@@ -12,12 +12,14 @@
  * - Auto-merges environment variables as single-key fallback
  * - Persistent config at ~/.khyquant/api_keys.json
  */
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
-const { parseApiKeyEntries, parseApiKeyList } = require('./apiKeyFormat');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 const { getDataHome, getLegacyDataHome } = require('../utils/dataHome');
+
+const { parseApiKeyEntries, parseApiKeyList } = require('./apiKeyFormat');
 
 const KHY_DIR = getDataHome();
 const POOL_FILE = path.join(KHY_DIR, 'api_keys.json');
@@ -61,36 +63,87 @@ let _initialized = false;
 
 // Provider → env key mapping (for auto-merge)
 const ENV_KEY_MAP = {
-  agnes: { key: 'AGNES_API_KEY', endpoint: 'AGNES_API_ENDPOINT', default: 'https://apihub.agnes-ai.com/v1' },
-  sensenova: { key: 'SENSENOVA_API_KEY', endpoint: 'SENSENOVA_API_ENDPOINT', default: 'https://token.sensenova.cn/v1' },
-  deepseek: { key: 'DEEPSEEK_API_KEY', endpoint: 'DEEPSEEK_API_ENDPOINT', default: 'https://api.deepseek.com/v1' },
-  qwen: { key: 'QWEN_API_KEY', endpoint: 'QWEN_API_ENDPOINT', default: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
-  glm: { key: 'GLM_API_KEY', endpoint: 'GLM_API_ENDPOINT', default: 'https://open.bigmodel.cn/api/paas/v4' },
-  doubao: { key: 'DOUBAO_API_KEY', endpoint: 'DOUBAO_API_ENDPOINT', default: 'https://ark.cn-beijing.volces.com/api/v3' },
-  wenxin: { key: 'WENXIN_API_KEY', endpoint: 'WENXIN_API_ENDPOINT', default: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop' },
-  openai: { key: 'OPENAI_API_KEY', endpoint: 'OPENAI_API_ENDPOINT', default: 'https://api.openai.com/v1' },
-  anthropic: { key: 'ANTHROPIC_API_KEY', endpoint: 'ANTHROPIC_API_ENDPOINT', default: 'https://api.anthropic.com/v1' },
+  agnes: {
+    key: 'AGNES_API_KEY',
+    endpoint: 'AGNES_API_ENDPOINT',
+    default: 'https://apihub.agnes-ai.com/v1',
+  },
+  sensenova: {
+    key: 'SENSENOVA_API_KEY',
+    endpoint: 'SENSENOVA_API_ENDPOINT',
+    default: 'https://token.sensenova.cn/v1',
+  },
+  deepseek: {
+    key: 'DEEPSEEK_API_KEY',
+    endpoint: 'DEEPSEEK_API_ENDPOINT',
+    default: 'https://api.deepseek.com/v1',
+  },
+  qwen: {
+    key: 'QWEN_API_KEY',
+    endpoint: 'QWEN_API_ENDPOINT',
+    default: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  },
+  glm: {
+    key: 'GLM_API_KEY',
+    endpoint: 'GLM_API_ENDPOINT',
+    default: 'https://open.bigmodel.cn/api/paas/v4',
+  },
+  doubao: {
+    key: 'DOUBAO_API_KEY',
+    endpoint: 'DOUBAO_API_ENDPOINT',
+    default: 'https://ark.cn-beijing.volces.com/api/v3',
+  },
+  wenxin: {
+    key: 'WENXIN_API_KEY',
+    endpoint: 'WENXIN_API_ENDPOINT',
+    default: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop',
+  },
+  openai: {
+    key: 'OPENAI_API_KEY',
+    endpoint: 'OPENAI_API_ENDPOINT',
+    default: 'https://api.openai.com/v1',
+  },
+  anthropic: {
+    key: 'ANTHROPIC_API_KEY',
+    endpoint: 'ANTHROPIC_API_ENDPOINT',
+    default: 'https://api.anthropic.com/v1',
+  },
   // Trae 使用加密原生协议（adaptive-api.trae.ai），非 OpenAI 兼容；不设 api.trae.ai 默认端点（避免 404）。
   trae: { key: 'TRAE_API_KEY', endpoint: 'TRAE_API_ENDPOINT', default: '' },
   relay: { key: 'RELAY_API_KEY', endpoint: 'RELAY_API_ENDPOINT', default: '' },
   codex: { key: 'CODEX_API_KEY', endpoint: 'CODEX_API_ENDPOINT', default: '' },
+  stepfun: {
+    key: 'STEPFUN_API_KEY',
+    endpoint: 'STEPFUN_API_ENDPOINT',
+    default: 'https://api.stepfun.com/step_plan/v1',
+  },
 };
 
-// 内置 provider 默认 key（pip 安装后无需 khy init 即可使用）
-const BUILTIN_PROVIDER_KEYS = {
-  agnes: {
-    key: 'sk-QwWaiiCfTy86mY2UBr22I1XiZKT6MzWz6Lglydhf63puDtVI',
-    endpoint: 'https://apihub.agnes-ai.com/v1',
-    priority: 10,
-    label: 'built-in',
-  },
-  sensenova: {
-    key: 'sk-VGIvz88JG36VuWGRnvjJrtT8tMv8mgUc',
-    endpoint: 'https://token.sensenova.cn/v1',
-    priority: 10,
-    label: 'built-in',
-  },
-};
+// 内置 provider 默认 key（仅从环境变量读取，源码中不留硬编码凭据）。
+// 门控: KHY_BUILTIN_AGNES_KEY / KHY_BUILTIN_SENSENOVA_KEY 环境变量。
+// 未设置时静默跳过（逐字节回退到「无内置 key」行为）。
+function _getBuiltinProviderKeys() {
+  const entries = {};
+  const agnesKey = process.env.KHY_BUILTIN_AGNES_KEY;
+  if (agnesKey && agnesKey.trim()) {
+    entries.agnes = {
+      key: agnesKey.trim(),
+      endpoint: 'https://apihub.agnes-ai.com/v1',
+      priority: 10,
+      label: 'built-in',
+    };
+  }
+  const sensenovaKey = process.env.KHY_BUILTIN_SENSENOVA_KEY;
+  if (sensenovaKey && sensenovaKey.trim()) {
+    entries.sensenova = {
+      key: sensenovaKey.trim(),
+      endpoint: 'https://token.sensenova.cn/v1',
+      priority: 10,
+      label: 'built-in',
+    };
+  }
+  return entries;
+}
 
 // ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -99,20 +152,28 @@ const BUILTIN_PROVIDER_KEYS = {
  * Safe to call multiple times (idempotent).
  */
 function init() {
-  if (_initialized) return;
+  if (_initialized) {
+    return;
+  }
   _initialized = true;
 
   // One-time legacy migration: ~/.khyquant/api_keys.json → getDataHome().
   // Read-old-write-new; never delete the legacy file.
   try {
-    if (POOL_FILE !== LEGACY_POOL_FILE
-      && !fs.existsSync(POOL_FILE)
-      && fs.existsSync(LEGACY_POOL_FILE)) {
+    if (
+      POOL_FILE !== LEGACY_POOL_FILE &&
+      !fs.existsSync(POOL_FILE) &&
+      fs.existsSync(LEGACY_POOL_FILE)
+    ) {
       const legacy = fs.readFileSync(LEGACY_POOL_FILE, 'utf-8');
-      if (!fs.existsSync(KHY_DIR)) fs.mkdirSync(KHY_DIR, { recursive: true });
+      if (!fs.existsSync(KHY_DIR)) {
+        fs.mkdirSync(KHY_DIR, { recursive: true });
+      }
       fs.writeFileSync(POOL_FILE, legacy, 'utf-8');
     }
-  } catch { /* migration is best-effort; fall through to normal load */ }
+  } catch {
+    /* migration is best-effort; fall through to normal load */
+  }
 
   // Load persisted config
   let saved = {};
@@ -120,7 +181,9 @@ function init() {
     if (fs.existsSync(POOL_FILE)) {
       saved = JSON.parse(fs.readFileSync(POOL_FILE, 'utf-8'));
     }
-  } catch { /* ignore corrupt file */ }
+  } catch {
+    /* ignore corrupt file */
+  }
 
   // Register keys from JSON
   for (const [provider, rawConfig] of Object.entries(saved)) {
@@ -130,7 +193,9 @@ function init() {
       label: '',
     });
     for (const cfg of parsedEntries) {
-      if (!cfg.key) continue;
+      if (!cfg.key) {
+        continue;
+      }
       _registerKey(provider, cfg);
     }
   }
@@ -138,12 +203,16 @@ function init() {
   // Merge env vars as fallback (only if not already present)
   for (const [provider, envCfg] of Object.entries(ENV_KEY_MAP)) {
     const keysFromEnv = _collectProviderEnvKeys(provider, envCfg.key);
-    if (keysFromEnv.length === 0) continue;
+    if (keysFromEnv.length === 0) {
+      continue;
+    }
 
     // Check if this key already exists in pool
     const existing = _pool.get(provider) || [];
     for (const envKey of keysFromEnv) {
-      if (existing.some(e => e.key === envKey)) continue;
+      if (existing.some((e) => e.key === envKey)) {
+        continue;
+      }
       _registerKey(provider, {
         key: envKey,
         endpoint: process.env[envCfg.endpoint] || envCfg.default,
@@ -153,10 +222,40 @@ function init() {
     }
   }
 
+  // Auto-discover *_API_KEY + *_API_ENDPOINT env vars not in ENV_KEY_MAP
+  const knownProviders = new Set(Object.keys(ENV_KEY_MAP));
+  for (const [envKey, envVal] of Object.entries(process.env)) {
+    if (!envVal || !envVal.trim()) {
+      continue;
+    }
+    const match = envKey.match(/^(.+)_API_KEY$/i);
+    if (!match) {
+      continue;
+    }
+    const provider = match[1].toLowerCase();
+    if (knownProviders.has(provider) || _pool.has(provider)) {
+      continue;
+    }
+    const endpointKey = `${match[1]}_API_ENDPOINT`;
+    const endpoint =
+      process.env[endpointKey] ||
+      process.env[endpointKey.toUpperCase()] ||
+      process.env[endpointKey.toLowerCase()] ||
+      '';
+    _registerKey(provider, {
+      key: envVal.trim(),
+      endpoint: endpoint.trim(),
+      priority: 0,
+      label: 'env',
+    });
+  }
+
   // Merge built-in provider keys as fallback (only if not already present)
-  for (const [provider, cfg] of Object.entries(BUILTIN_PROVIDER_KEYS)) {
+  for (const [provider, cfg] of Object.entries(_getBuiltinProviderKeys())) {
     const existing = _pool.get(provider) || [];
-    if (existing.some(e => e.key === cfg.key)) continue;
+    if (existing.some((e) => e.key === cfg.key)) {
+      continue;
+    }
     _registerKey(provider, { ...cfg });
   }
 
@@ -166,10 +265,14 @@ function init() {
     const { builtinGlmKeyEntries } = require('./builtinGlmKey');
     for (const [provider, cfg] of Object.entries(builtinGlmKeyEntries(process.env))) {
       const existing = _pool.get(provider) || [];
-      if (existing.some(e => e.key === cfg.key)) continue;
+      if (existing.some((e) => e.key === cfg.key)) {
+        continue;
+      }
       _registerKey(provider, { ...cfg });
     }
-  } catch { /* fail-soft: 不并入占位 key */ }
+  } catch {
+    /* fail-soft: 不并入占位 key */
+  }
 }
 
 /**
@@ -196,25 +299,42 @@ function init() {
  * @returns {{added:number, removed:number, updated:number, total:number}}
  */
 function reload() {
-  if (!_initialized) { init(); return { added: _stateMap.size, removed: 0, updated: 0, total: _stateMap.size }; }
+  if (!_initialized) {
+    init();
+    return { added: _stateMap.size, removed: 0, updated: 0, total: _stateMap.size };
+  }
   const slots = require('./concurrencySlots');
 
   // id -> { id, provider, config } — the set we WANT after reload.
   const desired = new Map();
   const want = (provider, config) => {
-    if (!config || !config.key) return;
-    const id = crypto.createHash('md5').update(`${provider}:${config.key}`).digest('hex').slice(0, 12);
-    if (!desired.has(id)) desired.set(id, { id, provider, config });
+    if (!config || !config.key) {
+      return;
+    }
+    const id = crypto
+      .createHash('md5')
+      .update(`${provider}:${config.key}`)
+      .digest('hex')
+      .slice(0, 12);
+    if (!desired.has(id)) {
+      desired.set(id, { id, provider, config });
+    }
   };
 
   // 1a. Persisted JSON config (re-read from disk; never mutate process.env).
   let saved = {};
   try {
-    if (fs.existsSync(POOL_FILE)) saved = JSON.parse(fs.readFileSync(POOL_FILE, 'utf-8'));
-  } catch { /* ignore corrupt file — keep current pool for those providers */ }
+    if (fs.existsSync(POOL_FILE)) {
+      saved = JSON.parse(fs.readFileSync(POOL_FILE, 'utf-8'));
+    }
+  } catch {
+    /* ignore corrupt file — keep current pool for those providers */
+  }
   for (const [provider, rawConfig] of Object.entries(saved)) {
     const parsedEntries = parseApiKeyEntries(rawConfig, { endpoint: '', priority: 0, label: '' });
-    for (const cfg of parsedEntries) want(provider, cfg);
+    for (const cfg of parsedEntries) {
+      want(provider, cfg);
+    }
   }
 
   // 1b. Environment variables (the watcher has already overlaid any .env edits
@@ -230,8 +350,8 @@ function reload() {
     }
   }
 
-  // 1c. Builtin fallbacks (always available, same as init).
-  for (const [provider, cfg] of Object.entries(BUILTIN_PROVIDER_KEYS)) {
+  // 1c. Builtin fallbacks (env-sourced, same as init).
+  for (const [provider, cfg] of Object.entries(_getBuiltinProviderKeys())) {
     want(provider, { ...cfg });
   }
 
@@ -242,7 +362,37 @@ function reload() {
     for (const [provider, cfg] of Object.entries(builtinGlmKeyEntries(process.env))) {
       want(provider, { ...cfg });
     }
-  } catch { /* fail-soft: 不并入占位 key */ }
+  } catch {
+    /* fail-soft: 不并入占位 key */
+  }
+
+  // 1e. Auto-discover *_API_KEY + *_API_ENDPOINT env vars not in ENV_KEY_MAP
+  const knownReloadProviders = new Set(Object.keys(ENV_KEY_MAP));
+  for (const [envKey, envVal] of Object.entries(process.env)) {
+    if (!envVal || !envVal.trim()) {
+      continue;
+    }
+    const match = envKey.match(/^(.+)_API_KEY$/i);
+    if (!match) {
+      continue;
+    }
+    const provider = match[1].toLowerCase();
+    if (knownReloadProviders.has(provider)) {
+      continue;
+    }
+    const endpointKey = `${match[1]}_API_ENDPOINT`;
+    const endpoint =
+      process.env[endpointKey] ||
+      process.env[endpointKey.toUpperCase()] ||
+      process.env[endpointKey.toLowerCase()] ||
+      '';
+    want(provider, {
+      key: envVal.trim(),
+      endpoint: endpoint.trim(),
+      priority: 0,
+      label: 'env',
+    });
+  }
 
   let added = 0;
   let updated = 0;
@@ -260,10 +410,17 @@ function reload() {
       const nextEndpoint = config.endpoint || '';
       const nextPriority = config.priority ?? 0;
       const nextLabel = config.label || '';
-      if (existing.endpoint !== nextEndpoint || existing.priority !== nextPriority || existing.label !== nextLabel) {
+      const nextProxy = config.proxy || '';
+      if (
+        existing.endpoint !== nextEndpoint ||
+        existing.priority !== nextPriority ||
+        existing.label !== nextLabel ||
+        (existing.proxy || '') !== nextProxy
+      ) {
         existing.endpoint = nextEndpoint;
         existing.priority = nextPriority;
         existing.label = nextLabel;
+        existing.proxy = nextProxy;
         updated += 1;
       }
     }
@@ -272,15 +429,25 @@ function reload() {
   // 3. Remove vanished keys — and free their concurrency slot (init/removeKey
   //    never freed slots on the env path; reload makes that whole again).
   for (const [id, entry] of [..._stateMap]) {
-    if (desired.has(id)) continue;
+    if (desired.has(id)) {
+      continue;
+    }
     const entries = _pool.get(entry.provider);
     if (entries) {
-      const idx = entries.findIndex(e => e.id === id);
-      if (idx !== -1) entries.splice(idx, 1);
-      if (entries.length === 0) _pool.delete(entry.provider);
+      const idx = entries.findIndex((e) => e.id === id);
+      if (idx !== -1) {
+        entries.splice(idx, 1);
+      }
+      if (entries.length === 0) {
+        _pool.delete(entry.provider);
+      }
     }
     _stateMap.delete(id);
-    try { slots.unregister(id); } catch { /* slot may already be gone */ }
+    try {
+      slots.unregister(id);
+    } catch {
+      /* slot may already be gone */
+    }
     removed += 1;
   }
 
@@ -300,21 +467,33 @@ function save() {
   const data = {};
   for (const [provider, entries] of _pool) {
     data[provider] = entries
-      .filter(e => e.label !== 'env') // Don't persist env-sourced keys
-      .filter(e => !e.placeholder && !_isPlaceholderKey(e.key)) // Don't persist placeholder/non-functional keys
-      .map(e => ({
+      .filter((e) => e.label !== 'env') // Don't persist env-sourced keys
+      .filter((e) => !e.placeholder && !_isPlaceholderKey(e.key)) // Don't persist placeholder/non-functional keys
+      .map((e) => ({
         key: e.key,
         endpoint: e.endpoint,
         priority: e.priority,
         label: e.label,
+        // per-provider 代理地址：仅在配置了时持久化，避免给直连条目增加冗余字段。
+        ...(e.proxy ? { proxy: e.proxy } : {}),
       }));
-    if (data[provider].length === 0) delete data[provider];
+    if (data[provider].length === 0) {
+      delete data[provider];
+    }
   }
 
   try {
-    if (!fs.existsSync(KHY_DIR)) fs.mkdirSync(KHY_DIR, { recursive: true });
+    if (!fs.existsSync(KHY_DIR)) {
+      fs.mkdirSync(KHY_DIR, { recursive: true });
+    }
     fs.writeFileSync(POOL_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch { /* best-effort */ }
+  } catch (err) {
+    // 持久化失败静默丢弃 → 服务重启后所有 key 丢失！必须记录。
+    try {
+      process.stderr.write(`[apiKeyPool] 持久化失败: ${err.message}\n`);
+    } catch (_) {}
+  }
+  // 注意：API key 以明文存储在 POOL_FILE 中。生产环境应确保该文件权限为 600。
 }
 
 // ── Key Management ───────────────────────────────────────────────────────
@@ -326,12 +505,14 @@ function save() {
  * @returns {string} keyId
  */
 function addKey(provider, config) {
-  if (!config.key) throw new Error('API key is required');
+  if (!config.key) {
+    throw new Error('API key is required');
+  }
   init();
 
   // Check for duplicate
   const existing = _pool.get(provider) || [];
-  if (existing.some(e => e.key === config.key)) {
+  if (existing.some((e) => e.key === config.key)) {
     throw new Error('This key already exists in the pool');
   }
 
@@ -348,14 +529,20 @@ function addKey(provider, config) {
 function removeKey(provider, keyId) {
   init();
   const entries = _pool.get(provider);
-  if (!entries) return;
+  if (!entries) {
+    return;
+  }
 
-  const idx = entries.findIndex(e => e.id === keyId);
-  if (idx === -1) return;
+  const idx = entries.findIndex((e) => e.id === keyId);
+  if (idx === -1) {
+    return;
+  }
 
   entries.splice(idx, 1);
   _stateMap.delete(keyId);
-  if (entries.length === 0) _pool.delete(provider);
+  if (entries.length === 0) {
+    _pool.delete(provider);
+  }
   save();
 }
 
@@ -364,7 +551,9 @@ function removeKey(provider, keyId) {
  */
 function disableKey(provider, keyId) {
   const entry = _stateMap.get(keyId);
-  if (entry) entry.status = 'disabled';
+  if (entry) {
+    entry.status = 'disabled';
+  }
 }
 
 /**
@@ -392,14 +581,16 @@ function enableKey(provider, keyId) {
 function pick(provider) {
   init();
   const available = _collectAvailableEntries(provider);
-  if (available.length === 0) return null;
+  if (available.length === 0) {
+    return null;
+  }
 
   // Sort by priority descending
   available.sort((a, b) => b.priority - a.priority);
 
   // Group by top priority level
   const topPriority = available[0].priority;
-  const topGroup = available.filter(e => e.priority === topPriority);
+  const topGroup = available.filter((e) => e.priority === topPriority);
 
   // Round-robin within top group
   const cursor = (_cursors[provider] || 0) % topGroup.length;
@@ -420,10 +611,14 @@ function pick(provider) {
 function pickById(provider, keyId) {
   init();
   const targetId = String(keyId || '').trim();
-  if (!targetId) return null;
+  if (!targetId) {
+    return null;
+  }
   const available = _collectAvailableEntries(provider);
-  const selected = available.find(e => e.id === targetId);
-  if (!selected) return null;
+  const selected = available.find((e) => e.id === targetId);
+  if (!selected) {
+    return null;
+  }
   return _touchAndFormatSelection(selected);
 }
 
@@ -458,9 +653,13 @@ function listAvailableKeys(provider) {
  */
 function markSuccess(keyId) {
   const entry = _stateMap.get(keyId);
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
-  if (entry.backoffLevel > 0) entry.backoffLevel--;
+  if (entry.backoffLevel > 0) {
+    entry.backoffLevel--;
+  }
   entry.status = 'active';
   entry.lastError = null;
 }
@@ -471,7 +670,8 @@ function markSuccess(keyId) {
  * @param {string} value - Retry-After header value
  * @returns {number} cooldown in ms, clamped to [BASE_COOLDOWN_MS, MAX_RETRY_AFTER_MS]
  */
-const parseRetryAfter = (value) => require('../utils/parseRetryAfterCooldown')(value, BASE_COOLDOWN_MS, MAX_RETRY_AFTER_MS);
+const parseRetryAfter = (value) =>
+  require('../utils/parseRetryAfterCooldown')(value, BASE_COOLDOWN_MS, MAX_RETRY_AFTER_MS);
 
 /**
  * Mark a key as failed. Applies cooldown for rate limit / auth errors.
@@ -483,7 +683,9 @@ const parseRetryAfter = (value) => require('../utils/parseRetryAfterCooldown')(v
  */
 function markFailure(keyId, statusCode, errorMsg = '', responseHeaders = null) {
   const entry = _stateMap.get(keyId);
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
   entry.totalFailures++;
   entry.lastError = errorMsg || `HTTP ${statusCode}`;
@@ -520,10 +722,12 @@ function markFailure(keyId, statusCode, errorMsg = '', responseHeaders = null) {
 function getPoolStatus(provider) {
   init();
   const entries = _pool.get(provider);
-  if (!entries) return [];
+  if (!entries) {
+    return [];
+  }
 
   const now = Date.now();
-  return entries.map(e => {
+  return entries.map((e) => {
     // Expire cooldown if needed
     if (e.status === 'cooldown' && e.cooldownUntil <= now) {
       e.status = 'active';
@@ -582,23 +786,35 @@ function hasAvailableKeys(provider) {
 // JSON without the explicit `placeholder` flag. Fail-soft: any error → empty set.
 let _placeholderKeysCache = null;
 function _placeholderKeys() {
-  if (_placeholderKeysCache) return _placeholderKeysCache;
+  if (_placeholderKeysCache) {
+    return _placeholderKeysCache;
+  }
   const set = new Set();
   try {
     const { GLM_PLACEHOLDER_KEY } = require('./builtinGlmKey');
-    if (GLM_PLACEHOLDER_KEY) set.add(GLM_PLACEHOLDER_KEY);
-  } catch { /* fail-soft: no placeholder recognition */ }
+    if (GLM_PLACEHOLDER_KEY) {
+      set.add(GLM_PLACEHOLDER_KEY);
+    }
+  } catch {
+    /* fail-soft: no placeholder recognition */
+  }
   _placeholderKeysCache = set;
   return set;
 }
 
 function _isPlaceholderKey(key) {
-  try { return _placeholderKeys().has(key); } catch { return false; }
+  try {
+    return _placeholderKeys().has(key);
+  } catch {
+    return false;
+  }
 }
 
 function _collectAvailableEntries(provider) {
   const entries = _pool.get(provider);
-  if (!entries || entries.length === 0) return [];
+  if (!entries || entries.length === 0) {
+    return [];
+  }
 
   const now = Date.now();
   for (const e of entries) {
@@ -612,11 +828,15 @@ function _collectAvailableEntries(provider) {
   // call the provider) are NEVER usable: excluding them here means hasAvailableKeys()
   // reports the provider as unconfigured AND pick() never sends the fake key upstream.
   // They remain visible via getPoolStatus() so the provider still shows as "configured".
-  return entries.filter(e => !e.placeholder && e.status === 'active' && slots.hasAvailableSlot(e.id));
+  return entries.filter(
+    (e) => !e.placeholder && e.status === 'active' && slots.hasAvailableSlot(e.id)
+  );
 }
 
 function _touchAndFormatSelection(entry) {
-  if (!entry) return null;
+  if (!entry) {
+    return null;
+  }
   entry.lastUsedAt = Date.now();
   entry.totalRequests++;
   return {
@@ -624,11 +844,17 @@ function _touchAndFormatSelection(entry) {
     endpoint: entry.endpoint,
     keyId: entry.id,
     label: entry.label,
+    // per-provider 代理地址（空串 = 直连），随选中条目一起交给请求层。
+    proxy: entry.proxy || '',
   };
 }
 
 function _registerKey(provider, config) {
-  const id = crypto.createHash('md5').update(`${provider}:${config.key}`).digest('hex').slice(0, 12);
+  const id = crypto
+    .createHash('md5')
+    .update(`${provider}:${config.key}`)
+    .digest('hex')
+    .slice(0, 12);
 
   const entry = {
     id,
@@ -637,6 +863,8 @@ function _registerKey(provider, config) {
     endpoint: config.endpoint || '',
     priority: config.priority ?? 0,
     label: config.label || '',
+    // per-provider 代理地址：来自 api_keys.json 条目的 proxy 字段，缺省空（直连）。
+    proxy: config.proxy || '',
     // 占位/不可用凭据标记(如内置 GLM 占位 key):true → 从可用性/选择路径排除,但仍在
     // getPoolStatus introspection 中列出。默认 false(普通真实 key)。既支持显式标记
     // (builtinGlmKeyEntries 并入时),也按 key 值兜底识别——因为占位 key 曾被 save() 持久化到
@@ -652,7 +880,9 @@ function _registerKey(provider, config) {
     lastError: null,
   };
 
-  if (!_pool.has(provider)) _pool.set(provider, []);
+  if (!_pool.has(provider)) {
+    _pool.set(provider, []);
+  }
   _pool.get(provider).push(entry);
   _stateMap.set(id, entry);
 
@@ -664,7 +894,9 @@ function _registerKey(provider, config) {
 }
 
 function maskKey(key) {
-  if (!key || key.length < 10) return '***';
+  if (!key || key.length < 10) {
+    return '***';
+  }
   return key.slice(0, 6) + '...' + key.slice(-4);
 }
 
@@ -674,7 +906,9 @@ function _collectProviderEnvKeys(provider, primaryEnvKeyName) {
     .replace(/[^A-Z0-9]/g, '_');
 
   const candidates = [];
-  if (primaryEnvKeyName) candidates.push(process.env[primaryEnvKeyName]);
+  if (primaryEnvKeyName) {
+    candidates.push(process.env[primaryEnvKeyName]);
+  }
   if (prefix) {
     candidates.push(process.env[`${prefix}_API_KEYS`]);
     for (let i = 1; i <= 10; i++) {
@@ -682,11 +916,13 @@ function _collectProviderEnvKeys(provider, primaryEnvKeyName) {
     }
   }
 
-  const flattened = candidates.flatMap(value => parseApiKeyList(value));
+  const flattened = candidates.flatMap((value) => parseApiKeyList(value));
   const deduped = [];
   const seen = new Set();
   for (const token of flattened) {
-    if (!token || seen.has(token)) continue;
+    if (!token || seen.has(token)) {
+      continue;
+    }
     seen.add(token);
     deduped.push(token);
   }
@@ -711,5 +947,5 @@ module.exports = {
   getAllStatus,
   getProviders,
   hasAvailableKeys,
-  BUILTIN_PROVIDER_KEYS,
+  _getBuiltinProviderKeys,
 };

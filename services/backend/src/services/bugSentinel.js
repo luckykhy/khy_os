@@ -41,21 +41,23 @@
  *   catch (e) { require('./bugSentinel').tripwire(e, { code: 'loop.optionalThing' }); }
  */
 
-const MAX_RECORDS = 200;       // 主环形缓冲上限(drop-oldest)
-const MAX_ANOMALIES = 50;      // 已触发预警保留上限
+const MAX_RECORDS = 200; // 主环形缓冲上限(drop-oldest)
+const MAX_ANOMALIES = 50; // 已触发预警保留上限
 const DEFAULT_WINDOW_MS = 60000;
 const DEFAULT_THRESHOLD = 5;
 
 // ── 可注入时钟(默认 Date.now;测试用 __setClock 注入,确定性滑窗) ──
 let _clock = () => Date.now();
-function __setClock(fn) { _clock = typeof fn === 'function' ? fn : (() => Date.now()); }
+function __setClock(fn) {
+  _clock = typeof fn === 'function' ? fn : () => Date.now();
+}
 
 // ── 进程内状态(单一真源) ──
-const _records = [];                 // {kind:'invariant'|'swallowed', code, detail, at}
-const _anomalies = [];               // {code, count, windowMs, firstSeen, lastSeen, sample, at}
-const _byCode = new Map();           // code -> { count, times: number[] (窗口内时间戳) }
-const _activeAnomalyCodes = new Set();// 已处于「越阈值」态的 code,避免每条都重复告警
-const _listeners = new Set();        // onAnomaly 订阅者
+const _records = []; // {kind:'invariant'|'swallowed', code, detail, at}
+const _anomalies = []; // {code, count, windowMs, firstSeen, lastSeen, sample, at}
+const _byCode = new Map(); // code -> { count, times: number[] (窗口内时间戳) }
+const _activeAnomalyCodes = new Set(); // 已处于「越阈值」态的 code,避免每条都重复告警
+const _listeners = new Set(); // onAnomaly 订阅者
 let _totalSwallowed = 0;
 let _totalBreaches = 0;
 
@@ -70,21 +72,35 @@ class BugSentinelError extends Error {
 
 function mode(env = process.env) {
   const raw = env && env.KHY_BUG_SENTINEL;
-  if (raw === 'off' || raw === '0' || raw === 'false') return 'off';
-  if (raw === 'strict') return 'strict';
-  if (raw === 'observe' || raw === 'on' || raw === '1') return 'observe';
+  if (raw === 'off' || raw === '0' || raw === 'false') {
+    return 'off';
+  }
+  if (raw === 'strict') {
+    return 'strict';
+  }
+  if (raw === 'observe' || raw === 'on' || raw === '1') {
+    return 'observe';
+  }
   // 未显式设置:测试环境默认 strict(让 CI 在最早边界炸出 bug),否则 observe。
-  if (env && env.NODE_ENV === 'test') return 'strict';
+  if (env && env.NODE_ENV === 'test') {
+    return 'strict';
+  }
   return 'observe';
 }
 
-function isEnabled(env = process.env) { return mode(env) !== 'off'; }
-function isStrict(env = process.env) { return mode(env) === 'strict'; }
+function isEnabled(env = process.env) {
+  return mode(env) !== 'off';
+}
+
+function isStrict(env = process.env) {
+  return mode(env) === 'strict';
+}
 
 function _windowMs(env = process.env) {
   const v = Number(env && env.KHY_BUG_SENTINEL_WINDOW_MS);
   return Number.isFinite(v) && v > 0 ? v : DEFAULT_WINDOW_MS;
 }
+
 function _threshold(env = process.env) {
   const v = Number(env && env.KHY_BUG_SENTINEL_THRESHOLD);
   return Number.isFinite(v) && v >= 2 ? Math.floor(v) : DEFAULT_THRESHOLD;
@@ -92,17 +108,32 @@ function _threshold(env = process.env) {
 
 function _safeStr(x, max = 240) {
   let s;
-  if (x == null) s = '';
-  else if (typeof x === 'string') s = x;
-  else if (x instanceof Error) s = x.message || String(x);
-  else { try { s = JSON.stringify(x); } catch { s = String(x); } }
+  if (x == null) {
+    s = '';
+  } else if (typeof x === 'string') {
+    s = x;
+  } else if (x instanceof Error) {
+    s = x.message || String(x);
+  } else {
+    try {
+      s = JSON.stringify(x);
+    } catch {
+      s = String(x);
+    }
+  }
   return s.length > max ? `${s.slice(0, max)}…` : s;
 }
 
 function _codeFromError(err) {
-  if (!err) return 'swallowed';
-  if (err.code && typeof err.code === 'string') return `err.${err.code}`;
-  if (err.name && err.name !== 'Error') return `err.${err.name}`;
+  if (!err) {
+    return 'swallowed';
+  }
+  if (err.code && typeof err.code === 'string') {
+    return `err.${err.code}`;
+  }
+  if (err.name && err.name !== 'Error') {
+    return `err.${err.name}`;
+  }
   return 'swallowed';
 }
 
@@ -113,21 +144,32 @@ function _activeAnnounceEnabled(env) {
   const v = env && env.KHY_BUG_SENTINEL_ACTIVE;
   return v !== 'off' && v !== '0' && v !== 'false';
 }
+
 function _activeAnnounce(anomaly, env) {
-  if (!_activeAnnounceEnabled(env)) return;
+  if (!_activeAnnounceEnabled(env)) {
+    return;
+  }
   try {
     process.emitWarning(
       `code "${anomaly.code}" recurred ${anomaly.count}× within ${Math.round(anomaly.windowMs / 1000)}s — possible hidden bug surfacing early`,
-      { type: 'BugSentinelAnomaly', code: 'KHY_BUG_SENTINEL_ANOMALY' },
+      { type: 'BugSentinelAnomaly', code: 'KHY_BUG_SENTINEL_ANOMALY' }
     );
-  } catch { /* 主动通道 fail-soft:绝不反噬 */ }
+  } catch {
+    /* 主动通道 fail-soft:绝不反噬 */
+  }
 }
 
 function _emitAnomaly(anomaly, env) {
   _anomalies.push(anomaly);
-  while (_anomalies.length > MAX_ANOMALIES) _anomalies.shift();
+  while (_anomalies.length > MAX_ANOMALIES) {
+    _anomalies.shift();
+  }
   for (const fn of _listeners) {
-    try { fn(anomaly); } catch { /* listener fail-soft: 监听器自身绝不反噬哨兵 */ }
+    try {
+      fn(anomaly);
+    } catch {
+      /* listener fail-soft: 监听器自身绝不反噬哨兵 */
+    }
   }
   _activeAnnounce(anomaly, env);
 }
@@ -141,34 +183,47 @@ function _record(kind, code, detail, env) {
   const c = code || 'unspecified';
 
   _records.push({ kind, code: c, detail: _safeStr(detail), at: now });
-  while (_records.length > MAX_RECORDS) _records.shift();
-  if (kind === 'swallowed') _totalSwallowed += 1;
-  else if (kind === 'invariant') _totalBreaches += 1;
+  while (_records.length > MAX_RECORDS) {
+    _records.shift();
+  }
+  if (kind === 'swallowed') {
+    _totalSwallowed += 1;
+  } else if (kind === 'invariant') {
+    _totalBreaches += 1;
+  }
 
   const windowMs = _windowMs(env);
   const threshold = _threshold(env);
   let bucket = _byCode.get(c);
-  if (!bucket) { bucket = { count: 0, times: [] }; _byCode.set(c, bucket); }
+  if (!bucket) {
+    bucket = { count: 0, times: [] };
+    _byCode.set(c, bucket);
+  }
   bucket.count += 1;
   bucket.times.push(now);
   // 滑窗裁剪:只保留窗口内的时间戳。
   const cutoff = now - windowMs;
-  while (bucket.times.length && bucket.times[0] < cutoff) bucket.times.shift();
+  while (bucket.times.length && bucket.times[0] < cutoff) {
+    bucket.times.shift();
+  }
 
   const inWindow = bucket.times.length;
   if (inWindow >= threshold && !_activeAnomalyCodes.has(c)) {
     _activeAnomalyCodes.add(c);
-    _emitAnomaly({
-      code: c,
-      kind,
-      count: inWindow,
-      windowMs,
-      threshold,
-      firstSeen: bucket.times[0],
-      lastSeen: now,
-      sample: _safeStr(detail, 160),
-      at: now,
-    }, env);
+    _emitAnomaly(
+      {
+        code: c,
+        kind,
+        count: inWindow,
+        windowMs,
+        threshold,
+        firstSeen: bucket.times[0],
+        lastSeen: now,
+        sample: _safeStr(detail, 160),
+        at: now,
+      },
+      env
+    );
   } else if (inWindow < threshold && _activeAnomalyCodes.has(c)) {
     _activeAnomalyCodes.delete(c); // 回落 → 重新武装
   }
@@ -182,10 +237,16 @@ function _record(kind, code, detail, env) {
  */
 function invariant(condition, code, detail, env = process.env) {
   const m = mode(env);
-  if (m === 'off') return Boolean(condition);
-  if (condition) return true;
+  if (m === 'off') {
+    return Boolean(condition);
+  }
+  if (condition) {
+    return true;
+  }
   _record('invariant', code || 'invariant', detail, env);
-  if (m === 'strict') throw new BugSentinelError(code || 'invariant', _safeStr(detail));
+  if (m === 'strict') {
+    throw new BugSentinelError(code || 'invariant', _safeStr(detail));
+  }
   return false;
 }
 
@@ -195,7 +256,9 @@ function invariant(condition, code, detail, env = process.env) {
  */
 function tripwire(error, context = {}, env = process.env) {
   try {
-    if (mode(env) === 'off') return null;
+    if (mode(env) === 'off') {
+      return null;
+    }
     const code = (context && context.code) || _codeFromError(error);
     const detail = (context && context.detail) || (error && error.message) || _safeStr(error);
     _record('swallowed', code, detail, env);
@@ -207,11 +270,16 @@ function tripwire(error, context = {}, env = process.env) {
 
 /** 订阅主动预警(主动监听发现的出口)。返回取消订阅函数。 */
 function onAnomaly(fn) {
-  if (typeof fn !== 'function') return () => {};
+  if (typeof fn !== 'function') {
+    return () => {};
+  }
   _listeners.add(fn);
   return () => _listeners.delete(fn);
 }
-function offAnomaly(fn) { _listeners.delete(fn); }
+
+function offAnomaly(fn) {
+  _listeners.delete(fn);
+}
 
 /** 读出当前哨兵状态(供 loop 返回契约 / khy health / khy doctor 主动呈现)。 */
 function snapshot(env = process.env) {
@@ -219,9 +287,11 @@ function snapshot(env = process.env) {
   // 取计数前若干(确定性:按 count 降序,再按 code 字典序)。
   const entries = [..._byCode.entries()]
     .map(([code, b]) => [code, b.count])
-    .sort((a, b) => (b[1] - a[1]) || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
     .slice(0, 12);
-  for (const [code, count] of entries) byCode[code] = count;
+  for (const [code, count] of entries) {
+    byCode[code] = count;
+  }
   return {
     mode: mode(env),
     swallowed: _totalSwallowed,

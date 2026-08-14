@@ -17,6 +17,7 @@
  */
 
 const path = require('path');
+
 const { analyze, SEVERITY } = require('./coherenceAnalyzer');
 const coherenceGate = require('./coherenceGate');
 const deliverableClosure = require('./deliverableClosure');
@@ -29,7 +30,9 @@ function countCodeFiles(files) {
   for (const f of files || []) {
     const ext = path.extname(String(f)).toLowerCase();
     const base = path.basename(String(f)).toLowerCase();
-    if (CODE_EXT.has(ext) || base === 'package.json') n += 1;
+    if (CODE_EXT.has(ext) || base === 'package.json') {
+      n += 1;
+    }
   }
   return n;
 }
@@ -76,8 +79,19 @@ function evaluateCoherenceGate(opts = {}) {
       return { shouldGate: false, message: null, gaps, blocking: [], reason: decision.reason };
     }
     const round = (opts.rounds || 0) + 1;
-    const message = coherenceGate.buildGateMessage(decision.blocking, round, opts.maxRounds || 2, gaps);
-    return { shouldGate: true, message, gaps, blocking: decision.blocking, reason: decision.reason };
+    const message = coherenceGate.buildGateMessage(
+      decision.blocking,
+      round,
+      opts.maxRounds || 2,
+      gaps
+    );
+    return {
+      shouldGate: true,
+      message,
+      gaps,
+      blocking: decision.blocking,
+      reason: decision.reason,
+    };
   } catch {
     return { shouldGate: false, message: null, gaps: [], blocking: [], reason: 'error' };
   }

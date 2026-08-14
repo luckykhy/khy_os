@@ -19,7 +19,9 @@
 // 宿主注入的无态发送器(session.ws.send 包装),加载时由 setKhyosDeps 注入一次。
 let wsSend = null;
 function setKhyosDeps(deps = {}) {
-  if (typeof deps.wsSend === 'function') wsSend = deps.wsSend;
+  if (typeof deps.wsSend === 'function') {
+    wsSend = deps.wsSend;
+  }
 }
 
 // ── KHY OS kernel terminal (bare-metal kernel over the serial bridge) ──
@@ -36,7 +38,11 @@ async function handleKhyosStart(session, msg) {
   try {
     khyos = require('@khy/shared/runtime/khyos');
   } catch (err) {
-    return wsSend(session, { type: 'khyos_status', status: 'error', message: '运行时不可用: ' + err.message });
+    return wsSend(session, {
+      type: 'khyos_status',
+      status: 'error',
+      message: '运行时不可用: ' + err.message,
+    });
   }
 
   wsSend(session, { type: 'khyos_status', status: 'booting' });
@@ -46,9 +52,10 @@ async function handleKhyosStart(session, msg) {
     // reconnects but is isolated between users.
     const diskName = `web-${(session.user && session.user.id) || 'anon'}.img`;
     const path = require('path');
-    const diskPath = msg && msg.persist === false
-      ? undefined
-      : path.join(khyos.khyosCacheDir(), 'disks', diskName);
+    const diskPath =
+      msg && msg.persist === false
+        ? undefined
+        : path.join(khyos.khyosCacheDir(), 'disks', diskName);
 
     const runner = new khyos.KhyOsRunner({
       isoPath: iso,
@@ -61,16 +68,24 @@ async function handleKhyosStart(session, msg) {
       wsSend(session, { type: 'khyos_data', data: buf.toString('base64') });
     });
     runner.on('error', (err) => {
-      wsSend(session, { type: 'khyos_status', status: 'error', message: err.message || String(err) });
+      wsSend(session, {
+        type: 'khyos_status',
+        status: 'error',
+        message: err.message || String(err),
+      });
     });
     runner.on('exit', () => {
       wsSend(session, { type: 'khyos_status', status: 'exited' });
-      if (session.khyosRunner === runner) session.khyosRunner = null;
+      if (session.khyosRunner === runner) {
+        session.khyosRunner = null;
+      }
     });
     // First-run portable-QEMU download (~30–40MB): surface progress so the
     // terminal doesn't appear hung. Additive — absent provisioning, no event fires.
     runner.on('status', (s) => {
-      if (!s || s.phase !== 'provisioning-qemu') return;
+      if (!s || s.phase !== 'provisioning-qemu') {
+        return;
+      }
       const pct = s.total > 0 ? Math.min(100, Math.floor((s.downloaded / s.total) * 100)) : 0;
       const message = s.done ? '便携 QEMU 下载完成，正在启动…' : `正在下载便携 QEMU… ${pct}%`;
       wsSend(session, { type: 'khyos_status', status: 'provisioning', message });
@@ -78,10 +93,23 @@ async function handleKhyosStart(session, msg) {
 
     await runner.start();
     // The connection may have dropped while booting.
-    if (session.khyosRunner !== runner) { try { await runner.stop(); } catch { /* ignore */ } return; }
+    if (session.khyosRunner !== runner) {
+      try {
+        await runner.stop();
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
     wsSend(session, { type: 'khyos_status', status: 'ready' });
   } catch (err) {
-    if (session.khyosRunner) { try { await session.khyosRunner.stop(); } catch { /* ignore */ } }
+    if (session.khyosRunner) {
+      try {
+        await session.khyosRunner.stop();
+      } catch {
+        /* ignore */
+      }
+    }
     session.khyosRunner = null;
     // The Web terminal cannot run a CLI build itself, so the raw provisioner
     // exception ("No KHY OS ISO available …") is a dead-end here. When the ISO is
@@ -91,8 +119,8 @@ async function handleKhyosStart(session, msg) {
     const raw = (err && err.message) || String(err);
     const isoMissing = /No KHY OS ISO available|KHY_KERNEL_ISO/i.test(raw);
     const message = isoMissing
-      ? '内核 ISO 尚未构建。请在终端运行 `khy os build` 从内核源码构建一次'
-        + '（需 nasm/gcc/ld/grub-mkrescue/qemu 工具链），完成后重新打开内核终端即可。'
+      ? '内核 ISO 尚未构建。请在终端运行 `khy os build` 从内核源码构建一次' +
+        '（需 nasm/gcc/ld/grub-mkrescue/qemu 工具链），完成后重新打开内核终端即可。'
       : raw;
     wsSend(session, { type: 'khyos_status', status: 'error', message });
   }
@@ -100,7 +128,9 @@ async function handleKhyosStart(session, msg) {
 
 function handleKhyosInput(session, msg) {
   const runner = session.khyosRunner;
-  if (!runner) return;
+  if (!runner) {
+    return;
+  }
   // Input arrives base64-encoded (raw serial bytes the xterm produced).
   let bytes;
   try {
@@ -108,7 +138,9 @@ function handleKhyosInput(session, msg) {
   } catch {
     return;
   }
-  runner.write(bytes).catch(() => { /* surfaced via 'error' */ });
+  runner.write(bytes).catch(() => {
+    /* surfaced via 'error' */
+  });
 }
 
 async function handleKhyosStop(session) {
@@ -116,7 +148,11 @@ async function handleKhyosStop(session) {
     const runner = session.khyosRunner;
     session.khyosRunner = null;
     stopKhyosDesktopStream(session);
-    try { await runner.stop(); } catch { /* ignore */ }
+    try {
+      await runner.stop();
+    } catch {
+      /* ignore */
+    }
   }
   wsSend(session, { type: 'khyos_status', status: 'stopped' });
 }
@@ -140,11 +176,17 @@ function _khyosDesktopCaptureEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_KHYOS_DESKTOP_CAPTURE', e);
     }
-  } catch { /* registry unavailable → local fallback */ }
+  } catch {
+    /* registry unavailable → local fallback */
+  }
   const v = e.KHY_KHYOS_DESKTOP_CAPTURE;
   return !(v !== undefined && _KHYOS_DESKTOP_FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -159,7 +201,11 @@ function stopKhyosDesktopStream(session) {
 async function handleKhyosDesktopStart(session, msg) {
   const runner = session.khyosRunner;
   if (!runner) {
-    return wsSend(session, { type: 'khyos_desktop_status', status: 'error', message: '内核未运行,请先启动内核终端' });
+    return wsSend(session, {
+      type: 'khyos_desktop_status',
+      status: 'error',
+      message: '内核未运行,请先启动内核终端',
+    });
   }
   if (!runner.enableDesktopCapture) {
     return wsSend(session, {
@@ -178,8 +224,13 @@ async function handleKhyosDesktopStart(session, msg) {
   const tick = async () => {
     // captureScreen() serializes internally, but skip if the previous frame's
     // encode/transmit hasn't finished so a slow frame can't pile up timers.
-    if (sending) return;
-    if (session.khyosRunner !== runner) { stopKhyosDesktopStream(session); return; }
+    if (sending) {
+      return;
+    }
+    if (session.khyosRunner !== runner) {
+      stopKhyosDesktopStream(session);
+      return;
+    }
     sending = true;
     try {
       const { png, width, height } = await runner.captureScreen();
@@ -194,13 +245,19 @@ async function handleKhyosDesktopStart(session, msg) {
     } catch (err) {
       // A transient capture failure (monitor not up yet mid-boot) should retry,
       // not tear the stream down; surface a soft status the first time only.
-      wsSend(session, { type: 'khyos_desktop_status', status: 'capturing', message: (err && err.message) || String(err) });
+      wsSend(session, {
+        type: 'khyos_desktop_status',
+        status: 'capturing',
+        message: (err && err.message) || String(err),
+      });
     } finally {
       sending = false;
     }
   };
 
-  session.khyosDesktopTimer = setInterval(() => { void tick(); }, KHYOS_DESKTOP_FRAME_INTERVAL_MS);
+  session.khyosDesktopTimer = setInterval(() => {
+    void tick();
+  }, KHYOS_DESKTOP_FRAME_INTERVAL_MS);
   // Fire one frame immediately so the viewer isn't blank for the first interval.
   void tick();
 }
@@ -227,11 +284,17 @@ function _webDesktopInputEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_WEB_DESKTOP_INPUT', e);
     }
-  } catch { /* registry unavailable → local fallback */ }
+  } catch {
+    /* registry unavailable → local fallback */
+  }
   const v = e.KHY_WEB_DESKTOP_INPUT;
   return !(v !== undefined && _WEB_DESKTOP_INPUT_FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -280,21 +343,31 @@ const _QEMU_KEY_PASSTHROUGH = /^[a-z0-9]$/;
  * @returns {string|null}
  */
 function _mapBrowserKey(ev) {
-  if (!ev || typeof ev.key !== 'string' || ev.key.length === 0) return null;
+  if (!ev || typeof ev.key !== 'string' || ev.key.length === 0) {
+    return null;
+  }
   const key = ev.key;
   let name = null;
   if (Object.prototype.hasOwnProperty.call(_QEMU_KEY_NAMES, key)) {
     name = _QEMU_KEY_NAMES[key];
   } else if (key.length === 1) {
     const lower = key.toLowerCase();
-    if (_QEMU_KEY_PASSTHROUGH.test(lower)) name = lower;
+    if (_QEMU_KEY_PASSTHROUGH.test(lower)) {
+      name = lower;
+    }
   }
-  if (!name) return null;
+  if (!name) {
+    return null;
+  }
   // Prepend modifiers as a chord (shift is implied by QEMU for shifted symbols,
   // so only ctrl/alt are forwarded to avoid double-shift artifacts).
   const mods = [];
-  if (ev.ctrlKey) mods.push('ctrl');
-  if (ev.altKey) mods.push('alt');
+  if (ev.ctrlKey) {
+    mods.push('ctrl');
+  }
+  if (ev.altKey) {
+    mods.push('alt');
+  }
   return mods.length ? `${mods.join('-')}-${name}` : name;
 }
 
@@ -304,27 +377,47 @@ function _mapBrowserKey(ev) {
  * a `buttons` bitmask). No runner, gate off, or unmapped key → silent no-op.
  */
 function handleKhyosDesktopInput(session, msg) {
-  if (!_webDesktopInputEnabled()) return;
+  if (!_webDesktopInputEnabled()) {
+    return;
+  }
   const runner = session && session.khyosRunner;
-  if (!runner) return;
-  if (!msg || typeof msg !== 'object') return;
+  if (!runner) {
+    return;
+  }
+  if (!msg || typeof msg !== 'object') {
+    return;
+  }
 
   if (msg.kind === 'key') {
     const name = _mapBrowserKey(msg);
-    if (!name) return;
+    if (!name) {
+      return;
+    }
     if (typeof runner.sendKey === 'function') {
-      runner.sendKey(name).catch(() => { /* dropped keystroke, non-fatal */ });
+      runner.sendKey(name).catch(() => {
+        /* dropped keystroke, non-fatal */
+      });
     }
     return;
   }
 
   if (msg.kind === 'mouse') {
-    if (typeof runner.sendMouse !== 'function') return;
+    if (typeof runner.sendMouse !== 'function') {
+      return;
+    }
     const move = {};
-    if (Number.isFinite(msg.dx)) move.dx = msg.dx;
-    if (Number.isFinite(msg.dy)) move.dy = msg.dy;
-    if (Number.isFinite(msg.buttons)) move.buttons = msg.buttons;
-    runner.sendMouse(move).catch(() => { /* dropped input, non-fatal */ });
+    if (Number.isFinite(msg.dx)) {
+      move.dx = msg.dx;
+    }
+    if (Number.isFinite(msg.dy)) {
+      move.dy = msg.dy;
+    }
+    if (Number.isFinite(msg.buttons)) {
+      move.buttons = msg.buttons;
+    }
+    runner.sendMouse(move).catch(() => {
+      /* dropped input, non-fatal */
+    });
     return;
   }
   // Unknown kind → ignore (forward-compatible with future input kinds).
@@ -341,73 +434,139 @@ function _webLocalActionsEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_WEB_LOCAL_ACTIONS', e);
     }
-  } catch { /* registry unavailable → local fallback */ }
+  } catch {
+    /* registry unavailable → local fallback */
+  }
   const v = e.KHY_WEB_LOCAL_ACTIONS;
   return !(v !== undefined && _WEB_ACTION_FALSY.has(String(v).trim().toLowerCase()));
 }
 
 function _mdWysiwygEnabled() {
-  try { return require('./flagRegistry').isFlagEnabled('KHY_MD_WYSIWYG'); }
-  catch { return true; } // 保守:注册表不可用视为开(与 md.js flagOn 同 default-on 语义)。
+  try {
+    return require('./flagRegistry').isFlagEnabled('KHY_MD_WYSIWYG');
+  } catch {
+    return true;
+  } // 保守:注册表不可用视为开(与 md.js flagOn 同 default-on 语义)。
 }
 
 function handleKhyosTrayStart(session, msg) {
   if (!_webLocalActionsEnabled()) {
-    return wsSend(session, { type: 'khyos_tray_status', status: 'disabled', message: '本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)' });
+    return wsSend(session, {
+      type: 'khyos_tray_status',
+      status: 'disabled',
+      message: '本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)',
+    });
   }
   let spawn;
-  try { ({ spawn } = require('child_process')); }
-  catch (err) { return wsSend(session, { type: 'khyos_tray_status', status: 'error', message: '子进程不可用: ' + err.message }); }
+  try {
+    ({ spawn } = require('child_process'));
+  } catch (err) {
+    return wsSend(session, {
+      type: 'khyos_tray_status',
+      status: 'error',
+      message: '子进程不可用: ' + err.message,
+    });
+  }
   try {
     // 与 CLI `khy tray --detach` 同 SSOT:后台 detached 拉起托盘,立即 unref 返回,不占 WS 会话。
-    const child = spawn('khy', ['tray', '--detach'], { detached: true, stdio: 'ignore', windowsHide: true });
+    const child = spawn('khy', ['tray', '--detach'], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
     child.on('error', (err) => {
-      wsSend(session, { type: 'khyos_tray_status', status: 'error', message: '托盘启动失败: ' + ((err && err.message) || String(err)) });
+      wsSend(session, {
+        type: 'khyos_tray_status',
+        status: 'error',
+        message: '托盘启动失败: ' + ((err && err.message) || String(err)),
+      });
     });
     child.unref();
     wsSend(session, { type: 'khyos_tray_status', status: 'starting', message: '系统托盘启动中…' });
   } catch (err) {
-    wsSend(session, { type: 'khyos_tray_status', status: 'error', message: '托盘启动失败: ' + ((err && err.message) || String(err)) });
+    wsSend(session, {
+      type: 'khyos_tray_status',
+      status: 'error',
+      message: '托盘启动失败: ' + ((err && err.message) || String(err)),
+    });
   }
 }
 
 async function handleKhyosMdOpen(session, msg) {
   if (!_webLocalActionsEnabled()) {
-    return wsSend(session, { type: 'khyos_md_status', status: 'disabled', message: '本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)' });
+    return wsSend(session, {
+      type: 'khyos_md_status',
+      status: 'disabled',
+      message: '本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)',
+    });
   }
   const path = require('path');
   const fs = require('fs');
   let toolsDir;
-  try { toolsDir = require('../cli/handlers/md').resolveToolsDir(); }
-  catch (err) { return wsSend(session, { type: 'khyos_md_status', status: 'error', message: 'md 处理器不可用: ' + err.message }); }
+  try {
+    toolsDir = require('../cli/handlers/md').resolveToolsDir();
+  } catch (err) {
+    return wsSend(session, {
+      type: 'khyos_md_status',
+      status: 'error',
+      message: 'md 处理器不可用: ' + err.message,
+    });
+  }
   if (!toolsDir) {
-    return wsSend(session, { type: 'khyos_md_status', status: 'error', message: '未找到 khyosMarkdown 工具目录(tools/khyos-markdown)' });
+    return wsSend(session, {
+      type: 'khyos_md_status',
+      status: 'error',
+      message: '未找到 khyosMarkdown 工具目录(tools/khyos-markdown)',
+    });
   }
   let bridge;
-  try { bridge = require(path.join(toolsDir, 'khyos-md-bridge.js')); }
-  catch (err) { return wsSend(session, { type: 'khyos_md_status', status: 'error', message: '加载桥接器失败: ' + err.message }); }
+  try {
+    bridge = require(path.join(toolsDir, 'khyos-md-bridge.js'));
+  } catch (err) {
+    return wsSend(session, {
+      type: 'khyos_md_status',
+      status: 'error',
+      message: '加载桥接器失败: ' + err.message,
+    });
+  }
 
   // 目标默认为项目根 khy.md,大小写兜底 KHY.md;均缺则以空白工作台打开(与 CLI openEditor 同语义)。
   const base = process.env.KHYQUANT_CWD || process.cwd();
-  const rel = (msg && typeof msg.path === 'string' && msg.path.trim()) ? msg.path.trim() : 'khy.md';
+  const rel = msg && typeof msg.path === 'string' && msg.path.trim() ? msg.path.trim() : 'khy.md';
   let abs = path.resolve(base, rel);
   try {
     if (!fs.existsSync(abs) && rel.toLowerCase() === 'khy.md') {
       const alt = path.resolve(base, 'KHY.md');
-      if (fs.existsSync(alt)) abs = alt;
+      if (fs.existsSync(alt)) {
+        abs = alt;
+      }
     }
-  } catch { /* fs probe fail-soft — 交给桥接器按空白处理 */ }
+  } catch {
+    /* fs probe fail-soft — 交给桥接器按空白处理 */
+  }
 
   try {
     // 常驻桥接器(autoShutdown:false):由 WS 会话/宿主生命周期管理,浏览器标签开合不牵连服务存活。
-    const handle = await bridge.startBridge({ targetPath: abs, wysiwyg: _mdWysiwygEnabled(), autoShutdown: false });
+    const handle = await bridge.startBridge({
+      targetPath: abs,
+      wysiwyg: _mdWysiwygEnabled(),
+      autoShutdown: false,
+    });
     wsSend(session, { type: 'khyos_md_status', status: 'ready', url: handle.url, path: abs });
   } catch (err) {
-    wsSend(session, { type: 'khyos_md_status', status: 'error', message: '启动 Markdown 工作台失败: ' + ((err && err.message) || String(err)) });
+    wsSend(session, {
+      type: 'khyos_md_status',
+      status: 'error',
+      message: '启动 Markdown 工作台失败: ' + ((err && err.message) || String(err)),
+    });
   }
 }
 
@@ -419,7 +578,9 @@ async function handleKhyosMdOpen(session, msg) {
 
 /** 任务对象 → 精简线格式(只出 UI 需要的安全字段,绝不外泄 payload 内部结构/密钥形态)。 */
 function _toWireTask(t) {
-  if (!t || typeof t !== 'object') return null;
+  if (!t || typeof t !== 'object') {
+    return null;
+  }
   return {
     id: String(t.id == null ? '' : t.id),
     subject: String(t.subject || ''),
@@ -432,7 +593,12 @@ function _toWireTask(t) {
 
 function handleKhyosTasksGet(session, msg) {
   if (!_webLocalActionsEnabled()) {
-    return wsSend(session, { type: 'khyos_tasks', status: 'disabled', tasks: [], message: '本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)' });
+    return wsSend(session, {
+      type: 'khyos_tasks',
+      status: 'disabled',
+      tasks: [],
+      message: '本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)',
+    });
   }
   let tasks = [];
   try {
@@ -440,7 +606,12 @@ function handleKhyosTasksGet(session, msg) {
     const raw = typeof store.list === 'function' ? store.list() : [];
     tasks = (Array.isArray(raw) ? raw : []).map(_toWireTask).filter(Boolean);
   } catch (err) {
-    return wsSend(session, { type: 'khyos_tasks', status: 'error', tasks: [], message: '读取任务记录失败: ' + ((err && err.message) || String(err)) });
+    return wsSend(session, {
+      type: 'khyos_tasks',
+      status: 'error',
+      tasks: [],
+      message: '读取任务记录失败: ' + ((err && err.message) || String(err)),
+    });
   }
   return wsSend(session, { type: 'khyos_tasks', status: 'ok', tasks });
 }

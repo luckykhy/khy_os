@@ -11,13 +11,23 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
+
 const { getColorDepth, adaptColor } = require('./palette');
 
 const THEMES_DIR = path.join(__dirname, 'themes');
-const PREFS_FILE = path.join(os.homedir(), '.khyquant', 'preferences.json');
-const CUSTOM_THEME_FILE = path.join(os.homedir(), '.khyquant', 'theme.json');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const PREFS_FILE = path.join(_appHome(), 'preferences.json');
+const CUSTOM_THEME_FILE = path.join(_appHome(), 'theme.json');
 
 // ── State ──
 
@@ -30,7 +40,9 @@ let _initialized = false;
 let _defaultTheme = null;
 
 function _getDefaultTheme() {
-  if (_defaultTheme) return _defaultTheme;
+  if (_defaultTheme) {
+    return _defaultTheme;
+  }
   try {
     _defaultTheme = JSON.parse(fs.readFileSync(path.join(THEMES_DIR, 'default.json'), 'utf8'));
   } catch {
@@ -38,16 +50,85 @@ function _getDefaultTheme() {
     _defaultTheme = {
       meta: { name: 'default', label: 'Default', description: 'Built-in fallback' },
       colors: {
-        claude: '#D77757', success: '#4EBA65', error: '#FF6B80', warning: '#FFC107',
-        text: '#FFFFFF', secondaryText: '#A9A9A9', subtle: '#505050', bashBorder: '#6B7280', bashBg: '#2A2A2A',
-        permission: '#FFC107', link: '#6495ED', diffAdded: '#225C2B', diffRemoved: '#7A2936',
-        diffAddedDimmed: '#475E4A', diffRemovedDimmed: '#69484D', diffAddedWord: '#38A660',
-        diffRemovedWord: '#B3596B', permissionPurple: '#B388FF', userMessageBg: '#262626',
+        claude: '#D77757',
+        success: '#4EBA65',
+        error: '#FF6B80',
+        warning: '#FFC107',
+        text: '#FFFFFF',
+        secondaryText: '#A9A9A9',
+        subtle: '#505050',
+        bashBorder: '#6B7280',
+        bashBg: '#2A2A2A',
+        permission: '#FFC107',
+        link: '#6495ED',
+        diffAdded: '#225C2B',
+        diffRemoved: '#7A2936',
+        diffAddedDimmed: '#475E4A',
+        diffRemovedDimmed: '#69484D',
+        diffAddedWord: '#38A660',
+        diffRemovedWord: '#B3596B',
+        permissionPurple: '#B388FF',
+        userMessageBg: '#262626',
       },
-      spinnerChars: { darwin: ['●','✢','✳','✶','✻','✽'], fallback: ['●','*','+','×','+','*'] },
-      thinkingVerbs: ['Thinking','Reasoning','Inferring','Analyzing','Considering','Evaluating','Reflecting','Pondering','Processing','Pollinating'],
-      phaseLabels: { init:'Initializing', security:'Security check', preprocess:'Preprocessing', request:'Thinking', thinking:'Thinking', analyzing:'Analyzing', generating:'Generating', tools:'Running tools', explore:'Searching', reading:'Reading', writing:'Writing', tool:'Running tool', done:'Done' },
-      toolDisplayNames: { bash:'Bash', shell:'Bash', shellcommand:'Bash', command:'Bash', read:'Read', readfile:'Read', write:'Write', writefile:'Write', createfile:'Write', edit:'Update', editfile:'Update', multiedit:'Update', notebookedit:'Update', glob:'Search', grep:'Search', find:'Search', findfiles:'Search', search:'Search', searchcontent:'Search', websearch:'Search', webfetch:'Fetch', todowrite:'Todo', notebookread:'Read', agent:'Agent', task:'Task', ls:'Search' },
+      spinnerChars: {
+        darwin: ['●', '✢', '✳', '✶', '✻', '✽'],
+        fallback: ['●', '*', '+', '×', '+', '*'],
+      },
+      thinkingVerbs: [
+        'Thinking',
+        'Reasoning',
+        'Inferring',
+        'Analyzing',
+        'Considering',
+        'Evaluating',
+        'Reflecting',
+        'Pondering',
+        'Processing',
+        'Pollinating',
+      ],
+      phaseLabels: {
+        init: 'Initializing',
+        security: 'Security check',
+        preprocess: 'Preprocessing',
+        request: 'Thinking',
+        thinking: 'Thinking',
+        analyzing: 'Analyzing',
+        generating: 'Generating',
+        tools: 'Running tools',
+        explore: 'Searching',
+        reading: 'Reading',
+        writing: 'Writing',
+        tool: 'Running tool',
+        done: 'Done',
+      },
+      toolDisplayNames: {
+        bash: 'Bash',
+        shell: 'Bash',
+        shellcommand: 'Bash',
+        command: 'Bash',
+        read: 'Read',
+        readfile: 'Read',
+        write: 'Write',
+        writefile: 'Write',
+        createfile: 'Write',
+        edit: 'Update',
+        editfile: 'Update',
+        multiedit: 'Update',
+        notebookedit: 'Update',
+        glob: 'Search',
+        grep: 'Search',
+        find: 'Search',
+        findfiles: 'Search',
+        search: 'Search',
+        searchcontent: 'Search',
+        websearch: 'Search',
+        webfetch: 'Fetch',
+        todowrite: 'Todo',
+        notebookread: 'Read',
+        agent: 'Agent',
+        task: 'Task',
+        ls: 'Search',
+      },
     };
   }
   return _defaultTheme;
@@ -61,21 +142,27 @@ function _getDefaultTheme() {
  * Reads saved preference for active theme.
  */
 function init() {
-  if (_initialized) return;
+  if (_initialized) {
+    return;
+  }
   _initialized = true;
 
   // Load built-in themes
   try {
-    const files = fs.readdirSync(THEMES_DIR).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(THEMES_DIR).filter((f) => f.endsWith('.json'));
     for (const file of files) {
       try {
         const theme = JSON.parse(fs.readFileSync(path.join(THEMES_DIR, file), 'utf8'));
         if (theme.meta && theme.meta.name) {
           _themes.set(theme.meta.name, theme);
         }
-      } catch { /* skip corrupt theme files */ }
+      } catch {
+        /* skip corrupt theme files */
+      }
     }
-  } catch { /* themes dir missing */ }
+  } catch {
+    /* themes dir missing */
+  }
 
   // Load custom user theme
   try {
@@ -85,7 +172,9 @@ function init() {
         _themes.set(custom.meta.name, custom);
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Ensure default always exists
   if (!_themes.has('default')) {
@@ -100,7 +189,9 @@ function init() {
         _activeName = prefs.theme;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -109,7 +200,9 @@ function init() {
  * @returns {object} Theme with { meta, colors, spinnerChars, thinkingVerbs, phaseLabels, toolDisplayNames }
  */
 function getTheme() {
-  if (!_initialized) init();
+  if (!_initialized) {
+    init();
+  }
   return _themes.get(_activeName) || _getDefaultTheme();
 }
 
@@ -120,21 +213,33 @@ function getTheme() {
  * @returns {boolean} true if switched successfully
  */
 function setTheme(name) {
-  if (!_initialized) init();
-  if (!_themes.has(name)) return false;
+  if (!_initialized) {
+    init();
+  }
+  if (!_themes.has(name)) {
+    return false;
+  }
 
   _activeName = name;
 
   // Persist preference
   try {
     const dir = path.dirname(PREFS_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
 
     let prefs = {};
-    try { prefs = JSON.parse(fs.readFileSync(PREFS_FILE, 'utf8')); } catch { /* new file */ }
+    try {
+      prefs = JSON.parse(fs.readFileSync(PREFS_FILE, 'utf8'));
+    } catch {
+      /* new file */
+    }
     prefs.theme = name;
     fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
-  } catch { /* persistence is best-effort */ }
+  } catch {
+    /* persistence is best-effort */
+  }
 
   return true;
 }
@@ -144,7 +249,9 @@ function setTheme(name) {
  * @returns {Array<{ name: string, label: string, description: string, active: boolean }>}
  */
 function listThemes() {
-  if (!_initialized) init();
+  if (!_initialized) {
+    init();
+  }
   const result = [];
   for (const [name, theme] of _themes) {
     result.push({
@@ -166,10 +273,12 @@ function listThemes() {
  */
 function color(key) {
   const theme = getTheme();
-  const hex = (theme.colors && theme.colors[key]) || (() => {
-    const def = _getDefaultTheme();
-    return (def.colors && def.colors[key]) || '#FFFFFF';
-  })();
+  const hex =
+    (theme.colors && theme.colors[key]) ||
+    (() => {
+      const def = _getDefaultTheme();
+      return (def.colors && def.colors[key]) || '#FFFFFF';
+    })();
   return hex;
 }
 
@@ -188,7 +297,9 @@ function colorAdapted(key) {
  * @returns {string}
  */
 function getActiveName() {
-  if (!_initialized) init();
+  if (!_initialized) {
+    init();
+  }
   return _activeName;
 }
 

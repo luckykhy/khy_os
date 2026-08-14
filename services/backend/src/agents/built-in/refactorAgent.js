@@ -77,10 +77,7 @@ const REFACTOR_AGENT = {
     '重构专家：用于代码重构、模式改进、技术债清理。传入需要重构的代码/模块/模式问题，它会提取公共模块、消除重复、简化复杂逻辑、对齐模式——同时保证不改变可观察行为。有完整编辑权限，每步重构后验证测试通过。',
   color: 'cyan',
   background: true,
-  disallowedTools: [
-    AGENT_TOOL_NAME,
-    EXIT_PLAN_MODE_TOOL_NAME,
-  ],
+  disallowedTools: [AGENT_TOOL_NAME, EXIT_PLAN_MODE_TOOL_NAME],
   source: 'built-in',
   baseDir: 'built-in',
   model: 'inherit',

@@ -79,7 +79,7 @@ function parsePlanFromResponse(text) {
   };
 
   // Extract numbered steps
-  const stepPattern = /(?:^|\n)\s*(\d+)[.、）)]\s*(.+)/g;
+  const stepPattern = /(?:^|\n)\s*(\d+)[.、）)]\s*(.+)/gm;
   const matches = [...text.matchAll(stepPattern)];
   for (const m of matches) {
     plan.steps.push({
@@ -93,21 +93,21 @@ function parsePlanFromResponse(text) {
   const dataSection = text.match(/需要的数据[\s\S]*?(?=##|$)/);
   if (dataSection) {
     const dataItems = [...dataSection[0].matchAll(/[-•]\s*(.+)/g)];
-    plan.dataNeeds = dataItems.map(m => m[1].trim());
+    plan.dataNeeds = dataItems.map((m) => m[1].trim());
   }
 
   // Extract expected outputs section
   const outputSection = text.match(/预计输出[\s\S]*?(?=##|$)/);
   if (outputSection) {
     const outputItems = [...outputSection[0].matchAll(/[-•]\s*(.+)/g)];
-    plan.expectedOutputs = outputItems.map(m => m[1].trim());
+    plan.expectedOutputs = outputItems.map((m) => m[1].trim());
   }
 
   // Extract risks section
   const riskSection = text.match(/风险[\s\S]*?(?=##|$)/);
   if (riskSection) {
     const riskItems = [...riskSection[0].matchAll(/[-•]\s*(.+)/g)];
-    plan.risks = riskItems.map(m => m[1].trim());
+    plan.risks = riskItems.map((m) => m[1].trim());
   }
 
   return plan;
@@ -130,26 +130,31 @@ async function presentForApproval(plan, renderer, rl) {
 
   // Show data needs and risks if present
   let _chalk;
-  const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+  const c = () => (_chalk ??= require('chalk').default || require('chalk'));
 
   if (plan.dataNeeds.length > 0) {
     console.log('');
     console.log(c().dim('  需要的数据:'));
-    plan.dataNeeds.forEach(d => console.log(c().dim(`    • ${d}`)));
+    plan.dataNeeds.forEach((d) => console.log(c().dim(`    • ${d}`)));
   }
 
   if (plan.risks.length > 0) {
     console.log('');
     console.log(c().yellow('  风险提示:'));
-    plan.risks.forEach(r => console.log(c().yellow(`    ⚠ ${r}`)));
+    plan.risks.forEach((r) => console.log(c().yellow(`    ⚠ ${r}`)));
   }
 
   console.log('');
-  console.log(c().cyan('  操作: ') +
-    c().white('Enter') + c().dim(' 确认执行 · ') +
-    c().white('skip N') + c().dim(' 跳过步骤 · ') +
-    c().white('edit N 描述') + c().dim(' 修改步骤 · ') +
-    c().white('n') + c().dim(' 取消')
+  console.log(
+    c().cyan('  操作: ') +
+      c().white('Enter') +
+      c().dim(' 确认执行 · ') +
+      c().white('skip N') +
+      c().dim(' 跳过步骤 · ') +
+      c().white('edit N 描述') +
+      c().dim(' 修改步骤 · ') +
+      c().white('n') +
+      c().dim(' 取消')
   );
 
   return new Promise((resolve) => {
@@ -196,7 +201,9 @@ async function presentForApproval(plan, renderer, rl) {
             status: 'pending',
           });
           // Re-number
-          plan.steps.forEach((s, i) => { s.id = i + 1; });
+          plan.steps.forEach((s, i) => {
+            s.id = i + 1;
+          });
           modifications.push(`Added step after ${addMatch[1]}`);
         }
       }
@@ -226,7 +233,7 @@ async function executePlanSteps(plan, opts) {
   const planTracker = new renderer.TaskPlanTracker();
 
   // Add all non-skipped steps
-  const activeSteps = plan.steps.filter(s => s.status !== 'skipped');
+  const activeSteps = plan.steps.filter((s) => s.status !== 'skipped');
   for (const step of activeSteps) {
     planTracker.addTask(step.description);
   }

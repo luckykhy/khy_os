@@ -255,7 +255,7 @@ test('_CONCERN_POLICY 每条 autonomy 合法、order 为正数', () => {
 
 test('方案说明 OPS-MAN-075 已落盘且与生成器输出一致(防手改漂移)', () => {
   const fs = require('node:fs');
-  const { buildDoc, DOC_PATH } = require('../restore-plan');
+  const { buildDoc, DOC_PATH } = require('../restore/restore-plan');
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   const generated = buildDoc();
   assert.strictEqual(

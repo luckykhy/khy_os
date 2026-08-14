@@ -10,9 +10,10 @@
  * 匹配逻辑集中在此，签名声明集中在 formatRegistry，二者分离（数据/代码分离）。
  */
 
-const fs = require('fs');
 const crypto = require('crypto');
+const fs = require('fs');
 const path = require('path');
+
 const registry = require('./formatRegistry');
 
 /** 读头部用于签名匹配的字节数（覆盖最深签名 tar@257 + 余量）。 */
@@ -24,9 +25,13 @@ const MARKER_HEAD_BYTES = 256 * 1024;
 
 /** 单个签名条目是否在 buffer 指定偏移命中。 */
 function _matchSignature(buf, sig) {
-  if (!sig || !Buffer.isBuffer(sig.bytes)) return false;
+  if (!sig || !Buffer.isBuffer(sig.bytes)) {
+    return false;
+  }
   const end = sig.offset + sig.bytes.length;
-  if (buf.length < end) return false;
+  if (buf.length < end) {
+    return false;
+  }
   return buf.compare(sig.bytes, 0, sig.bytes.length, sig.offset, end) === 0;
 }
 
@@ -37,10 +42,14 @@ function _matchSignature(buf, sig) {
  * 判据：major 版本字节(offset 6-7)落在合理 class 区间 → class；否则按 fat-macho。
  */
 function _disambiguateCafebabe(buf) {
-  if (buf.length < 8) return 'java-class';
+  if (buf.length < 8) {
+    return 'java-class';
+  }
   const major = buf.readUInt16BE(6);
   // Java class major: 45 (JDK1.1) ~ 70+ (现代)。fat-macho 此处是 nfat_arch，通常 <16。
-  if (major >= 45 && major <= 200) return 'java-class';
+  if (major >= 45 && major <= 200) {
+    return 'java-class';
+  }
   return 'macho';
 }
 
@@ -52,7 +61,11 @@ function _detectArch(formatId, buf) {
       const little = buf[5] === 1;
       const machine = buf.readUInt16LE(18); // e_machine (LE 常见)
       const MACHINE = { 0x3e: 'x86-64', 0x03: 'x86', 0xb7: 'arm64', 0x28: 'arm', 0xf3: 'riscv' };
-      return { bits: cls, endian: little ? 'little' : 'big', arch: MACHINE[machine] || `machine:${machine}` };
+      return {
+        bits: cls,
+        endian: little ? 'little' : 'big',
+        arch: MACHINE[machine] || `machine:${machine}`,
+      };
     }
     if (formatId === 'pe' && buf.length >= 0x40) {
       // PE: e_lfanew at 0x3C → COFF Machine 2 字节
@@ -60,15 +73,20 @@ function _detectArch(formatId, buf) {
       if (peOff + 6 <= buf.length && buf.toString('ascii', peOff, peOff + 4) === 'PE\0\0') {
         const machine = buf.readUInt16LE(peOff + 4);
         const MACHINE = { 0x8664: 'x86-64', 0x14c: 'x86', 0xaa64: 'arm64', 0x1c0: 'arm' };
-        return { bits: machine === 0x8664 || machine === 0xaa64 ? 64 : 32, arch: MACHINE[machine] || `machine:${machine}` };
+        return {
+          bits: machine === 0x8664 || machine === 0xaa64 ? 64 : 32,
+          arch: MACHINE[machine] || `machine:${machine}`,
+        };
       }
     }
     if (formatId === 'macho' && buf.length >= 8) {
       const m32 = buf.readUInt32BE(0);
-      const bits = (m32 === 0xfeedfacf || m32 === 0xcffaedfe) ? 64 : 32;
+      const bits = m32 === 0xfeedfacf || m32 === 0xcffaedfe ? 64 : 32;
       return { bits, arch: 'macho' };
     }
-  } catch { /* 头部畸形：架构留空，绝不抛 */ }
+  } catch {
+    /* 头部畸形：架构留空，绝不抛 */
+  }
   return {};
 }
 
@@ -89,7 +107,7 @@ function scanFileSync(filePath) {
     label: 'Unknown / opaque bytes',
     ext: path.extname(filePath || '').toLowerCase(),
     arch: {},
-    markers: [],     // 命中的嵌入标记 id 列表
+    markers: [], // 命中的嵌入标记 id 列表
     candidateTools: [],
     note: '',
   };
@@ -100,7 +118,9 @@ function scanFileSync(filePath) {
   } catch {
     return result; // 不存在/不可读：exists=false
   }
-  if (!stat.isFile()) return result;
+  if (!stat.isFile()) {
+    return result;
+  }
   result.exists = true;
   result.sizeBytes = stat.size;
 
@@ -124,7 +144,9 @@ function scanFileSync(filePath) {
         pos += n;
       }
       result.sha256 = hash.digest('hex');
-    } catch { /* 哈希失败不致命 */ }
+    } catch {
+      /* 哈希失败不致命 */
+    }
 
     // 头部签名匹配。
     const head = Buffer.alloc(Math.min(HEADER_BYTES, stat.size || HEADER_BYTES));
@@ -170,22 +192,33 @@ function scanFileSync(filePath) {
       }
     }
     for (const marker of registry.EMBEDDED_MARKERS) {
-      if (marker.appliesTo && marker.appliesTo !== 'any' && marker.appliesTo !== result.format) continue;
+      if (marker.appliesTo && marker.appliesTo !== 'any' && marker.appliesTo !== result.format) {
+        continue;
+      }
       const probes = [marker.contentMarker, ...(marker.altMarkers || [])].filter(Buffer.isBuffer);
       const hit = markerBufs.some((b) => probes.some((p) => b.includes(p)));
       if (hit) {
         result.markers.push(marker.id);
         // 嵌入标记可升级可还原档位（如裸 ELF + PyInstaller → SOURCE）。
-        if (marker.recoverability && _isStrongerRecoverability(marker.recoverability, result.recoverability)) {
+        if (
+          marker.recoverability &&
+          _isStrongerRecoverability(marker.recoverability, result.recoverability)
+        ) {
           result.recoverability = marker.recoverability;
           result.family = marker.family;
           result.label = `${result.label} · ${marker.label}`;
         }
-        result.candidateTools = Array.from(new Set([...result.candidateTools, ...(marker.tools || [])]));
+        result.candidateTools = Array.from(
+          new Set([...result.candidateTools, ...(marker.tools || [])])
+        );
       }
     }
   } finally {
-    try { fs.closeSync(fd); } catch { /* noop */ }
+    try {
+      fs.closeSync(fd);
+    } catch {
+      /* noop */
+    }
   }
 
   return result;

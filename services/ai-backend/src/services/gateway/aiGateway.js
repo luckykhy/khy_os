@@ -30,10 +30,13 @@ function classifyError(status, message = '') {
   if (status >= 500 && status < 600) return 'server_error';
 
   const msg = (message || '').toLowerCase();
-  if (msg.includes('etimedout') || msg.includes('timeout') || msg.includes('aborted')) return 'timeout';
-  if (msg.includes('econnrefused') || msg.includes('enotfound') || msg.includes('network')) return 'network';
+  if (msg.includes('etimedout') || msg.includes('timeout') || msg.includes('aborted'))
+    return 'timeout';
+  if (msg.includes('econnrefused') || msg.includes('enotfound') || msg.includes('network'))
+    return 'network';
   if (msg.includes('rate') && msg.includes('limit')) return 'rate_limit';
-  if (msg.includes('unauthorized') || /invalid.*key/i.test(msg) || msg.includes('api key')) return 'auth';
+  if (msg.includes('unauthorized') || /invalid.*key/i.test(msg) || msg.includes('api key'))
+    return 'auth';
 
   return 'unknown';
 }
@@ -58,9 +61,9 @@ class AIGateway {
     this._initialized = false;
     this._initPromise = null;
     // Anti-ban: token bucket rate limiter (per adapter)
-    this._requestLog = {};          // key → timestamps of recent requests
-    this._consecutiveFailures = 0;  // for exponential backoff
-    this._lastRefreshTime = 0;      // last adapter re-detection time
+    this._requestLog = {}; // key → timestamps of recent requests
+    this._consecutiveFailures = 0; // for exponential backoff
+    this._lastRefreshTime = 0; // last adapter re-detection time
     // Local adapters that don't need rate limiting
     this._localAdapters = new Set(['ollama']);
   }
@@ -103,19 +106,19 @@ class AIGateway {
     const log = this._requestLog[adapterKey];
 
     // Clean old entries
-    this._requestLog[adapterKey] = log.filter(t => now - t < WINDOW_MS);
+    this._requestLog[adapterKey] = log.filter((t) => now - t < WINDOW_MS);
 
     if (this._requestLog[adapterKey].length >= MAX_REQUESTS) {
       // Wait until oldest request expires + random jitter
-      const waitMs = (this._requestLog[adapterKey][0] + WINDOW_MS - now) + Math.random() * 2000;
-      await new Promise(r => setTimeout(r, Math.max(100, waitMs)));
+      const waitMs = this._requestLog[adapterKey][0] + WINDOW_MS - now + Math.random() * 2000;
+      await new Promise((r) => setTimeout(r, Math.max(100, waitMs)));
     }
 
     // Exponential backoff on consecutive failures
     if (this._consecutiveFailures > 0) {
       const backoffMs = Math.min(30000, 1000 * Math.pow(2, this._consecutiveFailures - 1));
       const jitter = Math.random() * backoffMs * 0.5;
-      await new Promise(r => setTimeout(r, backoffMs + jitter));
+      await new Promise((r) => setTimeout(r, backoffMs + jitter));
     }
 
     this._requestLog[adapterKey].push(Date.now());
@@ -133,23 +136,22 @@ class AIGateway {
   }
 
   async _doInit() {
-
     // Respect environment toggles
     if (process.env.GATEWAY_CLI_ENABLED === 'false') {
-      this._adapters.find(a => a.key === 'cli').enabled = false;
+      this._adapters.find((a) => a.key === 'cli').enabled = false;
     }
     if (process.env.GATEWAY_OLLAMA_ENABLED === 'false') {
-      this._adapters.find(a => a.key === 'ollama').enabled = false;
+      this._adapters.find((a) => a.key === 'ollama').enabled = false;
     }
     if (process.env.GATEWAY_RELAY_ENABLED === 'false') {
-      this._adapters.find(a => a.key === 'relay').enabled = false;
+      this._adapters.find((a) => a.key === 'relay').enabled = false;
     }
 
     // Respect IDE adapter toggles
     for (const ideKey of ['kiro', 'cursor', 'trae', 'claude', 'codex', 'windsurf', 'vscode']) {
       const envKey = `GATEWAY_${ideKey.toUpperCase()}_ENABLED`;
       if (process.env[envKey] === 'false') {
-        const entry = this._adapters.find(a => a.key === ideKey);
+        const entry = this._adapters.find((a) => a.key === ideKey);
         if (entry) entry.enabled = false;
       }
     }
@@ -182,14 +184,29 @@ class AIGateway {
 
     // AI Monitor: start trace
     const monitor = require('../aiMonitor');
-    const traceId = monitor.startTrace({ prompt, model: options.model, adapter: options.adapter, options });
+    const traceId = monitor.startTrace({
+      prompt,
+      model: options.model,
+      adapter: options.adapter,
+      options,
+    });
 
     // Plugin Chain: onBeforeRequest
     const pluginChain = require('./pluginChain');
-    let pluginCtx = await pluginChain.executeBeforeRequest({ prompt, options, adapter: null, cancelled: false });
+    let pluginCtx = await pluginChain.executeBeforeRequest({
+      prompt,
+      options,
+      adapter: null,
+      cancelled: false,
+    });
     if (pluginCtx.cancelled) {
       monitor.endTrace(traceId, null, { error: 'Cancelled by plugin' });
-      return { success: false, content: 'Request cancelled by gateway plugin', provider: 'plugin', attempts: [] };
+      return {
+        success: false,
+        content: 'Request cancelled by gateway plugin',
+        provider: 'plugin',
+        attempts: [],
+      };
     }
     prompt = pluginCtx.prompt || prompt;
     options = pluginCtx.options || options;
@@ -202,7 +219,9 @@ class AIGateway {
         monitor.endTrace(traceId, appLaunchResult, {});
         return appLaunchResult;
       }
-    } catch { /* interceptor load failure — continue to adapter cascade */ }
+    } catch {
+      /* interceptor load failure — continue to adapter cascade */
+    }
 
     // ── Per-user upstream override (multi-tenant data plane) ──────────
     // When an explicit apiEndpoint is supplied (by the proxy from a resolved
@@ -213,15 +232,25 @@ class AIGateway {
     // served by global keys. Absent options.apiEndpoint this block is inert
     // and the cascade below is byte-identical to before.
     if (options.apiEndpoint) {
-      const relayEntry = this._adapters.find(a => a.key === 'relay_api' || a.key === 'relay');
+      const relayEntry = this._adapters.find((a) => a.key === 'relay_api' || a.key === 'relay');
       if (relayEntry && relayEntry.adapter) {
         try {
           await this._enforceRateLimit(relayEntry.key);
           const result = await relayEntry.adapter.generate(prompt, { ...options });
           if (result && result.success) {
             this._consecutiveFailures = 0;
-            monitor.endTrace(traceId, { content: result.content, model: result.model, provider: result.provider, tokens: result.tokenUsage });
-            await pluginChain.executeAfterResponse({ prompt, options, response: result, adapter: relayEntry.key });
+            monitor.endTrace(traceId, {
+              content: result.content,
+              model: result.model,
+              provider: result.provider,
+              tokens: result.tokenUsage,
+            });
+            await pluginChain.executeAfterResponse({
+              prompt,
+              options,
+              response: result,
+              adapter: relayEntry.key,
+            });
             return {
               success: true,
               content: result.content,
@@ -232,7 +261,9 @@ class AIGateway {
               attempts: result.attempts || [],
             };
           }
-          monitor.endTrace(traceId, null, { error: (result && result.error) || 'user upstream failed' });
+          monitor.endTrace(traceId, null, {
+            error: (result && result.error) || 'user upstream failed',
+          });
           return {
             success: false,
             content: (result && result.content) || 'User gateway upstream request failed',
@@ -241,7 +272,9 @@ class AIGateway {
             model: (result && result.model) || options.model || null,
             statusCode: result && result.statusCode,
             error: result && result.error,
-            errorType: (result && result.errorType) || classifyError(result && result.statusCode, result && result.error),
+            errorType:
+              (result && result.errorType) ||
+              classifyError(result && result.statusCode, result && result.error),
             attempts: (result && result.attempts) || [],
           };
         } catch (err) {
@@ -282,8 +315,8 @@ class AIGateway {
         options = { ...options, model: autoResult.model || options.model };
         // Reorder to try auto-selected first
         orderedAdapters = [
-          ...this._adapters.filter(a => a.key === autoResult.adapter),
-          ...this._adapters.filter(a => a.key !== autoResult.adapter),
+          ...this._adapters.filter((a) => a.key === autoResult.adapter),
+          ...this._adapters.filter((a) => a.key !== autoResult.adapter),
         ];
       }
     } else if (preferredAdapter) {
@@ -291,8 +324,8 @@ class AIGateway {
         options = { ...options, model: preferredModel };
       }
       orderedAdapters = [
-        ...this._adapters.filter(a => a.key === preferredAdapter),
-        ...this._adapters.filter(a => a.key !== preferredAdapter),
+        ...this._adapters.filter((a) => a.key === preferredAdapter),
+        ...this._adapters.filter((a) => a.key !== preferredAdapter),
       ];
     } else {
       // Habit-based preference: if no env override, use learned preference
@@ -300,12 +333,14 @@ class AIGateway {
       try {
         const { getPreferredModel } = require('../usageHabitService');
         habitPreferred = getPreferredModel('conversation');
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
 
       if (habitPreferred && habitPreferred.adapter) {
         orderedAdapters = [
-          ...this._adapters.filter(a => a.key === habitPreferred.adapter),
-          ...this._adapters.filter(a => a.key !== habitPreferred.adapter),
+          ...this._adapters.filter((a) => a.key === habitPreferred.adapter),
+          ...this._adapters.filter((a) => a.key !== habitPreferred.adapter),
         ];
         if (habitPreferred.model && !options.model) {
           options = { ...options, model: habitPreferred.model };
@@ -331,7 +366,10 @@ class AIGateway {
           const apProvider = options.provider || process.env.DEFAULT_AI_PROVIDER || 'deepseek';
           const maxPoolRetries = 5;
           for (let pi = 0; pi < maxPoolRetries; pi++) {
-            const picked = accountPool.pick(apProvider, { sessionId: options.sessionId, model: options.model });
+            const picked = accountPool.pick(apProvider, {
+              sessionId: options.sessionId,
+              model: options.model,
+            });
             if (!picked) break;
 
             try {
@@ -347,12 +385,25 @@ class AIGateway {
               if (result.success) {
                 accountPool.markSuccess(picked.accountId);
                 this._consecutiveFailures = 0;
-                monitor.endTrace(traceId, { content: result.content, model: result.model, provider: result.provider, tokens: result.tokenUsage });
-                await pluginChain.executeAfterResponse({ prompt, options, response: result, adapter: entry.key });
+                monitor.endTrace(traceId, {
+                  content: result.content,
+                  model: result.model,
+                  provider: result.provider,
+                  tokens: result.tokenUsage,
+                });
+                await pluginChain.executeAfterResponse({
+                  prompt,
+                  options,
+                  response: result,
+                  adapter: entry.key,
+                });
                 return {
                   success: true,
                   content: result.content,
-                  provider: result.provider + (picked.label ? ` [${picked.label}]` : '') + ` (${picked.tier})`,
+                  provider:
+                    result.provider +
+                    (picked.label ? ` [${picked.label}]` : '') +
+                    ` (${picked.tier})`,
                   adapter: result.adapter,
                   model: result.model || null,
                   tokenUsage: result.tokenUsage || null,
@@ -373,7 +424,12 @@ class AIGateway {
                   errorType: result.errorType || classifyError(sc, result.error),
                 });
               }
-              monitor.addCascadeAttempt(traceId, { adapter: entry.key, success: false, error: result.error, model: options.model });
+              monitor.addCascadeAttempt(traceId, {
+                adapter: entry.key,
+                success: false,
+                error: result.error,
+                model: options.model,
+              });
             } catch (err) {
               const sc = err.status || err.statusCode || err.response?.status || 0;
               const errHeaders = err.response?.headers || null;
@@ -385,15 +441,18 @@ class AIGateway {
                 statusCode: sc,
                 errorType: classifyError(sc, err.message),
               });
-              if (![429, 403, 401, 529].includes(sc) && !/rate.?limit|overloaded/i.test(err.message)) {
+              if (
+                ![429, 403, 401, 529].includes(sc) &&
+                !/rate.?limit|overloaded/i.test(err.message)
+              ) {
                 break;
               }
             }
           }
           // Account pool exhausted — notify caller and fall through to standard single-key flow
           if (options.onFallback) {
-            const nextEntry = orderedAdapters.find(a =>
-              a.key !== entry.key && a.enabled && (a.available || a.key === 'relay')
+            const nextEntry = orderedAdapters.find(
+              (a) => a.key !== entry.key && a.enabled && (a.available || a.key === 'relay')
             );
             options.onFallback({
               failedAdapter: entry.adapter.getStatus().name,
@@ -402,7 +461,9 @@ class AIGateway {
               nextAdapter: nextEntry ? nextEntry.adapter.getStatus().name : null,
             });
           }
-        } catch { /* accountPool not available, fall through */ }
+        } catch {
+          /* accountPool not available, fall through */
+        }
       }
 
       // Legacy API Key Pool integration: for relay/api adapters, try multiple keys
@@ -440,8 +501,18 @@ class AIGateway {
               if (result.success) {
                 pool.markSuccess(picked.keyId);
                 this._consecutiveFailures = 0;
-                monitor.endTrace(traceId, { content: result.content, model: result.model, provider: result.provider, tokens: result.tokenUsage });
-                await pluginChain.executeAfterResponse({ prompt, options, response: result, adapter: entry.key });
+                monitor.endTrace(traceId, {
+                  content: result.content,
+                  model: result.model,
+                  provider: result.provider,
+                  tokens: result.tokenUsage,
+                });
+                await pluginChain.executeAfterResponse({
+                  prompt,
+                  options,
+                  response: result,
+                  adapter: entry.key,
+                });
                 return {
                   success: true,
                   content: result.content,
@@ -464,7 +535,12 @@ class AIGateway {
                 statusCode: sc,
                 errorType: result.errorType || classifyError(sc, result.error),
               });
-              monitor.addCascadeAttempt(traceId, { adapter: entry.key, success: false, error: result.error, model: options.model });
+              monitor.addCascadeAttempt(traceId, {
+                adapter: entry.key,
+                success: false,
+                error: result.error,
+                model: options.model,
+              });
               // Continue to next pool key
             } catch (err) {
               if (releaseSlot) releaseSlot();
@@ -479,15 +555,18 @@ class AIGateway {
                 errorType: classifyError(sc, err.message),
               });
               // Continue to next pool key for retryable errors
-              if (![429, 403, 401, 529].includes(sc) && !/rate.?limit|overloaded/i.test(err.message)) {
+              if (
+                ![429, 403, 401, 529].includes(sc) &&
+                !/rate.?limit|overloaded/i.test(err.message)
+              ) {
                 break; // Non-retryable, move to next adapter
               }
             }
           }
           // Pool exhausted for this adapter, notify and move to next adapter
           if (options.onFallback) {
-            const nextEntry = orderedAdapters.find(a =>
-              a.key !== entry.key && a.enabled && (a.available || a.key === 'relay')
+            const nextEntry = orderedAdapters.find(
+              (a) => a.key !== entry.key && a.enabled && (a.available || a.key === 'relay')
             );
             options.onFallback({
               failedAdapter: entry.adapter.getStatus().name,
@@ -498,7 +577,9 @@ class AIGateway {
           }
           continue; // Move to next adapter in cascade
         }
-      } catch { /* pool not available, fall through to normal flow */ }
+      } catch {
+        /* pool not available, fall through to normal flow */
+      }
 
       // Standard single-key flow (no pool or pool not applicable)
       // Attempt with one auto-retry for transient errors
@@ -512,8 +593,18 @@ class AIGateway {
 
           if (result.success) {
             this._consecutiveFailures = 0; // reset on success
-            monitor.endTrace(traceId, { content: result.content, model: result.model, provider: result.provider, tokens: result.tokenUsage });
-            await pluginChain.executeAfterResponse({ prompt, options, response: result, adapter: entry.key });
+            monitor.endTrace(traceId, {
+              content: result.content,
+              model: result.model,
+              provider: result.provider,
+              tokens: result.tokenUsage,
+            });
+            await pluginChain.executeAfterResponse({
+              prompt,
+              options,
+              response: result,
+              adapter: entry.key,
+            });
             return {
               success: true,
               content: result.content,
@@ -537,8 +628,8 @@ class AIGateway {
 
           // Notify caller about fallback (don't silently switch)
           if (options.onFallback) {
-            const nextEntry = orderedAdapters.find(a =>
-              a.key !== entry.key && a.enabled && (a.available || a.key === 'relay')
+            const nextEntry = orderedAdapters.find(
+              (a) => a.key !== entry.key && a.enabled && (a.available || a.key === 'relay')
             );
             options.onFallback({
               failedAdapter: entry.adapter.getStatus().name,
@@ -562,17 +653,22 @@ class AIGateway {
           });
 
           // Auto-retry once for transient errors (rate_limit, server_error, overloaded)
-          if (attempt === 0 && (errorType === 'rate_limit' || errorType === 'server_error' || errorType === 'overloaded')) {
+          if (
+            attempt === 0 &&
+            (errorType === 'rate_limit' ||
+              errorType === 'server_error' ||
+              errorType === 'overloaded')
+          ) {
             const baseDelay = errorType === 'rate_limit' ? 3000 : 1500;
             const jitter = Math.random() * baseDelay * 0.5; // random jitter up to 50%
-            await new Promise(r => setTimeout(r, baseDelay + jitter));
+            await new Promise((r) => setTimeout(r, baseDelay + jitter));
             continue; // retry same adapter
           }
 
           // Notify caller about fallback (don't silently switch)
           if (options.onFallback) {
-            const nextEntry = orderedAdapters.find(a =>
-              a.key !== entry.key && a.enabled && (a.available || a.key === 'relay')
+            const nextEntry = orderedAdapters.find(
+              (a) => a.key !== entry.key && a.enabled && (a.available || a.key === 'relay')
             );
             options.onFallback({
               failedAdapter: entry.adapter.getStatus().name,
@@ -645,7 +741,7 @@ class AIGateway {
     // 1. Check user preference
     const preferred = process.env.GATEWAY_PREFERRED_ADAPTER;
     if (preferred && preferred !== 'auto') {
-      const entry = this._adapters.find(a => a.key === preferred && a.enabled);
+      const entry = this._adapters.find((a) => a.key === preferred && a.enabled);
       if (entry && (entry.available || entry.adapter.detect())) {
         return {
           adapter: preferred,
@@ -660,12 +756,14 @@ class AIGateway {
       const { getPreferredModel } = require('../usageHabitService');
       const habit = getPreferredModel(taskType);
       if (habit && habit.adapter) {
-        const entry = this._adapters.find(a => a.key === habit.adapter && a.enabled);
+        const entry = this._adapters.find((a) => a.key === habit.adapter && a.enabled);
         if (entry && entry.available) {
           return { adapter: habit.adapter, model: habit.model || null, reason: 'learned_habit' };
         }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
 
     // 3. Task-based capability matching
     const TASK_PREFERENCES = {
@@ -678,7 +776,7 @@ class AIGateway {
     const taskOrder = TASK_PREFERENCES[taskType];
     if (taskOrder) {
       for (const key of taskOrder) {
-        const entry = this._adapters.find(a => a.key === key && a.enabled && a.available);
+        const entry = this._adapters.find((a) => a.key === key && a.enabled && a.available);
         if (entry) {
           return { adapter: key, model: null, reason: `best_for_${taskType}` };
         }
@@ -706,7 +804,7 @@ class AIGateway {
   async generateWithSubModel(prompt, adapterKey, options = {}) {
     if (!this._initialized) await this.init();
 
-    const entry = this._adapters.find(a => a.key === adapterKey && a.enabled);
+    const entry = this._adapters.find((a) => a.key === adapterKey && a.enabled);
     if (!entry || !entry.available) {
       return {
         success: false,
@@ -735,7 +833,7 @@ class AIGateway {
    * Get status of all adapters (for display).
    */
   getStatus() {
-    return this._adapters.map(entry => {
+    return this._adapters.map((entry) => {
       const status = entry.adapter.getStatus();
       return {
         ...status,
@@ -764,13 +862,15 @@ class AIGateway {
             return status;
           }
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       return null;
     }
 
     // If preferred adapter is set, try it first
     if (preferredAdapter) {
-      const entry = this._adapters.find(a => a.key === preferredAdapter && a.enabled);
+      const entry = this._adapters.find((a) => a.key === preferredAdapter && a.enabled);
       if (entry) {
         const status = entry.adapter.getStatus();
         if (status.available) {
@@ -802,7 +902,7 @@ class AIGateway {
    * Get a specific adapter by key (for IDE commands).
    */
   getAdapter(key) {
-    const entry = this._adapters.find(a => a.key === key);
+    const entry = this._adapters.find((a) => a.key === key);
     return entry ? entry.adapter : null;
   }
 
@@ -845,7 +945,7 @@ class AIGateway {
    * @returns {Promise<{connectivity: {success,latencyMs,error?}, models?: {success,latencyMs,error?,count?}}>}
    */
   async testAdapter(adapterKey) {
-    const entry = this._adapters.find(a => a.key === adapterKey);
+    const entry = this._adapters.find((a) => a.key === adapterKey);
     if (!entry || !entry.adapter) {
       return { connectivity: { success: false, latencyMs: 0, error: 'Adapter not found' } };
     }

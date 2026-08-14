@@ -8,9 +8,9 @@
  */
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 const MAX_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -50,7 +50,7 @@ async function startSession(prompt, opts = {}) {
   _saveSession(session);
 
   // Execute planning in background
-  _executePlan(session, timeoutMs, opts).catch(err => {
+  _executePlan(session, timeoutMs, opts).catch((err) => {
     session.status = 'failed';
     session.error = err.message;
     session.completedAt = Date.now();
@@ -114,7 +114,8 @@ Structure your response as:
         gateway.generate(planningPrompt, { model: opts.model }),
         _timeout(timeoutMs),
       ]);
-      reply = typeof result === 'string' ? result : (result.text || result.reply || JSON.stringify(result));
+      reply =
+        typeof result === 'string' ? result : result.text || result.reply || JSON.stringify(result);
     } catch {
       // Fallback: the cli/ai chat core, consumed via the inversion port so this
       // service never reaches up into the CLI layer. Null when the CLI was not
@@ -140,7 +141,6 @@ Structure your response as:
     session.status = 'completed';
     session.completedAt = Date.now();
     _saveSession(session);
-
   } catch (err) {
     session.status = 'failed';
     session.error = err.message;
@@ -152,9 +152,7 @@ Structure your response as:
 }
 
 function _timeout(ms) {
-  return new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Planning timeout')), ms)
-  );
+  return new Promise((_, reject) => setTimeout(() => reject(new Error('Planning timeout')), ms));
 }
 
 /**
@@ -205,7 +203,9 @@ function _saveSession(session) {
 function getSession(id) {
   // Check active sessions first
   const active = _activeSessions.get(id);
-  if (active) return active;
+  if (active) {
+    return active;
+  }
 
   // Check disk
   try {
@@ -231,16 +231,20 @@ function listSessions() {
   // Disk sessions
   try {
     const dir = _plansDir();
-    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
     for (const file of files) {
       try {
         const session = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf-8'));
-        if (!sessions.find(s => s.id === session.id)) {
+        if (!sessions.find((s) => s.id === session.id)) {
           sessions.push(session);
         }
-      } catch { /* skip corrupt */ }
+      } catch {
+        /* skip corrupt */
+      }
     }
-  } catch { /* empty dir */ }
+  } catch {
+    /* empty dir */
+  }
 
   return sessions.sort((a, b) => b.startedAt - a.startedAt);
 }

@@ -28,7 +28,9 @@ const DEFAULT_WARN_RATIO = 0.8;
 // Non-finite / negative → 0. Counters and ceilings are never negative.
 function _nonNeg(v) {
   const n = Number(v);
-  if (!Number.isFinite(n) || n < 0) return 0;
+  if (!Number.isFinite(n) || n < 0) {
+    return 0;
+  }
   return n;
 }
 
@@ -41,14 +43,22 @@ function _nonNeg(v) {
 function resolveBudget(env) {
   const e = env || {};
   const raw = e.KHY_TOKEN_BUDGET;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   // Explicit off-tokens (and unset) ⇒ disabled. Floor to an integer ceiling.
   const ceiling = OFF_VALUES.includes(v) ? 0 : Math.floor(_nonNeg(raw));
 
   let warnRatio = Number(e.KHY_TOKEN_BUDGET_WARN_RATIO);
-  if (!Number.isFinite(warnRatio)) warnRatio = DEFAULT_WARN_RATIO;
-  if (warnRatio < 0) warnRatio = 0;
-  if (warnRatio > 1) warnRatio = 1;
+  if (!Number.isFinite(warnRatio)) {
+    warnRatio = DEFAULT_WARN_RATIO;
+  }
+  if (warnRatio < 0) {
+    warnRatio = 0;
+  }
+  if (warnRatio > 1) {
+    warnRatio = 1;
+  }
 
   return { ceiling, warnRatio };
 }
@@ -62,10 +72,16 @@ function resolveBudget(env) {
  * @returns {number} >=0; non-object / unparsable → 0.
  */
 function extractTokenCount(tokenUsage) {
-  if (!tokenUsage || typeof tokenUsage !== 'object') return 0;
+  if (!tokenUsage || typeof tokenUsage !== 'object') {
+    return 0;
+  }
   const t = tokenUsage;
-  if (t.total_tokens != null) return _nonNeg(t.total_tokens);
-  if (t.totalTokens != null) return _nonNeg(t.totalTokens);
+  if (t.total_tokens != null) {
+    return _nonNeg(t.total_tokens);
+  }
+  if (t.totalTokens != null) {
+    return _nonNeg(t.totalTokens);
+  }
   const prompt = _nonNeg(t.prompt_tokens != null ? t.prompt_tokens : t.input_tokens);
   const completion = _nonNeg(t.completion_tokens != null ? t.completion_tokens : t.output_tokens);
   return prompt + completion;
@@ -84,15 +100,24 @@ function assessBudget({ spent, ceiling, warnRatio } = {}) {
     return { state: 'ok', spent: _spent, ceiling: 0, remaining: Infinity, ratio: 0 };
   }
   let _warn = Number(warnRatio);
-  if (!Number.isFinite(_warn)) _warn = DEFAULT_WARN_RATIO;
-  if (_warn < 0) _warn = 0;
-  if (_warn > 1) _warn = 1;
+  if (!Number.isFinite(_warn)) {
+    _warn = DEFAULT_WARN_RATIO;
+  }
+  if (_warn < 0) {
+    _warn = 0;
+  }
+  if (_warn > 1) {
+    _warn = 1;
+  }
 
   const ratio = _spent / _ceiling;
   const remaining = Math.max(0, _ceiling - _spent);
   let state = 'ok';
-  if (_spent >= _ceiling) state = 'stop';
-  else if (_spent >= _ceiling * _warn) state = 'warn';
+  if (_spent >= _ceiling) {
+    state = 'stop';
+  } else if (_spent >= _ceiling * _warn) {
+    state = 'warn';
+  }
   return { state, spent: _spent, ceiling: _ceiling, remaining, ratio };
 }
 
@@ -119,7 +144,9 @@ const _BUDGET_MULTIPLIERS = { k: 1000, m: 1000000, b: 1000000000 };
 function _parseBudgetMatch(value, suffix) {
   const mult = _BUDGET_MULTIPLIERS[String(suffix).toLowerCase()];
   const n = parseFloat(value);
-  if (!Number.isFinite(n) || !mult) return null;
+  if (!Number.isFinite(n) || !mult) {
+    return null;
+  }
   return n * mult;
 }
 
@@ -130,13 +157,21 @@ function _parseBudgetMatch(value, suffix) {
  *   (bare "500k" without '+', "+500" without suffix, plain text, non-string → null).
  */
 function parseTokenBudget(text) {
-  if (typeof text !== 'string' || text.length === 0) return null;
+  if (typeof text !== 'string' || text.length === 0) {
+    return null;
+  }
   const start = text.match(_SHORTHAND_START_RE);
-  if (start) return _parseBudgetMatch(start[1], start[2]);
+  if (start) {
+    return _parseBudgetMatch(start[1], start[2]);
+  }
   const end = text.match(_SHORTHAND_END_RE);
-  if (end) return _parseBudgetMatch(end[1], end[2]);
+  if (end) {
+    return _parseBudgetMatch(end[1], end[2]);
+  }
   const verbose = text.match(_VERBOSE_RE);
-  if (verbose) return _parseBudgetMatch(verbose[1], verbose[2]);
+  if (verbose) {
+    return _parseBudgetMatch(verbose[1], verbose[2]);
+  }
   return null;
 }
 
@@ -149,7 +184,9 @@ function parseTokenBudget(text) {
  */
 function promptTokenBudgetEnabled(env) {
   const raw = env && env.KHY_PROMPT_TOKEN_BUDGET;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -162,9 +199,13 @@ function promptTokenBudgetEnabled(env) {
  * @returns {number|null} floored positive ceiling, or null.
  */
 function resolvePromptBudget(text, env) {
-  if (!promptTokenBudgetEnabled(env)) return null;
+  if (!promptTokenBudgetEnabled(env)) {
+    return null;
+  }
   const n = parseTokenBudget(text);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
   return Math.floor(n);
 }
 
@@ -175,15 +216,23 @@ function resolvePromptBudget(text, env) {
  * @returns {string}
  */
 function buildBudgetStopNotice({ spent, ceiling, env } = {}) {
-  const { ceiling: gated } = resolveBudget(env || (typeof process !== 'undefined' ? process.env : {}));
+  const { ceiling: gated } = resolveBudget(
+    env || (typeof process !== 'undefined' ? process.env : {})
+  );
   // The notice is meaningful only under an active ceiling. If the env says disabled,
   // stay silent regardless of the passed numbers (defensive against a stray call).
-  if (gated <= 0) return '';
+  if (gated <= 0) {
+    return '';
+  }
   const _spent = Math.floor(_nonNeg(spent));
   const _ceiling = Math.floor(_nonNeg(ceiling));
-  if (_ceiling <= 0) return '';
-  return `⚠ Token 预算已达上限（${_spent}/${_ceiling} tokens），已停止本轮以防无界消耗。`
-    + `如需继续，请调高 KHY_TOKEN_BUDGET 或拆分任务。`;
+  if (_ceiling <= 0) {
+    return '';
+  }
+  return (
+    `⚠ Token 预算已达上限（${_spent}/${_ceiling} tokens），已停止本轮以防无界消耗。` +
+    `如需继续，请调高 KHY_TOKEN_BUDGET 或拆分任务。`
+  );
 }
 
 module.exports = {

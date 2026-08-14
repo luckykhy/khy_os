@@ -12,12 +12,14 @@
  *   - Per-process resource enforcement
  */
 const { fork } = require('child_process');
-const path = require('path');
 const crypto = require('crypto');
 const EventEmitter = require('events');
-const { MSG, createMessage, parseMessage, createRequestResponse } = require('./ipcProtocol');
+const path = require('path');
+
 const { createProcessLimits, startWatchdog } = require('../services/resourceGuard');
 const { safeKill } = require('../tools/platformUtils');
+
+const { MSG, createMessage, parseMessage, createRequestResponse } = require('./ipcProtocol');
 
 const WORKER_ENTRY = path.join(__dirname, 'agentWorkerEntry.js');
 const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
@@ -56,7 +58,8 @@ class ProcessAgent extends EventEmitter {
     this.chatOpts = opts.chatOpts || {};
 
     // ── Depth tracking ──────────────────────────────────────────────
-    this._currentDepth = (opts.parentContext?.depth ?? opts.parentContext?.toSerializable?.()?.depth) || 0;
+    this._currentDepth =
+      (opts.parentContext?.depth ?? opts.parentContext?.toSerializable?.()?.depth) || 0;
     this._maxDepth = opts.maxSpawnDepth || 3;
 
     /** @type {ProcessAgentState} */
@@ -76,6 +79,16 @@ class ProcessAgent extends EventEmitter {
     this._rpc = null;
     this._watchdog = null;
     this._children = new Set(); // child ProcessAgent instances
+
+    // Lifecycle FSM (observation-first): mirrors state.status transitions.
+    // A missing/broken FSM module must never affect agent behavior.
+    try {
+      this._fsm = require('../services/stateMachine/agentLifecycle').createAgentLifecycleFsm({
+        name: this.id,
+      });
+    } catch {
+      this._fsm = null;
+    }
   }
 
   /**
@@ -85,7 +98,7 @@ class ProcessAgent extends EventEmitter {
   async run() {
     // ── Depth guard ─────────────────────────────────────────────────
     if (this._currentDepth >= this._maxDepth) {
-      this.state.status = 'error';
+      this._setStatus('fail', 'error');
       this.state.error = `Spawn rejected: depth ${this._currentDepth} >= maxSpawnDepth ${this._maxDepth}`;
       this.state.completedAt = Date.now();
       throw new Error(this.state.error);
@@ -95,10 +108,15 @@ class ProcessAgent extends EventEmitter {
     try {
       const hookSystem = require('../cli/hooks/hookSystem');
       await hookSystem.trigger('SubAgentStart', {
-        agentId: this.id, task: this.task, role: this.role,
-        depth: this._currentDepth, mode: 'process',
+        agentId: this.id,
+        task: this.task,
+        role: this.role,
+        depth: this._currentDepth,
+        mode: 'process',
       });
-    } catch { /* hooks are best-effort */ }
+    } catch {
+      /* hooks are best-effort */
+    }
 
     try {
       await this._spawn();
@@ -109,14 +127,18 @@ class ProcessAgent extends EventEmitter {
       try {
         const hookSystem = require('../cli/hooks/hookSystem');
         await hookSystem.trigger('SubAgentEnd', {
-          agentId: this.id, task: this.task, status: 'completed',
+          agentId: this.id,
+          task: this.task,
+          status: 'completed',
           durationMs: (this.state.completedAt || Date.now()) - this.state.startedAt,
         });
-      } catch { /* hooks are best-effort */ }
+      } catch {
+        /* hooks are best-effort */
+      }
 
       return result;
     } catch (err) {
-      this.state.status = 'error';
+      this._setStatus('fail', 'error');
       this.state.error = err.message;
       this.state.completedAt = Date.now();
       this._cleanup();
@@ -125,11 +147,15 @@ class ProcessAgent extends EventEmitter {
       try {
         const hookSystem = require('../cli/hooks/hookSystem');
         await hookSystem.trigger('SubAgentEnd', {
-          agentId: this.id, task: this.task, status: 'error',
+          agentId: this.id,
+          task: this.task,
+          status: 'error',
           error: err.message,
           durationMs: (this.state.completedAt || Date.now()) - this.state.startedAt,
         });
-      } catch { /* hooks are best-effort */ }
+      } catch {
+        /* hooks are best-effort */
+      }
 
       throw err;
     }
@@ -141,29 +167,43 @@ class ProcessAgent extends EventEmitter {
   kill() {
     // ── Cascade: kill children first ────────────────────────────────
     for (const child of this._children) {
-      try { child.kill(); } catch { /* best-effort */ }
+      try {
+        child.kill();
+      } catch {
+        /* best-effort */
+      }
     }
     this._children.clear();
 
     // ── Hook: Stop ──────────────────────────────────────────────────
     try {
       const hookSystem = require('../cli/hooks/hookSystem');
-      hookSystem.trigger('Stop', {
-        agentId: this.id, task: this.task, reason: 'killed',
-      }).catch(() => {});
-    } catch { /* hooks are best-effort */ }
+      hookSystem
+        .trigger('Stop', {
+          agentId: this.id,
+          task: this.task,
+          reason: 'killed',
+        })
+        .catch(() => {});
+    } catch {
+      /* hooks are best-effort */
+    }
 
     if (this._rpc) {
       this._rpc.notify(MSG.KILL, {});
     }
-    this.state.status = 'killed';
+    this._setStatus('kill', 'killed');
     this.state.completedAt = Date.now();
-    // Grace period before SIGKILL
-    setTimeout(() => {
+    // Grace period before SIGKILL; cancel if the child exits on its own
+    const graceTimer = setTimeout(() => {
       if (this._child && !this._child.killed) {
         safeKill(this._child, 'SIGKILL', 0);
       }
     }, 3000);
+    graceTimer.unref();
+    if (this._child) {
+      this._child.once('exit', () => clearTimeout(graceTimer));
+    }
     this._cleanup();
   }
 
@@ -182,12 +222,42 @@ class ProcessAgent extends EventEmitter {
    * @returns {boolean} true if sent successfully
    */
   sendFollowUp(message, seq) {
-    if (!this._child || this._child.killed) return false;
+    if (!this._child || this._child.killed) {
+      return false;
+    }
     const msg = createMessage(MSG.FOLLOW_UP, this.id, { message, seq });
-    try { this._child.send(msg); return true; } catch { return false; }
+    try {
+      this._child.send(msg);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // ── Internal ──────────────────────────────────────────────────────
+
+  /**
+   * Drive state.status through the lifecycle FSM.
+   * Behavior contract: the externally visible status string always ends up
+   * equal to `fallbackStatus`, exactly like the legacy direct assignments.
+   * Illegal transitions (fire returns ok:false) are observation signals only
+   * and never change behavior; the flag-off NoopFsm path falls back too.
+   * @param {string} event - AGENT_EVENTS name (e.g. 'fail', 'kill')
+   * @param {string} fallbackStatus - legacy status string to set
+   */
+  _setStatus(event, fallbackStatus) {
+    if (this._fsm) {
+      const r = this._fsm.fire(event);
+      if (r && r.ok) {
+        this.state.status = r.to;
+        return;
+      }
+      // Disabled (NoopFsm) or illegal transition: keep legacy behavior.
+      this.state.status = fallbackStatus;
+      return;
+    }
+    this.state.status = fallbackStatus;
+  }
 
   async _spawn() {
     const limits = createProcessLimits({
@@ -203,7 +273,7 @@ class ProcessAgent extends EventEmitter {
     });
 
     this.state.pid = this._child.pid;
-    this.state.status = 'initializing';
+    this._setStatus('spawn_start', 'initializing');
 
     this._rpc = createRequestResponse(this._child, this.id, {
       timeoutMs: this.timeoutMs,
@@ -212,7 +282,7 @@ class ProcessAgent extends EventEmitter {
     // Listen for child events
     this._child.on('exit', (code, signal) => {
       if (this.state.status === 'running' || this.state.status === 'initializing') {
-        this.state.status = 'error';
+        this._setStatus('fail', 'error');
         this.state.error = `Child exited unexpectedly (code=${code}, signal=${signal})`;
         this.state.completedAt = Date.now();
       }
@@ -221,7 +291,7 @@ class ProcessAgent extends EventEmitter {
     });
 
     this._child.on('error', (err) => {
-      this.state.status = 'error';
+      this._setStatus('fail', 'error');
       this.state.error = err.message;
       this.state.completedAt = Date.now();
       this._cleanup();
@@ -244,17 +314,45 @@ class ProcessAgent extends EventEmitter {
     // Listen for progress and metrics — touch watchdog on activity
     this._child.on('message', (raw) => {
       const parsed = parseMessage(raw);
-      if (!parsed.valid) return;
+      if (!parsed.valid) {
+        return;
+      }
       const { msg } = parsed;
       // Any IPC message counts as activity
-      if (this._watchdog) this._watchdog.touch();
-      if (msg.type === MSG.PROGRESS) this.emit('progress', msg.payload);
+      if (this._watchdog) {
+        this._watchdog.touch();
+      }
+      if (msg.type === MSG.PROGRESS) {
+        this.emit('progress', msg.payload);
+      }
       if (msg.type === MSG.METRICS) {
         this.state.metrics = msg.payload;
         this.emit('metrics', msg.payload);
       }
       if (msg.type === MSG.ACK) {
         this.emit('ack', msg.payload);
+      }
+
+      // Observability (末尾埋点): transparently mirror worker IPC into the
+      // append-only event log. No new IPC message types are introduced and the
+      // existing emit/handling above is untouched. Fail-soft — a logging error
+      // must never affect agent orchestration.
+      if (
+        msg.type === MSG.PROGRESS ||
+        msg.type === MSG.RESULT ||
+        msg.type === MSG.METRICS ||
+        msg.type === MSG.ERROR
+      ) {
+        try {
+          require('../observability/eventLog').append({
+            type: `agent.${msg.type}`,
+            source: 'processAgent',
+            traceId: this.id,
+            payload: { agentId: this.id, role: this.role, data: msg.payload },
+          });
+        } catch {
+          /* fail-soft: observability must never break IPC handling */
+        }
       }
     });
 
@@ -271,9 +369,10 @@ class ProcessAgent extends EventEmitter {
     // Serialize context for IPC, propagating depth+1
     let contextData = null;
     if (this.parentContext) {
-      contextData = typeof this.parentContext.toSerializable === 'function'
-        ? this.parentContext.toSerializable()
-        : { ...this.parentContext };
+      contextData =
+        typeof this.parentContext.toSerializable === 'function'
+          ? this.parentContext.toSerializable()
+          : { ...this.parentContext };
     } else {
       // Create minimal context
       const { AgentContext } = require('../services/agentContext');
@@ -295,11 +394,13 @@ class ProcessAgent extends EventEmitter {
 
       const onMsg = (raw) => {
         const parsed = parseMessage(raw);
-        if (!parsed.valid) return;
+        if (!parsed.valid) {
+          return;
+        }
         if (parsed.msg.type === MSG.READY) {
           clearTimeout(timer);
           this._child.removeListener('message', onMsg);
-          this.state.status = 'ready';
+          this._setStatus('init_ok', 'ready');
           resolve();
         } else if (parsed.msg.type === MSG.ERROR) {
           clearTimeout(timer);
@@ -312,7 +413,7 @@ class ProcessAgent extends EventEmitter {
   }
 
   async _executeTask() {
-    this.state.status = 'running';
+    this._setStatus('task_start', 'running');
 
     const taskMsg = createMessage(MSG.TASK, this.id, {
       prompt: this.task,
@@ -324,19 +425,21 @@ class ProcessAgent extends EventEmitter {
     return new Promise((resolve, reject) => {
       const onMsg = (raw) => {
         const parsed = parseMessage(raw);
-        if (!parsed.valid) return;
+        if (!parsed.valid) {
+          return;
+        }
         const { msg } = parsed;
 
         if (msg.type === MSG.RESULT) {
           this._child.removeListener('message', onMsg);
-          this.state.status = 'completed';
+          this._setStatus('task_done', 'completed');
           this.state.result = msg.payload.text || '';
           this.state.completedAt = Date.now();
           this._cleanup();
           resolve(this.state);
         } else if (msg.type === MSG.ERROR) {
           this._child.removeListener('message', onMsg);
-          this.state.status = 'error';
+          this._setStatus('fail', 'error');
           this.state.error = msg.payload.message || 'Unknown error';
           this.state.completedAt = Date.now();
           this._cleanup();

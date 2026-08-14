@@ -27,9 +27,9 @@
  * event — subsequent starts read the persisted value (source 'file'/'env').
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 // jsonwebtoken accepts any non-empty secret, but the shared env validator
 // (config/env.js) requires >= 32 chars; align with it so a provisioned secret
@@ -37,11 +37,10 @@ const crypto = require('crypto');
 const MIN_SECRET_LEN = 32;
 
 function _canonicalEnvPath() {
-  if (process.env.KHY_ENV_FILE) return path.resolve(process.env.KHY_ENV_FILE);
-  return path.resolve(
-    process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..'),
-    '.env'
-  );
+  if (process.env.KHY_ENV_FILE) {
+    return path.resolve(process.env.KHY_ENV_FILE);
+  }
+  return path.resolve(process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..'), '.env');
 }
 
 function _readEnvValueFromFile(file, key) {
@@ -53,9 +52,14 @@ function _readEnvValueFromFile(file, key) {
   }
   // Match `KEY=value` on its own line; tolerate surrounding whitespace.
   const m = content.match(new RegExp(`^\\s*${key}\\s*=\\s*(.*)\\s*$`, 'm'));
-  if (!m) return '';
+  if (!m) {
+    return '';
+  }
   // Strip optional surrounding quotes, mirroring dotenv parsing.
-  return m[1].trim().replace(/^["']|["']$/g, '').trim();
+  return m[1]
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .trim();
 }
 
 /**
@@ -92,7 +96,9 @@ function ensureJwtSecret(opts = {}) {
   } catch (err) {
     // Could not persist (read-only fs, etc.). The in-memory secret still lets
     // this process serve logins; warn that it will rotate on restart.
-    emit(`JWT_SECRET 缺失，已生成临时密钥但写入 .env 失败（${err.message}）；重启后密钥会变化、已签发的登录态将失效`);
+    emit(
+      `JWT_SECRET 缺失，已生成临时密钥但写入 .env 失败（${err.message}）；重启后密钥会变化、已签发的登录态将失效`
+    );
   }
 
   return { secret: generated, source: 'generated' };

@@ -37,7 +37,9 @@ class SshConnectionManager {
 
   disconnect(connectionId) {
     const key = String(connectionId || '').trim();
-    if (!key) return { disconnected: false, status: 'invalid_connection_id' };
+    if (!key) {
+      return { disconnected: false, status: 'invalid_connection_id' };
+    }
 
     const existing = this._connections.get(key);
     if (!existing) {
@@ -56,16 +58,22 @@ class SshConnectionManager {
 
   getSession(connectionId) {
     const key = String(connectionId || '').trim();
-    if (!key) return null;
+    if (!key) {
+      return null;
+    }
     const record = this._connections.get(key);
     return record ? { ...record } : null;
   }
 
   touch(connectionId) {
     const key = String(connectionId || '').trim();
-    if (!key) return false;
+    if (!key) {
+      return false;
+    }
     const record = this._connections.get(key);
-    if (!record) return false;
+    if (!record) {
+      return false;
+    }
     record.lastActivityAt = new Date().toISOString();
     return true;
   }

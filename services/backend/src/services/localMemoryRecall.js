@@ -20,16 +20,22 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env = process.env) {
   // 记忆总开关 KHY_DISABLE_MEMORY 优先(与 memdir 一致):整库禁用则召回工具也下线。
   const disabled = env && (env.KHY_DISABLE_MEMORY === '1' || env.KHY_DISABLE_MEMORY === 'true');
-  if (disabled) return false;
+  if (disabled) {
+    return false;
+  }
   const raw = env && env.KHY_MEMORY_RECALL_TOOL;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
 /** 把请求的 limit 夹到 [1, MAX_LIMIT];非法 → 默认值。 */
 function normalizeLimit(limit) {
   const n = Math.floor(Number(limit));
-  if (!Number.isFinite(n) || n <= 0) return DEFAULT_LIMIT;
+  if (!Number.isFinite(n) || n <= 0) {
+    return DEFAULT_LIMIT;
+  }
   return Math.min(n, MAX_LIMIT);
 }
 
@@ -45,11 +51,18 @@ function _truncate(text, n) {
  * @returns {Array<{filename,name,type,description,score,body}>}
  */
 function shapeRelevant(selected, opts = {}) {
-  if (!Array.isArray(selected)) return [];
-  const bodyChars = Number.isFinite(opts.bodyChars) && opts.bodyChars > 0 ? Math.floor(opts.bodyChars) : DEFAULT_BODY_CHARS;
+  if (!Array.isArray(selected)) {
+    return [];
+  }
+  const bodyChars =
+    Number.isFinite(opts.bodyChars) && opts.bodyChars > 0
+      ? Math.floor(opts.bodyChars)
+      : DEFAULT_BODY_CHARS;
   const out = [];
   for (const m of selected) {
-    if (!m || typeof m !== 'object') continue;
+    if (!m || typeof m !== 'object') {
+      continue;
+    }
     const fm = m.frontmatter || {};
     out.push({
       filename: m.filename || '',
@@ -69,11 +82,16 @@ function shapeRelevant(selected, opts = {}) {
  * @returns {Array<{filename,name,type,description,matches}>}
  */
 function shapeSearch(results, opts = {}) {
-  if (!Array.isArray(results)) return [];
-  const maxMatches = Number.isFinite(opts.maxMatches) && opts.maxMatches > 0 ? Math.floor(opts.maxMatches) : 5;
+  if (!Array.isArray(results)) {
+    return [];
+  }
+  const maxMatches =
+    Number.isFinite(opts.maxMatches) && opts.maxMatches > 0 ? Math.floor(opts.maxMatches) : 5;
   const out = [];
   for (const r of results) {
-    if (!r || typeof r !== 'object') continue;
+    if (!r || typeof r !== 'object') {
+      continue;
+    }
     const fm = r.frontmatter || {};
     out.push({
       filename: r.filename || '',
@@ -90,7 +108,9 @@ function shapeSearch(results, opts = {}) {
 function buildRecallSummary(query, shaped) {
   const n = Array.isArray(shaped) ? shaped.length : 0;
   const q = String(query || '').trim();
-  if (n === 0) return `本地记忆库没有与「${q}」相关的记忆。`;
+  if (n === 0) {
+    return `本地记忆库没有与「${q}」相关的记忆。`;
+  }
   return `从本地记忆库召回 ${n} 条与「${q}」相关的记忆。`;
 }
 

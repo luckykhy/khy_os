@@ -25,8 +25,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { printInfo, printError, printWarn } = require('../formatters');
+
 const perfReport = require('../../services/perf/perfReport');
+const { printInfo, printError, printWarn } = require('../formatters');
 
 // transcript 读取上限,防超大 JSONL OOM;超过只取尾部(性能视图关注近况)。
 const MAX_TRANSCRIPT_LINES = 20000;
@@ -52,7 +53,9 @@ function _parseSessionArg(subCommand, args) {
   const all = [subCommand, ...(Array.isArray(args) ? args : [])].filter(Boolean).map(String);
   for (const a of all) {
     const t = a.trim();
-    if (t && !t.startsWith('--')) return t;
+    if (t && !t.startsWith('--')) {
+      return t;
+    }
   }
   return '';
 }
@@ -61,20 +64,28 @@ function _parseSessionArg(subCommand, args) {
 function _readTranscript(file) {
   let raw;
   try {
-    if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) return [];
+    if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      return [];
+    }
     raw = fs.readFileSync(file, 'utf-8');
   } catch {
     return [];
   }
   let lines = raw.split('\n');
-  if (lines.length > MAX_TRANSCRIPT_LINES) lines = lines.slice(-MAX_TRANSCRIPT_LINES);
+  if (lines.length > MAX_TRANSCRIPT_LINES) {
+    lines = lines.slice(-MAX_TRANSCRIPT_LINES);
+  }
   const out = [];
   for (const line of lines) {
     const s = line.trim();
-    if (!s) continue;
+    if (!s) {
+      continue;
+    }
     try {
       const obj = JSON.parse(s);
-      if (obj && typeof obj === 'object') out.push(obj);
+      if (obj && typeof obj === 'object') {
+        out.push(obj);
+      }
     } catch {
       // 坏行跳过(诚实:部分写入/截断行不致整份报告失败)。
     }
@@ -111,7 +122,9 @@ async function handlePerfIssue(subCommand, args = [], _options = {}) {
     const sessionPersistence = require('../../services/sessionPersistence');
     if (!sessionId) {
       const recent = sessionPersistence.listPersistedSessions({ limit: 1 }) || [];
-      if (recent.length && recent[0] && recent[0].sessionId) sessionId = recent[0].sessionId;
+      if (recent.length && recent[0] && recent[0].sessionId) {
+        sessionId = recent[0].sessionId;
+      }
     }
     if (sessionId) {
       const file = sessionPersistence.jsonlPathFor(sessionId);

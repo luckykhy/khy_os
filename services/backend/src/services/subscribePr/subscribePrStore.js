@@ -12,6 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir } = require('../../utils/dataHome');
 
 /** 订阅列表文件绝对路径:<dataHome>/pr-subscriptions/subscriptions.json */
@@ -32,7 +33,9 @@ function readAll() {
 
 /** 原子写订阅数组(temp + rename)。成功返回数组,失败 null。 */
 function writeAll(subscriptions) {
-  if (!Array.isArray(subscriptions)) return null;
+  if (!Array.isArray(subscriptions)) {
+    return null;
+  }
   try {
     const file = listPath();
     const tmp = `${file}.tmp-${process.pid}`;
@@ -47,7 +50,9 @@ function writeAll(subscriptions) {
 /** 按 key upsert 一条订阅(已存在则不重复添加,返回 {list, added})。 */
 function upsert(descriptor) {
   const list = readAll();
-  if (!descriptor || !descriptor.key) return { list, added: false };
+  if (!descriptor || !descriptor.key) {
+    return { list, added: false };
+  }
   const idx = list.findIndex((s) => s && s.key === descriptor.key);
   if (idx >= 0) {
     return { list, added: false }; // 已订阅,保留原记录(含 lastClassification)
@@ -62,7 +67,9 @@ function remove(key) {
   const list = readAll();
   const next = list.filter((s) => !(s && s.key === key));
   const removed = next.length !== list.length;
-  if (removed) writeAll(next);
+  if (removed) {
+    writeAll(next);
+  }
   return { list: next, removed };
 }
 
@@ -71,9 +78,14 @@ function updateClassification(key, classification) {
   const list = readAll();
   let changed = false;
   for (const s of list) {
-    if (s && s.key === key) { s.lastClassification = classification; changed = true; }
+    if (s && s.key === key) {
+      s.lastClassification = classification;
+      changed = true;
+    }
   }
-  if (changed) writeAll(list);
+  if (changed) {
+    writeAll(list);
+  }
   return changed;
 }
 

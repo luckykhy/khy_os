@@ -27,47 +27,86 @@
  * Feature-gated: KHY_USE_EXEC_ENGINE=true to activate.
  */
 
-const path = require('path');
 const fs = require('fs');
-const { analyzeCommand } = require('./shellSafetyValidator');
+const path = require('path');
+
+const _toolNameVariants = require('../utils/toolNameVariants');
+
 const { diagnostics, generateTraceId: genDiagTraceId } = require('./diagnosticEvents');
+const { analyzeCommand } = require('./shellSafetyValidator');
 
 // ── Constants ──────────────────────────────────────────────────────
 
 const MAX_PARALLEL_TOOLS = 8;
 
 const KNOWN_CONCURRENCY_SAFE = new Set([
-  'read_file', 'readFile', 'Read', 'readfile',
-  'grep', 'Grep', 'rg',
-  'glob', 'Glob', 'find', 'find_files',
-  'search', 'web_search', 'webSearch', 'WebSearch', 'websearch',
-  'quote', 'data_fetch',
-  'git_status', 'git_diff', 'git_log',
-  'LS', 'ls',
+  'read_file',
+  'readFile',
+  'Read',
+  'readfile',
+  'grep',
+  'Grep',
+  'rg',
+  'glob',
+  'Glob',
+  'find',
+  'find_files',
+  'search',
+  'web_search',
+  'webSearch',
+  'WebSearch',
+  'websearch',
+  'quote',
+  'data_fetch',
+  'git_status',
+  'git_diff',
+  'git_log',
+  'LS',
+  'ls',
 ]);
 
 const WRITE_PATH_TOOLS = new Set([
-  'edit_file', 'editFile', 'write_file', 'writeFile', 'Edit', 'Write',
-  'FileEdit', 'FileWrite', 'file_edit', 'file_write',
+  'edit_file',
+  'editFile',
+  'write_file',
+  'writeFile',
+  'Edit',
+  'Write',
+  'FileEdit',
+  'FileWrite',
+  'file_edit',
+  'file_write',
 ]);
 
 const READ_ONLY_TOOLS = new Set([
-  'read_file', 'readfile', 'readFile', 'read',
-  'grep', 'rg', 'search', 'glob', 'find', 'ls', 'LS',
-  'quote', 'data_fetch', 'web_search', 'webSearch', 'websearch',
-  'git_status', 'git_diff', 'git_log',
+  'read_file',
+  'readfile',
+  'readFile',
+  'read',
+  'grep',
+  'rg',
+  'search',
+  'glob',
+  'find',
+  'ls',
+  'LS',
+  'quote',
+  'data_fetch',
+  'web_search',
+  'webSearch',
+  'websearch',
+  'git_status',
+  'git_diff',
+  'git_log',
 ]);
 
-const SHELL_TOOL_NAMES = new Set([
-  'shell_command', 'shellCommand', 'bash', 'execute_command',
-]);
+const SHELL_TOOL_NAMES = new Set(['shell_command', 'shellCommand', 'bash', 'execute_command']);
 
 // ── Concurrency-safety resolution (s02) ─────────────────────────────
 // Generate name variants (snake_case / camelCase / lowercase) so a call
 // named 'shell_command' resolves to the registered tool 'shellCommand'.
 // Shared with toolCalling via the neutral utils/toolNameVariants leaf — both
 // services depend on utils, not on each other (no reverse dependency).
-const _toolNameVariants = require('../utils/toolNameVariants');
 
 /**
  * Resolve whether a tool call is concurrency-safe.
@@ -85,14 +124,19 @@ const _toolNameVariants = require('../utils/toolNameVariants');
  * @returns {boolean}
  */
 function resolveConcurrencySafe(call, toolRegistry) {
-  if (!call || call.legacy) return false;
+  if (!call || call.legacy) {
+    return false;
+  }
   if (toolRegistry && typeof toolRegistry.get === 'function') {
     for (const variant of _toolNameVariants(call.name)) {
       const regTool = toolRegistry.get(variant);
       if (regTool) {
         if (typeof regTool.isConcurrencySafe === 'function') {
-          try { return !!regTool.isConcurrencySafe(call.params); }
-          catch { return false; }
+          try {
+            return !!regTool.isConcurrencySafe(call.params);
+          } catch {
+            return false;
+          }
         }
         if (typeof regTool.isConcurrencySafe === 'boolean') {
           return regTool.isConcurrencySafe;
@@ -124,14 +168,18 @@ function resolveConcurrencySafe(call, toolRegistry) {
  */
 function partitionIntoBatches(toolCalls, toolRegistry, cwd) {
   const batches = [];
-  if (!Array.isArray(toolCalls) || toolCalls.length === 0) return batches;
+  if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
+    return batches;
+  }
   const baseDir = cwd || process.env.KHYQUANT_CWD || process.cwd();
 
   let current = null; // open parallel batch
   const writePaths = new Set(); // resolved write paths in the current parallel batch
 
   const flush = () => {
-    if (current && current.calls.length > 0) batches.push(current);
+    if (current && current.calls.length > 0) {
+      batches.push(current);
+    }
     current = null;
     writePaths.clear();
   };
@@ -159,7 +207,9 @@ function partitionIntoBatches(toolCalls, toolRegistry, cwd) {
       }
     }
 
-    if (!current) current = { parallel: true, calls: [] };
+    if (!current) {
+      current = { parallel: true, calls: [] };
+    }
     current.calls.push(call);
   }
   flush();
@@ -176,7 +226,9 @@ function _fileContentHash(filePath) {
     const bytesRead = fs.readSync(fd, buf, 0, 10240, 0);
     fs.closeSync(fd);
     return crypto.createHash('md5').update(buf.slice(0, bytesRead)).digest('hex');
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // ── Result hash ────────────────────────────────────────────────────
@@ -185,7 +237,9 @@ function _hashResult(result) {
   const str = typeof result === 'string' ? result : JSON.stringify(result || '');
   const s = str.slice(0, 4096);
   let hash = 0;
-  for (let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
+  }
   return hash.toString(36);
 }
 
@@ -243,29 +297,41 @@ class ToolExecutionEngine {
 
     // Stage 1: PreToolUse hook
     const hookResult = await this._runPreToolUseHook(call);
-    if (hookResult) return hookResult;
+    if (hookResult) {
+      return hookResult;
+    }
 
     // Stage 2: Loop detection
     const loopResult = this._checkLoopDetection(call);
-    if (loopResult) return loopResult;
+    if (loopResult) {
+      return loopResult;
+    }
 
     // Stage 3: Dedup check
     const dedupResult = this._checkDedup(call);
-    if (dedupResult) return dedupResult;
+    if (dedupResult) {
+      return dedupResult;
+    }
 
     // Stage 4: Intent dedup
     const intentResult = this._checkIntentDedup(call);
-    if (intentResult) return intentResult;
+    if (intentResult) {
+      return intentResult;
+    }
 
     // Record call in loop detector
-    if (this._loopDetector) this._loopDetector.recordCall(call.name, call.params);
+    if (this._loopDetector) {
+      this._loopDetector.recordCall(call.name, call.params);
+    }
 
     // Stage 5: Platform rewrite
     this._rewritePlatformCommand(call);
 
     // Stage 6: Shell safety
     const safetyResult = await this._checkShellSafety(call);
-    if (safetyResult) return safetyResult;
+    if (safetyResult) {
+      return safetyResult;
+    }
 
     // Phase 7: Check streaming executor cache (tool may have been pre-executed)
     if (this._streamingExecutor) {
@@ -273,10 +339,16 @@ class ToolExecutionEngine {
       if (cached) {
         const elapsed = cached.elapsed || 0;
         const result = cached.output || cached;
-        if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, elapsed);
+        if (this._onToolResult) {
+          this._onToolResult(call.name, call.params, result, this._iteration, elapsed);
+        }
         return {
-          tool: call.name, params: call.params, result, elapsed,
-          _toolUseId: call._toolUseId || null, _preExecuted: true,
+          tool: call.name,
+          params: call.params,
+          result,
+          elapsed,
+          _toolUseId: call._toolUseId || null,
+          _preExecuted: true,
         };
       }
     }
@@ -284,11 +356,14 @@ class ToolExecutionEngine {
     // Stage 7: Execute
     const start = Date.now();
     const diagSpanId = diagnostics.emitToolCall(call.name, call.params, {
-      traceId: this._diagTraceId, requestId: this._requestId,
+      traceId: this._diagTraceId,
+      requestId: this._requestId,
     });
 
     this._emitTraceEvent('agent.tool.call', {
-      toolName: call.name, params: call.params, iteration: this._iteration,
+      toolName: call.name,
+      params: call.params,
+      iteration: this._iteration,
     });
 
     let result;
@@ -315,10 +390,13 @@ class ToolExecutionEngine {
 
     // Stage 10: Diagnostics
     diagnostics.emitToolResult(diagSpanId, result, result?.error || null, {
-      traceId: this._diagTraceId, requestId: this._requestId,
+      traceId: this._diagTraceId,
+      requestId: this._requestId,
     });
     this._emitTraceEvent('agent.tool.result', {
-      toolName: call.name, success: !!result?.success, error: result?.error || null,
+      toolName: call.name,
+      success: !!result?.success,
+      error: result?.error || null,
       iteration: this._iteration,
     });
 
@@ -329,18 +407,26 @@ class ToolExecutionEngine {
     this._cacheFileHash(call, result);
 
     // Record outcome in loop detector
-    if (this._loopDetector) this._loopDetector.recordOutcome(call.name, call.params, result);
+    if (this._loopDetector) {
+      this._loopDetector.recordOutcome(call.name, call.params, result);
+    }
 
     const elapsed = Date.now() - start;
 
     // Stage 13: PostToolUse hook
     result = await this._runPostToolUseHook(call, result, elapsed);
 
-    if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, elapsed);
+    if (this._onToolResult) {
+      this._onToolResult(call.name, call.params, result, this._iteration, elapsed);
+    }
 
     return {
-      tool: call.name, params: call.params, result, elapsed,
-      _loopWarning: call._loopWarning, _toolUseId: call._toolUseId || null,
+      tool: call.name,
+      params: call.params,
+      result,
+      elapsed,
+      _loopWarning: call._loopWarning,
+      _toolUseId: call._toolUseId || null,
     };
   }
 
@@ -351,10 +437,16 @@ class ToolExecutionEngine {
    * @returns {Promise<Array>} Array of execution results
    */
   async executeBatch(toolCalls, context = {}) {
-    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return [];
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
+      return [];
+    }
 
     let toolRegistry;
-    try { toolRegistry = require('../tools'); } catch { toolRegistry = null; }
+    try {
+      toolRegistry = require('../tools');
+    } catch {
+      toolRegistry = null;
+    }
 
     // Order-preserving partition (s02): contiguous safe calls → parallel batch,
     // each unsafe call → its own serial batch, batch order = original order.
@@ -368,14 +460,20 @@ class ToolExecutionEngine {
         results.push(...settled);
         // Denied within a parallel batch → stop the whole sequence.
         for (const r of settled) {
-          if (r.result?.denied) { r._denied = true; return results; }
+          if (r.result?.denied) {
+            r._denied = true;
+            return results;
+          }
         }
       } else {
         // Single call (parallel batch of 1 or a serial batch) → run inline.
         for (const call of batch.calls) {
           const r = await this.executeOne(call, context);
           results.push(r);
-          if (r.result?.denied) { r._denied = true; return results; }
+          if (r.result?.denied) {
+            r._denied = true;
+            return results;
+          }
         }
       }
     }
@@ -389,13 +487,20 @@ class ToolExecutionEngine {
   // { parallel, sequential } shape. New code should use partitionIntoBatches.
   _classifyCalls(toolCalls) {
     let toolRegistry;
-    try { toolRegistry = require('../tools'); } catch { toolRegistry = null; }
+    try {
+      toolRegistry = require('../tools');
+    } catch {
+      toolRegistry = null;
+    }
     const batches = partitionIntoBatches(toolCalls, toolRegistry);
     const parallel = [];
     const sequential = [];
     for (const b of batches) {
-      if (b.parallel) parallel.push(...b.calls);
-      else sequential.push(...b.calls);
+      if (b.parallel) {
+        parallel.push(...b.calls);
+      } else {
+        sequential.push(...b.calls);
+      }
     }
     return { parallel, sequential };
   }
@@ -404,19 +509,23 @@ class ToolExecutionEngine {
     try {
       const { runWithConcurrency } = require('./concurrencyLimiter');
       const result = await runWithConcurrency({
-        tasks: calls.map(call => () => this.executeOne(call, context)),
+        tasks: calls.map((call) => () => this.executeOne(call, context)),
         limit: MAX_PARALLEL_TOOLS,
         errorMode: 'continue',
       });
       return result.results;
     } catch {
       // Fallback: Promise.allSettled
-      const settled = await Promise.allSettled(
-        calls.map(call => this.executeOne(call, context))
-      );
-      return settled.map(s => s.status === 'fulfilled'
-        ? s.value
-        : { tool: 'unknown', params: {}, result: { success: false, error: s.reason?.message || 'Promise rejected' }, elapsed: 0 }
+      const settled = await Promise.allSettled(calls.map((call) => this.executeOne(call, context)));
+      return settled.map((s) =>
+        s.status === 'fulfilled'
+          ? s.value
+          : {
+              tool: 'unknown',
+              params: {},
+              result: { success: false, error: s.reason?.message || 'Promise rejected' },
+              elapsed: 0,
+            }
       );
     }
   }
@@ -424,11 +533,15 @@ class ToolExecutionEngine {
   // ── Pipeline stages ────────────────────────────────────────────────
 
   async _runPreToolUseHook(call) {
-    if (!this._hookSystem) return null;
+    if (!this._hookSystem) {
+      return null;
+    }
     try {
       const hr = await this._hookSystem.trigger('PreToolUse', {
-        toolName: call.name, params: call.params,
-        iteration: this._iteration, _fileReadHashes: this._fileReadHashes,
+        toolName: call.name,
+        params: call.params,
+        iteration: this._iteration,
+        _fileReadHashes: this._fileReadHashes,
       });
       if (hr.blocked) {
         // Soft guards (editBoundary / fileStale / priorRead) flag their block as
@@ -439,36 +552,68 @@ class ToolExecutionEngine {
           try {
             const { requestGuardApproval } = require('./guardApproval');
             const verdict = await requestGuardApproval({
-              toolName: call.name, params: call.params,
-              reason: hr.reason, source: hr.source,
+              toolName: call.name,
+              params: call.params,
+              reason: hr.reason,
+              source: hr.source,
               onControlRequest: this._onControlRequest,
             });
             if (verdict.allowed) {
               call.params = verdict.params;
               return null; // proceed through the rest of the pipeline
             }
-          } catch { /* approval failure falls through to the block */ }
+          } catch {
+            /* approval failure falls through to the block */
+          }
         }
-        const result = { success: false, error: `[Hook] ${hr.reason || 'Blocked by PreToolUse hook'}` };
-        if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, 0);
-        return { tool: call.name, params: call.params, result, elapsed: 0, _toolUseId: call._toolUseId || null };
+        const result = {
+          success: false,
+          error: `[Hook] ${hr.reason || 'Blocked by PreToolUse hook'}`,
+        };
+        if (this._onToolResult) {
+          this._onToolResult(call.name, call.params, result, this._iteration, 0);
+        }
+        return {
+          tool: call.name,
+          params: call.params,
+          result,
+          elapsed: 0,
+          _toolUseId: call._toolUseId || null,
+        };
       }
-      if (hr.context?.params) call.params = hr.context.params;
-    } catch { /* hook failure should not block */ }
+      if (hr.context?.params) {
+        call.params = hr.context.params;
+      }
+    } catch {
+      /* hook failure should not block */
+    }
     return null;
   }
 
   _checkLoopDetection(call) {
-    if (!this._loopDetector) return null;
+    if (!this._loopDetector) {
+      return null;
+    }
     const detection = this._loopDetector.check(call.name, call.params);
-    if (detection.stuck && (detection.level === 'circuit_breaker' || detection.level === 'critical')) {
+    if (
+      detection.stuck &&
+      (detection.level === 'circuit_breaker' || detection.level === 'critical')
+    ) {
       const result = {
         success: false,
         error: `[LoopDetector:${detection.detector}] ${detection.message}\n\n[STOP] Do not retry. Answer with available info or explain the limitation.`,
         _loopDetected: true,
       };
-      if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, 0);
-      return { tool: call.name, params: call.params, result, elapsed: 0, _toolUseId: call._toolUseId || null };
+      if (this._onToolResult) {
+        this._onToolResult(call.name, call.params, result, this._iteration, 0);
+      }
+      return {
+        tool: call.name,
+        params: call.params,
+        result,
+        elapsed: 0,
+        _toolUseId: call._toolUseId || null,
+      };
     }
     if (detection.level === 'warning' && detection.message) {
       call._loopWarning = detection.message;
@@ -509,76 +654,161 @@ class ToolExecutionEngine {
     try {
       const { toolCallGuardrail } = require('./toolGuards');
       guardrailResult = toolCallGuardrail(call.name, call.params, prevExec.resultHash);
-    } catch { /* allow */ }
-
-    if (guardrailResult.level === 'critical') {
-      const result = { success: false, error: `[ToolCallGuardrail:critical] ${guardrailResult.reason}`, _loopDetected: true, _deduped: true };
-      if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, 0);
-      return { tool: call.name, params: call.params, result, elapsed: 0, _toolUseId: call._toolUseId || null };
+    } catch {
+      /* allow */
     }
 
-    const result = { ...prevExec.result, _deduped: true,
-      _dedupNote: `This exact call was already executed (attempt #${prevExec.count}). Use the previous result.` };
+    if (guardrailResult.level === 'critical') {
+      const result = {
+        success: false,
+        error: `[ToolCallGuardrail:critical] ${guardrailResult.reason}`,
+        _loopDetected: true,
+        _deduped: true,
+      };
+      if (this._onToolResult) {
+        this._onToolResult(call.name, call.params, result, this._iteration, 0);
+      }
+      return {
+        tool: call.name,
+        params: call.params,
+        result,
+        elapsed: 0,
+        _toolUseId: call._toolUseId || null,
+      };
+    }
+
+    const result = {
+      ...prevExec.result,
+      _deduped: true,
+      _dedupNote: `This exact call was already executed (attempt #${prevExec.count}). Use the previous result.`,
+    };
     if (guardrailResult.level === 'warning' && guardrailResult.injectedHint) {
       result._guardrailWarning = guardrailResult.injectedHint;
     }
-    if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, 0);
-    return { tool: call.name, params: call.params, result, elapsed: 0, _toolUseId: call._toolUseId || null };
+    if (this._onToolResult) {
+      this._onToolResult(call.name, call.params, result, this._iteration, 0);
+    }
+    return {
+      tool: call.name,
+      params: call.params,
+      result,
+      elapsed: 0,
+      _toolUseId: call._toolUseId || null,
+    };
   }
 
   _checkIntentDedup(call) {
     try {
-      const { extractShellIntent, _isShellTool, extractPathIntent, _isFsTool } = require('./toolLoopDetector');
+      const {
+        extractShellIntent,
+        _isShellTool,
+        extractPathIntent,
+        _isFsTool,
+      } = require('./toolLoopDetector');
       let intentKey = null;
       if (_isShellTool(call.name)) {
         const intent = extractShellIntent(call.params?.command || call.params?.cmd);
-        if (intent) intentKey = `__intent__:shell:${intent}`;
+        if (intent) {
+          intentKey = `__intent__:shell:${intent}`;
+        }
       } else if (_isFsTool(call.name)) {
         const pathIntent = extractPathIntent(call.name, call.params);
-        if (pathIntent) intentKey = `__intent__:fspath:${pathIntent}`;
+        if (pathIntent) {
+          intentKey = `__intent__:fspath:${pathIntent}`;
+        }
       }
       if (intentKey) {
         const prev = this._executedCallKeys.get(intentKey);
         if (prev && prev.count >= 2) {
-          const result = { ...prev.result, _deduped: true, _loopDetected: true,
-            _dedupNote: `Same target "${intentKey}" already attempted ${prev.count} times. Do not retry.` };
-          if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, 0);
-          return { tool: call.name, params: call.params, result, elapsed: 0, _toolUseId: call._toolUseId || null };
+          const result = {
+            ...prev.result,
+            _deduped: true,
+            _loopDetected: true,
+            _dedupNote: `Same target "${intentKey}" already attempted ${prev.count} times. Do not retry.`,
+          };
+          if (this._onToolResult) {
+            this._onToolResult(call.name, call.params, result, this._iteration, 0);
+          }
+          return {
+            tool: call.name,
+            params: call.params,
+            result,
+            elapsed: 0,
+            _toolUseId: call._toolUseId || null,
+          };
         }
-        if (prev) prev.count++; else this._executedCallKeys.set(intentKey, { result: null, count: 1 });
+        if (prev) {
+          prev.count++;
+        } else {
+          this._executedCallKeys.set(intentKey, { result: null, count: 1 });
+        }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
     return null;
   }
 
   _rewritePlatformCommand(call) {
-    if (!SHELL_TOOL_NAMES.has(call.name) || !call.params?.command) return;
+    if (!SHELL_TOOL_NAMES.has(call.name) || !call.params?.command) {
+      return;
+    }
     try {
       const { proactivePlatformRewrite } = require('./platformRewrite');
       const rewritten = proactivePlatformRewrite(call.params.command);
       if (rewritten !== call.params.command) {
         call.params = { ...call.params, command: rewritten, _originalCommand: call.params.command };
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   async _checkShellSafety(call) {
-    if (!SHELL_TOOL_NAMES.has(call.name) || !call.params?.command) return null;
+    if (!SHELL_TOOL_NAMES.has(call.name) || !call.params?.command) {
+      return null;
+    }
 
     const safety = analyzeCommand(call.params.command);
     if (!safety.safe) {
-      const result = { success: false, error: `[ShellSafety] Command blocked (${safety.maxSeverity}): ${safety.risks.filter(r => r.severity === 'critical').map(r => r.detail).join('; ')}` };
-      if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, 0);
-      return { tool: call.name, params: call.params, result, elapsed: 0, _toolUseId: call._toolUseId || null };
+      const result = {
+        success: false,
+        error: `[ShellSafety] Command blocked (${safety.maxSeverity}): ${safety.risks
+          .filter((r) => r.severity === 'critical')
+          .map((r) => r.detail)
+          .join('; ')}`,
+      };
+      if (this._onToolResult) {
+        this._onToolResult(call.name, call.params, result, this._iteration, 0);
+      }
+      return {
+        tool: call.name,
+        params: call.params,
+        result,
+        elapsed: 0,
+        _toolUseId: call._toolUseId || null,
+      };
     }
 
     if (this._execApproval) {
       const approval = this._execApproval.checkCommand(call.params.command);
       const verdict = await this._resolveExecApproval(call, approval);
       if (verdict === 'deny') {
-        const result = { success: false, denied: true, error: `[ExecApproval] ${approval.reason} (risk: ${approval.risk})` };
-        if (this._onToolResult) this._onToolResult(call.name, call.params, result, this._iteration, 0);
-        return { tool: call.name, params: call.params, result, elapsed: 0, _toolUseId: call._toolUseId || null };
+        const result = {
+          success: false,
+          denied: true,
+          error: `[ExecApproval] ${approval.reason} (risk: ${approval.risk})`,
+        };
+        if (this._onToolResult) {
+          this._onToolResult(call.name, call.params, result, this._iteration, 0);
+        }
+        return {
+          tool: call.name,
+          params: call.params,
+          result,
+          elapsed: 0,
+          _toolUseId: call._toolUseId || null,
+        };
       }
     }
     return null;
@@ -591,32 +821,66 @@ class ToolExecutionEngine {
    * contract (escape valves, fail-closed, dedup token).
    */
   async _resolveExecApproval(call, approval) {
-    if (approval.allowed === true) return 'allow';
-    if (!approval.requestId) return 'deny';
+    if (approval.allowed === true) {
+      return 'allow';
+    }
+    if (!approval.requestId) {
+      return 'deny';
+    }
 
     const requestId = approval.requestId;
     let execApprovalMod = null;
-    try { execApprovalMod = require('./execApproval'); } catch { execApprovalMod = null; }
+    try {
+      execApprovalMod = require('./execApproval');
+    } catch {
+      execApprovalMod = null;
+    }
     const mgr = (execApprovalMod && execApprovalMod.execApproval) || this._execApproval || null;
     const EXEC_APPROVED = execApprovalMod && execApprovalMod.EXEC_APPROVED;
 
     const stampAllow = () => {
-      if (mgr) { try { mgr.decide(requestId, 'approved', { decidedBy: 'escape_valve' }); } catch { /* best-effort */ } }
-      if (EXEC_APPROVED && call.params && typeof call.params === 'object') call.params[EXEC_APPROVED] = true;
+      if (mgr) {
+        try {
+          mgr.decide(requestId, 'approved', { decidedBy: 'escape_valve' });
+        } catch {
+          /* best-effort */
+        }
+      }
+      if (EXEC_APPROVED && call.params && typeof call.params === 'object') {
+        call.params[EXEC_APPROVED] = true;
+      }
       return 'allow';
     };
     const stampDeny = (by) => {
-      if (mgr) { try { mgr.decide(requestId, 'denied', { decidedBy: by || 'fail_closed' }); } catch { /* best-effort */ } }
+      if (mgr) {
+        try {
+          mgr.decide(requestId, 'denied', { decidedBy: by || 'fail_closed' });
+        } catch {
+          /* best-effort */
+        }
+      }
       return 'deny';
     };
 
     let yolo = false;
-    try { yolo = require('./permissionStore').getProfile() === 'yolo'; } catch { /* optional */ }
+    try {
+      yolo = require('./permissionStore').getProfile() === 'yolo';
+    } catch {
+      /* optional */
+    }
     let dangerous = false;
-    try { dangerous = require('./toolCalling').isDangerousMode(); } catch { /* optional */ }
-    if (process.env.KHY_EXEC_APPROVAL === 'off' || dangerous || yolo) return stampAllow();
+    try {
+      dangerous = require('./toolCalling').isDangerousMode();
+    } catch {
+      /* optional */
+    }
+    if (process.env.KHY_EXEC_APPROVAL === 'off' || dangerous || yolo) {
+      return stampAllow();
+    }
 
-    if (typeof this._onControlRequest !== 'function') return stampDeny('no_channel');
+    if (typeof this._onControlRequest !== 'function') {
+      return stampDeny('no_channel');
+    }
 
     let ctrlResp = null;
     try {
@@ -628,7 +892,9 @@ class ToolExecutionEngine {
           input: { command: call.params?.command, risk: approval.risk, reason: approval.reason },
         },
       });
-    } catch { ctrlResp = null; }
+    } catch {
+      ctrlResp = null;
+    }
 
     // Honor the SAME resolution payloads every host emits via the canonical
     // toolCalling._decisionFromControl — primitives (`true`, `'always'`) AND the
@@ -639,14 +905,16 @@ class ToolExecutionEngine {
     let allow = false;
     try {
       const d = require('./toolCalling')._decisionFromControl(ctrlResp);
-      allow = (d === 'allow' || d === 'allow-always');
+      allow = d === 'allow' || d === 'allow-always';
     } catch {
       if (ctrlResp === true) {
         allow = true;
       } else if (ctrlResp && typeof ctrlResp === 'object') {
         let node = ctrlResp;
-        if (node.type === 'control_response' && node.response) node = node.response;
-        const inner = (node.response && typeof node.response === 'object') ? node.response : node;
+        if (node.type === 'control_response' && node.response) {
+          node = node.response;
+        }
+        const inner = node.response && typeof node.response === 'object' ? node.response : node;
         allow = (inner.behavior || node.behavior) === 'allow';
       }
     }
@@ -655,29 +923,60 @@ class ToolExecutionEngine {
 
   async _runRecovery(call, result) {
     try {
-      const { recoverOpenAppAfterShellFailure, recoverWebSearchAfterShellFailure } = require('./appLaunchRecovery');
+      const {
+        recoverOpenAppAfterShellFailure,
+        recoverWebSearchAfterShellFailure,
+      } = require('./appLaunchRecovery');
       const toolCalling = require('./toolCalling');
-      const execCtx = { sessionId: this._traceSessionId, traceId: this._diagTraceId, requestId: this._requestId };
-      result = await recoverOpenAppAfterShellFailure(call, result, this._userMessage, toolCalling, execCtx);
-      result = await recoverWebSearchAfterShellFailure(call, result, this._userMessage, toolCalling, execCtx);
-    } catch { /* recovery failure is non-critical */ }
+      const execCtx = {
+        sessionId: this._traceSessionId,
+        traceId: this._diagTraceId,
+        requestId: this._requestId,
+      };
+      result = await recoverOpenAppAfterShellFailure(
+        call,
+        result,
+        this._userMessage,
+        toolCalling,
+        execCtx
+      );
+      result = await recoverWebSearchAfterShellFailure(
+        call,
+        result,
+        this._userMessage,
+        toolCalling,
+        execCtx
+      );
+    } catch {
+      /* recovery failure is non-critical */
+    }
     return result;
   }
 
   _injectPlatformHint(call, result) {
-    if (!result || result.success) return;
-    if (!SHELL_TOOL_NAMES.has(call.name)) return;
+    if (!result || result.success) {
+      return;
+    }
+    if (!SHELL_TOOL_NAMES.has(call.name)) {
+      return;
+    }
     try {
       const { getWindowsCommandHint, getLinuxCommandHint } = require('./platformRewrite');
       const cmd = String(call.params?.command || '');
       if (process.platform === 'win32') {
         const hint = getWindowsCommandHint(cmd);
-        if (hint) result.error = (result.error || '') + '\n[Windows Hint] ' + hint;
+        if (hint) {
+          result.error = (result.error || '') + '\n[Windows Hint] ' + hint;
+        }
       } else {
         const hint = getLinuxCommandHint(cmd);
-        if (hint) result.error = (result.error || '') + '\n[Linux Hint] ' + hint;
+        if (hint) {
+          result.error = (result.error || '') + '\n[Linux Hint] ' + hint;
+        }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   _registerDedupKey(call, result) {
@@ -686,38 +985,63 @@ class ToolExecutionEngine {
 
     // Update intent key
     try {
-      const { extractShellIntent, _isShellTool, extractPathIntent, _isFsTool } = require('./toolLoopDetector');
+      const {
+        extractShellIntent,
+        _isShellTool,
+        extractPathIntent,
+        _isFsTool,
+      } = require('./toolLoopDetector');
       let intentKey = null;
       if (_isShellTool(call.name)) {
         const si = extractShellIntent(call.params?.command || call.params?.cmd);
-        if (si) intentKey = `__intent__:shell:${si}`;
+        if (si) {
+          intentKey = `__intent__:shell:${si}`;
+        }
       } else if (_isFsTool(call.name)) {
         const pi = extractPathIntent(call.name, call.params);
-        if (pi) intentKey = `__intent__:fspath:${pi}`;
+        if (pi) {
+          intentKey = `__intent__:fspath:${pi}`;
+        }
       }
       if (intentKey) {
         const prev = this._executedCallKeys.get(intentKey);
-        if (prev) prev.result = result; else this._executedCallKeys.set(intentKey, { result, count: 1 });
+        if (prev) {
+          prev.result = result;
+        } else {
+          this._executedCallKeys.set(intentKey, { result, count: 1 });
+        }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
 
     // Guardrail record
     try {
       const { toolCallGuardrailRecordResult } = require('./toolGuards');
       const str = typeof result === 'string' ? result : JSON.stringify(result || '');
       toolCallGuardrailRecordResult(call.name, call.params, str.slice(0, 4096));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   _cacheFileHash(call, result) {
-    if (!/^(read_file|readFile)$/i.test(call.name) || !result?.success) return;
+    if (!/^(read_file|readFile)$/i.test(call.name) || !result?.success) {
+      return;
+    }
     const fp = call.params?.path || call.params?.file_path;
-    if (!fp) return;
+    if (!fp) {
+      return;
+    }
     try {
       let abs = path.resolve(process.env.KHYQUANT_CWD || process.cwd(), fp);
       // Use the shared platform-aware normalizer so the key matches the
       // prior-read / stale guards on Windows (drive-case & slash parity).
-      try { abs = require('../tools/_readTracker').normalizePath(abs); } catch { /* fallback to resolved */ }
+      try {
+        abs = require('../tools/_readTracker').normalizePath(abs);
+      } catch {
+        /* fallback to resolved */
+      }
       const hash = _fileContentHash(abs);
       if (hash) {
         try {
@@ -727,14 +1051,21 @@ class ToolExecutionEngine {
           this._fileReadHashes.set(abs, { hash, mtime: null, size: null });
         }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   async _runPostToolUseHook(call, result, elapsed) {
-    if (!this._hookSystem) return result;
+    if (!this._hookSystem) {
+      return result;
+    }
     try {
       const postHr = await this._hookSystem.trigger('PostToolUse', {
-        toolName: call.name, params: call.params, result, elapsed,
+        toolName: call.name,
+        params: call.params,
+        result,
+        elapsed,
         _fileReadHashes: this._fileReadHashes,
       });
       // s04: PostToolUse 优雅停机 — 置实例标志，由引擎循环边界检查并干净收尾。
@@ -742,24 +1073,37 @@ class ToolExecutionEngine {
         this._hookStopRequested = true;
         this._hookStopReason = postHr.context.stopReason || postHr.reason || '';
       }
-      if (postHr.context?.result) return postHr.context.result;
-    } catch { /* non-critical */ }
+      if (postHr.context?.result) {
+        return postHr.context.result;
+      }
+    } catch {
+      /* non-critical */
+    }
     return result;
   }
 
   _emitTraceEvent(eventName, payload) {
-    if (!this._traceAudit) return;
+    if (!this._traceAudit) {
+      return;
+    }
     try {
-      this._traceAudit.logEvent(eventName, {
-        requestId: this._requestId, ...payload,
-      }, {
-        sessionId: this._traceSessionId,
-        traceId: this._diagTraceId,
-        requestId: this._requestId,
-        source: 'tool-loop',
-        visibility: 'summary',
-      });
-    } catch { /* non-critical */ }
+      this._traceAudit.logEvent(
+        eventName,
+        {
+          requestId: this._requestId,
+          ...payload,
+        },
+        {
+          sessionId: this._traceSessionId,
+          traceId: this._diagTraceId,
+          requestId: this._requestId,
+          source: 'tool-loop',
+          visibility: 'summary',
+        }
+      );
+    } catch {
+      /* non-critical */
+    }
   }
 }
 

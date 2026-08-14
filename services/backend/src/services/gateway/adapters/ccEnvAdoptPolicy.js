@@ -22,7 +22,12 @@
  */
 
 // Order matters for display; ANTHROPIC_AUTH_TOKEN is preferred as the active credential.
-const ADOPTABLE_KEYS = ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL'];
+const ADOPTABLE_KEYS = [
+  'ANTHROPIC_BASE_URL',
+  'ANTHROPIC_AUTH_TOKEN',
+  'ANTHROPIC_API_KEY',
+  'ANTHROPIC_MODEL',
+];
 
 function _clean(v) {
   return v == null ? '' : String(v).trim();
@@ -31,8 +36,12 @@ function _clean(v) {
 /** Mask a secret for display: keep a short head + tail, never the middle. */
 function maskSecret(v) {
   const s = _clean(v);
-  if (!s) return '';
-  if (s.length <= 10) return `${s.slice(0, 2)}…(len=${s.length})`;
+  if (!s) {
+    return '';
+  }
+  if (s.length <= 10) {
+    return `${s.slice(0, 2)}…(len=${s.length})`;
+  }
   return `${s.slice(0, 6)}…${s.slice(-3)}(len=${s.length})`;
 }
 
@@ -69,10 +78,18 @@ function planCcEnvAdoption(env = {}, defaults = {}) {
   const authScheme = authToken ? 'bearer' : 'x-api-key';
 
   const entries = [];
-  if (baseUrl) entries.push({ key: 'ANTHROPIC_BASE_URL', value: baseUrl });
-  if (authToken) entries.push({ key: 'ANTHROPIC_AUTH_TOKEN', value: authToken });
-  if (apiKey) entries.push({ key: 'ANTHROPIC_API_KEY', value: apiKey });
-  if (model) entries.push({ key: 'ANTHROPIC_MODEL', value: model });
+  if (baseUrl) {
+    entries.push({ key: 'ANTHROPIC_BASE_URL', value: baseUrl });
+  }
+  if (authToken) {
+    entries.push({ key: 'ANTHROPIC_AUTH_TOKEN', value: authToken });
+  }
+  if (apiKey) {
+    entries.push({ key: 'ANTHROPIC_API_KEY', value: apiKey });
+  }
+  if (model) {
+    entries.push({ key: 'ANTHROPIC_MODEL', value: model });
+  }
 
   return {
     ok: true,
@@ -127,7 +144,10 @@ function renderEnvFilePatch(existingContent, entries) {
   // Normalize: collapse 3+ blank lines, trim leading/trailing blank lines,
   // end with exactly one newline. Trimming both ends also drops the phantom
   // empty line that splitting an empty input produces.
-  const text = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  const text = out
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
   return text.length ? `${text}\n` : '';
 }
 
@@ -145,7 +165,9 @@ function renderEnvFilePatch(existingContent, entries) {
  */
 function resolveExportTarget(homedir, userPath) {
   const explicit = _clean(userPath);
-  if (explicit) return explicit;
+  if (explicit) {
+    return explicit;
+  }
   const home = _clean(homedir) || '.';
   return `${home}/Desktop/khy-cc-env.env`;
 }

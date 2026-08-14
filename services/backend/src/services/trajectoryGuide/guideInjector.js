@@ -17,8 +17,9 @@
  * follow"), so the weak model is steered, not constrained.
  */
 
-const config = require('./config');
 const { assess } = require('../marshal/capabilityVector');
+
+const config = require('./config');
 const guideRetriever = require('./guideRetriever');
 
 /** Render the recommended-path block from a selected map, budget-capped. */
@@ -26,7 +27,9 @@ function _renderBlock(map, budgetChars) {
   const lines = [];
   lines.push('# Recommended Path (from a past successful trajectory)');
   lines.push('');
-  lines.push(`A strong model previously solved a similar task ("${map.task}") along the path below.`);
+  lines.push(
+    `A strong model previously solved a similar task ("${map.task}") along the path below.`
+  );
   lines.push('You MAY follow these steps in order to reach the result with less trial-and-error.');
   lines.push('This is guidance, not a constraint: adapt freely, and verify your own results.');
   lines.push('');
@@ -54,22 +57,36 @@ function _renderBlock(map, budgetChars) {
  * @returns {Promise<string|null>}
  */
 async function buildGuideBlock(args = {}) {
-  if (!config.isGuideInjectEnabled()) return null;
+  if (!config.isGuideInjectEnabled()) {
+    return null;
+  }
   const { userMessage, modelId } = args;
-  if (!userMessage || !modelId) return null;
+  if (!userMessage || !modelId) {
+    return null;
+  }
 
   // Weak-only: strong models author maps, they don't consume them.
   let strength;
-  try { strength = assess(modelId).strength; } catch { return null; }
-  if (strength !== 'weak') return null;
+  try {
+    strength = assess(modelId).strength;
+  } catch {
+    return null;
+  }
+  if (strength !== 'weak') {
+    return null;
+  }
 
   let guide;
   try {
-    guide = await guideRetriever.findGuide(String(userMessage), { allowVector: !!args.allowVector });
+    guide = await guideRetriever.findGuide(String(userMessage), {
+      allowVector: !!args.allowVector,
+    });
   } catch {
     return null; // best-effort: never break the turn
   }
-  if (!guide || !guide.map) return null;
+  if (!guide || !guide.map) {
+    return null;
+  }
 
   return _renderBlock(guide.map, config.guideChars());
 }

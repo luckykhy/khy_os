@@ -145,6 +145,9 @@ int vmm_map_page(struct vm_space *space, uint64_t virt_addr, uint64_t phys_addr,
     if (!pt)
         return -5;
 
+    if (pt[pt_i] & VMM_FLAG_PRESENT)
+        return -6;
+
     uint64_t pte = (phys_addr & ~0xFFFULL) | VMM_FLAG_PRESENT;
     pte |= (flags & (VMM_FLAG_WRITABLE | VMM_FLAG_USER | VMM_FLAG_COW | VMM_FLAG_NO_EXEC));
     pt[pt_i] = pte;
@@ -162,6 +165,8 @@ int vmm_map_anonymous(struct vm_space *space, uint64_t virt_addr, size_t size, u
 
     uint64_t start = virt_addr & ~0xFFFULL;
     uint64_t end = align_up_u64(virt_addr + size, VMM_PAGE_SIZE);
+    if (end <= start)
+        return -1;
 
     for (uint64_t va = start; va < end; va += VMM_PAGE_SIZE) {
         uint64_t phys = vmm_alloc_owned_page(space);

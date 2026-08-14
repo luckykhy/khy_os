@@ -50,7 +50,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
  */
 function _conflictDetectEnabled() {
   const v = process.env.KHY_MERGE_FILE_CONFLICT;
-  if (v === undefined || v === null) return true;
+  if (v === undefined || v === null) {
+    return true;
+  }
   return !_FALSY.has(String(v).trim().toLowerCase());
 }
 
@@ -68,22 +70,34 @@ function _conflictDetectEnabled() {
  * @returns {Array<{file: string, labels: string[]}>} 仅冲突项（labels.length >= _CONFLICT_MIN）
  */
 function detectFileConflicts(subtaskFiles) {
-  if (!_conflictDetectEnabled()) return [];
-  if (!Array.isArray(subtaskFiles)) return [];
+  if (!_conflictDetectEnabled()) {
+    return [];
+  }
+  if (!Array.isArray(subtaskFiles)) {
+    return [];
+  }
 
   // file → Set<label>（label 去重：同一子任务重复列同一文件只计一次）
   const byFile = new Map();
 
   for (const entry of subtaskFiles) {
-    if (!entry || typeof entry !== 'object') continue;
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
     const files = entry.files;
-    if (!Array.isArray(files)) continue;
+    if (!Array.isArray(files)) {
+      continue;
+    }
     const label = typeof entry.label === 'string' ? entry.label : String(entry.label ?? '');
 
     for (const f of files) {
-      if (typeof f !== 'string') continue;
+      if (typeof f !== 'string') {
+        continue;
+      }
       const file = f.trim();
-      if (!file) continue;
+      if (!file) {
+        continue;
+      }
       let labels = byFile.get(file);
       if (!labels) {
         labels = new Set();
@@ -113,7 +127,9 @@ function detectFileConflicts(subtaskFiles) {
  * @returns {string}
  */
 function formatConflictWarning(conflicts) {
-  if (!Array.isArray(conflicts) || conflicts.length === 0) return '';
+  if (!Array.isArray(conflicts) || conflicts.length === 0) {
+    return '';
+  }
   const parts = conflicts.map((c) => {
     const labels = Array.isArray(c && c.labels) ? c.labels.join(', ') : '';
     return `${c && c.file}（${labels}）`;

@@ -26,7 +26,9 @@
 const fs = require('fs');
 
 function ensureDirSync(dir) {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 }
 
 module.exports = ensureDirSync;

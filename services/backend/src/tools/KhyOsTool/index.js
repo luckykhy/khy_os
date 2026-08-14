@@ -21,6 +21,7 @@
  */
 
 const path = require('path');
+
 const { BaseTool } = require('../_baseTool');
 
 // ── Singleton kernel session (lazy boot, reused across tool calls) ──
@@ -43,46 +44,76 @@ function agentDiskPath(khyos) {
 }
 
 function clearIdleTimer() {
-  if (_idleTimer) { clearTimeout(_idleTimer); _idleTimer = null; }
+  if (_idleTimer) {
+    clearTimeout(_idleTimer);
+    _idleTimer = null;
+  }
 }
 
 function armIdleTimer() {
   clearIdleTimer();
-  _idleTimer = setTimeout(() => { void teardown(); }, IDLE_MS);
-  if (_idleTimer.unref) _idleTimer.unref();
+  _idleTimer = setTimeout(() => {
+    void teardown();
+  }, IDLE_MS);
+  if (_idleTimer.unref) {
+    _idleTimer.unref();
+  }
 }
 
 async function teardown() {
   clearIdleTimer();
   const r = _runner;
   _runner = null;
-  if (r) { try { await r.stop(); } catch { /* ignore */ } }
+  if (r) {
+    try {
+      await r.stop();
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 function installExitHook() {
-  if (_exitHookInstalled) return;
+  if (_exitHookInstalled) {
+    return;
+  }
   _exitHookInstalled = true;
   // Best-effort synchronous kill so QEMU isn't orphaned if the host exits while
   // a kernel session is live (async stop() can't complete inside 'exit').
   process.once('exit', () => {
     try {
       const pid = _runner && _runner.pid;
-      if (pid) process.kill(pid, 'SIGKILL');
-    } catch { /* ignore */ }
+      if (pid) {
+        process.kill(pid, 'SIGKILL');
+      }
+    } catch {
+      /* ignore */
+    }
   });
 }
 
 async function ensureRunner() {
-  if (_runner && _runner.running) return _runner;
-  if (_booting) return _booting;
+  if (_runner && _runner.running) {
+    return _runner;
+  }
+  if (_booting) {
+    return _booting;
+  }
   _booting = (async () => {
     const khyos = loadKhyos();
     const iso = await khyos.ensureKhyosIso();
     const runner = new khyos.KhyOsRunner({ isoPath: iso, diskPath: agentDiskPath(khyos) });
     // Errors surface to callers via runCommand rejection; on exit, drop the
     // singleton so the next call boots a fresh kernel.
-    runner.on('error', () => { /* noop — observed through command failures */ });
-    runner.on('exit', () => { if (_runner === runner) { _runner = null; clearIdleTimer(); } });
+    runner.on('error', () => {
+      /* noop — observed through command failures */
+    });
+    runner.on('exit', () => {
+      if (_runner === runner) {
+        _runner = null;
+        clearIdleTimer();
+      }
+    });
     await runner.start();
     await runner.waitForPrompt(BOOT_TIMEOUT_MS);
     _runner = runner;
@@ -104,8 +135,12 @@ class KhyOsTool extends BaseTool {
   static searchHint = 'bare-metal kernel low-level disk memory process syscall qemu';
   static shouldDefer = false;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Run a command on the bare-metal KHY OS kernel and return its output.
@@ -146,7 +181,8 @@ Tips:
       properties: {
         command: {
           type: 'string',
-          description: 'The KHY OS kernel shell command to run, e.g. "ps", "ls /bin", "run /bin/forkwait.elf", "diskwrite 100 hello", "diskread 100".',
+          description:
+            'The KHY OS kernel shell command to run, e.g. "ps", "ls /bin", "run /bin/forkwait.elf", "diskwrite 100 hello", "diskread 100".',
           minLength: 1,
         },
         timeout_ms: {
@@ -157,7 +193,8 @@ Tips:
         },
         restart: {
           type: 'boolean',
-          description: 'Reboot the kernel before running this command (fresh kernel state; the KhyFS disk still persists). Use to test reboot persistence or recover a wedged kernel.',
+          description:
+            'Reboot the kernel before running this command (fresh kernel state; the KhyFS disk still persists). Use to test reboot persistence or recover a wedged kernel.',
         },
       },
       required: ['command'],
@@ -171,7 +208,10 @@ Tips:
   async execute(params, _context) {
     const command = String((params && params.command) || '').trim();
     if (!command) {
-      return { success: false, error: 'command is required (a KHY OS shell command, e.g. "ps", "ls /bin", "diskread 100")' };
+      return {
+        success: false,
+        error: 'command is required (a KHY OS shell command, e.g. "ps", "ls /bin", "diskread 100")',
+      };
     }
     const timeoutMs = Number(params.timeout_ms) > 0 ? Number(params.timeout_ms) : 15000;
     const restart = !!params.restart;
@@ -179,7 +219,9 @@ Tips:
     // Serialize on the single serial line so concurrent tool calls never
     // interleave their bytes. Keep the chain alive regardless of outcome.
     const run = _chain.then(async () => {
-      if (restart) await teardown();
+      if (restart) {
+        await teardown();
+      }
       const coldBoot = !(_runner && _runner.running);
 
       let runner;
@@ -206,7 +248,10 @@ Tips:
         return { success: false, error: `command failed: ${err.message}` };
       }
     });
-    _chain = run.then(() => {}, () => {});
+    _chain = run.then(
+      () => {},
+      () => {}
+    );
     return run;
   }
 }

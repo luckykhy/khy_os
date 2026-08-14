@@ -26,7 +26,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env) {
   const raw = env && env.KHY_LAUNCH_TRUST_SPAWN;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -72,8 +74,10 @@ function formatLaunchOutput(displayName, execHint, verification, env) {
   if (verification && verification.verified) {
     return `已启动并验证: ${displayName} (${execHint})`;
   }
-  return `已启动: ${displayName} (${execHint})`
-    + `（启动命令已成功返回；2s 内未捕捉到新进程,窗口确认为尽力而为,不代表启动失败）`;
+  return (
+    `已启动: ${displayName} (${execHint})` +
+    `（启动命令已成功返回；2s 内未捕捉到新进程,窗口确认为尽力而为,不代表启动失败）`
+  );
 }
 
 module.exports = {

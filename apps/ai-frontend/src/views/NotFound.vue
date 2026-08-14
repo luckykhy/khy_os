@@ -18,9 +18,13 @@
           <div class="not-found-links">
             <router-link class="not-found-link" to="/home" @click="stopCountdown">首页</router-link>
             <span class="not-found-sep" aria-hidden="true">·</span>
-            <router-link class="not-found-link" to="/chat" @click="stopCountdown">开始对话</router-link>
+            <router-link class="not-found-link" to="/chat" @click="stopCountdown"
+              >开始对话</router-link
+            >
             <span class="not-found-sep" aria-hidden="true">·</span>
-            <router-link class="not-found-link" to="/features" @click="stopCountdown">功能索引</router-link>
+            <router-link class="not-found-link" to="/features" @click="stopCountdown"
+              >功能索引</router-link
+            >
           </div>
         </div>
       </template>
@@ -35,47 +39,50 @@
 //
 // 倒计时:3 秒后自动 router.replace('/home')(replace 而非 push,避免"返回"又回到坏地址)。
 // 用户点击任意按钮/链接/取消即停表,绝不打断主动操作;组件卸载必清定时器。
-import { ref, onMounted, onBeforeUnmount, markRaw } from 'vue'
-import { useRouter } from 'vue-router'
-import { Compass } from '@element-plus/icons-vue'
-import KhyEmpty from '@/components/KhyEmpty.vue'
+import { ref, onMounted, onBeforeUnmount, markRaw } from 'vue';
+import { useRouter } from 'vue-router';
+import { Compass } from '@element-plus/icons-vue';
+import KhyEmpty from '@/components/KhyEmpty.vue';
 
-const CompassIcon = markRaw(Compass)
-const AUTO_RETURN_SECONDS = 3
+const CompassIcon = markRaw(Compass);
+const AUTO_RETURN_SECONDS = 3;
 
-const router = useRouter()
-const seconds = ref(AUTO_RETURN_SECONDS)
-const counting = ref(true)
-let timer = null
+const router = useRouter();
+const seconds = ref(AUTO_RETURN_SECONDS);
+const counting = ref(true);
+let timer = null;
 
 function stopCountdown() {
-  counting.value = false
-  if (timer) { clearInterval(timer); timer = null }
+  counting.value = false;
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
 }
 
 function goHome() {
-  stopCountdown()
-  router.replace('/home')
+  stopCountdown();
+  router.replace('/home');
 }
 
 function goBack() {
-  stopCountdown()
+  stopCountdown();
   // history 里没有上一页(如直接粘贴坏 URL 进来)时,回退到首页兜底。
-  if (window.history.length > 1) router.back()
-  else router.replace('/home')
+  if (window.history.length > 1) router.back();
+  else router.replace('/home');
 }
 
 onMounted(() => {
   timer = setInterval(() => {
-    seconds.value -= 1
+    seconds.value -= 1;
     if (seconds.value <= 0) {
-      stopCountdown()
-      router.replace('/home')
+      stopCountdown();
+      router.replace('/home');
     }
-  }, 1000)
-})
+  }, 1000);
+});
 
-onBeforeUnmount(stopCountdown)
+onBeforeUnmount(stopCountdown);
 </script>
 
 <style scoped>

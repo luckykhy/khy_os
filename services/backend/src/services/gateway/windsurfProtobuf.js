@@ -32,7 +32,9 @@ function appendStringField(buf, fieldNum, text) {
   const payload = Buffer.from(String(text || ''), 'utf8');
   appendTag(buf, fieldNum, 2);
   appendVarint(buf, payload.length);
-  for (const b of payload) buf.push(b);
+  for (const b of payload) {
+    buf.push(b);
+  }
 }
 
 /** 追加 varint（wireType 0）布尔字段。 */
@@ -46,7 +48,9 @@ function encodeWindsurfClientModelConfig(modelId, recommended = false) {
   const msg = [];
   appendStringField(msg, 1, modelId); // label
   appendStringField(msg, 22, modelId); // model_uid
-  if (recommended) appendBoolField(msg, 11, true); // is_recommended
+  if (recommended) {
+    appendBoolField(msg, 11, true);
+  } // is_recommended
   return Buffer.from(msg);
 }
 
@@ -61,7 +65,9 @@ function encodeWindsurfModelConfigResponse(models = []) {
     const inner = encodeWindsurfClientModelConfig(list[i], i === 0);
     appendTag(out, 1, 2); // repeated client_model_configs
     appendVarint(out, inner.length);
-    for (const b of inner) out.push(b);
+    for (const b of inner) {
+      out.push(b);
+    }
   }
   return Buffer.from(out);
 }

@@ -1,18 +1,296 @@
+const http = require('http');
+const https = require('https');
+
 const axios = require('axios');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 const jwt = require('jsonwebtoken');
-const { toGoogleInlineData, toOpenAIVisionBlocks, toAnthropicImageBlocks } = require('./gateway/adapters/_imageCompat');
-const { convertMessagesAnthropicToOpenAI } = require('./gateway/adapters/_toolSchemaConverter');
+
+const { PRIMARY: MODELS } = require('../constants/models');
+
 const { extractPrimaryApiKey } = require('./apiKeyFormat');
 const { normalizeCacheUsage } = require('./gateway/adapters/_cacheUsage');
+const {
+  toGoogleInlineData,
+  toOpenAIVisionBlocks,
+  toAnthropicImageBlocks,
+} = require('./gateway/adapters/_imageCompat');
+const { convertMessagesAnthropicToOpenAI } = require('./gateway/adapters/_toolSchemaConverter');
+
 // Model-name SSOT: free-tier provider model choices flow from constants/models.js.
-const { PRIMARY: MODELS } = require('../constants/models');
+
+// ── Keep-alive 连接管理与死连接免疫 ─────────────────────────────────
+// 长空闲后服务端会静默关闭 keep-alive TCP 连接;下次复用该死连接会报
+// socket hang up / ECONNRESET,导致新消息被错误地记成 unknown 失败。对策:
+//   1. keepAlive 复用连接,但**不设 agent 级 timeout**:实测(Node v24 原生
+//      http.Agent + 本地服务器,块间隔 > timeout)该 timeout 是 socket 级,
+//      活跃请求期间同样触发 socket/request 的 timeout 事件——对块间隔可能
+//      超过阈值的 SSE 长流(OpenAI/Anthropic 流式)是不可靠行为(当前 axios
+//      恰好不因此销毁流,但属未文档化实现细节,不可依赖)。Node 原生 Agent
+//      也没有 agentkeepalive 的 freeSocketTimeout(仅作用空闲池)选项,故无法
+//      只对 free socket 设超时 → 选择安全方案:不设 timeout;
+//   2. 用较小的 maxFreeSockets 收紧空闲池,减少可能变成死连接的存量;
+//   3. 若仍撞上死连接(尚未收到任何响应数据),postWithDeadConnRetry 自动用
+//      全新连接重试一次(仅一次)——死连接防护完全由该重试兜底。
+const KEEP_ALIVE_MAX_FREE_SOCKETS = 5;
+
+/**
+ * 判定给定模型是否应剥离 tools 声明(小模型不支持 function calling)。
+ * 单一真源在 gateway/modelToolingCapability(与系统提示词教学门同源);
+ * 门控关 → 字节回退到旧内联名字正则。
+ *
+ * @param {string} model
+ * @param {object} opts
+ * @param {boolean} [opts._toolCapProbe] - 能力探测必须真发 tools,绝不剥离
+ * @returns {boolean} true=应剥离 tools(消息中的工具块须内联为文本)
+ */
+function _decideStripTools(model, opts = {}) {
+  try {
+    if (opts._toolCapProbe) {
+      return false;
+    } // 探测必须保留 tools
+    const _toolCap = require('./gateway/modelToolingCapability');
+    if (_toolCap.isEnabled()) {
+      let _measured = null;
+      try {
+        _measured = require('./gateway/toolCapabilityStore').getVerdict(model);
+      } catch {
+        /* best effort */
+      }
+      return _toolCap.shouldStripUpstreamTools(model, { measured: _measured });
+    }
+  } catch {
+    /* capability store 不可用 → 名字启发 */
+  }
+  return (
+    /(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny)/i.test(String(model || '')) &&
+    !/deepseek-v[3-9]/i.test(String(model || '')) &&
+    !/sensenova-\d/i.test(String(model || ''))
+  );
+}
+
+// ── 代理支持 ──────────────────────────────────────────────
+// 配置了 HTTPS_PROXY 时，优先走代理；代理不可达时自动回退直连。
+// 不配置 HTTPS_PROXY 时完全不走代理（性能零损耗）。
+const _configuredProxyUrl = (process.env.HTTPS_PROXY || process.env.https_proxy || '').trim();
+const _proxyAgent = _configuredProxyUrl ? new HttpsProxyAgent(_configuredProxyUrl) : null;
+const sharedHttpAgent = new http.Agent({
+  keepAlive: true,
+  maxFreeSockets: KEEP_ALIVE_MAX_FREE_SOCKETS,
+});
+const sharedHttpsAgent = new https.Agent({
+  keepAlive: true,
+  maxFreeSockets: KEEP_ALIVE_MAX_FREE_SOCKETS,
+});
+const _directHttpsAgent = new https.Agent({
+  keepAlive: true,
+  maxFreeSockets: KEEP_ALIVE_MAX_FREE_SOCKETS,
+});
+
+let _proxyFailedOnce = false;
+
+// ── Per-provider 代理 ─────────────────────────────────────
+// provider 配置(custom_providers.json / api_keys.json)带 proxy 字段时，该 provider
+// 的请求单独经其代理发出；其余 provider 不受影响（沿用共享 keep-alive agent 直连）。
+// agent 按代理 URL 缓存复用，保持 keep-alive 连接池语义。代理地址只来自配置，源码零硬编码。
+const _providerProxyAgents = new Map();
+
+function _agentForProviderProxy(proxyUrl, label) {
+  const raw = String(proxyUrl || '').trim();
+  // 空串/null → 直连（返回共享 keep-alive https agent，行为等同不配置代理）。
+  if (!raw) {
+    return sharedHttpsAgent;
+  }
+  let agent = _providerProxyAgents.get(raw);
+  if (!agent) {
+    try {
+      agent = new HttpsProxyAgent(raw);
+    } catch (err) {
+      // 非法代理 URL 会在此同步抛错；容错回退直连，避免请求前崩溃。
+      // 只打 err.code（如 ERR_INVALID_URL），不打 URL/凭据。
+      console.warn(
+        `[proxy] ${label || 'provider'} 代理地址无效（${(err && err.code) || 'invalid'}），回退直连`
+      );
+      return sharedHttpsAgent;
+    }
+    _providerProxyAgents.set(raw, agent);
+    try {
+      const u = new URL(raw);
+      console.log(
+        `[proxy] 连接 ${label || 'provider'} 经代理 ${u.hostname}:${u.port}（per-provider，通道已建立）`
+      );
+    } catch {
+      /* proxyUrl 无法解析主机端口时仅跳过日志，agent 已可用 */
+    }
+  }
+  return agent;
+}
+
+function _currentHttpsAgent() {
+  if (!_proxyAgent || _proxyFailedOnce) {
+    return _directHttpsAgent;
+  }
+  return _proxyAgent;
+}
+
+function withKeepAliveAgents(config = {}) {
+  // config 展开在后 → 调用方显式传入的 httpAgent/httpsAgent 优先于共享 agent。
+  return { httpAgent: sharedHttpAgent, httpsAgent: _currentHttpsAgent(), ...config };
+}
+
+// 死连接错误判定:keep-alive 连接被服务端关闭后复用所致,换新连接即可恢复。
+// err.response 存在 → 已收到上游响应,不属于死连接。注意排除 axios 超时
+// (code 同为 ECONNABORTED 但 message 带 timeout)——超时重试只会双倍等待。
+function isDeadConnectionError(err) {
+  if (!err || err.response) {
+    return false;
+  }
+  const msg = String(err.message || '').toLowerCase();
+  const code = String(err.code || '').toUpperCase();
+  if (code === 'ECONNABORTED' || msg.includes('econnaborted')) {
+    return !/timeout|timed?\s*out/.test(msg);
+  }
+  return (
+    code === 'ECONNRESET' ||
+    code === 'EPIPE' ||
+    msg.includes('socket hang up') ||
+    msg.includes('econnreset') ||
+    msg.includes('epipe') ||
+    msg.includes('broken pipe')
+  );
+}
+
+// POST 封装:注入共享 keep-alive agent;遇死连接(未收到任何响应数据)时
+// 用全新连接重试一次(不带 agent → 绕开池内可能残留的其他死 socket)。
+// config._providerProxyUrl(内部字段,发请求前剥离)存在时走 per-provider 代理分支:
+// 请求经该代理的缓存 agent 发出;死连接重试改用全新 HttpsProxyAgent(仍经代理,
+// 同样绕开池内死 socket)。不带该字段的请求走原共享 agent 路径,行为逐字节不变。
+async function postWithDeadConnRetry(url, data, config, label) {
+  const { _providerProxyUrl, ...restConfig } = config || {};
+  const providerProxyUrl = String(_providerProxyUrl || '').trim();
+  if (providerProxyUrl) {
+    const proxied = { ...restConfig, httpsAgent: _agentForProviderProxy(providerProxyUrl, label) };
+    try {
+      return await axios.post(url, data, withKeepAliveAgents(proxied));
+    } catch (err) {
+      if (!isDeadConnectionError(err)) {
+        throw err;
+      }
+      console.warn(
+        `连接被服务端关闭(${err.code || err.message})，正在经代理用新连接重试 ${label} (第1/1次)...`
+      );
+      let retryAgent;
+      try {
+        retryAgent = new HttpsProxyAgent(providerProxyUrl);
+      } catch (e) {
+        // 代理地址此刻变得非法/不可构造 → 死连接重试改用直连，绝不因构造抛错中断。
+        console.warn(
+          `[proxy] ${label || 'provider'} 代理地址无效（${(e && e.code) || 'invalid'}），死连接重试改用直连`
+        );
+        return axios.post(url, data, {
+          ...restConfig,
+          httpsAgent: _directHttpsAgent,
+          httpAgent: sharedHttpAgent,
+        });
+      }
+      return axios.post(url, data, { ...restConfig, httpsAgent: retryAgent });
+    }
+  }
+  try {
+    return await axios.post(url, data, withKeepAliveAgents(restConfig));
+  } catch (err) {
+    // 代理不可用(连接拒绝/超时) → 回退直连
+    if (_proxyAgent && !_proxyFailedOnce && isProxyConnectError(err)) {
+      _proxyFailedOnce = true;
+      console.warn(`[proxy] 代理 ${_configuredProxyUrl} 不可达，回退直连`);
+      return axios.post(url, data, {
+        ...restConfig,
+        httpsAgent: _directHttpsAgent,
+        httpAgent: sharedHttpAgent,
+      });
+    }
+    if (!isDeadConnectionError(err)) {
+      throw err;
+    }
+    console.warn(
+      `连接被服务端关闭(${err.code || err.message})，正在用新连接重试 ${label} (第1/1次)...`
+    );
+    return axios.post(url, data, { ...restConfig });
+  }
+}
+
+function isProxyConnectError(err) {
+  if (!err || err.response) {
+    return false;
+  }
+  const msg = String(err.message || '').toLowerCase();
+  const code = String(err.code || '').toUpperCase();
+  return (
+    code === 'ECONNREFUSED' ||
+    code === 'ECONNRESET' ||
+    msg.includes('econnrefused') ||
+    msg.includes('proxy connect') ||
+    msg.includes('tunnel') ||
+    msg.includes('connect econnrefused')
+  );
+}
+
+// Sliding idle watchdog for streaming responses. Some providers accept the
+// request (headers arrive) but never emit a single data chunk, leaving the
+// stream Promise pending forever and the TUI stuck on "thinking". The watchdog
+// arms on creation, is reset on every data chunk, and on expiry destroys the
+// stream and rejects with an honest, actionable Chinese message.
+// Threshold: KHY_STREAM_IDLE_TIMEOUT_MS (default 45000ms).
+//
+// Timeout layering: by default the gateway idle watchdog
+// (GATEWAY_WALL_CLOCK_TIMEOUT_MS) fires first; this stream-level guard
+// (KHY_STREAM_IDLE_TIMEOUT_MS, 45s) and the TUI-level guard
+// (KHY_CHAT_IDLE_TIMEOUT_MS, 180s) are last-resort backstops. When tuning,
+// keep KHY_STREAM_IDLE_TIMEOUT_MS >= the gateway idle default.
+function createStreamIdleWatchdog(stream, reject, label) {
+  // Explicit parse with positivity check: a negative/zero/garbage env value
+  // must fall back to the default instead of arming an instant timeout.
+  const rawIdleMs = Number.parseInt(
+    String(process.env.KHY_STREAM_IDLE_TIMEOUT_MS || '').trim(),
+    10
+  );
+  const idleTimeoutMs = Number.isFinite(rawIdleMs) && rawIdleMs > 0 ? rawIdleMs : 45000;
+  let timer = null;
+  const onExpire = () => {
+    timer = null;
+    try {
+      stream.destroy();
+    } catch {
+      /* best effort — stream may be gone */
+    }
+    reject(
+      new Error(
+        `流式响应空闲超时：${label} 已 ${Math.round(idleTimeoutMs / 1000)}s 未收到任何数据分块（可设 KHY_STREAM_IDLE_TIMEOUT_MS 调整）`
+      )
+    );
+  };
+  const touch = () => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(onExpire, idleTimeoutMs);
+  };
+  const clear = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  touch(); // arm immediately — covers the "headers arrived, zero chunks" hang
+  return { touch, clear };
+}
 
 class MultiFreeService {
   constructor() {
     this.baiduToken = null;
     this.baiduTokenExpireAt = 0;
-    const googleApiKey = extractPrimaryApiKey(process.env.GOOGLE_GEMINI_API_KEY)
-      || extractPrimaryApiKey(process.env.GEMINI_API_KEY);
+    const googleApiKey =
+      extractPrimaryApiKey(process.env.GOOGLE_GEMINI_API_KEY) ||
+      extractPrimaryApiKey(process.env.GEMINI_API_KEY);
     const groqApiKey = extractPrimaryApiKey(process.env.GROQ_API_KEY);
     const openRouterApiKey = extractPrimaryApiKey(process.env.OPENROUTER_API_KEY);
     const openAiApiKey = extractPrimaryApiKey(process.env.OPENAI_API_KEY);
@@ -21,11 +299,13 @@ class MultiFreeService {
     const zhipuApiKey = extractPrimaryApiKey(process.env.ZHIPU_API_KEY);
     const xunfeiApiKey = extractPrimaryApiKey(process.env.XUNFEI_API_KEY);
     const baiduApiKey = extractPrimaryApiKey(process.env.BAIDU_API_KEY);
-    const baiduSecretKey = extractPrimaryApiKey(process.env.BAIDU_SECRET_KEY)
-      || extractPrimaryApiKey(process.env.BAIDU_API_SECRET)
-      || extractPrimaryApiKey(process.env.BAIDU_SECRET);
-    const alibabaApiKey = extractPrimaryApiKey(process.env.ALIBABA_API_KEY)
-      || extractPrimaryApiKey(process.env.DASHSCOPE_API_KEY);
+    const baiduSecretKey =
+      extractPrimaryApiKey(process.env.BAIDU_SECRET_KEY) ||
+      extractPrimaryApiKey(process.env.BAIDU_API_SECRET) ||
+      extractPrimaryApiKey(process.env.BAIDU_SECRET);
+    const alibabaApiKey =
+      extractPrimaryApiKey(process.env.ALIBABA_API_KEY) ||
+      extractPrimaryApiKey(process.env.DASHSCOPE_API_KEY);
     const huggingFaceToken = extractPrimaryApiKey(process.env.HUGGINGFACE_TOKEN);
 
     this.providers = {
@@ -156,7 +436,7 @@ class MultiFreeService {
         model: 'mistralai/Mistral-7B-Instruct-v0.2',
         priority: 9,
         supportsVision: false,
-      }
+      },
     };
   }
 
@@ -178,9 +458,10 @@ class MultiFreeService {
       available: available.length > 0,
       provider: available[0]?.name || 'local-fallback',
       configuredProviders: available.map((p) => p.name),
-      message: available.length > 0
-        ? `${available.length} provider(s) configured`
-        : 'No cloud providers configured, using local fallback'
+      message:
+        available.length > 0
+          ? `${available.length} provider(s) configured`
+          : 'No cloud providers configured, using local fallback',
     };
   }
 
@@ -193,13 +474,13 @@ class MultiFreeService {
         provider: 'local-fallback',
         response: null,
         availableProviders,
-        results: []
+        results: [],
       };
     }
 
     const result = await this.generateResponse('Reply with one short sentence: connection ok.', {
       temperature: 0,
-      maxTokens: 64
+      maxTokens: 64,
     });
 
     return {
@@ -208,7 +489,7 @@ class MultiFreeService {
       provider: result.provider,
       response: result.content,
       availableProviders,
-      results: result.attempts || []
+      results: result.attempts || [],
     };
   }
 
@@ -217,7 +498,7 @@ class MultiFreeService {
     const stockCode = payload.stockCode || 'UNKNOWN';
     const result = await this.generateResponse(prompt, {
       temperature: payload.temperature ?? 0.4,
-      maxTokens: payload.maxTokens ?? 1500
+      maxTokens: payload.maxTokens ?? 1500,
     });
 
     if (result.success && result.content) {
@@ -230,7 +511,9 @@ class MultiFreeService {
   async generateResponse(prompt, options = {}) {
     const temperature = options.temperature ?? 0.4;
     const maxTokens = options.maxTokens ?? 1024;
-    const requestedProvider = String(options.provider || '').trim().toLowerCase();
+    const requestedProvider = String(options.provider || '')
+      .trim()
+      .toLowerCase();
     const requestedModel = String(options.model || '').trim();
 
     if (!prompt || !prompt.trim()) {
@@ -238,7 +521,7 @@ class MultiFreeService {
         success: false,
         content: 'Prompt is empty',
         provider: 'none',
-        attempts: []
+        attempts: [],
       };
     }
 
@@ -253,20 +536,29 @@ class MultiFreeService {
           content: `Provider not configured: ${requestedProvider}`,
           provider: 'none',
           attempts: [],
-          availableProviders: allProviders.map((p) => p.key)
+          availableProviders: allProviders.map((p) => p.key),
         };
       }
     }
 
     if (requestedModel && providers.length > 1) {
       const scoreByModel = (provider) => {
-        if (provider.model === requestedModel) return 3;
-        if (Array.isArray(provider.availableModels) && provider.availableModels.some((m) => m.id === requestedModel)) return 2;
+        if (provider.model === requestedModel) {
+          return 3;
+        }
+        if (
+          Array.isArray(provider.availableModels) &&
+          provider.availableModels.some((m) => m.id === requestedModel)
+        ) {
+          return 2;
+        }
         return 0;
       };
       providers = [...providers].sort((a, b) => {
         const diff = scoreByModel(b) - scoreByModel(a);
-        if (diff !== 0) return diff;
+        if (diff !== 0) {
+          return diff;
+        }
         return a.priority - b.priority;
       });
     }
@@ -297,9 +589,12 @@ class MultiFreeService {
         const tokenUsage = typeof result === 'object' ? result?.tokenUsage : null;
         const thinking = typeof result === 'object' ? result?.thinking : null;
         const toolUseBlocks = typeof result === 'object' ? result?.toolUseBlocks : null;
-        const finishReason = typeof result === 'object' ? (result?.finishReason || null) : null;
+        const finishReason = typeof result === 'object' ? result?.finishReason || null : null;
 
-        if ((typeof content === 'string' && content.trim()) || (Array.isArray(toolUseBlocks) && toolUseBlocks.length > 0)) {
+        if (
+          (typeof content === 'string' && content.trim()) ||
+          (Array.isArray(toolUseBlocks) && toolUseBlocks.length > 0)
+        ) {
           attempts.push({ provider: provider.name, success: true });
           return {
             success: true,
@@ -308,20 +603,46 @@ class MultiFreeService {
             model: requestedModel || provider.model,
             tokenUsage: tokenUsage || null,
             thinking: thinking || undefined,
-            toolUseBlocks: Array.isArray(toolUseBlocks) && toolUseBlocks.length > 0 ? toolUseBlocks : undefined,
+            toolUseBlocks:
+              Array.isArray(toolUseBlocks) && toolUseBlocks.length > 0 ? toolUseBlocks : undefined,
             finishReason: finishReason || undefined,
             attempts,
-            availableProviders: providers.map((p) => p.name)
+            availableProviders: providers.map((p) => p.name),
           };
         }
 
-        // Tag empty replies explicitly. An empty HTTP-200 means the channel is
-        // healthy but the model produced no text (a weak-model blip, common right
-        // after a tool call) — NOT a degraded channel. aiGateway excludes `empty`
-        // from the transient cooldown map; leaving errorType unset let it fall
-        // through to `unknown`, which carries a ~20s cross-request cooldown and
-        // forced every re-ask within the window to fast-fail. Mirrors relayApiAdapter.
-        attempts.push({ provider: provider.name, success: false, error: 'Empty response', errorType: 'empty' });
+        // Tag empty replies explicitly with finish-reason diagnostics so the
+        // user sees *why* the model produced no text instead of a generic
+        // "Empty response". An empty HTTP-200 means the channel is healthy but
+        // the model produced no text — NOT a degraded channel. aiGateway
+        // excludes `empty` from the transient cooldown map; leaving errorType
+        // unset would let it fall through to `unknown`, which carries a ~20s
+        // cross-request cooldown and forced every re-ask within the window to
+        // fast-fail. Mirrors relayApiAdapter.
+        let emptyReason = 'Empty response';
+        const _fr = finishReason || null;
+        if (_fr === 'content_filter' || _fr === 'SAFETY') {
+          emptyReason = '内容被模型安全策略过滤，请换个表述重试';
+        } else if (_fr === 'length' || _fr === 'MAX_TOKENS') {
+          emptyReason =
+            '模型输出长度超限（max_tokens 过小或上下文已满），请增大 max_tokens 或缩短输入';
+        } else if (_fr === 'tool_calls' || _fr === 'tool_use') {
+          emptyReason = '模型仅返回了工具调用，未生成文本内容';
+        } else if (typeof result === 'object' && result?.refusal) {
+          emptyReason = `模型拒绝回答: ${result.refusal}`;
+        } else if (_fr) {
+          emptyReason = `模型未生成文本内容（finish_reason=${_fr}），请重试或切换模型`;
+        }
+        attempts.push({
+          provider: provider.name,
+          success: false,
+          error: emptyReason,
+          errorType: 'empty',
+          meta: {
+            finishReason: _fr,
+            hasToolCalls: !!(typeof result === 'object' && result?.toolUseBlocks?.length),
+          },
+        });
       } catch (error) {
         // Extract detailed API error from response body (axios stores in error.response.data)
         let detailedMsg = error.message || '';
@@ -329,8 +650,10 @@ class MultiFreeService {
           const respData = error.response && error.response.data;
           if (respData) {
             const apiErr = typeof respData === 'object' && respData.error;
-            const apiMsg = typeof respData === 'string' ? respData
-              : (apiErr && apiErr.message) || respData.message || '';
+            const apiMsg =
+              typeof respData === 'string'
+                ? respData
+                : (apiErr && apiErr.message) || respData.message || '';
             // Include error code (e.g. 'insufficient_quota') for accurate classification
             const apiCode = (apiErr && apiErr.code) || '';
             if (apiMsg && apiCode && !apiMsg.toLowerCase().includes(apiCode.toLowerCase())) {
@@ -339,37 +662,66 @@ class MultiFreeService {
               detailedMsg = apiMsg;
             }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         let errorType;
         try {
           const { classifyAdapterError } = require('./gateway/adapters/_errorClassifiers');
           errorType = classifyAdapterError(
             { message: detailedMsg || error.message },
-            { statusCode: error.status || error.statusCode || (error.response && error.response.status) || 0 }
+            {
+              statusCode:
+                error.status || error.statusCode || (error.response && error.response.status) || 0,
+            }
           );
-        } catch { /* classification unavailable */ }
-        attempts.push({
+        } catch {
+          /* classification unavailable */
+        }
+        const attemptEntry = {
           provider: provider.name,
           success: false,
           error: detailedMsg || error.message,
           ...(errorType ? { errorType } : {}),
-        });
+        };
+        // Debug: log raw errors from providers so we can improve classification.
+        // Remove or gate behind KHY_DEBUG_PROVIDER_ERRORS=1 once stable.
+        if (process.env.KHY_DEBUG_PROVIDER_ERRORS) {
+          console.error(
+            '[multiFreeService] provider=' +
+              provider.name +
+              ' errorType=' +
+              (errorType || '(unclassified)') +
+              ' status=' +
+              (error.status || error.response?.status || '?') +
+              ' rawError=' +
+              JSON.stringify(detailedMsg || error.message).substring(0, 200)
+          );
+        }
+        attempts.push(attemptEntry);
       }
     }
 
     // If every provider returned empty (and none threw), surface the failure as
     // `empty` at the top level too: recordFailureEarly (aiGateway) reads the
     // top-level errorType to decide the cooldown, and `empty` is cooldown-free.
-    const allEmpty = attempts.length > 0 && attempts.every(
-      (a) => a.success === false && a.errorType === 'empty'
-    );
+    const allEmpty =
+      attempts.length > 0 && attempts.every((a) => a.success === false && a.errorType === 'empty');
+
+    // Use the last failed attempt's error as the primary error. Never return
+    // localFallback as `content` — that template is quant-analysis text, not a
+    // chat response, and propagating it as content misleads users and the
+    // circuit breaker (which reads `content` for error classification).
+    const lastFailedAttempt = attempts.filter((a) => !a.success && a.error).pop();
+
     return {
       success: false,
-      content: this.localFallback('general', 'UNKNOWN'),
+      content: '', // no fake content — callers must check `success` first
       provider: 'local-fallback',
-      ...(allEmpty ? { errorType: 'empty', error: 'Empty response' } : {}),
+      error: lastFailedAttempt?.error || 'All providers failed',
+      errorType: allEmpty ? 'empty' : lastFailedAttempt?.errorType || 'unknown',
       attempts,
-      availableProviders: providers.map((p) => p.name)
+      availableProviders: providers.map((p) => p.name),
     };
   }
 
@@ -409,83 +761,109 @@ class MultiFreeService {
     // Build parts: images first (if any), then text
     const parts = [];
     if (opts.images && opts.images.length > 0) {
-      for (const block of toGoogleInlineData(opts.images)) parts.push(block);
+      for (const block of toGoogleInlineData(opts.images)) {
+        parts.push(block);
+      }
     }
     parts.push({ text: prompt });
 
-    const response = await axios.post(url, {
-      contents: [{ parts }],
-      generationConfig: {
-        temperature: opts.temperature,
-        maxOutputTokens: opts.maxTokens
-      }
-    }, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 30000
-    });
+    const response = await postWithDeadConnRetry(
+      url,
+      {
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: opts.temperature,
+          maxOutputTokens: opts.maxTokens,
+        },
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 30000,
+      },
+      provider.name
+    );
 
     const content = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const finishReason = response.data?.candidates?.[0]?.finishReason || null;
     const meta = response.data?.usageMetadata;
-    const tokenUsage = meta ? {
-      inputTokens: meta.promptTokenCount || 0,
-      outputTokens: meta.candidatesTokenCount || 0,
-      totalTokens: meta.totalTokenCount || 0,
-    } : null;
-    return { content, tokenUsage };
+    const tokenUsage = meta
+      ? {
+          inputTokens: meta.promptTokenCount || 0,
+          outputTokens: meta.candidatesTokenCount || 0,
+          totalTokens: meta.totalTokenCount || 0,
+        }
+      : null;
+    return { content, tokenUsage, finishReason };
   }
 
   async callGroq(provider, prompt, opts) {
     const model = opts.model || provider.model || MODELS.freeGroq;
-    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: opts.temperature,
-      max_tokens: opts.maxTokens
-    }, {
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        'Content-Type': 'application/json'
+    const response = await postWithDeadConnRetry(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: opts.temperature,
+        max_tokens: opts.maxTokens,
       },
-      timeout: 30000
-    });
+      {
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      },
+      provider.name
+    );
 
     const content = response.data?.choices?.[0]?.message?.content || '';
+    const finishReason = response.data?.choices?.[0]?.finish_reason || null;
     const usage = response.data?.usage;
-    const tokenUsage = usage ? {
-      inputTokens: usage.prompt_tokens || 0,
-      outputTokens: usage.completion_tokens || 0,
-      totalTokens: usage.total_tokens || 0,
-      ...normalizeCacheUsage(usage),
-    } : null;
-    return { content, tokenUsage };
+    const tokenUsage = usage
+      ? {
+          inputTokens: usage.prompt_tokens || 0,
+          outputTokens: usage.completion_tokens || 0,
+          totalTokens: usage.total_tokens || 0,
+          ...normalizeCacheUsage(usage),
+        }
+      : null;
+    return { content, tokenUsage, finishReason };
   }
 
   async callOpenRouter(provider, prompt, opts) {
     const model = opts.model || provider.model;
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: opts.temperature,
-      max_tokens: opts.maxTokens
-    }, {
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': require('../constants/serviceDefaults').HTTP_REFERER,
-        'X-Title': 'khy OS'
+    const response = await postWithDeadConnRetry(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: opts.temperature,
+        max_tokens: opts.maxTokens,
       },
-      timeout: 30000
-    });
+      {
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': require('../constants/serviceDefaults').HTTP_REFERER,
+          'X-Title': 'khy OS',
+        },
+        timeout: 30000,
+      },
+      provider.name
+    );
 
     const content = response.data?.choices?.[0]?.message?.content || '';
+    const finishReason = response.data?.choices?.[0]?.finish_reason || null;
     const usage = response.data?.usage;
-    const tokenUsage = usage ? {
-      inputTokens: usage.prompt_tokens || 0,
-      outputTokens: usage.completion_tokens || 0,
-      totalTokens: usage.total_tokens || 0,
-      ...normalizeCacheUsage(usage),
-    } : null;
-    return { content, tokenUsage };
+    const tokenUsage = usage
+      ? {
+          inputTokens: usage.prompt_tokens || 0,
+          outputTokens: usage.completion_tokens || 0,
+          totalTokens: usage.total_tokens || 0,
+          ...normalizeCacheUsage(usage),
+        }
+      : null;
+    return { content, tokenUsage, finishReason };
   }
 
   async callOpenAI(provider, prompt, opts) {
@@ -494,22 +872,25 @@ class MultiFreeService {
     let baseUrl = provider.baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com';
     baseUrl = baseUrl.replace(/\/v1\/?$/, '');
     const model = opts.model || provider.model;
+    // per-provider 代理:provider 配置带 proxy 字段时,本次请求经其代理发出
+    // (postWithDeadConnRetry 内剥离该内部字段并注入对应 agent);不带则直连不变。
+    const _proxyCfg = String(provider.proxy || '').trim()
+      ? { _providerProxyUrl: String(provider.proxy).trim() }
+      : {};
 
     // Build message content: multimodal array if images present, plain string otherwise
     let messageContent;
     if (opts.images && opts.images.length > 0) {
-      messageContent = [
-        ...toOpenAIVisionBlocks(opts.images),
-        { type: 'text', text: prompt },
-      ];
+      messageContent = [...toOpenAIVisionBlocks(opts.images), { type: 'text', text: prompt }];
     } else {
       messageContent = prompt;
     }
 
     // Use structured messages if available, otherwise single user message
-    let messages = opts.structuredMessages && opts.structuredMessages.length > 0
-      ? opts.structuredMessages.map(m => ({ ...m }))
-      : [{ role: 'user', content: messageContent }];
+    let messages =
+      opts.structuredMessages && opts.structuredMessages.length > 0
+        ? opts.structuredMessages.map((m) => ({ ...m }))
+        : [{ role: 'user', content: messageContent }];
 
     // 注入 system prompt（CC 通过 opts.system 传入，OpenAI 协议需要 role:'system' 消息）
     if (opts.system && messages[0]?.role !== 'system') {
@@ -518,45 +899,59 @@ class MultiFreeService {
 
     // 追加模型身份信息到 system 消息末尾，防止小模型幻觉编造身份
     if (model) {
-      const sysIdx = messages.findIndex(m => m.role === 'system');
+      const sysIdx = messages.findIndex((m) => m.role === 'system');
       const identityHint = `\n\n[Model Identity] You are ${model}, served through KHY gateway. Do not fabricate a different identity or claim to be running in any specific IDE environment.`;
       if (sysIdx >= 0) {
-        messages[sysIdx] = { ...messages[sysIdx], content: (messages[sysIdx].content || '') + identityHint };
+        messages[sysIdx] = {
+          ...messages[sysIdx],
+          content: (messages[sysIdx].content || '') + identityHint,
+        };
       } else {
         messages.unshift({ role: 'system', content: identityHint.trim() });
       }
     }
 
     // 当使用 structuredMessages 且有图片时，将图片注入到最后一条 user 消息
-    if (opts.structuredMessages && opts.structuredMessages.length > 0
-        && opts.images && opts.images.length > 0) {
+    if (
+      opts.structuredMessages &&
+      opts.structuredMessages.length > 0 &&
+      opts.images &&
+      opts.images.length > 0
+    ) {
       const imageBlocks = toOpenAIVisionBlocks(opts.images);
       for (let i = messages.length - 1; i >= 0; i--) {
         if (messages[i].role === 'user') {
-          const textContent = typeof messages[i].content === 'string'
-            ? messages[i].content
-            : (Array.isArray(messages[i].content)
-              ? messages[i].content.map(c => c.text || '').join('')
-              : String(messages[i].content || ''));
+          const textContent =
+            typeof messages[i].content === 'string'
+              ? messages[i].content
+              : Array.isArray(messages[i].content)
+                ? messages[i].content.map((c) => c.text || '').join('')
+                : String(messages[i].content || '');
           messages[i] = {
             ...messages[i],
-            content: [
-              ...imageBlocks,
-              { type: 'text', text: textContent },
-            ],
+            content: [...imageBlocks, { type: 'text', text: textContent }],
           };
           break;
         }
       }
     }
 
+    // 小模型判定(单一真源):决定 (a) 是否剥离 tools 声明 (b) 工具块消息如何降级。
+    // 必须在消息转换之前判定——若剥离 tools 却仍用 hasTools=true 转换,消息里会残留
+    // role:'tool'/'tool_calls' 而顶层无 tools 声明,严格 OpenAI 兼容端点(stepfun
+    // step_plan 等)返回 HTTP 400 "Unrecognized chat message"。
+    const _isSmallModel = _decideStripTools(model, opts);
+
     // Convert Anthropic tool_use/tool_result content blocks to OpenAI format
-    // (structuredMessages from ai.js may contain tool_use/tool_result arrays)
-    const hasAnthropicToolBlocks = messages.some(m =>
-      Array.isArray(m.content) && m.content.some(b => b.type === 'tool_use' || b.type === 'tool_result')
+    // (structuredMessages from ai.js may contain tool_use/tool_result arrays).
+    // 小模型 → hasTools=false:工具块内联为纯文本,绝不产生 role:'tool' 消息。
+    const hasAnthropicToolBlocks = messages.some(
+      (m) =>
+        Array.isArray(m.content) &&
+        m.content.some((b) => b.type === 'tool_use' || b.type === 'tool_result')
     );
     if (hasAnthropicToolBlocks) {
-      messages = convertMessagesAnthropicToOpenAI(messages, true);
+      messages = convertMessagesAnthropicToOpenAI(messages, !_isSmallModel);
     }
 
     const requestBody = {
@@ -572,33 +967,19 @@ class MultiFreeService {
     // Exceptions: deepseek-v4-flash, sensenova-6.7-flash-lite are full-size models with tool calling.
     let _toolsSkippedReason = '';
     if (opts.tools && opts.tools.length > 0) {
-      // 该「小模型不支持 function calling → 剥离 tools」判定单一真源在
-      // modelToolingCapability(与系统提示词教学门同源,strip⟺teach 永远同步)。
-      // 实测为准:measured 来自 toolCapabilityStore(live probe / 被动学习),胜过名字启发。
-      // _toolCapProbe:能力探测自身必须真发 tools 才能测出结果,绝不剥离。
-      // 门控 KHY_MODEL_TOOLING_CAPABILITY 关 → 字节回退到旧内联正则。
-      const _toolCap = require('./gateway/modelToolingCapability');
-      let _isSmallModel;
-      if (opts._toolCapProbe) {
-        _isSmallModel = false; // 探测必须保留 tools
-      } else if (_toolCap.isEnabled()) {
-        let _measured = null;
-        try { _measured = require('./gateway/toolCapabilityStore').getVerdict(model); } catch { /* best effort */ }
-        _isSmallModel = _toolCap.shouldStripUpstreamTools(model, { measured: _measured });
-      } else {
-        _isSmallModel = (/(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny)/i.test(model)
-          && !/deepseek-v[3-9]/i.test(model)
-          && !/sensenova-\d/i.test(model));
-      }
       if (_isSmallModel) {
         _toolsSkippedReason = `模型 ${model} 不支持工具调用 (function calling)，将以纯文本模式回答。如需使用工具，请切换到支持 function calling 的模型。`;
         if (opts.onChunk) {
           opts.onChunk({ type: 'notice', text: _toolsSkippedReason });
         }
       } else {
-        requestBody.tools = opts.tools.map(t => ({
+        requestBody.tools = opts.tools.map((t) => ({
           type: 'function',
-          function: { name: t.name, description: t.description, parameters: t.input_schema || t.parameters || { type: 'object', properties: {} } },
+          function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.input_schema || t.parameters || { type: 'object', properties: {} },
+          },
         }));
       }
     }
@@ -608,17 +989,28 @@ class MultiFreeService {
     // the request can succeed (API key is valid — only the payload was rejected). Stripping
     // stream_options degrades usage reporting to today's behavior (ctx may stay 0), not a regression.
     const _retryWithoutTools = async (err) => {
-      if (err.response?.status !== 400) return null;
-      if (!requestBody.tools && !requestBody.stream_options) return null;
+      if (err.response?.status !== 400) {
+        return null;
+      }
+      if (!requestBody.tools && !requestBody.stream_options) {
+        return null;
+      }
       const retryBody = { ...requestBody };
       if (retryBody.tools) {
         delete retryBody.tools;
         delete retryBody.tool_choice;
-        if (opts.onChunk) opts.onChunk({ type: 'notice', text: `模型 ${model} 拒绝了工具调用请求 (HTTP 400)，已自动去除工具定义重试` });
+        if (opts.onChunk) {
+          opts.onChunk({
+            type: 'notice',
+            text: `模型 ${model} 拒绝了工具调用请求 (HTTP 400)，已自动去除工具定义重试`,
+          });
+        }
       }
       // stream_options is a standard OpenAI field but some non-compliant gateways reject unknown
       // keys; drop it on retry so the request still goes through.
-      if (retryBody.stream_options) delete retryBody.stream_options;
+      if (retryBody.stream_options) {
+        delete retryBody.stream_options;
+      }
       return retryBody;
     };
 
@@ -629,25 +1021,18 @@ class MultiFreeService {
       // trailing `usage` chunk when the request carries stream_options.include_usage — without it
       // tokenUsage stays null and the TUI shows `0% ctx (0/128k)`. Gated (KHY_STREAM_USAGE),
       // fail-soft, byte-revert when off. See services/streamUsageOptions.js.
-      try { require('./streamUsageOptions').applyStreamUsage(requestBody, process.env); } catch { /* leaf unavailable → no opt-in */ }
+      try {
+        require('./streamUsageOptions').applyStreamUsage(requestBody, process.env);
+      } catch {
+        /* leaf unavailable → no opt-in */
+      }
 
       let response;
       try {
-        response = await axios.post(`${baseUrl}/v1/chat/completions`, requestBody, {
-          headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: opts.timeoutMs || 120000,
-          responseType: 'stream',
-          signal: opts.signal,
-        });
-      } catch (err) {
-        // On 400, retry without tools — API key is valid, payload was rejected
-        const retryBody = await _retryWithoutTools(err);
-        if (retryBody) {
-          retryBody.stream = true;
-          response = await axios.post(`${baseUrl}/v1/chat/completions`, retryBody, {
+        response = await postWithDeadConnRetry(
+          `${baseUrl}/v1/chat/completions`,
+          requestBody,
+          {
             headers: {
               Authorization: `Bearer ${provider.apiKey}`,
               'Content-Type': 'application/json',
@@ -655,7 +1040,30 @@ class MultiFreeService {
             timeout: opts.timeoutMs || 120000,
             responseType: 'stream',
             signal: opts.signal,
-          });
+            ..._proxyCfg,
+          },
+          provider.name
+        );
+      } catch (err) {
+        // On 400, retry without tools — API key is valid, payload was rejected
+        const retryBody = await _retryWithoutTools(err);
+        if (retryBody) {
+          retryBody.stream = true;
+          response = await postWithDeadConnRetry(
+            `${baseUrl}/v1/chat/completions`,
+            retryBody,
+            {
+              headers: {
+                Authorization: `Bearer ${provider.apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              timeout: opts.timeoutMs || 120000,
+              responseType: 'stream',
+              signal: opts.signal,
+              ..._proxyCfg,
+            },
+            provider.name
+          );
         } else {
           throw err;
         }
@@ -663,29 +1071,41 @@ class MultiFreeService {
 
       let content = '';
       const toolCallAccum = {}; // index → {name, arguments}
-      let inputTokens = 0, outputTokens = 0;
-      let cacheReadTokens = 0, cacheWriteTokens = 0;
+      let inputTokens = 0,
+        outputTokens = 0;
+      let cacheReadTokens = 0,
+        cacheWriteTokens = 0;
       let finishReason = null; // OpenAI finish_reason (last chunk) — fed to the loop's stop_reason trust
 
       return new Promise((resolve, reject) => {
         let buffer = '';
         const stream = response.data;
+        // Sliding idle timeout: reset on every chunk, reject when the remote
+        // stalls (no chunks) longer than the threshold instead of hanging forever.
+        const watchdog = createStreamIdleWatchdog(stream, reject, `${provider.name}/${model}`);
 
         stream.on('data', (chunk) => {
+          watchdog.touch();
           buffer += chunk.toString();
           const lines = buffer.split('\n');
           buffer = lines.pop(); // keep incomplete line
 
           for (const line of lines) {
             const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            if (!trimmed || !trimmed.startsWith('data: ')) {
+              continue;
+            }
             const payload = trimmed.slice(6);
-            if (payload === '[DONE]') continue;
+            if (payload === '[DONE]') {
+              continue;
+            }
 
             try {
               const data = JSON.parse(payload);
               // finish_reason rides the terminal chunk (stop | length | tool_calls | content_filter)
-              if (data.choices?.[0]?.finish_reason) finishReason = data.choices[0].finish_reason;
+              if (data.choices?.[0]?.finish_reason) {
+                finishReason = data.choices[0].finish_reason;
+              }
 
               // Usage rides the final chunk. With stream_options.include_usage the provider emits a
               // usage-only chunk whose `choices` is empty (delta undefined) → it MUST be read before
@@ -698,14 +1118,20 @@ class MultiFreeService {
                 const _c = normalizeCacheUsage(data.usage);
                 cacheReadTokens = _c.cacheReadInputTokens;
                 cacheWriteTokens = _c.cacheWriteInputTokens;
-                opts.onChunk({ type: 'cost', cost: {
-                  inputTokens, outputTokens,
-                  totalTokens: data.usage.total_tokens || inputTokens + outputTokens,
-                }});
+                opts.onChunk({
+                  type: 'cost',
+                  cost: {
+                    inputTokens,
+                    outputTokens,
+                    totalTokens: data.usage.total_tokens || inputTokens + outputTokens,
+                  },
+                });
               }
 
               const delta = data.choices?.[0]?.delta;
-              if (!delta) continue;
+              if (!delta) {
+                continue;
+              }
 
               // Text content
               if (delta.content) {
@@ -717,111 +1143,162 @@ class MultiFreeService {
               if (delta.tool_calls) {
                 for (const tc of delta.tool_calls) {
                   const idx = tc.index ?? 0;
-                  if (!toolCallAccum[idx]) toolCallAccum[idx] = { id: '', name: '', arguments: '' };
-                  if (tc.id) toolCallAccum[idx].id = tc.id;
-                  if (tc.function?.name) toolCallAccum[idx].name = tc.function.name;
-                  if (tc.function?.arguments) toolCallAccum[idx].arguments += tc.function.arguments;
+                  if (!toolCallAccum[idx]) {
+                    toolCallAccum[idx] = { id: '', name: '', arguments: '' };
+                  }
+                  if (tc.id) {
+                    toolCallAccum[idx].id = tc.id;
+                  }
+                  if (tc.function?.name) {
+                    toolCallAccum[idx].name = tc.function.name;
+                  }
+                  if (tc.function?.arguments) {
+                    toolCallAccum[idx].arguments += tc.function.arguments;
+                  }
                 }
               }
-            } catch { /* skip malformed SSE lines */ }
+            } catch {
+              /* skip malformed SSE lines */
+            }
           }
         });
 
         stream.on('end', () => {
+          watchdog.clear();
           // Finalize accumulated tool calls → 结构化 toolUseBlocks
-          const toolCalls = Object.values(toolCallAccum).filter(tc => tc.name);
+          const toolCalls = Object.values(toolCallAccum).filter((tc) => tc.name);
           let toolUseBlocks = null;
           if (toolCalls.length > 0) {
-            toolUseBlocks = toolCalls.map(tc => {
+            toolUseBlocks = toolCalls.map((tc) => {
               let params;
-              try { params = JSON.parse(tc.arguments); } catch { params = {}; }
+              try {
+                params = JSON.parse(tc.arguments);
+              } catch {
+                params = {};
+              }
               const id = tc.id || `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
               return { id, name: tc.name, params, input: params };
             });
-
-            // Emit full tool_use chunks so proxy SSE reconstruction has id/name/input
-            for (const block of toolUseBlocks) {
-              opts.onChunk({ type: 'tool_use', id: block.id, name: block.name, input: block.input });
-            }
+            // NOTE: Do NOT emit tool_use events via onChunk here — the outer
+            // native tool-use loop (toolUseLoopCore.js) owns tool lifecycle
+            // events via its onToolCall callback (pushToolFromLoop in the TUI),
+            // which also handles turn-ack, preface injection, progress display,
+            // history flushing and LAN broadcast. Emitting here would duplicate
+            // all of those side-effects because the loop re-emits onToolCall
+            // for the same toolUseBlocks it receives from this resolved promise.
+            // The non-streaming fallback below already follows this pattern
+            // (no onChunk emission, only return toolUseBlocks).
           }
 
-          const tokenUsage = (inputTokens || outputTokens) ? {
-            inputTokens, outputTokens,
-            totalTokens: inputTokens + outputTokens,
-            ...(cacheReadTokens || cacheWriteTokens
-              ? { cacheReadInputTokens: cacheReadTokens, cacheWriteInputTokens: cacheWriteTokens }
-              : {}),
-          } : null;
+          const tokenUsage =
+            inputTokens || outputTokens
+              ? {
+                  inputTokens,
+                  outputTokens,
+                  totalTokens: inputTokens + outputTokens,
+                  ...(cacheReadTokens || cacheWriteTokens
+                    ? {
+                        cacheReadInputTokens: cacheReadTokens,
+                        cacheWriteInputTokens: cacheWriteTokens,
+                      }
+                    : {}),
+                }
+              : null;
           resolve({ content, tokenUsage, toolUseBlocks, finishReason });
         });
 
-        stream.on('error', reject);
+        stream.on('error', (err) => {
+          watchdog.clear();
+          reject(err);
+        });
+        // Non-standard teardown may emit only 'close' (no 'end'/'error') —
+        // clear the watchdog there too so its timer never leaks.
+        stream.on('close', () => watchdog.clear());
       });
     }
 
     // ── Non-streaming fallback ──────────────────────────────────────
     let response;
     try {
-      response = await axios.post(`${baseUrl}/v1/chat/completions`, requestBody, {
-        headers: {
-          Authorization: `Bearer ${provider.apiKey}`,
-          'Content-Type': 'application/json'
+      response = await postWithDeadConnRetry(
+        `${baseUrl}/v1/chat/completions`,
+        requestBody,
+        {
+          headers: {
+            Authorization: `Bearer ${provider.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+          ..._proxyCfg,
         },
-        timeout: 30000
-      });
+        provider.name
+      );
     } catch (err) {
       const retryBody = await _retryWithoutTools(err);
       if (retryBody) {
-        response = await axios.post(`${baseUrl}/v1/chat/completions`, retryBody, {
-          headers: {
-            Authorization: `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json'
+        response = await postWithDeadConnRetry(
+          `${baseUrl}/v1/chat/completions`,
+          retryBody,
+          {
+            headers: {
+              Authorization: `Bearer ${provider.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000,
+            ..._proxyCfg,
           },
-          timeout: 30000
-        });
+          provider.name
+        );
       } else {
         throw err;
       }
     }
 
     const msg = response.data?.choices?.[0]?.message;
-    let content = msg?.content || '';
+    const content = msg?.content || '';
 
     // Convert native tool_calls → 结构化 toolUseBlocks
     let toolUseBlocks = null;
     if (msg?.tool_calls && msg.tool_calls.length > 0) {
-      toolUseBlocks = msg.tool_calls.map(tc => {
+      toolUseBlocks = msg.tool_calls.map((tc) => {
         const fn = tc.function;
         let params;
-        try { params = JSON.parse(fn.arguments); } catch { params = {}; }
+        try {
+          params = JSON.parse(fn.arguments);
+        } catch {
+          params = {};
+        }
         const id = tc.id || `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         return { id, name: fn.name, params, input: params };
       });
     }
 
     const usage = response.data?.usage;
-    const tokenUsage = usage ? {
-      inputTokens: usage.prompt_tokens || 0,
-      outputTokens: usage.completion_tokens || 0,
-      totalTokens: usage.total_tokens || 0,
-      ...normalizeCacheUsage(usage),
-    } : null;
+    const tokenUsage = usage
+      ? {
+          inputTokens: usage.prompt_tokens || 0,
+          outputTokens: usage.completion_tokens || 0,
+          totalTokens: usage.total_tokens || 0,
+          ...normalizeCacheUsage(usage),
+        }
+      : null;
     const finishReason = response.data?.choices?.[0]?.finish_reason || null;
     return { content, tokenUsage, toolUseBlocks, finishReason };
   }
 
   async callAnthropic(provider, prompt, opts) {
     // Support custom base URL (relay/proxy) via ANTHROPIC_BASE_URL env
-    const baseUrl = (provider.baseUrl || process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '');
+    const baseUrl = (
+      provider.baseUrl ||
+      process.env.ANTHROPIC_BASE_URL ||
+      'https://api.anthropic.com'
+    ).replace(/\/+$/, '');
     const isRelay = !baseUrl.includes('api.anthropic.com');
 
     // Build message content: multimodal array if images present, plain string otherwise
     let messageContent;
     if (opts.images && opts.images.length > 0 && !isRelay) {
-      messageContent = [
-        ...toAnthropicImageBlocks(opts.images),
-        { type: 'text', text: prompt },
-      ];
+      messageContent = [...toAnthropicImageBlocks(opts.images), { type: 'text', text: prompt }];
     } else {
       messageContent = prompt;
     }
@@ -831,11 +1308,13 @@ class MultiFreeService {
     let systemContent = '';
     if (opts.structuredMessages && opts.structuredMessages.length > 0) {
       // Anthropic uses separate system param, extract it from messages
-      const sysMsg = opts.structuredMessages.find(m => m.role === 'system');
-      if (sysMsg) systemContent = sysMsg.content;
+      const sysMsg = opts.structuredMessages.find((m) => m.role === 'system');
+      if (sysMsg) {
+        systemContent = sysMsg.content;
+      }
       apiMessages = opts.structuredMessages
-        .filter(m => m.role !== 'system')
-        .map(m => ({ role: m.role, content: m.content }));
+        .filter((m) => m.role !== 'system')
+        .map((m) => ({ role: m.role, content: m.content }));
       // Ensure first message is user role (Anthropic requirement)
       if (apiMessages.length > 0 && apiMessages[0].role !== 'user') {
         apiMessages.unshift({ role: 'user', content: '(context follows)' });
@@ -845,17 +1324,15 @@ class MultiFreeService {
         const imageBlocks = toAnthropicImageBlocks(opts.images);
         for (let i = apiMessages.length - 1; i >= 0; i--) {
           if (apiMessages[i].role === 'user') {
-            const textContent = typeof apiMessages[i].content === 'string'
-              ? apiMessages[i].content
-              : (Array.isArray(apiMessages[i].content)
-                ? apiMessages[i].content.map(c => c.text || '').join('')
-                : String(apiMessages[i].content || ''));
+            const textContent =
+              typeof apiMessages[i].content === 'string'
+                ? apiMessages[i].content
+                : Array.isArray(apiMessages[i].content)
+                  ? apiMessages[i].content.map((c) => c.text || '').join('')
+                  : String(apiMessages[i].content || '');
             apiMessages[i] = {
               ...apiMessages[i],
-              content: [
-                ...imageBlocks,
-                { type: 'text', text: textContent },
-              ],
+              content: [...imageBlocks, { type: 'text', text: textContent }],
             };
             break;
           }
@@ -864,7 +1341,9 @@ class MultiFreeService {
     } else {
       apiMessages = [{ role: 'user', content: messageContent }];
     }
-    if (opts.system && !systemContent) systemContent = opts.system;
+    if (opts.system && !systemContent) {
+      systemContent = opts.system;
+    }
 
     const body = {
       model: opts.model || provider.model,
@@ -893,7 +1372,7 @@ class MultiFreeService {
 
     // Add tool definitions for native tool use
     if (opts.tools && opts.tools.length > 0 && !isRelay) {
-      body.tools = opts.tools.map(t => ({
+      body.tools = opts.tools.map((t) => ({
         name: t.name,
         description: t.description,
         input_schema: t.parameters || { type: 'object', properties: {} },
@@ -918,41 +1397,55 @@ class MultiFreeService {
     // ── Streaming path for Anthropic ────────────────────────────────
     if (typeof opts.onChunk === 'function' && !isRelay) {
       body.stream = true;
-      const response = await axios.post(`${baseUrl}/v1/messages`, body, {
-        headers: {
-          'x-api-key': provider.apiKey,
-          'anthropic-version': '2024-10-22',
-          'anthropic-beta': 'prompt-caching-2024-07-31',
-          'Content-Type': 'application/json',
+      const response = await postWithDeadConnRetry(
+        `${baseUrl}/v1/messages`,
+        body,
+        {
+          headers: {
+            'x-api-key': provider.apiKey,
+            'anthropic-version': '2024-10-22',
+            'anthropic-beta': 'prompt-caching-2024-07-31',
+            'Content-Type': 'application/json',
+          },
+          timeout: opts.timeoutMs || 120000,
+          responseType: 'stream',
+          signal: opts.signal,
         },
-        timeout: opts.timeoutMs || 120000,
-        responseType: 'stream',
-        signal: opts.signal,
-      });
+        provider.name
+      );
 
       let content = '';
       let thinkingContent = '';
       let currentToolName = '';
       let currentToolInput = '';
-      let inputTokens = 0, outputTokens = 0;
-      let cacheReadTokens = 0, cacheWriteTokens = 0;
+      let inputTokens = 0,
+        outputTokens = 0;
+      let cacheReadTokens = 0,
+        cacheWriteTokens = 0;
       let finishReason = null; // Anthropic stop_reason (message_delta) — fed to the loop's stop_reason trust
       const toolUseBlocks = [];
 
       return new Promise((resolve, reject) => {
         let buffer = '';
         const stream = response.data;
+        // Sliding idle timeout — same rationale as the OpenAI-format branch above.
+        const watchdog = createStreamIdleWatchdog(stream, reject, `${provider.name}/${body.model}`);
 
         stream.on('data', (chunk) => {
+          watchdog.touch();
           buffer += chunk.toString();
           const lines = buffer.split('\n');
           buffer = lines.pop();
 
           for (const line of lines) {
             const trimmed = line.trim();
-            if (!trimmed.startsWith('data: ')) continue;
+            if (!trimmed.startsWith('data: ')) {
+              continue;
+            }
             const payload = trimmed.slice(6);
-            if (payload === '[DONE]') continue;
+            if (payload === '[DONE]') {
+              continue;
+            }
 
             try {
               const event = JSON.parse(payload);
@@ -964,7 +1457,11 @@ class MultiFreeService {
                   if (block?.type === 'tool_use') {
                     currentToolName = block.name || '';
                     currentToolInput = '';
-                    opts.onChunk({ type: 'tool_use', tool: currentToolName });
+                    // NOTE: Do NOT emit tool_use via onChunk here — the outer
+                    // native tool-use loop owns tool lifecycle events via its
+                    // onToolCall callback. Emitting here would duplicate the
+                    // event because the loop re-emits onToolCall for the same
+                    // toolUseBlocks it receives from this resolved promise.
                   } else if (block?.type === 'thinking') {
                     opts.onChunk({ type: 'thinking', text: '' });
                   }
@@ -986,7 +1483,11 @@ class MultiFreeService {
                 case 'content_block_stop': {
                   if (currentToolName) {
                     let input = {};
-                    try { input = JSON.parse(currentToolInput); } catch { /* ignore */ }
+                    try {
+                      input = JSON.parse(currentToolInput);
+                    } catch {
+                      /* ignore */
+                    }
                     toolUseBlocks.push({ name: currentToolName, input });
                     currentToolName = '';
                     currentToolInput = '';
@@ -995,13 +1496,19 @@ class MultiFreeService {
                 }
                 case 'message_delta': {
                   // stop_reason arrives on message_delta (end_turn | tool_use | max_tokens | stop_sequence)
-                  if (event.delta?.stop_reason) finishReason = event.delta.stop_reason;
+                  if (event.delta?.stop_reason) {
+                    finishReason = event.delta.stop_reason;
+                  }
                   if (event.usage) {
                     outputTokens = event.usage.output_tokens || 0;
-                    opts.onChunk({ type: 'cost', cost: {
-                      inputTokens, outputTokens,
-                      totalTokens: inputTokens + outputTokens,
-                    }});
+                    opts.onChunk({
+                      type: 'cost',
+                      cost: {
+                        inputTokens,
+                        outputTokens,
+                        totalTokens: inputTokens + outputTokens,
+                      },
+                    });
                   }
                   break;
                 }
@@ -1011,26 +1518,40 @@ class MultiFreeService {
                     const _c = normalizeCacheUsage(event.message.usage);
                     cacheReadTokens = _c.cacheReadInputTokens;
                     cacheWriteTokens = _c.cacheWriteInputTokens;
-                    opts.onChunk({ type: 'cost', cost: {
-                      inputTokens, outputTokens: 0,
-                      totalTokens: inputTokens,
-                    }});
+                    opts.onChunk({
+                      type: 'cost',
+                      cost: {
+                        inputTokens,
+                        outputTokens: 0,
+                        totalTokens: inputTokens,
+                      },
+                    });
                   }
                   break;
                 }
               }
-            } catch { /* skip malformed SSE lines */ }
+            } catch {
+              /* skip malformed SSE lines */
+            }
           }
         });
 
         stream.on('end', () => {
-          const tokenUsage = (inputTokens || outputTokens) ? {
-            inputTokens, outputTokens,
-            totalTokens: inputTokens + outputTokens,
-            ...(cacheReadTokens || cacheWriteTokens
-              ? { cacheReadInputTokens: cacheReadTokens, cacheWriteInputTokens: cacheWriteTokens }
-              : {}),
-          } : null;
+          watchdog.clear();
+          const tokenUsage =
+            inputTokens || outputTokens
+              ? {
+                  inputTokens,
+                  outputTokens,
+                  totalTokens: inputTokens + outputTokens,
+                  ...(cacheReadTokens || cacheWriteTokens
+                    ? {
+                        cacheReadInputTokens: cacheReadTokens,
+                        cacheWriteInputTokens: cacheWriteTokens,
+                      }
+                    : {}),
+                }
+              : null;
           resolve({
             content,
             tokenUsage,
@@ -1040,22 +1561,33 @@ class MultiFreeService {
           });
         });
 
-        stream.on('error', reject);
+        stream.on('error', (err) => {
+          watchdog.clear();
+          reject(err);
+        });
+        // Non-standard teardown may emit only 'close' (no 'end'/'error') —
+        // clear the watchdog there too so its timer never leaks.
+        stream.on('close', () => watchdog.clear());
       });
     }
 
     // ── Non-streaming fallback ──────────────────────────────────────
     let response;
     try {
-      response = await axios.post(`${baseUrl}/v1/messages`, body, {
-        headers: {
-          'x-api-key': provider.apiKey,
-          'anthropic-version': '2024-10-22',
-          'anthropic-beta': 'prompt-caching-2024-07-31',
-          'Content-Type': 'application/json'
+      response = await postWithDeadConnRetry(
+        `${baseUrl}/v1/messages`,
+        body,
+        {
+          headers: {
+            'x-api-key': provider.apiKey,
+            'anthropic-version': '2024-10-22',
+            'anthropic-beta': 'prompt-caching-2024-07-31',
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
         },
-        timeout: 30000
-      });
+        provider.name
+      );
     } catch (err) {
       if (isRelay && err.response?.status === 400) {
         const minimalBody = {
@@ -1064,14 +1596,19 @@ class MultiFreeService {
           temperature: opts.temperature,
           messages: [{ role: 'user', content: messageContent }],
         };
-        response = await axios.post(`${baseUrl}/v1/messages`, minimalBody, {
-          headers: {
-            'x-api-key': provider.apiKey,
-            'anthropic-version': '2024-10-22',
-            'Content-Type': 'application/json'
+        response = await postWithDeadConnRetry(
+          `${baseUrl}/v1/messages`,
+          minimalBody,
+          {
+            headers: {
+              'x-api-key': provider.apiKey,
+              'anthropic-version': '2024-10-22',
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000,
           },
-          timeout: 30000
-        });
+          provider.name
+        );
       } else {
         throw err;
       }
@@ -1088,17 +1625,21 @@ class MultiFreeService {
       } else if (block.type === 'tool_use') {
         toolUseBlocks.push(block);
       } else if (block.type === 'thinking') {
-        thinkingContent += (block.thinking || '');
+        thinkingContent += block.thinking || '';
       }
     }
-    if (!content && !toolUseBlocks.length) content = response.data?.content?.[0]?.text || '';
+    if (!content && !toolUseBlocks.length) {
+      content = response.data?.content?.[0]?.text || '';
+    }
 
     const usage = response.data?.usage;
-    const tokenUsage = usage ? {
-      inputTokens: usage.input_tokens || 0,
-      outputTokens: usage.output_tokens || 0,
-      totalTokens: (usage.input_tokens || 0) + (usage.output_tokens || 0),
-    } : null;
+    const tokenUsage = usage
+      ? {
+          inputTokens: usage.input_tokens || 0,
+          outputTokens: usage.output_tokens || 0,
+          totalTokens: (usage.input_tokens || 0) + (usage.output_tokens || 0),
+        }
+      : null;
     const finishReason = response.data?.stop_reason || null;
     return {
       content,
@@ -1118,18 +1659,21 @@ class MultiFreeService {
     const payload = {
       api_key: id,
       exp: Math.round(Date.now() / 1000) + 3600,
-      timestamp: Math.round(Date.now() / 1000)
+      timestamp: Math.round(Date.now() / 1000),
     };
 
     return jwt.sign(payload, secret, {
       algorithm: 'HS256',
-      header: { alg: 'HS256', sign_type: 'SIGN' }
+      header: { alg: 'HS256', sign_type: 'SIGN' },
     });
   }
 
   async callZhipu(provider, prompt, opts) {
     const model = opts.model || provider.model;
-    const baseUrl = (provider.baseUrl || 'https://open.bigmodel.cn/api/paas/v4').replace(/\/+$/, '');
+    const baseUrl = (provider.baseUrl || 'https://open.bigmodel.cn/api/paas/v4').replace(
+      /\/+$/,
+      ''
+    );
     const endpoint = /\/chat\/completions$/i.test(baseUrl)
       ? baseUrl
       : `${baseUrl}/chat/completions`;
@@ -1142,9 +1686,10 @@ class MultiFreeService {
     let token;
     try {
       const shape = require('./zhipuRequestShape');
-      token = shape.resolveZhipuAuthMode(provider.apiKey, process.env, endpoint) === 'raw'
-        ? provider.apiKey
-        : this.generateZhipuJWT(provider.apiKey);
+      token =
+        shape.resolveZhipuAuthMode(provider.apiKey, process.env, endpoint) === 'raw'
+          ? provider.apiKey
+          : this.generateZhipuJWT(provider.apiKey);
     } catch {
       token = this.generateZhipuJWT(provider.apiKey);
     }
@@ -1161,11 +1706,10 @@ class MultiFreeService {
       try {
         const { downscaleGlmVisionImages } = require('./gateway/glmVisionImageDownscale');
         _images = downscaleGlmVisionImages(model, opts.images, process.env);
-      } catch { /* fail-soft: 原图透传 */ }
-      messageContent = [
-        ...toOpenAIVisionBlocks(_images),
-        { type: 'text', text: prompt },
-      ];
+      } catch {
+        /* fail-soft: 原图透传 */
+      }
+      messageContent = [...toOpenAIVisionBlocks(_images), { type: 'text', text: prompt }];
     }
 
     // max_tokens 钳位:GLM 视觉模型(glm-4v-flash/glm-4.6v-flash)上限 [1,1024],发高值 →
@@ -1175,13 +1719,15 @@ class MultiFreeService {
     try {
       const { clampMaxTokensForGlmVision } = require('./gateway/glmVisionMaxTokens');
       _maxTokens = clampMaxTokensForGlmVision(model, opts.maxTokens, process.env);
-    } catch { /* fail-soft: 原样透传 */ }
+    } catch {
+      /* fail-soft: 原样透传 */
+    }
 
     const requestBody = {
       model,
       messages: [{ role: 'user', content: messageContent }],
       temperature: opts.temperature,
-      max_tokens: _maxTokens
+      max_tokens: _maxTokens,
     };
     // 文本预算截断:无图的大文本(磁盘扫描等工具结果,实测约 25304 token)会撞 GLM 视觉端
     // 16384 合并预算 → 400 code 1210 → 级联落剪贴板兜底。发送前对 messages 做文本侧预算截断
@@ -1189,25 +1735,41 @@ class MultiFreeService {
     // 透传(逐字节回退)。仅 GLM 视觉模型触发,非视觉模型不受影响。
     try {
       const { clampTextBudgetInMessages } = require('./gateway/glmVisionTextBudget');
-      clampTextBudgetInMessages(model, requestBody.messages, { maxTokens: _maxTokens }, process.env);
-    } catch { /* fail-soft: 原样透传 */ }
+      clampTextBudgetInMessages(
+        model,
+        requestBody.messages,
+        { maxTokens: _maxTokens },
+        process.env
+      );
+    } catch {
+      /* fail-soft: 原样透传 */
+    }
     // reasoning_effort:GLM-5.2 招牌请求参数。门控 KHY_ZHIPU_REASONING_EFFORT 默认开——从 opts 取
     // 合法枚举透传;门关/缺失/非法 → 不写该字段(逐字节回退旧行为,只发 temperature/max_tokens)。
     try {
       const shape = require('./zhipuRequestShape');
       const effort = shape.pickReasoningEffort(opts, process.env);
-      if (effort) requestBody.reasoning_effort = effort;
-    } catch { /* fail-soft: 不透传 */ }
+      if (effort) {
+        requestBody.reasoning_effort = effort;
+      }
+    } catch {
+      /* fail-soft: 不透传 */
+    }
 
     let response;
     try {
-      response = await axios.post(endpoint, requestBody, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      response = await postWithDeadConnRetry(
+        endpoint,
+        requestBody,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 60000,
         },
-        timeout: 60000
-      });
+        provider.name
+      );
     } catch (err) {
       // 关键诊断:智谱 v4 在 HTTP 错误(尤其 404)体里回**真实原因**(结构化 { error: { code, message } }
       // 或顶层 { code, message }):code `1002/1003/1004…`=鉴权/无效 key、`1211`=模型不存在/未开通、
@@ -1224,9 +1786,15 @@ class MultiFreeService {
         const upstreamMsg = upstream && (upstream.message || upstream.msg || '');
         if (status || upstreamCode || upstreamMsg) {
           const parts = [];
-          if (status) parts.push(`HTTP ${status}`);
-          if (upstreamCode) parts.push(`code ${upstreamCode}`);
-          if (upstreamMsg) parts.push(String(upstreamMsg));
+          if (status) {
+            parts.push(`HTTP ${status}`);
+          }
+          if (upstreamCode) {
+            parts.push(`code ${upstreamCode}`);
+          }
+          if (upstreamMsg) {
+            parts.push(String(upstreamMsg));
+          }
           const detail = parts.join(' · ');
           if (detail && err && typeof err.message === 'string' && !err.message.includes(detail)) {
             err.message = `智谱AI: ${detail} (${err.message})`;
@@ -1238,45 +1806,58 @@ class MultiFreeService {
             err.zhipuMessage = upstreamMsg || undefined;
           }
         }
-      } catch { /* 诊断增强绝不掩盖原始错误:任何解析失败 → 原样抛出 */ }
+      } catch {
+        /* 诊断增强绝不掩盖原始错误:任何解析失败 → 原样抛出 */
+      }
       throw err;
     }
 
     const content = response.data?.choices?.[0]?.message?.content || '';
     const usage = response.data?.usage;
-    const tokenUsage = usage ? {
-      inputTokens: usage.prompt_tokens || 0,
-      outputTokens: usage.completion_tokens || 0,
-      totalTokens: usage.total_tokens || 0,
-      ...normalizeCacheUsage(usage),
-    } : null;
-    return { content, tokenUsage };
+    const tokenUsage = usage
+      ? {
+          inputTokens: usage.prompt_tokens || 0,
+          outputTokens: usage.completion_tokens || 0,
+          totalTokens: usage.total_tokens || 0,
+          ...normalizeCacheUsage(usage),
+        }
+      : null;
+    const finishReason = response.data?.choices?.[0]?.finish_reason || null;
+    return { content, tokenUsage, finishReason };
   }
 
   async callXunfei(provider, prompt, opts) {
     const model = opts.model || provider.model || 'lite';
-    const response = await axios.post('https://spark-api-open.xf-yun.com/v1/chat/completions', {
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: opts.temperature,
-      max_tokens: opts.maxTokens
-    }, {
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        'Content-Type': 'application/json'
+    const response = await postWithDeadConnRetry(
+      'https://spark-api-open.xf-yun.com/v1/chat/completions',
+      {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: opts.temperature,
+        max_tokens: opts.maxTokens,
       },
-      timeout: 30000
-    });
+      {
+        headers: {
+          Authorization: `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      },
+      provider.name
+    );
 
     const content = response.data?.choices?.[0]?.message?.content || response.data?.result || '';
+    const finishReason = response.data?.choices?.[0]?.finish_reason || null;
     const usage = response.data?.usage;
-    const tokenUsage = usage ? {
-      inputTokens: usage.prompt_tokens || 0,
-      outputTokens: usage.completion_tokens || 0,
-      totalTokens: usage.total_tokens || 0,
-      ...normalizeCacheUsage(usage),
-    } : null;
-    return { content, tokenUsage };
+    const tokenUsage = usage
+      ? {
+          inputTokens: usage.prompt_tokens || 0,
+          outputTokens: usage.completion_tokens || 0,
+          totalTokens: usage.total_tokens || 0,
+          ...normalizeCacheUsage(usage),
+        }
+      : null;
+    return { content, tokenUsage, finishReason };
   }
 
   async callAlibaba(provider, prompt, opts) {
@@ -1284,7 +1865,17 @@ class MultiFreeService {
     const baseUrl = (provider.baseUrl || 'https://dashscope.aliyuncs.com').replace(/\/+$/, '');
 
     // Use OpenAI-compatible API for newer models (qwen-max, qwen-plus, etc.)
-    const useCompatible = /^qwen[2-]/.test(model) || ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen-long', 'qwen-vl-max', 'qwen-vl-plus', 'qwen-coder-plus'].includes(model);
+    const useCompatible =
+      /^qwen[2-]/.test(model) ||
+      [
+        'qwen-max',
+        'qwen-plus',
+        'qwen-turbo',
+        'qwen-long',
+        'qwen-vl-max',
+        'qwen-vl-plus',
+        'qwen-coder-plus',
+      ].includes(model);
     const compatibleUrl = /\/compatible-mode\/v1$/i.test(baseUrl)
       ? `${baseUrl}/chat/completions`
       : `${baseUrl}/compatible-mode/v1/chat/completions`;
@@ -1293,55 +1884,70 @@ class MultiFreeService {
       : `${baseUrl}/api/v1/services/aigc/text-generation/generation`;
 
     if (useCompatible) {
-      const response = await axios.post(compatibleUrl, {
+      const response = await postWithDeadConnRetry(
+        compatibleUrl,
+        {
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: opts.temperature,
+          max_tokens: opts.maxTokens,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${provider.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 60000,
+        },
+        provider.name
+      );
+
+      const content = response.data?.choices?.[0]?.message?.content || '';
+      const finishReason = response.data?.choices?.[0]?.finish_reason || null;
+      const usage = response.data?.usage;
+      const tokenUsage = usage
+        ? {
+            inputTokens: usage.prompt_tokens || 0,
+            outputTokens: usage.completion_tokens || 0,
+            totalTokens: usage.total_tokens || 0,
+          }
+        : null;
+      return { content, tokenUsage, finishReason };
+    }
+
+    // Legacy DashScope API
+    const response = await postWithDeadConnRetry(
+      legacyUrl,
+      {
         model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: opts.temperature,
-        max_tokens: opts.maxTokens,
-      }, {
+        input: {
+          messages: [{ role: 'user', content: prompt }],
+        },
+        parameters: {
+          result_format: 'message',
+          temperature: opts.temperature,
+          max_tokens: opts.maxTokens,
+        },
+      },
+      {
         headers: {
           Authorization: `Bearer ${provider.apiKey}`,
           'Content-Type': 'application/json',
         },
-        timeout: 60000,
-      });
-
-      const content = response.data?.choices?.[0]?.message?.content || '';
-      const usage = response.data?.usage;
-      const tokenUsage = usage ? {
-        inputTokens: usage.prompt_tokens || 0,
-        outputTokens: usage.completion_tokens || 0,
-        totalTokens: usage.total_tokens || 0,
-      } : null;
-      return { content, tokenUsage };
-    }
-
-    // Legacy DashScope API
-    const response = await axios.post(legacyUrl, {
-      model,
-      input: {
-        messages: [{ role: 'user', content: prompt }]
+        timeout: 30000,
       },
-      parameters: {
-        result_format: 'message',
-        temperature: opts.temperature,
-        max_tokens: opts.maxTokens
-      }
-    }, {
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
-    });
+      provider.name
+    );
 
     const content = response.data?.output?.choices?.[0]?.message?.content || '';
     const usage = response.data?.usage;
-    const tokenUsage = usage ? {
-      inputTokens: usage.input_tokens || 0,
-      outputTokens: usage.output_tokens || 0,
-      totalTokens: usage.total_tokens || (usage.input_tokens || 0) + (usage.output_tokens || 0),
-    } : null;
+    const tokenUsage = usage
+      ? {
+          inputTokens: usage.input_tokens || 0,
+          outputTokens: usage.output_tokens || 0,
+          totalTokens: usage.total_tokens || (usage.input_tokens || 0) + (usage.output_tokens || 0),
+        }
+      : null;
     return { content, tokenUsage };
   }
 
@@ -1363,7 +1969,26 @@ class MultiFreeService {
         }
 
         const tokenUrl = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${provider.apiKey}&client_secret=${provider.secretKey}`;
-        const tokenResponse = await axios.get(tokenUrl, { timeout: 20000 });
+        let tokenResponse;
+        try {
+          tokenResponse = await axios.get(tokenUrl, withKeepAliveAgents({ timeout: 20000 }));
+        } catch (err) {
+          // 与 POST 路径语义一致：全局 HTTPS_PROXY 代理不可达时一次性回退直连重试，
+          // 避免 Baidu OAuth GET 在代理挂掉时硬失败。
+          if (_proxyAgent && !_proxyFailedOnce && isProxyConnectError(err)) {
+            _proxyFailedOnce = true;
+            console.warn(
+              `[proxy] 代理 ${_configuredProxyUrl} 不可达，回退直连重试 Baidu OAuth 令牌获取 (第1/1次)...`
+            );
+            tokenResponse = await axios.get(tokenUrl, {
+              httpsAgent: _directHttpsAgent,
+              httpAgent: sharedHttpAgent,
+              timeout: 20000,
+            });
+          } else {
+            throw err;
+          }
+        }
         const accessToken = tokenResponse.data?.access_token;
 
         if (!accessToken) {
@@ -1386,55 +2011,61 @@ class MultiFreeService {
 
   async callBaidu(provider, prompt, opts) {
     const accessToken = await this.getBaiduAccessToken(provider);
-    const baseUrl = (provider.baseUrl || 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop').replace(/\/+$/, '');
+    const baseUrl = (
+      provider.baseUrl || 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop'
+    ).replace(/\/+$/, '');
     const endpoint = /\/chat\/completions$/i.test(baseUrl)
       ? baseUrl
       : `${baseUrl}/chat/completions`;
-    const response = await axios.post(
+    const response = await postWithDeadConnRetry(
       endpoint,
       {
         messages: [{ role: 'user', content: prompt }],
         temperature: opts.temperature,
-        top_p: 0.8
+        top_p: 0.8,
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+          Authorization: `Bearer ${accessToken}`,
         },
-        timeout: 30000
-      }
+        timeout: 30000,
+      },
+      provider.name
     );
 
     const content = response.data?.result || '';
     const usage = response.data?.usage;
-    const tokenUsage = usage ? {
-      inputTokens: usage.prompt_tokens || 0,
-      outputTokens: usage.completion_tokens || 0,
-      totalTokens: usage.total_tokens || 0,
-      ...normalizeCacheUsage(usage),
-    } : null;
+    const tokenUsage = usage
+      ? {
+          inputTokens: usage.prompt_tokens || 0,
+          outputTokens: usage.completion_tokens || 0,
+          totalTokens: usage.total_tokens || 0,
+          ...normalizeCacheUsage(usage),
+        }
+      : null;
     return { content, tokenUsage };
   }
 
   async callHuggingFace(provider, prompt, opts) {
     const model = opts.model || provider.model;
-    const response = await axios.post(
+    const response = await postWithDeadConnRetry(
       `https://api-inference.huggingface.co/models/${model}`,
       {
         inputs: prompt,
         parameters: {
           max_new_tokens: Math.min(opts.maxTokens, 512),
-          temperature: opts.temperature
-        }
+          temperature: opts.temperature,
+        },
       },
       {
         headers: {
           Authorization: `Bearer ${provider.apiKey}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        timeout: 45000
-      }
+        timeout: 45000,
+      },
+      provider.name
     );
 
     let content = '';
@@ -1461,10 +2092,13 @@ class MultiFreeService {
       social: `【情绪分析】${stockCode} 市场情绪分歧较大，建议避免情绪化操作，严格执行既定交易规则。`,
       news: `【新闻分析】${stockCode} 当前暂无明确单边催化剂，建议密切关注官方公告及政策变化动向。`,
       strategy: `【策略分析】${stockCode} 适合采用分批建仓策略，严格设置止损位并控制风险预算。`,
-      risk: `【风险分析】${stockCode} 主要风险来自波动率扩张和流动性变化，建议保持保守仓位管理。`
+      risk: `【风险分析】${stockCode} 主要风险来自波动率扩张和流动性变化，建议保持保守仓位管理。`,
     };
 
-    return templates[agentId] || `【综合分析】${stockCode} 在线大模型服务暂时不可用，已返回本地规则兜底分析结果。`;
+    return (
+      templates[agentId] ||
+      `【综合分析】${stockCode} 在线大模型服务暂时不可用，已返回本地规则兜底分析结果。`
+    );
   }
 }
 
@@ -1484,23 +2118,33 @@ function enumerateKnownModels() {
     const seen = new Set();
     const push = (id, provider, supportsVision) => {
       const mid = String(id == null ? '' : id).trim();
-      if (!mid) return;
+      if (!mid) {
+        return;
+      }
       const key = mid.toLowerCase();
-      if (seen.has(key)) return;
+      if (seen.has(key)) {
+        return;
+      }
       seen.add(key);
       out.push({ id: mid, provider: String(provider || ''), supportsVision: !!supportsVision });
     };
     for (const [key, p] of Object.entries(svc.providers || {})) {
-      if (!p) continue;
+      if (!p) {
+        continue;
+      }
       const provider = p.name || key;
       if (Array.isArray(p.availableModels)) {
         for (const m of p.availableModels) {
-          if (!m) continue;
-          const id = typeof m === 'string' ? m : (m.id || m.model || m.name);
+          if (!m) {
+            continue;
+          }
+          const id = typeof m === 'string' ? m : m.id || m.model || m.name;
           push(id, provider, p.supportsVision);
         }
       }
-      if (p.model) push(p.model, provider, p.supportsVision);
+      if (p.model) {
+        push(p.model, provider, p.supportsVision);
+      }
     }
     return out;
   } catch {
@@ -1509,3 +2153,5 @@ function enumerateKnownModels() {
 }
 
 module.exports.enumerateKnownModels = enumerateKnownModels;
+// Exposed for unit-style verification of the sliding idle timeout behavior.
+module.exports.createStreamIdleWatchdog = createStreamIdleWatchdog;

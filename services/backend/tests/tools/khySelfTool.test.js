@@ -23,7 +23,7 @@ test('静态元数据:名称/类别/只读/别名', () => {
 
 test('inputSchema 暴露 action(enum)与 query', () => {
   const schema = makeTool().inputSchema;
-  assert.deepStrictEqual(schema.properties.action.enum, ['commands', 'location', 'self_audit', 'all']);
+  assert.deepStrictEqual(schema.properties.action.enum, ['commands', 'location', 'self_audit', 'self_audit_verify', 'all']);
   assert.strictEqual(schema.properties.query.type, 'string');
 });
 
@@ -85,4 +85,38 @@ test('默认 action=all → location + commands 一并返回', async () => {
 test('未知 action 归一到 all', async () => {
   const r = await makeTool().execute({ action: 'bogus' });
   assert.strictEqual(r.action, 'all');
+});
+
+test('action=self_audit_verify → 逐项证据明细 + selfSourceDir + Read/Grep hint', async () => {
+  const r = await makeTool().execute({ action: 'self_audit_verify' });
+  assert.strictEqual(r.success, true);
+  assert.strictEqual(r.action, 'self_audit_verify');
+  const v = r.selfAuditVerify;
+  assert.ok(v, 'selfAuditVerify present');
+  assert.strictEqual(typeof v.checkedAt, 'string');
+  assert.ok(Array.isArray(v.items) && v.items.length >= 5, 'per-item evidence for the 5 tracked issues');
+  for (const it of v.items) {
+    assert.strictEqual(typeof it.id, 'string');
+    assert.strictEqual(typeof it.verified, 'boolean');
+    assert.ok(Array.isArray(it.checks), `${it.id} checks is array`);
+    assert.strictEqual(typeof it.reason, 'string');
+  }
+  assert.strictEqual(typeof v.selfSourceDir, 'string');
+  assert.match(v.hint, /Read\/Grep/, 'hint points the model at Read/Grep for deeper inspection');
+});
+
+test('action=self_audit_verify 门控关 → 诚实空信号(success:false + error)', async () => {
+  // KhySelfTool reads process.env internally; the verifier checks the gate BEFORE
+  // its TTL cache, so gating off via process.env is reliable regardless of cache state.
+  const prev = process.env.KHY_AUDIT_DYNAMIC_VERIFY;
+  try {
+    process.env.KHY_AUDIT_DYNAMIC_VERIFY = '0';
+    const r = await makeTool().execute({ action: 'self_audit_verify' });
+    assert.strictEqual(r.success, false);
+    assert.strictEqual(r.action, 'self_audit_verify');
+    assert.match(r.error, /verification unavailable/);
+  } finally {
+    if (prev === undefined) delete process.env.KHY_AUDIT_DYNAMIC_VERIFY;
+    else process.env.KHY_AUDIT_DYNAMIC_VERIFY = prev;
+  }
 });

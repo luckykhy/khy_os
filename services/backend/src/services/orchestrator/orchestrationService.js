@@ -25,22 +25,32 @@
  * state ('running'|'paused'|'cancelled'|'done'|'failed'|'idle') in `result`.
  */
 
-const plan = require('./orchestrationPlan');
 const journal = require('./orchestrationJournal');
+const plan = require('./orchestrationPlan');
 
 const DEFAULT_RESULT_CHARS = 2000;
 const DEFAULT_STEP_MAX_RETRIES = 1; // fail → blocked immediately; `replay` is the explicit retry
 
 function orchestrateEnabled(env = process.env) {
   const v = env.KHY_ORCHESTRATE;
-  if (v === undefined || v === null || v === '') return true; // default ON
+  if (v === undefined || v === null || v === '') {
+    return true;
+  } // default ON
   return !(v === '0' || String(v).toLowerCase() === 'false' || String(v).toLowerCase() === 'off');
 }
 
 function _parseJson(str, fallback) {
-  if (str == null) return fallback;
-  if (typeof str === 'object') return str;
-  try { return JSON.parse(str); } catch { return fallback; }
+  if (str == null) {
+    return fallback;
+  }
+  if (typeof str === 'object') {
+    return str;
+  }
+  try {
+    return JSON.parse(str);
+  } catch {
+    return fallback;
+  }
 }
 
 function _truncate(s, max = DEFAULT_RESULT_CHARS) {
@@ -48,28 +58,39 @@ function _truncate(s, max = DEFAULT_RESULT_CHARS) {
   return str.length <= max ? str : str.slice(0, max) + '… [truncated]';
 }
 
-function _now() { return Date.now(); }
-function _iso(ms) { return new Date(ms).toISOString(); }
+function _now() {
+  return Date.now();
+}
+
+function _iso(ms) {
+  return new Date(ms).toISOString();
+}
 
 // Mirror AgentTool's fan-out policy without importing it (same env seams).
 function _fanoutLimit(env = process.env) {
-  if (env.KHY_ENABLE_MULTI_AGENT === 'false') return 1;
+  if (env.KHY_ENABLE_MULTI_AGENT === 'false') {
+    return 1;
+  }
   const n = parseInt(env.KHY_MAX_SUBAGENTS, 10);
   return Number.isFinite(n) && n > 0 ? n : Infinity;
 }
 
 async function _runLimited(items, limit, worker) {
-  const lim = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : (items.length || 1);
+  const lim = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : items.length || 1;
   let i = 0;
   async function next() {
     const idx = i;
     i += 1;
-    if (idx >= items.length) return;
+    if (idx >= items.length) {
+      return;
+    }
     await worker(items[idx], idx);
     return next();
   }
   const runners = [];
-  for (let k = 0; k < Math.min(lim, items.length); k++) runners.push(next());
+  for (let k = 0; k < Math.min(lim, items.length); k++) {
+    runners.push(next());
+  }
   await Promise.all(runners);
 }
 
@@ -80,14 +101,25 @@ function _taskBoard(opts) {
 async function _defaultAgentRunner(step, opts) {
   const AgentTool = require('../../tools/AgentTool');
   const params = { prompt: step.prompt, role: step.role };
-  if (step.subagentType) params.subagent_type = step.subagentType;
-  if (step.model) params.model = step.model;
-  if (opts.timeout) params.timeout = opts.timeout;
+  if (step.subagentType) {
+    params.subagent_type = step.subagentType;
+  }
+  if (step.model) {
+    params.model = step.model;
+  }
+  if (opts.timeout) {
+    params.timeout = opts.timeout;
+  }
   const res = await AgentTool.execute(params, opts.agentContext || {});
   return {
     success: !!(res && res.success),
     output: res && res.output != null ? String(res.output) : (res && res.message) || '',
-    error: res && res.error ? String(res.error) : (res && res.success ? null : 'sub-agent reported failure'),
+    error:
+      res && res.error
+        ? String(res.error)
+        : res && res.success
+          ? null
+          : 'sub-agent reported failure',
   };
 }
 
@@ -98,7 +130,11 @@ function _agentRunner(opts) {
 function _nextSeq(runId, opts) {
   const records = journal.readJournal(runId, opts.env);
   let max = -1;
-  for (const r of records) { if (typeof r.seq === 'number' && r.seq > max) max = r.seq; }
+  for (const r of records) {
+    if (typeof r.seq === 'number' && r.seq > max) {
+      max = r.seq;
+    }
+  }
   return max + 1;
 }
 
@@ -116,11 +152,17 @@ function _readControl(parentTask) {
 function _writeControl(runId, control, parentStatus, opts) {
   const tb = _taskBoard(opts);
   const parent = tb.getTask(runId);
-  if (!parent) throw new Error(`orchestration run not found: ${runId}`);
+  if (!parent) {
+    throw new Error(`orchestration run not found: ${runId}`);
+  }
   const prev = _parseJson(parent.result, {});
   const updates = { result: JSON.stringify({ ...prev, control }) };
-  if (parentStatus) updates.status = parentStatus;
-  if (control === 'done') updates.completedAt = _now();
+  if (parentStatus) {
+    updates.status = parentStatus;
+  }
+  if (control === 'done') {
+    updates.completedAt = _now();
+  }
   tb.updateTask(runId, updates);
   return parent;
 }
@@ -131,8 +173,12 @@ function _reverseStepIndex(meta) {
   const idMap = (meta && meta.idMap) || {};
   const steps = (meta && meta.plan && meta.plan.steps) || [];
   const byStepId = {};
-  for (const s of steps) byStepId[s.id] = s;
-  for (const stepId of Object.keys(idMap)) idx[idMap[stepId]] = byStepId[stepId];
+  for (const s of steps) {
+    byStepId[s.id] = s;
+  }
+  for (const stepId of Object.keys(idMap)) {
+    idx[idMap[stepId]] = byStepId[stepId];
+  }
   return idx;
 }
 
@@ -144,13 +190,20 @@ function createRun(spec, opts = {}) {
   const builtPlan = plan.buildOrchestrationPlan(spec);
   const tb = _taskBoard(opts);
   const STATUS = tb.STATUS || {};
-  const maxRetries = Number.isFinite(opts.maxRetries) && opts.maxRetries > 0
-    ? Math.floor(opts.maxRetries) : DEFAULT_STEP_MAX_RETRIES;
+  const maxRetries =
+    Number.isFinite(opts.maxRetries) && opts.maxRetries > 0
+      ? Math.floor(opts.maxRetries)
+      : DEFAULT_STEP_MAX_RETRIES;
 
   // Parent task = the run. Created READY then moved to RUNNING so children are claimable.
   const parent = tb.createTask({
     title: builtPlan.label,
-    description: JSON.stringify({ kind: 'orchestration-run', mode: builtPlan.mode, label: builtPlan.label, plan: builtPlan }),
+    description: JSON.stringify({
+      kind: 'orchestration-run',
+      mode: builtPlan.mode,
+      label: builtPlan.label,
+      plan: builtPlan,
+    }),
     priority: opts.priority || 'medium',
     status: STATUS.READY || 'ready',
   });
@@ -173,13 +226,24 @@ function createRun(spec, opts = {}) {
 
   // Persist idMap alongside the plan, and open the run as running.
   tb.updateTask(runId, {
-    description: JSON.stringify({ kind: 'orchestration-run', mode: builtPlan.mode, label: builtPlan.label, plan: builtPlan, idMap }),
+    description: JSON.stringify({
+      kind: 'orchestration-run',
+      mode: builtPlan.mode,
+      label: builtPlan.label,
+      plan: builtPlan,
+      idMap,
+    }),
     status: STATUS.RUNNING || 'running',
     result: JSON.stringify({ control: 'running' }),
   });
 
   const ctx = { seq: 0, opts: { ...opts, env: opts.env || process.env } };
-  _appendJournal(runId, 'run_created', { mode: builtPlan.mode, label: builtPlan.label, stepCount: builtPlan.stepCount }, ctx);
+  _appendJournal(
+    runId,
+    'run_created',
+    { mode: builtPlan.mode, label: builtPlan.label, stepCount: builtPlan.stepCount },
+    ctx
+  );
 
   return { runId, plan: builtPlan, idMap };
 }
@@ -194,7 +258,9 @@ async function executeRun(runId, opts = {}) {
   const tb = _taskBoard(opts);
   const STATUS = tb.STATUS || {};
   const parent = tb.getTask(runId);
-  if (!parent) throw new Error(`orchestration run not found: ${runId}`);
+  if (!parent) {
+    throw new Error(`orchestration run not found: ${runId}`);
+  }
   const meta = _parseJson(parent.description, {});
   const stepByChild = _reverseStepIndex(meta);
   const runner = _agentRunner(opts);
@@ -218,20 +284,33 @@ async function executeRun(runId, opts = {}) {
     iterations += 1;
     // Re-read control each iteration so a concurrent pause/cancel is honored.
     control = _readControl(tb.getTask(runId));
-    if (control === 'paused' || control === 'cancelled') break;
+    if (control === 'paused' || control === 'cancelled') {
+      break;
+    }
 
     const children = tb.getChildTasks(runId) || [];
-    const claimable = children.filter((c) => (c.status === (STATUS.READY || 'ready')) && !c.claimLock);
+    const claimable = children.filter(
+      (c) => c.status === (STATUS.READY || 'ready') && !c.claimLock
+    );
     const claimed = [];
     for (const c of claimable) {
       // claimTask enforces dependency + parent gating internally.
-      if (tb.claimTask(c.id, workerId)) claimed.push(c);
+      if (tb.claimTask(c.id, workerId)) {
+        claimed.push(c);
+      }
     }
-    if (claimed.length === 0) break; // nothing progressable right now
+    if (claimed.length === 0) {
+      break;
+    } // nothing progressable right now
 
     await _runLimited(claimed, fanout, async (child) => {
       const step = stepByChild[child.id] || { prompt: child.description, role: 'general' };
-      _appendJournal(runId, 'step_start', { stepId: step.id, childId: child.id, role: step.role }, ctx);
+      _appendJournal(
+        runId,
+        'step_start',
+        { stepId: step.id, childId: child.id, role: step.role },
+        ctx
+      );
       let res;
       try {
         res = await runner(step, { ...opts, env });
@@ -241,11 +320,21 @@ async function executeRun(runId, opts = {}) {
       if (res && res.success) {
         tb.completeTask(child.id, _truncate(res.output));
         executed += 1;
-        _appendJournal(runId, 'step_done', { stepId: step.id, childId: child.id, resultPreview: _truncate(res.output, 200) }, ctx);
+        _appendJournal(
+          runId,
+          'step_done',
+          { stepId: step.id, childId: child.id, resultPreview: _truncate(res.output, 200) },
+          ctx
+        );
       } else {
         const reason = String((res && res.error) || 'sub-agent failed');
         tb.failTask(child.id, reason);
-        _appendJournal(runId, 'step_failed', { stepId: step.id, childId: child.id, error: reason }, ctx);
+        _appendJournal(
+          runId,
+          'step_failed',
+          { stepId: step.id, childId: child.id, error: reason },
+          ctx
+        );
       }
     });
   }
@@ -253,7 +342,8 @@ async function executeRun(runId, opts = {}) {
   // Finalize run state (unless paused/cancelled mid-flight).
   if (control !== 'paused' && control !== 'cancelled') {
     const children = tb.getChildTasks(runId) || [];
-    const allDone = children.length > 0 && children.every((c) => c.status === (STATUS.DONE || 'done'));
+    const allDone =
+      children.length > 0 && children.every((c) => c.status === (STATUS.DONE || 'done'));
     const anyBlocked = children.some((c) => c.status === (STATUS.BLOCKED || 'blocked'));
     if (allDone) {
       _writeControl(runId, 'done', STATUS.DONE || 'done', opts);
@@ -340,7 +430,9 @@ async function replayRun(runId, opts = {}) {
 function getRunStatus(runId, opts = {}) {
   const tb = _taskBoard(opts);
   const parent = tb.getTask(runId);
-  if (!parent) return null;
+  if (!parent) {
+    return null;
+  }
   const meta = _parseJson(parent.description, {});
   const builtPlan = meta.plan || { steps: [] };
   const stepByChild = _reverseStepIndex(meta);
@@ -349,15 +441,17 @@ function getRunStatus(runId, opts = {}) {
   const statusById = {};
   const steps = children.map((c) => {
     const step = stepByChild[c.id] || {};
-    if (step.id) statusById[step.id] = c.status;
-    const failed = c.status === (tb.STATUS && tb.STATUS.BLOCKED || 'blocked');
+    if (step.id) {
+      statusById[step.id] = c.status;
+    }
+    const failed = c.status === ((tb.STATUS && tb.STATUS.BLOCKED) || 'blocked');
     return {
       stepId: step.id || c.id,
       childId: c.id,
       role: step.role || '',
       status: c.status,
       dependsOn: step.dependsOn || [],
-      result: failed ? null : (c.result != null ? _truncate(c.result, 200) : null),
+      result: failed ? null : c.result != null ? _truncate(c.result, 200) : null,
       error: failed ? (c.result != null ? _truncate(c.result, 200) : 'blocked') : null,
     };
   });
@@ -381,7 +475,15 @@ function listRuns(opts = {}) {
   const out = [];
   for (const runId of ids) {
     const st = getRunStatus(runId, opts);
-    if (st) out.push({ runId: st.runId, mode: st.mode, label: st.label, control: st.control, progress: st.progress });
+    if (st) {
+      out.push({
+        runId: st.runId,
+        mode: st.mode,
+        label: st.label,
+        control: st.control,
+        progress: st.progress,
+      });
+    }
   }
   return out;
 }

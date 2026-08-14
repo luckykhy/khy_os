@@ -39,9 +39,9 @@ const MUTEX_PAIRS = Object.freeze([
     winner: 'mathSolve',
     axis: '输出详略 / 长度',
     reason:
-      '数学解题协议要求分步展示完整推导与回代自检,懒人方法论要求最短输出——两者在「输出详略」'
-      + '轴上正相反。正确性与可验证性优先于最小化:本回合采用分步解题,不套用懒人「最短输出」约束。'
-      + '(懒人原则仍适用于最终交付的代码量 / 不过度工程,但不得用它压缩或省略解题推导。)',
+      '数学解题协议要求分步展示完整推导与回代自检,懒人方法论要求最短输出——两者在「输出详略」' +
+      '轴上正相反。正确性与可验证性优先于最小化:本回合采用分步解题,不套用懒人「最短输出」约束。' +
+      '(懒人原则仍适用于最终交付的代码量 / 不过度工程,但不得用它压缩或省略解题推导。)',
   }),
 ]);
 
@@ -54,11 +54,17 @@ function isEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_PROTOCOL_ARBITRATION', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_PROTOCOL_ARBITRATION;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -81,11 +87,17 @@ function resolveArbitration(activeProtocolKeys = []) {
   for (const pair of MUTEX_PAIRS) {
     const a = pair.keys[0];
     const b = pair.keys[1];
-    if (!active.has(a) || !active.has(b)) continue;   // 需两者同时生效
+    if (!active.has(a) || !active.has(b)) {
+      continue;
+    } // 需两者同时生效
     // 胜者可能已被更高优先的另一对抑制;若胜者已被抑制,本对不再抑制败者(避免连锁误抑)。
-    if (suppressed.has(pair.winner)) continue;
+    if (suppressed.has(pair.winner)) {
+      continue;
+    }
     const loser = pair.winner === a ? b : a;
-    if (suppressed.has(loser)) continue;              // 已被抑制,不重复记
+    if (suppressed.has(loser)) {
+      continue;
+    } // 已被抑制,不重复记
     suppressed.add(loser);
     arbitrations.push({ winner: pair.winner, loser, axis: pair.axis, reason: pair.reason });
   }
@@ -100,7 +112,9 @@ function resolveArbitration(activeProtocolKeys = []) {
  */
 function arbitrate(activeProtocolKeys = [], env) {
   try {
-    if (!isEnabled(env)) return { suppressed: new Set(), arbitrations: [] };
+    if (!isEnabled(env)) {
+      return { suppressed: new Set(), arbitrations: [] };
+    }
     return resolveArbitration(activeProtocolKeys);
   } catch {
     return { suppressed: new Set(), arbitrations: [] };
@@ -116,12 +130,16 @@ function arbitrate(activeProtocolKeys = [], env) {
  */
 function buildArbitrationNotice(arbitrations = [], labels = {}) {
   const items = (Array.isArray(arbitrations) ? arbitrations : []).filter(Boolean);
-  if (items.length === 0) return '';
+  if (items.length === 0) {
+    return '';
+  }
   const nameOf = (k) => String((labels && labels[k]) || k);
   const lines = [];
   lines.push('## 协议冲突仲裁 —— 下列协议因互斥已被弃用,本回合勿再套用');
   items.forEach((it, i) => {
-    lines.push(`${i + 1}. 冲突轴「${it.axis}」:采用「${nameOf(it.winner)}」,弃用「${nameOf(it.loser)}」。`);
+    lines.push(
+      `${i + 1}. 冲突轴「${it.axis}」:采用「${nameOf(it.winner)}」,弃用「${nameOf(it.loser)}」。`
+    );
     lines.push(`   理由:${it.reason}`);
   });
   lines.push('');

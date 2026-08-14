@@ -28,7 +28,9 @@ function pathFor(id) {
 
 /** Persist a map atomically (tmp + rename). Returns the written path. */
 function saveMap(map) {
-  if (!map || !map.id) throw new Error('map.id is required');
+  if (!map || !map.id) {
+    throw new Error('map.id is required');
+  }
   const file = pathFor(map.id);
   const tmp = `${file}.tmp-${process.pid}`;
   fs.writeFileSync(tmp, JSON.stringify(map, null, 2));
@@ -58,7 +60,9 @@ function listMaps() {
   for (const n of names) {
     try {
       out.push(JSON.parse(fs.readFileSync(path.join(mapsDir(), n), 'utf-8')));
-    } catch { /* skip corrupt file */ }
+    } catch {
+      /* skip corrupt file */
+    }
   }
   return out;
 }

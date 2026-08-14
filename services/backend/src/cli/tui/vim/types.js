@@ -28,9 +28,19 @@ function isOperatorKey(key) {
 }
 
 const SIMPLE_MOTIONS = new Set([
-  'h', 'l', 'j', 'k',          // basic movement
-  'w', 'b', 'e', 'W', 'B', 'E', // word motions
-  '0', '^', '$',               // line positions
+  'h',
+  'l',
+  'j',
+  'k', // basic movement
+  'w',
+  'b',
+  'e',
+  'W',
+  'B',
+  'E', // word motions
+  '0',
+  '^',
+  '$', // line positions
 ]);
 
 const FIND_KEYS = new Set(['f', 'F', 't', 'T']);
@@ -42,12 +52,21 @@ function isTextObjScopeKey(key) {
 }
 
 const TEXT_OBJ_TYPES = new Set([
-  'w', 'W',            // word / WORD
-  '"', "'", '`',       // quotes
-  '(', ')', 'b',       // parens
-  '[', ']',            // brackets
-  '{', '}', 'B',       // braces
-  '<', '>',            // angle brackets
+  'w',
+  'W', // word / WORD
+  '"',
+  "'",
+  '`', // quotes
+  '(',
+  ')',
+  'b', // parens
+  '[',
+  ']', // brackets
+  '{',
+  '}',
+  'B', // braces
+  '<',
+  '>', // angle brackets
 ]);
 
 const MAX_VIM_COUNT = 10000;

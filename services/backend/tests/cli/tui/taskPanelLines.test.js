@@ -14,6 +14,7 @@ const {
   panelStatusIcon,
   formatPanelStateLines,
   mergeTaskLines,
+  taskLineStatus,
   summarizeHiddenTaskLines,
   taskHiddenBreakdownEnabled,
   taskPanelSplitEnabled,
@@ -27,6 +28,22 @@ test('panelStatusIcon: 状态 → ✓/→/✗/○', () => {
   assert.equal(panelStatusIcon('in_progress'), '→');
   assert.equal(panelStatusIcon('error'), '✗');
   assert.equal(panelStatusIcon('pending'), '○');
+});
+
+// ── taskLineStatus: 行首图标 → 状态的单一真源(taskLineStyle/SidebarPanel 共用) ──
+test('taskLineStatus: 四种图标 → 对应状态(含前导空白)', () => {
+  assert.equal(taskLineStatus('✓ 已完成项'), 'completed');
+  assert.equal(taskLineStatus('→ 进行中项'), 'in_progress');
+  assert.equal(taskLineStatus('✗ 失败项'), 'error');
+  assert.equal(taskLineStatus('○ 待办项'), 'pending');
+  assert.equal(taskLineStatus('  → 缩进行'), 'in_progress');
+});
+
+test('taskLineStatus: 未知图标/空/非字符串 → null', () => {
+  assert.equal(taskLineStatus('- 普通行'), null);
+  assert.equal(taskLineStatus(''), null);
+  assert.equal(taskLineStatus(null), null);
+  assert.equal(taskLineStatus(undefined), null);
 });
 
 test('panelStatusIcon: 未知/空 → 保守归 ○', () => {

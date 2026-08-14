@@ -13,10 +13,11 @@
  * Aligned with Claude Code's voice input/output integration.
  */
 const { spawn, execSync, spawnSync } = require('child_process');
-const { safeKill } = require('../tools/platformUtils');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
+
+const { safeKill } = require('../tools/platformUtils');
 
 const VOICE_SETTINGS_KEY = 'voiceEnabled';
 const VOICE_PROVIDER_KEY = 'voiceProvider';
@@ -32,30 +33,62 @@ const PLATFORM = process.platform;
  */
 function _whichCmd(bin) {
   const { searchExecutable } = require('../tools/platformUtils');
-  if (!searchExecutable(bin)) throw new Error(`${bin} not found`);
+  if (!searchExecutable(bin)) {
+    throw new Error(`${bin} not found`);
+  }
 }
 
 function detectTTSProvider() {
   if (PLATFORM === 'win32') {
     // Windows has no common CLI TTS out-of-the-box.
     // Check for edge-tts (Python package) only.
-    try { _whichCmd('edge-tts'); return 'edge-tts'; } catch { /* ignore */ }
+    try {
+      _whichCmd('edge-tts');
+      return 'edge-tts';
+    } catch {
+      /* ignore */
+    }
     return null;
   }
 
   if (PLATFORM === 'darwin') {
-    try { _whichCmd('say'); return 'say'; } catch { /* ignore */ }
+    try {
+      _whichCmd('say');
+      return 'say';
+    } catch {
+      /* ignore */
+    }
   }
 
   // Linux: espeak or espeak-ng
-  try { _whichCmd('espeak-ng'); return 'espeak'; } catch { /* ignore */ }
-  try { _whichCmd('espeak'); return 'espeak'; } catch { /* ignore */ }
+  try {
+    _whichCmd('espeak-ng');
+    return 'espeak';
+  } catch {
+    /* ignore */
+  }
+  try {
+    _whichCmd('espeak');
+    return 'espeak';
+  } catch {
+    /* ignore */
+  }
 
   // Cross-platform: edge-tts (Python package)
-  try { _whichCmd('edge-tts'); return 'edge-tts'; } catch { /* ignore */ }
+  try {
+    _whichCmd('edge-tts');
+    return 'edge-tts';
+  } catch {
+    /* ignore */
+  }
 
   // Piper (fast local TTS)
-  try { _whichCmd('piper'); return 'piper'; } catch { /* ignore */ }
+  try {
+    _whichCmd('piper');
+    return 'piper';
+  } catch {
+    /* ignore */
+  }
 
   return null;
 }
@@ -67,23 +100,48 @@ function detectTTSProvider() {
 function detectSTTProvider() {
   if (PLATFORM === 'win32') {
     // Windows: only check for whisper
-    try { _whichCmd('whisper'); return 'whisper-local'; } catch { /* ignore */ }
+    try {
+      _whichCmd('whisper');
+      return 'whisper-local';
+    } catch {
+      /* ignore */
+    }
     return null;
   }
 
   // Check for whisper.cpp or whisper CLI
-  try { _whichCmd('whisper'); return 'whisper-local'; } catch { /* ignore */ }
+  try {
+    _whichCmd('whisper');
+    return 'whisper-local';
+  } catch {
+    /* ignore */
+  }
 
   // Check for sox (recording)
-  try { _whichCmd('sox'); return 'sox'; } catch { /* ignore */ }
+  try {
+    _whichCmd('sox');
+    return 'sox';
+  } catch {
+    /* ignore */
+  }
 
   // macOS: can use `say -i` workaround or system speech recognition
   if (PLATFORM === 'darwin') {
-    try { _whichCmd('rec'); return 'sox'; } catch { /* ignore */ }
+    try {
+      _whichCmd('rec');
+      return 'sox';
+    } catch {
+      /* ignore */
+    }
   }
 
   // Linux: arecord
-  try { _whichCmd('arecord'); return 'sox'; } catch { /* ignore */ }
+  try {
+    _whichCmd('arecord');
+    return 'sox';
+  } catch {
+    /* ignore */
+  }
 
   return null;
 }
@@ -106,11 +164,17 @@ let _ttsProcess = null;
 function speak(text, options = {}) {
   // Cancel any ongoing speech
   if (_ttsProcess) {
-    try { safeKill(_ttsProcess); } catch { /* ignore */ }
+    try {
+      safeKill(_ttsProcess);
+    } catch {
+      /* ignore */
+    }
     _ttsProcess = null;
   }
 
-  if (!text || typeof text !== 'string') return { cancel: () => {} };
+  if (!text || typeof text !== 'string') {
+    return { cancel: () => {} };
+  }
 
   // Clean text for speech (remove markdown, code blocks, etc.)
   const cleanText = text
@@ -123,7 +187,9 @@ function speak(text, options = {}) {
     .replace(/\n/g, ' ')
     .trim();
 
-  if (!cleanText) return { cancel: () => {} };
+  if (!cleanText) {
+    return { cancel: () => {} };
+  }
 
   const provider = options.provider || detectTTSProvider();
 
@@ -131,10 +197,16 @@ function speak(text, options = {}) {
     case 'say': {
       // macOS
       const args = [cleanText];
-      if (options.voice) args.unshift('-v', options.voice);
-      if (options.rate) args.unshift('-r', String(options.rate));
+      if (options.voice) {
+        args.unshift('-v', options.voice);
+      }
+      if (options.rate) {
+        args.unshift('-r', String(options.rate));
+      }
       _ttsProcess = spawn('say', args, { stdio: 'ignore' });
-      _ttsProcess.on('error', () => { /* say not available */ });
+      _ttsProcess.on('error', () => {
+        /* say not available */
+      });
       break;
     }
 
@@ -143,9 +215,13 @@ function speak(text, options = {}) {
       const { searchExecutable } = require('../tools/platformUtils');
       const cmd = searchExecutable('espeak-ng') ? 'espeak-ng' : 'espeak';
       const args = [cleanText];
-      if (options.rate) args.unshift('-s', String(options.rate));
+      if (options.rate) {
+        args.unshift('-s', String(options.rate));
+      }
       _ttsProcess = spawn(cmd, args, { stdio: 'ignore' });
-      _ttsProcess.on('error', () => { /* espeak not available */ });
+      _ttsProcess.on('error', () => {
+        /* espeak not available */
+      });
       break;
     }
 
@@ -153,23 +229,37 @@ function speak(text, options = {}) {
       // Microsoft Edge TTS (cross-platform, requires Python package)
       const voice = options.voice || 'en-US-AriaNeural';
       const outFile = path.join(ensureTempDir(), `tts_${Date.now()}.mp3`);
-      _ttsProcess = spawn('edge-tts', ['--voice', voice, '--text', cleanText, '--write-media', outFile], {
-        stdio: 'ignore',
+      _ttsProcess = spawn(
+        'edge-tts',
+        ['--voice', voice, '--text', cleanText, '--write-media', outFile],
+        {
+          stdio: 'ignore',
+        }
+      );
+      _ttsProcess.on('error', () => {
+        /* edge-tts not available */
       });
-      _ttsProcess.on('error', () => { /* edge-tts not available */ });
       _ttsProcess.on('close', () => {
         // Play the generated audio
-        const player = PLATFORM === 'darwin' ? 'afplay' : PLATFORM === 'win32' ? 'powershell' : 'mpv';
+        const player =
+          PLATFORM === 'darwin' ? 'afplay' : PLATFORM === 'win32' ? 'powershell' : 'mpv';
         try {
-          const playArgs = PLATFORM === 'win32'
-            ? ['-NoProfile', '-c', `Start-Process "${outFile}"`]
-            : [outFile];
+          const playArgs =
+            PLATFORM === 'win32' ? ['-NoProfile', '-c', `Start-Process "${outFile}"`] : [outFile];
           const playProcess = spawn(player, playArgs, { stdio: 'ignore' });
-          playProcess.on('error', () => { /* player not available */ });
-          playProcess.on('close', () => {
-            try { fs.unlinkSync(outFile); } catch { /* ignore */ }
+          playProcess.on('error', () => {
+            /* player not available */
           });
-        } catch { /* no player available */ }
+          playProcess.on('close', () => {
+            try {
+              fs.unlinkSync(outFile);
+            } catch {
+              /* ignore */
+            }
+          });
+        } catch {
+          /* no player available */
+        }
       });
       break;
     }
@@ -177,20 +267,36 @@ function speak(text, options = {}) {
     case 'piper': {
       // Piper local TTS
       const outFile = path.join(ensureTempDir(), `tts_${Date.now()}.wav`);
-      _ttsProcess = spawn('piper', ['--output_file', outFile], { stdio: ['pipe', 'ignore', 'ignore'] });
-      _ttsProcess.on('error', () => { /* piper not available */ });
+      _ttsProcess = spawn('piper', ['--output_file', outFile], {
+        stdio: ['pipe', 'ignore', 'ignore'],
+      });
+      _ttsProcess.on('error', () => {
+        /* piper not available */
+      });
       _ttsProcess.stdin.write(cleanText);
       _ttsProcess.stdin.end();
       _ttsProcess.on('close', () => {
-        const player = PLATFORM === 'darwin' ? 'afplay' : PLATFORM === 'win32' ? 'powershell' : 'aplay';
+        const player =
+          PLATFORM === 'darwin' ? 'afplay' : PLATFORM === 'win32' ? 'powershell' : 'aplay';
         try {
-          const playArgs = PLATFORM === 'win32'
-            ? ['-NoProfile', '-c', `(New-Object Media.SoundPlayer "${outFile}").PlaySync()`]
-            : [outFile];
-          spawn(player, playArgs, { stdio: 'ignore' }).on('error', () => { /* player not available */ }).on('close', () => {
-            try { fs.unlinkSync(outFile); } catch { /* ignore */ }
-          });
-        } catch { /* ignore */ }
+          const playArgs =
+            PLATFORM === 'win32'
+              ? ['-NoProfile', '-c', `(New-Object Media.SoundPlayer "${outFile}").PlaySync()`]
+              : [outFile];
+          spawn(player, playArgs, { stdio: 'ignore' })
+            .on('error', () => {
+              /* player not available */
+            })
+            .on('close', () => {
+              try {
+                fs.unlinkSync(outFile);
+              } catch {
+                /* ignore */
+              }
+            });
+        } catch {
+          /* ignore */
+        }
       });
       break;
     }
@@ -201,13 +307,25 @@ function speak(text, options = {}) {
   }
 
   const proc = _ttsProcess;
-  _ttsProcess.on('close', () => { if (_ttsProcess === proc) _ttsProcess = null; });
-  _ttsProcess.on('error', () => { if (_ttsProcess === proc) _ttsProcess = null; });
+  _ttsProcess.on('close', () => {
+    if (_ttsProcess === proc) {
+      _ttsProcess = null;
+    }
+  });
+  _ttsProcess.on('error', () => {
+    if (_ttsProcess === proc) {
+      _ttsProcess = null;
+    }
+  });
 
   return {
     cancel: () => {
       if (proc && !proc.killed) {
-        try { safeKill(proc); } catch { /* ignore */ }
+        try {
+          safeKill(proc);
+        } catch {
+          /* ignore */
+        }
       }
     },
   };
@@ -218,7 +336,11 @@ function speak(text, options = {}) {
  */
 function stopSpeaking() {
   if (_ttsProcess) {
-    try { safeKill(_ttsProcess); } catch { /* ignore */ }
+    try {
+      safeKill(_ttsProcess);
+    } catch {
+      /* ignore */
+    }
     _ttsProcess = null;
   }
 }
@@ -258,10 +380,18 @@ async function listen(options = {}) {
   try {
     const text = await transcribeAudio(tempFile, options.language);
     const stat = fs.statSync(tempFile);
-    try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tempFile);
+    } catch {
+      /* ignore */
+    }
     return { text, duration: Math.round(stat.size / 32000) }; // rough duration estimate
   } catch (err) {
-    try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tempFile);
+    } catch {
+      /* ignore */
+    }
     return { error: `Transcription failed: ${err.message}` };
   }
 }
@@ -280,9 +410,13 @@ function recordAudio(outFile, maxDurationSec) {
       });
     } else {
       // Linux: arecord
-      recorder = spawn('arecord', ['-f', 'cd', '-t', 'wav', '-d', String(maxDurationSec), outFile], {
-        stdio: ['ignore', 'ignore', 'pipe'],
-      });
+      recorder = spawn(
+        'arecord',
+        ['-f', 'cd', '-t', 'wav', '-d', String(maxDurationSec), outFile],
+        {
+          stdio: ['ignore', 'ignore', 'pipe'],
+        }
+      );
     }
 
     recorder.on('close', (code) => {
@@ -297,7 +431,11 @@ function recordAudio(outFile, maxDurationSec) {
 
     // Allow early stop via SIGINT
     const sigintHandler = () => {
-      try { safeKill(recorder); } catch { /* ignore */ }
+      try {
+        safeKill(recorder);
+      } catch {
+        /* ignore */
+      }
     };
     process.once('SIGINT', sigintHandler);
     recorder.on('close', () => process.removeListener('SIGINT', sigintHandler));
@@ -310,36 +448,51 @@ function recordAudio(outFile, maxDurationSec) {
 async function transcribeAudio(wavFile, language = 'en') {
   // Try whisper first
   try {
-    const result = spawnSync('whisper', [
-      wavFile,
-      '--model', 'base',
-      '--language', language,
-      '--output_format', 'txt',
-      '--output_dir', path.dirname(wavFile),
-    ], { encoding: 'utf-8', timeout: 60000 });
+    const result = spawnSync(
+      'whisper',
+      [
+        wavFile,
+        '--model',
+        'base',
+        '--language',
+        language,
+        '--output_format',
+        'txt',
+        '--output_dir',
+        path.dirname(wavFile),
+      ],
+      { encoding: 'utf-8', timeout: 60000 }
+    );
 
     if (result.status === 0) {
       const txtFile = wavFile.replace(/\.wav$/, '.txt');
       if (fs.existsSync(txtFile)) {
         const text = fs.readFileSync(txtFile, 'utf-8').trim();
-        try { fs.unlinkSync(txtFile); } catch { /* ignore */ }
+        try {
+          fs.unlinkSync(txtFile);
+        } catch {
+          /* ignore */
+        }
         return text;
       }
     }
-  } catch { /* whisper not available */ }
+  } catch {
+    /* whisper not available */
+  }
 
   // Fallback: whisper.cpp
   try {
-    const result = spawnSync('whisper-cpp', [
-      '-m', 'base',
-      '-f', wavFile,
-      '-l', language,
-    ], { encoding: 'utf-8', timeout: 60000 });
+    const result = spawnSync('whisper-cpp', ['-m', 'base', '-f', wavFile, '-l', language], {
+      encoding: 'utf-8',
+      timeout: 60000,
+    });
 
     if (result.status === 0 && result.stdout) {
       return result.stdout.trim();
     }
-  } catch { /* not available */ }
+  } catch {
+    /* not available */
+  }
 
   throw new Error('No transcription engine available. Install whisper or whisper.cpp.');
 }
@@ -348,7 +501,13 @@ async function transcribeAudio(wavFile, language = 'en') {
 
 function getVoiceSettings() {
   try {
-    const settingsFile = path.join(os.homedir(), '.khy', 'settings.json');
+    // Portable-aware data home; fallback to the legacy location.
+    let settingsFile;
+    try {
+      settingsFile = path.join(require('../utils/dataHome').getDataHome(), 'settings.json');
+    } catch {
+      settingsFile = path.join(os.homedir(), '.khy', 'settings.json');
+    }
     if (fs.existsSync(settingsFile)) {
       const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
       return {
@@ -356,15 +515,25 @@ function getVoiceSettings() {
         provider: settings[VOICE_PROVIDER_KEY] || null,
       };
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { enabled: false, provider: null };
 }
 
 function setVoiceEnabled(enabled) {
   try {
-    const settingsFile = path.join(os.homedir(), '.khy', 'settings.json');
+    // Portable-aware data home; fallback to the legacy location.
+    let settingsFile;
+    try {
+      settingsFile = path.join(require('../utils/dataHome').getDataHome(), 'settings.json');
+    } catch {
+      settingsFile = path.join(os.homedir(), '.khy', 'settings.json');
+    }
     const settingsDir = path.dirname(settingsFile);
-    if (!fs.existsSync(settingsDir)) fs.mkdirSync(settingsDir, { recursive: true });
+    if (!fs.existsSync(settingsDir)) {
+      fs.mkdirSync(settingsDir, { recursive: true });
+    }
 
     let settings = {};
     if (fs.existsSync(settingsFile)) {
@@ -372,7 +541,9 @@ function setVoiceEnabled(enabled) {
     }
     settings[VOICE_SETTINGS_KEY] = enabled;
     fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2), 'utf-8');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 // ── Capabilities ───────────────────────────────────────────────────
@@ -388,7 +559,9 @@ function getCapabilities() {
 // ── Helpers ────────────────────────────────────────────────────────
 
 function ensureTempDir() {
-  if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
+  if (!fs.existsSync(TEMP_DIR)) {
+    fs.mkdirSync(TEMP_DIR, { recursive: true });
+  }
   return TEMP_DIR;
 }
 

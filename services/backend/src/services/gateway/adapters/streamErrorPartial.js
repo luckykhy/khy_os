@@ -27,10 +27,10 @@ const ABORT_RE = /AbortError|ABORT_ERR|aborted by (?:the )?user|operation was ab
 
 // 典型瞬时传输错误码 —— 仅作可观测/诊断参考(策略主判据是"非中止 + 有进度",不依赖此表)。
 const TRANSIENT_RE = new RegExp(
-  '(?:ECONNRESET|socket hang ?up|ETIMEDOUT|ECONNABORTED|ECONNREFUSED|EPIPE'
-  + '|ENETUNREACH|ENETRESET|EHOSTUNREACH|EAI_AGAIN|premature close|read ECONN'
-  + '|stream (?:closed|ended) unexpectedly)',
-  'i',
+  '(?:ECONNRESET|socket hang ?up|ETIMEDOUT|ECONNABORTED|ECONNREFUSED|EPIPE' +
+    '|ENETUNREACH|ENETRESET|EHOSTUNREACH|EAI_AGAIN|premature close|read ECONN' +
+    '|stream (?:closed|ended) unexpectedly)',
+  'i'
 );
 
 /**
@@ -40,7 +40,9 @@ const TRANSIENT_RE = new RegExp(
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_STREAM_ERROR_PRESERVE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -50,7 +52,9 @@ function isEnabled(env = process.env) {
  * @returns {string}
  */
 function _errorSignature(error) {
-  if (!error) return '';
+  if (!error) {
+    return '';
+  }
   const code = error.code == null ? '' : String(error.code);
   const name = error.name == null ? '' : String(error.name);
   const message = error.message == null ? '' : String(error.message);
@@ -64,9 +68,13 @@ function _errorSignature(error) {
  */
 function isUserAbort(opts = {}) {
   const o = opts || {};
-  if (o.aborted) return true;
+  if (o.aborted) {
+    return true;
+  }
   const err = o.error;
-  if (err && err.name === 'AbortError') return true;
+  if (err && err.name === 'AbortError') {
+    return true;
+  }
   return ABORT_RE.test(_errorSignature(err));
 }
 
@@ -82,10 +90,16 @@ function isUserAbort(opts = {}) {
  * @returns {boolean}
  */
 function shouldPreservePartial(opts = {}, env = process.env) {
-  if (!isEnabled(env)) return false;
+  if (!isEnabled(env)) {
+    return false;
+  }
   const o = opts || {};
-  if (!o.hasContent) return false;
-  if (isUserAbort(o)) return false;
+  if (!o.hasContent) {
+    return false;
+  }
+  if (isUserAbort(o)) {
+    return false;
+  }
   return true;
 }
 

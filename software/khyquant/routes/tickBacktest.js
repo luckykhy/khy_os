@@ -9,7 +9,8 @@ const fs = require('fs');
 // Configure multer for CSV uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../../data/tick');
+    // tick data lives inside the project data home (.khy/khyquant/data/tick)
+    const dir = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data', 'tick');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -75,7 +76,7 @@ router.post('/run-tick', async (req, res) => {
     if (!fileName) {
       return res.status(400).json({ success: false, message: 'fileName is required' });
     }
-    const filePath = path.join(__dirname, '../../data/tick', fileName);
+    const filePath = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data', 'tick', fileName);
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ success: false, message: 'Tick data file not found' });
     }
@@ -135,7 +136,7 @@ router.post('/run-from-zip', async (req, res) => {
 
     // Fallback: look for uploaded CSV matching symbol
     if (ticks.length === 0) {
-      const uploadDir = path.join(__dirname, '../../data/tick');
+      const uploadDir = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data', 'tick');
       if (fs.existsSync(uploadDir)) {
         const candidates = fs.readdirSync(uploadDir)
           .filter(f => f.toLowerCase().includes(symbol.toLowerCase()) && f.endsWith('.csv'))
@@ -208,7 +209,7 @@ router.get('/tick-files', async (req, res) => {
 router.delete('/tick-files/:fileName', async (req, res) => {
   try {
     const { fileName } = req.params;
-    const filePath = path.join(__dirname, '../../data/tick', fileName);
+    const filePath = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data', 'tick', fileName);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
       res.json({ success: true, message: `Deleted ${fileName}` });

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markdown 文件交付 Prompt 模板 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>platform<span class="sep">›</span>delivery<span class="sep">›</span>adapters<span class="sep">›</span>prompts<span class="sep">›</span>Markdown 文件交付 Prompt 模板</div>
+      <header class="hero reveal"><h1>Markdown 文件交付 Prompt 模板</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#markdown-文件交付-prompt-模板">Markdown 文件交付 Prompt 模板</a></li><li class="lvl-2"><a href="#角色">角色</a></li><li class="lvl-2"><a href="#输入参数">输入参数</a></li><li class="lvl-2"><a href="#规则">规则</a></li><li class="lvl-2"><a href="#输出格式">输出格式</a></li><li class="lvl-2"><a href="#示例">示例</a></li><li class="lvl-2"><a href="#异常处理">异常处理</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="markdown-文件交付-prompt-模板">Markdown 文件交付 Prompt 模板<a class="anchor" href="#markdown-文件交付-prompt-模板" aria-label="锚点">#</a></h1>
+<h2 id="角色">角色<a class="anchor" href="#角色" aria-label="锚点">#</a></h2>
+<p>你是一个专业的 Markdown 文件生成器。你的任务是将给定的内容格式化为标准的 Markdown 文件，并保存到指定位置。</p>
+<h2 id="输入参数">输入参数<a class="anchor" href="#输入参数" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;filename&quot;: &quot;输出文件名（不含路径）&quot;,
+  &quot;output_dir&quot;: &quot;输出目录（绝对路径）&quot;,
+  &quot;title&quot;: &quot;文档标题&quot;,
+  &quot;content&quot;: &quot;文档正文（可以是结构化数据，需要转换为 Markdown）&quot;,
+  &quot;template&quot;: &quot;可选模板名（default | report | changelog | readme）&quot;,
+  &quot;frontmatter&quot;: {&quot;date&quot;: &quot;2025-01-01&quot;, &quot;author&quot;: &quot;xxx&quot;, &quot;tags&quot;: [&quot;a&quot;, &quot;b&quot;]},
+  &quot;toc&quot;: true
+}</code></pre>
+<h2 id="规则">规则<a class="anchor" href="#规则" aria-label="锚点">#</a></h2>
+<ol><li><strong>文件结构</strong> (严格按此顺序):</li></ol>
+<pre><code>   ---              ← YAML Frontmatter（如果提供了 frontmatter）
+   ---
+   # 标题           ← 如果提供了 title
+   [TOC]            ← 如果 toc=true
+   正文内容</code></pre>
+<ol><li><strong>内容转换规则</strong>:<ul><li>结构数据（JSON/对象）→ Markdown 表格</li><li>数组 → 无序列表 <code>- item</code></li><li>嵌套数组 → 嵌套列表</li><li>代码 → fenced code block（自动推断语言）</li><li>键值对 → 无序列表或表格</li><li>时间戳 → 人类可读格式</li></ul></li></ol>
+<ol><li><strong>表格生成</strong>:</li></ol>
+<pre><code>   | 列1 | 列2 | 列3 |
+   |-----|-----|-----|
+   | val | val | val |</code></pre>
+<ul><li>列宽自动调整（最长单元格 + 2 字符 padding）</li><li>超过 20 列的数据转列表</li></ul>
+<ol><li><strong>模板选择</strong>:<ul><li><code>default</code>: 标准文档</li><li><code>report</code>: 增加摘要、目录、分页</li><li><code>changelog</code>: 增加版本对比表格</li><li><code>readme</code>: 增加简介、安装、使用章节</li></ul></li></ol>
+<ol><li><strong>文件名安全</strong>: 替换非法字符 <code>/ \ : * ? &quot; &lt; &gt; |</code> 为 <code>_</code></li><li><strong>目录创建</strong>: 如果 output_dir 不存在，递归创建</li></ol>
+<h2 id="输出格式">输出格式<a class="anchor" href="#输出格式" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;success&quot;: true,
+  &quot;platform&quot;: &quot;markdown&quot;,
+  &quot;filepath&quot;: &quot;/absolute/path/to/output.md&quot;,
+  &quot;size_bytes&quot;: 1234,
+  &quot;lines&quot;: 45,
+  &quot;template_used&quot;: &quot;default&quot;
+}</code></pre>
+<h2 id="示例">示例<a class="anchor" href="#示例" aria-label="锚点">#</a></h2>
+<p>输入：</p>
+<pre><code class="language-json">{
+  &quot;filename&quot;: &quot;status.md&quot;,
+  &quot;title&quot;: &quot;服务状态&quot;,
+  &quot;content&quot;: [
+    {&quot;service&quot;: &quot;API&quot;, &quot;status&quot;: &quot;ok&quot;, &quot;latency&quot;: &quot;45ms&quot;},
+    {&quot;service&quot;: &quot;DB&quot;, &quot;status&quot;: &quot;ok&quot;, &quot;latency&quot;: &quot;12ms&quot;}
+  ]
+}</code></pre>
+<p>输出 Markdown：</p>
+<pre><code class="language-markdown">---
+date: 2025-01-01
+---
+
+# 服务状态
+
+| service | status | latency |
+|---------|--------|---------|
+| API     | ok     | 45ms    |
+| DB      | ok     | 12ms    |</code></pre>
+<h2 id="异常处理">异常处理<a class="anchor" href="#异常处理" aria-label="锚点">#</a></h2>
+<ul><li>如果 output_dir 不可写：返回 error <code>write_permission_denied</code></li><li>如果 filename 为空：使用 <code>delivery_${timestamp}.md</code></li><li>如果 content 为 null/undefined：写入空文件并警告</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../platform/delivery/adapters/prompts/email.prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Email 平台交付 Prompt 模板</div></a><a class="next" href="../../../../platform/delivery/adapters/prompts/notion.prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Notion 平台交付 Prompt 模板</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="platform/delivery/adapters/prompts/markdown.prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

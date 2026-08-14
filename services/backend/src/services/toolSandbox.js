@@ -9,10 +9,10 @@
  *
  * Extends (does not replace) resourceGuard.js's safeExec.
  */
-const vm = require('vm');
 const { execSync } = require('child_process');
-const path = require('path');
 const os = require('os');
+const path = require('path');
+const vm = require('vm');
 
 // ── OS-Level Sandbox (bwrap / Seatbelt / Windows Job Object) ──────
 
@@ -24,12 +24,19 @@ let _seatbeltAvailable = undefined;
  * @returns {string|null} Path to bwrap binary or null
  */
 function _detectBwrap() {
-  if (_bwrapPath !== undefined) return _bwrapPath;
-  if (process.platform !== 'linux') { _bwrapPath = null; return null; }
+  if (_bwrapPath !== undefined) {
+    return _bwrapPath;
+  }
+  if (process.platform !== 'linux') {
+    _bwrapPath = null;
+    return null;
+  }
   try {
     const result = execSync('which bwrap 2>/dev/null', { encoding: 'utf-8', timeout: 3000 }).trim();
     _bwrapPath = result || null;
-  } catch { _bwrapPath = null; }
+  } catch {
+    _bwrapPath = null;
+  }
   return _bwrapPath;
 }
 
@@ -38,12 +45,19 @@ function _detectBwrap() {
  * @returns {boolean}
  */
 function _detectSeatbelt() {
-  if (_seatbeltAvailable !== undefined) return _seatbeltAvailable;
-  if (process.platform !== 'darwin') { _seatbeltAvailable = false; return false; }
+  if (_seatbeltAvailable !== undefined) {
+    return _seatbeltAvailable;
+  }
+  if (process.platform !== 'darwin') {
+    _seatbeltAvailable = false;
+    return false;
+  }
   try {
     execSync('which sandbox-exec 2>/dev/null', { encoding: 'utf-8', timeout: 3000 });
     _seatbeltAvailable = true;
-  } catch { _seatbeltAvailable = false; }
+  } catch {
+    _seatbeltAvailable = false;
+  }
   return _seatbeltAvailable;
 }
 
@@ -63,10 +77,21 @@ function _buildSeatbeltPolicy(opts = {}) {
   const tmpDir = os.tmpdir();
 
   const writablePaths = [
-    cwd, tmpDir, '/private/tmp',
+    cwd,
+    tmpDir,
+    '/private/tmp',
     path.join(home, '.khyquant'),
     ...(opts.extraWritable || []),
   ];
+  // Portable-aware app home must stay writable too (dedup keeps legacy behavior).
+  try {
+    const appHome = require('../utils/dataHome').getAppHome();
+    if (!writablePaths.includes(appHome)) {
+      writablePaths.push(appHome);
+    }
+  } catch {
+    /* dataHome unavailable */
+  }
 
   const lines = [
     '(version 1)',
@@ -119,7 +144,9 @@ function _buildSeatbeltPolicy(opts = {}) {
  * @returns {string}
  */
 function buildSeatbeltCommand(command, opts = {}) {
-  if (process.platform !== 'darwin' || !_detectSeatbelt()) return command;
+  if (process.platform !== 'darwin' || !_detectSeatbelt()) {
+    return command;
+  }
 
   const policy = _buildSeatbeltPolicy(opts);
   // sandbox-exec -p <policy> <command>
@@ -144,14 +171,18 @@ function buildSeatbeltCommand(command, opts = {}) {
  * @returns {string}
  */
 function buildWindowsJobCommand(command, opts = {}) {
-  if (process.platform !== 'win32') return command;
+  if (process.platform !== 'win32') {
+    return command;
+  }
 
   const memoryLimit = (opts.memoryLimitMB || 512) * 1024 * 1024;
   const cpuRate = opts.cpuRatePercent || 80;
 
   // PowerShell 脚本创建 Job Object 并在其中运行命令
   const ps = [
-    '$job = [System.Diagnostics.Process]::Start("cmd.exe", "/c ' + command.replace(/"/g, '`"') + '")',
+    '$job = [System.Diagnostics.Process]::Start("cmd.exe", "/c ' +
+      command.replace(/"/g, '`"') +
+      '")',
     'try {',
     `  $job.MaxWorkingSet = [IntPtr]::new(${memoryLimit})`,
     '  $job.WaitForExit()',
@@ -171,11 +202,21 @@ function buildWindowsJobCommand(command, opts = {}) {
  * @returns {boolean}
  */
 function isOsSandboxEnabled() {
-  const flag = String(process.env.KHY_OS_SANDBOX || 'auto').trim().toLowerCase();
-  if (flag === 'false' || flag === '0') return false;
-  if (process.platform === 'linux') return !!_detectBwrap();
-  if (process.platform === 'darwin') return _detectSeatbelt();
-  if (process.platform === 'win32') return true; // Job Object 始终可用
+  const flag = String(process.env.KHY_OS_SANDBOX || 'auto')
+    .trim()
+    .toLowerCase();
+  if (flag === 'false' || flag === '0') {
+    return false;
+  }
+  if (process.platform === 'linux') {
+    return !!_detectBwrap();
+  }
+  if (process.platform === 'darwin') {
+    return _detectSeatbelt();
+  }
+  if (process.platform === 'win32') {
+    return true;
+  } // Job Object 始终可用
   return false;
 }
 
@@ -200,9 +241,15 @@ function _shouldSkipOsSandbox(limits) {
  * @returns {string} 包装后的命令
  */
 function buildSandboxCommand(command, opts = {}) {
-  if (process.platform === 'linux') return buildBwrapCommand(command, opts);
-  if (process.platform === 'darwin') return buildSeatbeltCommand(command, opts);
-  if (process.platform === 'win32') return buildWindowsJobCommand(command, opts);
+  if (process.platform === 'linux') {
+    return buildBwrapCommand(command, opts);
+  }
+  if (process.platform === 'darwin') {
+    return buildSeatbeltCommand(command, opts);
+  }
+  if (process.platform === 'win32') {
+    return buildWindowsJobCommand(command, opts);
+  }
   return command;
 }
 
@@ -228,9 +275,13 @@ function buildSandboxCommand(command, opts = {}) {
  * @returns {string} Full bwrap-wrapped command string
  */
 function buildBwrapCommand(command, opts = {}) {
-  if (process.platform === 'win32') return command; // bwrap not available on Windows
+  if (process.platform === 'win32') {
+    return command;
+  } // bwrap not available on Windows
   const bwrap = _detectBwrap();
-  if (!bwrap) return command; // fallback: no bwrap
+  if (!bwrap) {
+    return command;
+  } // fallback: no bwrap
 
   const cwd = opts.cwd || process.env.KHYQUANT_CWD || process.cwd();
   const home = os.homedir();
@@ -253,8 +304,12 @@ function buildBwrapCommand(command, opts = {}) {
   const roBinds = ['/usr', '/bin', '/lib', '/lib64', '/etc', '/opt', '/var/lib'];
   for (const p of roBinds) {
     try {
-      if (require('fs').existsSync(p)) args.push('--ro-bind', p, p);
-    } catch { /* skip non-existent */ }
+      if (require('fs').existsSync(p)) {
+        args.push('--ro-bind', p, p);
+      }
+    } catch {
+      /* skip non-existent */
+    }
   }
 
   // Device and proc filesystems (required for most commands)
@@ -266,8 +321,12 @@ function buildBwrapCommand(command, opts = {}) {
   // Bind real tmpdir if different from /tmp
   if (tmpDir && tmpDir !== '/tmp') {
     try {
-      if (require('fs').existsSync(tmpDir)) args.push('--bind', tmpDir, tmpDir);
-    } catch { /* skip */ }
+      if (require('fs').existsSync(tmpDir)) {
+        args.push('--bind', tmpDir, tmpDir);
+      }
+    } catch {
+      /* skip */
+    }
   }
 
   // Home directory — read-write (needed for .npm, .cache, tool configs)
@@ -285,12 +344,16 @@ function buildBwrapCommand(command, opts = {}) {
   // Extra bind mounts from caller
   if (Array.isArray(opts.extraBindRw)) {
     for (const p of opts.extraBindRw) {
-      if (p) args.push('--bind', p, p);
+      if (p) {
+        args.push('--bind', p, p);
+      }
     }
   }
   if (Array.isArray(opts.extraBindRo)) {
     for (const p of opts.extraBindRo) {
-      if (p) args.push('--ro-bind', p, p);
+      if (p) {
+        args.push('--ro-bind', p, p);
+      }
     }
   }
 
@@ -321,10 +384,10 @@ function buildBwrapCommand(command, opts = {}) {
 // ── Default limits per risk level ───────────────────────────────────
 
 const DEFAULT_LIMITS = {
-  safe:     { timeoutMs: 10000,  maxOutputBytes: 1048576,  maxMemoryMB: 100 },
-  low:      { timeoutMs: 30000,  maxOutputBytes: 5242880,  maxMemoryMB: 200 },
-  medium:   { timeoutMs: 60000,  maxOutputBytes: 10485760, maxMemoryMB: 300 },
-  high:     { timeoutMs: 120000, maxOutputBytes: 10485760, maxMemoryMB: 500 },
+  safe: { timeoutMs: 10000, maxOutputBytes: 1048576, maxMemoryMB: 100 },
+  low: { timeoutMs: 30000, maxOutputBytes: 5242880, maxMemoryMB: 200 },
+  medium: { timeoutMs: 60000, maxOutputBytes: 10485760, maxMemoryMB: 300 },
+  high: { timeoutMs: 120000, maxOutputBytes: 10485760, maxMemoryMB: 500 },
   critical: { timeoutMs: 120000, maxOutputBytes: 10485760, maxMemoryMB: 500 },
 };
 
@@ -337,7 +400,7 @@ const BLOCKED_COMMANDS = [
   'rm -rf /*',
   'mkfs',
   'dd if=',
-  ':(){:|:&};:',   // fork bomb
+  ':(){:|:&};:', // fork bomb
   'chmod -R 777 /',
   'wget|sh',
   'curl|sh',
@@ -346,31 +409,23 @@ const BLOCKED_COMMANDS = [
 ];
 
 const BLOCKED_COMMAND_PATTERNS = [
-  /\brm\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+\/(\s|$|\*)/i,  // rm -rf / or rm -rf /*
-  /\brm\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+~(\s|$|\/)/i,    // rm -rf ~
-  /\bmkfs\b/i,                                              // mkfs (any variant)
-  /\bdd\s+.*\bif=/i,                                        // dd if=
-  /:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;?\s*:/,             // fork bomb variants
-  /\bchmod\s+.*-R\s+7{3}\s+\//i,                           // chmod -R 777 /
-  /\b(wget|curl)\s+.*\|\s*(sh|bash)\b/i,                   // pipe download to shell
-  /\b(sh|bash)\s+.*<\(.*\b(wget|curl)\b/i,                 // process substitution download
-  /\beval\s+.*\$\(\s*(wget|curl)\b/i,                      // eval $(curl/wget ...)
-  /\bsudo\s+rm\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+\//i,     // sudo rm -rf /
-  /\b>\s*\/dev\/[sh]d[a-z]/i,                               // write to raw disk device
-  /\bshred\s+.*\/dev\/[sh]d/i,                              // shred disk device
-  /\bwipefs\b/i,                                             // wipe filesystem signatures
+  /\brm\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+\/(\s|$|\*)/i, // rm -rf / or rm -rf /*
+  /\brm\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+~(\s|$|\/)/i, // rm -rf ~
+  /\bmkfs\b/i, // mkfs (any variant)
+  /\bdd\s+.*\bif=/i, // dd if=
+  /:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;?\s*:/, // fork bomb variants
+  /\bchmod\s+.*-R\s+7{3}\s+\//i, // chmod -R 777 /
+  /\b(wget|curl)\s+.*\|\s*(sh|bash)\b/i, // pipe download to shell
+  /\b(sh|bash)\s+.*<\(.*\b(wget|curl)\b/i, // process substitution download
+  /\beval\s+.*\$\(\s*(wget|curl)\b/i, // eval $(curl/wget ...)
+  /\bsudo\s+rm\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+\//i, // sudo rm -rf /
+  /\b>\s*\/dev\/[sh]d[a-z]/i, // write to raw disk device
+  /\bshred\s+.*\/dev\/[sh]d/i, // shred disk device
+  /\bwipefs\b/i, // wipe filesystem signatures
 ];
 
 // Paths that should never be written to
-const BLOCKED_PATHS = [
-  '/etc/',
-  '/usr/',
-  '/bin/',
-  '/sbin/',
-  '/boot/',
-  '/proc/',
-  '/sys/',
-];
+const BLOCKED_PATHS = ['/etc/', '/usr/', '/bin/', '/sbin/', '/boot/', '/proc/', '/sys/'];
 
 // ── Sandboxed Code Execution ────────────────────────────────────────
 
@@ -395,21 +450,23 @@ function sandboxedExec(code, limits = {}) {
   const sandbox = {
     console: {
       log: (...args) => {
-        const line = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+        const line = args
+          .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+          .join(' ');
         totalOutputBytes += Buffer.byteLength(line, 'utf-8');
         if (totalOutputBytes <= maxOutput) {
           output.push(line);
         }
       },
       error: (...args) => {
-        const line = args.map(a => String(a)).join(' ');
+        const line = args.map((a) => String(a)).join(' ');
         totalOutputBytes += Buffer.byteLength(line, 'utf-8');
         if (totalOutputBytes <= maxOutput) {
           output.push(`[ERROR] ${line}`);
         }
       },
       warn: (...args) => {
-        const line = args.map(a => String(a)).join(' ');
+        const line = args.map((a) => String(a)).join(' ');
         totalOutputBytes += Buffer.byteLength(line, 'utf-8');
         if (totalOutputBytes <= maxOutput) {
           output.push(`[WARN] ${line}`);
@@ -433,11 +490,11 @@ function sandboxedExec(code, limits = {}) {
     RegExp,
     Error,
     Promise,
-    setTimeout: undefined,  // Blocked
+    setTimeout: undefined, // Blocked
     setInterval: undefined, // Blocked
-    require: undefined,     // Blocked
-    process: undefined,     // Blocked
-    global: undefined,      // Blocked
+    require: undefined, // Blocked
+    process: undefined, // Blocked
+    global: undefined, // Blocked
   };
 
   try {
@@ -452,7 +509,9 @@ function sandboxedExec(code, limits = {}) {
     return {
       success: true,
       result: _serializeResult(result),
-      output: truncated ? outputText + `\n... (output truncated at ${maxOutput} bytes)` : outputText,
+      output: truncated
+        ? outputText + `\n... (output truncated at ${maxOutput} bytes)`
+        : outputText,
       elapsed,
       truncated,
     };
@@ -600,8 +659,12 @@ function getToolLimits(toolName, risk) {
 // ── Internal helpers ────────────────────────────────────────────────
 
 function _serializeResult(result) {
-  if (result === undefined) return undefined;
-  if (result === null) return null;
+  if (result === undefined) {
+    return undefined;
+  }
+  if (result === null) {
+    return null;
+  }
   if (typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') {
     return result;
   }
@@ -622,46 +685,158 @@ function _serializeResult(result) {
 const COMMAND_CLASSIFICATIONS = {
   // Safe: read-only, no side effects
   safe: [
-    'ls', 'cat', 'head', 'tail', 'wc', 'echo', 'pwd', 'whoami', 'id', 'date',
-    'uname', 'hostname', 'which', 'file', 'stat', 'du', 'df', 'env', 'printenv',
-    'grep', 'rg', 'find', 'locate', 'tree', 'less', 'more', 'sort', 'uniq',
-    'diff', 'md5sum', 'sha256sum', 'base64', 'xxd', 'hexdump', 'strings',
-    'git status', 'git log', 'git diff', 'git branch', 'git show', 'git remote',
-    'node --version', 'npm --version', 'python --version', 'moon version',
+    'ls',
+    'cat',
+    'head',
+    'tail',
+    'wc',
+    'echo',
+    'pwd',
+    'whoami',
+    'id',
+    'date',
+    'uname',
+    'hostname',
+    'which',
+    'file',
+    'stat',
+    'du',
+    'df',
+    'env',
+    'printenv',
+    'grep',
+    'rg',
+    'find',
+    'locate',
+    'tree',
+    'less',
+    'more',
+    'sort',
+    'uniq',
+    'diff',
+    'md5sum',
+    'sha256sum',
+    'base64',
+    'xxd',
+    'hexdump',
+    'strings',
+    'git status',
+    'git log',
+    'git diff',
+    'git branch',
+    'git show',
+    'git remote',
+    'node --version',
+    'npm --version',
+    'python --version',
+    'moon version',
     // Windows equivalents
-    'dir', 'type', 'where', 'ver', 'systeminfo',
+    'dir',
+    'type',
+    'where',
+    'ver',
+    'systeminfo',
   ],
   // Moderate: may modify user files, non-destructive
   moderate: [
-    'cp', 'mv', 'touch', 'mkdir', 'ln', 'tar', 'zip', 'unzip', 'gzip', 'gunzip',
-    'git add', 'git commit', 'git checkout', 'git merge', 'git stash',
-    'npm install', 'npm run', 'pip install', 'moon build', 'moon test',
-    'make', 'cargo build', 'go build',
-    'sed', 'awk', 'tee', 'xargs',
+    'cp',
+    'mv',
+    'touch',
+    'mkdir',
+    'ln',
+    'tar',
+    'zip',
+    'unzip',
+    'gzip',
+    'gunzip',
+    'git add',
+    'git commit',
+    'git checkout',
+    'git merge',
+    'git stash',
+    'npm install',
+    'npm run',
+    'pip install',
+    'moon build',
+    'moon test',
+    'make',
+    'cargo build',
+    'go build',
+    'sed',
+    'awk',
+    'tee',
+    'xargs',
     // Windows
-    'copy', 'move', 'md', 'xcopy',
+    'copy',
+    'move',
+    'md',
+    'xcopy',
   ],
   // Dangerous: may cause data loss or affect system
   dangerous: [
-    'rm', 'rmdir', 'chmod', 'chown', 'kill', 'pkill', 'killall',
-    'apt', 'yum', 'dnf', 'pacman', 'brew',
-    'npm uninstall', 'pip uninstall',
-    'git push', 'git reset', 'git rebase', 'git clean',
-    'docker', 'podman', 'systemctl', 'service',
-    'crontab', 'at',
+    'rm',
+    'rmdir',
+    'chmod',
+    'chown',
+    'kill',
+    'pkill',
+    'killall',
+    'apt',
+    'yum',
+    'dnf',
+    'pacman',
+    'brew',
+    'npm uninstall',
+    'pip uninstall',
+    'git push',
+    'git reset',
+    'git rebase',
+    'git clean',
+    'docker',
+    'podman',
+    'systemctl',
+    'service',
+    'crontab',
+    'at',
     // Windows
-    'del', 'rd', 'icacls', 'taskkill', 'sc', 'net',
+    'del',
+    'rd',
+    'icacls',
+    'taskkill',
+    'sc',
+    'net',
   ],
   // Critical: always blocked unless explicitly approved
   critical: [
-    'dd', 'mkfs', 'fdisk', 'parted', 'mount', 'umount',
-    'sudo', 'su', 'passwd',
-    'iptables', 'firewall-cmd', 'ufw',
-    'reboot', 'shutdown', 'init', 'halt', 'poweroff',
-    'nc -e', 'ncat -e', 'socat',
-    'curl|sh', 'wget|sh', 'curl|bash', 'wget|bash',
+    'dd',
+    'mkfs',
+    'fdisk',
+    'parted',
+    'mount',
+    'umount',
+    'sudo',
+    'su',
+    'passwd',
+    'iptables',
+    'firewall-cmd',
+    'ufw',
+    'reboot',
+    'shutdown',
+    'init',
+    'halt',
+    'poweroff',
+    'nc -e',
+    'ncat -e',
+    'socat',
+    'curl|sh',
+    'wget|sh',
+    'curl|bash',
+    'wget|bash',
     // Windows
-    'format', 'diskpart', 'shutdown', 'bcdedit',
+    'format',
+    'diskpart',
+    'shutdown',
+    'bcdedit',
   ],
 };
 
@@ -690,7 +865,10 @@ function classifyCommand(command) {
   // where e.g. "which feishu || find ..." accidentally matches a dangerous
   // pattern embedded in a longer token.
   if (/\|\||&&|;\s/.test(lower)) {
-    const segments = lower.split(/\|\||&&|;/).map(s => s.trim()).filter(Boolean);
+    const segments = lower
+      .split(/\|\||&&|;/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     let worstTier = 'safe';
     let worstRule = null;
     const tierOrder = { safe: 0, unknown: 1, moderate: 2, dangerous: 3, critical: 4 };
@@ -818,8 +996,8 @@ const _escalationAuditLog = [];
 const MAX_AUDIT_LOG = 500;
 
 const ESCALATION_TTL = {
-  dangerous: 30 * 60 * 1000,  // 30 minutes
-  critical:  5 * 60 * 1000,   // 5 minutes
+  dangerous: 30 * 60 * 1000, // 30 minutes
+  critical: 5 * 60 * 1000, // 5 minutes
 };
 
 /**
@@ -873,9 +1051,7 @@ function approveEscalation(params) {
   const expiresAt = now + ttl;
 
   const cmdPrefix = command === '*' ? '*' : command.trim().split(/\s+/).slice(0, 2).join(' ');
-  const key = scope === 'tier'
-    ? `${userId}:${tier}`
-    : `${userId}:command:${cmdPrefix}`;
+  const key = scope === 'tier' ? `${userId}:${tier}` : `${userId}:command:${cmdPrefix}`;
 
   _approvedEscalations.set(key, {
     approvedAt: now,
@@ -964,17 +1140,18 @@ function routeCommand(command, options = {}) {
   // A critical command can only run via the escape executor ('direct'/full-access) when the
   // syscall gateway has issued an escape token. Without it, critical is hard-blocked regardless
   // of any local escalation-ledger entry — the gateway's typed-YES is the sole escape authority.
-  const _criticalRoute = () => (tier === 'critical' && !escapeApproved)
-    ? {
-        executor: 'blocked',
-        tier,
-        limits: policy.limits,
-        approved: false,
-        needsApproval: true,
-        matchedRule,
-        approvalReason: 'sandbox_escape_requires_gateway',
-      }
-    : null;
+  const _criticalRoute = () =>
+    tier === 'critical' && !escapeApproved
+      ? {
+          executor: 'blocked',
+          tier,
+          limits: policy.limits,
+          approved: false,
+          needsApproval: true,
+          matchedRule,
+          approvalReason: 'sandbox_escape_requires_gateway',
+        }
+      : null;
 
   // Safe and moderate: always allowed
   if (tier === 'safe' || tier === 'moderate' || tier === 'unknown') {
@@ -993,7 +1170,9 @@ function routeCommand(command, options = {}) {
     // Local ledger approval is NOT sufficient to ESCAPE the sandbox: a critical command
     // still requires the gateway-issued escape token, else it is hard-blocked.
     const blocked = _criticalRoute();
-    if (blocked) return blocked;
+    if (blocked) {
+      return blocked;
+    }
     return {
       executor: tier === 'critical' ? 'direct' : 'sandbox',
       tier,
@@ -1025,9 +1204,10 @@ function routeCommand(command, options = {}) {
     approved: false,
     needsApproval: true,
     matchedRule,
-    approvalPrompt: tier === 'critical'
-      ? `⚠ Critical command detected: "${command.slice(0, 80)}". This command is blocked by default. Type "approve" to allow execution (5 min window).`
-      : `⚠ Dangerous command: "${command.slice(0, 80)}". Type "approve" to allow (30 min window), or "skip" to cancel.`,
+    approvalPrompt:
+      tier === 'critical'
+        ? `⚠ Critical command detected: "${command.slice(0, 80)}". This command is blocked by default. Type "approve" to allow execution (5 min window).`
+        : `⚠ Dangerous command: "${command.slice(0, 80)}". Type "approve" to allow (30 min window), or "skip" to cancel.`,
   };
 }
 
@@ -1051,7 +1231,10 @@ async function evaluateSandboxEscape(call = {}, io = {}) {
     const verdict = await gateway.evaluate({ ...call, sandboxEscape: true }, io);
     return { approved: verdict.allow === true, level: verdict.level, reasons: verdict.reasons };
   } catch (e) {
-    return { approved: false, reasons: [`sandbox-escape gateway error fail-closed: ${e && e.message}`] };
+    return {
+      approved: false,
+      reasons: [`sandbox-escape gateway error fail-closed: ${e && e.message}`],
+    };
   }
 }
 

@@ -32,9 +32,9 @@
 // ── 方言词表(单一真源,消除近百处复制的分歧)──────────────────────────────
 // 每个词表是一档「关闭词」集合。per-flag 通过 `off:` 指名引用,保留各自历史方言不被抹平。
 const OFF_WORDS = {
-  CANON: ['0', 'false', 'off', 'no'],                          // 71 文件 / goalStopGate / rewindScope 父
+  CANON: ['0', 'false', 'off', 'no'], // 71 文件 / goalStopGate / rewindScope 父
   EXTENDED: ['0', 'false', 'off', 'no', 'disable', 'disabled'], // toolContract / rewindScope 子
-  MINIMAL: ['0', 'false', 'off'],                              // 仅 priorityTaxonomy(不归一)
+  MINIMAL: ['0', 'false', 'off'], // 仅 priorityTaxonomy(不归一)
 };
 const _VALID_OFF_NAMES = new Set(Object.keys(OFF_WORDS));
 const _VALID_MODES = new Set(['default-on', 'opt-in', 'numeric']);
@@ -49,9 +49,13 @@ const _SELF_OFF = OFF_WORDS.CANON;
 function isRegistryEnabled(env = process.env) {
   try {
     const v = env && env.KHY_FLAG_REGISTRY;
-    if (v === undefined || v === null) return true;
+    if (v === undefined || v === null) {
+      return true;
+    }
     return !_SELF_OFF.includes(String(v).trim().toLowerCase());
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 // ── flag 声明表(种子集:已确证的父子链 + outlier)────────────────────────
@@ -66,11 +70,26 @@ const FLAGS = {
   // ── 持久目标 goal 链(goalStopGate.js;CANON 4 词 + 归一)──────────────
   KHY_GOAL: { mode: 'default-on', off: 'CANON', default: true },
   KHY_GOAL_STOP_GATE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GOAL' },
-  KHY_GOAL_EVIDENCE_GATE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GOAL_STOP_GATE' },
+  KHY_GOAL_EVIDENCE_GATE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GOAL_STOP_GATE',
+  },
   // Completion contract 门(参考 Hermes v0.18.0):目标预先声明的完成标准未被证据逐条覆盖 → redrive。
-  KHY_GOAL_COMPLETION_CONTRACT: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GOAL_STOP_GATE' },
+  KHY_GOAL_COMPLETION_CONTRACT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GOAL_STOP_GATE',
+  },
   // Verify-ran 门(goal「khy 做完任务不会及时验证测试」):声称验证通过但整轮从未真正跑过验证命令 → redrive。
-  KHY_GOAL_VERIFY_RAN_GATE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GOAL_STOP_GATE' },
+  KHY_GOAL_VERIFY_RAN_GATE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GOAL_STOP_GATE',
+  },
   KHY_GOAL_AUTO_CLEAR: { mode: 'default-on', off: 'CANON', default: true },
   KHY_GOAL_STOP_GATE_MAX: { mode: 'numeric', default: 1, min: 0, max: 10 },
 
@@ -81,16 +100,36 @@ const FLAGS = {
   // KHY_GIT_INIT_FALLBACK_IDENTITY(向导子门):缺 git 身份时也用**仓库级** fallback 身份落首次
   // commit(得可用 main 主线,让用户能立即提交/建分支);关 → 回退旧的「缺身份跳过 commit」。
   KHY_AUTO_GIT_INIT: { mode: 'default-on', off: 'CANON', default: true },
-  KHY_GIT_INIT_WIZARD: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_AUTO_GIT_INIT' },
-  KHY_GIT_INIT_FALLBACK_IDENTITY: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GIT_INIT_WIZARD' },
+  KHY_GIT_INIT_WIZARD: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_AUTO_GIT_INIT',
+  },
+  KHY_GIT_INIT_FALLBACK_IDENTITY: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GIT_INIT_WIZARD',
+  },
 
   // ── 工具契约链(toolContract.js;EXTENDED 6 词 + 归一)────────────────
   KHY_TOOL_CONTRACT: { mode: 'default-on', off: 'EXTENDED', default: true },
-  KHY_TOOL_PARAM_AUDIT: { mode: 'default-on', off: 'EXTENDED', default: true, parent: 'KHY_TOOL_CONTRACT' },
+  KHY_TOOL_PARAM_AUDIT: {
+    mode: 'default-on',
+    off: 'EXTENDED',
+    default: true,
+    parent: 'KHY_TOOL_CONTRACT',
+  },
 
   // ── 回溯 rewind 链(rewindScope.js;混合词表:父 CANON、子 EXTENDED;声明-only,不 rewire)──
   KHY_REWIND_SCOPE: { mode: 'default-on', off: 'CANON', default: true },
-  KHY_REWIND_SUMMARIZE: { mode: 'default-on', off: 'EXTENDED', default: true, parent: 'KHY_REWIND_SCOPE' },
+  KHY_REWIND_SUMMARIZE: {
+    mode: 'default-on',
+    off: 'EXTENDED',
+    default: true,
+    parent: 'KHY_REWIND_SCOPE',
+  },
 
   // ── 优先级/严重性(priorityTaxonomy.js;MINIMAL 3 词 + 不归一;声明-only,不 rewire)──
   KHY_PLAN_PRIORITY: { mode: 'default-on', off: 'MINIMAL', default: true, normalize: false },
@@ -200,7 +239,12 @@ const FLAGS = {
   // 接缝3:深树目录体积热点。byDir 只按顶层单段分组,对 Users/AppData/.../ 深树近乎无分辨率;
   // 开该门 → summarizeListing 增 dirHotspots(受 maxDirDepth rollup 的目录 count+totalSize top-K);
   // 关 → dirHotspots:[](不渲染新段,字节回退)。子门控嵌 KHY_FILE_SALIENCE 语义下。
-  KHY_DIR_HOTSPOTS: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_FILE_SALIENCE' },
+  KHY_DIR_HOTSPOTS: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_FILE_SALIENCE',
+  },
   // 接缝1:Bash 列目录命令(ls -R/find/tree/du/dir /s)海量 stdout 在 _smartTruncate 盲截前,
   // 先经 listingParse 解析回条目 + fileSalience 摘要前置到顶部;关 → 逐字节回退纯截断。
   KHY_BASH_LISTING_SALIENCE: { mode: 'default-on', off: 'CANON', default: true },
@@ -263,6 +307,12 @@ const FLAGS = {
   // PlanApproval 审阅框 + y/n 批准语法 + executePlan。关门 → 逐字节回退旧单次 startPlan(大方框+无调研)。
   KHY_PLAN_CC_RESEARCH: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 计划前多方案选择(taskComplexity.injectPlanningPrompt multiOption;goal 2026-08-07)──
+  // 复杂任务拆解时,旧行为模型直接提交单一执行计划,用户只能全盘批准/修改/拒绝。开该门 →
+  // 拆解注入提示模型先用 AskUserQuestion 呈现 2-3 个**执行策略**(各带权衡:速度/深度/风险),
+  // 用户选定后模型再按所选策略细化 <execution_plan>;关门 → 逐字节回退单方案拆解。
+  KHY_PLAN_MULTI_OPTION: { mode: 'default-on', off: 'CANON', default: true },
+
   // ── DiskAnalyze 工具(补 khy 缺失的找大文件/旧安装包/重复文件能力,治弱模型即兴写全盘 PowerShell)──
   // 背景:khy 无正规磁盘分析路径(DiskCleanup 只清白名单缓存、零重复文件检测),弱模型只能即兴写
   // `powershell Get-ChildItem -Recurse` 扫全盘——静默无输出被 60s 超时杀、且无 du 摘要。DiskAnalyze
@@ -270,9 +320,19 @@ const FLAGS = {
   // max-entries + hash 候选上限三重有界,不靠模型手写 shell。关 → 工具不注册(= 今日无此工具行为)。
   KHY_DISKANALYZE_TOOL: { mode: 'default-on', off: 'CANON', default: true },
   // 子门控:安装包扩展/名模式 + 大小/年龄阈值 + 去重分组决策的纯叶子。关 → 分类/分组决策逐字节回退空。
-  KHY_DISKANALYZE_CATALOG: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_DISKANALYZE_TOOL' },
+  KHY_DISKANALYZE_CATALOG: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_DISKANALYZE_TOOL',
+  },
   // 子门控:ASCII 报告渲染纯叶子。关 → 回退最小 legacy 串(不改数据字段)。
-  KHY_DISKANALYZE_REPORT: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_DISKANALYZE_TOOL' },
+  KHY_DISKANALYZE_REPORT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_DISKANALYZE_TOOL',
+  },
   // 大文件阈值(MB);低于此不计入 largeFiles。clamp[1, 1048576]。默认 100MB。
   KHY_DISKANALYZE_MIN_SIZE_MB: { mode: 'numeric', default: 100, min: 1, max: 1048576 },
   // 旧安装包年龄阈值(天);安装包 mtime 早于此才算「旧」。clamp[1, 36500]。默认 180 天。
@@ -296,7 +356,12 @@ const FLAGS = {
   // 响应头(upload/download/total/expire)→ 前端流量已用/总量/到期进度条(仿 Clash Verge 订阅卡)。
   // 纯叶子 subscriptionUserinfo 持此门;关门 → parseSubscriptionUserinfo 返 null(进度条消失、
   // 节点解析不受影响)。父 KHY_PROXY_SUBSCRIPTION 关则整个订阅特性关,故此门 parent 挂其下。
-  KHY_PROXY_SUB_USERINFO: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_PROXY_SUBSCRIPTION' },
+  KHY_PROXY_SUB_USERINFO: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_PROXY_SUBSCRIPTION',
+  },
 
   // 「选中节点实际使用」出站内核:vmess/vless/trojan/ss/ssr 等 raw 协议节点本身不能承载流量,需本机
   // mihomo 内核生成配置 + spawn 暴露本地混合端口,再 applyProxy(本地端口)真正路由。opt-in 默认关:
@@ -344,13 +409,28 @@ const FLAGS = {
   KHY_UPSTREAM_STUDY_TOOL: { mode: 'default-on', off: 'CANON', default: true },
   // 子门控:精华/糟粕分类 + 打分 + 已知参考项目识别的纯叶子。关 ⇒ 分类恒 neutral(逐字节回退,不产
   // 精华/糟粕划分,报告退化为纯清点)。
-  KHY_UPSTREAM_STUDY_CATALOG: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_UPSTREAM_STUDY_TOOL' },
+  KHY_UPSTREAM_STUDY_CATALOG: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_UPSTREAM_STUDY_TOOL',
+  },
   // 子门控:ASCII 学习报告渲染纯叶子。关 ⇒ 回退最小 legacy 串(不改数据字段)。
-  KHY_UPSTREAM_STUDY_REPORT: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_UPSTREAM_STUDY_TOOL' },
+  KHY_UPSTREAM_STUDY_REPORT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_UPSTREAM_STUDY_TOOL',
+  },
   // 子门控:移植计划纯叶子——在精华/糟粕之上再判**能改/不能改**(许可证/法律与糟粕=forbidden 勿移植,
   // 配置/changelog=caution 谨慎,源码/测试/文档=safe 可择优移植)与**先改/后改顺序**(先读 changelog/doc
   // 理解 → 先改接口/契约/配置 → 再改实现 → 最后改测试验证)。关 ⇒ facade 不产 plan 字段(逐字节回退)。
-  KHY_UPSTREAM_STUDY_PLAN: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_UPSTREAM_STUDY_TOOL' },
+  KHY_UPSTREAM_STUDY_PLAN: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_UPSTREAM_STUDY_TOOL',
+  },
   // 精华阅读清单条目数(Top-N,按学习价值打分排序)。clamp[1, 500]。默认 25。
   KHY_UPSTREAM_STUDY_TOP: { mode: 'numeric', default: 25, min: 1, max: 500 },
   // 单个「精华」文件的可读大小上限(KB);超此仍算精华但标记「过大, 略读」不进首要阅读位。clamp[1, 1048576]。默认 256KB。
@@ -451,7 +531,13 @@ const FLAGS = {
   // 且存在「两纯散文行之间」的安全软边界时,回退到软封存以封顶 live 段长度(至多把段落拆两段,
   // 绝不劈开 fence/表格/列表/引用);关 → 只用空行边界,逐字节回退今日行为。
   KHY_TUI_SOFT_SEAL: { mode: 'default-on', off: 'CANON', default: true },
-  KHY_TUI_SOFT_SEAL_CHARS: { mode: 'numeric', default: 2000, min: 200, max: 1000000, parent: 'KHY_TUI_SOFT_SEAL' },
+  KHY_TUI_SOFT_SEAL_CHARS: {
+    mode: 'numeric',
+    default: 2000,
+    min: 200,
+    max: 1000000,
+    parent: 'KHY_TUI_SOFT_SEAL',
+  },
 
   // ── 流式卡死误判:阈值调优 + 首 token 宽限(streamStaleTuning;「任务经常中断」)──
   // 推理模型(o1/o3、deepseek-r1、thinking 模式)在**首 token 之前**会静默思考,远超历史
@@ -460,8 +546,20 @@ const FLAGS = {
   // (默认 120s)宽限静默推理,首 chunk 一到即回落稳态;③KHY_STREAM_STALE_MS(>0)整体覆盖稳态阈值。
   // 关 → 冻结的 PROVIDER_STALE_MS 查表(gpt/openai 45s、无宽限),逐字节回退今日行为。
   KHY_STREAM_STALE_TUNING: { mode: 'default-on', off: 'CANON', default: true },
-  KHY_STREAM_FIRST_TOKEN_GRACE_MS: { mode: 'numeric', default: 120000, min: 0, max: 1800000, parent: 'KHY_STREAM_STALE_TUNING' },
-  KHY_STREAM_STALE_MS: { mode: 'numeric', default: 0, min: 0, max: 1800000, parent: 'KHY_STREAM_STALE_TUNING' },
+  KHY_STREAM_FIRST_TOKEN_GRACE_MS: {
+    mode: 'numeric',
+    default: 120000,
+    min: 0,
+    max: 1800000,
+    parent: 'KHY_STREAM_STALE_TUNING',
+  },
+  KHY_STREAM_STALE_MS: {
+    mode: 'numeric',
+    default: 0,
+    min: 0,
+    max: 1800000,
+    parent: 'KHY_STREAM_STALE_TUNING',
+  },
 
   // ── 通用兜底小任务超时放宽(genericSmallTaskRelax;「任务经常中断」)──
   // aiGatewayGenerateMethod 小任务(prompt ≤220 字符)的 fastCap 链末位兜底此前是裸 30000——
@@ -495,6 +593,13 @@ const FLAGS = {
   // 开该门 → 截断时为省略号预留 3 列(内容填到 limit-3 再接 `...`,总宽 ≤ limit;整串本就 ≤ limit 时原样返回);
   // 关 → 逐字节回退历史「填满 limit 再溢出接 `...`」行为。
   KHY_TRUNCATE_WIDTH_BUDGET: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 多行大段输出的单次缓冲写(bulkLines;修「逐行 console.log 刷屏卡顿」)──
+  // 多处把 AI 回复/大段动态输出按 `.split('\n').forEach(l => console.log(...))` 逐行打印:
+  // 千行输出 = 千次同步写 syscall,Windows ConHost 逐次阻塞 → 终端「一行一行往外挤」。
+  // 开该门 → 各行(带 indent 前缀)join 后一次性 process.stdout.write(与逐行 console.log
+  // 输出逐字节等价),写后通知 spinner 外部写;关 → 逐字节回退历史逐行 console.log。
+  KHY_BULK_LINE_WRITE: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── `--key=value` 内联选项解析(inlineOptionParse;修「router 丢掉等号选项的值」)──
   // router.js 的选项解析只认空格分隔 `--key value`:对 `--out=report.md` 取 key='out=report.md'、
@@ -587,7 +692,12 @@ const FLAGS = {
   // 那里没有此模型 → `model_not_found` 404。开该门 → 工具默认改用带 `glm/` 前缀的池限定 pin
   // (glm/glm-4.6v-flash),让 _resolveApiPoolProviderForRequest 定向到 GLM 视觉端点(模型确实存在处);
   // 关 → 逐字节回退裸 `glm-4.6v-flash`(供仅经 api 池访问 GLM、无独立 glm 池 key 的用户)。parent 上门。
-  KHY_RECOGNIZE_IMAGE_POOL_PIN: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_MODEL' },
+  KHY_RECOGNIZE_IMAGE_POOL_PIN: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_MODEL',
+  },
 
   // ── 外层带图请求钉 `api` 适配器(glmVisionApiPin;/goal「图像识别始终 404 / 裸 404」根治)──
   // 实测(reproduce 证):模型本身就是 GLM 视觉模型(glm/glm-4.6v-flash、glm-4v-flash)时,
@@ -600,7 +710,12 @@ const FLAGS = {
   // post-failure OCR 兜底救回。关 → 逐字节回退今日行为(通用级联,可能被抢答)。当前非 api 首选
   // (含环境级 GATEWAY_PREFERRED_ADAPTER,如 codex)亦覆盖——因非 api 通道对该 GLM 视觉模型必 404。
   // parent 上门。
-  KHY_GLM_VISION_API_PIN: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_MODEL' },
+  KHY_GLM_VISION_API_PIN: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_MODEL',
+  },
 
   // ── GLM 视觉模型 max_tokens 钳位(glmVisionMaxTokens;/goal「识图 400 code 1210」根治)──
   // 实测:识图链路(relayApiAdapter OpenAI 兼容分支 `options.maxTokens ?? 8192`、callZhipu 请求体)
@@ -608,7 +723,12 @@ const FLAGS = {
   // [1,1024],发送 8192 → 智谱端参数校验 400 拒绝(code 1210「max_tokens参数非法：限制数值范围[1,1024]」),
   // 识图整轮失败(文本模型无此上限,故文本正常)。开该门 → 命中 GLM 视觉模型时把 max_tokens 钳进
   // [1,1024];关 → 逐字节回退(原样发送高默认值)。视觉模型判定复用 glmVisionApiPin 单一真源。parent 上门。
-  KHY_GLM_VISION_MAX_TOKENS_CLAMP: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_MODEL' },
+  KHY_GLM_VISION_MAX_TOKENS_CLAMP: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_MODEL',
+  },
 
   // ── GLM 视觉过大图片降采样(glmVisionImageDownscale;/goal「识图 400 code 1210」第二形态根治)──
   // 实测(0.1.181 诊断浮现):GLM 视觉端另有一条**合并预算**约束 `inputs tokens + max_new_tokens
@@ -619,20 +739,35 @@ const FLAGS = {
   // (Windows PowerShell System.Drawing / macOS sips / Linux ImageMagick·ffmpeg)等比降采样到预算内;
   // 关门 / 平台工具缺失 / 任何失败 → 原图透传(逐字节回退今日行为,交回既有 OCR 兜底与错误诊断)。
   // 仅 GLM 视觉模型 + 估算超预算才重编码,预算内的图 0 成本透传。视觉判定复用 glmVisionApiPin 单一真源。parent 上门。
-  KHY_GLM_VISION_IMAGE_DOWNSCALE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_MODEL' },
+  KHY_GLM_VISION_IMAGE_DOWNSCALE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_MODEL',
+  },
 
   // ── GLM 视觉降采样诊断日志(glmVisionImageDownscale._diag)──
   // 默认开(与 KHY_RELAY_ERROR_BODY_DIAG 同期,便于用户复现读日志定位:探针失败 / 预算内不缩 /
   // 缩放成功 / 平台工具失败仍发原图)。写 stderr,前缀 `[glm_vision_downscale]`。关门
   // 0/false/off/no → 静默(逐字节回退无日志)。parent 上门。
-  KHY_GLM_VISION_DOWNSCALE_DIAG: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_IMAGE_DOWNSCALE' },
+  KHY_GLM_VISION_DOWNSCALE_DIAG: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_IMAGE_DOWNSCALE',
+  },
 
   // ── GLM 视觉「统一归一化所有输入图」(glmVisionImageDownscale;用户诉求「统一处理所有照片」)──
   // 缺口:仅「超预算才缩」会让接近预算边界的图(估算误差内)偶尔仍撞 1210,且不同来源图尺寸参差。
   // 开该门 → 对**每张** GLM 视觉输入图统一按最大边上限 KHY_GLM_VISION_MAX_EDGE(默认 1512px)等比
   // 收敛:超上限的缩到上限内(既避 token 超限,又给识别一个稳定清晰的分辨率);已在上限内的不动。
   // 与「超预算降采样」取二者更强的收缩(min scale)。关 → 逐字节回退「仅超预算才缩」。parent 上门。
-  KHY_GLM_VISION_NORMALIZE_ALL: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_IMAGE_DOWNSCALE' },
+  KHY_GLM_VISION_NORMALIZE_ALL: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_IMAGE_DOWNSCALE',
+  },
 
   // ── GLM 视觉超大文本预算截断(glmVisionTextBudget;排障「为什么会出现剪贴板中转模式」根治)──
   // 实测(v0.1.183 会话日志):扫 C+D 盘 → DiskCleanup 返回约 25304 个 input token 的**纯文本**
@@ -643,7 +778,12 @@ const FLAGS = {
   // **中段截断最大的文本块**(优先缩巨型工具结果,保留系统/用户小提示,保头保尾 + 截断标记);
   // 关门 / 任何异常 → 原样透传(逐字节回退今日行为)。仅 GLM 视觉模型 + 估算超预算才截断,预算内
   // 0 成本透传。视觉判定复用 glmVisionApiPin 单一真源。纯字符串运算、零 IO、绝不抛。parent 上门。
-  KHY_GLM_VISION_TEXT_BUDGET: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_MODEL' },
+  KHY_GLM_VISION_TEXT_BUDGET: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_MODEL',
+  },
 
   // ── 视觉级联耗尽的确定性根因诊断(visionExhaustionDiagnostic;/goal「404/429 别静默落剪贴板」)──
   // 缺口:带图请求穷尽所有通道后,generate 末端只给笼统的「所有 AI 通道均不可用」墙,不告诉用户
@@ -654,13 +794,32 @@ const FLAGS = {
   // allAttempts 提取这两类信号,前置一段**指名道姓**的可执行指引(去 open.bigmodel.cn 实名领取模型 /
   // 降并发稍后重试)到兜底墙之前;关门/任何异常 → 逐字节回退(不前置,直接落通用墙)。诚实:404/429
   // 是账号侧事实,代码只翻译已发生的信号成指引,不代办领取/解限流。纯叶子零 IO 绝不抛。parent 上门。
-  KHY_VISION_EXHAUSTION_DIAG: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_MODEL' },
+  KHY_VISION_EXHAUSTION_DIAG: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_MODEL',
+  },
 
   // 视觉级联耗尽诊断的**网络不可达**子分支(OPS-MAN-134,承 KHY_VISION_EXHAUSTION_DIAG):socket hang up /
   // 连接被重置 / 代理隧道不通 等传输层故障,与 404(未领取)、429(限流)正交。开(默认)→ 网络信号可见,
   // 前置「图确实收到、只是网络送不到」的诚实交代;关(0/false/off/no)→ 诊断看不见网络信号,逐字节回退
   // 到只识 404/429(网络-only 耗尽落通用墙)。纯叶子零 IO 绝不抛;绝不谎称「没收到图」。
-  KHY_VISION_NETWORK_EXHAUSTION_DIAG: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_VISION_EXHAUSTION_DIAG' },
+  KHY_VISION_NETWORK_EXHAUSTION_DIAG: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_VISION_EXHAUSTION_DIAG',
+  },
+
+  // ── 通用通道失败可操作指引(buildChannelFailureAdvice;承 visionExhaustionDiagnostic 的通用化)──
+  // 视觉专项诊断只覆盖带图请求;文本/混合请求穷尽所有通道后仍只看到「所有 AI 通道均不可用」墙,
+  // 即便 attempts 里握着高频确定性信号:①server_error/5xx = 上游/代理瞬时故障;②auth/401/403 =
+  // 密钥无效或权限不足;③rate_limit/429 = 通道被限流;④network/代理隧道 = 传输层故障;
+  // ⑤model_not_found/404 = 模型不存在或未领取。开该门(默认)→ 穷尽时从 allAttempts 提取信号,
+  // 前置一段**可执行指引**(检查 key / 降并发 / 查代理 / 检查模型)到兜底墙之前;关门/任何异常 →
+  // 逐字节回退(不前置,直接落通用墙)。诚实:只翻译已发生信号,不代办;纯叶子零 IO 绝不抛。
+  KHY_CHANNEL_FAILURE_ADVICE: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── 人肉中转不作自动兜底(manualRelayAutoFallbackPolicy;排障「为什么出现剪贴板中转模式」收尾修)──
   // 剪贴板中转(clipboardRelayAdapter)本质是人肉复制粘贴 + 监听剪贴板(最长等人 5 分钟),网页中转
@@ -686,7 +845,12 @@ const FLAGS = {
   // 命令/持久化/反弹 shell/混淆。纯叶子 skillThreatScanner(零 IO、绝不抛、fail-soft 偏 safe)。
   // 开门 → dangerous(critical 命中)默认阻断持久化,除非显式 force;caution 附警告仍放行。
   // 关门 → 逐字节回退今日行为(learnFrom* 不扫描直接持久化)。父门 KHY_LEARN_FROM_SOURCE。
-  KHY_LEARN_SOURCE_THREAT_SCAN: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_LEARN_FROM_SOURCE' },
+  KHY_LEARN_SOURCE_THREAT_SCAN: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_LEARN_FROM_SOURCE',
+  },
 
   // ── skill journey(统一时间线)──
   // getSkillJourney 聚合已学技能 + 记忆目录,交纯叶子 journeyTimeline 合并/排序/汇总
@@ -759,14 +923,24 @@ const FLAGS = {
   // 在 pip 升级成功后,若检测到 npm 全局装有 @khy-os/khy-os,顺带 `npm install -g @khy-os/khy-os@latest`
   // 把两渠道同步到最新;关 → 逐字节回退旧单渠道行为(只升 pip)。npm 步骤 fail-soft,失败绝不影响
   // pip 结果。
-  KHY_MULTI_CHANNEL_SYNC: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_SELF_UPDATE' },
+  KHY_MULTI_CHANNEL_SYNC: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_SELF_UPDATE',
+  },
 
   // ── 更新时实时显示 pip 下载进度(routerDispatchOps case 'update')──
   // 用户诉求「khy update 更新时不显示下载进度」。旧路径用 execSync 整段捕获 pip 输出,跑完才出结果、
   // 全程静默。开该门 → 用 spawn 把 pip 的 Collecting/Downloading(带 MB 计数)/Installing 输出实时 tee
   // 到终端,同时累积到 buffer 供残骸清理/成功判定/失败分类(output 语义不变);关 → 逐字节回退旧
   // execSync 捕获(无实时进度)。仅在交互式 `khy update` 生效(applyUpdate 结构化路径始终捕获,不流式)。
-  KHY_UPDATE_STREAM_PROGRESS: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_SELF_UPDATE' },
+  KHY_UPDATE_STREAM_PROGRESS: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_SELF_UPDATE',
+  },
 
   // ── 文件占用(WinError 32)一次性自动重试(pipFailurePolicy.buildLockRetryPlan;routerDispatchOps +
   //    khySelfUpdateService.applyUpdate)──
@@ -774,7 +948,12 @@ const FLAGS = {
   // 句柄导致 pip 覆盖失败,旧逻辑判为 file-locked 后只诊断并放弃 → 用户被迫再敲一次。开该门 → 停占用
   // 进程 + 清 ~ 前缀残骸 + 等待句柄释放后,以 --force-reinstall --no-cache-dir 干净覆盖重试一次(全局仅
   // 一次);关 → 逐字节回退旧「放弃并诊断」行为。运行时另受 KHY_PIP_FAILURE_POLICY 总策略门约束。
-  KHY_UPDATE_LOCK_RETRY: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_SELF_UPDATE' },
+  KHY_UPDATE_LOCK_RETRY: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_SELF_UPDATE',
+  },
 
   // ── 透明视觉降级(OCR/读不出)时顺带邀请配置 GLM 视觉 key(visionOcrFallback;/goal 收尾「接上」)──
   // 透明视觉路在「GLM 视觉门控开、但用户尚未配置 GLM key」时无法改道 GLM 视觉端点
@@ -782,7 +961,12 @@ const FLAGS = {
   // 「读不出」提示。用户其实离能直接看图只差一个 key,却无任何邀约。开该门 → 在这两种降级分支的
   // prompt 末尾注入一句面向模型的指令,让模型主动、简短地问用户「要不要配 GLM 视觉 key,配好后我就能
   // 直接看图」;关 → 不注入、逐字节回退。仅在调用方确认「门控开且 GLM key 缺失」时生效。parent 上门。
-  KHY_VISION_OCR_KEY_INVITE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GLM_VISION_MODEL' },
+  KHY_VISION_OCR_KEY_INVITE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GLM_VISION_MODEL',
+  },
 
   // ── 低置信 OCR 兜底诚实告诫(ocrConfidenceCaveat;/goal 2026-07-11「纯文本模型 + 图片 →
   // 本地 OCR 兜底提取图片信息」的正交诚实缺口)────────────────────────────────────────────
@@ -953,6 +1137,20 @@ const FLAGS = {
   // 不碰 api 代理(它 honor PROXY_MODEL_ROUTE_MAP 能正确转发自定义 provider)。
   KHY_RELAY_MODEL_GUARD: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 级联模型作用域(cascadeModelScope;用户实测:codex 未安装 → gpt-5.3-codex-review
+  // 被带给 relay_api(端点 api.stepfun.com)→ HTTP 404 model_invalid → 重试才答出话)──
+  // GATEWAY_PREFERRED_MODEL 是全局的,但模型名按适配器而异。开该门 → 级联回落到**非首选**
+  // 通道时丢弃该模型名,让通道用自有默认模型(与 getActiveAdapter 的 shouldAttachPreferred
+  // 规则对称,也是既有 ollama 特例的一般化)。关 → 恒携带,逐字节回退今日行为。
+  KHY_CASCADE_MODEL_SCOPE: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 斜杠命令子命令透传(router.parseInput;全库 28 条菜单 route 带默认子命令)──
+  // `/daemon restart` 曾被展开成 `daemon status restart` —— 子命令位被 status 占死,
+  // restart 沦为位置参数被**静默忽略**(不报错,只是默默做了另一件事)。开该门 → 用户给的
+  // 参数若是该命令的合法子命令,就丢掉 route 里的默认子命令。无参调用行为逐字节不变。
+  // 关 → 回退「route 原样拼接」的历史行为。
+  KHY_SLASH_SUBCOMMAND_PASSTHROUGH: { mode: 'default-on', off: 'CANON', default: true },
+
   // ── api 通配兜底守卫(wildcardPoolGuard;用户实测:agnes-2.0-flash → open.bigmodel.cn 400 code 1211)──
   // `api` 通道的 pool 解析末位是**盲通配** GATEWAY_API_POOL_PROVIDER:一个裸模型名(无 `:`/`/`)
   // 在显式 apiPoolProvider / provider / scoped 前缀全落空后,直接被塞进通配默认池,不做任何「厂商
@@ -992,12 +1190,22 @@ const FLAGS = {
   // model_not_found failure cached」——而该裸名模型明明可用(此前甚至报过 token 超限=已送达上游)。
   // 开该门 → 当前请求模型串 ≠ 造成 404 的模型串(如剥裸名后)则放行做真实尝试,当轮救回;相同模型串
   // 仍尊重冷却(不硬撞确实不存在的模型)。关 / 缺当前或缓存模型串 → 逐字节回退今日按通道冷却。parent 上门。
-  KHY_MNF_COOLDOWN_PER_MODEL: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_MODEL_NOT_FOUND_RECOVERY' },
+  KHY_MNF_COOLDOWN_PER_MODEL: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MODEL_NOT_FOUND_RECOVERY',
+  },
 
   // model_not_found 显示纠偏(modelExistenceEvidence):有证据表明模型已送达上游(参数/token 类报错、
   // 或送出串为复合 id)时,为「真实失败原因」行追加注解——消解「刚嫌 token 太大、转头又说找不到模型」的
   // 自相矛盾。只改显示不改分类;关或无证据 → 逐字节回退原行。parent 上门。
-  KHY_MNF_EXISTENCE_NOTE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_MODEL_NOT_FOUND_RECOVERY' },
+  KHY_MNF_EXISTENCE_NOTE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MODEL_NOT_FOUND_RECOVERY',
+  },
 
   // 「真实失败原因」列表让本轮新鲜 live 失败(真实 statusCode)排在陈旧缓存跳过
   // (virtualSkip / statusCode:0 / "failure cached cooldown Ns")之前。修 429 现场被
@@ -1062,7 +1270,12 @@ const FLAGS = {
   // 模型,按 GLM 优先顺序逐个再试描述;全部失败才落诚实说明兜底(见 KHY_VISION_FAILURE_SUMMARY)。
   // 关(0/false/off/no)→ 只试主视觉模型一次(逐字节回退单次尝试)。parent 上门:describe-and-return
   // 关则本门必关(级联只在 describe-and-return 内生效)。视觉判定/有 key 判定复用既有单一真源。
-  KHY_VISION_FALLBACK_CASCADE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_VISION_DESCRIBE_RETURN' },
+  KHY_VISION_FALLBACK_CASCADE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_VISION_DESCRIBE_RETURN',
+  },
 
   // ── describe-and-return 级联全失败后「剥图 + OCR + 底线」与失败说明**解耦**(visionOcrFallback
   //    .isDescribeFailFloorEnabled;修 2026-07-12「Khy 无法正确读图 / 消息里没有附带图片」)──────
@@ -1161,7 +1374,12 @@ const FLAGS = {
   // 新版永久免费视觉模型 glm-4.6v-flash/glm-4v-flash 在 JWT 鉴权上下文回 404 model_not_found、raw→200
   // (识图始终失败的真因)。开门 → v4 端点上 id.secret 也用 raw,与 test-key 对齐;关/异常 → 逐字节回退
   // 原「id.secret→jwt」。仅收窄官方 v4 端点,自定义/中转端点仍 JWT(严格超集)。parent 上门。
-  KHY_ZHIPU_V4_RAW_BEARER: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_ZHIPU_RAW_BEARER' },
+  KHY_ZHIPU_V4_RAW_BEARER: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_ZHIPU_RAW_BEARER',
+  },
 
   // reasoning_effort 请求侧透传:GLM-5.2 招牌参数(max/xhigh/high/medium/low/minimal/none),
   // callZhipu 历史只透传 temperature/max_tokens,把它丢了 → 经此路径调 GLM-5.2 的 reasoning_effort
@@ -1457,25 +1675,46 @@ const FLAGS = {
   // 最像卡死的窗口。开 → 请求发出后 KHY_FIRST_RESPONSE_ACK_MS(默认 1200ms)内一个 chunk 都没到,
   // 就甩一句 wait-aware 短句(按 turnIndex 轮换);首个 chunk 一到即取消。关 → 逐字节回退无提示。
   KHY_FIRST_RESPONSE_ACK: { mode: 'default-on', off: 'CANON', default: true },
-  KHY_FIRST_RESPONSE_ACK_MS: { mode: 'numeric', default: 1200, min: 200, max: 60000, parent: 'KHY_FIRST_RESPONSE_ACK' },
+  KHY_FIRST_RESPONSE_ACK_MS: {
+    mode: 'numeric',
+    default: 1200,
+    min: 200,
+    max: 60000,
+    parent: 'KHY_FIRST_RESPONSE_ACK',
+  },
   // 中途选项子门:用户在 AskUserQuestion / L2 确认 / 权限 Allow-Deny 里作出选择后,模型据此恢复
   // 流式前又是一段同构静默窗口。开 → 控制请求 finally 里重新武装一个 selection 变体守护(delay 内
   // 模型没恢复出 chunk → 甩一句「收到你的选择,正在据此继续…」);首个恢复 chunk 一到即取消。
   // 关(或父门关)→ 逐字节回退到「选择后无提示」。
-  KHY_FIRST_RESPONSE_ACK_SELECTION: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_FIRST_RESPONSE_ACK' },
+  KHY_FIRST_RESPONSE_ACK_SELECTION: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_FIRST_RESPONSE_ACK',
+  },
 
   // 工具迭代恢复子门:一个工具刚返回、模型据此续跑前,「工具返回 → 首个恢复 chunk」之间又是一段
   // 同构静默窗口(本回合最初的提交守护早被首 chunk 消费、turnAck 也一回合至多一次)。开 → 每个工具
   // 收尾信号处(tool_result/tool_complete)重新武装一个 resume 变体守护(delay 内模型没出下一 chunk
   // → 甩一句「工具已返回,正在继续处理…」);下一 chunk 一到即取消。关(或父门关)→ 逐字节回退无提示。
-  KHY_FIRST_RESPONSE_ACK_RESUME: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_FIRST_RESPONSE_ACK' },
+  KHY_FIRST_RESPONSE_ACK_RESUME: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_FIRST_RESPONSE_ACK',
+  },
 
   // 图片分析子门:图片分析子流(剪贴板/文件/粘贴)走非流式 `await ai().chat(prompt,{images})`——
   // 无 onChunk 流、无 markChunk,只一个长 await,期间终端全静默;视觉级联(vision→OCR)最耗时、
   // 最像卡死,模型偶尔谎称「没收到图片」。开 → arm 于 await 前的 image 变体守护(delay 内答复未落地
   // → 甩一句「收到你的图片,正在识别分析…」既补窗口又即时确认图片已收到);await 完成/异常即 disarm。
   // 关(或父门关)→ 逐字节回退无提示。
-  KHY_FIRST_RESPONSE_ACK_IMAGE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_FIRST_RESPONSE_ACK' },
+  KHY_FIRST_RESPONSE_ACK_IMAGE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_FIRST_RESPONSE_ACK',
+  },
 
   // ── 协作网格 peer 会话区分标签(meshCore.shapePeers;修「多会话怎么区分/管理」)────
   // 会话 /goal:同一目录不同窗口开多个会话、或不同目录开会话时,协作链接(mesh peers)只列出
@@ -1828,6 +2067,16 @@ const FLAGS = {
   // 关 → selfAuditRegistry.formatForSystemPrompt 返 ''、selfProfile 不注入(接缝逐字节回退)。
   KHY_SELF_AUDIT_AWARENESS: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 自审报告动态核验(selfAuditVerifier;自审可信度)──
+  // 自审块此前是静态声明:缓解模块被删了提示词仍称「已缓解」,被质疑真实性时无法取证
+  // (KhySelf self_audit 只回显注册表静态数据 = 循环论证)。开该门 → selfAuditVerifier 在
+  // 运行时用 fs 核验各项 evidenceAnchors(缓解模块文件存在性 + 门控开关状态),结果注入
+  // 系统提示徽标(·已核验/·核验失败)并供 KhySelf(action:self_audit_verify) 逐项取证。
+  // 关 → verifyAll 返 null、提示词逐字节回退静态自审块(今日行为)。
+  KHY_AUDIT_DYNAMIC_VERIFY: { mode: 'default-on', off: 'CANON', default: true },
+  // 核验结果会话级 TTL 缓存毫秒数(避免每轮系统提示重建都重复 stat 磁盘)。clamp[0, 86400000]。默认 5 分钟。
+  KHY_AUDIT_VERIFY_TTL_MS: { mode: 'numeric', default: 300000, min: 0, max: 86400000 },
+
   // ── 工具簇预激活(toolClusterActivation;自审 #4「工具发现成本高」)──
   // 30 个工具标 shouldDefer,子代理(AgentContext 作用域)起手拿到的是过滤掉延迟工具的精简
   // 定义,要用某能力须先 ToolSearch 命中——而关键词召回不稳(报告:返回的多是被 defer 的工具)。
@@ -1933,7 +2182,12 @@ const FLAGS = {
   // `Promise.race([adapter, idleTimeout])` 补第三条「attemptAbort.signal abort 时立即 reject」
   // 的臂,UI 的取消信号不再依赖适配器自愿配合即可打断在途请求。关 → 上游不挂臂,逐字节回退今日
   // 两臂行为。父门 KHY_GATEWAY_HARD_TIMEOUT 关时本子门也关(取消基础设施成对关闭)。
-  KHY_GATEWAY_ABORT_RACE_ARM: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_GATEWAY_HARD_TIMEOUT' },
+  KHY_GATEWAY_ABORT_RACE_ARM: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_GATEWAY_HARD_TIMEOUT',
+  },
   // kiro 适配器透传 abortSignal(root cause A)。开 → client.send/内部 120s race/parseCWStreamEvents
   // 都接取消信号,卡在建连/首字节/流上时 abort 能真正撤回在途请求并释放 socket。关 → 逐字节回退
   // 今日「kiro 不响应 abort、只等 120s 硬超时」行为。
@@ -1970,7 +2224,12 @@ const FLAGS = {
   KHY_GATEWAY_SCALE_TO_ZERO: { mode: 'opt-in', off: 'CANON', default: false },
   // 降零前的闲置窗口毫秒;clamp[60000, 86400000]。默认 900000(15min):够避免抖动式频繁停/启,
   // 又不至于让空闲进程长期占资源。冷启是否预热沿用 KHY_GATEWAY_WARMUP_ON_BOOT,不新造预热门。
-  KHY_GATEWAY_SCALE_TO_ZERO_IDLE_MS: { mode: 'numeric', default: 900000, min: 60000, max: 86400000 },
+  KHY_GATEWAY_SCALE_TO_ZERO_IDLE_MS: {
+    mode: 'numeric',
+    default: 900000,
+    min: 60000,
+    max: 86400000,
+  },
 
   // ── 工具级模型可设超时(_toolTimeout;同「让模型设硬超时」族)──────────────────────────
   // WebSearch/DesktopControl/LSP 对各自网络/子进程/RPC 调用无任何超时;WebFetch/databaseQuery 有
@@ -2035,6 +2294,17 @@ const FLAGS = {
   // `@s`→`@sr`→`@src` 对同一目录重复读。开该门 → 按 abs 目录短 TTL 记忆 readdir 结果,连续
   // 按键复用一次系统调用(过滤/映射仍现算)。关 → 直读不缓存,逐字节回退今日行为。
   KHY_COMPLETION_READDIR_CACHE: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── React dev 渲染 performance 条目周期清理(治「TUI 越用越卡 / 长时运行后搜索卡死」)──
+  // khy TUI 用 React development 版(NODE_ENV 未设 → react-reconciler.development.js),其中
+  // supportsUserTiming 在 console.timeStamp 存在时恒 true,渲染追踪每帧调 performance.measure
+  // **且从不 clearMeasures**。25fps × 数小时 → 全局 buffer 累积到百万条(截图实证
+  // MaxPerformanceEntryBufferExceededWarning: 1000001 measure entries),内存/性能持续劣化 →
+  // 每帧渲染越来越慢,表现为「搜索转圈几小时 / 界面卡死」。开该门 → TUI 启动时安装低频
+  // (KHY_PERF_ENTRY_REAP_MS,默认 60s)定时器周期清空 measure/mark(纯清 buffer,零业务副作用)。
+  // 关 → 不安装,逐字节回退今日行为。
+  KHY_PERF_ENTRY_REAP: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_PERF_ENTRY_REAP_MS: { mode: 'numeric', default: 60000, min: 5000, max: 600000 },
 
   // ── 搜索浏览器兜底硬超时(playwrightSearch.fetchRenderedHtml;治「一显示正在搜索就卡死」)──
   // web 搜索的 request 抓取空时会回退到无头浏览器(bing-cn/baidu 各起一个 Chromium)。旧路径
@@ -2105,9 +2375,24 @@ const FLAGS = {
   // 后四者 parent=KHY_MD_EDITOR:父关→子必关。
   KHY_MD_EDITOR: { mode: 'default-on', off: 'CANON', default: true },
   KHY_MD_WYSIWYG: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_MD_EDITOR' },
-  KHY_MD_AUTO_REGISTER: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_MD_EDITOR' },
-  KHY_MD_AUTO_SHUTDOWN: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_MD_EDITOR' },
-  KHY_MD_SIDEBAR_CURRENT_DIR: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_MD_EDITOR' },
+  KHY_MD_AUTO_REGISTER: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MD_EDITOR',
+  },
+  KHY_MD_AUTO_SHUTDOWN: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MD_EDITOR',
+  },
+  KHY_MD_SIDEBAR_CURRENT_DIR: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MD_EDITOR',
+  },
 
   // ── 设备应用管理器:下载 / 卸载 / 管理当前设备所有应用(deviceApps)──────────────────
   //   KHY_DEVICE_APPS(父)总闸:设备应用管理器(deviceAppManager IO 壳 + deviceAppsPolicy 纯判定)。
@@ -2119,13 +2404,28 @@ const FLAGS = {
   //                     关 → 静默下载(仍下载,只是不重绘进度),逐字节回退到无进度提示。
   // 后二者 parent=KHY_DEVICE_APPS:父关→子必关。
   KHY_DEVICE_APPS: { mode: 'default-on', off: 'CANON', default: true },
-  KHY_DEVICE_APPS_TOOL: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_DEVICE_APPS' },
-  KHY_DEVICE_APPS_PROGRESS: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_DEVICE_APPS' },
+  KHY_DEVICE_APPS_TOOL: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_DEVICE_APPS',
+  },
+  KHY_DEVICE_APPS_PROGRESS: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_DEVICE_APPS',
+  },
   //   KHY_DEVICE_APPS_NATIVE_UNINSTALL  卸载「非包管理器安装」的原生 exe/CLI(Windows 注册表
   //                     Uninstall 键 → 跑 app 自带卸载器:MSI msiexec /x、Inno unins*.exe、NSIS Uninstall.exe)。
   //                     T2 层:包管理器(T1)找不到该 app 时的兜底。关 → nativeUninstaller 诚实回报
   //                     available:false,路由回退到「仅 T1 + T3 拒绝盲删」。父关→子必关。
-  KHY_DEVICE_APPS_NATIVE_UNINSTALL: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_DEVICE_APPS' },
+  KHY_DEVICE_APPS_NATIVE_UNINSTALL: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_DEVICE_APPS',
+  },
 
   // ── 厂商连通性自检:输入 key 测是否连通(providerConnectivitySpec 纯叶子 + tester IO 壳 + `khy test-key` CLI)──
   //   KHY_PROVIDER_CONNECTIVITY_TEST 总闸:`khy test-key <厂商> --key <k>` / `--all` / `list`。
@@ -2144,7 +2444,6 @@ const FLAGS = {
   //   KHY_CHANGE_WATCH / KHY_DISABLE_KEYPOOL_WATCH / KHY_SELF_EDIT_WATCH …)由其服务直读,不改语义。
   KHY_LIFECYCLE_POLICY: { mode: 'default-on', off: 'CANON', default: true },
 
-
   // ── 不信任弱模型:就地护栏标注 + 示范引导(weakModelGuidance)──────────────────────────
   // [AI-弱模型·加在这] 新 KHY_* 门控就加在 FLAGS 里、这个形状;父→子优先级用 parent 声明。
   // 弱模型改 khyos 时,由 weakModelGuidance 纯叶子(单一真源)向就地横幅 / WeakModelGuidance 工具 /
@@ -2156,7 +2455,12 @@ const FLAGS = {
   // coding profile 是否**始终注入**弱模型护栏指令 + 反例→正例示范(闭合 dead-end:否则弱模型只有
   // 主动调 WeakModelGuidance 工具才看得到护栏)。parent=KHY_WEAK_MODEL_GUIDANCE:父关→子必关。
   // 关 → _codingProfile 逐字节回退(不注入该段),但源码里的静态横幅与工具出口不受影响。
-  KHY_WEAK_MODEL_PROFILE_INJECT: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_WEAK_MODEL_GUIDANCE' },
+  KHY_WEAK_MODEL_PROFILE_INJECT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_WEAK_MODEL_GUIDANCE',
+  },
 
   // ── 网页空态多角度提示词模板:内置目录(promptTemplateCatalog)──────────────────────────
   // AIChat 空态起始模板的**后端可配置内置目录**(纯叶子单一真源);前端经 GET /api/ai/prompts/builtin
@@ -2170,7 +2474,12 @@ const FLAGS = {
   // profile(始终注入流程索引指令)+ toolUseLoop 循环顶部(首轮据用户消息匹配到就注入整套流程)
   // 同源输出。parent=KHY_WEAK_MODEL_GUIDANCE:父关→本门必关。关 → buildProcedureDirective 返空、
   // matchProcedure 返 null,两注入点逐字节回退(不注入任何流程,与无本引擎的旧行为等价)。
-  KHY_PROCEDURE_CATALOG: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_WEAK_MODEL_GUIDANCE' },
+  KHY_PROCEDURE_CATALOG: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_WEAK_MODEL_GUIDANCE',
+  },
 
   // ── 修复智能体纪律:「说了却没做就收场」跟进回核 ─────────────────────────────
   // [AI-弱模型·加在这] 弱模型(乃至被污染上下文带偏的强模型)最高频翻车形态——零工具调用的动作
@@ -2178,7 +2487,12 @@ const FLAGS = {
   // followThroughGuard 在 toolUseLoop 收尾分支一次性回核,逼模型真的发起工具调用或用具体工具证据
   // 证明阻碍真实。parent=KHY_WEAK_MODEL_GUIDANCE:父关→本门必关。关 → assessFollowThrough 恒返
   // null,接线处不注入任何 nudge(逐字节回退到无本守卫的旧行为)。
-  KHY_FOLLOW_THROUGH_GUARD: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_WEAK_MODEL_GUIDANCE' },
+  KHY_FOLLOW_THROUGH_GUARD: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_WEAK_MODEL_GUIDANCE',
+  },
 
   // ── 修 GLM 配置死循环:configureModelProvider 的 list/add 真源一致化 ─────────────────────
   // [AI-弱模型·加在这] 内置 provider(glm/deepseek/…)的 key 写进 apiKeyPool+env、从不写
@@ -2232,11 +2546,21 @@ const FLAGS = {
   // (始终注入能力指令)+ toolUseLoop 首轮(点名即注入路由 nudge)同源输出。parent=
   // KHY_WEAK_MODEL_GUIDANCE:父关→本门必关。关 → buildExternalAgentDirective 返 ''、两注入点逐
   // 字节回退(不注入,与无本引擎的旧行为等价)。
-  KHY_EXTERNAL_AGENT_DIRECTIVE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_WEAK_MODEL_GUIDANCE' },
+  KHY_EXTERNAL_AGENT_DIRECTIVE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_WEAK_MODEL_GUIDANCE',
+  },
   // 首轮「用户点名某外部 agent」的确定性路由 nudge(点名 + 驱动动词两命中才接管,零假阳性)。
   // parent=KHY_EXTERNAL_AGENT_DIRECTIVE:父关→本门必关。关 → detectExternalAgentRequest 返 null、
   // buildExternalAgentNudge 返 '' → 首轮注入点逐字节回退(能力指令仍在,只是不主动点名 nudge)。
-  KHY_EXTERNAL_AGENT_NUDGE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_EXTERNAL_AGENT_DIRECTIVE' },
+  KHY_EXTERNAL_AGENT_NUDGE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_EXTERNAL_AGENT_DIRECTIVE',
+  },
 
   // ── 诊断锚定:追问「为什么报错」时把最近捕获的真因 pin 回上下文,逼模型诊断真错而非跑偏 ──
   // dogfood:上一轮 gateway 报 model_not_found 404(真因已捕获),下一轮用户问「为什么报了 404」,
@@ -2244,7 +2568,12 @@ const FLAGS = {
   // 历史里、无机制逼模型注意它。diagnosticGrounding 纯叶子(捕获侧 recordFailure 单槽 + 读侧首轮
   // detect「为什么失败」意图 → 注入 [SYSTEM: 诊断锚定] pin 真因)。parent=KHY_WEAK_MODEL_GUIDANCE:
   // 父/子任一关 → detectWhyFailureQuestion 返 false、buildGroundingDirective 返 null → 注入点逐字节回退。
-  KHY_DIAGNOSTIC_GROUNDING: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_WEAK_MODEL_GUIDANCE' },
+  KHY_DIAGNOSTIC_GROUNDING: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_WEAK_MODEL_GUIDANCE',
+  },
 
   // ── headless `khy -p` 走真·工具循环(runToolUseLoop)使工具真执行(Claude Code -p 对齐)──
   // [AI-弱模型·加在这] dogfood 实测:headless `-p` 直接 `await chat(prompt,…)`(ai.chat 是**单次
@@ -2266,13 +2595,23 @@ const FLAGS = {
   // KHY_HEADLESS_PROGRESS=1|on|force 可在非 TTY 强开(测试/CI)。关(0/off)→ 不挂进度回调,
   // 逐字节回退今日的沉默。parent=KHY_HEADLESS_NATIVE_LOOP:仅原生循环路径有工具回调可挂,父关
   // 则本门无处发。
-  KHY_HEADLESS_PROGRESS: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_HEADLESS_NATIVE_LOOP' },
+  KHY_HEADLESS_PROGRESS: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_HEADLESS_NATIVE_LOOP',
+  },
   // KHY_HEADLESS_PROGRESS_DETAIL:headless `-p` 工具结果行的**内容摘要**(CC `-p` 对齐的下一层)。
   // 今日 formatToolResult 只吐 `完成/失败 + 耗时`,零结果内容(无 diff/无「读取 N 行」/无退出码)。
   // 开 → 成功结果行追加一句 CC 风格摘要(读取 N 行 / 更新 basename (+X −Y) / N 处匹配 / N 个文件 /
   // 退出码 0 · N 行),仍只走 stderr、stdout 契约不动。关(0/off)→ 逐字节回退今日「完成 + 耗时」终态。
   // parent=KHY_HEADLESS_PROGRESS:父关则连结果行都不发,内容摘要无处附。
-  KHY_HEADLESS_PROGRESS_DETAIL: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_HEADLESS_PROGRESS' },
+  KHY_HEADLESS_PROGRESS_DETAIL: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_HEADLESS_PROGRESS',
+  },
   // KHY_HEADLESS_PROGRESS_TEXT:headless `-p` 执行中的**中间叙述文本**(工具调用前的「说明」散文)。
   // 今日 headless text 模式只把 finalResponse 打到 stdout,模型在工具调用前写的「先读一下这个文件…」
   // 之类过程叙述全不可见(loop 级 _callerOnChunk 因 chatOpts 无 onChunk 而为 null,preamble 补发路
@@ -2280,14 +2619,24 @@ const FLAGS = {
   // chatOpts 挂一个 onChunk,把 `{type:'text'}` 的中间散文写 **stderr**(复用 loop 内已有的 preamble
   // 补发 + 逐轮去重,stdout finalResponse 契约逐字节不动)。关(0/off)→ chatOpts 不挂 onChunk,
   // preamble 补发继续沉默,逐字节回退今日行为。parent=KHY_HEADLESS_PROGRESS:父关则整条进度反馈都不发。
-  KHY_HEADLESS_PROGRESS_TEXT: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_HEADLESS_PROGRESS' },
+  KHY_HEADLESS_PROGRESS_TEXT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_HEADLESS_PROGRESS',
+  },
   // KHY_HEADLESS_PROGRESS_HEARTBEAT:headless `-p` 单个**长时工具**运行中的「仍在运行…」心跳。
   // 今日 onToolCall 打一行 start 后直到 onToolResult 之间全静默——一个跑 30s 的 shellCommand/子代理
   // 在人眼里和卡死无异(CC `-p` 会持续显示活动)。开 → bin/khy.js 起一个 unref 的 setInterval,当有
   // 在飞工具且已运行 ≥5s 时每 5s 往 **stderr** 补一行 `⏳ {显示名} 运行中 {elapsed}`(unref 不阻塞退出·
   // 工具结束即停发)。关(0/off)→ 不起心跳定时器,逐字节回退今日 start→静默→result。
   // parent=KHY_HEADLESS_PROGRESS:父关则整条进度反馈都不发。
-  KHY_HEADLESS_PROGRESS_HEARTBEAT: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_HEADLESS_PROGRESS' },
+  KHY_HEADLESS_PROGRESS_HEARTBEAT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_HEADLESS_PROGRESS',
+  },
 
   // ── headless `khy -p` 原生循环抛错时的回退诊断(KHY_HEADLESS_LOOP_FALLBACK_DIAG)────────
   // [AI-弱模型·加在这] 今日 bin/khy.js 的 `} catch { result = null; }` 静默吞掉整个 runToolUseLoop
@@ -2295,7 +2644,12 @@ const FLAGS = {
   // 开 → catch 里往 **stderr** 写一行 `⚠ 原生工具循环失败,回退单发 · {错误摘要}`(stdout 机器契约
   // 逐字节不动·pipe/重定向安全),随后照常回退单发。关(0/off)→ 逐字节回退今日静默吞回退。
   // parent=KHY_HEADLESS_NATIVE_LOOP:回退路径只存在于原生循环块内,父关则根本不进该路径。
-  KHY_HEADLESS_LOOP_FALLBACK_DIAG: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_HEADLESS_NATIVE_LOOP' },
+  KHY_HEADLESS_LOOP_FALLBACK_DIAG: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_HEADLESS_NATIVE_LOOP',
+  },
 
   // ── headless `khy -p` 达迭代/步数上限时如实反映退出码与 json 契约(KHY_HEADLESS_EXIT_ON_LIMIT)─
   // [AI-弱模型·加在这] dogfood:runToolUseLoop 达内部最大迭代数返回 {maxIterationsReached:true} 但
@@ -2306,7 +2660,12 @@ const FLAGS = {
   // 并置 result.maxTurnsHit,使 json 报 error_max_turns/is_error:true、退出码用 resolveExitCode 给
   // **3**(区别于硬错误 2·表示「步数耗尽·可重试」)。关(0/off)→ 不置位、不透传影响判决,退出码
   // 逐字节回退 `errorType?2:0`(限流停止仍退 0,与今日一致)。parent=KHY_HEADLESS_NATIVE_LOOP。
-  KHY_HEADLESS_EXIT_ON_LIMIT: { mode: 'opt-in', off: 'CANON', default: false, parent: 'KHY_HEADLESS_NATIVE_LOOP' },
+  KHY_HEADLESS_EXIT_ON_LIMIT: {
+    mode: 'opt-in',
+    off: 'CANON',
+    default: false,
+    parent: 'KHY_HEADLESS_NATIVE_LOOP',
+  },
 
   // ── 自主/非交互 L1(黄灯)自动放行,唯 L2 红线仍 fail-closed(autonomousL1AutoApprove)──
   // [AI-弱模型·别绕过红线] dogfood 实测:非交互环境(无交互器 onCtrl 缺失·headless `khy -p`/
@@ -2341,7 +2700,12 @@ const FLAGS = {
   // 渲染「这看起来像 glm 的 key,确认是这家吗?」让用户点头/改厂商,绝不静默拍板。**显式 hint 仍即时
   // 归属**(用户已明说厂商就不再多问)。parent=KHY_KEY_UPDATE_FLOW:父关→本门必关。关 → decideProvider
   // 逐字节回退旧行为(形态命中直接 { provider:'glm' }·shapeGuess 不产出)。
-  KHY_KEY_SHAPE_CONFIRM: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_KEY_UPDATE_FLOW' },
+  KHY_KEY_SHAPE_CONFIRM: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_KEY_UPDATE_FLOW',
+  },
 
   // ── 用户提示词发给模型前先做结构化处理(promptStructurer)──────────────────────────────
   // [AI-弱模型·加在这] /goal「我发给 ai 的提示词,都先做结构化处理后再发给模型,提示词=结构+内容」。
@@ -2356,13 +2720,23 @@ const FLAGS = {
   // 引导模型据任务性质把请求往可复用/成类的资产形态取舍(不为通用而通用,冲突仍以原文为准)。
   // parent=KHY_PROMPT_STRUCTURING:父关→本门必关。关 → buildAssetLens 返 ''、不追加透镜段,
   // 结构化仍产「结构+内容」(逐字节回退到无透镜的基础结构化)。
-  KHY_PROMPT_STRUCTURING_ASSET_LENS: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_PROMPT_STRUCTURING' },
+  KHY_PROMPT_STRUCTURING_ASSET_LENS: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_PROMPT_STRUCTURING',
+  },
 
   // 代码化提示词:复杂任务时,在结构块后追加一段 ```spec 声明式规格(把已解析的任务/范围/约束/期望写
   // 成逻辑精确、消歧、线性化的代码化表达,供 AI 的逻辑推理直接消费)。**仅复杂任务触发**(简单请求不加
   // 噪),仍是原文的逻辑重述、冲突以原文为准。parent=KHY_PROMPT_STRUCTURING:父关→本门必关。
   // 关 → buildCodeSpec 返 ''、不追加 spec 段(逐字节回退到无代码化的结构+内容)。
-  KHY_PROMPT_STRUCTURING_CODE_SPEC: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_PROMPT_STRUCTURING' },
+  KHY_PROMPT_STRUCTURING_CODE_SPEC: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_PROMPT_STRUCTURING',
+  },
 
   // roundAdvanceAssessor 纯叶子:toolUseLoop 每完成一轮(模型回应+工具执行)后,吃每轮小结已算好的
   // 成功/失败/去重/读写命令分项,确定性判一个「本轮任务是否向前推进了一步」的判决(推进/停滞/空转)+
@@ -2384,7 +2758,12 @@ const FLAGS = {
   // 的再驱动,彻底消除 Flavor A 的那一次重复。硬纠错门与 goalStopGate 不受影响(由回声断路器兜底)。
   // parent=KHY_ANSWER_ECHO_GUARD:父关→本门必关。关 → shouldSuppressSoftRedrive 恒 false,7 软门各自的
   // `&& !suppressed` 恒 `&& true`(逐字节回退,软门原样触发)。
-  KHY_SUPPRESS_SOFT_REDRIVE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_ANSWER_ECHO_GUARD' },
+  KHY_SUPPRESS_SOFT_REDRIVE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_ANSWER_ECHO_GUARD',
+  },
 
   // 单次 completion 内「整段答案逐字重复两遍」折叠(replyDedup)。dogfood(api:agnes:agnes-2.0-flash,
   // v0.1.165):工具轮后弱模型在**一次**回复里把整段旅游答案生成两遍(reply = A + A,逐字节相同、
@@ -2402,6 +2781,248 @@ const FLAGS = {
   // (单次封顶,产新文本不触发回声断路器)。**默认关**:续写多一次模型调用、且可能续写本就该短的答案,
   // 故仅显式 =true|1 开启。关 → shouldContinue 恒 false,接线整段跳过(逐字节回退到「忠实渲染早停」)。
   KHY_SHORT_STOP_CONTINUATION: { mode: 'opt-in', off: 'CANON', default: false },
+
+  // ── 截断兼容:length 截断自动续写兜底(toolUseLoopCore 无工具调用收尾分支)· 默认开 ─────
+  // 症状:finish_reason=length 截断且主恢复(maxTokensRecovery)未介入时,半截的「思考」文本直接被当作
+  // 完整答案返回(长文本还会命中 concludeNow 短路)。开 → 收尾分支在返回前至多自动续写 2 次
+  // (局部计数封顶,防死循环);主恢复已尝试并放弃时不重复接手。关 → 跳过续写,仅靠返回前
+  // 的诚实截断提示兜底(P1 披露不受本门控影响)。
+  KHY_LENGTH_TRUNCATION_AUTO_CONTINUE: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 工具循环绝对超时的活动感知宽限(toolUseLoopCore 绝对超时判定)──────────────────
+  // 旧行为:纯墙钟 `loopElapsed > KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS`(默认 20 分钟)到点即截断，
+  // 活跃推进中的任务照样被掐。改为双条件:墙钟超限 **且** 空闲(距上次工具完成/AI 回复)
+  // 超过本宽限才收口——正在产出时绝不掐断，等当前活动收尾后才返回。clamp[0, 600000]。默认 30s。
+  // 另:KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS=0 显式关闭绝对超时兜底(0 = 无上限，对标 Claude Code)。
+  KHY_TOOL_LOOP_ABSOLUTE_GRACE_MS: { mode: 'numeric', default: 30000, min: 0, max: 600000 },
+
+  // ── AgentTool 子代理空闲看门狗(替代 Promise.race 硬墙钟超时)──────────────────────
+  // 旧行为:子代理用 Promise.race 硬超时，活跃工作中的子代理到点照样被掐。开 → 改为空闲
+  // 看门狗:仅当子代理连续空闲(无工具进展/无输出)超 KHY_AGENT_IDLE_TIMEOUT_MS 才判超时。
+  // 关(0/off)→ 逐字节回退旧 Promise.race 硬超时。
+  KHY_AGENT_IDLE_WATCHDOG: { mode: 'default-on', off: 'CANON', default: true },
+  // 子代理空闲超时毫秒数。运行时默认 max(params.timeout*1000, 120000)，本表登记静态兜底 120000。
+  // clamp[1000, 86400000]。parent=KHY_AGENT_IDLE_WATCHDOG:父关则看门狗整体回退，本阈值无意义。
+  KHY_AGENT_IDLE_TIMEOUT_MS: {
+    mode: 'numeric',
+    default: 120000,
+    min: 1000,
+    max: 86400000,
+    parent: 'KHY_AGENT_IDLE_WATCHDOG',
+  },
+
+  // ── Small-model (T2/T3) normalization pipeline (smallModelDefaults.js SSOT) ──────
+  // Structured pipeline checkpoints for weak models: each tool-use round passes
+  // deterministic checkpoints (schema fed → call parsed → params valid → result
+  // consumed) instead of free-form retries. Off → verbatim legacy loop behavior.
+  KHY_SMALL_MODEL_PIPELINE: { mode: 'default-on', off: 'CANON', default: true },
+  // Tool-schema compression: feed T2/T3 models 'small'/'micro' toFunctionDef
+  // levels (per constants/smallModelDefaults.resolveSchemaLevel) to cut prompt
+  // tokens. Off → every tier gets the verbatim 'full' schema (today's behavior).
+  KHY_SMALL_MODEL_SCHEMA_COMPRESS: { mode: 'default-on', off: 'CANON', default: true },
+  // Parameter ladder correction: coerce near-miss tool params (type casts,
+  // enum fuzzy match, alias keys) step by step within the per-tier retry budget
+  // before rejecting. Off → params rejected verbatim on first mismatch.
+  KHY_SMALL_MODEL_PARAM_COERCE: { mode: 'default-on', off: 'CANON', default: true },
+  // Few-shot example injection: prepend per-tier tool-call examples
+  // (smallModelDefaults.getFewShotCount) for weak models. Off → no examples
+  // injected (today's behavior for every tier).
+  KHY_SMALL_MODEL_FEW_SHOT: { mode: 'default-on', off: 'CANON', default: true },
+  // Auto-escalation: when a small model trips the failure thresholds
+  // (smallModelDefaults.getEscalationThresholds), hand the session over to a
+  // stronger tier, capped by getMaxEscalations. Off → never escalates.
+  KHY_AUTO_ESCALATION: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 显式状态机核心(services/stateMachine/fsm.js;CANON 4 词 + 归一)──────────
+  // 轻量 FSM 影子观测框架(agent 生命周期/工具循环阶段/REPL 阶段/启动阶段)。开 →
+  // createFsm 返回真 FSM(声明式转移表、环形缓冲历史、非法转移 fail-soft 记录不抛);
+  // 关 → 返回同形 no-op FSM(fire 恒 {ok:false, disabled:true},零记录零开销)。
+  KHY_FSM_ENABLED: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── Gateway retry/recovery enhancements (aiGatewayGenerateMethod.js) ────────
+  // Reactive context-overflow auto-adjust: when a provider rejects with
+  // context_length/413 and the error message carries parseable token counts,
+  // lower adapterOptions.maxTokens to the available window and retry the same
+  // adapter once (at most 1 adjustment per request). Off → verbatim legacy path
+  // (error propagates; upstream aiContextFlow triggers compaction). Default on.
+  KHY_CONTEXT_OVERFLOW_AUTO_ADJUST: { mode: 'default-on', off: 'CANON', default: true },
+  // Safety buffer subtracted from the remaining context window before deciding
+  // whether an in-place maxTokens adjustment is viable. Default 512 tokens.
+  KHY_CONTEXT_SAFETY_BUFFER_TOKENS: {
+    mode: 'numeric',
+    default: 512,
+    min: 0,
+    max: 100000,
+    parent: 'KHY_CONTEXT_OVERFLOW_AUTO_ADJUST',
+  },
+  // Minimum completion budget: skip the maxTokens adjustment when the usable
+  // window (limit - prompt - buffer) falls below this floor. Default 256 tokens.
+  KHY_CONTEXT_MIN_COMPLETION_TOKENS: {
+    mode: 'numeric',
+    default: 256,
+    min: 1,
+    max: 100000,
+    parent: 'KHY_CONTEXT_OVERFLOW_AUTO_ADJUST',
+  },
+
+  // ── 真实上下文窗口 + 诚实的自动压缩(contextWindowDefaults / aiRequestAnalysis /
+  //    contextRouter.autoCompactTriggerTokens / aiChatCore 进度链路)─────────────
+  // 拆掉「隐式 131072 钳位」:_resolveContextBudget 历史上把 runtime.CONTEXT_TOKEN_LIMIT
+  // (= env || 131072)当成「已配置的上限」参与 Math.min,于是没配任何东西时也恒钳到 128k,
+  // 真实窗口 >131072 的模型(Agnes 512k、Claude 200k)全被砍。开 → 仅当 KHY_CONTEXT_TOKEN_LIMIT
+  // **显式设置**才钳位;关 → 逐字节回退历史表达式。
+  KHY_CONTEXT_LIMIT_NO_IMPLICIT_CLAMP: { mode: 'default-on', off: 'CANON', default: true },
+  // 上游/静态表谎报窗口时的理性天花板(现实最大真实窗口:GPT-4.1 系 1047576)。
+  // 宁可写小不可写大 —— 窗口写小只多压缩一次(可恢复),写大则运行时 400/413(不可恢复)。
+  KHY_CONTEXT_WINDOW_CEILING: { mode: 'numeric', default: 1048576, min: 8000, max: 10000000 },
+  // 底栏「距自动压缩」倒计时的主门(contextWarning.isEnabled,此前已存在但未登记)。
+  KHY_CONTEXT_WARNING: { mode: 'default-on', off: 'CANON', default: true },
+  // 倒计时改用**真实触发点**(contextRouter.autoCompactTriggerTokens 推导的绝对 token 数)
+  // 而非 0.8×window 比例式。关 → 强制比例路径,逐字节回退历史(会重现「承诺 80% 实际 63%
+  // 就压缩」的谎报)。
+  KHY_CONTEXT_WARNING_REAL_THRESHOLD: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_CONTEXT_WARNING',
+  },
+  // 压缩进度覆盖所有路径:强化二次压缩 / 工具循环各趟 / 反应式 413 此前都不传 onPhase,
+  // 在 TUI 里完全静默;且轮级 const 让第 2..N 趟复用第 1 趟的 tokensBefore/耗时。
+  // 开 → 每趟重置基准并补发 'compacted' 终止符(缺终止符 → 进度条永久留屏)。
+  KHY_COMPACT_PROGRESS_ALL_PATHS: { mode: 'default-on', off: 'CANON', default: true },
+  // 声明式登记(不改读取点行为):窗口相关的两个逃生阀。KHY_CONTEXT_TOKEN_LIMIT 的语义
+  // 刚从「永远钳位」变为「显式设置才钳位」,正是注册表该记录的东西;两者默认 0 表未设。
+  KHY_CONTEXT_WINDOW: { mode: 'numeric', default: 0, min: 0, max: 10000000 },
+  KHY_CONTEXT_TOKEN_LIMIT: { mode: 'numeric', default: 0, min: 0, max: 10000000 },
+  // Background fast-fail: requests explicitly tagged requestSource:'background'
+  // skip same-adapter retries and pool key rotation on overloaded/rate_limit
+  // errors, cascading straight to the next adapter. Foreground/internal calls
+  // are unaffected. Off → background requests retry like foreground. Default on.
+  KHY_BG_FAST_FAIL: { mode: 'default-on', off: 'CANON', default: true },
+  // Auto credential refresh on 401/403: when the failing adapter exposes an
+  // optional refreshCredential() method, run it (single-flight per adapter via
+  // credentialRefreshCoordinator) and retry the same adapter once. Failure
+  // falls back to existing account-pool rotation. Default on.
+  KHY_AUTO_CREDENTIAL_REFRESH: { mode: 'default-on', off: 'CANON', default: true },
+  // Upper bound (ms) for a single credential refresh attempt (Promise.race
+  // timeout inside credentialRefreshCoordinator). Default 10000 ms.
+  KHY_CREDENTIAL_REFRESH_TIMEOUT_MS: {
+    mode: 'numeric',
+    default: 10000,
+    min: 1000,
+    max: 120000,
+    parent: 'KHY_AUTO_CREDENTIAL_REFRESH',
+  },
+
+  // ── Dynamic max_tokens resolution (gateway/maxTokensPolicy.js) ──────────────
+  // Preflight max_tokens auto-resolve: before dispatching to an adapter, derive
+  // a safe completion budget from known model metadata (context-window cache +
+  // model output-limit cache + prompt token estimate) via maxTokensPolicy.
+  // Unknown metadata → the policy abstains and adapter fallbacks apply
+  // unchanged. Off → verbatim legacy path (caller value or adapter default).
+  KHY_MAX_TOKENS_AUTO_RESOLVE: { mode: 'default-on', off: 'CANON', default: true },
+  // Length-truncation recovery attempt budget (maxTokensRecovery.shouldRecover).
+  // Replaces the hardcoded 3-attempt cap; clamp[1, 10]. Independent of
+  // KHY_MAX_TOKENS_AUTO_RESOLVE — recovery still runs when preflight is off.
+  KHY_LENGTH_RECOVERY_MAX_ATTEMPTS: { mode: 'numeric', default: 3, min: 1, max: 10 },
+  // Centralized default max_tokens fallback for maxTokensPolicy Rule 4 (all
+  // model metadata unknown). 0 = disabled (keep the conservative abstain
+  // semantics: policy returns null and adapter fallbacks stay authoritative).
+  // >0 = inject this value as the completion budget when nothing is known,
+  // replacing the scattered per-adapter hardcoded fallbacks with one knob.
+  // Never applies to the insufficient_window abstain (known-but-tight window).
+  KHY_DEFAULT_MAX_TOKENS: {
+    mode: 'numeric',
+    default: 0,
+    min: 0,
+    max: 131072,
+    parent: 'KHY_MAX_TOKENS_AUTO_RESOLVE',
+  },
+
+  // ── Tool interruptBehavior consumption (toolUseLoopCore) ───────────────────
+  // Consume the declarative per-tool interruptBehavior ('cancel'|'block') at the
+  // executeTool sites: 'block' tools get a derived abort signal that withholds a
+  // user interrupt until the running tool finishes, bounded by
+  // KHY_TOOL_INTERRUPT_BLOCK_MAX_MS. No built-in tool declares 'block' today, so
+  // default-on is behavior-neutral. Off → every tool receives the raw parent
+  // signal (verbatim legacy cancel path, byte-identical).
+  KHY_TOOL_INTERRUPT_BEHAVIOR: { mode: 'default-on', off: 'CANON', default: true },
+  // Upper bound (ms) a 'block' tool may keep running after a user interrupt
+  // before the derived signal force-cancels it (every block-wait is capped by
+  // this timer — no unbounded waits). Default 10000 ms.
+  KHY_TOOL_INTERRUPT_BLOCK_MAX_MS: {
+    mode: 'numeric',
+    default: 10000,
+    min: 0,
+    max: 600000,
+    parent: 'KHY_TOOL_INTERRUPT_BEHAVIOR',
+  },
+
+  // ── 权限模式规则(permissions/patternMatcher + permissionStore.storePatternRules)────
+  // 持久权限规则支持通配符命令前缀(如 `npm run *`)与参数 glob。开 → permissionStore.check
+  // 在精确规则之后、session approval 之前评估模式规则(deny 优先于 allow·fail-closed;复合
+  // 命令 `&&`/`|`/`;`/重定向等拒绝泛化);approvePattern/denyPattern/listPatternRules API 生效,
+  // forever 规则持久化到 permissions.json 的 storePatternRules 字段(命名避开 permissionPolicy
+  // 同文件的 patternRules 命名空间)。**opt-in 默认关**:门关 → check() 完全跳过模式分支、
+  // API 明确 no-op(approvePattern/denyPattern 返 {ok:false,disabled:true}、listPatternRules
+  // 返 [])。关 → 行为与现状逐字节一致。
+  KHY_PERMISSION_PATTERN_RULES: { mode: 'opt-in', off: 'CANON', default: false },
+  // patternMatcher 编译后 RegExp 的模块级 Map 缓存容量上界;超界淘汰最旧条目(插入序)。
+  // clamp[1, 65536]。parent=KHY_PERMISSION_PATTERN_RULES:父关则模式匹配整体不运行,本阈值无意义。
+  KHY_PERMISSION_PATTERN_CACHE_CAP: {
+    mode: 'numeric',
+    default: 256,
+    min: 1,
+    max: 65536,
+    parent: 'KHY_PERMISSION_PATTERN_RULES',
+  },
+
+  // ── Tool result tri-path serialization (_toolResultNormalizer / toolUseLoopHelpers) ──
+  // Gate for the tri-path model-input wiring in _buildToolResultMessage: when on,
+  // the structured tool_result entry content is produced by the pure
+  // mapToolResultToModelBlock (images preserved, unified Chinese truncation
+  // notice). Opt-in, default off → legacy path stays byte-identical.
+  KHY_TOOL_RESULT_TRIPATH: { mode: 'opt-in', off: 'CANON', default: false },
+  // Human-readable render cap (chars) for renderToolResultMessage. clamp[1, 10000000].
+  // parent=KHY_TOOL_RESULT_TRIPATH: the render path only matters when tri-path is on.
+  KHY_TOOL_RESULT_RENDER_MAX_CHARS: {
+    mode: 'numeric',
+    default: 4000,
+    min: 1,
+    max: 10000000,
+    parent: 'KHY_TOOL_RESULT_TRIPATH',
+  },
+
+  // ── 代码地图 Repo Map(repoMap/index + repoMapRenderer;复用 projectMetadataService 扫描)──
+  // 主开关(opt-in 默认关):开 → 消费 _collectContext 的确定性扫描产物,渲染一份带 token
+  // 预算的紧凑「目录树骨架 + 逐文件符号签名」代码地图供上下文注入;关 → 逐字节回退(不渲染、
+  // 不建缓存)。父门控,子项(预算/缓存)父关即必关。
+  KHY_REPO_MAP: { mode: 'opt-in', off: 'CANON', default: false },
+  // 代码地图渲染的 token 预算:贪心按排名填充,超预算即截断并追加「还有 N 个文件」脚注。
+  // clamp[500, 32000]。parent=KHY_REPO_MAP:主开关关则代码地图不渲染,本预算无意义。
+  KHY_REPO_MAP_TOKEN_BUDGET: {
+    mode: 'numeric',
+    default: 4000,
+    min: 500,
+    max: 32000,
+    parent: 'KHY_REPO_MAP',
+  },
+  // 代码地图指纹缓存(default-on):指纹未变 → 命中缓存跳过重扫/重渲染;指纹一变即失效。
+  // parent=KHY_REPO_MAP:主开关关则不读写缓存。
+  KHY_REPO_MAP_CACHE: { mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_REPO_MAP' },
+
+  // ── 误拒自动拆分重试 Refusal Auto-Recovery(gateway/refusalRecovery + aiGatewayGenerateMethod)──
+  // 模型把合理学习/合理需求误判为违规、返回套话式拒绝(如「抱歉,我不能…」)时,网关层自动检测
+  // (纯正则,零额外 LLM 开销)、把原始 prompt 拆成有序子步骤(1 次轻量 LLM)、逐步递归重执并聚合。
+  // 仅在纯聊天路径(无工具)触发,自带安全护栏(具体安全原因的正当拒绝 + HARMFUL_MARKERS 排除)。
+  // 默认开;关 → result.content 逐字节不变(真 no-op)。
+  KHY_REFUSAL_RECOVERY: { mode: 'default-on', off: 'CANON', default: true },
+  // 单次恢复最多拆分/重执的子步骤数上限(截断)。clamp[2, 10]。
+  KHY_REFUSAL_RECOVERY_MAX_STEPS: { mode: 'numeric', default: 5, min: 2, max: 10 },
+  // 每请求最多触发几次恢复。clamp[0, 3]。
+  KHY_REFUSAL_RECOVERY_MAX_RETRIES: { mode: 'numeric', default: 1, min: 0, max: 3 },
+  // 每步的活动空闲上限(ms):基于活动的滑动超时,收到 chunk/完成即重置,绝不硬 kill 整个循环。clamp[15000, 300000]。
+  KHY_REFUSAL_RECOVERY_STEP_IDLE_MS: { mode: 'numeric', default: 60000, min: 15000, max: 300000 },
 };
 
 /**
@@ -2416,21 +3037,27 @@ const FLAGS = {
 function isFlagEnabled(name, env = process.env, _seen) {
   try {
     const spec = FLAGS[name];
-    if (!spec) return true;                                   // 未登记 → 保守放行
+    if (!spec) {
+      return true;
+    } // 未登记 → 保守放行
 
     // 父→子优先级:父关则子必关。_seen 防父子成环导致的无限递归。
     const seen = _seen || new Set();
     if (spec.parent && !seen.has(name)) {
       seen.add(name);
-      if (!isFlagEnabled(spec.parent, env, seen)) return false;
+      if (!isFlagEnabled(spec.parent, env, seen)) {
+        return false;
+      }
     }
 
     const raw = env && env[name];
 
-    if (spec.mode === 'opt-in') {                             // KHY_FEATURE_* 方言:仅显式开
+    if (spec.mode === 'opt-in') {
+      // KHY_FEATURE_* 方言:仅显式开
       return raw === 'true' || raw === '1';
     }
-    if (spec.mode === 'numeric') {                            // 数值型:非 0 即「配置了」——布尔视角保守放行
+    if (spec.mode === 'numeric') {
+      // 数值型:非 0 即「配置了」——布尔视角保守放行
       return true;
     }
 
@@ -2440,10 +3067,12 @@ function isFlagEnabled(name, env = process.env, _seen) {
       // 精确复现 priorityTaxonomy 的裸 `===`:不 trim、不 lowercase(大写 OFF 读成「开」)。
       return !words.includes(raw);
     }
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !words.includes(String(raw).trim().toLowerCase());
   } catch {
-    return true;                                              // 兜底:任何意外 → 保守放行
+    return true; // 兜底:任何意外 → 保守放行
   }
 }
 
@@ -2459,14 +3088,22 @@ function resolveNumeric(name, env = process.env) {
   const spec = FLAGS[name];
   const fallback = spec && Number.isFinite(spec.default) ? spec.default : 0;
   try {
-    if (!spec || spec.mode !== 'numeric') return fallback;
+    if (!spec || spec.mode !== 'numeric') {
+      return fallback;
+    }
     const raw = env && env[name];
     const n = Number.parseInt(String(raw == null ? '' : raw).trim(), 10);
-    if (!Number.isFinite(n) || n < 0) return fallback;
+    if (!Number.isFinite(n) || n < 0) {
+      return fallback;
+    }
     const min = Number.isFinite(spec.min) ? spec.min : 0;
     const max = Number.isFinite(spec.max) ? spec.max : n;
-    if (n < min) return min;
-    if (n > max) return max;
+    if (n < min) {
+      return min;
+    }
+    if (n > max) {
+      return max;
+    }
     return n;
   } catch {
     return fallback;
@@ -2480,7 +3117,9 @@ function resolveNumeric(name, env = process.env) {
  */
 function listFlags() {
   try {
-    return Object.keys(FLAGS).sort().map((name) => ({ name, ...FLAGS[name] }));
+    return Object.keys(FLAGS)
+      .sort()
+      .map((name) => ({ name, ...FLAGS[name] }));
   } catch {
     return [];
   }

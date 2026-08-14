@@ -36,7 +36,9 @@
 
 // 门控 KHY_WRITE_COUNT_LINES_CC(与 toolResultSummary._writeLineCount 同键)。
 function countLinesEnabled(env = process.env) {
-  const flag = String((env && env.KHY_WRITE_COUNT_LINES_CC) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_WRITE_COUNT_LINES_CC) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -60,7 +62,9 @@ function ccCountLines(content) {
  */
 function countLinesOr(content, env = process.env) {
   const s = String(content == null ? '' : content);
-  if (!countLinesEnabled(env)) return s.split('\n').length; // legacy 裸口径
+  if (!countLinesEnabled(env)) {
+    return s.split('\n').length;
+  } // legacy 裸口径
   return ccCountLines(s);
 }
 

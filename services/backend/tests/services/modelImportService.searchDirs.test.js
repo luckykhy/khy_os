@@ -24,6 +24,8 @@ describe('modelImportService search dirs', () => {
     const svc = require('../../src/services/modelImportService');
     const dirs = svc.getModelSearchDirs();
 
-    expect(dirs).toContain('/tmp/custom-ollama-models/blobs');
+    // The service resolves the env path via path.resolve — on Windows a POSIX
+    // literal becomes a current-drive path, so assert against the same resolve.
+    expect(dirs).toContain(path.resolve('/tmp/custom-ollama-models/blobs'));
   });
 });

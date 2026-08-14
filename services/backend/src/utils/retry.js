@@ -18,7 +18,9 @@ async function retry(fn, maxRetries = 3, baseDelay = 1000) {
       }
       await new Promise((resolve) => {
         const t = setTimeout(resolve, delay);
-        if (t.unref) t.unref();
+        if (t.unref) {
+          t.unref();
+        }
       });
       delay *= 2;
     }

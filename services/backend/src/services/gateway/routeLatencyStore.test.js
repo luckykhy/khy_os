@@ -7,11 +7,11 @@
  * getStats 形状(含 ageMs)、_reset。store 做 fs IO 故非纯叶子。
  */
 
-const { describe, test, before, after, beforeEach } = require('node:test');
+const fs = require('fs');
 const assert = require('node:assert/strict');
+const { describe, test, before, after, beforeEach } = require('node:test');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
 
 // 隔离数据家:必须在 require store(→ dataHome 惰性缓存)之前设好。
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'route-latency-store-'));
@@ -20,12 +20,20 @@ process.env.KHY_DATA_HOME = TMP;
 const store = require('./routeLatencyStore');
 
 describe('routeLatencyStore — EWMA 递推与统计', () => {
-  before(() => { process.env.KHY_DATA_HOME = TMP; });
+  before(() => {
+    process.env.KHY_DATA_HOME = TMP;
+  });
   after(() => {
     store._reset();
-    try { fs.rmSync(TMP, { recursive: true, force: true }); } catch { /* ignore */ }
+    try {
+      fs.rmSync(TMP, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
   });
-  beforeEach(() => { store._reset(); });
+  beforeEach(() => {
+    store._reset();
+  });
 
   test('首样本 → ewmaMs 直接置为该值,samples=1', () => {
     store.record('adapter:api', 2000);
@@ -44,7 +52,9 @@ describe('routeLatencyStore — EWMA 递推与统计', () => {
     // 0.3*5000 + 0.7*1000 = 1500 + 700 = 2200
     assert.equal(Math.round(s.ewmaMs), 2200);
     assert.equal(s.samples, 2);
-    if (prev !== undefined) process.env.KHY_ROUTE_LATENCY_EWMA_ALPHA = prev;
+    if (prev !== undefined) {
+      process.env.KHY_ROUTE_LATENCY_EWMA_ALPHA = prev;
+    }
   });
 
   test('非法 latency(0/负/NaN/非数)→ 忽略,不污染 EWMA、不增 samples', () => {

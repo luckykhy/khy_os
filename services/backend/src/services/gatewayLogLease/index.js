@@ -32,9 +32,9 @@
  */
 
 const ctxMod = require('./context');
+const devLog = require('./devLog');
 const logLease = require('./logLease');
 const noiseFilter = require('./noiseFilter');
-const devLog = require('./devLog');
 const sandbox = require('./sandbox');
 
 module.exports = {

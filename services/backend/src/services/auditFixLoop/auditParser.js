@@ -24,7 +24,11 @@ const SEVERITIES = ['critical', 'high', 'medium', 'low', 'nit'];
 // 严重性分级单一真源(goal 2026-06-25):tier ↔ 前缀码(H1/M2/LOW3…)的解析与 tier 内
 // 序号赋值都委派 priorityTaxonomy,口径与计划优先级、审计 agent 输出格式一致。fail-soft。
 let _tax = null;
-try { _tax = require('../priorityTaxonomy'); } catch { _tax = null; }
+try {
+  _tax = require('../priorityTaxonomy');
+} catch {
+  _tax = null;
+}
 
 /** Empty/zeroed counts object. */
 function _zeroCounts() {
@@ -40,15 +44,32 @@ function _normSeverity(raw) {
   if (_tax && typeof _tax.normalizeSeverityToken === 'function') {
     try {
       const t = _tax.normalizeSeverityToken(raw);
-      if (t && t.key) return t.key;
-    } catch { /* fall through to local mapping */ }
+      if (t && t.key) {
+        return t.key;
+      }
+    } catch {
+      /* fall through to local mapping */
+    }
   }
-  const s = String(raw || '').trim().toLowerCase().replace(/s$/, ''); // "nits" → "nit"
-  if (s === 'critical' || s === 'crit') return 'critical';
-  if (s === 'high') return 'high';
-  if (s === 'medium' || s === 'med') return 'medium';
-  if (s === 'low') return 'low';
-  if (s === 'nit' || s === 'nitpick') return 'nit';
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/s$/, ''); // "nits" → "nit"
+  if (s === 'critical' || s === 'crit') {
+    return 'critical';
+  }
+  if (s === 'high') {
+    return 'high';
+  }
+  if (s === 'medium' || s === 'med') {
+    return 'medium';
+  }
+  if (s === 'low') {
+    return 'low';
+  }
+  if (s === 'nit' || s === 'nitpick') {
+    return 'nit';
+  }
   return null;
 }
 
@@ -58,9 +79,17 @@ function _normSeverity(raw) {
  * when the taxonomy is absent or disabled.
  */
 function _withCodes(findings) {
-  if (_tax && typeof _tax.isBugSeverityEnabled === 'function' && _tax.isBugSeverityEnabled()
-    && typeof _tax.assignSeverityCodes === 'function') {
-    try { return _tax.assignSeverityCodes(findings); } catch { /* keep raw */ }
+  if (
+    _tax &&
+    typeof _tax.isBugSeverityEnabled === 'function' &&
+    _tax.isBugSeverityEnabled() &&
+    typeof _tax.assignSeverityCodes === 'function'
+  ) {
+    try {
+      return _tax.assignSeverityCodes(findings);
+    } catch {
+      /* keep raw */
+    }
   }
   return findings;
 }
@@ -74,10 +103,15 @@ function _field(block, name) {
   // Match "**Name:** value" up to end of line; tolerate missing bold markers.
   const re = new RegExp(`\\*{0,2}${name}\\*{0,2}\\s*:\\s*(.+)`, 'i');
   const m = block.match(re);
-  if (!m) return '';
+  if (!m) {
+    return '';
+  }
   // The closing "**" of "**Name:**" lands after the colon, so the capture can
   // begin with stray markdown markers — strip leading/trailing * and space.
-  return m[1].replace(/^[\s*]+/, '').replace(/[\s*]+$/, '').trim();
+  return m[1]
+    .replace(/^[\s*]+/, '')
+    .replace(/[\s*]+$/, '')
+    .trim();
 }
 
 /**
@@ -91,7 +125,8 @@ function _parseFindingBlocks(text) {
   // headings the model writes ("### Summary") are ignored.
   // Code forms (C1/H2/M3/LOW1/NIT1) must precede the bare words so "LOW2" is not
   // partially eaten by the "low" alternative (which would strip the number).
-  const headingRe = /^#{1,6}\s*\[?\s*(C\d+|H\d+|M\d+|LOW\d+|NIT\d+|critical|high|medium|low|nit|nits|crit|med)\s*\]?\s*(.*)$/gim;
+  const headingRe =
+    /^#{1,6}\s*\[?\s*(C\d+|H\d+|M\d+|LOW\d+|NIT\d+|critical|high|medium|low|nit|nits|crit|med)\s*\]?\s*(.*)$/gim;
   const matches = [];
   let m;
   while ((m = headingRe.exec(text)) !== null) {
@@ -100,7 +135,9 @@ function _parseFindingBlocks(text) {
   for (let i = 0; i < matches.length; i++) {
     const cur = matches[i];
     const severity = _normSeverity(cur.sev);
-    if (!severity) continue;
+    if (!severity) {
+      continue;
+    }
     const bodyStart = cur.index + cur.full.length;
     const bodyEnd = i + 1 < matches.length ? matches[i + 1].index : text.length;
     const block = text.slice(bodyStart, bodyEnd);
@@ -110,7 +147,10 @@ function _parseFindingBlocks(text) {
     const statusMatch = title.match(/[—\-]\s*(FIXED|DEFERRED|NOT-?A-?DEFECT|NOT A DEFECT)\s*$/i);
     if (statusMatch) {
       status = statusMatch[1].toUpperCase().replace(/\s+/g, '-');
-      title = title.slice(0, statusMatch.index).replace(/[—\-\s]+$/, '').trim();
+      title = title
+        .slice(0, statusMatch.index)
+        .replace(/[—\-\s]+$/, '')
+        .trim();
     }
     findings.push({
       severity,
@@ -143,16 +183,16 @@ function parseAuditReport(text) {
 
   // Counts derived from the parsed headers (the structural source of truth).
   const parsedCounts = _zeroCounts();
-  for (const f of findings) parsedCounts[f.severity]++;
+  for (const f of findings) {
+    parsedCounts[f.severity]++;
+  }
   const parsedTotal = findings.length;
 
   // Authoritative summary line, when present.
-  const lineMatch = raw.match(
-    /AUDIT:\s*(\d+)\s*finding/i,
-  );
+  const lineMatch = raw.match(/AUDIT:\s*(\d+)\s*finding/i);
   const hasSummaryLine = !!lineMatch;
   const detailMatch = raw.match(
-    /AUDIT:\s*(\d+)\s*findings?\s*\(\s*(\d+)\s*critical[,;\s]+(\d+)\s*high[,;\s]+(\d+)\s*medium[,;\s]+(\d+)\s*low[,;\s]+(\d+)\s*nit/i,
+    /AUDIT:\s*(\d+)\s*findings?\s*\(\s*(\d+)\s*critical[,;\s]+(\d+)\s*high[,;\s]+(\d+)\s*medium[,;\s]+(\d+)\s*low[,;\s]+(\d+)\s*nit/i
   );
 
   let counts = parsedCounts;
@@ -195,16 +235,20 @@ function parseAuditReport(text) {
  * @returns {boolean}
  */
 function hasActionableFindings(report) {
-  if (!report || !report.counts) return false;
-  return (report.counts.critical + report.counts.high) > 0;
+  if (!report || !report.counts) {
+    return false;
+  }
+  return report.counts.critical + report.counts.high > 0;
 }
 
 /** The actionable (CRITICAL/HIGH) findings, highest severity first. */
 function actionableFindings(report) {
-  if (!report || !Array.isArray(report.findings)) return [];
+  if (!report || !Array.isArray(report.findings)) {
+    return [];
+  }
   const order = { critical: 0, high: 1 };
   return report.findings
-    .filter(f => f.severity === 'critical' || f.severity === 'high')
+    .filter((f) => f.severity === 'critical' || f.severity === 'high')
     .sort((a, b) => order[a.severity] - order[b.severity]);
 }
 
@@ -221,17 +265,26 @@ function parseFixReport(text) {
   const findings = _withCodes(_parseFindingBlocks(raw));
 
   const line = raw.match(
-    /FIX:\s*(\d+)\s*fixed[,;\s]+(\d+)\s*deferred[,;\s]+(\d+)\s*not-?a-?defect(?:[^\d]+(\d+))?/i,
+    /FIX:\s*(\d+)\s*fixed[,;\s]+(\d+)\s*deferred[,;\s]+(\d+)\s*not-?a-?defect(?:[^\d]+(\d+))?/i
   );
   const hasSummaryLine = !!line;
 
   // Prefer the per-block statuses when present; fall back to the summary line.
-  let fixed = 0, deferred = 0, notDefect = 0;
+  let fixed = 0,
+    deferred = 0,
+    notDefect = 0;
   let countedFromBlocks = 0;
   for (const f of findings) {
-    if (f.status === 'FIXED') { fixed++; countedFromBlocks++; }
-    else if (f.status === 'DEFERRED') { deferred++; countedFromBlocks++; }
-    else if (/NOT-?A-?DEFECT/.test(f.status)) { notDefect++; countedFromBlocks++; }
+    if (f.status === 'FIXED') {
+      fixed++;
+      countedFromBlocks++;
+    } else if (f.status === 'DEFERRED') {
+      deferred++;
+      countedFromBlocks++;
+    } else if (/NOT-?A-?DEFECT/.test(f.status)) {
+      notDefect++;
+      countedFromBlocks++;
+    }
   }
 
   let total = countedFromBlocks;
@@ -239,7 +292,7 @@ function parseFixReport(text) {
     fixed = parseInt(line[1], 10) || 0;
     deferred = parseInt(line[2], 10) || 0;
     notDefect = parseInt(line[3], 10) || 0;
-    total = line[4] != null ? (parseInt(line[4], 10) || 0) : (fixed + deferred + notDefect);
+    total = line[4] != null ? parseInt(line[4], 10) || 0 : fixed + deferred + notDefect;
   } else if (line && line[4] != null) {
     total = parseInt(line[4], 10) || total;
   }
@@ -252,11 +305,15 @@ function parseFixReport(text) {
  * e.g. "2 严重 / 1 高 / 3 中". Used in the transparent completion annotation.
  */
 function summarizeCounts(counts) {
-  if (!counts) return '';
+  if (!counts) {
+    return '';
+  }
   const labels = { critical: '严重', high: '高', medium: '中', low: '低', nit: 'nit' };
   const parts = [];
   for (const sev of SEVERITIES) {
-    if (counts[sev] > 0) parts.push(`${counts[sev]} ${labels[sev]}`);
+    if (counts[sev] > 0) {
+      parts.push(`${counts[sev]} ${labels[sev]}`);
+    }
   }
   return parts.join(' / ');
 }

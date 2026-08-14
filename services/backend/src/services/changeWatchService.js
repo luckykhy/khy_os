@@ -23,10 +23,10 @@
  *   KHY_CHANGE_WATCH_VERDICT(默认开)。关任一即静默。
  */
 
+const { spawnSync, execFile } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
-const { spawnSync } = require('child_process');
 
 const verdictLeaf = require('./changeWatchVerdict');
 
@@ -47,35 +47,80 @@ const INTERNAL_CONSUMER = 'khy-internal';
  * @returns {string[]}
  */
 function _acksOf(rec) {
-  if (rec && Array.isArray(rec.ackedBy)) return rec.ackedBy.slice();
+  if (rec && Array.isArray(rec.ackedBy)) {
+    return rec.ackedBy.slice();
+  }
   return rec && rec.consumed === true ? [INTERNAL_CONSUMER] : [];
 }
 
 /** 常驻总开关(与叶子门控独立;关闭即不启动 watcher)。 */
 function isWatchEnabled(env = process.env) {
   const raw = env && env.KHY_CHANGE_WATCH;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !OFF.includes(String(raw).trim().toLowerCase());
 }
 
 function _intervalMs(env = process.env) {
   const raw = Number(env && env.KHY_CHANGE_WATCH_INTERVAL_MS);
-  if (Number.isFinite(raw) && raw >= 2000 && raw <= 600000) return Math.floor(raw);
+  if (Number.isFinite(raw) && raw >= 2000 && raw <= 600000) {
+    return Math.floor(raw);
+  }
   return DEFAULT_INTERVAL_MS;
 }
 
 // ── 默认 IO 实现(真实 git / fs)──────────────────────────────────────────────
 function _git(args, cwd) {
   return spawnSync('git', args, {
-    cwd, encoding: 'utf8', timeout: 15000, stdio: ['pipe', 'pipe', 'pipe'],
+    cwd,
+    encoding: 'utf8',
+    timeout: 15000,
+    stdio: ['pipe', 'pipe', 'pipe'],
     maxBuffer: 32 * 1024 * 1024,
+  });
+}
+
+/**
+ * Non-blocking sibling of _git, shaped like a spawnSync result. checkOnce runs
+ * at every chat turn start (aiChatCore); the 3-5 sequential sync git spawns
+ * measured ~110-300ms EACH on Windows, freezing the TUI spinner ~0.9s per
+ * turn. detectChanges is awaited by checkOnce, so async here is contract-safe.
+ * Never rejects.
+ * @returns {Promise<{status:number, stdout:string, stderr:string}>}
+ */
+function _gitAsync(args, cwd) {
+  return new Promise((resolve) => {
+    try {
+      execFile(
+        'git',
+        args,
+        {
+          cwd,
+          timeout: 15000,
+          windowsHide: true,
+          maxBuffer: 32 * 1024 * 1024,
+        },
+        (err, stdout, stderr) => {
+          resolve({
+            status: err ? (typeof err.code === 'number' ? err.code : 1) : 0,
+            stdout: String(stdout || ''),
+            stderr: String(stderr || (err && err.message) || ''),
+          });
+        }
+      );
+    } catch (e) {
+      resolve({ status: 1, stdout: '', stderr: String((e && e.message) || e) });
+    }
   });
 }
 
 /** 是否把 projectDir 锚定到 git 仓库顶层(默认开;{0,false,off,no} 关 → 用原始 cwd,逐字节回退)。 */
 function _repoRootAnchorEnabled(env = process.env) {
   const raw = env && env.KHY_CHANGE_WATCH_REPO_ROOT;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !OFF.includes(String(raw).trim().toLowerCase());
 }
 
@@ -89,15 +134,30 @@ function _repoRootAnchorEnabled(env = process.env) {
  * @returns {string|null}
  */
 function _repoTopLevel(dir) {
+  // Cached per start dir: the repo top-level is stable for a process lifetime,
+  // and the sync git probe (~150-350ms) would otherwise block every turn.
+  const hit = _repoTopCache.get(dir);
+  if (hit !== undefined) {
+    return hit;
+  }
+  let top = null;
   try {
     const r = _git(['rev-parse', '--show-toplevel'], dir);
     if (r && r.status === 0) {
-      const top = String(r.stdout || '').trim();
-      if (top) return top;
+      const t = String(r.stdout || '').trim();
+      if (t) {
+        top = t;
+      }
     }
-  } catch { /* fail-soft */ }
-  return null;
+  } catch {
+    /* fail-soft */
+  }
+  _repoTopCache.set(dir, top);
+  return top;
 }
+
+// dir -> top-level path or null (negative results cached too).
+const _repoTopCache = new Map();
 
 /**
  * 解析 watcher 的 projectDir:门控开且能探到 git 顶层 → 用顶层;否则(门控关 / 非 git /
@@ -107,7 +167,9 @@ function _repoTopLevel(dir) {
  * @returns {string}
  */
 function _anchorToRepoRoot(dir, env = process.env) {
-  if (!_repoRootAnchorEnabled(env)) return dir;
+  if (!_repoRootAnchorEnabled(env)) {
+    return dir;
+  }
   const top = _repoTopLevel(dir);
   return top || dir;
 }
@@ -115,7 +177,9 @@ function _anchorToRepoRoot(dir, env = process.env) {
 /** 是否把「守卫自测夹具」排除出改动校验集(默认开;{0,false,off,no} 关 → 不排除,逐字节回退)。 */
 function _guardFixtureExclusionEnabled(env = process.env) {
   const raw = env && env.KHY_CHANGE_WATCH_SKIP_GUARD_FIXTURES;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !OFF.includes(String(raw).trim().toLowerCase());
 }
 
@@ -130,7 +194,9 @@ function _guardFixtureExclusionEnabled(env = process.env) {
  * @returns {boolean}
  */
 function _isGuardSelfTestFixture(repoRel) {
-  const norm = String(repoRel || '').split(path.sep).join('/');
+  const norm = String(repoRel || '')
+    .split(path.sep)
+    .join('/');
   return /(^|\/)scripts\/tests\/[^/]+\.test\.js$/.test(norm);
 }
 
@@ -145,33 +211,40 @@ function _isGuardSelfTestFixture(repoRel) {
  */
 function _deltaAttributionEnabled(env = process.env) {
   const raw = env && env.KHY_CHANGE_WATCH_DELTA_ATTRIBUTION;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !OFF.includes(String(raw).trim().toLowerCase());
 }
 
 /**
  * 侦测当前工作树里被改动的 khy 源文件(tracked 改动 + staged + untracked),并算一个内容签名。
  * 签名变化即代表「有人又改了」。非 git 仓库 → 空集(watcher 静默不报错)。
- * @returns {{files:string[], signature:string}}
+ * 异步:git 探测走 _gitAsync(非阻塞),避免每轮对话开头冻结事件循环(spinner 停转)。
+ * @returns {Promise<{files:string[], signature:string}>}
  */
-function _defaultDetectChanges(projectDir) {
-  const inside = _git(['rev-parse', '--is-inside-work-tree'], projectDir);
+async function _defaultDetectChanges(projectDir) {
+  const inside = await _gitAsync(['rev-parse', '--is-inside-work-tree'], projectDir);
   if (inside.status !== 0 || String(inside.stdout || '').trim() !== 'true') {
     return { files: [], signature: '' };
   }
   const set = new Set();
-  const collect = (args, splitNul) => {
-    const r = _git(args, projectDir);
-    if (r.status !== 0) return;
+  const collect = async (args, splitNul) => {
+    const r = await _gitAsync(args, projectDir);
+    if (r.status !== 0) {
+      return;
+    }
     const out = String(r.stdout || '');
     for (const raw of splitNul ? out.split('\0') : out.split('\n')) {
       const f = raw.trim();
-      if (f) set.add(f);
+      if (f) {
+        set.add(f);
+      }
     }
   };
-  collect(['diff', '--name-only'], false);
-  collect(['diff', '--name-only', '--cached'], false);
-  collect(['ls-files', '--others', '--exclude-standard'], false);
+  await collect(['diff', '--name-only'], false);
+  await collect(['diff', '--name-only', '--cached'], false);
+  await collect(['ls-files', '--others', '--exclude-standard'], false);
 
   const files = [...set];
   // 内容签名:path:mtimeMs:size,排序后哈希。确定性反映「文件是否又变了」。
@@ -227,7 +300,7 @@ function create(deps = {}) {
 
   let _lastDetectSig = null; // 上次侦测到的工作树签名(变了才重新校验)
   let _lastSpokenSig = null; // 上次已「开口播报」的 verdict 签名(去抖)
-  let _baselineSigs = null;  // 逐文件基线映射(path→"mtime:size");delta 归因的参照系,跨进程从落盘 detectBaseline 恢复
+  let _baselineSigs = null; // 逐文件基线映射(path→"mtime:size");delta 归因的参照系,跨进程从落盘 detectBaseline 恢复
   let _timer = null;
 
   /**
@@ -237,10 +310,13 @@ function create(deps = {}) {
    * @returns {Promise<{changed:boolean, verdict?:Object, spoke?:boolean}>}
    */
   async function checkOnce() {
-    if (!isWatchEnabled(env) || !verdictLeaf.isEnabled(env)) return { changed: false };
+    if (!isWatchEnabled(env) || !verdictLeaf.isEnabled(env)) {
+      return { changed: false };
+    }
     let detected;
     try {
-      detected = detectChanges(projectDir);
+      // await:默认实现已异步(非阻塞 git);注入的同步假实现经 await 原样兑现,测试不受影响。
+      detected = await detectChanges(projectDir);
     } catch (e) {
       logger(`change-watch detect error: ${e && e.message}`);
       return { changed: false };
@@ -249,8 +325,13 @@ function create(deps = {}) {
     const sig = String((detected && detected.signature) || '');
 
     // 工作树没变(或本就干净)→ 无新改动,不重复校验。
-    if (sig === '' ) { _lastDetectSig = sig; return { changed: false }; }
-    if (sig === _lastDetectSig) return { changed: false };
+    if (sig === '') {
+      _lastDetectSig = sig;
+      return { changed: false };
+    }
+    if (sig === _lastDetectSig) {
+      return { changed: false };
+    }
 
     // 跨进程去重(关键性能闸):一次性 CLI 是全新进程,内存 _lastDetectSig 为空,否则每轮对话
     // 都会对整个脏树重跑 node --check(脏树可达数十文件 → 数十次子进程 spawn,拖慢每次 LLM 调用)。
@@ -258,10 +339,16 @@ function create(deps = {}) {
     // 校验过 → 直接复用,不重算;未消费的判定仍会被 ai.js 读出并注入。
     if (_lastDetectSig === null) {
       let prev = null;
-      try { prev = store.read(); } catch { prev = null; }
+      try {
+        prev = store.read();
+      } catch {
+        prev = null;
+      }
       if (prev && prev.detectSignature === sig) {
         _lastDetectSig = sig;
-        if (prev.consumed === true) _lastSpokenSig = prev.signature;
+        if (prev.consumed === true) {
+          _lastSpokenSig = prev.signature;
+        }
         return { changed: false };
       }
     }
@@ -270,42 +357,53 @@ function create(deps = {}) {
     // ── 自基线以来的增量归因(修「整棵累积 WIP 脏树全归因你刚才那次改动」)────────────────
     // 参照系 = 上次观察时的逐文件签名基线;只有相对基线**新增 / 变化**的文件才算「刚发生的改动」。
     // 首次观察(无基线)→ 整棵脏树是既存 WIP,建立基线并**保持沉默**(不归因、不校验、不注入)。
-    let attributedFiles = files;                 // 门关 / 无 fileSigs → 归因整棵脏树(逐字节回退)
-    const curSigs = detected && detected.fileSigs && typeof detected.fileSigs === 'object'
-      ? detected.fileSigs
-      : null;
+    let attributedFiles = files; // 门关 / 无 fileSigs → 归因整棵脏树(逐字节回退)
+    const curSigs =
+      detected && detected.fileSigs && typeof detected.fileSigs === 'object'
+        ? detected.fileSigs
+        : null;
     const deltaOn = _deltaAttributionEnabled(env) && !!curSigs;
     if (deltaOn) {
       let baseline = _baselineSigs;
-      if (baseline === null) {                   // 全新进程 → 从落盘 detectBaseline 恢复参照系
+      if (baseline === null) {
+        // 全新进程 → 从落盘 detectBaseline 恢复参照系
         try {
           const prev = store.read();
-          baseline = prev && prev.detectBaseline && typeof prev.detectBaseline === 'object'
-            ? prev.detectBaseline
-            : null;
-        } catch { baseline = null; }
+          baseline =
+            prev && prev.detectBaseline && typeof prev.detectBaseline === 'object'
+              ? prev.detectBaseline
+              : null;
+        } catch {
+          baseline = null;
+        }
       }
       // 首次观察无参照 → 整棵脏树都视为既存(attributedFiles=[]);否则取「签名与基线不同」的子集。
-      attributedFiles = baseline === null
-        ? []
-        : files.filter((f) => curSigs[f] !== baseline[f]);
-      _baselineSigs = curSigs;                   // 基线推进到当前态
+      attributedFiles = baseline === null ? [] : files.filter((f) => curSigs[f] !== baseline[f]);
+      _baselineSigs = curSigs; // 基线推进到当前态
       if (attributedFiles.length === 0) {
         // 自基线以来无任何**新增/变化**(首次观察,或仅有文件被移出脏树)→ 推进基线并沉默。
         const baselineRecord = {
           schemaVersion: SCHEMA_VERSION,
           verdict: 'uncertain',
           reason: baseline === null ? 'baseline-established' : 'baseline-advanced',
-          failures: [], warnings: [], files: [], skipped: [],
-          directive: '', display: '', text: '',
-          signature: '',                         // 无 verdict 可播报 → 不注入
+          failures: [],
+          warnings: [],
+          files: [],
+          skipped: [],
+          directive: '',
+          display: '',
+          text: '',
+          signature: '', // 无 verdict 可播报 → 不注入
           detectSignature: sig,
           detectBaseline: curSigs,
           ackedBy: [INTERNAL_CONSUMER],
-          consumed: true,                        // 视为已消费 → 永不注入
+          consumed: true, // 视为已消费 → 永不注入
         };
-        try { store.write(baselineRecord); }
-        catch (e) { logger(`change-watch persist error: ${e && e.message}`); }
+        try {
+          store.write(baselineRecord);
+        } catch (e) {
+          logger(`change-watch persist error: ${e && e.message}`);
+        }
         return { changed: false, baseline: baselineRecord.reason };
       }
     }
@@ -325,7 +423,11 @@ function create(deps = {}) {
     let validation = null;
     if (validatable.length > 0) {
       try {
-        validation = await validate(validatable, { runSyntax: true, runGuards: true, runTests: false });
+        validation = await validate(validatable, {
+          runSyntax: true,
+          runGuards: true,
+          runTests: false,
+        });
       } catch (e) {
         logger(`change-watch validate error: ${e && e.message}`);
         validation = null; // → uncertain
@@ -348,9 +450,9 @@ function create(deps = {}) {
       warnings: verdict.warnings,
       files: validatable,
       skipped,
-      directive: feedback.directive,   // 命令式 [SYSTEM:] 指令,直接注入 AI 提示词
-      display: feedback.display,        // 人/工具可读的纯文本反馈
-      text: feedback.display,           // 稳定别名:任何工具可逐字采用的反馈文本
+      directive: feedback.directive, // 命令式 [SYSTEM:] 指令,直接注入 AI 提示词
+      display: feedback.display, // 人/工具可读的纯文本反馈
+      text: feedback.display, // 稳定别名:任何工具可逐字采用的反馈文本
       signature: verdictLeaf.verdictSignature(verdict),
       detectSignature: sig, // 工作树内容签名,供跨进程去重(同一棵树不重复校验)
 
@@ -360,7 +462,9 @@ function create(deps = {}) {
       consumed: !spoke,
     };
     // delta 模式:把基线随本次判定一并推进(供跨进程下次增量归因);门关时不加字段 → 逐字节回退。
-    if (deltaOn) record.detectBaseline = curSigs;
+    if (deltaOn) {
+      record.detectBaseline = curSigs;
+    }
 
     try {
       store.write(record);
@@ -372,8 +476,16 @@ function create(deps = {}) {
       _lastSpokenSig = record.signature;
       logger(`change-watch: ${verdict.verdict} — ${feedback.display.split('\n')[0]}`);
       if (onFeedback) {
-        try { onFeedback({ verdict: verdict.verdict, directive: feedback.directive, display: feedback.display, files: validatable }); }
-        catch (e) { logger(`change-watch onFeedback error: ${e && e.message}`); }
+        try {
+          onFeedback({
+            verdict: verdict.verdict,
+            directive: feedback.directive,
+            display: feedback.display,
+            files: validatable,
+          });
+        } catch (e) {
+          logger(`change-watch onFeedback error: ${e && e.message}`);
+        }
       }
     }
 
@@ -381,37 +493,57 @@ function create(deps = {}) {
   }
 
   async function start(opts = {}) {
-    if (_timer) return { started: false, reason: 'already-running' };
-    if (!isWatchEnabled(env)) return { started: false, reason: 'disabled' };
-    const ms = Number.isFinite(opts.intervalMs) ? Math.max(2000, Math.floor(opts.intervalMs)) : _intervalMs(env);
+    if (_timer) {
+      return { started: false, reason: 'already-running' };
+    }
+    if (!isWatchEnabled(env)) {
+      return { started: false, reason: 'disabled' };
+    }
+    const ms = Number.isFinite(opts.intervalMs)
+      ? Math.max(2000, Math.floor(opts.intervalMs))
+      : _intervalMs(env);
     // 启动即跑一次(立刻反映启动前已发生的改动),再定时。
     await checkOnce().catch(() => {});
-    _timer = setInterval(() => { Promise.resolve(checkOnce()).catch(() => {}); }, ms);
-    if (_timer && typeof _timer.unref === 'function') _timer.unref();
+    _timer = setInterval(() => {
+      Promise.resolve(checkOnce()).catch(() => {});
+    }, ms);
+    if (_timer && typeof _timer.unref === 'function') {
+      _timer.unref();
+    }
     logger(`change-watch started (interval=${ms}ms, dir=${projectDir})`);
     return { started: true, intervalMs: ms };
   }
 
   function stop() {
-    if (!_timer) return { stopped: false };
+    if (!_timer) {
+      return { stopped: false };
+    }
     clearInterval(_timer);
     _timer = null;
     return { stopped: true };
   }
 
   function getLatestVerdict() {
-    try { return store.read(); } catch { return null; }
+    try {
+      return store.read();
+    } catch {
+      return null;
+    }
   }
 
   /** 标记最新记录已被某 AI 消费(注入过),避免重复灌。返回是否成功。 */
   function markConsumed() {
     try {
       const rec = store.read();
-      if (!rec) return false;
+      if (!rec) {
+        return false;
+      }
       rec.consumed = true;
       store.write(rec);
       return true;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 
   /** 把一条记录投影成对外反馈对象(公开契约字段)。 */
@@ -436,14 +568,26 @@ function create(deps = {}) {
    * @returns {Object|null}
    */
   function pendingFor(consumerId = INTERNAL_CONSUMER) {
-    if (!isWatchEnabled(env) || !verdictLeaf.isEnabled(env)) return null;
+    if (!isWatchEnabled(env) || !verdictLeaf.isEnabled(env)) {
+      return null;
+    }
     const cid = String(consumerId || INTERNAL_CONSUMER).trim() || INTERNAL_CONSUMER;
     let rec = null;
-    try { rec = store.read(); } catch { rec = null; }
-    if (!rec) return null;
+    try {
+      rec = store.read();
+    } catch {
+      rec = null;
+    }
+    if (!rec) {
+      return null;
+    }
     const directive = String(rec.directive || '').trim();
-    if (!directive) return null;
-    if (_acksOf(rec).includes(cid)) return null;
+    if (!directive) {
+      return null;
+    }
+    if (_acksOf(rec).includes(cid)) {
+      return null;
+    }
     return _projectFeedback(rec);
   }
 
@@ -460,26 +604,49 @@ function create(deps = {}) {
    * @returns {Object|null}
    */
   function consumePendingInjection(consumerId = INTERNAL_CONSUMER) {
-    if (!isWatchEnabled(env) || !verdictLeaf.isEnabled(env)) return null;
+    if (!isWatchEnabled(env) || !verdictLeaf.isEnabled(env)) {
+      return null;
+    }
     const cid = String(consumerId || INTERNAL_CONSUMER).trim() || INTERNAL_CONSUMER;
     let rec = null;
-    try { rec = store.read(); } catch { rec = null; }
-    if (!rec) return null;
+    try {
+      rec = store.read();
+    } catch {
+      rec = null;
+    }
+    if (!rec) {
+      return null;
+    }
     const directive = String(rec.directive || '').trim();
-    if (!directive) return null;
+    if (!directive) {
+      return null;
+    }
     const acks = _acksOf(rec);
-    if (acks.includes(cid)) return null;
+    if (acks.includes(cid)) {
+      return null;
+    }
     acks.push(cid);
     rec.ackedBy = acks;
-    if (cid === INTERNAL_CONSUMER) rec.consumed = true; // 兼容旧读取者(ai.js / 渲染器)的镜像
-    try { store.write(rec); } catch { /* best-effort,落盘失败不影响本次注入 */ }
+    if (cid === INTERNAL_CONSUMER) {
+      rec.consumed = true;
+    } // 兼容旧读取者(ai.js / 渲染器)的镜像
+    try {
+      store.write(rec);
+    } catch {
+      /* best-effort,落盘失败不影响本次注入 */
+    }
     _lastSpokenSig = rec.signature || _lastSpokenSig;
     return _projectFeedback(rec);
   }
 
   return {
-    checkOnce, start, stop, getLatestVerdict, markConsumed,
-    consumePendingInjection, pendingFor,
+    checkOnce,
+    start,
+    stop,
+    getLatestVerdict,
+    markConsumed,
+    consumePendingInjection,
+    pendingFor,
     getStorePath: () => (typeof store.path === 'function' ? store.path() : null),
     _projectDir: projectDir,
   };
@@ -489,10 +656,15 @@ function create(deps = {}) {
 function _defaultStore(projectDir) {
   let dir = null;
   function _dir() {
-    if (dir) return dir;
+    if (dir) {
+      return dir;
+    }
     let base;
-    try { base = require('../utils/dataHome').getDataHome(); }
-    catch { base = path.join(require('os').homedir(), '.khyos'); }
+    try {
+      base = require('../utils/dataHome').getDataHome();
+    } catch {
+      base = path.join(require('os').homedir(), '.khyos');
+    }
     dir = path.join(base, 'change-watch');
     return dir;
   }
@@ -507,11 +679,15 @@ function _defaultStore(projectDir) {
     },
     read() {
       const dst = path.join(_dir(), 'verdict.json');
-      if (!fs.existsSync(dst)) return null;
+      if (!fs.existsSync(dst)) {
+        return null;
+      }
       return JSON.parse(fs.readFileSync(dst, 'utf8'));
     },
     // 公开契约路径:外部 AI 工具可直接定位并读取这份反馈(<dataHome>/change-watch/verdict.json)。
-    path() { return path.join(_dir(), 'verdict.json'); },
+    path() {
+      return path.join(_dir(), 'verdict.json');
+    },
   };
 }
 
@@ -526,14 +702,17 @@ function _defaultStore(projectDir) {
  * @returns {(context?:Object)=>Promise<{action:'modify'|'allow', additionalContext?:string}>}
  */
 function makePrePromptInjector(consume) {
-  const take = typeof consume === 'function' ? consume : () => _instance().consumePendingInjection();
+  const take =
+    typeof consume === 'function' ? consume : () => _instance().consumePendingInjection();
   return async function changeWatchInjector() {
     try {
       const pending = take();
       if (pending && pending.directive) {
         return { action: 'modify', additionalContext: String(pending.directive) };
       }
-    } catch { /* fail-soft:反馈通道故障绝不挡 AI 管线 */ }
+    } catch {
+      /* fail-soft:反馈通道故障绝不挡 AI 管线 */
+    }
     return { action: 'allow' };
   };
 }
@@ -541,7 +720,9 @@ function makePrePromptInjector(consume) {
 // ── 模块级单例(daemon / CLI 用同一实例)──────────────────────────────────────
 let _singleton = null;
 function _instance() {
-  if (!_singleton) _singleton = create();
+  if (!_singleton) {
+    _singleton = create();
+  }
   return _singleton;
 }
 

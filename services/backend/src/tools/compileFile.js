@@ -10,23 +10,28 @@
 
 const fs = require('fs');
 const path = require('path');
-const { defineTool } = require('./_baseTool');
-const compileRegistry = require('../services/compile/registry');
+
 const { parseDiagnostics } = require('../services/compile/diagnostics');
-const { spawnWithIdleTimeout } = require('../utils/spawnWithIdleTimeout');
+const compileRegistry = require('../services/compile/registry');
 const { createEphemeralDir } = require('../utils/ephemeralTmp');
+const { spawnWithIdleTimeout } = require('../utils/spawnWithIdleTimeout');
+
+const { defineTool } = require('./_baseTool');
 
 const DEFAULT_IDLE_MS = 60_000;
 const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
 
 /** Heuristic: did a spawn failure mean "toolchain binary not found"? */
 function _looksLikeMissingBinary(message) {
-  return /ENOENT|not found|command not found|无法找到|不是内部或外部命令/i.test(String(message || ''));
+  return /ENOENT|not found|command not found|无法找到|不是内部或外部命令/i.test(
+    String(message || '')
+  );
 }
 
 module.exports = defineTool({
   name: 'compile_file',
-  description: 'Compile or type-check a single source file/snippet (C, C++, Rust, Go, Java, Python, TypeScript), returning structured errors/warnings. Missing toolchains trigger an interactive install. Use build_project for whole projects.',
+  description:
+    'Compile or type-check a single source file/snippet (C, C++, Rust, Go, Java, Python, TypeScript), returning structured errors/warnings. Missing toolchains trigger an interactive install. Use build_project for whole projects.',
   category: 'execution',
   risk: 'medium',
   isReadOnly: false,
@@ -35,11 +40,31 @@ module.exports = defineTool({
   searchHint: 'compile build cc gcc rustc javac tsc single file language',
 
   inputSchema: {
-    language: { type: 'string', required: true, description: 'Source language: c | cpp | rust | go | java | python | typescript' },
-    code: { type: 'string', required: false, description: 'Inline source to compile (one of code/file required)' },
-    file: { type: 'string', required: false, description: 'Path to an existing source file to compile' },
-    filename: { type: 'string', required: false, description: 'Base name (controls stem / Java class; defaults Main). e.g. "Main"' },
-    outputPath: { type: 'string', required: false, description: 'Persist the compiled artifact here (default: ephemeral, discarded after check)' },
+    language: {
+      type: 'string',
+      required: true,
+      description: 'Source language: c | cpp | rust | go | java | python | typescript',
+    },
+    code: {
+      type: 'string',
+      required: false,
+      description: 'Inline source to compile (one of code/file required)',
+    },
+    file: {
+      type: 'string',
+      required: false,
+      description: 'Path to an existing source file to compile',
+    },
+    filename: {
+      type: 'string',
+      required: false,
+      description: 'Base name (controls stem / Java class; defaults Main). e.g. "Main"',
+    },
+    outputPath: {
+      type: 'string',
+      required: false,
+      description: 'Persist the compiled artifact here (default: ephemeral, discarded after check)',
+    },
     timeout: { type: 'number', required: false, description: 'Idle timeout in ms (default 60000)' },
   },
 
@@ -72,12 +97,19 @@ module.exports = defineTool({
     try {
       const dep = require('../services/dependency');
       const miss = dep.ensure(lang.toolchainDepId);
-      if (miss) return { ...miss.toStructuredResult(), depId: lang.toolchainDepId };
-    } catch { /* resolver unavailable — fall through; ENOENT below still maps */ }
+      if (miss) {
+        return { ...miss.toStructuredResult(), depId: lang.toolchainDepId };
+      }
+    } catch {
+      /* resolver unavailable — fall through; ENOENT below still maps */
+    }
 
     // ── materialize the source + an output dir (ephemeral unless persisted) ──
     const ephemeral = createEphemeralDir({ prefix: `compile-${lang.id}` });
-    const stem = _safeStem(params.filename || (hasFile ? path.basename(params.file).replace(/\.[^.]+$/, '') : 'Main'), lang);
+    const stem = _safeStem(
+      params.filename || (hasFile ? path.basename(params.file).replace(/\.[^.]+$/, '') : 'Main'),
+      lang
+    );
     let src;
     let outDir = ephemeral.path;
     try {
@@ -88,7 +120,10 @@ module.exports = defineTool({
           return { success: false, error: `Source file not found: ${src}` };
         }
       } else {
-        const srcName = lang.id === 'java' ? `${compileRegistry._javaClass(stem)}.java` : `${stem}${lang.exts[0]}`;
+        const srcName =
+          lang.id === 'java'
+            ? `${compileRegistry._javaClass(stem)}.java`
+            : `${stem}${lang.exts[0]}`;
         src = path.join(ephemeral.path, srcName);
         fs.writeFileSync(src, params.code, 'utf-8');
       }
@@ -98,7 +133,10 @@ module.exports = defineTool({
       }
 
       const argv = lang.buildArgv({ src, outDir, stem });
-      const idleMs = Math.max(1000, parseInt(String(params.timeout || DEFAULT_IDLE_MS), 10) || DEFAULT_IDLE_MS);
+      const idleMs = Math.max(
+        1000,
+        parseInt(String(params.timeout || DEFAULT_IDLE_MS), 10) || DEFAULT_IDLE_MS
+      );
 
       let result;
       try {
@@ -108,10 +146,22 @@ module.exports = defineTool({
           // Java pins its JVM to UTF-8 output (see compile/registry), so decode the
           // pipe as UTF-8 instead of guessing the console code page — otherwise CN
           // Windows mojibakes the compiler diagnostics.
-          ...(lang.utf8Output ? { outputEncoding: require('../utils/javaEncoding').outputEncoding() } : {}),
-          spawnOpts: { cwd: outDir, env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' }, windowsHide: true },
+          ...(lang.utf8Output
+            ? { outputEncoding: require('../utils/javaEncoding').outputEncoding() }
+            : {}),
+          spawnOpts: {
+            cwd: outDir,
+            env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
+            windowsHide: true,
+          },
           label: `compile_file:${lang.id}`,
-          onActivity: (payload) => { try { context?.onActivity?.({ tool: 'compile_file', language: lang.id, ...payload }); } catch { /* non-critical */ } },
+          onActivity: (payload) => {
+            try {
+              context?.onActivity?.({ tool: 'compile_file', language: lang.id, ...payload });
+            } catch {
+              /* non-critical */
+            }
+          },
         });
       } catch (err) {
         const msg = (err && err.message) || String(err);
@@ -122,9 +172,18 @@ module.exports = defineTool({
         if (_looksLikeMissingBinary(msg)) {
           try {
             const dep = require('../services/dependency');
-            return { ...new dep.MissingDependencyError(lang.toolchainDepId).toStructuredResult(), depId: lang.toolchainDepId };
-          } catch { /* dependency subsystem unavailable */ }
-          return { success: false, depId: lang.toolchainDepId, error: `Required toolchain not installed: ${lang.bin}` };
+            return {
+              ...new dep.MissingDependencyError(lang.toolchainDepId).toStructuredResult(),
+              depId: lang.toolchainDepId,
+            };
+          } catch {
+            /* dependency subsystem unavailable */
+          }
+          return {
+            success: false,
+            depId: lang.toolchainDepId,
+            error: `Required toolchain not installed: ${lang.bin}`,
+          };
         }
         result = { stdout: '', stderr: msg, code: 1 };
       }
@@ -141,8 +200,12 @@ module.exports = defineTool({
         const built = lang.artifactPath({ outDir, stem });
         if (built && fs.existsSync(built)) {
           if (params.outputPath && path.resolve(params.outputPath) !== built) {
-            try { fs.copyFileSync(built, path.resolve(params.outputPath)); artifact = path.resolve(params.outputPath); }
-            catch { artifact = built; }
+            try {
+              fs.copyFileSync(built, path.resolve(params.outputPath));
+              artifact = path.resolve(params.outputPath);
+            } catch {
+              artifact = built;
+            }
           } else {
             artifact = built;
           }
@@ -176,9 +239,16 @@ module.exports = defineTool({
 
 /** Sanitize a stem into a safe file/identifier base. */
 function _safeStem(raw, lang) {
-  let s = String(raw || 'Main').replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9_]/g, '_').slice(0, 48);
-  if (!s) s = 'Main';
+  let s = String(raw || 'Main')
+    .replace(/\.[^.]+$/, '')
+    .replace(/[^A-Za-z0-9_]/g, '_')
+    .slice(0, 48);
+  if (!s) {
+    s = 'Main';
+  }
   // Java class names must start with a letter/underscore.
-  if (lang.id === 'java' && !/^[A-Za-z_]/.test(s)) s = `C_${s}`;
+  if (lang.id === 'java' && !/^[A-Za-z_]/.test(s)) {
+    s = `C_${s}`;
+  }
   return s;
 }

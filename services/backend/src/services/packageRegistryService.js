@@ -47,15 +47,21 @@ function isEnabled(env = process.env) {
 
 function _clampLimit(n) {
   const v = Number(n);
-  if (!Number.isFinite(v) || v <= 0) return DEFAULT_LIMIT;
+  if (!Number.isFinite(v) || v <= 0) {
+    return DEFAULT_LIMIT;
+  }
   return Math.min(MAX_LIMIT, Math.max(1, Math.floor(v)));
 }
 
 /** 只允许白名单主机的 https GET,防 SSRF / 主机逃逸。 */
 function _assertAllowed(url) {
   const u = new URL(url);
-  if (u.protocol !== 'https:') throw new Error(`refusing non-https url: ${u.protocol}`);
-  if (!ALLOWED_HOSTS.has(u.host)) throw new Error(`host not in allowlist: ${u.host}`);
+  if (u.protocol !== 'https:') {
+    throw new Error(`refusing non-https url: ${u.protocol}`);
+  }
+  if (!ALLOWED_HOSTS.has(u.host)) {
+    throw new Error(`host not in allowlist: ${u.host}`);
+  }
   return u;
 }
 
@@ -67,18 +73,24 @@ async function _getJson(url, { fetchImpl, timeoutMs }) {
     return { ok: false, status: 0, error: err.message };
   }
   const doFetch = fetchImpl || (typeof fetch === 'function' ? fetch : null);
-  if (!doFetch) return { ok: false, status: 0, error: 'fetch unavailable in this runtime' };
+  if (!doFetch) {
+    return { ok: false, status: 0, error: 'fetch unavailable in this runtime' };
+  }
   let signal;
   try {
     signal = AbortSignal.timeout(timeoutMs || DEFAULT_TIMEOUT_MS);
-  } catch { /* older runtime: no AbortSignal.timeout — fetch without signal */ }
+  } catch {
+    /* older runtime: no AbortSignal.timeout — fetch without signal */
+  }
   try {
     const res = await doFetch(url, {
       signal,
       headers: { Accept: 'application/json', 'User-Agent': 'khy-os-registry/1.0' },
     });
     const status = res && typeof res.status === 'number' ? res.status : 0;
-    if (!res || !res.ok) return { ok: false, status, error: `HTTP ${status}` };
+    if (!res || !res.ok) {
+      return { ok: false, status, error: `HTTP ${status}` };
+    }
     const json = await res.json();
     return { ok: true, status, json };
   } catch (err) {
@@ -101,14 +113,26 @@ function _npmPackageFromSearchObject(obj) {
     npm: links.npm || (p.name ? `https://www.npmjs.com/package/${p.name}` : ''),
     publisher: (p.publisher && p.publisher.username) || '',
     date: p.date || '',
-    score: obj && obj.score && typeof obj.score.final === 'number' ? Number(obj.score.final.toFixed(3)) : null,
+    score:
+      obj && obj.score && typeof obj.score.final === 'number'
+        ? Number(obj.score.final.toFixed(3))
+        : null,
   };
 }
 
 async function _npmSearch(query, limit, ctx) {
   const url = `https://${NPM_HOST}/-/v1/search?text=${encodeURIComponent(query)}&size=${limit}`;
   const r = await _getJson(url, ctx);
-  if (!r.ok) return { success: false, registry: 'npm', action: 'search', query, error: r.error, results: [] };
+  if (!r.ok) {
+    return {
+      success: false,
+      registry: 'npm',
+      action: 'search',
+      query,
+      error: r.error,
+      results: [],
+    };
+  }
   const objects = Array.isArray(r.json && r.json.objects) ? r.json.objects : [];
   return {
     success: true,
@@ -128,8 +152,12 @@ async function _npmInfo(name, ctx) {
   if (!r.ok) {
     const notFound = r.status === 404;
     return {
-      success: false, registry: 'npm', action: 'info', query: name,
-      notFound, error: notFound ? `npm package not found: ${name}` : r.error,
+      success: false,
+      registry: 'npm',
+      action: 'info',
+      query: name,
+      notFound,
+      error: notFound ? `npm package not found: ${name}` : r.error,
     };
   }
   const j = r.json || {};
@@ -137,15 +165,23 @@ async function _npmInfo(name, ctx) {
   const v = (j.versions && j.versions[latest]) || {};
   const repo = v.repository || j.repository || {};
   return {
-    success: true, registry: 'npm', action: 'info', query: name,
+    success: true,
+    registry: 'npm',
+    action: 'info',
+    query: name,
     package: {
       name: j.name || name,
       version: latest,
       description: (v.description || j.description || '').slice(0, 500),
       homepage: v.homepage || j.homepage || '',
-      license: typeof v.license === 'string' ? v.license : (v.license && v.license.type) || j.license || '',
+      license:
+        typeof v.license === 'string'
+          ? v.license
+          : (v.license && v.license.type) || j.license || '',
       repository: (repo && (repo.url || repo)) || '',
-      keywords: Array.isArray(v.keywords || j.keywords) ? (v.keywords || j.keywords).slice(0, 12) : [],
+      keywords: Array.isArray(v.keywords || j.keywords)
+        ? (v.keywords || j.keywords).slice(0, 12)
+        : [],
       npm: `https://www.npmjs.com/package/${j.name || name}`,
     },
   };
@@ -161,7 +197,10 @@ function _pypiPackageFromJson(j, name) {
     version: info.version || '',
     description: (info.summary || '').slice(0, 500),
     homepage: info.home_page || projectUrls.Homepage || projectUrls.Home || '',
-    license: (typeof info.license === 'string' ? info.license : '') || (info.classifiers || []).find(c => /^License ::/.test(c)) || '',
+    license:
+      (typeof info.license === 'string' ? info.license : '') ||
+      (info.classifiers || []).find((c) => /^License ::/.test(c)) ||
+      '',
     requiresPython: info.requires_python || '',
     author: info.author || '',
     pypi: `https://pypi.org/project/${info.name || name}/`,
@@ -174,11 +213,21 @@ async function _pypiInfo(name, ctx) {
   if (!r.ok) {
     const notFound = r.status === 404;
     return {
-      success: false, registry: 'pypi', action: 'info', query: name,
-      notFound, error: notFound ? `PyPI package not found: ${name}` : r.error,
+      success: false,
+      registry: 'pypi',
+      action: 'info',
+      query: name,
+      notFound,
+      error: notFound ? `PyPI package not found: ${name}` : r.error,
     };
   }
-  return { success: true, registry: 'pypi', action: 'info', query: name, package: _pypiPackageFromJson(r.json, name) };
+  return {
+    success: true,
+    registry: 'pypi',
+    action: 'info',
+    query: name,
+    package: _pypiPackageFromJson(r.json, name),
+  };
 }
 
 /** 从 web 搜索结果 URL 里抽 pypi.org/project/<name> 的包名(去重、保序)。 */
@@ -190,7 +239,10 @@ function _extractPypiNames(results) {
     const m = /pypi\.org\/project\/([A-Za-z0-9._-]+)/i.exec(url);
     if (m && m[1]) {
       const nm = m[1].toLowerCase();
-      if (!seen.has(nm)) { seen.add(nm); names.push(m[1]); }
+      if (!seen.has(nm)) {
+        seen.add(nm);
+        names.push(m[1]);
+      }
     }
   }
   return names;
@@ -205,8 +257,14 @@ async function _pypiSearch(query, limit, ctx) {
   const webSearch = ctx.webSearch;
   if (typeof webSearch !== 'function') {
     return {
-      success: false, registry: 'pypi', action: 'search', query, method: 'unavailable', results: [],
-      error: 'PyPI 无公开的关键词搜索 JSON API,且本会话 web 搜索不可用。请改用 action:"info" 并给出确切包名。',
+      success: false,
+      registry: 'pypi',
+      action: 'search',
+      query,
+      method: 'unavailable',
+      results: [],
+      error:
+        'PyPI 无公开的关键词搜索 JSON API,且本会话 web 搜索不可用。请改用 action:"info" 并给出确切包名。',
     };
   }
   let searchRes;
@@ -214,27 +272,47 @@ async function _pypiSearch(query, limit, ctx) {
     searchRes = await webSearch(`${query} site:pypi.org`, { count: Math.max(limit * 2, 10) });
   } catch (err) {
     return {
-      success: false, registry: 'pypi', action: 'search', query, method: 'web-search-fallback', results: [],
+      success: false,
+      registry: 'pypi',
+      action: 'search',
+      query,
+      method: 'web-search-fallback',
+      results: [],
       error: `web 搜索失败:${(err && err.message) || String(err)}`,
     };
   }
   if (!searchRes || searchRes.success === false) {
     return {
-      success: false, registry: 'pypi', action: 'search', query, method: 'web-search-fallback', results: [],
-      error: (searchRes && searchRes.error) || 'web 搜索无结果', depId: searchRes && searchRes.depId,
+      success: false,
+      registry: 'pypi',
+      action: 'search',
+      query,
+      method: 'web-search-fallback',
+      results: [],
+      error: (searchRes && searchRes.error) || 'web 搜索无结果',
+      depId: searchRes && searchRes.depId,
     };
   }
   const names = _extractPypiNames(searchRes.results).slice(0, limit);
   if (names.length === 0) {
     return {
-      success: true, registry: 'pypi', action: 'search', query, method: 'web-search-fallback', results: [],
+      success: true,
+      registry: 'pypi',
+      action: 'search',
+      query,
+      method: 'web-search-fallback',
+      results: [],
       note: '站内搜索未从结果中解析到 pypi.org/project 包名。请改用 action:"info" 并给出确切包名。',
     };
   }
-  const infos = await Promise.all(names.map(nm => _pypiInfo(nm, ctx)));
-  const results = infos.filter(x => x && x.success && x.package).map(x => x.package);
+  const infos = await Promise.all(names.map((nm) => _pypiInfo(nm, ctx)));
+  const results = infos.filter((x) => x && x.success && x.package).map((x) => x.package);
   return {
-    success: true, registry: 'pypi', action: 'search', query, method: 'web-search-fallback',
+    success: true,
+    registry: 'pypi',
+    action: 'search',
+    query,
+    method: 'web-search-fallback',
     note: 'PyPI 无公开关键词搜索 API,此结果经 web 站内搜索 + PyPI JSON API 富集(最佳努力,非官方全量检索)。',
     results,
   };
@@ -257,11 +335,17 @@ async function _pypiSearch(query, limit, ctx) {
 async function queryRegistry(opts = {}) {
   const env = opts.env || process.env;
   if (!isEnabled(env)) {
-    return { success: false, disabled: true, error: 'package registry lookups disabled (KHY_PACKAGE_REGISTRY=0)' };
+    return {
+      success: false,
+      disabled: true,
+      error: 'package registry lookups disabled (KHY_PACKAGE_REGISTRY=0)',
+    };
   }
 
   const rawQuery = typeof opts.query === 'string' ? opts.query.trim().slice(0, MAX_QUERY_LEN) : '';
-  if (!rawQuery) return { success: false, error: 'query is required (keyword for search, exact name for info)' };
+  if (!rawQuery) {
+    return { success: false, error: 'query is required (keyword for search, exact name for info)' };
+  }
 
   const action = opts.action === 'info' ? 'info' : 'search';
   const registry = ['npm', 'pypi', 'auto'].includes(opts.registry) ? opts.registry : 'auto';
@@ -272,8 +356,12 @@ async function queryRegistry(opts = {}) {
   if (!webSearch) {
     try {
       const ws = require('./webSearchService');
-      if (ws && typeof ws.search === 'function') webSearch = ws.search;
-    } catch { /* web search unavailable — pypi search degrades honestly */ }
+      if (ws && typeof ws.search === 'function') {
+        webSearch = ws.search;
+      }
+    } catch {
+      /* web search unavailable — pypi search degrades honestly */
+    }
   }
 
   const ctx = {
@@ -284,22 +372,39 @@ async function queryRegistry(opts = {}) {
 
   try {
     if (action === 'info') {
-      if (registry === 'npm') return await _npmInfo(rawQuery, ctx);
-      if (registry === 'pypi') return await _pypiInfo(rawQuery, ctx);
+      if (registry === 'npm') {
+        return await _npmInfo(rawQuery, ctx);
+      }
+      if (registry === 'pypi') {
+        return await _pypiInfo(rawQuery, ctx);
+      }
       // auto: 先 npm,未命中再 pypi。
       const npm = await _npmInfo(rawQuery, ctx);
-      if (npm.success) return npm;
+      if (npm.success) {
+        return npm;
+      }
       const pypi = await _pypiInfo(rawQuery, ctx);
-      if (pypi.success) return pypi;
+      if (pypi.success) {
+        return pypi;
+      }
       return {
-        success: false, registry: 'auto', action: 'info', query: rawQuery,
-        error: `包名 "${rawQuery}" 在 npm 与 PyPI 均未找到`, npm, pypi,
+        success: false,
+        registry: 'auto',
+        action: 'info',
+        query: rawQuery,
+        error: `包名 "${rawQuery}" 在 npm 与 PyPI 均未找到`,
+        npm,
+        pypi,
       };
     }
 
     // action === 'search'
-    if (registry === 'npm') return await _npmSearch(rawQuery, limit, ctx);
-    if (registry === 'pypi') return await _pypiSearch(rawQuery, limit, ctx);
+    if (registry === 'npm') {
+      return await _npmSearch(rawQuery, limit, ctx);
+    }
+    if (registry === 'pypi') {
+      return await _pypiSearch(rawQuery, limit, ctx);
+    }
     // auto: 两者并行,合并。
     const [npm, pypi] = await Promise.all([
       _npmSearch(rawQuery, limit, ctx),
@@ -315,7 +420,13 @@ async function queryRegistry(opts = {}) {
     };
   } catch (err) {
     // 顶层兜底:任何未预期异常都转成结构化失败,永不冒泡打断会话。
-    return { success: false, registry, action, query: rawQuery, error: `registry query failed: ${(err && err.message) || String(err)}` };
+    return {
+      success: false,
+      registry,
+      action,
+      query: rawQuery,
+      error: `registry query failed: ${(err && err.message) || String(err)}`,
+    };
   }
 }
 

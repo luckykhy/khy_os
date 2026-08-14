@@ -14,6 +14,7 @@
  */
 
 const nodePath = require('path');
+
 const { USER_TRACK_PROTECTED_NAMES } = require('./extensionLoader');
 
 function isWithin(root, target, pathImpl) {
@@ -31,21 +32,21 @@ function isWithin(root, target, pathImpl) {
  * @returns {{ safe:boolean, allowed:Array, rejected:Array<{path,reason}> }}
  */
 function planOfficialUpdate(opts = {}) {
-  const {
-    coreRoot,
-    protectedRoots = [],
-    incomingFiles = [],
-    pathImpl = nodePath,
-  } = opts;
+  const { coreRoot, protectedRoots = [], incomingFiles = [], pathImpl = nodePath } = opts;
 
-  if (!coreRoot) throw new Error('planOfficialUpdate: 缺少 coreRoot');
+  if (!coreRoot) {
+    throw new Error('planOfficialUpdate: 缺少 coreRoot');
+  }
 
   const allowed = [];
   const rejected = [];
 
   for (const file of incomingFiles) {
     const target = file && file.path;
-    if (!target) { rejected.push({ path: String(target), reason: '缺少 path' }); continue; }
+    if (!target) {
+      rejected.push({ path: String(target), reason: '缺少 path' });
+      continue;
+    }
 
     // 1) 必须落在核心轨内。
     const inCore = isWithin(coreRoot, target, pathImpl);
@@ -57,10 +58,15 @@ function planOfficialUpdate(opts = {}) {
     let hitsProtected = false;
     for (const proot of protectedRoots) {
       const inProt = isWithin(proot, inCore.abs, pathImpl);
-      if (inProt.within) { hitsProtected = true; break; }
+      if (inProt.within) {
+        hitsProtected = true;
+        break;
+      }
       // 受保护名兜底：路径段含 user_patch/ extensions/ 也拦。
     }
-    const segHit = inCore.abs.split(pathImpl.sep).some((seg) => USER_TRACK_PROTECTED_NAMES.includes(seg));
+    const segHit = inCore.abs
+      .split(pathImpl.sep)
+      .some((seg) => USER_TRACK_PROTECTED_NAMES.includes(seg));
     if (hitsProtected || segHit) {
       rejected.push({ path: target, reason: '目标命中受保护用户扩展轨，严禁官方覆盖（红线4）' });
       continue;
@@ -103,7 +109,11 @@ function detectBreakingChange(opts = {}) {
 function applyOfficialUpdate(opts = {}) {
   const { plan, fs = require('fs'), pathImpl = nodePath } = opts;
   if (!plan || plan.safe !== true) {
-    return { applied: [], aborted: true, reason: '更新包不安全（命中用户轨或越界），已拒绝施工（红线4）' };
+    return {
+      applied: [],
+      aborted: true,
+      reason: '更新包不安全（命中用户轨或越界），已拒绝施工（红线4）',
+    };
   }
   const applied = [];
   for (const f of plan.allowed) {

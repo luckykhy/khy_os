@@ -8,8 +8,12 @@ class SnipTool extends BaseTool {
   static searchHint = 'truncate trim tool result context window';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Replace a previous tool result with a shorter summary to free context window space.
@@ -21,7 +25,10 @@ Use when a tool result is too large and you've already extracted the needed info
       type: 'object',
       properties: {
         tool_use_id: { type: 'string', description: 'The tool_use_id of the result to replace' },
-        replacement: { type: 'string', description: 'Brief summary to replace the original result' },
+        replacement: {
+          type: 'string',
+          description: 'Brief summary to replace the original result',
+        },
       },
       required: ['tool_use_id', 'replacement'],
     };

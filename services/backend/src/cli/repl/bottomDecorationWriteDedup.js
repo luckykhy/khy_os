@@ -26,7 +26,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_BOTTOM_DECORATION_WRITE_DEDUP;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -41,13 +43,19 @@ let _lastWritten = null;
  */
 function shouldWrite(str, env = process.env) {
   try {
-    if (!isEnabled(env)) return true;                 // 门控关 → 恒写(逐字节回退)
-    if (typeof str !== 'string') return true;         // 非串 → 保守照写
-    if (_lastWritten !== null && _lastWritten === str) return false; // 与上次相同 → 跳过
-    _lastWritten = str;                               // 记录本次写出
+    if (!isEnabled(env)) {
+      return true;
+    } // 门控关 → 恒写(逐字节回退)
+    if (typeof str !== 'string') {
+      return true;
+    } // 非串 → 保守照写
+    if (_lastWritten !== null && _lastWritten === str) {
+      return false;
+    } // 与上次相同 → 跳过
+    _lastWritten = str; // 记录本次写出
     return true;
   } catch {
-    return true;                                      // 异常 → 保守照写
+    return true; // 异常 → 保守照写
   }
 }
 
@@ -55,10 +63,14 @@ function shouldWrite(str, env = process.env) {
  * 使去重槽失效:强制下次 shouldWrite 必返 true。
  * 在 frame 渲染 / 拆除等「终端下方状态被别处改动」时调用。
  */
-function invalidate() { _lastWritten = null; }
+function invalidate() {
+  _lastWritten = null;
+}
 
 // 测试/生命周期钩子。
-function _peek() { return _lastWritten; }
+function _peek() {
+  return _lastWritten;
+}
 
 module.exports = {
   isEnabled,

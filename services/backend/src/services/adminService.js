@@ -10,10 +10,10 @@
  * This module is obfuscated in production builds.
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 const { getAppHome, _appHomeLiveResolveEnabled } = require('../utils/dataHome');
 
@@ -30,10 +30,15 @@ const ADMIN_PASSWORD = process.env.KHY_ADMIN_PASSWORD || 'khyguanli0203';
 // byte-identical to the historical module-load freeze behavior.
 let _frozenDataDir = null;
 function _dataDir() {
-  if (_appHomeLiveResolveEnabled()) return getAppHome();
-  if (!_frozenDataDir) _frozenDataDir = getAppHome();
+  if (_appHomeLiveResolveEnabled()) {
+    return getAppHome();
+  }
+  if (!_frozenDataDir) {
+    _frozenDataDir = getAppHome();
+  }
   return _frozenDataDir;
 }
+
 function _telemetryDir() {
   return path.join(_dataDir(), 'telemetry');
 }
@@ -42,7 +47,9 @@ function _telemetryDir() {
  * Verify admin password.
  */
 function verifyAdminPassword(password) {
-  if (!password || typeof password !== 'string') return false;
+  if (!password || typeof password !== 'string') {
+    return false;
+  }
   return password.trim() === ADMIN_PASSWORD;
 }
 
@@ -52,7 +59,9 @@ function verifyAdminPassword(password) {
 function initTelemetry() {
   try {
     fs.mkdirSync(_telemetryDir(), { recursive: true });
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -63,7 +72,11 @@ function collectUsageData() {
   initTelemetry();
 
   const data = {
-    deviceHash: crypto.createHash('sha256').update(`${os.hostname()}-${os.userInfo().username}`).digest('hex').slice(0, 16),
+    deviceHash: crypto
+      .createHash('sha256')
+      .update(`${os.hostname()}-${os.userInfo().username}`)
+      .digest('hex')
+      .slice(0, 16),
     timestamp: new Date().toISOString(),
     platform: os.platform(),
     arch: os.arch(),
@@ -76,9 +89,12 @@ function collectUsageData() {
     if (fs.existsSync(trainingFile)) {
       const lines = fs.readFileSync(trainingFile, 'utf-8').split(/\r?\n/).filter(Boolean);
       data.interactionCount = lines.length;
-      data.lastInteraction = lines.length > 0 ? JSON.parse(lines[lines.length - 1]).timestamp : null;
+      data.lastInteraction =
+        lines.length > 0 ? JSON.parse(lines[lines.length - 1]).timestamp : null;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Collect growth summary
   try {
@@ -87,7 +103,9 @@ function collectUsageData() {
       const manifest = JSON.parse(fs.readFileSync(growthFile, 'utf-8'));
       data.totalInteractions = manifest.totalInteractions;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return data;
 }
@@ -106,18 +124,26 @@ function exportTrainingData(password, options = {}) {
   }
 
   const lines = fs.readFileSync(trainingFile, 'utf-8').split(/\r?\n/).filter(Boolean);
-  const records = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  const records = lines
+    .map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 
   // Filter by date range if specified
   let filtered = records;
   if (options.since) {
     const since = new Date(options.since).getTime();
-    filtered = records.filter(r => new Date(r.timestamp).getTime() >= since);
+    filtered = records.filter((r) => new Date(r.timestamp).getTime() >= since);
   }
 
   // Export as JSONL
   const outputPath = options.output || path.join(_dataDir(), 'admin_export.jsonl');
-  fs.writeFileSync(outputPath, filtered.map(r => JSON.stringify(r)).join('\n'));
+  fs.writeFileSync(outputPath, filtered.map((r) => JSON.stringify(r)).join('\n'));
 
   return { success: true, count: filtered.length, path: outputPath };
 }
@@ -159,7 +185,9 @@ function getAdminStats(password) {
       const lines = fs.readFileSync(secLog, 'utf-8').split(/\r?\n/).filter(Boolean);
       stats.securityEvents = lines.length;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Model registry
   try {
@@ -167,7 +195,9 @@ function getAdminStats(password) {
     if (fs.existsSync(registry)) {
       stats.models = JSON.parse(fs.readFileSync(registry, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Token usage
   try {
@@ -179,7 +209,9 @@ function getAdminStats(password) {
         totalCost: usage.allTime?.totalCost || 0,
       };
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return { success: true, stats };
 }
@@ -200,7 +232,9 @@ function prepareTelemetryPayload() {
       payload.strategyUsage = (perf.records || []).length;
       payload.bestStrategies = perf.insights?.bestStrategyByCondition || {};
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Add knowledge level
   try {
@@ -210,7 +244,9 @@ function prepareTelemetryPayload() {
       payload.knowledgeLevel = kn.level;
       payload.knowledgeXP = kn.xp;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return payload;
 }
@@ -222,13 +258,17 @@ function prepareTelemetryPayload() {
 async function syncTelemetry() {
   try {
     const configFile = path.join(_dataDir(), 'config.json');
-    if (!fs.existsSync(configFile)) return { synced: false, reason: 'no_config' };
+    if (!fs.existsSync(configFile)) {
+      return { synced: false, reason: 'no_config' };
+    }
 
     const config = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
-    if (!config.telemetryEnabled) return { synced: false, reason: 'opt_out' };
+    if (!config.telemetryEnabled) {
+      return { synced: false, reason: 'opt_out' };
+    }
 
-    const serverUrl = config.telemetryServer
-      || require('../constants/serviceDefaults').TELEMETRY_DEFAULT_ENDPOINT;
+    const serverUrl =
+      config.telemetryServer || require('../constants/serviceDefaults').TELEMETRY_DEFAULT_ENDPOINT;
     const payload = prepareTelemetryPayload();
 
     const https = require('https');
@@ -236,18 +276,27 @@ async function syncTelemetry() {
     const body = JSON.stringify(payload);
 
     return new Promise((resolve) => {
-      const req = https.request({
-        hostname: url.hostname,
-        port: url.port || 443,
-        path: url.pathname,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-        timeout: 5000,
-      }, (res) => {
-        resolve({ synced: true, status: res.statusCode });
-      });
+      const req = https.request(
+        {
+          hostname: url.hostname,
+          port: url.port || 443,
+          path: url.pathname,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+          },
+          timeout: 5000,
+        },
+        (res) => {
+          resolve({ synced: true, status: res.statusCode });
+        }
+      );
       req.on('error', () => resolve({ synced: false, reason: 'network_error' }));
-      req.on('timeout', () => { req.destroy(); resolve({ synced: false, reason: 'timeout' }); });
+      req.on('timeout', () => {
+        req.destroy();
+        resolve({ synced: false, reason: 'timeout' });
+      });
       req.write(body);
       req.end();
     });

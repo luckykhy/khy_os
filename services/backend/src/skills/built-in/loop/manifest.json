@@ -1,8 +1,15 @@
 {
   "name": "loop",
-  "command": "/loop",
   "description": "Iteratively improve code through repeated test-fix cycles",
-  "version": "1.0.0",
-  "userInvocable": true,
-  "tags": ["iteration", "testing"]
+  "trigger": "/loop",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "iteration",
+    "testing"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
 }

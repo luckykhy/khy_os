@@ -26,9 +26,9 @@ const DEFAULT_JITTER = 1.0;
 // Keeps retrying with capped backoff until the rate window resets or
 // an absolute cap (6h) is reached. Emits heartbeat every 30s to keep
 // CI hosts alive.
-const PERSISTENT_MAX_BACKOFF_MS = 5 * 60 * 1000;   // 5 min cap per sleep
+const PERSISTENT_MAX_BACKOFF_MS = 5 * 60 * 1000; // 5 min cap per sleep
 const PERSISTENT_ABSOLUTE_CAP_MS = 6 * 60 * 60 * 1000; // 6 hour hard stop
-const HEARTBEAT_INTERVAL_MS = 30_000;                // 30s keepalive
+const HEARTBEAT_INTERVAL_MS = 30_000; // 30s keepalive
 
 /**
  * Execute a function with exponential backoff retry.
@@ -71,10 +71,14 @@ async function retryWithBackoff(fn, opts = {}) {
       return await fn(attempt);
     } catch (err) {
       // Last attempt — throw without retry
-      if (attempt >= maxAttempts) throw err;
+      if (attempt >= maxAttempts) {
+        throw err;
+      }
 
       // Check if error is retryable
-      if (shouldRetry && !shouldRetry(err, attempt)) throw err;
+      if (shouldRetry && !shouldRetry(err, attempt)) {
+        throw err;
+      }
 
       // Calculate delay
       let baseDelay;
@@ -122,11 +126,12 @@ async function retryWithBackoff(fn, opts = {}) {
  * @returns {number|undefined} milliseconds to wait
  */
 function parseRetryAfter(err) {
-  const header = err?.response?.headers?.['retry-after']
-    || err?.headers?.['retry-after']
-    || err?.retryAfter;
+  const header =
+    err?.response?.headers?.['retry-after'] || err?.headers?.['retry-after'] || err?.retryAfter;
 
-  if (header == null) return undefined;
+  if (header == null) {
+    return undefined;
+  }
 
   // Integer seconds
   const seconds = Number(header);
@@ -152,21 +157,34 @@ function parseRetryAfter(err) {
  * @returns {boolean}
  */
 function isRetryableError(err) {
-  if (!err) return false;
+  if (!err) {
+    return false;
+  }
 
   // Network errors — by error code first.
-  if (err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND'
-      || err.code === 'ECONNREFUSED' || err.code === 'EAI_AGAIN') {
+  if (
+    err.code === 'ECONNRESET' ||
+    err.code === 'ETIMEDOUT' ||
+    err.code === 'ENOTFOUND' ||
+    err.code === 'ECONNREFUSED' ||
+    err.code === 'EAI_AGAIN'
+  ) {
     return true;
   }
 
   // HTTP status codes
   const status = err.status || err.statusCode || err.response?.status;
-  if (status === 429) return true; // Rate limited
-  if (status >= 500 && status < 600) return true; // Server error
+  if (status === 429) {
+    return true;
+  } // Rate limited
+  if (status >= 500 && status < 600) {
+    return true;
+  } // Server error
 
   // Anthropic/OpenAI overloaded
-  if (err.type === 'overloaded_error') return true;
+  if (err.type === 'overloaded_error') {
+    return true;
+  }
   if (/overloaded|rate.?limit|too.?many.?requests|capacity/i.test(err.message || '')) {
     return true;
   }
@@ -176,7 +194,11 @@ function isRetryableError(err) {
   // signal is the message string 'socket hang up' — without this branch such
   // failures were classified non-retryable, forcing the user to type 「继续」 to
   // resume a truncated turn. Matching here lets retryWithBackoff auto-recover.
-  if (/socket hang up|connection reset|network error|dns|econnreset|etimedout|eai_again/i.test(err.message || '')) {
+  if (
+    /socket hang up|connection reset|network error|dns|econnreset|etimedout|eai_again/i.test(
+      err.message || ''
+    )
+  ) {
     return true;
   }
 
@@ -188,10 +210,16 @@ function _sleep(ms, signal) {
   // 但 setTimeout 已捕获原始 resolve → 正常完成时 removeEventListener 永不跑 → abort 监听器泄漏。
   // 门开走清理路径(定时器回调先摘监听器再 resolve);门关/异常 → 逐字节回退 legacy 泄漏写法。
   let _cleanup = true;
-  try { _cleanup = require('./retrySleepCleanup').retrySleepCleanupEnabled(process.env); }
-  catch { _cleanup = true; }
+  try {
+    _cleanup = require('./retrySleepCleanup').retrySleepCleanupEnabled(process.env);
+  } catch {
+    _cleanup = true;
+  }
   return new Promise((resolve, reject) => {
-    if (!signal) { setTimeout(resolve, ms); return; }
+    if (!signal) {
+      setTimeout(resolve, ms);
+      return;
+    }
     if (_cleanup) {
       let onAbort = null;
       const done = () => {
@@ -228,11 +256,19 @@ function _sleep(ms, signal) {
  * @returns {boolean}
  */
 function isPersistentRetryable(err) {
-  if (!err) return false;
+  if (!err) {
+    return false;
+  }
   const status = err.status || err.statusCode || err.response?.status;
-  if (status === 429 || status === 529) return true;
-  if (err.type === 'overloaded_error') return true;
-  if (/overloaded|too.?many.?requests|capacity/i.test(err.message || '')) return true;
+  if (status === 429 || status === 529) {
+    return true;
+  }
+  if (err.type === 'overloaded_error') {
+    return true;
+  }
+  if (/overloaded|too.?many.?requests|capacity/i.test(err.message || '')) {
+    return true;
+  }
   return false;
 }
 
@@ -268,7 +304,9 @@ async function persistentRetry(fn, opts = {}) {
       return await fn(attempt);
     } catch (err) {
       // Only persist on capacity errors
-      if (!isPersistentRetryable(err)) throw err;
+      if (!isPersistentRetryable(err)) {
+        throw err;
+      }
 
       // Check absolute cap
       const elapsed = Date.now() - startTime;
@@ -294,7 +332,9 @@ async function persistentRetry(fn, opts = {}) {
       // Chunk long sleep into heartbeat intervals
       let slept = 0;
       while (slept < delayMs) {
-        if (signal?.aborted) throw new Error('Persistent retry aborted during sleep');
+        if (signal?.aborted) {
+          throw new Error('Persistent retry aborted during sleep');
+        }
         const chunk = Math.min(HEARTBEAT_INTERVAL_MS, delayMs - slept);
         await _sleep(chunk, signal);
         slept += chunk;
@@ -373,11 +413,21 @@ class ClassifiedError {
   /** 获取推荐的恢复策略 (按优先级排序) */
   get recoveryHints() {
     const hints = [];
-    if (this.shouldCompress) hints.push('compress_context');
-    if (this.shouldRotateCredential) hints.push('rotate_credential');
-    if (this.shouldFallback) hints.push('fallback_model');
-    if (this.retryable && this.retryAfter) hints.push(`wait_${this.retryAfter}ms`);
-    if (this.retryable && !this.retryAfter) hints.push('retry_with_backoff');
+    if (this.shouldCompress) {
+      hints.push('compress_context');
+    }
+    if (this.shouldRotateCredential) {
+      hints.push('rotate_credential');
+    }
+    if (this.shouldFallback) {
+      hints.push('fallback_model');
+    }
+    if (this.retryable && this.retryAfter) {
+      hints.push(`wait_${this.retryAfter}ms`);
+    }
+    if (this.retryable && !this.retryAfter) {
+      hints.push('retry_with_backoff');
+    }
     return hints;
   }
 
@@ -407,14 +457,14 @@ class ClassifiedError {
 const ERROR_KIND_STRATEGIES = Object.freeze({
   rate_limit: {
     attempts: 5,
-    minDelayMs: 30000,   // 30s 基础（配合 Retry-After）
+    minDelayMs: 30000, // 30s 基础（配合 Retry-After）
     maxDelayMs: 120000,
     jitter: 0.5,
     description: 'API 速率限制 (429)',
   },
   overloaded: {
     attempts: 3,
-    minDelayMs: 2000,    // 2s 基础 + 高 jitter
+    minDelayMs: 2000, // 2s 基础 + 高 jitter
     maxDelayMs: 30000,
     jitter: 1.0,
     description: 'API 过载 (529/overloaded)',
@@ -429,7 +479,7 @@ const ERROR_KIND_STRATEGIES = Object.freeze({
     description: '服务端错误 (5xx)',
   },
   timeout: {
-    attempts: 2,         // 直接重试 1 次
+    attempts: 2, // 直接重试 1 次
     minDelayMs: 500,
     maxDelayMs: 3000,
     jitter: 0.3,
@@ -443,7 +493,7 @@ const ERROR_KIND_STRATEGIES = Object.freeze({
     description: '网络错误 (ECONNRESET/DNS)',
   },
   context_length: {
-    attempts: 1,         // 不重试 — 触发 ReactiveCompact
+    attempts: 1, // 不重试 — 触发 ReactiveCompact
     minDelayMs: 0,
     maxDelayMs: 0,
     jitter: 0,
@@ -451,7 +501,7 @@ const ERROR_KIND_STRATEGIES = Object.freeze({
     triggerCompact: true,
   },
   auth: {
-    attempts: 1,         // 不重试
+    attempts: 1, // 不重试
     minDelayMs: 0,
     maxDelayMs: 0,
     jitter: 0,
@@ -501,8 +551,13 @@ function classifyError(err, opts = {}) {
     });
   }
   // Stage 2: auth
-  else if ([401, 403].includes(status) || /auth|unauthorized|forbidden|invalid.?key|api.?key/i.test(msg)) {
-    const permanent = /invalid.?key|revoked|deactivated|suspended|banned|locked|terminated/i.test(msg);
+  else if (
+    [401, 403].includes(status) ||
+    /auth|unauthorized|forbidden|invalid.?key|api.?key/i.test(msg)
+  ) {
+    const permanent = /invalid.?key|revoked|deactivated|suspended|banned|locked|terminated/i.test(
+      msg
+    );
     classified = new ClassifiedError({
       reason: permanent ? FailoverReason.AUTH_PERMANENT : FailoverReason.AUTH,
       retryable: !permanent,
@@ -563,7 +618,11 @@ function classifyError(err, opts = {}) {
     });
   }
   // Stage 8: timeout
-  else if (err.name === 'TimeoutError' || err.code === 'ETIMEDOUT' || /timed?\s*out|timeout/i.test(msg)) {
+  else if (
+    err.name === 'TimeoutError' ||
+    err.code === 'ETIMEDOUT' ||
+    /timed?\s*out|timeout/i.test(msg)
+  ) {
     classified = new ClassifiedError({
       reason: FailoverReason.TIMEOUT,
       retryable: true,
@@ -572,8 +631,10 @@ function classifyError(err, opts = {}) {
     });
   }
   // Stage 9: network
-  else if (['ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED', 'EAI_AGAIN'].includes(err.code)
-           || /socket hang up|network|dns|connection reset|econnreset/i.test(msg)) {
+  else if (
+    ['ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED', 'EAI_AGAIN'].includes(err.code) ||
+    /socket hang up|network|dns|connection reset|econnreset/i.test(msg)
+  ) {
     classified = new ClassifiedError({
       reason: FailoverReason.NETWORK,
       retryable: true,
@@ -610,7 +671,9 @@ function classifyError(err, opts = {}) {
   }
 
   // 向后兼容
-  if (opts.asString) return classified.kind;
+  if (opts.asString) {
+    return classified.kind;
+  }
   return classified;
 }
 
@@ -640,11 +703,21 @@ async function retryByErrorKind(fn, opts = {}) {
     const strategy = ERROR_KIND_STRATEGIES[lastErrorKind] || ERROR_KIND_STRATEGIES.unknown;
 
     // 通知调用方分类结果
-    if (onClassified) try { onClassified(lastClassified); } catch { /* ignore */ }
+    if (onClassified) {
+      try {
+        onClassified(lastClassified);
+      } catch {
+        /* ignore */
+      }
+    }
 
     // 执行恢复提示
     if (lastClassified.shouldCompress && onCompact) {
-      try { onCompact(firstErr); } catch { /* ignore */ }
+      try {
+        onCompact(firstErr);
+      } catch {
+        /* ignore */
+      }
     }
 
     // 不重试的类型
@@ -659,14 +732,30 @@ async function retryByErrorKind(fn, opts = {}) {
           return await fn(attempt);
         } catch (err) {
           const classified = classifyError(err);
-          if (onClassified) try { onClassified(classified); } catch { /* ignore */ }
+          if (onClassified) {
+            try {
+              onClassified(classified);
+            } catch {
+              /* ignore */
+            }
+          }
 
           // 检查恢复提示
           if (classified.shouldRotateCredential && onFallback) {
-            try { onFallback(err, lastErrorKind); } catch { /* ignore */ }
+            try {
+              onFallback(err, lastErrorKind);
+            } catch {
+              /* ignore */
+            }
           }
           if (strategy.triggerFallbackOnLastAttempt && attempt >= strategy.attempts - 1) {
-            if (onFallback) try { onFallback(err, lastErrorKind); } catch { /* ignore */ }
+            if (onFallback) {
+              try {
+                onFallback(err, lastErrorKind);
+              } catch {
+                /* ignore */
+              }
+            }
           }
           throw err;
         }

@@ -46,10 +46,16 @@ function listRelayPresets() {
  * @returns {{baseUrl:string, model:(string|null), label:string} | null}
  */
 function getRelayPreset(name) {
-  const key = String(name || '').trim().toLowerCase();
-  if (!key) return null;
+  const key = String(name || '')
+    .trim()
+    .toLowerCase();
+  if (!key) {
+    return null;
+  }
   const p = RELAY_PRESETS[key];
-  if (!p) return null;
+  if (!p) {
+    return null;
+  }
   return { baseUrl: p.baseUrl, model: p.model || null, label: p.label || key };
 }
 

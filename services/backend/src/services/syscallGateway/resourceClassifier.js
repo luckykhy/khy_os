@@ -23,8 +23,13 @@ const LEVELS = Object.freeze({ L0: 'L0', L1: 'L1', L2: 'L2' });
 // 始终红灯的动作：天然不可逆 / 系统级，与资源作用域无关。
 // SANDBOX_ESCAPE（跳出 OS 沙箱 / 全权执行）天然属系统级提权，与删除/装包同级红线。
 const _ALWAYS_L2_ACTIONS = new Set([
-  ACTIONS.DELETE, ACTIONS.KILL, ACTIONS.ENV, ACTIONS.INSTALL,
-  ACTIONS.LISTEN, ACTIONS.EXEC_CODE, ACTIONS.SANDBOX_ESCAPE,
+  ACTIONS.DELETE,
+  ACTIONS.KILL,
+  ACTIONS.ENV,
+  ACTIONS.INSTALL,
+  ACTIONS.LISTEN,
+  ACTIONS.EXEC_CODE,
+  ACTIONS.SANDBOX_ESCAPE,
 ]);
 
 // 自身可能黄可能红的动作，交给作用域细分。

@@ -39,10 +39,12 @@ const ORPHAN_RETENTION_DAYS = 7;
 const _MS_PER_DAY = 86400000;
 
 /** 门控:KHY_TODO_SESSION_SCOPED 默认开,仅 {0,false,off,no} 关。 */
-function todoSessionScopeEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function todoSessionScopeEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_TODO_SESSION_SCOPED;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -58,7 +60,9 @@ function todoSessionScopeEnabled(env = (typeof process !== 'undefined' ? process
 function _sanitizeSessionId(sessionId) {
   try {
     const s = String(sessionId == null ? '' : sessionId).trim();
-    if (!s) return '';
+    if (!s) {
+      return '';
+    }
     return s.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 128);
   } catch {
     return '';
@@ -76,23 +80,35 @@ function resolveTodoFilePath(opts = {}) {
   try {
     const env = opts.env || (typeof process !== 'undefined' ? process.env : {});
     const tmpdir = String(opts.tmpdir || '');
-    if (!todoSessionScopeEnabled(env)) return path.join(tmpdir, LEGACY_FILE);
+    if (!todoSessionScopeEnabled(env)) {
+      return path.join(tmpdir, LEGACY_FILE);
+    }
     const sid = _sanitizeSessionId(opts.sessionId);
-    if (!sid) return path.join(tmpdir, LEGACY_FILE);
+    if (!sid) {
+      return path.join(tmpdir, LEGACY_FILE);
+    }
     return path.join(tmpdir, `${SCOPED_PREFIX}${sid}${SCOPED_SUFFIX}`);
   } catch {
     // 极端 fail-soft:回退历史全局路径。
-    try { return path.join(String(opts.tmpdir || ''), LEGACY_FILE); } catch { return LEGACY_FILE; }
+    try {
+      return path.join(String(opts.tmpdir || ''), LEGACY_FILE);
+    } catch {
+      return LEGACY_FILE;
+    }
   }
 }
 
 /** 解析孤儿保留期天数。KHY_TODO_ORPHAN_DAYS 为正整数时采用,非法 / 缺失 → 默认 7。 */
-function resolveOrphanRetentionDays(env = (typeof process !== 'undefined' ? process.env : {})) {
+function resolveOrphanRetentionDays(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_TODO_ORPHAN_DAYS;
-    if (raw === undefined || raw === null || String(raw).trim() === '') return ORPHAN_RETENTION_DAYS;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return ORPHAN_RETENTION_DAYS;
+    }
     const n = Number(String(raw).trim());
-    if (Number.isInteger(n) && n > 0) return n;
+    if (Number.isInteger(n) && n > 0) {
+      return n;
+    }
     return ORPHAN_RETENTION_DAYS;
   } catch {
     return ORPHAN_RETENTION_DAYS;
@@ -116,21 +132,33 @@ function resolveOrphanRetentionDays(env = (typeof process !== 'undefined' ? proc
 function selectStaleTodoFiles(args = {}) {
   try {
     const env = args.env || (typeof process !== 'undefined' ? process.env : {});
-    if (!todoSessionScopeEnabled(env)) return [];
+    if (!todoSessionScopeEnabled(env)) {
+      return [];
+    }
     const entries = args.entries;
     const now = args.now;
-    if (!Array.isArray(entries) || !Number.isFinite(now)) return [];
+    if (!Array.isArray(entries) || !Number.isFinite(now)) {
+      return [];
+    }
 
     const thresholdMs = resolveOrphanRetentionDays(env) * _MS_PER_DAY;
     const keep = String(args.keepPath || '');
     const stale = [];
     for (const e of entries) {
-      if (!e || typeof e.path !== 'string' || !e.path) continue;
-      if (keep && e.path === keep) continue;           // 当前会话文件绝不清
+      if (!e || typeof e.path !== 'string' || !e.path) {
+        continue;
+      }
+      if (keep && e.path === keep) {
+        continue;
+      } // 当前会话文件绝不清
       const mt = Number(e.mtimeMs);
-      if (!Number.isFinite(mt)) continue;              // mtime 缺失 → 保守保留
+      if (!Number.isFinite(mt)) {
+        continue;
+      } // mtime 缺失 → 保守保留
       const age = now - mt;
-      if (Number.isFinite(age) && age >= thresholdMs) stale.push(e.path);
+      if (Number.isFinite(age) && age >= thresholdMs) {
+        stale.push(e.path);
+      }
     }
     return stale;
   } catch {

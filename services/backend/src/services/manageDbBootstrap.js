@@ -10,7 +10,7 @@
  * 背景(已逐行核实):
  *   - 新装环境 SQLite 库由 sequelize 自动创建为空库;`scripts/seed.js`(建表 + 写 admin)
  *     是手动步骤,pip 装后无人运行。
- *   - `admin` 账号密码来自 `DEFAULT_ADMIN_PASSWORD` 环境变量(非内置账号,cliAuthService._BUILTIN_ACCOUNTS 只有 admin05/youke5),
+ *   - `admin` 账号密码来自统一模块 credentialGenerator(环境变量可覆盖;cliAuthService 的离线回退也读同一凭据文件),
  *     故登录落到 DB 分支 `User.findOne`(aiManagementServer.js:889)→ 抛
  *     `SQLITE_ERROR: no such table: users` → catch 返 500(:926-931)。
  *   - **schema drift**:老库里 `users` 早已存在,但后加的 model 表(marketplace_plugins /
@@ -43,7 +43,9 @@ function isEnabled(env) {
     return flagRegistry.isFlagEnabled('KHY_MANAGE_DB_AUTOSEED', e);
   } catch {
     const raw = e && e.KHY_MANAGE_DB_AUTOSEED;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !OFF_VALUES.includes(String(raw).trim().toLowerCase());
   }
 }
@@ -84,7 +86,9 @@ async function missingModelTables(sequelize) {
   for (const model of Object.values(sequelize.models)) {
     const tn = model.getTableName();
     const name = String((tn && tn.tableName) || tn).toLowerCase();
-    if (!existing.has(name)) missing.push(name);
+    if (!existing.has(name)) {
+      missing.push(name);
+    }
   }
   return missing;
 }
@@ -116,12 +120,18 @@ async function missingColumns(sequelize, model) {
   const attrs = (model.getAttributes ? model.getAttributes() : model.rawAttributes) || {};
   const missing = [];
   for (const [key, attr] of Object.entries(attrs)) {
-    if (!attr) continue;
+    if (!attr) {
+      continue;
+    }
     const type = attr.type;
     // VIRTUAL 属性不落物理列,跳过(否则 addColumn 会失败或造出多余列)。
-    if (type && type.constructor && type.constructor.key === 'VIRTUAL') continue;
+    if (type && type.constructor && type.constructor.key === 'VIRTUAL') {
+      continue;
+    }
     const field = String(attr.field || key);
-    if (!existing.has(field.toLowerCase())) missing.push({ field, attr });
+    if (!existing.has(field.toLowerCase())) {
+      missing.push({ field, attr });
+    }
   }
   return missing;
 }
@@ -146,7 +156,9 @@ async function backfillMissingColumns(sequelize) {
     } catch {
       continue; // 该表探测失败 → 跳过,不阻断其它表
     }
-    if (!cols.length) continue;
+    if (!cols.length) {
+      continue;
+    }
     const tableName = model.getTableName();
     for (const { field, attr } of cols) {
       try {
@@ -205,31 +217,33 @@ async function ensureManageDbSeeded(env) {
       columnsAdded = 0; // 列自愈失败不影响 table 自愈 / admin 写入
     }
 
-    // 3. 幂等确保 admin(镜像 seed.js:207-224,预哈希 + raw SQL 避免 model hook 双哈希)。
+    // 3. 幂等确保默认管理员(预哈希 + raw SQL 避免 model hook 双哈希)。凭据来自统一
+    //    模块 credentialGenerator(与 adminAutoInit 同源:OS 用户名 + 机器派生密码,
+    //    明文持久化到 .khy/credentials/default-admin.json),保证两条播种路径生成
+    //    的是**同一个**账号同一个密码,而非各自造号。DEFAULT_ADMIN_PASSWORD /
+    //    KHY_ADMIN_PASSWORD 环境变量仍可覆盖(此时不写凭据文件)。
     //    存在性判定用 **raw SQL COUNT** 而非 `User.findOne`——后者 SELECT 全部 model 列,
     //    若 users 表尚有未 backfill 的列 drift 会抛「no such column」,把整个 bootstrap
     //    带进 catch → seeded:false、admin 漏建。raw `SELECT 1` 只碰 username,免疫列 drift。
+    const credGen = require('./credentialGenerator');
+    const adminUsername = credGen.resolveDefaultAdminUsername(e);
     let adminCreated = false;
     const [adminRows] = await sequelize.query(
       'SELECT 1 FROM users WHERE username = :username LIMIT 1',
-      { replacements: { username: 'admin' } }
+      { replacements: { username: adminUsername } }
     );
     const adminExists = Array.isArray(adminRows) && adminRows.length > 0;
     if (!adminExists) {
-      // Password from env; never hardcoded. Falls back to random if not set.
-      const crypto = require('crypto');
-      const adminPassword = String(e.DEFAULT_ADMIN_PASSWORD || '').trim()
-        || Array.from(crypto.getRandomValues(new Uint8Array(16)))
-          .map(b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62])
-          .join('');
+      // Shared credentials source — env override or persisted/generated file.
+      const creds = credGen.loadOrCreateDefaultAdminCredentials(e);
       const now = new Date().toISOString();
       await sequelize.query(
-        'INSERT INTO users (username, password, email, role, status, created_at, updated_at) '
-          + 'VALUES (:username, :password, :email, :role, :status, :now, :now)',
+        'INSERT INTO users (username, password, email, role, status, created_at, updated_at) ' +
+          'VALUES (:username, :password, :email, :role, :status, :now, :now)',
         {
           replacements: {
-            username: 'admin',
-            password: await bcrypt.hash(adminPassword, 10),
+            username: creds.username,
+            password: await bcrypt.hash(creds.password, 10),
             email: 'admin@khy-quant.com',
             role: 'admin',
             status: 'active',
@@ -238,14 +252,34 @@ async function ensureManageDbSeeded(env) {
         }
       );
       adminCreated = true;
-      console.log(`[manageDbBootstrap] seeded admin account (password: ${adminPassword})`);
+      // Never log the plaintext password — only its storage location.
+      if (creds.fromEnv) {
+        console.log(`[manageDbBootstrap] 已生成初始管理员 ${creds.username}，密码来自环境变量`);
+      } else {
+        console.log(
+          `[manageDbBootstrap] 已生成初始管理员 ${creds.username}，密码已保存至 ${creds.filePath || '(写入失败)'}`
+        );
+      }
     }
 
-    return { seeded: true, tablesCreated, columnsAdded, adminCreated, missingCount: missing.length };
+    return {
+      seeded: true,
+      tablesCreated,
+      columnsAdded,
+      adminCreated,
+      missingCount: missing.length,
+    };
   } catch (err) {
     // best-effort:绝不阻断服务启动。
     return { seeded: false, reason: (err && err.message) || 'error' };
   }
 }
 
-module.exports = { isEnabled, ensureManageDbSeeded, tableExists, missingModelTables, missingColumns, backfillMissingColumns };
+module.exports = {
+  isEnabled,
+  ensureManageDbSeeded,
+  tableExists,
+  missingModelTables,
+  missingColumns,
+  backfillMissingColumns,
+};

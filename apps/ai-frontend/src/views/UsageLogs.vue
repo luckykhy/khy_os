@@ -1,6 +1,9 @@
 <template>
   <div class="usage-logs-page">
-    <KhyPageHeader title="用量日志" subtitle="网关请求计量、计费与明细（CLI 适配器为估算值，标注 estimated）">
+    <KhyPageHeader
+      title="用量日志"
+      subtitle="网关请求计量、计费与明细（CLI 适配器为估算值，标注 estimated）"
+    >
       <template #actions>
         <el-button :loading="billing.loading.value" @click="refresh">
           <el-icon><Refresh /></el-icon>
@@ -12,28 +15,28 @@
     <!-- Summary metric cards -->
     <div class="metric-row">
       <div class="metric-card">
-        <div class="metric-icon metric-icon--blue"><el-icon><Histogram /></el-icon></div>
+        <div class="metric-icon metric-icon--blue"><KhyIcon kind="data" size="md" /></div>
         <div class="metric-body">
           <div class="metric-label">请求数</div>
           <div class="metric-value">{{ totals.requests || 0 }}</div>
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-icon metric-icon--green"><el-icon><Coin /></el-icon></div>
+        <div class="metric-icon metric-icon--green"><KhyIcon kind="coins" size="md" /></div>
         <div class="metric-body">
           <div class="metric-label">总 Tokens</div>
           <div class="metric-value">{{ formatNumber(totals.totalTokens || 0) }}</div>
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-icon metric-icon--orange"><el-icon><Money /></el-icon></div>
+        <div class="metric-icon metric-icon--orange"><KhyIcon kind="wallet" size="md" /></div>
         <div class="metric-body">
           <div class="metric-label">计费金额（CNY）</div>
           <div class="metric-value">¥{{ (totals.billedCny || 0).toFixed(4) }}</div>
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-icon metric-icon--red"><el-icon><WarningFilled /></el-icon></div>
+        <div class="metric-icon metric-icon--red"><KhyIcon kind="warning" size="md" /></div>
         <div class="metric-body">
           <div class="metric-label">错误数</div>
           <div class="metric-value">{{ totals.errors || 0 }}</div>
@@ -45,7 +48,12 @@
     <el-card shadow="never" class="filter-card">
       <div class="filter-bar">
         <el-input v-model="filters.model" placeholder="模型" clearable style="width: 180px" />
-        <el-input v-model="filters.customerId" placeholder="客户 ID" clearable style="width: 200px" />
+        <el-input
+          v-model="filters.customerId"
+          placeholder="客户 ID"
+          clearable
+          style="width: 200px"
+        />
         <el-input v-model="filters.tokenId" placeholder="令牌 ID" clearable style="width: 180px" />
         <el-select v-model="filters.status" placeholder="状态" clearable style="width: 130px">
           <el-option label="成功" value="ok" />
@@ -67,7 +75,13 @@
 
     <!-- Table -->
     <el-card shadow="never" class="table-card">
-      <el-table :data="logs.items" stripe size="small" v-loading="billing.loading.value" empty-text="暂无日志">
+      <el-table
+        :data="logs.items"
+        stripe
+        size="small"
+        v-loading="billing.loading.value"
+        empty-text="暂无日志"
+      >
         <el-table-column prop="ts" label="时间" width="180">
           <template #default="{ row }">{{ formatTime(row.ts) }}</template>
         </el-table-column>
@@ -94,7 +108,7 @@
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="row.status === 'ok' ? 'success' : 'danger'">
-              {{ row.status === 'ok' ? row.httpStatus : (row.httpStatus || 'err') }}
+              {{ row.status === 'ok' ? row.httpStatus : row.httpStatus || 'err' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -119,86 +133,95 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import {
-  Refresh, Histogram, Coin, Money, WarningFilled,
-} from '@element-plus/icons-vue'
-import { useGatewayBilling } from '@/composables/useGatewayBilling'
-import KhyPageHeader from '@/components/KhyPageHeader.vue'
+import { computed, onMounted, reactive, ref } from 'vue';
+import { Refresh, Histogram, Coin, Money, WarningFilled } from '@element-plus/icons-vue';
+import { useGatewayBilling } from '@/composables/useGatewayBilling';
+import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
-const billing = useGatewayBilling()
-const logs = billing.logs
-const summary = billing.summary
+const billing = useGatewayBilling();
+const logs = billing.logs;
+const summary = billing.summary;
 
-const filters = reactive({ model: '', customerId: '', tokenId: '', status: '' })
-const dateRange = ref(null)
-const pageSize = ref(50)
-const currentPage = ref(1)
+const filters = reactive({ model: '', customerId: '', tokenId: '', status: '' });
+const dateRange = ref(null);
+const pageSize = ref(50);
+const currentPage = ref(1);
 
-const totals = computed(() => summary.value?.totals || {})
+const totals = computed(() => summary.value?.totals || {});
 
 function buildParams() {
   const params = {
     limit: pageSize.value,
     offset: (currentPage.value - 1) * pageSize.value,
-  }
-  if (filters.model) params.model = filters.model
-  if (filters.customerId) params.customerId = filters.customerId
-  if (filters.tokenId) params.tokenId = filters.tokenId
-  if (filters.status) params.status = filters.status
+  };
+  if (filters.model) params.model = filters.model;
+  if (filters.customerId) params.customerId = filters.customerId;
+  if (filters.tokenId) params.tokenId = filters.tokenId;
+  if (filters.status) params.status = filters.status;
   if (Array.isArray(dateRange.value) && dateRange.value.length === 2) {
-    params.from = dateRange.value[0]
-    params.to = dateRange.value[1]
+    params.from = dateRange.value[0];
+    params.to = dateRange.value[1];
   }
-  return params
+  return params;
 }
 
 async function load() {
-  const params = buildParams()
+  const params = buildParams();
   await Promise.all([
     billing.fetchLogs(params),
     billing.fetchSummary({ groupBy: 'model', from: params.from, to: params.to }),
-  ])
+  ]);
 }
 
 function applyFilters() {
-  currentPage.value = 1
-  load()
+  currentPage.value = 1;
+  load();
 }
 
 function resetFilters() {
-  filters.model = ''
-  filters.customerId = ''
-  filters.tokenId = ''
-  filters.status = ''
-  dateRange.value = null
-  currentPage.value = 1
-  load()
+  filters.model = '';
+  filters.customerId = '';
+  filters.tokenId = '';
+  filters.status = '';
+  dateRange.value = null;
+  currentPage.value = 1;
+  load();
 }
 
-function refresh() { load() }
+function refresh() {
+  load();
+}
 
 function onPageChange(page) {
-  currentPage.value = page
-  load()
+  currentPage.value = page;
+  load();
 }
 
 function onSizeChange(size) {
-  pageSize.value = size
-  currentPage.value = 1
-  load()
+  pageSize.value = size;
+  currentPage.value = 1;
+  load();
 }
 
+// NOTE: zh-CN locale + hour12:false + '—' fallback + raw-input catch return;
+// NOT equivalent to utils/formatTimestamp.js formatTime ('-' fallback,
+// default locale, String(t) catch) — do not merge.
 function formatTime(ts) {
-  if (!ts) return '—'
-  try { return new Date(ts).toLocaleString('zh-CN', { hour12: false }) } catch { return ts }
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toLocaleString('zh-CN', { hour12: false });
+  } catch {
+    return ts;
+  }
 }
 
+// NOTE: zh-CN locale, integer only; NOT equivalent to Settings.vue formatNumber
+// (undefined locale + maximumFractionDigits param) — do not merge.
 function formatNumber(n) {
-  return Number(n || 0).toLocaleString('zh-CN')
+  return Number(n || 0).toLocaleString('zh-CN');
 }
 
-onMounted(load)
+onMounted(load);
 </script>
 
 <style scoped>
@@ -237,10 +260,18 @@ onMounted(load)
   flex-shrink: 0;
 }
 
-.metric-icon--blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.metric-icon--green { background: linear-gradient(135deg, #10b981, #059669); }
-.metric-icon--orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.metric-icon--red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.metric-icon--blue {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+.metric-icon--green {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+.metric-icon--orange {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+.metric-icon--red {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
 
 .metric-label {
   font-size: 12px;
@@ -277,6 +308,8 @@ onMounted(load)
 }
 
 @media (max-width: 1024px) {
-  .metric-row { grid-template-columns: repeat(2, 1fr); }
+  .metric-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

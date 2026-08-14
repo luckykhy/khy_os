@@ -15,7 +15,7 @@
 
 // ── Constants ──────────────────────────────────────────────────────
 
-const DEFAULT_INTERVAL_MS = 15000;  // 15s — typical proxy timeout is 60s
+const DEFAULT_INTERVAL_MS = 15000; // 15s — typical proxy timeout is 60s
 const COMMENT_EVENT = ': keepalive\n\n';
 
 // ── Keepalive Class ────────────────────────────────────────────────
@@ -43,14 +43,18 @@ class SSEKeepalive {
         this._backpressure = new SSEBackpressure(res, {
           highWaterMark: options.highWaterMark || undefined,
         });
-      } catch { /* sseBackpressure 模块不可用时降级为直写 */ }
+      } catch {
+        /* sseBackpressure 模块不可用时降级为直写 */
+      }
     }
   }
 
   _nextEventId(providedId = null) {
     const parsed = Number.parseInt(providedId, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
-      if (parsed > this._eventSeq) this._eventSeq = parsed;
+      if (parsed > this._eventSeq) {
+        this._eventSeq = parsed;
+      }
       return parsed;
     }
     this._eventSeq += 1;
@@ -58,7 +62,9 @@ class SSEKeepalive {
   }
 
   _writeSseEvent({ event = null, data, eventId = null }) {
-    if (!this._active || this._res.writableEnded) return -1;
+    if (!this._active || this._res.writableEnded) {
+      return -1;
+    }
     const seq = this._nextEventId(eventId);
     const payload = typeof data === 'string' ? data : JSON.stringify(data);
     const formatted = event
@@ -78,7 +84,9 @@ class SSEKeepalive {
   }
 
   async _flushPending() {
-    if (!this._backpressure) return;
+    if (!this._backpressure) {
+      return;
+    }
     try {
       await this._backpressure.flushAll();
     } catch {
@@ -94,7 +102,9 @@ class SSEKeepalive {
    * @returns {Promise<number>} Event sequence number
    */
   async sendAsync(event, data) {
-    if (!this._active || this._res.writableEnded) return -1;
+    if (!this._active || this._res.writableEnded) {
+      return -1;
+    }
     const seq = this._nextEventId();
     const payload = typeof data === 'string' ? data : JSON.stringify(data);
     const formatted = event
@@ -117,9 +127,13 @@ class SSEKeepalive {
    * @returns {this}
    */
   start() {
-    if (this._timer) return this;
+    if (this._timer) {
+      return this;
+    }
     this._timer = setInterval(() => {
-      if (!this._active) return;
+      if (!this._active) {
+        return;
+      }
       try {
         if (!this._res.writableEnded && !this._res.destroyed) {
           this._res.write(COMMENT_EVENT);
@@ -127,11 +141,19 @@ class SSEKeepalive {
           void this.stop();
         }
       } catch (err) {
-        if (this._onError) try { this._onError(err); } catch { /* ignore */ }
+        if (this._onError) {
+          try {
+            this._onError(err);
+          } catch {
+            /* ignore */
+          }
+        }
         void this.stop();
       }
     }, this._intervalMs);
-    if (this._timer.unref) this._timer.unref();
+    if (this._timer.unref) {
+      this._timer.unref();
+    }
     return this;
   }
 
@@ -172,7 +194,9 @@ class SSEKeepalive {
    * @param {boolean} [aborted=false]
    */
   async done(aborted = false) {
-    if (!this._active) return;
+    if (!this._active) {
+      return;
+    }
     await this._flushPending();
     this.send('done', { aborted, seq: this._eventSeq });
     await this._flushPending();
@@ -222,7 +246,7 @@ function attach(res, options = {}) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'X-Accel-Buffering': 'no', // nginx buffering bypass
     });
   }
@@ -237,7 +261,9 @@ function attach(res, options = {}) {
   keepalive.start();
 
   // Auto-stop on close
-  res.on('close', () => { void keepalive.stop(); });
+  res.on('close', () => {
+    void keepalive.stop();
+  });
 
   return keepalive;
 }

@@ -13,7 +13,9 @@
     </template>
 
     <p class="gw-card-desc">
-      选择文生图 / 绘图使用的模型。留空（自动）时按可用后端的固定优先级自动选择：{{ autoOrderText }}。
+      选择文生图 / 绘图使用的模型。留空（自动）时按可用后端的固定优先级自动选择：{{
+        autoOrderText
+      }}。
     </p>
 
     <el-form label-position="top">
@@ -46,8 +48,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { PictureFilled } from '@element-plus/icons-vue'
+import { computed } from 'vue';
+import { PictureFilled } from '@element-plus/icons-vue';
 
 const props = defineProps({
   // { backend, model } — '' / 'auto' backend means auto.
@@ -57,21 +59,24 @@ const props = defineProps({
   // Fixed auto precedence (display only).
   autoOrder: { type: Array, default: () => ['openai', 'agnes', 'domestic', 'sd_webui'] },
   busy: { type: Boolean, default: false },
-})
-const emit = defineEmits(['update'])
+});
+const emit = defineEmits(['update']);
 
-const autoOrderText = computed(() => props.autoOrder.join(' > '))
+const autoOrderText = computed(() => props.autoOrder.join(' > '));
 
 const currentBackend = computed(() =>
-  String(props.current?.backend || '').trim().toLowerCase())
-const currentModel = computed(() => String(props.current?.model || '').trim())
-const isAuto = computed(() => !currentBackend.value || currentBackend.value === 'auto')
+  String(props.current?.backend || '')
+    .trim()
+    .toLowerCase()
+);
+const currentModel = computed(() => String(props.current?.model || '').trim());
+const isAuto = computed(() => !currentBackend.value || currentBackend.value === 'auto');
 
 function optValue(o) {
-  return `${o.backend}::${o.model || ''}`
+  return `${o.backend}::${o.model || ''}`;
 }
 function optLabel(o) {
-  return o.model ? `${o.backend} · ${o.model}` : o.backend
+  return o.model ? `${o.backend} · ${o.model}` : o.backend;
 }
 
 // Normalized option list; if the current pin isn't among the catalog options
@@ -82,33 +87,36 @@ const mergedOptions = computed(() => {
     model: o.model || '',
     value: optValue(o),
     label: optLabel(o),
-  }))
+  }));
   if (!isAuto.value) {
-    const cur = { backend: currentBackend.value, model: currentModel.value }
+    const cur = { backend: currentBackend.value, model: currentModel.value };
     if (!list.some((o) => o.value === optValue(cur))) {
-      list.unshift({ ...cur, value: optValue(cur), label: optLabel(cur) + '（当前）' })
+      list.unshift({ ...cur, value: optValue(cur), label: optLabel(cur) + '（当前）' });
     }
   }
-  return list
-})
+  return list;
+});
 
 const selectValue = computed(() =>
-  isAuto.value ? 'auto' : `${currentBackend.value}::${currentModel.value}`)
+  isAuto.value ? 'auto' : `${currentBackend.value}::${currentModel.value}`
+);
 
 const currentLabel = computed(() => {
-  if (isAuto.value) return '自动选择'
-  return currentModel.value ? `${currentBackend.value} · ${currentModel.value}` : currentBackend.value
-})
+  if (isAuto.value) return '自动选择';
+  return currentModel.value
+    ? `${currentBackend.value} · ${currentModel.value}`
+    : currentBackend.value;
+});
 
 function onChange(value) {
   if (value === 'auto') {
-    emit('update', { backend: 'auto', model: '' })
-    return
+    emit('update', { backend: 'auto', model: '' });
+    return;
   }
-  const idx = String(value).indexOf('::')
-  const backend = idx >= 0 ? value.slice(0, idx) : value
-  const model = idx >= 0 ? value.slice(idx + 2) : ''
-  emit('update', { backend, model })
+  const idx = String(value).indexOf('::');
+  const backend = idx >= 0 ? value.slice(0, idx) : value;
+  const model = idx >= 0 ? value.slice(idx + 2) : '';
+  emit('update', { backend, model });
 }
 </script>
 

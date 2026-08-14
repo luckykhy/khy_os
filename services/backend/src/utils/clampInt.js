@@ -22,10 +22,16 @@
  */
 function clampInt(v, lo, hi, fallback) {
   let n = Number(v);
-  if (!Number.isFinite(n)) n = fallback;
+  if (!Number.isFinite(n)) {
+    n = fallback;
+  }
   n = Math.round(n);
-  if (n < lo) n = lo;
-  if (n > hi) n = hi;
+  if (n < lo) {
+    n = lo;
+  }
+  if (n > hi) {
+    n = hi;
+  }
   return n;
 }
 

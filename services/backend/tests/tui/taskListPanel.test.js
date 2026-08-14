@@ -251,6 +251,16 @@ describe('TaskListPanel — coordinated (props-driven) path (A+B 防跳顶)', ()
     expect(running.props.color).toBe('cyan');
   });
 
+  test('协作路径空 lines → null(窄终端语义:不回退自读,即使 store 有任务)', () => {
+    // App-side contract (issue #1 fix): on narrow terminals App ALWAYS passes
+    // coordinated empty lines — with or without the liveRegionBudget leaf —
+    // so the panel must return null and NEVER fall back to the self-read path
+    // (store content here is poison that must not leak).
+    mockSnap = '→ SELF-READ poison';
+    const el = TaskListPanel({ lines: [], hidden: 0, hiddenLines: [] });
+    expect(el).toBeNull();
+  });
+
   test('缺口②协作路径:props.lines 两源并存 → 同样分段(App SSOT 供行,面板分区)', () => {
     // 协作路径下 App 已合并/截断,面板对 props.lines 施加同一 splitTaskLinesBySource。
     const el = TaskListPanel({ lines: ['→ 计划 A', '✓ #7 项目任务', '○ 会话待办'], hidden: 0 });

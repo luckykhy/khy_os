@@ -1,0 +1,56 @@
+# .dockerignore — keep the Docker build context small and fast.
+# These files/folders are irrelevant to the khy-os CLI container.
+
+# Git
+.git
+.gitignore
+
+# Node / Python junk (pip wheel bundles everything itself)
+node_modules
+__pycache__
+*.pyc
+
+# CI / docs (not needed in the image)
+.github
+docs
+*.md
+
+# Build outputs
+dist
+build
+*.egg-info
+
+# Dev / IDE files
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Test fixtures / data
+test
+tests
+.khy
+.khyos
+.khy-runtime
+.runtime
+.khyquant-data
+cache
+data
+khy-Trajectory
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Vendored MCP server & reference material (not part of the image)
+tools/deepseek-eyes
+docs/_ref
+
+# Kernel ISO build artifacts (built separately via kernel/Dockerfile.kernel-build)
+kernel
+platform/khy_platform/bundled
+
+# Platform packages — only exclude moonbit-plugin-sdk (large binaries);
+# shared/ must remain available for Dockerfile COPY commands.
+platform/packages/moonbit-plugin-sdk

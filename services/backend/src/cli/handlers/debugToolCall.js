@@ -13,8 +13,8 @@
  * 门控 KHY_DEBUG_TOOL_CALL 默认开;关 → 命令不接管(字节回退)。
  */
 
-const { printInfo, printError } = require('../formatters');
 const leaf = require('../debugToolCall');
+const { printInfo, printError } = require('../formatters');
 
 async function handleDebugToolCall(subCommand, args = [], _options = {}) {
   if (!leaf.isEnabled(process.env)) {
@@ -24,16 +24,23 @@ async function handleDebugToolCall(subCommand, args = [], _options = {}) {
 
   // limit:子命令或 args 里第一个正整数;缺省 5。
   let limit = 5;
-  const tokens = [subCommand].concat(Array.isArray(args) ? args : []).filter((t) => t != null && t !== '');
+  const tokens = [subCommand]
+    .concat(Array.isArray(args) ? args : [])
+    .filter((t) => t != null && t !== '');
   for (const t of tokens) {
     const n = parseInt(t, 10);
-    if (Number.isInteger(n) && n > 0) { limit = n; break; }
+    if (Number.isInteger(n) && n > 0) {
+      limit = n;
+      break;
+    }
   }
 
   let sessionId = null;
   try {
     sessionId = require('../../services/session/sessionForestService').getCurrentSessionId();
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   if (!sessionId) {
     printInfo('暂无活动会话 —— 先开始一段对话,再用 /debug-tool-call 查看最近的工具调用。');
     return true;

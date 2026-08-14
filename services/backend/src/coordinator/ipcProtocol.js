@@ -16,25 +16,25 @@ const crypto = require('crypto');
 /** @enum {string} */
 const MSG = Object.freeze({
   // Parent → Child
-  INIT:       'init',        // serialized AgentContext + config
-  TASK:       'task',        // task prompt to execute
-  FOLLOW_UP:  'follow_up',   // follow-up message for running agent
-  KILL:       'kill',        // graceful shutdown request
+  INIT: 'init', // serialized AgentContext + config
+  TASK: 'task', // task prompt to execute
+  FOLLOW_UP: 'follow_up', // follow-up message for running agent
+  KILL: 'kill', // graceful shutdown request
 
   // Child → Parent
-  READY:      'ready',       // child bootstrapped, ready for TASK
-  PROGRESS:   'progress',    // partial result / streaming chunk
-  TOOL_CALL:  'tool_call',   // requesting parent-side tool execution
-  RESULT:     'result',      // final result
-  ERROR:      'error',       // fatal error
-  METRICS:    'metrics',     // resource usage report
+  READY: 'ready', // child bootstrapped, ready for TASK
+  PROGRESS: 'progress', // partial result / streaming chunk
+  TOOL_CALL: 'tool_call', // requesting parent-side tool execution
+  RESULT: 'result', // final result
+  ERROR: 'error', // fatal error
+  METRICS: 'metrics', // resource usage report
 
   // Bidirectional
-  HEARTBEAT:  'heartbeat',   // keep-alive ping/pong
+  HEARTBEAT: 'heartbeat', // keep-alive ping/pong
 
   // Mailbox protocol
-  ACK:          'ack',           // C→P: acknowledge received message (payload.seq)
-  QUEUE_STATUS: 'queue_status',  // P→C: current queue depth (backpressure signal)
+  ACK: 'ack', // C→P: acknowledge received message (payload.seq)
+  QUEUE_STATUS: 'queue_status', // P→C: current queue depth (backpressure signal)
 });
 
 // ── Envelope ────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ function createMessage(type, agentId, payload = {}, requestId) {
     throw new Error('agentId is required');
   }
   return {
-    _ipc: true,                 // marker to distinguish from other IPC traffic
+    _ipc: true, // marker to distinguish from other IPC traffic
     type,
     requestId: requestId || crypto.randomBytes(6).toString('hex'),
     agentId: String(agentId),
@@ -105,7 +105,9 @@ function createRequestResponse(channel, agentId, opts = {}) {
 
   function onMessage(raw) {
     const parsed = parseMessage(raw);
-    if (!parsed.valid) return;
+    if (!parsed.valid) {
+      return;
+    }
     const { msg } = parsed;
 
     const entry = pending.get(msg.requestId);
@@ -131,12 +133,16 @@ function createRequestResponse(channel, agentId, opts = {}) {
      * @returns {Promise<object>} Resolved response message
      */
     request(type, payload = {}, customTimeout) {
-      if (destroyed) return Promise.reject(new Error('RPC channel destroyed'));
+      if (destroyed) {
+        return Promise.reject(new Error('RPC channel destroyed'));
+      }
       const msg = createMessage(type, agentId, payload);
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           pending.delete(msg.requestId);
-          reject(new Error(`IPC request timed out after ${customTimeout || timeoutMs}ms (type=${type})`));
+          reject(
+            new Error(`IPC request timed out after ${customTimeout || timeoutMs}ms (type=${type})`)
+          );
         }, customTimeout || timeoutMs);
         timer.unref?.();
         pending.set(msg.requestId, { resolve, reject, timer });
@@ -150,9 +156,15 @@ function createRequestResponse(channel, agentId, opts = {}) {
      * @param {object} [payload]
      */
     notify(type, payload = {}) {
-      if (destroyed) return;
+      if (destroyed) {
+        return;
+      }
       const msg = createMessage(type, agentId, payload);
-      try { channel.send(msg); } catch { /* channel closed */ }
+      try {
+        channel.send(msg);
+      } catch {
+        /* channel closed */
+      }
     },
 
     /**

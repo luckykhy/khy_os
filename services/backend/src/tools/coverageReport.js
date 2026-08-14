@@ -16,9 +16,10 @@
  * coverage percentages.
  */
 
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { defineTool } = require('./_baseTool');
 const { guardedReadFileSync } = require('./guardedReadFileSync');
 
 // ─── Known report paths (checked in order) ──────────────────────────────────
@@ -38,9 +39,15 @@ const KNOWN_PATHS = [
 function _detectFormat(filePath) {
   try {
     const head = guardedReadFileSync(filePath, 'utf-8').trimStart();
-    if (head.startsWith('TN:') || head.startsWith('SF:')) return 'lcov';
-    if (head.startsWith('{')) return 'json';
-    if (head.startsWith('<?xml') || head.startsWith('<coverage')) return 'cobertura';
+    if (head.startsWith('TN:') || head.startsWith('SF:')) {
+      return 'lcov';
+    }
+    if (head.startsWith('{')) {
+      return 'json';
+    }
+    if (head.startsWith('<?xml') || head.startsWith('<coverage')) {
+      return 'cobertura';
+    }
     return 'unknown';
   } catch {
     return 'unknown';
@@ -61,20 +68,32 @@ function _parseLcov(lcovPath) {
   for (const rawLine of text.split('\n')) {
     const line = rawLine.trim();
     if (!line || line === 'end_of_record') {
-      if (current) records.push(current);
+      if (current) {
+        records.push(current);
+      }
       current = null;
       continue;
     }
 
     if (line.startsWith('SF:')) {
-      if (current) records.push(current);
-      current = { file: line.slice(3), lines: { found: 0, hit: 0, details: [] }, branches: { found: 0, hit: 0 }, functions: { found: 0, hit: 0 } };
+      if (current) {
+        records.push(current);
+      }
+      current = {
+        file: line.slice(3),
+        lines: { found: 0, hit: 0, details: [] },
+        branches: { found: 0, hit: 0 },
+        functions: { found: 0, hit: 0 },
+      };
     } else if (current) {
       if (line.startsWith('DA:')) {
         const [, lineNum, count] = line.match(/^DA:(\d+),(\d+)/) || [];
-        const l = parseInt(lineNum, 10), c = parseInt(count, 10);
+        const l = parseInt(lineNum, 10),
+          c = parseInt(count, 10);
         current.lines.found++;
-        if (c > 0) current.lines.hit++;
+        if (c > 0) {
+          current.lines.hit++;
+        }
         current.lines.details.push({ line: l, hit: c });
       } else if (line.startsWith('LF:')) {
         current.lines.found = parseInt(line.slice(3), 10);
@@ -91,7 +110,9 @@ function _parseLcov(lcovPath) {
       }
     }
   }
-  if (current) records.push(current);
+  if (current) {
+    records.push(current);
+  }
 
   return _buildResult(records, 'lcov');
 }
@@ -100,15 +121,23 @@ function _parseLcov(lcovPath) {
 
 function _parseCoverageJson(jsonPath) {
   let raw;
-  try { raw = JSON.parse(guardedReadFileSync(jsonPath, 'utf-8')); } catch { return null; }
+  try {
+    raw = JSON.parse(guardedReadFileSync(jsonPath, 'utf-8'));
+  } catch {
+    return null;
+  }
 
   const records = [];
 
   // coverage-summary.json shape: { total: { lines/branches/functions/statements: { total, covered, pct } }, "file.js": {...} }
   if (raw && raw.total && typeof raw.total === 'object') {
     for (const [file, stats] of Object.entries(raw)) {
-      if (file === 'total') continue;
-      if (!stats || typeof stats !== 'object') continue;
+      if (file === 'total') {
+        continue;
+      }
+      if (!stats || typeof stats !== 'object') {
+        continue;
+      }
       const lines = stats.lines || {};
       const branches = stats.branches || {};
       const functions = stats.functions || {};
@@ -125,15 +154,20 @@ function _parseCoverageJson(jsonPath) {
   // coverage-final.json shape (Istanbul): { "file.js": { path, statementMap, fnMap, branchMap, s, f, b } }
   if (raw && typeof raw === 'object' && !raw.total) {
     for (const [file, data] of Object.entries(raw)) {
-      if (!data || typeof data !== 'object') continue;
+      if (!data || typeof data !== 'object') {
+        continue;
+      }
       const stmts = Object.values(data.s || {});
       const branches = Object.values(data.b || {});
       const fns = Object.values(data.f || {});
       records.push({
         file,
-        lines: { found: stmts.length, hit: stmts.filter(v => v > 0).length },
-        branches: { found: branches.length, hit: branches.filter(v => Array.isArray(v) ? v[0] > 0 : v > 0).length },
-        functions: { found: fns.length, hit: fns.filter(v => v > 0).length },
+        lines: { found: stmts.length, hit: stmts.filter((v) => v > 0).length },
+        branches: {
+          found: branches.length,
+          hit: branches.filter((v) => (Array.isArray(v) ? v[0] > 0 : v > 0)).length,
+        },
+        functions: { found: fns.length, hit: fns.filter((v) => v > 0).length },
       });
     }
     return _buildResult(records, 'json');
@@ -159,15 +193,20 @@ function _parseCobertura(xmlPath) {
     while ((clsMatch = clsRe.exec(pkgBody)) !== null) {
       const file = clsMatch[1];
       const clsBody = clsMatch[2];
-      let totalLines = 0, hitLines = 0;
-      let totalBranches = 0, hitBranches = 0;
+      let totalLines = 0,
+        hitLines = 0;
+      let totalBranches = 0,
+        hitBranches = 0;
 
-      const lineRe = /<line[^>]*hits\s*=\s*"(\d+)"[^>]*number\s*=\s*"(\d+)"[^>]*(?:branch\s*=\s*"true")?[^>]*>/g;
+      const lineRe =
+        /<line[^>]*hits\s*=\s*"(\d+)"[^>]*number\s*=\s*"(\d+)"[^>]*(?:branch\s*=\s*"true")?[^>]*>/g;
       let lMatch;
       while ((lMatch = lineRe.exec(clsBody)) !== null) {
         totalLines++;
         const hits = parseInt(lMatch[1], 10);
-        if (hits > 0) hitLines++;
+        if (hits > 0) {
+          hitLines++;
+        }
         // Cobertura branch attribute: condition-coverage="50% (1/2)"
         const condMatch = clsBody.match(/condition-coverage\s*=\s*"(\d+)%\s*\((\d+)\/(\d+)\)"/);
         if (condMatch) {
@@ -187,7 +226,8 @@ function _parseCobertura(xmlPath) {
 
   if (records.length === 0) {
     // Fallback: simpler <class> tags without nested <lines>
-    const simpleClsRe = /<class[^>]*filename\s*=\s*"([^"]*)"[^>]*line-rate\s*=\s*"([^"]*)"[^>]*branch-rate\s*=\s*"([^"]*)"/g;
+    const simpleClsRe =
+      /<class[^>]*filename\s*=\s*"([^"]*)"[^>]*line-rate\s*=\s*"([^"]*)"[^>]*branch-rate\s*=\s*"([^"]*)"/g;
     let scMatch;
     while ((scMatch = simpleClsRe.exec(text)) !== null) {
       records.push({
@@ -205,18 +245,31 @@ function _parseCobertura(xmlPath) {
 // ─── Unified result builder ──────────────────────────────────────────────────
 
 function _pct(hit, found) {
-  if (!found || found <= 0) return 0;
+  if (!found || found <= 0) {
+    return 0;
+  }
   return Math.round((hit / found) * 10000) / 100;
 }
 
 function _buildResult(records, format) {
   if (!records.length) {
-    return { format, files: 0, lineCoverage: null, branchCoverage: null, fnCoverage: null, filesBelowThreshold: [], worstFiles: [] };
+    return {
+      format,
+      files: 0,
+      lineCoverage: null,
+      branchCoverage: null,
+      fnCoverage: null,
+      filesBelowThreshold: [],
+      worstFiles: [],
+    };
   }
 
-  let totalLines = 0, hitLines = 0;
-  let totalBranches = 0, hitBranches = 0;
-  let totalFns = 0, hitFns = 0;
+  let totalLines = 0,
+    hitLines = 0;
+  let totalBranches = 0,
+    hitBranches = 0;
+  let totalFns = 0,
+    hitFns = 0;
 
   const gaps = [];
 
@@ -246,7 +299,7 @@ function _buildResult(records, format) {
   // Sort by line coverage ascending (worst first)
   gaps.sort((a, b) => a.linePct - b.linePct);
 
-  const filesBelowThreshold = gaps.filter(g => g.linePct < 80);
+  const filesBelowThreshold = gaps.filter((g) => g.linePct < 80);
   const worstFiles = gaps.slice(0, 10);
 
   return {
@@ -266,13 +319,17 @@ function _buildResult(records, format) {
 function _findReport(explicitPath, cwd) {
   if (explicitPath) {
     const resolved = path.resolve(cwd, explicitPath);
-    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) return resolved;
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+      return resolved;
+    }
     return null;
   }
 
   for (const rel of KNOWN_PATHS) {
     const candidate = path.join(cwd, rel);
-    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      return candidate;
+    }
   }
   return null;
 }
@@ -282,9 +339,9 @@ function _findReport(explicitPath, cwd) {
 module.exports = defineTool({
   name: 'coverage_report',
   description:
-    'Parse existing test coverage reports (lcov.info, coverage-summary.json, cobertura XML) '
-    + 'and return structured coverage data with identified gaps — files below 80% line coverage, '
-    + 'worst-covered files, and overall line/branch/function percentages.',
+    'Parse existing test coverage reports (lcov.info, coverage-summary.json, cobertura XML) ' +
+    'and return structured coverage data with identified gaps — files below 80% line coverage, ' +
+    'worst-covered files, and overall line/branch/function percentages.',
   category: 'analysis',
   risk: 'safe',
   isReadOnly: true,
@@ -296,14 +353,16 @@ module.exports = defineTool({
     path: {
       type: 'string',
       maxLength: 4096,
-      description: 'Path to a coverage report file. Auto-detected from common locations if omitted (coverage/lcov.info, etc.).',
+      description:
+        'Path to a coverage report file. Auto-detected from common locations if omitted (coverage/lcov.info, etc.).',
     },
     threshold: {
       type: 'number',
       min: 0,
       max: 100,
       default: 80,
-      description: 'Line coverage threshold percentage (0-100). Files below this are flagged as gaps. Default 80.',
+      description:
+        'Line coverage threshold percentage (0-100). Files below this are flagged as gaps. Default 80.',
     },
   },
 
@@ -327,15 +386,23 @@ module.exports = defineTool({
     }
 
     const format = _detectFormat(reportPath);
-    const threshold = (params && Number.isFinite(params.threshold) && params.threshold >= 0 && params.threshold <= 100)
-      ? params.threshold : 80;
+    const threshold =
+      params &&
+      Number.isFinite(params.threshold) &&
+      params.threshold >= 0 &&
+      params.threshold <= 100
+        ? params.threshold
+        : 80;
 
     let result;
     try {
-      if (format === 'lcov') result = _parseLcov(reportPath);
-      else if (format === 'json') result = _parseCoverageJson(reportPath);
-      else if (format === 'cobertura') result = _parseCobertura(reportPath);
-      else {
+      if (format === 'lcov') {
+        result = _parseLcov(reportPath);
+      } else if (format === 'json') {
+        result = _parseCoverageJson(reportPath);
+      } else if (format === 'cobertura') {
+        result = _parseCobertura(reportPath);
+      } else {
         return {
           success: false,
           error: `Unknown coverage format in: ${reportPath}`,
@@ -361,15 +428,20 @@ module.exports = defineTool({
     }
 
     const below = result.filesBelowThreshold || [];
-    const gapsList = below.slice(0, 15).map(g =>
-      `  ${g.file} — lines: ${g.linePct}%${g.branchPct !== undefined ? `, branches: ${g.branchPct}%` : ''}`
-    ).join('\n');
+    const gapsList = below
+      .slice(0, 15)
+      .map(
+        (g) =>
+          `  ${g.file} — lines: ${g.linePct}%${g.branchPct !== undefined ? `, branches: ${g.branchPct}%` : ''}`
+      )
+      .join('\n');
 
     const header = `Coverage report: ${path.basename(reportPath)} (${format})`;
     const summary = `Overall: lines ${result.lineCoverage}%${result.branchCoverage ? `, branches ${result.branchCoverage}%` : ''}${result.fnCoverage ? `, functions ${result.fnCoverage}%` : ''} across ${result.files} files.`;
-    const gapsBlock = below.length > 0
-      ? `\nFiles below ${threshold}% line coverage (${below.length} of ${result.files}):\n${gapsList}\nHint: worst file is ${result.worstFiles[0]?.file || 'N/A'} at ${result.worstFiles[0]?.linePct || '?'}%.`
-      : `\nAll ${result.files} files meet the ${threshold}% line coverage threshold.`;
+    const gapsBlock =
+      below.length > 0
+        ? `\nFiles below ${threshold}% line coverage (${below.length} of ${result.files}):\n${gapsList}\nHint: worst file is ${result.worstFiles[0]?.file || 'N/A'} at ${result.worstFiles[0]?.linePct || '?'}%.`
+        : `\nAll ${result.files} files meet the ${threshold}% line coverage threshold.`;
 
     return {
       success: true,

@@ -33,11 +33,17 @@ function isEnabled(env) {
   const e = env || (typeof process !== 'undefined' && process.env) || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_TERMINAL_LAUNCH', e);
     }
-  } catch { /* registry unavailable → local fallback */ }
+  } catch {
+    /* registry unavailable → local fallback */
+  }
   const v = e.KHY_TERMINAL_LAUNCH;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -47,8 +53,18 @@ function isEnabled(env) {
  * 保守白名单(零假阳性):只收明确是交互式 CLI 编码 agent 的基名,绝不误伤 GUI 应用。
  */
 const INTERACTIVE_TERMINAL_APPS = Object.freeze([
-  'opencode', 'claude', 'codex', 'aider', 'gemini', 'crush', 'goose',
-  'cursor-agent', 'qwen', 'amp', 'kiro', 'trae',
+  'opencode',
+  'claude',
+  'codex',
+  'aider',
+  'gemini',
+  'crush',
+  'goose',
+  'cursor-agent',
+  'qwen',
+  'amp',
+  'kiro',
+  'trae',
 ]);
 const _INTERACTIVE_SET = Object.freeze(new Set(INTERACTIVE_TERMINAL_APPS));
 
@@ -59,8 +75,12 @@ const _INTERACTIVE_SET = Object.freeze(new Set(INTERACTIVE_TERMINAL_APPS));
  */
 function _basenameNoExt(target) {
   try {
-    const raw = String(target == null ? '' : target).trim().replace(/^"+|"+$/g, '');
-    if (!raw) return '';
+    const raw = String(target == null ? '' : target)
+      .trim()
+      .replace(/^"+|"+$/g, '');
+    if (!raw) {
+      return '';
+    }
     // Split on BOTH separators so a Windows-style target (C:\...\opencode.cmd)
     // resolves identically on a POSIX host (path.basename would be host-dependent).
     const seg = raw.split(/[\\/]/).pop() || '';
@@ -78,21 +98,29 @@ function _basenameNoExt(target) {
  * @returns {boolean}
  */
 function isInteractiveTerminalApp(target, env) {
-  if (!isEnabled(env)) return false;
+  if (!isEnabled(env)) {
+    return false;
+  }
   const name = _basenameNoExt(target);
   return !!name && _INTERACTIVE_SET.has(name);
 }
 
 /** AppleScript 双引号字符串转义(仅转义 \\ 与 ")。 */
 function _appleScriptQuote(s) {
-  return `"${String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  return `"${String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')}"`;
 }
 
 /** POSIX 单引号 shell 量化(用于 osascript do script 内的一条命令行)。 */
 function _shQuote(token) {
   const s = String(token == null ? '' : token);
-  if (s === '') return "''";
-  if (/^[A-Za-z0-9_./:@%+=-]+$/.test(s)) return s;
+  if (s === '') {
+    return "''";
+  }
+  if (/^[A-Za-z0-9_./:@%+=-]+$/.test(s)) {
+    return s;
+  }
   return `'${s.replace(/'/g, "'\\''")}'`;
 }
 
@@ -110,8 +138,12 @@ function _shQuote(token) {
 function buildTerminalLaunchArgv(opts) {
   try {
     const o = opts || {};
-    const target = String(o.target == null ? '' : o.target).trim().replace(/^"+|"+$/g, '');
-    if (!target) return null;
+    const target = String(o.target == null ? '' : o.target)
+      .trim()
+      .replace(/^"+|"+$/g, '');
+    if (!target) {
+      return null;
+    }
     const args = Array.isArray(o.args) ? o.args.map((a) => String(a)) : [];
     const platform = o.platform || (typeof process !== 'undefined' && process.platform) || '';
     const env = o.env || (typeof process !== 'undefined' && process.env) || {};

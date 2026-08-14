@@ -9,7 +9,9 @@ class TeamDeleteTool extends BaseTool {
   static searchHint = 'team delete remove teammate';
   static shouldDefer = true;
 
-  isConcurrencySafe() { return false; }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Delete a teammate created by TeamCreate.

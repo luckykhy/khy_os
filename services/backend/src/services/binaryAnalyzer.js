@@ -27,28 +27,41 @@ const path = require('path');
 // (=0/false/off/no) → legacy unguarded behaviour, byte-identical on well-formed
 // input but crash-prone on malformed input (honest escape hatch).
 function binaryParseGuardEnabled(env = process.env) {
-  const flag = String((env && env.KHY_BINARY_PARSE_GUARD) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_BINARY_PARSE_GUARD) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
 // ─── ELF Constants ────────────────────────────────────────────────────────
 
-const ELF_MAGIC = Buffer.from([0x7F, 0x45, 0x4C, 0x46]); // \x7FELF
+const ELF_MAGIC = Buffer.from([0x7f, 0x45, 0x4c, 0x46]); // \x7FELF
 const ELF_MACHINES = {
-  0x03: 'x86', 0x3E: 'x86_64', 0x28: 'ARM', 0xB7: 'AArch64',
-  0xF3: 'RISC-V', 0x08: 'MIPS', 0x15: 'PowerPC64',
+  0x03: 'x86',
+  0x3e: 'x86_64',
+  0x28: 'ARM',
+  0xb7: 'AArch64',
+  0xf3: 'RISC-V',
+  0x08: 'MIPS',
+  0x15: 'PowerPC64',
 };
 const ELF_TYPES = { 1: 'relocatable', 2: 'executable', 3: 'shared_object', 4: 'core' };
 
 // ─── PE Constants ─────────────────────────────────────────────────────────
 
-const PE_MAGIC = Buffer.from([0x4D, 0x5A]); // MZ
+const PE_MAGIC = Buffer.from([0x4d, 0x5a]); // MZ
 const PE_MACHINES = {
-  0x014C: 'x86', 0x8664: 'x86_64', 0xAA64: 'AArch64',
+  0x014c: 'x86',
+  0x8664: 'x86_64',
+  0xaa64: 'AArch64',
 };
 const PE_SUBSYSTEMS = {
-  1: 'native', 2: 'gui', 3: 'console', 7: 'posix',
-  10: 'efi_application', 14: 'xbox',
+  1: 'native',
+  2: 'gui',
+  3: 'console',
+  7: 'posix',
+  10: 'efi_application',
+  14: 'xbox',
 };
 
 // ─── ELF Parser ───────────────────────────────────────────────────────────
@@ -83,64 +96,72 @@ function parseELF(buffer, env = process.env) {
   // RangeError; the guard degrades to the header already collected above instead
   // of crashing analyzeBinary. Gate off → rethrow (legacy byte-identical path).
   try {
-  // Parse section headers for section names
-  if (is64 && buffer.length >= 64) {
-    const shoff = Number(buffer.readBigUInt64LE(40));
-    const shentsize = read16(58);
-    const shnum = read16(60);
-    const shstrndx = read16(62);
+    // Parse section headers for section names
+    if (is64 && buffer.length >= 64) {
+      const shoff = Number(buffer.readBigUInt64LE(40));
+      const shentsize = read16(58);
+      const shnum = read16(60);
+      const shstrndx = read16(62);
 
-    if (shoff > 0 && shoff + shnum * shentsize <= buffer.length) {
-      // Read section string table
-      let strtabOff = 0, strtabSize = 0;
-      if (shstrndx < shnum) {
-        const strSecOff = shoff + shstrndx * shentsize;
-        strtabOff = Number(buffer.readBigUInt64LE(strSecOff + 24));
-        strtabSize = Number(buffer.readBigUInt64LE(strSecOff + 32));
-      }
-
-      for (let i = 0; i < shnum && i < 64; i++) {
-        const off = shoff + i * shentsize;
-        if (off + shentsize > buffer.length) break;
-
-        const nameIdx = read32(off);
-        const sh_type = read32(off + 4);
-        const sh_size = Number(buffer.readBigUInt64LE(off + 32));
-
-        let name = `section_${i}`;
-        if (strtabOff > 0 && nameIdx < strtabSize) {
-          const end = buffer.indexOf(0, strtabOff + nameIdx);
-          if (end > strtabOff + nameIdx) {
-            name = buffer.toString('ascii', strtabOff + nameIdx, end);
-          }
+      if (shoff > 0 && shoff + shnum * shentsize <= buffer.length) {
+        // Read section string table
+        let strtabOff = 0,
+          strtabSize = 0;
+        if (shstrndx < shnum) {
+          const strSecOff = shoff + shstrndx * shentsize;
+          strtabOff = Number(buffer.readBigUInt64LE(strSecOff + 24));
+          strtabSize = Number(buffer.readBigUInt64LE(strSecOff + 32));
         }
 
-        result.sections.push({ name, type: sh_type, size: sh_size });
+        for (let i = 0; i < shnum && i < 64; i++) {
+          const off = shoff + i * shentsize;
+          if (off + shentsize > buffer.length) {
+            break;
+          }
+
+          const nameIdx = read32(off);
+          const sh_type = read32(off + 4);
+          const sh_size = Number(buffer.readBigUInt64LE(off + 32));
+
+          let name = `section_${i}`;
+          if (strtabOff > 0 && nameIdx < strtabSize) {
+            const end = buffer.indexOf(0, strtabOff + nameIdx);
+            if (end > strtabOff + nameIdx) {
+              name = buffer.toString('ascii', strtabOff + nameIdx, end);
+            }
+          }
+
+          result.sections.push({ name, type: sh_type, size: sh_size });
+        }
+      }
+
+      // Parse dynamic section for dependencies
+      const phoff = Number(buffer.readBigUInt64LE(32));
+      const phentsize = read16(54);
+      const phnum = read16(56);
+
+      // Find PT_DYNAMIC segment
+      for (let i = 0; i < phnum; i++) {
+        const off = phoff + i * phentsize;
+        if (off + phentsize > buffer.length) {
+          break;
+        }
+        const p_type = read32(off);
+        if (p_type === 2) {
+          // PT_DYNAMIC
+          const dynOff = Number(buffer.readBigUInt64LE(off + 8));
+          const dynSize = Number(buffer.readBigUInt64LE(off + 32));
+          // Find DT_NEEDED entries (would need string table from PT_DYNAMIC)
+          // Simplified: scan for common library patterns
+          _findElfDeps(buffer, dynOff, dynSize, result);
+          break;
+        }
       }
     }
-
-    // Parse dynamic section for dependencies
-    const phoff = Number(buffer.readBigUInt64LE(32));
-    const phentsize = read16(54);
-    const phnum = read16(56);
-
-    // Find PT_DYNAMIC segment
-    for (let i = 0; i < phnum; i++) {
-      const off = phoff + i * phentsize;
-      if (off + phentsize > buffer.length) break;
-      const p_type = read32(off);
-      if (p_type === 2) { // PT_DYNAMIC
-        const dynOff = Number(buffer.readBigUInt64LE(off + 8));
-        const dynSize = Number(buffer.readBigUInt64LE(off + 32));
-        // Find DT_NEEDED entries (would need string table from PT_DYNAMIC)
-        // Simplified: scan for common library patterns
-        _findElfDeps(buffer, dynOff, dynSize, result);
-        break;
-      }
-    }
-  }
   } catch (err) {
-    if (!binaryParseGuardEnabled(env)) throw err;
+    if (!binaryParseGuardEnabled(env)) {
+      throw err;
+    }
     // Guard on: malformed section/program headers → keep the parsed ELF header,
     // leave sections/dependencies as collected so far. Never throw.
   }
@@ -155,13 +176,21 @@ function _findElfDeps(buffer, dynOff, dynSize, result) {
 
   for (let i = 0; i < dynSize; i += 16) {
     const off = dynOff + i;
-    if (off + 16 > buffer.length) break;
+    if (off + 16 > buffer.length) {
+      break;
+    }
     const tag = Number(buffer.readBigInt64LE(off));
     const val = Number(buffer.readBigUInt64LE(off + 8));
 
-    if (tag === 0) break; // DT_NULL
-    if (tag === 5) strtabAddr = val; // DT_STRTAB
-    if (tag === 1) needed.push(val); // DT_NEEDED (string offset)
+    if (tag === 0) {
+      break;
+    } // DT_NULL
+    if (tag === 5) {
+      strtabAddr = val;
+    } // DT_STRTAB
+    if (tag === 1) {
+      needed.push(val);
+    } // DT_NEEDED (string offset)
   }
 
   // Try to resolve DT_NEEDED strings from loaded sections
@@ -191,10 +220,14 @@ function parsePE(buffer, env = process.env) {
   }
 
   const peOffset = buffer.readUInt32LE(60); // e_lfanew
-  if (peOffset + 4 + 20 > buffer.length) return null;
+  if (peOffset + 4 + 20 > buffer.length) {
+    return null;
+  }
 
   const peSig = buffer.readUInt32LE(peOffset);
-  if (peSig !== 0x00004550) return null; // "PE\0\0"
+  if (peSig !== 0x00004550) {
+    return null;
+  } // "PE\0\0"
 
   const coffOff = peOffset + 4;
   const machine = buffer.readUInt16LE(coffOff);
@@ -202,10 +235,12 @@ function parsePE(buffer, env = process.env) {
   const optHeaderSize = buffer.readUInt16LE(coffOff + 16);
 
   const optOff = coffOff + 20;
-  if (optOff + optHeaderSize > buffer.length) return null;
+  if (optOff + optHeaderSize > buffer.length) {
+    return null;
+  }
 
   const optMagic = buffer.readUInt16LE(optOff);
-  const is64 = optMagic === 0x020B;
+  const is64 = optMagic === 0x020b;
 
   const result = {
     format: 'PE',
@@ -227,46 +262,63 @@ function parsePE(buffer, env = process.env) {
   // with a buffer ending at optOff+112). Guard degrades to the header parsed so
   // far instead of throwing. Gate off → rethrow (legacy byte-identical path).
   try {
-  if (is64 && optOff + 112 <= buffer.length) {
-    result.entry_point = buffer.readUInt32LE(optOff + 16);
-    result.image_base = Number(buffer.readBigUInt64LE(optOff + 24));
-    const subsystem = buffer.readUInt16LE(optOff + 68);
-    result.subsystem = PE_SUBSYSTEMS[subsystem] || `unknown(${subsystem})`;
+    if (is64 && optOff + 112 <= buffer.length) {
+      result.entry_point = buffer.readUInt32LE(optOff + 16);
+      result.image_base = Number(buffer.readBigUInt64LE(optOff + 24));
+      const subsystem = buffer.readUInt16LE(optOff + 68);
+      result.subsystem = PE_SUBSYSTEMS[subsystem] || `unknown(${subsystem})`;
 
-    // Data directories
-    const numDirs = buffer.readUInt32LE(optOff + 108);
+      // Data directories
+      const numDirs = buffer.readUInt32LE(optOff + 108);
 
-    // Parse import directory (index 1)
-    if (numDirs > 1) {
-      const importRVA = buffer.readUInt32LE(optOff + 112 + 8);
-      const importSize = buffer.readUInt32LE(optOff + 112 + 12);
+      // Parse import directory (index 1)
+      if (numDirs > 1) {
+        const importRVA = buffer.readUInt32LE(optOff + 112 + 8);
+        const importSize = buffer.readUInt32LE(optOff + 112 + 12);
 
-      if (importRVA > 0 && importSize > 0) {
-        _findPEImports(buffer, importRVA, importSize, numSections,
-                       coffOff, optHeaderSize, result);
+        if (importRVA > 0 && importSize > 0) {
+          _findPEImports(
+            buffer,
+            importRVA,
+            importSize,
+            numSections,
+            coffOff,
+            optHeaderSize,
+            result
+          );
+        }
       }
     }
-  }
 
-  // Parse section headers
-  const secOff = optOff + optHeaderSize;
-  for (let i = 0; i < numSections && i < 96; i++) {
-    const off = secOff + i * 40;
-    if (off + 40 > buffer.length) break;
+    // Parse section headers
+    const secOff = optOff + optHeaderSize;
+    for (let i = 0; i < numSections && i < 96; i++) {
+      const off = secOff + i * 40;
+      if (off + 40 > buffer.length) {
+        break;
+      }
 
-    const name = buffer.toString('ascii', off, off + 8).replace(/\0/g, '');
-    const virtualSize = buffer.readUInt32LE(off + 8);
-    const characteristics = buffer.readUInt32LE(off + 36);
+      const name = buffer.toString('ascii', off, off + 8).replace(/\0/g, '');
+      const virtualSize = buffer.readUInt32LE(off + 8);
+      const characteristics = buffer.readUInt32LE(off + 36);
 
-    const flags = [];
-    if (characteristics & 0x20000000) flags.push('execute');
-    if (characteristics & 0x40000000) flags.push('read');
-    if (characteristics & 0x80000000) flags.push('write');
+      const flags = [];
+      if (characteristics & 0x20000000) {
+        flags.push('execute');
+      }
+      if (characteristics & 0x40000000) {
+        flags.push('read');
+      }
+      if (characteristics & 0x80000000) {
+        flags.push('write');
+      }
 
-    result.sections.push({ name, size: virtualSize, flags });
-  }
+      result.sections.push({ name, size: virtualSize, flags });
+    }
   } catch (err) {
-    if (!binaryParseGuardEnabled(env)) throw err;
+    if (!binaryParseGuardEnabled(env)) {
+      throw err;
+    }
     // Guard on: malformed optional/section headers → keep the parsed PE header,
     // leave sections/dependencies as collected so far. Never throw.
   }
@@ -274,15 +326,24 @@ function parsePE(buffer, env = process.env) {
   return result;
 }
 
-function _findPEImports(buffer, importRVA, importSize, numSections,
-                        coffOff, optHeaderSize, result) {
+function _findPEImports(
+  buffer,
+  importRVA,
+  importSize,
+  numSections,
+  coffOff,
+  optHeaderSize,
+  result
+) {
   // Convert RVA to file offset using section table
   const secOff = coffOff + 20 + optHeaderSize;
   let fileOff = 0;
 
   for (let i = 0; i < numSections; i++) {
     const off = secOff + i * 40;
-    if (off + 40 > buffer.length) break;
+    if (off + 40 > buffer.length) {
+      break;
+    }
     const va = buffer.readUInt32LE(off + 12);
     const rawSize = buffer.readUInt32LE(off + 16);
     const rawPtr = buffer.readUInt32LE(off + 20);
@@ -293,21 +354,29 @@ function _findPEImports(buffer, importRVA, importSize, numSections,
     }
   }
 
-  if (fileOff === 0) return;
+  if (fileOff === 0) {
+    return;
+  }
 
   // Read import descriptors (20 bytes each, null-terminated)
   for (let i = 0; i < 128; i++) {
     const descOff = fileOff + i * 20;
-    if (descOff + 20 > buffer.length) break;
+    if (descOff + 20 > buffer.length) {
+      break;
+    }
 
     const nameRVA = buffer.readUInt32LE(descOff + 12);
-    if (nameRVA === 0) break;
+    if (nameRVA === 0) {
+      break;
+    }
 
     // Convert name RVA to file offset
     let nameFileOff = 0;
     for (let s = 0; s < numSections; s++) {
       const soff = secOff + s * 40;
-      if (soff + 40 > buffer.length) break;
+      if (soff + 40 > buffer.length) {
+        break;
+      }
       const va = buffer.readUInt32LE(soff + 12);
       const rawSize = buffer.readUInt32LE(soff + 16);
       const rawPtr = buffer.readUInt32LE(soff + 20);
@@ -320,8 +389,11 @@ function _findPEImports(buffer, importRVA, importSize, numSections,
 
     if (nameFileOff > 0 && nameFileOff < buffer.length) {
       const end = buffer.indexOf(0, nameFileOff);
-      const dllName = buffer.toString('ascii', nameFileOff,
-        Math.min(end > nameFileOff ? end : nameFileOff + 64, buffer.length));
+      const dllName = buffer.toString(
+        'ascii',
+        nameFileOff,
+        Math.min(end > nameFileOff ? end : nameFileOff + 64, buffer.length)
+      );
       if (dllName.length > 0 && dllName.length < 128) {
         result.dependencies.push(dllName);
       }
@@ -351,7 +423,9 @@ async function analyzeBinary(filePath) {
 
   // Try ELF first, then PE
   let result = parseELF(buffer);
-  if (!result) result = parsePE(buffer);
+  if (!result) {
+    result = parsePE(buffer);
+  }
   if (!result) {
     return {
       error: 'Unknown binary format',
@@ -381,7 +455,8 @@ function assessCompatibility(analysis) {
 
   if (analysis.format === 'ELF') {
     compat.canRunOn.linux = true;
-    compat.canRunOn.macos = analysis.architecture === 'AArch64' || analysis.architecture === 'x86_64';
+    compat.canRunOn.macos =
+      analysis.architecture === 'AArch64' || analysis.architecture === 'x86_64';
     compat.canRunOn.windows = false;
 
     // Check for platform-specific dependencies
@@ -405,10 +480,18 @@ function assessCompatibility(analysis) {
     compat.canRunOn.macos = false;
 
     // Check for WINE compatibility hints
-    const wineSupported = ['kernel32.dll', 'user32.dll', 'gdi32.dll',
-      'advapi32.dll', 'msvcrt.dll', 'ntdll.dll', 'shell32.dll'];
+    const wineSupported = [
+      'kernel32.dll',
+      'user32.dll',
+      'gdi32.dll',
+      'advapi32.dll',
+      'msvcrt.dll',
+      'ntdll.dll',
+      'shell32.dll',
+    ];
     const unsupported = analysis.dependencies.filter(
-      d => !wineSupported.some(w => d.toLowerCase() === w));
+      (d) => !wineSupported.some((w) => d.toLowerCase() === w)
+    );
 
     if (unsupported.length === 0) {
       compat.canRunOn.linux = true; // Likely works under WINE
@@ -426,7 +509,8 @@ function assessCompatibility(analysis) {
     // KHY OS compatibility check
     const khySupported = ['kernel32.dll'];
     const khyUnsupported = analysis.dependencies.filter(
-      d => !khySupported.some(w => d.toLowerCase() === w));
+      (d) => !khySupported.some((w) => d.toLowerCase() === w)
+    );
     if (khyUnsupported.length > 0) {
       compat.issues.push({
         severity: 'warning',
@@ -450,8 +534,7 @@ async function compareBinaries(pathA, pathB) {
     sameArchitecture: a.architecture === b.architecture,
     sameFormat: a.format === b.format,
     samePlatform: a.platform === b.platform,
-    sharedDependencies: (a.dependencies || []).filter(
-      d => (b.dependencies || []).includes(d)),
+    sharedDependencies: (a.dependencies || []).filter((d) => (b.dependencies || []).includes(d)),
   };
 }
 

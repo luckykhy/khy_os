@@ -12,8 +12,8 @@
  * 本壳只持有可变值 + best-effort 读当前会话色。
  */
 
-let _color = null;     // 当前活动会话色(null = 默认 cyan)
-let _loaded = false;   // 是否已尝试从元数据播种
+let _color = null; // 当前活动会话色(null = 默认 cyan)
+let _loaded = false; // 是否已尝试从元数据播种
 
 function setSessionColor(color) {
   const c = color == null ? null : String(color).trim().toLowerCase();
@@ -23,24 +23,37 @@ function setSessionColor(color) {
 }
 
 function _seedOnce() {
-  if (_loaded) return;
+  if (_loaded) {
+    return;
+  }
   _loaded = true; // 无论成败只播种一次
   try {
     const sessionId = require('../../services/session/sessionForestService').getCurrentSessionId();
-    if (!sessionId) return;
+    if (!sessionId) {
+      return;
+    }
     const meta = require('../../services/sessionPersistence').loadSessionMeta(sessionId);
     const c = meta && meta.metadata && meta.metadata.color;
-    if (c && String(c).toLowerCase() !== 'default') _color = String(c).toLowerCase();
-  } catch { /* best-effort: no session / no metadata → stay default */ }
+    if (c && String(c).toLowerCase() !== 'default') {
+      _color = String(c).toLowerCase();
+    }
+  } catch {
+    /* best-effort: no session / no metadata → stay default */
+  }
 }
 
 /** App.js 每帧调用:返回当前会话色(null = 默认)。首帧惰性播种。 */
 function getSessionColor() {
-  if (!_loaded) _seedOnce();
+  if (!_loaded) {
+    _seedOnce();
+  }
   return _color;
 }
 
 /** 测试钩子:重置进程级状态。 */
-function _reset() { _color = null; _loaded = false; }
+function _reset() {
+  _color = null;
+  _loaded = false;
+}
 
 module.exports = { setSessionColor, getSessionColor, _reset };

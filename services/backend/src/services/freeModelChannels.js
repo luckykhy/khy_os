@@ -30,7 +30,15 @@ const FREE_MODEL_CHANNELS = [
     name: '智谱 GLM(BigModel)',
     poolKey: 'glm',
     note: '7 个永久免费 Flash 模型:对话/视觉/推理/文生图/文生视频',
-    freeModels: ['glm-4.7-flash', 'glm-4.6v-flash', 'glm-4.1v-thinking-flash', 'glm-4-flash-250414', 'glm-4v-flash', 'cogview-3-flash', 'cogvideox-flash'],
+    freeModels: [
+      'glm-4.7-flash',
+      'glm-4.6v-flash',
+      'glm-4.1v-thinking-flash',
+      'glm-4-flash-250414',
+      'glm-4v-flash',
+      'cogview-3-flash',
+      'cogvideox-flash',
+    ],
     console: 'https://open.bigmodel.cn/usercenter/apikeys',
     configureHint: '把智谱 key 发我,或 configureModelProvider(provider="智谱", apiKey=...)',
   },
@@ -39,18 +47,28 @@ const FREE_MODEL_CHANNELS = [
     name: '硅基流动 SiliconFlow',
     poolKey: 'siliconflow',
     note: '多款开源模型免费额度(Qwen / GLM / DeepSeek 蒸馏等,OpenAI 兼容)',
-    freeModels: ['Qwen/Qwen2.5-7B-Instruct', 'THUDM/glm-4-9b-chat', 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B'],
+    freeModels: [
+      'Qwen/Qwen2.5-7B-Instruct',
+      'THUDM/glm-4-9b-chat',
+      'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
+    ],
     console: 'https://cloud.siliconflow.cn/account/ak',
-    configureHint: 'configureModelProvider(kind="custom", provider="硅基流动", endpoint="https://api.siliconflow.cn/v1", apiKey=..., model="Qwen/Qwen2.5-7B-Instruct")',
+    configureHint:
+      'configureModelProvider(kind="custom", provider="硅基流动", endpoint="https://api.siliconflow.cn/v1", apiKey=..., model="Qwen/Qwen2.5-7B-Instruct")',
   },
   {
     key: 'openrouter',
     name: 'OpenRouter(:free 模型)',
     poolKey: 'openrouter',
     note: '聚合多家模型,带 :free 后缀的模型免费调用',
-    freeModels: ['deepseek/deepseek-r1:free', 'google/gemini-2.0-flash-exp:free', 'meta-llama/llama-3.3-70b-instruct:free'],
+    freeModels: [
+      'deepseek/deepseek-r1:free',
+      'google/gemini-2.0-flash-exp:free',
+      'meta-llama/llama-3.3-70b-instruct:free',
+    ],
     console: 'https://openrouter.ai/keys',
-    configureHint: 'configureModelProvider(kind="custom", provider="OpenRouter", endpoint="https://openrouter.ai/api/v1", apiKey=..., model="deepseek/deepseek-r1:free")',
+    configureHint:
+      'configureModelProvider(kind="custom", provider="OpenRouter", endpoint="https://openrouter.ai/api/v1", apiKey=..., model="deepseek/deepseek-r1:free")',
   },
 ];
 
@@ -65,14 +83,21 @@ function freeModelChannelsEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_FREE_MODEL_CHANNELS', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_FREE_MODEL_CHANNELS;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -82,21 +107,36 @@ function freeModelChannelsEnabled(env = process.env) {
 /** 仅保留公开 http(s) URL,否则丢弃(渲染为可点链接,绝不放不可信 scheme)。 */
 function _safeUrl(v) {
   const s = String(v == null ? '' : v).trim();
-  if (!s || !/^https?:\/\//i.test(s)) return '';
-  try { new URL(s); return s; } catch { return ''; }
+  if (!s || !/^https?:\/\//i.test(s)) {
+    return '';
+  }
+  try {
+    new URL(s);
+    return s;
+  } catch {
+    return '';
+  }
 }
 
 /** 规整一条渠道为规范形状,或返回 null 丢弃。绝不让 key/secret 透出。 */
 function _sanitize(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const key = String(raw.key || '').trim().toLowerCase();
-  if (!key) return null;
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const key = String(raw.key || '')
+    .trim()
+    .toLowerCase();
+  if (!key) {
+    return null;
+  }
   return {
     key,
     name: String(raw.name || key),
     poolKey: String(raw.poolKey || '').trim(),
     note: String(raw.note || ''),
-    freeModels: Array.isArray(raw.freeModels) ? raw.freeModels.map((m) => String(m)).filter(Boolean) : [],
+    freeModels: Array.isArray(raw.freeModels)
+      ? raw.freeModels.map((m) => String(m)).filter(Boolean)
+      : [],
     console: _safeUrl(raw.console),
     configureHint: String(raw.configureHint || ''),
     // NOTE: 任何 raw.key 之外的 apiKey/secret 一律不拷贝——渠道是无凭据元数据。
@@ -106,10 +146,14 @@ function _sanitize(raw) {
 /** 解析 env KHY_FREE_MODEL_CHANNELS 为覆盖/新增数组。畸形/非数组 → []。 */
 function _readEnvOverrides(env = process.env) {
   const raw = env && env.KHY_FREE_MODEL_CHANNELS;
-  if (!raw || typeof raw !== 'string' || !raw.trim()) return [];
+  if (!raw || typeof raw !== 'string' || !raw.trim()) {
+    return [];
+  }
   // 若是纯开关词(true/1/off…)而非 JSON,不当覆盖处理。
   const t = raw.trim();
-  if (!t.startsWith('[')) return [];
+  if (!t.startsWith('[')) {
+    return [];
+  }
   try {
     const parsed = JSON.parse(t);
     return Array.isArray(parsed) ? parsed : [];
@@ -126,17 +170,27 @@ function _readEnvOverrides(env = process.env) {
  */
 function listFreeModelChannels(env = process.env) {
   try {
-    if (!freeModelChannelsEnabled(env)) return [];
+    if (!freeModelChannelsEnabled(env)) {
+      return [];
+    }
     const byKey = new Map();
     for (const c of FREE_MODEL_CHANNELS) {
       const clean = _sanitize(c);
-      if (clean) byKey.set(clean.key, clean);
+      if (clean) {
+        byKey.set(clean.key, clean);
+      }
     }
     for (const o of _readEnvOverrides(env)) {
-      const key = String(o && o.key ? o.key : '').trim().toLowerCase();
-      if (!key) continue;
+      const key = String(o && o.key ? o.key : '')
+        .trim()
+        .toLowerCase();
+      if (!key) {
+        continue;
+      }
       const merged = _sanitize({ ...(byKey.get(key) || { key }), ...o, key });
-      if (merged) byKey.set(key, merged);
+      if (merged) {
+        byKey.set(key, merged);
+      }
     }
     return Array.from(byKey.values());
   } catch {
@@ -153,7 +207,9 @@ function listFreeModelChannels(env = process.env) {
 function buildFreeModelChannelsMessage(env = process.env) {
   try {
     const channels = listFreeModelChannels(env);
-    if (!channels.length) return '';
+    if (!channels.length) {
+      return '';
+    }
     return channels
       .map((c) => {
         const url = c.console ? `(${c.console})` : '';

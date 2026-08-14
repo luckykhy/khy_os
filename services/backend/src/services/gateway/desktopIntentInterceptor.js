@@ -17,10 +17,22 @@
 
 // 动作动词 → 窗口原语。最小化要排在「关闭」之前匹配以免「关」吞掉。
 // 形如：<动词> [窗口/应用] <名称> ；名称允许为空（针对当前/最前窗口）。
-const _ACTIVATE_RE = /^(?:激活|切到|切换到|聚焦|前置|呼出|唤起|activate|focus|switch\s+to|raise|bring\s+(?:up|to\s+front))\s*(?:窗口|应用|程序|window|app)?\s*(.*)$/i;
-const _MINIMIZE_RE = /^(?:最小化|缩小|最小|minimi[sz]e|hide)\s*(?:窗口|应用|程序|window|app)?\s*(.*)$/i;
-const _CLOSE_RE = /^(?:关闭|关掉|退出|结束|close|quit|kill)\s*(?:窗口|应用|程序|window|app)?\s*(.*)$/i;
-const _LIST_RE = /^(?:列出|列举|显示|查看|有哪些|list)\s*(?:当前|所有|全部|open)?\s*(?:窗口|应用|程序|windows?|apps?)\s*$/i;
+const _ACTIVATE_RE =
+  /^(?:激活|切到|切换到|聚焦|前置|呼出|唤起|activate|focus|switch\s+to|raise|bring\s+(?:up|to\s+front))\s*(?:窗口|应用|程序|window|app)?\s*(.*)$/i;
+const _MINIMIZE_RE =
+  /^(?:最小化|缩小|最小|minimi[sz]e|hide)\s*(?:窗口|应用|程序|window|app)?\s*(.*)$/i;
+const _CLOSE_RE =
+  /^(?:关闭|关掉|退出|结束|close|quit|kill)\s*(?:窗口|应用|程序|window|app)?\s*(.*)$/i;
+const _LIST_RE =
+  /^(?:列出|列举|显示|查看|有哪些|list)\s*(?:当前|所有|全部|open)?\s*(?:窗口|应用|程序|windows?|apps?)\s*$/i;
+
+// 桌面内容感知：「我的桌面上有些什么 / 桌面有哪些图标 / what's on my desktop」。
+// 只读，直接走 desktopIcons（枚举桌面 ListView 图标），比截图+OCR 可靠，也不会拍到
+// khyos 终端自身。与 listWindows 并列，最先匹配（短指令、纯只读）。
+// 覆盖：我的/我 前缀，桌面/桌面上/桌面里的 主体，有什么/有些什么/有哪些/都是什么 等问词，
+// 可带 图标/内容/icon(s) 尾缀。结尾问号可省略。
+const _DESKTOP_ICONS_RE =
+  /^(?:我的|我)?桌面(?:上|里的)?(?:有些什么|有什么|有哪些|都是些什么|都是什么|有哪些图标|有什么内容|都是|上有什么|上有哪些|上都是|的内容|内容|图标|icons?|icon)?\s*(?:？|\?)?$/i;
 
 const _MAX_NAME = 40;
 
@@ -30,42 +42,65 @@ const _MAX_NAME = 40;
  */
 function _canonicalizeName(raw, toolCalling) {
   const name = String(raw || '').trim();
-  if (!name) return '';
-  if (!toolCalling || !toolCalling.APP_ALIAS_MAP) return name;
+  if (!name) {
+    return '';
+  }
+  if (!toolCalling || !toolCalling.APP_ALIAS_MAP) {
+    return name;
+  }
   try {
     const candidates = toolCalling._buildAppCandidates(name);
     const aliasMap = toolCalling.APP_ALIAS_MAP;
     // 直接别名命中：优先返回规范英文名（窗口标题/进程名通常用英文）。
     for (const c of candidates) {
-      if (aliasMap[c]) return aliasMap[c];
+      if (aliasMap[c]) {
+        return aliasMap[c];
+      }
     }
-  } catch { /* best effort — fall through to raw */ }
+  } catch {
+    /* best effort — fall through to raw */
+  }
   return name;
 }
 
 /**
  * 解析一段文本，返回 { action, name } 或 null。
- * action ∈ activate | closeWindow | minimizeWindow | listWindows
+ * action ∈ activate | closeWindow | minimizeWindow | listWindows | desktopIcons
  */
 function _parseDesktopIntent(text, toolCalling) {
   const t = String(text || '').trim();
-  if (!t) return null;
+  if (!t) {
+    return null;
+  }
 
   // 列窗口：纯只读，最先识别（无名称）。
-  if (_LIST_RE.test(t)) return { action: 'listWindows', name: '' };
+  if (_LIST_RE.test(t)) {
+    return { action: 'listWindows', name: '' };
+  }
+
+  // 桌面图标清单：纯只读，直接枚举桌面 ListView（不依赖截图/视觉）。
+  if (_DESKTOP_ICONS_RE.test(t)) {
+    return { action: 'desktopIcons', name: '' };
+  }
 
   // 顺序：最小化 → 关闭 → 激活（避免「关闭」误吞「最小化」等）。
   let m = _MINIMIZE_RE.exec(t);
-  if (m) return { action: 'minimizeWindow', name: _extractName(m[1], toolCalling) };
+  if (m) {
+    return { action: 'minimizeWindow', name: _extractName(m[1], toolCalling) };
+  }
 
   m = _CLOSE_RE.exec(t);
-  if (m) return { action: 'closeWindow', name: _extractName(m[1], toolCalling) };
+  if (m) {
+    return { action: 'closeWindow', name: _extractName(m[1], toolCalling) };
+  }
 
   m = _ACTIVATE_RE.exec(t);
   if (m) {
     const name = _extractName(m[1], toolCalling);
     // 「激活」必须带目标名，否则语义太泛（避免误吞普通对话）。
-    if (!name) return null;
+    if (!name) {
+      return null;
+    }
     return { action: 'activate', name };
   }
 
@@ -76,7 +111,9 @@ function _extractName(rawTail, toolCalling) {
   let tail = String(rawTail || '').trim();
   // 去掉常见尾缀助词：的窗口 / 这个应用 / 它 等。
   tail = tail.replace(/(?:的)?(?:窗口|应用|程序|window|app)\s*$/i, '').trim();
-  if (tail.length > _MAX_NAME) return ''; // 过长→不像应用名，放弃拦截
+  if (tail.length > _MAX_NAME) {
+    return '';
+  } // 过长→不像应用名，放弃拦截
   return _canonicalizeName(tail, toolCalling);
 }
 
@@ -90,35 +127,63 @@ function _extractName(rawTail, toolCalling) {
 async function tryDesktopIntent(prompt, options) {
   const rawUserMessage = String(options?.userMessage || '').trim();
   const text = rawUserMessage || String(prompt || '').trim();
-  if (!text || text.length > 80) return null; // 长文本不是命令式短指令
+  if (!text || text.length > 80) {
+    return null;
+  } // 长文本不是命令式短指令
 
   let toolCalling = null;
-  try { toolCalling = require('../toolCalling'); } catch { /* alias map optional */ }
+  try {
+    toolCalling = require('../toolCalling');
+  } catch {
+    /* alias map optional */
+  }
 
   const intent = _parseDesktopIntent(text, toolCalling);
-  if (!intent) return null;
+  if (!intent) {
+    return null;
+  }
 
   const { action, name } = intent;
 
   // 加载桌面门面（graceful fallback）。
   let desktop;
-  try { desktop = require('../desktopControl').create(); } catch { return null; }
+  try {
+    desktop = require('../desktopControl').create();
+  } catch {
+    return null;
+  }
 
   const id = 'desktop_intent_0';
   const { onChunk } = options || {};
   const toolInput = name ? `${action}: ${name}` : action;
   if (typeof onChunk === 'function') {
-    try { onChunk({ type: 'tool_use', tool: 'DesktopControl', input: toolInput, id }); } catch { /* best effort */ }
+    try {
+      onChunk({ type: 'tool_use', tool: 'DesktopControl', input: toolInput, id });
+    } catch {
+      /* best effort */
+    }
   }
 
   try {
     let result;
     switch (action) {
-      case 'activate': result = await desktop.activate(name); break;
-      case 'closeWindow': result = await desktop.closeWindow(name); break;
-      case 'minimizeWindow': result = await desktop.minimizeWindow(name); break;
-      case 'listWindows': result = await desktop.listWindows(); break;
-      default: return null;
+      case 'activate':
+        result = await desktop.activate(name);
+        break;
+      case 'closeWindow':
+        result = await desktop.closeWindow(name);
+        break;
+      case 'minimizeWindow':
+        result = await desktop.minimizeWindow(name);
+        break;
+      case 'listWindows':
+        result = await desktop.listWindows();
+        break;
+      case 'desktopIcons':
+        result = await desktop.desktopIcons();
+        break;
+      default:
+        return null;
     }
 
     const ok = !!(result && result.success);
@@ -126,25 +191,43 @@ async function tryDesktopIntent(prompt, options) {
     if (ok) {
       if (action === 'listWindows') {
         output = (result.stdout && String(result.stdout).trim()) || '（没有可见窗口）';
+      } else if (action === 'desktopIcons') {
+        const icons = (Array.isArray(result.elements) ? result.elements : [])
+          .map((e) => e && e.name)
+          .filter((n) => n && String(n).trim());
+        output = icons.length
+          ? `桌面图标清单（共 ${icons.length} 个）：\n${icons.map((n, i) => `${i + 1}. ${n}`).join('\n')}`
+          : '（桌面上没有枚举到图标）';
       } else {
         const label = name || '当前窗口';
-        const verb = { activate: '已激活', closeWindow: '已关闭', minimizeWindow: '已最小化' }[action] || '已执行';
+        const verb =
+          { activate: '已激活', closeWindow: '已关闭', minimizeWindow: '已最小化' }[action] ||
+          '已执行';
         output = `${verb} ${label}`;
       }
     } else if (result && result.denied) {
       // 闸门关闭：给出开启指引，绝不绕过保护。
-      output = `桌面操控当前已禁用（${result.reason || '安全闸门关闭'}）。`
-        + `\n请先开启：在 CLI 输入 /desktop on（自主）| /desktop ask（每会话批一次）| /desktop strict（每次批），`
-        + `或设置环境变量 KHY_DESKTOP_CONTROL=on。`;
+      output =
+        `桌面操控当前已禁用（${result.reason || '安全闸门关闭'}）。` +
+        `\n请先开启：在 CLI 输入 /desktop on（自主）| /desktop ask（每会话批一次）| /desktop strict（每次批），` +
+        `或设置环境变量 KHY_DESKTOP_CONTROL=on。`;
     } else {
-      const hints = result && Array.isArray(result.installHints) && result.installHints.length
-        ? `\n可安装更完整的后端：${result.installHints.map(h => h.hint || `${h.manager || ''} ${h.package || ''}`.trim()).filter(Boolean).join('；')}`
-        : '';
+      const hints =
+        result && Array.isArray(result.installHints) && result.installHints.length
+          ? `\n可安装更完整的后端：${result.installHints
+              .map((h) => h.hint || `${h.manager || ''} ${h.package || ''}`.trim())
+              .filter(Boolean)
+              .join('；')}`
+          : '';
       output = `${action} 失败：${(result && (result.error || result.reason)) || '未知原因'}${hints}`;
     }
 
     if (typeof onChunk === 'function') {
-      try { onChunk({ type: 'tool_result', id, content: output }); } catch { /* best effort */ }
+      try {
+        onChunk({ type: 'tool_result', id, content: output });
+      } catch {
+        /* best effort */
+      }
     }
 
     return {
@@ -158,7 +241,11 @@ async function tryDesktopIntent(prompt, options) {
   } catch (err) {
     const errMsg = `桌面操控失败: ${err.message}`;
     if (typeof onChunk === 'function') {
-      try { onChunk({ type: 'tool_result', id, content: errMsg }); } catch { /* best effort */ }
+      try {
+        onChunk({ type: 'tool_result', id, content: errMsg });
+      } catch {
+        /* best effort */
+      }
     }
     return null; // fallback 到正常 adapter cascade
   }
@@ -172,4 +259,5 @@ module.exports = {
   _MINIMIZE_RE,
   _CLOSE_RE,
   _LIST_RE,
+  _DESKTOP_ICONS_RE,
 };

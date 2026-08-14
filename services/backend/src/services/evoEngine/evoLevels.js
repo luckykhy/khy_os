@@ -56,11 +56,18 @@ function atLeast(actual, required) {
  * @returns {string} LEVELS.*
  */
 function classify(attribution = {}) {
-  const blob = `${attribution.why || ''} ${attribution.surface || ''} ${attribution.kind || ''}`.toLowerCase();
-  if (/(压缩|网关|调度|核心引擎|元约束|constitution|gateway|compress|scheduler|核心流转)/.test(blob)) {
+  const blob =
+    `${attribution.why || ''} ${attribution.surface || ''} ${attribution.kind || ''}`.toLowerCase();
+  if (
+    /(压缩|网关|调度|核心引擎|元约束|constitution|gateway|compress|scheduler|核心流转)/.test(blob)
+  ) {
     return LEVELS.L2;
   }
-  if (/(缺.*工具|新.*解析器|新.*工具|能力空洞|未覆盖格式|missing tool|new parser|new tool|拓扑空洞)/.test(blob)) {
+  if (
+    /(缺.*工具|新.*解析器|新.*工具|能力空洞|未覆盖格式|missing tool|new parser|new tool|拓扑空洞)/.test(
+      blob
+    )
+  ) {
     return LEVELS.L1;
   }
   return LEVELS.L0;

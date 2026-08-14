@@ -51,9 +51,7 @@ test('表头前的前置内容 → 无标题块(title=null)在前', () => {
 
 test('表头容差:两侧空白、`=` 数量≥3(如 ==== label ====)仍识别', () => {
   const text = '   ====  build  ====   \nartifact ready';
-  assert.deepEqual(parseToolOutputSections(text), [
-    { title: 'build', body: 'artifact ready' },
-  ]);
+  assert.deepEqual(parseToolOutputSections(text), [{ title: 'build', body: 'artifact ready' }]);
 });
 
 test('表头后 body 为空 → 保留空 body 块(表头本身即信息)', () => {
@@ -73,9 +71,7 @@ test('假阳防护:shell 相等比较 / 非表头的 === 用法不误判为表�
 
 test('body 内部空行保留,段首尾空行裁掉', () => {
   const text = '=== s ===\n\nline1\n\nline2\n\n';
-  assert.deepEqual(parseToolOutputSections(text), [
-    { title: 's', body: 'line1\n\nline2' },
-  ]);
+  assert.deepEqual(parseToolOutputSections(text), [{ title: 's', body: 'line1\n\nline2' }]);
 });
 
 test('确定性:同一输入多次调用结果相同', () => {

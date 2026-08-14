@@ -15,10 +15,10 @@
 
 const path = require('path');
 
-const { printError, printInfo, printSuccess, printWarn } = require('../formatters');
 const { PORTABLE_ROOT_DEFAULT } = require('../../constants/serviceDefaults');
 const { CRITICAL_ENTRY_FILES } = require('../../services/portableSyncRules');
 const engine = require('../../services/portableSyncService');
+const { printError, printInfo, printSuccess, printWarn } = require('../formatters');
 
 // This file lives at services/backend/src/cli/handlers → repo root is 5 up.
 const SOURCE_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
@@ -35,7 +35,9 @@ const LIST_PREVIEW_LIMIT = 30;
 /** Parse --source/-s, --target/-t, --dry-run from the raw args array. */
 function _parseOptions(args) {
   const opts = { source: null, target: null, dryRun: false };
-  if (!args || !Array.isArray(args)) return opts;
+  if (!args || !Array.isArray(args)) {
+    return opts;
+  }
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if ((arg === '--source' || arg === '-s') && i + 1 < args.length) {
@@ -86,7 +88,11 @@ async function _handleStatus() {
  */
 async function _handleOnce(opts) {
   const source = opts.source ? path.resolve(opts.source) : SOURCE_ROOT;
-  const target = opts.target ? path.resolve(opts.target) : (PORTABLE_ROOT_DEFAULT ? path.resolve(PORTABLE_ROOT_DEFAULT) : '');
+  const target = opts.target
+    ? path.resolve(opts.target)
+    : PORTABLE_ROOT_DEFAULT
+      ? path.resolve(PORTABLE_ROOT_DEFAULT)
+      : '';
   if (!target) {
     printError('未指定目标目录: 请传 --target <dir>，或设置环境变量 KHY_PORTABLE_ROOT');
     return;
@@ -100,10 +106,14 @@ async function _handleOnce(opts) {
   }
 
   // 2. Source health gate: never push broken entrypoints to the portable copy.
-  printInfo(`正在检查源码健康 → ${source} (node --check ${CRITICAL_ENTRY_FILES.length} 个入口文件)`);
+  printInfo(
+    `正在检查源码健康 → ${source} (node --check ${CRITICAL_ENTRY_FILES.length} 个入口文件)`
+  );
   const health = await engine.checkSourceHealth(source);
   if (!health.ok) {
-    printError(`源码健康检查未通过 (${health.failures.length}/${CRITICAL_ENTRY_FILES.length} 个文件失败)，拒绝同步:`);
+    printError(
+      `源码健康检查未通过 (${health.failures.length}/${CRITICAL_ENTRY_FILES.length} 个文件失败)，拒绝同步:`
+    );
     for (const f of health.failures) {
       console.log(`    ${f.file}: ${f.output.split('\n')[0] || '语法检查失败'}`);
     }
@@ -121,7 +131,9 @@ async function _handleOnce(opts) {
   if (syncNodeModules) {
     printInfo(`检测到 ${nmDecision.lockFile} 哈希不一致，将镜像 node_modules`);
   } else {
-    printInfo(`依赖 lock 哈希一致 (${String(nmDecision.sourceHash).slice(0, 12)}…)，跳过 node_modules 镜像`);
+    printInfo(
+      `依赖 lock 哈希一致 (${String(nmDecision.sourceHash).slice(0, 12)}…)，跳过 node_modules 镜像`
+    );
   }
 
   // 5. --dry-run: print the plan and stop (zero side effects).
@@ -147,7 +159,9 @@ async function _handleOnce(opts) {
   //    Timeout is idle-based only (rule 3): it takes effect before the next
   //    file operation and never interrupts an in-flight single-file copy.
   const total = plan.copy.length + plan.delete.length;
-  printInfo(`正在同步源码 → ${target} (待处理 ${total}，更新 ${plan.copy.length}，跳过 ${plan.skipCount})`);
+  printInfo(
+    `正在同步源码 → ${target} (待处理 ${total}，更新 ${plan.copy.length}，跳过 ${plan.skipCount})`
+  );
   let lastFileTick = 0;
   let lastRoboTick = 0;
   let result;
@@ -156,13 +170,17 @@ async function _handleOnce(opts) {
       if (p.action === 'robocopy') {
         if (p.lines - lastRoboTick >= ROBOCOPY_LINES_EVERY) {
           lastRoboTick = p.lines;
-          printInfo(`正在镜像 services\\backend\\node_modules → ${target} (robocopy 运行中，已输出 ${p.lines} 行)`);
+          printInfo(
+            `正在镜像 services\\backend\\node_modules → ${target} (robocopy 运行中，已输出 ${p.lines} 行)`
+          );
         }
         return;
       }
       if (p.done - lastFileTick >= PROGRESS_EVERY || p.done === p.total) {
         lastFileTick = p.done;
-        printInfo(`正在同步源码 → ${target} (已处理 ${p.done}/${p.total}，更新 ${plan.copy.length})`);
+        printInfo(
+          `正在同步源码 → ${target} (已处理 ${p.done}/${p.total}，更新 ${plan.copy.length})`
+        );
       }
     });
   } catch (err) {
@@ -210,7 +228,9 @@ async function _handleOnce(opts) {
  */
 async function handlePortableSync(subCommand, args, options) {
   const opts = _parseOptions(args);
-  if (options && options['dry-run']) opts.dryRun = true;
+  if (options && options['dry-run']) {
+    opts.dryRun = true;
+  }
   const cmd = (subCommand || 'start').toLowerCase();
 
   switch (cmd) {

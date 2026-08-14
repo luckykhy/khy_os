@@ -21,11 +21,7 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const {
-  docsFreshnessEnabled,
-  buildDocPathIndex,
-  matchStaleSuspects,
-} = require('./docPathIndex');
+const { docsFreshnessEnabled, buildDocPathIndex, matchStaleSuspects } = require('./docPathIndex');
 
 const MAX_DOC_BYTES = 512 * 1024; // 单篇文档读取上限(防超大文件)
 const SKIP_DIRS = new Set(['node_modules', '.git', 'bundled', 'dist', 'build', '.ai', 'coverage']);
@@ -37,7 +33,9 @@ const { SOURCE_EXTS } = require('./docPathIndex');
 
 function _isSourceRel(rel) {
   const r = String(rel || '').replace(/\\/g, '/');
-  if (!r || r.startsWith('docs/') || r.startsWith('.ai/')) return false;
+  if (!r || r.startsWith('docs/') || r.startsWith('.ai/')) {
+    return false;
+  }
   const ext = (r.split('.').pop() || '').toLowerCase();
   return SOURCE_EXTS.has(ext);
 }
@@ -62,7 +60,9 @@ function collectChangedSources(cwd, opts = {}) {
       if (r && r.ok && r.out) {
         for (const line of r.out.split(/\r?\n/)) {
           const rel = line.trim();
-          if (rel && _isSourceRel(rel)) out.add(rel.replace(/\\/g, '/'));
+          if (rel && _isSourceRel(rel)) {
+            out.add(rel.replace(/\\/g, '/'));
+          }
         }
       }
     }
@@ -75,7 +75,9 @@ function collectChangedSources(cwd, opts = {}) {
 function _safeRead(abs) {
   try {
     const st = fs.statSync(abs);
-    if (!st.isFile() || st.size > MAX_DOC_BYTES) return null;
+    if (!st.isFile() || st.size > MAX_DOC_BYTES) {
+      return null;
+    }
     return fs.readFileSync(abs, 'utf-8');
   } catch {
     return null;
@@ -91,19 +93,34 @@ function loadDocRecords(repoRoot) {
   const recs = [];
   const docsRoot = path.join(repoRoot, 'docs');
   try {
-    if (!fs.existsSync(docsRoot)) return recs;
+    if (!fs.existsSync(docsRoot)) {
+      return recs;
+    }
     const stack = [docsRoot];
     while (stack.length) {
       const dir = stack.pop();
       let entries;
-      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
       for (const e of entries) {
-        if (SKIP_DIRS.has(e.name)) continue;
+        if (SKIP_DIRS.has(e.name)) {
+          continue;
+        }
         const abs = path.join(dir, e.name);
-        if (e.isDirectory()) { stack.push(abs); continue; }
-        if (!e.name.endsWith('.md')) continue;
+        if (e.isDirectory()) {
+          stack.push(abs);
+          continue;
+        }
+        if (!e.name.endsWith('.md')) {
+          continue;
+        }
         const text = _safeRead(abs);
-        if (text != null) recs.push({ path: path.relative(repoRoot, abs).replace(/\\/g, '/'), text });
+        if (text != null) {
+          recs.push({ path: path.relative(repoRoot, abs).replace(/\\/g, '/'), text });
+        }
       }
     }
   } catch {
@@ -136,7 +153,9 @@ function runDocsFreshness(repoRoot, opts = {}) {
     warnOnly: true,
   };
   try {
-    if (!docsFreshnessEnabled(env)) return empty;
+    if (!docsFreshnessEnabled(env)) {
+      return empty;
+    }
     const root = repoRoot || env.KHYQUANT_CWD || process.cwd();
     const git = typeof opts.gitSoft === 'function' ? opts.gitSoft : _gitSoft;
 
@@ -160,9 +179,8 @@ function runDocsFreshness(repoRoot, opts = {}) {
     if (opts.fix) {
       try {
         result.productActions = _regenerateProducts(root, docRecords, git, env);
-        result.markerActions = opts.markerSync === false
-          ? []
-          : _syncMarkers(root, docRecords, git, env);
+        result.markerActions =
+          opts.markerSync === false ? [] : _syncMarkers(root, docRecords, git, env);
         result.restaged = [
           ...result.productActions.filter((a) => a.restaged).map((a) => a.rel),
           ...result.markerActions.filter((a) => a.restaged).map((a) => a.rel),
@@ -185,48 +203,88 @@ function runDocsFreshness(repoRoot, opts = {}) {
 function _regenerateProducts(repoRoot, docRecords, git, env) {
   const actions = [];
   let plan;
-  try { plan = require('./docProductPlan'); } catch { return actions; }
-  if (!plan.docRegenEnabled(env)) return actions;
+  try {
+    plan = require('./docProductPlan');
+  } catch {
+    return actions;
+  }
+  if (!plan.docRegenEnabled(env)) {
+    return actions;
+  }
 
   // committed 产物清单。
   const ls = git(['ls-files', 'docs'], repoRoot);
-  const committed = ls.ok && ls.out ? ls.out.split(/\r?\n/).map((s) => s.trim()).filter(Boolean) : [];
+  const committed =
+    ls.ok && ls.out
+      ? ls.out
+          .split(/\r?\n/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
   const committedProducts = committed.filter((f) => f.endsWith('.html') || f.endsWith('.pdf'));
-  if (committedProducts.length === 0) return actions;
+  if (committedProducts.length === 0) {
+    return actions;
+  }
 
   // 本次变更过的 docs/*.md(暂存或工作树)。
   const changedMd = new Set();
-  for (const args of [['diff', '--name-only'], ['diff', '--cached', '--name-only']]) {
+  for (const args of [
+    ['diff', '--name-only'],
+    ['diff', '--cached', '--name-only'],
+  ]) {
     const r = git(args, repoRoot);
-    if (r.ok && r.out) for (const l of r.out.split(/\r?\n/)) {
-      const rel = l.trim().replace(/\\/g, '/');
-      if (rel.startsWith('docs/') && rel.endsWith('.md')) changedMd.add(rel);
+    if (r.ok && r.out) {
+      for (const l of r.out.split(/\r?\n/)) {
+        const rel = l.trim().replace(/\\/g, '/');
+        if (rel.startsWith('docs/') && rel.endsWith('.md')) {
+          changedMd.add(rel);
+        }
+      }
     }
   }
 
   const mdToPdf = path.join(repoRoot, 'scripts', 'docs', 'md-to-pdf.js');
-  if (!fs.existsSync(mdToPdf)) return actions;
+  if (!fs.existsSync(mdToPdf)) {
+    return actions;
+  }
 
   for (const md of changedMd) {
     const p = plan.planDocProducts(md, committedProducts);
     for (const item of p.regen) {
       const mdAbs = path.join(repoRoot, item.md);
-      if (!fs.existsSync(mdAbs)) continue;
+      if (!fs.existsSync(mdAbs)) {
+        continue;
+      }
       const flag = item.mode; // '--html-only' or null(全量)
       try {
         const args = [mdToPdf, mdAbs];
-        if (flag) args.push(flag);
+        if (flag) {
+          args.push(flag);
+        }
         execFileSync(process.execPath, args, { cwd: repoRoot, timeout: 60000, stdio: 'ignore' });
         // 只 re-stage 自己重生成的、且属 committed 产物的文件。
         let restaged = false;
         for (const prod of item.products) {
           const add = git(['add', '--', prod], repoRoot);
-          if (add.ok) restaged = true;
+          if (add.ok) {
+            restaged = true;
+          }
         }
-        actions.push({ rel: item.md, products: item.products, mode: flag || 'full', ok: true, restaged });
+        actions.push({
+          rel: item.md,
+          products: item.products,
+          mode: flag || 'full',
+          ok: true,
+          restaged,
+        });
       } catch (e) {
         // fail-soft:留旧产物,继续。
-        actions.push({ rel: item.md, products: item.products, ok: false, err: (e && e.message) || String(e) });
+        actions.push({
+          rel: item.md,
+          products: item.products,
+          ok: false,
+          err: (e && e.message) || String(e),
+        });
       }
     }
   }
@@ -240,23 +298,48 @@ function _regenerateProducts(repoRoot, docRecords, git, env) {
 function _syncMarkers(repoRoot, docRecords, git, env) {
   const actions = [];
   let sync;
-  try { sync = require('./docMarkerSync'); } catch { return actions; }
-  if (!sync.docMarkerSyncEnabled(env)) return actions;
+  try {
+    sync = require('./docMarkerSync');
+  } catch {
+    return actions;
+  }
+  if (!sync.docMarkerSyncEnabled(env)) {
+    return actions;
+  }
 
   let valueMap;
-  try { valueMap = sync.buildValueMap(_gatherSsotDeps(repoRoot)); } catch { return actions; }
-  if (!valueMap || valueMap.size === 0) return actions;
+  try {
+    valueMap = sync.buildValueMap(_gatherSsotDeps(repoRoot));
+  } catch {
+    return actions;
+  }
+  if (!valueMap || valueMap.size === 0) {
+    return actions;
+  }
 
   for (const rec of docRecords) {
-    if (!rec.text.includes('khy-docs-sync:begin')) continue;
+    if (!rec.text.includes('khy-docs-sync:begin')) {
+      continue;
+    }
     let res;
-    try { res = sync.syncManagedRegions(rec.text, valueMap); } catch { continue; }
-    if (!res || !res.changed) continue;
+    try {
+      res = sync.syncManagedRegions(rec.text, valueMap);
+    } catch {
+      continue;
+    }
+    if (!res || !res.changed) {
+      continue;
+    }
     const abs = path.join(repoRoot, rec.path);
     try {
       fs.writeFileSync(abs, res.text, 'utf-8');
       const add = git(['add', '--', rec.path], repoRoot);
-      actions.push({ rel: rec.path, changedRegions: res.changedRegions, ok: true, restaged: add.ok });
+      actions.push({
+        rel: rec.path,
+        changedRegions: res.changedRegions,
+        ok: true,
+        restaged: add.ok,
+      });
     } catch (e) {
       actions.push({ rel: rec.path, ok: false, err: (e && e.message) || String(e) });
     }
@@ -269,20 +352,34 @@ function _gatherSsotDeps(repoRoot) {
   const deps = {};
   try {
     const cmd = require('../../constants/commandSchema');
-    if (typeof cmd.getBuiltinSlashCommands === 'function') deps.slashCommands = cmd.getBuiltinSlashCommands();
-  } catch { /* ignore */ }
+    if (typeof cmd.getBuiltinSlashCommands === 'function') {
+      deps.slashCommands = cmd.getBuiltinSlashCommands();
+    }
+  } catch {
+    /* ignore */
+  }
   try {
     const sd = require('../../constants/serviceDefaults');
-    if (sd && sd.AI_BACKEND_DEFAULT_PORT != null) deps.aiBackendPort = sd.AI_BACKEND_DEFAULT_PORT;
-  } catch { /* ignore */ }
+    if (sd && sd.AI_BACKEND_DEFAULT_PORT != null) {
+      deps.aiBackendPort = sd.AI_BACKEND_DEFAULT_PORT;
+    }
+  } catch {
+    /* ignore */
+  }
   try {
     const pkg = require(path.join(repoRoot, 'services', 'backend', 'package.json'));
-    if (pkg && pkg.version) deps.khyVersion = pkg.version;
+    if (pkg && pkg.version) {
+      deps.khyVersion = pkg.version;
+    }
   } catch {
     try {
       const pkg2 = require('../../../package.json');
-      if (pkg2 && pkg2.version) deps.khyVersion = pkg2.version;
-    } catch { /* ignore */ }
+      if (pkg2 && pkg2.version) {
+        deps.khyVersion = pkg2.version;
+      }
+    } catch {
+      /* ignore */
+    }
   }
   return deps;
 }

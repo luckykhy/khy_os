@@ -44,7 +44,13 @@ function _file(taskId) {
   return path.join(_dir(), `${_safe(taskId)}.json`);
 }
 
-function _stamp() { try { return Date.now(); } catch { return 0; } }
+function _stamp() {
+  try {
+    return Date.now();
+  } catch {
+    return 0;
+  }
+}
 
 /**
  * 构建一张快照对象（不落盘）。缺失终极目标即抛——指南针不可空（防呆⑥ 的前提）。
@@ -52,15 +58,19 @@ function _stamp() { try { return Date.now(); } catch { return 0; } }
  * @returns {object} snapshot
  */
 function build(input = {}) {
-  if (!input.taskId) throw new Error('snapshot.build: taskId 必填（全局任务 ID）');
-  if (!input.ultimateGoal) throw new Error('snapshot.build: ultimateGoal 必填（永不删除的指南针）');
+  if (!input.taskId) {
+    throw new Error('snapshot.build: taskId 必填（全局任务 ID）');
+  }
+  if (!input.ultimateGoal) {
+    throw new Error('snapshot.build: ultimateGoal 必填（永不删除的指南针）');
+  }
   return {
     version: SNAPSHOT_VERSION,
     status: input.status || STATUS.ACTIVE,
     timestamp: _stamp(),
     taskId: String(input.taskId),
     step: Number.isFinite(input.step) ? input.step : 0,
-    ultimateGoal: String(input.ultimateGoal),       // 指南针：永不删除
+    ultimateGoal: String(input.ultimateGoal), // 指南针：永不删除
     compressedHistory: input.compressedHistory || [],
     nextInstruction: input.nextInstruction || '',
     offloadPointers: Array.isArray(input.offloadPointers) ? input.offloadPointers : [],
@@ -82,9 +92,13 @@ function build(input = {}) {
  */
 function persist(snapshot) {
   try {
-    if (!snapshot || !snapshot.taskId) return { ok: false, error: 'missing taskId' };
+    if (!snapshot || !snapshot.taskId) {
+      return { ok: false, error: 'missing taskId' };
+    }
     const dir = _dir();
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     const file = _file(snapshot.taskId);
     const tmp = `${file}.tmp-${process.pid}`;
     const fd = fs.openSync(tmp, 'w');
@@ -105,7 +119,9 @@ function persist(snapshot) {
 function load(taskId) {
   try {
     const file = _file(taskId);
-    if (!fs.existsSync(file)) return null;
+    if (!fs.existsSync(file)) {
+      return null;
+    }
     return JSON.parse(fs.readFileSync(file, 'utf-8'));
   } catch {
     return null;
@@ -115,7 +131,9 @@ function load(taskId) {
 /** 标记任务完成——hotStart 会跳过已完成快照，不再热启。 */
 function markComplete(taskId) {
   const s = load(taskId);
-  if (!s) return { ok: false, error: 'not found' };
+  if (!s) {
+    return { ok: false, error: 'not found' };
+  }
   s.status = STATUS.DONE;
   s.timestamp = _stamp();
   return persist(s);
@@ -128,7 +146,9 @@ function markComplete(taskId) {
  */
 function hotStart(taskId) {
   const snapshot = load(taskId);
-  if (!snapshot) return { found: false, resumable: false, reason: 'no snapshot' };
+  if (!snapshot) {
+    return { found: false, resumable: false, reason: 'no snapshot' };
+  }
   if (snapshot.status === STATUS.DONE) {
     return { found: true, resumable: false, snapshot, reason: 'task already done' };
   }
@@ -145,11 +165,15 @@ function hotStart(taskId) {
  * 状态，模型从断点指令继续——不询问、不复述（防呆⑥）。
  */
 function formatInjection(snapshot) {
-  if (!snapshot) return '';
+  if (!snapshot) {
+    return '';
+  }
   const p = [];
   p.push('[SESSION HOT-START — 检测到未完成任务快照，跳过寒暄，直接从断点接力]');
   p.push(`## 终极目标（指南针，永不偏离）\n${snapshot.ultimateGoal}`);
-  p.push(`## 进度\n任务 ${snapshot.taskId} · 已到第 ${snapshot.step} 步 · 重试计数 ${snapshot.retryCount}`);
+  p.push(
+    `## 进度\n任务 ${snapshot.taskId} · 已到第 ${snapshot.step} 步 · 重试计数 ${snapshot.retryCount}`
+  );
   if (snapshot.lessons && snapshot.lessons.length) {
     p.push(`## 错误教训（务必规避）\n${snapshot.lessons.map((l) => `- ${l}`).join('\n')}`);
   }
@@ -157,12 +181,18 @@ function formatInjection(snapshot) {
     p.push(`## 核心实体状态\n${snapshot.entities.map((e) => `- ${e}`).join('\n')}`);
   }
   if (snapshot.compressedHistory && snapshot.compressedHistory.length) {
-    p.push(`## 压缩历史流\n\`\`\`json\n${_trunc(JSON.stringify(snapshot.compressedHistory), 2000)}\n\`\`\``);
+    p.push(
+      `## 压缩历史流\n\`\`\`json\n${_trunc(JSON.stringify(snapshot.compressedHistory), 2000)}\n\`\`\``
+    );
   }
   if (snapshot.offloadPointers && snapshot.offloadPointers.length) {
-    p.push(`## 外部卸载指针（需要时按 ref 回读）\n${snapshot.offloadPointers.map((r) => `- ${typeof r === 'string' ? r : r.ref}`).join('\n')}`);
+    p.push(
+      `## 外部卸载指针（需要时按 ref 回读）\n${snapshot.offloadPointers.map((r) => `- ${typeof r === 'string' ? r : r.ref}`).join('\n')}`
+    );
   }
-  p.push(`## 下一步具体指令（从此处继续）\n${snapshot.nextInstruction || '（无显式指令——依终极目标推进下一步）'}`);
+  p.push(
+    `## 下一步具体指令（从此处继续）\n${snapshot.nextInstruction || '（无显式指令——依终极目标推进下一步）'}`
+  );
   return p.join('\n\n');
 }
 

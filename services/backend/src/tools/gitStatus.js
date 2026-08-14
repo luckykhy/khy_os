@@ -1,12 +1,16 @@
-const { defineTool, isGitRepo } = require('./_baseTool');
 const { execSync } = require('child_process');
+
+const { defineTool, isGitRepo } = require('./_baseTool');
 const _execCompat = require('./_execCompat');
 
 module.exports = defineTool({
   name: 'gitStatus',
-  description: 'Show the working tree status (git status --porcelain)',
+  description:
+    'Show the git working-tree status in porcelain format (staged/modified/untracked files). ' +
+    'Read-only; use it before committing or to check for uncommitted changes. Use gitDiff to see the actual content changes.',
   category: 'git',
   risk: 'safe',
+  searchHint: 'staged modified untracked working tree 状态 变更 未跟踪',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled: isGitRepo,
@@ -22,10 +26,15 @@ module.exports = defineTool({
           const detector = require('../services/gitExecutableDetector');
           const detected = detector.detectGitExecutable();
           if (!detected) {
-            return { success: false, error: detector.buildNoGitMessage({ platform: process.platform }) };
+            return {
+              success: false,
+              error: detector.buildNoGitMessage({ platform: process.platform }),
+            };
           }
           quotedGit = detected === 'git' ? 'git' : `"${detected}"`;
-        } catch { /* 检测失败 → 回退 'git'(历史行为) */ }
+        } catch {
+          /* 检测失败 → 回退 'git'(历史行为) */
+        }
       }
       // 非阻塞 exec 垫片(门控 KHY_EXEC_NONBLOCKING 默认开):同步 execSync 会冻结事件循环
       // (spinner 停 / ESC 死),换异步 exec 后事件循环照转;OFF 逐字节回退今日 execSync。

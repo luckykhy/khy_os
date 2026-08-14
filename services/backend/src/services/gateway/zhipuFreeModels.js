@@ -35,13 +35,37 @@ const ZHIPU_ENDPOINT = 'https://open.bigmodel.cn/api/paas/v4';
 //   'video'  —— 走 /videos/generations 的文/图生视频模型,**不进聊天目录**。
 // glm-4.5-flash 已于 2026-01 下线并自动路由到 glm-4.7-flash,故不列入。
 const ZHIPU_FREE_MODELS = Object.freeze([
-  Object.freeze({ id: 'glm-4.7-flash', modality: 'chat', label: 'GLM-4.7-Flash(免费·旗舰对话/推理/Agent,200K 上下文)' }),
-  Object.freeze({ id: 'glm-4.6v-flash', modality: 'vision', label: 'GLM-4.6V-Flash(免费·视觉理解)' }),
-  Object.freeze({ id: 'glm-4.1v-thinking-flash', modality: 'vision', label: 'GLM-4.1V-Thinking-Flash(免费·视觉推理)' }),
-  Object.freeze({ id: 'glm-4-flash-250414', modality: 'chat', label: 'GLM-4-Flash-250414(免费·文本)' }),
+  Object.freeze({
+    id: 'glm-4.7-flash',
+    modality: 'chat',
+    label: 'GLM-4.7-Flash(免费·旗舰对话/推理/Agent,200K 上下文)',
+  }),
+  Object.freeze({
+    id: 'glm-4.6v-flash',
+    modality: 'vision',
+    label: 'GLM-4.6V-Flash(免费·视觉理解)',
+  }),
+  Object.freeze({
+    id: 'glm-4.1v-thinking-flash',
+    modality: 'vision',
+    label: 'GLM-4.1V-Thinking-Flash(免费·视觉推理)',
+  }),
+  Object.freeze({
+    id: 'glm-4-flash-250414',
+    modality: 'chat',
+    label: 'GLM-4-Flash-250414(免费·文本)',
+  }),
   Object.freeze({ id: 'glm-4v-flash', modality: 'vision', label: 'GLM-4V-Flash(免费·图像理解)' }),
-  Object.freeze({ id: 'cogview-3-flash', modality: 'image', label: 'CogView-3-Flash(免费·文生图)' }),
-  Object.freeze({ id: 'cogvideox-flash', modality: 'video', label: 'CogVideoX-Flash(免费·文/图生视频)' }),
+  Object.freeze({
+    id: 'cogview-3-flash',
+    modality: 'image',
+    label: 'CogView-3-Flash(免费·文生图)',
+  }),
+  Object.freeze({
+    id: 'cogvideox-flash',
+    modality: 'video',
+    label: 'CogVideoX-Flash(免费·文/图生视频)',
+  }),
 ]);
 
 // 进「聊天目录」的免费模型 modality(对话 + 视觉)。图像/视频端点不同,排除避免被当聊天模型误选。
@@ -66,14 +90,21 @@ function zhipuFreeModelsEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('../flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_ZHIPU_FREE_MODELS', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_ZHIPU_FREE_MODELS;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -86,7 +117,11 @@ function zhipuFreeModelsEnabled(env = process.env) {
  * @returns {boolean}
  */
 function isGlmPoolKey(poolKey) {
-  return String(poolKey == null ? '' : poolKey).trim().toLowerCase() === GLM_POOL_KEY;
+  return (
+    String(poolKey == null ? '' : poolKey)
+      .trim()
+      .toLowerCase() === GLM_POOL_KEY
+  );
 }
 
 /**
@@ -96,7 +131,9 @@ function isGlmPoolKey(poolKey) {
  */
 function listZhipuFreeModels(env = process.env) {
   try {
-    if (!zhipuFreeModelsEnabled(env)) return [];
+    if (!zhipuFreeModelsEnabled(env)) {
+      return [];
+    }
     return ZHIPU_FREE_MODELS.map((m) => ({ id: m.id, modality: m.modality, label: m.label }));
   } catch {
     return [];
@@ -110,7 +147,9 @@ function listZhipuFreeModels(env = process.env) {
  */
 function zhipuFreeChatModelIds(env = process.env) {
   try {
-    if (!zhipuFreeModelsEnabled(env)) return [];
+    if (!zhipuFreeModelsEnabled(env)) {
+      return [];
+    }
     return ZHIPU_FREE_MODELS.filter((m) => CHAT_MODALITIES.includes(m.modality)).map((m) => m.id);
   } catch {
     return [];
@@ -124,7 +163,9 @@ function zhipuFreeChatModelIds(env = process.env) {
  */
 function zhipuFreeModelIds(env = process.env) {
   try {
-    if (!zhipuFreeModelsEnabled(env)) return [];
+    if (!zhipuFreeModelsEnabled(env)) {
+      return [];
+    }
     return ZHIPU_FREE_MODELS.map((m) => m.id);
   } catch {
     return [];
@@ -151,9 +192,16 @@ function zhipuFreeModelIds(env = process.env) {
 function augmentGlmPoolModels(poolKey, existing, env = process.env) {
   const base = Array.isArray(existing) ? existing.slice() : [];
   try {
-    if (!zhipuFreeModelsEnabled(env)) return base;
-    if (!isGlmPoolKey(poolKey)) return base;
-    const idOf = (x) => String(typeof x === 'string' ? x : (x && x.id) || '').trim().toLowerCase();
+    if (!zhipuFreeModelsEnabled(env)) {
+      return base;
+    }
+    if (!isGlmPoolKey(poolKey)) {
+      return base;
+    }
+    const idOf = (x) =>
+      String(typeof x === 'string' ? x : (x && x.id) || '')
+        .trim()
+        .toLowerCase();
     const have = new Set(base.map(idOf).filter(Boolean));
     for (const id of zhipuFreeChatModelIds(env)) {
       const lc = String(id).toLowerCase();
@@ -187,13 +235,19 @@ function augmentGlmPoolModels(poolKey, existing, env = process.env) {
 function remapRetiredZhipuModel(model, env = process.env) {
   try {
     const raw = String(model == null ? '' : model).trim();
-    if (!raw) return model;                          // 空 → 原样
-    if (!zhipuFreeModelsEnabled(env)) return model;  // 门关 → 逐字节回退(今日无 remap)
+    if (!raw) {
+      return model;
+    } // 空 → 原样
+    if (!zhipuFreeModelsEnabled(env)) {
+      return model;
+    } // 门关 → 逐字节回退(今日无 remap)
     const key = raw.toLowerCase();
-    if (key.startsWith('glm-4.5v')) return model;    // 护栏:glm-4.5v* 是有效视觉模型,绝不误伤
-    return RETIRED_ZHIPU_REMAP[key] || model;        // 未知/有效名 → 原样返回
+    if (key.startsWith('glm-4.5v')) {
+      return model;
+    } // 护栏:glm-4.5v* 是有效视觉模型,绝不误伤
+    return RETIRED_ZHIPU_REMAP[key] || model; // 未知/有效名 → 原样返回
   } catch {
-    return model;                                    // fail-soft:异常绝不阻断请求
+    return model; // fail-soft:异常绝不阻断请求
   }
 }
 

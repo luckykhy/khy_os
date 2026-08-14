@@ -40,17 +40,29 @@ const OFF = new Set(['0', 'false', 'off', 'no']);
 
 /** 富化总开关。默认开,仅 KHY_MEMORY_RECALL_ENRICH∈{0,false,off,no} 关闭。 */
 function isEnabled(env) {
-  return !OFF.has(String((env || process.env || {}).KHY_MEMORY_RECALL_ENRICH || '').trim().toLowerCase());
+  return !OFF.has(
+    String((env || process.env || {}).KHY_MEMORY_RECALL_ENRICH || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /** CJK 二元组子层开关(独立)。默认开。 */
 function _bigramEnabled(env) {
-  return !OFF.has(String((env || process.env || {}).KHY_MEMORY_RECALL_BIGRAM || '').trim().toLowerCase());
+  return !OFF.has(
+    String((env || process.env || {}).KHY_MEMORY_RECALL_BIGRAM || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /** 别名哨兵子层开关(独立)。默认开。 */
 function _aliasEnabled(env) {
-  return !OFF.has(String((env || process.env || {}).KHY_MEMORY_RECALL_ALIAS || '').trim().toLowerCase());
+  return !OFF.has(
+    String((env || process.env || {}).KHY_MEMORY_RECALL_ALIAS || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // 规范哨兵前缀:控制字符 U+0001,真实 token([a-z0-9]+ 或单个 CJK)绝无此字符 → 零冲突。
@@ -63,30 +75,54 @@ const ALIAS_PREFIX = 'a:';
  * 需要扩展时应审慎增组,而非放宽判据。
  */
 const ALIAS_GROUPS = Object.freeze([
-  { id: 'mem', en: ['memory', 'memories', 'remember', 'remembered', 'recall', 'recalled', 'recollection'],
-    zh: ['记忆', '记住', '记得', '召回', '回忆', '想起'] },
-  { id: 'forget', en: ['forget', 'forgot', 'forgotten', 'forgetful', 'amnesia'],
-    zh: ['健忘', '遗忘', '忘记', '忘了', '忘掉', '记不'] },
-  { id: 'pref', en: ['preference', 'preferences', 'prefer', 'prefers', 'preferred', 'habit', 'habits'],
-    zh: ['偏好', '喜好', '习惯', '喜欢'] },
-  { id: 'project', en: ['project', 'projects', 'repo', 'repos', 'repository', 'codebase'],
-    zh: ['项目', '工程', '仓库'] },
-  { id: 'session', en: ['session', 'sessions', 'conversation', 'conversations'],
-    zh: ['会话', '对话'] },
-  { id: 'task', en: ['task', 'tasks', 'todo', 'todos'],
-    zh: ['任务', '待办'] },
-  { id: 'permanent', en: ['permanent', 'permanently', 'persistent', 'durable'],
-    zh: ['永久', '永远', '持久'] },
-  { id: 'config', en: ['config', 'configuration', 'configure', 'settings', 'setting'],
-    zh: ['配置', '设置', '设定'] },
-  { id: 'gateway', en: ['gateway', 'gateways'],
-    zh: ['网关'] },
-  { id: 'timing', en: ['timing', 'trigger', 'triggers', 'triggered'],
-    zh: ['时机', '触发'] },
-  { id: 'write', en: ['save', 'saved', 'store', 'stored', 'capture', 'captured', 'persist'],
-    zh: ['写入', '保存', '存储', '捕获'] },
-  { id: 'rule', en: ['rule', 'rules', 'convention', 'conventions', 'guideline', 'guidelines'],
-    zh: ['规则', '约定', '规范'] },
+  {
+    id: 'mem',
+    en: ['memory', 'memories', 'remember', 'remembered', 'recall', 'recalled', 'recollection'],
+    zh: ['记忆', '记住', '记得', '召回', '回忆', '想起'],
+  },
+  {
+    id: 'forget',
+    en: ['forget', 'forgot', 'forgotten', 'forgetful', 'amnesia'],
+    zh: ['健忘', '遗忘', '忘记', '忘了', '忘掉', '记不'],
+  },
+  {
+    id: 'pref',
+    en: ['preference', 'preferences', 'prefer', 'prefers', 'preferred', 'habit', 'habits'],
+    zh: ['偏好', '喜好', '习惯', '喜欢'],
+  },
+  {
+    id: 'project',
+    en: ['project', 'projects', 'repo', 'repos', 'repository', 'codebase'],
+    zh: ['项目', '工程', '仓库'],
+  },
+  {
+    id: 'session',
+    en: ['session', 'sessions', 'conversation', 'conversations'],
+    zh: ['会话', '对话'],
+  },
+  { id: 'task', en: ['task', 'tasks', 'todo', 'todos'], zh: ['任务', '待办'] },
+  {
+    id: 'permanent',
+    en: ['permanent', 'permanently', 'persistent', 'durable'],
+    zh: ['永久', '永远', '持久'],
+  },
+  {
+    id: 'config',
+    en: ['config', 'configuration', 'configure', 'settings', 'setting'],
+    zh: ['配置', '设置', '设定'],
+  },
+  { id: 'gateway', en: ['gateway', 'gateways'], zh: ['网关'] },
+  { id: 'timing', en: ['timing', 'trigger', 'triggers', 'triggered'], zh: ['时机', '触发'] },
+  {
+    id: 'write',
+    en: ['save', 'saved', 'store', 'stored', 'capture', 'captured', 'persist'],
+    zh: ['写入', '保存', '存储', '捕获'],
+  },
+  {
+    id: 'rule',
+    en: ['rule', 'rules', 'convention', 'conventions', 'guideline', 'guidelines'],
+    zh: ['规则', '约定', '规范'],
+  },
 ]);
 
 const _CJK_RE = /[一-鿿]/;
@@ -101,7 +137,9 @@ function _addCjkBigrams(out, raw) {
   for (let i = 0; i + 1 < s.length; i++) {
     const a = s[i];
     const b = s[i + 1];
-    if (_CJK_RE.test(a) && _CJK_RE.test(b)) out.add(a + b);
+    if (_CJK_RE.test(a) && _CJK_RE.test(b)) {
+      out.add(a + b);
+    }
   }
 }
 
@@ -115,11 +153,23 @@ function _addCjkBigrams(out, raw) {
 function _addAliasSentinels(out, baseTokens, lowerRaw) {
   for (const g of ALIAS_GROUPS) {
     let hit = false;
-    for (const w of g.en) { if (baseTokens.has(w)) { hit = true; break; } }
-    if (!hit) {
-      for (const p of g.zh) { if (lowerRaw.indexOf(p) !== -1) { hit = true; break; } }
+    for (const w of g.en) {
+      if (baseTokens.has(w)) {
+        hit = true;
+        break;
+      }
     }
-    if (hit) out.add(ALIAS_PREFIX + g.id);
+    if (!hit) {
+      for (const p of g.zh) {
+        if (lowerRaw.indexOf(p) !== -1) {
+          hit = true;
+          break;
+        }
+      }
+    }
+    if (hit) {
+      out.add(ALIAS_PREFIX + g.id);
+    }
   }
 }
 
@@ -134,11 +184,17 @@ function _addAliasSentinels(out, baseTokens, lowerRaw) {
 function enrichTokens(baseTokens, rawText, env) {
   const base = baseTokens instanceof Set ? baseTokens : new Set(baseTokens || []);
   try {
-    if (!isEnabled(env)) return new Set(base);
+    if (!isEnabled(env)) {
+      return new Set(base);
+    }
     const out = new Set(base);
     const raw = String(rawText || '');
-    if (_bigramEnabled(env)) _addCjkBigrams(out, raw);
-    if (_aliasEnabled(env)) _addAliasSentinels(out, base, raw.toLowerCase());
+    if (_bigramEnabled(env)) {
+      _addCjkBigrams(out, raw);
+    }
+    if (_aliasEnabled(env)) {
+      _addAliasSentinels(out, base, raw.toLowerCase());
+    }
     return out;
   } catch {
     // 绝不抛:任何异常都回退到 base 的副本(等价于富化关闭)。

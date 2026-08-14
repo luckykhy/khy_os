@@ -22,13 +22,13 @@
  * 与 errorCodes 的 E02(安全)/E07(权限) 对齐：内容安全、权限/审批拒绝绝不重试或续写。
  */
 const NON_RESUMABLE_ERROR_TYPES = new Set([
-  'content_filter',   // E02 内容安全策略中断
-  'safety',           // 安全停机的别名
-  'refusal',          // 模型显式拒答（语义拒绝，重试无意义且可能违规）
-  'permission',       // E07 权限拦截
+  'content_filter', // E02 内容安全策略中断
+  'safety', // 安全停机的别名
+  'refusal', // 模型显式拒答（语义拒绝，重试无意义且可能违规）
+  'permission', // E07 权限拦截
   'permission_denied',
-  'approval_denied',  // 审批网关拒绝
-  'blocked',          // 通用阻断
+  'approval_denied', // 审批网关拒绝
+  'blocked', // 通用阻断
   'context_overflow', // E03 上下文溢出，须先压缩
   'context_length_exceeded',
 ]);
@@ -52,7 +52,9 @@ function maxAutoResume() {
     return DEFAULT_AUTO_RESUME_ATTEMPTS;
   }
   const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0) return DEFAULT_AUTO_RESUME_ATTEMPTS;
+  if (!Number.isFinite(n) || n < 0) {
+    return DEFAULT_AUTO_RESUME_ATTEMPTS;
+  }
   return Math.min(Math.floor(n), 5);
 }
 
@@ -62,7 +64,9 @@ function maxAutoResume() {
  * NON_RESUMABLE_ERROR_TYPES 的安全/权限/溢出类返回 false。
  */
 function isResumableError(errorType) {
-  if (!errorType) return true; // 无类型（纯截断/空响应）默认可续
+  if (!errorType) {
+    return true;
+  } // 无类型（纯截断/空响应）默认可续
   return !NON_RESUMABLE_ERROR_TYPES.has(String(errorType).trim().toLowerCase());
 }
 
@@ -73,8 +77,12 @@ function isResumableError(errorType) {
  */
 function isContinuationCommand(text) {
   const t = String(text || '').trim();
-  if (!t || t.length > 30) return false;
-  return /^(继续|接着|go\s*on|keep\s*going|continue|接着做|继续执行|接着来|往下)[\s。.!！？?]*$/i.test(t);
+  if (!t || t.length > 30) {
+    return false;
+  }
+  return /^(继续|接着|go\s*on|keep\s*going|continue|接着做|继续执行|接着来|往下)[\s。.!！？?]*$/i.test(
+    t
+  );
 }
 
 /**
@@ -82,7 +90,9 @@ function isContinuationCommand(text) {
  * 优先用归因自带的 continueHint，缺失时回落通用 CONTINUE_HINT。
  */
 function continueHintFor(attribution) {
-  if (!attribution || attribution.resumable === false) return null;
+  if (!attribution || attribution.resumable === false) {
+    return null;
+  }
   if (attribution.resumable === true) {
     return attribution.continueHint || CONTINUE_HINT;
   }

@@ -32,33 +32,94 @@ const _normTool = require('../../utils/normalizeAlnumKey');
 // Action classification by normalized tool name. Order matters: a token is tested
 // against the most specific category first (edit before write, etc.).
 const _DELETE = ['deletefile', 'delete', 'removefile', 'remove', 'rm', 'unlink', 'rmdir'];
-const _EDIT = ['editfile', 'edit', 'stredit', 'strreplace', 'strreplaceeditor', 'multiedit',
-  'multiedits', 'applypatch', 'patch', 'append', 'appendfile', 'notebookedit', 'insert', 'replace'];
-const _WRITE = ['createfile', 'writefile', 'write', 'newfile', 'savefile', 'createdocument', 'renderdocument'];
+const _EDIT = [
+  'editfile',
+  'edit',
+  'stredit',
+  'strreplace',
+  'strreplaceeditor',
+  'multiedit',
+  'multiedits',
+  'applypatch',
+  'patch',
+  'append',
+  'appendfile',
+  'notebookedit',
+  'insert',
+  'replace',
+];
+const _WRITE = [
+  'createfile',
+  'writefile',
+  'write',
+  'newfile',
+  'savefile',
+  'createdocument',
+  'renderdocument',
+];
 const _READ = ['readfile', 'read', 'cat', 'view', 'notebookread', 'opencat'];
-const _COMMAND = ['shellcommand', 'shell', 'bash', 'command', 'runcommand', 'run', 'exec',
-  'execute', 'powershell', 'terminal', 'cmd', 'spawn'];
+const _COMMAND = [
+  'shellcommand',
+  'shell',
+  'bash',
+  'command',
+  'runcommand',
+  'run',
+  'exec',
+  'execute',
+  'powershell',
+  'terminal',
+  'cmd',
+  'spawn',
+];
 
 function _classify(toolName) {
   const k = _normTool(toolName);
-  if (!k) return 'other';
-  if (_DELETE.includes(k)) return 'delete';
-  if (_EDIT.includes(k)) return 'edit';
-  if (_WRITE.includes(k)) return 'write';
-  if (_READ.includes(k)) return 'read';
-  if (_COMMAND.includes(k)) return 'command';
+  if (!k) {
+    return 'other';
+  }
+  if (_DELETE.includes(k)) {
+    return 'delete';
+  }
+  if (_EDIT.includes(k)) {
+    return 'edit';
+  }
+  if (_WRITE.includes(k)) {
+    return 'write';
+  }
+  if (_READ.includes(k)) {
+    return 'read';
+  }
+  if (_COMMAND.includes(k)) {
+    return 'command';
+  }
   return 'other';
 }
 
-const _PATH_KEYS = ['path', 'file_path', 'filePath', 'notebook_path', 'notebookPath',
-  'file', 'target', 'filename', 'fileName', 'dest', 'destination'];
+const _PATH_KEYS = [
+  'path',
+  'file_path',
+  'filePath',
+  'notebook_path',
+  'notebookPath',
+  'file',
+  'target',
+  'filename',
+  'fileName',
+  'dest',
+  'destination',
+];
 const _CMD_KEYS = ['command', 'cmd', 'script', 'commandLine', 'command_line'];
 
 function _pick(obj, keys) {
-  if (!obj || typeof obj !== 'object') return undefined;
+  if (!obj || typeof obj !== 'object') {
+    return undefined;
+  }
   for (const k of keys) {
     const v = obj[k];
-    if (typeof v === 'string' && v.trim()) return v.trim();
+    if (typeof v === 'string' && v.trim()) {
+      return v.trim();
+    }
   }
   return undefined;
 }
@@ -71,21 +132,33 @@ function _pick(obj, keys) {
  */
 function _resolveSuccess(result) {
   const r = result && typeof result === 'object' ? result : {};
-  if (typeof r.success === 'boolean') return r.success;
-  if (typeof r.exitCode === 'number') return r.exitCode === 0;
-  if (typeof r.error === 'string' && r.error.trim()) return false;
-  if (r.isError === true) return false;
+  if (typeof r.success === 'boolean') {
+    return r.success;
+  }
+  if (typeof r.exitCode === 'number') {
+    return r.exitCode === 0;
+  }
+  if (typeof r.error === 'string' && r.error.trim()) {
+    return false;
+  }
+  if (r.isError === true) {
+    return false;
+  }
   return null;
 }
 
 function _errorOf(result) {
   const r = result && typeof result === 'object' ? result : {};
-  const code = (typeof r.code === 'string' && r.code)
-    || (typeof r.error_code === 'string' && r.error_code)
-    || undefined;
+  const code =
+    (typeof r.code === 'string' && r.code) ||
+    (typeof r.error_code === 'string' && r.error_code) ||
+    undefined;
   let message;
-  if (typeof r.error === 'string' && r.error.trim()) message = r.error.trim();
-  else if (typeof r.message === 'string' && r.message.trim()) message = r.message.trim();
+  if (typeof r.error === 'string' && r.error.trim()) {
+    message = r.error.trim();
+  } else if (typeof r.message === 'string' && r.message.trim()) {
+    message = r.message.trim();
+  }
   return { code, message };
 }
 
@@ -104,8 +177,10 @@ function buildTurnEnvelope(finalResult, opts = {}) {
   const log = Array.isArray(fr.toolCallLog) ? fr.toolCallLog : [];
 
   const summary = String(
-    (opts && typeof opts.summary === 'string' ? opts.summary : undefined)
-    ?? fr.finalResponse ?? fr.reply ?? '',
+    (opts && typeof opts.summary === 'string' ? opts.summary : undefined) ??
+      fr.finalResponse ??
+      fr.reply ??
+      ''
   );
 
   const artifacts = [];
@@ -117,13 +192,20 @@ function buildTurnEnvelope(finalResult, opts = {}) {
   let succeededCount = 0;
 
   for (const entry of log) {
-    if (!entry || typeof entry !== 'object') continue;
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
     const tool = String(entry.tool || '').trim();
-    if (!tool || tool === '_legacy_cmd') continue;
+    if (!tool || tool === '_legacy_cmd') {
+      continue;
+    }
     const kind = _classify(tool);
     const success = _resolveSuccess(entry.result);
-    if (success === true) succeededCount += 1;
-    else if (success === false) failedCount += 1;
+    if (success === true) {
+      succeededCount += 1;
+    } else if (success === false) {
+      failedCount += 1;
+    }
 
     if (kind === 'command') {
       const command = _pick(entry.params, _CMD_KEYS);
@@ -138,8 +220,11 @@ function buildTurnEnvelope(finalResult, opts = {}) {
       const path = _pick(entry.params, _PATH_KEYS);
       if (path) {
         artifacts.push({ path, action: kind, tool });
-        if (kind === 'read') filesReadSet.add(path);
-        else if (success !== false) filesTouchedSet.add(path); // only count a mutation that did not explicitly fail
+        if (kind === 'read') {
+          filesReadSet.add(path);
+        } else if (success !== false) {
+          filesTouchedSet.add(path);
+        } // only count a mutation that did not explicitly fail
       }
     }
 
@@ -150,7 +235,7 @@ function buildTurnEnvelope(finalResult, opts = {}) {
   }
 
   // Top-level turn-level error (pseudo-refusal / classified failure) outranks per-tool noise.
-  const topErrorCode = (typeof fr.error_code === 'string' && fr.error_code) ? fr.error_code : null;
+  const topErrorCode = typeof fr.error_code === 'string' && fr.error_code ? fr.error_code : null;
   const pseudoRefusal = fr.pseudoRefusal === true;
   if (topErrorCode || pseudoRefusal) {
     const att = fr.attribution && typeof fr.attribution === 'object' ? fr.attribution : {};
@@ -175,6 +260,30 @@ function buildTurnEnvelope(finalResult, opts = {}) {
     status = 'partial';
   }
 
+  // Delivery verdict from the harness (fail/warn → goal not honestly met).
+  let delivery = null;
+  if (
+    typeof fr.harness === 'object' &&
+    fr.harness &&
+    typeof fr.harness.deliveryVerdict === 'object'
+  ) {
+    const dv = fr.harness.deliveryVerdict;
+    const v = String(dv.verdict || '');
+    delivery = {
+      verdict: v,
+      blockedBy: Array.isArray(dv.blockedBy)
+        ? dv.blockedBy.map(String)
+        : typeof dv.blockedBy === 'string' && dv.blockedBy
+          ? [dv.blockedBy]
+          : [],
+      summary: String(dv.summary || ''),
+    };
+    // 交付判定为 fail 时不伪装成功。
+    if (v === 'fail' && status === 'ok') {
+      status = 'partial';
+    }
+  }
+
   return {
     schemaVersion: SCHEMA_VERSION,
     status,
@@ -184,6 +293,7 @@ function buildTurnEnvelope(finalResult, opts = {}) {
     filesRead: Array.from(filesReadSet),
     commands,
     errors,
+    delivery,
     metrics: {
       iterations: Number.isFinite(fr.iterations) ? fr.iterations : null,
       toolCalls,

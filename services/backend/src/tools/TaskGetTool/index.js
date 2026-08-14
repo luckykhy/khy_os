@@ -11,8 +11,12 @@ class TaskGetTool extends BaseTool {
   static aliases = ['task_get', 'get_task'];
   static searchHint = 'get task details status dependencies';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Retrieve a task by its ID from the task list.

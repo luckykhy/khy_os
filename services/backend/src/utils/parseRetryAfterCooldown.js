@@ -22,7 +22,9 @@
  */
 
 function parseRetryAfterCooldown(value, baseCooldownMs = 10000, maxRetryAfterMs = 600000) {
-  if (!value) return baseCooldownMs;
+  if (!value) {
+    return baseCooldownMs;
+  }
   const asNumber = Number(value);
   if (!isNaN(asNumber) && asNumber > 0) {
     return Math.min(maxRetryAfterMs, Math.max(baseCooldownMs, asNumber * 1000));

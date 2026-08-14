@@ -12,12 +12,15 @@
 const { spawn } = require('child_process');
 const os = require('os');
 const path = require('path');
+
 const { defaultShell } = require('../tools/platformUtils');
 
 let _nodePty = null;
 
 function _loadNodePty() {
-  if (_nodePty !== null) return _nodePty;
+  if (_nodePty !== null) {
+    return _nodePty;
+  }
   try {
     _nodePty = require('node-pty');
   } catch {
@@ -89,7 +92,10 @@ function _launchWithNodePty(pty, shell, cwd, env) {
     process.stdout.on('resize', onResize);
 
     // Restore raw mode on unexpected signals to avoid corrupting parent shell
-    const onSignal = () => { restoreStdin(); process.exit(130); };
+    const onSignal = () => {
+      restoreStdin();
+      process.exit(130);
+    };
     process.on('SIGINT', onSignal);
     process.on('SIGTERM', onSignal);
 

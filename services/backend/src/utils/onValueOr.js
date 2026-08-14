@@ -23,7 +23,9 @@
 
 function onValueOr(raw, dflt = true) {
   try {
-    if (raw == null || String(raw).trim() === '') return dflt;
+    if (raw == null || String(raw).trim() === '') {
+      return dflt;
+    }
     const v = String(raw).trim().toLowerCase();
     return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   } catch {

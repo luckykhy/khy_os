@@ -30,7 +30,9 @@ const ERROR_BYTES = 1024 * 1024 * 1024;
 /** env 门控惯例(同 interruptHint.isInterruptHintEnabled):默认开,仅显式 0/false/off/no 关。 */
 function isFooterMemoryEnabled(env = process.env) {
   const raw = env && env[FLAG];
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -41,9 +43,15 @@ function isFooterMemoryEnabled(env = process.env) {
  */
 function resolveMemoryLevel(rssBytes) {
   const b = Number(rssBytes);
-  if (!Number.isFinite(b)) return 'normal';
-  if (b >= ERROR_BYTES) return 'error';
-  if (b >= WARNING_BYTES) return 'warning';
+  if (!Number.isFinite(b)) {
+    return 'normal';
+  }
+  if (b >= ERROR_BYTES) {
+    return 'error';
+  }
+  if (b >= WARNING_BYTES) {
+    return 'warning';
+  }
   return 'normal';
 }
 
@@ -57,14 +65,26 @@ function resolveMemoryLevel(rssBytes) {
  */
 function buildFooterMemory(p = {}, env = process.env) {
   try {
-    if (!isFooterMemoryEnabled(env)) return null;
+    if (!isFooterMemoryEnabled(env)) {
+      return null;
+    }
     const rssBytes = Number(p && p.rssBytes);
-    if (!Number.isFinite(rssBytes) || rssBytes <= 0) return null;
+    if (!Number.isFinite(rssBytes) || rssBytes <= 0) {
+      return null;
+    }
     let humanize = null;
-    try { humanize = require('../ccFormat').ccFormatFileSize; } catch { humanize = null; }
-    if (typeof humanize !== 'function') return null;
+    try {
+      humanize = require('../ccFormat').ccFormatFileSize;
+    } catch {
+      humanize = null;
+    }
+    if (typeof humanize !== 'function') {
+      return null;
+    }
     const sizeText = humanize(rssBytes);
-    if (!sizeText) return null;
+    if (!sizeText) {
+      return null;
+    }
     const pid = Number(p && p.pid);
     const pidText = Number.isFinite(pid) && pid > 0 ? `pid:${pid}` : null;
     const text = pidText ? `${sizeText} · ${pidText}` : String(sizeText);

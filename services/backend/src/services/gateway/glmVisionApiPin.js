@@ -38,14 +38,22 @@ const _GLM_VISION_ID_RE = /^glm-4(?:\.\d+)?v(?:[-_].*)?$/;
  * @returns {string} 小写裸 id(无前缀原样小写);无效 → ''
  */
 function bareModelId(model) {
-  const m = String(model == null ? '' : model).trim().toLowerCase();
-  if (!m) return '';
+  const m = String(model == null ? '' : model)
+    .trim()
+    .toLowerCase();
+  if (!m) {
+    return '';
+  }
   // 三段式 api:pool:model
   const m3 = m.match(/^api[:/]([a-z0-9_-]+)[:/](.+)$/);
-  if (m3) return m3[2].trim();
+  if (m3) {
+    return m3[2].trim();
+  }
   // 两段式 provider/model 或 provider:model
   const m2 = m.match(/^[a-z0-9_-]+[:/](.+)$/);
-  if (m2) return m2[1].trim();
+  if (m2) {
+    return m2[1].trim();
+  }
   return m;
 }
 
@@ -57,7 +65,9 @@ function bareModelId(model) {
 function apiPinEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_GLM_VISION_API_PIN;
-    if (raw == null || String(raw).trim() === '') return true; // 缺省 → 默认开
+    if (raw == null || String(raw).trim() === '') {
+      return true;
+    } // 缺省 → 默认开
     const v = String(raw).trim().toLowerCase();
     return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   } catch {
@@ -72,7 +82,9 @@ function apiPinEnabled(env = process.env) {
  */
 function isGlmVisionModelName(model) {
   const bare = bareModelId(model);
-  if (!bare) return false;
+  if (!bare) {
+    return false;
+  }
   return _GLM_VISION_ID_RE.test(bare);
 }
 
@@ -89,14 +101,24 @@ function shouldPinApiForGlmVision(input = {}) {
   try {
     const { hasImage, model, hasGlmKey } = input;
     const env = input.env || process.env;
-    if (!hasImage) return false;
-    if (!hasGlmKey) return false;
-    if (!apiPinEnabled(env)) return false;
+    if (!hasImage) {
+      return false;
+    }
+    if (!hasGlmKey) {
+      return false;
+    }
+    if (!apiPinEnabled(env)) {
+      return false;
+    }
     // 父门:GLM 视觉总开关关 → 不介入(逐字节回退)。
     try {
       const glm = require('./glmVisionModel');
-      if (!glm.glmVisionEnabled(env)) return false;
-    } catch { /* 叶子不可用 → 继续按本叶子自有判定 */ }
+      if (!glm.glmVisionEnabled(env)) {
+        return false;
+      }
+    } catch {
+      /* 叶子不可用 → 继续按本叶子自有判定 */
+    }
     return isGlmVisionModelName(model);
   } catch {
     return false;

@@ -24,13 +24,23 @@ const MAX_ENTRIES = parseInt(process.env.KHY_RE_MAX_ENTRIES, 10) || 20000;
 
 /** 与 unpackTool 同源：条目路径是否安全（无 .. / 绝对 / 盘符）。 */
 function _isSafeEntry(entryPath) {
-  if (!entryPath || typeof entryPath !== 'string') return false;
-  if (path.isAbsolute(entryPath)) return false;
+  if (!entryPath || typeof entryPath !== 'string') {
+    return false;
+  }
+  if (path.isAbsolute(entryPath)) {
+    return false;
+  }
   const segments = entryPath.split(/[/\\]/);
   for (const seg of segments) {
-    if (seg === '..') return false;
-    if (seg === '.') continue;
-    if (/^[A-Za-z]:/.test(seg)) return false;
+    if (seg === '..') {
+      return false;
+    }
+    if (seg === '.') {
+      continue;
+    }
+    if (/^[A-Za-z]:/.test(seg)) {
+      return false;
+    }
   }
   return true;
 }
@@ -44,19 +54,57 @@ function _isWithinDest(resolvedPath, destDir) {
 
 // 视作「源码/可读资产」的扩展名（用于编目与保真度比对的主集合）。
 const SOURCE_EXTS = new Set([
-  '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.vue', '.svelte',
-  '.py', '.pyw', '.rb', '.php', '.go', '.rs', '.java', '.kt', '.cs',
-  '.c', '.h', '.cpp', '.cc', '.hpp', '.swift', '.scala', '.clj',
-  '.html', '.css', '.scss', '.json', '.yaml', '.yml', '.toml', '.xml',
-  '.sql', '.sh', '.md', '.txt', '.proto', '.graphql',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.ts',
+  '.tsx',
+  '.jsx',
+  '.vue',
+  '.svelte',
+  '.py',
+  '.pyw',
+  '.rb',
+  '.php',
+  '.go',
+  '.rs',
+  '.java',
+  '.kt',
+  '.cs',
+  '.c',
+  '.h',
+  '.cpp',
+  '.cc',
+  '.hpp',
+  '.swift',
+  '.scala',
+  '.clj',
+  '.html',
+  '.css',
+  '.scss',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.xml',
+  '.sql',
+  '.sh',
+  '.md',
+  '.txt',
+  '.proto',
+  '.graphql',
 ]);
 // 字节码扩展（需后续反编译，编目时标注 needsDecompile）。
 const BYTECODE_EXTS = new Set(['.class', '.pyc', '.pyo', '.dll', '.exe']);
 
 function _classifyMember(name) {
   const ext = path.extname(name).toLowerCase();
-  if (SOURCE_EXTS.has(ext)) return 'source';
-  if (BYTECODE_EXTS.has(ext)) return 'bytecode';
+  if (SOURCE_EXTS.has(ext)) {
+    return 'source';
+  }
+  if (BYTECODE_EXTS.has(ext)) {
+    return 'bytecode';
+  }
   return 'asset';
 }
 
@@ -75,16 +123,30 @@ async function _recoverZip(filePath, outDir, opts) {
     const entries = await zip.entries();
     const entryList = Object.values(entries);
     if (entryList.length > MAX_ENTRIES) {
-      return { ok: false, reason: `entry count ${entryList.length} exceeds cap ${MAX_ENTRIES}`, members: [] };
+      return {
+        ok: false,
+        reason: `entry count ${entryList.length} exceeds cap ${MAX_ENTRIES}`,
+        members: [],
+      };
     }
 
     for (const e of entryList) {
-      if (e.isDirectory) continue;
+      if (e.isDirectory) {
+        continue;
+      }
       const name = e.name;
-      if (!_isSafeEntry(name)) { skipped++; continue; }
+      if (!_isSafeEntry(name)) {
+        skipped++;
+        continue;
+      }
       totalBytes += e.size || 0;
       if (totalBytes > MAX_RECOVER_BYTES) {
-        return { ok: false, reason: `uncompressed size exceeds cap ${MAX_RECOVER_BYTES}`, members, truncated: true };
+        return {
+          ok: false,
+          reason: `uncompressed size exceeds cap ${MAX_RECOVER_BYTES}`,
+          members,
+          truncated: true,
+        };
       }
       const member = {
         name,
@@ -94,7 +156,10 @@ async function _recoverZip(filePath, outDir, opts) {
 
       if (!opts.listOnly && outDir) {
         const dest = path.join(outDir, name);
-        if (!_isWithinDest(dest, outDir)) { skipped++; continue; }
+        if (!_isWithinDest(dest, outDir)) {
+          skipped++;
+          continue;
+        }
         await fs.promises.mkdir(path.dirname(dest), { recursive: true });
         await zip.extract(name, dest);
         member.extractedTo = dest;
@@ -133,7 +198,8 @@ function _recoverNodeBundle() {
   return {
     ok: false,
     deferred: true,
-    reason: 'Node 自包含可执行的源在 V8 snapshot/内嵌字符串；以 stringHarvester 切片 + 外部工具为主',
+    reason:
+      'Node 自包含可执行的源在 V8 snapshot/内嵌字符串；以 stringHarvester 切片 + 外部工具为主',
     members: [],
     format: 'node-bundle',
   };
@@ -166,7 +232,9 @@ async function recover(filePath, scan, opts = {}) {
       return {
         ok: true,
         format: 'script',
-        members: [{ name: path.basename(filePath), size: st.size, kind: 'source', extractedTo: filePath }],
+        members: [
+          { name: path.basename(filePath), size: st.size, kind: 'source', extractedTo: filePath },
+        ],
         note: 'Artifact is already source (script).',
       };
     }

@@ -30,19 +30,21 @@
  * @module services/upstreamStudyPlan
  */
 
-
 // 许可证 / 法律文件(basename 去扩展名命中)——照搬会把上游许可/著作权引入 Khy,绝不移植。
-const LICENSE_RE = /^(licen[sc]e|copying|copyright|notice|patents?|authors|contributors|unlicense|third[-_]?party[-_]?notices?)$/i;
+const LICENSE_RE =
+  /^(licen[sc]e|copying|copyright|notice|patents?|authors|contributors|unlicense|third[-_]?party[-_]?notices?)$/i;
 
 // 「接口/契约」信号:扩展名。
 const CONTRACT_EXTS = new Set(['.proto', '.graphql', '.gql', '.thrift', '.avsc']);
 
 // 「接口/契约」信号:basename(含 TS 声明文件 .d.ts,与名字含 types/schema/interface/api/dto/model 的源码)。
 const DTS_RE = /\.d\.ts$/i;
-const CONTRACT_BASE_RE = /(^|[._-])(type|types|schema|schemas|interface|interfaces|contract|contracts|api|apis|dto|dtos|model|models|proto|constants?)([._-]|\.|$)/i;
+const CONTRACT_BASE_RE =
+  /(^|[._-])(type|types|schema|schemas|interface|interfaces|contract|contracts|api|apis|dto|dtos|model|models|proto|constants?)([._-]|\.|$)/i;
 
 // migration / upgrading 类文档(先读)——CHANGELOG_RE 已在 catalog 归为 bucket:'changelog';这里补一般 doc 情形。
-const READ_FIRST_DOC_RE = /(^|[._-])(migration|migrating|upgrade|upgrading|breaking|readme|changelog|changes|news|history)([._-]|\.|$)/i;
+const READ_FIRST_DOC_RE =
+  /(^|[._-])(migration|migrating|upgrade|upgrading|breaking|readme|changelog|changes|news|history)([._-]|\.|$)/i;
 
 const _isEnabled = require('../utils/isEnabledDefaultOn');
 
@@ -54,16 +56,29 @@ function isPlanEnabled(env) {
 function _baseOf(path) {
   try {
     const cat = require('./upstreamStudyCatalog');
-    if (cat && typeof cat.baseOf === 'function') return cat.baseOf(path);
-  } catch { /* fall through */ }
-  return (String(path || '').replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '').toLowerCase();
+    if (cat && typeof cat.baseOf === 'function') {
+      return cat.baseOf(path);
+    }
+  } catch {
+    /* fall through */
+  }
+  return (
+    String(path || '')
+      .replace(/[\\/]+$/, '')
+      .split(/[\\/]/)
+      .pop() || ''
+  ).toLowerCase();
 }
 
 function _extOf(path) {
   try {
     const cat = require('./upstreamStudyCatalog');
-    if (cat && typeof cat.extOf === 'function') return cat.extOf(path);
-  } catch { /* fall through */ }
+    if (cat && typeof cat.extOf === 'function') {
+      return cat.extOf(path);
+    }
+  } catch {
+    /* fall through */
+  }
   const base = _baseOf(path);
   const i = base.lastIndexOf('.');
   return i > 0 ? base.slice(i) : '';
@@ -85,8 +100,12 @@ function _stem(base) {
  */
 function portabilityOf(item, env) {
   try {
-    if (!isPlanEnabled(env)) return { verdict: '', reason: '' };
-    if (!item) return { verdict: 'forbidden', reason: '空条目' };
+    if (!isPlanEnabled(env)) {
+      return { verdict: '', reason: '' };
+    }
+    if (!item) {
+      return { verdict: 'forbidden', reason: '空条目' };
+    }
     const path = String(item.path || '');
     const base = _baseOf(path);
     const stem = _stem(base);
@@ -94,7 +113,10 @@ function portabilityOf(item, env) {
 
     // forbidden:法律文件 —— 无论它被归成 doc 精华,照搬都会引入上游许可/著作权。
     if (LICENSE_RE.test(stem)) {
-      return { verdict: 'forbidden', reason: '许可证/法律文件:照搬会引入上游许可, 勿覆盖 Khy 对应文件' };
+      return {
+        verdict: 'forbidden',
+        reason: '许可证/法律文件:照搬会引入上游许可, 勿覆盖 Khy 对应文件',
+      };
     }
     // forbidden:非精华桶(糟粕/中性)——本就不该移植。
     const ESSENCE = new Set(['changelog', 'source', 'test', 'doc', 'config']);
@@ -134,23 +156,37 @@ const WAVES = Object.freeze([
  */
 function portWaveOf(item, env) {
   try {
-    if (!isPlanEnabled(env)) return null;
-    if (!item) return null;
+    if (!isPlanEnabled(env)) {
+      return null;
+    }
+    if (!item) {
+      return null;
+    }
     const path = String(item.path || '');
     const base = _baseOf(path);
     const ext = _extOf(path);
     const bucket = String(item.bucket || '');
 
     // 0 先读:changelog 桶,或名字像 migration/upgrade/readme 的文档。
-    if (bucket === 'changelog') return { ...WAVES[0] };
-    if (bucket === 'doc' && READ_FIRST_DOC_RE.test(base)) return { ...WAVES[0] };
+    if (bucket === 'changelog') {
+      return { ...WAVES[0] };
+    }
+    if (bucket === 'doc' && READ_FIRST_DOC_RE.test(base)) {
+      return { ...WAVES[0] };
+    }
 
     // 1 先改:接口/契约/配置(实现依赖它们)。
-    if (bucket === 'config') return { ...WAVES[1] };
-    if (DTS_RE.test(base) || CONTRACT_EXTS.has(ext) || CONTRACT_BASE_RE.test(base)) return { ...WAVES[1] };
+    if (bucket === 'config') {
+      return { ...WAVES[1] };
+    }
+    if (DTS_RE.test(base) || CONTRACT_EXTS.has(ext) || CONTRACT_BASE_RE.test(base)) {
+      return { ...WAVES[1] };
+    }
 
     // 3 最后:测试。
-    if (bucket === 'test') return { ...WAVES[3] };
+    if (bucket === 'test') {
+      return { ...WAVES[3] };
+    }
 
     // 2 再改:普通源码 / 其余一般文档。
     return { ...WAVES[2] };
@@ -169,17 +205,21 @@ function portWaveOf(item, env) {
  */
 function buildStudyPlan(items, env) {
   try {
-    if (!isPlanEnabled(env)) return null;
+    if (!isPlanEnabled(env)) {
+      return null;
+    }
     const list = Array.isArray(items) ? items : [];
     const byWave = new Map(WAVES.map((w) => [w.wave, []]));
     const forbidden = [];
 
     for (const it of list) {
-      if (!it) continue;
+      if (!it) {
+        continue;
+      }
       const port = portabilityOf(it, env);
       if (port.verdict === 'forbidden') {
         forbidden.push({ path: String(it.path || ''), reason: port.reason });
-        continue;                       // 不能改的不排入波次
+        continue; // 不能改的不排入波次
       }
       const w = portWaveOf(it, env);
       const wave = w ? w.wave : 2;
@@ -187,7 +227,7 @@ function buildStudyPlan(items, env) {
       bucketArr.push({
         path: String(it.path || ''),
         bucket: String(it.bucket || ''),
-        portability: port.verdict,       // 'safe' | 'caution'
+        portability: port.verdict, // 'safe' | 'caution'
         reason: port.reason,
         isNew: !!it.isNew,
         isChanged: !!it.isChanged,
@@ -195,9 +235,11 @@ function buildStudyPlan(items, env) {
       });
     }
 
-    const waves = WAVES
-      .map((w) => ({ wave: w.wave, label: w.label, items: byWave.get(w.wave) || [] }))
-      .filter((w) => w.items.length > 0);
+    const waves = WAVES.map((w) => ({
+      wave: w.wave,
+      label: w.label,
+      items: byWave.get(w.wave) || [],
+    })).filter((w) => w.items.length > 0);
 
     return {
       waves,

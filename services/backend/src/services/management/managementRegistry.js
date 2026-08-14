@@ -13,7 +13,7 @@
 const { validateContract } = require('./resourceContract');
 
 const _resources = new Map(); // id -> contract
-const _sources = new Map();   // `${source}:${sourceDetail}` -> id (真源占用表)
+const _sources = new Map(); // `${source}:${sourceDetail}` -> id (真源占用表)
 
 class ManagementError extends Error {
   constructor(message, code) {
@@ -30,7 +30,10 @@ class ManagementError extends Error {
 function register(contract) {
   const { ok, errors } = validateContract(contract);
   if (!ok) {
-    throw new ManagementError(`资源契约非法 [${contract && contract.id}]: ${errors.join('; ')}`, 'INVALID_CONTRACT');
+    throw new ManagementError(
+      `资源契约非法 [${contract && contract.id}]: ${errors.join('; ')}`,
+      'INVALID_CONTRACT'
+    );
   }
   const id = contract.id;
   const sourceKey = `${contract.source}:${contract.sourceDetail}`;
@@ -38,7 +41,10 @@ function register(contract) {
   // 真源唯一性:别的资源已占用同一真源 → 拒绝(防双根/双写)。
   const owner = _sources.get(sourceKey);
   if (owner && owner !== id) {
-    throw new ManagementError(`真源冲突: "${sourceKey}" 已被资源 "${owner}" 占用,不能再绑定到 "${id}"`, 'SOURCE_CONFLICT');
+    throw new ManagementError(
+      `真源冲突: "${sourceKey}" 已被资源 "${owner}" 占用,不能再绑定到 "${id}"`,
+      'SOURCE_CONFLICT'
+    );
   }
 
   // 覆盖注册:先清掉该 id 旧的真源占用。
@@ -70,7 +76,9 @@ function listIds() {
  */
 async function invoke(id, op, args = {}, ctx = {}) {
   const contract = _resources.get(id);
-  if (!contract) throw new ManagementError(`未知资源: ${id}`, 'UNKNOWN_RESOURCE');
+  if (!contract) {
+    throw new ManagementError(`未知资源: ${id}`, 'UNKNOWN_RESOURCE');
+  }
   if (!contract.capabilities.includes(op)) {
     throw new ManagementError(`资源 "${id}" 不支持操作: ${op}`, 'UNSUPPORTED_OP');
   }
@@ -85,17 +93,19 @@ async function invoke(id, op, args = {}, ctx = {}) {
  * 产出全量资源 × 能力矩阵(供对等守卫 + 文档 + 前端动态渲染)。
  */
 function describe() {
-  return listIds().sort().map((id) => {
-    const c = _resources.get(id);
-    return {
-      id: c.id,
-      label: c.label,
-      source: c.source,
-      sourceDetail: c.sourceDetail,
-      capabilities: c.capabilities.slice(),
-      schema: c.schema || null,
-    };
-  });
+  return listIds()
+    .sort()
+    .map((id) => {
+      const c = _resources.get(id);
+      return {
+        id: c.id,
+        label: c.label,
+        source: c.source,
+        sourceDetail: c.sourceDetail,
+        capabilities: c.capabilities.slice(),
+        schema: c.schema || null,
+      };
+    });
 }
 
 /** 仅供测试:清空注册表。 */

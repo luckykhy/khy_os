@@ -7,12 +7,14 @@
  */
 'use strict';
 
-const { RARITY_COLORS, RARITY_STARS, STAT_NAMES, ANIMATION, NARROW_THRESHOLD } = require('./types');
 const { renderSprite, renderFace, getIdleFrame } = require('./sprites');
+const { RARITY_COLORS, RARITY_STARS, STAT_NAMES, ANIMATION, NARROW_THRESHOLD } = require('./types');
 
 let _chalk;
 function chalk() {
-  if (_chalk) return _chalk;
+  if (_chalk) {
+    return _chalk;
+  }
   const m = require('chalk');
   _chalk = m.default || m;
   return _chalk;
@@ -21,7 +23,9 @@ function chalk() {
 // ── ANSI Helpers ───────────────────────────────────────────────────
 
 function moveCursorUp(n) {
-  if (n > 0) process.stdout.write(`\x1b[${n}A`);
+  if (n > 0) {
+    process.stdout.write(`\x1b[${n}A`);
+  }
 }
 
 function clearLine() {
@@ -86,9 +90,11 @@ function renderSpeechBubble(text, ticksRemaining, fadeTicks) {
       current = current ? `${current} ${word}` : word;
     }
   }
-  if (current) lines.push(current);
+  if (current) {
+    lines.push(current);
+  }
 
-  const width = Math.min(MAX_BUBBLE_WIDTH, Math.max(...lines.map(l => l.length)));
+  const width = Math.min(MAX_BUBBLE_WIDTH, Math.max(...lines.map((l) => l.length)));
   const top = '\u256D' + '\u2500'.repeat(width + 2) + '\u256E'; // ╭──╮
   const bot = '\u2570' + '\u2500'.repeat(width + 2) + '\u256F'; // ╰──╯
 
@@ -100,7 +106,7 @@ function renderSpeechBubble(text, ticksRemaining, fadeTicks) {
 
   // Fade effect in last ticks
   if (ticksRemaining <= fadeTicks) {
-    return result.map(l => c.dim(l));
+    return result.map((l) => c.dim(l));
   }
   return result;
 }
@@ -108,11 +114,11 @@ function renderSpeechBubble(text, ticksRemaining, fadeTicks) {
 // ── Heart Animation ────────────────────────────────────────────────
 
 const HEART_FRAMES = [
-  '   \u2661    \u2661   ',  // ♡
-  '  \u2661  \u2665   \u2661  ',  // ♡ ♥
-  ' \u2665   \u2665  \u2665   ',  // ♥
-  '\u2665  \u2665      \u2665 ',  // ♥ big
-  '\u00B7    \u00B7   \u00B7  ',  // · fade
+  '   \u2661    \u2661   ', // ♡
+  '  \u2661  \u2665   \u2661  ', // ♡ ♥
+  ' \u2665   \u2665  \u2665   ', // ♥
+  '\u2665  \u2665      \u2665 ', // ♥ big
+  '\u00B7    \u00B7   \u00B7  ', // · fade
 ];
 
 /**
@@ -145,26 +151,10 @@ function renderHeartAnimation() {
 // ── Hatch Animation ────────────────────────────────────────────────
 
 const HATCH_FRAMES = [
-  ['            ',
-   '    ____    ',
-   '   / .. \\   ',
-   '  |      |  ',
-   '  \\______/  '],
-  ['            ',
-   '    _/\\_    ',
-   '   / .. \\   ',
-   '  |  ??  |  ',
-   '  \\______/  '],
-  ['     *      ',
-   '   _/ \\_   ',
-   '  /  ..  \\  ',
-   '  |  !!  |  ',
-   '  \\__  __/  '],
-  ['   * * *    ',
-   '    /  \\    ',
-   '   | !! |   ',
-   '  _/    \\_  ',
-   '  __    __  '],
+  ['            ', '    ____    ', '   / .. \\   ', '  |      |  ', '  \\______/  '],
+  ['            ', '    _/\\_    ', '   / .. \\   ', '  |  ??  |  ', '  \\______/  '],
+  ['     *      ', '   _/ \\_   ', '  /  ..  \\  ', '  |  !!  |  ', '  \\__  __/  '],
+  ['   * * *    ', '    /  \\    ', '   | !! |   ', '  _/    \\_  ', '  __    __  '],
 ];
 
 /**
@@ -180,7 +170,9 @@ function renderHatchAnimation(companion) {
     hideCursor();
 
     // Print initial blank lines
-    for (let i = 0; i < totalLines; i++) process.stdout.write('\n');
+    for (let i = 0; i < totalLines; i++) {
+      process.stdout.write('\n');
+    }
 
     const timer = setInterval(() => {
       moveCursorUp(totalLines);
@@ -230,7 +222,9 @@ function startAnimation(companion) {
   hideCursor();
 
   const timer = setInterval(() => {
-    if (stopped) return;
+    if (stopped) {
+      return;
+    }
 
     // Clear previous frame
     if (lineCount > 0) {
@@ -262,7 +256,7 @@ function startAnimation(companion) {
 
       let lines = renderSprite(companion, frame);
       if (blink) {
-        lines = lines.map(l => l.replace(new RegExp(escapeRegex(companion.eye), 'g'), '-'));
+        lines = lines.map((l) => l.replace(new RegExp(escapeRegex(companion.eye), 'g'), '-'));
       }
 
       // Name plate under sprite
@@ -313,7 +307,9 @@ function renderCard(companion) {
   const species = companion.species.name || companion.species.id;
   parts.push(sep);
   parts.push(` ${companion.species.emoji}  ${c.bold(companion.name || '???')}${shiny}`);
-  parts.push(`    ${colorize(companion.rarity.toUpperCase(), companion.rarity)} ${stars}  ${c.gray(species)}`);
+  parts.push(
+    `    ${colorize(companion.rarity.toUpperCase(), companion.rarity)} ${stars}  ${c.gray(species)}`
+  );
   parts.push(sep);
 
   // Sprite (frame 0)
@@ -360,7 +356,7 @@ function renderNarrowFallback(companion) {
   const face = renderFace(companion.species.id, companion.eye);
   const rTag = companion.rarity.charAt(0).toUpperCase();
   const shiny = companion.shiny ? '\u2728' : '';
-  const stats = STAT_NAMES.map(s => {
+  const stats = STAT_NAMES.map((s) => {
     const v = companion.stats[s] || 0;
     return `${s.slice(0, 3)}:${v}`;
   }).join(' ');

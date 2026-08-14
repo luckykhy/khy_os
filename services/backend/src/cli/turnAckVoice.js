@@ -22,11 +22,17 @@ function isEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_TURN_ACK', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_TURN_ACK;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -51,9 +57,13 @@ const _ACK_LINES = [
 function computeTurnAck(opts) {
   try {
     const { turnIndex, sawText, env } = opts || {};
-    if (!isEnabled(env)) return '';
-    if (sawText === true) return '';
-    const n = (Number.isInteger(turnIndex) && turnIndex >= 0) ? turnIndex : 0;
+    if (!isEnabled(env)) {
+      return '';
+    }
+    if (sawText === true) {
+      return '';
+    }
+    const n = Number.isInteger(turnIndex) && turnIndex >= 0 ? turnIndex : 0;
     return _ACK_LINES[n % _ACK_LINES.length];
   } catch {
     return '';

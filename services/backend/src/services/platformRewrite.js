@@ -15,38 +15,58 @@
 // macOS-specific: Linux desktop commands → macOS equivalents
 const _LINUX_TO_MACOS = {
   'xdg-open': 'open',
-  'xclip': 'pbcopy',
-  'xsel': 'pbcopy',
+  xclip: 'pbcopy',
+  xsel: 'pbcopy',
   'xdg-mime': 'mdls',
-  'nautilus': 'open',
-  'nemo': 'open',
-  'dolphin': 'open',
-  'thunar': 'open',
+  nautilus: 'open',
+  nemo: 'open',
+  dolphin: 'open',
+  thunar: 'open',
   'xdg-settings': 'defaults',
-  'xrandr': 'system_profiler SPDisplaysDataType',
-  'apt': 'brew',
+  xrandr: 'system_profiler SPDisplaysDataType',
+  apt: 'brew',
   'apt-get': 'brew',
-  'yum': 'brew',
-  'dnf': 'brew',
-  'pacman': 'brew',
-  'systemctl': 'launchctl',
-  'journalctl': 'log show',
+  yum: 'brew',
+  dnf: 'brew',
+  pacman: 'brew',
+  systemctl: 'launchctl',
+  journalctl: 'log show',
 };
 
 const _UNIX_TO_WIN = {
-  ls: 'dir', cat: 'type', cp: 'copy', mv: 'move', rm: 'del',
-  grep: 'findstr', touch: 'type nul >', which: 'where', pwd: 'cd',
-  clear: 'cls', head: 'powershell -NoProfile -c "Get-Content"',
+  ls: 'dir',
+  cat: 'type',
+  cp: 'copy',
+  mv: 'move',
+  rm: 'del',
+  grep: 'findstr',
+  touch: 'type nul >',
+  which: 'where',
+  pwd: 'cd',
+  clear: 'cls',
+  head: 'powershell -NoProfile -c "Get-Content"',
   tail: 'powershell -NoProfile -c "Get-Content ... -Tail"',
-  chmod: '(no equivalent)', chown: '(no equivalent)',
-  ps: 'tasklist', kill: 'taskkill', df: 'powershell -NoProfile -c "Get-CimInstance Win32_LogicalDisk"',
-  uname: 'ver', find: 'dir /s /b',
+  chmod: '(no equivalent)',
+  chown: '(no equivalent)',
+  ps: 'tasklist',
+  kill: 'taskkill',
+  df: 'powershell -NoProfile -c "Get-CimInstance Win32_LogicalDisk"',
+  uname: 'ver',
+  find: 'dir /s /b',
 };
 
 const _WIN_TO_UNIX = {
-  dir: 'ls', type: 'cat', copy: 'cp', move: 'mv', del: 'rm',
-  findstr: 'grep', where: 'which', cls: 'clear',
-  tasklist: 'ps aux', taskkill: 'kill', ver: 'uname -a',
+  dir: 'ls',
+  type: 'cat',
+  copy: 'cp',
+  move: 'mv',
+  del: 'rm',
+  findstr: 'grep',
+  where: 'which',
+  cls: 'clear',
+  tasklist: 'ps aux',
+  taskkill: 'kill',
+  ver: 'uname -a',
 };
 
 // ── Public API ───────────────────────────────────────────────────────
@@ -58,7 +78,9 @@ const _WIN_TO_UNIX = {
  * Returns the (possibly rewritten) command string.
  */
 function proactivePlatformRewrite(command) {
-  if (!command || typeof command !== 'string') return command;
+  if (!command || typeof command !== 'string') {
+    return command;
+  }
   const isWin = process.platform === 'win32';
 
   if (isWin) {
@@ -74,7 +96,10 @@ function proactivePlatformRewrite(command) {
 
   // macOS: rewrite Linux-desktop commands to macOS equivalents
   if (process.platform === 'darwin') {
-    const base = command.trim().split(/[\s|;&]/)[0].toLowerCase();
+    const base = command
+      .trim()
+      .split(/[\s|;&]/)[0]
+      .toLowerCase();
     const macCmd = _LINUX_TO_MACOS[base];
     if (macCmd) {
       command = command.replace(new RegExp(`^${base}\\b`, 'm'), macCmd);
@@ -128,28 +153,49 @@ function proactivePlatformRewrite(command) {
 }
 
 function getWindowsCommandHint(command) {
-  if (!command) return null;
-  const base = command.trim().split(/[\s/\\|;&]/)[0].toLowerCase();
+  if (!command) {
+    return null;
+  }
+  const base = command
+    .trim()
+    .split(/[\s/\\|;&]/)[0]
+    .toLowerCase();
   const winCmd = _UNIX_TO_WIN[base];
-  if (!winCmd) return null;
+  if (!winCmd) {
+    return null;
+  }
   const hasHome = /~[/\\]/.test(command);
   const pathHint = hasHome ? '，将 ~ 替换为 %USERPROFILE%' : '';
   return `当前系统是 Windows，"${base}" 不可用。请改用 "${winCmd}"${pathHint}。`;
 }
 
 function getLinuxCommandHint(command) {
-  if (!command) return null;
-  const base = command.trim().split(/[\s/\\|;&]/)[0].toLowerCase();
+  if (!command) {
+    return null;
+  }
+  const base = command
+    .trim()
+    .split(/[\s/\\|;&]/)[0]
+    .toLowerCase();
   const unixCmd = _WIN_TO_UNIX[base];
-  if (!unixCmd) return null;
+  if (!unixCmd) {
+    return null;
+  }
   return `当前系统是 Linux/macOS，"${base}" 不可用。请改用 "${unixCmd}"。`;
 }
 
 function getMacOSCommandHint(command) {
-  if (!command) return null;
-  const base = command.trim().split(/[\s/\\|;&]/)[0].toLowerCase();
+  if (!command) {
+    return null;
+  }
+  const base = command
+    .trim()
+    .split(/[\s/\\|;&]/)[0]
+    .toLowerCase();
   const macCmd = _LINUX_TO_MACOS[base];
-  if (!macCmd) return null;
+  if (!macCmd) {
+    return null;
+  }
   return `当前系统是 macOS，"${base}" 不可用。请改用 "${macCmd}"。`;
 }
 

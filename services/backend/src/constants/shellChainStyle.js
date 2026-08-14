@@ -26,19 +26,34 @@
 /** 门控:仅当显式置为 0/false/off/no 时关闭,其余(含未设)均开启。 */
 function isEnabled(env) {
   const raw = String((env || process.env).KHY_POWERSHELL_CHAIN_STYLE || 'on')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
 // KHY_SHELL 显式覆盖 → 归一化 token(与 getShellConfiguration 的 shell 家族对齐)。
 function _normalizeOverrideToken(raw) {
-  const v = String(raw || '').trim().toLowerCase();
-  if (!v) return null;
-  if (['powershell', 'powershell.exe', 'windows powershell', 'winps', 'ps'].includes(v)) return 'powershell';
-  if (['pwsh', 'pwsh.exe', 'powershell7', 'pwsh7', 'ps7', 'powershell-core'].includes(v)) return 'pwsh';
-  if (['cmd', 'cmd.exe', 'command', 'comspec'].includes(v)) return 'cmd';
-  if (['bash', 'gitbash', 'git-bash', 'msys', 'mingw'].includes(v)) return 'bash';
-  if (['sh', 'posix', 'dash'].includes(v)) return 'sh';
+  const v = String(raw || '')
+    .trim()
+    .toLowerCase();
+  if (!v) {
+    return null;
+  }
+  if (['powershell', 'powershell.exe', 'windows powershell', 'winps', 'ps'].includes(v)) {
+    return 'powershell';
+  }
+  if (['pwsh', 'pwsh.exe', 'powershell7', 'pwsh7', 'ps7', 'powershell-core'].includes(v)) {
+    return 'pwsh';
+  }
+  if (['cmd', 'cmd.exe', 'command', 'comspec'].includes(v)) {
+    return 'cmd';
+  }
+  if (['bash', 'gitbash', 'git-bash', 'msys', 'mingw'].includes(v)) {
+    return 'bash';
+  }
+  if (['sh', 'posix', 'dash'].includes(v)) {
+    return 'sh';
+  }
   return null;
 }
 
@@ -49,18 +64,30 @@ function _normalizeOverrideToken(raw) {
 function resolveFamily(env) {
   const e = env || process.env;
   const override = _normalizeOverrideToken(e.KHY_SHELL);
-  if (override === 'powershell' || override === 'pwsh' || override === 'cmd') return override;
-  if (override === 'bash' || override === 'sh') return null; // 非 Windows 家族,交由调用方按 posix 处理
+  if (override === 'powershell' || override === 'pwsh' || override === 'cmd') {
+    return override;
+  }
+  if (override === 'bash' || override === 'sh') {
+    return null;
+  } // 非 Windows 家族,交由调用方按 posix 处理
   const comspec = String(e.COMSPEC || '').toLowerCase();
-  if (comspec.endsWith('powershell.exe')) return 'powershell';
-  if (comspec.endsWith('pwsh.exe')) return 'pwsh';
-  if (comspec.endsWith('cmd.exe')) return 'cmd';
+  if (comspec.endsWith('powershell.exe')) {
+    return 'powershell';
+  }
+  if (comspec.endsWith('pwsh.exe')) {
+    return 'pwsh';
+  }
+  if (comspec.endsWith('cmd.exe')) {
+    return 'cmd';
+  }
   return null;
 }
 
 /** 目标是否为 PowerShell 家族(且门控开启)。powershell(5.1)与 pwsh(7)都算。 */
 function targetsPowerShell(env) {
-  if (!isEnabled(env)) return false;
+  if (!isEnabled(env)) {
+    return false;
+  }
   const fam = resolveFamily(env);
   return fam === 'powershell' || fam === 'pwsh';
 }
@@ -72,7 +99,9 @@ function targetsPowerShell(env) {
  * @returns {'powershell'|'pwsh'|'cmd'|'bash'|'sh'|null}
  */
 function parseExecOverride(env) {
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   return _normalizeOverrideToken((env || process.env).KHY_SHELL);
 }
 

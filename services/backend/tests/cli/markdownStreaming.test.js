@@ -1,5 +1,10 @@
 'use strict';
 
+// Force ANSI color so the code-block shading (256-color background) is emitted
+// even when the test runner's stdout is not a TTY — the code box is now
+// identified by its background escape, not by box-drawing characters.
+process.env.FORCE_COLOR = '3';
+
 /**
  * markdownStreaming.test.js — stream-safe live markdown render (node:test).
  *
@@ -20,8 +25,13 @@ const assert = require('node:assert/strict');
 
 const { renderMarkdownLite, renderMarkdownStreaming } = require('../../src/cli/markdownRenderer');
 
-// Box-drawing chars the code-block renderer emits (see _renderMarkdownLiteInner).
-const hasCodeBox = (s) => s.includes('╭') && s.includes('│') && s.includes('╰');
+// The code-block renderer no longer draws a box; it shades each line with an
+// ANSI background color and emits NO box-drawing characters (so the user's
+// clipboard never picks up border verticals). Chalk may render the background
+// as 256-color (`[48;5;…m`) or truecolor (`[48;2;…m`) depending on the color
+// level, so a code box is identified by the `[48;` background introducer plus
+// the ABSENCE of any box-drawing glyph.
+const hasCodeBox = (s) => s.includes('[48;') && !/[╭╮╰╯│]/.test(s);
 
 describe('renderMarkdownStreaming — graceful in-progress code block', () => {
   test('an UNCLOSED fence already renders as a code box (not bare backticks)', () => {

@@ -14,6 +14,14 @@
 
 const fs = require('fs');
 const path = require('path');
+
+const staleness = require('../services/memoryStaleness');
+const writeSafety = require('../services/memoryWriteSafety');
+
+// 稳定、非有损的文件名 slug 单一真源(纯叶子,门控 KHY_MEMORY_SLUG_STABLE)。旧
+// `_generateFilename` 丢弃非 ASCII → 中文名塌成 `feedback_.md` 互相碰撞 + 无幂等去重;
+// 本叶子把 slug 变成 (type,name) 的确定性函数,关闭态逐字节回退旧文件名。
+const memorySlug = require('./memorySlug');
 const {
   getMemoryDir,
   getMemoryIndexPath,
@@ -23,12 +31,6 @@ const {
   MAX_ENTRYPOINT_BYTES,
   MEMORY_INDEX_NAME,
 } = require('./paths');
-const writeSafety = require('../services/memoryWriteSafety');
-const staleness = require('../services/memoryStaleness');
-// 稳定、非有损的文件名 slug 单一真源(纯叶子,门控 KHY_MEMORY_SLUG_STABLE)。旧
-// `_generateFilename` 丢弃非 ASCII → 中文名塌成 `feedback_.md` 互相碰撞 + 无幂等去重;
-// 本叶子把 slug 变成 (type,name) 的确定性函数,关闭态逐字节回退旧文件名。
-const memorySlug = require('./memorySlug');
 
 // ── Frontmatter parsing ────────────────────────────────────────────────
 
@@ -51,10 +53,14 @@ function parseFrontmatter(content) {
   // Simple YAML parser (key: value pairs, one per line)
   for (const line of yamlBlock.split('\n')) {
     const colonIdx = line.indexOf(':');
-    if (colonIdx === -1) continue;
+    if (colonIdx === -1) {
+      continue;
+    }
     const key = line.slice(0, colonIdx).trim();
     const value = line.slice(colonIdx + 1).trim();
-    if (key) frontmatter[key] = value;
+    if (key) {
+      frontmatter[key] = value;
+    }
   }
 
   return { frontmatter, body: body.trim() };
@@ -91,7 +97,9 @@ function serializeFrontmatter(frontmatter, body) {
  * @returns {string|null}
  */
 function _normalizeTierOption(v) {
-  if (v == null || v === '') return null;
+  if (v == null || v === '') {
+    return null;
+  }
   try {
     const { TIER_ORDER } = require('../services/memoryTier');
     const t = String(v).trim().toLowerCase();
@@ -126,9 +134,7 @@ function truncateEntrypoint(raw) {
     return { content: trimmed, lineCount, byteCount, wasTruncated: false };
   }
 
-  let truncated = wasLineTruncated
-    ? lines.slice(0, MAX_ENTRYPOINT_LINES).join('\n')
-    : trimmed;
+  let truncated = wasLineTruncated ? lines.slice(0, MAX_ENTRYPOINT_LINES).join('\n') : trimmed;
 
   if (truncated.length > MAX_ENTRYPOINT_BYTES) {
     const cutAt = truncated.lastIndexOf('\n', MAX_ENTRYPOINT_BYTES);
@@ -136,11 +142,17 @@ function truncateEntrypoint(raw) {
   }
 
   const reasons = [];
-  if (wasLineTruncated) reasons.push(`${lineCount} lines (limit: ${MAX_ENTRYPOINT_LINES})`);
-  if (wasByteTruncated) reasons.push(`${_formatBytes(byteCount)} (limit: ${_formatBytes(MAX_ENTRYPOINT_BYTES)})`);
+  if (wasLineTruncated) {
+    reasons.push(`${lineCount} lines (limit: ${MAX_ENTRYPOINT_LINES})`);
+  }
+  if (wasByteTruncated) {
+    reasons.push(`${_formatBytes(byteCount)} (limit: ${_formatBytes(MAX_ENTRYPOINT_BYTES)})`);
+  }
 
   return {
-    content: truncated + `\n\n> WARNING: ${MEMORY_INDEX_NAME} is ${reasons.join(' and ')}. Only part was loaded. Keep index entries to one line under ~150 chars; move detail into topic files.`,
+    content:
+      truncated +
+      `\n\n> WARNING: ${MEMORY_INDEX_NAME} is ${reasons.join(' and ')}. Only part was loaded. Keep index entries to one line under ~150 chars; move detail into topic files.`,
     lineCount,
     byteCount,
     wasTruncated: true,
@@ -148,8 +160,12 @@ function truncateEntrypoint(raw) {
 }
 
 function _formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  if (bytes < 1024) {
+    return `${bytes}B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)}KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
@@ -169,7 +185,9 @@ function _formatBytes(bytes) {
 /** Synchronous sleep without busy-spinning (deterministic, no IO). */
 function _sleepSync(ms) {
   const n = Number(ms);
-  if (!Number.isFinite(n) || n <= 0) return;
+  if (!Number.isFinite(n) || n <= 0) {
+    return;
+  }
   try {
     // SharedArrayBuffer-backed wait blocks the thread for `n` ms with no spin.
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
@@ -213,10 +231,16 @@ function _safeWriteFileSync(filepath, content) {
     } catch (err) {
       lastErr = err;
       // Clean up a partial temp file before deciding whether to retry.
-      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(tmpPath);
+      } catch {
+        /* ignore */
+      }
 
       const code = err && err.code;
-      if (!writeSafety.shouldRetry(code, attempt, plan.maxAttempts)) break;
+      if (!writeSafety.shouldRetry(code, attempt, plan.maxAttempts)) {
+        break;
+      }
       _sleepSync(writeSafety.backoffMs(attempt, plan.backoffBaseMs));
     }
   }
@@ -262,7 +286,7 @@ function loadMemoryPrompt() {
     lines.push(
       `## ${MEMORY_INDEX_NAME}`,
       '',
-      `Your ${MEMORY_INDEX_NAME} is currently empty. When you save new memories, they will appear here.`,
+      `Your ${MEMORY_INDEX_NAME} is currently empty. When you save new memories, they will appear here.`
     );
   }
 
@@ -311,12 +335,12 @@ function saveMemory(type, name, content, options = {}) {
   // updated: per-memory 最后更新时间戳(P1.3)。门控关 ⇒ 不写,字节回退到旧行为;
   // 读取侧缺该键时回退到文件 mtime(向后兼容)。允许调用方显式传 updated 覆盖(便于测试)。
   const updated = staleness.isEnabled(process.env)
-    ? (options.updated || new Date().toISOString())
+    ? options.updated || new Date().toISOString()
     : null;
 
   const fileContent = serializeFrontmatter(
     { name, description, type, ...(tier ? { tier } : {}), ...(updated ? { updated } : {}) },
-    content,
+    content
   );
 
   _safeWriteFileSync(filepath, fileContent);
@@ -358,7 +382,9 @@ function deleteMemory(filename, options = {}) {
   const updateIndex = options.updateIndex !== false;
 
   try {
-    if (!fs.existsSync(filepath)) return false;
+    if (!fs.existsSync(filepath)) {
+      return false;
+    }
     fs.unlinkSync(filepath);
 
     if (updateIndex) {
@@ -392,7 +418,7 @@ function updateMemoryIndex(entries) {
   }
 
   // Parse existing entries
-  const existingLines = existingContent.split('\n').filter(l => l.trim());
+  const existingLines = existingContent.split('\n').filter((l) => l.trim());
   const existingMap = new Map();
 
   for (const line of existingLines) {
@@ -426,17 +452,22 @@ function updateMemoryIndex(entries) {
  * @returns {Array<{filename: string, frontmatter: object, matches: string[]}>}
  */
 function searchMemories(query) {
-  if (!query || typeof query !== 'string') return [];
+  if (!query || typeof query !== 'string') {
+    return [];
+  }
 
   const memoryDir = getMemoryDir();
   const results = [];
   const lowerQuery = query.toLowerCase();
 
   try {
-    if (!fs.existsSync(memoryDir)) return [];
+    if (!fs.existsSync(memoryDir)) {
+      return [];
+    }
 
-    const files = fs.readdirSync(memoryDir)
-      .filter(f => f.endsWith('.md') && f !== MEMORY_INDEX_NAME);
+    const files = fs
+      .readdirSync(memoryDir)
+      .filter((f) => f.endsWith('.md') && f !== MEMORY_INDEX_NAME);
 
     for (const filename of files) {
       try {
@@ -444,7 +475,9 @@ function searchMemories(query) {
         const content = fs.readFileSync(filepath, 'utf-8');
         const lowerContent = content.toLowerCase();
 
-        if (!lowerContent.includes(lowerQuery)) continue;
+        if (!lowerContent.includes(lowerQuery)) {
+          continue;
+        }
 
         const parsed = parseFrontmatter(content);
         const lines = content.split('\n');
@@ -482,10 +515,13 @@ function listMemories() {
   const results = [];
 
   try {
-    if (!fs.existsSync(memoryDir)) return [];
+    if (!fs.existsSync(memoryDir)) {
+      return [];
+    }
 
-    const files = fs.readdirSync(memoryDir)
-      .filter(f => f.endsWith('.md') && f !== MEMORY_INDEX_NAME);
+    const files = fs
+      .readdirSync(memoryDir)
+      .filter((f) => f.endsWith('.md') && f !== MEMORY_INDEX_NAME);
 
     for (const filename of files) {
       try {
@@ -528,10 +564,14 @@ function _tokenizeForRecall(text) {
   const lower = String(text || '').toLowerCase();
   const latin = lower.match(/[a-z0-9]+/g) || [];
   for (const t of latin) {
-    if (t.length >= 2) set.add(t);
+    if (t.length >= 2) {
+      set.add(t);
+    }
   }
   const cjk = lower.match(/[一-鿿]/g) || [];
-  for (const c of cjk) set.add(c);
+  for (const c of cjk) {
+    set.add(c);
+  }
   return set;
 }
 
@@ -539,7 +579,9 @@ function _tokenizeForRecall(text) {
 function _overlapCount(queryTokens, fieldTokens) {
   let n = 0;
   for (const t of queryTokens) {
-    if (fieldTokens.has(t)) n++;
+    if (fieldTokens.has(t)) {
+      n++;
+    }
   }
   return n;
 }
@@ -565,12 +607,17 @@ function _overlapCount(queryTokens, fieldTokens) {
 function selectRelevantMemories(query, opts = {}) {
   const limit = Number.isFinite(opts.limit) && opts.limit > 0 ? Math.floor(opts.limit) : 5;
   const minScore = Number.isFinite(opts.minScore) ? opts.minScore : 1;
-  const exclude = opts.exclude instanceof Set
-    ? opts.exclude
-    : (Array.isArray(opts.exclude) ? new Set(opts.exclude) : null);
+  const exclude =
+    opts.exclude instanceof Set
+      ? opts.exclude
+      : Array.isArray(opts.exclude)
+        ? new Set(opts.exclude)
+        : null;
 
   const queryTokens = _tokenizeForRecall(query);
-  if (queryTokens.size === 0) return [];
+  if (queryTokens.size === 0) {
+    return [];
+  }
 
   // Symmetric recall-token enrichment (CJK bigrams + canonical alias sentinels):
   // enrich the query and each field with the SAME transform so cross-language /
@@ -579,23 +626,32 @@ function selectRelevantMemories(query, opts = {}) {
   // to the prior keyword-overlap behavior. Lazy-required (zero-dep pure leaf) so
   // early bootstrap that pulls in memdir never depends on it.
   let _enrich;
-  try { _enrich = require('../services/memoryEngine/memoryRecallTokens').enrichTokens; }
-  catch { _enrich = (t) => t; }
+  try {
+    _enrich = require('../services/memoryEngine/memoryRecallTokens').enrichTokens;
+  } catch {
+    _enrich = (t) => t;
+  }
   const qTokens = _enrich(queryTokens, query);
   const ef = (t) => _enrich(_tokenizeForRecall(t), t);
 
   const scored = [];
   for (const entry of listMemories()) {
-    if (exclude && exclude.has(entry.filename)) continue;
+    if (exclude && exclude.has(entry.filename)) {
+      continue;
+    }
     const parsed = readMemory(entry.filename);
-    if (!parsed.exists) continue;
+    if (!parsed.exists) {
+      continue;
+    }
     const fm = parsed.frontmatter || {};
     const score =
       _overlapCount(qTokens, ef(fm.name)) * 3 +
       _overlapCount(qTokens, ef(fm.description)) * 2 +
       _overlapCount(qTokens, ef(fm.type)) * 1 +
       _overlapCount(qTokens, ef(parsed.body)) * 1;
-    if (score < minScore) continue;
+    if (score < minScore) {
+      continue;
+    }
     scored.push({ filename: entry.filename, frontmatter: fm, body: parsed.body, score });
   }
 
@@ -627,20 +683,32 @@ function loadRelevantMemories(query, opts = {}) {
 
   const envLimit = parseInt(process.env.KHY_MEMORY_RECALL_LIMIT || '', 10);
   const envChars = parseInt(process.env.KHY_MEMORY_RECALL_CHARS || '', 10);
-  const limit = Number.isFinite(opts.limit) && opts.limit > 0
-    ? Math.floor(opts.limit)
-    : (Number.isFinite(envLimit) && envLimit > 0 ? envLimit : 5);
-  const maxChars = Number.isFinite(opts.maxChars) && opts.maxChars > 0
-    ? Math.floor(opts.maxChars)
-    : (Number.isFinite(envChars) && envChars > 0 ? envChars : 4000);
+  const limit =
+    Number.isFinite(opts.limit) && opts.limit > 0
+      ? Math.floor(opts.limit)
+      : Number.isFinite(envLimit) && envLimit > 0
+        ? envLimit
+        : 5;
+  const maxChars =
+    Number.isFinite(opts.maxChars) && opts.maxChars > 0
+      ? Math.floor(opts.maxChars)
+      : Number.isFinite(envChars) && envChars > 0
+        ? envChars
+        : 4000;
 
   let selected;
   try {
-    selected = selectRelevantMemories(query, { limit, minScore: opts.minScore, exclude: opts.exclude });
+    selected = selectRelevantMemories(query, {
+      limit,
+      minScore: opts.minScore,
+      exclude: opts.exclude,
+    });
   } catch {
     return null;
   }
-  if (!selected || selected.length === 0) return null;
+  if (!selected || selected.length === 0) {
+    return null;
+  }
 
   const blocks = [];
   let used = 0;
@@ -648,35 +716,48 @@ function loadRelevantMemories(query, opts = {}) {
   for (const mem of selected) {
     const title = String(mem.frontmatter.name || mem.filename);
     const body = String(mem.body || '').trim();
-    if (!body) continue;
+    if (!body) {
+      continue;
+    }
     const remaining = maxChars - used;
-    if (remaining <= 0) break;
-    const clippedBody = body.length > remaining
-      ? body.slice(0, remaining).trimEnd() + ' …'
-      : body;
+    if (remaining <= 0) {
+      break;
+    }
+    const clippedBody = body.length > remaining ? body.slice(0, remaining).trimEnd() + ' …' : body;
 
     // P1.3 过期标注(非侵入):用 frontmatter.updated,缺失则回退文件 mtime;判定全在纯叶子。
     let staleNote = '';
     try {
       let updatedMs = staleness.parseUpdatedMs(mem.frontmatter.updated);
       if (updatedMs == null) {
-        try { updatedMs = fs.statSync(getMemoryFilePath(mem.filename)).mtimeMs; } catch { /* ignore */ }
+        try {
+          updatedMs = fs.statSync(getMemoryFilePath(mem.filename)).mtimeMs;
+        } catch {
+          /* ignore */
+        }
       }
       const assessment = staleness.assessStaleness(
-        { type: mem.frontmatter.type, updatedMs, nowMs }, process.env,
+        { type: mem.frontmatter.type, updatedMs, nowMs },
+        process.env
       );
       staleNote = staleness.formatStaleNote(assessment);
-    } catch { /* fail-soft: no annotation */ }
+    } catch {
+      /* fail-soft: no annotation */
+    }
 
     const block = staleNote
       ? `### ${title} (${mem.filename})\n${staleNote}\n${clippedBody}`
       : `### ${title} (${mem.filename})\n${clippedBody}`;
     blocks.push(block);
     used += block.length;
-    if (used >= maxChars) break;
+    if (used >= maxChars) {
+      break;
+    }
   }
 
-  if (blocks.length === 0) return null;
+  if (blocks.length === 0) {
+    return null;
+  }
   return blocks.join('\n\n');
 }
 
@@ -705,8 +786,8 @@ function _buildMemoryLines(memoryDir) {
     '<types>',
     '<type>',
     '    <name>user</name>',
-    '    <description>Information about the user\'s role, goals, responsibilities, and knowledge. Tailor future behavior to their preferences and perspective.</description>',
-    '    <when_to_save>When you learn details about the user\'s role, preferences, responsibilities, or knowledge.</when_to_save>',
+    "    <description>Information about the user's role, goals, responsibilities, and knowledge. Tailor future behavior to their preferences and perspective.</description>",
+    "    <when_to_save>When you learn details about the user's role, preferences, responsibilities, or knowledge.</when_to_save>",
     '</type>',
     '<type>',
     '    <name>feedback</name>',
@@ -802,20 +883,29 @@ function _generateFilename(type, name) {
  */
 function _findExistingMemoryFilename(type, name) {
   try {
-    if (!memorySlug.slugGateEnabled(process.env)) return null;
+    if (!memorySlug.slugGateEnabled(process.env)) {
+      return null;
+    }
     const wantKey = memorySlug.memoryKey(type, name);
     const memoryDir = getMemoryDir();
-    if (!fs.existsSync(memoryDir)) return null;
-    const files = fs.readdirSync(memoryDir)
-      .filter(f => f.endsWith('.md') && f !== MEMORY_INDEX_NAME);
+    if (!fs.existsSync(memoryDir)) {
+      return null;
+    }
+    const files = fs
+      .readdirSync(memoryDir)
+      .filter((f) => f.endsWith('.md') && f !== MEMORY_INDEX_NAME);
     for (const filename of files) {
       try {
         const content = fs.readFileSync(path.join(memoryDir, filename), 'utf-8');
         const parsed = parseFrontmatter(content);
         const fm = parsed && parsed.frontmatter ? parsed.frontmatter : {};
-        if (!fm.name || !fm.type) continue;
+        if (!fm.name || !fm.type) {
+          continue;
+        }
         // 仅在同 type 下比对,避免跨类型误并;键含 type 规范化冗余保护。
-        if (memorySlug.memoryKey(fm.type, fm.name) === wantKey) return filename;
+        if (memorySlug.memoryKey(fm.type, fm.name) === wantKey) {
+          return filename;
+        }
       } catch {
         // 跳过不可读文件
       }
@@ -833,10 +923,12 @@ function _findExistingMemoryFilename(type, name) {
 function _removeFromIndex(filename) {
   const indexPath = getMemoryIndexPath();
   try {
-    if (!fs.existsSync(indexPath)) return;
+    if (!fs.existsSync(indexPath)) {
+      return;
+    }
     const content = fs.readFileSync(indexPath, 'utf-8');
     const lines = content.split('\n');
-    const filtered = lines.filter(line => !line.includes(`(${filename})`));
+    const filtered = lines.filter((line) => !line.includes(`(${filename})`));
     if (filtered.length !== lines.length) {
       _safeWriteFileSync(indexPath, filtered.join('\n'));
     }
@@ -864,10 +956,16 @@ function ensureProjectMemoryIndex(projectRoot) {
   const dir = getProjectMemoryDir(projectRoot);
   const indexPath = path.join(dir, MEMORY_INDEX_NAME);
   const enabled = contract.isEnabled(process.env);
-  if (!enabled) return { dir, indexPath, created: false, enabled: false };
+  if (!enabled) {
+    return { dir, indexPath, created: false, enabled: false };
+  }
   try {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    if (fs.existsSync(indexPath)) return { dir, indexPath, created: false, enabled: true };
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (fs.existsSync(indexPath)) {
+      return { dir, indexPath, created: false, enabled: true };
+    }
     const seed = contract.buildProjectMemoryIndexContract({
       projectRoot: projectRoot || process.cwd(),
       memoryDir: dir,
@@ -934,17 +1032,23 @@ function loadProjectMemoryPrompt(projectRoot) {
   try {
     const { getProjectMemoryDir } = require('./paths');
     const contract = require('./projectMemoryContract');
-    if (!contract.isEnabled(process.env)) return null;
+    if (!contract.isEnabled(process.env)) {
+      return null;
+    }
 
     const root = projectRoot || process.cwd();
     const dir = getProjectMemoryDir(root);
     const indexPath = path.join(dir, MEMORY_INDEX_NAME);
-    if (!fs.existsSync(indexPath)) return null;
+    if (!fs.existsSync(indexPath)) {
+      return null;
+    }
 
     const raw = String(fs.readFileSync(indexPath, 'utf-8') || '');
     // Only surface an index that actually holds curated pointers; the bare seed
     // (0 entries) is the empty template and must not cost context.
-    if (contract.countIndexEntries(raw) < 1) return null;
+    if (contract.countIndexEntries(raw) < 1) {
+      return null;
+    }
 
     const { content } = truncateEntrypoint(raw);
     return [
@@ -996,17 +1100,31 @@ function appendProjectProgress(entry, projectRoot) {
     const o = entry && typeof entry === 'object' ? entry : {};
     const nowIso = new Date().toISOString();
     const block = progress.formatProgressEntry({
-      topic: o.topic, covered: o.covered, next: o.next, nowIso,
+      topic: o.topic,
+      covered: o.covered,
+      next: o.next,
+      nowIso,
     });
-    if (!block) return { ok: false, path: filePath, enabled: true, created: false };
+    if (!block) {
+      return { ok: false, path: filePath, enabled: true, created: false };
+    }
 
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     let created = false;
     let existing = '';
     if (fs.existsSync(filePath)) {
-      try { existing = String(fs.readFileSync(filePath, 'utf-8') || ''); } catch { existing = ''; }
+      try {
+        existing = String(fs.readFileSync(filePath, 'utf-8') || '');
+      } catch {
+        existing = '';
+      }
     }
-    if (!existing) { existing = progress.PROGRESS_HEADER; created = true; }
+    if (!existing) {
+      existing = progress.PROGRESS_HEADER;
+      created = true;
+    }
     _safeWriteFileSync(filePath, existing + block);
     return { ok: true, path: filePath, enabled: true, created };
   } catch {
@@ -1028,13 +1146,19 @@ function appendProjectProgress(entry, projectRoot) {
 function loadProjectProgressPrompt(projectRoot) {
   try {
     const progress = require('../services/memoryEngine/progressLog');
-    if (!progress.isRecallEnabled(process.env)) return null;
+    if (!progress.isRecallEnabled(process.env)) {
+      return null;
+    }
     const { getProjectMemoryDir } = require('./paths');
     const filePath = path.join(getProjectMemoryDir(projectRoot), PROGRESS_INDEX_NAME);
-    if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
     const raw = String(fs.readFileSync(filePath, 'utf-8') || '');
     const latest = progress.latestPerTopic(progress.parseProgressEntries(raw));
-    if (!latest.length) return null;
+    if (!latest.length) {
+      return null;
+    }
     return progress.renderProgressRecall(latest);
   } catch {
     return null; // recall is best-effort — never breaks prompt assembly

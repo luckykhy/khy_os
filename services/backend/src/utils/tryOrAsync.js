@@ -17,7 +17,11 @@
  */
 
 async function tryOrAsync(fn, dflt) {
-  try { return await fn(); } catch { return dflt; }
+  try {
+    return await fn();
+  } catch {
+    return dflt;
+  }
 }
 
 module.exports = tryOrAsync;

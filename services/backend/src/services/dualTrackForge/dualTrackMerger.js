@@ -19,8 +19,8 @@
  * `source_track` 取值固定 'Deterministic' | 'Assisted' | 'Dual-Track'，永不为空（防呆④）。
  */
 
-const evoRequirement = require('../evoEngine/evoRequirement');
 const evoLevels = require('../evoEngine/evoLevels');
+const evoRequirement = require('../evoEngine/evoRequirement');
 
 const SOURCE_TRACK = Object.freeze({
   DETERMINISTIC: 'Deterministic',
@@ -45,7 +45,11 @@ class DualTrackRequirementMerger {
     if (!backstop || !backstop.requirement) {
       throw new Error('DualTrackMerger.merge: 缺少保底轨 backstop（确定性轨不可为空）');
     }
-    const hasGain = !!(assisted && Number.isFinite(assisted.confidence) && assisted.confidence >= this.threshold);
+    const hasGain = !!(
+      assisted &&
+      Number.isFinite(assisted.confidence) &&
+      assisted.confidence >= this.threshold
+    );
 
     let requirement = backstop.requirement;
     let escalatedToL2 = false;
@@ -73,14 +77,18 @@ class DualTrackRequirementMerger {
 
     const source_track = hasGain ? SOURCE_TRACK.DUAL_TRACK : SOURCE_TRACK.DETERMINISTIC;
     const merged_action = [`[保底] ${backstop.action}`];
-    if (hasGain) merged_action.push(`[增益] ${assisted.suggested_evo_requirement}`);
+    if (hasGain) {
+      merged_action.push(`[增益] ${assisted.suggested_evo_requirement}`);
+    }
 
     return {
       requirementId: requirement.id,
       title: this._title(backstop, hasGain ? assisted : null),
       source_track,
       deterministic_finding: backstop.finding,
-      assisted_hypothesis: hasGain ? `${assisted.root_cause_hypothesis} (置信度: ${assisted.confidence})` : null,
+      assisted_hypothesis: hasGain
+        ? `${assisted.root_cause_hypothesis} (置信度: ${assisted.confidence})`
+        : null,
       merged_action,
       priority: this._priority(backstop, hasGain ? assisted : null, escalatedToL2),
       confidence: hasGain ? assisted.confidence : null,
@@ -99,7 +107,9 @@ class DualTrackRequirementMerger {
     if (!assisted || !assisted.suggested_evo_requirement) {
       throw new Error('DualTrackMerger.fromAssisted: 缺少合格增益假设');
     }
-    const surface = String(observation.surface || (observation.context && observation.context.tool) || 'runtime').slice(0, 300);
+    const surface = String(
+      observation.surface || (observation.context && observation.context.tool) || 'runtime'
+    ).slice(0, 300);
     const requirement = evoRequirement.forge({
       signal: evoRequirement.SIGNALS.TOOL_FAILURE,
       painPoint: `软性逻辑异常：${assisted.root_cause_hypothesis}`.slice(0, 300),
@@ -133,9 +143,15 @@ class DualTrackRequirementMerger {
   }
 
   _priority(backstop, assisted, escalatedToL2) {
-    if (escalatedToL2) return 'High';
-    if (backstop.priority === 'High') return 'High';
-    if (assisted && assisted.confidence >= HIGH_CONFIDENCE) return 'High';
+    if (escalatedToL2) {
+      return 'High';
+    }
+    if (backstop.priority === 'High') {
+      return 'High';
+    }
+    if (assisted && assisted.confidence >= HIGH_CONFIDENCE) {
+      return 'High';
+    }
     return backstop.priority || 'Medium';
   }
 }

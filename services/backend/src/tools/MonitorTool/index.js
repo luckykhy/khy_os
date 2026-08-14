@@ -1,5 +1,6 @@
-const { BaseTool } = require('../_baseTool');
 const { spawn } = require('child_process');
+
+const { BaseTool } = require('../_baseTool');
 const { platformShell } = require('../platformUtils');
 
 /**
@@ -10,7 +11,9 @@ const { platformShell } = require('../platformUtils');
  */
 function _monitorBackgroundEnabled(env) {
   const raw = env && env.KHY_MONITOR_BACKGROUND;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -26,7 +29,9 @@ class MonitorTool extends BaseTool {
 
   // Background mode returns immediately, so it is concurrency-safe; the legacy
   // blocking fallback (gate off) is not. Reflect the active behavior honestly.
-  isConcurrencySafe() { return _monitorBackgroundEnabled(process.env); }
+  isConcurrencySafe() {
+    return _monitorBackgroundEnabled(process.env);
+  }
 
   prompt() {
     return `Start a long-running command in the background and stream its output to a file.
@@ -45,9 +50,20 @@ watchers, API polling loops, \`watch\`, build/test watchers.
     return {
       type: 'object',
       properties: {
-        command: { type: 'string', description: 'Shell command to monitor (should produce streaming output)' },
-        description: { type: 'string', description: 'Human-readable description of what is being monitored (used as the task label)' },
-        timeout: { type: 'number', description: 'Optional idle/wall cap in ms (max 600000). Omit to let the monitor run until it exits on its own.' },
+        command: {
+          type: 'string',
+          description: 'Shell command to monitor (should produce streaming output)',
+        },
+        description: {
+          type: 'string',
+          description:
+            'Human-readable description of what is being monitored (used as the task label)',
+        },
+        timeout: {
+          type: 'number',
+          description:
+            'Optional idle/wall cap in ms (max 600000). Omit to let the monitor run until it exits on its own.',
+        },
       },
       required: ['command'],
     };
@@ -86,7 +102,11 @@ watchers, API polling loops, \`watch\`, build/test watchers.
     // the existing toolUseLoop drain emits the exit <task_notification>. The
     // entry shape mirrors that path (status/command/result) plus monitor extras.
     let backgroundShells = null;
-    try { ({ backgroundShells } = require('../backgroundShellRegistry')); } catch { /* drain just won't fire */ }
+    try {
+      ({ backgroundShells } = require('../backgroundShellRegistry'));
+    } catch {
+      /* drain just won't fire */
+    }
     const entry = {
       status: 'running',
       command,
@@ -95,10 +115,16 @@ watchers, API polling loops, \`watch\`, build/test watchers.
       kind: 'monitor',
       outputFile,
     };
-    if (backgroundShells) backgroundShells.set(taskId, entry);
+    if (backgroundShells) {
+      backgroundShells.set(taskId, entry);
+    }
 
     let stream = null;
-    try { stream = fs.createWriteStream(outputFile, { flags: 'a' }); } catch { stream = null; }
+    try {
+      stream = fs.createWriteStream(outputFile, { flags: 'a' });
+    } catch {
+      stream = null;
+    }
 
     // Bounded in-memory tail feeds the exit notification summary; the full live
     // stream lives in outputFile.
@@ -106,12 +132,28 @@ watchers, API polling loops, \`watch\`, build/test watchers.
     let tailLen = 0;
     const append = (buf) => {
       const str = buf.toString();
-      if (stream) { try { stream.write(str); } catch { /* file gone */ } }
+      if (stream) {
+        try {
+          stream.write(str);
+        } catch {
+          /* file gone */
+        }
+      }
       tail.push(str);
       tailLen += str.length;
-      while (tailLen > MAX_TAIL && tail.length > 1) { tailLen -= tail.shift().length; }
+      while (tailLen > MAX_TAIL && tail.length > 1) {
+        tailLen -= tail.shift().length;
+      }
     };
-    const closeStream = () => { if (stream) { try { stream.end(); } catch { /* already closed */ } } };
+    const closeStream = () => {
+      if (stream) {
+        try {
+          stream.end();
+        } catch {
+          /* already closed */
+        }
+      }
+    };
 
     // CC's Monitor has no timeout (a monitor runs until it exits). Honor that by
     // default; only apply a kill timer when the caller explicitly asks for one.
@@ -139,7 +181,9 @@ watchers, API polling loops, \`watch\`, build/test watchers.
       entry.status = code === 0 ? 'completed' : 'failed';
       const out = tail.join('').slice(-MAX_TAIL);
       entry.result = { output: out, exitCode: code };
-      if (code !== 0) entry.error = `monitor "${description}" exited with code ${code}`;
+      if (code !== 0) {
+        entry.error = `monitor "${description}" exited with code ${code}`;
+      }
     });
     proc.on('error', (err) => {
       closeStream();
@@ -191,7 +235,9 @@ watchers, API polling loops, \`watch\`, build/test watchers.
     });
   }
 
-  getActivityDescription(input) { return `监控任务：${input.description || input.command}`; }
+  getActivityDescription(input) {
+    return `监控任务：${input.description || input.command}`;
+  }
 }
 
 module.exports = MonitorTool;

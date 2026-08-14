@@ -31,8 +31,16 @@ const _ALL_PLATFORMS = Object.freeze(Object.values(PLATFORM));
  * 每条：{ platform, kernel, match(probe) } —— match 仅依赖注入的 probe（确定性、可测）。
  */
 const KERNEL_SIGNATURES = Object.freeze([
-  { platform: PLATFORM.HARMONY, kernel: 'ArkTS/OHOS', match: (p) => /harmony|ohos|arkts/i.test(`${p.osType} ${p.runtime}`) },
-  { platform: PLATFORM.ANDROID, kernel: 'Linux/Bionic(Android)', match: (p) => /android/i.test(`${p.osType} ${p.runtime}`) || p.isAndroid === true },
+  {
+    platform: PLATFORM.HARMONY,
+    kernel: 'ArkTS/OHOS',
+    match: (p) => /harmony|ohos|arkts/i.test(`${p.osType} ${p.runtime}`),
+  },
+  {
+    platform: PLATFORM.ANDROID,
+    kernel: 'Linux/Bionic(Android)',
+    match: (p) => /android/i.test(`${p.osType} ${p.runtime}`) || p.isAndroid === true,
+  },
   { platform: PLATFORM.MACOS, kernel: 'XNU(Darwin)', match: (p) => p.nodePlatform === 'darwin' },
   { platform: PLATFORM.WINDOWS, kernel: 'Win32 NT', match: (p) => p.nodePlatform === 'win32' },
   { platform: PLATFORM.LINUX, kernel: 'Linux Kernel', match: (p) => p.nodePlatform === 'linux' },
@@ -43,11 +51,34 @@ const KERNEL_SIGNATURES = Object.freeze([
  * 不是当前已实现的工具清单，而是淬火器升维器官时的方向指引（proposedModules 取材于此）。
  */
 const NATIVE_TOPOLOGY = Object.freeze({
-  [PLATFORM.WINDOWS]: Object.freeze(['COM自动化', 'WMI系统管控', '注册表深度干预', 'Office生态互操作']),
-  [PLATFORM.LINUX]: Object.freeze(['eBPF内核级监控', 'Cgroup资源隔离', 'Shell管道极速编排', '系统级守护进程(Daemon)化']),
-  [PLATFORM.MACOS]: Object.freeze(['AppleScript/Shortcuts生态闭环', 'Swift原生桥接', '沙箱内安全合规操作']),
-  [PLATFORM.ANDROID]: Object.freeze(['无障碍服务UiAutomator', 'Intent隐式调用跨应用', '低功耗后台保活', '传感器直读']),
-  [PLATFORM.HARMONY]: Object.freeze(['分布式软总线设备发现', '元服务免安装调用', 'ArkTS原生并发模型']),
+  [PLATFORM.WINDOWS]: Object.freeze([
+    'COM自动化',
+    'WMI系统管控',
+    '注册表深度干预',
+    'Office生态互操作',
+  ]),
+  [PLATFORM.LINUX]: Object.freeze([
+    'eBPF内核级监控',
+    'Cgroup资源隔离',
+    'Shell管道极速编排',
+    '系统级守护进程(Daemon)化',
+  ]),
+  [PLATFORM.MACOS]: Object.freeze([
+    'AppleScript/Shortcuts生态闭环',
+    'Swift原生桥接',
+    '沙箱内安全合规操作',
+  ]),
+  [PLATFORM.ANDROID]: Object.freeze([
+    '无障碍服务UiAutomator',
+    'Intent隐式调用跨应用',
+    '低功耗后台保活',
+    '传感器直读',
+  ]),
+  [PLATFORM.HARMONY]: Object.freeze([
+    '分布式软总线设备发现',
+    '元服务免安装调用',
+    'ArkTS原生并发模型',
+  ]),
 });
 
 /**
@@ -78,7 +109,9 @@ const AFFINITY_TABLE = Object.freeze({
 
 /** 一个意图的全平台亲和子表（未知意图 → null）。 */
 function affinityFor(intent) {
-  return Object.prototype.hasOwnProperty.call(AFFINITY_TABLE, intent) ? AFFINITY_TABLE[intent] : null;
+  return Object.prototype.hasOwnProperty.call(AFFINITY_TABLE, intent)
+    ? AFFINITY_TABLE[intent]
+    : null;
 }
 
 /** 是否已知平台身份。 */

@@ -17,7 +17,9 @@
  */
 
 function resultElbowEnabled(env = process.env) {
-  const flag = String((env && env.KHY_RESULT_ELBOW) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_RESULT_ELBOW) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -30,7 +32,7 @@ function resultElbowEnabled(env = process.env) {
 function resultLineLead(env = process.env) {
   return resultElbowEnabled(env)
     ? { glyph: '⎿ ', color: undefined, dim: true } // CC: 暗色 elbow,与命令正文同语言
-    : { glyph: '✓ ', color: 'green', dim: true };   // legacy 字节回退:绿色对勾
+    : { glyph: '✓ ', color: 'green', dim: true }; // legacy 字节回退:绿色对勾
 }
 
 module.exports = { resultElbowEnabled, resultLineLead };

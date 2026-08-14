@@ -35,7 +35,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** KHY_CC_MCP_BRIDGE gate: default ON, {0,false,off,no} (case/space-insensitive) → OFF. */
 function isCcMcpBridgeEnabled(env = process.env) {
   const raw = env && env.KHY_CC_MCP_BRIDGE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -58,17 +60,25 @@ const _join = require('../../utils/pathJoinSafe');
 function ccMcpConfigSources({ homedir, projectDir } = {}) {
   try {
     const out = [];
-    const push = (p, kind) => { if (p) out.push({ path: p, kind }); };
+    const push = (p, kind) => {
+      if (p) {
+        out.push({ path: p, kind });
+      }
+    };
 
     if (homedir) {
       const claudeJson = _join(homedir, '.claude.json');
       // Same file carries both the user-scope map and per-project maps; the
       // shell reads it once per source but extraction picks the right shape.
       push(claudeJson, 'claudeJson-user');
-      if (projectDir) push(claudeJson, 'claudeJson-project');
+      if (projectDir) {
+        push(claudeJson, 'claudeJson-project');
+      }
     }
     // CC's project-local .mcp.json convention (byte-identical mcpServers map).
-    if (projectDir) push(_join(projectDir, '.mcp.json'), 'mcpJson');
+    if (projectDir) {
+      push(_join(projectDir, '.mcp.json'), 'mcpJson');
+    }
 
     return out;
   } catch {
@@ -78,11 +88,21 @@ function ccMcpConfigSources({ homedir, projectDir } = {}) {
 
 /** Look up a project entry in CC's projects map, tolerating path normalization. */
 function _projectEntry(projects, projectDir) {
-  if (!projects || typeof projects !== 'object' || !projectDir) return null;
-  if (Object.prototype.hasOwnProperty.call(projects, projectDir)) return projects[projectDir];
+  if (!projects || typeof projects !== 'object' || !projectDir) {
+    return null;
+  }
+  if (Object.prototype.hasOwnProperty.call(projects, projectDir)) {
+    return projects[projectDir];
+  }
   let resolved = '';
-  try { resolved = path.resolve(String(projectDir)); } catch { resolved = ''; }
-  if (resolved && Object.prototype.hasOwnProperty.call(projects, resolved)) return projects[resolved];
+  try {
+    resolved = path.resolve(String(projectDir));
+  } catch {
+    resolved = '';
+  }
+  if (resolved && Object.prototype.hasOwnProperty.call(projects, resolved)) {
+    return projects[resolved];
+  }
   return null;
 }
 
@@ -97,7 +117,9 @@ function _projectEntry(projects, projectDir) {
  */
 function extractMcpServers(raw, kind, projectDir) {
   try {
-    if (!raw || typeof raw !== 'object') return {};
+    if (!raw || typeof raw !== 'object') {
+      return {};
+    }
     let map = null;
     if (kind === 'claudeJson-user' || kind === 'mcpJson') {
       map = raw.mcpServers;
@@ -105,12 +127,16 @@ function extractMcpServers(raw, kind, projectDir) {
       const entry = _projectEntry(raw.projects, projectDir);
       map = entry && entry.mcpServers;
     }
-    if (!map || typeof map !== 'object') return {};
+    if (!map || typeof map !== 'object') {
+      return {};
+    }
     // Shallow-copy each server config so callers can annotate (add _scope etc.)
     // without mutating the injected input.
     const out = {};
     for (const [name, cfg] of Object.entries(map)) {
-      if (name && cfg && typeof cfg === 'object') out[name] = { ...cfg };
+      if (name && cfg && typeof cfg === 'object') {
+        out[name] = { ...cfg };
+      }
     }
     return out;
   } catch {

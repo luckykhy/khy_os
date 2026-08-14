@@ -22,8 +22,8 @@ const { TRUST, PRODUCER } = khyTrace;
 const GATE_ENV = 'KHY_TRAJECTORY_QUARANTINE';
 
 const ACTION = Object.freeze({
-  ALLOW: 'allow',           // 放行执行
-  GATE: 'gate',             // 交常规审批闸（交互式人工确认）
+  ALLOW: 'allow', // 放行执行
+  GATE: 'gate', // 交常规审批闸（交互式人工确认）
   QUARANTINE: 'quarantine', // 隔离：绝不执行，回 error 工具结果
 });
 
@@ -43,7 +43,9 @@ function _isRelayedForExec(producer) {
 function isGateEnabled(env) {
   const src = env || process.env || {};
   const raw = src[GATE_ENV];
-  if (raw == null || raw === '') return true; // 缺省 ON
+  if (raw == null || raw === '') {
+    return true;
+  } // 缺省 ON
   const v = String(raw).trim().toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
@@ -59,36 +61,50 @@ function isGateEnabled(env) {
  * @returns {{action:string, trust:string, reason:string, riskLevel?:string}}
  */
 function decide(signals = {}) {
-  const {
-    producer,
-    interactive = false,
-    preApproved = false,
-    gateEnabled,
-    riskLevel,
-  } = signals;
+  const { producer, interactive = false, preApproved = false, gateEnabled, riskLevel } = signals;
 
   const relayed = _isRelayedForExec(producer);
 
   // 本地 origin 从不隔离：本地 agent loop 合法使用既有权限路径，零回归。
   if (!relayed) {
-    return { action: ACTION.ALLOW, trust: TRUST.VERIFIED, reason: 'local origin (khy-local)', riskLevel };
+    return {
+      action: ACTION.ALLOW,
+      trust: TRUST.VERIFIED,
+      reason: 'local origin (khy-local)',
+      riskLevel,
+    };
   }
 
   const enabled = gateEnabled != null ? gateEnabled : isGateEnabled();
 
   // 逃生口：显式关闭隔离闸 → 放行（迁移用）。仍标 CLAIMED（非本地验证），保留溯源真相。
   if (!enabled) {
-    return { action: ACTION.ALLOW, trust: TRUST.CLAIMED, reason: `quarantine gate disabled via ${GATE_ENV}`, riskLevel };
+    return {
+      action: ACTION.ALLOW,
+      trust: TRUST.CLAIMED,
+      reason: `quarantine gate disabled via ${GATE_ENV}`,
+      riskLevel,
+    };
   }
 
   // 已获显式批准 → 放行；过常规闸后由本地执行验证，标 VERIFIED。
   if (preApproved) {
-    return { action: ACTION.ALLOW, trust: TRUST.VERIFIED, reason: 'relayed call explicitly approved', riskLevel };
+    return {
+      action: ACTION.ALLOW,
+      trust: TRUST.VERIFIED,
+      reason: 'relayed call explicitly approved',
+      riskLevel,
+    };
   }
 
   // 交互式 → 交常规审批闸，让人工 gate 决定（不在此处自动放行）。
   if (interactive) {
-    return { action: ACTION.GATE, trust: TRUST.CLAIMED, reason: 'relayed call routed to approval gate', riskLevel };
+    return {
+      action: ACTION.GATE,
+      trust: TRUST.CLAIMED,
+      reason: 'relayed call routed to approval gate',
+      riskLevel,
+    };
   }
 
   // 非交互 + 无批准 → fail-CLOSED 隔离，绝不自动执行。
@@ -107,12 +123,14 @@ function decide(signals = {}) {
  */
 function assertNoAutoDangerous(ctx = {}) {
   const { producer, enablingDangerous } = ctx;
-  if (!enablingDangerous) return;
+  if (!enablingDangerous) {
+    return;
+  }
   const enabled = ctx.gateEnabled != null ? ctx.gateEnabled : isGateEnabled();
   if (enabled && _isRelayedForExec(producer)) {
     throw new Error(
       `[trajectoryProvenance] 不变式违背：中转 origin（${producer}）不得自动开启全局 dangerous mode；` +
-      `中转调用必须经隔离闸（${GATE_ENV}）。`
+        `中转调用必须经隔离闸（${GATE_ENV}）。`
     );
   }
 }

@@ -46,7 +46,9 @@ const MARGIN = 3;
 const MIN_CONTENT = 20;
 
 function diffContentWidthEnabled(env = process.env) {
-  const flag = String((env && env.KHY_DIFF_CONTENT_WIDTH) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_DIFF_CONTENT_WIDTH) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -65,8 +67,12 @@ function _posInt(v, fallback) {
  * @returns {number}
  */
 function diffClipWidth({ columns, gutterWidth, expanded = false, env = process.env } = {}) {
-  if (!diffContentWidthEnabled(env)) return LEGACY_CLIP;
-  if (expanded) return Infinity;
+  if (!diffContentWidthEnabled(env)) {
+    return LEGACY_CLIP;
+  }
+  if (expanded) {
+    return Infinity;
+  }
   const cols = _posInt(columns, DEFAULT_COLUMNS);
   const gw = _posInt(gutterWidth, 1);
   return Math.max(MIN_CONTENT, cols - gw - PREFIX_EXTRA - MARGIN);

@@ -14,17 +14,24 @@ module.exports = defineTool({
   description:
     'Search public package registries (npm and PyPI) for open-source packages. ' +
     'Use when the user asks whether a suitable open-source library/package exists, ' +
-    'or wants a package\'s latest version / metadata. Actions: search (by keyword), info (exact name).',
+    "or wants a package's latest version / metadata. Actions: search (by keyword), info (exact name).",
   category: 'data',
   risk: 'low',
   isReadOnly: true,
   isConcurrencySafe: true,
 
-  aliases: ['registry_search', 'npm_search', 'pypi_search', 'package_search', 'search_packages', 'find_package'],
+  aliases: [
+    'registry_search',
+    'npm_search',
+    'pypi_search',
+    'package_search',
+    'search_packages',
+    'find_package',
+  ],
   shouldDefer: true,
   searchHint:
-    'search npm pypi package registry for open source library packages 查 npm pip 仓库有没有合适的开源库包 '
-    + 'find package latest version metadata 是否存在某个包 pip install npm install candidate',
+    'search npm pypi package registry for open source library packages 查 npm pip 仓库有没有合适的开源库包 ' +
+    'find package latest version metadata 是否存在某个包 pip install npm install candidate',
 
   prompt() {
     return `Search the public npm and PyPI package registries for open-source packages.
@@ -89,7 +96,12 @@ Report findings faithfully; do not invent packages that the registries did not r
       });
       if (result && result.success === false) {
         // 如实传播失败(含 depId,供依赖自愈漏斗接管缺失的 web 搜索依赖)。
-        return toolErrorCodes.enrich({ success: false, error: result.error || 'registry query failed', depId: result.depId, data: result });
+        return toolErrorCodes.enrich({
+          success: false,
+          error: result.error || 'registry query failed',
+          depId: result.depId,
+          data: result,
+        });
       }
       return { success: true, data: result };
     } catch (err) {

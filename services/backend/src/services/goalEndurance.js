@@ -40,10 +40,10 @@ const STOP_GATE_MAX = 10;
 //     (源注:「对标 Claude Code 无硬上限」)→ endurance 推荐拉到 24h,让超长单条回复不被截断。
 //   KHY_TOOL_LOOP_MAX_MS:单轮内的**空闲**守卫(有推进即重置,活跃的长任务不会触发)。
 //     默认 10 分钟,clamp [5s, 30min] → endurance 推荐拉到上限 30min。
-const SESSION_ABS_TIMEOUT_DEFAULT_MS = 1200000;   // 20 分钟(toolUseLoopCore 默认)
+const SESSION_ABS_TIMEOUT_DEFAULT_MS = 1200000; // 20 分钟(toolUseLoopCore 默认)
 const SESSION_ABS_TIMEOUT_ENDURANCE_MS = 86400000; // 24 小时(无 clamp,拟合「无硬上限」)
-const SESSION_IDLE_TIMEOUT_DEFAULT_MS = 600000;   // 10 分钟(MAX_ELAPSED_MS_DEFAULT)
-const SESSION_IDLE_TIMEOUT_MAX_MS = 1800000;      // 30 分钟(KHY_TOOL_LOOP_MAX_MS clamp 上限)
+const SESSION_IDLE_TIMEOUT_DEFAULT_MS = 600000; // 10 分钟(MAX_ELAPSED_MS_DEFAULT)
+const SESSION_IDLE_TIMEOUT_MAX_MS = 1800000; // 30 分钟(KHY_TOOL_LOOP_MAX_MS clamp 上限)
 // KHY_UNATTENDED_AUTOANSWER 的「开」值(默认关;镜像 unattendedAutoAnswer.ON_VALUES,
 // 此处内联以保持 goalEndurance 纯叶子零跨叶依赖)。
 const _AUTOANSWER_ON_VALUES = ['1', 'true', 'on', 'yes'];
@@ -56,12 +56,16 @@ function _num(v) {
 
 /** 小时 → 人读短标签(∞ / N 天 / N 小时 / N 分钟)。 */
 function _fmtH(h) {
-  if (!Number.isFinite(h)) return '∞';
+  if (!Number.isFinite(h)) {
+    return '∞';
+  }
   if (h >= 48) {
     const d = h / 24;
     return `${Number.isInteger(d) ? d : d.toFixed(1)} 天`;
   }
-  if (h >= 1) return `${Number.isInteger(h) ? h : h.toFixed(1)} 小时`;
+  if (h >= 1) {
+    return `${Number.isInteger(h) ? h : h.toFixed(1)} 小时`;
+  }
   return `${Math.round(h * 60)} 分钟`;
 }
 
@@ -73,13 +77,21 @@ function _fmtH(h) {
  */
 function _tokenCeiling(env) {
   const raw = String((env || {}).KHY_TOKEN_BUDGET == null ? '' : (env || {}).KHY_TOKEN_BUDGET)
-    .trim().toLowerCase();
-  if (!raw || raw === '0' || raw === 'off' || raw === 'false' || raw === 'no') return 0;
+    .trim()
+    .toLowerCase();
+  if (!raw || raw === '0' || raw === 'off' || raw === 'false' || raw === 'no') {
+    return 0;
+  }
   const m = raw.match(/^([0-9]+(?:\.[0-9]+)?)\s*([km])?$/);
-  if (!m) return 0;
+  if (!m) {
+    return 0;
+  }
   let n = parseFloat(m[1]);
-  if (m[2] === 'k') n *= 1e3;
-  else if (m[2] === 'm') n *= 1e6;
+  if (m[2] === 'k') {
+    n *= 1e3;
+  } else if (m[2] === 'm') {
+    n *= 1e6;
+  }
   return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
 }
 
@@ -92,7 +104,9 @@ function _tokenCeiling(env) {
 function _resolveStopGateMax(env) {
   const raw = (env || {}).KHY_GOAL_STOP_GATE_MAX;
   const n = Number.parseInt(String(raw == null ? '' : raw).trim(), 10);
-  if (!Number.isFinite(n)) return STOP_GATE_DEFAULT;
+  if (!Number.isFinite(n)) {
+    return STOP_GATE_DEFAULT;
+  }
   return Math.min(Math.max(n, 0), STOP_GATE_MAX);
 }
 
@@ -111,7 +125,9 @@ function _resolvePosIntMs(env, key, def) {
 
 /** 毫秒 → 人读短标签(分钟/小时)。 */
 function _fmtMs(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return '0';
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return '0';
+  }
   if (ms >= HOUR_MS) {
     const h = ms / HOUR_MS;
     return `${Number.isInteger(h) ? h : h.toFixed(1)} 小时`;
@@ -125,10 +141,10 @@ function _fmtMs(ms) {
  */
 function buildEnduranceEnv() {
   return Object.freeze({
-    KHY_GOAL_IDLE_MS: '0',        // 关闭 12h 闲置退役(多日运行的头号确定性杀手)
-    KHY_GOAL_MAX_TURNS: '1000',   // 把用户轮预算提到上限(自主自驱几乎不消耗轮次)
+    KHY_GOAL_IDLE_MS: '0', // 关闭 12h 闲置退役(多日运行的头号确定性杀手)
+    KHY_GOAL_MAX_TURNS: '1000', // 把用户轮预算提到上限(自主自驱几乎不消耗轮次)
     KHY_GOAL_STOP_GATE_MAX: '10', // 单个用户轮内多自续接几步再交还控制权
-    KHY_TOKEN_BUDGET: '0',        // 取消硬 token 上限(上下文吃紧自动压缩,不因 token 停)
+    KHY_TOKEN_BUDGET: '0', // 取消硬 token 上限(上下文吃紧自动压缩,不因 token 停)
   });
 }
 
@@ -160,7 +176,7 @@ function assessGoalEndurance({ goal = null, env, nowMs, targetHours } = {}) {
 
   // ── 1) 闲置退役(idle reconcile)—— 多日运行的头号确定性杀手 ──────────────
   const reconcileOn = core.isReconcileEnabled(e);
-  const idleMs = core.resolveIdleMs(e);           // Infinity 表关闭(KHY_GOAL_IDLE_MS=0)
+  const idleMs = core.resolveIdleMs(e); // Infinity 表关闭(KHY_GOAL_IDLE_MS=0)
   let horizonHours = Infinity;
   if (reconcileOn && Number.isFinite(idleMs)) {
     const idleH = idleMs / HOUR_MS;
@@ -217,14 +233,16 @@ function assessGoalEndurance({ goal = null, env, nowMs, targetHours } = {}) {
     warnings.push({
       key: 'token-budget',
       title: `设置了硬 token 上限 KHY_TOKEN_BUDGET=${ceiling}`,
-      detail: '达上限会用已完成工作合成一条回复并结束本轮(目标不退役,但本轮被截断);多日无人值守下这会打断推进。',
+      detail:
+        '达上限会用已完成工作合成一条回复并结束本轮(目标不退役,但本轮被截断);多日无人值守下这会打断推进。',
       fix: 'KHY_TOKEN_BUDGET=0',
       fixNote: '取消硬 token 上限;khy 会在上下文吃紧时自动压缩历史而不是停下。',
     });
   } else {
     notes.push({
       key: 'token-budget',
-      title: '无硬 token 上限:上下文吃紧时自动压缩/归档历史,不因 token 耗尽而停(这正是「token 足够不中断」的底气)。',
+      title:
+        '无硬 token 上限:上下文吃紧时自动压缩/归档历史,不因 token 耗尽而停(这正是「token 足够不中断」的底气)。',
     });
   }
 
@@ -249,7 +267,7 @@ function assessGoalEndurance({ goal = null, env, nowMs, targetHours } = {}) {
     targetHours: targetH,
     horizonHours,
     hasGoal: Boolean(goal && goal.text),
-    goalText: (goal && goal.text) ? String(goal.text) : '',
+    goalText: goal && goal.text ? String(goal.text) : '',
     turns: { bounded, cap, spent, remaining },
     blockers,
     warnings,
@@ -267,12 +285,17 @@ function buildEnduranceReport(a) {
   const r = a || {};
   const lines = [];
   lines.push('[持久目标 · 连续多日运行底气自检]');
-  if (r.hasGoal) lines.push(`目标:「${r.goalText}」`);
-  else lines.push('当前没有活动的持久目标 —— 下面是对通用配置的评估(设定目标后同样适用)。');
+  if (r.hasGoal) {
+    lines.push(`目标:「${r.goalText}」`);
+  } else {
+    lines.push('当前没有活动的持久目标 —— 下面是对通用配置的评估(设定目标后同样适用)。');
+  }
 
   const horizon = _fmtH(r.horizonHours);
   if (r.enduring) {
-    lines.push(`判定:✅ 可连续运行约 ${horizon}${Number.isFinite(r.horizonHours) ? '' : '(不受闲置退役限制)'} —— 满足「连续跑约 ${_fmtH(r.targetHours)}」。`);
+    lines.push(
+      `判定:✅ 可连续运行约 ${horizon}${Number.isFinite(r.horizonHours) ? '' : '(不受闲置退役限制)'} —— 满足「连续跑约 ${_fmtH(r.targetHours)}」。`
+    );
   } else {
     lines.push(`判定:⚠️ 尚不足以连续跑约 ${_fmtH(r.targetHours)}:确定性中断视界仅 ${horizon}。`);
   }
@@ -282,26 +305,38 @@ function buildEnduranceReport(a) {
     lines.push('—— 阻断项(会中断多日运行)——');
     for (const b of r.blockers) {
       lines.push(`  ✗ ${b.title}`);
-      if (b.detail) lines.push(`      ${b.detail}`);
-      if (b.fix) lines.push(`      修法:export ${b.fix}${b.fixNote ? `（${b.fixNote}）` : ''}`);
+      if (b.detail) {
+        lines.push(`      ${b.detail}`);
+      }
+      if (b.fix) {
+        lines.push(`      修法:export ${b.fix}${b.fixNote ? `（${b.fixNote}）` : ''}`);
+      }
     }
   }
   if (Array.isArray(r.warnings) && r.warnings.length) {
     lines.push('—— 提示项(建议但非阻断)——');
     for (const w of r.warnings) {
       lines.push(`  ⚠ ${w.title}`);
-      if (w.fix) lines.push(`      修法:export ${w.fix}${w.fixNote ? `（${w.fixNote}）` : ''}`);
+      if (w.fix) {
+        lines.push(`      修法:export ${w.fix}${w.fixNote ? `（${w.fixNote}）` : ''}`);
+      }
     }
   }
   if (Array.isArray(r.notes) && r.notes.length) {
     lines.push('—— 已就绪 ——');
-    for (const n of r.notes) lines.push(`  ✓ ${n.title}`);
+    for (const n of r.notes) {
+      lines.push(`  ✓ ${n.title}`);
+    }
   }
 
   lines.push('一键 endurance 配置(照抄到当前 shell,即可连续跑几天不自我中断):');
   const envMap = r.enduranceEnv || buildEnduranceEnv();
-  for (const k of Object.keys(envMap)) lines.push(`  export ${k}=${envMap[k]}`);
-  lines.push('一键落盘(写入 khy 的 .env 配置,与 khy goal on 同一处,新会话/重启自动生效):khy goal endurance --apply');
+  for (const k of Object.keys(envMap)) {
+    lines.push(`  export ${k}=${envMap[k]}`);
+  }
+  lines.push(
+    '一键落盘(写入 khy 的 .env 配置,与 khy goal on 同一处,新会话/重启自动生效):khy goal endurance --apply'
+  );
   return lines;
 }
 
@@ -324,10 +359,10 @@ function buildEnduranceReport(a) {
  */
 function buildSessionEnduranceEnv() {
   return Object.freeze({
-    KHY_TOKEN_BUDGET: '0',                                              // 取消硬 token 上限(上下文自动压缩)
+    KHY_TOKEN_BUDGET: '0', // 取消硬 token 上限(上下文自动压缩)
     KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS: String(SESSION_ABS_TIMEOUT_ENDURANCE_MS), // 单轮绝对上限 → 24h(拟合无硬上限)
-    KHY_TOOL_LOOP_MAX_MS: String(SESSION_IDLE_TIMEOUT_MAX_MS),          // 单轮空闲守卫 → 30min(clamp 上限)
-    KHY_UNATTENDED_AUTOANSWER: '1',                                     // AskUserQuestion 无人值守时自动采用推荐选项作答(不阻塞等人)
+    KHY_TOOL_LOOP_MAX_MS: String(SESSION_IDLE_TIMEOUT_MAX_MS), // 单轮空闲守卫 → 30min(clamp 上限)
+    KHY_UNATTENDED_AUTOANSWER: '1', // AskUserQuestion 无人值守时自动采用推荐选项作答(不阻塞等人)
   });
 }
 
@@ -373,12 +408,17 @@ function assessSessionEndurance({ env, targetHours } = {}) {
   } else {
     notes.push({
       key: 'token-budget',
-      title: '无硬 token 上限:上下文吃紧时自动压缩/归档历史,不因 token 耗尽而停(「token 足够不中断」的底气)。',
+      title:
+        '无硬 token 上限:上下文吃紧时自动压缩/归档历史,不因 token 耗尽而停(「token 足够不中断」的底气)。',
     });
   }
 
   // 单轮回复长度边界(到点仅结束当条回复并自动续接,不中断会话)。
-  const absMs = _resolvePosIntMs(e, 'KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS', SESSION_ABS_TIMEOUT_DEFAULT_MS);
+  const absMs = _resolvePosIntMs(
+    e,
+    'KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS',
+    SESSION_ABS_TIMEOUT_DEFAULT_MS
+  );
   const idleMs = _resolvePosIntMs(e, 'KHY_TOOL_LOOP_MAX_MS', SESSION_IDLE_TIMEOUT_DEFAULT_MS);
   const absAtEndurance = absMs >= SESSION_ABS_TIMEOUT_ENDURANCE_MS;
   const idleAtEndurance = idleMs >= SESSION_IDLE_TIMEOUT_MAX_MS;
@@ -386,9 +426,11 @@ function assessSessionEndurance({ env, targetHours } = {}) {
     warnings.push({
       key: 'reply-bounds',
       title: `单轮回复边界:绝对 ${_fmtMs(absMs)} / 空闲 ${_fmtMs(idleMs)}`,
-      detail: '到点仅结束当前这一条回复并自动续接(会话不中断);超长单条回复想更少被切,可调高这两个上限。',
+      detail:
+        '到点仅结束当前这一条回复并自动续接(会话不中断);超长单条回复想更少被切,可调高这两个上限。',
       fix: `KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS=${SESSION_ABS_TIMEOUT_ENDURANCE_MS} KHY_TOOL_LOOP_MAX_MS=${SESSION_IDLE_TIMEOUT_MAX_MS}`,
-      fixNote: '把单轮绝对上限拉到 24h、空闲守卫拉到 30min(clamp 上限);活跃推进时空闲守卫本就不触发。',
+      fixNote:
+        '把单轮绝对上限拉到 24h、空闲守卫拉到 30min(clamp 上限);活跃推进时空闲守卫本就不触发。',
     });
   } else {
     notes.push({
@@ -401,26 +443,32 @@ function assessSessionEndurance({ env, targetHours } = {}) {
   // AI 中途提问也会阻塞等人,一个问题停住整个 run。开启后由 unattendedAutoAnswer 用推荐选项(index 0)
   // 确定性作答、无感续跑。默认关(自动作答是行为变更,须显式 opt-in;endurance 落盘会打开它)。
   const autoAnswerOn = _AUTOANSWER_ON_VALUES.includes(
-    String((e.KHY_UNATTENDED_AUTOANSWER == null ? '' : e.KHY_UNATTENDED_AUTOANSWER)).trim().toLowerCase(),
+    String(e.KHY_UNATTENDED_AUTOANSWER == null ? '' : e.KHY_UNATTENDED_AUTOANSWER)
+      .trim()
+      .toLowerCase()
   );
   if (autoAnswerOn) {
     notes.push({
       key: 'auto-answer',
-      title: '已开启无人值守自动作答:AI 中途提问时自动采用「最推荐选项」作答,不阻塞等人(多日不中断的关键)。',
+      title:
+        '已开启无人值守自动作答:AI 中途提问时自动采用「最推荐选项」作答,不阻塞等人(多日不中断的关键)。',
     });
     // 不偏离用户本意:自动作答在盲选 index 0 前,先由 autoAnswerIntentGuard(默认开)用确定性词法
     // 信号把选择校准回「持久目标 + 原始诉求锚点」;显式 (Recommended) 一律尊重,无信号则逐字节回退基线。
     notes.push({
       key: 'intent-fidelity',
-      title: '不偏离本意:自动作答会先按你的持久目标/原始诉求校准选项(intent-guard 默认开),显式推荐项优先、无信号才回退首项;校准过的卡会显式标注「已按你的目标校准」。',
+      title:
+        '不偏离本意:自动作答会先按你的持久目标/原始诉求校准选项(intent-guard 默认开),显式推荐项优先、无信号才回退首项;校准过的卡会显式标注「已按你的目标校准」。',
     });
   } else {
     warnings.push({
       key: 'auto-answer',
       title: 'AI 中途提问(AskUserQuestion)默认会阻塞等人回答',
-      detail: '连续几天无人值守时,一个待答问题会停住整个 run;开启后自动采用推荐选项作答、无感续跑。',
+      detail:
+        '连续几天无人值守时,一个待答问题会停住整个 run;开启后自动采用推荐选项作答、无感续跑。',
       fix: 'KHY_UNATTENDED_AUTOANSWER=1',
-      fixNote: '无人值守时用 questionQuality 排好序的推荐选项(index 0)确定性作答;需要人拍板时改回 0 即恢复阻塞等人。',
+      fixNote:
+        '无人值守时用 questionQuality 排好序的推荐选项(index 0)确定性作答;需要人拍板时改回 0 即恢复阻塞等人。',
     });
   }
 
@@ -429,7 +477,8 @@ function assessSessionEndurance({ env, targetHours } = {}) {
   // auth/billing)是**刻意的诚实边界**:不盲目瞎切,而是明确报错——这是特性不是缺口。
   notes.push({
     key: 'model-failover',
-    title: '模型不可用自动无感续接:网关跨适配器级联 + 跨 key 池轮换已默认启用(可重试/可回退错误自动换,永久错误诚实报错不瞎切)。',
+    title:
+      '模型不可用自动无感续接:网关跨适配器级联 + 跨 key 池轮换已默认启用(可重试/可回退错误自动换,永久错误诚实报错不瞎切)。',
   });
 
   // 错误处理:多日不中断的最后一道防线。瞬时/工具/模型错误已被网关归一成返回值(工具错误
@@ -439,7 +488,8 @@ function assessSessionEndurance({ env, targetHours } = {}) {
   // 也只结束本轮、会话继续,不会一次意外抛出杀掉整个 run。
   notes.push({
     key: 'error-handling',
-    title: '错误处理:瞬时/工具/模型错误被网关归一成返回值、本轮优雅收尾;意外异常由主循环防御纵深 try/catch 兜住(默认开),只结束本轮不掉线;永久错误诚实报错(刻意边界)。',
+    title:
+      '错误处理:瞬时/工具/模型错误被网关归一成返回值、本轮优雅收尾;意外异常由主循环防御纵深 try/catch 兜住(默认开),只结束本轮不掉线;永久错误诚实报错(刻意边界)。',
   });
 
   return {
@@ -465,7 +515,9 @@ function buildSessionEnduranceReport(a) {
   const lines = [];
   lines.push('—— 交互式会话(无需目标)底气 ——');
   if (r.enduring) {
-    lines.push(`判定:✅ 纯交互会话默认可连续跑约 ${_fmtH(r.targetHours)}+ 不中断(无闲置退出/无累计轮数上限/无会话级 token 上限)。`);
+    lines.push(
+      `判定:✅ 纯交互会话默认可连续跑约 ${_fmtH(r.targetHours)}+ 不中断(无闲置退出/无累计轮数上限/无会话级 token 上限)。`
+    );
   } else {
     lines.push('判定:⚠️ 存在会中断交互会话的配置(见下)。');
   }
@@ -473,11 +525,15 @@ function buildSessionEnduranceReport(a) {
     lines.push('  —— 提示项(建议但非中断)——');
     for (const w of r.warnings) {
       lines.push(`    ⚠ ${w.title}`);
-      if (w.fix) lines.push(`        修法:export ${w.fix}${w.fixNote ? `（${w.fixNote}）` : ''}`);
+      if (w.fix) {
+        lines.push(`        修法:export ${w.fix}${w.fixNote ? `（${w.fixNote}）` : ''}`);
+      }
     }
   }
   if (Array.isArray(r.notes) && r.notes.length) {
-    for (const n of r.notes) lines.push(`    ✓ ${n.title}`);
+    for (const n of r.notes) {
+      lines.push(`    ✓ ${n.title}`);
+    }
   }
   return lines;
 }
@@ -493,15 +549,19 @@ function buildSessionEnduranceReport(a) {
 function buildEnduranceHeadline({ sessionAfter, goalAfter, scope = 'all' } = {}) {
   const lines = [];
   if ((scope === 'all' || scope === 'session') && sessionAfter) {
-    lines.push(sessionAfter.enduring
-      ? '落盘后 · 交互式会话:✅ 默认可连续跑几天不中断(无闲置退出/无累计轮数上限)。'
-      : '落盘后 · 交互式会话:⚠️ 仍有中断配置(跑 khy goal endurance 查看)。');
+    lines.push(
+      sessionAfter.enduring
+        ? '落盘后 · 交互式会话:✅ 默认可连续跑几天不中断(无闲置退出/无累计轮数上限)。'
+        : '落盘后 · 交互式会话:⚠️ 仍有中断配置(跑 khy goal endurance 查看)。'
+    );
   }
   if ((scope === 'all' || scope === 'goal') && goalAfter) {
     const horizon = _fmtH(goalAfter.horizonHours);
-    lines.push(goalAfter.enduring
-      ? `落盘后 · 目标(/goal):✅ 可连续运行约 ${horizon}${Number.isFinite(goalAfter.horizonHours) ? '' : '(不受闲置退役限制)'}。`
-      : `落盘后 · 目标(/goal):⚠️ 确定性中断视界仅 ${horizon}(可能有 endurance env 之外的阻断项)。`);
+    lines.push(
+      goalAfter.enduring
+        ? `落盘后 · 目标(/goal):✅ 可连续运行约 ${horizon}${Number.isFinite(goalAfter.horizonHours) ? '' : '(不受闲置退役限制)'}。`
+        : `落盘后 · 目标(/goal):⚠️ 确定性中断视界仅 ${horizon}(可能有 endurance env 之外的阻断项)。`
+    );
   }
   return lines;
 }
@@ -533,8 +593,12 @@ function buildEnduranceHeadline({ sessionAfter, goalAfter, scope = 'all' } = {})
 function _desiredForScope(scope) {
   const goalEnv = buildEnduranceEnv();
   const sessionEnv = buildSessionEnduranceEnv();
-  if (scope === 'goal') return { ...goalEnv };
-  if (scope === 'session') return { ...sessionEnv };
+  if (scope === 'goal') {
+    return { ...goalEnv };
+  }
+  if (scope === 'session') {
+    return { ...sessionEnv };
+  }
   return { ...goalEnv, ...sessionEnv }; // 'all' —— 并集(共有键值一致)
 }
 
@@ -573,11 +637,12 @@ function buildEndurancePersistPlan({ env, scope = 'all' } = {}) {
 function buildEndurancePersistReport({ before, after, plan, envPath, headline } = {}) {
   const lines = [];
   const p = plan || { changes: [], unchanged: [] };
-  const scopeLabel = p.scope === 'goal' ? '目标'
-    : p.scope === 'session' ? '交互会话'
-    : '目标+交互会话';
+  const scopeLabel =
+    p.scope === 'goal' ? '目标' : p.scope === 'session' ? '交互会话' : '目标+交互会话';
   lines.push(`[连续多日不中断底气 · 落盘 · ${scopeLabel}]`);
-  if (after && after.hasGoal) lines.push(`目标:「${after.goalText}」`);
+  if (after && after.hasGoal) {
+    lines.push(`目标:「${after.goalText}」`);
+  }
 
   if (p.changes.length) {
     lines.push(`已写入 ${envPath || 'khy 的 .env'}（新会话/重启后自动生效）:`);
@@ -588,20 +653,28 @@ function buildEndurancePersistReport({ before, after, plan, envPath, headline } 
   } else {
     lines.push(`无需变更:${p.unchanged.length} 个 endurance 键已是目标值（配置早已落盘）。`);
   }
-  for (const u of p.unchanged) lines.push(`  ✓ ${u.key}=${u.value}（已是目标值）`);
+  for (const u of p.unchanged) {
+    lines.push(`  ✓ ${u.key}=${u.value}（已是目标值）`);
+  }
 
   // 目标专属 after 判定:仅在落盘涉及目标维度时才展示(scope='session' 时目标键未写,
   // 展示目标 ⚠️ 会误导 —— 会话维度判定改由下方 headline 承载)。
   if (after && p.scope !== 'session') {
     const horizon = _fmtH(after.horizonHours);
     if (after.enduring) {
-      lines.push(`落盘后 · 目标判定:✅ 可连续运行约 ${horizon}${Number.isFinite(after.horizonHours) ? '' : '(不受闲置退役限制)'} —— 满足「连续跑约 ${_fmtH(after.targetHours)}」。`);
+      lines.push(
+        `落盘后 · 目标判定:✅ 可连续运行约 ${horizon}${Number.isFinite(after.horizonHours) ? '' : '(不受闲置退役限制)'} —— 满足「连续跑约 ${_fmtH(after.targetHours)}」。`
+      );
     } else {
-      lines.push(`落盘后 · 目标判定:⚠️ 仍不足以连续跑约 ${_fmtH(after.targetHours)}:确定性中断视界 ${horizon}（可能有 endurance env 之外的阻断项,跑 khy goal endurance 查看）。`);
+      lines.push(
+        `落盘后 · 目标判定:⚠️ 仍不足以连续跑约 ${_fmtH(after.targetHours)}:确定性中断视界 ${horizon}（可能有 endurance env 之外的阻断项,跑 khy goal endurance 查看）。`
+      );
     }
   }
   if (Array.isArray(headline) && headline.length) {
-    for (const h of headline) lines.push(h);
+    for (const h of headline) {
+      lines.push(h);
+    }
   }
   lines.push('撤销:编辑该文件或用 khy config 改回相应键。');
   return lines;

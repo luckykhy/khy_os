@@ -61,7 +61,14 @@ function detect(text) {
   const byId = new Map();
   const ensure = (p) => {
     if (!byId.has(p.id)) {
-      byId.set(p.id, { id: p.id, name: p.name, priority: p.priority, fix: p.fix, count: 0, matches: [] });
+      byId.set(p.id, {
+        id: p.id,
+        name: p.name,
+        priority: p.priority,
+        fix: p.fix,
+        count: 0,
+        matches: [],
+      });
     }
     return byId.get(p.id);
   };
@@ -78,7 +85,9 @@ function detect(text) {
     // ── 逐模式（带 regex 的）在本段内定位 ──
     let tripletInPara = 0;
     for (const pat of patterns) {
-      if (!pat.re) continue; // 15/16 段级/全文级，单独处理
+      if (!pat.re) {
+        continue;
+      } // 15/16 段级/全文级，单独处理
       pat.re.lastIndex = 0;
       let m;
       while ((m = pat.re.exec(ptext)) !== null) {
@@ -86,25 +95,37 @@ function detect(text) {
         const matchStr = m[0];
         const globalIdx = para.start + localIdx;
 
-        if (pat.atEnd && !_isNearEnd(ptext, localIdx, matchStr.length)) continue;
-        if (pat.requiresNoCitation && _hasNearbyCitation(src, globalIdx)) continue;
+        if (pat.atEnd && !_isNearEnd(ptext, localIdx, matchStr.length)) {
+          continue;
+        }
+        if (pat.requiresNoCitation && _hasNearbyCitation(src, globalIdx)) {
+          continue;
+        }
 
         const f = ensure(pat);
         f.count += 1;
         f.matches.push({ text: matchStr, index: globalIdx, paragraph: pi, atEnd: !!pat.atEnd });
-        if (pat.id === 6) tripletInPara += 1;
+        if (pat.id === 6) {
+          tripletInPara += 1;
+        }
 
-        if (matchStr.length === 0) pat.re.lastIndex += 1; // 防零宽死循环
+        if (matchStr.length === 0) {
+          pat.re.lastIndex += 1;
+        } // 防零宽死循环
       }
     }
-    if (tripletInPara > tripletMax) tripletMax = tripletInPara;
+    if (tripletInPara > tripletMax) {
+      tripletMax = tripletInPara;
+    }
 
     // ── 理论起笔：本段第一句是否命中模式 1 ──
     const firstSentence = textStats.sentences(ptext)[0] || '';
     const theoryRe = patterns.find((p) => p.id === 1).re;
     theoryRe.lastIndex = 0;
     const theoryOpener = theoryRe.test(firstSentence);
-    if (theoryOpener) theoryOpenerParas += 1;
+    if (theoryOpener) {
+      theoryOpenerParas += 1;
+    }
 
     // ── 每段 AI 高频词数（约束「每段≤2」）──
     const hf = rules.highFreqRegex();
@@ -113,19 +134,36 @@ function detect(text) {
     let hfm;
     while ((hfm = hf.exec(ptext)) !== null) {
       highFreq += 1;
-      const f = ensure({ id: 11, name: 'AI高频词', priority: rules.PRIORITY.HIGH, fix: rules.PATTERNS[10].fix });
+      const f = ensure({
+        id: 11,
+        name: 'AI高频词',
+        priority: rules.PRIORITY.HIGH,
+        fix: rules.PATTERNS[10].fix,
+      });
       f.matches.push({ text: hfm[0], index: para.start + hfm.index, paragraph: pi, atEnd: false });
       f.count += 1;
     }
-    if (highFreq > maxHighFreqPerPara) maxHighFreqPerPara = highFreq;
+    if (highFreq > maxHighFreqPerPara) {
+      maxHighFreqPerPara = highFreq;
+    }
 
     // ── 标点失衡（模式 15，段级）──
     const colons = (ptext.match(/[:：]/g) || []).length;
     const dashes = (ptext.match(/——|--/g) || []).length;
     if (colons >= thresholds.colonPerParagraph || dashes >= thresholds.dashPerParagraph) {
-      const f = ensure({ id: 15, name: '标点失衡', priority: rules.PRIORITY.LOW, fix: rules.PATTERNS[14].fix });
+      const f = ensure({
+        id: 15,
+        name: '标点失衡',
+        priority: rules.PRIORITY.LOW,
+        fix: rules.PATTERNS[14].fix,
+      });
       f.count += 1;
-      f.matches.push({ text: `冒号${colons}/破折号${dashes}`, index: para.start, paragraph: pi, atEnd: false });
+      f.matches.push({
+        text: `冒号${colons}/破折号${dashes}`,
+        index: para.start,
+        paragraph: pi,
+        atEnd: false,
+      });
     }
 
     perParagraph.push({ index: pi, highFreq, colons, dashes, theoryOpener });
@@ -133,9 +171,19 @@ function detect(text) {
 
   // ── 加粗滥用（模式 16，全文级）──
   if (stats.boldCount > thresholds.boldTotal) {
-    const f = ensure({ id: 16, name: '加粗滥用', priority: rules.PRIORITY.LOW, fix: rules.PATTERNS[15].fix });
+    const f = ensure({
+      id: 16,
+      name: '加粗滥用',
+      priority: rules.PRIORITY.LOW,
+      fix: rules.PATTERNS[15].fix,
+    });
     f.count = stats.boldCount;
-    f.matches.push({ text: `全文加粗 ${stats.boldCount} 处`, index: 0, paragraph: -1, atEnd: false });
+    f.matches.push({
+      text: `全文加粗 ${stats.boldCount} 处`,
+      index: 0,
+      paragraph: -1,
+      atEnd: false,
+    });
   }
 
   const findings = [...byId.values()].sort((a, b) => a.id - b.id);
@@ -147,9 +195,13 @@ function detect(text) {
   let low = 0;
   let weighted = 0;
   for (const f of findings) {
-    if (f.priority === rules.PRIORITY.HIGH) high += f.count;
-    else if (f.priority === rules.PRIORITY.MID) mid += f.count;
-    else low += f.count;
+    if (f.priority === rules.PRIORITY.HIGH) {
+      high += f.count;
+    } else if (f.priority === rules.PRIORITY.MID) {
+      mid += f.count;
+    } else {
+      low += f.count;
+    }
     weighted += (W[f.priority] || 1) * f.count;
   }
 

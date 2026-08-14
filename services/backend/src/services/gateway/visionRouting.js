@@ -13,6 +13,8 @@
  * 决策结果 action：
  *   'keep'         —— 无图，或当前模型已支持视觉：原样进行。
  *   'switch-model' —— 候选里找到视觉模型：带 model 字段，调用方改写后路由到它。
+ *   'mcp-vision'   —— 配置了 KHY_MCP_VISION_SERVER：调用 MCP 视觉工具（如 deepseek-eyes）
+ *                      识图，将描述注入 prompt 后由当前模型作答。
  *   'ocr-fallback' —— 带图但当前模型纯文本且候选无视觉：调用方退回 OCR 转文本。
  */
 
@@ -35,11 +37,17 @@ const {
  */
 function _modelProviderPrefix(model) {
   const input = String(model == null ? '' : model).trim();
-  if (!input) return null;
+  if (!input) {
+    return null;
+  }
   const m3 = input.match(/^api[:/]([a-z0-9_-]+)[:/].+$/i);
-  if (m3) return m3[1].toLowerCase();
+  if (m3) {
+    return m3[1].toLowerCase();
+  }
   const m2 = input.match(/^([a-z0-9_-]+)[:/].+$/i);
-  if (m2) return m2[1].toLowerCase();
+  if (m2) {
+    return m2[1].toLowerCase();
+  }
   return null;
 }
 
@@ -49,7 +57,7 @@ function _modelProviderPrefix(model) {
  * @param {string}  input.currentModel     当前选定模型 id
  * @param {Array<string|object>} [input.candidateModels] 同 provider/可选范围内的候选模型清单
  * @param {object}  [input.env]            注入 env(测试用)，默认 process.env
- * @returns {{action:'keep'|'switch-model'|'ocr-fallback', model?:string, reason:string}}
+ * @returns {{action:'keep'|'switch-model'|'mcp-vision'|'ocr-fallback', mcpServer?:string, model?:string, reason:string}}
  */
 function decideVisionRouting(input = {}) {
   const { hasImage, currentModel } = input;
@@ -63,13 +71,22 @@ function decideVisionRouting(input = {}) {
     return { action: 'keep', reason: 'current_model_supports_vision' };
   }
 
-  const currentLower = String(currentModel || '').trim().toLowerCase();
+  const currentLower = String(currentModel || '')
+    .trim()
+    .toLowerCase();
 
   // 1) 显式钉选优先：用户用 KHY_VISION_FALLBACK_MODEL 指定首选视觉模型时，
   //    只要它本身支持视觉且不等于当前模型，就用它(消除"注册表里到底哪个是视觉
   //    模型"的歧义，给用户确定性控制权)。
+  //    值 'auto' 表示跳过钉选，由后续步骤（同 provider 候选 → MCP → 跨 provider
+  //    自动扫描）处理，不在此处硬编码具体模型。
   const pinned = String(env.KHY_VISION_FALLBACK_MODEL || '').trim();
-  if (pinned && pinned.toLowerCase() !== currentLower && isVisionCapableModel(pinned, { env })) {
+  if (
+    pinned &&
+    pinned.toLowerCase() !== 'auto' &&
+    pinned.toLowerCase() !== currentLower &&
+    isVisionCapableModel(pinned, { env })
+  ) {
     // poolHint：钉选模型自带的 provider 前缀(若有)。aiGateway 据此覆盖请求 scope,
     // 让跨 pool 兜底(当前 SenseNova、兜底 relay/gpt-4o-mini)真正打到 relay 端点。
     return {
@@ -82,7 +99,9 @@ function decideVisionRouting(input = {}) {
 
   // 2) 在候选(同 provider 兄弟模型)里找视觉模型，排除当前模型自身。
   const others = candidateModels.filter((c) => {
-    const id = String(_candidateModelId(c) || '').trim().toLowerCase();
+    const id = String(_candidateModelId(c) || '')
+      .trim()
+      .toLowerCase();
     return id && id !== currentLower;
   });
   const picked = pickVisionCandidate(others, { env });
@@ -94,7 +113,19 @@ function decideVisionRouting(input = {}) {
     };
   }
 
-  // 3) 候选里没有视觉模型：退回 OCR 转文本。
+  // 3) MCP 视觉工具：用户通过 KHY_MCP_VISION_SERVER 指定 MCP 服务器名
+  //    (如 deepseek-eyes)，由 aiGateway 在识图时调用该服务器的工具。
+  //    优先级高于 OCR，低于原生视觉模型。
+  const mcpServer = String(env.KHY_MCP_VISION_SERVER || '').trim();
+  if (mcpServer) {
+    return {
+      action: 'mcp-vision',
+      mcpServer,
+      reason: 'mcp_vision_server_configured',
+    };
+  }
+
+  // 4) 候选里没有视觉模型且无 MCP 视觉工具：退回 OCR 转文本。
   return { action: 'ocr-fallback', reason: 'no_vision_candidate_available' };
 }
 

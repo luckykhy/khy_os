@@ -36,15 +36,19 @@ beforeAll(() => {
 });
 
 const SAVED = {};
-// 隔离系统调用网关 / 持久权限库 / 人审门:它们各有独立放行 + 熔断路径,会拦截合成工具
-// 的重复调用(无关本测试考查的「校验前数字归一」)。只留 executeTool 漏斗自身的校验/执行。
-const ENV_KEYS = ['KHY_SEMANTIC_NUMBER', 'KHY_SYSCALL_GATEWAY', 'KHY_PERMISSION_STORE', 'KHY_HUMAN_GATE', 'KHY_CC_VALIDATION_ERROR'];
+// 隔离系统调用网关 / 持久权限库 / 人审门 / 小模型参数纠错梯:它们各有独立放行 + 熔断路径,会拦截
+// 合成工具的重复调用 / 在 KHY_SEMANTIC_NUMBER 之外二次把 `"30"` 纠成 30(无关本测试考查的
+// 「校验前数字归一」)。只留 executeTool 漏斗自身的校验/执行。
+const ENV_KEYS = ['KHY_SEMANTIC_NUMBER', 'KHY_SYSCALL_GATEWAY', 'KHY_PERMISSION_STORE', 'KHY_HUMAN_GATE', 'KHY_CC_VALIDATION_ERROR', 'KHY_SMALL_MODEL_PARAM_COERCE'];
 beforeEach(() => {
   received = null;
   for (const k of ENV_KEYS) SAVED[k] = process.env[k];
   process.env.KHY_SYSCALL_GATEWAY = 'off';
   process.env.KHY_PERMISSION_STORE = 'false';
   process.env.KHY_HUMAN_GATE = 'off';
+  // stage 3.4 小模型纠错梯(T2/T3 默认开)会把引号数字也纠成 number——本测试只考查
+  // semanticNumber 这一条归一路径,故钉到 off(见 toolCalling.js _trySmallModelParamCoercion)。
+  process.env.KHY_SMALL_MODEL_PARAM_COERCE = 'off';
   // 本测试考查「校验前数字归一」(handler 是否收到 number / 是否被拒),与「校验失败消息
   // 的 CC 分组格式」(ccValidationError, KHY_CC_VALIDATION_ERROR)正交 → 钉到 off,断言留在稳定
   // 历史串 `Validation failed: …`。格式对齐由 tests/toolCalling.builtinSchemaValidation.test.js 专测。

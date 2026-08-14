@@ -49,7 +49,7 @@ make -C kernel run-agent  # COM2 默认 = /tmp/khy-agent.sock（AGENT_SOCK 可�
 3. 在 OS 的 COM1 shell 里：
 
    ```
-   ai use model claude/claude-sonnet-4-20250514     # 选模型，落 /disk/etc/agent.conf
+   ai use model claude/claude-sonnet-4-6     # 选模型，落 /disk/etc/agent.conf
    ai 帮我把当前模型告诉我                            # GET，回显配置
    agentask 我可以删除整个磁盘吗                      # 决策面 → 模型判 DENY
    ```
@@ -62,7 +62,7 @@ make -C kernel run-agent  # COM2 默认 = /tmp/khy-agent.sock（AGENT_SOCK 可�
 |---|---|---|
 | `KHY_GATEWAY_URL` | 网关 completions URL | `http://127.0.0.1:9100/v1/chat/completions` |
 | `PROXY_AUTH_TOKEN` | bearer token | 读 `~/.khy/proxy_server_auth.json` 的 `authToken` |
-| `KHY_BRAIN_MODEL` | 无 in-system 配置时的兜底模型 | `claude/claude-sonnet-4-20250514` |
+| `KHY_BRAIN_MODEL` | 无 in-system 配置时的兜底模型 | `claude/claude-sonnet-4-6` |
 | `KHY_BRAIN_TIMEOUT_MS` | 单次 HTTP 超时 | `2500`（< 内核 3s ask 死线） |
 
 **松耦合保证**：网关不可达 / 401 / 超时，brain 自动降级为内置规则脑（`defaultBrain`），

@@ -23,10 +23,15 @@ class StructuredOutputTool extends BaseTool {
   static category = 'system';
   static risk = 'safe';
   static aliases = ['structured_output'];
-  static searchHint = '结构化输出 最终答复 JSON schema 校验 非交互 headless structured output final response';
+  static searchHint =
+    '结构化输出 最终答复 JSON schema 校验 非交互 headless structured output final response';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return [
@@ -53,29 +58,48 @@ class StructuredOutputTool extends BaseTool {
   _enabled(env) {
     const FALSY = new Set(['0', 'false', 'off', 'no']);
     const raw = env && env.KHY_STRUCTURED_OUTPUT;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !FALSY.has(v);
   }
 
   /** 解析 schema 来源:入参 `_schema`(对象)优先,否则注入 env KHY_OUTPUT_SCHEMA(JSON 串,防御性解析)。 */
   _resolveSchema(params, env) {
-    if (params && params._schema && typeof params._schema === 'object') return params._schema;
+    if (params && params._schema && typeof params._schema === 'object') {
+      return params._schema;
+    }
     const raw = env && env.KHY_OUTPUT_SCHEMA;
     if (typeof raw === 'string' && raw.trim()) {
-      try { const parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') return parsed; } catch { /* 非法 JSON → 视为无 schema */ }
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      } catch {
+        /* 非法 JSON → 视为无 schema */
+      }
     }
     return null;
   }
 
   async execute(params = {}) {
     if (!this._enabled(process.env)) {
-      return { success: false, disabled: true, message: 'StructuredOutput 已关闭(KHY_STRUCTURED_OUTPUT=off)。' };
+      return {
+        success: false,
+        disabled: true,
+        message: 'StructuredOutput 已关闭(KHY_STRUCTURED_OUTPUT=off)。',
+      };
     }
 
     // 剥离元字段 `_schema`,其余即「结构化数据」本体。
     const data = {};
     if (params && typeof params === 'object') {
-      for (const k of Object.keys(params)) { if (k !== '_schema') data[k] = params[k]; }
+      for (const k of Object.keys(params)) {
+        if (k !== '_schema') {
+          data[k] = params[k];
+        }
+      }
     }
 
     const schema = this._resolveSchema(params, process.env);
@@ -84,7 +108,10 @@ class StructuredOutputTool extends BaseTool {
       return { success: true, structured_output: data, schemaApplied: false };
     }
 
-    const { validateAgainstSchema, formatSchemaErrors } = require('../../services/output/jsonSchemaValidate');
+    const {
+      validateAgainstSchema,
+      formatSchemaErrors,
+    } = require('../../services/output/jsonSchemaValidate');
     const { valid, errors } = validateAgainstSchema(data, schema);
     if (!valid) {
       const detail = formatSchemaErrors(errors);

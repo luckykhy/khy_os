@@ -22,7 +22,6 @@
  * @module services/planModeDirective
  */
 
-
 const _isEnabled = require('../utils/isEnabledDefaultOn');
 
 /** 计划模式 CC 对齐总开关。默认 on。 */
@@ -52,7 +51,9 @@ const PLAN_DIRECTIVE = [
  */
 function buildPlanDirective(env) {
   try {
-    if (!isPlanResearchEnabled(env)) return '';
+    if (!isPlanResearchEnabled(env)) {
+      return '';
+    }
     return PLAN_DIRECTIVE;
   } catch {
     return '';

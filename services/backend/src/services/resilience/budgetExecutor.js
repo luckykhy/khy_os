@@ -21,9 +21,9 @@
  *       绝不静默躺平）。深度上限 MAX_FALLBACK_DEPTH 在此处再做一次双保险切片。
  */
 
-const { MAX_FALLBACK_DEPTH, MAX_RETRY_PER_PLAN } = require('./fallbackTree');
-const { classifyFailure } = require('./errorSignature');
 const { DeadLoopDetector } = require('./deadLoopDetector');
+const { classifyFailure } = require('./errorSignature');
+const { MAX_FALLBACK_DEPTH, MAX_RETRY_PER_PLAN } = require('./fallbackTree');
 const { SalvageProtector } = require('./salvage');
 
 const DEFAULT_FLOOR_PCT = 10;
@@ -31,10 +31,14 @@ const DEFAULT_FLOOR_PCT = 10;
 function _resolveFloorPct(explicit) {
   if (explicit !== undefined && explicit !== null) {
     const n = Number(explicit);
-    if (Number.isFinite(n) && n >= 0 && n <= 100) return n;
+    if (Number.isFinite(n) && n >= 0 && n <= 100) {
+      return n;
+    }
   }
   const env = Number(process.env.KHY_RESILIENCE_BUDGET_FLOOR_PCT);
-  if (Number.isFinite(env) && env >= 0 && env <= 100) return env;
+  if (Number.isFinite(env) && env >= 0 && env <= 100) {
+    return env;
+  }
   return DEFAULT_FLOOR_PCT;
 }
 
@@ -55,7 +59,9 @@ function makeStepBudget(totalSteps) {
   const total = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : MAX_FALLBACK_DEPTH;
   let used = 0;
   return {
-    spendOne() { used += 1; },
+    spendOne() {
+      used += 1;
+    },
     snapshot() {
       const remainingUnits = Math.max(0, total - used);
       return {
@@ -76,7 +82,9 @@ function makeTokenBudget(source = {}) {
   const total = Number(source.total) || 0;
   const spentFn = typeof source.spent === 'function' ? source.spent : () => 0;
   return {
-    spendOne() { /* token 消耗由外部真实账本驱动，这里不自增 */ },
+    spendOne() {
+      /* token 消耗由外部真实账本驱动，这里不自增 */
+    },
     snapshot() {
       const spent = Number(spentFn()) || 0;
       const remainingUnits = Math.max(0, total - spent);
@@ -105,7 +113,8 @@ class BudgetAwareExecutor {
     this.runner = typeof opts.runner === 'function' ? opts.runner : null;
     this.budget = opts.budget || null; // 缺省在 run() 里按树深初始化
     this.floorPct = _resolveFloorPct(opts.floorPct);
-    this.detector = opts.detector instanceof DeadLoopDetector ? opts.detector : new DeadLoopDetector();
+    this.detector =
+      opts.detector instanceof DeadLoopDetector ? opts.detector : new DeadLoopDetector();
     this.onDegrade = typeof opts.onDegrade === 'function' ? opts.onDegrade : null;
     this.availableTools = Array.isArray(opts.availableTools) ? opts.availableTools : null;
   }
@@ -131,18 +140,28 @@ class BudgetAwareExecutor {
         lastFailure: classifyFailure(err),
         circuit: 'executor-error',
       });
-      return { ok: false, intent: tree && tree.intent, salvage, attempted: salvage.attempted_paths, circuit: 'executor-error' };
+      return {
+        ok: false,
+        intent: tree && tree.intent,
+        salvage,
+        attempted: salvage.attempted_paths,
+        circuit: 'executor-error',
+      };
     }
   }
 
   async _run(tree, context) {
-    if (!this.runner) throw new Error('BudgetAwareExecutor 需要注入 runner');
+    if (!this.runner) {
+      throw new Error('BudgetAwareExecutor 需要注入 runner');
+    }
     if (!tree || !Array.isArray(tree.plans) || tree.plans.length === 0) {
       throw new Error('无效的降级树');
     }
     // 双保险：再次裁到硬上限（即便树被绕过 builder 构造）。
     const plans = tree.plans.slice(0, MAX_FALLBACK_DEPTH);
-    if (!this.budget) this.budget = makeStepBudget(plans.length);
+    if (!this.budget) {
+      this.budget = makeStepBudget(plans.length);
+    }
 
     const ctx = { intent: tree.intent, ...context };
     const attempted = [];
@@ -156,12 +175,20 @@ class BudgetAwareExecutor {
 
       // ── 预算闸门①：低于地板，禁止开启新 Plan → 立即兜底。
       if (snap.remainingPct < this.floorPct) {
-        attempted.push({ plan: node.plan, reason: `skipped:budget-floor(${snap.remainingPct}%<${this.floorPct}%)`, retry: 0 });
+        attempted.push({
+          plan: node.plan,
+          reason: `skipped:budget-floor(${snap.remainingPct}%<${this.floorPct}%)`,
+          retry: 0,
+        });
         return this._toSalvage(tree, attempted, salvageData, lastFailure, 'budget-floor');
       }
       // ── 预算闸门②：剩余不足以支撑后续全部节点 → 立即兜底。
       if (snap.remainingUnits < remainingPlans) {
-        attempted.push({ plan: node.plan, reason: `skipped:budget-insufficient(${snap.remainingUnits}<${remainingPlans})`, retry: 0 });
+        attempted.push({
+          plan: node.plan,
+          reason: `skipped:budget-insufficient(${snap.remainingUnits}<${remainingPlans})`,
+          retry: 0,
+        });
         return this._toSalvage(tree, attempted, salvageData, lastFailure, 'budget-insufficient');
       }
 
@@ -172,14 +199,24 @@ class BudgetAwareExecutor {
         salvageData.push(outcome.salvage);
       }
       if (outcome.ok) {
-        return { ok: true, intent: tree.intent, plan: node.plan, result: outcome.result, attempted };
+        return {
+          ok: true,
+          intent: tree.intent,
+          plan: node.plan,
+          result: outcome.result,
+          attempted,
+        };
       }
       lastFailure = outcome.failure;
 
       // ── 失败 → 强制向下降级（绝不回头重试本 Plan）。注入模型上下文。
       const next = plans[i + 1] || null;
       if (next && this.onDegrade) {
-        try { this.onDegrade(this.buildDegradeContext(tree, node, next, lastFailure)); } catch { /* 注入失败不影响降级 */ }
+        try {
+          this.onDegrade(this.buildDegradeContext(tree, node, next, lastFailure));
+        } catch {
+          /* 注入失败不影响降级 */
+        }
       }
     }
 
@@ -199,7 +236,13 @@ class BudgetAwareExecutor {
     if (probe.dead) {
       return {
         ok: false,
-        failure: { code: 'DEAD_LOOP', reason: 'dead-loop', retryable: false, missingDependency: null, message: '与上一次调用完全相同，判定死循环，强制跳过。' },
+        failure: {
+          code: 'DEAD_LOOP',
+          reason: 'dead-loop',
+          retryable: false,
+          missingDependency: null,
+          message: '与上一次调用完全相同，判定死循环，强制跳过。',
+        },
         record: { plan: node.plan, reason: 'dead-loop-skip', retry: 0 },
         salvage: null,
       };
@@ -207,9 +250,18 @@ class BudgetAwareExecutor {
 
     // 首发。
     this.budget.spendOne();
-    let result = await _safeRun(this.runner, node.tool, params, { plan: node.plan, intent: ctx.intent, retry: 0 });
+    const result = await _safeRun(this.runner, node.tool, params, {
+      plan: node.plan,
+      intent: ctx.intent,
+      retry: 0,
+    });
     if (_isSuccess(node, result)) {
-      return { ok: true, result, record: { plan: node.plan, reason: 'ok', retry: 0 }, salvage: _salvageOf(node, result) };
+      return {
+        ok: true,
+        result,
+        record: { plan: node.plan, reason: 'ok', retry: 0 },
+        salvage: _salvageOf(node, result),
+      };
     }
     let failure = classifyFailure(result);
     let salvage = _salvageOf(node, result);
@@ -220,28 +272,58 @@ class BudgetAwareExecutor {
     //    c) 改变后的新调用不构成死循环。
     if (MAX_RETRY_PER_PLAN >= 1 && typeof ctx.repair === 'function') {
       let repair = null;
-      try { repair = await ctx.repair({ node, failure, params, context: ctx }); } catch { repair = null; }
-      const nextParams = repair && repair.params && typeof repair.params === 'object' ? repair.params : null;
-      const reallyChanged = !!(repair && repair.changed && nextParams
-        && this.detector.changed(node.tool, params, node.tool, nextParams));
+      try {
+        repair = await ctx.repair({ node, failure, params, context: ctx });
+      } catch {
+        repair = null;
+      }
+      const nextParams =
+        repair && repair.params && typeof repair.params === 'object' ? repair.params : null;
+      const reallyChanged = !!(
+        repair &&
+        repair.changed &&
+        nextParams &&
+        this.detector.changed(node.tool, params, node.tool, nextParams)
+      );
       if (reallyChanged) {
         const probe2 = this.detector.inspect(node.tool, nextParams);
         if (!probe2.dead) {
           this.budget.spendOne();
-          const result2 = await _safeRun(this.runner, node.tool, nextParams, { plan: node.plan, intent: ctx.intent, retry: 1 });
+          const result2 = await _safeRun(this.runner, node.tool, nextParams, {
+            plan: node.plan,
+            intent: ctx.intent,
+            retry: 1,
+          });
           if (_isSuccess(node, result2)) {
-            return { ok: true, result: result2, record: { plan: node.plan, reason: 'ok-after-repair', retry: 1 }, salvage: _salvageOf(node, result2) };
+            return {
+              ok: true,
+              result: result2,
+              record: { plan: node.plan, reason: 'ok-after-repair', retry: 1 },
+              salvage: _salvageOf(node, result2),
+            };
           }
           failure = classifyFailure(result2);
           const s2 = _salvageOf(node, result2);
-          if (s2) salvage = s2;
-          return { ok: false, failure, record: { plan: node.plan, reason: failure.reason, retry: 1 }, salvage };
+          if (s2) {
+            salvage = s2;
+          }
+          return {
+            ok: false,
+            failure,
+            record: { plan: node.plan, reason: failure.reason, retry: 1 },
+            salvage,
+          };
         }
       }
     }
 
     // 无修复 / 修复没真正改变输入 → 不重试（同类错误严禁死缠），直接降级。
-    return { ok: false, failure, record: { plan: node.plan, reason: failure.reason, retry: 0 }, salvage };
+    return {
+      ok: false,
+      failure,
+      record: { plan: node.plan, reason: failure.reason, retry: 0 },
+      salvage,
+    };
   }
 
   /** 组装兜底并包成统一返回形状。 */
@@ -298,13 +380,19 @@ async function _safeRun(runner, tool, params, meta) {
 
 function _isSuccess(node, result) {
   if (node.isSuccess) {
-    try { return !!node.isSuccess(result); } catch { return false; }
+    try {
+      return !!node.isSuccess(result);
+    } catch {
+      return false;
+    }
   }
   return !!(result && result.success === true);
 }
 
 function _salvageOf(node, result) {
-  if (!node.extractSalvage) return null;
+  if (!node.extractSalvage) {
+    return null;
+  }
   try {
     const s = node.extractSalvage(result);
     return s === undefined ? null : s;

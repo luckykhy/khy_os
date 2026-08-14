@@ -6,12 +6,18 @@
  */
 
 let _chalk;
-const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const c = () => (_chalk ??= require('chalk').default || require('chalk'));
 
 let _transparency;
 function _getTransparency() {
-  if (_transparency !== undefined) return _transparency;
-  try { _transparency = require('../services/transparencyService'); } catch { _transparency = null; }
+  if (_transparency !== undefined) {
+    return _transparency;
+  }
+  try {
+    _transparency = require('../services/transparencyService');
+  } catch {
+    _transparency = null;
+  }
   return _transparency;
 }
 
@@ -23,9 +29,13 @@ function _getTransparency() {
  */
 function printTurnCost(usage) {
   const t = _getTransparency();
-  if (!t || !usage) return;
+  if (!t || !usage) {
+    return;
+  }
   const line = t.formatPostResponseLine(usage);
-  if (line) console.log(line);
+  if (line) {
+    console.log(line);
+  }
 }
 
 /**
@@ -35,9 +45,13 @@ function printTurnCost(usage) {
  */
 function printCascadeSteps(steps) {
   const t = _getTransparency();
-  if (!t || !steps || steps.length <= 1) return;
+  if (!t || !steps || steps.length <= 1) {
+    return;
+  }
   const line = t.formatCascadeSteps(steps);
-  if (line) console.log(`  ${c().dim('cascade:')} ${line}`);
+  if (line) {
+    console.log(`  ${c().dim('cascade:')} ${line}`);
+  }
 }
 
 /**
@@ -47,11 +61,17 @@ function printCascadeSteps(steps) {
  */
 function printPermissionTier(classification) {
   const t = _getTransparency();
-  if (!t || !classification) return;
+  if (!t || !classification) {
+    return;
+  }
   // Only show for dangerous/critical (safe/moderate are quiet)
-  if (classification.tier === 'safe' || classification.tier === 'moderate') return;
+  if (classification.tier === 'safe' || classification.tier === 'moderate') {
+    return;
+  }
   const line = t.formatPermissionTier(classification);
-  if (line) console.log(`    ${line}`);
+  if (line) {
+    console.log(`    ${line}`);
+  }
 }
 
 /**
@@ -61,9 +81,13 @@ function printPermissionTier(classification) {
  */
 function printSessionRecap(session) {
   const t = _getTransparency();
-  if (!t || !session) return;
+  if (!t || !session) {
+    return;
+  }
   const text = t.formatSessionRecap(session);
-  if (text) process.stdout.write(text);
+  if (text) {
+    process.stdout.write(text);
+  }
 }
 
 /**
@@ -73,9 +97,13 @@ function printSessionRecap(session) {
  */
 function printQuotaWarning(quota) {
   const t = _getTransparency();
-  if (!t || !quota) return;
+  if (!t || !quota) {
+    return;
+  }
   const warning = t.checkQuotaWarning(quota);
-  if (warning) console.log(`  ${warning}`);
+  if (warning) {
+    console.log(`  ${warning}`);
+  }
 }
 
 /**
@@ -85,9 +113,13 @@ function printQuotaWarning(quota) {
  */
 function printCompactionResult(compaction) {
   const t = _getTransparency();
-  if (!t || !compaction) return;
+  if (!t || !compaction) {
+    return;
+  }
   const line = t.formatCompactionNotice(compaction);
-  if (line) console.log(`  ${line}`);
+  if (line) {
+    console.log(`  ${line}`);
+  }
 }
 
 /**
@@ -98,9 +130,13 @@ function printCompactionResult(compaction) {
  */
 function printEditPreview(edit) {
   const t = _getTransparency();
-  if (!t || !edit) return false;
+  if (!t || !edit) {
+    return false;
+  }
   const preview = t.formatEditPreview(edit);
-  if (!preview) return false;
+  if (!preview) {
+    return false;
+  }
   console.log(`    ${preview.header}`);
   for (const line of preview.diffLines) {
     console.log(`    ${line}`);

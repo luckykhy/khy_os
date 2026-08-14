@@ -10,21 +10,28 @@
  * 透传子模块（catalog/milestonePlanner）便于单测；自身只做编排与渲染。
  */
 
+const projectTemplateService = require('../projectTemplateService');
+
 const catalog = require('./catalog');
 const planner = require('./milestonePlanner');
-const projectTemplateService = require('../projectTemplateService');
 
 let _stackConflict = null;
 function stackConflict() {
   if (!_stackConflict) {
-    try { _stackConflict = require('./stackConflict'); } catch { _stackConflict = { detectStackConflict: () => ({ conflict: false }) }; }
+    try {
+      _stackConflict = require('./stackConflict');
+    } catch {
+      _stackConflict = { detectStackConflict: () => ({ conflict: false }) };
+    }
   }
   return _stackConflict;
 }
 
 let _detector = null;
 function detector() {
-  if (!_detector) _detector = require('../deploy/projectDetector');
+  if (!_detector) {
+    _detector = require('../deploy/projectDetector');
+  }
   return _detector;
 }
 
@@ -65,13 +72,21 @@ function match(goal) {
   const a = catalog.matchArchetype(goal);
   if (a) {
     let cf = { conflict: false };
-    try { cf = stackConflict().detectStackConflict(goal, a) || { conflict: false }; } catch { cf = { conflict: false }; }
+    try {
+      cf = stackConflict().detectStackConflict(goal, a) || { conflict: false };
+    } catch {
+      cf = { conflict: false };
+    }
     if (cf.conflict) {
       // 降级：模板不领跑，但把它作为「仅结构参考」的软指针交回，让模型可取其里程碑而不自动采纳其持久层。
       return {
         kind: 'none',
         match: null,
-        conflict: { requested: cf.requested, archetypeHas: cf.archetypeHas, dimension: cf.dimension },
+        conflict: {
+          requested: cf.requested,
+          archetypeHas: cf.archetypeHas,
+          dimension: cf.dimension,
+        },
         reference: {
           id: a.id,
           label: a.label || a.id,
@@ -80,10 +95,15 @@ function match(goal) {
         guidance: cf.guidance,
       };
     }
-    return { kind: 'archetype', match: { id: a.id, label: a.label || a.id, templateName: a.templateName } };
+    return {
+      kind: 'archetype',
+      match: { id: a.id, label: a.label || a.id, templateName: a.templateName },
+    };
   }
   const c = catalog.matchConcept(goal);
-  if (c) return { kind: 'concept', match: { id: c.id, name: c.name || c.id } };
+  if (c) {
+    return { kind: 'concept', match: { id: c.id, name: c.name || c.id } };
+  }
   return { kind: 'none', match: null };
 }
 
@@ -98,7 +118,9 @@ function _resolveArchetype(idOrGoal) {
  */
 function plan(idOrGoal) {
   const a = _resolveArchetype(idOrGoal);
-  if (!a) return { ok: false, error: `未找到可构建原型: ${idOrGoal}` };
+  if (!a) {
+    return { ok: false, error: `未找到可构建原型: ${idOrGoal}` };
+  }
   return { ok: true, ...planner.buildPlan(a) };
 }
 
@@ -110,7 +132,9 @@ function plan(idOrGoal) {
  */
 function milestone(idOrGoal, index, opts = {}) {
   const a = _resolveArchetype(idOrGoal);
-  if (!a) return { ok: false, error: `未找到可构建原型: ${idOrGoal}` };
+  if (!a) {
+    return { ok: false, error: `未找到可构建原型: ${idOrGoal}` };
+  }
   return planner.milestoneSlice(a, Number(index) || 0, opts);
 }
 
@@ -120,7 +144,9 @@ function milestone(idOrGoal, index, opts = {}) {
  */
 function concept(idOrTrigger) {
   const c = catalog.getConcept(idOrTrigger) || catalog.matchConcept(idOrTrigger);
-  if (!c) return { ok: false, error: `未找到概念卡: ${idOrTrigger}` };
+  if (!c) {
+    return { ok: false, error: `未找到概念卡: ${idOrTrigger}` };
+  }
   return {
     ok: true,
     id: c.id,
@@ -144,8 +170,12 @@ function concept(idOrTrigger) {
  */
 function scaffold(idOrGoal, opts = {}) {
   const a = _resolveArchetype(idOrGoal);
-  if (!a) return { ok: false, error: `未找到可构建原型: ${idOrGoal}` };
-  if (!a.templateName) return { ok: false, error: `原型 ${a.id} 未关联脚手架模板` };
+  if (!a) {
+    return { ok: false, error: `未找到可构建原型: ${idOrGoal}` };
+  }
+  if (!a.templateName) {
+    return { ok: false, error: `原型 ${a.id} 未关联脚手架模板` };
+  }
   try {
     const rendered = projectTemplateService.renderTemplate(a.templateName, opts.variables || {});
     return { ok: true, archetype: a.id, ...rendered };
@@ -160,7 +190,9 @@ function scaffold(idOrGoal, opts = {}) {
  * @param {object} [opts]
  */
 function verify(dir, opts = {}) {
-  if (!dir) return { ok: false, error: '缺少目录参数' };
+  if (!dir) {
+    return { ok: false, error: '缺少目录参数' };
+  }
   try {
     const detected = detector().detectProject(dir, opts);
     return { ok: true, dir, plan: detected };
@@ -171,10 +203,19 @@ function verify(dir, opts = {}) {
 
 /** ASCII 框：里程碑总览的人类可读渲染。 */
 function renderPlanReport(p) {
-  if (!p || p.ok === false) return `（无可渲染计划: ${p && p.error || '未知'}）`;
+  if (!p || p.ok === false) {
+    return `（无可渲染计划: ${(p && p.error) || '未知'}）`;
+  }
   const lines = [];
   const title = `项目蓝图: ${p.label || p.id}`;
-  const width = Math.max(40, ...[title, ...p.milestones.map((m) => `  ${m.index + 1}. ${m.title} (${m.fileCount} 文件)`)].map((s) => s.length)) + 2;
+  const width =
+    Math.max(
+      40,
+      ...[
+        title,
+        ...p.milestones.map((m) => `  ${m.index + 1}. ${m.title} (${m.fileCount} 文件)`),
+      ].map((s) => s.length)
+    ) + 2;
   const bar = '─'.repeat(width);
   lines.push(`┌${bar}┐`);
   lines.push(`│ ${title.padEnd(width - 1)}│`);
@@ -186,9 +227,15 @@ function renderPlanReport(p) {
   lines.push(`└${bar}┘`);
   if (p.build) {
     const b = p.build;
-    if (b.install) lines.push(`安装: ${b.install}`);
-    if (b.run) lines.push(`运行: ${b.run}`);
-    if (b.port) lines.push(`端口: ${b.port}`);
+    if (b.install) {
+      lines.push(`安装: ${b.install}`);
+    }
+    if (b.run) {
+      lines.push(`运行: ${b.run}`);
+    }
+    if (b.port) {
+      lines.push(`端口: ${b.port}`);
+    }
   }
   lines.push(`用法: 逐个取里程碑切片(milestone 模式)照着建，或 scaffold 一把拿骨架。`);
   return lines.join('\n');

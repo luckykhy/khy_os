@@ -2,9 +2,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { BaseTool } = require('../_baseTool');
+
 const cg = require('../../services/commentGuidance');
 const wmg = require('../../services/weakModelGuidance');
+const { BaseTool } = require('../_baseTool');
 
 /**
  * CommentGuidanceTool — 「什么地方该写什么样的注释」的确定性教学/审计工具。
@@ -26,10 +27,15 @@ class CommentGuidanceTool extends BaseTool {
   static category = 'analysis';
   static risk = 'safe';
   static aliases = ['comments', 'comment_audit', 'comment_guide', 'doc_audit'];
-  static searchHint = '注释 规范 文档 docstring JSDoc 该写什么注释 注释审计 死代码 TODO 文件头 接口文档';
+  static searchHint =
+    '注释 规范 文档 docstring JSDoc 该写什么注释 注释审计 死代码 TODO 文件头 接口文档';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return [
@@ -62,11 +68,12 @@ class CommentGuidanceTool extends BaseTool {
         },
         lang: {
           type: 'string',
-          description: "语言:js/ts/python/c/go/java(缺省由 path 扩展名推断,再缺省按 js)",
+          description: '语言:js/ts/python/c/go/java(缺省由 path 扩展名推断,再缺省按 js)',
         },
         view: {
           type: 'string',
-          description: "返回粒度:'full' guide+audit(默认) / 'guide' 仅规范 / 'audit' 仅审计 / 'weak-model' 弱模型就地护栏",
+          description:
+            "返回粒度:'full' guide+audit(默认) / 'guide' 仅规范 / 'audit' 仅审计 / 'weak-model' 弱模型就地护栏",
           enum: ['full', 'guide', 'audit', 'weak-model'],
           default: 'full',
         },
@@ -84,7 +91,7 @@ class CommentGuidanceTool extends BaseTool {
     return {
       enabled: true,
       directive: wmg.buildWeakModelDirective(),
-      sites: wmg.listGuardSites().map(s => ({ ...s, banner: wmg.bannerFor(s.key) })),
+      sites: wmg.listGuardSites().map((s) => ({ ...s, banner: wmg.bannerFor(s.key) })),
       exemplars: wmg.WEAK_MODEL_EXEMPLARS,
       toolCallHint: wmg.toolCallHint(),
     };
@@ -147,7 +154,9 @@ class CommentGuidanceTool extends BaseTool {
       findings: audit.findings,
       clean: audit.summary.total === 0,
     };
-    if (view === 'audit') return base;
+    if (view === 'audit') {
+      return base;
+    }
 
     // full:附上分层规范,便于模型按规范补注释。
     return { ...base, guide: this._buildGuide(audit.lang) };
@@ -155,8 +164,12 @@ class CommentGuidanceTool extends BaseTool {
 
   getActivityDescription(input) {
     const view = (input && input.view) || 'full';
-    if (view === 'guide') return '注释规范查询';
-    if (view === 'weak-model') return '弱模型就地护栏查询';
+    if (view === 'guide') {
+      return '注释规范查询';
+    }
+    if (view === 'weak-model') {
+      return '弱模型就地护栏查询';
+    }
     const where = input && input.path ? `(${path.basename(String(input.path))})` : '';
     return `注释审计${where}`;
   }

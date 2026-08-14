@@ -14,12 +14,21 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 // ── Constants ──────────────────────────────────────────────────────────
 
-const RULES_FILE = path.join(os.homedir(), '.khy', 'permission-rules.json');
+// Portable-aware data home resolved at load (legacy const semantics preserved).
+function _dataHome() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return getDataHome();
+  } catch {
+    return path.join(os.homedir(), '.khy');
+  }
+}
+const RULES_FILE = path.join(_dataHome(), 'permission-rules.json');
 
 // ── State ──────────────────────────────────────────────────────────────
 
@@ -46,7 +55,9 @@ function _ensureDir() {
 }
 
 function _load() {
-  if (_loaded) return;
+  if (_loaded) {
+    return;
+  }
   _loaded = true;
 
   try {
@@ -54,7 +65,7 @@ function _load() {
       const data = JSON.parse(fs.readFileSync(RULES_FILE, 'utf-8'));
       _rules = Array.isArray(data.rules) ? data.rules : [];
       // Restore only persistent rules (session rules are transient)
-      _rules = _rules.filter(r => r.scope === 'persistent');
+      _rules = _rules.filter((r) => r.scope === 'persistent');
     }
   } catch {
     _rules = [];
@@ -64,12 +75,20 @@ function _load() {
 function _save() {
   try {
     _ensureDir();
-    const persistent = _rules.filter(r => r.scope === 'persistent');
-    fs.writeFileSync(RULES_FILE, JSON.stringify({
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      rules: persistent,
-    }, null, 2), 'utf-8');
+    const persistent = _rules.filter((r) => r.scope === 'persistent');
+    fs.writeFileSync(
+      RULES_FILE,
+      JSON.stringify(
+        {
+          version: 1,
+          updatedAt: new Date().toISOString(),
+          rules: persistent,
+        },
+        null,
+        2
+      ),
+      'utf-8'
+    );
   } catch {
     // Best effort
   }
@@ -101,7 +120,9 @@ function addAlwaysAllow(toolName, pattern = null, options = {}) {
   _removeMatchingRule(toolName, pattern);
   _rules.push(rule);
 
-  if (scope === 'persistent') _save();
+  if (scope === 'persistent') {
+    _save();
+  }
 }
 
 /**
@@ -127,7 +148,9 @@ function addAlwaysDeny(toolName, pattern = null, options = {}) {
   _removeMatchingRule(toolName, pattern);
   _rules.push(rule);
 
-  if (scope === 'persistent') _save();
+  if (scope === 'persistent') {
+    _save();
+  }
 }
 
 /**
@@ -139,16 +162,24 @@ function addAlwaysDeny(toolName, pattern = null, options = {}) {
 function removeRule(toolName, pattern = null) {
   _load();
   const removed = _removeMatchingRule(toolName, pattern);
-  if (removed) _save();
+  if (removed) {
+    _save();
+  }
   return removed;
 }
 
 function _removeMatchingRule(toolName, pattern) {
   const before = _rules.length;
-  _rules = _rules.filter(r => {
-    if (r.toolName !== toolName) return true;
-    if (pattern === null && r.pattern === null) return false;
-    if (pattern !== null && r.pattern !== null && r.pattern === pattern) return false;
+  _rules = _rules.filter((r) => {
+    if (r.toolName !== toolName) {
+      return true;
+    }
+    if (pattern === null && r.pattern === null) {
+      return false;
+    }
+    if (pattern !== null && r.pattern !== null && r.pattern === pattern) {
+      return false;
+    }
     return true;
   });
   return _rules.length < before;
@@ -171,8 +202,12 @@ function checkPermission(toolName, params = {}) {
 
   // Deny rules take precedence (fail-closed)
   for (const rule of _rules) {
-    if (rule.toolName !== toolName) continue;
-    if (rule.decision !== 'deny') continue;
+    if (rule.toolName !== toolName) {
+      continue;
+    }
+    if (rule.decision !== 'deny') {
+      continue;
+    }
 
     if (_matchesPattern(rule.pattern, paramStr)) {
       return 'deny';
@@ -181,8 +216,12 @@ function checkPermission(toolName, params = {}) {
 
   // Then check allow rules
   for (const rule of _rules) {
-    if (rule.toolName !== toolName) continue;
-    if (rule.decision !== 'allow') continue;
+    if (rule.toolName !== toolName) {
+      continue;
+    }
+    if (rule.decision !== 'allow') {
+      continue;
+    }
 
     if (_matchesPattern(rule.pattern, paramStr)) {
       return 'allow';
@@ -202,7 +241,9 @@ function checkPermission(toolName, params = {}) {
  */
 function _matchesPattern(pattern, paramStr) {
   // Null pattern matches everything for this tool
-  if (pattern === null) return true;
+  if (pattern === null) {
+    return true;
+  }
 
   try {
     const re = new RegExp(pattern, 'i');
@@ -219,15 +260,25 @@ function _matchesPattern(pattern, paramStr) {
  * @returns {string}
  */
 function _serializeParams(params) {
-  if (!params || typeof params !== 'object') return '';
+  if (!params || typeof params !== 'object') {
+    return '';
+  }
 
   // For bash tools, the command string is the primary match target
-  if (params.command) return String(params.command);
-  if (params.cmd) return String(params.cmd);
+  if (params.command) {
+    return String(params.command);
+  }
+  if (params.cmd) {
+    return String(params.cmd);
+  }
 
   // For file tools, the path is the primary match target
-  if (params.file_path) return String(params.file_path);
-  if (params.path) return String(params.path);
+  if (params.file_path) {
+    return String(params.file_path);
+  }
+  if (params.path) {
+    return String(params.path);
+  }
 
   // Fallback: JSON representation
   try {
@@ -255,7 +306,7 @@ function getAllRules() {
  */
 function getRulesForTool(toolName) {
   _load();
-  return _rules.filter(r => r.toolName === toolName);
+  return _rules.filter((r) => r.toolName === toolName);
 }
 
 /**
@@ -266,7 +317,7 @@ function getRulesForTool(toolName) {
 function clearRules(options = {}) {
   _load();
   if (options.sessionOnly) {
-    _rules = _rules.filter(r => r.scope === 'persistent');
+    _rules = _rules.filter((r) => r.scope === 'persistent');
   } else {
     _rules = [];
     _save();

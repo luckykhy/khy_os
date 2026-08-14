@@ -8,9 +8,11 @@
 'use strict';
 
 const BROADCAST_INTERVAL_MS = parseInt(
-  process.env.GATEWAY_HEALTH_BROADCAST_INTERVAL_MS || '5000', 10
+  process.env.GATEWAY_HEALTH_BROADCAST_INTERVAL_MS || '5000',
+  10
 );
-const ENABLED = String(process.env.GATEWAY_HEALTH_BROADCAST_ENABLED || 'true').toLowerCase() !== 'false';
+const ENABLED =
+  String(process.env.GATEWAY_HEALTH_BROADCAST_ENABLED || 'true').toLowerCase() !== 'false';
 
 class ChannelHealthBroadcaster {
   /**
@@ -40,9 +42,13 @@ class ChannelHealthBroadcaster {
    * Start periodic health polling.
    */
   start() {
-    if (!ENABLED || this._timer) return;
+    if (!ENABLED || this._timer) {
+      return;
+    }
     this._timer = setInterval(() => this._poll(), BROADCAST_INTERVAL_MS);
-    if (this._timer.unref) this._timer.unref();
+    if (this._timer.unref) {
+      this._timer.unref();
+    }
     // Initial poll
     this._poll();
   }
@@ -71,7 +77,9 @@ class ChannelHealthBroadcaster {
    * @param {string} [detail]
    */
   recordRequestActivity(adapterKey, event, detail = '') {
-    if (!ENABLED) return;
+    if (!ENABLED) {
+      return;
+    }
     const entry = {
       adapter: adapterKey,
       event,
@@ -79,12 +87,16 @@ class ChannelHealthBroadcaster {
       timestamp: Date.now(),
     };
     this._activityRing.push(entry);
-    if (this._activityRing.length > 50) this._activityRing.shift();
+    if (this._activityRing.length > 50) {
+      this._activityRing.shift();
+    }
 
     // Broadcast immediately
     try {
       this._broadcast('channel_activity', entry);
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   /**
@@ -96,15 +108,18 @@ class ChannelHealthBroadcaster {
     }
     try {
       const states = await this._healthStore.getAllAdapterStates(this._adapterKeys);
-      const adapters = this._adapterKeys.map(key => {
+      const adapters = this._adapterKeys.map((key) => {
         const s = states[key] || {};
         let circuitState = 'closed';
-        if (s.inCooldown) circuitState = 'open';
-        else if (s.failureCount > 0 && s.consecutiveSuccesses > 0) circuitState = 'half-open';
+        if (s.inCooldown) {
+          circuitState = 'open';
+        } else if (s.failureCount > 0 && s.consecutiveSuccesses > 0) {
+          circuitState = 'half-open';
+        }
 
         return {
           key,
-          status: s.inCooldown ? 'cooldown' : (s.failureCount > 0 ? 'degraded' : 'healthy'),
+          status: s.inCooldown ? 'cooldown' : s.failureCount > 0 ? 'degraded' : 'healthy',
           failureCount: s.failureCount || 0,
           cooldownRemainingMs: s.cooldownRemainingMs || 0,
           circuitState,
@@ -136,10 +151,16 @@ class ChannelHealthBroadcaster {
         this._lastSnapshot = serialized;
         this._broadcast('channel_health', snapshot);
         for (const fn of this._listeners) {
-          try { fn(snapshot); } catch { /* ignore */ }
+          try {
+            fn(snapshot);
+          } catch {
+            /* ignore */
+          }
         }
       }
-    } catch { /* polling should never crash */ }
+    } catch {
+      /* polling should never crash */
+    }
   }
 }
 

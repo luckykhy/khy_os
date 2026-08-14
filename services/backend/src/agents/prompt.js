@@ -29,11 +29,11 @@ function getAgentToolPrompt(agentDefinitions, opts = {}) {
   const { isCoordinator = false, allowedAgentTypes } = opts;
 
   const effectiveAgents = allowedAgentTypes
-    ? agentDefinitions.filter(a => allowedAgentTypes.includes(a.agentType))
+    ? agentDefinitions.filter((a) => allowedAgentTypes.includes(a.agentType))
     : agentDefinitions;
 
   const agentListSection = `Available agent types and the tools they have access to:
-${effectiveAgents.map(agent => formatAgentLine(agent)).join('\n')}`;
+${effectiveAgents.map((agent) => formatAgentLine(agent)).join('\n')}`;
 
   const shared = `Launch a new agent to handle complex, multi-step tasks autonomously.
 
@@ -83,8 +83,8 @@ Usage notes:
   // 失败(如尚未重建的 bundled 副本拿不到该叶子)时退回内联 legacy 文案,保证字节回退。
   let writingThePromptSection;
   try {
-    writingThePromptSection = require('../services/agents/delegationPromptPolicy')
-      .resolveWritingThePromptSection();
+    writingThePromptSection =
+      require('../services/agents/delegationPromptPolicy').resolveWritingThePromptSection();
   } catch {
     writingThePromptSection = `
 

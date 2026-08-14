@@ -5,11 +5,15 @@ try {
   MultiFreeService = require('./multiFreeService');
 } catch {
   try {
-    MultiFreeService = require(path.resolve(__dirname, '../../../../backend/src/services/multiFreeService'));
+    MultiFreeService = require(
+      path.resolve(__dirname, '../../../../backend/src/services/multiFreeService')
+    );
   } catch {
     // 无可用 LLM 服务时返回空壳，避免顶层崩溃
     MultiFreeService = class MultiFreeServiceStub {
-      async generateResponse() { return { success: false, content: '', error: 'MultiFreeService 不可用' }; }
+      async generateResponse() {
+        return { success: false, content: '', error: 'MultiFreeService 不可用' };
+      }
     };
   }
 }

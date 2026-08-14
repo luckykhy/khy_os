@@ -332,6 +332,8 @@ class WebSocketService {
       this._listeners.set(type, new Set())
     }
     this._listeners.get(type).add(callback)
+    // Return unsubscribe function for easy cleanup
+    return () => this.off(type, callback)
   }
 
   off(type, callback) {

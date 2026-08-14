@@ -28,7 +28,9 @@ function isEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_TOOL_LOOP_CHAT_GUARD;
     const v = (raw == null ? '' : String(raw)).trim().toLowerCase();
-    if (v === '') return true;
+    if (v === '') {
+      return true;
+    }
     return !ON_FALSY.includes(v);
   } catch {
     return true; // never throw; conservative = guard on
@@ -42,9 +44,15 @@ function isEnabled(env = process.env) {
  */
 function _messageOf(err) {
   try {
-    if (!err) return '';
-    if (typeof err === 'string') return err;
-    if (err.message != null) return String(err.message);
+    if (!err) {
+      return '';
+    }
+    if (typeof err === 'string') {
+      return err;
+    }
+    if (err.message != null) {
+      return String(err.message);
+    }
     return String(err);
   } catch {
     return '';
@@ -61,9 +69,15 @@ function _messageOf(err) {
 function _classifyKind(msg) {
   try {
     const m = String(msg || '').toLowerCase();
-    if (/timeout|etimedout|timed out|deadline/.test(m)) return 'timeout';
-    if (/econnreset|econnrefused|enotfound|socket hang|network|dns|getaddrinfo/.test(m)) return 'network';
-    if (/abort|cancell?ed/.test(m)) return 'cancelled';
+    if (/timeout|etimedout|timed out|deadline/.test(m)) {
+      return 'timeout';
+    }
+    if (/econnreset|econnrefused|enotfound|socket hang|network|dns|getaddrinfo/.test(m)) {
+      return 'network';
+    }
+    if (/abort|cancell?ed/.test(m)) {
+      return 'cancelled';
+    }
     return 'unexpected_error';
   } catch {
     return 'unexpected_error';
@@ -84,9 +98,9 @@ function buildUnexpectedChatErrorResult(err, opts = {}) {
     const kind = _classifyKind(msg);
     const detail = msg ? `具体错误:${msg}` : '未获取到具体错误信息。';
     const finalResponse =
-      '抱歉,本轮模型调用遇到意外异常,已安全结束这一轮(会话未中断,可继续下一步)。\n\n'
-      + detail
-      + '\n\n提示:回复「继续」即可重试或推进;若反复出现,请检查模型通道 / 网络配置。';
+      '抱歉,本轮模型调用遇到意外异常,已安全结束这一轮(会话未中断,可继续下一步)。\n\n' +
+      detail +
+      '\n\n提示:回复「继续」即可重试或推进;若反复出现,请检查模型通道 / 网络配置。';
     return {
       finalResponse,
       errorType: kind,

@@ -34,10 +34,15 @@ async function handleMoa(input, deps) {
   // Reference models from --models, else fall back to gateway defaults.
   let models = [];
   if (options.models) {
-    models = String(options.models).split(',').map((m) => m.trim()).filter(Boolean);
+    models = String(options.models)
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean);
   }
   const gateway = _resolveGateway();
-  if (models.length === 0) models = _getDefaultModels(gateway);
+  if (models.length === 0) {
+    models = _getDefaultModels(gateway);
+  }
 
   if (models.length < 2) {
     console.log(c.yellow('  MoA 需要至少 2 个参考模型。用 --models model1,model2 指定。'));
@@ -46,7 +51,9 @@ async function handleMoa(input, deps) {
   }
 
   // Prompt = input minus any flags.
-  const prompt = String(input).replace(/--\w+\s+\S+/g, '').trim();
+  const prompt = String(input)
+    .replace(/--\w+\s+\S+/g, '')
+    .trim();
   if (!prompt) {
     console.log(c.yellow('  请提供一个问题(prompt)。'));
     return;
@@ -77,7 +84,12 @@ async function handleMoa(input, deps) {
   if (options.verbose) {
     for (const ref of result.references) {
       console.log(c.bold(`  ── 参考: ${ref.model} ──`));
-      console.log(ref.content.split('\n').map((l) => `    ${l}`).join('\n'));
+      console.log(
+        ref.content
+          .split('\n')
+          .map((l) => `    ${l}`)
+          .join('\n')
+      );
       console.log('');
     }
   } else {
@@ -87,7 +99,12 @@ async function handleMoa(input, deps) {
 
   console.log(c.bold(`  ✅ 合成答案 (aggregator: ${result.aggregatorModel}):`));
   console.log('');
-  console.log(result.finalAnswer.split('\n').map((l) => `  ${l}`).join('\n'));
+  console.log(
+    result.finalAnswer
+      .split('\n')
+      .map((l) => `  ${l}`)
+      .join('\n')
+  );
   console.log('');
 }
 
@@ -114,7 +131,9 @@ function _getDefaultModels(gateway) {
         return models.slice(0, 3).map((m) => m.id || m.name || m);
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return [];
 }
 

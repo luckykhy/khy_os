@@ -39,7 +39,10 @@ const TIER_VECTORS = Object.freeze({
 // Aggregate-score weights. reasoning dominates (it is what plans well), planning
 // next, then instruction-following, then JSON strictness. Sum = 1.0.
 const SCORE_WEIGHTS = Object.freeze({
-  reasoning: 0.5, planning: 0.25, instruction: 0.15, jsonStrict: 0.1,
+  reasoning: 0.5,
+  planning: 0.25,
+  instruction: 0.15,
+  jsonStrict: 0.1,
 });
 
 const DEFAULT_STRONG_THRESHOLD = 65;
@@ -47,7 +50,9 @@ const DEFAULT_STRONG_THRESHOLD = 65;
 function _envNum(name, fallback, { min = -Infinity, max = Infinity } = {}) {
   const raw = process.env[name];
   const n = raw === undefined || raw === '' ? fallback : Number(raw);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, n));
 }
 
@@ -76,10 +81,11 @@ function capabilityVector(modelId, opts = {}) {
  */
 function capabilityScore(modelId, opts = {}) {
   const v = capabilityVector(modelId, opts);
-  const raw = v.reasoning * SCORE_WEIGHTS.reasoning
-    + v.planning * SCORE_WEIGHTS.planning
-    + v.instruction * SCORE_WEIGHTS.instruction
-    + v.jsonStrict * SCORE_WEIGHTS.jsonStrict;
+  const raw =
+    v.reasoning * SCORE_WEIGHTS.reasoning +
+    v.planning * SCORE_WEIGHTS.planning +
+    v.instruction * SCORE_WEIGHTS.instruction +
+    v.jsonStrict * SCORE_WEIGHTS.jsonStrict;
   return Math.round(raw * 100) / 100;
 }
 

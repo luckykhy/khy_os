@@ -30,6 +30,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const memdir = require('../../memdir');
 const memoryTier = require('../memoryTier');
 
@@ -41,14 +42,23 @@ function _int(envKey, dflt) {
   const v = parseInt(process.env[envKey] || '', 10);
   return Number.isFinite(v) && v >= 0 ? v : dflt;
 }
+
 function _float(envKey, dflt) {
   const v = parseFloat(process.env[envKey] || '');
   return Number.isFinite(v) && v > 0 ? v : dflt;
 }
 
-function minBodyChars() { return _int('KHY_MEMORY_MIN_BODY_CHARS', 12); }
-function dupThreshold() { return _float('KHY_MEMORY_DUP_THRESHOLD', 0.82); }
-function distillIntervalDays() { return _float('KHY_MEMORY_DISTILL_INTERVAL_DAYS', 7); }
+function minBodyChars() {
+  return _int('KHY_MEMORY_MIN_BODY_CHARS', 12);
+}
+
+function dupThreshold() {
+  return _float('KHY_MEMORY_DUP_THRESHOLD', 0.82);
+}
+
+function distillIntervalDays() {
+  return _float('KHY_MEMORY_DISTILL_INTERVAL_DAYS', 7);
+}
 
 /** Per-type staleness horizon in days. user is effectively immortal. */
 function staleThresholdDays(type) {
@@ -65,7 +75,7 @@ function staleThresholdDays(type) {
 /** Durability weight by type (higher ⇒ more worth keeping), for the value score. */
 function _durabilityWeight(type) {
   const t = String(type || '').toLowerCase();
-  return ({ user: 1.0, feedback: 0.9, reference: 0.6, project: 0.5 })[t] || 0.5;
+  return { user: 1.0, feedback: 0.9, reference: 0.6, project: 0.5 }[t] || 0.5;
 }
 
 // ── similarity ─────────────────────────────────────────────────────────────
@@ -79,10 +89,16 @@ function _memTokens(entry, body) {
 
 /** Jaccard similarity between two token sets. */
 function jaccard(a, b) {
-  if (!a || !b || a.size === 0 || b.size === 0) return 0;
+  if (!a || !b || a.size === 0 || b.size === 0) {
+    return 0;
+  }
   let inter = 0;
   const [small, large] = a.size <= b.size ? [a, b] : [b, a];
-  for (const t of small) if (large.has(t)) inter++;
+  for (const t of small) {
+    if (large.has(t)) {
+      inter++;
+    }
+  }
   const union = a.size + b.size - inter;
   return union === 0 ? 0 : inter / union;
 }
@@ -116,18 +132,25 @@ function analyze(opts = {}) {
   const nowMs = Number.isFinite(opts.nowMs) ? opts.nowMs : Date.now();
 
   let list;
-  try { list = memdir.listMemories(); } catch { list = []; }
+  try {
+    list = memdir.listMemories();
+  } catch {
+    list = [];
+  }
 
   // Hydrate each memory with body + tokens + value, skipping unreadable files.
   const mems = [];
   for (const entry of list) {
     const parsed = memdir.readMemory(entry.filename);
-    if (!parsed.exists) continue;
+    if (!parsed.exists) {
+      continue;
+    }
     const body = String(parsed.body || '').trim();
     const type = String((entry.frontmatter || {}).type || '').toLowerCase();
-    const modifiedAtMs = entry.modifiedAt instanceof Date
-      ? entry.modifiedAt.getTime()
-      : Number(entry.modifiedAt) || nowMs;
+    const modifiedAtMs =
+      entry.modifiedAt instanceof Date
+        ? entry.modifiedAt.getTime()
+        : Number(entry.modifiedAt) || nowMs;
     mems.push({
       filename: entry.filename,
       frontmatter: entry.frontmatter || {},
@@ -153,22 +176,36 @@ function analyze(opts = {}) {
   const minБody = minBodyChars();
   for (const m of mems) {
     if (m.bodyLen < minБody && m.forgetEligible) {
-      forget.push({ filename: m.filename, type: m.type, reason: 'empty', detail: `正文仅 ${m.bodyLen} 字符` });
+      forget.push({
+        filename: m.filename,
+        type: m.type,
+        reason: 'empty',
+        detail: `正文仅 ${m.bodyLen} 字符`,
+      });
       forgotten.add(m.filename);
     }
   }
 
   // 2) Near-duplicates: among survivors, cluster by similarity; keep the highest
   //    value, archive the rest. Process by descending value so survivors win.
-  const survivors = mems.filter((m) => !forgotten.has(m.filename))
-    .sort((a, b) => b.value - a.value || b.modifiedAtMs - a.modifiedAtMs || a.filename.localeCompare(b.filename));
+  const survivors = mems
+    .filter((m) => !forgotten.has(m.filename))
+    .sort(
+      (a, b) =>
+        b.value - a.value || b.modifiedAtMs - a.modifiedAtMs || a.filename.localeCompare(b.filename)
+    );
   const threshold = dupThreshold();
   const kept = [];
   for (const m of survivors) {
-    if (forgotten.has(m.filename)) continue;
+    if (forgotten.has(m.filename)) {
+      continue;
+    }
     let absorbedInto = null;
     for (const k of kept) {
-      if (jaccard(m.tokens, k.tokens) >= threshold) { absorbedInto = k; break; }
+      if (jaccard(m.tokens, k.tokens) >= threshold) {
+        absorbedInto = k;
+        break;
+      }
     }
     if (absorbedInto && m.forgetEligible) {
       forget.push({
@@ -179,8 +216,15 @@ function analyze(opts = {}) {
       });
       forgotten.add(m.filename);
       const grp = merge.find((g) => g.survivor === absorbedInto.filename);
-      if (grp) grp.absorbed.push(m.filename);
-      else merge.push({ survivor: absorbedInto.filename, absorbed: [m.filename], reason: 'near-duplicate' });
+      if (grp) {
+        grp.absorbed.push(m.filename);
+      } else {
+        merge.push({
+          survivor: absorbedInto.filename,
+          absorbed: [m.filename],
+          reason: 'near-duplicate',
+        });
+      }
     } else {
       // 非重复,或虽近似但属 permanent 层(免疫遗忘)→ 保留。
       kept.push(m);
@@ -189,7 +233,9 @@ function analyze(opts = {}) {
 
   // 3) Staleness: among remaining survivors, age out per-type horizons.
   for (const m of kept.slice()) {
-    if (forgotten.has(m.filename)) continue;
+    if (forgotten.has(m.filename)) {
+      continue;
+    }
     const ageDays = (nowMs - m.modifiedAtMs) / 86_400_000;
     const horizon = staleThresholdDays(m.type);
     if (ageDays > horizon && m.forgetEligible) {
@@ -213,7 +259,10 @@ function analyze(opts = {}) {
     keep: keep.length,
     forget: forget.length,
     mergeGroups: merge.length,
-    byReason: forget.reduce((acc, f) => { acc[f.reason] = (acc[f.reason] || 0) + 1; return acc; }, {}),
+    byReason: forget.reduce((acc, f) => {
+      acc[f.reason] = (acc[f.reason] || 0) + 1;
+      return acc;
+    }, {}),
   };
 
   return { keep, forget, merge, stats };
@@ -224,6 +273,7 @@ function analyze(opts = {}) {
 function _archiveDir() {
   return path.join(memdir.getMemoryDir(), '.archive');
 }
+
 function _manifestPath() {
   return path.join(_archiveDir(), 'manifest.json');
 }
@@ -233,8 +283,11 @@ function _readManifest() {
     const raw = fs.readFileSync(_manifestPath(), 'utf8');
     const m = JSON.parse(raw);
     return Array.isArray(m) ? m : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
+
 function _writeManifest(entries) {
   fs.mkdirSync(_archiveDir(), { recursive: true });
   fs.writeFileSync(_manifestPath(), JSON.stringify(entries, null, 2) + '\n', 'utf8');
@@ -244,7 +297,9 @@ function _writeManifest(entries) {
 function _removeFromIndex(filenames) {
   try {
     const idxPath = memdir.getMemoryIndexPath();
-    if (!fs.existsSync(idxPath)) return;
+    if (!fs.existsSync(idxPath)) {
+      return;
+    }
     const set = new Set(filenames);
     const lines = fs.readFileSync(idxPath, 'utf8').split('\n');
     const filtered = lines.filter((line) => {
@@ -252,7 +307,9 @@ function _removeFromIndex(filenames) {
       return !(match && set.has(match[1]));
     });
     fs.writeFileSync(idxPath, filtered.join('\n'), 'utf8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -278,7 +335,10 @@ function applyPlan(plan, opts = {}) {
     const src = path.join(dir, item.filename);
     let dest = path.join(archiveDir, item.filename);
     try {
-      if (!fs.existsSync(src)) { failed.push({ filename: item.filename, error: 'not found' }); continue; }
+      if (!fs.existsSync(src)) {
+        failed.push({ filename: item.filename, error: 'not found' });
+        continue;
+      }
       // Avoid clobbering a prior archived file of the same name.
       if (fs.existsSync(dest)) {
         const ext = path.extname(item.filename);
@@ -296,7 +356,10 @@ function applyPlan(plan, opts = {}) {
       });
       archived.push(item.filename);
     } catch (err) {
-      failed.push({ filename: item.filename, error: err && err.message ? err.message : String(err) });
+      failed.push({
+        filename: item.filename,
+        error: err && err.message ? err.message : String(err),
+      });
     }
   }
 
@@ -324,16 +387,29 @@ function restore(opts = {}) {
 
   for (const rec of manifest) {
     const wantOne = opts.filename && rec.filename !== opts.filename;
-    if (wantOne) { remaining.push(rec); continue; }
+    if (wantOne) {
+      remaining.push(rec);
+      continue;
+    }
     const src = path.join(archiveDir, rec.archivedAs || rec.filename);
     const dest = path.join(dir, rec.filename);
     try {
-      if (!fs.existsSync(src)) { failed.push({ filename: rec.filename, error: 'archive missing' }); continue; }
-      if (fs.existsSync(dest)) { failed.push({ filename: rec.filename, error: '目标已存在，跳过以免覆盖' }); remaining.push(rec); continue; }
+      if (!fs.existsSync(src)) {
+        failed.push({ filename: rec.filename, error: 'archive missing' });
+        continue;
+      }
+      if (fs.existsSync(dest)) {
+        failed.push({ filename: rec.filename, error: '目标已存在，跳过以免覆盖' });
+        remaining.push(rec);
+        continue;
+      }
       fs.renameSync(src, dest);
       restored.push(rec.filename);
     } catch (err) {
-      failed.push({ filename: rec.filename, error: err && err.message ? err.message : String(err) });
+      failed.push({
+        filename: rec.filename,
+        error: err && err.message ? err.message : String(err),
+      });
       remaining.push(rec);
     }
   }
@@ -352,14 +428,22 @@ function listArchived() {
 function _statePath() {
   return path.join(memdir.getMemoryDir(), '.distill.json');
 }
+
 function _readState() {
-  try { return JSON.parse(fs.readFileSync(_statePath(), 'utf8')) || {}; } catch { return {}; }
+  try {
+    return JSON.parse(fs.readFileSync(_statePath(), 'utf8')) || {};
+  } catch {
+    return {};
+  }
 }
+
 function _writeState(state) {
   try {
     fs.mkdirSync(memdir.getMemoryDir(), { recursive: true });
     fs.writeFileSync(_statePath(), JSON.stringify(state, null, 2) + '\n', 'utf8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 function _isoStamp(nowMs) {
@@ -422,15 +506,23 @@ function distill(opts = {}) {
 function maybeDistill(opts = {}) {
   try {
     const mode = String(process.env.KHY_MEMORY_DISTILL_AUTO || 'report').toLowerCase();
-    if (mode === 'off') return { skipped: true, reason: 'disabled' };
+    if (mode === 'off') {
+      return { skipped: true, reason: 'disabled' };
+    }
     if (process.env.KHY_DISABLE_MEMORY === '1' || process.env.KHY_DISABLE_MEMORY === 'true') {
       return { skipped: true, reason: 'memory-disabled' };
     }
-    if (!opts.force && !intervalElapsed(opts.nowMs)) return { skipped: true, reason: 'interval-not-elapsed' };
+    if (!opts.force && !intervalElapsed(opts.nowMs)) {
+      return { skipped: true, reason: 'interval-not-elapsed' };
+    }
     const out = distill({ apply: mode === 'archive', nowMs: opts.nowMs });
     return { skipped: false, ...out, mode };
   } catch (err) {
-    return { skipped: true, reason: 'error', error: err && err.message ? err.message : String(err) };
+    return {
+      skipped: true,
+      reason: 'error',
+      error: err && err.message ? err.message : String(err),
+    };
   }
 }
 

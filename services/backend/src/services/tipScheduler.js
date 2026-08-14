@@ -26,7 +26,9 @@ const GATE = 'KHY_STARTUP_TIPS';
 
 function tipsEnabled(env) {
   const raw = env && env[GATE];
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -48,7 +50,11 @@ const TIPS = [
   { id: 'hud', text: '/hud 展开完整仪表盘', cooldownSessions: 6 },
   { id: 'pool', text: 'pool list 管理 AI 账号池', cooldownSessions: 8 },
   { id: 'image', text: 'image <路径> 图片分析/网页还原', cooldownSessions: 8 },
-  { id: 'shell', text: '!<命令> 直接跑 shell，输出进上下文（如 !git status）', cooldownSessions: 5 },
+  {
+    id: 'shell',
+    text: '!<命令> 直接跑 shell，输出进上下文（如 !git status）',
+    cooldownSessions: 5,
+  },
   { id: 'web-tools', text: '/web-tools 查看联网搜索后端与运行期动态引擎', cooldownSessions: 6 },
   // 新用户早期提示：仅前若干次启动相关（演示 isRelevant）。
   {
@@ -69,7 +75,9 @@ const TIPS = [
 function getSessionsSinceLastShown(tipId, history, numStartups) {
   const h = history && typeof history === 'object' ? history : {};
   const lastShown = h[tipId];
-  if (lastShown == null || !Number.isFinite(Number(lastShown))) return Infinity;
+  if (lastShown == null || !Number.isFinite(Number(lastShown))) {
+    return Infinity;
+  }
   const n = Number(numStartups);
   const base = Number.isFinite(n) ? n : 0;
   const since = base - Number(lastShown);
@@ -81,7 +89,9 @@ function getRelevantTips(tips, history, numStartups, ctx) {
   const list = Array.isArray(tips) ? tips : [];
   const out = [];
   for (const tip of list) {
-    if (!tip || typeof tip !== 'object' || !tip.id || !tip.text) continue;
+    if (!tip || typeof tip !== 'object' || !tip.id || !tip.text) {
+      continue;
+    }
     let relevant = true;
     if (typeof tip.isRelevant === 'function') {
       try {
@@ -90,10 +100,14 @@ function getRelevantTips(tips, history, numStartups, ctx) {
         relevant = false;
       }
     }
-    if (!relevant) continue;
+    if (!relevant) {
+      continue;
+    }
     const cooldown = Number(tip.cooldownSessions);
     const cd = Number.isFinite(cooldown) && cooldown >= 0 ? cooldown : 0;
-    if (getSessionsSinceLastShown(tip.id, history, numStartups) >= cd) out.push(tip);
+    if (getSessionsSinceLastShown(tip.id, history, numStartups) >= cd) {
+      out.push(tip);
+    }
   }
   return out;
 }
@@ -102,8 +116,12 @@ function getRelevantTips(tips, history, numStartups, ctx) {
 // sessionsSince 降序取首（最久未显示）。稳定：等值（含全 Infinity 的首次启动）保持输入顺序。
 function selectTipWithLongestTimeSinceShown(availableTips, history, numStartups) {
   const list = Array.isArray(availableTips) ? availableTips : [];
-  if (list.length === 0) return undefined;
-  if (list.length === 1) return list[0];
+  if (list.length === 0) {
+    return undefined;
+  }
+  if (list.length === 1) {
+    return list[0];
+  }
   let best = list[0];
   let bestSince = getSessionsSinceLastShown(best.id, history, numStartups);
   for (let i = 1; i < list.length; i++) {
@@ -125,8 +143,12 @@ function selectTipWithLongestTimeSinceShown(availableTips, history, numStartups)
  */
 function selectStartupTip(state, env) {
   try {
-    if (!tipsEnabled(env)) return null;
-    if (!state || typeof state !== 'object' || Array.isArray(state)) return null;
+    if (!tipsEnabled(env)) {
+      return null;
+    }
+    if (!state || typeof state !== 'object' || Array.isArray(state)) {
+      return null;
+    }
     const s = state;
     const tips = Array.isArray(s.tips) ? s.tips : TIPS;
     const history = s.history && typeof s.history === 'object' ? s.history : {};
@@ -134,7 +156,9 @@ function selectStartupTip(state, env) {
     const ctx = s.ctx && typeof s.ctx === 'object' ? s.ctx : { numStartups };
     const relevant = getRelevantTips(tips, history, numStartups, ctx);
     const tip = selectTipWithLongestTimeSinceShown(relevant, history, numStartups);
-    if (!tip || !tip.id || !tip.text) return null;
+    if (!tip || !tip.id || !tip.text) {
+      return null;
+    }
     return { id: tip.id, text: tip.text };
   } catch {
     return null;

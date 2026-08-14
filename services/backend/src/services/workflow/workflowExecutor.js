@@ -28,28 +28,45 @@ const MAX_STEPS = 1000;
 // ── Pure helpers (exported for unit tests) ───────────────────────────────────
 
 function getPath(obj, path) {
-  if (!obj || !path) return undefined;
-  return String(path).split('.').reduce((acc, k) => (acc == null ? undefined : acc[k]), obj);
+  if (!obj || !path) {
+    return undefined;
+  }
+  return String(path)
+    .split('.')
+    .reduce((acc, k) => (acc == null ? undefined : acc[k]), obj);
 }
 
 // Replace {{ var.path }} occurrences in a template string.
 function interpolate(tmpl, vars) {
-  if (tmpl == null) return '';
+  if (tmpl == null) {
+    return '';
+  }
   return String(tmpl).replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k) => {
     const v = getPath(vars, k);
-    if (v == null) return '';
+    if (v == null) {
+      return '';
+    }
     return typeof v === 'object' ? JSON.stringify(v) : String(v);
   });
 }
 
 // Best-effort extraction of textual output from heterogeneous primitive returns.
 function extractText(res) {
-  if (res == null) return '';
-  if (typeof res === 'string') return res;
+  if (res == null) {
+    return '';
+  }
+  if (typeof res === 'string') {
+    return res;
+  }
   if (typeof res === 'object') {
-    const cand = res.text ?? res.content ?? res.finalResponse ?? res.output ?? res.result ?? res.message;
-    if (cand != null) return typeof cand === 'string' ? cand : JSON.stringify(cand);
-    if (res.data != null) return typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+    const cand =
+      res.text ?? res.content ?? res.finalResponse ?? res.output ?? res.result ?? res.message;
+    if (cand != null) {
+      return typeof cand === 'string' ? cand : JSON.stringify(cand);
+    }
+    if (res.data != null) {
+      return typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+    }
     return JSON.stringify(res);
   }
   return String(res);
@@ -65,14 +82,26 @@ function truncate(text, max = 280) {
 function resolveOperand(tok, vars) {
   const t = String(tok).trim();
   const m = t.match(/^\{\{\s*([\w.]+)\s*\}\}$/);
-  if (m) return getPath(vars, m[1]);
-  if (/^".*"$/.test(t) || /^'.*'$/.test(t)) return t.slice(1, -1);
-  if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
-  if (t === 'true') return true;
-  if (t === 'false') return false;
+  if (m) {
+    return getPath(vars, m[1]);
+  }
+  if (/^".*"$/.test(t) || /^'.*'$/.test(t)) {
+    return t.slice(1, -1);
+  }
+  if (/^-?\d+(\.\d+)?$/.test(t)) {
+    return Number(t);
+  }
+  if (t === 'true') {
+    return true;
+  }
+  if (t === 'false') {
+    return false;
+  }
   if (/^[\w.]+$/.test(t)) {
     const v = getPath(vars, t);
-    if (v !== undefined) return v;
+    if (v !== undefined) {
+      return v;
+    }
   }
   return t;
 }
@@ -80,15 +109,23 @@ function resolveOperand(tok, vars) {
 function compare(a, op, b) {
   const na = Number(a);
   const nb = Number(b);
-  const numeric = a !== '' && b !== '' && a != null && b != null && !Number.isNaN(na) && !Number.isNaN(nb);
+  const numeric =
+    a !== '' && b !== '' && a != null && b != null && !Number.isNaN(na) && !Number.isNaN(nb);
   switch (op) {
-    case '==': return numeric ? na === nb : String(a) === String(b);
-    case '!=': return numeric ? na !== nb : String(a) !== String(b);
-    case '>': return numeric ? na > nb : String(a) > String(b);
-    case '<': return numeric ? na < nb : String(a) < String(b);
-    case '>=': return numeric ? na >= nb : String(a) >= String(b);
-    case '<=': return numeric ? na <= nb : String(a) <= String(b);
-    default: return false;
+    case '==':
+      return numeric ? na === nb : String(a) === String(b);
+    case '!=':
+      return numeric ? na !== nb : String(a) !== String(b);
+    case '>':
+      return numeric ? na > nb : String(a) > String(b);
+    case '<':
+      return numeric ? na < nb : String(a) < String(b);
+    case '>=':
+      return numeric ? na >= nb : String(a) >= String(b);
+    case '<=':
+      return numeric ? na <= nb : String(a) <= String(b);
+    default:
+      return false;
   }
 }
 
@@ -96,7 +133,9 @@ function compare(a, op, b) {
 // truthiness of a single value/var. NEVER executes arbitrary code.
 function evalCondition(expr, vars) {
   const s = String(expr == null ? '' : expr).trim();
-  if (!s) return false;
+  if (!s) {
+    return false;
+  }
   const m = s.match(/^(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+)$/);
   if (!m) {
     const v = resolveOperand(s, vars);
@@ -109,16 +148,24 @@ function evalCondition(expr, vars) {
 // is EXACTLY "{{var}}" preserves the referenced value's type; otherwise the
 // reference is interpolated into the string.
 function resolveArgs(args, vars) {
-  if (args == null) return {};
+  if (args == null) {
+    return {};
+  }
   if (typeof args === 'string') {
     const m = args.match(/^\{\{\s*([\w.]+)\s*\}\}$/);
-    if (m) return getPath(vars, m[1]);
+    if (m) {
+      return getPath(vars, m[1]);
+    }
     return interpolate(args, vars);
   }
-  if (Array.isArray(args)) return args.map((a) => resolveArgs(a, vars));
+  if (Array.isArray(args)) {
+    return args.map((a) => resolveArgs(a, vars));
+  }
   if (typeof args === 'object') {
     const out = {};
-    for (const [k, v] of Object.entries(args)) out[k] = resolveArgs(v, vars);
+    for (const [k, v] of Object.entries(args)) {
+      out[k] = resolveArgs(v, vars);
+    }
     return out;
   }
   return args;
@@ -160,15 +207,20 @@ function defaultPrimitives(ctx = {}) {
       // prompt if the tool surface differs.
       try {
         const AgentTool = require('../../tools/AgentTool');
-        const tool = AgentTool.execute ? AgentTool : (AgentTool.default || AgentTool.AgentTool);
+        const tool = AgentTool.execute ? AgentTool : AgentTool.default || AgentTool.AgentTool;
         if (tool && typeof tool.execute === 'function') {
-          return tool.execute({
-            subagent_type: 'general-purpose',
-            description: spec.agentName || 'workflow sub-agent',
-            prompt: spec.instructions || '',
-          }, {});
+          return tool.execute(
+            {
+              subagent_type: 'general-purpose',
+              description: spec.agentName || 'workflow sub-agent',
+              prompt: spec.instructions || '',
+            },
+            {}
+          );
         }
-      } catch { /* fall through to chat */ }
+      } catch {
+        /* fall through to chat */
+      }
       return this.chat(spec.instructions || '', { model: spec.model });
     },
     async runCode(language, source, vars) {
@@ -200,7 +252,9 @@ function defaultPrimitives(ctx = {}) {
 
 function loopStateToObj(map) {
   const o = {};
-  for (const [k, v] of map) o[k] = v;
+  for (const [k, v] of map) {
+    o[k] = v;
+  }
   return o;
 }
 
@@ -239,8 +293,10 @@ async function runGraph(graph, options = {}) {
   const nodeList = Array.isArray(graph.nodes) ? graph.nodes : [];
   const nodes = new Map(nodeList.map((n) => [n.id, n]));
   const outEdges = new Map();
-  for (const c of (Array.isArray(graph.connections) ? graph.connections : [])) {
-    if (!outEdges.has(c.from)) outEdges.set(c.from, []);
+  for (const c of Array.isArray(graph.connections) ? graph.connections : []) {
+    if (!outEdges.has(c.from)) {
+      outEdges.set(c.from, []);
+    }
     outEdges.get(c.from).push(c);
   }
 
@@ -251,7 +307,9 @@ async function runGraph(graph, options = {}) {
   };
 
   const start = nodeList.find((n) => n.type === 'start');
-  if (!start) throw new Error('graph has no start node');
+  if (!start) {
+    throw new Error('graph has no start node');
+  }
 
   // Resume from a durable checkpoint (cross-process human-in-the-loop OR quantum
   // preemption). A quantum resume ONLY repositions the cursor — the node it
@@ -262,12 +320,16 @@ async function runGraph(graph, options = {}) {
   const isQuantumResume = !!(resume && resume.kind === 'quantum');
   const loopState = new Map();
   if (resume && resume.loopState && typeof resume.loopState === 'object') {
-    for (const [k, v] of Object.entries(resume.loopState)) loopState.set(k, v);
+    for (const [k, v] of Object.entries(resume.loopState)) {
+      loopState.set(k, v);
+    }
   }
   let resumeNodeId = resume && !isQuantumResume ? resume.nodeId : null;
   let pendingAnswer = resume && !isQuantumResume ? resume.answer : undefined;
   let cur = resume ? nodes.get(resume.nodeId) : start;
-  if (resume && !cur) throw new Error(`resume node ${resume.nodeId} not found in graph`);
+  if (resume && !cur) {
+    throw new Error(`resume node ${resume.nodeId} not found in graph`);
+  }
   let steps = 0;
 
   while (cur) {
@@ -276,7 +338,12 @@ async function runGraph(graph, options = {}) {
     }
     const node = cur;
     const d = node.data || {};
-    const entry = { nodeId: node.id, type: node.type, name: node.name || node.type, status: 'running' };
+    const entry = {
+      nodeId: node.id,
+      type: node.type,
+      name: node.name || node.type,
+      status: 'running',
+    };
     let port = 'default';
 
     try {
@@ -293,7 +360,9 @@ async function runGraph(graph, options = {}) {
         case 'prompt': {
           const text = interpolate(d.prompt, vars);
           const value = extractText(await primitives.chat(text, { model: d.model || undefined }));
-          if (d.outputVar) vars[d.outputVar] = value;
+          if (d.outputVar) {
+            vars[d.outputVar] = value;
+          }
           entry.summary = truncate(value);
           break;
         }
@@ -312,7 +381,9 @@ async function runGraph(graph, options = {}) {
           const items = forEach && Array.isArray(vars[d.itemsVar]) ? vars[d.itemsVar] : null;
           const limit = forEach ? (items ? items.length : 0) : Number(d.count || 0);
           if (st.i < limit) {
-            if (forEach && items) vars[d.itemVar || 'item'] = items[st.i];
+            if (forEach && items) {
+              vars[d.itemVar || 'item'] = items[st.i];
+            }
             st.i += 1;
             port = 'loop-body';
             entry.summary = `迭代 ${st.i}/${limit}`;
@@ -330,27 +401,37 @@ async function runGraph(graph, options = {}) {
         }
 
         case 'toolCall': {
-          const value = extractText(await primitives.executeTool(d.tool, resolveArgs(d.args, vars)));
-          if (d.outputVar) vars[d.outputVar] = value;
+          const value = extractText(
+            await primitives.executeTool(d.tool, resolveArgs(d.args, vars))
+          );
+          if (d.outputVar) {
+            vars[d.outputVar] = value;
+          }
           entry.summary = truncate(value);
           break;
         }
 
         case 'skill': {
-          const value = extractText(await primitives.executeSkill(d.skillName, resolveArgs(d.args, vars)));
+          const value = extractText(
+            await primitives.executeSkill(d.skillName, resolveArgs(d.args, vars))
+          );
           entry.summary = truncate(value);
           break;
         }
 
         case 'subAgent': {
-          const value = extractText(await primitives.runSubAgent({
-            agentName: d.agentName,
-            instructions: interpolate(d.instructions, vars),
-            model: d.model || undefined,
-            tools: d.tools,
-            maxTurns: d.maxTurns,
-          }));
-          if (d.outputVar) vars[d.outputVar] = value;
+          const value = extractText(
+            await primitives.runSubAgent({
+              agentName: d.agentName,
+              instructions: interpolate(d.instructions, vars),
+              model: d.model || undefined,
+              tools: d.tools,
+              maxTurns: d.maxTurns,
+            })
+          );
+          if (d.outputVar) {
+            vars[d.outputVar] = value;
+          }
           entry.summary = truncate(value);
           break;
         }
@@ -358,7 +439,9 @@ async function runGraph(graph, options = {}) {
         case 'code': {
           const source = interpolate(d.source, vars);
           const value = extractText(await primitives.runCode(d.language || 'bash', source, vars));
-          if (d.outputVar) vars[d.outputVar] = value;
+          if (d.outputVar) {
+            vars[d.outputVar] = value;
+          }
           entry.summary = truncate(value);
           break;
         }
@@ -370,7 +453,9 @@ async function runGraph(graph, options = {}) {
             headers: resolveArgs(d.headers, vars),
             body: d.body ? interpolate(d.body, vars) : undefined,
           });
-          if (d.outputVar) vars[d.outputVar] = res;
+          if (d.outputVar) {
+            vars[d.outputVar] = res;
+          }
           entry.summary = truncate(extractText(res));
           break;
         }
@@ -381,7 +466,9 @@ async function runGraph(graph, options = {}) {
           // when pausing is not requested, auto-answer with the first option.
           if (resumeNodeId === node.id) {
             const answer = pendingAnswer == null ? '' : pendingAnswer;
-            if (d.answerVar) vars[d.answerVar] = answer;
+            if (d.answerVar) {
+              vars[d.answerVar] = answer;
+            }
             entry.status = 'succeeded';
             entry.summary = `已收到回答：${truncate(answer) || '(空)'}`;
             // Checkpoint consumed — clear so later asks pause normally.
@@ -408,7 +495,9 @@ async function runGraph(graph, options = {}) {
             };
           }
           const answer = (Array.isArray(d.options) && d.options[0]) || '';
-          if (d.answerVar) vars[d.answerVar] = answer;
+          if (d.answerVar) {
+            vars[d.answerVar] = answer;
+          }
           entry.status = 'skipped';
           entry.summary = `人机交互占位，自动答：${answer || '(空)'}`;
           break;
@@ -419,7 +508,9 @@ async function runGraph(graph, options = {}) {
           entry.summary = `未知节点类型 ${node.type}，已跳过`;
       }
 
-      if (entry.status === 'running') entry.status = 'succeeded';
+      if (entry.status === 'running') {
+        entry.status = 'succeeded';
+      }
     } catch (err) {
       entry.status = 'failed';
       entry.error = err && err.message ? err.message : String(err);

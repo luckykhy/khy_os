@@ -49,7 +49,9 @@ function isEnabled(env) {
     if (flagRegistry.isRegistryEnabled(e)) {
       return flagRegistry.isFlagEnabled('KHY_PROCEDURE_CATALOG', e);
     }
-  } catch { /* 注册表异常 → 回退手写判定 */ }
+  } catch {
+    /* 注册表异常 → 回退手写判定 */
+  }
   return !_off(e.KHY_PROCEDURE_CATALOG);
 }
 
@@ -64,8 +66,26 @@ const PROCEDURES = Object.freeze([
     taskType: '配置模型 / API Key',
     title: '配置模型 provider / API Key 流程',
     when: Object.freeze({
-      keywords: Object.freeze(['配置', '配好', '设置模型', 'api key', 'apikey', '密钥', '换key', '加key',
-        '智谱', 'glm', 'deepseek', 'kimi', '通义', 'agnes', 'sensenova', 'provider', '渠道', '接入模型']),
+      keywords: Object.freeze([
+        '配置',
+        '配好',
+        '设置模型',
+        'api key',
+        'apikey',
+        '密钥',
+        '换key',
+        '加key',
+        '智谱',
+        'glm',
+        'deepseek',
+        'kimi',
+        '通义',
+        'agnes',
+        'sensenova',
+        'provider',
+        '渠道',
+        '接入模型',
+      ]),
       tools: Object.freeze(['configureModelProvider', 'ConfigureModelProvider']),
     }),
     steps: Object.freeze([
@@ -88,7 +108,18 @@ const PROCEDURES = Object.freeze([
     taskType: '改代码',
     title: '安全改代码流程',
     when: Object.freeze({
-      keywords: Object.freeze(['改代码', '修改', '编辑', '重构', '修复', '实现', '加功能', '改文件', 'bug', 'fix']),
+      keywords: Object.freeze([
+        '改代码',
+        '修改',
+        '编辑',
+        '重构',
+        '修复',
+        '实现',
+        '加功能',
+        '改文件',
+        'bug',
+        'fix',
+      ]),
       tools: Object.freeze(['FileEdit', 'Edit', 'Write', 'MultiEdit', 'ApplyPatch']),
     }),
     steps: Object.freeze([
@@ -110,7 +141,17 @@ const PROCEDURES = Object.freeze([
     taskType: '加开关/门控/纯叶子',
     title: '新增 KHY_* 门控 + 纯叶子流程',
     when: Object.freeze({
-      keywords: Object.freeze(['门控', '开关', 'flag', 'feature flag', 'khy_', '纯叶子', 'leaf', '默认开', '灰度']),
+      keywords: Object.freeze([
+        '门控',
+        '开关',
+        'flag',
+        'feature flag',
+        'khy_',
+        '纯叶子',
+        'leaf',
+        '默认开',
+        '灰度',
+      ]),
       tools: Object.freeze([]),
     }),
     steps: Object.freeze([
@@ -132,7 +173,22 @@ const PROCEDURES = Object.freeze([
     taskType: '排查报错/失败',
     title: '排查失败与报错流程',
     when: Object.freeze({
-      keywords: Object.freeze(['报错', '失败', '错误', '异常', '不工作', '不生效', '崩溃', 'error', '401', '403', '404', '500', 'timeout', '超时']),
+      keywords: Object.freeze([
+        '报错',
+        '失败',
+        '错误',
+        '异常',
+        '不工作',
+        '不生效',
+        '崩溃',
+        'error',
+        '401',
+        '403',
+        '404',
+        '500',
+        'timeout',
+        '超时',
+      ]),
       tools: Object.freeze([]),
     }),
     steps: Object.freeze([
@@ -155,8 +211,25 @@ const PROCEDURES = Object.freeze([
     taskType: '下载/部署项目·便携版',
     title: '下载部署项目 / 转便携版流程',
     when: Object.freeze({
-      keywords: Object.freeze(['下载', '部署', '安装', '便携', '便携版', '绿色版', '免安装', 'portable',
-        'deploy', 'install', '装一下', '搭一下', '跑起来', '本地部署', '发布资产', '二进制', 'binary']),
+      keywords: Object.freeze([
+        '下载',
+        '部署',
+        '安装',
+        '便携',
+        '便携版',
+        '绿色版',
+        '免安装',
+        'portable',
+        'deploy',
+        'install',
+        '装一下',
+        '搭一下',
+        '跑起来',
+        '本地部署',
+        '发布资产',
+        '二进制',
+        'binary',
+      ]),
       tools: Object.freeze(['shellCommand', 'ShellCommand', 'WebFetch']),
     }),
     steps: Object.freeze([
@@ -179,7 +252,19 @@ const PROCEDURES = Object.freeze([
     taskType: '联网搜索/取网页',
     title: '联网搜索与网页读取流程',
     when: Object.freeze({
-      keywords: Object.freeze(['搜索', '搜一下', '查一下', '联网', '最新', '新闻', '网页', '打开链接', '取网页', 'search', '查资料']),
+      keywords: Object.freeze([
+        '搜索',
+        '搜一下',
+        '查一下',
+        '联网',
+        '最新',
+        '新闻',
+        '网页',
+        '打开链接',
+        '取网页',
+        'search',
+        '查资料',
+      ]),
       tools: Object.freeze(['WebSearch', 'WebFetch']),
     }),
     steps: Object.freeze([
@@ -189,17 +274,25 @@ const PROCEDURES = Object.freeze([
       '给出结论时**附来源 URL**,不编造事实与链接。',
       '抓不到 / 被墙:说明情况并给已有信息,不要反复重试同一 URL。',
     ]),
-    pitfalls: Object.freeze([
-      '单来源直接下结论。',
-      '编造 URL 或事实。',
-    ]),
+    pitfalls: Object.freeze(['单来源直接下结论。', '编造 URL 或事实。']),
   }),
   Object.freeze({
     id: 'vision-task',
     taskType: '识图/视觉',
     title: '图像识别与视觉失败恢复流程',
     when: Object.freeze({
-      keywords: Object.freeze(['图片', '图像', '截图', '识别', '识图', '看图', 'ocr', '这张图', '照片', 'vision']),
+      keywords: Object.freeze([
+        '图片',
+        '图像',
+        '截图',
+        '识别',
+        '识图',
+        '看图',
+        'ocr',
+        '这张图',
+        '照片',
+        'vision',
+      ]),
       tools: Object.freeze(['RecognizeImage', 'ImageOCR']),
     }),
     steps: Object.freeze([
@@ -219,9 +312,25 @@ const PROCEDURES = Object.freeze([
     taskType: '发布版本',
     title: '发布 / 出包版本流程(先干跑再真发)',
     when: Object.freeze({
-      keywords: Object.freeze(['发布', '发版', 'release', 'publish', '出包', '出版本',
-        '上传', 'npm', 'pypi', 'testpypi', '打标签', '干跑', 'dry-run', 'dryrun',
-        '彩排', '正式发', '发包']),
+      keywords: Object.freeze([
+        '发布',
+        '发版',
+        'release',
+        'publish',
+        '出包',
+        '出版本',
+        '上传',
+        'npm',
+        'pypi',
+        'testpypi',
+        '打标签',
+        '干跑',
+        'dry-run',
+        'dryrun',
+        '彩排',
+        '正式发',
+        '发包',
+      ]),
       tools: Object.freeze([]),
     }),
     steps: Object.freeze([
@@ -252,17 +361,25 @@ const PROCEDURES = Object.freeze([
       '提交信息结尾加 `Co-Authored-By` 尾注(仓库既有约定)。',
       '**只在用户明确要求时才 push**;不确定就先提交不推送并告知。',
     ]),
-    pitfalls: Object.freeze([
-      '直接往 main 提 / 未经允许就 push。',
-      '一把 add . 夹带无关改动。',
-    ]),
+    pitfalls: Object.freeze(['直接往 main 提 / 未经允许就 push。', '一把 add . 夹带无关改动。']),
   }),
   Object.freeze({
     id: 'verify-and-report',
     taskType: '验证与收尾',
     title: '验证并诚实报告流程',
     when: Object.freeze({
-      keywords: Object.freeze(['验证', '测试', '跑一下', '完成了吗', '确认', '收尾', '检查', 'test', 'verify', '守卫']),
+      keywords: Object.freeze([
+        '验证',
+        '测试',
+        '跑一下',
+        '完成了吗',
+        '确认',
+        '收尾',
+        '检查',
+        'test',
+        'verify',
+        '守卫',
+      ]),
       tools: Object.freeze([]),
     }),
     steps: Object.freeze([
@@ -272,10 +389,7 @@ const PROCEDURES = Object.freeze([
       '任务确实做完且验证过,才明确说「完成」——不含糊、不谎报。',
       '别用 --no-verify 强推过守卫;守卫红=真问题,先修到自己变绿。',
     ]),
-    pitfalls: Object.freeze([
-      '没跑测试就宣称完成。',
-      '谎报绿 / 用 --no-verify 掩盖问题。',
-    ]),
+    pitfalls: Object.freeze(['没跑测试就宣称完成。', '谎报绿 / 用 --no-verify 掩盖问题。']),
   }),
 ]);
 
@@ -286,7 +400,9 @@ const PROCEDURES = Object.freeze([
  * @returns {Array<object>} 每条含 id/taskType/title/when/steps/pitfalls 的**浅拷贝**
  */
 function listProcedures(opts = {}, env) {
-  if (!isEnabled(env)) return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
   const id = opts && opts.id != null ? String(opts.id).trim() : '';
   const taskType = opts && opts.taskType != null ? String(opts.taskType).trim() : '';
   let rows = PROCEDURES.map((p) => ({
@@ -297,8 +413,12 @@ function listProcedures(opts = {}, env) {
     steps: p.steps.slice(),
     pitfalls: p.pitfalls.slice(),
   }));
-  if (id) rows = rows.filter((p) => p.id === id);
-  if (taskType) rows = rows.filter((p) => p.taskType === taskType);
+  if (id) {
+    rows = rows.filter((p) => p.id === id);
+  }
+  if (taskType) {
+    rows = rows.filter((p) => p.taskType === taskType);
+  }
   return rows;
 }
 
@@ -327,17 +447,25 @@ function _normSignal(signal) {
  */
 function matchProcedure(signal, env) {
   try {
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const { text, toolName } = _normSignal(signal);
-    if (!text && !toolName) return null;
+    if (!text && !toolName) {
+      return null;
+    }
     let best = null;
     let bestScore = 0;
     for (const p of PROCEDURES) {
       let score = 0;
-      if (toolName && p.when.tools.includes(toolName)) score += 3;
+      if (toolName && p.when.tools.includes(toolName)) {
+        score += 3;
+      }
       if (text) {
         for (const kw of p.when.keywords) {
-          if (kw && text.includes(kw)) score += 1;
+          if (kw && text.includes(kw)) {
+            score += 1;
+          }
         }
       }
       if (score > bestScore) {
@@ -345,7 +473,9 @@ function matchProcedure(signal, env) {
         best = p;
       }
     }
-    if (!best || bestScore <= 0) return null;
+    if (!best || bestScore <= 0) {
+      return null;
+    }
     return listProcedures({ id: best.id }, env)[0] || null;
   } catch {
     return null; // 纯叶子:异常 → 安全默认(null),绝不抛
@@ -359,9 +489,13 @@ function matchProcedure(signal, env) {
  * @returns {string}
  */
 function buildProcedureBlock(proc) {
-  if (!proc || !Array.isArray(proc.steps) || proc.steps.length === 0) return '';
-  const lines = [`## 照着做:${proc.title}`,
-    '这是本类任务的确定性流程。**按编号一步步做,不要即兴发挥、不要跳步。**'];
+  if (!proc || !Array.isArray(proc.steps) || proc.steps.length === 0) {
+    return '';
+  }
+  const lines = [
+    `## 照着做:${proc.title}`,
+    '这是本类任务的确定性流程。**按编号一步步做,不要即兴发挥、不要跳步。**',
+  ];
   proc.steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
   if (Array.isArray(proc.pitfalls) && proc.pitfalls.length) {
     lines.push('避坑:');
@@ -378,7 +512,9 @@ function buildProcedureBlock(proc) {
  */
 function buildProcedureDirective(env) {
   try {
-    if (!isEnabled(env)) return '';
+    if (!isEnabled(env)) {
+      return '';
+    }
     const lines = [
       '## 照流程做事(别开盲盒)',
       '下面是几套针对高频任务的确定性流程。当你的当前任务命中其中一类时,**照着那套编号步骤一步步做,不要即兴发挥**——流程就是用来把不确定性压下去的。需要完整步骤时,系统会在该任务开始时把匹配到的那套流程注入给你。',

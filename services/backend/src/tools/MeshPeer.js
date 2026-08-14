@@ -23,13 +23,14 @@ function _selfId(context) {
 module.exports = defineTool({
   name: 'MeshPeer',
   description:
-    'Collaborate with OTHER running khy instances on this machine (Claude Code-aligned multi-instance mesh). '
-    + 'action="peers" lists live peer instances; "send" delivers a message to a peer (by id); '
-    + '"inbox" drains messages addressed to you; "attach"/"detach" set or clear your default peer. '
-    + 'Distinct from in-process teammates/coordinator and from cross-machine remote — this is same-machine, separate processes.',
+    'Collaborate with OTHER running khy instances on this machine (Claude Code-aligned multi-instance mesh). ' +
+    'action="peers" lists live peer instances; "send" delivers a message to a peer (by id); ' +
+    '"inbox" drains messages addressed to you; "attach"/"detach" set or clear your default peer. ' +
+    'Distinct from in-process teammates/coordinator and from cross-machine remote — this is same-machine, separate processes.',
   category: 'coordinator',
   risk: 'low',
   aliases: ['mesh', 'peer', 'peers', 'meshPeer'],
+  searchHint: 'mesh network discovery node collaborate 组网 节点 协作 发现设备',
   isReadOnly: (params) => {
     const a = String((params && params.action) || 'peers').toLowerCase();
     return a === 'peers' || a === 'inbox';
@@ -45,7 +46,8 @@ module.exports = defineTool({
     to: {
       type: 'string',
       required: false,
-      description: 'Target peer instance id (for send/attach). If omitted on send, uses your attached peer.',
+      description:
+        'Target peer instance id (for send/attach). If omitted on send, uses your attached peer.',
     },
     message: {
       type: 'string',
@@ -67,18 +69,27 @@ module.exports = defineTool({
 
     const self = _selfId(context);
     if (!self) {
-      return { success: false, error: 'Cannot resolve this instance id (no session id in context); mesh requires a running session.' };
+      return {
+        success: false,
+        error:
+          'Cannot resolve this instance id (no session id in context); mesh requires a running session.',
+      };
     }
     // 首次使用即把本会话登记进网格(幂等;保留既有 startedAt/attachedTo)。
     const reg = store.register({ id: self, name: (params && params.name) || undefined });
-    if (!reg.ok) return { success: false, error: `register failed: ${reg.error}` };
+    if (!reg.ok) {
+      return { success: false, error: `register failed: ${reg.error}` };
+    }
 
     const action = String((params && params.action) || 'peers').toLowerCase();
 
     try {
       if (action === 'peers') {
         const peers = store.listPeers({ selfId: self });
-        return { success: true, data: { self, count: peers.length, summary: core.buildPeersSummary(peers), peers } };
+        return {
+          success: true,
+          data: { self, count: peers.length, summary: core.buildPeersSummary(peers), peers },
+        };
       }
 
       if (action === 'inbox') {
@@ -102,24 +113,37 @@ module.exports = defineTool({
           const me = store.getPeer(self);
           to = me && core.normalizeId(me.attachedTo);
         }
-        if (!to) return { success: false, error: 'No target: pass `to`, or attach to a peer first.' };
+        if (!to) {
+          return { success: false, error: 'No target: pass `to`, or attach to a peer first.' };
+        }
         const text = String((params && params.message) || '');
         const res = store.send(self, to, text);
-        if (!res.ok) return { success: false, error: res.error };
+        if (!res.ok) {
+          return { success: false, error: res.error };
+        }
         return { success: true, data: { self, to, summary: core.buildSendSummary(res) } };
       }
 
       if (action === 'attach') {
         const to = core.normalizeId(params && params.to);
-        if (!to) return { success: false, error: '`to` (peer id) is required for attach.' };
+        if (!to) {
+          return { success: false, error: '`to` (peer id) is required for attach.' };
+        }
         const res = store.attach(self, to);
-        if (!res.ok) return { success: false, error: res.error };
-        return { success: true, data: { self, attachedTo: to, summary: `已挂接到实例「${to}」,后续 send 默认发往它。` } };
+        if (!res.ok) {
+          return { success: false, error: res.error };
+        }
+        return {
+          success: true,
+          data: { self, attachedTo: to, summary: `已挂接到实例「${to}」,后续 send 默认发往它。` },
+        };
       }
 
       if (action === 'detach') {
         const res = store.detach(self);
-        if (!res.ok) return { success: false, error: res.error };
+        if (!res.ok) {
+          return { success: false, error: res.error };
+        }
         return { success: true, data: { self, summary: '已解除挂接。' } };
       }
 

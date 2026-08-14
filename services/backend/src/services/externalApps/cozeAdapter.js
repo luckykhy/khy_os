@@ -25,15 +25,21 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const yaml = require('js-yaml');
+
 const S = require('./_shared');
 
 const APP = 'coze';
 
 /** 返回 model 模板目录(可能为 null:未指明项目根)。 */
 function _modelDir(env = process.env) {
-  if (env && env.COZE_MODEL_DIR) return S.expandHome(env.COZE_MODEL_DIR, env);
-  if (env && env.COZE_HOME) return path.join(S.expandHome(env.COZE_HOME, env), 'backend', 'conf', 'model');
+  if (env && env.COZE_MODEL_DIR) {
+    return S.expandHome(env.COZE_MODEL_DIR, env);
+  }
+  if (env && env.COZE_HOME) {
+    return path.join(S.expandHome(env.COZE_HOME, env), 'backend', 'conf', 'model');
+  }
   return null;
 }
 
@@ -52,7 +58,13 @@ function list(env = process.env) {
   try {
     const dir = _modelDir(env);
     if (!dir || !fs.existsSync(dir)) {
-      return { success: true, app: APP, providers: [], model: '', note: dir ? '' : 'coze 项目根未指明(设 COZE_HOME 或 COZE_MODEL_DIR)' };
+      return {
+        success: true,
+        app: APP,
+        providers: [],
+        model: '',
+        note: dir ? '' : 'coze 项目根未指明(设 COZE_HOME 或 COZE_MODEL_DIR)',
+      };
     }
     const files = fs.readdirSync(dir).filter((f) => /^model_template_.*\.ya?ml$/.test(f));
     const providers = [];
@@ -76,15 +88,25 @@ function get(target, env = process.env) {
   try {
     const dir = _modelDir(env);
     const id = String(target || '').toLowerCase();
-    if (!dir) return { success: false, app: APP, error: 'coze 项目根未指明' };
+    if (!dir) {
+      return { success: false, app: APP, error: 'coze 项目根未指明' };
+    }
     const file = path.join(dir, _templateName(id));
     const text = S.readIfExists(file);
-    if (text == null) return { success: false, app: APP, error: `template not found: ${id}` };
+    if (text == null) {
+      return { success: false, app: APP, error: `template not found: ${id}` };
+    }
     const doc = yaml.load(text) || {};
     const cc = (doc.meta && doc.meta.conn_config) || {};
     return {
-      success: true, app: APP,
-      provider: { id: doc.name || id, models: cc.model ? [cc.model] : [], endpoint: cc.base_url || '', hasKey: Boolean(cc.api_key) },
+      success: true,
+      app: APP,
+      provider: {
+        id: doc.name || id,
+        models: cc.model ? [cc.model] : [],
+        endpoint: cc.base_url || '',
+        hasKey: Boolean(cc.api_key),
+      },
     };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
@@ -111,7 +133,9 @@ function _buildTemplate({ id, provider, model, apiKey, endpoint }) {
 function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
   try {
     const id = String(provider || model || '').toLowerCase();
-    if (!id) return { success: false, app: APP, error: 'provider or model is required' };
+    if (!id) {
+      return { success: false, app: APP, error: 'provider or model is required' };
+    }
 
     const resolvedKey = S.resolveApiKey(provider, apiKey);
     const resolvedEndpoint = S.resolveEndpoint(provider, endpoint);
@@ -122,12 +146,24 @@ function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
     // 无项目根 → 降级:回传可写入 YAML,不猜路径落盘。
     if (!dir) {
       const yamlText = _buildTemplate({
-        id: 100001, provider, model: resolvedModel, apiKey: resolvedKey.key, endpoint: resolvedEndpoint,
+        id: 100001,
+        provider,
+        model: resolvedModel,
+        apiKey: resolvedKey.key,
+        endpoint: resolvedEndpoint,
       });
       return {
-        success: true, app: APP, action: 'add', degraded: true, provider: id,
-        model: resolvedModel, endpoint: resolvedEndpoint, keySource: resolvedKey.source,
-        keyMasked: S.maskKey(resolvedKey.key), suggestedFile: templateName, yaml: yamlText,
+        success: true,
+        app: APP,
+        action: 'add',
+        degraded: true,
+        provider: id,
+        model: resolvedModel,
+        endpoint: resolvedEndpoint,
+        keySource: resolvedKey.source,
+        keyMasked: S.maskKey(resolvedKey.key),
+        suggestedFile: templateName,
+        yaml: yamlText,
         note: 'coze 项目根未指明:请将以下 YAML 存到 backend/conf/model/(或设 COZE_HOME 后重试落盘)',
       };
     }
@@ -135,21 +171,36 @@ function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
     const file = path.join(dir, templateName);
     // merge:已存则保留原 id,只更新 conn_config。
     const existing = S.readIfExists(file);
-    const doc = existing ? (yaml.load(existing) || {}) : {};
+    const doc = existing ? yaml.load(existing) || {} : {};
     doc.id = doc.id || 100001;
     doc.name = resolvedModel || provider || doc.name;
     doc.meta = doc.meta && typeof doc.meta === 'object' ? doc.meta : {};
-    if (!doc.meta.protocol) doc.meta.protocol = 'openai';
-    doc.meta.conn_config = doc.meta.conn_config && typeof doc.meta.conn_config === 'object' ? doc.meta.conn_config : {};
-    if (resolvedEndpoint) doc.meta.conn_config.base_url = resolvedEndpoint;
-    if (resolvedKey.key) doc.meta.conn_config.api_key = resolvedKey.key;
-    if (resolvedModel) doc.meta.conn_config.model = resolvedModel;
+    if (!doc.meta.protocol) {
+      doc.meta.protocol = 'openai';
+    }
+    doc.meta.conn_config =
+      doc.meta.conn_config && typeof doc.meta.conn_config === 'object' ? doc.meta.conn_config : {};
+    if (resolvedEndpoint) {
+      doc.meta.conn_config.base_url = resolvedEndpoint;
+    }
+    if (resolvedKey.key) {
+      doc.meta.conn_config.api_key = resolvedKey.key;
+    }
+    if (resolvedModel) {
+      doc.meta.conn_config.model = resolvedModel;
+    }
 
     S.atomicWrite(file, yaml.dump(doc, { lineWidth: -1 }));
     return {
-      success: true, app: APP, action: 'add', provider: id,
-      model: resolvedModel, endpoint: resolvedEndpoint,
-      keySource: resolvedKey.source, keyMasked: S.maskKey(resolvedKey.key), file,
+      success: true,
+      app: APP,
+      action: 'add',
+      provider: id,
+      model: resolvedModel,
+      endpoint: resolvedEndpoint,
+      keySource: resolvedKey.source,
+      keyMasked: S.maskKey(resolvedKey.key),
+      file,
     };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
@@ -159,15 +210,26 @@ function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
 function remove({ target, confirmed } = {}, env = process.env) {
   try {
     const id = String(target || '').toLowerCase();
-    if (!id) return { success: false, app: APP, error: 'target is required' };
+    if (!id) {
+      return { success: false, app: APP, error: 'target is required' };
+    }
     const dir = _modelDir(env);
-    if (!dir) return { success: false, app: APP, error: 'coze 项目根未指明' };
+    if (!dir) {
+      return { success: false, app: APP, error: 'coze 项目根未指明' };
+    }
     const file = path.join(dir, _templateName(id));
-    if (!fs.existsSync(file)) return { success: false, app: APP, error: `template not found: ${id}` };
+    if (!fs.existsSync(file)) {
+      return { success: false, app: APP, error: `template not found: ${id}` };
+    }
 
     if (!confirmed) {
       return {
-        success: true, app: APP, action: 'remove', preview: true, confirmed: false, target: id,
+        success: true,
+        app: APP,
+        action: 'remove',
+        preview: true,
+        confirmed: false,
+        target: id,
         message: `将删除 ${APP} 模板文件「${_templateName(id)}」。回复「确认删除」以执行。`,
       };
     }
@@ -187,7 +249,9 @@ function remove({ target, confirmed } = {}, env = process.env) {
 function usable(env = process.env) {
   try {
     const dir = _modelDir(env);
-    if (!dir || !fs.existsSync(dir)) return { success: true, app: APP, providers: [] };
+    if (!dir || !fs.existsSync(dir)) {
+      return { success: true, app: APP, providers: [] };
+    }
     const files = fs.readdirSync(dir).filter((f) => /^model_template_.*\.ya?ml$/.test(f));
     const providers = [];
     for (const f of files) {

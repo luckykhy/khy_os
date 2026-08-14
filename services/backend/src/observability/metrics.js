@@ -1,6 +1,7 @@
 'use strict';
 
 const { timingSafeEqual } = require('crypto');
+
 const { Router } = require('express');
 const { Registry, collectDefaultMetrics, Counter, Histogram, Gauge } = require('prom-client');
 
@@ -12,12 +13,18 @@ function parseBool(value, fallback = false) {
 function normalizePath(rawPath) {
   const input = String(rawPath || '/');
   const path = input.split('?')[0] || '/';
-  if (path === '/' || path === '/health' || path === '/api/health') return path;
+  if (path === '/' || path === '/health' || path === '/api/health') {
+    return path;
+  }
 
   const segments = path.split('/').filter(Boolean);
-  if (segments.length === 0) return '/';
+  if (segments.length === 0) {
+    return '/';
+  }
   if (segments[0] === 'api') {
-    if (segments.length === 1) return '/api';
+    if (segments.length === 1) {
+      return '/api';
+    }
     return `/api/${segments[1]}/#path`;
   }
   return `/${segments[0]}/#path`;
@@ -32,7 +39,9 @@ function extractBearerToken(authHeader) {
 function secureTokenEqual(expected, actual) {
   const expectedBuf = Buffer.from(String(expected), 'utf8');
   const actualBuf = Buffer.from(String(actual), 'utf8');
-  if (expectedBuf.length !== actualBuf.length) return false;
+  if (expectedBuf.length !== actualBuf.length) {
+    return false;
+  }
   return timingSafeEqual(expectedBuf, actualBuf);
 }
 
@@ -161,4 +170,3 @@ module.exports = {
   createMetrics,
   normalizePath,
 };
-

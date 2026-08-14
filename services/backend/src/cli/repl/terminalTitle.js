@@ -34,14 +34,18 @@ let _titleSpinnerTimer = null;
 let _titleSpinnerIdx = 0;
 
 function _startTitleSpinner() {
-  if (_titleSpinnerTimer) return;
+  if (_titleSpinnerTimer) {
+    return;
+  }
   _titleSpinnerIdx = 0;
   _titleSpinnerTimer = setInterval(() => {
     const frame = _titleSpinnerFrames[_titleSpinnerIdx % _titleSpinnerFrames.length];
     _titleSpinnerIdx++;
     setTerminalTitle(`${frame} ${_currentTopic || 'khy OS'}`);
   }, 200);
-  if (_titleSpinnerTimer.unref) _titleSpinnerTimer.unref();
+  if (_titleSpinnerTimer.unref) {
+    _titleSpinnerTimer.unref();
+  }
 }
 
 function _stopTitleSpinner() {

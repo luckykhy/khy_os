@@ -37,11 +37,18 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']); // CANON off-words
  */
 function isEnabled(env = process.env) {
   try {
-    return require('../flagRegistry').isFlagEnabled('KHY_MNF_COOLDOWN_PER_MODEL', env || process.env);
-  } catch { /* fall through to local */ }
+    return require('../flagRegistry').isFlagEnabled(
+      'KHY_MNF_COOLDOWN_PER_MODEL',
+      env || process.env
+    );
+  } catch {
+    /* fall through to local */
+  }
   try {
     const raw = (env || process.env).KHY_MNF_COOLDOWN_PER_MODEL;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -49,7 +56,9 @@ function isEnabled(env = process.env) {
 }
 
 function _norm(s) {
-  return String(s == null ? '' : s).trim().toLowerCase();
+  return String(s == null ? '' : s)
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -67,15 +76,25 @@ function _norm(s) {
  */
 function shouldBypassModelNotFoundCooldown(opts = {}) {
   try {
-    if (!isEnabled(opts && opts.env)) return false;
+    if (!isEnabled(opts && opts.env)) {
+      return false;
+    }
     const cached = opts && opts.cached;
-    if (!cached) return false;
-    if (_norm(cached.errorType) !== 'model_not_found') return false;
+    if (!cached) {
+      return false;
+    }
+    if (_norm(cached.errorType) !== 'model_not_found') {
+      return false;
+    }
     const currentModel = _norm(opts.currentModel);
-    if (!currentModel) return false;          // 当前模型未知 → 保守,尊重冷却
+    if (!currentModel) {
+      return false;
+    } // 当前模型未知 → 保守,尊重冷却
     const cachedModel = _norm(cached.model);
-    if (!cachedModel) return false;           // 旧记录无模型串 → 保守,逐字节回退
-    return currentModel !== cachedModel;      // 不同模型 → 该 404 与本模型无关,放行真实尝试
+    if (!cachedModel) {
+      return false;
+    } // 旧记录无模型串 → 保守,逐字节回退
+    return currentModel !== cachedModel; // 不同模型 → 该 404 与本模型无关,放行真实尝试
   } catch {
     return false;
   }
@@ -87,9 +106,10 @@ function describeModelNotFoundCooldownScope() {
     gate: 'KHY_MNF_COOLDOWN_PER_MODEL',
     parent: 'KHY_MODEL_NOT_FOUND_RECOVERY',
     defaultOn: true,
-    summary: 'model_not_found 的 fast-fail 冷却从「按通道」收窄为「按模型」:当前请求的模型串与'
-      + '造成 404 的模型串不同(如复合 id 剥成裸名后)→ 放行做真实尝试,当轮即可救回;相同模型串仍尊重冷却。'
-      + '门控关 / 当前或缓存模型串缺失 → 逐字节回退今日按通道冷却。',
+    summary:
+      'model_not_found 的 fast-fail 冷却从「按通道」收窄为「按模型」:当前请求的模型串与' +
+      '造成 404 的模型串不同(如复合 id 剥成裸名后)→ 放行做真实尝试,当轮即可救回;相同模型串仍尊重冷却。' +
+      '门控关 / 当前或缓存模型串缺失 → 逐字节回退今日按通道冷却。',
   };
 }
 

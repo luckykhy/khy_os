@@ -10,9 +10,10 @@
  * config: { webhook, secret, encryptKey, verificationToken }
  */
 
-const { BaseChannel } = require('./_baseChannel');
-const sender = require('../messaging/msgSender');
 const inbound = require('../messaging/msgInboundCore');
+const sender = require('../messaging/msgSender');
+
+const { BaseChannel } = require('./_baseChannel');
 
 class FeishuChannel extends BaseChannel {
   constructor(config = {}) {
@@ -24,14 +25,23 @@ class FeishuChannel extends BaseChannel {
   }
 
   async connect() {
-    if (!this.webhook) throw new Error('feishu: webhook is required');
+    if (!this.webhook) {
+      throw new Error('feishu: webhook is required');
+    }
     this._connected = true;
     this.emit('connected');
   }
 
   async sendMessage(channelId, text, opts = {}) {
-    const result = await sender.sendText({ platform: 'feishu', webhook: this.webhook, secret: this.secret, text });
-    if (!result.ok) { this.emit('error', { error: new Error(result.error) }); }
+    const result = await sender.sendText({
+      platform: 'feishu',
+      webhook: this.webhook,
+      secret: this.secret,
+      text,
+    });
+    if (!result.ok) {
+      this.emit('error', { error: new Error(result.error) });
+    }
     return result;
   }
 
@@ -45,9 +55,16 @@ class FeishuChannel extends BaseChannel {
    * @returns {{ok:boolean, kind?:string, challenge?:string, error?:string}}
    */
   handleInbound(body = {}) {
-    const r = inbound.handleFeishu(body, { encryptKey: this.encryptKey, verificationToken: this.verificationToken });
-    if (!r.ok) return r;
-    if (r.kind === 'challenge') return r; // 路由据此回 { challenge }
+    const r = inbound.handleFeishu(body, {
+      encryptKey: this.encryptKey,
+      verificationToken: this.verificationToken,
+    });
+    if (!r.ok) {
+      return r;
+    }
+    if (r.kind === 'challenge') {
+      return r;
+    } // 路由据此回 { challenge }
     const msg = r.message;
     if (msg && msg.text) {
       this.emit('message', {

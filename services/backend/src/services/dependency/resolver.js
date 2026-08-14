@@ -16,8 +16,9 @@
  * 默认绑定真实实现；测试可注入纯内存桩，做到零网络零真实文件系统。
  */
 
-const { PROBE, getDependency, listDependencies } = require('./registry');
 const { ToolError } = require('../toolError');
+
+const { PROBE, getDependency, listDependencies } = require('./registry');
 const toolchainVersions = require('./toolchainVersions');
 
 // ── 默认（真实）探针实现 ──────────────────────────────────────────
@@ -45,7 +46,9 @@ function _realResolveNodeModule(moduleName, paths) {
         const bases = paths.map((nm) => path.dirname(nm));
         require.resolve(moduleName, { paths: bases });
         return true;
-      } catch { /* fall through */ }
+      } catch {
+        /* fall through */
+      }
     }
     return false;
   }
@@ -55,8 +58,13 @@ function _realCheckPythonPackage(pkg) {
   try {
     const { execFileSync } = require('child_process');
     const py = _realSearchExecutable('python3') || _realSearchExecutable('python');
-    if (!py) return false;
-    execFileSync(py, ['-c', `import ${pkg}`], { timeout: 8000, stdio: ['ignore', 'ignore', 'ignore'] });
+    if (!py) {
+      return false;
+    }
+    execFileSync(py, ['-c', `import ${pkg}`], {
+      timeout: 8000,
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
     return true;
   } catch {
     return false;
@@ -75,9 +83,13 @@ function _backendRoot() {
     const fs = require('fs');
     let dir = __dirname;
     for (let i = 0; i < 8; i++) {
-      if (fs.existsSync(path.join(dir, 'package.json'))) return dir;
+      if (fs.existsSync(path.join(dir, 'package.json'))) {
+        return dir;
+      }
       const parent = path.dirname(dir);
-      if (parent === dir) break;
+      if (parent === dir) {
+        break;
+      }
       dir = parent;
     }
     return path.resolve(__dirname, '../../..');
@@ -94,7 +106,9 @@ function defaultEnv() {
   const backendRoot = _backendRoot();
   const loc = installLocation.resolveInstallRoot(backendRoot);
   const modulePaths = loc.relocated ? installLocation.modulePathsFor(loc.root) : [];
-  if (loc.relocated) installLocation.registerModulePath(loc.root);
+  if (loc.relocated) {
+    installLocation.registerModulePath(loc.root);
+  }
   return {
     searchExecutable: _realSearchExecutable,
     resolveNodeModule: (m) => _realResolveNodeModule(m, modulePaths),
@@ -118,20 +132,37 @@ function defaultEnv() {
  */
 function probe(depId, env = defaultEnv()) {
   const dep = getDependency(depId);
-  if (!dep) return { id: depId, present: false, kind: 'unknown', detail: 'unknown dependency' };
+  if (!dep) {
+    return { id: depId, present: false, kind: 'unknown', detail: 'unknown dependency' };
+  }
   const p = dep.probe || {};
   try {
     if (p.type === PROBE.NODE_MODULE) {
       const ok = !!env.resolveNodeModule(p.module);
-      return { id: depId, present: ok, kind: dep.kind, detail: ok ? p.module : `node module "${p.module}" not resolvable` };
+      return {
+        id: depId,
+        present: ok,
+        kind: dep.kind,
+        detail: ok ? p.module : `node module "${p.module}" not resolvable`,
+      };
     }
     if (p.type === PROBE.COMMAND) {
       const found = env.searchExecutable(p.bin);
-      return { id: depId, present: !!found, kind: dep.kind, detail: found || `command "${p.bin}" not on PATH` };
+      return {
+        id: depId,
+        present: !!found,
+        kind: dep.kind,
+        detail: found || `command "${p.bin}" not on PATH`,
+      };
     }
     if (p.type === PROBE.PYTHON_PACKAGE) {
       const ok = !!env.checkPythonPackage(p.pkg);
-      return { id: depId, present: ok, kind: dep.kind, detail: ok ? p.pkg : `python package "${p.pkg}" not importable` };
+      return {
+        id: depId,
+        present: ok,
+        kind: dep.kind,
+        detail: ok ? p.pkg : `python package "${p.pkg}" not importable`,
+      };
     }
   } catch {
     return { id: depId, present: false, kind: dep.kind, detail: 'probe error' };
@@ -145,15 +176,26 @@ function probe(depId, env = defaultEnv()) {
  * 从一个失败信号里抽取可匹配的文本（兼容多种失败形状）。
  */
 function _extractText(failure) {
-  if (!failure) return '';
-  if (typeof failure === 'string') return failure;
+  if (!failure) {
+    return '';
+  }
+  if (typeof failure === 'string') {
+    return failure;
+  }
   const parts = [];
-  if (failure instanceof Error || typeof failure.message === 'string') parts.push(failure.message || '');
-  if (failure.note) parts.push(String(failure.note));
-  if (failure.hint) parts.push(String(failure.hint));
+  if (failure instanceof Error || typeof failure.message === 'string') {
+    parts.push(failure.message || '');
+  }
+  if (failure.note) {
+    parts.push(String(failure.note));
+  }
+  if (failure.hint) {
+    parts.push(String(failure.hint));
+  }
   if (failure.error) {
-    if (typeof failure.error === 'string') parts.push(failure.error);
-    else if (typeof failure.error === 'object') {
+    if (typeof failure.error === 'string') {
+      parts.push(failure.error);
+    } else if (typeof failure.error === 'object') {
       parts.push(String(failure.error.message || ''));
       parts.push(String(failure.error.hint || ''));
     }
@@ -169,13 +211,20 @@ function _extractText(failure) {
  * @returns {string|null} 归一化的顶层包名；非包名/相对路径/绝对路径一律 null。
  */
 function _extractMissingModule(text) {
-  if (!text) return null;
-  const m = /cannot find (?:module|package) ['"]([^'"]+)['"]/i.exec(text)
-    || /\bMODULE_NOT_FOUND\b[\s\S]{0,80}?['"]([^'"]+)['"]/i.exec(text);
-  if (!m) return null;
+  if (!text) {
+    return null;
+  }
+  const m =
+    /cannot find (?:module|package) ['"]([^'"]+)['"]/i.exec(text) ||
+    /\bMODULE_NOT_FOUND\b[\s\S]{0,80}?['"]([^'"]+)['"]/i.exec(text);
+  if (!m) {
+    return null;
+  }
   let name = String(m[1] || '').trim();
   // 相对 / 绝对路径不是包（如 "../models"、"/abs/path"）。
-  if (!name || name.startsWith('.') || name.startsWith('/') || name.startsWith('\\')) return null;
+  if (!name || name.startsWith('.') || name.startsWith('/') || name.startsWith('\\')) {
+    return null;
+  }
   // 归一到顶层包名：@scope/name 保留两段，其余取首段（剥子路径）。
   if (name.startsWith('@')) {
     const parts = name.split('/');
@@ -184,7 +233,9 @@ function _extractMissingModule(text) {
     name = name.split('/')[0];
   }
   // 严格包名字符集校验（防御性；命中后也只用于查表比对，不入命令）。
-  if (!/^(@[a-z0-9._-]+\/)?[a-z0-9._-]+$/i.test(name)) return null;
+  if (!/^(@[a-z0-9._-]+\/)?[a-z0-9._-]+$/i.test(name)) {
+    return null;
+  }
   return name;
 }
 
@@ -202,17 +253,23 @@ function _extractMissingModule(text) {
 function detectFromError(failure) {
   if (failure && typeof failure === 'object' && failure.depId) {
     const dep = getDependency(failure.depId);
-    if (dep) return { depId: dep.id, dependency: dep };
+    if (dep) {
+      return { depId: dep.id, dependency: dep };
+    }
   }
   const text = _extractText(failure);
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
   for (const dep of listDependencies()) {
     for (const m of dep.matchers || []) {
       try {
         if (m.test ? m.test(text) : text.includes(String(m))) {
           return { depId: dep.id, dependency: dep };
         }
-      } catch { /* malformed matcher — skip */ }
+      } catch {
+        /* malformed matcher — skip */
+      }
     }
   }
   // 通用兜底：Node 模块缺失 → 仅映射到已收录依赖（安全红线，见上）。
@@ -246,7 +303,9 @@ function detectFromError(failure) {
  */
 function buildInstallPlan(depId, env = defaultEnv(), opts = {}) {
   const dep = getDependency(depId);
-  if (!dep || !dep.install) return null;
+  if (!dep || !dep.install) {
+    return null;
+  }
   const inst = dep.install;
   const platform = env.platform || process.platform;
   const defaultCommand = (inst.platform && inst.platform[platform]) || inst.command;
@@ -263,7 +322,9 @@ function buildInstallPlan(depId, env = defaultEnv(), opts = {}) {
     });
   }
   const command = versioned || defaultCommand;
-  if (!Array.isArray(command) || command.length === 0) return null;
+  if (!Array.isArray(command) || command.length === 0) {
+    return null;
+  }
   // 防御性拷贝——调用方拿到的是快照，绝不能改写注册表/版本表里的原数组。
   const argv = command.slice();
   const followUp = Array.isArray(inst.followUp) ? inst.followUp.slice() : null;
@@ -327,7 +388,9 @@ class MissingDependencyError extends Error {
  */
 function ensure(depId, env = defaultEnv()) {
   const p = probe(depId, env);
-  if (p.present) return null;
+  if (p.present) {
+    return null;
+  }
   return new MissingDependencyError(depId, { env });
 }
 

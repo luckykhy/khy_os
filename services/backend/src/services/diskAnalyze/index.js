@@ -15,9 +15,11 @@
  */
 
 const os = require('os');
-const walker = require('./walker');
+
 const catalog = require('../diskAnalyzeCatalog');
 const report = require('../diskAnalyzeReport');
+
+const walker = require('./walker');
 
 const DEFAULT_TOP = 20;
 const FIND_ALL = ['large', 'installers', 'duplicates'];
@@ -25,34 +27,56 @@ const FIND_ALL = ['large', 'installers', 'duplicates'];
 function _detectPlatform() {
   try {
     const p = process.platform;
-    if (p === 'win32') return 'windows';
-    if (p === 'darwin') return 'macos';
+    if (p === 'win32') {
+      return 'windows';
+    }
+    if (p === 'darwin') {
+      return 'macos';
+    }
     return 'linux';
-  } catch { return 'linux'; }
+  } catch {
+    return 'linux';
+  }
 }
 
 function _defaultDeps() {
   let fsImpl = null;
   let cryptoImpl = null;
-  try { fsImpl = require('fs'); } catch { /* ignore */ }
-  try { cryptoImpl = require('crypto'); } catch { /* ignore */ }
+  try {
+    fsImpl = require('fs');
+  } catch {
+    /* ignore */
+  }
+  try {
+    cryptoImpl = require('crypto');
+  } catch {
+    /* ignore */
+  }
   return { fsImpl, cryptoImpl, now: Date.now, platform: _detectPlatform() };
 }
 
 function _normalizeRoots(opts) {
   const raw = [];
-  if (Array.isArray(opts.roots)) raw.push(...opts.roots);
-  if (opts.path) raw.push(opts.path);
+  if (Array.isArray(opts.roots)) {
+    raw.push(...opts.roots);
+  }
+  if (opts.path) {
+    raw.push(opts.path);
+  }
   const seen = new Set();
   const roots = [];
   for (const r of raw) {
     const s = String(r || '').trim();
-    if (!s || seen.has(s)) continue;
+    if (!s || seen.has(s)) {
+      continue;
+    }
     seen.add(s);
     // 裸盘符 "D:" → "D:\"(readdirSync 需要有分隔符的根)。
     roots.push(/^[a-zA-Z]:$/.test(s) ? s + '\\' : s);
   }
-  if (!roots.length) roots.push(process.cwd ? process.cwd() : '.');
+  if (!roots.length) {
+    roots.push(process.cwd ? process.cwd() : '.');
+  }
   return roots;
 }
 
@@ -66,10 +90,12 @@ function analyze(opts = {}) {
   const env = opts.env || (typeof process !== 'undefined' ? process.env : {});
   const deps = opts.deps || _defaultDeps();
   const roots = _normalizeRoots(opts);
-  const find = Array.isArray(opts.find) && opts.find.length
-    ? opts.find.filter((f) => FIND_ALL.includes(f))
-    : FIND_ALL.slice();
-  const top = Number.isFinite(opts.top) && opts.top > 0 ? Math.min(1000, Math.floor(opts.top)) : DEFAULT_TOP;
+  const find =
+    Array.isArray(opts.find) && opts.find.length
+      ? opts.find.filter((f) => FIND_ALL.includes(f))
+      : FIND_ALL.slice();
+  const top =
+    Number.isFinite(opts.top) && opts.top > 0 ? Math.min(1000, Math.floor(opts.top)) : DEFAULT_TOP;
   const now = typeof deps.now === 'function' ? deps.now() : Date.now();
 
   const result = {
@@ -92,7 +118,9 @@ function analyze(opts = {}) {
     result.totals.scanned = walked.scanned || 0;
     result.totals.bytes = walked.bytes || 0;
     result.totals.files = files.length;
-    if (walked.truncated) result.notes.push(`扫描在上限内提前结束(${walked.reason || 'limit'}),结果为部分视图`);
+    if (walked.truncated) {
+      result.notes.push(`扫描在上限内提前结束(${walked.reason || 'limit'}),结果为部分视图`);
+    }
 
     // 大文件
     if (find.includes('large')) {
@@ -121,8 +149,12 @@ function analyze(opts = {}) {
     if (find.includes('duplicates')) {
       const sizeGroups = catalog.groupBySize(files, env);
       const picked = catalog.selectHashCandidates(sizeGroups, env);
-      if (picked.skippedTooBig) result.notes.push(`${picked.skippedTooBig} 个超大文件未参与重复比对(超单文件 hash 上限)`);
-      if (picked.skippedOverCount) result.notes.push(`${picked.skippedOverCount} 个候选未参与重复比对(超候选总数上限)`);
+      if (picked.skippedTooBig) {
+        result.notes.push(`${picked.skippedTooBig} 个超大文件未参与重复比对(超单文件 hash 上限)`);
+      }
+      if (picked.skippedOverCount) {
+        result.notes.push(`${picked.skippedOverCount} 个候选未参与重复比对(超候选总数上限)`);
+      }
       const groups = walker.hashDuplicates(picked.toHash, deps);
       result.duplicateGroups = groups.slice(0, top).map((g) => ({
         sizeBytes: g.sizeBytes,
@@ -137,7 +169,11 @@ function analyze(opts = {}) {
   } catch (err) {
     result.success = false;
     result.notes.push(`分析异常: ${err && err.message ? err.message : String(err)}`);
-    try { result.report = report.renderAnalyzeReport(result, env); } catch { /* ignore */ }
+    try {
+      result.report = report.renderAnalyzeReport(result, env);
+    } catch {
+      /* ignore */
+    }
     return result;
   }
 }

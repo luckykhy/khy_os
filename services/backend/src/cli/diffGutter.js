@@ -18,7 +18,9 @@
 const FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function diffGutterWidthEnabled(env = process.env) {
-  const flag = String((env && env.KHY_DIFF_GUTTER_WIDTH) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_DIFF_GUTTER_WIDTH) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -26,7 +28,9 @@ const LEGACY_WIDTH = 4;
 
 function _digits(n) {
   const v = Math.floor(Number(n));
-  if (!Number.isFinite(v) || v < 1) return 0;
+  if (!Number.isFinite(v) || v < 1) {
+    return 0;
+  }
   return String(v).length;
 }
 
@@ -37,7 +41,9 @@ function _digits(n) {
  * Gate off → legacy fixed 4 (byte-identical to the old `padStart(4)`).
  */
 function computeDiffGutterWidthForMax(maxLineNumber, env = process.env) {
-  if (!diffGutterWidthEnabled(env)) return LEGACY_WIDTH;
+  if (!diffGutterWidthEnabled(env)) {
+    return LEGACY_WIDTH;
+  }
   const d = _digits(maxLineNumber);
   return d > 0 ? d : 1; // CC floors maxLineNumber at 1 → at least one digit column
 }
@@ -50,13 +56,17 @@ function computeDiffGutterWidthForMax(maxLineNumber, env = process.env) {
  * Gate off → legacy fixed 4.
  */
 function computeDiffGutterWidth(rows, env = process.env) {
-  if (!diffGutterWidthEnabled(env)) return LEGACY_WIDTH;
+  if (!diffGutterWidthEnabled(env)) {
+    return LEGACY_WIDTH;
+  }
   let max = 0;
   if (Array.isArray(rows)) {
     for (const r of rows) {
       if (r && r.num != null) {
         const d = _digits(r.num);
-        if (d > max) max = d;
+        if (d > max) {
+          max = d;
+        }
       }
     }
   }

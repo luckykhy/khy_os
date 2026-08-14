@@ -118,7 +118,7 @@ int agentframe_encode(const struct agentframe *f, uint8_t *out, size_t out_max) 
 
     /* COBS output is at most n + ceil(n/254) + 1; require room for that plus the
      * trailing 0x00 delimiter. */
-    if (out_max < n + (n / 254) + 2)
+    if (out_max < n + (n / 254) + 3)
         return -1;
 
     size_t enc = agentframe_cobs_encode(raw, n, out);

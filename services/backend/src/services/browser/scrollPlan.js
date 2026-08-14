@@ -20,19 +20,25 @@
 
 /** autoScroll 的默认参数（均可被 opts / env 覆盖，再经夹取）。 */
 const DEFAULTS = Object.freeze({
-  maxPasses: 60,        // 最多滚动轮数（硬上界，防无限滚动）
-  settleMs: 400,        // 每轮滚动后等待懒加载的毫秒数
-  stableRounds: 3,      // 高度连续多少轮不增长即判定「到底」
-  maxChars: 2_000_000,  // harvest 文本字符上界（防内存爆）
-  stepRatio: 0.9,       // 每轮滚动 innerHeight * stepRatio
+  maxPasses: 60, // 最多滚动轮数（硬上界，防无限滚动）
+  settleMs: 400, // 每轮滚动后等待懒加载的毫秒数
+  stableRounds: 3, // 高度连续多少轮不增长即判定「到底」
+  maxChars: 2_000_000, // harvest 文本字符上界（防内存爆）
+  stepRatio: 0.9, // 每轮滚动 innerHeight * stepRatio
 });
 
 /** 数值夹取：非有限数 → 回退 fallback，再夹到 [lo, hi]。 */
 function _clampNum(v, lo, hi, fallback) {
   let n = Number(v);
-  if (!Number.isFinite(n)) n = fallback;
-  if (n < lo) n = lo;
-  if (n > hi) n = hi;
+  if (!Number.isFinite(n)) {
+    n = fallback;
+  }
+  if (n < lo) {
+    n = lo;
+  }
+  if (n > hi) {
+    n = hi;
+  }
   return n;
 }
 
@@ -45,9 +51,10 @@ function _clampInt(v, lo, hi, fallback) {
 const _envNum = require('../../utils/envNum');
 
 /** 是否启用自动滚动（门控关 → 字节回退，autoScroll 退化为单次滚到底）。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   const v = String((env && env.KHY_BROWSER_AUTOSCROLL) != null ? env.KHY_BROWSER_AUTOSCROLL : '')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -57,21 +64,27 @@ function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
  * @param {Object} [env]   环境变量（读 KHY_BROWSER_SCROLL_* 默认）
  * @returns {{maxPasses,settleMs,stableRounds,maxChars,stepRatio,harvest,harvestSelector,toSelector}}
  */
-function normalizeScrollConfig(opts = {}, env = (typeof process !== 'undefined' ? process.env : {})) {
+function normalizeScrollConfig(opts = {}, env = typeof process !== 'undefined' ? process.env : {}) {
   const o = opts && typeof opts === 'object' ? opts : {};
   const e = env && typeof env === 'object' ? env : {};
 
   const maxPasses = _clampInt(
     o.maxPasses != null ? o.maxPasses : _envNum(e, 'KHY_BROWSER_SCROLL_MAX_PASSES'),
-    1, 1000, DEFAULTS.maxPasses,
+    1,
+    1000,
+    DEFAULTS.maxPasses
   );
   const settleMs = _clampNum(
     o.settleMs != null ? o.settleMs : _envNum(e, 'KHY_BROWSER_SCROLL_SETTLE_MS'),
-    0, 30_000, DEFAULTS.settleMs,
+    0,
+    30_000,
+    DEFAULTS.settleMs
   );
   const maxChars = _clampInt(
     o.maxChars != null ? o.maxChars : _envNum(e, 'KHY_BROWSER_SCROLL_MAX_CHARS'),
-    1000, 20_000_000, DEFAULTS.maxChars,
+    1000,
+    20_000_000,
+    DEFAULTS.maxChars
   );
   const stableRounds = _clampInt(o.stableRounds, 1, 10, DEFAULTS.stableRounds);
   const stepRatio = _clampNum(o.stepRatio, 0.1, 1, DEFAULTS.stepRatio);
@@ -83,10 +96,12 @@ function normalizeScrollConfig(opts = {}, env = (typeof process !== 'undefined' 
     maxChars,
     stepRatio,
     harvest: !!o.harvest,
-    harvestSelector: typeof o.harvestSelector === 'string' && o.harvestSelector.trim()
-      ? o.harvestSelector.trim() : null,
-    toSelector: typeof o.toSelector === 'string' && o.toSelector.trim()
-      ? o.toSelector.trim() : null,
+    harvestSelector:
+      typeof o.harvestSelector === 'string' && o.harvestSelector.trim()
+        ? o.harvestSelector.trim()
+        : null,
+    toSelector:
+      typeof o.toSelector === 'string' && o.toSelector.trim() ? o.toSelector.trim() : null,
   };
 }
 
@@ -99,8 +114,12 @@ function nextStagnant(prevStreak, prevHeight, height) {
   const ps = Number.isFinite(prevStreak) && prevStreak > 0 ? Math.floor(prevStreak) : 0;
   const ph = Number(prevHeight);
   const h = Number(height);
-  if (!Number.isFinite(h)) return ps; // 读不到高度：保守不归零也不增长
-  if (!Number.isFinite(ph)) return 0; // 首轮没有上一高度：不算停滞
+  if (!Number.isFinite(h)) {
+    return ps;
+  } // 读不到高度：保守不归零也不增长
+  if (!Number.isFinite(ph)) {
+    return 0;
+  } // 首轮没有上一高度：不算停滞
   return h <= ph ? ps + 1 : 0;
 }
 
@@ -123,9 +142,15 @@ function decideContinue(state = {}) {
   const harvestedChars = Number(state.harvestedChars) || 0;
   const maxChars = Number(state.maxChars) || DEFAULTS.maxChars;
 
-  if (pass >= maxPasses) return { cont: false, reason: 'max-passes' };
-  if (harvestedChars >= maxChars) return { cont: false, reason: 'char-cap' };
-  if (stagnantStreak >= stableRounds) return { cont: false, reason: 'stable' };
+  if (pass >= maxPasses) {
+    return { cont: false, reason: 'max-passes' };
+  }
+  if (harvestedChars >= maxChars) {
+    return { cont: false, reason: 'char-cap' };
+  }
+  if (stagnantStreak >= stableRounds) {
+    return { cont: false, reason: 'stable' };
+  }
   return { cont: true, reason: 'continue' };
 }
 
@@ -148,7 +173,11 @@ function mergeHarvest(state, chunkText, maxChars) {
   const base = state && typeof state === 'object' ? state : newHarvestState();
   const keys = Object.create(null);
   // 浅拷贝已见 key 集（保持纯函数：不动入参）。
-  if (base.keys) for (const k in base.keys) keys[k] = true;
+  if (base.keys) {
+    for (const k in base.keys) {
+      keys[k] = true;
+    }
+  }
 
   let text = typeof base.text === 'string' ? base.text : '';
   let chars = Number.isFinite(base.chars) ? base.chars : text.length;
@@ -161,12 +190,19 @@ function mergeHarvest(state, chunkText, maxChars) {
     const rawLines = chunkText.split(/\r?\n/);
     for (let i = 0; i < rawLines.length; i++) {
       const line = rawLines[i].trim();
-      if (!line) continue;
+      if (!line) {
+        continue;
+      }
       const key = line; // 归一化键 = trim 后整行
-      if (keys[key]) continue;
+      if (keys[key]) {
+        continue;
+      }
       keys[key] = true;
       const piece = (text ? '\n' : '') + line;
-      if (chars + piece.length > cap) { truncated = true; break; }
+      if (chars + piece.length > cap) {
+        truncated = true;
+        break;
+      }
       text += piece;
       chars += piece.length;
       lines += 1;
@@ -179,7 +215,9 @@ function mergeHarvest(state, chunkText, maxChars) {
 /** 取首个非空字符串。 */
 function _firstStr(...vals) {
   for (const v of vals) {
-    if (typeof v === 'string' && v.trim()) return v.trim();
+    if (typeof v === 'string' && v.trim()) {
+      return v.trim();
+    }
   }
   return null;
 }
@@ -198,7 +236,9 @@ function resolveIndexTarget(opts = {}) {
   const anchorRaw = _firstStr(o.hash, o.anchor);
   if (anchorRaw) {
     const value = anchorRaw.replace(/^#+/, '').trim();
-    if (value) return { mode: 'anchor', value };
+    if (value) {
+      return { mode: 'anchor', value };
+    }
   }
 
   // index：需有数字 index；itemSelector 缺省 '*'。
@@ -217,7 +257,9 @@ function resolveIndexTarget(opts = {}) {
 
   // selector：直接 CSS 定位。
   const selector = _firstStr(o.selector);
-  if (selector) return { mode: 'selector', selector };
+  if (selector) {
+    return { mode: 'selector', selector };
+  }
 
   return { mode: 'none' };
 }

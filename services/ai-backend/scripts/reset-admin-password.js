@@ -6,9 +6,11 @@
  * Reset or create AI management admin account credentials.
  *
  * Usage:
- *   node ai-backend/scripts/reset-admin-password.js
- *   node ai-backend/scripts/reset-admin-password.js --password admin123
- *   node ai-backend/scripts/reset-admin-password.js --username admin --password newpass
+ *   node ai-backend/scripts/reset-admin-password.js --password <new-password>
+ *   node ai-backend/scripts/reset-admin-password.js --username admin --password <new-password>
+ *
+ * The password MUST be provided explicitly (--password / AI_MGMT_ADMIN_PASSWORD /
+ * DEFAULT_ADMIN_PASSWORD) — there is no built-in default anymore.
  */
 const path = require('path');
 
@@ -21,7 +23,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 require('dotenv').config({ path: path.resolve(__dirname, '../../backend/.env') });
 
 function parseArg(name, fallback = '') {
-  const idx = process.argv.findIndex(arg => arg === name);
+  const idx = process.argv.findIndex((arg) => arg === name);
   if (idx >= 0 && process.argv[idx + 1]) return process.argv[idx + 1];
   return fallback;
 }
@@ -33,12 +35,19 @@ function resolvePassword() {
   if (fromEnv) return fromEnv;
   const fromDefaultEnv = String(process.env.DEFAULT_ADMIN_PASSWORD || '').trim();
   if (fromDefaultEnv) return fromDefaultEnv;
-  return 'admin123';
+  // No hardcoded fallback — refuse instead of resetting to a weak default.
+  return '';
 }
 
 async function main() {
   const username = String(parseArg('--username', 'admin') || 'admin').trim() || 'admin';
   const password = resolvePassword();
+  if (!password) {
+    console.error(
+      '[error] 未提供新密码。请使用 --password 参数或 AI_MGMT_ADMIN_PASSWORD / DEFAULT_ADMIN_PASSWORD 环境变量指定；初始自动生成的凭据见数据目录 .khy/credentials/default-admin.json'
+    );
+    process.exit(1);
+  }
   const defaultEmail = `${username}@khy-quant.com`;
   const email = String(parseArg('--email', defaultEmail) || defaultEmail).trim() || defaultEmail;
 
@@ -80,14 +89,14 @@ async function main() {
   }
 
   console.log(`[info] username=${username}`);
-  console.log(`[info] password=${password}`);
+  // The plaintext password is intentionally not echoed back.
   if (dbPath) {
     console.log(`[info] sqlite=${dbPath}`);
   }
   await sequelize.close().catch(() => {});
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(`[error] ${err.message}`);
   process.exit(1);
 });

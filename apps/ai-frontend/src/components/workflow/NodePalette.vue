@@ -17,22 +17,22 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = defineProps({
   catalog: { type: Object, default: () => ({ categories: [], nodes: [] }) },
-})
+});
 
-const categories = computed(() => props.catalog?.categories || [])
+const categories = computed(() => props.catalog?.categories || []);
 
 function nodesByCategory(catId) {
-  return (props.catalog?.nodes || []).filter((n) => n.category === catId)
+  return (props.catalog?.nodes || []).filter((n) => n.category === catId);
 }
 
 // HTML5 drag payload: the node type the canvas should instantiate on drop.
 function onDragStart(event, node) {
-  event.dataTransfer.setData('application/khy-node-type', node.type)
-  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('application/khy-node-type', node.type);
+  event.dataTransfer.effectAllowed = 'move';
 }
 </script>
 
@@ -62,8 +62,16 @@ function onDragStart(event, node) {
 .palette-item:hover {
   border-color: var(--el-color-primary);
 }
-.palette-item.cat-control { border-left: 3px solid var(--el-color-primary); }
-.palette-item.cat-agent { border-left: 3px solid var(--el-color-success); }
-.palette-item.cat-data { border-left: 3px solid var(--el-color-warning); }
-.palette-item.cat-human { border-left: 3px solid var(--el-color-danger); }
+.palette-item.cat-control {
+  border-left: 3px solid var(--el-color-primary);
+}
+.palette-item.cat-agent {
+  border-left: 3px solid var(--el-color-success);
+}
+.palette-item.cat-data {
+  border-left: 3px solid var(--el-color-warning);
+}
+.palette-item.cat-human {
+  border-left: 3px solid var(--el-color-danger);
+}
 </style>

@@ -161,7 +161,7 @@ test('leaf-gate-orphan: 代码引用了门控 token → 无 finding', () => {
 
 // ── 自洁 / 全树零误报 ────────────────────────────────────────────────
 test('守卫扫自身源码:零 finding', () => {
-  for (const rel of ['scripts/lib/leafContractGuard.js', 'scripts/check-leaf-contract.js']) {
+  for (const rel of ['scripts/lib/leafContractGuard.js', 'scripts/ci/check-leaf-contract.js']) {
     const r = guard.assessFile({ relPath: rel, source: readSrc(rel) });
     assert.deepStrictEqual(r.findings, [], `${rel} 应零 finding,实得 ${JSON.stringify(r.findings)}`);
   }

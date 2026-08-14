@@ -148,16 +148,15 @@ function _displayWidth(str) {
   let width = 0;
   for (const ch of plain) {
     const cp = ch.codePointAt(0) || 0;
-    const isWide = (
-      (cp >= 0x1100 && cp <= 0x115F) ||
-      (cp >= 0x2E80 && cp <= 0xA4CF) ||
-      (cp >= 0xAC00 && cp <= 0xD7AF) ||
-      (cp >= 0xF900 && cp <= 0xFAFF) ||
-      (cp >= 0xFE10 && cp <= 0xFE6F) ||
-      (cp >= 0xFF01 && cp <= 0xFF60) ||
-      (cp >= 0xFFE0 && cp <= 0xFFE6) ||
-      (cp >= 0x20000 && cp <= 0x2FA1F)
-    );
+    const isWide =
+      (cp >= 0x1100 && cp <= 0x115f) ||
+      (cp >= 0x2e80 && cp <= 0xa4cf) ||
+      (cp >= 0xac00 && cp <= 0xd7af) ||
+      (cp >= 0xf900 && cp <= 0xfaff) ||
+      (cp >= 0xfe10 && cp <= 0xfe6f) ||
+      (cp >= 0xff01 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) ||
+      (cp >= 0x20000 && cp <= 0x2fa1f);
     width += isWide ? 2 : 1;
   }
   return width;
@@ -171,22 +170,27 @@ function _displayWidth(str) {
  */
 function _truncateToDisplayWidth(str, width) {
   const text = String(str || '');
-  if (width <= 0) return '';
+  if (width <= 0) {
+    return '';
+  }
   let out = '';
   let used = 0;
   for (const ch of text) {
     const cp = ch.codePointAt(0) || 0;
-    const w = (
-      (cp >= 0x1100 && cp <= 0x115F) ||
-      (cp >= 0x2E80 && cp <= 0xA4CF) ||
-      (cp >= 0xAC00 && cp <= 0xD7AF) ||
-      (cp >= 0xF900 && cp <= 0xFAFF) ||
-      (cp >= 0xFE10 && cp <= 0xFE6F) ||
-      (cp >= 0xFF01 && cp <= 0xFF60) ||
-      (cp >= 0xFFE0 && cp <= 0xFFE6) ||
-      (cp >= 0x20000 && cp <= 0x2FA1F)
-    ) ? 2 : 1;
-    if (used + w > width) break;
+    const w =
+      (cp >= 0x1100 && cp <= 0x115f) ||
+      (cp >= 0x2e80 && cp <= 0xa4cf) ||
+      (cp >= 0xac00 && cp <= 0xd7af) ||
+      (cp >= 0xf900 && cp <= 0xfaff) ||
+      (cp >= 0xfe10 && cp <= 0xfe6f) ||
+      (cp >= 0xff01 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) ||
+      (cp >= 0x20000 && cp <= 0x2fa1f)
+        ? 2
+        : 1;
+    if (used + w > width) {
+      break;
+    }
     out += ch;
     used += w;
   }
@@ -201,7 +205,9 @@ function _truncateToDisplayWidth(str, width) {
  */
 function _padToWidth(str, width) {
   const visible = _displayWidth(str);
-  if (visible >= width) return str;
+  if (visible >= width) {
+    return str;
+  }
   return str + ' '.repeat(width - visible);
 }
 
@@ -222,9 +228,7 @@ function renderSideBySideDiff(oldContent, newContent, filePath = '') {
   const changes = computeDiff(oldContent, newContent);
 
   // Header
-  const header = filePath
-    ? chalk.bold.cyan(`  --- ${filePath}`)
-    : chalk.bold.cyan('  --- diff');
+  const header = filePath ? chalk.bold.cyan(`  --- ${filePath}`) : chalk.bold.cyan('  --- diff');
 
   if (termCols <= 120) {
     // Narrow terminal: unified diff format
@@ -243,7 +247,7 @@ function renderSideBySideDiff(oldContent, newContent, filePath = '') {
  */
 function _renderUnifiedDiff(changes, header) {
   const lines = [header, ''];
-  const maxLineNum = Math.max(1, ...changes.map(c => c.lineNum));
+  const maxLineNum = Math.max(1, ...changes.map((c) => c.lineNum));
   const numWidth = String(maxLineNum).length;
 
   // Word-level diff support
@@ -252,7 +256,9 @@ function _renderUnifiedDiff(changes, header) {
     _wordDiff = require('../wordDiff');
     const themeRegistry = require('../themeRegistry');
     _theme = themeRegistry.getTheme().colors;
-  } catch { /* fallback to line-level */ }
+  } catch {
+    /* fallback to line-level */
+  }
 
   for (let idx = 0; idx < changes.length; idx++) {
     const change = changes[idx];
@@ -266,8 +272,12 @@ function _renderUnifiedDiff(changes, header) {
           const result = _wordDiff.renderWordDiffLine(change.content, next.content, _theme);
           if (result) {
             const nextNum = String(next.lineNum).padStart(numWidth);
-            lines.push(chalk.bgHex(_theme.diffRemoved).hex('#FFFFFF')(`  ${num} - `) + result.oldRendered);
-            lines.push(chalk.bgHex(_theme.diffAdded).hex('#FFFFFF')(`  ${nextNum} + `) + result.newRendered);
+            lines.push(
+              chalk.bgHex(_theme.diffRemoved).hex('#FFFFFF')(`  ${num} - `) + result.oldRendered
+            );
+            lines.push(
+              chalk.bgHex(_theme.diffAdded).hex('#FFFFFF')(`  ${nextNum} + `) + result.newRendered
+            );
             idx++;
             break;
           }
@@ -321,7 +331,7 @@ function _renderSideBySide(changes, header, termCols) {
       i++;
     } else if (change.type === 'remove') {
       // Look ahead for a paired addition
-      const nextChange = (i + 1 < changes.length) ? changes[i + 1] : null;
+      const nextChange = i + 1 < changes.length ? changes[i + 1] : null;
       const num = String(change.lineNum).padStart(numWidth);
       const leftContent = _truncateToDisplayWidth(change.content, contentWidth);
       const leftSide = _padToWidth(chalk.red(`${num} -${leftContent}`), halfWidth);
@@ -368,8 +378,11 @@ function renderInlineDiffPreview(filePath, changes) {
   let removals = 0;
 
   for (const c of changes) {
-    if (c.type === 'add') additions++;
-    else if (c.type === 'remove') removals++;
+    if (c.type === 'add') {
+      additions++;
+    } else if (c.type === 'remove') {
+      removals++;
+    }
   }
 
   // Estimate "modified" lines: paired remove+add sequences

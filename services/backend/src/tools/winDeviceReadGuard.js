@@ -50,7 +50,9 @@ const WIN_DEVICE_GUARD_FLAG = 'KHY_READFILE_WIN_DEVICE_GUARD';
 const _RESERVED_STEM_RE = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/;
 
 function _isOff(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return OFF_VALUES.includes(v);
 }
 
@@ -70,8 +72,12 @@ function winDeviceGuardEnabled(env = process.env) {
  * @returns {boolean}
  */
 function _isDeviceNamespace(backslashed) {
-  if (/^\\\\\.\\/.test(backslashed)) return true;               // \\.\...
-  if (/^\\\\\?\\GLOBALROOT\\/i.test(backslashed)) return true;  // \\?\GLOBALROOT\Device\...
+  if (/^\\\\\.\\/.test(backslashed)) {
+    return true;
+  } // \\.\...
+  if (/^\\\\\?\\GLOBALROOT\\/i.test(backslashed)) {
+    return true;
+  } // \\?\GLOBALROOT\Device\...
   return false;
 }
 
@@ -82,16 +88,28 @@ function _isDeviceNamespace(backslashed) {
  * @returns {('reserved-name'|'device-namespace'|null)}
  */
 function classifyWindowsDevice(filePath, platform = process.platform) {
-  if (platform !== 'win32') return null;
-  if (!filePath || typeof filePath !== 'string') return null;
+  if (platform !== 'win32') {
+    return null;
+  }
+  if (!filePath || typeof filePath !== 'string') {
+    return null;
+  }
 
   const backslashed = filePath.replace(/\//g, '\\');
-  if (_isDeviceNamespace(backslashed)) return 'device-namespace';
+  if (_isDeviceNamespace(backslashed)) {
+    return 'device-namespace';
+  }
 
   // basename → 去掉首个 '.' 之后(扩展名/数据流)→ 去尾部空格与点 → 大写。
   const base = backslashed.split('\\').pop() || '';
-  const stem = base.split('.')[0].replace(/[ .]+$/, '').trim().toUpperCase();
-  if (_RESERVED_STEM_RE.test(stem)) return 'reserved-name';
+  const stem = base
+    .split('.')[0]
+    .replace(/[ .]+$/, '')
+    .trim()
+    .toUpperCase();
+  if (_RESERVED_STEM_RE.test(stem)) {
+    return 'reserved-name';
+  }
 
   return null;
 }
@@ -106,9 +124,10 @@ function buildWinDeviceRefusal(info = {}) {
   const kind = info && info.kind;
   const p = info && info.path ? String(info.path) : '';
   const base = p.replace(/\//g, '\\').split('\\').pop() || p;
-  const head = kind === 'device-namespace'
-    ? `已拒绝读取设备命名空间路径「${p}」`
-    : `已拒绝读取 Windows 保留设备名「${base}」`;
+  const head =
+    kind === 'device-namespace'
+      ? `已拒绝读取设备命名空间路径「${p}」`
+      : `已拒绝读取 Windows 保留设备名「${base}」`;
   return [
     `${head}。`,
     '这是 Windows 的保留设备(如 CON / COM1 / NUL / LPT1 / \\\\.\\ 设备),',

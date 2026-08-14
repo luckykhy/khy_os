@@ -36,7 +36,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_TOOL_LITERAL_OUTPUT_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -57,13 +59,21 @@ const _linesCache = new WeakMap();
  */
 function memoPreview(result, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !result || typeof result !== 'object') return computeFn();
-    if (_previewCache.has(result)) return _previewCache.get(result);
+    if (!isEnabled(env) || !result || typeof result !== 'object') {
+      return computeFn();
+    }
+    if (_previewCache.has(result)) {
+      return _previewCache.get(result);
+    }
     const preview = computeFn();
     _previewCache.set(result, preview);
     return preview;
   } catch {
-    try { return computeFn(); } catch { return ''; }
+    try {
+      return computeFn();
+    } catch {
+      return '';
+    }
   }
 }
 
@@ -80,16 +90,27 @@ function memoPreview(result, computeFn, env = process.env) {
  */
 function memoFoldedLines(result, expanded, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !result || typeof result !== 'object') return computeFn();
+    if (!isEnabled(env) || !result || typeof result !== 'object') {
+      return computeFn();
+    }
     const k = expanded ? 1 : 0;
     let byExpanded = _linesCache.get(result);
-    if (byExpanded && byExpanded.has(k)) return byExpanded.get(k);
+    if (byExpanded && byExpanded.has(k)) {
+      return byExpanded.get(k);
+    }
     const lines = computeFn();
-    if (!byExpanded) { byExpanded = new Map(); _linesCache.set(result, byExpanded); }
+    if (!byExpanded) {
+      byExpanded = new Map();
+      _linesCache.set(result, byExpanded);
+    }
     byExpanded.set(k, lines);
     return lines;
   } catch {
-    try { return computeFn(); } catch { return []; }
+    try {
+      return computeFn();
+    } catch {
+      return [];
+    }
   }
 }
 

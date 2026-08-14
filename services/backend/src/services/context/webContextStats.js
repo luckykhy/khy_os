@@ -19,14 +19,18 @@
  * 门控 KHY_WEB_CONTEXT_STATS 默认开;关 → 返回 null,调用方省略该字段(字节回退)。
  */
 
-const { analyzeMessageBreakdown } = require('./messageBreakdown');
-const { analyzeContextSuggestions } = require('./contextSuggestions');
+const { LARGE_FAMILY_CONTEXT_WINDOW } = require('../../constants/contextWindowDefaults');
 
-const DEFAULT_CONTEXT_WINDOW = 200000; // Claude 家族常见默认,仅在既无入参也无 env 时兜底。
+const { analyzeContextSuggestions } = require('./contextSuggestions');
+const { analyzeMessageBreakdown } = require('./messageBreakdown');
+
+const DEFAULT_CONTEXT_WINDOW = LARGE_FAMILY_CONTEXT_WINDOW; // Claude 家族常见默认,仅在既无入参也无 env 时兜底。
 
 function webContextStatsEnabled(env = process.env) {
   const raw = env && env.KHY_WEB_CONTEXT_STATS;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   const v = String(raw).trim().toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
@@ -39,9 +43,13 @@ function _num(n) {
 // 解析上下文窗口上限:显式入参优先 → KHY_CONTEXT_WINDOW 环境变量 → 家族默认。
 function _resolveContextWindow(input, env) {
   const explicit = _num(input && input.contextWindow);
-  if (explicit > 0) return Math.floor(explicit);
+  if (explicit > 0) {
+    return Math.floor(explicit);
+  }
   const fromEnv = _num(env && env.KHY_CONTEXT_WINDOW);
-  if (fromEnv > 0) return Math.floor(fromEnv);
+  if (fromEnv > 0) {
+    return Math.floor(fromEnv);
+  }
   return DEFAULT_CONTEXT_WINDOW;
 }
 
@@ -63,11 +71,17 @@ function _resolveContextWindow(input, env) {
  * }} 门控关 → null。
  */
 function analyzeWebContextStats(input = {}, env = process.env) {
-  if (!webContextStatsEnabled(env)) return null;
-  if (!input || typeof input !== 'object') return null;
+  if (!webContextStatsEnabled(env)) {
+    return null;
+  }
+  if (!input || typeof input !== 'object') {
+    return null;
+  }
 
   const estimate = typeof input.estimateTokens === 'function' ? input.estimateTokens : null;
-  if (!estimate) return null;
+  if (!estimate) {
+    return null;
+  }
 
   const contextWindow = _resolveContextWindow(input, env);
   const messages = Array.isArray(input.messages) ? input.messages : [];
@@ -76,7 +90,9 @@ function analyzeWebContextStats(input = {}, env = process.env) {
   let mb = null;
   try {
     mb = analyzeMessageBreakdown({ messages, estimateTokens: estimate }, env);
-  } catch { /* 分解 best-effort */ }
+  } catch {
+    /* 分解 best-effort */
+  }
   const bd = mb || {
     totalTokens: 0,
     toolCallTokens: 0,
@@ -90,7 +106,11 @@ function analyzeWebContextStats(input = {}, env = process.env) {
   // 2) System tools 类别 = 发给模型的工具 schema JSON 的真实开销。
   let systemToolsTokens = 0;
   if (input.toolDefsJson && typeof input.toolDefsJson === 'string') {
-    try { systemToolsTokens = _num(estimate(input.toolDefsJson)); } catch { systemToolsTokens = 0; }
+    try {
+      systemToolsTokens = _num(estimate(input.toolDefsJson));
+    } catch {
+      systemToolsTokens = 0;
+    }
   }
 
   // 3) 组装分类(省略 0 token 的类别 = honest,不显示空条目)。
@@ -110,18 +130,21 @@ function analyzeWebContextStats(input = {}, env = process.env) {
   // 4) 可操作优化建议(复用 contextSuggestions 规则)。
   let suggestions = [];
   try {
-    suggestions = analyzeContextSuggestions(
-      {
-        percentage,
-        contextWindow,
-        categories,
-        toolCallsByType,
-        isAutoCompactEnabled:
-          typeof input.isAutoCompactEnabled === 'boolean' ? input.isAutoCompactEnabled : null,
-      },
-      env,
-    ) || [];
-  } catch { suggestions = []; }
+    suggestions =
+      analyzeContextSuggestions(
+        {
+          percentage,
+          contextWindow,
+          categories,
+          toolCallsByType,
+          isAutoCompactEnabled:
+            typeof input.isAutoCompactEnabled === 'boolean' ? input.isAutoCompactEnabled : null,
+        },
+        env
+      ) || [];
+  } catch {
+    suggestions = [];
+  }
 
   return {
     totalTokens,

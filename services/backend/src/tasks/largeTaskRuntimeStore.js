@@ -1,13 +1,14 @@
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
-const { getDataDir } = require('../utils/dataHome');
+const fs = require('fs');
+const path = require('path');
+
 const { detectErrorKindDeep } = require('../services/errorClassifier');
 const { isRetryableError } = require('../services/retryWithBackoff');
 const { getTmpDir } = require('../tools/platformUtils');
+const { getDataDir } = require('../utils/dataHome');
 
 const TASK_STATUSES = Object.freeze([
   'queued',
@@ -51,8 +52,12 @@ const _posIntEnv = (raw, def) => {
   const n = parseInt(raw, 10);
   return Number.isFinite(n) && n > 0 ? n : def;
 };
-const MAX_ATTEMPTS_PER_TASK = _posIntEnv(process.env.KHY_TASK_ATTEMPTS_MAX, 200);
-const MAX_CHECKPOINTS_PER_TASK = _posIntEnv(process.env.KHY_TASK_CHECKPOINTS_MAX, 500);
+const MAX_ATTEMPTS_PER_TASK = _posIntEnv(process.env.KHY_TASK_ATTEMPTS_MAX, 100);
+const MAX_CHECKPOINTS_PER_TASK = _posIntEnv(process.env.KHY_TASK_CHECKPOINTS_MAX, 200);
+// Global task_events ring-buffer cap. Every _persist() re-serializes the whole
+// event log, so a smaller cap directly cuts write amplification on the SSOT file.
+// Default 10000, overridable via KHY_TASK_EVENTS_MAX (consistent with the caps above).
+const MAX_TASK_EVENTS = _posIntEnv(process.env.KHY_TASK_EVENTS_MAX, 10_000);
 
 // 「不同入口唯一数据」:TUI 与 web 后端是不同进程,共享同一份磁盘存储
 // (large_task_runtime.json)。首次 _ensureLoaded 后 in-memory `state` 永不再读盘,
@@ -62,9 +67,12 @@ const MAX_CHECKPOINTS_PER_TASK = _posIntEnv(process.env.KHY_TASK_CHECKPOINTS_MAX
 const _RELOAD_STALE_FALSY = new Set(['0', 'false', 'off', 'no']);
 function _reloadOnStaleEnabled() {
   const raw = process.env.KHY_TASK_STORE_RELOAD_ON_STALE;
-  if (raw == null || raw === '') return true; // default-on
+  if (raw == null || raw === '') {
+    return true;
+  } // default-on
   return !_RELOAD_STALE_FALSY.has(String(raw).trim().toLowerCase());
 }
+
 function _statMtimeMs(targetPath) {
   try {
     return fs.statSync(targetPath).mtimeMs;
@@ -72,7 +80,11 @@ function _statMtimeMs(targetPath) {
     return null; // missing / unreadable → treat as not-stale (fail-soft, never throw)
   }
 }
-const SANDBOX_FALLBACK_STORE_PATH = path.join(getTmpDir(), 'khy-large-tasks', 'large_task_runtime.json');
+const SANDBOX_FALLBACK_STORE_PATH = path.join(
+  getTmpDir(),
+  'khy-large-tasks',
+  'large_task_runtime.json'
+);
 const DEFAULT_NON_RETRYABLE_ERROR_TYPES = Object.freeze([
   'auth',
   'authentication_error',
@@ -138,15 +150,35 @@ function _normalizeErrorKind(kind) {
 }
 
 function _parseBooleanStrict(value, fallback) {
-  if (typeof value === 'boolean') return value;
+  if (typeof value === 'boolean') {
+    return value;
+  }
   if (typeof value === 'number') {
-    if (value === 1) return true;
-    if (value === 0) return false;
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
   }
   if (typeof value === 'string') {
     const normalized = value.trim().toLowerCase();
-    if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') return true;
-    if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') return false;
+    if (
+      normalized === 'true' ||
+      normalized === '1' ||
+      normalized === 'yes' ||
+      normalized === 'on'
+    ) {
+      return true;
+    }
+    if (
+      normalized === 'false' ||
+      normalized === '0' ||
+      normalized === 'no' ||
+      normalized === 'off'
+    ) {
+      return false;
+    }
   }
   return fallback;
 }
@@ -157,7 +189,9 @@ function _normalizeStringTokenList(value, normalizer, fallback = []) {
   const seen = new Set();
   for (const item of input) {
     const normalized = normalizer(item);
-    if (!normalized || seen.has(normalized)) continue;
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
     seen.add(normalized);
     out.push(normalized);
   }
@@ -170,7 +204,9 @@ function _normalizeNumberList(value, fallback = []) {
   const seen = new Set();
   for (const item of input) {
     const normalized = _normalizeStatusCode(item);
-    if (!Number.isFinite(normalized) || seen.has(normalized)) continue;
+    if (!Number.isFinite(normalized) || seen.has(normalized)) {
+      continue;
+    }
     seen.add(normalized);
     out.push(normalized);
   }
@@ -179,8 +215,8 @@ function _normalizeNumberList(value, fallback = []) {
 }
 
 function _compileRetryPolicy(input = {}, fallback = DEFAULT_RETRY_POLICY) {
-  const base = (fallback && typeof fallback === 'object') ? fallback : DEFAULT_RETRY_POLICY;
-  const patch = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+  const base = fallback && typeof fallback === 'object' ? fallback : DEFAULT_RETRY_POLICY;
+  const patch = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
 
   const nonRetryableErrorTypes = _normalizeStringTokenList(
     patch.non_retryable_error_types,
@@ -220,7 +256,8 @@ function _compileRetryPolicy(input = {}, fallback = DEFAULT_RETRY_POLICY) {
 }
 
 function _retryPolicySnapshot(policy) {
-  const source = policy && typeof policy === 'object' ? policy : _compileRetryPolicy({}, DEFAULT_RETRY_POLICY);
+  const source =
+    policy && typeof policy === 'object' ? policy : _compileRetryPolicy({}, DEFAULT_RETRY_POLICY);
   return {
     non_retryable_error_types: [...(source.non_retryable_error_types || [])],
     non_retryable_status_codes: [...(source.non_retryable_status_codes || [])],
@@ -231,7 +268,7 @@ function _retryPolicySnapshot(policy) {
 }
 
 function _normalizeRetryPolicyPatch(value = {}) {
-  const patch = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+  const patch = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const out = {};
 
   if (patch.non_retryable_error_types !== undefined) {
@@ -278,7 +315,9 @@ function _canonicalizeRetryPolicyPatchForHash(value = {}) {
     out.non_retryable_error_types = [...normalized.non_retryable_error_types].sort();
   }
   if (Array.isArray(normalized.non_retryable_status_codes)) {
-    out.non_retryable_status_codes = [...normalized.non_retryable_status_codes].sort((a, b) => a - b);
+    out.non_retryable_status_codes = [...normalized.non_retryable_status_codes].sort(
+      (a, b) => a - b
+    );
   }
   if (Array.isArray(normalized.non_retryable_error_kinds)) {
     out.non_retryable_error_kinds = [...normalized.non_retryable_error_kinds].sort();
@@ -300,22 +339,34 @@ function _computeRetryPolicyPatchHash(value = {}) {
 
 function _boundedInteger(value, fallback, min, max) {
   const n = Number.parseInt(value, 10);
-  if (!Number.isFinite(n)) return fallback;
-  if (n < min) return min;
-  if (n > max) return max;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
+  if (n < min) {
+    return min;
+  }
+  if (n > max) {
+    return max;
+  }
   return n;
 }
 
 function _boundedDurationMs(value, fallbackMs, maxMs) {
-  if (value === undefined || value === null || value === '') return fallbackMs;
+  if (value === undefined || value === null || value === '') {
+    return fallbackMs;
+  }
   const n = Number(value);
-  if (!Number.isFinite(n)) return fallbackMs;
-  if (n <= 0) return 0;
+  if (!Number.isFinite(n)) {
+    return fallbackMs;
+  }
+  if (n <= 0) {
+    return 0;
+  }
   return Math.min(maxMs, Math.max(1_000, Math.round(n)));
 }
 
 function _normalizeRetryPolicyApprovalRetention(input = {}) {
-  const source = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+  const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
   return {
     ticket_max_total: _boundedInteger(
       source.ticket_max_total ?? source.ticketMaxTotal,
@@ -351,8 +402,12 @@ function _normalizeRetryPolicyApprovalRetention(input = {}) {
 function _candidateStorePaths(primaryPath) {
   const candidates = [];
   for (const candidate of [primaryPath, _fallbackStorePathFromCwd(), SANDBOX_FALLBACK_STORE_PATH]) {
-    if (!candidate) continue;
-    if (!candidates.includes(candidate)) candidates.push(candidate);
+    if (!candidate) {
+      continue;
+    }
+    if (!candidates.includes(candidate)) {
+      candidates.push(candidate);
+    }
   }
   return candidates;
 }
@@ -370,27 +425,102 @@ function _firstWritablePath(primaryPath) {
   return primaryPath;
 }
 
+// Bounded synchronous sleep. Short I/O exception per AGENTS.md timeout rules:
+// only used as a handshake/probe backoff with a hard upper bound (<2s total in
+// any caller). Prefers Atomics.wait (no CPU burn); falls back to a bounded
+// busy-wait if SharedArrayBuffer is unavailable.
+function _sleepSync(ms) {
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  } catch {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      /* bounded busy-wait fallback */
+    }
+  }
+}
+
+// On Windows, renameSync over a target held open by another process (TUI/web
+// backend reader, AV scanner) throws EPERM/EBUSY/EACCES transiently.
+const RENAME_RETRYABLE_CODES = new Set(['EPERM', 'EBUSY', 'EACCES']);
+const RENAME_RETRY_DELAYS_MS = Object.freeze([50, 100, 200]);
+
+// Atomic write: write tmp then rename into place, retrying transient Windows
+// sharing-violation errors with a bounded synchronous backoff (max 350ms total,
+// short I/O exception / probe nature). Non-retryable errors rethrow immediately.
+// The tmp file is always cleaned up: on success rename moved it away and unlink
+// fails silently; on failure unlink removes the orphan.
+function _atomicWriteWithRetry(targetPath, data) {
+  const rand = crypto.randomBytes(3).toString('hex');
+  const tmpPath = `${targetPath}.tmp-${process.pid}-${Date.now()}-${rand}`;
+  try {
+    fs.writeFileSync(tmpPath, data, 'utf-8');
+    for (let attempt = 0; ; attempt++) {
+      try {
+        fs.renameSync(tmpPath, targetPath);
+        return;
+      } catch (err) {
+        const retryable = RENAME_RETRYABLE_CODES.has(err?.code);
+        if (!retryable || attempt >= RENAME_RETRY_DELAYS_MS.length) {
+          throw err;
+        }
+        _sleepSync(RENAME_RETRY_DELAYS_MS[attempt]);
+      }
+    }
+  } finally {
+    // Best-effort tmp cleanup; after a successful rename the path no longer exists.
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      /* already renamed away or gone */
+    }
+  }
+}
+
 function createLargeTaskRuntimeStore(options = {}) {
   const nowFn = typeof options.nowFn === 'function' ? options.nowFn : () => Date.now();
-  let storePath = options.storePath || _firstWritablePath(path.join(getDataDir('tasks'), 'large_task_runtime.json'));
+  let storePath =
+    options.storePath ||
+    _firstWritablePath(path.join(getDataDir('tasks'), 'large_task_runtime.json'));
   const eventBus = new EventEmitter();
   eventBus.setMaxListeners(200);
-  let retryPolicy = _compileRetryPolicy(options.retry_policy || options.retryPolicy || {}, DEFAULT_RETRY_POLICY);
+  let retryPolicy = _compileRetryPolicy(
+    options.retry_policy || options.retryPolicy || {},
+    DEFAULT_RETRY_POLICY
+  );
   let approvalRetention = _normalizeRetryPolicyApprovalRetention(
     options.approval_retention || options.approvalRetention || {}
+  );
+  // TTL after which a persisted in_progress idempotency record left behind by
+  // a crashed/killed process may be taken over and re-executed. 0 disables
+  // takeover entirely (legacy behavior: in_progress blocks forever).
+  const idempotencyInProgressTtlMs = _boundedDurationMs(
+    options.idempotency_in_progress_ttl_ms ?? options.idempotencyInProgressTtlMs,
+    600_000,
+    24 * 3600 * 1000
   );
 
   let loaded = false;
   let loadedMtimeMs = null;
   let state = _emptyState();
+  let tmpCleanupDone = false;
+  // True while _withStoreLock() covers the current read-modify-write cycle;
+  // suppresses re-locking inside _persist() (no reentrant mkdir self-wait).
+  let storeLockActive = false;
 
   // True only when reload-on-stale is enabled AND the on-disk store has advanced
   // past the mtime we last loaded/persisted (i.e. another entry point wrote it).
   function _isStoreStale() {
-    if (!_reloadOnStaleEnabled()) return false;
+    if (!_reloadOnStaleEnabled()) {
+      return false;
+    }
     const m = _statMtimeMs(storePath);
-    if (m == null) return false; // file gone/unreadable → keep in-memory copy
-    if (loadedMtimeMs == null) return true; // never recorded → reload to be safe
+    if (m == null) {
+      return false;
+    } // file gone/unreadable → keep in-memory copy
+    if (loadedMtimeMs == null) {
+      return true;
+    } // never recorded → reload to be safe
     return m > loadedMtimeMs;
   }
 
@@ -417,37 +547,80 @@ function createLargeTaskRuntimeStore(options = {}) {
     };
   }
 
+  // One-shot startup sweep: remove orphan tmp files left behind by crashed or
+  // killed writers. The 60s age gate avoids deleting a tmp another live process
+  // is about to rename. Every step is best-effort (never throws).
+  function _cleanupStaleTmpFiles() {
+    const staleBeforeMs = Date.now() - 60_000;
+    for (const candidate of _candidateStorePaths(storePath)) {
+      try {
+        const dir = path.dirname(candidate);
+        const prefix = `${path.basename(candidate)}.tmp-`;
+        for (const name of fs.readdirSync(dir)) {
+          if (!name.startsWith(prefix)) {
+            continue;
+          }
+          try {
+            const full = path.join(dir, name);
+            const st = fs.statSync(full);
+            if (st.isFile() && st.mtimeMs < staleBeforeMs) {
+              fs.unlinkSync(full);
+            }
+          } catch {
+            /* best-effort per-file */
+          }
+        }
+      } catch {
+        /* best-effort per-directory */
+      }
+    }
+  }
+
   function _ensureLoaded() {
     if (loaded) {
-      if (!_isStoreStale()) return;
+      if (!_isStoreStale()) {
+        return;
+      }
       loaded = false; // stale: fall through and re-align to the shared on-disk SSOT
+    }
+    if (!tmpCleanupDone) {
+      tmpCleanupDone = true;
+      _cleanupStaleTmpFiles();
     }
     loaded = true;
     for (const candidate of _candidateStorePaths(storePath)) {
       try {
-        if (!fs.existsSync(candidate)) continue;
+        if (!fs.existsSync(candidate)) {
+          continue;
+        }
         const raw = fs.readFileSync(candidate, 'utf-8');
         const parsed = JSON.parse(raw);
         storePath = candidate;
         state = {
           ..._emptyState(),
           ...(parsed || {}),
-          retry_policy: parsed?.retry_policy || parsed?.retryPolicy || _retryPolicySnapshot(retryPolicy),
-          retry_policy_approval_retention: parsed?.retry_policy_approval_retention
-            || parsed?.retryPolicyApprovalRetention
-            || _clone(approvalRetention),
+          retry_policy:
+            parsed?.retry_policy || parsed?.retryPolicy || _retryPolicySnapshot(retryPolicy),
+          retry_policy_approval_retention:
+            parsed?.retry_policy_approval_retention ||
+            parsed?.retryPolicyApprovalRetention ||
+            _clone(approvalRetention),
           tasks: parsed?.tasks || {},
           task_attempts: parsed?.task_attempts || {},
           task_checkpoints: parsed?.task_checkpoints || {},
           task_events: Array.isArray(parsed?.task_events) ? parsed.task_events : [],
-          retry_policy_events: Array.isArray(parsed?.retry_policy_events) ? parsed.retry_policy_events : [],
+          retry_policy_events: Array.isArray(parsed?.retry_policy_events)
+            ? parsed.retry_policy_events
+            : [],
           retry_policy_approval_tickets: Array.isArray(parsed?.retry_policy_approval_tickets)
             ? parsed.retry_policy_approval_tickets
             : [],
           retry_policy_approval_events: Array.isArray(parsed?.retry_policy_approval_events)
             ? parsed.retry_policy_approval_events
             : [],
-          retry_policy_approval_retention_events: Array.isArray(parsed?.retry_policy_approval_retention_events)
+          retry_policy_approval_retention_events: Array.isArray(
+            parsed?.retry_policy_approval_retention_events
+          )
             ? parsed.retry_policy_approval_retention_events
             : [],
           idempotency_records: parsed?.idempotency_records || {},
@@ -455,7 +628,9 @@ function createLargeTaskRuntimeStore(options = {}) {
         retryPolicy = _compileRetryPolicy(state.retry_policy || {}, retryPolicy);
         state.retry_policy = _retryPolicySnapshot(retryPolicy);
         approvalRetention = _normalizeRetryPolicyApprovalRetention(
-          state.retry_policy_approval_retention || state.retryPolicyApprovalRetention || approvalRetention
+          state.retry_policy_approval_retention ||
+            state.retryPolicyApprovalRetention ||
+            approvalRetention
         );
         state.retry_policy_approval_retention = _clone(approvalRetention);
         if (!Number.isFinite(state.next_event_id) || state.next_event_id <= 0) {
@@ -469,47 +644,54 @@ function createLargeTaskRuntimeStore(options = {}) {
           state.next_seq = _rebuildNextSeq(state.tasks);
         }
         if (!Number.isFinite(state.next_policy_event_id) || state.next_policy_event_id <= 0) {
-          const maxPolicyEventId = (Array.isArray(state.retry_policy_events) ? state.retry_policy_events : [])
-            .reduce((max, event) => {
-              const current = Number(event?.policy_event_id || 0);
-              return Number.isFinite(current) && current > max ? current : max;
-            }, 0);
+          const maxPolicyEventId = (
+            Array.isArray(state.retry_policy_events) ? state.retry_policy_events : []
+          ).reduce((max, event) => {
+            const current = Number(event?.policy_event_id || 0);
+            return Number.isFinite(current) && current > max ? current : max;
+          }, 0);
           state.next_policy_event_id = maxPolicyEventId + 1;
         }
-        if (!Number.isFinite(state.next_retry_policy_approval_seq) || state.next_retry_policy_approval_seq <= 0) {
-          const maxApprovalSeq = (Array.isArray(state.retry_policy_approval_tickets)
-            ? state.retry_policy_approval_tickets
-            : [])
-            .reduce((max, ticket) => {
-              const current = Number(ticket?.seq || 0);
-              return Number.isFinite(current) && current > max ? current : max;
-            }, 0);
+        if (
+          !Number.isFinite(state.next_retry_policy_approval_seq) ||
+          state.next_retry_policy_approval_seq <= 0
+        ) {
+          const maxApprovalSeq = (
+            Array.isArray(state.retry_policy_approval_tickets)
+              ? state.retry_policy_approval_tickets
+              : []
+          ).reduce((max, ticket) => {
+            const current = Number(ticket?.seq || 0);
+            return Number.isFinite(current) && current > max ? current : max;
+          }, 0);
           state.next_retry_policy_approval_seq = maxApprovalSeq + 1;
         }
         if (
-          !Number.isFinite(state.next_retry_policy_approval_event_id)
-          || state.next_retry_policy_approval_event_id <= 0
+          !Number.isFinite(state.next_retry_policy_approval_event_id) ||
+          state.next_retry_policy_approval_event_id <= 0
         ) {
-          const maxApprovalEventId = (Array.isArray(state.retry_policy_approval_events)
-            ? state.retry_policy_approval_events
-            : [])
-            .reduce((max, event) => {
-              const current = Number(event?.approval_event_id || 0);
-              return Number.isFinite(current) && current > max ? current : max;
-            }, 0);
+          const maxApprovalEventId = (
+            Array.isArray(state.retry_policy_approval_events)
+              ? state.retry_policy_approval_events
+              : []
+          ).reduce((max, event) => {
+            const current = Number(event?.approval_event_id || 0);
+            return Number.isFinite(current) && current > max ? current : max;
+          }, 0);
           state.next_retry_policy_approval_event_id = maxApprovalEventId + 1;
         }
         if (
-          !Number.isFinite(state.next_retry_policy_approval_retention_event_id)
-          || state.next_retry_policy_approval_retention_event_id <= 0
+          !Number.isFinite(state.next_retry_policy_approval_retention_event_id) ||
+          state.next_retry_policy_approval_retention_event_id <= 0
         ) {
-          const maxRetentionEventId = (Array.isArray(state.retry_policy_approval_retention_events)
-            ? state.retry_policy_approval_retention_events
-            : [])
-            .reduce((max, event) => {
-              const current = Number(event?.retention_event_id || 0);
-              return Number.isFinite(current) && current > max ? current : max;
-            }, 0);
+          const maxRetentionEventId = (
+            Array.isArray(state.retry_policy_approval_retention_events)
+              ? state.retry_policy_approval_retention_events
+              : []
+          ).reduce((max, event) => {
+            const current = Number(event?.retention_event_id || 0);
+            return Number.isFinite(current) && current > max ? current : max;
+          }, 0);
           state.next_retry_policy_approval_retention_event_id = maxRetentionEventId + 1;
         }
         loadedMtimeMs = _statMtimeMs(storePath);
@@ -527,25 +709,144 @@ function createLargeTaskRuntimeStore(options = {}) {
     let maxSeq = 0;
     for (const id of Object.keys(tasks || {})) {
       const match = id.match(/-(\d+)$/);
-      if (!match) continue;
+      if (!match) {
+        continue;
+      }
       const seq = Number.parseInt(match[1], 10);
-      if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+      if (Number.isFinite(seq) && seq > maxSeq) {
+        maxSeq = seq;
+      }
     }
     return maxSeq + 1;
   }
 
+  // Cross-process write lock via atomic mkdir. Lock dir is derived from the
+  // store candidate path (no hardcoded absolute paths). Total wait is bounded
+  // (~1.5s, short I/O exception / handshake nature); on timeout we fail-soft to
+  // a lockless write — possibly losing a concurrent update is preferable to
+  // deadlocking task execution. Returns the lockDir when held, or null.
+  function _acquireStoreLock(candidate) {
+    const lockDir = `${candidate}.lock`;
+    const STALE_LOCK_MS = 5_000; // short I/O exception: locks only span one write
+    const MAX_WAIT_MS = 1_500;
+    const startedMs = Date.now();
+    while (true) {
+      try {
+        fs.mkdirSync(lockDir); // atomic create = lock acquired
+        try {
+          fs.writeFileSync(
+            path.join(lockDir, 'owner.json'),
+            JSON.stringify({ pid: process.pid, at: new Date().toISOString() }),
+            'utf-8'
+          );
+        } catch {
+          /* owner marker is best-effort diagnostics */
+        }
+        return lockDir;
+      } catch (err) {
+        if (err?.code !== 'EEXIST') {
+          return null;
+        } // unexpected fs error → lockless write
+        try {
+          // Stale-lock preemption: double-check age to avoid racing a fresh holder.
+          const st = fs.statSync(lockDir);
+          if (Date.now() - st.mtimeMs > STALE_LOCK_MS) {
+            const st2 = fs.statSync(lockDir);
+            if (Date.now() - st2.mtimeMs > STALE_LOCK_MS) {
+              fs.rmSync(lockDir, { recursive: true, force: true });
+              continue;
+            }
+          }
+        } catch {
+          /* lock vanished between checks → retry acquire */
+        }
+        const waitedMs = Date.now() - startedMs;
+        if (waitedMs >= MAX_WAIT_MS) {
+          console.warn(
+            `[largeTaskRuntimeStore] 获取写锁超时（目标文件: ${candidate}，已等待 ${waitedMs}ms），降级为无锁写入，可能丢失并发更新`
+          );
+          return null;
+        }
+        _sleepSync(25); // bounded backoff before re-probing the lock
+      }
+    }
+  }
+
+  function _releaseStoreLock(lockDir) {
+    if (!lockDir) {
+      return;
+    }
+    try {
+      fs.rmSync(lockDir, { recursive: true, force: true });
+    } catch {
+      /* best-effort release; stale-lock preemption covers leftovers */
+    }
+  }
+
+  // Run fn under the cross-process store lock, forcing a re-read of the
+  // on-disk SSOT first so the whole read-modify-write cycle operates on the
+  // latest state. The forced reload (loaded = false) is deliberate: file mtime
+  // resolution can be too coarse to detect a concurrent writer, so the
+  // _isStoreStale() mtime probe must NOT be trusted inside the critical
+  // section. If the lock cannot be acquired within the bounded wait (~1.5s),
+  // we fail-soft and still run fn() locklessly (availability over strict
+  // consistency), matching the pre-existing degraded-write behavior.
+  // Reentrant: nested calls run inline under the already-held lock.
+  function _withStoreLock(fn) {
+    if (storeLockActive) {
+      return fn();
+    }
+    const lockDir = _acquireStoreLock(storePath); // null → degraded lockless run
+    storeLockActive = true;
+    let result;
+    try {
+      // Unconditional re-alignment to the latest on-disk state before mutating.
+      loaded = false;
+      _ensureLoaded();
+      result = fn();
+    } catch (err) {
+      storeLockActive = false;
+      _releaseStoreLock(lockDir);
+      throw err;
+    }
+    if (result && typeof result.then === 'function') {
+      // Async mutation (executeIdempotentSideEffect): keep the lock until the
+      // promise settles so its persist calls stay covered. Long executors may
+      // exceed the 5s stale-lock threshold and be preempted — acceptable
+      // fail-soft trade-off, same as the lockless degradation path.
+      return result.finally(() => {
+        storeLockActive = false;
+        _releaseStoreLock(lockDir);
+      });
+    }
+    storeLockActive = false;
+    _releaseStoreLock(lockDir);
+    return result;
+  }
+
+  // Export-time wrapper for public mutating methods: preserves signature,
+  // return value and exception semantics while covering the whole
+  // read-modify-write cycle (not just the write) with the store lock.
+  function _locked(fn) {
+    return (...args) => _withStoreLock(() => fn(...args));
+  }
+
   function _persist() {
-    const candidates = options.storePath
-      ? [storePath]
-      : _candidateStorePaths(storePath);
+    const candidates = options.storePath ? [storePath] : _candidateStorePaths(storePath);
     let lastErr = null;
     for (const candidate of candidates) {
       try {
         const dir = path.dirname(candidate);
         fs.mkdirSync(dir, { recursive: true });
-        const tmpPath = `${candidate}.tmp-${process.pid}-${Date.now()}`;
-        fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf-8');
-        fs.renameSync(tmpPath, candidate);
+        // Serialize concurrent writers (TUI vs web backend) around the rename.
+        // Skipped when _withStoreLock() already holds the lock for the whole
+        // read-modify-write cycle (avoids reentrant mkdir self-wait).
+        const lockDir = storeLockActive ? null : _acquireStoreLock(candidate);
+        try {
+          _atomicWriteWithRetry(candidate, JSON.stringify(state, null, 2));
+        } finally {
+          _releaseStoreLock(lockDir);
+        }
         storePath = candidate;
         loadedMtimeMs = _statMtimeMs(candidate);
         return;
@@ -565,11 +866,12 @@ function createLargeTaskRuntimeStore(options = {}) {
   }
 
   function _newTaskId(type = 'task') {
-    const scope = String(type || 'task')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 18) || 'task';
+    const scope =
+      String(type || 'task')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 18) || 'task';
     const seq = state.next_seq++;
     const suffix = crypto.randomBytes(2).toString('hex');
     return `${scope}-${suffix}-${seq}`;
@@ -584,7 +886,9 @@ function createLargeTaskRuntimeStore(options = {}) {
   function canTransition(fromStatus, toStatus) {
     _assertValidStatus(fromStatus);
     _assertValidStatus(toStatus);
-    if (fromStatus === toStatus) return true;
+    if (fromStatus === toStatus) {
+      return true;
+    }
     const allowed = STATUS_TRANSITIONS[fromStatus];
     return Boolean(allowed && allowed.has(toStatus));
   }
@@ -592,7 +896,9 @@ function createLargeTaskRuntimeStore(options = {}) {
   function _assertTransition(task, toStatus) {
     _assertValidStatus(toStatus);
     const fromStatus = task.status;
-    if (fromStatus === toStatus) return;
+    if (fromStatus === toStatus) {
+      return;
+    }
     if (TERMINAL_STATUSES.has(fromStatus)) {
       throw new Error(`Terminal task is immutable: ${task.id} is ${fromStatus}`);
     }
@@ -612,13 +918,27 @@ function createLargeTaskRuntimeStore(options = {}) {
       task.lease_owner = null;
       task.lease_until = null;
     }
-    if (extra.next_run_at !== undefined) task.next_run_at = extra.next_run_at;
-    if (extra.lease_owner !== undefined) task.lease_owner = extra.lease_owner;
-    if (extra.lease_until !== undefined) task.lease_until = extra.lease_until;
-    if (extra.heartbeat_at !== undefined) task.heartbeat_at = extra.heartbeat_at;
-    if (extra.progress_pct !== undefined) task.progress_pct = _normalizeProgress(extra.progress_pct);
-    if (extra.last_error !== undefined) task.last_error = extra.last_error;
-    if (extra.last_result !== undefined) task.last_result = extra.last_result;
+    if (extra.next_run_at !== undefined) {
+      task.next_run_at = extra.next_run_at;
+    }
+    if (extra.lease_owner !== undefined) {
+      task.lease_owner = extra.lease_owner;
+    }
+    if (extra.lease_until !== undefined) {
+      task.lease_until = extra.lease_until;
+    }
+    if (extra.heartbeat_at !== undefined) {
+      task.heartbeat_at = extra.heartbeat_at;
+    }
+    if (extra.progress_pct !== undefined) {
+      task.progress_pct = _normalizeProgress(extra.progress_pct);
+    }
+    if (extra.last_error !== undefined) {
+      task.last_error = extra.last_error;
+    }
+    if (extra.last_result !== undefined) {
+      task.last_result = extra.last_result;
+    }
     _recordTaskEvent({
       trace_id: task.trace_id,
       task_id: task.id,
@@ -639,12 +959,16 @@ function createLargeTaskRuntimeStore(options = {}) {
   function _taskLatencyMs(task, nowIso) {
     const createdMs = Date.parse(task.created_at);
     const nowMs = Date.parse(nowIso);
-    if (!Number.isFinite(createdMs) || !Number.isFinite(nowMs) || nowMs < createdMs) return 0;
+    if (!Number.isFinite(createdMs) || !Number.isFinite(nowMs) || nowMs < createdMs) {
+      return 0;
+    }
     return nowMs - createdMs;
   }
 
   function _recordTaskEvent(event) {
-    if (!Array.isArray(state.task_events)) state.task_events = [];
+    if (!Array.isArray(state.task_events)) {
+      state.task_events = [];
+    }
     const record = {
       event_id: state.next_event_id++,
       trace_id: event.trace_id || null,
@@ -661,8 +985,8 @@ function createLargeTaskRuntimeStore(options = {}) {
       at: event.at || _nowIso(),
     };
     state.task_events.push(record);
-    if (state.task_events.length > 20_000) {
-      state.task_events.splice(0, state.task_events.length - 20_000);
+    if (state.task_events.length > MAX_TASK_EVENTS) {
+      state.task_events.splice(0, state.task_events.length - MAX_TASK_EVENTS);
     }
     try {
       eventBus.emit('task_event', _clone(record));
@@ -672,7 +996,9 @@ function createLargeTaskRuntimeStore(options = {}) {
   }
 
   function _recordRetryPolicyEvent(event) {
-    if (!Array.isArray(state.retry_policy_events)) state.retry_policy_events = [];
+    if (!Array.isArray(state.retry_policy_events)) {
+      state.retry_policy_events = [];
+    }
     const record = {
       policy_event_id: state.next_policy_event_id++,
       trace_id: event.trace_id || null,
@@ -681,12 +1007,14 @@ function createLargeTaskRuntimeStore(options = {}) {
       reason: event.reason || null,
       changed: event.changed === true,
       patch: event.patch && typeof event.patch === 'object' ? _clone(event.patch) : {},
-      before_policy: event.before_policy && typeof event.before_policy === 'object'
-        ? _clone(event.before_policy)
-        : _retryPolicySnapshot(DEFAULT_RETRY_POLICY),
-      after_policy: event.after_policy && typeof event.after_policy === 'object'
-        ? _clone(event.after_policy)
-        : _retryPolicySnapshot(DEFAULT_RETRY_POLICY),
+      before_policy:
+        event.before_policy && typeof event.before_policy === 'object'
+          ? _clone(event.before_policy)
+          : _retryPolicySnapshot(DEFAULT_RETRY_POLICY),
+      after_policy:
+        event.after_policy && typeof event.after_policy === 'object'
+          ? _clone(event.after_policy)
+          : _retryPolicySnapshot(DEFAULT_RETRY_POLICY),
       at: event.at || _nowIso(),
     };
     state.retry_policy_events.push(record);
@@ -708,12 +1036,14 @@ function createLargeTaskRuntimeStore(options = {}) {
       reason: event.reason || null,
       changed: event.changed === true,
       patch: event.patch && typeof event.patch === 'object' ? _clone(event.patch) : {},
-      before_retention: event.before_retention && typeof event.before_retention === 'object'
-        ? _clone(event.before_retention)
-        : {},
-      after_retention: event.after_retention && typeof event.after_retention === 'object'
-        ? _clone(event.after_retention)
-        : {},
+      before_retention:
+        event.before_retention && typeof event.before_retention === 'object'
+          ? _clone(event.before_retention)
+          : {},
+      after_retention:
+        event.after_retention && typeof event.after_retention === 'object'
+          ? _clone(event.after_retention)
+          : {},
       at: event.at || _nowIso(),
     };
     state.retry_policy_approval_retention_events.push(record);
@@ -732,7 +1062,9 @@ function createLargeTaskRuntimeStore(options = {}) {
   }
 
   function _recordRetryPolicyApprovalEvent(event) {
-    if (!Array.isArray(state.retry_policy_approval_events)) state.retry_policy_approval_events = [];
+    if (!Array.isArray(state.retry_policy_approval_events)) {
+      state.retry_policy_approval_events = [];
+    }
     const record = {
       approval_event_id: state.next_retry_policy_approval_event_id++,
       ticket_id: event.ticket_id || null,
@@ -763,8 +1095,12 @@ function createLargeTaskRuntimeStore(options = {}) {
 
   function _findRetryPolicyApprovalTicketIndex(ticketId) {
     const key = String(ticketId || '').trim();
-    if (!key) return -1;
-    const list = Array.isArray(state.retry_policy_approval_tickets) ? state.retry_policy_approval_tickets : [];
+    if (!key) {
+      return -1;
+    }
+    const list = Array.isArray(state.retry_policy_approval_tickets)
+      ? state.retry_policy_approval_tickets
+      : [];
     return list.findIndex((ticket) => String(ticket?.ticket_id || '') === key);
   }
 
@@ -773,7 +1109,9 @@ function createLargeTaskRuntimeStore(options = {}) {
   }
 
   function _approvalTicketTerminalAtMs(ticket) {
-    if (!ticket || typeof ticket !== 'object') return null;
+    if (!ticket || typeof ticket !== 'object') {
+      return null;
+    }
     const candidates = [
       ticket.consumed_at,
       ticket.rejected_at,
@@ -783,7 +1121,9 @@ function createLargeTaskRuntimeStore(options = {}) {
     ];
     for (const candidate of candidates) {
       const parsed = Date.parse(String(candidate || ''));
-      if (Number.isFinite(parsed)) return parsed;
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
     }
     return null;
   }
@@ -805,7 +1145,9 @@ function createLargeTaskRuntimeStore(options = {}) {
     if (approvalRetention.terminal_ticket_max_age_ms > 0) {
       const cutoff = now - approvalRetention.terminal_ticket_max_age_ms;
       const nextTickets = state.retry_policy_approval_tickets.filter((ticket) => {
-        if (!_isTerminalRetryPolicyApprovalStatus(String(ticket?.status || ''))) return true;
+        if (!_isTerminalRetryPolicyApprovalStatus(String(ticket?.status || ''))) {
+          return true;
+        }
         const terminalAt = _approvalTicketTerminalAtMs(ticket);
         return !Number.isFinite(terminalAt) || terminalAt >= cutoff;
       });
@@ -830,16 +1172,18 @@ function createLargeTaskRuntimeStore(options = {}) {
       const overflow = terminalTickets.length - approvalRetention.terminal_ticket_max_count;
       if (overflow > 0) {
         const dropIndexes = new Set(terminalTickets.slice(0, overflow).map((item) => item.index));
-        state.retry_policy_approval_tickets = state.retry_policy_approval_tickets
-          .filter((_, index) => !dropIndexes.has(index));
+        state.retry_policy_approval_tickets = state.retry_policy_approval_tickets.filter(
+          (_, index) => !dropIndexes.has(index)
+        );
         changed = true;
       }
     }
 
     // Final hard cap for total ticket count.
     if (state.retry_policy_approval_tickets.length > approvalRetention.ticket_max_total) {
-      state.retry_policy_approval_tickets = state.retry_policy_approval_tickets
-        .slice(state.retry_policy_approval_tickets.length - approvalRetention.ticket_max_total);
+      state.retry_policy_approval_tickets = state.retry_policy_approval_tickets.slice(
+        state.retry_policy_approval_tickets.length - approvalRetention.ticket_max_total
+      );
       changed = true;
     }
 
@@ -856,8 +1200,9 @@ function createLargeTaskRuntimeStore(options = {}) {
       }
     }
     if (state.retry_policy_approval_events.length > approvalRetention.event_max_total) {
-      state.retry_policy_approval_events = state.retry_policy_approval_events
-        .slice(state.retry_policy_approval_events.length - approvalRetention.event_max_total);
+      state.retry_policy_approval_events = state.retry_policy_approval_events.slice(
+        state.retry_policy_approval_events.length - approvalRetention.event_max_total
+      );
       changed = true;
     }
 
@@ -865,13 +1210,21 @@ function createLargeTaskRuntimeStore(options = {}) {
   }
 
   function _expireRetryPolicyApprovalTickets(nowMs = nowFn(), options = {}) {
-    const list = Array.isArray(state.retry_policy_approval_tickets) ? state.retry_policy_approval_tickets : [];
+    const list = Array.isArray(state.retry_policy_approval_tickets)
+      ? state.retry_policy_approval_tickets
+      : [];
     let changed = false;
-    const expireAtIso = new Date(Number.isFinite(Number(nowMs)) ? Number(nowMs) : nowFn()).toISOString();
+    const expireAtIso = new Date(
+      Number.isFinite(Number(nowMs)) ? Number(nowMs) : nowFn()
+    ).toISOString();
     for (const ticket of list) {
-      if (!ticket || ticket.status !== 'pending') continue;
+      if (!ticket || ticket.status !== 'pending') {
+        continue;
+      }
       const expiresMs = Date.parse(String(ticket.expires_at || ''));
-      if (!Number.isFinite(expiresMs) || expiresMs >= nowMs) continue;
+      if (!Number.isFinite(expiresMs) || expiresMs >= nowMs) {
+        continue;
+      }
       const previousStatus = ticket.status;
       ticket.status = 'expired';
       ticket.expired_at = expireAtIso;
@@ -907,15 +1260,23 @@ function createLargeTaskRuntimeStore(options = {}) {
 
   function _normalizeProgress(value) {
     const n = Number(value);
-    if (!Number.isFinite(n)) return 0;
-    if (n < 0) return 0;
-    if (n > 100) return 100;
+    if (!Number.isFinite(n)) {
+      return 0;
+    }
+    if (n < 0) {
+      return 0;
+    }
+    if (n > 100) {
+      return 100;
+    }
     return Math.round(n);
   }
 
   function _getTaskOrThrow(taskId) {
     const task = state.tasks[taskId];
-    if (!task) throw new Error(`Task not found: ${taskId}`);
+    if (!task) {
+      throw new Error(`Task not found: ${taskId}`);
+    }
     return task;
   }
 
@@ -934,7 +1295,9 @@ function createLargeTaskRuntimeStore(options = {}) {
     _ensureLoaded();
     const createdAt = _nowIso();
     const id = input.id || _newTaskId(input.type);
-    if (state.tasks[id]) throw new Error(`Task already exists: ${id}`);
+    if (state.tasks[id]) {
+      throw new Error(`Task already exists: ${id}`);
+    }
 
     const task = {
       id,
@@ -980,16 +1343,26 @@ function createLargeTaskRuntimeStore(options = {}) {
   function listTasks(filter = {}) {
     _ensureLoaded();
     let tasks = Object.values(state.tasks);
-    if (filter.status) tasks = tasks.filter((task) => task.status === filter.status);
-    if (filter.type) tasks = tasks.filter((task) => task.type === filter.type);
-    if (filter.source) {
-      tasks = tasks.filter((task) => task.payload_json && task.payload_json.source === filter.source);
+    if (filter.status) {
+      tasks = tasks.filter((task) => task.status === filter.status);
     }
-    if (filter.id_prefix) tasks = tasks.filter((task) => task.id.startsWith(filter.id_prefix));
+    if (filter.type) {
+      tasks = tasks.filter((task) => task.type === filter.type);
+    }
+    if (filter.source) {
+      tasks = tasks.filter(
+        (task) => task.payload_json && task.payload_json.source === filter.source
+      );
+    }
+    if (filter.id_prefix) {
+      tasks = tasks.filter((task) => task.id.startsWith(filter.id_prefix));
+    }
     tasks.sort((a, b) => {
       const pa = Number(a.priority || 100);
       const pb = Number(b.priority || 100);
-      if (pa !== pb) return pa - pb;
+      if (pa !== pb) {
+        return pa - pb;
+      }
       return String(a.created_at).localeCompare(String(b.created_at));
     });
     return tasks.map(_clone);
@@ -1006,17 +1379,38 @@ function createLargeTaskRuntimeStore(options = {}) {
       }
     }
 
-    if (patch.payload_json !== undefined) task.payload_json = patch.payload_json;
-    if (patch.priority !== undefined) task.priority = Number(patch.priority) || task.priority;
-    if (patch.next_run_at !== undefined) task.next_run_at = patch.next_run_at;
-    if (patch.progress_pct !== undefined) task.progress_pct = _normalizeProgress(patch.progress_pct);
-    if (patch.lease_owner !== undefined) task.lease_owner = patch.lease_owner;
-    if (patch.lease_until !== undefined) task.lease_until = patch.lease_until;
-    if (patch.heartbeat_at !== undefined) task.heartbeat_at = patch.heartbeat_at;
-    if (patch.last_error !== undefined) task.last_error = patch.last_error;
-    if (patch.last_result !== undefined) task.last_result = patch.last_result;
-    if (patch.status !== undefined) _setTaskStatus(task, patch.status, patch);
-    else task.updated_at = _nowIso();
+    if (patch.payload_json !== undefined) {
+      task.payload_json = patch.payload_json;
+    }
+    if (patch.priority !== undefined) {
+      task.priority = Number(patch.priority) || task.priority;
+    }
+    if (patch.next_run_at !== undefined) {
+      task.next_run_at = patch.next_run_at;
+    }
+    if (patch.progress_pct !== undefined) {
+      task.progress_pct = _normalizeProgress(patch.progress_pct);
+    }
+    if (patch.lease_owner !== undefined) {
+      task.lease_owner = patch.lease_owner;
+    }
+    if (patch.lease_until !== undefined) {
+      task.lease_until = patch.lease_until;
+    }
+    if (patch.heartbeat_at !== undefined) {
+      task.heartbeat_at = patch.heartbeat_at;
+    }
+    if (patch.last_error !== undefined) {
+      task.last_error = patch.last_error;
+    }
+    if (patch.last_result !== undefined) {
+      task.last_result = patch.last_result;
+    }
+    if (patch.status !== undefined) {
+      _setTaskStatus(task, patch.status, patch);
+    } else {
+      task.updated_at = _nowIso();
+    }
 
     _persist();
     return _clone(task);
@@ -1034,7 +1428,10 @@ function createLargeTaskRuntimeStore(options = {}) {
     _ensureLoaded();
     const task = _getTaskOrThrow(taskId);
     const now = nowFn();
-    const leaseMs = Math.max(1_000, Number(options.leaseMs || DEFAULT_LEASE_MS) || DEFAULT_LEASE_MS);
+    const leaseMs = Math.max(
+      1_000,
+      Number(options.leaseMs || DEFAULT_LEASE_MS) || DEFAULT_LEASE_MS
+    );
     const nowIso = new Date(now).toISOString();
     const leaseUntil = new Date(now + leaseMs).toISOString();
 
@@ -1060,18 +1457,24 @@ function createLargeTaskRuntimeStore(options = {}) {
     const candidates = Object.values(state.tasks)
       .filter((task) => task.status === 'queued' || task.status === 'retry_wait')
       .filter((task) => {
-        if (task.status !== 'retry_wait') return true;
+        if (task.status !== 'retry_wait') {
+          return true;
+        }
         const dueAt = new Date(task.next_run_at || task.updated_at).getTime();
         return !Number.isFinite(dueAt) || dueAt <= now;
       })
       .sort((a, b) => {
         const pa = Number(a.priority || 100);
         const pb = Number(b.priority || 100);
-        if (pa !== pb) return pa - pb;
+        if (pa !== pb) {
+          return pa - pb;
+        }
         return String(a.created_at).localeCompare(String(b.created_at));
       });
 
-    if (candidates.length === 0) return null;
+    if (candidates.length === 0) {
+      return null;
+    }
     return claimTask(candidates[0].id, workerId, options);
   }
 
@@ -1093,7 +1496,10 @@ function createLargeTaskRuntimeStore(options = {}) {
     if (task.lease_owner && workerId && task.lease_owner !== workerId) {
       throw new Error(`Task lease owner mismatch: ${task.lease_owner} != ${workerId}`);
     }
-    const leaseMs = Math.max(1_000, Number(options.leaseMs || DEFAULT_LEASE_MS) || DEFAULT_LEASE_MS);
+    const leaseMs = Math.max(
+      1_000,
+      Number(options.leaseMs || DEFAULT_LEASE_MS) || DEFAULT_LEASE_MS
+    );
     const now = nowFn();
     task.heartbeat_at = new Date(now).toISOString();
     task.lease_until = new Date(now + leaseMs).toISOString();
@@ -1184,7 +1590,10 @@ function createLargeTaskRuntimeStore(options = {}) {
     }
 
     const statusCode = Number.parseInt(failure?.status_code, 10);
-    if (Number.isFinite(statusCode) && effectivePolicy.non_retryable_status_code_set.has(statusCode)) {
+    if (
+      Number.isFinite(statusCode) &&
+      effectivePolicy.non_retryable_status_code_set.has(statusCode)
+    ) {
       return { retryable: false, reason: 'non_retryable_status_code', error_kind: null };
     }
 
@@ -1209,10 +1618,18 @@ function createLargeTaskRuntimeStore(options = {}) {
   function _computeRetryDelayMs(attemptCount, options = {}) {
     if (options.retry_delay_ms !== undefined) {
       const fixed = Number(options.retry_delay_ms);
-      if (Number.isFinite(fixed) && fixed >= 0) return Math.round(fixed);
+      if (Number.isFinite(fixed) && fixed >= 0) {
+        return Math.round(fixed);
+      }
     }
-    const base = Math.max(200, Number(options.retry_base_delay_ms || DEFAULT_RETRY_DELAY_MS) || DEFAULT_RETRY_DELAY_MS);
-    const cap = Math.max(base, Number(options.retry_cap_delay_ms || MAX_RETRY_DELAY_MS) || MAX_RETRY_DELAY_MS);
+    const base = Math.max(
+      200,
+      Number(options.retry_base_delay_ms || DEFAULT_RETRY_DELAY_MS) || DEFAULT_RETRY_DELAY_MS
+    );
+    const cap = Math.max(
+      base,
+      Number(options.retry_cap_delay_ms || MAX_RETRY_DELAY_MS) || MAX_RETRY_DELAY_MS
+    );
     const jitterPct = Math.min(1, Math.max(0, Number(options.jitter_pct ?? 0.2)));
     const exp = Math.min(cap, base * Math.pow(2, Math.max(0, attemptCount - 1)));
     const jitter = exp * jitterPct;
@@ -1309,7 +1726,9 @@ function createLargeTaskRuntimeStore(options = {}) {
   function cancelTask(taskId, reason = 'cancelled') {
     _ensureLoaded();
     const task = _getTaskOrThrow(taskId);
-    if (TERMINAL_STATUSES.has(task.status)) return _clone(task);
+    if (TERMINAL_STATUSES.has(task.status)) {
+      return _clone(task);
+    }
     _setTaskStatus(task, 'cancelling', {
       last_error: { type: 'cancelled', message: String(reason || 'cancelled') },
     });
@@ -1328,10 +1747,16 @@ function createLargeTaskRuntimeStore(options = {}) {
       : Number.isFinite(Number(checkpoint.stepNo))
         ? Number(checkpoint.stepNo)
         : 0;
+    // 缺省进度用任务当前进度,而不是 0——否则不带 progress_pct 的检查点(如
+    // POST /tasks/:taskId/checkpoints 原样透传)会把已推进的任务进度回拨到 0,
+    // resume 后显示 0%。
+    const fallbackProgress = state.tasks[taskId].progress_pct ?? 0;
     const cp = {
       task_id: taskId,
       step_no: stepNo,
-      progress_pct: _normalizeProgress(checkpoint.progress_pct ?? checkpoint.progressPct ?? 0),
+      progress_pct: _normalizeProgress(
+        checkpoint.progress_pct ?? checkpoint.progressPct ?? fallbackProgress
+      ),
       state_blob_json: checkpoint.state_blob_json ?? checkpoint.stateBlob ?? {},
       schema_version: Number.isFinite(Number(checkpoint.schema_version))
         ? Number(checkpoint.schema_version)
@@ -1351,19 +1776,38 @@ function createLargeTaskRuntimeStore(options = {}) {
     state.tasks[taskId].progress_pct = cp.progress_pct;
     state.tasks[taskId].updated_at = cp.created_at;
     _persist();
+    // Observability (末尾埋点): emit a snapshot event capturing the full task
+    // state + checkpoint for later replay/recovery. Independent JSONL event log
+    // — does NOT touch the runtime store's own persistence. Fail-soft: a logging
+    // error must never affect checkpointing.
+    try {
+      require('../observability/eventLog').snapshot(
+        taskId,
+        { task: _clone(state.tasks[taskId]), checkpoint: cp },
+        { source: 'largeTaskRuntimeStore' }
+      );
+    } catch {
+      /* fail-soft: snapshot event must not affect checkpointing */
+    }
     return _clone(cp);
   }
 
   function listCheckpoints(taskId) {
     _ensureLoaded();
-    const list = Array.isArray(state.task_checkpoints[taskId]) ? state.task_checkpoints[taskId] : [];
+    const list = Array.isArray(state.task_checkpoints[taskId])
+      ? state.task_checkpoints[taskId]
+      : [];
     return list.map(_clone);
   }
 
   function getLatestCheckpoint(taskId, options = {}) {
     _ensureLoaded();
-    const list = Array.isArray(state.task_checkpoints[taskId]) ? state.task_checkpoints[taskId] : [];
-    if (list.length === 0) return null;
+    const list = Array.isArray(state.task_checkpoints[taskId])
+      ? state.task_checkpoints[taskId]
+      : [];
+    if (list.length === 0) {
+      return null;
+    }
     const allowedSchemas = Array.isArray(options.allowed_schema_versions)
       ? new Set(options.allowed_schema_versions.map((n) => Number(n)))
       : null;
@@ -1430,12 +1874,24 @@ function createLargeTaskRuntimeStore(options = {}) {
         };
       }
       if (existing.status === 'in_progress') {
-        return {
-          ok: false,
-          code: 'idempotency_in_progress',
-          message: 'same idempotency_key request is already in progress',
-          record: _clone(existing),
-        };
+        // Stale takeover guard: a record stuck in_progress past the TTL means
+        // the owning process most likely died mid-execution. An unparseable
+        // updated_at (NaN age) is treated as stale as well.
+        const ttlMs = idempotencyInProgressTtlMs;
+        const ageMs = Date.now() - Date.parse(existing.updated_at);
+        const stale = ttlMs > 0 && !(ageMs <= ttlMs);
+        if (!stale) {
+          return {
+            ok: false,
+            code: 'idempotency_in_progress',
+            message: 'same idempotency_key request is already in progress',
+            record: _clone(existing),
+          };
+        }
+        console.warn(
+          `[largeTaskRuntimeStore] 幂等记录接管: scope=${scope} key=${idempotencyKey} 已停留 in_progress ${ageMs}ms > TTL ${ttlMs}ms，重新执行副作用`
+        );
+        // Fall through: rebuild the record below and re-run the executor.
       }
       if (existing.status === 'succeeded') {
         return {
@@ -1448,6 +1904,12 @@ function createLargeTaskRuntimeStore(options = {}) {
     }
 
     const createdAt = _nowIso();
+    // Diagnostic counter: incremented only when a stale in_progress record is
+    // taken over; failed re-runs and fresh records keep the previous value (0).
+    const takeoverCount =
+      existing && existing.status === 'in_progress'
+        ? (Number(existing.takeover_count) || 0) + 1
+        : Number(existing?.takeover_count) || 0;
     const record = {
       scope,
       idempotency_key: idempotencyKey,
@@ -1457,6 +1919,7 @@ function createLargeTaskRuntimeStore(options = {}) {
       error_message: null,
       created_at: createdAt,
       updated_at: createdAt,
+      takeover_count: takeoverCount,
     };
     state.idempotency_records[scope] = scopeStore;
     scopeStore[idempotencyKey] = record;
@@ -1488,9 +1951,13 @@ function createLargeTaskRuntimeStore(options = {}) {
     const now = options.nowMs === undefined ? nowFn() : Number(options.nowMs);
     let requeued = 0;
     for (const task of Object.values(state.tasks)) {
-      if ((task.status !== 'claimed' && task.status !== 'running') || !task.lease_until) continue;
+      if ((task.status !== 'claimed' && task.status !== 'running') || !task.lease_until) {
+        continue;
+      }
       const leaseUntil = new Date(task.lease_until).getTime();
-      if (!Number.isFinite(leaseUntil) || leaseUntil > now) continue;
+      if (!Number.isFinite(leaseUntil) || leaseUntil > now) {
+        continue;
+      }
       _setTaskStatus(task, 'retry_wait', {
         next_run_at: _nowIso(),
         lease_owner: null,
@@ -1502,13 +1969,17 @@ function createLargeTaskRuntimeStore(options = {}) {
       });
       requeued++;
     }
-    if (requeued > 0) _persist();
+    if (requeued > 0) {
+      _persist();
+    }
     return { requeued };
   }
 
   function deleteTask(taskId) {
     _ensureLoaded();
-    if (!state.tasks[taskId]) return false;
+    if (!state.tasks[taskId]) {
+      return false;
+    }
     delete state.tasks[taskId];
     delete state.task_attempts[taskId];
     delete state.task_checkpoints[taskId];
@@ -1552,7 +2023,10 @@ function createLargeTaskRuntimeStore(options = {}) {
         events = events.filter((event) => Number(event.event_id || 0) > afterId);
       }
     }
-    const limit = Math.max(1, Math.min(5000, Number(filter.limit || events.length) || events.length));
+    const limit = Math.max(
+      1,
+      Math.min(5000, Number(filter.limit || events.length) || events.length)
+    );
     if (events.length > limit) {
       events = events.slice(events.length - limit);
     }
@@ -1570,8 +2044,13 @@ function createLargeTaskRuntimeStore(options = {}) {
   }
 
   function _quantile(sortedValues, q) {
-    if (!Array.isArray(sortedValues) || sortedValues.length === 0) return 0;
-    const pos = Math.min(sortedValues.length - 1, Math.max(0, Math.ceil(sortedValues.length * q) - 1));
+    if (!Array.isArray(sortedValues) || sortedValues.length === 0) {
+      return 0;
+    }
+    const pos = Math.min(
+      sortedValues.length - 1,
+      Math.max(0, Math.ceil(sortedValues.length * q) - 1)
+    );
     return sortedValues[pos];
   }
 
@@ -1580,24 +2059,34 @@ function createLargeTaskRuntimeStore(options = {}) {
     const tasks = Object.values(state.tasks || {});
     const attempts = Object.values(state.task_attempts || {}).flat();
 
-    const queueDepth = tasks.filter((task) => task.status === 'queued' || task.status === 'retry_wait').length;
+    const queueDepth = tasks.filter(
+      (task) => task.status === 'queued' || task.status === 'retry_wait'
+    ).length;
     const terminalTasks = tasks.filter((task) => TERMINAL_STATUSES.has(task.status));
     const succeeded = terminalTasks.filter((task) => task.status === 'succeeded').length;
     const deadLetter = terminalTasks.filter((task) => task.status === 'dead_letter').length;
 
-    const successRate = terminalTasks.length > 0 ? (succeeded / terminalTasks.length) : 0;
-    const deadLetterRate = terminalTasks.length > 0 ? (deadLetter / terminalTasks.length) : 0;
+    const successRate = terminalTasks.length > 0 ? succeeded / terminalTasks.length : 0;
+    const deadLetterRate = terminalTasks.length > 0 ? deadLetter / terminalTasks.length : 0;
     const retryEvents = attempts.filter((attempt) => attempt.result_status === 'retry_wait').length;
-    const retryRate = attempts.length > 0 ? (retryEvents / attempts.length) : 0;
+    const retryRate = attempts.length > 0 ? retryEvents / attempts.length : 0;
 
     const claimLatencies = [];
     for (const task of tasks) {
       const createdMs = Date.parse(task.created_at);
-      if (!Number.isFinite(createdMs)) continue;
-      const claimEvent = (state.task_events || []).find((event) => event.task_id === task.id && event.state_to === 'claimed');
-      if (!claimEvent) continue;
+      if (!Number.isFinite(createdMs)) {
+        continue;
+      }
+      const claimEvent = (state.task_events || []).find(
+        (event) => event.task_id === task.id && event.state_to === 'claimed'
+      );
+      if (!claimEvent) {
+        continue;
+      }
       const claimMs = Date.parse(claimEvent.at);
-      if (!Number.isFinite(claimMs) || claimMs < createdMs) continue;
+      if (!Number.isFinite(claimMs) || claimMs < createdMs) {
+        continue;
+      }
       claimLatencies.push(claimMs - createdMs);
     }
     claimLatencies.sort((a, b) => a - b);
@@ -1625,7 +2114,10 @@ function createLargeTaskRuntimeStore(options = {}) {
   }
 
   function resetForTests(options = {}) {
-    retryPolicy = _compileRetryPolicy(options.retry_policy || options.retryPolicy || {}, DEFAULT_RETRY_POLICY);
+    retryPolicy = _compileRetryPolicy(
+      options.retry_policy || options.retryPolicy || {},
+      DEFAULT_RETRY_POLICY
+    );
     approvalRetention = _normalizeRetryPolicyApprovalRetention(
       options.approval_retention || options.approvalRetention || {}
     );
@@ -1637,7 +2129,11 @@ function createLargeTaskRuntimeStore(options = {}) {
     if (options.persist !== false) {
       _persist();
     } else {
-      try { fs.unlinkSync(storePath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(storePath);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -1782,7 +2278,9 @@ function createLargeTaskRuntimeStore(options = {}) {
     _ensureLoaded();
     _maintainRetryPolicyApprovalArtifacts();
     const index = _findRetryPolicyApprovalTicketIndex(ticketId);
-    if (index < 0) return null;
+    if (index < 0) {
+      return null;
+    }
     const ticket = state.retry_policy_approval_tickets[index];
     return ticket ? _clone(ticket) : null;
   }
@@ -1790,15 +2288,22 @@ function createLargeTaskRuntimeStore(options = {}) {
   function listRetryPolicyApprovalTickets(filter = {}) {
     _ensureLoaded();
     _maintainRetryPolicyApprovalArtifacts();
-    let tickets = Array.isArray(state.retry_policy_approval_tickets) ? state.retry_policy_approval_tickets : [];
+    let tickets = Array.isArray(state.retry_policy_approval_tickets)
+      ? state.retry_policy_approval_tickets
+      : [];
     if (filter.status) {
       tickets = tickets.filter((ticket) => String(ticket?.status || '') === String(filter.status));
     }
     if (filter.trace_id) {
       tickets = tickets.filter((ticket) => ticket.trace_id === filter.trace_id);
     }
-    const limit = Math.max(1, Math.min(5_000, Number(filter.limit || tickets.length) || tickets.length));
-    tickets = [...tickets].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    const limit = Math.max(
+      1,
+      Math.min(5_000, Number(filter.limit || tickets.length) || tickets.length)
+    );
+    tickets = [...tickets].sort((a, b) =>
+      String(b.created_at || '').localeCompare(String(a.created_at || ''))
+    );
     if (tickets.length > limit) {
       tickets = tickets.slice(0, limit);
     }
@@ -1808,7 +2313,9 @@ function createLargeTaskRuntimeStore(options = {}) {
   function listRetryPolicyApprovalEvents(filter = {}) {
     _ensureLoaded();
     _maintainRetryPolicyApprovalArtifacts();
-    let events = Array.isArray(state.retry_policy_approval_events) ? state.retry_policy_approval_events : [];
+    let events = Array.isArray(state.retry_policy_approval_events)
+      ? state.retry_policy_approval_events
+      : [];
     if (filter.after_id !== undefined && filter.after_id !== null) {
       const afterId = Number.parseInt(filter.after_id, 10);
       if (Number.isFinite(afterId) && afterId >= 0) {
@@ -1824,7 +2331,10 @@ function createLargeTaskRuntimeStore(options = {}) {
     if (filter.event_type) {
       events = events.filter((event) => event.event_type === filter.event_type);
     }
-    const limit = Math.max(1, Math.min(5_000, Number(filter.limit || events.length) || events.length));
+    const limit = Math.max(
+      1,
+      Math.min(5_000, Number(filter.limit || events.length) || events.length)
+    );
     if (events.length > limit) {
       events = events.slice(events.length - limit);
     }
@@ -1835,10 +2345,14 @@ function createLargeTaskRuntimeStore(options = {}) {
     _ensureLoaded();
     _maintainRetryPolicyApprovalArtifacts({ persist: false });
     const index = _findRetryPolicyApprovalTicketIndex(ticketId);
-    if (index < 0) return null;
+    if (index < 0) {
+      return null;
+    }
     const ticket = state.retry_policy_approval_tickets[index];
     const nowIso = _nowIso();
-    if (ticket.status !== 'pending') return _clone(ticket);
+    if (ticket.status !== 'pending') {
+      return _clone(ticket);
+    }
     const previousStatus = ticket.status;
     ticket.status = 'approved';
     ticket.approved_by = reviewer || null;
@@ -1859,14 +2373,22 @@ function createLargeTaskRuntimeStore(options = {}) {
     return _clone(ticket);
   }
 
-  function rejectRetryPolicyApprovalTicket(ticketId, reviewer = null, reason = 'rejected_by_reviewer') {
+  function rejectRetryPolicyApprovalTicket(
+    ticketId,
+    reviewer = null,
+    reason = 'rejected_by_reviewer'
+  ) {
     _ensureLoaded();
     _maintainRetryPolicyApprovalArtifacts({ persist: false });
     const index = _findRetryPolicyApprovalTicketIndex(ticketId);
-    if (index < 0) return null;
+    if (index < 0) {
+      return null;
+    }
     const ticket = state.retry_policy_approval_tickets[index];
     const nowIso = _nowIso();
-    if (ticket.status !== 'pending') return _clone(ticket);
+    if (ticket.status !== 'pending') {
+      return _clone(ticket);
+    }
     const previousStatus = ticket.status;
     ticket.status = 'rejected';
     ticket.rejected_by = reviewer || null;
@@ -1900,14 +2422,26 @@ function createLargeTaskRuntimeStore(options = {}) {
       return { ok: false, code: 'ticket_expired', message: 'approval ticket expired.' };
     }
     if (ticket.status !== 'approved') {
-      return { ok: false, code: 'ticket_not_approved', message: `approval ticket status is ${ticket.status}.` };
+      return {
+        ok: false,
+        code: 'ticket_not_approved',
+        message: `approval ticket status is ${ticket.status}.`,
+      };
     }
     if (ticket.consumed_at) {
-      return { ok: false, code: 'ticket_already_consumed', message: 'approval ticket already consumed.' };
+      return {
+        ok: false,
+        code: 'ticket_already_consumed',
+        message: 'approval ticket already consumed.',
+      };
     }
     const expectedPatchHash = _computeRetryPolicyPatchHash(input.patch || {});
     if (ticket.patch_hash && expectedPatchHash !== ticket.patch_hash) {
-      return { ok: false, code: 'ticket_patch_mismatch', message: 'approval ticket patch does not match request.' };
+      return {
+        ok: false,
+        code: 'ticket_patch_mismatch',
+        message: 'approval ticket patch does not match request.',
+      };
     }
 
     const previousStatus = ticket.status;
@@ -1946,7 +2480,10 @@ function createLargeTaskRuntimeStore(options = {}) {
     if (filter.actor) {
       events = events.filter((event) => event.actor === filter.actor);
     }
-    const limit = Math.max(1, Math.min(5_000, Number(filter.limit || events.length) || events.length));
+    const limit = Math.max(
+      1,
+      Math.min(5_000, Number(filter.limit || events.length) || events.length)
+    );
     if (events.length > limit) {
       events = events.slice(events.length - limit);
     }
@@ -1965,7 +2502,10 @@ function createLargeTaskRuntimeStore(options = {}) {
     if (filter.trace_id) {
       events = events.filter((event) => event.trace_id === filter.trace_id);
     }
-    const limit = Math.max(1, Math.min(5_000, Number(filter.limit || events.length) || events.length));
+    const limit = Math.max(
+      1,
+      Math.min(5_000, Number(filter.limit || events.length) || events.length)
+    );
     if (events.length > limit) {
       events = events.slice(events.length - limit);
     }
@@ -2006,25 +2546,27 @@ function createLargeTaskRuntimeStore(options = {}) {
     TASK_STATUSES,
     TERMINAL_STATUSES: new Set(TERMINAL_STATUSES),
     canTransition,
-    createTask,
+    // Public mutating methods are wrapped so the full read-modify-write cycle
+    // runs under the cross-process store lock with a forced disk re-read.
+    createTask: _locked(createTask),
     getTask,
     listTasks,
-    updateTaskFields,
-    transitionTask,
-    claimTask,
-    claimNextTask,
-    startTask,
-    heartbeatTask,
-    markSucceeded,
-    markFailed,
-    cancelTask,
-    saveCheckpoint,
+    updateTaskFields: _locked(updateTaskFields),
+    transitionTask: _locked(transitionTask),
+    claimTask: _locked(claimTask),
+    claimNextTask: _locked(claimNextTask),
+    startTask: _locked(startTask),
+    heartbeatTask: _locked(heartbeatTask),
+    markSucceeded: _locked(markSucceeded),
+    markFailed: _locked(markFailed),
+    cancelTask: _locked(cancelTask),
+    saveCheckpoint: _locked(saveCheckpoint),
     listCheckpoints,
     getLatestCheckpoint,
-    resumeFromCheckpoint,
-    executeIdempotentSideEffect,
-    requeueExpiredLeases,
-    deleteTask,
+    resumeFromCheckpoint: _locked(resumeFromCheckpoint),
+    executeIdempotentSideEffect: _locked(executeIdempotentSideEffect),
+    requeueExpiredLeases: _locked(requeueExpiredLeases),
+    deleteTask: _locked(deleteTask),
     getAttempts,
     listTaskEvents,
     getTaskAudit,
@@ -2032,20 +2574,20 @@ function createLargeTaskRuntimeStore(options = {}) {
     subscribeTaskEvents,
     getRetryPolicy,
     getRetryPolicyApprovalRetention,
-    updateRetryPolicyApprovalRetention,
-    setRetryPolicyApprovalRetention,
+    updateRetryPolicyApprovalRetention: _locked(updateRetryPolicyApprovalRetention),
+    setRetryPolicyApprovalRetention: _locked(setRetryPolicyApprovalRetention),
     listRetryPolicyApprovalRetentionEvents,
     subscribeRetryPolicyApprovalRetentionEvents,
-    createRetryPolicyApprovalTicket,
+    createRetryPolicyApprovalTicket: _locked(createRetryPolicyApprovalTicket),
     getRetryPolicyApprovalTicket,
     listRetryPolicyApprovalTickets,
     listRetryPolicyApprovalEvents,
-    approveRetryPolicyApprovalTicket,
-    rejectRetryPolicyApprovalTicket,
-    consumeRetryPolicyApprovalTicket,
+    approveRetryPolicyApprovalTicket: _locked(approveRetryPolicyApprovalTicket),
+    rejectRetryPolicyApprovalTicket: _locked(rejectRetryPolicyApprovalTicket),
+    consumeRetryPolicyApprovalTicket: _locked(consumeRetryPolicyApprovalTicket),
     listRetryPolicyEvents,
-    updateRetryPolicy,
-    setRetryPolicy,
+    updateRetryPolicy: _locked(updateRetryPolicy),
+    setRetryPolicy: _locked(setRetryPolicy),
     subscribeRetryPolicyApprovalEvents,
     getSnapshot,
     resetForTests,

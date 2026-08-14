@@ -22,16 +22,26 @@ const DEFAULT_MIN_FILES = 1;
 /** Default bound on automatic audit→fix→re-audit rounds. */
 const DEFAULT_MAX_ROUNDS = 2;
 
+// NOTE: intentionally NOT converged to utils/envFlagEnabled. This treats ANY
+// value not matching /^(0|false|off|no)$/i as true and has no {1,true,on,yes,y}
+// accept set, so e.g. 'y'/'n'/'maybe' differ from the leaf's three-state
+// semantics (leaf: unknown -> default, 'n' -> false). Not byte-equivalent.
 function _envFlagEnabled(raw, dflt) {
-  if (raw == null || raw === '') return dflt;
+  if (raw == null || raw === '') {
+    return dflt;
+  }
   return !/^(0|false|off|no)$/i.test(String(raw).trim());
 }
 
 function _envInt(name, fallback, min, max) {
   const raw = process.env[name];
-  if (raw == null || raw === '') return fallback;
+  if (raw == null || raw === '') {
+    return fallback;
+  }
   const n = Number.parseInt(String(raw), 10);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
   return Math.max(min, Math.min(max, n));
 }
 
@@ -69,8 +79,12 @@ function shouldAudit(sig = {}) {
   } = sig;
 
   // Never recurse: audit/fix agents are themselves sub-agents.
-  if (isSubagent) return { audit: false, reason: 'subagent' };
-  if (!isEnabled()) return { audit: false, reason: 'disabled' };
+  if (isSubagent) {
+    return { audit: false, reason: 'subagent' };
+  }
+  if (!isEnabled()) {
+    return { audit: false, reason: 'disabled' };
+  }
 
   const minFiles = _envInt('KHY_AUDIT_FIX_MIN_FILES', DEFAULT_MIN_FILES, 1, 1000);
   const fileTrigger = Number(modifiedFileCount) >= minFiles;
@@ -80,7 +94,7 @@ function shouldAudit(sig = {}) {
   if (fileTrigger || planTrigger || goalTrigger) {
     return {
       audit: true,
-      reason: fileTrigger ? 'modified-files' : (planTrigger ? 'execution-plan' : 'goal-mode'),
+      reason: fileTrigger ? 'modified-files' : planTrigger ? 'execution-plan' : 'goal-mode',
       triggers: { file: fileTrigger, plan: planTrigger, goal: goalTrigger },
     };
   }

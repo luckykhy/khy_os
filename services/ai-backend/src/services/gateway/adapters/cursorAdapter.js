@@ -14,13 +14,29 @@ const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
 // Cursor stores auth tokens in different locations per platform
 const CURSOR_STORAGE_PATHS = [
   path.join(os.homedir(), '.config', 'Cursor', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Cursor',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'storage.json'),
 ];
 
 const CURSOR_DB_PATHS = [
   path.join(os.homedir(), '.config', 'Cursor', 'User', 'globalStorage', 'state.vscdb'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage', 'state.vscdb'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Cursor',
+    'User',
+    'globalStorage',
+    'state.vscdb'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage', 'state.vscdb'),
 ];
 
@@ -46,12 +62,13 @@ function readCursorToken() {
       if (fs.existsSync(p)) {
         const data = JSON.parse(fs.readFileSync(p, 'utf8'));
         // Cursor stores token under various keys
-        const token = data.cursorAuth?.accessToken
-          || data['cursorAuth/accessToken']
-          || data.accessToken;
+        const token =
+          data.cursorAuth?.accessToken || data['cursorAuth/accessToken'] || data.accessToken;
         if (token) return { accessToken: token, source: 'storage.json' };
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return null;
 }
@@ -61,7 +78,10 @@ function detect(forceRefresh = false) {
 
   // Check token first
   _token = readCursorToken();
-  if (_token) { _available = true; return true; }
+  if (_token) {
+    _available = true;
+    return true;
+  }
 
   // Fallback: check if Cursor is installed
   try {
@@ -75,7 +95,7 @@ function detect(forceRefresh = false) {
 }
 
 async function listModels() {
-  return KNOWN_MODELS.map(m => ({
+  return KNOWN_MODELS.map((m) => ({
     ...m,
     provider: 'cursor',
     description: '',
@@ -132,7 +152,7 @@ function cursorChat(prompt, model, onChunk) {
       method: 'POST',
       headers: sanitizeOutgoingHeaders({
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_token.accessToken}`,
+        Authorization: `Bearer ${_token.accessToken}`,
         'Content-Length': Buffer.byteLength(payload),
       }),
       timeout: TIMEOUT_MS,
@@ -140,7 +160,9 @@ function cursorChat(prompt, model, onChunk) {
 
     const req = https.request(options, (res) => {
       let data = '';
-      res.on('data', chunk => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
         try {
           const result = JSON.parse(data);
@@ -160,7 +182,10 @@ function cursorChat(prompt, model, onChunk) {
     });
 
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Cursor API timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Cursor API timeout'));
+    });
     req.write(payload);
     req.end();
   });

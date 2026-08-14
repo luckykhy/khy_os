@@ -47,12 +47,16 @@ function _removeDir(dir) {
 }
 
 function _installExitHooks() {
-  if (_exitHooksInstalled) return;
+  if (_exitHooksInstalled) {
+    return;
+  }
   _exitHooksInstalled = true;
 
   // 'exit' must be synchronous — no async fs here.
   process.on('exit', () => {
-    for (const dir of _live) _removeDir(dir);
+    for (const dir of _live) {
+      _removeDir(dir);
+    }
     _live.clear();
   });
 
@@ -60,11 +64,17 @@ function _installExitHooks() {
   // exit semantics. Guarded so we only act if there is something to clean.
   for (const sig of ['SIGINT', 'SIGTERM']) {
     process.on(sig, () => {
-      for (const dir of _live) _removeDir(dir);
+      for (const dir of _live) {
+        _removeDir(dir);
+      }
       _live.clear();
       // Re-raise with the default disposition so exit codes stay conventional.
       process.removeAllListeners(sig);
-      try { process.kill(process.pid, sig); } catch { process.exit(0); }
+      try {
+        process.kill(process.pid, sig);
+      } catch {
+        process.exit(0);
+      }
     });
   }
 }
@@ -89,7 +99,9 @@ function createEphemeralDir(opts = {}) {
 
   let disposed = false;
   const dispose = () => {
-    if (disposed) return;
+    if (disposed) {
+      return;
+    }
     disposed = true;
     _live.delete(dir);
     _removeDir(dir);

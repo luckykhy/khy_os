@@ -22,6 +22,7 @@
 'use strict';
 
 const crypto = require('crypto');
+
 const { getTaskOutputPath } = require('./diskOutput');
 
 // ── Constants ──────────────────────────────────────────────────────────
@@ -108,10 +109,14 @@ function generateTaskId(type) {
  * @returns {string|null} Task type or null if unknown
  */
 function taskTypeFromId(taskId) {
-  if (!taskId || taskId.length < 2) return null;
+  if (!taskId || taskId.length < 2) {
+    return null;
+  }
   const prefix = taskId[0];
   for (const [type, p] of Object.entries(TASK_ID_PREFIXES)) {
-    if (p === prefix) return type;
+    if (p === prefix) {
+      return type;
+    }
   }
   return null;
 }

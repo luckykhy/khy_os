@@ -43,10 +43,14 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']); // CANON off-words
 function isEnabled(env = process.env) {
   try {
     return require('../flagRegistry').isFlagEnabled('KHY_WILDCARD_POOL_GUARD', env || process.env);
-  } catch { /* fall through to local */ }
+  } catch {
+    /* fall through to local */
+  }
   try {
     const raw = (env || process.env).KHY_WILDCARD_POOL_GUARD;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -61,9 +65,13 @@ function isEnabled(env = process.env) {
  */
 function extractVendorPrefix(model) {
   try {
-    if (typeof model !== 'string') return '';
+    if (typeof model !== 'string') {
+      return '';
+    }
     const m = model.trim().toLowerCase();
-    if (!m) return '';
+    if (!m) {
+      return '';
+    }
     const match = m.match(/^([a-z0-9]+)(?:[-._:/]|$)/);
     return match ? match[1] : '';
   } catch {
@@ -75,10 +83,16 @@ function _toLowerSet(list) {
   const out = new Set();
   try {
     for (const item of Array.isArray(list) ? list : []) {
-      const s = String(item || '').trim().toLowerCase();
-      if (s) out.add(s);
+      const s = String(item || '')
+        .trim()
+        .toLowerCase();
+      if (s) {
+        out.add(s);
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return out;
 }
 
@@ -95,7 +109,9 @@ function _toLowerSet(list) {
 function evaluateWildcardModel(params = {}) {
   try {
     const model = String(params.model || '').trim();
-    const wildcardPool = String(params.wildcardPool || '').trim().toLowerCase();
+    const wildcardPool = String(params.wildcardPool || '')
+      .trim()
+      .toLowerCase();
     const vendor = extractVendorPrefix(model);
 
     // 无法判定的一律放行(保守):无模型 / 无厂商前缀 / 无通配池。
@@ -145,13 +161,19 @@ function evaluateWildcardModel(params = {}) {
  */
 function buildUnregisteredModelHint(params = {}, env = process.env) {
   try {
-    if (!isEnabled(env)) return '';
+    if (!isEnabled(env)) {
+      return '';
+    }
     const model = String(params.model || '').trim();
     const vendor = String(params.vendor || '').trim();
-    if (!model) return '';
+    if (!model) {
+      return '';
+    }
     const who = vendor || '该厂商';
-    return `模型 ${model} 未登记(${who} provider 无运行时池,无法路由)。`
-      + `请先为 ${who} 配置 key/endpoint,或用 pool:model 形式显式指定(如 ${who}:${model})。`;
+    return (
+      `模型 ${model} 未登记(${who} provider 无运行时池,无法路由)。` +
+      `请先为 ${who} 配置 key/endpoint,或用 pool:model 形式显式指定(如 ${who}:${model})。`
+    );
   } catch {
     return '';
   }
@@ -162,12 +184,13 @@ function describeWildcardPoolGuard() {
   return {
     gate: 'KHY_WILDCARD_POOL_GUARD',
     defaultOn: true,
-    summary: '通配兜底守卫:`api` 通道的裸模型名在显式/scoped 全落空后会盲落 '
-      + 'GATEWAY_API_POOL_PROVIDER 默认池。若该模型厂商是已登记 preset 却无运行时池、且≠通配池,'
-      + '则盲发必打错端点(实测 agnes-2.0-flash → open.bigmodel.cn → 400 code 1211)。守卫据此'
-      + '判定 mismatch,调用方不再盲路由(返回 null),转清晰失败并给出登记/pool:model 指引。'
-      + '对称于 relay_api 的 relayModelGuard;显式 pool:model / provider 命中的路由永不受影响。'
-      + '门控关则原样盲落(今日行为)。',
+    summary:
+      '通配兜底守卫:`api` 通道的裸模型名在显式/scoped 全落空后会盲落 ' +
+      'GATEWAY_API_POOL_PROVIDER 默认池。若该模型厂商是已登记 preset 却无运行时池、且≠通配池,' +
+      '则盲发必打错端点(实测 agnes-2.0-flash → open.bigmodel.cn → 400 code 1211)。守卫据此' +
+      '判定 mismatch,调用方不再盲路由(返回 null),转清晰失败并给出登记/pool:model 指引。' +
+      '对称于 relay_api 的 relayModelGuard;显式 pool:model / provider 命中的路由永不受影响。' +
+      '门控关则原样盲落(今日行为)。',
   };
 }
 

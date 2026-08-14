@@ -22,14 +22,16 @@ class LineBuffer {
   constructor() {
     this._pending = '';
     this._fenceOpen = false; // 当前是否在代码围栏内
-    this._tableRun = false;  // 当前是否在表格块内
+    this._tableRun = false; // 当前是否在表格块内
   }
 
   /**
    * 追加增量文本
    */
   push(delta) {
-    if (!delta) return;
+    if (!delta) {
+      return;
+    }
     this._pending += delta;
   }
 
@@ -43,11 +45,15 @@ class LineBuffer {
    */
   takeCommittable() {
     const buf = this._pending;
-    if (!buf) return '';
+    if (!buf) {
+      return '';
+    }
 
     // 找到最后一个换行符——这是候选拆分点
     const lastNl = buf.lastIndexOf('\n');
-    if (lastNl < 0) return ''; // 没有完整行
+    if (lastNl < 0) {
+      return '';
+    } // 没有完整行
 
     const candidate = buf.slice(0, lastNl + 1);
     const tail = buf.slice(lastNl + 1);
@@ -87,13 +93,17 @@ class LineBuffer {
    */
   takePartial(minChars = 80) {
     const buf = this._pending;
-    if (!buf || buf.length < minChars) return '';
+    if (!buf || buf.length < minChars) {
+      return '';
+    }
 
     // 围栏内不拆分
     const fences = buf.match(/^```/gm);
     const fenceCount = fences ? fences.length : 0;
     const netOpen = (this._fenceOpen ? 1 : 0) + fenceCount;
-    if (netOpen % 2 !== 0) return '';
+    if (netOpen % 2 !== 0) {
+      return '';
+    }
 
     // 找最佳切割点：最后一个空格、CJK 字符后、或标点后
     // 搜索范围：[minChars * 0.5, buf.length]
@@ -103,11 +113,20 @@ class LineBuffer {
     for (let i = buf.length - 1; i >= searchStart; i--) {
       const ch = buf[i];
       // 空格边界
-      if (ch === ' ' || ch === '\t') { cutAt = i + 1; break; }
+      if (ch === ' ' || ch === '\t') {
+        cutAt = i + 1;
+        break;
+      }
       // CJK 字符后（中日韩可以在任意字符后断开）
-      if (ch.charCodeAt(0) >= 0x3000) { cutAt = i + 1; break; }
+      if (ch.charCodeAt(0) >= 0x3000) {
+        cutAt = i + 1;
+        break;
+      }
       // 标点后
-      if (/[，。、；：！？,.;:!?）】」』"'…—]/.test(ch)) { cutAt = i + 1; break; }
+      if (/[，。、；：！？,.;:!?）】」』"'…—]/.test(ch)) {
+        cutAt = i + 1;
+        break;
+      }
     }
 
     if (cutAt <= 0) {
@@ -142,7 +161,9 @@ class LineBuffer {
    * 当前缓冲区行数
    */
   get pendingLines() {
-    if (!this._pending) return 0;
+    if (!this._pending) {
+      return 0;
+    }
     const m = this._pending.match(/\n/g);
     return m ? m.length : 0;
   }
@@ -196,9 +217,9 @@ class AdaptiveChunker {
     this._lb = lineBuffer;
     this._render = renderFn;
     this._mode = ChunkMode.SMOOTH;
-    this._firstChunkTs = 0;       // 当前积压的起始时间
-    this._lastModeChange = 0;     // 上次模式切换的时间戳
-    this._catchupExitTs = 0;      // CatchUp 退出条件首次满足的时间
+    this._firstChunkTs = 0; // 当前积压的起始时间
+    this._lastModeChange = 0; // 上次模式切换的时间戳
+    this._catchupExitTs = 0; // CatchUp 退出条件首次满足的时间
   }
 
   /**
@@ -209,7 +230,9 @@ class AdaptiveChunker {
     const lines = this._lb.pendingLines;
     const len = this._lb.pendingLength;
 
-    if (lines === 0 && len === 0) return;
+    if (lines === 0 && len === 0) {
+      return;
+    }
 
     // 记录积压起始时间
     if (this._firstChunkTs === 0) {
@@ -224,7 +247,7 @@ class AdaptiveChunker {
         this._lastModeChange = now;
       } else if (
         (lines >= CHUNKING.ENTER_LINES || age >= CHUNKING.ENTER_AGE_MS) &&
-        (now - this._lastModeChange >= CHUNKING.REENTER_HOLD_MS)
+        now - this._lastModeChange >= CHUNKING.REENTER_HOLD_MS
       ) {
         this._mode = ChunkMode.CATCHUP;
         this._lastModeChange = now;
@@ -297,7 +320,9 @@ class AdaptiveChunker {
     let rounds = 0;
     while (rounds < CHUNKING.CATCHUP_BATCH) {
       const chunk = this._lb.takeCommittable();
-      if (!chunk) break;
+      if (!chunk) {
+        break;
+      }
       batch += chunk;
       rounds++;
     }

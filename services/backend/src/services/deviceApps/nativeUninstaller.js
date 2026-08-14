@@ -38,20 +38,31 @@ function _defaultDeps() {
     // 同步读注册表子树(reg query <root> /s)。返回 stdout 文本;失败返 ''(fail-soft)。
     regQuery: (root) => {
       try {
-        return String(execFileSync('reg', ['query', root, '/s'], {
-          timeout: 60000, maxBuffer: 64 * 1024 * 1024, windowsHide: true,
-        }) || '');
-      } catch (_) { return ''; }
+        return String(
+          execFileSync('reg', ['query', root, '/s'], {
+            timeout: 60000,
+            maxBuffer: 64 * 1024 * 1024,
+            windowsHide: true,
+          }) || ''
+        );
+      } catch (_) {
+        return '';
+      }
     },
     // 执行卸载 argv,继承 stdio(卸载器可能有 UI/进度)。
-    runInherit: (argv, timeoutMs) => new Promise((resolve) => {
-      try {
-        execFile(argv[0], argv.slice(1), { timeout: timeoutMs || 600000, stdio: 'inherit', windowsHide: true },
-          (err) => resolve({ ok: !err, error: err ? String(err.message || err) : null }));
-      } catch (e) {
-        resolve({ ok: false, error: String(e && e.message || e) });
-      }
-    }),
+    runInherit: (argv, timeoutMs) =>
+      new Promise((resolve) => {
+        try {
+          execFile(
+            argv[0],
+            argv.slice(1),
+            { timeout: timeoutMs || 600000, stdio: 'inherit', windowsHide: true },
+            (err) => resolve({ ok: !err, error: err ? String(err.message || err) : null })
+          );
+        } catch (e) {
+          resolve({ ok: false, error: String((e && e.message) || e) });
+        }
+      }),
   };
 }
 
@@ -65,11 +76,15 @@ function _parseRegQuery(text) {
   const out = [];
   let cur = null;
   const flush = () => {
-    if (cur && (cur.DisplayName || cur.UninstallString || cur.QuietUninstallString)) out.push(cur);
+    if (cur && (cur.DisplayName || cur.UninstallString || cur.QuietUninstallString)) {
+      out.push(cur);
+    }
     cur = null;
   };
   for (const line of lines) {
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
     // 顶格且以 HK 开头 = 新子键边界。
     if (/^HK[A-Z_]+\\/i.test(line)) {
       flush();
@@ -77,18 +92,29 @@ function _parseRegQuery(text) {
       cur = { keyName: parts[parts.length - 1] };
       continue;
     }
-    if (!cur) continue;
+    if (!cur) {
+      continue;
+    }
     // 值行:`    Name    REG_SZ    Value`(REG_SZ/REG_EXPAND_SZ/…)。以 2+ 空格切三段。
     const m = /^\s+(\S.*?)\s{2,}REG_[A-Z_]+\s{2,}(.*)$/.exec(line);
-    if (!m) continue;
+    if (!m) {
+      continue;
+    }
     const name = m[1].trim();
     const val = m[2].trim();
-    if (name === 'DisplayName') cur.DisplayName = val;
-    else if (name === 'UninstallString') cur.UninstallString = val;
-    else if (name === 'QuietUninstallString') cur.QuietUninstallString = val;
-    else if (name === 'InstallLocation') cur.InstallLocation = val;
-    else if (name === 'DisplayVersion') cur.DisplayVersion = val;
-    else if (name === 'Publisher') cur.Publisher = val;
+    if (name === 'DisplayName') {
+      cur.DisplayName = val;
+    } else if (name === 'UninstallString') {
+      cur.UninstallString = val;
+    } else if (name === 'QuietUninstallString') {
+      cur.QuietUninstallString = val;
+    } else if (name === 'InstallLocation') {
+      cur.InstallLocation = val;
+    } else if (name === 'DisplayVersion') {
+      cur.DisplayVersion = val;
+    } else if (name === 'Publisher') {
+      cur.Publisher = val;
+    }
   }
   flush();
   return out;
@@ -105,7 +131,10 @@ function getNativeUninstaller(env = process.env, deps) {
   }
   const d = deps || _defaultDeps();
   if (d.platform !== 'win32') {
-    return { available: false, reason: `原生卸载器仅支持 Windows(当前 ${d.platform});其它平台由包管理器(T1)覆盖` };
+    return {
+      available: false,
+      reason: `原生卸载器仅支持 Windows(当前 ${d.platform});其它平台由包管理器(T1)覆盖`,
+    };
   }
 
   return {
@@ -120,13 +149,23 @@ function getNativeUninstaller(env = process.env, deps) {
       const apps = [];
       for (const root of _UNINSTALL_ROOTS) {
         let text = '';
-        try { text = d.regQuery(root); } catch (_) { text = ''; }
-        if (!text) continue;
+        try {
+          text = d.regQuery(root);
+        } catch (_) {
+          text = '';
+        }
+        if (!text) {
+          continue;
+        }
         for (const raw of _parseRegQuery(text)) {
           const norm = policy.normalizeRecord(raw);
-          if (!norm.ok) continue; // 无卸载器 → 跳过(不列不可卸的)
+          if (!norm.ok) {
+            continue;
+          } // 无卸载器 → 跳过(不列不可卸的)
           const key = (norm.record.displayName + '|' + norm.record.keyName).toLowerCase();
-          if (seen.has(key)) continue;
+          if (seen.has(key)) {
+            continue;
+          }
           seen.add(key);
           apps.push(norm.record);
         }
@@ -139,7 +178,9 @@ function getNativeUninstaller(env = process.env, deps) {
      */
     findByName(query) {
       const listed = this.listInstalled();
-      if (!listed.ok) return { ok: false, matches: [], error: listed.error };
+      if (!listed.ok) {
+        return { ok: false, matches: [], error: listed.error };
+      }
       return { ok: true, matches: policy.matchRecords(listed.apps, query) };
     },
 
@@ -150,9 +191,13 @@ function getNativeUninstaller(env = process.env, deps) {
      */
     async uninstall(record, { confirmed = false } = {}) {
       const cmd = policy.buildNativeUninstallCommand(record);
-      if (!cmd.ok) return { ok: false, error: cmd.reason || '无法构造卸载命令(无自带卸载器)' };
+      if (!cmd.ok) {
+        return { ok: false, error: cmd.reason || '无法构造卸载命令(无自带卸载器)' };
+      }
       const plan = cmd.argv.join(' ');
-      if (!confirmed) return { ok: false, error: '卸载未确认(需 confirmed:true)', argv: cmd.argv, plan };
+      if (!confirmed) {
+        return { ok: false, error: '卸载未确认(需 confirmed:true)', argv: cmd.argv, plan };
+      }
       const res = await d.runInherit(cmd.argv, 600000);
       return { ok: res.ok, error: res.error || undefined, argv: cmd.argv, plan };
     },

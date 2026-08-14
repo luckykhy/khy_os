@@ -26,16 +26,22 @@ class PhysicalException extends Error {
     super(`${code}: ${finding}`);
     this.name = 'PhysicalException';
     this.code = code;
-    this.finding = finding;       // 人读定位，如 "调用了不存在的工具 tool_x"
-    this.detail = detail;         // 结构化现场 { toolName, used, budget, ... }
+    this.finding = finding; // 人读定位，如 "调用了不存在的工具 tool_x"
+    this.detail = detail; // 结构化现场 { toolName, used, budget, ... }
     this.physical = true;
   }
 }
 
 function _text(err) {
-  if (err == null) return '';
-  if (typeof err === 'string') return err;
-  if (err instanceof Error) return `${err.message || ''} ${err.code || ''}`;
+  if (err == null) {
+    return '';
+  }
+  if (typeof err === 'string') {
+    return err;
+  }
+  if (err instanceof Error) {
+    return `${err.message || ''} ${err.code || ''}`;
+  }
   if (typeof err === 'object') {
     const msg = err.message || err.error || err.reason || '';
     return `${typeof msg === 'string' ? msg : JSON.stringify(msg)} ${err.code || ''}`;
@@ -44,18 +50,36 @@ function _text(err) {
 }
 
 function _toSet(x) {
-  if (!x) return null;
-  if (x instanceof Set) return x;
-  if (Array.isArray(x)) return new Set(x.map(String));
+  if (!x) {
+    return null;
+  }
+  if (x instanceof Set) {
+    return x;
+  }
+  if (Array.isArray(x)) {
+    return new Set(x.map(String));
+  }
   return null;
 }
 
 // 错误签名 → 物理码（兜底；显式信号缺失时启用）。顺序即优先级。
 const _SIGNATURES = [
-  { code: PHYSICAL_CODES.ERR_BEHAVIOR_FORBIDDEN, re: /(forbidden|eperm|denied|越权|拒绝执行|权限不足|behavior_forbidden|审批未过|越界访问)/i },
-  { code: PHYSICAL_CODES.ERR_TOOL_HALLUCINATION, re: /(unknown tool|hallucinat|不存在的工具|no such tool|tool not found|未注册工具|tool_unavailable)/i },
-  { code: PHYSICAL_CODES.ERR_RESOURCE_OVERFLOW, re: /(overflow|max_tokens|资源越界|上下文溢出|预算超限|budget exceeded|resource_overflow|context.*meltdown|频繁熔断)/i },
-  { code: PHYSICAL_CODES.ERR_SCHEMA_VIOLATION, re: /(schema|json.*parse|parse.*json|格式校验|结构化校验|validation failed|invalid format|schema_violation|不是合法json)/i },
+  {
+    code: PHYSICAL_CODES.ERR_BEHAVIOR_FORBIDDEN,
+    re: /(forbidden|eperm|denied|越权|拒绝执行|权限不足|behavior_forbidden|审批未过|越界访问)/i,
+  },
+  {
+    code: PHYSICAL_CODES.ERR_TOOL_HALLUCINATION,
+    re: /(unknown tool|hallucinat|不存在的工具|no such tool|tool not found|未注册工具|tool_unavailable)/i,
+  },
+  {
+    code: PHYSICAL_CODES.ERR_RESOURCE_OVERFLOW,
+    re: /(overflow|max_tokens|资源越界|上下文溢出|预算超限|budget exceeded|resource_overflow|context.*meltdown|频繁熔断)/i,
+  },
+  {
+    code: PHYSICAL_CODES.ERR_SCHEMA_VIOLATION,
+    re: /(schema|json.*parse|parse.*json|格式校验|结构化校验|validation failed|invalid format|schema_violation|不是合法json)/i,
+  },
 ];
 
 class PhysicalAssertionGate {
@@ -76,18 +100,24 @@ class PhysicalAssertionGate {
    */
   assert(obs = {}) {
     const hits = this._detectAll(obs);
-    if (!hits.length) return null;
-    hits.sort((a, b) => (mappingFor(a.code).gateOrder) - (mappingFor(b.code).gateOrder));
+    if (!hits.length) {
+      return null;
+    }
+    hits.sort((a, b) => mappingFor(a.code).gateOrder - mappingFor(b.code).gateOrder);
     const primary = hits[0];
     const ex = new PhysicalException(primary.code, primary.finding, primary.detail);
-    if (hits.length > 1) ex.also = hits.slice(1).map((h) => ({ code: h.code, finding: h.finding }));
+    if (hits.length > 1) {
+      ex.also = hits.slice(1).map((h) => ({ code: h.code, finding: h.finding }));
+    }
     return ex;
   }
 
   /** 命中即抛 PhysicalException；无硬伤返回 undefined。 */
   assertOrThrow(obs = {}) {
     const ex = this.assert(obs);
-    if (ex) throw ex;
+    if (ex) {
+      throw ex;
+    }
   }
 
   /**
@@ -97,12 +127,18 @@ class PhysicalAssertionGate {
    * @param {function} [project]  (result)=>observation，把执行产物投影成断言现场
    */
   async wrap(fn, project) {
-    let result, threw = null;
-    try { result = await fn(); }
-    catch (e) { threw = e; }
+    let result,
+      threw = null;
+    try {
+      result = await fn();
+    } catch (e) {
+      threw = e;
+    }
     const obs = threw
       ? { error: threw }
-      : (typeof project === 'function' ? (project(result) || {}) : { output: result });
+      : typeof project === 'function'
+        ? project(result) || {}
+        : { output: result };
     const physical = this.assert(obs);
     if (threw && !physical) {
       // 抛了错但物理上判不出硬伤——保留原错误语义，交由旁路/上层处理。
@@ -116,34 +152,72 @@ class PhysicalAssertionGate {
 
     // —— 1) 行为越权（显式） ——
     if (obs.denied === true || obs.forbidden === true || obs.gatewayBlocked === true) {
-      hits.push({ code: PHYSICAL_CODES.ERR_BEHAVIOR_FORBIDDEN, finding: '行为越权被守卫/网关阻断', detail: { surface: obs.surface } });
+      hits.push({
+        code: PHYSICAL_CODES.ERR_BEHAVIOR_FORBIDDEN,
+        finding: '行为越权被守卫/网关阻断',
+        detail: { surface: obs.surface },
+      });
     }
 
     // —— 2) 工具调用幻觉（显式） ——
     const known = _toSet(obs.knownTools);
     if (obs.toolName && known && !known.has(String(obs.toolName))) {
-      hits.push({ code: PHYSICAL_CODES.ERR_TOOL_HALLUCINATION, finding: `调用了不存在的工具 ${obs.toolName}`, detail: { toolName: obs.toolName } });
+      hits.push({
+        code: PHYSICAL_CODES.ERR_TOOL_HALLUCINATION,
+        finding: `调用了不存在的工具 ${obs.toolName}`,
+        detail: { toolName: obs.toolName },
+      });
     }
 
     // —— 3) 资源越界（显式） ——
     if (obs.resourceOverflow === true) {
-      hits.push({ code: PHYSICAL_CODES.ERR_RESOURCE_OVERFLOW, finding: '资源越界（显式标志）', detail: {} });
-    } else if (Number.isFinite(obs.resourceUsed) && Number.isFinite(obs.budget) && obs.resourceUsed > obs.budget) {
-      hits.push({ code: PHYSICAL_CODES.ERR_RESOURCE_OVERFLOW, finding: `资源越界：用量 ${obs.resourceUsed} > 预算 ${obs.budget}`, detail: { used: obs.resourceUsed, budget: obs.budget } });
+      hits.push({
+        code: PHYSICAL_CODES.ERR_RESOURCE_OVERFLOW,
+        finding: '资源越界（显式标志）',
+        detail: {},
+      });
+    } else if (
+      Number.isFinite(obs.resourceUsed) &&
+      Number.isFinite(obs.budget) &&
+      obs.resourceUsed > obs.budget
+    ) {
+      hits.push({
+        code: PHYSICAL_CODES.ERR_RESOURCE_OVERFLOW,
+        finding: `资源越界：用量 ${obs.resourceUsed} > 预算 ${obs.budget}`,
+        detail: { used: obs.resourceUsed, budget: obs.budget },
+      });
     }
 
     // —— 4) Schema 违例（显式：校验器 / JSON 解析） ——
     if (obs.schema != null && obs.output !== undefined) {
-      const validate = typeof obs.schema === 'function' ? obs.schema
-        : (obs.schema && typeof obs.schema.validate === 'function' ? obs.schema.validate : null);
+      const validate =
+        typeof obs.schema === 'function'
+          ? obs.schema
+          : obs.schema && typeof obs.schema.validate === 'function'
+            ? obs.schema.validate
+            : null;
       if (validate) {
         let ok = false;
-        try { ok = validate(obs.output) === true; } catch { ok = false; }
-        if (!ok) hits.push({ code: PHYSICAL_CODES.ERR_SCHEMA_VIOLATION, finding: '输出未通过 Schema 校验器', detail: {} });
+        try {
+          ok = validate(obs.output) === true;
+        } catch {
+          ok = false;
+        }
+        if (!ok) {
+          hits.push({
+            code: PHYSICAL_CODES.ERR_SCHEMA_VIOLATION,
+            finding: '输出未通过 Schema 校验器',
+            detail: {},
+          });
+        }
       }
     }
     if (obs.expectJson === true && obs.output !== undefined && !this._parsesAsJson(obs.output)) {
-      hits.push({ code: PHYSICAL_CODES.ERR_SCHEMA_VIOLATION, finding: '输出无法解析为 JSON', detail: {} });
+      hits.push({
+        code: PHYSICAL_CODES.ERR_SCHEMA_VIOLATION,
+        finding: '输出无法解析为 JSON',
+        detail: {},
+      });
     }
 
     // —— 5) 错误签名兜底（仅当显式路一无所获时启用，避免重复计码） ——
@@ -151,7 +225,11 @@ class PhysicalAssertionGate {
       const blob = _text(obs.error);
       for (const sig of _SIGNATURES) {
         if (sig.re.test(blob)) {
-          hits.push({ code: sig.code, finding: `由错误签名归类：${blob.trim().slice(0, 160)}`, detail: { fromSignature: true } });
+          hits.push({
+            code: sig.code,
+            finding: `由错误签名归类：${blob.trim().slice(0, 160)}`,
+            detail: { fromSignature: true },
+          });
           break;
         }
       }
@@ -160,9 +238,18 @@ class PhysicalAssertionGate {
   }
 
   _parsesAsJson(output) {
-    if (output && typeof output === 'object') return true; // 已是对象
-    if (typeof output !== 'string') return false;
-    try { JSON.parse(output); return true; } catch { return false; }
+    if (output && typeof output === 'object') {
+      return true;
+    } // 已是对象
+    if (typeof output !== 'string') {
+      return false;
+    }
+    try {
+      JSON.parse(output);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

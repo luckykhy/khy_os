@@ -38,20 +38,34 @@ let userB;
 async function tableExists(name) {
   const [rows] = await sequelize.query(
     "SELECT name FROM sqlite_master WHERE type='table' AND name = :name",
-    { replacements: { name } },
+    { replacements: { name } }
   );
   return rows.length > 0;
 }
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'heal-a', email: 'heal-a@test.local', password: 'pw-heal-a-123', status: 'active' });
-  userB = await User.create({ username: 'heal-b', email: 'heal-b@test.local', password: 'pw-heal-b-123', status: 'active' });
+  userA = await User.create({
+    username: 'heal-a',
+    email: 'heal-a@test.local',
+    password: 'pw-heal-a-123',
+    status: 'active',
+  });
+  userB = await User.create({
+    username: 'heal-b',
+    email: 'heal-b@test.local',
+    password: 'pw-heal-b-123',
+    status: 'active',
+  });
 });
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 describe('userGatewayConfigService — per-user table self-heal', () => {
@@ -100,18 +114,27 @@ describe('userGatewayConfigService — per-user table self-heal', () => {
     // so here we exercise the model store CRUD on the healed table.
     expect(await tableExists('user_provider_models')).toBe(true);
 
-    const first = await svc.upsertModels(userA.id, 'relay', [
-      { model: 'gpt-4o', capability: 'text' },
-      { model: 'sora', capability: 'video' },
-    ], { source: 'detected' });
+    const first = await svc.upsertModels(
+      userA.id,
+      'relay',
+      [
+        { model: 'gpt-4o', capability: 'text' },
+        { model: 'sora', capability: 'video' },
+      ],
+      { source: 'detected' }
+    );
     expect(await tableExists('user_provider_models')).toBe(true);
     expect(first.added).toBe(2);
     expect(first.total).toBe(2);
 
     // Re-upsert: idempotent (no new rows), manual addition survives a re-probe.
-    const manual = await svc.upsertModels(userA.id, 'relay', [{ model: 'my-model' }], { source: 'manual' });
+    const manual = await svc.upsertModels(userA.id, 'relay', [{ model: 'my-model' }], {
+      source: 'manual',
+    });
     expect(manual.added).toBe(1);
-    const again = await svc.upsertModels(userA.id, 'relay', [{ model: 'gpt-4o' }], { source: 'detected' });
+    const again = await svc.upsertModels(userA.id, 'relay', [{ model: 'gpt-4o' }], {
+      source: 'detected',
+    });
     expect(again.added).toBe(0);
     expect(again.total).toBe(3);
 

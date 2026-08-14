@@ -62,38 +62,28 @@ const KHY_GUIDE_AGENT = {
     if (toolUseContext && toolUseContext.options) {
       // 1. Custom skills
       const commands = toolUseContext.options.commands || [];
-      const customCommands = commands.filter(cmd => cmd.type === 'prompt');
+      const customCommands = commands.filter((cmd) => cmd.type === 'prompt');
       if (customCommands.length > 0) {
         const commandList = customCommands
-          .map(cmd => `- /${cmd.name}: ${cmd.description}`)
+          .map((cmd) => `- /${cmd.name}: ${cmd.description}`)
           .join('\n');
-        contextSections.push(
-          `**Available custom skills in this project:**\n${commandList}`,
-        );
+        contextSections.push(`**Available custom skills in this project:**\n${commandList}`);
       }
 
       // 2. Custom agents
       const agentDefs = toolUseContext.options.agentDefinitions;
       if (agentDefs && agentDefs.activeAgents) {
-        const customAgents = agentDefs.activeAgents.filter(
-          a => a.source !== 'built-in',
-        );
+        const customAgents = agentDefs.activeAgents.filter((a) => a.source !== 'built-in');
         if (customAgents.length > 0) {
-          const agentList = customAgents
-            .map(a => `- ${a.agentType}: ${a.whenToUse}`)
-            .join('\n');
-          contextSections.push(
-            `**Available custom agents configured:**\n${agentList}`,
-          );
+          const agentList = customAgents.map((a) => `- ${a.agentType}: ${a.whenToUse}`).join('\n');
+          contextSections.push(`**Available custom agents configured:**\n${agentList}`);
         }
       }
 
       // 3. MCP servers
       const mcpClients = toolUseContext.options.mcpClients;
       if (mcpClients && mcpClients.length > 0) {
-        const mcpList = mcpClients
-          .map(client => `- ${client.name}`)
-          .join('\n');
+        const mcpList = mcpClients.map((client) => `- ${client.name}`).join('\n');
         contextSections.push(`**Configured MCP servers:**\n${mcpList}`);
       }
     }

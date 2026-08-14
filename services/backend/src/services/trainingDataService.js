@@ -14,8 +14,7 @@ const fsp = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
 
-const DATA_DIR = process.env.TRAINING_DATA_DIR
-  || path.join(__dirname, '../../data/training');
+const DATA_DIR = process.env.TRAINING_DATA_DIR || path.join(__dirname, '../../data/training');
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB per file, then rotate
 const MAX_TOTAL_SIZE = parseInt(process.env.TRAINING_MAX_SIZE_MB || '500', 10) * 1024 * 1024; // 500MB default cap
 const RETENTION_DAYS = parseInt(process.env.TRAINING_RETENTION_DAYS || '90', 10); // 90 days default
@@ -87,7 +86,7 @@ function recordInteraction(record) {
     const line = JSON.stringify(entry) + '\n';
     const filePath = getOutputPath();
     // Non-blocking write
-    fsp.appendFile(filePath, line, 'utf-8').catch(err => {
+    fsp.appendFile(filePath, line, 'utf-8').catch((err) => {
       console.error('[TrainingData] Async write failed:', err.message);
     });
     _currentSize += Buffer.byteLength(line);
@@ -119,7 +118,7 @@ function recordFeedback(sessionId, messageIndex, feedback) {
     const line = JSON.stringify(entry) + '\n';
     const filePath = getOutputPath();
     // Non-blocking write
-    fsp.appendFile(filePath, line, 'utf-8').catch(err => {
+    fsp.appendFile(filePath, line, 'utf-8').catch((err) => {
       console.error('[TrainingData] Async write failed:', err.message);
     });
     _currentSize += Buffer.byteLength(line);
@@ -135,7 +134,9 @@ function recordFeedback(sessionId, messageIndex, feedback) {
  * Anonymize user ID (hash to prevent PII leakage in training data).
  */
 function anonymizeId(userId) {
-  if (!userId) return 'anonymous';
+  if (!userId) {
+    return 'anonymous';
+  }
   return crypto.createHash('sha256').update(String(userId)).digest('hex').slice(0, 32);
 }
 
@@ -143,7 +144,7 @@ function anonymizeId(userId) {
  * Sanitize messages for training (remove PII patterns).
  */
 function sanitizeMessages(messages) {
-  return messages.map(msg => ({
+  return messages.map((msg) => ({
     role: msg.role,
     content: String(msg.content || '')
       // Remove Chinese mobile phone numbers (1[3-9]xxxxxxxxx)
@@ -155,8 +156,8 @@ function sanitizeMessages(messages) {
       // Remove bank card numbers (13-19 digits, with optional spaces/dashes)
       .replace(/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4,7}\b/g, '[BANKCARD]')
       // Remove IP addresses
-      .replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[IP]')
-      // Keep everything else
+      .replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[IP]'),
+    // Keep everything else
   }));
 }
 
@@ -168,22 +169,35 @@ function exportForTraining(options = {}) {
   const { minRating = 0, format = 'chatml' } = options;
   ensureDataDir();
 
-  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.jsonl')).sort();
+  const files = fs
+    .readdirSync(DATA_DIR)
+    .filter((f) => f.endsWith('.jsonl'))
+    .sort();
   const conversations = [];
 
   for (const file of files) {
-    const lines = fs.readFileSync(path.join(DATA_DIR, file), 'utf-8').split(/\r?\n/).filter(Boolean);
+    const lines = fs
+      .readFileSync(path.join(DATA_DIR, file), 'utf-8')
+      .split(/\r?\n/)
+      .filter(Boolean);
     for (const line of lines) {
       try {
         const entry = JSON.parse(line);
-        if (entry.type === 'feedback') continue; // Skip feedback-only entries
-        if (minRating > 0 && (entry.rating || 0) < minRating) continue;
+        if (entry.type === 'feedback') {
+          continue;
+        } // Skip feedback-only entries
+        if (minRating > 0 && (entry.rating || 0) < minRating) {
+          continue;
+        }
 
         if (format === 'chatml') {
           // ChatML format (compatible with Qwen training)
           const conv = {
             conversations: [
-              ...entry.messages.map(m => ({ from: m.role === 'user' ? 'human' : 'gpt', value: m.content })),
+              ...entry.messages.map((m) => ({
+                from: m.role === 'user' ? 'human' : 'gpt',
+                value: m.content,
+              })),
               { from: 'gpt', value: entry.response },
             ],
           };
@@ -191,14 +205,13 @@ function exportForTraining(options = {}) {
         } else if (format === 'openai') {
           // OpenAI fine-tuning format
           const conv = {
-            messages: [
-              ...entry.messages,
-              { role: 'assistant', content: entry.response },
-            ],
+            messages: [...entry.messages, { role: 'assistant', content: entry.response }],
           };
           conversations.push(conv);
         }
-      } catch { /* skip malformed lines */ }
+      } catch {
+        /* skip malformed lines */
+      }
     }
   }
 
@@ -211,7 +224,7 @@ function exportForTraining(options = {}) {
 function getStats() {
   ensureDataDir();
 
-  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.jsonl'));
+  const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.jsonl'));
   let totalSize = 0;
   let totalLines = 0;
 
@@ -240,7 +253,10 @@ function getStats() {
 function purgeExpired() {
   ensureDataDir();
   const cutoff = Date.now() - RETENTION_DAYS * 86400_000;
-  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.jsonl')).sort();
+  const files = fs
+    .readdirSync(DATA_DIR)
+    .filter((f) => f.endsWith('.jsonl'))
+    .sort();
   let deleted = 0;
   let freedBytes = 0;
 
@@ -269,7 +285,10 @@ function purgeExpired() {
  */
 function enforceSizeLimit() {
   ensureDataDir();
-  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.jsonl')).sort(); // oldest first
+  const files = fs
+    .readdirSync(DATA_DIR)
+    .filter((f) => f.endsWith('.jsonl'))
+    .sort(); // oldest first
   let totalSize = 0;
   const fileSizes = [];
 
@@ -306,7 +325,7 @@ function enforceSizeLimit() {
  */
 function purgeAll() {
   ensureDataDir();
-  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.jsonl'));
+  const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.jsonl'));
   let freedBytes = 0;
 
   for (const file of files) {
@@ -335,7 +354,9 @@ function runMaintenance() {
     totalFreedMB: (parseFloat(expired.freedMB) + parseFloat(sized.freedMB)).toFixed(2),
   };
   if (total.expiredDeleted + total.sizeDeleted > 0) {
-    console.log(`[TrainingData] Maintenance: deleted ${total.expiredDeleted} expired + ${total.sizeDeleted} over-limit files, freed ${total.totalFreedMB}MB`);
+    console.log(
+      `[TrainingData] Maintenance: deleted ${total.expiredDeleted} expired + ${total.sizeDeleted} over-limit files, freed ${total.totalFreedMB}MB`
+    );
   }
   return total;
 }

@@ -92,82 +92,108 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { Delete, Plus } from '@element-plus/icons-vue'
+import { ref, computed, watch } from 'vue';
+import { Delete, Plus } from '@element-plus/icons-vue';
 
 const props = defineProps({
   field: { type: Object, required: true },
   modelValue: { default: null },
-})
-const emit = defineEmits(['update:modelValue'])
+});
+const emit = defineEmits(['update:modelValue']);
 
 function emitValue(v) {
-  emit('update:modelValue', v)
+  emit('update:modelValue', v);
 }
 
 // ── code widget (JSON object <-> text) ──────────────────────────────────────
-const isJson = computed(() => (props.field.language || '') === 'json')
-const codeInvalid = ref(false)
-const codeText = ref('')
+const isJson = computed(() => (props.field.language || '') === 'json');
+const codeInvalid = ref(false);
+const codeText = ref('');
 
 function syncCodeText() {
   if (isJson.value) {
     try {
-      codeText.value = JSON.stringify(props.modelValue ?? {}, null, 2)
+      codeText.value = JSON.stringify(props.modelValue ?? {}, null, 2);
     } catch {
-      codeText.value = ''
+      codeText.value = '';
     }
   } else {
-    codeText.value = props.modelValue == null ? '' : String(props.modelValue)
+    codeText.value = props.modelValue == null ? '' : String(props.modelValue);
   }
-  codeInvalid.value = false
+  codeInvalid.value = false;
 }
-watch(() => props.modelValue, syncCodeText, { immediate: true })
+watch(() => props.modelValue, syncCodeText, { immediate: true });
 
 function onCodeInput(text) {
-  codeText.value = text
+  codeText.value = text;
   if (isJson.value) {
     try {
-      const parsed = JSON.parse(text || '{}')
-      codeInvalid.value = false
-      emitValue(parsed)
+      const parsed = JSON.parse(text || '{}');
+      codeInvalid.value = false;
+      emitValue(parsed);
     } catch {
-      codeInvalid.value = true // keep typing; don't persist malformed JSON
+      codeInvalid.value = true; // keep typing; don't persist malformed JSON
     }
   } else {
-    emitValue(text)
+    emitValue(text);
   }
 }
 
 // ── string-list ─────────────────────────────────────────────────────────────
-const listValue = computed(() => (Array.isArray(props.modelValue) ? props.modelValue : []))
-function addListItem() { emitValue([...listValue.value, '']) }
-function updateListItem(i, v) {
-  const next = listValue.value.slice()
-  next[i] = v
-  emitValue(next)
+const listValue = computed(() => (Array.isArray(props.modelValue) ? props.modelValue : []));
+function addListItem() {
+  emitValue([...listValue.value, '']);
 }
-function removeListItem(i) { emitValue(listValue.value.filter((_, idx) => idx !== i)) }
+function updateListItem(i, v) {
+  const next = listValue.value.slice();
+  next[i] = v;
+  emitValue(next);
+}
+function removeListItem(i) {
+  emitValue(listValue.value.filter((_, idx) => idx !== i));
+}
 
 // ── keyvalue-list ───────────────────────────────────────────────────────────
 const kvValue = computed(() =>
   (Array.isArray(props.modelValue) ? props.modelValue : []).map((r) =>
-    r && typeof r === 'object' ? { key: r.key ?? '', value: r.value ?? '' } : { key: '', value: '' },
-  ),
-)
-function addKv() { emitValue([...kvValue.value, { key: '', value: '' }]) }
-function updateKv(i, k, v) {
-  const next = kvValue.value.map((row) => ({ ...row }))
-  next[i][k] = v
-  emitValue(next)
+    r && typeof r === 'object' ? { key: r.key ?? '', value: r.value ?? '' } : { key: '', value: '' }
+  )
+);
+function addKv() {
+  emitValue([...kvValue.value, { key: '', value: '' }]);
 }
-function removeKv(i) { emitValue(kvValue.value.filter((_, idx) => idx !== i)) }
+function updateKv(i, k, v) {
+  const next = kvValue.value.map((row) => ({ ...row }));
+  next[i][k] = v;
+  emitValue(next);
+}
+function removeKv(i) {
+  emitValue(kvValue.value.filter((_, idx) => idx !== i));
+}
 </script>
 
 <style scoped>
-.nf-list { display: flex; flex-direction: column; gap: 6px; }
-.nf-list__row { display: flex; gap: 6px; align-items: center; }
-.nf-code__warn { display: block; margin-top: 4px; font-size: 11px; color: var(--el-color-danger); }
-.nf-code :deep(textarea) { font-family: var(--el-font-family-mono, monospace); font-size: 12px; }
-.nf-code--invalid :deep(textarea) { border-color: var(--el-color-danger); }
+.nf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nf-list__row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.nf-code__warn {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--el-color-danger);
+}
+.nf-code :deep(textarea) {
+  font-family: var(--el-font-family-mono, monospace);
+  font-size: 12px;
+}
+.nf-code--invalid :deep(textarea) {
+  border-color: var(--el-color-danger);
+}
 </style>

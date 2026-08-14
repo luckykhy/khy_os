@@ -389,10 +389,10 @@ class MarketController {
       // 这里可以使用 Sequelize 批量插入
       // await Instrument.bulkCreate(instruments, { updateOnDuplicate: ['name', 'type', 'category'] });
       
-      // 暂时保存到文件系统
+      // 暂时保存到项目数据家（.khy/khyquant/data/）
       const fs = require('fs');
       const path = require('path');
-      const dataDir = path.join(__dirname, '../../data');
+      const dataDir = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data');
       
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
@@ -433,7 +433,7 @@ class MarketController {
     try {
       const fs = require('fs');
       const path = require('path');
-      const filePath = path.join(__dirname, '../../data/instruments.json');
+      const filePath = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data', 'instruments.json');
       
       if (!fs.existsSync(filePath)) {
         return res.json({

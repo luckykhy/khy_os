@@ -25,17 +25,76 @@ const exportSvc = require('../src/services/workflowExportService');
 const COMPLETE_GRAPH = {
   nodes: [
     { id: 'n_start', type: 'start', name: 'Start', position: { x: 0, y: 0 }, data: { inputs: [] } },
-    { id: 'n_ask', type: 'askUserQuestion', name: '问标的', position: { x: 160, y: 0 }, data: { question: '选哪个标的？', options: ['BTC', 'ETH'], answerVar: 'sym' } },
-    { id: 'n_agent', type: 'subAgent', name: '研究员', position: { x: 320, y: 0 }, data: { agentName: 'researcher', instructions: '研究 {{sym}} 的基本面。', model: 'sonnet', tools: ['WebSearch'], maxTurns: 5 } },
-    { id: 'n_if', type: 'ifElse', name: '是否看多', position: { x: 480, y: 0 }, data: { expression: 'score > 0', trueLabel: '看多', falseLabel: '看空' } },
+    {
+      id: 'n_ask',
+      type: 'askUserQuestion',
+      name: '问标的',
+      position: { x: 160, y: 0 },
+      data: { question: '选哪个标的？', options: ['BTC', 'ETH'], answerVar: 'sym' },
+    },
+    {
+      id: 'n_agent',
+      type: 'subAgent',
+      name: '研究员',
+      position: { x: 320, y: 0 },
+      data: {
+        agentName: 'researcher',
+        instructions: '研究 {{sym}} 的基本面。',
+        model: 'sonnet',
+        tools: ['WebSearch'],
+        maxTurns: 5,
+      },
+    },
+    {
+      id: 'n_if',
+      type: 'ifElse',
+      name: '是否看多',
+      position: { x: 480, y: 0 },
+      data: { expression: 'score > 0', trueLabel: '看多', falseLabel: '看空' },
+    },
     { id: 'n_end', type: 'end', name: 'End', position: { x: 640, y: 0 }, data: { outputs: [] } },
   ],
   connections: [
-    { id: 'e1', from: 'n_start', fromPort: 'default', to: 'n_ask', toPort: 'input', condition: null },
-    { id: 'e2', from: 'n_ask', fromPort: 'default', to: 'n_agent', toPort: 'input', condition: null },
-    { id: 'e3', from: 'n_agent', fromPort: 'default', to: 'n_if', toPort: 'input', condition: null },
-    { id: 'e4', from: 'n_if', fromPort: 'branch-true', to: 'n_end', toPort: 'input', condition: null },
-    { id: 'e5', from: 'n_if', fromPort: 'branch-false', to: 'n_end', toPort: 'input', condition: null },
+    {
+      id: 'e1',
+      from: 'n_start',
+      fromPort: 'default',
+      to: 'n_ask',
+      toPort: 'input',
+      condition: null,
+    },
+    {
+      id: 'e2',
+      from: 'n_ask',
+      fromPort: 'default',
+      to: 'n_agent',
+      toPort: 'input',
+      condition: null,
+    },
+    {
+      id: 'e3',
+      from: 'n_agent',
+      fromPort: 'default',
+      to: 'n_if',
+      toPort: 'input',
+      condition: null,
+    },
+    {
+      id: 'e4',
+      from: 'n_if',
+      fromPort: 'branch-true',
+      to: 'n_end',
+      toPort: 'input',
+      condition: null,
+    },
+    {
+      id: 'e5',
+      from: 'n_if',
+      fromPort: 'branch-false',
+      to: 'n_end',
+      toPort: 'input',
+      condition: null,
+    },
   ],
 };
 
@@ -43,13 +102,26 @@ let user;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  user = await User.create({ username: 'wf-exp', email: 'wf-exp@test.local', password: 'pw-exp-123', status: 'active' });
+  user = await User.create({
+    username: 'wf-exp',
+    email: 'wf-exp@test.local',
+    password: 'pw-exp-123',
+    status: 'active',
+  });
 });
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
-  try { fs.rmSync(TMP_HOME, { recursive: true, force: true }); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
+  try {
+    fs.rmSync(TMP_HOME, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
 });
 
 describe('exportWorkflow — end to end', () => {
@@ -84,15 +156,18 @@ describe('exportWorkflow — end to end', () => {
   test('SKILL.md has parseable frontmatter + mermaid + steps', async () => {
     await exportSvc.exportWorkflow(user.id, id, { homeDir: TMP_HOME });
     const slug = exportSvc.slugFor(user.id, '研究流程');
-    const md = fs.readFileSync(path.join(TMP_HOME, '.khyquant', 'skills', slug, 'SKILL.md'), 'utf-8');
+    const md = fs.readFileSync(
+      path.join(TMP_HOME, '.khyquant', 'skills', slug, 'SKILL.md'),
+      'utf-8'
+    );
 
-    expect(md).toMatch(/^---\n[\s\S]*?\n---\n/);          // frontmatter block
+    expect(md).toMatch(/^---\n[\s\S]*?\n---\n/); // frontmatter block
     expect(md).toContain(`name: ${slug}`);
     expect(md).toContain('```mermaid');
     expect(md).toContain('flowchart TD');
     expect(md).toContain('## Execution Steps');
-    expect(md).toContain('看多');                          // branch label on edge
-    expect(md).toContain('researcher');                     // subAgent reference
+    expect(md).toContain('看多'); // branch label on edge
+    expect(md).toContain('researcher'); // subAgent reference
   });
 
   test('agent .md carries name/description/model and the instructions body', async () => {
@@ -107,9 +182,14 @@ describe('exportWorkflow — end to end', () => {
   test('rejects export of an incomplete graph (no end node)', async () => {
     const wf = await svc.create(user.id, { name: '半成品' });
     await svc.save(user.id, wf.id, {
-      graph: { nodes: [{ id: 's', type: 'start', name: 'S', position: { x: 0, y: 0 }, data: {} }], connections: [] },
+      graph: {
+        nodes: [{ id: 's', type: 'start', name: 'S', position: { x: 0, y: 0 }, data: {} }],
+        connections: [],
+      },
     });
-    await expect(exportSvc.exportWorkflow(user.id, wf.id, { homeDir: TMP_HOME })).rejects.toThrow(/end/);
+    await expect(exportSvc.exportWorkflow(user.id, wf.id, { homeDir: TMP_HOME })).rejects.toThrow(
+      /end/
+    );
   });
 });
 
@@ -124,7 +204,11 @@ describe('exportWorkflow — provider targeting', () => {
   });
 
   afterAll(() => {
-    try { fs.rmSync(TMP_ROOT, { recursive: true, force: true }); } catch { /* ignore */ }
+    try {
+      fs.rmSync(TMP_ROOT, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
   });
 
   test('default provider is khy and lands under home (regression lock)', async () => {
@@ -133,12 +217,16 @@ describe('exportWorkflow — provider targeting', () => {
     expect(out.summary.run).toBe(`goal: run ${out.slug}`);
     const skill = out.files.find((f) => f.kind === 'skill');
     expect(skill.path).toBe(path.join(TMP_HOME, '.khyquant', 'skills', out.slug, 'SKILL.md'));
-    expect(out.files.find((f) => f.kind === 'agent').path)
-      .toBe(path.join(TMP_HOME, '.khy', 'agents', 'researcher.md'));
+    expect(out.files.find((f) => f.kind === 'agent').path).toBe(
+      path.join(TMP_HOME, '.khy', 'agents', 'researcher.md')
+    );
   });
 
   test('claude-code writes to project .claude dirs with provider tool legend', async () => {
-    const out = await exportSvc.exportWorkflow(user.id, id, { provider: 'claude-code', rootDir: TMP_ROOT });
+    const out = await exportSvc.exportWorkflow(user.id, id, {
+      provider: 'claude-code',
+      rootDir: TMP_ROOT,
+    });
     expect(out.provider).toBe('claude-code');
     expect(out.summary.run).toBe(`/${out.slug}`);
 
@@ -154,7 +242,10 @@ describe('exportWorkflow — provider targeting', () => {
   });
 
   test('codex writes a single skill (no agent dir) with codex tool names', async () => {
-    const out = await exportSvc.exportWorkflow(user.id, id, { provider: 'codex', rootDir: TMP_ROOT });
+    const out = await exportSvc.exportWorkflow(user.id, id, {
+      provider: 'codex',
+      rootDir: TMP_ROOT,
+    });
     expect(out.provider).toBe('codex');
     expect(out.summary.run).toBe(`$${out.slug}`);
     expect(out.summary.agents).toBe(0);

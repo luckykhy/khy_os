@@ -58,7 +58,9 @@ function _htmlParsingAvailable() {
   try {
     // eslint-disable-next-line global-require
     const svc = require('./webSearchService');
-    return typeof svc.isHtmlParsingAvailable === 'function' ? !!svc.isHtmlParsingAvailable() : false;
+    return typeof svc.isHtmlParsingAvailable === 'function'
+      ? !!svc.isHtmlParsingAvailable()
+      : false;
   } catch {
     return false;
   }
@@ -68,7 +70,9 @@ function _loadEngines(env, configText) {
   try {
     // eslint-disable-next-line global-require
     const disc = require('./search/searchSourceDiscovery');
-    if (typeof disc.loadDynamicEngines !== 'function') return [];
+    if (typeof disc.loadDynamicEngines !== 'function') {
+      return [];
+    }
     const list = disc.loadDynamicEngines({ env, configText });
     return Array.isArray(list) ? list : [];
   } catch {
@@ -82,9 +86,13 @@ function _discoveryEnabled(env) {
   try {
     // eslint-disable-next-line global-require
     const disc = require('./search/searchSourceDiscovery');
-    if (typeof disc.isEnabled === 'function') return !!disc.isEnabled(env);
+    if (typeof disc.isEnabled === 'function') {
+      return !!disc.isEnabled(env);
+    }
     // 回退：镜像 _envOn 默认开语义。
-    const v = String((env && env.KHY_SEARCH_SOURCE_DISCOVERY) || '').trim().toLowerCase();
+    const v = String((env && env.KHY_SEARCH_SOURCE_DISCOVERY) || '')
+      .trim()
+      .toLowerCase();
     return !['0', 'false', 'off'].includes(v);
   } catch {
     return false;

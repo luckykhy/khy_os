@@ -36,7 +36,9 @@ const router = require('../src/routes/workflow');
 const workflowService = require('../src/services/workflowService');
 // The native executor lives in the trading backend; import it to prove the
 // converted graph is genuinely runnable (not just structurally valid).
-const { runGraph } = require(path.resolve(__dirname, '../../backend/src/services/workflow/workflowExecutor'));
+const { runGraph } = require(
+  path.resolve(__dirname, '../../backend/src/services/workflow/workflowExecutor')
+);
 
 const FX = path.join(__dirname, 'fixtures', 'coze');
 const tableJson = fs.readFileSync(path.join(FX, 'sample-table.json'));
@@ -66,7 +68,12 @@ let userA;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'coze-alice', email: 'coze-alice@test.local', password: 'pw-alice-123', status: 'active' });
+  userA = await User.create({
+    username: 'coze-alice',
+    email: 'coze-alice@test.local',
+    password: 'pw-alice-123',
+    status: 'active',
+  });
   app = express();
   app.use(express.json({ limit: '2mb' }));
   app.use('/api/workflow', router);
@@ -74,7 +81,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 const auth = (u) => ['Authorization', `Bearer ${tokenFor(u.id)}`];
@@ -159,7 +170,9 @@ describe('coze import — POST /api/workflow/import/coze', () => {
     expect(res.body.data.report.source).toBe('coze');
 
     // Round-trips on reload.
-    const reload = await request(app).get(`/api/workflow/${res.body.data.id}`).set(...auth(userA));
+    const reload = await request(app)
+      .get(`/api/workflow/${res.body.data.id}`)
+      .set(...auth(userA));
     expect(reload.status).toBe(200);
     expect(reload.body.data.graph.nodes.length).toBe(13);
   });

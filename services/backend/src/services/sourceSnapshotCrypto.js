@@ -49,7 +49,9 @@ const SCRYPT = Object.freeze({ N: 16384, r: 8, p: 1, keylen: 32, maxmem: 64 * 10
 
 function _normalizeSecret(secret) {
   const s = secret == null ? '' : String(secret);
-  if (!s) throw new Error('source snapshot secret is empty');
+  if (!s) {
+    throw new Error('source snapshot secret is empty');
+  }
   return s;
 }
 

@@ -21,15 +21,25 @@
  * @returns {string}
  */
 function extractMessageText(item) {
-  if (!item || typeof item !== 'object') return '';
-  if (typeof item.text === 'string' && item.text.trim()) return item.text.trim();
-  if (typeof item.message === 'string' && item.message.trim()) return item.message.trim();
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  if (typeof item.text === 'string' && item.text.trim()) {
+    return item.text.trim();
+  }
+  if (typeof item.message === 'string' && item.message.trim()) {
+    return item.message.trim();
+  }
 
   const pullFromContent = (content) => {
-    if (!Array.isArray(content)) return '';
+    if (!Array.isArray(content)) {
+      return '';
+    }
     const parts = [];
     for (const blk of content) {
-      if (!blk) continue;
+      if (!blk) {
+        continue;
+      }
       if (typeof blk === 'string') {
         parts.push(blk);
         continue;
@@ -42,11 +52,17 @@ function extractMessageText(item) {
   };
 
   const fromContent = pullFromContent(item.content);
-  if (fromContent) return fromContent;
+  if (fromContent) {
+    return fromContent;
+  }
   const fromMsgContent = pullFromContent(item.message?.content);
-  if (fromMsgContent) return fromMsgContent;
+  if (fromMsgContent) {
+    return fromMsgContent;
+  }
   const fromResultContent = pullFromContent(item.result?.content);
-  if (fromResultContent) return fromResultContent;
+  if (fromResultContent) {
+    return fromResultContent;
+  }
   return '';
 }
 
@@ -56,13 +72,19 @@ function extractMessageText(item) {
  * @returns {{ thinking: string|null, rest: string }}
  */
 function extractThinkingTags(text) {
-  if (!text || typeof text !== 'string') return { thinking: null, rest: text || '' };
+  if (!text || typeof text !== 'string') {
+    return { thinking: null, rest: text || '' };
+  }
   const thinkingParts = [];
-  const rest = text.replace(/<thinking>([\s\S]*?)<\/thinking>/g, (_, content) => {
-    const trimmed = content.trim();
-    if (trimmed) thinkingParts.push(trimmed);
-    return '';
-  }).trim();
+  const rest = text
+    .replace(/<thinking>([\s\S]*?)<\/thinking>/g, (_, content) => {
+      const trimmed = content.trim();
+      if (trimmed) {
+        thinkingParts.push(trimmed);
+      }
+      return '';
+    })
+    .trim();
   return {
     thinking: thinkingParts.length > 0 ? thinkingParts.join('\n') : null,
     rest,
@@ -75,19 +97,25 @@ function extractThinkingTags(text) {
  * @returns {string}
  */
 function extractReasoningText(item) {
-  if (!item) return '';
+  if (!item) {
+    return '';
+  }
   // Reasoning items can have: .summary (array of {type:'summary_text',text}), .text, or .content
   if (Array.isArray(item.summary)) {
     return item.summary
-      .map(s => (typeof s === 'string' ? s : (s && s.text) || ''))
+      .map((s) => (typeof s === 'string' ? s : (s && s.text) || ''))
       .filter(Boolean)
       .join('\n');
   }
-  if (typeof item.text === 'string') return item.text;
-  if (typeof item.content === 'string') return item.content;
+  if (typeof item.text === 'string') {
+    return item.text;
+  }
+  if (typeof item.content === 'string') {
+    return item.content;
+  }
   if (Array.isArray(item.content)) {
     return item.content
-      .map(c => (typeof c === 'string' ? c : (c && c.text) || ''))
+      .map((c) => (typeof c === 'string' ? c : (c && c.text) || ''))
       .filter(Boolean)
       .join('\n');
   }
@@ -104,15 +132,21 @@ function parseDirectResponse(output) {
   const textParts = [];
   const functionCalls = [];
   const reasoningParts = [];
-  for (const item of (output || [])) {
-    if (!item || typeof item !== 'object') continue;
+  for (const item of output || []) {
+    if (!item || typeof item !== 'object') {
+      continue;
+    }
     if (item.type === 'message' && (item.role === 'assistant' || !item.role)) {
       const text = extractMessageText(item);
       if (text) {
         // Extract prompt-based <thinking> tags from text content
         const { thinking, rest } = extractThinkingTags(text);
-        if (thinking) reasoningParts.push(thinking);
-        if (rest) textParts.push(rest);
+        if (thinking) {
+          reasoningParts.push(thinking);
+        }
+        if (rest) {
+          textParts.push(rest);
+        }
       }
     } else if (item.type === 'function_call') {
       functionCalls.push({
@@ -120,10 +154,15 @@ function parseDirectResponse(output) {
         name: item.name || 'unknown',
         arguments: item.arguments || '{}',
       });
-    } else if (item.type === 'reasoning' || (item.type && String(item.type).includes('reasoning'))) {
+    } else if (
+      item.type === 'reasoning' ||
+      (item.type && String(item.type).includes('reasoning'))
+    ) {
       // OpenAI Responses API native reasoning items
       const text = extractReasoningText(item);
-      if (text) reasoningParts.push(text);
+      if (text) {
+        reasoningParts.push(text);
+      }
     }
   }
   return { textParts, functionCalls, reasoningParts };

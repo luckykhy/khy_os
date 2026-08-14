@@ -20,7 +20,15 @@ function getPool() {
   return require('../../services/accountPool');
 }
 
-const IMPORTABLE_PROVIDERS = ['windsurf', 'kiro', 'trae', 'cursor', 'warp', 'antigravity', 'nirvana'];
+const IMPORTABLE_PROVIDERS = [
+  'windsurf',
+  'kiro',
+  'trae',
+  'cursor',
+  'warp',
+  'antigravity',
+  'nirvana',
+];
 const VALID_SCHEDULING_MODES = ['PerformanceFirst', 'Balance', 'CacheFirst'];
 const IMPORT_PROVIDER_ALIAS = Object.freeze({
   nir: 'nirvana',
@@ -33,12 +41,16 @@ const PROVIDER_CANONICAL_MAP = Object.freeze({
 });
 
 function canonicalProvider(provider) {
-  const raw = String(provider || '').trim().toLowerCase();
+  const raw = String(provider || '')
+    .trim()
+    .toLowerCase();
   return PROVIDER_CANONICAL_MAP[raw] || raw;
 }
 
 function normalizeImportProvider(provider) {
-  const raw = String(provider || '').trim().toLowerCase();
+  const raw = String(provider || '')
+    .trim()
+    .toLowerCase();
   return IMPORT_PROVIDER_ALIAS[raw] || raw;
 }
 
@@ -46,34 +58,57 @@ const IMPORTABLE_PROVIDER_CANONICAL = [...new Set(IMPORTABLE_PROVIDERS.map(canon
 
 function statusColor(status) {
   const st = String(status || '').toLowerCase();
-  if (st === 'active') return chalk.green;
-  if (st === 'disabled') return chalk.dim;
-  if (st === 'banned' || st === 'invalid') return chalk.red;
-  if (st === 'leased' || st === 'cooldown') return chalk.yellow;
+  if (st === 'active') {
+    return chalk.green;
+  }
+  if (st === 'disabled') {
+    return chalk.dim;
+  }
+  if (st === 'banned' || st === 'invalid') {
+    return chalk.red;
+  }
+  if (st === 'leased' || st === 'cooldown') {
+    return chalk.yellow;
+  }
   return chalk.white;
 }
 
 async function findAccountByNeedle(pool, needle) {
   const accounts = await pool.getAllAccounts();
-  const key = String(needle || '').trim().toLowerCase();
-  if (!key) return null;
-  return accounts.find(a =>
-    String(a.id) === key ||
-    String(a.label || '').trim().toLowerCase() === key ||
-    String(a.email || '').trim().toLowerCase() === key
-  ) || null;
+  const key = String(needle || '')
+    .trim()
+    .toLowerCase();
+  if (!key) {
+    return null;
+  }
+  return (
+    accounts.find(
+      (a) =>
+        String(a.id) === key ||
+        String(a.label || '')
+          .trim()
+          .toLowerCase() === key ||
+        String(a.email || '')
+          .trim()
+          .toLowerCase() === key
+    ) || null
+  );
 }
 
 async function handlePoolList(provider) {
   const pool = getPool();
   await pool.init();
-  const norm = String(provider || '').trim().toLowerCase();
+  const norm = String(provider || '')
+    .trim()
+    .toLowerCase();
   const accounts = await pool.getAllAccounts(norm || '');
 
   if (accounts.length === 0) {
-    printInfo(norm
-      ? `账号池中暂无 ${norm} 账号，使用 pool import ${norm} 或 pool add ${norm} 添加`
-      : `账号池为空，使用 pool import <${IMPORTABLE_PROVIDERS.join('|')}> 导入`);
+    printInfo(
+      norm
+        ? `账号池中暂无 ${norm} 账号，使用 pool import ${norm} 或 pool add ${norm} 添加`
+        : `账号池为空，使用 pool import <${IMPORTABLE_PROVIDERS.join('|')}> 导入`
+    );
     return;
   }
 
@@ -82,7 +117,7 @@ async function handlePoolList(provider) {
   console.log('');
   printTable(
     ['ID', '提供商', '标签', '状态', 'Token', '来源'],
-    accounts.map(a => [
+    accounts.map((a) => [
       String(a.id),
       a.provider,
       a.label || a.email || chalk.dim('-'),
@@ -101,22 +136,25 @@ async function handlePoolImport(provider, sourcePathArg) {
   let target = normalizeImportProvider(provider);
   if (!target) {
     const { promptCompat } = require('../uiPrompt');
-    const { picked } = await promptCompat([{
-      type: 'list',
-      name: 'picked',
-      message: '选择要导入的登录账号来源:',
-      choices: [
-        ...IMPORTABLE_PROVIDERS,
-        { name: '↩️  返回', value: null },
-      ],
-    }]);
-    if (!picked) return;
+    const { picked } = await promptCompat([
+      {
+        type: 'list',
+        name: 'picked',
+        message: '选择要导入的登录账号来源:',
+        choices: [...IMPORTABLE_PROVIDERS, { name: '↩️  返回', value: null }],
+      },
+    ]);
+    if (!picked) {
+      return;
+    }
     target = normalizeImportProvider(picked);
   }
 
   const sourcePath = String(sourcePathArg || '').trim();
   if (!IMPORTABLE_PROVIDERS.includes(target) && !sourcePath) {
-    printError(`不支持的提供商: ${target}。若为自定义来源，请提供导入路径：pool import ${target} <path>`);
+    printError(
+      `不支持的提供商: ${target}。若为自定义来源，请提供导入路径：pool import ${target} <path>`
+    );
     printInfo(`内置可选: ${IMPORTABLE_PROVIDERS.join(', ')}`);
     return;
   }
@@ -125,10 +163,11 @@ async function handlePoolImport(provider, sourcePathArg) {
       activateIfNone: true,
       ...(sourcePath ? { sourcePath } : {}),
     });
-    printSuccess(`已导入 ${target} 账号: 发现 ${result.found}，新增 ${result.inserted}，更新 ${result.updated}`);
-    const byProvider = result && result.byProvider && typeof result.byProvider === 'object'
-      ? result.byProvider
-      : {};
+    printSuccess(
+      `已导入 ${target} 账号: 发现 ${result.found}，新增 ${result.inserted}，更新 ${result.updated}`
+    );
+    const byProvider =
+      result && result.byProvider && typeof result.byProvider === 'object' ? result.byProvider : {};
     const providerRows = Object.entries(byProvider).filter(([, v]) => Number(v?.found || 0) > 0);
     if (providerRows.length > 1 || target === 'nirvana' || target === 'antigravity') {
       console.log('');
@@ -159,20 +198,32 @@ async function handlePoolImport(provider, sourcePathArg) {
 
 async function refreshGatewayAfterAccountSwitch(provider) {
   const adapterKey = canonicalProvider(provider);
-  if (!adapterKey) return { adapterKey: '', skipped: true, reason: 'invalid-provider' };
+  if (!adapterKey) {
+    return { adapterKey: '', skipped: true, reason: 'invalid-provider' };
+  }
 
   try {
     const gateway = require('../../services/gateway/aiGateway');
-    if (!gateway._initialized) await gateway.init();
+    if (!gateway.isInitialized()) {
+      await gateway.init();
+    }
 
     const reconnect = await gateway.forceReconnect(adapterKey);
-    try { await gateway.refreshAdapters(); } catch { /* best effort */ }
+    try {
+      await gateway.refreshAdapters();
+    } catch {
+      /* best effort */
+    }
 
     let modelCount = null;
     try {
       const models = await gateway.listModels(adapterKey);
-      if (Array.isArray(models)) modelCount = models.length;
-    } catch { /* best effort */ }
+      if (Array.isArray(models)) {
+        modelCount = models.length;
+      }
+    } catch {
+      /* best effort */
+    }
 
     return { adapterKey, reconnect, modelCount };
   } catch (error) {
@@ -184,7 +235,9 @@ async function handlePoolUse(provider, idOrLabel) {
   const pool = getPool();
   await pool.init();
 
-  const p = String(provider || '').trim().toLowerCase();
+  const p = String(provider || '')
+    .trim()
+    .toLowerCase();
   const key = String(idOrLabel || '').trim();
   if (!p || !key) {
     printError('用法: pool use <provider> <id|label|email>');
@@ -233,7 +286,9 @@ async function handlePoolAdd(provider, tokenArg) {
   const pool = getPool();
   await pool.init();
 
-  const p = String(provider || '').trim().toLowerCase();
+  const p = String(provider || '')
+    .trim()
+    .toLowerCase();
   if (!p) {
     printError('用法: pool add <provider> [token]');
     return;
@@ -250,7 +305,7 @@ async function handlePoolAdd(provider, tokenArg) {
         name: 'token',
         message: `${p} access token:`,
         mask: '*',
-        validate: v => v.length > 0 ? true : '请输入 token',
+        validate: (v) => (v.length > 0 ? true : '请输入 token'),
       },
       {
         type: 'input',
@@ -262,12 +317,14 @@ async function handlePoolAdd(provider, tokenArg) {
     token = String(answers.token || '').trim();
     label = String(answers.label || '').trim();
   } else {
-    const answers = await promptCompat([{
-      type: 'input',
-      name: 'label',
-      message: '标签（可选）:',
-      default: '',
-    }]);
+    const answers = await promptCompat([
+      {
+        type: 'input',
+        name: 'label',
+        message: '标签（可选）:',
+        default: '',
+      },
+    ]);
     label = String(answers.label || '').trim();
   }
 
@@ -287,12 +344,14 @@ async function handlePoolAdd(provider, tokenArg) {
     });
     printSuccess(`已添加账号: ${p} ${account?.tokenPreview || ''}`.trim());
 
-    const { activateNow } = await promptCompat([{
-      type: 'confirm',
-      name: 'activateNow',
-      message: '是否立即设为当前账号?',
-      default: true,
-    }]);
+    const { activateNow } = await promptCompat([
+      {
+        type: 'confirm',
+        name: 'activateNow',
+        message: '是否立即设为当前账号?',
+        default: true,
+      },
+    ]);
     if (activateNow && account?.id) {
       await pool.useAccount(p, String(account.id));
       printSuccess('已设为当前账号');
@@ -319,13 +378,17 @@ async function handlePoolDelete(idOrLabel) {
   }
 
   const { promptCompat } = require('../uiPrompt');
-  const { confirm } = await promptCompat([{
-    type: 'confirm',
-    name: 'confirm',
-    message: `确认删除 ${target.provider} 账号 "${target.label || target.email || target.id}"?`,
-    default: false,
-  }]);
-  if (!confirm) return;
+  const { confirm } = await promptCompat([
+    {
+      type: 'confirm',
+      name: 'confirm',
+      message: `确认删除 ${target.provider} 账号 "${target.label || target.email || target.id}"?`,
+      default: false,
+    },
+  ]);
+  if (!confirm) {
+    return;
+  }
 
   try {
     await pool.removeAccount(target.id);
@@ -393,7 +456,9 @@ async function handlePoolStatus() {
   console.log('');
   console.log(`  总账号: ${chalk.white.bold(String(status.totalAccounts || 0))}`);
   console.log(`  调度模式: ${chalk.cyan(status.schedulingMode || 'Balance')}`);
-  console.log(`  熔断器: ${status.circuitBreaker?.enabled ? chalk.green('启用') : chalk.dim('禁用')}`);
+  console.log(
+    `  熔断器: ${status.circuitBreaker?.enabled ? chalk.green('启用') : chalk.dim('禁用')}`
+  );
   console.log('');
 
   const rows = Object.entries(status.byProvider || {});
@@ -418,8 +483,12 @@ async function handlePoolStatus() {
   console.log('');
   for (const provider of IMPORTABLE_PROVIDER_CANONICAL) {
     const active = await pool.getActiveAccount(provider);
-    if (!active) continue;
-    console.log(`  ${chalk.dim(provider)} 当前: ${chalk.white(active.label || active.email || `ID ${active.id}`)} ${chalk.dim(active.tokenPreview || '')}`);
+    if (!active) {
+      continue;
+    }
+    console.log(
+      `  ${chalk.dim(provider)} 当前: ${chalk.white(active.label || active.email || `ID ${active.id}`)} ${chalk.dim(active.tokenPreview || '')}`
+    );
   }
   console.log('');
 }
@@ -453,7 +522,9 @@ async function handlePoolScheduling(mode) {
 async function pickDefaultClientLabel(pool) {
   for (const provider of IMPORTABLE_PROVIDER_CANONICAL) {
     const active = await pool.getActiveAccount(provider);
-    if (!active) continue;
+    if (!active) {
+      continue;
+    }
     const base = active.label || active.email || provider;
     return `${provider}-${String(base).replace(/[^a-zA-Z0-9_-]/g, '-')}`;
   }
@@ -464,14 +535,16 @@ async function handlePoolApi(clientLabel) {
   const pool = getPool();
   await pool.init();
 
-  const label = String(clientLabel || '').trim() || await pickDefaultClientLabel(pool);
+  const label = String(clientLabel || '').trim() || (await pickDefaultClientLabel(pool));
   const proxyHandler = require('./proxy');
   await proxyHandler.handleProxyQuickstart([label], {});
 }
 
 function normalizePoolProvider(value = '') {
   const raw = normalizeImportProvider(value);
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
   return canonicalProvider(raw);
 }
 
@@ -486,7 +559,11 @@ function printPoolAutoImportUsage() {
   console.log('');
   console.log(chalk.dim('  说明:'));
   console.log(chalk.dim('    1) now 会强制触发一次导入（绕过冷却时间）'));
-  console.log(chalk.dim('    2) 默认导入源优先读取 KHY_POOL_AUTO_IMPORT_SOURCE，其次 ~/Downloads/nirvana-source.zip'));
+  console.log(
+    chalk.dim(
+      '    2) 默认导入源优先读取 KHY_POOL_AUTO_IMPORT_SOURCE，其次 ~/Downloads/nirvana-source.zip'
+    )
+  );
   console.log(chalk.dim(`    3) provider 可选: ${IMPORTABLE_PROVIDER_CANONICAL.join(', ')}`));
   console.log('');
 }
@@ -495,7 +572,9 @@ async function handlePoolAutoImport(action, arg1, arg2) {
   const pool = getPool();
   await pool.init();
 
-  const sub = String(action || '').trim().toLowerCase();
+  const sub = String(action || '')
+    .trim()
+    .toLowerCase();
   if (!sub || sub === 'help' || sub === 'status') {
     printPoolAutoImportUsage();
     return;
@@ -511,9 +590,7 @@ async function handlePoolAutoImport(action, arg1, arg2) {
   const parsedProvider = normalizePoolProvider(rawArg1);
 
   const provider = parsedProvider || '';
-  const sourcePath = provider
-    ? rawArg2
-    : rawArg1;
+  const sourcePath = provider ? rawArg2 : rawArg1;
 
   if (provider && !IMPORTABLE_PROVIDER_CANONICAL.includes(provider)) {
     printError(`不支持的 provider: ${provider}`);
@@ -551,7 +628,9 @@ async function handlePoolAutoImport(action, arg1, arg2) {
     totalFound += found;
     totalInserted += inserted;
     totalUpdated += updated;
-    if (result?.imported) importedCount += 1;
+    if (result?.imported) {
+      importedCount += 1;
+    }
 
     rows.push([
       p,
@@ -566,13 +645,14 @@ async function handlePoolAutoImport(action, arg1, arg2) {
   }
 
   console.log('');
-  printTable(
-    ['Provider', '结果', '发现', '新增', '更新', '原因', '来源', '错误'],
-    rows
-  );
+  printTable(['Provider', '结果', '发现', '新增', '更新', '原因', '来源', '错误'], rows);
   console.log('');
-  if (sourcePath) printInfo(`导入源路径: ${sourcePath}`);
-  printSuccess(`auto-import 完成: provider ${targets.length}，执行 ${importedCount}，发现 ${totalFound}，新增 ${totalInserted}，更新 ${totalUpdated}`);
+  if (sourcePath) {
+    printInfo(`导入源路径: ${sourcePath}`);
+  }
+  printSuccess(
+    `auto-import 完成: provider ${targets.length}，执行 ${importedCount}，发现 ${totalFound}，新增 ${totalInserted}，更新 ${totalUpdated}`
+  );
 }
 
 module.exports = {

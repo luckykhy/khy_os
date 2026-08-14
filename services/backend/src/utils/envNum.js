@@ -24,7 +24,9 @@
  */
 function envNum(env, key) {
   const raw = env && env[key];
-  if (raw == null || String(raw).trim() === '') return undefined;
+  if (raw == null || String(raw).trim() === '') {
+    return undefined;
+  }
   const n = Number(raw);
   return Number.isFinite(n) ? n : undefined;
 }

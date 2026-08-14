@@ -48,6 +48,7 @@ function setupAiModule(capture, gatewayOverrides = {}) {
 
   const gatewayMock = {
     _initialized: true,
+    isInitialized() { return this._initialized; },
     init: jest.fn(async () => {}),
     getStatus: jest.fn(() => [
       { type: 'codex', enabled: true, available: true, name: 'OpenAI Codex' },

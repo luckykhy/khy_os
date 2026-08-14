@@ -21,11 +21,25 @@
  */
 
 function normalizeCompatibility(raw = '') {
-  const value = String(raw || '').trim().toLowerCase();
-  if (!value) return 'openai';
-  if (value === 'openai' || value === 'openai-compatible' || value === 'openai_compatible') return 'openai';
-  if (value === 'anthropic' || value === 'anthropic-compatible' || value === 'anthropic_compatible') return 'anthropic';
-  if (value === 'unknown' || value === 'auto' || value === 'detect') return 'unknown';
+  const value = String(raw || '')
+    .trim()
+    .toLowerCase();
+  if (!value) {
+    return 'openai';
+  }
+  if (value === 'openai' || value === 'openai-compatible' || value === 'openai_compatible') {
+    return 'openai';
+  }
+  if (
+    value === 'anthropic' ||
+    value === 'anthropic-compatible' ||
+    value === 'anthropic_compatible'
+  ) {
+    return 'anthropic';
+  }
+  if (value === 'unknown' || value === 'auto' || value === 'detect') {
+    return 'unknown';
+  }
   return '';
 }
 

@@ -38,7 +38,9 @@ const LATEST_ZHIPU_MODELS = ['glm-5.2', 'glm-4-flash', 'glm-4-air', 'glm-4', 'gl
  */
 function latestGlmModelEnabled(env = process.env) {
   const raw = env && env.KHY_GLM_LATEST_MODEL;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 

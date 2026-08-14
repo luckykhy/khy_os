@@ -72,19 +72,76 @@ function isExternalAgentNudgeEnabled(env) {
  *   blurb       — 一句话说明。
  */
 const EXTERNAL_AGENTS = Object.freeze([
-  Object.freeze({ id: 'claude', name: 'Claude Code', aliases: Object.freeze(['claude code', 'claude-code', 'claudecode', 'claude']), delegatable: true, adapter: 'claude', blurb: 'Anthropic Claude Code CLI' }),
-  Object.freeze({ id: 'codex', name: 'Codex', aliases: Object.freeze(['openai codex', 'codex']), delegatable: true, adapter: 'codex', blurb: 'OpenAI Codex CLI' }),
-  Object.freeze({ id: 'opencode', name: 'OpenCode', aliases: Object.freeze(['opencode', 'open code']), delegatable: true, adapter: 'opencode', blurb: 'OpenCode CLI' }),
-  Object.freeze({ id: 'cursor', name: 'Cursor', aliases: Object.freeze(['cursor agent', 'cursor-agent', 'cursor']), delegatable: false, adapter: 'cursor', blurb: 'Cursor CLI/agent' }),
-  Object.freeze({ id: 'kiro', name: 'Kiro', aliases: Object.freeze(['kiro']), delegatable: false, adapter: 'kiro', blurb: 'Kiro agent' }),
-  Object.freeze({ id: 'trae', name: 'Trae', aliases: Object.freeze(['trae']), delegatable: false, adapter: 'trae', blurb: 'Trae IDE agent' }),
-  Object.freeze({ id: 'warp', name: 'Warp', aliases: Object.freeze(['warp']), delegatable: false, adapter: 'warp', blurb: 'Warp agent' }),
-  Object.freeze({ id: 'windsurf', name: 'Windsurf', aliases: Object.freeze(['windsurf']), delegatable: false, adapter: 'windsurf', blurb: 'Windsurf agent' }),
+  Object.freeze({
+    id: 'claude',
+    name: 'Claude Code',
+    aliases: Object.freeze(['claude code', 'claude-code', 'claudecode', 'claude']),
+    delegatable: true,
+    adapter: 'claude',
+    blurb: 'Anthropic Claude Code CLI',
+  }),
+  Object.freeze({
+    id: 'codex',
+    name: 'Codex',
+    aliases: Object.freeze(['openai codex', 'codex']),
+    delegatable: true,
+    adapter: 'codex',
+    blurb: 'OpenAI Codex CLI',
+  }),
+  Object.freeze({
+    id: 'opencode',
+    name: 'OpenCode',
+    aliases: Object.freeze(['opencode', 'open code']),
+    delegatable: true,
+    adapter: 'opencode',
+    blurb: 'OpenCode CLI',
+  }),
+  Object.freeze({
+    id: 'cursor',
+    name: 'Cursor',
+    aliases: Object.freeze(['cursor agent', 'cursor-agent', 'cursor']),
+    delegatable: false,
+    adapter: 'cursor',
+    blurb: 'Cursor CLI/agent',
+  }),
+  Object.freeze({
+    id: 'kiro',
+    name: 'Kiro',
+    aliases: Object.freeze(['kiro']),
+    delegatable: false,
+    adapter: 'kiro',
+    blurb: 'Kiro agent',
+  }),
+  Object.freeze({
+    id: 'trae',
+    name: 'Trae',
+    aliases: Object.freeze(['trae']),
+    delegatable: false,
+    adapter: 'trae',
+    blurb: 'Trae IDE agent',
+  }),
+  Object.freeze({
+    id: 'warp',
+    name: 'Warp',
+    aliases: Object.freeze(['warp']),
+    delegatable: false,
+    adapter: 'warp',
+    blurb: 'Warp agent',
+  }),
+  Object.freeze({
+    id: 'windsurf',
+    name: 'Windsurf',
+    aliases: Object.freeze(['windsurf']),
+    delegatable: false,
+    adapter: 'windsurf',
+    blurb: 'Windsurf agent',
+  }),
 ]);
 
 // 驱动/委派动词(双语)。命中任一即视为「要把任务交出去」的意图,与 agent 点名两命中才接管
 // (零假阳性:单出现 "cursor"/"claude" 而无驱动动词 → 不接管,避免误伤「光标位置」「clause」类噪音)。
-const DRIVE_VERB_RE = /(用|使用|让|叫|请|派|交给|委派|驱动|切到|切换到|调用|喊|找|拉起|启动|跑一下|帮我用|帮我叫|use\b|drive\b|delegate\b|hand[\s-]?off|hand it to|ask\b|have\b|let\b|run (?:it |this |the task )?(?:with|on|through|via)|spawn\b|switch to|kick off|fire up|launch\b)/i;
+const DRIVE_VERB_RE =
+  /(用|使用|让|叫|请|派|交给|委派|驱动|切到|切换到|调用|喊|找|拉起|启动|跑一下|帮我用|帮我叫|use\b|drive\b|delegate\b|hand[\s-]?off|hand it to|ask\b|have\b|let\b|run (?:it |this |the task )?(?:with|on|through|via)|spawn\b|switch to|kick off|fire up|launch\b)/i;
 
 // 收敛到 utils/toLowerCaseSafe 单一真源(逐字节委托,调用点不变)
 const _norm = require('../utils/toLowerCaseSafe');
@@ -101,20 +158,36 @@ const _norm = require('../utils/toLowerCaseSafe');
  */
 function detectExternalAgentRequest(message, env) {
   try {
-    if (!isExternalAgentNudgeEnabled(env)) return null;
+    if (!isExternalAgentNudgeEnabled(env)) {
+      return null;
+    }
     const text = _norm(message);
-    if (!text) return null;
-    if (!DRIVE_VERB_RE.test(text)) return null; // 无驱动动词 → 不接管
+    if (!text) {
+      return null;
+    }
+    if (!DRIVE_VERB_RE.test(text)) {
+      return null;
+    } // 无驱动动词 → 不接管
     for (const agent of EXTERNAL_AGENTS) {
       for (const alias of agent.aliases) {
         // 词界匹配:别名两侧非字母数字(中文/标点/空白/首尾均可),避免 "clause"/"discourse" 类子串误命中。
         const idx = text.indexOf(alias);
-        if (idx < 0) continue;
+        if (idx < 0) {
+          continue;
+        }
         const before = idx === 0 ? '' : text[idx - 1];
         const after = idx + alias.length >= text.length ? '' : text[idx + alias.length];
         const isWordChar = (c) => c !== '' && /[a-z0-9]/.test(c);
-        if (isWordChar(before) || isWordChar(after)) continue; // 子串命中(前后仍是字母数字)→ 跳过
-        return { id: agent.id, name: agent.name, delegatable: agent.delegatable, adapter: agent.adapter, blurb: agent.blurb };
+        if (isWordChar(before) || isWordChar(after)) {
+          continue;
+        } // 子串命中(前后仍是字母数字)→ 跳过
+        return {
+          id: agent.id,
+          name: agent.name,
+          delegatable: agent.delegatable,
+          adapter: agent.adapter,
+          blurb: agent.blurb,
+        };
       }
     }
     return null;
@@ -134,7 +207,9 @@ function detectExternalAgentRequest(message, env) {
 function buildExternalAgentNudge(message, env) {
   try {
     const hit = detectExternalAgentRequest(message, env);
-    if (!hit) return '';
+    if (!hit) {
+      return '';
+    }
     if (hit.delegatable) {
       return [
         '[SYSTEM:外部 agent 路由]',
@@ -164,7 +239,9 @@ function buildExternalAgentNudge(message, env) {
  */
 function buildExternalAgentDirective(env) {
   try {
-    if (!isExternalAgentDirectiveEnabled(env)) return '';
+    if (!isExternalAgentDirectiveEnabled(env)) {
+      return '';
+    }
     const delegatable = EXTERNAL_AGENTS.filter((a) => a.delegatable);
     const launchOnly = EXTERNAL_AGENTS.filter((a) => !a.delegatable);
     const delLines = delegatable

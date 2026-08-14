@@ -25,50 +25,77 @@ function parseInlineRuns(text) {
   const n = text.length;
   let buf = '';
   const flush = (extra) => {
-    if (buf) runs.push({ text: buf });
+    if (buf) {
+      runs.push({ text: buf });
+    }
     buf = '';
-    if (extra) runs.push(extra);
+    if (extra) {
+      runs.push(extra);
+    }
   };
   while (i < n) {
     // **bold**
     if (text.startsWith('**', i)) {
       const end = text.indexOf('**', i + 2);
-      if (end > i + 1) { flush({ text: text.slice(i + 2, end), bold: true }); i = end + 2; continue; }
+      if (end > i + 1) {
+        flush({ text: text.slice(i + 2, end), bold: true });
+        i = end + 2;
+        continue;
+      }
     }
     // *italic* (single, not part of **)
     if (text[i] === '*' && text[i + 1] !== '*') {
       const end = text.indexOf('*', i + 1);
-      if (end > i) { flush({ text: text.slice(i + 1, end), italic: true }); i = end + 1; continue; }
+      if (end > i) {
+        flush({ text: text.slice(i + 1, end), italic: true });
+        i = end + 1;
+        continue;
+      }
     }
     // `inline code` → keep as plain semantic text (no styling claim)
     if (text[i] === '`') {
       const end = text.indexOf('`', i + 1);
-      if (end > i) { flush({ text: text.slice(i + 1, end) }); i = end + 1; continue; }
+      if (end > i) {
+        flush({ text: text.slice(i + 1, end) });
+        i = end + 1;
+        continue;
+      }
     }
     buf += text[i];
     i += 1;
   }
   flush();
   // Collapse to a single plain run when there is no emphasis — keeps the AST tidy.
-  if (runs.length === 0) return [{ text: '' }];
-  if (runs.length === 1 && !runs[0].bold && !runs[0].italic) return [{ text: runs[0].text }];
+  if (runs.length === 0) {
+    return [{ text: '' }];
+  }
+  if (runs.length === 1 && !runs[0].bold && !runs[0].italic) {
+    return [{ text: runs[0].text }];
+  }
   return runs;
 }
 
 /** A paragraph block; uses plain `text` when there is no emphasis, else `runs`. */
 function _paragraph(text) {
   const runs = parseInlineRuns(text);
-  if (runs.length === 1 && !runs[0].bold && !runs[0].italic) return { type: 'paragraph', text: runs[0].text };
+  if (runs.length === 1 && !runs[0].bold && !runs[0].italic) {
+    return { type: 'paragraph', text: runs[0].text };
+  }
   return { type: 'paragraph', runs };
 }
 
 function _isTableSep(line) {
   return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line);
 }
+
 function _splitRow(line) {
   let s = line.trim();
-  if (s.startsWith('|')) s = s.slice(1);
-  if (s.endsWith('|')) s = s.slice(0, -1);
+  if (s.startsWith('|')) {
+    s = s.slice(1);
+  }
+  if (s.endsWith('|')) {
+    s = s.slice(0, -1);
+  }
   return s.split('|').map((c) => c.trim());
 }
 
@@ -89,7 +116,9 @@ function markdownToAst(markdown, opts = {}) {
   const flushPara = () => {
     if (paraBuf.length) {
       const text = paraBuf.join(' ').trim();
-      if (text) blocks.push(_paragraph(text));
+      if (text) {
+        blocks.push(_paragraph(text));
+      }
       paraBuf = [];
     }
   };
@@ -113,7 +142,10 @@ function markdownToAst(markdown, opts = {}) {
       const lang = fence[2] || undefined;
       const body = [];
       i += 1;
-      while (i < lines.length && !new RegExp(`^\\s*${marker === '`' ? '`{3,}' : '~{3,}'}\\s*$`).test(lines[i])) {
+      while (
+        i < lines.length &&
+        !new RegExp(`^\\s*${marker === '`' ? '`{3,}' : '~{3,}'}\\s*$`).test(lines[i])
+      ) {
         body.push(lines[i]);
         i += 1;
       }
@@ -167,9 +199,13 @@ function markdownToAst(markdown, opts = {}) {
       while (i < lines.length) {
         const um = /^\s*[-*+]\s+(.*)$/.exec(lines[i]);
         const om = /^\s*\d+[.)]\s+(.*)$/.exec(lines[i]);
-        if (ordered && om) items.push(om[1].trim());
-        else if (!ordered && um) items.push(um[1].trim());
-        else break;
+        if (ordered && om) {
+          items.push(om[1].trim());
+        } else if (!ordered && um) {
+          items.push(um[1].trim());
+        } else {
+          break;
+        }
         i += 1;
       }
       blocks.push({ type: 'list', ordered, items });

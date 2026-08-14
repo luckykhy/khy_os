@@ -40,9 +40,9 @@ const ConnectionState = Object.freeze({
  * @enum {string}
  */
 const ConfigScope = Object.freeze({
-  LOCAL: 'local',       // .khyquant/mcp.json in project dir
-  USER: 'user',         // ~/.khy/mcp.json or ~/.khyquant/mcp.json
-  DYNAMIC: 'dynamic',   // Added at runtime via API
+  LOCAL: 'local', // .khyquant/mcp.json in project dir
+  USER: 'user', // ~/.khy/mcp.json or ~/.khyquant/mcp.json
+  DYNAMIC: 'dynamic', // Added at runtime via API
 });
 
 // ── Server Config Shapes ────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ function serializeClient(connection) {
     capabilities: connection.capabilities || undefined,
     serverInfo: connection.serverInfo || undefined,
     instructions: connection.instructions || undefined,
-    tools: (connection.tools || []).map(t => serializeTool(connection.name, t)),
+    tools: (connection.tools || []).map((t) => serializeTool(connection.name, t)),
     error: connection.error || undefined,
   };
 }
@@ -194,7 +194,7 @@ function buildCliState(connections) {
     }
 
     if (conn.resources) {
-      resources[name] = conn.resources.map(r => ({ ...r, server: name }));
+      resources[name] = conn.resources.map((r) => ({ ...r, server: name }));
     }
   }
 

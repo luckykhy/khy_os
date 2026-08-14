@@ -55,15 +55,27 @@ function isEnabled(env = process.env) {
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
-/** 规范化 model id(缓存键统一用此,与决策层按名字判定保持同一规范化语义)。 */
+/**
+ * 规范化 model id —— 能力缓存的键。委托 capabilityModelKey 单一真源:除 trim/lower
+ * 外还剥掉适配器/池子前缀,把路由 id(`api:agnes:agnes-2.5-flash`,教学门看到的形状)
+ * 与裸模型名(`agnes-2.5-flash`,剥离门看到的形状)折叠成同一个键。两者曾各写一条相反
+ * 记录,让模型同时收到「有原生工具」和「你没有原生工具」两套指令 —— 见
+ * capabilityModelKey.js 头部。本函数只做键规范化,从不用于线上请求的 model 串。
+ */
 function normalizeModel(model) {
-  return _norm(model);
+  try {
+    return require('./capabilityModelKey').capabilityModelKey(model);
+  } catch {
+    return _norm(model); // 叶子不可用 → 退回旧语义,宁可键分裂也不能让热路径抛
+  }
 }
 
 /** TTL(ms);env KHY_TOOL_CAP_TTL_MS 可调,非法/非正回落默认。 */
 function ttlMs(env = process.env) {
   const raw = parseInt((env && env.KHY_TOOL_CAP_TTL_MS) || '', 10);
-  if (Number.isFinite(raw) && raw > 0) return raw;
+  if (Number.isFinite(raw) && raw > 0) {
+    return raw;
+  }
   return DEFAULT_TTL_MS;
 }
 
@@ -77,7 +89,9 @@ function ttlMs(env = process.env) {
  */
 function nativeTtlMs(env = process.env) {
   const raw = parseInt((env && env.KHY_TOOL_CAP_NATIVE_TTL_MS) || '', 10);
-  if (Number.isFinite(raw) && raw > 0) return raw;
+  if (Number.isFinite(raw) && raw > 0) {
+    return raw;
+  }
   return 0;
 }
 
@@ -103,7 +117,9 @@ function interpretProbeResult(result) {
     }
 
     // 成功判定:显式 success===false 视为失败;未给 success 字段时,以「有文字内容」近似成功。
-    const text = String(r.content != null ? r.content : (r.thinking != null ? r.thinking : '')).trim();
+    const text = String(
+      r.content != null ? r.content : r.thinking != null ? r.thinking : ''
+    ).trim();
     const explicitlyFailed = r.success === false;
     if (explicitlyFailed) {
       return { verdict: 'unknown', reason: 'generation_failed' };
@@ -136,18 +152,26 @@ function interpretProbeResult(result) {
  */
 function shouldReprobe(record, env = process.env, now) {
   try {
-    if (!record || typeof record !== 'object') return true;
+    if (!record || typeof record !== 'object') {
+      return true;
+    }
     const verdict = record.verdict;
-    if (verdict !== 'native' && verdict !== 'text') return true; // unknown/缺失不算已测
+    if (verdict !== 'native' && verdict !== 'text') {
+      return true;
+    } // unknown/缺失不算已测
     const measuredAt = Number(record.measuredAt);
-    if (!Number.isFinite(measuredAt)) return true;
+    if (!Number.isFinite(measuredAt)) {
+      return true;
+    }
     const t = Number.isFinite(now) ? now : Date.now();
     if (verdict === 'native') {
       const nttl = nativeTtlMs(env);
-      if (nttl <= 0) return false; // sticky:确证通过永不重测
-      return (t - measuredAt) > nttl;
+      if (nttl <= 0) {
+        return false;
+      } // sticky:确证通过永不重测
+      return t - measuredAt > nttl;
     }
-    return (t - measuredAt) > ttlMs(env);
+    return t - measuredAt > ttlMs(env);
   } catch {
     return true;
   }

@@ -38,9 +38,9 @@ function enabled() {
 
 // ── 配置根 + 文本扩展名 allowlist（照抄 bridge READABLE_EXT）────────────────────
 const READABLE_EXT = new Set(['.md', '.markdown', '.mdown', '.mkd', '.txt', '.text']);
-const MAX_READ_BYTES = 2 * 1024 * 1024;   // 单文件读上限 2MB（超限拒，避免大文件拖垮）
-const MAX_LIST_ENTRIES = 2000;            // 列目录条目上限
-const MAX_LIST_DEPTH = 6;                 // 递归深度上限
+const MAX_READ_BYTES = 2 * 1024 * 1024; // 单文件读上限 2MB（超限拒，避免大文件拖垮）
+const MAX_LIST_ENTRIES = 2000; // 列目录条目上限
+const MAX_LIST_DEPTH = 6; // 递归深度上限
 
 function workbenchRoot() {
   const cfg = process.env.KHY_MD_WORKBENCH_ROOT;
@@ -82,7 +82,11 @@ function listHandler(req, res) {
     const baseDir = c.abs;
 
     let baseStat = null;
-    try { baseStat = fs.statSync(baseDir); } catch (_) { baseStat = null; }
+    try {
+      baseStat = fs.statSync(baseDir);
+    } catch (_) {
+      baseStat = null;
+    }
     if (!baseStat || !baseStat.isDirectory()) return fail(res, 404, 'directory not found');
 
     const files = [];
@@ -91,10 +95,19 @@ function listHandler(req, res) {
     const walk = (dir, depth) => {
       if (files.length >= MAX_LIST_ENTRIES || depth > MAX_LIST_DEPTH) return 0;
       let entries;
-      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return 0; }
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch (_) {
+        return 0;
+      }
       // 目录在前、字典序（与桥接器/文档索引一致）。
-      entries.sort((a, b) => (a.isDirectory() === b.isDirectory())
-        ? a.name.localeCompare(b.name) : (a.isDirectory() ? -1 : 1));
+      entries.sort((a, b) =>
+        a.isDirectory() === b.isDirectory()
+          ? a.name.localeCompare(b.name)
+          : a.isDirectory()
+            ? -1
+            : 1
+      );
       let count = 0;
       for (const e of entries) {
         if (files.length >= MAX_LIST_ENTRIES) break;
@@ -102,12 +115,13 @@ function listHandler(req, res) {
         const abs = path.join(dir, e.name);
         if (e.isDirectory()) {
           const marker = files.length;
-          files.push({ name: e.name, path: abs, depth, type: 'dir' });
+          files.push({ name: e.name, path: path.relative(root, abs), depth, type: 'dir' });
           const sub = walk(abs, depth + 1);
-          if (sub === 0) files.splice(marker, 1); // 空目录（无可读文件）节点剔除
+          if (sub === 0)
+            files.splice(marker, 1); // 空目录（无可读文件）节点剔除
           else count += sub;
         } else if (READABLE_EXT.has(path.extname(e.name).toLowerCase())) {
-          files.push({ name: e.name, path: abs, depth, type: 'file' });
+          files.push({ name: e.name, path: path.relative(root, abs), depth, type: 'file' });
           count += 1;
         }
       }
@@ -115,8 +129,16 @@ function listHandler(req, res) {
     };
     walk(baseDir, 0);
 
-    const label = dirParam ? path.basename(baseDir) : ('📁 ' + path.basename(baseDir));
-    return res.json({ success: true, data: { root, dir: baseDir, label, files } });
+    const label = dirParam ? path.basename(baseDir) : '📁 ' + path.basename(baseDir);
+    return res.json({
+      success: true,
+      data: {
+        root: path.relative(root, root) || '.',
+        dir: path.relative(root, baseDir),
+        label,
+        files,
+      },
+    });
   } catch (err) {
     return fail(res, 400, (err && err.message) || 'list failed');
   }
@@ -130,15 +152,24 @@ function readHandler(req, res) {
     const root = workbenchRoot();
     const c = confine(root, p);
     if (!c.ok) return fail(res, 403, 'path escapes workbench root');
-    if (!READABLE_EXT.has(path.extname(c.abs).toLowerCase())) return fail(res, 400, 'not a text file');
+    if (!READABLE_EXT.has(path.extname(c.abs).toLowerCase()))
+      return fail(res, 400, 'not a text file');
 
     let stat = null;
-    try { stat = fs.statSync(c.abs); } catch (_) { stat = null; }
+    try {
+      stat = fs.statSync(c.abs);
+    } catch (_) {
+      stat = null;
+    }
     if (!stat || !stat.isFile()) return fail(res, 404, 'file not found');
     if (stat.size > MAX_READ_BYTES) return fail(res, 422, 'file too large');
 
     let content = '';
-    try { content = fs.readFileSync(c.abs, 'utf8'); } catch (_) { return fail(res, 404, 'read failed'); }
+    try {
+      content = fs.readFileSync(c.abs, 'utf8');
+    } catch (_) {
+      return fail(res, 404, 'read failed');
+    }
     return res.json({ success: true, data: { path: c.abs, content } });
   } catch (err) {
     return fail(res, 400, (err && err.message) || 'read failed');
@@ -153,21 +184,31 @@ function saveHandler(req, res) {
     const root = workbenchRoot();
     const c = confine(root, p);
     if (!c.ok) return fail(res, 403, 'path escapes workbench root');
-    if (!READABLE_EXT.has(path.extname(c.abs).toLowerCase())) return fail(res, 400, 'not a text file');
+    if (!READABLE_EXT.has(path.extname(c.abs).toLowerCase()))
+      return fail(res, 400, 'not a text file');
 
     const body = req.body || {};
-    const content = typeof body.content === 'string'
-      ? body.content
-      : (typeof body === 'string' ? body : '');
-    if (Buffer.byteLength(content, 'utf8') > MAX_READ_BYTES) return fail(res, 422, 'content too large');
+    const content =
+      typeof body.content === 'string' ? body.content : typeof body === 'string' ? body : '';
+    if (Buffer.byteLength(content, 'utf8') > MAX_READ_BYTES)
+      return fail(res, 422, 'content too large');
 
     // 只写既有文件所在目录内（父目录必须已存在，不新建目录树，避免危险写路径）。
     const parent = path.dirname(c.abs);
     let parentStat = null;
-    try { parentStat = fs.statSync(parent); } catch (_) { parentStat = null; }
-    if (!parentStat || !parentStat.isDirectory()) return fail(res, 404, 'target directory not found');
+    try {
+      parentStat = fs.statSync(parent);
+    } catch (_) {
+      parentStat = null;
+    }
+    if (!parentStat || !parentStat.isDirectory())
+      return fail(res, 404, 'target directory not found');
 
-    try { fs.writeFileSync(c.abs, content, 'utf8'); } catch (_) { return fail(res, 400, 'write failed'); }
+    try {
+      fs.writeFileSync(c.abs, content, 'utf8');
+    } catch (_) {
+      return fail(res, 400, 'write failed');
+    }
     return res.json({ success: true, data: { path: c.abs } });
   } catch (err) {
     return fail(res, 400, (err && err.message) || 'save failed');
@@ -181,6 +222,11 @@ router.post('/save', saveHandler);
 module.exports = router;
 module.exports.enabled = enabled;
 module.exports.__test__ = {
-  confine, workbenchRoot, READABLE_EXT, enabled,
-  listHandler, readHandler, saveHandler,
+  confine,
+  workbenchRoot,
+  READABLE_EXT,
+  enabled,
+  listHandler,
+  readHandler,
+  saveHandler,
 };

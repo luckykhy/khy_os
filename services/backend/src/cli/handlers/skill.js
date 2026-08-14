@@ -100,11 +100,15 @@ async function handleSkillList(options) {
   console.log(chalk.bold('  📦 可用 Skills'));
   console.log('');
 
-  const sourceLabel = { builtin: chalk.green('内置'), installed: chalk.cyan('已安装'), remote: chalk.yellow('远程') };
+  const sourceLabel = {
+    builtin: chalk.green('内置'),
+    installed: chalk.cyan('已安装'),
+    remote: chalk.yellow('远程'),
+  };
 
   const skillState = require('../../services/skillStateService');
   const headers = ['触发器', '名称', '描述', '来源', '状态'];
-  const rows = skills.map(s => [
+  const rows = skills.map((s) => [
     chalk.white(s.trigger || '-'),
     s.name || s.id,
     chalk.dim(s.description || ''),
@@ -155,11 +159,12 @@ async function handleSkillSearch(keyword) {
 
   const skillRegistry = require('../../services/skillRegistry');
   const all = await skillRegistry.listSkills({ refresh: true });
-  const results = all.filter(s =>
-    (s.name && s.name.includes(keyword)) ||
-    (s.description && s.description.includes(keyword)) ||
-    (s.id && s.id.includes(keyword)) ||
-    (s.tags && s.tags.some(t => t.includes(keyword)))
+  const results = all.filter(
+    (s) =>
+      (s.name && s.name.includes(keyword)) ||
+      (s.description && s.description.includes(keyword)) ||
+      (s.id && s.id.includes(keyword)) ||
+      (s.tags && s.tags.some((t) => t.includes(keyword)))
   );
 
   if (results.length === 0) {
@@ -170,7 +175,7 @@ async function handleSkillSearch(keyword) {
   console.log('');
   console.log(chalk.bold(`  🔍 搜索结果: "${keyword}"`));
   const headers = ['ID', '名称', '描述'];
-  const rows = results.map(s => [s.id, s.name || '-', chalk.dim(s.description || '')]);
+  const rows = results.map((s) => [s.id, s.name || '-', chalk.dim(s.description || '')]);
   printTable(headers, rows);
 }
 
@@ -244,7 +249,9 @@ async function handleSkillLearn(args, options) {
           if (d.adaptable) {
             console.log(`  ${chalk.green('●')} ${d.name} — ${chalk.dim(d.type)}`);
           } else {
-            console.log(`  ${chalk.yellow('○')} ${d.name} — ${chalk.dim('需先安装: ' + d.installCmd)}`);
+            console.log(
+              `  ${chalk.yellow('○')} ${d.name} — ${chalk.dim('需先安装: ' + d.installCmd)}`
+            );
           }
         }
         console.log('');
@@ -280,8 +287,12 @@ async function handleSkillLearn(args, options) {
       }
       printSuccess(`已从目录学习: ${result.name}`);
       printInfo(`描述: ${result.description}`);
-      printInfo(`Skill ID: ${result.id}  提炼命令 ${result.commandCount} 条 / 章节 ${result.headingCount} 个`);
-      if (result.filePath) printInfo(`文件: ${result.filePath}`);
+      printInfo(
+        `Skill ID: ${result.id}  提炼命令 ${result.commandCount} 条 / 章节 ${result.headingCount} 个`
+      );
+      if (result.filePath) {
+        printInfo(`文件: ${result.filePath}`);
+      }
       break;
     }
 
@@ -300,13 +311,20 @@ async function handleSkillLearn(args, options) {
       }
       printSuccess(`已从网页学习: ${result.name}`);
       printInfo(`描述: ${result.description}`);
-      printInfo(`Skill ID: ${result.id}  提炼命令 ${result.commandCount} 条 / 章节 ${result.headingCount} 个`);
-      if (result.filePath) printInfo(`文件: ${result.filePath}`);
+      printInfo(
+        `Skill ID: ${result.id}  提炼命令 ${result.commandCount} 条 / 章节 ${result.headingCount} 个`
+      );
+      if (result.filePath) {
+        printInfo(`文件: ${result.filePath}`);
+      }
       break;
     }
 
     case 'workflow': {
-      const sequenceStr = args.slice(1).join(' ').replace(/^["']|["']$/g, '');
+      const sequenceStr = args
+        .slice(1)
+        .join(' ')
+        .replace(/^["']|["']$/g, '');
       if (!sequenceStr) {
         printError('请指定命令序列');
         printInfo('用法: skill learn workflow "quote sh600519 → backtest sh600519"');
@@ -396,8 +414,12 @@ async function handleSkillJourney() {
   for (const e of result.entries) {
     const style = kindStyle[e.kind] || { icon: '📦', color: chalk.white, label: e.kind };
     const day = e.date ? chalk.dim(e.date.slice(0, 10)) : chalk.dim('——————');
-    console.log(`  ${day}  ${style.icon} ${style.color(`[${style.label}]`)} ${chalk.white(e.title)}`);
-    if (e.description) console.log(`              ${chalk.dim(e.description)}`);
+    console.log(
+      `  ${day}  ${style.icon} ${style.color(`[${style.label}]`)} ${chalk.white(e.title)}`
+    );
+    if (e.description) {
+      console.log(`              ${chalk.dim(e.description)}`);
+    }
   }
 
   const s = result.summary || {};
@@ -500,7 +522,9 @@ async function handleSkillCurator(args, options) {
       console.log(chalk.yellow('  Stale skills:'));
       for (const name of status.staleList) {
         const usage = curator.getSkillUsage(name);
-        console.log(`    ${name} — ${chalk.dim(`used ${usage?.use_count || 0}x, last: ${usage?.last_activity_at?.slice(0, 10) || 'unknown'}`)}`);
+        console.log(
+          `    ${name} — ${chalk.dim(`used ${usage?.use_count || 0}x, last: ${usage?.last_activity_at?.slice(0, 10) || 'unknown'}`)}`
+        );
       }
     }
     console.log('');
@@ -515,7 +539,10 @@ async function handleSkillCurator(args, options) {
 }
 
 async function handleSkillPin(name) {
-  if (!name) { printError('Usage: skill pin <name>'); return; }
+  if (!name) {
+    printError('Usage: skill pin <name>');
+    return;
+  }
   const curator = require('../../services/skillCuratorService');
   if (curator.pinSkill(name)) {
     printSuccess(`Skill "${name}" pinned (exempt from auto-archive).`);
@@ -525,7 +552,10 @@ async function handleSkillPin(name) {
 }
 
 async function handleSkillUnpin(name) {
-  if (!name) { printError('Usage: skill unpin <name>'); return; }
+  if (!name) {
+    printError('Usage: skill unpin <name>');
+    return;
+  }
   const curator = require('../../services/skillCuratorService');
   if (curator.unpinSkill(name)) {
     printSuccess(`Skill "${name}" unpinned.`);
@@ -535,10 +565,16 @@ async function handleSkillUnpin(name) {
 }
 
 async function handleSkillArchive(name) {
-  if (!name) { printError('Usage: skill archive <name>'); return; }
+  if (!name) {
+    printError('Usage: skill archive <name>');
+    return;
+  }
   const skillModule = require('../../skills');
   const skill = skillModule.findSkill(name);
-  if (!skill) { printError(`Skill "${name}" not found.`); return; }
+  if (!skill) {
+    printError(`Skill "${name}" not found.`);
+    return;
+  }
   const curator = require('../../services/skillCuratorService');
   if (curator.archiveSkill(skill)) {
     printSuccess(`Skill "${name}" archived to .archive/.`);
@@ -548,7 +584,10 @@ async function handleSkillArchive(name) {
 }
 
 async function handleSkillRestore(name) {
-  if (!name) { printError('Usage: skill restore <name>'); return; }
+  if (!name) {
+    printError('Usage: skill restore <name>');
+    return;
+  }
   const curator = require('../../services/skillCuratorService');
   if (curator.restoreSkill(name)) {
     printSuccess(`Skill "${name}" restored from archive.`);
@@ -566,7 +605,10 @@ async function handleSkillEnable(name, enabled) {
   }
   const skillModule = require('../../skills');
   const skill = skillModule.findSkill(name);
-  if (!skill) { printError(`Skill "${name}" not found.`); return; }
+  if (!skill) {
+    printError(`Skill "${name}" not found.`);
+    return;
+  }
 
   const state = require('../../services/skillStateService');
   state.setEnabled(skill.name, enabled);
@@ -589,11 +631,17 @@ async function handleSkillAdd(source, options) {
   const skill = options && (options.skill || options.s);
   try {
     const result = await withSpinner(`Fetching skill from: ${source}`, async () =>
-      installer.addFromSource(source, { skill: skill ? String(skill) : undefined }));
+      installer.addFromSource(source, { skill: skill ? String(skill) : undefined })
+    );
     printSuccess(`Skill "${result.name}" installed to ${result.dest}`);
-    if (result.subdir) printInfo(`Source: ${result.source}${result.ref ? `@${result.ref}` : ''} (${result.subdir})`);
-    else printInfo(`Source: ${result.source}${result.ref ? `@${result.ref}` : ''}`);
-    printInfo('It is enabled by default and discoverable now. Use `skill list` to verify, `skill disable <name>` to turn it off.');
+    if (result.subdir) {
+      printInfo(`Source: ${result.source}${result.ref ? `@${result.ref}` : ''} (${result.subdir})`);
+    } else {
+      printInfo(`Source: ${result.source}${result.ref ? `@${result.ref}` : ''}`);
+    }
+    printInfo(
+      'It is enabled by default and discoverable now. Use `skill list` to verify, `skill disable <name>` to turn it off.'
+    );
   } catch (err) {
     printError(`Add failed: ${err.message}`);
   }
@@ -609,7 +657,8 @@ async function handleSkillImport(srcPath, options) {
   const pkg = require('../../services/skillPackageService');
   try {
     const result = await withSpinner(`Importing skill from: ${srcPath}`, async () =>
-      pkg.importSkill(srcPath, options || {}));
+      pkg.importSkill(srcPath, options || {})
+    );
     printSuccess(`Skill "${result.name}" imported to ${result.dest}`);
     printInfo('It is enabled by default. Use `skill disable <name>` to turn it off.');
   } catch (err) {

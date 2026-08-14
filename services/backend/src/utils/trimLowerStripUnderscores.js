@@ -22,7 +22,10 @@
  */
 
 function trimLowerStripUnderscores(name) {
-  return String(name || '').trim().toLowerCase().replace(/_/g, '');
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, '');
 }
 
 module.exports = trimLowerStripUnderscores;

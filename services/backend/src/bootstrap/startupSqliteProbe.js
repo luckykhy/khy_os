@@ -22,7 +22,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function _gateEnabled(env) {
   const v = (env || process.env).KHY_STARTUP_SQLITE_PROBE;
-  if (v === undefined || v === null) return true;
+  if (v === undefined || v === null) {
+    return true;
+  }
   return !_FALSY.has(String(v).trim().toLowerCase());
 }
 
@@ -50,7 +52,9 @@ function runStartupSqliteProbe(options = {}) {
       "process.stdout.write('KHY_SQLITE_OK:' + ((A.__driverInfo && A.__driverInfo.type) || 'unknown'));",
     ].join('\n');
     const child = spawnSync(process.execPath, ['-e', script], {
-      encoding: 'utf8', timeout: timeoutMs, windowsHide: true,
+      encoding: 'utf8',
+      timeout: timeoutMs,
+      windowsHide: true,
     });
     const match = String(child.stdout || '').match(/KHY_SQLITE_OK:(\S+)/);
     if (match) {
@@ -60,8 +64,12 @@ function runStartupSqliteProbe(options = {}) {
       result.driver = match[1];
       try {
         const info = require('../config/sqlite-adapter').__driverInfo;
-        if (info && info.type) result.driver = info.type;
-      } catch { /* 以子进程结果为准 */ }
+        if (info && info.type) {
+          result.driver = info.type;
+        }
+      } catch {
+        /* 以子进程结果为准 */
+      }
       return result;
     }
     if (child.error && child.error.code === 'ETIMEDOUT') {
@@ -79,7 +87,11 @@ function runStartupSqliteProbe(options = {}) {
     if (child.signal) {
       result.detail = `SQLite 探针子进程被信号 ${child.signal} 终止（疑似 better-sqlite3 原生模块段错误 / ABI 不匹配）`;
     } else {
-      const stderrTail = String(child.stderr || '').trim().split(/\r?\n/).slice(-3).join(' | ');
+      const stderrTail = String(child.stderr || '')
+        .trim()
+        .split(/\r?\n/)
+        .slice(-3)
+        .join(' | ');
       result.detail = `SQLite 探针子进程退出码 ${child.status}${stderrTail ? `：${stderrTail}` : ''}`;
     }
     return result;

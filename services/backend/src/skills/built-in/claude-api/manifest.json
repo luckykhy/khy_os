@@ -1,8 +1,15 @@
 {
   "name": "claude-api",
-  "command": "/claude-api",
   "description": "Guide for using the Anthropic API and Claude models",
-  "version": "1.0.0",
-  "userInvocable": true,
-  "tags": ["api", "guide"]
+  "trigger": "/claude-api",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "api",
+    "guide"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
 }

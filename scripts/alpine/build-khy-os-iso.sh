@@ -75,7 +75,13 @@ for cmd in wget tar chroot mount umount grub-mkrescue xorriso mksquashfs; do
 done
 
 ALPINE_BRANCH="v${ALPINE_VERSION}"
-MINIROOTFS_URL="${MIRROR}/${ALPINE_BRANCH}/releases/${ARCH}/alpine-minirootfs-${ALPINE_VERSION}.0-${ARCH}.tar.gz"
+# Alpine minirootfs tarballs use three-part version (e.g. 3.23.0).
+# Strip any existing patch level from user-provided version and append .0.
+ALPINE_PATCHED="${ALPINE_VERSION}"
+if [[ "${ALPINE_PATCHED}" =~ ^[0-9]+\.[0-9]+$ ]]; then
+  ALPINE_PATCHED="${ALPINE_PATCHED}.0"
+fi
+MINIROOTFS_URL="${MIRROR}/${ALPINE_BRANCH}/releases/${ARCH}/alpine-minirootfs-${ALPINE_PATCHED}-${ARCH}.tar.gz"
 
 info "KHY OS ISO Builder"
 info "  Alpine: ${ALPINE_BRANCH} (${ARCH})"

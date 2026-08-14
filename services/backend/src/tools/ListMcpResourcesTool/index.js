@@ -7,8 +7,12 @@ class ListMcpResourcesTool extends BaseTool {
   static aliases = ['list_mcp_resources'];
   static searchHint = 'mcp resources list available';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `List available resources from connected MCP servers.
@@ -30,7 +34,11 @@ Resources are data sources (files, databases, APIs) that MCP servers expose.`;
       const resources = mcp.listResources(params.server_name);
       return { success: true, resources };
     } catch (err) {
-      return { success: true, resources: [], note: 'No MCP servers connected or error: ' + err.message };
+      return {
+        success: true,
+        resources: [],
+        note: 'No MCP servers connected or error: ' + err.message,
+      };
     }
   }
 }

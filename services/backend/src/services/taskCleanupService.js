@@ -21,7 +21,7 @@ function _noticeLine(removed, days, color) {
   const paint = typeof color === 'function' ? color : (t) => t;
   return paint(
     `🧹 已清理 ${removed} 条陈旧任务(超过 ${days} 天未更新)。用 /tasks 查看当前清单。`,
-    'notice',
+    'notice'
   );
 }
 
@@ -51,18 +51,20 @@ function cleanupStaleTasks(opts = {}) {
     } catch {
       return { ran: true, removed: 0, ids: [] }; // store 读失败 → 不阻塞
     }
-    if (!Array.isArray(tasks)) return { ran: true, removed: 0, ids: [] };
+    if (!Array.isArray(tasks)) {
+      return { ran: true, removed: 0, ids: [] };
+    }
 
-    const now = Number.isFinite(opts.now)
-      ? opts.now
-      : (typeof Date !== 'undefined' ? Date.now() : 0);
+    const now = Number.isFinite(opts.now) ? opts.now : typeof Date !== 'undefined' ? Date.now() : 0;
 
     const staleIds = policy.selectStaleTaskIds({ tasks, now, env });
 
     const removedIds = [];
     for (const id of staleIds) {
       try {
-        if (store.remove(id)) removedIds.push(id);
+        if (store.remove(id)) {
+          removedIds.push(id);
+        }
       } catch {
         // 单条删除失败:吞掉、少删而已,继续下一条
       }

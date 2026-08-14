@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref } from 'vue';
 
 /**
  * Theme composable (singleton).
@@ -11,64 +11,66 @@ import { ref } from 'vue'
  * explicit choice.
  */
 
-const STORAGE_KEY = 'khy_ai_theme'
-const VALID = ['light', 'dark']
+const STORAGE_KEY = 'khy_ai_theme';
+const VALID = ['light', 'dark'];
 
 function readStoredTheme() {
   try {
-    const value = localStorage.getItem(STORAGE_KEY)
-    if (value && VALID.includes(value)) return value
+    const value = localStorage.getItem(STORAGE_KEY);
+    if (value && VALID.includes(value)) return value;
   } catch {
     // ignore storage access errors (private mode, etc.)
   }
-  return null
+  return null;
 }
 
 function systemPrefersDark() {
   try {
-    return typeof window !== 'undefined'
-      && typeof window.matchMedia === 'function'
-      && window.matchMedia('(prefers-color-scheme: dark)').matches
+    return (
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+    );
   } catch {
-    return false
+    return false;
   }
 }
 
 function resolveInitialTheme() {
-  return readStoredTheme() || (systemPrefersDark() ? 'dark' : 'light')
+  return readStoredTheme() || (systemPrefersDark() ? 'dark' : 'light');
 }
 
 /** Apply the theme to <html> without persisting. Safe to call pre-mount. */
 export function applyTheme(theme) {
-  const next = VALID.includes(theme) ? theme : 'light'
+  const next = VALID.includes(theme) ? theme : 'light';
   try {
-    const root = document.documentElement
-    root.classList.toggle('dark', next === 'dark')
-    root.setAttribute('data-theme', next)
-    root.style.colorScheme = next
+    const root = document.documentElement;
+    root.classList.toggle('dark', next === 'dark');
+    root.setAttribute('data-theme', next);
+    root.style.colorScheme = next;
   } catch {
     // document may be unavailable in SSR-like contexts
   }
-  return next
+  return next;
 }
 
 // Singleton state shared across all callers.
-const theme = ref(applyTheme(resolveInitialTheme()))
+const theme = ref(applyTheme(resolveInitialTheme()));
 
 export function useTheme() {
   function setTheme(next) {
-    const applied = applyTheme(next)
-    theme.value = applied
+    const applied = applyTheme(next);
+    theme.value = applied;
     try {
-      localStorage.setItem(STORAGE_KEY, applied)
+      localStorage.setItem(STORAGE_KEY, applied);
     } catch {
       // ignore storage write errors
     }
   }
 
   function toggleTheme() {
-    setTheme(theme.value === 'dark' ? 'light' : 'dark')
+    setTheme(theme.value === 'dark' ? 'light' : 'dark');
   }
 
-  return { theme, setTheme, toggleTheme }
+  return { theme, setTheme, toggleTheme };
 }

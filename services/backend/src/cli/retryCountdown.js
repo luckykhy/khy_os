@@ -31,7 +31,9 @@ const FLAG = 'KHY_RETRY_COUNTDOWN'; // 主闸:网关重试等待期显示逐秒�
 /** env 门控惯例(同 interruptHint.isInterruptHintEnabled):默认开,仅显式 0/false/off/no 关。 */
 function isRetryCountdownEnabled(env = process.env) {
   const raw = env && env[FLAG];
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 

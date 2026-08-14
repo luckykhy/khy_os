@@ -33,10 +33,10 @@ const _HELP_WORDS = new Set(['help', '-h', '--help', '帮助', '用法']);
 
 /** 认领结果种类。 */
 const CLAIM_RESULT = {
-  CLAIMED_FREE: 'claimed_free',       // 此前无人持有 → 认领
+  CLAIMED_FREE: 'claimed_free', // 此前无人持有 → 认领
   TOOK_OVER_STALE: 'took_over_stale', // 持有者进程已死 → 接管
-  OVERRODE_LIVE: 'overrode_live',     // 持有者活着但非本进程 → 覆盖式认领
-  ALREADY_SELF: 'already_self',       // 已是本进程 → no-op
+  OVERRODE_LIVE: 'overrode_live', // 持有者活着但非本进程 → 覆盖式认领
+  ALREADY_SELF: 'already_self', // 已是本进程 → no-op
 };
 
 /**
@@ -46,12 +46,27 @@ const CLAIM_RESULT = {
  */
 function parseClaimArgs(args) {
   const list = Array.isArray(args) ? args : [];
-  const first = list.length > 0 ? String(list[0] == null ? '' : list[0]).trim().toLowerCase() : '';
-  if (first === '') return { action: 'claim', valid: true, parseError: null };
-  if (_HELP_WORDS.has(first)) return { action: 'help', valid: true, parseError: null };
-  if (_CLAIM_WORDS.has(first)) return { action: 'claim', valid: true, parseError: null };
-  if (_STATUS_WORDS.has(first)) return { action: 'status', valid: true, parseError: null };
-  if (_RELEASE_WORDS.has(first)) return { action: 'release', valid: true, parseError: null };
+  const first =
+    list.length > 0
+      ? String(list[0] == null ? '' : list[0])
+          .trim()
+          .toLowerCase()
+      : '';
+  if (first === '') {
+    return { action: 'claim', valid: true, parseError: null };
+  }
+  if (_HELP_WORDS.has(first)) {
+    return { action: 'help', valid: true, parseError: null };
+  }
+  if (_CLAIM_WORDS.has(first)) {
+    return { action: 'claim', valid: true, parseError: null };
+  }
+  if (_STATUS_WORDS.has(first)) {
+    return { action: 'status', valid: true, parseError: null };
+  }
+  if (_RELEASE_WORDS.has(first)) {
+    return { action: 'release', valid: true, parseError: null };
+  }
   return { action: 'claim', valid: false, parseError: 'unknown_action' };
 }
 
@@ -70,7 +85,12 @@ function decideClaim(input) {
   const priorPid = ptr ? _intOrNull(ptr.pid) : null;
 
   if (!ptr || priorPid == null) {
-    return { result: CLAIM_RESULT.CLAIMED_FREE, shouldWrite: true, priorPid: null, priorAlive: false };
+    return {
+      result: CLAIM_RESULT.CLAIMED_FREE,
+      shouldWrite: true,
+      priorPid: null,
+      priorAlive: false,
+    };
   }
   if (selfPid != null && priorPid === selfPid) {
     return { result: CLAIM_RESULT.ALREADY_SELF, shouldWrite: false, priorPid, priorAlive: true };
@@ -127,11 +147,17 @@ function buildClaimText(decision, selfPid) {
       lines.push(`  ✓ 已认领主角色(此前无人持有)。本进程 pid=${self == null ? '?' : self}`);
       break;
     case CLAIM_RESULT.TOOK_OVER_STALE:
-      lines.push(`  ✓ 已接管主角色 —— 原持有者 pid=${d.priorPid} 进程已不存在(陈旧指针)。本进程 pid=${self == null ? '?' : self}`);
+      lines.push(
+        `  ✓ 已接管主角色 —— 原持有者 pid=${d.priorPid} 进程已不存在(陈旧指针)。本进程 pid=${self == null ? '?' : self}`
+      );
       break;
     case CLAIM_RESULT.OVERRODE_LIVE:
-      lines.push(`  ✓ 已覆盖式认领主角色 —— 原持有者 pid=${d.priorPid} 仍在运行,现已让位给本进程 pid=${self == null ? '?' : self}。`);
-      lines.push('    (对齐 Claude Code「强制成为 main」语义;khy 无 sub 注册表,故不会自动重绑其它实例。)');
+      lines.push(
+        `  ✓ 已覆盖式认领主角色 —— 原持有者 pid=${d.priorPid} 仍在运行,现已让位给本进程 pid=${self == null ? '?' : self}。`
+      );
+      lines.push(
+        '    (对齐 Claude Code「强制成为 main」语义;khy 无 sub 注册表,故不会自动重绑其它实例。)'
+      );
       break;
     case CLAIM_RESULT.ALREADY_SELF:
       lines.push(`  ℹ 本进程 pid=${self == null ? '?' : self} 已是主角色(无变化)。`);
@@ -157,10 +183,18 @@ function buildStatusText(input) {
   const holderPid = _intOrNull(ptr.pid);
   const isSelf = self != null && holderPid === self;
   const alive = src.holderAlive === true;
-  lines.push(`  持有者 pid=${holderPid}${isSelf ? '(本进程)' : ''} · ${alive ? '存活' : '已不存在(陈旧)'}`);
-  if (ptr.host) lines.push(`  主机: ${ptr.host}`);
-  if (ptr.claimedAt) lines.push(`  认领时间: ${ptr.claimedAt}`);
-  if (!alive && !isSelf) lines.push('  提示: 持有者已死,可用 /claim-main 接管。');
+  lines.push(
+    `  持有者 pid=${holderPid}${isSelf ? '(本进程)' : ''} · ${alive ? '存活' : '已不存在(陈旧)'}`
+  );
+  if (ptr.host) {
+    lines.push(`  主机: ${ptr.host}`);
+  }
+  if (ptr.claimedAt) {
+    lines.push(`  认领时间: ${ptr.claimedAt}`);
+  }
+  if (!alive && !isSelf) {
+    lines.push('  提示: 持有者已死,可用 /claim-main 接管。');
+  }
   return lines.join('\n');
 }
 
@@ -205,14 +239,18 @@ function buildUnknownText() {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_CLAIM_MAIN === undefined ? 'true' : e.KHY_CLAIM_MAIN;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 
 // ── 内部纯助手 ───────────────────────────────────────────────────────────────
 function _intOrNull(v) {
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
   return Math.floor(n);
 }
 

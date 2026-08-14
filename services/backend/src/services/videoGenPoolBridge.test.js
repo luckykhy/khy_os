@@ -1,7 +1,7 @@
 'use strict';
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const {
   bridgeEnabled,
@@ -107,7 +107,9 @@ test('pickVideoProviderFromPool: endpointFor throwing → falls back to provider
   const picked = pickVideoProviderFromPool({
     env: {},
     providers: [{ poolKey: 'agnes', endpoint: AGNES }],
-    endpointFor: () => { throw new Error('boom'); },
+    endpointFor: () => {
+      throw new Error('boom');
+    },
   });
   assert.strictEqual(picked.poolKey, 'agnes');
 });
@@ -137,8 +139,13 @@ test('listVideoProvidersFromPool: returns ALL whitelisted hits, deterministic le
       { poolKey: 'agnes', endpoint: AGNES },
     ],
   });
-  assert.deepStrictEqual(list.map((p) => p.poolKey), ['agnes', 'alpha', 'zeta']);
-  for (const p of list) assert.strictEqual(p.endpoint, 'https://apihub.agnes-ai.com/v1');
+  assert.deepStrictEqual(
+    list.map((p) => p.poolKey),
+    ['agnes', 'alpha', 'zeta']
+  );
+  for (const p of list) {
+    assert.strictEqual(p.endpoint, 'https://apihub.agnes-ai.com/v1');
+  }
 });
 
 test('listVideoProvidersFromPool: dedupes repeated poolKeys, keeps first endpoint seen', () => {
@@ -163,8 +170,11 @@ test('listVideoProvidersFromPool: gate-off → [] (byte-revert)', () => {
 
 test('listVideoProvidersFromPool: no whitelist hit / malformed → [], never throws', () => {
   assert.deepStrictEqual(
-    listVideoProvidersFromPool({ env: {}, providers: [{ poolKey: 'x', endpoint: 'https://api.deepseek.com/v1' }] }),
-    [],
+    listVideoProvidersFromPool({
+      env: {},
+      providers: [{ poolKey: 'x', endpoint: 'https://api.deepseek.com/v1' }],
+    }),
+    []
   );
   assert.deepStrictEqual(listVideoProvidersFromPool({}), []);
   assert.deepStrictEqual(listVideoProvidersFromPool({ providers: null }), []);

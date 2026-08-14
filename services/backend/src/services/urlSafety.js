@@ -18,6 +18,7 @@
 
 const dns = require('node:dns/promises');
 const { isIP } = require('node:net');
+
 const ipaddr = require('ipaddr.js');
 
 // Optional allowlist for fake-IP CIDRs (e.g. Clash fake-ip pool 198.18.0.0/16),
@@ -25,8 +26,13 @@ const ipaddr = require('ipaddr.js');
 // Comma-separated CIDRs in KHY_FAKE_IP_CIDRS.
 function _fakeIpCidrs() {
   const raw = process.env.KHY_FAKE_IP_CIDRS;
-  if (!raw) return [];
-  return raw.split(',').map((c) => c.trim()).filter(Boolean);
+  if (!raw) {
+    return [];
+  }
+  return raw
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean);
 }
 
 // URL.hostname keeps the brackets for IPv6 literals (`[::1]`), which break
@@ -37,7 +43,9 @@ function _stripIpv6Brackets(host) {
 
 function _isAllowedFakeIp(address) {
   const cidrs = _fakeIpCidrs();
-  if (isIP(address) === 0 || cidrs.length === 0) return false;
+  if (isIP(address) === 0 || cidrs.length === 0) {
+    return false;
+  }
   try {
     const parsed = ipaddr.parse(address);
     return cidrs.some((cidr) => parsed.match(ipaddr.parseCIDR(cidr)));
@@ -54,15 +62,29 @@ function _isAllowedFakeIp(address) {
  * @returns {boolean}
  */
 function isPrivateOrLocalHostname(hostname) {
-  const host = _stripIpv6Brackets(String(hostname || '').trim().toLowerCase());
-  if (!host || host === 'localhost' || host.endsWith('.localhost')) return true;
+  const host = _stripIpv6Brackets(
+    String(hostname || '')
+      .trim()
+      .toLowerCase()
+  );
+  if (!host || host === 'localhost' || host.endsWith('.localhost')) {
+    return true;
+  }
   // Common internal TLDs that should never reach the public internet.
-  if (host.endsWith('.local') || host.endsWith('.internal')) return true;
-  if (isIP(host) === 0) return false; // not an IP literal — defer to DNS
+  if (host.endsWith('.local') || host.endsWith('.internal')) {
+    return true;
+  }
+  if (isIP(host) === 0) {
+    return false;
+  } // not an IP literal — defer to DNS
   try {
     let addr = ipaddr.parse(host);
     // Unwrap IPv4-mapped IPv6 (::ffff:127.0.0.1) so the IPv4 ranges apply.
-    if (addr.kind() === 'ipv6' && typeof addr.isIPv4MappedAddress === 'function' && addr.isIPv4MappedAddress()) {
+    if (
+      addr.kind() === 'ipv6' &&
+      typeof addr.isIPv4MappedAddress === 'function' &&
+      addr.isIPv4MappedAddress()
+    ) {
       addr = addr.toIPv4Address();
     }
     return addr.range() !== 'unicast';
@@ -80,7 +102,9 @@ function isPrivateOrLocalHostname(hostname) {
 function isPublicHttpUrl(url) {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
     return !isPrivateOrLocalHostname(parsed.hostname);
   } catch {
     return false;
@@ -103,10 +127,31 @@ function assertPublicHttpUrl(url, label = 'URL') {
 }
 
 // Indirection point so tests can stub DNS without real network access.
-let _dnsLookup = (hostname) => dns.lookup(hostname, { all: true, verbatim: true });
+// Includes a 5-second timeout to prevent slow/drifting DNS servers from
+// hanging the request indefinitely.
+const DNS_LOOKUP_TIMEOUT_MS = parseInt(process.env.KHY_DNS_LOOKUP_TIMEOUT_MS, 10) || 5000;
+
+async function _timedDnsLookup(hostname) {
+  // dns/promises.lookup takes no callback; race it against a timeout instead.
+  // The timeout branch only rejects — the underlying lookup is left to settle
+  // on its own (its result is simply discarded).
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`DNS lookup timed out after ${DNS_LOOKUP_TIMEOUT_MS}ms`));
+    }, DNS_LOOKUP_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([dns.lookup(hostname, { all: true, verbatim: true }), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+let _dnsLookup = (hostname) => _timedDnsLookup(hostname);
 
 function __setDnsLookupForTests(lookup) {
-  _dnsLookup = lookup || ((hostname) => dns.lookup(hostname, { all: true, verbatim: true }));
+  _dnsLookup = lookup || ((hostname) => _timedDnsLookup(hostname));
 }
 
 /**
@@ -123,7 +168,9 @@ async function assertPublicHttpUrlResolved(url, label = 'URL') {
   assertPublicHttpUrl(parsed, label);
 
   const host = _stripIpv6Brackets(parsed.hostname);
-  if (isIP(host) !== 0) return; // IP literal already validated
+  if (isIP(host) !== 0) {
+    return;
+  } // IP literal already validated
 
   let resolved;
   try {
@@ -132,7 +179,11 @@ async function assertPublicHttpUrlResolved(url, label = 'URL') {
     throw new Error(`${label} could not be resolved`);
   }
   const list = Array.isArray(resolved) ? resolved : [];
-  if (list.some((entry) => isPrivateOrLocalHostname(entry.address) && !_isAllowedFakeIp(entry.address))) {
+  if (
+    list.some(
+      (entry) => isPrivateOrLocalHostname(entry.address) && !_isAllowedFakeIp(entry.address)
+    )
+  ) {
     throw new Error(`${label} resolves to a private or local network target, which is not allowed`);
   }
 }

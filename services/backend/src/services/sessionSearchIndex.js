@@ -27,7 +27,11 @@ function _dbPath() {
   } catch {
     const os = require('os');
     const dir = path.join(os.homedir(), '.khyquant');
-    try { fs.mkdirSync(dir, { recursive: true }); } catch { /* exists */ }
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch {
+      /* exists */
+    }
     return path.join(dir, 'sessions.db');
   }
 }
@@ -40,7 +44,9 @@ function _dbPath() {
  * Safe to call multiple times (idempotent).
  */
 function init() {
-  if (_db) return;
+  if (_db) {
+    return;
+  }
 
   let Database;
   try {
@@ -149,14 +155,18 @@ function init() {
 
     _stmts.countConvs = _db.prepare('SELECT COUNT(*) AS count FROM conversations');
     _stmts.countMsgs = _db.prepare('SELECT COUNT(*) AS count FROM messages');
-    _stmts.existingMsgCount = _db.prepare('SELECT COUNT(*) AS count FROM messages WHERE session_id = ?');
+    _stmts.existingMsgCount = _db.prepare(
+      'SELECT COUNT(*) AS count FROM messages WHERE session_id = ?'
+    );
 
     _available = true;
 
     // Register centralized shutdown hook (best-effort; module may be absent in tests)
     try {
       require('../bootstrap/shutdown').addShutdownHook('session-search-index', shutdown);
-    } catch { /* shutdown module optional */ }
+    } catch {
+      /* shutdown module optional */
+    }
   } catch (err) {
     _db = null;
     _available = false;
@@ -170,7 +180,9 @@ function init() {
  * @param {object} sessionData - { title, model, messages[], createdAt, updatedAt }
  */
 function indexSession(sessionId, sessionData) {
-  if (!_available || !_db) return;
+  if (!_available || !_db) {
+    return;
+  }
 
   const messages = sessionData.messages || [];
 
@@ -193,8 +205,11 @@ function indexSession(sessionId, sessionData) {
       // Only insert new messages (append-only)
       for (let i = existingCount; i < messages.length; i++) {
         const msg = messages[i];
-        const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
-        if (!content.trim()) continue;
+        const content =
+          typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
+        if (!content.trim()) {
+          continue;
+        }
         _stmts.insertMsg.run({
           sessionId,
           uuid: msg.uuid || null,
@@ -207,7 +222,9 @@ function indexSession(sessionId, sessionData) {
     });
 
     txn();
-  } catch { /* indexing failure is non-fatal */ }
+  } catch {
+    /* indexing failure is non-fatal */
+  }
 }
 
 /**
@@ -218,7 +235,9 @@ function indexSession(sessionId, sessionData) {
  * @returns {Array<{ sessionId, title, role, content, timestamp, uuid, parentUuid, rank }>}
  */
 function searchMessages(query, opts = {}) {
-  if (!_available || !_db || !query) return [];
+  if (!_available || !_db || !query) {
+    return [];
+  }
 
   const limit = opts.limit || 20;
   const offset = opts.offset || 0;
@@ -226,17 +245,24 @@ function searchMessages(query, opts = {}) {
   try {
     // Sanitize query for FTS5 trigram — strip quotes and use raw text
     const safeQuery = query.replace(/['"]/g, '').trim();
-    if (!safeQuery) return [];
+    if (!safeQuery) {
+      return [];
+    }
 
     let rows;
     if (opts.sessionId) {
-      rows = _stmts.searchBySession.all({ query: safeQuery, sessionId: opts.sessionId, limit, offset });
+      rows = _stmts.searchBySession.all({
+        query: safeQuery,
+        sessionId: opts.sessionId,
+        limit,
+        offset,
+      });
     } else if (opts.since) {
       rows = _stmts.searchSince.all({ query: safeQuery, since: opts.since, limit, offset });
     } else {
       rows = _stmts.search.all({ query: safeQuery, limit, offset });
     }
-    return rows.map(r => ({
+    return rows.map((r) => ({
       sessionId: r.session_id,
       title: r.title || '',
       role: r.role,
@@ -256,14 +282,18 @@ function searchMessages(query, opts = {}) {
  * @param {string} sessionId
  */
 function removeSessionIndex(sessionId) {
-  if (!_available || !_db) return;
+  if (!_available || !_db) {
+    return;
+  }
   try {
     const txn = _db.transaction(() => {
       _stmts.deleteConvMsgs.run(sessionId);
       _stmts.deleteConv.run(sessionId);
     });
     txn();
-  } catch { /* non-fatal */ }
+  } catch {
+    /* non-fatal */
+  }
 }
 
 /**
@@ -279,8 +309,17 @@ function getStats() {
     const sessions = _stmts.countConvs.get().count;
     const messages = _stmts.countMsgs.get().count;
     let dbSize = 0;
-    try { dbSize = fs.statSync(_dbPath()).size; } catch { /* ok */ }
-    return { totalSessions: sessions, totalMessages: messages, dbSizeBytes: dbSize, available: true };
+    try {
+      dbSize = fs.statSync(_dbPath()).size;
+    } catch {
+      /* ok */
+    }
+    return {
+      totalSessions: sessions,
+      totalMessages: messages,
+      dbSizeBytes: dbSize,
+      available: true,
+    };
   } catch {
     return { totalSessions: 0, totalMessages: 0, dbSizeBytes: 0, available: false };
   }
@@ -301,13 +340,17 @@ function isAvailable() {
  * @returns {{ walPages: number, movedPages: number } | null}
  */
 function walCheckpoint(mode = 'PASSIVE') {
-  if (!_db) return null;
+  if (!_db) {
+    return null;
+  }
   try {
     const result = _db.pragma(`wal_checkpoint(${mode})`);
     return result && result[0]
       ? { walPages: result[0].wal || 0, movedPages: result[0].checkpointed || 0 }
       : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -315,10 +358,14 @@ function walCheckpoint(mode = 'PASSIVE') {
  * Call after bulk deletes or on maintenance schedule.
  */
 function ftsOptimize() {
-  if (!_db) return;
+  if (!_db) {
+    return;
+  }
   try {
     _db.exec("INSERT INTO messages_fts(messages_fts) VALUES('optimize')");
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 /**
@@ -334,13 +381,17 @@ function ftsOptimize() {
 function reindexAll(opts = {}) {
   if (!_available || !_db) {
     init();
-    if (!_available) return { indexed: 0, skipped: 0, total: 0, elapsed: 0 };
+    if (!_available) {
+      return { indexed: 0, skipped: 0, total: 0, elapsed: 0 };
+    }
   }
 
   const start = Date.now();
   const batchSize = opts.batchSize || 50;
   const onProgress = opts.onProgress || null;
-  let indexed = 0, skipped = 0, total = 0;
+  let indexed = 0,
+    skipped = 0,
+    total = 0;
 
   try {
     // Resolve the bulk session source via the neutral port instead of requiring
@@ -370,14 +421,20 @@ function reindexAll(opts = {}) {
         }
       }
       if (onProgress) {
-        try { onProgress({ indexed, skipped, total }); } catch { /* non-critical */ }
+        try {
+          onProgress({ indexed, skipped, total });
+        } catch {
+          /* non-critical */
+        }
       }
     }
 
     // Optimize FTS after bulk insert, then truncate the WAL to reclaim space
     ftsOptimize();
     walCheckpoint('TRUNCATE');
-  } catch { /* reindex is best-effort */ }
+  } catch {
+    /* reindex is best-effort */
+  }
 
   return { indexed, skipped, total, elapsed: Date.now() - start };
 }
@@ -387,10 +444,20 @@ function reindexAll(opts = {}) {
  * Best-effort: never throws. Safe to call multiple times.
  */
 function shutdown() {
-  if (!_db) return;
+  if (!_db) {
+    return;
+  }
   walCheckpoint('RESTART');
-  try { _db.pragma('optimize'); } catch { /* best-effort */ }
-  try { _db.close(); } catch { /* best-effort */ }
+  try {
+    _db.pragma('optimize');
+  } catch {
+    /* best-effort */
+  }
+  try {
+    _db.close();
+  } catch {
+    /* best-effort */
+  }
   _db = null;
   _stmts = {};
   _available = false;
@@ -399,7 +466,11 @@ function shutdown() {
 /** @internal Close DB and reset for testing */
 function _resetForTest() {
   if (_db) {
-    try { _db.close(); } catch { /* ok */ }
+    try {
+      _db.close();
+    } catch {
+      /* ok */
+    }
   }
   _db = null;
   _stmts = {};

@@ -26,19 +26,25 @@ const PY_EXT = new Set(['.py', '.pyi']);
  */
 function detectLang(file) {
   const ext = path.extname(String(file || '')).toLowerCase();
-  if (JS_EXT.has(ext)) return 'js';
-  if (PY_EXT.has(ext)) return 'py';
+  if (JS_EXT.has(ext)) {
+    return 'js';
+  }
+  if (PY_EXT.has(ext)) {
+    return 'py';
+  }
   return null;
 }
 
 /** 去除行内/块注释，降低正则误命中注释里的 import 字样。fail-safe：异常返回原文。 */
 function _stripComments(src) {
   try {
-    return String(src)
-      // 块注释
-      .replace(/\/\*[\s\S]*?\*\//g, ' ')
-      // 行注释（避免吃掉 URL 的 //，要求前面不是冒号）
-      .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    return (
+      String(src)
+        // 块注释
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        // 行注释（避免吃掉 URL 的 //，要求前面不是冒号）
+        .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+    );
   } catch {
     return String(src || '');
   }
@@ -47,13 +53,19 @@ function _stripComments(src) {
 /** 从一段 `{ a, b as c }` 形式的内容提取「源端」符号名。`b as c` → b（被导入的是 b）。 */
 function _parseNamedClause(clause) {
   const out = [];
-  if (!clause) return out;
+  if (!clause) {
+    return out;
+  }
   for (const raw of clause.split(',')) {
     const piece = raw.trim();
-    if (!piece) continue;
+    if (!piece) {
+      continue;
+    }
     // `b as c` → 取 as 左侧；`type X` (TS) → 去掉 type 前缀
     const m = piece.replace(/^type\s+/, '').match(/^([A-Za-z_$][\w$]*)/);
-    if (m) out.push(m[1]);
+    if (m) {
+      out.push(m[1]);
+    }
   }
   return out;
 }
@@ -66,7 +78,9 @@ function _parseJs(src) {
   let dynamicExports = false;
 
   const addImport = (spec, names, kind) => {
-    if (!spec) return;
+    if (!spec) {
+      return;
+    }
     imports.push({ spec, names: names || [], kind: kind || 'esm' });
   };
 
@@ -80,29 +94,42 @@ function _parseJs(src) {
     const names = [];
     if (clause) {
       // namespace: * as ns
-      if (/\*\s+as\s+[A-Za-z_$]/.test(clause)) names.push('*');
+      if (/\*\s+as\s+[A-Za-z_$]/.test(clause)) {
+        names.push('*');
+      }
       // named: { ... }
       const braced = clause.match(/\{([\s\S]*?)\}/);
-      if (braced) names.push(..._parseNamedClause(braced[1]));
+      if (braced) {
+        names.push(..._parseNamedClause(braced[1]));
+      }
       // default：clause 以标识符开头（非 { 非 *）
       const defM = clause.match(/^([A-Za-z_$][\w$]*)/);
-      if (defM && !clause.startsWith('{') && !clause.startsWith('*')) names.push('default');
+      if (defM && !clause.startsWith('{') && !clause.startsWith('*')) {
+        names.push('default');
+      }
     }
     addImport(spec, names, 'esm');
   }
 
   // ── ESM: re-export `export { a } from 'spec'` / `export * from 'spec'` ─
-  const reexportRe = /export\s+(?:\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{([\s\S]*?)\})\s+from\s+["']([^"']+)["']/g;
+  const reexportRe =
+    /export\s+(?:\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{([\s\S]*?)\})\s+from\s+["']([^"']+)["']/g;
   while ((m = reexportRe.exec(text)) !== null) {
     const names = m[1] ? _parseNamedClause(m[1]) : ['*'];
     addImport(m[2], names, 'esm');
     // `export * from` 让本模块导出面变得不可静态确定
-    if (!m[1]) dynamicExports = true;
-    else for (const n of _parseNamedClause(m[1])) exportNames.add(n);
+    if (!m[1]) {
+      dynamicExports = true;
+    } else {
+      for (const n of _parseNamedClause(m[1])) {
+        exportNames.add(n);
+      }
+    }
   }
 
   // ── CJS: require('spec')，含解构 const { a } = require('spec') ──────
-  const requireRe = /(?:(?:const|let|var)\s+(\{[\s\S]*?\}|[A-Za-z_$][\w$]*)\s*=\s*)?require\s*\(\s*["']([^"']+)["']\s*\)/g;
+  const requireRe =
+    /(?:(?:const|let|var)\s+(\{[\s\S]*?\}|[A-Za-z_$][\w$]*)\s*=\s*)?require\s*\(\s*["']([^"']+)["']\s*\)/g;
   while ((m = requireRe.exec(text)) !== null) {
     const binding = (m[1] || '').trim();
     const names = [];
@@ -117,48 +144,74 @@ function _parseJs(src) {
 
   // ── 动态 import('spec') ────────────────────────────────────────────
   const dynImportRe = /import\s*\(\s*["']([^"']+)["']\s*\)/g;
-  while ((m = dynImportRe.exec(text)) !== null) addImport(m[1], [], 'esm');
+  while ((m = dynImportRe.exec(text)) !== null) {
+    addImport(m[1], [], 'esm');
+  }
 
   // ── ESM 导出符号 ───────────────────────────────────────────────────
   let em;
-  const namedDeclRe = /export\s+(?:async\s+)?(?:const|let|var|function\*?|class)\s+([A-Za-z_$][\w$]*)/g;
-  while ((em = namedDeclRe.exec(text)) !== null) exportNames.add(em[1]);
+  const namedDeclRe =
+    /export\s+(?:async\s+)?(?:const|let|var|function\*?|class)\s+([A-Za-z_$][\w$]*)/g;
+  while ((em = namedDeclRe.exec(text)) !== null) {
+    exportNames.add(em[1]);
+  }
   const exportListRe = /export\s+\{([^}]*)\}(?!\s*from)/g;
   while ((em = exportListRe.exec(text)) !== null) {
     // `a as b` 对外导出名是 b
     for (const raw of em[1].split(',')) {
       const piece = raw.trim();
-      if (!piece) continue;
+      if (!piece) {
+        continue;
+      }
       const asM = piece.match(/\bas\s+([A-Za-z_$][\w$]*)/);
-      if (asM) { exportNames.add(asM[1]); continue; }
+      if (asM) {
+        exportNames.add(asM[1]);
+        continue;
+      }
       const idM = piece.replace(/^type\s+/, '').match(/^([A-Za-z_$][\w$]*)/);
-      if (idM) exportNames.add(idM[1]);
+      if (idM) {
+        exportNames.add(idM[1]);
+      }
     }
   }
-  if (/export\s+default\b/.test(text)) hasDefaultExport = true;
+  if (/export\s+default\b/.test(text)) {
+    hasDefaultExport = true;
+  }
 
   // ── CJS 导出符号 ───────────────────────────────────────────────────
   // exports.NAME = / module.exports.NAME =
   const cjsPropRe = /(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=/g;
-  while ((em = cjsPropRe.exec(text)) !== null) exportNames.add(em[1]);
+  while ((em = cjsPropRe.exec(text)) !== null) {
+    exportNames.add(em[1]);
+  }
   // module.exports = { a, b, c }  —— 取对象字面量的键
   const cjsObjRe = /module\.exports\s*=\s*\{([\s\S]*?)\}/g;
   while ((em = cjsObjRe.exec(text)) !== null) {
     for (const raw of em[1].split(',')) {
       const piece = raw.trim();
-      if (!piece) continue;
+      if (!piece) {
+        continue;
+      }
       const keyM = piece.match(/^([A-Za-z_$][\w$]*)\s*[:,]?/);
-      if (keyM) exportNames.add(keyM[1]);
+      if (keyM) {
+        exportNames.add(keyM[1]);
+      }
     }
     hasDefaultExport = true; // 对象整体也可作为默认导入
   }
   // module.exports = <非对象>（函数/类/标识符/Object.assign…）→ 默认导出 + 动态面
   if (/module\.exports\s*=\s*(?!\{)/.test(text)) {
     hasDefaultExport = true;
-    if (/Object\.assign\s*\(\s*(?:module\.)?exports/.test(text)) dynamicExports = true;
+    if (/Object\.assign\s*\(\s*(?:module\.)?exports/.test(text)) {
+      dynamicExports = true;
+    }
   }
-  if (/Object\.assign\s*\(\s*(?:module\.)?exports/.test(text)) dynamicExports = true;
-  if (/(?:module\.)?exports\s*\[/.test(text)) dynamicExports = true; // exports['x'] 计算键
+  if (/Object\.assign\s*\(\s*(?:module\.)?exports/.test(text)) {
+    dynamicExports = true;
+  }
+  if (/(?:module\.)?exports\s*\[/.test(text)) {
+    dynamicExports = true;
+  } // exports['x'] 计算键
 
   return {
     lang: 'js',
@@ -180,7 +233,12 @@ function _parsePy(src) {
     const names = m[2]
       .replace(/[()]/g, '')
       .split(',')
-      .map((s) => s.trim().split(/\s+as\s+/)[0].trim())
+      .map((s) =>
+        s
+          .trim()
+          .split(/\s+as\s+/)[0]
+          .trim()
+      )
       .filter((s) => s && s !== '*');
     imports.push({ spec, names, kind: 'py-from' });
   }
@@ -189,11 +247,19 @@ function _parsePy(src) {
   // 顶层定义可视作「导出」：def/class/赋值。__all__ 显式声明优先。
   const allM = text.match(/__all__\s*=\s*\[([\s\S]*?)\]/);
   if (allM) {
-    for (const q of allM[1].matchAll(/["']([\w]+)["']/g)) exportNames.add(q[1]);
+    for (const q of allM[1].matchAll(/["']([\w]+)["']/g)) {
+      exportNames.add(q[1]);
+    }
   } else {
-    for (const dm of text.matchAll(/^(?:async\s+)?def\s+([A-Za-z_]\w*)/gm)) exportNames.add(dm[1]);
-    for (const cm of text.matchAll(/^class\s+([A-Za-z_]\w*)/gm)) exportNames.add(cm[1]);
-    for (const am of text.matchAll(/^([A-Za-z_]\w*)\s*=/gm)) exportNames.add(am[1]);
+    for (const dm of text.matchAll(/^(?:async\s+)?def\s+([A-Za-z_]\w*)/gm)) {
+      exportNames.add(dm[1]);
+    }
+    for (const cm of text.matchAll(/^class\s+([A-Za-z_]\w*)/gm)) {
+      exportNames.add(cm[1]);
+    }
+    for (const am of text.matchAll(/^([A-Za-z_]\w*)\s*=/gm)) {
+      exportNames.add(am[1]);
+    }
   }
 
   return {
@@ -212,9 +278,15 @@ function _parsePy(src) {
  * @returns {{lang:string|null, imports:Array, exports:{names:Set<string>,hasDefault:boolean,dynamic:boolean}}}
  */
 function parseFile(file, src) {
-  const empty = { lang: null, imports: [], exports: { names: new Set(), hasDefault: false, dynamic: true } };
+  const empty = {
+    lang: null,
+    imports: [],
+    exports: { names: new Set(), hasDefault: false, dynamic: true },
+  };
   const lang = detectLang(file);
-  if (!lang) return empty;
+  if (!lang) {
+    return empty;
+  }
   try {
     return lang === 'js' ? _parseJs(src) : _parsePy(src);
   } catch {

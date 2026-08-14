@@ -22,9 +22,10 @@
  * @module handlers/convert
  */
 const { spawn } = require('child_process');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
+
 const { safeKill } = require('../../tools/platformUtils');
 
 const DOC_HELPER = path.join(__dirname, '../../services/docHelper.py');
@@ -42,10 +43,18 @@ const _resolvePath = require('../../utils/resolveUserPath');
 /** Classify a path by extension into a conversion source-kind. */
 function _kindOf(p) {
   const ext = path.extname(p).toLowerCase();
-  if (IMAGE_EXTS.has(ext)) return 'image';
-  if (ext === '.pdf') return 'pdf';
-  if (ext === '.docx') return 'docx';
-  if (ext === '.txt' || ext === '.text' || ext === '.md') return 'txt';
+  if (IMAGE_EXTS.has(ext)) {
+    return 'image';
+  }
+  if (ext === '.pdf') {
+    return 'pdf';
+  }
+  if (ext === '.docx') {
+    return 'docx';
+  }
+  if (ext === '.txt' || ext === '.text' || ext === '.md') {
+    return 'txt';
+  }
   return null;
 }
 
@@ -59,7 +68,10 @@ function _resolveInputs(rawInput, cwd) {
   if (Array.isArray(rawInput)) {
     items = rawInput;
   } else if (typeof rawInput === 'string' && rawInput.includes(',')) {
-    items = rawInput.split(',').map((s) => s.trim()).filter(Boolean);
+    items = rawInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   } else {
     items = [rawInput];
   }
@@ -70,13 +82,16 @@ function _resolveInputs(rawInput, cwd) {
     try {
       if (fs.existsSync(resolved[0]) && fs.statSync(resolved[0]).isDirectory()) {
         const dir = resolved[0];
-        const imgs = fs.readdirSync(dir)
+        const imgs = fs
+          .readdirSync(dir)
           .filter((n) => IMAGE_EXTS.has(path.extname(n).toLowerCase()))
           .sort((a, b) => a.localeCompare(b))
           .map((n) => path.join(dir, n));
         return imgs; // may be empty → caller reports "no images found"
       }
-    } catch { /* fall through to file list */ }
+    } catch {
+      /* fall through to file list */
+    }
   }
   return resolved;
 }
@@ -92,7 +107,9 @@ function _spawnHelper(pythonPath, sub, argv, deps = {}) {
     let stderr = '';
     let timer = null;
     const arm = () => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       timer = setTimeout(() => {
         safeKill(child);
         reject(new Error(`Conversion idle-timed out (${IDLE_TIMEOUT_MS / 1000}s with no output)`));
@@ -102,18 +119,31 @@ function _spawnHelper(pythonPath, sub, argv, deps = {}) {
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (d) => { stdout += d; arm(); });
-    child.stderr.on('data', (d) => { stderr += d; arm(); });
+    child.stdout.on('data', (d) => {
+      stdout += d;
+      arm();
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d;
+      arm();
+    });
     child.on('error', (err) => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       reject(new Error(`Python process error: ${err.message}`));
     });
     child.on('close', (code) => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       try {
         resolve(JSON.parse(stdout.trim()));
       } catch (e) {
-        if (code !== 0) { reject(new Error(`Python exit code ${code}: ${stderr || stdout}`)); return; }
+        if (code !== 0) {
+          reject(new Error(`Python exit code ${code}: ${stderr || stdout}`));
+          return;
+        }
         reject(new Error(`Failed to parse output: ${e.message}`));
       }
     });
@@ -164,14 +194,24 @@ async function runConvert(opts = {}, deps = {}) {
     const ext = path.extname(String(opts.output)).toLowerCase();
     to = { '.pdf': 'pdf', '.txt': 'txt', '.docx': 'docx' }[ext] || null;
   }
-  if (!to) to = DEFAULT_TARGET[fromKind];
+  if (!to) {
+    to = DEFAULT_TARGET[fromKind];
+  }
   if (!TARGET_EXT[to]) {
-    return { success: false, error: `Unsupported target format: ${to}. Use one of: pdf, txt, docx.` };
+    return {
+      success: false,
+      error: `Unsupported target format: ${to}. Use one of: pdf, txt, docx.`,
+    };
   }
 
   const pair = `${fromKind}->${to}`;
   const SUPPORTED = new Set([
-    'image->pdf', 'image->txt', 'pdf->txt', 'pdf->docx', 'docx->txt', 'txt->docx',
+    'image->pdf',
+    'image->txt',
+    'pdf->txt',
+    'pdf->docx',
+    'docx->txt',
+    'txt->docx',
   ]);
   if (!SUPPORTED.has(pair)) {
     return {
@@ -198,14 +238,20 @@ async function runConvert(opts = {}, deps = {}) {
   {
     const { validateNoPathTraversal, validateNotUNCPath } = require('../../tools/inputValidators');
     const unc = validateNotUNCPath(outputPath);
-    if (!unc.valid) return { success: false, error: unc.message };
+    if (!unc.valid) {
+      return { success: false, error: unc.message };
+    }
     const confine = validateNoPathTraversal(outputPath);
-    if (!confine.valid) return { success: false, error: confine.message };
+    if (!confine.valid) {
+      return { success: false, error: confine.message };
+    }
   }
 
   // Existence check for non-directory single inputs (images may come from a dir).
   for (const p of inputs) {
-    if (!fs.existsSync(p)) return { success: false, error: `File not found: ${p}` };
+    if (!fs.existsSync(p)) {
+      return { success: false, error: `File not found: ${p}` };
+    }
   }
 
   let pythonPath;
@@ -252,11 +298,26 @@ async function runConvert(opts = {}, deps = {}) {
     let sub;
     let argv;
     switch (pair) {
-      case 'image->pdf': sub = 'img2pdf'; argv = [outputPath, ...inputs]; break;
-      case 'pdf->txt': sub = 'pdf2txt'; argv = [inputs[0], outputPath]; break;
-      case 'pdf->docx': sub = 'pdf2word'; argv = [inputs[0], outputPath]; break;
-      case 'docx->txt': sub = 'docx2txt'; argv = [inputs[0], outputPath]; break;
-      case 'txt->docx': sub = 'txt2docx'; argv = [inputs[0], outputPath]; break;
+      case 'image->pdf':
+        sub = 'img2pdf';
+        argv = [outputPath, ...inputs];
+        break;
+      case 'pdf->txt':
+        sub = 'pdf2txt';
+        argv = [inputs[0], outputPath];
+        break;
+      case 'pdf->docx':
+        sub = 'pdf2word';
+        argv = [inputs[0], outputPath];
+        break;
+      case 'docx->txt':
+        sub = 'docx2txt';
+        argv = [inputs[0], outputPath];
+        break;
+      case 'txt->docx':
+        sub = 'txt2docx';
+        argv = [inputs[0], outputPath];
+        break;
       default:
         return { success: false, error: `No conversion from ${fromKind} to ${to}.` };
     }
@@ -280,7 +341,9 @@ async function handleConvert(parsed = {}) {
   // `convert` takes a positional input. Depending on the parser the first token
   // may land in subCommand or args[0]; accept both, plus --input.
   const positional = [];
-  if (parsed.subCommand) positional.push(parsed.subCommand);
+  if (parsed.subCommand) {
+    positional.push(parsed.subCommand);
+  }
   positional.push(...args);
 
   const opts = {
@@ -302,10 +365,14 @@ async function handleConvert(parsed = {}) {
     printInfo(`输出：${result.output}`);
   } else if (result.needsDep) {
     printWarn(result.error);
-    if (result.hint) printInfo(result.hint);
+    if (result.hint) {
+      printInfo(result.hint);
+    }
   } else {
     printError(result.error || '格式转换失败');
-    if (result.hint) printInfo(result.hint);
+    if (result.hint) {
+      printInfo(result.hint);
+    }
   }
   return true;
 }

@@ -17,6 +17,9 @@ function clearVidEnv() {
   for (const k of Object.keys(process.env)) {
     if (k.startsWith('KHY_VIDEO_GEN_') || k.startsWith('GATEWAY_VIDEO_GEN_')) delete process.env[k];
   }
+  // videoGenService falls back to the shared chat AGNES_API_KEY — a live khy
+  // session leaks it into every "nothing configured" assertion.
+  delete process.env.AGNES_API_KEY;
 }
 
 beforeEach(() => {

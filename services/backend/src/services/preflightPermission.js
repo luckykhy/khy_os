@@ -39,7 +39,9 @@ async function runPreflight(toolCalls, options = {}) {
   // Deduplicate tool names
   const uniqueTools = new Map();
   for (const call of toolCalls) {
-    if (call.legacy || call.name === '_legacy_cmd') continue;
+    if (call.legacy || call.name === '_legacy_cmd') {
+      continue;
+    }
     if (!uniqueTools.has(call.name)) {
       uniqueTools.set(call.name, call);
     }
@@ -47,10 +49,18 @@ async function runPreflight(toolCalls, options = {}) {
 
   // Check each tool against permission store
   let permStore;
-  try { permStore = require('./permissionStore'); } catch { permStore = null; }
+  try {
+    permStore = require('./permissionStore');
+  } catch {
+    permStore = null;
+  }
 
   let toolCalling;
-  try { toolCalling = require('./toolCalling'); } catch { toolCalling = null; }
+  try {
+    toolCalling = require('./toolCalling');
+  } catch {
+    toolCalling = null;
+  }
 
   for (const [name] of uniqueTools) {
     // Check if already approved
@@ -67,7 +77,9 @@ async function runPreflight(toolCalls, options = {}) {
           risk = regTool.risk || 'medium';
           isReadOnly = typeof regTool.isReadOnly === 'function' ? regTool.isReadOnly({}) : false;
         }
-      } catch { /* registry not available */ }
+      } catch {
+        /* registry not available */
+      }
 
       const decision = permStore.check(name, {}, { risk, isReadOnly });
       if (decision === 'allow') {
@@ -87,7 +99,7 @@ async function runPreflight(toolCalls, options = {}) {
       } else {
         // Check if tool is safe risk (auto-approve)
         const tools = toolCalling.listTools ? toolCalling.listTools() : [];
-        const toolDef = tools.find(t => t.name === name);
+        const toolDef = tools.find((t) => t.name === name);
         if (toolDef && toolDef.risk === 'safe') {
           alreadyApproved = true;
         }
@@ -107,11 +119,13 @@ async function runPreflight(toolCalls, options = {}) {
           description = regTool.description || '';
           risk = regTool.risk || 'medium';
         }
-      } catch { /* fallback */ }
+      } catch {
+        /* fallback */
+      }
 
       if (!description && toolCalling) {
         const tools = toolCalling.listTools ? toolCalling.listTools() : [];
-        const toolDef = tools.find(t => t.name === name);
+        const toolDef = tools.find((t) => t.name === name);
         if (toolDef) {
           description = toolDef.description || '';
           risk = toolDef.risk || 'medium';
@@ -129,7 +143,9 @@ async function runPreflight(toolCalls, options = {}) {
 
   // Silent mode (for testing or non-interactive contexts)
   if (options.silent) {
-    for (const t of needsApproval) denied.add(t.name);
+    for (const t of needsApproval) {
+      denied.add(t.name);
+    }
     return { approved, denied };
   }
 
@@ -141,11 +157,15 @@ async function runPreflight(toolCalls, options = {}) {
     // service layer. Null when headless → caught below → deny all for safety.
     const _prompter = require('./permissionPromptPort').getPermissionPrompter();
     const formatBatchPermissionDialog = _prompter && _prompter.promptBatch;
-    if (!formatBatchPermissionDialog) throw new Error('no interactive prompter registered');
+    if (!formatBatchPermissionDialog) {
+      throw new Error('no interactive prompter registered');
+    }
     dialogResult = await formatBatchPermissionDialog(needsApproval);
   } catch {
     // Dialog not available — deny all for safety
-    for (const t of needsApproval) denied.add(t.name);
+    for (const t of needsApproval) {
+      denied.add(t.name);
+    }
     return { approved, denied };
   }
 
@@ -159,7 +179,11 @@ async function runPreflight(toolCalls, options = {}) {
     for (const t of needsApproval) {
       approved.add(t.name);
       if (permStore) {
-        try { permStore.approve(t.name, 'forever'); } catch { /* best effort */ }
+        try {
+          permStore.approve(t.name, 'forever');
+        } catch {
+          /* best effort */
+        }
       }
     }
   } else {
@@ -167,7 +191,11 @@ async function runPreflight(toolCalls, options = {}) {
     for (const t of needsApproval) {
       denied.add(t.name);
       if (permStore) {
-        try { permStore.deny(t.name, 'session'); } catch { /* best effort */ }
+        try {
+          permStore.deny(t.name, 'session');
+        } catch {
+          /* best effort */
+        }
       }
     }
   }

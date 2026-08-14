@@ -287,10 +287,7 @@ function formatCompactSummary(summary) {
   const summaryMatch = formatted.match(/<summary>([\s\S]*?)<\/summary>/);
   if (summaryMatch) {
     const content = summaryMatch[1] || '';
-    formatted = formatted.replace(
-      /<summary>[\s\S]*?<\/summary>/,
-      `Summary:\n${content.trim()}`,
-    );
+    formatted = formatted.replace(/<summary>[\s\S]*?<\/summary>/, `Summary:\n${content.trim()}`);
   }
 
   // Clean up extra whitespace
@@ -325,7 +322,8 @@ ${formatted}`;
   }
 
   if (options.suppressFollowUp) {
-    message += '\nContinue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I\'ll continue" or similar. Pick up the last task as if the break never happened.';
+    message +=
+      '\nContinue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I\'ll continue" or similar. Pick up the last task as if the break never happened.';
   }
 
   return message;
@@ -390,11 +388,12 @@ function getAnchoredCompactPrompt({ previousSummary, context = [], customInstruc
       ].join('\n')
     : 'Create a new anchored summary from the conversation history above.';
 
-  let prompt = NO_TOOLS_PREAMBLE
-    + `Your task is to create a structured summary following the anchored summary format.\n\n`
-    + anchor
-    + '\n\n'
-    + ANCHORED_SUMMARY_TEMPLATE;
+  let prompt =
+    NO_TOOLS_PREAMBLE +
+    `Your task is to create a structured summary following the anchored summary format.\n\n` +
+    anchor +
+    '\n\n' +
+    ANCHORED_SUMMARY_TEMPLATE;
 
   if (context.length > 0) {
     prompt += '\n\nAdditional context:\n' + context.join('\n');

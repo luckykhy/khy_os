@@ -1,7 +1,8 @@
 'use strict';
 
-const { defineTool, isGitRepo } = require('./_baseTool');
 const { execSync } = require('child_process');
+
+const { defineTool, isGitRepo } = require('./_baseTool');
 const _execCompat = require('./_execCompat');
 
 /**
@@ -18,37 +19,47 @@ const _execCompat = require('./_execCompat');
  */
 module.exports = defineTool({
   name: 'gitBlame',
-  description: 'Show line-by-line authorship for a file (git blame): who last changed each line and in which commit. Read-only; supports an optional line range.',
+  description:
+    'Show line-by-line authorship for a file (git blame): who last changed each line and in which commit. ' +
+    'Read-only; use it for provenance questions during debugging/refactoring. Pass start_line/end_line to blame just a range of a large file cheaply; whitespace-only changes are ignored.',
   category: 'git',
   risk: 'safe',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled: isGitRepo,
   aliases: ['git_blame'],
+  searchHint: 'authorship who changed line commit history 代码归属 追溯 作者',
   inputSchema: {
     file: {
       type: 'string',
       required: true,
-      description: 'Path to the file to blame (relative to the repo root).',
+      description: 'Path to the file to blame, relative to the repo root, e.g. "src/app.js".',
+      example: 'src/app.js',
     },
     start_line: {
       type: 'number',
       required: false,
       min: 1,
-      description: 'Optional first line (1-based) of a range to blame. Pair with end_line.',
+      description:
+        'First line (1-based) of the range to blame (default: whole file). Pair with end_line.',
+      example: 100,
     },
     end_line: {
       type: 'number',
       required: false,
       min: 1,
-      description: 'Optional last line (1-based) of a range to blame. Pair with start_line.',
+      description:
+        'Last line (1-based) of the range to blame; must be >= start_line. Pair with start_line.',
+      example: 150,
     },
   },
   async execute(params, _context) {
     try {
       const cwd = process.env.KHYQUANT_CWD || process.cwd();
       const file = params && params.file ? String(params.file) : '';
-      if (!file) return { success: false, error: 'file is required' };
+      if (!file) {
+        return { success: false, error: 'file is required' };
+      }
       // Optional line range → -L start,end. Both must be positive integers with end >= start.
       let rangeArg = '';
       const s = parseInt(params && params.start_line, 10);

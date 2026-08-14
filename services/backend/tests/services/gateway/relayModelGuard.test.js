@@ -30,8 +30,8 @@ test('gate default-on; CANON off values close it (byte-revert)', () => {
 
 test('isRelayServableModel: relay/trae families → true', () => {
   for (const m of [
-    'claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', 'gpt-5.3-codex',
-    'gpt-4o', 'gemini-2.5-flash', 'deepseek-chat', 'qwen-max', 'glm-4.6',
+    'claude-sonnet-4-6', 'claude-sonnet-4-20250514', 'claude-haiku-4-5-latest', 'claude-3-5-haiku-20241022',
+    'gpt-5.3-codex', 'gpt-4o', 'gemini-2.5-flash', 'deepseek-chat', 'qwen-max', 'glm-4.6',
     'doubao-1.5-vision', 'kimi-k2', 'grok-4', 'sonnet', 'haiku', 'opus',
     'llama-4-scout', 'mistral-large', 'o3',
   ]) {

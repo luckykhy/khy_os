@@ -29,7 +29,9 @@ const {
 let codes = null;
 try {
   codes = require('./failsafe/errorCodes');
-} catch { /* failsafe 字典缺失时降级，不影响主流程 */ }
+} catch {
+  /* failsafe 字典缺失时降级，不影响主流程 */
+}
 
 // ── kind → 可操作中文修复指引（高于 suggestRecoveryAction 的动作令牌，给人看） ──
 const KIND_REMEDIATION = {
@@ -41,10 +43,7 @@ const KIND_REMEDIATION = {
     '目标响应过慢或不可达：稍后重试，或提高超时阈值。',
     '检查网络/代理是否稳定；必要时切换模型通道或镜像源。',
   ],
-  rate_limit: [
-    '触发限流：稍候重试，或切换到其他账号/通道。',
-    '降低并发与请求频率。',
-  ],
+  rate_limit: ['触发限流：稍候重试，或切换到其他账号/通道。', '降低并发与请求频率。'],
   context_length: [
     '上下文超长：运行 /compact 压缩，或 history clear 清理历史。',
     '改用更大上下文窗口的模型。',
@@ -57,28 +56,16 @@ const KIND_REMEDIATION = {
     '权限不足：检查文件/目录所有权与读写位（ls -l），必要时调整权限。',
     '受沙箱/审批网关拦截时，按提示确认授权或降低操作影响面。',
   ],
-  billing: [
-    '账户额度不足或欠费：检查计费状态并充值，或切换可用账号。',
-  ],
+  billing: ['账户额度不足或欠费：检查计费状态并充值，或切换可用账号。'],
   model_not_found: [
     '模型不存在或不可用：运行 /model 查看可用模型并改选。',
     '核对模型 ID 拼写与该渠道是否支持该模型。',
   ],
-  overloaded: [
-    '上游服务过载：稍后重试；khyos 会自动降级到备用通道。',
-  ],
-  server_error: [
-    '上游服务端错误（5xx）：稍后重试；若持续，切换模型通道。',
-  ],
-  refusal: [
-    '内容被安全策略拦截：调整请求内容后重试。',
-  ],
-  cancelled: [
-    '操作已被取消（Ctrl+C / 超时中断）：如非预期，请重新执行。',
-  ],
-  process: [
-    '子进程异常退出或通道关闭：查看下方真实输出定位原因，修正后重跑。',
-  ],
+  overloaded: ['上游服务过载：稍后重试；khyos 会自动降级到备用通道。'],
+  server_error: ['上游服务端错误（5xx）：稍后重试；若持续，切换模型通道。'],
+  refusal: ['内容被安全策略拦截：调整请求内容后重试。'],
+  cancelled: ['操作已被取消（Ctrl+C / 超时中断）：如非预期，请重新执行。'],
+  process: ['子进程异常退出或通道关闭：查看下方真实输出定位原因，修正后重跑。'],
 };
 
 // ── errno / 系统码 → 具体修复（比 kind 更精确，优先采用） ──
@@ -88,13 +75,19 @@ const ERRNO_REMEDIATION = {
   ],
   EACCES: () => ['权限被拒绝：检查目标的读写/执行权限（chmod / chown），或换用有权限的目录。'],
   EPERM: () => ['操作不被允许：可能需要更高权限或受系统策略限制；核对所有权与运行身份。'],
-  EADDRINUSE: (ctx) => [`端口已被占用${ctx ? `：${ctx}` : ''}。换一个端口（--port N），或结束占用该端口的进程（lsof -i:PORT）。`],
-  ECONNREFUSED: () => ['目标服务未在监听：确认服务已启动且地址/端口正确（如先运行 khy server start）。'],
+  EADDRINUSE: (ctx) => [
+    `端口已被占用${ctx ? `：${ctx}` : ''}。换一个端口（--port N），或结束占用该端口的进程（lsof -i:PORT）。`,
+  ],
+  ECONNREFUSED: () => [
+    '目标服务未在监听：确认服务已启动且地址/端口正确（如先运行 khy server start）。',
+  ],
   ENOTFOUND: () => ['域名解析失败：检查网络/DNS 与目标地址拼写；受限网络下配置代理。'],
   ETIMEDOUT: () => ['连接超时：检查网络/代理与目标可达性，稍后重试。'],
   ENOSPC: () => ['磁盘空间不足：清理空间后重试（df -h 查看占用）。'],
   EMFILE: () => ['打开文件句柄过多：提高 ulimit -n，或排查句柄泄漏。'],
-  MODULE_NOT_FOUND: (ctx) => [`缺少 Node 依赖${ctx ? `：${ctx}` : ''}。在 services/backend 下运行 npm install 后重试。`],
+  MODULE_NOT_FOUND: (ctx) => [
+    `缺少 Node 依赖${ctx ? `：${ctx}` : ''}。在 services/backend 下运行 npm install 后重试。`,
+  ],
   ELOOP: () => ['符号链接成环：检查目标路径的软链接是否自引用。'],
 };
 
@@ -105,19 +98,30 @@ const GENERIC_REMEDIATION = [
 
 /** 从错误对象/结果对象中尽力提取退出码（数字）。 */
 function _extractExitCode(err) {
-  if (err == null || typeof err !== 'object') return undefined;
+  if (err == null || typeof err !== 'object') {
+    return undefined;
+  }
   for (const key of ['exitCode', 'status', 'statusCode']) {
     const v = err[key];
-    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      return v;
+    }
   }
   // err.code 可能是数字退出码，也可能是 errno 字符串；仅数字时当退出码
-  if (typeof err.code === 'number' && Number.isFinite(err.code)) return err.code;
+  if (typeof err.code === 'number' && Number.isFinite(err.code)) {
+    return err.code;
+  }
   return undefined;
 }
 
 /** 提取 errno 风格的字符串码（ENOENT / MODULE_NOT_FOUND…）。 */
 function _extractErrno(err) {
-  if (err && typeof err === 'object' && typeof err.code === 'string' && /^[A-Z_]+$/.test(err.code)) {
+  if (
+    err &&
+    typeof err === 'object' &&
+    typeof err.code === 'string' &&
+    /^[A-Z_]+$/.test(err.code)
+  ) {
     return err.code;
   }
   return undefined;
@@ -146,12 +150,19 @@ function describeCliError(err, opts = {}) {
   if (err instanceof Error || typeof err === 'string') {
     reason = formatErrorMessage(err);
   } else if (err && typeof err === 'object') {
-    const msg = (typeof err.error === 'string' && err.error.trim())
-      ? err.error
-      : (typeof err.message === 'string' && err.message.trim() ? err.message : '');
-    if (msg) reason = formatErrorMessage(msg);
+    const msg =
+      typeof err.error === 'string' && err.error.trim()
+        ? err.error
+        : typeof err.message === 'string' && err.message.trim()
+          ? err.message
+          : '';
+    if (msg) {
+      reason = formatErrorMessage(msg);
+    }
   }
-  const stderrText = (opts.stderr || (err && typeof err === 'object' ? err.stderr : '') || '').toString().trim();
+  const stderrText = (opts.stderr || (err && typeof err === 'object' ? err.stderr : '') || '')
+    .toString()
+    .trim();
   if (stderrText) {
     const cleaned = formatErrorMessage(stderrText);
     reason = reason && reason !== cleaned ? `${reason} | ${cleaned}` : cleaned;
@@ -159,8 +170,9 @@ function describeCliError(err, opts = {}) {
   reason = (reason || '').trim();
   // 只剩退出码、无任何文案时，至少说明"进程以非零码退出"，并附兜底原因
   if (!reason || reason === '-1' || reason === String(exitCode)) {
-    reason = opts.fallbackReason
-      || (exitCode != null
+    reason =
+      opts.fallbackReason ||
+      (exitCode != null
         ? `进程以退出码 ${exitCode} 结束，但未输出具体错误信息。`
         : '操作失败，但未捕获到具体错误信息。');
   }
@@ -186,7 +198,9 @@ function describeCliError(err, opts = {}) {
       reauth: '重新登录认证（khy login）。',
       retry: '这是可重试错误：稍后重试。',
     };
-    if (byAction[action]) suggestions.push(byAction[action]);
+    if (byAction[action]) {
+      suggestions.push(byAction[action]);
+    }
   }
   if (!suggestions.length) {
     suggestions.push(...GENERIC_REMEDIATION);
@@ -195,20 +209,28 @@ function describeCliError(err, opts = {}) {
     suggestions.push(GENERIC_REMEDIATION[0]);
   }
 
-  const title = opts.title
-    || (kind ? `命令失败（${_kindLabel(kind)}）` : '命令失败');
+  const title = opts.title || (kind ? `命令失败（${_kindLabel(kind)}）` : '命令失败');
 
-  const stack = (err instanceof Error && err.stack) ? err.stack : undefined;
+  const stack = err instanceof Error && err.stack ? err.stack : undefined;
 
   return { title, reason, exitCode, kind, suggestions, stack };
 }
 
 function _kindLabel(kind) {
   const labels = {
-    network: '网络', timeout: '超时', rate_limit: '限流', context_length: '上下文超限',
-    auth: '认证', permission: '权限', billing: '计费', model_not_found: '模型不存在',
-    overloaded: '服务过载', server_error: '服务端错误', refusal: '安全拦截',
-    cancelled: '已取消', process: '子进程',
+    network: '网络',
+    timeout: '超时',
+    rate_limit: '限流',
+    context_length: '上下文超限',
+    auth: '认证',
+    permission: '权限',
+    billing: '计费',
+    model_not_found: '模型不存在',
+    overloaded: '服务过载',
+    server_error: '服务端错误',
+    refusal: '安全拦截',
+    cancelled: '已取消',
+    process: '子进程',
   };
   return labels[kind] || kind;
 }

@@ -10,8 +10,8 @@
  * 以及集成:注册表里每个工具都能分到一级。零 IO、确定性——每断言显式传 env。
  */
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const ttc = require('../toolTierCatalog');
 
@@ -32,7 +32,9 @@ test('isEnabled:注册表关时回退私有 _off 判定(逐字节等价)', () =>
 test('TIERS / META_TOOLS:冻结(纯叶子不可变)且元素冻结', () => {
   assert.ok(Object.isFrozen(ttc.TIERS));
   assert.ok(Object.isFrozen(ttc.META_TOOLS));
-  for (const t of ttc.TIERS) assert.ok(Object.isFrozen(t), `tier ${t.tier} frozen`);
+  for (const t of ttc.TIERS) {
+    assert.ok(Object.isFrozen(t), `tier ${t.tier} frozen`);
+  }
   const tiers = ttc.TIERS.map((t) => t.tier);
   assert.deepEqual(tiers, [1, 2, 3]);
 });
@@ -114,8 +116,11 @@ test('集成:注册表里每个已注册工具都能分到一个层级(1/2/3),�
   let tools = [];
   try {
     const map = require('../../tools').getAll();
-    if (map && typeof map.values === 'function') tools = Array.from(map.values());
-    else if (Array.isArray(map)) tools = map;
+    if (map && typeof map.values === 'function') {
+      tools = Array.from(map.values());
+    } else if (Array.isArray(map)) {
+      tools = map;
+    }
   } catch {
     // 注册表加载失败(环境问题)不判本用例失败——分级判定本身已由上面纯用例覆盖。
     return;

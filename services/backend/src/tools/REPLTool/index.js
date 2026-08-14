@@ -1,5 +1,6 @@
-const { BaseTool } = require('../_baseTool');
 const vm = require('vm');
+
+const { BaseTool } = require('../_baseTool');
 
 class REPLTool extends BaseTool {
   static toolName = 'REPL';
@@ -8,8 +9,12 @@ class REPLTool extends BaseTool {
   static aliases = ['repl', 'eval', 'node_repl'];
   static searchHint = 'evaluate javascript node repl execute code';
   static shouldDefer = true;
+  // Evaluation output is bounded like other command-runner tools (30K chars).
+  static maxResultSizeChars = 30000;
 
-  isConcurrencySafe() { return false; }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Execute JavaScript code in a sandboxed Node.js REPL.
@@ -23,7 +28,11 @@ Each execution gets a fresh context.`;
       type: 'object',
       properties: {
         code: { type: 'string', description: 'JavaScript code to execute' },
-        timeout: { type: 'number', description: 'Execution timeout in ms (default 10000)', default: 10000 },
+        timeout: {
+          type: 'number',
+          description: 'Execution timeout in ms (default 10000)',
+          default: 10000,
+        },
       },
       required: ['code'],
     };
@@ -65,7 +74,9 @@ Each execution gets a fresh context.`;
     }
   }
 
-  getActivityDescription() { return '执行 REPL 代码'; }
+  getActivityDescription() {
+    return '执行 REPL 代码';
+  }
 }
 
 module.exports = REPLTool;

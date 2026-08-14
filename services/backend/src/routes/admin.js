@@ -24,15 +24,18 @@
 
 /* ========== 依赖导入 ========== */
 const express = require('express');
+
 const crypto = require('crypto');
+
 const router = express.Router();
 const UserLogService = require('../services/userLogService');
-const SystemSettingService = require('../services/systemSettingService');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
-const { isAllowedSettingKey } = require('../config/settingsWhitelist');
+
 const bcrypt = require('bcryptjs');
-const { User } = require('../models');
 const { Op } = require('sequelize');
+
+const { isAllowedSettingKey } = require('../config/settingsWhitelist');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { User } = require('../models');
 const { sequelize, Strategy, Announcement, Feedback, Trade } = require('../models');
 const logger = require('../utils/logger');
 
@@ -44,7 +47,7 @@ router.get('/stats', authenticateToken, requireAdmin, async (req, res) => {
     const [totalUsers, totalStrategies, totalAnnouncements] = await Promise.all([
       User.count(),
       Strategy.count().catch(() => 0),
-      Announcement.count().catch(() => 0)
+      Announcement.count().catch(() => 0),
     ]);
     res.json({
       success: true,
@@ -52,8 +55,8 @@ router.get('/stats', authenticateToken, requireAdmin, async (req, res) => {
         totalUsers,
         totalStrategies,
         totalAnnouncements,
-        onlineUsers: 0
-      }
+        onlineUsers: 0,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -66,13 +69,13 @@ router.get('/activities', authenticateToken, requireAdmin, async (req, res) => {
     const recentUsers = await User.findAll({
       order: [['created_at', 'DESC']],
       limit: 10,
-      attributes: ['id', 'username', 'created_at']
+      attributes: ['id', 'username', 'created_at'],
     });
-    const activities = recentUsers.map(u => ({
+    const activities = recentUsers.map((u) => ({
       id: u.id,
       type: 'user',
       description: `新用户 ${u.username} 注册成功`,
-      createdAt: u.created_at
+      createdAt: u.created_at,
     }));
     res.json({ success: true, data: activities });
   } catch (error) {
@@ -96,8 +99,8 @@ router.get('/system-status', authenticateToken, requireAdmin, async (req, res) =
         database: dbOk,
         websocket: true,
         aiService: false,
-        load: '正常'
-      }
+        load: '正常',
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -116,20 +119,22 @@ router.post('/create-test-admin', authenticateToken, requireAdmin, async (req, r
   try {
     // 检查是否已存在管理员
     const existingAdmin = await User.findOne({ where: { role: 'admin' } });
-    
+
     if (existingAdmin) {
       return res.json({
         success: true,
-        message: '管理员账号已存在'
+        message: '管理员账号已存在',
       });
     }
 
     // 创建测试管理员 — 密码来自环境变量，不回显硬编码值。
     // TEST_ADMIN_PASSWORD: 指定密码；未设置时生成随机密码并通过响应返回。
     const envPw = String(process.env.TEST_ADMIN_PASSWORD || '').trim();
-    const testPassword = envPw || Array.from(crypto.getRandomValues(new Uint8Array(12)))
-      .map(b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62])
-      .join('');
+    const testPassword =
+      envPw ||
+      Array.from(crypto.getRandomValues(new Uint8Array(12)))
+        .map((b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62])
+        .join('');
     const hashedPassword = await bcrypt.hash(testPassword, 10);
 
     const admin = await User.create({
@@ -137,22 +142,25 @@ router.post('/create-test-admin', authenticateToken, requireAdmin, async (req, r
       email: 'admin@khyquant.com',
       password: hashedPassword,
       role: 'admin',
-      status: 'active'
+      status: 'active',
     });
 
+    // 密码不回显在响应体中（避免浏览器 DevTools / 代理日志泄露）
+    // 通过响应头发送，仅当前请求可见
+    res.set('X-Generated-Password', testPassword);
+    console.log(`[DEV] 测试管理员密码（仅显示一次）: ${testPassword}`);
     res.json({
       success: true,
       message: '测试管理员创建成功',
       username: 'admin',
-      password: testPassword
+      passwordHint: '密码已通过响应头 X-Generated-Password 返回（仅本次请求可见）',
     });
-
   } catch (error) {
     console.error('创建测试管理员失败:', error);
     res.status(500).json({
       success: false,
       message: '创建测试管理员失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -162,16 +170,7 @@ router.post('/create-test-admin', authenticateToken, requireAdmin, async (req, r
 // 获取用户操作日志列表 —— 支持按用户ID、操作类型、状态、日期范围、关键词等多条件筛选分页查询
 router.get('/user-logs', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      userId,
-      action,
-      status,
-      startDate,
-      endDate,
-      search
-    } = req.query;
+    const { page = 1, limit = 20, userId, action, status, startDate, endDate, search } = req.query;
 
     const result = await UserLogService.getUserLogs({
       page: parseInt(page),
@@ -181,20 +180,20 @@ router.get('/user-logs', authenticateToken, requireAdmin, async (req, res) => {
       status,
       startDate,
       endDate,
-      search
+      search,
     });
 
     res.json({
       success: true,
       data: result,
-      message: '获取用户日志成功'
+      message: '获取用户日志成功',
     });
   } catch (error) {
     console.error('获取用户日志失败:', error);
     res.status(500).json({
       success: false,
       message: '获取用户日志失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -208,14 +207,14 @@ router.get('/user-activity-stats', authenticateToken, requireAdmin, async (req, 
     res.json({
       success: true,
       data: stats,
-      message: '获取用户活动统计成功'
+      message: '获取用户活动统计成功',
     });
   } catch (error) {
     console.error('获取用户活动统计失败:', error);
     res.status(500).json({
       success: false,
       message: '获取用户活动统计失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -229,14 +228,14 @@ router.delete('/user-logs/cleanup', authenticateToken, requireAdmin, async (req,
     res.json({
       success: true,
       data: { deletedCount },
-      message: `成功清理 ${deletedCount} 条旧日志记录`
+      message: `成功清理 ${deletedCount} 条旧日志记录`,
     });
   } catch (error) {
     console.error('清理旧日志失败:', error);
     res.status(500).json({
       success: false,
       message: '清理旧日志失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -246,14 +245,7 @@ router.delete('/user-logs/cleanup', authenticateToken, requireAdmin, async (req,
 // CSV 文件头部添加了 BOM(\uFEFF) 以确保 Excel 正确识别中文编码
 router.get('/user-logs/export', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const {
-      userId,
-      action,
-      status,
-      startDate,
-      endDate,
-      search
-    } = req.query;
+    const { userId, action, status, startDate, endDate, search } = req.query;
 
     const result = await UserLogService.getUserLogs({
       page: 1,
@@ -263,7 +255,7 @@ router.get('/user-logs/export', authenticateToken, requireAdmin, async (req, res
       status,
       startDate,
       endDate,
-      search
+      search,
     });
 
     // 设置CSV响应头
@@ -275,7 +267,7 @@ router.get('/user-logs/export', authenticateToken, requireAdmin, async (req, res
     res.write('\uFEFF' + csvHeader); // 添加BOM以支持中文
 
     // CSV数据
-    result.logs.forEach(log => {
+    result.logs.forEach((log) => {
       const row = [
         log.id,
         log.userId,
@@ -284,9 +276,11 @@ router.get('/user-logs/export', authenticateToken, requireAdmin, async (req, res
         log.actionDescription || '',
         log.ipAddress || '',
         log.status,
-        new Date(log.timestamp).toLocaleString('zh-CN')
-      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
-      
+        new Date(log.timestamp).toLocaleString('zh-CN'),
+      ]
+        .map((field) => `"${String(field).replace(/"/g, '""')}"`)
+        .join(',');
+
       res.write(row + '\n');
     });
 
@@ -296,7 +290,7 @@ router.get('/user-logs/export', authenticateToken, requireAdmin, async (req, res
     res.status(500).json({
       success: false,
       message: '导出用户日志失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -313,7 +307,7 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在'
+        message: '用户不存在',
       });
     }
 
@@ -322,7 +316,7 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
       username: username || user.username,
       email: email || user.email,
       role: role || user.role,
-      status: status || user.status
+      status: status || user.status,
     });
 
     // 记录操作日志
@@ -334,7 +328,7 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
       status: 'success',
-      details: { updatedBy: req.user.id, updatedFields: Object.keys(req.body) }
+      details: { updatedBy: req.user.id, updatedFields: Object.keys(req.body) },
     });
 
     res.json({
@@ -347,16 +341,16 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
         status: user.status,
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        updatedAt: user.updatedAt,
       },
-      message: '用户信息更新成功'
+      message: '用户信息更新成功',
     });
   } catch (error) {
     console.error('更新用户信息失败:', error);
     res.status(500).json({
       success: false,
       message: '更新用户信息失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -370,7 +364,7 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
     if (parseInt(id) === req.user.id) {
       return res.status(400).json({
         success: false,
-        message: '不能删除自己的账号'
+        message: '不能删除自己的账号',
       });
     }
 
@@ -378,7 +372,7 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在'
+        message: '用户不存在',
       });
     }
 
@@ -391,21 +385,21 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
       status: 'success',
-      details: { deletedBy: req.user.id }
+      details: { deletedBy: req.user.id },
     });
 
     await user.destroy();
 
     res.json({
       success: true,
-      message: '用户删除成功'
+      message: '用户删除成功',
     });
   } catch (error) {
     console.error('删除用户失败:', error);
     res.status(500).json({
       success: false,
       message: '删除用户失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -420,7 +414,7 @@ router.post('/users/:id/reset-password', authenticateToken, requireAdmin, async 
     if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({
         success: false,
-        message: '新密码长度至少6位'
+        message: '新密码长度至少6位',
       });
     }
 
@@ -428,7 +422,7 @@ router.post('/users/:id/reset-password', authenticateToken, requireAdmin, async 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: '用户不存在'
+        message: '用户不存在',
       });
     }
 
@@ -445,19 +439,19 @@ router.post('/users/:id/reset-password', authenticateToken, requireAdmin, async 
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
       status: 'success',
-      details: { resetBy: req.user.id }
+      details: { resetBy: req.user.id },
     });
 
     res.json({
       success: true,
-      message: '密码重置成功'
+      message: '密码重置成功',
     });
   } catch (error) {
     console.error('重置密码失败:', error);
     res.status(500).json({
       success: false,
       message: '重置密码失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -471,24 +465,21 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: '用户名、邮箱和密码为必填项'
+        message: '用户名、邮箱和密码为必填项',
       });
     }
 
     // 检查用户名和邮箱是否已存在
     const existingUser = await User.findOne({
       where: {
-        [Op.or]: [
-          { username },
-          { email }
-        ]
-      }
+        [Op.or]: [{ username }, { email }],
+      },
     });
 
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: '用户名或邮箱已存在'
+        message: '用户名或邮箱已存在',
       });
     }
 
@@ -499,7 +490,7 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
       email,
       password: hashedPassword,
       role,
-      status
+      status,
     });
 
     // 记录操作日志
@@ -511,7 +502,7 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
       status: 'success',
-      details: { createdBy: req.user.id }
+      details: { createdBy: req.user.id },
     });
 
     res.status(201).json({
@@ -522,16 +513,16 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
         email: user.email,
         role: user.role,
         status: user.status,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
       },
-      message: '用户创建成功'
+      message: '用户创建成功',
     });
   } catch (error) {
     console.error('创建用户失败:', error);
     res.status(500).json({
       success: false,
       message: '创建用户失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -560,37 +551,103 @@ router.get('/system/settings', authenticateToken, requireAdmin, async (req, res)
     // 降级方案：数据库不可用时返回预设的模拟配置，保证前端页面可正常展示
     const mockSettings = {
       system: [
-        { key: 'system.name', value: 'khy OS AI 平台操作系统', type: 'string', description: '系统名称', isEditable: true },
-        { key: 'system.version', value: '1.0.0', type: 'string', description: '系统版本', isEditable: false },
-        { key: 'system.description', value: '专业的量化交易平台', type: 'text', description: '系统描述', isEditable: true },
-        { key: 'system.maintenance_mode', value: false, type: 'boolean', description: '维护模式', isEditable: true }
+        {
+          key: 'system.name',
+          value: 'khy OS AI 平台操作系统',
+          type: 'string',
+          description: '系统名称',
+          isEditable: true,
+        },
+        {
+          key: 'system.version',
+          value: '1.0.0',
+          type: 'string',
+          description: '系统版本',
+          isEditable: false,
+        },
+        {
+          key: 'system.description',
+          value: '专业的量化交易平台',
+          type: 'text',
+          description: '系统描述',
+          isEditable: true,
+        },
+        {
+          key: 'system.maintenance_mode',
+          value: false,
+          type: 'boolean',
+          description: '维护模式',
+          isEditable: true,
+        },
       ],
       user: [
-        { key: 'user.registration_enabled', value: true, type: 'boolean', description: '允许用户注册', isEditable: true },
-        { key: 'user.session_timeout', value: 7, type: 'number', description: '会话超时时间（天）', isEditable: true }
+        {
+          key: 'user.registration_enabled',
+          value: true,
+          type: 'boolean',
+          description: '允许用户注册',
+          isEditable: true,
+        },
+        {
+          key: 'user.session_timeout',
+          value: 7,
+          type: 'number',
+          description: '会话超时时间（天）',
+          isEditable: true,
+        },
       ],
       security: [
-        { key: 'security.password_min_length', value: 6, type: 'number', description: '密码最小长度', isEditable: true },
-        { key: 'security.login_attempts_limit', value: 5, type: 'number', description: '登录尝试次数限制', isEditable: true }
+        {
+          key: 'security.password_min_length',
+          value: 6,
+          type: 'number',
+          description: '密码最小长度',
+          isEditable: true,
+        },
+        {
+          key: 'security.login_attempts_limit',
+          value: 5,
+          type: 'number',
+          description: '登录尝试次数限制',
+          isEditable: true,
+        },
       ],
       trading: [
-        { key: 'trading.default_commission', value: 0.0003, type: 'number', description: '默认手续费率', isEditable: true },
-        { key: 'trading.max_positions', value: 10, type: 'number', description: '最大持仓数量', isEditable: true },
-        { key: 'kline.enabled_periods', value: ['daily'], type: 'json', description: 'K线允许显示的时间周期', isEditable: true }
-      ]
+        {
+          key: 'trading.default_commission',
+          value: 0.0003,
+          type: 'number',
+          description: '默认手续费率',
+          isEditable: true,
+        },
+        {
+          key: 'trading.max_positions',
+          value: 10,
+          type: 'number',
+          description: '最大持仓数量',
+          isEditable: true,
+        },
+        {
+          key: 'kline.enabled_periods',
+          value: ['daily'],
+          type: 'json',
+          description: 'K线允许显示的时间周期',
+          isEditable: true,
+        },
+      ],
     };
 
     res.json({
       success: true,
       data: mockSettings,
-      message: '获取系统设置成功'
+      message: '获取系统设置成功',
     });
   } catch (error) {
     console.error('获取系统设置失败:', error);
     res.status(500).json({
       success: false,
       message: '获取系统设置失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -603,16 +660,16 @@ router.put('/system/settings', authenticateToken, requireAdmin, async (req, res)
     if (!settings || typeof settings !== 'object') {
       return res.status(400).json({
         success: false,
-        message: '设置数据格式错误'
+        message: '设置数据格式错误',
       });
     }
 
     // 用白名单校验设置项的 key 前缀，防止恶意写入不允许的配置
-    const invalidKeys = Object.keys(settings).filter(k => !isAllowedSettingKey(k));
+    const invalidKeys = Object.keys(settings).filter((k) => !isAllowedSettingKey(k));
     if (invalidKeys.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `不允许的设置项: ${invalidKeys.join(', ')}`
+        message: `不允许的设置项: ${invalidKeys.join(', ')}`,
       });
     }
 
@@ -631,20 +688,20 @@ router.put('/system/settings', authenticateToken, requireAdmin, async (req, res)
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
       status: 'success',
-      details: { updatedSettings: Object.keys(settings) }
+      details: { updatedSettings: Object.keys(settings) },
     });
 
     res.json({
       success: true,
       data: settings,
-      message: '系统设置更新成功'
+      message: '系统设置更新成功',
     });
   } catch (error) {
     console.error('更新系统设置失败:', error);
     res.status(500).json({
       success: false,
       message: '更新系统设置失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -658,41 +715,41 @@ router.get('/system/info', authenticateToken, requireAdmin, async (req, res) => 
       // 暂时使用固定值，避免模型依赖问题
       Promise.resolve(0), // Strategy.count(),
       Promise.resolve(0), // Backtest.count(),
-      Promise.resolve(0)  // Trade.count()
+      Promise.resolve(0), // Trade.count()
     ]);
 
     const systemInfo = {
       settings: {
         system: [
           { key: 'system.name', value: 'khy OS AI 平台操作系统' },
-          { key: 'system.version', value: '1.0.0' }
-        ]
+          { key: 'system.version', value: '1.0.0' },
+        ],
       },
       statistics: {
         userCount,
         strategyCount,
         backtestCount,
-        tradeCount
+        tradeCount,
       },
       systemInfo: {
         nodeVersion: process.version,
         platform: process.platform,
         uptime: process.uptime(),
-        memoryUsage: process.memoryUsage()
-      }
+        memoryUsage: process.memoryUsage(),
+      },
     };
 
     res.json({
       success: true,
       data: systemInfo,
-      message: '获取系统信息成功'
+      message: '获取系统信息成功',
     });
   } catch (error) {
     console.error('获取系统信息失败:', error);
     res.status(500).json({
       success: false,
       message: '获取系统信息失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -705,7 +762,7 @@ router.post('/system/settings/reset', authenticateToken, requireAdmin, async (re
     if (!key) {
       return res.status(400).json({
         success: false,
-        message: '请指定要重置的设置项'
+        message: '请指定要重置的设置项',
       });
     }
 
@@ -715,7 +772,7 @@ router.post('/system/settings/reset', authenticateToken, requireAdmin, async (re
       'system.maintenance_mode': false,
       'user.registration_enabled': true,
       'security.password_min_length': 6,
-      'trading.default_commission': 0.0003
+      'trading.default_commission': 0.0003,
     };
 
     const defaultValue = defaultValues[key] || null;
@@ -729,20 +786,20 @@ router.post('/system/settings/reset', authenticateToken, requireAdmin, async (re
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
       status: 'success',
-      details: { resetKey: key }
+      details: { resetKey: key },
     });
 
     res.json({
       success: true,
       data: { key, value: defaultValue },
-      message: '设置重置成功'
+      message: '设置重置成功',
     });
   } catch (error) {
     console.error('重置设置失败:', error);
     res.status(500).json({
       success: false,
       message: '重置设置失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -761,19 +818,19 @@ router.post('/system/settings/initialize', authenticateToken, requireAdmin, asyn
       actionDescription: '管理员初始化系统默认设置',
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
-      status: 'success'
+      status: 'success',
     });
 
     res.json({
       success: true,
-      message: '默认设置初始化成功'
+      message: '默认设置初始化成功',
     });
   } catch (error) {
     console.error('初始化默认设置失败:', error);
     res.status(500).json({
       success: false,
       message: '初始化默认设置失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -788,22 +845,27 @@ router.get('/users/:userId/account', authenticateToken, requireAdmin, async (req
   try {
     const { userId } = req.params;
     const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ success: false, message: '用户不存在' });
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
 
     const trades = await Trade.findAll({
-      where: { user_id: userId, status: 'filled' }
+      where: { user_id: userId, status: 'filled' },
     });
 
     // 每个用户默认初始模拟资金为 100 万
-    const initialFunds = 1000000.00;
-    let totalProfit = 0, positionCost = 0, positionValue = 0;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const initialFunds = 1000000.0;
+    let totalProfit = 0,
+      positionCost = 0,
+      positionValue = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     let todayProfit = 0;
 
     // 遍历所有已成交交易，分别累计：
     //   已平仓交易 -> 计入总盈亏(totalProfit)，如果是今天平仓则计入当日盈亏
     //   未平仓买入 -> 计入持仓成本(positionCost)和持仓市值(positionValue)
-    trades.forEach(trade => {
+    trades.forEach((trade) => {
       if (trade.isClosed && trade.profit) {
         totalProfit += parseFloat(trade.profit);
         if (trade.closedAt && new Date(trade.closedAt) >= today) {
@@ -828,8 +890,8 @@ router.get('/users/:userId/account', authenticateToken, requireAdmin, async (req
         totalProfit: parseFloat(totalProfit.toFixed(2)),
         todayProfit: parseFloat(todayProfit.toFixed(2)),
         positionValue: parseFloat(positionValue.toFixed(2)),
-        tradeCount: trades.length
-      }
+        tradeCount: trades.length,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -841,22 +903,28 @@ router.get('/funds', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const users = await User.findAll({
       attributes: ['id', 'username', 'email', 'status', 'createdAt'],
-      include: [{
-        model: Trade,
-        as: 'trades',
-        where: { status: 'filled' },
-        required: false,
-        attributes: ['id', 'isClosed', 'profit', 'side', 'amount']
-      }]
+      include: [
+        {
+          model: Trade,
+          as: 'trades',
+          where: { status: 'filled' },
+          required: false,
+          attributes: ['id', 'isClosed', 'profit', 'side', 'amount'],
+        },
+      ],
     });
 
-    const initialFunds = 1000000.00;
+    const initialFunds = 1000000.0;
     const fundsData = users.map((user) => {
       const trades = user.trades || [];
-      let totalProfit = 0, positionCost = 0;
-      trades.forEach(trade => {
-        if (trade.isClosed && trade.profit) totalProfit += parseFloat(trade.profit);
-        else if (!trade.isClosed && trade.side === 'buy') positionCost += parseFloat(trade.amount);
+      let totalProfit = 0,
+        positionCost = 0;
+      trades.forEach((trade) => {
+        if (trade.isClosed && trade.profit) {
+          totalProfit += parseFloat(trade.profit);
+        } else if (!trade.isClosed && trade.side === 'buy') {
+          positionCost += parseFloat(trade.amount);
+        }
       });
       const availableFunds = initialFunds + totalProfit - positionCost;
       return {
@@ -868,7 +936,7 @@ router.get('/funds', authenticateToken, requireAdmin, async (req, res) => {
         availableFunds: parseFloat(availableFunds.toFixed(2)),
         totalProfit: parseFloat(totalProfit.toFixed(2)),
         tradeCount: trades.length,
-        registeredAt: user.createdAt
+        registeredAt: user.createdAt,
       };
     });
 
@@ -882,18 +950,42 @@ router.get('/funds', authenticateToken, requireAdmin, async (req, res) => {
 // 返回分页数据并通过 JOIN 关联用户表获取用户名
 router.get('/trades', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { userId, symbol, side, status, type, startDate, endDate, page = 1, pageSize = 20 } = req.query;
+    const {
+      userId,
+      symbol,
+      side,
+      status,
+      type,
+      startDate,
+      endDate,
+      page = 1,
+      pageSize = 20,
+    } = req.query;
     // 动态构建 Sequelize 查询条件：支持用户ID、股票代码模糊匹配、方向、状态、类型、日期范围
     const where = {};
-    if (userId) where.user_id = userId;
-    if (symbol) where.symbol = { [Op.like]: `%${symbol}%` };
-    if (side) where.side = side;
-    if (status) where.status = status;
-    if (type) where.type = type;
+    if (userId) {
+      where.user_id = userId;
+    }
+    if (symbol) {
+      where.symbol = { [Op.like]: `%${symbol}%` };
+    }
+    if (side) {
+      where.side = side;
+    }
+    if (status) {
+      where.status = status;
+    }
+    if (type) {
+      where.type = type;
+    }
     if (startDate || endDate) {
       where.createdAt = {};
-      if (startDate) where.createdAt[Op.gte] = new Date(startDate);
-      if (endDate) where.createdAt[Op.lte] = new Date(endDate + ' 23:59:59');
+      if (startDate) {
+        where.createdAt[Op.gte] = new Date(startDate);
+      }
+      if (endDate) {
+        where.createdAt[Op.lte] = new Date(endDate + ' 23:59:59');
+      }
     }
 
     const offset = (parseInt(page) - 1) * parseInt(pageSize);
@@ -902,7 +994,7 @@ router.get('/trades', authenticateToken, requireAdmin, async (req, res) => {
       include: [{ model: User, attributes: ['username', 'email'], as: 'user' }],
       order: [['createdAt', 'DESC']],
       limit: parseInt(pageSize),
-      offset
+      offset,
     });
 
     res.json({
@@ -910,7 +1002,7 @@ router.get('/trades', authenticateToken, requireAdmin, async (req, res) => {
       data: rows,
       total: count,
       page: parseInt(page),
-      pageSize: parseInt(pageSize)
+      pageSize: parseInt(pageSize),
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -928,7 +1020,7 @@ router.get('/users/:userId/trades', authenticateToken, requireAdmin, async (req,
       where: { user_id: userId },
       order: [['createdAt', 'DESC']],
       limit: parseInt(pageSize),
-      offset
+      offset,
     });
 
     res.json({ success: true, data: rows, total: count });
@@ -941,6 +1033,7 @@ router.get('/users/:userId/trades', authenticateToken, requireAdmin, async (req,
 // AKShare 是 Python 金融数据接口库，此处管理其自动更新与手动触发检查
 
 const akshareUpdater = require('../services/akshareUpdater');
+const SystemSettingService = require('../services/systemSettingService');
 
 // 查询 AKShare 数据源当前版本及更新状态
 router.get('/akshare/status', authenticateToken, requireAdmin, async (req, res) => {

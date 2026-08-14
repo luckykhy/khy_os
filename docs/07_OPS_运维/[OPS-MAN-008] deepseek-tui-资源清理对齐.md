@@ -46,7 +46,7 @@
   - `startPeriodicCleanup({ skipInitial })` 支持跳过首轮，避免启动阶段重复清理
 - `backend/src/bootstrap/prefetch.js`
   - 启动延迟任务改为：`runCleanup({ trigger: 'startup' })` 后 `startPeriodicCleanup({ skipInitial: true })`，避免重复执行
-- `backend/src/cli/router.js`、`backend/src/cli/handlers/settings.js`
+- `backend/src/cli/router.js`（`cleanup`/`memory` 命令在此内联实现）
   - `cleanup status` 新增最近一次清理报告（触发源、耗时、失败数、目标进度）
   - `cleanup` 执行时新增“目标+进度”式状态输出，避免模糊文案
 - `backend/tests/services/cleanupService.test.js`

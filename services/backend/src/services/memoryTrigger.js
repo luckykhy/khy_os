@@ -37,12 +37,20 @@ const NONE = Object.freeze({ kind: 'none' });
 
 /** 捕获侧总开关。默认开,KHY_MEMORY_TRIGGER∈{0,false,off,no} 关。 */
 function isEnabled() {
-  return !OFF.has(String(process.env.KHY_MEMORY_TRIGGER || '').trim().toLowerCase());
+  return !OFF.has(
+    String(process.env.KHY_MEMORY_TRIGGER || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /** 主动子层开关(独立于总开关)。默认开,KHY_PROACTIVE_CAPTURE∈{0,false,off,no} 关。 */
 function isProactiveEnabled() {
-  return !OFF.has(String(process.env.KHY_PROACTIVE_CAPTURE || '').trim().toLowerCase());
+  return !OFF.has(
+    String(process.env.KHY_PROACTIVE_CAPTURE || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /**
@@ -50,25 +58,33 @@ function isProactiveEnabled() {
  * 关 ⇒ instruction 分支恒不触发(逐字节退化到「不把项目约定路由到指令文件」的今日行为)。
  */
 function isInstructionCandidateEnabled() {
-  return !OFF.has(String(process.env.KHY_INSTRUCTION_CANDIDATE || '').trim().toLowerCase());
+  return !OFF.has(
+    String(process.env.KHY_INSTRUCTION_CANDIDATE || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // ── 触发短语 ─────────────────────────────────────────────────────────
 // 显式「请记住」意图。命中即必须捕获(用户直接指令)。
-const EXPLICIT_RE = /(记住|记一下|记下来|帮我记|存一下|存下来|以后都|从现在起|别再|不要再|remember\s+(that|this)|my\s+(name|preference)\s+is|note\s+to\s+self|请记住)/i;
+const EXPLICIT_RE =
+  /(记住|记一下|记下来|帮我记|存一下|存下来|以后都|从现在起|别再|不要再|remember\s+(that|this)|my\s+(name|preference)\s+is|note\s+to\s+self|请记住)/i;
 
 // 显式触发里偏「协作偏好/纠偏」语气的,归 feedback 类(对齐既有 _MEMORY_FEEDBACK_RE)。
 const FEEDBACK_RE = /(以后|别再|不要再|from\s+now\s+on|don'?t\s+(ever\s+)?)/i;
 
 // 保留层提示词。
-const PERMANENT_HINT_RE = /(永久|永远|一直记|始终记|别忘|永远别忘|forever|permanently|never\s+forget)/i;
-const SHORT_TERM_HINT_RE = /(临时|暂时|这次|本次会话|just\s+(for\s+)?now|temporar(y|ily)|for\s+this\s+session)/i;
+const PERMANENT_HINT_RE =
+  /(永久|永远|一直记|始终记|别忘|永远别忘|forever|permanently|never\s+forget)/i;
+const SHORT_TERM_HINT_RE =
+  /(临时|暂时|这次|本次会话|just\s+(for\s+)?now|temporar(y|ily)|for\s+this\s+session)/i;
 
 // 稳定身份事实(高精度):姓名声明。命中 ⇒ permanent + user + 固定 topic key。
 const IDENTITY_RE = /(我叫|我的名字(是|叫)|my\s+name\s+is)\s*\S/i;
 
 // 稳定偏好声明(主动子层白名单,高精度):长期习惯而非一次性任务陈述。
-const PREFERENCE_RE = /(我(习惯|一般|通常|总是|一直|默认)(用|使用)|我(喜欢|偏好)(用|使用)|i\s+(prefer|usually\s+use|always\s+use|generally\s+use))\s*\S/i;
+const PREFERENCE_RE =
+  /(我(习惯|一般|通常|总是|一直|默认)(用|使用)|我(喜欢|偏好)(用|使用)|i\s+(prefer|usually\s+use|always\s+use|generally\s+use))\s*\S/i;
 
 // 指令文件候选(instruction 分支白名单,高精度·零假阳性偏向):**项目级长期约定 / 规范 /
 // 构建命令 / 协作方式**——这类应写进指令文件(khy.md/agent.md)让它注入每回合系统提示,而非
@@ -93,16 +109,20 @@ const INSTRUCTION_RE = new RegExp(
     '\\bthis\\s+(project|repo|codebase)\\s+(uses|always|never|must|should|requires)\\b',
     '\\b(build|test|lint)\\s+(command|script)\\s+(is|:)\\b',
   ].join('|'),
-  'i',
+  'i'
 );
 
 // 疑问句 / 请求句(否决 instruction 触发):用户在**问**或**要求一次性动作**而非**确立约定**。
-const _QUESTION_RE = /(吗[?？]?\s*$|怎么|如何|为什么|是不是|能不能|可不可以|帮我|请(帮|你|问)|\?\s*$|？\s*$)/;
+const _QUESTION_RE =
+  /(吗[?？]?\s*$|怎么|如何|为什么|是不是|能不能|可不可以|帮我|请(帮|你|问)|\?\s*$|？\s*$)/;
 
 // 去掉句首的显式触发前缀,留下干净正文(对齐 ai.js 既有 strip)。
 function _stripTrigger(raw) {
   return String(raw)
-    .replace(/^\s*(请\s*)?(帮我\s*)?(记住|记一下|记下来|帮我记|存一下|存下来|note\s+to\s+self|remember\s+(that|this))[:：,，\s]*/i, '')
+    .replace(
+      /^\s*(请\s*)?(帮我\s*)?(记住|记一下|记下来|帮我记|存一下|存下来|note\s+to\s+self|remember\s+(that|this))[:：,，\s]*/i,
+      ''
+    )
     .trim();
 }
 
@@ -111,15 +131,23 @@ function _stripTrigger(raw) {
  * 再看永久提示/身份,缺省落 cross_session。
  */
 function _inferTier(raw) {
-  if (SHORT_TERM_HINT_RE.test(raw)) return memoryTier.TIERS.SHORT_TERM;
-  if (PERMANENT_HINT_RE.test(raw) || IDENTITY_RE.test(raw)) return memoryTier.TIERS.PERMANENT;
+  if (SHORT_TERM_HINT_RE.test(raw)) {
+    return memoryTier.TIERS.SHORT_TERM;
+  }
+  if (PERMANENT_HINT_RE.test(raw) || IDENTITY_RE.test(raw)) {
+    return memoryTier.TIERS.PERMANENT;
+  }
   return memoryTier.TIERS.CROSS_SESSION;
 }
 
 /** 推断语义种类:身份→user;纠偏/偏好语气→feedback;否则 user(用户想留的事实)。 */
 function _inferType(raw) {
-  if (IDENTITY_RE.test(raw)) return 'user';
-  if (FEEDBACK_RE.test(raw)) return 'feedback';
+  if (IDENTITY_RE.test(raw)) {
+    return 'user';
+  }
+  if (FEEDBACK_RE.test(raw)) {
+    return 'feedback';
+  }
   return 'user';
 }
 
@@ -132,15 +160,25 @@ function _inferType(raw) {
  *   - name 为 null ⇒ 调用方自行从 note 派生 slug(每条独立,不合并)。
  */
 function classify(message) {
-  if (!isEnabled()) return NONE;
+  if (!isEnabled()) {
+    return NONE;
+  }
   const raw = String(message || '').trim();
-  if (!raw || raw.length > 2000) return NONE;
+  if (!raw || raw.length > 2000) {
+    return NONE;
+  }
 
   // ① 显式「请记住」:必须捕获。身份声明用固定 topic key 以便后续 supersede。
   if (EXPLICIT_RE.test(raw)) {
     const note = _stripTrigger(raw) || raw;
     if (IDENTITY_RE.test(note) || IDENTITY_RE.test(raw)) {
-      return { kind: 'explicit', name: 'user-name', note, tier: memoryTier.TIERS.PERMANENT, type: 'user' };
+      return {
+        kind: 'explicit',
+        name: 'user-name',
+        note,
+        tier: memoryTier.TIERS.PERMANENT,
+        type: 'user',
+      };
     }
     return { kind: 'explicit', name: null, note, tier: _inferTier(raw), type: _inferType(raw) };
   }
@@ -149,11 +187,23 @@ function classify(message) {
   if (isProactiveEnabled()) {
     if (IDENTITY_RE.test(raw)) {
       // 身份是「同一主题、值会变」的典型 → 固定 topic key,再次声明则更新而非堆叠。
-      return { kind: 'proactive', name: 'user-name', note: raw, tier: memoryTier.TIERS.PERMANENT, type: 'user' };
+      return {
+        kind: 'proactive',
+        name: 'user-name',
+        note: raw,
+        tier: memoryTier.TIERS.PERMANENT,
+        type: 'user',
+      };
     }
     if (PREFERENCE_RE.test(raw)) {
       // 不同偏好应共存(tab/空格…),故 name 留 null 按正文独立成条;同条复述经 decideUpdate skip。
-      return { kind: 'proactive', name: null, note: raw, tier: memoryTier.TIERS.CROSS_SESSION, type: 'feedback' };
+      return {
+        kind: 'proactive',
+        name: null,
+        note: raw,
+        tier: memoryTier.TIERS.CROSS_SESSION,
+        type: 'feedback',
+      };
     }
   }
 

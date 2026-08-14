@@ -21,10 +21,16 @@
  */
 
 function envFlagEnabled(rawValue, defaultValue = true) {
-  if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') return defaultValue;
+  if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') {
+    return defaultValue;
+  }
   const normalized = String(rawValue).trim().toLowerCase();
-  if (['1', 'true', 'on', 'yes', 'y'].includes(normalized)) return true;
-  if (['0', 'false', 'off', 'no', 'n'].includes(normalized)) return false;
+  if (['1', 'true', 'on', 'yes', 'y'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'off', 'no', 'n'].includes(normalized)) {
+    return false;
+  }
   return defaultValue;
 }
 

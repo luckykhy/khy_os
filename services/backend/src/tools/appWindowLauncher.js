@@ -12,9 +12,9 @@
  * The URL is passed as a single argv element straight to spawn (no shell),
  * so metacharacters like `&` never need escaping on the --app path.
  */
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
 
 /**
  * Dynamically discover Chromium-based browsers that support --app mode on
@@ -44,10 +44,24 @@ function findAppModeBrowsers() {
   ].filter(Boolean);
 
   for (const p of edgePaths) {
-    try { if (fs.existsSync(p)) { candidates.push(p); break; } } catch { /* next */ }
+    try {
+      if (fs.existsSync(p)) {
+        candidates.push(p);
+        break;
+      }
+    } catch {
+      /* next */
+    }
   }
   for (const p of chromePaths) {
-    try { if (fs.existsSync(p)) { candidates.push(p); break; } } catch { /* next */ }
+    try {
+      if (fs.existsSync(p)) {
+        candidates.push(p);
+        break;
+      }
+    } catch {
+      /* next */
+    }
   }
 
   return candidates;
@@ -61,7 +75,9 @@ function findAppModeBrowsers() {
 function _trySpawnApp(sp, executable, url) {
   try {
     const child = sp(executable, [`--app=${url}`], { detached: true, stdio: 'ignore' });
-    if (child && typeof child.unref === 'function') child.unref();
+    if (child && typeof child.unref === 'function') {
+      child.unref();
+    }
     return true;
   } catch {
     return false;
@@ -96,11 +112,15 @@ function _openDefaultTab(url, openDefaultImpl) {
 function openAppWindow(url, { spawnImpl, openDefaultImpl } = {}) {
   const sp = spawnImpl || spawn;
   const target = String(url || '').trim();
-  if (!target) return { opened: false, mode: 'tab' };
+  if (!target) {
+    return { opened: false, mode: 'tab' };
+  }
 
   if (process.platform === 'win32') {
     for (const browser of findAppModeBrowsers()) {
-      if (_trySpawnApp(sp, browser, target)) return { opened: true, mode: 'app-window' };
+      if (_trySpawnApp(sp, browser, target)) {
+        return { opened: true, mode: 'app-window' };
+      }
     }
     return _openDefaultTab(target, openDefaultImpl);
   }
@@ -113,16 +133,30 @@ function openAppWindow(url, { spawnImpl, openDefaultImpl } = {}) {
     ];
     for (const browser of macBrowsers) {
       let exists = false;
-      try { exists = fs.existsSync(browser); } catch { exists = false; }
-      if (exists && _trySpawnApp(sp, browser, target)) return { opened: true, mode: 'app-window' };
+      try {
+        exists = fs.existsSync(browser);
+      } catch {
+        exists = false;
+      }
+      if (exists && _trySpawnApp(sp, browser, target)) {
+        return { opened: true, mode: 'app-window' };
+      }
     }
     return _openDefaultTab(target, openDefaultImpl);
   }
 
   // Linux and others: try common Chromium-family commands from PATH.
-  const linuxBrowsers = ['google-chrome', 'google-chrome-stable', 'chromium-browser', 'chromium', 'microsoft-edge'];
+  const linuxBrowsers = [
+    'google-chrome',
+    'google-chrome-stable',
+    'chromium-browser',
+    'chromium',
+    'microsoft-edge',
+  ];
   for (const cmd of linuxBrowsers) {
-    if (_trySpawnApp(sp, cmd, target)) return { opened: true, mode: 'app-window' };
+    if (_trySpawnApp(sp, cmd, target)) {
+      return { opened: true, mode: 'app-window' };
+    }
   }
   return _openDefaultTab(target, openDefaultImpl);
 }

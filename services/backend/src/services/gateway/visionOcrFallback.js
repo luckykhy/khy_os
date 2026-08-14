@@ -75,8 +75,12 @@ const _REJECTION_TEXT_RE =
  * @returns {boolean}
  */
 function isModelRejectionResult(result) {
-  if (!result || result.success !== false) return false;
-  if (isModelRejection(result)) return true; // 结构化 code/errorType（单一真源）
+  if (!result || result.success !== false) {
+    return false;
+  }
+  if (isModelRejection(result)) {
+    return true;
+  } // 结构化 code/errorType（单一真源）
   const txt = `${result.error || ''} ${result.message || ''} ${result.errorType || ''}`;
   return _REJECTION_TEXT_RE.test(txt);
 }
@@ -93,8 +97,12 @@ function isModelRejectionResult(result) {
  */
 function shouldOcrRescue(input = {}) {
   const { result, hasImage } = input;
-  if (!isEnabled(input.env)) return false;
-  if (!hasImage) return false;
+  if (!isEnabled(input.env)) {
+    return false;
+  }
+  if (!hasImage) {
+    return false;
+  }
   return isModelRejectionResult(result);
 }
 
@@ -132,9 +140,17 @@ function isRateLimitOcrEnabled(env) {
  */
 function shouldRateLimitOcrRescue(input = {}) {
   const { errorType, hasImage } = input;
-  if (!isRateLimitOcrEnabled(input.env)) return false;
-  if (!hasImage) return false;
-  return _RATE_LIMIT_OCR_ERROR_TYPES.has(String(errorType || '').trim().toLowerCase());
+  if (!isRateLimitOcrEnabled(input.env)) {
+    return false;
+  }
+  if (!hasImage) {
+    return false;
+  }
+  return _RATE_LIMIT_OCR_ERROR_TYPES.has(
+    String(errorType || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // 限流 OCR 兜底注入文案首行标记,供调用方去重。
@@ -151,7 +167,9 @@ const RATE_LIMIT_OCR_NOTE_MARKER = '[视觉通道限流·本地 OCR 兜底]';
  */
 function buildRateLimitOcrNote(input = {}) {
   try {
-    if (!isRateLimitOcrEnabled(input.env)) return null;
+    if (!isRateLimitOcrEnabled(input.env)) {
+      return null;
+    }
     const n = Number.isFinite(input.count) && input.count > 0 ? Math.floor(input.count) : 0;
     const countPart = n > 0 ? `${n} 张图片` : '图片';
     return [
@@ -191,7 +209,9 @@ const UNREADABLE_NOTE_MARKER = '[图像无法读取]';
  */
 function buildVisionUnreadableNote(input = {}) {
   try {
-    if (!isEnabled(input.env)) return null;
+    if (!isEnabled(input.env)) {
+      return null;
+    }
     const n = Number.isFinite(input.count) && input.count > 0 ? Math.floor(input.count) : 0;
     const countPart = n > 0 ? `${n} 张图片` : '图片';
     return [
@@ -247,7 +267,9 @@ function isStripImageFloorEnabled(env) {
  */
 function buildStrippedImageFloorNote(input = {}) {
   try {
-    if (!isStripImageFloorEnabled(input.env)) return null;
+    if (!isStripImageFloorEnabled(input.env)) {
+      return null;
+    }
     const n = Number.isFinite(input.count) && input.count > 0 ? Math.floor(input.count) : 0;
     const countPart = n > 0 ? `${n} 张图片` : '图片';
     return [
@@ -309,11 +331,17 @@ function isVisionKeyInviteEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : {}) || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_VISION_OCR_KEY_INVITE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退(父门控由调用方 _glmVisionOn 另行把关) */ }
+  } catch {
+    /* 注册表不可用 → 本地回退(父门控由调用方 _glmVisionOn 另行把关) */
+  }
   const v = e.KHY_VISION_OCR_KEY_INVITE;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -330,8 +358,12 @@ function isVisionKeyInviteEnabled(env) {
  */
 function buildVisionKeyConfigOffer(input = {}) {
   try {
-    if (!input || !input.glmKeyMissing) return null;
-    if (!isVisionKeyInviteEnabled(input.env)) return null;
+    if (!input || !input.glmKeyMissing) {
+      return null;
+    }
+    if (!isVisionKeyInviteEnabled(input.env)) {
+      return null;
+    }
     return [
       `${VISION_KEY_INVITE_MARKER} 补充事实:当前尚未配置 GLM(智谱)视觉模型的 API Key——`,
       '这正是我无法直接「看」这张图、只能退回上述方式的根因。请在本次回应的末尾,主动且简短地',

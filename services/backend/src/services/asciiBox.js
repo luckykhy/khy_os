@@ -32,7 +32,9 @@ function boxRow(text, width) {
  * @returns {string}
  */
 function boxRule(label, width) {
-  if (!label) return `├${'─'.repeat(width + 2)}┤`;
+  if (!label) {
+    return `├${'─'.repeat(width + 2)}┤`;
+  }
   const inner = `─ ${label} `;
   const fill = width + 2 - inner.length;
   return `├${inner}${'─'.repeat(Math.max(0, fill))}┤`;

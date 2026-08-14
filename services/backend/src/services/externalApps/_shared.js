@@ -18,9 +18,15 @@ const path = require('path');
 /** 展开前导 ~ 为用户主目录。 */
 function expandHome(p, env = process.env) {
   const home = (env && env.HOME) || os.homedir();
-  if (!p) return p;
-  if (p === '~') return home;
-  if (p.startsWith('~/')) return path.join(home, p.slice(2));
+  if (!p) {
+    return p;
+  }
+  if (p === '~') {
+    return home;
+  }
+  if (p.startsWith('~/')) {
+    return path.join(home, p.slice(2));
+  }
   return p;
 }
 
@@ -29,7 +35,9 @@ function readIfExists(file) {
   try {
     return fs.readFileSync(file, 'utf8');
   } catch (e) {
-    if (e && e.code === 'ENOENT') return null;
+    if (e && e.code === 'ENOENT') {
+      return null;
+    }
     throw e;
   }
 }
@@ -50,12 +58,18 @@ function atomicWrite(file, content) {
 /** 解析 .env 文本 → { KEY: value }(仅用于 has-key 判断,值不解引号回传原样去引号)。 */
 function parseDotenv(text) {
   const out = {};
-  if (!text) return out;
+  if (!text) {
+    return out;
+  }
   for (const rawLine of String(text).split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
+    if (!line || line.startsWith('#')) {
+      continue;
+    }
     const m = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (!m) continue;
+    if (!m) {
+      continue;
+    }
     let val = m[2].trim();
     if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
       val = val.slice(1, -1);
@@ -76,15 +90,23 @@ function upsertDotenv(text, key, value) {
   const re = new RegExp(`^(?:export\\s+)?${key}\\s*=`);
   let replaced = false;
   const next = lines.map((l) => {
-    if (!replaced && re.test(l.trim())) { replaced = true; return line; }
+    if (!replaced && re.test(l.trim())) {
+      replaced = true;
+      return line;
+    }
     return l;
   });
   if (!replaced) {
-    if (next.length && next[next.length - 1] === '') next.splice(next.length - 1, 0, line);
-    else next.push(line);
+    if (next.length && next[next.length - 1] === '') {
+      next.splice(next.length - 1, 0, line);
+    } else {
+      next.push(line);
+    }
   }
   let out = next.join('\n');
-  if (!out.endsWith('\n')) out += '\n';
+  if (!out.endsWith('\n')) {
+    out += '\n';
+  }
   return out;
 }
 
@@ -97,7 +119,9 @@ function removeDotenvKey(text, key, tombstonePrefix) {
   for (const l of src.split(/\r?\n/)) {
     if (re.test(l.trim())) {
       removed = true;
-      if (tombstonePrefix) out.push(`${tombstonePrefix} ${key}`);
+      if (tombstonePrefix) {
+        out.push(`${tombstonePrefix} ${key}`);
+      }
       continue;
     }
     out.push(l);
@@ -109,7 +133,10 @@ function removeDotenvKey(text, key, tombstonePrefix) {
 
 /** 由 provider id 生成 shell 风格的 env 键名,如 deepseek → DEEPSEEK_API_KEY。 */
 function envKeyName(provider, suffix = 'API_KEY') {
-  const norm = String(provider || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const norm = String(provider || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
   return `${norm || 'CUSTOM'}_${suffix}`;
 }
 
@@ -117,7 +144,9 @@ function envKeyName(provider, suffix = 'API_KEY') {
 function presetFor(provider) {
   try {
     const { getProviderPresets } = require('../gateway/providerPresets');
-    const id = String(provider || '').trim().toLowerCase();
+    const id = String(provider || '')
+      .trim()
+      .toLowerCase();
     const hit = getProviderPresets().find((p) => p.id === id);
     return hit || null;
   } catch {
@@ -130,25 +159,35 @@ function presetFor(provider) {
  * 返回 { key, source:'nl'|'pool'|'none' }。绝不抛(池不可用 → none)。
  */
 function resolveApiKey(provider, explicitKey) {
-  if (explicitKey) return { key: explicitKey, source: 'nl' };
+  if (explicitKey) {
+    return { key: explicitKey, source: 'nl' };
+  }
   try {
     const pool = require('../apiKeyPool');
     const avail = pool.listAvailableKeys(provider) || [];
-    if (avail.length && avail[0].key) return { key: avail[0].key, source: 'pool' };
-  } catch { /* pool unavailable — fall through */ }
+    if (avail.length && avail[0].key) {
+      return { key: avail[0].key, source: 'pool' };
+    }
+  } catch {
+    /* pool unavailable — fall through */
+  }
   return { key: '', source: 'none' };
 }
 
 /** 解析 endpoint:NL 给的优先,否则 preset 的 baseUrl。 */
 function resolveEndpoint(provider, explicitEndpoint) {
-  if (explicitEndpoint) return explicitEndpoint;
+  if (explicitEndpoint) {
+    return explicitEndpoint;
+  }
   const preset = presetFor(provider);
   return preset && preset.baseUrl ? preset.baseUrl : '';
 }
 
 /** 解析默认模型:NL 给的优先,否则 preset 的 defaultModel。 */
 function resolveModel(provider, explicitModel) {
-  if (explicitModel) return explicitModel;
+  if (explicitModel) {
+    return explicitModel;
+  }
   const preset = presetFor(provider);
   return preset && preset.defaultModel ? preset.defaultModel : '';
 }
@@ -156,7 +195,9 @@ function resolveModel(provider, explicitModel) {
 /** 脱敏:只留头尾各 4 字符。用于结果回显,绝不回原文 key。 */
 function maskKey(key) {
   const s = String(key || '');
-  if (s.length <= 8) return s ? '****' : '';
+  if (s.length <= 8) {
+    return s ? '****' : '';
+  }
   return `${s.slice(0, 4)}…${s.slice(-4)}`;
 }
 

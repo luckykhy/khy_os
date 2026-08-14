@@ -7,8 +7,8 @@
  * 冷启动/陈旧不误伤,门关逐字节回退(罚分恒 0),异常输入绝不抛。
  */
 
-const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
+const { describe, test } = require('node:test');
 
 const {
   isRouteLatencyAwareEnabled,
@@ -108,7 +108,10 @@ describe('buildLatencyReason — reasons 条目形状', () => {
     assert.equal(buildLatencyReason({ ewmaMs: 800, samples: 10 }, { ceiling: 40, env: ON }), null);
   });
   test('门关 → null', () => {
-    assert.equal(buildLatencyReason({ ewmaMs: 12000, samples: 10 }, { ceiling: 40, env: OFF }), null);
+    assert.equal(
+      buildLatencyReason({ ewmaMs: 12000, samples: 10 }, { ceiling: 40, env: OFF }),
+      null
+    );
   });
   test('绝不抛', () => {
     assert.doesNotThrow(() => buildLatencyReason());

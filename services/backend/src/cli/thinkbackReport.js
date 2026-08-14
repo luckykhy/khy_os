@@ -29,7 +29,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
  */
 function thinkbackEnabled(env = process.env) {
   const raw = env && env.KHY_THINKBACK;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -61,14 +63,15 @@ function _fmtCost(n) {
  * @returns {string[]}
  */
 function buildThinkbackReport(p, env = process.env, deps = {}) {
-  if (!thinkbackEnabled(env)) return [];
+  if (!thinkbackEnabled(env)) {
+    return [];
+  }
   const o = p || {};
   const history = Array.isArray(o.history) ? o.history : [];
   const habits = o.habits && typeof o.habits === 'object' ? o.habits : {};
   const periodLabel = String(o.periodLabel == null ? '' : o.periodLabel).trim() || '本期';
-  const fmtTokens = typeof deps.fmtTokens === 'function'
-    ? deps.fmtTokens
-    : (n) => String(Math.floor(_num(n)));
+  const fmtTokens =
+    typeof deps.fmtTokens === 'function' ? deps.fmtTokens : (n) => String(Math.floor(_num(n)));
 
   // 聚合按日历史。
   let totalTokens = 0;
@@ -77,20 +80,24 @@ function buildThinkbackReport(p, env = process.env, deps = {}) {
   let activeDays = 0;
   let peakDay = null; // { date, totalTokens }
   for (const row of history) {
-    if (!row || typeof row !== 'object') continue;
+    if (!row || typeof row !== 'object') {
+      continue;
+    }
     const tk = _num(row.totalTokens);
     const rq = _num(row.requests);
     totalTokens += tk;
     totalRequests += rq;
     totalCost += _num(row.costUSD);
-    if (tk > 0 || rq > 0) activeDays += 1;
+    if (tk > 0 || rq > 0) {
+      activeDays += 1;
+    }
     if (tk > 0 && (!peakDay || tk > peakDay.totalTokens)) {
       peakDay = { date: String(row.date || ''), totalTokens: tk };
     }
   }
 
-  const timeProfile = habits.timeProfile && typeof habits.timeProfile === 'object'
-    ? habits.timeProfile : {};
+  const timeProfile =
+    habits.timeProfile && typeof habits.timeProfile === 'object' ? habits.timeProfile : {};
   const totalSessions = _num(timeProfile.totalSessions);
   const avgSession = String(timeProfile.avgSession == null ? '' : timeProfile.avgSession).trim();
   const modelRanking = Array.isArray(habits.modelRanking) ? habits.modelRanking : [];
@@ -124,7 +131,9 @@ function buildThinkbackReport(p, env = process.env, deps = {}) {
   if (modelRanking.length > 0) {
     const top = modelRanking[0];
     const name = top && top.model ? String(top.model) : '';
-    if (name) lines.push(`  最常用模型: ${name}（${Math.floor(_num(top.count))} 次）`);
+    if (name) {
+      lines.push(`  最常用模型: ${name}（${Math.floor(_num(top.count))} 次）`);
+    }
   }
 
   if (topics.length > 0) {
@@ -132,7 +141,9 @@ function buildThinkbackReport(p, env = process.env, deps = {}) {
       .slice(0, 5)
       .map((t) => (t && t.topic ? String(t.topic) : ''))
       .filter((s) => s.length > 0);
-    if (names.length) lines.push(`  高频话题: ${names.join('、')}`);
+    if (names.length) {
+      lines.push(`  高频话题: ${names.join('、')}`);
+    }
   }
 
   return lines;

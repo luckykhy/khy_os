@@ -15,17 +15,26 @@
  */
 
 const fs = require('fs');
+
 const { getEncodingForBuffer } = require('./systemEncoding');
 
 // Node Buffer 可原生解码的编码（无需 iconv）。
 const NATIVE_ENCODINGS = new Set([
-  'utf-8', 'utf8',
-  'utf16le', 'utf-16le', 'ucs2', 'ucs-2',
-  'latin1', 'binary', 'ascii',
+  'utf-8',
+  'utf8',
+  'utf16le',
+  'utf-16le',
+  'ucs2',
+  'ucs-2',
+  'latin1',
+  'binary',
+  'ascii',
 ]);
 
 function normalizeEncoding(enc) {
-  return String(enc || '').trim().toLowerCase();
+  return String(enc || '')
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -51,7 +60,9 @@ function decodeBuffer(buf, encoding) {
     }
   }
   // 剥前导 BOM（U+FEFF）——utf8 解码不会自动去除，会污染首行/JSON.parse。
-  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  if (text.charCodeAt(0) === 0xfeff) {
+    text = text.slice(1);
+  }
   return text;
 }
 
@@ -67,7 +78,8 @@ function decodeBuffer(buf, encoding) {
  * @returns {{ text: string, encoding: string, truncated: boolean, totalBytes: (number|undefined) }}
  */
 function readTextFileSmart(filePath, opts = {}) {
-  const maxBytes = Number.isFinite(opts.maxBytes) && opts.maxBytes > 0 ? Math.floor(opts.maxBytes) : 0;
+  const maxBytes =
+    Number.isFinite(opts.maxBytes) && opts.maxBytes > 0 ? Math.floor(opts.maxBytes) : 0;
   let buf;
   let truncated = false;
   let totalBytes;
@@ -94,8 +106,11 @@ function readTextFileSmart(filePath, opts = {}) {
   let enc = normalizeEncoding(opts.encoding);
   // FE FF 是 UTF-16BE BOM——getEncodingForBuffer 不识别它，这里先兜住。
   if (!enc || enc === 'auto') {
-    if (buf.length >= 2 && buf[0] === 0xFE && buf[1] === 0xFF) enc = 'utf-16be';
-    else enc = normalizeEncoding(getEncodingForBuffer(buf));
+    if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
+      enc = 'utf-16be';
+    } else {
+      enc = normalizeEncoding(getEncodingForBuffer(buf));
+    }
   }
   return { text: decodeBuffer(buf, enc), encoding: enc, truncated, totalBytes };
 }

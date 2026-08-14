@@ -20,34 +20,44 @@
  * 默认端点（ollama 11434 / 网关 9100）均可被 env 覆盖。
  */
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const http = require('http');
 const https = require('https');
-const { execFileSync } = require('child_process');
+const os = require('os');
+const path = require('path');
 
-const curriculum = require('./learningCurriculum');
+const { PRIMARY: MODELS } = require('../constants/models');
+
 // Model-name SSOT: embedding model default flows from constants/models.js
 // (env KHY_LEARN_EMBED_MODEL still overrides first).
-const { PRIMARY: MODELS } = require('../constants/models');
 
 // ── env 配置（带边界） ───────────────────────────────────────────────
 function _envStr(name, def) {
   const v = process.env[name];
   return v == null || String(v).trim() === '' ? def : String(v).trim();
 }
+
 function _envInt(name, def, min, max) {
   const n = parseInt(process.env[name], 10);
-  if (!Number.isFinite(n)) return def;
+  if (!Number.isFinite(n)) {
+    return def;
+  }
   let r = n;
-  if (typeof min === 'number') r = Math.max(min, r);
-  if (typeof max === 'number') r = Math.min(max, r);
+  if (typeof min === 'number') {
+    r = Math.max(min, r);
+  }
+  if (typeof max === 'number') {
+    r = Math.min(max, r);
+  }
   return r;
 }
+
 function _envBool(name, def) {
   const v = process.env[name];
-  if (v == null || v === '') return def;
+  if (v == null || v === '') {
+    return def;
+  }
   return !/^(0|false|no|off)$/i.test(String(v).trim());
 }
 
@@ -69,7 +79,16 @@ const DOCS_BASE_URL = _envStr('KHY_LEARN_DOCS_BASE_URL', '');
 const EMBED_URL = _envStr('KHY_LEARN_EMBED_URL', '');
 const EMBED_MODEL = _envStr('KHY_LEARN_EMBED_MODEL', MODELS.embedding);
 
-const CACHE_DIR = path.join(os.homedir(), '.khyquant', 'learn-cache');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const CACHE_DIR = path.join(_appHome(), 'learn-cache');
 
 // ── 分词（复用领域中性的 CJK/ASCII 分词叶子模块） ──────────────────────
 // 历史上本模块借用 knowledge 教学服务导出的 tokenizeForSearch，那条「低层课程检索
@@ -79,13 +98,19 @@ const CACHE_DIR = path.join(os.homedir(), '.khyquant', 'learn-cache');
 let _tokenize;
 try {
   const st = require('./searchTokenizer');
-  if (typeof st.tokenizeForSearch === 'function') _tokenize = st.tokenizeForSearch;
-} catch { /* tokenizer leaf unavailable — use local fallback below */ }
+  if (typeof st.tokenizeForSearch === 'function') {
+    _tokenize = st.tokenizeForSearch;
+  }
+} catch {
+  /* tokenizer leaf unavailable — use local fallback below */
+}
 if (!_tokenize) {
   // Same technique as knowledgeTeachingService._searchTokenize: CJK runs → single
   // chars + bigrams, ASCII runs → whole token. Kept as a fallback only.
   _tokenize = function (text) {
-    if (!text) return [];
+    if (!text) {
+      return [];
+    }
     const lower = String(text).toLowerCase();
     const parts = lower.match(/[一-鿿]+|[a-z0-9_]+/g) || [];
     const out = [];
@@ -93,7 +118,9 @@ if (!_tokenize) {
       if (/[一-鿿]/.test(p)) {
         for (let i = 0; i < p.length; i++) {
           out.push(p[i]);
-          if (i + 1 < p.length) out.push(p.slice(i, i + 2));
+          if (i + 1 < p.length) {
+            out.push(p.slice(i, i + 2));
+          }
         }
       } else {
         out.push(p);
@@ -106,36 +133,44 @@ if (!_tokenize) {
 // OS/内核领域同义词（量化版同义词表不适用，这里维护本课程自己的一份）。键和值都用
 // 分词后的形态参与扩展，桥接「中文概念 ⇄ 英文标识符 ⇄ 代码符号」以提高召回。
 const _OS_SYNONYMS = {
-  '内核': ['kernel'], 'kernel': ['内核', 'os'],
-  '决策': ['decision', '裁决', 'allow', 'deny', 'ask', 'agentask'],
-  '裁决': ['decision', '决策'],
-  '调度': ['sched', 'scheduler', 'schedule', '抢占', 'preempt'],
-  '抢占': ['preempt', 'sched', '调度'],
-  '中断': ['interrupt', 'idt', 'isr', 'irq'],
-  '内存': ['memory', 'pmm', 'vmm', 'heap', 'kheap', 'paging', '分页'],
-  '分页': ['paging', 'vmm', '内存'],
-  '进程': ['process', 'task', 'fork', 'pid'],
-  '系统调用': ['syscall'], 'syscall': ['系统调用', 'sys'],
-  '串口': ['serial', 'com2', 'com1', 'uart'],
-  '帧': ['frame', 'cobs', 'crc16', 'agentframe'],
-  '事件': ['event', 'spawn', 'exit', 'fault', 'agentevent'],
-  '配置': ['config', 'agentconf', 'conf'],
-  '桥': ['bridge', 'host', 'khybridge'],
-  '控制': ['control', 'agentctl', 'ctl'],
-  '文件系统': ['vfs', 'diskfs', 'ramfs', 'fs', '持久化', 'persist'],
-  '持久化': ['persist', 'diskfs', '文件系统'],
-  '引导': ['boot', 'bootloader', 'grub'],
-  '协同': ['agent', 'collaborate', 'pivot'],
-  'agent': ['智能体', '代理', 'mcp'],
-  'mcp': ['agent', 'jsonrpc'],
-  '网关': ['gateway', 'brain'],
+  内核: ['kernel'],
+  kernel: ['内核', 'os'],
+  决策: ['decision', '裁决', 'allow', 'deny', 'ask', 'agentask'],
+  裁决: ['decision', '决策'],
+  调度: ['sched', 'scheduler', 'schedule', '抢占', 'preempt'],
+  抢占: ['preempt', 'sched', '调度'],
+  中断: ['interrupt', 'idt', 'isr', 'irq'],
+  内存: ['memory', 'pmm', 'vmm', 'heap', 'kheap', 'paging', '分页'],
+  分页: ['paging', 'vmm', '内存'],
+  进程: ['process', 'task', 'fork', 'pid'],
+  系统调用: ['syscall'],
+  syscall: ['系统调用', 'sys'],
+  串口: ['serial', 'com2', 'com1', 'uart'],
+  帧: ['frame', 'cobs', 'crc16', 'agentframe'],
+  事件: ['event', 'spawn', 'exit', 'fault', 'agentevent'],
+  配置: ['config', 'agentconf', 'conf'],
+  桥: ['bridge', 'host', 'khybridge'],
+  控制: ['control', 'agentctl', 'ctl'],
+  文件系统: ['vfs', 'diskfs', 'ramfs', 'fs', '持久化', 'persist'],
+  持久化: ['persist', 'diskfs', '文件系统'],
+  引导: ['boot', 'bootloader', 'grub'],
+  协同: ['agent', 'collaborate', 'pivot'],
+  agent: ['智能体', '代理', 'mcp'],
+  mcp: ['agent', 'jsonrpc'],
+  网关: ['gateway', 'brain'],
 };
 
 function _expandTokens(tokens) {
   const set = new Set(tokens);
   for (const t of tokens) {
     const syn = _OS_SYNONYMS[t];
-    if (syn) for (const s of syn) for (const st of _tokenize(s)) set.add(st);
+    if (syn) {
+      for (const s of syn) {
+        for (const st of _tokenize(s)) {
+          set.add(st);
+        }
+      }
+    }
   }
   return Array.from(set);
 }
@@ -143,11 +178,18 @@ function _expandTokens(tokens) {
 // ── 语料构建 ─────────────────────────────────────────────────────────
 // 收敛到 utils/collapseWhitespace 单一真源(逐字节委托,调用点不变)
 const _norm = require('../utils/collapseWhitespace');
-function _clip(s, n) { const t = String(s); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
+
+const curriculum = require('./learningCurriculum');
+function _clip(s, n) {
+  const t = String(s);
+  return t.length > n ? t.slice(0, n - 1) + '…' : t;
+}
 
 function _makeChunk(source, title, text) {
   const body = _clip(_norm(text), MAX_CHUNK_CHARS);
-  if (!body) return null;
+  if (!body) {
+    return null;
+  }
   const tokenSrc = `${title || ''} ${body}`;
   const tokenSet = new Set(_tokenize(tokenSrc));
   const titleTokens = new Set(_tokenize(title || ''));
@@ -157,15 +199,27 @@ function _makeChunk(source, title, text) {
 function _curriculumChunks() {
   const chunks = [];
   let layers = [];
-  try { layers = curriculum.getAllLayers() || []; } catch { layers = []; }
+  try {
+    layers = curriculum.getAllLayers() || [];
+  } catch {
+    layers = [];
+  }
   for (const layer of layers) {
-    const c = _makeChunk(`curriculum:${layer.id}`, `第${layer.id}层 ${layer.title}`, layer.summary || '');
-    if (c) chunks.push(c);
-    for (const topic of (layer.topics || [])) {
-      const fileNames = (topic.files || []).map(f => path.basename(String(f))).join(' ');
+    const c = _makeChunk(
+      `curriculum:${layer.id}`,
+      `第${layer.id}层 ${layer.title}`,
+      layer.summary || ''
+    );
+    if (c) {
+      chunks.push(c);
+    }
+    for (const topic of layer.topics || []) {
+      const fileNames = (topic.files || []).map((f) => path.basename(String(f))).join(' ');
       const text = `${layer.title} / ${topic.title}。${topic.desc || ''}${fileNames ? `。相关源码: ${fileNames}` : ''}`;
       const c2 = _makeChunk(`curriculum:${layer.id}.${topic.id}`, topic.title, text);
-      if (c2) chunks.push(c2);
+      if (c2) {
+        chunks.push(c2);
+      }
     }
   }
   return chunks;
@@ -185,7 +239,9 @@ function _chunkMarkdown(sourceLabel, content) {
       for (let i = 0; i < norm.length && out.length < MAX_CHUNKS_PER_DOC; i += MAX_CHUNK_CHARS) {
         const slice = norm.slice(i, i + MAX_CHUNK_CHARS);
         const c = _makeChunk(`doc:${sourceLabel}${heading ? '#' + heading : ''}`, heading, slice);
-        if (c) out.push(c);
+        if (c) {
+          out.push(c);
+        }
       }
     }
     buf = [];
@@ -195,12 +251,16 @@ function _chunkMarkdown(sourceLabel, content) {
     if (m) {
       flush();
       heading = _norm(m[1]).slice(0, 80);
-      if (out.length >= MAX_CHUNKS_PER_DOC) break;
+      if (out.length >= MAX_CHUNKS_PER_DOC) {
+        break;
+      }
     } else {
       buf.push(line);
     }
   }
-  if (out.length < MAX_CHUNKS_PER_DOC) flush();
+  if (out.length < MAX_CHUNKS_PER_DOC) {
+    flush();
+  }
   return out;
 }
 
@@ -212,28 +272,42 @@ function _listMarkdownDocs() {
   const found = []; // { label, abs }
   const seen = new Set();
   const push = (label, abs) => {
-    if (!abs || seen.has(abs) || found.length >= MAX_DOC_FILES) return;
+    if (!abs || seen.has(abs) || found.length >= MAX_DOC_FILES) {
+      return;
+    }
     seen.add(abs);
     found.push({ label, abs });
   };
   for (const rel of docRoots) {
     const absDir = curriculum.resolveSourceAbs(rel);
-    if (!absDir) continue;
+    if (!absDir) {
+      continue;
+    }
     let entries = [];
     try {
       const st = fs.statSync(absDir);
-      if (!st.isDirectory()) continue;
+      if (!st.isDirectory()) {
+        continue;
+      }
       entries = fs.readdirSync(absDir, { withFileTypes: true });
-    } catch { continue; }
+    } catch {
+      continue;
+    }
     for (const e of entries) {
-      if (found.length >= MAX_DOC_FILES) break;
-      if (!e.isFile() || !e.name.toLowerCase().endsWith('.md')) continue;
+      if (found.length >= MAX_DOC_FILES) {
+        break;
+      }
+      if (!e.isFile() || !e.name.toLowerCase().endsWith('.md')) {
+        continue;
+      }
       push(`${rel}/${e.name}`, path.join(absDir, e.name));
     }
   }
   for (const rf of rootFiles) {
     const abs = curriculum.resolveSourceAbs(rf);
-    if (abs) push(rf, abs);
+    if (abs) {
+      push(rf, abs);
+    }
   }
   return found;
 }
@@ -241,12 +315,20 @@ function _listMarkdownDocs() {
 function _docChunks() {
   const chunks = [];
   for (const { label, abs } of _listMarkdownDocs()) {
-    if (chunks.length >= MAX_TOTAL_CHUNKS) break;
+    if (chunks.length >= MAX_TOTAL_CHUNKS) {
+      break;
+    }
     let content = '';
-    try { content = fs.readFileSync(abs, 'utf-8'); } catch { continue; }
+    try {
+      content = fs.readFileSync(abs, 'utf-8');
+    } catch {
+      continue;
+    }
     for (const c of _chunkMarkdown(label, content)) {
       chunks.push(c);
-      if (chunks.length >= MAX_TOTAL_CHUNKS) break;
+      if (chunks.length >= MAX_TOTAL_CHUNKS) {
+        break;
+      }
     }
   }
   return chunks;
@@ -257,18 +339,32 @@ function _sourceHeadChunks() {
   const chunks = [];
   const seen = new Set();
   let layers = [];
-  try { layers = curriculum.getAllLayers() || []; } catch { layers = []; }
+  try {
+    layers = curriculum.getAllLayers() || [];
+  } catch {
+    layers = [];
+  }
   for (const layer of layers) {
-    for (const topic of (layer.topics || [])) {
-      for (const f of (topic.files || [])) {
-        if (seen.has(f) || chunks.length >= MAX_TOTAL_CHUNKS) continue;
+    for (const topic of layer.topics || []) {
+      for (const f of topic.files || []) {
+        if (seen.has(f) || chunks.length >= MAX_TOTAL_CHUNKS) {
+          continue;
+        }
         seen.add(f);
         let preview = null;
-        try { preview = curriculum.readFilePreview(f, 24); } catch { preview = null; }
-        if (!preview || !preview.lines || preview.lines.length === 0) continue;
+        try {
+          preview = curriculum.readFilePreview(f, 24);
+        } catch {
+          preview = null;
+        }
+        if (!preview || !preview.lines || preview.lines.length === 0) {
+          continue;
+        }
         const text = preview.lines.join('\n');
         const c = _makeChunk(`src:${f}`, path.basename(f), text);
-        if (c) chunks.push(c);
+        if (c) {
+          chunks.push(c);
+        }
       }
     }
   }
@@ -280,43 +376,65 @@ function _buildCorpus() {
   const chunks = [];
   for (const part of [_curriculumChunks(), _docChunks(), _sourceHeadChunks()]) {
     for (const c of part) {
-      if (chunks.length >= MAX_TOTAL_CHUNKS) break;
+      if (chunks.length >= MAX_TOTAL_CHUNKS) {
+        break;
+      }
       chunks.push(c);
     }
   }
   return chunks;
 }
+
 function _getCorpus() {
-  if (!_corpusCache) _corpusCache = _buildCorpus();
+  if (!_corpusCache) {
+    _corpusCache = _buildCorpus();
+  }
   return _corpusCache;
 }
-function resetCorpusCache() { _corpusCache = null; }
+
+function resetCorpusCache() {
+  _corpusCache = null;
+}
 
 function _chunkFromAbs(absPath, label) {
   try {
     const content = fs.readFileSync(absPath, 'utf-8');
     const lower = absPath.toLowerCase();
-    if (lower.endsWith('.md')) return _chunkMarkdown(label || path.basename(absPath), content);
+    if (lower.endsWith('.md')) {
+      return _chunkMarkdown(label || path.basename(absPath), content);
+    }
     const head = content.split('\n').slice(0, 40).join('\n');
-    const c = _makeChunk(`fetched:${label || path.basename(absPath)}`, path.basename(absPath), head);
+    const c = _makeChunk(
+      `fetched:${label || path.basename(absPath)}`,
+      path.basename(absPath),
+      head
+    );
     return c ? [c] : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 // ── 词法检索 ─────────────────────────────────────────────────────────
 function _scoreChunk(chunk, qtokens, rawQuery) {
-  if (qtokens.length === 0) return 0;
+  if (qtokens.length === 0) {
+    return 0;
+  }
   let hit = 0;
   for (const qt of qtokens) {
     if (chunk.tokenSet.has(qt)) {
       hit += 1;
-      if (chunk.titleTokens.has(qt)) hit += 0.5;
+      if (chunk.titleTokens.has(qt)) {
+        hit += 0.5;
+      }
     }
   }
   let score = hit / qtokens.length;
   // Substring bonus on the raw (normalized) query — rewards exact phrase hits.
   const rq = _norm(rawQuery).toLowerCase();
-  if (rq.length >= 3 && chunk.text.toLowerCase().includes(rq)) score += 0.4;
+  if (rq.length >= 3 && chunk.text.toLowerCase().includes(rq)) {
+    score += 0.4;
+  }
   return score;
 }
 
@@ -326,7 +444,9 @@ function lexicalSearch(query, corpus, limit) {
   const scored = [];
   for (const chunk of corpus) {
     const s = _scoreChunk(chunk, qtokens, query);
-    if (s > 0) scored.push({ chunk, score: s });
+    if (s > 0) {
+      scored.push({ chunk, score: s });
+    }
   }
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, limit);
@@ -335,27 +455,44 @@ function lexicalSearch(query, corpus, limit) {
 // ── 向量（混合 RAG，可选） ───────────────────────────────────────────
 function _gatewayBase() {
   const url = _envStr('KHY_GATEWAY_URL', '');
-  if (url) return url.replace(/\/+$/, '');
+  if (url) {
+    return url.replace(/\/+$/, '');
+  }
   const host = _envStr('PROXY_HOST', '127.0.0.1');
   const port = _envStr('PROXY_PORT', '9100');
   return `http://${host}:${port}`;
 }
+
 function _gatewayToken() {
   const t = _envStr('PROXY_AUTH_TOKEN', '');
-  if (t) return t;
+  if (t) {
+    return t;
+  }
   try {
-    const p = path.join(os.homedir(), '.khy', 'proxy_server_auth.json');
+    let p;
+    try {
+      p = path.join(require('../utils/dataHome').getDataHome(), 'proxy_server_auth.json');
+    } catch {
+      p = path.join(os.homedir(), '.khy', 'proxy_server_auth.json');
+    }
     const j = JSON.parse(fs.readFileSync(p, 'utf-8'));
     return j && j.authToken ? String(j.authToken) : '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
+
 function _ollamaHost() {
   // Read the live env first so a runtime OLLAMA_HOST change takes effect, then
   // fall back to the canonical default in constants/serviceDefaults (the single
   // source of truth — never hardcode the host:port literal here).
   let h = _envStr('OLLAMA_HOST', '');
   if (!h) {
-    try { h = require('../constants/serviceDefaults').OLLAMA_HOST || ''; } catch { /* ignore */ }
+    try {
+      h = require('../constants/serviceDefaults').OLLAMA_HOST || '';
+    } catch {
+      /* ignore */
+    }
   }
   return String(h || '').replace(/\/+$/, '');
 }
@@ -368,7 +505,12 @@ function _embedEndpoints() {
     const style = /\/api\/embed/.test(EMBED_URL) ? 'ollama' : 'openai';
     list.push({ kind: 'env', url: EMBED_URL, style, headers: {} });
   }
-  list.push({ kind: 'ollama', url: `${_ollamaHost()}/api/embeddings`, style: 'ollama', headers: {} });
+  list.push({
+    kind: 'ollama',
+    url: `${_ollamaHost()}/api/embeddings`,
+    style: 'ollama',
+    headers: {},
+  });
   const token = _gatewayToken();
   list.push({
     kind: 'gateway',
@@ -379,22 +521,40 @@ function _embedEndpoints() {
   return list;
 }
 
-function _requestModule(urlStr) { return urlStr.startsWith('https:') ? https : http; }
+function _requestModule(urlStr) {
+  return urlStr.startsWith('https:') ? https : http;
+}
 
 function _httpGet(urlStr, timeoutMs, headers) {
   return new Promise((resolve) => {
     let done = false;
-    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    const finish = (v) => {
+      if (!done) {
+        done = true;
+        resolve(v);
+      }
+    };
     let req;
     try {
-      req = _requestModule(urlStr).request(urlStr, { method: 'GET', headers: headers || {} }, (res) => {
-        const bufs = [];
-        res.on('data', (d) => bufs.push(d));
-        res.on('end', () => finish({ status: res.statusCode || 0, body: Buffer.concat(bufs) }));
-      });
-    } catch { return finish(null); }
+      req = _requestModule(urlStr).request(
+        urlStr,
+        { method: 'GET', headers: headers || {} },
+        (res) => {
+          const bufs = [];
+          res.on('data', (d) => bufs.push(d));
+          res.on('end', () => finish({ status: res.statusCode || 0, body: Buffer.concat(bufs) }));
+        }
+      );
+    } catch {
+      return finish(null);
+    }
     req.on('error', () => finish(null));
-    req.setTimeout(timeoutMs, () => { try { req.destroy(); } catch {} finish(null); });
+    req.setTimeout(timeoutMs, () => {
+      try {
+        req.destroy();
+      } catch {}
+      finish(null);
+    });
     req.end();
   });
 }
@@ -402,23 +562,42 @@ function _httpGet(urlStr, timeoutMs, headers) {
 function _httpPostJson(urlStr, obj, timeoutMs, headers) {
   return new Promise((resolve) => {
     let done = false;
-    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    const finish = (v) => {
+      if (!done) {
+        done = true;
+        resolve(v);
+      }
+    };
     let req;
     const payload = Buffer.from(JSON.stringify(obj), 'utf-8');
-    const h = Object.assign({ 'Content-Type': 'application/json', 'Content-Length': payload.length }, headers || {});
+    const h = Object.assign(
+      { 'Content-Type': 'application/json', 'Content-Length': payload.length },
+      headers || {}
+    );
     try {
       req = _requestModule(urlStr).request(urlStr, { method: 'POST', headers: h }, (res) => {
         const bufs = [];
         res.on('data', (d) => bufs.push(d));
         res.on('end', () => {
           let json = null;
-          try { json = JSON.parse(Buffer.concat(bufs).toString('utf-8')); } catch { json = null; }
+          try {
+            json = JSON.parse(Buffer.concat(bufs).toString('utf-8'));
+          } catch {
+            json = null;
+          }
           finish({ status: res.statusCode || 0, json });
         });
       });
-    } catch { return finish(null); }
+    } catch {
+      return finish(null);
+    }
     req.on('error', () => finish(null));
-    req.setTimeout(timeoutMs, () => { try { req.destroy(); } catch {} finish(null); });
+    req.setTimeout(timeoutMs, () => {
+      try {
+        req.destroy();
+      } catch {}
+      finish(null);
+    });
     req.write(payload);
     req.end();
   });
@@ -431,13 +610,19 @@ async function _probeUrl(urlStr, timeoutMs) {
 }
 
 async function isEmbeddingReachable() {
-  if (!RAG_ENABLED) return false;
+  if (!RAG_ENABLED) {
+    return false;
+  }
   for (const ep of _embedEndpoints()) {
     try {
       const u = new URL(ep.url);
       const probe = `${u.protocol}//${u.host}/`;
-      if (await _probeUrl(probe, PROBE_TIMEOUT_MS)) return true;
-    } catch { /* try next */ }
+      if (await _probeUrl(probe, PROBE_TIMEOUT_MS)) {
+        return true;
+      }
+    } catch {
+      /* try next */
+    }
   }
   return false;
 }
@@ -449,86 +634,148 @@ async function _embedTexts(texts) {
   for (const ep of _embedEndpoints()) {
     try {
       if (ep.style === 'openai') {
-        const r = await _httpPostJson(ep.url, { model: EMBED_MODEL, input: slice }, EMBED_TIMEOUT_MS, ep.headers);
+        const r = await _httpPostJson(
+          ep.url,
+          { model: EMBED_MODEL, input: slice },
+          EMBED_TIMEOUT_MS,
+          ep.headers
+        );
         const data = r && r.json && Array.isArray(r.json.data) ? r.json.data : null;
-        if (data && data.length === slice.length && data.every(d => Array.isArray(d.embedding))) {
-          return data.map(d => d.embedding);
+        if (data && data.length === slice.length && data.every((d) => Array.isArray(d.embedding))) {
+          return data.map((d) => d.embedding);
         }
       } else {
         // ollama: one prompt per call
         const vecs = [];
         let ok = true;
         for (const t of slice) {
-          const r = await _httpPostJson(ep.url, { model: EMBED_MODEL, prompt: t }, EMBED_TIMEOUT_MS, ep.headers);
+          const r = await _httpPostJson(
+            ep.url,
+            { model: EMBED_MODEL, prompt: t },
+            EMBED_TIMEOUT_MS,
+            ep.headers
+          );
           const emb = r && r.json && Array.isArray(r.json.embedding) ? r.json.embedding : null;
-          if (!emb) { ok = false; break; }
+          if (!emb) {
+            ok = false;
+            break;
+          }
           vecs.push(emb);
         }
-        if (ok && vecs.length === slice.length) return vecs;
+        if (ok && vecs.length === slice.length) {
+          return vecs;
+        }
       }
-    } catch { /* try next endpoint */ }
+    } catch {
+      /* try next endpoint */
+    }
   }
   return null;
 }
 
 function _cosine(a, b) {
-  if (!a || !b || a.length !== b.length) return 0;
-  let dot = 0, na = 0, nb = 0;
-  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
-  if (na === 0 || nb === 0) return 0;
+  if (!a || !b || a.length !== b.length) {
+    return 0;
+  }
+  let dot = 0,
+    na = 0,
+    nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  if (na === 0 || nb === 0) {
+    return 0;
+  }
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
 // ── 网络补取（模式2） ────────────────────────────────────────────────
 function _resolveDocsBase() {
-  if (DOCS_BASE_URL) return DOCS_BASE_URL.replace(/\/+$/, '') + '/';
+  if (DOCS_BASE_URL) {
+    return DOCS_BASE_URL.replace(/\/+$/, '') + '/';
+  }
   // Best-effort derive a raw base from the `github` remote, but only when the
   // user opts in (KHY_LEARN_DOCS_DERIVE) — the repo's default `github` remote is
   // a placeholder, so deriving from it by default would mislabel mode 2 and
   // point fetches at a nonexistent repo. Explicit KHY_LEARN_DOCS_BASE_URL is the
   // honest default path ("待用户设远端"). Degrades to null on any failure.
-  if (!_envBool('KHY_LEARN_DOCS_DERIVE', false)) return null;
+  if (!_envBool('KHY_LEARN_DOCS_DERIVE', false)) {
+    return null;
+  }
   try {
     const url = execFileSync('git', ['config', '--get', 'remote.github.url'], {
-      timeout: PROBE_TIMEOUT_MS, stdio: ['ignore', 'pipe', 'ignore'],
-    }).toString().trim();
+      timeout: PROBE_TIMEOUT_MS,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
     const m = /github\.com[:/]+([^/]+)\/([^/.]+)(?:\.git)?/.exec(url);
-    if (m) return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/main/`;
-  } catch { /* no git / no remote */ }
+    if (m) {
+      return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/main/`;
+    }
+  } catch {
+    /* no git / no remote */
+  }
   return null;
 }
 
 async function isDocsRemoteReachable() {
-  if (!RAG_ENABLED) return false;
+  if (!RAG_ENABLED) {
+    return false;
+  }
   const base = _resolveDocsBase();
-  if (!base) return false;
+  if (!base) {
+    return false;
+  }
   try {
     const u = new URL(base);
     return await _probeUrl(`${u.protocol}//${u.host}/`, PROBE_TIMEOUT_MS);
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 // Fetch a topic's locally-missing source/doc files from the configured remote
 // into the learn cache. Returns [{ file, abs }] for files actually fetched.
 async function fetchMissingForTopic(topic) {
-  if (!RAG_ENABLED || !topic || !Array.isArray(topic.files)) return [];
+  if (!RAG_ENABLED || !topic || !Array.isArray(topic.files)) {
+    return [];
+  }
   const base = _resolveDocsBase();
-  if (!base) return [];
+  if (!base) {
+    return [];
+  }
   const fetched = [];
   for (const file of topic.files) {
     let localAbs = null;
-    try { localAbs = curriculum.resolveSourceAbs(file); } catch { localAbs = null; }
-    if (localAbs) continue; // present locally — nothing to fetch
+    try {
+      localAbs = curriculum.resolveSourceAbs(file);
+    } catch {
+      localAbs = null;
+    }
+    if (localAbs) {
+      continue;
+    } // present locally — nothing to fetch
     const url = base + String(file).replace(/^\/+/, '');
     let res = null;
-    try { res = await _httpGet(url, FETCH_TIMEOUT_MS, {}); } catch { res = null; }
-    if (!res || res.status < 200 || res.status >= 300 || !res.body || res.body.length === 0) continue;
+    try {
+      res = await _httpGet(url, FETCH_TIMEOUT_MS, {});
+    } catch {
+      res = null;
+    }
+    if (!res || res.status < 200 || res.status >= 300 || !res.body || res.body.length === 0) {
+      continue;
+    }
     const dest = path.join(CACHE_DIR, String(file));
     try {
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       fs.writeFileSync(dest, res.body);
       fetched.push({ file, abs: dest });
-    } catch { /* cache write failed — skip */ }
+    } catch {
+      /* cache write failed — skip */
+    }
   }
   return fetched;
 }
@@ -545,23 +792,35 @@ async function fetchMissingForTopic(topic) {
  */
 async function buildContext(query, opts = {}) {
   const empty = { chunks: [], text: '', usedVector: false, fetched: [] };
-  if (!RAG_ENABLED || !_norm(query)) return empty;
+  if (!RAG_ENABLED || !_norm(query)) {
+    return empty;
+  }
   const topK = typeof opts.topK === 'number' ? Math.max(1, Math.min(30, opts.topK)) : TOPK;
 
   let corpus;
-  try { corpus = _getCorpus().slice(); } catch { return empty; }
+  try {
+    corpus = _getCorpus().slice();
+  } catch {
+    return empty;
+  }
 
   // Merge any caller-provided extra files (e.g. mode-2 fetched cache paths).
   if (Array.isArray(opts.extraPaths)) {
     for (const ab of opts.extraPaths) {
-      for (const c of _chunkFromAbs(ab)) corpus.push(c);
+      for (const c of _chunkFromAbs(ab)) {
+        corpus.push(c);
+      }
     }
   }
-  if (corpus.length === 0) return empty;
+  if (corpus.length === 0) {
+    return empty;
+  }
 
   // Stage 1: lexical (always). This is the recall floor — works fully offline.
   const lexical = lexicalSearch(query, corpus, LEXICAL_CANDIDATES);
-  if (lexical.length === 0) return Object.assign({}, empty);
+  if (lexical.length === 0) {
+    return Object.assign({}, empty);
+  }
 
   let ranked = lexical;
   let usedVector = false;
@@ -571,11 +830,11 @@ async function buildContext(query, opts = {}) {
   // precision. Any failure → keep lexical order.
   if (opts.allowVector) {
     try {
-      const texts = [query, ...lexical.map(x => x.chunk.text)];
+      const texts = [query, ...lexical.map((x) => x.chunk.text)];
       const vecs = await _embedTexts(texts);
       if (vecs && vecs.length === Math.min(texts.length, EMBED_MAX_TEXTS) && vecs.length >= 2) {
         const qv = vecs[0];
-        const maxLex = Math.max(...lexical.map(x => x.score)) || 1;
+        const maxLex = Math.max(...lexical.map((x) => x.score)) || 1;
         const blended = lexical.slice(0, vecs.length - 1).map((x, i) => {
           const cos = _cosine(qv, vecs[i + 1]);
           const lexNorm = x.score / maxLex;
@@ -583,24 +842,35 @@ async function buildContext(query, opts = {}) {
         });
         // Candidates beyond the embedding cap keep their lexical score (scaled
         // below the blended band) so nothing silently disappears.
-        const tail = lexical.slice(vecs.length - 1).map(x => ({ chunk: x.chunk, score: (x.score / maxLex) * 0.4 }));
+        const tail = lexical
+          .slice(vecs.length - 1)
+          .map((x) => ({ chunk: x.chunk, score: (x.score / maxLex) * 0.4 }));
         blended.push(...tail);
         blended.sort((a, b) => b.score - a.score);
         ranked = blended;
         usedVector = true;
       }
-    } catch { /* keep lexical ranking */ }
+    } catch {
+      /* keep lexical ranking */
+    }
   }
 
   const top = ranked.slice(0, topK);
-  const chunks = top.map(x => ({ source: x.chunk.source, title: x.chunk.title, text: x.chunk.text, score: Number(x.score.toFixed(4)) }));
+  const chunks = top.map((x) => ({
+    source: x.chunk.source,
+    title: x.chunk.title,
+    text: x.chunk.text,
+    score: Number(x.score.toFixed(4)),
+  }));
 
   // Plain text block for prompt injection, capped overall.
   const parts = [];
   let used = 0;
   for (const c of chunks) {
     const piece = `[${c.source}] ${c.text}`;
-    if (used + piece.length > MAX_CONTEXT_CHARS && parts.length > 0) break;
+    if (used + piece.length > MAX_CONTEXT_CHARS && parts.length > 0) {
+      break;
+    }
     parts.push(piece);
     used += piece.length;
   }
@@ -610,14 +880,22 @@ async function buildContext(query, opts = {}) {
 // Terminal-colored rendering of a buildContext result, for the offline modes
 // (1 & 2). Lazy-require chalk so headless callers (tests) don't depend on TTY.
 function formatSection(ctx) {
-  if (!ctx || !Array.isArray(ctx.chunks) || ctx.chunks.length === 0) return '';
+  if (!ctx || !Array.isArray(ctx.chunks) || ctx.chunks.length === 0) {
+    return '';
+  }
   let chalk;
-  try { chalk = require('chalk'); } catch { chalk = null; }
+  try {
+    chalk = require('chalk');
+  } catch {
+    chalk = null;
+  }
   const dim = chalk ? (s) => chalk.gray(s) : (s) => s;
   const cyan = chalk ? (s) => chalk.cyan(s) : (s) => s;
   const lines = [];
   lines.push('');
-  lines.push(`  ${cyan('📚 相关代码与文档')} ${dim(ctx.usedVector ? '(混合检索·词法+向量)' : '(词法检索)')}`);
+  lines.push(
+    `  ${cyan('📚 相关代码与文档')} ${dim(ctx.usedVector ? '(混合检索·词法+向量)' : '(词法检索)')}`
+  );
   for (const c of ctx.chunks) {
     lines.push(`    ${dim('•')} ${cyan(c.source)}`);
     const text = _clip(c.text, 220);

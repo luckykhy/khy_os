@@ -15,16 +15,20 @@
 
 // 参数名 → 边界用例启发表。命中关键词即套用对应边界集。
 const BOUNDARY_HEURISTICS = [
-  { test: /(count|num|size|len|idx|index|limit|offset|age|qty|amount)/i,
-    cases: ['0', '-1', '1', 'Number.MAX_SAFE_INTEGER'] },
-  { test: /(str|text|name|msg|message|title|path|url|key|id|word)/i,
-    cases: ["''", "'   '", "'a'", "'\\u{1F600}'"] },
-  { test: /(list|arr|items|rows|set|coll|args)/i,
-    cases: ['[]', '[null]', '[1,2,3]'] },
-  { test: /(map|obj|opts|options|config|ctx|context|payload|data)/i,
-    cases: ['{}', 'null', '{ a: 1 }'] },
-  { test: /(flag|enable|is|has|should|bool)/i,
-    cases: ['true', 'false'] },
+  {
+    test: /(count|num|size|len|idx|index|limit|offset|age|qty|amount)/i,
+    cases: ['0', '-1', '1', 'Number.MAX_SAFE_INTEGER'],
+  },
+  {
+    test: /(str|text|name|msg|message|title|path|url|key|id|word)/i,
+    cases: ["''", "'   '", "'a'", "'\\u{1F600}'"],
+  },
+  { test: /(list|arr|items|rows|set|coll|args)/i, cases: ['[]', '[null]', '[1,2,3]'] },
+  {
+    test: /(map|obj|opts|options|config|ctx|context|payload|data)/i,
+    cases: ['{}', 'null', '{ a: 1 }'],
+  },
+  { test: /(flag|enable|is|has|should|bool)/i, cases: ['true', 'false'] },
 ];
 const DEFAULT_CASES = ['null', 'undefined', "''", '0'];
 
@@ -39,15 +43,22 @@ class AutoTestScaffolder {
     const sigs = [];
     const seen = new Set();
     const add = (name, paramStr) => {
-      if (!name || seen.has(name)) return;
+      if (!name || seen.has(name)) {
+        return;
+      }
       seen.add(name);
       sigs.push({ name, params: this._splitParams(paramStr) });
     };
     let m;
     const fnRe = /(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g;
-    while ((m = fnRe.exec(src)) !== null) add(m[1], m[2]);
-    const constRe = /(?:^|\n)\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/g;
-    while ((m = constRe.exec(src)) !== null) add(m[1], m[2]);
+    while ((m = fnRe.exec(src)) !== null) {
+      add(m[1], m[2]);
+    }
+    const constRe =
+      /(?:^|\n)\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/g;
+    while ((m = constRe.exec(src)) !== null) {
+      add(m[1], m[2]);
+    }
     return sigs;
   }
 
@@ -55,14 +66,23 @@ class AutoTestScaffolder {
   _splitParams(paramStr) {
     return String(paramStr || '')
       .split(',')
-      .map((p) => p.replace(/=.*/, '').replace(/\.\.\./, '').trim())
+      .map((p) =>
+        p
+          .replace(/=.*/, '')
+          .replace(/\.\.\./, '')
+          .trim()
+      )
       .filter(Boolean)
       .map((p) => (/^[{[]/.test(p) ? p.replace(/[{}[\]\s]/g, '').split(':')[0] : p));
   }
 
   /** 为单个参数推断边界用例集。 */
   boundaryCasesFor(paramName) {
-    for (const h of BOUNDARY_HEURISTICS) if (h.test.test(paramName)) return h.cases.slice();
+    for (const h of BOUNDARY_HEURISTICS) {
+      if (h.test.test(paramName)) {
+        return h.cases.slice();
+      }
+    }
     return DEFAULT_CASES.slice();
   }
 
@@ -105,7 +125,9 @@ class AutoTestScaffolder {
         out.push(`test('${sig.name} — 边界: ${param} ∈ {${cases.join(', ')}}', () => {`);
         for (const c of cases) {
           const args = sig.params.map((p) => (p === param ? c : 'undefined')).join(', ');
-          out.push(`  assert.doesNotThrow(() => ${sig.name}(${args})); // TODO: 断言 ${param}=${c} 的预期行为`);
+          out.push(
+            `  assert.doesNotThrow(() => ${sig.name}(${args})); // TODO: 断言 ${param}=${c} 的预期行为`
+          );
         }
         out.push('});', '');
       }

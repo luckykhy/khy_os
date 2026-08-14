@@ -17,7 +17,9 @@
 
 function parseJsonObjectMap(raw) {
   const text = String(raw || '').trim();
-  if (!text) return {};
+  if (!text) {
+    return {};
+  }
   try {
     const parsed = JSON.parse(text);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {

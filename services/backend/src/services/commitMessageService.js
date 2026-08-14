@@ -10,6 +10,7 @@
  */
 
 const { execSync } = require('child_process');
+
 const log = require('../utils/logger');
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -67,19 +68,27 @@ function collectStagedChanges(cwd) {
 
     try {
       diff = execSync('git diff --cached', opts);
-    } catch { /* no staged changes */ }
+    } catch {
+      /* no staged changes */
+    }
 
     // If no staged diff, try unstaged
     if (!diff.trim()) {
       try {
         diff = execSync('git diff', opts);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     try {
       stat = execSync('git diff --cached --stat', opts);
     } catch {
-      try { stat = execSync('git diff --stat', opts); } catch { /* ignore */ }
+      try {
+        stat = execSync('git diff --stat', opts);
+      } catch {
+        /* ignore */
+      }
     }
 
     try {
@@ -89,7 +98,9 @@ function collectStagedChanges(cwd) {
       try {
         const nameOnly = execSync('git diff --name-only', opts);
         files = nameOnly.trim().split('\n').filter(Boolean);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     // Truncate diff
@@ -161,7 +172,10 @@ async function generateCommitMessage(deps, options = {}) {
 
     let message = result?.reply || result?.content || '';
     // Clean up: remove surrounding quotes or code fences
-    message = message.replace(/^```[\s\S]*?\n/, '').replace(/\n```\s*$/, '').trim();
+    message = message
+      .replace(/^```[\s\S]*?\n/, '')
+      .replace(/\n```\s*$/, '')
+      .trim();
     message = message.replace(/^["']|["']$/g, '').trim();
 
     if (!message) {
@@ -194,7 +208,7 @@ async function autoCommit(deps, options = {}) {
   // Stage files if specified
   if (options.files && options.files.length > 0) {
     try {
-      const fileList = options.files.map(f => `"${f}"`).join(' ');
+      const fileList = options.files.map((f) => `"${f}"`).join(' ');
       execSync(`git add ${fileList}`, opts);
     } catch (err) {
       return { message: '', committed: false, error: `Failed to stage files: ${err.message}` };

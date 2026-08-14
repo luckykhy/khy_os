@@ -40,9 +40,13 @@ function _legacyLine(model) {
 //   - 门开 + index>0 → 「视觉模型 <prev> 不可用，正在改用 <model> 继续识别...」减冗余首句。
 function buildCascadeAttemptNotice({ index, model, prevModel, env } = {}) {
   const _model = model || '视觉模型';
-  if (!isCascadeAttemptNoticeEnabled(env)) return _legacyLine(model);
+  if (!isCascadeAttemptNoticeEnabled(env)) {
+    return _legacyLine(model);
+  }
   const i = Number(index);
-  if (!Number.isFinite(i) || i <= 0) return _legacyLine(model);
+  if (!Number.isFinite(i) || i <= 0) {
+    return _legacyLine(model);
+  }
   const _prev = prevModel || '上一视觉模型';
   return `视觉模型 ${_prev} 不可用，正在改用 ${_model} 继续识别...`;
 }

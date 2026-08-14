@@ -41,7 +41,7 @@
 #define AGENTFRAME_HEADER      9    /* type(1)+seq(4)+code(2)+len(2)            */
 #define AGENTFRAME_CRC         2
 #define AGENTFRAME_RAW_MAX     (AGENTFRAME_HEADER + AGENTFRAME_PAYLOAD_MAX + AGENTFRAME_CRC)
-#define AGENTFRAME_WIRE_MAX    (AGENTFRAME_RAW_MAX + (AGENTFRAME_RAW_MAX / 254) + 2)
+#define AGENTFRAME_WIRE_MAX    (AGENTFRAME_RAW_MAX + (AGENTFRAME_RAW_MAX / 254) + 3)
 
 struct agentframe {
     uint8_t  type;

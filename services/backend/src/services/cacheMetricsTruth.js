@@ -41,11 +41,17 @@ function isEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_CACHE_METRICS_TRUTH', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_CACHE_METRICS_TRUTH;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -82,7 +88,9 @@ const _METRICS_QUESTION_RES = [
  */
 function isCacheMetricsQuestion(text) {
   const s = String(text == null ? '' : text);
-  if (!s.trim()) return false;
+  if (!s.trim()) {
+    return false;
+  }
   try {
     return _METRICS_QUESTION_RES.some((re) => re.test(s));
   } catch {
@@ -116,32 +124,55 @@ const _PERCENT_RE = /\d{1,3}\s*%|\d{1,3}\s*percent\b/i;
  * @returns {{deflected:boolean, reason:string}}
  */
 function detectDeflection(answer, metrics) {
-  if (!metrics || !metrics.hasData) return { deflected: false, reason: 'no-data' };
+  if (!metrics || !metrics.hasData) {
+    return { deflected: false, reason: 'no-data' };
+  }
   const ans = String(answer == null ? '' : answer);
   let hasDeflection = false;
   for (const re of _DEFLECTION_RES) {
-    try { if (re.test(ans)) { hasDeflection = true; break; } } catch { /* skip */ }
+    try {
+      if (re.test(ans)) {
+        hasDeflection = true;
+        break;
+      }
+    } catch {
+      /* skip */
+    }
   }
   const hasPercent = _PERCENT_RE.test(ans);
-  if (hasPercent && !hasDeflection) return { deflected: false, reason: 'stated' };
-  if (hasDeflection) return { deflected: true, reason: 'deflected' };
-  if (!hasPercent) return { deflected: true, reason: 'no-figure' };
+  if (hasPercent && !hasDeflection) {
+    return { deflected: false, reason: 'stated' };
+  }
+  if (hasDeflection) {
+    return { deflected: true, reason: 'deflected' };
+  }
+  if (!hasPercent) {
+    return { deflected: true, reason: 'no-figure' };
+  }
   return { deflected: false, reason: 'stated' };
 }
 
 /** 本轮 usage → 命中率百分比(0..100),或 null(无缓存字段/无输入)。 */
 function _turnHitRate(usage) {
-  if (!usage || typeof usage !== 'object') return null;
+  if (!usage || typeof usage !== 'object') {
+    return null;
+  }
   const input = _num(usage.inputTokens != null ? usage.inputTokens : usage.input_tokens);
   const cacheWrite = _num(
-    usage.cacheWriteInputTokens != null ? usage.cacheWriteInputTokens : usage.cache_creation_input_tokens
+    usage.cacheWriteInputTokens != null
+      ? usage.cacheWriteInputTokens
+      : usage.cache_creation_input_tokens
   );
   const cacheRead = _num(
     usage.cacheReadInputTokens != null ? usage.cacheReadInputTokens : usage.cache_read_input_tokens
   );
-  if (cacheRead === 0 && cacheWrite === 0) return null; // 无缓存数据
+  if (cacheRead === 0 && cacheWrite === 0) {
+    return null;
+  } // 无缓存数据
   const total = input + cacheWrite + cacheRead;
-  if (total === 0) return null;
+  if (total === 0) {
+    return null;
+  }
   return (cacheRead / total) * 100;
 }
 
@@ -168,9 +199,13 @@ function resolveMetrics(raw = {}) {
     const rep = r.report && typeof r.report === 'object' ? r.report : null;
     const table = rep && rep.adapters && typeof rep.adapters === 'object' ? rep.adapters : {};
     for (const [k, entry] of Object.entries(table)) {
-      if (!entry || typeof entry !== 'object') continue;
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
       const requests = _num(entry.requests);
-      if (requests <= 0) continue; // 无样本 → 跳过(不臆造)
+      if (requests <= 0) {
+        continue;
+      } // 无样本 → 跳过(不臆造)
       // getReport() 的 hitRate 是 0..1 小数;缺则由 totalCacheReadTokens/totalInputTokens 兜算。
       let frac = Number(entry.hitRate);
       if (!Number.isFinite(frac)) {
@@ -185,7 +220,9 @@ function resolveMetrics(raw = {}) {
       });
     }
     adapters.sort((a, b) => b.requests - a.requests);
-  } catch { /* fail-soft:遥测坏 → 空表 */ }
+  } catch {
+    /* fail-soft:遥测坏 → 空表 */
+  }
 
   const hasData = turnRate !== null || adapters.length > 0;
   return { turnRate, adapters, activeKey, hasData };
@@ -207,7 +244,9 @@ const pickUserText = require('../utils/pickUserTextSafe');
 
 /** 找到当前渠道的累计条目(若在表内)。 */
 function _findActive(adapters, activeKey) {
-  if (!activeKey) return null;
+  if (!activeKey) {
+    return null;
+  }
   return adapters.find((a) => a.key === activeKey) || null;
 }
 
@@ -219,35 +258,53 @@ function _findActive(adapters, activeKey) {
  * @returns {string|null}
  */
 function buildMetricsFooter(metrics, opts = {}) {
-  if (!isEnabled(opts.env)) return null;
+  if (!isEnabled(opts.env)) {
+    return null;
+  }
   const m = metrics && typeof metrics === 'object' ? metrics : null;
-  if (!m || !m.hasData) return null;
+  if (!m || !m.hasData) {
+    return null;
+  }
   const locale = opts.locale === 'en' ? 'en' : 'zh';
   const active = _findActive(m.adapters || [], m.activeKey);
   const topN = (m.adapters || []).slice(0, 3);
 
   if (locale === 'en') {
     const clauses = [];
-    if (m.turnRate !== null) clauses.push(`this turn's cache hit rate is ${Math.round(m.turnRate)}% (from this response's usage)`);
+    if (m.turnRate !== null) {
+      clauses.push(
+        `this turn's cache hit rate is ${Math.round(m.turnRate)}% (from this response's usage)`
+      );
+    }
     if (active) {
-      clauses.push(`the active channel "${active.key}" has a ${Math.round(active.ratePct)}% cumulative hit rate over ${active.requests} requests`);
+      clauses.push(
+        `the active channel "${active.key}" has a ${Math.round(active.ratePct)}% cumulative hit rate over ${active.requests} requests`
+      );
     } else if (topN.length) {
       const parts = topN.map((a) => `${a.key} ${Math.round(a.ratePct)}% (${a.requests} req)`);
       clauses.push(`cumulative by channel — ${parts.join('; ')}`);
     }
-    if (!clauses.length) return null;
+    if (!clauses.length) {
+      return null;
+    }
     return `\n\n${METRICS_MARKER} · verified】${clauses.join('; ')}. Source: the khy gateway cache-billing probe. khyos reports its own runtime telemetry truthfully instead of claiming it has no monitoring access.`;
   }
 
   const clauses = [];
-  if (m.turnRate !== null) clauses.push(`本轮缓存命中率 ${Math.round(m.turnRate)}%(来自本次响应 usage)`);
+  if (m.turnRate !== null) {
+    clauses.push(`本轮缓存命中率 ${Math.round(m.turnRate)}%(来自本次响应 usage)`);
+  }
   if (active) {
-    clauses.push(`当前渠道「${active.key}」累计命中率 ${Math.round(active.ratePct)}%(共 ${active.requests} 次请求)`);
+    clauses.push(
+      `当前渠道「${active.key}」累计命中率 ${Math.round(active.ratePct)}%(共 ${active.requests} 次请求)`
+    );
   } else if (topN.length) {
     const parts = topN.map((a) => `${a.key} ${Math.round(a.ratePct)}%(${a.requests} 次)`);
     clauses.push(`各渠道累计 —— ${parts.join(';')}`);
   }
-  if (!clauses.length) return null;
+  if (!clauses.length) {
+    return null;
+  }
   return `\n\n${METRICS_MARKER} · 确定性核对】${clauses.join(';')}。数据源:khy 网关缓存计费探针(cacheEconomyStore),khyos 对自身运行时遥测如实上报,不谎称没有监控数据。`;
 }
 
@@ -258,13 +315,15 @@ function buildMetricsFooter(metrics, opts = {}) {
  * @returns {string}
  */
 function formatMetricsDirective(opts = {}) {
-  if (!isEnabled(opts.env)) return '';
+  if (!isEnabled(opts.env)) {
+    return '';
+  }
   const locale = opts.locale === 'en' ? 'en' : 'zh';
 
   if (locale === 'en') {
     return [
       '## Cache hit rate is observable (do not feign ignorance)',
-      '- khyos DOES track its own cache hit rate: this turn\'s value comes from the response usage (cache_read / cache_creation tokens), and per-channel cumulative rates are kept by the gateway cache-billing probe.',
+      "- khyos DOES track its own cache hit rate: this turn's value comes from the response usage (cache_read / cache_creation tokens), and per-channel cumulative rates are kept by the gateway cache-billing probe.",
       '- When the user asks what your cache hit rate is, answer with that REAL figure, or point to the cache transparency report. Do NOT claim you have "no access to real-time monitoring tools".',
       '- If the current session truly has no cache data yet, say so plainly (e.g. no cache-served tokens observed yet) rather than deflecting to generic "it depends".',
     ].join('\n');

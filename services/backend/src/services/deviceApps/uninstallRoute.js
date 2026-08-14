@@ -44,19 +44,26 @@ function decideUninstallRoute(facts = {}) {
   if (nativeAvailable && matches > 0) {
     return {
       tier: 'native',
-      reason: matches === 1
-        ? '包管理器未覆盖;命中注册表自带卸载器,跑其原生卸载器'
-        : `包管理器未覆盖;注册表命中 ${matches} 个同名条目,需选定后再卸`,
+      reason:
+        matches === 1
+          ? '包管理器未覆盖;命中注册表自带卸载器,跑其原生卸载器'
+          : `包管理器未覆盖;注册表命中 ${matches} 个同名条目,需选定后再卸`,
       ambiguous: matches > 1,
     };
   }
 
   // T3:两条路都没有 → 诚实拒绝(绝不猜删)。
   const why = [];
-  if (!isPmAppId) why.push('非包管理器标识');
-  else if (!pmAvailable) why.push('无可用包管理器');
-  if (!nativeAvailable) why.push('原生卸载器不可用(非 Windows 或门关)');
-  else if (matches === 0) why.push('注册表未匹配到自带卸载器');
+  if (!isPmAppId) {
+    why.push('非包管理器标识');
+  } else if (!pmAvailable) {
+    why.push('无可用包管理器');
+  }
+  if (!nativeAvailable) {
+    why.push('原生卸载器不可用(非 Windows 或门关)');
+  } else if (matches === 0) {
+    why.push('注册表未匹配到自带卸载器');
+  }
   return {
     tier: 'refuse',
     reason: `未找到清单或自带卸载器(${why.join('、')});拒绝盲删安装目录`,

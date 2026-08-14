@@ -33,7 +33,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** KHY_CC_AGENT_BRIDGE gate: default ON, {0,false,off,no} (case/space-insensitive) → OFF. */
 function isCcAgentBridgeEnabled(env = process.env) {
   const raw = env && env.KHY_CC_AGENT_BRIDGE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -54,7 +56,11 @@ const _join = require('../utils/pathJoinSafe');
 function ccAgentSearchDirs({ homedir } = {}) {
   try {
     const out = [];
-    const push = (dir, source, recursive) => { if (dir) out.push({ dir, source, recursive }); };
+    const push = (dir, source, recursive) => {
+      if (dir) {
+        out.push({ dir, source, recursive });
+      }
+    };
 
     if (homedir) {
       // User-installed CC agents — flat directory of <name>.md.

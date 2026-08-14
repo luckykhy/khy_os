@@ -49,8 +49,9 @@ const VERIFY_MARKER = '【khyos 确定性复核】';
 // 等式 `<算式> = <结果>`:左侧为纯数值算式(数字/算符/空白/括号/千分逗号),右侧为一个
 // 带可选符号、可选千分逗号与小数的数。左侧前不得紧贴字母/下划线/点(避免 `x2=...`/`v1.2=`)。
 // 捕获:1=左侧算式 2=可选近似标记 3=右侧数。最多扫描有限个,绝不正则灾难性回溯。
-const _EQ_RE = /(?<![\w.])([0-9][0-9\s.,()+\-*/^%]*[0-9)])\s*[=＝]\s*(≈|≅|约等于|约|大约|~|＝约)?\s*(-?[0-9](?:[0-9,]*[0-9])?(?:\.[0-9]+)?)/g;
-const _STRONG_OP_RE = /[*/^%()]/;             // 高置信算符:乘除幂模与括号
+const _EQ_RE =
+  /(?<![\w.])([0-9][0-9\s.,()+\-*/^%]*[0-9)])\s*[=＝]\s*(≈|≅|约等于|约|大约|~|＝约)?\s*(-?[0-9](?:[0-9,]*[0-9])?(?:\.[0-9]+)?)/g;
+const _STRONG_OP_RE = /[*/^%()]/; // 高置信算符:乘除幂模与括号
 const _DATE_RE = /\b\d{4}\s*-\s*\d{1,2}\s*-\s*\d{1,2}\b/;
 const _VERSION_RE = /\b\d+\.\d+\.\d+/;
 const _MAX_EQ = 16;
@@ -58,8 +59,12 @@ const _MAX_EQ = 16;
 /** 归一一个十进制数字串以便逐字符比较:去千分逗号/空白、去小数尾随零与尾随小数点。 */
 function _normNum(s) {
   let t = String(s == null ? '' : s).replace(/[,\s]/g, '');
-  if (t.includes('.')) t = t.replace(/0+$/, '').replace(/\.$/, '');
-  if (t === '-0') t = '0';
+  if (t.includes('.')) {
+    t = t.replace(/0+$/, '').replace(/\.$/, '');
+  }
+  if (t === '-0') {
+    t = '0';
+  }
   return t;
 }
 
@@ -72,37 +77,61 @@ function _normNum(s) {
 function verifyArithmeticClaims(text, env) {
   const out = [];
   try {
-    if (!isEnabled(env)) return out;
+    if (!isEnabled(env)) {
+      return out;
+    }
     const raw = String(text == null ? '' : text);
-    if (!raw) return out;
+    if (!raw) {
+      return out;
+    }
     const seen = new Set();
     let m;
     let scanned = 0;
     _EQ_RE.lastIndex = 0;
     while ((m = _EQ_RE.exec(raw)) !== null) {
-      if (scanned >= _MAX_EQ) break;
+      if (scanned >= _MAX_EQ) {
+        break;
+      }
       scanned += 1;
       const lhsRaw = m[1];
       const approx = m[2];
       const rhsRaw = m[3];
-      if (approx) continue;                          // 模型明示近似 → 不算证伪
+      if (approx) {
+        continue;
+      } // 模型明示近似 → 不算证伪
       const lhs = lhsRaw.trim();
-      if (!_STRONG_OP_RE.test(lhs)) continue;        // 仅取高置信算式(含 * / ^ % 或括号)
-      if (_DATE_RE.test(lhs) || _VERSION_RE.test(lhs)) continue;
-      const exprForEval = lhs.replace(/,/g, '');     // 去千分逗号再交给精确求值器
+      if (!_STRONG_OP_RE.test(lhs)) {
+        continue;
+      } // 仅取高置信算式(含 * / ^ % 或括号)
+      if (_DATE_RE.test(lhs) || _VERSION_RE.test(lhs)) {
+        continue;
+      }
+      const exprForEval = lhs.replace(/,/g, ''); // 去千分逗号再交给精确求值器
       const r = computeArithmetic(exprForEval);
-      if (!r || !r.ok) continue;
-      if (r.terminating === false) continue;         // 非终止小数:模型四舍五入合理 → 不证伪
+      if (!r || !r.ok) {
+        continue;
+      }
+      if (r.terminating === false) {
+        continue;
+      } // 非终止小数:模型四舍五入合理 → 不证伪
       const exact = _normNum(r.exact);
       const stated = _normNum(rhsRaw);
-      if (!exact || !stated) continue;
-      if (exact === stated) continue;                // 算对了 → 不报
+      if (!exact || !stated) {
+        continue;
+      }
+      if (exact === stated) {
+        continue;
+      } // 算对了 → 不报
       const key = exprForEval.replace(/\s+/g, '') + '=' + stated;
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        continue;
+      }
       seen.add(key);
       out.push({ expr: lhs.replace(/\s+/g, ' '), stated: String(rhsRaw).trim(), exact: r.exact });
     }
-  } catch { /* fail-soft:复核是附加证据,出错绝不阻断答复 */ }
+  } catch {
+    /* fail-soft:复核是附加证据,出错绝不阻断答复 */
+  }
   return out;
 }
 
@@ -116,11 +145,19 @@ function verifyArithmeticClaims(text, env) {
  */
 function verifyActionClaims(text, toolCallLog = [], env) {
   try {
-    if (!isEnabled(env)) return [];
+    if (!isEnabled(env)) {
+      return [];
+    }
     const { reconcile } = require('./trajectoryProvenance/claimReconciler');
-    const r = reconcile(String(text == null ? '' : text), Array.isArray(toolCallLog) ? toolCallLog : [], { env });
-    return (r && Array.isArray(r.contradictions)) ? r.contradictions : [];
-  } catch { return []; }
+    const r = reconcile(
+      String(text == null ? '' : text),
+      Array.isArray(toolCallLog) ? toolCallLog : [],
+      { env }
+    );
+    return r && Array.isArray(r.contradictions) ? r.contradictions : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -138,7 +175,9 @@ function buildVerificationNote(contradictions = {}) {
     if (arithmetic.length) {
       lines.push('· 算式真值(khyos 用精确有理数运算复核,模型心算/浮点不可信):');
       for (const a of arithmetic) {
-        lines.push(`    ${a.expr} 的确定性结果是 ${a.exact},上文写的是 ${a.stated} —— 以 ${a.exact} 为准。`);
+        lines.push(
+          `    ${a.expr} 的确定性结果是 ${a.exact},上文写的是 ${a.stated} —— 以 ${a.exact} 为准。`
+        );
       }
     }
     if (action.length) {
@@ -150,12 +189,18 @@ function buildVerificationNote(contradictions = {}) {
     if (math.length) {
       lines.push('· 解代入复核(khyos 用精确有理数把你给出的解代回原方程):');
       for (const f of math) {
-        lines.push(`    代入后「${f.eqText}」左边 = ${f.lhs},右边 = ${f.rhs},两边不相等 —— 此解不满足该方程,请重解。`);
+        lines.push(
+          `    代入后「${f.eqText}」左边 = ${f.lhs},右边 = ${f.rhs},两边不相等 —— 此解不满足该方程,请重解。`
+        );
       }
     }
-    if (!lines.length) return null;
+    if (!lines.length) {
+      return null;
+    }
     return `\n\n${VERIFY_MARKER} 我不轻信模型自报,已用确定性代码复核本次答复,发现以下可证伪之处:\n${lines.join('\n')}`;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -167,10 +212,16 @@ function buildVerificationNote(contradictions = {}) {
 function _verifySolutions(text, env) {
   try {
     const m = require('./mathSolvePolicy');
-    if (typeof m.verifySolution !== 'function' || typeof m.isEnabled !== 'function') return { ran: false, confirmed: [], falsified: [] };
-    if (!m.isEnabled(env)) return { ran: false, confirmed: [], falsified: [] };
+    if (typeof m.verifySolution !== 'function' || typeof m.isEnabled !== 'function') {
+      return { ran: false, confirmed: [], falsified: [] };
+    }
+    if (!m.isEnabled(env)) {
+      return { ran: false, confirmed: [], falsified: [] };
+    }
     return m.verifySolution(text, env);
-  } catch { return { ran: false, confirmed: [], falsified: [] }; }
+  } catch {
+    return { ran: false, confirmed: [], falsified: [] };
+  }
 }
 
 /**
@@ -183,7 +234,14 @@ function _verifySolutions(text, env) {
  * @returns {{arithmetic:Array, action:Array, math:object, note:string|null}}
  */
 function verifyAnswer({ answer = '', toolCallLog = [], actions = true, env } = {}) {
-  if (!isEnabled(env)) return { arithmetic: [], action: [], math: { ran: false, confirmed: [], falsified: [] }, note: null };
+  if (!isEnabled(env)) {
+    return {
+      arithmetic: [],
+      action: [],
+      math: { ran: false, confirmed: [], falsified: [] },
+      note: null,
+    };
+  }
   const arithmetic = verifyArithmeticClaims(answer, env);
   const action = actions ? verifyActionClaims(answer, toolCallLog, env) : [];
   const math = _verifySolutions(answer, env);
@@ -191,8 +249,17 @@ function verifyAnswer({ answer = '', toolCallLog = [], actions = true, env } = {
   const falsifiedNote = buildVerificationNote({ arithmetic, action, math: math.falsified });
   // 正向确认:仅在本次**没有任何**证伪时,才给「解经确定性验证为真 ✓」(避免与失败信息冲突)。
   let confirmNote = null;
-  if (!arithmetic.length && !action.length && !(math.falsified || []).length && (math.confirmed || []).length) {
-    try { confirmNote = require('./mathSolvePolicy').buildSolutionConfirmation(math); } catch { confirmNote = null; }
+  if (
+    !arithmetic.length &&
+    !action.length &&
+    !(math.falsified || []).length &&
+    (math.confirmed || []).length
+  ) {
+    try {
+      confirmNote = require('./mathSolvePolicy').buildSolutionConfirmation(math);
+    } catch {
+      confirmNote = null;
+    }
   }
   const note = [falsifiedNote, confirmNote].filter(Boolean).join('') || null;
   return { arithmetic, action, math, note };

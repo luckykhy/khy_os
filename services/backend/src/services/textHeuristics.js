@@ -26,12 +26,20 @@
  * @returns {number}
  */
 function estimateTokens(text) {
-  if (!text) return 0;
+  if (!text) {
+    return 0;
+  }
   // 移除 1.2x 安全系数 — 安全系数只在 contextRouter 应用一次（A2）。
   try {
     const wasm = require('./contextWasm');
     return wasm.estimateTokens(text);
-  } catch { /* fallback to JS */ }
+  } catch {
+    /* fallback to JS */
+  }
+  // NOTE(batch-3): intentionally NOT delegated to utils/simpleTokenEstimate — the
+  // phantom-edge leaf contract (tests/services/textHeuristics.test.js) pins this
+  // module's require list to exactly ['./contextWasm']; adding any edge would fail
+  // it. The expression below IS the canonical atom, kept inline by contract.
   const len = String(text).length;
   return Math.ceil(len / 4);
 }
@@ -41,12 +49,38 @@ function estimateTokens(text) {
 // inputPurify filler 路径、inputPreprocessor._inferIntent、routes/ai.js 硬编码检查。
 const GREETING_EXACT = new Set([
   // Chinese
-  '你好', '您好', '嗨', '哈喽', '在吗', '在么', '嘿', '喂', '早',
-  '嗨嗨', '嘿嘿', '你好呀', '你好啊', '嗨呀',
-  '早上好', '下午好', '晚上好', '早安', '午安', '晚安',
+  '你好',
+  '您好',
+  '嗨',
+  '哈喽',
+  '在吗',
+  '在么',
+  '嘿',
+  '喂',
+  '早',
+  '嗨嗨',
+  '嘿嘿',
+  '你好呀',
+  '你好啊',
+  '嗨呀',
+  '早上好',
+  '下午好',
+  '晚上好',
+  '早安',
+  '午安',
+  '晚安',
   // English
-  'hi', 'hello', 'hey', 'yo', 'sup', 'hiya', 'howdy',
-  'goodmorning', 'goodafternoon', 'goodevening', 'goodnight',
+  'hi',
+  'hello',
+  'hey',
+  'yo',
+  'sup',
+  'hiya',
+  'howdy',
+  'goodmorning',
+  'goodafternoon',
+  'goodevening',
+  'goodnight',
 ]);
 
 /**
@@ -56,11 +90,17 @@ const GREETING_EXACT = new Set([
  */
 function isGreeting(input) {
   const raw = String(input || '').trim();
-  if (!raw || raw.length > 24) return false;
+  if (!raw || raw.length > 24) {
+    return false;
+  }
   // Reject if input contains code / path / special chars
-  if (/[\n`$\\/]/.test(raw)) return false;
+  if (/[\n`$\\/]/.test(raw)) {
+    return false;
+  }
   const compact = raw.toLowerCase().replace(/[！!。.,，?？\s]/g, '');
-  if (!compact) return false;
+  if (!compact) {
+    return false;
+  }
   return GREETING_EXACT.has(compact);
 }
 

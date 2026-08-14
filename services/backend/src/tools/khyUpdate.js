@@ -18,19 +18,26 @@ const { defineTool } = require('./_baseTool');
 module.exports = defineTool({
   name: 'khyUpdate',
   description:
-    'Check for and apply updates to khy-os itself. Action "check" (read-only) reports the '
-    + 'installed version vs the latest on PyPI; action "apply" upgrades khy-os via pip. '
-    + 'Use when the user asks whether khyos can be updated or to update it.',
+    'Check for and apply updates to khy-os itself. Action "check" (read-only) reports the ' +
+    'installed version vs the latest on PyPI; action "apply" upgrades khy-os via pip. ' +
+    'Use when the user asks whether khyos can be updated or to update it.',
   category: 'system',
   risk: 'high',
   isReadOnly: false,
   isConcurrencySafe: false,
 
-  aliases: ['khy_update', 'self_update', 'update_khyos', 'upgrade_khy', 'khyos_update', 'check_update'],
+  aliases: [
+    'khy_update',
+    'self_update',
+    'update_khyos',
+    'upgrade_khy',
+    'khyos_update',
+    'check_update',
+  ],
   shouldDefer: true,
   searchHint:
-    'update upgrade khyos khy-os self version check latest new version 更新升级 khyos 有没有新版本 能不能更新 '
-    + 'pip install upgrade khy-os current version',
+    'update upgrade khyos khy-os self version check latest new version 更新升级 khyos 有没有新版本 能不能更新 ' +
+    'pip install upgrade khy-os current version',
 
   prompt() {
     return `Check for and apply updates to khy-os itself.
@@ -66,7 +73,7 @@ Guidance:
   },
 
   getActivityDescription(input) {
-    return (input && input.action === 'apply') ? '更新 khyos' : '检查 khyos 更新';
+    return input && input.action === 'apply' ? '更新 khyos' : '检查 khyos 更新';
   },
 
   async execute(params) {
@@ -76,7 +83,11 @@ Guidance:
       const action = params && params.action === 'apply' ? 'apply' : 'check';
       const result = action === 'apply' ? svc.applyUpdate() : await svc.checkUpdate();
       if (result && result.success === false) {
-        return toolErrorCodes.enrich({ success: false, error: result.error || result.diagnosis || 'khy update failed', data: result });
+        return toolErrorCodes.enrich({
+          success: false,
+          error: result.error || result.diagnosis || 'khy update failed',
+          data: result,
+        });
       }
       return { success: true, data: result };
     } catch (err) {

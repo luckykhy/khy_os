@@ -22,29 +22,33 @@ const scoring = require('../../../src/services/memoryEngine/scoring');
 
 const DAY = 24 * 60 * 60 * 1000;
 
-function withScratch(fn) {
+async function withScratch(fn) {
   const prevDir = process.env.KHY_MEMORY_DIR;
+  const prevMerge = process.env.KHY_MEMORY_MERGE_LEGACY;
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-prime-'));
   process.env.KHY_MEMORY_DIR = tmp;
+  process.env.KHY_MEMORY_MERGE_LEGACY = 'off';
   paths._resetCache();
   try {
-    return fn(tmp);
+    return await fn(tmp);
   } finally {
     if (prevDir === undefined) delete process.env.KHY_MEMORY_DIR;
     else process.env.KHY_MEMORY_DIR = prevDir;
+    if (prevMerge === undefined) delete process.env.KHY_MEMORY_MERGE_LEGACY;
+    else process.env.KHY_MEMORY_MERGE_LEGACY = prevMerge;
     paths._resetCache();
     try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ }
   }
 }
 
-test('rankForPriming: 空库 → []', () => {
-  withScratch(() => {
+test('rankForPriming: 空库 → []', async () => {
+  await withScratch(() => {
     assert.deepStrictEqual(scoring.rankForPriming({ nowMs: Date.now() }), []);
   });
 });
 
-test('rankForPriming: tier×typeBonus 序 — user(permanent) 在 project 之前,stale reference 被剔除', () => {
-  withScratch(() => {
+test('rankForPriming: tier×typeBonus 序 — user(permanent) 在 project 之前,stale reference 被剔除', async () => {
+  await withScratch(() => {
     const now = Date.now();
     // 三条,同刻创建(recency 相近),让 tier×typeBonus 决定序。
     memdir.saveMemory('user', 'who-you-are', '你是资深工程师。', { updated: new Date(now).toISOString() });
@@ -62,8 +66,8 @@ test('rankForPriming: tier×typeBonus 序 — user(permanent) 在 project 之前
   });
 });
 
-test('rankForPriming: limit 截断', () => {
-  withScratch(() => {
+test('rankForPriming: limit 截断', async () => {
+  await withScratch(() => {
     const now = Date.now();
     for (let i = 0; i < 5; i++) {
       memdir.saveMemory('project', `p${i}`, `body ${i}`, { updated: new Date(now).toISOString() });
@@ -73,10 +77,10 @@ test('rankForPriming: limit 截断', () => {
   });
 });
 
-test('REGRESSION: rankMemories("") 仍返回 []（空查询缺口不变）', () => {
-  withScratch(() => {
+test('REGRESSION: rankMemories("") 仍返回 []（空查询缺口不变）', async () => {
+  await withScratch(async () => {
     memdir.saveMemory('user', 'x', 'y', {});
-    assert.deepStrictEqual(scoring.rankMemories('', { nowMs: Date.now() }), []);
-    assert.deepStrictEqual(scoring.rankMemories('   ', { nowMs: Date.now() }), []);
+    assert.deepStrictEqual(await scoring.rankMemories('', { nowMs: Date.now() }), []);
+    assert.deepStrictEqual(await scoring.rankMemories('   ', { nowMs: Date.now() }), []);
   });
 });

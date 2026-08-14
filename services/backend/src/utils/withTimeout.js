@@ -19,10 +19,27 @@
 function _withTimeout(promise, ms) {
   return new Promise((resolve) => {
     let settled = false;
-    const t = setTimeout(() => { if (!settled) { settled = true; resolve({ __timeout: true }); } }, ms);
+    const t = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve({ __timeout: true });
+      }
+    }, ms);
     Promise.resolve(promise).then(
-      (v) => { if (!settled) { settled = true; clearTimeout(t); resolve(v); } },
-      () => { if (!settled) { settled = true; clearTimeout(t); resolve({ __error: true }); } },
+      (v) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(t);
+          resolve(v);
+        }
+      },
+      () => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(t);
+          resolve({ __error: true });
+        }
+      }
     );
   });
 }

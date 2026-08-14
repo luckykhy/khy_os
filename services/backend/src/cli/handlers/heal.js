@@ -95,8 +95,10 @@ async function handleHeal(subCommand, args = [], options = {}) {
   }
 
   console.log(
-    chalk.bold('\n  🔧 源码自愈体检')
-    + chalk.dim(`  (缺失 ${summary.missing || 0} · 损坏 ${summary.corrupt || 0} · 待处理 ${planCount})\n`),
+    chalk.bold('\n  🔧 源码自愈体检') +
+      chalk.dim(
+        `  (缺失 ${summary.missing || 0} · 损坏 ${summary.corrupt || 0} · 待处理 ${planCount})\n`
+      )
   );
 
   // 逐条列出计划(缺失/损坏)。
@@ -113,9 +115,9 @@ async function handleHeal(subCommand, args = [], options = {}) {
   // 版本红线拦截。
   if (reason === 'version-mismatch') {
     printWarn(
-      `快照版本 (${(res.report && res.report.snapshotVersion) || '?'}) 与运行版本 `
-      + `(${(res.report && res.report.runningVersion) || '?'}) 不一致：这更像版本漂移而非损坏，`
-      + `已拒绝自动写回。如确需整树还原，请运行 khy restore。`,
+      `快照版本 (${(res.report && res.report.snapshotVersion) || '?'}) 与运行版本 ` +
+        `(${(res.report && res.report.runningVersion) || '?'}) 不一致：这更像版本漂移而非损坏，` +
+        `已拒绝自动写回。如确需整树还原，请运行 khy restore。`
     );
     return true;
   }
@@ -123,11 +125,13 @@ async function handleHeal(subCommand, args = [], options = {}) {
   // 过量红线拦截。
   if (reason === 'too-many-changes') {
     printWarn(
-      `待修复文件数 (${planCount}) 超过安全阈值 `
-      + `(${(res.report && res.report.autoMax) || 25})：这更像系统性差异而非「个别文件损坏」，`
-      + `已拒绝自动 mass-write。`,
+      `待修复文件数 (${planCount}) 超过安全阈值 ` +
+        `(${(res.report && res.report.autoMax) || 25})：这更像系统性差异而非「个别文件损坏」，` +
+        `已拒绝自动 mass-write。`
     );
-    printInfo('如确认是大范围损坏，请运行 khy restore 整树还原；或 khy heal --apply --force 强制修复（仍守版本红线）。');
+    printInfo(
+      '如确认是大范围损坏，请运行 khy restore 整树还原；或 khy heal --apply --force 强制修复（仍守版本红线）。'
+    );
     return true;
   }
 

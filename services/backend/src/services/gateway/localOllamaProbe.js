@@ -30,7 +30,11 @@ async function fetchLocalModels() {
   try {
     running = await ollamaModelManager.isOllamaRunning();
   } catch (err) {
-    return { running: false, models: [], error: err && err.message ? err.message : 'ollama probe failed' };
+    return {
+      running: false,
+      models: [],
+      error: err && err.message ? err.message : 'ollama probe failed',
+    };
   }
   if (!running) {
     return { running: false, models: [], error: null };
@@ -42,7 +46,11 @@ async function fetchLocalModels() {
       .map((m) => ({ id: m.name, source: 'local' }));
     return { running: true, models, error: null };
   } catch (err) {
-    return { running: true, models: [], error: err && err.message ? err.message : 'list models failed' };
+    return {
+      running: true,
+      models: [],
+      error: err && err.message ? err.message : 'list models failed',
+    };
   }
 }
 

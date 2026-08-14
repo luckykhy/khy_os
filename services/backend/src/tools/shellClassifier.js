@@ -11,29 +11,53 @@
 
 // ── Command Classification Sets ────────────────────────────────────
 
-const SEARCH_COMMANDS = new Set([
-  'find', 'grep', 'rg', 'ag', 'ack', 'locate', 'which', 'whereis',
-]);
+const SEARCH_COMMANDS = new Set(['find', 'grep', 'rg', 'ag', 'ack', 'locate', 'which', 'whereis']);
 
 const READ_COMMANDS = new Set([
-  'cat', 'head', 'tail', 'less', 'more',
-  'wc', 'stat', 'file', 'strings',
-  'jq', 'awk', 'cut', 'sort', 'uniq', 'tr',
+  'cat',
+  'head',
+  'tail',
+  'less',
+  'more',
+  'wc',
+  'stat',
+  'file',
+  'strings',
+  'jq',
+  'awk',
+  'cut',
+  'sort',
+  'uniq',
+  'tr',
   // Cross-platform read-only diagnostics whose base command name has no
   // mutating form — purely report system/host state, never change it.
-  'systeminfo', 'hostname', 'whoami', 'ver', 'uname', 'id',
-  'arch', 'date', 'uptime', 'getconf', 'lscpu', 'nproc',
+  'systeminfo',
+  'hostname',
+  'whoami',
+  'ver',
+  'uname',
+  'id',
+  'arch',
+  'date',
+  'uptime',
+  'getconf',
+  'lscpu',
+  'nproc',
 ]);
 
 const LIST_COMMANDS = new Set([
-  'ls', 'dir', 'tree', 'du', 'df',
+  'ls',
+  'dir',
+  'tree',
+  'du',
+  'df',
   // Read-only enumerations of processes / block devices.
-  'tasklist', 'ps', 'lsblk',
+  'tasklist',
+  'ps',
+  'lsblk',
 ]);
 
-const NEUTRAL_COMMANDS = new Set([
-  'echo', 'printf', 'true', 'false', ':',
-]);
+const NEUTRAL_COMMANDS = new Set(['echo', 'printf', 'true', 'false', ':']);
 
 // ── Verb-gated read-only commands ──────────────────────────────────
 //
@@ -45,43 +69,66 @@ const NEUTRAL_COMMANDS = new Set([
 const READONLY_VERB_GATED = new Map([
   // `wmic <alias> get ...` / `wmic <alias> list ...` read; reject any
   // method/mutation verb regardless of position.
-  ['wmic', (tokens) => {
-    const t = tokens.slice(1); // drop the leading "wmic"
-    const mutating = ['call', 'create', 'delete', 'set', 'terminate', 'assoc'];
-    if (t.some((x) => mutating.includes(x))) return false;
-    return t.includes('get') || t.includes('list');
-  }],
+  [
+    'wmic',
+    (tokens) => {
+      const t = tokens.slice(1); // drop the leading "wmic"
+      const mutating = ['call', 'create', 'delete', 'set', 'terminate', 'assoc'];
+      if (t.some((x) => mutating.includes(x))) {
+        return false;
+      }
+      return t.includes('get') || t.includes('list');
+    },
+  ],
   // `reg query ...` reads; `reg add|delete|import|...` mutate.
   ['reg', (tokens) => tokens[1] === 'query'],
   // `sc query|queryex ...` reads; `sc create|delete|config|start|stop` mutate.
   ['sc', (tokens) => tokens[1] === 'query' || tokens[1] === 'queryex'],
   // `systemctl status|show|is-active|...` read; `start|stop|enable|...` mutate.
-  ['systemctl', (tokens) => [
-    'status', 'show', 'is-active', 'is-enabled',
-    'list-units', 'list-unit-files', 'cat', 'get-default',
-  ].includes(tokens[1])],
+  [
+    'systemctl',
+    (tokens) =>
+      [
+        'status',
+        'show',
+        'is-active',
+        'is-enabled',
+        'list-units',
+        'list-unit-files',
+        'cat',
+        'get-default',
+      ].includes(tokens[1]),
+  ],
 ]);
 
 const SILENT_COMMANDS = new Set([
-  'mv', 'cp', 'rm', 'mkdir', 'rmdir', 'chmod', 'chown',
-  'ln', 'touch', 'install',
+  'mv',
+  'cp',
+  'rm',
+  'mkdir',
+  'rmdir',
+  'chmod',
+  'chown',
+  'ln',
+  'touch',
+  'install',
 ]);
 
 // ── Device Path Blocking ───────────────────────────────────────────
 
 const BLOCKED_DEVICE_PATHS = new Set([
-  '/dev/zero',       // infinite output
-  '/dev/random',     // infinite output / blocks
-  '/dev/urandom',    // infinite output
-  '/dev/full',       // infinite output
-  '/dev/stdin',      // blocks waiting for input
-  '/dev/tty',        // blocks waiting for input
-  '/dev/console',    // blocks waiting for input
-  '/dev/stdout',     // meaningless read
-  '/dev/stderr',     // meaningless read
-  '/dev/fd/0',       // fd alias (stdin)
-  '/dev/fd/1',       // fd alias (stdout)
-  '/dev/fd/2',       // fd alias (stderr)
+  '/dev/zero', // infinite output
+  '/dev/random', // infinite output / blocks
+  '/dev/urandom', // infinite output
+  '/dev/full', // infinite output
+  '/dev/stdin', // blocks waiting for input
+  '/dev/tty', // blocks waiting for input
+  '/dev/console', // blocks waiting for input
+  '/dev/stdout', // meaningless read
+  '/dev/stderr', // meaningless read
+  '/dev/fd/0', // fd alias (stdin)
+  '/dev/fd/1', // fd alias (stdout)
+  '/dev/fd/2', // fd alias (stderr)
 ]);
 
 /**
@@ -90,7 +137,9 @@ const BLOCKED_DEVICE_PATHS = new Set([
  * @returns {boolean}
  */
 function isBlockedDevicePath(filePath) {
-  if (!filePath || typeof filePath !== 'string') return false;
+  if (!filePath || typeof filePath !== 'string') {
+    return false;
+  }
   const normalized = filePath.replace(/\/+$/, '');
   return BLOCKED_DEVICE_PATHS.has(normalized);
 }
@@ -106,7 +155,9 @@ const REDIRECT_OPS = new Set(['>', '>>', '2>', '2>>', '&>', '&>>']);
  * @returns {string[]}
  */
 function splitCommandWithOperators(command) {
-  if (!command || typeof command !== 'string') return [];
+  if (!command || typeof command !== 'string') {
+    return [];
+  }
 
   const parts = [];
   let current = '';
@@ -117,8 +168,11 @@ function splitCommandWithOperators(command) {
 
     // Handle quotes
     if ((ch === '"' || ch === "'") && (i === 0 || command[i - 1] !== '\\')) {
-      if (inQuote === ch) { inQuote = null; }
-      else if (!inQuote) { inQuote = ch; }
+      if (inQuote === ch) {
+        inQuote = null;
+      } else if (!inQuote) {
+        inQuote = ch;
+      }
       current += ch;
       continue;
     }
@@ -130,7 +184,9 @@ function splitCommandWithOperators(command) {
 
     // Handle operators
     if (ch === '|' || ch === '&' || ch === ';') {
-      if (current.trim()) parts.push(current.trim());
+      if (current.trim()) {
+        parts.push(current.trim());
+      }
       current = '';
 
       // Check for || or &&
@@ -145,7 +201,9 @@ function splitCommandWithOperators(command) {
 
     // Handle redirects
     if (ch === '>' || (ch === '2' && i + 1 < command.length && command[i + 1] === '>')) {
-      if (current.trim()) parts.push(current.trim());
+      if (current.trim()) {
+        parts.push(current.trim());
+      }
       current = '';
       let op = ch;
       while (i + 1 < command.length && (command[i + 1] === '>' || command[i + 1] === '&')) {
@@ -157,7 +215,9 @@ function splitCommandWithOperators(command) {
 
     current += ch;
   }
-  if (current.trim()) parts.push(current.trim());
+  if (current.trim()) {
+    parts.push(current.trim());
+  }
 
   return parts;
 }
@@ -170,16 +230,24 @@ function splitCommandWithOperators(command) {
  * @returns {string} Base command name
  */
 function getBaseCommand(cmd) {
-  if (!cmd) return '';
+  if (!cmd) {
+    return '';
+  }
   const tokens = cmd.trim().split(/\s+/);
 
   let i = 0;
   // Skip environment variable assignments (FOO=bar cmd)
-  while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) i++;
+  while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) {
+    i++;
+  }
   // Skip sudo/env prefixes
-  while (i < tokens.length && (tokens[i] === 'sudo' || tokens[i] === 'env')) i++;
+  while (i < tokens.length && (tokens[i] === 'sudo' || tokens[i] === 'env')) {
+    i++;
+  }
 
-  if (i >= tokens.length) return '';
+  if (i >= tokens.length) {
+    return '';
+  }
 
   // Extract basename from path (e.g., /usr/bin/grep → grep)
   const full = tokens[i];
@@ -196,17 +264,27 @@ function getBaseCommand(cmd) {
  * @returns {string[]}
  */
 function getCommandTokens(cmd) {
-  if (!cmd) return [];
+  if (!cmd) {
+    return [];
+  }
   const tokens = cmd.trim().split(/\s+/);
 
   let i = 0;
-  while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) i++;
-  while (i < tokens.length && (tokens[i] === 'sudo' || tokens[i] === 'env')) i++;
-  if (i >= tokens.length) return [];
+  while (i < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[i])) {
+    i++;
+  }
+  while (i < tokens.length && (tokens[i] === 'sudo' || tokens[i] === 'env')) {
+    i++;
+  }
+  if (i >= tokens.length) {
+    return [];
+  }
 
   const rest = tokens.slice(i).map((t) => t.toLowerCase());
   const slash = rest[0].lastIndexOf('/');
-  if (slash >= 0) rest[0] = rest[0].slice(slash + 1);
+  if (slash >= 0) {
+    rest[0] = rest[0].slice(slash + 1);
+  }
   return rest;
 }
 
@@ -250,13 +328,19 @@ function isSearchOrReadCommand(command) {
     }
 
     // Skip pipeline/logic operators
-    if (OPERATORS.has(part)) continue;
+    if (OPERATORS.has(part)) {
+      continue;
+    }
 
     const base = getBaseCommand(part);
-    if (!base) continue;
+    if (!base) {
+      continue;
+    }
 
     // Neutral commands don't affect classification
-    if (NEUTRAL_COMMANDS.has(base)) continue;
+    if (NEUTRAL_COMMANDS.has(base)) {
+      continue;
+    }
 
     // Verb-gated commands: read-only only with a query subcommand. The
     // predicate decides per-invocation; a mutating form falls through to the
@@ -279,9 +363,15 @@ function isSearchOrReadCommand(command) {
       return { isSearch: false, isRead: false, isList: false };
     }
 
-    if (isPartSearch) hasSearch = true;
-    if (isPartRead) hasRead = true;
-    if (isPartList) hasList = true;
+    if (isPartSearch) {
+      hasSearch = true;
+    }
+    if (isPartRead) {
+      hasRead = true;
+    }
+    if (isPartList) {
+      hasList = true;
+    }
   }
 
   return { isSearch: hasSearch, isRead: hasRead, isList: hasList };

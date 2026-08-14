@@ -66,7 +66,8 @@ const GIT_HAZARD_HINTS = Object.freeze([
   {
     key: 'force-push',
     // 匹配 `git push ... --force` / `-f` / `--force-with-lease`。
-    test: (s) => /\bgit\b[^\n]*\bpush\b/.test(s) && /(--force-with-lease|--force|(^|\s)-[a-zA-Z]*f)/.test(s),
+    test: (s) =>
+      /\bgit\b[^\n]*\bpush\b/.test(s) && /(--force-with-lease|--force|(^|\s)-[a-zA-Z]*f)/.test(s),
     what: '强制推送——用本地历史覆盖远程分支',
     risks: [
       '会覆盖远程分支：别人（或你自己在别处）已推送的提交可能被抹掉且难以找回',
@@ -87,8 +88,10 @@ const GIT_HAZARD_HINTS = Object.freeze([
   {
     key: 'clean-fd',
     // 匹配 `git clean` 带 -f 且带 -d（任意顺序/合并形式，如 -fd / -df / -f -d）。
-    test: (s) => /\bgit\b[^\n]*\bclean\b/.test(s)
-      && /(^|\s)-[a-zA-Z]*f/.test(s) && /(^|\s)-[a-zA-Z]*d/.test(s),
+    test: (s) =>
+      /\bgit\b[^\n]*\bclean\b/.test(s) &&
+      /(^|\s)-[a-zA-Z]*f/.test(s) &&
+      /(^|\s)-[a-zA-Z]*d/.test(s),
     what: '清理——永久删除工作区里所有未被 git 跟踪的文件和目录',
     risks: [
       '未被 git 跟踪的新文件/目录会被**直接删除**，不进回收站，几乎无法找回',
@@ -107,12 +110,20 @@ const GIT_HAZARD_HINTS = Object.freeze([
 function _gitHazardHint(intent) {
   try {
     const parts = [];
-    if (intent && typeof intent.resource === 'string') parts.push(intent.resource);
-    if (intent && typeof intent.raw === 'string') parts.push(intent.raw);
+    if (intent && typeof intent.resource === 'string') {
+      parts.push(intent.resource);
+    }
+    if (intent && typeof intent.raw === 'string') {
+      parts.push(intent.raw);
+    }
     const s = parts.join(' ').toLowerCase();
-    if (!s.trim()) return null;
+    if (!s.trim()) {
+      return null;
+    }
     for (const h of GIT_HAZARD_HINTS) {
-      if (h.test(s)) return h;
+      if (h.test(s)) {
+        return h;
+      }
     }
     return null;
   } catch {
@@ -120,39 +131,57 @@ function _gitHazardHint(intent) {
   }
 }
 
-
 /**
  * 由 intent 推导「难易」(difficulty) 与「重要程度」(importance)。
  * importance 直接对应分级（影响越大越重要）；difficulty 反映「这步好不好懂、好不好撤销」。
  * @returns {{ importance:'low'|'medium'|'high', difficulty:'easy'|'moderate'|'hard' }}
  */
 function _gradeFromIntent(intent, level) {
-  const importance = level === redLine.LEVELS.L2 ? 'high'
-    : level === redLine.LEVELS.L1 ? 'medium' : 'low';
+  const importance =
+    level === redLine.LEVELS.L2 ? 'high' : level === redLine.LEVELS.L1 ? 'medium' : 'low';
 
   const action = intent && intent.action;
-  const hardActions = [ACTIONS.DELETE, ACTIONS.KILL, ACTIONS.INSTALL, ACTIONS.ENV,
-    ACTIONS.EXEC_CODE, ACTIONS.SANDBOX_ESCAPE, ACTIONS.LISTEN];
+  const hardActions = [
+    ACTIONS.DELETE,
+    ACTIONS.KILL,
+    ACTIONS.INSTALL,
+    ACTIONS.ENV,
+    ACTIONS.EXEC_CODE,
+    ACTIONS.SANDBOX_ESCAPE,
+    ACTIONS.LISTEN,
+  ];
   let difficulty;
-  if (intent && (intent.isReadOnly === true || action === ACTIONS.READ)) difficulty = 'easy';
-  else if ((intent && intent.isDestructive === true) || hardActions.includes(action)) difficulty = 'hard';
-  else difficulty = 'moderate';
+  if (intent && (intent.isReadOnly === true || action === ACTIONS.READ)) {
+    difficulty = 'easy';
+  } else if ((intent && intent.isDestructive === true) || hardActions.includes(action)) {
+    difficulty = 'hard';
+  } else {
+    difficulty = 'moderate';
+  }
 
   return { importance, difficulty };
 }
 
 /** 说明详尽程度：取「重要程度」与「难易」中更高者。 */
 function _depthOf(importance, difficulty) {
-  if (importance === 'high' || difficulty === 'hard') return 'detailed';
-  if (importance === 'medium' || difficulty === 'moderate') return 'standard';
+  if (importance === 'high' || difficulty === 'hard') {
+    return 'detailed';
+  }
+  if (importance === 'medium' || difficulty === 'moderate') {
+    return 'standard';
+  }
   return 'brief';
 }
 
 /** 该不该附上工作区状态：写入 / 删除 / 进程 / 网络等会改变东西的操作，或 L1 以上。 */
 function _wantsWorkspace(intent, level) {
-  if (level !== redLine.LEVELS.L0) return true;
+  if (level !== redLine.LEVELS.L0) {
+    return true;
+  }
   const a = intent && intent.action;
-  return a === ACTIONS.WRITE || a === ACTIONS.DELETE || a === ACTIONS.PROCESS || a === ACTIONS.NETWORK;
+  return (
+    a === ACTIONS.WRITE || a === ACTIONS.DELETE || a === ACTIONS.PROCESS || a === ACTIONS.NETWORK
+  );
 }
 
 /**
@@ -177,7 +206,12 @@ function explain(intent, opts = {}) {
   try {
     d = describe(intent);
   } catch {
-    d = { isRedLine: true, level: redLine.LEVELS.L2, summary: '高危操作（分级异常，保守提示）', reasons: [] };
+    d = {
+      isRedLine: true,
+      level: redLine.LEVELS.L2,
+      summary: '高危操作（分级异常，保守提示）',
+      reasons: [],
+    };
   }
   const level = d.level || redLine.LEVELS.L2;
   const { importance, difficulty } = _gradeFromIntent(intent, level);
@@ -185,13 +219,19 @@ function explain(intent, opts = {}) {
 
   const action = (intent && intent.action) || ACTIONS.UNKNOWN;
   const gitHazard = _gitHazardHint(intent);
-  const whatHappens = gitHazard ? gitHazard.what : (ACTION_WHAT[action] || ACTION_WHAT[ACTIONS.UNKNOWN]);
+  const whatHappens = gitHazard
+    ? gitHazard.what
+    : ACTION_WHAT[action] || ACTION_WHAT[ACTIONS.UNKNOWN];
 
   // Headline：一眼看清「将要做什么、危不危险」。
   let headline;
-  if (level === redLine.LEVELS.L2) headline = `⚠ 高风险操作：${whatHappens}`;
-  else if (level === redLine.LEVELS.L1) headline = `即将：${whatHappens}（影响有限，确认一次即可）`;
-  else headline = `即将：${whatHappens}`;
+  if (level === redLine.LEVELS.L2) {
+    headline = `⚠ 高风险操作：${whatHappens}`;
+  } else if (level === redLine.LEVELS.L1) {
+    headline = `即将：${whatHappens}（影响有限，确认一次即可）`;
+  } else {
+    headline = `即将：${whatHappens}`;
+  }
 
   const reasons = Array.isArray(d.reasons) ? d.reasons.slice() : [];
 
@@ -202,15 +242,23 @@ function explain(intent, opts = {}) {
     risks = (ACTION_RISKS[action] || []).slice();
     if (gitHazard) {
       // git 危险操作：用专项后果/撤销覆盖泛化文案，讲清这条命令的真实破坏面。
-      for (const r of gitHazard.risks) if (!risks.includes(r)) risks.push(r);
+      for (const r of gitHazard.risks) {
+        if (!risks.includes(r)) {
+          risks.push(r);
+        }
+      }
     }
     if (intent && intent.isDestructive === true && action !== ACTIONS.DELETE) {
       risks.push('这是破坏性操作，可能修改或销毁既有状态');
     }
-    if (!risks.length) risks.push('这是被判定为高风险的操作，请确认你了解其后果');
-    howToUndo = gitHazard ? gitHazard.undo : (ACTION_UNDO[action] || '此操作可能不可逆，请在确认前再次核对');
+    if (!risks.length) {
+      risks.push('这是被判定为高风险的操作，请确认你了解其后果');
+    }
+    howToUndo = gitHazard
+      ? gitHazard.undo
+      : ACTION_UNDO[action] || '此操作可能不可逆，请在确认前再次核对';
   } else if (depth === 'standard') {
-    howToUndo = gitHazard ? gitHazard.undo : (ACTION_UNDO[action] || null);
+    howToUndo = gitHazard ? gitHazard.undo : ACTION_UNDO[action] || null;
   }
 
   // 工作区状态：必须基于已采集数据；缺则主动获取（gather-if-missing），全程 fail-soft。
@@ -219,8 +267,8 @@ function explain(intent, opts = {}) {
     try {
       let ws = opts.workspace;
       if (!ws) {
-        const wc = opts.collectWorkspace
-          || require('../workspace/workspaceContext').collectWorkspaceContext;
+        const wc =
+          opts.collectWorkspace || require('../workspace/workspaceContext').collectWorkspaceContext;
         ws = wc(opts.cwd);
       }
       if (ws) {
@@ -232,8 +280,31 @@ function explain(intent, opts = {}) {
     }
   }
 
-  const text = renderText({ level, importance, difficulty, depth, headline, whatHappens, reasons, risks, howToUndo, workspace });
-  return { level, importance, difficulty, depth, headline, whatHappens, reasons, risks, howToUndo, workspace, text };
+  const text = renderText({
+    level,
+    importance,
+    difficulty,
+    depth,
+    headline,
+    whatHappens,
+    reasons,
+    risks,
+    howToUndo,
+    workspace,
+  });
+  return {
+    level,
+    importance,
+    difficulty,
+    depth,
+    headline,
+    whatHappens,
+    reasons,
+    risks,
+    howToUndo,
+    workspace,
+    text,
+  };
 }
 
 /**
@@ -243,28 +314,42 @@ function explain(intent, opts = {}) {
  */
 function renderText(e) {
   // brief：只给一行（L0 只读 / 低风险）。
-  if (e.depth === 'brief') return e.headline;
+  if (e.depth === 'brief') {
+    return e.headline;
+  }
 
   const lines = [e.headline];
 
   // standard：补一句「在哪做、可不可逆」。
   if (e.depth === 'standard') {
-    if (e.workspace) lines.push('', '当前工作区：', e.workspace);
-    if (e.howToUndo) lines.push('', `撤销方式：${e.howToUndo}`);
+    if (e.workspace) {
+      lines.push('', '当前工作区：', e.workspace);
+    }
+    if (e.howToUndo) {
+      lines.push('', `撤销方式：${e.howToUndo}`);
+    }
     return lines.join('\n');
   }
 
   // detailed（L2 / 难撤销）：讲全。
   if (e.reasons && e.reasons.length) {
     lines.push('', '为什么需要你确认：');
-    for (const r of e.reasons) lines.push(`  · ${r}`);
+    for (const r of e.reasons) {
+      lines.push(`  · ${r}`);
+    }
   }
   if (e.risks && e.risks.length) {
     lines.push('', '可能的后果：');
-    for (const r of e.risks) lines.push(`  · ${r}`);
+    for (const r of e.risks) {
+      lines.push(`  · ${r}`);
+    }
   }
-  if (e.howToUndo) lines.push('', `撤销方式：${e.howToUndo}`);
-  if (e.workspace) lines.push('', '当前工作区：', e.workspace);
+  if (e.howToUndo) {
+    lines.push('', `撤销方式：${e.howToUndo}`);
+  }
+  if (e.workspace) {
+    lines.push('', '当前工作区：', e.workspace);
+  }
   return lines.join('\n');
 }
 

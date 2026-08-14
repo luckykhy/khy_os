@@ -17,9 +17,9 @@
  * @module handlers/capability
  */
 const chalk = require('chalk').default || require('chalk');
-const { printInfo, printError, printTable, printSuccess, printWarn } = require('../formatters');
 const cap = require('../../services/capabilityRegistry');
 const nlConfig = require('../../services/config/nlConfigResolver');
+const { printInfo, printError, printTable, printSuccess, printWarn } = require('../formatters');
 
 function _handleList() {
   const caps = cap.listCapabilities();
@@ -31,7 +31,7 @@ function _handleList() {
   printInfo(`已登记能力 ${caps.length} 项（每项 = 可执行代码 + 测试 + 自动发现）：`);
   const rows = caps.map((c) => {
     const covered = c.tests.length > 0 ? chalk.green('是') : chalk.yellow('无');
-    return [c.name, c.summary || '-', (c.surfaces.join('/') || '-'), covered];
+    return [c.name, c.summary || '-', c.surfaces.join('/') || '-', covered];
   });
   printTable(['能力', '说明', '可用面', '带测试'], rows);
   printInfo('查看详情：khy capability show <能力名>');
@@ -50,8 +50,12 @@ function _handleShow(name) {
     return true;
   }
   printInfo(chalk.bold(`能力：${info.name}`));
-  if (info.summary) printInfo(`  说明：${info.summary}`);
-  if (info.learnedFrom) printInfo(`  来源：${info.learnedFrom}`);
+  if (info.summary) {
+    printInfo(`  说明：${info.summary}`);
+  }
+  if (info.learnedFrom) {
+    printInfo(`  来源：${info.learnedFrom}`);
+  }
   printInfo(`  可用面：${info.surfaces.join(' / ') || '-'}`);
 
   if (info.testsResolved.length === 0) {
@@ -88,11 +92,17 @@ async function _handleToggles() {
       const bin = await require('../../services/rtkMode').resolveBinary();
       rtkInstalled = !!bin;
     }
-  } catch { /* 探测失败 → 回退纯 env 显示 */ }
+  } catch {
+    /* 探测失败 → 回退纯 env 显示 */
+  }
 
   const rows = list.map((c) => {
     const raw = process.env[c.envKey];
-    const off = ['0', 'false', 'off', 'no'].includes(String(raw == null ? 'true' : raw).trim().toLowerCase());
+    const off = ['0', 'false', 'off', 'no'].includes(
+      String(raw == null ? 'true' : raw)
+        .trim()
+        .toLowerCase()
+    );
     let cur = off ? chalk.yellow('关') : chalk.green('开');
     // 幻影启用诚实标注:RTK 开着但没装 → 「开(未装·未生效)」。
     if (!off && c.envKey === 'KHY_RTK_MODE' && rtkInstalled === false) {
@@ -124,8 +134,11 @@ function _handleToggle(name, turnOn) {
     return true;
   }
   const c = nlConfig.findCapability(name);
-  const envKey = c ? c.envKey
-    : (/\bKHY_[A-Z0-9_]{2,}\b/.test(name) ? name.match(/\bKHY_[A-Z0-9_]{2,}\b/)[0] : null);
+  const envKey = c
+    ? c.envKey
+    : /\bKHY_[A-Z0-9_]{2,}\b/.test(name)
+      ? name.match(/\bKHY_[A-Z0-9_]{2,}\b/)[0]
+      : null;
   if (!envKey) {
     printError(`未识别的能力:${name}`);
     printInfo('用 `khy capability toggles` 查看可控能力,或直接给出 KHY_* 键。');
@@ -133,9 +146,13 @@ function _handleToggle(name, turnOn) {
   }
   const value = turnOn ? nlConfig.ON_VALUE : nlConfig.OFF_VALUE;
   const p = _persist(envKey, value);
-  if (p == null) return true;
+  if (p == null) {
+    return true;
+  }
   const label = c ? c.summary : envKey;
-  printSuccess(`✅ ${label} ${turnOn ? '已开启' : '已关闭'}(${envKey}=${value})。已即时生效并持久化。`);
+  printSuccess(
+    `✅ ${label} ${turnOn ? '已开启' : '已关闭'}(${envKey}=${value})。已即时生效并持久化。`
+  );
   printInfo(`已写入:${p}`);
   return true;
 }
@@ -153,7 +170,9 @@ function _handleSetRaw(name, value) {
     return true;
   }
   const p = _persist(envKey, String(value));
-  if (p == null) return true;
+  if (p == null) {
+    return true;
+  }
   printSuccess(`✅ ${envKey} 已设为 ${value}。已即时生效并持久化。`);
   printInfo(`已写入:${p}`);
   return true;
@@ -167,12 +186,24 @@ function handleCapability(parsed = {}) {
   const sub = String(parsed.subCommand || '').toLowerCase();
   const args = Array.isArray(parsed.args) ? parsed.args : [];
 
-  if (!sub || sub === 'list') return _handleList();
-  if (sub === 'show') return _handleShow(args[0]);
-  if (sub === 'toggles') return _handleToggles();
-  if (sub === 'on') return _handleToggle(args[0], true);
-  if (sub === 'off') return _handleToggle(args[0], false);
-  if (sub === 'set') return _handleSetRaw(args[0], args[1]);
+  if (!sub || sub === 'list') {
+    return _handleList();
+  }
+  if (sub === 'show') {
+    return _handleShow(args[0]);
+  }
+  if (sub === 'toggles') {
+    return _handleToggles();
+  }
+  if (sub === 'on') {
+    return _handleToggle(args[0], true);
+  }
+  if (sub === 'off') {
+    return _handleToggle(args[0], false);
+  }
+  if (sub === 'set') {
+    return _handleSetRaw(args[0], args[1]);
+  }
 
   printError(`未知子命令：${sub}`);
   printInfo('用法: capability list | show <名> | toggles | on <名> | off <名> | set <KHY_键> <值>');

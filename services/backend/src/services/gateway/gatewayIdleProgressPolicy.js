@@ -63,7 +63,9 @@ function idleProgressOnlyEnabled(env = process.env) {
  */
 function shouldResetIdle(isRealProgress, env = process.env) {
   try {
-    if (!idleProgressOnlyEnabled(env)) return true;
+    if (!idleProgressOnlyEnabled(env)) {
+      return true;
+    }
     return isRealProgress === true;
   } catch {
     // 保守:异常 → 回退今日行为(重置 idle),绝不因本叶子引入新的卡死。

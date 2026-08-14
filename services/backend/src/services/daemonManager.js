@@ -7,10 +7,11 @@
  * background process. PID and port are stored in ~/.khyquant/daemon.pid.
  */
 const { spawn } = require('child_process');
-const { safeKill } = require('../tools/platformUtils');
 const fs = require('fs');
-const path = require('path');
 const http = require('http');
+const path = require('path');
+
+const { safeKill } = require('../tools/platformUtils');
 const { getDataDir, getDataHome, getLegacyDataHome } = require('../utils/dataHome');
 
 const PID_FILE = path.join(getDataDir(), 'daemon.pid');
@@ -36,12 +37,16 @@ function _readPidFile() {
 function _writePidFile(info) {
   try {
     fs.writeFileSync(PID_FILE, JSON.stringify(info, null, 2), 'utf-8');
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function _toPort(raw, fallback = null) {
   const n = parseInt(String(raw ?? ''), 10);
-  if (!Number.isFinite(n) || n <= 0 || n > 65535) return fallback;
+  if (!Number.isFinite(n) || n <= 0 || n > 65535) {
+    return fallback;
+  }
   return n;
 }
 
@@ -50,21 +55,27 @@ function _readRuntimeFile() {
     try {
       const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
       const apiPort = _toPort(raw?.apiPort);
-      if (!apiPort) continue;
+      if (!apiPort) {
+        continue;
+      }
       return {
         pid: Number(raw?.pid) || null,
         apiPort,
         updatedAt: Number(raw?.updatedAt) || 0,
         source: filePath,
       };
-    } catch { /* try next */ }
+    } catch {
+      /* try next */
+    }
   }
   return null;
 }
 
 function _resolveLivePort(info, runtime) {
   const requestedPort = _toPort(info?.port);
-  if (!runtime || !runtime.apiPort) return requestedPort;
+  if (!runtime || !runtime.apiPort) {
+    return requestedPort;
+  }
   if (runtime.pid && info?.pid && Number(runtime.pid) !== Number(info.pid)) {
     return requestedPort;
   }
@@ -123,7 +134,9 @@ function daemonStart(opts = {}) {
     throw err;
   }
 
-  child.on('error', () => { /* detached — best effort */ });
+  child.on('error', () => {
+    /* detached — best effort */
+  });
 
   // Write PID file
   const info = {
@@ -146,7 +159,9 @@ function daemonStart(opts = {}) {
  */
 function daemonStop() {
   const info = _readPidFile();
-  if (!info) return false;
+  if (!info) {
+    return false;
+  }
 
   if (_isAlive(info.pid)) {
     safeKill(info.pid, 'SIGTERM', 3000);
@@ -154,12 +169,18 @@ function daemonStop() {
     const deadline = Date.now() + 5000;
     while (_isAlive(info.pid) && Date.now() < deadline) {
       const waitUntil = Date.now() + 100;
-      while (Date.now() < waitUntil) { /* spin */ }
+      while (Date.now() < waitUntil) {
+        /* spin */
+      }
     }
   }
 
   // Remove PID file
-  try { fs.unlinkSync(PID_FILE); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(PID_FILE);
+  } catch {
+    /* ignore */
+  }
   return true;
 }
 
@@ -171,7 +192,13 @@ async function daemonStatus() {
   const info = _readPidFile();
   if (!info || !_isAlive(info.pid)) {
     // Clean up stale PID file
-    if (info) try { fs.unlinkSync(PID_FILE); } catch { /* ignore */ }
+    if (info) {
+      try {
+        fs.unlinkSync(PID_FILE);
+      } catch {
+        /* ignore */
+      }
+    }
     return { running: false, pid: null, port: null, uptime: null, health: null };
   }
 
@@ -192,16 +219,22 @@ async function daemonStatus() {
     if (livePort) {
       health = await _httpGet(`http://127.0.0.1:${livePort}/api/health`, 3000);
     }
-  } catch { /* not responding yet */ }
+  } catch {
+    /* not responding yet */
+  }
 
   // scale-to-zero 只读建议(scaleToZeroPolicy 纯叶子;门 KHY_GATEWAY_SCALE_TO_ZERO,opt-in 默认关)。
   // 闲置以 runtime.updatedAt(缺则 startedAt)为粗粒度代理。仅呈现建议,绝不据此自动关停。fail-soft。
   const idleMs = Date.now() - (runtime && runtime.updatedAt ? runtime.updatedAt : info.startedAt);
   let scaleToZero = null;
   try {
-    scaleToZero = require('./gateway/scaleToZeroPolicy')
-      .describeScaleDecision({ idleMs, activeRequests: 0 }, process.env);
-  } catch { /* fail-soft: 顾问字段缺失不影响 status */ }
+    scaleToZero = require('./gateway/scaleToZeroPolicy').describeScaleDecision(
+      { idleMs, activeRequests: 0 },
+      process.env
+    );
+  } catch {
+    /* fail-soft: 顾问字段缺失不影响 status */
+  }
 
   return {
     running: true,
@@ -237,14 +270,22 @@ function _httpGet(url, timeoutMs) {
   return new Promise((resolve, reject) => {
     const req = http.get(url, { timeout: timeoutMs }, (res) => {
       let body = '';
-      res.on('data', (chunk) => { body += chunk; });
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
       res.on('end', () => {
-        try { resolve(JSON.parse(body)); }
-        catch { resolve(body); }
+        try {
+          resolve(JSON.parse(body));
+        } catch {
+          resolve(body);
+        }
       });
     });
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
   });
 }
 

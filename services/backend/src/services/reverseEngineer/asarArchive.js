@@ -28,11 +28,17 @@ const _MAX_HEADER_SIZE = 512 * 1024 * 1024;
  * @returns {number|null} headerSize；畸形返回 null
  */
 function parseHeaderSize(head) {
-  if (!Buffer.isBuffer(head) || head.length < 8) return null;
+  if (!Buffer.isBuffer(head) || head.length < 8) {
+    return null;
+  }
   // size pickle 的载荷恰好是一个 UInt32（4 字节）。
-  if (head.readUInt32LE(0) !== 4) return null;
+  if (head.readUInt32LE(0) !== 4) {
+    return null;
+  }
   const headerSize = head.readUInt32LE(4);
-  if (!Number.isInteger(headerSize) || headerSize <= 0 || headerSize > _MAX_HEADER_SIZE) return null;
+  if (!Number.isInteger(headerSize) || headerSize <= 0 || headerSize > _MAX_HEADER_SIZE) {
+    return null;
+  }
   return headerSize;
 }
 
@@ -43,16 +49,27 @@ function parseHeaderSize(head) {
  * @returns {{header:object, dataOffset:number}|null} 畸形返回 null
  */
 function parseHeader(headerBuf, headerSize) {
-  if (!Buffer.isBuffer(headerBuf) || headerBuf.length < 8) return null;
+  if (!Buffer.isBuffer(headerBuf) || headerBuf.length < 8) {
+    return null;
+  }
   try {
     const jsonLen = headerBuf.readUInt32LE(4); // pickle 内字符串的字节长度
-    if (!Number.isInteger(jsonLen) || jsonLen <= 0 || jsonLen + 8 > headerBuf.length) return null;
+    if (!Number.isInteger(jsonLen) || jsonLen <= 0 || jsonLen + 8 > headerBuf.length) {
+      return null;
+    }
     const header = JSON.parse(headerBuf.toString('utf8', 8, 8 + jsonLen));
-    if (!header || typeof header !== 'object' || !header.files || typeof header.files !== 'object') {
+    if (
+      !header ||
+      typeof header !== 'object' ||
+      !header.files ||
+      typeof header.files !== 'object'
+    ) {
       return null;
     }
     return { header, dataOffset: HEADER_BASE + headerSize };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -63,10 +80,14 @@ function parseHeader(headerBuf, headerSize) {
 function flattenEntries(header) {
   const out = [];
   const walk = (node, prefix) => {
-    if (!node || !node.files || typeof node.files !== 'object') return;
+    if (!node || !node.files || typeof node.files !== 'object') {
+      return;
+    }
     for (const name of Object.keys(node.files)) {
       const info = node.files[name];
-      if (!info || typeof info !== 'object') continue;
+      if (!info || typeof info !== 'object') {
+        continue;
+      }
       const rel = prefix ? `${prefix}/${name}` : name;
       if (info.files && typeof info.files === 'object') {
         walk(info, rel); // 目录
@@ -85,7 +106,11 @@ function flattenEntries(header) {
       }
     }
   };
-  try { walk(header, ''); } catch { /* fail-closed: 返回已收集部分 */ }
+  try {
+    walk(header, '');
+  } catch {
+    /* fail-closed: 返回已收集部分 */
+  }
   return out;
 }
 

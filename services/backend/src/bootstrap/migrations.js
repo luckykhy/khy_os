@@ -25,8 +25,12 @@ function compareVersions(a, b) {
   for (let i = 0; i < 3; i++) {
     const va = pa[i] || 0;
     const vb = pb[i] || 0;
-    if (va < vb) return -1;
-    if (va > vb) return 1;
+    if (va < vb) {
+      return -1;
+    }
+    if (va > vb) {
+      return 1;
+    }
   }
   return 0;
 }
@@ -64,9 +68,34 @@ const MIGRATIONS = [
             if (stat.isFile() && now - stat.mtimeMs > MAX_AGE_MS) {
               fs.unlinkSync(full);
             }
-          } catch { /* skip individual file errors */ }
+          } catch {
+            /* skip individual file errors */
+          }
         }
-      } catch { /* cache dir may not exist yet */ }
+      } catch {
+        /* cache dir may not exist yet */
+      }
+    },
+  },
+  {
+    version: '1.1.0',
+    description:
+      'Register GUI Eval models (GuiEvalTask, GuiEvalRun) — DB tables created by sequelize.sync()',
+    up: async () => {
+      // No-op at the filesystem level. The two new Sequelize models are registered
+      // in platform/packages/shared/src/models/index.js and re-exported by the backend.
+      // sequelize.sync({alter:false}) at startup will CREATE TABLE IF NOT EXISTS for
+      // gui_eval_tasks and gui_eval_runs automatically.
+    },
+  },
+  {
+    version: '1.2.0',
+    description:
+      'Register Web Frontend Eval models (WebFrontendEvalTask, WebFrontendEvalRun) — DB tables created by sequelize.sync()',
+    up: async () => {
+      // No-op at the filesystem level. The two new Sequelize models are registered
+      // in platform/packages/shared/src/models/index.js. sequelize.sync() at startup
+      // will CREATE TABLE IF NOT EXISTS for web_frontend_eval_tasks and web_frontend_eval_runs.
     },
   },
 ];
@@ -90,7 +119,9 @@ function _readVersionFile() {
 function _writeVersionFile(data) {
   try {
     fs.writeFileSync(_getVersionFilePath(), JSON.stringify(data, null, 2));
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 // ── Public API ───────────────────────────────────────────────────────────
@@ -104,9 +135,9 @@ async function runMigrations() {
   const versionData = _readVersionFile();
   const currentVersion = versionData.version || '0.0.0';
 
-  const pending = MIGRATIONS
-    .filter((m) => compareVersions(m.version, currentVersion) > 0)
-    .sort((a, b) => compareVersions(a.version, b.version));
+  const pending = MIGRATIONS.filter((m) => compareVersions(m.version, currentVersion) > 0).sort(
+    (a, b) => compareVersions(a.version, b.version)
+  );
 
   if (pending.length === 0) {
     state.set('bootstrapVersion', currentVersion);
@@ -135,7 +166,9 @@ async function runMigrations() {
           description: migration.description,
           error: err.message,
         });
-      } catch { /* logger not available */ }
+      } catch {
+        /* logger not available */
+      }
     }
   }
 

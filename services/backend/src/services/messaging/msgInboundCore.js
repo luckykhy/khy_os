@@ -28,7 +28,9 @@ const crypto = require('crypto');
 function _safeEq(a, b) {
   const ba = Buffer.from(String(a == null ? '' : a), 'utf8');
   const bb = Buffer.from(String(b == null ? '' : b), 'utf8');
-  if (ba.length !== bb.length || ba.length === 0) return false;
+  if (ba.length !== bb.length || ba.length === 0) {
+    return false;
+  }
   try {
     return crypto.timingSafeEqual(ba, bb);
   } catch {
@@ -38,18 +40,27 @@ function _safeEq(a, b) {
 
 /** 去 PKCS7 padding,pad 值越界时保守返回原 buffer。 */
 function _pkcs7strip(buf) {
-  if (!buf || !buf.length) return buf || Buffer.alloc(0);
+  if (!buf || !buf.length) {
+    return buf || Buffer.alloc(0);
+  }
   const pad = buf[buf.length - 1];
-  if (pad < 1 || pad > 32 || pad > buf.length) return buf;
+  if (pad < 1 || pad > 32 || pad > buf.length) {
+    return buf;
+  }
   return buf.slice(0, buf.length - pad);
 }
 
 /** 从 XML 里取某个标签内容(优先 CDATA),取不到返回 ''。 */
 function _xmlTag(xml, tag) {
   const s = String(xml == null ? '' : xml);
-  const re = new RegExp(`<${tag}>\\s*(?:<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>|([\\s\\S]*?))\\s*</${tag}>`, 'i');
+  const re = new RegExp(
+    `<${tag}>\\s*(?:<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>|([\\s\\S]*?))\\s*</${tag}>`,
+    'i'
+  );
   const m = re.exec(s);
-  if (!m) return '';
+  if (!m) {
+    return '';
+  }
   return (m[1] != null ? m[1] : m[2] != null ? m[2] : '').trim();
 }
 
@@ -67,7 +78,9 @@ function dingtalkSign(secret, timestamp) {
  */
 function verifyDingtalk(args = {}) {
   const { secret, timestamp, sign } = args;
-  if (!secret || timestamp == null || !sign) return false;
+  if (!secret || timestamp == null || !sign) {
+    return false;
+  }
   return _safeEq(dingtalkSign(secret, timestamp), sign);
 }
 
@@ -90,11 +103,15 @@ function parseDingtalk(payload) {
 
 /** AES-256-CBC 解密飞书加密事件。key = sha256(encryptKey);iv = 密文前 16B。 */
 function feishuDecrypt(encryptB64, encryptKey) {
-  if (!encryptB64 || !encryptKey) return { ok: false, error: '飞书解密需要 encrypt 与 encryptKey。' };
+  if (!encryptB64 || !encryptKey) {
+    return { ok: false, error: '飞书解密需要 encrypt 与 encryptKey。' };
+  }
   try {
     const key = crypto.createHash('sha256').update(String(encryptKey), 'utf8').digest(); // 32B
     const data = Buffer.from(String(encryptB64), 'base64');
-    if (data.length <= 16) return { ok: false, error: '飞书密文长度不足。' };
+    if (data.length <= 16) {
+      return { ok: false, error: '飞书密文长度不足。' };
+    }
     const iv = data.slice(0, 16);
     const ct = data.slice(16);
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
@@ -119,11 +136,16 @@ function handleFeishu(body, opts = {}) {
   // 加密事件:{ encrypt: '...' }
   if (evt && typeof evt.encrypt === 'string') {
     const dec = feishuDecrypt(evt.encrypt, opts.encryptKey);
-    if (!dec.ok) return dec;
+    if (!dec.ok) {
+      return dec;
+    }
     try {
       evt = JSON.parse(dec.plaintext);
     } catch (err) {
-      return { ok: false, error: `飞书解密后 JSON 解析失败:${err && err.message ? err.message : String(err)}` };
+      return {
+        ok: false,
+        error: `飞书解密后 JSON 解析失败:${err && err.message ? err.message : String(err)}`,
+      };
     }
   }
 
@@ -182,7 +204,9 @@ function wecomSignature(token, timestamp, nonce, encrypt) {
 /** 校验企业微信 msg_signature。 */
 function verifyWecom(args = {}) {
   const { token, timestamp, nonce, encrypt, msgSignature } = args;
-  if (!token || timestamp == null || nonce == null || !encrypt || !msgSignature) return false;
+  if (!token || timestamp == null || nonce == null || !encrypt || !msgSignature) {
+    return false;
+  }
   return _safeEq(wecomSignature(token, timestamp, nonce, encrypt), msgSignature);
 }
 
@@ -196,21 +220,32 @@ function wecomAesKey(encodingAesKey) {
  * 明文布局 = [16B 随机][4B BE 明文长度][明文][receiveid]。
  */
 function wecomDecrypt(encryptB64, encodingAesKey) {
-  if (!encryptB64 || !encodingAesKey) return { ok: false, error: '企业微信解密需要 encrypt 与 EncodingAESKey。' };
+  if (!encryptB64 || !encodingAesKey) {
+    return { ok: false, error: '企业微信解密需要 encrypt 与 EncodingAESKey。' };
+  }
   try {
     const key = wecomAesKey(encodingAesKey);
-    if (key.length !== 32) return { ok: false, error: 'EncodingAESKey 解出的密钥长度非 32 字节。' };
+    if (key.length !== 32) {
+      return { ok: false, error: 'EncodingAESKey 解出的密钥长度非 32 字节。' };
+    }
     const iv = key.slice(0, 16);
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
     decipher.setAutoPadding(false);
-    const bytes = _pkcs7strip(Buffer.concat([decipher.update(Buffer.from(String(encryptB64), 'base64')), decipher.final()]));
-    if (bytes.length < 20) return { ok: false, error: '企业微信明文长度不足。' };
+    const bytes = _pkcs7strip(
+      Buffer.concat([decipher.update(Buffer.from(String(encryptB64), 'base64')), decipher.final()])
+    );
+    if (bytes.length < 20) {
+      return { ok: false, error: '企业微信明文长度不足。' };
+    }
     const msgLen = bytes.readUInt32BE(16);
     const msg = bytes.slice(20, 20 + msgLen).toString('utf8');
     const receiveId = bytes.slice(20 + msgLen).toString('utf8');
     return { ok: true, msg, receiveId };
   } catch (err) {
-    return { ok: false, error: `企业微信解密失败:${err && err.message ? err.message : String(err)}` };
+    return {
+      ok: false,
+      error: `企业微信解密失败:${err && err.message ? err.message : String(err)}`,
+    };
   }
 }
 
@@ -230,18 +265,24 @@ function handleWecom(args = {}) {
       return { ok: false, error: '企业微信 echostr 签名校验失败。' };
     }
     const dec = wecomDecrypt(args.echostr, encodingAesKey);
-    if (!dec.ok) return dec;
+    if (!dec.ok) {
+      return dec;
+    }
     return { ok: true, kind: 'verify', plaintext: dec.msg, receiveId: dec.receiveId };
   }
 
   // POST 事件
   const encrypt = _xmlTag(args.xmlBody, 'Encrypt');
-  if (!encrypt) return { ok: false, error: '企业微信回调 XML 未找到 <Encrypt>。' };
+  if (!encrypt) {
+    return { ok: false, error: '企业微信回调 XML 未找到 <Encrypt>。' };
+  }
   if (!verifyWecom({ token, timestamp, nonce, encrypt, msgSignature })) {
     return { ok: false, error: '企业微信 msg_signature 校验失败。' };
   }
   const dec = wecomDecrypt(encrypt, encodingAesKey);
-  if (!dec.ok) return dec;
+  if (!dec.ok) {
+    return dec;
+  }
   return { ok: true, kind: 'event', message: parseWecomMessage(dec.msg) };
 }
 

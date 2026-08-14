@@ -75,7 +75,11 @@ function dupMaxFileBytes() {
 
 /** Master kill-switch. KHY_PROJECT_HYGIENE=off disables all hygiene checks. */
 function enabled() {
-  return String(process.env.KHY_PROJECT_HYGIENE || '').trim().toLowerCase() !== 'off';
+  return (
+    String(process.env.KHY_PROJECT_HYGIENE || '')
+      .trim()
+      .toLowerCase() !== 'off'
+  );
 }
 
 module.exports = {

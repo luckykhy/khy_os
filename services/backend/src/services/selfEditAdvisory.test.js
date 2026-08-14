@@ -8,8 +8,8 @@
  * pass·fail / 安装态降级 / 门控关→null)。
  */
 
-const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
+const { describe, test } = require('node:test');
 
 const m = require('./selfEditAdvisory');
 
@@ -21,7 +21,11 @@ describe('门控梯 — 默认开,仅显式 falsy 关', () => {
   });
   test('显式 falsy(大小写/空白不敏感)→ 关', () => {
     for (const v of ['0', 'false', 'off', 'no', 'OFF', ' No ']) {
-      assert.equal(m.selfEditAdvisoryEnabled({ KHY_SELF_EDIT_ADVISORY: v }), false, `advisory ${v}`);
+      assert.equal(
+        m.selfEditAdvisoryEnabled({ KHY_SELF_EDIT_ADVISORY: v }),
+        false,
+        `advisory ${v}`
+      );
       assert.equal(m.selfEditWatchEnabled({ KHY_SELF_EDIT_WATCH: v }), false, `watch ${v}`);
     }
   });
@@ -54,8 +58,14 @@ describe('isMirroredSourcePath — 三 payload 命中,bundle 内与测试文件�
     assert.equal(m.isMirroredSourcePath('./services\\backend\\src\\a.js').mirrored, true);
   });
   test('bundle 树内的文件不算源', () => {
-    assert.equal(m.isMirroredSourcePath('platform/khy_os/bundled/services/backend/src/x.js').mirrored, false);
-    assert.equal(m.isMirroredSourcePath('packaging/npm/bundled/services/backend/src/x.js').mirrored, false);
+    assert.equal(
+      m.isMirroredSourcePath('platform/khy_os/bundled/services/backend/src/x.js').mirrored,
+      false
+    );
+    assert.equal(
+      m.isMirroredSourcePath('packaging/npm/bundled/services/backend/src/x.js').mirrored,
+      false
+    );
   });
   test('测试文件不进载荷 → 不算源', () => {
     assert.equal(m.isMirroredSourcePath('services/backend/src/x.test.js').mirrored, false);
@@ -89,7 +99,10 @@ describe('computeMirrorPaths — 映射到两 bundle 树', () => {
 
 describe('detectPureLeaf — 标记 + 契约词同现于首块注释', () => {
   test('自声明纯叶子 → true', () => {
-    assert.equal(m.detectPureLeaf('/**\n * foo — 纯叶子(零 IO、确定性)。\n */\nmodule.exports={};'), true);
+    assert.equal(
+      m.detectPureLeaf('/**\n * foo — 纯叶子(零 IO、确定性)。\n */\nmodule.exports={};'),
+      true
+    );
   });
   test('pure leaf 英文变体 → true', () => {
     assert.equal(m.detectPureLeaf('/**\n * pure-leaf: deterministic 单一真源\n */'), true);
@@ -107,13 +120,19 @@ describe('buildSelfEditAdvisory', () => {
   const rel = 'services/backend/src/services/x.js';
 
   test('已同步 + 非叶子 + 守卫全过', () => {
-    const r = m.buildSelfEditAdvisory({
-      repoRel: rel,
-      isLeaf: false,
-      mirrorState: { missing: [], drift: [] },
-      guardResults: [{ name: 'leaf-contract', ok: true }, { name: 'model-hardcoding', ok: true }],
-      guardsAvailable: true,
-    }, {});
+    const r = m.buildSelfEditAdvisory(
+      {
+        repoRel: rel,
+        isLeaf: false,
+        mirrorState: { missing: [], drift: [] },
+        guardResults: [
+          { name: 'leaf-contract', ok: true },
+          { name: 'model-hardcoding', ok: true },
+        ],
+        guardsAvailable: true,
+      },
+      {}
+    );
     assert.ok(r);
     assert.match(r.humanLine, /镜像已同步/);
     assert.match(r.humanLine, /✓ leaf-contract/);
@@ -124,13 +143,27 @@ describe('buildSelfEditAdvisory', () => {
   });
 
   test('漂移 + 叶子 + 守卫失败(内联 error 计数与样本)', () => {
-    const r = m.buildSelfEditAdvisory({
-      repoRel: rel,
-      isLeaf: true,
-      mirrorState: { missing: ['packaging/npm/bundled/services/backend/src/services/x.js'], drift: [] },
-      guardResults: [{ name: 'model-hardcoding', ok: false, errorCount: 1, warnCount: 0, sample: "'claude-3'" }],
-      guardsAvailable: true,
-    }, {});
+    const r = m.buildSelfEditAdvisory(
+      {
+        repoRel: rel,
+        isLeaf: true,
+        mirrorState: {
+          missing: ['packaging/npm/bundled/services/backend/src/services/x.js'],
+          drift: [],
+        },
+        guardResults: [
+          {
+            name: 'model-hardcoding',
+            ok: false,
+            errorCount: 1,
+            warnCount: 0,
+            sample: "'claude-3'",
+          },
+        ],
+        guardsAvailable: true,
+      },
+      {}
+    );
     assert.ok(r);
     assert.match(r.humanLine, /⚠ 需同步/);
     assert.match(r.humanLine, /纯叶子契约/);
@@ -142,13 +175,16 @@ describe('buildSelfEditAdvisory', () => {
   });
 
   test('安装态(守卫不可用)→ 降级为手动提示,不假装跑过', () => {
-    const r = m.buildSelfEditAdvisory({
-      repoRel: rel,
-      isLeaf: false,
-      mirrorState: { missing: [], drift: [] },
-      guardResults: [],
-      guardsAvailable: false,
-    }, {});
+    const r = m.buildSelfEditAdvisory(
+      {
+        repoRel: rel,
+        isLeaf: false,
+        mirrorState: { missing: [], drift: [] },
+        guardResults: [],
+        guardsAvailable: false,
+      },
+      {}
+    );
     assert.ok(r);
     assert.match(r.humanLine, /安装态无 scripts/);
     assert.match(r.aiNote, /安装态/);
@@ -162,7 +198,10 @@ describe('buildSelfEditAdvisory', () => {
   test('门控关 → null(逐字节回退)', () => {
     assert.equal(m.buildSelfEditAdvisory({ repoRel: rel }, { KHY_SELF_EDIT_ADVISORY: '0' }), null);
     // env 也可经 p.env 传入
-    assert.equal(m.buildSelfEditAdvisory({ repoRel: rel, env: { KHY_SELF_EDIT_ADVISORY: 'off' } }), null);
+    assert.equal(
+      m.buildSelfEditAdvisory({ repoRel: rel, env: { KHY_SELF_EDIT_ADVISORY: 'off' } }),
+      null
+    );
   });
 
   test('坏输入不抛', () => {

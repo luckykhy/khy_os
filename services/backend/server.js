@@ -34,19 +34,58 @@ const path = require('path');
 // spawn. Prevents the "black box flicker" when this server runs. Reuses the
 // central patch (win32-only, gated KHY_WINDOWS_SPAWN_HIDE, idempotent,
 // fail-soft); no-op on non-win32. Must precede the child_process require below.
-try { require('./src/bootstrap/windowsSpawnHardening').installWindowsSpawnHardening(); } catch { /* best effort */ }
+try {
+  require('./src/bootstrap/windowsSpawnHardening').installWindowsSpawnHardening();
+} catch {
+  /* best effort */
+}
 const canonicalEnvPath = process.env.KHY_ENV_FILE
   ? path.resolve(process.env.KHY_ENV_FILE)
   : path.resolve(__dirname, '.env');
 require('dotenv').config({ path: canonicalEnvPath });
 
+// ── Shadow startup-phase FSM (observability only, zero behavior change) ──
+// Fail-soft + optional: the stateMachine module must never break server boot.
+// Mounted on `process` so diagnostics can read it from anywhere.
+let _serverStartupFsm = null;
+try {
+  _serverStartupFsm = require('./src/services/stateMachine/startupPhases').createStartupFsm({
+    name: 'server-startup',
+  });
+} catch {
+  /* fsm is optional */
+}
+try {
+  process.__khyServerStartupFsm = _serverStartupFsm;
+} catch {
+  /* best effort */
+}
+// Optional stderr transition logger (KHY_STATE_DEBUG=1 only); fail-soft.
+try {
+  require('./src/services/stateMachine/debugLog').attachDebugLog(
+    _serverStartupFsm,
+    'server-startup'
+  );
+} catch {
+  /* debug log optional */
+}
+if (_serverStartupFsm) _serverStartupFsm.fire('advance', { step: 'dotenv_loaded' }); // -> env_check
+
 // Ensure the JWT signing secret exists before any auth path reads it.
 // Self-provisions + persists a strong secret if the canonical .env lacks one.
 try {
   require('./src/bootstrap/ensureAuthSecret').ensureJwtSecret({
-    log: (m) => { try { console.warn(`  ⚠ ${m}`); } catch { /* ignore */ } },
+    log: (m) => {
+      try {
+        console.warn(`  ⚠ ${m}`);
+      } catch {
+        /* ignore */
+      }
+    },
   });
-} catch { /* helper unavailable — validateRequiredEnv below will surface it */ }
+} catch {
+  /* helper unavailable — validateRequiredEnv below will surface it */
+}
 
 const { applyEnvDefaults, validateRequiredEnv } = require('./src/config/env');
 
@@ -64,13 +103,17 @@ const {
 } = require('./src/observability');
 
 applyEnvDefaults();
-validateRequiredEnv();
+if (typeof validateRequiredEnv === 'function') {
+  validateRequiredEnv();
+}
 
 // Install crash recovery early (before any async work)
 try {
   const crashRecovery = require('./src/services/crashRecovery');
   crashRecovery.install({ logger: console });
-} catch { /* crashRecovery not available */ }
+} catch {
+  /* crashRecovery not available */
+}
 
 patchExpressAsync();
 
@@ -79,16 +122,32 @@ initializeOpenTelemetry({
   serviceVersion: backendVersion,
   logger: console,
 });
+if (_serverStartupFsm) _serverStartupFsm.fire('advance', { step: 'otel_init' }); // -> modules_load
 
-
-
-// 生产环境下禁用控制台输出，避免日志噪音影响性能
+// 生产环境下禁止 debug 级别控制台输出，保留 warn/error 用于运维告警
 if (process.env.NODE_ENV === 'production') {
-
-  console.log = () => {};
-
+  const _origLog = console.log;
+  console.log = (...args) => {
+    // Still let through startup banner messages (they contain health check URLs, port info)
+    // L1: 加 u flag 以正确匹配 emoji（星标/占位符等码点）
+    if (args.length > 0 && typeof args[0] === 'string' && args[0].match(/^[\s]*[⚡🚀⚠✗✓☐]/u)) {
+      _origLog(...args);
+      return;
+    }
+    // M2: 非 banner 日志路由到 logger，避免静默丢弃（此闭包仅在 logger 就绪后被调用）
+    try {
+      logger.info(args.map(String).join(' '));
+    } catch {
+      /* logger 尚未就绪时忽略 */
+    }
+  };
   console.debug = () => {};
-
+  console.warn = (...args) => {
+    _origLog('[WARN]', ...args);
+  };
+  console.error = (...args) => {
+    _origLog('[ERROR]', ...args);
+  };
 }
 
 // ─── 核心依赖导入 ──────────────────────────────────────────────────────
@@ -106,14 +165,6 @@ const WebSocket = require('ws');
 let { sequelize, initDatabase } = require('./src/config/database');
 
 const models = require('./src/models'); // 加载所有模型
-
-const realtimeDataService = require('./src/services/realtimeDataService');
-
-const notificationService = require('./src/services/notificationService');
-
-const instrumentSyncService = require('./src/services/instrumentSyncService'); // Instrument auto-sync service
-
-const authSessionService = require('./src/services/authSessionService');
 
 const { spawn } = require('child_process');
 
@@ -136,7 +187,14 @@ const { apiLimiter, authLimiter, aiLimiter } = require('./src/middleware/rateLim
 const { authMiddleware } = require('./src/middleware/auth');
 const { AI_BACKEND_URL, BACKEND_PORT } = require('./src/constants/serviceDefaults');
 
-
+// ─── 延迟初始化的服务层单例（在后台启动 IIFE 中赋值）────────────────────
+// C1+C2: 这些服务被健康检查、WebSocket handler、优雅关闭 hooks 引用，
+// 必须在模块顶层用 let 声明并初始化为 null，避免 IIFE 内 const 声明导致
+// 外部引用抛 ReferenceError（被各层 try-catch 静默吞掉）。所有使用点需 null 守卫。
+let realtimeDataService = null;
+let notificationService = null;
+let instrumentSyncService = null;
+let authSessionService = null;
 
 // ─── 路由模块导入 ──────────────────────────────────────────────────────
 // 按五层架构分组导入所有 API 路由（对应论文第4章 §4.2 路由层设计）
@@ -163,8 +221,6 @@ const dashboardRoutes = require('./src/routes/dashboard');
 
 const passwordResetRoutes = require('./src/routes/passwordReset');
 
-
-
 const tradeRoutes = require('./src/routes/trade');
 
 const tradesRoutes = require('./src/routes/trades'); // 交易记录路由
@@ -186,8 +242,10 @@ const replayRoutes = require('./src/routes/replay'); // 数据回放路由
 const remoteSshRoutes = require('./src/routes/remoteSsh'); // 远程 SSH 会话管理
 const largeTaskRoutes = require('./src/routes/largeTasks'); // 大型任务运行时控制面
 const aiGatewayPaymentsRoutes = require('./src/routes/aiGatewayPayments'); // AI 网关支付订单本地闭环
+const videoRoutes = require('./src/routes/video'); // 视频生成（文生视频 / 图生视频 / 关键帧动画）
+const imageRoutes = require('./src/routes/image'); // 图像生成（文生图 / 图生图，Agnes Image 2.1 Flash）
 
-
+if (_serverStartupFsm) _serverStartupFsm.fire('advance', { step: 'routes_loaded' }); // -> service_discover
 
 // ─── 创建 Express 应用、HTTP 服务器和 WebSocket 服务器 ─────────────────
 // 三者共享同一端口，HTTP 与 WebSocket 在同一进程中运行（对应论文第4章 §4.1 系统架构）
@@ -232,11 +290,14 @@ function _discoverPgPaths() {
   const versions = [18, 17, 16, 15, 14];
   const prefixes = ['Program Files', 'Program Files (x86)'];
   const drives = [];
-  for (let code = 67; code <= 90; code++) { // C..Z
+  for (let code = 67; code <= 90; code++) {
+    // C..Z
     const letter = String.fromCharCode(code);
     try {
       if (fs.existsSync(`${letter}:\\`)) drives.push(`${letter}:`);
-    } catch { /* drive not accessible */ }
+    } catch {
+      /* drive not accessible */
+    }
   }
   const paths = [];
   for (const drive of drives) {
@@ -251,9 +312,8 @@ function _discoverPgPaths() {
 
 const parsedPortRetry = Number.parseInt(process.env.PORT_AUTO_RETRY || '20', 10);
 
-const MAX_PORT_RETRY = Number.isFinite(parsedPortRetry) && parsedPortRetry > 0 ? parsedPortRetry : 20;
-
-
+const MAX_PORT_RETRY =
+  Number.isFinite(parsedPortRetry) && parsedPortRetry > 0 ? parsedPortRetry : 20;
 
 // 服务器超时设置：180秒，适配大量历史K线数据加载场景
 // headersTimeout 须略大于 keepAliveTimeout，防止 Node.js 警告
@@ -264,43 +324,47 @@ server.keepAliveTimeout = 180000;
 
 server.headersTimeout = 185000; // 略大于keepAliveTimeout
 
-
-
 // ─── 中间件注册 ──────────────────────────────────────────────────────────
 // Security headers, CORS, JSON parsing, request logging, audit, rate limiting
 // Security headers (helmet)
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],   // SPA bundler needs inline; eval removed for XSS hardening
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      imgSrc: ["'self'", "data:", "blob:", "https:"],
-      connectSrc: ["'self'", "ws:", "wss:", "https:"],             // WebSocket + API calls
-      frameSrc: ["'none'"],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"], // SPA bundler needs inline; eval removed for XSS hardening
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'https:'], // WebSocket + API calls
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false,   // Needed for external chart/data loading
-}));
+    crossOriginEmbedderPolicy: false, // Needed for external chart/data loading
+  })
+);
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (same-origin, curl, mobile apps)
-    if (!origin) return callback(null, true);
-    const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
-      ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(s => s.trim())
-      : _buildDefaultCorsOrigins();
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    callback(new Error('CORS: origin not allowed'));
-  },
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (same-origin, curl, mobile apps)
+      if (!origin) return callback(null, true);
+      const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+        ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+        : _buildDefaultCorsOrigins();
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // L3: 拒绝跨域时返回 (null, false)，让 cors 中间件回退到无 CORS 头的正常响应，
+      // 而非将 Error 抛入 Express 错误处理链（会返回 500）。
+      callback(null, false);
+    },
+    credentials: true,
+  })
+);
 
 app.use(express.json({ limit: '50mb' }));
 
@@ -319,50 +383,36 @@ if (metrics.enabled) {
 }
 
 app.use((req, res, next) => {
-
   // Only set JSON content-type for API routes, not static files
   if (req.path.startsWith('/api') || req.path === '/health') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
   }
 
   next();
-
 });
-
-
 
 // 统一错误响应信封中间件（对应论文第4章 §4.3 统一错误处理）
 // 设计模式：装饰器模式（Decorator），包装 res.json 方法以规范化错误结构
 // 作用：防止原始错误对象泄漏到前端，统一 { success, message } 格式
 
 app.use((req, res, next) => {
-
   const originalJson = res.json.bind(res);
 
   res.json = (payload) => {
-
     if (payload && typeof payload === 'object' && payload.success === false) {
-
       if (payload.error && typeof payload.error !== 'string') {
-
         payload.error = undefined;
-
       }
 
       if (!payload.message) {
-
         payload.message = '请求处理失败';
-
       }
-
     }
 
     return originalJson(payload);
-
   };
 
   next();
-
 });
 
 app.use(requestLogger);
@@ -371,50 +421,46 @@ app.use(auditLog);
 
 app.use('/api', apiLimiter);
 
-
-
 // ============================================================
 // 路由注册区域（对应论文第4章，图5 五层架构路由映射）
 // 第1组：认证与授权（接入与路由层）
 // 设计模式：策略模式（Strategy），authLimiter 按策略限制登录频率
 // ============================================================
-app.use('/api/auth', authLimiter, authRoutes);    // 登录、注册、Token刷新
+app.use('/api/auth', authLimiter, authRoutes); // 登录、注册、Token刷新
 
-app.use('/api/users', userRoutes);                // 用户信息增删改查
+app.use('/api/users', userRoutes); // 用户信息增删改查
 
 // ============================================================
 // 第2组：策略管理（策略适配层）
 // 设计模式：适配器模式（Adapter），将不同策略语言统一为内部可执行格式
 // ============================================================
-app.use('/api/strategies', strategyRoutes);        // 策略 CRUD 和执行
+app.use('/api/strategies', strategyRoutes); // 策略 CRUD 和执行
 
-app.use('/api/strategy', strategyRoutes);          // 单数别名，向后兼容
+app.use('/api/strategy', strategyRoutes); // 单数别名，向后兼容
 
-app.use('/api/backtest', backtestRoutes);          // 回测引擎接口
+app.use('/api/backtest', backtestRoutes); // 回测引擎接口
 
-app.use('/api/backtests', backtestRoutes);         // 复数别名，论文中引用形式
+app.use('/api/backtests', backtestRoutes); // 复数别名，论文中引用形式
 
-app.use('/api/watchlist', watchlistRoutes);        // 自选股管理
+app.use('/api/watchlist', watchlistRoutes); // 自选股管理
 
-app.use('/api/admin', adminRoutes);                // 管理员后台接口
+app.use('/api/admin', adminRoutes); // 管理员后台接口
 
-app.use('/api/stock', stockProxyRoutes);           // 股票数据代理（解决跨域）
+app.use('/api/stock', stockProxyRoutes); // 股票数据代理（解决跨域）
 
-app.use('/api/settings', settingsRoutes);          // 系统设置
+app.use('/api/settings', settingsRoutes); // 系统设置
 
-app.use('/api/dashboard', dashboardRoutes);        // 仪表盘汇总数据
+app.use('/api/dashboard', dashboardRoutes); // 仪表盘汇总数据
 
 app.use('/api/password-reset', passwordResetRoutes); // 密码重置流程
-
-
 
 // ============================================================
 // 第3组：交易与多智能体协同（对应论文第5章 §5.2 多智能体协同层）
 // 设计模式：观察者模式（Observer），智能体之间通过事件通信
 // ============================================================
-app.use('/api/trading', tradeRoutes);              // 交易下单与持仓管理
+app.use('/api/trading', tradeRoutes); // 交易下单与持仓管理
 
-app.use('/api/trades', tradesRoutes);              // 交易历史记录查询
+app.use('/api/trades', tradesRoutes); // 交易历史记录查询
 
 app.use('/api/trading-agents', tradingAgentsRoutes); // 多智能体交易系统
 
@@ -437,8 +483,12 @@ function createAiProxy({ timeout = 30000 } = {}) {
       const url = `${activeAiBackendUrl}${req.originalUrl}`;
       // Security: only forward safe headers (prevent info leak)
       const PROXY_ALLOWED_HEADERS = [
-        'content-type', 'accept', 'accept-language', 'authorization',
-        'user-agent', 'x-request-id'
+        'content-type',
+        'accept',
+        'accept-language',
+        'authorization',
+        'user-agent',
+        'x-request-id',
       ];
       const forwardHeaders = {};
       for (const key of PROXY_ALLOWED_HEADERS) {
@@ -463,7 +513,11 @@ function createAiProxy({ timeout = 30000 } = {}) {
       }
       resp.data.on('error', (streamErr) => {
         if (!res.headersSent) {
-          res.status(502).json({ error: 'AI backend stream error', detail: streamErr.message });
+          res.status(502).json({
+            success: false,
+            message: 'AI backend stream error',
+            detail: streamErr.message,
+          });
         } else {
           res.end();
         }
@@ -471,32 +525,34 @@ function createAiProxy({ timeout = 30000 } = {}) {
       resp.data.pipe(res);
     } catch (err) {
       if (!res.headersSent) {
-        res.status(503).json({ error: 'AI backend unavailable', detail: err.message });
+        res
+          .status(503)
+          .json({ success: false, message: 'AI backend unavailable', detail: err.message });
       }
     }
   };
 }
 
-app.use('/api/ai', authMiddleware, aiLimiter, createAiProxy({ timeout: 120000 }));  // AI 接口代理，超时120秒适配大模型推理
+app.use('/api/ai', authMiddleware, aiLimiter, createAiProxy({ timeout: 120000 })); // AI 接口代理，超时120秒适配大模型推理
 app.use('/api/analysis', (req, res) => res.redirect(307, `/api/ai${req.url}`)); // 分析接口重定向到 AI
 
-app.use('/api/announcements', announcementRoutes);       // 系统公告管理
+app.use('/api/announcements', announcementRoutes); // 系统公告管理
 
-app.use('/api/commands', commandCatalogRoutes);          // 功能索引（命令目录，公开只读）
+app.use('/api/commands', commandCatalogRoutes); // 功能索引（命令目录，公开只读）
 
-app.use('/api/feedback', feedbackRoutes);                // 用户反馈收集
+app.use('/api/feedback', feedbackRoutes); // 用户反馈收集
 
 // ============================================================
 // 第4组：数据治理层（对应论文第4章 §4.4 四级降级数据获取策略）
 // 数据获取优先级：缓存 → AKShare → 备用源 → 本地存储
 // ============================================================
-app.use('/api/comprehensive', comprehensiveDataRoutes);   // 综合数据聚合接口（多源融合）
+app.use('/api/comprehensive', comprehensiveDataRoutes); // 综合数据聚合接口（多源融合）
 
 app.use('/api/comprehensive-data', comprehensiveDataRoutes); // 别名路由
 
-app.use('/api/market', marketRoutes);                     // 市场行情数据
+app.use('/api/market', marketRoutes); // 市场行情数据
 
-app.use('/api/replay', replayRoutes);                     // 历史数据回放（用于策略复盘）
+app.use('/api/replay', replayRoutes); // 历史数据回放（用于策略复盘）
 
 app.use('/api/tick-backtest', require('./src/routes/tickBacktest')); // Tick 级回测引擎
 
@@ -509,32 +565,34 @@ app.use('/api/bank-transfer', require('./src/routes/bankTransfer')); // 银行�
 // ============================================================
 app.use('/api/instruments', require('./src/routes/instruments')); // 金融标的列表（股票/期货/指数）
 
-app.use('/api/favorites', require('./src/routes/favorites'));     // 用户收藏（自选股）
+app.use('/api/favorites', require('./src/routes/favorites')); // 用户收藏（自选股）
 
-app.use('/api/kline-data', require('./src/routes/klineData'));   // K线 OHLCV 数据接口
+app.use('/api/kline-data', require('./src/routes/klineData')); // K线 OHLCV 数据接口
 
-app.use('/api/cache', require('./src/routes/cache'));             // 缓存管理（清理、查看统计）
+app.use('/api/cache', require('./src/routes/cache')); // 缓存管理（清理、查看统计）
 
 app.use('/api/instrument-sync', require('./src/routes/instrumentSync')); // 标的自动同步接口
 
 // ============================================================
 // 第6组：系统管理与外部服务接口
 // ============================================================
-app.use('/api/system', require('./src/routes/system'));       // 系统信息（局域网IP、版本等）
+app.use('/api/system', require('./src/routes/system')); // 系统信息（局域网IP、版本等）
 
-app.use('/api/webauthn', require('./src/routes/webauthn'));   // 生物认证（WebAuthn 指纹/面容）
+app.use('/api/webauthn', require('./src/routes/webauthn')); // 生物认证（WebAuthn 指纹/面容）
 
-app.use('/api/news', authMiddleware, aiLimiter, createAiProxy());  // 新闻资讯（代理到 AI 后端，需认证+限流）
+app.use('/api/news', authMiddleware, aiLimiter, createAiProxy()); // 新闻资讯（代理到 AI 后端，需认证+限流）
 
-app.use('/api/external', require('./src/routes/external'));   // 外部信号 Webhook（JWT 鉴权）
+app.use('/api/external', require('./src/routes/external')); // 外部信号 Webhook（JWT 鉴权）
 app.use('/api/payment-webhooks', require('./src/routes/paymentWebhooks')); // 支付网关公开回调（签名校验）
 
-app.use('/api/api-keys', require('./src/routes/apiKey'));     // API 密钥管理
+app.use('/api/api-keys', require('./src/routes/apiKey')); // API 密钥管理
 
 app.use('/api/downloads', require('./src/routes/downloads')); // 安装包下载（Windows/APK）
-app.use('/api/ai-gateway-admin', require('./src/routes/aiGatewayAdmin'));  // AI 网关管理（本地 Key Pool 管理，需 Admin 认证）
+app.use('/api/ai-gateway-admin', require('./src/routes/aiGatewayAdmin')); // AI 网关管理（本地 Key Pool 管理，需 Admin 认证）
 app.use('/api/ai-gateway/payments', authMiddleware, aiGatewayPaymentsRoutes); // 支付订单（本地实现，避免落到通用 AI 代理）
-app.use('/api/ai-gateway', authMiddleware, aiLimiter, createAiProxy({ timeout: 120000 }));  // AI 网关（代理到 AI 后端，120s 适配大模型推理）
+app.use('/api/ai-gateway', authMiddleware, aiLimiter, createAiProxy({ timeout: 120000 })); // AI 网关（代理到 AI 后端，120s 适配大模型推理）
+app.use('/api/video', authMiddleware, aiLimiter, videoRoutes); // 视频生成（文生视频 / 图生视频 / 关键帧动画，Agnes Video V2.0）
+app.use('/api/image', authMiddleware, aiLimiter, imageRoutes); // 图像生成（文生图 / 图生图，Agnes Image 2.1 Flash）
 app.use('/api/remote/ssh', authMiddleware, remoteSshRoutes); // 远程 SSH 会话与命令预演（需认证）
 app.use('/api/large-tasks', authMiddleware, largeTaskRoutes); // 大型任务调度与审计（需认证）
 app.use('/api/proxy-subscriptions', authMiddleware, require('./src/routes/proxySubscription')); // 代理管理：订阅组导入（需认证，SSRF 校验）
@@ -542,8 +600,8 @@ app.use('/api/proxy-subscriptions', authMiddleware, require('./src/routes/proxyS
 // ============================================================
 // 第7组：AI Chain 子系统（LangChain 兼容 chain.run() 接口）
 // ============================================================
-app.use('/api/chain', require('./src/routes/chain'));  // Chain 执行（WASM + Python 双引擎）
-app.use('/api/llm', require('./src/routes/freeLLM'));  // 免费 LLM 连接测试和状态查询
+app.use('/api/chain', require('./src/routes/chain')); // Chain 执行（WASM + Python 双引擎）
+app.use('/api/llm', require('./src/routes/freeLLM')); // 免费 LLM 连接测试和状态查询
 app.use('/webhooks', require('./src/routes/webhooks')); // 外部渠道回调（Slack Events API 等）
 
 // ─── 服务健康检查端点 ─────────────────────────────────────────────────
@@ -551,63 +609,50 @@ app.use('/webhooks', require('./src/routes/webhooks')); // 外部渠道回调（
 // 部署时 Nginx/Docker 通过此端点判断服务是否可用（对应论文第6章 §6.2 运维监控）
 
 const healthHandler = async (req, res) => {
-
   // Check if request is authenticated for detailed diagnostics
   let isAuthed = false;
   try {
     const authHeader = req.headers.authorization;
-    if (authHeader && process.env.JWT_SECRET) {
+    if (authSessionService && authHeader && process.env.JWT_SECRET) {
       const token = authHeader.split(' ')[1];
       if (token) {
-        const authResult = await authSessionService.authenticateAccessToken(token, { touch: false });
+        const authResult = await authSessionService.authenticateAccessToken(token, {
+          touch: false,
+        });
         if (authResult?.ok && authResult.user?.id) isAuthed = true;
       }
     }
-  } catch { /* not authenticated */ }
+  } catch {
+    /* not authenticated */
+  }
 
   const checks = {
-
     database: { ok: false, detail: 'disconnected' },
 
     cache: { ok: false, detail: 'unknown' },
 
     websocket: { ok: true, detail: `clients:${wss.clients?.size || 0}` },
 
-    instrumentSync: { ok: true, detail: 'running' }
-
+    instrumentSync: { ok: true, detail: 'running' },
   };
 
-
-
   try {
-
     await sequelize.authenticate();
 
     checks.database = { ok: true, detail: 'connected' };
-
   } catch (error) {
-
     checks.database = { ok: false, detail: isAuthed ? error.message : 'error' };
-
   }
 
-
-
   try {
-
     const cacheStats = await require('./src/services/cacheService').getStats();
 
     const isCacheHealthy = cacheStats?.type === 'redis' || cacheStats?.type === 'memory';
 
     checks.cache = { ok: isCacheHealthy, detail: cacheStats?.type || 'unknown' };
-
   } catch (error) {
-
     checks.cache = { ok: false, detail: isAuthed ? error.message : 'error' };
-
   }
-
-
 
   const allOk = Object.values(checks).every((item) => item.ok);
 
@@ -615,13 +660,12 @@ const healthHandler = async (req, res) => {
     // Unauthenticated: return minimal info only
     return res.status(allOk ? 200 : 503).json({
       status: allOk ? 'ok' : 'degraded',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 
   // Authenticated: return full diagnostics
   res.status(allOk ? 200 : 503).json({
-
     status: allOk ? 'ok' : 'degraded',
 
     timestamp: new Date().toISOString(),
@@ -632,10 +676,8 @@ const healthHandler = async (req, res) => {
 
     memoryMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
 
-    checks
-
+    checks,
   });
-
 };
 
 app.get('/health', healthHandler);
@@ -656,13 +698,15 @@ let _bootActivePort = null;
 (async () => {
   try {
     _bootActivePort = await listenWithAutoPort(server, START_PORT, '0.0.0.0');
+    if (_serverStartupFsm)
+      _serverStartupFsm.fire('skip_to_running', { step: 'http_listening', port: _bootActivePort }); // -> running
     startIdleShutdownIfEmpty();
     // 立即获取 IP 信息用于 banner
     const _os = require('os');
     const _nifs = _os.networkInterfaces();
     const _ips = [];
-    Object.keys(_nifs).forEach(iface => {
-      _nifs[iface].forEach(n => {
+    Object.keys(_nifs).forEach((iface) => {
+      _nifs[iface].forEach((n) => {
         if (n.family === 'IPv4' && !n.internal) _ips.push(n.address);
       });
     });
@@ -671,6 +715,15 @@ let _bootActivePort = null;
     if (_ips[0]) console.log(`   http://${_ips[0]}:${_bootActivePort}`);
     console.log(`   ws://localhost:${_bootActivePort}`);
     console.log(`   健康检查: http://localhost:${_bootActivePort}/health\n`);
+
+    // ─── 延迟加载的服务层模块（原同步路径，已推迟到 listen() 之后）──────────
+    // 这些服务仅用于 WebSocket 连接处理和后台任务，不在请求路由路径上。
+    // 推迟加载可将 ~800ms 的服务实例化从冷启动关键路径移除。
+    // C1+C2: 赋值到模块顶层的 let 变量（而非 const），使外部引用可见。
+    realtimeDataService = require('./src/services/realtimeDataService');
+    notificationService = require('./src/services/notificationService');
+    instrumentSyncService = require('./src/services/instrumentSyncService');
+    authSessionService = require('./src/services/authSessionService');
 
     // ─── 后台初始化（不阻塞 HTTP 监听）─────────────────────────────
     const bootStart = Date.now();
@@ -691,7 +744,7 @@ let _bootActivePort = null;
           break;
         } catch (e) {
           if (attempt < maxRetries) {
-            await new Promise(r => setTimeout(r, retryDelay));
+            await new Promise((r) => setTimeout(r, retryDelay));
           } else {
             console.error('Database connection failed:', e.message);
           }
@@ -705,41 +758,80 @@ let _bootActivePort = null;
             try {
               const { runAutoDbMigration } = require('./src/bootstrap/dbAutoMigration');
               await runAutoDbMigration({ silent: true, reason: 'server-startup' });
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+              logger.warn('init:dbMigration failed', { error: e.message });
+            }
             try {
               const useAlterSync = process.env.DB_SYNC_ALTER === 'true';
               await sequelize.sync({ alter: useAlterSync, force: false });
             } catch (e) {
-              try { await sequelize.sync({ force: false }); } catch {}
+              try {
+                await sequelize.sync({ force: false });
+              } catch {}
             }
-            // 管理员账户
-            try {
-              const User = require('./src/models').User;
-              const adminExists = await User.findOne({ where: { username: 'admin' } });
-              if (!adminExists) {
-                const bcrypt = require('bcryptjs');
-                const crypto = require('crypto');
-                const pw = await bcrypt.hash(process.env.DEFAULT_ADMIN_PASSWORD || crypto.randomBytes(16).toString('hex'), 12);
-                const now = new Date().toISOString();
-                await sequelize.query(
-                  'INSERT INTO users (username, password, email, role, status, created_at, updated_at) VALUES (:username, :password, :email, :role, :status, :now, :now)',
-                  { replacements: { username: 'admin', password: pw, email: 'admin@khy-quant.com', role: 'admin', status: 'active', now } }
-                );
-                console.log('Admin user created');
-              }
-            } catch (e) { /* ignore */ }
+            // 默认管理员自动初始化（幂等，失败不阻断启动）
+            const { ensureDefaultAdmin } = require('./src/bootstrap/adminAutoInit');
+            await ensureDefaultAdmin();
             // 默认标的和自选股
             try {
               const { Instrument, Watchlist, User } = require('./src/models');
               const defaultInstruments = [
-                { symbol: 'sh000300', name: '沪深300', type: 'index', market: 'SSE', category: '指数' },
-                { symbol: 'sh000001', name: '上证指数', type: 'index', market: 'SSE', category: '指数' },
-                { symbol: 'sz399001', name: '深证成指', type: 'index', market: 'SZSE', category: '指数' },
-                { symbol: 'sz399006', name: '创业板指', type: 'index', market: 'SZSE', category: '指数' },
-                { symbol: 'rb_main', name: '螺纹钢主力', type: 'futures', market: 'SHFE', category: '期货' },
-                { symbol: 'rb2510', name: '螺纹钢2510', type: 'futures', market: 'SHFE', category: '期货' },
-                { symbol: 'sh600519', name: '贵州茅台', type: 'stock', market: 'SSE', category: 'A股' },
-                { symbol: 'sh600036', name: '招商银行', type: 'stock', market: 'SSE', category: 'A股' },
+                {
+                  symbol: 'sh000300',
+                  name: '沪深300',
+                  type: 'index',
+                  market: 'SSE',
+                  category: '指数',
+                },
+                {
+                  symbol: 'sh000001',
+                  name: '上证指数',
+                  type: 'index',
+                  market: 'SSE',
+                  category: '指数',
+                },
+                {
+                  symbol: 'sz399001',
+                  name: '深证成指',
+                  type: 'index',
+                  market: 'SZSE',
+                  category: '指数',
+                },
+                {
+                  symbol: 'sz399006',
+                  name: '创业板指',
+                  type: 'index',
+                  market: 'SZSE',
+                  category: '指数',
+                },
+                {
+                  symbol: 'rb_main',
+                  name: '螺纹钢主力',
+                  type: 'futures',
+                  market: 'SHFE',
+                  category: '期货',
+                },
+                {
+                  symbol: 'rb2510',
+                  name: '螺纹钢2510',
+                  type: 'futures',
+                  market: 'SHFE',
+                  category: '期货',
+                },
+                {
+                  symbol: 'sh600519',
+                  name: '贵州茅台',
+                  type: 'stock',
+                  market: 'SSE',
+                  category: 'A股',
+                },
+                {
+                  symbol: 'sh600036',
+                  name: '招商银行',
+                  type: 'stock',
+                  market: 'SSE',
+                  category: 'A股',
+                },
               ];
               for (const inst of defaultInstruments) {
                 await Instrument.findOrCreate({ where: { symbol: inst.symbol }, defaults: inst });
@@ -747,117 +839,205 @@ let _bootActivePort = null;
               const adminUser = await User.findOne({ where: { username: 'admin' } });
               if (adminUser) {
                 const defaultWatchlist = [
-                  { symbol: 'sh000300', symbolName: '沪深300', instrumentType: 'index', category: '指数', basePrice: 4660 },
-                  { symbol: 'sh000001', symbolName: '上证指数', instrumentType: 'index', category: '指数', basePrice: 3350 },
-                  { symbol: 'sz399001', symbolName: '深证成指', instrumentType: 'index', category: '指数', basePrice: 10800 },
-                  { symbol: 'rb_main', symbolName: '螺纹钢主力', instrumentType: 'futures', category: '期货', basePrice: 3380 },
-                  { symbol: 'sh600519', symbolName: '贵州茅台', instrumentType: 'stock', category: '股票', basePrice: 1680 },
-                  { symbol: 'sh600036', symbolName: '招商银行', instrumentType: 'stock', category: '股票', basePrice: 38 },
+                  {
+                    symbol: 'sh000300',
+                    symbolName: '沪深300',
+                    instrumentType: 'index',
+                    category: '指数',
+                    basePrice: 4660,
+                  },
+                  {
+                    symbol: 'sh000001',
+                    symbolName: '上证指数',
+                    instrumentType: 'index',
+                    category: '指数',
+                    basePrice: 3350,
+                  },
+                  {
+                    symbol: 'sz399001',
+                    symbolName: '深证成指',
+                    instrumentType: 'index',
+                    category: '指数',
+                    basePrice: 10800,
+                  },
+                  {
+                    symbol: 'rb_main',
+                    symbolName: '螺纹钢主力',
+                    instrumentType: 'futures',
+                    category: '期货',
+                    basePrice: 3380,
+                  },
+                  {
+                    symbol: 'sh600519',
+                    symbolName: '贵州茅台',
+                    instrumentType: 'stock',
+                    category: '股票',
+                    basePrice: 1680,
+                  },
+                  {
+                    symbol: 'sh600036',
+                    symbolName: '招商银行',
+                    instrumentType: 'stock',
+                    category: '股票',
+                    basePrice: 38,
+                  },
                 ];
                 for (const item of defaultWatchlist) {
-                  await Watchlist.findOrCreate({ where: { userId: adminUser.id, symbol: item.symbol }, defaults: { userId: adminUser.id, ...item } });
+                  await Watchlist.findOrCreate({
+                    where: { userId: adminUser.id, symbol: item.symbol },
+                    defaults: { userId: adminUser.id, ...item },
+                  });
                 }
                 console.log('Default instruments and watchlist seeded');
               }
-            } catch (e) { /* ignore */ }
-            // 螺纹钢高频策略模板
+            } catch (e) {
+              logger.warn('init:seedInstruments failed', { error: e.message });
+            }
+            // 螺纹钢高频策略模板（H2: 种子数据已外置到 src/seeds/rebarStrategy.js）
             try {
-              const Strategy = require('./src/models').Strategy;
-              const rebarCode = 'function strategy(data, params) {\n  var emaFast = params.ema_fast || 5;\n  var emaSlow = params.ema_slow || 20;\n  var rsiPeriod = params.rsi_period || 6;\n  var bollPeriod = params.boll_period || 20;\n  var bollStd = params.boll_std || 2;\n  var rsiOversold = params.rsi_oversold || 30;\n  var rsiOverbought = params.rsi_overbought || 75;\n  var signals = [];\n  function calcEMA(values, period) {\n    var ema = [values[0]];\n    var k = 2 / (period + 1);\n    for (var i = 1; i < values.length; i++) { ema.push(values[i] * k + ema[i - 1] * (1 - k)); }\n    return ema;\n  }\n  function calcRSI(closes, period) {\n    var rsi = [];\n    for (var i = 0; i < period; i++) rsi.push(50);\n    var avgGain = 0, avgLoss = 0;\n    for (var j = 1; j <= period; j++) { var d = closes[j] - closes[j - 1]; if (d > 0) avgGain += d; else avgLoss -= d; }\n    avgGain /= period; avgLoss /= period;\n    rsi.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));\n    for (var i = period + 1; i < closes.length; i++) {\n      var diff = closes[i] - closes[i - 1];\n      avgGain = (avgGain * (period - 1) + (diff > 0 ? diff : 0)) / period;\n      avgLoss = (avgLoss * (period - 1) + (diff > 0 ? -diff : 0)) / period;\n      rsi.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));\n    }\n    return rsi;\n  }\n  function calcSMA(values, period) {\n    var sma = [];\n    for (var i = 0; i < values.length; i++) {\n      if (i < period - 1) { sma.push(values[i]); continue; }\n      var sum = 0;\n      for (var j = i - period + 1; j <= i; j++) sum += values[j];\n      sma.push(sum / period);\n    }\n    return sma;\n  }\n  function calcBoll(closes, period, std) {\n    var mid = calcSMA(closes, period);\n    var upper = [], lower = [];\n    for (var i = 0; i < closes.length; i++) {\n      if (i < period - 1) { upper.push(mid[i] + std * 0.01 * mid[i]); lower.push(mid[i] - std * 0.01 * mid[i]); continue; }\n      var sum2 = 0;\n      for (var j = i - period + 1; j <= i; j++) sum2 += (closes[j] - mid[i]) * (closes[j] - mid[i]);\n      var sd = Math.sqrt(sum2 / period);\n      upper.push(mid[i] + std * sd);\n      lower.push(mid[i] - std * sd);\n    }\n    return { mid: mid, upper: upper, lower: lower };\n  }\n  function calcVolMA(data, period) {\n    var vols = data.map(function(d) { return d.volume || 0; });\n    return calcSMA(vols, period);\n  }\n  var closes = data.map(function(d) { return d.close; });\n  var emaF = calcEMA(closes, emaFast);\n  var emaS = calcEMA(closes, emaSlow);\n  var rsi = calcRSI(closes, rsiPeriod);\n  var boll = calcBoll(closes, bollPeriod, bollStd);\n  var volMA = calcVolMA(data, 20);\n  var minBars = Math.max(emaSlow, bollPeriod, rsiPeriod) + 1;\n  for (var i = 0; i < data.length; i++) {\n    if (i < minBars) { signals.push({ type: \'hold\', index: i }); continue; }\n    var c = data[i].close;\n    var vol = data[i].volume || 0;\n    var volRat = volMA[i] > 0 ? vol / volMA[i] : 1;\n    var goldenCross = emaF[i] > emaS[i] && emaF[i - 1] <= emaS[i - 1];\n    var deathCross = emaF[i] < emaS[i] && emaF[i - 1] >= emaS[i - 1];\n    var emaBullish = emaF[i] > emaS[i];\n    var rsiBounce = rsi[i] > rsiOversold && rsi[i - 1] <= rsiOversold && emaBullish;\n    var bollBounce = c > boll.lower[i] && data[i-1].close <= boll.lower[i-1] && emaBullish;\n    if (goldenCross && rsi[i] > rsiOversold) {\n      signals.push({ type: \'buy\', index: i, price: c, time: data[i].time || data[i].date, reason: \'EMA golden cross, RSI=\' + rsi[i].toFixed(1) });\n    } else if (rsiBounce) {\n      signals.push({ type: \'buy\', index: i, price: c, time: data[i].time || data[i].date, reason: \'RSI bounce from oversold=\' + rsi[i].toFixed(1) });\n    } else if (bollBounce && rsi[i] < 50) {\n      signals.push({ type: \'buy\', index: i, price: c, time: data[i].time || data[i].date, reason: \'Bollinger lower bounce, RSI=\' + rsi[i].toFixed(1) });\n    } else if (deathCross) {\n      signals.push({ type: \'sell\', index: i, price: c, time: data[i].time || data[i].date, reason: \'EMA death cross\' });\n    } else if (rsi[i] > rsiOverbought) {\n      signals.push({ type: \'sell\', index: i, price: c, time: data[i].time || data[i].date, reason: \'RSI overbought=\' + rsi[i].toFixed(1) });\n    } else if (c < boll.lower[i] * 0.98) {\n      signals.push({ type: \'sell\', index: i, price: c, time: data[i].time || data[i].date, reason: \'Stop loss below BB lower\' });\n    } else { signals.push({ type: \'hold\', index: i }); }\n  }\n  signals.auxiliaryLines = { ema5: emaF, ema20: emaS, bollUpper: boll.upper, bollMid: boll.mid, bollLower: boll.lower };\n  return signals;\n}';
-              const rebarParams = { ema_fast: 5, ema_slow: 20, rsi_period: 6, boll_period: 20, boll_std: 2, volume_ratio: 1.3, rsi_oversold: 30, rsi_overbought: 75 };
-              const existing = await Strategy.findOne({ where: { name: '螺纹钢主力高频策略' } });
-              if (existing) {
-                await existing.update({ code: rebarCode, parameters: rebarParams });
-              } else {
-                await Strategy.create({ user_id: 1, name: '螺纹钢主力高频策略', description: '基于EMA金叉死叉+布林带+RSI的高频信号策略。', type: 'trend', language: 'javascript', status: 'active', isPublic: true, parameters: rebarParams, code: rebarCode });
-              }
-            } catch (e) { /* ignore */ }
+              const { seedRebarStrategy } = require('./src/seeds/rebarStrategy');
+              await seedRebarStrategy();
+            } catch (e) {
+              logger.warn('init:seedRebarStrategy failed', { error: e.message });
+            }
 
             // 定时任务注册
             try {
               const instrumentService = require('./src/services/instrumentService');
               const cron = require('node-cron');
               cron.schedule('0 2 * * *', async () => {
-                try { await instrumentService.syncInstrumentsFromAData(); } catch {}
+                try {
+                  await instrumentService.syncInstrumentsFromAData();
+                } catch (e) {
+                  logger.warn('cron:instrumentSync failed', { error: e.message });
+                }
               });
               console.log('Cron: 标的数据同步 (每天2:00)');
               const cacheController = require('./src/controllers/cacheController');
               const comprehensiveDataService = require('./src/services/comprehensiveDataService');
               cron.schedule('0 3 * * *', async () => {
                 try {
-                  const instruments = await instrumentService.getInstruments({ status: 'active', limit: 100 });
+                  const instruments = await instrumentService.getInstruments({
+                    status: 'active',
+                    limit: 100,
+                  });
                   for (const inst of instruments) {
                     try {
-                      const klineData = await comprehensiveDataService.getComprehensiveData(inst.symbol, { period: 'daily', limit: 500 });
+                      const klineData = await comprehensiveDataService.getComprehensiveData(
+                        inst.symbol,
+                        { period: 'daily', limit: 500 }
+                      );
                       if (klineData?.kline?.length) {
                         const klineDataService = require('./src/services/klineDataService');
-                        await klineDataService.saveKlineData(inst.symbol, inst.name, 'daily', klineData.kline);
+                        await klineDataService.saveKlineData(
+                          inst.symbol,
+                          inst.name,
+                          'daily',
+                          klineData.kline
+                        );
                       }
-                      await new Promise(r => setTimeout(r, 100));
-                    } catch {}
+                      await new Promise((r) => setTimeout(r, 100));
+                    } catch (e) {
+                      logger.warn('cron:klineData item failed', { error: e.message });
+                    }
                   }
-                } catch {}
+                } catch (e) {
+                  logger.warn('cron:klineData failed', { error: e.message });
+                }
               });
               console.log('Cron: K线数据持久化 (每天3:00)');
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+              logger.warn('cron:register failed', { error: e.message });
+            }
 
             // 标的同步服务
-            try { instrumentSyncService.start(); } catch {}
+            try {
+              if (instrumentSyncService) instrumentSyncService.start();
+            } catch (e) {
+              logger.warn('cron:instrumentSync start failed', { error: e.message });
+            }
 
             // 非关键服务
             try {
               const trainingData = require('./src/services/trainingDataService');
               trainingData.runMaintenance();
-            } catch {}
+            } catch (e) {
+              logger.warn('cron:trainingData maintenance failed', { error: e.message });
+            }
             try {
               const credentialWatcher = require('./src/services/credentialWatcherService');
               credentialWatcher.start();
-            } catch (e) { logger?.warn?.('CredentialWatcher failed', { error: e.message }); }
+            } catch (e) {
+              logger?.warn?.('CredentialWatcher failed', { error: e.message });
+            }
             try {
               const workflowRunWorker = require('./src/services/workflow/workflowRunWorker');
               workflowRunWorker.start();
-            } catch (e) { logger?.warn?.('WorkflowRunWorker failed', { error: e.message }); }
+            } catch (e) {
+              logger?.warn?.('WorkflowRunWorker failed', { error: e.message });
+            }
             try {
               const akshareUpdater = require('./src/services/akshareUpdater');
               akshareUpdater.startScheduler();
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+              logger.warn('init:akshareUpdater failed', { error: e.message });
+            }
 
-            console.log('\n⚡ 后台初始化完成 (' + ((Date.now() - bootStart) / 1000).toFixed(1) + 's)');
+            console.log(
+              '\n⚡ 后台初始化完成 (' + ((Date.now() - bootStart) / 1000).toFixed(1) + 's)'
+            );
           })(),
           (async () => {
             try {
               const networkDetector = require('./src/services/networkDetector');
               await networkDetector.init();
               console.log('Network mode: ' + networkDetector.getDataMode());
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+              logger.warn('init:networkDetector failed', { error: e.message });
+            }
           })(),
           (async () => {
             try {
               const sqliteBackup = require('./src/services/sqliteBackupService');
               sqliteBackup.init();
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+              logger.warn('init:sqliteBackup failed', { error: e.message });
+            }
           })(),
           (async () => {
             try {
               const mlAgentService = require('./src/services/mlAgentService');
               const mlStatus = await mlAgentService.checkPythonRuntimeDependencies();
               if (!mlStatus.ok) console.warn('ML Python dependencies missing');
-            } catch (e) { /* ignore */ }
+            } catch (e) {
+              logger.warn('init:mlAgentDeps failed', { error: e.message });
+            }
           })(),
           (async () => {
             try {
-              const result = await require('./src/services/instrumentService').syncInstrumentsFromAData();
-              console.log('标的同步: ' + result.successCount + ' 成功, ' + result.failCount + ' 失败');
-            } catch (e) { console.error('标的同步失败:', e.message); }
-          })()
+              const result =
+                await require('./src/services/instrumentService').syncInstrumentsFromAData();
+              console.log(
+                '标的同步: ' + result.successCount + ' 成功, ' + result.failCount + ' 失败'
+              );
+            } catch (e) {
+              console.error('标的同步失败:', e.message);
+            }
+          })(),
         ]);
       } else {
         // Even without DB, start non-critical services
-        try { instrumentSyncService.start(); } catch {}
+        try {
+          if (instrumentSyncService) instrumentSyncService.start();
+        } catch (e) {
+          logger.warn('cron:instrumentSync start failed', { error: e.message });
+        }
         try {
           const akshareUpdater = require('./src/services/akshareUpdater');
           akshareUpdater.startScheduler();
-        } catch {}
+        } catch (e) {
+          logger.warn('cron:akshareUpdater failed', { error: e.message });
+        }
       }
 
       // Update bootstrap state
@@ -866,7 +1046,9 @@ let _bootActivePort = null;
         bootstrapState.set('activePort', _bootActivePort);
         bootstrapState.set('dbConnected', _bootDbConnected);
         bootstrapState.set('dbMode', process.env.DB_MODE || null);
-      } catch {}
+      } catch (e) {
+        logger.warn('cron:bootstrapState update failed', { error: e.message });
+      }
     } catch (e) {
       console.warn('后台初始化异常:', e.message);
     }
@@ -885,7 +1067,7 @@ const IDLE_SHUTDOWN_MS = parseInt(process.env.IDLE_SHUTDOWN_MS || '60000', 10); 
 const IDLE_SHUTDOWN_ENABLED = process.env.IDLE_SHUTDOWN !== 'false' && !process.env.DOCKER;
 let _idleShutdownTimer = null;
 const WS_HEARTBEAT_INTERVAL_MS = parseInt(process.env.WS_HEARTBEAT_INTERVAL_MS || '30000', 10); // 30s
-const WS_HEARTBEAT_TIMEOUT_MS = parseInt(process.env.WS_HEARTBEAT_TIMEOUT_MS || '70000', 10);   // 70s
+const WS_HEARTBEAT_TIMEOUT_MS = parseInt(process.env.WS_HEARTBEAT_TIMEOUT_MS || '70000', 10); // 70s
 let _wsHeartbeatTimer = null;
 
 function getActiveWsClientCount() {
@@ -900,7 +1082,10 @@ function getActiveWsClientCount() {
 }
 
 function resetIdleShutdown() {
-  if (_idleShutdownTimer) { clearTimeout(_idleShutdownTimer); _idleShutdownTimer = null; }
+  if (_idleShutdownTimer) {
+    clearTimeout(_idleShutdownTimer);
+    _idleShutdownTimer = null;
+  }
 }
 
 function startIdleShutdownIfEmpty() {
@@ -910,7 +1095,11 @@ function startIdleShutdownIfEmpty() {
   _idleShutdownTimer = setTimeout(() => {
     // Double-check: still no clients?
     if (getActiveWsClientCount() > 0) return;
-    logger.info('No frontend clients connected for ' + (IDLE_SHUTDOWN_MS / 1000) + 's, shutting down to release port');
+    logger.info(
+      'No frontend clients connected for ' +
+        IDLE_SHUTDOWN_MS / 1000 +
+        's, shutting down to release port'
+    );
     requestShutdown('idle-shutdown');
   }, IDLE_SHUTDOWN_MS);
   _idleShutdownTimer.unref();
@@ -932,13 +1121,17 @@ function startWsProtocolHeartbeat() {
       const lastPongAt = client._lastPongAt || 0;
       if (lastPongAt > 0 && now - lastPongAt > WS_HEARTBEAT_TIMEOUT_MS) {
         logger.warn('WebSocket protocol heartbeat timeout, terminating stale client', {
-          elapsedMs: now - lastPongAt
+          elapsedMs: now - lastPongAt,
         });
-        try { client.terminate(); } catch {}
+        try {
+          client.terminate();
+        } catch {}
         continue;
       }
 
-      try { client.ping(); } catch {}
+      try {
+        client.ping();
+      } catch {}
     }
   }, WS_HEARTBEAT_INTERVAL_MS);
 
@@ -954,9 +1147,12 @@ function stopWsProtocolHeartbeat() {
 
 // Endpoint for frontend to explicitly trigger shutdown (e.g., on page unload)
 // Requires admin authentication to prevent unauthorized server termination
-const { authMiddleware: shutdownAuth, adminMiddleware: shutdownAdmin } = require('./src/middleware/auth');
+const {
+  authMiddleware: shutdownAuth,
+  adminMiddleware: shutdownAdmin,
+} = require('./src/middleware/auth');
 app.post('/api/shutdown', shutdownAuth, shutdownAdmin, (req, res) => {
-  res.status(200).json({ ok: true });
+  res.status(200).json({ ok: true, success: true }); // 兼容旧客户端依赖的 ok 字段
   // Delay shutdown slightly to allow response to be sent
   setTimeout(() => requestShutdown('api-shutdown'), 500);
 });
@@ -964,17 +1160,13 @@ app.post('/api/shutdown', shutdownAuth, shutdownAdmin, (req, res) => {
 // API 404 (JSON only)
 
 app.use('/api/*', (req, res) => {
-
   res.status(404).json({
-
     success: false,
 
     message: '接口不存在',
 
-    path: req.originalUrl
-
+    path: req.originalUrl,
   });
-
 });
 
 // ─── 前端静态文件服务（SPA 单页应用） ──────────────────────────────────
@@ -1015,8 +1207,6 @@ if (fs.existsSync(frontendDistPath) && fs.existsSync(path.join(frontendDistPath,
 // 全局错误处理中间件 —— Express 四参数中间件，捕获所有路由中抛出的异常
 app.use(errorHandler);
 
-
-
 // ─── WebSocket 实时通信模块 ────────────────────────────────────────────
 // 用于实时行情推送、系统通知和心跳检测（对应论文第4章 §4.7 实时数据推送）
 // 连接流程：建立连接 → JWT 认证 → 订阅标的 → 接收实时行情
@@ -1028,24 +1218,37 @@ const WS_MAX_CONNECTIONS_PER_MINUTE = 20;
 const WS_WINDOW_MS = 60000;
 
 function wsRateLimitCheck(req) {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || '';
+  // Use req.ip (respects trust proxy setting) when available, fall back to
+  // the socket remote address. Do NOT read x-forwarded-for directly — it is
+  // trivially spoofable from client-side WebSocket connections and would
+  // bypass the per-IP rate limit.
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
   const now = Date.now();
   const log = _wsConnectionLog.get(ip) || [];
-  const recent = log.filter(t => now - t < WS_WINDOW_MS);
+  const recent = log.filter((t) => now - t < WS_WINDOW_MS);
   if (recent.length >= WS_MAX_CONNECTIONS_PER_MINUTE) return false;
   recent.push(now);
   _wsConnectionLog.set(ip, recent);
   // Prevent memory leak: prune stale IPs periodically
   if (_wsConnectionLog.size > 1000) {
     for (const [k, v] of _wsConnectionLog) {
-      if (v.every(t => now - t > WS_WINDOW_MS)) _wsConnectionLog.delete(k);
+      if (v.every((t) => now - t > WS_WINDOW_MS)) _wsConnectionLog.delete(k);
     }
   }
   return true;
 }
 
-wss.on('connection', (ws, req) => {
+// M1+M3: 定时清理 _wsConnectionLog 中的过期条目，避免仅在 size>1000 时才清理
+// 导致的内存缓慢增长。每 60s 扫描一次，.unref() 使其不阻塞进程退出。
+const _wsConnectionLogCleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _wsConnectionLog) {
+    if (v.every((t) => now - t > WS_WINDOW_MS)) _wsConnectionLog.delete(k);
+  }
+}, WS_WINDOW_MS);
+_wsConnectionLogCleanupTimer.unref?.();
 
+wss.on('connection', (ws, req) => {
   if (!wsRateLimitCheck(req)) {
     ws.close(1008, 'Rate limit exceeded');
     return;
@@ -1059,8 +1262,6 @@ wss.on('connection', (ws, req) => {
     ws._lastPongAt = Date.now();
   });
 
-
-
   const subscriptions = new Set();
 
   let userId = null;
@@ -1069,52 +1270,54 @@ wss.on('connection', (ws, req) => {
 
   let isAuthenticated = false;
 
-
-
   ws.on('message', async (message) => {
-
     try {
-
       const data = JSON.parse(message);
-
-
 
       // 处理认证
 
       if (data.type === 'auth') {
-
         try {
-
           const token = data.token;
 
           if (!token) {
+            ws.send(
+              JSON.stringify({
+                type: 'auth_error',
 
-            ws.send(JSON.stringify({
-
-              type: 'auth_error',
-
-              message: '缺少认证令牌'
-
-            }));
+                message: '缺少认证令牌',
+              })
+            );
 
             return;
-
           }
 
-
-
-          const authResult = await authSessionService.authenticateAccessToken(token, { touch: false });
+          if (!authSessionService) {
+            ws.send(
+              JSON.stringify({
+                type: 'auth_error',
+                message: '认证服务尚未就绪，请稍后重试',
+              })
+            );
+            return;
+          }
+          const authResult = await authSessionService.authenticateAccessToken(token, {
+            touch: false,
+          });
           if (!authResult?.ok || !authResult.user) {
-            const messageText = authResult?.code === 'session_revoked' ||
+            const messageText =
+              authResult?.code === 'session_revoked' ||
               authResult?.code === 'session_expired' ||
               authResult?.code === 'token_version_mismatch' ||
               authResult?.code === 'legacy_token_revoked'
-              ? '登录会话已失效，请重新登录'
-              : '认证失败';
-            ws.send(JSON.stringify({
-              type: 'auth_error',
-              message: messageText
-            }));
+                ? '登录会话已失效，请重新登录'
+                : '认证失败';
+            ws.send(
+              JSON.stringify({
+                type: 'auth_error',
+                message: messageText,
+              })
+            );
             return;
           }
 
@@ -1122,155 +1325,124 @@ wss.on('connection', (ws, req) => {
           userRole = authResult.user.role;
           isAuthenticated = true;
 
-          notificationService.registerConnection(ws, userId, userRole);
+          if (notificationService) notificationService.registerConnection(ws, userId, userRole);
 
-          ws.send(JSON.stringify({
-            type: 'auth_success',
-            message: '认证成功',
-            userId,
-            role: userRole
-          }));
+          ws.send(
+            JSON.stringify({
+              type: 'auth_success',
+              message: '认证成功',
+              userId,
+              role: userRole,
+            })
+          );
 
           console.log(`WebSocket用户认证成功: ${authResult.user.username} (${userRole})`);
-
         } catch (error) {
-
           console.error('WebSocket认证失败:', error);
 
-          ws.send(JSON.stringify({
+          ws.send(
+            JSON.stringify({
+              type: 'auth_error',
 
-            type: 'auth_error',
-
-            message: '认证令牌无效'
-
-          }));
-
+              message: '认证令牌无效',
+            })
+          );
         }
 
         return;
-
       }
-
-
 
       // 需要认证的操作
 
       if (!isAuthenticated) {
+        ws.send(
+          JSON.stringify({
+            type: 'error',
 
-        ws.send(JSON.stringify({
-
-          type: 'error',
-
-          message: '请先进行认证'
-
-        }));
+            message: '请先进行认证',
+          })
+        );
 
         return;
-
       }
 
-
-
       if (data.type === 'subscribe') {
-
         // 订阅实时数据
 
         const symbol = data.symbol;
 
         subscriptions.add(symbol);
 
-        realtimeDataService.subscribe(symbol, ws);
+        if (realtimeDataService) realtimeDataService.subscribe(symbol, ws);
 
+        ws.send(
+          JSON.stringify({
+            type: 'subscribed',
 
+            symbol,
 
-        ws.send(JSON.stringify({
-
-          type: 'subscribed',
-
-          symbol,
-
-          message: `已订阅 ${symbol} 的实时数据`
-
-        }));
-
+            message: `已订阅 ${symbol} 的实时数据`,
+          })
+        );
       } else if (data.type === 'unsubscribe') {
-
         // 取消订阅
 
         const symbol = data.symbol;
 
         subscriptions.delete(symbol);
 
-        realtimeDataService.unsubscribe(symbol, ws);
+        if (realtimeDataService) realtimeDataService.unsubscribe(symbol, ws);
 
+        ws.send(
+          JSON.stringify({
+            type: 'unsubscribed',
 
+            symbol,
 
-        ws.send(JSON.stringify({
-
-          type: 'unsubscribed',
-
-          symbol,
-
-          message: `已取消订阅 ${symbol}`
-
-        }));
-
+            message: `已取消订阅 ${symbol}`,
+          })
+        );
       } else if (data.type === 'ping') {
-
         // 心跳检测
 
-        ws.send(JSON.stringify({
+        ws.send(
+          JSON.stringify({
+            type: 'pong',
 
-          type: 'pong',
-
-          timestamp: new Date().toISOString()
-
-        }));
-
+            timestamp: new Date().toISOString(),
+          })
+        );
       } else if (data.type === 'get_stats' && userRole === 'admin') {
-
         // 管理员获取连接统计
 
-        const stats = notificationService.getStats();
+        const stats = notificationService ? notificationService.getStats() : {};
 
-        ws.send(JSON.stringify({
+        ws.send(
+          JSON.stringify({
+            type: 'stats',
 
-          type: 'stats',
-
-          data: stats
-
-        }));
-
+            data: stats,
+          })
+        );
       }
-
     } catch (error) {
-
       console.error('WebSocket消息处理错误:', error);
 
-      ws.send(JSON.stringify({
+      // H3: 不将 error.message 直接回传客户端，仅 dev 模式附带详情
+      const errorPayload = { type: 'error', message: '消息处理失败' };
+      if (process.env.NODE_ENV !== 'production') errorPayload.detail = error.message;
 
-        type: 'error',
-
-        message: error.message
-
-      }));
-
+      ws.send(JSON.stringify(errorPayload));
     }
-
   });
 
-
-
   ws.on('close', () => {
-
     console.log('WebSocket连接关闭');
 
     // 清理所有订阅
 
-    subscriptions.forEach(symbol => {
-
-      realtimeDataService.unsubscribe(symbol, ws);
-
+    subscriptions.forEach((symbol) => {
+      if (realtimeDataService) realtimeDataService.unsubscribe(symbol, ws);
     });
 
     subscriptions.clear();
@@ -1281,68 +1453,49 @@ wss.on('connection', (ws, req) => {
     }, 0);
   });
 
-
-
   ws.on('error', (error) => {
-
-    console.error('WebSocket错误:', error);
-
+    // H3: 不输出完整 error 对象，仅记录错误消息
+    console.error('WebSocket错误:', error?.message || error);
   });
-
-
 
   // 发送欢迎消息
 
-  ws.send(JSON.stringify({
+  ws.send(
+    JSON.stringify({
+      type: 'connected',
 
-    type: 'connected',
-
-    message: '已连接到实时服务，请进行认证'
-
-  }));
-
+      message: '已连接到实时服务，请进行认证',
+    })
+  );
 });
 
 startWsProtocolHeartbeat();
-
-
 
 // ─── Windows 下自动启动 PostgreSQL 服务 ───────────────────────────────
 // 仅 Windows 平台生效：自动检测 PostgreSQL 安装路径并启动服务
 // 支持 C:/D: 盘的 16/17/18 版本自动探测，30秒超时保护
 
 async function autoStartPostgreSQL() {
-
   return new Promise((resolve) => {
-
     try {
-
       console.log('🔍 检查 PostgreSQL 服务状态...');
-
-
 
       // Discover PostgreSQL installation paths dynamically
       // Supports: env override, Windows "Program Files" scan across drives, PATH lookup
       const possiblePaths = _discoverPgPaths();
 
-
-
       let pgPath = null;
 
       let pgData = null;
 
-
-
       // 查找 PostgreSQL 安装路径
 
       for (const basePath of possiblePaths) {
-
         const pgCtlPath = path.join(basePath, 'bin', 'pg_ctl.exe');
 
         const dataPath = path.join(basePath, 'data');
 
         if (fs.existsSync(pgCtlPath) && fs.existsSync(dataPath)) {
-
           pgPath = path.join(basePath, 'bin', 'pg_ctl.exe');
 
           pgData = dataPath;
@@ -1350,290 +1503,181 @@ async function autoStartPostgreSQL() {
           console.log(`✓ 找到 PostgreSQL: ${basePath}`);
 
           break;
-
         }
-
       }
 
-
-
       if (!pgPath) {
-
         console.log('⚠️ PostgreSQL 未安装或未找到，跳过自动启动');
 
         resolve();
 
         return;
-
       }
-
-
 
       // 检查服务状态
 
       const checkProcess = spawn(pgPath, ['status', '-D', pgData], {
-
         stdio: ['pipe', 'pipe', 'pipe'],
 
-        windowsHide: true
-
+        windowsHide: true,
       });
-
-
 
       let checkResolved = false;
 
-
-
       checkProcess.on('exit', (code) => {
-
         if (checkResolved) return;
 
         checkResolved = true;
 
-
-
         if (code === 0) {
-
           console.log('✓ PostgreSQL 服务已在运行');
 
           resolve();
-
         } else {
-
           console.log('🚀 正在启动 PostgreSQL 服务...');
-
-
 
           // 启动 PostgreSQL
 
           const startProcess = spawn(pgPath, ['start', '-D', pgData], {
-
             stdio: ['pipe', 'pipe', 'pipe'],
 
-            windowsHide: true
-
+            windowsHide: true,
           });
-
-
 
           let startResolved = false;
 
-
-
           startProcess.on('exit', (startCode) => {
-
             if (startResolved) return;
 
             startResolved = true;
 
-
-
             if (startCode === 0) {
-
               console.log('✓ PostgreSQL 服务启动成功');
 
               // 等待服务完全启动
 
               setTimeout(() => resolve(), 3000);
-
             } else {
-
               console.log('⚠️ PostgreSQL 服务启动失败，但继续运行');
 
               resolve();
-
             }
-
           });
 
-
-
           startProcess.on('error', (error) => {
-
             if (!startResolved) {
-
               console.error('PostgreSQL 启动错误:', error.message);
 
               startResolved = true;
 
               resolve();
-
             }
-
           });
-
-
 
           // 30秒超时
 
           setTimeout(() => {
-
             if (!startResolved) {
-
               console.log('⏰ PostgreSQL 启动超时，但继续运行');
 
               startResolved = true;
 
               resolve();
-
             }
-
           }, 30000);
-
         }
-
       });
 
-
-
       checkProcess.on('error', (error) => {
-
         if (!checkResolved) {
-
           console.error('PostgreSQL 状态检查错误:', error.message);
 
           checkResolved = true;
 
           resolve();
-
         }
-
       });
-
-
 
       // 10秒超时
 
       setTimeout(() => {
-
         if (!checkResolved) {
-
           console.log('⏰ PostgreSQL 状态检查超时，尝试直接启动');
 
           checkResolved = true;
 
-
-
           // 直接尝试启动
 
           const directStartProcess = spawn(pgPath, ['start', '-D', pgData], {
-
             stdio: ['pipe', 'pipe', 'pipe'],
 
-            windowsHide: true
-
+            windowsHide: true,
           });
-
-
 
           directStartProcess.on('exit', () => {
-
             setTimeout(() => resolve(), 3000);
-
           });
-
-
 
           directStartProcess.on('error', () => {
-
             resolve();
-
           });
-
         }
-
       }, 10000);
-
-
-
     } catch (error) {
-
       console.error('自动启动 PostgreSQL 失败:', error.message);
 
       resolve(); // 即使失败也继续
-
     }
-
   });
-
 }
-
-
 
 // ─── 端口自动递增监听 ─────────────────────────────────────────────────
 // 若指定端口被占用，自动尝试下一个端口，最多重试 MAX_PORT_RETRY 次
 // 避免用户手动修改端口号，提升开箱即用体验
 
 function listenWithAutoPort(serverInstance, startPort, host = '0.0.0.0') {
-
   return new Promise((resolve, reject) => {
-
     const tryListen = (port, attempt) => {
-
       const onError = (error) => {
-
         serverInstance.off('listening', onListening);
 
-
-
         if (error?.code === 'EADDRINUSE' && attempt < MAX_PORT_RETRY) {
-
           const nextPort = port + 1;
 
           logger.warn('Port is in use, retrying next port', {
-
             port,
 
             nextPort,
 
             attempt,
 
-            maxAttempts: MAX_PORT_RETRY
-
+            maxAttempts: MAX_PORT_RETRY,
           });
 
           setTimeout(() => tryListen(nextPort, attempt + 1), 80);
 
           return;
-
         }
 
-
-
         reject(error);
-
       };
 
-
-
       const onListening = () => {
-
         serverInstance.off('error', onError);
 
         resolve(port);
-
       };
-
-
 
       serverInstance.once('error', onError);
 
       serverInstance.once('listening', onListening);
 
       serverInstance.listen(port, host);
-
     };
 
-
-
     tryListen(startPort, 1);
-
   });
-
 }
-
-
 
 /**
  * 主启动函数
@@ -1647,9 +1691,15 @@ async function startServer() {
   try {
     await new Promise((resolve) => {
       const check = setInterval(() => {
-        if (_bootActivePort) { clearInterval(check); resolve(); }
+        if (_bootActivePort) {
+          clearInterval(check);
+          resolve();
+        }
       }, 50);
-      setTimeout(() => { clearInterval(check); resolve(); }, 30000);
+      setTimeout(() => {
+        clearInterval(check);
+        resolve();
+      }, 30000);
     });
   } catch (error) {
     console.error('✗ 服务器启动失败:', error);
@@ -1666,36 +1716,99 @@ async function startServer() {
 // 使用 bootstrap 模块统一编排，5秒总超时保护
 // 设计模式：命令模式（Command），每个清理动作封装为独立的 hook 函数
 try {
-  const { addShutdownHook, registerShutdownHandlers, requestShutdown } = require('./src/bootstrap/shutdown');
-  addShutdownHook('realtimeData', async () => { try { realtimeDataService.cleanup(); } catch {} });
-  addShutdownHook('notifications', async () => { try { notificationService.cleanup(); } catch {} });
-  addShutdownHook('instrumentSync', async () => { try { instrumentSyncService.stop(); } catch {} });
-  addShutdownHook('wsProtocolHeartbeat', async () => { try { stopWsProtocolHeartbeat(); } catch {} });
-  addShutdownHook('idleShutdownTimer', async () => { try { resetIdleShutdown(); } catch {} });
-  addShutdownHook('credentialWatcher', async () => { try { require('./src/services/credentialWatcherService').stop(); } catch {} });
-  addShutdownHook('workflowRunWorker', async () => { try { require('./src/services/workflow/workflowRunWorker').stop(); } catch {} });
-  addShutdownHook('openTelemetry', async () => { try { await shutdownOpenTelemetry(logger); } catch {} });
-  addShutdownHook('httpServer', () => new Promise((resolve) => {
-    const timer = setTimeout(() => { resolve(); }, 3000);
-    server.close(() => {
-      clearTimeout(timer);
-      logger.info('Server closed gracefully');
-      resolve();
-    });
-  }));
+  const {
+    addShutdownHook,
+    registerShutdownHandlers,
+    requestShutdown,
+  } = require('./src/bootstrap/shutdown');
+  addShutdownHook('realtimeData', async () => {
+    try {
+      if (realtimeDataService) realtimeDataService.cleanup();
+    } catch {}
+  });
+  addShutdownHook('notifications', async () => {
+    try {
+      if (notificationService) notificationService.cleanup();
+    } catch {}
+  });
+  addShutdownHook('instrumentSync', async () => {
+    try {
+      if (instrumentSyncService) instrumentSyncService.stop();
+    } catch {}
+  });
+  addShutdownHook('wsProtocolHeartbeat', async () => {
+    try {
+      stopWsProtocolHeartbeat();
+    } catch {}
+  });
+  addShutdownHook('idleShutdownTimer', async () => {
+    try {
+      resetIdleShutdown();
+    } catch {}
+  });
+  addShutdownHook('credentialWatcher', async () => {
+    try {
+      require('./src/services/credentialWatcherService').stop();
+    } catch {}
+  });
+  addShutdownHook('workflowRunWorker', async () => {
+    try {
+      require('./src/services/workflow/workflowRunWorker').stop();
+    } catch {}
+  });
+  addShutdownHook('openTelemetry', async () => {
+    try {
+      await shutdownOpenTelemetry(logger);
+    } catch {}
+  });
+  addShutdownHook('startupFsm', async () => {
+    if (_serverStartupFsm) _serverStartupFsm.fire('shutdown', { step: 'graceful_shutdown' });
+  });
+  addShutdownHook(
+    'httpServer',
+    () =>
+      new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          resolve();
+        }, 3000);
+        server.close(() => {
+          clearTimeout(timer);
+          logger.info('Server closed gracefully');
+          resolve();
+        });
+      })
+  );
   registerShutdownHandlers();
 } catch {
   // Fallback: original inline shutdown if bootstrap module unavailable
   function gracefulShutdown(signal) {
     logger.warn('Shutdown signal received', { signal });
-    try { realtimeDataService.cleanup(); } catch {}
-    try { notificationService.cleanup(); } catch {}
-    try { instrumentSyncService.stop(); } catch {}
-    try { stopWsProtocolHeartbeat(); } catch {}
-    try { resetIdleShutdown(); } catch {}
-    try { require('./src/services/credentialWatcherService').stop(); } catch {}
-    try { require('./src/services/workflow/workflowRunWorker').stop(); } catch {}
-    try { void shutdownOpenTelemetry(logger); } catch {}
+    if (_serverStartupFsm)
+      _serverStartupFsm.fire('shutdown', { step: 'graceful_shutdown', signal });
+    try {
+      if (realtimeDataService) realtimeDataService.cleanup();
+    } catch {}
+    try {
+      if (notificationService) notificationService.cleanup();
+    } catch {}
+    try {
+      if (instrumentSyncService) instrumentSyncService.stop();
+    } catch {}
+    try {
+      stopWsProtocolHeartbeat();
+    } catch {}
+    try {
+      resetIdleShutdown();
+    } catch {}
+    try {
+      require('./src/services/credentialWatcherService').stop();
+    } catch {}
+    try {
+      require('./src/services/workflow/workflowRunWorker').stop();
+    } catch {}
+    try {
+      void shutdownOpenTelemetry(logger);
+    } catch {}
     server.close(() => {
       logger.info('Server closed gracefully');
       process.exit(0);
@@ -1710,35 +1823,23 @@ try {
 // 避免单个请求异常导致整个进程崩溃，提升系统可用性（对应论文第6章 §6.3 容错设计）
 
 process.on('uncaughtException', (error) => {
-
   logger.error('uncaughtException captured', {
-
     message: error.message,
 
-    stack: error.stack
-
+    stack: error.stack,
   });
 
   console.error('[FATAL] Uncaught exception:', error.message);
-
 });
 
-
-
 process.on('unhandledRejection', (reason) => {
-
   const message = reason instanceof Error ? reason.message : String(reason);
 
   const stack = reason instanceof Error ? reason.stack : undefined;
 
   logger.error('unhandledRejection captured', { message, stack });
-
 });
-
-
 
 // 启动入口：调用主启动函数，开始整个系统的初始化流程
 logger.info('Observability OpenTelemetry status', { status: getOpenTelemetryStatus() });
 startServer();
-
-

@@ -67,17 +67,17 @@ test('ProxyManagement: onMounted 拉取出站状态', () => {
 
 test('ProxyManagement: 内核缺失横幅显示确切下载 URL + 落地路径 + 一键复制(coreDownload 接线)', () => {
   // 派生:从 egressStatus.coreStatus.download 取后端 SSOT 描述符。
-  assert.match(VIEW, /const coreDownload = computed\(/)
-  assert.match(VIEW, /coreStatus\?\.download/)
+  assert.match(VIEW, /const coreDownload = computed\(/);
+  assert.match(VIEW, /coreStatus\?\.download/);
   // 横幅:可点下载 URL + 落地目录 + 复制按钮(copyText)。
-  assert.match(VIEW, /coreDownload\.url/)
-  assert.match(VIEW, /coreDownload\.binDir/)
-  assert.match(VIEW, /coreDownload\.version/)
-  assert.match(VIEW, /:href="coreDownload\.url"/)
-  assert.match(VIEW, /function copyText\(/)
-  assert.match(VIEW, /copyText\(coreDownload\.url/)
-})
+  assert.match(VIEW, /coreDownload\.url/);
+  assert.match(VIEW, /coreDownload\.binDir/);
+  assert.match(VIEW, /coreDownload\.version/);
+  assert.match(VIEW, /:href="coreDownload\.url"/);
+  assert.match(VIEW, /function copyText\(/);
+  assert.match(VIEW, /copyText\(coreDownload\.url/);
+});
 
 test('ProxyManagement: 冷门平台无描述符时仍给官方 releases 兜底链接(绝不留死路)', () => {
-  assert.match(VIEW, /MetaCubeX\/mihomo\/releases/)
-})
+  assert.match(VIEW, /MetaCubeX\/mihomo\/releases/);
+});

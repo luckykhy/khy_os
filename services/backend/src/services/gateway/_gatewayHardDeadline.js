@@ -47,15 +47,23 @@ function _isEnabled(name, env) {
     return flagRegistry.isFlagEnabled(name, e);
   } catch {
     const raw = e && e[name];
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !OFF_VALUES.includes(String(raw).trim().toLowerCase());
   }
 }
 
 function _clampTimeout(n) {
-  if (!Number.isFinite(n) || n <= 0) return null;
-  if (n < HARD_TIMEOUT_MIN) return HARD_TIMEOUT_MIN;
-  if (n > HARD_TIMEOUT_MAX) return HARD_TIMEOUT_MAX;
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  if (n < HARD_TIMEOUT_MIN) {
+    return HARD_TIMEOUT_MIN;
+  }
+  if (n > HARD_TIMEOUT_MAX) {
+    return HARD_TIMEOUT_MAX;
+  }
   return n;
 }
 
@@ -80,20 +88,28 @@ function resolveGatewayHardTimeoutMs(opts) {
 
   // 1) 调用方/模型显式旋钮优先。
   const fromOptions = _clampTimeout(Number(o.optionsTimeoutMs));
-  if (fromOptions != null) return fromOptions;
+  if (fromOptions != null) {
+    return fromOptions;
+  }
 
   // 2) 显式 env 覆盖(仅当真的设了值,否则落到任务规模默认)。
   const rawEnv = e && e.KHY_GATEWAY_HARD_TIMEOUT_MS;
   if (rawEnv !== undefined && rawEnv !== null && String(rawEnv).trim() !== '') {
     const parsed = Number.parseInt(String(rawEnv).trim(), 10);
     const clamped = _clampTimeout(parsed);
-    if (clamped != null) return clamped;
+    if (clamped != null) {
+      return clamped;
+    }
   }
 
   // 3) 任务规模保守默认。
   const scale = o.taskScale || {};
-  if (scale.isLargeTask) return HARD_TIMEOUT_DEFAULTS.large;
-  if (scale.isSmallTask) return HARD_TIMEOUT_DEFAULTS.small;
+  if (scale.isLargeTask) {
+    return HARD_TIMEOUT_DEFAULTS.large;
+  }
+  if (scale.isSmallTask) {
+    return HARD_TIMEOUT_DEFAULTS.small;
+  }
   return HARD_TIMEOUT_DEFAULTS.normal;
 }
 
@@ -111,7 +127,9 @@ function createGatewayDeadline(opts) {
   try {
     const o = opts || {};
     const e = _env(o.env);
-    if (!isGatewayHardTimeoutEnabled(e)) return null;
+    if (!isGatewayHardTimeoutEnabled(e)) {
+      return null;
+    }
     const clock = typeof o.nowFn === 'function' ? o.nowFn : Date.now;
     const deadlineMs = resolveGatewayHardTimeoutMs({
       optionsTimeoutMs: o.optionsTimeoutMs,
@@ -127,13 +145,17 @@ function createGatewayDeadline(opts) {
         try {
           const t = Number.isFinite(now) ? now : clock();
           return t >= deadline;
-        } catch { return false; }
+        } catch {
+          return false;
+        }
       },
       remainingMs(now) {
         try {
           const t = Number.isFinite(now) ? now : clock();
           return Math.max(0, deadline - t);
-        } catch { return 0; }
+        } catch {
+          return 0;
+        }
       },
     };
   } catch {
@@ -151,15 +173,25 @@ function resolveMaxTotalAttempts(env) {
   try {
     const raw = e && e.KHY_GATEWAY_MAX_TOTAL_ATTEMPTS;
     // 显式关闭 → 不封顶(逐字节回退今日行为)。
-    if (raw !== undefined && raw !== null && OFF_VALUES.includes(String(raw).trim().toLowerCase())) {
+    if (
+      raw !== undefined &&
+      raw !== null &&
+      OFF_VALUES.includes(String(raw).trim().toLowerCase())
+    ) {
       return Infinity;
     }
     const flagRegistry = require('../flagRegistry');
     const v = flagRegistry.resolveNumeric('KHY_GATEWAY_MAX_TOTAL_ATTEMPTS', e);
-    if (Number.isFinite(v) && v >= 4) return v;
-  } catch { /* fall through */ }
+    if (Number.isFinite(v) && v >= 4) {
+      return v;
+    }
+  } catch {
+    /* fall through */
+  }
   const rawN = Number.parseInt((e && e.KHY_GATEWAY_MAX_TOTAL_ATTEMPTS) || '', 10);
-  if (Number.isFinite(rawN) && rawN >= 4) return Math.min(500, rawN);
+  if (Number.isFinite(rawN) && rawN >= 4) {
+    return Math.min(500, rawN);
+  }
   return 48;
 }
 
@@ -172,7 +204,9 @@ function resolveMaxTotalAttempts(env) {
 function shouldStopForAttemptCap(count, env) {
   try {
     const cap = resolveMaxTotalAttempts(env);
-    if (!Number.isFinite(cap)) return false; // 不封顶
+    if (!Number.isFinite(cap)) {
+      return false;
+    } // 不封顶
     return Number.isFinite(count) && count >= cap;
   } catch {
     return false; // fail-soft:判定失败 ⇒ 不终止(今日行为)

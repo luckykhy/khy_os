@@ -13,10 +13,14 @@
  */
 'use strict';
 
-const { appendLog, readTodayLog, getRecentLogs, getLogFileCount } = require('./dailyLog');
 const { shouldDream, runDream } = require('./autoDream');
-const { activate: activateProactive, deactivate: deactivateProactive, isProactiveActive } = require('./proactive');
 const { readLastConsolidatedAt } = require('./consolidationLock');
+const { appendLog, readTodayLog, getRecentLogs, getLogFileCount } = require('./dailyLog');
+const {
+  activate: activateProactive,
+  deactivate: deactivateProactive,
+  isProactiveActive,
+} = require('./proactive');
 
 // ── Mode Detection ─────────────────────────────────────────────────
 
@@ -27,8 +31,12 @@ const { readLastConsolidatedAt } = require('./consolidationLock');
 function isAssistantMode() {
   // Environment variable
   const env = process.env.KHYQUANT_ASSISTANT_MODE;
-  if (env === 'true' || env === '1') return true;
-  if (env === 'false' || env === '0') return false;
+  if (env === 'true' || env === '1') {
+    return true;
+  }
+  if (env === 'false' || env === '0') {
+    return false;
+  }
 
   // Config file
   try {
@@ -40,7 +48,9 @@ function isAssistantMode() {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       return !!config.assistant;
     }
-  } catch { /* no config */ }
+  } catch {
+    /* no config */
+  }
 
   return false;
 }
@@ -59,12 +69,14 @@ let _dreamingEngine = null;
  * @returns {import('../services/memoryDreaming').MemoryDreaming}
  */
 function _getDreamingEngine() {
-  if (_dreamingEngine) return _dreamingEngine;
+  if (_dreamingEngine) {
+    return _dreamingEngine;
+  }
   const path = require('path');
-  const { getDataDir } = require('../utils/dataHome');
+  const { getMemoryDataDir } = require('../utils/dataHome');
   const { MemoryDreaming } = require('../services/memoryDreaming');
 
-  const memDir = getDataDir('memory');
+  const memDir = getMemoryDataDir();
   let gateway = null;
   try {
     const ai = require('../cli/ai');
@@ -81,14 +93,20 @@ function _getDreamingEngine() {
         },
       };
     }
-  } catch { /* AI not available — engine still runs dedup phases */ }
+  } catch {
+    /* AI not available — engine still runs dedup phases */
+  }
 
   _dreamingEngine = new MemoryDreaming({
     storePath: path.join(memDir, 'dream-store.json'),
     archivePath: path.join(memDir, 'dream-archive.json'),
     gateway,
     onPhaseComplete: (phase, stats) => {
-      try { appendLog(`Dream phase '${phase}' complete: ${JSON.stringify(stats)}`); } catch { /* ignore */ }
+      try {
+        appendLog(`Dream phase '${phase}' complete: ${JSON.stringify(stats)}`);
+      } catch {
+        /* ignore */
+      }
     },
   });
   _dreamingEngine.load();
@@ -114,13 +132,19 @@ function getDreamingEngine() {
 /** KHY_MEMORY_DREAM_PROMOTE — default ON. */
 function _dreamPromoteEnabled() {
   return !['0', 'false', 'off', 'no'].includes(
-    String(process.env.KHY_MEMORY_DREAM_PROMOTE == null ? '' : process.env.KHY_MEMORY_DREAM_PROMOTE).trim().toLowerCase());
+    String(process.env.KHY_MEMORY_DREAM_PROMOTE == null ? '' : process.env.KHY_MEMORY_DREAM_PROMOTE)
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /** KHY_MEMORY_DREAM_DEEP — default OFF (spends AI tokens on synthesis). */
 function _dreamDeepEnabled() {
   return ['1', 'true', 'on', 'yes'].includes(
-    String(process.env.KHY_MEMORY_DREAM_DEEP == null ? '' : process.env.KHY_MEMORY_DREAM_DEEP).trim().toLowerCase());
+    String(process.env.KHY_MEMORY_DREAM_DEEP == null ? '' : process.env.KHY_MEMORY_DREAM_DEEP)
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /**
@@ -134,11 +158,11 @@ function _dreamDeepEnabled() {
 async function _promoteDreamInsights(engine) {
   const fs = require('fs');
   const path = require('path');
-  const { getDataDir } = require('../utils/dataHome');
+  const { getMemoryDataDir } = require('../utils/dataHome');
   const memoryEngine = require('../services/memoryEngine');
   const dreamPromote = memoryEngine.dreamPromote;
 
-  const memDir = getDataDir('memory');
+  const memDir = getMemoryDataDir();
   const ledgerPath = path.join(memDir, 'dream-promoted.json');
 
   // Ledger of already-promoted dream ids (fail-soft → empty Set).
@@ -146,15 +170,25 @@ async function _promoteDreamInsights(engine) {
   try {
     if (fs.existsSync(ledgerPath)) {
       const raw = JSON.parse(fs.readFileSync(ledgerPath, 'utf-8'));
-      if (Array.isArray(raw)) promoted = new Set(raw.map(String));
+      if (Array.isArray(raw)) {
+        promoted = new Set(raw.map(String));
+      }
     }
-  } catch { promoted = new Set(); }
+  } catch {
+    promoted = new Set();
+  }
 
   let entries = [];
-  try { entries = engine.snapshotMemories(); } catch { entries = []; }
+  try {
+    entries = engine.snapshotMemories();
+  } catch {
+    entries = [];
+  }
 
   const selected = dreamPromote.selectPromotable(entries, promoted, process.env);
-  if (!selected || selected.length === 0) return;
+  if (!selected || selected.length === 0) {
+    return;
+  }
 
   const newlyPromoted = [];
   for (const s of selected) {
@@ -167,23 +201,35 @@ async function _promoteDreamInsights(engine) {
       });
       // Any success outcome (write / skip / skip-duplicate) means the insight is
       // now represented in the store → mark the dream id so we skip it next tick.
-      if (r && r.success) newlyPromoted.push(s.id);
-    } catch { /* per-entry fail-soft */ }
+      if (r && r.success) {
+        newlyPromoted.push(s.id);
+      }
+    } catch {
+      /* per-entry fail-soft */
+    }
   }
 
-  if (newlyPromoted.length === 0) return;
-  for (const id of newlyPromoted) promoted.add(id);
+  if (newlyPromoted.length === 0) {
+    return;
+  }
+  for (const id of newlyPromoted) {
+    promoted.add(id);
+  }
   try {
     fs.writeFileSync(ledgerPath, JSON.stringify([...promoted], null, 2));
     appendLog(`Promoted ${newlyPromoted.length} dream insight(s) into markdown memory.`);
-  } catch { /* ledger write best-effort */ }
+  } catch {
+    /* ledger write best-effort */
+  }
 }
 
 /**
  * Activate assistant mode — starts daily logging and proactive ticks.
  */
 function activate() {
-  if (_activated) return;
+  if (_activated) {
+    return;
+  }
   _activated = true;
 
   process.env.KHYQUANT_ASSISTANT_MODE = 'true';
@@ -198,14 +244,18 @@ function activate() {
       try {
         const ai = require('../cli/ai');
         runDream(ai).catch(() => {}); // Fire and forget
-      } catch { /* AI not available */ }
+      } catch {
+        /* AI not available */
+      }
 
       // Orphan engine: run the light dedup phase over the structured dream
       // store. Lossless — duplicates are archived, never destroyed.
       try {
         const engine = _getDreamingEngine();
         engine.runLightPhase().catch(() => {}); // Fire and forget
-      } catch { /* engine unavailable */ }
+      } catch {
+        /* engine unavailable */
+      }
 
       // Bridge high-value cross-memory dream insights into the recallable markdown
       // store (KHY_MEMORY_DREAM_PROMOTE, default on). Optionally run the deep
@@ -216,14 +266,17 @@ function activate() {
         if (_dreamPromoteEnabled()) {
           const engine = _getDreamingEngine();
           if (_dreamDeepEnabled() && typeof engine.runDeepPhase === 'function') {
-            engine.runDeepPhase()
+            engine
+              .runDeepPhase()
               .then(() => _promoteDreamInsights(engine))
               .catch(() => {});
           } else {
             _promoteDreamInsights(engine).catch(() => {});
           }
         }
-      } catch { /* promotion best-effort */ }
+      } catch {
+        /* promotion best-effort */
+      }
     }
   });
 }
@@ -232,7 +285,9 @@ function activate() {
  * Deactivate assistant mode.
  */
 function deactivate() {
-  if (!_activated) return;
+  if (!_activated) {
+    return;
+  }
   _activated = false;
 
   process.env.KHYQUANT_ASSISTANT_MODE = 'false';
@@ -269,13 +324,27 @@ function getStatus() {
  * @param {string} [summary] - Brief summary of the response
  */
 function logInteraction(userInput, summary) {
-  if (!isAssistantMode()) return;
+  if (!isAssistantMode()) {
+    return;
+  }
 
   const entry = summary
     ? `**User:** ${userInput.slice(0, 100)}\n**Summary:** ${summary.slice(0, 200)}`
     : `**User:** ${userInput.slice(0, 100)}`;
 
   appendLog(entry);
+
+  // 承诺提取接线(commitmentTrack 薄壳,KHY_COMMITMENT 门控默认开):把本轮对话交给
+  // commitmentTracker 异步提取承诺/提醒。仅记录提醒数据,绝不执行任何操作。
+  // fail-soft:无 AI chat(headless/单测)/门关/异常 → 静默跳过,不影响对话记录。
+  try {
+    require('../services/commitmentTrack').trackCommitment({
+      userText: userInput,
+      assistantText: summary || '',
+    });
+  } catch {
+    /* best-effort */
+  }
 }
 
 module.exports = {

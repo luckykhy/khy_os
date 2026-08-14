@@ -35,7 +35,9 @@ function defaultDeps() {
     dir: () => getDataDir('deployments'),
     now: () => new Date().toISOString(),
     isAlive: (pid) => {
-      if (!pid) return false;
+      if (!pid) {
+        return false;
+      }
       try {
         process.kill(pid, 0);
         return true;
@@ -54,7 +56,9 @@ function ledgerPath(deps) {
 function load(deps = defaultDeps()) {
   const p = ledgerPath(deps);
   try {
-    if (!deps.fs.existsSync(p)) return [];
+    if (!deps.fs.existsSync(p)) {
+      return [];
+    }
     const raw = deps.fs.readFileSync(p, 'utf8');
     const data = JSON.parse(raw);
     return Array.isArray(data) ? data : [];
@@ -80,8 +84,11 @@ function upsert(record, deps = defaultDeps()) {
     ...record,
     updatedAt: deps.now(),
   };
-  if (idx >= 0) records[idx] = merged;
-  else records.push(merged);
+  if (idx >= 0) {
+    records[idx] = merged;
+  } else {
+    records.push(merged);
+  }
   save(records, deps);
   return merged;
 }

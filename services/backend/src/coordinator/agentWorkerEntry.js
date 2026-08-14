@@ -22,17 +22,23 @@ const _followUpQueue = [];
 // ── IPC send helper ─────────────────────────────────────────────────────
 
 function send(type, payload = {}, requestId) {
-  if (!process.send) return; // not forked
+  if (!process.send) {
+    return;
+  } // not forked
   try {
     process.send(createMessage(type, _agentId || 'unknown', payload, requestId));
-  } catch { /* parent gone */ }
+  } catch {
+    /* parent gone */
+  }
 }
 
 // ── Message handler ─────────────────────────────────────────────────────
 
 process.on('message', async (raw) => {
   const parsed = parseMessage(raw);
-  if (!parsed.valid) return;
+  if (!parsed.valid) {
+    return;
+  }
   const { msg } = parsed;
 
   switch (msg.type) {
@@ -65,7 +71,9 @@ async function handleInit(msg) {
 
     const depth = _context?.depth ?? msg.payload.context?.depth ?? 0;
     const role = _context?.role ?? 'unknown';
-    process.stderr.write(`[AgentWorker:${_agentId}] depth=${depth}, role=${role}, pid=${process.pid}\n`);
+    process.stderr.write(
+      `[AgentWorker:${_agentId}] depth=${depth}, role=${role}, pid=${process.pid}\n`
+    );
 
     send(MSG.READY, { pid: process.pid }, msg.requestId);
 
@@ -84,7 +92,10 @@ async function handleTask(msg) {
   const { prompt, chatOpts: extraOpts } = msg.payload;
 
   try {
-    send(MSG.PROGRESS, { phase: 'loading', message: 'Loading AI pipeline...' });
+    send(MSG.PROGRESS, {
+      phase: 'loading',
+      message: `加载 AI 处理管线（Agent ${_agentId}·角色 ${_context?.role || 'agent'}·深度 ${_context?.depth ?? 0}）...`,
+    });
 
     // Try to load the AI module
     let aiModule;
@@ -94,9 +105,8 @@ async function handleTask(msg) {
       // Fallback: use gateway directly
       const gateway = require('../services/gateway/aiGateway');
       const result = await gateway.generate(prompt);
-      const text = typeof result === 'string'
-        ? result
-        : (result.text || result.reply || JSON.stringify(result));
+      const text =
+        typeof result === 'string' ? result : result.text || result.reply || JSON.stringify(result);
       send(MSG.RESULT, { text, tokens: 0, toolCalls: 0 }, msg.requestId);
       reportMetrics();
       process.exit(0);
@@ -123,25 +133,35 @@ async function handleTask(msg) {
             for (const name of selectToolsToActivate(prompt)) {
               toolRegistry.ensureToolForContext(name, _context);
             }
-          } catch { /* 预激活最佳努力,失败不影响主流程 */ }
+          } catch {
+            /* 预激活最佳努力,失败不影响主流程 */
+          }
           chatOpts.toolDefinitions = toolRegistry.getDefinitionsForContext(_context);
-        } catch { /* fallback: no filtering */ }
+        } catch {
+          /* fallback: no filtering */
+        }
       }
     }
 
-    send(MSG.PROGRESS, { phase: 'running', message: 'Executing task...' });
+    send(MSG.PROGRESS, {
+      phase: 'running',
+      message: `执行任务（Agent ${_agentId}·角色 ${_context?.role || 'agent'}），已提交指令 ${String(prompt || '').length} 字符,等待模型响应...`,
+    });
 
     const result = await aiModule.chat(prompt, chatOpts);
 
-    send(MSG.RESULT, {
-      text: result.reply || result.text || '',
-      tokens: result.tokenUsage?.totalTokens || 0,
-      toolCalls: (result.commands || []).length,
-    }, msg.requestId);
+    send(
+      MSG.RESULT,
+      {
+        text: result.reply || result.text || '',
+        tokens: result.tokenUsage?.totalTokens || 0,
+        toolCalls: (result.commands || []).length,
+      },
+      msg.requestId
+    );
 
     reportMetrics();
     process.exit(0);
-
   } catch (err) {
     if (_aborted) {
       send(MSG.ERROR, { message: 'Task aborted', code: 'ABORTED' }, msg.requestId);
@@ -161,7 +181,10 @@ function handleFollowUp(msg) {
 
 function handleKill(msg) {
   _aborted = true;
-  if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+  if (_heartbeatTimer) {
+    clearInterval(_heartbeatTimer);
+    _heartbeatTimer = null;
+  }
   send(MSG.METRICS, buildMetrics(), msg.requestId);
   // Give pending IPC a moment to flush, then exit
   setTimeout(() => process.exit(0), 100);
@@ -203,7 +226,10 @@ process.on('unhandledRejection', (reason) => {
 // guarantee worker cleanup on both platforms.
 const _onTerminate = () => {
   _aborted = true;
-  if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+  if (_heartbeatTimer) {
+    clearInterval(_heartbeatTimer);
+    _heartbeatTimer = null;
+  }
   reportMetrics();
   setTimeout(() => process.exit(0), 100);
 };

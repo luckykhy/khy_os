@@ -26,7 +26,9 @@
  */
 
 function semanticNumberEnabled(env = process.env) {
-  const flag = String((env && env.KHY_SEMANTIC_NUMBER) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_SEMANTIC_NUMBER) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -43,7 +45,9 @@ const _DECIMAL_LITERAL = /^-?\d+(\.\d+)?$/;
 function coerceNumericLiteral(v) {
   if (typeof v === 'string' && _DECIMAL_LITERAL.test(v)) {
     const n = Number(v);
-    if (Number.isFinite(n)) return n;
+    if (Number.isFinite(n)) {
+      return n;
+    }
   }
   return v;
 }
@@ -61,17 +65,27 @@ function coerceNumericLiteral(v) {
  * @returns {object}  原对象(无变化 / 门控关)或浅拷贝(有形参被转换)。
  */
 function coerceSchemaNumbers(schema, params, env) {
-  if (!semanticNumberEnabled(env)) return params;
-  if (!schema || typeof schema !== 'object') return params;
-  if (!params || typeof params !== 'object' || Array.isArray(params)) return params;
+  if (!semanticNumberEnabled(env)) {
+    return params;
+  }
+  if (!schema || typeof schema !== 'object') {
+    return params;
+  }
+  if (!params || typeof params !== 'object' || Array.isArray(params)) {
+    return params;
+  }
 
   let out = null; // 惰性浅拷贝:只在确有转换时才分配 → 无变化时引用恒等。
   for (const [key, rule] of Object.entries(schema)) {
-    if (!rule || typeof rule !== 'object' || rule.type !== 'number') continue;
+    if (!rule || typeof rule !== 'object' || rule.type !== 'number') {
+      continue;
+    }
     const value = params[key];
     const coerced = coerceNumericLiteral(value);
     if (coerced !== value) {
-      if (!out) out = { ...params };
+      if (!out) {
+        out = { ...params };
+      }
       out[key] = coerced;
     }
   }

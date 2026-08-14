@@ -26,15 +26,23 @@ const { printInfo, printWarn } = require('../formatters');
 
 /** 关键字过滤:工具名 / 别名 / 描述任一命中(大小写不敏感)。 */
 function _filterToolCatalog(catalog, keyword) {
-  const kw = String(keyword || '').trim().toLowerCase();
-  if (!kw) return catalog;
+  const kw = String(keyword || '')
+    .trim()
+    .toLowerCase();
+  if (!kw) {
+    return catalog;
+  }
   const categories = [];
   for (const cat of catalog.categories) {
-    const tools = cat.tools.filter((t) =>
-      t.name.toLowerCase().includes(kw)
-      || (t.desc && t.desc.toLowerCase().includes(kw))
-      || (Array.isArray(t.aliases) && t.aliases.some((a) => a.toLowerCase().includes(kw))));
-    if (tools.length) categories.push({ ...cat, tools });
+    const tools = cat.tools.filter(
+      (t) =>
+        t.name.toLowerCase().includes(kw) ||
+        (t.desc && t.desc.toLowerCase().includes(kw)) ||
+        (Array.isArray(t.aliases) && t.aliases.some((a) => a.toLowerCase().includes(kw)))
+    );
+    if (tools.length) {
+      categories.push({ ...cat, tools });
+    }
   }
   const total = categories.reduce((n, c) => n + c.tools.length, 0);
   return { ...catalog, categories, total };
@@ -47,24 +55,32 @@ function _filterToolCatalog(catalog, keyword) {
  */
 async function handleToolList(subCommand, args = [], options = {}) {
   const env = process.env;
-  const { buildToolCatalog, toolCatalogEnabled } = require('../../services/toolCatalog/toolCatalog');
+  const {
+    buildToolCatalog,
+    toolCatalogEnabled,
+  } = require('../../services/toolCatalog/toolCatalog');
 
   if (!toolCatalogEnabled(env)) {
     printWarn('工具清单已被 KHY_TOOL_CATALOG 禁用（当前为关闭状态）。');
     return true;
   }
 
-  const raw = (subCommand && !subCommand.startsWith('-')) ? subCommand : (args[0] || '');
+  const raw = subCommand && !subCommand.startsWith('-') ? subCommand : args[0] || '';
   const keyword = raw && !raw.startsWith('-') ? raw : '';
   let catalog = buildToolCatalog({}, env);
-  if (keyword) catalog = _filterToolCatalog(catalog, keyword);
+  if (keyword) {
+    catalog = _filterToolCatalog(catalog, keyword);
+  }
 
   if (options.json) {
     console.log(JSON.stringify(catalog, null, 2));
     return true;
   }
 
-  console.log(chalk.bold('\n  🧰 khy 工具清单') + chalk.dim(`  (共 ${catalog.total} 个工具，可 /toollist <关键字> 过滤)\n`));
+  console.log(
+    chalk.bold('\n  🧰 khy 工具清单') +
+      chalk.dim(`  (共 ${catalog.total} 个工具，可 /toollist <关键字> 过滤)\n`)
+  );
   if (catalog.total === 0) {
     printInfo(keyword ? `没有匹配「${keyword}」的工具。` : '当前没有可展示的工具。');
     return true;
@@ -75,7 +91,9 @@ async function handleToolList(subCommand, args = [], options = {}) {
       const name = chalk.green(t.name.padEnd(22));
       const tag = t.readOnly ? chalk.dim('[只读]') : chalk.yellow(`[${t.risk}]`);
       console.log(`    ${name} ${tag}`);
-      if (t.desc) console.log(chalk.dim(`      ${t.desc}`));
+      if (t.desc) {
+        console.log(chalk.dim(`      ${t.desc}`));
+      }
       if (Array.isArray(t.aliases) && t.aliases.length) {
         console.log(chalk.dim(`      别名: ${t.aliases.join(', ')}`));
       }

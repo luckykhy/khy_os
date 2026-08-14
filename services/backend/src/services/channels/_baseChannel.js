@@ -30,7 +30,9 @@ class BaseChannel extends EventEmitter {
   }
 
   /** @returns {boolean} */
-  get connected() { return this._connected; }
+  get connected() {
+    return this._connected;
+  }
 
   /**
    * Connect to the external service.

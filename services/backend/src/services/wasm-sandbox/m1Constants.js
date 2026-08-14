@@ -6,8 +6,12 @@
  */
 
 function toBigInt(value, label = 'value') {
-  if (typeof value === 'bigint') return value;
-  if (typeof value === 'number' && Number.isSafeInteger(value)) return BigInt(value);
+  if (typeof value === 'bigint') {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isSafeInteger(value)) {
+    return BigInt(value);
+  }
   throw new TypeError(`${label} must be a safe integer or bigint`);
 }
 

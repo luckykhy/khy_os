@@ -36,7 +36,9 @@ function _fenceOpenRe() {
     if (_fenceOpenRegexFn === undefined) {
       _fenceOpenRegexFn = require('./fenceLangCharset').fenceOpenRegex;
     }
-    if (typeof _fenceOpenRegexFn === 'function') return _fenceOpenRegexFn(process.env);
+    if (typeof _fenceOpenRegexFn === 'function') {
+      return _fenceOpenRegexFn(process.env);
+    }
   } catch {
     /* 落历史正则 */
   }
@@ -50,11 +52,21 @@ function _fenceOpenRe() {
  * Returns one of: 'heading', 'fence_open', 'table', 'list', 'blank', 'prose'.
  */
 function classifyLine(line) {
-  if (BLANK_RE.test(line)) return 'blank';
-  if (_fenceOpenRe().test(line)) return 'fence_open';
-  if (HEADING_RE.test(line)) return 'heading';
-  if (TABLE_RE.test(line)) return 'table';
-  if (ULIST_RE.test(line) || OLIST_RE.test(line)) return 'list';
+  if (BLANK_RE.test(line)) {
+    return 'blank';
+  }
+  if (_fenceOpenRe().test(line)) {
+    return 'fence_open';
+  }
+  if (HEADING_RE.test(line)) {
+    return 'heading';
+  }
+  if (TABLE_RE.test(line)) {
+    return 'table';
+  }
+  if (ULIST_RE.test(line) || OLIST_RE.test(line)) {
+    return 'list';
+  }
   return 'prose';
 }
 
@@ -70,11 +82,11 @@ class MarkdownStreamState {
     }
     this._renderFn = renderFn;
     this._state = 'prose';
-    this._buffer = '';          // accumulated text for current block
-    this._committed = '';       // all committed (rendered) text
-    this._fenceLang = '';       // language tag of current code fence
-    this._fenceTicks = 3;       // backtick count of the opening fence
-    this._remainder = '';       // partial line not yet terminated by \n
+    this._buffer = ''; // accumulated text for current block
+    this._committed = ''; // all committed (rendered) text
+    this._fenceLang = ''; // language tag of current code fence
+    this._fenceTicks = 3; // backtick count of the opening fence
+    this._remainder = ''; // partial line not yet terminated by \n
   }
 
   /**
@@ -82,7 +94,9 @@ class MarkdownStreamState {
    * @param {string} delta - new text chunk from streaming
    */
   feed(delta) {
-    if (!delta) return;
+    if (!delta) {
+      return;
+    }
 
     // Prepend any leftover partial line from the previous feed
     const input = this._remainder + delta;
@@ -115,7 +129,6 @@ class MarkdownStreamState {
    */
   _processLine(line) {
     switch (this._state) {
-
       case 'code_fence':
         this._handleCodeFenceLine(line);
         break;
@@ -144,9 +157,11 @@ class MarkdownStreamState {
     this._buffer += line + '\n';
     // Closing fence: same or more backticks, optional whitespace
     const trimmed = line.trim();
-    if (trimmed.length >= this._fenceTicks &&
-        /^`+$/.test(trimmed) &&
-        trimmed.length >= this._fenceTicks) {
+    if (
+      trimmed.length >= this._fenceTicks &&
+      /^`+$/.test(trimmed) &&
+      trimmed.length >= this._fenceTicks
+    ) {
       // Verify it is actually all backticks and at least as many as the opener
       const tickCount = trimmed.length;
       if (tickCount >= this._fenceTicks) {
@@ -270,7 +285,7 @@ class MarkdownStreamState {
   _enterFence(line) {
     const m = line.match(_fenceOpenRe());
     this._fenceTicks = m ? m[1].length : 3;
-    this._fenceLang = m ? (m[2] || '') : '';
+    this._fenceLang = m ? m[2] || '' : '';
     this._state = 'code_fence';
     this._buffer = line + '\n';
   }

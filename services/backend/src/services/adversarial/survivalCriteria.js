@@ -52,41 +52,51 @@ const ALL_INVARIANTS = Object.freeze(Object.values(INVARIANTS));
 
 /** 单条不变量判定器：返回 null 表示守住，返回 {detail} 表示破防。 */
 const CHECKERS = Object.freeze({
-  [INVARIANTS.NO_THROW]: (o) => (o.threw
-    ? { detail: `非预期异常逃逸：${(o.error && o.error.name) || 'Error'}: ${(o.error && o.error.message) || ''}`.trim() }
-    : null),
+  [INVARIANTS.NO_THROW]: (o) =>
+    o.threw
+      ? {
+          detail:
+            `非预期异常逃逸：${(o.error && o.error.name) || 'Error'}: ${(o.error && o.error.message) || ''}`.trim(),
+        }
+      : null,
 
-  [INVARIANTS.BOUNDED]: (o) => (o.bounded === false
-    ? { detail: `未在封顶内终止（calls=${o.calls}）——疑似死循环/无限重试` }
-    : null),
+  [INVARIANTS.BOUNDED]: (o) =>
+    o.bounded === false
+      ? { detail: `未在封顶内终止（calls=${o.calls}）——疑似死循环/无限重试` }
+      : null,
 
   [INVARIANTS.NO_SILENT_FAILURE]: (o) => {
     // 静默失败 = 交付空且无任何归因（无 E0x、无兜底、无显式拒损）。
     const empty = _isEmptyOutcome(o.outcome);
     const attributed = o.hasErrorCode || o.hasSalvage || o.rejected;
-    return (empty && !attributed)
+    return empty && !attributed
       ? { detail: '交付为空且无归因（无 E0x / 无兜底 / 无显式拒损）——静默失败' }
       : null;
   },
 
-  [INVARIANTS.ALWAYS_SALVAGE]: (o) => (o.hasSalvage
-    ? null
-    : { detail: '降级耗尽后未交付结构化 salvage——躺平' }),
+  [INVARIANTS.ALWAYS_SALVAGE]: (o) =>
+    o.hasSalvage ? null : { detail: '降级耗尽后未交付结构化 salvage——躺平' },
 
-  [INVARIANTS.BUDGET_FLOOR_HONORED]: (o) => (o.budgetFloorHeld === false
-    ? { detail: '极限预算下越过地板继续燃烧——预算地板失守' }
-    : null),
+  [INVARIANTS.BUDGET_FLOOR_HONORED]: (o) =>
+    o.budgetFloorHeld === false ? { detail: '极限预算下越过地板继续燃烧——预算地板失守' } : null,
 
-  [INVARIANTS.FORGERY_REJECTED]: (o) => (o.forgeryRejected
-    ? null
-    : { detail: '伪造/篡改/裸 payload 未被验封拒绝——封印边界被绕过' }),
+  [INVARIANTS.FORGERY_REJECTED]: (o) =>
+    o.forgeryRejected ? null : { detail: '伪造/篡改/裸 payload 未被验封拒绝——封印边界被绕过' },
 });
 
 function _isEmptyOutcome(outcome) {
-  if (outcome == null) return true;
-  if (typeof outcome === 'string') return outcome.trim() === '';
-  if (Array.isArray(outcome)) return outcome.length === 0;
-  if (typeof outcome === 'object') return Object.keys(outcome).length === 0;
+  if (outcome == null) {
+    return true;
+  }
+  if (typeof outcome === 'string') {
+    return outcome.trim() === '';
+  }
+  if (Array.isArray(outcome)) {
+    return outcome.length === 0;
+  }
+  if (typeof outcome === 'object') {
+    return Object.keys(outcome).length === 0;
+  }
   return false;
 }
 
@@ -98,14 +108,17 @@ function _isEmptyOutcome(outcome) {
  */
 function evaluate(observation) {
   const o = observation || {};
-  const checked = Array.isArray(o.expectInvariants) && o.expectInvariants.length
-    ? o.expectInvariants.filter((id) => CHECKERS[id])
-    : [];
+  const checked =
+    Array.isArray(o.expectInvariants) && o.expectInvariants.length
+      ? o.expectInvariants.filter((id) => CHECKERS[id])
+      : [];
   const breaches = [];
   for (const id of checked) {
     try {
       const verdict = CHECKERS[id](o);
-      if (verdict) breaches.push({ invariant: id, detail: verdict.detail });
+      if (verdict) {
+        breaches.push({ invariant: id, detail: verdict.detail });
+      }
     } catch (err) {
       // fail-closed：判定器自身崩溃也算破防，绝不静默放行。
       breaches.push({ invariant: id, detail: `判定器异常（保守判破防）：${err && err.message}` });
@@ -131,7 +144,9 @@ function summarize(results) {
   const byInvariant = {};
   const byTarget = {};
   for (const r of list) {
-    if (!r) continue;
+    if (!r) {
+      continue;
+    }
     if (!r.survived) {
       const t = r.target || 'unknown';
       byTarget[t] = (byTarget[t] || 0) + 1;

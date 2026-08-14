@@ -10,10 +10,11 @@
  * config: { webhook, secret }
  */
 
-const { BaseChannel } = require('./_baseChannel');
 const log = require('../../utils/logger');
-const sender = require('../messaging/msgSender');
 const inbound = require('../messaging/msgInboundCore');
+const sender = require('../messaging/msgSender');
+
+const { BaseChannel } = require('./_baseChannel');
 
 class DingTalkChannel extends BaseChannel {
   constructor(config = {}) {
@@ -24,16 +25,26 @@ class DingTalkChannel extends BaseChannel {
 
   async connect() {
     // 群机器人基于 webhook,无持久连接;有 webhook 即视为「就绪」。
-    if (!this.webhook) throw new Error('dingtalk: webhook is required');
+    if (!this.webhook) {
+      throw new Error('dingtalk: webhook is required');
+    }
     this._connected = true;
     this.emit('connected');
   }
 
   /** channelId 若为 https sessionWebhook 则回该会话,否则发到配置的群 webhook。 */
   async sendMessage(channelId, text, opts = {}) {
-    const webhook = (typeof channelId === 'string' && /^https:\/\//i.test(channelId)) ? channelId : this.webhook;
-    const result = await sender.sendText({ platform: 'dingtalk', webhook, secret: this.secret, text });
-    if (!result.ok) { this.emit('error', { error: new Error(result.error) }); }
+    const webhook =
+      typeof channelId === 'string' && /^https:\/\//i.test(channelId) ? channelId : this.webhook;
+    const result = await sender.sendText({
+      platform: 'dingtalk',
+      webhook,
+      secret: this.secret,
+      text,
+    });
+    if (!result.ok) {
+      this.emit('error', { error: new Error(result.error) });
+    }
     return result;
   }
 
@@ -49,11 +60,19 @@ class DingTalkChannel extends BaseChannel {
    */
   handleInbound(headers = {}, body = {}) {
     if (this.secret) {
-      const ok = inbound.verifyDingtalk({ secret: this.secret, timestamp: headers.timestamp, sign: headers.sign });
-      if (!ok) return { ok: false, error: 'dingtalk 签名校验失败' };
+      const ok = inbound.verifyDingtalk({
+        secret: this.secret,
+        timestamp: headers.timestamp,
+        sign: headers.sign,
+      });
+      if (!ok) {
+        return { ok: false, error: 'dingtalk 签名校验失败' };
+      }
     }
     const msg = inbound.parseDingtalk(body);
-    if (!msg.text) return { ok: true };
+    if (!msg.text) {
+      return { ok: true };
+    }
     this.emit('message', {
       channelId: msg.sessionWebhook || this.webhook,
       userId: msg.userId,

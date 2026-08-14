@@ -1,0 +1,15 @@
+{
+  "name": "khy-hello",
+  "version": "1.0.0",
+  "description": "Test fixture plugin: registers /hello.greet",
+  "main": "./src/index.js",
+  "khy": {
+    "namespace": "hello",
+    "version": "1.0.0",
+    "description": "Test fixture: greeting command with persistent counter",
+    "engines": {
+      "khy": ">=1.0.0"
+    },
+    "main": "./src/index.js"
+  }
+}

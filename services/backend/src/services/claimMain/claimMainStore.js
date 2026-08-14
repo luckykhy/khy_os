@@ -15,6 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir } = require('../../utils/dataHome');
 
 /** 主指针文件绝对路径:<dataHome>/instances/main.json */
@@ -35,7 +36,9 @@ function readPointer() {
 
 /** 原子写指针(temp + rename)。成功返回 descriptor,失败 null。 */
 function writePointer(descriptor) {
-  if (!descriptor || typeof descriptor !== 'object') return null;
+  if (!descriptor || typeof descriptor !== 'object') {
+    return null;
+  }
   try {
     const file = pointerPath();
     const tmp = `${file}.tmp-${process.pid}`;
@@ -65,13 +68,17 @@ function clearPointer() {
  */
 function isPidAlive(pid) {
   const n = Number(pid);
-  if (!Number.isFinite(n) || n <= 0) return false;
+  if (!Number.isFinite(n) || n <= 0) {
+    return false;
+  }
   try {
     process.kill(Math.floor(n), 0);
     return true;
   } catch (err) {
     // EPERM:进程存在但本进程无权限发信号 → 仍视为存活。
-    if (err && err.code === 'EPERM') return true;
+    if (err && err.code === 'EPERM') {
+      return true;
+    }
     return false;
   }
 }

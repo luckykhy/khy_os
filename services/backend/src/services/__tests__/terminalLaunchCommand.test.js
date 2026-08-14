@@ -12,8 +12,8 @@
  * 零 IO、确定性——每断言显式传 env/platform,不依赖进程环境。
  */
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const tlc = require('../terminalLaunchCommand');
 
@@ -57,24 +57,43 @@ test('isInteractiveTerminalApp:白名单命中(含路径/扩展);门关/未知/�
 
 test('buildTerminalLaunchArgv:win32 → cmd /c start "" cmd /k <target> <args>', () => {
   const built = tlc.buildTerminalLaunchArgv({
-    target: 'opencode', args: ['--flag', 'x'], platform: 'win32', env: {},
+    target: 'opencode',
+    args: ['--flag', 'x'],
+    platform: 'win32',
+    env: {},
   });
   assert.ok(built && built.command);
   assert.equal(built.command, 'cmd.exe');
-  assert.deepEqual(built.args, ['/d', '/s', '/c', 'start', '', 'cmd', '/k', 'opencode', '--flag', 'x']);
+  assert.deepEqual(built.args, [
+    '/d',
+    '/s',
+    '/c',
+    'start',
+    '',
+    'cmd',
+    '/k',
+    'opencode',
+    '--flag',
+    'x',
+  ]);
   assert.equal(built.windowsHide, true);
 });
 
 test('buildTerminalLaunchArgv:win32 尊重 COMSPEC 覆盖', () => {
   const built = tlc.buildTerminalLaunchArgv({
-    target: 'opencode', platform: 'win32', env: { COMSPEC: 'C:\\Windows\\System32\\cmd.exe' },
+    target: 'opencode',
+    platform: 'win32',
+    env: { COMSPEC: 'C:\\Windows\\System32\\cmd.exe' },
   });
   assert.equal(built.command, 'C:\\Windows\\System32\\cmd.exe');
 });
 
 test('buildTerminalLaunchArgv:darwin → osascript Terminal do script + activate', () => {
   const built = tlc.buildTerminalLaunchArgv({
-    target: 'opencode', args: ['--flag'], platform: 'darwin', env: {},
+    target: 'opencode',
+    args: ['--flag'],
+    platform: 'darwin',
+    env: {},
   });
   assert.equal(built.command, 'osascript');
   assert.equal(built.args[0], '-e');
@@ -86,7 +105,10 @@ test('buildTerminalLaunchArgv:darwin → osascript Terminal do script + activate
 
 test('buildTerminalLaunchArgv:linux → x-terminal-emulator -e <target> <args>', () => {
   const built = tlc.buildTerminalLaunchArgv({
-    target: 'opencode', args: ['--flag', 'y'], platform: 'linux', env: {},
+    target: 'opencode',
+    args: ['--flag', 'y'],
+    platform: 'linux',
+    env: {},
   });
   assert.equal(built.command, 'x-terminal-emulator');
   assert.deepEqual(built.args, ['-e', 'opencode', '--flag', 'y']);
@@ -103,5 +125,7 @@ test('buildTerminalLaunchArgv:空/坏 target 返 null;绝不抛', () => {
 test('INTERACTIVE_TERMINAL_APPS 冻结(纯叶子不可变)', () => {
   assert.ok(Object.isFrozen(tlc.INTERACTIVE_TERMINAL_APPS));
   assert.ok(tlc.INTERACTIVE_TERMINAL_APPS.includes('opencode'));
-  assert.throws(() => { tlc.INTERACTIVE_TERMINAL_APPS.push('evil'); });
+  assert.throws(() => {
+    tlc.INTERACTIVE_TERMINAL_APPS.push('evil');
+  });
 });

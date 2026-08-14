@@ -187,3 +187,41 @@ test('no checkpoints ⇒ loadProjectProgressPrompt returns null (byte-revert)', 
     assert.strictEqual(memdir.loadProjectProgressPrompt(), null);
   });
 });
+
+test('section cache busts when a checkpoint lands mid-process (recall freshness)', async () => {
+  // 回归守卫:memory 系统提示段的 cacheKey(memoryStamp)必须折入每项目 PROGRESS.md 状态。
+  // 否则守护进程运行期间新落盘的检查点不会改变 stamp → 命中缓存段 → 模型永远看不到
+  // 「上次学到哪」(断点续接读侧在生产中失效,直到 MEMORY.md 变化或重启)。
+  const sss = require('../../../src/constants/systemPromptSections');
+  const prompts = require('../../../src/constants/prompts');
+  const dataHome = require('../../../src/utils/dataHome');
+  const prevCwd = process.cwd();
+  const prevHome = process.env.KHY_PROJECT_DATA_HOME;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-stamp-'));
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-stampp-'));
+  process.env.KHY_PROJECT_DATA_HOME = tmp;
+  try { dataHome._resetStorageCaches(); } catch { /* optional */ }
+  try { paths._resetCache && paths._resetCache(); } catch { /* optional */ }
+  process.chdir(work);
+  try {
+    sss.clearSectionCache();
+    const opts = { enabledTools: [], model: 't', adapter: 'a', cwd: work, userMessage: 'hi' };
+    const b1 = await prompts.getSystemPrompt(opts);
+    const hasRecall1 = b1.some((s) => s && /上次学到哪|项目进度检查点/.test(String(s)));
+    assert.strictEqual(hasRecall1, false, 'no checkpoint yet → no recall');
+    const r = memdir.appendProjectProgress({ topic: '微信-tester01', covered: '类比推理', next: '练习真题' }, work);
+    assert.ok(r.ok, 'checkpoint must land on disk');
+    const b2 = await prompts.getSystemPrompt(opts);
+    const hasRecall2 = b2.some((s) => s && /上次学到哪|项目进度检查点/.test(String(s)));
+    assert.strictEqual(hasRecall2, true, 'fresh checkpoint must bust the section cache and reach the prompt');
+    const recallText = b2.filter((s) => s && /上次学到哪|项目进度检查点/.test(String(s))).map(String).join('\n');
+    assert.ok(recallText.includes('类比推理'), 'recall carries the newest covered point');
+    assert.ok(recallText.includes('练习真题'), 'recall carries the next step');
+  } finally {
+    process.chdir(prevCwd);
+    if (prevHome === undefined) delete process.env.KHY_PROJECT_DATA_HOME;
+    else process.env.KHY_PROJECT_DATA_HOME = prevHome;
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ }
+    try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* ignore */ }
+  }
+});

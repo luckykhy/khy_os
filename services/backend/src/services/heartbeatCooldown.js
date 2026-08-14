@@ -19,9 +19,9 @@
  *   | event      | Run (bootstrap) | Defer if !due OR within floor |
  */
 
-const DEFAULT_MIN_WAKE_SPACING_MS = 30_000;   // 30 seconds
-const DEFAULT_FLOOD_WINDOW_MS = 60_000;        // 60 seconds
-const DEFAULT_FLOOD_THRESHOLD = 5;             // 5 wakes in flood window
+const DEFAULT_MIN_WAKE_SPACING_MS = 30_000; // 30 seconds
+const DEFAULT_FLOOD_WINDOW_MS = 60_000; // 60 seconds
+const DEFAULT_FLOOD_THRESHOLD = 5; // 5 wakes in flood window
 
 /**
  * @typedef {object} ShouldDeferInput
@@ -69,9 +69,7 @@ function shouldDeferWake(input) {
 
   // Scheduled: defer if not yet due
   if (input.intent === 'scheduled') {
-    return input.now < input.nextDueMs
-      ? { defer: true, reason: 'not-due' }
-      : { defer: false };
+    return input.now < input.nextDueMs ? { defer: true, reason: 'not-due' } : { defer: false };
   }
 
   // Event: first wake (no prior run) bypasses cooldown gates
@@ -103,9 +101,7 @@ function _checkFloodGuard(input) {
   const floodWindow = input.floodWindowMs ?? DEFAULT_FLOOD_WINDOW_MS;
   const floodThreshold = input.floodThreshold ?? DEFAULT_FLOOD_THRESHOLD;
 
-  if (!input.recentRunStarts
-      || input.recentRunStarts.length < floodThreshold
-      || floodWindow <= 0) {
+  if (!input.recentRunStarts || input.recentRunStarts.length < floodThreshold || floodWindow <= 0) {
     return null;
   }
 
@@ -115,13 +111,13 @@ function _checkFloodGuard(input) {
   // Scan from most recent backward
   for (let i = input.recentRunStarts.length - 1; i >= 0; i--) {
     const ts = input.recentRunStarts[i];
-    if (ts === undefined || ts < windowStart) break;
+    if (ts === undefined || ts < windowStart) {
+      break;
+    }
     inWindow++;
   }
 
-  return inWindow >= floodThreshold
-    ? { defer: true, reason: 'flood' }
-    : null;
+  return inWindow >= floodThreshold ? { defer: true, reason: 'flood' } : null;
 }
 
 /**
@@ -176,7 +172,9 @@ class AgentCooldownTracker {
    */
   shouldDefer(agentId, intent) {
     const state = this._agents.get(agentId);
-    if (!state) return { defer: false };
+    if (!state) {
+      return { defer: false };
+    }
 
     return shouldDeferWake({
       intent,
@@ -192,7 +190,9 @@ class AgentCooldownTracker {
    */
   recordStart(agentId) {
     const state = this._agents.get(agentId);
-    if (!state) return;
+    if (!state) {
+      return;
+    }
 
     const now = Date.now();
     state.lastRunStartedAtMs = now;

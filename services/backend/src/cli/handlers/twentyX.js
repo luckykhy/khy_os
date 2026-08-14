@@ -16,18 +16,24 @@
  * @module handlers/twentyX
  */
 const chalk = require('chalk').default || require('chalk');
-const { printInfo, printError, printSuccess } = require('../formatters');
 const twentyXMode = require('../../services/twentyXMode');
+const { printInfo, printError, printSuccess } = require('../formatters');
 
 function _handleStatus() {
   const s = twentyXMode.describeTwentyXState(process.env);
   printInfo(chalk.bold('20 倍模式(满负荷档)'));
   const tone = s.enabled ? chalk.green : chalk.yellow;
   printInfo(`  状态:${tone(s.label)}(KHY_20X_MODE)`);
-  if (s.hint) printInfo(`  ${chalk.dim(s.hint)}`);
+  if (s.hint) {
+    printInfo(`  ${chalk.dim(s.hint)}`);
+  }
   printInfo('');
-  printInfo(`  放大轴:effort=${chalk.cyan(s.effort)} · 工具循环迭代上限 ${chalk.cyan(s.maxIterations)} · 并行子代理扇出 ${chalk.cyan(`${s.maxChildren}/${s.maxTotalAgents}`)}`);
-  printInfo(`  说明:${chalk.dim('「20x」是模式名(沿用 CC 品牌语);khy 自托管不计费,放大取安全封顶值,非字面 20× 并行。')}`);
+  printInfo(
+    `  放大轴:effort=${chalk.cyan(s.effort)} · 工具循环迭代上限 ${chalk.cyan(s.maxIterations)} · 并行子代理扇出 ${chalk.cyan(`${s.maxChildren}/${s.maxTotalAgents}`)}`
+  );
+  printInfo(
+    `  说明:${chalk.dim('「20x」是模式名(沿用 CC 品牌语);khy 自托管不计费,放大取安全封顶值,非字面 20× 并行。')}`
+  );
   printInfo('');
   printInfo(`  开关:${chalk.cyan('khy 20x on|off')}`);
   return true;
@@ -45,7 +51,9 @@ function _handleToggle(turnOn) {
   const envPath = writeEnvPatch({ KHY_20X_MODE: value });
   process.env.KHY_20X_MODE = value; // 当前进程立即生效
   if (turnOn) {
-    printSuccess('20 倍模式已开启(KHY_20X_MODE=true)——每个任务顶格投入:effort=max + 扩展思考 + 更高迭代/并行上限。');
+    printSuccess(
+      '20 倍模式已开启(KHY_20X_MODE=true)——每个任务顶格投入:effort=max + 扩展思考 + 更高迭代/并行上限。'
+    );
   } else {
     printSuccess('20 倍模式已关闭(KHY_20X_MODE=false)——回到今日常规档。');
   }
@@ -57,7 +65,9 @@ function _handleToggle(turnOn) {
  * @param {{ subCommand?:string, args?:string[], options?:object }} parsed
  */
 async function handleTwentyX(parsed = {}) {
-  const sub = String(parsed.subCommand || (Array.isArray(parsed.args) && parsed.args[0]) || 'status').toLowerCase();
+  const sub = String(
+    parsed.subCommand || (Array.isArray(parsed.args) && parsed.args[0]) || 'status'
+  ).toLowerCase();
   switch (sub) {
     case 'on':
     case 'enable':

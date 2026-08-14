@@ -9,14 +9,19 @@
  */
 const http = require('http');
 const os = require('os');
+
+const { PRIMARY: MODELS } = require('../../../constants/models');
+const { OLLAMA_HOST } = require('../../../constants/serviceDefaults');
+const mapRuntimeCategory = require('../../../utils/mapRuntimeErrorCategory');
 const { parseNdjsonNodeStream } = require('../../ndjsonStream');
 const { createAdapterRuntimeDiagnosticsStore } = require('../runtimeDiagnosticsStore');
-const { toOllamaBase64Images } = require('./_imageCompat');
+
 const { normalizeAbortReason, createAbortError } = require('./_abortHelpers');
 const { classifyAdapterError } = require('./_errorClassifiers');
-const { convertMessagesAnthropicToOpenAI } = require('./_toolSchemaConverter');
-const { buildSuccess, buildFailure } = require('./_responseBuilder');
+const { toOllamaBase64Images } = require('./_imageCompat');
 const { createProtocolHandler } = require('./_protocolPipeline');
+const { buildSuccess, buildFailure } = require('./_responseBuilder');
+const { convertMessagesAnthropicToOpenAI } = require('./_toolSchemaConverter');
 
 const _openaiHandler = createProtocolHandler({ protocol: 'openai', adapterName: 'ollama' });
 
@@ -27,12 +32,12 @@ function _updateMediaRegistry(available) {
     const { mediaRegistry } = require('../../mediaUnderstanding');
     mediaRegistry.setAvailability('ollama', available);
     _mediaRegistered = true;
-  } catch { /* mediaUnderstanding not available */ }
+  } catch {
+    /* mediaUnderstanding not available */
+  }
 }
 
-const { OLLAMA_HOST } = require('../../../constants/serviceDefaults');
 // Model-name SSOT: last-resort seed model flows from constants/models.js.
-const { PRIMARY: MODELS } = require('../../../constants/models');
 
 const DEFAULT_HOST = OLLAMA_HOST;
 // Last-resort seed only. The real default is resolved at call time from the
@@ -51,8 +56,12 @@ let _models = [];
 // name that may not exist locally.
 function resolveDefaultModel() {
   const envModel = String(process.env.OLLAMA_MODEL || '').trim();
-  if (envModel) return envModel;
-  if (Array.isArray(_models) && _models.length > 0) return _models[0];
+  if (envModel) {
+    return envModel;
+  }
+  if (Array.isArray(_models) && _models.length > 0) {
+    return _models[0];
+  }
   return DEFAULT_MODEL;
 }
 const _modelContextWindows = new Map(); // model name → context_length from /api/tags
@@ -62,23 +71,41 @@ let _runtimeDiagnostics = _runtimeDiagnosticsStore.createEmptyDiagnostic();
 // ── Memory-aware model selection ────────────────────────────────────────
 // Known model memory requirements (GiB, Q4_K_M quantization)
 const MODEL_MEMORY_GIB = {
-  'qwen2.5:0.5b':  0.8,  'qwen2.5:1.5b':  1.5,  'qwen2.5:3b':    2.5,
-  'qwen2.5:7b':    5.4,  'qwen2.5:14b':   9.5,   'qwen2.5:32b':   20,
-  'qwen3.5:4b':    3.2,
-  'llama3.2:1b':   1.3,  'llama3.2:3b':    2.5,   'llama3.1:8b':   5.5,
-  'llama3.1:70b':  42,
-  'phi3:mini':     2.5,  'phi3.5:mini':    2.5,
-  'gemma2:2b':     2.0,  'gemma2:9b':      6.5,
-  'mistral:7b':    5.2,  'deepseek-coder:6.7b': 4.5,
-  'codellama:7b':  5.0,  'codellama:13b':  8.5,
-  'starcoder2:3b': 2.5,  'starcoder2:7b':  5.0,
+  'qwen2.5:0.5b': 0.8,
+  'qwen2.5:1.5b': 1.5,
+  'qwen2.5:3b': 2.5,
+  'qwen2.5:7b': 5.4,
+  'qwen2.5:14b': 9.5,
+  'qwen2.5:32b': 20,
+  'qwen3.5:4b': 3.2,
+  'llama3.2:1b': 1.3,
+  'llama3.2:3b': 2.5,
+  'llama3.1:8b': 5.5,
+  'llama3.1:70b': 42,
+  'phi3:mini': 2.5,
+  'phi3.5:mini': 2.5,
+  'gemma2:2b': 2.0,
+  'gemma2:9b': 6.5,
+  'mistral:7b': 5.2,
+  'deepseek-coder:6.7b': 4.5,
+  'codellama:7b': 5.0,
+  'codellama:13b': 8.5,
+  'starcoder2:3b': 2.5,
+  'starcoder2:7b': 5.0,
 };
 
 // Fallback model preferences (smallest → larger)
 const FALLBACK_MODELS = [
-  'qwen2.5:0.5b', 'qwen2.5:1.5b', 'llama3.2:1b', 'phi3:mini',
-  'gemma2:2b', 'qwen2.5:3b', 'qwen3.5:4b', 'llama3.2:3b',
-  'starcoder2:3b', 'deepseek-coder:6.7b',
+  'qwen2.5:0.5b',
+  'qwen2.5:1.5b',
+  'llama3.2:1b',
+  'phi3:mini',
+  'gemma2:2b',
+  'qwen2.5:3b',
+  'qwen3.5:4b',
+  'llama3.2:3b',
+  'starcoder2:3b',
+  'deepseek-coder:6.7b',
 ];
 
 /**
@@ -87,8 +114,12 @@ const FALLBACK_MODELS = [
  * Heuristic: ~0.7 GiB per billion params (Q4) + 0.5 GiB overhead.
  */
 function estimateModelMemoryGiB(modelId) {
-  const id = String(modelId || '').toLowerCase().trim();
-  if (MODEL_MEMORY_GIB[id]) return MODEL_MEMORY_GIB[id];
+  const id = String(modelId || '')
+    .toLowerCase()
+    .trim();
+  if (MODEL_MEMORY_GIB[id]) {
+    return MODEL_MEMORY_GIB[id];
+  }
 
   // Try to extract parameter count from ":Nb" tag (e.g. qwen2:7b → 7)
   const match = id.match(/:(\d+(?:\.\d+)?)b/);
@@ -104,45 +135,58 @@ function estimateModelMemoryGiB(modelId) {
  * Returns null if no suitable fallback found.
  */
 function findMemoryFitModel(availableGiB, installedModels = []) {
-  const installed = new Set(installedModels.map(m => String(m).toLowerCase().trim()));
+  const installed = new Set(installedModels.map((m) => String(m).toLowerCase().trim()));
 
   // First: check FALLBACK_MODELS order (preferred small models)
   for (const m of FALLBACK_MODELS) {
-    if (installed.has(m) && estimateModelMemoryGiB(m) <= availableGiB) return m;
+    if (installed.has(m) && estimateModelMemoryGiB(m) <= availableGiB) {
+      return m;
+    }
   }
 
   // Second: check all installed models, pick smallest that fits
   const candidates = [...installed]
-    .map(m => ({ id: m, mem: estimateModelMemoryGiB(m) }))
-    .filter(c => c.mem <= availableGiB)
+    .map((m) => ({ id: m, mem: estimateModelMemoryGiB(m) }))
+    .filter((c) => c.mem <= availableGiB)
     .sort((a, b) => a.mem - b.mem);
   return candidates.length > 0 ? candidates[0].id : null;
 }
 
-
 function normalizeOllamaHostname(hostname) {
   const raw = String(hostname || '').trim();
-  if (!raw) return '127.0.0.1';
-  if (raw === 'localhost') return '127.0.0.1';
+  if (!raw) {
+    return '127.0.0.1';
+  }
+  if (raw === 'localhost') {
+    return '127.0.0.1';
+  }
   // URL.hostname for IPv6 literals is bracketed (e.g. "[::1]"), but
   // http.request expects plain IPv6 host without brackets.
   return raw.replace(/^\[([^\]]+)\]$/, '$1');
 }
 
 function extractOllamaErrorMessage(result, fallback = '') {
-  if (!result) return String(fallback || '').trim();
+  if (!result) {
+    return String(fallback || '').trim();
+  }
   const data = result.data;
   if (data && typeof data === 'object') {
     const direct = String(data.error || data.message || '').trim();
-    if (direct) return direct;
+    if (direct) {
+      return direct;
+    }
     if (data.message && typeof data.message === 'object') {
       const nested = String(data.message.error || data.message.content || '').trim();
-      if (nested) return nested;
+      if (nested) {
+        return nested;
+      }
     }
   }
   if (typeof data === 'string') {
     const text = data.trim();
-    if (text) return text.slice(0, 500);
+    if (text) {
+      return text.slice(0, 500);
+    }
   }
   return String(fallback || '').trim();
 }
@@ -155,31 +199,39 @@ function getRequestId(options = {}) {
   return String(options.requestId || options.traceId || '').trim();
 }
 
-const mapRuntimeCategory = require('../../../utils/mapRuntimeErrorCategory');
-
 function recordRuntimeFailure(options = {}, payload = {}) {
-  _runtimeDiagnostics = _runtimeDiagnosticsStore.record(_runtimeDiagnostics, {
-    requestId: getRequestId(options),
-    ...payload,
-  }, {
-    fallbackTrigger: 'request_failed',
-  });
+  _runtimeDiagnostics = _runtimeDiagnosticsStore.record(
+    _runtimeDiagnostics,
+    {
+      requestId: getRequestId(options),
+      ...payload,
+    },
+    {
+      fallbackTrigger: 'request_failed',
+    }
+  );
 }
 
 function recordRuntimeRecovery(options = {}, summary = '', diagnosis = '') {
-  if (Number(_runtimeDiagnostics.at || 0) <= 0 || _runtimeDiagnostics.healed) return;
-  _runtimeDiagnostics = _runtimeDiagnosticsStore.record(_runtimeDiagnostics, {
-    requestId: getRequestId(options),
-    healed: true,
-    trigger: 'request_recovered',
-    category: 'recovery',
-    phase: 'response',
-    summary,
-    diagnosis,
-    lastError: '',
-  }, {
-    fallbackTrigger: 'request_recovered',
-  });
+  if (Number(_runtimeDiagnostics.at || 0) <= 0 || _runtimeDiagnostics.healed) {
+    return;
+  }
+  _runtimeDiagnostics = _runtimeDiagnosticsStore.record(
+    _runtimeDiagnostics,
+    {
+      requestId: getRequestId(options),
+      healed: true,
+      trigger: 'request_recovered',
+      category: 'recovery',
+      phase: 'response',
+      summary,
+      diagnosis,
+      lastError: '',
+    },
+    {
+      fallbackTrigger: 'request_recovered',
+    }
+  );
 }
 
 /**
@@ -190,7 +242,9 @@ function ollamaRequest(path, method = 'GET', body = null, requestOptions = {}) {
   const url = new URL(path, host);
   const timeoutMs = Number.isFinite(Number(requestOptions.timeoutMs))
     ? Math.max(1000, Number(requestOptions.timeoutMs))
-    : (method === 'GET' ? 3000 : TIMEOUT_MS);
+    : method === 'GET'
+      ? 3000
+      : TIMEOUT_MS;
   const signal = requestOptions.signal || null;
 
   return new Promise((resolve, reject) => {
@@ -211,23 +265,37 @@ function ollamaRequest(path, method = 'GET', body = null, requestOptions = {}) {
 
     let settled = false;
     const finish = (fn, value) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       if (signal && onAbort) {
-        try { signal.removeEventListener('abort', onAbort); } catch { /* ignore */ }
+        try {
+          signal.removeEventListener('abort', onAbort);
+        } catch {
+          /* ignore */
+        }
       }
-      if (hardTimer) clearTimeout(hardTimer);
+      if (hardTimer) {
+        clearTimeout(hardTimer);
+      }
       fn(value);
     };
     const onAbort = () => {
       const err = createAbortError(signal ? signal.reason : null);
-      try { req.destroy(err); } catch { /* ignore */ }
+      try {
+        req.destroy(err);
+      } catch {
+        /* ignore */
+      }
       finish(reject, err);
     };
 
     const req = http.request(options, (res) => {
       let data = '';
-      res.on('data', chunk => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
         try {
           finish(resolve, { status: res.statusCode, data: JSON.parse(data) });
@@ -247,7 +315,9 @@ function ollamaRequest(path, method = 'GET', body = null, requestOptions = {}) {
       signal.addEventListener('abort', onAbort, { once: true });
     }
 
-    req.on('error', (err) => { finish(reject, err); });
+    req.on('error', (err) => {
+      finish(reject, err);
+    });
     req.on('timeout', () => {
       req.destroy();
       finish(reject, new Error('Ollama request timeout'));
@@ -285,8 +355,16 @@ async function _accumulateOllamaStream(lineObjects, cb = {}) {
   let sawMessage = false;
   let sawResponse = false;
   for await (const obj of lineObjects) {
-    if (!obj || typeof obj !== 'object') continue;
-    if (onActivity) { try { onActivity(); } catch { /* best effort */ } }
+    if (!obj || typeof obj !== 'object') {
+      continue;
+    }
+    if (onActivity) {
+      try {
+        onActivity();
+      } catch {
+        /* best effort */
+      }
+    }
     last = obj;
     const msg = obj.message;
     if (msg && typeof msg === 'object') {
@@ -294,22 +372,40 @@ async function _accumulateOllamaStream(lineObjects, cb = {}) {
       const delta = typeof msg.content === 'string' ? msg.content : '';
       if (delta) {
         content += delta;
-        if (onToken) { try { onToken(delta); } catch { /* best effort */ } }
+        if (onToken) {
+          try {
+            onToken(delta);
+          } catch {
+            /* best effort */
+          }
+        }
       }
-      if (typeof msg.thinking === 'string' && msg.thinking) thinking += msg.thinking;
+      if (typeof msg.thinking === 'string' && msg.thinking) {
+        thinking += msg.thinking;
+      }
       // Ollama emits the full tool_calls array (usually only on the done line);
       // keep the latest non-empty set rather than concatenating partials.
-      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length) toolCalls = msg.tool_calls;
+      if (Array.isArray(msg.tool_calls) && msg.tool_calls.length) {
+        toolCalls = msg.tool_calls;
+      }
     }
     if (typeof obj.response === 'string') {
       sawResponse = true;
       const delta = obj.response;
       if (delta) {
         content += delta;
-        if (onToken) { try { onToken(delta); } catch { /* best effort */ } }
+        if (onToken) {
+          try {
+            onToken(delta);
+          } catch {
+            /* best effort */
+          }
+        }
       }
     }
-    if (typeof obj.thinking === 'string' && obj.thinking) thinking += obj.thinking;
+    if (typeof obj.thinking === 'string' && obj.thinking) {
+      thinking += obj.thinking;
+    }
     // obj.done === true marks the terminal line; keep draining to flush trailers.
   }
   return { content, thinking, toolCalls, last, sawMessage, sawResponse };
@@ -370,27 +466,46 @@ function ollamaStreamRequest(path, body, requestOptions = {}) {
     let settled = false;
     let idleTimer = null;
     let idleFired = false;
-    const clearIdle = () => { if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; } };
+    const clearIdle = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
     const armIdle = () => {
       clearIdle();
       idleTimer = setTimeout(() => {
         idleFired = true;
-        try { req.destroy(new Error('Ollama stream idle timeout')); } catch { /* ignore */ }
+        try {
+          req.destroy(new Error('Ollama stream idle timeout'));
+        } catch {
+          /* ignore */
+        }
       }, idleTimeoutMs);
       idleTimer.unref?.();
     };
     const finish = (fn, value) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       clearIdle();
       if (signal && onAbort) {
-        try { signal.removeEventListener('abort', onAbort); } catch { /* ignore */ }
+        try {
+          signal.removeEventListener('abort', onAbort);
+        } catch {
+          /* ignore */
+        }
       }
       fn(value);
     };
     const onAbort = () => {
       const err = createAbortError(signal ? signal.reason : null);
-      try { req.destroy(err); } catch { /* ignore */ }
+      try {
+        req.destroy(err);
+      } catch {
+        /* ignore */
+      }
       finish(reject, err);
     };
 
@@ -399,10 +514,16 @@ function ollamaStreamRequest(path, body, requestOptions = {}) {
       if (status !== 200) {
         // Buffer the error body so the caller's status-based fallback path works.
         let data = '';
-        res.on('data', (c) => { data += c; });
+        res.on('data', (c) => {
+          data += c;
+        });
         res.on('end', () => {
           let parsed = data;
-          try { parsed = JSON.parse(data); } catch { /* keep raw */ }
+          try {
+            parsed = JSON.parse(data);
+          } catch {
+            /* keep raw */
+          }
           finish(resolve, { status, data: parsed });
         });
         res.on('error', (err) => finish(reject, err));
@@ -423,35 +544,45 @@ function ollamaStreamRequest(path, body, requestOptions = {}) {
           }
           const data = isChat
             ? {
-              message: {
-                role: 'assistant',
-                content: acc.content,
-                ...(acc.toolCalls && acc.toolCalls.length ? { tool_calls: acc.toolCalls } : {}),
-                ...(acc.thinking ? { thinking: acc.thinking } : {}),
-              },
-              done: true,
-            }
+                message: {
+                  role: 'assistant',
+                  content: acc.content,
+                  ...(acc.toolCalls && acc.toolCalls.length ? { tool_calls: acc.toolCalls } : {}),
+                  ...(acc.thinking ? { thinking: acc.thinking } : {}),
+                },
+                done: true,
+              }
             : {
-              response: acc.content,
-              ...(acc.thinking ? { thinking: acc.thinking } : {}),
-              done: true,
-            };
+                response: acc.content,
+                ...(acc.thinking ? { thinking: acc.thinking } : {}),
+                done: true,
+              };
           finish(resolve, { status: 200, data });
         } catch (err) {
-          if (idleFired) finish(reject, new Error('Ollama stream idle timeout'));
-          else finish(reject, err);
+          if (idleFired) {
+            finish(reject, new Error('Ollama stream idle timeout'));
+          } else {
+            finish(reject, err);
+          }
         }
       })();
     });
 
     req.on('error', (err) => {
-      if (idleFired) finish(reject, new Error('Ollama stream idle timeout'));
-      else finish(reject, err);
+      if (idleFired) {
+        finish(reject, new Error('Ollama stream idle timeout'));
+      } else {
+        finish(reject, err);
+      }
     });
 
-    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+    if (signal) {
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
 
-    if (body) req.write(JSON.stringify(body));
+    if (body) {
+      req.write(JSON.stringify(body));
+    }
     req.end();
   });
 }
@@ -462,7 +593,9 @@ function ollamaStreamRequest(path, body, requestOptions = {}) {
  * Because detection uses async HTTP, call detectAsync() for fresh probe.
  */
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
   // Synchronous path can only return cached value; trigger async probe
   detectAsync().catch(() => {});
   return _available || false;
@@ -475,12 +608,14 @@ async function detectAsync() {
   try {
     const result = await ollamaRequest('/api/tags', 'GET');
     if (result.status === 200 && result.data?.models?.length > 0) {
-      _models = result.data.models.map(m => m.name || m.model);
+      _models = result.data.models.map((m) => m.name || m.model);
       // Cache context window from model details when available
       for (const m of result.data.models) {
         const name = m.name || m.model;
         const ctxLen = m.details?.context_length || m.context_length || 0;
-        if (name && ctxLen > 0) _modelContextWindows.set(name, ctxLen);
+        if (name && ctxLen > 0) {
+          _modelContextWindows.set(name, ctxLen);
+        }
       }
       _available = true;
       _updateMediaRegistry(true);
@@ -515,16 +650,22 @@ function _ollamaDefaultNumPredict() {
 function _splitOllamaThinking(content, nativeThinking) {
   let text = String(content || '');
   const parts = [];
-  if (nativeThinking && String(nativeThinking).trim()) parts.push(String(nativeThinking).trim());
+  if (nativeThinking && String(nativeThinking).trim()) {
+    parts.push(String(nativeThinking).trim());
+  }
   // Complete inline blocks.
   text = text.replace(/<think(?:ing)?>([\s\S]*?)<\/think(?:ing)?>/gi, (_m, inner) => {
-    if (inner && inner.trim()) parts.push(inner.trim());
+    if (inner && inner.trim()) {
+      parts.push(inner.trim());
+    }
     return '';
   });
   // Unclosed block (model hit num_predict mid-reasoning).
   const unclosed = text.match(/<think(?:ing)?>([\s\S]*)$/i);
   if (unclosed) {
-    if (unclosed[1] && unclosed[1].trim()) parts.push(unclosed[1].trim());
+    if (unclosed[1] && unclosed[1].trim()) {
+      parts.push(unclosed[1].trim());
+    }
     text = text.slice(0, unclosed.index);
   }
   return { content: text.trim(), thinking: parts.length ? parts.join('\n\n') : null };
@@ -537,7 +678,11 @@ function _splitOllamaThinking(content, nativeThinking) {
 function buildChatMessages(prompt, options, { hasTools = false } = {}) {
   const messages = [];
   let _flattenOL;
-  try { _flattenOL = require('../../../services/contentBlockUtils').flattenContent; } catch { _flattenOL = (c) => String(c || ''); }
+  try {
+    _flattenOL = require('../../../services/contentBlockUtils').flattenContent;
+  } catch {
+    _flattenOL = (c) => String(c || '');
+  }
 
   // If structured messages are provided, use them
   if (options.messages && Array.isArray(options.messages) && options.messages.length > 0) {
@@ -545,8 +690,10 @@ function buildChatMessages(prompt, options, { hasTools = false } = {}) {
     // (Ollama /api/chat supports OpenAI-style tool_calls + role:'tool' messages)
     let rawMsgs = options.messages;
     if (hasTools) {
-      const hasAnthropicBlocks = rawMsgs.some(m =>
-        Array.isArray(m.content) && m.content.some(b => b.type === 'tool_use' || b.type === 'tool_result')
+      const hasAnthropicBlocks = rawMsgs.some(
+        (m) =>
+          Array.isArray(m.content) &&
+          m.content.some((b) => b.type === 'tool_use' || b.type === 'tool_result')
       );
       if (hasAnthropicBlocks) {
         rawMsgs = convertMessagesAnthropicToOpenAI(rawMsgs, true);
@@ -557,12 +704,20 @@ function buildChatMessages(prompt, options, { hasTools = false } = {}) {
       const role = msg.role || 'user';
       // Pass through tool messages as-is when tools are active (Ollama supports role:'tool')
       if (hasTools && role === 'tool') {
-        messages.push({ role: 'tool', content: typeof msg.content === 'string' ? msg.content : _flattenOL(msg.content), tool_call_id: msg.tool_call_id });
+        messages.push({
+          role: 'tool',
+          content: typeof msg.content === 'string' ? msg.content : _flattenOL(msg.content),
+          tool_call_id: msg.tool_call_id,
+        });
         continue;
       }
       // Pass through assistant tool_calls when tools are active
       if (hasTools && role === 'assistant' && msg.tool_calls) {
-        messages.push({ role: 'assistant', content: msg.content || '', tool_calls: msg.tool_calls });
+        messages.push({
+          role: 'assistant',
+          content: msg.content || '',
+          tool_calls: msg.tool_calls,
+        });
         continue;
       }
       const textContent = typeof msg.content === 'string' ? msg.content : _flattenOL(msg.content);
@@ -590,7 +745,9 @@ function buildChatMessages(prompt, options, { hasTools = false } = {}) {
 }
 
 function attachImagesToLatestUserMessage(messages = [], imageBase64List = []) {
-  if (!Array.isArray(imageBase64List) || imageBase64List.length === 0) return messages;
+  if (!Array.isArray(imageBase64List) || imageBase64List.length === 0) {
+    return messages;
+  }
   const next = Array.isArray(messages)
     ? messages.map((msg) => (msg && typeof msg === 'object' ? { ...msg } : msg))
     : [];
@@ -624,7 +781,9 @@ function buildGeneratePromptFromMessages(prompt, options) {
   for (const msg of messages) {
     const role = String(msg.role || 'user').toLowerCase();
     const content = String(msg.content || '').trim();
-    if (!content) continue;
+    if (!content) {
+      continue;
+    }
     if (role === 'assistant') {
       parts.push(`[Assistant]\n${content}`);
     } else {
@@ -642,13 +801,15 @@ async function generate(prompt, options = {}) {
   let model = String(options.model || resolveDefaultModel()).trim() || resolveDefaultModel();
 
   // Memory-aware model selection: auto-downgrade if not enough RAM
-  const freeMemGiB = os.freemem() / (1024 ** 3);
+  const freeMemGiB = os.freemem() / 1024 ** 3;
   const requiredGiB = estimateModelMemoryGiB(model);
   if (requiredGiB > freeMemGiB) {
     const fallback = findMemoryFitModel(freeMemGiB, _models);
     if (fallback) {
       const msg = `内存不足: ${model} 需要 ${requiredGiB}GiB，可用 ${freeMemGiB.toFixed(1)}GiB → 自动降级到 ${fallback}`;
-      if (typeof options.onChunk === 'function') options.onChunk({ type: 'status', text: msg });
+      if (typeof options.onChunk === 'function') {
+        options.onChunk({ type: 'status', text: msg });
+      }
       model = fallback;
     } else if (freeMemGiB < 1.0) {
       recordRuntimeFailure(options, {
@@ -659,7 +820,9 @@ async function generate(prompt, options = {}) {
         lastError: `insufficient memory for ${model}`,
       });
       return buildFailure('insufficient memory', {
-        adapter: 'ollama', provider: `Ollama (${model})`, errorType: 'memory',
+        adapter: 'ollama',
+        provider: `Ollama (${model})`,
+        errorType: 'memory',
         attempts: [{ provider: `Ollama (${model})`, success: false, error: 'insufficient memory' }],
       });
     }
@@ -685,8 +848,16 @@ async function generate(prompt, options = {}) {
       lastError: 'image payload normalization failed',
     });
     return buildFailure('image payload normalization failed', {
-      adapter: 'ollama', provider: `Ollama (${model})`, errorType: 'unsupported_image',
-      attempts: [{ provider: `Ollama (${model})`, success: false, error: 'image payload normalization failed' }],
+      adapter: 'ollama',
+      provider: `Ollama (${model})`,
+      errorType: 'unsupported_image',
+      attempts: [
+        {
+          provider: `Ollama (${model})`,
+          success: false,
+          error: 'image payload normalization failed',
+        },
+      ],
     });
   }
 
@@ -697,7 +868,9 @@ async function generate(prompt, options = {}) {
       if (!ensure.running) {
         const ensureErr = ensure.error || 'Ollama not available';
         recordRuntimeFailure(options, {
-          trigger: /timeout/i.test(String(ensureErr || '')) ? 'startup_timeout' : 'service_unavailable',
+          trigger: /timeout/i.test(String(ensureErr || ''))
+            ? 'startup_timeout'
+            : 'service_unavailable',
           category: mapRuntimeCategory(classifyAdapterError(ensureErr), ensureErr),
           phase: 'startup',
           summary: `Ollama was unavailable before request start (${model})`,
@@ -705,7 +878,8 @@ async function generate(prompt, options = {}) {
           lastError: ensureErr,
         });
         return buildFailure(ensureErr, {
-          adapter: 'ollama', provider: 'Ollama',
+          adapter: 'ollama',
+          provider: 'Ollama',
           attempts: [{ provider: `Ollama (${model})`, success: false, error: ensureErr }],
         });
       }
@@ -714,7 +888,9 @@ async function generate(prompt, options = {}) {
     // Small models (< 7B params) often don't support OpenAI role:'tool' messages.
     // Embed tool results as plain text in role:'user' messages instead.
     const _paramB = (() => {
-      const m = String(model).toLowerCase().match(/:(\d+(?:\.\d+)?)b/);
+      const m = String(model)
+        .toLowerCase()
+        .match(/:(\d+(?:\.\d+)?)b/);
       return m ? parseFloat(m[1]) : null;
     })();
     const useToolRole = _paramB !== null ? _paramB >= 7 : true;
@@ -732,7 +908,8 @@ async function generate(prompt, options = {}) {
     // - system is a top-level field (not a message)
     // - temperature/top_p/num_predict live under options
     // - images are Ollama raw base64, not OpenAI image_url blocks
-    const systemMsg = openaiBody.messages?.[0]?.role === 'system' ? openaiBody.messages[0].content : undefined;
+    const systemMsg =
+      openaiBody.messages?.[0]?.role === 'system' ? openaiBody.messages[0].content : undefined;
     const chatMessages = systemMsg ? openaiBody.messages.slice(1) : openaiBody.messages;
     const chatPayload = {
       model,
@@ -747,21 +924,29 @@ async function generate(prompt, options = {}) {
         num_predict: options.maxTokens || _ollamaDefaultNumPredict(),
       },
     };
-    if (openaiBody.tools) chatPayload.tools = openaiBody.tools;
+    if (openaiBody.tools) {
+      chatPayload.tools = openaiBody.tools;
+    }
     // Thinking-mode control: only forward when the caller is explicit, so
     // reasoning models keep their default behavior otherwise. Ollama accepts a
     // top-level `think` boolean on /api/chat (newer builds); older builds that
     // don't recognize the field simply ignore it. Without this, think:false
     // never reaches the model and a reasoning turn can spend its whole token
     // budget on hidden reasoning, leaving content empty.
-    if (typeof options.think === 'boolean') chatPayload.think = options.think;
+    if (typeof options.think === 'boolean') {
+      chatPayload.think = options.think;
+    }
 
     // Forward each streamed delta to the gateway-provided onChunk. The gateway
     // wraps this to reset its per-adapter idle-watchdog, so a steadily-progressing
     // (but slow) local model is never killed as "stale". best-effort.
     const forwardChunk = (delta) => {
       if (typeof options.onChunk === 'function') {
-        try { options.onChunk(delta); } catch { /* best effort */ }
+        try {
+          options.onChunk(delta);
+        } catch {
+          /* best effort */
+        }
       }
     };
 
@@ -778,14 +963,19 @@ async function generate(prompt, options = {}) {
       const parsed = _openaiHandler.parseJsonResponse(openaiEnvelope);
       // Ollama may also carry reasoning on the raw message (native think mode).
       const nativeThinking = parsed.thinking || result.data.message.thinking || null;
-      const { content: cleanContent, thinking } = _splitOllamaThinking(parsed.content, nativeThinking);
+      const { content: cleanContent, thinking } = _splitOllamaThinking(
+        parsed.content,
+        nativeThinking
+      );
       recordRuntimeRecovery(
         options,
         `Ollama chat request succeeded (${model})`,
         'ollama /api/chat returned a complete response'
       );
       return buildSuccess(cleanContent, {
-        adapter: 'ollama', provider: `Ollama (${model})`, model,
+        adapter: 'ollama',
+        provider: `Ollama (${model})`,
+        model,
         toolUseBlocks: parsed.toolUseBlocks,
         thinking,
         attempts: [{ provider: `Ollama (${model})`, success: true }],
@@ -794,7 +984,9 @@ async function generate(prompt, options = {}) {
 
     // Compatibility fallback: some Ollama builds/models fail on /api/chat but
     // can still serve /api/generate reliably.
-    const shouldFallbackGenerate = [404, 405, 500, 501, 502, 503].includes(Number(result.status || 0));
+    const shouldFallbackGenerate = [404, 405, 500, 501, 502, 503].includes(
+      Number(result.status || 0)
+    );
     if (shouldFallbackGenerate) {
       const generatePayload = {
         model,
@@ -807,7 +999,9 @@ async function generate(prompt, options = {}) {
           num_predict: options.maxTokens || _ollamaDefaultNumPredict(),
         },
       };
-      if (typeof options.think === 'boolean') generatePayload.think = options.think;
+      if (typeof options.think === 'boolean') {
+        generatePayload.think = options.think;
+      }
       const fallback = await ollamaStreamRequest('/api/generate', generatePayload, {
         signal: requestSignal,
         idleTimeoutMs: timeoutMs,
@@ -815,7 +1009,8 @@ async function generate(prompt, options = {}) {
       });
       if (fallback.status === 200 && fallback.data && typeof fallback.data.response === 'string') {
         const { content: cleanContent, thinking } = _splitOllamaThinking(
-          fallback.data.response, fallback.data.thinking || null
+          fallback.data.response,
+          fallback.data.thinking || null
         );
         recordRuntimeRecovery(
           options,
@@ -823,7 +1018,9 @@ async function generate(prompt, options = {}) {
           'ollama /api/generate recovered after /api/chat did not return a usable response'
         );
         return buildSuccess(cleanContent, {
-          adapter: 'ollama', provider: `Ollama (${model})`, model,
+          adapter: 'ollama',
+          provider: `Ollama (${model})`,
+          model,
           thinking,
           attempts: [{ provider: `Ollama (${model})`, success: true }],
         });
@@ -843,7 +1040,9 @@ async function generate(prompt, options = {}) {
         lastError: 'model not found',
       });
       return buildFailure('model not found', {
-        adapter: 'ollama', provider: 'Ollama', errorType: 'unavailable',
+        adapter: 'ollama',
+        provider: 'Ollama',
+        errorType: 'unavailable',
         attempts: [{ provider: `Ollama (${model})`, success: false, error: 'model not found' }],
       });
     }
@@ -860,8 +1059,18 @@ async function generate(prompt, options = {}) {
       lastError: httpError,
     });
     return buildFailure(httpError, {
-      adapter: 'ollama', provider: 'Ollama', errorType: httpErrorType, statusCode: result.status,
-      attempts: [{ provider: `Ollama (${model})`, success: false, error: httpError, statusCode: result.status }],
+      adapter: 'ollama',
+      provider: 'Ollama',
+      errorType: httpErrorType,
+      statusCode: result.status,
+      attempts: [
+        {
+          provider: `Ollama (${model})`,
+          success: false,
+          error: httpError,
+          statusCode: result.status,
+        },
+      ],
     });
   } catch (err) {
     if (requestSignal && requestSignal.aborted) {
@@ -879,8 +1088,12 @@ async function generate(prompt, options = {}) {
         lastError: normalizedAbortMessage,
       });
       return buildFailure(normalizedAbortMessage, {
-        adapter: 'ollama', provider: 'Ollama', errorType: 'cancelled',
-        attempts: [{ provider: `Ollama (${model})`, success: false, error: normalizedAbortMessage }],
+        adapter: 'ollama',
+        provider: 'Ollama',
+        errorType: 'cancelled',
+        attempts: [
+          { provider: `Ollama (${model})`, success: false, error: normalizedAbortMessage },
+        ],
       });
     }
     if ((err && err.code === 'ECONNREFUSED') || /ECONNREFUSED/i.test(err?.message || '')) {
@@ -894,7 +1107,9 @@ async function generate(prompt, options = {}) {
         lastError: 'ECONNREFUSED',
       });
       return buildFailure('ECONNREFUSED', {
-        adapter: 'ollama', provider: 'Ollama', errorType: 'network',
+        adapter: 'ollama',
+        provider: 'Ollama',
+        errorType: 'network',
         attempts: [{ provider: `Ollama (${model})`, success: false, error: 'ECONNREFUSED' }],
       });
     }
@@ -909,7 +1124,9 @@ async function generate(prompt, options = {}) {
       lastError: errMsg,
     });
     return buildFailure(errMsg, {
-      adapter: 'ollama', provider: 'Ollama', errorType,
+      adapter: 'ollama',
+      provider: 'Ollama',
+      errorType,
       attempts: [{ provider: `Ollama (${model})`, success: false, error: errMsg }],
     });
   }
@@ -943,12 +1160,15 @@ async function listModels() {
     await detectAsync();
   }
   const current = resolveDefaultModel();
-  const freeMemGiB = os.freemem() / (1024 ** 3);
+  const freeMemGiB = os.freemem() / 1024 ** 3;
   return (_models || []).map((id) => {
     const memEst = estimateModelMemoryGiB(id);
     let memoryFit = 'ok';
-    if (memEst > freeMemGiB) memoryFit = 'insufficient';
-    else if (memEst > freeMemGiB * 0.8) memoryFit = 'tight';
+    if (memEst > freeMemGiB) {
+      memoryFit = 'insufficient';
+    } else if (memEst > freeMemGiB * 0.8) {
+      memoryFit = 'tight';
+    }
     return {
       id,
       name: id,
@@ -971,7 +1191,15 @@ function destroy() {
 }
 
 module.exports = {
-  detect, detectAsync, generate, getStatus, getModels, listModels, destroy, getRuntimeDiagnostics,
+  detect,
+  detectAsync,
+  generate,
+  getStatus,
+  getModels,
+  listModels,
+  destroy,
+  getRuntimeDiagnostics,
   // Exported for unit tests (streaming accumulation + request).
-  _accumulateOllamaStream, ollamaStreamRequest,
+  _accumulateOllamaStream,
+  ollamaStreamRequest,
 };

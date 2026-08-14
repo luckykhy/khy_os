@@ -13,10 +13,10 @@
 
 const path = require('path');
 
-const projectDetector = require('./projectDetector');
-const syncEngine = require('./syncEngine');
-const runners = require('./runners');
 const ledger = require('./deployLedger');
+const projectDetector = require('./projectDetector');
+const runners = require('./runners');
+const syncEngine = require('./syncEngine');
 
 function defaultDeps() {
   return {
@@ -35,7 +35,9 @@ function defaultDeps() {
 /** Parse an explicit start-command override string into an argv command. */
 function parseCommandOverride(str) {
   const parts = String(str).trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return null;
+  if (parts.length === 0) {
+    return null;
+  }
   return { exe: parts[0], args: parts.slice(1), display: parts.join(' ') };
 }
 
@@ -64,7 +66,9 @@ function deployProject(opts = {}) {
   const deps = { ...defaultDeps(), ...(opts.deps || {}) };
   const onStep = typeof opts.onStep === 'function' ? opts.onStep : () => {};
 
-  if (!opts.target) throw new Error('部署目标路径未指定 (target)');
+  if (!opts.target) {
+    throw new Error('部署目标路径未指定 (target)');
+  }
   const source = path.resolve(opts.source || deps.cwd || process.cwd());
   const target = path.resolve(opts.target);
   const name = opts.name || safeName(target);
@@ -100,7 +104,9 @@ function deployProject(opts = {}) {
   result.type = plan.type;
   result.signals = plan.signals;
   result.notes = plan.notes.slice();
-  if (opts.port == null && plan.port != null) result.port = plan.port;
+  if (opts.port == null && plan.port != null) {
+    result.port = plan.port;
+  }
   record({
     name: 'detect',
     status: 'ok',

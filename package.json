@@ -2,15 +2,12 @@
   "name": "Khy-OS",
   "private": true,
   "workspaces": [
-    "platform/packages/plugin-sdk",
-    "platform/packages/sdk",
     "platform/packages/shared",
-    "platform/packages/khy-*",
     "services/backend",
     "services/ai-backend"
   ],
   "scripts": {
-    "preinstall": "node scripts/link-shared-dev.js"
+    "preinstall": "node scripts/install/link-shared-dev.js"
   },
   "devDependencies": {
     "javascript-obfuscator": "^5.4.2"

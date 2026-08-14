@@ -40,11 +40,17 @@ function isEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_MODEL_IDENTITY_TRUTH', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_MODEL_IDENTITY_TRUTH;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -53,12 +59,23 @@ function isEnabled(env) {
 const IDENTITY_MARKER = '【khyos 模型身份';
 
 // 视为「无真值」的占位符(网关未解析时的哨兵),归一后落入此集合 → 当作缺失。
-const _UNKNOWN_TOKENS = new Set(['', 'auto', 'unknown', 'none', 'null', 'undefined', 'default', '自动']);
+const _UNKNOWN_TOKENS = new Set([
+  '',
+  'auto',
+  'unknown',
+  'none',
+  'null',
+  'undefined',
+  'default',
+  '自动',
+]);
 
 /** 归一一个渠道/模型串:trim;占位符(auto/unknown/…)→ 空。 */
 function _clean(v) {
   const s = String(v == null ? '' : v).trim();
-  if (_UNKNOWN_TOKENS.has(s.toLowerCase())) return '';
+  if (_UNKNOWN_TOKENS.has(s.toLowerCase())) {
+    return '';
+  }
   return s;
 }
 
@@ -110,7 +127,9 @@ const _IDENTITY_QUESTION_RES = [
  */
 function isIdentityQuestion(text) {
   const s = String(text == null ? '' : text);
-  if (!s.trim()) return false;
+  if (!s.trim()) {
+    return false;
+  }
   try {
     return _IDENTITY_QUESTION_RES.some((re) => re.test(s));
   } catch {
@@ -139,7 +158,13 @@ function _familiesIn(text) {
   const s = String(text || '');
   const out = new Set();
   for (const [key, re] of Object.entries(_FAMILY_RES)) {
-    try { if (re.test(s)) out.add(key); } catch { /* skip */ }
+    try {
+      if (re.test(s)) {
+        out.add(key);
+      }
+    } catch {
+      /* skip */
+    }
   }
   return out;
 }
@@ -148,7 +173,9 @@ function _familiesIn(text) {
  * 归一模型/渠道串以便包含判定:小写、去空白与常见分隔符,便于「答复是否已含真实模型 id」比对。
  */
 function _norm(s) {
-  return String(s == null ? '' : s).toLowerCase().replace(/[\s._/:-]+/g, '');
+  return String(s == null ? '' : s)
+    .toLowerCase()
+    .replace(/[\s._/:-]+/g, '');
 }
 
 /**
@@ -164,7 +191,9 @@ function detectDisguise(answer, truth) {
   const t = truth || {};
   const channel = _clean(t.channel);
   const model = _clean(t.model);
-  if (!channel && !model) return { disguised: false, reason: 'no-truth' };
+  if (!channel && !model) {
+    return { disguised: false, reason: 'no-truth' };
+  }
 
   const ans = String(answer == null ? '' : answer);
   const ansNorm = _norm(ans);
@@ -181,10 +210,15 @@ function detectDisguise(answer, truth) {
   let conflict = false;
   if (answerFamilies.size > 0) {
     for (const fam of answerFamilies) {
-      if (!truthFamilies.has(fam)) { conflict = true; break; }
+      if (!truthFamilies.has(fam)) {
+        conflict = true;
+        break;
+      }
     }
     // 真值无可辨家族时,无法据家族判冲突(避免误报),交由「隐瞒」判据处理。
-    if (truthFamilies.size === 0) conflict = false;
+    if (truthFamilies.size === 0) {
+      conflict = false;
+    }
   }
 
   if (conflict && !mentionsModel && !mentionsChannel) {
@@ -215,21 +249,31 @@ function pickUserText(prompt, options) {
   } catch {
     // fail-soft(叶子不可用):原 prompt 优先行为
     const direct = String(prompt == null ? '' : prompt).trim();
-    if (direct) return direct;
+    if (direct) {
+      return direct;
+    }
     try {
       const msgs = options && Array.isArray(options.messages) ? options.messages : [];
       for (let i = msgs.length - 1; i >= 0; i--) {
         const m = msgs[i];
-        if (!m || m.role !== 'user') continue;
-        if (typeof m.content === 'string') return m.content.trim();
+        if (!m || m.role !== 'user') {
+          continue;
+        }
+        if (typeof m.content === 'string') {
+          return m.content.trim();
+        }
         if (Array.isArray(m.content)) {
           const parts = m.content
-            .map((p) => (typeof p === 'string' ? p : (p && (p.text || p.content) || '')))
+            .map((p) => (typeof p === 'string' ? p : (p && (p.text || p.content)) || ''))
             .filter(Boolean);
-          if (parts.length) return parts.join(' ').trim();
+          if (parts.length) {
+            return parts.join(' ').trim();
+          }
         }
       }
-    } catch { /* fail-soft */ }
+    } catch {
+      /* fail-soft */
+    }
     return '';
   }
 }
@@ -242,9 +286,13 @@ function pickUserText(prompt, options) {
  * @returns {string|null}
  */
 function buildTruthFooter(truth, opts = {}) {
-  if (!isEnabled(opts.env)) return null;
+  if (!isEnabled(opts.env)) {
+    return null;
+  }
   const t = resolveTruth(truth);
-  if (!t.channel && !t.model) return null;
+  if (!t.channel && !t.model) {
+    return null;
+  }
   const locale = opts.locale === 'en' ? 'en' : 'zh';
 
   if (locale === 'en') {
@@ -265,14 +313,20 @@ function buildTruthFooter(truth, opts = {}) {
  * @returns {string}
  */
 function formatIdentityDirective(truth, opts = {}) {
-  if (!isEnabled(opts.env)) return '';
+  if (!isEnabled(opts.env)) {
+    return '';
+  }
   const t = resolveTruth(truth || {});
   const locale = opts.locale === 'en' ? 'en' : 'zh';
 
   if (locale === 'en') {
     const known = [];
-    if (t.channel) known.push(`channel = ${t.channel}`);
-    if (t.model) known.push(`model = ${t.model}`);
+    if (t.channel) {
+      known.push(`channel = ${t.channel}`);
+    }
+    if (t.model) {
+      known.push(`model = ${t.model}`);
+    }
     const knownLine = known.length
       ? `Your real runtime identity (from the khy gateway): ${known.join(', ')}.`
       : 'Your real runtime identity is set by the khy gateway (real supply channel + real model, resolved at request time; see the Adapter/Model line above).';
@@ -288,8 +342,12 @@ function formatIdentityDirective(truth, opts = {}) {
   }
 
   const known = [];
-  if (t.channel) known.push(`渠道 = ${t.channel}`);
-  if (t.model) known.push(`模型 = ${t.model}`);
+  if (t.channel) {
+    known.push(`渠道 = ${t.channel}`);
+  }
+  if (t.model) {
+    known.push(`模型 = ${t.model}`);
+  }
   const knownLine = known.length
     ? `你的真实运行身份(由 khy 网关决定):${known.join('、')}。`
     : '你的真实运行身份由 khy 网关决定:真实供应渠道见上方 Adapter、真实模型见上方 Model(具体值在请求时解析)。';

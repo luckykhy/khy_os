@@ -30,7 +30,9 @@ function isEnabled(env = process.env) {
     return require('../flagRegistry').isFlagEnabled('KHY_DEVICE_APPS_NATIVE_UNINSTALL', env);
   } catch (_) {
     const raw = env && env.KHY_DEVICE_APPS_NATIVE_UNINSTALL;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !_FALSY.has(String(raw).trim().toLowerCase());
   }
 }
@@ -45,16 +47,21 @@ const INSTALLER_KIND = Object.freeze({
 });
 
 // Windows MSI ProductCode:{8-4-4-4-12} 十六进制 GUID(大括号必带)。
-const _MSI_GUID_RE = /^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}$/;
+const _MSI_GUID_RE =
+  /^\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}$/;
 
 // 从 UninstallString 里抓「首个 exe 路径」。兼容带引号("C:\...\unins000.exe" /x)与
 // 不带引号(C:\Program Files\App\uninstall.exe)。仅用于分类/取路径;绝不据此拼 shell。
 function _extractExePath(uninstallString) {
   const s = String(uninstallString || '').trim();
-  if (!s) return null;
+  if (!s) {
+    return null;
+  }
   // 带引号:取第一段引号内容。
   const q = /^"([^"]+\.exe)"/i.exec(s);
-  if (q) return q[1];
+  if (q) {
+    return q[1];
+  }
   // 不带引号:取到 .exe 为止(路径可含空格,故贪婪到首个 .exe 边界)。
   const m = /^(.+?\.exe)(?:\s|$)/i.exec(s);
   return m ? m[1].trim() : null;
@@ -67,26 +74,40 @@ function _extractExePath(uninstallString) {
  * 缺字段容忍。返回 { ok, record?/reason }。
  */
 function normalizeRecord(raw) {
-  if (!raw || typeof raw !== 'object') return { ok: false, reason: '记录为空或非对象' };
+  if (!raw || typeof raw !== 'object') {
+    return { ok: false, reason: '记录为空或非对象' };
+  }
   const displayName = String(raw.DisplayName || raw.displayName || '').trim();
   const quiet = String(raw.QuietUninstallString || raw.quietUninstallString || '').trim();
   const normal = String(raw.UninstallString || raw.uninstallString || '').trim();
   // MSI ProductCode:优先取显式字段;否则从 keyName(HKLM 下 MSI 的子键名即 ProductCode)推断。
   const keyName = String(raw.keyName || raw.KeyName || '').trim();
   const explicitGuid = String(raw.msiProductCode || '').trim();
-  const guid = _MSI_GUID_RE.test(explicitGuid) ? explicitGuid
-    : (_MSI_GUID_RE.test(keyName) ? keyName : '');
+  const guid = _MSI_GUID_RE.test(explicitGuid)
+    ? explicitGuid
+    : _MSI_GUID_RE.test(keyName)
+      ? keyName
+      : '';
 
   // 两个卸载串都空、且无 MSI GUID → 无卸载器可用,拒绝(绝不猜删)。
   if (!quiet && !normal && !guid) {
-    return { ok: false, reason: 'UninstallString/QuietUninstallString 均为空且无 MSI ProductCode:无自带卸载器,拒绝盲删' };
+    return {
+      ok: false,
+      reason:
+        'UninstallString/QuietUninstallString 均为空且无 MSI ProductCode:无自带卸载器,拒绝盲删',
+    };
   }
 
   let kind = INSTALLER_KIND.GENERIC;
   const probe = (quiet || normal).toLowerCase();
-  if (guid || /msiexec/i.test(probe)) kind = INSTALLER_KIND.MSI;
-  else if (/unins\d*\.exe/i.test(probe)) kind = INSTALLER_KIND.INNO;   // Inno Setup: unins000.exe
-  else if (/uninst.*\.exe|\\uninstall\.exe/i.test(probe)) kind = INSTALLER_KIND.NSIS; // NSIS: uninstall.exe/uninst.exe
+  if (guid || /msiexec/i.test(probe)) {
+    kind = INSTALLER_KIND.MSI;
+  } else if (/unins\d*\.exe/i.test(probe)) {
+    kind = INSTALLER_KIND.INNO;
+  } // Inno Setup: unins000.exe
+  else if (/uninst.*\.exe|\\uninstall\.exe/i.test(probe)) {
+    kind = INSTALLER_KIND.NSIS;
+  } // NSIS: uninstall.exe/uninst.exe
 
   return {
     ok: true,
@@ -114,7 +135,9 @@ function normalizeRecord(raw) {
  * 返回 { ok, argv?/reason, silent, source }。
  */
 function buildNativeUninstallCommand(record) {
-  if (!record || typeof record !== 'object') return { ok: false, reason: '记录无效' };
+  if (!record || typeof record !== 'object') {
+    return { ok: false, reason: '记录无效' };
+  }
   const kind = record.kind || INSTALLER_KIND.GENERIC;
 
   // 1) MSI:最优先,最静默。
@@ -130,7 +153,9 @@ function buildNativeUninstallCommand(record) {
   // 2) 作者提供的静默卸载串:直接采用(切成 argv;不改内容,作者已负责静默)。
   if (record.quietUninstallString) {
     const argv = _splitCommandLine(record.quietUninstallString);
-    if (argv && argv.length) return { ok: true, argv, silent: true, source: 'quiet-uninstall-string' };
+    if (argv && argv.length) {
+      return { ok: true, argv, silent: true, source: 'quiet-uninstall-string' };
+    }
   }
 
   // 3) 普通卸载串:抽 exe,补该家族静默 flag。
@@ -141,9 +166,16 @@ function buildNativeUninstallCommand(record) {
     const flags = _silentFlagsFor(kind);
     const merged = rest.slice();
     for (const f of flags) {
-      if (!merged.some(a => a.toLowerCase() === f.toLowerCase())) merged.push(f);
+      if (!merged.some((a) => a.toLowerCase() === f.toLowerCase())) {
+        merged.push(f);
+      }
     }
-    return { ok: true, argv: [exe, ...merged], silent: flags.length > 0, source: 'uninstall-string' };
+    return {
+      ok: true,
+      argv: [exe, ...merged],
+      silent: flags.length > 0,
+      source: 'uninstall-string',
+    };
   }
 
   // 4) 无法安全取得卸载器 → 拒绝(绝不猜删安装目录)。
@@ -152,8 +184,12 @@ function buildNativeUninstallCommand(record) {
 
 // 各安装器家族的静默参数(让卸载无人值守;generic 不猜,返回空表照原样执行)。
 function _silentFlagsFor(kind) {
-  if (kind === INSTALLER_KIND.INNO) return ['/VERYSILENT', '/NORESTART'];
-  if (kind === INSTALLER_KIND.NSIS) return ['/S'];
+  if (kind === INSTALLER_KIND.INNO) {
+    return ['/VERYSILENT', '/NORESTART'];
+  }
+  if (kind === INSTALLER_KIND.NSIS) {
+    return ['/S'];
+  }
   return [];
 }
 
@@ -168,14 +204,22 @@ function _splitCommandLine(cmd) {
   let inQuote = false;
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
-    if (ch === '"') { inQuote = !inQuote; continue; }
+    if (ch === '"') {
+      inQuote = !inQuote;
+      continue;
+    }
     if (!inQuote && /\s/.test(ch)) {
-      if (cur) { out.push(cur); cur = ''; }
+      if (cur) {
+        out.push(cur);
+        cur = '';
+      }
       continue;
     }
     cur += ch;
   }
-  if (cur) out.push(cur);
+  if (cur) {
+    out.push(cur);
+  }
   return out;
 }
 
@@ -184,17 +228,30 @@ function _splitCommandLine(cmd) {
  * 大小写不敏感;精确 displayName 命中优先,其次子串命中。返回匹配数组(可能空)。
  */
 function matchRecords(records, query) {
-  if (!Array.isArray(records)) return [];
-  const q = String(query || '').trim().toLowerCase();
-  if (!q) return [];
+  if (!Array.isArray(records)) {
+    return [];
+  }
+  const q = String(query || '')
+    .trim()
+    .toLowerCase();
+  if (!q) {
+    return [];
+  }
   const exact = [];
   const partial = [];
   for (const r of records) {
-    if (!r || typeof r !== 'object') continue;
+    if (!r || typeof r !== 'object') {
+      continue;
+    }
     const name = String(r.displayName || '').toLowerCase();
-    if (!name) continue;
-    if (name === q) exact.push(r);
-    else if (name.includes(q) || q.includes(name)) partial.push(r);
+    if (!name) {
+      continue;
+    }
+    if (name === q) {
+      exact.push(r);
+    } else if (name.includes(q) || q.includes(name)) {
+      partial.push(r);
+    }
   }
   return exact.length ? exact : partial;
 }

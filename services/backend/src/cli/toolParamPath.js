@@ -59,14 +59,18 @@
 const ELLIPSIS = '…'; // '…'
 
 function pathMiddleTruncateEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TOOL_PATH_MIDDLE_TRUNCATE) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TOOL_PATH_MIDDLE_TRUNCATE) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
 // Width-metric sub-gate: when off, the leaf uses the original code-unit budget
 // (byte-identical to the pre-刀80 behaviour). Default on.
 function pathWidthAwareEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TOOL_PATH_WIDTH) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TOOL_PATH_WIDTH) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -74,12 +78,16 @@ function pathWidthAwareEnabled(env = process.env) {
 // Iterates by code point (for…of) so surrogate pairs are never bisected.
 function _prefixByWidth(s, budget, dw) {
   s = String(s);
-  if (budget <= 0) return '';
+  if (budget <= 0) {
+    return '';
+  }
   let acc = 0;
   let out = '';
   for (const ch of s) {
     const cw = dw(ch);
-    if (acc + cw > budget) break;
+    if (acc + cw > budget) {
+      break;
+    }
     acc += cw;
     out += ch;
   }
@@ -89,13 +97,17 @@ function _prefixByWidth(s, budget, dw) {
 // Longest SUFFIX of s (whole code points) whose display width <= budget.
 function _suffixByWidth(s, budget, dw) {
   s = String(s);
-  if (budget <= 0) return '';
+  if (budget <= 0) {
+    return '';
+  }
   const cps = Array.from(s); // code points, not UTF-16 units
   let acc = 0;
   let out = '';
   for (let i = cps.length - 1; i >= 0; i--) {
     const cw = dw(cps[i]);
-    if (acc + cw > budget) break;
+    if (acc + cw > budget) {
+      break;
+    }
     acc += cw;
     out = cps[i] + out;
   }
@@ -121,7 +133,9 @@ function _strategy(env) {
           suffix: (s, budget) => _suffixByWidth(s, budget, w),
         };
       }
-    } catch { /* fall through to legacy code-unit strategy */ }
+    } catch {
+      /* fall through to legacy code-unit strategy */
+    }
   }
   // Legacy strategy — the exact `.length` / `.slice` shapes the leaf used before.
   return {
@@ -138,8 +152,12 @@ function _strategy(env) {
 // truncateToWidth's shape: keep budget-1 of width + ellipsis).
 function _truncateEnd(s, maxLen, st) {
   s = String(s);
-  if (st.width(s) <= maxLen) return s;
-  if (maxLen <= 1) return ELLIPSIS;
+  if (st.width(s) <= maxLen) {
+    return s;
+  }
+  if (maxLen <= 1) {
+    return ELLIPSIS;
+  }
   return st.prefix(s, maxLen - 1) + ELLIPSIS;
 }
 
@@ -147,8 +165,12 @@ function _truncateEnd(s, maxLen, st) {
 // truncateStartToWidth).
 function _truncateStart(s, maxLen, st) {
   s = String(s);
-  if (st.width(s) <= maxLen) return s;
-  if (maxLen <= 1) return ELLIPSIS;
+  if (st.width(s) <= maxLen) {
+    return s;
+  }
+  if (maxLen <= 1) {
+    return ELLIPSIS;
+  }
   return ELLIPSIS + st.suffix(s, maxLen - 1);
 }
 
@@ -165,18 +187,26 @@ function _truncateStart(s, maxLen, st) {
 function truncatePathMiddle(pathStr, maxLen, env = process.env) {
   const p = String(pathStr == null ? '' : pathStr);
   const max = Number(maxLen);
-  if (!Number.isFinite(max)) return p;
+  if (!Number.isFinite(max)) {
+    return p;
+  }
 
   const st = _strategy(env);
 
   // No truncation needed.
-  if (st.width(p) <= max) return p;
+  if (st.width(p) <= max) {
+    return p;
+  }
 
   // Edge case: non-positive budget.
-  if (max <= 0) return ELLIPSIS;
+  if (max <= 0) {
+    return ELLIPSIS;
+  }
 
   // Need room for "…" + something meaningful — fall back to end-truncate.
-  if (max < 5) return _truncateEnd(p, max, st);
+  if (max < 5) {
+    return _truncateEnd(p, max, st);
+  }
 
   // Find the last path separator ('/' or '\\' — Khy supports Windows paths). A
   // separator is always a single BMP unit, so slicing at it never splits a pair.
@@ -187,11 +217,15 @@ function truncatePathMiddle(pathStr, maxLen, env = process.env) {
   const filenameLen = st.width(filename);
 
   // If the filename alone is (nearly) the whole budget, truncate from the start.
-  if (filenameLen >= max - 1) return _truncateStart(p, max, st);
+  if (filenameLen >= max - 1) {
+    return _truncateStart(p, max, st);
+  }
 
   // Space left for the directory prefix. Result: directory + "…" + filename.
   const availableForDir = max - 1 - filenameLen; // -1 for the ellipsis
-  if (availableForDir <= 0) return _truncateStart(filename, max, st);
+  if (availableForDir <= 0) {
+    return _truncateStart(filename, max, st);
+  }
 
   // Truncate the directory (no ellipsis — the middle '…' is the separator).
   const truncatedDir = st.prefix(directory, availableForDir);
@@ -224,14 +258,18 @@ module.exports = {
  */
 function formatToolHeaderPath(rawPath, cwd = process.cwd(), env = process.env, maxLen = 60) {
   const raw0 = String(rawPath == null ? '' : rawPath);
-  if (!raw0) return raw0;
+  if (!raw0) {
+    return raw0;
+  }
   let rel;
   try {
     rel = require('./ccRelativePath').relativizeToolPath(raw0, cwd, env);
   } catch {
     rel = raw0;
   }
-  if (!pathMiddleTruncateEnabled(env)) return rel;
+  if (!pathMiddleTruncateEnabled(env)) {
+    return rel;
+  }
   // 与 ToolLines 一致:归一空白后交给 truncatePathMiddle。它内部按显示宽度判断
   // 「放得下就原样返回」,故这里无需再自行做 fit 判断(旧版的 `norm.length > maxLen`
   // 是 code-unit 判断,对 CJK 会误判「放得下」而漏截;收敛进 truncatePathMiddle 后

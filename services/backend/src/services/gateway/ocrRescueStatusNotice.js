@@ -37,10 +37,15 @@ function isRescueStatusEnabled(env) {
  * @returns {string|null}
  */
 function buildOcrRescueStatus({ count, adapterName, env } = {}) {
-  if (!isRescueStatusEnabled(env)) return null;
+  if (!isRescueStatusEnabled(env)) {
+    return null;
+  }
   const n = Number(count);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  const who = (typeof adapterName === 'string' && adapterName.trim()) ? adapterName.trim() : '当前适配器';
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  const who =
+    typeof adapterName === 'string' && adapterName.trim() ? adapterName.trim() : '当前适配器';
   const noun = n === 1 ? '1 张图片' : `${n} 张图片`;
   return `检测到图片输入：${who} 不支持图像识别，已降级用本地 OCR 成功提取 ${noun}文本并据此作答`;
 }
@@ -72,10 +77,14 @@ function isRescuePrepStatusEnabled(env) {
  * @returns {string|null}
  */
 function buildOcrRescuePrepStatus({ count, modelName, env } = {}) {
-  if (!isRescuePrepStatusEnabled(env)) return null;
+  if (!isRescuePrepStatusEnabled(env)) {
+    return null;
+  }
   const n = Number(count);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  const who = (typeof modelName === 'string' && modelName.trim()) ? modelName.trim() : '当前模型';
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  const who = typeof modelName === 'string' && modelName.trim() ? modelName.trim() : '当前模型';
   const noun = n === 1 ? '1 张图片' : `${n} 张图片`;
   return `检测到图片输入：${who} 不支持图像识别，已降级用本地 OCR 成功提取 ${noun}文本并据此作答`;
 }
@@ -114,7 +123,9 @@ function isPrepClosureDedupEnabled(env) {
  */
 function shouldSuppressPrepForClosure({ intermediateEnabled, closureEnabled, env } = {}) {
   try {
-    if (!isPrepClosureDedupEnabled(env)) return false;
+    if (!isPrepClosureDedupEnabled(env)) {
+      return false;
+    }
     return intermediateEnabled === true && closureEnabled === true;
   } catch {
     return false;

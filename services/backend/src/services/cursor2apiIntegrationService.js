@@ -6,14 +6,16 @@
  * - Install/build the extracted Node project
  * - Start/stop/status management for the Cursor2API process
  */
+const { spawn, spawnSync } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
+const net = require('net');
 const os = require('os');
 const path = require('path');
-const net = require('net');
-const crypto = require('crypto');
-const { spawn, spawnSync } = require('child_process');
-const { safeKill } = require('../tools/platformUtils');
+
 const StreamZip = require('node-stream-zip');
+
+const { safeKill } = require('../tools/platformUtils');
 const { getDataHome } = require('../utils/dataHome');
 
 const APP_NAME = 'cursor2api';
@@ -45,16 +47,26 @@ const ensureDir = require('../utils/mkdirpSync');
 
 function normalizePort(raw, fallback = DEFAULT_PORT) {
   const n = parseInt(raw, 10);
-  if (!Number.isFinite(n) || n <= 0 || n > 65535) return fallback;
+  if (!Number.isFinite(n) || n <= 0 || n > 65535) {
+    return fallback;
+  }
   return n;
 }
 
 function normalizeBool(raw, fallback) {
-  if (raw === undefined || raw === null || raw === '') return fallback;
-  if (typeof raw === 'boolean') return raw;
+  if (raw === undefined || raw === null || raw === '') {
+    return fallback;
+  }
+  if (typeof raw === 'boolean') {
+    return raw;
+  }
   const v = String(raw).trim().toLowerCase();
-  if (['1', 'true', 'yes', 'on'].includes(v)) return true;
-  if (['0', 'false', 'no', 'off'].includes(v)) return false;
+  if (['1', 'true', 'yes', 'on'].includes(v)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(v)) {
+    return false;
+  }
   return fallback;
 }
 
@@ -66,8 +78,12 @@ function generateAuthToken() {
 
 function maskToken(token) {
   const t = String(token || '').trim();
-  if (!t) return '(empty)';
-  if (t.length <= 10) return `${t.slice(0, 3)}***`;
+  if (!t) {
+    return '(empty)';
+  }
+  if (t.length <= 10) {
+    return `${t.slice(0, 3)}***`;
+  }
   return `${t.slice(0, 6)}***${t.slice(-4)}`;
 }
 
@@ -80,7 +96,9 @@ function loadConfig() {
     requireToken: true,
   };
   try {
-    if (!fs.existsSync(configPath())) return defaults;
+    if (!fs.existsSync(configPath())) {
+      return defaults;
+    }
     const raw = JSON.parse(fs.readFileSync(configPath(), 'utf-8'));
     return {
       ...defaults,
@@ -114,7 +132,9 @@ function saveConfig(nextConfig = {}) {
 
 function readPid() {
   try {
-    if (!fs.existsSync(pidPath())) return null;
+    if (!fs.existsSync(pidPath())) {
+      return null;
+    }
     const pid = parseInt(fs.readFileSync(pidPath(), 'utf-8').trim(), 10);
     return Number.isFinite(pid) && pid > 0 ? pid : null;
   } catch {
@@ -129,14 +149,18 @@ function writePid(pid) {
 
 function clearPid() {
   try {
-    if (fs.existsSync(pidPath())) fs.unlinkSync(pidPath());
+    if (fs.existsSync(pidPath())) {
+      fs.unlinkSync(pidPath());
+    }
   } catch {
     // best effort
   }
 }
 
 function isPidAlive(pid) {
-  if (!pid || pid <= 0) return false;
+  if (!pid || pid <= 0) {
+    return false;
+  }
   try {
     process.kill(pid, 0);
     return true;
@@ -165,8 +189,10 @@ async function waitForPortState(port, expectOpen, timeoutMs = 15000) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     const open = await isPortOpen(port);
-    if (open === expectOpen) return true;
-    await new Promise(r => setTimeout(r, 300));
+    if (open === expectOpen) {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 300));
   }
   return false;
 }
@@ -174,21 +200,27 @@ async function waitForPortState(port, expectOpen, timeoutMs = 15000) {
 async function waitForProcessExit(pid, timeoutMs = 6000) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
-    if (!isPidAlive(pid)) return true;
-    await new Promise(r => setTimeout(r, 200));
+    if (!isPidAlive(pid)) {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 200));
   }
   return !isPidAlive(pid);
 }
 
 function tailProcessError(result) {
   const joined = `${result.stderr || ''}\n${result.stdout || ''}`.trim();
-  if (!joined) return 'no process output';
+  if (!joined) {
+    return 'no process output';
+  }
   return joined.split('\n').slice(-10).join('\n');
 }
 
 function readPackageInfo(installDir) {
   const pkgPath = path.join(installDir, 'package.json');
-  if (!fs.existsSync(pkgPath)) return null;
+  if (!fs.existsSync(pkgPath)) {
+    return null;
+  }
   try {
     return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
   } catch {
@@ -233,20 +265,27 @@ async function extractZip(zipFilePath, installDir) {
     throw new Error(`解压失败: ${err.message}`);
   } finally {
     if (zip) {
-      try { await zip.close(); } catch { /* ignore */ }
+      try {
+        await zip.close();
+      } catch {
+        /* ignore */
+      }
     }
   }
 
   try {
-    const entries = fs.readdirSync(tmpDir, { withFileTypes: true })
-      .filter(d => d.name !== '__MACOSX');
+    const entries = fs
+      .readdirSync(tmpDir, { withFileTypes: true })
+      .filter((d) => d.name !== '__MACOSX');
     let sourceDir = tmpDir;
 
     if (entries.length === 1 && entries[0].isDirectory()) {
       sourceDir = path.join(tmpDir, entries[0].name);
     } else {
       for (const e of entries) {
-        if (!e.isDirectory()) continue;
+        if (!e.isDirectory()) {
+          continue;
+        }
         const maybe = path.join(tmpDir, e.name);
         if (fs.existsSync(path.join(maybe, 'package.json'))) {
           sourceDir = maybe;
@@ -337,8 +376,10 @@ async function prepareProject(options = {}) {
     throw new Error(`未发现 cursor2api 项目目录: ${installDir}`);
   }
 
-  const needInstall = options.forceInstall === true || !fs.existsSync(path.join(installDir, 'node_modules'));
-  const needBuild = options.forceBuild === true || !fs.existsSync(path.join(installDir, 'dist', 'index.js'));
+  const needInstall =
+    options.forceInstall === true || !fs.existsSync(path.join(installDir, 'node_modules'));
+  const needBuild =
+    options.forceBuild === true || !fs.existsSync(path.join(installDir, 'dist', 'index.js'));
 
   if (needInstall) {
     runNpm(installDir, ['install', '--no-audit', '--no-fund'], 'npm install');
@@ -425,7 +466,9 @@ async function start(options = {}) {
     detached: true,
     stdio: ['ignore', fd, fd],
   });
-  child.on('error', () => { /* detached service — best effort */ });
+  child.on('error', () => {
+    /* detached service — best effort */
+  });
   fs.closeSync(fd);
 
   if (!child.pid) {
@@ -437,7 +480,11 @@ async function start(options = {}) {
 
   const online = await waitForPortState(port, true, 15000);
   if (!online) {
-    try { safeKill(child.pid); } catch { /* ignore */ }
+    try {
+      safeKill(child.pid);
+    } catch {
+      /* ignore */
+    }
     clearPid();
     throw new Error('启动超时：15 秒内端口未就绪，请检查日志');
   }
@@ -471,11 +518,19 @@ async function stop() {
     return { stopped: false, alreadyStopped: true };
   }
 
-  try { safeKill(pid); } catch { /* ignore */ }
+  try {
+    safeKill(pid);
+  } catch {
+    /* ignore */
+  }
 
   let exited = await waitForProcessExit(pid, 5000);
   if (!exited) {
-    try { safeKill(pid, 'SIGKILL', 0); } catch { /* ignore */ }
+    try {
+      safeKill(pid, 'SIGKILL', 0);
+    } catch {
+      /* ignore */
+    }
     exited = await waitForProcessExit(pid, 2000);
   }
 

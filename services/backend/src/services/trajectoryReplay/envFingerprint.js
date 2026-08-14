@@ -15,9 +15,9 @@
  * capture. Capture is total: any missing field resolves to null, never throws.
  */
 
+const { execFileSync } = require('child_process');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const artifactHash = require('./artifactHash');
 
@@ -74,21 +74,39 @@ function capture(opts = {}) {
   let osInfo = null;
   try {
     osInfo = { platform: os.platform(), release: os.release(), arch: os.arch() };
-  } catch { osInfo = null; }
+  } catch {
+    osInfo = null;
+  }
 
   let nodeVersion = null;
-  try { nodeVersion = process.version || null; } catch { nodeVersion = null; }
+  try {
+    nodeVersion = process.version || null;
+  } catch {
+    nodeVersion = null;
+  }
 
   let cwd = null;
-  try { cwd = opts.cwd != null ? String(opts.cwd) : process.cwd(); } catch { cwd = null; }
+  try {
+    cwd = opts.cwd != null ? String(opts.cwd) : process.cwd();
+  } catch {
+    cwd = null;
+  }
 
   let manifestHash = null;
   if (opts.manifestPath) {
-    try { manifestHash = artifactHash.hashFile(path.resolve(opts.manifestPath)); } catch { manifestHash = null; }
+    try {
+      manifestHash = artifactHash.hashFile(path.resolve(opts.manifestPath));
+    } catch {
+      manifestHash = null;
+    }
   }
 
   let capturedAt = null;
-  try { capturedAt = Date.now(); } catch { capturedAt = null; }
+  try {
+    capturedAt = Date.now();
+  } catch {
+    capturedAt = null;
+  }
 
   return { os: osInfo, node: nodeVersion, cwd, toolchain, manifestHash, capturedAt };
 }

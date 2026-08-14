@@ -21,7 +21,7 @@ function _resolveRoot(cwd) {
   const base = cwd || process.env.KHYQUANT_CWD || process.cwd();
   try {
     const instr = require('./instructionFileService');
-    const root = (instr && typeof instr.findGitRoot === 'function') ? instr.findGitRoot(base) : null;
+    const root = instr && typeof instr.findGitRoot === 'function' ? instr.findGitRoot(base) : null;
     return root || base;
   } catch {
     return base;
@@ -38,9 +38,13 @@ function _gitignorePath(cwd) {
  * - 已有内容:先补齐尾换行,再接块(块的前导 \n 充当一个空行分隔)。
  */
 function _joinBlock(existingText, block) {
-  if (!existingText) return block.replace(/^\n/, '');
+  if (!existingText) {
+    return block.replace(/^\n/, '');
+  }
   let base = existingText;
-  if (!base.endsWith('\n')) base += '\n';
+  if (!base.endsWith('\n')) {
+    base += '\n';
+  }
   return base + block;
 }
 
@@ -56,8 +60,12 @@ function detectStacks(cwd) {
   try {
     const { detectProject } = require('./deploy/projectDetector');
     const plan = detectProject(dir) || {};
-    if (plan.type && plan.type !== 'unknown') stacks.push(String(plan.type));
-  } catch { /* fail-soft */ }
+    if (plan.type && plan.type !== 'unknown') {
+      stacks.push(String(plan.type));
+    }
+  } catch {
+    /* fail-soft */
+  }
   return stacks;
 }
 
@@ -65,7 +73,9 @@ function detectStacks(cwd) {
 function readGitignore(cwd) {
   try {
     const file = _gitignorePath(cwd);
-    if (!fs.existsSync(file)) return '';
+    if (!fs.existsSync(file)) {
+      return '';
+    }
     return fs.readFileSync(file, 'utf-8');
   } catch {
     return '';
@@ -93,7 +103,12 @@ function hasGitignore(cwd) {
 function appendPatterns(cwd, patterns, opts = {}) {
   try {
     if (!advisor.isEnabled()) {
-      return { success: false, added: [], skipped: [], error: 'gitignore advisor disabled (KHY_GITIGNORE_ADVISOR=off)' };
+      return {
+        success: false,
+        added: [],
+        skipped: [],
+        error: 'gitignore advisor disabled (KHY_GITIGNORE_ADVISOR=off)',
+      };
     }
     const list = Array.isArray(patterns) ? patterns : [];
     const file = _gitignorePath(cwd);
@@ -116,7 +131,9 @@ function appendPatterns(cwd, patterns, opts = {}) {
     }
 
     const block = advisor.renderGitignoreBlock(additions, { header: opts && opts.header });
-    if (!block) return { success: true, file, added: [], skipped };
+    if (!block) {
+      return { success: true, file, added: [], skipped };
+    }
 
     fs.writeFileSync(file, _joinBlock(existingText, block), 'utf-8');
     return { success: true, file, added: additions, skipped };
@@ -139,11 +156,16 @@ function appendPatterns(cwd, patterns, opts = {}) {
 function generateForProject(cwd, opts = {}) {
   try {
     if (!advisor.isEnabled()) {
-      return { success: false, stacks: [], added: [], skipped: [], error: 'gitignore advisor disabled (KHY_GITIGNORE_ADVISOR=off)' };
+      return {
+        success: false,
+        stacks: [],
+        added: [],
+        skipped: [],
+        error: 'gitignore advisor disabled (KHY_GITIGNORE_ADVISOR=off)',
+      };
     }
-    const stacks = Array.isArray(opts && opts.stacks) && opts.stacks.length
-      ? opts.stacks
-      : detectStacks(cwd);
+    const stacks =
+      Array.isArray(opts && opts.stacks) && opts.stacks.length ? opts.stacks : detectStacks(cwd);
     const existingText = readGitignore(cwd);
     const file = _gitignorePath(cwd);
 
@@ -158,15 +180,23 @@ function generateForProject(cwd, opts = {}) {
       return { success: true, file, stacks, added: [], skipped: [] };
     }
 
-    const header = (opts && opts.header)
-      || `khy 按技术栈(${stacks.join(', ') || '通用'})生成的忽略项`;
+    const header =
+      (opts && opts.header) || `khy 按技术栈(${stacks.join(', ') || '通用'})生成的忽略项`;
     const block = advisor.renderGitignoreBlock(additions, { header });
-    if (!block) return { success: true, file, stacks, added: [], skipped: [] };
+    if (!block) {
+      return { success: true, file, stacks, added: [], skipped: [] };
+    }
 
     fs.writeFileSync(file, _joinBlock(existingText, block), 'utf-8');
     return { success: true, file, stacks, added: additions, skipped: [] };
   } catch (err) {
-    return { success: false, stacks: [], added: [], skipped: [], error: (err && err.message) || String(err) };
+    return {
+      success: false,
+      stacks: [],
+      added: [],
+      skipped: [],
+      error: (err && err.message) || String(err),
+    };
   }
 }
 

@@ -42,9 +42,13 @@ function isEnabled(env = process.env) {
     if (reg && typeof reg.isFlagEnabled === 'function') {
       return reg.isFlagEnabled('KHY_EXTERNAL_APP_IMPORT', env);
     }
-  } catch { /* registry unavailable — local CANON fallback */ }
+  } catch {
+    /* registry unavailable — local CANON fallback */
+  }
   const raw = env && env.KHY_EXTERNAL_APP_IMPORT;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -53,8 +57,14 @@ const _normApp = require('../../utils/trimLowerCase');
 
 function _adapterFor(app) {
   const mod = _ADAPTERS[_normApp(app)];
-  if (!mod) return null;
-  try { return require(mod); } catch { return null; }
+  if (!mod) {
+    return null;
+  }
+  try {
+    return require(mod);
+  } catch {
+    return null;
+  }
 }
 
 /** poolKey = `<app>-<provider>`,规整为 registrar 认可的 `/^[a-z0-9][-a-z0-9]*$/`。 */
@@ -65,7 +75,11 @@ function _poolKey(app, providerId) {
 
 /** 默认 registrar(真)。测试经 deps.registrar 注入 spy。 */
 function _defaultRegistrar() {
-  try { return require('./customProviderRegistrar'); } catch { return null; }
+  try {
+    return require('./customProviderRegistrar');
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -73,14 +87,33 @@ function _defaultRegistrar() {
  * @returns { success, app, providers:[{id, endpoint, models, defaultModel, hasKey, keyMasked}] }
  */
 function discover(app, env = process.env) {
-  if (!isEnabled(env)) return { success: false, app: _normApp(app), error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）', providers: [] };
+  if (!isEnabled(env)) {
+    return {
+      success: false,
+      app: _normApp(app),
+      error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）',
+      providers: [],
+    };
+  }
   const adapter = _adapterFor(app);
   if (!adapter || typeof adapter.usable !== 'function') {
-    return { success: false, app: _normApp(app), error: `不支持的外部软件: ${app || '(空)'}`, providers: [] };
+    return {
+      success: false,
+      app: _normApp(app),
+      error: `不支持的外部软件: ${app || '(空)'}`,
+      providers: [],
+    };
   }
   try {
     const res = adapter.usable(env) || {};
-    if (!res.success) return { success: false, app: _normApp(app), error: res.error || 'usable failed', providers: [] };
+    if (!res.success) {
+      return {
+        success: false,
+        app: _normApp(app),
+        error: res.error || 'usable failed',
+        providers: [],
+      };
+    }
     const providers = (res.providers || []).map((p) => ({
       id: p.id,
       endpoint: p.endpoint || '',
@@ -91,13 +124,24 @@ function discover(app, env = process.env) {
     }));
     return { success: true, app: _normApp(app), providers };
   } catch (e) {
-    return { success: false, app: _normApp(app), error: String((e && e.message) || e), providers: [] };
+    return {
+      success: false,
+      app: _normApp(app),
+      error: String((e && e.message) || e),
+      providers: [],
+    };
   }
 }
 
 /** 遍历 6 app 聚合发现。 */
 function discoverAll(env = process.env) {
-  if (!isEnabled(env)) return { success: false, error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）', apps: [] };
+  if (!isEnabled(env)) {
+    return {
+      success: false,
+      error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）',
+      apps: [],
+    };
+  }
   const apps = APPS.map((app) => discover(app, env));
   return { success: true, apps };
 }
@@ -111,14 +155,34 @@ function discoverAll(env = process.env) {
  */
 function importApp(opts = {}, env = process.env, deps = {}) {
   const app = _normApp(opts.app);
-  if (!isEnabled(env)) return { success: false, app, error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）', imported: [], skipped: [] };
+  if (!isEnabled(env)) {
+    return {
+      success: false,
+      app,
+      error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）',
+      imported: [],
+      skipped: [],
+    };
+  }
   const adapter = _adapterFor(app);
   if (!adapter || typeof adapter.usable !== 'function') {
-    return { success: false, app, error: `不支持的外部软件: ${opts.app || '(空)'}`, imported: [], skipped: [] };
+    return {
+      success: false,
+      app,
+      error: `不支持的外部软件: ${opts.app || '(空)'}`,
+      imported: [],
+      skipped: [],
+    };
   }
   const registrar = deps.registrar || _defaultRegistrar();
   if (!registrar || typeof registrar.registerCustomProvider !== 'function') {
-    return { success: false, app, error: 'customProviderRegistrar 不可用', imported: [], skipped: [] };
+    return {
+      success: false,
+      app,
+      error: 'customProviderRegistrar 不可用',
+      imported: [],
+      skipped: [],
+    };
   }
 
   const imported = [];
@@ -129,12 +193,16 @@ function importApp(opts = {}, env = process.env, deps = {}) {
   } catch (e) {
     return { success: false, app, error: String((e && e.message) || e), imported: [], skipped: [] };
   }
-  if (!raw.success) return { success: false, app, error: raw.error || 'usable failed', imported: [], skipped: [] };
+  if (!raw.success) {
+    return { success: false, app, error: raw.error || 'usable failed', imported: [], skipped: [] };
+  }
 
   const wantOne = opts.provider ? String(opts.provider).toLowerCase() : '';
   for (const p of raw.providers || []) {
     const id = String(p.id || '').toLowerCase();
-    if (wantOne && id !== wantOne) continue;
+    if (wantOne && id !== wantOne) {
+      continue;
+    }
 
     // 密钥:app 自己的真 key 优先,否则借 khy 已存的同厂商 key。
     let key = p.apiKey || '';
@@ -142,27 +210,52 @@ function importApp(opts = {}, env = process.env, deps = {}) {
     if (!key) {
       try {
         const r = S.resolveApiKey(id, '');
-        if (r && r.key) { key = r.key; keySource = r.source; }
-      } catch { /* pool unavailable */ }
+        if (r && r.key) {
+          key = r.key;
+          keySource = r.source;
+        }
+      } catch {
+        /* pool unavailable */
+      }
     }
     // endpoint:app 自己的优先,否则 preset baseUrl。
     let endpoint = p.endpoint || '';
     if (!endpoint) {
-      try { endpoint = S.resolveEndpoint(id, ''); } catch { /* ignore */ }
+      try {
+        endpoint = S.resolveEndpoint(id, '');
+      } catch {
+        /* ignore */
+      }
     }
     const models = Array.isArray(p.models) ? p.models.filter(Boolean) : [];
     const defaultModel = p.defaultModel || models[0] || '';
 
     // 缺任一必要字段 → 跳过(记原因,绝不半截注册)。
-    if (!defaultModel) { skipped.push({ app, provider: id, reason: 'no model configured' }); continue; }
-    if (!endpoint) { skipped.push({ app, provider: id, reason: 'no endpoint (app 未配 + 无 preset)' }); continue; }
-    if (!key) { skipped.push({ app, provider: id, reason: 'no api key (app 未配 + khy 池无同厂商 key)' }); continue; }
+    if (!defaultModel) {
+      skipped.push({ app, provider: id, reason: 'no model configured' });
+      continue;
+    }
+    if (!endpoint) {
+      skipped.push({ app, provider: id, reason: 'no endpoint (app 未配 + 无 preset)' });
+      continue;
+    }
+    if (!key) {
+      skipped.push({ app, provider: id, reason: 'no api key (app 未配 + khy 池无同厂商 key)' });
+      continue;
+    }
 
     const poolKey = _poolKey(app, id);
     if (opts.dryRun) {
       imported.push({
-        app, provider: id, poolKey, models: models.length ? models : [defaultModel],
-        defaultModel, endpoint, keySource, keyMasked: S.maskKey(key), dryRun: true,
+        app,
+        provider: id,
+        poolKey,
+        models: models.length ? models : [defaultModel],
+        defaultModel,
+        endpoint,
+        keySource,
+        keyMasked: S.maskKey(key),
+        dryRun: true,
       });
       continue;
     }
@@ -178,10 +271,14 @@ function importApp(opts = {}, env = process.env, deps = {}) {
         ensureInit: true,
       });
       imported.push({
-        app, provider: id, poolKey: (result && result.poolKey) || poolKey,
-        models: (result && result.models) || models, defaultModel,
+        app,
+        provider: id,
+        poolKey: (result && result.poolKey) || poolKey,
+        models: (result && result.models) || models,
+        defaultModel,
         endpoint: (result && result.endpoint) || endpoint,
-        keySource, keyMasked: S.maskKey(key),
+        keySource,
+        keyMasked: S.maskKey(key),
       });
     } catch (e) {
       skipped.push({ app, provider: id, reason: String((e && e.message) || e) });
@@ -193,13 +290,24 @@ function importApp(opts = {}, env = process.env, deps = {}) {
 
 /** 遍历 6 app 全部导入。 */
 function importAll(opts = {}, env = process.env, deps = {}) {
-  if (!isEnabled(env)) return { success: false, error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）', imported: [], skipped: [] };
+  if (!isEnabled(env)) {
+    return {
+      success: false,
+      error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）',
+      imported: [],
+      skipped: [],
+    };
+  }
   const imported = [];
   const skipped = [];
   for (const app of APPS) {
     const r = importApp({ app, tier: opts.tier, dryRun: opts.dryRun }, env, deps);
-    if (r && Array.isArray(r.imported)) imported.push(...r.imported);
-    if (r && Array.isArray(r.skipped)) skipped.push(...r.skipped);
+    if (r && Array.isArray(r.imported)) {
+      imported.push(...r.imported);
+    }
+    if (r && Array.isArray(r.skipped)) {
+      skipped.push(...r.skipped);
+    }
   }
   return { success: true, imported, skipped };
 }
@@ -210,17 +318,30 @@ function importAll(opts = {}, env = process.env, deps = {}) {
  */
 function unimport(opts = {}, env = process.env, deps = {}) {
   const app = _normApp(opts.app);
-  if (!isEnabled(env)) return { success: false, app, error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）' };
+  if (!isEnabled(env)) {
+    return { success: false, app, error: '外部模型导入已被门控关闭（KHY_EXTERNAL_APP_IMPORT）' };
+  }
   const id = String(opts.provider || '').toLowerCase();
-  if (!id) return { success: false, app, error: 'provider is required' };
+  if (!id) {
+    return { success: false, app, error: 'provider is required' };
+  }
   const registrar = deps.registrar || _defaultRegistrar();
   if (!registrar || typeof registrar.unregisterCustomProvider !== 'function') {
     return { success: false, app, error: 'customProviderRegistrar 不可用' };
   }
   const poolKey = _poolKey(app, id);
   try {
-    const result = registrar.unregisterCustomProvider(poolKey, { removeKeys: opts.removeKeys === true });
-    return { success: true, app, provider: id, poolKey, removeKeys: opts.removeKeys === true, result };
+    const result = registrar.unregisterCustomProvider(poolKey, {
+      removeKeys: opts.removeKeys === true,
+    });
+    return {
+      success: true,
+      app,
+      provider: id,
+      poolKey,
+      removeKeys: opts.removeKeys === true,
+      result,
+    };
   } catch (e) {
     return { success: false, app, provider: id, poolKey, error: String((e && e.message) || e) };
   }

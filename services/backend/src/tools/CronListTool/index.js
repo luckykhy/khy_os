@@ -11,8 +11,12 @@ class CronListTool extends BaseTool {
   static aliases = ['cron_list', 'list_cron'];
   static searchHint = 'list cron jobs schedule view';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `List all cron jobs scheduled via CronCreate/ScheduleCron, both durable (.khy/scheduled_tasks.json) and session-only.`;
@@ -42,9 +46,8 @@ class CronListTool extends BaseTool {
       const file = cronScheduler.DURABLE_FILE || '~/.khy/scheduled_tasks.json';
       return {
         success: false,
-        error: (err && err.message)
-          ? err.message
-          : `CronList 读取定时任务失败（durable 文件: ${file}）`,
+        error:
+          err && err.message ? err.message : `CronList 读取定时任务失败（durable 文件: ${file}）`,
       };
     }
   }

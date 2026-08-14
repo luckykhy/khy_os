@@ -27,6 +27,7 @@ describe('platformUtils windows compatibility', () => {
 
   test('openDefault uses cmd start on Windows for URL targets', () => {
     setPlatform('win32');
+    process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
     const unref = jest.fn();
     const spawn = jest.fn(() => ({ unref, on: jest.fn() }));
     jest.doMock('child_process', () => ({
@@ -37,9 +38,11 @@ describe('platformUtils windows compatibility', () => {
     const { openDefault } = require('../../src/tools/platformUtils');
     openDefault('http://127.0.0.1:8090/?a=1&b=2');
 
+    // The whole `start "" "url"` invocation is one argv element so the
+    // double-quoted URL (and its `&`) survives as a single token.
     expect(spawn).toHaveBeenCalledWith(
-      'cmd',
-      ['/c', 'start', '""', '"http://127.0.0.1:8090/?a=1&b=2"'],
+      'C:\\Windows\\System32\\cmd.exe',
+      ['/d', '/s', '/c', 'start "" "http://127.0.0.1:8090/?a=1&b=2"'],
       expect.objectContaining({
         detached: true,
         stdio: 'ignore',
@@ -124,22 +127,37 @@ describe('getShellConfiguration', () => {
     }
   }
 
+  // Host-independent variants: the pure-fs computeShellConfig above depends on
+  // the HOST having /bin/bash (false on Windows). The fs-mocked
+  // computeShellConfigWithFs variant pins existence explicitly, so the Unix
+  // defaults hold on any runner.
+
   test('Unix default → non-login bash (/bin/bash -c)', () => {
-    expect(computeShellConfig({ platform: 'linux' }))
+    expect(computeShellConfigWithFs({
+      platform: 'linux',
+      env: { SHELL: undefined },
+      existsSync: (p) => p === '/bin/bash',
+    }))
       .toEqual({ executable: '/bin/bash', argsPrefix: ['-c'], shell: 'bash' });
   });
 
   test('Unix login:true → login bash (/bin/bash -lc) for profile PATH', () => {
-    expect(computeShellConfig({ platform: 'linux', options: { login: true } }))
+    expect(computeShellConfigWithFs({
+      platform: 'linux',
+      env: { SHELL: undefined },
+      options: { login: true },
+      existsSync: (p) => p === '/bin/bash',
+    }))
       .toEqual({ executable: '/bin/bash', argsPrefix: ['-lc'], shell: 'bash' });
   });
 
   test('Windows Git Bash (MSYSTEM=MINGW64) → bash with -c', () => {
-    const cfg = computeShellConfig({
+    const cfg = computeShellConfigWithFs({
       platform: 'win32',
-      // KHY_GIT_BASH_PATH points at an existing file so findGitBashPath resolves
-      // deterministically on the (non-Windows) test host.
+      // KHY_GIT_BASH_PATH points at a path that exists (pinned via the mocked
+      // fs) so findGitBashPath resolves deterministically on any host.
       env: { MSYSTEM: 'MINGW64', TERM: 'dumb', KHY_GIT_BASH_PATH: '/bin/bash' },
+      existsSync: (p) => p === '/bin/bash',
     });
     expect(cfg.shell).toBe('bash');
     expect(cfg.argsPrefix).toEqual(['-c']);

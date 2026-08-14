@@ -69,18 +69,27 @@ function isOnDemandRelocationEnabled(env) {
 function partitionDynamicSections(sections, env) {
   const passthrough = { stableSections: sections, volatileSections: [] };
   try {
-    if (!Array.isArray(sections)) return passthrough;
-    if (!isReorderEnabled(env)) return passthrough;
+    if (!Array.isArray(sections)) {
+      return passthrough;
+    }
+    if (!isReorderEnabled(env)) {
+      return passthrough;
+    }
 
     const stable = [];
     const volatile = [];
     for (const s of sections) {
       const id = s && typeof s === 'object' ? s.id : undefined;
-      if (id && _VOLATILE_SET.has(id)) volatile.push(s);
-      else stable.push(s);
+      if (id && _VOLATILE_SET.has(id)) {
+        volatile.push(s);
+      } else {
+        stable.push(s);
+      }
     }
     // 无易变段命中 → 原样回退(避免制造与今日不同的新引用形态)。
-    if (volatile.length === 0) return passthrough;
+    if (volatile.length === 0) {
+      return passthrough;
+    }
     return { stableSections: stable, volatileSections: volatile };
   } catch {
     return passthrough;

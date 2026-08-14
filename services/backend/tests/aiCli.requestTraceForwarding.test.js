@@ -36,6 +36,7 @@ function setupAiModule(gatewayGenerate, options = {}) {
 
   jest.doMock('../src/services/gateway/aiGateway', () => ({
     _initialized: true,
+    isInitialized() { return this._initialized; },
     init: jest.fn(async () => {}),
     getStatus: jest.fn(() => [
       { type: 'codex', enabled: true, available: true, name: 'OpenAI Codex' },

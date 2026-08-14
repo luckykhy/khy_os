@@ -32,7 +32,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** KHY_WORKSPACE_TRUST 门控:默认开,{0,false,off,no} 回退关。 */
 function isTrustGateEnabled(env = process.env) {
   const raw = env && env.KHY_WORKSPACE_TRUST;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -48,7 +50,9 @@ function isTrustGateEnabled(env = process.env) {
  */
 function isPersistHomeTrustEnabled(env = process.env) {
   const raw = env && env.KHY_TRUST_PERSIST_HOME;
-  const v = String(raw === undefined || raw === null ? '' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return ['1', 'true', 'on', 'yes', 'y'].includes(v);
 }
 
@@ -60,14 +64,18 @@ function isPersistHomeTrustEnabled(env = process.env) {
  */
 function isExactDirTrustEnabled(env = process.env) {
   const raw = env && env.KHY_TRUST_EXACT_DIR;
-  const v = String(raw === undefined || raw === null ? '' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return ['1', 'true', 'on', 'yes', 'y'].includes(v);
 }
 
 /** 把路径规整为稳定的绝对路径 key(纯字符串/path 运算,零 IO)。失败回退原串。 */
 function normalizePathForKey(p) {
   try {
-    if (!p) return '';
+    if (!p) {
+      return '';
+    }
     return path.resolve(String(p));
   } catch {
     return String(p || '');
@@ -95,19 +103,28 @@ function isHomeDir(cwd, homedir) {
  */
 function isPathTrusted(cwd, trustedPaths, exactMatch = false) {
   try {
-    const set = trustedPaths instanceof Set
-      ? trustedPaths
-      : new Set((Array.isArray(trustedPaths) ? trustedPaths : []).map(normalizePathForKey));
+    const set =
+      trustedPaths instanceof Set
+        ? trustedPaths
+        : new Set((Array.isArray(trustedPaths) ? trustedPaths : []).map(normalizePathForKey));
     let cur = normalizePathForKey(cwd);
-    if (!cur) return false;
+    if (!cur) {
+      return false;
+    }
     // 精确匹配:仅当前目录命中,子目录须单独批准。
-    if (exactMatch) return set.has(cur);
+    if (exactMatch) {
+      return set.has(cur);
+    }
     // 向上遍历所有父目录,任一命中即信任;到根(parent===cur)停止。
     // 有界:绝对路径的父链长度有限,不会死循环。
     while (true) {
-      if (set.has(cur)) return true;
+      if (set.has(cur)) {
+        return true;
+      }
       const parent = normalizePathForKey(path.resolve(cur, '..'));
-      if (parent === cur) return false;
+      if (parent === cur) {
+        return false;
+      }
       cur = parent;
     }
   } catch {
@@ -133,7 +150,14 @@ function isPathTrusted(cwd, trustedPaths, exactMatch = false) {
  *   (由壳读门控 KHY_TRUST_EXACT_DIR 注入;叶子不读 env 决策值)
  * @returns {{ trusted:boolean, needsPrompt:boolean, isHomeDir:boolean, reason:string }}
  */
-function computeTrustState({ cwd, homedir, trustedPaths, exactTrustedPaths, sessionTrusted, exactDir } = {}) {
+function computeTrustState({
+  cwd,
+  homedir,
+  trustedPaths,
+  exactTrustedPaths,
+  sessionTrusted,
+  exactDir,
+} = {}) {
   try {
     if (sessionTrusted) {
       return { trusted: true, needsPrompt: false, isHomeDir: false, reason: 'session' };

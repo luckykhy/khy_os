@@ -84,10 +84,7 @@ const DEPLOY_AGENT = {
     '部署专家：用于 CI/CD 流程配置、Docker 优化、发布自动化和环境管理。传入部署任务（配置 GitHub Actions、优化 Dockerfile、设置发布流程、管理环境变量），它会配置和优化部署基础设施。有搜索、读取、Bash 和编辑权限。',
   color: 'green',
   background: true,
-  disallowedTools: [
-    AGENT_TOOL_NAME,
-    EXIT_PLAN_MODE_TOOL_NAME,
-  ],
+  disallowedTools: [AGENT_TOOL_NAME, EXIT_PLAN_MODE_TOOL_NAME],
   source: 'built-in',
   baseDir: 'built-in',
   model: 'inherit',

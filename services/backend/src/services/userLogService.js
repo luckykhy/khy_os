@@ -1,5 +1,6 @@
-const UserLog = require('../models/UserLog');
 const { Op } = require('sequelize');
+
+const UserLog = require('../models/UserLog');
 
 class UserLogService {
   // 记录用户日志
@@ -14,7 +15,7 @@ class UserLogService {
         userAgent,
         sessionId,
         status = 'success',
-        details = {}
+        details = {},
       } = logData;
 
       const log = await UserLog.create({
@@ -27,7 +28,7 @@ class UserLogService {
         sessionId,
         status,
         details,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       return log;
@@ -44,16 +45,7 @@ class UserLogService {
   // 获取用户日志列表（管理员用）
   static async getUserLogs(options = {}) {
     try {
-      const {
-        page = 1,
-        limit = 20,
-        userId,
-        action,
-        status,
-        startDate,
-        endDate,
-        search
-      } = options;
+      const { page = 1, limit = 20, userId, action, status, startDate, endDate, search } = options;
 
       const offset = (page - 1) * limit;
       const where = {};
@@ -73,15 +65,15 @@ class UserLogService {
 
       if (startDate && endDate) {
         where.timestamp = {
-          [Op.between]: [new Date(startDate), new Date(endDate)]
+          [Op.between]: [new Date(startDate), new Date(endDate)],
         };
       } else if (startDate) {
         where.timestamp = {
-          [Op.gte]: new Date(startDate)
+          [Op.gte]: new Date(startDate),
         };
       } else if (endDate) {
         where.timestamp = {
-          [Op.lte]: new Date(endDate)
+          [Op.lte]: new Date(endDate),
         };
       }
 
@@ -89,7 +81,7 @@ class UserLogService {
         where[Op.or] = [
           { username: { [Op.iLike]: `%${search}%` } },
           { actionDescription: { [Op.iLike]: `%${search}%` } },
-          { ipAddress: { [Op.iLike]: `%${search}%` } }
+          { ipAddress: { [Op.iLike]: `%${search}%` } },
         ];
       }
 
@@ -97,7 +89,7 @@ class UserLogService {
         where,
         order: [['timestamp', 'DESC']],
         limit: parseInt(limit),
-        offset: parseInt(offset)
+        offset: parseInt(offset),
       });
 
       return {
@@ -105,7 +97,7 @@ class UserLogService {
         total: count,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(count / limit)
+        totalPages: Math.ceil(count / limit),
       };
     } catch (error) {
       console.error('获取用户日志失败:', error);
@@ -123,32 +115,32 @@ class UserLogService {
       const dailyLogins = await UserLog.findAll({
         attributes: [
           [UserLog.sequelize.fn('DATE', UserLog.sequelize.col('timestamp')), 'date'],
-          [UserLog.sequelize.fn('COUNT', UserLog.sequelize.col('id')), 'count']
+          [UserLog.sequelize.fn('COUNT', UserLog.sequelize.col('id')), 'count'],
         ],
         where: {
           action: 'login',
           status: 'success',
           timestamp: {
-            [Op.gte]: startDate
-          }
+            [Op.gte]: startDate,
+          },
         },
         group: [UserLog.sequelize.fn('DATE', UserLog.sequelize.col('timestamp'))],
-        order: [[UserLog.sequelize.fn('DATE', UserLog.sequelize.col('timestamp')), 'ASC']]
+        order: [[UserLog.sequelize.fn('DATE', UserLog.sequelize.col('timestamp')), 'ASC']],
       });
 
       // 按操作类型统计
       const actionStats = await UserLog.findAll({
         attributes: [
           'action',
-          [UserLog.sequelize.fn('COUNT', UserLog.sequelize.col('id')), 'count']
+          [UserLog.sequelize.fn('COUNT', UserLog.sequelize.col('id')), 'count'],
         ],
         where: {
           timestamp: {
-            [Op.gte]: startDate
-          }
+            [Op.gte]: startDate,
+          },
         },
         group: ['action'],
-        order: [[UserLog.sequelize.fn('COUNT', UserLog.sequelize.col('id')), 'DESC']]
+        order: [[UserLog.sequelize.fn('COUNT', UserLog.sequelize.col('id')), 'DESC']],
       });
 
       // 活跃用户统计
@@ -157,33 +149,33 @@ class UserLogService {
           'userId',
           'username',
           [UserLog.sequelize.fn('COUNT', UserLog.sequelize.col('id')), 'activityCount'],
-          [UserLog.sequelize.fn('MAX', UserLog.sequelize.col('timestamp')), 'lastActivity']
+          [UserLog.sequelize.fn('MAX', UserLog.sequelize.col('timestamp')), 'lastActivity'],
         ],
         where: {
           timestamp: {
-            [Op.gte]: startDate
-          }
+            [Op.gte]: startDate,
+          },
         },
         group: ['userId', 'username'],
         order: [[UserLog.sequelize.fn('COUNT', UserLog.sequelize.col('id')), 'DESC']],
-        limit: 10
+        limit: 10,
       });
 
       return {
-        dailyLogins: dailyLogins.map(item => ({
+        dailyLogins: dailyLogins.map((item) => ({
           date: item.dataValues.date,
-          count: parseInt(item.dataValues.count)
+          count: parseInt(item.dataValues.count),
         })),
-        actionStats: actionStats.map(item => ({
+        actionStats: actionStats.map((item) => ({
           action: item.action,
-          count: parseInt(item.dataValues.count)
+          count: parseInt(item.dataValues.count),
         })),
-        activeUsers: activeUsers.map(item => ({
+        activeUsers: activeUsers.map((item) => ({
           userId: item.userId,
           username: item.username,
           activityCount: parseInt(item.dataValues.activityCount),
-          lastActivity: item.dataValues.lastActivity
-        }))
+          lastActivity: item.dataValues.lastActivity,
+        })),
       };
     } catch (error) {
       console.error('获取用户活动统计失败:', error);
@@ -200,9 +192,9 @@ class UserLogService {
       const deletedCount = await UserLog.destroy({
         where: {
           timestamp: {
-            [Op.lt]: cutoffDate
-          }
-        }
+            [Op.lt]: cutoffDate,
+          },
+        },
       });
 
       return deletedCount;

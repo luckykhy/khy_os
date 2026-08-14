@@ -18,9 +18,15 @@ function safeStringifyRaw(raw) {
     s = JSON.stringify(raw, null, 2);
   } catch (_) {
     // 循环引用等：降级为粗略字符串，绝不抛错。
-    try { s = String(raw); } catch (_e) { s = '<unrepresentable>'; }
+    try {
+      s = String(raw);
+    } catch (_e) {
+      s = '<unrepresentable>';
+    }
   }
-  if (typeof s !== 'string') s = String(s);
+  if (typeof s !== 'string') {
+    s = String(s);
+  }
   if (s.length > RAW_VIEW_MAX) {
     s = s.slice(0, RAW_VIEW_MAX) + `\n…(已截断，共 ${s.length} 字符)`;
   }
@@ -34,7 +40,7 @@ function safeStringifyRaw(raw) {
  * @returns {{kind, actionType, title, message, canExtend, rawDataView, renderable}}
  */
 function buildUnknownActionPlaceholder(action) {
-  const actionType = (action && action.type) ? String(action.type) : '<unknown>';
+  const actionType = action && action.type ? String(action.type) : '<unknown>';
   return {
     kind: 'unknown-action-placeholder',
     actionType,

@@ -1,7 +1,7 @@
 'use strict';
 
-const { CAP, IPC, METHOD, SERVICE, hasCapability, toBigInt } = require('./m1Constants');
 const { createHeader, decodeFrame, encodeFrame, nextRequestId } = require('./ipcCodec');
+const { CAP, IPC, METHOD, SERVICE, hasCapability, toBigInt } = require('./m1Constants');
 
 class CapabilityError extends Error {
   constructor(message) {
@@ -101,8 +101,13 @@ function createMoonbitHostBridge({
   capabilityMask = 0n,
   defaultTimeoutMs = IPC.DEFAULT_TIMEOUT_MS,
 } = {}) {
-  if (!transport || (typeof transport.call !== 'function' && typeof transport.callSync !== 'function')) {
-    throw new TypeError('transport.call(frame, meta) or transport.callSync(frame, meta) is required');
+  if (
+    !transport ||
+    (typeof transport.call !== 'function' && typeof transport.callSync !== 'function')
+  ) {
+    throw new TypeError(
+      'transport.call(frame, meta) or transport.callSync(frame, meta) is required'
+    );
   }
 
   let mask = toBigInt(capabilityMask, 'capabilityMask');
@@ -124,9 +129,10 @@ function createMoonbitHostBridge({
       _mustHave(mask, CAP.IPC, 'CAP_IPC');
       _mustHave(mask, requiredCapabilityForCall(serviceId, methodId), `service:${serviceId}`);
 
-      const timeoutMs = Number.isInteger(options.timeoutMs) && options.timeoutMs > 0
-        ? options.timeoutMs
-        : defaultTimeoutMs;
+      const timeoutMs =
+        Number.isInteger(options.timeoutMs) && options.timeoutMs > 0
+          ? options.timeoutMs
+          : defaultTimeoutMs;
 
       const requestId = nextRequestId();
       const body = _asJsonBuffer(payload);
@@ -197,9 +203,10 @@ function createMoonbitHostBridge({
         throw new IpcTransportError('IPC sync transport is not available');
       }
 
-      const timeoutMs = Number.isInteger(options.timeoutMs) && options.timeoutMs > 0
-        ? options.timeoutMs
-        : defaultTimeoutMs;
+      const timeoutMs =
+        Number.isInteger(options.timeoutMs) && options.timeoutMs > 0
+          ? options.timeoutMs
+          : defaultTimeoutMs;
 
       const requestId = nextRequestId();
       const body = _asJsonBuffer(payload);

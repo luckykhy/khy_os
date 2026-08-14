@@ -23,7 +23,7 @@
  */
 
 let _chalk;
-const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const c = () => (_chalk ??= require('chalk').default || require('chalk'));
 
 // ── Per-Turn Cost Display ─────────────────────────────────────────
 
@@ -45,14 +45,22 @@ const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
  * @returns {string} Formatted line (ANSI colored)
  */
 function formatTurnCost(usage) {
-  if (!usage) return '';
+  if (!usage) {
+    return '';
+  }
   const chalk = c();
   const parts = [];
 
   const fmtK = (n) => {
-    if (!n || n <= 0) return '0';
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+    if (!n || n <= 0) {
+      return '0';
+    }
+    if (n >= 1_000_000) {
+      return `${(n / 1_000_000).toFixed(1)}m`;
+    }
+    if (n >= 1_000) {
+      return `${(n / 1_000).toFixed(1)}k`;
+    }
     return String(n);
   };
 
@@ -69,16 +77,17 @@ function formatTurnCost(usage) {
 
   // Cost
   if (usage.costUSD != null && usage.costUSD > 0) {
-    const cost = usage.costUSD >= 0.01
-      ? `$${usage.costUSD.toFixed(2)}`
-      : `$${usage.costUSD.toFixed(4)}`;
+    const cost =
+      usage.costUSD >= 0.01 ? `$${usage.costUSD.toFixed(2)}` : `$${usage.costUSD.toFixed(4)}`;
     parts.push(chalk.yellow(cost));
   }
 
   // Model + adapter
   if (usage.model) {
     let modelStr = chalk.cyan(usage.model);
-    if (usage.adapter) modelStr += chalk.dim(` via ${usage.adapter}`);
+    if (usage.adapter) {
+      modelStr += chalk.dim(` via ${usage.adapter}`);
+    }
     parts.push(modelStr);
   }
 
@@ -104,18 +113,26 @@ function formatTurnCost(usage) {
  * @returns {string}
  */
 function formatCascadeSteps(steps) {
-  if (!steps || steps.length === 0) return '';
-  if (steps.length === 1 && steps[0].success) return ''; // single success, nothing to show
+  if (!steps || steps.length === 0) {
+    return '';
+  }
+  if (steps.length === 1 && steps[0].success) {
+    return '';
+  } // single success, nothing to show
   const chalk = c();
 
-  return steps.map(step => {
-    const icon = step.success ? chalk.green('✓') : chalk.red('✗');
-    const name = chalk.white(step.adapter || 'unknown');
-    const detail = step.success
-      ? (step.durationMs ? chalk.dim(`(${step.durationMs}ms)`) : '')
-      : chalk.dim(`(${step.error || 'failed'})`);
-    return `${icon} ${name} ${detail}`.trim();
-  }).join(chalk.dim(' → '));
+  return steps
+    .map((step) => {
+      const icon = step.success ? chalk.green('✓') : chalk.red('✗');
+      const name = chalk.white(step.adapter || 'unknown');
+      const detail = step.success
+        ? step.durationMs
+          ? chalk.dim(`(${step.durationMs}ms)`)
+          : ''
+        : chalk.dim(`(${step.error || 'failed'})`);
+      return `${icon} ${name} ${detail}`.trim();
+    })
+    .join(chalk.dim(' → '));
 }
 
 // ── Permission Tier Display ───────────────────────────────────────
@@ -130,7 +147,9 @@ function formatCascadeSteps(steps) {
  * @returns {string}
  */
 function formatPermissionTier(classification) {
-  if (!classification) return '';
+  if (!classification) {
+    return '';
+  }
   const chalk = c();
   const { tier, matchedRule, approved } = classification;
 
@@ -144,11 +163,12 @@ function formatPermissionTier(classification) {
 
   const tierLabel = tierColors[tier] || chalk.dim(tier);
   const rule = matchedRule ? chalk.dim(` [${matchedRule}]`) : '';
-  const status = approved === false
-    ? chalk.red(' → blocked')
-    : approved === true
-      ? chalk.green(' → approved')
-      : '';
+  const status =
+    approved === false
+      ? chalk.red(' → blocked')
+      : approved === true
+        ? chalk.green(' → approved')
+        : '';
 
   return `${chalk.dim('tier:')} ${tierLabel}${rule}${status}`;
 }
@@ -170,21 +190,33 @@ function formatPermissionTier(classification) {
  * @returns {string} Multi-line formatted recap
  */
 function formatSessionRecap(session) {
-  if (!session) return '';
+  if (!session) {
+    return '';
+  }
   const chalk = c();
   const lines = [];
 
   const fmtK = (n) => {
-    if (!n) return '0';
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}m`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+    if (!n) {
+      return '0';
+    }
+    if (n >= 1_000_000) {
+      return `${(n / 1_000_000).toFixed(1)}m`;
+    }
+    if (n >= 1_000) {
+      return `${(n / 1_000).toFixed(1)}k`;
+    }
     return String(n);
   };
 
   const fmtDur = (ms) => {
     const sec = Math.floor(ms / 1000);
-    if (sec >= 3600) return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
-    if (sec >= 60) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+    if (sec >= 3600) {
+      return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`;
+    }
+    if (sec >= 60) {
+      return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+    }
     return `${sec}s`;
   };
 
@@ -195,19 +227,24 @@ function formatSessionRecap(session) {
 
   // Duration + requests
   const dur = session.durationMs > 0 ? fmtDur(session.durationMs) : 'N/A';
-  lines.push(`  Duration:    ${chalk.white(dur)}  ·  ${chalk.white(session.requestCount || 0)} requests`);
+  lines.push(
+    `  Duration:    ${chalk.white(dur)}  ·  ${chalk.white(session.requestCount || 0)} requests`
+  );
 
   // Tokens
   const input = fmtK(session.totalInputTokens || 0);
   const output = fmtK(session.totalOutputTokens || 0);
   const total = fmtK((session.totalInputTokens || 0) + (session.totalOutputTokens || 0));
-  lines.push(`  Tokens:      ${chalk.dim('↑')} ${chalk.white(input)}  ${chalk.dim('↓')} ${chalk.white(output)}  ${chalk.dim('Σ')} ${chalk.bold(total)}`);
+  lines.push(
+    `  Tokens:      ${chalk.dim('↑')} ${chalk.white(input)}  ${chalk.dim('↓')} ${chalk.white(output)}  ${chalk.dim('Σ')} ${chalk.bold(total)}`
+  );
 
   // Cost
   if (session.totalCostUSD > 0) {
-    const usd = session.totalCostUSD >= 0.01
-      ? `$${session.totalCostUSD.toFixed(2)}`
-      : `$${session.totalCostUSD.toFixed(4)}`;
+    const usd =
+      session.totalCostUSD >= 0.01
+        ? `$${session.totalCostUSD.toFixed(2)}`
+        : `$${session.totalCostUSD.toFixed(4)}`;
     const cny = `¥${(session.totalCostUSD * 7.25).toFixed(2)}`;
     lines.push(`  Cost:        ${chalk.yellow(usd)} ${chalk.dim(`(${cny})`)}`);
   }
@@ -224,9 +261,7 @@ function formatSessionRecap(session) {
 
   // Top tools
   if (session.topTools && session.topTools.length > 0) {
-    const toolStrs = session.topTools.slice(0, 5).map(t =>
-      `${t.name}(${t.count})`
-    );
+    const toolStrs = session.topTools.slice(0, 5).map((t) => `${t.name}(${t.count})`);
     lines.push(`  Top tools:   ${chalk.dim(toolStrs.join(', '))}`);
   }
 
@@ -248,16 +283,24 @@ function formatSessionRecap(session) {
  * @returns {string|null} Warning string or null
  */
 function checkQuotaWarning(quota, warningThreshold = 80) {
-  if (!quota || quota.limit <= 0) return null;
+  if (!quota || quota.limit <= 0) {
+    return null;
+  }
   const pct = Math.round((quota.used / quota.limit) * 100);
-  if (pct < warningThreshold) return null;
+  if (pct < warningThreshold) {
+    return null;
+  }
 
   const chalk = c();
   if (pct >= 95) {
-    return chalk.red(`⚠ Quota nearly exhausted: ${pct}% used (${quota.used.toLocaleString()}/${quota.limit.toLocaleString()} tokens)`);
+    return chalk.red(
+      `⚠ Quota nearly exhausted: ${pct}% used (${quota.used.toLocaleString()}/${quota.limit.toLocaleString()} tokens)`
+    );
   }
   if (pct >= 90) {
-    return chalk.yellow(`⚠ Quota high: ${pct}% used (${quota.used.toLocaleString()}/${quota.limit.toLocaleString()} tokens)`);
+    return chalk.yellow(
+      `⚠ Quota high: ${pct}% used (${quota.used.toLocaleString()}/${quota.limit.toLocaleString()} tokens)`
+    );
   }
   return chalk.yellow(`Quota: ${pct}% used`);
 }
@@ -274,16 +317,20 @@ function checkQuotaWarning(quota, warningThreshold = 80) {
  * @returns {string}
  */
 function formatCompactionNotice(compaction) {
-  if (!compaction) return '';
+  if (!compaction) {
+    return '';
+  }
   const chalk = c();
 
-  const fmtK = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+  const fmtK = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
   const before = fmtK(compaction.beforeTokens || 0);
   const after = fmtK(compaction.afterTokens || 0);
   const saved = fmtK((compaction.beforeTokens || 0) - (compaction.afterTokens || 0));
   const dur = compaction.durationMs > 0 ? ` (${(compaction.durationMs / 1000).toFixed(1)}s)` : '';
 
-  return chalk.hex('#FFC107')(`✻ Context compacted: ${before} → ${after} tokens (saved ${saved})${dur}`);
+  return chalk.hex('#FFC107')(
+    `✻ Context compacted: ${before} → ${after} tokens (saved ${saved})${dur}`
+  );
 }
 
 // ── Edit Diff Preview ─────────────────────────────────────────────
@@ -300,13 +347,16 @@ function formatCompactionNotice(compaction) {
  * @returns {{ header: string, diffLines: string[], stats: { added: number, removed: number } }}
  */
 function formatEditPreview(edit) {
-  if (!edit) return null;
+  if (!edit) {
+    return null;
+  }
   const chalk = c();
 
   const oldLines = (edit.oldContent || '').split('\n');
   const newLines = (edit.newContent || '').split('\n');
 
-  const header = chalk.dim(`Preview edit: ${edit.filePath}`) +
+  const header =
+    chalk.dim(`Preview edit: ${edit.filePath}`) +
     (edit.lineStart ? chalk.dim(`:${edit.lineStart}`) : '');
 
   const diffLines = [];
@@ -350,7 +400,9 @@ function formatEditPreview(edit) {
  * @returns {string}
  */
 function formatPostResponseLine(turnData) {
-  if (!turnData) return '';
+  if (!turnData) {
+    return '';
+  }
   return `  ${c().dim('╰─')} ${formatTurnCost(turnData)}`;
 }
 

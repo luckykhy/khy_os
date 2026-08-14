@@ -40,7 +40,7 @@
 <ol><li><code>setup.py</code> 在构建 wheel 时总是从顶层 <code>backend/frontend/...</code> 重新生成 <code>khy_os/bundled</code>。</li><li>用于 sdist 的 <code>MANIFEST.in</code> 使用了狭窄的扩展名过滤规则并裁剪掉了 <code>frontend/dist</code>，因此 sdist 内部的顶层源码并不完整。</li></ol>
 <p>因此，从 sdist 重新构建 wheel 时会重新生成一份更小的 bundled 负载。</p>
 <h2 id="已应用的修复">已应用的修复<a class="anchor" href="#已应用的修复" aria-label="锚点">#</a></h2>
-<p>更新了 <a href="/home/kodehu03/Khy-OS/MANIFEST.in"><code>MANIFEST.in</code></a>：</p>
+<p>更新了 <span class="deadlink" title="目标不存在：/home/kodehu03/Khy-OS/MANIFEST.in"><code>MANIFEST.in</code></span>：</p>
 <ol><li>将顶层源码的包含方式切换为广义的整树包含：<ul><li><code>recursive-include backend *</code></li><li><code>recursive-include frontend *</code></li><li><code>recursive-include packages/shared *</code></li><li><code>recursive-include docs *</code></li></ul></li><li>在 sdist 中保留 <code>frontend/dist</code>（移除了 <code>prune frontend/dist</code>）。</li><li>添加 <code>prune khy_os/bundled</code> 以避免重复打包（顶层源码 + bundled 副本）。</li></ol>
 <p>这样既保留了重新构建所需的输入，又控制了 sdist 的体积。</p>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>

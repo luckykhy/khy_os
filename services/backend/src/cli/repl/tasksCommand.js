@@ -17,7 +17,9 @@
  */
 let _chalk, _formatters;
 const chalk = () => {
-  if (_chalk) return _chalk;
+  if (_chalk) {
+    return _chalk;
+  }
   const chalkModule = require('chalk');
   _chalk = chalkModule.default || chalkModule;
   return _chalk;
@@ -108,7 +110,9 @@ function _sortTasksByUpdatedDesc(tasks = []) {
 
 function _toShortTime(value) {
   const ts = _parseIsoTime(value);
-  if (!ts) return '-';
+  if (!ts) {
+    return '-';
+  }
   try {
     return new Date(ts).toLocaleString('zh-CN', { hour12: false });
   } catch {
@@ -118,20 +122,19 @@ function _toShortTime(value) {
 
 function _truncateText(value, max = 36) {
   const text = String(value || '').trim();
-  if (!text) return '-';
-  if (text.length <= max) return text;
+  if (!text) {
+    return '-';
+  }
+  if (text.length <= max) {
+    return text;
+  }
   return `${text.slice(0, Math.max(0, max - 1))}…`;
 }
 
 function _taskSummaryText(task) {
   const payload = task?.payload_json || {};
   return _truncateText(
-    payload.description
-    || payload.label
-    || payload.subject
-    || payload.type
-    || task?.type
-    || '',
+    payload.description || payload.label || payload.subject || payload.type || task?.type || '',
     42
   );
 }
@@ -163,15 +166,17 @@ function _printTasksUsage() {
 }
 
 function _printTaskList(runtimeTasks, listTitle, limit) {
-  const tableRows = runtimeTasks.slice(0, limit).map((task) => [
-    task.id,
-    `${_taskStatusLabel(task.status)} (${task.status})`,
-    _truncateText(task.type || '-', 18),
-    _taskProgressText(task),
-    _taskAttemptText(task),
-    _toShortTime(task.updated_at),
-    _taskSummaryText(task),
-  ]);
+  const tableRows = runtimeTasks
+    .slice(0, limit)
+    .map((task) => [
+      task.id,
+      `${_taskStatusLabel(task.status)} (${task.status})`,
+      _truncateText(task.type || '-', 18),
+      _taskProgressText(task),
+      _taskAttemptText(task),
+      _toShortTime(task.updated_at),
+      _taskSummaryText(task),
+    ]);
 
   console.log('');
   console.log(c.bold(`  ${listTitle}（显示 ${tableRows.length}/${runtimeTasks.length}）`));
@@ -193,27 +198,35 @@ function _printTaskDetail(task, audit) {
   console.log(`    重试: ${_taskAttemptText(task)}`);
   console.log(`    创建: ${_toShortTime(task.created_at)}`);
   console.log(`    更新: ${_toShortTime(task.updated_at)}`);
-  if (task.completed_at) console.log(`    完成: ${_toShortTime(task.completed_at)}`);
-  if (task.next_run_at) console.log(`    下次运行: ${_toShortTime(task.next_run_at)}`);
-  if (task.trace_id) console.log(`    Trace: ${task.trace_id}`);
+  if (task.completed_at) {
+    console.log(`    完成: ${_toShortTime(task.completed_at)}`);
+  }
+  if (task.next_run_at) {
+    console.log(`    下次运行: ${_toShortTime(task.next_run_at)}`);
+  }
+  if (task.trace_id) {
+    console.log(`    Trace: ${task.trace_id}`);
+  }
   if (payload.description || payload.label || payload.subject) {
     console.log(`    摘要: ${payload.description || payload.label || payload.subject}`);
   }
 
   if (task.last_error) {
     const err = task.last_error;
-    const statusCode = err.status_code !== undefined && err.status_code !== null ? ` status=${err.status_code}` : '';
+    const statusCode =
+      err.status_code !== undefined && err.status_code !== null ? ` status=${err.status_code}` : '';
     const retryable = typeof err.retryable === 'boolean' ? ` retryable=${err.retryable}` : '';
     console.log(`    最近错误: ${err.type || 'error'}${statusCode}${retryable}`);
-    if (err.message) console.log(`      ${err.message}`);
+    if (err.message) {
+      console.log(`      ${err.message}`);
+    }
   }
 
   if (task.last_result !== undefined && task.last_result !== null) {
     let resultText = '';
     try {
-      resultText = typeof task.last_result === 'string'
-        ? task.last_result
-        : JSON.stringify(task.last_result);
+      resultText =
+        typeof task.last_result === 'string' ? task.last_result : JSON.stringify(task.last_result);
     } catch {
       resultText = String(task.last_result);
     }
@@ -221,23 +234,29 @@ function _printTaskDetail(task, audit) {
   }
 
   if (attempts.length > 0) {
-    const attemptRows = attempts.slice(-5).reverse().map((item) => [
-      String(item.attempt_no ?? '-'),
-      String(item.result_status || '-'),
-      String(item.error_type || '-'),
-      item.retry_delay_ms ? `${item.retry_delay_ms}ms` : '-',
-      _toShortTime(item.ended_at || item.started_at),
-    ]);
+    const attemptRows = attempts
+      .slice(-5)
+      .reverse()
+      .map((item) => [
+        String(item.attempt_no ?? '-'),
+        String(item.result_status || '-'),
+        String(item.error_type || '-'),
+        item.retry_delay_ms ? `${item.retry_delay_ms}ms` : '-',
+        _toShortTime(item.ended_at || item.started_at),
+      ]);
     fmt().printTable(['尝试', '结果', '错误类型', '延迟', '时间'], attemptRows);
   }
 
   if (events.length > 0) {
-    const eventRows = events.slice(-6).reverse().map((event) => [
-      String(event.event_id ?? '-'),
-      `${event.state_from || '-'} -> ${event.state_to || '-'}`,
-      String(event.attempt_no ?? '-'),
-      _toShortTime(event.at),
-    ]);
+    const eventRows = events
+      .slice(-6)
+      .reverse()
+      .map((event) => [
+        String(event.event_id ?? '-'),
+        `${event.state_from || '-'} -> ${event.state_to || '-'}`,
+        String(event.attempt_no ?? '-'),
+        _toShortTime(event.at),
+      ]);
     fmt().printTable(['事件', '状态变化', '尝试', '时间'], eventRows);
   }
   console.log('');
@@ -245,9 +264,13 @@ function _printTaskDetail(task, audit) {
 
 function _parseLimitToken(tokens, index, fallback) {
   const raw = String(tokens[index] || '').trim();
-  if (!raw) return fallback;
+  if (!raw) {
+    return fallback;
+  }
   const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed)) return fallback;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
   return Math.max(1, Math.min(100, parsed));
 }
 
@@ -271,9 +294,13 @@ async function _handleTasksCommand(rawArgs = '') {
   });
   if (control.handled) {
     for (const event of control.events) {
-      if (event.level === 'success') printSuccess(event.text);
-      else if (event.level === 'info') printInfo(event.text);
-      else printError(event.text);
+      if (event.level === 'success') {
+        printSuccess(event.text);
+      } else if (event.level === 'info') {
+        printInfo(event.text);
+      } else {
+        printError(event.text);
+      }
     }
     return;
   }
@@ -281,15 +308,21 @@ async function _handleTasksCommand(rawArgs = '') {
   const filter = primary ? _TASK_FILTER_ALIASES[primary] || null : 'all';
   if (filter) {
     const allTasks = _sortTasksByUpdatedDesc(taskControlService.listTasks());
-    const summary = { total: allTasks.length, pending: 0, running: 0, paused: 0, completed: 0, failed: 0 };
+    const summary = {
+      total: allTasks.length,
+      pending: 0,
+      running: 0,
+      paused: 0,
+      completed: 0,
+      failed: 0,
+    };
     for (const item of allTasks) {
       const group = _taskGroup(item.status);
       summary[group] = (summary[group] || 0) + 1;
     }
 
-    const filtered = filter === 'all'
-      ? allTasks
-      : allTasks.filter((item) => _taskGroup(item.status) === filter);
+    const filtered =
+      filter === 'all' ? allTasks : allTasks.filter((item) => _taskGroup(item.status) === filter);
     const limit = _parseLimitToken(tokens, 1, filter === 'all' ? 12 : 20);
     printInfo(
       `任务概览 total=${summary.total} pending=${summary.pending} running=${summary.running} paused=${summary.paused} completed=${summary.completed} failed=${summary.failed}`

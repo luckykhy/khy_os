@@ -27,7 +27,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_RUNNING_TOOLS_SUMMARY_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -35,7 +37,9 @@ function isEnabled(env = process.env) {
 // 与第一层(classifyTool 按 tool 身份记忆分类)正交、可独立回退。
 function isArrayMemoEnabled(env = process.env) {
   const raw = env && env.KHY_RUNNING_TOOLS_ARRAY_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -52,14 +56,22 @@ const _classifyCache = new WeakMap();
  */
 function classifyTool(toolObj, name, classifyFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !toolObj || typeof toolObj !== 'object') return classifyFn(name);
+    if (!isEnabled(env) || !toolObj || typeof toolObj !== 'object') {
+      return classifyFn(name);
+    }
     const cached = _classifyCache.get(toolObj);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {
+      return cached;
+    }
     const cat = classifyFn(name);
     _classifyCache.set(toolObj, cat);
     return cat;
   } catch {
-    try { return classifyFn(name); } catch { return 'other'; }
+    try {
+      return classifyFn(name);
+    } catch {
+      return 'other';
+    }
   }
 }
 
@@ -75,14 +87,26 @@ function classifyTool(toolObj, name, classifyFn, env = process.env) {
  */
 function summarizeRunning(tools, isRunningFn, nameFn, classifyFn, env = process.env) {
   const counts = Object.create(null);
-  if (!Array.isArray(tools)) return counts;
+  if (!Array.isArray(tools)) {
+    return counts;
+  }
   for (let i = 0; i < tools.length; i++) {
     const t = tools[i];
     let running;
-    try { running = !!isRunningFn(t); } catch { running = false; }
-    if (!running) continue;
+    try {
+      running = !!isRunningFn(t);
+    } catch {
+      running = false;
+    }
+    if (!running) {
+      continue;
+    }
     let name;
-    try { name = nameFn(t); } catch { name = ''; }
+    try {
+      name = nameFn(t);
+    } catch {
+      name = '';
+    }
     const cat = classifyTool(t, name, classifyFn, env);
     counts[cat] = (counts[cat] || 0) + 1;
   }
@@ -119,21 +143,32 @@ const _arrayCache = new WeakMap();
  * @param {object} [env]
  * @returns {Object<string,number>} 类别 → 计数
  */
-function summarizeRunningByArrayIdentity(tools, isRunningFn, nameFn, classifyFn, env = process.env) {
+function summarizeRunningByArrayIdentity(
+  tools,
+  isRunningFn,
+  nameFn,
+  classifyFn,
+  env = process.env
+) {
   try {
     // 门控关、或 tools 非对象(无法作 WeakMap 键)→ 逐字节回退直接全扫描。
     if (!isArrayMemoEnabled(env) || !tools || typeof tools !== 'object') {
       return summarizeRunning(tools, isRunningFn, nameFn, classifyFn, env);
     }
     const cached = _arrayCache.get(tools);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {
+      return cached;
+    }
     const counts = summarizeRunning(tools, isRunningFn, nameFn, classifyFn, env);
     _arrayCache.set(tools, counts);
     return counts;
   } catch {
     // 任何异常 → 回退全扫描(绝不抛)。
-    try { return summarizeRunning(tools, isRunningFn, nameFn, classifyFn, env); }
-    catch { return Object.create(null); }
+    try {
+      return summarizeRunning(tools, isRunningFn, nameFn, classifyFn, env);
+    } catch {
+      return Object.create(null);
+    }
   }
 }
 

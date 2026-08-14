@@ -39,14 +39,22 @@ async function issueToken(uid, label) {
   await ApiKey.update({ isActive: false }, { where: { userId: uid, isActive: true } });
   const raw = generateKey();
   await ApiKey.create({
-    userId: uid, keyHash: hashApiKey(raw), keyPrefix: extractPrefix(raw),
-    label: label || 'default', isActive: true,
+    userId: uid,
+    keyHash: hashApiKey(raw),
+    keyPrefix: extractPrefix(raw),
+    label: label || 'default',
+    isActive: true,
   });
   return raw;
 }
 
 const enforce = (bearer, model = '') =>
-  enforcer.enforceInbound({ bearer, model, messages: [{ role: 'user', content: 'hi' }], traceId: 't' });
+  enforcer.enforceInbound({
+    bearer,
+    model,
+    messages: [{ role: 'user', content: 'hi' }],
+    traceId: 't',
+  });
 
 let userA, userB, userC;
 let keyA, keyB, keyC;
@@ -54,13 +62,38 @@ let keyA, keyB, keyC;
 beforeAll(async () => {
   await sequelize.sync({ force: true });
 
-  userA = await User.create({ username: 'alice', email: 'a@test.local', password: 'pw-alice-123', status: 'active' });
-  userB = await User.create({ username: 'bob', email: 'b@test.local', password: 'pw-bob-123', status: 'active' });
-  userC = await User.create({ username: 'carol', email: 'c@test.local', password: 'pw-carol-123', status: 'active' });
+  userA = await User.create({
+    username: 'alice',
+    email: 'a@test.local',
+    password: 'pw-alice-123',
+    status: 'active',
+  });
+  userB = await User.create({
+    username: 'bob',
+    email: 'b@test.local',
+    password: 'pw-bob-123',
+    status: 'active',
+  });
+  userC = await User.create({
+    username: 'carol',
+    email: 'c@test.local',
+    password: 'pw-carol-123',
+    status: 'active',
+  });
 
   // A and B configure distinct upstreams; C stays unconfigured.
-  await svc.saveRelayConfig(userA.id, { baseUrl: 'https://a.example.com', modelId: 'a-model', compatibility: 'openai', apiKey: 'sk-aaa-secret' });
-  await svc.saveRelayConfig(userB.id, { baseUrl: 'https://b.example.com', modelId: 'b-model', compatibility: 'anthropic', apiKey: 'sk-bbb-secret' });
+  await svc.saveRelayConfig(userA.id, {
+    baseUrl: 'https://a.example.com',
+    modelId: 'a-model',
+    compatibility: 'openai',
+    apiKey: 'sk-aaa-secret',
+  });
+  await svc.saveRelayConfig(userB.id, {
+    baseUrl: 'https://b.example.com',
+    modelId: 'b-model',
+    compatibility: 'anthropic',
+    apiKey: 'sk-bbb-secret',
+  });
 
   keyA = await issueToken(userA.id, 'cc-a');
   keyB = await issueToken(userB.id, 'cc-b');
@@ -71,7 +104,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 describe('data plane — per-user upstream routing', () => {

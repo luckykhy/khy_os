@@ -17,8 +17,9 @@
  */
 
 const os = require('os');
-const { printInfo, printSuccess, printWarn } = require('../formatters');
+
 const plan = require('../../services/terminal/terminalSetupPlan');
+const { printInfo, printSuccess, printWarn } = require('../formatters');
 
 /**
  * @param {string} _subCommand 预留(本命令无子命令)
@@ -35,8 +36,12 @@ async function handleTerminalSetup(_subCommand, _args = [], _options = {}) {
   let detected = { name: 'unknown', isRemote: false };
   try {
     const { detectTerminal } = require('../../services/adaptiveConfig');
-    if (typeof detectTerminal === 'function') detected = detectTerminal() || detected;
-  } catch { /* fail-soft:检测不到按 unknown 处理 */ }
+    if (typeof detectTerminal === 'function') {
+      detected = detectTerminal() || detected;
+    }
+  } catch {
+    /* fail-soft:检测不到按 unknown 处理 */
+  }
 
   const result = plan.planTerminalSetup({
     name: detected.name,
@@ -45,7 +50,9 @@ async function handleTerminalSetup(_subCommand, _args = [], _options = {}) {
     env: process.env,
   });
 
-  printInfo(`检测到终端:${result.displayName}${result.terminal && result.terminal !== result.displayName.toLowerCase() ? `(${result.terminal})` : ''}`);
+  printInfo(
+    `检测到终端:${result.displayName}${result.terminal && result.terminal !== result.displayName.toLowerCase() ? `(${result.terminal})` : ''}`
+  );
 
   if (result.category === 'native') {
     printSuccess(result.reason);
@@ -60,7 +67,9 @@ async function handleTerminalSetup(_subCommand, _args = [], _options = {}) {
 
   // needs-setup:打印方案(诚实:khy 给步骤与片段,不静默改你的配置)。
   printInfo(result.reason);
-  if (result.configPath) printInfo(`配置文件:${result.configPath}`);
+  if (result.configPath) {
+    printInfo(`配置文件:${result.configPath}`);
+  }
   if (Array.isArray(result.steps) && result.steps.length) {
     printInfo('步骤:');
     result.steps.forEach((s, i) => printInfo(`  ${i + 1}. ${s}`));

@@ -24,12 +24,12 @@
  * module never mutates the caller's result or any model-visible content.
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
-const tierRegistry = require('./tierRegistry');
 const artifactHash = require('./artifactHash');
+const tierRegistry = require('./tierRegistry');
 
 const LEDGER_VERSION = 1;
 const LEDGER_EXT = '.replay-ledger.jsonl';
@@ -65,24 +65,42 @@ function _contentStoreDir(sessionId) {
 /** Persist after-bytes to the content store, keyed by sha256. Best-effort. */
 function _storeContent(sessionId, sha, content) {
   try {
-    if (!sha || content == null) return;
+    if (!sha || content == null) {
+      return;
+    }
     const dir = _contentStoreDir(sessionId);
     const blob = path.join(dir, sha);
-    if (fs.existsSync(blob)) return; // content-addressed → already stored
-    const tmp = path.join(dir, `.${sha}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`);
+    if (fs.existsSync(blob)) {
+      return;
+    } // content-addressed → already stored
+    const tmp = path.join(
+      dir,
+      `.${sha}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`
+    );
     fs.writeFileSync(tmp, Buffer.from(content, 'utf-8'), { mode: 0o600 });
     fs.renameSync(tmp, blob);
-  } catch { /* best-effort — content store is an optional reproduction aid */ }
+  } catch {
+    /* best-effort — content store is an optional reproduction aid */
+  }
 }
 
 /** Read entries (JSONL) from a ledger file. Returns []. */
 function read(ledgerPath) {
   try {
-    if (!fs.existsSync(ledgerPath)) return [];
-    return fs.readFileSync(ledgerPath, 'utf-8')
+    if (!fs.existsSync(ledgerPath)) {
+      return [];
+    }
+    return fs
+      .readFileSync(ledgerPath, 'utf-8')
       .split('\n')
       .filter(Boolean)
-      .map((line) => { try { return JSON.parse(line); } catch { return null; } })
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
       .filter(Boolean);
   } catch {
     return [];
@@ -94,7 +112,11 @@ function nextSeq(sessionId) {
   const key = String(sessionId);
   if (!_seqCounters.has(key)) {
     let seed = 0;
-    try { seed = read(_ledgerPathForSession(sessionId)).length; } catch { seed = 0; }
+    try {
+      seed = read(_ledgerPathForSession(sessionId)).length;
+    } catch {
+      seed = 0;
+    }
     _seqCounters.set(key, seed);
   }
   const v = _seqCounters.get(key);
@@ -115,10 +137,12 @@ function _artifactsFromWriteDiff(sessionId, writeDiff) {
   const after = typeof writeDiff.afterContent === 'string' ? writeDiff.afterContent : '';
   const beforeHash = before === '' ? null : artifactHash.hashString(before);
   const afterHash = after === '' ? null : artifactHash.hashString(after);
-  const op = before === '' ? 'create' : (after === '' ? 'delete' : 'modify');
+  const op = before === '' ? 'create' : after === '' ? 'delete' : 'modify';
 
   // Persist the after-bytes so a later-deleted file can still be reproduced.
-  if (afterHash && _captureContentEnabled()) _storeContent(sessionId, afterHash, after);
+  if (afterHash && _captureContentEnabled()) {
+    _storeContent(sessionId, afterHash, after);
+  }
 
   return {
     writeDiffHashes: { filePath: writeDiff.filePath, beforeHash, afterHash },
@@ -131,8 +155,14 @@ function _summarizeResult(result) {
   if (!result || typeof result !== 'object') {
     return { success: undefined, exitCode: undefined, outputHash: null, denied: false };
   }
-  const output = result.output != null ? result.output
-    : (result.content != null ? result.content : (result.stdout != null ? result.stdout : null));
+  const output =
+    result.output != null
+      ? result.output
+      : result.content != null
+        ? result.content
+        : result.stdout != null
+          ? result.stdout
+          : null;
   return {
     success: result.success === true,
     exitCode: typeof result.exitCode === 'number' ? result.exitCode : undefined,
@@ -154,7 +184,9 @@ function _summarizeResult(result) {
  */
 function recordToolTurn({ sessionId, name, params, result, writeDiff, seq } = {}) {
   try {
-    if (sessionId == null || name == null) return { ok: false, error: 'missing sessionId/name' };
+    if (sessionId == null || name == null) {
+      return { ok: false, error: 'missing sessionId/name' };
+    }
     const normName = tierRegistry.normalize(name);
     const tier = tierRegistry.effectiveTier(name);
     const { writeDiffHashes, artifacts } = _artifactsFromWriteDiff(sessionId, writeDiff);
@@ -173,7 +205,9 @@ function recordToolTurn({ sessionId, name, params, result, writeDiff, seq } = {}
     };
     const ledgerPath = _ledgerPathForSession(sessionId);
     const dir = path.dirname(ledgerPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.appendFileSync(ledgerPath, JSON.stringify(entry) + '\n');
     return { ok: true, seq: entry.seq };
   } catch (e) {
@@ -190,16 +224,28 @@ function verifyLedger(ledgerPath) {
   const entries = read(ledgerPath);
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
-    if (e.seq !== i) return { ok: false, length: entries.length, badAt: i, reason: `seq 不连续：期望 ${i} 实为 ${e.seq}` };
-    if (typeof e.name !== 'string' || !e.tier) return { ok: false, length: entries.length, badAt: i, reason: `条目 #${i} 缺 name/tier` };
+    if (e.seq !== i) {
+      return {
+        ok: false,
+        length: entries.length,
+        badAt: i,
+        reason: `seq 不连续：期望 ${i} 实为 ${e.seq}`,
+      };
+    }
+    if (typeof e.name !== 'string' || !e.tier) {
+      return { ok: false, length: entries.length, badAt: i, reason: `条目 #${i} 缺 name/tier` };
+    }
   }
   return { ok: true, length: entries.length, badAt: null, reason: null };
 }
 
 /** Test/maintenance helper: reset the in-memory seq counter for a session. */
 function _resetSeq(sessionId) {
-  if (sessionId == null) _seqCounters.clear();
-  else _seqCounters.delete(String(sessionId));
+  if (sessionId == null) {
+    _seqCounters.clear();
+  } else {
+    _seqCounters.delete(String(sessionId));
+  }
 }
 
 module.exports = {

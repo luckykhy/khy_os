@@ -26,7 +26,9 @@
 
 // 门控 KHY_TRUNCATE_TO_LINES 默认开;标准 falsy 串(0/false/off/no,大小写/空白不敏感)关。
 function truncateLinesEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TRUNCATE_TO_LINES) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TRUNCATE_TO_LINES) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -42,9 +44,13 @@ function _asString(text) {
 function truncateToLines(text, maxLines, ellipsis = '…') {
   const s = _asString(text);
   const n = Number(maxLines);
-  if (!Number.isFinite(n) || n < 0) return s;
+  if (!Number.isFinite(n) || n < 0) {
+    return s;
+  }
   const lines = s.split('\n');
-  if (lines.length <= n) return s;
+  if (lines.length <= n) {
+    return s;
+  }
   return lines.slice(0, n).join('\n') + ellipsis;
 }
 
@@ -60,11 +66,17 @@ function truncateToLines(text, maxLines, ellipsis = '…') {
 function truncatePreview(text, maxLines, env = process.env) {
   const s = _asString(text);
   const n = Number(maxLines);
-  if (!Number.isFinite(n) || n < 0) return s;
+  if (!Number.isFinite(n) || n < 0) {
+    return s;
+  }
   const lines = s.split('\n');
-  if (lines.length <= n) return s;
+  if (lines.length <= n) {
+    return s;
+  }
   const head = lines.slice(0, n).join('\n');
-  if (!truncateLinesEnabled(env)) return head;
+  if (!truncateLinesEnabled(env)) {
+    return head;
+  }
   const dropped = lines.length - n;
   return head + '\n… +' + dropped + ' 行';
 }

@@ -28,24 +28,36 @@ function isEnabled(env) {
 // 从每图明细里收集「被自动旋正的角度」：orientationCorrected 为正数才算发生了校正。
 // 去重 + 升序；非数组 / 畸形项一律安全跳过，绝不抛。
 function computeCorrectedOrientations(details) {
-  if (!Array.isArray(details)) return [];
+  if (!Array.isArray(details)) {
+    return [];
+  }
   const degs = new Set();
   for (const d of details) {
-    if (!d || typeof d !== 'object') continue;
+    if (!d || typeof d !== 'object') {
+      continue;
+    }
     const deg = Number(d.orientationCorrected);
-    if (Number.isFinite(deg) && deg > 0) degs.add(deg);
+    if (Number.isFinite(deg) && deg > 0) {
+      degs.add(deg);
+    }
   }
   return Array.from(degs).sort((a, b) => a - b);
 }
 
 // 渲染诚实告诫。门关 / 无校正 / 畸形 → null（不注入，逐字节回退）。
 function buildOrientationNotice({ corrected, env } = {}) {
-  if (!isEnabled(env)) return null;
-  if (!Array.isArray(corrected) || corrected.length === 0) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
+  if (!Array.isArray(corrected) || corrected.length === 0) {
+    return null;
+  }
   const list = corrected.map((d) => `${d}°`).join('、');
-  return `[提示：以下图片方向不正，OCR 已自动将其旋转校正（${list}）后才成功识别出文字——`
-    + `上述文本取自旋正后的图像，而非原图方向。原图方向下的识别结果是不可靠的乱码，已被丢弃。`
-    + `请据旋正后的文本作答；若仍有疑问，可改用支持看图的多模态模型复核原图。]`;
+  return (
+    `[提示：以下图片方向不正，OCR 已自动将其旋转校正（${list}）后才成功识别出文字——` +
+    `上述文本取自旋正后的图像，而非原图方向。原图方向下的识别结果是不可靠的乱码，已被丢弃。` +
+    `请据旋正后的文本作答；若仍有疑问，可改用支持看图的多模态模型复核原图。]`
+  );
 }
 
 module.exports = { isEnabled, computeCorrectedOrientations, buildOrientationNotice, FLAG };

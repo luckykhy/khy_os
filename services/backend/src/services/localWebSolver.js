@@ -31,21 +31,32 @@
  */
 
 let _fmt = null;
-try { _fmt = require('./localFormat'); } catch { /* degrade to plain text */ }
+try {
+  _fmt = require('./localFormat');
+} catch {
+  /* degrade to plain text */
+}
 
 function _intFromEnv(name, def, min = 1, max = 20) {
   const v = parseInt(process.env[name], 10);
-  if (!Number.isFinite(v)) return def;
+  if (!Number.isFinite(v)) {
+    return def;
+  }
   return Math.max(min, Math.min(max, v));
 }
 
 function _enabled() {
-  const v = String(process.env.KHY_LOCAL_WEB_SOLVER || 'on').trim().toLowerCase();
+  const v = String(process.env.KHY_LOCAL_WEB_SOLVER || 'on')
+    .trim()
+    .toLowerCase();
   return !['0', 'off', 'false', 'no'].includes(v);
 }
 
 function _norm(s) {
-  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  return String(s || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
 }
 
 /**
@@ -58,9 +69,13 @@ function buildReformulations(query, deps = {}) {
   const seen = new Set();
   const push = (q, label) => {
     const t = String(q || '').trim();
-    if (!t || t.length < 2) return;
+    if (!t || t.length < 2) {
+      return;
+    }
     const key = _norm(t);
-    if (seen.has(key)) return;
+    if (seen.has(key)) {
+      return;
+    }
     seen.add(key);
     out.push({ query: t, label });
   };
@@ -71,8 +86,12 @@ function buildReformulations(query, deps = {}) {
   if (typeof deps.coreTerm === 'function') {
     try {
       const core = deps.coreTerm(query);
-      if (core && _norm(core) !== _norm(query)) push(core, 'core_term');
-    } catch { /* ignore */ }
+      if (core && _norm(core) !== _norm(query)) {
+        push(core, 'core_term');
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   // Keyword distillation: the highest-signal terms joined — drops conversational
@@ -82,9 +101,13 @@ function buildReformulations(query, deps = {}) {
       const kw = deps.keywords(query);
       if (Array.isArray(kw) && kw.length) {
         const joined = kw.slice(0, 6).join(' ');
-        if (joined && _norm(joined) !== _norm(query)) push(joined, 'keywords');
+        if (joined && _norm(joined) !== _norm(query)) {
+          push(joined, 'keywords');
+        }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return out;
@@ -94,10 +117,14 @@ function _dedupeResults(results) {
   const out = [];
   const seen = new Set();
   for (const r of results || []) {
-    if (!r) continue;
+    if (!r) {
+      continue;
+    }
     const url = String(r.url || '').trim();
     const key = url ? url.toLowerCase() : _norm(r.title || r.snippet || '');
-    if (!key || seen.has(key)) continue;
+    if (!key || seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(r);
   }
@@ -133,7 +160,8 @@ function _formatBestEffortMiss(query, triedLabels) {
         },
       ],
       meta: ['网络搜索', '尽力而为'],
-      footer: '已尽力联网检索但未获得可靠结果；这不是无能为力，而是当前信息不足——按上面任一方式可继续推进。',
+      footer:
+        '已尽力联网检索但未获得可靠结果；这不是无能为力，而是当前信息不足——按上面任一方式可继续推进。',
     });
   }
   const lines = [];
@@ -156,12 +184,20 @@ function _formatBestEffortMiss(query, triedLabels) {
  * @returns {Promise<{answer:string, strategies:string[], queriesTried:number, resultCount:number}|null>}
  */
 async function solve(query, deps = {}) {
-  if (!_enabled()) return null;
+  if (!_enabled()) {
+    return null;
+  }
   const q = String(query || '').trim();
-  if (q.length < 2) return null;
-  if (deps.networkUp === false) return null;            // offline → caller degrades
+  if (q.length < 2) {
+    return null;
+  }
+  if (deps.networkUp === false) {
+    return null;
+  } // offline → caller degrades
   const search = typeof deps.search === 'function' ? deps.search : null;
-  if (!search) return null;
+  if (!search) {
+    return null;
+  }
   const synthesize = typeof deps.synthesize === 'function' ? deps.synthesize : null;
 
   const maxQueries = _intFromEnv('KHY_LOCAL_WEB_SOLVER_MAX_QUERIES', 3, 1, 6);
@@ -174,18 +210,28 @@ async function solve(query, deps = {}) {
   for (const step of plan) {
     tried.push(step.label);
     let res = null;
-    try { res = await search(step.query); } catch { /* one strategy fails, continue */ }
+    try {
+      res = await search(step.query);
+    } catch {
+      /* one strategy fails, continue */
+    }
     if (Array.isArray(res) && res.length) {
       aggregated = _dedupeResults([...aggregated, ...res]);
     }
     // Early-exit: enough evidence gathered, no need to burn more search latency.
-    if (aggregated.length >= minResults) break;
+    if (aggregated.length >= minResults) {
+      break;
+    }
   }
 
   // Evidence in hand → synthesize a single answer from the COMBINED results.
   if (aggregated.length && synthesize) {
     let answer = null;
-    try { answer = synthesize(q, aggregated); } catch { answer = null; }
+    try {
+      answer = synthesize(q, aggregated);
+    } catch {
+      answer = null;
+    }
     if (answer && String(answer).trim()) {
       return {
         answer: String(answer).trim(),

@@ -10,10 +10,14 @@ const { User } = require('../../../models');
 const PUBLIC_ATTRS = ['id', 'username', 'email', 'role', 'status', 'lastLoginAt', 'createdAt'];
 
 function toPublic(user) {
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
   const u = user.get ? user.get({ plain: true }) : user;
   const out = {};
-  for (const k of PUBLIC_ATTRS) out[k] = u[k];
+  for (const k of PUBLIC_ATTRS) {
+    out[k] = u[k];
+  }
   return out;
 }
 
@@ -44,15 +48,25 @@ const contract = {
       return { users: rows.map(toPublic) };
     },
     async get(args) {
-      if (!args || args.id == null) throw new Error('id is required');
+      if (!args || args.id == null) {
+        throw new Error('id is required');
+      }
       const user = await User.findByPk(args.id, { attributes: PUBLIC_ATTRS });
-      if (!user) throw new Error('user not found');
+      if (!user) {
+        throw new Error('user not found');
+      }
       return { user: toPublic(user) };
     },
     async create(args) {
-      if (!args || !args.username) throw new Error('username is required');
-      if (!args.email) throw new Error('email is required');
-      if (!args.password) throw new Error('password is required');
+      if (!args || !args.username) {
+        throw new Error('username is required');
+      }
+      if (!args.email) {
+        throw new Error('email is required');
+      }
+      if (!args.password) {
+        throw new Error('password is required');
+      }
       const role = args.role === 'admin' ? 'admin' : 'user';
       const user = await User.create({
         username: args.username,
@@ -63,17 +77,27 @@ const contract = {
       return { user: toPublic(user) };
     },
     async delete(args) {
-      if (!args || args.id == null) throw new Error('id is required');
+      if (!args || args.id == null) {
+        throw new Error('id is required');
+      }
       const user = await User.findByPk(args.id);
-      if (!user) throw new Error('user not found');
+      if (!user) {
+        throw new Error('user not found');
+      }
       await user.destroy();
       return { deleted: args.id };
     },
     'reset-password': async (args) => {
-      if (!args || args.id == null) throw new Error('id is required');
-      if (!args.password) throw new Error('password is required');
+      if (!args || args.id == null) {
+        throw new Error('id is required');
+      }
+      if (!args.password) {
+        throw new Error('password is required');
+      }
       const user = await User.findByPk(args.id);
-      if (!user) throw new Error('user not found');
+      if (!user) {
+        throw new Error('user not found');
+      }
       await user.update({ password: args.password });
       return { reset: args.id };
     },

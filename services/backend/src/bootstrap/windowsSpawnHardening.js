@@ -41,11 +41,17 @@ function isEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_WINDOWS_SPAWN_HIDE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_WINDOWS_SPAWN_HIDE;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -66,13 +72,19 @@ const _isPlainObject = require('../utils/isPlainObject');
  * @returns {Array} 同一数组
  */
 function injectWindowsHide(callArgs) {
-  if (!Array.isArray(callArgs)) return callArgs;
+  if (!Array.isArray(callArgs)) {
+    return callArgs;
+  }
   // 1) 已有 options 对象 → 就地补(仅当未显式设置)。
   for (let i = 0; i < callArgs.length; i++) {
     if (_isPlainObject(callArgs[i])) {
       const opts = callArgs[i];
       if (opts.windowsHide === undefined) {
-        try { opts.windowsHide = true; } catch { /* 冻结对象等 → 放弃注入,原样调用 */ }
+        try {
+          opts.windowsHide = true;
+        } catch {
+          /* 冻结对象等 → 放弃注入,原样调用 */
+        }
       }
       return callArgs;
     }
@@ -88,7 +100,15 @@ function injectWindowsHide(callArgs) {
   return callArgs;
 }
 
-const _PATCH_METHODS = ['spawn', 'spawnSync', 'exec', 'execSync', 'execFile', 'execFileSync', 'fork'];
+const _PATCH_METHODS = [
+  'spawn',
+  'spawnSync',
+  'exec',
+  'execSync',
+  'execFile',
+  'execFileSync',
+  'fork',
+];
 
 /**
  * 安装补丁。仅 win32 + 门控开时生效;否则 no-op(返回原因)。绝不抛。
@@ -99,28 +119,47 @@ function installWindowsSpawnHardening(opts = {}) {
   try {
     const env = opts.env || process.env;
     const platform = opts.platform || process.platform;
-    if (platform !== 'win32') return { installed: false, reason: 'not-win32' };
-    if (!isEnabled(env)) return { installed: false, reason: 'disabled' };
+    if (platform !== 'win32') {
+      return { installed: false, reason: 'not-win32' };
+    }
+    if (!isEnabled(env)) {
+      return { installed: false, reason: 'disabled' };
+    }
 
     const cp = opts.childProcess || require('child_process');
-    if (cp.__khyWindowsHidePatched) return { installed: false, reason: 'already' };
+    if (cp.__khyWindowsHidePatched) {
+      return { installed: false, reason: 'already' };
+    }
 
     const patched = [];
     for (const name of _PATCH_METHODS) {
       const orig = cp[name];
-      if (typeof orig !== 'function') continue;
+      if (typeof orig !== 'function') {
+        continue;
+      }
       const wrapped = function (...callArgs) {
-        try { injectWindowsHide(callArgs); } catch { /* 绝不因注入失败而破坏派生 */ }
+        try {
+          injectWindowsHide(callArgs);
+        } catch {
+          /* 绝不因注入失败而破坏派生 */
+        }
         return orig.apply(this, callArgs);
       };
       wrapped.__khyOrig = orig;
       // 保留原函数上可能存在的静态属性(如 exec.[util.promisify.custom]),避免丢失 promisify 支持。
-      try { Object.setPrototypeOf(wrapped, orig); } catch { /* 忽略 */ }
+      try {
+        Object.setPrototypeOf(wrapped, orig);
+      } catch {
+        /* 忽略 */
+      }
       cp[name] = wrapped;
       patched.push(name);
     }
     Object.defineProperty(cp, '__khyWindowsHidePatched', {
-      value: true, enumerable: false, configurable: true, writable: true,
+      value: true,
+      enumerable: false,
+      configurable: true,
+      writable: true,
     });
     return { installed: true, methods: patched };
   } catch {

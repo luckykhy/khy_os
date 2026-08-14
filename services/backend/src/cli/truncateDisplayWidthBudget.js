@@ -25,7 +25,9 @@ const ELLIPSIS_WIDTH = 3; // ASCII `...` = 3 显示列(与 formatters 的省略�
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_TRUNCATE_WIDTH_BUDGET;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -48,8 +50,12 @@ function _legacy(source, limit, widthOf) {
 function _budgeted(source, limit, widthOf) {
   const chars = Array.from(source);
   let total = 0;
-  for (const ch of chars) total += widthOf(ch);
-  if (total <= limit) return source; // 完整放得下 → 不截断、不加省略号(与历史一致)。
+  for (const ch of chars) {
+    total += widthOf(ch);
+  }
+  if (total <= limit) {
+    return source;
+  } // 完整放得下 → 不截断、不加省略号(与历史一致)。
 
   // 预算不足以容纳省略号(极端窄列)→ 返回宽度安全的前缀,绝不溢出(不硬塞会越界的 `...`)。
   const budget = limit >= ELLIPSIS_WIDTH ? limit - ELLIPSIS_WIDTH : 0;
@@ -57,11 +63,15 @@ function _budgeted(source, limit, widthOf) {
   let out = '';
   for (const ch of chars) {
     const chWidth = widthOf(ch);
-    if (width + chWidth > budget) break;
+    if (width + chWidth > budget) {
+      break;
+    }
     out += ch;
     width += chWidth;
   }
-  if (out) return `${out}${ELLIPSIS}`;
+  if (out) {
+    return `${out}${ELLIPSIS}`;
+  }
   // 一个字符都放不进预算:limit≥3 时省略号自身正好 ≤ limit;limit<3 时返回空串(宁可空也不溢出)。
   return limit >= ELLIPSIS_WIDTH ? ELLIPSIS : '';
 }
@@ -77,7 +87,9 @@ function _budgeted(source, limit, widthOf) {
 function truncateWidth(source, limit, widthOf, env = process.env) {
   try {
     const fn = typeof widthOf === 'function' ? widthOf : (ch) => Array.from(String(ch)).length;
-    return isEnabled(env) ? _budgeted(String(source), limit, fn) : _legacy(String(source), limit, fn);
+    return isEnabled(env)
+      ? _budgeted(String(source), limit, fn)
+      : _legacy(String(source), limit, fn);
   } catch {
     // 兜底:退化为不带省略号的原样返回,绝不抛。
     return String(source == null ? '' : source);

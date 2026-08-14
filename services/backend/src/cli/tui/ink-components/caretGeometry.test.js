@@ -5,8 +5,8 @@
 // horizontal alignment). Pure — synthesizes `rows` arrays, never mounts ink.
 // node:test (jest is broken under rtk — run with `node --test`).
 
-const test = require('node:test');
 const assert = require('node:assert');
+const test = require('node:test');
 
 const cg = require('./caretGeometry');
 
@@ -48,20 +48,22 @@ test('caretColumn: no caret row / empty / non-array → {MARKER_W, -1}', () => {
 
 // ── caretColumn: measure 抛 → fall back to length, 永不抛 ─────────────────────
 test('caretColumn: throwing measure falls back to code-unit length', () => {
-  const bad = () => { throw new Error('boom'); };
+  const bad = () => {
+    throw new Error('boom');
+  };
   assert.doesNotThrow(() => cg.caretColumn([line('hello', 3)], { measure: bad }));
   assert.deepEqual(cg.caretColumn([line('hello', 3)], { measure: bad }), { col: 5, rowIndex: 0 });
 });
 
 // ── clampColumn: 越界 / 负值 / 非法钳制 ──────────────────────────────────────
 test('clampColumn: clamps to [0, cols - minMenuWidth]', () => {
-  assert.equal(cg.clampColumn(10, 80, 24), 10);            // in range
-  assert.equal(cg.clampColumn(70, 80, 24), 56);            // 80-24=56 ceiling
+  assert.equal(cg.clampColumn(10, 80, 24), 10); // in range
+  assert.equal(cg.clampColumn(70, 80, 24), 56); // 80-24=56 ceiling
   assert.equal(cg.clampColumn(0, 80, 24), 0);
-  assert.equal(cg.clampColumn(-5, 80, 24), 0);             // negative → 0
-  assert.equal(cg.clampColumn(10, 0, 24), 0);              // bad cols → 0
-  assert.equal(cg.clampColumn(NaN, 80, 24), 0);            // bad col → 0
-  assert.equal(cg.clampColumn(10, 80, 0), 10);             // no min → just floor(cols)
+  assert.equal(cg.clampColumn(-5, 80, 24), 0); // negative → 0
+  assert.equal(cg.clampColumn(10, 0, 24), 0); // bad cols → 0
+  assert.equal(cg.clampColumn(NaN, 80, 24), 0); // bad col → 0
+  assert.equal(cg.clampColumn(10, 80, 0), 10); // no min → just floor(cols)
 });
 
 // ── 门控梯:KHY_IME_CURSOR ───────────────────────────────────────────────────
@@ -79,7 +81,11 @@ test('completionFollowEnabled: default on; explicit falsy off', () => {
   assert.equal(cg.completionFollowEnabled({}), true);
   assert.equal(cg.completionFollowEnabled(undefined), true);
   for (const v of ['0', 'false', 'off', 'no', 'OFF', ' No ']) {
-    assert.equal(cg.completionFollowEnabled({ KHY_COMPLETION_FOLLOW_CURSOR: v }), false, `value ${v}`);
+    assert.equal(
+      cg.completionFollowEnabled({ KHY_COMPLETION_FOLLOW_CURSOR: v }),
+      false,
+      `value ${v}`
+    );
   }
   assert.equal(cg.completionFollowEnabled({ KHY_COMPLETION_FOLLOW_CURSOR: '1' }), true);
 });

@@ -1,8 +1,10 @@
 const express = require('express');
+
 const router = express.Router();
-const { Announcement, AnnouncementRead, User } = require('../models');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { Op } = require('sequelize');
+
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { Announcement, AnnouncementRead, User } = require('../models');
 const notificationService = require('../services/notificationService');
 
 // 管理员创建公告
@@ -17,13 +19,13 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
       expireAt,
       isSticky = false,
       isPopup = false,
-      targetUsers = []
+      targetUsers = [],
     } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({
         success: false,
-        message: '标题和内容不能为空'
+        message: '标题和内容不能为空',
       });
     }
 
@@ -41,8 +43,8 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
       author_id: req.user.id,
       metadata: {
         createdBy: req.user.username,
-        createdAt: new Date().toISOString()
-      }
+        createdAt: new Date().toISOString(),
+      },
     });
 
     // 获取完整的公告信息（包含作者信息）
@@ -51,9 +53,9 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
         {
           model: User,
           as: 'author',
-          attributes: [...User.PUBLIC_ATTRIBUTES]
-        }
-      ]
+          attributes: [...User.PUBLIC_ATTRIBUTES],
+        },
+      ],
     });
 
     // 实时广播新公告通知
@@ -67,15 +69,14 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
     res.json({
       success: true,
       message: '公告发布成功',
-      data: fullAnnouncement
+      data: fullAnnouncement,
     });
-
   } catch (error) {
     console.error('创建公告错误:', error);
     res.status(500).json({
       success: false,
       message: '创建公告失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -87,9 +88,15 @@ router.get('/admin', authMiddleware, adminMiddleware, async (req, res) => {
     const offset = (page - 1) * pageSize;
 
     const where = {};
-    if (status) where.status = status;
-    if (type) where.type = type;
-    if (priority) where.priority = priority;
+    if (status) {
+      where.status = status;
+    }
+    if (type) {
+      where.type = type;
+    }
+    if (priority) {
+      where.priority = priority;
+    }
 
     const announcements = await Announcement.findAndCountAll({
       where,
@@ -97,12 +104,15 @@ router.get('/admin', authMiddleware, adminMiddleware, async (req, res) => {
         {
           model: User,
           as: 'author',
-          attributes: [...User.PUBLIC_ATTRIBUTES]
-        }
+          attributes: [...User.PUBLIC_ATTRIBUTES],
+        },
       ],
       limit: parseInt(pageSize),
       offset: parseInt(offset),
-      order: [['isSticky', 'DESC'], ['publishAt', 'DESC']]
+      order: [
+        ['isSticky', 'DESC'],
+        ['publishAt', 'DESC'],
+      ],
     });
 
     // 获取每个公告的阅读统计（单次分组聚合，避免 N+1 查询 —— [MGMT-RPT-020] REQ-2026-007）
@@ -118,7 +128,7 @@ router.get('/admin', authMiddleware, adminMiddleware, async (req, res) => {
         raw: true,
       });
       const countById = new Map(
-        readCounts.map((r) => [String(r.announcement_id), Number(r.count) || 0]),
+        readCounts.map((r) => [String(r.announcement_id), Number(r.count) || 0])
       );
       for (const announcement of announcements.rows) {
         announcement.dataValues.actualReadCount = countById.get(String(announcement.id)) || 0;
@@ -131,16 +141,15 @@ router.get('/admin', authMiddleware, adminMiddleware, async (req, res) => {
         list: announcements.rows,
         total: announcements.count,
         page: parseInt(page),
-        pageSize: parseInt(pageSize)
-      }
+        pageSize: parseInt(pageSize),
+      },
     });
-
   } catch (error) {
     console.error('获取管理员公告列表错误:', error);
     res.status(500).json({
       success: false,
       message: '获取公告列表失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -153,24 +162,20 @@ router.get('/', authMiddleware, async (req, res) => {
 
     const where = {
       status: 'published',
-      [Op.or]: [
-        { publishAt: { [Op.lte]: new Date() } },
-        { publishAt: null }
-      ],
-      [Op.or]: [
-        { expireAt: { [Op.gte]: new Date() } },
-        { expireAt: null }
-      ]
+      [Op.or]: [{ publishAt: { [Op.lte]: new Date() } }, { publishAt: null }],
+      [Op.or]: [{ expireAt: { [Op.gte]: new Date() } }, { expireAt: null }],
     };
 
-    if (type) where.type = type;
+    if (type) {
+      where.type = type;
+    }
 
-    let include = [
+    const include = [
       {
         model: User,
         as: 'author',
-        attributes: [...User.REFERENCE_ATTRIBUTES]
-      }
+        attributes: [...User.REFERENCE_ATTRIBUTES],
+      },
     ];
 
     // 如果只要未读的，添加条件
@@ -179,9 +184,9 @@ router.get('/', authMiddleware, async (req, res) => {
         model: AnnouncementRead,
         as: 'reads',
         where: { user_id: req.user.id },
-        required: false
+        required: false,
       });
-      
+
       // 在查询后过滤未读的
     }
 
@@ -190,36 +195,37 @@ router.get('/', authMiddleware, async (req, res) => {
       include,
       limit: parseInt(pageSize),
       offset: parseInt(offset),
-      order: [['isSticky', 'DESC'], ['publishAt', 'DESC']]
+      order: [
+        ['isSticky', 'DESC'],
+        ['publishAt', 'DESC'],
+      ],
     });
 
     // 标记用户的阅读状态
     const userReads = await AnnouncementRead.findAll({
       where: {
         user_id: req.user.id,
-        announcement_id: announcements.rows.map(a => a.id)
-      }
+        announcement_id: announcements.rows.map((a) => a.id),
+      },
     });
 
     const readMap = {};
-    userReads.forEach(read => {
+    userReads.forEach((read) => {
       readMap[read.announcement_id] = read;
     });
 
-    const result = announcements.rows.map(announcement => {
+    const result = announcements.rows.map((announcement) => {
       const read = readMap[announcement.id];
       return {
         ...announcement.toJSON(),
         isRead: !!read,
         readAt: read?.readAt,
-        isLiked: read?.isLiked || false
+        isLiked: read?.isLiked || false,
       };
     });
 
     // 如果只要未读的，过滤结果
-    const finalResult = unreadOnly === 'true' 
-      ? result.filter(item => !item.isRead)
-      : result;
+    const finalResult = unreadOnly === 'true' ? result.filter((item) => !item.isRead) : result;
 
     res.json({
       success: true,
@@ -228,16 +234,15 @@ router.get('/', authMiddleware, async (req, res) => {
         total: unreadOnly === 'true' ? finalResult.length : announcements.count,
         page: parseInt(page),
         pageSize: parseInt(pageSize),
-        unreadCount: result.filter(item => !item.isRead).length
-      }
+        unreadCount: result.filter((item) => !item.isRead).length,
+      },
     });
-
   } catch (error) {
     console.error('获取公告列表错误:', error);
     res.status(500).json({
       success: false,
       message: '获取公告列表失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -252,15 +257,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
         {
           model: User,
           as: 'author',
-          attributes: [...User.PUBLIC_ATTRIBUTES]
-        }
-      ]
+          attributes: [...User.PUBLIC_ATTRIBUTES],
+        },
+      ],
     });
 
     if (!announcement) {
       return res.status(404).json({
         success: false,
-        message: '公告不存在'
+        message: '公告不存在',
       });
     }
 
@@ -268,7 +273,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     if (announcement.status !== 'published' && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: '无权限查看此公告'
+        message: '无权限查看此公告',
       });
     }
 
@@ -276,15 +281,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const read = await AnnouncementRead.findOne({
       where: {
         user_id: req.user.id,
-        announcement_id: id
-      }
+        announcement_id: id,
+      },
     });
 
     // 如果未读，标记为已读
     if (!read) {
       await AnnouncementRead.create({
         user_id: req.user.id,
-        announcement_id: id
+        announcement_id: id,
       });
 
       // 更新阅读计数
@@ -297,16 +302,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
         ...announcement.toJSON(),
         isRead: !!read,
         readAt: read?.readAt,
-        isLiked: read?.isLiked || false
-      }
+        isLiked: read?.isLiked || false,
+      },
     });
-
   } catch (error) {
     console.error('获取公告详情错误:', error);
     res.status(500).json({
       success: false,
       message: '获取公告详情失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -320,18 +324,18 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
     if (!announcement) {
       return res.status(404).json({
         success: false,
-        message: '公告不存在'
+        message: '公告不存在',
       });
     }
 
     const [read, created] = await AnnouncementRead.findOrCreate({
       where: {
         user_id: req.user.id,
-        announcement_id: id
+        announcement_id: id,
       },
       defaults: {
-        isLiked: true
-      }
+        isLiked: true,
+      },
     });
 
     if (!created) {
@@ -344,16 +348,15 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
       success: true,
       message: read.isLiked ? '点赞成功' : '取消点赞',
       data: {
-        isLiked: read.isLiked
-      }
+        isLiked: read.isLiked,
+      },
     });
-
   } catch (error) {
     console.error('点赞公告错误:', error);
     res.status(500).json({
       success: false,
       message: '操作失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -368,7 +371,7 @@ router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     if (!announcement) {
       return res.status(404).json({
         success: false,
-        message: '公告不存在'
+        message: '公告不存在',
       });
     }
 
@@ -377,22 +380,21 @@ router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
       metadata: {
         ...announcement.metadata,
         updatedBy: req.user.username,
-        updatedAt: new Date().toISOString()
-      }
+        updatedAt: new Date().toISOString(),
+      },
     });
 
     res.json({
       success: true,
       message: '公告更新成功',
-      data: announcement
+      data: announcement,
     });
-
   } catch (error) {
     console.error('更新公告错误:', error);
     res.status(500).json({
       success: false,
       message: '更新公告失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -406,13 +408,13 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     if (!announcement) {
       return res.status(404).json({
         success: false,
-        message: '公告不存在'
+        message: '公告不存在',
       });
     }
 
     // 删除相关的阅读记录
     await AnnouncementRead.destroy({
-      where: { announcement_id: id }
+      where: { announcement_id: id },
     });
 
     // 删除公告
@@ -420,15 +422,14 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      message: '公告删除成功'
+      message: '公告删除成功',
     });
-
   } catch (error) {
     console.error('删除公告错误:', error);
     res.status(500).json({
       success: false,
       message: '删除公告失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -444,17 +445,17 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => 
     const typeStats = await Announcement.findAll({
       attributes: [
         'type',
-        [Announcement.sequelize.fn('COUNT', Announcement.sequelize.col('id')), 'count']
+        [Announcement.sequelize.fn('COUNT', Announcement.sequelize.col('id')), 'count'],
       ],
-      group: ['type']
+      group: ['type'],
     });
 
     const priorityStats = await Announcement.findAll({
       attributes: [
         'priority',
-        [Announcement.sequelize.fn('COUNT', Announcement.sequelize.col('id')), 'count']
+        [Announcement.sequelize.fn('COUNT', Announcement.sequelize.col('id')), 'count'],
       ],
-      group: ['priority']
+      group: ['priority'],
     });
 
     res.json({
@@ -464,23 +465,22 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => 
         published: publishedCount,
         draft: draftCount,
         sticky: stickyCount,
-        typeStats: typeStats.map(item => ({
+        typeStats: typeStats.map((item) => ({
           type: item.type,
-          count: parseInt(item.dataValues.count)
+          count: parseInt(item.dataValues.count),
         })),
-        priorityStats: priorityStats.map(item => ({
+        priorityStats: priorityStats.map((item) => ({
           priority: item.priority,
-          count: parseInt(item.dataValues.count)
-        }))
-      }
+          count: parseInt(item.dataValues.count),
+        })),
+      },
     });
-
   } catch (error) {
     console.error('获取公告统计错误:', error);
     res.status(500).json({
       success: false,
       message: '获取统计信息失败',
-      error: error.message
+      error: error.message,
     });
   }
 });

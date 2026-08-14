@@ -13,32 +13,41 @@
  * Backend selection and credentials are env-driven (zero-hardcoding).
  */
 
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const videoGenService = require('../services/videoGenService');
 const toolErrorCodes = require('../services/toolErrorCodes');
+const videoGenService = require('../services/videoGenService');
 
 /** Resolve a user path with Windows %VAR% / ~ expansion (mirrors imageGenerate). */
 const _resolvePath = require('../utils/resolveToolPath');
 
+const { defineTool } = require('./_baseTool');
+
 module.exports = defineTool({
   name: 'video_generate',
   description:
-    'Generate a video from a text prompt and optional input image(s) '
-    + '(text-to-video / image-to-video / 文生视频 / 图生视频 / 多图视频 / 关键帧动画 / keyframe animation). '
-    + 'Asynchronous: the tool submits the job, polls until completion, downloads the MP4, and returns its path. '
-    + 'Routes to a configurable backend (Agnes). Returns clear setup instructions if no backend is configured.',
+    'Generate a video from a text prompt and optional input image(s) ' +
+    '(text-to-video / image-to-video / 文生视频 / 图生视频 / 多图视频 / 关键帧动画 / keyframe animation). ' +
+    'Asynchronous: the tool submits the job, polls until completion, downloads the MP4, and returns its path. ' +
+    'Routes to a configurable backend (Agnes). Returns clear setup instructions if no backend is configured.',
   category: 'analysis',
   risk: 'low',
   isReadOnly: false,
   isConcurrencySafe: true,
-  searchHint: 'video generate text-to-video image-to-video 文生视频 图生视频 视频生成 关键帧 keyframe animation',
+  searchHint:
+    'video generate text-to-video image-to-video 文生视频 图生视频 视频生成 关键帧 keyframe animation',
   aliases: [
-    'videoGenerate', 'generate_video', 'text_to_video', 'image_to_video',
-    '文生视频', '图生视频', '视频生成', '生成视频', '关键帧动画',
+    'videoGenerate',
+    'generate_video',
+    'text_to_video',
+    'image_to_video',
+    '文生视频',
+    '图生视频',
+    '视频生成',
+    '生成视频',
+    '关键帧动画',
   ],
 
   inputSchema: {
@@ -51,25 +60,38 @@ module.exports = defineTool({
     images: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Optional input image URL(s). One URL = image-to-video; multiple = multi-image / keyframes. Must be public HTTP(S) URLs.',
+      description:
+        'Optional input image URL(s). One URL = image-to-video; multiple = multi-image / keyframes. Must be public HTTP(S) URLs.',
     },
     mode: {
       type: 'string',
-      description: 'Optional generation mode, e.g. "keyframes" for keyframe interpolation between input images.',
+      description:
+        'Optional generation mode, e.g. "keyframes" for keyframe interpolation between input images.',
     },
     width: { type: 'number', description: 'Video width (default backend-decided, e.g. 1152).' },
     height: { type: 'number', description: 'Video height (default backend-decided, e.g. 768).' },
     numFrames: {
       type: 'number',
-      description: 'Total frames. Must be <= 441 and satisfy 8n+1 (e.g. 81, 121, 241, 441). Default 121 (~5s @ 24fps).',
+      description:
+        'Total frames. Must be <= 441 and satisfy 8n+1 (e.g. 81, 121, 241, 441). Default 121 (~5s @ 24fps).',
     },
-    frameRate: { type: 'number', min: 1, max: 60, description: 'Frames per second (1-60). Default 24.' },
+    frameRate: {
+      type: 'number',
+      min: 1,
+      max: 60,
+      description: 'Frames per second (1-60). Default 24.',
+    },
     numInferenceSteps: {
       type: 'number',
-      description: 'Optional denoising / inference steps (Agnes num_inference_steps). Higher = more refined but slower. Backend default when omitted.',
+      description:
+        'Optional denoising / inference steps (Agnes num_inference_steps). Higher = more refined but slower. Backend default when omitted.',
     },
     seed: { type: 'number', description: 'Optional random seed for reproducibility.' },
-    negativePrompt: { type: 'string', maxLength: 2000, description: 'Things to avoid in the video.' },
+    negativePrompt: {
+      type: 'string',
+      maxLength: 2000,
+      description: 'Things to avoid in the video.',
+    },
     outputPath: {
       type: 'string',
       maxLength: 4096,
@@ -91,10 +113,14 @@ module.exports = defineTool({
       return { valid: false, message: e.message };
     }
     if (input.outputPath) {
-      const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+      const {
+        validateNotDevicePath,
+        validateNotUNCPath,
+        composeValidations,
+      } = require('./inputValidators');
       return composeValidations(
         validateNotDevicePath(input.outputPath),
-        validateNotUNCPath(input.outputPath),
+        validateNotUNCPath(input.outputPath)
       );
     }
     return { valid: true };
@@ -110,7 +136,9 @@ module.exports = defineTool({
     const startedAt = Date.now();
     const cwd = process.env.KHYQUANT_CWD || process.cwd();
     const prompt = params && params.prompt ? String(params.prompt) : '';
-    const images = Array.isArray(params && params.images) ? params.images.filter(Boolean).map(String) : [];
+    const images = Array.isArray(params && params.images)
+      ? params.images.filter(Boolean).map(String)
+      : [];
 
     let result;
     try {
@@ -122,13 +150,31 @@ module.exports = defineTool({
         height: params && Number.isFinite(params.height) ? params.height : undefined,
         numFrames: params && Number.isFinite(params.numFrames) ? params.numFrames : undefined,
         frameRate: params && Number.isFinite(params.frameRate) ? params.frameRate : undefined,
-        numInferenceSteps: params && Number.isFinite(params.numInferenceSteps) ? params.numInferenceSteps : undefined,
+        numInferenceSteps:
+          params && Number.isFinite(params.numInferenceSteps)
+            ? params.numInferenceSteps
+            : undefined,
         seed: params && Number.isFinite(params.seed) ? params.seed : undefined,
         negativePrompt: params && params.negativePrompt,
+        onProgress(p) {
+          if (typeof _context.onProgress === 'function') {
+            try {
+              _context.onProgress(`视频生成: ${p.progress}% (${p.status})`);
+            } catch {
+              /* non-essential */
+            }
+          }
+        },
       });
     } catch (err) {
       if (err && (err.code === 'NO_BACKEND' || err.code === 'BAD_PARAM')) {
-        return toolErrorCodes.enrich({ success: false, code: err.code, error: err.message, content: err.message, meta: { backend: videoGenService.resolveBackend() } });
+        return toolErrorCodes.enrich({
+          success: false,
+          code: err.code,
+          error: err.message,
+          content: err.message,
+          meta: { backend: videoGenService.resolveBackend() },
+        });
       }
       const backend = videoGenService.resolveBackend();
       const error = `视频生成失败（后端 ${backend || 'unknown'}）：${err.message}`;
@@ -147,14 +193,32 @@ module.exports = defineTool({
       target = _resolvePath(params.outputPath, cwd);
       const { validateNoPathTraversal } = require('./inputValidators');
       const confine = validateNoPathTraversal(target);
-      if (!confine.valid) return { success: false, error: confine.message };
+      if (!confine.valid) {
+        return { success: false, error: confine.message };
+      }
       if (fs.existsSync(target) && fs.statSync(target).isDirectory()) {
         target = path.join(target, `video_${Date.now()}.mp4`);
       } else {
         fs.mkdirSync(path.dirname(target), { recursive: true });
       }
     } else {
-      target = path.join(os.tmpdir(), `khy_video_${Date.now()}.mp4`);
+      const drive = path.parse(__dirname).root; // dynamic based on project location
+      const outDir = path.join(drive, 'tmp', 'khy-videos');
+      const fallback = path.join(os.tmpdir(), 'khy-videos');
+      const finalDir =
+        fs.existsSync(outDir) ||
+        (function (d) {
+          try {
+            fs.mkdirSync(d, { recursive: true });
+            return true;
+          } catch {
+            return false;
+          }
+        })(outDir)
+          ? outDir
+          : fallback;
+      fs.mkdirSync(finalDir, { recursive: true });
+      target = path.join(finalDir, `khy_video_${Date.now()}.mp4`);
     }
 
     let savedPath = null;
@@ -168,7 +232,12 @@ module.exports = defineTool({
         code: 'DOWNLOAD_FAILED',
         error,
         content: `${error}\n视频 URL：${result.videoUrl}`,
-        meta: { backend: result.backend, model: result.model, videoUrl: result.videoUrl, videoId: result.videoId },
+        meta: {
+          backend: result.backend,
+          model: result.model,
+          videoUrl: result.videoUrl,
+          videoId: result.videoId,
+        },
       });
     }
 

@@ -31,18 +31,27 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _graphemeStepEnabled() {
   return !OFF_VALUES.includes(
-    String((process.env && process.env.KHY_CURSOR_GRAPHEME) || '').trim().toLowerCase());
+    String((process.env && process.env.KHY_CURSOR_GRAPHEME) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // Length in code units of the code point ending at `offset` (1 for BMP, 2 for a
 // trailing low surrogate that pairs with the preceding high surrogate).
 function _prevStep(text, offset) {
-  if (offset <= 0) return 0;
-  if (!_graphemeStepEnabled()) return 1;
+  if (offset <= 0) {
+    return 0;
+  }
+  if (!_graphemeStepEnabled()) {
+    return 1;
+  }
   const lo = text.charCodeAt(offset - 1);
   if (lo >= 0xdc00 && lo <= 0xdfff && offset >= 2) {
     const hi = text.charCodeAt(offset - 2);
-    if (hi >= 0xd800 && hi <= 0xdbff) return 2;
+    if (hi >= 0xd800 && hi <= 0xdbff) {
+      return 2;
+    }
   }
   return 1;
 }
@@ -50,12 +59,18 @@ function _prevStep(text, offset) {
 // Length in code units of the code point starting at `offset` (1 for BMP, 2 for
 // a leading high surrogate followed by a low surrogate).
 function _nextStep(text, offset) {
-  if (offset >= text.length) return 0;
-  if (!_graphemeStepEnabled()) return 1;
+  if (offset >= text.length) {
+    return 0;
+  }
+  if (!_graphemeStepEnabled()) {
+    return 1;
+  }
   const hi = text.charCodeAt(offset);
   if (hi >= 0xd800 && hi <= 0xdbff && offset + 1 < text.length) {
     const lo = text.charCodeAt(offset + 1);
-    if (lo >= 0xdc00 && lo <= 0xdfff) return 2;
+    if (lo >= 0xdc00 && lo <= 0xdfff) {
+      return 2;
+    }
   }
   return 1;
 }
@@ -133,22 +148,30 @@ class Cursor {
   up() {
     const lines = this.lines();
     const ln = this.line();
-    if (ln === 0) return this.start();
+    if (ln === 0) {
+      return this.start();
+    }
     const col = this.column();
     const targetLen = lines[ln - 1].length;
     let off = 0;
-    for (let i = 0; i < ln - 1; i++) off += lines[i].length + 1;
+    for (let i = 0; i < ln - 1; i++) {
+      off += lines[i].length + 1;
+    }
     return new Cursor(this.text, off + Math.min(col, targetLen));
   }
 
   down() {
     const lines = this.lines();
     const ln = this.line();
-    if (ln >= lines.length - 1) return this.end();
+    if (ln >= lines.length - 1) {
+      return this.end();
+    }
     const col = this.column();
     const targetLen = lines[ln + 1].length;
     let off = 0;
-    for (let i = 0; i <= ln; i++) off += lines[i].length + 1;
+    for (let i = 0; i <= ln; i++) {
+      off += lines[i].length + 1;
+    }
     return new Cursor(this.text, off + Math.min(col, targetLen));
   }
 
@@ -156,30 +179,42 @@ class Cursor {
 
   wordLeft() {
     let i = this.offset;
-    while (i > 0 && !isWordChar(this.text[i - 1])) i--;
-    while (i > 0 && isWordChar(this.text[i - 1])) i--;
+    while (i > 0 && !isWordChar(this.text[i - 1])) {
+      i--;
+    }
+    while (i > 0 && isWordChar(this.text[i - 1])) {
+      i--;
+    }
     return new Cursor(this.text, i);
   }
 
   wordRight() {
     let i = this.offset;
     const n = this.text.length;
-    while (i < n && !isWordChar(this.text[i])) i++;
-    while (i < n && isWordChar(this.text[i])) i++;
+    while (i < n && !isWordChar(this.text[i])) {
+      i++;
+    }
+    while (i < n && isWordChar(this.text[i])) {
+      i++;
+    }
     return new Cursor(this.text, i);
   }
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   insert(str) {
-    if (!str) return this;
+    if (!str) {
+      return this;
+    }
     const next = this.text.slice(0, this.offset) + str + this.text.slice(this.offset);
     return new Cursor(next, this.offset + str.length);
   }
 
   /** Delete the character before the caret (Backspace). */
   backspace() {
-    if (this.offset === 0) return this;
+    if (this.offset === 0) {
+      return this;
+    }
     const step = _prevStep(this.text, this.offset);
     const next = this.text.slice(0, this.offset - step) + this.text.slice(this.offset);
     return new Cursor(next, this.offset - step);
@@ -187,7 +222,9 @@ class Cursor {
 
   /** Delete the character at the caret (forward Delete). */
   del() {
-    if (this.offset >= this.text.length) return this;
+    if (this.offset >= this.text.length) {
+      return this;
+    }
     const step = _nextStep(this.text, this.offset);
     const next = this.text.slice(0, this.offset) + this.text.slice(this.offset + step);
     return new Cursor(next, this.offset);

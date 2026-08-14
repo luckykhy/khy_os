@@ -41,14 +41,21 @@ function builtinGlmKeyEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_BUILTIN_GLM_KEY', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_BUILTIN_GLM_KEY;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -65,7 +72,9 @@ function builtinGlmKeyEnabled(env = process.env) {
  */
 function builtinGlmKeyEntries(env = process.env) {
   try {
-    if (!builtinGlmKeyEnabled(env)) return {};
+    if (!builtinGlmKeyEnabled(env)) {
+      return {};
+    }
     return {
       [GLM_POOL_KEY]: {
         key: GLM_PLACEHOLDER_KEY,

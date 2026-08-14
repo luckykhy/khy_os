@@ -23,7 +23,9 @@ function _gateEnabled(env = process.env) {
     return require('../../services/flagRegistry').isFlagEnabled('KHY_DEVICE_APPS_TOOL', env);
   } catch {
     const raw = env && env.KHY_DEVICE_APPS_TOOL;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
   }
 }
@@ -37,8 +39,12 @@ class DeviceAppsTool extends BaseTool {
   static aliases = ['device_apps', 'app_manager', 'manage_apps', 'system_apps'];
   static searchHint = 'list, search, install, uninstall or download applications on this device';
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
   isDestructive(input) {
     const a = input && input.action;
     return a === 'uninstall' || a === 'install';
@@ -69,7 +75,8 @@ class DeviceAppsTool extends BaseTool {
         dest: { type: 'string', description: 'For action "download": destination file path.' },
         confirm: {
           type: 'boolean',
-          description: 'Must be true to actually run install/uninstall/download. Without it, only the plan is returned.',
+          description:
+            'Must be true to actually run install/uninstall/download. Without it, only the plan is returned.',
         },
       },
       required: [],
@@ -99,11 +106,15 @@ class DeviceAppsTool extends BaseTool {
 
       if (action === 'list' || action === 'search') {
         const res = await mgr.listInstalled();
-        if (!res.ok) return { success: false, error: res.error };
+        if (!res.ok) {
+          return { success: false, error: res.error };
+        }
         let apps = res.apps;
-        const kw = String((params && params.appId) || '').trim().toLowerCase();
+        const kw = String((params && params.appId) || '')
+          .trim()
+          .toLowerCase();
         if (action === 'search' && kw) {
-          apps = apps.filter(a => (a.name + ' ' + a.id).toLowerCase().includes(kw));
+          apps = apps.filter((a) => (a.name + ' ' + a.id).toLowerCase().includes(kw));
         }
         return {
           success: true,
@@ -127,7 +138,12 @@ class DeviceAppsTool extends BaseTool {
           if (res.argv) {
             return {
               success: true,
-              plan: { action, packageManager: mgr.pm.id, command: res.argv.join(' '), argv: res.argv },
+              plan: {
+                action,
+                packageManager: mgr.pm.id,
+                command: res.argv.join(' '),
+                argv: res.argv,
+              },
               requiresConfirm: true,
               message: `将安装 ${appId}。确认后重发并带 confirm:true 才会执行。`,
             };
@@ -135,7 +151,13 @@ class DeviceAppsTool extends BaseTool {
           return { success: false, error: res.error };
         }
         return res.ok
-          ? { success: true, action, appId, packageManager: mgr.pm.id, command: (res.argv || []).join(' ') }
+          ? {
+              success: true,
+              action,
+              appId,
+              packageManager: mgr.pm.id,
+              command: (res.argv || []).join(' '),
+            }
           : { success: false, error: res.error, command: (res.argv || []).join(' ') };
       }
 
@@ -150,7 +172,9 @@ class DeviceAppsTool extends BaseTool {
    * 未确认只回计划(argv)要求 confirm;确认才执行。
    */
   async _uninstallRouted(appId, confirmed, mgr, env) {
-    if (!appId) return { success: false, error: 'uninstall 需要 appId' };
+    if (!appId) {
+      return { success: false, error: 'uninstall 需要 appId' };
+    }
     const { decideUninstallRoute } = require('../../services/deviceApps/uninstallRoute');
     const policy = require('../../services/deviceApps/deviceAppsPolicy');
     const { getNativeUninstaller } = require('../../services/deviceApps/nativeUninstaller');
@@ -159,7 +183,9 @@ class DeviceAppsTool extends BaseTool {
     let matches = [];
     if (native.available) {
       const found = native.findByName(appId);
-      if (found.ok) matches = found.matches;
+      if (found.ok) {
+        matches = found.matches;
+      }
     }
     const route = decideUninstallRoute({
       query: appId,
@@ -170,26 +196,48 @@ class DeviceAppsTool extends BaseTool {
     });
 
     if (route.tier === 'refuse') {
-      return { success: false, tier: 'refuse', error: `无法安全卸载「${appId}」:${route.reason}`, note: 'khy 只在能找到包管理器清单或应用自带卸载器时才卸载,绝不猜删安装目录。' };
+      return {
+        success: false,
+        tier: 'refuse',
+        error: `无法安全卸载「${appId}」:${route.reason}`,
+        note: 'khy 只在能找到包管理器清单或应用自带卸载器时才卸载,绝不猜删安装目录。',
+      };
     }
 
     if (route.tier === 'pm') {
       const res = await mgr.uninstall(appId, { confirmed });
       if (!confirmed) {
         return res.argv
-          ? { success: true, tier: 'pm', plan: { packageManager: mgr.pm.id, command: res.argv.join(' '), argv: res.argv }, requiresConfirm: true, message: `将经包管理器卸载 ${appId}。确认后重发并带 confirm:true 才会执行。` }
+          ? {
+              success: true,
+              tier: 'pm',
+              plan: { packageManager: mgr.pm.id, command: res.argv.join(' '), argv: res.argv },
+              requiresConfirm: true,
+              message: `将经包管理器卸载 ${appId}。确认后重发并带 confirm:true 才会执行。`,
+            }
           : { success: false, error: res.error };
       }
       return res.ok
-        ? { success: true, tier: 'pm', action: 'uninstall', appId, packageManager: mgr.pm.id, command: (res.argv || []).join(' ') }
+        ? {
+            success: true,
+            tier: 'pm',
+            action: 'uninstall',
+            appId,
+            packageManager: mgr.pm.id,
+            command: (res.argv || []).join(' '),
+          }
         : { success: false, error: res.error, command: (res.argv || []).join(' ') };
     }
 
     // T2 native
     if (route.ambiguous) {
       return {
-        success: true, tier: 'native', requiresDisambiguation: true,
-        matches: matches.slice(0, 20).map(r => ({ displayName: r.displayName, version: r.version, publisher: r.publisher })),
+        success: true,
+        tier: 'native',
+        requiresDisambiguation: true,
+        matches: matches
+          .slice(0, 20)
+          .map((r) => ({ displayName: r.displayName, version: r.version, publisher: r.publisher })),
         message: `注册表命中 ${matches.length} 个同名条目,请用更精确的名称重发。`,
       };
     }
@@ -197,18 +245,32 @@ class DeviceAppsTool extends BaseTool {
     const res = await native.uninstall(rec, { confirmed });
     if (!confirmed) {
       return res.argv
-        ? { success: true, tier: 'native', plan: { command: res.plan, argv: res.argv }, requiresConfirm: true, message: `将跑「${rec.displayName}」自带卸载器。确认后重发并带 confirm:true 才会执行。` }
+        ? {
+            success: true,
+            tier: 'native',
+            plan: { command: res.plan, argv: res.argv },
+            requiresConfirm: true,
+            message: `将跑「${rec.displayName}」自带卸载器。确认后重发并带 confirm:true 才会执行。`,
+          }
         : { success: false, error: res.error };
     }
     return res.ok
-      ? { success: true, tier: 'native', action: 'uninstall', appId: rec.displayName, command: res.plan }
+      ? {
+          success: true,
+          tier: 'native',
+          action: 'uninstall',
+          appId: rec.displayName,
+          command: res.plan,
+        }
       : { success: false, error: res.error, command: res.plan };
   }
 
   async _download(params, env) {
     const url = params && params.url;
     const dest = params && params.dest;
-    if (!url || !dest) return { success: false, error: 'download 需要 url 与 dest' };
+    if (!url || !dest) {
+      return { success: false, error: 'download 需要 url 与 dest' };
+    }
     if (params.confirm !== true) {
       return {
         success: true,
@@ -217,10 +279,20 @@ class DeviceAppsTool extends BaseTool {
         message: `将从 ${url} 下载到 ${dest}。确认后重发并带 confirm:true 才会执行。`,
       };
     }
-    const { downloadWithProgress, formatBytes } = require('../../services/deviceApps/deviceAppsDownloader');
+    const {
+      downloadWithProgress,
+      formatBytes,
+    } = require('../../services/deviceApps/deviceAppsDownloader');
     try {
       const res = await downloadWithProgress(url, dest, null, {});
-      return { success: true, action: 'download', url, path: res.path, bytes: res.bytes, size: formatBytes(res.bytes) };
+      return {
+        success: true,
+        action: 'download',
+        url,
+        path: res.path,
+        bytes: res.bytes,
+        size: formatBytes(res.bytes),
+      };
     } catch (err) {
       return { success: false, error: err && err.message ? err.message : String(err) };
     }

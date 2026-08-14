@@ -35,16 +35,23 @@ const FALSY = ['0', 'false', 'off', 'no'];
 function isWebFetchHardDeadlineEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_WEBFETCH_HARD_DEADLINE;
-    if (raw === undefined || raw === null || raw === '') return true;
+    if (raw === undefined || raw === null || raw === '') {
+      return true;
+    }
     return !FALSY.includes(String(raw).trim().toLowerCase());
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /** 是否像一个可用的 AbortSignal(具 aborted 布尔 + addEventListener)。绝不抛。 */
 function _isSignalLike(s) {
-  return !!(s && typeof s === 'object'
-    && typeof s.addEventListener === 'function'
-    && 'aborted' in s);
+  return !!(
+    s &&
+    typeof s === 'object' &&
+    typeof s.addEventListener === 'function' &&
+    'aborted' in s
+  );
 }
 
 /**
@@ -56,10 +63,14 @@ function _isSignalLike(s) {
  */
 function resolveParentSignal(context, env = process.env) {
   try {
-    if (!isWebFetchHardDeadlineEnabled(env)) return null;
+    if (!isWebFetchHardDeadlineEnabled(env)) {
+      return null;
+    }
     const sig = context && context.signal;
     return _isSignalLike(sig) ? sig : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -72,7 +83,9 @@ function resolveParentSignal(context, env = process.env) {
  */
 function resolveTotalDeadlineMs(timeoutMs, fallbackMs = 30000) {
   const n = Number(timeoutMs);
-  if (Number.isFinite(n) && n > 0) return n;
+  if (Number.isFinite(n) && n > 0) {
+    return n;
+  }
   const f = Number(fallbackMs);
   return Number.isFinite(f) && f > 0 ? f : 30000;
 }
@@ -85,14 +98,21 @@ function resolveTotalDeadlineMs(timeoutMs, fallbackMs = 30000) {
  * @returns {object}
  */
 function mergeSignalOption(options, signal) {
-  if (!signal) return options;
-  try { return Object.assign({}, options, { signal }); }
-  catch { return options; }
+  if (!signal) {
+    return options;
+  }
+  try {
+    return Object.assign({}, options, { signal });
+  } catch {
+    return options;
+  }
 }
 
 /** 识别一个错误是否为 abort(总墙钟耗尽 / ESC / 底层 AbortSignal)。绝不抛。 */
 function isAbortError(err) {
-  if (!err || typeof err !== 'object') return false;
+  if (!err || typeof err !== 'object') {
+    return false;
+  }
   return err.code === 'ABORT_ERR' || err.name === 'AbortError' || err.__webFetchDeadline === true;
 }
 

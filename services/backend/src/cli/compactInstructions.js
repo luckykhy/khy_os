@@ -44,7 +44,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
  */
 function compactInstructionsEnabled(env = process.env) {
   const raw = env && env.KHY_COMPACT_INSTRUCTIONS;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -57,9 +59,15 @@ function compactInstructionsEnabled(env = process.env) {
 function extractCompactInstructions(parsed) {
   const p = parsed || {};
   const parts = [];
-  if (p.subCommand != null) parts.push(String(p.subCommand));
+  if (p.subCommand != null) {
+    parts.push(String(p.subCommand));
+  }
   if (Array.isArray(p.args)) {
-    for (const a of p.args) { if (a != null) parts.push(String(a)); }
+    for (const a of p.args) {
+      if (a != null) {
+        parts.push(String(a));
+      }
+    }
   }
   return parts.join(' ').replace(/\s+/g, ' ').trim();
 }
@@ -74,9 +82,13 @@ function extractCompactInstructions(parsed) {
  */
 function buildCompactOptions(parsed, env = process.env) {
   const base = { mode: 'auto' };
-  if (!compactInstructionsEnabled(env)) return base;
+  if (!compactInstructionsEnabled(env)) {
+    return base;
+  }
   const text = extractCompactInstructions(parsed);
-  if (!text) return base;
+  if (!text) {
+    return base;
+  }
   return { mode: 'auto', instructions: text };
 }
 

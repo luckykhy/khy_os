@@ -13,9 +13,27 @@ const MAX_BUFFER = 10 * 1024 * 1024;
 
 // Known Claude Code models (detected dynamically where possible)
 const KNOWN_MODELS = [
-  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', isDefault: false, tier: 'ultra', category: 'reasoning' },
-  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', isDefault: true, tier: 'high', category: 'general' },
-  { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', isDefault: false, tier: 'medium', category: 'fast' },
+  {
+    id: 'claude-opus-4-6',
+    name: 'Claude Opus 4.6',
+    isDefault: false,
+    tier: 'ultra',
+    category: 'reasoning',
+  },
+  {
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
+    isDefault: true,
+    tier: 'high',
+    category: 'general',
+  },
+  {
+    id: 'claude-haiku-4-5-20251001',
+    name: 'Claude Haiku 4.5',
+    isDefault: false,
+    tier: 'medium',
+    category: 'fast',
+  },
 ];
 
 let _available = null;
@@ -25,7 +43,9 @@ function commandExists(cmd) {
     const lookup = process.platform === 'win32' ? 'where' : 'which';
     execFileSync(lookup, [cmd], { stdio: 'pipe', timeout: 5000 });
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -41,7 +61,7 @@ function detect(forceRefresh = false) {
  * List available models.
  */
 async function listModels() {
-  return KNOWN_MODELS.map(m => ({
+  return KNOWN_MODELS.map((m) => ({
     ...m,
     provider: 'claude',
     description: '',
@@ -71,7 +91,13 @@ function processStreamEvent(event, onChunk, appendContent) {
  */
 async function generate(prompt, options = {}) {
   if (!detect()) {
-    return { success: false, content: '', provider: 'Claude Code', adapter: 'claude', attempts: [] };
+    return {
+      success: false,
+      content: '',
+      provider: 'Claude Code',
+      adapter: 'claude',
+      attempts: [],
+    };
   }
 
   const onChunk = options.onChunk || (() => {});
@@ -98,8 +124,12 @@ async function generate(prompt, options = {}) {
           if (!line.trim()) continue;
           try {
             const event = JSON.parse(line);
-            processStreamEvent(event, onChunk, (text) => { fullContent += text; });
-          } catch { /* not valid JSON */ }
+            processStreamEvent(event, onChunk, (text) => {
+              fullContent += text;
+            });
+          } catch {
+            /* not valid JSON */
+          }
         }
       });
 
@@ -111,8 +141,12 @@ async function generate(prompt, options = {}) {
         if (buffer.trim()) {
           try {
             const event = JSON.parse(buffer);
-            processStreamEvent(event, onChunk, (text) => { fullContent += text; });
-          } catch { /* ignore */ }
+            processStreamEvent(event, onChunk, (text) => {
+              fullContent += text;
+            });
+          } catch {
+            /* ignore */
+          }
         }
         if (code === 0 || fullContent.trim()) resolve(fullContent.trim());
         else reject(new Error(stderr.trim() || `claude exited with code ${code}`));
@@ -152,6 +186,8 @@ function getStatus() {
   };
 }
 
-function destroy() { _available = null; }
+function destroy() {
+  _available = null;
+}
 
 module.exports = { detect, listModels, generate, getStatus, destroy };

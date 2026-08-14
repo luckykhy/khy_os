@@ -67,7 +67,9 @@ export function validateProviderDraft(draft = {}) {
  */
 export function buildProviderPayload(draft = {}) {
   const payload = {
-    provider: String(draft.provider || '').trim().toLowerCase(),
+    provider: String(draft.provider || '')
+      .trim()
+      .toLowerCase(),
     displayName: String(draft.displayName || '').trim(),
     key: String(draft.key || '').trim(),
     models: parseModelSeed(draft.models),

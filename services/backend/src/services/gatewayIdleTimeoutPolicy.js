@@ -38,7 +38,9 @@ function isEnabled(env) {
     return flagRegistry.isFlagEnabled('KHY_GATEWAY_IDLE_TIMEOUT_POLICY', e);
   } catch {
     const raw = e && e.KHY_GATEWAY_IDLE_TIMEOUT_POLICY;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !OFF_VALUES.includes(String(raw).trim().toLowerCase());
   }
 }
@@ -54,7 +56,10 @@ function launcherTimeoutDefaults(env) {
     const src = isEnabled(env) ? ON_DEFAULTS : LEGACY_DEFAULTS;
     return { hardTimeoutMs: src.hardTimeoutMs, idleTimeoutMs: src.idleTimeoutMs };
   } catch {
-    return { hardTimeoutMs: LEGACY_DEFAULTS.hardTimeoutMs, idleTimeoutMs: LEGACY_DEFAULTS.idleTimeoutMs };
+    return {
+      hardTimeoutMs: LEGACY_DEFAULTS.hardTimeoutMs,
+      idleTimeoutMs: LEGACY_DEFAULTS.idleTimeoutMs,
+    };
   }
 }
 

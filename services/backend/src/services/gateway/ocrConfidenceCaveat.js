@@ -48,10 +48,16 @@ function isEnabled(env) {
  * @returns {boolean}
  */
 function isLowConfidence(detail) {
-  if (!detail || typeof detail !== 'object') return false;
-  if (detail.needsAiFallback === true) return true;
+  if (!detail || typeof detail !== 'object') {
+    return false;
+  }
+  if (detail.needsAiFallback === true) {
+    return true;
+  }
   const c = Number(detail.confidence);
-  if (Number.isFinite(c) && c > 0 && c < LOW_CONFIDENCE_THRESHOLD) return true;
+  if (Number.isFinite(c) && c > 0 && c < LOW_CONFIDENCE_THRESHOLD) {
+    return true;
+  }
   return false;
 }
 
@@ -61,10 +67,14 @@ function isLowConfidence(detail) {
  * @returns {number}
  */
 function countLowConfidence(details) {
-  if (!Array.isArray(details)) return 0;
+  if (!Array.isArray(details)) {
+    return 0;
+  }
   let n = 0;
   for (const d of details) {
-    if (isLowConfidence(d)) n += 1;
+    if (isLowConfidence(d)) {
+      n += 1;
+    }
   }
   return n;
 }
@@ -76,14 +86,21 @@ function countLowConfidence(details) {
  * @returns {string|null}
  */
 function buildLowConfidenceCaveat({ count, total, env } = {}) {
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   const n = Number(count);
-  if (!Number.isFinite(n) || n < 1) return null;
-  const scope = Number.isFinite(Number(total)) && Number(total) > 0
-    ? `其中 ${n}/${Number(total)} 张`
-    : `其中 ${n} 张`;
-  return `[提示：${scope}图片的 OCR 识别置信度较低，文字可能存在误识或漏识，请谨慎对待上述识别文本，`
-    + `不要当作确定无误的事实；必要时请用户核对原图，或改用支持看图的多模态模型复核。]`;
+  if (!Number.isFinite(n) || n < 1) {
+    return null;
+  }
+  const scope =
+    Number.isFinite(Number(total)) && Number(total) > 0
+      ? `其中 ${n}/${Number(total)} 张`
+      : `其中 ${n} 张`;
+  return (
+    `[提示：${scope}图片的 OCR 识别置信度较低，文字可能存在误识或漏识，请谨慎对待上述识别文本，` +
+    `不要当作确定无误的事实；必要时请用户核对原图，或改用支持看图的多模态模型复核。]`
+  );
 }
 
 module.exports = {

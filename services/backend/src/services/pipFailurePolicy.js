@@ -36,11 +36,16 @@ function isEnabled(env = process.env) {
 // ── 失败模式(单一真源)──────────────────────────────────────────────────────────
 // 顺序即优先级:proxy 先于 network(代理拒连本质是网络,但修法不同——优先按代理诊断)。
 // 每条 re 都对 pip 实际吐出的英文 + 中文 Windows 错误做强匹配,误报率极低。
-const _PROXY_RE = /proxyerror|cannot connect to proxy|tunnel connection failed|proxy.{0,40}(refused|10061|拒绝)|由于目标计算机积极拒绝.{0,40}(代理|proxy)|\[winerror 10061\][\s\S]{0,80}proxy/i;
-const _NETWORK_RE = /failed to establish a new connection|max retries exceeded|connection (refused|reset|aborted|timed out)|connection broken|temporary failure in name resolution|getaddrinfo|name or service not known|network is unreachable|read timed out|由于目标计算机积极拒绝|无法连接|连接超时|connecttimeout|newconnectionerror/i;
-const _NOT_FOUND_RE = /no matching distribution found|could not find a version|\b404\b|not found on|no such package/i;
-const _FILE_LOCKED_RE = /\[winerror 32\]|另一个程序正在使用此文件|进程无法访问|being used by another process|cannot access the file because it is being used|the process cannot access the file/i;
-const _PERMISSION_RE = /permission denied|access is denied|拒绝访问|\beacces\b|errno 13|could not install packages.*permission/i;
+const _PROXY_RE =
+  /proxyerror|cannot connect to proxy|tunnel connection failed|proxy.{0,40}(refused|10061|拒绝)|由于目标计算机积极拒绝.{0,40}(代理|proxy)|\[winerror 10061\][\s\S]{0,80}proxy/i;
+const _NETWORK_RE =
+  /failed to establish a new connection|max retries exceeded|connection (refused|reset|aborted|timed out)|connection broken|temporary failure in name resolution|getaddrinfo|name or service not known|network is unreachable|read timed out|由于目标计算机积极拒绝|无法连接|连接超时|connecttimeout|newconnectionerror/i;
+const _NOT_FOUND_RE =
+  /no matching distribution found|could not find a version|\b404\b|not found on|no such package/i;
+const _FILE_LOCKED_RE =
+  /\[winerror 32\]|另一个程序正在使用此文件|进程无法访问|being used by another process|cannot access the file because it is being used|the process cannot access the file/i;
+const _PERMISSION_RE =
+  /permission denied|access is denied|拒绝访问|\beacces\b|errno 13|could not install packages.*permission/i;
 
 /**
  * 把 pip 的合并输出(stdout+stderr+message)确定性归类。绝不抛。
@@ -50,14 +55,26 @@ const _PERMISSION_RE = /permission denied|access is denied|拒绝访问|\beacces
 function classifyPipFailure(text) {
   try {
     const t = String(text || '');
-    if (!t.trim()) return { kind: 'other', retryWithoutProxy: false, transient: false };
-    if (_PROXY_RE.test(t)) return { kind: 'proxy', retryWithoutProxy: true, transient: true };
+    if (!t.trim()) {
+      return { kind: 'other', retryWithoutProxy: false, transient: false };
+    }
+    if (_PROXY_RE.test(t)) {
+      return { kind: 'proxy', retryWithoutProxy: true, transient: true };
+    }
     // not-found 先于 network 判定:404/无分布是「换包/换版本」问题,不是连通性问题。
-    if (_NOT_FOUND_RE.test(t)) return { kind: 'not-found', retryWithoutProxy: false, transient: false };
-    if (_NETWORK_RE.test(t)) return { kind: 'network', retryWithoutProxy: true, transient: true };
+    if (_NOT_FOUND_RE.test(t)) {
+      return { kind: 'not-found', retryWithoutProxy: false, transient: false };
+    }
+    if (_NETWORK_RE.test(t)) {
+      return { kind: 'network', retryWithoutProxy: true, transient: true };
+    }
     // file-locked 先于 permission:WinError 32 文本里也含「拒绝访问」类词,但根因不同。
-    if (_FILE_LOCKED_RE.test(t)) return { kind: 'file-locked', retryWithoutProxy: false, transient: true };
-    if (_PERMISSION_RE.test(t)) return { kind: 'permission', retryWithoutProxy: false, transient: false };
+    if (_FILE_LOCKED_RE.test(t)) {
+      return { kind: 'file-locked', retryWithoutProxy: false, transient: true };
+    }
+    if (_PERMISSION_RE.test(t)) {
+      return { kind: 'permission', retryWithoutProxy: false, transient: false };
+    }
     return { kind: 'other', retryWithoutProxy: false, transient: false };
   } catch {
     return { kind: 'other', retryWithoutProxy: false, transient: false };
@@ -71,8 +88,14 @@ function isProxyFailure(text) {
 
 // ── 直连重试:剥掉代理的环境对象 ──────────────────────────────────────────────────
 const _PROXY_ENV_KEYS = Object.freeze([
-  'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'FTP_PROXY',
-  'http_proxy', 'https_proxy', 'all_proxy', 'ftp_proxy',
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'ALL_PROXY',
+  'FTP_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'all_proxy',
+  'ftp_proxy',
 ]);
 
 /**
@@ -86,14 +109,16 @@ function stripProxyEnv(env = process.env) {
   try {
     const src = env && typeof env === 'object' ? env : {};
     for (const k of Object.keys(src)) {
-      if (_PROXY_ENV_KEYS.includes(k)) continue;
+      if (_PROXY_ENV_KEYS.includes(k)) {
+        continue;
+      }
       out[k] = src[k];
     }
     // 双保险:即使有遗漏的代理键,NO_PROXY=* 让 requests/urllib3 对所有主机绕过代理。
     out.NO_PROXY = '*';
     out.no_proxy = '*';
   } catch {
-    return { ...((env && typeof env === 'object') ? env : {}) };
+    return { ...(env && typeof env === 'object' ? env : {}) };
   }
   return out;
 }
@@ -205,11 +230,17 @@ function buildPipFailureDiagnosis(opts = {}) {
  */
 function detectWindowsUpgradeLockRisk(opts = {}) {
   try {
-    const plat = String((opts && opts.platform) || '').trim().toLowerCase();
-    if (plat !== 'win32') return { atRisk: false, count: 0 };
+    const plat = String((opts && opts.platform) || '')
+      .trim()
+      .toLowerCase();
+    if (plat !== 'win32') {
+      return { atRisk: false, count: 0 };
+    }
 
     const text = String((opts && opts.processListText) || '');
-    if (!text.trim()) return { atRisk: false, count: 0 };
+    if (!text.trim()) {
+      return { atRisk: false, count: 0 };
+    }
 
     // tasklist /FO CSV 输出:首行 "Image Name","PID"...;后续每行一个进程。
     // 简单数行数:跳过首行标题,数包含 node.exe 的实际进程行数。
@@ -249,11 +280,19 @@ function buildUpgradeStopPlan(opts = {}) {
   const NONE = { shouldStop: false, steps: [], message: '' };
   try {
     const env = opts && typeof opts.env === 'object' && opts.env ? opts.env : process.env;
-    if (!isEnabled(env)) return NONE;
-    const plat = String((opts && opts.platform) || '').trim().toLowerCase();
-    if (plat !== 'win32') return NONE;
+    if (!isEnabled(env)) {
+      return NONE;
+    }
+    const plat = String((opts && opts.platform) || '')
+      .trim()
+      .toLowerCase();
+    if (plat !== 'win32') {
+      return NONE;
+    }
     const risk = opts && typeof opts.risk === 'object' && opts.risk ? opts.risk : null;
-    if (!risk || !risk.atRisk) return NONE;
+    if (!risk || !risk.atRisk) {
+      return NONE;
+    }
     return {
       shouldStop: true,
       steps: [
@@ -302,10 +341,16 @@ function buildLockRetryPlan(opts = {}) {
   try {
     const env = opts && typeof opts.env === 'object' && opts.env ? opts.env : process.env;
     // 父门 + 子门任一关 → 不重试(逐字节回退)。
-    if (!isEnabled(env) || !isLockRetryEnabled(env)) return NONE;
-    if (opts && opts.alreadyRetried) return NONE; // 一次性:已用掉则不再重试。
+    if (!isEnabled(env) || !isLockRetryEnabled(env)) {
+      return NONE;
+    }
+    if (opts && opts.alreadyRetried) {
+      return NONE;
+    } // 一次性:已用掉则不再重试。
     const kind = String((opts && opts.kind) || '').trim();
-    if (kind !== 'file-locked') return NONE; // 仅文件占用这类瞬态失败才自动重试。
+    if (kind !== 'file-locked') {
+      return NONE;
+    } // 仅文件占用这类瞬态失败才自动重试。
     return { shouldRetry: true, forceReinstall: true, waitMs: 1500 };
   } catch {
     return NONE;
@@ -334,8 +379,12 @@ function isVersionSanityEnabled(env = process.env) {
 
 /** 解析语义版本主号(整数);无法解析 → null。纯函数。 */
 function _majorOf(version) {
-  const m = String(version == null ? '' : version).trim().match(/^(\d+)\./);
-  if (!m) return null;
+  const m = String(version == null ? '' : version)
+    .trim()
+    .match(/^(\d+)\./);
+  if (!m) {
+    return null;
+  }
   const n = Number.parseInt(m[1], 10);
   return Number.isFinite(n) ? n : null;
 }
@@ -361,7 +410,9 @@ function evaluateUpdatedVersion(opts = {}) {
   try {
     const env = opts && typeof opts.env === 'object' && opts.env ? opts.env : process.env;
     // 门关:逐字节回退旧行为(一律信任读回的版本)。
-    if (!isVersionSanityEnabled(env)) return SAFE;
+    if (!isVersionSanityEnabled(env)) {
+      return SAFE;
+    }
 
     const target = _norm(opts && opts.targetPkg);
     const upgraded = _norm(opts && opts.upgradedPkg);

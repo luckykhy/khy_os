@@ -11,6 +11,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+
 const { isWin, searchExecutable } = require('../tools/platformUtils');
 
 let _cached = null;
@@ -20,15 +21,23 @@ function isWindows() {
 }
 
 function isAbsoluteOrExplicitPath(value) {
-  if (!value) return false;
+  if (!value) {
+    return false;
+  }
   return value.includes('/') || value.includes('\\') || path.isAbsolute(value);
 }
 
 function isContainerRuntime() {
-  if (process.platform === 'win32') return false;
-  if (process.env.CONTAINER === 'docker' || process.env.DOCKER_CONTAINER === 'true') return true;
+  if (process.platform === 'win32') {
+    return false;
+  }
+  if (process.env.CONTAINER === 'docker' || process.env.DOCKER_CONTAINER === 'true') {
+    return true;
+  }
   try {
-    if (fs.existsSync('/.dockerenv')) return true;
+    if (fs.existsSync('/.dockerenv')) {
+      return true;
+    }
   } catch {
     // Ignore permission/runtime issues and continue with other checks.
   }
@@ -41,16 +50,13 @@ function isContainerRuntime() {
 }
 
 function getContainerPythonCandidates() {
-  return [
-    '/usr/local/bin/python3',
-    '/usr/bin/python3',
-    '/usr/local/bin/python',
-    '/usr/bin/python'
-  ];
+  return ['/usr/local/bin/python3', '/usr/bin/python3', '/usr/local/bin/python', '/usr/bin/python'];
 }
 
 function canRunPython(executable) {
-  if (!executable) return false;
+  if (!executable) {
+    return false;
+  }
   try {
     execSync(`"${executable}" -c "import sys; sys.exit(0)"`, { stdio: 'pipe' });
     return true;
@@ -60,7 +66,9 @@ function canRunPython(executable) {
 }
 
 function resolveFromPath(command) {
-  if (!command) return null;
+  if (!command) {
+    return null;
+  }
   // Single cross-platform which/where resolver.
   return searchExecutable(command);
 }
@@ -91,7 +99,7 @@ function collectCandidates() {
         path.join(backendRoot, '.venv', 'Scripts', 'python.exe'),
         path.join(backendRoot, 'venv', 'Scripts', 'python.exe'),
         path.join(backendRoot, 'ml', '.venv', 'Scripts', 'python.exe'),
-        path.join(backendRoot, 'ml', 'venv', 'Scripts', 'python.exe')
+        path.join(backendRoot, 'ml', 'venv', 'Scripts', 'python.exe'),
       ]
     : [
         path.join(backendRoot, '.venv', 'bin', 'python3'),
@@ -101,7 +109,7 @@ function collectCandidates() {
         path.join(backendRoot, 'ml', '.venv', 'bin', 'python3'),
         path.join(backendRoot, 'ml', '.venv', 'bin', 'python'),
         path.join(backendRoot, 'ml', 'venv', 'bin', 'python3'),
-        path.join(backendRoot, 'ml', 'venv', 'bin', 'python')
+        path.join(backendRoot, 'ml', 'venv', 'bin', 'python'),
       ];
 
   candidates.push(...localVenvCandidates);
@@ -127,44 +135,61 @@ function _pythonPathQuiet() {
     const flagRegistry = require('../services/flagRegistry');
     return flagRegistry.isFlagEnabled('KHY_PYTHON_PATH_QUIET', process.env);
   } catch {
-    const raw = String(process.env.KHY_PYTHON_PATH_QUIET == null ? '' : process.env.KHY_PYTHON_PATH_QUIET)
-      .trim().toLowerCase();
+    const raw = String(
+      process.env.KHY_PYTHON_PATH_QUIET == null ? '' : process.env.KHY_PYTHON_PATH_QUIET
+    )
+      .trim()
+      .toLowerCase();
     return !['0', 'false', 'off', 'no'].includes(raw);
   }
 }
 
 function findPython() {
-  if (_cached) return _cached;
+  if (_cached) {
+    return _cached;
+  }
 
   const _quiet = _pythonPathQuiet();
   const seen = new Set();
   const candidates = collectCandidates();
 
   for (const candidate of candidates) {
-    if (!candidate || seen.has(candidate)) continue;
+    if (!candidate || seen.has(candidate)) {
+      continue;
+    }
     seen.add(candidate);
 
     if (isAbsoluteOrExplicitPath(candidate)) {
-      if (!fs.existsSync(candidate)) continue;
+      if (!fs.existsSync(candidate)) {
+        continue;
+      }
       if (canRunPython(candidate)) {
         _cached = candidate;
-        if (!_quiet) console.log(`Using Python executable: ${_cached}`);
+        if (!_quiet) {
+          console.log(`Using Python executable: ${_cached}`);
+        }
         return _cached;
       }
       continue;
     }
 
     const resolved = resolveFromPath(candidate);
-    if (!resolved) continue;
+    if (!resolved) {
+      continue;
+    }
     if (canRunPython(resolved)) {
       _cached = resolved;
-      if (!_quiet) console.log(`Using Python executable: ${_cached}`);
+      if (!_quiet) {
+        console.log(`Using Python executable: ${_cached}`);
+      }
       return _cached;
     }
   }
 
   _cached = isWindows() ? 'python' : 'python3';
-  if (!_quiet) console.warn(`Could not resolve an exact Python path. Falling back to command: ${_cached}`);
+  if (!_quiet) {
+    console.warn(`Could not resolve an exact Python path. Falling back to command: ${_cached}`);
+  }
   return _cached;
 }
 

@@ -16,24 +16,29 @@
  *   KHY_NET_PROBE_INTERVAL_MS background re-check cadence     (default 300000)
  */
 const net = require('net');
+
 const logger = require('../utils/logger');
 
 // Neutral, app-agnostic defaults: public anycast DNS resolvers on 443.
 // Using IP literals avoids conflating DNS-resolution failure with the TCP
 // reachability we actually want to measure. Reachable in CN and globally.
 const DEFAULT_PROBE_TARGETS = [
-  { host: '223.5.5.5', port: 443 },   // AliDNS (CN anycast)
+  { host: '223.5.5.5', port: 443 }, // AliDNS (CN anycast)
   { host: '119.29.29.29', port: 443 }, // DNSPod / Tencent (CN anycast)
-  { host: '1.1.1.1', port: 443 },     // Cloudflare (global)
-  { host: '8.8.8.8', port: 443 },     // Google (global)
+  { host: '1.1.1.1', port: 443 }, // Cloudflare (global)
+  { host: '8.8.8.8', port: 443 }, // Google (global)
 ];
 
 function _parseTargets(raw) {
-  if (!raw || typeof raw !== 'string') return null;
+  if (!raw || typeof raw !== 'string') {
+    return null;
+  }
   const targets = [];
   for (const part of raw.split(',')) {
     const spec = part.trim();
-    if (!spec) continue;
+    if (!spec) {
+      continue;
+    }
     const idx = spec.lastIndexOf(':');
     if (idx > 0 && idx < spec.length - 1) {
       const host = spec.slice(0, idx).trim();
@@ -74,13 +79,17 @@ class NetworkDetector {
    * Initialize: run first check and start periodic re-check.
    */
   async init() {
-    if (this._initialized) return;
+    if (this._initialized) {
+      return;
+    }
     this._initialized = true;
     await this._doCheck();
     this._intervalHandle = setInterval(() => this._doCheck(), this._cacheTTL);
     // Background probing must not pin the event loop: let it die with the
     // main process (daemon-equivalent).
-    if (this._intervalHandle.unref) this._intervalHandle.unref();
+    if (this._intervalHandle.unref) {
+      this._intervalHandle.unref();
+    }
   }
 
   /**
@@ -104,12 +113,18 @@ class NetworkDetector {
    * Never rejects — failure/timeout resolves false.
    */
   _probeOne(target) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       let settled = false;
-      const done = ok => {
-        if (settled) return;
+      const done = (ok) => {
+        if (settled) {
+          return;
+        }
         settled = true;
-        try { socket.destroy(); } catch { /* ignore */ }
+        try {
+          socket.destroy();
+        } catch {
+          /* ignore */
+        }
         resolve(ok);
       };
       const socket = net.connect({ host: target.host, port: target.port });
@@ -124,10 +139,12 @@ class NetworkDetector {
    * Probe all targets in parallel; online if any connects.
    */
   _doCheck() {
-    if (this._checking) return Promise.resolve();
+    if (this._checking) {
+      return Promise.resolve();
+    }
     this._checking = true;
 
-    return Promise.all(this._targets.map(t => this._probeOne(t))).then(results => {
+    return Promise.all(this._targets.map((t) => this._probeOne(t))).then((results) => {
       const okIndex = results.findIndex(Boolean);
       if (okIndex >= 0) {
         const t = this._targets[okIndex];
@@ -153,7 +170,9 @@ class NetworkDetector {
    */
   isOnline() {
     // If never checked, assume offline until first check completes.
-    if (!this._initialized) return false;
+    if (!this._initialized) {
+      return false;
+    }
     return this._online;
   }
 
@@ -179,7 +198,7 @@ class NetworkDetector {
       ageMs,
       stale: ageMs == null ? true : ageMs > this._cacheTTL * 2,
       reason: this._lastReason,
-      targets: this._targets.map(t => `${t.host}:${t.port}`),
+      targets: this._targets.map((t) => `${t.host}:${t.port}`),
       timeoutMs: this._timeoutMs,
       intervalMs: this._cacheTTL,
     };
@@ -197,11 +216,15 @@ class NetworkDetector {
    * @returns {boolean}
    */
   shouldAttemptNetwork() {
-    if (!this._initialized || !this._lastCheck) return true;
+    if (!this._initialized || !this._lastCheck) {
+      return true;
+    }
     const ageMs = Date.now() - this._lastCheck;
     const fresh = ageMs <= this._cacheTTL * 2;
     // Only suppress when we are confidently AND freshly offline.
-    if (fresh && !this._online) return false;
+    if (fresh && !this._online) {
+      return false;
+    }
     return true;
   }
 

@@ -11,12 +11,12 @@
  */
 
 let _chalk;
-const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const c = () => (_chalk ??= require('chalk').default || require('chalk'));
 
 // ── State ──
 
-let _tasks = null;     // null = no panel, Array<{description, status}> = show panel
-let _listener = null;  // single onChange callback (REPL layer)
+let _tasks = null; // null = no panel, Array<{description, status}> = show panel
+let _listener = null; // single onChange callback (REPL layer)
 
 // ── Public API ──
 
@@ -25,7 +25,7 @@ let _listener = null;  // single onChange callback (REPL layer)
  * @param {Array<{description: string, status: string}>} tasks
  */
 function setTasks(tasks) {
-  _tasks = tasks.map(t => ({ description: t.description, status: t.status || 'pending' }));
+  _tasks = tasks.map((t) => ({ description: t.description, status: t.status || 'pending' }));
   _notify();
 }
 
@@ -35,7 +35,9 @@ function setTasks(tasks) {
  * @param {string} status - 'pending' | 'in_progress' | 'completed' | 'error'
  */
 function updateTask(index, status) {
-  if (!_tasks || !_tasks[index]) return;
+  if (!_tasks || !_tasks[index]) {
+    return;
+  }
   _tasks[index].status = status;
   _notify();
 }
@@ -66,7 +68,11 @@ function onChange(fn) {
 
 function _notify() {
   if (typeof _listener === 'function') {
-    try { _listener(); } catch { /* best effort */ }
+    try {
+      _listener();
+    } catch {
+      /* best effort */
+    }
   }
 }
 
@@ -77,13 +83,19 @@ function _notify() {
  * Uses process.stdout.write directly to avoid console.log recursion.
  */
 function renderPanel() {
-  if (!_tasks || _tasks.length === 0) return;
-  if (!process.stdout.isTTY) return;
-  if (process.stdout.isTTY) return;
+  if (!_tasks || _tasks.length === 0) {
+    return;
+  }
+  if (!process.stdout.isTTY) {
+    return;
+  }
+  if (process.stdout.isTTY) {
+    return;
+  }
 
   const width = Math.min(process.stdout.columns || 80, 120);
-  const done = _tasks.filter(t => t.status === 'completed').length;
-  const errored = _tasks.filter(t => t.status === 'error').length;
+  const done = _tasks.filter((t) => t.status === 'completed').length;
+  const errored = _tasks.filter((t) => t.status === 'error').length;
   const total = _tasks.length;
 
   // Title rule: ─ 计划进度 2/5 ────────
@@ -98,9 +110,10 @@ function renderPanel() {
   for (const task of _tasks) {
     // Truncate description to fit terminal width (leave room for icon + indent)
     const maxDescLen = Math.max(10, width - 6);
-    const desc = task.description.length > maxDescLen
-      ? task.description.slice(0, maxDescLen - 1) + '…'
-      : task.description;
+    const desc =
+      task.description.length > maxDescLen
+        ? task.description.slice(0, maxDescLen - 1) + '…'
+        : task.description;
 
     switch (task.status) {
       case 'completed':

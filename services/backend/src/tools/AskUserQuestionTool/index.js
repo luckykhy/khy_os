@@ -4,8 +4,8 @@
  * Allows the AI to ask the user multiple-choice or free-form questions
  * during execution. Supports multi-select and recommended options.
  */
-const { BaseTool } = require('../_baseTool');
 const _questionQuality = require('../../services/questionQuality');
+const { BaseTool } = require('../_baseTool');
 
 class AskUserQuestionTool extends BaseTool {
   static toolName = 'AskUserQuestion';
@@ -15,8 +15,12 @@ class AskUserQuestionTool extends BaseTool {
   static searchHint = 'ask user question clarify confirm choice';
   static alwaysLoad = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Use this tool only when you are blocked on a decision that is genuinely the user's to make: one you cannot resolve from the request, the code, or sensible defaults.
@@ -61,11 +65,13 @@ Preview content is rendered as markdown in a monospace box. Multi-line text with
             properties: {
               question: {
                 type: 'string',
-                description: 'The complete question to ask the user. Should be clear, specific, and end with a question mark.',
+                description:
+                  'The complete question to ask the user. Should be clear, specific, and end with a question mark.',
               },
               header: {
                 type: 'string',
-                description: 'Very short label displayed as a chip/tag (max 12 chars). Examples: "Auth method", "Library", "Approach".',
+                description:
+                  'Very short label displayed as a chip/tag (max 12 chars). Examples: "Auth method", "Library", "Approach".',
               },
               options: {
                 type: 'array',
@@ -79,11 +85,13 @@ Preview content is rendered as markdown in a monospace box. Multi-line text with
                     },
                     description: {
                       type: 'string',
-                      description: 'Explanation of what this option means or what will happen if chosen.',
+                      description:
+                        'Explanation of what this option means or what will happen if chosen.',
                     },
                     preview: {
                       type: 'string',
-                      description: 'Optional preview content rendered when this option is focused. Use for mockups, code snippets, or visual comparisons.',
+                      description:
+                        'Optional preview content rendered when this option is focused. Use for mockups, code snippets, or visual comparisons.',
                     },
                   },
                   required: ['label', 'description'],
@@ -93,7 +101,8 @@ Preview content is rendered as markdown in a monospace box. Multi-line text with
               },
               multiSelect: {
                 type: 'boolean',
-                description: 'Set to true to allow multiple options to be selected (default: false).',
+                description:
+                  'Set to true to allow multiple options to be selected (default: false).',
               },
             },
             required: ['question', 'header', 'options', 'multiSelect'],
@@ -107,17 +116,20 @@ Preview content is rendered as markdown in a monospace box. Multi-line text with
         },
         metadata: {
           type: 'object',
-          description: 'Optional metadata for tracking and analytics purposes. Not displayed to user.',
+          description:
+            'Optional metadata for tracking and analytics purposes. Not displayed to user.',
           properties: {
             source: {
               type: 'string',
-              description: 'Optional identifier for the source of this question (e.g., "remember" for /remember command).',
+              description:
+                'Optional identifier for the source of this question (e.g., "remember" for /remember command).',
             },
           },
         },
         annotations: {
           type: 'object',
-          description: 'Optional per-question annotations from the user (e.g., notes on preview selections). Keyed by question text.',
+          description:
+            'Optional per-question annotations from the user (e.g., notes on preview selections). Keyed by question text.',
         },
       },
       required: ['questions'],
@@ -139,18 +151,19 @@ Preview content is rendered as markdown in a monospace box. Multi-line text with
     // own readline here would race the ink raw-mode input and the REPL readline.
 
     // Normalize legacy single-question params to the canonical questions array.
-    let questions = Array.isArray(params.questions) && params.questions.length
-      ? params.questions
-      : [];
+    let questions =
+      Array.isArray(params.questions) && params.questions.length ? params.questions : [];
 
     // Backward compatibility: if no `questions` array but old-style `question` field exists, normalize it.
     if (questions.length === 0 && params.question) {
-      questions = [{
-        question: String(params.question || ''),
-        header: String(params.header || '').slice(0, 12) || 'Question',
-        options: Array.isArray(params.options) ? params.options : [],
-        multiSelect: !!params.multiSelect,
-      }];
+      questions = [
+        {
+          question: String(params.question || ''),
+          header: String(params.header || '').slice(0, 12) || 'Question',
+          options: Array.isArray(params.options) ? params.options : [],
+          multiSelect: !!params.multiSelect,
+        },
+      ];
     }
 
     // Validate constraints per Claude Code spec.
@@ -178,7 +191,9 @@ Preview content is rendered as markdown in a monospace box. Multi-line text with
     // Gated KHY_QUESTION_RECOMMENDED_FIRST (default on); never throws.
     try {
       questions = _questionQuality.normalizeQuestions(questions, { env: process.env });
-    } catch { /* fail-soft: keep model-supplied order */ }
+    } catch {
+      /* fail-soft: keep model-supplied order */
+    }
 
     return {
       success: true,

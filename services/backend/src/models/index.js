@@ -3,6 +3,7 @@
  * backend-local auth state/session models.
  */
 const sharedModels = require('@khy/shared/models');
+
 const AuthSession = require('./AuthSession');
 const UserAuthState = require('./UserAuthState');
 
@@ -38,6 +39,8 @@ if (!UserAuthState.associations?.user) {
   });
 }
 
+// Ensure new GUI eval models are registered in the backend export
+// (sharedModels.index.js already sets up associations)
 module.exports = {
   ...sharedModels,
   AuthSession,

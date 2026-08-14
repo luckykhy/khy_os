@@ -16,7 +16,9 @@
 
 function isEnabled(env) {
   const raw = env && env.KHY_COPY;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -31,12 +33,21 @@ function parseCopyArgs(tokens) {
   let codeOnly = false;
   const list = Array.isArray(tokens) ? tokens : [];
   for (const raw of list) {
-    if (raw == null) continue;
+    if (raw == null) {
+      continue;
+    }
     const t = String(raw).trim().toLowerCase();
-    if (t === '') continue;
-    if (t === 'code' || t === '--code' || t === '-c') { codeOnly = true; continue; }
+    if (t === '') {
+      continue;
+    }
+    if (t === 'code' || t === '--code' || t === '-c') {
+      codeOnly = true;
+      continue;
+    }
     const n = parseInt(t, 10);
-    if (Number.isInteger(n) && n > 0) { nth = n; }
+    if (Number.isInteger(n) && n > 0) {
+      nth = n;
+    }
   }
   return { nth, codeOnly };
 }
@@ -48,11 +59,17 @@ function parseCopyArgs(tokens) {
  * @returns {{ text: string, ordinal: number, total: number } | null}
  */
 function selectReply(texts, nth) {
-  if (!Array.isArray(texts)) return null;
+  if (!Array.isArray(texts)) {
+    return null;
+  }
   const cleaned = texts.filter((t) => typeof t === 'string' && t.trim() !== '');
-  if (cleaned.length === 0) return null;
+  if (cleaned.length === 0) {
+    return null;
+  }
   const n = Number.isInteger(nth) && nth > 0 ? nth : 1;
-  if (n > cleaned.length) return null;
+  if (n > cleaned.length) {
+    return null;
+  }
   const idx = cleaned.length - n; // 最近 = 末尾
   return { text: cleaned[idx], ordinal: n, total: cleaned.length };
 }
@@ -63,7 +80,9 @@ function selectReply(texts, nth) {
  * @returns {string[]}
  */
 function extractCodeBlocks(text) {
-  if (typeof text !== 'string' || text === '') return [];
+  if (typeof text !== 'string' || text === '') {
+    return [];
+  }
   const lines = text.split('\n');
   const blocks = [];
   let inBlock = false;
@@ -72,16 +91,26 @@ function extractCodeBlocks(text) {
   for (const line of lines) {
     const m = /^\s*(```+|~~~+)/.exec(line);
     if (!inBlock && m) {
-      inBlock = true; fence = m[1][0]; buf = []; continue;
+      inBlock = true;
+      fence = m[1][0];
+      buf = [];
+      continue;
     }
     if (inBlock) {
       const close = new RegExp('^\\s*' + (fence === '`' ? '```+' : '~~~+') + '\\s*$');
-      if (close.test(line)) { blocks.push(buf.join('\n')); inBlock = false; buf = []; continue; }
+      if (close.test(line)) {
+        blocks.push(buf.join('\n'));
+        inBlock = false;
+        buf = [];
+        continue;
+      }
       buf.push(line);
     }
   }
   // 未闭合围栏:容错收尾,把已积累内容也算一块(绝不丢用户内容)
-  if (inBlock && buf.length > 0) blocks.push(buf.join('\n'));
+  if (inBlock && buf.length > 0) {
+    blocks.push(buf.join('\n'));
+  }
   return blocks.filter((b) => b !== '');
 }
 
@@ -98,7 +127,8 @@ function buildCopyPayload(texts, opts = {}) {
   if (!picked) {
     return { ok: false, reason: 'no_reply' };
   }
-  const ord = picked.ordinal === 1 ? '最近一条助手回复' : `从最近往回数第 ${picked.ordinal} 条助手回复`;
+  const ord =
+    picked.ordinal === 1 ? '最近一条助手回复' : `从最近往回数第 ${picked.ordinal} 条助手回复`;
   if (codeOnly) {
     const blocks = extractCodeBlocks(picked.text);
     if (blocks.length === 0) {

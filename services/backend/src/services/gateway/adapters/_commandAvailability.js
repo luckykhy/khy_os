@@ -50,9 +50,14 @@ function _probeSync(cmd) {
       timeout: PROBE_TIMEOUT_MS,
       env: process.env,
     });
-    if (r && !r.error && r.status === 0) return { ok: true, error: '' };
-    if (r && r.error) priorError = r.error.message || String(r.error);
-    else if (r && typeof r.status === 'number' && r.status !== 0) priorError = `exit ${r.status}`;
+    if (r && !r.error && r.status === 0) {
+      return { ok: true, error: '' };
+    }
+    if (r && r.error) {
+      priorError = r.error.message || String(r.error);
+    } else if (r && typeof r.status === 'number' && r.status !== 0) {
+      priorError = `exit ${r.status}`;
+    }
   } catch (err) {
     priorError = (err && err.message) || String(err);
   }
@@ -75,20 +80,56 @@ function _probeSync(cmd) {
  * @param {string} cmd
  * @param {object} [options]
  * @param {number} [options.ttlMs] - Override the cache TTL for this lookup.
- * @param {boolean} [options.force] - Ignore the cache and re-probe now.
+ * @param {boolean} [options.force] - Bypass the cache, re-probe synchronously
+ *   now and return the fresh result.
  * @returns {{ ok: boolean, error: string, at: number }}
  */
 function check(cmd, options = {}) {
   const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : DEFAULT_TTL_MS;
   const now = Date.now();
   const hit = _cache.get(cmd);
-  if (!options.force && hit && ttlMs > 0 && (now - hit.at) < ttlMs) {
+  if (!options.force && hit && ttlMs > 0 && now - hit.at < ttlMs) {
+    return hit;
+  }
+  // Stale-while-revalidate (default path only): when a previous entry exists
+  // but has expired, serve it as-is and refresh asynchronously in the
+  // background. The sync hot path therefore only ever blocks on a genuinely
+  // cold cache (no probe ever ran), which the startup prewarm eliminates in
+  // practice. Two explicit opt-outs skip SWR and probe synchronously:
+  // `force: true` (contract: bypass the cache and return the fresh result) and
+  // `ttlMs === 0` (caching disabled via KHY_CLI_DETECT_TTL_MS=0 — always
+  // re-probe). Neither runs on the default submit hot path: hot callers use
+  // the async variants or the default TTL.
+  if (!options.force && ttlMs > 0 && hit) {
+    _refreshAsync(cmd);
     return hit;
   }
   const res = _probeSync(cmd);
   const entry = { ok: res.ok, error: res.error, at: now };
   _cache.set(cmd, entry);
   return entry;
+}
+
+// Commands with a background refresh already in flight (dedup guard).
+const _refreshing = new Set();
+
+/**
+ * Kick a non-blocking cache refresh for a stale entry. Never throws.
+ * @param {string} cmd
+ */
+function _refreshAsync(cmd) {
+  if (_refreshing.has(cmd)) {
+    return;
+  }
+  _refreshing.add(cmd);
+  _probeAsync(cmd)
+    .then((res) => {
+      _cache.set(cmd, { ok: res.ok, error: res.error, at: Date.now() });
+    })
+    .catch(() => {})
+    .then(() => {
+      _refreshing.delete(cmd);
+    });
 }
 
 /**
@@ -118,20 +159,42 @@ function isAvailable(cmd, options) {
  * @returns {Promise<{ ok: boolean, error: string }>}
  */
 function _probeAsync(cmd) {
-  return new Promise((resolve) => {
-    execFile(cmd, ['--version'], { timeout: PROBE_TIMEOUT_MS }, (err) => {
-      if (!err) return resolve({ ok: true, error: '' });
-      const priorError = (err && err.message) || String(err);
-      // Fallback: PATH lookup — robust in restricted environments where direct
-      // execution may fail with EPERM even when the command is runnable.
-      const lookup = process.platform === 'win32' ? 'where' : 'which';
-      execFile(lookup, [cmd], { timeout: PROBE_TIMEOUT_MS }, (err2) => {
-        if (!err2) return resolve({ ok: true, error: '' });
-        resolve({ ok: false, error: priorError });
-      });
-    });
+  // Stagger launches through a shared gate: on Windows each native spawn
+  // blocks the JS thread ~100-450ms during process creation, so N probes
+  // fired in the same tick (parallel adapter detect) merge into one
+  // multi-second freeze. Serializing the LAUNCH (not the wait) with a
+  // macrotask gap lets timers — the TUI spinner — run between each spawn.
+  const gate = _launchGate;
+  let release;
+  _launchGate = new Promise((r) => {
+    release = r;
   });
+  return gate.then(
+    () =>
+      new Promise((resolve) => {
+        execFile(cmd, ['--version'], { timeout: PROBE_TIMEOUT_MS }, (err) => {
+          if (!err) {
+            return resolve({ ok: true, error: '' });
+          }
+          const priorError = (err && err.message) || String(err);
+          // Fallback: PATH lookup — robust in restricted environments where direct
+          // execution may fail with EPERM even when the command is runnable.
+          const lookup = process.platform === 'win32' ? 'where' : 'which';
+          execFile(lookup, [cmd], { timeout: PROBE_TIMEOUT_MS }, (err2) => {
+            if (!err2) {
+              return resolve({ ok: true, error: '' });
+            }
+            resolve({ ok: false, error: priorError });
+          });
+        });
+        // Open the gate for the next probe on a later macrotask.
+        setTimeout(release, 15);
+      })
+  );
 }
+
+// Shared launch gate for _probeAsync (see comment there).
+let _launchGate = Promise.resolve();
 
 /**
  * Async counterpart of {@link check}: returns the cached availability entry,
@@ -150,7 +213,7 @@ async function checkAsync(cmd, options = {}) {
   const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : DEFAULT_TTL_MS;
   const now = Date.now();
   const hit = _cache.get(cmd);
-  if (!options.force && hit && ttlMs > 0 && (now - hit.at) < ttlMs) {
+  if (!options.force && hit && ttlMs > 0 && now - hit.at < ttlMs) {
     return hit;
   }
   const res = await _probeAsync(cmd);
@@ -179,27 +242,36 @@ async function isAvailableAsync(cmd, options) {
  */
 function prewarm(cmds = []) {
   const list = Array.isArray(cmds) ? cmds : [cmds];
-  return Promise.all(list.map((cmd) => new Promise((resolve) => {
-    const now = Date.now();
-    const hit = _cache.get(cmd);
-    if (hit && DEFAULT_TTL_MS > 0 && (now - hit.at) < DEFAULT_TTL_MS) {
-      return resolve(hit);
-    }
-    const store = (ok, error) => {
-      const entry = { ok, error: error || '', at: Date.now() };
-      _cache.set(cmd, entry);
-      resolve(entry);
-    };
-    execFile(cmd, ['--version'], { timeout: PROBE_TIMEOUT_MS }, (err) => {
-      if (!err) return store(true, '');
-      // Async PATH fallback mirrors the sync probe's second stage.
-      const lookup = process.platform === 'win32' ? 'where' : 'which';
-      execFile(lookup, [cmd], { timeout: PROBE_TIMEOUT_MS }, (err2) => {
-        if (!err2) return store(true, '');
-        store(false, (err.message || String(err)));
-      });
-    });
-  })));
+  return Promise.all(
+    list.map(
+      (cmd) =>
+        new Promise((resolve) => {
+          const now = Date.now();
+          const hit = _cache.get(cmd);
+          if (hit && DEFAULT_TTL_MS > 0 && now - hit.at < DEFAULT_TTL_MS) {
+            return resolve(hit);
+          }
+          const store = (ok, error) => {
+            const entry = { ok, error: error || '', at: Date.now() };
+            _cache.set(cmd, entry);
+            resolve(entry);
+          };
+          execFile(cmd, ['--version'], { timeout: PROBE_TIMEOUT_MS }, (err) => {
+            if (!err) {
+              return store(true, '');
+            }
+            // Async PATH fallback mirrors the sync probe's second stage.
+            const lookup = process.platform === 'win32' ? 'where' : 'which';
+            execFile(lookup, [cmd], { timeout: PROBE_TIMEOUT_MS }, (err2) => {
+              if (!err2) {
+                return store(true, '');
+              }
+              store(false, err.message || String(err));
+            });
+          });
+        })
+    )
+  );
 }
 
 /**

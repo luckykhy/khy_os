@@ -68,17 +68,17 @@ const MATRIX = {
         darwin: ['brew', 'install', 'python@3.10'],
         win32: ['winget', 'install', '--id', 'Python.Python.3.10', '-e'],
       },
-      '3.11': {
+      3.11: {
         linux: ['apt-get', 'install', '-y', 'python3.11'],
         darwin: ['brew', 'install', 'python@3.11'],
         win32: ['winget', 'install', '--id', 'Python.Python.3.11', '-e'],
       },
-      '3.12': {
+      3.12: {
         linux: ['apt-get', 'install', '-y', 'python3.12'],
         darwin: ['brew', 'install', 'python@3.12'],
         win32: ['winget', 'install', '--id', 'Python.Python.3.12', '-e'],
       },
-      '3.13': {
+      3.13: {
         linux: ['apt-get', 'install', '-y', 'python3.13'],
         darwin: ['brew', 'install', 'python@3.13'],
         win32: ['winget', 'install', '--id', 'Python.Python.3.13', '-e'],
@@ -114,18 +114,28 @@ const MATRIX = {
 /** 门控:KHY_DEP_VERSIONS 默认开,仅显式关字面量关闭。 */
 function isEnabled(env = process.env) {
   const v = env && env.KHY_DEP_VERSIONS;
-  if (v === undefined || v === null || v === '') return true;
+  if (v === undefined || v === null || v === '') {
+    return true;
+  }
   return !OFF.has(String(v).trim().toLowerCase());
 }
 
 /** 把别名 / 大小写归一到 canonical depId;未知则原样小写返回(供调用方继续查 registry)。 */
 function resolveDepId(name) {
-  const n = String(name || '').trim().toLowerCase();
-  if (!n) return '';
-  if (MATRIX[n]) return n;
+  const n = String(name || '')
+    .trim()
+    .toLowerCase();
+  if (!n) {
+    return '';
+  }
+  if (MATRIX[n]) {
+    return n;
+  }
   for (const depId of Object.keys(MATRIX)) {
     const aliases = MATRIX[depId].aliases || [];
-    if (aliases.some((a) => a.toLowerCase() === n)) return depId;
+    if (aliases.some((a) => a.toLowerCase() === n)) {
+      return depId;
+    }
   }
   return n;
 }
@@ -138,9 +148,13 @@ function resolveDepId(name) {
  */
 function parseDepSpec(spec) {
   const s = String(spec || '').trim();
-  if (!s) return { depId: '', version: null };
+  if (!s) {
+    return { depId: '', version: null };
+  }
   const at = s.indexOf('@');
-  if (at < 0) return { depId: resolveDepId(s), version: null };
+  if (at < 0) {
+    return { depId: resolveDepId(s), version: null };
+  }
   const rawId = s.slice(0, at);
   const rawVer = s.slice(at + 1).trim();
   return { depId: resolveDepId(rawId), version: rawVer || null };
@@ -154,14 +168,16 @@ function isVersionable(depId) {
 /** 某工具链支持的版本字符串列表(声明顺序);非版本可选返回 []。 */
 function supportedVersions(depId) {
   const entry = MATRIX[resolveDepId(depId)];
-  if (!entry) return [];
+  if (!entry) {
+    return [];
+  }
   return Object.keys(entry.versions);
 }
 
 /** 某工具链的默认版本(无则 null)。 */
 function defaultVersion(depId) {
   const entry = MATRIX[resolveDepId(depId)];
-  return entry ? (entry.default || null) : null;
+  return entry ? entry.default || null : null;
 }
 
 /** 列出全部版本可选工具链(供 CLI 陈述)。纯函数,返回新数组。 */
@@ -191,18 +207,28 @@ function listVersionable() {
  */
 function resolveVersionedCommand(args = {}) {
   const env = args.env || process.env;
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   const depId = resolveDepId(args.depId);
   const entry = MATRIX[depId];
-  if (!entry) return null;
+  if (!entry) {
+    return null;
+  }
   const version = String(args.version == null ? '' : args.version).trim();
-  if (!version) return null;
+  if (!version) {
+    return null;
+  }
   // 白名单校验:只接受已登记版本键(绝不把外来字符串拼进命令)。
-  if (!Object.prototype.hasOwnProperty.call(entry.versions, version)) return null;
+  if (!Object.prototype.hasOwnProperty.call(entry.versions, version)) {
+    return null;
+  }
   const platform = args.platform || process.platform;
   const byPlat = entry.versions[version];
   const argv = byPlat && byPlat[platform];
-  if (!Array.isArray(argv) || argv.length === 0) return null;
+  if (!Array.isArray(argv) || argv.length === 0) {
+    return null;
+  }
   return argv.slice();
 }
 

@@ -19,42 +19,107 @@ const SECURITY_LOG = path.join(os.homedir(), '.khyquant', 'security.log');
 
 const INJECTION_PATTERNS = [
   // Direct prompt extraction (English)
-  { pattern: /ignore\s*(all\s*)?(previous|prior|above|earlier)\s*(instruction|prompt|context|rule)/i, threat: 'ignore_instructions' },
-  { pattern: /show\s*(me\s*)?(the\s*)?(your\s*)?(system|hidden|internal|original)\s*(prompt|instruction|message)/i, threat: 'show_prompt' },
-  { pattern: /repeat\s*(everything|all|the\s*text|content|word)\s*(above|before|prior|previous)/i, threat: 'repeat_above' },
-  { pattern: /what\s*(are|is|were)\s*(your|the)\s*(system\s*)?(instruction|prompt|rule|directive)/i, threat: 'ask_instructions' },
-  { pattern: /print\s*(your|the|all)\s*(system\s*)?(prompt|instruction|rule|config)/i, threat: 'print_prompt' },
-  { pattern: /output\s*(your|the)\s*(initial|first|system)\s*(prompt|message|instruction)/i, threat: 'output_prompt' },
-  { pattern: /tell\s*me\s*(your|the)\s*(system|hidden)\s*(prompt|instruction)/i, threat: 'tell_prompt' },
+  {
+    pattern:
+      /ignore\s*(all\s*)?(previous|prior|above|earlier)\s*(instruction|prompt|context|rule)/i,
+    threat: 'ignore_instructions',
+  },
+  {
+    pattern:
+      /show\s*(me\s*)?(the\s*)?(your\s*)?(system|hidden|internal|original)\s*(prompt|instruction|message)/i,
+    threat: 'show_prompt',
+  },
+  {
+    pattern: /repeat\s*(everything|all|the\s*text|content|word)\s*(above|before|prior|previous)/i,
+    threat: 'repeat_above',
+  },
+  {
+    pattern: /what\s*(are|is|were)\s*(your|the)\s*(system\s*)?(instruction|prompt|rule|directive)/i,
+    threat: 'ask_instructions',
+  },
+  {
+    pattern: /print\s*(your|the|all)\s*(system\s*)?(prompt|instruction|rule|config)/i,
+    threat: 'print_prompt',
+  },
+  {
+    pattern: /output\s*(your|the)\s*(initial|first|system)\s*(prompt|message|instruction)/i,
+    threat: 'output_prompt',
+  },
+  {
+    pattern: /tell\s*me\s*(your|the)\s*(system|hidden)\s*(prompt|instruction)/i,
+    threat: 'tell_prompt',
+  },
   { pattern: /reveal\s*(your|the|hidden)\s*(prompt|instruction|system)/i, threat: 'reveal_prompt' },
-  { pattern: /dump\s*(your|the|all)\s*(prompt|instruction|config|context)/i, threat: 'dump_prompt' },
-  { pattern: /act\s*as\s*(if|though)\s*you\s*(have\s*)?no\s*(restriction|rule|limit)/i, threat: 'remove_restrictions' },
-  { pattern: /pretend\s*(you\s*)?(are|have)\s*no\s*(rule|restriction|limit|constraint)/i, threat: 'pretend_no_rules' },
+  {
+    pattern: /dump\s*(your|the|all)\s*(prompt|instruction|config|context)/i,
+    threat: 'dump_prompt',
+  },
+  {
+    pattern: /act\s*as\s*(if|though)\s*you\s*(have\s*)?no\s*(restriction|rule|limit)/i,
+    threat: 'remove_restrictions',
+  },
+  {
+    pattern: /pretend\s*(you\s*)?(are|have)\s*no\s*(rule|restriction|limit|constraint)/i,
+    threat: 'pretend_no_rules',
+  },
   { pattern: /you\s*are\s*now\s*(free|unrestricted|unfiltered|DAN)/i, threat: 'jailbreak_dan' },
-  { pattern: /disregard\s*(all|any|previous)\s*(safety|instruction|rule|guideline)/i, threat: 'disregard_safety' },
+  {
+    pattern: /disregard\s*(all|any|previous)\s*(safety|instruction|rule|guideline)/i,
+    threat: 'disregard_safety',
+  },
 
   // Source code / architecture probing
-  { pattern: /show\s*(me\s*)?(your|the)\s*(source|code|implementation|backend|codebase)/i, threat: 'code_extraction' },
+  {
+    pattern: /show\s*(me\s*)?(your|the)\s*(source|code|implementation|backend|codebase)/i,
+    threat: 'code_extraction',
+  },
   { pattern: /(source|code)\s*(structure|architecture|layout|tree)/i, threat: 'code_structure' },
-  { pattern: /what\s*(files|modules|services|classes|functions)\s*(do\s*you|are\s*there)/i, threat: 'enumerate_files' },
-  { pattern: /list\s*(your|all|the)\s*(internal|backend|service|module|file)/i, threat: 'list_internals' },
-  { pattern: /how\s*(are|is)\s*(you|your\s*system|the\s*backend)\s*(built|implemented|coded)/i, threat: 'implementation_details' },
+  {
+    pattern: /what\s*(files|modules|services|classes|functions)\s*(do\s*you|are\s*there)/i,
+    threat: 'enumerate_files',
+  },
+  {
+    pattern: /list\s*(your|all|the)\s*(internal|backend|service|module|file)/i,
+    threat: 'list_internals',
+  },
+  {
+    pattern: /how\s*(are|is)\s*(you|your\s*system|the\s*backend)\s*(built|implemented|coded)/i,
+    threat: 'implementation_details',
+  },
 
   // Training data extraction
-  { pattern: /show\s*(me\s*)?(your|the|all)\s*(training|fine-?tun|dataset)\s*(data|set|example)/i, threat: 'training_data' },
-  { pattern: /export\s*(all|your|the)\s*(data|knowledge|training|model\s*weights)/i, threat: 'export_data' },
-  { pattern: /what\s*(data|examples?)\s*(were|was)\s*you\s*trained\s*on/i, threat: 'training_source' },
+  {
+    pattern: /show\s*(me\s*)?(your|the|all)\s*(training|fine-?tun|dataset)\s*(data|set|example)/i,
+    threat: 'training_data',
+  },
+  {
+    pattern: /export\s*(all|your|the)\s*(data|knowledge|training|model\s*weights)/i,
+    threat: 'export_data',
+  },
+  {
+    pattern: /what\s*(data|examples?)\s*(were|was)\s*you\s*trained\s*on/i,
+    threat: 'training_source',
+  },
 
   // Chinese variants
   { pattern: /忽略.{0,10}(指令|规则|限制|提示)/i, threat: 'cn_ignore_rules' },
-  { pattern: /(显示|展示|输出|打印|告诉).{0,10}(系统|内部|隐藏).{0,10}(提示|指令|prompt)/i, threat: 'cn_show_prompt' },
-  { pattern: /重复.{0,10}(上面|之前|以上|前面).{0,10}(内容|文字|所有)/i, threat: 'cn_repeat_above' },
+  {
+    pattern: /(显示|展示|输出|打印|告诉).{0,10}(系统|内部|隐藏).{0,10}(提示|指令|prompt)/i,
+    threat: 'cn_show_prompt',
+  },
+  {
+    pattern: /重复.{0,10}(上面|之前|以上|前面).{0,10}(内容|文字|所有)/i,
+    threat: 'cn_repeat_above',
+  },
   { pattern: /(你的|系统的).{0,10}(源代码|源码|代码|实现)/i, threat: 'cn_source_code' },
   { pattern: /(查看|获取|提取).{0,10}(训练|模型).{0,10}(数据|样本)/i, threat: 'cn_training_data' },
   { pattern: /(假装|扮演).{0,10}(没有|无).{0,10}(限制|规则|约束)/i, threat: 'cn_no_restrictions' },
   { pattern: /角色扮演.{0,20}(无限制|DAN|越狱)/i, threat: 'cn_jailbreak' },
   { pattern: /(你|系统).{0,10}(由什么|用什么).{0,10}(编写|开发|构建)/i, threat: 'cn_how_built' },
-  { pattern: /(列出|列举).{0,10}(所有|全部).{0,10}(文件|模块|服务|接口)/i, threat: 'cn_list_files' },
+  {
+    pattern: /(列出|列举).{0,10}(所有|全部).{0,10}(文件|模块|服务|接口)/i,
+    threat: 'cn_list_files',
+  },
   { pattern: /(泄露|暴露|透露).{0,10}(内部|系统|隐藏)/i, threat: 'cn_leak' },
 ];
 
@@ -68,7 +133,10 @@ const LEAK_PATTERNS = [
   { pattern: /process\.env\.[A-Z_]+/gi, replacement: '[环境变量]' },
   { pattern: /SYSTEM_PROMPT/gi, replacement: '[系统配置]' },
   { pattern: /\.khyquant\/(config|security|token_usage)/gi, replacement: '[用户数据]' },
-  { pattern: /tradingAgentsService|aiGateway|multiFreeService|securityGuard/gi, replacement: '[内部模块]' },
+  {
+    pattern: /tradingAgentsService|aiGateway|multiFreeService|securityGuard/gi,
+    replacement: '[内部模块]',
+  },
   { pattern: /modelTrainingService|tokenUsageService|growthService/gi, replacement: '[内部模块]' },
   { pattern: /knowledgeTeachingService|agentCommunication/gi, replacement: '[内部模块]' },
   { pattern: /node_modules\//gi, replacement: '[依赖]' },
@@ -78,9 +146,9 @@ const LEAK_PATTERNS = [
 // ─── Layer 3: Rate Limiting ─────────────────────────────────────────────────
 
 const RATE_LIMIT = {
-  windowMs: 60000,         // 1 minute window
-  maxSuspicious: 3,        // max 3 suspicious queries per window
-  cooldownMs: 300000,      // 5 minute cooldown
+  windowMs: 60000, // 1 minute window
+  maxSuspicious: 3, // max 3 suspicious queries per window
+  cooldownMs: 300000, // 5 minute cooldown
 };
 
 let _suspiciousCount = 0;
@@ -114,7 +182,10 @@ function analyzeInput(userMessage) {
       safe: false,
       threat: 'rate_limited',
       confidence: 1.0,
-      refusal: '操作过于频繁，请稍后再试。冷却时间剩余: ' + Math.ceil((_cooldownUntil - Date.now()) / 1000) + '秒',
+      refusal:
+        '操作过于频繁，请稍后再试。冷却时间剩余: ' +
+        Math.ceil((_cooldownUntil - Date.now()) / 1000) +
+        '秒',
     };
   }
 
@@ -167,11 +238,19 @@ function getSecurityStats() {
     if (!fs.existsSync(SECURITY_LOG)) return { totalEvents: 0, recentEvents: [] };
 
     const lines = fs.readFileSync(SECURITY_LOG, 'utf-8').split('\n').filter(Boolean);
-    const events = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    const events = lines
+      .map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
     // Last 24h events
     const oneDayAgo = Date.now() - 86400000;
-    const recent = events.filter(e => new Date(e.timestamp).getTime() > oneDayAgo);
+    const recent = events.filter((e) => new Date(e.timestamp).getTime() > oneDayAgo);
 
     // Threat type distribution
     const byType = {};
@@ -220,7 +299,9 @@ function _logEvent(event) {
     const dir = path.dirname(SECURITY_LOG);
     fs.mkdirSync(dir, { recursive: true });
     fs.appendFileSync(SECURITY_LOG, JSON.stringify(event) + '\n');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 // ─── System Prompt Security Directive ───────────────────────────────────────
@@ -249,22 +330,55 @@ const { execSync } = require('child_process');
  */
 const MINING_SIGNATURES = [
   // Process names
-  'xmrig', 'cpuminer', 'minergate', 'bfgminer', 'cgminer', 'ethminer',
-  'nbminer', 'phoenixminer', 'lolminer', 'trex', 't-rex', 'gminer',
-  'nanominer', 'srbminer', 'teamredminer', 'xmr-stak', 'monero',
-  'cryptonight', 'randomx', 'kawpow', 'ethash', 'minerd',
+  'xmrig',
+  'cpuminer',
+  'minergate',
+  'bfgminer',
+  'cgminer',
+  'ethminer',
+  'nbminer',
+  'phoenixminer',
+  'lolminer',
+  'trex',
+  't-rex',
+  'gminer',
+  'nanominer',
+  'srbminer',
+  'teamredminer',
+  'xmr-stak',
+  'monero',
+  'cryptonight',
+  'randomx',
+  'kawpow',
+  'ethash',
+  'minerd',
 ];
 
 const TROJAN_SIGNATURES = [
   // Common backdoor / reverse shell patterns
-  'nc -e', 'bash -i', '/dev/tcp/', 'python -c.*import socket',
-  'perl -e.*socket', 'ruby -rsocket', 'lua.*socket',
+  'nc -e',
+  'bash -i',
+  '/dev/tcp/',
+  'python -c.*import socket',
+  'perl -e.*socket',
+  'ruby -rsocket',
+  'lua.*socket',
   // Web shells
-  'c99', 'r57', 'wso', 'b374k', 'weevely',
+  'c99',
+  'r57',
+  'wso',
+  'b374k',
+  'weevely',
   // Known malware
-  'ircbot', 'ddos', 'tsunami', 'kaiten', 'billgates',
+  'ircbot',
+  'ddos',
+  'tsunami',
+  'kaiten',
+  'billgates',
   // Suspicious cron patterns
-  'wget.*cron', 'curl.*cron', `${path.posix.sep}tmp${path.posix.sep}.*\\.sh`,
+  'wget.*cron',
+  'curl.*cron',
+  `${path.posix.sep}tmp${path.posix.sep}.*\\.sh`,
 ];
 
 /**
@@ -278,7 +392,9 @@ function scanForThreats() {
   // 1. Check for mining processes
   try {
     const processes = execSync('ps aux 2>/dev/null || tasklist 2>/dev/null', {
-      encoding: 'utf-8', stdio: 'pipe', timeout: 5000,
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 5000,
     });
 
     for (const sig of MINING_SIGNATURES) {
@@ -301,7 +417,9 @@ function scanForThreats() {
         });
       }
     }
-  } catch { /* can't read processes — not root? */ }
+  } catch {
+    /* can't read processes — not root? */
+  }
 
   // 2. Check CPU usage (mining typically > 80%)
   try {
@@ -317,12 +435,18 @@ function scanForThreats() {
         action: 'Check top processes: top -o %CPU',
       });
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // 3. Check for suspicious cron jobs
   try {
-    const crontab = execSync('crontab -l 2>/dev/null', { encoding: 'utf-8', stdio: 'pipe', timeout: 3000 });
-    const suspiciousCron = crontab.split('\n').filter(line => {
+    const crontab = execSync('crontab -l 2>/dev/null', {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 3000,
+    });
+    const suspiciousCron = crontab.split('\n').filter((line) => {
       const lower = line.toLowerCase();
       return /wget|curl.*\|.*sh|\/tmp\/|mining|xmrig|\.sh\s*&/.test(lower) && !line.startsWith('#');
     });
@@ -334,12 +458,16 @@ function scanForThreats() {
         entries: suspiciousCron,
       });
     }
-  } catch { /* no cron or permission denied */ }
+  } catch {
+    /* no cron or permission denied */
+  }
 
   // 4. Check for suspicious listening ports (common mining pool ports)
   try {
     const netstat = execSync('ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null', {
-      encoding: 'utf-8', stdio: 'pipe', timeout: 3000,
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 3000,
     });
     const miningPorts = ['3333', '4444', '5555', '7777', '8888', '9999', '14444', '45700'];
     for (const port of miningPorts) {
@@ -351,14 +479,18 @@ function scanForThreats() {
         });
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // 5. Check /tmp for suspicious executables
   try {
     const tmpFiles = execSync('find /tmp -maxdepth 2 -executable -type f 2>/dev/null | head -20', {
-      encoding: 'utf-8', stdio: 'pipe', timeout: 3000,
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 3000,
     });
-    const suspiciousFiles = tmpFiles.split('\n').filter(f => {
+    const suspiciousFiles = tmpFiles.split('\n').filter((f) => {
       return f && /\.(sh|elf|bin|out)$|xmr|mine|payload/i.test(f);
     });
     if (suspiciousFiles.length > 0) {
@@ -369,7 +501,9 @@ function scanForThreats() {
         files: suspiciousFiles,
       });
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // 6. Check authorized_keys for unauthorized additions
   try {
@@ -383,14 +517,16 @@ function scanForThreats() {
         });
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // General recommendations
   recommendations.push(
     { type: 'firewall', detail: '确保防火墙只开放必要端口 (如 3000, 5000)' },
     { type: 'updates', detail: '定期更新系统: apt update && apt upgrade' },
     { type: 'fail2ban', detail: '安装 fail2ban 防暴力破解: apt install fail2ban' },
-    { type: 'rootkit', detail: '定期扫描 rootkit: apt install rkhunter && rkhunter --check' },
+    { type: 'rootkit', detail: '定期扫描 rootkit: apt install rkhunter && rkhunter --check' }
   );
 
   const clean = threats.length === 0;
@@ -414,21 +550,35 @@ function checkProcessIntegrity() {
   try {
     const pid = process.pid;
     const children = execSync(`pgrep -P ${pid} 2>/dev/null`, {
-      encoding: 'utf-8', stdio: 'pipe', timeout: 3000,
-    }).trim().split('\n').filter(Boolean);
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 3000,
+    })
+      .trim()
+      .split('\n')
+      .filter(Boolean);
 
     // Our expected children: node processes for backend
     const suspicious = [];
     for (const childPid of children) {
       try {
         const cmdline = execSync(`cat /proc/${childPid}/cmdline 2>/dev/null | tr '\\0' ' '`, {
-          encoding: 'utf-8', stdio: 'pipe', timeout: 2000,
+          encoding: 'utf-8',
+          stdio: 'pipe',
+          timeout: 2000,
         }).trim();
         // Node/npm children are expected
-        if (!cmdline.includes('node') && !cmdline.includes('npm') && !cmdline.includes('python') && cmdline.length > 0) {
+        if (
+          !cmdline.includes('node') &&
+          !cmdline.includes('npm') &&
+          !cmdline.includes('python') &&
+          cmdline.length > 0
+        ) {
           suspicious.push({ pid: childPid, cmd: cmdline.slice(0, 100) });
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     return {
@@ -457,7 +607,7 @@ function startSecurityMonitor(intervalMs = 600000) {
         _logEvent({
           timestamp: new Date().toISOString(),
           type: 'threat_detected',
-          threats: result.threats.map(t => ({ type: t.type, severity: t.severity })),
+          threats: result.threats.map((t) => ({ type: t.type, severity: t.severity })),
         });
         // Could also emit warning to console if in REPL context
       }
@@ -470,7 +620,9 @@ function startSecurityMonitor(intervalMs = 600000) {
           suspicious: integrity.suspicious,
         });
       }
-    } catch { /* monitor must never crash the main process */ }
+    } catch {
+      /* monitor must never crash the main process */
+    }
   }, intervalMs);
 
   // Don't prevent Node.js from exiting
@@ -492,53 +644,199 @@ function stopSecurityMonitor() {
  */
 const DANGEROUS_COMMAND_PATTERNS = [
   // 1. Fork bombs
-  { regex: /:\(\)\s*\{\s*:\|:\s*&\s*\}\s*;\s*:/, type: 'fork_bomb', severity: 'critical', detail: 'Fork bomb detected — will exhaust system process table' },
-  { regex: /(\w+)\(\)\s*\{\s*\1\s*\|\s*\1\s*&\s*\}\s*;\s*\1/, type: 'fork_bomb', severity: 'critical', detail: 'Named fork bomb detected — will exhaust system process table' },
+  {
+    regex: /:\(\)\s*\{\s*:\|:\s*&\s*\}\s*;\s*:/,
+    type: 'fork_bomb',
+    severity: 'critical',
+    detail: 'Fork bomb detected — will exhaust system process table',
+  },
+  {
+    regex: /(\w+)\(\)\s*\{\s*\1\s*\|\s*\1\s*&\s*\}\s*;\s*\1/,
+    type: 'fork_bomb',
+    severity: 'critical',
+    detail: 'Named fork bomb detected — will exhaust system process table',
+  },
 
   // 2. Disk wipes
-  { regex: /dd\s+if=\/dev\/(zero|random|urandom)/, type: 'disk_wipe', severity: 'critical', detail: 'Disk overwrite via dd with destructive input source' },
-  { regex: /\bmkfs\./, type: 'disk_wipe', severity: 'critical', detail: 'Filesystem format command detected — will destroy all data on target device' },
-  { regex: /\bshred\b/, type: 'disk_wipe', severity: 'critical', detail: 'Secure file destruction command detected' },
+  {
+    regex: /dd\s+if=\/dev\/(zero|random|urandom)/,
+    type: 'disk_wipe',
+    severity: 'critical',
+    detail: 'Disk overwrite via dd with destructive input source',
+  },
+  {
+    regex: /\bmkfs\./,
+    type: 'disk_wipe',
+    severity: 'critical',
+    detail: 'Filesystem format command detected — will destroy all data on target device',
+  },
+  {
+    regex: /\bshred\b/,
+    type: 'disk_wipe',
+    severity: 'critical',
+    detail: 'Secure file destruction command detected',
+  },
 
   // 3. Recursive deletion
-  { regex: /rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+(-[a-zA-Z]*r[a-zA-Z]*|--recursive)|(-[a-zA-Z]*r[a-zA-Z]*\s+(-[a-zA-Z]*f[a-zA-Z]*|--force)))\s+\/(\s|$|\*)/, type: 'recursive_delete', severity: 'critical', detail: 'Recursive forced deletion targeting root filesystem' },
-  { regex: /rm\s+-rf\s+\/(\s|$|\*)/, type: 'recursive_delete', severity: 'critical', detail: 'Recursive forced deletion targeting root filesystem' },
-  { regex: /rm\s+-rf\s+~/, type: 'recursive_delete', severity: 'critical', detail: 'Recursive forced deletion targeting home directory' },
+  {
+    regex:
+      /rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+(-[a-zA-Z]*r[a-zA-Z]*|--recursive)|(-[a-zA-Z]*r[a-zA-Z]*\s+(-[a-zA-Z]*f[a-zA-Z]*|--force)))\s+\/(\s|$|\*)/,
+    type: 'recursive_delete',
+    severity: 'critical',
+    detail: 'Recursive forced deletion targeting root filesystem',
+  },
+  {
+    regex: /rm\s+-rf\s+\/(\s|$|\*)/,
+    type: 'recursive_delete',
+    severity: 'critical',
+    detail: 'Recursive forced deletion targeting root filesystem',
+  },
+  {
+    regex: /rm\s+-rf\s+~/,
+    type: 'recursive_delete',
+    severity: 'critical',
+    detail: 'Recursive forced deletion targeting home directory',
+  },
 
   // 4. Reverse shells
-  { regex: /bash\s+-i\s+>&?\s*\/dev\/tcp\//, type: 'reverse_shell', severity: 'critical', detail: 'Bash reverse shell via /dev/tcp' },
-  { regex: /\bnc\s+(-[a-zA-Z]*e[a-zA-Z]*)\s+\/bin\//, type: 'reverse_shell', severity: 'critical', detail: 'Netcat reverse shell with command execution' },
-  { regex: /python[23]?\s+-c\s*['""].*import\s+socket.*connect/, type: 'reverse_shell', severity: 'critical', detail: 'Python reverse shell via socket' },
+  {
+    regex: /bash\s+-i\s+>&?\s*\/dev\/tcp\//,
+    type: 'reverse_shell',
+    severity: 'critical',
+    detail: 'Bash reverse shell via /dev/tcp',
+  },
+  {
+    regex: /\bnc\s+(-[a-zA-Z]*e[a-zA-Z]*)\s+\/bin\//,
+    type: 'reverse_shell',
+    severity: 'critical',
+    detail: 'Netcat reverse shell with command execution',
+  },
+  {
+    regex: /python[23]?\s+-c\s*['""].*import\s+socket.*connect/,
+    type: 'reverse_shell',
+    severity: 'critical',
+    detail: 'Python reverse shell via socket',
+  },
 
   // 5. Privilege escalation
-  { regex: /chmod\s+777\s+\/(\s|$)/, type: 'privilege_escalation', severity: 'critical', detail: 'Setting root filesystem to world-writable' },
-  { regex: /chmod\s+(-[a-zA-Z]*R[a-zA-Z]*|--recursive)\s+777/, type: 'privilege_escalation', severity: 'critical', detail: 'Recursive chmod 777 — exposes entire directory tree' },
-  { regex: /\bchown\s+root\b/, type: 'privilege_escalation', severity: 'high', detail: 'Changing file ownership to root' },
+  {
+    regex: /chmod\s+777\s+\/(\s|$)/,
+    type: 'privilege_escalation',
+    severity: 'critical',
+    detail: 'Setting root filesystem to world-writable',
+  },
+  {
+    regex: /chmod\s+(-[a-zA-Z]*R[a-zA-Z]*|--recursive)\s+777/,
+    type: 'privilege_escalation',
+    severity: 'critical',
+    detail: 'Recursive chmod 777 — exposes entire directory tree',
+  },
+  {
+    regex: /\bchown\s+root\b/,
+    type: 'privilege_escalation',
+    severity: 'high',
+    detail: 'Changing file ownership to root',
+  },
 
   // 6. Data exfiltration
-  { regex: /curl\s+.*\|\s*sh/, type: 'data_exfiltration', severity: 'critical', detail: 'Remote script download and execution via curl pipe' },
-  { regex: /wget\s+.*\|\s*sh/, type: 'data_exfiltration', severity: 'critical', detail: 'Remote script download and execution via wget pipe' },
-  { regex: /(curl|wget|nc|ncat)\s+.*(<\s*\/etc\/(passwd|shadow|ssh)|\/etc\/(passwd|shadow))/, type: 'data_exfiltration', severity: 'critical', detail: 'Sensitive system file sent to network command' },
-  { regex: /cat\s+\/etc\/(passwd|shadow).*\|\s*(curl|wget|nc|ncat)/, type: 'data_exfiltration', severity: 'critical', detail: 'Piping sensitive file to network command' },
+  {
+    regex: /curl\s+.*\|\s*sh/,
+    type: 'data_exfiltration',
+    severity: 'critical',
+    detail: 'Remote script download and execution via curl pipe',
+  },
+  {
+    regex: /wget\s+.*\|\s*sh/,
+    type: 'data_exfiltration',
+    severity: 'critical',
+    detail: 'Remote script download and execution via wget pipe',
+  },
+  {
+    regex: /(curl|wget|nc|ncat)\s+.*(<\s*\/etc\/(passwd|shadow|ssh)|\/etc\/(passwd|shadow))/,
+    type: 'data_exfiltration',
+    severity: 'critical',
+    detail: 'Sensitive system file sent to network command',
+  },
+  {
+    regex: /cat\s+\/etc\/(passwd|shadow).*\|\s*(curl|wget|nc|ncat)/,
+    type: 'data_exfiltration',
+    severity: 'critical',
+    detail: 'Piping sensitive file to network command',
+  },
 
   // 7. System destruction
-  { regex: /\bkill\s+-9\s+1\b/, type: 'system_destruction', severity: 'critical', detail: 'Killing init/systemd (PID 1) — will crash the system' },
-  { regex: /\bkillall\b/, type: 'system_destruction', severity: 'high', detail: 'Mass process termination command' },
-  { regex: /\bshutdown\b/, type: 'system_destruction', severity: 'high', detail: 'System shutdown command' },
-  { regex: /\breboot\b/, type: 'system_destruction', severity: 'high', detail: 'System reboot command' },
-  { regex: /\binit\s+0\b/, type: 'system_destruction', severity: 'critical', detail: 'System halt via init 0' },
+  {
+    regex: /\bkill\s+-9\s+1\b/,
+    type: 'system_destruction',
+    severity: 'critical',
+    detail: 'Killing init/systemd (PID 1) — will crash the system',
+  },
+  {
+    regex: /\bkillall\b/,
+    type: 'system_destruction',
+    severity: 'high',
+    detail: 'Mass process termination command',
+  },
+  {
+    regex: /\bshutdown\b/,
+    type: 'system_destruction',
+    severity: 'high',
+    detail: 'System shutdown command',
+  },
+  {
+    regex: /\breboot\b/,
+    type: 'system_destruction',
+    severity: 'high',
+    detail: 'System reboot command',
+  },
+  {
+    regex: /\binit\s+0\b/,
+    type: 'system_destruction',
+    severity: 'critical',
+    detail: 'System halt via init 0',
+  },
 
   // 8. Crypto mining
-  { regex: /\bxmrig\b/, type: 'crypto_mining', severity: 'critical', detail: 'XMRig crypto miner detected' },
-  { regex: /\bcpuminer\b/, type: 'crypto_mining', severity: 'critical', detail: 'CPU miner detected' },
-  { regex: /stratum\+tcp:\/\//, type: 'crypto_mining', severity: 'critical', detail: 'Mining pool stratum protocol URL detected' },
+  {
+    regex: /\bxmrig\b/,
+    type: 'crypto_mining',
+    severity: 'critical',
+    detail: 'XMRig crypto miner detected',
+  },
+  {
+    regex: /\bcpuminer\b/,
+    type: 'crypto_mining',
+    severity: 'critical',
+    detail: 'CPU miner detected',
+  },
+  {
+    regex: /stratum\+tcp:\/\//,
+    type: 'crypto_mining',
+    severity: 'critical',
+    detail: 'Mining pool stratum protocol URL detected',
+  },
 
   // 9. Crontab manipulation
-  { regex: /crontab\s+-r/, type: 'crontab_manipulation', severity: 'high', detail: 'Crontab removal — will delete all scheduled tasks' },
-  { regex: /\/etc\/cron/, type: 'crontab_manipulation', severity: 'high', detail: 'Direct write to system cron directory' },
+  {
+    regex: /crontab\s+-r/,
+    type: 'crontab_manipulation',
+    severity: 'high',
+    detail: 'Crontab removal — will delete all scheduled tasks',
+  },
+  {
+    regex: /\/etc\/cron/,
+    type: 'crontab_manipulation',
+    severity: 'high',
+    detail: 'Direct write to system cron directory',
+  },
 
   // 10. SSH key injection
-  { regex: /authorized_keys/, type: 'ssh_key_injection', severity: 'high', detail: 'SSH authorized_keys modification — possible unauthorized access injection' },
+  {
+    regex: /authorized_keys/,
+    type: 'ssh_key_injection',
+    severity: 'high',
+    detail: 'SSH authorized_keys modification — possible unauthorized access injection',
+  },
 ];
 
 /**
@@ -547,7 +845,8 @@ const DANGEROUS_COMMAND_PATTERNS = [
  * @returns {{ safe: boolean, threats: Array<{ type: string, severity: string, detail: string }>, riskLevel: string }}
  */
 function analyzeCommand(command) {
-  if (!command || typeof command !== 'string') return { safe: true, threats: [], riskLevel: 'safe' };
+  if (!command || typeof command !== 'string')
+    return { safe: true, threats: [], riskLevel: 'safe' };
 
   const threats = [];
   const lower = command.toLowerCase();
@@ -564,14 +863,19 @@ function analyzeCommand(command) {
       timestamp: new Date().toISOString(),
       type: 'dangerous_command_blocked',
       command: command.slice(0, 200),
-      threats: threats.map(t => ({ type: t.type, severity: t.severity })),
+      threats: threats.map((t) => ({ type: t.type, severity: t.severity })),
     });
   }
 
   return {
     safe: threats.length === 0,
     threats,
-    riskLevel: threats.length === 0 ? 'safe' : threats.some(t => t.severity === 'critical') ? 'critical' : 'high',
+    riskLevel:
+      threats.length === 0
+        ? 'safe'
+        : threats.some((t) => t.severity === 'critical')
+          ? 'critical'
+          : 'high',
   };
 }
 

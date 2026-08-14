@@ -40,11 +40,17 @@ function isActivationEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_TOOL_CLUSTER_ACTIVATION', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_TOOL_CLUSTER_ACTIVATION;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -64,121 +70,195 @@ const TOOL_CLUSTERS = [
     id: 'web-browse',
     tools: ['WebBrowser', 'webSearch'],
     patterns: [
-      /浏览器/, /打开网页/, /访问网站/, /网页/, /上网/,
-      /\bbrowser\b/i, /\bnavigate\b/i, /open\s+(the\s+)?url/i, /web\s*page/i,
+      /浏览器/,
+      /打开网页/,
+      /访问网站/,
+      /网页/,
+      /上网/,
+      /\bbrowser\b/i,
+      /\bnavigate\b/i,
+      /open\s+(the\s+)?url/i,
+      /web\s*page/i,
     ],
   },
   {
     id: 'web-search',
     tools: ['webSearch'],
     patterns: [
-      /联网搜/, /网上查/, /搜一下/, /搜索一下/, /查一下.*最新/, /上网查/,
-      /search\s+(the\s+)?web/i, /\bweb\s*search\b/i, /latest\s+news/i, /google\s+it/i,
+      /联网搜/,
+      /网上查/,
+      /搜一下/,
+      /搜索一下/,
+      /查一下.*最新/,
+      /上网查/,
+      /search\s+(the\s+)?web/i,
+      /\bweb\s*search\b/i,
+      /latest\s+news/i,
+      /google\s+it/i,
     ],
   },
   {
     id: 'compile',
     tools: ['compile_file'],
     patterns: [
-      /编译/, /构建.*(文件|代码|程序)/,
-      /\bcompile\b/i, /\bgcc\b/i, /\bg\+\+/i, /\brustc\b/i, /\bjavac\b/i, /\btsc\b/i,
+      /编译/,
+      /构建.*(文件|代码|程序)/,
+      /\bcompile\b/i,
+      /\bgcc\b/i,
+      /\bg\+\+/i,
+      /\brustc\b/i,
+      /\bjavac\b/i,
+      /\btsc\b/i,
     ],
   },
   {
     id: 'model-config',
     tools: ['configureModelProvider'],
     patterns: [
-      /配置.*(模型|供应商|厂商|网关)/, /(添加|新增|设置|更换).*(模型|密钥|api\s*key)/i,
-      /api\s*key/i, /密钥/, /配置\s*provider/i,
-      /configure\s+(the\s+)?(model|provider)/i, /add\s+(a\s+)?model/i,
+      /配置.*(模型|供应商|厂商|网关)/,
+      /(添加|新增|设置|更换).*(模型|密钥|api\s*key)/i,
+      /api\s*key/i,
+      /密钥/,
+      /配置\s*provider/i,
+      /configure\s+(the\s+)?(model|provider)/i,
+      /add\s+(a\s+)?model/i,
     ],
   },
   {
     id: 'package-search',
     tools: ['registrySearch'],
     patterns: [
-      /查.*(npm|pypi|包|依赖库)/i, /搜.*(npm|pypi|package|依赖)/i, /有没有.*(库|package|包)/i,
-      /\bnpm\b/i, /\bpypi\b/i, /package\s+registry/i, /open\s*source.*(library|package)/i,
+      /查.*(npm|pypi|包|依赖库)/i,
+      /搜.*(npm|pypi|package|依赖)/i,
+      /有没有.*(库|package|包)/i,
+      /\bnpm\b/i,
+      /\bpypi\b/i,
+      /package\s+registry/i,
+      /open\s*source.*(library|package)/i,
     ],
   },
   {
     id: 'desktop-control',
-    tools: ['DesktopControl', 'TerminalCapture'],
+    tools: ['DesktopControl', 'TerminalCapture', 'ComputerUse'],
     patterns: [
-      /桌面.*(操作|控制|截图)/, /截屏/, /屏幕截图/, /模拟(鼠标|键盘|点击)/, /自动(点击|填表)/,
-      /\bscreenshot\b/i, /\bdesktop\s+control/i, /mouse\s+click/i, /keyboard\s+type/i, /fill\s+(the\s+)?form/i,
+      /桌面.*(操作|控制|截图)/,
+      /截屏/,
+      /屏幕截图/,
+      /模拟(鼠标|键盘|点击)/,
+      /自动(点击|填表)/,
+      /操作.*(桌面|屏幕|电脑)/,
+      /操控.*(屏幕|电脑|桌面)/,
+      /\bscreenshot\b/i,
+      /\bdesktop\s+control/i,
+      /mouse\s+click/i,
+      /keyboard\s+type/i,
+      /fill\s+(the\s+)?form/i,
+      /computer\s+use/i,
+      /\bgui\s+agent\b/i,
+      /automat.*(click|desktop|gui)/i,
+      // Chinese app-based desktop commands (aligned with intentGate DESKTOP_TRIGGER_RE):
+      /(?:打开|启动|运行|关闭|激活|切换|最小化)\s*(?:微信|qq|火狐|edge|word|excel|ppt|outlook|记事本|计算器|画图|steam|钉钉|腾讯会议)/i,
+      /(?:在|用)\s*(?:微信|qq|火狐|chrome|edge|word|excel|ppt|outlook|记事本|计算器|画图|steam|钉钉)[^\s，。,.!?\n]{0,40}(?:发消息|输入|填写|点击|打开|发送|回复|操作|编辑|整理)/i,
+      /(?:点击|点一下|双击|右击|输入|键入|截屏|看屏幕|操控电脑|操作屏幕)/i,
     ],
   },
   {
     id: 'workflow',
     tools: ['Workflow'],
     patterns: [
-      /工作流/, /流水线/, /编排.*(任务|流程|代理)/,
-      /\bworkflow\b/i, /\bpipeline\b/i, /automation\s+sequence/i,
+      /工作流/,
+      /流水线/,
+      /编排.*(任务|流程|代理)/,
+      /\bworkflow\b/i,
+      /\bpipeline\b/i,
+      /automation\s+sequence/i,
     ],
   },
   {
     id: 'remote-trigger',
     tools: ['RemoteTrigger'],
-    patterns: [
-      /远程触发/, /webhook/i, /回调地址/, /触发信号/,
-      /remote\s+trigger/i, /\bwebhook\b/i,
-    ],
+    patterns: [/远程触发/, /webhook/i, /回调地址/, /触发信号/, /remote\s+trigger/i, /\bwebhook\b/i],
   },
   {
     id: 'repl-eval',
     tools: ['REPL'],
     patterns: [
-      /执行.*(js|javascript|node)\s*代码/i, /跑一段\s*(js|javascript|node)/i, /求值/,
-      /\brepl\b/i, /evaluate\s+(some\s+)?(js|javascript|node)/i, /run\s+.*\bnode\b\s+code/i,
+      /执行.*(js|javascript|node)\s*代码/i,
+      /跑一段\s*(js|javascript|node)/i,
+      /求值/,
+      /\brepl\b/i,
+      /evaluate\s+(some\s+)?(js|javascript|node)/i,
+      /run\s+.*\bnode\b\s+code/i,
     ],
   },
   {
     id: 'team',
     tools: ['TeamCreate', 'TeamDelete'],
     patterns: [
-      /(创建|新建|组建).*(团队|队友|协作代理)/, /并行代理/, /多代理协作/,
-      /\bteammate\b/i, /parallel\s+agent/i, /create\s+(a\s+)?team\b/i,
+      /(创建|新建|组建).*(团队|队友|协作代理)/,
+      /并行代理/,
+      /多代理协作/,
+      /\bteammate\b/i,
+      /parallel\s+agent/i,
+      /create\s+(a\s+)?team\b/i,
     ],
   },
   {
     id: 'self-update',
     tools: ['khyUpdate'],
     patterns: [
-      /(更新|升级)\s*khy/i, /khy.*(更新|升级|新版本)/i, /检查.*(khy).*版本/i,
-      /update\s+khy/i, /upgrade\s+khy/i,
+      /(更新|升级)\s*khy/i,
+      /khy.*(更新|升级|新版本)/i,
+      /检查.*(khy).*版本/i,
+      /update\s+khy/i,
+      /upgrade\s+khy/i,
     ],
   },
   {
     id: 'lsp',
     tools: ['LSP'],
     patterns: [
-      /跳转.*(定义|引用)/, /查找.*(符号|引用|定义)/, /重命名符号/,
-      /language\s+server/i, /\blsp\b/i, /go\s+to\s+definition/i, /find\s+references/i, /rename\s+symbol/i,
+      /跳转.*(定义|引用)/,
+      /查找.*(符号|引用|定义)/,
+      /重命名符号/,
+      /language\s+server/i,
+      /\blsp\b/i,
+      /go\s+to\s+definition/i,
+      /find\s+references/i,
+      /rename\s+symbol/i,
     ],
   },
   {
     id: 'monitor',
     tools: ['Monitor', 'BashOutput'],
     patterns: [
-      /监控.*(进程|命令|后台)/, /盯着.*(输出|进程)/, /持续观察/,
-      /monitor\s+(the\s+)?(process|command)/i, /watch\s+process/i,
+      /监控.*(进程|命令|后台)/,
+      /盯着.*(输出|进程)/,
+      /持续观察/,
+      /monitor\s+(the\s+)?(process|command)/i,
+      /watch\s+process/i,
     ],
   },
   {
     id: 'powershell',
     tools: ['PowerShell'],
-    patterns: [
-      /powershell/i, /pwsh/i, /ps1\s*脚本/i,
-    ],
+    patterns: [/powershell/i, /pwsh/i, /ps1\s*脚本/i],
   },
 ];
 
 /** 稳定字符串化输入文本(非字符串 → '')。 */
 function _text(v) {
-  if (typeof v === 'string') return v;
-  if (v == null) return '';
-  try { return String(v); } catch { return ''; }
+  if (typeof v === 'string') {
+    return v;
+  }
+  if (v == null) {
+    return '';
+  }
+  try {
+    return String(v);
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -188,11 +268,17 @@ function _text(v) {
  * @returns {boolean}
  */
 function _clusterMatches(cluster, text) {
-  if (!cluster || !Array.isArray(cluster.patterns)) return false;
+  if (!cluster || !Array.isArray(cluster.patterns)) {
+    return false;
+  }
   for (const re of cluster.patterns) {
     try {
-      if (re instanceof RegExp && re.test(text)) return true;
-    } catch { /* 单个正则异常不影响其余 */ }
+      if (re instanceof RegExp && re.test(text)) {
+        return true;
+      }
+    } catch {
+      /* 单个正则异常不影响其余 */
+    }
   }
   return false;
 }
@@ -208,17 +294,25 @@ function _clusterMatches(cluster, text) {
 function selectToolsToActivate(text, opts = {}) {
   try {
     const env = (opts && opts.env) || process.env;
-    if (!isActivationEnabled(env)) return [];
+    if (!isActivationEnabled(env)) {
+      return [];
+    }
     const s = _text(text);
-    if (!s) return [];
+    if (!s) {
+      return [];
+    }
     const picked = new Set();
     for (const cluster of TOOL_CLUSTERS) {
       if (_clusterMatches(cluster, s)) {
-        for (const name of cluster.tools) picked.add(name);
+        for (const name of cluster.tools) {
+          picked.add(name);
+        }
       }
     }
     return Array.from(picked).sort();
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -229,20 +323,28 @@ function selectToolsToActivate(text, opts = {}) {
 function matchClusters(text) {
   try {
     const s = _text(text);
-    if (!s) return [];
+    if (!s) {
+      return [];
+    }
     const out = [];
     for (const cluster of TOOL_CLUSTERS) {
-      if (_clusterMatches(cluster, s)) out.push({ id: cluster.id, tools: cluster.tools.slice() });
+      if (_clusterMatches(cluster, s)) {
+        out.push({ id: cluster.id, tools: cluster.tools.slice() });
+      }
     }
     return out;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /** 全部声明的延迟工具名(去重),供守卫用真实 registry 核对。 */
 function declaredClusterTools() {
   const set = new Set();
   for (const cluster of TOOL_CLUSTERS) {
-    for (const name of cluster.tools) set.add(name);
+    for (const name of cluster.tools) {
+      set.add(name);
+    }
   }
   return Array.from(set).sort();
 }

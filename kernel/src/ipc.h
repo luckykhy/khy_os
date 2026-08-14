@@ -76,4 +76,13 @@ int ipc_call(uint16_t dest_port, const struct ipc_message *request,
 /* Get the task ID that owns a given port. Returns -1 if not registered. */
 int ipc_port_owner(uint16_t port);
 
+/* Release every IPC port owned by `task_id`. Unblocks any tasks waiting on
+ * those ports. Called during process exit so that ports registered by a dying
+ * process do not permanently consume entries in the fixed-size port table
+ * (IPC_MAX_PORTS = 32), which would otherwise exhaust the table over time and
+ * prevent any new process from registering a port. Must be called from the
+ * exiting task's own context (sched_current_id() == task_id) or with
+ * interrupts disabled, because sched_unblock may be called. */
+void ipc_cleanup_task(int task_id);
+
 #endif

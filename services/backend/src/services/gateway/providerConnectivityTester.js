@@ -22,8 +22,13 @@ async function testConnectivity(input = {}, env = process.env) {
   const built = spec.buildConnectivityRequest(input, env);
   if (!built.ok) {
     return {
-      ok: false, testable: false, verdict: 'skipped', label: built.reason, reason: built.reason,
-      poolKey: (input && input.poolKey) || '', name: (input && (input.name || input.poolKey)) || '',
+      ok: false,
+      testable: false,
+      verdict: 'skipped',
+      label: built.reason,
+      reason: built.reason,
+      poolKey: (input && input.poolKey) || '',
+      name: (input && (input.name || input.poolKey)) || '',
     };
   }
   const axios = require('axios');
@@ -40,20 +45,32 @@ async function testConnectivity(input = {}, env = process.env) {
     });
     const cls = spec.classifyConnectivityResult({ status: resp.status });
     return {
-      ok: cls.verdict === 'ok', verdict: cls.verdict, label: cls.label,
-      status: resp.status, latencyMs: Date.now() - started,
-      service: built.service, poolKey: built.poolKey, name: built.name,
-      model: built.model, endpoint: built.endpoint,
+      ok: cls.verdict === 'ok',
+      verdict: cls.verdict,
+      label: cls.label,
+      status: resp.status,
+      latencyMs: Date.now() - started,
+      service: built.service,
+      poolKey: built.poolKey,
+      name: built.name,
+      model: built.model,
+      endpoint: built.endpoint,
     };
   } catch (err) {
     const status = err && err.response && err.response.status;
     const cls = spec.classifyConnectivityResult({ status, errorCode: err && err.code });
     return {
-      ok: false, verdict: cls.verdict, label: cls.label,
-      status: status || 0, latencyMs: Date.now() - started,
+      ok: false,
+      verdict: cls.verdict,
+      label: cls.label,
+      status: status || 0,
+      latencyMs: Date.now() - started,
       error: err && err.message ? err.message : String(err),
-      service: built.service, poolKey: built.poolKey, name: built.name,
-      model: built.model, endpoint: built.endpoint,
+      service: built.service,
+      poolKey: built.poolKey,
+      name: built.name,
+      model: built.model,
+      endpoint: built.endpoint,
     };
   }
 }
@@ -71,11 +88,19 @@ async function testAll(input = {}, env = process.env) {
   for (const t of targets) {
     const key = String(keys[t.poolKey] || (t.envKey && env[t.envKey]) || '').trim();
     if (!key) {
-      results.push({ verdict: 'skipped', label: '未提供 key(--key 或环境变量)', reason: '未提供 key', name: t.name, poolKey: t.poolKey });
+      results.push({
+        verdict: 'skipped',
+        label: '未提供 key(--key 或环境变量)',
+        reason: '未提供 key',
+        name: t.name,
+        poolKey: t.poolKey,
+      });
       continue;
     }
     // eslint-disable-next-line no-await-in-loop
-    results.push(await testConnectivity({ poolKey: t.poolKey, key, timeoutMs: input && input.timeoutMs }, env));
+    results.push(
+      await testConnectivity({ poolKey: t.poolKey, key, timeoutMs: input && input.timeoutMs }, env)
+    );
   }
   return results;
 }

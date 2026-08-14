@@ -25,10 +25,8 @@
  */
 'use strict';
 
-const {
-  findOperation,
-  operationParamSchema,
-} = require('@khy/shared/plugins/openapiTools');
+const { findOperation, operationParamSchema } = require('@khy/shared/plugins/openapiTools');
+
 const urlSafety = require('../urlSafety');
 
 const REQUEST_TIMEOUT_MS = Number(process.env.KHY_PLUGIN_REQUEST_TIMEOUT_MS || 30000);
@@ -50,10 +48,14 @@ function _err(status, message) {
 function _baseUrl(openapi, manifest) {
   const servers = Array.isArray(openapi && openapi.servers) ? openapi.servers : [];
   const first = servers.find((s) => s && typeof s.url === 'string' && /^https?:\/\//i.test(s.url));
-  if (first) return first.url.replace(/\/+$/, '');
+  if (first) {
+    return first.url.replace(/\/+$/, '');
+  }
   // Fallback: a manifest-declared base (some Coze exports carry it on api).
   const apiUrl = manifest && manifest.api && manifest.api.base_url;
-  if (typeof apiUrl === 'string' && /^https?:\/\//i.test(apiUrl)) return apiUrl.replace(/\/+$/, '');
+  if (typeof apiUrl === 'string' && /^https?:\/\//i.test(apiUrl)) {
+    return apiUrl.replace(/\/+$/, '');
+  }
   throw _err(400, 'Plugin OpenAPI has no absolute server URL');
 }
 
@@ -61,7 +63,9 @@ function _baseUrl(openapi, manifest) {
 
 function _bindRequest(openapi, operationId, args) {
   const op = findOperation(openapi, operationId);
-  if (!op) throw _err(404, `Unknown operation "${operationId}"`);
+  if (!op) {
+    throw _err(404, `Unknown operation "${operationId}"`);
+  }
   const { params } = operationParamSchema(openapi, operationId);
   const a = args && typeof args === 'object' ? args : {};
 
@@ -80,7 +84,7 @@ function _bindRequest(openapi, operationId, args) {
     if (p.in === 'path') {
       pathTemplate = pathTemplate.replace(
         new RegExp(`\\{${_escapeRe(p.name)}\\}`, 'g'),
-        encodeURIComponent(String(val)),
+        encodeURIComponent(String(val))
       );
     } else if (p.in === 'query') {
       query[p.name] = val;
@@ -99,8 +103,11 @@ const _escapeRe = require('../../utils/escapeRegExp');
 
 function _appendQuery(urlObj, query) {
   for (const [k, v] of Object.entries(query || {})) {
-    if (Array.isArray(v)) v.forEach((item) => urlObj.searchParams.append(k, String(item)));
-    else urlObj.searchParams.append(k, String(v));
+    if (Array.isArray(v)) {
+      v.forEach((item) => urlObj.searchParams.append(k, String(item)));
+    } else {
+      urlObj.searchParams.append(k, String(v));
+    }
   }
 }
 
@@ -111,18 +118,27 @@ async function _applyAuth(authConfig, ctx) {
   const auth = authConfig && typeof authConfig === 'object' ? authConfig : { type: 'none' };
   const type = String(auth.type || 'none').toLowerCase();
 
-  if (type === 'none') return;
+  if (type === 'none') {
+    return;
+  }
 
   if (type === 'apikey') {
-    if (!auth.value) throw _err(400, 'apiKey auth is missing "value"');
+    if (!auth.value) {
+      throw _err(400, 'apiKey auth is missing "value"');
+    }
     const name = auth.name || 'Authorization';
-    if ((auth.in || 'header') === 'query') ctx.query[name] = auth.value;
-    else ctx.headers[name] = auth.value;
+    if ((auth.in || 'header') === 'query') {
+      ctx.query[name] = auth.value;
+    } else {
+      ctx.headers[name] = auth.value;
+    }
     return;
   }
 
   if (type === 'bearer') {
-    if (!auth.token) throw _err(400, 'bearer auth is missing "token"');
+    if (!auth.token) {
+      throw _err(400, 'bearer auth is missing "token"');
+    }
     ctx.headers.Authorization = `Bearer ${auth.token}`;
     return;
   }
@@ -146,7 +162,9 @@ async function _resolveOAuthToken(auth, ctx) {
   // authorization_code: rely on a pre-obtained access token (the redirect dance
   // happens in the REST/UI layer). Refresh via refresh_token when expired.
   if (grant === 'authorization_code') {
-    if (auth.accessToken && !_expired(auth.expiresAt, ctx.now)) return auth.accessToken;
+    if (auth.accessToken && !_expired(auth.expiresAt, ctx.now)) {
+      return auth.accessToken;
+    }
     if (auth.refreshToken) {
       const fresh = await _fetchToken(auth, ctx, {
         grant_type: 'refresh_token',
@@ -154,37 +172,49 @@ async function _resolveOAuthToken(auth, ctx) {
       });
       return fresh.access_token;
     }
-    if (auth.accessToken) return auth.accessToken; // no expiry info; use as-is
+    if (auth.accessToken) {
+      return auth.accessToken;
+    } // no expiry info; use as-is
     throw _err(401, 'OAuth authorization_code plugin has no access token; (re)authorize it first');
   }
 
   // client_credentials: fully server-side; cache by endpoint+client+scope.
   const key = _oauthCacheKey(auth);
   const cached = ctx.tokenCache.get(key);
-  if (cached && !_expired(cached.expiresAt, ctx.now)) return cached.accessToken;
+  if (cached && !_expired(cached.expiresAt, ctx.now)) {
+    return cached.accessToken;
+  }
 
   const tok = await _fetchToken(auth, ctx, {
     grant_type: 'client_credentials',
     ...(auth.scope ? { scope: auth.scope } : {}),
   });
-  const expiresAt = tok.expires_in ? ctx.now() + (Number(tok.expires_in) * 1000) : null;
+  const expiresAt = tok.expires_in ? ctx.now() + Number(tok.expires_in) * 1000 : null;
   ctx.tokenCache.set(key, { accessToken: tok.access_token, expiresAt });
   return tok.access_token;
 }
 
 function _expired(expiresAt, now) {
-  if (!expiresAt) return false;
+  if (!expiresAt) {
+    return false;
+  }
   // 30s safety margin.
-  return now() >= (Number(expiresAt) - 30000);
+  return now() >= Number(expiresAt) - 30000;
 }
 
 async function _fetchToken(auth, ctx, form) {
-  if (!auth.tokenUrl) throw _err(400, 'OAuth config is missing "tokenUrl"');
+  if (!auth.tokenUrl) {
+    throw _err(400, 'OAuth config is missing "tokenUrl"');
+  }
   await urlSafety.assertPublicHttpUrlResolved(new URL(auth.tokenUrl), 'OAuth token URL');
 
   const body = new URLSearchParams(form);
-  if (auth.clientId) body.set('client_id', auth.clientId);
-  if (auth.clientSecret) body.set('client_secret', auth.clientSecret);
+  if (auth.clientId) {
+    body.set('client_id', auth.clientId);
+  }
+  if (auth.clientSecret) {
+    body.set('client_secret', auth.clientSecret);
+  }
 
   const res = await ctx.http({
     method: 'POST',
@@ -205,7 +235,11 @@ async function _fetchToken(auth, ctx, form) {
 }
 
 function _tryJson(s) {
-  try { return JSON.parse(s); } catch { return null; }
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
 }
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -226,8 +260,12 @@ function _tryJson(s) {
  */
 async function invoke(opts = {}) {
   const { openapi, manifest, operationId, args, authConfig } = opts;
-  if (!openapi || typeof openapi !== 'object') throw _err(400, 'invoke requires an openapi document');
-  if (!operationId) throw _err(400, 'invoke requires an operationId');
+  if (!openapi || typeof openapi !== 'object') {
+    throw _err(400, 'invoke requires an openapi document');
+  }
+  if (!operationId) {
+    throw _err(400, 'invoke requires an operationId');
+  }
 
   const http = opts._http || require('axios');
   const now = opts._now || Date.now;
@@ -260,11 +298,14 @@ async function invoke(opts = {}) {
     validateStatus: () => true,
   });
 
-  const contentType = (res.headers && (res.headers['content-type'] || res.headers['Content-Type'])) || '';
+  const contentType =
+    (res.headers && (res.headers['content-type'] || res.headers['Content-Type'])) || '';
   let data = res.data;
   if (typeof data === 'string' && /json/i.test(contentType)) {
     const parsed = _tryJson(data);
-    if (parsed !== null) data = parsed;
+    if (parsed !== null) {
+      data = parsed;
+    }
   }
 
   return {

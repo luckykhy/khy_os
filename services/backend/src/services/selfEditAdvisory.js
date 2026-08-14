@@ -22,7 +22,9 @@
 // ── 门控(默认开,仅显式 0/false/off/no 关)──────────────────────────────
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function _flagOn(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -49,8 +51,12 @@ const SOURCE_PAYLOADS = [
 /** 归一仓库相对路径:反斜杠 → 正斜杠,去前导 ./ 与 /。永不抛。 */
 function _normRel(repoRel) {
   let s = String(repoRel == null ? '' : repoRel).replace(/\\/g, '/');
-  while (s.startsWith('./')) s = s.slice(2);
-  while (s.startsWith('/')) s = s.slice(1);
+  while (s.startsWith('./')) {
+    s = s.slice(2);
+  }
+  while (s.startsWith('/')) {
+    s = s.slice(1);
+  }
   return s;
 }
 
@@ -67,13 +73,19 @@ function _under(p, root) {
 function isMirroredSourcePath(repoRel) {
   try {
     const rel = _normRel(repoRel);
-    if (!rel) return { mirrored: false };
+    if (!rel) {
+      return { mirrored: false };
+    }
     // bundle 树内的文件不是「源」(避免监视器自噬 / 把镜像当源)。
     for (const root of MIRROR_ROOTS) {
-      if (_under(rel, root)) return { mirrored: false };
+      if (_under(rel, root)) {
+        return { mirrored: false };
+      }
     }
     // 测试文件不进 bundle 载荷。
-    if (/\.test\.[cm]?jsx?$/.test(rel)) return { mirrored: false };
+    if (/\.test\.[cm]?jsx?$/.test(rel)) {
+      return { mirrored: false };
+    }
     for (const payload of SOURCE_PAYLOADS) {
       if (_under(rel, payload.src)) {
         const payloadRel = rel === payload.src ? '' : rel.slice(payload.src.length + 1);
@@ -94,7 +106,9 @@ function isMirroredSourcePath(repoRel) {
 function computeMirrorPaths(repoRel) {
   try {
     const info = isMirroredSourcePath(repoRel);
-    if (!info.mirrored) return [];
+    if (!info.mirrored) {
+      return [];
+    }
     const tail = info.payloadRel ? `${info.dst}/${info.payloadRel}` : info.dst;
     return MIRROR_ROOTS.map((root) => `${root}/${tail}`);
   } catch {
@@ -113,7 +127,9 @@ const _CONTRACT_TERMS_RE = /零\s*IO|确定性|绝不抛|单一真源|env\s*门�
 function _firstBlockComment(source) {
   const text = String(source || '');
   const start = text.indexOf('/*');
-  if (start < 0) return '';
+  if (start < 0) {
+    return '';
+  }
   const end = text.indexOf('*/', start + 2);
   return end < 0 ? text.slice(start) : text.slice(start, end + 2);
 }
@@ -126,7 +142,9 @@ function _firstBlockComment(source) {
 function detectPureLeaf(source) {
   try {
     const header = _firstBlockComment(source);
-    if (!header) return false;
+    if (!header) {
+      return false;
+    }
     return _LEAF_MARKER_RE.test(header) && _CONTRACT_TERMS_RE.test(header);
   } catch {
     return false;
@@ -137,18 +155,26 @@ function detectPureLeaf(source) {
 function _guardLineHuman(g) {
   const mark = g && g.ok ? '✓' : '✗';
   const name = (g && g.name) || 'guard';
-  if (g && g.ok) return `${mark} ${name}`;
+  if (g && g.ok) {
+    return `${mark} ${name}`;
+  }
   const errs = Number(g && g.errorCount) || 0;
   const warns = Number(g && g.warnCount) || 0;
   const parts = [];
-  if (errs > 0) parts.push(`${errs} error`);
-  if (warns > 0) parts.push(`${warns} warn`);
+  if (errs > 0) {
+    parts.push(`${errs} error`);
+  }
+  if (warns > 0) {
+    parts.push(`${warns} warn`);
+  }
   return `${mark} ${name}${parts.length ? `(${parts.join('/')})` : ''}`;
 }
 
 function _guardLineAi(g) {
   const name = (g && g.name) || 'guard';
-  if (g && g.ok) return `   - ${name}: 通过`;
+  if (g && g.ok) {
+    return `   - ${name}: 通过`;
+  }
   const errs = Number(g && g.errorCount) || 0;
   const warns = Number(g && g.warnCount) || 0;
   const sample = g && g.sample ? ` — ${String(g.sample).slice(0, 160)}` : '';
@@ -171,10 +197,14 @@ function _guardLineAi(g) {
 function buildSelfEditAdvisory(p = {}, env = process.env) {
   try {
     const _env = (p && p.env) || env;
-    if (!selfEditAdvisoryEnabled(_env)) return null;
+    if (!selfEditAdvisoryEnabled(_env)) {
+      return null;
+    }
     const rel = _normRel(p && p.repoRel);
     const mirrors = computeMirrorPaths(rel);
-    if (mirrors.length === 0) return null; // 非 khy 镜像源 → 不反馈
+    if (mirrors.length === 0) {
+      return null;
+    } // 非 khy 镜像源 → 不反馈
 
     const mirrorState = (p && p.mirrorState) || {};
     const missing = Array.isArray(mirrorState.missing) ? mirrorState.missing : [];
@@ -204,22 +234,34 @@ function buildSelfEditAdvisory(p = {}, env = process.env) {
     // ── AI 面(下一轮注记,可直接照做)────────────────────────────────
     const aLines = [`[khy 自维护提示] 你刚改动了 khy 自身源码 ${rel}。收尾前请完成:`];
     aLines.push('1) 三副本镜像(逐字节一致):');
-    for (const m of mirrors) aLines.push(`   - ${m}`);
+    for (const m of mirrors) {
+      aLines.push(`   - ${m}`);
+    }
     if (outOfSync) {
-      if (missing.length) aLines.push(`   当前缺失:${missing.join(' , ')}`);
-      if (drift.length) aLines.push(`   当前漂移(内容不一致):${drift.join(' , ')}`);
+      if (missing.length) {
+        aLines.push(`   当前缺失:${missing.join(' , ')}`);
+      }
+      if (drift.length) {
+        aLines.push(`   当前漂移(内容不一致):${drift.join(' , ')}`);
+      }
     } else {
       aLines.push('   当前:已同步 ✓');
     }
     if (isLeaf) {
-      aLines.push('2) 纯叶子契约(本文件自声明为纯叶子):保持零 IO、确定性、永不抛、KHY_* 门控默认开、关时逐字节 legacy。');
+      aLines.push(
+        '2) 纯叶子契约(本文件自声明为纯叶子):保持零 IO、确定性、永不抛、KHY_* 门控默认开、关时逐字节 legacy。'
+      );
     }
     if (guardsAvailable && guardResults.length > 0) {
       aLines.push('3) 守卫(已当场运行):');
-      for (const g of guardResults) aLines.push(_guardLineAi(g));
+      for (const g of guardResults) {
+        aLines.push(_guardLineAi(g));
+      }
       aLines.push(`   未自动运行的请手动:node scripts/check-agent-rules.js ${rel}`);
     } else {
-      aLines.push(`3) 守卫:当前为安装态(无 scripts/),请在 dev checkout 手动运行 node scripts/check-leaf-contract.js / check-agent-rules.js / check-model-hardcoding.js ${rel}`);
+      aLines.push(
+        `3) 守卫:当前为安装态(无 scripts/),请在 dev checkout 手动运行 node scripts/check-leaf-contract.js / check-agent-rules.js / check-model-hardcoding.js ${rel}`
+      );
     }
     const aiNote = aLines.join('\n');
 

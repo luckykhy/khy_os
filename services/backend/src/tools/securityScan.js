@@ -18,17 +18,22 @@
  * State transparency: meta reports scanner_engine, rules_applied, files_scanned.
  */
 
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { defineTool } = require('./_baseTool');
+const _walkBudget = require('./_walkBudget');
 const { guardedReadFileSync } = require('./guardedReadFileSync');
+// 墙钟预算:同步递归 walk 无时间上限时会阻塞事件循环(超大树 / junction 回环 / 慢盘)。
 
 // ─── Extended ruleset (includes codeScanner SCAN_RULES + additions) ──────────
 
 // Lazy-require codeScanner rules to avoid pulling the module at definition time.
 let _SCAN_RULES = null;
 function _getRules() {
-  if (_SCAN_RULES) return _SCAN_RULES;
+  if (_SCAN_RULES) {
+    return _SCAN_RULES;
+  }
   try {
     _SCAN_RULES = require('../services/security/codeScanner').SCAN_RULES;
   } catch {
@@ -39,7 +44,8 @@ function _getRules() {
     // Path traversal
     {
       id: 'PATH_TRAVERSAL',
-      pattern: /\.\.\/\.\.\/|\.\.\\\.\.\\|path\.join\s*\(\s*.*\.\.\/|path\.resolve\s*\(\s*.*\.\.\/|require\s*\(\s*.*\.\.\/\.\.\//gi,
+      pattern:
+        /\.\.\/\.\.\/|\.\.\\\.\.\\|path\.join\s*\(\s*.*\.\.\/|path\.resolve\s*\(\s*.*\.\.\/|require\s*\(\s*.*\.\.\/\.\.\//gi,
       severity: 'high',
       category: 'path_traversal',
       description: 'Suspicious path traversal pattern (directory escape)',
@@ -101,7 +107,8 @@ function _getRules() {
     // Hardcoded secrets (broader)
     {
       id: 'HARDCODED_SECRET_BROAD',
-      pattern: /(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|auth[_-]?token)\s*(?:=|:)\s*['"]([^'"]{8,})['"]/gi,
+      pattern:
+        /(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|auth[_-]?token)\s*(?:=|:)\s*['"]([^'"]{8,})['"]/gi,
       severity: 'medium',
       category: 'secret_exfil',
       description: 'Possible hardcoded credential',
@@ -117,7 +124,8 @@ function _getRules() {
     // Unsafe deserialization
     {
       id: 'UNSAFE_DESERIALIZE',
-      pattern: /\b(?:yaml\.load\s*\(|pickle\.load|eval\s*\(\s*.*serializ|JSON\.parse\s*\(\s*.*untrusted)/gi,
+      pattern:
+        /\b(?:yaml\.load\s*\(|pickle\.load|eval\s*\(\s*.*serializ|JSON\.parse\s*\(\s*.*untrusted)/gi,
       severity: 'high',
       category: 'unsafe_behavior',
       description: 'Potentially unsafe deserialization',
@@ -134,19 +142,47 @@ function _getRules() {
 // ─── File discovery ─────────────────────────────────────────────────────────
 
 const DEFAULT_EXCLUDE = new Set([
-  'node_modules', '.git', 'dist', 'build', '.cache', 'coverage',
-  '__pycache__', 'vendor', 'venv', '.venv', 'target', '.next',
-  '.nuxt', 'bower_components', '.tox', '.mypy_cache', '.pytest_cache',
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  '.cache',
+  'coverage',
+  '__pycache__',
+  'vendor',
+  'venv',
+  '.venv',
+  'target',
+  '.next',
+  '.nuxt',
+  'bower_components',
+  '.tox',
+  '.mypy_cache',
+  '.pytest_cache',
 ]);
 
 const SOURCE_EXTS = new Set([
-  '.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.mts', '.cts',
-  '.py', '.pyi', '.pyx',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.jsx',
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.cts',
+  '.py',
+  '.pyi',
+  '.pyx',
   '.rs',
   '.go',
-  '.java', '.kt', '.scala',
-  '.sh', '.bash', '.zsh',
-  '.yaml', '.yml',
+  '.java',
+  '.kt',
+  '.scala',
+  '.sh',
+  '.bash',
+  '.zsh',
+  '.yaml',
+  '.yml',
   '.toml',
   '.php',
   '.rb',
@@ -154,47 +190,78 @@ const SOURCE_EXTS = new Set([
 ]);
 
 const SOURCE_NAMES = new Set([
-  'Dockerfile', '.env.example', '.env.sample', 'Makefile', 'CMakeLists.txt',
+  'Dockerfile',
+  '.env.example',
+  '.env.sample',
+  'Makefile',
+  'CMakeLists.txt',
 ]);
 
 function _isScannable(filePath) {
   const ext = path.extname(filePath).toLowerCase();
-  if (SOURCE_EXTS.has(ext)) return true;
+  if (SOURCE_EXTS.has(ext)) {
+    return true;
+  }
   const base = path.basename(filePath);
-  if (SOURCE_NAMES.has(base)) return true;
+  if (SOURCE_NAMES.has(base)) {
+    return true;
+  }
   // Match Dockerfile variants
-  if (base.startsWith('Dockerfile') || base.startsWith('docker-compose')) return true;
+  if (base.startsWith('Dockerfile') || base.startsWith('docker-compose')) {
+    return true;
+  }
   return false;
 }
 
 function _readExcludeDirs() {
   const envDirs = process.env.KHY_SECURITY_SCAN_EXCLUDE || '';
-  if (!envDirs) return DEFAULT_EXCLUDE;
+  if (!envDirs) {
+    return DEFAULT_EXCLUDE;
+  }
   const custom = new Set(DEFAULT_EXCLUDE);
   for (const d of envDirs.split(',')) {
     const trimmed = d.trim();
-    if (trimmed) custom.add(trimmed);
+    if (trimmed) {
+      custom.add(trimmed);
+    }
   }
   return custom;
 }
 
 /**
  * Walk a project directory and collect scannable files.
+ * 墙钟预算:同步递归 walk 无时间上限时,超大树 / Windows junction 回环 / 慢盘会把事件循环
+ * 阻塞到分钟级(与 glob/grep 同根因)。复用 _walkBudget:预算耗尽提前收尾,不阻塞事件循环。
  * @param {string} root
  * @param {number} maxFiles
+ * @param {object} [deadline] - { exceeded():boolean } 墙钟预算判定器(null=无预算,今日行为)
  * @returns {string[]}
  */
-function _collectFiles(root, maxFiles) {
+function _collectFiles(root, maxFiles, deadline) {
   const excludeDirs = _readExcludeDirs();
   const files = [];
 
   function walk(dir) {
-    if (files.length >= maxFiles) return;
+    if (files.length >= maxFiles) {
+      return;
+    }
+    if (deadline && deadline.exceeded()) {
+      return;
+    }
     let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
 
     for (const entry of entries) {
-      if (files.length >= maxFiles) break;
+      if (files.length >= maxFiles) {
+        break;
+      }
+      if (deadline && deadline.exceeded()) {
+        break;
+      }
       const fullPath = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
@@ -232,12 +299,14 @@ async function _runSemgrep(root, { spawnWithIdleTimeout, getShellConfiguration }
     output = '';
   }
 
-  if (!output.trim()) return [];
+  if (!output.trim()) {
+    return [];
+  }
 
   try {
     const parsed = JSON.parse(output);
     const findings = [];
-    for (const r of (parsed.results || [])) {
+    for (const r of parsed.results || []) {
       findings.push({
         file: r.path || '',
         line: (r.start && r.start.line) || 0,
@@ -260,10 +329,10 @@ async function _runSemgrep(root, { spawnWithIdleTimeout, getShellConfiguration }
 module.exports = defineTool({
   name: 'security_scan',
   description:
-    'Scan project source files for security vulnerabilities. Applies built-in regex rules '
-    + '(shell injection, secret exfiltration, SSTI, SQL injection, prototype pollution, '
-    + 'path traversal, weak crypto, command injection) and optionally semgrep. '
-    + 'Use this before deploying or reviewing untrusted code.',
+    'Scan project source files for security vulnerabilities. Applies built-in regex rules ' +
+    '(shell injection, secret exfiltration, SSTI, SQL injection, prototype pollution, ' +
+    'path traversal, weak crypto, command injection) and optionally semgrep. ' +
+    'Use this before deploying or reviewing untrusted code.',
   category: 'analysis',
   risk: 'safe',
   isReadOnly: true,
@@ -303,11 +372,12 @@ module.exports = defineTool({
   },
 
   async execute(params, _context) {
-    const cwd = (params && params.cwd) ? path.resolve(String(params.cwd)) : process.cwd();
+    const cwd = params && params.cwd ? path.resolve(String(params.cwd)) : process.cwd();
     const minSeverity = (params && params.minSeverity) || 'low';
-    const maxFiles = (params && Number.isFinite(params.maxFiles))
-      ? Math.min(5000, Math.max(10, Math.floor(params.maxFiles)))
-      : 1000;
+    const maxFiles =
+      params && Number.isFinite(params.maxFiles)
+        ? Math.min(5000, Math.max(10, Math.floor(params.maxFiles)))
+        : 1000;
     const wantSemgrep = !!(params && params.semgrep);
 
     if (!fs.existsSync(cwd) || !fs.statSync(cwd).isDirectory()) {
@@ -322,15 +392,22 @@ module.exports = defineTool({
     const rules = _getRules();
     const { SEVERITY_ORDER: severityOrder } = require('../services/security/codeScanner');
     const minIdx = severityOrder.indexOf(minSeverity);
-    const relevantRules = rules.filter(r => severityOrder.indexOf(r.severity) >= minIdx);
+    const relevantRules = rules.filter((r) => severityOrder.indexOf(r.severity) >= minIdx);
 
-    const files = _collectFiles(cwd, maxFiles);
+    const deadline = _walkBudget.createWalkDeadline(process.env);
+    const files = _collectFiles(cwd, maxFiles, deadline);
     const findings = [];
 
     for (const filePath of files) {
       let content;
-      try { content = guardedReadFileSync(filePath, 'utf-8'); } catch { continue; }
-      if (content.includes('\0')) continue; // skip binary
+      try {
+        content = guardedReadFileSync(filePath, 'utf-8');
+      } catch {
+        continue;
+      }
+      if (content.includes('\0')) {
+        continue;
+      } // skip binary
 
       for (const rule of relevantRules) {
         rule.pattern.lastIndex = 0;
@@ -368,10 +445,14 @@ module.exports = defineTool({
     const allFindings = [...findings, ...semgrepFindings];
 
     // ── Group and summarize ──────────────────────────────────────────────────
+    const timedOut = !!(deadline && deadline.exceeded());
+    const budgetNote = timedOut
+      ? ` (scan hit its wall-clock budget and stopped early — some files were not scanned)`
+      : '';
     if (allFindings.length === 0) {
       return {
         success: true,
-        content: `Security scan complete — no issues found in ${files.length} files${wantSemgrep ? ' (regex + semgrep)' : ''}.`,
+        content: `Security scan complete — no issues found in ${files.length} files${wantSemgrep ? ' (regex + semgrep)' : ''}.${budgetNote}`,
         meta: {
           scannerEngine: wantSemgrep && semgrepAvailable ? 'regex+semgrep' : 'regex',
           semgrepAvailable,
@@ -379,6 +460,7 @@ module.exports = defineTool({
           rulesApplied: relevantRules.length,
           totalFindings: 0,
           bySeverity: {},
+          timedOut,
         },
       };
     }
@@ -392,11 +474,14 @@ module.exports = defineTool({
     // Build readable content
     const topFindings = allFindings.slice(0, 30);
     const lines = [
-      `Security scan: ${allFindings.length} finding(s) in ${files.length} files${wantSemgrep && semgrepAvailable ? ' (regex + semgrep)' : ''}.`,
-      `By severity: ${Object.entries(bySeverity).map(([s, c]) => `${s}=${c}`).join(', ')}.`,
+      `Security scan: ${allFindings.length} finding(s) in ${files.length} files${wantSemgrep && semgrepAvailable ? ' (regex + semgrep)' : ''}.${budgetNote}`,
+      `By severity: ${Object.entries(bySeverity)
+        .map(([s, c]) => `${s}=${c}`)
+        .join(', ')}.`,
       '',
-      ...topFindings.map(f =>
-        `  [${f.severity.toUpperCase()}] ${f.file}:${f.line} — ${f.description}\n    → ${f.match}`
+      ...topFindings.map(
+        (f) =>
+          `  [${f.severity.toUpperCase()}] ${f.file}:${f.line} — ${f.description}\n    → ${f.match}`
       ),
     ];
 
@@ -414,6 +499,7 @@ module.exports = defineTool({
         rulesApplied: relevantRules.length,
         totalFindings: allFindings.length,
         bySeverity,
+        timedOut,
       },
     };
   },

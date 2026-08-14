@@ -11,9 +11,9 @@
  * 项目分桶），不另立持久化机制。落盘走 tmp+rename 原子写，绝不产生半截文件。
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 function _dir() {
   try {
@@ -71,7 +71,9 @@ function offload(taskId, key, data) {
 function load(pointerOrPath) {
   try {
     const file = _resolvePath(pointerOrPath);
-    if (!file || !fs.existsSync(file)) return null;
+    if (!file || !fs.existsSync(file)) {
+      return null;
+    }
     const parsed = JSON.parse(fs.readFileSync(file, 'utf-8'));
     return parsed && 'data' in parsed ? parsed.data : parsed;
   } catch {
@@ -80,7 +82,9 @@ function load(pointerOrPath) {
 }
 
 function _resolvePath(pointerOrPath) {
-  if (!pointerOrPath) return '';
+  if (!pointerOrPath) {
+    return '';
+  }
   const s = String(pointerOrPath);
   const m = s.match(/ref="([^"]+)"/);
   return m ? m[1] : s;
@@ -90,7 +94,11 @@ const _safe = require('../../utils/slugifyToken'); // 文件名安全化单一�
 
 // new Date()/Date.now() 在工作流脚本里被禁；此处是普通服务模块，可用，但保持容错。
 function _stamp() {
-  try { return Date.now(); } catch { return 0; }
+  try {
+    return Date.now();
+  } catch {
+    return 0;
+  }
 }
 
 module.exports = { offload, load, _resolvePath };

@@ -28,6 +28,7 @@
  * In the scope stage: ↑/↓ move, 1-3 quick-select, Enter confirms, Esc goes back.
  */
 const React = require('react');
+
 const inkRuntime = require('../inkRuntime');
 
 const MARKER = '❯';
@@ -46,22 +47,32 @@ function RewindPicker({ targets = [], onResolve, title }) {
 
   // Nothing to rewind to → resolve null so the caller is not left hanging.
   React.useEffect(() => {
-    if (list.length === 0) onResolve(null);
+    if (list.length === 0) {
+      onResolve(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list.length]);
 
   const moveCursor = (dir) => {
-    if (list.length === 0) return;
+    if (list.length === 0) {
+      return;
+    }
     setCursor((c) => (c + dir + list.length) % list.length);
   };
 
   const choose = (idx) => {
     const t = list[idx];
-    if (!t) return;
+    if (!t) {
+      return;
+    }
     // If this target has a code checkpoint and the scope feature is on, enter the
     // scope stage; otherwise resolve immediately (single-stage, today's behavior).
     let choices = null;
-    try { choices = require('../../rewindScope').buildRewindScopeChoices(t, process.env); } catch { choices = null; }
+    try {
+      choices = require('../../rewindScope').buildRewindScopeChoices(t, process.env);
+    } catch {
+      choices = null;
+    }
     if (choices && choices.length) {
       setScopeStage({ target: t, choices });
       setScopeCursor(0);
@@ -74,34 +85,67 @@ function RewindPicker({ targets = [], onResolve, title }) {
     // ── Scope stage ────────────────────────────────────────────────
     if (scopeStage) {
       const choices = scopeStage.choices;
-      if (key.escape) { setScopeStage(null); return; } // back to target list
-      if (key.upArrow) { setScopeCursor((c) => (c - 1 + choices.length) % choices.length); return; }
-      if (key.downArrow || key.tab) { setScopeCursor((c) => (c + 1) % choices.length); return; }
+      if (key.escape) {
+        setScopeStage(null);
+        return;
+      } // back to target list
+      if (key.upArrow) {
+        setScopeCursor((c) => (c - 1 + choices.length) % choices.length);
+        return;
+      }
+      if (key.downArrow || key.tab) {
+        setScopeCursor((c) => (c + 1) % choices.length);
+        return;
+      }
       const scopeCh = require('../../fullWidthInput').foldDigits(ch, process.env);
       if (scopeCh && scopeCh >= '1' && scopeCh <= String(choices.length)) {
         const idx = parseInt(scopeCh, 10) - 1;
-        if (idx >= 0 && idx < choices.length) { onResolve(scopeStage.target, choices[idx].value); }
+        if (idx >= 0 && idx < choices.length) {
+          onResolve(scopeStage.target, choices[idx].value);
+        }
         return;
       }
-      if (key.return) { onResolve(scopeStage.target, choices[scopeCursor].value); return; }
+      if (key.return) {
+        onResolve(scopeStage.target, choices[scopeCursor].value);
+        return;
+      }
       return;
     }
     // ── Target stage ───────────────────────────────────────────────
-    if (list.length === 0) return;
-    if (key.escape) { onResolve(null); return; }
-    if (key.upArrow) { moveCursor(-1); return; }
-    if (key.downArrow || key.tab) { moveCursor(1); return; }
+    if (list.length === 0) {
+      return;
+    }
+    if (key.escape) {
+      onResolve(null);
+      return;
+    }
+    if (key.upArrow) {
+      moveCursor(-1);
+      return;
+    }
+    if (key.downArrow || key.tab) {
+      moveCursor(1);
+      return;
+    }
     // 全角(CJK IME)数字折半角后判定(单一真源 cli/fullWidthInput.js,门控关→原样字节回退)。
     const navCh = require('../../fullWidthInput').foldDigits(ch, process.env);
     if (navCh && navCh >= '1' && navCh <= '9') {
       const idx = parseInt(navCh, 10) - 1;
-      if (idx >= 0 && idx < list.length) { setCursor(idx); choose(idx); }
+      if (idx >= 0 && idx < list.length) {
+        setCursor(idx);
+        choose(idx);
+      }
       return;
     }
-    if (key.return) { choose(cursor); return; }
+    if (key.return) {
+      choose(cursor);
+      return;
+    }
   });
 
-  if (list.length === 0) return null;
+  if (list.length === 0) {
+    return null;
+  }
 
   // ── Scope stage render ───────────────────────────────────────────
   if (scopeStage) {
@@ -109,10 +153,15 @@ function RewindPicker({ targets = [], onResolve, title }) {
     const scopeRows = choices.map((c, i) => {
       const active = i === scopeCursor;
       const marker = active ? MARKER : ' ';
-      return h(Text, { key: `s-${i}`, color: active ? 'cyan' : undefined, bold: active },
-        `   ${marker} ${i + 1}. ${c.label}  —  ${c.hint}`);
+      return h(
+        Text,
+        { key: `s-${i}`, color: active ? 'cyan' : undefined, bold: active },
+        `   ${marker} ${i + 1}. ${c.label}  —  ${c.hint}`
+      );
     });
-    return h(Box, { flexDirection: 'column', borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
+    return h(
+      Box,
+      { flexDirection: 'column', borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
       h(Text, { color: 'cyan', bold: true }, '? 恢复范围（↑/↓ 选择，回车确认）'),
       h(Box, { flexDirection: 'column' }, scopeRows),
       h(Text, { dimColor: true }, '  Enter 确认 · ↑/↓ 导航 · 数字键快选 · Esc 返回')
@@ -122,7 +171,9 @@ function RewindPicker({ targets = [], onResolve, title }) {
   // Compute the visible window so the cursor stays in view.
   const pageSize = Math.min(PAGE_SIZE, list.length);
   let start = Math.max(0, Math.min(cursor - Math.floor(pageSize / 2), list.length - pageSize));
-  if (start < 0) start = 0;
+  if (start < 0) {
+    start = 0;
+  }
   const end = Math.min(list.length, start + pageSize);
 
   const rows = [];
@@ -134,16 +185,22 @@ function RewindPicker({ targets = [], onResolve, title }) {
     const codeTag = t && t.checkpointId ? ' ⮌代码' : '';
     const preview = (t && t.preview) || '(空消息)';
     rows.push(
-      h(Text, { key: `r-${i}`, color: active ? 'cyan' : undefined, bold: active },
-        `   ${marker} ${numberLabel} ${preview}${codeTag}`)
+      h(
+        Text,
+        { key: `r-${i}`, color: active ? 'cyan' : undefined, bold: active },
+        `   ${marker} ${numberLabel} ${preview}${codeTag}`
+      )
     );
   }
 
-  const scrollHint = list.length > pageSize
-    ? `  （${cursor + 1}/${list.length}${start > 0 ? ' · ↑更多' : ''}${end < list.length ? ' · ↓更多' : ''}）`
-    : '';
+  const scrollHint =
+    list.length > pageSize
+      ? `  （${cursor + 1}/${list.length}${start > 0 ? ' · ↑更多' : ''}${end < list.length ? ' · ↓更多' : ''}）`
+      : '';
 
-  return h(Box, { flexDirection: 'column', borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
+  return h(
+    Box,
+    { flexDirection: 'column', borderStyle: 'round', borderColor: 'cyan', paddingX: 1 },
     h(Text, { color: 'cyan', bold: true }, `? ${title || '回溯到哪条消息（↑/↓ 选择，回车确认）'}`),
     h(Box, { flexDirection: 'column' }, rows),
     h(Text, { dimColor: true }, `  Enter 回溯 · ↑/↓ 导航 · 数字键快选 · Esc 取消${scrollHint}`)

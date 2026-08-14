@@ -40,7 +40,10 @@ function kebab(raw) {
 }
 
 function safeFilename(raw) {
-  return String(raw == null ? '' : raw).trim().replace(/[^\w.\-一-龥]+/g, '-').replace(/^-+|-+$/g, '');
+  return String(raw == null ? '' : raw)
+    .trim()
+    .replace(/[^\w.\-一-龥]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function slugFor(userId, name) {
@@ -56,7 +59,10 @@ function mmId(id) {
 
 // Escape a label for use inside a quoted mermaid shape.
 function mmLabel(text) {
-  return String(text == null ? '' : text).replace(/"/g, "'").replace(/\n/g, ' ').slice(0, 60);
+  return String(text == null ? '' : text)
+    .replace(/"/g, "'")
+    .replace(/\n/g, ' ')
+    .slice(0, 60);
 }
 
 // Shape wrapper per node type.
@@ -127,7 +133,10 @@ function orderNodes(graph) {
 }
 
 function oneLine(text, max = 120) {
-  return String(text == null ? '' : text).replace(/\s+/g, ' ').trim().slice(0, max);
+  return String(text == null ? '' : text)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
 }
 
 // Per-type instruction body for a single step.
@@ -139,9 +148,11 @@ function instructionFor(node) {
     case 'end':
       return '工作流结束，返回结果。';
     case 'prompt':
-      return `执行提示词：${oneLine(d.prompt) || '(空)'}` +
+      return (
+        `执行提示词：${oneLine(d.prompt) || '(空)'}` +
         (d.model ? `（模型 ${d.model}）` : '') +
-        (d.outputVar ? `；结果存入变量 \`${d.outputVar}\`` : '');
+        (d.outputVar ? `；结果存入变量 \`${d.outputVar}\`` : '')
+      );
     case 'ifElse':
       return `判断条件：\`${oneLine(d.expression) || '(未设置)'}\``;
     case 'loop':
@@ -155,13 +166,17 @@ function instructionFor(node) {
     case 'skill':
       return `运行技能 \`${d.skillName || '?'}\``;
     case 'code':
-      return `执行 ${d.language || 'bash'} 代码` + (d.outputVar ? `；结果存入 \`${d.outputVar}\`` : '');
+      return (
+        `执行 ${d.language || 'bash'} 代码` + (d.outputVar ? `；结果存入 \`${d.outputVar}\`` : '')
+      );
     case 'http':
       return `发起 HTTP 请求：${d.method || 'GET'} ${oneLine(d.url) || '(无 URL)'}`;
     case 'askUserQuestion':
-      return `向用户提问：${oneLine(d.question) || '(空)'}` +
+      return (
+        `向用户提问：${oneLine(d.question) || '(空)'}` +
         (Array.isArray(d.options) && d.options.length ? `（选项：${d.options.join(' / ')}）` : '') +
-        (d.answerVar ? `；回答存入 \`${d.answerVar}\`` : '');
+        (d.answerVar ? `；回答存入 \`${d.answerVar}\`` : '')
+      );
     default:
       return node.type;
   }
@@ -205,7 +220,8 @@ function buildExecutionLegend(graph, provider) {
   const t = provider.tools;
   const rows = [];
   if (present.has('subAgent')) rows.push(`- **子代理节点**：用${t.subAgent}执行`);
-  if (present.has('askUserQuestion')) rows.push(`- **询问用户节点**：用${t.askUserQuestion}向用户提问并按回答分支`);
+  if (present.has('askUserQuestion'))
+    rows.push(`- **询问用户节点**：用${t.askUserQuestion}向用户提问并按回答分支`);
   if (present.has('skill')) rows.push(`- **技能节点**：调用${t.skill}`);
   if (present.has('code')) rows.push(`- **代码节点**：用${t.shell}执行`);
   if (present.has('http')) rows.push(`- **HTTP 节点**：用${t.http}发起请求`);
@@ -221,7 +237,8 @@ function buildExecutionLegend(graph, provider) {
 
 function buildSkillMarkdown(wf, graph, provider) {
   const slug = slugFor(wf.userId, wf.name);
-  const description = oneLine(wf.description) || `可视化工作流「${wf.name}」（由 KHY 工作流编辑器导出）`;
+  const description =
+    oneLine(wf.description) || `可视化工作流「${wf.name}」（由 KHY 工作流编辑器导出）`;
   const fm = [
     '---',
     `name: ${slug}`,
@@ -300,7 +317,12 @@ async function exportWorkflow(userId, id, opts = {}) {
   // Completeness gate: only a runnable graph may be exported.
   svc.validateGraph(graph, { strict: true });
 
-  const wf = { userId, name: record.name, description: record.description, version: record.version };
+  const wf = {
+    userId,
+    name: record.name,
+    description: record.description,
+    version: record.version,
+  };
   const slug = slugFor(userId, wf.name);
 
   const files = [];
@@ -315,7 +337,9 @@ async function exportWorkflow(userId, id, opts = {}) {
   // 2) one agent file per subAgent node with a usable name — only for providers
   //    that have a dedicated agent directory (Claude Code, Cursor, KHY). For
   //    providers without one, sub-agent instructions stay inline in the skill.
-  const subAgents = graph.nodes.filter((n) => n.type === 'subAgent' && safeFilename(n.data && n.data.agentName));
+  const subAgents = graph.nodes.filter(
+    (n) => n.type === 'subAgent' && safeFilename(n.data && n.data.agentName)
+  );
   if (provider.dirs.agent && subAgents.length) {
     const agentDir = path.join(baseDir, ...provider.dirs.agent.split('/'));
     fs.mkdirSync(agentDir, { recursive: true });

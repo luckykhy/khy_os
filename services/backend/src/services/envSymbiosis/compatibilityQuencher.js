@@ -18,11 +18,12 @@
  */
 
 const evoRequirement = require('../evoEngine/evoRequirement');
+
 const { PLATFORM, topologyFor, isPlatform } = require('./platformIds');
 
 /** 淬火种类。 */
 const QUENCH_KIND = Object.freeze({
-  ORGAN_NEWBORN: 'organ-newborn',     // 器官新生（器官空洞淬火）
+  ORGAN_NEWBORN: 'organ-newborn', // 器官新生（器官空洞淬火）
   SPECIALTY_ROLLBACK: 'specialty-rollback', // 特长回滚（熔断淬火）
 });
 
@@ -34,11 +35,13 @@ class CompatibilityQuencher {
    * @returns {object} { status, kind, env_scope, specialty, requirement, action, priority }
    */
   quenchOrganVoid(block, fingerprint) {
-    const env = this._envScope(fingerprint);   // 防呆②：无 env_scope 即拒绝铸造，绝不外溢全局
+    const env = this._envScope(fingerprint); // 防呆②：无 env_scope 即拒绝铸造，绝不外溢全局
     const intent = String((block && block.intent) || 'unknown-intent');
     const specialty = String((block && block.specialty) || `${intent}@${env}`);
     const directions = topologyFor(env);
-    const organHint = directions.length ? `（参考该环境长板：${directions.slice(0, 3).join('、')}）` : '';
+    const organHint = directions.length
+      ? `（参考该环境长板：${directions.slice(0, 3).join('、')}）`
+      : '';
 
     const requirement = evoRequirement.forge({
       signal: evoRequirement.SIGNALS.TOOL_FAILURE,
@@ -58,8 +61,14 @@ class CompatibilityQuencher {
     });
 
     return this._decorate({
-      status: 'quenched', kind: QUENCH_KIND.ORGAN_NEWBORN, env_scope: env, specialty,
-      requirement, action: `为 ${env} 新生「${intent}」原生器官`, priority: 'High', rollback: false,
+      status: 'quenched',
+      kind: QUENCH_KIND.ORGAN_NEWBORN,
+      env_scope: env,
+      specialty,
+      requirement,
+      action: `为 ${env} 新生「${intent}」原生器官`,
+      priority: 'High',
+      rollback: false,
     });
   }
 
@@ -91,8 +100,14 @@ class CompatibilityQuencher {
     });
 
     return this._decorate({
-      status: 'quenched', kind: QUENCH_KIND.SPECIALTY_ROLLBACK, env_scope: env, specialty,
-      requirement, action: `熔断并回滚 ${env} 特长 ${specialty}，补安全兜底`, priority: 'High', rollback: true,
+      status: 'quenched',
+      kind: QUENCH_KIND.SPECIALTY_ROLLBACK,
+      env_scope: env,
+      specialty,
+      requirement,
+      action: `熔断并回滚 ${env} 特长 ${specialty}，补安全兜底`,
+      priority: 'High',
+      rollback: true,
     });
   }
 
@@ -100,7 +115,9 @@ class CompatibilityQuencher {
   _envScope(fingerprint) {
     const env = fingerprint && fingerprint.platform;
     if (!isPlatform(env)) {
-      throw new Error('CompatibilityQuencher: 缺少已识别的 env_scope，拒绝铸造环境特异性需求（防呆②③）');
+      throw new Error(
+        'CompatibilityQuencher: 缺少已识别的 env_scope，拒绝铸造环境特异性需求（防呆②③）'
+      );
     }
     return env;
   }
@@ -119,7 +136,9 @@ class CompatibilityQuencher {
     out.requirement.env_scope = out.env_scope;
     out.requirement.specialty = out.specialty;
     out.requirement.envSpecific = true;
-    if (out.rollback) out.requirement.rollback = true;
+    if (out.rollback) {
+      out.requirement.rollback = true;
+    }
     return out;
   }
 }

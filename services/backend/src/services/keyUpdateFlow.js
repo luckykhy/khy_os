@@ -40,10 +40,16 @@ function isEnabled(env = process.env) {
     if (flagRegistry.isRegistryEnabled(env)) {
       return flagRegistry.isFlagEnabled('KHY_KEY_UPDATE_FLOW', env);
     }
-    const raw = String((env && env.KHY_KEY_UPDATE_FLOW) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_KEY_UPDATE_FLOW) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -55,25 +61,50 @@ function isEnabled(env = process.env) {
  */
 function _isShapeConfirmEnabled(env = process.env) {
   try {
-    if (!isEnabled(env)) return false;                       // parent 关 → 子必关
+    if (!isEnabled(env)) {
+      return false;
+    } // parent 关 → 子必关
     if (flagRegistry.isRegistryEnabled(env)) {
       return flagRegistry.isFlagEnabled('KHY_KEY_SHAPE_CONFIRM', env);
     }
-    const raw = String((env && env.KHY_KEY_SHAPE_CONFIRM) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_KEY_SHAPE_CONFIRM) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 // 只在**无模型**路径(cooperative:true)介入,风险有界:用户已被邀请「把 key 发我」。
 // 判据仍保持严格——避免把普通问句里恰好出现的长串误当成 key。
-const _SK_RE = /\bsk-[A-Za-z0-9_-]{6,}\b/;                 // OpenAI/DeepSeek/… 家族显式前缀
+const _SK_RE = /\bsk-[A-Za-z0-9_-]{6,}\b/; // OpenAI/DeepSeek/… 家族显式前缀
 const _LONE_TOKEN_RE = /^[A-Za-z0-9][A-Za-z0-9_.\-]{22,}[A-Za-z0-9]$/; // ≥24 字符的孤立长串
-const _ID_SECRET_RE = /^[A-Za-z0-9]{6,}\.[A-Za-z0-9]{6,}$/;           // 智谱 id.secret 形态
+const _ID_SECRET_RE = /^[A-Za-z0-9]{6,}\.[A-Za-z0-9]{6,}$/; // 智谱 id.secret 形态
 
 /** 标签词(出现在 key 前后不算「内容」,如「密钥 sk-xxx」)。归一后匹配。 */
 const _LABEL_WORDS = new Set([
-  'key', 'apikey', 'api', 'token', 'secret', '密钥', '钥匙', '秘钥', '令牌',
-  'the', 'my', '这是', '这个', '是', '用', '换成', '更新', '更换', '替换',
+  'key',
+  'apikey',
+  'api',
+  'token',
+  'secret',
+  '密钥',
+  '钥匙',
+  '秘钥',
+  '令牌',
+  'the',
+  'my',
+  '这是',
+  '这个',
+  '是',
+  '用',
+  '换成',
+  '更新',
+  '更换',
+  '替换',
 ]);
 
 /** 归一:lowercase + 去首尾中英文标点(便于标签/厂商比对)。 */
@@ -86,10 +117,18 @@ function _norm(tok) {
 /** 单个 token 是否长得像一把 key。 */
 function _isKeyish(tok) {
   const t = _norm(tok);
-  if (!t) return false;
-  if (_SK_RE.test(t)) return true;
-  if (_ID_SECRET_RE.test(t)) return true;
-  if (_LONE_TOKEN_RE.test(t)) return true;
+  if (!t) {
+    return false;
+  }
+  if (_SK_RE.test(t)) {
+    return true;
+  }
+  if (_ID_SECRET_RE.test(t)) {
+    return true;
+  }
+  if (_LONE_TOKEN_RE.test(t)) {
+    return true;
+  }
   return false;
 }
 
@@ -101,14 +140,15 @@ function _isKeyish(tok) {
  * @returns {string}
  */
 function _trimEdges(tok) {
-  return String(tok || '')
-    .replace(/^[\s，。,.;；:：、「」"'`]+|[\s，。,.;；:：、「」"'`]+$/g, '');
+  return String(tok || '').replace(/^[\s，。,.;；:：、「」"'`]+|[\s，。,.;；:：、「」"'`]+$/g, '');
 }
 
 /** 从一个 keyish token 里剥出干净的 key 值(去尾随标点,**保留大小写**)。 */
 function _cleanKey(tok) {
   const m = String(tok || '').match(_SK_RE);
-  if (m) return m[0];
+  if (m) {
+    return m[0];
+  }
   return _trimEdges(tok);
 }
 
@@ -121,19 +161,27 @@ function _cleanKey(tok) {
  */
 function looksLikeBareKey(text, env = process.env) {
   const NO = { isKey: false, key: '' };
-  if (!isEnabled(env)) return NO;
+  if (!isEnabled(env)) {
+    return NO;
+  }
   try {
     const t = String(text || '').trim();
-    if (!t || t.length > 240) return NO;
+    if (!t || t.length > 240) {
+      return NO;
+    }
 
     // sk- 家族:句中任意位置命中即认(允许「glm sk-xxx」「把 key 换成 sk-xxx」)。
     const sk = t.match(_SK_RE);
-    if (sk) return { isKey: true, key: sk[0] };
+    if (sk) {
+      return { isKey: true, key: sk[0] };
+    }
 
     // 非 sk- 家族:按 token 扫描,恰好一个 keyish token 且其余都是标签/厂商/极短词。
     const tokens = t.split(/\s+/).filter(Boolean);
     const keyish = tokens.filter(_isKeyish);
-    if (keyish.length !== 1) return NO;
+    if (keyish.length !== 1) {
+      return NO;
+    }
     const others = tokens.filter((tok) => !_isKeyish(tok));
     const allLabelOrHint = others.every(
       (tok) => _LABEL_WORDS.has(_norm(tok)) || !!extractProviderHint(tok, env)
@@ -143,7 +191,9 @@ function looksLikeBareKey(text, env = process.env) {
       return { isKey: true, key: _cleanKey(keyish[0]) };
     }
     return NO;
-  } catch { return NO; }
+  } catch {
+    return NO;
+  }
 }
 
 // ── 厂商提示词 → 规范别名(findBuiltinProvider 会进一步解析内置别名)────────────────
@@ -167,15 +217,23 @@ const _HINTS = [
  * @returns {string}
  */
 function extractProviderHint(text, env = process.env) {
-  if (!isEnabled(env)) return '';
+  if (!isEnabled(env)) {
+    return '';
+  }
   try {
     const t = String(text || '');
-    if (!t) return '';
+    if (!t) {
+      return '';
+    }
     for (const [re, alias] of _HINTS) {
-      if (re.test(t)) return alias;
+      if (re.test(t)) {
+        return alias;
+      }
     }
     return '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 // 智谱(GLM)API Key 的独有形态:`{32 位十六进制 id}.{secret}`(如
@@ -193,13 +251,21 @@ const _ZHIPU_KEY_SHAPE_RE = /^[0-9a-f]{32}\.[A-Za-z0-9_-]{6,}$/i;
  * @returns {string}
  */
 function inferProviderFromKeyShape(key, env = process.env) {
-  if (!isEnabled(env)) return '';
+  if (!isEnabled(env)) {
+    return '';
+  }
   try {
     const k = String(key || '').trim();
-    if (!k) return '';
-    if (_ZHIPU_KEY_SHAPE_RE.test(k)) return 'glm';
+    if (!k) {
+      return '';
+    }
+    if (_ZHIPU_KEY_SHAPE_RE.test(k)) {
+      return 'glm';
+    }
     return '';
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -215,22 +281,32 @@ function inferProviderFromKeyShape(key, env = process.env) {
  * @returns {{provider:string}|{needsProvider:true}|{needsProvider:true, shapeGuess:string}}
  */
 function decideProvider(input, env = process.env) {
-  if (!isEnabled(env)) return { needsProvider: true };
+  if (!isEnabled(env)) {
+    return { needsProvider: true };
+  }
   try {
     const hint = String((input && input.hint) || '').trim();
-    if (hint) return { provider: hint };
+    if (hint) {
+      return { provider: hint };
+    }
     // key 形态可辨识(目前唯智谱 GLM)。**不静默归属**——同形态未必真属智谱,先带猜测反问确认。
     const shape = inferProviderFromKeyShape((input && input.key) || '', env);
     if (shape) {
-      if (_isShapeConfirmEnabled(env)) return { needsProvider: true, shapeGuess: shape };
-      return { provider: shape };                             // 子门关 → 逐字节回退旧行为
+      if (_isShapeConfirmEnabled(env)) {
+        return { needsProvider: true, shapeGuess: shape };
+      }
+      return { provider: shape }; // 子门关 → 逐字节回退旧行为
     }
     const cfg = Array.isArray(input && input.configuredPoolKeys)
       ? input.configuredPoolKeys.filter(Boolean)
       : [];
-    if (cfg.length === 1) return { provider: String(cfg[0]) };
+    if (cfg.length === 1) {
+      return { provider: String(cfg[0]) };
+    }
     return { needsProvider: true };
-  } catch { return { needsProvider: true }; }
+  } catch {
+    return { needsProvider: true };
+  }
 }
 
 /**
@@ -241,13 +317,19 @@ function decideProvider(input, env = process.env) {
  * @returns {string}
  */
 function buildKeyUpdateInvite(opts = {}, env = process.env) {
-  if (!isEnabled(env)) return '';
+  if (!isEnabled(env)) {
+    return '';
+  }
   try {
     const provider = String((opts && opts.provider) || '').trim();
     const who = provider ? `${provider} 的 ` : '';
-    return `检测到 ${who}API Key 失效或未配置。需要我帮你更新吗?`
-      + `把 key 直接发我(如 sk-...),我就地帮你写入更新——无需任何模型即可完成。`;
-  } catch { return ''; }
+    return (
+      `检测到 ${who}API Key 失效或未配置。需要我帮你更新吗?` +
+      `把 key 直接发我(如 sk-...),我就地帮你写入更新——无需任何模型即可完成。`
+    );
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -258,13 +340,21 @@ function buildKeyUpdateInvite(opts = {}, env = process.env) {
  * @returns {string}
  */
 function buildShapeConfirmInvite(opts = {}, env = process.env) {
-  if (!_isShapeConfirmEnabled(env)) return '';
+  if (!_isShapeConfirmEnabled(env)) {
+    return '';
+  }
   try {
     const guess = String((opts && opts.shapeGuess) || '').trim();
-    if (!guess) return '';
-    return `这把 key 的形态看起来像 ${guess} 的 key。确认要归属到 ${guess} 吗?`
-      + `是就回「确认 ${guess}」;若其实是别家(如别家兼容 key),回「换成 <厂商名>」。`;
-  } catch { return ''; }
+    if (!guess) {
+      return '';
+    }
+    return (
+      `这把 key 的形态看起来像 ${guess} 的 key。确认要归属到 ${guess} 吗?` +
+      `是就回「确认 ${guess}」;若其实是别家(如别家兼容 key),回「换成 <厂商名>」。`
+    );
+  } catch {
+    return '';
+  }
 }
 
 module.exports = {

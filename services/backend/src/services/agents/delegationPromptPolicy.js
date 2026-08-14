@@ -34,7 +34,9 @@ const _OFF = new Set(['0', 'false', 'off', 'no']);
 function isDelegationCoachingEnabled(env = process.env) {
   try {
     const v = (env || {})[DELEGATION_PROMPT_GATE];
-    if (v === undefined || v === null) return true;
+    if (v === undefined || v === null) {
+      return true;
+    }
     return !_OFF.has(String(v).trim().toLowerCase());
   } catch {
     return true; // fail-soft:无法判定时维持默认开
@@ -101,9 +103,7 @@ A sub-agent is a smart colleague who just walked in: it cannot see this conversa
  */
 function resolveWritingThePromptSection(env = process.env) {
   try {
-    return isDelegationCoachingEnabled(env)
-      ? buildDelegationPromptGuide()
-      : LEGACY_WRITING_SECTION;
+    return isDelegationCoachingEnabled(env) ? buildDelegationPromptGuide() : LEGACY_WRITING_SECTION;
   } catch {
     return LEGACY_WRITING_SECTION; // fail-soft:任何异常都退回既有文案
   }

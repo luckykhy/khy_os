@@ -20,24 +20,33 @@
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
 
-function _store() { return require('../../services/meshStore'); }
-function _core() { return require('../../services/meshCore'); }
+function _store() {
+  return require('../../services/meshStore');
+}
+
+function _core() {
+  return require('../../services/meshCore');
+}
 
 function _persist(value, deps) {
-  const writeEnvPatch = (deps && typeof deps.writeEnvPatch === 'function')
-    ? deps.writeEnvPatch
-    : require('./config')._writeEnvPatch;
+  const writeEnvPatch =
+    deps && typeof deps.writeEnvPatch === 'function'
+      ? deps.writeEnvPatch
+      : require('./config')._writeEnvPatch;
   return writeEnvPatch({ KHY_MESH: value });
 }
 
 function _handlePeers() {
   const peers = _store().listPeers();
   if (!peers.length) {
-    printInfo('当前没有在线的 khy 实例。一个运行中的会话首次用 MeshPeer 工具或 `khy mesh register` 即会上线。');
+    printInfo(
+      '当前没有在线的 khy 实例。一个运行中的会话首次用 MeshPeer 工具或 `khy mesh register` 即会上线。'
+    );
     return 0;
   }
   const core = _core();
-  const labeled = typeof core.peerLabelsEnabled === 'function' && core.peerLabelsEnabled(process.env);
+  const labeled =
+    typeof core.peerLabelsEnabled === 'function' && core.peerLabelsEnabled(process.env);
   if (labeled) {
     // 会话区分:「会话」列(同目录多窗口带 #编号)+「目录」列(跨目录一眼分清)。
     const rows = peers.map((p) => [
@@ -50,7 +59,9 @@ function _handlePeers() {
       p.startedAt || '-',
     ]);
     printTable(['会话', '目录', '实例 id', 'PID', '挂接到', '待读', '上线于'], rows);
-    printInfo(`共 ${peers.length} 个在线实例。同目录多窗口看「会话」列的 #编号,跨目录看「目录」列。投递:khy mesh send <实例id> <消息>`);
+    printInfo(
+      `共 ${peers.length} 个在线实例。同目录多窗口看「会话」列的 #编号,跨目录看「目录」列。投递:khy mesh send <实例id> <消息>`
+    );
     return 0;
   }
   const rows = peers.map((p) => [
@@ -71,7 +82,7 @@ function _handleRegister(args, options) {
   const name = options && (options.name || options.n);
   const res = _store().register({
     id: id ? String(id) : undefined,
-    name: name ? String(name) : (Array.isArray(args) ? args.join(' ') : undefined),
+    name: name ? String(name) : Array.isArray(args) ? args.join(' ') : undefined,
   });
   if (!res.ok) {
     printError(`登记失败:${res.error || '未知错误'}`);
@@ -90,7 +101,7 @@ function _handleSend(args, options) {
     printError('用法:khy mesh send <对端实例id> <消息> [--from <自身id>]');
     return 1;
   }
-  const from = (options && (options.from || options.f)) ? String(options.from || options.f) : 'cli';
+  const from = options && (options.from || options.f) ? String(options.from || options.f) : 'cli';
   const res = _store().send(from, to, message);
   if (!res.ok) {
     printError(`发送失败:${res.error || '未知错误'}`);
@@ -116,7 +127,10 @@ function _handleInbox(args) {
     printInfo(`实例「${id}」的信箱为空。`);
     return 0;
   }
-  const rows = messages.map((m) => [m.from, m.text.length > 60 ? `${m.text.slice(0, 60)}…` : m.text]);
+  const rows = messages.map((m) => [
+    m.from,
+    m.text.length > 60 ? `${m.text.slice(0, 60)}…` : m.text,
+  ]);
   printTable(['来自', '消息'], rows);
   printInfo(`已读取并清空 ${messages.length} 条消息。`);
   return 0;
@@ -158,7 +172,9 @@ function _handleToggle(turnOn, deps) {
   const value = turnOn ? 'true' : 'off';
   try {
     const p = _persist(value, deps);
-    printSuccess(`✅ 多实例协作网格${turnOn ? '已开启' : '已关闭'}（KHY_MESH=${value}）。已即时生效并持久化。`);
+    printSuccess(
+      `✅ 多实例协作网格${turnOn ? '已开启' : '已关闭'}（KHY_MESH=${value}）。已即时生效并持久化。`
+    );
     printInfo(`已写入:${p}`);
     return 0;
   } catch (e) {
@@ -177,19 +193,41 @@ function _handleToggle(turnOn, deps) {
 function handleMesh(subCommand, args = [], options = {}, deps = {}) {
   const sub = String(subCommand || 'peers').toLowerCase();
   if (sub === 'help' || options.help) {
-    printInfo('用法: mesh [peers] | mesh register [--name N] | mesh send <对端id> <消息> [--from I] | mesh inbox <id> | mesh attach <自身id> <对端id> | mesh detach <自身id> | mesh on | mesh off');
-    printInfo('同机多个 khy 实例互相发现并跨进程通信。与单进程内 teammate/coordinator、跨机 remote 互不相干。');
+    printInfo(
+      '用法: mesh [peers] | mesh register [--name N] | mesh send <对端id> <消息> [--from I] | mesh inbox <id> | mesh attach <自身id> <对端id> | mesh detach <自身id> | mesh on | mesh off'
+    );
+    printInfo(
+      '同机多个 khy 实例互相发现并跨进程通信。与单进程内 teammate/coordinator、跨机 remote 互不相干。'
+    );
     return 0;
   }
-  if (!sub || sub === 'peers' || sub === 'list' || sub === 'ls') return _handlePeers();
-  if (sub === 'register' || sub === 'join') return _handleRegister(args, options);
-  if (sub === 'send' || sub === 'msg' || sub === 'tell') return _handleSend(args, options);
-  if (sub === 'inbox' || sub === 'recv' || sub === 'read') return _handleInbox(args);
-  if (sub === 'attach') return _handleAttach(args);
-  if (sub === 'detach') return _handleDetach(args);
-  if (sub === 'on') return _handleToggle(true, deps);
-  if (sub === 'off') return _handleToggle(false, deps);
-  printError(`未知子命令:${subCommand}。可用:peers / register / send / inbox / attach / detach / on / off。`);
+  if (!sub || sub === 'peers' || sub === 'list' || sub === 'ls') {
+    return _handlePeers();
+  }
+  if (sub === 'register' || sub === 'join') {
+    return _handleRegister(args, options);
+  }
+  if (sub === 'send' || sub === 'msg' || sub === 'tell') {
+    return _handleSend(args, options);
+  }
+  if (sub === 'inbox' || sub === 'recv' || sub === 'read') {
+    return _handleInbox(args);
+  }
+  if (sub === 'attach') {
+    return _handleAttach(args);
+  }
+  if (sub === 'detach') {
+    return _handleDetach(args);
+  }
+  if (sub === 'on') {
+    return _handleToggle(true, deps);
+  }
+  if (sub === 'off') {
+    return _handleToggle(false, deps);
+  }
+  printError(
+    `未知子命令:${subCommand}。可用:peers / register / send / inbox / attach / detach / on / off。`
+  );
   return 1;
 }
 

@@ -16,8 +16,8 @@
  * 门控 KHY_KEYBINDINGS 默认开;关 → 命令不接管(字节回退到「无此命令」的历史世界,提示按 ? 看浮层)。
  */
 
-const { printInfo } = require('../formatters');
 const catalog = require('../../services/keybindings/keybindingCatalog');
+const { printInfo } = require('../formatters');
 
 /**
  * @param {string} _subCommand 预留(无子命令)
@@ -33,8 +33,11 @@ async function handleKeybindings(_subCommand, args = [], _options = {}) {
   const term = Array.isArray(args) ? args.join(' ').trim() : String(args || '').trim();
 
   // 已知上下文名 → 当作 context 精确筛;否则当作自由查询。
-  const KNOWN = new Set(catalog.KEYBINDING_CATALOG.map((g) => g.context.toLowerCase())
-    .concat(catalog.KEYBINDING_CATALOG.map((g) => g.label.toLowerCase())));
+  const KNOWN = new Set(
+    catalog.KEYBINDING_CATALOG.map((g) => g.context.toLowerCase()).concat(
+      catalog.KEYBINDING_CATALOG.map((g) => g.label.toLowerCase())
+    )
+  );
   let groups;
   if (term && KNOWN.has(term.toLowerCase())) {
     groups = catalog.selectCatalog({ context: term });

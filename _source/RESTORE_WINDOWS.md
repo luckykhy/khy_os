@@ -72,8 +72,8 @@ make            # 产出 build/khy-os-kernel.iso（Linux/macOS/WSL2）
 ## 4. 构建前端（可选）
 
 ```bash
-# 主前端
-cd frontend && npm install && npm run build
+# 主前端 (AI 管理前端)
+cd apps/ai-frontend && npm install && npm run build
 # AI 管理前端
 cd apps/ai-frontend && npm install && npm run build
 # 量化前端

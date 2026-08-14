@@ -12,10 +12,10 @@
  * 这是 ide.js 交互确认自动安装之外的显式入口——同一套注册表/解析器/安装器。
  */
 
-const { printSuccess, printError, printInfo, printWarn, printTable } = require('../formatters');
+const installer = require('../../services/gateway/adapters/portableCliInstaller');
 const registry = require('../../services/gateway/adapters/portableCliRegistry');
 const resolver = require('../../services/gateway/adapters/portableCliResolver');
-const installer = require('../../services/gateway/adapters/portableCliInstaller');
+const { printSuccess, printError, printInfo, printWarn, printTable } = require('../formatters');
 
 /**
  * 便携工具根目录(默认 `~/.khy/tools`)。解析器是纯叶子、不会自行定位数据家,
@@ -40,8 +40,11 @@ function handleToolsList() {
     const installed = resolver.isInstalled(t.key, { toolsRoot });
     const native = registry.hasNativeResolver(t.key);
     let state;
-    if (native) state = installed ? '便携已装(专用解析)' : '专用解析(PATH/便携)';
-    else state = installed ? '便携已装' : '未装(可 khy tools install)';
+    if (native) {
+      state = installed ? '便携已装(专用解析)' : '专用解析(PATH/便携)';
+    } else {
+      state = installed ? '便携已装' : '未装(可 khy tools install)';
+    }
     return [t.key, t.pkg, installed ? '✓' : '', state];
   });
   console.log('');
@@ -55,13 +58,23 @@ function handleToolsList() {
 /** 装或更新一个工具(verb 仅影响提示文案,底层同实现)。 */
 async function _installOrUpdate(toolKey, verb) {
   if (!registry.isKnownTool(toolKey)) {
-    printError(`未知便携工具: ${toolKey || '(空)'}。可用:${registry.listTools().map((t) => t.key).join(' / ')}`);
+    printError(
+      `未知便携工具: ${toolKey || '(空)'}。可用:${registry
+        .listTools()
+        .map((t) => t.key)
+        .join(' / ')}`
+    );
     return;
   }
   const tool = registry.getTool(toolKey);
   printInfo(`正在${verb} ${tool.key} 便携版(${tool.pkg}@latest)…`);
   const result = await installer.install(tool.key, {
-    onProgress: (text) => { const s = String(text).trim(); if (s) process.stdout.write(`  ${s}\n`); },
+    onProgress: (text) => {
+      const s = String(text).trim();
+      if (s) {
+        process.stdout.write(`  ${s}\n`);
+      }
+    },
   });
   if (result.ok) {
     printSuccess(`${tool.key} 便携版已${verb}到 ${result.packageDir || '数据家 tools 目录'}`);
@@ -83,18 +96,30 @@ function handleToolsPath(toolKey) {
   const dir = resolver.packageDir(toolKey, { toolsRoot });
   const installed = resolver.isInstalled(toolKey, { toolsRoot });
   console.log(dir || '(无法定位便携根目录)');
-  if (!installed) printInfo('尚未安装:khy tools install ' + toolKey);
+  if (!installed) {
+    printInfo('尚未安装:khy tools install ' + toolKey);
+  }
 }
 
 /** 路由入口:khy tools <sub> [tool]。 */
 async function handleToolsCommand(subCommand, args = []) {
   const sub = String(subCommand || 'list').toLowerCase();
   const tool = (args && args[0]) || '';
-  if (sub === 'list' || sub === 'ls' || sub === 'status') return handleToolsList();
-  if (sub === 'install' || sub === 'add') return _installOrUpdate(tool, '安装');
-  if (sub === 'update' || sub === 'upgrade') return _installOrUpdate(tool, '更新');
-  if (sub === 'path' || sub === 'where') return handleToolsPath(tool);
-  printError(`未知子命令: ${sub}。可用: list | install <工具> | update <工具> | path | where | help`);
+  if (sub === 'list' || sub === 'ls' || sub === 'status') {
+    return handleToolsList();
+  }
+  if (sub === 'install' || sub === 'add') {
+    return _installOrUpdate(tool, '安装');
+  }
+  if (sub === 'update' || sub === 'upgrade') {
+    return _installOrUpdate(tool, '更新');
+  }
+  if (sub === 'path' || sub === 'where') {
+    return handleToolsPath(tool);
+  }
+  printError(
+    `未知子命令: ${sub}。可用: list | install <工具> | update <工具> | path | where | help`
+  );
 }
 
 module.exports = { handleToolsCommand };

@@ -16,7 +16,9 @@
 
 function normLower(v) {
   try {
-    return String(v === undefined || v === null ? '' : v).trim().toLowerCase();
+    return String(v === undefined || v === null ? '' : v)
+      .trim()
+      .toLowerCase();
   } catch {
     return '';
   }

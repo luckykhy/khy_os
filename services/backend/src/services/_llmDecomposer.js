@@ -33,7 +33,9 @@ const _cache = new Map();
 
 function _getCached(key) {
   const entry = _cache.get(key);
-  if (!entry) return null;
+  if (!entry) {
+    return null;
+  }
   if (Date.now() - entry.ts > CACHE_TTL_MS) {
     _cache.delete(key);
     return null;
@@ -58,7 +60,9 @@ function _setCache(key, value) {
  * @returns {Promise<{subtasks: Array, reason: string} | null>}
  */
 async function decompose(message, deps) {
-  if (!message || !deps?.callModel) return null;
+  if (!message || !deps?.callModel) {
+    return null;
+  }
 
   // Feature gate
   if (String(process.env.KHY_LLM_DECOMPOSE || '').toLowerCase() !== 'true') {
@@ -68,14 +72,16 @@ async function decompose(message, deps) {
   // Cache check
   const cacheKey = message.slice(0, 500);
   const cached = _getCached(cacheKey);
-  if (cached !== null) return cached;
+  if (cached !== null) {
+    return cached;
+  }
 
   try {
     const result = await Promise.race([
-      deps.callModel(
-        `${SYSTEM_PROMPT}\n\nUser request:\n${message}`,
-        { effort: 'low', _isFollowUp: true }
-      ),
+      deps.callModel(`${SYSTEM_PROMPT}\n\nUser request:\n${message}`, {
+        effort: 'low',
+        _isFollowUp: true,
+      }),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('decompose timeout')), DECOMPOSE_TIMEOUT_MS)
       ),
@@ -88,20 +94,27 @@ async function decompose(message, deps) {
     const recovered = extractFirstJson(reply, null);
     const parsed = Array.isArray(recovered)
       ? recovered
-      : (Array.isArray(recovered?.subtasks) ? recovered.subtasks
-        : (Array.isArray(recovered?.tasks) ? recovered.tasks : null));
+      : Array.isArray(recovered?.subtasks)
+        ? recovered.subtasks
+        : Array.isArray(recovered?.tasks)
+          ? recovered.tasks
+          : null;
     if (!Array.isArray(parsed) || parsed.length < 2) {
       _setCache(cacheKey, null);
       return null;
     }
 
-    const subtasks = parsed.slice(0, 6).map((item, i) => ({
-      prompt: item.description || item.title || '',
-      role: ['explore', 'implement', 'verify', 'general'].includes(item.role)
-        ? item.role : 'general',
-      originIndex: i,
-      dependencies: Array.isArray(item.dependencies) ? item.dependencies : [],
-    })).filter(st => st.prompt.length > 0);
+    const subtasks = parsed
+      .slice(0, 6)
+      .map((item, i) => ({
+        prompt: item.description || item.title || '',
+        role: ['explore', 'implement', 'verify', 'general'].includes(item.role)
+          ? item.role
+          : 'general',
+        originIndex: i,
+        dependencies: Array.isArray(item.dependencies) ? item.dependencies : [],
+      }))
+      .filter((st) => st.prompt.length > 0);
 
     if (subtasks.length < 2) {
       _setCache(cacheKey, null);

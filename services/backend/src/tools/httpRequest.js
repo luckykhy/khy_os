@@ -1,11 +1,12 @@
 'use strict';
 
-const { defineTool } = require('./_baseTool');
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
 
 const toolErrorCodes = require('../services/toolErrorCodes');
+
+const { defineTool } = require('./_baseTool');
 
 /**
  * httpRequest — generic HTTP client (GET/POST/PUT/DELETE/PATCH/HEAD).
@@ -37,7 +38,9 @@ function _once(urlStr, { method, headers, body, timeoutMs }) {
       return;
     }
     if (target.protocol !== 'http:' && target.protocol !== 'https:') {
-      resolve({ _err: { code: 'BAD_PARAM', message: `不支持的协议：${target.protocol}（仅 http/https）` } });
+      resolve({
+        _err: { code: 'BAD_PARAM', message: `不支持的协议：${target.protocol}（仅 http/https）` },
+      });
       return;
     }
     const lib = target.protocol === 'https:' ? https : http;
@@ -46,40 +49,39 @@ function _once(urlStr, { method, headers, body, timeoutMs }) {
     if (body != null && method !== 'GET' && method !== 'HEAD') {
       payload = typeof body === 'string' ? body : JSON.stringify(body);
       if (!Object.keys(reqHeaders).some((h) => h.toLowerCase() === 'content-type')) {
-        reqHeaders['Content-Type'] = typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json';
+        reqHeaders['Content-Type'] =
+          typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json';
       }
       reqHeaders['Content-Length'] = Buffer.byteLength(payload);
     }
 
-    const req = lib.request(
-      target,
-      { method, headers: reqHeaders, timeout: timeoutMs },
-      (res) => {
-        const chunks = [];
-        let size = 0;
-        let truncated = false;
-        res.on('data', (c) => {
-          size += c.length;
-          if (size <= MAX_BODY_BYTES) {
-            chunks.push(c);
-          } else if (!truncated) {
-            truncated = true;
-            const room = MAX_BODY_BYTES - (size - c.length);
-            if (room > 0) chunks.push(c.slice(0, room));
+    const req = lib.request(target, { method, headers: reqHeaders, timeout: timeoutMs }, (res) => {
+      const chunks = [];
+      let size = 0;
+      let truncated = false;
+      res.on('data', (c) => {
+        size += c.length;
+        if (size <= MAX_BODY_BYTES) {
+          chunks.push(c);
+        } else if (!truncated) {
+          truncated = true;
+          const room = MAX_BODY_BYTES - (size - c.length);
+          if (room > 0) {
+            chunks.push(c.slice(0, room));
           }
+        }
+      });
+      res.on('end', () => {
+        resolve({
+          status: res.statusCode,
+          statusText: res.statusMessage || '',
+          headers: res.headers,
+          body: Buffer.concat(chunks).toString('utf-8'),
+          truncated,
+          location: res.headers && res.headers.location,
         });
-        res.on('end', () => {
-          resolve({
-            status: res.statusCode,
-            statusText: res.statusMessage || '',
-            headers: res.headers,
-            body: Buffer.concat(chunks).toString('utf-8'),
-            truncated,
-            location: res.headers && res.headers.location,
-          });
-        });
-      },
-    );
+      });
+    });
     req.on('error', (err) => {
       // Connection refused / DNS / reset / TLS → service unavailable (transient).
       resolve({ _err: { code: 'SERVICE_UNAVAILABLE', message: err.message } });
@@ -88,7 +90,9 @@ function _once(urlStr, { method, headers, body, timeoutMs }) {
       req.destroy();
       resolve({ _err: { code: 'TIMEOUT', message: `请求超时（${timeoutMs}ms）` } });
     });
-    if (payload != null) req.write(payload);
+    if (payload != null) {
+      req.write(payload);
+    }
     req.end();
   });
 }
@@ -96,9 +100,9 @@ function _once(urlStr, { method, headers, body, timeoutMs }) {
 module.exports = defineTool({
   name: 'httpRequest',
   description:
-    'Make an HTTP/HTTPS request (GET/POST/PUT/DELETE/PATCH/HEAD) to an arbitrary URL and return the status, '
-    + 'headers and body. Use for calling REST/JSON APIs directly instead of shelling out to curl. '
-    + 'Body capped at 1 MiB; redirects followed up to 5 hops.',
+    'Make a single HTTP/HTTPS request (GET/POST/PUT/DELETE/PATCH/HEAD) and return status, headers and body. ' +
+    'Use it to call REST/JSON APIs directly instead of shelling out to curl; use WebFetch to read a web PAGE and webSearch to find information. ' +
+    'Constraints: only http/https schemes; response body capped at 1 MiB; redirects followed up to 5 hops.',
   category: 'data',
   risk: 'medium',
   isReadOnly: false,
@@ -111,30 +115,40 @@ module.exports = defineTool({
   aliases: ['http_request', 'curl'],
   searchHint: 'http request rest api call get post put delete curl fetch endpoint',
   inputSchema: {
-    url: { type: 'string', required: true, description: 'Absolute http(s) URL to request.' },
+    url: {
+      type: 'string',
+      required: true,
+      description: 'Absolute http(s) URL to request, e.g. "https://api.example.com/v1/users".',
+      example: 'https://api.example.com/v1/users',
+    },
     method: {
       type: 'string',
       required: false,
       enum: ALLOWED_METHODS,
       default: 'GET',
-      description: 'HTTP method (default GET).',
+      description: 'HTTP method (default: GET).',
+      example: 'POST',
     },
     headers: {
       type: 'object',
       required: false,
-      description: 'Optional request headers as a flat {name: value} object.',
+      description:
+        'Request headers as a flat {name: value} object, e.g. {"Authorization": "Bearer ..."} (default: none).',
     },
     body: {
       type: 'string',
       required: false,
-      description: 'Optional request body (string). For JSON, pass a JSON string; Content-Type defaults accordingly.',
+      description:
+        'Request body string; for JSON pass a JSON string like \'{"a":1}\' — Content-Type defaults accordingly (default: none; ignored for GET/HEAD).',
+      example: '{"a":1}',
     },
     timeout: {
       type: 'number',
       required: false,
       min: 1,
       max: 120000,
-      description: `Per-attempt timeout in ms (default ${DEFAULT_TIMEOUT_MS}).`,
+      description: `Per-attempt timeout in ms, range 1–120000 (default: ${DEFAULT_TIMEOUT_MS}).`,
+      example: 10000,
     },
   },
 
@@ -160,10 +174,12 @@ module.exports = defineTool({
         error: `不支持的方法：${method}（允许:${ALLOWED_METHODS.join('/')}）`,
       });
     }
-    const timeoutMs = Number.isFinite(params && params.timeout) ? params.timeout : DEFAULT_TIMEOUT_MS;
+    const timeoutMs = Number.isFinite(params && params.timeout)
+      ? params.timeout
+      : DEFAULT_TIMEOUT_MS;
 
     let url = String((params && params.url) || '');
-    let headers = (params && params.headers) || {};
+    const headers = (params && params.headers) || {};
     const body = params && params.body;
     let res;
     let hops = 0;

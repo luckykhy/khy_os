@@ -54,7 +54,13 @@ async function detectSafely(uid, provider) {
   try {
     return await userModelDetectionService.detectForProvider(uid, provider);
   } catch (err) {
-    return { provider, probed: false, added: 0, total: 0, error: (err && err.message) || 'detection failed' };
+    return {
+      provider,
+      probed: false,
+      added: 0,
+      total: 0,
+      error: (err && err.message) || 'detection failed',
+    };
   }
 }
 
@@ -304,8 +310,12 @@ function mapKeyRow(row) {
 router.get('/cc/endpoint', (req, res) => {
   try {
     const port = proxyServer.getPort();
-    const publicUrl = String(process.env.PROXY_PUBLIC_URL || '').trim().replace(/\/+$/, '');
-    const host = String(req.headers['x-forwarded-host'] || req.hostname || 'localhost').split(':')[0];
+    const publicUrl = String(process.env.PROXY_PUBLIC_URL || '')
+      .trim()
+      .replace(/\/+$/, '');
+    const host = String(req.headers['x-forwarded-host'] || req.hostname || 'localhost').split(
+      ':'
+    )[0];
     const endpoint = publicUrl || `http://${host}:${port}`;
     res.json({
       success: true,
@@ -371,10 +381,7 @@ router.delete('/cc/tokens/:id', async (req, res) => {
   try {
     const uid = userId(req);
     const id = Number(req.params.id);
-    const [updated] = await ApiKey.update(
-      { isActive: false },
-      { where: { userId: uid, id } }
-    );
+    const [updated] = await ApiKey.update({ isActive: false }, { where: { userId: uid, id } });
     invalidateUser(uid);
     res.json({ success: true, data: { revoked: updated > 0, id } });
   } catch (err) {

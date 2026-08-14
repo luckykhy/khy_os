@@ -19,6 +19,7 @@
  */
 
 const { spawnSync } = require('child_process');
+
 const { detectPlatform } = require('./prCreateService');
 
 const GH_TIMEOUT_MS = 20000;
@@ -35,7 +36,7 @@ function _gh(args, cwd) {
       return { ok: false, error: (r && r.error && r.error.message) || '无法执行 gh' };
     }
     if (r.status !== 0) {
-      const msg = String((r.stderr || r.stdout || '')).trim() || `gh 退出码 ${r.status}`;
+      const msg = String(r.stderr || r.stdout || '').trim() || `gh 退出码 ${r.status}`;
       return { ok: false, error: msg };
     }
     return { ok: true, stdout: String(r.stdout || '').trim() };
@@ -104,10 +105,7 @@ async function fetchPrComments(options = {}) {
   const prNumber = pr.number;
 
   // 行内代码评论走 REST；失败不致命，降级空列表。
-  const inline = _gh(
-    ['api', `repos/{owner}/{repo}/pulls/${prNumber}/comments`, '--paginate'],
-    cwd,
-  );
+  const inline = _gh(['api', `repos/{owner}/{repo}/pulls/${prNumber}/comments`, '--paginate'], cwd);
   const reviewComments = inline.ok ? _parseJson(inline.stdout, []) : [];
 
   return {

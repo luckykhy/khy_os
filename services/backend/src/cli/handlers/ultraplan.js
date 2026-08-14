@@ -10,7 +10,9 @@
 
 let _chalk;
 function chalk() {
-  if (_chalk) return _chalk;
+  if (_chalk) {
+    return _chalk;
+  }
   const m = require('chalk');
   _chalk = m.default || m;
   return _chalk;
@@ -29,10 +31,14 @@ async function handleUltraplanCommand(args, options) {
   try {
     const { isEnabled } = require('../../services/featureFlags');
     if (!isEnabled('ultraplan')) {
-      console.log(c.gray('Ultraplan feature is disabled. Set KHY_FEATURE_ULTRAPLAN=true to enable.'));
+      console.log(
+        c.gray('Ultraplan feature is disabled. Set KHY_FEATURE_ULTRAPLAN=true to enable.')
+      );
       return true;
     }
-  } catch { /* no feature flags */ }
+  } catch {
+    /* no feature flags */
+  }
 
   const prompt = args.join(' ').trim();
   if (!prompt) {
@@ -79,7 +85,14 @@ async function handleUltraplanCommand(args, options) {
       }
     }, 1000);
     // Hard timeout
-    setTimeout(() => { clearInterval(check); clearInterval(poll); resolve(); }, 31 * 60 * 1000);
+    setTimeout(
+      () => {
+        clearInterval(check);
+        clearInterval(poll);
+        resolve();
+      },
+      31 * 60 * 1000
+    );
   });
 
   return true;
@@ -102,7 +115,7 @@ function _showResult(session, c) {
     const r = session.result;
     // 会话时长走 ccFormatDuration SSOT(门控 KHY_CC_FORMAT):多分钟/小时会话
     // 显 "5m 0s"/"1h 0m 0s" 而非裸 "300s"/"3600s"。门控关 → 逐字节回退旧 `${toFixed(0)}s`。
-    const _durMs = (session.completedAt - session.startedAt);
+    const _durMs = session.completedAt - session.startedAt;
     const _durLegacy = `${(_durMs / 1000).toFixed(0)}s`;
     const elapsed = require('../ccFormat').ccFormatDurationOr(_durMs, _durLegacy, process.env);
 
@@ -110,11 +123,21 @@ function _showResult(session, c) {
     console.log(c.gray(`  Session: ${session.id} | Duration: ${elapsed}`));
     console.log(c.gray('  ' + '\u2500'.repeat(50)));
 
-    if (r.title) console.log(c.bold(`\n  ${r.title}`));
-    if (r.analysis) console.log(c.white(`\n  Analysis:\n  ${r.analysis.slice(0, 500)}`));
-    if (r.steps) console.log(c.green(`\n  Steps:\n  ${r.steps.slice(0, 1000)}`));
-    if (r.risks) console.log(c.yellow(`\n  Risks:\n  ${r.risks.slice(0, 300)}`));
-    if (r.testing) console.log(c.cyan(`\n  Testing:\n  ${r.testing.slice(0, 300)}`));
+    if (r.title) {
+      console.log(c.bold(`\n  ${r.title}`));
+    }
+    if (r.analysis) {
+      console.log(c.white(`\n  Analysis:\n  ${r.analysis.slice(0, 500)}`));
+    }
+    if (r.steps) {
+      console.log(c.green(`\n  Steps:\n  ${r.steps.slice(0, 1000)}`));
+    }
+    if (r.risks) {
+      console.log(c.yellow(`\n  Risks:\n  ${r.risks.slice(0, 300)}`));
+    }
+    if (r.testing) {
+      console.log(c.cyan(`\n  Testing:\n  ${r.testing.slice(0, 300)}`));
+    }
 
     console.log(c.gray('\n  ' + '\u2500'.repeat(50)));
     console.log(c.gray(`  Full plan saved to: ~/.khyquant/ultraplans/${session.id}.json\n`));
@@ -140,13 +163,24 @@ async function handleUltraplanStatus() {
 
   const _ccFmt = require('../ccFormat');
   for (const s of sessions.slice(0, 10)) {
-    const statusColor = s.status === 'completed' ? c.green : s.status === 'running' ? c.cyan : c.red;
+    const statusColor =
+      s.status === 'completed' ? c.green : s.status === 'running' ? c.cyan : c.red;
     // 时长走 ccFormatDuration SSOT;运行中的 `...` 尾缀在 *Or 外拼接(门控关逐字节回退)。
     const elapsed = s.completedAt
-      ? _ccFmt.ccFormatDurationOr(s.completedAt - s.startedAt, `${((s.completedAt - s.startedAt) / 1000).toFixed(0)}s`, process.env)
-      : _ccFmt.ccFormatDurationOr(Date.now() - s.startedAt, `${((Date.now() - s.startedAt) / 1000).toFixed(0)}s`, process.env) + '...';
+      ? _ccFmt.ccFormatDurationOr(
+          s.completedAt - s.startedAt,
+          `${((s.completedAt - s.startedAt) / 1000).toFixed(0)}s`,
+          process.env
+        )
+      : _ccFmt.ccFormatDurationOr(
+          Date.now() - s.startedAt,
+          `${((Date.now() - s.startedAt) / 1000).toFixed(0)}s`,
+          process.env
+        ) + '...';
 
-    console.log(`  ${c.gray(s.id)} ${statusColor(s.status.padEnd(10))} ${c.gray(elapsed)} ${s.prompt.slice(0, 40)}`);
+    console.log(
+      `  ${c.gray(s.id)} ${statusColor(s.status.padEnd(10))} ${c.gray(elapsed)} ${s.prompt.slice(0, 40)}`
+    );
   }
   console.log('');
   return true;

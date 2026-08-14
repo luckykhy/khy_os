@@ -26,7 +26,9 @@ const DEFAULTS = Object.freeze({
 
 /** Parse a boolean-ish env flag; treats on/1/true/yes (case-insensitive) as true. */
 function _flag(raw) {
-  if (raw == null) return false;
+  if (raw == null) {
+    return false;
+  }
   return /^(on|1|true|yes)$/i.test(String(raw).trim());
 }
 

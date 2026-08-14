@@ -29,7 +29,11 @@
  */
 
 let _fmt = null;
-try { _fmt = require('./localFormat'); } catch { /* degrade to plain text */ }
+try {
+  _fmt = require('./localFormat');
+} catch {
+  /* degrade to plain text */
+}
 
 function _gateOn() {
   return String(process.env.KHY_ENV_OPTIMIZE || 'true').toLowerCase() !== 'false';
@@ -56,10 +60,15 @@ function _junkScanOn() {
  *   reviewCount:number, reviewHuman:string, byCategory:object, driveRoots:string[]}|null}
  */
 function _scanJunk() {
-  if (!_junkScanOn()) return null;
+  if (!_junkScanOn()) {
+    return null;
+  }
   let dc;
-  try { dc = require('./diskCleanup'); }
-  catch { return null; }
+  try {
+    dc = require('./diskCleanup');
+  } catch {
+    return null;
+  }
   try {
     // includeReview:false → recycle-bin / update caches (recoverable data) are
     // reported as "review" but never selected for removal. keepRecentHours left
@@ -75,7 +84,9 @@ function _scanJunk() {
       byCategory: plan.byCategory || {},
       driveRoots: Array.isArray(plan.driveRoots) ? plan.driveRoots : [],
     };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -89,12 +100,17 @@ function _scanJunk() {
  */
 function _runProbes() {
   let mod;
-  try { mod = require('./envProbes'); }
-  catch { return []; }
+  try {
+    mod = require('./envProbes');
+  } catch {
+    return [];
+  }
   try {
     const out = mod.runProbes();
     return Array.isArray(out) ? out : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -109,12 +125,17 @@ function _runProbes() {
  */
 function _runRepairs() {
   let mod;
-  try { mod = require('./envRepair'); }
-  catch { return []; }
+  try {
+    mod = require('./envRepair');
+  } catch {
+    return [];
+  }
   try {
     const out = mod.runRepairs();
     return Array.isArray(out) ? out : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -129,7 +150,9 @@ function _runRepairs() {
 function _detectPlatform() {
   try {
     return require('./envPlatform').detectPlatform();
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // Intent match: the sentence must name BOTH an "environment/system" target AND a
@@ -137,17 +160,24 @@ function _detectPlatform() {
 // (e.g. "看看系统信息") never trips this heavier handler. Anchored on the user's
 // own phrasing "打造当前系统最佳环境" plus natural paraphrases in zh/en.
 const _TARGET_RE = /(系统|环境|environment|system|底座|运行环境|操作系统|\bos\b)/i;
-const _ACTION_RE = /(打造|优化|调优|自检|自愈|修复|体检|调到最佳|最佳(化|状态|环境)?|最棒|最好|tune|optimi[sz]e|self[-\s]?check|self[-\s]?heal|diagnose|make.*best)/i;
+const _ACTION_RE =
+  /(打造|优化|调优|自检|自愈|修复|体检|调到最佳|最佳(化|状态|环境)?|最棒|最好|tune|optimi[sz]e|self[-\s]?check|self[-\s]?heal|diagnose|make.*best)/i;
 
 function isEnvOptimizeIntent(text) {
-  if (!_gateOn()) return false;
+  if (!_gateOn()) {
+    return false;
+  }
   const t = String(text || '');
-  if (t.length > 80) return false; // a directive, not a long paragraph
+  if (t.length > 80) {
+    return false;
+  } // a directive, not a long paragraph
   return _TARGET_RE.test(t) && _ACTION_RE.test(t);
 }
 
 function detectEnvOptimize(text) {
-  if (!isEnvOptimizeIntent(text)) return null;
+  if (!isEnvOptimizeIntent(text)) {
+    return null;
+  }
   return { type: 'env_optimize', category: '环境优化', label: '打造最佳环境' };
 }
 
@@ -160,7 +190,11 @@ async function executeEnvOptimize() {
   try {
     selfCheck = require('./baseSelfCheckService');
   } catch (err) {
-    return { type: 'env_optimize', success: false, error: `self-check unavailable: ${err && err.message}` };
+    return {
+      type: 'env_optimize',
+      success: false,
+      error: `self-check unavailable: ${err && err.message}`,
+    };
   }
 
   try {
@@ -174,7 +208,12 @@ async function executeEnvOptimize() {
     });
 
     if (report && report.skipped) {
-      return { type: 'env_optimize', success: false, skipped: true, reason: report.reason || 'already_running' };
+      return {
+        type: 'env_optimize',
+        success: false,
+        skipped: true,
+        reason: report.reason || 'already_running',
+      };
     }
 
     const issues = Array.isArray(report.issues) ? report.issues : [];
@@ -212,8 +251,12 @@ async function executeEnvOptimize() {
 }
 
 function _severityZh(sev) {
-  if (sev === 'critical') return '严重';
-  if (sev === 'degraded') return '降级';
+  if (sev === 'critical') {
+    return '严重';
+  }
+  if (sev === 'degraded') {
+    return '降级';
+  }
   return '健康';
 }
 
@@ -223,16 +266,23 @@ function _severityZh(sev) {
 // deletion stays behind DiskCleanupTool's human confirmation gate, never here.
 function _humanBytes(n) {
   const b = Number(n) || 0;
-  if (b < 1024) return `${b} B`;
+  if (b < 1024) {
+    return `${b} B`;
+  }
   const units = ['KB', 'MB', 'GB', 'TB'];
   let v = b / 1024;
   let i = 0;
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
   return `${v.toFixed(1)} ${units[i]}`;
 }
 
 function _junkLines(junk) {
-  if (!junk || (junk.selectedCount || 0) === 0) return [];
+  if (!junk || (junk.selectedCount || 0) === 0) {
+    return [];
+  }
   const lines = [];
   const drives = junk.driveRoots.length ? junk.driveRoots.join(' ') : '默认盘';
   lines.push(`可回收 ${junk.selectedHuman}（${junk.selectedCount} 项 · ${drives}）`);
@@ -250,16 +300,24 @@ function _junkLines(junk) {
 // Severity glyph for a probe finding, so critical items stand out in the bullet
 // list without needing colour. Keeps the plain-text and rich branches identical.
 function _probeGlyph(sev) {
-  if (sev === 'critical') return '✗';
-  if (sev === 'high') return '▲';
-  if (sev === 'warning') return '⚠';
+  if (sev === 'critical') {
+    return '✗';
+  }
+  if (sev === 'high') {
+    return '▲';
+  }
+  if (sev === 'warning') {
+    return '⚠';
+  }
   return '·';
 }
 
 // Human bullet lines for the extensible health-probe findings. Returns [] when
 // nothing was flagged (healthy machine), so the caller omits the whole section.
 function _probeLines(probes) {
-  if (!Array.isArray(probes) || probes.length === 0) return [];
+  if (!Array.isArray(probes) || probes.length === 0) {
+    return [];
+  }
   return probes.slice(0, 12).map((p) => {
     const glyph = _probeGlyph(p.severity);
     const hint = p.hint ? ` — ${p.hint}` : '';
@@ -272,16 +330,20 @@ function _probeLines(probes) {
 // section. A ✓ marks something actually created/fixed this run; a ! marks a
 // dimension that needs the human (e.g. a corrupt path we refuse to delete).
 function _envRepairLines(envRepairs) {
-  if (!Array.isArray(envRepairs) || envRepairs.length === 0) return [];
+  if (!Array.isArray(envRepairs) || envRepairs.length === 0) {
+    return [];
+  }
   return envRepairs.slice(0, 12).map((r) => {
-    const glyph = r.changed ? '✓' : (r.ok ? '·' : '!');
+    const glyph = r.changed ? '✓' : r.ok ? '·' : '!';
     return `${glyph} [${r.label}] ${r.detail}`;
   });
 }
 
 function formatEnvOptimize(result) {
   if (!result || result.success !== true) {
-    if (result && result.skipped) return '已有自检任务在运行，请稍候重试。';
+    if (result && result.skipped) {
+      return '已有自检任务在运行，请稍候重试。';
+    }
     return `打造最佳环境失败：${(result && result.error) || '未知错误'}`;
   }
 
@@ -289,7 +351,7 @@ function formatEnvOptimize(result) {
   const repairs = result.repairs || [];
   const junk = result.junk || null;
   const junkLines = _junkLines(junk);
-  const junkReclaim = junkLines.length ? (junk.selectedHuman || '') : '';
+  const junkReclaim = junkLines.length ? junk.selectedHuman || '' : '';
   const probeLines = _probeLines(result.probes);
   const probeCount = probeLines.length;
   const envRepairLines = _envRepairLines(result.envRepairs);
@@ -316,10 +378,18 @@ function formatEnvOptimize(result) {
       : `环境健康，另有 ${junkReclaim} 垃圾可回收。`;
   } else {
     const parts = [];
-    if (envFixedCount) parts.push(`已修复 ${envFixedCount} 项环境缺失`);
-    if (issues.length) parts.push(`${issues.length} 项自检问题（已自动修复 ${repairs.length} 项）`);
-    if (probeCount) parts.push(`${probeCount} 项环境隐患`);
-    if (junkReclaim) parts.push(`${junkReclaim} 垃圾可回收`);
+    if (envFixedCount) {
+      parts.push(`已修复 ${envFixedCount} 项环境缺失`);
+    }
+    if (issues.length) {
+      parts.push(`${issues.length} 项自检问题（已自动修复 ${repairs.length} 项）`);
+    }
+    if (probeCount) {
+      parts.push(`${probeCount} 项环境隐患`);
+    }
+    if (junkReclaim) {
+      parts.push(`${junkReclaim} 垃圾可回收`);
+    }
     verdict = `发现 ${parts.join('，')}。`;
   }
 
@@ -330,18 +400,22 @@ function formatEnvOptimize(result) {
       ['级别', _severityZh(result.severity)],
       ['耗时', `${result.durationMs}ms`],
     ];
-    if (platformLabel) kv.push(['平台', platformLabel]);
+    if (platformLabel) {
+      kv.push(['平台', platformLabel]);
+    }
     kv.push(['结论', verdict]);
     sections.push({ lines: _fmt.keyValues(kv) });
     if (repairs.length) {
       sections.push({
         heading: '已自动修复',
-        lines: _fmt.bullets(repairs.slice(0, 8).map(r => {
-          const act = r.action ? `[${r.action}] ` : '';
-          const from = r.from ? `${r.from} ` : '';
-          const to = r.to ? `→ ${r.to}` : '';
-          return `${act}${from}${to}`.trim() || '(repair)';
-        })),
+        lines: _fmt.bullets(
+          repairs.slice(0, 8).map((r) => {
+            const act = r.action ? `[${r.action}] ` : '';
+            const from = r.from ? `${r.from} ` : '';
+            const to = r.to ? `→ ${r.to}` : '';
+            return `${act}${from}${to}`.trim() || '(repair)';
+          })
+        ),
       });
     }
     if (envRepairLines.length) {
@@ -353,7 +427,7 @@ function formatEnvOptimize(result) {
     if (issues.length) {
       sections.push({
         heading: '仍需关注',
-        lines: _fmt.bullets(issues.slice(0, 8).map(i => `[${i.source || '系统'}] ${i.message}`)),
+        lines: _fmt.bullets(issues.slice(0, 8).map((i) => `[${i.source || '系统'}] ${i.message}`)),
       });
     }
     if (probeLines.length) {

@@ -21,10 +21,15 @@ class KhySelfTool extends BaseTool {
   static category = 'system';
   static risk = 'safe';
   static aliases = ['khy_self', 'self_info', 'whoami_khy', 'khy_where', 'self_locate'];
-  static searchHint = 'khy self introspection what commands do I have where am I installed find my own source files install location command catalog';
+  static searchHint =
+    'khy self introspection what commands do I have where am I installed find my own source files install location command catalog';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Introspect khy itself — what commands/features it has and where it is installed.
@@ -42,6 +47,10 @@ action:
   "self_audit" — khyos's self-assessed known issues (the self-audit report:
       each issue's severity, current status, and mitigation module). Use this to
       answer "what are khyos's biggest problems / your limitations" from ground truth.
+  "self_audit_verify" — INDEPENDENTLY verify the self-audit report against the live
+      filesystem/flags: per-item evidence (mitigation module files exist? gates ON?).
+      Use this when the user challenges whether the self-audit is real, then optionally
+      Read/Grep the returned selfSourceDir to inspect the evidence yourself.
   "all" (default) — location + a command overview.
 
 Returns structured data; do not confuse khy's own source dir with the user's project cwd.`;
@@ -53,12 +62,13 @@ Returns structured data; do not confuse khy's own source dir with the user's pro
       properties: {
         action: {
           type: 'string',
-          enum: ['commands', 'location', 'self_audit', 'all'],
+          enum: ['commands', 'location', 'self_audit', 'self_audit_verify', 'all'],
           description: 'What to introspect. Default "all".',
         },
         query: {
           type: 'string',
-          description: 'When action includes commands: filter by keyword across command name/label/description.',
+          description:
+            'When action includes commands: filter by keyword across command name/label/description.',
         },
       },
     };
@@ -70,7 +80,9 @@ Returns structured data; do not confuse khy's own source dir with the user's pro
       if (typeof selfProfile.getInstallLocation === 'function') {
         return selfProfile.getInstallLocation();
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     return null;
   }
 
@@ -80,7 +92,9 @@ Returns structured data; do not confuse khy's own source dir with the user's pro
       if (typeof cc.buildCommandCatalog === 'function') {
         return cc.buildCommandCatalog();
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     return null;
   }
 
@@ -90,30 +104,51 @@ Returns structured data; do not confuse khy's own source dir with the user's pro
       if (typeof sar.summarize === 'function') {
         return sar.summarize({ env: process.env });
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
+    return null;
+  }
+
+  _loadSelfAuditVerification() {
+    try {
+      const verifier = require('../../services/selfAuditVerifier');
+      if (typeof verifier.verifyAll === 'function') {
+        return verifier.verifyAll({ env: process.env });
+      }
+    } catch {
+      /* fall through */
+    }
     return null;
   }
 
   _filterCatalog(catalog, query) {
-    const q = String(query || '').trim().toLowerCase();
+    const q = String(query || '')
+      .trim()
+      .toLowerCase();
     const cats = Array.isArray(catalog && catalog.categories) ? catalog.categories : [];
     const out = [];
     let matched = 0;
     for (const cat of cats) {
-      if (!cat || typeof cat !== 'object') continue;
+      if (!cat || typeof cat !== 'object') {
+        continue;
+      }
       const cmds = Array.isArray(cat.commands) ? cat.commands : [];
       const kept = q
-        ? cmds.filter(c => {
-          const hay = `${c.cmd || ''} ${c.label || ''} ${c.name || ''} ${c.desc || ''}`.toLowerCase();
-          return hay.includes(q);
-        })
+        ? cmds.filter((c) => {
+            const hay =
+              `${c.cmd || ''} ${c.label || ''} ${c.name || ''} ${c.desc || ''}`.toLowerCase();
+            return hay.includes(q);
+          })
         : cmds;
-      if (kept.length === 0) continue;
+      if (kept.length === 0) {
+        continue;
+      }
       matched += kept.length;
       out.push({
         key: cat.key,
         label: cat.label,
-        commands: kept.map(c => ({
+        commands: kept.map((c) => ({
           cmd: c.cmd,
           label: c.label || '',
           desc: c.desc || '',
@@ -125,10 +160,43 @@ Returns structured data; do not confuse khy's own source dir with the user's pro
   }
 
   async execute(params = {}) {
-    const action = ['commands', 'location', 'self_audit', 'all'].includes(params.action) ? params.action : 'all';
+    const action = ['commands', 'location', 'self_audit', 'self_audit_verify', 'all'].includes(
+      params.action
+    )
+      ? params.action
+      : 'all';
     const result = { success: true, action };
 
     try {
+      if (action === 'self_audit_verify') {
+        const verification = this._loadSelfAuditVerification();
+        if (!verification || !verification.results) {
+          // Honest empty-signal: gate off or verifier unresolvable — say so, do not fake evidence.
+          return {
+            success: false,
+            action,
+            error:
+              'khy self-audit verification unavailable (selfAuditVerifier gated off or not resolvable in this context).',
+          };
+        }
+        const loc = this._loadLocation();
+        const selfSourceDir = (loc && loc.selfSrcDir) || '';
+        result.selfAuditVerify = {
+          checkedAt: verification.checkedAt,
+          items: Object.entries(verification.results).map(([id, r]) => ({
+            id,
+            verified: !!(r && r.verified),
+            checks: (r && r.checks) || [],
+            reason: (r && r.reason) || '',
+          })),
+          selfSourceDir,
+          hint: selfSourceDir
+            ? `Evidence above was checked live (module file existence + gate state). To inspect deeper yourself, pass this ABSOLUTE path to Read/Grep: ${selfSourceDir}`
+            : 'Self source dir unresolved; evidence above was still checked live.',
+        };
+        return result;
+      }
+
       if (action === 'self_audit' || action === 'all') {
         const audit = this._loadSelfAudit();
         if (audit) {
@@ -172,7 +240,7 @@ Returns structured data; do not confuse khy's own source dir with the user's pro
             matched,
             query: params.query ? String(params.query) : null,
             categories,
-            note: 'These are khy\'s own slash/router commands. Full browsable index: /features (TUI) or GET /api/commands.',
+            note: "These are khy's own slash/router commands. Full browsable index: /features (TUI) or GET /api/commands.",
           };
         } else {
           result.commands = null;
@@ -180,17 +248,36 @@ Returns structured data; do not confuse khy's own source dir with the user's pro
       }
 
       // Honest empty-signal: if nothing resolved, say so instead of a silent blank.
-      if (action === 'self_audit' && (result.selfAudit === null || result.selfAudit === undefined)) {
-        return { success: false, action, error: 'khy self-audit unavailable (selfAuditRegistry not resolvable in this context).' };
+      if (
+        action === 'self_audit' &&
+        (result.selfAudit === null || result.selfAudit === undefined)
+      ) {
+        return {
+          success: false,
+          action,
+          error: 'khy self-audit unavailable (selfAuditRegistry not resolvable in this context).',
+        };
       }
-      if (result.location === null && (action === 'location' || action === 'all')
-        && (result.commands === null || result.commands === undefined)) {
-        return { success: false, action, error: 'khy self-introspection unavailable (selfProfile/commandCatalog not resolvable in this context).' };
+      if (
+        result.location === null &&
+        (action === 'location' || action === 'all') &&
+        (result.commands === null || result.commands === undefined)
+      ) {
+        return {
+          success: false,
+          action,
+          error:
+            'khy self-introspection unavailable (selfProfile/commandCatalog not resolvable in this context).',
+        };
       }
 
       return result;
     } catch (err) {
-      return { success: false, action, error: `KhySelf introspection failed: ${err && err.message ? err.message : String(err)}` };
+      return {
+        success: false,
+        action,
+        error: `KhySelf introspection failed: ${err && err.message ? err.message : String(err)}`,
+      };
     }
   }
 }

@@ -31,12 +31,14 @@
  *   }
  */
 
-const { MicroLoopExecutor } = require('./microLoopExecutor');
 const { PrescriptionDeadLoopDetector } = require('./deadLoopDetector');
+const { MicroLoopExecutor } = require('./microLoopExecutor');
 
 let _resilience = null;
 function _getResilience() {
-  if (_resilience) return _resilience;
+  if (_resilience) {
+    return _resilience;
+  }
   _resilience = require('../resilience');
   return _resilience;
 }
@@ -55,10 +57,12 @@ class FallbackTreeWithHeal {
   constructor(opts = {}) {
     this.opts = opts || {};
     this.deadLoop = new PrescriptionDeadLoopDetector();
-    this.microLoop = opts.microLoop || new MicroLoopExecutor({
-      deadLoop: this.deadLoop,
-      confirm: opts.confirm,
-    });
+    this.microLoop =
+      opts.microLoop ||
+      new MicroLoopExecutor({
+        deadLoop: this.deadLoop,
+        confirm: opts.confirm,
+      });
   }
 
   /**
@@ -73,10 +77,11 @@ class FallbackTreeWithHeal {
     const { ResilienceCoordinator } = _getResilience();
 
     // 把自愈微循环作为 repair 钩子注入降级执行器；control 透传给 L1 获批。
-    const repair = (hookArgs) => this.microLoop.repair({
-      ...hookArgs,
-      context: { ...(hookArgs.context || {}), control: context.control },
-    });
+    const repair = (hookArgs) =>
+      this.microLoop.repair({
+        ...hookArgs,
+        context: { ...(hookArgs.context || {}), control: context.control },
+      });
 
     const coord = new ResilienceCoordinator({
       runner: this.opts.runner,
@@ -92,7 +97,8 @@ class FallbackTreeWithHeal {
     } catch (err) {
       // 协调器理应不抛；万一抛了也要交差一份兜底（绝不裸抛给上层）。
       return this._fallbackReport({
-        intent: typeof intentOrTree === 'string' ? intentOrTree : (intentOrTree && intentOrTree.intent),
+        intent:
+          typeof intentOrTree === 'string' ? intentOrTree : intentOrTree && intentOrTree.intent,
         salvage: null,
         executorError: (err && err.message) || String(err),
       });
@@ -138,7 +144,10 @@ class FallbackTreeWithHeal {
           reason: 'execution-error',
           risk: null,
           prescription: null,
-          detail: executorError || (salvage && salvage.next_action_suggestion) || '工具执行失败且无可本地修复的处方。',
+          detail:
+            executorError ||
+            (salvage && salvage.next_action_suggestion) ||
+            '工具执行失败且无可本地修复的处方。',
         };
 
     return {
@@ -146,10 +155,11 @@ class FallbackTreeWithHeal {
       intent: String((salvage && salvage.intent) || intent || '(未命名意图)'),
       diagnosis,
       attempted_fixes: this.microLoop.attempted_fixes.slice(),
-      salvage_data: (salvage && salvage.salvage_data !== undefined) ? salvage.salvage_data : '',
-      next_action_suggestion: (salvage && salvage.next_action_suggestion)
-        || (diag && diag.action)
-        || '已穷尽自愈与降级路径，请人工核查上述诊断与尝试记录后重试。',
+      salvage_data: salvage && salvage.salvage_data !== undefined ? salvage.salvage_data : '',
+      next_action_suggestion:
+        (salvage && salvage.next_action_suggestion) ||
+        (diag && diag.action) ||
+        '已穷尽自愈与降级路径，请人工核查上述诊断与尝试记录后重试。',
     };
   }
 }

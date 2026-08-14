@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref } from 'vue';
 
 // Single source of truth for "is the app currently waiting on something".
 // Two independent signals are merged so neither can mask the other:
@@ -8,27 +8,27 @@ import { computed, ref } from 'vue'
 //     chunk download. A boolean (not a counter) avoids leaks when a guard issues
 //     redirects (many beforeEach, a single afterEach).
 // The top progress bar (GlobalProgressBar.vue) renders whenever isLoading is true.
-const httpPending = ref(0)
-const routeLoading = ref(false)
+const httpPending = ref(0);
+const routeLoading = ref(false);
 
-const isLoading = computed(() => httpPending.value > 0 || routeLoading.value)
+const isLoading = computed(() => httpPending.value > 0 || routeLoading.value);
 
 export function httpStart() {
-  httpPending.value += 1
+  httpPending.value += 1;
 }
 
 export function httpDone() {
-  httpPending.value = Math.max(0, httpPending.value - 1)
+  httpPending.value = Math.max(0, httpPending.value - 1);
 }
 
 export function routeStart() {
-  routeLoading.value = true
+  routeLoading.value = true;
 }
 
 export function routeDone() {
-  routeLoading.value = false
+  routeLoading.value = false;
 }
 
 export function useGlobalLoading() {
-  return { isLoading, httpPending, routeLoading }
+  return { isLoading, httpPending, routeLoading };
 }

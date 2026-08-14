@@ -21,21 +21,31 @@ function pickUserText(prompt, options) {
     return require('../services/latestUserText').pickUserText(prompt, options, process.env);
   } catch {
     const direct = String(prompt == null ? '' : prompt).trim();
-    if (direct) return direct;
+    if (direct) {
+      return direct;
+    }
     try {
       const msgs = options && Array.isArray(options.messages) ? options.messages : [];
       for (let i = msgs.length - 1; i >= 0; i--) {
         const m = msgs[i];
-        if (!m || m.role !== 'user') continue;
-        if (typeof m.content === 'string') return m.content.trim();
+        if (!m || m.role !== 'user') {
+          continue;
+        }
+        if (typeof m.content === 'string') {
+          return m.content.trim();
+        }
         if (Array.isArray(m.content)) {
           const parts = m.content
-            .map((p) => (typeof p === 'string' ? p : (p && (p.text || p.content) || '')))
+            .map((p) => (typeof p === 'string' ? p : (p && (p.text || p.content)) || ''))
             .filter(Boolean);
-          if (parts.length) return parts.join(' ').trim();
+          if (parts.length) {
+            return parts.join(' ').trim();
+          }
         }
       }
-    } catch { /* fail-soft */ }
+    } catch {
+      /* fail-soft */
+    }
     return '';
   }
 }

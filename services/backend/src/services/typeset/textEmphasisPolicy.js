@@ -19,7 +19,7 @@
  * 纯叶子契约:零 IO、确定性、绝不抛、fail-soft;两道门控关闭时调用方逐字节回退到旧行为。
  */
 
-const ENV_EMPHASIS = 'KHY_TYPESET_EMPHASIS';      // 强调层(加粗 + 层级),默认开
+const ENV_EMPHASIS = 'KHY_TYPESET_EMPHASIS'; // 强调层(加粗 + 层级),默认开
 const ENV_BIG_HEADINGS = 'KHY_TYPESET_BIG_HEADINGS'; // 字面双宽放大标题,默认关(实验性)
 
 // DEC 双宽单高行(VT100 DECDWL):置于物理行**最前**时,整行字形渲染为两倍宽、同高。
@@ -28,13 +28,17 @@ const DEC_DOUBLE_WIDTH = '\x1b#6';
 
 function _truthyDefaultOn(raw) {
   // 默认开:仅显式 falsy 才关。
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 function _truthyDefaultOff(raw) {
   // 默认关:仅显式 truthy 才开。
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return ['1', 'true', 'on', 'yes'].includes(v);
 }
 
@@ -62,11 +66,21 @@ function isBigHeadingsEnabled(env = process.env) {
  */
 function headingDescriptor(level) {
   let lvl = Number.isFinite(level) ? Math.trunc(level) : 1;
-  if (lvl < 1) lvl = 1;
-  if (lvl > 6) lvl = 6;
-  if (lvl === 1) return { level: 1, bold: true, tone: 'h1', prominent: true };
-  if (lvl === 2) return { level: 2, bold: true, tone: 'h2', prominent: true };
-  if (lvl === 3) return { level: 3, bold: true, tone: 'h3', prominent: false };
+  if (lvl < 1) {
+    lvl = 1;
+  }
+  if (lvl > 6) {
+    lvl = 6;
+  }
+  if (lvl === 1) {
+    return { level: 1, bold: true, tone: 'h1', prominent: true };
+  }
+  if (lvl === 2) {
+    return { level: 2, bold: true, tone: 'h2', prominent: true };
+  }
+  if (lvl === 3) {
+    return { level: 3, bold: true, tone: 'h3', prominent: false };
+  }
   return { level: lvl, bold: true, tone: 'muted', prominent: false };
 }
 
@@ -76,7 +90,9 @@ function headingDescriptor(level) {
  */
 function shouldBoldHeading(level, env = process.env) {
   try {
-    if (!isEmphasisEnabled(env)) return false;
+    if (!isEmphasisEnabled(env)) {
+      return false;
+    }
     return true; // 强调层开:所有标题级别加粗
   } catch {
     return false;
@@ -90,7 +106,9 @@ function shouldBoldHeading(level, env = process.env) {
  */
 function bigHeadingPrefix(level, env = process.env) {
   try {
-    if (!isBigHeadingsEnabled(env)) return '';
+    if (!isBigHeadingsEnabled(env)) {
+      return '';
+    }
     const lvl = Number.isFinite(level) ? Math.trunc(level) : 1;
     return lvl <= 2 ? DEC_DOUBLE_WIDTH : '';
   } catch {

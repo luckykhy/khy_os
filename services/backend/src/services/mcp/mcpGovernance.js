@@ -37,14 +37,39 @@ function describeConfigPrecedence(paths = {}) {
   const p = paths && typeof paths === 'object' ? paths : {};
   let order = 0;
   const push = (scope, label, file, overrides, note) => {
-    rows.push({ order: order++, scope, label, path: file || null, overrides: overrides || null, note });
+    rows.push({
+      order: order++,
+      scope,
+      label,
+      path: file || null,
+      overrides: overrides || null,
+      note,
+    });
   };
   push(ConfigScope.USER, '用户级', p.userPath || null, null, '~/.khy/mcp.json(全局默认)');
-  push(ConfigScope.USER, '用户级(legacy)', p.legacyPath || null, '用户级', '~/.khyquant/mcp.json(向后兼容)');
+  push(
+    ConfigScope.USER,
+    '用户级(legacy)',
+    p.legacyPath || null,
+    '用户级',
+    '~/.khyquant/mcp.json(向后兼容)'
+  );
   if (p.projectDir) {
     const sep = String(p.projectDir).endsWith('/') ? '' : '/';
-    push(ConfigScope.LOCAL, '项目级', `${p.projectDir}${sep}.khy/mcp.json`, '用户级', '项目共享配置,覆盖同名用户级服务器');
-    push(ConfigScope.LOCAL, '项目级(legacy)', `${p.projectDir}${sep}.khyquant/mcp.json`, '项目级', '向后兼容');
+    push(
+      ConfigScope.LOCAL,
+      '项目级',
+      `${p.projectDir}${sep}.khy/mcp.json`,
+      '用户级',
+      '项目共享配置,覆盖同名用户级服务器'
+    );
+    push(
+      ConfigScope.LOCAL,
+      '项目级(legacy)',
+      `${p.projectDir}${sep}.khyquant/mcp.json`,
+      '项目级',
+      '向后兼容'
+    );
   }
   return rows;
 }
@@ -87,18 +112,27 @@ function resolveApprovalPolicy(tool) {
   const isReadOnly = t.isReadOnly === true;
   if (isDestructive) {
     return {
-      humanGate: true, planModeAllowed: false, autoApprovable: false, level: 'destructive',
+      humanGate: true,
+      planModeAllowed: false,
+      autoApprovable: false,
+      level: 'destructive',
       reason: '破坏性(destructiveHint)→ 不可绕过的人闸门确认',
     };
   }
   if (isReadOnly) {
     return {
-      humanGate: false, planModeAllowed: true, autoApprovable: true, level: 'read-only',
+      humanGate: false,
+      planModeAllowed: true,
+      autoApprovable: true,
+      level: 'read-only',
       reason: '只读(readOnlyHint)→ plan 模式可放行,可自动批准',
     };
   }
   return {
-    humanGate: false, planModeAllowed: false, autoApprovable: false, level: 'standard',
+    humanGate: false,
+    planModeAllowed: false,
+    autoApprovable: false,
+    level: 'standard',
     reason: '无注解 → 常规权限流程(默认需批准,plan 模式不放行)',
   };
 }
@@ -123,12 +157,18 @@ function buildGovernanceView(args = {}) {
   const approval = { destructive: 0, readOnly: 0, standard: 0 };
   for (const tool of tools) {
     const server = tool && (tool.serverName || tool.normalizedServerName);
-    if (!toolsByServer.has(server)) toolsByServer.set(server, 0);
+    if (!toolsByServer.has(server)) {
+      toolsByServer.set(server, 0);
+    }
     toolsByServer.set(server, toolsByServer.get(server) + 1);
     const pol = resolveApprovalPolicy(tool);
-    if (pol.level === 'destructive') approval.destructive += 1;
-    else if (pol.level === 'read-only') approval.readOnly += 1;
-    else approval.standard += 1;
+    if (pol.level === 'destructive') {
+      approval.destructive += 1;
+    } else if (pol.level === 'read-only') {
+      approval.readOnly += 1;
+    } else {
+      approval.standard += 1;
+    }
   }
 
   const servers = Object.entries(mcpServers).map(([name, cfg]) => {

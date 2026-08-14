@@ -1,8 +1,8 @@
 'use strict';
 
-const { BaseTool } = require('../_baseTool');
 const diskCleanup = require('../../services/diskCleanup');
 const _clarify = require('../../services/diskCleanupClarify');
+const { BaseTool } = require('../_baseTool');
 
 /**
  * DiskCleanupTool — 安全清理 C 盘/D 盘的磁盘清理工具（教 khyos 不破坏用户数据地清盘）。
@@ -21,7 +21,8 @@ class DiskCleanupTool extends BaseTool {
   static category = 'system';
   static risk = 'high';
   static aliases = ['clean_disk', 'cleanup_disk', 'disk_cleanup', 'clean_c_drive'];
-  static searchHint = '清理 C盘 D盘 磁盘 垃圾 缓存 临时文件 回收站 清理空间 disk cleanup free space';
+  static searchHint =
+    '清理 C盘 D盘 磁盘 垃圾 缓存 临时文件 回收站 清理空间 disk cleanup free space';
 
   // 动态风险：仅 mode=clean && apply=true 时才是破坏性，scan/plan 为只读。
   isReadOnly(input) {
@@ -31,7 +32,9 @@ class DiskCleanupTool extends BaseTool {
   isDestructive(input) {
     return !!(input && input.mode === 'clean' && input.apply === true);
   }
-  isConcurrencySafe() { return false; }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return [
@@ -82,7 +85,8 @@ class DiskCleanupTool extends BaseTool {
         },
         scanDepth: {
           type: 'string',
-          description: '扫描深度档:shallow(浅,2层) / standard(标准,6层,默认) / deep(深,12层)。越深体积/在用判定越准但越慢。也可用 maxDepth 直接给数字',
+          description:
+            '扫描深度档:shallow(浅,2层) / standard(标准,6层,默认) / deep(深,12层)。越深体积/在用判定越准但越慢。也可用 maxDepth 直接给数字',
           enum: ['shallow', 'standard', 'deep'],
         },
         maxDepth: {
@@ -91,7 +95,8 @@ class DiskCleanupTool extends BaseTool {
         },
         granularity: {
           type: 'string',
-          description: 'scan 结果的颗粒细度:coarse(按大类汇总) / standard(按目录,默认) / fine(逐项按体积明细)',
+          description:
+            'scan 结果的颗粒细度:coarse(按大类汇总) / standard(按目录,默认) / fine(逐项按体积明细)',
           enum: ['coarse', 'standard', 'fine'],
         },
         categories: {
@@ -121,7 +126,9 @@ class DiskCleanupTool extends BaseTool {
       keepRecentHours: params.keepRecentHours,
       categories: params.categories,
     };
-    if (_depth != null) opts.maxDepth = _depth;
+    if (_depth != null) {
+      opts.maxDepth = _depth;
+    }
 
     if (mode === 'scan') {
       const res = diskCleanup.scan(opts);
@@ -147,9 +154,7 @@ class DiskCleanupTool extends BaseTool {
         granularity: shaped.granularity,
         candidateCount: candidates.length,
         // coarse → 汇总行(rolledUp);standard/fine → 候选明细(fine 已按体积降序)。
-        ...(shaped.rolledUp
-          ? { categorySummary: shaped.rows }
-          : { candidates: shaped.rows }),
+        ...(shaped.rolledUp ? { categorySummary: shaped.rows } : { candidates: shaped.rows }),
       };
     }
 
@@ -197,8 +202,17 @@ class DiskCleanupTool extends BaseTool {
       totals: p.totals,
       byCategory: p.byCategory,
       byDrive: p.byDrive,
-      review: p.review.map((c) => ({ label: c.label, path: c.path, sizeBytes: c.sizeBytes, note: c.note })),
-      protectedSkipped: p.skipped.map((c) => ({ label: c.label, path: c.path, reason: c.skipReason })),
+      review: p.review.map((c) => ({
+        label: c.label,
+        path: c.path,
+        sizeBytes: c.sizeBytes,
+        note: c.note,
+      })),
+      protectedSkipped: p.skipped.map((c) => ({
+        label: c.label,
+        path: c.path,
+        reason: c.skipReason,
+      })),
     };
   }
 

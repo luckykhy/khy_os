@@ -14,6 +14,7 @@
  */
 
 const nodePath = require('path');
+
 const { CorePollutionError } = require('./actionRegistry');
 
 // 受保护的用户轨目录名：官方更新与污染检查统一以这两个名字识别用户领地（红线4/5）。
@@ -81,8 +82,13 @@ function loadUserTrack(opts = {}) {
   try {
     manifest = JSON.parse(manifestRaw);
   } catch (e) {
-    result.errors.push({ name: '<manifest>', reason: `manifest.json 解析失败: ${e.message}（基座照常运行）` });
-    if (logger && logger.warn) logger.warn(`[dualTrack:loader] manifest 解析失败，跳过用户轨: ${e.message}`);
+    result.errors.push({
+      name: '<manifest>',
+      reason: `manifest.json 解析失败: ${e.message}（基座照常运行）`,
+    });
+    if (logger && logger.warn) {
+      logger.warn(`[dualTrack:loader] manifest 解析失败，跳过用户轨: ${e.message}`);
+    }
     return result;
   }
 
@@ -100,18 +106,26 @@ function loadUserTrack(opts = {}) {
       // 沙箱边界：module 必须落在用户轨内（红线5）。
       const modAbs = assertWithinUserTrack(entry.module, userTrackRoot, pathImpl);
       const mod = requireImpl(modAbs);
-      const handler = typeof mod === 'function' ? mod
-        : (mod && typeof mod.handler === 'function' ? mod.handler : null);
+      const handler =
+        typeof mod === 'function'
+          ? mod
+          : mod && typeof mod.handler === 'function'
+            ? mod.handler
+            : null;
       if (!handler) {
         result.skipped.push({ name: label, reason: '模块未导出 handler 函数' });
         continue;
       }
-      registry.registerOverride(entry.actionType, handler, { source: `user_track:${manifest.name || 'unnamed'}` });
+      registry.registerOverride(entry.actionType, handler, {
+        source: `user_track:${manifest.name || 'unnamed'}`,
+      });
       result.loaded.push({ name: label, actionType: entry.actionType, kind: entry.kind });
     } catch (e) {
       // 单个扩展坏掉绝不拖垮基座（graceful）。
       result.errors.push({ name: label, reason: e.message });
-      if (logger && logger.warn) logger.warn(`[dualTrack:loader] 扩展 ${label} 加载失败，已跳过: ${e.message}`);
+      if (logger && logger.warn) {
+        logger.warn(`[dualTrack:loader] 扩展 ${label} 加载失败，已跳过: ${e.message}`);
+      }
     }
   }
   return result;

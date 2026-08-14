@@ -69,15 +69,18 @@ function makeLocalModelChat(gateway, localKey, opts = {}) {
     throw new TypeError('makeLocalModelChat: gateway.generateWithSubModel is required');
   }
 
-  const textAdapter = (opts.adapter && typeof opts.adapter.buildSystemAddendum === 'function')
-    ? opts.adapter
-    : require('./toolProtocolAdapter').textAdapter;
+  const textAdapter =
+    opts.adapter && typeof opts.adapter.buildSystemAddendum === 'function'
+      ? opts.adapter
+      : require('./toolProtocolAdapter').textAdapter;
 
   // Resolve the advertised tool surface ONCE — it is stable across the turns of
   // a single request. selectTools curates a read-only base tier plus, when
   // writeEnabled, the write/shell delivery tier; buildSystemAddendum renders the
   // text-protocol instructions + persona for exactly that surface.
-  const allDefs = Array.isArray(opts.toolDefinitions) ? opts.toolDefinitions : _safeToolDefinitions();
+  const allDefs = Array.isArray(opts.toolDefinitions)
+    ? opts.toolDefinitions
+    : _safeToolDefinitions();
   const writeEnabled = !!opts.writeEnabled;
   const defs = textAdapter.selectTools(allDefs, { writeEnabled }) || [];
   const system = textAdapter.buildSystemAddendum(defs, { writeEnabled }) || '';

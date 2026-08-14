@@ -1,15 +1,14 @@
 const fs = require('fs');
 const path = require('path');
-const imageService = require('./imageService');
+
 const aiGateway = require('./gateway/aiGateway');
+const imageService = require('./imageService');
 
 function isClipboardImageArg(raw = '') {
-  const s = String(raw || '').trim().toLowerCase();
-  return s === 'paste'
-    || s === 'clipboard'
-    || s === 'clip'
-    || s === '粘贴'
-    || s === '剪贴板';
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase();
+  return s === 'paste' || s === 'clipboard' || s === 'clip' || s === '粘贴' || s === '剪贴板';
 }
 
 function buildImage2WebPrompt(userPrompt = '') {
@@ -32,15 +31,21 @@ function buildImage2WebPrompt(userPrompt = '') {
 
 function extractHtmlFromAiReply(text = '') {
   const content = String(text || '');
-  if (!content.trim()) return '';
+  if (!content.trim()) {
+    return '';
+  }
 
   const htmlFence = content.match(/```html\s*([\s\S]*?)```/i);
-  if (htmlFence && htmlFence[1]) return String(htmlFence[1]).trim();
+  if (htmlFence && htmlFence[1]) {
+    return String(htmlFence[1]).trim();
+  }
 
   const anyFence = [...content.matchAll(/```[\w-]*\s*([\s\S]*?)```/g)];
   for (const item of anyFence) {
     const block = String(item[1] || '').trim();
-    if (!block) continue;
+    if (!block) {
+      continue;
+    }
     if (/<(?:!doctype|html|head|body|style|main|section|div)\b/i.test(block)) {
       return block;
     }
@@ -54,8 +59,12 @@ function extractHtmlFromAiReply(text = '') {
 
 function toRunnableHtml(htmlText = '') {
   const html = String(htmlText || '').trim();
-  if (!html) return '';
-  if (/<html[\s>]/i.test(html) || /<!doctype/i.test(html)) return html;
+  if (!html) {
+    return '';
+  }
+  if (/<html[\s>]/i.test(html) || /<!doctype/i.test(html)) {
+    return html;
+  }
 
   return [
     '<!doctype html>',
@@ -75,12 +84,16 @@ function toRunnableHtml(htmlText = '') {
 function resolveOutputPath(outRaw = '', sourcePath = '', cwd = process.cwd()) {
   const normalizedCwd = path.resolve(cwd || process.cwd());
   const raw = String(outRaw || '').trim();
-  if (raw) return path.resolve(normalizedCwd, raw);
+  if (raw) {
+    return path.resolve(normalizedCwd, raw);
+  }
 
   let base = 'restored-page';
   if (sourcePath) {
     const parsed = path.parse(String(sourcePath));
-    if (parsed && parsed.name) base = `${parsed.name}.restored`;
+    if (parsed && parsed.name) {
+      base = `${parsed.name}.restored`;
+    }
   }
   return path.join(normalizedCwd, `${base}.html`);
 }
@@ -123,8 +136,12 @@ async function convertImageToWeb(options = {}) {
     return { success: false, error: err.message || '图片读取失败' };
   }
 
-  if (!aiGateway._initialized) {
-    try { await aiGateway.init(); } catch { /* best effort */ }
+  if (!aiGateway.isInitialized()) {
+    try {
+      await aiGateway.init();
+    } catch {
+      /* best effort */
+    }
   }
 
   const prompt = buildImage2WebPrompt(userPrompt);

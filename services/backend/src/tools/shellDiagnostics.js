@@ -31,8 +31,9 @@ function diagnoseEmptyFailure(code, command) {
   const cmd = String(command || '');
   // 过滤器(find/findstr/grep)退出码 1:这是「未匹配」的正常语义,不一定是错误。
   if (code === 1 && _FILTER_TAIL_RE.test(cmd)) {
-    let line = 'find/findstr/grep 退出码 1 = 未匹配到任何行(不一定是错误);'
-      + 'Windows 上对中文/非 ASCII needle 常因代码页(chcp)误判为无匹配。';
+    let line =
+      'find/findstr/grep 退出码 1 = 未匹配到任何行(不一定是错误);' +
+      'Windows 上对中文/非 ASCII needle 常因代码页(chcp)误判为无匹配。';
     // 叠加:若同时把 stderr 抹掉了,提示移除重定向。
     if (_STDERR_DISCARD_RE.test(cmd)) {
       line += ' 此外 stderr 被重定向到 null 而丢弃,移除该重定向后重跑可见真实错误。';
@@ -74,8 +75,12 @@ function composeShellError(code, output, command) {
   try {
     const { buildPythonInvocationHint } = require('./pythonInvocationHint');
     const hint = buildPythonInvocationHint(command, output, process.env);
-    if (hint) composed = `${composed}\n${hint}`;
-  } catch { /* 提示叶子不可用 → 保持原错误串 */ }
+    if (hint) {
+      composed = `${composed}\n${hint}`;
+    }
+  } catch {
+    /* 提示叶子不可用 → 保持原错误串 */
+  }
   // 通用错误分类(教 khyos 处理未见过的错误):非空 stderr 但不属 python 姿势错时,据报错
   // 签名把失败归入一个已知环境/姿势错家族(命令找不到 / 权限 / 路径 / 缺依赖 / 端口 / 磁盘 /
   // 网络),各追加**一条**可操作改法。单火 · 让位 python(not-found 由上面的 python 叶子接管,
@@ -84,8 +89,12 @@ function composeShellError(code, output, command) {
   try {
     const { buildShellErrorHint } = require('./shellErrorClassify');
     const classHint = buildShellErrorHint(command, output, process.env);
-    if (classHint) composed = `${composed}\n${classHint}`;
-  } catch { /* 分类叶子不可用 → 保持原错误串 */ }
+    if (classHint) {
+      composed = `${composed}\n${classHint}`;
+    }
+  } catch {
+    /* 分类叶子不可用 → 保持原错误串 */
+  }
   return composed;
 }
 

@@ -44,7 +44,10 @@ const _TOON_DEPTH_OFF = ['0', 'false', 'off', 'no'];
 const _TOON_MAX_DECODE_DEPTH = 2048;
 function _toonDepthCapEnabled() {
   return !_TOON_DEPTH_OFF.includes(
-    String((process.env && process.env.KHY_TOON_DEPTH_CAP) || '').trim().toLowerCase());
+    String((process.env && process.env.KHY_TOON_DEPTH_CAP) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 // ─── JSON → TOON Encoding ───────────────────────────────────────────────────
@@ -93,9 +96,8 @@ function _encodeValue(value, depth, lines, opts) {
   const type = typeof value;
 
   if (type === 'string') {
-    const str = value.length > opts.maxStringLen
-      ? value.slice(0, opts.maxStringLen) + '...'
-      : value;
+    const str =
+      value.length > opts.maxStringLen ? value.slice(0, opts.maxStringLen) + '...' : value;
     // Multi-line strings use | block indicator
     if (str.includes('\n')) {
       lines.push(_indent(depth) + '|');
@@ -120,17 +122,15 @@ function _encodeValue(value, depth, lines, opts) {
     }
 
     // Check if array of simple values (flat array)
-    const allSimple = value.every(v => v === null || typeof v !== 'object');
+    const allSimple = value.every((v) => v === null || typeof v !== 'object');
     if (allSimple && value.length <= 10) {
       // Inline flat array
-      lines.push(_indent(depth) + '[' + value.map(v => _simpleValue(v)).join(', ') + ']');
+      lines.push(_indent(depth) + '[' + value.map((v) => _simpleValue(v)).join(', ') + ']');
       return;
     }
 
     // Array of objects: use - prefix (YAML-like)
-    const items = value.length > opts.maxArrayItems
-      ? value.slice(0, opts.maxArrayItems)
-      : value;
+    const items = value.length > opts.maxArrayItems ? value.slice(0, opts.maxArrayItems) : value;
 
     for (const item of items) {
       if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
@@ -200,7 +200,9 @@ function _encodeValue(value, depth, lines, opts) {
  * @returns {*} Decoded value
  */
 function decode(toon) {
-  if (!toon || typeof toon !== 'string') return null;
+  if (!toon || typeof toon !== 'string') {
+    return null;
+  }
 
   const lines = toon.split('\n');
   const result = _parseLines(lines, 0, 0, 0);
@@ -208,7 +210,9 @@ function decode(toon) {
 }
 
 function _parseLines(lines, startIdx, baseIndent, depth = 0) {
-  if (startIdx >= lines.length) return { value: null, nextIdx: startIdx };
+  if (startIdx >= lines.length) {
+    return { value: null, nextIdx: startIdx };
+  }
 
   // Depth cap: stop recursing past the bound so an adversarially deep document
   // cannot overflow the stack. Mirrors encode's `<truncated>` (which decodes to
@@ -235,11 +239,21 @@ function _parseLines(lines, startIdx, baseIndent, depth = 0) {
   }
 
   // Empty object/array
-  if (trimmed === '{}') return { value: {}, nextIdx: startIdx + 1 };
-  if (trimmed === '[]') return { value: [], nextIdx: startIdx + 1 };
-  if (trimmed === 'null') return { value: null, nextIdx: startIdx + 1 };
-  if (trimmed === 'true') return { value: true, nextIdx: startIdx + 1 };
-  if (trimmed === 'false') return { value: false, nextIdx: startIdx + 1 };
+  if (trimmed === '{}') {
+    return { value: {}, nextIdx: startIdx + 1 };
+  }
+  if (trimmed === '[]') {
+    return { value: [], nextIdx: startIdx + 1 };
+  }
+  if (trimmed === 'null') {
+    return { value: null, nextIdx: startIdx + 1 };
+  }
+  if (trimmed === 'true') {
+    return { value: true, nextIdx: startIdx + 1 };
+  }
+  if (trimmed === 'false') {
+    return { value: false, nextIdx: startIdx + 1 };
+  }
 
   // Number
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
@@ -253,8 +267,12 @@ function _parseLines(lines, startIdx, baseIndent, depth = 0) {
     while (idx < lines.length) {
       const line = lines[idx];
       const indent = _getIndent(line);
-      if (indent < baseIndent && idx > startIdx) break;
-      if (!line.trim().startsWith('- ') && indent <= baseIndent && idx > startIdx) break;
+      if (indent < baseIndent && idx > startIdx) {
+        break;
+      }
+      if (!line.trim().startsWith('- ') && indent <= baseIndent && idx > startIdx) {
+        break;
+      }
 
       if (line.trim().startsWith('- ')) {
         const content = line.trim().slice(2);
@@ -269,7 +287,9 @@ function _parseLines(lines, startIdx, baseIndent, depth = 0) {
           while (idx < lines.length) {
             const nextLine = lines[idx];
             const nextIndent = _getIndent(nextLine);
-            if (nextIndent <= indent || !nextLine.trim()) break;
+            if (nextIndent <= indent || !nextLine.trim()) {
+              break;
+            }
             const nextTrimmed = nextLine.trim();
             if (nextTrimmed.includes(': ')) {
               const [nKey, ...nVal] = nextTrimmed.split(': ');
@@ -296,9 +316,14 @@ function _parseLines(lines, startIdx, baseIndent, depth = 0) {
     while (idx < lines.length) {
       const line = lines[idx];
       const indent = _getIndent(line);
-      if (indent < baseIndent && idx > startIdx) break;
+      if (indent < baseIndent && idx > startIdx) {
+        break;
+      }
       const lt = line.trim();
-      if (!lt) { idx++; continue; }
+      if (!lt) {
+        idx++;
+        continue;
+      }
 
       if (lt.endsWith(':')) {
         const key = lt.slice(0, -1);
@@ -324,13 +349,22 @@ function _parseLines(lines, startIdx, baseIndent, depth = 0) {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function _isSimple(value) {
-  return value === null || value === undefined ||
-    typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+  return (
+    value === null ||
+    value === undefined ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  );
 }
 
 function _simpleValue(value) {
-  if (value === null || value === undefined) return 'null';
-  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
   return String(value);
 }
 
@@ -344,12 +378,22 @@ function _getIndent(line) {
 }
 
 function _parseSimple(str) {
-  if (!str) return null;
+  if (!str) {
+    return null;
+  }
   const trimmed = str.trim();
-  if (trimmed === 'null') return null;
-  if (trimmed === 'true') return true;
-  if (trimmed === 'false') return false;
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (trimmed === 'null') {
+    return null;
+  }
+  if (trimmed === 'true') {
+    return true;
+  }
+  if (trimmed === 'false') {
+    return false;
+  }
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+    return Number(trimmed);
+  }
   return trimmed;
 }
 

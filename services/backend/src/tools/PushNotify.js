@@ -22,7 +22,12 @@ const DEFAULT_TIMEOUT_MS = 15000;
 function _send(urlStr, { method, headers, body, timeoutMs }) {
   return new Promise((resolve) => {
     let target;
-    try { target = new URL(urlStr); } catch { resolve({ _err: `非法 URL：${urlStr}` }); return; }
+    try {
+      target = new URL(urlStr);
+    } catch {
+      resolve({ _err: `非法 URL：${urlStr}` });
+      return;
+    }
     const lib = target.protocol === 'https:' ? https : http;
     const reqHeaders = Object.assign({}, headers || {});
     let payload = null;
@@ -35,13 +40,32 @@ function _send(urlStr, { method, headers, body, timeoutMs }) {
       req = lib.request(target, { method, headers: reqHeaders, timeout: timeoutMs }, (res) => {
         const chunks = [];
         let size = 0;
-        res.on('data', (c) => { size += c.length; if (size <= MAX_BODY_BYTES) chunks.push(c); });
-        res.on('end', () => resolve({ status: res.statusCode, statusText: res.statusMessage || '', body: Buffer.concat(chunks).toString('utf-8') }));
+        res.on('data', (c) => {
+          size += c.length;
+          if (size <= MAX_BODY_BYTES) {
+            chunks.push(c);
+          }
+        });
+        res.on('end', () =>
+          resolve({
+            status: res.statusCode,
+            statusText: res.statusMessage || '',
+            body: Buffer.concat(chunks).toString('utf-8'),
+          })
+        );
       });
-    } catch (e) { resolve({ _err: (e && e.message) || String(e) }); return; }
+    } catch (e) {
+      resolve({ _err: (e && e.message) || String(e) });
+      return;
+    }
     req.on('error', (err) => resolve({ _err: err.message }));
-    req.on('timeout', () => { req.destroy(); resolve({ _err: `请求超时（${timeoutMs}ms）` }); });
-    if (payload != null) req.write(payload);
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ _err: `请求超时（${timeoutMs}ms）` });
+    });
+    if (payload != null) {
+      req.write(payload);
+    }
     req.end();
   });
 }
@@ -49,19 +73,28 @@ function _send(urlStr, { method, headers, body, timeoutMs }) {
 module.exports = defineTool({
   name: 'PushNotify',
   description:
-    'Send a push notification to the user OFF-TERMINAL (their phone/desktop) — e.g. when a long task '
-    + 'finishes or you hit a blocking decision point. The destination (ntfy / Bark / Discord / Slack / generic '
-    + 'webhook) must be configured first via `khy notify set <provider> <target>`. Give a short title and body.',
+    'Send a push notification to the user OFF-TERMINAL (their phone/desktop) — e.g. when a long task ' +
+    'finishes or you hit a blocking decision point. The destination (ntfy / Bark / Discord / Slack / generic ' +
+    'webhook) must be configured first via `khy notify set <provider> <target>`. Give a short title and body.',
   category: 'coordinator',
   risk: 'low',
   isReadOnly: () => false,
   isConcurrencySafe: true,
   aliases: ['push', 'notify', 'pushNotify', 'push_notify'],
-  searchHint: 'push notification alert notify mobile phone ntfy bark discord slack webhook done finished',
+  searchHint:
+    'push notification alert notify mobile phone ntfy bark discord slack webhook done finished',
   inputSchema: {
-    title: { type: 'string', required: true, description: 'Short notification title (e.g. "Build finished").' },
+    title: {
+      type: 'string',
+      required: true,
+      description: 'Short notification title (e.g. "Build finished").',
+    },
     body: { type: 'string', required: false, description: 'Notification body / details.' },
-    priority: { type: 'string', required: false, description: 'min | low | default | high | max (or 1-5).' },
+    priority: {
+      type: 'string',
+      required: false,
+      description: 'min | low | default | high | max (or 1-5).',
+    },
   },
 
   getActivityDescription(input) {
@@ -83,7 +116,9 @@ module.exports = defineTool({
     }
 
     const title = String((params && params.title) || '').trim();
-    if (!title) return { success: false, error: 'title is required.' };
+    if (!title) {
+      return { success: false, error: 'title is required.' };
+    }
 
     const built = core.buildPushRequest({
       provider: cfg.provider,
@@ -92,7 +127,9 @@ module.exports = defineTool({
       body: (params && params.body) || '',
       priority: params && params.priority,
     });
-    if (!built.ok) return { success: false, error: built.error };
+    if (!built.ok) {
+      return { success: false, error: built.error };
+    }
 
     const { url, method, headers, body } = built.request;
     const masked = core.maskTarget(cfg.target);
@@ -102,7 +139,9 @@ module.exports = defineTool({
       await assertPublicHttpUrlResolved(url, '推送目标');
     } catch (e) {
       // 错误信息可能含 target,脱敏后再回。
-      const msg = String((e && e.message) || e).split(cfg.target).join(masked);
+      const msg = String((e && e.message) || e)
+        .split(cfg.target)
+        .join(masked);
       return { success: false, error: `推送目标未通过安全校验:${msg}（自托管内网地址不被允许)。` };
     }
 
@@ -112,11 +151,20 @@ module.exports = defineTool({
     }
     const ok = res.status >= 200 && res.status < 300;
     if (!ok) {
-      return { success: false, error: `推送被拒(HTTP ${res.status} ${res.statusText})`, status: res.status };
+      return {
+        success: false,
+        error: `推送被拒(HTTP ${res.status} ${res.statusText})`,
+        status: res.status,
+      };
     }
     return {
       success: true,
-      data: { provider: cfg.provider, target: masked, title, summary: `已推送通知到 ${core.PROVIDERS[cfg.provider].label}(${masked})。` },
+      data: {
+        provider: cfg.provider,
+        target: masked,
+        title,
+        summary: `已推送通知到 ${core.PROVIDERS[cfg.provider].label}(${masked})。`,
+      },
     };
   },
 });

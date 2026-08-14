@@ -15,6 +15,7 @@
 - 💾 自动保存 + 最近文件
 - 🖥 独立 GUI 窗口（Edge/Chrome --app 模式）
 - 🚀 零外部依赖，单文件 HTML 工作台
+- 🤖 内置 MCP 服务器，供 AI Agent 调用
 
 ## 独立安装
 
@@ -63,12 +64,46 @@ khyos-markdown
 khyos-markdown --no-open
 ```
 
+## MCP 集成（供 AI Agent 调用）
+
+khyosMarkdown 内置 MCP (Model Context Protocol) 服务器，任何支持 MCP 的 AI Agent（Claude Desktop、Cursor、Qoder 等）都可以调用。
+
+### 提供的工具
+
+| 工具 | 说明 |
+|------|------|
+| `read_markdown` | 读取 Markdown 文件内容 |
+| `write_markdown` | 写入/保存 Markdown 文件（自动建目录） |
+| `list_markdown` | 递归列出目录下所有 .md 文件 |
+| `search_markdown` | 全文搜索关键词 |
+| `open_editor` | 在 khyosMarkdown GUI 中打开文件供人查看 |
+| `get_outline` | 提取文档标题大纲 |
+
+### 配置示例（Claude Desktop / Cursor / Qoder）
+
+```json
+{
+  "mcpServers": {
+    "khyos-markdown": {
+      "command": "node",
+      "args": [
+        "D:/Portable/khy-os/tools/khyos-markdown/khyos-md-mcp.js",
+        "--root", "D:/你的文档目录"
+      ]
+    }
+  }
+}
+```
+
+`--root` 限制文件操作范围（安全边界），默认为当前工作目录。
+
 ## 目录文件
 
 | 文件 | 职责 |
 | --- | --- |
 | `khyosMarkdown.html` | 单文件工作台：内联 MD 解析器 + 编辑器 + 预览 + CSS，零 CDN，断网可用 |
 | `khyos-md-bridge.js` | 纯 Node 零依赖桥接器：`127.0.0.1` 同源服务，token 鉴权，消除 `file://` CORS |
+| `khyos-md-mcp.js` | 零依赖 MCP 服务器（stdio JSON-RPC 2.0），供 AI Agent 调用 |
 | `KhyosMarkdown.exe` | Windows 启动器（C# 编译，自动定位 node，无控制台窗口） |
 | `khyosmarkdown` | Linux/macOS 启动脚本（自动查找 fnm/nvm/PATH 中的 node） |
 | `khyosmarkdown.command` | macOS 双击启动器 |

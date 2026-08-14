@@ -40,7 +40,10 @@ let userA;
 beforeAll(async () => {
   await sequelize.sync({ force: true });
   userA = await User.create({
-    username: 'mdwb-a', email: 'mdwb-a@test.local', password: 'pw-a-123456', status: 'active',
+    username: 'mdwb-a',
+    email: 'mdwb-a@test.local',
+    password: 'pw-a-123456',
+    status: 'active',
   });
 
   // 根目录内的桩文件树：一个 md、一个子目录 md、一个非文本文件。
@@ -58,10 +61,26 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  try { await sequelize.close(); } catch (_) { /* ignore */ }
-  try { fs.rmSync(ROOT, { recursive: true, force: true }); } catch (_) { /* ignore */ }
-  try { fs.rmSync(path.join(path.dirname(ROOT), 'SECRET.md'), { force: true }); } catch (_) { /* ignore */ }
-  try { fs.rmSync(TMP_DB, { force: true }); } catch (_) { /* ignore */ }
+  try {
+    await sequelize.close();
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    fs.rmSync(ROOT, { recursive: true, force: true });
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    fs.rmSync(path.join(path.dirname(ROOT), 'SECRET.md'), { force: true });
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    fs.rmSync(TMP_DB, { force: true });
+  } catch (_) {
+    /* ignore */
+  }
 });
 
 describe('mdWorkbench route — auth + confinement + allowlist', () => {
@@ -71,7 +90,9 @@ describe('mdWorkbench route — auth + confinement + allowlist', () => {
   });
 
   test('鉴权后 /list 列出根内 Markdown（递归子目录，忽略非文本）', async () => {
-    const r = await request(app).get('/api/md-workbench/list').set('Authorization', `Bearer ${tokenFor(userA.id)}`);
+    const r = await request(app)
+      .get('/api/md-workbench/list')
+      .set('Authorization', `Bearer ${tokenFor(userA.id)}`);
     expect(r.status).toBe(200);
     expect(r.body.success).toBe(true);
     const names = r.body.data.files.map((f) => f.name);
@@ -85,7 +106,9 @@ describe('mdWorkbench route — auth + confinement + allowlist', () => {
     // 追加一个只含非文本的空目录（应无 dir 节点）。
     fs.mkdirSync(path.join(ROOT, 'empty'), { recursive: true });
     fs.writeFileSync(path.join(ROOT, 'empty', 'x.png'), 'x');
-    const r = await request(app).get('/api/md-workbench/list').set('Authorization', `Bearer ${tokenFor(userA.id)}`);
+    const r = await request(app)
+      .get('/api/md-workbench/list')
+      .set('Authorization', `Bearer ${tokenFor(userA.id)}`);
     const files = r.body.data.files;
     const dirNode = files.find((f) => f.type === 'dir' && f.name === 'sub');
     expect(dirNode).toBeTruthy();
@@ -166,7 +189,8 @@ describe('mdWorkbench enabled() — default-on + CANON off', () => {
   const KEY = 'KHY_AI_MD_WORKBENCH_FILES';
   const saved = process.env[KEY];
   afterEach(() => {
-    if (saved === undefined) delete process.env[KEY]; else process.env[KEY] = saved;
+    if (saved === undefined) delete process.env[KEY];
+    else process.env[KEY] = saved;
   });
 
   test('缺省应开', () => {

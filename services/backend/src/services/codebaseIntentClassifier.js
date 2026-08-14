@@ -19,7 +19,9 @@
  */
 function isCodebaseQuery(message) {
   const text = String(message || '').trim();
-  if (text.length < 3) return { isCodebase: false, type: 'none' };
+  if (text.length < 3) {
+    return { isCodebase: false, type: 'none' };
+  }
   const lower = text.toLowerCase();
 
   // Pattern 1: Explicit file path or extension references
@@ -29,7 +31,11 @@ function isCodebaseQuery(message) {
   }
 
   // Pattern 2: Code search — looking for definitions/implementations
-  if (/where is|find\s+(the\s+)?function|find\s+(the\s+)?class|show me.*(?:code|implementation|definition)|what does.*(?:function|method|class)\b/i.test(text)) {
+  if (
+    /where is|find\s+(the\s+)?function|find\s+(the\s+)?class|show me.*(?:code|implementation|definition)|what does.*(?:function|method|class)\b/i.test(
+      text
+    )
+  ) {
     return { isCodebase: true, type: 'code_search' };
   }
   // Chinese code search patterns
@@ -38,7 +44,11 @@ function isCodebaseQuery(message) {
   }
 
   // Pattern 3: Architecture/structure questions
-  if (/\b(architecture|structure|how\s+(is|does|do)\s+\w+\s+(implement|work)|code\s*base|project\s+structure)\b/i.test(text)) {
+  if (
+    /\b(architecture|structure|how\s+(is|does|do)\s+\w+\s+(implement|work)|code\s*base|project\s+structure)\b/i.test(
+      text
+    )
+  ) {
     return { isCodebase: true, type: 'structural' };
   }
   // Chinese structural patterns

@@ -22,7 +22,12 @@
     "diffAddedWord": "#CCCCCC",
     "diffRemovedWord": "#888888",
     "permissionPurple": "#AAAAAA",
-    "userMessageBg": "#1A1A1A"
+    "userMessageBg": "#1A1A1A",
+    "mdBold": "#DDDDDD",
+    "mdBullet": "#999999",
+    "mdListNumber": "#999999",
+    "mdH3": "#CCCCCC",
+    "mdQuote": "#777777"
   },
   "spinnerChars": {
     "darwin": ["●", "○", "◉", "○", "●", "○"],

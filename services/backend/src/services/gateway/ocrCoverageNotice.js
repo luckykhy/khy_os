@@ -46,7 +46,9 @@ function isEnabled(env) {
 /** 保守取非负有限整数;非法 → 0。 */
 function _nonNegInt(value) {
   const n = Number(value);
-  if (!Number.isFinite(n) || n < 0) return 0;
+  if (!Number.isFinite(n) || n < 0) {
+    return 0;
+  }
   return Math.floor(n);
 }
 
@@ -63,9 +65,13 @@ function computeCoverage({ totalImages, ocrTextCount, maxImages } = {}) {
   const cap = capRaw >= 1 ? capRaw : 0; // 0 表示「上限未知」→ 不推断 omitted
   // withText 不可能超过实际尝试数;先按 total 夹紧,后按 attempted 夹紧。
   let withText = _nonNegInt(ocrTextCount);
-  if (withText > total) withText = total;
+  if (withText > total) {
+    withText = total;
+  }
   const attempted = cap > 0 ? Math.min(total, cap) : total;
-  if (withText > attempted) withText = attempted;
+  if (withText > attempted) {
+    withText = attempted;
+  }
   const omitted = cap > 0 ? Math.max(0, total - attempted) : 0;
   const unreadable = Math.max(0, attempted - withText);
   return { total, cap, attempted, withText, omitted, unreadable };
@@ -80,14 +86,18 @@ function computeCoverage({ totalImages, ocrTextCount, maxImages } = {}) {
  */
 function buildCoverageNotice({ totalImages, ocrTextCount, maxImages, env } = {}) {
   try {
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const c = computeCoverage({ totalImages, ocrTextCount, maxImages });
-    if (c.omitted < 1 && c.unreadable < 1) return null;
+    if (c.omitted < 1 && c.unreadable < 1) {
+      return null;
+    }
     const parts = [];
     if (c.omitted > 0) {
       parts.push(
-        `因单次 OCR 图片上限（${c.cap} 张），本次共 ${c.total} 张图片中仅识别了前 ${c.attempted} 张，`
-        + `另有 ${c.omitted} 张未做识别`
+        `因单次 OCR 图片上限（${c.cap} 张），本次共 ${c.total} 张图片中仅识别了前 ${c.attempted} 张，` +
+          `另有 ${c.omitted} 张未做识别`
       );
     }
     if (c.unreadable > 0) {
@@ -95,8 +105,10 @@ function buildCoverageNotice({ totalImages, ocrTextCount, maxImages, env } = {})
         `另有 ${c.unreadable} 张图片未能提取到文字（可能为纯图像/照片，或缺少对应语言字库）`
       );
     }
-    return `[提示：${parts.join('；')}。上述 OCR 文本并未覆盖全部图片，请勿默认已看到所有图片内容；`
-      + `必要时请用户分批发送、精简图片，或改用支持看图的多模态模型复核。]`;
+    return (
+      `[提示：${parts.join('；')}。上述 OCR 文本并未覆盖全部图片，请勿默认已看到所有图片内容；` +
+      `必要时请用户分批发送、精简图片，或改用支持看图的多模态模型复核。]`
+    );
   } catch {
     return null; // fail-safe:任何异常都视为「不告诫」,逐字节回退
   }

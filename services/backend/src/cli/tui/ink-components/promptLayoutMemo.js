@@ -25,8 +25,11 @@ const { isFlagEnabled } = require('../../../services/flagRegistry');
  * @returns {boolean}
  */
 function isPromptLayoutMemoEnabled(env = process.env) {
-  try { return isFlagEnabled('KHY_PROMPT_LAYOUT_MEMO', env); }
-  catch { return true; }
+  try {
+    return isFlagEnabled('KHY_PROMPT_LAYOUT_MEMO', env);
+  } catch {
+    return true;
+  }
 }
 
 module.exports = { isPromptLayoutMemoEnabled };

@@ -20,17 +20,18 @@
  *   await tools.execute('quote', { symbol: 'sh600519' })
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
+
 const { defineTool, validateParams, BaseTool } = require('./_baseTool');
 const { filterToolsByProfile, getProfileTools, listProfiles } = require('./toolProfile');
 
 // ── Registry state ──────────────────────────────────────────────────
 
-let _tools = new Map();    // name → tool definition
-let _mcpTools = new Map(); // name → MCP tool definition (tracked separately)
+const _tools = new Map(); // name → tool definition
+const _mcpTools = new Map(); // name → MCP tool definition (tracked separately)
 let _loaded = false;
-let _denyRules = null;     // cached deny rules
+let _denyRules = null; // cached deny rules
 
 // ── getAll() memoization (Ch2「不要每轮重建可复用结构」) ─────────────
 // getAll() merges _tools ⊎ _mcpTools into a fresh ~200-entry Map on every
@@ -42,8 +43,8 @@ let _denyRules = null;     // cached deny rules
 // capabilityRegistry/metaToolEngine/toolCalling/toolUseLoop/toolSearch all
 // only iterate/get). Downstream profile/deferral filters build their own new
 // Maps, so the shared cached Map is never mutated. Gate off → legacy rebuild.
-let _toolsVersion = 0;       // bumps on every registry mutation
-let _getAllCache = null;     // memoized merged base Map
+let _toolsVersion = 0; // bumps on every registry mutation
+let _getAllCache = null; // memoized merged base Map
 let _getAllCacheVersion = -1;
 
 /** Bump the registry version so the next getAll() rebuilds its cache. */
@@ -57,14 +58,16 @@ function _bumpToolsVersion() {
  * `=0/off/false/no` → byte-identical legacy rebuild on every call.
  */
 function _isRegistryMemoEnabled() {
-  const v = String(process.env.KHY_TOOL_REGISTRY_MEMO || '').trim().toLowerCase();
+  const v = String(process.env.KHY_TOOL_REGISTRY_MEMO || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'off' || v === 'false' || v === 'no');
 }
 
 // ── Deferred loading session state ─────────────────────────────────
-let _revealedDeferred = new Set();   // mid-session revealed tool names
-let _inflightReveals = new Map();    // name → Promise (concurrent dedup)
-let _deferralEnabled = (process.env.KHY_DEFER_TOOLS !== '0'); // default: enabled
+const _revealedDeferred = new Set(); // mid-session revealed tool names
+const _inflightReveals = new Map(); // name → Promise (concurrent dedup)
+let _deferralEnabled = process.env.KHY_DEFER_TOOLS !== '0'; // default: enabled
 // Monotonic fingerprint of the revealed-deferred set. Reveal/reset mutate the
 // Set membership WITHOUT bumping _toolsVersion, so assembleToolPool()'s deferral
 // filter depends on this counter to know when its memoized pool went stale.
@@ -83,25 +86,34 @@ let _revealVersion = 0;
  * Files/dirs starting with _ or named index.js are excluded.
  */
 function loadTools() {
-  if (_loaded) return;
+  if (_loaded) {
+    return;
+  }
   _loaded = true;
 
   // ── Phase 1: Load subdirectory-based tools (BaseTool classes) ───
   try {
     const entries = fs.readdirSync(__dirname, { withFileTypes: true });
-    const dirs = entries.filter(e =>
-      e.isDirectory() && !e.name.startsWith('_') && !e.name.startsWith('.')
+    const dirs = entries.filter(
+      (e) => e.isDirectory() && !e.name.startsWith('_') && !e.name.startsWith('.')
     );
 
     for (const dir of dirs) {
       const indexPath = path.join(__dirname, dir.name, 'index.js');
-      if (!fs.existsSync(indexPath)) continue;
+      if (!fs.existsSync(indexPath)) {
+        continue;
+      }
 
       try {
         const exported = require(indexPath);
 
         // Case 1: exported object is already a frozen defineTool() result
-        if (exported && exported.name && typeof exported.execute === 'function' && typeof exported.toFunctionDef === 'function') {
+        if (
+          exported &&
+          exported.name &&
+          typeof exported.execute === 'function' &&
+          typeof exported.toFunctionDef === 'function'
+        ) {
           _tools.set(exported.name, exported);
           continue;
         }
@@ -129,7 +141,11 @@ function loadTools() {
         }
 
         // Case 5: exported.default is a BaseTool subclass — instantiate
-        if (exported && typeof exported.default === 'function' && exported.default.prototype instanceof BaseTool) {
+        if (
+          exported &&
+          typeof exported.default === 'function' &&
+          exported.default.prototype instanceof BaseTool
+        ) {
           const instance = new exported.default();
           const toolDef = instance.toToolDef();
           _tools.set(toolDef.name, toolDef);
@@ -150,9 +166,9 @@ function loadTools() {
 
   // ── Phase 2: Load flat .js tool files from this directory ───────
   try {
-    const files = fs.readdirSync(__dirname).filter(f =>
-      f.endsWith('.js') && !f.startsWith('_') && f !== 'index.js'
-    );
+    const files = fs
+      .readdirSync(__dirname)
+      .filter((f) => f.endsWith('.js') && !f.startsWith('_') && f !== 'index.js');
 
     for (const file of files) {
       try {
@@ -203,7 +219,9 @@ function loadTools() {
         cmdReg.registerBulk(tool._pendingCommands, 'tool');
       }
     }
-  } catch { /* commandRegistry not available */ }
+  } catch {
+    /* commandRegistry not available */
+  }
 }
 
 /**
@@ -212,7 +230,9 @@ function loadTools() {
  * New:    same format (compatible)
  */
 function _convertLegacyParams(params) {
-  if (!params || typeof params !== 'object') return {};
+  if (!params || typeof params !== 'object') {
+    return {};
+  }
   // The formats are actually compatible, just pass through
   return { ...params };
 }
@@ -226,7 +246,9 @@ function _convertLegacyParams(params) {
 function mergeToolMaps(primary, secondary) {
   const merged = new Map(primary);
   for (const [name, tool] of secondary) {
-    if (!merged.has(name)) merged.set(name, tool);
+    if (!merged.has(name)) {
+      merged.set(name, tool);
+    }
   }
   return merged;
 }
@@ -238,7 +260,9 @@ function mergeToolMaps(primary, secondary) {
  * @returns {Map<string, object>}
  */
 function getAll() {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
   if (!_isRegistryMemoEnabled()) {
     return mergeToolMaps(_tools, _mcpTools);
   }
@@ -257,25 +281,44 @@ function getAll() {
  * @returns {object|undefined}
  */
 function get(name) {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
   return _tools.get(name) || _mcpTools.get(name);
 }
 
 /**
  * Get tool definitions in Claude/OpenAI function-calling format.
  * @param {string} [profileId] - Optional profile to filter tools (minimal/coding/analysis/full)
+ * @param {object} [options]
+ * @param {'full'|'small'|'micro'} [options.schemaLevel] - Schema compression level
+ *   passed through to each tool's toFunctionDef (small-model pipeline). Absent or
+ *   unknown → 'full', byte-identical to the historical output.
  * @returns {Array<{name, description, parameters}>}
  */
-function getDefinitions(profileId) {
+function getDefinitions(profileId, options = {}) {
   let tools = getAll();
   if (profileId && profileId !== 'full') {
     tools = filterToolsByProfile(tools, profileId);
   }
   // Deferral filtering: exclude unrevealed deferred tools
   if (_deferralEnabled && profileId !== 'full') {
+    const beforeCount = tools.size;
     tools = _filterDeferred(tools);
+    const afterCount = tools.size;
+    if (process.env.KHY_DEBUG_TOOLS === '1' && (profileId === undefined || profileId === 'full')) {
+      console.error(
+        `[DEBUG-PROFILE] getDefinitions(profileId=${profileId}) deferred: ${beforeCount}→${afterCount}, revealedDeferred=[${[..._revealedDeferred].join(',')}]`
+      );
+    }
   }
-  return [...tools.values()].map(t => t.toFunctionDef());
+  const schemaLevel = options && options.schemaLevel;
+  if (process.env.KHY_DEBUG_TOOLS === '1' && (profileId === undefined || profileId === 'full')) {
+    console.error(
+      `[DEBUG-PROFILE] getDefinitions returning ${tools.size} tools: [${[...tools.keys()].join(', ')}]`
+    );
+  }
+  return [...tools.values()].map((t) => t.toFunctionDef(schemaLevel));
 }
 
 /**
@@ -285,7 +328,9 @@ function getDefinitions(profileId) {
 function getByCategory() {
   const grouped = {};
   for (const tool of getAll().values()) {
-    if (!grouped[tool.category]) grouped[tool.category] = [];
+    if (!grouped[tool.category]) {
+      grouped[tool.category] = [];
+    }
     grouped[tool.category].push(tool);
   }
   return grouped;
@@ -298,7 +343,9 @@ function getByCategory() {
  * @param {boolean} [options.isMcp] - Track as MCP tool (separate partition for sorting)
  */
 function register(tool, options = {}) {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
   if (!tool || !tool.name) {
     throw new Error('Tool must have a name');
   }
@@ -366,7 +413,11 @@ async function execute(name, params = {}, context = {}) {
   // no-op).
   let p = params;
   if (typeof tool.normalizeParams === 'function') {
-    try { p = tool.normalizeParams(params, process.env); } catch { p = params; }
+    try {
+      p = tool.normalizeParams(params, process.env);
+    } catch {
+      p = params;
+    }
   }
 
   // Validate parameters — CC-aligned grouped, LLM-friendly message (gate
@@ -419,7 +470,9 @@ function clearMcpTools() {
  * @returns {string[]}
  */
 function getMcpToolNames() {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
   return [..._mcpTools.keys()];
 }
 
@@ -441,19 +494,30 @@ function reload() {
     for (const entry of entries) {
       if (entry.isDirectory() && !entry.name.startsWith('_') && !entry.name.startsWith('.')) {
         const indexPath = path.join(__dirname, entry.name, 'index.js');
-        try { delete require.cache[require.resolve(indexPath)]; } catch { /* ignore */ }
+        try {
+          delete require.cache[require.resolve(indexPath)];
+        } catch {
+          /* ignore */
+        }
       }
     }
 
     // Clear flat file caches
-    const files = entries.filter(e =>
-      e.isFile() && e.name.endsWith('.js') && !e.name.startsWith('_') && e.name !== 'index.js'
+    const files = entries.filter(
+      (e) =>
+        e.isFile() && e.name.endsWith('.js') && !e.name.startsWith('_') && e.name !== 'index.js'
     );
     for (const file of files) {
       const fullPath = path.join(__dirname, file.name);
-      try { delete require.cache[require.resolve(fullPath)]; } catch { /* ignore */ }
+      try {
+        delete require.cache[require.resolve(fullPath)];
+      } catch {
+        /* ignore */
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   loadTools();
   return _tools.size;
@@ -467,13 +531,18 @@ function reload() {
  * @returns {Array<{ tool: string, reason?: string }>}
  */
 function loadDenyRules() {
-  if (_denyRules !== null) return _denyRules;
+  if (_denyRules !== null) {
+    return _denyRules;
+  }
   try {
     const { getDataHome } = require('../utils/dataHome');
     const configPath = path.join(getDataHome(), 'tool_deny_rules.json');
-    if (!fs.existsSync(configPath)) { _denyRules = []; return _denyRules; }
+    if (!fs.existsSync(configPath)) {
+      _denyRules = [];
+      return _denyRules;
+    }
     const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    _denyRules = Array.isArray(raw) ? raw.filter(r => r && r.tool) : [];
+    _denyRules = Array.isArray(raw) ? raw.filter((r) => r && r.tool) : [];
   } catch {
     _denyRules = [];
   }
@@ -488,10 +557,14 @@ function loadDenyRules() {
  */
 function isDenied(name, rules) {
   for (const rule of rules) {
-    if (rule.tool === name) return true;
+    if (rule.tool === name) {
+      return true;
+    }
     if (rule.tool.includes('*')) {
       const pattern = new RegExp('^' + rule.tool.replace(/\*/g, '.*') + '$');
-      if (pattern.test(name)) return true;
+      if (pattern.test(name)) {
+        return true;
+      }
     }
   }
   return false;
@@ -504,10 +577,14 @@ function isDenied(name, rules) {
  * @returns {Map}
  */
 function filterByDenyRules(toolMap, rules) {
-  if (!rules || rules.length === 0) return toolMap;
+  if (!rules || rules.length === 0) {
+    return toolMap;
+  }
   const result = new Map();
   for (const [name, tool] of toolMap) {
-    if (!isDenied(name, rules)) result.set(name, tool);
+    if (!isDenied(name, rules)) {
+      result.set(name, tool);
+    }
   }
   return result;
 }
@@ -536,7 +613,9 @@ function filterByDenyRules(toolMap, rules) {
  * @returns {Map<string, object>}
  */
 function assembleToolPool(denyRules, profileId) {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
 
   // Memoize the default (deny-rules-unspecified) production path. The pool is a
   // pure function of: registry contents (_toolsVersion), profileId, deferral
@@ -547,9 +626,13 @@ function assembleToolPool(denyRules, profileId) {
   // shared cached Map is safe. Gate off → byte-identical legacy rebuild.
   if (denyRules === undefined && _isAssemblePoolMemoEnabled()) {
     const key = _assemblePoolCacheKey(profileId);
-    if (_assemblePoolCache.has(key)) return _assemblePoolCache.get(key);
+    if (_assemblePoolCache.has(key)) {
+      return _assemblePoolCache.get(key);
+    }
     const built = _buildToolPool(undefined, profileId);
-    if (_assemblePoolCache.size >= _ASSEMBLE_POOL_CACHE_CAP) _assemblePoolCache.clear();
+    if (_assemblePoolCache.size >= _ASSEMBLE_POOL_CACHE_CAP) {
+      _assemblePoolCache.clear();
+    }
     _assemblePoolCache.set(key, built);
     return built;
   }
@@ -566,9 +649,12 @@ function assembleToolPool(denyRules, profileId) {
 const _assemblePoolCache = new Map();
 const _ASSEMBLE_POOL_CACHE_CAP = 16;
 function _isAssemblePoolMemoEnabled() {
-  const v = String(process.env.KHY_TOOL_ASSEMBLE_POOL_MEMO || '').trim().toLowerCase();
+  const v = String(process.env.KHY_TOOL_ASSEMBLE_POOL_MEMO || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'off' || v === 'false' || v === 'no');
 }
+
 function _assemblePoolCacheKey(profileId) {
   return `${profileId || 'full'}|${_toolsVersion}|${_deferralEnabled ? 1 : 0}|${_revealVersion}`;
 }
@@ -604,7 +690,9 @@ function _buildToolPool(denyRules, profileId) {
     result.set(name, tool);
   }
   for (const [name, tool] of sortedMcp) {
-    if (!result.has(name)) result.set(name, tool);
+    if (!result.has(name)) {
+      result.set(name, tool);
+    }
   }
 
   return result;
@@ -617,7 +705,9 @@ function _buildToolPool(denyRules, profileId) {
  * @returns {Map<string, object>}
  */
 function getDeferredTools() {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
   const result = new Map();
   for (const [name, tool] of _tools) {
     if (tool.shouldDefer && !tool.alwaysLoad) {
@@ -637,7 +727,9 @@ function getDeferredTools() {
  * @returns {Map<string, object>}
  */
 function getNonDeferredTools() {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
   const result = new Map();
   for (const [name, tool] of _tools) {
     if (!tool.shouldDefer || tool.alwaysLoad) {
@@ -662,7 +754,9 @@ function getNonDeferredTools() {
 function _filterDeferred(toolMap) {
   const result = new Map();
   for (const [name, tool] of toolMap) {
-    if (tool.shouldDefer && !tool.alwaysLoad && !_revealedDeferred.has(name)) continue;
+    if (tool.shouldDefer && !tool.alwaysLoad && !_revealedDeferred.has(name)) {
+      continue;
+    }
     result.set(name, tool);
   }
   return result;
@@ -677,7 +771,9 @@ function _filterDeferred(toolMap) {
 function _filterDeferredForContext(toolMap, revealedSet) {
   const result = new Map();
   for (const [name, tool] of toolMap) {
-    if (tool.shouldDefer && !tool.alwaysLoad && !revealedSet.has(name)) continue;
+    if (tool.shouldDefer && !tool.alwaysLoad && !revealedSet.has(name)) {
+      continue;
+    }
     result.set(name, tool);
   }
   return result;
@@ -702,7 +798,7 @@ function getDefinitionsForContext(agentContext) {
   if (_deferralEnabled && profileId !== 'full') {
     tools = _filterDeferredForContext(tools, agentContext.revealedDeferred);
   }
-  return [...tools.values()].map(t => t.toFunctionDef());
+  return [...tools.values()].map((t) => t.toFunctionDef());
 }
 
 /**
@@ -713,7 +809,9 @@ function getDefinitionsForContext(agentContext) {
  * @returns {{ revealed: boolean, reason?: string, tool?: object, error?: string }}
  */
 function ensureToolForContext(name, agentContext) {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
 
   const tool = _tools.get(name) || _mcpTools.get(name);
   if (!tool) {
@@ -736,7 +834,9 @@ function ensureToolForContext(name, agentContext) {
  * @returns {Promise<{ revealed: boolean, reason?: string, tool?: object, error?: string }>}
  */
 async function ensureTool(name) {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
 
   const tool = _tools.get(name) || _mcpTools.get(name);
   if (!tool) {
@@ -798,16 +898,29 @@ function getRevealedDeferred() {
  * @returns {Promise<string>}
  */
 async function getToolPrompt(name) {
-  if (!_loaded) loadTools();
+  if (!_loaded) {
+    loadTools();
+  }
   const tool = _tools.get(name) || _mcpTools.get(name);
-  if (!tool) return '';
+  if (!tool) {
+    return '';
+  }
   return tool.prompt();
 }
 
 // ── Result Size Management ─────────────────────────────────────────
 
-const DEFAULT_MAX_RESULT_CHARS = 30000;  // 30K default
-const RESULT_DIR = path.join(os.homedir(), '.khyquant', 'tool_results');
+const DEFAULT_MAX_RESULT_CHARS = 30000; // 30K default
+
+// Lazily resolve the tool results dir (portable-aware); fallback to legacy.
+function _resultDir() {
+  try {
+    const { getAppDataDir } = require('../utils/dataHome');
+    return getAppDataDir('tool_results');
+  } catch {
+    return path.join(os.homedir(), '.khyquant', 'tool_results');
+  }
+}
 
 /**
  * Apply result size budget. Truncates oversized output and optionally
@@ -820,13 +933,19 @@ const RESULT_DIR = path.join(os.homedir(), '.khyquant', 'tool_results');
  */
 function applyResultBudget(toolName, output, maxChars) {
   if (typeof output !== 'string') {
-    try { output = JSON.stringify(output); } catch { output = String(output); }
+    try {
+      output = JSON.stringify(output);
+    } catch {
+      output = String(output);
+    }
   }
 
   // Determine limit
   let limit = maxChars;
   if (limit === undefined) {
-    if (!_loaded) loadTools();
+    if (!_loaded) {
+      loadTools();
+    }
     const tool = _tools.get(toolName) || _mcpTools.get(toolName);
     if (tool && tool.maxResultSizeChars !== undefined) {
       limit = tool.maxResultSizeChars;
@@ -847,15 +966,19 @@ function applyResultBudget(toolName, output, maxChars) {
   // Truncate and persist full result to disk
   let diskPath;
   try {
-    if (!fs.existsSync(RESULT_DIR)) fs.mkdirSync(RESULT_DIR, { recursive: true });
+    if (!fs.existsSync(_resultDir())) {
+      fs.mkdirSync(_resultDir(), { recursive: true });
+    }
     const filename = `${toolName}_${Date.now()}.txt`;
-    diskPath = path.join(RESULT_DIR, filename);
+    diskPath = path.join(_resultDir(), filename);
     fs.writeFileSync(diskPath, output, 'utf-8');
 
     // Clean old results (keep last 20)
-    const files = fs.readdirSync(RESULT_DIR).sort();
+    const files = fs.readdirSync(_resultDir()).sort();
     while (files.length > 20) {
-      try { fs.unlinkSync(path.join(RESULT_DIR, files.shift())); } catch {}
+      try {
+        fs.unlinkSync(path.join(_resultDir(), files.shift()));
+      } catch {}
     }
   } catch {
     diskPath = undefined;
@@ -936,7 +1059,9 @@ function getEnabled() {
   const result = new Map();
   for (const [name, tool] of getAll()) {
     const enabled = typeof tool.isEnabled === 'function' ? tool.isEnabled() : true;
-    if (enabled) result.set(name, tool);
+    if (enabled) {
+      result.set(name, tool);
+    }
   }
   return result;
 }
@@ -946,7 +1071,7 @@ function getEnabled() {
  * @returns {Array<{name, description, parameters}>}
  */
 function getEnabledDefinitions() {
-  return [...getEnabled().values()].map(t => t.toFunctionDef());
+  return [...getEnabled().values()].map((t) => t.toFunctionDef());
 }
 
 // ── Exports ─────────────────────────────────────────────────────────

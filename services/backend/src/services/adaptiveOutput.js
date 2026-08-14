@@ -17,9 +17,9 @@
 
 // ── Constants ──────────────────────────────────────────────────────
 
-const INITIAL_OUTPUT_CAP = 8192;          // 8K tokens — saves GPU slot reservation
-const ESCALATED_OUTPUT_CAP = 65536;       // 64K tokens — full capacity
-const TRUNCATION_SIGNAL_CHARS = 200;      // Min chars to consider a valid partial response
+const INITIAL_OUTPUT_CAP = 8192; // 8K tokens — saves GPU slot reservation
+const ESCALATED_OUTPUT_CAP = 65536; // 64K tokens — full capacity
+const TRUNCATION_SIGNAL_CHARS = 200; // Min chars to consider a valid partial response
 
 // ── Global Timeout Multiplier ──────────────────────────────────────
 
@@ -30,9 +30,13 @@ const TRUNCATION_SIGNAL_CHARS = 200;      // Min chars to consider a valid parti
  */
 function getTimeoutMultiplier() {
   const raw = process.env.KHY_TIMEOUT_MULTIPLIER;
-  if (!raw) return 1.0;
+  if (!raw) {
+    return 1.0;
+  }
   const val = parseFloat(raw);
-  if (!Number.isFinite(val) || val <= 0) return 1.0;
+  if (!Number.isFinite(val) || val <= 0) {
+    return 1.0;
+  }
   return Math.max(0.1, Math.min(10.0, val));
 }
 
@@ -58,7 +62,9 @@ function applyMultiplier(baseMs) {
  * @returns {{ truncated: boolean, reason?: string }}
  */
 function detectTruncation(response, currentCap) {
-  if (!response) return { truncated: false };
+  if (!response) {
+    return { truncated: false };
+  }
 
   // Explicit truncation signal from API
   const finishReason = response.finish_reason || response.stop_reason || '';
@@ -177,15 +183,24 @@ function longRunThreshold(effectiveTimeoutMs) {
 function createLongRunAdvisory(params) {
   const threshold = longRunThreshold(params.timeoutMs);
   const handle = setTimeout(() => {
-    const msg = `Command "${(params.command || '').slice(0, 60)}" has been running for ${Math.round(threshold / 1000)}s. ` +
+    const msg =
+      `Command "${(params.command || '').slice(0, 60)}" has been running for ${Math.round(threshold / 1000)}s. ` +
       `Consider running it in the background to avoid timeout.`;
-    try { params.onAdvisory(msg); } catch { /* ignore */ }
+    try {
+      params.onAdvisory(msg);
+    } catch {
+      /* ignore */
+    }
   }, threshold);
 
-  if (handle.unref) handle.unref();
+  if (handle.unref) {
+    handle.unref();
+  }
 
   return {
-    clear() { clearTimeout(handle); },
+    clear() {
+      clearTimeout(handle);
+    },
   };
 }
 

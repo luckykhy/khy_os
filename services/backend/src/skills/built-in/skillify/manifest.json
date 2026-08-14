@@ -1,8 +1,15 @@
 {
   "name": "skillify",
-  "command": "/skillify",
   "description": "Convert a conversation into a reusable skill",
-  "version": "1.0.0",
-  "userInvocable": true,
-  "tags": ["skill", "creation"]
+  "trigger": "/skillify",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "skill",
+    "creation"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
 }

@@ -17,7 +17,9 @@ const ENV_TPM = parseInt(process.env.PROXY_DEFAULT_TPM, 10) || 0;
 // key -> { reqAvail, tokAvail, lastRefill, rpm, tpm }
 const _buckets = new Map();
 
-function nowMs() { return Date.now(); }
+function nowMs() {
+  return Date.now();
+}
 
 function resolveLimits({ tokenLimits, customerLimits, groupLimits } = {}) {
   const pick = (key) => {

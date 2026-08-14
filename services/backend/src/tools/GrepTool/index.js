@@ -6,20 +6,26 @@
  */
 // [AI-弱模型·照抄] 本工具即 weakModelGuidance 'tool-description' 位点的**示范**:prompt() 简明祈使、
 // 参数逐个写清。改本工具时参数严格照 inputSchema;prompt() 末尾的 this.weakModelToolNote() 注入别删。
-const { BaseTool } = require('../_baseTool');
 const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const { BaseTool } = require('../_baseTool');
 // 非阻塞执行垫片:同步 execSync 会阻塞事件循环(spinner 停、ESC 无效)→「调用工具卡死」。
 // 门控开时改用异步 exec(输出/退出码/抛错与 execSync 同形);门控关时逐字节回退 execSync。
 const _execCompat = require('../_execCompat');
-const path = require('path');
-const fs = require('fs');
+const _walkBudget = require('../_walkBudget');
 const {
   isRgAvailable: _isRgAvailablePlatform,
   isGrepAvailable,
   shellEscape: _shellEscapePlatform,
   pureJsGrep,
+  pureJsGrepAsync,
   DEFAULT_EXCLUDE_DIRS,
 } = require('../platformUtils');
+// 墙钟预算:无 rg/grep 时 pure-JS 回退是同步递归 walk,超大树 / Windows junction 回环 /
+// 慢盘会把事件循环阻塞到分钟级(「一显示正在搜索就卡死」)。与 GlobTool/ListDirTool 同源修复:
+// 预算耗尽提前收尾 + 门控开走异步 walk(不冻结事件循环)。
 
 const MAX_OUTPUT = 100 * 1024; // 100 KB
 
@@ -30,12 +36,19 @@ class GrepTool extends BaseTool {
   static aliases = ['grep', 'search_content', 'rg'];
   static searchHint = 'search grep regex content files';
   static alwaysLoad = true;
+  // Grep output is bounded (40K chars) — large match sets are persisted with a preview.
+  static maxResultSizeChars = 40000;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
-    return `A powerful search tool built on ripgrep
+    return (
+      `A powerful search tool built on ripgrep
 
   Usage:
   - ALWAYS use Grep for search tasks. NEVER invoke \`grep\` or \`rg\` as a Bash command. The Grep tool has been optimized for correct permissions and access.
@@ -49,7 +62,8 @@ class GrepTool extends BaseTool {
   - If you get too many matches, narrow with path/glob/type or switch output_mode. If you get zero matches, broaden the path or try nearby naming variants before concluding nothing exists
   - In unfamiliar repositories, use Grep together with README/project-manifest reads to trace where the important code paths start
   - When you report findings, name the path/glob/type filters you used and surface relevant match counts instead of only saying "found it"
-` + this.weakModelToolNote();
+` + this.weakModelToolNote()
+    );
   }
 
   get inputSchema() {
@@ -70,12 +84,14 @@ class GrepTool extends BaseTool {
         },
         type: {
           type: 'string',
-          description: 'File type to search (e.g., "js", "py", "rust"). More efficient than glob for standard file types.',
+          description:
+            'File type to search (e.g., "js", "py", "rust"). More efficient than glob for standard file types.',
         },
         output_mode: {
           type: 'string',
           enum: ['content', 'files_with_matches', 'count'],
-          description: 'Output mode: "content" shows matching lines, "files_with_matches" shows file paths (default), "count" shows match counts.',
+          description:
+            'Output mode: "content" shows matching lines, "files_with_matches" shows file paths (default), "count" shows match counts.',
         },
         '-i': {
           type: 'boolean',
@@ -91,7 +107,8 @@ class GrepTool extends BaseTool {
         },
         multiline: {
           type: 'boolean',
-          description: 'Enable multiline mode where . matches newlines and patterns can span lines. Default: false.',
+          description:
+            'Enable multiline mode where . matches newlines and patterns can span lines. Default: false.',
         },
         '-A': {
           type: 'number',
@@ -99,11 +116,13 @@ class GrepTool extends BaseTool {
         },
         '-B': {
           type: 'number',
-          description: 'Number of lines to show before each match. Requires output_mode: "content".',
+          description:
+            'Number of lines to show before each match. Requires output_mode: "content".',
         },
         '-C': {
           type: 'number',
-          description: 'Number of context lines before and after each match. Requires output_mode: "content".',
+          description:
+            'Number of context lines before and after each match. Requires output_mode: "content".',
         },
       },
       required: ['pattern'],
@@ -142,7 +161,9 @@ class GrepTool extends BaseTool {
   async _executeRg(params, searchPath, mode, headLimit, caseInsensitive, cwd) {
     const args = [];
 
-    if (caseInsensitive) args.push('-i');
+    if (caseInsensitive) {
+      args.push('-i');
+    }
 
     if (mode === 'files_with_matches') {
       args.push('-l');
@@ -150,9 +171,15 @@ class GrepTool extends BaseTool {
       args.push('-c');
     } else {
       args.push('-n'); // line numbers for content mode
-      if (params['-A']) args.push(`-A`, `${params['-A']}`);
-      if (params['-B']) args.push(`-B`, `${params['-B']}`);
-      if (params['-C'] || params.context) args.push(`-C`, `${params['-C'] || params.context}`);
+      if (params['-A']) {
+        args.push(`-A`, `${params['-A']}`);
+      }
+      if (params['-B']) {
+        args.push(`-B`, `${params['-B']}`);
+      }
+      if (params['-C'] || params.context) {
+        args.push(`-C`, `${params['-C'] || params.context}`);
+      }
     }
 
     if (params.multiline) {
@@ -198,7 +225,9 @@ class GrepTool extends BaseTool {
 
   async _executeGrep(params, searchPath, mode, headLimit, caseInsensitive, cwd) {
     const args = ['-rn'];
-    if (caseInsensitive) args.push('-i');
+    if (caseInsensitive) {
+      args.push('-i');
+    }
 
     if (mode === 'files_with_matches') {
       args.push('-l');
@@ -217,9 +246,15 @@ class GrepTool extends BaseTool {
     }
 
     if (mode === 'content') {
-      if (params['-A']) args.push(`-A`, `${params['-A']}`);
-      if (params['-B']) args.push(`-B`, `${params['-B']}`);
-      if (params['-C'] || params.context) args.push(`-C`, `${params['-C'] || params.context}`);
+      if (params['-A']) {
+        args.push(`-A`, `${params['-A']}`);
+      }
+      if (params['-B']) {
+        args.push(`-B`, `${params['-B']}`);
+      }
+      if (params['-C'] || params.context) {
+        args.push(`-C`, `${params['-C'] || params.context}`);
+      }
     }
 
     const escapedPattern = _shellEscape(params.pattern);
@@ -247,34 +282,61 @@ class GrepTool extends BaseTool {
     }
   }
 
-  _executePureJs(params, searchPath, mode, headLimit, _caseInsensitive, cwd) {
+  async _executePureJs(params, searchPath, mode, headLimit, _caseInsensitive, cwd) {
     try {
       const flags = _caseInsensitive ? 'i' : '';
       const regex = new RegExp(params.pattern, flags);
       const excludeDirs = DEFAULT_EXCLUDE_DIRS;
 
-      const result = pureJsGrep(searchPath, regex, {
-        mode,
-        glob: params.glob,
-        maxResults: headLimit,
-        excludeDirs,
-      });
+      // 墙钟预算 + 异步 walk:门开走 pureJsGrepAsync(事件循环不被冻结);门关 → 逐字节回退
+      // 今日同步 pureJsGrep(无预算)。
+      const deadline = _walkBudget.createWalkDeadline(process.env);
+      const result = _walkBudget.isWalkAsyncEnabled(process.env)
+        ? await pureJsGrepAsync(searchPath, regex, {
+            mode,
+            glob: params.glob,
+            maxResults: headLimit,
+            excludeDirs,
+            deadline,
+          })
+        : pureJsGrep(searchPath, regex, {
+            mode,
+            glob: params.glob,
+            maxResults: headLimit,
+            excludeDirs,
+            deadline,
+          });
 
       if (mode === 'files_with_matches') {
-        const files = (result.files || []).map(f => path.relative(cwd, f));
-        return { success: true, files, count: files.length, truncated: result.truncated };
+        const files = (result.files || []).map((f) => path.relative(cwd, f));
+        const out = { success: true, files, count: files.length, truncated: result.truncated };
+        if (result.timedOut) {
+          out.timedOut = true;
+        }
+        return out;
       }
       if (mode === 'count') {
-        const counts = (result.counts || []).map(c => ({
-          file: path.relative(cwd, c.file), count: c.count,
+        const counts = (result.counts || []).map((c) => ({
+          file: path.relative(cwd, c.file),
+          count: c.count,
         }));
-        return { success: true, counts, total: result.total || 0 };
+        const out = { success: true, counts, total: result.total || 0 };
+        if (result.timedOut) {
+          out.timedOut = true;
+        }
+        return out;
       }
       // content mode
-      const matches = (result.matches || []).map(m => ({
-        file: path.relative(cwd, m.file), line: m.line, content: m.content,
+      const matches = (result.matches || []).map((m) => ({
+        file: path.relative(cwd, m.file),
+        line: m.line,
+        content: m.content,
       }));
-      return { success: true, matches, count: matches.length, truncated: result.truncated };
+      const out = { success: true, matches, count: matches.length, truncated: result.truncated };
+      if (result.timedOut) {
+        out.timedOut = true;
+      }
+      return out;
     } catch (err) {
       return { success: false, error: `Pure-JS grep error: ${err.message}` };
     }
@@ -289,8 +351,12 @@ class GrepTool extends BaseTool {
     const limited = lines.slice(0, headLimit);
 
     if (mode === 'files_with_matches') {
-      const files = limited.map(f => {
-        try { return path.relative(cwd, f.trim()); } catch { return f.trim(); }
+      const files = limited.map((f) => {
+        try {
+          return path.relative(cwd, f.trim());
+        } catch {
+          return f.trim();
+        }
       });
       return { success: true, files, count: files.length, truncated: lines.length > headLimit };
     }
@@ -302,14 +368,16 @@ class GrepTool extends BaseTool {
         if (sep > 0) {
           const file = path.relative(cwd, line.slice(0, sep));
           const count = parseInt(line.slice(sep + 1), 10);
-          if (count > 0) counts.push({ file, count });
+          if (count > 0) {
+            counts.push({ file, count });
+          }
         }
       }
       return { success: true, counts, total: counts.reduce((s, c) => s + c.count, 0) };
     }
 
     // mode === 'content'
-    const matches = limited.map(line => {
+    const matches = limited.map((line) => {
       const firstColon = line.indexOf(':');
       const secondColon = line.indexOf(':', firstColon + 1);
       if (firstColon > 0 && secondColon > 0) {

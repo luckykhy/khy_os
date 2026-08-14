@@ -35,10 +35,18 @@ const _AUTO = new Set(['auto', 'default', '']);
  * @returns {'true'|'false'|'auto'|''} 无法识别返回空串(由调用方友好报错)。
  */
 function normalizeSandboxFlag(raw) {
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
-  if (_AUTO.has(s)) return 'auto';
-  if (_TRUE.has(s)) return 'true';
-  if (_FALSE.has(s)) return 'false';
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
+  if (_AUTO.has(s)) {
+    return 'auto';
+  }
+  if (_TRUE.has(s)) {
+    return 'true';
+  }
+  if (_FALSE.has(s)) {
+    return 'false';
+  }
   return '';
 }
 
@@ -67,16 +75,27 @@ function _backendFor(platform, bwrapAvailable, seatbeltAvailable) {
  */
 function resolveSandboxState(input = {}) {
   const flag = normalizeSandboxFlag(input.flag) || 'auto';
-  const { backend, available } = _backendFor(input.platform, input.bwrapAvailable, input.seatbeltAvailable);
+  const { backend, available } = _backendFor(
+    input.platform,
+    input.bwrapAvailable,
+    input.seatbeltAvailable
+  );
 
   if (flag === 'false') {
-    return { flag, effective: false, backend, available, reason: '已显式关闭(KHY_OS_SANDBOX=false)' };
+    return {
+      flag,
+      effective: false,
+      backend,
+      available,
+      reason: '已显式关闭(KHY_OS_SANDBOX=false)',
+    };
   }
   // flag 为 'true' 或 'auto':均按平台可用性决定(对齐 isOsSandboxEnabled——它对 true/auto 不区分)。
   if (!available) {
-    const why = backend === 'none'
-      ? `当前平台(${String(input.platform || '未知')})无 OS 沙箱后端`
-      : `${backend} 不可用(未检测到依赖)`;
+    const why =
+      backend === 'none'
+        ? `当前平台(${String(input.platform || '未知')})无 OS 沙箱后端`
+        : `${backend} 不可用(未检测到依赖)`;
     return { flag, effective: false, backend, available, reason: why };
   }
   const label = flag === 'true' ? '已显式开启' : 'auto(平台后端可用)';
@@ -94,14 +113,20 @@ function resolveSandboxState(input = {}) {
  * @returns {{ok:boolean, flag?:string, unset?:boolean, parseError:string|null}}
  */
 function planSandboxAction(action, currentFlag) {
-  const a = String(action == null ? '' : action).trim().toLowerCase();
+  const a = String(action == null ? '' : action)
+    .trim()
+    .toLowerCase();
   const cur = normalizeSandboxFlag(currentFlag) || 'auto';
 
   if (a === 'auto' || a === 'default' || a === 'reset') {
     return { ok: true, unset: true, parseError: null };
   }
-  if (_TRUE.has(a)) return { ok: true, flag: 'true', parseError: null };
-  if (_FALSE.has(a)) return { ok: true, flag: 'false', parseError: null };
+  if (_TRUE.has(a)) {
+    return { ok: true, flag: 'true', parseError: null };
+  }
+  if (_FALSE.has(a)) {
+    return { ok: true, flag: 'false', parseError: null };
+  }
   if (a === 'toggle' || a === '') {
     // 翻转:当前显式关 → 开;当前 true/auto → 关(off 总是显式,便于可预测)。
     const next = cur === 'false' ? 'true' : 'false';
@@ -115,7 +140,9 @@ const _falsy = require('../../utils/isOffValue');
 
 /** 门控读取(KHY_SANDBOX_TOGGLE 默认开;关 → 命令不接管)。注入 env,叶子不读 process.env。 */
 function isEnabled(env = {}) {
-  return !_falsy(env && env.KHY_SANDBOX_TOGGLE === undefined ? 'true' : (env && env.KHY_SANDBOX_TOGGLE));
+  return !_falsy(
+    env && env.KHY_SANDBOX_TOGGLE === undefined ? 'true' : env && env.KHY_SANDBOX_TOGGLE
+  );
 }
 
 module.exports = {

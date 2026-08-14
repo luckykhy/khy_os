@@ -33,7 +33,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
 /** KHY_ENV_INFO_ALIGN 门控:默认开(unset → 开),{0,false,off,no} 关。 */
 function envInfoAlignEnabled(env = process.env) {
   const raw = env && env.KHY_ENV_INFO_ALIGN;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -54,7 +56,9 @@ function buildEnvInfoLines(values) {
   lines.push(`    终端: ${v.term || 'N/A'}`);
   lines.push(`    版本: ${v.version}`);
   const branch = v.gitBranch == null ? '' : String(v.gitBranch).trim();
-  if (branch) lines.push(`    Git 分支: ${branch}`);
+  if (branch) {
+    lines.push(`    Git 分支: ${branch}`);
+  }
   return lines;
 }
 

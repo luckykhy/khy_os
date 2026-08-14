@@ -31,9 +31,7 @@ const RANK = Object.freeze({
   [STRATEGIES.SYSTEM_BLOCK]: 2,
 });
 
-const ALL = Object.freeze([
-  STRATEGIES.PROMPT_SOFT, STRATEGIES.CODE_HARD, STRATEGIES.SYSTEM_BLOCK,
-]);
+const ALL = Object.freeze([STRATEGIES.PROMPT_SOFT, STRATEGIES.CODE_HARD, STRATEGIES.SYSTEM_BLOCK]);
 
 /** True iff `s` is one of the three legal strategy enum values. */
 function isStrategy(s) {

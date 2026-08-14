@@ -5,7 +5,6 @@
  * adding blocks/blockedBy relationships, and modifying task details.
  */
 const { BaseTool } = require('../_baseTool');
-
 const _taskStore = require('../_taskStore');
 
 class TaskUpdateTool extends BaseTool {
@@ -16,8 +15,12 @@ class TaskUpdateTool extends BaseTool {
   static searchHint = 'update task status progress complete block';
   static alwaysLoad = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Update the status or details of an existing task.
@@ -74,7 +77,8 @@ Tips:
         },
         owner: {
           type: 'string',
-          description: 'Claim the task by assigning an owner (agent identifier). Pass an empty string to release ownership.',
+          description:
+            'Claim the task by assigning an owner (agent identifier). Pass an empty string to release ownership.',
         },
         blocks: {
           type: 'array',
@@ -136,12 +140,24 @@ Tips:
     }
 
     const updates = {};
-    if (status) updates.status = status;
-    if (description !== undefined) updates.description = description;
-    if (activeForm !== undefined) updates.activeForm = activeForm;
-    if (owner !== undefined) updates.owner = owner;
-    if (blocks) updates.blocks = blocks;
-    if (blockedBy) updates.blockedBy = blockedBy;
+    if (status) {
+      updates.status = status;
+    }
+    if (description !== undefined) {
+      updates.description = description;
+    }
+    if (activeForm !== undefined) {
+      updates.activeForm = activeForm;
+    }
+    if (owner !== undefined) {
+      updates.owner = owner;
+    }
+    if (blocks) {
+      updates.blocks = blocks;
+    }
+    if (blockedBy) {
+      updates.blockedBy = blockedBy;
+    }
 
     const updated = _taskStore.update(id, updates);
 
@@ -151,7 +167,7 @@ Tips:
       for (const blockedId of updated.blocks) {
         const blocked = _taskStore.get(blockedId);
         if (blocked && blocked.blockedBy) {
-          const remaining = blocked.blockedBy.filter(bid => {
+          const remaining = blocked.blockedBy.filter((bid) => {
             const blocker = _taskStore.get(bid);
             return blocker && blocker.status !== 'completed';
           });

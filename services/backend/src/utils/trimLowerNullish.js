@@ -24,7 +24,9 @@
  */
 
 function trimLowerNullish(s) {
-  return String(s == null ? '' : s).trim().toLowerCase();
+  return String(s == null ? '' : s)
+    .trim()
+    .toLowerCase();
 }
 
 module.exports = trimLowerNullish;

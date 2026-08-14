@@ -4,7 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 describe('repl regression gate scope', () => {
-  const replPath = path.resolve(__dirname, '../../src/cli/repl.js');
+  // The interactive session loop (where the regression gate lives) was split out
+  // of repl.js into the sibling replSession.js (god-file split); the guarded
+  // invariant — gate state declared in the outer loop scope before the harness
+  // runs — is unchanged, only the file hosting it moved.
+  const replPath = path.resolve(__dirname, '../../src/cli/replSession.js');
 
   test('declares regression gate state in outer loop scope before harness execution', () => {
     const source = fs.readFileSync(replPath, 'utf8');

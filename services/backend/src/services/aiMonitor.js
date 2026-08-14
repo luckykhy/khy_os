@@ -8,8 +8,8 @@
  * - SSE event stream for real-time monitoring
  * - Stats aggregation (total, success rate, avg latency)
  */
-const { EventEmitter } = require('events');
 const crypto = require('crypto');
+const { EventEmitter } = require('events');
 
 const MAX_TRACES = parseInt(process.env.AI_MONITOR_MAX_TRACES, 10) || 100;
 const ENABLED = process.env.AI_MONITOR_ENABLED !== 'false';
@@ -32,7 +32,9 @@ _events.setMaxListeners(50);
  * @returns {string} traceId
  */
 function startTrace(request) {
-  if (!ENABLED) return null;
+  if (!ENABLED) {
+    return null;
+  }
 
   const traceId = `trace_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
   const trace = {
@@ -72,10 +74,14 @@ function startTrace(request) {
  * @param {object} attempt - { adapter, success, latencyMs, error, model }
  */
 function addCascadeAttempt(traceId, attempt) {
-  if (!ENABLED || !traceId) return;
+  if (!ENABLED || !traceId) {
+    return;
+  }
 
   const trace = _traceMap.get(traceId);
-  if (!trace) return;
+  if (!trace) {
+    return;
+  }
 
   trace.cascade.push({
     adapter: attempt.adapter,
@@ -96,10 +102,14 @@ function addCascadeAttempt(traceId, attempt) {
  * @param {object} [meta] - Additional metadata
  */
 function endTrace(traceId, response, meta = {}) {
-  if (!ENABLED || !traceId) return;
+  if (!ENABLED || !traceId) {
+    return;
+  }
 
   const trace = _traceMap.get(traceId);
-  if (!trace) return;
+  if (!trace) {
+    return;
+  }
 
   trace.endTime = Date.now();
   trace.latencyMs = trace.endTime - trace.startTime;
@@ -132,14 +142,17 @@ function getTraces(filter = {}) {
   let results = [..._traces];
 
   if (filter.provider) {
-    results = results.filter(t => t.request?.adapter === filter.provider || t.response?.provider === filter.provider);
+    results = results.filter(
+      (t) => t.request?.adapter === filter.provider || t.response?.provider === filter.provider
+    );
   }
   if (filter.success !== undefined) {
-    results = results.filter(t => t.success === filter.success);
+    results = results.filter((t) => t.success === filter.success);
   }
   if (filter.since) {
-    const since = typeof filter.since === 'number' ? filter.since : new Date(filter.since).getTime();
-    results = results.filter(t => t.startTime >= since);
+    const since =
+      typeof filter.since === 'number' ? filter.since : new Date(filter.since).getTime();
+    results = results.filter((t) => t.startTime >= since);
   }
 
   // Sort newest first
@@ -158,14 +171,16 @@ function getTraces(filter = {}) {
  */
 function getStats() {
   const total = _totalCount;
-  const successRate = total > 0 ? (_successCount / total * 100).toFixed(1) : '0.0';
+  const successRate = total > 0 ? ((_successCount / total) * 100).toFixed(1) : '0.0';
   const avgLatency = _successCount > 0 ? Math.round(_totalLatencyMs / _successCount) : 0;
 
   // Per-provider breakdown
   const providers = {};
   for (const trace of _traces) {
     const key = trace.response?.provider || trace.request?.adapter || 'unknown';
-    if (!providers[key]) providers[key] = { total: 0, success: 0, failure: 0, totalLatency: 0 };
+    if (!providers[key]) {
+      providers[key] = { total: 0, success: 0, failure: 0, totalLatency: 0 };
+    }
     providers[key].total++;
     if (trace.success) {
       providers[key].success++;
@@ -176,10 +191,14 @@ function getStats() {
   }
 
   for (const key of Object.keys(providers)) {
-    providers[key].avgLatency = providers[key].success > 0
-      ? Math.round(providers[key].totalLatency / providers[key].success) : 0;
-    providers[key].successRate = providers[key].total > 0
-      ? (providers[key].success / providers[key].total * 100).toFixed(1) : '0.0';
+    providers[key].avgLatency =
+      providers[key].success > 0
+        ? Math.round(providers[key].totalLatency / providers[key].success)
+        : 0;
+    providers[key].successRate =
+      providers[key].total > 0
+        ? ((providers[key].success / providers[key].total) * 100).toFixed(1)
+        : '0.0';
   }
 
   return {
@@ -225,9 +244,24 @@ function getRecent(n = 10) {
 // ── Helpers ──
 
 function truncate(str, maxLen) {
-  if (!str) return '';
-  if (typeof str !== 'string') str = String(str);
-  return str.length > maxLen ? str.slice(0, maxLen) + '...' : str;
+  if (!str) {
+    return '';
+  }
+  if (typeof str !== 'string') {
+    str = String(str);
+  }
+  if (str.length <= maxLen) {
+    return str;
+  }
+  // Width-aware truncation (CJK = 2 columns). Lazy require keeps the service
+  // layer free of a load-time dependency on the CLI layer; on failure fall
+  // back to the legacy byte-level slice.
+  try {
+    const { truncateToWidth } = require('../cli/formatters');
+    return `${truncateToWidth(str, maxLen)}(已截断，共 ${str.length} 字符)`;
+  } catch {
+    return str.slice(0, maxLen) + '...';
+  }
 }
 
 module.exports = {

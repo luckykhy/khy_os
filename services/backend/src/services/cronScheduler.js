@@ -12,9 +12,10 @@
  *
  * Data file: <dataHome>/growth/cron_jobs.json（默认 ~/.khy；env KHY_CRON_JOBS_FILE 可覆盖）
  */
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+
 const { getDataHome, getLegacyDataHome } = require('../utils/dataHome');
 
 const DEFAULT_GROWTH_DIR = path.join(getDataHome(), 'growth');
@@ -35,14 +36,20 @@ const _ensureDir = require('../utils/ensureDirSync');
 // 一次性 legacy 迁移：读旧写新，绝不删旧。仅在未设显式 env 覆盖时生效。
 function _migrateLegacy() {
   try {
-    if (process.env.KHY_CRON_JOBS_FILE || process.env.KHY_CRON_GROWTH_DIR) return;
-    if (JOBS_FILE !== LEGACY_JOBS_FILE
-      && !fs.existsSync(JOBS_FILE)
-      && fs.existsSync(LEGACY_JOBS_FILE)) {
+    if (process.env.KHY_CRON_JOBS_FILE || process.env.KHY_CRON_GROWTH_DIR) {
+      return;
+    }
+    if (
+      JOBS_FILE !== LEGACY_JOBS_FILE &&
+      !fs.existsSync(JOBS_FILE) &&
+      fs.existsSync(LEGACY_JOBS_FILE)
+    ) {
       _ensureDir(GROWTH_DIR);
       fs.writeFileSync(JOBS_FILE, fs.readFileSync(LEGACY_JOBS_FILE, 'utf8'), 'utf8');
     }
-  } catch { /* migration is best-effort */ }
+  } catch {
+    /* migration is best-effort */
+  }
 }
 
 function _loadJobs() {
@@ -51,7 +58,9 @@ function _loadJobs() {
     if (fs.existsSync(JOBS_FILE)) {
       return JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8'));
     }
-  } catch { /* corrupt file */ }
+  } catch {
+    /* corrupt file */
+  }
   return { version: 1, jobs: {} };
 }
 
@@ -78,7 +87,9 @@ function _parseCronField(field, min, max) {
     const trimmed = part.trim();
 
     if (trimmed === '*') {
-      for (let i = min; i <= max; i++) values.add(i);
+      for (let i = min; i <= max; i++) {
+        values.add(i);
+      }
       continue;
     }
 
@@ -86,7 +97,8 @@ function _parseCronField(field, min, max) {
     if (stepMatch) {
       const [, base, stepStr] = stepMatch;
       const step = parseInt(stepStr, 10);
-      let start = min, end = max;
+      let start = min,
+        end = max;
 
       if (base !== '*') {
         const rangeMatch = base.match(/^(\d+)-(\d+)$/);
@@ -102,11 +114,19 @@ function _parseCronField(field, min, max) {
       let _stepOk = true;
       try {
         const _g = require('./cronStepGuard').cronStepUsable(step, process.env);
-        if (_g !== null) _stepOk = _g;
-      } catch { /* fail-soft → legacy loop below */ }
-      if (!_stepOk) continue;
+        if (_g !== null) {
+          _stepOk = _g;
+        }
+      } catch {
+        /* fail-soft → legacy loop below */
+      }
+      if (!_stepOk) {
+        continue;
+      }
 
-      for (let i = start; i <= end; i += step) values.add(i);
+      for (let i = start; i <= end; i += step) {
+        values.add(i);
+      }
       continue;
     }
 
@@ -114,12 +134,16 @@ function _parseCronField(field, min, max) {
     if (rangeMatch) {
       const start = parseInt(rangeMatch[1], 10);
       const end = parseInt(rangeMatch[2], 10);
-      for (let i = start; i <= end; i++) values.add(i);
+      for (let i = start; i <= end; i++) {
+        values.add(i);
+      }
       continue;
     }
 
     const num = parseInt(trimmed, 10);
-    if (!isNaN(num)) values.add(num);
+    if (!isNaN(num)) {
+      values.add(num);
+    }
   }
 
   return values;
@@ -134,7 +158,9 @@ function _parseCronField(field, min, max) {
  */
 function matchesCron(cronExpr, date) {
   const fields = cronExpr.trim().split(/\s+/);
-  if (fields.length !== 5) return false;
+  if (fields.length !== 5) {
+    return false;
+  }
 
   const [minF, hourF, domF, monF, dowF] = fields;
 
@@ -148,9 +174,15 @@ function matchesCron(cronExpr, date) {
   const dayOfWeek = d.getDay(); // 0=Sunday
 
   // Minute / hour / month always AND together.
-  if (!minute.has(d.getMinutes())) return false;
-  if (!hour.has(d.getHours())) return false;
-  if (!month.has(d.getMonth() + 1)) return false;
+  if (!minute.has(d.getMinutes())) {
+    return false;
+  }
+  if (!hour.has(d.getHours())) {
+    return false;
+  }
+  if (!month.has(d.getMonth() + 1)) {
+    return false;
+  }
 
   // Day-of-month vs day-of-week follow the Vixie-cron rule: when BOTH fields
   // are restricted (neither is `*`), a match on EITHER fires the job (OR);
@@ -162,7 +194,9 @@ function matchesCron(cronExpr, date) {
   const domMatch = dom.has(d.getDate());
   const dowMatch = dow.has(dayOfWeek) || (dayOfWeek === 0 && dow.has(7));
 
-  if (domRestricted && dowRestricted) return domMatch || dowMatch;
+  if (domRestricted && dowRestricted) {
+    return domMatch || dowMatch;
+  }
   return domMatch && dowMatch;
 }
 
@@ -181,7 +215,9 @@ function addJob(spec) {
 
   // Validate cron expression
   const fields = spec.cron.trim().split(/\s+/);
-  if (fields.length !== 5) throw new Error(`Invalid cron expression: expected 5 fields, got ${fields.length}`);
+  if (fields.length !== 5) {
+    throw new Error(`Invalid cron expression: expected 5 fields, got ${fields.length}`);
+  }
 
   const data = _loadJobs();
   const id = 'cj-' + crypto.randomBytes(3).toString('hex');
@@ -210,7 +246,9 @@ function addJob(spec) {
  */
 function removeJob(id) {
   const data = _loadJobs();
-  if (!data.jobs[id]) return false;
+  if (!data.jobs[id]) {
+    return false;
+  }
   delete data.jobs[id];
   _saveJobs(data);
   return true;
@@ -223,7 +261,9 @@ function removeJob(id) {
  */
 function enableJob(id) {
   const data = _loadJobs();
-  if (!data.jobs[id]) return false;
+  if (!data.jobs[id]) {
+    return false;
+  }
   data.jobs[id].enabled = true;
   _saveJobs(data);
   return true;
@@ -236,7 +276,9 @@ function enableJob(id) {
  */
 function disableJob(id) {
   const data = _loadJobs();
-  if (!data.jobs[id]) return false;
+  if (!data.jobs[id]) {
+    return false;
+  }
   data.jobs[id].enabled = false;
   _saveJobs(data);
   return true;
@@ -276,7 +318,9 @@ function getJob(id) {
  * Start the scheduler tick loop.
  */
 function start() {
-  if (_running) return;
+  if (_running) {
+    return;
+  }
   _running = true;
   _tickTimer = setInterval(() => _tick(), TICK_INTERVAL_MS);
   _tickTimer.unref?.();
@@ -306,17 +350,23 @@ async function _tick(now) {
   const triggered = [];
 
   for (const [id, job] of Object.entries(data.jobs)) {
-    if (!job.enabled) continue;
-    if (!matchesCron(job.cron, date)) continue;
+    if (!job.enabled) {
+      continue;
+    }
+    if (!matchesCron(job.cron, date)) {
+      continue;
+    }
 
     // Prevent double-run within same minute
     if (job.lastRunAt) {
       const lastRun = new Date(job.lastRunAt);
-      if (lastRun.getFullYear() === date.getFullYear()
-        && lastRun.getMonth() === date.getMonth()
-        && lastRun.getDate() === date.getDate()
-        && lastRun.getHours() === date.getHours()
-        && lastRun.getMinutes() === date.getMinutes()) {
+      if (
+        lastRun.getFullYear() === date.getFullYear() &&
+        lastRun.getMonth() === date.getMonth() &&
+        lastRun.getDate() === date.getDate() &&
+        lastRun.getHours() === date.getHours() &&
+        lastRun.getMinutes() === date.getMinutes()
+      ) {
         continue;
       }
     }
@@ -328,11 +378,13 @@ async function _tick(now) {
     _saveJobs(data);
 
     // Execute asynchronously with timeout
-    _executeJob(id, job, data).catch(err => {
+    _executeJob(id, job, data).catch((err) => {
       // Log but don't crash the scheduler
       try {
         process.stderr.write(`[CronScheduler] Job ${id} failed: ${err.message}\n`);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     });
   }
 
@@ -361,14 +413,16 @@ async function _executeJob(id, job, data) {
     // The process stays alive as long as it produces output; only killed
     // after `idleMs` of silence (or absolute wall-clock limit).
     const { spawn } = require('child_process');
-const { safeKill } = require('../tools/platformUtils');
+    const { safeKill } = require('../tools/platformUtils');
     const idleMs = job.maxRuntimeMs || DEFAULT_MAX_RUNTIME_MS;
     try {
       result = await new Promise((resolve, reject) => {
         let stdout = '';
         let idleTimer = null;
         const resetIdle = () => {
-          if (idleTimer) clearTimeout(idleTimer);
+          if (idleTimer) {
+            clearTimeout(idleTimer);
+          }
           idleTimer = setTimeout(() => {
             safeKill(proc);
             resolve(stdout.trim());
@@ -381,10 +435,26 @@ const { safeKill } = require('../tools/platformUtils');
           stdio: ['ignore', 'pipe', 'pipe'],
           timeout: idleMs * 3, // absolute wall-clock safety net
         });
-        proc.stdout.on('data', (chunk) => { stdout += chunk; resetIdle(); });
-        proc.stderr.on('data', (chunk) => { stdout += chunk; resetIdle(); });
-        proc.on('close', () => { if (idleTimer) clearTimeout(idleTimer); resolve(stdout.trim()); });
-        proc.on('error', (err) => { if (idleTimer) clearTimeout(idleTimer); reject(err); });
+        proc.stdout.on('data', (chunk) => {
+          stdout += chunk;
+          resetIdle();
+        });
+        proc.stderr.on('data', (chunk) => {
+          stdout += chunk;
+          resetIdle();
+        });
+        proc.on('close', () => {
+          if (idleTimer) {
+            clearTimeout(idleTimer);
+          }
+          resolve(stdout.trim());
+        });
+        proc.on('error', (err) => {
+          if (idleTimer) {
+            clearTimeout(idleTimer);
+          }
+          reject(err);
+        });
         resetIdle(); // start initial idle timer
       });
     } catch (err) {
@@ -394,8 +464,9 @@ const { safeKill } = require('../tools/platformUtils');
     // Agent mode: use AI pipeline.
     // In tests we skip real gateway execution by default to avoid long-lived
     // async side effects that outlive the Jest environment.
-    const disableAgentInTest = process.env.NODE_ENV === 'test'
-      && String(process.env.KHY_CRON_ENABLE_AGENT_IN_TEST || '').toLowerCase() !== 'true';
+    const disableAgentInTest =
+      process.env.NODE_ENV === 'test' &&
+      String(process.env.KHY_CRON_ENABLE_AGENT_IN_TEST || '').toLowerCase() !== 'true';
     if (disableAgentInTest) {
       result = '[test-mode] agent execution skipped';
     } else {
@@ -405,15 +476,23 @@ const { safeKill } = require('../tools/platformUtils');
         const aiResult = await Promise.race([
           gateway.generate(prompt),
           new Promise((_, rej) => {
-            hardTimer = setTimeout(() => rej(new Error('Cron job hard timeout')), job.maxRuntimeMs || DEFAULT_MAX_RUNTIME_MS);
+            hardTimer = setTimeout(
+              () => rej(new Error('Cron job hard timeout')),
+              job.maxRuntimeMs || DEFAULT_MAX_RUNTIME_MS
+            );
             hardTimer.unref?.();
           }),
         ]);
-        result = typeof aiResult === 'string' ? aiResult : (aiResult.text || aiResult.reply || JSON.stringify(aiResult));
+        result =
+          typeof aiResult === 'string'
+            ? aiResult
+            : aiResult.text || aiResult.reply || JSON.stringify(aiResult);
       } catch (err) {
         result = `Error: ${err.message}`;
       } finally {
-        if (hardTimer) clearTimeout(hardTimer);
+        if (hardTimer) {
+          clearTimeout(hardTimer);
+        }
       }
     }
   }
@@ -431,7 +510,9 @@ const { safeKill } = require('../tools/platformUtils');
       const { getMessageRouter } = require('./channels/messageRouter');
       const router = getMessageRouter();
       await router.sendToChannel(job.channel, `[Cron: ${id}] ${result.slice(0, 4000)}`);
-    } catch { /* channel delivery is best-effort */ }
+    } catch {
+      /* channel delivery is best-effort */
+    }
   }
 }
 
@@ -439,11 +520,15 @@ const { safeKill } = require('../tools/platformUtils');
 function _resetForTest() {
   stop();
   try {
-    if (fs.existsSync(JOBS_FILE)) fs.unlinkSync(JOBS_FILE);
+    if (fs.existsSync(JOBS_FILE)) {
+      fs.unlinkSync(JOBS_FILE);
+    }
   } catch (err) {
-    const code = String(err && err.code || '');
+    const code = String((err && err.code) || '');
     // Some CI/sandbox environments mount home as read-only.
-    if (code === 'EROFS' || code === 'EACCES' || code === 'EPERM') return;
+    if (code === 'EROFS' || code === 'EACCES' || code === 'EPERM') {
+      return;
+    }
     throw err;
   }
 }

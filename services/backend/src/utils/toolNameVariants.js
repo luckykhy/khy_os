@@ -18,7 +18,9 @@
 
 function toolNameVariants(name) {
   const raw = String(name || '').trim();
-  if (!raw) return [];
+  if (!raw) {
+    return [];
+  }
   const variants = new Set([raw]);
   const snake = raw
     .replace(/([a-z])([A-Z])/g, '$1_$2')

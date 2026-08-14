@@ -16,11 +16,11 @@
  *   const report = await dc.clean({ roots: ['C:'], apply: true });    // 真清（经人闸）
  */
 
-const scanner = require('./scanner');
-const planner = require('./planner');
 const executor = require('./executor');
 const catalog = require('./junkCatalog');
+const planner = require('./planner');
 const guard = require('./protectedGuard');
+const scanner = require('./scanner');
 
 /** 只读扫描：返回全部候选（含被跳过/否决的，便于透明）。 */
 function scan(opts = {}) {
@@ -49,19 +49,38 @@ function renderPlanReport(plan) {
   const lines = [];
   const t = plan.totals;
   lines.push('┌─ khyos 安全磁盘清理 · 计划 ────────────────────────┐');
-  lines.push(`│ 平台: ${_pad(plan.platform, 10)} 盘符: ${_pad(plan.driveRoots.join(' '), 16)}        `.slice(0, 53) + '│');
+  lines.push(
+    `│ 平台: ${_pad(plan.platform, 10)} 盘符: ${_pad(plan.driveRoots.join(' '), 16)}        `.slice(
+      0,
+      53
+    ) + '│'
+  );
   lines.push('├────────────────────────────────────────────────────┤');
-  lines.push(`│ 本次将清理: ${_pad(t.selectedCount + ' 项', 8)} 可回收 ${_pad(t.selectedHuman, 10)}            `.slice(0, 53) + '│');
+  lines.push(
+    `│ 本次将清理: ${_pad(t.selectedCount + ' 项', 8)} 可回收 ${_pad(t.selectedHuman, 10)}            `.slice(
+      0,
+      53
+    ) + '│'
+  );
   if (Object.keys(plan.byCategory).length) {
     for (const [cat, v] of Object.entries(plan.byCategory)) {
-      lines.push(`│   · ${_pad(cat, 16)} ${_pad(String(v.count) + ' 项', 7)} ${planner._humanBytes(v.bytes)}`.padEnd(53).slice(0, 53) + '│');
+      lines.push(
+        `│   · ${_pad(cat, 16)} ${_pad(String(v.count) + ' 项', 7)} ${planner._humanBytes(v.bytes)}`
+          .padEnd(53)
+          .slice(0, 53) + '│'
+      );
     }
   } else {
     lines.push('│   (无可清理项，磁盘已很干净)                          '.slice(0, 53) + '│');
   }
   if (t.reviewCount) {
     lines.push('├─ 需确认 (review，默认不清) ─────────────────────────┤');
-    lines.push(`│ ${_pad(t.reviewCount + ' 项', 8)} 约 ${_pad(t.reviewHuman, 10)}  含回收站/更新缓存等           `.slice(0, 53) + '│');
+    lines.push(
+      `│ ${_pad(t.reviewCount + ' 项', 8)} 约 ${_pad(t.reviewHuman, 10)}  含回收站/更新缓存等           `.slice(
+        0,
+        53
+      ) + '│'
+    );
     lines.push('│ 想清这些请显式开启 includeReview                     '.slice(0, 53) + '│');
   }
   if (t.skippedCount) {

@@ -7,13 +7,36 @@
  * - Active account selection per provider
  * - Quick import from local IDE login storage
  */
+const { spawnSync } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawnSync } = require('child_process');
+
 // Pure credential/token value helpers extracted to a directly-tested module.
 // Imported back under their original names so every call site stays identical.
+const {
+  CURSOR_STORAGE_PATHS,
+  CURSOR_DB_PATHS,
+  WARP_STORAGE_PATHS,
+  NIRVANA_STORAGE_PATHS,
+  NIRVANA_TRAE_CACHE_PATHS,
+  NIRVANA_PRESET_LOGIN_EMAIL,
+  _getKiroTokenCandidatePaths,
+  resolveObservedAutoImportSourcePath,
+  resolveObservedAutoImportCooldownMs,
+  resolveArchiveImportRoot,
+  cleanupArchiveExtractDirs,
+  resolveNirvanaDefaultRoots,
+  normalizeNirvanaProviderHint,
+  _scanText,
+  detectNirvanaProvider,
+  walkCandidateFiles,
+  readCursorTokenFromVscdb,
+  collectNirvanaCandidatesFromRecord,
+  collectGenericCandidateFromRecord,
+  importGenericCandidatesFromPath,
+} = require('./accountPool/candidateDetect');
 const {
   normalizePoolType,
   safeJsonParse,
@@ -46,19 +69,59 @@ const DEFAULT_SCHEDULING_CONFIG = {
 
 const WINDSURF_STORAGE_PATHS = [
   path.join(os.homedir(), '.config', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'AppData', 'Roaming', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Windsurf',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
+  path.join(
+    os.homedir(),
+    'AppData',
+    'Roaming',
+    'Windsurf',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), '.config', 'Codeium', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Codeium', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Codeium',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Codeium', 'User', 'globalStorage', 'storage.json'),
 ];
 
 const TRAE_STORAGE_PATHS = [
   path.join(os.homedir(), '.config', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Trae CN',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
   path.join(os.homedir(), '.config', 'Trae', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Trae', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Trae',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Trae', 'User', 'globalStorage', 'storage.json'),
 ];
 
@@ -66,28 +129,6 @@ const TRAE_STORAGE_PATHS = [
 // 扫描本地 IDE/CLI 登录存储并归一为候选凭据记录,对 DB-core 零回调。宿主 importer 与 6 个
 // 共享 storage-path 常量按 **同名 re-import** 接回,调用点字节不变。DB-core 状态(_db /
 // _schedulingCache / _observedAutoImportState 等)与全部持久化仍留本文件。
-const {
-  CURSOR_STORAGE_PATHS,
-  CURSOR_DB_PATHS,
-  WARP_STORAGE_PATHS,
-  NIRVANA_STORAGE_PATHS,
-  NIRVANA_TRAE_CACHE_PATHS,
-  NIRVANA_PRESET_LOGIN_EMAIL,
-  _getKiroTokenCandidatePaths,
-  resolveObservedAutoImportSourcePath,
-  resolveObservedAutoImportCooldownMs,
-  resolveArchiveImportRoot,
-  cleanupArchiveExtractDirs,
-  resolveNirvanaDefaultRoots,
-  normalizeNirvanaProviderHint,
-  _scanText,
-  detectNirvanaProvider,
-  walkCandidateFiles,
-  readCursorTokenFromVscdb,
-  collectNirvanaCandidatesFromRecord,
-  collectGenericCandidateFromRecord,
-  importGenericCandidatesFromPath,
-} = require('./accountPool/candidateDetect');
 
 let _db = null;
 let _initialized = false;
@@ -99,17 +140,22 @@ let _scheduler = null;
 let _importer = null;
 let _sync = null;
 
-
 async function resolveSequelize(sequelize) {
-  if (sequelize) return sequelize;
+  if (sequelize) {
+    return sequelize;
+  }
 
   try {
     const db = require('../config/database');
-    if (db && db.sequelize) return db.sequelize;
+    if (db && db.sequelize) {
+      return db.sequelize;
+    }
     if (db && typeof db.initDatabase === 'function') {
       return await db.initDatabase();
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   throw new Error('Account pool init failed: sequelize instance not available');
 }
@@ -130,7 +176,9 @@ async function ensureColumn(table, name, definition) {
   _assertSqlIdentifier(table, 'table');
   _assertSqlIdentifier(name, 'column');
   const [cols] = await _db.query(`PRAGMA table_info(${table})`);
-  const exists = Array.isArray(cols) && cols.some(c => String(c.name || '').toLowerCase() === name.toLowerCase());
+  const exists =
+    Array.isArray(cols) &&
+    cols.some((c) => String(c.name || '').toLowerCase() === name.toLowerCase());
   if (!exists) {
     await _db.query(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
   }
@@ -198,7 +246,9 @@ async function ensurePoolSchema() {
   await _db.query('CREATE INDEX IF NOT EXISTS idx_account_pool_type ON account_pool(pool_type)');
   await _db.query('CREATE INDEX IF NOT EXISTS idx_account_pool_status ON account_pool(status)');
   await _db.query('CREATE INDEX IF NOT EXISTS idx_account_pool_enabled ON account_pool(enabled)');
-  await _db.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_account_pool_token_hash ON account_pool(pool_type, token_hash)');
+  await _db.query(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_account_pool_token_hash ON account_pool(pool_type, token_hash)'
+  );
 
   await _db.query(
     `INSERT OR IGNORE INTO account_pool_config (key, value, updated_at)
@@ -231,7 +281,9 @@ async function ensureReady() {
  * Initialize pool database objects.
  */
 async function init(sequelize) {
-  if (_initialized && _db) return;
+  if (_initialized && _db) {
+    return;
+  }
   _db = await resolveSequelize(sequelize);
   await ensurePoolSchema();
   _ensureSubModules();
@@ -242,14 +294,15 @@ async function init(sequelize) {
 async function setActiveAccount(poolType, accountId) {
   await ensureReady();
   const norm = normalizePoolType(poolType);
-  if (!norm) throw new Error('poolType is required');
+  if (!norm) {
+    throw new Error('poolType is required');
+  }
 
+  await _db.query('DELETE FROM account_pool_active WHERE pool_type = :poolType', {
+    replacements: { poolType: norm },
+  });
   await _db.query(
-    'DELETE FROM account_pool_active WHERE pool_type = :poolType',
-    { replacements: { poolType: norm } }
-  );
-  await _db.query(
-    'INSERT INTO account_pool_active (pool_type, account_id, updated_at) VALUES (:poolType, :accountId, datetime(\'now\'))',
+    "INSERT INTO account_pool_active (pool_type, account_id, updated_at) VALUES (:poolType, :accountId, datetime('now'))",
     { replacements: { poolType: norm, accountId } }
   );
 }
@@ -263,7 +316,9 @@ async function findAccountByIdOrLabel(poolType, idOrLabel) {
   await ensureReady();
   const norm = normalizePoolType(poolType);
   const raw = String(idOrLabel || '').trim();
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
 
   // `id` is a globally-unique primary key, so an id match must NOT be scoped by
   // pool_type — otherwise "switch account" fails with "Account not found"
@@ -293,13 +348,17 @@ async function findAccountByIdOrLabel(poolType, idOrLabel) {
 }
 
 function _rowToAccountView(row, activeMap = null) {
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   const poolType = normalizePoolType(row.pool_type);
   const activeId = activeMap ? activeMap.get(poolType) : null;
 
   let status = String(row.status || 'available').toLowerCase();
   const enabled = Number(row.enabled || 0) === 1;
-  if (!enabled) status = 'disabled';
+  if (!enabled) {
+    status = 'disabled';
+  }
   if (enabled && activeId && Number(activeId) === Number(row.id) && _isSelectableStatus(status)) {
     status = 'active';
   }
@@ -339,7 +398,7 @@ async function getAllAccounts(poolType = '') {
     norm ? { replacements: { poolType: norm } } : undefined
   );
 
-  return (rows || []).map(row => _rowToAccountView(row, activeMap));
+  return (rows || []).map((row) => _rowToAccountView(row, activeMap));
 }
 
 // Phase C-2: balanced re-selection of the "next" account. In 'Balance' mode
@@ -355,7 +414,9 @@ async function _pickNextAccountRow(norm, excludeId = null) {
   const policy = selector.policyForMode(_schedulingCache.schedulingMode);
   const excludeClause = excludeId != null ? 'AND id != :excludeId' : '';
   const replacements = { poolType: norm };
-  if (excludeId != null) replacements.excludeId = excludeId;
+  if (excludeId != null) {
+    replacements.excludeId = excludeId;
+  }
 
   if (policy === 'mru') {
     const [rows] = await _db.query(
@@ -384,14 +445,18 @@ async function _pickNextAccountRow(norm, excludeId = null) {
      ORDER BY COALESCE(last_used_at, created_at) ASC, id ASC`,
     { replacements }
   );
-  if (!rows || rows.length === 0) return null;
+  if (!rows || rows.length === 0) {
+    return null;
+  }
   return selector.pickBalanced(rows, { policy }) || rows[0];
 }
 
 async function getActiveAccount(poolType) {
   await ensureReady();
   const norm = normalizePoolType(poolType);
-  if (!norm) return null;
+  if (!norm) {
+    return null;
+  }
 
   const [activeRows] = await _db.query(
     `SELECT a.*
@@ -418,10 +483,14 @@ async function getActiveAccount(poolType) {
     }
   }
 
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
 
   const authData = safeJsonParse(row.auth_data, {}) || {};
-  const accessToken = String(row.access_token || authData.accessToken || authData.userJwt || '').trim();
+  const accessToken = String(
+    row.access_token || authData.accessToken || authData.userJwt || ''
+  ).trim();
   const refreshToken = String(row.refresh_token || authData.refreshToken || '').trim();
   const expiresAt = authData.expiresAt || authData.refreshExpireAt || null;
   return {
@@ -443,7 +512,9 @@ async function getActiveAccount(poolType) {
 
 async function getActiveToken(poolType) {
   const acct = await getActiveAccount(poolType);
-  if (!acct || !acct.accessToken) return null;
+  if (!acct || !acct.accessToken) {
+    return null;
+  }
   return {
     poolType: acct.poolType,
     accountId: acct.id,
@@ -460,9 +531,13 @@ async function getActiveToken(poolType) {
 async function upsertTokenRecord(poolType, tokenData = {}) {
   await ensureReady();
   const norm = normalizePoolType(poolType);
-  if (!norm) throw new Error('poolType is required');
+  if (!norm) {
+    throw new Error('poolType is required');
+  }
 
-  const accessToken = String(tokenData.accessToken || tokenData.access_token || tokenData.apiKey || '').trim();
+  const accessToken = String(
+    tokenData.accessToken || tokenData.access_token || tokenData.apiKey || ''
+  ).trim();
   const refreshToken = String(tokenData.refreshToken || tokenData.refresh_token || '').trim();
   const email = String(tokenData.email || '').trim() || null;
   if (!accessToken && !refreshToken && !email) {
@@ -544,7 +619,9 @@ async function upsertTokenRecord(poolType, tokenData = {}) {
 
 async function saveObservedToken(poolType, tokenData = {}, options = {}) {
   const norm = normalizePoolType(poolType);
-  if (!norm) return null;
+  if (!norm) {
+    return null;
+  }
 
   const upserted = await upsertTokenRecord(norm, tokenData);
   if (options.activateIfNone !== false) {
@@ -558,7 +635,9 @@ async function saveObservedToken(poolType, tokenData = {}, options = {}) {
 
 async function addAccount(config = {}) {
   const poolType = normalizePoolType(config.poolType || config.provider || config.type);
-  if (!poolType) throw new Error('provider is required');
+  if (!poolType) {
+    throw new Error('provider is required');
+  }
 
   const upserted = await upsertTokenRecord(poolType, {
     email: config.email || null,
@@ -580,64 +659,98 @@ async function addAccount(config = {}) {
 
   if (upserted.id) {
     const active = await getActiveAccount(poolType);
-    if (!active) await setActiveAccount(poolType, upserted.id);
+    if (!active) {
+      await setActiveAccount(poolType, upserted.id);
+    }
   }
 
   const accounts = await getAllAccounts(poolType);
-  return accounts.find(a => Number(a.id) === Number(upserted.id)) || null;
+  return accounts.find((a) => Number(a.id) === Number(upserted.id)) || null;
 }
 
 async function updateAccount(id, config = {}) {
   await ensureReady();
   const accountId = Number(id);
-  if (!Number.isFinite(accountId) || accountId <= 0) throw new Error('invalid account id');
+  if (!Number.isFinite(accountId) || accountId <= 0) {
+    throw new Error('invalid account id');
+  }
 
-  const [rows] = await _db.query(
-    'SELECT * FROM account_pool WHERE id = :id LIMIT 1',
-    { replacements: { id: accountId } }
-  );
+  const [rows] = await _db.query('SELECT * FROM account_pool WHERE id = :id LIMIT 1', {
+    replacements: { id: accountId },
+  });
   const current = rows && rows[0] ? rows[0] : null;
-  if (!current) throw new Error(`account not found: ${id}`);
+  if (!current) {
+    throw new Error(`account not found: ${id}`);
+  }
 
-  const nextPoolType = normalizePoolType(config.poolType || config.provider || config.type || current.pool_type);
-  if (!nextPoolType) throw new Error('provider is required');
+  const nextPoolType = normalizePoolType(
+    config.poolType || config.provider || config.type || current.pool_type
+  );
+  if (!nextPoolType) {
+    throw new Error('provider is required');
+  }
 
   const currentAuthData = safeJsonParse(current.auth_data, {}) || {};
   const nextAuthData = {
     ...currentAuthData,
     ...(config.authData && typeof config.authData === 'object' ? config.authData : {}),
   };
-  if (config.endpoint !== undefined) nextAuthData.endpoint = config.endpoint || '';
-  if (config.expiresAt !== undefined) nextAuthData.expiresAt = config.expiresAt || null;
-  if (config.source !== undefined) nextAuthData.source = config.source || 'manual';
+  if (config.endpoint !== undefined) {
+    nextAuthData.endpoint = config.endpoint || '';
+  }
+  if (config.expiresAt !== undefined) {
+    nextAuthData.expiresAt = config.expiresAt || null;
+  }
+  if (config.source !== undefined) {
+    nextAuthData.source = config.source || 'manual';
+  }
 
-  const nextEmail = config.email !== undefined ? (config.email || null) : (current.email || null);
-  const nextPassword = config.password !== undefined ? (config.password || null) : (current.password || null);
-  const nextAccessToken = config.apiKey !== undefined
-    ? (config.apiKey || null)
-    : (config.accessToken !== undefined
-      ? (config.accessToken || null)
-      : (config.access_token !== undefined ? (config.access_token || null) : (current.access_token || null)));
-  const nextRefreshToken = config.refreshToken !== undefined
-    ? (config.refreshToken || null)
-    : (config.refresh_token !== undefined ? (config.refresh_token || null) : (current.refresh_token || null));
-  const nextLabel = config.label !== undefined ? (config.label || null) : (current.label || null);
-  const nextPriority = config.priority !== undefined
-    ? (Number.isFinite(Number(config.priority)) ? Number(config.priority) : 0)
-    : Number(current.priority || 0);
-  const nextAccountType = config.tier || config.accountType || config.account_type || current.account_type || 'LOGIN';
-  const nextSourcePath = config.sourcePath !== undefined ? (config.sourcePath || null) : (current.source_path || null);
-  const nextMetadata = config.metadata !== undefined
-    ? (config.metadata ? JSON.stringify(config.metadata) : null)
-    : (current.metadata || null);
+  const nextEmail = config.email !== undefined ? config.email || null : current.email || null;
+  const nextPassword =
+    config.password !== undefined ? config.password || null : current.password || null;
+  const nextAccessToken =
+    config.apiKey !== undefined
+      ? config.apiKey || null
+      : config.accessToken !== undefined
+        ? config.accessToken || null
+        : config.access_token !== undefined
+          ? config.access_token || null
+          : current.access_token || null;
+  const nextRefreshToken =
+    config.refreshToken !== undefined
+      ? config.refreshToken || null
+      : config.refresh_token !== undefined
+        ? config.refresh_token || null
+        : current.refresh_token || null;
+  const nextLabel = config.label !== undefined ? config.label || null : current.label || null;
+  const nextPriority =
+    config.priority !== undefined
+      ? Number.isFinite(Number(config.priority))
+        ? Number(config.priority)
+        : 0
+      : Number(current.priority || 0);
+  const nextAccountType =
+    config.tier || config.accountType || config.account_type || current.account_type || 'LOGIN';
+  const nextSourcePath =
+    config.sourcePath !== undefined ? config.sourcePath || null : current.source_path || null;
+  const nextMetadata =
+    config.metadata !== undefined
+      ? config.metadata
+        ? JSON.stringify(config.metadata)
+        : null
+      : current.metadata || null;
 
   const hashSource = String(nextAccessToken || nextRefreshToken || '').trim();
-  const nextTokenHash = hashSource ? tokenHash(hashSource) : (current.token_hash || null);
+  const nextTokenHash = hashSource ? tokenHash(hashSource) : current.token_hash || null;
 
-  const nextEnabled = config.enabled === undefined ? Number(current.enabled || 0) : (config.enabled !== false ? 1 : 0);
+  const nextEnabled =
+    config.enabled === undefined ? Number(current.enabled || 0) : config.enabled !== false ? 1 : 0;
   let nextStatus = String(current.status || 'available').toLowerCase();
-  if (nextEnabled !== 1) nextStatus = 'disabled';
-  else if (nextStatus === 'disabled') nextStatus = 'available';
+  if (nextEnabled !== 1) {
+    nextStatus = 'disabled';
+  } else if (nextStatus === 'disabled') {
+    nextStatus = 'available';
+  }
 
   await _db.query(
     `UPDATE account_pool
@@ -679,7 +792,9 @@ async function updateAccount(id, config = {}) {
   );
 
   // Keep active mapping consistent with latest provider/status.
-  await _db.query('DELETE FROM account_pool_active WHERE account_id = :id', { replacements: { id: accountId } });
+  await _db.query('DELETE FROM account_pool_active WHERE account_id = :id', {
+    replacements: { id: accountId },
+  });
   if (nextEnabled === 1 && _isSelectableStatus(nextStatus)) {
     const [activeRows] = await _db.query(
       'SELECT account_id FROM account_pool_active WHERE pool_type = :poolType LIMIT 1',
@@ -691,15 +806,19 @@ async function updateAccount(id, config = {}) {
   }
 
   const accounts = await getAllAccounts(nextPoolType);
-  return accounts.find(a => Number(a.id) === accountId) || null;
+  return accounts.find((a) => Number(a.id) === accountId) || null;
 }
 
 async function removeAccount(id) {
   await ensureReady();
   const accountId = Number(id);
-  if (!Number.isFinite(accountId) || accountId <= 0) throw new Error('invalid account id');
+  if (!Number.isFinite(accountId) || accountId <= 0) {
+    throw new Error('invalid account id');
+  }
 
-  await _db.query('DELETE FROM account_pool_active WHERE account_id = :id', { replacements: { id: accountId } });
+  await _db.query('DELETE FROM account_pool_active WHERE account_id = :id', {
+    replacements: { id: accountId },
+  });
   await _db.query('DELETE FROM account_pool WHERE id = :id', { replacements: { id: accountId } });
 }
 
@@ -710,15 +829,21 @@ async function removeAccount(id) {
  */
 async function removeAccounts(ids) {
   await ensureReady();
-  const valid = [...new Set(
-    (Array.isArray(ids) ? ids : [])
-      .map((v) => Number(v))
-      .filter((n) => Number.isFinite(n) && n > 0)
-  )];
-  if (valid.length === 0) return { removed: 0, ids: [] };
+  const valid = [
+    ...new Set(
+      (Array.isArray(ids) ? ids : [])
+        .map((v) => Number(v))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    ),
+  ];
+  if (valid.length === 0) {
+    return { removed: 0, ids: [] };
+  }
 
   // Parameterized IN-list keeps this injection-safe across the dialect.
-  await _db.query('DELETE FROM account_pool_active WHERE account_id IN (:ids)', { replacements: { ids: valid } });
+  await _db.query('DELETE FROM account_pool_active WHERE account_id IN (:ids)', {
+    replacements: { ids: valid },
+  });
   await _db.query('DELETE FROM account_pool WHERE id IN (:ids)', { replacements: { ids: valid } });
   return { removed: valid.length, ids: valid };
 }
@@ -737,9 +862,13 @@ async function removeAllAccounts(poolType = '') {
     norm ? { replacements: { poolType: norm } } : undefined
   );
   const ids = (rows || []).map((r) => Number(r.id)).filter((n) => Number.isFinite(n) && n > 0);
-  if (ids.length === 0) return { removed: 0 };
+  if (ids.length === 0) {
+    return { removed: 0 };
+  }
 
-  await _db.query('DELETE FROM account_pool_active WHERE account_id IN (:ids)', { replacements: { ids } });
+  await _db.query('DELETE FROM account_pool_active WHERE account_id IN (:ids)', {
+    replacements: { ids },
+  });
   await _db.query(
     `DELETE FROM account_pool ${norm ? 'WHERE pool_type = :poolType' : ''}`,
     norm ? { replacements: { poolType: norm } } : undefined
@@ -769,30 +898,43 @@ async function disableAccount(id) {
      WHERE id = :id`,
     { replacements: { id: accountId } }
   );
-  await _db.query('DELETE FROM account_pool_active WHERE account_id = :id', { replacements: { id: accountId } });
+  await _db.query('DELETE FROM account_pool_active WHERE account_id = :id', {
+    replacements: { id: accountId },
+  });
 }
 
 async function useAccount(poolType, idOrLabel) {
   await ensureReady();
   const norm = normalizePoolType(poolType);
   const target = await findAccountByIdOrLabel(norm, idOrLabel);
-  if (!target) throw new Error(`Account not found: ${idOrLabel}`);
-  if (Number(target.enabled || 0) !== 1) throw new Error('Account is disabled');
-  if (!_isSelectableStatus(target.status)) throw new Error(`Account status is ${target.status}`);
+  if (!target) {
+    throw new Error(`Account not found: ${idOrLabel}`);
+  }
+  if (Number(target.enabled || 0) !== 1) {
+    throw new Error('Account is disabled');
+  }
+  if (!_isSelectableStatus(target.status)) {
+    throw new Error(`Account status is ${target.status}`);
+  }
 
   await setActiveAccount(norm, target.id);
   await _db.query(
-    'UPDATE account_pool SET last_used_at = datetime(\'now\'), updated_at = datetime(\'now\') WHERE id = :id',
+    "UPDATE account_pool SET last_used_at = datetime('now'), updated_at = datetime('now') WHERE id = :id",
     { replacements: { id: target.id } }
   );
 
   // Auto-sync to local IDE storage so Kiro/nirvana sees the switch
-  try { _ensureSubModules(); await _sync.syncActiveAccountToLocal(norm); } catch { /* best effort */ }
+  try {
+    _ensureSubModules();
+    await _sync.syncActiveAccountToLocal(norm);
+  } catch {
+    /* best effort */
+  }
 
   // Resolve the switched account's view by id across all pools — the row may be
   // stored under a legacy alias pool_type, so a norm-filtered fetch could miss it.
   const accounts = await getAllAccounts();
-  return accounts.find(a => Number(a.id) === Number(target.id)) || null;
+  return accounts.find((a) => Number(a.id) === Number(target.id)) || null;
 }
 
 async function getStatus() {
@@ -816,11 +958,17 @@ async function getStatus() {
     row.total++;
 
     const st = String(acct.status || '').toLowerCase();
-    if (st === 'active') row.active++;
-    else if (st === 'disabled') row.disabled++;
-    else if (st === 'leased' || st === 'cooldown') row.cooldown++;
-    else if (st === 'banned') row.banned++;
-    else row.available++;
+    if (st === 'active') {
+      row.active++;
+    } else if (st === 'disabled') {
+      row.disabled++;
+    } else if (st === 'leased' || st === 'cooldown') {
+      row.cooldown++;
+    } else if (st === 'banned') {
+      row.banned++;
+    } else {
+      row.available++;
+    }
   }
 
   return {
@@ -835,7 +983,9 @@ async function getSchedulingConfig() {
   await ensureReady();
   return {
     schedulingMode: _schedulingCache.schedulingMode || DEFAULT_SCHEDULING_CONFIG.schedulingMode,
-    maxWaitSeconds: Number(_schedulingCache.maxWaitSeconds || DEFAULT_SCHEDULING_CONFIG.maxWaitSeconds),
+    maxWaitSeconds: Number(
+      _schedulingCache.maxWaitSeconds || DEFAULT_SCHEDULING_CONFIG.maxWaitSeconds
+    ),
   };
 }
 
@@ -855,7 +1005,6 @@ async function setSchedulingConfig(next = {}) {
 
   return getSchedulingConfig();
 }
-
 
 // ── Legacy lease APIs ────────────────────────────────────────────────────
 
@@ -893,7 +1042,9 @@ async function acquire(poolType, userId = 'default') {
     const cooldownMs = parseInt(process.env.POOL_COOLDOWN_MS, 10) || DEFAULT_COOLDOWN_MS;
     if (Date.now() - releasedAt < cooldownMs) {
       const remaining = Math.ceil((cooldownMs - (Date.now() - releasedAt)) / 60000);
-      throw new Error(`Cooldown active (${remaining} min remaining). Use pool switch for immediate replacement.`);
+      throw new Error(
+        `Cooldown active (${remaining} min remaining). Use pool switch for immediate replacement.`
+      );
     }
   }
 
@@ -954,11 +1105,13 @@ async function release(requestId) {
   await ensureReady();
 
   const [leases] = await _db.query(
-    'SELECT * FROM account_leases WHERE request_id = :requestId AND status = \'active\'',
+    "SELECT * FROM account_leases WHERE request_id = :requestId AND status = 'active'",
     { replacements: { requestId } }
   );
 
-  if (leases.length === 0) throw new Error('Lease not found or already released');
+  if (leases.length === 0) {
+    throw new Error('Lease not found or already released');
+  }
 
   const lease = leases[0];
   await _db.query(
@@ -999,11 +1152,13 @@ async function reportStatus(requestId, status, userId = 'default') {
   await ensureReady();
 
   const [leases] = await _db.query(
-    'SELECT * FROM account_leases WHERE request_id = :requestId AND status = \'active\'',
+    "SELECT * FROM account_leases WHERE request_id = :requestId AND status = 'active'",
     { replacements: { requestId } }
   );
 
-  if (leases.length === 0) throw new Error('Lease not found');
+  if (leases.length === 0) {
+    throw new Error('Lease not found');
+  }
 
   const lease = leases[0];
 
@@ -1041,7 +1196,9 @@ async function acquireSkipCooldown(poolType, userId) {
     { replacements: { poolType: norm } }
   );
 
-  if (accounts.length === 0) throw new Error(`No available accounts in ${poolType} pool`);
+  if (accounts.length === 0) {
+    throw new Error(`No available accounts in ${poolType} pool`);
+  }
 
   const account = accounts[0];
   const requestId = crypto.randomUUID();
@@ -1093,7 +1250,9 @@ async function getStats(poolType) {
 
 async function addAccounts(poolType, accounts) {
   const norm = normalizePoolType(poolType);
-  if (!Array.isArray(accounts)) return 0;
+  if (!Array.isArray(accounts)) {
+    return 0;
+  }
 
   let count = 0;
   for (const acct of accounts) {
@@ -1109,8 +1268,12 @@ async function addAccounts(poolType, accounts) {
         priority: acct.priority || 0,
         sourcePath: acct.source_path || acct.sourcePath || null,
       });
-      if (res.inserted || res.updated) count++;
-    } catch { /* skip broken account */ }
+      if (res.inserted || res.updated) {
+        count++;
+      }
+    } catch {
+      /* skip broken account */
+    }
   }
   return count;
 }
@@ -1128,7 +1291,7 @@ async function resetAccounts(poolType, emails) {
       {
         replacements: {
           poolType: norm,
-          emails: emails.map(e => String(e || '').toLowerCase()),
+          emails: emails.map((e) => String(e || '').toLowerCase()),
         },
       }
     );
@@ -1169,10 +1332,14 @@ function formatLease(row) {
 async function banActiveAccount(poolType) {
   await ensureReady();
   const norm = normalizePoolType(poolType);
-  if (!norm) return null;
+  if (!norm) {
+    return null;
+  }
 
   const activeAcct = await getActiveAccount(norm);
-  if (!activeAcct || !activeAcct.id) return null;
+  if (!activeAcct || !activeAcct.id) {
+    return null;
+  }
 
   // Mark current active account as banned
   await _db.query(
@@ -1184,7 +1351,13 @@ async function banActiveAccount(poolType) {
   const nextAcct = await _pickNextAccountRow(norm, activeAcct.id);
   if (nextAcct) {
     await setActiveAccount(norm, nextAcct.id);
-    return { switched: true, bannedId: activeAcct.id, nextId: nextAcct.id, label: nextAcct.label || nextAcct.email || '', nextEmail: nextAcct.email || '' };
+    return {
+      switched: true,
+      bannedId: activeAcct.id,
+      nextId: nextAcct.id,
+      label: nextAcct.label || nextAcct.email || '',
+      nextEmail: nextAcct.email || '',
+    };
   }
 
   // No alternative account available
@@ -1202,10 +1375,14 @@ async function banActiveAccount(poolType) {
 async function cooldownAccount(poolType, durationMs = 60000) {
   await ensureReady();
   const norm = normalizePoolType(poolType);
-  if (!norm) return null;
+  if (!norm) {
+    return null;
+  }
 
   const activeAcct = await getActiveAccount(norm);
-  if (!activeAcct || !activeAcct.id) return null;
+  if (!activeAcct || !activeAcct.id) {
+    return null;
+  }
 
   const cooldownUntil = new Date(Date.now() + durationMs).toISOString();
 
@@ -1218,7 +1395,14 @@ async function cooldownAccount(poolType, durationMs = 60000) {
   const nextAcct = await _pickNextAccountRow(norm, activeAcct.id);
   if (nextAcct) {
     await setActiveAccount(norm, nextAcct.id);
-    return { switched: true, cooldownId: activeAcct.id, nextId: nextAcct.id, label: nextAcct.label || nextAcct.email || '', nextEmail: nextAcct.email || '', cooldownUntil };
+    return {
+      switched: true,
+      cooldownId: activeAcct.id,
+      nextId: nextAcct.id,
+      label: nextAcct.label || nextAcct.email || '',
+      nextEmail: nextAcct.email || '',
+      cooldownUntil,
+    };
   }
   return { switched: false, cooldownId: activeAcct.id, nextId: null, cooldownUntil };
 }
@@ -1262,21 +1446,27 @@ _ensureSubModules();
 function importProviderTokens(provider, options) {
   return _importer.importProviderTokens(provider, options);
 }
+
 function autoImportObservedCredentials(provider, options) {
   return _importer.autoImportObservedCredentials(provider, options);
 }
+
 function detectWarpLocalLogin() {
   return _importer.detectWarpLocalLogin();
 }
+
 function syncActiveAccountToLocal(provider, options) {
   return _sync.syncActiveAccountToLocal(provider, options);
 }
+
 function getWatchablePaths(provider) {
   return _sync.getWatchablePaths(provider);
 }
+
 function runGC() {
   return _scheduler.runGC();
 }
+
 function stopGC() {
   return _scheduler.stopGC();
 }

@@ -20,7 +20,9 @@ function survivesTrim(toolName, env) {
   const allowed = getProfileTools('coding');
   const allowedSet = new Set(allowed.map((n) => n.toLowerCase()));
   // 外部 agent 委派可达性:directive 开 → 保留 Agent。
-  if (ead.isExternalAgentDirectiveEnabled(env)) allowedSet.add('agent');
+  if (ead.isExternalAgentDirectiveEnabled(env)) {
+    allowedSet.add('agent');
+  }
   return allowedSet.has(String(toolName || '').toLowerCase());
 }
 

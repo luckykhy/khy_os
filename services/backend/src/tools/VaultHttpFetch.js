@@ -39,7 +39,8 @@ function _once(urlStr, { method, headers, body, timeoutMs }) {
     if (body != null && method !== 'GET' && method !== 'HEAD') {
       payload = typeof body === 'string' ? body : JSON.stringify(body);
       if (!Object.keys(reqHeaders).some((h) => h.toLowerCase() === 'content-type')) {
-        reqHeaders['Content-Type'] = typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json';
+        reqHeaders['Content-Type'] =
+          typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json';
       }
       reqHeaders['Content-Length'] = Buffer.byteLength(payload);
     }
@@ -51,29 +52,41 @@ function _once(urlStr, { method, headers, body, timeoutMs }) {
         let truncated = false;
         res.on('data', (c) => {
           size += c.length;
-          if (size <= MAX_BODY_BYTES) chunks.push(c);
-          else if (!truncated) {
+          if (size <= MAX_BODY_BYTES) {
+            chunks.push(c);
+          } else if (!truncated) {
             truncated = true;
             const room = MAX_BODY_BYTES - (size - c.length);
-            if (room > 0) chunks.push(c.slice(0, room));
+            if (room > 0) {
+              chunks.push(c.slice(0, room));
+            }
           }
         });
-        res.on('end', () => resolve({
-          status: res.statusCode,
-          statusText: res.statusMessage || '',
-          headers: res.headers,
-          body: Buffer.concat(chunks).toString('utf-8'),
-          truncated,
-          location: res.headers && res.headers.location,
-        }));
+        res.on('end', () =>
+          resolve({
+            status: res.statusCode,
+            statusText: res.statusMessage || '',
+            headers: res.headers,
+            body: Buffer.concat(chunks).toString('utf-8'),
+            truncated,
+            location: res.headers && res.headers.location,
+          })
+        );
       });
     } catch (e) {
       resolve({ _err: { code: 'SERVICE_UNAVAILABLE', message: (e && e.message) || String(e) } });
       return;
     }
-    req.on('error', (err) => resolve({ _err: { code: 'SERVICE_UNAVAILABLE', message: err.message } }));
-    req.on('timeout', () => { req.destroy(); resolve({ _err: { code: 'TIMEOUT', message: `请求超时（${timeoutMs}ms）` } }); });
-    if (payload != null) req.write(payload);
+    req.on('error', (err) =>
+      resolve({ _err: { code: 'SERVICE_UNAVAILABLE', message: err.message } })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ _err: { code: 'TIMEOUT', message: `请求超时（${timeoutMs}ms）` } });
+    });
+    if (payload != null) {
+      req.write(payload);
+    }
     req.end();
   });
 }
@@ -81,26 +94,54 @@ function _once(urlStr, { method, headers, body, timeoutMs }) {
 module.exports = defineTool({
   name: 'VaultHttpFetch',
   description:
-    'Make an HTTP/HTTPS request that uses secrets from the local vault WITHOUT the secret values ever '
-    + 'entering your context. Reference a secret anywhere in url/headers/body with the placeholder '
-    + '{{vault:NAME}}; the value is injected server-side and any echo is redacted from the response. '
-    + 'Manage secrets with `khy vault set/list/rm`. Does NOT auto-follow redirects (returns 3xx for you to decide).',
+    'Make an HTTP/HTTPS request that uses secrets from the local vault WITHOUT the secret values ever ' +
+    'entering your context. Reference a secret anywhere in url/headers/body with the placeholder ' +
+    '{{vault:NAME}}; the value is injected server-side and any echo is redacted from the response. ' +
+    'Manage secrets with `khy vault set/list/rm`. Does NOT auto-follow redirects (returns 3xx for you to decide).',
   category: 'data',
   risk: 'medium',
   isReadOnly: false,
   isConcurrencySafe: true,
   aliases: ['vault_fetch', 'vaultHttpFetch', 'vault_http_fetch'],
-  searchHint: 'vault secret token api http request authorization bearer credential fetch {{vault:NAME}}',
+  searchHint:
+    'vault secret token api http request authorization bearer credential fetch {{vault:NAME}}',
   inputSchema: {
-    url: { type: 'string', required: true, description: 'Absolute http(s) URL. May contain {{vault:NAME}} placeholders.' },
-    method: { type: 'string', required: false, enum: ALLOWED_METHODS, default: 'GET', description: 'HTTP method (default GET).' },
-    headers: { type: 'object', required: false, description: 'Headers as {name:value}. Values may contain {{vault:NAME}} (e.g. Authorization: "Bearer {{vault:GITHUB_PAT}}").' },
-    body: { type: 'string', required: false, description: 'Optional request body; may contain {{vault:NAME}} placeholders.' },
-    timeout: { type: 'number', required: false, min: 1, max: 120000, description: `Per-attempt timeout in ms (default ${DEFAULT_TIMEOUT_MS}).` },
+    url: {
+      type: 'string',
+      required: true,
+      description: 'Absolute http(s) URL. May contain {{vault:NAME}} placeholders.',
+    },
+    method: {
+      type: 'string',
+      required: false,
+      enum: ALLOWED_METHODS,
+      default: 'GET',
+      description: 'HTTP method (default GET).',
+    },
+    headers: {
+      type: 'object',
+      required: false,
+      description:
+        'Headers as {name:value}. Values may contain {{vault:NAME}} (e.g. Authorization: "Bearer {{vault:GITHUB_PAT}}").',
+    },
+    body: {
+      type: 'string',
+      required: false,
+      description: 'Optional request body; may contain {{vault:NAME}} placeholders.',
+    },
+    timeout: {
+      type: 'number',
+      required: false,
+      min: 1,
+      max: 120000,
+      description: `Per-attempt timeout in ms (default ${DEFAULT_TIMEOUT_MS}).`,
+    },
   },
 
   async validateInput(input) {
-    if (!input || !input.url || !String(input.url).trim()) return { valid: false, message: 'url is required.' };
+    if (!input || !input.url || !String(input.url).trim()) {
+      return { valid: false, message: 'url is required.' };
+    }
     return { valid: true };
   },
 
@@ -120,11 +161,17 @@ module.exports = defineTool({
 
     const method = String((params && params.method) || 'GET').toUpperCase();
     if (!ALLOWED_METHODS.includes(method)) {
-      return { success: false, error: `不支持的方法：${method}（允许:${ALLOWED_METHODS.join('/')}）` };
+      return {
+        success: false,
+        error: `不支持的方法：${method}（允许:${ALLOWED_METHODS.join('/')}）`,
+      };
     }
-    const timeoutMs = Number.isFinite(params && params.timeout) ? params.timeout : DEFAULT_TIMEOUT_MS;
+    const timeoutMs = Number.isFinite(params && params.timeout)
+      ? params.timeout
+      : DEFAULT_TIMEOUT_MS;
     const rawUrl = String((params && params.url) || '');
-    const rawHeaders = (params && params.headers && typeof params.headers === 'object') ? params.headers : {};
+    const rawHeaders =
+      params && params.headers && typeof params.headers === 'object' ? params.headers : {};
     const rawBody = params && typeof params.body === 'string' ? params.body : undefined;
 
     // 1) 收集被引用的密钥名 → 从保险库取明文(仅服务端用)。
@@ -144,7 +191,10 @@ module.exports = defineTool({
     try {
       await assertPublicHttpUrlResolved(url, '目标 URL');
     } catch (e) {
-      return { success: false, error: `目标 URL 未通过安全校验:${core.redactSecrets((e && e.message) || String(e), secretValues)}` };
+      return {
+        success: false,
+        error: `目标 URL 未通过安全校验:${core.redactSecrets((e && e.message) || String(e), secretValues)}`,
+      };
     }
 
     // 4) 发请求(不自动跟随重定向 —— 带密钥不该静默转发到别处)。
@@ -155,7 +205,13 @@ module.exports = defineTool({
     const safeMeta = { method, redirectFollowed: false };
 
     if (res._err) {
-      return { success: false, code: res._err.code, error: redact(res._err.message), content: redact(res._err.message), meta: safeMeta };
+      return {
+        success: false,
+        code: res._err.code,
+        error: redact(res._err.message),
+        content: redact(res._err.message),
+        meta: safeMeta,
+      };
     }
 
     const isRedirect = res.status >= 300 && res.status < 400 && res.location;

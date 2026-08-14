@@ -46,8 +46,12 @@ class TieredResponseRouter {
     switch (band) {
       case BANDS.EXECUTION:
         return {
-          sandbox: 'ExecutionGateway', band, confidence, intent,
-          sideEffectsAllowed: true, toolsAllowed: true,
+          sandbox: 'ExecutionGateway',
+          band,
+          confidence,
+          intent,
+          sideEffectsAllowed: true,
+          toolsAllowed: true,
           downstream: [...EXECUTION_DOWNSTREAM],
           note: '强意图特征，放行入闸；执行前仍须经数据主权网关 + 权限审批',
         };
@@ -55,8 +59,12 @@ class TieredResponseRouter {
       case BANDS.CONFIRM: {
         // 防呆④：确认沙箱**绝无**副作用，只生成零风险确认请求。
         const sandbox = {
-          sandbox: 'ConfirmSandbox', band, confidence, intent,
-          sideEffectsAllowed: false, toolsAllowed: false,
+          sandbox: 'ConfirmSandbox',
+          band,
+          confidence,
+          intent,
+          sideEffectsAllowed: false,
+          toolsAllowed: false,
           confirmPrompt: this._confirmPrompt(analysis),
           note: '歧义模糊带：禁止自主猜测执行（防呆②），生成确认请求交用户裁决',
         };
@@ -66,8 +74,12 @@ class TieredResponseRouter {
       case BANDS.CHAT:
       default:
         return {
-          sandbox: 'ChatSandbox', band: BANDS.CHAT, confidence, intent,
-          sideEffectsAllowed: false, toolsAllowed: false,
+          sandbox: 'ChatSandbox',
+          band: BANDS.CHAT,
+          confidence,
+          intent,
+          sideEffectsAllowed: false,
+          toolsAllowed: false,
           note: '安全对话带：纯生成、无工具权限，闲聊/自指疑问物理隔绝于系统模式',
         };
     }
@@ -84,11 +96,19 @@ class TieredResponseRouter {
    * @throws {ZeroRiskViolationError}
    */
   assertZeroRisk(sandbox) {
-    if (sandbox.sandbox !== 'ConfirmSandbox') return sandbox;
-    if (sandbox.sideEffectsAllowed) throw new ZeroRiskViolationError('sideEffectsAllowed');
-    if (sandbox.toolsAllowed) throw new ZeroRiskViolationError('toolsAllowed');
+    if (sandbox.sandbox !== 'ConfirmSandbox') {
+      return sandbox;
+    }
+    if (sandbox.sideEffectsAllowed) {
+      throw new ZeroRiskViolationError('sideEffectsAllowed');
+    }
+    if (sandbox.toolsAllowed) {
+      throw new ZeroRiskViolationError('toolsAllowed');
+    }
     for (const k of ['exec', 'tool', 'mutate', 'apply', 'commit', 'downstream']) {
-      if (k in sandbox) throw new ZeroRiskViolationError(k);
+      if (k in sandbox) {
+        throw new ZeroRiskViolationError(k);
+      }
     }
     return sandbox;
   }

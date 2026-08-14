@@ -30,12 +30,18 @@ function panelStatusIcon(status) {
  * @returns {string[]}
  */
 function formatPanelStateLines(tasks) {
-  if (!Array.isArray(tasks)) return [];
+  if (!Array.isArray(tasks)) {
+    return [];
+  }
   const out = [];
   for (const t of tasks) {
-    if (!t) continue;
+    if (!t) {
+      continue;
+    }
     const desc = String(t.description || '').trim();
-    if (!desc) continue;
+    if (!desc) {
+      continue;
+    }
     out.push(`${panelStatusIcon(t.status)} ${desc}`);
   }
   return out;
@@ -61,7 +67,9 @@ function mergeTaskLines(snapshotText, panelTasks) {
   const out = [];
   for (const line of [...planLines, ...snapLines]) {
     const key = line.trim();
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(line);
   }
@@ -75,12 +83,31 @@ function mergeTaskLines(snapshotText, panelTasks) {
  * @returns {boolean}
  */
 function taskHiddenBreakdownEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TASK_HIDDEN_BREAKDOWN) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TASK_HIDDEN_BREAKDOWN) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
 // 行首图标 → 状态(panelStatusIcon 的逆映射,用于从已渲染行回推状态)。
 const ICON_STATUS = { '✓': 'completed', '→': 'in_progress', '✗': 'error', '○': 'pending' };
+
+/**
+ * 单行 → 状态(单一真源:行首图标判定的唯一入口,供 taskLineStyle /
+ * SidebarPanel 等所有消费方复用,绝不各自再写一套图标字面量)。
+ * 行首非已知图标 → null。零 IO、确定性、绝不抛。
+ * @param {string} line - 行首带状态图标的单行
+ * @returns {'completed'|'in_progress'|'error'|'pending'|null}
+ */
+function taskLineStatus(line) {
+  return (
+    ICON_STATUS[
+      String(line == null ? '' : line)
+        .trimStart()
+        .charAt(0)
+    ] || null
+  );
+}
 
 /**
  * 把已渲染行(行首带 ✓/→/✗/○ 图标)按状态计数(单一真源:复用 ICON_STATUS 逆映射,
@@ -92,12 +119,19 @@ const ICON_STATUS = { '✓': 'completed', '→': 'in_progress', '✗': 'error', 
  */
 function countTaskLinesByStatus(lines) {
   const counts = { completed: 0, in_progress: 0, pending: 0, error: 0, unknown: 0 };
-  if (!Array.isArray(lines)) return counts;
+  if (!Array.isArray(lines)) {
+    return counts;
+  }
   for (const line of lines) {
-    const head = String(line || '').trimStart().charAt(0);
+    const head = String(line || '')
+      .trimStart()
+      .charAt(0);
     const status = ICON_STATUS[head];
-    if (status) counts[status] += 1;
-    else counts.unknown += 1;
+    if (status) {
+      counts[status] += 1;
+    } else {
+      counts.unknown += 1;
+    }
   }
   return counts;
 }
@@ -116,22 +150,38 @@ function countTaskLinesByStatus(lines) {
  * @returns {string} 形如「2 进行中, 3 待办, 1 已完成」;无法分解或门控关 → ''
  */
 function summarizeHiddenTaskLines(hiddenLines, env = process.env) {
-  if (!taskHiddenBreakdownEnabled(env)) return '';
-  if (!Array.isArray(hiddenLines) || hiddenLines.length === 0) return '';
+  if (!taskHiddenBreakdownEnabled(env)) {
+    return '';
+  }
+  if (!Array.isArray(hiddenLines) || hiddenLines.length === 0) {
+    return '';
+  }
 
   const counts = { in_progress: 0, pending: 0, completed: 0, error: 0 };
   for (const line of hiddenLines) {
-    const head = String(line || '').trimStart().charAt(0);
+    const head = String(line || '')
+      .trimStart()
+      .charAt(0);
     const status = ICON_STATUS[head];
-    if (!status) return ''; // 行首非已知图标 → 放弃分解,回退原始计数(绝不少计)
+    if (!status) {
+      return '';
+    } // 行首非已知图标 → 放弃分解,回退原始计数(绝不少计)
     counts[status] += 1;
   }
 
   const parts = [];
-  if (counts.in_progress > 0) parts.push(`${counts.in_progress} 进行中`);
-  if (counts.pending > 0) parts.push(`${counts.pending} 待办`);
-  if (counts.completed > 0) parts.push(`${counts.completed} 已完成`);
-  if (counts.error > 0) parts.push(`${counts.error} 错误`);
+  if (counts.in_progress > 0) {
+    parts.push(`${counts.in_progress} 进行中`);
+  }
+  if (counts.pending > 0) {
+    parts.push(`${counts.pending} 待办`);
+  }
+  if (counts.completed > 0) {
+    parts.push(`${counts.completed} 已完成`);
+  }
+  if (counts.error > 0) {
+    parts.push(`${counts.error} 错误`);
+  }
   return parts.join(', ');
 }
 
@@ -142,7 +192,9 @@ function summarizeHiddenTaskLines(hiddenLines, env = process.env) {
  * @returns {boolean}
  */
 function taskPanelSplitEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TASK_PANEL_SPLIT) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TASK_PANEL_SPLIT) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -170,15 +222,21 @@ const _PROJECT_LINE_RE = /^\s*[✓→○✗]\s+#\S/;
  *          门控关 / 非数组 / 空 / 仅单一来源(无可拆分)→ null(调用方逐字节回退扁平渲染)
  */
 function splitTaskLinesBySource(lines, env = process.env) {
-  if (!taskPanelSplitEnabled(env)) return null;
-  if (!Array.isArray(lines) || lines.length === 0) return null;
+  if (!taskPanelSplitEnabled(env)) {
+    return null;
+  }
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return null;
+  }
   const session = [];
   const project = [];
   for (const line of lines) {
     (_PROJECT_LINE_RE.test(String(line || '')) ? project : session).push(line);
   }
   // 仅当两组都非空才值得分区;单一来源 → null,让调用方回退今日扁平渲染(不加无谓标签)。
-  if (session.length === 0 || project.length === 0) return null;
+  if (session.length === 0 || project.length === 0) {
+    return null;
+  }
   return [
     { key: 'session', label: '本会话清单', lines: session },
     { key: 'project', label: '项目任务 · 跨会话', lines: project },
@@ -192,7 +250,9 @@ function splitTaskLinesBySource(lines, env = process.env) {
  * @returns {boolean}
  */
 function taskPriorityCapEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TASK_PRIORITY_CAP) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TASK_PRIORITY_CAP) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -221,23 +281,31 @@ const _SURVIVAL_RANK = { in_progress: 0, error: 1, pending: 2, completed: 3 };
  * @returns {{kept:string[], hiddenLines:string[]}|null}
  */
 function selectTaskLinesByPriority(lines, cap) {
-  if (!Array.isArray(lines)) return null;
+  if (!Array.isArray(lines)) {
+    return null;
+  }
   const n = lines.length;
-  if (!Number.isFinite(cap) || cap < 0 || cap >= n) return null; // 无截断 → 调用方处理
+  if (!Number.isFinite(cap) || cap < 0 || cap >= n) {
+    return null;
+  } // 无截断 → 调用方处理
   const ranked = [];
   for (let i = 0; i < n; i++) {
-    const head = String(lines[i] || '').trimStart().charAt(0);
+    const head = String(lines[i] || '')
+      .trimStart()
+      .charAt(0);
     const status = ICON_STATUS[head];
-    if (!status) return null; // 任一行不可识别 → 放弃优先级,回退尾切
+    if (!status) {
+      return null;
+    } // 任一行不可识别 → 放弃优先级,回退尾切
     ranked.push({ i, rank: _SURVIVAL_RANK[status] });
   }
   // 生存优先级升序;同档**降序**原始下标(尾锚定:靠后者先存活,守 khy 既有哲学)。
   const keptIdx = new Set(
     ranked
       .slice()
-      .sort((a, b) => (a.rank - b.rank) || (b.i - a.i))
+      .sort((a, b) => a.rank - b.rank || b.i - a.i)
       .slice(0, cap)
-      .map((x) => x.i),
+      .map((x) => x.i)
   );
   const kept = [];
   const hiddenLines = [];
@@ -251,6 +319,7 @@ module.exports = {
   panelStatusIcon,
   formatPanelStateLines,
   mergeTaskLines,
+  taskLineStatus,
   summarizeHiddenTaskLines,
   taskHiddenBreakdownEnabled,
   countTaskLinesByStatus,

@@ -13,25 +13,47 @@
 
 const { BaseTool } = require('../_baseTool');
 
-const ACTUATE = new Set(['move', 'click', 'doubleClick', 'rightClick', 'drag', 'scroll', 'type', 'typeKeystrokes', 'key', 'hotkey', 'fillForm', 'clickElement', 'hoverElement', 'selectText', 'activate', 'closeWindow', 'minimizeWindow']);
+const ACTUATE = new Set([
+  'move',
+  'click',
+  'doubleClick',
+  'rightClick',
+  'drag',
+  'scroll',
+  'type',
+  'typeKeystrokes',
+  'key',
+  'hotkey',
+  'fillForm',
+  'clickElement',
+  'hoverElement',
+  'selectText',
+  'activate',
+  'closeWindow',
+  'minimizeWindow',
+]);
 
 class DesktopControlTool extends BaseTool {
   static toolName = 'DesktopControl';
   static category = 'system';
   static risk = 'critical';
   static aliases = ['desktop', 'computer_use', 'gui_control'];
-  static searchHint = 'desktop screen screenshot mouse click keyboard type fill form control computer eyes ears mouth speak listen inspect observe accessibility ui elements buttons clickable 眼 耳 嘴 点击 填表 看清 元素 按钮';
+  static searchHint =
+    'desktop screen screenshot mouse click keyboard type fill form control computer eyes ears mouth speak listen inspect observe accessibility ui elements buttons clickable 眼 耳 嘴 点击 填表 看清 元素 按钮';
   static shouldDefer = true;
 
-  isConcurrencySafe() { return false; }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Control the local computer: see the screen, understand its UI as structured clickable elements, simulate mouse/keyboard, fill forms, speak/listen.
 Actions:
 - "capabilities": report which senses are available (eyes/perception/hands/mouth/ears) and the gate state. Safe, always allowed.
-- "observe": THE primary way to see — returns a screenshot path (for vision) PLUS "marks": a structured list of on-screen elements [{id:"e1", role, label, center:{x,y}, clickable, editable}]. Use this to learn what you can click before acting.
+- "observe": THE primary way to see — returns a screenshot path (for vision) PLUS "marks": a structured list of on-screen elements [{id:"e1", role, label, center:{x,y}, clickable, editable}]. Use this to learn what you can click before acting. VISION: the screenshot image is attached for you to see — when the user asks "what's on screen" or "look at the screen", use the attached image to describe the screen contents in detail.
 - "inspect": just the structured element list (no screenshot). clickableOnly:true to get only clickable items.
-- "screenshot"/"see": capture the desktop to a PNG (see also attaches elements + optional OCR). Eyes.
+- "desktopIcons": enumerate desktop icons directly (Windows reads the desktop ListView) — NO screenshot, NO OCR, NO vision needed. THE most reliable answer for "桌面上有什么 / what's on my desktop / my desktop icons". Returns icon names with positions.
+- "screenshot"/"see": capture the desktop to a PNG (see also attaches elements + optional OCR). VISION: the screenshot image is attached — always describe what you see in the image to answer the user's question. Eyes.
 - "clickElement": click an element by reference — target can be its id ("e3"), ordinal number, or its visible label ("Submit"/"提交"). Resolves to its center automatically. Prefer this over raw coordinates.
 - "hoverElement": move the mouse ONTO an element (by the same id/ordinal/label reference) without clicking — e.g. "move the mouse onto the Firefox button", reveal a tooltip/menu.
 - "selectText": locate a word/element by reference and double-click to SELECT it — e.g. "select the word 提交". For selecting a whole span, use drag(start→end) instead.
@@ -45,7 +67,12 @@ Actions:
 - "fillForm": fill a form. fields:[{element|ref (label/id) | x,y | selector, value, clearFirst?, tab?}], optional submit. Element-ref fields are located automatically via inspect.
 - "speak"/"listen": text-to-speech / speech-to-text (mouth/ears).
 WORKFLOW: observe → read marks → clickElement/hoverElement/selectText/type/fillForm by element reference. The structured marks tell you exactly what is clickable and where.
-SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The human must opt in via env KHY_DESKTOP_CONTROL=on (autonomous) | ask (approve once per session) | strict (approve every action). When off, actuation/capture is denied with guidance.`;
+DESKTOP NOTES:
+  * When the user asks "桌面上有什么 / what's on my desktop / desktop icons", PREFER "desktopIcons" (structured icon list) over screenshot — it never shows the terminal itself.
+  * A plain screenshot captures the WHOLE screen including this terminal window. If you must screenshot the actual desktop (icons/wallpaper), pass desktop:true to screenshot/see/observe — it minimizes all windows (Win+D) before capture and restores them after.
+  * Before acting on a window, run "listWindows" to learn what is open.
+SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The human must opt in via env KHY_DESKTOP_CONTROL=on (autonomous) | ask (approve once per session) | strict (approve every action). When off, actuation/capture is denied with guidance.
+GRADED CONFIRMATION: each action carries a risk level (low/medium/high/critical). In 'on' mode low/medium run autonomously, high asks once per session, critical asks every time; in 'ask' mode low is autonomous and medium+ ask once. TRUST ZONE: set KHY_COMPUTER_USE_ALLOWED_APPS=App1,App2 to lower one risk tier for whitelisted apps (critical→high, high→medium) — this never bypasses the actuation budget, and strict mode still confirms every step. Roll back anytime with KHY_DESKTOP_CONTROL=off.`;
   }
 
   get inputSchema() {
@@ -54,41 +81,112 @@ SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The hu
       properties: {
         action: {
           type: 'string',
-          enum: ['capabilities', 'observe', 'inspect', 'screenshot', 'see', 'clickElement', 'hoverElement', 'selectText',
-            'move', 'click', 'doubleClick', 'rightClick',
-            'drag', 'scroll', 'type', 'typeKeystrokes', 'key', 'hotkey', 'fillForm',
-            'activate', 'closeWindow', 'minimizeWindow', 'listWindows',
-            'speak', 'listen'],
+          enum: [
+            'capabilities',
+            'observe',
+            'inspect',
+            'desktopIcons',
+            'screenshot',
+            'see',
+            'clickElement',
+            'hoverElement',
+            'selectText',
+            'move',
+            'click',
+            'doubleClick',
+            'rightClick',
+            'drag',
+            'scroll',
+            'type',
+            'typeKeystrokes',
+            'key',
+            'hotkey',
+            'fillForm',
+            'activate',
+            'closeWindow',
+            'minimizeWindow',
+            'listWindows',
+            'speak',
+            'listen',
+          ],
           description: 'Operation to perform.',
         },
-        x: { type: 'number', description: 'Target X (absolute screen pixel) for mouse / capture region.' },
-        y: { type: 'number', description: 'Target Y (absolute screen pixel) for mouse / capture region.' },
+        x: {
+          type: 'number',
+          description: 'Target X (absolute screen pixel) for mouse / capture region.',
+        },
+        y: {
+          type: 'number',
+          description: 'Target Y (absolute screen pixel) for mouse / capture region.',
+        },
         x2: { type: 'number', description: 'Drag end X.' },
         y2: { type: 'number', description: 'Drag end Y.' },
         dx: { type: 'number', description: 'Scroll horizontal delta.' },
         dy: { type: 'number', description: 'Scroll vertical delta (negative = up).' },
         text: { type: 'string', description: 'Text to type / speak.' },
-        delayMs: { type: 'number', description: 'typeKeystrokes: per-character delay in ms (human-paced; default ~40, max 1000).' },
-        key: { type: 'string', description: 'Key name for "key" action, e.g. "enter","tab","esc".' },
-        keys: { type: 'array', items: { type: 'string' }, description: 'Combo for "hotkey", e.g. ["ctrl","c"].' },
+        delayMs: {
+          type: 'number',
+          description:
+            'typeKeystrokes: per-character delay in ms (human-paced; default ~40, max 1000).',
+        },
+        key: {
+          type: 'string',
+          description: 'Key name for "key" action, e.g. "enter","tab","esc".',
+        },
+        keys: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Combo for "hotkey", e.g. ["ctrl","c"].',
+        },
         region: {
           type: 'object',
           description: 'Optional capture region {x,y,w,h} for screenshot/see.',
-          properties: { x: { type: 'number' }, y: { type: 'number' }, w: { type: 'number' }, h: { type: 'number' } },
+          properties: {
+            x: { type: 'number' },
+            y: { type: 'number' },
+            w: { type: 'number' },
+            h: { type: 'number' },
+          },
         },
         ocr: { type: 'boolean', description: 'see/observe: run OCR on the screenshot.' },
-        target: { description: 'clickElement/hoverElement/selectText: element reference — id ("e3"), ordinal number, or visible label ("Submit"/"提交").' },
-        app: { type: 'string', description: 'activate/closeWindow/minimizeWindow: target application or window name/title, e.g. "Firefox"/"火狐". For close/minimize, empty = frontmost window (mac/Win).' },
-        kind: { type: 'string', enum: ['click', 'doubleClick', 'rightClick'], description: 'clickElement: which mouse action (default click).' },
-        clickableOnly: { type: 'boolean', description: 'inspect/observe: return only clickable elements.' },
+        desktop: {
+          type: 'boolean',
+          description:
+            'screenshot/see/observe: minimize all windows (Win+D) before capture and restore after — captures the actual desktop (icons/wallpaper) instead of this terminal. Also used by desktopIcons to select the desktop ListView backend.',
+        },
+        target: {
+          description:
+            'clickElement/hoverElement/selectText: element reference — id ("e3"), ordinal number, or visible label ("Submit"/"提交").',
+        },
+        app: {
+          type: 'string',
+          description:
+            'activate/closeWindow/minimizeWindow: target application or window name/title, e.g. "Firefox"/"火狐". For close/minimize, empty = frontmost window (mac/Win).',
+        },
+        kind: {
+          type: 'string',
+          enum: ['click', 'doubleClick', 'rightClick'],
+          description: 'clickElement: which mouse action (default click).',
+        },
+        clickableOnly: {
+          type: 'boolean',
+          description: 'inspect/observe: return only clickable elements.',
+        },
         fields: {
           type: 'array',
           description: 'fillForm fields: [{x,y | selector, value, clearFirst?, tab?}].',
           items: { type: 'object' },
         },
         submit: { description: 'fillForm: {selector} | {x,y} to click, or true to press Enter.' },
-        options: { type: 'object', description: 'speak/listen options (voice, rate, maxDurationSeconds, language).' },
-        timeoutMs: { type: 'number', description: 'Optional hard timeout in milliseconds for the action (default 30000, range 1000–300000). Backstops hangs in UI-automation actions. Does not apply to speak/listen (which are bounded by their own maxDurationSeconds).' },
+        options: {
+          type: 'object',
+          description: 'speak/listen options (voice, rate, maxDurationSeconds, language).',
+        },
+        timeoutMs: {
+          type: 'number',
+          description:
+            'Optional hard timeout in milliseconds for the action (default 30000, range 1000–300000). Backstops hangs in UI-automation actions. Does not apply to speak/listen (which are bounded by their own maxDurationSeconds).',
+        },
       },
       required: ['action'],
     };
@@ -97,7 +195,9 @@ SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The hu
   /** @param {object} [deps] test seam: { controller } overrides the DesktopController instance. */
   async execute(params = {}, deps = {}) {
     const action = params && params.action;
-    if (!action) return { success: false, error: 'DesktopControl 需要 "action"。', action: null };
+    if (!action) {
+      return { success: false, error: 'DesktopControl 需要 "action"。', action: null };
+    }
 
     let controller = deps.controller;
     if (!controller) {
@@ -114,34 +214,89 @@ SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The hu
 
     try {
       const dispatch = async () => {
-      switch (action) {
-        case 'capabilities': return controller.capabilities();
-        case 'observe': return await controller.observe({ region: params.region, ocr: !!params.ocr, clickableOnly: params.clickableOnly });
-        case 'inspect': return await controller.inspect({ region: params.region, clickableOnly: params.clickableOnly });
-        case 'clickElement': return await controller.clickElement(params.target, { kind: params.kind, elements: params.elements, refresh: params.refresh });
-        case 'hoverElement': return await controller.hoverElement(params.target, { elements: params.elements, refresh: params.refresh });
-        case 'selectText': return await controller.selectText(params.target, { elements: params.elements, refresh: params.refresh });
-        case 'screenshot': return await controller.screenshot({ region: params.region, outPath: params.outPath });
-        case 'see': return await controller.see({ region: params.region, ocr: params.ocr !== false, clickableOnly: params.clickableOnly });
-        case 'move': return await controller.move(params.x, params.y);
-        case 'click': return await controller.click(params.x, params.y);
-        case 'doubleClick': return await controller.doubleClick(params.x, params.y);
-        case 'rightClick': return await controller.rightClick(params.x, params.y);
-        case 'drag': return await controller.drag(params.x, params.y, params.x2, params.y2);
-        case 'scroll': return await controller.scroll(params.dx || 0, params.dy || 0);
-        case 'type': return await controller.type(params.text || '');
-        case 'typeKeystrokes': return await controller.typeKeystrokes(params.text || '', { delayMs: params.delayMs });
-        case 'key': return await controller.key(params.key);
-        case 'hotkey': return await controller.hotkey(params.keys);
-        case 'activate': return await controller.activate(params.app || params.name || params.target);
-        case 'closeWindow': return await controller.closeWindow(params.app || params.name || params.target);
-        case 'minimizeWindow': return await controller.minimizeWindow(params.app || params.name || params.target);
-        case 'listWindows': return await controller.listWindows();
-        case 'fillForm': return await controller.fillForm({ fields: params.fields, submit: params.submit });
-        case 'speak': return await controller.speak(params.text || '', params.options || {});
-        case 'listen': return await controller.listen(params.options || {});
-        default: return { success: false, error: `未知 action: ${action}`, action };
-      }
+        switch (action) {
+          case 'capabilities':
+            return controller.capabilities();
+          case 'observe':
+            return await controller.observe({
+              region: params.region,
+              ocr: !!params.ocr,
+              clickableOnly: params.clickableOnly,
+              desktop: params.desktop === true,
+            });
+          case 'inspect':
+            return await controller.inspect({
+              region: params.region,
+              clickableOnly: params.clickableOnly,
+            });
+          case 'desktopIcons':
+            return await controller.desktopIcons({ clickableOnly: params.clickableOnly });
+          case 'clickElement':
+            return await controller.clickElement(params.target, {
+              kind: params.kind,
+              elements: params.elements,
+              refresh: params.refresh,
+            });
+          case 'hoverElement':
+            return await controller.hoverElement(params.target, {
+              elements: params.elements,
+              refresh: params.refresh,
+            });
+          case 'selectText':
+            return await controller.selectText(params.target, {
+              elements: params.elements,
+              refresh: params.refresh,
+            });
+          case 'screenshot':
+            return await controller.screenshot({
+              region: params.region,
+              outPath: params.outPath,
+              desktop: params.desktop === true,
+            });
+          case 'see':
+            return await controller.see({
+              region: params.region,
+              ocr: params.ocr !== false,
+              clickableOnly: params.clickableOnly,
+              desktop: params.desktop === true,
+            });
+          case 'move':
+            return await controller.move(params.x, params.y);
+          case 'click':
+            return await controller.click(params.x, params.y);
+          case 'doubleClick':
+            return await controller.doubleClick(params.x, params.y);
+          case 'rightClick':
+            return await controller.rightClick(params.x, params.y);
+          case 'drag':
+            return await controller.drag(params.x, params.y, params.x2, params.y2);
+          case 'scroll':
+            return await controller.scroll(params.dx || 0, params.dy || 0);
+          case 'type':
+            return await controller.type(params.text || '');
+          case 'typeKeystrokes':
+            return await controller.typeKeystrokes(params.text || '', { delayMs: params.delayMs });
+          case 'key':
+            return await controller.key(params.key);
+          case 'hotkey':
+            return await controller.hotkey(params.keys);
+          case 'activate':
+            return await controller.activate(params.app || params.name || params.target);
+          case 'closeWindow':
+            return await controller.closeWindow(params.app || params.name || params.target);
+          case 'minimizeWindow':
+            return await controller.minimizeWindow(params.app || params.name || params.target);
+          case 'listWindows':
+            return await controller.listWindows();
+          case 'fillForm':
+            return await controller.fillForm({ fields: params.fields, submit: params.submit });
+          case 'speak':
+            return await controller.speak(params.text || '', params.options || {});
+          case 'listen':
+            return await controller.listen(params.options || {});
+          default:
+            return { success: false, error: `未知 action: ${action}`, action };
+        }
       };
       // speak/listen 由各自 maxDurationSeconds 自限,不套墙钟(否则会截断合法的长音频操作);
       // 其余 UI 自动化动作套模型可设墙钟兜底 hang(门控关 → 逐字节回退直接 await)。
@@ -158,10 +313,40 @@ SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The hu
       });
       const raced = await withDeadline(() => dispatch(), timeoutMs);
       if (raced && raced.__timedOut) {
-        return { success: false, action, error: `DesktopControl "${action}" 超时:已达 ${raced.timeoutMs}ms 硬上限` };
+        return {
+          success: false,
+          action,
+          error: `DesktopControl "${action}" 超时:已达 ${raced.timeoutMs}ms 硬上限`,
+        };
       }
       if (raced && raced.__error) {
-        return { success: false, action, error: (raced.__error && raced.__error.message) || String(raced.__error) };
+        return {
+          success: false,
+          action,
+          error: (raced.__error && raced.__error.message) || String(raced.__error),
+        };
+      }
+      // Inject vision content blocks for screenshot/observe/see actions
+      if (
+        raced &&
+        raced.success &&
+        raced.path &&
+        (action === 'observe' || action === 'screenshot' || action === 'see')
+      ) {
+        try {
+          const fs = require('fs');
+          if (fs.existsSync(raced.path)) {
+            const {
+              convertScreenshot,
+            } = require('../../services/desktopControl/screenshotToContentBlocks');
+            const blocks = await convertScreenshot(raced.path, { modelId: deps.modelId || null });
+            if (blocks && blocks.length > 0) {
+              raced._contentBlocks = blocks;
+            }
+          }
+        } catch {
+          /* fail-soft: no content blocks injected */
+        }
       }
       return raced;
     } catch (err) {
@@ -170,7 +355,24 @@ SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The hu
   }
 
   // 声明：actuation 类动作属高危物理操控（供上层透明展示/审计）。
-  static isActuation(action) { return ACTUATE.has(action); }
+  static isActuation(action) {
+    return ACTUATE.has(action);
+  }
+
+  /**
+   * 返回某动作的分级风险等级（none/low/medium/high/critical），委派 safetyGate 单一真源。
+   * 供上层 UI/审计透明展示每个动作的确认强度；未知动作保守按 high。
+   * @param {string} action
+   * @returns {string}
+   */
+  static riskOf(action) {
+    try {
+      const safetyGate = require('../../services/desktopControl/safetyGate');
+      return safetyGate.riskOf(action);
+    } catch {
+      return 'high';
+    }
+  }
 
   /**
    * 读取本次调用是否携带 Gate-1 盖的不可伪造 EXEC_APPROVED 戳（=用户已在权限框逐项批准）。
@@ -179,7 +381,9 @@ SAFETY: real mouse/keyboard control is high-risk and DISABLED by default. The hu
    * @returns {boolean}
    */
   static hostApprovedFromParams(params) {
-    if (!params || typeof params !== 'object') return false;
+    if (!params || typeof params !== 'object') {
+      return false;
+    }
     try {
       const { EXEC_APPROVED } = require('../../services/execApproval');
       return !!EXEC_APPROVED && params[EXEC_APPROVED] === true;

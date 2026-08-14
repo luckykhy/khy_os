@@ -21,50 +21,60 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, ref, watch } from 'vue'
-import { useGlobalLoading } from '@/composables/useGlobalLoading'
+import { onBeforeUnmount, ref, watch } from 'vue';
+import { useGlobalLoading } from '@/composables/useGlobalLoading';
 
-const { isLoading } = useGlobalLoading()
+const { isLoading } = useGlobalLoading();
 
-const visible = ref(false)
-const width = ref(0)
-let trickleTimer = null
-let doneTimer = null
+const visible = ref(false);
+const width = ref(0);
+let trickleTimer = null;
+let doneTimer = null;
 
 function clearTimers() {
-  if (trickleTimer) { clearInterval(trickleTimer); trickleTimer = null }
-  if (doneTimer) { clearTimeout(doneTimer); doneTimer = null }
+  if (trickleTimer) {
+    clearInterval(trickleTimer);
+    trickleTimer = null;
+  }
+  if (doneTimer) {
+    clearTimeout(doneTimer);
+    doneTimer = null;
+  }
 }
 
 function startTrickle() {
-  if (trickleTimer) return
+  if (trickleTimer) return;
   trickleTimer = setInterval(() => {
     // Asymptotic approach to 90% — slows down as it nears the cap so the bar
     // keeps moving (alive) without ever pretending to be done.
-    const remaining = 90 - width.value
+    const remaining = 90 - width.value;
     if (remaining > 0.5) {
-      width.value = Math.min(90, width.value + remaining * 0.12)
+      width.value = Math.min(90, width.value + remaining * 0.12);
     }
-  }, 280)
+  }, 280);
 }
 
-watch(isLoading, (loading) => {
-  clearTimers()
-  if (loading) {
-    visible.value = true
-    width.value = Math.max(width.value, 10)
-    startTrickle()
-  } else {
-    // Snap to full, then fade out and reset.
-    width.value = 100
-    doneTimer = setTimeout(() => {
-      visible.value = false
-      width.value = 0
-    }, 320)
-  }
-}, { immediate: true })
+watch(
+  isLoading,
+  (loading) => {
+    clearTimers();
+    if (loading) {
+      visible.value = true;
+      width.value = Math.max(width.value, 10);
+      startTrickle();
+    } else {
+      // Snap to full, then fade out and reset.
+      width.value = 100;
+      doneTimer = setTimeout(() => {
+        visible.value = false;
+        width.value = 0;
+      }, 320);
+    }
+  },
+  { immediate: true }
+);
 
-onBeforeUnmount(clearTimers)
+onBeforeUnmount(clearTimers);
 </script>
 
 <style scoped>

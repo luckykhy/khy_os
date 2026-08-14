@@ -18,7 +18,13 @@
 
 // 工具名语义即删除/移除 → 不可逆。(两份历史定义的并集；含 rmdir。)
 const DELETE_TOOL_NAMES = new Set([
-  'deletefile', 'delete_file', 'removefile', 'remove_file', 'rm', 'unlink', 'rmdir',
+  'deletefile',
+  'delete_file',
+  'removefile',
+  'remove_file',
+  'rm',
+  'unlink',
+  'rmdir',
 ]);
 
 // 命令里的删除动词。
@@ -71,21 +77,27 @@ const SECRET_PATH_PATTERNS = [
 
 // 内容疑似外泄机密（活凭证写到外发/日志/公共文件）。
 const SECRET_EXFIL_PATTERNS = [
-  /\b(AKIA|ASIA)[A-Z0-9]{16}\b/,                      // AWS access key id
-  /\bsk-[A-Za-z0-9]{20,}\b/,                          // OpenAI-style secret
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,               // private key blob
+  /\b(AKIA|ASIA)[A-Z0-9]{16}\b/, // AWS access key id
+  /\bsk-[A-Za-z0-9]{20,}\b/, // OpenAI-style secret
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/, // private key blob
   /\b(password|passwd|secret|api[_-]?key|token)\b\s*[:=]\s*['"][^'"]{6,}['"]/i,
 ];
 
 // package.json 破坏性触碰。
-const PKG_CORE_DELETE_PATTERNS = [
-  /(^|[\\/])package\.json$/i,
-];
+const PKG_CORE_DELETE_PATTERNS = [/(^|[\\/])package\.json$/i];
 
 function _str(x) {
-  if (x == null) return '';
-  if (typeof x === 'string') return x;
-  try { return JSON.stringify(x); } catch { return String(x); }
+  if (x == null) {
+    return '';
+  }
+  if (typeof x === 'string') {
+    return x;
+  }
+  try {
+    return JSON.stringify(x);
+  } catch {
+    return String(x);
+  }
 }
 
 function _any(patterns, text) {
@@ -94,7 +106,11 @@ function _any(patterns, text) {
 
 /** 工具名是否语义即删除。 */
 function isDeleteTool(tool) {
-  return DELETE_TOOL_NAMES.has(String(tool || '').trim().toLowerCase());
+  return DELETE_TOOL_NAMES.has(
+    String(tool || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /** 命令文本是否含删除动词。 */

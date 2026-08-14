@@ -13,7 +13,8 @@ const stripAnsi = require('../../../utils/stripAnsi');
 
 /** Test whether a Unicode code point is fullwidth (CJK, etc.). */
 function isFullwidth(code) {
-  return (code >= 0x1100 && code <= 0x115f) ||
+  return (
+    (code >= 0x1100 && code <= 0x115f) ||
     (code >= 0x2e80 && code <= 0x303e) ||
     (code >= 0x3040 && code <= 0x33bf) ||
     (code >= 0x3400 && code <= 0x4dbf) ||
@@ -24,7 +25,8 @@ function isFullwidth(code) {
     (code >= 0xff01 && code <= 0xff60) ||
     (code >= 0xffe0 && code <= 0xffe6) ||
     (code >= 0x20000 && code <= 0x2fffd) ||
-    (code >= 0x30000 && code <= 0x3fffd);
+    (code >= 0x30000 && code <= 0x3fffd)
+  );
 }
 
 /** Visible display width (strips ANSI, CJK=2). */

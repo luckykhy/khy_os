@@ -15,7 +15,7 @@ const path = require('path');
 
 // ── Registry state ─────────────────────────────────────────────────
 
-const _entries = new Map();  // name → { factory, instance, category, description, loaded }
+const _entries = new Map(); // name → { factory, instance, category, description, loaded }
 
 // ── Public API ─────────────────────────────────────────────────────
 
@@ -163,10 +163,15 @@ async function healthCheck() {
  * @returns {{ total: number, loaded: number, errored: number }}
  */
 function stats() {
-  let loaded = 0, errored = 0;
+  let loaded = 0,
+    errored = 0;
   for (const entry of _entries.values()) {
-    if (entry.loaded) loaded++;
-    if (entry.error) errored++;
+    if (entry.loaded) {
+      loaded++;
+    }
+    if (entry.error) {
+      errored++;
+    }
   }
   return { total: _entries.size, loaded, errored };
 }
@@ -178,37 +183,157 @@ function _autoRegister() {
   const svcDir = path.join(__dirname);
 
   const known = [
-    ['aiGateway', () => require('./gateway/aiGateway'), { category: 'gateway', description: 'AI request routing (multi-adapter cascade)' }],
-    ['multiFreeService', () => require('./multiFreeService'), { category: 'core', description: 'Free-tier AI provider aggregation' }],
-    ['strategyEngine', () => require('./strategyEngine'), { category: 'core', description: 'Trading strategy execution engine' }],
-    ['backtestEngine', () => require('./backtestEngine'), { category: 'core', description: 'Strategy backtesting engine' }],
-    ['marketDataService', () => require('./marketDataService'), { category: 'data', description: 'Market data access layer' }],
-    ['klineDataService', () => require('./klineDataService'), { category: 'data', description: 'K-line data service' }],
-    ['akshareDataService', () => require('./akshareDataService'), { category: 'data', description: 'AKShare data integration' }],
-    ['toolCalling', () => require('./toolCalling'), { category: 'core', description: 'Tool execution with permission system' }],
-    ['permissionStore', () => require('./permissionStore'), { category: 'security', description: 'Profile-aware permission management' }],
-    ['auditLog', () => require('./auditLog'), { category: 'security', description: 'Tool execution audit trail' }],
-    ['toolSandbox', () => require('./toolSandbox'), { category: 'security', description: 'Sandboxed code/shell execution' }],
-    ['toolUseLoop', () => require('./toolUseLoop'), { category: 'core', description: 'Iterative AI ↔ tool execution loop' }],
-    ['agenticHarnessService', () => require('./agenticHarnessService'), { category: 'core', description: 'Unified context/loop/skills/memory harness runtime' }],
-    ['securityGuardService', () => require('./securityGuardService'), { category: 'security', description: 'Input/output security scanning' }],
-    ['resourceGuard', () => require('./resourceGuard'), { category: 'security', description: 'Resource limits and safe execution' }],
-    ['baseSelfCheckService', () => require('./baseSelfCheckService'), { category: 'monitoring', description: 'Periodic base reliability self-check loop' }],
-    ['webSearchService', () => require('./webSearchService'), { category: 'data', description: 'Web search integration' }],
-    ['tradingAgentsService', () => require('./tradingAgentsService'), { category: 'core', description: 'Multi-agent trading system' }],
-    ['tokenUsageService', () => require('./tokenUsageService'), { category: 'monitoring', description: 'Token usage tracking' }],
-    ['growthService', () => require('./growthService'), { category: 'user', description: 'User growth and engagement tracking' }],
-    ['versionService', () => require('./versionService'), { category: 'system', description: 'Version management and updates' }],
-    ['cloudSync', () => require('./cloudSync'), { category: 'system', description: 'Cloud data synchronization' }],
+    [
+      'aiGateway',
+      () => require('./gateway/aiGateway'),
+      { category: 'gateway', description: 'AI request routing (multi-adapter cascade)' },
+    ],
+    [
+      'multiFreeService',
+      () => require('./multiFreeService'),
+      { category: 'core', description: 'Free-tier AI provider aggregation' },
+    ],
+    [
+      'strategyEngine',
+      () => require('./strategyEngine'),
+      { category: 'core', description: 'Trading strategy execution engine' },
+    ],
+    [
+      'backtestEngine',
+      () => require('./backtestEngine'),
+      { category: 'core', description: 'Strategy backtesting engine' },
+    ],
+    [
+      'marketDataService',
+      () => require('./marketDataService'),
+      { category: 'data', description: 'Market data access layer' },
+    ],
+    [
+      'klineDataService',
+      () => require('./klineDataService'),
+      { category: 'data', description: 'K-line data service' },
+    ],
+    [
+      'akshareDataService',
+      () => require('./akshareDataService'),
+      { category: 'data', description: 'AKShare data integration' },
+    ],
+    [
+      'toolCalling',
+      () => require('./toolCalling'),
+      { category: 'core', description: 'Tool execution with permission system' },
+    ],
+    [
+      'permissionStore',
+      () => require('./permissionStore'),
+      { category: 'security', description: 'Profile-aware permission management' },
+    ],
+    [
+      'auditLog',
+      () => require('./auditLog'),
+      { category: 'security', description: 'Tool execution audit trail' },
+    ],
+    [
+      'toolSandbox',
+      () => require('./toolSandbox'),
+      { category: 'security', description: 'Sandboxed code/shell execution' },
+    ],
+    [
+      'toolUseLoop',
+      () => require('./toolUseLoop'),
+      { category: 'core', description: 'Iterative AI ↔ tool execution loop' },
+    ],
+    [
+      'agenticHarnessService',
+      () => require('./agenticHarnessService'),
+      { category: 'core', description: 'Unified context/loop/skills/memory harness runtime' },
+    ],
+    [
+      'securityGuardService',
+      () => require('./securityGuardService'),
+      { category: 'security', description: 'Input/output security scanning' },
+    ],
+    [
+      'resourceGuard',
+      () => require('./resourceGuard'),
+      { category: 'security', description: 'Resource limits and safe execution' },
+    ],
+    [
+      'baseSelfCheckService',
+      () => require('./baseSelfCheckService'),
+      { category: 'monitoring', description: 'Periodic base reliability self-check loop' },
+    ],
+    [
+      'webSearchService',
+      () => require('./webSearchService'),
+      { category: 'data', description: 'Web search integration' },
+    ],
+    [
+      'tradingAgentsService',
+      () => require('./tradingAgentsService'),
+      { category: 'core', description: 'Multi-agent trading system' },
+    ],
+    [
+      'tokenUsageService',
+      () => require('./tokenUsageService'),
+      { category: 'monitoring', description: 'Token usage tracking' },
+    ],
+    [
+      'growthService',
+      () => require('./growthService'),
+      { category: 'user', description: 'User growth and engagement tracking' },
+    ],
+    [
+      'versionService',
+      () => require('./versionService'),
+      { category: 'system', description: 'Version management and updates' },
+    ],
+    [
+      'cloudSync',
+      () => require('./cloudSync'),
+      { category: 'system', description: 'Cloud data synchronization' },
+    ],
     // Bootstrap-level services (used early in startup, registering for unified health/discovery)
-    ['hardwareProfileService', () => require('./hardwareProfileService'), { category: 'system', description: 'Hardware detection and model recommendations' }],
-    ['networkDetector', () => require('./networkDetector'), { category: 'system', description: 'Network availability and proxy detection' }],
-    ['cacheService', () => require('./cacheService'), { category: 'core', description: 'Multi-tier cache (memory/Redis/file)' }],
-    ['cleanupService', () => require('./cleanupService'), { category: 'system', description: 'Periodic data and temp file cleanup' }],
-    ['projectMemoryService', () => require('./projectMemoryService'), { category: 'core', description: 'Project-level persistent memory (khy.md)' }],
-    ['fileIntegrityService', () => require('./fileIntegrityService'), { category: 'security', description: 'File integrity verification (hash checksums)' }],
-    ['adminService', () => require('./adminService'), { category: 'security', description: 'Admin authentication and user management' }],
-    ['skillLearningService', () => require('./skillLearningService'), { category: 'core', description: 'Skill usage tracking and auto-learning' }],
+    [
+      'hardwareProfileService',
+      () => require('./hardwareProfileService'),
+      { category: 'system', description: 'Hardware detection and model recommendations' },
+    ],
+    [
+      'networkDetector',
+      () => require('./networkDetector'),
+      { category: 'system', description: 'Network availability and proxy detection' },
+    ],
+    [
+      'cacheService',
+      () => require('./cacheService'),
+      { category: 'core', description: 'Multi-tier cache (memory/Redis/file)' },
+    ],
+    [
+      'cleanupService',
+      () => require('./cleanupService'),
+      { category: 'system', description: 'Periodic data and temp file cleanup' },
+    ],
+    [
+      'projectMemoryService',
+      () => require('./projectMemoryService'),
+      { category: 'core', description: 'Project-level persistent memory (khy.md)' },
+    ],
+    [
+      'fileIntegrityService',
+      () => require('./fileIntegrityService'),
+      { category: 'security', description: 'File integrity verification (hash checksums)' },
+    ],
+    [
+      'adminService',
+      () => require('./adminService'),
+      { category: 'security', description: 'Admin authentication and user management' },
+    ],
+    [
+      'skillLearningService',
+      () => require('./skillLearningService'),
+      { category: 'core', description: 'Skill usage tracking and auto-learning' },
+    ],
   ];
 
   for (const [name, factory, meta] of known) {

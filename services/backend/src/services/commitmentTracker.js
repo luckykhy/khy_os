@@ -83,14 +83,20 @@ class CommitmentTracker {
     const { userText, assistantText, agentId = '' } = input;
 
     // Gate checks
-    if (!userText?.trim() || !assistantText?.trim()) return false;
+    if (!userText?.trim() || !assistantText?.trim()) {
+      return false;
+    }
 
     // Failure cooldown
     const cooldownUntil = this._failureCooldowns.get(agentId) || 0;
-    if (Date.now() < cooldownUntil) return false;
+    if (Date.now() < cooldownUntil) {
+      return false;
+    }
 
     // Queue overflow guard
-    if (this._queue.length >= MAX_QUEUE_SIZE) return false;
+    if (this._queue.length >= MAX_QUEUE_SIZE) {
+      return false;
+    }
 
     this._queue.push({
       id: crypto.randomBytes(6).toString('hex'),
@@ -105,7 +111,7 @@ class CommitmentTracker {
     if (!this._debounceTimer) {
       this._debounceTimer = setTimeout(() => {
         this._debounceTimer = null;
-        this._drainQueue().catch(err =>
+        this._drainQueue().catch((err) =>
           this._logger.warn('Commitment extraction failed:', err.message)
         );
       }, DEBOUNCE_MS);
@@ -118,7 +124,9 @@ class CommitmentTracker {
    * Drain the extraction queue and process items.
    */
   async _drainQueue() {
-    if (this._queue.length === 0 || !this._gateway) return;
+    if (this._queue.length === 0 || !this._gateway) {
+      return;
+    }
 
     const batch = this._queue.splice(0);
 
@@ -131,7 +139,7 @@ class CommitmentTracker {
       } catch (err) {
         if (this._isTerminalError(err)) {
           this._failureCooldowns.set(item.agentId, Date.now() + TERMINAL_FAILURE_COOLDOWN_MS);
-          this._queue = this._queue.filter(q => q.agentId !== item.agentId);
+          this._queue = this._queue.filter((q) => q.agentId !== item.agentId);
           this._logger.warn('Commitment extraction disabled temporarily:', err.message);
         }
       }
@@ -156,7 +164,9 @@ If no commitments found, return {"candidates": []}.`;
       temperature: 0.1,
     });
 
-    if (!result.success) return [];
+    if (!result.success) {
+      return [];
+    }
     return this._parseCandidates(result.content);
   }
 
@@ -167,20 +177,28 @@ If no commitments found, return {"candidates": []}.`;
   _parseCandidates(raw) {
     const candidates = [];
     const trimmed = (raw || '').trim();
-    if (!trimmed) return candidates;
+    if (!trimmed) {
+      return candidates;
+    }
 
     // Try direct JSON parse
-    let records = [];
+    const records = [];
     try {
       const parsed = JSON.parse(trimmed);
-      if (parsed && typeof parsed === 'object') records.push(parsed);
+      if (parsed && typeof parsed === 'object') {
+        records.push(parsed);
+      }
     } catch {
       // Fragmented JSON extraction
       for (const fragment of this._extractJsonObjects(trimmed)) {
         try {
           const parsed = JSON.parse(fragment);
-          if (parsed && typeof parsed === 'object') records.push(parsed);
-        } catch { /* skip malformed */ }
+          if (parsed && typeof parsed === 'object') {
+            records.push(parsed);
+          }
+        } catch {
+          /* skip malformed */
+        }
       }
     }
 
@@ -188,7 +206,9 @@ If no commitments found, return {"candidates": []}.`;
       const rawCandidates = Array.isArray(record.candidates) ? record.candidates : [];
       for (const c of rawCandidates) {
         const validated = this._validateCandidate(c);
-        if (validated) candidates.push(validated);
+        if (validated) {
+          candidates.push(validated);
+        }
       }
     }
 
@@ -200,15 +220,34 @@ If no commitments found, return {"candidates": []}.`;
    */
   _extractJsonObjects(raw) {
     const out = [];
-    let depth = 0, start = -1, inString = false, escaped = false;
+    let depth = 0,
+      start = -1,
+      inString = false,
+      escaped = false;
 
     for (let i = 0; i < raw.length; i++) {
       const ch = raw[i];
-      if (escaped) { escaped = false; continue; }
-      if (ch === '\\' && inString) { escaped = true; continue; }
-      if (ch === '"') { inString = !inString; continue; }
-      if (inString) continue;
-      if (ch === '{') { if (depth === 0) start = i; depth++; }
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === '\\' && inString) {
+        escaped = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) {
+        continue;
+      }
+      if (ch === '{') {
+        if (depth === 0) {
+          start = i;
+        }
+        depth++;
+      }
       if (ch === '}' && depth > 0) {
         depth--;
         if (depth === 0 && start >= 0) {
@@ -224,41 +263,61 @@ If no commitments found, return {"candidates": []}.`;
    * Validate a raw candidate object.
    */
   _validateCandidate(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    if (raw.action === 'skip') return null;
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+    if (raw.action === 'skip') {
+      return null;
+    }
 
     const kind = raw.kind;
     const sensitivity = raw.sensitivity || 'routine';
     const source = raw.source || 'inferred_user_context';
 
-    if (!KIND_VALUES.has(kind)) return null;
-    if (!SENSITIVITY_VALUES.has(sensitivity)) return null;
-    if (!SOURCE_VALUES.has(source)) return null;
-    if (!raw.reason || !raw.suggestedText || !raw.dedupeKey) return null;
-    if (typeof raw.confidence !== 'number') return null;
+    if (!KIND_VALUES.has(kind)) {
+      return null;
+    }
+    if (!SENSITIVITY_VALUES.has(sensitivity)) {
+      return null;
+    }
+    if (!SOURCE_VALUES.has(source)) {
+      return null;
+    }
+    if (!raw.reason || !raw.suggestedText || !raw.dedupeKey) {
+      return null;
+    }
+    if (typeof raw.confidence !== 'number') {
+      return null;
+    }
 
     // Two-tier confidence threshold
-    const threshold = (kind === 'care_check_in' || sensitivity === 'care')
-      ? CARE_CONFIDENCE_THRESHOLD
-      : DEFAULT_CONFIDENCE_THRESHOLD;
+    const threshold =
+      kind === 'care_check_in' || sensitivity === 'care'
+        ? CARE_CONFIDENCE_THRESHOLD
+        : DEFAULT_CONFIDENCE_THRESHOLD;
 
-    if (raw.confidence < threshold) return null;
+    if (raw.confidence < threshold) {
+      return null;
+    }
 
     // Due window
     const earliestMs = raw.dueWindow?.earliest
       ? new Date(raw.dueWindow.earliest).getTime()
       : Date.now() + 3600_000; // default: 1 hour
-    if (isNaN(earliestMs) || earliestMs <= Date.now()) return null;
+    if (isNaN(earliestMs) || earliestMs <= Date.now()) {
+      return null;
+    }
 
-    const latestRaw = raw.dueWindow?.latest
-      ? new Date(raw.dueWindow.latest).getTime()
-      : undefined;
-    const latestMs = (latestRaw && !isNaN(latestRaw) && latestRaw >= earliestMs)
-      ? latestRaw
-      : earliestMs + DEFAULT_DUE_WINDOW_MS;
+    const latestRaw = raw.dueWindow?.latest ? new Date(raw.dueWindow.latest).getTime() : undefined;
+    const latestMs =
+      latestRaw && !isNaN(latestRaw) && latestRaw >= earliestMs
+        ? latestRaw
+        : earliestMs + DEFAULT_DUE_WINDOW_MS;
 
     return {
-      kind, sensitivity, source,
+      kind,
+      sensitivity,
+      source,
       reason: raw.reason,
       suggestedText: raw.suggestedText,
       dedupeKey: raw.dedupeKey.trim(),
@@ -278,17 +337,24 @@ If no commitments found, return {"candidates": []}.`;
    */
   _upsertCommitment(candidate, sourceItem) {
     const now = Date.now();
-    const existing = this._commitments.find(c =>
-      c.dedupeKey === candidate.dedupeKey
-      && c.agentId === (sourceItem.agentId || '')
-      && ['pending', 'snoozed'].includes(c.status)
+    const existing = this._commitments.find(
+      (c) =>
+        c.dedupeKey === candidate.dedupeKey &&
+        c.agentId === (sourceItem.agentId || '') &&
+        ['pending', 'snoozed'].includes(c.status)
     );
 
     if (existing) {
       // Update with higher confidence, wider window
       existing.confidence = Math.max(existing.confidence, candidate.confidence);
-      existing.dueWindow.earliestMs = Math.min(existing.dueWindow.earliestMs, candidate.dueWindow.earliestMs);
-      existing.dueWindow.latestMs = Math.max(existing.dueWindow.latestMs, candidate.dueWindow.latestMs);
+      existing.dueWindow.earliestMs = Math.min(
+        existing.dueWindow.earliestMs,
+        candidate.dueWindow.earliestMs
+      );
+      existing.dueWindow.latestMs = Math.max(
+        existing.dueWindow.latestMs,
+        candidate.dueWindow.latestMs
+      );
       existing.reason = candidate.reason || existing.reason;
       existing.suggestedText = candidate.suggestedText || existing.suggestedText;
       existing.updatedAtMs = now;
@@ -324,11 +390,12 @@ If no commitments found, return {"candidates": []}.`;
    */
   getDueCommitments(agentId) {
     const now = Date.now();
-    return this._commitments.filter(c =>
-      c.status === 'pending'
-      && (!agentId || c.agentId === agentId)
-      && now >= c.dueWindow.earliestMs
-      && now <= c.dueWindow.latestMs
+    return this._commitments.filter(
+      (c) =>
+        c.status === 'pending' &&
+        (!agentId || c.agentId === agentId) &&
+        now >= c.dueWindow.earliestMs &&
+        now <= c.dueWindow.latestMs
     );
   }
 
@@ -336,23 +403,30 @@ If no commitments found, return {"candidates": []}.`;
    * Mark a commitment as sent.
    */
   markSent(commitmentId) {
-    const c = this._commitments.find(r => r.id === commitmentId);
-    if (c) { c.status = 'sent'; c.attempts++; c.updatedAtMs = Date.now(); }
+    const c = this._commitments.find((r) => r.id === commitmentId);
+    if (c) {
+      c.status = 'sent';
+      c.attempts++;
+      c.updatedAtMs = Date.now();
+    }
   }
 
   /**
    * Dismiss a commitment.
    */
   dismiss(commitmentId) {
-    const c = this._commitments.find(r => r.id === commitmentId);
-    if (c) { c.status = 'dismissed'; c.updatedAtMs = Date.now(); }
+    const c = this._commitments.find((r) => r.id === commitmentId);
+    if (c) {
+      c.status = 'dismissed';
+      c.updatedAtMs = Date.now();
+    }
   }
 
   /**
    * Snooze a commitment by a duration.
    */
   snooze(commitmentId, durationMs = 3600_000) {
-    const c = this._commitments.find(r => r.id === commitmentId);
+    const c = this._commitments.find((r) => r.id === commitmentId);
     if (c) {
       c.status = 'snoozed';
       c.dueWindow.earliestMs = Date.now() + durationMs;
@@ -381,10 +455,16 @@ If no commitments found, return {"candidates": []}.`;
    * Get all commitments (for inspection).
    */
   getAll(filter = {}) {
-    return this._commitments.filter(c => {
-      if (filter.status && c.status !== filter.status) return false;
-      if (filter.kind && c.kind !== filter.kind) return false;
-      if (filter.agentId && c.agentId !== filter.agentId) return false;
+    return this._commitments.filter((c) => {
+      if (filter.status && c.status !== filter.status) {
+        return false;
+      }
+      if (filter.kind && c.kind !== filter.kind) {
+        return false;
+      }
+      if (filter.agentId && c.agentId !== filter.agentId) {
+        return false;
+      }
       return true;
     });
   }

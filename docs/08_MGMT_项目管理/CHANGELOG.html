@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>Changelog</div>
+      <header class="hero reveal"><h1>Changelog</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#changelog">Changelog</a></li><li class="lvl-2"><a href="#1-1-9">1.1.9</a></li><li class="lvl-3"><a href="#changed">Changed</a></li><li class="lvl-3"><a href="#fixed">Fixed</a></li><li class="lvl-3"><a href="#changed-2">Changed</a></li><li class="lvl-2"><a href="#1-1-8">1.1.8</a></li><li class="lvl-3"><a href="#highlights">Highlights</a></li><li class="lvl-3"><a href="#compatibility">Compatibility</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="changelog">Changelog<a class="anchor" href="#changelog" aria-label="锚点">#</a></h1>
+<p>All notable changes to khy OS will be documented in this file.</p>
+<p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/" target="_blank" rel="noopener">Keep a Changelog</a>,<br>and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" target="_blank" rel="noopener">Semantic Versioning</a>.</p>
+<h2 id="1-1-9">1.1.9<a class="anchor" href="#1-1-9" aria-label="锚点">#</a></h2>
+<p>khy OS 1.1.9 — 精简体积、跨平台脚本补齐与若干修复。</p>
+<h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="锚点">#</a></h3>
+<ul><li><strong>体积精简</strong>: 新增 <code>scripts/maintenance/slim-down.{bat,sh}</code> 一键清理脚本（日志、构建产物、</li></ul>
+<p>sqlite 临时文件、未使用的 node-llama-cpp 多平台二进制），幂等且双平台覆盖；日志轮转收紧<br>  （<code>maxFiles</code> 7d/14d + <code>zippedArchive</code>）防单日日志爆量。</p>
+<ul><li><strong>跨平台脚本</strong>: 补齐 <code>slim-down.sh</code> 与 <code>khy.sh repair</code> 支持，bat/sh 配对完整。</li></ul>
+<h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="锚点">#</a></h3>
+<ul><li><strong>模型「说要搜索却不调工具」</strong>:同一个模型在能力缓存里留下了两条键不同、裁决相反的记录</li></ul>
+<p>(<code>api:agnes:agnes-2.5-flash</code> → <code>text</code>,来自主动探测;<code>agnes-2.5-flash</code> → <code>native</code>,来自被动学习),<br>  而两道决定工具协议的闸各读一条:教学门拿路由 id、剥离门拿裸模型名。结果模型在同一轮里<br>  既收到完整的原生工具定义,又收到「你没有原生工具,请用 <code>&lt;tool_call&gt;</code> 文本语法」的教学 ——<br>  指令自相矛盾,模型于是只用散文说「我先用 WebSearch 搜索」,一个工具都不调,自我重驱一次后<br>  输出同样的段落并结束该轮。</p>
+<ul><li>新增纯叶子 <code>services/gateway/capabilityModelKey.js</code>:能力缓存的键统一折叠为<strong>裸模型名</strong>,</li></ul>
+<p>剥前缀的约定与 <code>apiAdapter.parseProviderModel</code> 同源(测试里有对撞断言防止三份正则各自演化)。<br>    ollama 风格的量化/尺寸 tag(<code>qwen:7b</code>)绝不误剥,否则不同模型会塌成同一条记录。</p>
+<ul><li><code>toolCapabilityStore</code> 加载时<strong>就地迁移</strong>历史带前缀的键并落盘,已有缓存文件自愈,撞键时</li></ul>
+<p><code>native</code> 胜 <code>text</code>。</p>
+<ul><li><code>recordVerdict</code> 新增<strong>不静默降级</strong>不变量:已确证 <code>native</code> 时,一次 <code>text</code> 观测不再覆盖它 ——</li></ul>
+<p>「见过真实的原生 tool_calls」是正面证据,「这次没看到」只是证据的缺席(探测用极简工具 +<br>    极短 maxTokens,假阴性正常)。降级只能显式发生:<code>khy gateway probe-tools</code> 主动重测(现在传<br>    <code>force</code>),或 <code>KHY_TEXT_ONLY_TOOL_MODELS</code> 钉死。</p>
+<h3 id="changed-2">Changed<a class="anchor" href="#changed-2" aria-label="锚点">#</a></h3>
+<ul><li><strong>TUI 任务看板改为「右栏」，与正文平齐贯穿整屏</strong>：看板不再作为 ink flex 行里的右列子元素渲染。</li></ul>
+<p>ink 活动区永远画在已提交的 <code>&lt;Static&gt;</code> 滚动区之下，所以树内看板结构性地被钉在视口底部，<br>  右上方那一大片空间永久浪费。现在改为两步：ink 渲染的一切收窄到 <code>cols - 栏宽</code>（新叶子<br>  <code>railLayout.contentCols</code> 是唯一真源，经 <code>effectiveCols</code> 供各渲染路径读取），最右侧那几列<br>  预留出来，由 <code>runtime/sidebarRail</code> 用「存光标 → 逐行绝对定位 → 取光标」的字节把看板画进<br>  槽位，从屏幕第 1 行铺到 <code>rows - 1</code> 行。</p>
+<ul><li>画笔字节被<strong>追加进 ink 自己的那一次 <code>write()</code></strong>（<code>app.jsx</code> 已有的 stdout Proxy），</li></ul>
+<p>整行擦除与重画因此是一次原子写入，屏幕上不存在「已擦除、未重画」的中间态 = 不闪烁。</p>
+<ul><li>全程不含 <code>\n</code>/<code>\r</code>、不改 scroll region，<code>&lt;Static&gt;</code> + 终端原生 scrollback 的输出模型</li></ul>
+<p>与复制粘贴行为完全不动；不新增定时器（复用 App 每秒的 <code>nowTick</code> 心跳）。</p>
+<ul><li><code>/model</code>、<code>/review</code> 等原生交互界面前后自动 suspend/resume，resize 变窄时先清旧几何，</li></ul>
+<p>退出路径清空槽位。</p>
+<ul><li>门控 <code>KHY_SIDEBAR_RAIL</code> <strong>默认开</strong>；<code>KHY_SIDEBAR_RAIL=0</code> 逐字节回到树内看板的旧行为。</li></ul>
+<p>宽度/配色沿用既有 <code>KHY_SIDEBAR*</code> 一族；约束高度的 <code>KHY_SIDEBAR_MAX_RATIO</code> /<br>    <code>KHY_SIDEBAR_MIN_CHROME</code> / <code>KHY_SIDEBAR_STACK_MAX_RATIO</code> 对右栏不再适用（它不占活动区行）。</p>
+<ul><li>窄于 <code>KHY_SIDEBAR_MIN_COLS</code>（默认 120 列）或非 TTY → 不激活，完全走 legacy 路径。</li></ul>
+<h2 id="1-1-8">1.1.8<a class="anchor" href="#1-1-8" aria-label="锚点">#</a></h2>
+<p>khy OS 1.1.8 — 安全加固、CI 流水线完善、前端体验优化与便携模式增强。</p>
+<h3 id="highlights">Highlights<a class="anchor" href="#highlights" aria-label="锚点">#</a></h3>
+<ul><li><strong>安全加固</strong>: 修复命令注入防护与会话撤销竞态条件 (d525650)，后端网关适配器、守护进程管理与启动恢复的全面硬化 (efb676b)。</li><li><strong>CI/CD 完善</strong>: 发布构件增加平台后缀防止覆盖 (18f60b8)；GitHub Release 写权限修复 (2a93fcc)；构建工具链锁定 Node 22 (5e31d1b)；独立构建所需打包脚本取消忽略 (b778b92)。</li><li><strong>前端体验</strong>: 浮动球、路由预加载与 AI 聊天视图改进 (338e3c2)；TUI 稳定性修复与输入→渲染性能优化 (f4e6541)。</li><li><strong>便携模式</strong>: 新增 portable 打包、健康检查与自愈工具链 (7970831)。</li><li><strong>基础设施</strong>: 后端版本同步机制与 SQLite 启动探测，<code>better-sqlite3</code> 降级为可选依赖 (893da15)；新增 <code>khyos-markdown</code> MCP 服务器 (1ceca37)。</li><li><strong>测试</strong>: TUI 渲染测试更新 (b336ca7)。</li></ul>
+<h3 id="compatibility">Compatibility<a class="anchor" href="#compatibility" aria-label="锚点">#</a></h3>
+<ul><li>安装 / 升级: <code>pip install -U khy-os</code> 或 <code>npm install -g @khy-os/khy-os</code>；<code>khy --version</code> 应报告 <code>1.1.8</code>。</li><li>Node.js &gt;= 20 要求不变。</li><li><code>better-sqlite3</code> 不再为强制依赖，无原生模块环境下自动回退至 <code>node:sqlite</code>。</li></ul>
+<hr>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/00_INDEX_项目管理-分类索引.html"><div class="dir">← 上一篇</div><div class="ttl">00INDEX 项目管理分类索引</div></a><a class="next" href="../../docs/08_MGMT_项目管理/CONTRIBUTING.html"><div class="dir">下一篇 →</div><div class="ttl">Contributing to Khy-OS</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/CHANGELOG.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

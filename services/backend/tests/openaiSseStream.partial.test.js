@@ -7,10 +7,12 @@
  * Three root causes covered:
  *   #1 reasoning-only turn: the parser must ACCUMULATE and RETURN reasoning_content
  *      (previously emitted as a chunk then dropped → empty reply → "未返回有效回复").
- *   #1b premature close with text: stream ends with no explicit finish_reason but
- *      content was produced → must be reported as `length` so the loop continues.
+ *   #1b clean stream end without finish_reason: after the relay-proxy fix, a clean
+ *      end without interruption is NOT forced to 'length' — relay proxies may strip
+ *      terminal markers for complete responses. Only ACTIVE interruption (error,
+ *      abort, stall) forces truncation.
  *   #2 transient channel interruption: stream errors mid-answer with content already
- *      accumulated → must RESOLVE the partial (interrupted+length) instead of
+ *      accumulated → must RESOLVE the partial (interrupted) instead of
  *      rejecting and discarding the work. A genuine abort still rejects.
  */
 
@@ -57,7 +59,7 @@ describe('parseOpenAISseStream — reasoning + interruption salvage', () => {
     expect(chunks.filter((c) => c.type === 'thinking')).toHaveLength(2);
   });
 
-  test('#1b stream ends with text but no finish_reason → reported as length (truncated)', async () => {
+  test('#1b stream ends cleanly without finish_reason → NOT forced to length (relay proxy may strip terminal markers)', async () => {
     const stream = fakeStream([
       { data: sse({ choices: [{ delta: { content: 'partial answer' } }] }) },
       { end: true },
@@ -66,7 +68,9 @@ describe('parseOpenAISseStream — reasoning + interruption salvage', () => {
     const result = await parseOpenAISseStream(stream, () => {});
 
     expect(result.content).toBe('partial answer');
-    expect(result.finishReason).toBe('length');
+    // Clean end without interruption: relay proxies strip terminal markers for
+    // complete responses, so we must NOT force 'length' here.
+    expect(result.finishReason).toBeNull();
   });
 
   test('#1b explicit finish_reason is preserved (no false length override)', async () => {
@@ -93,7 +97,7 @@ describe('parseOpenAISseStream — reasoning + interruption salvage', () => {
 
     expect(result.content).toBe('half of the answer');
     expect(result.interrupted).toBe(true);
-    expect(result.finishReason).toBe('length');
+    expect(result.finishReason).toBe('interrupted');
     expect(result.interruptError).toMatch(/socket hang up/);
   });
 

@@ -18,7 +18,12 @@
  *   5. Unknown → crash
  */
 
-const { formatErrorMessage, formatUncaughtError, collectErrorCandidates, extractErrorCode } = require('./errorClassifier');
+const {
+  formatErrorMessage,
+  formatUncaughtError,
+  collectErrorCandidates,
+  extractErrorCode,
+} = require('./errorClassifier');
 
 // ── Error Classification Constants ─────────────────────────────────
 
@@ -30,49 +35,81 @@ const FATAL_ERROR_CODES = new Set([
   'ERR_WORKER_INITIALIZATION_FAILED',
 ]);
 
-const CONFIG_ERROR_CODES = new Set([
-  'INVALID_CONFIG',
-  'MISSING_API_KEY',
-  'MISSING_CREDENTIALS',
-]);
+const CONFIG_ERROR_CODES = new Set(['INVALID_CONFIG', 'MISSING_API_KEY', 'MISSING_CREDENTIALS']);
 
 const TRANSIENT_NETWORK_CODES = new Set([
-  'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ESOCKETTIMEDOUT',
-  'ECONNABORTED', 'EPIPE', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN',
-  'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_DNS_RESOLVE_FAILED', 'UND_ERR_CONNECT',
-  'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
-  'EPROTO', 'ERR_SSL_WRONG_VERSION_NUMBER', 'ERR_SSL_PROTOCOL_RETURNED_AN_ERROR',
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'ESOCKETTIMEDOUT',
+  'ECONNABORTED',
+  'EPIPE',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'EAI_AGAIN',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_DNS_RESOLVE_FAILED',
+  'UND_ERR_CONNECT',
+  'UND_ERR_SOCKET',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_BODY_TIMEOUT',
+  'EPROTO',
+  'ERR_SSL_WRONG_VERSION_NUMBER',
+  'ERR_SSL_PROTOCOL_RETURNED_AN_ERROR',
 ]);
 
 const TRANSIENT_NETWORK_NAMES = new Set([
-  'AbortError', 'ConnectTimeoutError', 'HeadersTimeoutError',
-  'BodyTimeoutError', 'TimeoutError',
+  'AbortError',
+  'ConnectTimeoutError',
+  'HeadersTimeoutError',
+  'BodyTimeoutError',
+  'TimeoutError',
 ]);
 
 const TRANSIENT_NETWORK_SNIPPETS = [
-  'getaddrinfo', 'socket hang up', 'network error', 'network is unreachable',
-  'temporary failure in name resolution', 'upstream connect error',
-  'disconnect/reset before headers', 'tlsv1 alert', 'ssl routines',
-  'packet length too long', 'write eproto',
+  'getaddrinfo',
+  'socket hang up',
+  'network error',
+  'network is unreachable',
+  'temporary failure in name resolution',
+  'upstream connect error',
+  'disconnect/reset before headers',
+  'tlsv1 alert',
+  'ssl routines',
+  'packet length too long',
+  'write eproto',
   'client network socket disconnected before secure tls connection was established',
 ];
 
 const TRANSIENT_SQLITE_CODES = new Set([
-  'SQLITE_BUSY', 'SQLITE_CANTOPEN', 'SQLITE_IOERR', 'SQLITE_LOCKED',
+  'SQLITE_BUSY',
+  'SQLITE_CANTOPEN',
+  'SQLITE_IOERR',
+  'SQLITE_LOCKED',
 ]);
 
 const TRANSIENT_SQLITE_ERRCODES = new Set([5, 6, 10, 14]);
 
 const TRANSIENT_SQLITE_SNIPPETS = [
-  'unable to open database file', 'database is locked',
-  'database table is locked', 'disk i/o error',
+  'unable to open database file',
+  'database is locked',
+  'database table is locked',
+  'disk i/o error',
 ];
 
 const BENIGN_CODES = new Set(['EPIPE', 'EIO']);
 
 const BENIGN_EXCEPTION_CODES = new Set([
-  'ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN', 'ENOTFOUND',
-  'ETIMEDOUT', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_DNS_RESOLVE_FAILED', 'UND_ERR_CONNECT',
+  'ECONNREFUSED',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'EAI_AGAIN',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_DNS_RESOLVE_FAILED',
+  'UND_ERR_CONNECT',
 ]);
 
 // ── Transient Error Detection ──────────────────────────────────────
@@ -84,15 +121,23 @@ function isTransientNetworkError(err) {
   const candidates = collectErrorCandidates(err);
   for (const c of candidates) {
     const code = extractErrorCode(c);
-    if (code && TRANSIENT_NETWORK_CODES.has(code)) return true;
+    if (code && TRANSIENT_NETWORK_CODES.has(code)) {
+      return true;
+    }
 
     const name = c?.name;
-    if (typeof name === 'string' && TRANSIENT_NETWORK_NAMES.has(name)) return true;
+    if (typeof name === 'string' && TRANSIENT_NETWORK_NAMES.has(name)) {
+      return true;
+    }
 
     const msg = String(c?.message || '').toLowerCase();
-    if (msg === 'fetch failed' || msg.endsWith(': fetch failed')) return true;
+    if (msg === 'fetch failed' || msg.endsWith(': fetch failed')) {
+      return true;
+    }
     for (const snippet of TRANSIENT_NETWORK_SNIPPETS) {
-      if (msg.includes(snippet)) return true;
+      if (msg.includes(snippet)) {
+        return true;
+      }
     }
   }
   return false;
@@ -105,17 +150,25 @@ function isTransientSqliteError(err) {
   const candidates = collectErrorCandidates(err);
   for (const c of candidates) {
     const code = extractErrorCode(c);
-    if (code && TRANSIENT_SQLITE_CODES.has(code)) return true;
-    if (typeof code === 'string' && code.startsWith('SQLITE_')) return true;
+    if (code && TRANSIENT_SQLITE_CODES.has(code)) {
+      return true;
+    }
+    if (typeof code === 'string' && code.startsWith('SQLITE_')) {
+      return true;
+    }
 
     // Check numeric errcode
     if (c && typeof c === 'object' && typeof c.errcode === 'number') {
-      if (TRANSIENT_SQLITE_ERRCODES.has(c.errcode)) return true;
+      if (TRANSIENT_SQLITE_ERRCODES.has(c.errcode)) {
+        return true;
+      }
     }
 
     const msg = String(c?.message || '').toLowerCase();
     for (const snippet of TRANSIENT_SQLITE_SNIPPETS) {
-      if (msg.includes(snippet)) return true;
+      if (msg.includes(snippet)) {
+        return true;
+      }
     }
   }
   return false;
@@ -134,11 +187,16 @@ function isTransientFileWatchError(err) {
     if (code === 'ENOSPC') {
       const watchSignals = ['inotify', 'watcher', 'file watcher', 'watch limit', 'max watches'];
       for (const sig of watchSignals) {
-        if (msg.includes(sig)) return true;
+        if (msg.includes(sig)) {
+          return true;
+        }
       }
     }
     // Exhaustion messages
-    if (msg.includes('inotify watches') || msg.includes('system limit for number of file watchers')) {
+    if (
+      msg.includes('inotify watches') ||
+      msg.includes('system limit for number of file watchers')
+    ) {
       return true;
     }
   }
@@ -149,16 +207,24 @@ function isTransientFileWatchError(err) {
  * Check if error is any kind of transient error (safe to suppress).
  */
 function isTransientError(err) {
-  return isTransientNetworkError(err) || isTransientSqliteError(err) || isTransientFileWatchError(err);
+  return (
+    isTransientNetworkError(err) || isTransientSqliteError(err) || isTransientFileWatchError(err)
+  );
 }
 
 /**
  * Check if error is an AbortError (expected during shutdown).
  */
 function isAbortError(err) {
-  if (!err || typeof err !== 'object') return false;
-  if (err.name === 'AbortError') return true;
-  if (err.message === 'This operation was aborted') return true;
+  if (!err || typeof err !== 'object') {
+    return false;
+  }
+  if (err.name === 'AbortError') {
+    return true;
+  }
+  if (err.message === 'This operation was aborted') {
+    return true;
+  }
   return false;
 }
 
@@ -167,8 +233,12 @@ function isAbortError(err) {
  */
 function isBenignUncaughtException(err) {
   const code = extractErrorCode(err);
-  if (code && BENIGN_CODES.has(code)) return true;
-  if (code && BENIGN_EXCEPTION_CODES.has(code)) return true;
+  if (code && BENIGN_CODES.has(code)) {
+    return true;
+  }
+  if (code && BENIGN_EXCEPTION_CODES.has(code)) {
+    return true;
+  }
   return false;
 }
 
@@ -178,8 +248,12 @@ function isBenignUncaughtException(err) {
 const REJECTION_HANDLERS_KEY = Symbol.for('khy.unhandledRejection.handlers');
 const EXCEPTION_HANDLERS_KEY = Symbol.for('khy.uncaughtException.handlers');
 
-if (!globalThis[REJECTION_HANDLERS_KEY]) globalThis[REJECTION_HANDLERS_KEY] = new Set();
-if (!globalThis[EXCEPTION_HANDLERS_KEY]) globalThis[EXCEPTION_HANDLERS_KEY] = new Set();
+if (!globalThis[REJECTION_HANDLERS_KEY]) {
+  globalThis[REJECTION_HANDLERS_KEY] = new Set();
+}
+if (!globalThis[EXCEPTION_HANDLERS_KEY]) {
+  globalThis[EXCEPTION_HANDLERS_KEY] = new Set();
+}
 
 /**
  * Register a custom unhandled rejection handler.
@@ -204,12 +278,73 @@ function registerExceptionHandler(handler) {
 function _isHandledBy(handlers, error) {
   for (const handler of handlers) {
     try {
-      if (handler(error) === true) return true;
+      if (handler(error) === true) {
+        return true;
+      }
     } catch (e) {
       console.error('[CrashRecovery] Handler threw:', e);
     }
   }
   return false;
+}
+
+// ── Benign-exception log rate limit ────────────────────────────────
+
+/**
+ * Benign exceptions are reported rather than silently swallowed — but the
+ * report can be the thing that re-triggers them. An EPIPE on stdout is benign
+ * by BENIGN_CODES, and logging it writes to that same dead stdout, raising
+ * another EPIPE: on 2026-07-28 that closed loop wrote 2.6 GB of identical lines
+ * over six hours at ~6000 lines/sec.
+ *
+ * The real cut is in the shared logger (it now listens for stream 'error' so a
+ * broken stdout never reaches this handler as an exception, and drops the
+ * console transport once it does). This rate limit is the second line of
+ * defence: it bounds ANY self-feeding benign error to a few lines a minute,
+ * whatever the sink, while keeping long-run visibility that a hard cap would
+ * throw away — ECONNREFUSED/ENOTFOUND are benign too and may legitimately
+ * recur for hours.
+ */
+const BENIGN_LOG_WINDOW_MS = 60_000;
+const BENIGN_LOG_PER_WINDOW = 5;
+const _benignLogState = new Map(); // code -> { windowStart, logged, dropped }
+
+function _safeWarn(logger, msg) {
+  try {
+    logger.warn(msg);
+  } catch {
+    /* the sink itself is broken; nothing to do */
+  }
+}
+
+function _logBenign(logger, error) {
+  const key = extractErrorCode(error) || String(error?.name || 'unknown');
+  const now = Date.now();
+  let st = _benignLogState.get(key);
+
+  if (!st || now - st.windowStart >= BENIGN_LOG_WINDOW_MS) {
+    const dropped = st ? st.dropped : 0;
+    st = { windowStart: now, logged: 0, dropped: 0 };
+    _benignLogState.set(key, st);
+    if (dropped > 0) {
+      _safeWarn(
+        logger,
+        `[CrashRecovery] ${dropped} further benign ${key} exception(s) suppressed silently`
+      );
+    }
+  }
+
+  if (st.logged >= BENIGN_LOG_PER_WINDOW) {
+    st.dropped++;
+    return;
+  }
+  st.logged++;
+  _safeWarn(logger, `[CrashRecovery] Benign exception suppressed: ${formatErrorMessage(error)}`);
+}
+
+/** Test seam: forget the rate-limit windows. */
+function _resetBenignLogState() {
+  _benignLogState.clear();
 }
 
 // ── Installation ───────────────────────────────────────────────────
@@ -229,7 +364,9 @@ let _installed = false;
  *   down the whole UI; fatal/config errors still exit.
  */
 function install(opts = {}) {
-  if (_installed) return;
+  if (_installed) {
+    return;
+  }
   _installed = true;
 
   const logger = opts.logger || console;
@@ -238,7 +375,9 @@ function install(opts = {}) {
 
   process.on('unhandledRejection', (reason) => {
     // 1. Custom handler suppresses
-    if (_isHandledBy(globalThis[REJECTION_HANDLERS_KEY], reason)) return;
+    if (_isHandledBy(globalThis[REJECTION_HANDLERS_KEY], reason)) {
+      return;
+    }
 
     // 2. AbortError — expected during shutdown
     if (isAbortError(reason)) {
@@ -251,7 +390,9 @@ function install(opts = {}) {
     // 3. Fatal — crash immediately
     if (code && FATAL_ERROR_CODES.has(code)) {
       logger.error(`[CrashRecovery] FATAL: ${formatUncaughtError(reason)}`);
-      try { onFatal(reason); } catch {}
+      try {
+        onFatal(reason);
+      } catch {}
       process.exit(1);
       return;
     }
@@ -260,7 +401,9 @@ function install(opts = {}) {
     if (code && CONFIG_ERROR_CODES.has(code)) {
       logger.error(`[CrashRecovery] CONFIG ERROR: ${formatErrorMessage(reason)}`);
       _logRemediation(logger, reason, '配置错误');
-      try { onFatal(reason); } catch {}
+      try {
+        onFatal(reason);
+      } catch {}
       process.exit(1);
       return;
     }
@@ -274,18 +417,24 @@ function install(opts = {}) {
     // 6. Unknown — crash (server) or log-and-continue (interactive TUI)
     logger.error(`[CrashRecovery] Unhandled rejection: ${formatUncaughtError(reason)}`);
     _logRemediation(logger, reason, '未处理的 Promise 拒绝');
-    if (!exitOnUnknown) return;
-    try { onFatal(reason); } catch {}
+    if (!exitOnUnknown) {
+      return;
+    }
+    try {
+      onFatal(reason);
+    } catch {}
     process.exit(1);
   });
 
   process.on('uncaughtException', (error) => {
     // Custom handler
-    if (_isHandledBy(globalThis[EXCEPTION_HANDLERS_KEY], error)) return;
+    if (_isHandledBy(globalThis[EXCEPTION_HANDLERS_KEY], error)) {
+      return;
+    }
 
     // Benign
     if (isBenignUncaughtException(error)) {
-      logger.warn(`[CrashRecovery] Benign exception suppressed: ${formatErrorMessage(error)}`);
+      _logBenign(logger, error);
       return;
     }
 
@@ -293,7 +442,9 @@ function install(opts = {}) {
     const code = extractErrorCode(error);
     if (code && FATAL_ERROR_CODES.has(code)) {
       logger.error(`[CrashRecovery] FATAL EXCEPTION: ${formatUncaughtError(error)}`);
-      try { onFatal(error); } catch {}
+      try {
+        onFatal(error);
+      } catch {}
       process.exit(1);
       return;
     }
@@ -307,8 +458,12 @@ function install(opts = {}) {
     // Unknown — crash (server) or log-and-continue (interactive TUI)
     logger.error(`[CrashRecovery] Uncaught exception: ${formatUncaughtError(error)}`);
     _logRemediation(logger, error, '未捕获异常');
-    if (!exitOnUnknown) return;
-    try { onFatal(error); } catch {}
+    if (!exitOnUnknown) {
+      return;
+    }
+    try {
+      onFatal(error);
+    } catch {}
     process.exit(1);
   });
 }
@@ -324,7 +479,9 @@ function _logRemediation(logger, err, contextLabel) {
     (desc.suggestions || []).forEach((s, i) => {
       logger.error(`[CrashRecovery] fix[${i + 1}]: ${s}`);
     });
-  } catch { /* 兜底建议不可用时静默——主错误已记录 */ }
+  } catch {
+    /* 兜底建议不可用时静默——主错误已记录 */
+  }
 }
 
 module.exports = {
@@ -340,4 +497,5 @@ module.exports = {
   FATAL_ERROR_CODES,
   CONFIG_ERROR_CODES,
   TRANSIENT_NETWORK_CODES,
+  _resetBenignLogState,
 };

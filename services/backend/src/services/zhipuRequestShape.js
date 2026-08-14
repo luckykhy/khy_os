@@ -36,7 +36,13 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 //   none|minimal 关闭/最小思考;low|medium 提升到 high;high 标准;xhigh→max;max 最大。
 // 我们只做「合法性过滤 + 原样透传」,不做等价折叠(折叠由智谱服务端负责,叶子保持诚实原样)。
 const VALID_REASONING_EFFORT = Object.freeze([
-  'max', 'xhigh', 'high', 'medium', 'low', 'minimal', 'none',
+  'max',
+  'xhigh',
+  'high',
+  'medium',
+  'low',
+  'minimal',
+  'none',
 ]);
 
 /**
@@ -51,14 +57,21 @@ function _flagEnabled(flagName, env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled(flagName, e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e[flagName];
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -108,8 +121,12 @@ function zhipuV4RawBearerEnabled(env = process.env) {
  */
 function isOfficialZhipuV4Endpoint(endpoint) {
   try {
-    const e = String(endpoint == null ? '' : endpoint).trim().toLowerCase();
-    if (!e) return false;
+    const e = String(endpoint == null ? '' : endpoint)
+      .trim()
+      .toLowerCase();
+    if (!e) {
+      return false;
+    }
     return e.includes('open.bigmodel.cn') && e.includes('/api/paas/v4');
   } catch {
     return false;
@@ -124,7 +141,9 @@ function isOfficialZhipuV4Endpoint(endpoint) {
  */
 function hasIdSecretShape(apiKey) {
   try {
-    if (typeof apiKey !== 'string') return false;
+    if (typeof apiKey !== 'string') {
+      return false;
+    }
     const parts = apiKey.split('.');
     return parts.length === 2 && parts[0].length > 0 && parts[1].length > 0;
   } catch {
@@ -146,11 +165,17 @@ function hasIdSecretShape(apiKey) {
  */
 function resolveZhipuAuthMode(apiKey, env = process.env, endpoint = '') {
   try {
-    if (!zhipuRawBearerEnabled(env)) return 'jwt';
-    if (!hasIdSecretShape(apiKey)) return 'raw';
+    if (!zhipuRawBearerEnabled(env)) {
+      return 'jwt';
+    }
+    if (!hasIdSecretShape(apiKey)) {
+      return 'raw';
+    }
     // `id.secret` 形态:默认保守走 JWT,唯官方 v4 端点(raw Bearer 已被 test-key 实测证明可用、
     // 且新版免费视觉模型只在此鉴权上下文可见)+ 子门开 → 改走 raw。
-    if (isOfficialZhipuV4Endpoint(endpoint) && zhipuV4RawBearerEnabled(env)) return 'raw';
+    if (isOfficialZhipuV4Endpoint(endpoint) && zhipuV4RawBearerEnabled(env)) {
+      return 'raw';
+    }
     return 'jwt';
   } catch {
     return 'jwt';
@@ -164,7 +189,9 @@ function resolveZhipuAuthMode(apiKey, env = process.env, endpoint = '') {
  */
 function normalizeReasoningEffort(value) {
   try {
-    if (value == null) return null;
+    if (value == null) {
+      return null;
+    }
     const v = String(value).trim().toLowerCase();
     return VALID_REASONING_EFFORT.includes(v) ? v : null;
   } catch {
@@ -183,7 +210,9 @@ function normalizeReasoningEffort(value) {
  */
 function pickReasoningEffort(opts = {}, env = process.env) {
   try {
-    if (!zhipuReasoningEffortEnabled(env)) return null;
+    if (!zhipuReasoningEffortEnabled(env)) {
+      return null;
+    }
     const o = opts || {};
     const raw = o.reasoningEffort != null ? o.reasoningEffort : o.reasoning_effort;
     return normalizeReasoningEffort(raw);

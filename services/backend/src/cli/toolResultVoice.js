@@ -4,17 +4,25 @@
 const normalizeToolName = require('../utils/normalizeToolName');
 
 function classifyToolFailureDetail(detail = '') {
-  const cleanDetail = String(detail || '').replace(/\s+/g, ' ').trim();
+  const cleanDetail = String(detail || '')
+    .replace(/\s+/g, ' ')
+    .trim();
   const lower = cleanDetail.toLowerCase();
-  if (!lower) return '';
+  if (!lower) {
+    return '';
+  }
 
   if (
-    /(permission denied|access denied|forbidden|unauthorized|denied by policy|eacces|eperm|权限|无权|拒绝访问|禁止)/.test(lower)
+    /(permission denied|access denied|forbidden|unauthorized|denied by policy|eacces|eperm|权限|无权|拒绝访问|禁止)/.test(
+      lower
+    )
   ) {
     return 'permission';
   }
   if (
-    /(old_string not found|exact text mismatch|content mismatch|内容不匹配|上下文不匹配|fuzzy match|did not match)/.test(lower)
+    /(old_string not found|exact text mismatch|content mismatch|内容不匹配|上下文不匹配|fuzzy match|did not match)/.test(
+      lower
+    )
   ) {
     return 'mismatch';
   }
@@ -23,19 +31,17 @@ function classifyToolFailureDetail(detail = '') {
   ) {
     return 'not_found';
   }
-  if (
-    /(timed out|timeout|deadline exceeded|超时|超出了时间限制)/.test(lower)
-  ) {
+  if (/(timed out|timeout|deadline exceeded|超时|超出了时间限制)/.test(lower)) {
     return 'timeout';
   }
   if (
-    /(cannot parse|parse error|parse failed|invalid json|json parse|unexpected token|格式错误|解析失败|返回格式|无法解析)/.test(lower)
+    /(cannot parse|parse error|parse failed|invalid json|json parse|unexpected token|格式错误|解析失败|返回格式|无法解析)/.test(
+      lower
+    )
   ) {
     return 'parse';
   }
-  if (
-    /(failed|failure|error|exception|traceback|fatal|异常|失败|报错)/.test(lower)
-  ) {
+  if (/(failed|failure|error|exception|traceback|fatal|异常|失败|报错)/.test(lower)) {
     return 'generic';
   }
   return '';
@@ -50,12 +56,24 @@ function toolResultReflection(toolName, success, detail = '') {
   const failureKind = classifyToolFailureDetail(detail);
 
   if (!success) {
-    if (failureKind === 'permission') return '像是权限卡住了，我先换条不碰权限边界的路继续。';
-    if (failureKind === 'not_found') return '像是目标没对上，我先把路径和名字重新对齐。';
-    if (failureKind === 'timeout') return '这条链路有点卡，我先换个更轻的入口拿关键信息。';
-    if (failureKind === 'mismatch') return '上下文没对齐，我先把当前内容重新对齐再改。';
-    if (failureKind === 'parse') return '返回格式有点乱，我先把输入收窄一点再跑。';
-    if (failureKind === 'generic') return '这个报错说明当前入口不太对，我换条更稳的线继续。';
+    if (failureKind === 'permission') {
+      return '像是权限卡住了，我先换条不碰权限边界的路继续。';
+    }
+    if (failureKind === 'not_found') {
+      return '像是目标没对上，我先把路径和名字重新对齐。';
+    }
+    if (failureKind === 'timeout') {
+      return '这条链路有点卡，我先换个更轻的入口拿关键信息。';
+    }
+    if (failureKind === 'mismatch') {
+      return '上下文没对齐，我先把当前内容重新对齐再改。';
+    }
+    if (failureKind === 'parse') {
+      return '返回格式有点乱，我先把输入收窄一点再跑。';
+    }
+    if (failureKind === 'generic') {
+      return '这个报错说明当前入口不太对，我换条更稳的线继续。';
+    }
     return '这条路有点偏，我换条更稳的线继续。';
   }
 
@@ -65,7 +83,15 @@ function toolResultReflection(toolName, success, detail = '') {
   if (name === 'read' || name === 'readfile' || name === 'notebookread') {
     return '实现看清了，改动点也清楚了，我接着改。';
   }
-  if (name === 'write' || name === 'writefile' || name === 'createfile' || name === 'edit' || name === 'editfile' || name === 'multiedit' || name === 'notebookedit') {
+  if (
+    name === 'write' ||
+    name === 'writefile' ||
+    name === 'createfile' ||
+    name === 'edit' ||
+    name === 'editfile' ||
+    name === 'multiedit' ||
+    name === 'notebookedit'
+  ) {
     return '改动已经落下去了，我再跑一遍确认有没有偏。';
   }
   if (name === 'bash' || name === 'shell' || name === 'shellcommand' || name === 'command') {

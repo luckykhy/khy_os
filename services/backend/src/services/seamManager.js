@@ -25,9 +25,9 @@
 // ── Seam Level Definitions ────────────────────────────────────────────
 
 const SEAM_LEVELS = Object.freeze([
-  { name: 'L1', threshold: 48_000,  summaryBudget: 800,  model: 'flash' },
-  { name: 'L2', threshold: 96_000,  summaryBudget: 600,  model: 'flash' },
-  { name: 'L3', threshold: 144_000, summaryBudget: 400,  model: 'flash' },
+  { name: 'L1', threshold: 48_000, summaryBudget: 800, model: 'flash' },
+  { name: 'L2', threshold: 96_000, summaryBudget: 600, model: 'flash' },
+  { name: 'L3', threshold: 144_000, summaryBudget: 400, model: 'flash' },
   { name: 'Cycle', threshold: 192_000, summaryBudget: 1500, model: 'main' },
 ]);
 
@@ -123,9 +123,15 @@ function identifyArchiveRange(messages, level) {
   let archiveStart = -1;
   for (let i = 0; i < verbatimBoundary; i++) {
     const msg = messages[i];
-    if (msg.role === 'system') continue;
-    if (typeof msg.content === 'string' && msg.content.includes('<archived_context>')) continue;
-    if (archiveStart < 0) archiveStart = i;
+    if (msg.role === 'system') {
+      continue;
+    }
+    if (typeof msg.content === 'string' && msg.content.includes('<archived_context>')) {
+      continue;
+    }
+    if (archiveStart < 0) {
+      archiveStart = i;
+    }
   }
 
   if (archiveStart < 0 || archiveStart >= verbatimBoundary) {
@@ -156,15 +162,20 @@ async function buildArchiveBlock(archiveMessages, level, summarizeFn) {
       if (summary && summary.length > 0) {
         return _wrapArchiveBlock(summary, level);
       }
-    } catch { /* fallback to manual extract */ }
+    } catch {
+      /* fallback to manual extract */
+    }
   }
 
   // Manual extract: take key content from each message
   const parts = [];
   let charCount = 0;
   for (const msg of archiveMessages) {
-    if (charCount >= budgetChars) break;
-    const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
+    if (charCount >= budgetChars) {
+      break;
+    }
+    const content =
+      typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
     const snippet = content.slice(0, Math.min(200, budgetChars - charCount));
     if (snippet.length > 20) {
       parts.push(`[${msg.role}] ${snippet}${content.length > 200 ? '...' : ''}`);
@@ -244,7 +255,7 @@ function getStatus(sessionId = 'default') {
   const appliedLevels = [...applied];
 
   // Find next unapplied level
-  const nextLevel = SEAM_LEVELS.find(l => !applied.has(l.name)) || null;
+  const nextLevel = SEAM_LEVELS.find((l) => !applied.has(l.name)) || null;
 
   return { appliedLevels, nextLevel };
 }

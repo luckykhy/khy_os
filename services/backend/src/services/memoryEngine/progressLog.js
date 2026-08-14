@@ -31,20 +31,30 @@
 const OFF = new Set(['0', 'false', 'off', 'no']);
 
 function _off(v) {
-  return OFF.has(String(v == null ? '' : v).trim().toLowerCase());
+  return OFF.has(
+    String(v == null ? '' : v)
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /** 进度日志总门控(默认开)。遵从 KHY_DISABLE_MEMORY(=1/true 时整体关)。 */
 function isEnabled(env) {
   const e = env || process.env || {};
-  const dis = String(e.KHY_DISABLE_MEMORY || '').trim().toLowerCase();
-  if (dis === '1' || dis === 'true') return false;
+  const dis = String(e.KHY_DISABLE_MEMORY || '')
+    .trim()
+    .toLowerCase();
+  if (dis === '1' || dis === 'true') {
+    return false;
+  }
   return !_off(e.KHY_PROGRESS_LOG);
 }
 
 /** 开场召回子门控(默认开)。父关即关(父→子优先级)。 */
 function isRecallEnabled(env) {
-  if (!isEnabled(env)) return false;
+  if (!isEnabled(env)) {
+    return false;
+  }
   return !_off((env || process.env || {}).KHY_PROGRESS_LOG_RECALL);
 }
 
@@ -69,7 +79,7 @@ const _oneLine = require('../../utils/collapseWhitespace');
 
 function _clip(s) {
   const t = String(s == null ? '' : s);
-  return t.length > MAX_FIELD ? (t.slice(0, MAX_FIELD - 1) + '…') : t;
+  return t.length > MAX_FIELD ? t.slice(0, MAX_FIELD - 1) + '…' : t;
 }
 
 function _enc(s) {
@@ -77,7 +87,11 @@ function _enc(s) {
 }
 
 function _dec(s) {
-  try { return decodeURIComponent(String(s || '')); } catch { return String(s || ''); }
+  try {
+    return decodeURIComponent(String(s || ''));
+  } catch {
+    return String(s || '');
+  }
 }
 
 /** ISO 时间戳 → 人类可读日期(YYYY-MM-DD HH:MM)。绝不抛;坏输入原样返回。 */
@@ -105,8 +119,7 @@ function formatProgressEntry(e) {
     const covered = _oneLine(o.covered);
     const next = _oneLine(o.next);
     const iso = String(o.nowIso || '');
-    const sentinel =
-      `<!-- @progress v=1 ts=${_enc(iso)} topic=${_enc(topic)} covered=${_enc(covered)} next=${_enc(next)} -->`;
+    const sentinel = `<!-- @progress v=1 ts=${_enc(iso)} topic=${_enc(topic)} covered=${_enc(covered)} next=${_enc(next)} -->`;
     const lines = [
       sentinel,
       `### 📌 ${_clip(topic)} · ${_humanDate(iso)}`,
@@ -132,7 +145,9 @@ const _SENTINEL_RE =
  */
 function parseProgressEntries(raw) {
   const out = [];
-  if (typeof raw !== 'string' || !raw) return out;
+  if (typeof raw !== 'string' || !raw) {
+    return out;
+  }
   try {
     const re = new RegExp(_SENTINEL_RE.source, 'g'); // 每次新建,避免 lastIndex 复用陷阱
     let m;
@@ -144,7 +159,9 @@ function parseProgressEntries(raw) {
         next: _dec(m[4]),
       });
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return out;
 }
 
@@ -156,13 +173,19 @@ function parseProgressEntries(raw) {
  * @returns {Array<{tsIso,topic,covered,next}>}
  */
 function latestPerTopic(entries) {
-  if (!Array.isArray(entries)) return [];
+  if (!Array.isArray(entries)) {
+    return [];
+  }
   const byTopic = new Map();
   for (const e of entries) {
-    if (!e || typeof e !== 'object') continue;
+    if (!e || typeof e !== 'object') {
+      continue;
+    }
     const key = String(e.topic || '(未命名)');
     const prev = byTopic.get(key);
-    if (!prev || String(e.tsIso || '') >= String(prev.tsIso || '')) byTopic.set(key, e);
+    if (!prev || String(e.tsIso || '') >= String(prev.tsIso || '')) {
+      byTopic.set(key, e);
+    }
   }
   const list = [...byTopic.values()];
   list.sort((a, b) => String(b.tsIso || '').localeCompare(String(a.tsIso || '')));
@@ -181,9 +204,13 @@ function latestPerTopic(entries) {
  */
 function renderProgressRecall(latest, opts = {}) {
   try {
-    if (!Array.isArray(latest) || latest.length === 0) return null;
-    const cap = Number.isFinite(opts.maxTopics) && opts.maxTopics > 0
-      ? Math.floor(opts.maxTopics) : MAX_RECALL_TOPICS;
+    if (!Array.isArray(latest) || latest.length === 0) {
+      return null;
+    }
+    const cap =
+      Number.isFinite(opts.maxTopics) && opts.maxTopics > 0
+        ? Math.floor(opts.maxTopics)
+        : MAX_RECALL_TOPICS;
     const shown = latest.slice(0, cap);
     const lines = [
       '# 进度检查点 · 上次学到哪 (Where You Left Off)',
@@ -203,8 +230,8 @@ function renderProgressRecall(latest, opts = {}) {
       lines.push('');
     }
     lines.push(
-      '> 到达新的学习/工作里程碑时,调用 **RecordProgress** 工具追加一条检查点(主题 + 已覆盖 + 下一步),'
-      + '让下次会话能接上。这仅适用于此类需要跨会话续接的进度,不改变其它记忆的保存规则。',
+      '> 到达新的学习/工作里程碑时,调用 **RecordProgress** 工具追加一条检查点(主题 + 已覆盖 + 下一步),' +
+        '让下次会话能接上。这仅适用于此类需要跨会话续接的进度,不改变其它记忆的保存规则。'
     );
     return lines.join('\n');
   } catch {

@@ -38,7 +38,9 @@ const RE_ITALIC = /(?<!\w)_(?=\S)([^_\n]+?)(?<=\S)_(?!\w)/g;
  * @returns {boolean}
  */
 function underscoreEmphasisEnabled(env = process.env) {
-  const flag = String((env && env.KHY_UNDERSCORE_EMPHASIS) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_UNDERSCORE_EMPHASIS) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -49,9 +51,15 @@ function underscoreEmphasisEnabled(env = process.env) {
  * @returns {string}
  */
 function applyUnderscoreEmphasis(text, styler) {
-  if (typeof text !== 'string' || text.indexOf('_') === -1) return text;
-  if (!styler || typeof styler.italic !== 'function'
-    || typeof styler.bold !== 'function' || typeof styler.boldItalic !== 'function') {
+  if (typeof text !== 'string' || text.indexOf('_') === -1) {
+    return text;
+  }
+  if (
+    !styler ||
+    typeof styler.italic !== 'function' ||
+    typeof styler.bold !== 'function' ||
+    typeof styler.boldItalic !== 'function'
+  ) {
     return text;
   }
   return text

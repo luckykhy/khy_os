@@ -35,9 +35,9 @@ async function _defaultLlm(message) {
 module.exports = defineTool({
   name: 'createTool',
   description:
-    '当现有工具都无法满足需求、且该需求可由一段纯计算逻辑（数学/字符串/数组/JSON 变换）完成时，'
-    + '动态创建并注册一个新工具供后续步骤调用。新工具经静态安全扫描与沙箱测试后才会生效，'
-    + '严禁用于文件/网络/进程等带副作用的操作（这些请改用既有受控工具）。',
+    '当现有工具都无法满足需求、且该需求可由一段纯计算逻辑（数学/字符串/数组/JSON 变换）完成时，' +
+    '动态创建并注册一个新工具供后续步骤调用。新工具经静态安全扫描与沙箱测试后才会生效，' +
+    '严禁用于文件/网络/进程等带副作用的操作（这些请改用既有受控工具）。',
   category: 'system',
   risk: 'medium',
   // 默认不进初始 prompt，按关键词延迟揭示，避免无谓鼓励铸造（设计 §2/§7）。
@@ -48,7 +48,11 @@ module.exports = defineTool({
   isConcurrencySafe: false,
   // 默认关闭门禁：未显式启用时本工具对模型不可见（设计 §0）。
   isEnabled: () => {
-    try { return require('../../services/metaToolEngine').isEnabled(); } catch { return false; }
+    try {
+      return require('../../services/metaToolEngine').isEnabled();
+    } catch {
+      return false;
+    }
   },
   inputSchema: {
     purpose: {
@@ -86,17 +90,21 @@ module.exports = defineTool({
     }
 
     // 允许测试/宿主注入 llm；否则用默认 cli/ai 适配器。
-    const llm = (context && typeof context.llm === 'function') ? context.llm : _defaultLlm;
+    const llm = context && typeof context.llm === 'function' ? context.llm : _defaultLlm;
 
     let result;
     try {
       result = await engine.forgeTool(
         { purpose: params.purpose, name: params.name, inputHint: params.inputHint },
-        { llm, session: context && context.session },
+        { llm, session: context && context.session }
       );
     } catch (e) {
       // 引擎内部已尽量不抛；此处为终极防呆。
-      return { success: false, content: '新建工具时发生意外，已改用现有能力继续。', error: e.message };
+      return {
+        success: false,
+        content: '新建工具时发生意外，已改用现有能力继续。',
+        error: e.message,
+      };
     }
 
     const created = result.status === 'created' || result.status === 'reused';

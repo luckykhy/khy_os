@@ -16,12 +16,15 @@
  */
 
 const path = require('path');
+
 const catalog = require('./junkCatalog');
 const guard = require('./protectedGuard');
 
 let _storageRoots = null;
 function storageRoots() {
-  if (!_storageRoots) _storageRoots = require('../../utils/storageRoots');
+  if (!_storageRoots) {
+    _storageRoots = require('../../utils/storageRoots');
+  }
   return _storageRoots;
 }
 
@@ -49,7 +52,11 @@ function measure(dir, deps, depth = 0, maxDepth) {
   for (const ent of entries) {
     const full = path.join(dir, ent.name);
     let st;
-    try { st = fsImpl.lstatSync(full); } catch { continue; }
+    try {
+      st = fsImpl.lstatSync(full);
+    } catch {
+      continue;
+    }
     if (st.isSymbolicLink()) {
       // 符号链接本身计数但绝不跟随（避免越界到用户数据/无限环）。
       out.fileCount += 1;
@@ -62,13 +69,17 @@ function measure(dir, deps, depth = 0, maxDepth) {
         out.sizeBytes += sub.sizeBytes;
         out.fileCount += sub.fileCount;
         out.dirCount += sub.dirCount;
-        if (sub.newestMtimeMs > out.newestMtimeMs) out.newestMtimeMs = sub.newestMtimeMs;
+        if (sub.newestMtimeMs > out.newestMtimeMs) {
+          out.newestMtimeMs = sub.newestMtimeMs;
+        }
       }
     } else if (st.isFile()) {
       out.sizeBytes += st.size;
       out.fileCount += 1;
       const m = st.mtimeMs || 0;
-      if (m > out.newestMtimeMs) out.newestMtimeMs = m;
+      if (m > out.newestMtimeMs) {
+        out.newestMtimeMs = m;
+      }
     }
   }
   return out;
@@ -95,13 +106,17 @@ function resolveEntryPaths(entry, deps, driveRoots) {
       try {
         const ps = entry.resolve(deps, root) || [];
         paths.push(...ps);
-      } catch { /* fail-soft */ }
+      } catch {
+        /* fail-soft */
+      }
     }
   } else {
     try {
       const ps = entry.resolve(deps) || [];
       paths.push(...ps);
-    } catch { /* fail-soft */ }
+    } catch {
+      /* fail-soft */
+    }
   }
   return [...new Set(paths.filter(Boolean))];
 }
@@ -110,10 +125,12 @@ function resolveEntryPaths(entry, deps, driveRoots) {
  * 扫描一条 catalog 条目 → 0..n 候选。
  */
 function scanEntry(entry, deps, driveRoots, opts) {
-  const keepRecentMs = (opts.keepRecentHours != null
-    ? opts.keepRecentHours
-    : catalog.thresholds.keepRecentHours) * 3600 * 1000;
-  const ageMs = (entry.ageHours != null ? entry.ageHours : catalog.thresholds.defaultAgeHours) * 3600 * 1000;
+  const keepRecentMs =
+    (opts.keepRecentHours != null ? opts.keepRecentHours : catalog.thresholds.keepRecentHours) *
+    3600 *
+    1000;
+  const ageMs =
+    (entry.ageHours != null ? entry.ageHours : catalog.thresholds.defaultAgeHours) * 3600 * 1000;
   // 用户选的扫描深度档(opts.maxDepth 有限正数)覆盖全局阈值;缺省 → 传 undefined,measure 回退阈值。
   const maxDepth = Number.isFinite(opts.maxDepth) ? opts.maxDepth : undefined;
   const now = _now(deps);
@@ -142,8 +159,16 @@ function scanEntry(entry, deps, driveRoots, opts) {
 
     // 存在性
     let exists = false;
-    try { exists = deps.fsImpl.existsSync(p); } catch { exists = false; }
-    if (!exists) { cand.skipReason = '不存在'; results.push(cand); continue; }
+    try {
+      exists = deps.fsImpl.existsSync(p);
+    } catch {
+      exists = false;
+    }
+    if (!exists) {
+      cand.skipReason = '不存在';
+      results.push(cand);
+      continue;
+    }
 
     // 受保护否决（第二道防线）
     const verdict = guard.inspect(p, deps);
@@ -169,13 +194,17 @@ function scanEntry(entry, deps, driveRoots, opts) {
     cand.sizeBytes = m.sizeBytes;
     cand.fileCount = m.fileCount;
     cand.newestMtimeMs = m.newestMtimeMs;
-    cand.live = m.newestMtimeMs > 0 && (now - m.newestMtimeMs) < keepRecentMs;
+    cand.live = m.newestMtimeMs > 0 && now - m.newestMtimeMs < keepRecentMs;
 
     if (cand.live) {
       cand.skipReason = `在用(最近 ${Math.round((now - m.newestMtimeMs) / 60000)} 分钟内有写入)`;
     } else if (m.fileCount === 0) {
       cand.skipReason = '已空';
-    } else if (m.newestMtimeMs > 0 && (now - m.newestMtimeMs) < ageMs && entry.category === catalog.CATEGORY.SYSTEM_TEMP) {
+    } else if (
+      m.newestMtimeMs > 0 &&
+      now - m.newestMtimeMs < ageMs &&
+      entry.category === catalog.CATEGORY.SYSTEM_TEMP
+    ) {
       // 临时目录：整体太新（早于 ageHours）保守跳过。
       cand.skipReason = `临时文件过新(<${entry.ageHours != null ? entry.ageHours : catalog.thresholds.defaultAgeHours}h)`;
     } else {
@@ -199,20 +228,48 @@ function scan(opts = {}) {
   let driveRoots = [];
   if (platform === 'windows') {
     try {
-      const sys = storageRoots().getSystemDriveRoot({ platform, env: deps.env, homedir: deps.homedir });
+      const sys = storageRoots().getSystemDriveRoot({
+        platform,
+        env: deps.env,
+        homedir: deps.homedir,
+      });
       driveRoots.push(sys);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
-      const others = storageRoots().listNonSystemDrives({ platform, env: deps.env, fsImpl: deps.fsImpl, homedir: deps.homedir }) || [];
-      for (const d of others) driveRoots.push(d.root);
-    } catch { /* ignore */ }
+      const others =
+        storageRoots().listNonSystemDrives({
+          platform,
+          env: deps.env,
+          fsImpl: deps.fsImpl,
+          homedir: deps.homedir,
+        }) || [];
+      for (const d of others) {
+        driveRoots.push(d.root);
+      }
+    } catch {
+      /* ignore */
+    }
   } else {
     driveRoots = ['/'];
   }
   // 调用方可显式限定 roots（如只清 C 或只清 D）。
   if (Array.isArray(opts.roots) && opts.roots.length) {
-    const want = new Set(opts.roots.map((r) => String(r).toUpperCase().replace(/[\\/]+$/, '')));
-    driveRoots = driveRoots.filter((r) => want.has(String(r).toUpperCase().replace(/[\\/]+$/, '')));
+    const want = new Set(
+      opts.roots.map((r) =>
+        String(r)
+          .toUpperCase()
+          .replace(/[\\/]+$/, '')
+      )
+    );
+    driveRoots = driveRoots.filter((r) =>
+      want.has(
+        String(r)
+          .toUpperCase()
+          .replace(/[\\/]+$/, '')
+      )
+    );
   }
   driveRoots = [...new Set(driveRoots.filter(Boolean))];
 

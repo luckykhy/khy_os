@@ -33,7 +33,9 @@
 const FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function renderDedupEnabled(env = process.env) {
-  const flag = String((env && env.KHY_RENDER_DEDUP) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_RENDER_DEDUP) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -51,11 +53,17 @@ function _norm(s) {
  * @returns {boolean} true=已展示过(应抑制重渲);false=未展示过或门控关(应正常渲染)
  */
 function finalAlreadyStreamed(finalText, streamedText, env = process.env) {
-  if (!renderDedupEnabled(env)) return false;
+  if (!renderDedupEnabled(env)) {
+    return false;
+  }
   const finalNorm = _norm(finalText);
-  if (!finalNorm) return false;
+  if (!finalNorm) {
+    return false;
+  }
   const streamedNorm = _norm(streamedText);
-  if (!streamedNorm) return false;
+  if (!streamedNorm) {
+    return false;
+  }
   return streamedNorm.endsWith(finalNorm);
 }
 

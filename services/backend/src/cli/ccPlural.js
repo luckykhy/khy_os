@@ -20,21 +20,25 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_CC_PLURAL;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
 // CC 逐字节移植:n === 1 → 单数 `word`;否则 `pluralWord`(默认 `word + 's`)。
 // 不强转 n:CC 用严格 `=== 1`,故仅 number `1` 取单数(与 CC 同;字符串 '1' 取复数)。
 function plural(n, word, pluralWord) {
-  const p = (pluralWord == null) ? `${word}s` : pluralWord;
+  const p = pluralWord == null ? `${word}s` : pluralWord;
   return n === 1 ? word : p;
 }
 
 // `*Or` 约定:门控开 → CC `plural`;门控关 → 复数形(= 各 call-site 历史硬编码形)逐字节回退。
 function pluralOr(n, word, pluralWord, env = process.env) {
-  const p = (pluralWord == null) ? `${word}s` : pluralWord;
-  if (!isEnabled(env)) return p;
+  const p = pluralWord == null ? `${word}s` : pluralWord;
+  if (!isEnabled(env)) {
+    return p;
+  }
   return plural(n, word, p);
 }
 

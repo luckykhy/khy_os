@@ -6,6 +6,7 @@
 #include "elf.h"
 #include "pe.h"
 #include "wincompat.h"
+#include "ipc.h"
 #include "kheap.h"
 #include "sched.h"
 #include "serial.h"
@@ -588,6 +589,13 @@ int process_mark_exited(uint32_t pid, int exit_code) {
      * (writer) instead of hanging forever. Pure bookkeeping — touches no user
      * memory — so it is safe here in the exiting (or killer's) context. */
     syscall_release_fds(pid);
+    /* Release every IPC port the dying process registered. Use the process's
+     * own task_id, NOT sched_current_id(): the latter is the KILLER's task
+     * when another process calls kill(pid), and using it would clean up the
+     * killer's ports while the target's ports leak permanently. During a
+     * voluntary exit (syscall_exit → process_mark_exited) the two coincide,
+     * but the defence is already in place either way. */
+    ipc_cleanup_task(p->task_id >= 0 ? p->task_id : sched_current_id());
     /* Do NOT free the address space here: SYSCALL_EXIT runs on the exiting task
      * with this very space as the active CR3, so its page tables are still in
      * use. The space is destroyed in process_unregister_task() at reap time,
@@ -941,8 +949,23 @@ int process_create_from_pe(const char *path) {
         return -8;
     }
 
+    /* Seed the user stack: PE startup code expects RSP at the top of the
+     * freshly mapped stack window, with no argument layout (different from
+     * the ELF SysV convention). The scheduler task below launches the process
+     * with RSP = VMM_USER_STACK_TOP, and the PE entry point is responsible
+     * for its own startup sequence. */
+    uint64_t user_rsp = VMM_USER_STACK_TOP;
+
+    /* [SAFE] Allocate the process slot and bind the scheduler task under
+     * cli so a timer preemption cannot race with slot allocation and
+     * task→pid binding. Same rationale as the ELF path (see the long
+     * comment in process_create_from_elf_argv). */
+    uint64_t flags;
+    __asm__ volatile("pushfq; pop %0; cli" : "=r"(flags) :: "memory");
+
     int slot = alloc_slot();
     if (slot < 0) {
+        __asm__ volatile("push %0; popfq" :: "r"(flags) : "memory", "cc");
         vmm_destroy_space(space);
         return -9;
     }
@@ -951,6 +974,7 @@ int process_create_from_pe(const char *path) {
     struct process *p = &process_table[slot];
     memset(p, 0, sizeof(*p));
     p->pid = pid;
+    p->parent_pid = process_current_pid();
     p->task_id = -1;
     p->state = PROCESS_READY;
     p->is_user = 1;
@@ -960,8 +984,36 @@ int process_create_from_pe(const char *path) {
     p->space = space;
     copy_name(p->name, path);
 
+    /* Inherit the creating process's user identity and working directory. */
+    struct process *creator = find_by_pid(p->parent_pid);
+    if (creator) {
+        p->uid = creator->uid;   p->gid = creator->gid;
+        p->euid = creator->euid; p->egid = creator->egid;
+    }
+    copy_path_field(p->cwd, creator ? creator->cwd : kernel_cwd);
+
+    /* Create the Ring 3 scheduler task that actually executes this PE
+     * image. Born TASK_READY, must be bound before the scheduler sees it. */
+    int tid = sched_create_user_task(loaded.entry, user_rsp, space, p->name);
+    if (tid >= 0) {
+        task_to_pid[tid] = pid;
+        p->task_id = tid;
+        agentevent_post(AGENTEVENT_SPAWN, pid, p->parent_pid, tid, p->name);
+    }
+
+    __asm__ volatile("push %0; popfq" :: "r"(flags) : "memory", "cc");
+
+    if (tid < 0) {
+        vmm_destroy_space(space);
+        memset(p, 0, sizeof(*p));
+        p->state = PROCESS_UNUSED;
+        return -10;
+    }
+
     serial_print("[PROC] Loaded PE process pid=");
     serial_print_dec(pid);
+    serial_print(" tid=");
+    serial_print_dec((uint64_t)tid);
     serial_print(" path=");
     serial_print(path);
     serial_print(" subsystem=");

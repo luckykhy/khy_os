@@ -19,8 +19,7 @@ const os = require('os');
 // (避免全新 HOME 上 .khy / .khyquant 双写)。见 ../utils/dataHome。
 const { getAppHome, getAppDataDir } = require('../utils/dataHome');
 const KHY_DIR = getAppHome();
-const LOG_DIR = process.env.AI_GATEWAY_LOG_DIR
-  || getAppDataDir('ai_gateway_logs');
+const LOG_DIR = process.env.AI_GATEWAY_LOG_DIR || getAppDataDir('ai_gateway_logs');
 
 const RETENTION_DAYS = parseInt(process.env.AI_GATEWAY_LOG_RETENTION_DAYS, 10) || 90;
 
@@ -57,7 +56,8 @@ function append(record = {}) {
       provider: record.provider || '',
       inputTokens: toNum(record.inputTokens),
       outputTokens: toNum(record.outputTokens),
-      totalTokens: toNum(record.totalTokens) || (toNum(record.inputTokens) + toNum(record.outputTokens)),
+      totalTokens:
+        toNum(record.totalTokens) || toNum(record.inputTokens) + toNum(record.outputTokens),
       estimated: !!record.estimated,
       baseCostCny: toNum(record.baseCostCny),
       billedCny: toNum(record.billedCny),
@@ -88,10 +88,16 @@ function trimOld() {
       if (!f.endsWith('.jsonl')) continue;
       const day = f.slice(0, -6);
       if (day < cutoffKey) {
-        try { fs.unlinkSync(path.join(LOG_DIR, f)); } catch { /* ignore */ }
+        try {
+          fs.unlinkSync(path.join(LOG_DIR, f));
+        } catch {
+          /* ignore */
+        }
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function listDaysInRange(fromDay, toDay) {
@@ -105,7 +111,9 @@ function listDaysInRange(fromDay, toDay) {
       if (toDay && day > toDay) continue;
       days.push(day);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   days.sort(); // ascending
   return days;
 }
@@ -119,9 +127,15 @@ function readDay(day) {
     for (const line of raw.split('\n')) {
       const s = line.trim();
       if (!s) continue;
-      try { rows.push(JSON.parse(s)); } catch { /* skip corrupt line */ }
+      try {
+        rows.push(JSON.parse(s));
+      } catch {
+        /* skip corrupt line */
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return rows;
 }
 
@@ -147,8 +161,15 @@ function matchFilters(row, f) {
  * @returns {{ total, limit, offset, items }}
  */
 function query({
-  customerId, tokenId, group, model, status,
-  from, to, limit = 50, offset = 0,
+  customerId,
+  tokenId,
+  group,
+  model,
+  status,
+  from,
+  to,
+  limit = 50,
+  offset = 0,
 } = {}) {
   const fromDay = toDayKeyFromIso(from);
   const toDay = toDayKeyFromIso(to);
@@ -185,17 +206,30 @@ function summary({ groupBy = 'model', from, to } = {}) {
 
   const keyOf = (row) => {
     switch (groupBy) {
-      case 'customer': return row.customerId || '(none)';
-      case 'token': return row.tokenId || '(none)';
-      case 'group': return row.group || 'default';
-      case 'day': return String(row.ts).slice(0, 10);
+      case 'customer':
+        return row.customerId || '(none)';
+      case 'token':
+        return row.tokenId || '(none)';
+      case 'group':
+        return row.group || 'default';
+      case 'day':
+        return String(row.ts).slice(0, 10);
       case 'model':
-      default: return row.model || '(none)';
+      default:
+        return row.model || '(none)';
     }
   };
 
   const buckets = new Map();
-  const totals = { requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, baseCostCny: 0, billedCny: 0, errors: 0 };
+  const totals = {
+    requests: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    baseCostCny: 0,
+    billedCny: 0,
+    errors: 0,
+  };
 
   for (const day of days) {
     for (const row of readDay(day)) {
@@ -203,8 +237,17 @@ function summary({ groupBy = 'model', from, to } = {}) {
       const k = keyOf(row);
       let b = buckets.get(k);
       if (!b) {
-        b = { key: k, label: row.customerName && groupBy === 'customer' ? row.customerName : k,
-          requests: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0, baseCostCny: 0, billedCny: 0, errors: 0 };
+        b = {
+          key: k,
+          label: row.customerName && groupBy === 'customer' ? row.customerName : k,
+          requests: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          baseCostCny: 0,
+          billedCny: 0,
+          errors: 0,
+        };
         buckets.set(k, b);
       }
       b.requests += 1;

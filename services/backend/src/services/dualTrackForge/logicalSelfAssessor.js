@@ -14,7 +14,7 @@
  * 要么给 null，**永不抛**。
  */
 
-const DEFAULT_CONFIDENCE_THRESHOLD = 0.6;   // §5 防呆②：默认阈值（高于 §3.3 注释的 0.5，取严）
+const DEFAULT_CONFIDENCE_THRESHOLD = 0.6; // §5 防呆②：默认阈值（高于 §3.3 注释的 0.5，取严）
 const DEFAULT_TIMEOUT_MS = 4000;
 
 /** 软性逻辑异常：模型自评判定业务逻辑未达标。无响应时此路静默（不构造此异常）。 */
@@ -37,7 +37,9 @@ class LogicalSelfAssessor {
    */
   constructor(opts = {}) {
     this.brain = typeof opts.brain === 'function' ? opts.brain : null;
-    this.threshold = Number.isFinite(opts.threshold) ? opts.threshold : DEFAULT_CONFIDENCE_THRESHOLD;
+    this.threshold = Number.isFinite(opts.threshold)
+      ? opts.threshold
+      : DEFAULT_CONFIDENCE_THRESHOLD;
     this.timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : DEFAULT_TIMEOUT_MS;
   }
 
@@ -47,12 +49,17 @@ class LogicalSelfAssessor {
    * @returns {Promise<{root_cause_hypothesis:string, suggested_evo_requirement:string, confidence:number, l2Plan?:object}|null>}
    */
   async assess(snapshot = {}) {
-    if (!this.brain) return null;
+    if (!this.brain) {
+      return null;
+    }
     let raw;
     try {
-      raw = await this._withTimeout(Promise.resolve().then(() => this.brain(this._buildPrompt(snapshot))), this.timeoutMs);
+      raw = await this._withTimeout(
+        Promise.resolve().then(() => this.brain(this._buildPrompt(snapshot))),
+        this.timeoutMs
+      );
     } catch {
-      return null;   // 防呆①：超时 / 模型抛错 / 拒绝评估 → 静默降级
+      return null; // 防呆①：超时 / 模型抛错 / 拒绝评估 → 静默降级
     }
     const ev = this.evaluate(raw);
     return ev.ok ? ev.value : null;
@@ -64,20 +71,28 @@ class LogicalSelfAssessor {
    */
   evaluate(raw) {
     const obj = this._coerce(raw);
-    if (!obj) return { ok: false, reason: 'unparseable' };
+    if (!obj) {
+      return { ok: false, reason: 'unparseable' };
+    }
 
     const suggestion = obj.suggested_evo_requirement || obj.suggestion || obj.requirement;
-    if (!suggestion || !String(suggestion).trim()) return { ok: false, reason: 'no-suggestion' };
+    if (!suggestion || !String(suggestion).trim()) {
+      return { ok: false, reason: 'no-suggestion' };
+    }
 
     const confidence = this._num(obj.confidence);
-    if (confidence == null) return { ok: false, reason: 'no-confidence' };
+    if (confidence == null) {
+      return { ok: false, reason: 'no-confidence' };
+    }
 
     if (confidence < this.threshold) {
       return { ok: false, reason: 'low-confidence', confidence };
     }
 
     const value = {
-      root_cause_hypothesis: String(obj.root_cause_hypothesis || obj.hypothesis || '（模型未给根因）').slice(0, 600),
+      root_cause_hypothesis: String(
+        obj.root_cause_hypothesis || obj.hypothesis || '（模型未给根因）'
+      ).slice(0, 600),
       suggested_evo_requirement: String(suggestion).slice(0, 600),
       confidence: Math.max(0, Math.min(1, confidence)),
     };
@@ -93,19 +108,39 @@ class LogicalSelfAssessor {
   }
 
   _coerce(raw) {
-    if (raw == null) return null;
-    if (typeof raw === 'object') return raw;
-    if (typeof raw !== 'string') return null;
+    if (raw == null) {
+      return null;
+    }
+    if (typeof raw === 'object') {
+      return raw;
+    }
+    if (typeof raw !== 'string') {
+      return null;
+    }
     // 容忍模型在 JSON 前后夹带散文：抽取首个对象。
-    try { return JSON.parse(raw); } catch { /* fallthrough */ }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      /* fallthrough */
+    }
     const m = raw.match(/\{[\s\S]*\}/);
-    if (m) { try { return JSON.parse(m[0]); } catch { return null; } }
+    if (m) {
+      try {
+        return JSON.parse(m[0]);
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 
   _num(x) {
-    if (typeof x === 'number' && Number.isFinite(x)) return x;
-    if (typeof x === 'string' && x.trim() !== '' && Number.isFinite(Number(x))) return Number(x);
+    if (typeof x === 'number' && Number.isFinite(x)) {
+      return x;
+    }
+    if (typeof x === 'string' && x.trim() !== '' && Number.isFinite(Number(x))) {
+      return Number(x);
+    }
     return null;
   }
 
@@ -117,7 +152,11 @@ class LogicalSelfAssessor {
       output: snapshot.output,
       goal: snapshot.goal,
       physicalCode: snapshot.physicalCode || null,
-      outputFormat: { root_cause_hypothesis: 'string', suggested_evo_requirement: 'string', confidence: '0..1' },
+      outputFormat: {
+        root_cause_hypothesis: 'string',
+        suggested_evo_requirement: 'string',
+        confidence: '0..1',
+      },
     };
   }
 
@@ -125,15 +164,37 @@ class LogicalSelfAssessor {
     return new Promise((resolve, reject) => {
       let settled = false;
       const timer = setTimeout(() => {
-        if (!settled) { settled = true; reject(new Error('assessor-timeout')); }
+        if (!settled) {
+          settled = true;
+          reject(new Error('assessor-timeout'));
+        }
       }, ms);
-      if (timer && typeof timer.unref === 'function') timer.unref();
+      if (timer && typeof timer.unref === 'function') {
+        timer.unref();
+      }
       p.then(
-        (v) => { if (!settled) { settled = true; clearTimeout(timer); resolve(v); } },
-        (e) => { if (!settled) { settled = true; clearTimeout(timer); reject(e); } },
+        (v) => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            resolve(v);
+          }
+        },
+        (e) => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            reject(e);
+          }
+        }
       );
     });
   }
 }
 
-module.exports = { LogicalSelfAssessor, LogicalException, DEFAULT_CONFIDENCE_THRESHOLD, DEFAULT_TIMEOUT_MS };
+module.exports = {
+  LogicalSelfAssessor,
+  LogicalException,
+  DEFAULT_CONFIDENCE_THRESHOLD,
+  DEFAULT_TIMEOUT_MS,
+};

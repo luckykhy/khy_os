@@ -30,11 +30,17 @@ function isServeEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_MCP_SERVE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_MCP_SERVE;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -74,14 +80,18 @@ function parseMessage(line) {
   try {
     obj = JSON.parse(String(line == null ? '' : line));
   } catch (err) {
-    return { ok: false, error: `parse error: ${err && err.message ? err.message : 'invalid JSON'}` };
+    return {
+      ok: false,
+      error: `parse error: ${err && err.message ? err.message : 'invalid JSON'}`,
+    };
   }
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
     return { ok: false, error: 'invalid request: message must be a JSON object' };
   }
   const method = typeof obj.method === 'string' ? obj.method : undefined;
   // 通知 = 有 method、无 id(spec §4.1)。请求 = 有 method + id。
-  const hasId = Object.prototype.hasOwnProperty.call(obj, 'id') && obj.id !== undefined && obj.id !== null;
+  const hasId =
+    Object.prototype.hasOwnProperty.call(obj, 'id') && obj.id !== undefined && obj.id !== null;
   return {
     ok: true,
     id: hasId ? obj.id : null,
@@ -110,7 +120,9 @@ function buildResult(id, result) {
  */
 function buildError(id, code, message, data) {
   const error = { code, message: String(message == null ? '' : message) };
-  if (data !== undefined) error.data = data;
+  if (data !== undefined) {
+    error.data = data;
+  }
   return { jsonrpc: '2.0', id: id === undefined ? null : id, error };
 }
 
@@ -137,9 +149,10 @@ function buildInitializeResult(opts = {}) {
  */
 function toolDefToMcp(funcDef) {
   const def = funcDef && typeof funcDef === 'object' ? funcDef : {};
-  const inputSchema = def.parameters && typeof def.parameters === 'object'
-    ? def.parameters
-    : { type: 'object', properties: {} };
+  const inputSchema =
+    def.parameters && typeof def.parameters === 'object'
+      ? def.parameters
+      : { type: 'object', properties: {} };
   return {
     name: String(def.name == null ? '' : def.name),
     description: String(def.description == null ? '' : def.description),
@@ -159,14 +172,16 @@ function toolResultToMcp(result) {
   // 已是 MCP 原生形(content 数组)→ 透传,仅补 isError 语义。
   if (Array.isArray(r.content)) {
     const out = { content: r.content };
-    if (r.isError !== undefined) out.isError = !!r.isError;
-    else if (r.success === false) out.isError = true;
+    if (r.isError !== undefined) {
+      out.isError = !!r.isError;
+    } else if (r.success === false) {
+      out.isError = true;
+    }
     return out;
   }
   // khy 归一形 {success, content?, error?} → 单条 text。
   const isError = r.success === false;
-  const text = r.content != null ? r.content
-    : (r.error != null ? r.error : '');
+  const text = r.content != null ? r.content : r.error != null ? r.error : '';
   return {
     content: [{ type: 'text', text: String(text) }],
     isError,

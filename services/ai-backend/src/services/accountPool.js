@@ -22,18 +22,18 @@ const TIER_WEIGHT = { ULTRA: 300, PRO: 200, FREE: 100 };
 const DEFAULT_BACKOFF_STEPS = [60, 300, 1800, 7200];
 
 // In-memory pool + scheduling state
-let _accounts = [];       // Array of account objects from DB
+let _accounts = []; // Array of account objects from DB
 let _initialized = false;
-let _roundRobinIdx = {};  // { provider: index }
-let _stickyMap = {};      // { sessionId: { accountId, timestamp } }
+let _roundRobinIdx = {}; // { provider: index }
+let _stickyMap = {}; // { sessionId: { accountId, timestamp } }
 const STICKY_TTL_MS = 30 * 60 * 1000; // 30 minutes TTL for sticky entries
-const STICKY_MAX_ENTRIES = 10000;      // Hard cap to prevent OOM
+const STICKY_MAX_ENTRIES = 10000; // Hard cap to prevent OOM
 let _lastStickyCleanup = Date.now();
 
 // Config (persisted to DB or file)
 let _config = {
   schedulingMode: 'PerformanceFirst', // PerformanceFirst | Balance | CacheFirst
-  maxWaitSeconds: 30,                 // For CacheFirst mode
+  maxWaitSeconds: 30, // For CacheFirst mode
   circuitBreaker: {
     enabled: true,
     backoffSteps: DEFAULT_BACKOFF_STEPS,
@@ -62,7 +62,7 @@ function _cleanupStickyMap() {
     remaining
       .sort((a, b) => _stickyMap[a].timestamp - _stickyMap[b].timestamp)
       .slice(0, remaining.length - STICKY_MAX_ENTRIES)
-      .forEach(k => delete _stickyMap[k]);
+      .forEach((k) => delete _stickyMap[k]);
   }
 }
 
@@ -72,7 +72,9 @@ function _loadConfig() {
       const data = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
       _config = { ..._config, ...data };
     }
-  } catch { /* use defaults */ }
+  } catch {
+    /* use defaults */
+  }
 }
 
 function _saveConfig() {
@@ -80,7 +82,9 @@ function _saveConfig() {
     const dir = path.dirname(CONFIG_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(_config, null, 2));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -92,8 +96,13 @@ async function init() {
 
   try {
     const { AIAccount } = require('@khy/shared/models');
-    const rows = await AIAccount.findAll({ order: [['priority', 'DESC'], ['createdAt', 'ASC']] });
-    _accounts = rows.map(r => r.toJSON());
+    const rows = await AIAccount.findAll({
+      order: [
+        ['priority', 'DESC'],
+        ['createdAt', 'ASC'],
+      ],
+    });
+    _accounts = rows.map((r) => r.toJSON());
   } catch (err) {
     console.warn('[AccountPool] DB load failed, starting empty:', err.message);
     _accounts = [];
@@ -140,19 +149,23 @@ function _importLegacyKeys() {
         });
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
  * Compute health score for an account. Always in [0, 1.0].
  */
 function _computeHealth(account) {
-  const failRate = account.totalRequests > 0
-    ? Math.min(account.totalFailures / account.totalRequests, 1.0)
-    : 0;
-  const cooldownPenalty = (account.status === 'cooldown') ? 1.0 : 0;
-  const quotaPenalty = Math.max(0, 1.0 - (Math.min(account.quotaRemaining, 100) / 100));
-  return Math.max(0, Math.min(1.0, 1.0 - (failRate * 0.5) - (cooldownPenalty * 0.3) - (quotaPenalty * 0.2)));
+  const failRate =
+    account.totalRequests > 0 ? Math.min(account.totalFailures / account.totalRequests, 1.0) : 0;
+  const cooldownPenalty = account.status === 'cooldown' ? 1.0 : 0;
+  const quotaPenalty = Math.max(0, 1.0 - Math.min(account.quotaRemaining, 100) / 100);
+  return Math.max(
+    0,
+    Math.min(1.0, 1.0 - failRate * 0.5 - cooldownPenalty * 0.3 - quotaPenalty * 0.2)
+  );
 }
 
 /**
@@ -162,10 +175,18 @@ function _computeHealth(account) {
 function _tryReactivateExpired() {
   const now = new Date();
   for (const account of _accounts) {
-    if (account.status === 'cooldown' && account.cooldownUntil && new Date(account.cooldownUntil) <= now) {
+    if (
+      account.status === 'cooldown' &&
+      account.cooldownUntil &&
+      new Date(account.cooldownUntil) <= now
+    ) {
       account.status = 'active';
     }
-    if (account.status === 'circuit_open' && account.circuitOpenUntil && new Date(account.circuitOpenUntil) <= now) {
+    if (
+      account.status === 'circuit_open' &&
+      account.circuitOpenUntil &&
+      new Date(account.circuitOpenUntil) <= now
+    ) {
       account.status = 'active';
     }
   }
@@ -198,9 +219,11 @@ function pick(provider, options = {}) {
   // Periodic sticky map cleanup
   _cleanupStickyMap();
 
-  const candidates = _accounts.filter(a =>
-    a.provider === provider && _isUsable(a) &&
-    !(model && a.config?.protectedModels?.includes(model))
+  const candidates = _accounts.filter(
+    (a) =>
+      a.provider === provider &&
+      _isUsable(a) &&
+      !(model && a.config?.protectedModels?.includes(model))
   );
 
   if (candidates.length === 0) return null;
@@ -209,8 +232,8 @@ function pick(provider, options = {}) {
   candidates.sort((a, b) => {
     const tierDiff = (TIER_WEIGHT[b.tier] || 0) - (TIER_WEIGHT[a.tier] || 0);
     if (tierDiff !== 0) return tierDiff;
-    const scoreA = _computeHealth(a) * (a.quotaRemaining / 100) + (a.priority * 0.01);
-    const scoreB = _computeHealth(b) * (b.quotaRemaining / 100) + (b.priority * 0.01);
+    const scoreA = _computeHealth(a) * (a.quotaRemaining / 100) + a.priority * 0.01;
+    const scoreB = _computeHealth(b) * (b.quotaRemaining / 100) + b.priority * 0.01;
     return scoreB - scoreA;
   });
 
@@ -220,7 +243,7 @@ function pick(provider, options = {}) {
   if (_config.schedulingMode === 'CacheFirst' && sessionId) {
     const sticky = _stickyMap[sessionId];
     if (sticky) {
-      const stickyAccount = candidates.find(a => a.id != null && a.id === sticky.accountId);
+      const stickyAccount = candidates.find((a) => a.id != null && a.id === sticky.accountId);
       if (stickyAccount) {
         const elapsed = (Date.now() - sticky.timestamp) / 1000;
         if (elapsed < _config.maxWaitSeconds) {
@@ -231,7 +254,7 @@ function pick(provider, options = {}) {
   } else if (_config.schedulingMode === 'Balance' && sessionId) {
     const sticky = _stickyMap[sessionId];
     if (sticky) {
-      const stickyAccount = candidates.find(a => a.id != null && a.id === sticky.accountId);
+      const stickyAccount = candidates.find((a) => a.id != null && a.id === sticky.accountId);
       if (stickyAccount) selected = stickyAccount;
     }
   }
@@ -265,7 +288,7 @@ function pick(provider, options = {}) {
  * Mark an account as successfully used.
  */
 function markSuccess(accountId) {
-  const account = _accounts.find(a => a.id === accountId);
+  const account = _accounts.find((a) => a.id === accountId);
   if (!account) return;
 
   account.totalRequests++;
@@ -285,7 +308,7 @@ function markSuccess(accountId) {
  * @param {object} [headers] - Response headers (for Retry-After)
  */
 function markFailure(accountId, statusCode, errorMsg, headers) {
-  const account = _accounts.find(a => a.id === accountId);
+  const account = _accounts.find((a) => a.id === accountId);
   if (!account) return;
 
   account.totalRequests++;
@@ -338,7 +361,7 @@ function _persistAccount(account) {
   if (!account.id) return; // not yet in DB (legacy import)
   try {
     const { AIAccount } = require('@khy/shared/models');
-    AIAccount.update(account, { where: { id: account.id } }).catch(err => {
+    AIAccount.update(account, { where: { id: account.id } }).catch((err) => {
       console.warn(`[AccountPool] Failed to persist account ${account.id}:`, err.message);
     });
   } catch (err) {
@@ -378,7 +401,7 @@ async function updateAccount(id, updates) {
   }
   await AIAccount.update(filtered, { where: { id } });
   // Update in-memory
-  const idx = _accounts.findIndex(a => a.id === id);
+  const idx = _accounts.findIndex((a) => a.id === id);
   if (idx >= 0) Object.assign(_accounts[idx], filtered);
   return { id, ...filtered };
 }
@@ -386,7 +409,7 @@ async function updateAccount(id, updates) {
 async function removeAccount(id) {
   const { AIAccount } = require('@khy/shared/models');
   await AIAccount.destroy({ where: { id } });
-  _accounts = _accounts.filter(a => a.id !== id);
+  _accounts = _accounts.filter((a) => a.id !== id);
   return true;
 }
 
@@ -396,17 +419,19 @@ async function removeAccount(id) {
  * @returns {Promise<{ removed: number, ids: number[] }>}
  */
 async function removeAccounts(ids) {
-  const valid = [...new Set(
-    (Array.isArray(ids) ? ids : [])
-      .map((v) => Number(v))
-      .filter((n) => Number.isFinite(n) && n > 0)
-  )];
+  const valid = [
+    ...new Set(
+      (Array.isArray(ids) ? ids : [])
+        .map((v) => Number(v))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    ),
+  ];
   if (valid.length === 0) return { removed: 0, ids: [] };
 
   const { AIAccount } = require('@khy/shared/models');
   await AIAccount.destroy({ where: { id: valid } });
   const removeSet = new Set(valid);
-  _accounts = _accounts.filter(a => !removeSet.has(Number(a.id)));
+  _accounts = _accounts.filter((a) => !removeSet.has(Number(a.id)));
   return { removed: valid.length, ids: valid };
 }
 
@@ -417,18 +442,18 @@ async function removeAccounts(ids) {
  */
 async function removeAllAccounts(provider = '') {
   const { AIAccount } = require('@khy/shared/models');
-  const prov = String(provider || '').trim().toLowerCase();
+  const prov = String(provider || '')
+    .trim()
+    .toLowerCase();
   const where = prov ? { provider: prov } : {};
   const before = _accounts.length;
   const removed = await AIAccount.destroy({ where });
-  _accounts = prov
-    ? _accounts.filter(a => String(a.provider || '').toLowerCase() !== prov)
-    : [];
-  return { removed: Number.isFinite(removed) ? removed : (before - _accounts.length) };
+  _accounts = prov ? _accounts.filter((a) => String(a.provider || '').toLowerCase() !== prov) : [];
+  return { removed: Number.isFinite(removed) ? removed : before - _accounts.length };
 }
 
 async function enableAccount(id) {
-  const account = _accounts.find(a => a.id === id);
+  const account = _accounts.find((a) => a.id === id);
   if (account) {
     account.disabled = false;
     account.status = 'active';
@@ -438,7 +463,7 @@ async function enableAccount(id) {
 }
 
 async function disableAccount(id) {
-  const account = _accounts.find(a => a.id === id);
+  const account = _accounts.find((a) => a.id === id);
   if (account) {
     account.status = 'disabled';
     account.disabled = true;
@@ -448,7 +473,7 @@ async function disableAccount(id) {
 }
 
 function getAllAccounts() {
-  return _accounts.map(a => ({
+  return _accounts.map((a) => ({
     ...a,
     apiKey: a.apiKey ? a.apiKey.slice(0, 8) + '...' : '', // mask key
     healthScore: _computeHealth(a),
@@ -458,7 +483,8 @@ function getAllAccounts() {
 function getStatus() {
   const byProvider = {};
   for (const a of _accounts) {
-    if (!byProvider[a.provider]) byProvider[a.provider] = { total: 0, active: 0, cooldown: 0, circuitOpen: 0, disabled: 0 };
+    if (!byProvider[a.provider])
+      byProvider[a.provider] = { total: 0, active: 0, cooldown: 0, circuitOpen: 0, disabled: 0 };
     byProvider[a.provider].total++;
     if (a.status === 'active' && !a.disabled) byProvider[a.provider].active++;
     else if (a.status === 'cooldown') byProvider[a.provider].cooldown++;
@@ -482,7 +508,9 @@ const VALID_SCHEDULING_MODES = ['PerformanceFirst', 'Balance', 'CacheFirst'];
 function setSchedulingConfig(newConfig) {
   if (newConfig.schedulingMode) {
     if (!VALID_SCHEDULING_MODES.includes(newConfig.schedulingMode)) {
-      throw new Error(`Invalid scheduling mode: ${newConfig.schedulingMode}. Valid: ${VALID_SCHEDULING_MODES.join(', ')}`);
+      throw new Error(
+        `Invalid scheduling mode: ${newConfig.schedulingMode}. Valid: ${VALID_SCHEDULING_MODES.join(', ')}`
+      );
     }
     _config.schedulingMode = newConfig.schedulingMode;
   }
@@ -509,7 +537,7 @@ function setCircuitBreakerConfig(newConfig) {
       throw new Error('backoffSteps must be a non-empty array of positive integers');
     }
     const steps = newConfig.backoffSteps.map(Number);
-    if (steps.some(s => !Number.isFinite(s) || s < 1 || s > 86400)) {
+    if (steps.some((s) => !Number.isFinite(s) || s < 1 || s > 86400)) {
       throw new Error('Each backoff step must be a number between 1 and 86400 seconds');
     }
     _config.circuitBreaker.backoffSteps = steps;

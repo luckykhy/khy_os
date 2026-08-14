@@ -25,11 +25,20 @@ class BreachBreaker {
    * @param {(msg:string)=>void} [opts.onTrip]  跳闸回调（审计/告警）
    */
   constructor(opts = {}) {
-    this._l2RetryThreshold = Number.isInteger(opts.l2RetryThreshold) && opts.l2RetryThreshold > 0
-      ? opts.l2RetryThreshold : 3;
-    this._killer = typeof opts.killer === 'function'
-      ? opts.killer
-      : (pid) => { try { process.kill(pid, 'SIGTERM'); } catch { /* 已退出/无权，忽略 */ } };
+    this._l2RetryThreshold =
+      Number.isInteger(opts.l2RetryThreshold) && opts.l2RetryThreshold > 0
+        ? opts.l2RetryThreshold
+        : 3;
+    this._killer =
+      typeof opts.killer === 'function'
+        ? opts.killer
+        : (pid) => {
+            try {
+              process.kill(pid, 'SIGTERM');
+            } catch {
+              /* 已退出/无权，忽略 */
+            }
+          };
     this._onTrip = typeof opts.onTrip === 'function' ? opts.onTrip : () => {};
     this._tripped = false;
     this._tripReason = null;
@@ -38,16 +47,24 @@ class BreachBreaker {
     this._events = [];
   }
 
-  get tripped() { return this._tripped; }
-  get reason() { return this._tripReason; }
+  get tripped() {
+    return this._tripped;
+  }
+  get reason() {
+    return this._tripReason;
+  }
 
   /** 登记一个本会话产生的子进程 PID，供跳闸时清场。 */
   registerChild(pid) {
-    if (Number.isInteger(pid) && pid > 0) this._childPids.add(pid);
+    if (Number.isInteger(pid) && pid > 0) {
+      this._childPids.add(pid);
+    }
   }
 
   /** 子进程正常退出，注销登记。 */
-  unregisterChild(pid) { this._childPids.delete(pid); }
+  unregisterChild(pid) {
+    this._childPids.delete(pid);
+  }
 
   /**
    * 上报一次旁路标记探测结果。markers 非空 → 立即跳闸（零容忍）。
@@ -68,26 +85,40 @@ class BreachBreaker {
   reportDeniedL2() {
     this._deniedL2 += 1;
     if (this._deniedL2 >= this._l2RetryThreshold) {
-      this._trip(`L2 高危请求被拒达 ${this._deniedL2} 次（阈值 ${this._l2RetryThreshold}），判定反复硬闯`);
+      this._trip(
+        `L2 高危请求被拒达 ${this._deniedL2} 次（阈值 ${this._l2RetryThreshold}），判定反复硬闯`
+      );
       return true;
     }
     return false;
   }
 
   /** 熔断后该调用是否必须被拒。跳闸后恒为 true。 */
-  shouldBlock() { return this._tripped; }
+  shouldBlock() {
+    return this._tripped;
+  }
 
   _trip(reason) {
-    if (this._tripped) return; // 已跳闸，幂等
+    if (this._tripped) {
+      return;
+    } // 已跳闸，幂等
     this._tripped = true;
     this._tripReason = reason;
     this._events.push(reason);
     // 清场：终止所有登记在册的子进程。killer 自身异常不得反噬熔断流程。
     for (const pid of this._childPids) {
-      try { this._killer(pid); } catch { /* swallow */ }
+      try {
+        this._killer(pid);
+      } catch {
+        /* swallow */
+      }
     }
     this._childPids.clear();
-    try { this._onTrip(reason); } catch { /* swallow */ }
+    try {
+      this._onTrip(reason);
+    } catch {
+      /* swallow */
+    }
   }
 
   /** 随会话清零；熔断状态不可在会话内自愈，只能整体重置。 */

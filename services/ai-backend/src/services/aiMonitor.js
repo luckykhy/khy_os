@@ -132,14 +132,17 @@ function getTraces(filter = {}) {
   let results = [..._traces];
 
   if (filter.provider) {
-    results = results.filter(t => t.request?.adapter === filter.provider || t.response?.provider === filter.provider);
+    results = results.filter(
+      (t) => t.request?.adapter === filter.provider || t.response?.provider === filter.provider
+    );
   }
   if (filter.success !== undefined) {
-    results = results.filter(t => t.success === filter.success);
+    results = results.filter((t) => t.success === filter.success);
   }
   if (filter.since) {
-    const since = typeof filter.since === 'number' ? filter.since : new Date(filter.since).getTime();
-    results = results.filter(t => t.startTime >= since);
+    const since =
+      typeof filter.since === 'number' ? filter.since : new Date(filter.since).getTime();
+    results = results.filter((t) => t.startTime >= since);
   }
 
   // Sort newest first
@@ -158,7 +161,7 @@ function getTraces(filter = {}) {
  */
 function getStats() {
   const total = _totalCount;
-  const successRate = total > 0 ? (_successCount / total * 100).toFixed(1) : '0.0';
+  const successRate = total > 0 ? ((_successCount / total) * 100).toFixed(1) : '0.0';
   const avgLatency = _successCount > 0 ? Math.round(_totalLatencyMs / _successCount) : 0;
 
   // Per-provider breakdown
@@ -176,10 +179,14 @@ function getStats() {
   }
 
   for (const key of Object.keys(providers)) {
-    providers[key].avgLatency = providers[key].success > 0
-      ? Math.round(providers[key].totalLatency / providers[key].success) : 0;
-    providers[key].successRate = providers[key].total > 0
-      ? (providers[key].success / providers[key].total * 100).toFixed(1) : '0.0';
+    providers[key].avgLatency =
+      providers[key].success > 0
+        ? Math.round(providers[key].totalLatency / providers[key].success)
+        : 0;
+    providers[key].successRate =
+      providers[key].total > 0
+        ? ((providers[key].success / providers[key].total) * 100).toFixed(1)
+        : '0.0';
   }
 
   return {

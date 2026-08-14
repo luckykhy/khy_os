@@ -39,16 +39,29 @@ const _HELP_WORDS = new Set(['help', '-h', '--help', '帮助', '用法']);
  * @returns {{action:'run'|'status'|'stop'|'help', target:(string|null), valid:boolean, parseError:(string|null)}}
  */
 function parseAutofixArgs(args) {
-  const list = (Array.isArray(args) ? args : []).map((a) => String(a == null ? '' : a).trim()).filter((a) => a !== '');
-  if (list.length === 0) return { action: 'run', target: null, valid: true, parseError: null };
+  const list = (Array.isArray(args) ? args : [])
+    .map((a) => String(a == null ? '' : a).trim())
+    .filter((a) => a !== '');
+  if (list.length === 0) {
+    return { action: 'run', target: null, valid: true, parseError: null };
+  }
 
   const first = list[0].toLowerCase();
   let action = null;
   let rest = list;
-  if (_HELP_WORDS.has(first)) return { action: 'help', target: null, valid: true, parseError: null };
-  if (_RUN_WORDS.has(first)) { action = 'run'; rest = list.slice(1); }
-  else if (_STATUS_WORDS.has(first)) { action = 'status'; rest = list.slice(1); }
-  else if (_STOP_WORDS.has(first)) { action = 'stop'; rest = list.slice(1); }
+  if (_HELP_WORDS.has(first)) {
+    return { action: 'help', target: null, valid: true, parseError: null };
+  }
+  if (_RUN_WORDS.has(first)) {
+    action = 'run';
+    rest = list.slice(1);
+  } else if (_STATUS_WORDS.has(first)) {
+    action = 'status';
+    rest = list.slice(1);
+  } else if (_STOP_WORDS.has(first)) {
+    action = 'stop';
+    rest = list.slice(1);
+  }
 
   if (action === null) {
     // 第一个 token 不是动作词 —— 当作目标(PR 号/分支),动作默认 run。
@@ -61,7 +74,9 @@ function parseAutofixArgs(args) {
 
 function _normalizeTarget(raw) {
   const t = String(raw == null ? '' : raw).trim();
-  if (t === '') return null;
+  if (t === '') {
+    return null;
+  }
   // 去掉前缀 # / PR 字样,仅作线索透传,绝不在此解析仓库。
   return t.replace(/^#/, '').trim() || null;
 }
@@ -79,27 +94,53 @@ function decideFixPlan(input) {
   const modelAvailable = src.modelAvailable === true;
 
   if (ci.error || (!ci.classification && !ci.status)) {
-    return { proceed: false, kind: 'no_ci', ciClass: null,
-      reason: ci.error ? String(ci.error) : '未检测到 CI 平台(需 gh 或 glab CLI 已安装并登录)。' };
+    return {
+      proceed: false,
+      kind: 'no_ci',
+      ciClass: null,
+      reason: ci.error ? String(ci.error) : '未检测到 CI 平台(需 gh 或 glab CLI 已安装并登录)。',
+    };
   }
   const cls = String(ci.classification || '').toLowerCase();
 
   if (cls === 'pass') {
-    return { proceed: false, kind: 'already_pass', ciClass: cls, reason: '当前分支 CI 已通过,无需修复。' };
+    return {
+      proceed: false,
+      kind: 'already_pass',
+      ciClass: cls,
+      reason: '当前分支 CI 已通过,无需修复。',
+    };
   }
   if (cls === 'pending') {
-    return { proceed: false, kind: 'pending', ciClass: cls, reason: 'CI 仍在进行中,待其得出结论后再修复(可用 /ci watch 等待)。' };
+    return {
+      proceed: false,
+      kind: 'pending',
+      ciClass: cls,
+      reason: 'CI 仍在进行中,待其得出结论后再修复(可用 /ci watch 等待)。',
+    };
   }
   if (cls === 'fail') {
     if (!modelAvailable) {
-      return { proceed: false, kind: 'no_model', ciClass: cls,
-        reason: 'CI 失败,但当前无可用模型派发修复智能体(Tier A);请先用 /model 配置可用通道后重试。' };
+      return {
+        proceed: false,
+        kind: 'no_model',
+        ciClass: cls,
+        reason: 'CI 失败,但当前无可用模型派发修复智能体(Tier A);请先用 /model 配置可用通道后重试。',
+      };
     }
-    return { proceed: true, kind: 'fix', ciClass: cls,
-      reason: 'CI 失败 —— 将在本地工作树运行「审计→修复→重审」闭环修复严重/高优先级问题。' };
+    return {
+      proceed: true,
+      kind: 'fix',
+      ciClass: cls,
+      reason: 'CI 失败 —— 将在本地工作树运行「审计→修复→重审」闭环修复严重/高优先级问题。',
+    };
   }
-  return { proceed: false, kind: 'unknown', ciClass: cls || 'unknown',
-    reason: 'CI 结论未知,保守起见不自动修复(可用 /ci status 查看详情)。' };
+  return {
+    proceed: false,
+    kind: 'unknown',
+    ciClass: cls || 'unknown',
+    reason: 'CI 结论未知,保守起见不自动修复(可用 /ci status 查看详情)。',
+  };
 }
 
 /** 渲染 CI 状态文本(action=status,或 run 的前置披露)。 */
@@ -107,15 +148,23 @@ function buildCiStatusText(ciResult, target) {
   const ci = ciResult && typeof ciResult === 'object' ? ciResult : {};
   const lines = [];
   lines.push('🔧 autofix-pr · CI 状态');
-  if (target) lines.push(`  目标线索: ${target}(本地修复当前分支工作树;khy 不远程操作他人 PR)`);
+  if (target) {
+    lines.push(`  目标线索: ${target}(本地修复当前分支工作树;khy 不远程操作他人 PR)`);
+  }
   if (ci.error || (!ci.classification && !ci.status)) {
     lines.push(`  CI: 不可用 —— ${ci.error ? String(ci.error) : '未检测到 CI 平台'}`);
     return lines.join('\n');
   }
   lines.push(`  平台: ${ci.platform || '未知'}`);
-  lines.push(`  结论: ${_classLabel(ci.classification)}${ci.conclusion ? `(${ci.conclusion})` : ''}`);
-  if (ci.name) lines.push(`  工作流: ${ci.name}`);
-  if (ci.url) lines.push(`  链接: ${ci.url}`);
+  lines.push(
+    `  结论: ${_classLabel(ci.classification)}${ci.conclusion ? `(${ci.conclusion})` : ''}`
+  );
+  if (ci.name) {
+    lines.push(`  工作流: ${ci.name}`);
+  }
+  if (ci.url) {
+    lines.push(`  链接: ${ci.url}`);
+  }
   return lines.join('\n');
 }
 
@@ -142,21 +191,31 @@ function buildOutcomeText(afResult) {
   const lines = [];
   lines.push('🔧 autofix-pr · 本地修复结果');
   if (outcome === 'clean') {
-    lines.push('  审计未发现需修复的严重/高优先级问题(CI 失败可能由环境/外部因素导致,请查看 CI 日志)。');
+    lines.push(
+      '  审计未发现需修复的严重/高优先级问题(CI 失败可能由环境/外部因素导致,请查看 CI 日志)。'
+    );
   } else if (outcome === 'fixed') {
     const fixed = _countFixed(r);
-    lines.push(`  ✓ 已自动修复${fixed > 0 ? ` ${fixed} 项` : ''}严重/高优先级问题并通过重审。请重新触发 CI 验证。`);
+    lines.push(
+      `  ✓ 已自动修复${fixed > 0 ? ` ${fixed} 项` : ''}严重/高优先级问题并通过重审。请重新触发 CI 验证。`
+    );
   } else if (outcome === 'exhausted') {
     const remaining = _intNonNeg(r.totalActionableRemaining);
-    lines.push(`  ⚠ 经自动审计与修复后,仍有 ${remaining} 个严重/高优先级问题需人工关注(已达有界轮数上限)。`);
+    lines.push(
+      `  ⚠ 经自动审计与修复后,仍有 ${remaining} 个严重/高优先级问题需人工关注(已达有界轮数上限)。`
+    );
   } else if (outcome === 'error') {
-    lines.push(`  ✗ 修复闭环出错:${r.error ? String(r.error) : '未知错误'}(未对工作树造成保留性改动)。`);
+    lines.push(
+      `  ✗ 修复闭环出错:${r.error ? String(r.error) : '未知错误'}(未对工作树造成保留性改动)。`
+    );
   } else {
     lines.push('  修复闭环未返回有效结果。');
   }
   const fixedFiles = Array.isArray(r.filesFixed) ? r.filesFixed : [];
   if (fixedFiles.length > 0) {
-    lines.push(`  改动文件: ${fixedFiles.slice(0, 10).join(', ')}${fixedFiles.length > 10 ? ` …(+${fixedFiles.length - 10})` : ''}`);
+    lines.push(
+      `  改动文件: ${fixedFiles.slice(0, 10).join(', ')}${fixedFiles.length > 10 ? ` …(+${fixedFiles.length - 10})` : ''}`
+    );
   }
   return lines.join('\n');
 }
@@ -197,28 +256,38 @@ function buildUnknownText() {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_AUTOFIX_PR === undefined ? 'true' : e.KHY_AUTOFIX_PR;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 
 // ── 内部纯助手 ───────────────────────────────────────────────────────────────
 function _classLabel(cls) {
   switch (String(cls || '').toLowerCase()) {
-    case 'pass': return '通过 ✓';
-    case 'fail': return '失败 ✗';
-    case 'pending': return '进行中 …';
-    default: return '未知';
+    case 'pass':
+      return '通过 ✓';
+    case 'fail':
+      return '失败 ✗';
+    case 'pending':
+      return '进行中 …';
+    default:
+      return '未知';
   }
 }
+
 function _countFixed(r) {
   const rounds = Array.isArray(r && r.rounds) ? r.rounds : [];
   return rounds
     .filter((x) => x && x.fixed && x.fixReport)
-    .reduce((n, x) => n + (_intNonNeg(x.fixReport.fixed)), 0);
+    .reduce((n, x) => n + _intNonNeg(x.fixReport.fixed), 0);
 }
+
 function _intNonNeg(v) {
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return 0;
+  if (!Number.isFinite(n) || n <= 0) {
+    return 0;
+  }
   return Math.floor(n);
 }
 

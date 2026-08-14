@@ -18,7 +18,15 @@ const VSCODE_COPILOT_PATHS = [
 
 const VSCODE_STORAGE_PATHS = [
   path.join(os.homedir(), '.config', 'Code', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Code', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Code',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Code', 'User', 'globalStorage', 'storage.json'),
 ];
 
@@ -41,7 +49,9 @@ function readCopilotToken() {
         const token = data['github.com']?.oauth_token;
         if (token) return { accessToken: token, source: 'copilot' };
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return null;
 }
@@ -50,7 +60,10 @@ function detect(forceRefresh = false) {
   if (_available !== null && !forceRefresh) return _available;
 
   _token = readCopilotToken();
-  if (_token) { _available = true; return true; }
+  if (_token) {
+    _available = true;
+    return true;
+  }
 
   // Check if VS Code is installed
   try {
@@ -64,7 +77,7 @@ function detect(forceRefresh = false) {
 }
 
 async function listModels() {
-  return KNOWN_MODELS.map(m => ({ ...m, provider: 'vscode', description: '' }));
+  return KNOWN_MODELS.map((m) => ({ ...m, provider: 'vscode', description: '' }));
 }
 
 async function generate(prompt, options = {}) {
@@ -72,8 +85,10 @@ async function generate(prompt, options = {}) {
     _token = readCopilotToken();
     if (!_token) {
       return {
-        success: false, content: 'VS Code Copilot token not found',
-        provider: 'VSCode', adapter: 'vscode',
+        success: false,
+        content: 'VS Code Copilot token not found',
+        provider: 'VSCode',
+        adapter: 'vscode',
         attempts: [{ provider: 'VSCode', success: false, error: 'No token' }],
       };
     }
@@ -88,57 +103,77 @@ async function generate(prompt, options = {}) {
       stream: false,
     });
 
-    const req = https.request({
-      hostname: 'api.githubcopilot.com',
-      port: 443,
-      path: '/chat/completions',
-      method: 'POST',
-      headers: sanitizeOutgoingHeaders({
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_token.accessToken}`,
-        'Editor-Version': 'vscode/1.100.0',
-        'Editor-Plugin-Version': 'copilot-chat/0.30.0',
-        'Openai-Organization': 'github-copilot',
-        'Content-Length': Buffer.byteLength(body),
-      }),
-      timeout: TIMEOUT_MS,
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.choices?.[0]) {
+    const req = https.request(
+      {
+        hostname: 'api.githubcopilot.com',
+        port: 443,
+        path: '/chat/completions',
+        method: 'POST',
+        headers: sanitizeOutgoingHeaders({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${_token.accessToken}`,
+          'Editor-Version': 'vscode/1.100.0',
+          'Editor-Plugin-Version': 'copilot-chat/0.30.0',
+          'Openai-Organization': 'github-copilot',
+          'Content-Length': Buffer.byteLength(body),
+        }),
+        timeout: TIMEOUT_MS,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (json.choices?.[0]) {
+              resolve({
+                success: true,
+                content: json.choices[0].message.content,
+                provider: `VSCode Copilot (${model})`,
+                adapter: 'vscode',
+                attempts: [{ provider: 'VSCode', success: true }],
+              });
+            } else {
+              resolve({
+                success: false,
+                content: json.error?.message || 'Unknown error',
+                provider: 'VSCode',
+                adapter: 'vscode',
+                attempts: [{ provider: 'VSCode', success: false, error: json.error?.message }],
+              });
+            }
+          } catch (e) {
             resolve({
-              success: true, content: json.choices[0].message.content,
-              provider: `VSCode Copilot (${model})`, adapter: 'vscode',
-              attempts: [{ provider: 'VSCode', success: true }],
-            });
-          } else {
-            resolve({
-              success: false, content: json.error?.message || 'Unknown error',
-              provider: 'VSCode', adapter: 'vscode',
-              attempts: [{ provider: 'VSCode', success: false, error: json.error?.message }],
+              success: false,
+              content: e.message,
+              provider: 'VSCode',
+              adapter: 'vscode',
+              attempts: [{ provider: 'VSCode', success: false, error: e.message }],
             });
           }
-        } catch (e) {
-          resolve({
-            success: false, content: e.message,
-            provider: 'VSCode', adapter: 'vscode',
-            attempts: [{ provider: 'VSCode', success: false, error: e.message }],
-          });
-        }
+        });
+      }
+    );
+
+    req.on('error', (err) =>
+      resolve({
+        success: false,
+        content: err.message,
+        provider: 'VSCode',
+        adapter: 'vscode',
+        attempts: [{ provider: 'VSCode', success: false, error: err.message }],
+      })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({
+        success: false,
+        content: 'Request timeout',
+        provider: 'VSCode',
+        adapter: 'vscode',
+        attempts: [{ provider: 'VSCode', success: false, error: 'timeout' }],
       });
     });
-
-    req.on('error', (err) => resolve({
-      success: false, content: err.message, provider: 'VSCode', adapter: 'vscode',
-      attempts: [{ provider: 'VSCode', success: false, error: err.message }],
-    }));
-    req.on('timeout', () => { req.destroy(); resolve({
-      success: false, content: 'Request timeout', provider: 'VSCode', adapter: 'vscode',
-      attempts: [{ provider: 'VSCode', success: false, error: 'timeout' }],
-    }); });
     req.write(body);
     req.end();
   });
@@ -156,6 +191,9 @@ function getStatus() {
   };
 }
 
-function destroy() { _available = null; _token = null; }
+function destroy() {
+  _available = null;
+  _token = null;
+}
 
 module.exports = { detect, listModels, generate, getStatus, destroy };

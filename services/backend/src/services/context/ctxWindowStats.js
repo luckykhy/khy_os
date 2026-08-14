@@ -11,17 +11,23 @@
  * 调用方从 aiGateway 适配器真值传入;缺失时回退到注入的 env.KHY_CONTEXT_WINDOW(默认 128000)。
  * 阈值 env 可覆盖:KHY_CTX_WARN_PCT(默认 75)、KHY_CTX_CRIT_PCT(默认 90)。
  *
- * 注意:本文件刻意不在注释里书写 require-调用样式,避免架构债扫描器误判幽灵依赖。零依赖。
+ * 注意:本文件刻意不在注释里书写 require-调用样式,避免架构债扫描器误判幽灵依赖。
+ * 唯一依赖:constants/contextWindowDefaults(纯常量叶) —— 回退上限的单一真源,
+ * 使显示分母与压缩预算对同一个未知模型永不给出不同的数。
  */
 
-const _DEFAULT_FALLBACK_LIMIT = 128000;
+const { UNKNOWN_MODEL_CONTEXT_WINDOW } = require('../../constants/contextWindowDefaults');
+
+const _DEFAULT_FALLBACK_LIMIT = UNKNOWN_MODEL_CONTEXT_WINDOW;
 const _DEFAULT_WARN_PCT = 75;
 const _DEFAULT_CRIT_PCT = 90;
 
 /** 安全转非负整数;非有限/负 → 0。 */
 function _nonNegInt(v) {
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return 0;
+  if (!Number.isFinite(n) || n <= 0) {
+    return 0;
+  }
   return Math.floor(n);
 }
 
@@ -36,7 +42,9 @@ function _fallbackLimit(env) {
 function _pct(env, key, dflt) {
   const raw = env && env[key];
   const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0 || n > 100) return dflt;
+  if (!Number.isFinite(n) || n <= 0 || n > 100) {
+    return dflt;
+  }
   return Math.floor(n);
 }
 
@@ -71,8 +79,11 @@ function computeContextStats(input = {}, env = {}) {
   const percentUsed = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
 
   let status = 'healthy';
-  if (percentUsed >= critPct) status = 'critical';
-  else if (percentUsed >= warnPct) status = 'warning';
+  if (percentUsed >= critPct) {
+    status = 'critical';
+  } else if (percentUsed >= warnPct) {
+    status = 'warning';
+  }
 
   const sessionInput = _nonNegInt(input.sessionInput);
   const sessionOutput = _nonNegInt(input.sessionOutput);

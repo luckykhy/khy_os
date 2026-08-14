@@ -25,12 +25,13 @@
  * 不参与路由计算（路由器只读查询），因此「同意图同指纹同结果」铁律不破。
  */
 
+const evoLedger = require('../evoEngine/evoLedger');
+
+const { CompatibilityQuencher } = require('./compatibilityQuencher');
 const { EnvFingerprintScanner } = require('./envFingerprintScanner');
 const { NativeAffinityRouter, ROUTE_STATUS } = require('./nativeAffinityRouter');
-const { CompatibilityQuencher } = require('./compatibilityQuencher');
-const { SpecialtyBreaker, FUSE_CAUSE } = require('./specialtyBreaker');
 const { PLATFORM, topologyFor } = require('./platformIds');
-const evoLedger = require('../evoEngine/evoLedger');
+const { SpecialtyBreaker, FUSE_CAUSE } = require('./specialtyBreaker');
 
 const DEFAULT_BRANCH = 'envsymbiosis_pool';
 
@@ -64,7 +65,7 @@ class EnvSymbiosis {
    * }}
    */
   dispatch(intent) {
-    const fingerprint = this.scan();           // 防呆③：执行前必先取指纹
+    const fingerprint = this.scan(); // 防呆③：执行前必先取指纹
     const route = this.router.route(intent, fingerprint);
 
     switch (route.status) {
@@ -117,28 +118,41 @@ class EnvSymbiosis {
 
   /** 读取环境需求池（不可变哈希链拷贝）。 */
   pool() {
-    try { return this.ledger.read({ branch: this.branch }); } catch { return []; }
+    try {
+      return this.ledger.read({ branch: this.branch });
+    } catch {
+      return [];
+    }
   }
 
   /** 校验需求池链完整性（防呆⑤ 进化历史不可篡改，复用 evoLedger）。 */
   verifyPool() {
-    try { return this.ledger.verify({ branch: this.branch }); }
-    catch { return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' }; }
+    try {
+      return this.ledger.verify({ branch: this.branch });
+    } catch {
+      return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' };
+    }
   }
 
   _log(kind, quench) {
     try {
-      return this.ledger.append(kind, {
-        source: 'env-symbiosis',
-        env_scope: quench.env_scope,           // 防呆②：环境标记落账，需求永不脱离其 env_scope
-        kind: quench.kind,
-        specialty: quench.specialty,
-        requirementId: quench.requirement.id,
-        level: quench.requirement.level,
-        priority: quench.priority,
-        rollback: !!quench.rollback,
-      }, { branch: this.branch });
-    } catch { return { ok: false }; }
+      return this.ledger.append(
+        kind,
+        {
+          source: 'env-symbiosis',
+          env_scope: quench.env_scope, // 防呆②：环境标记落账，需求永不脱离其 env_scope
+          kind: quench.kind,
+          specialty: quench.specialty,
+          requirementId: quench.requirement.id,
+          level: quench.requirement.level,
+          priority: quench.priority,
+          rollback: !!quench.rollback,
+        },
+        { branch: this.branch }
+      );
+    } catch {
+      return { ok: false };
+    }
   }
 }
 

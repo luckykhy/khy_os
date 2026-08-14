@@ -78,16 +78,16 @@ class NotificationService {
         isSticky: announcement.isSticky,
         isPopup: announcement.isPopup,
         publishAt: announcement.publishAt,
-        author: announcement.author
+        author: announcement.author,
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     let sentCount = 0;
 
     // 向所有连接的用户发送通知
     this.connections.forEach((wsSet, userId) => {
-      wsSet.forEach(ws => {
+      wsSet.forEach((ws) => {
         if (ws.readyState === ws.OPEN) {
           try {
             ws.send(JSON.stringify(notification));
@@ -115,13 +115,15 @@ class NotificationService {
     }
 
     let sent = false;
-    this.connections.get(userId).forEach(ws => {
+    this.connections.get(userId).forEach((ws) => {
       if (ws.readyState === ws.OPEN) {
         try {
-          ws.send(JSON.stringify({
-            ...notification,
-            timestamp: new Date().toISOString()
-          }));
+          ws.send(
+            JSON.stringify({
+              ...notification,
+              timestamp: new Date().toISOString(),
+            })
+          );
           sent = true;
         } catch (error) {
           console.error(`发送个人通知失败 (用户${userId}):`, error);
@@ -139,13 +141,15 @@ class NotificationService {
   sendToAdmins(notification) {
     let sentCount = 0;
 
-    this.adminConnections.forEach(ws => {
+    this.adminConnections.forEach((ws) => {
       if (ws.readyState === ws.OPEN) {
         try {
-          ws.send(JSON.stringify({
-            ...notification,
-            timestamp: new Date().toISOString()
-          }));
+          ws.send(
+            JSON.stringify({
+              ...notification,
+              timestamp: new Date().toISOString(),
+            })
+          );
           sentCount++;
         } catch (error) {
           console.error('发送管理员通知失败:', error);
@@ -161,15 +165,18 @@ class NotificationService {
    * 获取连接统计信息
    */
   getStats() {
-    const userConnections = Array.from(this.connections.entries()).reduce((total, [userId, wsSet]) => {
-      return total + wsSet.size;
-    }, 0);
+    const userConnections = Array.from(this.connections.entries()).reduce(
+      (total, [userId, wsSet]) => {
+        return total + wsSet.size;
+      },
+      0
+    );
 
     return {
       totalUsers: this.connections.size,
       totalConnections: userConnections,
       adminConnections: this.adminConnections.size,
-      totalAll: userConnections + this.adminConnections.size
+      totalAll: userConnections + this.adminConnections.size,
     };
   }
 
@@ -202,16 +209,16 @@ class NotificationService {
       data: {
         message,
         type,
-        title: '系统通知'
+        title: '系统通知',
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     let sentCount = 0;
 
     // 向所有连接发送系统通知
     this.connections.forEach((wsSet) => {
-      wsSet.forEach(ws => {
+      wsSet.forEach((ws) => {
         if (ws.readyState === ws.OPEN) {
           try {
             ws.send(JSON.stringify(notification));
@@ -224,7 +231,7 @@ class NotificationService {
     });
 
     // 也向管理员发送
-    this.adminConnections.forEach(ws => {
+    this.adminConnections.forEach((ws) => {
       if (ws.readyState === ws.OPEN) {
         try {
           ws.send(JSON.stringify(notification));
@@ -246,14 +253,14 @@ class NotificationService {
   broadcast(message) {
     const notification = {
       ...message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     let sentCount = 0;
 
     // 向所有用户连接广播
     this.connections.forEach((wsSet) => {
-      wsSet.forEach(ws => {
+      wsSet.forEach((ws) => {
         if (ws.readyState === ws.OPEN) {
           try {
             ws.send(JSON.stringify(notification));
@@ -266,7 +273,7 @@ class NotificationService {
     });
 
     // 也向管理员广播
-    this.adminConnections.forEach(ws => {
+    this.adminConnections.forEach((ws) => {
       if (ws.readyState === ws.OPEN) {
         try {
           ws.send(JSON.stringify(notification));

@@ -29,15 +29,21 @@ function speak(text, options = {}, deps = {}) {
 
 /** 停止朗读。 */
 function stopSpeaking(deps = {}) {
-  try { _voice(deps).stopSpeaking(); return { success: true }; }
-  catch (err) { return { success: false, error: (err && err.message) || String(err) }; }
+  try {
+    _voice(deps).stopSpeaking();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err && err.message) || String(err) };
+  }
 }
 
 /** 耳：录音并转写为文本。 */
 async function listen(options = {}, deps = {}) {
   try {
     const res = await _voice(deps).listen(options);
-    if (res && res.error) return { success: false, error: res.error };
+    if (res && res.error) {
+      return { success: false, error: res.error };
+    }
     return { success: true, text: (res && res.text) || '', duration: (res && res.duration) || 0 };
   } catch (err) {
     return { success: false, error: `STT 失败：${(err && err.message) || String(err)}` };
@@ -53,7 +59,10 @@ function capabilities(deps = {}) {
       ears: { available: !!(caps && caps.stt), provider: (caps && caps.stt) || null },
     };
   } catch {
-    return { mouth: { available: false, provider: null }, ears: { available: false, provider: null } };
+    return {
+      mouth: { available: false, provider: null },
+      ears: { available: false, provider: null },
+    };
   }
 }
 

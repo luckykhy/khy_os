@@ -26,7 +26,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_SUBAGENT_TEXT_STREAM;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -48,8 +50,12 @@ const _PREVIEW_MAX = 72;
  */
 function textFromChunk(chunk) {
   try {
-    if (chunk == null) return '';
-    if (typeof chunk === 'string') return chunk;
+    if (chunk == null) {
+      return '';
+    }
+    if (typeof chunk === 'string') {
+      return chunk;
+    }
     if (typeof chunk === 'object' && chunk.type === 'text' && typeof chunk.text === 'string') {
       return chunk.text;
     }
@@ -70,7 +76,9 @@ function appendDelta(buf, delta) {
   try {
     const base = typeof buf === 'string' ? buf : '';
     const add = typeof delta === 'string' ? delta : String(delta == null ? '' : delta);
-    if (!add) return base;
+    if (!add) {
+      return base;
+    }
     const merged = base + add;
     return merged.length > _BUF_CAP ? merged.slice(merged.length - _BUF_CAP) : merged;
   } catch {
@@ -89,15 +97,24 @@ function appendDelta(buf, delta) {
 function previewLine(buf, max = _PREVIEW_MAX) {
   try {
     const s = typeof buf === 'string' ? buf : '';
-    if (!s) return '';
+    if (!s) {
+      return '';
+    }
     const lines = s.split(/\r?\n/);
     let last = '';
     for (let i = lines.length - 1; i >= 0; i--) {
-      const t = String(lines[i] || '').replace(/\s+/g, ' ').trim();
-      if (t) { last = t; break; }
+      const t = String(lines[i] || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (t) {
+        last = t;
+        break;
+      }
     }
-    if (!last) return '';
-    const n = Number.isFinite(max) && max > 1 ? (max | 0) : _PREVIEW_MAX;
+    if (!last) {
+      return '';
+    }
+    const n = Number.isFinite(max) && max > 1 ? max | 0 : _PREVIEW_MAX;
     return last.length > n ? `${last.slice(0, n - 1)}…` : last;
   } catch {
     return '';
@@ -110,7 +127,10 @@ function previewLine(buf, max = _PREVIEW_MAX) {
  * @returns {{type:'agent_text', text:string}}
  */
 function buildAgentTextEvent(text) {
-  return { type: 'agent_text', text: typeof text === 'string' ? text : String(text == null ? '' : text) };
+  return {
+    type: 'agent_text',
+    text: typeof text === 'string' ? text : String(text == null ? '' : text),
+  };
 }
 
 /** 自描述(给工具 / CLI / 文档 / 提示词用)。 */
@@ -120,8 +140,9 @@ function describeSubAgentTextStream() {
     defaultOn: true,
     bufferCap: _BUF_CAP,
     previewMax: _PREVIEW_MAX,
-    summary: '子 agent 正文 token 实时上浮到父级 agent 树的 detail 子行(对齐 Claude Code 流式 prose);'
-      + '门控关则只流工具 status,不发 agent_text 事件(字节回退)。',
+    summary:
+      '子 agent 正文 token 实时上浮到父级 agent 树的 detail 子行(对齐 Claude Code 流式 prose);' +
+      '门控关则只流工具 status,不发 agent_text 事件(字节回退)。',
   };
 }
 

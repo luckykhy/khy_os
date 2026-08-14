@@ -15,10 +15,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const PROJECT_CONFIG_PATTERN = '{package.json,pom.xml,Cargo.toml,go.mod,requirements.txt,pyproject.toml,build.gradle,CMakeLists.txt}';
+const PROJECT_CONFIG_PATTERN =
+  '{package.json,pom.xml,Cargo.toml,go.mod,requirements.txt,pyproject.toml,build.gradle,CMakeLists.txt}';
 const EDIT_TOOL_RE = /^(editFile|edit_file|edit|write_file|writeFile|scaffoldFiles|apply_patch)$/i;
-const SCAFFOLD_SIGNAL_RE = /\b(create|scaffold|bootstrap|generate|init|starter|boilerplate|from scratch|new (?:app|project|service|cli)|创建|新建|搭建|脚手架|初始化)\b/i;
-const CONTAINER_SIGNAL_RE = /\b(docker|dockerfile|container|compose|docker-compose|k8s|kubernetes|容器|镜像)\b/i;
+const SCAFFOLD_SIGNAL_RE =
+  /\b(create|scaffold|bootstrap|generate|init|starter|boilerplate|from scratch|new (?:app|project|service|cli)|创建|新建|搭建|脚手架|初始化)\b/i;
+const CONTAINER_SIGNAL_RE =
+  /\b(docker|dockerfile|container|compose|docker-compose|k8s|kubernetes|容器|镜像)\b/i;
 const COMPOSE_SIGNAL_RE = /\b(docker[ -]?compose|docker-compose|compose|编排)\b/i;
 const TEST_SIGNAL_RE = /\b(test|tests|unit test|integration test|regression|验证|回归|测试)\b/i;
 const COMMON_TEST_DIRS = ['backend/tests', 'tests', 'test', '__tests__', 'unit_tests', 'API_tests'];
@@ -39,18 +42,24 @@ function _safeToolLog(toolCallLog) {
 }
 
 function _hasEditSignals(toolCallLog) {
-  return _safeToolLog(toolCallLog).some((entry) => EDIT_TOOL_RE.test(entry?.tool || entry?.name || ''));
+  return _safeToolLog(toolCallLog).some((entry) =>
+    EDIT_TOOL_RE.test(entry?.tool || entry?.name || '')
+  );
 }
 
 function _hasMatchingPath(toolCallLog, pattern) {
   return _safeToolLog(toolCallLog).some((entry) => {
-    const filePath = String(entry?.params?.path || entry?.params?.file_path || entry?.params?.filePath || '');
+    const filePath = String(
+      entry?.params?.path || entry?.params?.file_path || entry?.params?.filePath || ''
+    );
     return pattern.test(filePath);
   });
 }
 
 function _projectHasAny(projectRoot, relativePaths) {
-  if (!projectRoot) return false;
+  if (!projectRoot) {
+    return false;
+  }
   return relativePaths.some((relativePath) => fs.existsSync(path.join(projectRoot, relativePath)));
 }
 
@@ -152,6 +161,21 @@ const CODING_TEST_EVIDENCE_ACCEPTANCE = [
   },
 ];
 
+// 任务**显式提到测试/验证**时追加的强判据:真实运行项目测试并拿到 exit 0,
+// 而不是只看文件是否存在。由 deliveryGate.test_run_evidence 落地(复用
+// verificationAgent.verify 的真实 spawnSync 退出码)。required 由 buildAcceptancePack
+// 在 signals.testsMentioned 时置 true。
+const CODING_TEST_RUN_EVIDENCE = [
+  {
+    id: 'test_run_evidence',
+    label: 'Project tests actually run and pass (exit 0)',
+    phase: 5,
+    required: true,
+    check: 'custom',
+    validator: 'test_run_evidence',
+  },
+];
+
 const ULTRAWORK_ACCEPTANCE = [
   {
     id: 'plan_exists',
@@ -210,13 +234,20 @@ function buildAcceptancePack(options = {}) {
 
   const signals = {
     hasEditSignals: _hasEditSignals(toolCallLog),
-    scaffoldRequested: SCAFFOLD_SIGNAL_RE.test(combinedText) || _safeToolLog(toolCallLog).some((entry) => /scaffold/i.test(entry?.tool || entry?.name || '')),
-    containerRequested: CONTAINER_SIGNAL_RE.test(combinedText)
-      || _hasMatchingPath(toolCallLog, /(?:^|\/)(Dockerfile|docker-compose\.ya?ml|\.dockerignore)$/i)
-      || _projectHasAny(projectRoot, ['Dockerfile', 'docker-compose.yml', 'docker-compose.yaml']),
-    composeRequested: COMPOSE_SIGNAL_RE.test(combinedText)
-      || _hasMatchingPath(toolCallLog, /docker-compose\.ya?ml$/i)
-      || _projectHasAny(projectRoot, ['docker-compose.yml', 'docker-compose.yaml']),
+    scaffoldRequested:
+      SCAFFOLD_SIGNAL_RE.test(combinedText) ||
+      _safeToolLog(toolCallLog).some((entry) => /scaffold/i.test(entry?.tool || entry?.name || '')),
+    containerRequested:
+      CONTAINER_SIGNAL_RE.test(combinedText) ||
+      _hasMatchingPath(
+        toolCallLog,
+        /(?:^|\/)(Dockerfile|docker-compose\.ya?ml|\.dockerignore)$/i
+      ) ||
+      _projectHasAny(projectRoot, ['Dockerfile', 'docker-compose.yml', 'docker-compose.yaml']),
+    composeRequested:
+      COMPOSE_SIGNAL_RE.test(combinedText) ||
+      _hasMatchingPath(toolCallLog, /docker-compose\.ya?ml$/i) ||
+      _projectHasAny(projectRoot, ['docker-compose.yml', 'docker-compose.yaml']),
     testsMentioned: TEST_SIGNAL_RE.test(combinedText),
     projectHasTests: _hasVisibleTestAssets(projectRoot),
   };
@@ -237,15 +268,35 @@ function buildAcceptancePack(options = {}) {
   for (const mode of modes) {
     switch (_normalizeText(mode)) {
       case 'coding': {
-        activate('coding_core', 'Coding core evidence', CODING_ACCEPTANCE, 'Activated for every coding task.');
+        activate(
+          'coding_core',
+          'Coding core evidence',
+          CODING_ACCEPTANCE,
+          'Activated for every coding task.'
+        );
+        // 任务显式提到测试/验证 → test 判据升级为 required(有真实证据要求);
+        // 仅项目本身有测试时 → 非阻断就绪信号;两者皆无 → 仅激活非阻断就绪。
+        const testRequired = signals.testsMentioned;
+        const testCriteria = CODING_TEST_EVIDENCE_ACCEPTANCE.map((criterion) =>
+          testRequired ? { ...criterion, required: true } : criterion
+        );
         activate(
           'coding_test_evidence',
           'Coding test evidence',
-          CODING_TEST_EVIDENCE_ACCEPTANCE,
+          testCriteria,
           signals.projectHasTests || signals.testsMentioned
             ? 'Project already exposes tests or the task explicitly mentions verification.'
             : 'Activated as a non-blocking readiness signal for code delivery.'
         );
+        // 显式提到测试 → 额外要求真实跑通测试(exit 0),拒绝「写了测试但从不运行」。
+        if (signals.testsMentioned) {
+          activate(
+            'coding_test_run_evidence',
+            'Coding tests actually pass',
+            CODING_TEST_RUN_EVIDENCE,
+            'The task explicitly mentions tests/verification — require a real green test run.'
+          );
+        }
 
         if (signals.scaffoldRequested) {
           activate(
@@ -257,11 +308,11 @@ function buildAcceptancePack(options = {}) {
         }
 
         if (signals.containerRequested) {
-          const containerCriteria = CODING_CONTAINER_ACCEPTANCE.map((criterion) => (
+          const containerCriteria = CODING_CONTAINER_ACCEPTANCE.map((criterion) =>
             criterion.id === 'docker_compose'
               ? { ...criterion, required: signals.composeRequested || criterion.required }
               : criterion
-          ));
+          );
           activate(
             'coding_container_delivery',
             'Container delivery assets',
@@ -275,15 +326,30 @@ function buildAcceptancePack(options = {}) {
       }
 
       case 'ultrawork':
-        activate('ultrawork_plan', 'Ultrawork plan evidence', ULTRAWORK_ACCEPTANCE, 'Activated by ultrawork mode.');
+        activate(
+          'ultrawork_plan',
+          'Ultrawork plan evidence',
+          ULTRAWORK_ACCEPTANCE,
+          'Activated by ultrawork mode.'
+        );
         break;
 
       case 'analyze':
-        activate('analyze_evidence', 'Analyze evidence', ANALYZE_ACCEPTANCE, 'Activated by analyze mode.');
+        activate(
+          'analyze_evidence',
+          'Analyze evidence',
+          ANALYZE_ACCEPTANCE,
+          'Activated by analyze mode.'
+        );
         break;
 
       case 'goal':
-        activate('goal_delivery', 'Goal execution evidence', GOAL_ACCEPTANCE, 'Activated by goal mode.');
+        activate(
+          'goal_delivery',
+          'Goal execution evidence',
+          GOAL_ACCEPTANCE,
+          'Activated by goal mode.'
+        );
         break;
 
       default:
@@ -326,6 +392,7 @@ module.exports = {
   CODING_SCAFFOLD_ACCEPTANCE,
   CODING_CONTAINER_ACCEPTANCE,
   CODING_TEST_EVIDENCE_ACCEPTANCE,
+  CODING_TEST_RUN_EVIDENCE,
   ULTRAWORK_ACCEPTANCE,
   ANALYZE_ACCEPTANCE,
   GOAL_ACCEPTANCE,

@@ -38,7 +38,8 @@ const DEFAULT_HINTS = {
   NETWORK_ERROR: 'Check network connectivity; the operation can be retried',
   EXECUTION_ERROR: 'Review the error details and try a different approach',
   RESOURCE_NOT_FOUND: 'Verify the path/identifier exists before accessing it',
-  MISSING_DEPENDENCY: 'A required dependency is not installed; confirm the install to self-heal, or install it manually',
+  MISSING_DEPENDENCY:
+    'A required dependency is not installed; confirm the install to self-heal, or install it manually',
 };
 
 // ── ToolError Class ────────────────────────────────────────────────
@@ -57,7 +58,11 @@ class ToolError extends Error {
    *   as `error.details` ONLY when present, so the structured shape stays
    *   byte-identical for callers that never set it.
    */
-  constructor(code, message, { recoverable = true, hint = '', retryable = false, originalError = null, details = null } = {}) {
+  constructor(
+    code,
+    message,
+    { recoverable = true, hint = '', retryable = false, originalError = null, details = null } = {}
+  ) {
     super(message);
     this.name = 'ToolError';
     this.code = ERROR_CODES[code] || ERROR_CODES.EXECUTION_ERROR;
@@ -87,7 +92,9 @@ class ToolError extends Error {
     };
     // Additive: only surface `details` when populated so the shape stays
     // byte-identical for the (overwhelming majority of) callers that don't set it.
-    if (this.details != null) error.details = this.details;
+    if (this.details != null) {
+      error.details = this.details;
+    }
     return { success: false, error };
   }
 
@@ -97,7 +104,9 @@ class ToolError extends Error {
    */
   toAIContext() {
     const lines = [`[ERROR:${this.code}] ${this.message}`];
-    if (this.hint) lines.push(`Hint: ${this.hint}`);
+    if (this.hint) {
+      lines.push(`Hint: ${this.hint}`);
+    }
     lines.push(`Retryable: ${this.retryable ? 'yes' : 'no'}`);
     return lines.join('\n');
   }
@@ -127,7 +136,9 @@ class ToolError extends Error {
    * @returns {boolean}
    */
   static isToolError(err) {
-    return err instanceof ToolError || !!(err && err.name === 'ToolError' && err.code in ERROR_CODES);
+    return (
+      err instanceof ToolError || !!(err && err.name === 'ToolError' && err.code in ERROR_CODES)
+    );
   }
 }
 
@@ -141,10 +152,21 @@ class ToolError extends Error {
 function _inferCodeFromError(err) {
   const msg = (err.message || '').toLowerCase();
 
-  if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT' || msg.includes('timeout') || msg.includes('timed out')) {
+  if (
+    err.code === 'ETIMEDOUT' ||
+    err.code === 'ESOCKETTIMEDOUT' ||
+    msg.includes('timeout') ||
+    msg.includes('timed out')
+  ) {
     return 'TIMEOUT';
   }
-  if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN' || msg.includes('network') || msg.includes('fetch failed')) {
+  if (
+    err.code === 'ECONNREFUSED' ||
+    err.code === 'ENOTFOUND' ||
+    err.code === 'EAI_AGAIN' ||
+    msg.includes('network') ||
+    msg.includes('fetch failed')
+  ) {
     return 'NETWORK_ERROR';
   }
   // Missing dependency — only when the text explicitly points at an install
@@ -180,12 +202,18 @@ function _inferCodeFromError(err) {
  * @returns {object|null}
  */
 function _extractErrorDetails(err) {
-  if (!err || typeof err !== 'object') return null;
+  if (!err || typeof err !== 'object') {
+    return null;
+  }
   const details = {};
   for (const key of ['code', 'errno', 'syscall', 'path', 'exitCode', 'signal']) {
-    if (err[key] !== undefined && err[key] !== null) details[key] = err[key];
+    if (err[key] !== undefined && err[key] !== null) {
+      details[key] = err[key];
+    }
   }
-  if (err.name && err.name !== 'Error' && err.name !== 'ToolError') details.errorName = err.name;
+  if (err.name && err.name !== 'Error' && err.name !== 'ToolError') {
+    details.errorName = err.name;
+  }
   return Object.keys(details).length > 0 ? details : null;
 }
 

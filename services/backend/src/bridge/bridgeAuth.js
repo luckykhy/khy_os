@@ -9,8 +9,8 @@
  */
 'use strict';
 
-const path = require('path');
 const crypto = require('crypto');
+const path = require('path');
 
 let _db = null;
 let _jwtSecret = null;
@@ -19,8 +19,12 @@ let _jwtSecret = null;
 let _bcrypt, _jwt, _Database;
 
 function _loadDeps() {
-  if (!_bcrypt) _bcrypt = require('bcryptjs');
-  if (!_jwt) _jwt = require('jsonwebtoken');
+  if (!_bcrypt) {
+    _bcrypt = require('bcryptjs');
+  }
+  if (!_jwt) {
+    _jwt = require('jsonwebtoken');
+  }
   if (!_Database) {
     const mod = require('../config/sqlite-adapter');
     _Database = mod.default || mod;
@@ -28,17 +32,48 @@ function _loadDeps() {
 }
 
 function _getJwtSecret() {
-  if (_jwtSecret) return _jwtSecret;
-  _jwtSecret = process.env.JWT_SECRET
-    || process.env.BRIDGE_JWT_SECRET
-    || crypto.randomBytes(32).toString('hex');
+  if (_jwtSecret) {
+    return _jwtSecret;
+  }
+
+  // Honor explicit env vars first (matches main backend behavior).
+  if (process.env.JWT_SECRET || process.env.BRIDGE_JWT_SECRET) {
+    _jwtSecret = process.env.JWT_SECRET || process.env.BRIDGE_JWT_SECRET;
+    return _jwtSecret;
+  }
+
+  // Persist the secret to a file so tokens survive server restarts.
+  // Without this, a random secret on every restart invalidates all issued tokens.
+  const fs = require('fs');
+  const dataDir = path.resolve(__dirname, '../../data');
+  const secretPath = path.join(dataDir, '.bridge_jwt_secret');
+  try {
+    if (fs.existsSync(secretPath)) {
+      const persisted = fs.readFileSync(secretPath, 'utf-8').trim();
+      if (persisted && persisted.length >= 32) {
+        _jwtSecret = persisted;
+        return _jwtSecret;
+      }
+    }
+  } catch {
+    /* first run or unreadable — generate new */
+  }
+
+  _jwtSecret = crypto.randomBytes(32).toString('hex');
+  try {
+    fs.writeFileSync(secretPath, _jwtSecret, { mode: 0o600 });
+  } catch {
+    /* non-critical */
+  }
   return _jwtSecret;
 }
 
 // ── Database ──────────────────────────────────────────────────────
 
 function initUserDb() {
-  if (_db) return;
+  if (_db) {
+    return;
+  }
   _loadDeps();
 
   const dataDir = path.resolve(__dirname, '../../data');
@@ -46,7 +81,9 @@ function initUserDb() {
 
   // Ensure data/ directory exists
   const fs = require('fs');
-  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
 
   _db = new _Database(dbPath);
   _db.pragma('journal_mode = WAL');
@@ -62,20 +99,41 @@ function initUserDb() {
     );
   `);
 
-  // Seed default admin account if not exists — password from env or auto-generated.
-  const bridgeAdminPw = String(process.env.BRIDGE_DEFAULT_ADMIN_PASSWORD || '').trim();
-  if (!bridgeAdminPw) {
-    // Auto-generate a strong random password (same pattern as manageDbBootstrap).
-    // Logged so the operator can see it on first startup.
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const bytes = crypto.randomBytes(16);
-    const generated = Array.from(bytes).map(b => chars[b % chars.length]).join('');
-    const hash = _bcrypt.hashSync(generated, 10);
-    _db.prepare('INSERT OR IGNORE INTO users (username, password_hash) VALUES (?, ?)').run('admin05', hash);
-    console.log(`[bridgeAuth] seeded default admin05 (password: ${generated})`);
-  } else {
-    const hash = _bcrypt.hashSync(bridgeAdminPw, 10);
-    _db.prepare('INSERT OR IGNORE INTO users (username, password_hash) VALUES (?, ?)').run('admin05', hash);
+  // Seed the default admin account if absent — credentials come from the
+  // unified generator (OS-user-derived username + machine-derived password,
+  // persisted under .khy/credentials/). BRIDGE_DEFAULT_ADMIN_PASSWORD env
+  // still overrides the password (no credentials file written in that case).
+  // Idempotent: an existing account is never touched. Best-effort: seeding
+  // failure never blocks the auth DB from opening.
+  try {
+    const credGen = require('../services/credentialGenerator');
+    const bridgeAdminPw = String(process.env.BRIDGE_DEFAULT_ADMIN_PASSWORD || '').trim();
+    if (bridgeAdminPw) {
+      const username = credGen.resolveDefaultAdminUsername();
+      const existing = _db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+      if (!existing) {
+        const hash = _bcrypt.hashSync(bridgeAdminPw, 10);
+        _db
+          .prepare('INSERT OR IGNORE INTO users (username, password_hash) VALUES (?, ?)')
+          .run(username, hash);
+        console.log(`[bridgeAuth] 已生成初始管理员 ${username}，密码来自环境变量`);
+      }
+    } else {
+      const creds = credGen.loadOrCreateDefaultAdminCredentials();
+      const existing = _db.prepare('SELECT id FROM users WHERE username = ?').get(creds.username);
+      if (!existing) {
+        // Only the bcrypt hash is stored; plaintext lives in the credentials file.
+        const hash = _bcrypt.hashSync(creds.password, 10);
+        _db
+          .prepare('INSERT OR IGNORE INTO users (username, password_hash) VALUES (?, ?)')
+          .run(creds.username, hash);
+        console.log(
+          `[bridgeAuth] 已生成初始管理员 ${creds.username}，密码已保存至 ${creds.filePath || '环境变量'}`
+        );
+      }
+    }
+  } catch (err) {
+    console.warn(`[bridgeAuth] 默认管理员播种失败（目标: bridge-users.db）: ${err && err.message}`);
   }
 }
 
@@ -120,7 +178,9 @@ function loginUser(username, password) {
     return { ok: false, error: '请输入用户名和密码' };
   }
 
-  const user = _db.prepare('SELECT id, username, password_hash FROM users WHERE username = ?').get(username);
+  const user = _db
+    .prepare('SELECT id, username, password_hash FROM users WHERE username = ?')
+    .get(username);
   if (!user) {
     return { ok: false, error: '用户名或密码错误' };
   }
@@ -130,11 +190,9 @@ function loginUser(username, password) {
     return { ok: false, error: '用户名或密码错误' };
   }
 
-  const token = _jwt.sign(
-    { userId: user.id, username: user.username },
-    _getJwtSecret(),
-    { expiresIn: '7d' },
-  );
+  const token = _jwt.sign({ userId: user.id, username: user.username }, _getJwtSecret(), {
+    expiresIn: '7d',
+  });
 
   return { ok: true, token, username: user.username };
 }

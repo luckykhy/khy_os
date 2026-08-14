@@ -25,11 +25,16 @@
  *   GET  /health              — Channel health snapshot (Redis-backed)
  *   GET  /health/stream       — SSE real-time channel health updates
  */
-const express = require('express');
 const fs = require('fs');
 const path = require('path');
+
+const express = require('express');
+
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const { parseApiKeyEntries, extractPrimaryApiKey } = require('../services/apiKeyFormat');
+const maskSecret = require('../utils/maskSecret');
+const normalizeCompatibility = require('../utils/normalizeCompatibility');
+const patchEnvContent = require('../utils/patchEnvContent');
 const { resolveAnthropicBaseUrl } = require('../utils/proxyBaseUrl');
 const router = express.Router();
 
@@ -38,27 +43,34 @@ router.use(authenticateToken, requireAdmin);
 
 const resolveEnvPathsForGateway = require('../utils/resolveGatewayEnvPaths');
 
-const patchEnvContent = require('../utils/patchEnvContent');
-
 function writeGatewayEnvPatch(envMap = {}, unsetKeys = []) {
   const { canonicalPath, targets } = resolveEnvPathsForGateway();
   for (const filePath of targets) {
     let content = '';
-    try { content = fs.readFileSync(filePath, 'utf-8'); } catch { /* no .env yet */ }
+    try {
+      content = fs.readFileSync(filePath, 'utf-8');
+    } catch {
+      /* no .env yet */
+    }
     const patched = patchEnvContent(content, envMap, unsetKeys);
     fs.writeFileSync(filePath, patched, 'utf-8');
   }
-  for (const [key, value] of Object.entries(envMap)) process.env[key] = String(value);
-  for (const key of unsetKeys) delete process.env[key];
+  for (const [key, value] of Object.entries(envMap)) {
+    process.env[key] = String(value);
+  }
+  for (const key of unsetKeys) {
+    delete process.env[key];
+  }
   return canonicalPath;
 }
 
 // 收敛到 utils/normalizeCompatibility 单一真源(逐字节委托,调用点不变)
-const normalizeCompatibility = require('../utils/normalizeCompatibility');
 
 function normalizeOpenAiLikeBaseUrl(raw = '') {
   const input = String(raw || '').trim();
-  if (!input) return { ok: false, error: 'empty' };
+  if (!input) {
+    return { ok: false, error: 'empty' };
+  }
   let parsed = null;
   try {
     parsed = new URL(input);
@@ -90,14 +102,14 @@ function normalizeOpenAiLikeBaseUrl(raw = '') {
 }
 
 // 收敛到 utils/maskSecret 单一真源(逐字节委托,调用点不变)
-const maskSecret = require('../utils/maskSecret');
 
 function getModelConfigSnapshot() {
   const baseUrl = String(process.env.RELAY_API_ENDPOINT || '').trim();
   const modelId = String(process.env.RELAY_API_MODEL || '').trim();
   const preferredAdapter = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim();
   const preferredModel = String(process.env.GATEWAY_PREFERRED_MODEL || '').trim();
-  const compatibility = normalizeCompatibility(process.env.RELAY_API_COMPATIBILITY || 'openai') || 'openai';
+  const compatibility =
+    normalizeCompatibility(process.env.RELAY_API_COMPATIBILITY || 'openai') || 'openai';
   const apiKey = extractPrimaryApiKey(process.env.RELAY_API_KEY || '');
   return {
     baseUrl,
@@ -115,10 +127,15 @@ function getModelConfigSnapshot() {
 router.get('/status', async (req, res) => {
   try {
     const gateway = require('../services/gateway/aiGateway');
-    if (!gateway._initialized) await gateway.init();
+    if (!gateway.isInitialized()) {
+      await gateway.init();
+    }
     const statuses = gateway.getStatus();
     const active = gateway.getActiveAdapter();
-    res.json({ adapters: statuses, active: active ? { name: active.name, type: active.type } : null });
+    res.json({
+      adapters: statuses,
+      active: active ? { name: active.name, type: active.type } : null,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -141,8 +158,15 @@ router.post('/pool/:provider/keys', (req, res) => {
     const pool = require('../services/apiKeyPool');
     pool.init();
     const { key, endpoint, priority, label } = req.body;
-    if (!key) return res.status(400).json({ error: 'key is required' });
-    pool.addKey(req.params.provider, { key, endpoint, priority: priority || 10, label: label || '' });
+    if (!key) {
+      return res.status(400).json({ error: 'key is required' });
+    }
+    pool.addKey(req.params.provider, {
+      key,
+      endpoint,
+      priority: priority || 10,
+      label: label || '',
+    });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -165,11 +189,19 @@ router.put('/pool/:provider/keys/:keyId', (req, res) => {
     const pool = require('../services/apiKeyPool');
     pool.init();
     const entries = pool.getPoolStatus(req.params.provider) || [];
-    const entry = entries.find(e => e.id === req.params.keyId || e.keyId === req.params.keyId);
-    if (!entry) return res.status(404).json({ error: `Key ${req.params.keyId} not found` });
-    if (req.body.endpoint !== undefined) entry.endpoint = String(req.body.endpoint || '').trim();
-    if (req.body.label !== undefined) entry.label = String(req.body.label || '').trim();
-    if (req.body.priority !== undefined) entry.priority = Number(req.body.priority) || 0;
+    const entry = entries.find((e) => e.id === req.params.keyId || e.keyId === req.params.keyId);
+    if (!entry) {
+      return res.status(404).json({ error: `Key ${req.params.keyId} not found` });
+    }
+    if (req.body.endpoint !== undefined) {
+      entry.endpoint = String(req.body.endpoint || '').trim();
+    }
+    if (req.body.label !== undefined) {
+      entry.label = String(req.body.label || '').trim();
+    }
+    if (req.body.priority !== undefined) {
+      entry.priority = Number(req.body.priority) || 0;
+    }
     pool.save();
     res.json({ success: true });
   } catch (err) {
@@ -195,8 +227,12 @@ router.put('/model-config', (req, res) => {
     const apiKeyInput = req.body?.apiKey;
     const clearApiKey = req.body?.clearApiKey === true;
 
-    if (!baseUrlRaw) return res.status(400).json({ error: 'baseUrl is required' });
-    if (!modelId) return res.status(400).json({ error: 'modelId is required' });
+    if (!baseUrlRaw) {
+      return res.status(400).json({ error: 'baseUrl is required' });
+    }
+    if (!modelId) {
+      return res.status(400).json({ error: 'modelId is required' });
+    }
 
     const normalizedUrl = normalizeOpenAiLikeBaseUrl(baseUrlRaw);
     if (!normalizedUrl.ok) {
@@ -224,8 +260,11 @@ router.put('/model-config', (req, res) => {
       unsetKeys.push('RELAY_API_KEY', 'RELAY_API_KEYS');
     } else if (primary) {
       envMap.RELAY_API_KEY = primary;
-      if (parsedEntries.length > 1) envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
-      else unsetKeys.push('RELAY_API_KEYS');
+      if (parsedEntries.length > 1) {
+        envMap.RELAY_API_KEYS = parsedEntries.map((entry) => entry.key).join(',');
+      } else {
+        unsetKeys.push('RELAY_API_KEYS');
+      }
     }
 
     const envPath = writeGatewayEnvPatch(envMap, unsetKeys);
@@ -251,9 +290,13 @@ router.put('/model-config', (req, res) => {
 router.get('/codex-config', (req, res) => {
   try {
     const codex = require('../services/gateway/adapters/codexAdapter');
-    const snapshot = typeof codex.getCodexUpstreamSnapshot === 'function' ? codex.getCodexUpstreamSnapshot() : {};
+    const snapshot =
+      typeof codex.getCodexUpstreamSnapshot === 'function' ? codex.getCodexUpstreamSnapshot() : {};
     const preferredAdapter = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim();
-    res.json({ success: true, data: { ...snapshot, active: preferredAdapter.toLowerCase() === 'codex', preferredAdapter } });
+    res.json({
+      success: true,
+      data: { ...snapshot, active: preferredAdapter.toLowerCase() === 'codex', preferredAdapter },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -264,13 +307,21 @@ router.put('/codex-config', (req, res) => {
     const providerName = String(req.body?.providerName || '').trim();
     const baseUrl = String(req.body?.baseUrl || '').trim();
     const model = String(req.body?.model || '').trim();
-    if (!providerName) return res.status(400).json({ error: 'providerName is required' });
-    if (!baseUrl) return res.status(400).json({ error: 'baseUrl is required' });
-    if (!model) return res.status(400).json({ error: 'model is required' });
+    if (!providerName) {
+      return res.status(400).json({ error: 'providerName is required' });
+    }
+    if (!baseUrl) {
+      return res.status(400).json({ error: 'baseUrl is required' });
+    }
+    if (!model) {
+      return res.status(400).json({ error: 'model is required' });
+    }
 
     const codex = require('../services/gateway/adapters/codexAdapter');
     if (typeof codex.setCodexUpstream !== 'function') {
-      return res.status(500).json({ error: 'codex adapter does not support upstream configuration' });
+      return res
+        .status(500)
+        .json({ error: 'codex adapter does not support upstream configuration' });
     }
     const apiKeyInput = String(req.body?.apiKey || '').trim();
     const written = codex.setCodexUpstream({
@@ -284,18 +335,34 @@ router.put('/codex-config', (req, res) => {
 
     let activated = false;
     if (req.body?.activate === true) {
-      writeGatewayEnvPatch({ GATEWAY_PREFERRED_ADAPTER: 'codex', GATEWAY_PREFERRED_MODEL: model }, []);
+      writeGatewayEnvPatch(
+        { GATEWAY_PREFERRED_ADAPTER: 'codex', GATEWAY_PREFERRED_MODEL: model },
+        []
+      );
       activated = true;
     }
 
-    const snapshot = typeof codex.getCodexUpstreamSnapshot === 'function' ? codex.getCodexUpstreamSnapshot() : {};
+    const snapshot =
+      typeof codex.getCodexUpstreamSnapshot === 'function' ? codex.getCodexUpstreamSnapshot() : {};
     res.json({
       success: true,
       data: {
         updated: true,
         activated,
-        written: { provider: written.provider, baseUrl: written.baseUrl, model: written.model, wireApi: written.wireApi, configPath: written.configPath },
-        config: { ...snapshot, active: String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim().toLowerCase() === 'codex' },
+        written: {
+          provider: written.provider,
+          baseUrl: written.baseUrl,
+          model: written.model,
+          wireApi: written.wireApi,
+          configPath: written.configPath,
+        },
+        config: {
+          ...snapshot,
+          active:
+            String(process.env.GATEWAY_PREFERRED_ADAPTER || '')
+              .trim()
+              .toLowerCase() === 'codex',
+        },
       },
     });
   } catch (err) {
@@ -310,11 +377,21 @@ router.get('/monitor/traces', (req, res) => {
     const monitor = require('../services/aiMonitor');
     const { limit, offset, provider, success, since } = req.query;
     const filter = {};
-    if (limit) filter.limit = parseInt(limit, 10);
-    if (offset) filter.offset = parseInt(offset, 10);
-    if (provider) filter.provider = provider;
-    if (success !== undefined) filter.success = success === 'true';
-    if (since) filter.since = since;
+    if (limit) {
+      filter.limit = parseInt(limit, 10);
+    }
+    if (offset) {
+      filter.offset = parseInt(offset, 10);
+    }
+    if (provider) {
+      filter.provider = provider;
+    }
+    if (success !== undefined) {
+      filter.success = success === 'true';
+    }
+    if (since) {
+      filter.since = since;
+    }
     res.json(monitor.getTraces(filter));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -335,7 +412,7 @@ router.get('/monitor/stream', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
 
@@ -457,10 +534,9 @@ function shouldWriteClaudeSettings() {
   // 的同名孪生此前各自内联同一套 token，收敛后两处共用单一解析语义。
   const _parseBoolean = require('../utils/parseBoolean');
   return _parseBoolean(
-    process.env.KHY_ALLOW_WRITE_CLAUDE_SETTINGS
-      || process.env.KHY_MANAGE_CLAUDE_SETTINGS,
+    process.env.KHY_ALLOW_WRITE_CLAUDE_SETTINGS || process.env.KHY_MANAGE_CLAUDE_SETTINGS,
     false,
-    { extended: false },
+    { extended: false }
   );
 }
 
@@ -469,7 +545,9 @@ router.get('/model-slots', (req, res) => {
     const os = require('os');
     const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
     let settings = {};
-    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch {}
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    } catch {}
     const env = settings.env || {};
     const slots = {};
     for (const [slot, envKey] of Object.entries(MODEL_SLOT_DEFS)) {
@@ -489,24 +567,38 @@ router.put('/model-slots', (req, res) => {
     const os = require('os');
     const updates = {};
     for (const slot of Object.keys(MODEL_SLOT_DEFS)) {
-      if (req.body[slot] !== undefined) updates[slot] = String(req.body[slot]).trim();
+      if (req.body[slot] !== undefined) {
+        updates[slot] = String(req.body[slot]).trim();
+      }
     }
-    if (Object.keys(updates).length === 0) return res.status(400).json({ error: '至少需要提供一个槽位更新' });
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: '至少需要提供一个槽位更新' });
+    }
     const canWriteClaudeSettings = shouldWriteClaudeSettings();
     // 1) ~/.claude/settings.json (explicit opt-in only)
     const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
     let settings = {};
-    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch { settings = {}; }
-    if (!settings.env || typeof settings.env !== 'object') settings.env = {};
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    } catch {
+      settings = {};
+    }
+    if (!settings.env || typeof settings.env !== 'object') {
+      settings.env = {};
+    }
     const envMap = {};
     for (const [slot, model] of Object.entries(updates)) {
       const envKey = MODEL_SLOT_DEFS[slot];
       envMap[envKey] = model;
-      if (canWriteClaudeSettings) settings.env[envKey] = model;
+      if (canWriteClaudeSettings) {
+        settings.env[envKey] = model;
+      }
     }
     if (canWriteClaudeSettings) {
       const dir = path.dirname(settingsPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
       const tmp = settingsPath + '.tmp';
       fs.writeFileSync(tmp, JSON.stringify(settings, null, 2) + '\n', 'utf-8');
       fs.renameSync(tmp, settingsPath);
@@ -547,9 +639,13 @@ router.get('/slots', (req, res) => {
 router.get('/health', async (req, res) => {
   try {
     const gateway = require('../services/gateway/aiGateway');
-    if (!gateway._initialized) await gateway.init();
+    if (!gateway.isInitialized()) {
+      await gateway.init();
+    }
     const broadcaster = gateway._healthBroadcaster;
-    if (!broadcaster) return res.json({ adapters: [], activity: [], timestamp: Date.now() });
+    if (!broadcaster) {
+      return res.json({ adapters: [], activity: [], timestamp: Date.now() });
+    }
     const snapshot = await broadcaster.getSnapshot();
     snapshot.activity = broadcaster.getRecentActivity();
     res.json(snapshot);
@@ -563,17 +659,21 @@ router.get('/health/stream', async (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
 
   const send = (event, data) => {
-    try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch {}
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch {}
   };
 
   try {
     const gateway = require('../services/gateway/aiGateway');
-    if (!gateway._initialized) await gateway.init();
+    if (!gateway.isInitialized()) {
+      await gateway.init();
+    }
     const broadcaster = gateway._healthBroadcaster;
 
     if (!broadcaster) {
@@ -591,13 +691,17 @@ router.get('/health/stream', async (req, res) => {
 
     // Keep-alive heartbeat
     const hb = setInterval(() => send('heartbeat', { ts: Date.now() }), 15000);
-    if (hb.unref) hb.unref();
+    if (hb.unref) {
+      hb.unref();
+    }
 
     req.on('close', () => {
       clearInterval(hb);
       // Remove listener (best effort — array filter)
       const idx = broadcaster._listeners.indexOf(onHealth);
-      if (idx >= 0) broadcaster._listeners.splice(idx, 1);
+      if (idx >= 0) {
+        broadcaster._listeners.splice(idx, 1);
+      }
     });
   } catch (err) {
     send('error', { message: err.message });
@@ -653,7 +757,12 @@ router.get('/agents/dashboard', async (_req, res) => {
     const dashboard = getAgentDashboard();
     res.json(dashboard);
   } catch (err) {
-    res.json({ agents: [], tree: [], stats: { total: 0, running: 0, completed: 0, failed: 0, maxDepth: 0 }, error: err.message });
+    res.json({
+      agents: [],
+      tree: [],
+      stats: { total: 0, running: 0, completed: 0, failed: 0, maxDepth: 0 },
+      error: err.message,
+    });
   }
 });
 
@@ -679,7 +788,9 @@ router.get('/capabilities/match', (req, res) => {
     let requirements;
     try {
       requirements = JSON.parse(String(req.query.requirements || '{}'));
-    } catch { return res.status(400).json({ error: 'Invalid requirements JSON' }); }
+    } catch {
+      return res.status(400).json({ error: 'Invalid requirements JSON' });
+    }
     const ranked = registry.bestAdaptersFor(requirements, { onlyAvailable: false, limit: 10 });
     res.json({ requirements, ranked });
   } catch (err) {

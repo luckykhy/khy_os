@@ -17,13 +17,13 @@
  * sha256 from 048 remains the sole success oracle throughout.
  */
 
-const config = require('./config');
 const aiBridge = require('./aiBridge');
-const mapAuthor = require('./mapAuthor');
-const mapStore = require('./mapStore');
-const mapExport = require('./mapExport');
-const guideRetriever = require('./guideRetriever');
+const config = require('./config');
 const guideInjector = require('./guideInjector');
+const guideRetriever = require('./guideRetriever');
+const mapAuthor = require('./mapAuthor');
+const mapExport = require('./mapExport');
+const mapStore = require('./mapStore');
 
 module.exports = {
   config,

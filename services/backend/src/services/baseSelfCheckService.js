@@ -8,7 +8,11 @@
  */
 const fs = require('fs');
 const path = require('path');
+
 const { getDataHome } = require('../utils/dataHome');
+const _patchEnvContent = require('../utils/patchEnvContent');
+const _resolveGatewayEnvPaths = require('../utils/resolveGatewayEnvPaths');
+
 const resourceGuard = require('./resourceGuard');
 const securityGuard = require('./securityGuardService');
 
@@ -25,7 +29,10 @@ const STRICT_MODE = _envBool(process.env.KHY_SELF_CHECK_STRICT, false);
 const DEFAULT_LOG_FILE = path.join(getDataHome(), 'selfcheck.log');
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_LOG_BACKUPS = 2;
-const SELF_CHECK_AUTO_REPAIR_PREFERRED = _envBool(process.env.KHY_SELF_CHECK_AUTO_REPAIR_PREFERRED, true);
+const SELF_CHECK_AUTO_REPAIR_PREFERRED = _envBool(
+  process.env.KHY_SELF_CHECK_AUTO_REPAIR_PREFERRED,
+  true
+);
 
 let _timer = null;
 let _intervalMs = 0;
@@ -43,14 +50,18 @@ function _toInt(value, fallback) {
 }
 
 function _envBool(value, fallback) {
-  if (value === undefined || value === null || value === '') return !!fallback;
+  if (value === undefined || value === null || value === '') {
+    return !!fallback;
+  }
   const s = String(value).trim().toLowerCase();
   return s === '1' || s === 'true' || s === 'on' || s === 'yes' || s === 'y';
 }
 
 function _normalizeInterval(intervalMs) {
   const n = _toInt(intervalMs, DEFAULT_INTERVAL_MS);
-  if (!Number.isFinite(n)) return DEFAULT_INTERVAL_MS;
+  if (!Number.isFinite(n)) {
+    return DEFAULT_INTERVAL_MS;
+  }
   return Math.max(MIN_INTERVAL_MS, Math.min(MAX_INTERVAL_MS, n));
 }
 
@@ -71,9 +82,15 @@ function _summarizeStates(entries, key = 'state') {
 }
 
 function _severityRank(s) {
-  if (s === 'critical') return 3;
-  if (s === 'high') return 2;
-  if (s === 'warning') return 1;
+  if (s === 'critical') {
+    return 3;
+  }
+  if (s === 'high') {
+    return 2;
+  }
+  if (s === 'warning') {
+    return 1;
+  }
   return 0;
 }
 
@@ -83,38 +100,51 @@ function _fallbackLogFile() {
 
 function _readLogFilePath() {
   const fallback = _fallbackLogFile();
-  if (fs.existsSync(_logFile)) return _logFile;
-  if (_logFile !== fallback && fs.existsSync(fallback)) return fallback;
+  if (fs.existsSync(_logFile)) {
+    return _logFile;
+  }
+  if (_logFile !== fallback && fs.existsSync(fallback)) {
+    return fallback;
+  }
   return _logFile;
 }
 
 function _rotateLogIfNeeded() {
   try {
-    if (!fs.existsSync(_logFile)) return;
+    if (!fs.existsSync(_logFile)) {
+      return;
+    }
     const stat = fs.statSync(_logFile);
-    if (stat.size <= MAX_LOG_SIZE) return;
+    if (stat.size <= MAX_LOG_SIZE) {
+      return;
+    }
 
     for (let i = MAX_LOG_BACKUPS - 1; i >= 1; i--) {
       const from = `${_logFile}.${i}`;
       const to = `${_logFile}.${i + 1}`;
       if (fs.existsSync(from)) {
-        if (i + 1 > MAX_LOG_BACKUPS) fs.unlinkSync(from);
-        else fs.renameSync(from, to);
+        if (i + 1 > MAX_LOG_BACKUPS) {
+          fs.unlinkSync(from);
+        } else {
+          fs.renameSync(from, to);
+        }
       }
     }
     fs.renameSync(_logFile, `${_logFile}.1`);
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
-
-const _resolveGatewayEnvPaths = require('../utils/resolveGatewayEnvPaths');
-
-const _patchEnvContent = require('../utils/patchEnvContent');
 
 function _writeGatewayEnvPatch(envMap = {}, unsetKeys = []) {
   const resolved = _resolveGatewayEnvPaths();
   for (const targetPath of resolved.targets) {
     let content = '';
-    try { content = fs.readFileSync(targetPath, 'utf-8'); } catch { /* no .env yet */ }
+    try {
+      content = fs.readFileSync(targetPath, 'utf-8');
+    } catch {
+      /* no .env yet */
+    }
     const patched = _patchEnvContent(content, envMap, unsetKeys);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, patched, 'utf-8');
@@ -157,8 +187,12 @@ function _appendLog(record) {
 
 function _classifySeverity(score, issues) {
   const maxIssueRank = issues.reduce((m, i) => Math.max(m, _severityRank(i?.severity)), 0);
-  if (score < 45 || maxIssueRank >= 3) return 'critical';
-  if (score < 75 || maxIssueRank >= 2) return 'degraded';
+  if (score < 45 || maxIssueRank >= 3) {
+    return 'critical';
+  }
+  if (score < 75 || maxIssueRank >= 2) {
+    return 'degraded';
+  }
   return 'healthy';
 }
 
@@ -166,22 +200,48 @@ function _shouldRunPeriodic(runSeq, everyN) {
   return runSeq === 1 || runSeq % everyN === 0;
 }
 
+// Delegate to resourceGuard.withTimeout when available; otherwise degrade to
+// a plain Promise.race timeout that only rejects (never kills any process).
+function _withTimeoutSafe(promise, ms, label) {
+  if (typeof resourceGuard.withTimeout === 'function') {
+    return resourceGuard.withTimeout(promise, ms, label);
+  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`操作超时 (${ms}ms): ${label}`));
+    }, ms);
+    if (timer.unref) {
+      timer.unref();
+    }
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 async function _checkServices(result, issues, scoreRef) {
   try {
     const registry = require('./serviceRegistry');
-    const checks = await resourceGuard.withTimeout(
+    const checks = await _withTimeoutSafe(
       Promise.resolve(registry.healthCheck()),
       SERVICE_HEALTH_TIMEOUT_MS,
       'serviceRegistry.healthCheck'
     );
 
-    const unhealthy = checks.filter(c => c.healthy === false);
-    const unknown = checks.filter(c => c.healthy === null);
+    const unhealthy = checks.filter((c) => c.healthy === false);
+    const unknown = checks.filter((c) => c.healthy === null);
 
     result.checks.services = {
       healthy: unhealthy.length === 0,
       total: checks.length,
-      unhealthy: unhealthy.map(i => ({ name: i.name, error: i.error || null })),
+      unhealthy: unhealthy.map((i) => ({ name: i.name, error: i.error || null })),
       unknownCount: unknown.length,
     };
 
@@ -237,7 +297,7 @@ async function _checkPlugins(result, issues, scoreRef, opts = {}) {
     const loaded = pluginLoader.getAllPlugins ? pluginLoader.getAllPlugins() : [];
 
     if (Array.isArray(loaded) && loaded.length > 0) {
-      runtime = loaded.map(p => ({
+      runtime = loaded.map((p) => ({
         name: p?.manifest?.name || p?.namespace || 'unknown',
         displayName: p?.manifest?.displayName || p?.manifest?.name || p?.namespace || 'unknown',
         namespace: p?.namespace || '',
@@ -248,9 +308,12 @@ async function _checkPlugins(result, issues, scoreRef, opts = {}) {
       const discovered = pluginLoader.discoverPlugins
         ? pluginLoader.discoverPlugins({ info() {}, warn() {}, error() {} })
         : [];
-      runtime = discovered.map(d => ({
+      runtime = discovered.map((d) => ({
         name: d?.manifestData?.name || path.basename(d?.pluginPath || ''),
-        displayName: d?.manifestData?.displayName || d?.manifestData?.name || path.basename(d?.pluginPath || ''),
+        displayName:
+          d?.manifestData?.displayName ||
+          d?.manifestData?.name ||
+          path.basename(d?.pluginPath || ''),
         namespace: d?.manifestData?.namespace || '',
         state: 'discovered',
         path: d?.pluginPath || '',
@@ -260,8 +323,10 @@ async function _checkPlugins(result, issues, scoreRef, opts = {}) {
     out.total = runtime.length;
     out.states = _summarizeStates(runtime, 'state');
 
-    const runtimeBad = runtime.filter(r => String(r.state || '').startsWith('disabled'));
-    const runtimeWarn = runtime.filter(r => ['loading', 'unknown', 'discovered'].includes(String(r.state || '')));
+    const runtimeBad = runtime.filter((r) => String(r.state || '').startsWith('disabled'));
+    const runtimeWarn = runtime.filter((r) =>
+      ['loading', 'unknown', 'discovered'].includes(String(r.state || ''))
+    );
     out.runtimeBad = runtimeBad.length;
     out.runtimeWarn = runtimeWarn.length;
 
@@ -292,21 +357,27 @@ async function _checkPlugins(result, issues, scoreRef, opts = {}) {
         const seen = new Set();
         const targets = [];
         for (const p of runtime) {
-          if (!p.path || seen.has(p.path)) continue;
+          if (!p.path || seen.has(p.path)) {
+            continue;
+          }
           seen.add(p.path);
           targets.push(p.path);
-          if (targets.length >= PLUGIN_DOCTOR_MAX) break;
+          if (targets.length >= PLUGIN_DOCTOR_MAX) {
+            break;
+          }
         }
 
         out.doctor.pluginCount = targets.length;
         for (const pluginPath of targets) {
           try {
-            const report = await resourceGuard.withTimeout(
-              Promise.resolve(runPluginDoctorForDir(pluginPath, {
-                deep: !!opts.doctorDeep,
-                strict: false,
-                fast: !opts.doctorDeep,
-              })),
+            const report = await _withTimeoutSafe(
+              Promise.resolve(
+                runPluginDoctorForDir(pluginPath, {
+                  deep: !!opts.doctorDeep,
+                  strict: false,
+                  fast: !opts.doctorDeep,
+                })
+              ),
               PLUGIN_DOCTOR_TIMEOUT_MS,
               `plugin doctor timeout: ${path.basename(pluginPath)}`
             );
@@ -396,9 +467,9 @@ async function _checkGatewayPreferred(result, issues, scoreRef, opts = {}) {
 
   try {
     const gateway = require('./gateway/aiGateway');
-    await resourceGuard.withTimeout(
+    await _withTimeoutSafe(
       (async () => {
-        if (!gateway._initialized && typeof gateway.init === 'function') {
+        if (!gateway.isInitialized() && typeof gateway.init === 'function') {
           await gateway.init();
         }
       })(),
@@ -406,13 +477,18 @@ async function _checkGatewayPreferred(result, issues, scoreRef, opts = {}) {
       'gateway.init'
     );
 
-    const statuses = await resourceGuard.withTimeout(
+    const statuses = await _withTimeoutSafe(
       Promise.resolve(typeof gateway.getStatus === 'function' ? gateway.getStatus() : []),
       SERVICE_HEALTH_TIMEOUT_MS,
       'gateway.getStatus'
     );
     const list = Array.isArray(statuses) ? statuses : [];
-    const matched = list.find((s) => String(s?.type || '').trim().toLowerCase() === configured);
+    const matched = list.find(
+      (s) =>
+        String(s?.type || '')
+          .trim()
+          .toLowerCase() === configured
+    );
 
     if (matched && matched.enabled !== false) {
       const available = matched.available !== false;
@@ -442,14 +518,13 @@ async function _checkGatewayPreferred(result, issues, scoreRef, opts = {}) {
       return;
     }
 
-    const fallback = list.find((s) =>
-      s && s.enabled && s.available && String(s.type || '').toLowerCase() !== 'clipboard'
+    const fallback = list.find(
+      (s) => s && s.enabled && s.available && String(s.type || '').toLowerCase() !== 'clipboard'
     );
     const nextAdapter = fallback ? String(fallback.type || '').trim() : 'auto';
-    const envPath = _writeGatewayEnvPatch(
-      { GATEWAY_PREFERRED_ADAPTER: nextAdapter },
-      ['GATEWAY_PREFERRED_MODEL']
-    );
+    const envPath = _writeGatewayEnvPatch({ GATEWAY_PREFERRED_ADAPTER: nextAdapter }, [
+      'GATEWAY_PREFERRED_MODEL',
+    ]);
     scoreRef.value += 8;
     checkOut.autoRepaired = true;
     checkOut.repairedTo = nextAdapter;
@@ -477,7 +552,9 @@ async function _checkGatewayPreferred(result, issues, scoreRef, opts = {}) {
       if (typeof gateway.refreshAdapters === 'function') {
         await gateway.refreshAdapters();
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
 
     result.checks.gateway = checkOut;
   } catch (err) {
@@ -509,10 +586,10 @@ async function runOnce(options = {}) {
   const startedAt = Date.now();
   const runSeq = ++_runCount;
   const trigger = options.trigger || 'manual';
-  const includeThreatScan = options.forceThreatScan === true
-    || _shouldRunPeriodic(runSeq, THREAT_SCAN_EVERY);
-  const includeDoctor = options.forcePluginDoctor === true
-    || _shouldRunPeriodic(runSeq, PLUGIN_DOCTOR_EVERY);
+  const includeThreatScan =
+    options.forceThreatScan === true || _shouldRunPeriodic(runSeq, THREAT_SCAN_EVERY);
+  const includeDoctor =
+    options.forcePluginDoctor === true || _shouldRunPeriodic(runSeq, PLUGIN_DOCTOR_EVERY);
 
   const result = {
     id: `sc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
@@ -540,20 +617,39 @@ async function runOnce(options = {}) {
   try {
     // 1) System resource pressure
     try {
-      const h = resourceGuard.systemHealthCheck();
-      const warnings = Array.isArray(h?.warnings) ? h.warnings : [];
-      result.checks.resource = {
-        healthy: !!h?.healthy,
-        memPercent: Number.isFinite(h?.memPercent) ? h.memPercent : null,
-        loadPercent: Number.isFinite(h?.loadPercent) ? h.loadPercent : null,
-        warningCount: warnings.length,
-        warnings: warnings.slice(0, 8),
-      };
-      if (!h?.healthy) {
-        scoreRef.value -= Math.min(35, 12 + warnings.length * 6);
-      }
-      for (const w of warnings.slice(0, 10)) {
-        issues.push({ source: 'resource', severity: 'warning', message: w });
+      if (typeof resourceGuard.systemHealthCheck !== 'function') {
+        // Guarded degradation: resource pressure check is skipped without
+        // deducting score when the runtime resourceGuard copy lacks the API.
+        result.checks.resource = {
+          healthy: true,
+          skipped: true,
+          reason: 'resourceGuard 未提供 systemHealthCheck，资源压力检查已跳过',
+          memPercent: null,
+          loadPercent: null,
+          warningCount: 0,
+          warnings: [],
+        };
+        issues.push({
+          source: 'resource',
+          severity: 'warning',
+          message: 'resourceGuard 未提供 systemHealthCheck，资源压力检查已跳过',
+        });
+      } else {
+        const h = resourceGuard.systemHealthCheck();
+        const warnings = Array.isArray(h?.warnings) ? h.warnings : [];
+        result.checks.resource = {
+          healthy: !!h?.healthy,
+          memPercent: Number.isFinite(h?.memPercent) ? h.memPercent : null,
+          loadPercent: Number.isFinite(h?.loadPercent) ? h.loadPercent : null,
+          warningCount: warnings.length,
+          warnings: warnings.slice(0, 8),
+        };
+        if (!h?.healthy) {
+          scoreRef.value -= Math.min(35, 12 + warnings.length * 6);
+        }
+        for (const w of warnings.slice(0, 10)) {
+          issues.push({ source: 'resource', severity: 'warning', message: w });
+        }
       }
     } catch (err) {
       scoreRef.value -= 20;
@@ -668,7 +764,8 @@ async function runOnce(options = {}) {
 
     // 6) Gateway preferred adapter correctness + optional auto-repair
     await _checkGatewayPreferred(result, issues, scoreRef, {
-      autoRepairPreferred: options.autoRepairPreferred !== false && SELF_CHECK_AUTO_REPAIR_PREFERRED,
+      autoRepairPreferred:
+        options.autoRepairPreferred !== false && SELF_CHECK_AUTO_REPAIR_PREFERRED,
     });
   } finally {
     const durationMs = Date.now() - startedAt;
@@ -723,7 +820,9 @@ function start(intervalMs = DEFAULT_INTERVAL_MS, options = {}) {
   _timer = setInterval(() => {
     runOnce({ trigger: 'loop' }).catch(() => {});
   }, _intervalMs);
-  if (typeof _timer.unref === 'function') _timer.unref();
+  if (typeof _timer.unref === 'function') {
+    _timer.unref();
+  }
 
   if (options.runImmediately !== false) {
     runOnce({
@@ -798,18 +897,20 @@ function history(limit = 20) {
 function tail(limit = 20) {
   const n = Math.max(1, _toInt(limit, 20));
   const logFile = _readLogFilePath();
-  if (!fs.existsSync(logFile)) return [];
+  if (!fs.existsSync(logFile)) {
+    return [];
+  }
 
   try {
-    const lines = fs.readFileSync(logFile, 'utf-8')
-      .split('\n')
-      .filter(Boolean);
+    const lines = fs.readFileSync(logFile, 'utf-8').split('\n').filter(Boolean);
 
     const out = [];
     for (let i = lines.length - 1; i >= 0 && out.length < n; i--) {
       try {
         out.push(JSON.parse(lines[i]));
-      } catch { /* skip malformed line */ }
+      } catch {
+        /* skip malformed line */
+      }
     }
     return out;
   } catch {
@@ -819,14 +920,18 @@ function tail(limit = 20) {
 
 function autoStartFromEnv() {
   const enabled = _envBool(process.env.KHY_SELF_CHECK_ENABLED, true);
-  if (!enabled) return status();
+  if (!enabled) {
+    return status();
+  }
   return start(_normalizeInterval(process.env.KHY_SELF_CHECK_INTERVAL_MS), {
     runImmediately: true,
   });
 }
 
 async function healthCheck() {
-  if (!_lastResult) return { healthy: true, note: 'no self-check run yet' };
+  if (!_lastResult) {
+    return { healthy: true, note: 'no self-check run yet' };
+  }
   return {
     healthy: _lastResult.severity !== 'critical',
     score: _lastResult.score,

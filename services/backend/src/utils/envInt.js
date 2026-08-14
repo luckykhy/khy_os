@@ -16,8 +16,12 @@
 function envInt(name, def, bounds = {}) {
   const n = parseInt(process.env[name], 10);
   let val = Number.isFinite(n) ? n : def;
-  if (typeof bounds.min === 'number' && val < bounds.min) val = bounds.min;
-  if (typeof bounds.max === 'number' && val > bounds.max) val = bounds.max;
+  if (typeof bounds.min === 'number' && val < bounds.min) {
+    val = bounds.min;
+  }
+  if (typeof bounds.max === 'number' && val > bounds.max) {
+    val = bounds.max;
+  }
   return val;
 }
 

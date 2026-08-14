@@ -1,7 +1,8 @@
 'use strict';
 
-const { defineTool, isGitRepo } = require('./_baseTool');
 const { execSync } = require('child_process');
+
+const { defineTool, isGitRepo } = require('./_baseTool');
 const _execCompat = require('./_execCompat');
 
 /**
@@ -13,30 +14,38 @@ const _execCompat = require('./_execCompat');
  */
 module.exports = defineTool({
   name: 'gitLog',
-  description: 'Show recent commit history (git log). Read-only; returns a bounded, one-line-per-commit summary.',
+  description:
+    'Show recent commit history (git log), optionally limited to one file. ' +
+    'Read-only; returns a bounded one-line-per-commit summary by default (20 commits). Use gitBlame for per-line authorship and gitDiff for uncommitted changes.',
   category: 'git',
   risk: 'safe',
   isReadOnly: true,
   isConcurrencySafe: true,
   isEnabled: isGitRepo,
   aliases: ['git_log'],
+  searchHint: 'history commits recent authors 提交历史 日志 提交记录',
   inputSchema: {
     max_count: {
       type: 'number',
       required: false,
       min: 1,
       max: 200,
-      description: 'How many commits to show (default 20, max 200).',
+      description: 'How many commits to show (default: 20, max 200).',
+      example: 50,
     },
     file: {
       type: 'string',
       required: false,
-      description: 'Optional path to limit history to a single file.',
+      description:
+        'Optional path to limit history to a single file, e.g. "src/app.js" (default: whole repo).',
+      example: 'src/app.js',
     },
     oneline: {
       type: 'boolean',
       required: false,
-      description: 'One line per commit (default true). Set false for full author/date/body.',
+      description:
+        'One line per commit (default: true). Set false for full author/date/subject blocks.',
+      example: false,
     },
   },
   async execute(params, _context) {

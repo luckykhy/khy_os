@@ -30,11 +30,21 @@ let _seq = 0;
 
 /** 规范化适配器 id：小写去空白，统一同义词（与 aiGateway._normalizeAdapterSig 对齐的最小集）。 */
 function normalizeAdapterId(raw) {
-  const s = String(raw || '').trim().toLowerCase();
-  if (!s) return null;
-  if (s === 'local llm' || s === 'local' || s.includes('本地模型')) return 'localllm';
-  if (s.includes('openai codex')) return 'codex';
-  if (s.includes('anthropic')) return 'claude';
+  const s = String(raw || '')
+    .trim()
+    .toLowerCase();
+  if (!s) {
+    return null;
+  }
+  if (s === 'local llm' || s === 'local' || s.includes('本地模型')) {
+    return 'localllm';
+  }
+  if (s.includes('openai codex')) {
+    return 'codex';
+  }
+  if (s.includes('anthropic')) {
+    return 'claude';
+  }
   return s;
 }
 

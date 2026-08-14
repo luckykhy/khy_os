@@ -56,6 +56,7 @@ describe('gateway status preferred adapter hints', () => {
 
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'codex', name: 'Codex CLI', enabled: true, available: true, detail: 'ok', priority: 1 },
@@ -93,8 +94,16 @@ describe('gateway status preferred adapter hints', () => {
     const printInfo = jest.fn();
     const printTable = jest.fn();
 
+    // Wide terminal so the status table keeps its preferred column widths —
+    // otherwise the detail cell ("协议风险: 上游可覆盖") gets truncated below
+    // the string this test asserts on.
+    const origCols = process.stdout.columns;
+    Object.defineProperty(process.stdout, 'columns', { value: 200, configurable: true, writable: true });
+    try {
+
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'codex', name: 'Codex CLI', enabled: true, available: true, detail: 'ok', priority: 1 },
@@ -139,6 +148,9 @@ describe('gateway status preferred adapter hints', () => {
     expect(output).toContain('协议风险: 上游可覆盖');
     expect(printInfo).toHaveBeenCalledWith('KHY 协议优先级: Codex CLI 可能在 KHY 之后仍追加上游隐藏 system prompt');
     expect(printInfo).toHaveBeenCalledWith('排查建议: 开启 KHY_GATEWAY_DEBUG_PROMPT=1');
+    } finally {
+      Object.defineProperty(process.stdout, 'columns', { value: origCols, configurable: true, writable: true });
+    }
   });
 
   test('shows default route recommendation directly in gateway status output', async () => {
@@ -149,6 +161,7 @@ describe('gateway status preferred adapter hints', () => {
 
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'codex', name: 'Codex CLI', enabled: true, available: true, detail: 'ok', priority: 1 },
@@ -195,6 +208,7 @@ describe('gateway status preferred adapter hints', () => {
 
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'codex', name: 'Codex CLI', enabled: true, available: true, detail: 'ok', priority: 1 },
@@ -246,6 +260,7 @@ describe('gateway status preferred adapter hints', () => {
 
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'codex', name: 'Codex CLI', enabled: true, available: true, detail: 'ok', priority: 1 },

@@ -25,7 +25,8 @@ const _FALSY = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
 
 /** 门控:仅显式关闭词关闭,其余(含未设)均开启。 */
 function slugGateEnabled(env) {
-  const v = (env || (typeof process !== 'undefined' ? process.env : undefined) || {}).KHY_MEMORY_SLUG_STABLE;
+  const v = (env || (typeof process !== 'undefined' ? process.env : undefined) || {})
+    .KHY_MEMORY_SLUG_STABLE;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
 
@@ -52,9 +53,15 @@ function legacySlug(name) {
  */
 function canonicalMemoryName(type, name) {
   let s = String(name == null ? '' : name);
-  try { s = s.normalize('NFC'); } catch { /* 环境无 normalize 时按原样 */ }
+  try {
+    s = s.normalize('NFC');
+  } catch {
+    /* 环境无 normalize 时按原样 */
+  }
   s = s.trim().toLowerCase().replace(/\s+/g, ' ');
-  const t = String(type == null ? '' : type).trim().toLowerCase();
+  const t = String(type == null ? '' : type)
+    .trim()
+    .toLowerCase();
   if (t) {
     // 剥一个前导 `type` + 分隔符(`_`/`-`/空格)。仅剥一次,避免过度吞名。
     const re = new RegExp('^' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\-_ ]+');
@@ -87,7 +94,13 @@ function _shortHash(normalized) {
  * @returns {string}
  */
 function memoryKey(type, name) {
-  return String(type == null ? '' : type).trim().toLowerCase() + ' ' + canonicalMemoryName(type, name);
+  return (
+    String(type == null ? '' : type)
+      .trim()
+      .toLowerCase() +
+    ' ' +
+    canonicalMemoryName(type, name)
+  );
 }
 
 /**
@@ -107,13 +120,18 @@ function memoryKey(type, name) {
 function buildMemoryFilename(type, name, opts = {}) {
   const legacy = type + '_' + legacySlug(name) + '.md';
   try {
-    if (!slugGateEnabled(opts.env)) return legacy;
+    if (!slugGateEnabled(opts.env)) {
+      return legacy;
+    }
     const canon = canonicalMemoryName(type, name);
     const cleanSlug = legacySlug(canon);
     // 有损 = 规范化名里存在任何码点 > 127 的字符(ASCII slug 无法表达 → 需哈希区分)。
     let lossy = false;
     for (let i = 0; i < canon.length; i++) {
-      if (canon.charCodeAt(i) > 127) { lossy = true; break; }
+      if (canon.charCodeAt(i) > 127) {
+        lossy = true;
+        break;
+      }
     }
     // 退化 = slug 为空或仅由分隔符构成(无任何可读信息)。
     const degenerate = !cleanSlug || /^[_\-]+$/.test(cleanSlug);

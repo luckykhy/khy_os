@@ -14,8 +14,9 @@
  */
 
 const path = require('path');
-const state = require('./state');
+
 const { checkpoint } = require('./startupProfiler');
+const state = require('./state');
 
 let _promise = null;
 
@@ -25,7 +26,9 @@ let _promise = null;
  * @returns {Promise<void>}
  */
 function init() {
-  if (_promise) return _promise;
+  if (_promise) {
+    return _promise;
+  }
   _promise = _doInit();
   return _promise;
 }
@@ -37,10 +40,7 @@ async function _doInit() {
   try {
     const envPath = process.env.KHY_ENV_FILE
       ? path.resolve(process.env.KHY_ENV_FILE)
-      : path.resolve(
-        process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..'),
-        '.env'
-      );
+      : path.resolve(process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..'), '.env');
     require('dotenv').config({ path: envPath });
   } catch {
     // dotenv not available or .env missing — proceed with process.env as-is
@@ -55,102 +55,93 @@ async function _doInit() {
   //     reproduces the normal env code path (source-aware AUTH_TOKEN → Bearer).
   try {
     const os = require('os');
-    const userEnvPath = path.join(os.homedir(), '.khy', '.env');
+    const userEnvPath = (() => {
+      try {
+        return path.join(require('../utils/dataHome').getDataHome(), '.env');
+      } catch {
+        return path.join(os.homedir(), '.khy', '.env');
+      }
+    })();
     require('dotenv').config({ path: userEnvPath, override: false });
   } catch {
     // Overlay is optional; absence is the common case.
   }
 
-  // 1.3 「装完即用」自动配置代理内核出站门(KHY_PROXY_CORE)。安装后首启把它一次性播种进上面刚加载的
-  //     升级安全 overlay(~/.khy/.env),让用户选中 raw 协议节点时不再撞「请设 KHY_PROXY_CORE=1」那道
-  //     门、无需手改 shell profile。尊重用户显式值(真实 env / .env / overlay 已设过含 =0 → 不覆盖),
-  //     幂等(播种一次后读到「已设」即跳过)。meta 门 KHY_PROXY_CORE_AUTOSEED(默认开)关 → 逐字节回退。
-  //     fail-soft:自播种绝不阻断启动。必须在 1.2 加载 overlay 之后运行(才知道 overlay 里有没有)。
-  //     非关键路径：fire-and-forget，不阻塞 init() 返回。
-  Promise.resolve().then(() => {
-    try {
-      const { ensureProxyCoreEnv } = require('./ensureProxyCoreEnv');
-      ensureProxyCoreEnv({ log: (m) => { try { console.warn(`  ⚠ ${m}`); } catch { /* ignore */ } } });
-    } catch {
-      // ensureProxyCoreEnv not available — user can still set KHY_PROXY_CORE manually
-    }
-  }).catch(() => {});
-
-  // 1.5 Ensure the JWT signing secret exists (self-provision + persist if
-  //     the canonical .env lacks it). Must run before any auth path reads
-  //     process.env.JWT_SECRET. Single source of truth for the secret.
-  //     非关键路径：daemonEntry.js 会在守护进程启动前单独调用 ensureJwtSecret，
-  //     CLI 命令通常不需要 JWT（使用 API key 认证），故 fire-and-forget。
-  Promise.resolve().then(() => {
-    try {
-      const { ensureJwtSecret } = require('./ensureAuthSecret');
-      ensureJwtSecret({ log: (m) => { try { console.warn(`  ⚠ ${m}`); } catch { /* ignore */ } } });
-    } catch {
-      // ensureAuthSecret not available — login will report a clear error itself
-    }
-  }).catch(() => {});
-
-  // 2. Apply environment defaults (DB_TYPE, PORT, etc.)
+  // 1.15 Expand `{env:VAR}` cross-references now that BOTH env layers are loaded
+  //      (canonical .env + ~/.khy/.env overlay). Must run after the overlay so a
+  //      placeholder can point at a variable defined in either file. dotenv does
+  //      not do this itself — without it `RELAY_API_KEY={env:STEPFUN_API_KEY}`
+  //      ships literally as `Bearer {env:STEPFUN_API_KEY}` → 401 on every relay call.
   try {
-    const { applyEnvDefaults } = require('../config/env');
-    applyEnvDefaults();
+    const { expandEnvPlaceholders } = require('./expandEnvPlaceholders');
+    expandEnvPlaceholders(process.env);
   } catch {
-    // config/env not available — non-critical
+    /* expansion is best-effort; raw values still flow through */
   }
 
-  // 2.5 Initialize saved proxy settings for all runtime modes.
-  // This ensures non-REPL commands (e.g. `khy gateway ...`) also honor
-  // previously configured Clash/HTTP/SOCKS proxy preferences.
-  // 非关键路径：仅首次使用代理时需要，fire-and-forget。
-  Promise.resolve().then(() => {
-    try {
-      const proxyConfig = require('../services/proxyConfigService');
-      proxyConfig.initFromConfig();
-    } catch {
-      // proxy config is optional — continue with direct network path
-    }
-  }).catch(() => {});
-
-  // 3. Ensure KHYQUANT_ROOT is set
-  if (!process.env.KHYQUANT_ROOT) {
-    process.env.KHYQUANT_ROOT = path.resolve(__dirname, '../..');
-  }
-
-  // 4. Register graceful shutdown handlers
-  try {
-    const { registerShutdownHandlers } = require('./shutdown');
-    registerShutdownHandlers();
-  } catch {
-    // shutdown module not available — non-critical
-  }
-
-  // 5. Apply custom CA certificates (must happen before first TLS handshake)
-  try {
-    if (process.env.NODE_EXTRA_CA_CERTS) {
-      const fs = require('fs');
-      const certPath = process.env.NODE_EXTRA_CA_CERTS;
-      if (fs.existsSync(certPath)) {
-        // Node.js respects NODE_EXTRA_CA_CERTS natively; just verify the file
-        // exists so we can warn early if it's missing.
+  // 1.3-1.7 并行执行 5 个非关键初始化步骤（原串行 .then() 链，改为 Promise.allSettled）
+  //          每个步骤独立 try/catch，互不阻塞，减少 ~200-500ms 串行等待。
+  await Promise.allSettled([
+    (async () => {
+      try {
+        const { ensureProxyCoreEnv } = require('./ensureProxyCoreEnv');
+        ensureProxyCoreEnv({
+          log: (m) => {
+            try {
+              console.warn(`  ⚠ ${m}`);
+            } catch {
+              /* ignore */
+            }
+          },
+        });
+      } catch {
+        /* ensureProxyCoreEnv not available */
       }
-    }
-  } catch {
-    // CA cert check is non-critical
-  }
+    })(),
+    (async () => {
+      try {
+        const { ensureJwtSecret } = require('./ensureAuthSecret');
+        ensureJwtSecret({
+          log: (m) => {
+            try {
+              console.warn(`  ⚠ ${m}`);
+            } catch {
+              /* ignore */
+            }
+          },
+        });
+      } catch {
+        /* ensureAuthSecret not available */
+      }
+    })(),
+    (async () => {
+      try {
+        const proxyConfig = require('../services/proxyConfigService');
+        proxyConfig.initFromConfig();
+      } catch {
+        /* proxy config is optional */
+      }
+    })(),
+    (async () => {
+      try {
+        const backendDir = process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..');
+        const appRegistry = require('../services/appRegistry');
+        appRegistry.autoRegisterDev(backendDir);
+      } catch {
+        /* appRegistry not available */
+      }
+    })(),
+    (async () => {
+      try {
+        const dynamicFreeModelService = require('../services/dynamicFreeModelService');
+        dynamicFreeModelService.warmUp();
+      } catch {
+        /* dynamicFreeModelService not available */
+      }
+    })(),
+  ]);
 
-  // 6. Auto-register khyquant in app registry (dev mode)
-  // 非关键路径：仅 `khy quant` / `khy khyquant` 命令需要，fire-and-forget。
-  Promise.resolve().then(() => {
-    try {
-      const backendDir = process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..');
-      const appRegistry = require('../services/appRegistry');
-      appRegistry.autoRegisterDev(backendDir);
-    } catch {
-      // appRegistry not available or registration failed — non-critical
-    }
-  }).catch(() => {});
-
-  // 7. Mark as initialized
+  // 8. Mark as initialized
   state.set('initialized', true);
 
   checkpoint('init:done');

@@ -15,8 +15,8 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -30,8 +30,35 @@ const MAX_ENTRYPOINT_BYTES = 25_000;
 let _cachedMemoryDir = null;
 
 /**
+ * Last-resort .khy home used when utils/dataHome cannot be loaded.
+ * Prefers the portable/install root (<root>/.khy) derived from the env
+ * override or this file's location (paths.js lives at
+ * <root>/services/backend/src/memdir/, so the root is four levels up); only
+ * falls back to the user home when no install root can be derived.
+ * @returns {string}
+ */
+function _fallbackKhyHome() {
+  try {
+    const root = process.env.KHYQUANT_PORTABLE_ROOT
+      ? path.resolve(process.env.KHYQUANT_PORTABLE_ROOT)
+      : path.resolve(__dirname, '..', '..', '..', '..');
+    if (
+      process.env.KHYQUANT_PORTABLE_ROOT ||
+      fs.existsSync(path.join(root, '.portable')) ||
+      fs.existsSync(path.join(root, '.khy'))
+    ) {
+      return path.join(root, '.khy');
+    }
+  } catch {
+    /* fall through to user home */
+  }
+  return path.join(os.homedir(), '.khy');
+}
+
+/**
  * Resolve the KHY-OS project-scoped data home (<root>/.khy).
- * Falls back to ~/.khy if dataHome cannot be loaded.
+ * Falls back to the portable/install root (then ~/.khy) if dataHome cannot
+ * be loaded.
  * @returns {string}
  */
 function _projectDataHome() {
@@ -39,28 +66,38 @@ function _projectDataHome() {
     const { getProjectDataHome } = require('../utils/dataHome');
     return getProjectDataHome();
   } catch {
-    return path.join(os.homedir(), '.khy');
+    return _fallbackKhyHome();
   }
 }
 
 // Memory-home unification gate decisions (pure leaf). fail-soft: if the leaf is
 // missing, treat both gates as OFF so resolution byte-reverts to legacy.
 let _memoryUnify;
-try { _memoryUnify = require('./memoryUnify'); } catch { _memoryUnify = null; }
+try {
+  _memoryUnify = require('./memoryUnify');
+} catch {
+  _memoryUnify = null;
+}
 
 /**
- * Resolve the DURABLE user-home memory dir (getDataHome()/memory, e.g.
- * ~/.khy/memory). This is the same root the dreaming/consolidation side writes
- * to (getDataDir('memory')); pointing recall here ends the split-brain and is
- * durable across pip upgrades. Falls back to ~/.khy/memory if dataHome fails.
+ * Resolve the DURABLE memory home. For regular installs this is
+ * getDataHome()/memory (e.g. ~/.khy/memory) — the same root the
+ * dreaming/consolidation side writes to (getDataDir('memory')). For PORTABLE
+ * deployments (.portable marker or KHYQUANT_PORTABLE_ROOT) it resolves to
+ * getProjectDataHome()/memory so memory travels with the portable directory
+ * instead of being pinned to the system-drive user home. Falls back to the
+ * portable/install root (then ~/.khy/memory) if dataHome fails.
  * @returns {string}
  */
 function _dataHomeMemory() {
   try {
-    const { getDataHome } = require('../utils/dataHome');
-    return path.join(getDataHome(), MEMORY_DIR_NAME);
+    const dataHome = require('../utils/dataHome');
+    if (typeof dataHome.isPortableDeployment === 'function' && dataHome.isPortableDeployment()) {
+      return path.join(dataHome.getProjectDataHome(), MEMORY_DIR_NAME);
+    }
+    return path.join(dataHome.getDataHome(), MEMORY_DIR_NAME);
   } catch {
-    return path.join(os.homedir(), '.khy', MEMORY_DIR_NAME);
+    return path.join(_fallbackKhyHome(), MEMORY_DIR_NAME);
   }
 }
 
@@ -70,7 +107,9 @@ function _dataHomeMemory() {
  * @returns {string} Absolute path to the memory directory (with trailing separator)
  */
 function getMemoryDir() {
-  if (_cachedMemoryDir) return _cachedMemoryDir;
+  if (_cachedMemoryDir) {
+    return _cachedMemoryDir;
+  }
 
   // 1. Environment override
   if (process.env.KHY_MEMORY_DIR) {
@@ -170,24 +209,40 @@ let _legacyMergeDone = false;
  * merge problem never blocks a save/recall. Runs at most once per process.
  */
 function migrateLegacyMemoryOnce() {
-  if (_legacyMergeDone) return;
+  if (_legacyMergeDone) {
+    return;
+  }
   _legacyMergeDone = true;
   try {
-    if (!_memoryUnify || !_memoryUnify.legacyMergeEnabled(process.env)) return;
-    if (!_memoryUnify.unifiedHomeEnabled(process.env)) return; // legacy == canonical
+    if (!_memoryUnify || !_memoryUnify.legacyMergeEnabled(process.env)) {
+      return;
+    }
+    if (!_memoryUnify.unifiedHomeEnabled(process.env)) {
+      return;
+    } // legacy == canonical
 
     const canonicalDir = getMemoryDir();
     const legacyDir = path.normalize(path.join(_projectDataHome(), MEMORY_DIR_NAME)) + path.sep;
-    if (path.normalize(legacyDir) === path.normalize(canonicalDir)) return;
-    if (!fs.existsSync(legacyDir)) return;
+    if (path.normalize(legacyDir) === path.normalize(canonicalDir)) {
+      return;
+    }
+    if (!fs.existsSync(legacyDir)) {
+      return;
+    }
 
     const legacyNames = fs.readdirSync(legacyDir);
     const canonicalNames = fs.existsSync(canonicalDir) ? fs.readdirSync(canonicalDir) : [];
     const toCopy = _memoryUnify.planLegacyMerge(canonicalNames, legacyNames);
-    if (toCopy.length === 0) return;
+    if (toCopy.length === 0) {
+      return;
+    }
 
     let memdir = null;
-    try { memdir = require('./memdir'); } catch { memdir = null; }
+    try {
+      memdir = require('./memdir');
+    } catch {
+      memdir = null;
+    }
 
     const indexEntries = [];
     for (const name of toCopy) {
@@ -204,13 +259,21 @@ function migrateLegacyMemoryOnce() {
             });
           }
         }
-      } catch { /* skip this file, keep going */ }
+      } catch {
+        /* skip this file, keep going */
+      }
     }
 
     if (memdir && typeof memdir.updateMemoryIndex === 'function' && indexEntries.length > 0) {
-      try { memdir.updateMemoryIndex(indexEntries); } catch { /* index union best-effort */ }
+      try {
+        memdir.updateMemoryIndex(indexEntries);
+      } catch {
+        /* index union best-effort */
+      }
     }
-  } catch { /* merge is best-effort; never block memory IO */ }
+  } catch {
+    /* merge is best-effort; never block memory IO */
+  }
 }
 
 /**
@@ -238,7 +301,9 @@ function isMemoryPath(absolutePath) {
  * @returns {string|null} Normalized path with trailing separator, or null
  */
 function _validatePath(raw) {
-  if (!raw || typeof raw !== 'string') return null;
+  if (!raw || typeof raw !== 'string') {
+    return null;
+  }
 
   let candidate = raw;
 
@@ -249,10 +314,18 @@ function _validatePath(raw) {
 
   const normalized = path.normalize(candidate).replace(/[/\\]+$/, '');
 
-  if (!path.isAbsolute(normalized)) return null;
-  if (normalized.length < 3) return null;
-  if (normalized.startsWith('\\\\') || normalized.startsWith('//')) return null;
-  if (normalized.includes('\0')) return null;
+  if (!path.isAbsolute(normalized)) {
+    return null;
+  }
+  if (normalized.length < 3) {
+    return null;
+  }
+  if (normalized.startsWith('\\\\') || normalized.startsWith('//')) {
+    return null;
+  }
+  if (normalized.includes('\0')) {
+    return null;
+  }
 
   return normalized + path.sep;
 }

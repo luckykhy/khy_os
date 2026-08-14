@@ -22,14 +22,23 @@
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
 
-function _core() { return require('../../services/messaging/msgChannelCore'); }
-function _store() { return require('../../services/messaging/msgConfigStore'); }
-function _sender() { return require('../../services/messaging/msgSender'); }
+function _core() {
+  return require('../../services/messaging/msgChannelCore');
+}
+
+function _store() {
+  return require('../../services/messaging/msgConfigStore');
+}
+
+function _sender() {
+  return require('../../services/messaging/msgSender');
+}
 
 function _persist(value, deps) {
-  const writeEnvPatch = (deps && typeof deps.writeEnvPatch === 'function')
-    ? deps.writeEnvPatch
-    : require('./config')._writeEnvPatch;
+  const writeEnvPatch =
+    deps && typeof deps.writeEnvPatch === 'function'
+      ? deps.writeEnvPatch
+      : require('./config')._writeEnvPatch;
   return writeEnvPatch({ KHY_MSG: value });
 }
 
@@ -50,7 +59,7 @@ function _handleStatus() {
   }
   printTable(
     ['平台', '名称', 'webhook(掩码)', '含密钥'],
-    list.map((p) => [p.platform, p.label, p.webhook, p.hasSecret ? '是' : '否']),
+    list.map((p) => [p.platform, p.label, p.webhook, p.hasSecret ? '是' : '否'])
   );
   printInfo('发消息:khy msg send <平台> <文本>。接收需把 /webhooks/<平台> 配到平台后台。');
   return 0;
@@ -59,7 +68,9 @@ function _handleStatus() {
 function _handlePlatforms() {
   printTable(
     ['平台', '名称', '去哪拿 webhook'],
-    _core().describePlatforms().map((p) => [p.platform, p.label, p.hint]),
+    _core()
+      .describePlatforms()
+      .map((p) => [p.platform, p.label, p.hint])
   );
   return 0;
 }
@@ -80,7 +91,9 @@ function _handleSet(args) {
     }
     const key = token.slice(0, idx).trim();
     let val = token.slice(idx + 1);
-    if (val === '-') val = _readStdinValue(); // 从 stdin 读,避免密钥进 shell 历史
+    if (val === '-') {
+      val = _readStdinValue();
+    } // 从 stdin 读,避免密钥进 shell 历史
     fields[key] = val;
   }
   if (!Object.keys(fields).length) {
@@ -100,9 +113,17 @@ function _handleSet(args) {
 async function _sendVia(platform, text) {
   const cfg = _store().getPlatform(platform);
   if (!cfg) {
-    return { ok: false, error: `平台「${platform}」尚未配置。先跑 khy msg set ${platform} webhook=<url>。` };
+    return {
+      ok: false,
+      error: `平台「${platform}」尚未配置。先跑 khy msg set ${platform} webhook=<url>。`,
+    };
   }
-  return _sender().sendText({ platform: cfg.platform, webhook: cfg.webhook, secret: cfg.secret, text });
+  return _sender().sendText({
+    platform: cfg.platform,
+    webhook: cfg.webhook,
+    secret: cfg.secret,
+    text,
+  });
 }
 
 async function _handleSend(args) {
@@ -152,7 +173,9 @@ function _handleToggle(turnOn, deps) {
   const value = turnOn ? 'true' : 'off';
   try {
     const p = _persist(value, deps);
-    printSuccess(`✅ 消息收发能力${turnOn ? '已开启' : '已关闭'}(KHY_MSG=${value})。已即时生效并持久化。`);
+    printSuccess(
+      `✅ 消息收发能力${turnOn ? '已开启' : '已关闭'}(KHY_MSG=${value})。已即时生效并持久化。`
+    );
     printInfo(`已写入:${p}`);
     return 0;
   } catch (e) {
@@ -171,19 +194,41 @@ function _handleToggle(turnOn, deps) {
 function handleMsg(subCommand, args = [], options = {}, deps = {}) {
   const sub = String(subCommand || 'status').toLowerCase();
   if (sub === 'help' || options.help) {
-    printInfo('用法: msg [status] | msg platforms | msg set <平台> <k>=<v>... | msg send <平台> <文本> | msg test <平台> | msg clear [平台] | msg on | msg off');
-    printInfo('平台: dingtalk / feishu / wecom。填群机器人 webhook 即可发送;接收需把 /webhooks/<平台> 配到平台后台。');
+    printInfo(
+      '用法: msg [status] | msg platforms | msg set <平台> <k>=<v>... | msg send <平台> <文本> | msg test <平台> | msg clear [平台] | msg on | msg off'
+    );
+    printInfo(
+      '平台: dingtalk / feishu / wecom。填群机器人 webhook 即可发送;接收需把 /webhooks/<平台> 配到平台后台。'
+    );
     return 0;
   }
-  if (!sub || sub === 'status' || sub === 'show' || sub === 'list') return _handleStatus();
-  if (sub === 'platforms' || sub === 'providers') return _handlePlatforms();
-  if (sub === 'set' || sub === 'config') return _handleSet(args);
-  if (sub === 'send' || sub === 'push') return _handleSend(args);
-  if (sub === 'test') return _handleTest(args);
-  if (sub === 'clear' || sub === 'rm' || sub === 'remove' || sub === 'unset') return _handleClear(args);
-  if (sub === 'on') return _handleToggle(true, deps);
-  if (sub === 'off') return _handleToggle(false, deps);
-  printError(`未知子命令:${subCommand}。可用:status / platforms / set / send / test / clear / on / off。`);
+  if (!sub || sub === 'status' || sub === 'show' || sub === 'list') {
+    return _handleStatus();
+  }
+  if (sub === 'platforms' || sub === 'providers') {
+    return _handlePlatforms();
+  }
+  if (sub === 'set' || sub === 'config') {
+    return _handleSet(args);
+  }
+  if (sub === 'send' || sub === 'push') {
+    return _handleSend(args);
+  }
+  if (sub === 'test') {
+    return _handleTest(args);
+  }
+  if (sub === 'clear' || sub === 'rm' || sub === 'remove' || sub === 'unset') {
+    return _handleClear(args);
+  }
+  if (sub === 'on') {
+    return _handleToggle(true, deps);
+  }
+  if (sub === 'off') {
+    return _handleToggle(false, deps);
+  }
+  printError(
+    `未知子命令:${subCommand}。可用:status / platforms / set / send / test / clear / on / off。`
+  );
   return 1;
 }
 

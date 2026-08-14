@@ -39,10 +39,14 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']); // CANON off-words
 function isEnabled(env = process.env) {
   try {
     return require('../flagRegistry').isFlagEnabled('KHY_RELAY_MODEL_GUARD', env || process.env);
-  } catch { /* fall through to local */ }
+  } catch {
+    /* fall through to local */
+  }
   try {
     const raw = (env || process.env).KHY_RELAY_MODEL_GUARD;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_FALSY.has(v);
   } catch {
     return true;
@@ -52,7 +56,8 @@ function isEnabled(env = process.env) {
 // relay_api(trae.ai)能服务的模型家族 —— 与 traeAdapter.isLikelyModelId 的识别族对齐(同一
 // 「trae 认得的模型」认知,单一真源不漂移):trae 面板列出的主流家族。落在此集合外的 id
 // (如自定义 provider 的 agnes-*)视为「relay 无法服务」。
-const _RELAY_FAMILY_RE = /(gpt|claude|deepseek|qwen|glm|doubao|llama|mistral|moonshot|yi[-._:]|kimi|minimax|gemini|swe[-._:]|sonnet|haiku|opus|cascade|grok|\bo1\b|\bo3\b|\bo4\b)/i;
+const _RELAY_FAMILY_RE =
+  /(gpt|claude|deepseek|qwen|glm|doubao|llama|mistral|moonshot|yi[-._:]|kimi|minimax|gemini|swe[-._:]|sonnet|haiku|opus|cascade|grok|\bo1\b|\bo3\b|\bo4\b)/i;
 
 /**
  * 判定 model 是否属于 relay_api 可服务的模型家族。非字符串 / 空 / 不匹配任何家族 → false。
@@ -62,9 +67,13 @@ const _RELAY_FAMILY_RE = /(gpt|claude|deepseek|qwen|glm|doubao|llama|mistral|moo
  */
 function isRelayServableModel(model) {
   try {
-    if (typeof model !== 'string') return false;
+    if (typeof model !== 'string') {
+      return false;
+    }
     const m = model.trim().toLowerCase();
-    if (!m) return false;
+    if (!m) {
+      return false;
+    }
     return _RELAY_FAMILY_RE.test(m);
   } catch {
     return false;
@@ -76,10 +85,11 @@ function describeRelayModelGuard() {
   return {
     gate: 'KHY_RELAY_MODEL_GUARD',
     defaultOn: true,
-    summary: 'relay_api(直连 trae.ai)通道的模型防护:级联/auto 误带的外来自定义 provider 模型'
-      + '(如 agnes-*,归 api 代理路由)不属 relay 可服务家族时,由 normalizeModelForAdapter '
-      + '丢弃为 null → relay 用自有默认模型,避免必然的 404 model_not_found + cooldown。'
-      + '对称于 claude 通道既有防护;不影响 api 代理通道。门控关则原样透传(今日行为)。',
+    summary:
+      'relay_api(直连 trae.ai)通道的模型防护:级联/auto 误带的外来自定义 provider 模型' +
+      '(如 agnes-*,归 api 代理路由)不属 relay 可服务家族时,由 normalizeModelForAdapter ' +
+      '丢弃为 null → relay 用自有默认模型,避免必然的 404 model_not_found + cooldown。' +
+      '对称于 claude 通道既有防护;不影响 api 代理通道。门控关则原样透传(今日行为)。',
   };
 }
 

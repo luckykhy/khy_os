@@ -8,10 +8,11 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const ROOT = path.resolve(__dirname, '../../..');
+// Repo root: this file lives at <root>/services/backend/tests/ci/, four levels up.
+const ROOT = path.resolve(__dirname, '../../../..');
 
 describe('D5: quality dashboard export', () => {
-  const dashboardPath = path.join(ROOT, '文档/报告/质量看板.json');
+  const dashboardPath = path.join(ROOT, 'docs/报告/质量看板.json');
 
   test('export-quality-dashboard.js runs without error', () => {
     const script = path.join(ROOT, 'scripts/ci/export-quality-dashboard.js');
@@ -37,7 +38,7 @@ describe('D5: quality dashboard export', () => {
 });
 
 describe('D5: dimension health export', () => {
-  const healthPath = path.join(ROOT, '文档/报告/维度健康.json');
+  const healthPath = path.join(ROOT, 'docs/报告/维度健康.json');
 
   test('export-dimension-health.js runs without error', () => {
     const script = path.join(ROOT, 'scripts/ci/export-dimension-health.js');

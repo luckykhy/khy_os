@@ -18,24 +18,34 @@
 
 'use strict';
 
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 // ─── Kill switch ───────────────────────────────────────────────────────
 function isEnabled() {
   const env = String(process.env.KHY_SYNTHETIC_TOOLS || '').toLowerCase();
-  if (env === 'false' || env === '0' || env === 'off') return false;
+  if (env === 'false' || env === '0' || env === 'off') {
+    return false;
+  }
   return true;
 }
 
 // ─── Gate: should the layer even try? ─────────────────────────────────
 let _capRegistry;
-try { _capRegistry = require('./gateway/capabilityRegistry'); } catch { _capRegistry = null; }
+try {
+  _capRegistry = require('./gateway/capabilityRegistry');
+} catch {
+  _capRegistry = null;
+}
 
 function shouldActivate(ctx = {}) {
-  if (!isEnabled()) return false;
+  if (!isEnabled()) {
+    return false;
+  }
   // If the caller already knows the model is low-tier, trust it.
-  if (ctx.isLowTierModel) return true;
+  if (ctx.isLowTierModel) {
+    return true;
+  }
   // Otherwise query capabilityRegistry for tool_use score.
   if (_capRegistry && ctx.adapter) {
     const score = _capRegistry.getCapability?.(ctx.adapter, 'tool_use') ?? 5;
@@ -52,7 +62,9 @@ const DETECTORS = [];
 function _userWants(userMsg, patterns) {
   const t = String(userMsg || '').toLowerCase();
   for (const p of patterns) {
-    if (p instanceof RegExp ? p.test(t) : t.includes(p)) return true;
+    if (p instanceof RegExp ? p.test(t) : t.includes(p)) {
+      return true;
+    }
   }
   return false;
 }
@@ -60,7 +72,9 @@ function _userWants(userMsg, patterns) {
 function _outputContains(output, patterns) {
   const t = String(output || '');
   for (const p of patterns) {
-    if (p instanceof RegExp ? p.test(t) : t.includes(p)) return true;
+    if (p instanceof RegExp ? p.test(t) : t.includes(p)) {
+      return true;
+    }
   }
   return false;
 }
@@ -80,39 +94,55 @@ function _inferOutputPath(userMsg, defaultDir, ext) {
 
   // Chinese directory aliases → real paths
   const DIR_ALIASES = {
-    '桌面': path.join(os.homedir(), 'Desktop'),
-    '下载': path.join(os.homedir(), 'Downloads'),
-    '文档': path.join(os.homedir(), 'Documents'),
-    '主目录': os.homedir(),
+    桌面: path.join(os.homedir(), 'Desktop'),
+    下载: path.join(os.homedir(), 'Downloads'),
+    文档: path.join(os.homedir(), 'Documents'),
+    主目录: os.homedir(),
   };
 
   // "保存到 ~/Desktop/foo.docx" or "save to /tmp/foo.txt"
-  const pathMatch = t.match(/(?:保存到|存到|写入|save\s+to|write\s+to|放到|放在)\s*["""']?([^\s"""']+)/i);
+  const pathMatch = t.match(
+    /(?:保存到|存到|写入|save\s+to|write\s+to|放到|放在)\s*["""']?([^\s"""']+)/i
+  );
   if (pathMatch) {
     let p = pathMatch[1].trim();
     // Resolve Chinese aliases first
-    if (DIR_ALIASES[p]) return DIR_ALIASES[p];
-    if (p.startsWith('~')) p = path.join(os.homedir(), p.slice(1));
+    if (DIR_ALIASES[p]) {
+      return DIR_ALIASES[p];
+    }
+    if (p.startsWith('~')) {
+      p = path.join(os.homedir(), p.slice(1));
+    }
     // Ensure correct extension
     if (ext && !p.endsWith(ext)) {
       const parsed = path.parse(p);
-      if (!parsed.ext) p = p + ext;
+      if (!parsed.ext) {
+        p = p + ext;
+      }
     }
     return p;
   }
   // "桌面" / "desktop"
-  if (/桌面|desktop/i.test(t)) return path.join(os.homedir(), 'Desktop');
+  if (/桌面|desktop/i.test(t)) {
+    return path.join(os.homedir(), 'Desktop');
+  }
   return defaultDir || path.join(os.homedir(), 'Desktop');
 }
 
 function _inferTitle(userMsg) {
   const t = String(userMsg || '');
   // "写一份XX攻略" → "XX攻略"
-  const m = t.match(/(?:写|创建|生成|制作|做|帮我写|write|create|make)\s*(?:一份|一个|一篇)?\s*(.{2,30}?)(?:保存|存|放|$)/i);
-  if (m) return m[1].trim();
+  const m = t.match(
+    /(?:写|创建|生成|制作|做|帮我写|write|create|make)\s*(?:一份|一个|一篇)?\s*(.{2,30}?)(?:保存|存|放|$)/i
+  );
+  if (m) {
+    return m[1].trim();
+  }
   // "关于XX的文档" → "XX"
   const m2 = t.match(/(?:关于|about)\s*(.{2,20}?)(?:的|文档|document)/i);
-  if (m2) return m2[1].trim();
+  if (m2) {
+    return m2[1].trim();
+  }
   return '';
 }
 
@@ -126,20 +156,40 @@ DETECTORS.push({
     const user = ctx.userMessage || '';
     // User must want a document
     const wantsDoc = _userWants(user, [
-      '文档', 'word', 'docx', /保存.*文/, /写.*报告/, /写.*攻略/,
-      /写.*方案/, /写.*计划/, /create.*doc/i, /write.*report/i,
+      '文档',
+      'word',
+      'docx',
+      /保存.*文/,
+      /写.*报告/,
+      /写.*攻略/,
+      /写.*方案/,
+      /写.*计划/,
+      /create.*doc/i,
+      /write.*report/i,
     ]);
-    if (!wantsDoc) return 0;
+    if (!wantsDoc) {
+      return 0;
+    }
 
     // Model output must be substantial prose
     const outLen = String(output || '').length;
-    if (outLen < 200) return 0;
+    if (outLen < 200) {
+      return 0;
+    }
 
     const hasProseMarker = _outputContains(output, [
-      '以下是', '内容如下', 'Here is', 'here is', '如下', '以下',
-      /^#\s+/m, /^##\s+/m,
+      '以下是',
+      '内容如下',
+      'Here is',
+      'here is',
+      '如下',
+      '以下',
+      /^#\s+/m,
+      /^##\s+/m,
     ]);
-    if (!hasProseMarker && outLen < 500) return 0.4;
+    if (!hasProseMarker && outLen < 500) {
+      return 0.4;
+    }
     return hasProseMarker ? 0.92 : 0.7;
   },
 
@@ -154,7 +204,9 @@ DETECTORS.push({
     // Strip meta-commentary prefix ("以下是XXX的内容：\n")
     let content = String(output || '');
     content = content.replace(/^.*?(?:以下是|内容如下|Here is)[^\n]*\n/i, '').trim();
-    if (!content) content = output;
+    if (!content) {
+      content = output;
+    }
 
     return {
       content,
@@ -173,13 +225,22 @@ DETECTORS.push({
   match(output, ctx) {
     const user = ctx.userMessage || '';
     const wantsSave = _userWants(user, [
-      /保存到/, /写入/, /存到/, /create\s+file/i, /save\s+(?:to|as)/i,
-      /write\s+to/i, /放到/,
+      /保存到/,
+      /写入/,
+      /存到/,
+      /create\s+file/i,
+      /save\s+(?:to|as)/i,
+      /write\s+to/i,
+      /放到/,
     ]);
-    if (!wantsSave) return 0;
+    if (!wantsSave) {
+      return 0;
+    }
 
     const blocks = _extractCodeBlocks(output);
-    if (blocks.length === 0) return 0;
+    if (blocks.length === 0) {
+      return 0;
+    }
     return 0.9;
   },
 
@@ -190,11 +251,30 @@ DETECTORS.push({
 
     // Infer extension from language hint
     const langExtMap = {
-      js: '.js', javascript: '.js', ts: '.ts', typescript: '.ts',
-      py: '.py', python: '.py', java: '.java', cpp: '.cpp', c: '.c',
-      html: '.html', css: '.css', json: '.json', yaml: '.yaml', yml: '.yml',
-      sh: '.sh', bash: '.sh', zsh: '.sh', md: '.md', txt: '.txt',
-      rs: '.rs', go: '.go', rb: '.rb', swift: '.swift', kt: '.kt',
+      js: '.js',
+      javascript: '.js',
+      ts: '.ts',
+      typescript: '.ts',
+      py: '.py',
+      python: '.py',
+      java: '.java',
+      cpp: '.cpp',
+      c: '.c',
+      html: '.html',
+      css: '.css',
+      json: '.json',
+      yaml: '.yaml',
+      yml: '.yml',
+      sh: '.sh',
+      bash: '.sh',
+      zsh: '.sh',
+      md: '.md',
+      txt: '.txt',
+      rs: '.rs',
+      go: '.go',
+      rb: '.rb',
+      swift: '.swift',
+      kt: '.kt',
     };
     const ext = langExtMap[block.lang.toLowerCase()] || '.txt';
 
@@ -219,34 +299,46 @@ DETECTORS.push({
   match(output, ctx) {
     const user = ctx.userMessage || '';
     const blocks = _extractCodeBlocks(output);
-    const shellBlocks = blocks.filter(b =>
-      /^(bash|sh|zsh|shell|terminal|cmd|powershell)?$/i.test(b.lang)
-      && b.code.split('\n').length <= 3
-      && b.code.length < 100
+    const shellBlocks = blocks.filter(
+      (b) =>
+        /^(bash|sh|zsh|shell|terminal|cmd|powershell)?$/i.test(b.lang) &&
+        b.code.split('\n').length <= 3 &&
+        b.code.length < 100
     );
-    if (shellBlocks.length !== 1) return 0;
+    if (shellBlocks.length !== 1) {
+      return 0;
+    }
 
     // Model must suggest running it
     const suggestsRun = _outputContains(output, [
-      '建议执行', '可以执行', '运行以下', '可以运行', '执行以下',
-      'you can run', 'run the following', 'execute the',
+      '建议执行',
+      '可以执行',
+      '运行以下',
+      '可以运行',
+      '执行以下',
+      'you can run',
+      'run the following',
+      'execute the',
     ]);
     // User must want execution
-    const wantsRun = _userWants(user, [
-      '执行', '运行', '跑', 'run', 'execute', '命令', 'command',
-    ]);
+    const wantsRun = _userWants(user, ['执行', '运行', '跑', 'run', 'execute', '命令', 'command']);
 
-    if (suggestsRun && wantsRun) return 0.85;
-    if (suggestsRun || wantsRun) return 0.6;
+    if (suggestsRun && wantsRun) {
+      return 0.85;
+    }
+    if (suggestsRun || wantsRun) {
+      return 0.6;
+    }
     return 0.3;
   },
 
   extract(output, ctx) {
     const blocks = _extractCodeBlocks(output);
-    const shellBlock = blocks.find(b =>
-      /^(bash|sh|zsh|shell|terminal|cmd|powershell)?$/i.test(b.lang)
-      && b.code.split('\n').length <= 3
-      && b.code.length < 100
+    const shellBlock = blocks.find(
+      (b) =>
+        /^(bash|sh|zsh|shell|terminal|cmd|powershell)?$/i.test(b.lang) &&
+        b.code.split('\n').length <= 3 &&
+        b.code.length < 100
     );
     return {
       command: shellBlock ? shellBlock.code.trim() : '',
@@ -263,14 +355,12 @@ DETECTORS.push({
 
   match(output, ctx) {
     const user = ctx.userMessage || '';
-    const wantsOpen = _userWants(user, [
-      /打开/, /启动/, /launch/i, /open\s+\w+/i,
-    ]);
-    if (!wantsOpen) return 0;
+    const wantsOpen = _userWants(user, [/打开/, /启动/, /launch/i, /open\s+\w+/i]);
+    if (!wantsOpen) {
+      return 0;
+    }
 
-    const outputSuggests = _outputContains(output, [
-      /打开|启动|launch|open\s+/i,
-    ]);
+    const outputSuggests = _outputContains(output, [/打开|启动|launch|open\s+/i]);
     return outputSuggests ? 0.8 : 0.4;
   },
 
@@ -292,17 +382,34 @@ DETECTORS.push({
 
   match(output, ctx) {
     const outputAdmits = _outputContains(output, [
-      '无法确定最新', '建议搜索', '无法获取最新', '建议您搜索',
-      "I don't have current", "I don't have access to real-time",
-      'my knowledge cutoff', 'search for the latest',
-      '无法提供最新', '无法确认当前',
+      '无法确定最新',
+      '建议搜索',
+      '无法获取最新',
+      '建议您搜索',
+      "I don't have current",
+      "I don't have access to real-time",
+      'my knowledge cutoff',
+      'search for the latest',
+      '无法提供最新',
+      '无法确认当前',
     ]);
-    if (!outputAdmits) return 0;
+    if (!outputAdmits) {
+      return 0;
+    }
 
     const user = ctx.userMessage || '';
     const wantsInfo = _userWants(user, [
-      /最新/, /现在/, /当前/, /latest/i, /current/i, /搜索/, /search/i,
-      /查/, /查询/, /今天/, /today/i,
+      /最新/,
+      /现在/,
+      /当前/,
+      /latest/i,
+      /current/i,
+      /搜索/,
+      /search/i,
+      /查/,
+      /查询/,
+      /今天/,
+      /today/i,
     ]);
     return wantsInfo ? 0.85 : 0.55;
   },
@@ -311,7 +418,9 @@ DETECTORS.push({
     const user = ctx.userMessage || '';
     // Use user message as search query, stripped of filler
     let query = user.replace(/请|帮我|帮忙|一下|吧|呢/g, '').trim();
-    if (!query || query.length < 2) query = user;
+    if (!query || query.length < 2) {
+      query = user;
+    }
     return { query };
   },
 });
@@ -346,7 +455,11 @@ function detectSyntheticAction(output, ctx = {}) {
  */
 async function executeSyntheticAction(plan, opts = {}) {
   let _executeTool;
-  try { ({ executeTool: _executeTool } = require('./toolCalling')); } catch { _executeTool = null; }
+  try {
+    ({ executeTool: _executeTool } = require('./toolCalling'));
+  } catch {
+    _executeTool = null;
+  }
 
   if (!_executeTool) {
     return { success: false, error: 'toolCalling not available' };
@@ -372,15 +485,18 @@ async function executeSyntheticAction(plan, opts = {}) {
  * Merge the original model output with the synthetic action result.
  */
 function formatWithSyntheticAction(originalText, result, plan) {
-  if (!plan || !result) return originalText;
+  if (!plan || !result) {
+    return originalText;
+  }
 
-  const actionLabel = {
-    save_as_docx: '保存为 Word 文档',
-    save_as_file: '保存文件',
-    execute_shell: '执行命令',
-    open_app: '打开应用',
-    web_search: '搜索',
-  }[plan.name] || plan.name;
+  const actionLabel =
+    {
+      save_as_docx: '保存为 Word 文档',
+      save_as_file: '保存文件',
+      execute_shell: '执行命令',
+      open_app: '打开应用',
+      web_search: '搜索',
+    }[plan.name] || plan.name;
 
   const suffix = result.success
     ? `\n\n---\n✅ ${actionLabel} 完成` + (result.outputPath ? `：${result.outputPath}` : '')

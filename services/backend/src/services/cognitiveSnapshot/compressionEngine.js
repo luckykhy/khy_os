@@ -22,8 +22,11 @@
 
 const LEVELS = Object.freeze({ L0: 'L0', L1: 'L1', L2: 'L2', L3: 'L3' });
 
+// Canonical chars/4 estimate atom (utils leaf; estimator fallback only).
+const _simpleTokenEstimate = require('../../utils/simpleTokenEstimate');
+
 // 触发线（§3.2 表）。
-const THRESHOLDS = Object.freeze({ L1: 0.50, L2: 0.75, L3: 0.90 });
+const THRESHOLDS = Object.freeze({ L1: 0.5, L2: 0.75, L3: 0.9 });
 
 // 防呆①红线：完整原始 I/O 最多保留的步数。绝不可调高。
 const RAW_WINDOW_HARD_CAP = 2;
@@ -32,29 +35,56 @@ const MAX_ENTITIES = 12;
 const SUMMARY_CHARS = 200;
 
 function _estimator(fn) {
-  if (typeof fn === 'function') return fn;
-  try { return require('../contextWasm').estimateTokens; }
-  catch { return (t) => Math.ceil(String(t || '').length / 4); }
+  if (typeof fn === 'function') {
+    return fn;
+  }
+  try {
+    return require('../contextWasm').estimateTokens;
+  } catch {
+    // Thin delegate; byte-identical to (t) => Math.ceil(String(t || '').length / 4).
+    return (t) => _simpleTokenEstimate(String(t || ''));
+  }
 }
 
 /** 选择压缩级别（§3.2）。usageRatio ∈ [0,1]，未知/越界 fail-safe 推到最严 L3。 */
 function selectLevel(usageRatio) {
   const r = Number(usageRatio);
-  if (!Number.isFinite(r) || r < 0) return LEVELS.L3; // fail-safe：拿不到占用就当满
-  if (r < THRESHOLDS.L1) return LEVELS.L0;
-  if (r < THRESHOLDS.L2) return LEVELS.L1;
-  if (r < THRESHOLDS.L3) return LEVELS.L2;
+  if (!Number.isFinite(r) || r < 0) {
+    return LEVELS.L3;
+  } // fail-safe：拿不到占用就当满
+  if (r < THRESHOLDS.L1) {
+    return LEVELS.L0;
+  }
+  if (r < THRESHOLDS.L2) {
+    return LEVELS.L1;
+  }
+  if (r < THRESHOLDS.L3) {
+    return LEVELS.L2;
+  }
   return LEVELS.L3;
 }
 
 function _trunc(v, n = SUMMARY_CHARS) {
-  if (v == null) return '';
-  const s = typeof v === 'string' ? v : (() => { try { return JSON.stringify(v); } catch { return String(v); } })();
+  if (v == null) {
+    return '';
+  }
+  const s =
+    typeof v === 'string'
+      ? v
+      : (() => {
+          try {
+            return JSON.stringify(v);
+          } catch {
+            return String(v);
+          }
+        })();
   return s.length > n ? s.slice(0, n) + '…' : s;
 }
 
 function _isFailure(step) {
-  if (step && step.error) return true;
+  if (step && step.error) {
+    return true;
+  }
   const r = step && step.result;
   return !!(r && (r.success === false || r.error));
 }
@@ -65,19 +95,25 @@ function _extractEntities(step) {
     step && step.intent,
     step && step.tool,
     step && (step.path || (step.params && (step.params.path || step.params.file))),
-    typeof (step && step.result) === 'object' ? _trunc(step.result, 300) : (step && step.result),
+    typeof (step && step.result) === 'object' ? _trunc(step.result, 300) : step && step.result,
     step && step.error,
-  ].filter(Boolean).map((x) => (typeof x === 'string' ? x : _trunc(x, 300))).join(' \n ');
+  ]
+    .filter(Boolean)
+    .map((x) => (typeof x === 'string' ? x : _trunc(x, 300)))
+    .join(' \n ');
 
   const ents = new Set();
-  if (step && step.tool) ents.add(`tool:${step.tool}`);
+  if (step && step.tool) {
+    ents.add(`tool:${step.tool}`);
+  }
   // 文件路径
   (blob.match(/[\w./-]*\/[\w./-]+\.[A-Za-z0-9]+/g) || []).forEach((p) => ents.add(`file:${p}`));
   // 错误码 (E01.. / ENOENT / EPERM ..)
   (blob.match(/\b[Ee][A-Z0-9]{2,12}\b/g) || []).forEach((c) => ents.add(`code:${c}`));
   // 显著标识符（camelCase / snake_case，长度≥4）
   (blob.match(/\b[a-zA-Z_][a-zA-Z0-9_]{3,}(?:[A-Z][a-z0-9]+|_[a-z0-9]+)+\b/g) || [])
-    .slice(0, 20).forEach((id) => ents.add(`sym:${id}`));
+    .slice(0, 20)
+    .forEach((id) => ents.add(`sym:${id}`));
   return [...ents].slice(0, MAX_ENTITIES);
 }
 
@@ -105,14 +141,19 @@ function extractL2(step = {}) {
   const entities = _extractEntities(step);
   const errorLessons = [];
   if (_isFailure(step)) {
-    const lesson = _trunc(step.error || (step.result && (step.result.error || step.result.message)) || step.result, 180);
-    if (lesson) errorLessons.push(`step${step.step != null ? step.step : '?'}: ${lesson}`);
+    const lesson = _trunc(
+      step.error || (step.result && (step.result.error || step.result.message)) || step.result,
+      180
+    );
+    if (lesson) {
+      errorLessons.push(`step${step.step != null ? step.step : '?'}: ${lesson}`);
+    }
   }
   return {
     step: step.step,
     level: LEVELS.L2,
-    entities,          // 防呆③：核心实体状态——保底
-    errorLessons,      // 防呆③：错误教训——保底
+    entities, // 防呆③：核心实体状态——保底
+    errorLessons, // 防呆③：错误教训——保底
   };
 }
 
@@ -153,7 +194,13 @@ function compressHistory(steps = [], opts = {}) {
     if (level === LEVELS.L3 && posFromOld < 0.34) {
       offloadCandidates.push({ step: s.step, l2: extractL2(s), folded: foldL1(s) });
       // 上下文里只留一个寻址占位；真实指针由 offloadStore 写盘后回填。
-      history.push({ step: s.step, level: LEVELS.L3, offloaded: true, ref: null, l2: extractL2(s) });
+      history.push({
+        step: s.step,
+        level: LEVELS.L3,
+        offloaded: true,
+        ref: null,
+        l2: extractL2(s),
+      });
     } else if (level === LEVELS.L3 || level === LEVELS.L2) {
       history.push(extractL2(s));
     } else {
@@ -191,15 +238,21 @@ function _slimRaw(step) {
     intent: step.intent || step.instruction || '',
     tool: step.tool || '',
     params: step.params,
-    result: typeof step.result === 'string' && step.result.length > 1200
-      ? step.result.slice(0, 1200) + '…' : step.result,
+    result:
+      typeof step.result === 'string' && step.result.length > 1200
+        ? step.result.slice(0, 1200) + '…'
+        : step.result,
     error: step.error,
     failed: _isFailure(step),
   };
 }
 
 function _serialize(arr) {
-  try { return JSON.stringify(arr); } catch { return String(arr); }
+  try {
+    return JSON.stringify(arr);
+  } catch {
+    return String(arr);
+  }
 }
 
 module.exports = {

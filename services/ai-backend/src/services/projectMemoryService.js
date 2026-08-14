@@ -44,13 +44,13 @@ function getProjectDir(cwd) {
   // Write a metadata file so we can map hash → path
   const metaPath = path.join(dir, 'project.json');
   try {
-    const meta = fs.existsSync(metaPath)
-      ? JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-      : {};
+    const meta = fs.existsSync(metaPath) ? JSON.parse(fs.readFileSync(metaPath, 'utf-8')) : {};
     meta.path = cwd;
     meta.lastAccessed = new Date().toISOString();
     fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   return dir;
 }
@@ -72,13 +72,19 @@ function saveSessionTrace(cwd, trace) {
   try {
     fs.writeFileSync(
       path.join(dir, 'last_session.json'),
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        ...trace,
-      }, null, 2),
+      JSON.stringify(
+        {
+          timestamp: new Date().toISOString(),
+          ...trace,
+        },
+        null,
+        2
+      ),
       'utf-8'
     );
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -91,7 +97,9 @@ function loadLastSession(cwd) {
     if (fs.existsSync(filePath)) {
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
@@ -108,10 +116,14 @@ function listProjects() {
       try {
         const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
         projects.push({ hash: d, ...meta });
-      } catch { /* skip corrupt entries */ }
+      } catch {
+        /* skip corrupt entries */
+      }
     }
     return projects.sort((a, b) => (b.lastAccessed || '').localeCompare(a.lastAccessed || ''));
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -127,7 +139,9 @@ function pruneProjects(maxKeep = MAX_PROJECTS) {
     try {
       fs.rmSync(path.join(PROJECTS_DIR, p.hash), { recursive: true, force: true });
       removed++;
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return removed;
 }

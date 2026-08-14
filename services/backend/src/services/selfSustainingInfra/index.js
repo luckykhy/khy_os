@@ -22,11 +22,12 @@
  * 把 generateDocs 挂到 CI，落地「代码→契约→文档/测试」的自动坍缩流。
  */
 
+const evoLedger = require('../evoEngine/evoLedger');
+
+const { AutoTestScaffolder } = require('./autoTestScaffolder');
 const { ContractDocGenerator } = require('./contractDocGenerator');
 const { DependencyImpactScanner } = require('./dependencyImpactScanner');
-const { AutoTestScaffolder } = require('./autoTestScaffolder');
 const { InfraGapQuencher, GAP_KIND } = require('./infraGapQuencher');
-const evoLedger = require('../evoEngine/evoLedger');
 
 const DEFAULT_BRANCH = 'self_sustaining_infra_pool';
 
@@ -46,7 +47,9 @@ class SelfSustainingInfra {
    * @returns {string}
    */
   generateDocs(fileMap) {
-    const modules = Object.keys(fileMap || {}).map((f) => this.docGen.extractContracts(fileMap[f], f));
+    const modules = Object.keys(fileMap || {}).map((f) =>
+      this.docGen.extractContracts(fileMap[f], f)
+    );
     return this.docGen.renderMarkdown(modules);
   }
 
@@ -88,13 +91,19 @@ class SelfSustainingInfra {
       // missing-test：公共函数无对应已测符号（防呆③ 的扫描面）。
       for (const name of this.quencher._publicSymbols(String(src))) {
         if (this.quencher._functionNames(String(src)).has(name) && !tested.has(name)) {
-          gaps.push({ kind: GAP_KIND.MISSING_TEST, symbol: name, file,
-            detail: `公共函数「${name}」无行为快照/单测` });
+          gaps.push({
+            kind: GAP_KIND.MISSING_TEST,
+            symbol: name,
+            file,
+            detail: `公共函数「${name}」无行为快照/单测`,
+          });
         }
       }
     }
     const byKind = {};
-    for (const g of gaps) byKind[g.kind] = (byKind[g.kind] || 0) + 1;
+    for (const g of gaps) {
+      byKind[g.kind] = (byKind[g.kind] || 0) + 1;
+    }
     return { gaps, byKind };
   }
 
@@ -107,10 +116,16 @@ class SelfSustainingInfra {
   commitGate(fileMap, opts = {}) {
     const { gaps } = this.audit(fileMap, opts);
     // 阻断面：缺测试 + 缺契约（裸奔的公共面）。
-    const blockingKinds = new Set([GAP_KIND.MISSING_TEST, GAP_KIND.MISSING_CONTRACT, GAP_KIND.UNTYPED_ANY]);
+    const blockingKinds = new Set([
+      GAP_KIND.MISSING_TEST,
+      GAP_KIND.MISSING_CONTRACT,
+      GAP_KIND.UNTYPED_ANY,
+    ]);
     const blocking = gaps.filter((g) => blockingKinds.has(g.kind));
     const requirements = this.quencher.quenchAll(blocking);
-    for (const req of requirements) this._log(req);
+    for (const req of requirements) {
+      this._log(req);
+    }
     return {
       blocked: blocking.length > 0,
       gaps,
@@ -150,26 +165,39 @@ class SelfSustainingInfra {
 
   /** 基建自愈需求池（不可变哈希链拷贝）。 */
   pool() {
-    try { return this.ledger.read({ branch: this.branch }); } catch { return []; }
+    try {
+      return this.ledger.read({ branch: this.branch });
+    } catch {
+      return [];
+    }
   }
 
   /** 校验需求池链完整性。 */
   verifyPool() {
-    try { return this.ledger.verify({ branch: this.branch }); }
-    catch { return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' }; }
+    try {
+      return this.ledger.verify({ branch: this.branch });
+    } catch {
+      return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' };
+    }
   }
 
   _log(req) {
     try {
-      return this.ledger.append(this.ledger.KIND.REQUIREMENT, {
-        source: 'self-sustaining-infra',
-        gapKind: req.gapKind,
-        targetSymbol: req.targetSymbol,
-        file: req.gapFile,
-        requirementId: req.id,
-        level: req.level,
-      }, { branch: this.branch });
-    } catch { return { ok: false }; }
+      return this.ledger.append(
+        this.ledger.KIND.REQUIREMENT,
+        {
+          source: 'self-sustaining-infra',
+          gapKind: req.gapKind,
+          targetSymbol: req.targetSymbol,
+          file: req.gapFile,
+          requirementId: req.id,
+          level: req.level,
+        },
+        { branch: this.branch }
+      );
+    } catch {
+      return { ok: false };
+    }
   }
 }
 

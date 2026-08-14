@@ -28,12 +28,31 @@
  */
 
 const _RECOMMEND_WORDS = new Set([
-  'recommend', 'rec', 'suggest', 'best', 'pick', 'advise', 'advice',
-  '推荐', '建议', '最佳', '选', '选哪个', '哪个好',
+  'recommend',
+  'rec',
+  'suggest',
+  'best',
+  'pick',
+  'advise',
+  'advice',
+  '推荐',
+  '建议',
+  '最佳',
+  '选',
+  '选哪个',
+  '哪个好',
 ]);
 const _STATUS_WORDS = new Set([
-  'status', 'state', 'stat', 'stats', 'list', 'show',
-  '状态', '查看', '列出', '列表',
+  'status',
+  'state',
+  'stat',
+  'stats',
+  'list',
+  'show',
+  '状态',
+  '查看',
+  '列出',
+  '列表',
 ]);
 const _HELP_WORDS = new Set(['help', '-h', '--help', '帮助', '用法']);
 
@@ -44,12 +63,25 @@ const _HELP_WORDS = new Set(['help', '-h', '--help', '帮助', '用法']);
  */
 function parseAdvisorArgs(args) {
   const list = Array.isArray(args) ? args : [];
-  const first = list.length > 0 ? String(list[0] == null ? '' : list[0]).trim().toLowerCase() : '';
+  const first =
+    list.length > 0
+      ? String(list[0] == null ? '' : list[0])
+          .trim()
+          .toLowerCase()
+      : '';
 
-  if (first === '') return { action: 'recommend', valid: true, parseError: null };
-  if (_HELP_WORDS.has(first)) return { action: 'help', valid: true, parseError: null };
-  if (_RECOMMEND_WORDS.has(first)) return { action: 'recommend', valid: true, parseError: null };
-  if (_STATUS_WORDS.has(first)) return { action: 'status', valid: true, parseError: null };
+  if (first === '') {
+    return { action: 'recommend', valid: true, parseError: null };
+  }
+  if (_HELP_WORDS.has(first)) {
+    return { action: 'help', valid: true, parseError: null };
+  }
+  if (_RECOMMEND_WORDS.has(first)) {
+    return { action: 'recommend', valid: true, parseError: null };
+  }
+  if (_STATUS_WORDS.has(first)) {
+    return { action: 'status', valid: true, parseError: null };
+  }
 
   return { action: 'recommend', valid: false, parseError: 'unknown_action' };
 }
@@ -77,15 +109,22 @@ function buildRecommendation(input) {
   // adapter(小写) → 排名条目,便于把候选模型对齐到其 adapter 的 UCB 统计。
   const rankByAdapter = new Map();
   for (const r of ranking) {
-    if (!r || r.adapter == null) continue;
+    if (!r || r.adapter == null) {
+      continue;
+    }
     const key = String(r.adapter).trim().toLowerCase();
-    if (key && !rankByAdapter.has(key)) rankByAdapter.set(key, r);
+    if (key && !rankByAdapter.has(key)) {
+      rankByAdapter.set(key, r);
+    }
   }
 
   // 任意一臂有真实抽样(pulls>0)即视为「有实测证据」。
   let hasEvidence = false;
   for (const r of ranking) {
-    if (r && Number(r.pulls) > 0) { hasEvidence = true; break; }
+    if (r && Number(r.pulls) > 0) {
+      hasEvidence = true;
+      break;
+    }
   }
 
   // 给每个候选附上其 adapter 的 UCB 统计;无对应统计 → 0/0(诚实留白)。
@@ -105,13 +144,19 @@ function buildRecommendation(input) {
 
   // 排序:有 UCB value 用 value 降序;value 全相等(无证据)→ 保候选次序(稳定)。
   annotated.sort((a, b) => {
-    if (a.value !== b.value) return b.value - a.value;
+    if (a.value !== b.value) {
+      return b.value - a.value;
+    }
     return a._index - b._index;
   });
 
   const ranked = annotated.map((a) => ({
-    adapter: a.adapter, model: a.model, label: a.label,
-    mean: a.mean, pulls: a.pulls, value: a.value,
+    adapter: a.adapter,
+    model: a.model,
+    label: a.label,
+    mean: a.mean,
+    pulls: a.pulls,
+    value: a.value,
   }));
 
   const top = ranked.length > 0 ? ranked[0] : null;
@@ -130,11 +175,15 @@ function _buildReason(top, hasEvidence, count) {
   const who = _modelLabel(top.adapter, top.model);
   if (hasEvidence && top.pulls > 0) {
     const meanPct = Math.round(top.mean * 100);
-    return `推荐 ${who}:在 ${count} 个可执行候选中,其实测回报(成功率×速度)经多臂老虎机评估最高`
-      + `(均值 ${meanPct}/100,样本 ${top.pulls} 次)。`;
+    return (
+      `推荐 ${who}:在 ${count} 个可执行候选中,其实测回报(成功率×速度)经多臂老虎机评估最高` +
+      `(均值 ${meanPct}/100,样本 ${top.pulls} 次)。`
+    );
   }
-  return `推荐 ${who}:当前尚无足够实测数据,暂按可用性/失败切换次序排序给出首选;`
-    + `随着实际调用累积,推荐会自动收敛到表现最好的通道。`;
+  return (
+    `推荐 ${who}:当前尚无足够实测数据,暂按可用性/失败切换次序排序给出首选;` +
+    `随着实际调用累积,推荐会自动收敛到表现最好的通道。`
+  );
 }
 
 /**
@@ -158,7 +207,9 @@ function buildRecommendText(rec) {
     ranked.slice(0, 8).forEach((c, i) => {
       lines.push(`    ${i + 1}. ${_modelLabel(c.adapter, c.model)}${_evidenceSuffix(c)}`);
     });
-    if (ranked.length > 8) lines.push(`    … 另有 ${ranked.length - 8} 个候选未列出`);
+    if (ranked.length > 8) {
+      lines.push(`    … 另有 ${ranked.length - 8} 个候选未列出`);
+    }
   }
   lines.push('  说明: 这是只读建议,不会自动切换;采纳请用 /model 选择(人工确认)。');
   return lines.join('\n');
@@ -178,7 +229,9 @@ function buildStatusText(rec) {
     lines.push('  当前无可执行候选(请先用 /model 或 /gateway 配置可用通道)。');
     return lines.join('\n');
   }
-  lines.push(`  ${r.hasEvidence ? '已积累实测数据(成功率×速度,经多臂老虎机评估):' : '尚无实测数据 —— 下方仅按可用性/失败次序排序:'}`);
+  lines.push(
+    `  ${r.hasEvidence ? '已积累实测数据(成功率×速度,经多臂老虎机评估):' : '尚无实测数据 —— 下方仅按可用性/失败次序排序:'}`
+  );
   ranked.forEach((c, i) => {
     const meanPct = Math.round(c.mean * 100);
     const ev = c.pulls > 0 ? `均值 ${meanPct}/100 · 样本 ${c.pulls}` : '无样本';
@@ -213,7 +266,9 @@ function buildUnknownText() {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_ADVISOR_COMMAND === undefined ? 'true' : e.KHY_ADVISOR_COMMAND;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 
@@ -221,24 +276,33 @@ function isEnabled(env) {
 function _isCand(c) {
   return c && typeof c === 'object' && c.adapter != null && String(c.adapter).trim() !== '';
 }
+
 function _candLabel(c) {
-  if (c && typeof c.label === 'string' && c.label.trim() !== '') return c.label;
+  if (c && typeof c.label === 'string' && c.label.trim() !== '') {
+    return c.label;
+  }
   return _modelLabel(c && c.adapter, c && c.model);
 }
+
 function _modelLabel(adapter, model) {
   const a = String(adapter == null ? '' : adapter).trim() || '(未知通道)';
   const m = model == null || String(model).trim() === '' ? '(默认模型)' : String(model).trim();
   return `${m} · 通道 ${a}`;
 }
+
 function _evidenceSuffix(c) {
-  if (!c || _intNonNeg(c.pulls) <= 0) return '';
+  if (!c || _intNonNeg(c.pulls) <= 0) {
+    return '';
+  }
   return `  (均值 ${Math.round(_num(c.mean) * 100)}/100 · 样本 ${_intNonNeg(c.pulls)})`;
 }
 // 有限数强转家族单一真源 utils/finiteNumber(见 finiteNumber.js)。
 const _num = require('../../utils/finiteNumber').toFiniteOr0;
 function _intNonNeg(v) {
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return 0;
+  if (!Number.isFinite(n) || n <= 0) {
+    return 0;
+  }
   return Math.floor(n);
 }
 

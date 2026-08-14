@@ -28,7 +28,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function isEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_HISTORY_REVERSE_SEARCH;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return true;
@@ -51,15 +53,21 @@ function search(history, query, opts = {}) {
   try {
     const list = Array.isArray(history) ? history : [];
     const q = String(query == null ? '' : query).toLowerCase();
-    if (q === '') return { query: String(query == null ? '' : query), matches: [], index: -1, current: '' };
+    if (q === '') {
+      return { query: String(query == null ? '' : query), matches: [], index: -1, current: '' };
+    }
 
     // 从最新(末尾)往回扫,累积命中下标 → 天然是新→旧序。
     const matches = [];
     for (let i = list.length - 1; i >= 0; i -= 1) {
       const item = list[i];
-      if (typeof item === 'string' && item.toLowerCase().includes(q)) matches.push(i);
+      if (typeof item === 'string' && item.toLowerCase().includes(q)) {
+        matches.push(i);
+      }
     }
-    if (matches.length === 0) return { query: String(query), matches: [], index: -1, current: '' };
+    if (matches.length === 0) {
+      return { query: String(query), matches: [], index: -1, current: '' };
+    }
 
     const rawFrom = typeof opts.from === 'number' ? opts.from : 0;
     const index = Math.max(0, Math.min(rawFrom, matches.length - 1));
@@ -81,7 +89,9 @@ function nextMatch(history, state = {}) {
     const list = Array.isArray(history) ? history : [];
     const matches = Array.isArray(state.matches) ? state.matches : [];
     const query = String(state.query == null ? '' : state.query);
-    if (matches.length === 0) return { query, matches: [], index: -1, current: '' };
+    if (matches.length === 0) {
+      return { query, matches: [], index: -1, current: '' };
+    }
     const cur = typeof state.index === 'number' ? state.index : 0;
     const index = Math.min(cur + 1, matches.length - 1);
     const at = matches[index];

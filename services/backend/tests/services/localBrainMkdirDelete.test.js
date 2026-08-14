@@ -166,6 +166,28 @@ test('rm 门控 KHY_FILE_DELETE=off → 字节回退(不命中)', () => {
   }
 });
 
+test('rm: 批量量词目标(所有文件/全部…)绝不拼成假字面路径,让路给 AI', () => {
+  // 「清理/删除所有文件」是泛指集合,不是单一确定对象 → 不得命中 file_delete,
+  // 更不得把「所有文件」resolve 成 cwd/所有文件 这种不存在的字面路径去「预览」。
+  for (const phrase of [
+    '清理所有文件',
+    '删除全部文件',
+    '请整理桌面并删除所有缓存',
+    '删除 everything',
+  ]) {
+    const p = lb.detectDeterministic(phrase, { cwd: '/tmp' });
+    assert.ok(!p || p.type !== 'file_delete', `「${phrase}」不应被当作单一 file_delete`);
+  }
+  // 单一具体目标仍照常命中(回归:护栏不能误伤真实删除)。
+  const p = lb.detectDeterministic('删除 tmp.txt', { cwd: '/tmp' });
+  assert.strictEqual(p && p.type, 'file_delete');
+  assert.strictEqual(p.target, path.resolve('/tmp', 'tmp.txt'));
+  // 批量量词判定函数直接可测
+  assert.strictEqual(lb._isBulkDeleteTarget('所有文件'), true);
+  assert.strictEqual(lb._isBulkDeleteTarget('everything'), true);
+  assert.strictEqual(lb._isBulkDeleteTarget('tmp.txt'), false);
+});
+
 // ── 不抢占既有意图(回归保护) ──────────────────────────────────────────
 
 test('不误判/不抢占既有 file_op / search / view / list', () => {

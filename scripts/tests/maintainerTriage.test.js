@@ -157,7 +157,7 @@ test('真实映射表可加载且分诊命中(集成)', () => {
 
 test('速查表 OPS-MAN-067 已落盘且与生成器输出一致(防手改漂移)', () => {
   const fs = require('node:fs');
-  const cli = require('../triage');
+  const cli = require('../diagnostics/triage');
   assert.ok(fs.existsSync(cli.DOC_PATH), '速查表未生成，先跑 npm run gen-triage-doc');
   const disk = fs.readFileSync(cli.DOC_PATH, 'utf8');
   assert.strictEqual(disk, cli.buildDoc(), '落盘速查表与生成器输出不一致，请重跑 gen-triage-doc');

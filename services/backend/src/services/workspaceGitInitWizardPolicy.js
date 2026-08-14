@@ -26,10 +26,12 @@
 const _OFF = new Set(['0', 'false', 'off', 'no']);
 
 /** 门控:KHY_GIT_INIT_WIZARD 默认开,仅 {0,false,off,no} 关。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_GIT_INIT_WIZARD;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -44,10 +46,12 @@ function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
  *   ——ensureWorkspaceRepo 顶层门关直接 disabled、planInitWizard 在 wizard 门关时早退,
  *   故本 in-file 门只需读自身 flag。
  */
-function isFallbackIdentityEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isFallbackIdentityEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_GIT_INIT_FALLBACK_IDENTITY;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -73,8 +77,12 @@ function planInitWizard(ctx = {}) {
     const env = (ctx && ctx.env) || (typeof process !== 'undefined' ? process.env : {});
     if (!isEnabled(env)) {
       return {
-        enabled: false, writeGitignore: false, commit: false,
-        useFallbackIdentity: false, setDefaultBranch: false, reason: 'wizard-disabled',
+        enabled: false,
+        writeGitignore: false,
+        commit: false,
+        useFallbackIdentity: false,
+        setDefaultBranch: false,
+        reason: 'wizard-disabled',
       };
     }
     const hasGitignore = !!(ctx && ctx.hasGitignore === true);
@@ -88,16 +96,26 @@ function planInitWizard(ctx = {}) {
     const setDefaultBranch = commit; // 只有真落了 commit,规范主线名才有意义。
 
     let reason;
-    if (!commit) reason = 'no-git-identity-skip-commit';        // fallback 门关 + 无身份
-    else if (useFallbackIdentity) reason = 'fallback-identity-commit';
-    else if (!writeGitignore) reason = 'gitignore-exists';
-    else reason = 'full-wizard';
+    if (!commit) {
+      reason = 'no-git-identity-skip-commit';
+    } // fallback 门关 + 无身份
+    else if (useFallbackIdentity) {
+      reason = 'fallback-identity-commit';
+    } else if (!writeGitignore) {
+      reason = 'gitignore-exists';
+    } else {
+      reason = 'full-wizard';
+    }
 
     return { enabled: true, writeGitignore, commit, useFallbackIdentity, setDefaultBranch, reason };
   } catch {
     return {
-      enabled: false, writeGitignore: false, commit: false,
-      useFallbackIdentity: false, setDefaultBranch: false, reason: 'error',
+      enabled: false,
+      writeGitignore: false,
+      commit: false,
+      useFallbackIdentity: false,
+      setDefaultBranch: false,
+      reason: 'error',
     };
   }
 }
@@ -118,9 +136,9 @@ const FALLBACK_IDENTITY = Object.freeze({ name: 'Khy OS', email: 'khy@localhost'
 function noIdentityNoticeLine(opts = {}) {
   const color = typeof opts.color === 'function' ? opts.color : (t) => t;
   return color(
-    '📝 已建 .gitignore,但未配置 git 身份(user.name/email),已跳过首次提交。'
-    + '配置后可用 `khy repo save "首次提交"` 保存首个版本。',
-    'init',
+    '📝 已建 .gitignore,但未配置 git 身份(user.name/email),已跳过首次提交。' +
+      '配置后可用 `khy repo save "首次提交"` 保存首个版本。',
+    'init'
   );
 }
 
@@ -132,9 +150,9 @@ function fallbackCommitNoticeLine(identityLabel, opts = {}) {
   const color = typeof opts.color === 'function' ? opts.color : (t) => t;
   const who = identityLabel ? `(${identityLabel})` : '';
   return color(
-    `📦 已把当前目录全部文件纳入 git 管理并创建首个提交,主线 \`${DEFAULT_BRANCH}\` 就绪,可直接提交/建分支。`
-    + `未检测到 git 身份,已为本仓库配置本地身份 ${who}(仅作用于此目录,不影响全局)。`,
-    'init',
+    `📦 已把当前目录全部文件纳入 git 管理并创建首个提交,主线 \`${DEFAULT_BRANCH}\` 就绪,可直接提交/建分支。` +
+      `未检测到 git 身份,已为本仓库配置本地身份 ${who}(仅作用于此目录,不影响全局)。`,
+    'init'
   );
 }
 

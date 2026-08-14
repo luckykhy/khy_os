@@ -12,19 +12,21 @@ const { defineTool } = require('./_baseTool');
 module.exports = defineTool({
   name: 'SessionInsights',
   description:
-    'Generate an insights report for a conversation session (Claude Code-aligned /insights): '
-    + 'turn count, most-used tools, topic keywords, duration. Read-only. '
-    + 'Defaults to the current session; pass sessionId to inspect a specific one.',
+    'Generate an insights report for a conversation session (Claude Code-aligned /insights): ' +
+    'turn count, most-used tools, topic keywords, duration. Read-only. ' +
+    'Defaults to the current session; pass sessionId to inspect a specific one.',
   category: 'analysis',
   risk: 'low',
   aliases: ['insights', 'sessionInsights'],
+  searchHint: 'statistics usage summary analytics 会话统计 洞察 用量分析',
   isReadOnly: () => true,
   isConcurrencySafe: true,
   inputSchema: {
     sessionId: {
       type: 'string',
       required: false,
-      description: 'Session id to analyze. Omit to use the current session (or the most recent one).',
+      description:
+        'Session id to analyze. Omit to use the current session (or the most recent one).',
     },
   },
   async execute(params, context) {
@@ -36,18 +38,29 @@ module.exports = defineTool({
     try {
       persistence = require('../services/sessionPersistence');
     } catch (e) {
-      return { success: false, error: 'session persistence unavailable: ' + ((e && e.message) || e) };
+      return {
+        success: false,
+        error: 'session persistence unavailable: ' + ((e && e.message) || e),
+      };
     }
 
     try {
       // 解析目标 sessionId:显式参数 > 当前会话(traceContext)> 最近一条持久化会话。
-      let sessionId = (params && params.sessionId) || (context && context.traceContext && context.traceContext.sessionId) || '';
+      let sessionId =
+        (params && params.sessionId) ||
+        (context && context.traceContext && context.traceContext.sessionId) ||
+        '';
       if (!sessionId) {
         const recent = persistence.listPersistedSessions({ limit: 1 });
-        if (recent && recent.length) sessionId = recent[0].sessionId;
+        if (recent && recent.length) {
+          sessionId = recent[0].sessionId;
+        }
       }
       if (!sessionId) {
-        return { success: true, data: { report: '会话洞见:暂无已持久化的会话可分析。', insights: null } };
+        return {
+          success: true,
+          data: { report: '会话洞见:暂无已持久化的会话可分析。', insights: null },
+        };
       }
 
       const session = persistence.restoreSession(sessionId);

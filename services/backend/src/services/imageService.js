@@ -9,26 +9,26 @@
  *
  * No npm dependencies — uses child_process + Buffer only.
  */
-const fs = require('fs');
-const path = require('path');
 const { execSync } = require('child_process');
+const fs = require('fs');
 const os = require('os');
+const path = require('path');
 
 // PowerShell binary candidates sourced from the platform-detail SSOT.
 const { POWERSHELL_BINS } = require('../tools/platformUtils');
 
 // Magic bytes for image format detection
 const MAGIC_BYTES = {
-  png:  Buffer.from([0x89, 0x50, 0x4E, 0x47]),
-  jpeg: Buffer.from([0xFF, 0xD8, 0xFF]),
-  gif:  Buffer.from([0x47, 0x49, 0x46]),
+  png: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+  jpeg: Buffer.from([0xff, 0xd8, 0xff]),
+  gif: Buffer.from([0x47, 0x49, 0x46]),
   webp: Buffer.from([0x52, 0x49, 0x46, 0x46]), // RIFF header
 };
 
 const MIME_MAP = {
-  png:  'image/png',
+  png: 'image/png',
   jpeg: 'image/jpeg',
-  gif:  'image/gif',
+  gif: 'image/gif',
   webp: 'image/webp',
 };
 
@@ -41,11 +41,21 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
  * @returns {'png'|'jpeg'|'gif'|'webp'|null}
  */
 function detectFormat(buf) {
-  if (!buf || buf.length < 4) return null;
-  if (buf.subarray(0, 4).equals(MAGIC_BYTES.png)) return 'png';
-  if (buf.subarray(0, 3).equals(MAGIC_BYTES.jpeg)) return 'jpeg';
-  if (buf.subarray(0, 3).equals(MAGIC_BYTES.gif)) return 'gif';
-  if (buf.subarray(0, 4).equals(MAGIC_BYTES.webp)) return 'webp';
+  if (!buf || buf.length < 4) {
+    return null;
+  }
+  if (buf.subarray(0, 4).equals(MAGIC_BYTES.png)) {
+    return 'png';
+  }
+  if (buf.subarray(0, 3).equals(MAGIC_BYTES.jpeg)) {
+    return 'jpeg';
+  }
+  if (buf.subarray(0, 3).equals(MAGIC_BYTES.gif)) {
+    return 'gif';
+  }
+  if (buf.subarray(0, 4).equals(MAGIC_BYTES.webp)) {
+    return 'webp';
+  }
   return null;
 }
 
@@ -62,8 +72,10 @@ function readImageFromFile(filePath) {
   }
 
   // Accept quoted paths from clipboard tools (e.g. "C:\Users\A B\...\img.png").
-  if ((normalized.startsWith('"') && normalized.endsWith('"'))
-    || (normalized.startsWith('\'') && normalized.endsWith('\''))) {
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
     normalized = normalized.slice(1, -1).trim();
   }
 
@@ -80,7 +92,11 @@ function readImageFromFile(filePath) {
       }
     } catch {
       normalized = normalized.replace(/^file:\/\/(?:localhost)?/i, '');
-      try { normalized = decodeURIComponent(normalized); } catch { /* ignore */ }
+      try {
+        normalized = decodeURIComponent(normalized);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -91,7 +107,9 @@ function readImageFromFile(filePath) {
 
   const stat = fs.statSync(resolved);
   if (stat.size > MAX_IMAGE_BYTES) {
-    throw new Error(`Image too large (${(stat.size / 1024 / 1024).toFixed(1)}MB). Max: ${MAX_IMAGE_BYTES / 1024 / 1024}MB`);
+    throw new Error(
+      `Image too large (${(stat.size / 1024 / 1024).toFixed(1)}MB). Max: ${MAX_IMAGE_BYTES / 1024 / 1024}MB`
+    );
   }
 
   const buf = fs.readFileSync(resolved);
@@ -145,7 +163,9 @@ function _readClipboardLinux() {
         format,
       };
     }
-  } catch { /* xclip failed */ }
+  } catch {
+    /* xclip failed */
+  }
 
   // Fallback: try wl-paste (Wayland)
   try {
@@ -162,9 +182,13 @@ function _readClipboardLinux() {
         format: 'png',
       };
     }
-  } catch { /* wl-paste failed */ }
+  } catch {
+    /* wl-paste failed */
+  }
 
-  throw new Error('Clipboard is empty or does not contain an image. Install xclip (X11) or wl-paste (Wayland).');
+  throw new Error(
+    'Clipboard is empty or does not contain an image. Install xclip (X11) or wl-paste (Wayland).'
+  );
 }
 
 function _readClipboardMac() {
@@ -178,22 +202,31 @@ function _readClipboardMac() {
       fs.unlinkSync(tmpFile);
       return result;
     }
-  } catch { /* pngpaste not available */ }
+  } catch {
+    /* pngpaste not available */
+  }
 
   // Fallback: osascript
   try {
-    execSync(`osascript -e 'set theFile to (POSIX file "${tmpFile}") as text' -e 'tell application "System Events" to set imageData to the clipboard as «class PNGf»' -e 'set fileRef to open for access file theFile with write permission' -e 'write imageData to fileRef' -e 'close access fileRef'`, {
-      timeout: 5000,
-      stdio: 'pipe',
-    });
+    execSync(
+      `osascript -e 'set theFile to (POSIX file "${tmpFile}") as text' -e 'tell application "System Events" to set imageData to the clipboard as «class PNGf»' -e 'set fileRef to open for access file theFile with write permission' -e 'write imageData to fileRef' -e 'close access fileRef'`,
+      {
+        timeout: 5000,
+        stdio: 'pipe',
+      }
+    );
     if (fs.existsSync(tmpFile)) {
       const result = readImageFromFile(tmpFile);
       fs.unlinkSync(tmpFile);
       return result;
     }
-  } catch { /* osascript failed */ }
+  } catch {
+    /* osascript failed */
+  }
 
-  throw new Error('Clipboard is empty or does not contain an image. Install pngpaste: brew install pngpaste');
+  throw new Error(
+    'Clipboard is empty or does not contain an image. Install pngpaste: brew install pngpaste'
+  );
 }
 
 function _readClipboardWindows() {
@@ -208,16 +241,22 @@ function _readClipboardWindows() {
   const shells = POWERSHELL_BINS;
   for (const shell of shells) {
     try {
-      execSync(
-        `${shell} -sta -noprofile -command "${psScript.replace(/"/g, '\\"')}"`,
-        { timeout: 10000, stdio: 'pipe' }
-      );
+      execSync(`${shell} -sta -noprofile -command "${psScript.replace(/"/g, '\\"')}"`, {
+        timeout: 10000,
+        stdio: 'pipe',
+      });
       if (fs.existsSync(tmpFile)) {
         const result = readImageFromFile(tmpFile);
-        try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+        try {
+          fs.unlinkSync(tmpFile);
+        } catch {
+          /* ignore */
+        }
         return result;
       }
-    } catch { /* try next shell */ }
+    } catch {
+      /* try next shell */
+    }
   }
 
   throw new Error('Clipboard is empty or does not contain an image.');
@@ -254,10 +293,14 @@ function isClipboardImageAvailable() {
             { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }
           );
           return result.trim().toLowerCase() === 'true';
-        } catch { /* try next */ }
+        } catch {
+          /* try next */
+        }
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return false;
 }
 
@@ -281,14 +324,18 @@ function readClipboardText() {
       for (const shell of POWERSHELL_BINS) {
         try {
           return execSync(`${shell} -noprofile -command "Get-Clipboard -Raw"`, EXEC) || '';
-        } catch { /* try next shell */ }
+        } catch {
+          /* try next shell */
+        }
       }
       return '';
     }
     // linux / other unix: X11 (xclip) then Wayland (wl-paste)
     try {
       return execSync('xclip -selection clipboard -t text/plain -o', EXEC) || '';
-    } catch { /* fall through to wayland */ }
+    } catch {
+      /* fall through to wayland */
+    }
     return execSync('wl-paste --no-newline', EXEC) || '';
   } catch {
     return '';
@@ -309,25 +356,35 @@ function writeClipboardText(text) {
   const payload = String(text == null ? '' : text);
   const EXEC = { input: payload, timeout: 5000, stdio: ['pipe', 'ignore', 'ignore'] };
   const tryPipe = (cmd) => {
-    try { execSync(cmd, EXEC); return true; } catch { return false; }
+    try {
+      execSync(cmd, EXEC);
+      return true;
+    } catch {
+      return false;
+    }
   };
   try {
-    if (platform === 'darwin') return tryPipe('pbcopy');
+    if (platform === 'darwin') {
+      return tryPipe('pbcopy');
+    }
     if (platform === 'win32') {
       for (const shell of POWERSHELL_BINS) {
         // Set-Clipboard reads the piped stdin; -Raw keeps newlines intact.
-        if (tryPipe(`${shell} -noprofile -command "$input | Set-Clipboard"`)) return true;
+        if (tryPipe(`${shell} -noprofile -command "$input | Set-Clipboard"`)) {
+          return true;
+        }
       }
       return tryPipe('clip');
     }
     // linux / other unix: X11 (xclip) then Wayland (wl-copy)
-    if (tryPipe('xclip -selection clipboard')) return true;
+    if (tryPipe('xclip -selection clipboard')) {
+      return true;
+    }
     return tryPipe('wl-copy');
   } catch {
     return false;
   }
 }
-
 
 const _IMAGE_PATH_RE = /\.(png|jpe?g|gif|webp)$/i;
 
@@ -347,24 +404,33 @@ function readImageFromClipboardOrPath() {
   try {
     if (isClipboardImageAvailable()) {
       const img = readImageFromClipboard();
-      if (img && img.base64) return img;
+      if (img && img.base64) {
+        return img;
+      }
     }
-  } catch { /* fall through to the path branch */ }
+  } catch {
+    /* fall through to the path branch */
+  }
 
   // 2) Clipboard holds a file path (img2file bridge output, or a copied file).
   try {
     const text = String(readClipboardText() || '').trim();
     if (text) {
       const candidate = text.split(/\r?\n/)[0].trim();
-      const unquoted = (candidate.startsWith('"') && candidate.endsWith('"'))
-        ? candidate.slice(1, -1).trim()
-        : candidate;
+      const unquoted =
+        candidate.startsWith('"') && candidate.endsWith('"')
+          ? candidate.slice(1, -1).trim()
+          : candidate;
       if (_IMAGE_PATH_RE.test(unquoted)) {
         const img = readImageFromFile(candidate); // accepts quoted paths
-        if (img && img.base64) return img;
+        if (img && img.base64) {
+          return img;
+        }
       }
     }
-  } catch { /* no usable path image */ }
+  } catch {
+    /* no usable path image */
+  }
 
   return null;
 }
@@ -386,9 +452,13 @@ function _imageSizeStr(sizeBytes, env = process.env) {
     const { ccFormatEnabled, ccFormatFileSize } = require('../cli/ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatFileSize(Number(sizeBytes));
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
+  } catch {
+    /* fall through to legacy */
+  }
   return sizeBytes >= 1024 * 1024
     ? `${(sizeBytes / 1024 / 1024).toFixed(1)}MB`
     : `${(sizeBytes / 1024).toFixed(0)}KB`;
@@ -407,7 +477,9 @@ function printImagePreview(image) {
   const term = process.env.TERM_PROGRAM || '';
   const isITerm = term === 'iTerm.app' || term === 'WezTerm' || process.env.KITTY_WINDOW_ID;
 
-  if (process.stdout.isTTY) return; // TUI handles image display
+  if (process.stdout.isTTY) {
+    return;
+  } // TUI handles image display
   if (isITerm && process.stdout.isTTY) {
     // iTerm2 inline image protocol
     const params = `inline=1;size=${image.sizeBytes};width=40;preserveAspectRatio=1`;
@@ -415,8 +487,10 @@ function printImagePreview(image) {
   } else {
     // Fallback: text-only summary
     let _chalk;
-    const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
-    console.log(`  ${c().cyan('📷')} ${c().white(`[Image: ${image.format.toUpperCase()}, ${sizeStr}]`)}`);
+    const c = () => (_chalk ??= require('chalk').default || require('chalk'));
+    console.log(
+      `  ${c().cyan('📷')} ${c().white(`[Image: ${image.format.toUpperCase()}, ${sizeStr}]`)}`
+    );
   }
 }
 
@@ -458,17 +532,28 @@ function saveBase64ToTemp(base64OrDataUrl, mimeType = 'image/png') {
     let base64 = String(base64OrDataUrl || '');
     // 去掉 data URL 前缀
     const dataUrlMatch = base64.match(/^data:[^;]+;base64,(.+)$/i);
-    if (dataUrlMatch) base64 = dataUrlMatch[1];
-    if (!base64 || base64.length < 16) return null;
+    if (dataUrlMatch) {
+      base64 = dataUrlMatch[1];
+    }
+    if (!base64 || base64.length < 16) {
+      return null;
+    }
 
-    const ext = (mimeType || '').includes('jpeg') || (mimeType || '').includes('jpg') ? '.jpg'
-      : (mimeType || '').includes('webp') ? '.webp'
-      : (mimeType || '').includes('gif') ? '.gif'
-      : '.png';
+    const ext =
+      (mimeType || '').includes('jpeg') || (mimeType || '').includes('jpg')
+        ? '.jpg'
+        : (mimeType || '').includes('webp')
+          ? '.webp'
+          : (mimeType || '').includes('gif')
+            ? '.gif'
+            : '.png';
 
     const tmpDir = path.join(os.tmpdir(), 'khy-ocr-tmp');
     fs.mkdirSync(tmpDir, { recursive: true });
-    const tmpFile = path.join(tmpDir, `img_${Date.now()}_${Math.random().toString(36).slice(2, 6)}${ext}`);
+    const tmpFile = path.join(
+      tmpDir,
+      `img_${Date.now()}_${Math.random().toString(36).slice(2, 6)}${ext}`
+    );
     fs.writeFileSync(tmpFile, Buffer.from(base64, 'base64'));
     return tmpFile;
   } catch {

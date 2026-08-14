@@ -44,7 +44,8 @@ const _deps = {
   homedir: () => os.homedir(),
   // 写 overlay 的单一真源:复用 gatewayEnvFile.writeEnvMap(patchEnvContent 幂等合并 + 更新
   // process.env)。测试可覆盖为 fake,避免真写盘。
-  writeEnvMap: (envMap, options) => require('../services/gatewayEnvFile').writeEnvMap(envMap, options),
+  writeEnvMap: (envMap, options) =>
+    require('../services/gatewayEnvFile').writeEnvMap(envMap, options),
 };
 
 /** 测试注入钩子:浅合并覆盖依赖,返回还原函数。 */
@@ -55,7 +56,9 @@ function _setDeps(overrides = {}) {
     _deps[k] = overrides[k];
   }
   return function restore() {
-    for (const k of Object.keys(prev)) _deps[k] = prev[k];
+    for (const k of Object.keys(prev)) {
+      _deps[k] = prev[k];
+    }
   };
 }
 
@@ -69,18 +72,29 @@ function isAutoseedEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled(META_FLAG, e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e[META_FLAG];
   return !(v !== undefined && _AUTOSEED_OFF.has(String(v).trim().toLowerCase()));
 }
 
 /** ~/.khy/.env overlay 的绝对路径(与 init.js:58 同一处)。 */
 function _overlayPath() {
-  return path.join(_deps.homedir(), '.khy', '.env');
+  // Portable-aware data home; fallback to the injectable legacy resolution.
+  try {
+    return path.join(require('../utils/dataHome').getDataHome(), '.env');
+  } catch {
+    return path.join(_deps.homedir(), '.khy', '.env');
+  }
 }
 
 /**
@@ -124,8 +138,7 @@ function ensureProxyCoreEnv(opts = {}) {
     }
 
     // 2) 规范 .env(KHY_ENV_FILE 或 backend/.env)里已显式设过 → 尊重,不动。
-    const canonical = opts.canonicalEnvPath
-      || (env.KHY_ENV_FILE ? String(env.KHY_ENV_FILE) : '');
+    const canonical = opts.canonicalEnvPath || (env.KHY_ENV_FILE ? String(env.KHY_ENV_FILE) : '');
     if (canonical && _fileHasFlag(canonical)) {
       return { action: 'skipped', reason: 'explicit-in-canonical-env' };
     }
@@ -139,9 +152,17 @@ function ensureProxyCoreEnv(opts = {}) {
     // 4) 三处都没有 → 首次自动播种到升级安全的 overlay。
     _deps.writeEnvMap({ [FLAG]: '1' }, { envPath: overlayPath });
     // writeEnvMap 已顺带 process.env[FLAG]='1',但注入 env 未必是 process.env,补设保证本进程即时生效。
-    try { if (env && typeof env === 'object') env[FLAG] = '1'; } catch { /* ignore */ }
-    emit(`已自动开启代理内核出站(${FLAG}=1)并写入 ${overlayPath}(升级安全,pip/npm 升级不覆盖;`
-      + `如需关闭,设 ${FLAG}=0 或 ${META_FLAG}=0)`);
+    try {
+      if (env && typeof env === 'object') {
+        env[FLAG] = '1';
+      }
+    } catch {
+      /* ignore */
+    }
+    emit(
+      `已自动开启代理内核出站(${FLAG}=1)并写入 ${overlayPath}(升级安全,pip/npm 升级不覆盖;` +
+        `如需关闭,设 ${FLAG}=0 或 ${META_FLAG}=0)`
+    );
     return { action: 'seeded', reason: 'first-time', path: overlayPath };
   } catch (err) {
     // fail-soft:播种失败绝不阻断启动(只读 fs 等);用户仍可手动设 env。

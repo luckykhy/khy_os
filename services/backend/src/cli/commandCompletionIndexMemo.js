@@ -27,7 +27,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_COMMAND_COMPLETION_INDEX_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -47,12 +49,18 @@ function getCompletionIndex(commandsMap, computeFn, env = process.env) {
       return computeFn();
     }
     const hit = _cache.get(commandsMap);
-    if (hit && hit.size === commandsMap.size) return hit.index;
+    if (hit && hit.size === commandsMap.size) {
+      return hit.index;
+    }
     const index = computeFn();
     _cache.set(commandsMap, { size: commandsMap.size, index });
     return index;
   } catch {
-    try { return computeFn(); } catch { return []; }
+    try {
+      return computeFn();
+    } catch {
+      return [];
+    }
   }
 }
 

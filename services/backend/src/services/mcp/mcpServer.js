@@ -41,9 +41,12 @@ function createServerCore(opts = {}) {
    * @returns {Array<object>}
    */
   function exposedTools() {
-    if (typeof registry.loadTools === 'function') registry.loadTools();
+    if (typeof registry.loadTools === 'function') {
+      registry.loadTools();
+    }
     const enabled = typeof registry.getEnabled === 'function' ? registry.getEnabled() : new Map();
-    const arr = enabled instanceof Map ? [...enabled.values()] : (Array.isArray(enabled) ? enabled : []);
+    const arr =
+      enabled instanceof Map ? [...enabled.values()] : Array.isArray(enabled) ? enabled : [];
     return policy.selectExposedTools(arr, policy.resolveExposeMode(env));
   }
 
@@ -97,7 +100,8 @@ function createServerCore(opts = {}) {
     try {
       return await protocol.dispatch(parsed, handlers);
     } catch (err) {
-      const code = err && err.__mcpCode !== undefined ? err.__mcpCode : protocol.ERROR_CODES.INTERNAL_ERROR;
+      const code =
+        err && err.__mcpCode !== undefined ? err.__mcpCode : protocol.ERROR_CODES.INTERNAL_ERROR;
       const message = err && err.message ? err.message : 'internal error';
       return protocol.buildError(parsed.id, code, message);
     }

@@ -32,11 +32,17 @@ function isSkillAddEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_SKILL_ADD', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_SKILL_ADD;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -62,13 +68,23 @@ function _validSeg(s) {
  * @returns {string|null}
  */
 function normalizeSubdir(sub) {
-  const raw = String(sub == null ? '' : sub).trim().replace(/\\/g, '/');
-  if (!raw) return null;
-  if (raw.startsWith('/') || /^[A-Za-z]:/.test(raw)) return null;
+  const raw = String(sub == null ? '' : sub)
+    .trim()
+    .replace(/\\/g, '/');
+  if (!raw) {
+    return null;
+  }
+  if (raw.startsWith('/') || /^[A-Za-z]:/.test(raw)) {
+    return null;
+  }
   const parts = raw.split('/').filter((p) => p && p !== '.');
-  if (!parts.length) return null;
+  if (!parts.length) {
+    return null;
+  }
   for (const p of parts) {
-    if (p === '..' || !_SEG_RE.test(p)) return null;
+    if (p === '..' || !_SEG_RE.test(p)) {
+      return null;
+    }
   }
   return parts.join('/');
 }
@@ -83,9 +99,13 @@ function inferSkillName(spec = {}) {
   const sub = spec.subdir ? String(spec.subdir).split('/').filter(Boolean) : [];
   if (sub.length) {
     const last = sub[sub.length - 1];
-    if (_validSeg(last)) return last;
+    if (_validSeg(last)) {
+      return last;
+    }
   }
-  if (_validSeg(spec.repo)) return spec.repo;
+  if (_validSeg(spec.repo)) {
+    return spec.repo;
+  }
   return null;
 }
 
@@ -98,11 +118,20 @@ function inferSkillName(spec = {}) {
  */
 function parseSource(source, opts = {}) {
   const raw = String(source == null ? '' : source).trim();
-  if (!raw) return { ok: false, error: 'skill 源不能为空(用法:khy skill add <owner/repo | https://github.com/…> [--skill <name>])。' };
+  if (!raw) {
+    return {
+      ok: false,
+      error:
+        'skill 源不能为空(用法:khy skill add <owner/repo | https://github.com/…> [--skill <name>])。',
+    };
+  }
 
   const explicitSub = opts && opts.skill ? normalizeSubdir(opts.skill) : null;
   if (opts && opts.skill && explicitSub == null) {
-    return { ok: false, error: `非法的 --skill 子路径「${opts.skill}」(不允许绝对路径、盘符或 .. 遍历)。` };
+    return {
+      ok: false,
+      error: `非法的 --skill 子路径「${opts.skill}」(不允许绝对路径、盘符或 .. 遍历)。`,
+    };
   }
 
   let host = '';
@@ -119,20 +148,26 @@ function parseSource(source, opts = {}) {
     host = ssh[1];
     const rest = ssh[2].replace(/^\/+/, '');
     const segs = _stripDotGit(rest).split('/').filter(Boolean);
-    if (segs.length < 2) return { ok: false, error: `无法从 SSH 源解析 owner/repo:「${raw}」。` };
+    if (segs.length < 2) {
+      return { ok: false, error: `无法从 SSH 源解析 owner/repo:「${raw}」。` };
+    }
     owner = segs[0];
     repo = segs[1];
     url = raw;
     kind = 'ssh';
   } else if (/^(https?|git|ssh):\/\//i.test(raw)) {
     // ── 完整 URL ──
-    let rest = raw.replace(/^[a-z]+:\/\//i, '');
+    const rest = raw.replace(/^[a-z]+:\/\//i, '');
     const slash = rest.indexOf('/');
-    if (slash < 0) return { ok: false, error: `URL 缺少仓库路径:「${raw}」。` };
+    if (slash < 0) {
+      return { ok: false, error: `URL 缺少仓库路径:「${raw}」。` };
+    }
     host = rest.slice(0, slash).replace(/^[^@]*@/, ''); // 去掉可能的 user@
     const pathPart = rest.slice(slash + 1).replace(/^\/+/, '');
     const segs = pathPart.split('/').filter(Boolean);
-    if (segs.length < 2) return { ok: false, error: `URL 无法解析 owner/repo:「${raw}」。` };
+    if (segs.length < 2) {
+      return { ok: false, error: `URL 无法解析 owner/repo:「${raw}」。` };
+    }
     owner = segs[0];
     repo = _stripDotGit(segs[1]);
     // github 风格 /tree/<ref>/<subdir…>
@@ -140,7 +175,9 @@ function parseSource(source, opts = {}) {
       ref = segs[3];
       if (!explicitSub && segs.length > 4) {
         const sub = normalizeSubdir(segs.slice(4).join('/'));
-        if (sub) subdir = sub;
+        if (sub) {
+          subdir = sub;
+        }
       }
     }
     url = `${raw.match(/^[a-z]+:\/\//i)[0]}${host}/${owner}/${repo}.git`;
@@ -154,19 +191,26 @@ function parseSource(source, opts = {}) {
       body = body.slice(0, hashAt);
     }
     const segs = body.split('/').filter(Boolean);
-    if (segs.length < 2) return { ok: false, error: `短写需形如 owner/repo:「${raw}」。` };
+    if (segs.length < 2) {
+      return { ok: false, error: `短写需形如 owner/repo:「${raw}」。` };
+    }
     host = 'github.com';
     owner = segs[0];
     repo = _stripDotGit(segs[1]);
     // owner/repo/sub/dir → 其余段作为子目录(除非 --skill 已指定)
     if (!explicitSub && segs.length > 2) {
       const sub = normalizeSubdir(segs.slice(2).join('/'));
-      if (sub) subdir = sub;
+      if (sub) {
+        subdir = sub;
+      }
     }
     url = `https://github.com/${owner}/${repo}.git`;
     kind = 'shorthand';
   } else {
-    return { ok: false, error: `无法识别的 skill 源:「${raw}」(支持 owner/repo、https://github.com/…、git@…)。` };
+    return {
+      ok: false,
+      error: `无法识别的 skill 源:「${raw}」(支持 owner/repo、https://github.com/…、git@…)。`,
+    };
   }
 
   if (!_validSeg(owner) || !_validSeg(repo)) {
@@ -197,7 +241,9 @@ function parseSource(source, opts = {}) {
  * @returns {string[]} 相对路径候选(''=克隆根)
  */
 function candidateSkillDirs(spec = {}) {
-  if (spec && spec.subdir) return [spec.subdir];
+  if (spec && spec.subdir) {
+    return [spec.subdir];
+  }
   // 根优先(单-skill 仓库),其次常见容器目录名(IO 层会在其下再找命名子目录)。
   return ['', 'skill', 'skills', '.skills'];
 }
@@ -208,5 +254,5 @@ module.exports = {
   normalizeSubdir,
   inferSkillName,
   candidateSkillDirs,
-  _validSeg,   // exposed for tests
+  _validSeg, // exposed for tests
 };

@@ -17,7 +17,9 @@
 function _hostOf(endpoint) {
   try {
     const s = String(endpoint == null ? '' : endpoint).trim();
-    if (!s) return '';
+    if (!s) {
+      return '';
+    }
     // 允许裸主机(无协议)也能解析:补一个占位协议再取 host。
     const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(s) ? s : `https://${s}`;
     return new URL(withScheme).hostname.toLowerCase();

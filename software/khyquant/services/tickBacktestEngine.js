@@ -9,7 +9,7 @@ const path = require('path');
 
 class TickBacktestEngine {
   constructor() {
-    this.dataDir = path.join(__dirname, '../../data/tick');
+    this.dataDir = path.join(__dirname, '../../..', '.khy', 'khyquant', 'data', 'tick');
     if (!fs.existsSync(this.dataDir)) {
       fs.mkdirSync(this.dataDir, { recursive: true });
     }

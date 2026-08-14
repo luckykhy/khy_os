@@ -23,6 +23,7 @@
  */
 
 const { extractFirstJson } = require('../gateway/safeJsonParse');
+
 const strategy = require('./constraintStrategy');
 const registry = require('./executorRegistry');
 
@@ -61,7 +62,8 @@ function buildMetaPlanSchema() {
       risk_dissent: {
         type: 'string',
         maxLength: 400,
-        description: '若选 Prompt_Soft，必须一句话论证为何绝不引发语法崩溃或逻辑污染；否则系统自动升级为 Code_Hard。',
+        description:
+          '若选 Prompt_Soft，必须一句话论证为何绝不引发语法崩溃或逻辑污染；否则系统自动升级为 Code_Hard。',
       },
     },
   };
@@ -75,7 +77,10 @@ function buildMetaPlanSchema() {
 function parseMetaPlan(rawOutput) {
   const parsed = extractFirstJson(rawOutput, null);
   if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return { ok: false, error: '未能从输出中解析出元规划 JSON 对象（防呆①：必须先产出元规划再执行）。' };
+    return {
+      ok: false,
+      error: '未能从输出中解析出元规划 JSON 对象（防呆①：必须先产出元规划再执行）。',
+    };
   }
   return { ok: true, plan: parsed };
 }
@@ -104,7 +109,9 @@ function validateMetaPlan(plan) {
 
   // 1. toolchain must be drawn from the registry (防呆: 不可凭空捏造).
   const tc = registry.validateToolchain(plan.toolchain);
-  if (!tc.valid) return { valid: false, error: tc.reason };
+  if (!tc.valid) {
+    return { valid: false, error: tc.reason };
+  }
 
   // 2. constraint_strategy must be a legal enum value.
   const declared = String(plan.constraint_strategy || '').trim();
@@ -124,7 +131,7 @@ function validateMetaPlan(plan) {
     if (dissent.length < _minDissent()) {
       effective = strategy.escalate(effective, strategy.STRATEGIES.CODE_HARD);
       escalations.push(
-        `选择 Prompt_Soft 但未给出充分的 risk_dissent（< ${_minDissent()} 字），按规则自动升级为 Code_Hard（拒绝偷懒）。`,
+        `选择 Prompt_Soft 但未给出充分的 risk_dissent（< ${_minDissent()} 字），按规则自动升级为 Code_Hard（拒绝偷懒）。`
       );
     } else if (registry.toolchainHasUnguarded(plan.toolchain)) {
       // A no-AST executor under Prompt_Soft is allowed ONLY with a dissent — which

@@ -13,9 +13,9 @@
  *  - clearGoal 记 terminalStatus(done / abandoned)。
  */
 
-const { test, before, after } = require('node:test');
-const assert = require('node:assert');
 const fs = require('fs');
+const assert = require('node:assert');
+const { test, before, after } = require('node:test');
 const os = require('os');
 const path = require('path');
 
@@ -26,18 +26,38 @@ const _savedMax = process.env.KHY_GOAL_MAX_TURNS;
 const _savedEnable = process.env.KHY_GOAL;
 
 before(() => {
-  process.env.KHYOS_HOME = TMP;            // 必须早于首次 require(goalStore)
+  process.env.KHYOS_HOME = TMP; // 必须早于首次 require(goalStore)
   delete process.env.KHY_GOAL_BOUNDED;
   delete process.env.KHY_GOAL_MAX_TURNS;
   delete process.env.KHY_GOAL;
 });
 
 after(() => {
-  if (_savedKhyosHome === undefined) delete process.env.KHYOS_HOME; else process.env.KHYOS_HOME = _savedKhyosHome;
-  if (_savedBounded === undefined) delete process.env.KHY_GOAL_BOUNDED; else process.env.KHY_GOAL_BOUNDED = _savedBounded;
-  if (_savedMax === undefined) delete process.env.KHY_GOAL_MAX_TURNS; else process.env.KHY_GOAL_MAX_TURNS = _savedMax;
-  if (_savedEnable === undefined) delete process.env.KHY_GOAL; else process.env.KHY_GOAL = _savedEnable;
-  try { fs.rmSync(TMP, { recursive: true, force: true }); } catch { /* best-effort */ }
+  if (_savedKhyosHome === undefined) {
+    delete process.env.KHYOS_HOME;
+  } else {
+    process.env.KHYOS_HOME = _savedKhyosHome;
+  }
+  if (_savedBounded === undefined) {
+    delete process.env.KHY_GOAL_BOUNDED;
+  } else {
+    process.env.KHY_GOAL_BOUNDED = _savedBounded;
+  }
+  if (_savedMax === undefined) {
+    delete process.env.KHY_GOAL_MAX_TURNS;
+  } else {
+    process.env.KHY_GOAL_MAX_TURNS = _savedMax;
+  }
+  if (_savedEnable === undefined) {
+    delete process.env.KHY_GOAL;
+  } else {
+    process.env.KHY_GOAL = _savedEnable;
+  }
+  try {
+    fs.rmSync(TMP, { recursive: true, force: true });
+  } catch {
+    /* best-effort */
+  }
 });
 
 // require 必须在 before 之后跑 —— node:test 里 before 先于 test 执行,而顶层 require
@@ -126,7 +146,7 @@ test('clearGoal 记 terminalStatus:done vs abandoned', () => {
   assert.ok(doneRec.terminatedAt);
 
   store.setGoal('abandon 目标', { cwd: CWD5 });
-  store.clearGoal({ cwd: CWD5 });   // 默认 abandoned
+  store.clearGoal({ cwd: CWD5 }); // 默认 abandoned
   const abRec = store.listGoals().find((g) => g.scope === core.scopeKeyFor(CWD5));
   assert.equal(abRec.terminalStatus, 'abandoned');
 });
@@ -138,14 +158,16 @@ test('旧记录(仅 active,无 turnsSpent)→ 首次 advance 不抛、视为 1',
   const goalsFile = path.join(TMP, 'goals', 'goals.json');
   const legacy = {
     version: core.STORE_VERSION,
-    goals: [{ id: 'legacy1', text: '旧目标', scope: core.scopeKeyFor(CWD6), cwd: CWD6, active: true }],
+    goals: [
+      { id: 'legacy1', text: '旧目标', scope: core.scopeKeyFor(CWD6), cwd: CWD6, active: true },
+    ],
   };
   fs.mkdirSync(path.dirname(goalsFile), { recursive: true });
   fs.writeFileSync(goalsFile, JSON.stringify(legacy), 'utf-8');
 
   process.env.KHY_GOAL_MAX_TURNS = '5';
   const d = store.advanceActiveGoalDirective({ cwd: CWD6 });
-  assert.ok(d.includes('还剩 4 轮'), d);      // spent=1 → remaining=cap-1=4
+  assert.ok(d.includes('还剩 4 轮'), d); // spent=1 → remaining=cap-1=4
   assert.equal(store.getActiveGoal(CWD6).turnsSpent, 1);
   delete process.env.KHY_GOAL_MAX_TURNS;
 });

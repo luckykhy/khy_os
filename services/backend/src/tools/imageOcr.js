@@ -1,10 +1,9 @@
 const { defineTool } = require('./_baseTool');
+
 const { spawn, execFileSync } = require('child_process');
-const { safeKill } = require('./platformUtils');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { guardedReadFileSync } = require('./guardedReadFileSync');
+const path = require('path');
 
 const DOC_HELPER = path.join(__dirname, '../services/docHelper.py');
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB
@@ -12,7 +11,14 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB
 let _enabled = null;
 const _checkEnabled = require('../utils/docHelperEnabled');
 const SUPPORTED_FORMATS = new Set([
-  '.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp', '.gif',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.bmp',
+  '.tiff',
+  '.tif',
+  '.webp',
+  '.gif',
 ]);
 
 const MIME_MAP = {
@@ -27,6 +33,9 @@ const MIME_MAP = {
 };
 
 const resolvePath = require('../utils/resolveToolPath');
+
+const { guardedReadFileSync } = require('./guardedReadFileSync');
+const { safeKill } = require('./platformUtils');
 
 function runPython(pythonPath, args, opts = {}) {
   return new Promise((resolve, reject) => {
@@ -46,11 +55,19 @@ function runPython(pythonPath, args, opts = {}) {
     let _totalTimer = null;
     const _totalMs = Number(opts.totalMs) > 0 ? Number(opts.totalMs) : 0;
     const _clearTimers = () => {
-      if (_idleTimer) { clearTimeout(_idleTimer); _idleTimer = null; }
-      if (_totalTimer) { clearTimeout(_totalTimer); _totalTimer = null; }
+      if (_idleTimer) {
+        clearTimeout(_idleTimer);
+        _idleTimer = null;
+      }
+      if (_totalTimer) {
+        clearTimeout(_totalTimer);
+        _totalTimer = null;
+      }
     };
     const _resetIdle = () => {
-      if (_idleTimer) clearTimeout(_idleTimer);
+      if (_idleTimer) {
+        clearTimeout(_idleTimer);
+      }
       _idleTimer = setTimeout(() => {
         _clearTimers();
         safeKill(child);
@@ -68,15 +85,21 @@ function runPython(pythonPath, args, opts = {}) {
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', d => { stdout += d; _resetIdle(); });
-    child.stderr.on('data', d => { stderr += d; _resetIdle(); });
+    child.stdout.on('data', (d) => {
+      stdout += d;
+      _resetIdle();
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d;
+      _resetIdle();
+    });
 
-    child.on('error', err => {
+    child.on('error', (err) => {
       _clearTimers();
       reject(new Error(`Python process error: ${err.message}`));
     });
 
-    child.on('close', code => {
+    child.on('close', (code) => {
       _clearTimers();
       if (code !== 0) {
         reject(new Error(`Python exit code ${code}: ${stderr}`));
@@ -110,14 +133,18 @@ async function aiVisionOcr(imagePath, opts = {}) {
       _ac = new AbortController();
       abortSignal = _ac.signal;
       _timer = setTimeout(() => {
-        try { _ac.abort('imageOcr vision total timeout'); } catch { /* ignore */ }
+        try {
+          _ac.abort('imageOcr vision total timeout');
+        } catch {
+          /* ignore */
+        }
       }, _totalMs);
     }
 
     const result = await gateway.generate(
-      'Extract all text from this image. Preserve the original layout and formatting. '
-      + 'If there are tables, output them in Markdown table format. '
-      + 'Output only the recognized text, no explanations.',
+      'Extract all text from this image. Preserve the original layout and formatting. ' +
+        'If there are tables, output them in Markdown table format. ' +
+        'Output only the recognized text, no explanations.',
       {
         images: [{ base64, mimeType }],
         maxTokens: 4096,
@@ -145,7 +172,9 @@ async function aiVisionOcr(imagePath, opts = {}) {
       error: `AI vision OCR error: ${err.message}`,
     };
   } finally {
-    if (_timer) clearTimeout(_timer);
+    if (_timer) {
+      clearTimeout(_timer);
+    }
   }
 }
 
@@ -162,18 +191,32 @@ function computeVisionAvailable(env) {
     const adapterCap = require('../services/gateway/adapterVisionCapability');
 
     let active = null;
-    try { active = gateway.getActiveAdapter(); } catch { active = null; }
+    try {
+      active = gateway.getActiveAdapter();
+    } catch {
+      active = null;
+    }
 
     const adapterKey = (active && active.key) || e.GATEWAY_PREFERRED_ADAPTER || '';
-    if (adapterCap.adapterHandlesImagesNatively(adapterKey, e)) return true;
+    if (adapterCap.adapterHandlesImagesNatively(adapterKey, e)) {
+      return true;
+    }
 
     const model = (active && active.activeModel) || e.GATEWAY_PREFERRED_MODEL || '';
-    if (model && visionCap.isVisionCapableModel(model, { env: e })) return true;
+    if (model && visionCap.isVisionCapableModel(model, { env: e })) {
+      return true;
+    }
 
     if (model && typeof gateway.collectProviderSiblingModels === 'function') {
       let siblings = [];
-      try { siblings = gateway.collectProviderSiblingModels(model); } catch { siblings = []; }
-      if (visionCap.hasVisionCapableCandidate(siblings, { env: e })) return true;
+      try {
+        siblings = gateway.collectProviderSiblingModels(model);
+      } catch {
+        siblings = [];
+      }
+      if (visionCap.hasVisionCapableCandidate(siblings, { env: e })) {
+        return true;
+      }
     }
     return false;
   } catch {
@@ -192,7 +235,9 @@ const _imageOcrTool = defineTool({
   risk: 'low',
   isReadOnly: (input) => !input?.outputPath,
   isEnabled() {
-    if (_enabled === null) _enabled = _checkEnabled();
+    if (_enabled === null) {
+      _enabled = _checkEnabled();
+    }
     return _enabled;
   },
   isConcurrencySafe: true,
@@ -202,16 +247,32 @@ const _imageOcrTool = defineTool({
 
   inputSchema: {
     imagePath: { type: 'string', required: true, description: 'Path to the image file' },
-    outputPath: { type: 'string', required: false, description: 'Save recognized text as an editable Word (.docx) file at this path' },
-    lang: { type: 'string', required: false, description: 'OCR language (default: chi_sim+eng). Examples: eng, chi_sim, chi_tra+eng' },
-    forceAi: { type: 'boolean', required: false, description: 'Force AI vision instead of local OCR' },
+    outputPath: {
+      type: 'string',
+      required: false,
+      description: 'Save recognized text as an editable Word (.docx) file at this path',
+    },
+    lang: {
+      type: 'string',
+      required: false,
+      description: 'OCR language (default: chi_sim+eng). Examples: eng, chi_sim, chi_tra+eng',
+    },
+    forceAi: {
+      type: 'boolean',
+      required: false,
+      description: 'Force AI vision instead of local OCR',
+    },
   },
 
   async validateInput(input) {
-    const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+    const {
+      validateNotDevicePath,
+      validateNotUNCPath,
+      composeValidations,
+    } = require('./inputValidators');
     return composeValidations(
       validateNotDevicePath(input.imagePath),
-      validateNotUNCPath(input.imagePath),
+      validateNotUNCPath(input.imagePath)
     );
   },
 
@@ -221,7 +282,9 @@ const _imageOcrTool = defineTool({
   },
 
   getToolUseSummary(input) {
-    if (!input?.imagePath) return null;
+    if (!input?.imagePath) {
+      return null;
+    }
     return `识别图片：${input.imagePath}`;
   },
 
@@ -266,13 +329,19 @@ const _imageOcrTool = defineTool({
       // secret-byte primitive.)
       const { validateNoPathTraversal } = require('./inputValidators');
       const outCheck = validateNoPathTraversal(outputDocx);
-      if (!outCheck.valid) return { success: false, error: outCheck.message };
+      if (!outCheck.valid) {
+        return { success: false, error: outCheck.message };
+      }
     }
 
     // 「不级联 + 有界 + local-OCR 优先」策略门控(KHY_IMAGE_OCR_NO_CASCADE,默认开)。
     // 关闭 → 逐字节回退到旧路径(本地失败即无条件 AI 视觉、无总超时)。
     let policy = null;
-    try { policy = require('../services/gateway/imageOcrFallbackPolicy'); } catch { policy = null; }
+    try {
+      policy = require('../services/gateway/imageOcrFallbackPolicy');
+    } catch {
+      policy = null;
+    }
     const policyOn = !!(policy && policy.isNoCascadeEnabled(process.env));
     const totalMs = policy ? policy.getTotalTimeoutMs(process.env) : 0;
     const ocrOpts = policyOn ? { totalMs } : {};
@@ -332,7 +401,11 @@ const _imageOcrTool = defineTool({
     // 本地 Tesseract OCR 优先(有界总超时),离线、不动网络。
     let localResult;
     try {
-      localResult = await _impl.runPython(pythonPath, [DOC_HELPER, 'ocr', imagePath, lang], ocrOpts);
+      localResult = await _impl.runPython(
+        pythonPath,
+        [DOC_HELPER, 'ocr', imagePath, lang],
+        ocrOpts
+      );
     } catch {
       localResult = { success: false, needsAiFallback: true };
     }
@@ -353,9 +426,13 @@ const _imageOcrTool = defineTool({
         method: 'tesseract',
         lang: localResult.lang,
       };
-      if (localResult.needsAiFallback) result.lowConfidence = true;
+      if (localResult.needsAiFallback) {
+        result.lowConfidence = true;
+      }
       // 无视觉模型时如实标注「已用本地 OCR」,绝不伪装成视觉识别。
-      if (!visionAvailable) result.note = '当前无可用视觉模型，已使用本地 OCR 识别结果';
+      if (!visionAvailable) {
+        result.note = '当前无可用视觉模型，已使用本地 OCR 识别结果';
+      }
       if (outputDocx) {
         return saveTextAsDocx(pythonPath, result.text, outputDocx, result);
       }

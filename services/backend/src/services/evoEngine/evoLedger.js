@@ -17,22 +17,22 @@
  * 都会被 `verify()` 当场抓出，从而满足「绝不允许模型篡改进化黑历史」的可审计铁律。
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 const LEDGER_VERSION = 1;
 const GENESIS_PREV = '0'.repeat(64);
 
 // 记录种类——覆盖一次演进闭环的全生命周期。
 const KIND = Object.freeze({
-  REQUIREMENT: 'requirement',   // 需求铸造
-  CODE: 'code',                 // 自生成代码快照
-  SANDBOX: 'sandbox',           // 沙箱判决
-  HOTLOAD: 'hotload',           // 受控热载
-  ROLLBACK: 'rollback',         // 回滚
-  FUSE: 'fuse',                 // 熔断/只读锁
-  ALERT: 'alert',               // 架构级人类告警
+  REQUIREMENT: 'requirement', // 需求铸造
+  CODE: 'code', // 自生成代码快照
+  SANDBOX: 'sandbox', // 沙箱判决
+  HOTLOAD: 'hotload', // 受控热载
+  ROLLBACK: 'rollback', // 回滚
+  FUSE: 'fuse', // 熔断/只读锁
+  ALERT: 'alert', // 架构级人类告警
 });
 
 function _dir() {
@@ -51,13 +51,22 @@ function _file(branch) {
   return path.join(_dir(), `ledger.${_safe(branch || 'main')}.json`);
 }
 
-function _stamp() { try { return Date.now(); } catch { return 0; } }
+function _stamp() {
+  try {
+    return Date.now();
+  } catch {
+    return 0;
+  }
+}
 
 /** 计算一条记录的内容哈希（不含 hash 字段自身）。 */
 function _hashEntry(entry) {
   const basis = JSON.stringify({
-    seq: entry.seq, kind: entry.kind, prevHash: entry.prevHash,
-    payload: entry.payload, at: entry.at,
+    seq: entry.seq,
+    kind: entry.kind,
+    prevHash: entry.prevHash,
+    payload: entry.payload,
+    at: entry.at,
   });
   return crypto.createHash('sha256').update(basis).digest('hex');
 }
@@ -65,7 +74,9 @@ function _hashEntry(entry) {
 function _readRaw(branch) {
   try {
     const f = _file(branch);
-    if (!fs.existsSync(f)) return [];
+    if (!fs.existsSync(f)) {
+      return [];
+    }
     const arr = JSON.parse(fs.readFileSync(f, 'utf-8'));
     return Array.isArray(arr) ? arr : [];
   } catch {
@@ -75,7 +86,9 @@ function _readRaw(branch) {
 
 function _writeRaw(branch, chain) {
   const dir = _dir();
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   const file = _file(branch);
   const tmp = `${file}.tmp-${process.pid}`;
   const fd = fs.openSync(tmp, 'w');
@@ -132,13 +145,23 @@ function verify(opts = {}) {
   for (let i = 0; i < chain.length; i++) {
     const e = chain[i];
     if (e.seq !== i) {
-      return { ok: false, length: chain.length, brokenAt: i, reason: `seq 不连续：期望 ${i} 实为 ${e.seq}` };
+      return {
+        ok: false,
+        length: chain.length,
+        brokenAt: i,
+        reason: `seq 不连续：期望 ${i} 实为 ${e.seq}`,
+      };
     }
     if (e.prevHash !== prevHash) {
       return { ok: false, length: chain.length, brokenAt: i, reason: `prevHash 断链于 #${i}` };
     }
     if (_hashEntry(e) !== e.hash) {
-      return { ok: false, length: chain.length, brokenAt: i, reason: `内容哈希不匹配于 #${i}（疑似篡改）` };
+      return {
+        ok: false,
+        length: chain.length,
+        brokenAt: i,
+        reason: `内容哈希不匹配于 #${i}（疑似篡改）`,
+      };
     }
     prevHash = e.hash;
   }

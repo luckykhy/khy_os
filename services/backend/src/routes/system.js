@@ -1,4 +1,5 @@
 const express = require('express');
+
 const router = express.Router();
 const os = require('os');
 
@@ -10,34 +11,40 @@ router.get('/network-info', (req, res) => {
   try {
     const networkInterfaces = os.networkInterfaces();
     let lanIp = null;
-    let candidateIps = [];
-    
+    const candidateIps = [];
+
     // 虚拟网卡关键词（用于排除）
     const virtualAdapterKeywords = [
-      'vmware', 'virtualbox', 'vbox', 'virtual', 'vethernet',
-      'docker', 'wsl', 'hyper-v', 'loopback', 'tunnel'
+      'vmware',
+      'virtualbox',
+      'vbox',
+      'virtual',
+      'vethernet',
+      'docker',
+      'wsl',
+      'hyper-v',
+      'loopback',
+      'tunnel',
     ];
-    
+
     // 遍历所有网络接口
     for (const interfaceName in networkInterfaces) {
       const interfaces = networkInterfaces[interfaceName];
       const lowerName = interfaceName.toLowerCase();
-      
+
       // 检查是否是虚拟网卡
-      const isVirtual = virtualAdapterKeywords.some(keyword => 
-        lowerName.includes(keyword)
-      );
-      
+      const isVirtual = virtualAdapterKeywords.some((keyword) => lowerName.includes(keyword));
+
       for (const iface of interfaces) {
         // 跳过内部（回环）地址和非IPv4地址
         if (iface.family === 'IPv4' && !iface.internal) {
           const ip = iface.address;
-          
+
           // 跳过169.254开头的APIPA地址
           if (ip.startsWith('169.254')) {
             continue;
           }
-          
+
           // 优先级1: 192.168开头的IP（最常见的家庭/办公室局域网）
           if (ip.startsWith('192.168') && !isVirtual) {
             candidateIps.push({ ip, priority: 1, name: interfaceName });
@@ -60,30 +67,37 @@ router.get('/network-info', (req, res) => {
         }
       }
     }
-    
+
     // 按优先级排序，选择最优IP
     if (candidateIps.length > 0) {
       candidateIps.sort((a, b) => a.priority - b.priority);
       lanIp = candidateIps[0].ip;
       console.log('✅ 选择局域网IP:', lanIp, '来自网卡:', candidateIps[0].name);
-      console.log('📋 所有候选IP:', candidateIps.map(c => `${c.ip} (${c.name}, 优先级${c.priority})`).join(', '));
+      console.log(
+        '📋 所有候选IP:',
+        candidateIps.map((c) => `${c.ip} (${c.name}, 优先级${c.priority})`).join(', ')
+      );
     }
-    
+
     res.json({
       success: true,
       data: {
         lanIp: lanIp,
         hostname: os.hostname(),
         platform: os.platform(),
-        allCandidates: candidateIps.map(c => ({ ip: c.ip, interface: c.name, priority: c.priority }))
-      }
+        allCandidates: candidateIps.map((c) => ({
+          ip: c.ip,
+          interface: c.name,
+          priority: c.priority,
+        })),
+      },
     });
   } catch (error) {
     console.error('获取网络信息失败:', error);
     res.status(500).json({
       success: false,
       message: '获取网络信息失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -103,12 +117,16 @@ router.get('/data-status', async (req, res) => {
       const { sequelize } = require('../config/database');
       await sequelize.authenticate();
       dbConnected = true;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     let cacheStats = { type: 'unknown' };
     try {
       cacheStats = await cacheService.getStats();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     res.json({
       success: true,
@@ -152,6 +170,24 @@ router.get('/data-sources/test', async (req, res) => {
         timestamp: new Date().toISOString(),
       },
     });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/system/trigger-voice-input
+ * 模拟 Win+H 唤起 Windows 语音听写面板（仅 Windows）。
+ */
+router.post('/trigger-voice-input', async (req, res) => {
+  try {
+    const voiceInputService = require('../services/voiceInputService');
+    const result = await voiceInputService.triggerWinH();
+    if (result.success) {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ success: false, error: result.error });
+    }
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

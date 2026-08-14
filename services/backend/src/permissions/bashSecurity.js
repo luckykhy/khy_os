@@ -161,28 +161,91 @@ const DANGEROUS_PATTERNS = [
  * Commands that are always safe (read-only or benign).
  */
 const SAFE_COMMANDS = new Set([
-  'ls', 'cat', 'head', 'tail', 'wc', 'grep', 'rg', 'find', 'which',
-  'echo', 'printf', 'date', 'whoami', 'hostname', 'uname',
-  'pwd', 'env', 'printenv', 'id', 'groups', 'file', 'stat',
-  'df', 'du', 'free', 'uptime', 'top', 'htop', 'ps',
-  'git status', 'git log', 'git diff', 'git show', 'git branch',
-  'git remote', 'git tag', 'git stash list', 'git blame',
-  'node --version', 'npm --version', 'pnpm --version', 'yarn --version',
-  'python --version', 'python3 --version', 'pip --version',
-  'man', 'help', 'type', 'command',
-  'true', 'false', 'test',
+  'ls',
+  'cat',
+  'head',
+  'tail',
+  'wc',
+  'grep',
+  'rg',
+  'find',
+  'which',
+  'echo',
+  'printf',
+  'date',
+  'whoami',
+  'hostname',
+  'uname',
+  'pwd',
+  'env',
+  'printenv',
+  'id',
+  'groups',
+  'file',
+  'stat',
+  'df',
+  'du',
+  'free',
+  'uptime',
+  'top',
+  'htop',
+  'ps',
+  'git status',
+  'git log',
+  'git diff',
+  'git show',
+  'git branch',
+  'git remote',
+  'git tag',
+  'git stash list',
+  'git blame',
+  'node --version',
+  'npm --version',
+  'pnpm --version',
+  'yarn --version',
+  'python --version',
+  'python3 --version',
+  'pip --version',
+  'man',
+  'help',
+  'type',
+  'command',
+  'true',
+  'false',
+  'test',
 ]);
 
 /**
  * Prefixes of read-only commands.
  */
 const SAFE_PREFIXES = [
-  'ls ', 'cat ', 'head ', 'tail ', 'wc ', 'grep ', 'rg ',
-  'find ', 'which ', 'echo ', 'printf ', 'file ', 'stat ',
-  'git status', 'git log ', 'git diff ', 'git show ', 'git blame ',
-  'git branch -', 'git remote -v', 'git tag -l',
-  'node -e ', 'node --eval ',
-  'jq ', 'yq ', 'sed -n ', 'awk ',
+  'ls ',
+  'cat ',
+  'head ',
+  'tail ',
+  'wc ',
+  'grep ',
+  'rg ',
+  'find ',
+  'which ',
+  'echo ',
+  'printf ',
+  'file ',
+  'stat ',
+  'git status',
+  'git log ',
+  'git diff ',
+  'git show ',
+  'git blame ',
+  'git branch -',
+  'git remote -v',
+  'git tag -l',
+  'node -e ',
+  'node --eval ',
+  'jq ',
+  'yq ',
+  'sed -n ',
+  'awk ',
 ];
 
 // ── Needs confirmation patterns ────────────────────────────────────────
@@ -247,13 +310,17 @@ function classifyBashCommand(command) {
   // Check confirmation-needed patterns
   for (const pattern of CONFIRMATION_PATTERNS) {
     if (pattern.test(trimmed)) {
-      return { safe: false, reason: 'Mutating command requires confirmation', category: 'needs_confirmation' };
+      return {
+        safe: false,
+        reason: 'Mutating command requires confirmation',
+        category: 'needs_confirmation',
+      };
     }
   }
 
   // Pipe chains — scan each segment
   if (trimmed.includes('|')) {
-    const segments = trimmed.split('|').map(s => s.trim());
+    const segments = trimmed.split('|').map((s) => s.trim());
     for (const seg of segments) {
       const segResult = classifyBashCommand(seg);
       if (segResult.category === 'blocked' || segResult.category === 'dangerous') {
@@ -261,7 +328,7 @@ function classifyBashCommand(command) {
       }
     }
     // If all segments are safe, the pipeline is safe
-    const allSafe = segments.every(seg => classifyBashCommand(seg).safe);
+    const allSafe = segments.every((seg) => classifyBashCommand(seg).safe);
     if (allSafe) {
       return { safe: true, reason: 'All pipeline segments are safe', category: 'safe' };
     }
@@ -269,7 +336,11 @@ function classifyBashCommand(command) {
 
   // Command substitution — conservative
   if (/\$\(/.test(trimmed) || /`[^`]+`/.test(trimmed)) {
-    return { safe: false, reason: 'Command substitution requires review', category: 'needs_confirmation' };
+    return {
+      safe: false,
+      reason: 'Command substitution requires review',
+      category: 'needs_confirmation',
+    };
   }
 
   // Redirect to file — conservative
@@ -278,7 +349,11 @@ function classifyBashCommand(command) {
   }
 
   // Default: unknown commands need confirmation
-  return { safe: false, reason: 'Unknown command — confirmation required', category: 'needs_confirmation' };
+  return {
+    safe: false,
+    reason: 'Unknown command — confirmation required',
+    category: 'needs_confirmation',
+  };
 }
 
 // ── Plan mode validation ───────────────────────────────────────────────

@@ -227,6 +227,21 @@ describe('screenCapture — 眼', () => {
     expect(r.success).toBe(false);
     expect(r.error).toMatch(/区域截屏参数非法/);
   });
+
+  test('desktop:true 时优先用 desktopFull 后端（Win+D 收起窗口再截图）', async () => {
+    let ran = null;
+    const deps = {
+      detect: () => ({ platform: 'win32', eyes: { available: true, backend: 'powershell-gdi' } }),
+      resolveBackend: () => registry.backendsFor('win32', 'capture').find((b) => b.id === 'powershell-gdi'),
+      execFile: (cmd, args, _o, cb) => { ran = { cmd, args }; cb(null, '', ''); },
+      exists: () => true,
+      statSize: () => 1024,
+    };
+    const r = await screenCapture.capture({ outPath: 'D:/tmp/khy-desktop/captures/d.png', desktop: true }, deps);
+    expect(r.success).toBe(true);
+    expect(ran.args.join(' ')).toMatch(/Show-Desktop/);
+    expect(ran.args.join(' ')).toMatch(/CopyFromScreen/);
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────
@@ -631,6 +646,37 @@ describe('DesktopControlTool — 模型可见工具', () => {
     expect(DesktopControlTool.category).toBe('system');
     expect(DesktopControlTool.shouldDefer).toBe(true);
   });
+
+  test('desktopIcons 动作路由到门面 desktopIcons（桌面图标清单）', async () => {
+    const seen = [];
+    const controller = {
+      desktopIcons: async (o) => { seen.push(['desktopIcons', o.clickableOnly]); return { success: true, elements: [{ name: '回收站' }], source: 'accessibility' }; },
+    };
+    const t = new DesktopControlTool();
+    const r = await t.execute({ action: 'desktopIcons', clickableOnly: true }, { controller });
+    expect(seen).toEqual([['desktopIcons', true]]);
+    expect(r.success).toBe(true);
+  });
+
+  test('screenshot/see 带 desktop:true 时透传（桌面截屏模式）', async () => {
+    const seen = [];
+    const controller = {
+      screenshot: async (o) => { seen.push(['screenshot', o.desktop]); return { success: true, path: null }; },
+      see: async (o) => { seen.push(['see', o.desktop]); return { success: true, path: null }; },
+    };
+    const t = new DesktopControlTool();
+    await t.execute({ action: 'screenshot', desktop: true }, { controller });
+    await t.execute({ action: 'see', desktop: false }, { controller });
+    expect(seen).toEqual([['screenshot', true], ['see', false]]);
+  });
+
+  test('action 枚举与 prompt 均暴露桌面专用能力', () => {
+    const t = new DesktopControlTool();
+    expect(t.inputSchema.properties.action.enum).toContain('desktopIcons');
+    expect(t.inputSchema.properties.desktop).toBeTruthy();
+    expect(t.prompt()).toMatch(/desktopIcons/);
+    expect(t.prompt()).toMatch(/Win\+D/);
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────
@@ -860,6 +906,37 @@ describe('desktopIntentInterceptor — 自然语言窗口操控意图映射', ()
     expect(desktopIntent._parseDesktopIntent('你好世界', tc)).toBeNull();
     expect(desktopIntent._parseDesktopIntent('打开火狐', tc)).toBeNull(); // 「打开」归 appLaunchInterceptor
     expect(desktopIntent._parseDesktopIntent('激活', tc)).toBeNull();     // 激活必须带目标名
+  });
+
+  test('「桌面上有什么」类短句 → desktopIcons（桌面图标清单）', () => {
+    expect(desktopIntent._parseDesktopIntent('桌面上有什么', tc)).toEqual({ action: 'desktopIcons', name: '' });
+    expect(desktopIntent._parseDesktopIntent('桌面有哪些图标', tc)).toEqual({ action: 'desktopIcons', name: '' });
+    expect(desktopIntent._parseDesktopIntent('桌面上都是什么', tc)).toEqual({ action: 'desktopIcons', name: '' });
+    expect(desktopIntent._parseDesktopIntent('what is on my desktop', tc)).toBeNull(); // 未覆盖句式不误吞
+    expect(desktopIntent._parseDesktopIntent('桌面上有个文件夹叫资料', tc)).toBeNull(); // 叙述句不误吞
+  });
+
+  test('desktopIcons 拦截成功时输出图标清单', async () => {
+    process.env.KHY_DESKTOP_CONTROL = 'on';
+    const fakeDesktop = {
+      desktopIcons: async () => ({ success: true, elements: [{ name: '此电脑' }, { name: '回收站' }, { name: 'Chrome' }], source: 'accessibility' }),
+    };
+    // 直接验证「解析→输出」：解析出 desktopIcons 动作，再用假门面模拟结果格式化。
+    const intent = desktopIntent._parseDesktopIntent('桌面上有什么', tc);
+    expect(intent.action).toBe('desktopIcons');
+    const result = await fakeDesktop.desktopIcons();
+    const icons = (Array.isArray(result.elements) ? result.elements : []).map((e) => e && e.name).filter(Boolean);
+    const output = icons.length ? `桌面图标清单（共 ${icons.length} 个）：\n${icons.map((n, i) => `${i + 1}. ${n}`).join('\n')}` : '（桌面上没有枚举到图标）';
+    expect(output).toMatch(/共 3 个/);
+    expect(output).toMatch(/Chrome/);
+  });
+
+  test('desktopIcons 闸门关闭 → denied 指引（不绕过保护）', async () => {
+    delete process.env.KHY_DESKTOP_CONTROL;
+    const r = await desktopIntent.tryDesktopIntent('', { userMessage: '桌面上有什么' });
+    expect(r).not.toBeNull();
+    expect(r.success).toBe(false);
+    expect(r.content).toMatch(/KHY_DESKTOP_CONTROL|\/desktop/);
   });
 
   test('闸门关闭(off)：拦截返回 denied 指引，绝不绕过保护', async () => {

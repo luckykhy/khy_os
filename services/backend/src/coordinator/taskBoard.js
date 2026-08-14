@@ -12,8 +12,8 @@
  */
 'use strict';
 
-const path = require('path');
 const crypto = require('crypto');
+const path = require('path');
 
 // ── State Constants ──
 
@@ -54,7 +54,7 @@ const DEFAULT_CLAIM_TTL_MS = 300_000; // 5 分钟认领过期
 const DEFAULT_MAX_RETRIES = 3;
 
 let _db = null;
-let _stmts = {};
+const _stmts = {};
 let _available = false;
 
 // ── Database ──
@@ -67,13 +67,19 @@ function _dbPath() {
     const os = require('os');
     const dir = path.join(os.homedir(), '.khyquant');
     const fs = require('fs');
-    try { fs.mkdirSync(dir, { recursive: true }); } catch { /* ok */ }
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch {
+      /* ok */
+    }
     return path.join(dir, 'taskboard.db');
   }
 }
 
 function _initDb() {
-  if (_db) return _available;
+  if (_db) {
+    return _available;
+  }
 
   let Database;
   try {
@@ -160,9 +166,15 @@ function _initDb() {
     `);
 
     _stmts.list = _db.prepare('SELECT * FROM tasks ORDER BY priority ASC, created_at ASC');
-    _stmts.listByStatus = _db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY priority ASC, created_at ASC');
-    _stmts.listByAssignee = _db.prepare('SELECT * FROM tasks WHERE assignee = ? ORDER BY priority ASC, created_at ASC');
-    _stmts.listByParent = _db.prepare('SELECT * FROM tasks WHERE parent_id = ? ORDER BY created_at ASC');
+    _stmts.listByStatus = _db.prepare(
+      'SELECT * FROM tasks WHERE status = ? ORDER BY priority ASC, created_at ASC'
+    );
+    _stmts.listByAssignee = _db.prepare(
+      'SELECT * FROM tasks WHERE assignee = ? ORDER BY priority ASC, created_at ASC'
+    );
+    _stmts.listByParent = _db.prepare(
+      'SELECT * FROM tasks WHERE parent_id = ? ORDER BY created_at ASC'
+    );
 
     _stmts.cleanOld = _db.prepare(`
       DELETE FROM tasks WHERE status IN ('done','archived') AND completed_at < ?
@@ -192,12 +204,36 @@ function _newId() {
   return 't_' + crypto.randomBytes(8).toString('hex');
 }
 
+// Observability hook — mirror board mutations into the append-only event log.
+// Fail-soft by contract: never throws, never alters task-board behavior or
+// return values (末尾埋点). eventLog itself is fail-soft; the extra try/catch
+// guards the require() so a missing module can't disrupt the coordinator.
+function _emitTaskEvent(type, data) {
+  try {
+    const traceId = data && (data.id || data.taskId || null);
+    require('../observability/eventLog').append({
+      type,
+      source: 'taskBoard',
+      traceId,
+      payload: data,
+    });
+  } catch {
+    /* fail-soft: observability must never break the task board */
+  }
+}
+
 function _parseJson(str, fallback) {
-  try { return JSON.parse(str); } catch { return fallback; }
+  try {
+    return JSON.parse(str);
+  } catch {
+    return fallback;
+  }
 }
 
 function _toRecord(row) {
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   return {
     id: row.id,
     title: row.title,
@@ -237,7 +273,9 @@ function _toRecord(row) {
 function createTask(task) {
   if (!_initDb()) {
     // Fallback: 文件模式 (向后兼容)
-    return _createTaskFile(task);
+    const rec = _createTaskFile(task);
+    _emitTaskEvent('task.created', rec);
+    return rec;
   }
 
   const id = _newId();
@@ -260,24 +298,34 @@ function createTask(task) {
     updatedAt: now,
   });
 
-  return _toRecord(_stmts.get.get(id));
+  const created = _toRecord(_stmts.get.get(id));
+  _emitTaskEvent('task.created', created);
+  return created;
 }
 
 function getTask(id) {
-  if (!_initDb()) return _getTaskFile(id);
+  if (!_initDb()) {
+    return _getTaskFile(id);
+  }
   return _toRecord(_stmts.get.get(id));
 }
 
 function updateTask(id, updates) {
-  if (!_initDb()) return _updateTaskFile(id, updates);
+  if (!_initDb()) {
+    return _updateTaskFile(id, updates);
+  }
 
   const existing = _stmts.get.get(id);
-  if (!existing) return null;
+  if (!existing) {
+    return null;
+  }
 
   const now = Date.now();
   // 将 legacy status 映射为 canonical
   let status = updates.status || existing.status;
-  if (LEGACY_TO_CANONICAL[status]) status = LEGACY_TO_CANONICAL[status];
+  if (LEGACY_TO_CANONICAL[status]) {
+    status = LEGACY_TO_CANONICAL[status];
+  }
 
   _stmts.update.run({
     id,
@@ -286,29 +334,38 @@ function updateTask(id, updates) {
     status,
     assignee: updates.assignee !== undefined ? updates.assignee : existing.assignee,
     priority: updates.priority || existing.priority,
-    dependencies: updates.dependencies ? JSON.stringify(updates.dependencies) : existing.dependencies,
+    dependencies: updates.dependencies
+      ? JSON.stringify(updates.dependencies)
+      : existing.dependencies,
     result: updates.result !== undefined ? updates.result : existing.result,
     updatedAt: now,
     completedAt: updates.completedAt || existing.completed_at,
     startedAt: updates.startedAt || existing.started_at,
     claimLock: updates.claimLock !== undefined ? updates.claimLock : existing.claim_lock,
-    claimExpires: updates.claimExpires !== undefined ? updates.claimExpires : existing.claim_expires,
-    consecutiveFailures: updates.consecutiveFailures !== undefined
-      ? updates.consecutiveFailures : existing.consecutive_failures,
+    claimExpires:
+      updates.claimExpires !== undefined ? updates.claimExpires : existing.claim_expires,
+    consecutiveFailures:
+      updates.consecutiveFailures !== undefined
+        ? updates.consecutiveFailures
+        : existing.consecutive_failures,
   });
 
   return _toRecord(_stmts.get.get(id));
 }
 
 function listTasks(filter = {}) {
-  if (!_initDb()) return _listTasksFile(filter);
+  if (!_initDb()) {
+    return _listTasksFile(filter);
+  }
 
   // 先清理过期认领 + dead letter
   const now = Date.now();
   try {
     _stmts.expireStaleClaims.run(now, now);
     _stmts.deadLetter.run(now);
-  } catch { /* non-fatal */ }
+  } catch {
+    /* non-fatal */
+  }
 
   let rows;
   if (filter.status) {
@@ -334,7 +391,11 @@ function listTasks(filter = {}) {
  * @returns {boolean} true if claim succeeded
  */
 function claimTask(id, workerId, opts = {}) {
-  if (!_initDb()) return _claimTaskFile(id, workerId, opts);
+  if (!_initDb()) {
+    const ok = _claimTaskFile(id, workerId, opts);
+    _emitTaskEvent('task.claimed', { id, workerId, ok });
+    return ok;
+  }
 
   const now = Date.now();
   const ttl = opts.claimTtlMs || DEFAULT_CLAIM_TTL_MS;
@@ -342,20 +403,26 @@ function claimTask(id, workerId, opts = {}) {
 
   // 先检查依赖
   const task = _stmts.get.get(id);
-  if (!task) return false;
+  if (!task) {
+    return false;
+  }
 
   const deps = _parseJson(task.dependencies, []);
   if (deps.length > 0) {
     for (const depId of deps) {
       const dep = _stmts.get.get(depId);
-      if (!dep || dep.status !== 'done') return false;
+      if (!dep || dep.status !== 'done') {
+        return false;
+      }
     }
   }
 
   // 检查父任务
   if (task.parent_id) {
     const parent = _stmts.get.get(task.parent_id);
-    if (parent && parent.status !== 'running' && parent.status !== 'done') return false;
+    if (parent && parent.status !== 'running' && parent.status !== 'done') {
+      return false;
+    }
   }
 
   // CAS: 在事务中执行
@@ -368,7 +435,9 @@ function claimTask(id, workerId, opts = {}) {
       now,
     });
 
-    if (result.changes !== 1) return false;
+    if (result.changes !== 1) {
+      return false;
+    }
 
     // 记录 task_run
     _stmts.insertRun.run({
@@ -381,27 +450,38 @@ function claimTask(id, workerId, opts = {}) {
     return true;
   });
 
-  return txn();
+  const ok = txn();
+  _emitTaskEvent('task.claimed', { id, workerId, ok });
+  return ok;
 }
 
 function completeTask(id, result) {
-  return updateTask(id, {
+  const rec = updateTask(id, {
     status: STATUS.DONE,
     result,
     completedAt: Date.now(),
   });
+  _emitTaskEvent('task.completed', rec || { id, result });
+  return rec;
 }
 
 function failTask(id, error) {
-  if (!_initDb()) return _updateTaskFile(id, { status: 'failed', result: error, completedAt: Date.now() });
+  if (!_initDb()) {
+    const rec = _updateTaskFile(id, { status: 'failed', result: error, completedAt: Date.now() });
+    _emitTaskEvent('task.failed', rec || { id, error });
+    return rec;
+  }
 
   const existing = _stmts.get.get(id);
-  if (!existing) return null;
+  if (!existing) {
+    return null;
+  }
 
   const failures = (existing.consecutive_failures || 0) + 1;
-  const status = failures >= (existing.max_retries || DEFAULT_MAX_RETRIES) ? STATUS.BLOCKED : STATUS.READY;
+  const status =
+    failures >= (existing.max_retries || DEFAULT_MAX_RETRIES) ? STATUS.BLOCKED : STATUS.READY;
 
-  return updateTask(id, {
+  const rec = updateTask(id, {
     status,
     result: error,
     completedAt: status === STATUS.BLOCKED ? Date.now() : null,
@@ -409,6 +489,8 @@ function failTask(id, error) {
     claimExpires: null,
     consecutiveFailures: failures,
   });
+  _emitTaskEvent('task.failed', rec || { id, error, status });
+  return rec;
 }
 
 /**
@@ -417,12 +499,16 @@ function failTask(id, error) {
  * @returns {object[]}
  */
 function getChildTasks(parentId) {
-  if (!_initDb()) return [];
+  if (!_initDb()) {
+    return [];
+  }
   return _stmts.listByParent.all(parentId).map(_toRecord);
 }
 
 function cleanup(olderThanMs = 3600000) {
-  if (!_initDb()) return _cleanupFile(olderThanMs);
+  if (!_initDb()) {
+    return _cleanupFile(olderThanMs);
+  }
   const cutoff = Date.now() - olderThanMs;
   const result = _stmts.cleanOld.run(cutoff);
   return result.changes;
@@ -443,10 +529,16 @@ function _createTaskFile(task) {
   const fs = require('fs');
   const id = 't-' + Date.now().toString(36) + '-' + crypto.randomBytes(2).toString('hex');
   const record = {
-    id, description: task.description, status: 'pending',
-    assignee: task.assignee || null, dependencies: task.dependencies || [],
-    priority: task.priority || 'medium', result: null,
-    createdAt: Date.now(), updatedAt: Date.now(), completedAt: null,
+    id,
+    description: task.description,
+    status: 'pending',
+    assignee: task.assignee || null,
+    dependencies: task.dependencies || [],
+    priority: task.priority || 'medium',
+    result: null,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    completedAt: null,
   };
   fs.writeFileSync(_taskPath(id), JSON.stringify(record, null, 2), 'utf-8');
   return record;
@@ -454,13 +546,19 @@ function _createTaskFile(task) {
 
 function _getTaskFile(id) {
   const fs = require('fs');
-  try { return JSON.parse(fs.readFileSync(_taskPath(id), 'utf-8')); } catch { return null; }
+  try {
+    return JSON.parse(fs.readFileSync(_taskPath(id), 'utf-8'));
+  } catch {
+    return null;
+  }
 }
 
 function _updateTaskFile(id, updates) {
   const fs = require('fs');
   const task = _getTaskFile(id);
-  if (!task) return null;
+  if (!task) {
+    return null;
+  }
   Object.assign(task, updates, { updatedAt: Date.now() });
   fs.writeFileSync(_taskPath(id), JSON.stringify(task, null, 2), 'utf-8');
   return task;
@@ -470,15 +568,25 @@ function _listTasksFile(filter = {}) {
   const fs = require('fs');
   const dir = _tasksDir();
   let files;
-  try { files = fs.readdirSync(dir).filter(f => f.endsWith('.json')); } catch { return []; }
+  try {
+    files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
+  } catch {
+    return [];
+  }
   const tasks = [];
   for (const file of files) {
     try {
       const task = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf-8'));
-      if (filter.status && task.status !== filter.status) continue;
-      if (filter.assignee && task.assignee !== filter.assignee) continue;
+      if (filter.status && task.status !== filter.status) {
+        continue;
+      }
+      if (filter.assignee && task.assignee !== filter.assignee) {
+        continue;
+      }
       tasks.push(task);
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   const po = { high: 0, medium: 1, low: 2 };
   tasks.sort((a, b) => (po[a.priority] ?? 1) - (po[b.priority] ?? 1) || a.createdAt - b.createdAt);
@@ -487,14 +595,20 @@ function _listTasksFile(filter = {}) {
 
 function _claimTaskFile(id, workerId, opts = {}) {
   const task = _getTaskFile(id);
-  if (!task || task.status !== 'pending') return false;
+  if (!task || task.status !== 'pending') {
+    return false;
+  }
   if (task.dependencies && task.dependencies.length > 0) {
     for (const depId of task.dependencies) {
       const dep = _getTaskFile(depId);
-      if (!dep || dep.status !== 'completed') return false;
+      if (!dep || dep.status !== 'completed') {
+        return false;
+      }
     }
   }
-  task.status = 'claimed'; task.assignee = workerId; task.updatedAt = Date.now();
+  task.status = 'claimed';
+  task.assignee = workerId;
+  task.updatedAt = Date.now();
   const fs = require('fs');
   fs.writeFileSync(_taskPath(id), JSON.stringify(task, null, 2), 'utf-8');
   return true;
@@ -507,15 +621,26 @@ function _cleanupFile(olderThanMs = 3600000) {
   const tasks = _listTasksFile();
   for (const task of tasks) {
     if ((task.status === 'completed' || task.status === 'failed') && task.completedAt < cutoff) {
-      try { fs.unlinkSync(_taskPath(task.id)); removed++; } catch { /* ok */ }
+      try {
+        fs.unlinkSync(_taskPath(task.id));
+        removed++;
+      } catch {
+        /* ok */
+      }
     }
   }
   return removed;
 }
 
 module.exports = {
-  createTask, getTask, updateTask, listTasks,
-  claimTask, completeTask, failTask, cleanup,
+  createTask,
+  getTask,
+  updateTask,
+  listTasks,
+  claimTask,
+  completeTask,
+  failTask,
+  cleanup,
   getChildTasks,
   STATUS,
   LEGACY_TO_CANONICAL,

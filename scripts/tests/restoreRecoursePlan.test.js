@@ -150,7 +150,7 @@ test('_bestReachable 取各 blocker 最好档的木桶短板', () => {
 // ── CLI 契约:文档漂移 ────────────────────────────────────────────────────────────
 
 test('CLI buildDoc 与授权档常量同源', () => {
-  const { buildDoc } = require('../restore-recourse');
+  const { buildDoc } = require('../restore/restore-recourse');
   const doc = buildDoc();
   assert.match(doc, /OPS-MAN-085/);
   assert.ok(doc.includes('dangerous-move'));
@@ -159,7 +159,7 @@ test('CLI buildDoc 与授权档常量同源', () => {
 });
 
 test('生成的 OPS-MAN-085 文档已落盘且与 buildDoc 逐字节一致（防漂移）', () => {
-  const { buildDoc, DOC_PATH } = require('../restore-recourse');
+  const { buildDoc, DOC_PATH } = require('../restore/restore-recourse');
   assert.ok(fs.existsSync(DOC_PATH), 'OPS-MAN-085 文档应已生成');
   assert.strictEqual(fs.readFileSync(DOC_PATH, 'utf8'), buildDoc());
 });

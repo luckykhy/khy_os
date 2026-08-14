@@ -103,11 +103,15 @@ function policyExists() {
  * @returns {object|null}
  */
 function loadPolicy() {
-  if (!policyExists()) return null;
+  if (!policyExists()) {
+    return null;
+  }
   try {
     const raw = fs.readFileSync(getPolicyPath(), 'utf-8');
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
     return _merge(defaultPolicy(), parsed);
   } catch {
     return null;
@@ -147,7 +151,9 @@ function ensurePolicy() {
 
 /** Normalize a strategy string; returns null when not a valid strategy. */
 function normalizeStrategy(value) {
-  const v = String(value || '').trim().toLowerCase();
+  const v = String(value || '')
+    .trim()
+    .toLowerCase();
   return STRATEGIES.includes(v) ? v : null;
 }
 

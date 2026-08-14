@@ -27,10 +27,12 @@ const RETENTION_DAYS = 7;
 const _MS_PER_DAY = 86400000;
 
 /** 门控:KHY_TASK_CLEANUP 默认开,仅 {0,false,off,no} 关。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_TASK_CLEANUP;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -42,12 +44,16 @@ function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
  * @param {object} [env]
  * @returns {number} 正整数天数
  */
-function resolveRetentionDays(env = (typeof process !== 'undefined' ? process.env : {})) {
+function resolveRetentionDays(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_TASK_CLEANUP_DAYS;
-    if (raw === undefined || raw === null || String(raw).trim() === '') return RETENTION_DAYS;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return RETENTION_DAYS;
+    }
     const n = Number(String(raw).trim());
-    if (Number.isInteger(n) && n > 0) return n;
+    if (Number.isInteger(n) && n > 0) {
+      return n;
+    }
     return RETENTION_DAYS;
   } catch {
     return RETENTION_DAYS;
@@ -57,9 +63,13 @@ function resolveRetentionDays(env = (typeof process !== 'undefined' ? process.en
 /** 单条任务的年龄(毫秒);时间戳缺失 / 不可解析 → null(调用方据此保守保留)。 */
 function _ageMs(task, now) {
   const stamp = (task && (task.updatedAt || task.createdAt)) || null;
-  if (!stamp) return null;
+  if (!stamp) {
+    return null;
+  }
   const t = Date.parse(stamp);
-  if (!Number.isFinite(t)) return null;
+  if (!Number.isFinite(t)) {
+    return null;
+  }
   const age = now - t;
   return Number.isFinite(age) ? age : null;
 }
@@ -76,21 +86,31 @@ function _ageMs(task, now) {
 function selectStaleTaskIds(args = {}) {
   try {
     const env = args.env || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(env)) return [];
+    if (!isEnabled(env)) {
+      return [];
+    }
 
     const tasks = args.tasks;
     const now = args.now;
-    if (!Array.isArray(tasks) || !Number.isFinite(now)) return [];
+    if (!Array.isArray(tasks) || !Number.isFinite(now)) {
+      return [];
+    }
 
     const retentionDays = resolveRetentionDays(env);
     const thresholdMs = retentionDays * _MS_PER_DAY;
 
     const stale = [];
     for (const task of tasks) {
-      if (!task || typeof task.id !== 'string' || !task.id) continue;
+      if (!task || typeof task.id !== 'string' || !task.id) {
+        continue;
+      }
       const age = _ageMs(task, now);
-      if (age === null) continue;          // 时间戳缺失 → 保守保留
-      if (age >= thresholdMs) stale.push(task.id);
+      if (age === null) {
+        continue;
+      } // 时间戳缺失 → 保守保留
+      if (age >= thresholdMs) {
+        stale.push(task.id);
+      }
     }
     return stale;
   } catch {

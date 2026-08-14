@@ -1,7 +1,7 @@
 'use strict';
 
-const runtimeStore = require('./largeTaskRuntimeStore');
 const { createLargeTaskOrchestrator } = require('./largeTaskOrchestrator');
+const runtimeStore = require('./largeTaskRuntimeStore');
 
 const DEFAULT_INTERVAL_MS = 2_000;
 const DEFAULT_LEASE_MS = 60_000;
@@ -12,26 +12,41 @@ const DEFAULT_RETRY_CAP_DELAY_MS = 300_000;
 const DEFAULT_RETRY_JITTER_PCT = 0.2;
 const DEFAULT_MAX_RUNS_PER_TICK = 3;
 
-const _parseBoolean = (value, fallback = false) => require('../utils/parseBoolean')(value, fallback, { extended: false });
+const _parseBoolean = (value, fallback = false) =>
+  require('../utils/parseBoolean')(value, fallback, { extended: false });
 
 function _parseIntInRange(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return fallback;
-  if (parsed < min) return min;
-  if (parsed > max) return max;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  if (parsed < min) {
+    return min;
+  }
+  if (parsed > max) {
+    return max;
+  }
   return parsed;
 }
 
 function _parseFloatInRange(value, fallback, min, max) {
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  if (parsed < min) return min;
-  if (parsed > max) return max;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  if (parsed < min) {
+    return min;
+  }
+  if (parsed > max) {
+    return max;
+  }
   return parsed;
 }
 
 function _normalizeSchemaVersions(value, fallback = null) {
-  if (!Array.isArray(value)) return fallback;
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
   const versions = value
     .map((item) => Number.parseInt(item, 10))
     .filter((item) => Number.isFinite(item) && item > 0);
@@ -39,10 +54,15 @@ function _normalizeSchemaVersions(value, fallback = null) {
 }
 
 function _normalizeRetryPolicy(value, fallback = null) {
-  const source = (value && typeof value === 'object' && !Array.isArray(value))
-    ? value
-    : (fallback && typeof fallback === 'object' && !Array.isArray(fallback) ? fallback : null);
-  if (!source) return null;
+  const source =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? value
+      : fallback && typeof fallback === 'object' && !Array.isArray(fallback)
+        ? fallback
+        : null;
+  if (!source) {
+    return null;
+  }
 
   const out = {};
   if (Array.isArray(source.non_retryable_error_types)) {
@@ -80,9 +100,24 @@ function _nowIso(nowFn) {
 }
 
 function _normalizeWorkerConfig(input = {}, fallback = {}) {
-  const intervalMs = _parseIntInRange(input.interval_ms, fallback.interval_ms ?? DEFAULT_INTERVAL_MS, 200, 300_000);
-  const leaseMs = _parseIntInRange(input.lease_ms, fallback.lease_ms ?? DEFAULT_LEASE_MS, 1_000, 600_000);
-  const heartbeatMs = _parseIntInRange(input.heartbeat_ms, fallback.heartbeat_ms ?? DEFAULT_HEARTBEAT_MS, 500, 120_000);
+  const intervalMs = _parseIntInRange(
+    input.interval_ms,
+    fallback.interval_ms ?? DEFAULT_INTERVAL_MS,
+    200,
+    300_000
+  );
+  const leaseMs = _parseIntInRange(
+    input.lease_ms,
+    fallback.lease_ms ?? DEFAULT_LEASE_MS,
+    1_000,
+    600_000
+  );
+  const heartbeatMs = _parseIntInRange(
+    input.heartbeat_ms,
+    fallback.heartbeat_ms ?? DEFAULT_HEARTBEAT_MS,
+    500,
+    120_000
+  );
   const idleTimeoutMs = _parseIntInRange(
     input.idle_timeout_ms,
     fallback.idle_timeout_ms ?? DEFAULT_IDLE_TIMEOUT_MS,
@@ -127,7 +162,10 @@ function _normalizeWorkerConfig(input = {}, fallback = {}) {
       input.allowed_checkpoint_schema_versions,
       fallback.allowed_checkpoint_schema_versions ?? null
     ),
-    retry_policy: _normalizeRetryPolicy(input.retry_policy || input.retryPolicy, fallback.retry_policy ?? null),
+    retry_policy: _normalizeRetryPolicy(
+      input.retry_policy || input.retryPolicy,
+      fallback.retry_policy ?? null
+    ),
   };
 }
 
@@ -155,13 +193,23 @@ function createLargeTaskWorkerService(options = {}) {
   let lastError = null;
 
   function _logInfo(message) {
-    if (!logger || typeof logger.info !== 'function') return;
-    try { logger.info(message); } catch { /* ignore logger failure */ }
+    if (!logger || typeof logger.info !== 'function') {
+      return;
+    }
+    try {
+      logger.info(message);
+    } catch {
+      /* ignore logger failure */
+    }
   }
 
   function _logWarn(message) {
     if (logger && typeof logger.warn === 'function') {
-      try { logger.warn(message); } catch { /* ignore logger failure */ }
+      try {
+        logger.warn(message);
+      } catch {
+        /* ignore logger failure */
+      }
       return;
     }
     _logInfo(message);
@@ -176,7 +224,9 @@ function createLargeTaskWorkerService(options = {}) {
   }
 
   function _compactRunResult(runResult) {
-    if (!runResult || typeof runResult !== 'object') return null;
+    if (!runResult || typeof runResult !== 'object') {
+      return null;
+    }
     return {
       task_id: runResult.task?.id || null,
       ok: Boolean(runResult.ok),
@@ -243,7 +293,7 @@ function createLargeTaskWorkerService(options = {}) {
     tickTotal += 1;
     _logInfo(
       `[LargeTaskWorker] Execute task queue tick target=large_tasks trigger=${trigger} ` +
-      `run_budget=${summary.run_budget} queue_depth_before=${summary.queue_depth_before}`
+        `run_budget=${summary.run_budget} queue_depth_before=${summary.queue_depth_before}`
     );
 
     try {
@@ -264,7 +314,9 @@ function createLargeTaskWorkerService(options = {}) {
           retry_policy: tickConfig.retry_policy,
         });
 
-        if (!runResult) break;
+        if (!runResult) {
+          break;
+        }
 
         summary.executed += 1;
         runTotal += 1;
@@ -287,7 +339,7 @@ function createLargeTaskWorkerService(options = {}) {
         }
       }
 
-      summary.idle = (summary.executed === 0 && summary.requeued_leases === 0);
+      summary.idle = summary.executed === 0 && summary.requeued_leases === 0;
       summary.queue_depth_after = Number(_safeMetrics().queue_depth || 0);
       summary.finished_at = _nowIso(nowFn);
       summary.duration_ms = Math.max(0, nowFn() - startMs);
@@ -296,8 +348,8 @@ function createLargeTaskWorkerService(options = {}) {
 
       _logInfo(
         `[LargeTaskWorker] Complete task queue tick target=large_tasks executed=${summary.executed}/${summary.run_budget} ` +
-        `succeeded=${summary.succeeded} failed=${summary.failed} queue_depth_after=${summary.queue_depth_after} ` +
-        `duration_ms=${summary.duration_ms}`
+          `succeeded=${summary.succeeded} failed=${summary.failed} queue_depth_after=${summary.queue_depth_after} ` +
+          `duration_ms=${summary.duration_ms}`
       );
 
       return _clone(summary);
@@ -316,7 +368,7 @@ function createLargeTaskWorkerService(options = {}) {
 
       _logWarn(
         `[LargeTaskWorker] Fail task queue tick target=large_tasks trigger=${trigger} ` +
-        `duration_ms=${summary.duration_ms} message="${message}"`
+          `duration_ms=${summary.duration_ms} message="${message}"`
       );
       return _clone(summary);
     }
@@ -328,7 +380,9 @@ function createLargeTaskWorkerService(options = {}) {
       timer = null;
     }
     timer = setInterval(() => {
-      if (tickPromise) return;
+      if (tickPromise) {
+        return;
+      }
       tickPromise = _executeTick({
         trigger: 'interval',
         taskHandler: _resolveTaskHandler(),
@@ -336,7 +390,9 @@ function createLargeTaskWorkerService(options = {}) {
         tickPromise = null;
       });
     }, config.interval_ms);
-    if (timer.unref) timer.unref();
+    if (timer.unref) {
+      timer.unref();
+    }
   }
 
   async function runTick(input = {}) {
@@ -364,7 +420,7 @@ function createLargeTaskWorkerService(options = {}) {
       _refreshTimer();
       _logInfo(
         `[LargeTaskWorker] Start queue worker target=large_tasks interval_ms=${config.interval_ms} ` +
-        `run_budget=${config.max_runs_per_tick} dry_run=${config.dry_run} commit=${config.commit}`
+          `run_budget=${config.max_runs_per_tick} dry_run=${config.dry_run} commit=${config.commit}`
       );
     } else {
       _refreshTimer();
@@ -391,7 +447,11 @@ function createLargeTaskWorkerService(options = {}) {
     }
     stoppedAt = _nowIso(nowFn);
     if (tickPromise) {
-      try { await tickPromise; } catch { /* handled in _executeTick */ }
+      try {
+        await tickPromise;
+      } catch {
+        /* handled in _executeTick */
+      }
     }
     if (wasRunning) {
       _logInfo('[LargeTaskWorker] Stop queue worker target=large_tasks running=0');

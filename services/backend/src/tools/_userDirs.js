@@ -25,9 +25,9 @@
  *     (callers honour this; this module always reports the real roots).
  */
 
+const { execFileSync } = require('child_process');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 let _cache = null;
 
@@ -55,7 +55,9 @@ function _winShellFolder(valueName) {
       { encoding: 'utf8', windowsHide: true, timeout: 4000 }
     );
     // Line shape: "    Desktop    REG_SZ    D:\HuaweiMoveData\Users\25789\Desktop"
-    const m = out.match(new RegExp(`${valueName.replace(/[{}]/g, '\\$&')}\\s+REG_[A-Z_]+\\s+(.+?)\\s*$`, 'm'));
+    const m = out.match(
+      new RegExp(`${valueName.replace(/[{}]/g, '\\$&')}\\s+REG_[A-Z_]+\\s+(.+?)\\s*$`, 'm')
+    );
     if (m && m[1]) {
       // Expand embedded %USERPROFILE% style variables.
       return m[1].trim().replace(/%([^%]+)%/g, (_, k) => process.env[k] || `%${k}%`);
@@ -70,7 +72,11 @@ function _computeRoots() {
   const roots = new Set();
   const add = (p) => {
     if (p && String(p).trim()) {
-      try { roots.add(path.resolve(String(p).trim())); } catch { /* ignore bad path */ }
+      try {
+        roots.add(path.resolve(String(p).trim()));
+      } catch {
+        /* ignore bad path */
+      }
     }
   };
 
@@ -102,7 +108,9 @@ function _computeRoots() {
   // User-configured extra roots (os path delimiter separated).
   const extra = process.env.KHY_WRITE_EXTRA_ROOTS;
   if (extra) {
-    for (const r of extra.split(path.delimiter)) add(r);
+    for (const r of extra.split(path.delimiter)) {
+      add(r);
+    }
   }
 
   return [...roots];
@@ -110,7 +118,9 @@ function _computeRoots() {
 
 /** Trusted absolute write roots (cached). */
 function getTrustedUserRoots() {
-  if (!_cache) _cache = _computeRoots();
+  if (!_cache) {
+    _cache = _computeRoots();
+  }
   return _cache;
 }
 
@@ -120,12 +130,16 @@ function getTrustedUserRoots() {
  * @returns {boolean}
  */
 function isUnderTrustedRoot(absPath) {
-  if (!absPath) return false;
+  if (!absPath) {
+    return false;
+  }
   const target = _norm(absPath);
   for (const root of getTrustedUserRoots()) {
     const base = _norm(root);
     const baseSep = base.endsWith(path.sep) ? base : base + path.sep;
-    if (target === base || target.startsWith(baseSep)) return true;
+    if (target === base || target.startsWith(baseSep)) {
+      return true;
+    }
   }
   return false;
 }
@@ -163,23 +177,23 @@ function isUnderTrustedRoot(absPath) {
 // Localized single-folder names for "Desktop" across common XDG/OS locales.
 // Matched case-insensitively against the first path segment under home.
 const _DESKTOP_ALIASES = new Set([
-  'desktop',          // en
-  '桌面',             // zh
-  'デスクトップ',      // ja
-  '바탕화면',          // ko
-  'bureau',           // fr
-  'escritorio',       // es
-  'schreibtisch',     // de
-  'scrivania',        // it
-  'bureaublad',       // nl
-  'skrivebord',       // da/nb
-  'skrivbord',        // sv
-  'työpöytä',         // fi
-  'pulpit',           // pl
-  'plocha',           // cs
-  'masaüstü',         // tr
+  'desktop', // en
+  '桌面', // zh
+  'デスクトップ', // ja
+  '바탕화면', // ko
+  'bureau', // fr
+  'escritorio', // es
+  'schreibtisch', // de
+  'scrivania', // it
+  'bureaublad', // nl
+  'skrivebord', // da/nb
+  'skrivbord', // sv
+  'työpöytä', // fi
+  'pulpit', // pl
+  'plocha', // cs
+  'masaüstü', // tr
   'área de trabalho', // pt
-  'рабочий стол',     // ru
+  'рабочий стол', // ru
 ]);
 
 let _desktopCache; // resolved canonical desktop (string) or null; undefined = unresolved
@@ -195,13 +209,19 @@ const _aliasKey = require('../utils/trimLowerCase');
  * @returns {string|null} absolute path, or null if it cannot be determined.
  */
 function resolveSpecialDir(kind, opts = {}) {
-  if (_aliasKey(kind) !== 'desktop') return null;
+  if (_aliasKey(kind) !== 'desktop') {
+    return null;
+  }
   const home = opts._home || os.homedir();
-  if (!home) return null;
+  if (!home) {
+    return null;
+  }
 
   if (process.platform === 'win32') {
     const known = _winShellFolder('Desktop');
-    if (known) return path.resolve(known);
+    if (known) {
+      return path.resolve(known);
+    }
     const up = process.env.USERPROFILE || home;
     return path.join(up, 'Desktop');
   }
@@ -211,17 +231,21 @@ function resolveSpecialDir(kind, opts = {}) {
   }
 
   // Linux / other POSIX: prefer the GUI's own answer.
-  const run = opts._run || ((cmd, args) =>
-    execFileSync(cmd, args, { encoding: 'utf8', timeout: 4000 }));
+  const run =
+    opts._run || ((cmd, args) => execFileSync(cmd, args, { encoding: 'utf8', timeout: 4000 }));
   try {
     const out = run('xdg-user-dir', ['DESKTOP']);
     const line = String(out || '').trim();
     // xdg-user-dir returns $HOME when unset — that is not a desktop, fall through.
-    if (line && path.resolve(line) !== path.resolve(home)) return path.resolve(line);
+    if (line && path.resolve(line) !== path.resolve(home)) {
+      return path.resolve(line);
+    }
   } catch {
     /* xdg-user-dir absent (no desktop env) — fall back to env/convention */
   }
-  if (process.env.XDG_DESKTOP_DIR) return path.resolve(process.env.XDG_DESKTOP_DIR);
+  if (process.env.XDG_DESKTOP_DIR) {
+    return path.resolve(process.env.XDG_DESKTOP_DIR);
+  }
   return path.join(home, 'Desktop');
 }
 
@@ -234,31 +258,53 @@ function resolveSpecialDir(kind, opts = {}) {
  * @returns {string} the normalized path, or the input unchanged when no rule fires.
  */
 function normalizeDesktopPath(absPath, opts = {}) {
-  if (!absPath || typeof absPath !== 'string') return absPath;
-  if (process.env.KHY_NO_DESKTOP_NORMALIZE) return absPath;
-  if (!path.isAbsolute(absPath)) return absPath; // cwd-relative ≠ desktop intent
+  if (!absPath || typeof absPath !== 'string') {
+    return absPath;
+  }
+  if (process.env.KHY_NO_DESKTOP_NORMALIZE) {
+    return absPath;
+  }
+  if (!path.isAbsolute(absPath)) {
+    return absPath;
+  } // cwd-relative ≠ desktop intent
 
   const home = opts._home || os.homedir();
-  if (!home) return absPath;
+  if (!home) {
+    return absPath;
+  }
 
   const rel = path.relative(home, absPath);
   // Outside home (starts with .. or is itself absolute) → leave untouched.
-  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return absPath;
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    return absPath;
+  }
 
   const segments = rel.split(path.sep).filter(Boolean);
-  if (segments.length === 0) return absPath;
-  if (!_DESKTOP_ALIASES.has(_aliasKey(segments[0]))) return absPath;
+  if (segments.length === 0) {
+    return absPath;
+  }
+  if (!_DESKTOP_ALIASES.has(_aliasKey(segments[0]))) {
+    return absPath;
+  }
 
   const resolveDesktop = opts._resolveDesktop || (() => resolveSpecialDir('desktop'));
   let canonical;
-  try { canonical = resolveDesktop(); } catch { canonical = null; }
-  if (!canonical) return absPath;
+  try {
+    canonical = resolveDesktop();
+  } catch {
+    canonical = null;
+  }
+  if (!canonical) {
+    return absPath;
+  }
 
   // OS authority wins: if the alias the user used already IS the canonical
   // desktop folder name, this is a genuine target — never rewrite it.
   const aliasBase = _aliasKey(segments[0]);
   const canonicalBase = _aliasKey(path.basename(canonical));
-  if (aliasBase === canonicalBase) return absPath;
+  if (aliasBase === canonicalBase) {
+    return absPath;
+  }
 
   return path.join(canonical, ...segments.slice(1));
 }
@@ -292,7 +338,9 @@ function expandUserPath(rawPath, cwd) {
     } else {
       p = p.replace(/\$\{?(\w+)\}?/g, (_, k) => process.env[k] || '');
     }
-    if (p.startsWith('~')) p = path.join(os.homedir(), p.slice(1));
+    if (p.startsWith('~')) {
+      p = path.join(os.homedir(), p.slice(1));
+    }
     const abs = path.isAbsolute(p) ? p : path.resolve(base, p);
     p = normalizeDesktopPath(abs);
   } catch {

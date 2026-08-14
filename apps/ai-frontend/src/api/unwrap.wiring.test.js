@@ -52,16 +52,25 @@ test('SSOT api/unwrap.js 存在且导出 unwrap', () => {
 for (const rel of CONSUMERS) {
   test(`${rel} imports the unwrap SSOT`, () => {
     const src = read(rel);
-    assert.match(src, /import \{ unwrap \} from '@\/api\/unwrap'/,
-      `${rel} must import { unwrap } from '@/api/unwrap'`);
+    assert.match(
+      src,
+      /import \{ unwrap \} from '@\/api\/unwrap'/,
+      `${rel} must import { unwrap } from '@/api/unwrap'`
+    );
   });
 
   test(`${rel} no longer defines an inline envelope helper`, () => {
     const src = read(rel);
-    assert.doesNotMatch(src, /function unwrap(Response)?\(res\)\s*\{/,
-      `${rel} must not re-declare a local unwrap/unwrapResponse — use the SSOT`);
+    assert.doesNotMatch(
+      src,
+      /function unwrap(Response)?\(res\)\s*\{/,
+      `${rel} must not re-declare a local unwrap/unwrapResponse — use the SSOT`
+    );
     // 也不得残留旧调用名。
-    assert.doesNotMatch(src, /unwrapResponse\(/,
-      `${rel} must not call unwrapResponse(...) — renamed to unwrap(...)`);
+    assert.doesNotMatch(
+      src,
+      /unwrapResponse\(/,
+      `${rel} must not call unwrapResponse(...) — renamed to unwrap(...)`
+    );
   });
 }

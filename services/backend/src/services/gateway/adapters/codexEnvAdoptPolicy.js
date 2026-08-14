@@ -46,8 +46,12 @@ function _clean(v) {
 /** Mask a secret for display: keep a short head + tail, never the middle. */
 function maskSecret(v) {
   const s = _clean(v);
-  if (!s) return '';
-  if (s.length <= 10) return `${s.slice(0, 2)}…(len=${s.length})`;
+  if (!s) {
+    return '';
+  }
+  if (s.length <= 10) {
+    return `${s.slice(0, 2)}…(len=${s.length})`;
+  }
   return `${s.slice(0, 6)}…${s.slice(-3)}(len=${s.length})`;
 }
 
@@ -75,14 +79,9 @@ function planCodexEnvAdoption(env = {}, defaults = {}) {
   const src = env || {};
   const def = defaults || {};
   const baseUrl =
-    _clean(src.CODEX_DIRECT_BASE_URL) ||
-    _clean(src.OPENAI_BASE_URL) ||
-    _clean(def.baseUrl);
+    _clean(src.CODEX_DIRECT_BASE_URL) || _clean(src.OPENAI_BASE_URL) || _clean(def.baseUrl);
   const apiKey = _clean(src.CODEX_API_KEY) || _clean(src.OPENAI_API_KEY);
-  const model =
-    _clean(src.CODEX_DIRECT_MODEL) ||
-    _clean(src.OPENAI_MODEL) ||
-    _clean(def.model);
+  const model = _clean(src.CODEX_DIRECT_MODEL) || _clean(src.OPENAI_MODEL) || _clean(def.model);
 
   // Need a credential to be worth persisting (base URL alone is not a login).
   if (!apiKey) {
@@ -102,7 +101,9 @@ function planCodexEnvAdoption(env = {}, defaults = {}) {
   // Persist the key under both names for the same reason.
   entries.push({ key: 'CODEX_API_KEY', value: apiKey });
   entries.push({ key: 'OPENAI_API_KEY', value: apiKey });
-  if (model) entries.push({ key: 'CODEX_DIRECT_MODEL', value: model });
+  if (model) {
+    entries.push({ key: 'CODEX_DIRECT_MODEL', value: model });
+  }
 
   return {
     ok: true,
@@ -156,7 +157,10 @@ function renderEnvFilePatch(existingContent, entries) {
 
   // Normalize: collapse 3+ blank lines, trim leading/trailing blank lines,
   // end with exactly one newline.
-  const text = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  const text = out
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
   return text.length ? `${text}\n` : '';
 }
 
@@ -173,7 +177,9 @@ function renderEnvFilePatch(existingContent, entries) {
  */
 function resolveExportTarget(homedir, userPath) {
   const explicit = _clean(userPath);
-  if (explicit) return explicit;
+  if (explicit) {
+    return explicit;
+  }
   const home = _clean(homedir) || '.';
   return `${home}/Desktop/khy-codex-env.env`;
 }

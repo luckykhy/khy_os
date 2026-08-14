@@ -10,8 +10,8 @@ const chalk = (() => {
   const m = require('chalk');
   return m.default || m;
 })();
-const { printError, printInfo } = require('../formatters');
 const { ccFormatDurationOr } = require('../ccFormat');
+const { printError, printInfo } = require('../formatters');
 
 const RISK_COLOR = {
   safe: (s) => chalk.dim(s),
@@ -35,7 +35,11 @@ function _riskTag(risk) {
 }
 
 function _fmtTime(iso) {
-  try { return new Date(iso).toLocaleString('zh-CN'); } catch { return iso || ''; }
+  try {
+    return new Date(iso).toLocaleString('zh-CN');
+  } catch {
+    return iso || '';
+  }
 }
 
 async function handleReceipts(subCommand, args, options) {
@@ -58,19 +62,29 @@ async function handleReceipts(subCommand, args, options) {
       const icon = STATUS_ICON[r.status] || chalk.dim('•');
       console.log(
         `  ${icon} ${chalk.cyan(r.id)} ${_riskTag(r.maxRisk)} ` +
-        `${chalk.dim(_fmtTime(r.startedAt))} ${chalk.dim(`(${r.tools} 工具)`)}`
+          `${chalk.dim(_fmtTime(r.startedAt))} ${chalk.dim(`(${r.tools} 工具)`)}`
       );
-      if (r.goal) console.log(`     ${chalk.dim(r.goal)}`);
+      if (r.goal) {
+        console.log(`     ${chalk.dim(r.goal)}`);
+      }
     }
-    console.log(chalk.dim(`\n  共 ${rows.length} 条 · 用法: receipts show <id> · receipts search <kw>\n`));
+    console.log(
+      chalk.dim(`\n  共 ${rows.length} 条 · 用法: receipts show <id> · receipts search <kw>\n`)
+    );
     return true;
   }
 
   if (cmd === 'show') {
     const id = args[0];
-    if (!id) { printError('用法: receipts show <RCPT-id>'); return true; }
+    if (!id) {
+      printError('用法: receipts show <RCPT-id>');
+      return true;
+    }
     const r = svc.getReceipt(id);
-    if (!r) { printError(`未找到回执: ${id}`); return true; }
+    if (!r) {
+      printError(`未找到回执: ${id}`);
+      return true;
+    }
 
     const icon = STATUS_ICON[r.status] || '•';
     console.log(chalk.bold(`\n  📑 回执 ${chalk.cyan(r.id)}  ${icon} ${r.status}\n`));
@@ -88,42 +102,60 @@ async function handleReceipts(subCommand, args, options) {
       console.log(chalk.dim('    (无)'));
     } else {
       for (const c of r.toolChain) {
-        const ci = c.status === 'ok' ? chalk.green('✓') : c.status === 'denied' ? chalk.red('⊘') : chalk.red('✗');
+        const ci =
+          c.status === 'ok'
+            ? chalk.green('✓')
+            : c.status === 'denied'
+              ? chalk.red('⊘')
+              : chalk.red('✗');
         const gate = c.stepType === 'human-gate' ? chalk.red(' 🔒人闸门') : '';
         console.log(
           `    ${ci} ${String(c.seq).padStart(2)}. ${chalk.cyan(c.tool)} ` +
-          `${_riskTag(c.risk)} ${chalk.dim(`${c.elapsedMs}ms · ${c.permission}`)}${gate}`
+            `${_riskTag(c.risk)} ${chalk.dim(`${c.elapsedMs}ms · ${c.permission}`)}${gate}`
         );
-        if (c.error) console.log(chalk.red(`        ↳ ${c.error}`));
+        if (c.error) {
+          console.log(chalk.red(`        ↳ ${c.error}`));
+        }
       }
     }
     // 4. 产物与变更
     console.log(chalk.bold('\n  产物与变更 (artifacts)'));
     if (r.artifacts?.files?.length) {
-      for (const f of r.artifacts.files) console.log(`    ${chalk.magenta(f.action)} ${f.path}`);
+      for (const f of r.artifacts.files) {
+        console.log(`    ${chalk.magenta(f.action)} ${f.path}`);
+      }
     } else {
       console.log(chalk.dim('    (无文件变更)'));
     }
-    if (r.artifacts?.summary) console.log(`    ${chalk.dim(r.artifacts.summary)}`);
+    if (r.artifacts?.summary) {
+      console.log(`    ${chalk.dim(r.artifacts.summary)}`);
+    }
     // 5. 风险与审批
     console.log(chalk.bold('\n  风险与审批 (riskApproval)'));
     console.log(`    最高风险: ${_riskTag(r.riskApproval?.maxRisk || 'safe')}`);
-    console.log(`    人闸门: ${r.riskApproval?.humanGated?.length || 0} · 拒绝: ${r.riskApproval?.denied?.length || 0}`);
+    console.log(
+      `    人闸门: ${r.riskApproval?.humanGated?.length || 0} · 拒绝: ${r.riskApproval?.denied?.length || 0}`
+    );
     // 6. 错误信息
     if (r.error) {
       console.log(chalk.bold('\n  错误信息 (error)'));
       console.log(chalk.red(`    ${r.error}`));
     }
-    console.log(chalk.dim(
-      `\n  ${r.counts?.ok || 0} 成功 / ${r.counts?.failed || 0} 失败 · ` +
-      `耗时 ${r.durationMs}ms${r.gitCommit ? ` · commit ${r.gitCommit.slice(0, 8)}` : ''}\n`
-    ));
+    console.log(
+      chalk.dim(
+        `\n  ${r.counts?.ok || 0} 成功 / ${r.counts?.failed || 0} 失败 · ` +
+          `耗时 ${r.durationMs}ms${r.gitCommit ? ` · commit ${r.gitCommit.slice(0, 8)}` : ''}\n`
+      )
+    );
     return true;
   }
 
   if (cmd === 'search') {
     const kw = args[0];
-    if (!kw) { printError('用法: receipts search <keyword>'); return true; }
+    if (!kw) {
+      printError('用法: receipts search <keyword>');
+      return true;
+    }
     const hits = svc.searchReceipts(kw, { limit: parseInt(options.limit, 10) || 30 });
     console.log(chalk.bold(`\n  🔍 搜索 "${kw}"\n`));
     if (hits.length === 0) {
@@ -132,7 +164,9 @@ async function handleReceipts(subCommand, args, options) {
       for (const h of hits) {
         const icon = STATUS_ICON[h.status] || chalk.dim('•');
         console.log(`  ${icon} ${chalk.cyan(h.id)} ${chalk.dim(_fmtTime(h.startedAt))}`);
-        if (h.goal) console.log(`     ${chalk.dim(h.goal)}`);
+        if (h.goal) {
+          console.log(`     ${chalk.dim(h.goal)}`);
+        }
       }
     }
     console.log('');
@@ -150,15 +184,27 @@ async function handleReceipts(subCommand, args, options) {
     }
     for (const r of rows) {
       const icon = STATUS_ICON[r.status] || chalk.dim('•');
-      const dur = ccFormatDurationOr(r.totalDurationMs || 0, `${((r.totalDurationMs || 0) / 1000).toFixed(1)}s`, process.env);
+      const dur = ccFormatDurationOr(
+        r.totalDurationMs || 0,
+        `${((r.totalDurationMs || 0) / 1000).toFixed(1)}s`,
+        process.env
+      );
       console.log(
         `  ${icon} ${chalk.cyan(r.id)} ${chalk.magenta(`[${r.mode}]`)} ` +
-        `${chalk.dim(`${r.successCount}/${r.subtaskCount} 成功 · ${dur}`)}`
+          `${chalk.dim(`${r.successCount}/${r.subtaskCount} 成功 · ${dur}`)}`
       );
-      if (r.goal) console.log(`     ${chalk.dim(r.goal)}`);
-      const exec = Object.entries(r.byExecutor || {}).map(([k, v]) => `${k}:${v}`).join(' ');
-      const steps = Object.entries(r.byStepType || {}).map(([k, v]) => `${k}:${v}`).join(' ');
-      if (exec || steps) console.log(chalk.dim(`     executors[${exec}] steps[${steps}]`));
+      if (r.goal) {
+        console.log(`     ${chalk.dim(r.goal)}`);
+      }
+      const exec = Object.entries(r.byExecutor || {})
+        .map(([k, v]) => `${k}:${v}`)
+        .join(' ');
+      const steps = Object.entries(r.byStepType || {})
+        .map(([k, v]) => `${k}:${v}`)
+        .join(' ');
+      if (exec || steps) {
+        console.log(chalk.dim(`     executors[${exec}] steps[${steps}]`));
+      }
     }
     console.log(chalk.dim(`\n  共 ${rows.length} 条\n`));
     return true;

@@ -16,6 +16,7 @@
  */
 
 const crypto = require('crypto');
+
 const log = require('../utils/logger');
 
 /**
@@ -82,13 +83,15 @@ class ArenaManager {
 
     // Run all models in parallel
     const entries = await Promise.all(
-      models.map((model) => this._queryModel(model, {
-        prompt,
-        system,
-        maxTokens,
-        temperature,
-        onProgress,
-      })),
+      models.map((model) =>
+        this._queryModel(model, {
+          prompt,
+          system,
+          maxTokens,
+          temperature,
+          onProgress,
+        })
+      )
     );
 
     const totalMs = Date.now() - startTime;
@@ -107,7 +110,9 @@ class ArenaManager {
     // Run optional evaluation on each successful entry
     if (typeof evalFn === 'function') {
       for (const entry of entries) {
-        if (entry.failed) continue;
+        if (entry.failed) {
+          continue;
+        }
         try {
           const evalResult = await evalFn(prompt, entry.content, entry.model);
           entry.evalScore = evalResult.score ?? null;
@@ -129,7 +134,9 @@ class ArenaManager {
       }
     }
 
-    log.info(`Arena ${arenaId}: completed in ${totalMs}ms, ${entries.filter((e) => !e.failed).length}/${models.length} succeeded`);
+    log.info(
+      `Arena ${arenaId}: completed in ${totalMs}ms, ${entries.filter((e) => !e.failed).length}/${models.length} succeeded`
+    );
 
     return result;
   }
@@ -161,18 +168,23 @@ class ArenaManager {
       const result = await this._callGateway(model, params, {
         signal: controller.signal,
         onChunk: (chunk) => {
-          if (!firstTokenMs) firstTokenMs = Date.now() - start;
+          if (!firstTokenMs) {
+            firstTokenMs = Date.now() - start;
+          }
           entry.content += chunk;
           if (params.onProgress) {
-            try { params.onProgress(model, { type: 'chunk', content: chunk }); }
-            catch { /* ignore */ }
+            try {
+              params.onProgress(model, { type: 'chunk', content: chunk });
+            } catch {
+              /* ignore */
+            }
           }
         },
       });
 
       entry.content = result.content || entry.content;
       entry.usage = result.usage || null;
-      entry.latencyMs = firstTokenMs || (Date.now() - start);
+      entry.latencyMs = firstTokenMs || Date.now() - start;
       entry.totalMs = Date.now() - start;
     } catch (err) {
       entry.error = err.message || String(err);
@@ -180,7 +192,9 @@ class ArenaManager {
       entry.totalMs = Date.now() - start;
       log.warn(`Arena: model ${model} failed: ${entry.error}`);
     } finally {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
     }
 
     return entry;
@@ -216,13 +230,19 @@ class ArenaManager {
       const stream = gw.chatStream(reqOptions);
       if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
         for await (const event of stream) {
-          if (opts.signal && opts.signal.aborted) break;
+          if (opts.signal && opts.signal.aborted) {
+            break;
+          }
           if (event.type === 'chunk' || event.delta) {
             const chunk = event.delta || event.content || '';
             content += chunk;
-            if (opts.onChunk) opts.onChunk(chunk);
+            if (opts.onChunk) {
+              opts.onChunk(chunk);
+            }
           }
-          if (event.usage) usage = event.usage;
+          if (event.usage) {
+            usage = event.usage;
+          }
         }
         return { content, usage };
       }
@@ -232,15 +252,19 @@ class ArenaManager {
     if (typeof gw.chat === 'function') {
       const result = await gw.chat(reqOptions);
       const content = result.content || result.text || '';
-      if (opts.onChunk) opts.onChunk(content);
+      if (opts.onChunk) {
+        opts.onChunk(content);
+      }
       return { content, usage: result.usage || null };
     }
 
     // Fallback to query
     if (typeof gw.query === 'function') {
       const result = await gw.query(params.prompt, { model, signal: opts.signal });
-      const content = typeof result === 'string' ? result : (result.reply || result.content || '');
-      if (opts.onChunk) opts.onChunk(content);
+      const content = typeof result === 'string' ? result : result.reply || result.content || '';
+      if (opts.onChunk) {
+        opts.onChunk(content);
+      }
       return { content, usage: null };
     }
 
@@ -266,7 +290,7 @@ function generateArenaSummary(prompt, entries) {
     model: e.model,
     latencyMs: e.latencyMs,
     totalMs: e.totalMs,
-    tokens: e.usage ? e.usage.total || (e.usage.prompt + e.usage.completion) : null,
+    tokens: e.usage ? e.usage.total || e.usage.prompt + e.usage.completion : null,
     contentLength: e.content.length,
     wordCount: e.content.split(/\s+/).length,
     hasCode: /```/.test(e.content),
@@ -282,10 +306,7 @@ function generateArenaSummary(prompt, entries) {
   const similarities = [];
   for (let i = 0; i < successful.length; i++) {
     for (let j = i + 1; j < successful.length; j++) {
-      const sim = _jaccardSimilarity(
-        successful[i].content,
-        successful[j].content,
-      );
+      const sim = _jaccardSimilarity(successful[i].content, successful[j].content);
       similarities.push({
         modelA: successful[i].model,
         modelB: successful[j].model,
@@ -338,8 +359,12 @@ function _jaccardSimilarity(a, b) {
  * @returns {string}
  */
 function _pickRecommendation(metrics, similarities) {
-  if (metrics.length === 0) return 'No successful responses to compare.';
-  if (metrics.length === 1) return `Only ${metrics[0].model} responded successfully.`;
+  if (metrics.length === 0) {
+    return 'No successful responses to compare.';
+  }
+  if (metrics.length === 1) {
+    return `Only ${metrics[0].model} responded successfully.`;
+  }
 
   // Score each model: lower latency = better, more content = better
   const scores = metrics.map((m) => {
@@ -351,7 +376,9 @@ function _pickRecommendation(metrics, similarities) {
     const maxWords = Math.max(...metrics.map((x) => x.wordCount)) || 1;
     score += 30 * Math.min(1, m.wordCount / maxWords);
     // Code presence bonus (0-20)
-    if (m.hasCode) score += 20;
+    if (m.hasCode) {
+      score += 20;
+    }
     // Total time (0-20): faster completion
     const maxTotal = Math.max(...metrics.map((x) => x.totalMs)) || 1;
     score += 20 * (1 - m.totalMs / maxTotal);
@@ -377,12 +404,23 @@ function _pickRecommendation(metrics, similarities) {
  * @returns {string}
  */
 function formatArenaResult(result, options) {
-  const c = (options && options.chalk) || { bold: (t) => t, green: (t) => t, red: (t) => t, dim: (t) => t, cyan: (t) => t, yellow: (t) => t, white: (t) => t, hex: () => (t) => t };
+  const c = (options && options.chalk) || {
+    bold: (t) => t,
+    green: (t) => t,
+    red: (t) => t,
+    dim: (t) => t,
+    cyan: (t) => t,
+    yellow: (t) => t,
+    white: (t) => t,
+    hex: () => (t) => t,
+  };
   const lines = [];
 
   lines.push('');
   lines.push(c.bold(`  Arena Results (${result.arenaId})`));
-  lines.push(c.dim(`  Prompt: ${result.prompt.substring(0, 80)}${result.prompt.length > 80 ? '...' : ''}`));
+  lines.push(
+    c.dim(`  Prompt: ${result.prompt.substring(0, 80)}${result.prompt.length > 80 ? '...' : ''}`)
+  );
   lines.push(c.dim(`  Total time: ${result.totalMs}ms`));
   lines.push('');
 
@@ -411,7 +449,8 @@ function formatArenaResult(result, options) {
     lines.push('');
     lines.push(c.bold('  Content Similarity:'));
     for (const s of result.summary.similarities) {
-      const bar = '█'.repeat(Math.round(s.similarity / 5)) + '░'.repeat(20 - Math.round(s.similarity / 5));
+      const bar =
+        '█'.repeat(Math.round(s.similarity / 5)) + '░'.repeat(20 - Math.round(s.similarity / 5));
       lines.push(`    ${s.modelA} ↔ ${s.modelB}: ${bar} ${s.similarity}%`);
     }
   }
@@ -438,7 +477,7 @@ function codeEval(prompt, response, _model) {
   const notes = [];
 
   // Code block presence
-  const codeBlocks = (response.match(/```[\s\S]*?```/g) || []);
+  const codeBlocks = response.match(/```[\s\S]*?```/g) || [];
   if (codeBlocks.length > 0) {
     score += 15;
     notes.push(`${codeBlocks.length} code block(s)`);

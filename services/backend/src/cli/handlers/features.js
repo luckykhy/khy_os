@@ -22,16 +22,24 @@ const { printInfo, printWarn } = require('../formatters');
 
 /** 关键字过滤：命令名 / 标签 / 描述任一命中(大小写不敏感)。 */
 function _filterCatalog(catalog, keyword) {
-  const kw = String(keyword || '').trim().toLowerCase();
-  if (!kw) return catalog;
+  const kw = String(keyword || '')
+    .trim()
+    .toLowerCase();
+  if (!kw) {
+    return catalog;
+  }
   const categories = [];
   for (const cat of catalog.categories) {
-    const commands = cat.commands.filter((c) =>
-      c.cmd.toLowerCase().includes(kw)
-      || c.label.toLowerCase().includes(kw)
-      || (c.desc && c.desc.toLowerCase().includes(kw))
-      || (Array.isArray(c.aliases) && c.aliases.some((a) => a.toLowerCase().includes(kw))));
-    if (commands.length) categories.push({ ...cat, commands });
+    const commands = cat.commands.filter(
+      (c) =>
+        c.cmd.toLowerCase().includes(kw) ||
+        c.label.toLowerCase().includes(kw) ||
+        (c.desc && c.desc.toLowerCase().includes(kw)) ||
+        (Array.isArray(c.aliases) && c.aliases.some((a) => a.toLowerCase().includes(kw)))
+    );
+    if (commands.length) {
+      categories.push({ ...cat, commands });
+    }
   }
   const total = categories.reduce((n, c) => n + c.commands.length, 0);
   return { ...catalog, categories, total };
@@ -44,24 +52,32 @@ function _filterCatalog(catalog, keyword) {
  */
 async function handleFeatures(subCommand, args = [], options = {}) {
   const env = process.env;
-  const { buildCommandCatalog, commandCatalogEnabled } = require('../../services/commandCatalog/commandCatalog');
+  const {
+    buildCommandCatalog,
+    commandCatalogEnabled,
+  } = require('../../services/commandCatalog/commandCatalog');
 
   if (!commandCatalogEnabled(env)) {
     printWarn('功能索引已被 KHY_COMMAND_CATALOG 禁用（当前为关闭状态）。');
     return true;
   }
 
-  const raw = (subCommand && !subCommand.startsWith('-')) ? subCommand : (args[0] || '');
+  const raw = subCommand && !subCommand.startsWith('-') ? subCommand : args[0] || '';
   const keyword = raw && !raw.startsWith('-') ? raw : '';
   let catalog = buildCommandCatalog({}, env);
-  if (keyword) catalog = _filterCatalog(catalog, keyword);
+  if (keyword) {
+    catalog = _filterCatalog(catalog, keyword);
+  }
 
   if (options.json) {
     console.log(JSON.stringify(catalog, null, 2));
     return true;
   }
 
-  console.log(chalk.bold('\n  🧭 khy 功能索引') + chalk.dim(`  (共 ${catalog.total} 项命令，可 /features <关键字> 过滤)\n`));
+  console.log(
+    chalk.bold('\n  🧭 khy 功能索引') +
+      chalk.dim(`  (共 ${catalog.total} 项命令，可 /features <关键字> 过滤)\n`)
+  );
   if (catalog.total === 0) {
     printInfo(keyword ? `没有匹配「${keyword}」的命令。` : '当前没有可展示的命令。');
     return true;
@@ -75,7 +91,9 @@ async function handleFeatures(subCommand, args = [], options = {}) {
       if (Array.isArray(c.aliases) && c.aliases.length) {
         console.log(chalk.dim(`      别名: ${c.aliases.join('、')}`));
       }
-      if (c.desc) console.log(chalk.dim(`      ${c.desc}`));
+      if (c.desc) {
+        console.log(chalk.dim(`      ${c.desc}`));
+      }
     }
     console.log('');
   }

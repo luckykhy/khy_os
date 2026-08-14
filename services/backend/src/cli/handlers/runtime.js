@@ -19,23 +19,27 @@
 
 const fs = require('fs');
 const path = require('path');
-const chalk = require('chalk').default || require('chalk');
-const {
-  printSuccess, printError, printWarn, printInfo, printTable,
-} = require('../formatters');
 
+const chalk = require('chalk').default || require('chalk');
 const provisioner = require('../../services/runtimeProvisioner');
+const { printSuccess, printError, printWarn, printInfo, printTable } = require('../formatters');
 
 // Map a provisioner status to a colored, human-facing label (Chinese UX,
 // matching the rest of the model-management surface).
 function statusLabel(status) {
   switch (status) {
-    case 'present':              return chalk.green('已就绪');
-    case 'provisioned':          return chalk.green('已安装');
-    case 'unsupported-platform': return chalk.yellow('平台无预编译');
-    case 'no-source':            return chalk.yellow('未固定哈希');
-    case 'failed':               return chalk.red('失败');
-    default:                     return chalk.dim(String(status || 'unknown'));
+    case 'present':
+      return chalk.green('已就绪');
+    case 'provisioned':
+      return chalk.green('已安装');
+    case 'unsupported-platform':
+      return chalk.yellow('平台无预编译');
+    case 'no-source':
+      return chalk.yellow('未固定哈希');
+    case 'failed':
+      return chalk.red('失败');
+    default:
+      return chalk.dim(String(status || 'unknown'));
   }
 }
 
@@ -61,9 +65,13 @@ function runtimeStatus() {
   const rows = report.runtimes.map((rt) => [
     rt.name,
     rt.present ? chalk.green('已就绪') : chalk.dim('缺失'),
-    rt.supported ? (rt.pinned ? chalk.green('已固定') : chalk.yellow('未固定哈希')) : chalk.dim('不支持'),
+    rt.supported
+      ? rt.pinned
+        ? chalk.green('已固定')
+        : chalk.yellow('未固定哈希')
+      : chalk.dim('不支持'),
     rt.version || '-',
-    rt.present ? '' : (rt.pinned ? '按需拉取' : '回退系统二进制'),
+    rt.present ? '' : rt.pinned ? '按需拉取' : '回退系统二进制',
   ]);
   printTable(['运行时', '状态', '本平台来源', '版本', '缺失时'], rows);
 
@@ -95,7 +103,9 @@ async function runtimeInstall(name) {
     targets = [name];
   }
 
-  console.log(`\n  ${chalk.cyan.bold('安装本地推理运行时')}  ${chalk.dim('(' + report.platform + ')')}\n`);
+  console.log(
+    `\n  ${chalk.cyan.bold('安装本地推理运行时')}  ${chalk.dim('(' + report.platform + ')')}\n`
+  );
 
   const results = [];
   for (const target of targets) {
@@ -144,7 +154,9 @@ function runtimeVerify(name) {
   }
   const targets = report.runtimes.filter((rt) => !name || rt.name === name);
 
-  console.log(`\n  ${chalk.cyan.bold('运行时放置自检')}  ${chalk.dim('(' + report.platform + ', 离线)')}\n`);
+  console.log(
+    `\n  ${chalk.cyan.bold('运行时放置自检')}  ${chalk.dim('(' + report.platform + ', 离线)')}\n`
+  );
 
   let allOk = true;
   const rows = [];
@@ -155,24 +167,39 @@ function runtimeVerify(name) {
     // POSIX needs the exec bit; Windows has no such concept.
     let exec = true;
     if (present && process.platform !== 'win32') {
-      try { exec = (fs.statSync(sentinelAbs).mode & 0o111) !== 0; } catch { exec = false; }
+      try {
+        exec = (fs.statSync(sentinelAbs).mode & 0o111) !== 0;
+      } catch {
+        exec = false;
+      }
     }
 
     let state;
-    if (!present) { state = chalk.red('缺失'); allOk = false; }
-    else if (!exec) { state = chalk.yellow('缺可执行位'); }
-    else { state = chalk.green('就绪'); }
+    if (!present) {
+      state = chalk.red('缺失');
+      allOk = false;
+    } else if (!exec) {
+      state = chalk.yellow('缺可执行位');
+    } else {
+      state = chalk.green('就绪');
+    }
 
     rows.push([rt.name, state, rt.sentinel]);
     if (!present) {
-      hints.push(`  ${chalk.bold(rt.name)}: 请把 ${report.platform} 的二进制放到\n    ${chalk.cyan(sentinelAbs)}`);
+      hints.push(
+        `  ${chalk.bold(rt.name)}: 请把 ${report.platform} 的二进制放到\n    ${chalk.cyan(sentinelAbs)}`
+      );
     } else if (!exec) {
-      hints.push(`  ${chalk.bold(rt.name)}: 已就位但缺可执行位，运行: ${chalk.cyan('chmod +x "' + sentinelAbs + '"')}`);
+      hints.push(
+        `  ${chalk.bold(rt.name)}: 已就位但缺可执行位，运行: ${chalk.cyan('chmod +x "' + sentinelAbs + '"')}`
+      );
     }
   }
 
   printTable(['运行时', '状态', 'sentinel(放置点)'], rows);
-  for (const h of hints) console.log(h);
+  for (const h of hints) {
+    console.log(h);
+  }
 
   if (allOk) {
     printSuccess('所有运行时已就位，provisioner 将直接使用，无需联网下载。');

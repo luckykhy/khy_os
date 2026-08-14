@@ -28,7 +28,31 @@
 const readline = require('readline');
 
 let chalk;
-try { chalk = require('chalk'); } catch { chalk = { bold: (t) => t, dim: (t) => t, green: (t) => t, red: (t) => t, yellow: (t) => t, cyan: (t) => t, blue: (t) => t, gray: (t) => t, white: (t) => t, hex: () => (t) => t, bgRed: (t) => t, bgGreen: (t) => t, bgYellow: (t) => t, bgBlue: (t) => t, bgCyan: (t) => t, bgHex: () => (t) => t, strikethrough: (t) => t, underline: (t) => t, italic: (t) => t }; }
+try {
+  chalk = require('chalk');
+} catch {
+  chalk = {
+    bold: (t) => t,
+    dim: (t) => t,
+    green: (t) => t,
+    red: (t) => t,
+    yellow: (t) => t,
+    cyan: (t) => t,
+    blue: (t) => t,
+    gray: (t) => t,
+    white: (t) => t,
+    hex: () => (t) => t,
+    bgRed: (t) => t,
+    bgGreen: (t) => t,
+    bgYellow: (t) => t,
+    bgBlue: (t) => t,
+    bgCyan: (t) => t,
+    bgHex: () => (t) => t,
+    strikethrough: (t) => t,
+    underline: (t) => t,
+    italic: (t) => t,
+  };
+}
 
 // ── Box Component ──
 
@@ -73,7 +97,12 @@ function Box(props) {
   let topLine = chars.tl + chars.h.repeat(contentWidth + padding * 2) + chars.tr;
   if (title) {
     const titleStr = ` ${title} `;
-    topLine = chars.tl + chars.h + titleStr + chars.h.repeat(Math.max(0, contentWidth + padding * 2 - titleStr.length - 1)) + chars.tr;
+    topLine =
+      chars.tl +
+      chars.h +
+      titleStr +
+      chars.h.repeat(Math.max(0, contentWidth + padding * 2 - titleStr.length - 1)) +
+      chars.tr;
   }
   output.push(colorFn(topLine));
 
@@ -116,19 +145,33 @@ function Box(props) {
  * @returns {string}
  */
 function Text(content, style) {
-  if (!style) return content;
+  if (!style) {
+    return content;
+  }
   let result = content;
-  if (style.bold) result = chalk.bold(result);
-  if (style.dim) result = chalk.dim(result);
-  if (style.italic && chalk.italic) result = chalk.italic(result);
-  if (style.underline && chalk.underline) result = chalk.underline(result);
+  if (style.bold) {
+    result = chalk.bold(result);
+  }
+  if (style.dim) {
+    result = chalk.dim(result);
+  }
+  if (style.italic && chalk.italic) {
+    result = chalk.italic(result);
+  }
+  if (style.underline && chalk.underline) {
+    result = chalk.underline(result);
+  }
   if (style.color) {
     const fn = chalk[style.color] || (chalk.hex ? chalk.hex(style.color) : null);
-    if (fn) result = fn(result);
+    if (fn) {
+      result = fn(result);
+    }
   }
   if (style.bg) {
     const bgKey = 'bg' + style.bg.charAt(0).toUpperCase() + style.bg.slice(1);
-    if (chalk[bgKey]) result = chalk[bgKey](result);
+    if (chalk[bgKey]) {
+      result = chalk[bgKey](result);
+    }
   }
   return result;
 }
@@ -165,12 +208,17 @@ function Spinner(props) {
 
   return {
     start() {
-      if (timer) return;
+      if (timer) {
+        return;
+      }
       timer = setInterval(render, interval);
       render();
     },
     stop() {
-      if (timer) { clearInterval(timer); timer = null; }
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
       process.stderr.write('\r' + ' '.repeat(currentLabel.length + 10) + '\r');
     },
     update(newLabel) {
@@ -214,7 +262,7 @@ function ProgressBar(props) {
   } = props;
 
   const pct = Math.max(0, Math.min(100, value));
-  const filled = Math.round(pct / 100 * width);
+  const filled = Math.round((pct / 100) * width);
   const empty = width - filled;
 
   const bar = chalk.green(completeChar.repeat(filled)) + chalk.gray(incompleteChar.repeat(empty));
@@ -240,20 +288,22 @@ function Table(props) {
   const { headers = [], rows = [], widths, align = 'left' } = props;
 
   // Auto-calculate widths
-  const colWidths = widths || headers.map((h, i) => {
-    const maxData = rows.reduce((max, row) => {
-      const cell = _stripAnsi(String(row[i] || ''));
-      return Math.max(max, cell.length);
-    }, 0);
-    return Math.max(_stripAnsi(h).length, maxData, 3);
-  });
+  const colWidths =
+    widths ||
+    headers.map((h, i) => {
+      const maxData = rows.reduce((max, row) => {
+        const cell = _stripAnsi(String(row[i] || ''));
+        return Math.max(max, cell.length);
+      }, 0);
+      return Math.max(_stripAnsi(h).length, maxData, 3);
+    });
 
   const lines = [];
 
   // Header
-  const headerLine = headers.map((h, i) =>
-    chalk.bold(_padCell(h, colWidths[i], align))
-  ).join(chalk.dim(' │ '));
+  const headerLine = headers
+    .map((h, i) => chalk.bold(_padCell(h, colWidths[i], align)))
+    .join(chalk.dim(' │ '));
   lines.push('  ' + headerLine);
 
   // Separator
@@ -262,9 +312,9 @@ function Table(props) {
 
   // Rows
   for (const row of rows) {
-    const cells = row.map((cell, i) =>
-      _padCell(String(cell || ''), colWidths[i], align)
-    ).join(chalk.dim(' │ '));
+    const cells = row
+      .map((cell, i) => _padCell(String(cell || ''), colWidths[i], align))
+      .join(chalk.dim(' │ '));
     lines.push('  ' + cells);
   }
 
@@ -285,7 +335,13 @@ function Table(props) {
  * @returns {Promise<any>} Selected value(s)
  */
 function Select(props) {
-  const { message, options: rawOptions, multi = false, allowOther = false, fuzzy: forceFuzzy = false } = props;
+  const {
+    message,
+    options: rawOptions,
+    multi = false,
+    allowOther = false,
+    fuzzy: forceFuzzy = false,
+  } = props;
   const { isLegacyWinTerminal } = require('../../tools/platformUtils');
   const _legacyWin = isLegacyWinTerminal();
   const CURSOR_CHAR = _legacyWin ? '>' : '❯';
@@ -305,7 +361,7 @@ function Select(props) {
     let cursor = 0;
     const selected = new Set();
     let filterText = '';
-    let filtered = allOptions;        // visible options after fuzzy filter
+    let filtered = allOptions; // visible options after fuzzy filter
     let filteredIndices = allOptions.map((_, i) => i); // map filtered→allOptions index
 
     function _applyFilter() {
@@ -319,13 +375,19 @@ function Select(props) {
         for (let i = 0; i < allOptions.length; i++) {
           const lbl = allOptions[i].label.toLowerCase();
           const desc = (allOptions[i].description || '').toLowerCase();
-          if (lbl.includes(lower) || desc.includes(lower) || allOptions[i].value === OTHER_SENTINEL) {
+          if (
+            lbl.includes(lower) ||
+            desc.includes(lower) ||
+            allOptions[i].value === OTHER_SENTINEL
+          ) {
             filtered.push(allOptions[i]);
             filteredIndices.push(i);
           }
         }
       }
-      if (cursor >= filtered.length) cursor = Math.max(0, filtered.length - 1);
+      if (cursor >= filtered.length) {
+        cursor = Math.max(0, filtered.length - 1);
+      }
     }
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -340,7 +402,9 @@ function Select(props) {
       if (_lastRenderLines > 0) {
         // 从当前位置清除上次渲染的所有行
       }
-      const filterHint = fuzzyEnabled ? chalk.dim(`  (输入过滤${filterText ? `: ${filterText}` : ''})`) : '';
+      const filterHint = fuzzyEnabled
+        ? chalk.dim(`  (输入过滤${filterText ? `: ${filterText}` : ''})`)
+        : '';
       process.stdout.write(`\r\x1B[K  ${chalk.bold(message)}${filterHint}\n`);
 
       let totalLines = 1; // 标题行
@@ -353,7 +417,9 @@ function Select(props) {
 
         let prefix = isCursor ? chalk.cyan(CURSOR_CHAR + ' ') : '  ';
         if (multi) {
-          prefix += isSelected ? chalk.green(SELECTED_CHAR + ' ') : chalk.dim(UNSELECTED_CHAR + ' ');
+          prefix += isSelected
+            ? chalk.green(SELECTED_CHAR + ' ')
+            : chalk.dim(UNSELECTED_CHAR + ' ');
         }
 
         const label = isCursor ? chalk.cyan(opt.label) : opt.label;
@@ -390,7 +456,9 @@ function Select(props) {
           process.stdout.write(`\x1B[B\x1B[K`);
         }
         process.stdout.write('\r');
-      } catch { /* 终端已关闭 */ }
+      } catch {
+        /* 终端已关闭 */
+      }
       rl.close();
     }
 
@@ -413,7 +481,9 @@ function Select(props) {
     render();
 
     process.stdin.on('keypress', async (ch, key) => {
-      if (!key) return;
+      if (!key) {
+        return;
+      }
 
       if (key.name === 'up' || key.name === 'k') {
         cursor = (cursor - 1 + filtered.length) % filtered.length;
@@ -423,12 +493,17 @@ function Select(props) {
         render();
       } else if (key.name === 'space' && multi) {
         const realIdx = filteredIndices[cursor];
-        if (selected.has(realIdx)) selected.delete(realIdx);
-        else selected.add(realIdx);
+        if (selected.has(realIdx)) {
+          selected.delete(realIdx);
+        } else {
+          selected.add(realIdx);
+        }
         render();
       } else if (key.name === 'return') {
         cleanup();
-        if (typeof process.stdin.setRawMode === 'function') process.stdin.setRawMode(false);
+        if (typeof process.stdin.setRawMode === 'function') {
+          process.stdin.setRawMode(false);
+        }
         if (multi) {
           resolve([...selected].map((i) => allOptions[i].value));
         } else {
@@ -443,7 +518,9 @@ function Select(props) {
         }
       } else if (key.name === 'escape' || (key.ctrl && key.name === 'c')) {
         cleanup();
-        if (typeof process.stdin.setRawMode === 'function') process.stdin.setRawMode(false);
+        if (typeof process.stdin.setRawMode === 'function') {
+          process.stdin.setRawMode(false);
+        }
         resolve(null);
       } else if (key.name === 'backspace' && fuzzyEnabled) {
         // G4: 退格删除过滤字符
@@ -477,7 +554,9 @@ function StatusBar(props) {
   let active = true;
 
   function render() {
-    if (!active || !process.stdout.isTTY) return;
+    if (!active || !process.stdout.isTTY) {
+      return;
+    }
 
     const cols = process.stdout.columns || 80;
     const left = currentProps.left || '';
@@ -494,7 +573,11 @@ function StatusBar(props) {
     let line = left + ' '.repeat(gap1) + center + ' '.repeat(gap2) + right;
     line = line.substring(0, cols);
 
-    const bgFn = currentProps.bg ? (chalk.bgHex ? chalk.bgHex(currentProps.bg) : chalk.bgBlue) : chalk.bgBlue;
+    const bgFn = currentProps.bg
+      ? chalk.bgHex
+        ? chalk.bgHex(currentProps.bg)
+        : chalk.bgBlue
+      : chalk.bgBlue;
 
     // Save cursor, move to bottom, render, restore cursor
     process.stdout.write(`\x1B7\x1B[${process.stdout.rows};1H${bgFn(chalk.white(line))}\x1B8`);
@@ -549,11 +632,15 @@ function HStack(components, gap) {
 
 function _getBorderChars(style) {
   switch (style) {
-    case 'double': return { tl: '╔', tr: '╗', bl: '╚', br: '╝', h: '═', v: '║' };
-    case 'round':  return { tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' };
-    case 'none':   return { tl: ' ', tr: ' ', bl: ' ', br: ' ', h: ' ', v: ' ' };
+    case 'double':
+      return { tl: '╔', tr: '╗', bl: '╚', br: '╝', h: '═', v: '║' };
+    case 'round':
+      return { tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' };
+    case 'none':
+      return { tl: ' ', tr: ' ', bl: ' ', br: ' ', h: ' ', v: ' ' };
     case 'single':
-    default:       return { tl: '┌', tr: '┐', bl: '└', br: '┘', h: '─', v: '│' };
+    default:
+      return { tl: '┌', tr: '┐', bl: '└', br: '┘', h: '─', v: '│' };
   }
 }
 
@@ -578,7 +665,9 @@ function _align(str, strippedLen, width, align) {
 function _padCell(str, width, align) {
   const stripped = _stripAnsi(str);
   const gap = Math.max(0, width - stripped.length);
-  if (align === 'right') return ' '.repeat(gap) + str;
+  if (align === 'right') {
+    return ' '.repeat(gap) + str;
+  }
   if (align === 'center') {
     const left = Math.floor(gap / 2);
     return ' '.repeat(left) + str + ' '.repeat(gap - left);
@@ -598,7 +687,9 @@ const SPARK_CHARS = _isLegacyWin() ? ' .:=|$#@' : '▁▂▃▄▅▆▇█';
  */
 function Sparkline(props) {
   const { data = [], width, color, label } = props;
-  if (!data.length) return label ? `  ${label} (no data)` : '  (no data)';
+  if (!data.length) {
+    return label ? `  ${label} (no data)` : '  (no data)';
+  }
 
   const lo = props.min !== undefined ? props.min : Math.min(...data);
   const hi = props.max !== undefined ? props.max : Math.max(...data);
@@ -616,13 +707,19 @@ function Sparkline(props) {
     }
   }
 
-  let line = samples.map(v => {
-    const idx = Math.round(((v - lo) / range) * (SPARK_CHARS.length - 1));
-    return SPARK_CHARS[Math.max(0, Math.min(SPARK_CHARS.length - 1, idx))];
-  }).join('');
+  let line = samples
+    .map((v) => {
+      const idx = Math.round(((v - lo) / range) * (SPARK_CHARS.length - 1));
+      return SPARK_CHARS[Math.max(0, Math.min(SPARK_CHARS.length - 1, idx))];
+    })
+    .join('');
 
   if (color) {
-    try { line = chalk.hex(color)(line); } catch { /* ignore invalid color */ }
+    try {
+      line = chalk.hex(color)(line);
+    } catch {
+      /* ignore invalid color */
+    }
   }
 
   const loStr = chalk.dim(lo.toFixed(1));
@@ -641,23 +738,36 @@ function Sparkline(props) {
  */
 function BarChart(props) {
   const { items = [], showValue = true } = props;
-  if (!items.length) return '  (no data)';
+  if (!items.length) {
+    return '  (no data)';
+  }
 
-  const barWidth = props.width || Math.min(20, Math.max(10, ((process.stdout.columns || 80) - 30)));
-  const maxLabel = Math.max(...items.map(it => _stripAnsi(it.label).length));
-  const globalMax = Math.max(...items.map(it => it.maxValue || it.value), 1);
+  const barWidth = props.width || Math.min(20, Math.max(10, (process.stdout.columns || 80) - 30));
+  const maxLabel = Math.max(...items.map((it) => _stripAnsi(it.label).length));
+  const globalMax = Math.max(...items.map((it) => it.maxValue || it.value), 1);
 
-  const lines = items.map(it => {
+  const lines = items.map((it) => {
     const pct = Math.max(0, Math.min(100, (it.value / globalMax) * 100));
-    const filled = Math.round(pct / 100 * barWidth);
+    const filled = Math.round((pct / 100) * barWidth);
     const empty = barWidth - filled;
 
     const barColor = it.color
-      ? (str => { try { return chalk.hex(it.color)(str); } catch { return str; } })
-      : pct > 80 ? chalk.red : pct > 50 ? chalk.yellow : chalk.green;
+      ? (str) => {
+          try {
+            return chalk.hex(it.color)(str);
+          } catch {
+            return str;
+          }
+        }
+      : pct > 80
+        ? chalk.red
+        : pct > 50
+          ? chalk.yellow
+          : chalk.green;
 
     const _lw = _isLegacyWin();
-    const bar = barColor((_lw ? '#' : '█').repeat(filled)) + chalk.dim((_lw ? '-' : '░').repeat(empty));
+    const bar =
+      barColor((_lw ? '#' : '█').repeat(filled)) + chalk.dim((_lw ? '-' : '░').repeat(empty));
     const lbl = _align(it.label, _stripAnsi(it.label).length, maxLabel, 'right');
     const val = showValue ? chalk.dim(` ${Math.round(pct)}%`) : '';
     return `  ${lbl}  ${bar}${val}`;
@@ -689,25 +799,42 @@ async function selectMenu({ message, choices, multi = false, allowOther = false,
   const { isTuiActive, promptCompat } = require('../uiPrompt');
   if (isTuiActive()) {
     const OTHER = '__khy_other__';
-    const bridgeChoices = (choices || []).map(ch =>
+    const bridgeChoices = (choices || []).map((ch) =>
       typeof ch === 'string'
         ? { name: ch, value: ch }
-        : { name: ch.name || ch.label || String(ch.value), value: ch.value !== undefined ? ch.value : ch.name });
-    if (allowOther) bridgeChoices.push({ name: '其他 (自由输入)', value: OTHER });
-    const ans = await promptCompat([{
-      type: multi ? 'checkbox' : 'list', name: 'value', message, choices: bridgeChoices,
-    }]);
-    if (!ans || !('value' in ans)) return null; // Esc/cancel
+        : {
+            name: ch.name || ch.label || String(ch.value),
+            value: ch.value !== undefined ? ch.value : ch.name,
+          }
+    );
+    if (allowOther) {
+      bridgeChoices.push({ name: '其他 (自由输入)', value: OTHER });
+    }
+    const ans = await promptCompat([
+      {
+        type: multi ? 'checkbox' : 'list',
+        name: 'value',
+        message,
+        choices: bridgeChoices,
+      },
+    ]);
+    if (!ans || !('value' in ans)) {
+      return null;
+    } // Esc/cancel
     let value = ans.value;
     if (allowOther) {
       const askCustom = async () => {
-        const r = await promptCompat([{ type: 'input', name: 'custom', message: '请输入自定义值:' }]);
+        const r = await promptCompat([
+          { type: 'input', name: 'custom', message: '请输入自定义值:' },
+        ]);
         return r && r.custom ? String(r.custom).trim() : '';
       };
       if (multi && Array.isArray(value) && value.includes(OTHER)) {
         const custom = await askCustom();
-        value = value.filter(v => v !== OTHER);
-        if (custom) value.push(custom);
+        value = value.filter((v) => v !== OTHER);
+        if (custom) {
+          value.push(custom);
+        }
       } else if (!multi && value === OTHER) {
         value = (await askCustom()) || null;
       }
@@ -716,8 +843,10 @@ async function selectMenu({ message, choices, multi = false, allowOther = false,
   }
 
   // Map inquirer-style choices to Select-style options
-  const options = (choices || []).map(ch => {
-    if (typeof ch === 'string') return { label: ch, value: ch };
+  const options = (choices || []).map((ch) => {
+    if (typeof ch === 'string') {
+      return { label: ch, value: ch };
+    }
     return {
       label: ch.name || ch.label || String(ch.value),
       value: ch.value !== undefined ? ch.value : ch.name,
@@ -733,12 +862,16 @@ async function selectMenu({ message, choices, multi = false, allowOther = false,
   // Fallback to inquirer for non-TTY
   try {
     const inquirer = require('inquirer');
-    const { value } = await inquirer.prompt([{
-      type: multi ? 'checkbox' : 'list',
-      name: 'value',
-      message,
-      choices: choices.map(ch => typeof ch === 'string' ? ch : { name: ch.name || ch.label, value: ch.value }),
-    }]);
+    const { value } = await inquirer.prompt([
+      {
+        type: multi ? 'checkbox' : 'list',
+        name: 'value',
+        message,
+        choices: choices.map((ch) =>
+          typeof ch === 'string' ? ch : { name: ch.name || ch.label, value: ch.value }
+        ),
+      },
+    ]);
     return value;
   } catch {
     return null;
@@ -766,4 +899,6 @@ module.exports = {
 // (headless) → callers degrade to inquirer / first candidate.
 try {
   require('../../services/interactiveMenuPort').registerMenuPrompter(selectMenu);
-} catch { /* port unavailable — non-cli context, services degrade to non-interactive */ }
+} catch {
+  /* port unavailable — non-cli context, services degrade to non-interactive */
+}

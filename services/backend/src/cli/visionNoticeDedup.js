@@ -30,14 +30,18 @@ function isEnabled(env) {
     const flagRegistry = require('../services/flagRegistry');
     return flagRegistry.isFlagEnabled(FLAG, e);
   } catch {
-    const raw = String(e[FLAG] == null ? '' : e[FLAG]).trim().toLowerCase();
+    const raw = String(e[FLAG] == null ? '' : e[FLAG])
+      .trim()
+      .toLowerCase();
     return !['0', 'false', 'off', 'no'].includes(raw);
   }
 }
 
 // 归一化签名:去首尾空白后原文。逐字节比较——不同模型名 / 不同失败真因天然签名不同,只折叠完全一致的重复。
 function signatureOf(msgText) {
-  if (typeof msgText !== 'string') return null;
+  if (typeof msgText !== 'string') {
+    return null;
+  }
   const s = msgText.trim();
   return s.length ? s : null;
 }
@@ -52,11 +56,19 @@ function signatureOf(msgText) {
  */
 function shouldRender(seenSet, msgText, env) {
   try {
-    if (!isEnabled(env)) return true;
-    if (!(seenSet instanceof Set)) return true;
+    if (!isEnabled(env)) {
+      return true;
+    }
+    if (!(seenSet instanceof Set)) {
+      return true;
+    }
     const sig = signatureOf(msgText);
-    if (sig == null) return true;
-    if (seenSet.has(sig)) return false;
+    if (sig == null) {
+      return true;
+    }
+    if (seenSet.has(sig)) {
+      return false;
+    }
     seenSet.add(sig);
     return true;
   } catch {

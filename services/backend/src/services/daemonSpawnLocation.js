@@ -50,12 +50,20 @@ function resolveDaemonSpawnLocation(input) {
   // Only relocate on Windows (the only OS where cwd locks a directory). Unix and
   // macOS can delete a directory that is a process's cwd, so cwd-in-bundle is
   // harmless there → keep byte-identical behavior.
-  if (platform !== 'win32') return NO_CHANGE;
-  if (!gateEnabled) return NO_CHANGE;
+  if (platform !== 'win32') {
+    return NO_CHANGE;
+  }
+  if (!gateEnabled) {
+    return NO_CHANGE;
+  }
   // No usable data home, or it is the same place we'd already use → nothing to
   // gain, keep current behavior.
-  if (!dataHome) return NO_CHANGE;
-  if (resolvedRoot && dataHome === resolvedRoot) return NO_CHANGE;
+  if (!dataHome) {
+    return NO_CHANGE;
+  }
+  if (resolvedRoot && dataHome === resolvedRoot) {
+    return NO_CHANGE;
+  }
 
   // Move cwd out of site-packages, and pin KHYQUANT_ROOT so path resolution that
   // used to fall back to the (now-changed) cwd/root stays exactly the same.

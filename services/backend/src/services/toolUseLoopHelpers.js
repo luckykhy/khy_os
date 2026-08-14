@@ -18,12 +18,24 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { diagnostics, generateTraceId: genDiagTraceId } = require('./diagnosticEvents');
-const { analyzeCommand } = require('./shellSafetyValidator');
+
+const _simpleTokenEstimate = require('../utils/simpleTokenEstimate');
+
+const _appLaunchRecovery = require('./appLaunchRecovery');
+const _capabilityAssess = require('./capabilityAssessment');
 const { getCapabilityMatrix } = require('./capabilityMatrix');
 const { SEAMS: CAP_SEAMS } = require('./capabilityMatrix/seams');
+const _deliveryFormatter = require('./deliveryFormatter');
+const { diagnostics, generateTraceId: genDiagTraceId } = require('./diagnosticEvents');
+const { analyzeCommand } = require('./shellSafetyValidator');
+
+// Canonical chars/4 estimate atom (utils leaf; byte-identical to Math.ceil(n / 4)).
 let _keyFindings = null;
-try { _keyFindings = require('../cli/keyFindings'); } catch { _keyFindings = null; }
+try {
+  _keyFindings = require('../cli/keyFindings');
+} catch {
+  _keyFindings = null;
+}
 
 // ── Core-injected bindings (set once at core load, before any of these helpers is invoked) ──
 let _APP_TARGET_PROBE_BINS = null;
@@ -33,12 +45,48 @@ let _resolveAutoWebSearchMode = null;
 let _extractToolOutput = null;
 let _getActiveModelContextWindow = null;
 function setToolUseLoopHelpersDeps(deps = {}) {
-  if (deps._APP_TARGET_PROBE_BINS !== undefined) _APP_TARGET_PROBE_BINS = deps._APP_TARGET_PROBE_BINS;
-  if (deps._SEARCH_TERM_STOPWORDS !== undefined) _SEARCH_TERM_STOPWORDS = deps._SEARCH_TERM_STOPWORDS;
-  if (deps._parsePositiveInt !== undefined) _parsePositiveInt = deps._parsePositiveInt;
-  if (deps._resolveAutoWebSearchMode !== undefined) _resolveAutoWebSearchMode = deps._resolveAutoWebSearchMode;
-  if (deps._extractToolOutput !== undefined) _extractToolOutput = deps._extractToolOutput;
-  if (deps._getActiveModelContextWindow !== undefined) _getActiveModelContextWindow = deps._getActiveModelContextWindow;
+  if (deps._APP_TARGET_PROBE_BINS !== undefined) {
+    _APP_TARGET_PROBE_BINS = deps._APP_TARGET_PROBE_BINS;
+  }
+  if (deps._SEARCH_TERM_STOPWORDS !== undefined) {
+    _SEARCH_TERM_STOPWORDS = deps._SEARCH_TERM_STOPWORDS;
+  }
+  if (deps._parsePositiveInt !== undefined) {
+    _parsePositiveInt = deps._parsePositiveInt;
+  }
+  if (deps._resolveAutoWebSearchMode !== undefined) {
+    _resolveAutoWebSearchMode = deps._resolveAutoWebSearchMode;
+  }
+  if (deps._extractToolOutput !== undefined) {
+    _extractToolOutput = deps._extractToolOutput;
+  }
+  if (deps._getActiveModelContextWindow !== undefined) {
+    _getActiveModelContextWindow = deps._getActiveModelContextWindow;
+  }
+}
+
+/**
+ * Build a natural-language reply draft from a recovery guide, so the AI has
+ * something it can send directly or extend naturally — preventing the model
+ * from blanking out or breaking the loop when it sees a structured error.
+ */
+function buildRecoveryUserMessage(r) {
+  const parts = [];
+  parts.push(`抱歉，刚才的操作失败了：${r.cause || '遇到了外部服务限制'}。`);
+  parts.push(r.fix ? `解决办法是${r.fix}。` : '');
+  if (r.steps && r.steps.length) {
+    parts.push('步骤很简单：');
+    r.steps.forEach((s) => {
+      parts.push(s);
+    });
+  }
+  if (r.openUrl) {
+    parts.push(`我已经帮你打开了配置页面，你只需要按提示操作即可。`);
+  }
+  if (r.envKey) {
+    parts.push(`拿到 token 后直接粘贴给我，我会自动帮你写入配置文件。`);
+  }
+  return parts.join(' ');
 }
 
 /**
@@ -55,7 +103,9 @@ function _buildToolResultMessage(toolResults) {
   const parts = ['[Tool execution results]\n'];
 
   for (const tr of toolResults) {
-    if (tr.tool === '_legacy_cmd') continue;
+    if (tr.tool === '_legacy_cmd') {
+      continue;
+    }
 
     const idRef = tr._toolUseId ? ` [tool_use_id=${tr._toolUseId}]` : '';
 
@@ -80,34 +130,50 @@ function _buildToolResultMessage(toolResults) {
       const output = _extractToolOutput(tr.result);
       if (output) {
         const text = typeof output === 'string' ? output : JSON.stringify(output);
+        // Sanitize tool output to prevent prompt injection via tool results.
+        // Neutralize [SYSTEM:...], [System:...], [KHY PRIORITY DIRECTIVE] patterns
+        // that could be interpreted as system directives by the model.
+        const sanitizedText = _sanitizeToolResultOutput(text);
         // D13: Smart per-tool truncation with noise classification
         try {
           const _smartTrunc = require('./smartTruncation');
           // Use model's actual context window if available, else env, else conservative default
-          const contextBudget = Number(process.env.KHY_CONTEXT_TOKEN_LIMIT)
-            || _getActiveModelContextWindow()
-            || 32768; // conservative default for weak models
-          const truncResult = _smartTrunc.truncate(tr.tool, text, { contextBudget });
+          const contextBudget =
+            Number(process.env.KHY_CONTEXT_TOKEN_LIMIT) || _getActiveModelContextWindow() || 32768; // conservative default for weak models
+          const truncResult = _smartTrunc.truncate(tr.tool, sanitizedText, { contextBudget });
           if (truncResult.truncated) {
             const omitted = truncResult.originalLen - truncResult.text.length;
-            toolOutputText += `${truncResult.text}\n... [${truncResult.strategy}: ${omitted} chars omitted, ${Math.ceil(omitted / 4)} est. tokens saved]`;
+            toolOutputText += `${truncResult.text}\n... [${truncResult.strategy}: ${omitted} chars omitted, ${_simpleTokenEstimate.fromCharCount(omitted)} est. tokens saved]`;
           } else {
             toolOutputText += truncResult.text;
           }
         } catch {
           const maxLen = 15000; // conservative fallback for weak models
-          toolOutputText += text.length > maxLen
-            ? `${text.slice(0, maxLen)}\n... [truncated ${text.length - maxLen} chars]`
-            : text;
+          toolOutputText +=
+            sanitizedText.length > maxLen
+              ? `${sanitizedText.slice(0, maxLen)}\n... [truncated ${sanitizedText.length - maxLen} chars]`
+              : sanitizedText;
         }
         // Append tool result metadata
         const meta = [];
-        if (tr.result.truncated) meta.push('output was truncated');
-        if (typeof tr.result.totalLines === 'number') meta.push(`${tr.result.totalLines} total lines`);
-        if (typeof tr.result.totalMatches === 'number') meta.push(`${tr.result.totalMatches} total matches`);
-        if (typeof tr.result.count === 'number' && tr.result.count > 0) meta.push(`${tr.result.count} results`);
-        if (typeof tr.result.size === 'number') meta.push(`${tr.result.size} bytes`);
-        if (meta.length > 0) toolOutputText += `\n[Metadata: ${meta.join(', ')}]`;
+        if (tr.result.truncated) {
+          meta.push('output was truncated');
+        }
+        if (typeof tr.result.totalLines === 'number') {
+          meta.push(`${tr.result.totalLines} total lines`);
+        }
+        if (typeof tr.result.totalMatches === 'number') {
+          meta.push(`${tr.result.totalMatches} total matches`);
+        }
+        if (typeof tr.result.count === 'number' && tr.result.count > 0) {
+          meta.push(`${tr.result.count} results`);
+        }
+        if (typeof tr.result.size === 'number') {
+          meta.push(`${tr.result.size} bytes`);
+        }
+        if (meta.length > 0) {
+          toolOutputText += `\n[Metadata: ${meta.join(', ')}]`;
+        }
       } else {
         toolOutputText += 'Success';
       }
@@ -116,12 +182,38 @@ function _buildToolResultMessage(toolResults) {
       const err = tr.result.error;
       if (err && typeof err === 'object' && err.code) {
         toolOutputText += `[ERROR:${err.code}] ${err.message}`;
-        if (err.hint) toolOutputText += `\nHint: ${err.hint}`;
+        if (err.hint) {
+          toolOutputText += `\nHint: ${err.hint}`;
+        }
         toolOutputText += `\nRetryable: ${err.retryable ? 'yes' : 'no'}`;
+        // 结构化恢复指南:AI 看到后可一步步引导用户操作
+        if (err.recovery) {
+          const r = err.recovery;
+          toolOutputText += `\n[Recovery] Cause: ${r.cause}`;
+          if (r.envFile) {
+            toolOutputText += `\n[Recovery] Target file: ${r.envFile}`;
+          }
+          if (r.envKey) {
+            toolOutputText += `\n[Recovery] Key to set: ${r.envKey}`;
+          }
+          if (r.steps && r.steps.length) {
+            toolOutputText += `\n[Recovery] Steps:`;
+            r.steps.forEach((s, i) => {
+              toolOutputText += `\n  ${i + 1}. ${s}`;
+            });
+          }
+          if (r.openUrl) {
+            toolOutputText += `\n[Recovery] Open this URL for the user: ${r.openUrl}`;
+          }
+          // 自然语言回复草稿:AI 可直接使用或自然延伸,不会因为不知道如何回应而熔断
+          const draft = r.userMessage || buildRecoveryUserMessage(r);
+          toolOutputText += `\n[Suggested reply for the user]: ${draft}`;
+        }
       } else {
-        const errStr = (err && typeof err === 'object')
-          ? (err.message || JSON.stringify(err))
-          : (err || 'Unknown error');
+        const errStr =
+          err && typeof err === 'object'
+            ? err.message || JSON.stringify(err)
+            : err || 'Unknown error';
         toolOutputText += `Error: ${errStr}`;
         if (tr.result && tr.result.hint) {
           toolOutputText += `\nHint: ${tr.result.hint}`;
@@ -129,16 +221,51 @@ function _buildToolResultMessage(toolResults) {
       }
     }
 
+    // Sanitize tool output to prevent prompt injection via tool results.
+    // Neutralize [SYSTEM:...], [System:...], [KHY PRIORITY DIRECTIVE] patterns
+    // that could be interpreted as system directives by the model.
+    if (toolOutputText) {
+      toolOutputText = _sanitizeToolResultOutput(toolOutputText);
+    }
+
     // Build structured tool_result entry.
     // 始终生成结构化块：原生 tool_use ID 直接配对；NL 解析的工具用合成 ID。
     // ensureToolResultPairing() 会处理配对不上的情况（注入 placeholder），
     // 而不是因为没有 ID 就丢弃结构化数据。
-    const effectiveToolUseId = tr._toolUseId || `synth_${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)}`;
+    const effectiveToolUseId =
+      tr._toolUseId ||
+      `synth_${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)}`;
+    // ── Tri-path gate (KHY_TOOL_RESULT_TRIPATH, opt-in default-off) ──
+    // Gate on: the model-facing entry content comes from the pure
+    // mapToolResultToModelBlock (images preserved via blocks, unified Chinese
+    // truncation notice); the string form is still sanitized here to keep the
+    // prompt-injection guard. Gate off: values below are byte-identical to the
+    // legacy expressions. Fail-soft: any error falls back to the legacy entry.
+    let _triPathContent = null;
+    let _triPathBlocks;
+    try {
+      if (require('./flagRegistry').isFlagEnabled('KHY_TOOL_RESULT_TRIPATH', process.env)) {
+        const _mapped = require('../tools/_toolResultNormalizer').mapToolResultToModelBlock(
+          tr.result
+        );
+        if (Array.isArray(_mapped)) {
+          _triPathBlocks = _mapped;
+        } else if (typeof _mapped === 'string' && _mapped) {
+          _triPathContent = _sanitizeToolResultOutput(_mapped);
+        }
+      }
+    } catch {
+      /* fail-soft: legacy entry below */
+    }
     _structuredToolResults.push({
       tool_use_id: effectiveToolUseId,
       tool: tr.tool,
-      content: toolOutputText || (isError ? 'Error' : 'Success'),
-      _contentBlocks: tr.result?._contentBlocks || null,
+      content:
+        _triPathContent != null
+          ? _triPathContent
+          : toolOutputText || (isError ? 'Error' : 'Success'),
+      _contentBlocks:
+        _triPathBlocks !== undefined ? _triPathBlocks : tr.result?._contentBlocks || null,
       is_error: isError,
     });
 
@@ -193,16 +320,23 @@ function _buildToolResultMessage(toolResults) {
  * Remove <tool_call> tags from text for display purposes.
  */
 function _stripToolCalls(text) {
-  if (!text) return '';
-  const _KNOWN_BARE_STRIP = /^(bash|shell|sh|command|read|readfile|write|writefile|edit|editfile|grep|rg|glob|find|ls|websearch|webfetch|search|agent|task)$/i;
+  if (!text) {
+    return '';
+  }
+  const _KNOWN_BARE_STRIP =
+    /^(bash|shell|sh|command|read|readfile|write|writefile|edit|editfile|grep|rg|glob|find|ls|websearch|webfetch|search|agent|task)$/i;
   // 按行处理裸 ToolName(args) 格式
   const lines = text.split('\n');
-  const cleaned = lines.filter((line) => {
-    const stripped = line.replace(/^\s*[>│┃├└╰❯▸›•*-]+\s*/u, '').trim();
-    const bm = stripped.match(/^([A-Za-z][A-Za-z0-9_]{0,24})\s*\([\s\S]*\)\s*$/);
-    if (bm && _KNOWN_BARE_STRIP.test(bm[1])) return false;
-    return true;
-  }).join('\n');
+  const cleaned = lines
+    .filter((line) => {
+      const stripped = line.replace(/^\s*[>│┃├└╰❯▸›•*-]+\s*/u, '').trim();
+      const bm = stripped.match(/^([A-Za-z][A-Za-z0-9_]{0,24})\s*\([\s\S]*\)\s*$/);
+      if (bm && _KNOWN_BARE_STRIP.test(bm[1])) {
+        return false;
+      }
+      return true;
+    })
+    .join('\n');
   return cleaned
     .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '')
     .replace(/【\s*调用\s*([^：:\]】\n]{1,32})\s*(?:[：:]\s*([^】]*?))?\s*】/g, '')
@@ -215,11 +349,17 @@ function _stripToolCalls(text) {
  * Remove <execution_plan> tags from text for display purposes.
  */
 function _stripExecutionPlan(text) {
-  if (!text) return text;
+  if (!text) {
+    return text;
+  }
   let out = text.replace(/<execution_plan>[\s\S]*?<\/execution_plan>/g, '');
   // 同时剥离关键节点汇报标记 <finding>，让全部显示点自动继承（fail-soft）。
   if (_keyFindings && typeof _keyFindings.stripFindings === 'function') {
-    try { out = _keyFindings.stripFindings(out); } catch { /* fail-soft: leave text as-is */ }
+    try {
+      out = _keyFindings.stripFindings(out);
+    } catch {
+      /* fail-soft: leave text as-is */
+    }
   }
   return out.trim();
 }
@@ -236,12 +376,18 @@ const PRUNE_KEEP_RECENT = 2;
 function _pruneOldToolOutputs(toolCallLog, currentIteration) {
   const recentCutoff = currentIteration - PRUNE_KEEP_RECENT;
   for (const entry of toolCallLog) {
-    if (!entry || entry.iteration >= recentCutoff || entry._pruned) continue;
+    if (!entry || entry.iteration >= recentCutoff || entry._pruned) {
+      continue;
+    }
     // Check all text-like fields in result
     const r = entry.result;
-    if (!r) continue;
+    if (!r) {
+      continue;
+    }
     const output = String(r.output || r.content || r.result || r.text || '');
-    if (output.length <= PRUNE_THRESHOLD) continue;
+    if (output.length <= PRUNE_THRESHOLD) {
+      continue;
+    }
 
     const tool = String(entry.tool || '').toLowerCase();
     let summary;
@@ -250,7 +396,9 @@ function _pruneOldToolOutputs(toolCallLog, currentIteration) {
       const cmd = String((entry.params && entry.params.command) || '').slice(0, 60);
       summary = `[shell] '${cmd}' → ${lines} lines, ${output.length} chars`;
     } else if (/read|readfile|read_file/.test(tool)) {
-      const fp = (entry.params && (entry.params.file_path || entry.params.filePath || entry.params.path)) || '';
+      const fp =
+        (entry.params && (entry.params.file_path || entry.params.filePath || entry.params.path)) ||
+        '';
       summary = `[read] ${fp} (${output.length} chars)`;
     } else if (/grep|rg/.test(tool)) {
       const matches = output.split('\n').filter(Boolean).length;
@@ -280,15 +428,26 @@ function _pruneOldToolOutputs(toolCallLog, currentIteration) {
  * Lists files created/modified, commands executed, and success/failure stats.
  */
 function _buildDeliverySummary(toolCallLog) {
-  if (!toolCallLog || toolCallLog.length === 0) return '';
+  if (!toolCallLog || toolCallLog.length === 0) {
+    return '';
+  }
 
   // D6: Housekeeping filter — suppress internal noise from delivery summary
   // Remove: dedup'd calls, loop-detected blocks, guardrail blocks, hook blocks
-  const filteredLog = toolCallLog.filter(entry => {
+  const filteredLog = toolCallLog.filter((entry) => {
     const r = entry.result;
-    if (!r) return true;
-    if (r._deduped || r._loopDetected) return false;
-    if (typeof r.error === 'string' && /^\[(ToolCallGuardrail|LoopDetector|Hook|ShellSafety)/.test(r.error)) return false;
+    if (!r) {
+      return true;
+    }
+    if (r._deduped || r._loopDetected) {
+      return false;
+    }
+    if (
+      typeof r.error === 'string' &&
+      /^\[(ToolCallGuardrail|LoopDetector|Hook|ShellSafety)/.test(r.error)
+    ) {
+      return false;
+    }
     return true;
   });
 
@@ -298,14 +457,20 @@ function _buildDeliverySummary(toolCallLog) {
   const cmdOps = [];
   const readOps = [];
   const searchOps = [];
-  const succeeded = toolCallLog.filter(t => t.result?.success === true).length;
-  const failed = toolCallLog.filter(t => t.result?.success === false && !t.result?._deduped && !t.result?._loopDetected).length;
+  const succeeded = toolCallLog.filter((t) => t.result?.success === true).length;
+  const failed = toolCallLog.filter(
+    (t) => t.result?.success === false && !t.result?._deduped && !t.result?._loopDetected
+  ).length;
   let totalElapsed = 0;
 
   for (const entry of filteredLog) {
-    const tool = String(entry.tool || '').toLowerCase().replace(/[\s_-]/g, '');
+    const tool = String(entry.tool || '')
+      .toLowerCase()
+      .replace(/[\s_-]/g, '');
     const params = entry.params || {};
-    if (typeof entry.elapsed === 'number') totalElapsed += entry.elapsed;
+    if (typeof entry.elapsed === 'number') {
+      totalElapsed += entry.elapsed;
+    }
 
     if (/^(write|writefile|createfile)$/.test(tool)) {
       const fp = params.file_path || params.path || params.filePath || '';
@@ -314,22 +479,43 @@ function _buildDeliverySummary(toolCallLog) {
         const diff = entry.result?._khyWriteDiff;
         const wasNew = diff && !diff.beforeContent;
         const lineCount = diff && diff.afterContent ? diff.afterContent.split('\n').length : 0;
-        fileCreated.push({ path: fp, lines: lineCount, isNew: wasNew, success: entry.success !== false });
+        fileCreated.push({
+          path: fp,
+          lines: lineCount,
+          isNew: wasNew,
+          success: entry.success !== false,
+        });
       }
     } else if (/^(scaffoldfiles)$/.test(tool)) {
       const dirs = Array.isArray(params.directories) ? params.directories.length : 0;
       const files = Array.isArray(params.files) ? params.files.length : 0;
-      fileCreated.push({ path: params.root || '.', lines: 0, isNew: true, success: entry.success !== false, scaffold: true, dirs, files });
+      fileCreated.push({
+        path: params.root || '.',
+        lines: 0,
+        isNew: true,
+        success: entry.success !== false,
+        scaffold: true,
+        dirs,
+        files,
+      });
     } else if (/^(edit|editfile|fileedit)$/.test(tool)) {
       const fp = params.file_path || params.path || params.filePath || '';
       if (fp) {
         const oldLen = (params.old_string || params.oldString || '').split('\n').length;
         const newLen = (params.new_string || params.newString || '').split('\n').length;
-        fileEdited.push({ path: fp, added: Math.max(0, newLen - oldLen), removed: Math.max(0, oldLen - newLen), success: entry.success !== false });
+        fileEdited.push({
+          path: fp,
+          added: Math.max(0, newLen - oldLen),
+          removed: Math.max(0, oldLen - newLen),
+          success: entry.success !== false,
+        });
       }
     } else if (/^(bash|shell|shellcommand)$/.test(tool)) {
       const cmd = String(params.command || '').trim();
-      const isReadCmd = /^\s*(ls|dir|cat|head|tail|find|tree|du|df|stat|file|wc|which|type|echo|pwd|whoami|hostname|uname|env|printenv|date)\b/i.test(cmd);
+      const isReadCmd =
+        /^\s*(ls|dir|cat|head|tail|find|tree|du|df|stat|file|wc|which|type|echo|pwd|whoami|hostname|uname|env|printenv|date)\b/i.test(
+          cmd
+        );
       if (cmd) {
         const short = cmd.length > 60 ? cmd.slice(0, 57) + '...' : cmd;
         if (isReadCmd) {
@@ -342,7 +528,9 @@ function _buildDeliverySummary(toolCallLog) {
       readOps.push(tool);
     } else if (/^(websearch|web_search|webfetch)$/.test(tool)) {
       const q = params.query || params.url || '';
-      if (q) searchOps.push(String(q).slice(0, 50));
+      if (q) {
+        searchOps.push(String(q).slice(0, 50));
+      }
     }
   }
 
@@ -358,13 +546,25 @@ function _buildDeliverySummary(toolCallLog) {
   if (fileCreated.length > 0) {
     const unique = new Map();
     for (const f of fileCreated) {
-      if (!unique.has(f.path)) unique.set(f.path, f);
+      if (!unique.has(f.path)) {
+        unique.set(f.path, f);
+      }
     }
     for (const [, f] of unique) {
       if (f.scaffold) {
-        allFileChanges.push({ path: f.path, op: '脚手架', diff: `${f.dirs} 目录, ${f.files} 文件`, ok: f.success });
+        allFileChanges.push({
+          path: f.path,
+          op: '脚手架',
+          diff: `${f.dirs} 目录, ${f.files} 文件`,
+          ok: f.success,
+        });
       } else {
-        allFileChanges.push({ path: f.path, op: f.isNew ? '新建' : '写入', diff: f.lines > 0 ? `${f.lines} 行` : '', ok: f.success });
+        allFileChanges.push({
+          path: f.path,
+          op: f.isNew ? '新建' : '写入',
+          diff: f.lines > 0 ? `${f.lines} 行` : '',
+          ok: f.success,
+        });
       }
     }
   }
@@ -373,16 +573,23 @@ function _buildDeliverySummary(toolCallLog) {
     const unique = new Map();
     for (const f of fileEdited) {
       const existing = unique.get(f.path);
-      if (existing) { existing.added += f.added; existing.removed += f.removed; }
-      else unique.set(f.path, { ...f });
+      if (existing) {
+        existing.added += f.added;
+        existing.removed += f.removed;
+      } else {
+        unique.set(f.path, { ...f });
+      }
     }
     for (const [fp, f] of unique) {
-      const diff = (f.added > 0 || f.removed > 0) ? `+${f.added}/-${f.removed}` : '';
+      const diff = f.added > 0 || f.removed > 0 ? `+${f.added}/-${f.removed}` : '';
       allFileChanges.push({ path: fp, op: '修改', diff, ok: f.success });
     }
   }
   if (allFileChanges.length > 0) {
-    const _basename = (p) => { const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')); return i >= 0 ? p.slice(i + 1) : p; };
+    const _basename = (p) => {
+      const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
+      return i >= 0 ? p.slice(i + 1) : p;
+    };
     sections.push(`**改动文件 (${allFileChanges.length})**`);
     sections.push('| 文件 | 操作 | 变更 |');
     sections.push('|------|------|------|');
@@ -391,7 +598,9 @@ function _buildDeliverySummary(toolCallLog) {
       const status = f.ok ? '' : ' ❌';
       sections.push(`| \`${_basename(f.path)}\` | ${f.op} | ${f.diff}${status} |`);
     }
-    if (allFileChanges.length > 10) sections.push(`| ... | +${allFileChanges.length - 10} 个文件 | |`);
+    if (allFileChanges.length > 10) {
+      sections.push(`| ... | +${allFileChanges.length - 10} 个文件 | |`);
+    }
   }
 
   // ── Commands ──
@@ -402,23 +611,36 @@ function _buildDeliverySummary(toolCallLog) {
     for (const c of display) {
       sections.push(`  \`$ ${c.cmd}\`${c.success ? '' : ' ❌'}`);
     }
-    if (cmdOps.length > 5) sections.push(`  ...+${cmdOps.length - 5} more`);
+    if (cmdOps.length > 5) {
+      sections.push(`  ...+${cmdOps.length - 5} more`);
+    }
   }
 
   // ── Search queries ──
   if (searchOps.length > 0) {
     sections.push('');
     sections.push(`**搜索 (${searchOps.length})**`);
-    sections.push(`  ${searchOps.slice(0, 3).map(q => `"${q}"`).join(', ')}${searchOps.length > 3 ? ` +${searchOps.length - 3}` : ''}`);
+    sections.push(
+      `  ${searchOps
+        .slice(0, 3)
+        .map((q) => `"${q}"`)
+        .join(', ')}${searchOps.length > 3 ? ` +${searchOps.length - 3}` : ''}`
+    );
   }
 
   // ── Statistics line ──
   const statsItems = [];
   statsItems.push(`${toolCallLog.length} 次调用`);
   statsItems.push(`${succeeded} 成功`);
-  if (failed > 0) statsItems.push(`${failed} 失败`);
-  if (readOps.length > 0) statsItems.push(`${readOps.length} 次读取`);
-  if (elapsedSec) statsItems.push(elapsedSec);
+  if (failed > 0) {
+    statsItems.push(`${failed} 失败`);
+  }
+  if (readOps.length > 0) {
+    statsItems.push(`${readOps.length} 次读取`);
+  }
+  if (elapsedSec) {
+    statsItems.push(elapsedSec);
+  }
 
   // Read-only investigation: simpler summary
   if (!hasWriteActions) {
@@ -433,11 +655,19 @@ function _buildDeliverySummary(toolCallLog) {
 
 function _looksLikeDeliveryConclusion(text = '') {
   // 单一真源：委派 activeAssist.hasSynthesizedConclusion（判据与正则同源，消除两份拷贝）。
-  try { return require('./query/activeAssist').hasSynthesizedConclusion(text); } catch {
+  try {
+    return require('./query/activeAssist').hasSynthesizedConclusion(text);
+  } catch {
     // fail-soft：回落到等价的本地判据，绝不因模块加载失败而误判。
-    const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-    if (!normalized) return false;
-    return /(完成|成功|已整理|已创建|已修改|无需|部分完成|最终结论|结果|总结|完成摘要|done|completed|summary|result|created|modified|finished|no.*needed|partial)/i.test(normalized);
+    const normalized = String(text || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized) {
+      return false;
+    }
+    return /(完成|成功|已整理|已创建|已修改|无需|部分完成|最终结论|结果|总结|完成摘要|done|completed|summary|result|created|modified|finished|no.*needed|partial)/i.test(
+      normalized
+    );
   }
 }
 
@@ -449,11 +679,15 @@ function _emitDeliveryFinalEvent(traceAudit, traceSessionId, diagTraceId, reques
     require('./receiptService').finalizeReceipt({
       sessionId: traceSessionId,
       status: payload.success ? (payload.hookStopped ? 'partial' : 'completed') : 'failed',
-      error: payload.success ? null : (payload.error || null),
+      error: payload.success ? null : payload.error || null,
     });
-  } catch { /* receipt optional */ }
+  } catch {
+    /* receipt optional */
+  }
 
-  if (!traceAudit) return;
+  if (!traceAudit) {
+    return;
+  }
   try {
     traceAudit.logEvent('agent.delivery.final', payload, {
       sessionId: traceSessionId,
@@ -462,36 +696,70 @@ function _emitDeliveryFinalEvent(traceAudit, traceSessionId, diagTraceId, reques
       source: 'tool-loop',
       visibility: 'summary',
     });
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 /**
  * Heuristic: does this look like a "work preface" instead of a real answer?
  */
 function _looksLikeProgressOnlyReply(text) {
-  if (!text) return false;
+  if (!text) {
+    return false;
+  }
   const t = text.replace(/\s+/g, ' ').trim();
-  if (!t) return false;
+  if (!t) {
+    return false;
+  }
   // 放宽长度限制：3000 字符（原 1500 仍然太窄，模型对复杂任务经常给出 2000+ 字符的规划性回复）
-  if (t.length > 3000) return false;
-  if (/<tool_call>/i.test(t)) return false;
-  if (/```/.test(t)) return false;
+  if (t.length > 3000) {
+    return false;
+  }
+  if (/<tool_call>/i.test(t)) {
+    return false;
+  }
+  if (/```/.test(t)) {
+    return false;
+  }
   // 放宽前缀匹配：增加更多常见的"我要做X"表达
-  const cn = /^(我来|我先|让我|正在|继续|先去|先看|先查|下面我来|我会先|好的|首先|接下来|现在|来看|来查|需要先|我需要|我打算|我准备|那我|嗯|可以|当然|没问题|马上|立即|开始)/;
-  const en = /^(let me|i(?:'| a)m (?:going to|now)|continuing to|i(?:'| wi)ll|ok|sure|first|I need to|I want to|I should|next|alright|now|starting|beginning)/i;
-  const hasTaskVerb = /(检查|排查|查看|看看|分析|探索|处理|修复|定位|梳理|总结|整理|清理|创建|搜索|读取|打开|执行|运行|列出|扫描|浏览|编辑|修改|写入|安装|配置|部署|测试|验证|调试|review|inspect|check|analy[sz]e|investigate|clean|organize|search|read|open|run|list|scan|browse|look|edit|modify|write|install|configure|deploy|test|verify|debug|fix|implement|add|update|create)/i.test(t);
+  const cn =
+    /^(我来|我先|让我|正在|继续|先去|先看|先查|下面我来|我会先|好的|首先|接下来|现在|来看|来查|需要先|我需要|我打算|我准备|那我|嗯|可以|当然|没问题|马上|立即|开始)/;
+  const en =
+    /^(let me|i(?:'| a)m (?:going to|now)|continuing to|i(?:'| wi)ll|ok|sure|first|I need to|I want to|I should|next|alright|now|starting|beginning)/i;
+  const hasTaskVerb =
+    /(检查|排查|查看|看看|分析|探索|处理|修复|定位|梳理|总结|整理|清理|创建|搜索|读取|打开|执行|运行|列出|扫描|浏览|编辑|修改|写入|安装|配置|部署|测试|验证|调试|review|inspect|check|analy[sz]e|investigate|clean|organize|search|read|open|run|list|scan|browse|look|edit|modify|write|install|configure|deploy|test|verify|debug|fix|implement|add|update|create)/i.test(
+      t
+    );
   // 也匹配含有编号步骤规划的回复（"1. 先做X 2. 再做Y"）
   const hasNumberedPlan = /\n\s*\d+[\.\)]\s+/.test(t) && hasTaskVerb;
   // 尾部/内嵌「半截话」意图（用户原话痛点：「也不要总是半截话」）。
   // 真实卡壳常**不**从首字符起头，例如「文件已经在桌面上了，让我用图像识别功能查看内容」——
   // 旧的起锚 cn/en 匹配会漏掉它 → placeholder=false → 自驱守卫不触发 → 用户被迫手敲「继续」。
   // 这里只看**最后一句**是否为「让我…<动作>」式计划小句、且全文无任何结论词：正是悬而未决的前言收尾。
-  const clauses = t.split(/[。．.!?！？;；\n]+/).map((s) => s.trim()).filter(Boolean);
+  const clauses = t
+    .split(/[。．.!?！？;；\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   const lastClause = clauses.length ? clauses[clauses.length - 1] : '';
-  const intentLead = /(让我|我来|我先|我现在|我去|我这就|我马上|我可以先|我打算|我准备|接下来我?|那我|那就|现在我?来?|继续)/;
-  const noConclusion = !/(完成|成功|已创建|已修改|已生成|已实现|已修复|已整理|已部署|已运行|已验证|已启动|已打开|已执行|已发送|已安装|已下载|已配置|结论|总结|综上|done|completed|finished|created|implemented|fixed|verified|summary|result)/i.test(t);
+  const intentLead =
+    /(让我|我来|我先|我现在|我去|我这就|我马上|我可以先|我打算|我准备|我把|接下来我?|那我|那就|现在我?来?|继续)/;
+  const noConclusion =
+    !/(完成|成功|已创建|已修改|已生成|已实现|已修复|已整理|已部署|已运行|已验证|已启动|已打开|已执行|已发送|已安装|已下载|已配置|结论|总结|综上|done|completed|finished|created|implemented|fixed|verified|summary|result)/i.test(
+      t
+    );
   const trailingIntent = !!lastClause && intentLead.test(lastClause) && hasTaskVerb && noConclusion;
-  return ((cn.test(t) || en.test(t)) && hasTaskVerb) || hasNumberedPlan || trailingIntent;
+  // 工具后过渡语（弱模型工具执行后只回一句接续话就停的典型形态，如「补到 5 条，继续往下整理。」
+  // 「外部查到 7 条，我把要点整理出来再回到正题。」）：短句 + 接续措辞 + 任务动词、
+  // 全文无结论词 → 仍是进度语而非最终回答（通用措辞模式，不硬编码整句）。
+  const transitional =
+    t.length <= 80 &&
+    noConclusion &&
+    hasTaskVerb &&
+    /(继续|接下来|往下|回到正题|回来|再回|补齐|稍后|随后|马上就?|这就)/.test(t);
+  return (
+    ((cn.test(t) || en.test(t)) && hasTaskVerb) || hasNumberedPlan || trailingIntent || transitional
+  );
 }
 
 /**
@@ -511,26 +779,48 @@ function _looksLikeProgressOnlyReply(text) {
  * @returns {boolean}
  */
 function _looksLikeToolOutputEcho(reply, toolCallLog) {
-  const norm = (s) => String(s == null ? '' : s).replace(/[\s　，,。.、;；:：!！?？\-_*#>`|]+/g, '').toLowerCase();
+  const norm = (s) =>
+    String(s == null ? '' : s)
+      .replace(/[\s　，,。.、;；:：!！?？\-_*#>`|]+/g, '')
+      .toLowerCase();
   const r = norm(reply);
-  if (r.length < 12) return false; // 太短谈不上「回贴清单」，交给其它判据
+  if (r.length < 12) {
+    return false;
+  } // 太短谈不上「回贴清单」，交给其它判据
   // 带结论词的回复属于真总结，绝不当 echo。
-  if (/(完成|成功|已整理|已创建|已修改|无需|不需要|结论|总结|综上|一共|总共|分别是|包括|主要有|可以看到|可以看出|看起来|summary|in\s+total|overall|there\s+are)/i.test(reply)) {
+  if (
+    /(完成|成功|已整理|已创建|已修改|无需|不需要|结论|总结|综上|一共|总共|分别是|包括|主要有|可以看到|可以看出|看起来|summary|in\s+total|overall|there\s+are)/i.test(
+      reply
+    )
+  ) {
     return false;
   }
-  if (!Array.isArray(toolCallLog)) return false;
+  if (!Array.isArray(toolCallLog)) {
+    return false;
+  }
   for (const t of toolCallLog) {
-    if (!t || t.success !== true && t.result?.success !== true) continue;
-    const out = t.output != null ? t.output
-      : (t.content != null ? t.content
-        : (t.result?.output != null ? t.result.output : t.result?.content));
-    const o = norm(typeof out === 'string' ? out : (out != null ? JSON.stringify(out) : ''));
-    if (o.length < 12) continue;
+    if (!t || (t.success !== true && t.result?.success !== true)) {
+      continue;
+    }
+    const out =
+      t.output != null
+        ? t.output
+        : t.content != null
+          ? t.content
+          : t.result?.output != null
+            ? t.result.output
+            : t.result?.content;
+    const o = norm(typeof out === 'string' ? out : out != null ? JSON.stringify(out) : '');
+    if (o.length < 12) {
+      continue;
+    }
     // 回复几乎完全是工具原文的子串（模型只截了一段回贴），或工具原文几乎完全是回复的
     // 子串（模型把整段原样回贴）。0.9 阈值留出标点/大小写归一后的细微差异。
     const shorter = r.length <= o.length ? r : o;
     const longer = r.length <= o.length ? o : r;
-    if (longer.includes(shorter) && shorter.length / longer.length >= 0.9) return true;
+    if (longer.includes(shorter) && shorter.length / longer.length >= 0.9) {
+      return true;
+    }
   }
   return false;
 }
@@ -549,13 +839,21 @@ function _looksLikeToolOutputEcho(reply, toolCallLog) {
  */
 function _replyIsUnsynthesizedListing(reply) {
   const t = String(reply || '');
-  if (t.replace(/\s/g, '').length < 24) return false;
-  if (/(完成|成功|已整理|结论|总结|综上|一共|总共|分别是|包括|主要有|可以看出|共\s*\d+\s*项|summary|in\s+total|overall|there\s+are)/i.test(t)) {
+  if (t.replace(/\s/g, '').length < 24) {
+    return false;
+  }
+  if (
+    /(完成|成功|已整理|结论|总结|综上|一共|总共|分别是|包括|主要有|可以看出|共\s*\d+\s*项|summary|in\s+total|overall|there\s+are)/i.test(
+      t
+    )
+  ) {
     return false; // 带结论/归纳句 → 真总结，不介入
   }
   try {
     return require('./toolDataSummary').looksLikeDirectoryListing(t);
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -563,13 +861,25 @@ function _replyIsUnsynthesizedListing(reply) {
  * Small models often output "请选择: 1. X 2. Y 3. Z" instead of calling tools.
  */
 function _looksLikeChoiceResponse(text) {
-  if (!text || text.length > 800) return false;
+  if (!text || text.length > 800) {
+    return false;
+  }
   // 必须有编号或列表项
-  if (!/\n\s*\d+[\.\)]\s+/.test(text) && !/(?:^|\n)\s*[-•]\s+/.test(text)) return false;
+  if (!/\n\s*\d+[\.\)]\s+/.test(text) && !/(?:^|\n)\s*[-•]\s+/.test(text)) {
+    return false;
+  }
   // 必须有选择性语言
-  if (!/(你可以选择|请选择|以下.*选项|以下.*方案|你想要哪|你更倾向|Which.*option|Which.*prefer|choose|pick one|here are.*option)/i.test(text)) return false;
+  if (
+    !/(你可以选择|请选择|以下.*选项|以下.*方案|你想要哪|你更倾向|Which.*option|Which.*prefer|choose|pick one|here are.*option)/i.test(
+      text
+    )
+  ) {
+    return false;
+  }
   // 不能已包含 tool_call
-  if (/<tool_call>/i.test(text)) return false;
+  if (/<tool_call>/i.test(text)) {
+    return false;
+  }
   return true;
 }
 
@@ -585,10 +895,16 @@ function _looksLikeChoiceResponse(text) {
  * 长度上限收紧到 600 字符——真正的交付总结通常更长且含具体信息；套话拒绝很短。
  */
 function _looksLikeCannedRefusal(text) {
-  if (!text) return false;
+  if (!text) {
+    return false;
+  }
   const t = String(text).replace(/\s+/g, ' ').trim();
-  if (!t || t.length > 600) return false;
-  return /(我无法(?:给到|给出|提供|回答|满足|帮(?:你|您|助)|处理|完成)|无法(?:给到|给出|提供)(?:相关|你|您|此|这)|抱歉[，,。.\s]{0,4}(?:我)?(?:不能|无法|没办法)|很抱歉[，,。.\s]{0,4}(?:我)?(?:不能|无法)|我(?:不能|无法|没办法)(?:帮|回答|提供|响应|处理|协助|满足)|不便(?:提供|回答|透露)|超出(?:了)?(?:我的)?(?:能力|权限|范围)|作为(?:一个)?(?:AI|人工智能|语言模型|大模型)|我只是(?:一个)?(?:AI|人工智能|语言模型)|i\s+(?:can(?:'|no)?t|cannot|am\s+(?:unable|not\s+able))\s+(?:to\s+)?(?:help|provide|assist|answer|share|do\s+that|comply)|i'?m\s+(?:sorry|unable|not\s+able|afraid)|as\s+an\s+ai|i\s+am\s+(?:just\s+)?an\s+ai)/i.test(t);
+  if (!t || t.length > 600) {
+    return false;
+  }
+  return /(我无法(?:给到|给出|提供|回答|满足|帮(?:你|您|助)|处理|完成)|无法(?:给到|给出|提供)(?:相关|你|您|此|这)|抱歉[，,。.\s]{0,4}(?:我)?(?:不能|无法|没办法)|很抱歉[，,。.\s]{0,4}(?:我)?(?:不能|无法)|我(?:不能|无法|没办法)(?:帮|回答|提供|响应|处理|协助|满足)|不便(?:提供|回答|透露)|超出(?:了)?(?:我的)?(?:能力|权限|范围)|作为(?:一个)?(?:AI|人工智能|语言模型|大模型)|我只是(?:一个)?(?:AI|人工智能|语言模型)|i\s+(?:can(?:'|no)?t|cannot|am\s+(?:unable|not\s+able))\s+(?:to\s+)?(?:help|provide|assist|answer|share|do\s+that|comply)|i'?m\s+(?:sorry|unable|not\s+able|afraid)|as\s+an\s+ai|i\s+am\s+(?:just\s+)?an\s+ai)/i.test(
+    t
+  );
 }
 
 /**
@@ -606,15 +922,37 @@ function _looksLikeCannedRefusal(text) {
  * @returns {boolean}
  */
 function _refusalStatesConcreteReason(text) {
-  if (!text) return false;
+  if (!text) {
+    return false;
+  }
   const t = String(text).replace(/\s+/g, ' ').trim();
-  if (!t) return false;
+  if (!t) {
+    return false;
+  }
   // Explicit causal connectors — the refusal is explaining itself.
-  if (/(因为|由于|这是因为|原因(?:是|在于)|because|due to|since\s+it|as\s+it\s+(?:is|would|could|requires)|in order to)/i.test(t)) return true;
+  if (
+    /(因为|由于|这是因为|原因(?:是|在于)|because|due to|since\s+it|as\s+it\s+(?:is|would|could|requires)|in order to)/i.test(
+      t
+    )
+  ) {
+    return true;
+  }
   // Concrete operational reasons.
-  if (/(权限|授权|认证|凭证|登录|token|api\s*key|依赖|未安装|没安装|缺少|缺失|不存在|找不到|没找到|未找到|enoent|不在|路径|目录|文件名|格式不|参数(?:错误|缺失|无效|不全)|超时|timeout|网络|连接|断网|离线|offline|服务(?:不可用|未启动|未运行)|配额|额度|限流|rate\s*limit|too\s+many|not\s+found|permission|denied|unauthorized|missing|not\s+installed|unavailable|invalid\s+(?:argument|parameter|path))/i.test(t)) return true;
+  if (
+    /(权限|授权|认证|凭证|登录|token|api\s*key|依赖|未安装|没安装|缺少|缺失|不存在|找不到|没找到|未找到|enoent|不在|路径|目录|文件名|格式不|参数(?:错误|缺失|无效|不全)|超时|timeout|网络|连接|断网|离线|offline|服务(?:不可用|未启动|未运行)|配额|额度|限流|rate\s*limit|too\s+many|not\s+found|permission|denied|unauthorized|missing|not\s+installed|unavailable|invalid\s+(?:argument|parameter|path))/i.test(
+      t
+    )
+  ) {
+    return true;
+  }
   // Policy / safety reasons — a genuine, explained safety refusal.
-  if (/(有害|危害|违法|违规|不当|不合规|危险|攻击|恶意|滥用|隐私|敏感|未成年|儿童|色情|暴力|武器|爆炸|歧视|仇恨|harmful|illegal|unsafe|against\s+(?:policy|the\s+rules)|policy|violat|abuse|malicious|dangerous|inappropriate|sensitive|privacy|minors?|explicit)/i.test(t)) return true;
+  if (
+    /(有害|危害|违法|违规|不当|不合规|危险|攻击|恶意|滥用|隐私|敏感|未成年|儿童|色情|暴力|武器|爆炸|歧视|仇恨|harmful|illegal|unsafe|against\s+(?:policy|the\s+rules)|policy|violat|abuse|malicious|dangerous|inappropriate|sensitive|privacy|minors?|explicit)/i.test(
+      t
+    )
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -622,23 +960,37 @@ function _refusalStatesConcreteReason(text) {
  * Heuristic: does the user request likely require concrete actions/tools?
  */
 function _looksLikeActionRequest(text) {
-  if (!text) return false;
-  return /(继续|检查|排查|修复|实现|修改|review|审查|自我检查|排错|定位|运行|执行|测试|验证|debug|调试|看下|看看|看一下|看一看|看一眼|查看|瞧|瞅|整理|清理|帮我|创建|搜索|查找|打开|安装|部署|编译|构建|启动|删除|移动|复制|下载|上传|写|加|改|做|配置|更新|升级|重构|优化|分析|识别|读|organize|clean|help|create|find|open|install|build|start|fix|implement|add|update|write|modify|change|remove|delete|move|copy|deploy|test|run|search|read|edit|configure|refactor|optimize|analyze|set up|make)/i.test(text);
+  if (!text) {
+    return false;
+  }
+  return /(继续|检查|排查|修复|实现|修改|review|审查|自我检查|排错|定位|运行|执行|测试|验证|debug|调试|看下|看看|看一下|看一看|看一眼|查看|瞧|瞅|整理|清理|帮我|创建|搜索|查找|打开|安装|部署|编译|构建|启动|删除|移动|复制|下载|上传|写|加|改|做|配置|更新|升级|重构|优化|分析|识别|读|organize|clean|help|create|find|open|install|build|start|fix|implement|add|update|write|modify|change|remove|delete|move|copy|deploy|test|run|search|read|edit|configure|refactor|optimize|analyze|set up|make)/i.test(
+    text
+  );
 }
 
 function _looksLikeAppLaunchRequest(text) {
-  if (!text) return false;
+  if (!text) {
+    return false;
+  }
   const raw = String(text || '').trim();
-  if (!raw) return false;
+  if (!raw) {
+    return false;
+  }
 
   // If the user pasted multi-line logs/transcripts, bias to the last meaningful
   // line because that is usually the actual question.
-  const lines = raw.split('\n').map(s => String(s || '').trim()).filter(Boolean);
+  const lines = raw
+    .split('\n')
+    .map((s) => String(s || '').trim())
+    .filter(Boolean);
   let focus = lines.length > 1 ? lines[lines.length - 1] : raw;
   focus = focus.replace(/^>\s*/, '').trim();
-  if (!focus) return false;
+  if (!focus) {
+    return false;
+  }
 
-  const issueMarkers = /(之后|下一句|下句话|上一句|本轮|上轮|变成|重复|误判|为什么|怎么|问题|故障|异常|报错|日志|记录|复现|bug)/i;
+  const issueMarkers =
+    /(之后|下一句|下句话|上一句|本轮|上轮|变成|重复|误判|为什么|怎么|问题|故障|异常|报错|日志|记录|复现|bug)/i;
   const directCn = /^(?:请|帮我|麻烦|可以|能否|请你|帮忙)?\s*(?:打开|启动|运行)\s*[^\n]{1,48}$/i;
   const directEn = /^(?:please\s+)?(?:open|launch|start|run)\b[\s\S]{1,48}$/i;
   const target = _extractAppTargetFromUserMessage(focus);
@@ -647,16 +999,27 @@ function _looksLikeAppLaunchRequest(text) {
   if (shortTarget && (directCn.test(focus) || directEn.test(focus))) {
     return !issueMarkers.test(focus);
   }
-  if (issueMarkers.test(focus)) return false;
+  if (issueMarkers.test(focus)) {
+    return false;
+  }
 
-  return /(打开|启动|运行).*(应用|程序|软件|工具|客户端|浏览器|编辑器|查看器|飞书|微信|qq|钉钉|lark|feishu|pdf|图片|图像)/i.test(focus)
-    || /\b(open|launch|start|run)\b[\s\S]{0,40}\b(app|application|program|tool|editor|viewer|browser|lark|feishu|pdf|image|photo)\b/i.test(focus);
+  return (
+    /(打开|启动|运行).*(应用|程序|软件|工具|客户端|浏览器|编辑器|查看器|飞书|微信|qq|钉钉|lark|feishu|pdf|图片|图像)/i.test(
+      focus
+    ) ||
+    /\b(open|launch|start|run)\b[\s\S]{0,40}\b(app|application|program|tool|editor|viewer|browser|lark|feishu|pdf|image|photo)\b/i.test(
+      focus
+    )
+  );
 }
 
-const _looksLikeProjectScaffoldRequest = (text) => require('./intentHeuristics').looksLikeProjectScaffoldRequest(text);
+const _looksLikeProjectScaffoldRequest = (text) =>
+  require('./intentHeuristics').looksLikeProjectScaffoldRequest(text);
 
 function _isShellToolName(name = '') {
-  const n = String(name || '').trim().toLowerCase();
+  const n = String(name || '')
+    .trim()
+    .toLowerCase();
   return n === 'shell_command' || n === 'shellcommand' || n === 'bash';
 }
 
@@ -669,30 +1032,50 @@ function _isShellToolName(name = '') {
 // default ON). OFF → byte-revert to the exact legacy 3-way literal compare.
 function _matchesShellDispatchName(name) {
   let normalize = true;
-  try { normalize = require('./flagRegistry').isFlagEnabled('KHY_PATCH_TOOLNAME_NORMALIZE', process.env); }
-  catch { normalize = true; }
-  if (normalize) return _isShellToolName(name);
+  try {
+    normalize = require('./flagRegistry').isFlagEnabled(
+      'KHY_PATCH_TOOLNAME_NORMALIZE',
+      process.env
+    );
+  } catch {
+    normalize = true;
+  }
+  if (normalize) {
+    return _isShellToolName(name);
+  }
   return name === 'shell_command' || name === 'shellCommand' || name === 'bash';
 }
 
 function _looksLikeShellAppProbeCommand(command = '') {
-  const cmd = String(command || '').trim().toLowerCase();
-  if (!cmd) return false;
-  return /\b(which|whereis|command\s+-v|type\s+-p|ps\s+aux|pgrep|pidof|nohup|xdg-open|gtk-launch|gio\s+launch)\b/.test(cmd)
-    || /\bgrep\s+-i\b/.test(cmd);
+  const cmd = String(command || '')
+    .trim()
+    .toLowerCase();
+  if (!cmd) {
+    return false;
+  }
+  return (
+    /\b(which|whereis|command\s+-v|type\s+-p|ps\s+aux|pgrep|pidof|nohup|xdg-open|gtk-launch|gio\s+launch)\b/.test(
+      cmd
+    ) || /\bgrep\s+-i\b/.test(cmd)
+  );
 }
 
-const _normalizeAppTarget = (target = '') => require('./appLaunchRecovery').normalizeAppTarget(target);
+const _normalizeAppTarget = (target = '') =>
+  require('./appLaunchRecovery').normalizeAppTarget(target);
 
 function _extractAppTargetFromShellCommand(command = '') {
   const raw = String(command || '').trim();
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
   const normalized = raw.replace(/\s+/g, ' ');
 
   const launchLike = normalized.match(/^(?:nohup\s+)?([a-z0-9._+-]+)/i);
   if (launchLike) {
     const bin = String(launchLike[1] || '').toLowerCase();
-    if (bin && !_APP_TARGET_PROBE_BINS.has(bin)) return _normalizeAppTarget(bin);
+    if (bin && !_APP_TARGET_PROBE_BINS.has(bin)) {
+      return _normalizeAppTarget(bin);
+    }
   }
 
   const whichMatch = normalized.match(/\bwhich\s+(.+)$/i);
@@ -700,16 +1083,33 @@ function _extractAppTargetFromShellCommand(command = '') {
     const tokens = whichMatch[1].split(/\s+/).filter(Boolean);
     for (const tokenRaw of tokens) {
       const token = String(tokenRaw || '').replace(/^['"`]+|['"`]+$/g, '');
-      if (!token) continue;
-      if (/^[|;&]/.test(token) || token.includes('||') || token.includes('&&') || token.includes(';')) break;
-      if (/^\d+>/.test(token) || /^2>/.test(token) || /^1>/.test(token)) break;
-      if (token.startsWith('-')) continue;
-      if (/^[a-z0-9._+-]+$/i.test(token)) return _normalizeAppTarget(token.toLowerCase());
+      if (!token) {
+        continue;
+      }
+      if (
+        /^[|;&]/.test(token) ||
+        token.includes('||') ||
+        token.includes('&&') ||
+        token.includes(';')
+      ) {
+        break;
+      }
+      if (/^\d+>/.test(token) || /^2>/.test(token) || /^1>/.test(token)) {
+        break;
+      }
+      if (token.startsWith('-')) {
+        continue;
+      }
+      if (/^[a-z0-9._+-]+$/i.test(token)) {
+        return _normalizeAppTarget(token.toLowerCase());
+      }
     }
   }
 
   const grepMatch = normalized.match(/\bgrep\s+(?:-[^\s]+\s+)*['"]?([a-z0-9._+-]{2,})['"]?/i);
-  if (grepMatch) return _normalizeAppTarget(String(grepMatch[1] || '').toLowerCase());
+  if (grepMatch) {
+    return _normalizeAppTarget(String(grepMatch[1] || '').toLowerCase());
+  }
 
   return '';
 }
@@ -717,7 +1117,9 @@ function _extractAppTargetFromShellCommand(command = '') {
 function _extractAppCandidatesFromShellCommand(command = '') {
   const out = [];
   const raw = String(command || '').trim();
-  if (!raw) return out;
+  if (!raw) {
+    return out;
+  }
   const normalized = raw.replace(/\s+/g, ' ');
 
   const whichMatch = normalized.match(/\bwhich\s+(.+)$/i);
@@ -725,74 +1127,129 @@ function _extractAppCandidatesFromShellCommand(command = '') {
     const tokens = whichMatch[1].split(/\s+/).filter(Boolean);
     for (const tokenRaw of tokens) {
       const token = String(tokenRaw || '').replace(/^['"`]+|['"`]+$/g, '');
-      if (!token) continue;
-      if (/^[|;&]/.test(token) || token.includes('||') || token.includes('&&') || token.includes(';')) break;
-      if (/^\d+>/.test(token) || /^2>/.test(token) || /^1>/.test(token)) break;
-      if (token.startsWith('-')) continue;
-      if (/^[a-z0-9._+-]+$/i.test(token)) out.push(_normalizeAppTarget(token.toLowerCase()));
+      if (!token) {
+        continue;
+      }
+      if (
+        /^[|;&]/.test(token) ||
+        token.includes('||') ||
+        token.includes('&&') ||
+        token.includes(';')
+      ) {
+        break;
+      }
+      if (/^\d+>/.test(token) || /^2>/.test(token) || /^1>/.test(token)) {
+        break;
+      }
+      if (token.startsWith('-')) {
+        continue;
+      }
+      if (/^[a-z0-9._+-]+$/i.test(token)) {
+        out.push(_normalizeAppTarget(token.toLowerCase()));
+      }
     }
   }
 
   const first = _extractAppTargetFromShellCommand(command);
-  if (first) out.unshift(first);
+  if (first) {
+    out.unshift(first);
+  }
 
   return [...new Set(out.filter(Boolean))];
 }
 
 function _extractAppTargetFromUserMessage(userMessage = '') {
   const raw = String(userMessage || '').trim();
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
 
-  if (/(图片|图像|image|photo).*(编辑器|editor)/i.test(raw)) return 'gimp';
-  if (/pdf/i.test(raw) && /(编辑|修改|editor|edit)/i.test(raw)) return 'libreoffice';
+  if (/(图片|图像|image|photo).*(编辑器|editor)/i.test(raw)) {
+    return 'gimp';
+  }
+  if (/pdf/i.test(raw) && /(编辑|修改|editor|edit)/i.test(raw)) {
+    return 'libreoffice';
+  }
 
   const quoted = raw.match(/["'“”](.+?)["'“”]/);
   if (quoted && quoted[1]) {
     const normalized = _normalizeAppTarget(quoted[1]);
-    if (normalized) return normalized;
+    if (normalized) {
+      return normalized;
+    }
   }
 
   const cnVerb = raw.match(/(?:打开|启动|运行)\s*([^\n，。,;；:：]{1,80})/);
   if (cnVerb && cnVerb[1]) {
     const normalized = _normalizeAppTarget(cnVerb[1]);
-    if (normalized) return normalized;
+    if (normalized) {
+      return normalized;
+    }
   }
 
   const enVerb = raw.match(/\b(?:open|launch|start|run)\b\s+([a-z0-9._+\-\s]{2,80})/i);
   if (enVerb && enVerb[1]) {
     const normalized = _normalizeAppTarget(enVerb[1]);
-    if (normalized) return normalized;
+    if (normalized) {
+      return normalized;
+    }
   }
 
-  if (/pdf/i.test(raw)) return 'pdf';
+  if (/pdf/i.test(raw)) {
+    return 'pdf';
+  }
   return '';
 }
 
 function _extractErrorTextFromResult(result = {}) {
   const err = result?.error;
-  if (!err) return '';
-  if (typeof err === 'string') return err;
-  if (typeof err === 'object') return [err.code, err.message, err.hint].filter(Boolean).join(' ');
+  if (!err) {
+    return '';
+  }
+  if (typeof err === 'string') {
+    return err;
+  }
+  if (typeof err === 'object') {
+    return [err.code, err.message, err.hint].filter(Boolean).join(' ');
+  }
   return String(err);
 }
 
 function _isShellExecutorUnavailableResult(result = {}) {
-  if (!result || result.success) return false;
+  if (!result || result.success) {
+    return false;
+  }
   const err = result.error;
-  if (err && typeof err === 'object' && String(err.code || '').toLowerCase() === 'executor_unavailable') return true;
+  if (
+    err &&
+    typeof err === 'object' &&
+    String(err.code || '').toLowerCase() === 'executor_unavailable'
+  ) {
+    return true;
+  }
   const text = `${_extractErrorTextFromResult(result)} ${String(result.hint || '')}`.toLowerCase();
-  return /fork:\s*retry:\s*resource temporarily unavailable/.test(text)
-    || /cannot fork subprocess/.test(text)
-    || /executor[_\s-]*unavailable/.test(text);
+  return (
+    /fork:\s*retry:\s*resource temporarily unavailable/.test(text) ||
+    /cannot fork subprocess/.test(text) ||
+    /executor[_\s-]*unavailable/.test(text)
+  );
 }
 
 function _looksLikeInfoSearchRequest(text) {
-  if (!text) return false;
+  if (!text) {
+    return false;
+  }
   const raw = _sanitizeSearchSourceMessage(String(text || ''));
-  if (!raw) return false;
+  if (!raw) {
+    return false;
+  }
   const constraints = _extractUserToolConstraints(raw);
-  if (constraints.disallowAllTools || constraints.disallowSearch) return false;
-  return /(搜索|搜一下|查一下|查查|新闻|热点|热搜|今日|今天|最新|时事|头条|文档|接口|参数|说明|官网|readme|manual|documentation|api|reference|web\s*search|search|news|headline|trending)/i.test(raw);
+  if (constraints.disallowAllTools || constraints.disallowSearch) {
+    return false;
+  }
+  return /(搜索|搜一下|查一下|查查|新闻|热点|热搜|今日|今天|最新|时事|头条|文档|接口|参数|说明|官网|readme|manual|documentation|api|reference|web\s*search|search|news|headline|trending)/i.test(
+    raw
+  );
 }
 
 /**
@@ -813,21 +1270,31 @@ function maybeForgeStructuredIntent(rawMessage, options, gatedInput) {
   const cfg = (options && options.structuredFurnace) || {};
   // byte-identical to `String(process.env.KHY_STRUCTURED_FURNACE||'').trim() !== '0'`
   // (zeroDisables kind, PRE.always). cfg.enabled still overrides below.
-  const envEnabled = getCapabilityMatrix().isEnabledAt(CAP_SEAMS.PRE_DISPATCH, 'structuredFurnace', {});
+  const envEnabled = getCapabilityMatrix().isEnabledAt(
+    CAP_SEAMS.PRE_DISPATCH,
+    'structuredFurnace',
+    {}
+  );
   // 显式 cfg.enabled 优先（含单次关闭 enabled:false）；未指定时落 env 默认（默认开）。
-  const enabled = cfg.enabled === false ? false : (cfg.enabled === true || envEnabled);
-  if (!enabled) return;
+  const enabled = cfg.enabled === false ? false : cfg.enabled === true || envEnabled;
+  if (!enabled) {
+    return;
+  }
   const mode = cfg.mode || process.env.KHY_STRUCTURED_FURNACE_MODE || 'observe';
 
   let furnace;
   try {
     furnace = require('./structuredFurnace');
-  } catch { return; /* 子系统缺失则视作未启用 */ }
+  } catch {
+    return; /* 子系统缺失则视作未启用 */
+  }
 
   try {
     const envelope = furnace.intercept(rawMessage);
     options.structuredFurnace = { ...cfg, enabled: true, mode, envelope };
-    if (gatedInput && typeof gatedInput === 'object') gatedInput.forgedEnvelope = envelope;
+    if (gatedInput && typeof gatedInput === 'object') {
+      gatedInput.forgedEnvelope = envelope;
+    }
   } catch (err) {
     // fail-soft 铁律：本块「绝不打断主循环」。FurnaceRejection 若因子系统未导出 /
     // 循环 require 时序而解析为 undefined，则 `err instanceof undefined` 会**自身抛
@@ -837,8 +1304,12 @@ function maybeForgeStructuredIntent(rawMessage, options, gatedInput) {
     if (typeof Rejection === 'function' && err instanceof Rejection) {
       const rejection = err.toJSON();
       options.structuredFurnace = { ...cfg, enabled: true, mode, rejection };
-      if (gatedInput && typeof gatedInput === 'object') gatedInput.furnaceRejection = rejection;
-      if (mode === 'enforce') throw err; // 调用方显式要求强约束时才上抛
+      if (gatedInput && typeof gatedInput === 'object') {
+        gatedInput.furnaceRejection = rejection;
+      }
+      if (mode === 'enforce') {
+        throw err;
+      } // 调用方显式要求强约束时才上抛
     }
     // observe 模式或非拒损异常：静默记录，不打断主循环。
   }
@@ -859,24 +1330,31 @@ function maybeForgeStructuredIntent(rawMessage, options, gatedInput) {
  */
 function maybeAttachCognitiveObserver(userMessage, options) {
   const cfg = (options && options.cognitiveSnapshot) || {};
-  const envRaw = String(process.env.KHY_COGNITIVE_SNAPSHOT || '').trim().toLowerCase();
+  const envRaw = String(process.env.KHY_COGNITIVE_SNAPSHOT || '')
+    .trim()
+    .toLowerCase();
   const envEnabled = envRaw === '1' || envRaw === 'on' || envRaw === 'true';
-  const enabled = cfg.enabled === false ? false : (cfg.enabled === true || envEnabled);
-  if (!enabled) return null;
+  const enabled = cfg.enabled === false ? false : cfg.enabled === true || envEnabled;
+  if (!enabled) {
+    return null;
+  }
   let engine;
   try {
     const { CognitiveContextEngine } = require('./cognitiveSnapshot');
     const taskId = String(
       cfg.taskId || options?.sessionId || options?._diagTraceId || `loop-${Date.now()}`
     );
-    const ultimateGoal = (String(cfg.ultimateGoal || userMessage || '').slice(0, 2000)) || 'unspecified-goal';
+    const ultimateGoal =
+      String(cfg.ultimateGoal || userMessage || '').slice(0, 2000) || 'unspecified-goal';
     engine = new CognitiveContextEngine({
       taskId,
       ultimateGoal,
       contextWindowTokens: cfg.contextWindowTokens,
       model: options?.model,
     });
-  } catch { return null; /* 子系统缺失则视作未启用 */ }
+  } catch {
+    return null; /* 子系统缺失则视作未启用 */
+  }
   return {
     observe({ iteration, usedTokens, contextWindow } = {}) {
       try {
@@ -893,9 +1371,13 @@ function maybeAttachCognitiveObserver(userMessage, options) {
             allow: verdict ? verdict.allow : undefined,
             action: verdict ? verdict.action : undefined,
           });
-        } catch { /* telemetry best-effort */ }
+        } catch {
+          /* telemetry best-effort */
+        }
         return verdict;
-      } catch { return null; /* observe must never throw into the loop */ }
+      } catch {
+        return null; /* observe must never throw into the loop */
+      }
     },
   };
 }
@@ -909,16 +1391,33 @@ function _extractUserToolConstraints(text = '') {
     hasExplicitConstraint: false,
     summary: '',
   };
-  if (!raw) return empty;
+  if (!raw) {
+    return empty;
+  }
 
-  const disallowAllTools = /(?:不要|别|禁止|无需|不用|不必)(?:再)?(?:调用|使用|动用|借助)?(?:任何|所有)?工具|(?:do\s+not|don't|never|without|no)\s+(?:call|use|invoke)\s+(?:any\s+)?tools?/i.test(raw);
-  const disallowSearch = /(?:不要|别|禁止|无需|不用|不必)(?:再)?(?:搜索|搜一下|联网|查一下|查找|查询|上网)|(?:do\s+not|don't|never|without|no)\s+(?:search|browse|look\s+up|web\s*search)/i.test(raw);
-  const disallowFileRead = /(?:不要|别|禁止|无需|不用|不必)(?:再)?(?:读取|查看|打开|浏览|扫描).{0,6}(?:文件|代码|目录)|(?:do\s+not|don't|never|without|no)\s+(?:read|open|browse|scan)\s+(?:any\s+)?(?:files?|code|directories?)/i.test(raw);
+  const disallowAllTools =
+    /(?:不要|别|禁止|无需|不用|不必)(?:再)?(?:调用|使用|动用|借助)?(?:任何|所有)?工具|(?:do\s+not|don't|never|without|no)\s+(?:call|use|invoke)\s+(?:any\s+)?tools?/i.test(
+      raw
+    );
+  const disallowSearch =
+    /(?:不要|别|禁止|无需|不用|不必)(?:再)?(?:搜索|搜一下|联网|查一下|查找|查询|上网)|(?:do\s+not|don't|never|without|no)\s+(?:search|browse|look\s+up|web\s*search)/i.test(
+      raw
+    );
+  const disallowFileRead =
+    /(?:不要|别|禁止|无需|不用|不必)(?:再)?(?:读取|查看|打开|浏览|扫描).{0,6}(?:文件|代码|目录)|(?:do\s+not|don't|never|without|no)\s+(?:read|open|browse|scan)\s+(?:any\s+)?(?:files?|code|directories?)/i.test(
+      raw
+    );
 
   const parts = [];
-  if (disallowAllTools) parts.push('no tools');
-  if (disallowSearch) parts.push('no search');
-  if (disallowFileRead) parts.push('no file reads');
+  if (disallowAllTools) {
+    parts.push('no tools');
+  }
+  if (disallowSearch) {
+    parts.push('no search');
+  }
+  if (disallowFileRead) {
+    parts.push('no file reads');
+  }
 
   return {
     disallowAllTools,
@@ -930,11 +1429,11 @@ function _extractUserToolConstraints(text = '') {
 }
 
 function _buildUserToolConstraintDirective(constraints = {}) {
-  if (!constraints || !constraints.hasExplicitConstraint) return '';
+  if (!constraints || !constraints.hasExplicitConstraint) {
+    return '';
+  }
 
-  const rules = [
-    '## USER TOOL CONSTRAINTS — must be obeyed for this request.',
-  ];
+  const rules = ['## USER TOOL CONSTRAINTS — must be obeyed for this request.'];
 
   if (constraints.disallowAllTools) {
     rules.push('Do not call any tools. Do not emit tool_use or tool_call blocks.');
@@ -947,16 +1446,32 @@ function _buildUserToolConstraintDirective(constraints = {}) {
     }
   }
 
-  rules.push('If these constraints reduce certainty, answer directly from current context and state the exact limitation.');
+  rules.push(
+    'If these constraints reduce certainty, answer directly from current context and state the exact limitation.'
+  );
   return rules.join('\n');
 }
 
-async function _recoverWebSearchAfterShellFailure(call, result, userMessage, toolCalling, execContext = {}) {
-  if (!call || !_isShellToolName(call.name)) return result;
+async function _recoverWebSearchAfterShellFailure(
+  call,
+  result,
+  userMessage,
+  toolCalling,
+  execContext = {}
+) {
+  if (!call || !_isShellToolName(call.name)) {
+    return result;
+  }
   const shellCommand = String(call.params?.command || '').trim();
-  if (!shellCommand) return result;
-  if (!_isShellExecutorUnavailableResult(result)) return result;
-  if (!_looksLikeInfoSearchRequest(userMessage)) return result;
+  if (!shellCommand) {
+    return result;
+  }
+  if (!_isShellExecutorUnavailableResult(result)) {
+    return result;
+  }
+  if (!_looksLikeInfoSearchRequest(userMessage)) {
+    return result;
+  }
 
   const previousHint = String(result?.hint || '').trim();
   const normalizedQuery = String(userMessage || '').trim() || 'latest news';
@@ -986,16 +1501,22 @@ async function _recoverWebSearchAfterShellFailure(call, result, userMessage, too
 
   // Tier-1: web search (current/hot news, docs, web knowledge)
   const webRecovered = await _tryTool('web_search', { query: normalizedQuery });
-  if (webRecovered) return webRecovered;
+  if (webRecovered) {
+    return webRecovered;
+  }
 
   // Tier-2: local/market symbol search fallback for degraded network environments
   const searchRecovered = await _tryTool('search', { keyword: normalizedQuery });
-  if (searchRecovered) return searchRecovered;
+  if (searchRecovered) {
+    return searchRecovered;
+  }
 
   // Tier-3: try toolSearch when model asks about tools/commands instead of external news
   if (/(工具|命令|command|tool)/i.test(normalizedQuery)) {
     const toolRecovered = await _tryTool('toolSearch', { query: normalizedQuery });
-    if (toolRecovered) return toolRecovered;
+    if (toolRecovered) {
+      return toolRecovered;
+    }
   }
 
   const fallbackErr = String(
@@ -1010,25 +1531,42 @@ async function _recoverWebSearchAfterShellFailure(call, result, userMessage, too
 }
 
 function _findLatestSuccessfulOpenAppEntry(toolCallLog = []) {
-  if (!Array.isArray(toolCallLog) || toolCallLog.length === 0) return null;
+  if (!Array.isArray(toolCallLog) || toolCallLog.length === 0) {
+    return null;
+  }
   for (let i = toolCallLog.length - 1; i >= 0; i--) {
     const entry = toolCallLog[i];
-    const tool = String(entry?.tool || '').trim().toLowerCase();
-    if (!entry?.result?.success) continue;
-    if (tool === 'open_app' || tool === 'openapp') return entry;
-    if (_isShellToolName(tool) && entry.result?._autoRecoveredTarget) return entry;
+    const tool = String(entry?.tool || '')
+      .trim()
+      .toLowerCase();
+    if (!entry?.result?.success) {
+      continue;
+    }
+    if (tool === 'open_app' || tool === 'openapp') {
+      return entry;
+    }
+    if (_isShellToolName(tool) && entry.result?._autoRecoveredTarget) {
+      return entry;
+    }
   }
   return null;
 }
 
-const _findLatestFailedOpenAppEntry = (toolCallLog = []) => require('./appLaunchRecovery').findLatestFailedOpenAppEntry(toolCallLog);
+const _findLatestFailedOpenAppEntry = (toolCallLog = []) =>
+  require('./appLaunchRecovery').findLatestFailedOpenAppEntry(toolCallLog);
 
 function _findLatestShellExecutorUnavailableEntry(toolCallLog = []) {
-  if (!Array.isArray(toolCallLog) || toolCallLog.length === 0) return null;
+  if (!Array.isArray(toolCallLog) || toolCallLog.length === 0) {
+    return null;
+  }
   for (let i = toolCallLog.length - 1; i >= 0; i--) {
     const entry = toolCallLog[i];
-    if (!entry || !_isShellToolName(entry.tool)) continue;
-    if (_isShellExecutorUnavailableResult(entry.result)) return entry;
+    if (!entry || !_isShellToolName(entry.tool)) {
+      continue;
+    }
+    if (_isShellExecutorUnavailableResult(entry.result)) {
+      return entry;
+    }
   }
   return null;
 }
@@ -1036,10 +1574,14 @@ function _findLatestShellExecutorUnavailableEntry(toolCallLog = []) {
 function _buildAppLaunchRecoveryCandidates(userMessage = '', shellEntry = null) {
   const candidates = [];
   const msgTarget = _extractAppTargetFromUserMessage(userMessage);
-  if (msgTarget) candidates.push(msgTarget);
+  if (msgTarget) {
+    candidates.push(msgTarget);
+  }
   const shellCommand = String(shellEntry?.params?.command || '').trim();
-  if (shellCommand) candidates.push(..._extractAppCandidatesFromShellCommand(shellCommand));
-  return [...new Set(candidates.map(v => String(v || '').trim()).filter(Boolean))];
+  if (shellCommand) {
+    candidates.push(..._extractAppCandidatesFromShellCommand(shellCommand));
+  }
+  return [...new Set(candidates.map((v) => String(v || '').trim()).filter(Boolean))];
 }
 
 // 门控:app-launch 中断回退是否优先于投机式 AI transient 重试(默认开)。
@@ -1047,25 +1589,40 @@ function _buildAppLaunchRecoveryCandidates(userMessage = '', shellEntry = null) 
 // 请求会先花数秒(指数退避)重试 AI 通道,再回退到确定性的 open_app——纯延迟。本地优先原则下,
 // 只要 open_app 回退能满足「打开应用」意图,就应优先它。关 → 恒 false,逐字节回退今日顺序。
 function _appLaunchInterruptPrecedenceEnabled(env = process.env) {
-  const v = String((env && env.KHY_APP_LAUNCH_INTERRUPT_PRECEDENCE) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_APP_LAUNCH_INTERRUPT_PRECEDENCE) || '')
+    .trim()
+    .toLowerCase();
   return v !== '0' && v !== 'false' && v !== 'off' && v !== 'no';
 }
 
-async function _recoverOpenAppAfterAiInterruption(aiResult = {}, userMessage = '', toolCallLog = [], execContext = {}) {
-  const errorType = String(aiResult?.errorType || '').trim().toLowerCase();
-  if (!['process', 'cancelled', 'timeout', 'network', 'unknown'].includes(errorType)) return null;
-  if (!_looksLikeAppLaunchRequest(userMessage)) return null;
+async function _recoverOpenAppAfterAiInterruption(
+  aiResult = {},
+  userMessage = '',
+  toolCallLog = [],
+  execContext = {}
+) {
+  const errorType = String(aiResult?.errorType || '')
+    .trim()
+    .toLowerCase();
+  if (!['process', 'cancelled', 'timeout', 'network', 'unknown'].includes(errorType)) {
+    return null;
+  }
+  if (!_looksLikeAppLaunchRequest(userMessage)) {
+    return null;
+  }
 
   const interruptionText = `AI 通道在结果整理阶段中断（${errorType || 'unknown'}）。`;
   const succeededEntry = _findLatestSuccessfulOpenAppEntry(toolCallLog);
   if (succeededEntry) {
     const output = String(succeededEntry.result?.output || '').trim();
-    if (output) return `${output}\n\n${interruptionText}`;
+    if (output) {
+      return `${output}\n\n${interruptionText}`;
+    }
     const appName = String(
-      succeededEntry.params?.name
-      || succeededEntry.result?._autoRecoveredTarget
-      || _extractAppTargetFromUserMessage(userMessage)
-      || '目标应用'
+      succeededEntry.params?.name ||
+        succeededEntry.result?._autoRecoveredTarget ||
+        _extractAppTargetFromUserMessage(userMessage) ||
+        '目标应用'
     ).trim();
     return `已执行打开应用：${appName}。\n\n${interruptionText}`;
   }
@@ -1073,22 +1630,24 @@ async function _recoverOpenAppAfterAiInterruption(aiResult = {}, userMessage = '
   const failedOpenAppEntry = _findLatestFailedOpenAppEntry(toolCallLog);
   if (failedOpenAppEntry) {
     const appName = String(
-      failedOpenAppEntry.params?.name
-      || _extractAppTargetFromUserMessage(userMessage)
-      || '目标应用'
+      failedOpenAppEntry.params?.name || _extractAppTargetFromUserMessage(userMessage) || '目标应用'
     ).trim();
     const failureText = String(
-      _extractErrorTextFromResult(failedOpenAppEntry.result)
-      || failedOpenAppEntry.result?.hint
-      || 'open_app failed'
+      _extractErrorTextFromResult(failedOpenAppEntry.result) ||
+        failedOpenAppEntry.result?.hint ||
+        'open_app failed'
     ).trim();
     return `打开应用 ${appName} 失败：${failureText}\n\n${interruptionText}`;
   }
 
   const shellEntry = _findLatestShellExecutorUnavailableEntry(toolCallLog);
-  if (!shellEntry) return null;
+  if (!shellEntry) {
+    return null;
+  }
   const candidates = _buildAppLaunchRecoveryCandidates(userMessage, shellEntry);
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) {
+    return null;
+  }
 
   let toolCalling = null;
   try {
@@ -1120,19 +1679,39 @@ async function _recoverOpenAppAfterAiInterruption(aiResult = {}, userMessage = '
 // ── Platform command rewriting ──────────────────────────────────────
 
 const _UNIX_TO_WIN = {
-  ls: 'dir', cat: 'type', cp: 'copy', mv: 'move', rm: 'del',
-  grep: 'findstr', touch: 'type nul >', which: 'where', pwd: 'cd',
-  clear: 'cls', head: 'powershell -NoProfile -c "Get-Content"',
+  ls: 'dir',
+  cat: 'type',
+  cp: 'copy',
+  mv: 'move',
+  rm: 'del',
+  grep: 'findstr',
+  touch: 'type nul >',
+  which: 'where',
+  pwd: 'cd',
+  clear: 'cls',
+  head: 'powershell -NoProfile -c "Get-Content"',
   tail: 'powershell -NoProfile -c "Get-Content ... -Tail"',
-  chmod: '(no equivalent)', chown: '(no equivalent)',
-  ps: 'tasklist', kill: 'taskkill', df: 'powershell -NoProfile -c "Get-CimInstance Win32_LogicalDisk"',
-  uname: 'ver', find: 'dir /s /b',
+  chmod: '(no equivalent)',
+  chown: '(no equivalent)',
+  ps: 'tasklist',
+  kill: 'taskkill',
+  df: 'powershell -NoProfile -c "Get-CimInstance Win32_LogicalDisk"',
+  uname: 'ver',
+  find: 'dir /s /b',
 };
 
 const _WIN_TO_UNIX = {
-  dir: 'ls', type: 'cat', copy: 'cp', move: 'mv', del: 'rm',
-  findstr: 'grep', where: 'which', cls: 'clear',
-  tasklist: 'ps aux', taskkill: 'kill', ver: 'uname -a',
+  dir: 'ls',
+  type: 'cat',
+  copy: 'cp',
+  move: 'mv',
+  del: 'rm',
+  findstr: 'grep',
+  where: 'which',
+  cls: 'clear',
+  tasklist: 'ps aux',
+  taskkill: 'kill',
+  ver: 'uname -a',
 };
 
 /**
@@ -1142,7 +1721,9 @@ const _WIN_TO_UNIX = {
  * Returns the (possibly rewritten) command string.
  */
 function _proactivePlatformRewrite(command) {
-  if (!command || typeof command !== 'string') return command;
+  if (!command || typeof command !== 'string') {
+    return command;
+  }
   const isWin = process.platform === 'win32';
 
   if (isWin) {
@@ -1202,28 +1783,54 @@ function _proactivePlatformRewrite(command) {
   return patched;
 }
 
-const _getWindowsCommandHint = (command) => require('./platformRewrite').getWindowsCommandHint(command);
+const _getWindowsCommandHint = (command) =>
+  require('./platformRewrite').getWindowsCommandHint(command);
 
 function _getLinuxCommandHint(command) {
-  if (!command) return null;
-  const base = command.trim().split(/[\s/\\|;&]/)[0].toLowerCase();
+  if (!command) {
+    return null;
+  }
+  const base = command
+    .trim()
+    .split(/[\s/\\|;&]/)[0]
+    .toLowerCase();
   const unixCmd = _WIN_TO_UNIX[base];
-  if (!unixCmd) return null;
+  if (!unixCmd) {
+    return null;
+  }
   return `当前系统是 Linux/macOS，"${base}" 不可用。请改用 "${unixCmd}"。`;
 }
 
-async function _recoverOpenAppAfterShellFailure(call, result, userMessage, toolCalling, execContext = {}) {
-  if (!call || !_isShellToolName(call.name)) return result;
+async function _recoverOpenAppAfterShellFailure(
+  call,
+  result,
+  userMessage,
+  toolCalling,
+  execContext = {}
+) {
+  if (!call || !_isShellToolName(call.name)) {
+    return result;
+  }
   const shellCommand = String(call.params?.command || '').trim();
-  if (!shellCommand) return result;
-  if (!_isShellExecutorUnavailableResult(result)) return result;
-  if (!_looksLikeAppLaunchRequest(userMessage) && !_looksLikeShellAppProbeCommand(shellCommand)) return result;
+  if (!shellCommand) {
+    return result;
+  }
+  if (!_isShellExecutorUnavailableResult(result)) {
+    return result;
+  }
+  if (!_looksLikeAppLaunchRequest(userMessage) && !_looksLikeShellAppProbeCommand(shellCommand)) {
+    return result;
+  }
 
   const candidates = _extractAppCandidatesFromShellCommand(shellCommand);
   const msgTarget = _extractAppTargetFromUserMessage(userMessage);
-  if (msgTarget) candidates.push(msgTarget);
+  if (msgTarget) {
+    candidates.push(msgTarget);
+  }
   const uniqueCandidates = [...new Set(candidates.filter(Boolean))];
-  if (uniqueCandidates.length === 0) return result;
+  if (uniqueCandidates.length === 0) {
+    return result;
+  }
 
   let fallback = null;
   let usedTarget = '';
@@ -1247,7 +1854,9 @@ async function _recoverOpenAppAfterShellFailure(call, result, userMessage, toolC
     }
   }
 
-  const fallbackErr = String(_extractErrorTextFromResult(fallback) || fallback?.hint || 'open_app failed').trim();
+  const fallbackErr = String(
+    _extractErrorTextFromResult(fallback) || fallback?.hint || 'open_app failed'
+  ).trim();
   const previousHint = String(result?.hint || '').trim();
   const failHint = `Auto-recovery open_app("${usedTarget}") failed: ${fallbackErr}`;
   return {
@@ -1257,16 +1866,22 @@ async function _recoverOpenAppAfterShellFailure(call, result, userMessage, toolC
 }
 
 function _unwrapPastedContent(raw = '') {
-  return String(raw || '').replace(/<pasted-content>\n([\s\S]*?)\n<\/pasted-content>/g, '$1').trim();
+  return String(raw || '')
+    .replace(/<pasted-content>\n([\s\S]*?)\n<\/pasted-content>/g, '$1')
+    .trim();
 }
 
-const _looksLikeFilePathToken = (token = '') => require('./scaffoldExtractor').looksLikeFilePathToken(token);
+const _looksLikeFilePathToken = (token = '') =>
+  require('./scaffoldExtractor').looksLikeFilePathToken(token);
 
-const _looksLikeDirectoryToken = (token = '') => require('./scaffoldExtractor').looksLikeDirectoryToken(token);
+const _looksLikeDirectoryToken = (token = '') =>
+  require('./scaffoldExtractor').looksLikeDirectoryToken(token);
 
 function _extractScaffoldSpecFromMessage(userMessage, options = {}) {
   const raw = _unwrapPastedContent(userMessage);
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
 
   const defaultConcurrency = _parsePositiveInt(options.defaultConcurrency, 4, 1, 16);
   const maxFiles = _parsePositiveInt(options.maxFiles, 120, 1, 500);
@@ -1274,33 +1889,56 @@ function _extractScaffoldSpecFromMessage(userMessage, options = {}) {
 
   let root = '.';
   const explicitRoot = raw.match(/(?:^|\s)(?:root|cwd|目录|路径)\s*[:=：]\s*([^\s,，;；]+)/i);
-  if (explicitRoot && explicitRoot[1]) root = explicitRoot[1].trim();
+  if (explicitRoot && explicitRoot[1]) {
+    root = explicitRoot[1].trim();
+  }
 
   const dirs = new Set();
   const files = new Map();
   const addDir = (value) => {
-    const d = String(value || '').trim().replace(/^['"`]+|['"`]+$/g, '').replace(/[\\/]+$/g, '');
-    if (!d || d === '.' || d === './') return;
-    if (dirs.size < maxDirs) dirs.add(d);
+    const d = String(value || '')
+      .trim()
+      .replace(/^['"`]+|['"`]+$/g, '')
+      .replace(/[\\/]+$/g, '');
+    if (!d || d === '.' || d === './') {
+      return;
+    }
+    if (dirs.size < maxDirs) {
+      dirs.add(d);
+    }
   };
   const addFile = (filePath, content = '') => {
-    const f = String(filePath || '').trim().replace(/^['"`]+|['"`]+$/g, '');
-    if (!f) return;
-    if (!files.has(f) && files.size < maxFiles) files.set(f, String(content || ''));
+    const f = String(filePath || '')
+      .trim()
+      .replace(/^['"`]+|['"`]+$/g, '');
+    if (!f) {
+      return;
+    }
+    if (!files.has(f) && files.size < maxFiles) {
+      files.set(f, String(content || ''));
+    }
   };
 
-  const inlineCodeTokens = [...raw.matchAll(/`([^`]+)`/g)].map(m => String(m[1] || '').trim()).filter(Boolean);
+  const inlineCodeTokens = [...raw.matchAll(/`([^`]+)`/g)]
+    .map((m) => String(m[1] || '').trim())
+    .filter(Boolean);
   for (const token of inlineCodeTokens) {
-    if (_looksLikeFilePathToken(token)) addFile(token);
-    else if (_looksLikeDirectoryToken(token)) addDir(token);
+    if (_looksLikeFilePathToken(token)) {
+      addFile(token);
+    } else if (_looksLikeDirectoryToken(token)) {
+      addDir(token);
+    }
   }
 
-  const lines = raw.split('\n').map(s => String(s || '').trim()).filter(Boolean);
+  const lines = raw
+    .split('\n')
+    .map((s) => String(s || '').trim())
+    .filter(Boolean);
   for (const lineRaw of lines) {
-    const line = lineRaw
-      .replace(/^\s*(?:[-*+•]|\d+[.)]|[└├│])\s*/g, '')
-      .trim();
-    if (!line) continue;
+    const line = lineRaw.replace(/^\s*(?:[-*+•]|\d+[.)]|[└├│])\s*/g, '').trim();
+    if (!line) {
+      continue;
+    }
 
     const pair = line.match(/^([A-Za-z0-9_./\\-]+\.[A-Za-z0-9]{1,10})\s*(?::|=>)\s*([\s\S]*)$/);
     if (pair && pair[1]) {
@@ -1326,10 +1964,14 @@ function _extractScaffoldSpecFromMessage(userMessage, options = {}) {
 
   for (const filePath of files.keys()) {
     const parent = path.dirname(filePath);
-    if (parent && parent !== '.' && parent !== filePath) addDir(parent);
+    if (parent && parent !== '.' && parent !== filePath) {
+      addDir(parent);
+    }
   }
 
-  if (dirs.size === 0 && files.size === 0) return null;
+  if (dirs.size === 0 && files.size === 0) {
+    return null;
+  }
   return {
     root,
     directories: [...dirs],
@@ -1341,7 +1983,7 @@ function _extractScaffoldSpecFromMessage(userMessage, options = {}) {
 
 function _sanitizeSearchSourceMessage(raw = '', options = {}) {
   const collapseWhitespace = options.collapseWhitespace !== false;
-  let text = String(raw || '')
+  const text = String(raw || '')
     .replace(/<pasted-content>\n([\s\S]*?)\n<\/pasted-content>\s*/g, '$1\n')
     // Strip system-injected sections that pollute downstream intent/query parsing.
     .replace(/\[System (?:Skill|Memory|Context)[^\]]*\][\s\S]*?(?=\[System |$)/gi, ' ');
@@ -1358,9 +2000,34 @@ function _sanitizeSearchSourceMessage(raw = '', options = {}) {
     .trim();
 }
 
+/**
+ * Sanitize tool output before sending it back to the model as part of a tool
+ * result message. Prevents prompt-injection via tool output that contains
+ * patterns the model might interpret as system directives.
+ *
+ * Neutralizes:
+ *   - [SYSTEM: ...]  continuation/steering signals
+ *   - [System: ...]   planning/key-findings preamble markers
+ *   - [KHY PRIORITY DIRECTIVE]  protocol injection block
+ *   - <pasted-content>...</pasted-content>  content wrappers
+ */
+function _sanitizeToolResultOutput(raw) {
+  let text = String(raw || '');
+  // Neutralize system-directive bracket patterns by replacing the opening bracket.
+  // This preserves the content but prevents the model from treating it as a directive.
+  text = text
+    .replace(/\[SYSTEM:/gi, '[SYS_TAG:')
+    .replace(/\[System\b/gi, '[SYS_TAG')
+    .replace(/\[KHY PRIORITY DIRECTIVE\]/gi, '[KHY_TAG]')
+    .replace(/<pasted-content>[\s\S]*?<\/pasted-content>/gi, '[content-redacted]');
+  return text;
+}
+
 function _buildSearchQueryCandidates(userMessage, maxCandidates = 3, mode = 'auto') {
   const source = _sanitizeSearchSourceMessage(userMessage);
-  if (!source) return [];
+  if (!source) {
+    return [];
+  }
 
   const resolvedMode = _resolveAutoWebSearchMode(source, mode);
   const limit = _parsePositiveInt(maxCandidates, 3, 1, 8);
@@ -1369,16 +2036,25 @@ function _buildSearchQueryCandidates(userMessage, maxCandidates = 3, mode = 'aut
   const termSet = new Set();
 
   const pushCandidate = (value) => {
-    const query = String(value || '').replace(/\s+/g, ' ').trim().slice(0, 200);
-    if (!query || candidates.includes(query)) return;
+    const query = String(value || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 200);
+    if (!query || candidates.includes(query)) {
+      return;
+    }
     candidates.push(query);
   };
 
   const pushTerm = (value) => {
     const text = String(value || '').trim();
-    if (!text) return;
+    if (!text) {
+      return;
+    }
     const low = text.toLowerCase();
-    if (termSet.has(low)) return;
+    if (termSet.has(low)) {
+      return;
+    }
     termSet.add(low);
     terms.push(text);
   };
@@ -1387,10 +2063,13 @@ function _buildSearchQueryCandidates(userMessage, maxCandidates = 3, mode = 'aut
   pushCandidate(source);
 
   // Quoted phrases are usually explicit topic nouns.
-  const quoted = source.match(/["'“”‘’《》「」『』][^"'“”‘’《》「」『』]{2,48}["'“”‘’《》「」『』]/g) || [];
+  const quoted =
+    source.match(/["'“”‘’《》「」『』][^"'“”‘’《》「」『』]{2,48}["'“”‘’《》「」『』]/g) || [];
   for (const phrase of quoted) {
     const clean = phrase.replace(/^["'“”‘’《》「」『』]|["'“”‘’《》「」『』]$/g, '').trim();
-    if (clean) pushTerm(clean);
+    if (clean) {
+      pushTerm(clean);
+    }
   }
 
   // Pull topic-like tokens and filter generic verbs/function words.
@@ -1399,7 +2078,9 @@ function _buildSearchQueryCandidates(userMessage, maxCandidates = 3, mode = 'aut
   for (const token of tokens) {
     const t = String(token || '').trim();
     const low = t.toLowerCase();
-    if (!t || _SEARCH_TERM_STOPWORDS.has(low)) continue;
+    if (!t || _SEARCH_TERM_STOPWORDS.has(low)) {
+      continue;
+    }
     pushTerm(t);
   }
 
@@ -1424,12 +2105,18 @@ function _buildSearchQueryCandidates(userMessage, maxCandidates = 3, mode = 'aut
   const topTerms = terms.slice(0, 6);
   for (let i = 0; i < topTerms.length; i++) {
     pushCandidate(topTerms[i]);
-    if (candidates.length >= limit) break;
+    if (candidates.length >= limit) {
+      break;
+    }
     for (let j = i + 1; j < topTerms.length; j++) {
       pushCandidate(`${topTerms[i]} ${topTerms[j]}`);
-      if (candidates.length >= limit) break;
+      if (candidates.length >= limit) {
+        break;
+      }
     }
-    if (candidates.length >= limit) break;
+    if (candidates.length >= limit) {
+      break;
+    }
   }
 
   return candidates.slice(0, limit);
@@ -1450,46 +2137,77 @@ const _PATCH_SHELL_NAMES = new Set(['shell_command', 'shellCommand', 'bash']);
  * search doesn't fail with "Search query is empty".
  */
 function _patchEmptySearchQuery(toolCalls, userMessage) {
-  if (!Array.isArray(toolCalls) || !userMessage) return;
+  if (!Array.isArray(toolCalls) || !userMessage) {
+    return;
+  }
   // 同 _patchEmptyShellCommand:字面 Set 漏掉 `WebSearch`/`WEB_SEARCH` 等大小写/分隔符变体。
   // 门控开 → 归一化(去空白/下划线/连字符后 lowercase)比对;关 → 逐字节回退旧字面 Set。
   let _normalizeNames = true;
-  try { _normalizeNames = require('./flagRegistry').isFlagEnabled('KHY_PATCH_TOOLNAME_NORMALIZE', process.env); }
-  catch { _normalizeNames = true; }
+  try {
+    _normalizeNames = require('./flagRegistry').isFlagEnabled(
+      'KHY_PATCH_TOOLNAME_NORMALIZE',
+      process.env
+    );
+  } catch {
+    _normalizeNames = true;
+  }
   const searchNames = _PATCH_SEARCH_NAMES;
   const _normalizedSearchNames = _PATCH_NORMALIZED_SEARCH_NAMES;
-  const _matchesSearch = (name) => (_normalizeNames
-    ? _normalizedSearchNames.has(String(name || '').toLowerCase().replace(/[\s_-]/g, ''))
-    : searchNames.has(name));
+  const _matchesSearch = (name) =>
+    _normalizeNames
+      ? _normalizedSearchNames.has(
+          String(name || '')
+            .toLowerCase()
+            .replace(/[\s_-]/g, '')
+        )
+      : searchNames.has(name);
   const configuredMode = process.env.KHY_AUTO_WEBSEARCH_MODE || 'auto';
   const fallbackQuery = _buildSearchQueryCandidates(userMessage, 1, configuredMode)[0] || '';
   for (const call of toolCalls) {
-    if (!call || !_matchesSearch(call.name)) continue;
+    if (!call || !_matchesSearch(call.name)) {
+      continue;
+    }
     const q = String(call.params?.query || call.params?.q || '').trim();
-    if (q) continue;
+    if (q) {
+      continue;
+    }
     // Use derived noun-focused query candidate.
     if (fallbackQuery) {
-      if (!call.params) call.params = {};
+      if (!call.params) {
+        call.params = {};
+      }
       call.params.query = fallbackQuery;
     }
   }
 }
 
 function _patchEmptyShellCommand(toolCalls, userMessage) {
-  if (!Array.isArray(toolCalls) || !userMessage) return;
+  if (!Array.isArray(toolCalls) || !userMessage) {
+    return;
+  }
   // 归一化名匹配(默认开):历史用大小写敏感的字面 Set {shell_command,shellCommand,bash},
   // 漏掉模型偶尔发的 `BASH` / `Bash` / 全小写 `shellcommand` 等同义变体 → 空命令补丁静默跳过。
   // _isShellToolName 已做 trim+toLowerCase 归一,覆盖同一批逻辑名。门控关 → 逐字节回退旧 Set。
   let _normalizeNames = true;
-  try { _normalizeNames = require('./flagRegistry').isFlagEnabled('KHY_PATCH_TOOLNAME_NORMALIZE', process.env); }
-  catch { _normalizeNames = true; }
+  try {
+    _normalizeNames = require('./flagRegistry').isFlagEnabled(
+      'KHY_PATCH_TOOLNAME_NORMALIZE',
+      process.env
+    );
+  } catch {
+    _normalizeNames = true;
+  }
   const shellNames = _PATCH_SHELL_NAMES;
   const _matchesShell = (name) => (_normalizeNames ? _isShellToolName(name) : shellNames.has(name));
   const isWin = process.platform === 'win32';
   for (const call of toolCalls) {
-    if (!call || !_matchesShell(call.name)) continue;
+    if (!call || !_matchesShell(call.name)) {
+      continue;
+    }
     const cmd = String(call.params?.command || call.params?.cmd || '').trim();
-    if (cmd) continue;
+    if (cmd) {
+      continue;
+    }
     // 推断命令：从用户消息中提取意图
     const msg = userMessage.toLowerCase();
     let inferred = '';
@@ -1500,13 +2218,19 @@ function _patchEmptyShellCommand(toolCalls, userMessage) {
     } else if (/进程|process|运行.*什么/i.test(msg)) {
       inferred = isWin ? 'tasklist' : 'ps aux';
     } else if (/磁盘|disk|空间|space/i.test(msg)) {
-      inferred = isWin ? 'powershell -NoProfile -Command "Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,Size,FreeSpace"' : 'df -h';
+      inferred = isWin
+        ? 'powershell -NoProfile -Command "Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,Size,FreeSpace"'
+        : 'df -h';
     } else if (/网络|network|ip|联网|ping/i.test(msg)) {
       inferred = isWin ? 'ipconfig' : 'ifconfig 2>/dev/null || ip addr';
     } else if (/内存|memory|ram/i.test(msg)) {
-      inferred = isWin ? 'powershell -NoProfile -Command "Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory"' : 'free -h';
+      inferred = isWin
+        ? 'powershell -NoProfile -Command "Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory"'
+        : 'free -h';
     } else if (/cpu|处理器|processor/i.test(msg)) {
-      inferred = isWin ? 'powershell -NoProfile -Command "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores"' : 'lscpu 2>/dev/null || sysctl -n machdep.cpu.brand_string';
+      inferred = isWin
+        ? 'powershell -NoProfile -Command "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores"'
+        : 'lscpu 2>/dev/null || sysctl -n machdep.cpu.brand_string';
     } else if (/系统|system|版本|version|信息/i.test(msg)) {
       inferred = isWin ? 'systeminfo' : 'uname -a';
     } else if (/环境变量|env|environment/i.test(msg)) {
@@ -1524,7 +2248,9 @@ function _patchEmptyShellCommand(toolCalls, userMessage) {
       inferred = '';
     }
     if (inferred) {
-      if (!call.params) call.params = {};
+      if (!call.params) {
+        call.params = {};
+      }
       call.params.command = inferred;
     }
   }
@@ -1535,40 +2261,69 @@ function _patchEmptyShellCommand(toolCalls, userMessage) {
  * Some small models emit Search() with no keyword; derive fallback from user message.
  */
 function _patchEmptyLocalSearchKeyword(toolCalls, userMessage) {
-  if (!Array.isArray(toolCalls) || !userMessage) return;
+  if (!Array.isArray(toolCalls) || !userMessage) {
+    return;
+  }
   const searchNames = new Set(['search']);
   const fallbackRaw = _sanitizeSearchSourceMessage(String(userMessage || ''));
-  const fallback = String(fallbackRaw || '').trim().slice(0, 120);
-  if (!fallback) return;
+  const fallback = String(fallbackRaw || '')
+    .trim()
+    .slice(0, 120);
+  if (!fallback) {
+    return;
+  }
   for (const call of toolCalls) {
-    if (!call || !searchNames.has(String(call.name || ''))) continue;
+    if (!call || !searchNames.has(String(call.name || ''))) {
+      continue;
+    }
     const keyword = String(call.params?.keyword || call.params?.query || '').trim();
-    if (keyword) continue;
-    if (!call.params) call.params = {};
+    if (keyword) {
+      continue;
+    }
+    if (!call.params) {
+      call.params = {};
+    }
     call.params.keyword = fallback;
   }
 }
 
 function _isWebLookupToolName(toolName = '') {
-  const normalized = String(toolName || '').toLowerCase().replace(/[\s_-]/g, '');
-  return normalized === 'websearch'
-    || normalized === 'webfetch'
-    || normalized === 'websearchmcp'
-    || normalized === 'search';
+  const normalized = String(toolName || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
+  return (
+    normalized === 'websearch' ||
+    normalized === 'webfetch' ||
+    normalized === 'websearchmcp' ||
+    normalized === 'search'
+  );
 }
 
 function _rewriteShellCallsForAppLaunch(toolCalls = [], userMessage = '') {
-  if (!Array.isArray(toolCalls) || toolCalls.length === 0) return toolCalls;
-  if (!_looksLikeAppLaunchRequest(userMessage)) return toolCalls;
+  if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
+    return toolCalls;
+  }
+  if (!_looksLikeAppLaunchRequest(userMessage)) {
+    return toolCalls;
+  }
 
   return toolCalls.map((call) => {
-    if (!call || call.legacy) return call;
-    if (!_isShellToolName(call.name)) return call;
+    if (!call || call.legacy) {
+      return call;
+    }
+    if (!_isShellToolName(call.name)) {
+      return call;
+    }
     const command = String(call.params?.command || '').trim();
-    if (!command || !_looksLikeShellAppProbeCommand(command)) return call;
+    if (!command || !_looksLikeShellAppProbeCommand(command)) {
+      return call;
+    }
 
-    const appName = _extractAppTargetFromShellCommand(command) || _extractAppTargetFromUserMessage(userMessage);
-    if (!appName) return call;
+    const appName =
+      _extractAppTargetFromShellCommand(command) || _extractAppTargetFromUserMessage(userMessage);
+    if (!appName) {
+      return call;
+    }
 
     return {
       ...call,
@@ -1585,9 +2340,10 @@ function _filterToolCallsByIntent(toolCalls = [], userMessage = '', userConstrai
     return { kept: toolCalls, removed: [], removedByConstraint: [], removedByIntent: [] };
   }
 
-  const constraints = userConstraints && typeof userConstraints === 'object'
-    ? userConstraints
-    : _extractUserToolConstraints(userMessage);
+  const constraints =
+    userConstraints && typeof userConstraints === 'object'
+      ? userConstraints
+      : _extractUserToolConstraints(userMessage);
   const allowOpenApp = _looksLikeAppLaunchRequest(userMessage);
 
   const kept = [];
@@ -1595,7 +2351,9 @@ function _filterToolCallsByIntent(toolCalls = [], userMessage = '', userConstrai
   const removedByConstraint = [];
   const removedByIntent = [];
   for (const call of toolCalls) {
-    const normalized = String(call?.name || '').toLowerCase().replace(/[\s_-]/g, '');
+    const normalized = String(call?.name || '')
+      .toLowerCase()
+      .replace(/[\s_-]/g, '');
     const blockedReason = _matchBlockedToolConstraint(normalized, constraints);
     if (blockedReason) {
       const blocked = { ...call, _constraintReason: blockedReason };
@@ -1619,17 +2377,29 @@ function _filterToolCallsByIntent(toolCalls = [], userMessage = '', userConstrai
 // 受限工具名集合（Ch2「不要每轮重建可复用结构」）：_matchBlockedToolConstraint 对
 // _filterToolCallsByIntent 循环里的**每个工具调用**都重建这两个字面量 Set,仅为 `.has` 成员
 // 测试。提升到模块作用域,构造一次、只读消费,不 mutate、不逃逸(函数只返回字符串原因),逐字节等价。
-const _BLOCKED_SEARCH_TOOLS = new Set([
-  'websearch', 'webfetch', 'search', 'searchweb',
-]);
+const _BLOCKED_SEARCH_TOOLS = new Set(['websearch', 'webfetch', 'search', 'searchweb']);
 const _BLOCKED_FILE_READ_TOOLS = new Set([
-  'read', 'readfile', 'grep', 'glob', 'ls', 'gitstatus', 'gitdiff', 'gitlog',
-  'find', 'findfiles', 'explore', 'searchcontent',
+  'read',
+  'readfile',
+  'grep',
+  'glob',
+  'ls',
+  'gitstatus',
+  'gitdiff',
+  'gitlog',
+  'find',
+  'findfiles',
+  'explore',
+  'searchcontent',
 ]);
 
 function _matchBlockedToolConstraint(normalizedToolName = '', constraints = {}) {
-  if (!normalizedToolName || !constraints) return '';
-  if (constraints.disallowAllTools) return 'all_tools';
+  if (!normalizedToolName || !constraints) {
+    return '';
+  }
+  if (constraints.disallowAllTools) {
+    return 'all_tools';
+  }
 
   if (constraints.disallowSearch && _BLOCKED_SEARCH_TOOLS.has(normalizedToolName)) {
     return 'search';
@@ -1642,10 +2412,15 @@ function _matchBlockedToolConstraint(normalizedToolName = '', constraints = {}) 
   return '';
 }
 
-function _buildConstraintRespectNudge(userMessage, previousReply, constraints = {}, blockedCalls = []) {
-  const blockedTools = [...new Set(
-    (blockedCalls || []).map(call => String(call?.name || '').trim()).filter(Boolean)
-  )];
+function _buildConstraintRespectNudge(
+  userMessage,
+  previousReply,
+  constraints = {},
+  blockedCalls = []
+) {
+  const blockedTools = [
+    ...new Set((blockedCalls || []).map((call) => String(call?.name || '').trim()).filter(Boolean)),
+  ];
   const lines = [
     '[System follow-up: respect explicit user constraints]',
     'The previous response attempted blocked tool use.',
@@ -1653,7 +2428,9 @@ function _buildConstraintRespectNudge(userMessage, previousReply, constraints = 
   ];
 
   if (constraints.disallowAllTools) {
-    lines.push('Do not emit any <tool_call> or tool_use blocks. Answer directly in natural language only.');
+    lines.push(
+      'Do not emit any <tool_call> or tool_use blocks. Answer directly in natural language only.'
+    );
   } else {
     if (constraints.disallowSearch) {
       lines.push('Do not use search or browsing tools.');
@@ -1661,10 +2438,14 @@ function _buildConstraintRespectNudge(userMessage, previousReply, constraints = 
     if (constraints.disallowFileRead) {
       lines.push('Do not read or scan files/directories.');
     }
-    lines.push('If another non-blocked tool is truly necessary, use only an allowed tool. Otherwise answer directly.');
+    lines.push(
+      'If another non-blocked tool is truly necessary, use only an allowed tool. Otherwise answer directly.'
+    );
   }
 
-  lines.push('If the constraint prevents certainty, explain that limitation briefly and give the best direct answer.');
+  lines.push(
+    'If the constraint prevents certainty, explain that limitation briefly and give the best direct answer.'
+  );
   if (blockedTools.length > 0) {
     lines.push('');
     lines.push(`[Blocked tools]\n${blockedTools.join(', ')}`);
@@ -1677,24 +2458,32 @@ function _buildConstraintRespectNudge(userMessage, previousReply, constraints = 
 }
 
 function _buildConstraintFallbackReply(constraints = {}, blockedCalls = []) {
-  const blockedTools = [...new Set(
-    (blockedCalls || []).map(call => String(call?.name || '').trim()).filter(Boolean)
-  )];
+  const blockedTools = [
+    ...new Set((blockedCalls || []).map((call) => String(call?.name || '').trim()).filter(Boolean)),
+  ];
   const bans = [];
-  if (constraints.disallowAllTools) bans.push('禁止调用任何工具');
-  if (constraints.disallowSearch) bans.push('禁止搜索');
-  if (constraints.disallowFileRead) bans.push('禁止读取文件');
+  if (constraints.disallowAllTools) {
+    bans.push('禁止调用任何工具');
+  }
+  if (constraints.disallowSearch) {
+    bans.push('禁止搜索');
+  }
+  if (constraints.disallowFileRead) {
+    bans.push('禁止读取文件');
+  }
   const banText = bans.length > 0 ? bans.join('、') : '存在显式工具限制';
   const toolText = blockedTools.length > 0 ? `（已拦截: ${blockedTools.join(', ')}）` : '';
   return `已按你的约束停止违规工具调用：${banText}${toolText}。当前回复未提供可直接展示的正文，因此无法在不违反约束的前提下继续自动展开。`;
 }
 
-const _buildAppLaunchToolNudge = (userMessage, previousReply) => require('./toolCallNudges').buildAppLaunchToolNudge(userMessage, previousReply);
+const _buildAppLaunchToolNudge = (userMessage, previousReply) =>
+  require('./toolCallNudges').buildAppLaunchToolNudge(userMessage, previousReply);
 
 /**
  * Build a nudge when the AI presented choices instead of acting.
  */
-const _buildChoiceResponseNudge = (userMessage) => require('./toolCallNudges').buildChoiceResponseNudge(userMessage);
+const _buildChoiceResponseNudge = (userMessage) =>
+  require('./toolCallNudges').buildChoiceResponseNudge(userMessage);
 
 /**
  * Build a one-shot continuation nudge when AI returns no tool calls.
@@ -1706,6 +2495,7 @@ function _buildNoToolCallNudge(userMessage, previousReply) {
     'Continue immediately.',
     'Choose one path only:',
     '1) If actions are needed, output one or more <tool_call>...</tool_call> now.',
+    '   Each <tool_call> must be on its own line, with no prose on that line.',
     '   You may also use natural format like: 【调用工具名：参数】.',
     '2) If no tool is needed, output the final complete answer now.',
     'Do not output a standalone progress preface.',
@@ -1729,6 +2519,7 @@ function _buildWebSearchToolNudge(userMessage, previousReply) {
     '',
     '[Required]',
     '- Prefer <tool_call>{"name":"web_search","params":{"query":"..."}}</tool_call>.',
+    '- The <tool_call> line must stand alone — no narration text on the same line, and no extra narration in a tool-calling reply.',
     '- Query must be non-empty and specific.',
     '',
     `[Original user request]\n${userMessage}`,
@@ -1767,11 +2558,21 @@ const _DIFF_PATH_KEYS = ['path', 'file_path', 'filePath', 'notebook_path', 'note
 // is intentionally absent — its patch may span multiple files, so a single
 // path/before snapshot does not model it; it falls through to its own output.
 const _WRITE_TOOL_NAMES = new Set([
-  'writefile', 'write', 'filewrite', 'filewritetool', 'createfile',
-  'editfile', 'edit', 'fileedit', 'fileedittool',
-  'multiedit', 'multiedittool',
-  'notebookedit', 'notebookedittool',
-  'fileop', 'fileoperation',
+  'writefile',
+  'write',
+  'filewrite',
+  'filewritetool',
+  'createfile',
+  'editfile',
+  'edit',
+  'fileedit',
+  'fileedittool',
+  'multiedit',
+  'multiedittool',
+  'notebookedit',
+  'notebookedittool',
+  'fileop',
+  'fileoperation',
 ]);
 
 /**
@@ -1783,7 +2584,9 @@ const _WRITE_TOOL_NAMES = new Set([
 function _resolveWriteToolPath(call) {
   for (const key of _DIFF_PATH_KEYS) {
     const v = call.params?.[key];
-    if (typeof v === 'string' && v.trim()) return v;
+    if (typeof v === 'string' && v.trim()) {
+      return v;
+    }
   }
   return null;
 }
@@ -1797,12 +2600,20 @@ function _resolveWriteToolPath(call) {
  * @returns {string|null} content, or null if not diffable
  */
 function _safeReadForDiff(filePath) {
-  if (!fs.existsSync(filePath)) return '';        // creation case → empty "before"
+  if (!fs.existsSync(filePath)) {
+    return '';
+  } // creation case → empty "before"
   const stat = fs.statSync(filePath);
-  if (!stat.isFile()) return null;                // dir / device — not diffable
-  if (stat.size > _DIFF_MAX_BYTES) return null;   // oversize — skip (防呆)
+  if (!stat.isFile()) {
+    return null;
+  } // dir / device — not diffable
+  if (stat.size > _DIFF_MAX_BYTES) {
+    return null;
+  } // oversize — skip (防呆)
   const buf = fs.readFileSync(filePath);
-  if (buf.includes(0)) return null;               // binary (NUL byte) — skip
+  if (buf.includes(0)) {
+    return null;
+  } // binary (NUL byte) — skip
   return buf.toString('utf-8');
 }
 
@@ -1822,12 +2633,20 @@ function _safeReadForDiff(filePath) {
  */
 function _captureWriteFileDiffContext(call) {
   try {
-    if (!call || !call.name) return null;
-    const toolName = String(call.name).toLowerCase().replace(/[\s_-]/g, '');
-    if (!_WRITE_TOOL_NAMES.has(toolName)) return null;
+    if (!call || !call.name) {
+      return null;
+    }
+    const toolName = String(call.name)
+      .toLowerCase()
+      .replace(/[\s_-]/g, '');
+    if (!_WRITE_TOOL_NAMES.has(toolName)) {
+      return null;
+    }
 
     const relPath = _resolveWriteToolPath(call);
-    if (!relPath) return null;
+    if (!relPath) {
+      return null;
+    }
     const cwd = process.env.KHYQUANT_CWD || process.cwd();
     // Resolve through the SAME expansion the tools apply (env vars → ~ → desktop
     // normalization → resolve), so before/after snapshots read the file the tool
@@ -1841,7 +2660,9 @@ function _captureWriteFileDiffContext(call) {
     }
 
     const beforeContent = _safeReadForDiff(filePath);
-    if (beforeContent === null) return null;       // binary / oversize / non-file
+    if (beforeContent === null) {
+      return null;
+    } // binary / oversize / non-file
     return { filePath, beforeContent };
   } catch {
     return null;
@@ -1862,13 +2683,19 @@ function _captureWriteFileDiffContext(call) {
  */
 function _finalizeWriteDiff(writeCtx) {
   try {
-    if (!writeCtx || typeof writeCtx.filePath !== 'string') return null;
+    if (!writeCtx || typeof writeCtx.filePath !== 'string') {
+      return null;
+    }
     const { filePath } = writeCtx;
     const beforeContent = typeof writeCtx.beforeContent === 'string' ? writeCtx.beforeContent : '';
 
     const afterContent = _safeReadForDiff(filePath);
-    if (afterContent === null) return null;        // binary / oversize result — skip
-    if (beforeContent === afterContent) return null; // no-op write — nothing to show
+    if (afterContent === null) {
+      return null;
+    } // binary / oversize result — skip
+    if (beforeContent === afterContent) {
+      return null;
+    } // no-op write — nothing to show
     return { filePath, beforeContent, afterContent };
   } catch {
     return null;
@@ -1897,7 +2724,8 @@ const _isComplexTask = (message) => require('./taskComplexity').isComplexTask(me
  * @param {number} score - complexity score from _isComplexTask
  * @returns {boolean}
  */
-const _shouldAutoDecompose = (message, score) => require('./taskComplexity').shouldAutoDecompose(message, score);
+const _shouldAutoDecompose = (message, score) =>
+  require('./taskComplexity').shouldAutoDecompose(message, score);
 
 /**
  * Inject planning instruction into the user message so AI outputs
@@ -1920,12 +2748,15 @@ function _injectPlanningPrompt(message, opts = {}) {
   try {
     const _tax = require('./priorityTaxonomy');
     priorityInst = _tax.buildPlanPriorityInstruction(process.env);
-  } catch { priorityInst = ''; }
+  } catch {
+    priorityInst = '';
+  }
   const head = priorityInst ? `${planInst}\n${priorityInst}` : planInst;
 
   // When auto-decompose is triggered, encourage Agent subtasks for parallel work
   if (opts.autoDecompose) {
-    const decomposeHint = '\n[System: This task contains independent parts. If subtasks are independent and can benefit from parallel execution, use the Agent tool with a `subtasks` array to run them concurrently.]';
+    const decomposeHint =
+      '\n[System: This task contains independent parts. If subtasks are independent and can benefit from parallel execution, use the Agent tool with a `subtasks` array to run them concurrently.]';
     return `${head}${decomposeHint}\n\n${message}`;
   }
 
@@ -1941,10 +2772,18 @@ function _injectPlanningPrompt(message, opts = {}) {
  * @returns {string}
  */
 function _injectKeyFindingsPrompt(message, env = process.env) {
-  if (!_keyFindings || typeof _keyFindings.buildKeyFindingsInstruction !== 'function') return message;
+  if (!_keyFindings || typeof _keyFindings.buildKeyFindingsInstruction !== 'function') {
+    return message;
+  }
   let inst = '';
-  try { inst = _keyFindings.buildKeyFindingsInstruction(env) || ''; } catch { inst = ''; }
-  if (!inst) return message;
+  try {
+    inst = _keyFindings.buildKeyFindingsInstruction(env) || '';
+  } catch {
+    inst = '';
+  }
+  if (!inst) {
+    return message;
+  }
   return `${inst}\n\n${message}`;
 }
 
@@ -1954,12 +2793,16 @@ function _injectKeyFindingsPrompt(message, env = process.env) {
  * @returns {{steps: Array<{id: number, description: string, toolHint: string, status: string}>} | null}
  */
 function _parseExecutionPlan(text) {
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
   const match = text.match(/<execution_plan>([\s\S]*?)<\/execution_plan>/);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
 
   const planText = match[1].trim();
-  const lines = planText.split('\n').filter(l => l.trim());
+  const lines = planText.split('\n').filter((l) => l.trim());
   const steps = [];
 
   for (const line of lines) {
@@ -1977,18 +2820,24 @@ function _parseExecutionPlan(text) {
       const prMatch = rest.match(/\[\s*(P\d)\s*\]/i);
       if (prMatch) {
         priority = prMatch[1].toUpperCase();
-        rest = (rest.slice(0, prMatch.index) + rest.slice(prMatch.index + prMatch[0].length)).trim();
+        rest = (
+          rest.slice(0, prMatch.index) + rest.slice(prMatch.index + prMatch[0].length)
+        ).trim();
       }
 
       // Optional leading toolHint bracket, e.g. "[shell_command]".
       let toolHint = '';
       const thMatch = rest.match(/^\[([^\]]*)\]\s*/);
-      if (thMatch) { toolHint = thMatch[1]; rest = rest.slice(thMatch[0].length).trim(); }
+      if (thMatch) {
+        toolHint = thMatch[1];
+        rest = rest.slice(thMatch[0].length).trim();
+      }
       let description = rest;
 
       // Extract parallel_group marker
-      const pgMatch = description.match(/[←←]\s*parallel_group:\s*(\w+)\s*$/i)
-        || description.match(/\(parallel_group:\s*(\w+)\)\s*$/i);
+      const pgMatch =
+        description.match(/[←←]\s*parallel_group:\s*(\w+)\s*$/i) ||
+        description.match(/\(parallel_group:\s*(\w+)\)\s*$/i);
       if (pgMatch) {
         parallelGroup = pgMatch[1].toUpperCase();
         description = description.slice(0, description.indexOf(pgMatch[0])).trim();
@@ -2017,7 +2866,8 @@ function _parseExecutionPlan(text) {
  * @param {number} currentStep - Current plan step index
  * @returns {number} Matched step index, or -1 if no match
  */
-const _matchToolCallToStep = (toolName, params, plan, currentStep) => require('./taskComplexity').matchToolCallToStep(toolName, params, plan, currentStep);
+const _matchToolCallToStep = (toolName, params, plan, currentStep) =>
+  require('./taskComplexity').matchToolCallToStep(toolName, params, plan, currentStep);
 
 /**
  * Check if the tool-use loop is enabled via feature flag.
@@ -2031,17 +2881,13 @@ function isEnabled() {
 // Phase 1J backward-compatible re-exports from extracted modules.
 // Internal callers continue to use toolUseLoop.xxx — no breaking change.
 
-const _toolCallParser      = require('./toolCallParser');
-const _deliveryFormatter   = require('./deliveryFormatter');
-const _intentHeuristics    = require('./intentHeuristics');
-const _taskComplexity      = require('./taskComplexity');
-const _capabilityAssess    = require('./capabilityAssessment');
-const _scaffoldExtractor   = require('./scaffoldExtractor');
-const _appLaunchRecovery   = require('./appLaunchRecovery');
-const _platformRewrite     = require('./platformRewrite');
-const _toolCallNudges      = require('./toolCallNudges');
-const _modelTier           = require('./modelTier');
-
+const _taskComplexity = require('./taskComplexity');
+const _toolCallNudges = require('./toolCallNudges');
+const _toolCallParser = require('./toolCallParser');
+const _intentHeuristics = require('./intentHeuristics');
+const _scaffoldExtractor = require('./scaffoldExtractor');
+const _platformRewrite = require('./platformRewrite');
+const _modelTier = require('./modelTier');
 
 module.exports = {
   PRUNE_KEEP_RECENT,

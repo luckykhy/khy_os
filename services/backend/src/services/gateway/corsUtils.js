@@ -9,8 +9,11 @@
  *   3. 其余一律返 'null'(浏览器拒绝跨域,服务端仍可正常响应)
  */
 
-const _proxyCorsOrigins = String(process.env.PROXY_CORS_ORIGINS || '').trim()
-  .split(',').map(s => s.trim()).filter(Boolean);
+const _proxyCorsOrigins = String(process.env.PROXY_CORS_ORIGINS || '')
+  .trim()
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 function _isLoopbackOrigin(origin) {
   try {
@@ -22,9 +25,15 @@ function _isLoopbackOrigin(origin) {
 }
 
 function resolveProxyCorsOrigin(reqOrigin) {
-  if (!reqOrigin) return 'null';
-  if (_proxyCorsOrigins.length > 0) return _proxyCorsOrigins.includes(reqOrigin) ? reqOrigin : 'null';
-  if (_isLoopbackOrigin(reqOrigin)) return reqOrigin;
+  if (!reqOrigin) {
+    return 'null';
+  }
+  if (_proxyCorsOrigins.length > 0) {
+    return _proxyCorsOrigins.includes(reqOrigin) ? reqOrigin : 'null';
+  }
+  if (_isLoopbackOrigin(reqOrigin)) {
+    return reqOrigin;
+  }
   return 'null';
 }
 

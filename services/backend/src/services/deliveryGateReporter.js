@@ -39,7 +39,9 @@ function _generateMarkdownReport(result, includeRemediation) {
   lines.push(`- Total criteria: ${result.criteriaCount}`);
   lines.push(`- Required: ${result.requiredCount}`);
   lines.push(`- Optional: ${result.optionalCount}`);
-  lines.push(`- Passed: ${result.passedCount} / ${result.criteriaCount} (${((result.passedCount / result.criteriaCount) * 100).toFixed(1)}%)`);
+  lines.push(
+    `- Passed: ${result.passedCount} / ${result.criteriaCount} (${((result.passedCount / result.criteriaCount) * 100).toFixed(1)}%)`
+  );
   lines.push(`- Failed: ${result.failedCount}`);
   lines.push('');
 
@@ -47,7 +49,7 @@ function _generateMarkdownReport(result, includeRemediation) {
   if (result.modes && result.modes.length > 0) {
     lines.push('## Detected Modes');
     lines.push('');
-    result.modes.forEach(mode => {
+    result.modes.forEach((mode) => {
       lines.push(`- **${mode}**`);
     });
     lines.push('');
@@ -62,7 +64,9 @@ function _generateMarkdownReport(result, includeRemediation) {
       lines.push('');
       lines.push(`- **Phase**: ${item.phase || 'N/A'}`);
       lines.push(`- **Check**: \`${item.check}\``);
-      if (item.target) lines.push(`- **Target**: \`${item.target}\``);
+      if (item.target) {
+        lines.push(`- **Target**: \`${item.target}\``);
+      }
       lines.push(`- **Status**: ${item.status}`);
       lines.push(`- **Detail**: ${item.detail}`);
       lines.push('');
@@ -82,7 +86,7 @@ function _generateMarkdownReport(result, includeRemediation) {
   }
 
   // 通过的检查
-  const passed = result.results.filter(r => r.status === 'pass');
+  const passed = result.results.filter((r) => r.status === 'pass');
   if (passed.length > 0) {
     lines.push('## ✅ Passed Checks');
     lines.push('');
@@ -202,23 +206,21 @@ function extractGateBMetrics(gateResult) {
   return {
     verdict: gateResult.verdict,
     pass: gateResult.verdict === 'pass',
-    passRate: gateResult.criteriaCount > 0
-      ? gateResult.passedCount / gateResult.criteriaCount
-      : 0,
+    passRate: gateResult.criteriaCount > 0 ? gateResult.passedCount / gateResult.criteriaCount : 0,
     requiredMissing: gateResult.missing.length,
     optionalWarnings: gateResult.warnings.length,
-    runtimeEvidencePresent: gateResult.results.some(r =>
-      r.check === 'evidence_in_response' && r.status === 'pass'
+    runtimeEvidencePresent: gateResult.results.some(
+      (r) => r.check === 'evidence_in_response' && r.status === 'pass'
     ),
-    testEvidencePresent: gateResult.results.some(r =>
-      r.check === 'test_dir_populated' && r.status === 'pass'
+    testEvidencePresent: gateResult.results.some(
+      (r) => r.check === 'test_dir_populated' && r.status === 'pass'
     ),
-    modes: gateResult.modes || []
+    modes: gateResult.modes || [],
   };
 }
 
 module.exports = {
   generateDeliveryReport,
   saveDeliveryReport,
-  extractGateBMetrics
+  extractGateBMetrics,
 };

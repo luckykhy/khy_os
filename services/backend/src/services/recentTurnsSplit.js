@@ -32,14 +32,21 @@ function recentTurnsSplitGuardEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_RECENT_TURNS_SPLIT_GUARD', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_RECENT_TURNS_SPLIT_GUARD;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -55,8 +62,12 @@ function recentTurnsSplitGuardEnabled(env = process.env) {
  */
 function splitRecent(conversation, keepRecent, env = process.env) {
   try {
-    if (!recentTurnsSplitGuardEnabled(env)) return null;
-    if (!Array.isArray(conversation)) return null;
+    if (!recentTurnsSplitGuardEnabled(env)) {
+      return null;
+    }
+    if (!Array.isArray(conversation)) {
+      return null;
+    }
     const n = Number(keepRecent);
     if (!Number.isFinite(n) || n <= 0) {
       return { oldTurns: conversation.slice(), recentTurns: [] };

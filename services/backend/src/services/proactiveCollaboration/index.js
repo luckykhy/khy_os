@@ -23,8 +23,8 @@
  * (the main loop) is never blocked. Pure aside from reading env via the caller.
  */
 
-const { detectCollaborationOpportunity } = require('./opportunityDetector');
 const { planDelegation } = require('./delegationPlanner');
+const { detectCollaborationOpportunity } = require('./opportunityDetector');
 
 /**
  * proposeCollaboration(message, opts) → {
@@ -41,11 +41,21 @@ const { planDelegation } = require('./delegationPlanner');
  *   minConfidence      (number?)  — override the detector confidence floor
  */
 function proposeCollaboration(message, opts = {}) {
-  const noop = (reason) => ({ inject: false, toolCall: null, reason, subtaskCount: 0, confidence: 0 });
+  const noop = (reason) => ({
+    inject: false,
+    toolCall: null,
+    reason,
+    subtaskCount: 0,
+    confidence: 0,
+  });
 
   try {
-    if (opts.enabled === false) return noop('disabled by configuration');
-    if (opts.agentToolAvailable === false) return noop('agent tool unavailable');
+    if (opts.enabled === false) {
+      return noop('disabled by configuration');
+    }
+    if (opts.agentToolAvailable === false) {
+      return noop('agent tool unavailable');
+    }
 
     const opportunity = detectCollaborationOpportunity(message, {
       minConfidence: opts.minConfidence,
@@ -55,7 +65,9 @@ function proposeCollaboration(message, opts = {}) {
     }
 
     const plan = planDelegation(opportunity, { goal: message });
-    if (!plan.toolCall) return noop('no actionable delegation plan');
+    if (!plan.toolCall) {
+      return noop('no actionable delegation plan');
+    }
 
     const droppedNote = plan.dropped > 0 ? ` (+${plan.dropped} folded by fan-out cap)` : '';
     return {

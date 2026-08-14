@@ -31,7 +31,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function bashOutputToolEnabled(env) {
   const e = env || process.env;
-  const raw = String(e.KHY_BASH_OUTPUT_TOOL == null ? '' : e.KHY_BASH_OUTPUT_TOOL).trim().toLowerCase();
+  const raw = String(e.KHY_BASH_OUTPUT_TOOL == null ? '' : e.KHY_BASH_OUTPUT_TOOL)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(raw);
 }
 
@@ -43,9 +45,15 @@ class BashOutputTool extends BaseTool {
   static searchHint = 'read background shell command output result';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
-  isEnabled() { return bashOutputToolEnabled(process.env); }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
+  isEnabled() {
+    return bashOutputToolEnabled(process.env);
+  }
 
   prompt() {
     return `Retrieve output from a running or completed background shell command.
@@ -60,9 +68,22 @@ class BashOutputTool extends BaseTool {
     return {
       type: 'object',
       properties: {
-        bash_id: { type: 'string', description: 'The background shell id (backgroundTaskId) to read output from' },
-        block: { type: 'boolean', description: 'Whether to wait for completion (default true)', default: true },
-        timeout: { type: 'number', description: 'Max wait time in ms (default 30000)', default: 30000, minimum: 0, maximum: 600000 },
+        bash_id: {
+          type: 'string',
+          description: 'The background shell id (backgroundTaskId) to read output from',
+        },
+        block: {
+          type: 'boolean',
+          description: 'Whether to wait for completion (default true)',
+          default: true,
+        },
+        timeout: {
+          type: 'number',
+          description: 'Max wait time in ms (default 30000)',
+          default: 30000,
+          minimum: 0,
+          maximum: 600000,
+        },
       },
       required: ['bash_id'],
     };
@@ -74,7 +95,9 @@ class BashOutputTool extends BaseTool {
     }
 
     const id = params && params.bash_id != null ? String(params.bash_id) : '';
-    if (!id) return { error: 'bash_id is required.' };
+    if (!id) {
+      return { error: 'bash_id is required.' };
+    }
 
     let registry;
     try {
@@ -84,7 +107,9 @@ class BashOutputTool extends BaseTool {
     }
 
     const entry = registry.get(id);
-    if (!entry) return { error: `Background shell ${id} not found` };
+    if (!entry) {
+      return { error: `Background shell ${id} not found` };
+    }
 
     const block = params.block !== false;
     const timeoutMs = Math.max(0, Math.min(Number(params.timeout) || 30000, 600000));
@@ -94,7 +119,9 @@ class BashOutputTool extends BaseTool {
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
         const current = registry.get(id);
-        if (!current || current.status !== 'running') break;
+        if (!current || current.status !== 'running') {
+          break;
+        }
         await new Promise((r) => setTimeout(r, 500));
       }
     }
@@ -111,7 +138,9 @@ class BashOutputTool extends BaseTool {
     };
   }
 
-  getActivityDescription(input) { return `读取后台命令输出：${input && input.bash_id ? input.bash_id : ''}`; }
+  getActivityDescription(input) {
+    return `读取后台命令输出：${input && input.bash_id ? input.bash_id : ''}`;
+  }
 }
 
 module.exports = BashOutputTool;

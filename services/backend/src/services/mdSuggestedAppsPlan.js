@@ -39,7 +39,9 @@ const DEFAULT_EXTS = Object.freeze(['.md', '.markdown']);
 
 /** 规整 exts：仅保留以 '.' 开头的字符串，去重、稳定；空/非法 → 默认表。 */
 function _normalizeExts(raw) {
-  if (!Array.isArray(raw)) return DEFAULT_EXTS.slice();
+  if (!Array.isArray(raw)) {
+    return DEFAULT_EXTS.slice();
+  }
   const seen = new Set();
   const out = [];
   for (const e of raw) {
@@ -65,16 +67,23 @@ function buildSuggestedAppsPlan(opts) {
   try {
     const o = opts && typeof opts === 'object' ? opts : {};
     const exts = _normalizeExts(o.exts);
-    const appKey = (typeof o.appKey === 'string' && o.appKey.trim()) ? o.appKey.trim() : APP_KEY;
-    const friendlyName = (typeof o.friendlyName === 'string' && o.friendlyName.trim())
-      ? o.friendlyName.trim() : FRIENDLY_NAME;
+    const appKey = typeof o.appKey === 'string' && o.appKey.trim() ? o.appKey.trim() : APP_KEY;
+    const friendlyName =
+      typeof o.friendlyName === 'string' && o.friendlyName.trim()
+        ? o.friendlyName.trim()
+        : FRIENDLY_NAME;
     const command = typeof o.command === 'string' ? o.command : '';
     const base = `${APPS_ROOT}\\${appKey}`;
     const ops = [];
     // 友好名：决定「建议的应用」里显示的应用名。
     ops.push({ key: base, name: 'FriendlyAppName', value: friendlyName, kind: 'value' });
     // 打开命令。
-    ops.push({ key: `${base}\\shell\\open\\command`, name: '(default)', value: command, kind: 'command' });
+    ops.push({
+      key: `${base}\\shell\\open\\command`,
+      name: '(default)',
+      value: command,
+      kind: 'command',
+    });
     // 关键机制：SupportedTypes 下每个扩展名一条空值 —— Windows 据此把 khy 列进「建议的应用」。
     for (const ext of exts) {
       ops.push({ key: `${base}\\SupportedTypes`, name: ext, value: '', kind: 'supported-type' });

@@ -52,140 +52,366 @@ const _OFF = new Set(['0', 'false', 'off', 'no']);
 const LIFECYCLE = Object.freeze([
   // ── cli-startup(deferredPrefetch 完整模式 khyquant)──────────────────────────
   Object.freeze({
-    id: 'hardwareProfileNotice', tier: 'startup-oneshot', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: 2000, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: '探测硬件档并在轻量机上打一条提示(limits 已同步前置应用),跑完即返回',
+    id: 'hardwareProfileNotice',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: 2000,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: '探测硬件档并在轻量机上打一条提示(limits 已同步前置应用),跑完即返回',
   }),
   Object.freeze({
-    id: 'cleanupService', tier: 'resident', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: 3000, immediate: false, unref: true, shutdownHook: true,
-    startSymbol: null, note: 'runCleanup 一次 + startPeriodicCleanup 起周期清理 timer(常驻)',
+    id: 'cleanupService',
+    tier: 'resident',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: 3000,
+    immediate: false,
+    unref: true,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'runCleanup 一次 + startPeriodicCleanup 起周期清理 timer(常驻)',
   }),
   Object.freeze({
-    id: 'resourceGuard', tier: 'resident', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: 4000, immediate: false, unref: true, shutdownHook: true,
-    startSymbol: null, note: 'startMemoryMonitor 起内存监视 timer(常驻)',
+    id: 'resourceGuard',
+    tier: 'resident',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: 4000,
+    immediate: false,
+    unref: true,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'startMemoryMonitor 起内存监视 timer(常驻)',
   }),
   Object.freeze({
-    id: 'projectMemoryPrune', tier: 'startup-oneshot', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: 4000, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: 'pruneProjects 修剪一次即返回',
+    id: 'projectMemoryPrune',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: 4000,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'pruneProjects 修剪一次即返回',
   }),
   Object.freeze({
-    id: 'fileIntegrity', tier: 'startup-oneshot', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: 5000, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: 'verifyOnStartup 文件完整性校验一次',
+    id: 'fileIntegrity',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: 5000,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'verifyOnStartup 文件完整性校验一次',
   }),
   Object.freeze({
-    id: 'versionUpdateNotice', tier: 'startup-oneshot', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: 5000, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: 'getUpdateNotice 取更新提示一次',
+    id: 'versionUpdateNotice',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: 5000,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'getUpdateNotice 取更新提示一次',
   }),
   Object.freeze({
-    id: 'ideAdapterRecovery', tier: 'startup-oneshot', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: 6000, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: 'recoverIdeAdapters 异步恢复一次',
+    id: 'ideAdapterRecovery',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: 6000,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'recoverIdeAdapters 异步恢复一次',
   }),
   Object.freeze({
-    id: 'skillLearning', tier: 'startup-oneshot', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: 8000, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: 'getSuggestedLearning 取学习建议一次',
+    id: 'skillLearning',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: 8000,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'getSuggestedLearning 取学习建议一次',
   }),
   Object.freeze({
-    id: 'immediateServices', tier: 'resident', process: 'cli-startup', mode: 'khyquant',
-    gate: null, gateInverted: false, delayMs: null, immediate: true, unref: true, shutdownHook: true,
-    startSymbol: null, note: 'setImmediate:cloudSync flush + adminTelemetry(一次)+ startSecurityMonitor(常驻)',
+    id: 'immediateServices',
+    tier: 'resident',
+    process: 'cli-startup',
+    mode: 'khyquant',
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: true,
+    unref: true,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'setImmediate:cloudSync flush + adminTelemetry(一次)+ startSecurityMonitor(常驻)',
   }),
 
   // ── cli-startup(deferredPrefetch 轻量模式 khy)──────────────────────────────
   Object.freeze({
-    id: 'gatewayWarmup', tier: 'startup-oneshot', process: 'cli-startup', mode: 'khy',
-    gate: 'KHY_GATEWAY_WARMUP_ON_BOOT', gateInverted: false, delayMs: 300, immediate: false,
-    unref: false, shutdownHook: true, startSymbol: null,
+    id: 'gatewayWarmup',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khy',
+    gate: 'KHY_GATEWAY_WARMUP_ON_BOOT',
+    gateInverted: false,
+    delayMs: 300,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
     note: '轻量模式 +300ms 触发 aiGateway.init() 预热一次(门判定仍在 runner 体内,逐字节保留原 !==false 语义)',
   }),
 
   // ── daemon 常驻(daemonEntry.js 独立进程)──────────────────────────────────
   Object.freeze({
-    id: 'aiManagementServer', tier: 'resident', process: 'daemon', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: '_server.listen', note: 'AI 管理面 http+ws 服务(常驻,daemon 主体)',
+    id: 'aiManagementServer',
+    tier: 'resident',
+    process: 'daemon',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: '_server.listen',
+    note: 'AI 管理面 http+ws 服务(常驻,daemon 主体)',
   }),
   Object.freeze({
-    id: 'daemonHeartbeat', tier: 'resident', process: 'daemon', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: true, shutdownHook: true,
-    startSymbol: '_heartbeatTimer = setInterval', note: 'daemon GC 心跳扫描 timer(常驻)',
+    id: 'daemonHeartbeat',
+    tier: 'resident',
+    process: 'daemon',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: true,
+    shutdownHook: true,
+    startSymbol: '_heartbeatTimer = setInterval',
+    note: 'daemon GC 心跳扫描 timer(常驻)',
   }),
   Object.freeze({
-    id: 'apiKeyPoolWatcher', tier: 'resident', process: 'daemon', mode: null,
-    gate: 'KHY_DISABLE_KEYPOOL_WATCH', gateInverted: true, delayMs: null, immediate: false,
-    unref: true, shutdownHook: true, startSymbol: "require('./apiKeyPoolWatcher').start",
+    id: 'apiKeyPoolWatcher',
+    tier: 'resident',
+    process: 'daemon',
+    mode: null,
+    gate: 'KHY_DISABLE_KEYPOOL_WATCH',
+    gateInverted: true,
+    delayMs: null,
+    immediate: false,
+    unref: true,
+    shutdownHook: true,
+    startSymbol: "require('./apiKeyPoolWatcher').start",
     note: 'api_keys.json fs.watch + 轮询(常驻);禁用式门 KHY_DISABLE_KEYPOOL_WATCH 置真则不起',
   }),
   Object.freeze({
-    id: 'changeWatch', tier: 'resident', process: 'daemon', mode: null,
-    gate: 'KHY_CHANGE_WATCH', gateInverted: false, delayMs: null, immediate: false,
-    unref: true, shutdownHook: true, startSymbol: 'changeWatch.start',
+    id: 'changeWatch',
+    tier: 'resident',
+    process: 'daemon',
+    mode: null,
+    gate: 'KHY_CHANGE_WATCH',
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: true,
+    shutdownHook: true,
+    startSymbol: 'changeWatch.start',
     note: '变更监视器(常驻);gate-before-start 干净模式,门 KHY_CHANGE_WATCH',
+  }),
+  Object.freeze({
+    id: 'ilinkChannel',
+    tier: 'resident',
+    process: 'daemon',
+    mode: null,
+    gate: 'KHY_MSG',
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: 'getMessageRouter',
+    note:
+      '微信个人号 ilink 长轮询通道(常驻);门 KHY_MSG + 需已扫码绑定。' +
+      '与其他 IM 渠道不同:webhook 渠道被动等敲门,本通道主动 getupdates,故 daemon 必须 eager 起它',
   }),
 
   // ── gated 常驻(repl/lazy,门开才起)────────────────────────────────────────
   Object.freeze({
-    id: 'selfEditWatcher', tier: 'resident', process: 'lazy', mode: null,
-    gate: 'KHY_SELF_EDIT_WATCH', gateInverted: false, delayMs: null, immediate: false,
-    unref: true, shutdownHook: true, startSymbol: null,
+    id: 'selfEditWatcher',
+    tier: 'resident',
+    process: 'lazy',
+    mode: null,
+    gate: 'KHY_SELF_EDIT_WATCH',
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: true,
+    shutdownHook: true,
+    startSymbol: null,
     note: '外部编辑器监视器(常驻);门 KHY_SELF_EDIT_WATCH(子闸)开才起,repl 内启动',
   }),
   Object.freeze({
-    id: 'cronScheduler', tier: 'resident', process: 'lazy', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: true, shutdownHook: true,
-    startSymbol: null, note: '计划任务调度器(常驻);KHY_CRON_* 家族门,首次注册任务时 lazy start',
+    id: 'cronScheduler',
+    tier: 'resident',
+    process: 'lazy',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: true,
+    shutdownHook: true,
+    startSymbol: null,
+    note: '计划任务调度器(常驻);KHY_CRON_* 家族门,首次注册任务时 lazy start',
   }),
 
   // ── on-demand 目录(按需,从不进同步冷启动路径;声明 + 守卫防回退)──────────────
   Object.freeze({
-    id: 'toolsRegistry', tier: 'on-demand', process: 'lazy', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: false, shutdownHook: false,
-    startSymbol: null, note: '107 个工具首次 getAll/get 时批量载入;KHY_DEFER_TOOLS 控制惰性(守卫断言门在)',
-  }),
-  Object.freeze({
-    id: 'aiGateway', tier: 'on-demand', process: 'lazy', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: false, shutdownHook: false,
+    id: 'toolsRegistry',
+    tier: 'on-demand',
+    process: 'lazy',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: false,
     startSymbol: null,
-    note: 'aiGateway + 17 adapter:construct+_doInit 需全部 adapter,故顶部 require 改惰性是 no-op;'
-      + '仅在首次 chat 或 +300ms warmup 后载入,守卫禁其回退到 bin/khy.js/bootstrap.js 同步冷路径',
+    note: '107 个工具首次 getAll/get 时批量载入;KHY_DEFER_TOOLS 控制惰性(守卫断言门在)',
   }),
   Object.freeze({
-    id: 'routerHandlers', tier: 'on-demand', process: 'lazy', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: false, shutdownHook: false,
-    startSymbol: null, note: 'router 全部 handler 每 case 内联 require(按需)',
+    id: 'aiGateway',
+    tier: 'on-demand',
+    process: 'lazy',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: false,
+    startSymbol: null,
+    note:
+      'aiGateway + 17 adapter:construct+_doInit 需全部 adapter,故顶部 require 改惰性是 no-op;' +
+      '仅在首次 chat 或 +300ms warmup 后载入,守卫禁其回退到 bin/khy.js/bootstrap.js 同步冷路径',
   }),
   Object.freeze({
-    id: 'providerConnectivityTester', tier: 'on-demand', process: 'lazy', mode: null,
-    gate: 'KHY_PROVIDER_CONNECTIVITY_TEST', gateInverted: false, delayMs: null, immediate: false,
-    unref: false, shutdownHook: false, startSymbol: null,
+    id: 'routerHandlers',
+    tier: 'on-demand',
+    process: 'lazy',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: false,
+    startSymbol: null,
+    note: 'router 全部 handler 每 case 内联 require(按需)',
+  }),
+  Object.freeze({
+    id: 'providerConnectivityTester',
+    tier: 'on-demand',
+    process: 'lazy',
+    mode: null,
+    gate: 'KHY_PROVIDER_CONNECTIVITY_TEST',
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: false,
+    startSymbol: null,
     note: 'khy test-key 连通性自检:仅命令触发(按需),门 KHY_PROVIDER_CONNECTIVITY_TEST',
   }),
   Object.freeze({
-    id: 'deviceApps', tier: 'on-demand', process: 'lazy', mode: null,
-    gate: 'KHY_DEVICE_APPS_TOOL', gateInverted: false, delayMs: null, immediate: false,
-    unref: false, shutdownHook: false, startSymbol: null,
+    id: 'deviceApps',
+    tier: 'on-demand',
+    process: 'lazy',
+    mode: null,
+    gate: 'KHY_DEVICE_APPS_TOOL',
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: false,
+    startSymbol: null,
     note: 'khy device 设备应用管理:仅命令/工具触发(按需)',
   }),
   Object.freeze({
-    id: 'mcpClients', tier: 'on-demand', process: 'lazy', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: 'MCP 客户端子进程:首次使用才连(按需),退出时清理',
+    id: 'mcpClients',
+    tier: 'on-demand',
+    process: 'lazy',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'MCP 客户端子进程:首次使用才连(按需),退出时清理',
   }),
   Object.freeze({
-    id: 'lspClients', tier: 'on-demand', process: 'lazy', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: 'LSP 客户端子进程:首次使用才起(按需),退出时清理',
+    id: 'lspClients',
+    tier: 'on-demand',
+    process: 'lazy',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: 'LSP 客户端子进程:首次使用才起(按需),退出时清理',
   }),
   Object.freeze({
-    id: 'localLLM', tier: 'on-demand', process: 'lazy', mode: null,
-    gate: null, gateInverted: false, delayMs: null, immediate: false, unref: false, shutdownHook: true,
-    startSymbol: null, note: '本地 LLM / tlsSidecar 子进程:首次需要才起(按需),退出时清理',
+    id: 'localLLM',
+    tier: 'on-demand',
+    process: 'lazy',
+    mode: null,
+    gate: null,
+    gateInverted: false,
+    delayMs: null,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: '本地 LLM / tlsSidecar 子进程:首次需要才起(按需),退出时清理',
   }),
 ]);
 
@@ -194,7 +420,11 @@ const _CLI_STARTUP_MODES = new Set(['khy', 'khyquant']);
 /** 找到条目(纯查找)。 */
 function _find(id) {
   const needle = String(id || '');
-  for (const e of LIFECYCLE) if (e.id === needle) return e;
+  for (const e of LIFECYCLE) {
+    if (e.id === needle) {
+      return e;
+    }
+  }
   return null;
 }
 
@@ -214,10 +444,16 @@ function isPolicyEnabled(env = process.env) {
     if (flagRegistry.isRegistryEnabled(env)) {
       return flagRegistry.isFlagEnabled('KHY_LIFECYCLE_POLICY', env);
     }
-    const raw = String((env && env.KHY_LIFECYCLE_POLICY) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_LIFECYCLE_POLICY) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -229,7 +465,9 @@ function listByTier(tier) {
   try {
     const t = String(tier || '');
     return LIFECYCLE.filter((e) => e.tier === t).map(_copy);
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -241,7 +479,9 @@ function listByProcess(proc) {
   try {
     const p = String(proc || '');
     return LIFECYCLE.filter((e) => e.process === p).map(_copy);
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -254,16 +494,24 @@ function listByProcess(proc) {
 function gateEnabled(id, env = process.env) {
   try {
     const e = _find(id);
-    if (!e || !e.gate) return true;
-    const raw = String((env && env[e.gate]) || '').trim().toLowerCase();
+    if (!e || !e.gate) {
+      return true;
+    }
+    const raw = String((env && env[e.gate]) || '')
+      .trim()
+      .toLowerCase();
     if (e.gateInverted) {
       // 禁用式 flag(KHY_DISABLE_*):置真=关闭 → 未置 / 关闭词 时服务启用。
       return !raw || _OFF.has(raw);
     }
     // 默认开式 flag:未置 或 非关闭词 → 启用。
-    if (!raw) return true;
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -275,14 +523,24 @@ function gateEnabled(id, env = process.env) {
  */
 function perIdOverride(id, env = process.env) {
   try {
-    if (!isPolicyEnabled(env)) return null; // 主门关 → 忽略 per-id 覆盖。
+    if (!isPolicyEnabled(env)) {
+      return null;
+    } // 主门关 → 忽略 per-id 覆盖。
     const e = _find(id);
-    if (!e) return null;
+    if (!e) {
+      return null;
+    }
     const key = `KHY_LIFECYCLE_${String(e.id).toUpperCase()}`;
-    const raw = String((env && env[key]) || '').trim().toLowerCase();
-    if (!raw) return null;
+    const raw = String((env && env[key]) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return null;
+    }
     return !_OFF.has(raw);
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -295,11 +553,19 @@ function perIdOverride(id, env = process.env) {
 function isResident(id, env = process.env) {
   try {
     const e = _find(id);
-    if (!e || e.tier !== 'resident') return false;
-    if (!gateEnabled(id, env)) return false;
-    if (perIdOverride(id, env) === false) return false;
+    if (!e || e.tier !== 'resident') {
+      return false;
+    }
+    if (!gateEnabled(id, env)) {
+      return false;
+    }
+    if (perIdOverride(id, env) === false) {
+      return false;
+    }
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -314,16 +580,21 @@ function listStartupSchedule(env = process.env, mode = 'khyquant') {
   try {
     const m = _CLI_STARTUP_MODES.has(String(mode)) ? String(mode) : 'khyquant';
     const policyOn = isPolicyEnabled(env);
-    const rows = LIFECYCLE
-      .filter((e) => e.process === 'cli-startup' && e.mode === m)
+    const rows = LIFECYCLE.filter((e) => e.process === 'cli-startup' && e.mode === m)
       .filter((e) => (policyOn ? perIdOverride(e.id, env) !== false : true))
       .map(_copy);
     // 稳定排序:immediate → +Infinity 排末;等延迟保留声明顺序。
     return rows
-      .map((e, i) => ({ e, i, key: e.immediate ? Number.POSITIVE_INFINITY : Number(e.delayMs) || 0 }))
-      .sort((a, b) => (a.key - b.key) || (a.i - b.i))
+      .map((e, i) => ({
+        e,
+        i,
+        key: e.immediate ? Number.POSITIVE_INFINITY : Number(e.delayMs) || 0,
+      }))
+      .sort((a, b) => a.key - b.key || a.i - b.i)
       .map((x) => x.e);
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -332,7 +603,11 @@ function listStartupSchedule(env = process.env, mode = 'khyquant') {
  * @returns {object|null}
  */
 function describe(id) {
-  try { return _copy(_find(id)); } catch { return null; }
+  try {
+    return _copy(_find(id));
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -342,14 +617,24 @@ function describe(id) {
 function allGates() {
   try {
     const set = new Set();
-    for (const e of LIFECYCLE) if (e.gate) set.add(e.gate);
+    for (const e of LIFECYCLE) {
+      if (e.gate) {
+        set.add(e.gate);
+      }
+    }
     return Array.from(set);
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /** 全部条目 id(深隔离):守卫做覆盖比对用。 */
 function allIds() {
-  try { return LIFECYCLE.map((e) => e.id); } catch { return []; }
+  try {
+    return LIFECYCLE.map((e) => e.id);
+  } catch {
+    return [];
+  }
 }
 
 module.exports = {

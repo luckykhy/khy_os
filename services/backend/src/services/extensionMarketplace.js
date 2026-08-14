@@ -11,11 +11,12 @@
  */
 
 const fs = require('fs');
-const path = require('path');
-const https = require('https');
 const http = require('http');
-const log = require('../utils/logger');
+const https = require('https');
+const path = require('path');
+
 const { withTempDir } = require('../utils/ephemeralTmp');
+const log = require('../utils/logger');
 
 const {
   listExtensions,
@@ -31,8 +32,8 @@ const {
 const DEFAULT_REGISTRY = 'https://registry.khy.dev';
 const REGISTRY_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
-let _registryCache = null;
-let _registryCacheTime = 0;
+const _registryCache = null;
+const _registryCacheTime = 0;
 
 /**
  * Get the registry URL from config or environment.
@@ -56,8 +57,12 @@ async function search(query, options) {
   const opts = options || {};
   const limit = opts.limit || 20;
   const url = new URL('/v1/extensions', _getRegistryUrl());
-  if (query) url.searchParams.set('q', query);
-  if (opts.tags && opts.tags.length) url.searchParams.set('tags', opts.tags.join(','));
+  if (query) {
+    url.searchParams.set('q', query);
+  }
+  if (opts.tags && opts.tags.length) {
+    url.searchParams.set('tags', opts.tags.join(','));
+  }
   url.searchParams.set('limit', String(limit));
 
   try {
@@ -126,15 +131,30 @@ async function checkUpdates() {
     try {
       const info = await getInfo(ext.name);
       if (!info) {
-        results.push({ name: ext.name, currentVersion: ext.version, latestVersion: null, updateAvailable: false });
+        results.push({
+          name: ext.name,
+          currentVersion: ext.version,
+          latestVersion: null,
+          updateAvailable: false,
+        });
         continue;
       }
 
       const latest = info.latestVersion || info.version || ext.version;
       const updateAvailable = _versionCompare(latest, ext.version) > 0;
-      results.push({ name: ext.name, currentVersion: ext.version, latestVersion: latest, updateAvailable });
+      results.push({
+        name: ext.name,
+        currentVersion: ext.version,
+        latestVersion: latest,
+        updateAvailable,
+      });
     } catch {
-      results.push({ name: ext.name, currentVersion: ext.version, latestVersion: null, updateAvailable: false });
+      results.push({
+        name: ext.name,
+        currentVersion: ext.version,
+        latestVersion: null,
+        updateAvailable: false,
+      });
     }
   }
 
@@ -148,7 +168,9 @@ async function checkUpdates() {
  */
 async function updateExtension(name) {
   const installed = listExtensions().find((e) => e.name === name);
-  if (!installed) throw new Error(`Extension "${name}" is not installed`);
+  if (!installed) {
+    throw new Error(`Extension "${name}" is not installed`);
+  }
 
   const oldVersion = installed.version;
 
@@ -190,7 +212,10 @@ function scaffold(name, targetDir, options) {
     skills: [],
     mcp: null,
   };
-  fs.writeFileSync(path.join(dir, 'openclaw.plugin.json'), JSON.stringify(manifest, null, 2) + '\n');
+  fs.writeFileSync(
+    path.join(dir, 'openclaw.plugin.json'),
+    JSON.stringify(manifest, null, 2) + '\n'
+  );
   files.push('openclaw.plugin.json');
 
   // package.json
@@ -222,13 +247,17 @@ module.exports = {
   activate(ctx) {
     ctx.logger.info('${name} activated');
 
-    ${capabilities.includes('cli-command') ? `// Register a CLI command
+    ${
+      capabilities.includes('cli-command')
+        ? `// Register a CLI command
     ctx.commands.register('${name}', {
       description: '${name} command',
       async handler(args) {
         return 'Hello from ${name}!';
       },
-    });` : '// Add extension logic here'}
+    });`
+        : '// Add extension logic here'
+    }
   },
 
   /**
@@ -303,14 +332,21 @@ async function _installFromTarball(name, tarballUrl, version) {
   try {
     // 下载到一次性临时目录再解压（避免 curl | tar 管道，Windows 不兼容）；
     // withTempDir 保证用完即毁，即便解压抛错或进程崩溃也不留垃圾。
-    await withTempDir(async (scratchDir) => {
-      const tgzPath = path.join(scratchDir, `${name}.tar.gz`);
-      await _downloadFile(tarballUrl, tgzPath);
-      execSync(`tar xzf "${tgzPath}" --strip-components=1 -C "${dest}"`, { stdio: 'pipe' });
-    }, { prefix: `ext-${name}` });
+    await withTempDir(
+      async (scratchDir) => {
+        const tgzPath = path.join(scratchDir, `${name}.tar.gz`);
+        await _downloadFile(tarballUrl, tgzPath);
+        execSync(`tar xzf "${tgzPath}" --strip-components=1 -C "${dest}"`, { stdio: 'pipe' });
+      },
+      { prefix: `ext-${name}` }
+    );
   } catch (err) {
     // Cleanup on failure
-    try { fs.rmSync(dest, { recursive: true, force: true }); } catch { /* ignore */ }
+    try {
+      fs.rmSync(dest, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
     throw new Error(`Failed to download extension: ${err.message}`);
   }
 
@@ -318,7 +354,9 @@ async function _installFromTarball(name, tarballUrl, version) {
   if (fs.existsSync(path.join(dest, 'package.json'))) {
     try {
       execSync('npm install --production', { cwd: dest, stdio: 'pipe' });
-    } catch { /* optional */ }
+    } catch {
+      /* optional */
+    }
   }
 
   return { name, version, path: dest };
@@ -345,7 +383,10 @@ function _downloadFile(url, destPath) {
       ws.on('error', reject);
     });
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Download timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Download timeout'));
+    });
   });
 }
 
@@ -364,26 +405,40 @@ function _fetchJson(url) {
       }
       let data = '';
       res.setEncoding('utf8');
-      res.on('data', (chunk) => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
-        try { resolve(JSON.parse(data)); }
-        catch (e) { reject(new Error(`Invalid JSON: ${e.message}`)); }
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error(`Invalid JSON: ${e.message}`));
+        }
       });
     });
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timed out'));
+    });
   });
 }
 
 function _versionCompare(a, b) {
-  if (!a || !b) return 0;
+  if (!a || !b) {
+    return 0;
+  }
   const pa = a.replace(/^v/, '').split('.').map(Number);
   const pb = b.replace(/^v/, '').split('.').map(Number);
   for (let i = 0; i < 3; i++) {
     const va = pa[i] || 0;
     const vb = pb[i] || 0;
-    if (va > vb) return 1;
-    if (va < vb) return -1;
+    if (va > vb) {
+      return 1;
+    }
+    if (va < vb) {
+      return -1;
+    }
   }
   return 0;
 }

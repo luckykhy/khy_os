@@ -9,14 +9,20 @@
  * Falls back to JS implementations if WASM is unavailable.
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+
+// Canonical chars/4 estimate atom (utils leaf; used by the JS fallback paths only).
+const _simpleTokenEstimate = require('../utils/simpleTokenEstimate');
 
 // WASM binary built by `cd backend/wasm-chain && moon build --target wasm-gc`
 const WASM_PATH = path.join(
-  __dirname, '../../wasm-chain/_build/wasm-gc/debug/build/cmd/main/main.wasm'
+  __dirname,
+  '../../wasm-chain/_build/wasm-gc/debug/build/cmd/main/main.wasm'
 );
-const MOONBIT_ENGINE = String(process.env.KHY_MOONBIT_ENGINE || 'auto').trim().toLowerCase();
+const MOONBIT_ENGINE = String(process.env.KHY_MOONBIT_ENGINE || 'auto')
+  .trim()
+  .toLowerCase();
 const EXTERNAL_PROVIDER_MODULE = String(process.env.KHY_MOONBIT_PROVIDER_MODULE || '').trim();
 
 let _instance = null;
@@ -32,9 +38,13 @@ function _shouldTryWasm() {
 }
 
 function _loadExternalProvider() {
-  if (_externalProviderLoadTried) return _externalProvider;
+  if (_externalProviderLoadTried) {
+    return _externalProvider;
+  }
   _externalProviderLoadTried = true;
-  if (!EXTERNAL_PROVIDER_MODULE) return null;
+  if (!EXTERNAL_PROVIDER_MODULE) {
+    return null;
+  }
   try {
     const resolved = path.isAbsolute(EXTERNAL_PROVIDER_MODULE)
       ? EXTERNAL_PROVIDER_MODULE
@@ -82,18 +92,26 @@ async function _loadWasm() {
 }
 
 async function getInstance() {
-  if (!_shouldTryWasm()) return null;
-  if (_instance) return _instance;
-  if (_loadError) return null;
-  if (_loading) return _loading;
+  if (!_shouldTryWasm()) {
+    return null;
+  }
+  if (_instance) {
+    return _instance;
+  }
+  if (_loadError) {
+    return null;
+  }
+  if (_loading) {
+    return _loading;
+  }
 
   _loading = _loadWasm()
-    .then(inst => {
+    .then((inst) => {
       _instance = inst;
       _loading = null;
       return inst;
     })
-    .catch(err => {
+    .catch((err) => {
       _loadError = err;
       _loading = null;
       return null;
@@ -120,13 +138,15 @@ function _jsCountPlaceholders(template) {
 
 function _jsExtractPlaceholders(template) {
   const matches = template.match(/\{([^{}]+)\}/g);
-  if (!matches) return [];
-  return matches.map(m => m.slice(1, -1));
+  if (!matches) {
+    return [];
+  }
+  return matches.map((m) => m.slice(1, -1));
 }
 
 function _jsFormatHistory(inputs, outputs, maxTurns) {
   const total = Math.min(inputs.length, outputs.length);
-  const start = (maxTurns > 0 && total > maxTurns) ? total - maxTurns : 0;
+  const start = maxTurns > 0 && total > maxTurns ? total - maxTurns : 0;
   const lines = [];
   for (let i = start; i < total; i++) {
     lines.push(`Human: ${inputs[i]}\nAI: ${outputs[i]}`);
@@ -136,12 +156,13 @@ function _jsFormatHistory(inputs, outputs, maxTurns) {
 
 function _jsEstimateHistoryTokens(inputs, outputs, maxTurns) {
   const total = Math.min(inputs.length, outputs.length);
-  const start = (maxTurns > 0 && total > maxTurns) ? total - maxTurns : 0;
+  const start = maxTurns > 0 && total > maxTurns ? total - maxTurns : 0;
   let chars = 0;
   for (let i = start; i < total; i++) {
     chars += 7 + inputs[i].length + 5 + outputs[i].length + 1;
   }
-  const raw = Math.ceil(chars / 4);
+  // Thin delegate; byte-identical to Math.ceil(chars / 4) for every number.
+  const raw = _simpleTokenEstimate.fromCharCount(chars);
   return Math.ceil(raw * 1.2);
 }
 
@@ -151,8 +172,11 @@ function _jsMaxTurnsForBudget(inputs, outputs, tokenBudget) {
   let tokensUsed = 0;
   for (let i = total - 1; i >= 0; i--) {
     const turnChars = 7 + inputs[i].length + 5 + outputs[i].length + 1;
-    const turnTokens = Math.ceil(Math.ceil(turnChars / 4) * 1.2);
-    if (tokensUsed + turnTokens > tokenBudget) break;
+    // Inner ceil(turnChars / 4) delegated; the 1.2x margin + outer ceil stay local.
+    const turnTokens = Math.ceil(_simpleTokenEstimate.fromCharCount(turnChars) * 1.2);
+    if (tokensUsed + turnTokens > tokenBudget) {
+      break;
+    }
     tokensUsed += turnTokens;
     turns++;
   }
@@ -185,13 +209,18 @@ function _jsParseReactResponse(response) {
 }
 
 function _jsValidateInput(input, maxLength) {
-  if (!input || input.length === 0) return -2;
-  if (maxLength > 0 && input.length > maxLength) return -1;
+  if (!input || input.length === 0) {
+    return -2;
+  }
+  if (maxLength > 0 && input.length > maxLength) {
+    return -1;
+  }
   return 0;
 }
 
 function _jsEstimateChainTokens(templateLen, inputLen, historyTokens) {
-  const textTokens = Math.ceil(Math.ceil((templateLen + inputLen) / 4) * 1.2);
+  // Inner ceil((templateLen + inputLen) / 4) delegated; margin + outer ceil stay local.
+  const textTokens = Math.ceil(_simpleTokenEstimate.fromCharCount(templateLen + inputLen) * 1.2);
   return textTokens + historyTokens;
 }
 
@@ -207,12 +236,16 @@ function _jsEstimateChainTokens(templateLen, inputLen, historyTokens) {
 function renderTemplate(template, keys, values) {
   if (_preferExternal()) {
     const external = _tryExternal('renderTemplate', [template, keys, values]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.render_template) {
     try {
       return _instance.exports.render_template(template, keys, values);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsRenderTemplate(template, keys, values);
 }
@@ -225,12 +258,16 @@ function renderTemplate(template, keys, values) {
 function countPlaceholders(template) {
   if (_preferExternal()) {
     const external = _tryExternal('countPlaceholders', [template]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.count_placeholders) {
     try {
       return _instance.exports.count_placeholders(template);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsCountPlaceholders(template);
 }
@@ -243,13 +280,17 @@ function countPlaceholders(template) {
 function extractPlaceholders(template) {
   if (_preferExternal()) {
     const external = _tryExternal('extractPlaceholders', [template]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.extract_placeholders) {
     try {
       const json = _instance.exports.extract_placeholders(template);
       return JSON.parse(json);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsExtractPlaceholders(template);
 }
@@ -264,12 +305,16 @@ function extractPlaceholders(template) {
 function formatHistory(inputs, outputs, maxTurns) {
   if (_preferExternal()) {
     const external = _tryExternal('formatHistory', [inputs, outputs, maxTurns]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.format_history) {
     try {
       return _instance.exports.format_history(inputs, outputs, maxTurns);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsFormatHistory(inputs, outputs, maxTurns);
 }
@@ -284,12 +329,16 @@ function formatHistory(inputs, outputs, maxTurns) {
 function estimateHistoryTokens(inputs, outputs, maxTurns) {
   if (_preferExternal()) {
     const external = _tryExternal('estimateHistoryTokens', [inputs, outputs, maxTurns]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.estimate_history_tokens) {
     try {
       return _instance.exports.estimate_history_tokens(inputs, outputs, maxTurns);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsEstimateHistoryTokens(inputs, outputs, maxTurns);
 }
@@ -304,12 +353,16 @@ function estimateHistoryTokens(inputs, outputs, maxTurns) {
 function maxTurnsForBudget(inputs, outputs, tokenBudget) {
   if (_preferExternal()) {
     const external = _tryExternal('maxTurnsForBudget', [inputs, outputs, tokenBudget]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.max_turns_for_budget) {
     try {
       return _instance.exports.max_turns_for_budget(inputs, outputs, tokenBudget);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsMaxTurnsForBudget(inputs, outputs, tokenBudget);
 }
@@ -322,13 +375,17 @@ function maxTurnsForBudget(inputs, outputs, tokenBudget) {
 function parseReactResponse(response) {
   if (_preferExternal()) {
     const external = _tryExternal('parseReactResponse', [response]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.parse_react_response) {
     try {
       const json = _instance.exports.parse_react_response(response);
       return JSON.parse(json);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsParseReactResponse(response);
 }
@@ -342,12 +399,16 @@ function parseReactResponse(response) {
 function validateInput(input, maxLength) {
   if (_preferExternal()) {
     const external = _tryExternal('validateInput', [input, maxLength]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.validate_input) {
     try {
       return _instance.exports.validate_input(input, maxLength);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsValidateInput(input, maxLength);
 }
@@ -362,12 +423,16 @@ function validateInput(input, maxLength) {
 function estimateChainTokens(templateLen, inputLen, historyTokens) {
   if (_preferExternal()) {
     const external = _tryExternal('estimateChainTokens', [templateLen, inputLen, historyTokens]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.estimate_chain_tokens) {
     try {
       return _instance.exports.estimate_chain_tokens(templateLen, inputLen, historyTokens);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsEstimateChainTokens(templateLen, inputLen, historyTokens);
 }
@@ -388,7 +453,9 @@ function getRuntimeInfo() {
     wasmLoadError: _loadError ? String(_loadError.message || _loadError) : '',
     externalProviderModule: EXTERNAL_PROVIDER_MODULE || '',
     externalProviderLoaded: !!_externalProvider,
-    externalProviderLoadError: _externalProviderLoadError ? String(_externalProviderLoadError.message || _externalProviderLoadError) : '',
+    externalProviderLoadError: _externalProviderLoadError
+      ? String(_externalProviderLoadError.message || _externalProviderLoadError)
+      : '',
   };
 }
 

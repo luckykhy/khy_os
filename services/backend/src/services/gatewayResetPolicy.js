@@ -22,10 +22,12 @@
 const _OFF = new Set(['0', 'false', 'off', 'no']);
 
 /** 门控:KHY_GATEWAY_RESET 默认开,仅 {0,false,off,no} 关。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   try {
     const raw = env && env.KHY_GATEWAY_RESET;
-    const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
     return !_OFF.has(v);
   } catch {
     return true;
@@ -85,7 +87,9 @@ function getFactoryDefaults() {
 function shouldResetGateway(opts = {}) {
   try {
     const env = (opts && opts.env) || (typeof process !== 'undefined' ? process.env : {});
-    if (!isEnabled(env)) return { shouldReset: false, reason: '' };
+    if (!isEnabled(env)) {
+      return { shouldReset: false, reason: '' };
+    }
 
     // 坏输入:envMap 缺失或非对象 → fail-soft 返回不重置
     if (!opts || typeof opts !== 'object' || !opts.envMap) {

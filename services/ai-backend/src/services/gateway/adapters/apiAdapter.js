@@ -25,7 +25,9 @@ function loadServiceCtor() {
     }
   }
 
-  throw new Error(`MultiFreeService load failed. Tried ${candidatePaths.length} locations. ${errors.join(' | ')}`);
+  throw new Error(
+    `MultiFreeService load failed. Tried ${candidatePaths.length} locations. ${errors.join(' | ')}`
+  );
 }
 
 function getService() {

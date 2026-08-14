@@ -15,31 +15,64 @@
  *   任一失败 → 记日志 + 静默回落,绝不抛、绝不阻塞。门控 KHY_RTK_AUTO_INSTALL。
  */
 
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+
+const { getAppHome } = require('../utils/dataHome');
 
 const rtkMode = require('./rtkMode');
-const { getAppHome } = require('../utils/dataHome');
 
 // 安装来源(可经 env 覆盖;默认取 RTK 官方仓库)。非 khy 云端点,gate 不拦。
 const RTK_GIT_URL = process.env.KHY_RTK_GIT_URL || 'https://github.com/rtk-ai/rtk';
-const RTK_INSTALL_SCRIPT_URL = process.env.KHY_RTK_INSTALL_SCRIPT_URL
-  || 'https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh';
+const RTK_INSTALL_SCRIPT_URL =
+  process.env.KHY_RTK_INSTALL_SCRIPT_URL ||
+  'https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh';
 
 function _log() {
-  try { return require('../utils/logger'); } catch { return null; }
+  try {
+    return require('../utils/logger');
+  } catch {
+    return null;
+  }
 }
-function _warn(msg) { const l = _log(); if (l && l.warn) { try { l.warn(msg); } catch { /* ignore */ } } }
-function _info(msg) { const l = _log(); if (l && l.info) { try { l.info(msg); } catch { /* ignore */ } } }
+
+function _warn(msg) {
+  const l = _log();
+  if (l && l.warn) {
+    try {
+      l.warn(msg);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function _info(msg) {
+  const l = _log();
+  if (l && l.info) {
+    try {
+      l.info(msg);
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 // ── 可注入 spawn(测试入口)──────────────────────────────────────────────────
 let _spawnImpl = null; // (file, args, opts) => Promise<{ code, stdout, stderr }>
-function __setSpawn(fn) { _spawnImpl = fn; }
-function __clearSpawn() { _spawnImpl = null; }
+function __setSpawn(fn) {
+  _spawnImpl = fn;
+}
+
+function __clearSpawn() {
+  _spawnImpl = null;
+}
 
 function _spawnAsync(file, args, opts = {}) {
-  if (typeof _spawnImpl === 'function') return Promise.resolve(_spawnImpl(file, args, opts));
+  if (typeof _spawnImpl === 'function') {
+    return Promise.resolve(_spawnImpl(file, args, opts));
+  }
   return new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
@@ -55,11 +88,23 @@ function _spawnAsync(file, args, opts = {}) {
       return resolve({ code: -1, stdout: '', stderr: String((err && err.message) || err) });
     }
     const timer = setTimeout(() => {
-      try { child.kill('SIGKILL'); } catch { /* ignore */ }
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        /* ignore */
+      }
       resolve({ code: -1, stdout, stderr: stderr + '\n[timeout]' });
     }, opts.timeout || 300000);
-    if (child.stdout) child.stdout.on('data', (d) => { stdout += String(d); });
-    if (child.stderr) child.stderr.on('data', (d) => { stderr += String(d); });
+    if (child.stdout) {
+      child.stdout.on('data', (d) => {
+        stdout += String(d);
+      });
+    }
+    if (child.stderr) {
+      child.stderr.on('data', (d) => {
+        stderr += String(d);
+      });
+    }
     child.on('error', (err) => {
       clearTimeout(timer);
       resolve({ code: -1, stdout, stderr: stderr + String((err && err.message) || err) });
@@ -83,9 +128,13 @@ let _attemptPromise = null;
  * 触发安装(fire-and-forget,非阻塞,永不抛)。供接缝在缺失时调用。
  */
 function kickoff() {
-  if (!rtkMode.autoInstallEnabled()) return;
+  if (!rtkMode.autoInstallEnabled()) {
+    return;
+  }
   // 不 await:本回合立即返回,安装在后台进行。
-  ensureInstalled().catch(() => { /* 已在内部记日志 */ });
+  ensureInstalled().catch(() => {
+    /* 已在内部记日志 */
+  });
 }
 
 /**
@@ -93,7 +142,9 @@ function kickoff() {
  * { success, method, path?, reason? }。永不抛。
  */
 function ensureInstalled() {
-  if (_attemptPromise) return _attemptPromise;
+  if (_attemptPromise) {
+    return _attemptPromise;
+  }
   _attemptPromise = _doInstall().catch((err) => {
     _warn(`[rtkInstaller] install attempt threw (non-fatal): ${(err && err.message) || err}`);
     return { success: false, method: null, reason: 'exception' };
@@ -104,17 +155,25 @@ function ensureInstalled() {
 async function _doInstall() {
   // 1) 已存在?
   const existing = await rtkMode.resolveBinary({ force: true });
-  if (existing) return { success: true, method: 'existing', path: existing };
+  if (existing) {
+    return { success: true, method: 'existing', path: existing };
+  }
 
   if (!rtkMode.autoInstallEnabled()) {
     return { success: false, method: null, reason: 'auto-install disabled' };
   }
 
-  const appHome = (() => { try { return getAppHome(); } catch { return null; } })();
+  const appHome = (() => {
+    try {
+      return getAppHome();
+    } catch {
+      return null;
+    }
+  })();
   const localBin = rtkMode.localBinPath();
 
   // 2) cargo install --git … --root <appHome>(落 ~/.khy/bin/rtk)
-  if (appHome && await _hasCommand('cargo')) {
+  if (appHome && (await _hasCommand('cargo'))) {
     _info(`[rtkInstaller] installing rtk via cargo from ${RTK_GIT_URL} …`);
     const r = await _spawnAsync(
       'cargo',
@@ -124,19 +183,20 @@ async function _doInstall() {
     if (r && r.code === 0) {
       rtkMode.__clearCache();
       const resolved = await rtkMode.resolveBinary({ force: true });
-      if (resolved) { _info('[rtkInstaller] rtk installed via cargo'); return { success: true, method: 'cargo', path: resolved }; }
+      if (resolved) {
+        _info('[rtkInstaller] rtk installed via cargo');
+        return { success: true, method: 'cargo', path: resolved };
+      }
     }
     _warn(`[rtkInstaller] cargo install failed (code ${r && r.code}); trying install script`);
   }
 
   // 3) 官方 install.sh(装到 ~/.local/bin)→ 拷入 ~/.khy/bin
-  if (process.platform !== 'win32' && await _hasCommand('curl')) {
+  if (process.platform !== 'win32' && (await _hasCommand('curl'))) {
     _info('[rtkInstaller] installing rtk via official install.sh …');
-    const r = await _spawnAsync(
-      'sh',
-      ['-c', `curl -fsSL ${RTK_INSTALL_SCRIPT_URL} | sh`],
-      { timeout: 300000 }
-    );
+    const r = await _spawnAsync('sh', ['-c', `curl -fsSL ${RTK_INSTALL_SCRIPT_URL} | sh`], {
+      timeout: 300000,
+    });
     if (r && r.code === 0) {
       const localBinDir = path.join(require('os').homedir(), '.local', 'bin', 'rtk');
       try {
@@ -150,7 +210,10 @@ async function _doInstall() {
       }
       rtkMode.__clearCache();
       const resolved = await rtkMode.resolveBinary({ force: true });
-      if (resolved) { _info('[rtkInstaller] rtk installed via install.sh'); return { success: true, method: 'script', path: resolved }; }
+      if (resolved) {
+        _info('[rtkInstaller] rtk installed via install.sh');
+        return { success: true, method: 'script', path: resolved };
+      }
     }
     _warn(`[rtkInstaller] install.sh failed (code ${r && r.code})`);
   }
@@ -160,7 +223,9 @@ async function _doInstall() {
 }
 
 // ── 测试入口 ────────────────────────────────────────────────────────────────
-function __reset() { _attemptPromise = null; }
+function __reset() {
+  _attemptPromise = null;
+}
 
 module.exports = {
   kickoff,

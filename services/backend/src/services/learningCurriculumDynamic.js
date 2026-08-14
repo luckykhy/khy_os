@@ -17,9 +17,9 @@
  * 原子写、零硬编码（阈值/开关走 KHY_LEARN_* env）。
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 // 覆盖层的纯持久化 + 纯合并原语下沉到叶子模块 learningOverlay（不依赖 curriculum），
 // 以打破 curriculum ⇄ dynamic 循环依赖。本模块 re-export 这些纯函数以保持调用方/测试接口不变。
@@ -40,24 +40,30 @@ const {
 // 收敛到 utils/envIntNonNeg 单一真源(逐字节委托,调用点不变)
 const _envInt = require('../utils/envIntNonNeg');
 
-const TTL_MS = () => _envInt('KHY_LEARN_DYNAMIC_TTL_MS', 6 * 60 * 60 * 1000);  // 默认 6h
-const MAX_DISCOVERED = () => _envInt('KHY_LEARN_DYNAMIC_MAX_TOPICS', 40);     // 发现知识点上限
-const MAX_AI_DESC = () => _envInt('KHY_LEARN_DYNAMIC_AI_DESC_MAX', 12);       // 单次 AI 生成 desc 上限
-const AI_TIMEOUT_MS = () => _envInt('KHY_LEARN_FETCH_TIMEOUT_MS', 4000);      // 复用既有取数超时
-const WALK_MAX_FILES = () => _envInt('KHY_LEARN_DYNAMIC_WALK_MAX', 6000);     // 自愈索引扫描上限
+const TTL_MS = () => _envInt('KHY_LEARN_DYNAMIC_TTL_MS', 6 * 60 * 60 * 1000); // 默认 6h
+const MAX_DISCOVERED = () => _envInt('KHY_LEARN_DYNAMIC_MAX_TOPICS', 40); // 发现知识点上限
+const MAX_AI_DESC = () => _envInt('KHY_LEARN_DYNAMIC_AI_DESC_MAX', 12); // 单次 AI 生成 desc 上限
+const AI_TIMEOUT_MS = () => _envInt('KHY_LEARN_FETCH_TIMEOUT_MS', 4000); // 复用既有取数超时
+const WALK_MAX_FILES = () => _envInt('KHY_LEARN_DYNAMIC_WALK_MAX', 6000); // 自愈索引扫描上限
 
 // ── 发现 + 自愈（纯文件系统，无需模型/网络） ─────────────────────────
-function _curriculum() { return require('./learningCurriculum'); }
+function _curriculum() {
+  return require('./learningCurriculum');
+}
 
 /** 把 syncCurriculum 报告里的「未覆盖文件」转成动态知识点。 */
 function _discoveredTopicsFromReport(report) {
   const cap = MAX_DISCOVERED();
   const out = [];
   const seen = new Set();
-  for (const u of (report.uncovered || [])) {
-    if (out.length >= cap) break;
+  for (const u of report.uncovered || []) {
+    if (out.length >= cap) {
+      break;
+    }
     const file = u.file;
-    if (!file || seen.has(file)) continue;
+    if (!file || seen.has(file)) {
+      continue;
+    }
     seen.add(file);
     const base = path.basename(file).replace(/\.(js|vue|md|ts)$/i, '');
     const id = `dyn-${u.category || 'mod'}-${base}`.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64);
@@ -65,7 +71,7 @@ function _discoveredTopicsFromReport(report) {
       layer: u.suggestedLayer,
       id,
       title: `${base}（${u.label || '新模块'}）`,
-      desc: '',                          // 留空：模式 3 由 AI 现场讲解；离线显示源码预览
+      desc: '', // 留空：模式 3 由 AI 现场讲解；离线显示源码预览
       files: [file],
       source: 'discovered',
     });
@@ -80,43 +86,76 @@ function _discoveredTopicsFromReport(report) {
 function _healStaleRefs(report, projectRoot) {
   const remaps = {};
   const stale = report.stale || [];
-  if (stale.length === 0) return remaps;
+  if (stale.length === 0) {
+    return remaps;
+  }
 
   // 构建 basename -> [相对路径...] 索引（一次性、bounded）。
-  const wanted = new Set(stale.map(s => path.basename(s.file)));
-  const index = new Map();   // basename -> Set(relPath)
-  const SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'coverage', '.venv', '__pycache__', 'vendor']);
+  const wanted = new Set(stale.map((s) => path.basename(s.file)));
+  const index = new Map(); // basename -> Set(relPath)
+  const SKIP = new Set([
+    'node_modules',
+    '.git',
+    'dist',
+    'build',
+    'coverage',
+    '.venv',
+    '__pycache__',
+    'vendor',
+  ]);
   let budget = WALK_MAX_FILES();
 
   const walk = (absDir) => {
-    if (budget <= 0) return;
+    if (budget <= 0) {
+      return;
+    }
     let entries;
-    try { entries = fs.readdirSync(absDir, { withFileTypes: true }); } catch { return; }
+    try {
+      entries = fs.readdirSync(absDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
     for (const e of entries) {
-      if (budget <= 0) return;
-      if (e.name.startsWith('.') && e.name !== '.ai') continue;
+      if (budget <= 0) {
+        return;
+      }
+      if (e.name.startsWith('.') && e.name !== '.ai') {
+        continue;
+      }
       const abs = path.join(absDir, e.name);
       if (e.isDirectory()) {
-        if (SKIP.has(e.name)) continue;
+        if (SKIP.has(e.name)) {
+          continue;
+        }
         walk(abs);
       } else if (e.isFile()) {
         budget--;
         const bn = e.name;
-        if (!wanted.has(bn)) continue;
+        if (!wanted.has(bn)) {
+          continue;
+        }
         const rel = path.relative(projectRoot, abs).split(path.sep).join('/');
-        if (!index.has(bn)) index.set(bn, new Set());
+        if (!index.has(bn)) {
+          index.set(bn, new Set());
+        }
         index.get(bn).add(rel);
       }
     }
   };
-  try { walk(projectRoot); } catch { /* ignore */ }
+  try {
+    walk(projectRoot);
+  } catch {
+    /* ignore */
+  }
 
   for (const s of stale) {
     const bn = path.basename(s.file);
     const matches = index.get(bn);
     if (matches && matches.size === 1) {
       const [only] = matches;
-      if (only && only !== s.file) remaps[s.file] = only;
+      if (only && only !== s.file) {
+        remaps[s.file] = only;
+      }
     }
     // 多个同名或零匹配 → 不猜测（保守，避免错误重映射）。
   }
@@ -125,8 +164,8 @@ function _healStaleRefs(report, projectRoot) {
 
 function _computeFingerprint(report, caps) {
   const payload = {
-    uncovered: (report.uncovered || []).map(u => u.file).sort(),
-    stale: (report.stale || []).map(s => s.file).sort(),
+    uncovered: (report.uncovered || []).map((u) => u.file).sort(),
+    stale: (report.stale || []).map((s) => s.file).sort(),
     caps,
   };
   return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
@@ -144,8 +183,12 @@ function _withTimeout(promise, ms, label) {
 
 /** AI 为发现的知识点生成简洁 desc。失败/超时静默丢弃，topic 保留空 desc。 */
 async function _aiEnrichDescriptions(topics, callModel) {
-  const targets = topics.filter(t => t.source === 'discovered' && !t.desc).slice(0, MAX_AI_DESC());
-  if (targets.length === 0) return topics;
+  const targets = topics
+    .filter((t) => t.source === 'discovered' && !t.desc)
+    .slice(0, MAX_AI_DESC());
+  if (targets.length === 0) {
+    return topics;
+  }
   const list = targets.map((t, i) => `${i + 1}. ${t.title} → ${t.files[0] || ''}`).join('\n');
   const prompt = [
     '[CURRICULUM ENRICH — 课程知识点描述生成]',
@@ -163,10 +206,14 @@ async function _aiEnrichDescriptions(topics, callModel) {
       for (const item of arr) {
         const idx = Number(item && item.i) - 1;
         const desc = item && typeof item.desc === 'string' ? item.desc.trim() : '';
-        if (idx >= 0 && idx < targets.length && desc) targets[idx].desc = desc.slice(0, 120);
+        if (idx >= 0 && idx < targets.length && desc) {
+          targets[idx].desc = desc.slice(0, 120);
+        }
       }
     }
-  } catch { /* fail-soft：保留空 desc */ }
+  } catch {
+    /* fail-soft：保留空 desc */
+  }
   return topics;
 }
 
@@ -189,18 +236,30 @@ async function _aiExpandTopics(report, callModel) {
     const reply = await _withTimeout(callModel(prompt), AI_TIMEOUT_MS(), 'expand');
     const { extractFirstJson } = require('./gateway/safeJsonParse');
     const parsed = extractFirstJson(reply, null);
-    const topics = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.topics) ? parsed.topics : null);
-    if (!Array.isArray(topics)) return [];
+    const topics = Array.isArray(parsed)
+      ? parsed
+      : parsed && Array.isArray(parsed.topics)
+        ? parsed.topics
+        : null;
+    if (!Array.isArray(topics)) {
+      return [];
+    }
     // 真实路径白名单：只接受 report 里出现过的文件，杜绝模型臆造。
-    const allowed = new Set((report.uncovered || []).map(u => u.file));
+    const allowed = new Set((report.uncovered || []).map((u) => u.file));
     const out = [];
     for (const t of topics) {
-      if (!t || t.layer == null || !t.id) continue;
-      const files = (Array.isArray(t.files) ? t.files : []).filter(f => allowed.has(f));
-      if (files.length === 0) continue;
+      if (!t || t.layer == null || !t.id) {
+        continue;
+      }
+      const files = (Array.isArray(t.files) ? t.files : []).filter((f) => allowed.has(f));
+      if (files.length === 0) {
+        continue;
+      }
       out.push({
         layer: Number(t.layer),
-        id: String(t.id).replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64),
+        id: String(t.id)
+          .replace(/[^a-zA-Z0-9_-]/g, '-')
+          .slice(0, 64),
         title: String(t.title || t.id).slice(0, 80),
         desc: String(t.desc || '').slice(0, 120),
         files,
@@ -226,14 +285,21 @@ async function _aiExpandTopics(report, callModel) {
  */
 async function refreshDynamic(opts = {}) {
   const result = { ok: false, changed: false, discovered: 0, healed: 0, aiAdded: 0 };
-  if (!isDynamicEnabled()) { result.reason = 'disabled'; return result; }
+  if (!isDynamicEnabled()) {
+    result.reason = 'disabled';
+    return result;
+  }
 
   const curriculum = _curriculum();
   const projectRoot = curriculum.PROJECT_ROOT;
 
   let report;
-  try { report = curriculum.syncCurriculum(); }
-  catch (e) { result.reason = `scan_failed:${e.message}`; return result; }
+  try {
+    report = curriculum.syncCurriculum();
+  } catch (e) {
+    result.reason = `scan_failed:${e.message}`;
+    return result;
+  }
 
   const useModel = !!opts.useModel && opts.model && opts.model !== 'none';
   const useNetwork = !!opts.useNetwork;
@@ -245,8 +311,8 @@ async function refreshDynamic(opts = {}) {
     // 扫描结果与能力都没变 → 跳过重写（机会式刷新省时省钱）。
     result.ok = true;
     result.reason = 'unchanged';
-    result.discovered = (prev.topics || []).filter(t => t.source === 'discovered').length;
-    result.aiAdded = (prev.topics || []).filter(t => t.source === 'ai').length;
+    result.discovered = (prev.topics || []).filter((t) => t.source === 'discovered').length;
+    result.aiAdded = (prev.topics || []).filter((t) => t.source === 'ai').length;
     result.healed = Object.keys(prev.fileRemaps || {}).length;
     return result;
   }
@@ -263,9 +329,13 @@ async function refreshDynamic(opts = {}) {
     topics = await _aiEnrichDescriptions(topics, callModel);
     const aiTopics = await _aiExpandTopics(report, callModel);
     // 合并 AI 扩充（去重 id）
-    const ids = new Set(topics.map(t => t.id));
+    const ids = new Set(topics.map((t) => t.id));
     for (const t of aiTopics) {
-      if (!ids.has(t.id)) { topics.push(t); ids.add(t.id); result.aiAdded++; }
+      if (!ids.has(t.id)) {
+        topics.push(t);
+        ids.add(t.id);
+        result.aiAdded++;
+      }
     }
   }
 
@@ -276,15 +346,17 @@ async function refreshDynamic(opts = {}) {
     capabilities: caps,
     fileRemaps,
     topics,
-    layers: [],           // 预留：当前 AI 扩充并入既有层；整层新增留作后续
+    layers: [], // 预留：当前 AI 扩充并入既有层；整层新增留作后续
   };
 
   const wrote = writeOverlay(overlay);
   result.ok = wrote;
   result.changed = wrote;
-  result.discovered = topics.filter(t => t.source === 'discovered').length;
+  result.discovered = topics.filter((t) => t.source === 'discovered').length;
   result.healed = Object.keys(fileRemaps).length;
-  if (!wrote) result.reason = 'write_failed';
+  if (!wrote) {
+    result.reason = 'write_failed';
+  }
   return result;
 }
 
@@ -292,7 +364,9 @@ async function refreshDynamic(opts = {}) {
  * 机会式刷新：TTL 内或扫描指纹未变则跳过。供 learn 入口低频调用，绝不阻断。
  */
 async function maybeRefreshDynamic(opts = {}) {
-  if (!isDynamicEnabled()) return { ok: false, reason: 'disabled' };
+  if (!isDynamicEnabled()) {
+    return { ok: false, reason: 'disabled' };
+  }
   try {
     const prev = loadOverlay();
     if (prev.generatedAt) {

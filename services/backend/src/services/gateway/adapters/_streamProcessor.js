@@ -28,8 +28,12 @@
  * @param {boolean} [options.handleTopLevelToolEvents=false] - 是否处理顶层 tool_use/tool_call/tool_result
  */
 function processStreamEvent(event, onChunk, appendContent, state, options = {}) {
-  if (!state) state = { blocks: new Map(), sawStreamEvent: false, sawAssistantText: false };
-  if (!state.blocks) state.blocks = new Map();
+  if (!state) {
+    state = { blocks: new Map(), sawStreamEvent: false, sawAssistantText: false };
+  }
+  if (!state.blocks) {
+    state.blocks = new Map();
+  }
 
   const {
     repairJson = false,
@@ -42,24 +46,38 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
   // ── 内部辅助函数 ──────────────────────────────────────────────────
 
   const summarizeInput = (input) => {
-    if (!input) return '';
-    if (typeof input === 'string') return input.slice(0, 120);
+    if (!input) {
+      return '';
+    }
+    if (typeof input === 'string') {
+      return input.slice(0, 120);
+    }
     try {
       return Object.entries(input)
-        .map(([k, v]) => `${k}=${String(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 40)}`)
+        .map(
+          ([k, v]) => `${k}=${String(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 40)}`
+        )
         .join(', ')
         .slice(0, 120);
-    } catch { return ''; }
+    } catch {
+      return '';
+    }
   };
 
   const parseJsonMaybe = (str) => {
-    if (!str || typeof str !== 'string') return null;
-    try { return JSON.parse(str); } catch {
+    if (!str || typeof str !== 'string') {
+      return null;
+    }
+    try {
+      return JSON.parse(str);
+    } catch {
       if (repairJson) {
         try {
           const { safeJsonParse } = require('../safeJsonParse');
           return safeJsonParse(str, null);
-        } catch { return null; }
+        } catch {
+          return null;
+        }
       }
       return null;
     }
@@ -67,13 +85,21 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
 
   const summarizeText = (value, maxLen = 220) => {
     const text = typeof value === 'string' ? value : summarizeInput(value);
-    if (!text) return '';
+    if (!text) {
+      return '';
+    }
     return text.length > maxLen ? `${text.slice(0, maxLen - 1)}…` : text;
   };
 
   const genai = () => {
-    if (!trackGenai || typeof getGenai !== 'function') return null;
-    try { return getGenai(); } catch { return null; }
+    if (!trackGenai || typeof getGenai !== 'function') {
+      return null;
+    }
+    try {
+      return getGenai();
+    } catch {
+      return null;
+    }
   };
 
   // ── 顶层工具事件（cliTool 特有） ──────────────────────────────────
@@ -92,10 +118,16 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
       return;
     }
     if (event.type === 'tool_result') {
-      const content = typeof event.content === 'string'
-        ? event.content
-        : JSON.stringify(event.content || event.result || '');
-      onChunk({ type: 'tool_result', id: event.tool_use_id || event.id || '', content: content.slice(0, 200), isError: event.is_error });
+      const content =
+        typeof event.content === 'string'
+          ? event.content
+          : JSON.stringify(event.content || event.result || '');
+      onChunk({
+        type: 'tool_result',
+        id: event.tool_use_id || event.id || '',
+        content: content.slice(0, 200),
+        isError: event.is_error,
+      });
       return;
     }
   }
@@ -128,8 +160,13 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
 
   // ── system 任务生命周期事件 ────────────────────────────────────────
 
-  if (event.type === 'system' && event.subtype &&
-      (event.subtype === 'task_started' || event.subtype === 'task_progress' || event.subtype === 'task_notification')) {
+  if (
+    event.type === 'system' &&
+    event.subtype &&
+    (event.subtype === 'task_started' ||
+      event.subtype === 'task_progress' ||
+      event.subtype === 'task_notification')
+  ) {
     onChunk({
       type: event.subtype,
       taskId: event.task_id || '',
@@ -170,8 +207,13 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
       return;
     }
 
-    if (ev.type === 'system' && ev.subtype &&
-        (ev.subtype === 'task_started' || ev.subtype === 'task_progress' || ev.subtype === 'task_notification')) {
+    if (
+      ev.type === 'system' &&
+      ev.subtype &&
+      (ev.subtype === 'task_started' ||
+        ev.subtype === 'task_progress' ||
+        ev.subtype === 'task_notification')
+    ) {
       onChunk({
         type: ev.subtype,
         taskId: ev.task_id || '',
@@ -186,7 +228,9 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
 
     if (ev.type === 'system' && ev.subtype === 'session_state_changed') {
       const stateText = ev.state || ev.session_state || '';
-      if (stateText) onChunk({ type: 'status', text: `Session state: ${stateText}` });
+      if (stateText) {
+        onChunk({ type: 'status', text: `Session state: ${stateText}` });
+      }
       return;
     }
 
@@ -199,7 +243,9 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
         id: block.id || '',
         inputRaw: '',
       };
-      if (trackGenai) blockState._startTs = Date.now();
+      if (trackGenai) {
+        blockState._startTs = Date.now();
+      }
       state.blocks.set(idx, blockState);
 
       if (block.type === 'thinking' && block.thinking) {
@@ -209,10 +255,21 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
         appendContent(block.text);
         state.sawAssistantText = true;
       } else if (block.type === 'tool_use') {
-        onChunk({ type: 'tool_use', tool: block.name || 'unknown', input: summarizeInput(block.input), rawInput: block.input || {}, id: block.id });
+        onChunk({
+          type: 'tool_use',
+          tool: block.name || 'unknown',
+          input: summarizeInput(block.input),
+          rawInput: block.input || {},
+          id: block.id,
+        });
       } else if (block.type === 'tool_result') {
-        const content = typeof block.content === 'string' ? block.content : JSON.stringify(block.content || '');
-        onChunk({ type: 'tool_result', id: block.tool_use_id || '', content: content.slice(0, 200) });
+        const content =
+          typeof block.content === 'string' ? block.content : JSON.stringify(block.content || '');
+        onChunk({
+          type: 'tool_result',
+          id: block.tool_use_id || '',
+          content: content.slice(0, 200),
+        });
       }
       return;
     }
@@ -228,7 +285,9 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
         state.sawAssistantText = true;
       } else if (delta.type === 'input_json_delta' && typeof delta.partial_json === 'string') {
         const blk = state.blocks.get(idx);
-        if (blk) blk.inputRaw += delta.partial_json;
+        if (blk) {
+          blk.inputRaw += delta.partial_json;
+        }
       }
       return;
     }
@@ -243,7 +302,13 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
           if (toolStopEventType === 'tool_result') {
             onChunk({ type: 'tool_result', id: blk.id || '', content: `参数: ${summary}` });
           } else {
-            onChunk({ type: 'tool_use', tool: blk.name || 'unknown', input: summary, rawInput: parsed || {}, id: blk.id });
+            onChunk({
+              type: 'tool_use',
+              tool: blk.name || 'unknown',
+              input: summary,
+              rawInput: parsed || {},
+              id: blk.id,
+            });
           }
         }
         // genai 遥测追踪
@@ -257,7 +322,9 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
               success: true,
               traceId: state._traceId || null,
             });
-          } catch { /* best effort */ }
+          } catch {
+            /* best effort */
+          }
         }
       }
       state.blocks.delete(idx);
@@ -276,7 +343,9 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
             inputTokens: ev.usage.input_tokens || 0,
             traceId: state._traceId || null,
           });
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       }
       return;
     }
@@ -303,7 +372,9 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
     }
     if (event.subtype === 'session_state_changed') {
       const stateText = event.state || event.session_state || '';
-      if (stateText) onChunk({ type: 'status', text: `Session state: ${stateText}` });
+      if (stateText) {
+        onChunk({ type: 'status', text: `Session state: ${stateText}` });
+      }
       return;
     }
   }
@@ -319,14 +390,26 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
         appendContent(block.text);
         state.sawAssistantText = true;
       } else if (block.type === 'tool_use') {
-        onChunk({ type: 'tool_use', tool: block.name || 'unknown', input: summarizeInput(block.input), rawInput: block.input || {}, id: block.id });
+        onChunk({
+          type: 'tool_use',
+          tool: block.name || 'unknown',
+          input: summarizeInput(block.input),
+          rawInput: block.input || {},
+          id: block.id,
+        });
       }
     }
   } else if (event.type === 'user' && event.message?.content) {
     for (const block of event.message.content) {
       if (block.type === 'tool_result') {
-        const content = typeof block.content === 'string' ? block.content : JSON.stringify(block.content || '');
-        onChunk({ type: 'tool_result', id: block.tool_use_id, content: content.slice(0, 200), isError: block.is_error });
+        const content =
+          typeof block.content === 'string' ? block.content : JSON.stringify(block.content || '');
+        onChunk({
+          type: 'tool_result',
+          id: block.tool_use_id,
+          content: content.slice(0, 200),
+          isError: block.is_error,
+        });
       }
     }
   } else if (event.type === 'result') {

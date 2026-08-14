@@ -22,7 +22,9 @@ const _checkpoints = []; // [{ label, ns }]
  * No-op when profiling is disabled (zero overhead in production).
  */
 function checkpoint(label) {
-  if (!enabled) return;
+  if (!enabled) {
+    return;
+  }
   _checkpoints.push({ label, ns: process.hrtime.bigint() });
 }
 
@@ -41,7 +43,9 @@ function getTimeline() {
  * Shows each checkpoint, elapsed time from start, and delta from previous.
  */
 function printSummary() {
-  if (_checkpoints.length === 0) return;
+  if (_checkpoints.length === 0) {
+    return;
+  }
 
   const lines = getTimeline();
   const header = '  Startup Profile';
@@ -54,9 +58,7 @@ function printSummary() {
     const delta = i === 0 ? ms : ms - lines[i - 1].ms;
     const elapsed = ms.toFixed(1).padStart(8);
     const deltaStr = ('+' + delta.toFixed(1)).padStart(8);
-    process.stderr.write(
-      `  ${elapsed}ms ${deltaStr}ms  ${label}\n`
-    );
+    process.stderr.write(`  ${elapsed}ms ${deltaStr}ms  ${label}\n`);
   }
 
   process.stderr.write(sep + '\n\n');

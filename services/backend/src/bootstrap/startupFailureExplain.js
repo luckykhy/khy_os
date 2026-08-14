@@ -49,8 +49,17 @@ function isEnabled(env = process.env) {
 
 // 修法里绝不允许出现的危险动作（与 hydrationHealth / 1000 条手册同源红线）。
 const _DANGER_TOKENS = [
-  'git commit', 'git push', 'rm -rf /', 'rm -r /', 'curl ', 'wget ',
-  'npm publish', 'twine', 'sudo rm', '> /dev', 'mkfs',
+  'git commit',
+  'git push',
+  'rm -rf /',
+  'rm -r /',
+  'curl ',
+  'wget ',
+  'npm publish',
+  'twine',
+  'sudo rm',
+  '> /dev',
+  'mkfs',
 ];
 
 /** 安全读 err 字段：恶意 getter 抛错也不冒泡（崩溃现场 err 形态不可信）。 */
@@ -74,8 +83,7 @@ function _missingModuleName(message) {
 const _CLASSIFIERS = [
   {
     id: 'module-not-found',
-    match: (ctx) => ctx.code === 'MODULE_NOT_FOUND'
-      || /Cannot find module ['"]/.test(ctx.message),
+    match: (ctx) => ctx.code === 'MODULE_NOT_FOUND' || /Cannot find module ['"]/.test(ctx.message),
     build: (ctx) => {
       const named = ctx.missingModule ? `（缺少模块 '${ctx.missingModule}'）` : '';
       return {
@@ -88,19 +96,21 @@ const _CLASSIFIERS = [
           win32: [
             'Windows 若上次升级被文件占用中断：先 khy stop 释放占用，再 pip install --force-reinstall --no-cache-dir khy-os。',
           ],
-          unix: [
-            '若从源码运行：在 services/backend 下执行 npm install 补齐依赖。',
-          ],
+          unix: ['若从源码运行：在 services/backend 下执行 npm install 补齐依赖。'],
         },
       };
     },
   },
   {
     id: 'native-abi-mismatch',
-    match: (ctx) => ctx.code === 'ERR_DLOPEN_FAILED'
-      || /\.node['"]?\b|shared library|invalid ELF|was compiled against a different Node/i.test(ctx.message),
+    match: (ctx) =>
+      ctx.code === 'ERR_DLOPEN_FAILED' ||
+      /\.node['"]?\b|shared library|invalid ELF|was compiled against a different Node/i.test(
+        ctx.message
+      ),
     build: () => ({
-      cause: '原生模块与当前 Node/平台 ABI 不匹配（如 better-sqlite3 跨平台复制而未针对本机重建）。',
+      cause:
+        '原生模块与当前 Node/平台 ABI 不匹配（如 better-sqlite3 跨平台复制而未针对本机重建）。',
       fixes: {
         common: [
           '在后端目录重建原生模块：npm rebuild better-sqlite3（或删掉 node_modules 后重跑 khy 让首启重装）。',
@@ -144,8 +154,12 @@ function _render(built, platform) {
  */
 function explainStartupFailure(err, platform = process.platform, env = process.env) {
   try {
-    if (!isEnabled(env)) return null;
-    if (!err || (typeof err !== 'object' && typeof err !== 'function')) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
+    if (!err || (typeof err !== 'object' && typeof err !== 'function')) {
+      return null;
+    }
     const code = _safeStr(() => err.code);
     const message = _safeStr(() => err.message) || _safeStr(() => err.stack);
     const ctx = {
@@ -161,7 +175,9 @@ function explainStartupFailure(err, platform = process.platform, env = process.e
       } catch {
         hit = false; // 谓词自身出错绝不冒泡
       }
-      if (!hit) continue;
+      if (!hit) {
+        continue;
+      }
       const built = c.build(ctx);
       // 自检：任何一条修法含危险动作则放弃（保守回退 null，绝不吐危险建议）。
       const allFixes = [
@@ -169,7 +185,9 @@ function explainStartupFailure(err, platform = process.platform, env = process.e
         ...(built.fixes.win32 || []),
         ...(built.fixes.unix || []),
       ];
-      if (!allFixes.every(_fixIsSafe)) return null;
+      if (!allFixes.every(_fixIsSafe)) {
+        return null;
+      }
       return _render(built, ctx.platform);
     }
     return null; // 未识别 → 逐字节回退今日裸 stack

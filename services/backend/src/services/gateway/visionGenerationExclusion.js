@@ -49,7 +49,7 @@ const GENERATION_PATTERNS = Object.freeze([
   { name: 'seedream', re: /seedream/ },
   { name: 'seededit', re: /seededit/ },
   { name: 'cogview', re: /cogview/ },
-  { name: 'wanx', re: /(^|[^a-z])wanx/ },      // 阿里通义万相(图像生成)
+  { name: 'wanx', re: /(^|[^a-z])wanx/ }, // 阿里通义万相(图像生成)
   { name: 'ideogram', re: /ideogram/ },
   { name: 'recraft', re: /recraft/ },
   { name: 'kandinsky', re: /kandinsky/ },
@@ -60,7 +60,7 @@ const GENERATION_PATTERNS = Object.freeze([
   // 同类防御(未来若扩展提示词也不致误改道),对今日 pick 行为为无副作用的 no-op。
   { name: 'video-segment', re: /(^|[^a-z])video([^a-z]|$)/ },
   { name: 'sora', re: /(^|[^a-z])sora(\b|[^a-z]|$)/ },
-  { name: 'veo', re: /(^|[^a-z])veo[\s._-]?\d/ },   // Google Veo 2/3
+  { name: 'veo', re: /(^|[^a-z])veo[\s._-]?\d/ }, // Google Veo 2/3
   { name: 'kling', re: /(^|[^a-z])kling/ },
   { name: 'cogvideo', re: /cogvideo/ },
   { name: 'hailuo', re: /hailuo/ },
@@ -76,7 +76,9 @@ const GENERATION_PATTERNS = Object.freeze([
 function visionGenerationExclusionEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_VISION_GENERATION_EXCLUSION;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -92,11 +94,19 @@ function visionGenerationExclusionEnabled(env = process.env) {
  */
 function isGenerationOnlyModel(model, env = process.env) {
   try {
-    if (!visionGenerationExclusionEnabled(env)) return false;
-    const m = String(model == null ? '' : model).trim().toLowerCase();
-    if (!m) return false;
+    if (!visionGenerationExclusionEnabled(env)) {
+      return false;
+    }
+    const m = String(model == null ? '' : model)
+      .trim()
+      .toLowerCase();
+    if (!m) {
+      return false;
+    }
     for (const p of GENERATION_PATTERNS) {
-      if (p.re.test(m)) return true;
+      if (p.re.test(m)) {
+        return true;
+      }
     }
     return false;
   } catch {
@@ -112,11 +122,19 @@ function isGenerationOnlyModel(model, env = process.env) {
  */
 function matchedGenerationPattern(model, env = process.env) {
   try {
-    if (!visionGenerationExclusionEnabled(env)) return null;
-    const m = String(model == null ? '' : model).trim().toLowerCase();
-    if (!m) return null;
+    if (!visionGenerationExclusionEnabled(env)) {
+      return null;
+    }
+    const m = String(model == null ? '' : model)
+      .trim()
+      .toLowerCase();
+    if (!m) {
+      return null;
+    }
     for (const p of GENERATION_PATTERNS) {
-      if (p.re.test(m)) return p.name;
+      if (p.re.test(m)) {
+        return p.name;
+      }
     }
     return null;
   } catch {

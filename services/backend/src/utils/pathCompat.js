@@ -1,9 +1,9 @@
 'use strict';
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const _DESKTOP_CACHE_TTL_MS = 5 * 60 * 1000;
 let _desktopCache = { value: '', at: 0 };
@@ -14,7 +14,9 @@ function _expandWindowsEnvVars(input = '') {
 
 function expandPathVariables(input = '') {
   let out = String(input || '');
-  if (!out) return out;
+  if (!out) {
+    return out;
+  }
 
   if (process.platform === 'win32') {
     out = _expandWindowsEnvVars(out);
@@ -29,22 +31,34 @@ function expandPathVariables(input = '') {
 }
 
 function _normalizeForCompare(input = '') {
-  return path.normalize(String(input || '')).replace(/[\\/]+$/, '').toLowerCase();
+  return path
+    .normalize(String(input || ''))
+    .replace(/[\\/]+$/, '')
+    .toLowerCase();
 }
 
 function _readDesktopFromRegistry() {
   try {
     const out = execFileSync(
       'reg',
-      ['query', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders', '/v', 'Desktop'],
+      [
+        'query',
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders',
+        '/v',
+        'Desktop',
+      ],
       { encoding: 'utf8', windowsHide: true, timeout: 2500 }
     );
     const line = String(out || '')
       .split(/\r?\n/)
       .find((l) => /\bDesktop\b/i.test(l) && /\bREG_\w+\b/i.test(l));
-    if (!line) return '';
+    if (!line) {
+      return '';
+    }
     const value = line.replace(/^.*\bREG_\w+\b\s+/i, '').trim();
-    if (!value) return '';
+    if (!value) {
+      return '';
+    }
     return path.normalize(_expandWindowsEnvVars(value));
   } catch {
     return '';
@@ -66,41 +80,65 @@ function _readDesktopFromPowerShell() {
 
 function getDesktopPath() {
   const now = Date.now();
-  if (_desktopCache.value && (now - _desktopCache.at) < _DESKTOP_CACHE_TTL_MS) {
+  if (_desktopCache.value && now - _desktopCache.at < _DESKTOP_CACHE_TTL_MS) {
     return _desktopCache.value;
   }
 
   const fallback = path.join(os.homedir(), 'Desktop');
   const add = (arr, value) => {
     const text = String(value || '').trim();
-    if (!text) return;
+    if (!text) {
+      return;
+    }
     arr.push(path.normalize(text));
   };
 
   let chosen = '';
   if (process.platform === 'win32') {
-    const candidates = [];
-    add(candidates, process.env.KHY_DESKTOP_DIR);
-    add(candidates, _readDesktopFromRegistry());
-    add(candidates, _readDesktopFromPowerShell());
-    if (process.env.ONEDRIVE || process.env.ONE_DRIVE || process.env.OneDrive) {
-      add(candidates, path.join(process.env.ONEDRIVE || process.env.ONE_DRIVE || process.env.OneDrive, 'Desktop'));
-    }
-    if (process.env.USERPROFILE) add(candidates, path.join(process.env.USERPROFILE, 'Desktop'));
-    if (process.env.HOMEDRIVE && process.env.HOMEPATH) {
-      add(candidates, path.join(`${process.env.HOMEDRIVE}${process.env.HOMEPATH}`, 'Desktop'));
-    }
-    add(candidates, fallback);
+    // Lazy candidate suppliers: each subprocess probe (registry/PowerShell)
+    // only runs when earlier candidates failed to yield a valid directory.
+    const suppliers = [
+      () => process.env.KHY_DESKTOP_DIR,
+      () => _readDesktopFromRegistry(),
+      () => _readDesktopFromPowerShell(),
+      () => {
+        const oneDrive = process.env.ONEDRIVE || process.env.ONE_DRIVE || process.env.OneDrive;
+        return oneDrive ? path.join(oneDrive, 'Desktop') : '';
+      },
+      () => (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'Desktop') : ''),
+      () =>
+        process.env.HOMEDRIVE && process.env.HOMEPATH
+          ? path.join(`${process.env.HOMEDRIVE}${process.env.HOMEPATH}`, 'Desktop')
+          : '',
+      () => fallback,
+    ];
 
-    for (const p of candidates) {
+    const candidates = [];
+    for (const supply of suppliers) {
+      let value = '';
+      try {
+        value = supply();
+      } catch {
+        value = '';
+      }
+      const before = candidates.length;
+      add(candidates, value);
+      if (candidates.length === before) {
+        continue;
+      }
+      const p = candidates[candidates.length - 1];
       try {
         if (p && fs.existsSync(p) && fs.statSync(p).isDirectory()) {
           chosen = p;
           break;
         }
-      } catch { /* ignore invalid candidate */ }
+      } catch {
+        /* ignore invalid candidate */
+      }
     }
-    if (!chosen) chosen = candidates.find(Boolean) || fallback;
+    if (!chosen) {
+      chosen = candidates.find(Boolean) || fallback;
+    }
   } else {
     const homeDesktop = path.join(os.homedir(), 'Desktop');
     try {
@@ -120,7 +158,9 @@ function _looksLikeUrl(input = '') {
 
 function _convertPosixWindowsMountPath(input = '') {
   const raw = String(input || '');
-  if (!raw) return raw;
+  if (!raw) {
+    return raw;
+  }
   // WSL style: /mnt/c/Users/foo -> C:\Users\foo
   const mnt = raw.match(/^\/mnt\/([A-Za-z])(\/|$)/);
   if (mnt) {
@@ -134,26 +174,32 @@ function _convertPosixWindowsMountPath(input = '') {
 
 function rewriteWindowsDesktopPath(input = '') {
   const raw = String(input || '');
-  if (!raw || process.platform !== 'win32' || _looksLikeUrl(raw)) return raw;
+  if (!raw || process.platform !== 'win32' || _looksLikeUrl(raw)) {
+    return raw;
+  }
 
   let expanded = expandPathVariables(raw);
   expanded = _convertPosixWindowsMountPath(expanded);
-  if (!expanded) return raw;
+  if (!expanded) {
+    return raw;
+  }
 
   const home = os.homedir();
   const homeDesktop = path.join(home, 'Desktop');
-  const userDesktop = process.env.USERPROFILE
-    ? path.join(process.env.USERPROFILE, 'Desktop')
-    : '';
+  const userDesktop = process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'Desktop') : '';
   const realDesktop = getDesktopPath();
-  if (!realDesktop) return raw;
+  if (!realDesktop) {
+    return raw;
+  }
 
   const realNorm = _normalizeForCompare(realDesktop);
   const homeNorm = _normalizeForCompare(homeDesktop);
   const userNorm = _normalizeForCompare(userDesktop);
   const expandedNorm = _normalizeForCompare(expanded);
 
-  if (realNorm === homeNorm || (userNorm && realNorm === userNorm)) return raw;
+  if (realNorm === homeNorm || (userNorm && realNorm === userNorm)) {
+    return raw;
+  }
 
   const homePrefix = `${homeNorm}\\`;
   const userPrefix = userNorm ? `${userNorm}\\` : '';
@@ -173,7 +219,9 @@ function rewriteWindowsDesktopPath(input = '') {
 
 function normalizePathParam(input = '', cwd = process.cwd()) {
   const raw = String(input || '');
-  if (!raw) return raw;
+  if (!raw) {
+    return raw;
+  }
   let normalized = expandPathVariables(raw);
   if (process.platform === 'win32') {
     normalized = _convertPosixWindowsMountPath(normalized);
@@ -194,12 +242,18 @@ function normalizePathParam(input = '', cwd = process.cwd()) {
  * @returns {string}
  */
 function windowsPathToPosix(winPath) {
-  if (!winPath) return winPath;
+  if (!winPath) {
+    return winPath;
+  }
   // UNC path: \\server\share → //server/share
-  if (winPath.startsWith('\\\\')) return winPath.replace(/\\/g, '/');
+  if (winPath.startsWith('\\\\')) {
+    return winPath.replace(/\\/g, '/');
+  }
   // Drive letter: C:\... → /c/...
   const m = winPath.match(/^([A-Za-z]):[/\\]/);
-  if (m) return '/' + m[1].toLowerCase() + winPath.slice(2).replace(/\\/g, '/');
+  if (m) {
+    return '/' + m[1].toLowerCase() + winPath.slice(2).replace(/\\/g, '/');
+  }
   return winPath.replace(/\\/g, '/');
 }
 
@@ -214,9 +268,13 @@ function windowsPathToPosix(winPath) {
  * @returns {string}
  */
 function posixPathToWindows(posixPath) {
-  if (!posixPath) return posixPath;
+  if (!posixPath) {
+    return posixPath;
+  }
   // UNC: //server/share → \\server\share
-  if (posixPath.startsWith('//')) return posixPath.replace(/\//g, '\\');
+  if (posixPath.startsWith('//')) {
+    return posixPath.replace(/\//g, '\\');
+  }
   // WSL style: /mnt/c/... -> C:\...
   const wsl = posixPath.match(/^\/mnt\/([A-Za-z])(\/|$)/);
   if (wsl) {
@@ -249,7 +307,9 @@ function posixPathToWindows(posixPath) {
  * @returns {string}
  */
 function normalizeUnicodePath(p) {
-  if (!p) return p;
+  if (!p) {
+    return p;
+  }
   return path.normalize(p).normalize('NFC');
 }
 

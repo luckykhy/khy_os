@@ -25,6 +25,14 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+const {
+  _writeDockerBundleDockerfile,
+  _writeDockerBundleCompose,
+  _writeDockerBundleEnvExample,
+  _writeDockerBundleReadme,
+  _timestampForFileName,
+} = require('./bundleArtifacts');
 const {
   DOCKER_BUNDLE_SKIP_NAMES,
   _readJsonSafe,
@@ -34,13 +42,6 @@ const {
   _writeInstallLayoutArtifacts,
   _buildDockerBundleArchive,
 } = require('./bundleCommon');
-const {
-  _writeDockerBundleDockerfile,
-  _writeDockerBundleCompose,
-  _writeDockerBundleEnvExample,
-  _writeDockerBundleReadme,
-  _timestampForFileName,
-} = require('./bundleArtifacts');
 
 const NOOP_LOGGER = {
   info() {},
@@ -50,7 +51,9 @@ const NOOP_LOGGER = {
 };
 
 function _normalizeLogger(logger) {
-  if (!logger || typeof logger !== 'object') return NOOP_LOGGER;
+  if (!logger || typeof logger !== 'object') {
+    return NOOP_LOGGER;
+  }
   return {
     info: typeof logger.info === 'function' ? logger.info : NOOP_LOGGER.info,
     success: typeof logger.success === 'function' ? logger.success : NOOP_LOGGER.success,
@@ -71,20 +74,26 @@ function _resolveDockerBackendSource(projectRoot) {
 
   const seen = new Set();
   const uniq = candidates
-    .map(p => path.resolve(p))
+    .map((p) => path.resolve(p))
     .filter((p) => {
-      if (seen.has(p)) return false;
+      if (seen.has(p)) {
+        return false;
+      }
       seen.add(p);
       return true;
     });
 
   // Prefer already self-contained backend (vendor/shared dependency)
   for (const candidate of uniq) {
-    if (_isSelfContainedBackend(candidate)) return candidate;
+    if (_isSelfContainedBackend(candidate)) {
+      return candidate;
+    }
   }
   // Fallback: any backend root we can patch to self-contained
   for (const candidate of uniq) {
-    if (_isBackendRoot(candidate)) return candidate;
+    if (_isBackendRoot(candidate)) {
+      return candidate;
+    }
   }
   return '';
 }
@@ -103,11 +112,12 @@ function _ensureSharedDependencyForBundle(backendDir, srcBackendDir) {
   const dep = String(pkg?.dependencies?.['@khy/shared'] || '').trim();
   const vendorSharedDir = path.join(backendDir, 'vendor', 'shared');
   const vendorSharedExists = fs.existsSync(path.join(vendorSharedDir, 'package.json'));
-  const depNeedsLocalVendor = !dep
-    || dep.startsWith('file:')
-    || dep.startsWith('workspace:')
-    || dep.startsWith('./')
-    || dep.startsWith('../');
+  const depNeedsLocalVendor =
+    !dep ||
+    dep.startsWith('file:') ||
+    dep.startsWith('workspace:') ||
+    dep.startsWith('./') ||
+    dep.startsWith('../');
   let patchedDependency = false;
   let touchedVendor = false;
 
@@ -120,7 +130,9 @@ function _ensureSharedDependencyForBundle(backendDir, srcBackendDir) {
       ];
       let copied = false;
       for (const src of sharedSrcCandidates) {
-        if (!fs.existsSync(path.join(src, 'package.json'))) continue;
+        if (!fs.existsSync(path.join(src, 'package.json'))) {
+          continue;
+        }
         fs.mkdirSync(path.join(backendDir, 'vendor'), { recursive: true });
         fs.cpSync(src, vendorSharedDir, { recursive: true, force: true });
         copied = true;
@@ -138,7 +150,9 @@ function _ensureSharedDependencyForBundle(backendDir, srcBackendDir) {
   }
 
   if (depNeedsLocalVendor && dep !== 'file:./vendor/shared') {
-    if (!pkg.dependencies || typeof pkg.dependencies !== 'object') pkg.dependencies = {};
+    if (!pkg.dependencies || typeof pkg.dependencies !== 'object') {
+      pkg.dependencies = {};
+    }
     pkg.dependencies['@khy/shared'] = 'file:./vendor/shared';
     fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf-8');
     patchedDependency = true;
@@ -147,7 +161,11 @@ function _ensureSharedDependencyForBundle(backendDir, srcBackendDir) {
   if (patchedDependency || touchedVendor) {
     const lockPath = path.join(backendDir, 'package-lock.json');
     if (fs.existsSync(lockPath)) {
-      try { fs.rmSync(lockPath, { force: true }); } catch { /* ignore */ }
+      try {
+        fs.rmSync(lockPath, { force: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -167,9 +185,13 @@ function buildDockerBundle(projectRoot, state, options = {}) {
   }
 
   const runtimePkg = _readJsonSafe(path.join(srcBackend, 'package.json'));
-  const version = String(runtimePkg.version || state?.versions?.backend || state?.versions?.pyproject || '0.0.0').trim();
+  const version = String(
+    runtimePkg.version || state?.versions?.backend || state?.versions?.pyproject || '0.0.0'
+  ).trim();
   const safeVersion = String(version || '0.0.0').replace(/[^0-9A-Za-z._-]/g, '-');
-  const bundleName = String(options.name || `khy-os-docker-${safeVersion}-${_timestampForFileName()}`).replace(/[^0-9A-Za-z._-]/g, '-');
+  const bundleName = String(
+    options.name || `khy-os-docker-${safeVersion}-${_timestampForFileName()}`
+  ).replace(/[^0-9A-Za-z._-]/g, '-');
 
   const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-docker-bundle-'));
   const bundleRoot = path.join(stagingRoot, bundleName);

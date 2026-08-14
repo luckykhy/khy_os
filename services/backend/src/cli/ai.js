@@ -9,30 +9,36 @@
  *
  * @module cli/ai
  */
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const os = require('os');
+const path = require('path');
 
 const runtime = require('../services/khyUpgradeRuntime');
+
+const _aiChatCore = require('./aiChatCore');
+const _chatState = require('./aiChatState');
+const _aiConversationOps = require('./aiConversationOps');
+const _aiGatewayClient = require('./aiGatewayClient');
+const _aiGGH = require('./aiGatewayGenerateHelpers');
+const _localState = require('./aiLocalState');
 const { foldOutput } = require('./toolDisplayPolicy');
 
 // ── Shared state singletons ──
-const _chatState = require('./aiChatState');
-const _localState = require('./aiLocalState');
 
 // ── God-file split: chat core (already extracted) ──
-const _aiChatCore = require('./aiChatCore');
 const {
-  chat, _stripHarnessScaffolding, _assessTaskDifficulty, _buildStructuredMessages, _isContextOverflowFailure, checkModelCapability
+  chat,
+  _stripHarnessScaffolding,
+  _assessTaskDifficulty,
+  _buildStructuredMessages,
+  _isContextOverflowFailure,
+  checkModelCapability,
 } = _aiChatCore;
 
 // ── Sub-modules (extracted from this file) ──
-const _aiGatewayClient = require('./aiGatewayClient');
 const _aiSession = require('./aiSession');
-const _aiConversationOps = require('./aiConversationOps');
 
 // ── Gateway Generate Helpers (sibling module) ──
-const _aiGGH = require('./aiGatewayGenerateHelpers');
 _aiGGH.setAiGatewayGenerateHelpersDeps({
   _resolveAuditTraceContext: _aiGatewayClient._resolveAuditTraceContext,
   _logStandaloneLlmRequest: _aiGatewayClient._logStandaloneLlmRequest,
@@ -43,62 +49,135 @@ const _salvageRecentToolResult = _aiGGH._salvageRecentToolResult;
 
 // ── Request-analysis helpers ──
 const {
-  _resolveModelContextLimit, _guessModelHint, _estimateContextTokens, _resolveContextBudget,
-  _applyVisionRouting, setAiRequestAnalysisDeps,
+  _resolveModelContextLimit,
+  _guessModelHint,
+  _estimateContextTokens,
+  _resolveContextBudget,
+  _applyVisionRouting,
+  setAiRequestAnalysisDeps,
 } = require('./aiRequestAnalysis');
 
 // ── Request-parsing / stream-interception helpers ──
 const {
-  _TOOL_CALL_MARKERS, _partialToolMarkerTailLen, _STREAM_TOOL_RAWINPUT_OFF, _streamToolRawInputEnabled,
-  _resolveToolBlockInput, _createStreamToolInterceptor, _classifyGatewayThrownError,
-  _isFirstTokenSignalChunk, _isTransientGatewayErrorType, _resolveTaskScale, FILEREF_MAX_TOKEN,
-  _fileRefRedosGuardEnabled, _extractFileReferences, _isLightweightConversationInput,
-  _buildGreetingQuickReply, _extractRequestedLanguage, _detectUserInputLanguage, _hasLanguageRuleInPrompt,
+  _TOOL_CALL_MARKERS,
+  _partialToolMarkerTailLen,
+  _STREAM_TOOL_RAWINPUT_OFF,
+  _streamToolRawInputEnabled,
+  _resolveToolBlockInput,
+  _createStreamToolInterceptor,
+  _classifyGatewayThrownError,
+  _isFirstTokenSignalChunk,
+  _isTransientGatewayErrorType,
+  _resolveTaskScale,
+  FILEREF_MAX_TOKEN,
+  _fileRefRedosGuardEnabled,
+  _extractFileReferences,
+  _isLightweightConversationInput,
+  _buildGreetingQuickReply,
+  _extractRequestedLanguage,
+  _detectUserInputLanguage,
+  _hasLanguageRuleInPrompt,
   _buildLanguageFallbackDirective,
 } = require('./aiRequestParsers');
 
 // ── Constants ──
 const EFFORT_PRESETS = {
-  max:    { temperature: 0.2, maxTokens: 32768, label: '最高精度', thinking: { budgetTokens: 10000 } },
-  high:   { temperature: 0.3, maxTokens: 16384, label: '高' },
+  max: { temperature: 0.2, maxTokens: 32768, label: '最高精度', thinking: { budgetTokens: 10000 } },
+  high: { temperature: 0.3, maxTokens: 16384, label: '高' },
   medium: { temperature: 0.5, maxTokens: 8192, label: '标准' },
-  low:    { temperature: 0.7, maxTokens: 4096, label: '快速' },
+  low: { temperature: 0.7, maxTokens: 4096, label: '快速' },
 };
 
 const MODEL_CAPABILITIES = {
   // Anthropic Claude
-  'claude-opus-4':       { code: 5, reasoning: 5, creative: 5, context: 1000000, label: 'Claude Opus 4' },
-  'claude-sonnet-4':     { code: 5, reasoning: 5, creative: 4, context: 1000000, label: 'Claude Sonnet 4' },
-  'claude-3-5-sonnet':   { code: 5, reasoning: 5, creative: 4, context: 200000, label: 'Claude 3.5 Sonnet' },
-  'claude-haiku-4':      { code: 4, reasoning: 4, creative: 3, context: 200000, label: 'Claude Haiku 4' },
-  'claude-3-haiku':      { code: 3, reasoning: 3, creative: 3, context: 200000, label: 'Claude 3 Haiku' },
+  'claude-opus-4': { code: 5, reasoning: 5, creative: 5, context: 1000000, label: 'Claude Opus 4' },
+  'claude-sonnet-4': {
+    code: 5,
+    reasoning: 5,
+    creative: 4,
+    context: 1000000,
+    label: 'Claude Sonnet 4',
+  },
+  'claude-3-5-sonnet': {
+    code: 5,
+    reasoning: 5,
+    creative: 4,
+    context: 200000,
+    label: 'Claude 3.5 Sonnet',
+  },
+  'claude-3-7-sonnet': {
+    code: 5,
+    reasoning: 5,
+    creative: 4,
+    context: 200000,
+    label: 'Claude 3.7 Sonnet',
+  },
+  'claude-haiku-4': {
+    code: 4,
+    reasoning: 4,
+    creative: 3,
+    context: 200000,
+    label: 'Claude Haiku 4',
+  },
+  'claude-3-haiku': {
+    code: 3,
+    reasoning: 3,
+    creative: 3,
+    context: 200000,
+    label: 'Claude 3 Haiku',
+  },
   // OpenAI GPT
-  'gpt-5-codex':         { code: 5, reasoning: 5, creative: 4, context: 1000000, label: 'GPT-5 Codex' },
-  'codex':               { code: 5, reasoning: 5, creative: 4, context: 1000000, label: 'GPT-5 Codex' },
-  'gpt-5':               { code: 5, reasoning: 5, creative: 5, context: 1000000, label: 'GPT-5' },
-  'gpt-4.1':             { code: 5, reasoning: 5, creative: 4, context: 1047576, label: 'GPT-4.1' },
-  'gpt-4.1-mini':        { code: 4, reasoning: 4, creative: 3, context: 1047576, label: 'GPT-4.1 Mini' },
-  'gpt-4.1-nano':        { code: 3, reasoning: 3, creative: 2, context: 1047576, label: 'GPT-4.1 Nano' },
-  'gpt-4o':              { code: 5, reasoning: 4, creative: 4, context: 128000, label: 'GPT-4o' },
-  'gpt-4o-mini':         { code: 3, reasoning: 3, creative: 3, context: 128000, label: 'GPT-4o Mini' },
-  'o3':                  { code: 5, reasoning: 5, creative: 4, context: 200000, label: 'o3' },
-  'o4-mini':             { code: 4, reasoning: 5, creative: 3, context: 200000, label: 'o4-mini' },
+  'gpt-5-codex': { code: 5, reasoning: 5, creative: 4, context: 1000000, label: 'GPT-5 Codex' },
+  codex: { code: 5, reasoning: 5, creative: 4, context: 1000000, label: 'GPT-5 Codex' },
+  'gpt-5': { code: 5, reasoning: 5, creative: 5, context: 1000000, label: 'GPT-5' },
+  'gpt-4.1': { code: 5, reasoning: 5, creative: 4, context: 1047576, label: 'GPT-4.1' },
+  'gpt-4.1-mini': { code: 4, reasoning: 4, creative: 3, context: 1047576, label: 'GPT-4.1 Mini' },
+  'gpt-4.1-nano': { code: 3, reasoning: 3, creative: 2, context: 1047576, label: 'GPT-4.1 Nano' },
+  'gpt-4o': { code: 5, reasoning: 4, creative: 4, context: 128000, label: 'GPT-4o' },
+  'gpt-4o-mini': { code: 3, reasoning: 3, creative: 3, context: 128000, label: 'GPT-4o Mini' },
+  o3: { code: 5, reasoning: 5, creative: 4, context: 200000, label: 'o3' },
+  'o4-mini': { code: 4, reasoning: 5, creative: 3, context: 200000, label: 'o4-mini' },
   // DeepSeek
-  'deepseek-v3':         { code: 5, reasoning: 4, creative: 3, context: 128000, label: 'DeepSeek V3' },
-  'deepseek-r1':         { code: 5, reasoning: 5, creative: 3, context: 128000, label: 'DeepSeek R1' },
-  'deepseek-v2':         { code: 4, reasoning: 4, creative: 3, context: 128000, label: 'DeepSeek V2' },
+  'deepseek-v3': { code: 5, reasoning: 4, creative: 3, context: 128000, label: 'DeepSeek V3' },
+  'deepseek-r1': { code: 5, reasoning: 5, creative: 3, context: 128000, label: 'DeepSeek R1' },
+  'deepseek-v2': { code: 4, reasoning: 4, creative: 3, context: 128000, label: 'DeepSeek V2' },
   // Google Gemini
-  'gemini-2.5-pro':      { code: 5, reasoning: 5, creative: 4, context: 1048576, label: 'Gemini 2.5 Pro' },
-  'gemini-2.5-flash':    { code: 4, reasoning: 4, creative: 3, context: 1048576, label: 'Gemini 2.5 Flash' },
-  'gemini-2.0-flash':    { code: 4, reasoning: 4, creative: 3, context: 1048576, label: 'Gemini 2.0 Flash' },
+  'gemini-2.5-pro': {
+    code: 5,
+    reasoning: 5,
+    creative: 4,
+    context: 1048576,
+    label: 'Gemini 2.5 Pro',
+  },
+  'gemini-2.5-flash': {
+    code: 4,
+    reasoning: 4,
+    creative: 3,
+    context: 1048576,
+    label: 'Gemini 2.5 Flash',
+  },
+  'gemini-2.0-flash': {
+    code: 4,
+    reasoning: 4,
+    creative: 3,
+    context: 1048576,
+    label: 'Gemini 2.0 Flash',
+  },
   // Qwen (通义千问)
-  'qwen3':               { code: 5, reasoning: 5, creative: 4, context: 131072, label: '通义千问 Qwen3' },
-  'qwen-plus':           { code: 4, reasoning: 4, creative: 3, context: 131072, label: '通义千问 Plus' },
-  'qwen-turbo':          { code: 3, reasoning: 3, creative: 3, context: 131072, label: '通义千问 Turbo' },
+  qwen3: { code: 5, reasoning: 5, creative: 4, context: 131072, label: '通义千问 Qwen3' },
+  'qwen-plus': { code: 4, reasoning: 4, creative: 3, context: 131072, label: '通义千问 Plus' },
+  'qwen-turbo': { code: 3, reasoning: 3, creative: 3, context: 131072, label: '通义千问 Turbo' },
   // 其他
-  'glm-4':               { code: 3, reasoning: 3, creative: 3, context: 128000, label: 'GLM-4' },
-  'llama-3.3':           { code: 3, reasoning: 3, creative: 2, context: 128000, label: 'Llama 3.3 (Groq)' },
-  'llama-4-maverick':    { code: 4, reasoning: 4, creative: 3, context: 1048576, label: 'Llama 4 Maverick' },
+  'kimi-k2': { code: 4, reasoning: 4, creative: 4, context: 131072, label: 'Kimi K2' },
+  'glm-4': { code: 3, reasoning: 3, creative: 3, context: 128000, label: 'GLM-4' },
+  'llama-3.3': { code: 3, reasoning: 3, creative: 2, context: 128000, label: 'Llama 3.3 (Groq)' },
+  'llama-4-maverick': {
+    code: 4,
+    reasoning: 4,
+    creative: 3,
+    context: 1048576,
+    label: 'Llama 4 Maverick',
+  },
 };
 
 // ── Inject deps to request analysis (needs constants + accessors defined above) ──
@@ -175,10 +254,18 @@ function _getStudyModeRuntimeMeta(preferredAdapter, preferredModel) {
   try {
     const gw = getGateway();
     const active = gw.getActiveAdapter?.();
-    if (!adapter && active?.name) adapter = String(active.name).trim();
-    if (!model && active?.activeModel) model = String(active.activeModel).trim();
-    if (!model && active?.name) model = String(active.name).trim();
-  } catch { /* best effort */ }
+    if (!adapter && active?.name) {
+      adapter = String(active.name).trim();
+    }
+    if (!model && active?.activeModel) {
+      model = String(active.activeModel).trim();
+    }
+    if (!model && active?.name) {
+      model = String(active.name).trim();
+    }
+  } catch {
+    /* best effort */
+  }
 
   return {
     adapter: adapter || null,
@@ -188,9 +275,17 @@ function _getStudyModeRuntimeMeta(preferredAdapter, preferredModel) {
 
 // ── Study Mode ──
 
-function enableStudyMode() { _chatState.studyMode = true; }
-function disableStudyMode() { _chatState.studyMode = false; }
-function isStudyMode() { return _chatState.studyMode; }
+function enableStudyMode() {
+  _chatState.studyMode = true;
+}
+
+function disableStudyMode() {
+  _chatState.studyMode = false;
+}
+
+function isStudyMode() {
+  return _chatState.studyMode;
+}
 
 // ── Effort Management ──
 
@@ -202,26 +297,40 @@ function setEffort(level) {
   return false;
 }
 
-function getEffort() { return _chatState.currentEffort; }
-function getEffortPresets() { return EFFORT_PRESETS; }
+function getEffort() {
+  return _chatState.currentEffort;
+}
+
+function getEffortPresets() {
+  return EFFORT_PRESETS;
+}
 
 /**
  * The effort the ACTIVE adapter actually applies — for display/truth.
  */
 function getActiveEffort() {
   try {
-    let adapterName = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim().toLowerCase();
+    let adapterName = String(process.env.GATEWAY_PREFERRED_ADAPTER || '')
+      .trim()
+      .toLowerCase();
     if (!adapterName) {
       const gw = require('../services/gateway/aiGateway');
       const active = typeof gw.getActiveAdapter === 'function' ? gw.getActiveAdapter() : null;
-      adapterName = String(active && active.name || '').trim().toLowerCase();
+      adapterName = String((active && active.name) || '')
+        .trim()
+        .toLowerCase();
     }
     if (adapterName === 'codex') {
       const codex = require('../services/gateway/adapters/codexAdapter');
-      const real = typeof codex.getConfiguredEffort === 'function' ? codex.getConfiguredEffort() : null;
-      if (real) return real;
+      const real =
+        typeof codex.getConfiguredEffort === 'function' ? codex.getConfiguredEffort() : null;
+      if (real) {
+        return real;
+      }
     }
-  } catch { /* gateway/adapter not ready — fall back to KHY global */ }
+  } catch {
+    /* gateway/adapter not ready — fall back to KHY global */
+  }
   return _chatState.currentEffort;
 }
 
@@ -231,17 +340,25 @@ function getActiveEffort() {
  */
 function _clampSubagentEffort(effort, ctx = {}) {
   const isSubagent = !!ctx.isSubagent;
-  const allowThinking = ctx.allowThinking != null
-    ? !!ctx.allowThinking
-    : String(process.env.KHY_SUBAGENT_ALLOW_THINKING || '').trim() === '1';
-  if (isSubagent && !allowThinking && effort === 'max') return 'high';
+  const allowThinking =
+    ctx.allowThinking != null
+      ? !!ctx.allowThinking
+      : String(process.env.KHY_SUBAGENT_ALLOW_THINKING || '').trim() === '1';
+  if (isSubagent && !allowThinking && effort === 'max') {
+    return 'high';
+  }
   return effort;
 }
 
 // ── Thinking Management ──
 
-function setThinkingEnabled(enabled) { _chatState.thinkingEnabled = !!enabled; }
-function isThinkingEnabled() { return _chatState.thinkingEnabled; }
+function setThinkingEnabled(enabled) {
+  _chatState.thinkingEnabled = !!enabled;
+}
+
+function isThinkingEnabled() {
+  return _chatState.thinkingEnabled;
+}
 
 /**
  * Check if the current model natively supports extended_thinking (Claude API).
@@ -255,12 +372,20 @@ function _modelSupportsNativeThinking(modelHint) {
  * Resolve the DeepSeek model variant that matches the /thinking toggle.
  */
 function _resolveDeepseekThinkingModel(modelHint, thinkingEnabled) {
-  const m = String(modelHint || '').trim().toLowerCase();
+  const m = String(modelHint || '')
+    .trim()
+    .toLowerCase();
   const isChat = m === 'deepseek-chat' || m === 'deepseek-v3' || m === 'deepseek';
   const isReasoner = m === 'deepseek-reasoner' || m === 'deepseek-r1';
-  if (!isChat && !isReasoner) return null;
-  if (thinkingEnabled && isChat) return 'deepseek-reasoner';
-  if (!thinkingEnabled && isReasoner) return 'deepseek-chat';
+  if (!isChat && !isReasoner) {
+    return null;
+  }
+  if (thinkingEnabled && isChat) {
+    return 'deepseek-reasoner';
+  }
+  if (!thinkingEnabled && isReasoner) {
+    return 'deepseek-chat';
+  }
   return null;
 }
 
@@ -291,7 +416,9 @@ function _createThinkTagInterceptor(originalOnChunk) {
 
   return function interceptedOnChunk(chunk) {
     if (!chunk || chunk.type !== 'text' || typeof chunk.text !== 'string') {
-      if (originalOnChunk) originalOnChunk(chunk);
+      if (originalOnChunk) {
+        originalOnChunk(chunk);
+      }
       return;
     }
 
@@ -302,14 +429,18 @@ function _createThinkTagInterceptor(originalOnChunk) {
 
     function flushText() {
       if (textBuf) {
-        if (originalOnChunk) originalOnChunk({ ...chunk, type: 'text', text: textBuf });
+        if (originalOnChunk) {
+          originalOnChunk({ ...chunk, type: 'text', text: textBuf });
+        }
         textBuf = '';
       }
     }
 
     function flushThink() {
       if (thinkBuf) {
-        if (originalOnChunk) originalOnChunk({ ...chunk, type: 'thinking', text: thinkBuf });
+        if (originalOnChunk) {
+          originalOnChunk({ ...chunk, type: 'thinking', text: thinkBuf });
+        }
         thinkBuf = '';
       }
     }
@@ -327,13 +458,17 @@ function _createThinkTagInterceptor(originalOnChunk) {
         tagBuffer += ch;
         i++;
         if (tagBuffer === TAG_OPEN) {
-          if (!insideThink) flushText();
+          if (!insideThink) {
+            flushText();
+          }
           insideThink = true;
           tagBuffer = '';
           continue;
         }
         if (tagBuffer === TAG_CLOSE) {
-          if (insideThink) flushThink();
+          if (insideThink) {
+            flushThink();
+          }
           insideThink = false;
           tagBuffer = '';
           continue;
@@ -344,8 +479,11 @@ function _createThinkTagInterceptor(originalOnChunk) {
         const flushed = tagBuffer;
         tagBuffer = '';
         for (const c of flushed) {
-          if (insideThink) thinkBuf += c;
-          else textBuf += c;
+          if (insideThink) {
+            thinkBuf += c;
+          } else {
+            textBuf += c;
+          }
         }
         continue;
       }
@@ -358,8 +496,11 @@ function _createThinkTagInterceptor(originalOnChunk) {
       i++;
     }
 
-    if (insideThink) flushThink();
-    else flushText();
+    if (insideThink) {
+      flushThink();
+    } else {
+      flushText();
+    }
   };
 }
 
@@ -381,15 +522,30 @@ _aiConversationOps.setAiConversationOpsDeps({
 });
 
 // ── Inject deps to aiChatCore ──
+const { resolveMaxHistory } = require('../constants/chatHistoryDefaults');
 _aiChatCore.setAiChatCoreDeps({
-  COT_INJECTION_PROMPT, EFFORT_PRESETS, MAX_HISTORY: 80, MODEL_CAPABILITIES,
-  _applyVisionRouting, _buildGreetingQuickReply, _buildLanguageFallbackDirective, _clampSubagentEffort,
-  _classifyGatewayThrownError, _createStreamToolInterceptor, _createThinkTagInterceptor,
+  COT_INJECTION_PROMPT,
+  EFFORT_PRESETS,
+  MAX_HISTORY: resolveMaxHistory(process.env),
+  MODEL_CAPABILITIES,
+  _applyVisionRouting,
+  _buildGreetingQuickReply,
+  _buildLanguageFallbackDirective,
+  _clampSubagentEffort,
+  _classifyGatewayThrownError,
+  _createStreamToolInterceptor,
+  _createThinkTagInterceptor,
   _ensureLiveSessionId: _aiSession._ensureLiveSessionId,
-  _estimateContextTokens, _extractFileReferences, _getModelInfo, _getStudyModeRuntimeMeta,
-  _guessModelHint, _isFirstTokenSignalChunk, _isLightweightConversationInput,
+  _estimateContextTokens,
+  _extractFileReferences,
+  _getModelInfo,
+  _getStudyModeRuntimeMeta,
+  _guessModelHint,
+  _isFirstTokenSignalChunk,
+  _isLightweightConversationInput,
   _isLocalThinkingModel: _aiGatewayClient._isLocalThinkingModel,
-  _isTransientGatewayErrorType, _logStandaloneLlmRequest: _aiGatewayClient._logStandaloneLlmRequest,
+  _isTransientGatewayErrorType,
+  _logStandaloneLlmRequest: _aiGatewayClient._logStandaloneLlmRequest,
   _logStandaloneLlmResponse: _aiGatewayClient._logStandaloneLlmResponse,
   _maybeAutoSaveMemory: _aiSession._maybeAutoSaveMemory,
   _maybeWarmupLocalPreferredOnce: _aiGatewayClient._maybeWarmupLocalPreferredOnce,
@@ -400,10 +556,14 @@ _aiChatCore.setAiChatCoreDeps({
   _resolveContextBudget,
   _resolveDeepseekThinkingModel,
   _resolveLocalPreferredMaxTokens: _aiGatewayClient._resolveLocalPreferredMaxTokens,
-  _resolveModelContextLimit, _resolveTaskScale,
+  _resolveModelContextLimit,
+  _resolveTaskScale,
   _uncommitOrphanTurn: _aiSession._uncommitOrphanTurn,
   _unregisterActiveGatewayRequest: _aiGatewayClient._unregisterActiveGatewayRequest,
-  getChatLatencyAutoTuner, getGateway, getSecurityDir, getService,
+  getChatLatencyAutoTuner,
+  getGateway,
+  getSecurityDir,
+  getService,
 });
 
 // ── Exports ──
@@ -424,6 +584,7 @@ module.exports = {
   resumeConversation: _aiSession.resumeConversation,
   resumePersistedSession: _aiSession.resumePersistedSession,
   resumeLastPersistedSession: _aiSession.resumeLastPersistedSession,
+  scopeSession: _aiSession.scopeSession,
   getLiveSessionId: _aiSession.getLiveSessionId,
   autoResumeLastSession: _aiSession.autoResumeLastSession,
   loadProjectMemoryContext: _aiSession.loadProjectMemoryContext,
@@ -435,6 +596,8 @@ module.exports = {
   isThinkingEnabled,
   getConversationStats: _aiConversationOps.getConversationStats,
   getConversation: _aiConversationOps.getConversation,
+  snapshotHistoryTurn: _aiConversationOps.snapshotHistoryTurn,
+  reconcileTurnHistory: _aiConversationOps.reconcileTurnHistory,
   getContextLimit: _aiConversationOps.getContextLimit,
   compactConversation: _aiConversationOps.compactConversation,
   compactHistory: _aiConversationOps.compactHistory,
@@ -451,13 +614,29 @@ module.exports = {
   EFFORT_PRESETS,
   _clampSubagentEffort,
   MODEL_CAPABILITIES,
-  getSystemPrompt: async () => runtime.makeSystemPrompt(getSecurityDir(), _getModelInfo()),
+  getSystemPrompt: async () => {
+    // Fire-and-forget geolocation prewarm: fill geolocationService's in-memory
+    // cache in the background so later (synchronous) prompt assembly can inject
+    // an approximate city-level location. NEVER await (must not block session
+    // startup) and NEVER surface errors.
+    try {
+      require('../services/geolocationService')
+        .getLocation()
+        .catch(() => {});
+    } catch {
+      /* geolocation optional — prompt assembly proceeds without it */
+    }
+    return runtime.makeSystemPrompt(getSecurityDir(), _getModelInfo());
+  },
   __test__: {
     _createStreamToolInterceptor,
     _partialToolMarkerTailLen,
     _isContextOverflowFailure,
     _uncommitOrphanTurn: _aiSession._uncommitOrphanTurn,
-    _pushRawMessage: (m) => { _chatState.messages.push(m); return _chatState.messages[_chatState.messages.length - 1]; },
+    _pushRawMessage: (m) => {
+      _chatState.messages.push(m);
+      return _chatState.messages[_chatState.messages.length - 1];
+    },
     _salvageRecentToolResult,
     _resolveDeepseekThinkingModel,
     _extractFileReferences,
@@ -473,17 +652,23 @@ module.exports = {
 // reaches them without a reverse require (DESIGN-ARCH-021, Batch 3).
 try {
   require('../services/modelCapabilityPort').registerModelCapabilityChecker(checkModelCapability);
-} catch { /* port unavailable — capability pre-check degrades to skipped */ }
+} catch {
+  /* port unavailable — capability pre-check degrades to skipped */
+}
 try {
   require('../services/aiSessionPort').registerAiSession({
     handleAiStatus: _aiConversationOps.handleAiStatus,
     handleAiConfig: _aiConversationOps.handleAiConfig,
     clearHistory: _aiConversationOps.clearHistory,
   });
-} catch { /* port unavailable — /status /config /new fallback degrades */ }
+} catch {
+  /* port unavailable — /status /config /new fallback degrades */
+}
 try {
   require('../services/aiChatPort').registerAiChat(chat);
-} catch { /* port unavailable — ultraplan/workflow chat fallback degrades */ }
+} catch {
+  /* port unavailable — ultraplan/workflow chat fallback degrades */
+}
 try {
   require('../services/aiConversationPort').registerAiConversation({
     getEffort,
@@ -491,4 +676,6 @@ try {
     loadLastConversation: _aiSession.loadLastConversation,
     clearHistory: _aiConversationOps.clearHistory,
   });
-} catch { /* port unavailable — queryEngine conversation-state ops degrade to no-op */ }
+} catch {
+  /* port unavailable — queryEngine conversation-state ops degrade to no-op */
+}

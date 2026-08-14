@@ -20,23 +20,31 @@ const STATE_STATUS = Object.freeze(['PENDING', 'ACTIVE', 'DONE', 'BLOCKED', 'CON
 
 class StateMachine {
   constructor() {
-    this.states = new Map();    // uid -> state
-    this.transitions = [];      // { from, to, on, guard, confidence }
-    this.contradictions = [];   // { a, b, reason }
-    this.initial = null;        // uid
+    this.states = new Map(); // uid -> state
+    this.transitions = []; // { from, to, on, guard, confidence }
+    this.contradictions = []; // { a, b, reason }
+    this.initial = null; // uid
   }
 
   addState(state) {
-    if (!state || !state.uid) throw new Error('stateMachine.addState: state.uid required');
+    if (!state || !state.uid) {
+      throw new Error('stateMachine.addState: state.uid required');
+    }
     const s = { status: 'PENDING', ...state };
-    if (!STATE_STATUS.includes(s.status)) s.status = 'PENDING';
+    if (!STATE_STATUS.includes(s.status)) {
+      s.status = 'PENDING';
+    }
     this.states.set(s.uid, s);
-    if (!this.initial) this.initial = s.uid;
+    if (!this.initial) {
+      this.initial = s.uid;
+    }
     return s.uid;
   }
 
   setInitial(uid) {
-    if (!this.states.has(uid)) throw new Error(`stateMachine.setInitial: unknown state ${uid}`);
+    if (!this.states.has(uid)) {
+      throw new Error(`stateMachine.setInitial: unknown state ${uid}`);
+    }
     this.initial = uid;
   }
 
@@ -45,7 +53,8 @@ class StateMachine {
       throw new Error(`stateMachine.addTransition: endpoint not found (${from} -> ${to})`);
     }
     this.transitions.push({
-      from, to,
+      from,
+      to,
       on: String(on || 'next'),
       ...(opts.guard ? { guard: opts.guard } : {}),
       confidence: typeof opts.confidence === 'number' ? opts.confidence : 1,
@@ -57,15 +66,25 @@ class StateMachine {
     this.contradictions.push({ a, b, reason: String(reason || 'conflicting-requirements') });
   }
 
-  hasContradictions() { return this.contradictions.length > 0; }
-  stateCount() { return this.states.size; }
-  transitionCount() { return this.transitions.length; }
+  hasContradictions() {
+    return this.contradictions.length > 0;
+  }
+  stateCount() {
+    return this.states.size;
+  }
+  transitionCount() {
+    return this.transitions.length;
+  }
 
   /** 物化转移矩阵：from -> { on -> to }。 */
   matrix() {
     const m = {};
-    for (const uid of this.states.keys()) m[uid] = {};
-    for (const t of this.transitions) m[t.from][t.on] = t.to;
+    for (const uid of this.states.keys()) {
+      m[uid] = {};
+    }
+    for (const t of this.transitions) {
+      m[t.from][t.on] = t.to;
+    }
     return m;
   }
 
@@ -74,7 +93,9 @@ class StateMachine {
     const reached = new Set(this.transitions.map((t) => t.to));
     const orphans = [];
     for (const uid of this.states.keys()) {
-      if (uid !== this.initial && !reached.has(uid)) orphans.push(uid);
+      if (uid !== this.initial && !reached.has(uid)) {
+        orphans.push(uid);
+      }
     }
     return orphans;
   }

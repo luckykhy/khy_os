@@ -7,6 +7,7 @@
  *   proxy cursor2api ...
  */
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
 const fs = require('fs');
 const os = require('os');
@@ -14,9 +15,22 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const { spawn, spawnSync } = require('child_process');
-const { printSuccess, printError, printInfo } = require('../formatters');
 
-const KHY_DIR = path.join(os.homedir(), '.khyquant');
+const normalizeModelId = require('../../services/gateway/_modelIdParse').normalizeModelIdTrimQuotes;
+const parseBooleanMaybe = require('../../utils/parseBoolean');
+const { printSuccess, printError, printInfo } = require('../formatters');
+const { formatStatusMessage } = require('../statusMessageFormatter');
+
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const KHY_DIR = _appHome();
 const PROXY_RUNTIME_FILE = path.join(KHY_DIR, 'proxy_server_runtime.json');
 const PROXY_DAEMON_SCRIPT = path.resolve(__dirname, '../../../scripts/proxy-daemon.js');
 const PROXY_CERT_DIR = path.join(KHY_DIR, 'proxy_certs');
@@ -28,19 +42,24 @@ function getProxy() {
 }
 
 function parsePortMaybe(raw, fallback = undefined) {
-  if (raw == null || raw === '') return fallback;
+  if (raw == null || raw === '') {
+    return fallback;
+  }
   const n = parseInt(raw, 10);
-  if (!Number.isFinite(n) || n <= 0 || n > 65535) return fallback;
+  if (!Number.isFinite(n) || n <= 0 || n > 65535) {
+    return fallback;
+  }
   return n;
 }
-
-const parseBooleanMaybe = require('../../utils/parseBoolean');
 
 function buildProxyStartOptions(options = {}, proxy = null) {
   const basePort = parsePortMaybe(options.port, proxy ? proxy.getPort() : 9100) || 9100;
   const httpsOnly = parseBooleanMaybe(options['https-only'] ?? options.httpsOnly, false);
   const httpsEnabled = parseBooleanMaybe(options.https, false) || httpsOnly;
-  const httpsPort = parsePortMaybe(options['https-port'] ?? options.httpsPort, httpsOnly ? basePort : (basePort + 1));
+  const httpsPort = parsePortMaybe(
+    options['https-port'] ?? options.httpsPort,
+    httpsOnly ? basePort : basePort + 1
+  );
   const host = String(options.host || process.env.PROXY_HOST || '127.0.0.1').trim() || '127.0.0.1';
   const tlsCertFile = String(options['tls-cert'] || options.tlsCertFile || '').trim();
   const tlsKeyFile = String(options['tls-key'] || options.tlsKeyFile || '').trim();
@@ -86,13 +105,22 @@ function buildProxyDaemonArgs(startOptions = {}) {
 
 function parsePositiveInt(raw, fallback) {
   const n = parseInt(String(raw ?? ''), 10);
-  if (!Number.isFinite(n) || n <= 0) return fallback;
+  if (!Number.isFinite(n) || n <= 0) {
+    return fallback;
+  }
   return n;
 }
 
+// NOT delegated to gateway/safeJsonParse (its repair layers would turn inputs
+// that fail here into repaired objects — different result set) nor to
+// utils/parseJsonObjectMap (no fallback param; this returns a *copy* of
+// fallback and rejects non-object parses back to fallback). Kept local for
+// byte conservation.
 function parseJsonObject(raw, fallback = {}) {
   const text = String(raw || '').trim();
-  if (!text) return { ...fallback };
+  if (!text) {
+    return { ...fallback };
+  }
   try {
     const parsed = JSON.parse(text);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
@@ -107,7 +135,7 @@ function parseJsonObject(raw, fallback = {}) {
 function parseCsvList(raw) {
   return String(raw || '')
     .split(/[\n,]/g)
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
 }
 
@@ -116,22 +144,27 @@ function dedupeList(items = []) {
   const seen = new Set();
   for (const item of items) {
     const value = String(item || '').trim();
-    if (!value) continue;
+    if (!value) {
+      continue;
+    }
     const key = value.toLowerCase();
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(value);
   }
   return out;
 }
 
-function normalizeModelId(raw) {
-  return String(raw || '').trim().replace(/^['"]|['"]$/g, '');
-}
+// normalizeModelId 已收敛至 services/gateway/_modelIdParse.js(Batch 2 纯函数原子层);
+// 保留本地常量名,调用点逐字节不变。
 
 function normalizeEndpointBase(raw) {
   const text = String(raw || '').trim();
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
 
   let base = text;
   if (!/^https?:\/\//i.test(base)) {
@@ -142,10 +175,12 @@ function normalizeEndpointBase(raw) {
     const url = new URL(base);
     let pathname = String(url.pathname || '').trim();
     if (pathname.endsWith('/chat/completions')) {
-      pathname = pathname.slice(0, -('/chat/completions'.length));
+      pathname = pathname.slice(0, -'/chat/completions'.length);
     }
     pathname = pathname.replace(/\/+$/, '');
-    if (!pathname || pathname === '/') pathname = '/v1';
+    if (!pathname || pathname === '/') {
+      pathname = '/v1';
+    }
     return `${url.protocol}//${url.host}${pathname}`;
   } catch {
     return '';
@@ -163,40 +198,49 @@ function normalizeTraeProfileId(raw) {
 
 function createTraeProfileId(name, used = new Set()) {
   const base = normalizeTraeProfileId(name) || `relay-${Date.now().toString(36)}`;
-  if (!used.has(base)) return base;
+  if (!used.has(base)) {
+    return base;
+  }
   for (let i = 2; i < 1000; i += 1) {
     const next = `${base}-${i}`;
-    if (!used.has(next)) return next;
+    if (!used.has(next)) {
+      return next;
+    }
   }
   return `${base}-${Date.now().toString(36)}`;
 }
 
 function parseModelMap(raw) {
   const source = String(raw || '').trim();
-  if (!source) return {};
+  if (!source) {
+    return {};
+  }
   const out = {};
   for (const row of source.split(/[\n,]/g)) {
     const line = String(row || '').trim();
-    if (!line) continue;
+    if (!line) {
+      continue;
+    }
     const sep = line.includes('=>') ? '=>' : '=';
     const idx = line.indexOf(sep);
-    if (idx <= 0) continue;
+    if (idx <= 0) {
+      continue;
+    }
     const from = normalizeModelId(line.slice(0, idx).trim());
     const to = normalizeModelId(line.slice(idx + sep.length).trim());
-    if (!from || !to) continue;
+    if (!from || !to) {
+      continue;
+    }
     out[from] = to;
   }
   return out;
 }
 
 function normalizeTraeProfile(row = {}, usedIds = new Set()) {
-  const endpoint = normalizeEndpointBase(
-    row.endpoint
-    || row.openaiBase
-    || row.baseUrl
-    || row.base
-  );
-  if (!endpoint) return null;
+  const endpoint = normalizeEndpointBase(row.endpoint || row.openaiBase || row.baseUrl || row.base);
+  if (!endpoint) {
+    return null;
+  }
 
   const modelMapInput = row.modelMap && typeof row.modelMap === 'object' ? row.modelMap : {};
   const parsedModels = Array.isArray(row.models) ? row.models : parseCsvList(row.models);
@@ -204,7 +248,9 @@ function normalizeTraeProfile(row = {}, usedIds = new Set()) {
     ...parsedModels.map(normalizeModelId),
     ...Object.keys(modelMapInput).map(normalizeModelId),
   ]);
-  if (models.length === 0) return null;
+  if (models.length === 0) {
+    return null;
+  }
 
   const modelMap = {};
   for (const modelId of models) {
@@ -213,7 +259,7 @@ function normalizeTraeProfile(row = {}, usedIds = new Set()) {
   }
 
   const idSeed = String(row.id || row.name || '').trim();
-  const id = (normalizeTraeProfileId(idSeed) || createTraeProfileId(idSeed, usedIds));
+  const id = normalizeTraeProfileId(idSeed) || createTraeProfileId(idSeed, usedIds);
   if (usedIds.has(id)) {
     return null;
   }
@@ -232,89 +278,108 @@ function normalizeTraeProfile(row = {}, usedIds = new Set()) {
   };
 }
 
-function loadTraeSwitchStore() {
-  const fallback = { activeId: '', profiles: [] };
-  try {
-    if (!fs.existsSync(TRAE_SWITCH_STORE_FILE)) return fallback;
-    const data = JSON.parse(fs.readFileSync(TRAE_SWITCH_STORE_FILE, 'utf-8'));
-    const rows = Array.isArray(data?.profiles) ? data.profiles : [];
-    const used = new Set();
-    const profiles = rows
-      .map(row => normalizeTraeProfile(row, used))
-      .filter(Boolean);
-    const activeId = String(data?.activeId || '').trim();
-    return {
-      activeId: profiles.some(p => p.id === activeId) ? activeId : '',
-      profiles,
-    };
-  } catch {
-    return fallback;
+/**
+ * createSwitchStore — Trae/Windsurf switch-store 读写原本是逐字节副本（唯一差异是
+ * TRAE_/WINDSURF_SWITCH_STORE_FILE 常量），此处收敛为以 storeFile 参数化的原子工厂。
+ * 下方四个具名薄绑定（loadTraeSwitchStore 等）保留原函数名/签名，以维持
+ * module.exports 契约与 setProxySwitchProfilesDeps 的 DI 注入键不变。
+ */
+function createSwitchStore(storeFile) {
+  function load() {
+    const fallback = { activeId: '', profiles: [] };
+    try {
+      if (!fs.existsSync(storeFile)) {
+        return fallback;
+      }
+      const data = JSON.parse(fs.readFileSync(storeFile, 'utf-8'));
+      const rows = Array.isArray(data?.profiles) ? data.profiles : [];
+      const used = new Set();
+      const profiles = rows.map((row) => normalizeTraeProfile(row, used)).filter(Boolean);
+      const activeId = String(data?.activeId || '').trim();
+      return {
+        activeId: profiles.some((p) => p.id === activeId) ? activeId : '',
+        profiles,
+      };
+    } catch {
+      return fallback;
+    }
   }
+
+  function save(store = {}) {
+    const used = new Set();
+    const profiles = (Array.isArray(store.profiles) ? store.profiles : [])
+      .map((row) => normalizeTraeProfile(row, used))
+      .filter(Boolean);
+    const activeIdInput = String(store.activeId || '').trim();
+    const activeId = profiles.some((p) => p.id === activeIdInput) ? activeIdInput : '';
+    const next = { activeId, profiles, updatedAt: new Date().toISOString() };
+    fs.mkdirSync(KHY_DIR, { recursive: true });
+    fs.writeFileSync(storeFile, JSON.stringify(next, null, 2), 'utf-8');
+    return next;
+  }
+
+  return { load, save };
+}
+
+const _traeSwitchStore = createSwitchStore(TRAE_SWITCH_STORE_FILE);
+const _windsurfSwitchStore = createSwitchStore(WINDSURF_SWITCH_STORE_FILE);
+
+function loadTraeSwitchStore() {
+  return _traeSwitchStore.load();
 }
 
 function saveTraeSwitchStore(store = {}) {
-  const used = new Set();
-  const profiles = (Array.isArray(store.profiles) ? store.profiles : [])
-    .map(row => normalizeTraeProfile(row, used))
-    .filter(Boolean);
-  const activeIdInput = String(store.activeId || '').trim();
-  const activeId = profiles.some(p => p.id === activeIdInput) ? activeIdInput : '';
-  const next = { activeId, profiles, updatedAt: new Date().toISOString() };
-  fs.mkdirSync(KHY_DIR, { recursive: true });
-  fs.writeFileSync(TRAE_SWITCH_STORE_FILE, JSON.stringify(next, null, 2), 'utf-8');
-  return next;
+  return _traeSwitchStore.save(store);
 }
 
 function resolveTraeProfile(store, query = '') {
   const profiles = Array.isArray(store?.profiles) ? store.profiles : [];
-  if (profiles.length === 0) return null;
-  const q = String(query || '').trim().toLowerCase();
+  if (profiles.length === 0) {
+    return null;
+  }
+  const q = String(query || '')
+    .trim()
+    .toLowerCase();
   if (!q) {
     if (store?.activeId) {
-      const active = profiles.find(p => p.id === store.activeId);
-      if (active) return active;
+      const active = profiles.find((p) => p.id === store.activeId);
+      if (active) {
+        return active;
+      }
     }
     return profiles[0];
   }
 
-  const exactById = profiles.find(p => p.id.toLowerCase() === q);
-  if (exactById) return exactById;
-  const exactByName = profiles.find(p => String(p.name || '').trim().toLowerCase() === q);
-  if (exactByName) return exactByName;
-  return profiles.find(p => p.id.toLowerCase().includes(q) || String(p.name || '').toLowerCase().includes(q)) || null;
+  const exactById = profiles.find((p) => p.id.toLowerCase() === q);
+  if (exactById) {
+    return exactById;
+  }
+  const exactByName = profiles.find(
+    (p) =>
+      String(p.name || '')
+        .trim()
+        .toLowerCase() === q
+  );
+  if (exactByName) {
+    return exactByName;
+  }
+  return (
+    profiles.find(
+      (p) =>
+        p.id.toLowerCase().includes(q) ||
+        String(p.name || '')
+          .toLowerCase()
+          .includes(q)
+    ) || null
+  );
 }
 
 function loadWindsurfSwitchStore() {
-  const fallback = { activeId: '', profiles: [] };
-  try {
-    if (!fs.existsSync(WINDSURF_SWITCH_STORE_FILE)) return fallback;
-    const data = JSON.parse(fs.readFileSync(WINDSURF_SWITCH_STORE_FILE, 'utf-8'));
-    const rows = Array.isArray(data?.profiles) ? data.profiles : [];
-    const used = new Set();
-    const profiles = rows
-      .map(row => normalizeTraeProfile(row, used))
-      .filter(Boolean);
-    const activeId = String(data?.activeId || '').trim();
-    return {
-      activeId: profiles.some(p => p.id === activeId) ? activeId : '',
-      profiles,
-    };
-  } catch {
-    return fallback;
-  }
+  return _windsurfSwitchStore.load();
 }
 
 function saveWindsurfSwitchStore(store = {}) {
-  const used = new Set();
-  const profiles = (Array.isArray(store.profiles) ? store.profiles : [])
-    .map(row => normalizeTraeProfile(row, used))
-    .filter(Boolean);
-  const activeIdInput = String(store.activeId || '').trim();
-  const activeId = profiles.some(p => p.id === activeIdInput) ? activeIdInput : '';
-  const next = { activeId, profiles, updatedAt: new Date().toISOString() };
-  fs.mkdirSync(KHY_DIR, { recursive: true });
-  fs.writeFileSync(WINDSURF_SWITCH_STORE_FILE, JSON.stringify(next, null, 2), 'utf-8');
-  return next;
+  return _windsurfSwitchStore.save(store);
 }
 
 function resolveWindsurfProfile(store, query = '') {
@@ -322,9 +387,11 @@ function resolveWindsurfProfile(store, query = '') {
 }
 
 function buildSwitchProfileSignature(profile = {}) {
-  const models = dedupeList([...(Array.isArray(profile.models) ? profile.models : [])].map(normalizeModelId))
-    .sort();
-  const mapSource = profile.modelMap && typeof profile.modelMap === 'object' ? profile.modelMap : {};
+  const models = dedupeList(
+    [...(Array.isArray(profile.models) ? profile.models : [])].map(normalizeModelId)
+  ).sort();
+  const mapSource =
+    profile.modelMap && typeof profile.modelMap === 'object' ? profile.modelMap : {};
   const mapEntries = Object.keys(mapSource)
     .map((key) => [normalizeModelId(key), normalizeModelId(mapSource[key])])
     .filter(([from, to]) => !!from && !!to)
@@ -344,7 +411,11 @@ function resolveEnvPathsForProxy() {
   const mirrorPath = path.resolve(__dirname, '../../../../.env');
   const syncMirror = String(process.env.KHY_ENV_SYNC_ROOT || 'true').toLowerCase() !== 'false';
   const targets = [canonicalPath];
-  if (syncMirror && mirrorPath !== canonicalPath && (fs.existsSync(mirrorPath) || fs.existsSync(canonicalPath))) {
+  if (
+    syncMirror &&
+    mirrorPath !== canonicalPath &&
+    (fs.existsSync(mirrorPath) || fs.existsSync(canonicalPath))
+  ) {
     targets.push(mirrorPath);
   }
   return { canonicalPath, targets };
@@ -356,7 +427,11 @@ function writeEnvPatch(envMap = {}, unsetKeys = []) {
   const { canonicalPath, targets } = resolveEnvPathsForProxy();
   for (const targetPath of targets) {
     let content = '';
-    try { content = fs.readFileSync(targetPath, 'utf-8'); } catch { /* no .env yet */ }
+    try {
+      content = fs.readFileSync(targetPath, 'utf-8');
+    } catch {
+      /* no .env yet */
+    }
     const patched = patchEnvContent(content, envMap, unsetKeys);
     fs.writeFileSync(targetPath, patched);
   }
@@ -372,9 +447,11 @@ function writeEnvPatch(envMap = {}, unsetKeys = []) {
 function buildTraeRouteMap(profile) {
   const routeMap = {};
   const map = profile?.modelMap || {};
-  for (const customModel of (profile?.models || [])) {
+  for (const customModel of profile?.models || []) {
     const source = normalizeModelId(customModel);
-    if (!source) continue;
+    if (!source) {
+      continue;
+    }
     const targetModel = normalizeModelId(map[source] || source) || source;
     routeMap[source] = {
       target: `relay_api:${targetModel}`,
@@ -387,7 +464,10 @@ function buildTraeRouteMap(profile) {
 function applyTraeSwitchProfile(profile) {
   const baseModel = (profile.models && profile.models[0]) || '';
   const defaultTarget = normalizeModelId((profile.modelMap || {})[baseModel] || baseModel);
-  const existingRouteMap = parseJsonObject(process.env.PROXY_MODEL_ROUTE_MAP || process.env.GATEWAY_MODEL_ROUTE_MAP, {});
+  const existingRouteMap = parseJsonObject(
+    process.env.PROXY_MODEL_ROUTE_MAP || process.env.GATEWAY_MODEL_ROUTE_MAP,
+    {}
+  );
   const routeMap = {
     ...existingRouteMap,
     ...buildTraeRouteMap(profile),
@@ -404,7 +484,9 @@ function applyTraeSwitchProfile(profile) {
     PROXY_MODEL_ROUTE_MAP: JSON.stringify(routeMap),
   };
 
-  if (profile.key) envMap.RELAY_API_KEY = profile.key;
+  if (profile.key) {
+    envMap.RELAY_API_KEY = profile.key;
+  }
   const envPath = writeEnvPatch(envMap, []);
   return {
     envPath,
@@ -413,13 +495,10 @@ function applyTraeSwitchProfile(profile) {
   };
 }
 
-function requestJson(url, {
-  method = 'GET',
-  headers = {},
-  body = null,
-  timeoutMs = 15000,
-  rejectUnauthorized = true,
-} = {}) {
+function requestJson(
+  url,
+  { method = 'GET', headers = {}, body = null, timeoutMs = 15000, rejectUnauthorized = true } = {}
+) {
   return new Promise((resolve, reject) => {
     let parsed;
     try {
@@ -431,42 +510,54 @@ function requestJson(url, {
 
     const client = parsed.protocol === 'https:' ? https : http;
     const isHttps = parsed.protocol === 'https:';
-    const bodyText = body == null ? '' : (typeof body === 'string' ? body : JSON.stringify(body));
-    const req = client.request({
-      protocol: parsed.protocol,
-      hostname: parsed.hostname,
-      port: parsed.port || (isHttps ? 443 : 80),
-      path: `${parsed.pathname}${parsed.search}`,
-      method,
-      timeout: timeoutMs,
-      headers: {
-        ...headers,
-        ...(body != null
-          ? {
-            'Content-Type': headers['Content-Type'] || headers['content-type'] || 'application/json',
-            'Content-Length': Buffer.byteLength(bodyText),
-          }
-          : {}),
+    const bodyText = body == null ? '' : typeof body === 'string' ? body : JSON.stringify(body);
+    const req = client.request(
+      {
+        protocol: parsed.protocol,
+        hostname: parsed.hostname,
+        port: parsed.port || (isHttps ? 443 : 80),
+        path: `${parsed.pathname}${parsed.search}`,
+        method,
+        timeout: timeoutMs,
+        headers: {
+          ...headers,
+          ...(body != null
+            ? {
+                'Content-Type':
+                  headers['Content-Type'] || headers['content-type'] || 'application/json',
+                'Content-Length': Buffer.byteLength(bodyText),
+              }
+            : {}),
+        },
+        ...(isHttps ? { rejectUnauthorized } : {}),
       },
-      ...(isHttps ? { rejectUnauthorized } : {}),
-    }, (res) => {
-      let raw = '';
-      res.on('data', (chunk) => { raw += String(chunk); });
-      res.on('end', () => {
-        let json = null;
-        try { json = JSON.parse(raw); } catch { /* keep raw */ }
-        resolve({
-          statusCode: Number(res.statusCode || 0),
-          headers: res.headers || {},
-          raw,
-          json,
+      (res) => {
+        let raw = '';
+        res.on('data', (chunk) => {
+          raw += String(chunk);
         });
-      });
-    });
+        res.on('end', () => {
+          let json = null;
+          try {
+            json = JSON.parse(raw);
+          } catch {
+            /* keep raw */
+          }
+          resolve({
+            statusCode: Number(res.statusCode || 0),
+            headers: res.headers || {},
+            raw,
+            json,
+          });
+        });
+      }
+    );
 
     req.on('error', reject);
     req.on('timeout', () => req.destroy(new Error('request timeout')));
-    if (body != null) req.write(bodyText);
+    if (body != null) {
+      req.write(bodyText);
+    }
     req.end();
   });
 }
@@ -478,15 +569,16 @@ function extractOpenAiText(payload = {}) {
   if (typeof payload?.choices?.[0]?.delta?.content === 'string') {
     return payload.choices[0].delta.content;
   }
-  if (typeof payload?.output_text === 'string') return payload.output_text;
+  if (typeof payload?.output_text === 'string') {
+    return payload.output_text;
+  }
   return '';
 }
 
-async function testTraeUpstream(profile, {
-  timeoutMs = 15000,
-  upstreamKey = '',
-  targetModel = '',
-} = {}) {
+async function testTraeUpstream(
+  profile,
+  { timeoutMs = 15000, upstreamKey = '', targetModel = '' } = {}
+) {
   const headers = { Accept: 'application/json' };
   if (upstreamKey) {
     headers.Authorization = `Bearer ${upstreamKey}`;
@@ -500,8 +592,11 @@ async function testTraeUpstream(profile, {
     timeoutMs,
   });
   let modelCount = 0;
-  if (Array.isArray(modelsRes?.json?.data)) modelCount = modelsRes.json.data.length;
-  else if (Array.isArray(modelsRes?.json?.models)) modelCount = modelsRes.json.models.length;
+  if (Array.isArray(modelsRes?.json?.data)) {
+    modelCount = modelsRes.json.data.length;
+  } else if (Array.isArray(modelsRes?.json?.models)) {
+    modelCount = modelsRes.json.models.length;
+  }
 
   const chatUrl = `${profile.endpoint.replace(/\/+$/, '')}/chat/completions`;
   const chatRes = await requestJson(chatUrl, {
@@ -533,13 +628,11 @@ async function testTraeUpstream(profile, {
   };
 }
 
-async function testTraeLocalProxy(profile, {
-  timeoutMs = 20000,
-  customModel = '',
-} = {}) {
+async function testTraeLocalProxy(profile, { timeoutMs = 20000, customModel = '' } = {}) {
   const proxy = getProxy();
   const run = await ensureProxyDaemonRunning(proxy, {});
-  const runtimeStatus = run.runtimeStatus || (proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null);
+  const runtimeStatus =
+    run.runtimeStatus || (proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null);
   const preferred = getPreferredBase(runtimeStatus, proxy.getPort ? proxy.getPort() : 9100);
   const base = preferred.base;
   const authToken = run?.auth?.authToken || '';
@@ -559,7 +652,7 @@ async function testTraeLocalProxy(profile, {
     rejectUnauthorized,
   });
   const modelIds = Array.isArray(modelsRes?.json?.data)
-    ? modelsRes.json.data.map(x => String(x?.id || '').trim()).filter(Boolean)
+    ? modelsRes.json.data.map((x) => String(x?.id || '').trim()).filter(Boolean)
     : [];
   const hasRaw = modelIds.includes(customModel);
   const hasPrefixed = modelIds.includes(`relay_api/${customModel}`);
@@ -601,24 +694,28 @@ async function testTraeLocalProxy(profile, {
 
 function sanitizeCommonName(raw) {
   const value = String(raw || 'localhost').trim();
-  if (!value) return 'localhost';
+  if (!value) {
+    return 'localhost';
+  }
   return value.replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 120) || 'localhost';
 }
 
 function resolveTlsFiles(options = {}) {
-  const tlsDirRaw = String(options['tls-dir'] || options.tlsDir || process.env.PROXY_TLS_DIR || PROXY_CERT_DIR).trim();
+  const tlsDirRaw = String(
+    options['tls-dir'] || options.tlsDir || process.env.PROXY_TLS_DIR || PROXY_CERT_DIR
+  ).trim();
   const tlsDir = tlsDirRaw || PROXY_CERT_DIR;
   const certFile = String(
-    options['tls-cert']
-      || options.tlsCertFile
-      || process.env.PROXY_TLS_CERT_FILE
-      || path.join(tlsDir, 'localhost.crt')
+    options['tls-cert'] ||
+      options.tlsCertFile ||
+      process.env.PROXY_TLS_CERT_FILE ||
+      path.join(tlsDir, 'localhost.crt')
   ).trim();
   const keyFile = String(
-    options['tls-key']
-      || options.tlsKeyFile
-      || process.env.PROXY_TLS_KEY_FILE
-      || path.join(tlsDir, 'localhost.key')
+    options['tls-key'] ||
+      options.tlsKeyFile ||
+      process.env.PROXY_TLS_KEY_FILE ||
+      path.join(tlsDir, 'localhost.key')
   ).trim();
   return { tlsDir, certFile, keyFile };
 }
@@ -656,8 +753,12 @@ function generateSelfSignedCert({
   fs.mkdirSync(path.dirname(certPath), { recursive: true });
   fs.mkdirSync(path.dirname(keyPath), { recursive: true });
   try {
-    if (force && fs.existsSync(certPath)) fs.unlinkSync(certPath);
-    if (force && fs.existsSync(keyPath)) fs.unlinkSync(keyPath);
+    if (force && fs.existsSync(certPath)) {
+      fs.unlinkSync(certPath);
+    }
+    if (force && fs.existsSync(keyPath)) {
+      fs.unlinkSync(keyPath);
+    }
   } catch {
     // Best effort before regeneration.
   }
@@ -690,24 +791,28 @@ function generateSelfSignedCert({
   ].join('\n');
 
   fs.writeFileSync(opensslConfPath, `${opensslConf}\n`, 'utf8');
-  const result = spawnSync('openssl', [
-    'req',
-    '-x509',
-    '-nodes',
-    '-newkey',
-    'rsa:2048',
-    '-sha256',
-    '-days',
-    String(validDays),
-    '-keyout',
-    keyPath,
-    '-out',
-    certPath,
-    '-config',
-    opensslConfPath,
-    '-extensions',
-    'v3_req',
-  ], { encoding: 'utf8' });
+  const result = spawnSync(
+    'openssl',
+    [
+      'req',
+      '-x509',
+      '-nodes',
+      '-newkey',
+      'rsa:2048',
+      '-sha256',
+      '-days',
+      String(validDays),
+      '-keyout',
+      keyPath,
+      '-out',
+      certPath,
+      '-config',
+      opensslConfPath,
+      '-extensions',
+      'v3_req',
+    ],
+    { encoding: 'utf8' }
+  );
 
   try {
     fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -747,16 +852,24 @@ function ensureHttpsTlsOptions(options = {}, { quiet = false } = {}) {
     throw new Error('HTTPS 参数不完整：请同时提供 --tls-cert 与 --tls-key');
   }
   if (explicitCert && explicitKey) {
-    return { options: { ...options }, certInfo: { certFile: explicitCert, keyFile: explicitKey, generated: false } };
+    return {
+      options: { ...options },
+      certInfo: { certFile: explicitCert, keyFile: explicitKey, generated: false },
+    };
   }
 
   const envCert = String(process.env.PROXY_TLS_CERT_FILE || '').trim();
   const envKey = String(process.env.PROXY_TLS_KEY_FILE || '').trim();
   if ((envCert && !envKey) || (!envCert && envKey)) {
-    throw new Error('环境变量 HTTPS 参数不完整：PROXY_TLS_CERT_FILE 与 PROXY_TLS_KEY_FILE 需要同时设置');
+    throw new Error(
+      '环境变量 HTTPS 参数不完整：PROXY_TLS_CERT_FILE 与 PROXY_TLS_KEY_FILE 需要同时设置'
+    );
   }
   if (envCert && envKey) {
-    return { options: { ...options }, certInfo: { certFile: envCert, keyFile: envKey, generated: false, fromEnv: true } };
+    return {
+      options: { ...options },
+      certInfo: { certFile: envCert, keyFile: envKey, generated: false, fromEnv: true },
+    };
   }
 
   const { certFile, keyFile } = resolveTlsFiles(options);
@@ -777,34 +890,46 @@ function ensureHttpsTlsOptions(options = {}, { quiet = false } = {}) {
     tlsKeyFile: certInfo.keyFile,
   };
   if (!quiet) {
-    if (certInfo.generated) printSuccess(`已生成 HTTPS 证书: ${certInfo.certFile}`);
-    else printInfo(`复用现有 HTTPS 证书: ${certInfo.certFile}`);
+    if (certInfo.generated) {
+      printSuccess(`已生成 HTTPS 证书: ${certInfo.certFile}`);
+    } else {
+      printInfo(`复用现有 HTTPS 证书: ${certInfo.certFile}`);
+    }
   }
   return { options: nextOptions, certInfo };
 }
 
 function loadProxyRuntime() {
   try {
-    if (!fs.existsSync(PROXY_RUNTIME_FILE)) return null;
+    if (!fs.existsSync(PROXY_RUNTIME_FILE)) {
+      return null;
+    }
     const data = JSON.parse(fs.readFileSync(PROXY_RUNTIME_FILE, 'utf-8'));
-    if (!data) return null;
+    if (!data) {
+      return null;
+    }
     const legacyPort = Number(data.port);
     const httpPort = Number(data.httpPort);
     const httpsPort = Number(data.httpsPort);
     const resolvedHttpPort = Number.isFinite(httpPort)
       ? httpPort
-      : ((data.httpsOnly === true || (data.httpsEnabled === true && Number.isFinite(httpsPort)))
-          ? null
-          : (Number.isFinite(legacyPort) ? legacyPort : null));
+      : data.httpsOnly === true || (data.httpsEnabled === true && Number.isFinite(httpsPort))
+        ? null
+        : Number.isFinite(legacyPort)
+          ? legacyPort
+          : null;
     const resolvedHttpsPort = Number.isFinite(httpsPort) ? httpsPort : null;
-    if (!resolvedHttpPort && !resolvedHttpsPort) return null;
+    if (!resolvedHttpPort && !resolvedHttpsPort) {
+      return null;
+    }
     return {
       pid: Number(data.pid) || null,
       port: resolvedHttpPort || resolvedHttpsPort,
       httpPort: resolvedHttpPort,
       httpsPort: resolvedHttpsPort,
       httpsEnabled: data.httpsEnabled === true || Number.isFinite(resolvedHttpsPort),
-      httpsOnly: data.httpsOnly === true || (!resolvedHttpPort && Number.isFinite(resolvedHttpsPort)),
+      httpsOnly:
+        data.httpsOnly === true || (!resolvedHttpPort && Number.isFinite(resolvedHttpsPort)),
       host: data.host || '127.0.0.1',
       startedAt: data.startedAt || null,
     };
@@ -817,17 +942,25 @@ function saveProxyRuntime(runtime) {
   try {
     fs.mkdirSync(KHY_DIR, { recursive: true });
     fs.writeFileSync(PROXY_RUNTIME_FILE, JSON.stringify(runtime, null, 2), 'utf-8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 function clearProxyRuntime() {
   try {
-    if (fs.existsSync(PROXY_RUNTIME_FILE)) fs.unlinkSync(PROXY_RUNTIME_FILE);
-  } catch { /* best effort */ }
+    if (fs.existsSync(PROXY_RUNTIME_FILE)) {
+      fs.unlinkSync(PROXY_RUNTIME_FILE);
+    }
+  } catch {
+    /* best effort */
+  }
 }
 
 function isProcessAlive(pid) {
-  if (!Number.isFinite(pid) || pid <= 0) return false;
+  if (!Number.isFinite(pid) || pid <= 0) {
+    return false;
+  }
   try {
     process.kill(pid, 0);
     return true;
@@ -844,27 +977,36 @@ function checkProxyHealthEndpoint(endpoint, token, timeoutMs = 1500) {
     }
     const protocol = endpoint.protocol === 'https' ? 'https' : 'http';
     const client = protocol === 'https' ? https : http;
-    const req = client.get({
-      hostname: '127.0.0.1',
-      port: endpoint.port,
-      path: '/health',
-      timeout: timeoutMs,
-      headers: { Authorization: `Bearer ${token}` },
-      ...(protocol === 'https' ? { rejectUnauthorized: false } : {}),
-    }, (res) => {
-      let body = '';
-      res.on('data', (chunk) => { body += String(chunk); });
-      res.on('end', () => {
-        let parsed = null;
-        try { parsed = JSON.parse(body); } catch { /* ignore */ }
-        resolve({
-          ok: res.statusCode === 200,
-          statusCode: res.statusCode,
-          endpoint: { ...endpoint, protocol },
-          runtime: parsed && typeof parsed === 'object' ? parsed.runtime || null : null,
+    const req = client.get(
+      {
+        hostname: '127.0.0.1',
+        port: endpoint.port,
+        path: '/health',
+        timeout: timeoutMs,
+        headers: { Authorization: `Bearer ${token}` },
+        ...(protocol === 'https' ? { rejectUnauthorized: false } : {}),
+      },
+      (res) => {
+        let body = '';
+        res.on('data', (chunk) => {
+          body += String(chunk);
         });
-      });
-    });
+        res.on('end', () => {
+          let parsed = null;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            /* ignore */
+          }
+          resolve({
+            ok: res.statusCode === 200,
+            statusCode: res.statusCode,
+            endpoint: { ...endpoint, protocol },
+            runtime: parsed && typeof parsed === 'object' ? parsed.runtime || null : null,
+          });
+        });
+      }
+    );
     req.on('error', () => resolve({ ok: false, endpoint: { ...endpoint, protocol } }));
     req.on('timeout', () => {
       req.destroy();
@@ -877,25 +1019,43 @@ function collectHealthCandidates(startOptions = {}, runtime = null, runtimeStatu
   const out = [];
   const seen = new Set();
   const pushEndpoint = (protocol, port) => {
-    if (!Number.isFinite(port) || port <= 0) return;
+    if (!Number.isFinite(port) || port <= 0) {
+      return;
+    }
     const key = `${protocol}:${port}`;
-    if (seen.has(key)) return;
+    if (seen.has(key)) {
+      return;
+    }
     seen.add(key);
     out.push({ protocol, port });
   };
 
-  if (startOptions.httpsEnabled && Number.isFinite(startOptions.httpsPort)) pushEndpoint('https', startOptions.httpsPort);
-  if (startOptions.httpEnabled && Number.isFinite(startOptions.port)) pushEndpoint('http', startOptions.port);
+  if (startOptions.httpsEnabled && Number.isFinite(startOptions.httpsPort)) {
+    pushEndpoint('https', startOptions.httpsPort);
+  }
+  if (startOptions.httpEnabled && Number.isFinite(startOptions.port)) {
+    pushEndpoint('http', startOptions.port);
+  }
 
   if (runtime) {
-    if (Number.isFinite(runtime.httpsPort)) pushEndpoint('https', runtime.httpsPort);
-    if (Number.isFinite(runtime.httpPort)) pushEndpoint('http', runtime.httpPort);
-    if (!Number.isFinite(runtime.httpPort) && Number.isFinite(runtime.port)) pushEndpoint('http', runtime.port);
+    if (Number.isFinite(runtime.httpsPort)) {
+      pushEndpoint('https', runtime.httpsPort);
+    }
+    if (Number.isFinite(runtime.httpPort)) {
+      pushEndpoint('http', runtime.httpPort);
+    }
+    if (!Number.isFinite(runtime.httpPort) && Number.isFinite(runtime.port)) {
+      pushEndpoint('http', runtime.port);
+    }
   }
 
   if (runtimeStatus && typeof runtimeStatus === 'object') {
-    if (runtimeStatus.https?.enabled && Number.isFinite(runtimeStatus.https.port)) pushEndpoint('https', runtimeStatus.https.port);
-    if (runtimeStatus.http?.enabled && Number.isFinite(runtimeStatus.http.port)) pushEndpoint('http', runtimeStatus.http.port);
+    if (runtimeStatus.https?.enabled && Number.isFinite(runtimeStatus.https.port)) {
+      pushEndpoint('https', runtimeStatus.https.port);
+    }
+    if (runtimeStatus.http?.enabled && Number.isFinite(runtimeStatus.http.port)) {
+      pushEndpoint('http', runtimeStatus.http.port);
+    }
   }
 
   return out;
@@ -962,7 +1122,7 @@ async function ensureProxyDaemonRunning(proxy, options = {}) {
 
   const maxAttempts = 35;
   for (let i = 0; i < maxAttempts; i++) {
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
     const latest = await getProxyRuntimeStatus(proxy, startOptions);
     if (latest.healthy) {
       return {
@@ -984,12 +1144,27 @@ async function ensureProxyDaemonRunning(proxy, options = {}) {
 }
 
 function getRuntimeForDisplay(runtimeStatus = null, fallbackPort = 9100) {
-  if (runtimeStatus && typeof runtimeStatus === 'object') return runtimeStatus;
+  if (runtimeStatus && typeof runtimeStatus === 'object') {
+    return runtimeStatus;
+  }
   return {
     mode: 'http-only',
     host: '127.0.0.1',
-    http: { enabled: true, port: fallbackPort, host: '127.0.0.1', url: `http://127.0.0.1:${fallbackPort}` },
-    https: { enabled: false, port: null, host: '127.0.0.1', url: '', certSource: '', certFile: '', keyFile: '' },
+    http: {
+      enabled: true,
+      port: fallbackPort,
+      host: '127.0.0.1',
+      url: `http://127.0.0.1:${fallbackPort}`,
+    },
+    https: {
+      enabled: false,
+      port: null,
+      host: '127.0.0.1',
+      url: '',
+      certSource: '',
+      certFile: '',
+      keyFile: '',
+    },
   };
 }
 
@@ -1013,10 +1188,16 @@ function printClientConnectGuide(token, runtimeStatus = null, label = '') {
   const httpBase = runtime.http?.enabled ? runtime.http.url : '';
   const httpsBase = runtime.https?.enabled ? runtime.https.url : '';
   console.log('');
-  console.log(`  ${chalk.cyan.bold('客户接入参数')}${cleanLabel ? chalk.dim(` (${cleanLabel})`) : ''}`);
+  console.log(
+    `  ${chalk.cyan.bold('客户接入参数')}${cleanLabel ? chalk.dim(` (${cleanLabel})`) : ''}`
+  );
   console.log('');
-  if (httpsBase) console.log(`  ${chalk.gray('HTTPS BaseURL:')}    ${chalk.cyan(httpsBase)}`);
-  if (httpBase) console.log(`  ${chalk.gray('HTTP BaseURL:')}     ${chalk.cyan(httpBase)}`);
+  if (httpsBase) {
+    console.log(`  ${chalk.gray('HTTPS BaseURL:')}    ${chalk.cyan(httpsBase)}`);
+  }
+  if (httpBase) {
+    console.log(`  ${chalk.gray('HTTP BaseURL:')}     ${chalk.cyan(httpBase)}`);
+  }
   console.log(`  ${chalk.gray('OpenAI BaseURL:')}   ${chalk.cyan(baseOpenAI)}`);
   console.log(`  ${chalk.gray('Anthropic BaseURL:')} ${chalk.cyan(baseAnthropic)}`);
   console.log(`  ${chalk.gray('Token:')}            ${chalk.yellow(token)}`);
@@ -1029,7 +1210,9 @@ function printClientConnectGuide(token, runtimeStatus = null, label = '') {
   console.log(chalk.dim(`    OPENAI_API_KEY=${token}`));
   if (httpsBase) {
     console.log(chalk.dim('  HTTPS 自签名证书提示:'));
-    console.log(chalk.dim('    生产环境建议导入系统信任链；临时调试可设置 NODE_TLS_REJECT_UNAUTHORIZED=0'));
+    console.log(
+      chalk.dim('    生产环境建议导入系统信任链；临时调试可设置 NODE_TLS_REJECT_UNAUTHORIZED=0')
+    );
   }
   console.log('');
 }
@@ -1038,23 +1221,48 @@ function printProxyHelp() {
   console.log('');
   console.log(`  ${chalk.cyan.bold('Proxy 常用命令 (精简)')}`);
   console.log('');
-  console.log(chalk.white('  proxy quickstart') + chalk.dim('               一键启动并显示接入参数'));
-  console.log(chalk.white('  proxy client add <客户名> [token]') + chalk.dim('  创建客户 token (自动 khy- 前缀)'));
-  console.log(chalk.white('  proxy client list') + chalk.dim('                查看客户 token 列表'));
+  console.log(
+    chalk.white('  proxy quickstart') + chalk.dim('               一键启动并显示接入参数')
+  );
+  console.log(
+    chalk.white('  proxy client add <客户名> [token]') +
+      chalk.dim('  创建客户 token (自动 khy- 前缀)')
+  );
+  console.log(
+    chalk.white('  proxy client list') + chalk.dim('                查看客户 token 列表')
+  );
   console.log(chalk.white('  proxy client rotate <token_id>') + chalk.dim('   轮换某客户 token'));
   console.log(chalk.white('  proxy status') + chalk.dim('                     查看运行与鉴权状态'));
-  console.log(chalk.white('  proxy core install') + chalk.dim('               下载安装代理内核 mihomo (proxy core status 查看去哪下)'));
-  console.log(chalk.white('  proxy cert generate') + chalk.dim('              一键生成本地 HTTPS 自签名证书'));
-  console.log(chalk.white('  proxy switch-center ...') + chalk.dim('          统一管理 Trae/Windsurf 模型代理切换'));
-  console.log(chalk.white('  proxy subscription ...') + chalk.dim('           VPN/Clash 订阅管理与应用'));
+  console.log(
+    chalk.white('  proxy core install') +
+      chalk.dim('               下载安装代理内核 mihomo (proxy core status 查看去哪下)')
+  );
+  console.log(
+    chalk.white('  proxy cert generate') + chalk.dim('              一键生成本地 HTTPS 自签名证书')
+  );
+  console.log(
+    chalk.white('  proxy switch-center ...') +
+      chalk.dim('          统一管理 Trae/Windsurf 模型代理切换')
+  );
+  console.log(
+    chalk.white('  proxy subscription ...') + chalk.dim('           VPN/Clash 订阅管理与应用')
+  );
   console.log('');
   console.log(chalk.dim('  高级命令:'));
-  console.log(chalk.dim('    proxy trae-switch ... / proxy windsurf-switch ...  兼容旧命令（建议迁移到 switch-center）'));
+  console.log(
+    chalk.dim(
+      '    proxy trae-switch ... / proxy windsurf-switch ...  兼容旧命令（建议迁移到 switch-center）'
+    )
+  );
   console.log(chalk.dim('    proxy token ...      兼容旧 token 管理命令'));
   console.log(chalk.dim('    proxy tls ...        TLS 指纹代理'));
   console.log(chalk.dim('    proxy cursor2api ... cursor2api 集成'));
   console.log(chalk.dim('  HTTPS 启动参数:'));
-  console.log(chalk.dim('    --https --https-port 9443 --tls-cert /path/server.crt --tls-key /path/server.key'));
+  console.log(
+    chalk.dim(
+      '    --https --https-port 9443 --tls-cert /path/server.crt --tls-key /path/server.key'
+    )
+  );
   console.log(chalk.dim('    若只传 --https，系统会自动在 ~/.khyquant/proxy_certs 生成并复用证书'));
   console.log(chalk.dim('  智能代理路由(环境变量):'));
   console.log(chalk.dim('    GATEWAY_PROXY_ROUTE_MODE=auto|always|direct'));
@@ -1065,13 +1273,15 @@ function printProxyHelp() {
 function printRuntimeEndpoints(runtimeStatus = null) {
   const runtime = getRuntimeForDisplay(runtimeStatus, 9100);
   if (runtime.http?.enabled) {
-    const host = runtime.http.url || `http://${runtime.http.host || '127.0.0.1'}:${runtime.http.port}`;
+    const host =
+      runtime.http.url || `http://${runtime.http.host || '127.0.0.1'}:${runtime.http.port}`;
     console.log(`  ${chalk.gray('HTTP Chat:')}   ${chalk.cyan(`${host}/v1/chat/completions`)}`);
     console.log(`  ${chalk.gray('HTTP Models:')} ${chalk.cyan(`${host}/v1/models`)}`);
     console.log(`  ${chalk.gray('HTTP Health:')} ${chalk.cyan(`${host}/health`)}`);
   }
   if (runtime.https?.enabled) {
-    const host = runtime.https.url || `https://${runtime.https.host || '127.0.0.1'}:${runtime.https.port}`;
+    const host =
+      runtime.https.url || `https://${runtime.https.host || '127.0.0.1'}:${runtime.https.port}`;
     console.log(`  ${chalk.gray('HTTPS Chat:')}   ${chalk.cyan(`${host}/v1/chat/completions`)}`);
     console.log(`  ${chalk.gray('HTTPS Models:')} ${chalk.cyan(`${host}/v1/models`)}`);
     console.log(`  ${chalk.gray('HTTPS Health:')} ${chalk.cyan(`${host}/health`)}`);
@@ -1087,7 +1297,11 @@ async function handleProxyCert(action = 'generate', args = [], options = {}) {
     console.log('');
     console.log(chalk.cyan.bold('  proxy cert 命令'));
     console.log('');
-    console.log(chalk.dim('  proxy cert generate [--force] [--tls-dir <dir>] [--tls-cert <cert>] [--tls-key <key>]'));
+    console.log(
+      chalk.dim(
+        '  proxy cert generate [--force] [--tls-dir <dir>] [--tls-cert <cert>] [--tls-key <key>]'
+      )
+    );
     console.log(chalk.dim('  proxy cert status'));
     console.log('');
     return;
@@ -1100,8 +1314,12 @@ async function handleProxyCert(action = 'generate', args = [], options = {}) {
     console.log('');
     console.log(chalk.cyan.bold('  HTTPS 证书状态'));
     console.log('');
-    console.log(`  ${chalk.gray('Cert:')} ${chalk.cyan(certFile)} ${certExists ? chalk.green('(exists)') : chalk.yellow('(missing)')}`);
-    console.log(`  ${chalk.gray('Key:')}  ${chalk.cyan(keyFile)} ${keyExists ? chalk.green('(exists)') : chalk.yellow('(missing)')}`);
+    console.log(
+      `  ${chalk.gray('Cert:')} ${chalk.cyan(certFile)} ${certExists ? chalk.green('(exists)') : chalk.yellow('(missing)')}`
+    );
+    console.log(
+      `  ${chalk.gray('Key:')}  ${chalk.cyan(keyFile)} ${keyExists ? chalk.green('(exists)') : chalk.yellow('(missing)')}`
+    );
     console.log('');
     return;
   }
@@ -1125,14 +1343,21 @@ async function handleProxyCert(action = 'generate', args = [], options = {}) {
       force,
     });
 
-    if (generated.generated) printSuccess('HTTPS 自签名证书已生成');
-    else printInfo('已复用现有 HTTPS 证书');
+    if (generated.generated) {
+      printSuccess('HTTPS 自签名证书已生成');
+    } else {
+      printInfo('已复用现有 HTTPS 证书');
+    }
     console.log(`  ${chalk.gray('Cert:')} ${chalk.cyan(generated.certFile)}`);
     console.log(`  ${chalk.gray('Key:')}  ${chalk.cyan(generated.keyFile)}`);
     console.log(`  ${chalk.gray('CN:')}   ${chalk.cyan(generated.cn || sanitizeCommonName(cn))}`);
     console.log(`  ${chalk.gray('Days:')} ${chalk.cyan(String(generated.days || days))}`);
     console.log('');
-    console.log(chalk.dim(`  启动示例: proxy start --https --tls-cert "${generated.certFile}" --tls-key "${generated.keyFile}"`));
+    console.log(
+      chalk.dim(
+        `  启动示例: proxy start --https --tls-cert "${generated.certFile}" --tls-key "${generated.keyFile}"`
+      )
+    );
     console.log('');
   } catch (err) {
     printError(`证书生成失败: ${err.message}`);
@@ -1156,7 +1381,8 @@ async function handleProxyStart(options = {}) {
     }
     const prepared = ensureHttpsTlsOptions(options);
     const runtime = await ensureProxyDaemonRunning(proxy, prepared.options);
-    const runtimeStatus = runtime.runtimeStatus || (proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null);
+    const runtimeStatus =
+      runtime.runtimeStatus || (proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null);
     const preferred = getPreferredBase(runtimeStatus, proxy.getPort());
     console.log('');
     printSuccess(runtime.started ? '反向代理已启动' : '反向代理已在运行');
@@ -1164,13 +1390,17 @@ async function handleProxyStart(options = {}) {
     console.log(`  ${chalk.gray('推荐入口:')} ${chalk.cyan(preferred.base)}`);
     printRuntimeEndpoints(runtimeStatus);
     console.log(`  ${chalk.gray('Store:')}  ${chalk.cyan(`${preferred.base}/reservoir/stats`)}`);
-    console.log(`  ${chalk.gray('Auth:')}   ${chalk.cyan(runtime.auth.authTokenMasked)} ${chalk.dim(`(${runtime.auth.source || 'unknown'})`)}`);
+    console.log(
+      `  ${chalk.gray('Auth:')}   ${chalk.cyan(runtime.auth.authTokenMasked)} ${chalk.dim(`(${runtime.auth.source || 'unknown'})`)}`
+    );
     if (runtime.started && runtime.auth.generated && runtime.auth.authToken) {
       console.log(`  ${chalk.gray('Token:')}  ${chalk.yellow(runtime.auth.authToken)}`);
     }
     console.log('');
     console.log(chalk.dim('  鉴权: Authorization: Bearer <khy-...>'));
-    console.log(chalk.dim('  常用管理: proxy quickstart | proxy client add <客户名> | proxy client list'));
+    console.log(
+      chalk.dim('  常用管理: proxy quickstart | proxy client add <客户名> | proxy client list')
+    );
     console.log(chalk.dim('  更多命令: proxy help'));
     if (runtime.auth.authToken) {
       printClientConnectGuide(runtime.auth.authToken, runtimeStatus, '主 Token');
@@ -1207,10 +1437,14 @@ async function handleProxyStop() {
   }
 
   for (let i = 0; i < 30; i++) {
-    await new Promise(r => setTimeout(r, 150));
-    if (!isProcessAlive(runtime.pid)) break;
+    await new Promise((r) => setTimeout(r, 150));
+    if (!isProcessAlive(runtime.pid)) {
+      break;
+    }
     const status = await getProxyRuntimeStatus(proxy);
-    if (!status.healthy) break;
+    if (!status.healthy) {
+      break;
+    }
   }
   clearProxyRuntime();
   printSuccess('反向代理已停止');
@@ -1219,10 +1453,14 @@ async function handleProxyStop() {
 async function handleProxyStatus() {
   const proxy = getProxy();
   const status = await getProxyRuntimeStatus(proxy);
-  const runtimeStatus = status.runtimeStatus || (proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null);
+  const runtimeStatus =
+    status.runtimeStatus || (proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null);
   const preferred = getPreferredBase(runtimeStatus, proxy.getPort());
-  const proxyConfigFile = path.join(os.homedir(), '.khyquant', 'proxy.json');
-  const routeMode = String(process.env.GATEWAY_PROXY_ROUTE_MODE || 'auto').trim().toLowerCase() || 'auto';
+  const proxyConfigFile = path.join(_appHome(), 'proxy.json');
+  const routeMode =
+    String(process.env.GATEWAY_PROXY_ROUTE_MODE || 'auto')
+      .trim()
+      .toLowerCase() || 'auto';
   const kiroRequireProxy = parseBooleanMaybe(
     process.env.KIRO_DISCOVERY_REQUIRE_PROXY ?? process.env.KIRO_REQUIRE_PROXY_FOR_DISCOVERY,
     false
@@ -1236,9 +1474,13 @@ async function handleProxyStatus() {
     printInfo('反向代理未运行 — 使用 proxy start 启动');
   }
   printRuntimeEndpoints(runtimeStatus);
-  console.log(`  ${chalk.gray('鉴权:')} ${chalk.cyan(status.auth.authTokenMasked)} ${chalk.dim(`(${status.auth.source})`)}`);
+  console.log(
+    `  ${chalk.gray('鉴权:')} ${chalk.cyan(status.auth.authTokenMasked)} ${chalk.dim(`(${status.auth.source})`)}`
+  );
   console.log(`  ${chalk.gray('Token数:')} ${status.auth.tokenCount}`);
-  console.log(`  ${chalk.gray('客户Token:')} ${status.auth.managedTokenEnabledCount}/${status.auth.managedTokenCount} (启用/总数)`);
+  console.log(
+    `  ${chalk.gray('客户Token:')} ${status.auth.managedTokenEnabledCount}/${status.auth.managedTokenCount} (启用/总数)`
+  );
   if (runtimeStatus?.mode) {
     console.log(`  ${chalk.gray('模式:')} ${runtimeStatus.mode}`);
   }
@@ -1249,11 +1491,19 @@ async function handleProxyStatus() {
     printInfo('当前 token 来源于环境变量 PROXY_AUTH_TOKEN，set/rotate 仅修改本地持久化 token。');
   }
   console.log(`  ${chalk.gray('代理配置:')} ${chalk.cyan(proxyConfigFile)}`);
-  console.log(`  ${chalk.gray('智能路由:')} ${chalk.cyan(`GATEWAY_PROXY_ROUTE_MODE=${routeMode}`)} ${chalk.dim('(auto=国外优先代理, 国内直连)')}`);
+  console.log(
+    `  ${chalk.gray('智能路由:')} ${chalk.cyan(`GATEWAY_PROXY_ROUTE_MODE=${routeMode}`)} ${chalk.dim('(auto=国外优先代理, 国内直连)')}`
+  );
   if (kiroRequireProxy) {
-    console.log(`  ${chalk.gray('Kiro发现:')} ${chalk.cyan('KIRO_DISCOVERY_REQUIRE_PROXY=true')} ${chalk.dim('(模型发现阶段强制代理)')}`);
+    console.log(
+      `  ${chalk.gray('Kiro发现:')} ${chalk.cyan('KIRO_DISCOVERY_REQUIRE_PROXY=true')} ${chalk.dim('(模型发现阶段强制代理)')}`
+    );
   }
-  console.log(chalk.dim('  常用: proxy client add <客户名> | proxy client list | proxy client rotate <token_id>'));
+  console.log(
+    chalk.dim(
+      '  常用: proxy client add <客户名> | proxy client list | proxy client rotate <token_id>'
+    )
+  );
 }
 
 async function handleProxyQuickstart(args = [], options = {}) {
@@ -1262,25 +1512,35 @@ async function handleProxyQuickstart(args = [], options = {}) {
   try {
     const startOptions = buildProxyStartOptions(options, proxy);
     const before = await getProxyRuntimeStatus(proxy, startOptions);
-    const prepared = before.healthy ? { options: startOptions } : ensureHttpsTlsOptions(startOptions);
+    const prepared = before.healthy
+      ? { options: startOptions }
+      : ensureHttpsTlsOptions(startOptions);
     const run = proxy.isRunning()
       ? {
-        started: false,
-        auth: proxy.getAuthStatus(),
-        runtime: loadProxyRuntime(),
-        runtimeStatus: proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null,
-      }
+          started: false,
+          auth: proxy.getAuthStatus(),
+          runtime: loadProxyRuntime(),
+          runtimeStatus: proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null,
+        }
       : await ensureProxyDaemonRunning(proxy, prepared.options);
     const auth = run.auth;
-    const runtimeStatus = run.runtimeStatus || (proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null);
+    const runtimeStatus =
+      run.runtimeStatus || (proxy.getRuntimeStatus ? proxy.getRuntimeStatus() : null);
     const preferred = getPreferredBase(runtimeStatus, proxy.getPort());
 
-    if (run.started) printSuccess(`反向代理已启动: ${preferred.base}`);
-    else printInfo(`反向代理已在运行: ${preferred.base}`);
+    if (run.started) {
+      printSuccess(`反向代理已启动: ${preferred.base}`);
+    } else {
+      printInfo(`反向代理已在运行: ${preferred.base}`);
+    }
     printRuntimeEndpoints(runtimeStatus);
 
-    console.log(`  ${chalk.gray('主Token:')} ${chalk.cyan(auth.authTokenMasked)} ${chalk.dim(`(${auth.source})`)}`);
-    console.log(`  ${chalk.gray('客户Token:')} ${auth.managedTokenEnabledCount}/${auth.managedTokenCount} (启用/总数)`);
+    console.log(
+      `  ${chalk.gray('主Token:')} ${chalk.cyan(auth.authTokenMasked)} ${chalk.dim(`(${auth.source})`)}`
+    );
+    console.log(
+      `  ${chalk.gray('客户Token:')} ${auth.managedTokenEnabledCount}/${auth.managedTokenCount} (启用/总数)`
+    );
 
     if (customerName) {
       const customToken = String(options.token || options.value || '').trim();
@@ -1365,7 +1625,9 @@ async function handleProxyClient(action = 'list', args = [], options = {}) {
   if (sub === 'on' || sub === 'enable' || sub === 'off' || sub === 'disable') {
     const tokenId = String(args[0] || options.id || '').trim();
     if (!tokenId) {
-      printError(`用法: proxy client ${sub === 'on' || sub === 'enable' ? 'on' : 'off'} <token_id>`);
+      printError(
+        `用法: proxy client ${sub === 'on' || sub === 'enable' ? 'on' : 'off'} <token_id>`
+      );
       return;
     }
     try {
@@ -1410,7 +1672,9 @@ async function handleProxyClient(action = 'list', args = [], options = {}) {
   for (const row of list) {
     const state = row.enabled ? chalk.green('启用') : chalk.yellow('禁用');
     console.log(`  ${chalk.white(row.id)}  ${state}  ${chalk.cyan(row.label || '-')}`);
-    console.log(`    ${chalk.dim(row.tokenMasked)}  ${chalk.dim(`updated ${row.updatedAt || '-'}`)}`);
+    console.log(
+      `    ${chalk.dim(row.tokenMasked)}  ${chalk.dim(`updated ${row.updatedAt || '-'}`)}`
+    );
   }
   console.log('');
   console.log(chalk.dim('  常用: proxy client rotate <token_id> | proxy client off <token_id>'));
@@ -1535,7 +1799,9 @@ async function handleProxyToken(action = 'status', args = [], options = {}) {
     for (const row of list) {
       const state = row.enabled ? chalk.green('启用') : chalk.yellow('禁用');
       console.log(`  ${chalk.white(row.id)}  ${state}  ${chalk.cyan(row.label || '-')}`);
-      console.log(`    ${chalk.dim(row.tokenMasked)}  ${chalk.dim(`updated ${row.updatedAt || '-'}`)}`);
+      console.log(
+        `    ${chalk.dim(row.tokenMasked)}  ${chalk.dim(`updated ${row.updatedAt || '-'}`)}`
+      );
     }
     console.log('');
     return;
@@ -1545,25 +1811,35 @@ async function handleProxyToken(action = 'status', args = [], options = {}) {
   console.log('');
   console.log(`  ${chalk.cyan.bold('主代理 Token 状态')}`);
   console.log('');
-  console.log(`  ${chalk.gray('来源:')}   ${status.source}${status.generated ? chalk.yellow(' (首次自动生成)') : ''}`);
+  console.log(
+    `  ${chalk.gray('来源:')}   ${status.source}${status.generated ? chalk.yellow(' (首次自动生成)') : ''}`
+  );
   console.log(`  ${chalk.gray('掩码:')}   ${chalk.cyan(status.authTokenMasked)}`);
   console.log(`  ${chalk.gray('Token:')}  ${chalk.yellow(status.authToken)}`);
   console.log(`  ${chalk.gray('Token数:')} ${status.tokenCount}`);
-  console.log(`  ${chalk.gray('客户Token:')} ${status.managedTokenEnabledCount}/${status.managedTokenCount} (启用/总数)`);
+  console.log(
+    `  ${chalk.gray('客户Token:')} ${status.managedTokenEnabledCount}/${status.managedTokenCount} (启用/总数)`
+  );
   console.log('');
   console.log(chalk.dim('  推荐使用简化命令:'));
   console.log(chalk.dim('    proxy client add <客户名> [token]'));
   console.log(chalk.dim('    proxy client list'));
   console.log(chalk.dim('    proxy client rotate <token_id> [new_token]'));
   console.log(chalk.dim('    proxy client on|off <token_id>'));
-  console.log(chalk.dim('  兼容旧命令: proxy token set|rotate|create|list|enable|disable|rotate-client|delete'));
+  console.log(
+    chalk.dim(
+      '  兼容旧命令: proxy token set|rotate|create|list|enable|disable|rotate-client|delete'
+    )
+  );
   console.log(chalk.dim('  备注: token 会自动补全 khy- 前缀'));
   console.log('');
 }
 
 async function handleProxySubscription(action = 'list', args = [], options = {}) {
   const proxyConfig = require('../../services/proxyConfigService');
-  const sub = String(action || 'list').trim().toLowerCase();
+  const sub = String(action || 'list')
+    .trim()
+    .toLowerCase();
 
   if (sub === 'help') {
     console.log('');
@@ -1595,7 +1871,10 @@ async function handleProxySubscription(action = 'list', args = [], options = {})
     printSuccess(`${result.created ? '已添加' : '已更新'}订阅: ${result.subscription.name}`);
     console.log(`  ${chalk.gray('ID:')} ${chalk.cyan(result.subscription.id)}`);
     console.log(`  ${chalk.gray('URL:')} ${chalk.cyan(result.subscription.url)}`);
-    if (result.subscription.sourceUrl && result.subscription.sourceUrl !== result.subscription.url) {
+    if (
+      result.subscription.sourceUrl &&
+      result.subscription.sourceUrl !== result.subscription.url
+    ) {
       console.log(`  ${chalk.gray('原始链接:')} ${chalk.dim(result.subscription.sourceUrl)}`);
     }
     return;
@@ -1648,7 +1927,9 @@ async function handleProxySubscription(action = 'list', args = [], options = {})
       console.log(`  ${chalk.gray('节点数量:')} ${chalk.cyan(String(hints.nodeCount))}`);
     }
     if (hints.proxy) {
-      console.log(`  ${chalk.gray('检测到代理:')} ${chalk.cyan(`${hints.proxy.type}://${hints.proxy.host}:${hints.proxy.port}`)}`);
+      console.log(
+        `  ${chalk.gray('检测到代理:')} ${chalk.cyan(`${hints.proxy.type}://${hints.proxy.host}:${hints.proxy.port}`)}`
+      );
     } else {
       printInfo('订阅已解析，但未包含本地端口（常见于 vmess/vless 节点订阅）');
     }
@@ -1665,7 +1946,9 @@ async function handleProxySubscription(action = 'list', args = [], options = {})
     }
     printSuccess(`订阅已应用: ${result.subscription.name}`);
     const hints = result.hints || {};
-    if (hints.format) console.log(`  ${chalk.gray('订阅格式:')} ${chalk.cyan(hints.format)}`);
+    if (hints.format) {
+      console.log(`  ${chalk.gray('订阅格式:')} ${chalk.cyan(hints.format)}`);
+    }
     if (Number.isFinite(hints.nodeCount) && hints.nodeCount > 0) {
       console.log(`  ${chalk.gray('节点数量:')} ${chalk.cyan(String(hints.nodeCount))}`);
     }
@@ -1693,16 +1976,25 @@ async function handleProxySubscription(action = 'list', args = [], options = {})
   for (const item of items) {
     const active = item.id === status.activeSubscriptionId;
     const icon = active ? chalk.green('●') : chalk.dim('○');
-    const state = item.lastStatus === 'ok'
-      ? chalk.green('ok')
-      : (item.lastStatus === 'error' ? chalk.red('error') : chalk.dim('unknown'));
-    console.log(`  ${icon} ${chalk.white(item.id)}  ${chalk.cyan(item.name)} ${active ? chalk.green('(active)') : ''}`);
+    const state =
+      item.lastStatus === 'ok'
+        ? chalk.green('ok')
+        : item.lastStatus === 'error'
+          ? chalk.red('error')
+          : chalk.dim('unknown');
+    console.log(
+      `  ${icon} ${chalk.white(item.id)}  ${chalk.cyan(item.name)} ${active ? chalk.green('(active)') : ''}`
+    );
     console.log(`    ${chalk.dim(item.url)}`);
     console.log(`    ${chalk.dim(`status=${state} checked=${item.lastCheckedAt || '-'}`)}`);
-    if (item.lastError) console.log(`    ${chalk.dim(`error=${item.lastError}`)}`);
+    if (item.lastError) {
+      console.log(`    ${chalk.dim(`error=${item.lastError}`)}`);
+    }
     const detectedProxy = item.detected?.proxy;
     if (detectedProxy?.port) {
-      console.log(`    ${chalk.dim(`detected=${detectedProxy.type}://${detectedProxy.host}:${detectedProxy.port}`)}`);
+      console.log(
+        `    ${chalk.dim(`detected=${detectedProxy.type}://${detectedProxy.host}:${detectedProxy.port}`)}`
+      );
     }
     if (item.detected?.format) {
       const count = Number(item.detected?.nodeCount || 0);
@@ -1759,14 +2051,22 @@ async function handleProxyTls(action, arg) {
     console.log('');
     console.log(`  ${chalk.cyan.bold('TLS Sidecar 状态')}`);
     console.log('');
-    console.log(`  ${chalk.gray('运行:')}       ${status.running ? chalk.green('● 是') : chalk.red('● 否')}`);
+    console.log(
+      `  ${chalk.gray('运行:')}       ${status.running ? chalk.green('● 是') : chalk.red('● 否')}`
+    );
     console.log(`  ${chalk.gray('已启用:')}     ${status.enabled ? '是' : '否'}`);
     console.log(`  ${chalk.gray('端口:')}       ${status.port}`);
     console.log(`  ${chalk.gray('指纹:')}       ${status.fingerprint}`);
-    console.log(`  ${chalk.gray('二进制:')}     ${status.binaryInstalled ? chalk.green('已安装') : chalk.yellow('未安装')}`);
-    console.log(`  ${chalk.gray('Go 工具链:')} ${status.goAvailable ? chalk.green('可用') : chalk.yellow('不可用')}`);
+    console.log(
+      `  ${chalk.gray('二进制:')}     ${status.binaryInstalled ? chalk.green('已安装') : chalk.yellow('未安装')}`
+    );
+    console.log(
+      `  ${chalk.gray('Go 工具链:')} ${status.goAvailable ? chalk.green('可用') : chalk.yellow('不可用')}`
+    );
     console.log(`  ${chalk.gray('目标域名:')}   ${status.targets.join(', ')}`);
-    if (status.pid) console.log(`  ${chalk.gray('PID:')}        ${status.pid}`);
+    if (status.pid) {
+      console.log(`  ${chalk.gray('PID:')}        ${status.pid}`);
+    }
     console.log('');
   }
 }
@@ -1783,13 +2083,11 @@ async function handleProxyCursor2Api(action = 'status', args = [], options = {})
   const zipPath = options.zip || options.file || args[0] || current.zipPath || svc.DEFAULT_ZIP_PATH;
   const port = parsePortMaybe(options.port, current.port);
   const authToken = options.token || options['auth-token'] || current.authToken || '';
-  const requireToken = options.open === true
-    ? false
-    : (options['no-auth'] === true ? false : true);
+  const requireToken = options.open === true ? false : options['no-auth'] === true ? false : true;
 
   if (action === 'setup' || action === 'extract' || action === 'install' || action === 'import') {
     try {
-      printInfo('正在提取并准备 cursor2api（可能需要几分钟）...');
+      printInfo(formatStatusMessage('提取并准备', 'cursor2api', `端口 ${port}，可能需要几分钟`));
       const result = await svc.setupFromZip({
         zipPath,
         port,
@@ -1802,8 +2100,12 @@ async function handleProxyCursor2Api(action = 'status', args = [], options = {})
       console.log(`  ${chalk.gray('安装目录:')} ${chalk.cyan(result.installDir)}`);
       console.log(`  ${chalk.gray('监听端口:')} ${chalk.cyan(String(result.port))}`);
       console.log(`  ${chalk.gray('入口文件:')} ${chalk.cyan(result.entry)}`);
-      console.log(`  ${chalk.gray('鉴权状态:')} ${result.authEnabled ? chalk.green('已启用') : chalk.yellow('未启用')}`);
-      console.log(`  ${chalk.gray('鉴权模式:')} ${result.requireToken ? chalk.green('强制鉴权') : chalk.yellow('开放模式')}`);
+      console.log(
+        `  ${chalk.gray('鉴权状态:')} ${result.authEnabled ? chalk.green('已启用') : chalk.yellow('未启用')}`
+      );
+      console.log(
+        `  ${chalk.gray('鉴权模式:')} ${result.requireToken ? chalk.green('强制鉴权') : chalk.yellow('开放模式')}`
+      );
       if (result.generatedToken) {
         console.log(`  ${chalk.gray('新 Token:')} ${chalk.yellow(result.authToken)}`);
       }
@@ -1817,7 +2119,7 @@ async function handleProxyCursor2Api(action = 'status', args = [], options = {})
 
   if (action === 'prepare' || action === 'build') {
     try {
-      printInfo('正在检查并安装/构建 cursor2api...');
+      printInfo(formatStatusMessage('安装并构建', 'cursor2api', `端口 ${port}`));
       const result = await svc.prepareProject({
         port,
         authToken,
@@ -1827,7 +2129,9 @@ async function handleProxyCursor2Api(action = 'status', args = [], options = {})
       });
       printSuccess(`cursor2api 依赖与构建完成 (${result.version || 'unknown'})`);
       console.log(`  ${chalk.gray('安装目录:')} ${chalk.cyan(result.installDir)}`);
-      console.log(`  ${chalk.gray('构建状态:')} ${result.built ? chalk.green('就绪') : chalk.red('未就绪')}`);
+      console.log(
+        `  ${chalk.gray('构建状态:')} ${result.built ? chalk.green('就绪') : chalk.red('未就绪')}`
+      );
       if (result.generatedToken) {
         console.log(`  ${chalk.gray('新 Token:')} ${chalk.yellow(result.authToken)}`);
       }
@@ -1877,7 +2181,9 @@ async function handleProxyCursor2Api(action = 'status', args = [], options = {})
     console.log('');
     console.log(`  ${chalk.cyan.bold('Cursor2API Token 状态')}`);
     console.log('');
-    console.log(`  ${chalk.gray('鉴权模式:')} ${status.requireToken ? chalk.green('强制鉴权') : chalk.yellow('开放模式')}`);
+    console.log(
+      `  ${chalk.gray('鉴权模式:')} ${status.requireToken ? chalk.green('强制鉴权') : chalk.yellow('开放模式')}`
+    );
     console.log(`  ${chalk.gray('Token:')}   ${chalk.cyan(svc.maskToken(status.authToken))}`);
     console.log('');
     console.log(chalk.dim('  用法: proxy cursor2api token set <token>'));
@@ -1897,12 +2203,20 @@ async function handleProxyCursor2Api(action = 'status', args = [], options = {})
       }
 
       console.log('');
-      console.log(`  ${chalk.gray('Claude Code:')} ${chalk.cyan(`ANTHROPIC_BASE_URL=http://localhost:${result.port}`)}`);
+      console.log(
+        `  ${chalk.gray('Claude Code:')} ${chalk.cyan(`ANTHROPIC_BASE_URL=http://localhost:${result.port}`)}`
+      );
       if (result.authEnabled) {
-        console.log(`  ${chalk.gray('Claude Code Key:')} ${chalk.cyan('ANTHROPIC_API_KEY=<你的token>')}`);
+        console.log(
+          `  ${chalk.gray('Claude Code Key:')} ${chalk.cyan('ANTHROPIC_API_KEY=<你的token>')}`
+        );
       }
-      console.log(`  ${chalk.gray('OpenAI/IDE:')} ${chalk.cyan(`OPENAI_BASE_URL=http://localhost:${result.port}/v1`)}`);
-      console.log(`  ${chalk.gray('鉴权模式:')} ${result.requireToken ? chalk.green('强制鉴权') : chalk.yellow('开放模式')}`);
+      console.log(
+        `  ${chalk.gray('OpenAI/IDE:')} ${chalk.cyan(`OPENAI_BASE_URL=http://localhost:${result.port}/v1`)}`
+      );
+      console.log(
+        `  ${chalk.gray('鉴权模式:')} ${result.requireToken ? chalk.green('强制鉴权') : chalk.yellow('开放模式')}`
+      );
       if (result.generatedToken) {
         console.log(`  ${chalk.gray('新 Token:')} ${chalk.yellow(result.authToken)}`);
       }
@@ -1918,8 +2232,11 @@ async function handleProxyCursor2Api(action = 'status', args = [], options = {})
   if (action === 'stop') {
     try {
       const result = await svc.stop();
-      if (result.alreadyStopped) printInfo('cursor2api 未运行');
-      else printSuccess('cursor2api 已停止');
+      if (result.alreadyStopped) {
+        printInfo('cursor2api 未运行');
+      } else {
+        printSuccess('cursor2api 已停止');
+      }
     } catch (err) {
       printError(`cursor2api 停止失败: ${err.message}`);
     }
@@ -1946,14 +2263,26 @@ async function handleProxyCursor2Api(action = 'status', args = [], options = {})
     console.log('');
     console.log(`  ${chalk.cyan.bold('Cursor2API 状态')}`);
     console.log('');
-    console.log(`  ${chalk.gray('已安装:')}     ${status.configured ? chalk.green('是') : chalk.yellow('否')}`);
-    console.log(`  ${chalk.gray('已构建:')}     ${status.built ? chalk.green('是') : chalk.yellow('否')}`);
-    console.log(`  ${chalk.gray('运行中:')}     ${status.running ? chalk.green('● 是') : chalk.red('● 否')}`);
-    console.log(`  ${chalk.gray('端口:')}       ${status.port}${status.portOpen ? chalk.green(' (open)') : chalk.dim(' (closed)')}`);
+    console.log(
+      `  ${chalk.gray('已安装:')}     ${status.configured ? chalk.green('是') : chalk.yellow('否')}`
+    );
+    console.log(
+      `  ${chalk.gray('已构建:')}     ${status.built ? chalk.green('是') : chalk.yellow('否')}`
+    );
+    console.log(
+      `  ${chalk.gray('运行中:')}     ${status.running ? chalk.green('● 是') : chalk.red('● 否')}`
+    );
+    console.log(
+      `  ${chalk.gray('端口:')}       ${status.port}${status.portOpen ? chalk.green(' (open)') : chalk.dim(' (closed)')}`
+    );
     console.log(`  ${chalk.gray('PID:')}        ${status.pid || '-'}`);
     console.log(`  ${chalk.gray('版本:')}       ${status.version || '-'}`);
-    console.log(`  ${chalk.gray('鉴权:')}       ${status.authEnabled ? chalk.green('已启用') : chalk.yellow('未启用')}`);
-    console.log(`  ${chalk.gray('鉴权模式:')}   ${status.requireToken ? chalk.green('强制鉴权') : chalk.yellow('开放模式')}`);
+    console.log(
+      `  ${chalk.gray('鉴权:')}       ${status.authEnabled ? chalk.green('已启用') : chalk.yellow('未启用')}`
+    );
+    console.log(
+      `  ${chalk.gray('鉴权模式:')}   ${status.requireToken ? chalk.green('强制鉴权') : chalk.yellow('开放模式')}`
+    );
     console.log(`  ${chalk.gray('Token:')}      ${status.authTokenMasked || '-'}`);
     console.log(`  ${chalk.gray('安装目录:')}   ${status.installDir}`);
     console.log(`  ${chalk.gray('ZIP 路径:')}   ${status.zipPath}`);
@@ -1977,9 +2306,19 @@ function printTraeSwitchHelp() {
   console.log(chalk.cyan.bold('  proxy trae-switch 命令'));
   console.log('');
   console.log(chalk.dim('  proxy trae-switch list'));
-  console.log(chalk.dim('  proxy trae-switch sync [--name 名称] [--endpoint https://.../v1] [--id trae-auto]'));
-  console.log(chalk.dim('  proxy trae-switch add <名称> --endpoint <openai_base> --models <m1,m2> [--key sk-xxx]'));
-  console.log(chalk.dim('  proxy trae-switch add <名称> --endpoint <openai_base> --map "customA=targetA,customB=targetB" [--key sk-xxx]'));
+  console.log(
+    chalk.dim('  proxy trae-switch sync [--name 名称] [--endpoint https://.../v1] [--id trae-auto]')
+  );
+  console.log(
+    chalk.dim(
+      '  proxy trae-switch add <名称> --endpoint <openai_base> --models <m1,m2> [--key sk-xxx]'
+    )
+  );
+  console.log(
+    chalk.dim(
+      '  proxy trae-switch add <名称> --endpoint <openai_base> --map "customA=targetA,customB=targetB" [--key sk-xxx]'
+    )
+  );
   console.log(chalk.dim('  proxy trae-switch use <id|名称>'));
   console.log(chalk.dim('  proxy trae-switch remove <id|名称>'));
   console.log(chalk.dim('  proxy trae-switch test [id|名称] [--model <custom_model>]'));
@@ -1999,22 +2338,29 @@ function printTraeSwitchApplySummary(profile, applied) {
   printSuccess(`已激活 Trae 供应商: ${profile.name} (${profile.id})`);
   console.log(`  ${chalk.gray('Endpoint:')} ${chalk.cyan(profile.endpoint)}`);
   console.log(`  ${chalk.gray('模型数:')}    ${profile.models.length}`);
-  console.log(`  ${chalk.gray('默认模型:')}  ${chalk.cyan(applied.defaultModel || profile.models[0] || '-')}`);
+  console.log(
+    `  ${chalk.gray('默认模型:')}  ${chalk.cyan(applied.defaultModel || profile.models[0] || '-')}`
+  );
   console.log(`  ${chalk.gray('路由规则:')}  ${applied.routeMapCount}`);
   console.log(`  ${chalk.gray('写入 .env:')} ${chalk.cyan(applied.envPath)}`);
   if (profile.key) {
-    const masked = profile.key.length > 10
-      ? `${profile.key.slice(0, 6)}***${profile.key.slice(-4)}`
-      : `${profile.key.slice(0, 3)}***`;
+    const masked =
+      profile.key.length > 10
+        ? `${profile.key.slice(0, 6)}***${profile.key.slice(-4)}`
+        : `${profile.key.slice(0, 3)}***`;
     console.log(`  ${chalk.gray('上游 Key:')} ${chalk.cyan(masked)}`);
   } else {
-    console.log(`  ${chalk.gray('上游 Key:')} ${chalk.yellow('未保存（请在环境变量或上游客户端中提供）')}`);
+    console.log(
+      `  ${chalk.gray('上游 Key:')} ${chalk.yellow('未保存（请在环境变量或上游客户端中提供）')}`
+    );
   }
   console.log('');
   printInfo('建议下一步:');
   console.log(chalk.dim('  1) khy proxy start'));
   console.log(chalk.dim('  2) khy proxy status'));
-  console.log(chalk.dim('  3) 在 Trae 里使用 OpenAI 兼容入口（模型名直接选你配置的 custom_model）'));
+  console.log(
+    chalk.dim('  3) 在 Trae 里使用 OpenAI 兼容入口（模型名直接选你配置的 custom_model）')
+  );
   console.log('');
 }
 
@@ -2041,7 +2387,9 @@ async function syncTraeSwitchProfileFromAdapter(options = {}) {
 
   const modelMap = {};
   for (const modelId of models) {
-    const mapped = normalizeModelId(parsedMap[modelId] || autoProfile.modelMap?.[modelId] || modelId);
+    const mapped = normalizeModelId(
+      parsedMap[modelId] || autoProfile.modelMap?.[modelId] || modelId
+    );
     modelMap[modelId] = mapped || modelId;
   }
   models = dedupeList(models);
@@ -2050,11 +2398,19 @@ async function syncTraeSwitchProfileFromAdapter(options = {}) {
   const idInput = String(options.id || autoProfile.id || 'trae-auto').trim();
   const name = String(options.name || autoProfile.name || 'Trae Auto').trim() || 'Trae Auto';
   const endpoint = normalizeEndpointBase(options.endpoint || autoProfile.endpoint || '');
-  const key = String(options.key || options['api-key'] || options.token || autoProfile.key || '').trim();
-  const used = new Set(store.profiles.map(p => p.id));
+  const key = String(
+    options.key || options['api-key'] || options.token || autoProfile.key || ''
+  ).trim();
+  const used = new Set(store.profiles.map((p) => p.id));
   const profileId = normalizeTraeProfileId(idInput) || createTraeProfileId(name, used);
-  const existing = store.profiles.find(p => p.id === profileId)
-    || store.profiles.find(p => String(p.name || '').trim().toLowerCase() === name.toLowerCase());
+  const existing =
+    store.profiles.find((p) => p.id === profileId) ||
+    store.profiles.find(
+      (p) =>
+        String(p.name || '')
+          .trim()
+          .toLowerCase() === name.toLowerCase()
+    );
   const now = new Date().toISOString();
   const nextProfile = {
     id: existing ? existing.id : profileId,
@@ -2067,7 +2423,7 @@ async function syncTraeSwitchProfileFromAdapter(options = {}) {
     updatedAt: now,
   };
   const nextProfiles = existing
-    ? store.profiles.map(p => (p.id === existing.id ? nextProfile : p))
+    ? store.profiles.map((p) => (p.id === existing.id ? nextProfile : p))
     : [...store.profiles, nextProfile];
   const nextStore = saveTraeSwitchStore({
     activeId: activate ? nextProfile.id : store.activeId,
@@ -2088,7 +2444,8 @@ async function syncTraeSwitchProfileFromAdapter(options = {}) {
     applied,
     activate,
     existing: !!existing,
-    changed: buildSwitchProfileSignature(existing || {}) !== buildSwitchProfileSignature(nextProfile),
+    changed:
+      buildSwitchProfileSignature(existing || {}) !== buildSwitchProfileSignature(nextProfile),
     activeChanged: !!activate && String(store.activeId || '') !== String(nextProfile.id || ''),
   };
 }
@@ -2107,7 +2464,9 @@ async function handleProxyTraeSwitch(action = 'status', args = [], options = {})
     console.log(chalk.cyan.bold('  Trae 第三方供应商列表'));
     console.log('');
     if (!store.profiles.length) {
-      printInfo('暂无配置。先执行: proxy switch-center add --provider trae <名称> --endpoint <openai_base> --models <m1,m2>');
+      printInfo(
+        '暂无配置。先执行: proxy switch-center add --provider trae <名称> --endpoint <openai_base> --models <m1,m2>'
+      );
       console.log('');
       return;
     }
@@ -2116,12 +2475,14 @@ async function handleProxyTraeSwitch(action = 'status', args = [], options = {})
       const icon = active ? chalk.green('●') : chalk.dim('○');
       const firstModels = profile.models.slice(0, 3).join(', ');
       const suffix = profile.models.length > 3 ? ` +${profile.models.length - 3}` : '';
-      console.log(`  ${icon} ${chalk.white(profile.id)}  ${chalk.cyan(profile.name)} ${active ? chalk.green('(active)') : ''}`);
+      console.log(
+        `  ${icon} ${chalk.white(profile.id)}  ${chalk.cyan(profile.name)} ${active ? chalk.green('(active)') : ''}`
+      );
       console.log(`    ${chalk.dim(profile.endpoint)}`);
       console.log(`    ${chalk.dim(`models: ${firstModels}${suffix}`)}`);
     }
     if (store.activeId) {
-      const activeProfile = store.profiles.find(p => p.id === store.activeId);
+      const activeProfile = store.profiles.find((p) => p.id === store.activeId);
       if (activeProfile) {
         console.log('');
         printInfo(`当前激活: ${activeProfile.name} (${activeProfile.id})`);
@@ -2145,15 +2506,18 @@ async function handleProxyTraeSwitch(action = 'status', args = [], options = {})
       printError('未找到可测试模型，请先为该配置添加 models');
       return;
     }
-    const targetModel = normalizeModelId(
-      options['target-model']
-      || options.targetModel
-      || profile.modelMap?.[customModel]
-      || customModel
-    ) || customModel;
+    const targetModel =
+      normalizeModelId(
+        options['target-model'] ||
+          options.targetModel ||
+          profile.modelMap?.[customModel] ||
+          customModel
+      ) || customModel;
     const timeoutMs = parsePositiveInt(options.timeout || options['timeout-ms'], 15000);
     const applyBeforeTest = parseBooleanMaybe(options.apply, true);
-    const upstreamKey = String(options.key || options['api-key'] || profile.key || process.env.RELAY_API_KEY || '').trim();
+    const upstreamKey = String(
+      options.key || options['api-key'] || profile.key || process.env.RELAY_API_KEY || ''
+    ).trim();
 
     console.log('');
     printInfo(`测试配置: ${profile.name} (${profile.id})`);
@@ -2249,7 +2613,7 @@ async function handleProxyTraeSwitch(action = 'status', args = [], options = {})
       printError(`未找到配置: ${query}`);
       return;
     }
-    const nextProfiles = store.profiles.filter(p => p.id !== profile.id);
+    const nextProfiles = store.profiles.filter((p) => p.id !== profile.id);
     const nextStore = saveTraeSwitchStore({
       activeId: store.activeId === profile.id ? '' : store.activeId,
       profiles: nextProfiles,
@@ -2291,13 +2655,26 @@ async function handleProxyTraeSwitch(action = 'status', args = [], options = {})
         name: options.name || args[0] || '',
       });
       const nextProfile = result.profile;
-      printSuccess(`${result.existing ? '已更新' : '已新增'} Trae 供应商: ${nextProfile.name} (${nextProfile.id})`);
-      printInfo(`来源 token: ${result.autoProfile.source || '-'} ${result.autoProfile.path ? `(${result.autoProfile.path})` : ''}`);
+      printSuccess(
+        `${result.existing ? '已更新' : '已新增'} Trae 供应商: ${nextProfile.name} (${nextProfile.id})`
+      );
+      printInfo(
+        `来源 token: ${result.autoProfile.source || '-'} ${result.autoProfile.path ? `(${result.autoProfile.path})` : ''}`
+      );
 
       if (result.activate) {
-        printTraeSwitchApplySummary(nextProfile, result.applied || { routeMapCount: 0, envPath: '-', defaultModel: nextProfile.models?.[0] || '' });
+        printTraeSwitchApplySummary(
+          nextProfile,
+          result.applied || {
+            routeMapCount: 0,
+            envPath: '-',
+            defaultModel: nextProfile.models?.[0] || '',
+          }
+        );
       } else {
-        printInfo('未激活该配置，可执行: proxy switch-center use ' + nextProfile.id + ' --provider trae');
+        printInfo(
+          '未激活该配置，可执行: proxy switch-center use ' + nextProfile.id + ' --provider trae'
+        );
       }
       return;
     } catch (err) {
@@ -2309,16 +2686,22 @@ async function handleProxyTraeSwitch(action = 'status', args = [], options = {})
 
   if (sub === 'add' || sub === 'create' || sub === 'set' || sub === 'update') {
     const name = String(args[0] || options.name || '').trim();
-    const endpoint = normalizeEndpointBase(options.endpoint || options.base || options.url || args[1] || '');
+    const endpoint = normalizeEndpointBase(
+      options.endpoint || options.base || options.url || args[1] || ''
+    );
     const modelsRaw = String(options.models || args[2] || '').trim();
     const mappingRaw = String(options.map || '').trim();
     const key = String(options.key || options['api-key'] || options.token || args[3] || '').trim();
     const activate = parseBooleanMaybe(options.activate, true);
     const idInput = String(options.id || '').trim();
-    const explicitTargetModel = normalizeModelId(options['target-model'] || options.targetModel || '');
+    const explicitTargetModel = normalizeModelId(
+      options['target-model'] || options.targetModel || ''
+    );
 
     if (!name) {
-      printError('用法: proxy switch-center add --provider trae <名称> --endpoint <openai_base> --models <m1,m2>');
+      printError(
+        '用法: proxy switch-center add --provider trae <名称> --endpoint <openai_base> --models <m1,m2>'
+      );
       return;
     }
     if (!endpoint) {
@@ -2343,10 +2726,16 @@ async function handleProxyTraeSwitch(action = 'status', args = [], options = {})
     }
     models = dedupeList(models);
 
-    const used = new Set(store.profiles.map(p => p.id));
+    const used = new Set(store.profiles.map((p) => p.id));
     const profileId = normalizeTraeProfileId(idInput) || createTraeProfileId(name, used);
-    const existing = store.profiles.find(p => p.id === profileId)
-      || store.profiles.find(p => String(p.name || '').trim().toLowerCase() === name.toLowerCase());
+    const existing =
+      store.profiles.find((p) => p.id === profileId) ||
+      store.profiles.find(
+        (p) =>
+          String(p.name || '')
+            .trim()
+            .toLowerCase() === name.toLowerCase()
+      );
     const now = new Date().toISOString();
     const nextProfile = {
       id: existing ? existing.id : profileId,
@@ -2359,20 +2748,24 @@ async function handleProxyTraeSwitch(action = 'status', args = [], options = {})
       updatedAt: now,
     };
     const nextProfiles = existing
-      ? store.profiles.map(p => (p.id === existing.id ? nextProfile : p))
+      ? store.profiles.map((p) => (p.id === existing.id ? nextProfile : p))
       : [...store.profiles, nextProfile];
     const nextStore = saveTraeSwitchStore({
       activeId: activate ? nextProfile.id : store.activeId,
       profiles: nextProfiles,
     });
-    printSuccess(`${existing ? '已更新' : '已新增'} Trae 供应商: ${nextProfile.name} (${nextProfile.id})`);
+    printSuccess(
+      `${existing ? '已更新' : '已新增'} Trae 供应商: ${nextProfile.name} (${nextProfile.id})`
+    );
 
     if (activate) {
       const profile = resolveTraeProfile(nextStore, nextProfile.id);
       const applied = applyTraeSwitchProfile(profile || nextProfile);
       printTraeSwitchApplySummary(profile || nextProfile, applied);
     } else {
-      printInfo('未激活该配置，可执行: proxy switch-center use ' + nextProfile.id + ' --provider trae');
+      printInfo(
+        '未激活该配置，可执行: proxy switch-center use ' + nextProfile.id + ' --provider trae'
+      );
     }
     return;
   }

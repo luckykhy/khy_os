@@ -17,13 +17,23 @@
  * updates a checkpoint file so the pipeline can be resumed after interruption.
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { execSync, spawn } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 const { safeMklink } = require('../tools/platformUtils');
 
-const BASE_DIR = path.join(os.homedir(), '.khy', 'cli-anything', 'generated');
+// Portable-aware data home resolved at load (legacy const semantics preserved).
+function _dataHome() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return getDataHome();
+  } catch {
+    return path.join(os.homedir(), '.khy');
+  }
+}
+const BASE_DIR = path.join(_dataHome(), 'cli-anything', 'generated');
 const TEMPLATES_DIR = path.join(__dirname, '..', 'data', 'cliAnythingTemplates');
 
 // URL whitelist: only allow https:// and git@ (SSH) for git clone.
@@ -38,14 +48,14 @@ function _validateGitUrl(input) {
 }
 
 const STAGES = [
-  { id: 0, name: 'acquire',   label: 'Source Acquisition',    template: 'STAGE_0_ACQUIRE.md' },
-  { id: 1, name: 'analyze',   label: 'Codebase Analysis',     template: 'STAGE_1_ANALYZE.md' },
-  { id: 2, name: 'design',    label: 'Architecture Design',   template: 'STAGE_2_DESIGN.md' },
-  { id: 3, name: 'implement', label: 'Implementation',        template: 'STAGE_3_IMPLEMENT.md' },
-  { id: 4, name: 'testplan',  label: 'Test Planning',         template: 'STAGE_4_TESTPLAN.md' },
-  { id: 5, name: 'testcode',  label: 'Test Implementation',   template: 'STAGE_5_TESTCODE.md' },
-  { id: 6, name: 'docs',      label: 'Documentation & SKILL', template: 'STAGE_6_DOCS.md' },
-  { id: 7, name: 'package',   label: 'Packaging & Register',  template: 'STAGE_7_PACKAGE.md' },
+  { id: 0, name: 'acquire', label: 'Source Acquisition', template: 'STAGE_0_ACQUIRE.md' },
+  { id: 1, name: 'analyze', label: 'Codebase Analysis', template: 'STAGE_1_ANALYZE.md' },
+  { id: 2, name: 'design', label: 'Architecture Design', template: 'STAGE_2_DESIGN.md' },
+  { id: 3, name: 'implement', label: 'Implementation', template: 'STAGE_3_IMPLEMENT.md' },
+  { id: 4, name: 'testplan', label: 'Test Planning', template: 'STAGE_4_TESTPLAN.md' },
+  { id: 5, name: 'testcode', label: 'Test Implementation', template: 'STAGE_5_TESTCODE.md' },
+  { id: 6, name: 'docs', label: 'Documentation & SKILL', template: 'STAGE_6_DOCS.md' },
+  { id: 7, name: 'package', label: 'Packaging & Register', template: 'STAGE_7_PACKAGE.md' },
 ];
 
 // 收敛到 utils/ensureDirSync 单一真源(逐字节委托,调用点不变)
@@ -53,7 +63,9 @@ const _ensureDir = require('../utils/ensureDirSync');
 
 function _readTemplate(name) {
   const filePath = path.join(TEMPLATES_DIR, name);
-  if (!fs.existsSync(filePath)) return null;
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
   return fs.readFileSync(filePath, 'utf-8');
 }
 
@@ -67,10 +79,16 @@ function _writeJSON(filePath, data) {
 function _inferSoftwareName(repoOrPath) {
   const input = String(repoOrPath || '').trim();
   if (input.startsWith('http') || input.startsWith('git@')) {
-    const lastSegment = input.split('/').pop().replace(/\.git$/, '');
+    const lastSegment = input
+      .split('/')
+      .pop()
+      .replace(/\.git$/, '');
     return lastSegment.toLowerCase().replace(/[^a-z0-9_-]/g, '');
   }
-  return path.basename(input).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  return path
+    .basename(input)
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '');
 }
 
 // ── Checkpoint Management ────────────────────────────────────────────────────
@@ -80,15 +98,17 @@ function _checkpointPath(software) {
 }
 
 function getCheckpoint(software) {
-  return _readJSON(_checkpointPath(software)) || {
-    software,
-    currentStage: 0,
-    completedStages: [],
-    startedAt: null,
-    lastUpdated: null,
-    runtime: null,
-    repoOrPath: null,
-  };
+  return (
+    _readJSON(_checkpointPath(software)) || {
+      software,
+      currentStage: 0,
+      completedStages: [],
+      startedAt: null,
+      lastUpdated: null,
+      runtime: null,
+      repoOrPath: null,
+    }
+  );
 }
 
 function _saveCheckpoint(software, checkpoint) {
@@ -109,7 +129,8 @@ function _markStageComplete(software, stageId) {
 
 // ── Stage 0: Source Acquisition ──────────────────────────────────────────────
 
-function executeStage0(repoOrPath, software, runtime) {
+// Marked async: the body awaits git clone (pre-existing top-level await bug fix).
+async function executeStage0(repoOrPath, software, runtime) {
   const workDir = path.join(BASE_DIR, software);
   _ensureDir(workDir);
 
@@ -131,12 +152,20 @@ function executeStage0(repoOrPath, software, runtime) {
             stdio: 'pipe',
             timeout: 120000,
           });
-          let stdout = '', stderr = '';
-          child.stdout.on('data', (d) => { stdout += d.toString(); });
-          child.stderr.on('data', (d) => { stderr += d.toString(); });
+          let stdout = '',
+            stderr = '';
+          child.stdout.on('data', (d) => {
+            stdout += d.toString();
+          });
+          child.stderr.on('data', (d) => {
+            stderr += d.toString();
+          });
           child.on('close', (code) => {
-            if (code === 0) resolve(stdout);
-            else reject(new Error(`git clone exited ${code}: ${stderr || stdout}`));
+            if (code === 0) {
+              resolve(stdout);
+            } else {
+              reject(new Error(`git clone exited ${code}: ${stderr || stdout}`));
+            }
           });
           child.on('error', (e) => reject(e));
         });
@@ -187,7 +216,9 @@ function _detectLanguage(dir) {
   ];
   for (const ind of indicators) {
     for (const f of ind.files) {
-      if (fs.existsSync(path.join(dir, f))) return ind.lang;
+      if (fs.existsSync(path.join(dir, f))) {
+        return ind.lang;
+      }
     }
   }
   return 'unknown';
@@ -195,21 +226,39 @@ function _detectLanguage(dir) {
 
 function _detectBuildSystem(dir) {
   const checks = [
-    ['CMakeLists.txt', 'cmake'], ['Makefile', 'make'], ['configure', 'autotools'],
-    ['pyproject.toml', 'pyproject'], ['setup.py', 'setuptools'],
-    ['package.json', 'npm'], ['Cargo.toml', 'cargo'], ['go.mod', 'go'],
+    ['CMakeLists.txt', 'cmake'],
+    ['Makefile', 'make'],
+    ['configure', 'autotools'],
+    ['pyproject.toml', 'pyproject'],
+    ['setup.py', 'setuptools'],
+    ['package.json', 'npm'],
+    ['Cargo.toml', 'cargo'],
+    ['go.mod', 'go'],
   ];
   for (const [file, system] of checks) {
-    if (fs.existsSync(path.join(dir, file))) return system;
+    if (fs.existsSync(path.join(dir, file))) {
+      return system;
+    }
   }
   return 'unknown';
 }
 
 function _detectEntryPoints(dir) {
   const entries = [];
-  const candidates = ['main.py', 'cli.py', 'app.py', '__main__.py', 'index.js', 'cli.js', 'main.go', 'main.rs'];
+  const candidates = [
+    'main.py',
+    'cli.py',
+    'app.py',
+    '__main__.py',
+    'index.js',
+    'cli.js',
+    'main.go',
+    'main.rs',
+  ];
   for (const f of candidates) {
-    if (fs.existsSync(path.join(dir, f))) entries.push(f);
+    if (fs.existsSync(path.join(dir, f))) {
+      entries.push(f);
+    }
   }
   try {
     const pkgJson = path.join(dir, 'package.json');
@@ -220,27 +269,39 @@ function _detectEntryPoints(dir) {
         entries.push(...bins);
       }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
   try {
     const setupPy = path.join(dir, 'setup.py');
     if (fs.existsSync(setupPy)) {
       const content = fs.readFileSync(setupPy, 'utf-8');
       const match = content.match(/console_scripts.*?\[([^\]]+)\]/s);
-      if (match) entries.push('(console_scripts found)');
+      if (match) {
+        entries.push('(console_scripts found)');
+      }
     }
-  } catch { /* skip */ }
+  } catch {
+    /* skip */
+  }
   return entries;
 }
 
 function _hasDir(base, name) {
-  try { return fs.statSync(path.join(base, name)).isDirectory(); } catch { return false; }
+  try {
+    return fs.statSync(path.join(base, name)).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 // ── AI Prompt Builder ────────────────────────────────────────────────────────
 
 function buildStagePrompt(software, stageId, runtime) {
   const stage = STAGES[stageId];
-  if (!stage) return null;
+  if (!stage) {
+    return null;
+  }
 
   const harness = _readTemplate('HARNESS_PROMPT.md') || '';
   const stageTemplate = _readTemplate(stage.template) || '';
@@ -257,7 +318,11 @@ function buildStagePrompt(software, stageId, runtime) {
     for (let i = 0; i < stageId; i++) {
       const resultFile = path.join(workDir, `stage${i}_result.json`);
       const data = _readJSON(resultFile);
-      if (data) prevResults.push(`### Stage ${i} Output\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``);
+      if (data) {
+        prevResults.push(
+          `### Stage ${i} Output\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``
+        );
+      }
     }
     const sopFile = path.join(workDir, `${software}.md`);
     if (fs.existsSync(sopFile)) {
@@ -266,14 +331,14 @@ function buildStagePrompt(software, stageId, runtime) {
     const archFile = path.join(workDir, 'architecture.json');
     const arch = _readJSON(archFile);
     if (arch) {
-      prevResults.push(`### Architecture\n\`\`\`json\n${JSON.stringify(arch, null, 2).slice(0, 4000)}\n\`\`\``);
+      prevResults.push(
+        `### Architecture\n\`\`\`json\n${JSON.stringify(arch, null, 2).slice(0, 4000)}\n\`\`\``
+      );
     }
     context = `\n## Previous Stage Results\n${prevResults.join('\n\n')}\n`;
   }
 
-  const skeleton = runtime === 'node'
-    ? _getNodeSkeletonSummary()
-    : _getPythonSkeletonSummary();
+  const skeleton = runtime === 'node' ? _getNodeSkeletonSummary() : _getPythonSkeletonSummary();
 
   return [
     harness,
@@ -353,7 +418,7 @@ function getPipelineStatus(software) {
     software,
     ...cp,
     totalStages: STAGES.length,
-    stages: STAGES.map(s => ({
+    stages: STAGES.map((s) => ({
       ...s,
       completed: cp.completedStages.includes(s.id),
       current: s.id === cp.currentStage,
@@ -363,19 +428,24 @@ function getPipelineStatus(software) {
 
 function listPipelines() {
   _ensureDir(BASE_DIR);
-  const dirs = fs.readdirSync(BASE_DIR).filter(d => {
-    try { return fs.statSync(path.join(BASE_DIR, d)).isDirectory(); } catch { return false; }
+  const dirs = fs.readdirSync(BASE_DIR).filter((d) => {
+    try {
+      return fs.statSync(path.join(BASE_DIR, d)).isDirectory();
+    } catch {
+      return false;
+    }
   });
-  return dirs.map(d => getPipelineStatus(d));
+  return dirs.map((d) => getPipelineStatus(d));
 }
 
 function scaffoldFromSkeleton(software, runtime) {
   const workDir = path.join(BASE_DIR, software);
   _ensureDir(workDir);
 
-  const skeletonDir = runtime === 'node'
-    ? path.join(TEMPLATES_DIR, 'node_skeleton')
-    : path.join(TEMPLATES_DIR, 'python_skeleton');
+  const skeletonDir =
+    runtime === 'node'
+      ? path.join(TEMPLATES_DIR, 'node_skeleton')
+      : path.join(TEMPLATES_DIR, 'python_skeleton');
 
   if (!fs.existsSync(skeletonDir)) {
     return { success: false, error: `Skeleton directory not found: ${skeletonDir}` };
@@ -390,7 +460,9 @@ function scaffoldFromSkeleton(software, runtime) {
     const expanded = content.replace(/\{\{SOFTWARE\}\}/g, software);
 
     let destName = file;
-    if (file === 'cli_template.py') destName = `${software}_cli.py`;
+    if (file === 'cli_template.py') {
+      destName = `${software}_cli.py`;
+    }
 
     const dest = path.join(workDir, destName);
     fs.writeFileSync(dest, expanded);
@@ -406,14 +478,12 @@ function buildFullAIPrompt(repoOrPath, options = {}) {
   const workDir = path.join(BASE_DIR, software);
 
   const harness = _readTemplate('HARNESS_PROMPT.md') || '';
-  const stageSections = STAGES.map(s => {
+  const stageSections = STAGES.map((s) => {
     const tmpl = _readTemplate(s.template) || '';
     return `---\n# Stage ${s.id}: ${s.label}\n${tmpl}`;
   }).join('\n\n');
 
-  const skeleton = runtime === 'node'
-    ? _getNodeSkeletonSummary()
-    : _getPythonSkeletonSummary();
+  const skeleton = runtime === 'node' ? _getNodeSkeletonSummary() : _getPythonSkeletonSummary();
 
   return [
     harness,

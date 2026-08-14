@@ -118,7 +118,7 @@ describe('generate', () => {
     const chatFn = async () =>
       JSON.stringify({ nodes: [{ id: 'n1', type: 'end' }], connections: [] });
     await expect(
-      svc.generate(testUserId, { prompt: 'x', persist: true, _chatFn: chatFn }),
+      svc.generate(testUserId, { prompt: 'x', persist: true, _chatFn: chatFn })
     ).rejects.toMatchObject({ statusCode: 422 });
     const after = await countWorkflows();
     expect(after).toBe(before); // never half-built
@@ -126,15 +126,20 @@ describe('generate', () => {
 
   test('persist:true creates a workflow and returns it', async () => {
     const chatFn = async () => JSON.stringify(validGraphObj());
-    const out = await svc.generate(testUserId, { prompt: 'persist me', persist: true, _chatFn: chatFn });
+    const out = await svc.generate(testUserId, {
+      prompt: 'persist me',
+      persist: true,
+      _chatFn: chatFn,
+    });
     expect(out.workflow).toBeTruthy();
     expect(out.workflow.id).toBeTruthy();
     expect(out.workflow.name).toBeTruthy();
   });
 
   test('empty prompt → 400', async () => {
-    await expect(svc.generate(testUserId, { prompt: '  ', _chatFn: async () => '{}' }))
-      .rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      svc.generate(testUserId, { prompt: '  ', _chatFn: async () => '{}' })
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 });
 
@@ -190,7 +195,12 @@ describe('_presetForProvider', () => {
 
 // Snapshot + clear the global relay env so resolver tests are deterministic
 // regardless of any ambient .env. Each suite restores the original values.
-const RELAY_ENV_KEYS = ['RELAY_API_ENDPOINT', 'RELAY_API_KEY', 'RELAY_API_MODEL', 'RELAY_API_KEY_FIELD'];
+const RELAY_ENV_KEYS = [
+  'RELAY_API_ENDPOINT',
+  'RELAY_API_KEY',
+  'RELAY_API_MODEL',
+  'RELAY_API_KEY_FIELD',
+];
 function snapshotRelayEnv() {
   const saved = {};
   for (const k of RELAY_ENV_KEYS) saved[k] = process.env[k];
@@ -208,8 +218,13 @@ function restoreRelayEnv(saved) {
 
 describe('_resolveSystemRelay (global gateway fallback)', () => {
   let _saved;
-  beforeEach(() => { _saved = snapshotRelayEnv(); clearRelayEnv(); });
-  afterEach(() => { restoreRelayEnv(_saved); });
+  beforeEach(() => {
+    _saved = snapshotRelayEnv();
+    clearRelayEnv();
+  });
+  afterEach(() => {
+    restoreRelayEnv(_saved);
+  });
 
   test('no RELAY_API_ENDPOINT → null', () => {
     expect(svc._resolveSystemRelay()).toBeNull();
@@ -260,8 +275,13 @@ describe('_resolveUpstream', () => {
   // case sets it explicitly — otherwise an ambient .env would mask the per-user
   // assertions now that _resolveUpstream falls back to the system relay.
   let _savedRelayEnv;
-  beforeEach(() => { _savedRelayEnv = snapshotRelayEnv(); clearRelayEnv(); });
-  afterEach(() => { restoreRelayEnv(_savedRelayEnv); });
+  beforeEach(() => {
+    _savedRelayEnv = snapshotRelayEnv();
+    clearRelayEnv();
+  });
+  afterEach(() => {
+    restoreRelayEnv(_savedRelayEnv);
+  });
 
   // A dedicated user per case keeps provider/relay state isolated.
   async function freshUser(name) {
@@ -336,8 +356,9 @@ describe('_resolveUpstream', () => {
     const uid = await freshUser('res-gate');
     // No relay, no provider, no _chatFn → must surface the configure-first error,
     // not a vague crash, and must never call the network.
-    await expect(svc.generate(uid, { prompt: 'do something' }))
-      .rejects.toMatchObject({ statusCode: 409 });
+    await expect(svc.generate(uid, { prompt: 'do something' })).rejects.toMatchObject({
+      statusCode: 409,
+    });
   });
 });
 

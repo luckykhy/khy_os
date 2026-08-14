@@ -48,18 +48,18 @@ khy gateway manage open</code></pre>
 <ul><li>若 CLI 已登录且存在服务端会话 token：<code>khyguanli</code> 打开后将自动写入管理页会话并直达页面</li><li>若 CLI 未登录（或仅本地离线登录）：将进入管理页登录页</li><li>CLI 可用 <code>/login</code> 执行登录</li><li>若 CLI 显示“本地离线登录态”，可再次执行 <code>/login</code> 补充服务端登录态（用于 <code>khyguanli</code> 自动免登录）</li></ul>
 <h2 id="3-登录方式">3. 登录方式<a class="anchor" href="#3-登录方式" aria-label="锚点">#</a></h2>
 <h3 id="3-1-用户名-密码模式-jwt">3.1 用户名/密码模式（JWT）<a class="anchor" href="#3-1-用户名-密码模式-jwt" aria-label="锚点">#</a></h3>
-<ul><li>默认管理员账号：<code>admin</code></li><li>默认密码：<code>admin123</code></li><li>历史安装可能是 <code>admin123.</code>，系统兼容迁移后会统一为 <code>admin123</code></li></ul>
-<p>若忘记密码，执行：</p>
+<ul><li>默认管理员账号：由后端自动初始化（幂等，已存在则跳过）</li><li>用户名解析顺序：<code>KHY_ADMIN_USERNAME</code> 环境变量 → 已存在的凭据文件 → 当前 OS 用户名（小写化 + 过滤非法字符）→ 兜底 <code>admin</code></li><li><strong>默认密码没有固定值</strong>：由机器指纹 + 随机熵生成（约 16 位混合字符强密码），首次启动时保存于数据目录 <code>.khy/credentials/default-admin.json</code>（<code>KHY_DATA_HOME</code> 覆盖时在其下）。请打开该文件查看初始密码。</li><li>若设置 <code>KHY_ADMIN_PASSWORD</code> / <code>DEFAULT_ADMIN_PASSWORD</code>：使用该密码，不写凭据文件，也不打印到日志。</li></ul>
+<p>若忘记密码，执行（<strong>密码必须显式提供，脚本无内置默认</strong>）：</p>
 <pre><code class="language-bash"># 在源码目录直接重置（推荐）
-node services/ai-backend/scripts/reset-admin-password.js --password admin123
-
-# 或 npm 脚本
-npm --prefix services/ai-backend run reset-admin</code></pre>
+node services/ai-backend/scripts/reset-admin-password.js --password &lt;你的新密码&gt;
+# 或 npm 脚本（需提供密码）
+npm --prefix services/ai-backend run reset-admin -- --password &lt;你的新密码&gt;</code></pre>
 <p>如果你是 Docker 部署，执行：</p>
-<pre><code class="language-bash">docker compose exec ai-backend node scripts/reset-admin-password.js --password admin123
+<pre><code class="language-bash">docker compose exec ai-backend node scripts/reset-admin-password.js --password &lt;你的新密码&gt;
 
 # 若使用自定义 compose project 名称（例如 khy-os）
-docker compose -p khy-os exec ai-backend node scripts/reset-admin-password.js --password admin123</code></pre>
+docker compose -p khy-os exec ai-backend node scripts/reset-admin-password.js --password &lt;你的新密码&gt;</code></pre>
+<blockquote><p>历史安装的 <code>admin123</code> / <code>admin123.</code> / <code>admin05 / 012003</code> 等固定默认账号均已被动态凭据机制取代，不再作为默认口令。</p></blockquote>
 <h3 id="3-2-token-模式-ai-mgmt-auth-token">3.2 Token 模式（AI_MGMT_AUTH_TOKEN）<a class="anchor" href="#3-2-token-模式-ai-mgmt-auth-token" aria-label="锚点">#</a></h3>
 <p>如果设置了 <code>AI_MGMT_AUTH_TOKEN</code>，登录口只接受 token：</p>
 <ul><li><code>username=任意, password=&lt;token&gt;</code>，或</li><li><code>username=&lt;token&gt;, password=任意</code></li></ul>
@@ -83,9 +83,9 @@ khy gateway manage open --daemon --frontend-dist-dir /absolute/path/to/dist</cod
 <ul><li><code>~/.khy/logs/ai_manage_daemon.log</code></li><li><code>~/.khy/logs/ai_frontend_dev.log</code></li></ul>
 <h2 id="5-常见登录失败与定位">5. 常见登录失败与定位<a class="anchor" href="#5-常见登录失败与定位" aria-label="锚点">#</a></h2>
 <h3 id="5-1-用户名或密码错误-401">5.1 用户名或密码错误（401）<a class="anchor" href="#5-1-用户名或密码错误-401" aria-label="锚点">#</a></h3>
-<ul><li>确认是否在 JWT 模式（未设置 <code>AI_MGMT_AUTH_TOKEN</code>）</li><li>优先尝试 <code>admin / admin123</code></li><li>不行就执行 <code>node services/ai-backend/scripts/reset-admin-password.js --password admin123</code> 重置</li></ul>
+<ul><li>确认是否在 JWT 模式（未设置 <code>AI_MGMT_AUTH_TOKEN</code>）</li><li>使用动态默认账号：用户名在数据目录 <code>.khy/credentials/default-admin.json</code> 中，密码同文件</li><li>或设置 <code>KHY_ADMIN_PASSWORD</code> / <code>DEFAULT_ADMIN_PASSWORD</code> 后重启后端</li><li>仍无法登录就执行 <code>node services/ai-backend/scripts/reset-admin-password.js --password &lt;新密码&gt;</code> 重置</li></ul>
 <h3 id="5-1-1-页面是旧版独立栈-8090-9090-时">5.1.1 页面是旧版独立栈（8090/9090）时<a class="anchor" href="#5-1-1-页面是旧版独立栈-8090-9090-时" aria-label="锚点">#</a></h3>
-<ul><li><code>GET /api/health</code> 返回 <code>service: khy-ai-backend</code> 说明当前是旧版独立栈</li><li>该栈现在也兼容历史 <code>admin123.</code> 登录并会自动迁移到 <code>admin123</code></li><li>若历史密码是随机值，必须跑重置脚本后再登录</li></ul>
+<ul><li><code>GET /api/health</code> 返回 <code>service: khy-ai-backend</code> 说明当前是旧版独立栈</li><li>该栈已移除历史 <code>admin123</code> / <code>admin123.</code> 兼容登录，改用动态凭据或显式 <code>--password</code> 重置</li><li>若历史密码是随机值，必须跑重置脚本后再登录</li></ul>
 <h3 id="5-2-页面能打开但点击登录无响应-提示网络错误">5.2 页面能打开但点击登录无响应/提示网络错误<a class="anchor" href="#5-2-页面能打开但点击登录无响应-提示网络错误" aria-label="锚点">#</a></h3>
 <ul><li>多数是前端可达但 API 不可达</li><li>先跑 <code>khy gateway manage status</code> 看 API 健康</li><li>前端已加入网络抖动重试（GET 请求自动重试 1 次）</li><li>仍持续报错时，优先检查：<ul><li><code>docker compose ps ai-backend ai-frontend</code></li><li>访问地址是否为 <code>http://127.0.0.1:18090</code></li></ul></li></ul>
 <h3 id="5-2-1-cli-可对话-网页不可对话-新增">5.2.1 CLI 可对话、网页不可对话（新增）<a class="anchor" href="#5-2-1-cli-可对话-网页不可对话-新增" aria-label="锚点">#</a></h3>

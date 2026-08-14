@@ -21,13 +21,14 @@
  */
 
 const crypto = require('crypto');
+
 const evoLevels = require('./evoLevels');
 
 const SIGNALS = Object.freeze({
-  INTERCEPTOR_BLOCK: 'interceptor-block',   // 拦截器阻断
-  TOOL_FAILURE: 'tool-failure',             // 工具调用失败
-  COMPRESSION_LOSS: 'compression-loss',     // 压缩提取丢失核义
-  CONTEXT_MELTDOWN: 'context-meltdown',     // 上下文频繁熔断
+  INTERCEPTOR_BLOCK: 'interceptor-block', // 拦截器阻断
+  TOOL_FAILURE: 'tool-failure', // 工具调用失败
+  COMPRESSION_LOSS: 'compression-loss', // 压缩提取丢失核义
+  CONTEXT_MELTDOWN: 'context-meltdown', // 上下文频繁熔断
 });
 
 const _ALL_SIGNALS = new Set(Object.values(SIGNALS));
@@ -36,7 +37,7 @@ const _ALL_SIGNALS = new Set(Object.values(SIGNALS));
 function signatureOf({ signal, surface, painPoint }) {
   const basis = [String(signal || ''), String(surface || ''), String(painPoint || '')]
     .join('|')
-    .replace(/\d+/g, '#')       // 数字归一（行号/计数不应分裂签名）
+    .replace(/\d+/g, '#') // 数字归一（行号/计数不应分裂签名）
     .toLowerCase()
     .slice(0, 400);
   return 'evo_' + crypto.createHash('sha256').update(basis).digest('hex').slice(0, 16);
@@ -67,7 +68,9 @@ function forge(input = {}) {
   const id = signatureOf({ signal, surface, painPoint });
 
   const declaredLevel = evoLevels.classify({
-    kind: attribution.kind, why: attribution.why, surface,
+    kind: attribution.kind,
+    why: attribution.why,
+    surface,
   });
 
   const req = {
@@ -82,9 +85,10 @@ function forge(input = {}) {
     },
     impact: String(input.impact || '未评估').slice(0, 500),
     proposedModules: Array.isArray(input.proposedModules) ? input.proposedModules.map(String) : [],
-    acceptanceCriteria: Array.isArray(input.acceptanceCriteria) && input.acceptanceCriteria.length
-      ? input.acceptanceCriteria.map(String)
-      : ['解决该痛点且不引入退化'],
+    acceptanceCriteria:
+      Array.isArray(input.acceptanceCriteria) && input.acceptanceCriteria.length
+        ? input.acceptanceCriteria.map(String)
+        : ['解决该痛点且不引入退化'],
     level: declaredLevel,
   };
 
@@ -92,7 +96,7 @@ function forge(input = {}) {
   if (declaredLevel === evoLevels.LEVELS.L2) {
     const l2 = evoLevels.planL2(input.l2Plan || {});
     req._l2 = l2;
-    req.executionLevel = l2.executionLevel;     // 实际以 L0 执行
+    req.executionLevel = l2.executionLevel; // 实际以 L0 执行
     req.validationSteps = l2.validationSteps;
     req.l2Valid = l2.valid;
   } else {
@@ -106,12 +110,24 @@ function forge(input = {}) {
 /** 校验一个对象是否是结构合法的 EvoRequirement。 */
 function validate(req) {
   const missing = [];
-  if (!req || typeof req !== 'object') return { valid: false, missing: ['<all>'] };
-  if (!req.id) missing.push('id');
-  if (!_ALL_SIGNALS.has(req.signal)) missing.push('signal');
-  if (!req.attribution || !req.attribution.why) missing.push('attribution.why');
-  if (!evoLevels.isLevel(req.level)) missing.push('level');
-  if (req.level === evoLevels.LEVELS.L2 && req.l2Valid === false) missing.push('l2Plan(architectureDiff/blastRadius)');
+  if (!req || typeof req !== 'object') {
+    return { valid: false, missing: ['<all>'] };
+  }
+  if (!req.id) {
+    missing.push('id');
+  }
+  if (!_ALL_SIGNALS.has(req.signal)) {
+    missing.push('signal');
+  }
+  if (!req.attribution || !req.attribution.why) {
+    missing.push('attribution.why');
+  }
+  if (!evoLevels.isLevel(req.level)) {
+    missing.push('level');
+  }
+  if (req.level === evoLevels.LEVELS.L2 && req.l2Valid === false) {
+    missing.push('l2Plan(architectureDiff/blastRadius)');
+  }
   return { valid: missing.length === 0, missing };
 }
 

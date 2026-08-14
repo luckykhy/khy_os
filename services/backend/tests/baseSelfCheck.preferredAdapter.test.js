@@ -91,6 +91,7 @@ describe('base self-check preferred adapter validation', () => {
     const refreshAdapters = jest.fn(async () => {});
     jest.doMock('../src/services/gateway/aiGateway', () => ({
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       refreshAdapters,
       getStatus: () => ([
@@ -128,6 +129,7 @@ describe('base self-check preferred adapter validation', () => {
     mockCommonServices();
     jest.doMock('../src/services/gateway/aiGateway', () => ({
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       refreshAdapters: jest.fn(async () => {}),
       getStatus: () => ([

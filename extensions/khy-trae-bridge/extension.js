@@ -79,12 +79,17 @@ function activate(context) {
   );
 
   // 状态栏指示
-  const statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
-  statusItem.command = 'khy-trae-bridge.sync';
-  statusItem.text = '$(key) KHY Bridge';
-  statusItem.tooltip = '点击手动同步 Trae 登录态到 KHY CLI';
-  statusItem.show();
-  context.subscriptions.push(statusItem);
+  let statusItem = null;
+  try {
+    statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
+    statusItem.command = 'khy-trae-bridge.sync';
+    statusItem.text = '$(key) KHY Bridge';
+    statusItem.tooltip = '点击手动同步 Trae 登录态到 KHY CLI';
+    statusItem.show();
+    context.subscriptions.push(statusItem);
+  } catch (err) {
+    log(`状态栏创建失败: ${err.message || err}`);
+  }
 
   log('扩展激活完成');
 }
@@ -279,6 +284,8 @@ function deactivate() {
     clearInterval(_timer);
     _timer = null;
   }
+  _firstAttempt = true; // 重置状态，下次激活时重新尝试授权
+  _lastSyncOk = false;
 }
 
 module.exports = { activate, deactivate };

@@ -15,7 +15,7 @@
  * @module services/diskAnalyzeReport
  */
 
-const WIDTH = 60;                       // 盒内文本可视宽度(不含左右边框)
+const WIDTH = 60; // 盒内文本可视宽度(不含左右边框)
 
 const _isEnabled = require('../utils/isEnabledDefaultOn');
 
@@ -25,16 +25,20 @@ function isReportEnabled(env) {
 
 // 字节 → 人类可读(带空格、到 TB)收敛到单一真源 byteFormat.humanBytes
 // (与 upstreamStudyReport / diskCleanup/planner 同口径,逐字节等价)。
+const { boxRow: _boxRow, boxRule: _boxRule } = require('./asciiBox');
 const { humanBytes: _humanBytes } = require('./byteFormat');
 
 // 盒式行/分隔线基元收敛到单一真源 asciiBox(宽度参数化;本地 _row/_rule 传 WIDTH)。
-const { boxRow: _boxRow, boxRule: _boxRule } = require('./asciiBox');
 
 /** 截断过长字符串,尾部留 … 标记(用于超宽路径)。 */
 function _ellipsize(s, max) {
   const str = String(s == null ? '' : s);
-  if (str.length <= max) return str;
-  if (max <= 1) return str.slice(0, max);
+  if (str.length <= max) {
+    return str;
+  }
+  if (max <= 1) {
+    return str.slice(0, max);
+  }
   return str.slice(0, max - 1) + '…';
 }
 
@@ -68,7 +72,9 @@ function _legacy(result) {
  */
 function renderAnalyzeReport(result, env) {
   try {
-    if (!isReportEnabled(env)) return _legacy(result);
+    if (!isReportEnabled(env)) {
+      return _legacy(result);
+    }
     const r = result || {};
     const large = Array.isArray(r.largeFiles) ? r.largeFiles : [];
     const installers = Array.isArray(r.oldInstallers) ? r.oldInstallers : [];
@@ -79,15 +85,19 @@ function renderAnalyzeReport(result, env) {
     const lines = [];
     lines.push(`┌─ khyos 磁盘分析${'─'.repeat(WIDTH + 2 - '─ khyos 磁盘分析'.length)}┐`);
     lines.push(_row(`平台 ${String(r.platform || '?')}   根 ${_ellipsize(roots, WIDTH - 12)}`));
-    lines.push(_row(`扫描 ${Number(totals.scanned || 0)} 项 · 累计 ${_humanBytes(totals.bytes || 0)}`
-      + (r.truncated ? ' · 已达上限截断' : '')));
+    lines.push(
+      _row(
+        `扫描 ${Number(totals.scanned || 0)} 项 · 累计 ${_humanBytes(totals.bytes || 0)}` +
+          (r.truncated ? ' · 已达上限截断' : '')
+      )
+    );
 
     // 最大文件 Top-N
     lines.push(_rule('最大文件'));
     if (large.length) {
       for (const f of large) {
         const size = _humanBytes(Number(f && f.size) || 0);
-        const path = _ellipsize(String(f && f.path || ''), WIDTH - size.length - 3);
+        const path = _ellipsize(String((f && f.path) || ''), WIDTH - size.length - 3);
         lines.push(_row(`${path}  ${size}`));
       }
     } else {
@@ -101,7 +111,7 @@ function renderAnalyzeReport(result, env) {
         const size = _humanBytes(Number(f && f.size) || 0);
         const age = Number.isFinite(Number(f && f.ageDays)) ? `${Math.round(f.ageDays)}天` : '';
         const tail = `${size}${age ? ' · ' + age : ''}`;
-        const path = _ellipsize(String(f && f.path || ''), WIDTH - tail.length - 3);
+        const path = _ellipsize(String((f && f.path) || ''), WIDTH - tail.length - 3);
         lines.push(_row(`${path}  ${tail}`));
       }
     } else {

@@ -12,7 +12,7 @@
 | 04 | `04_IMPL_实现/` | 30 |
 | 05 | `05_TEST_测试/` | 9 |
 | 06 | `06_DEPLOY_部署/` | 18 |
-| 07 | `07_OPS_运维/` | 68 |
+| 07 | `07_OPS_运维/` | 72 |
 | 08 | `08_MGMT_项目管理/` | 34 |
 | — | `AI协作预设包/`（跨阶段·分「给人看/给AI看」两线 + 可安装 skills/） | 11 文档 + 8 skill |
 
@@ -133,6 +133,7 @@
 - [`IMPL-RPT-028` 按需加载与零噪音重构日志-2026-06-12](04_IMPL_实现/%5BIMPL-RPT-028%5D%20按需加载与零噪音重构日志-2026-06-12.md)
 - [`IMPL-RPT-029` 夜间代码质量与健壮性完善日志-2026-06-11](04_IMPL_实现/%5BIMPL-RPT-029%5D%20夜间代码质量与健壮性完善日志-2026-06-11.md)
 - [`IMPL-RPT-032` 有学习价值的Bug汇编-UX漂移与half-wired](04_IMPL_实现/%5BIMPL-RPT-032%5D%20有学习价值的Bug汇编-UX漂移与half-wired.md)
+- [`IMPL-RPT-033` 后端公理化重构-网关与定价原子化-2026-07-30](04_IMPL_实现/%5BIMPL-RPT-033%5D%20后端公理化重构-网关与定价原子化-2026-07-30.md)
 
 ## 05_TEST_测试
 
@@ -239,6 +240,10 @@
 - [`OPS-MAN-069` 已装副本完整性自检清单](07_OPS_运维/%5BOPS-MAN-069%5D%20已装副本完整性自检清单.md)
 - [`OPS-MAN-070` 首启依赖hydration自检清单](07_OPS_运维/%5BOPS-MAN-070%5D%20首启依赖hydration自检清单.md)
 - [`OPS-MAN-169` 项目规则总纲-命名·skill·权限·mcp](07_OPS_运维/%5BOPS-MAN-169%5D%20项目规则总纲-命名·skill·权限·mcp.md)
+- [`OPS-MAN-170` 外部技能安装-khy-skill-add](07_OPS_运维/%5BOPS-MAN-170%5D%20外部技能安装-khy-skill-add.md)
+- [`OPS-MAN-171` 技能包规范-manifest与prompt模板](07_OPS_运维/%5BOPS-MAN-171%5D%20技能包规范-manifest与prompt模板.md)
+- [`OPS-MAN-172` 自定义供应商接入指南](07_OPS_运维/%5BOPS-MAN-172%5D%20自定义供应商接入指南.md)
+- [`OPS-MAN-173` MCP工具接入快速上手](07_OPS_运维/%5BOPS-MAN-173%5D%20MCP工具接入快速上手.md)
 
 ## 08_MGMT_项目管理
 

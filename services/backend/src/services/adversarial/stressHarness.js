@@ -18,8 +18,8 @@
  *     宁可误判破防，不可把施压器的 bug 伪装成「防御存活」。
  */
 
-const { INVARIANTS } = require('./survivalCriteria');
 const { TARGET } = require('./attackVectors');
+const { INVARIANTS } = require('./survivalCriteria');
 
 const DEFAULT_DEADLINE_MS = 3000;
 
@@ -33,12 +33,22 @@ function _withDeadline(promise, ms) {
   let timer = null;
   const guard = new Promise((resolve) => {
     timer = setTimeout(() => resolve({ __timedOut: true }), ms);
-    if (timer && typeof timer.unref === 'function') timer.unref();
+    if (timer && typeof timer.unref === 'function') {
+      timer.unref();
+    }
   });
   return Promise.race([
-    Promise.resolve(promise).then((v) => ({ __value: v }), (e) => ({ __error: e })),
+    Promise.resolve(promise).then(
+      (v) => ({ __value: v }),
+      (e) => ({ __error: e })
+    ),
     guard,
-  ]).then((r) => { if (timer) clearTimeout(timer); return r; });
+  ]).then((r) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    return r;
+  });
 }
 
 // ── 规约基座：所有驱动器都返回这个形状的子集，stress() 补齐元数据 ───────────────
@@ -66,7 +76,13 @@ function _baseObservation(vector) {
 function _driveFailsafe(vector, payload) {
   const obs = _baseObservation(vector);
   let failsafe;
-  try { failsafe = require('../failsafe'); } catch (e) { obs.threw = true; obs.error = _err(e); return obs; }
+  try {
+    failsafe = require('../failsafe');
+  } catch (e) {
+    obs.threw = true;
+    obs.error = _err(e);
+    return obs;
+  }
 
   try {
     if (payload.kind === 'llm-reply') {
@@ -95,7 +111,13 @@ function _driveFailsafe(vector, payload) {
 async function _driveResilience(vector, payload) {
   const obs = _baseObservation(vector);
   let resilience;
-  try { resilience = require('../resilience'); } catch (e) { obs.threw = true; obs.error = _err(e); return obs; }
+  try {
+    resilience = require('../resilience');
+  } catch (e) {
+    obs.threw = true;
+    obs.error = _err(e);
+    return obs;
+  }
 
   const { ResilienceCoordinator, FallbackTreeBuilder } = resilience;
 
@@ -104,9 +126,12 @@ async function _driveResilience(vector, payload) {
     try {
       const coord = new ResilienceCoordinator({ runner: async () => ({ success: false }) });
       const result = await coord.run(payload.intent, {});
-      obs.outcome = result && (result.salvage || result.result) || result;
+      obs.outcome = (result && (result.salvage || result.result)) || result;
       obs.hasSalvage = _isSalvage(result && result.salvage);
-    } catch (e) { obs.threw = true; obs.error = _err(e); }
+    } catch (e) {
+      obs.threw = true;
+      obs.error = _err(e);
+    }
     return obs;
   }
 
@@ -114,7 +139,9 @@ async function _driveResilience(vector, payload) {
   let calls = 0;
   const runner = async () => {
     calls += 1;
-    if (payload.throwEvery) throw new Error('对抗诱导的硬抛错');
+    if (payload.throwEvery) {
+      throw new Error('对抗诱导的硬抛错');
+    }
     return { success: false, error: '对抗诱导的失败', code: 'ADV_FAIL' };
   };
 
@@ -122,20 +149,24 @@ async function _driveResilience(vector, payload) {
   const sameParams = { fixed: 'identical' };
   const plans = payload.identicalSignature
     ? [
-      { plan: 'P1', tool: '__advTool', params: sameParams },
-      { plan: 'P2', tool: '__advTool', params: sameParams },
-      { plan: 'P3', tool: '__advTool', params: sameParams },
-    ]
+        { plan: 'P1', tool: '__advTool', params: sameParams },
+        { plan: 'P2', tool: '__advTool', params: sameParams },
+        { plan: 'P3', tool: '__advTool', params: sameParams },
+      ]
     : [
-      { plan: 'P1', tool: '__advTool1', params: { n: 1 } },
-      { plan: 'P2', tool: '__advTool2', params: { n: 2 } },
-      { plan: 'P3', tool: '__advTool3', params: { n: 3 } },
-    ];
+        { plan: 'P1', tool: '__advTool1', params: { n: 1 } },
+        { plan: 'P2', tool: '__advTool2', params: { n: 2 } },
+        { plan: 'P3', tool: '__advTool3', params: { n: 3 } },
+      ];
 
   let tree;
   try {
     tree = FallbackTreeBuilder.from('adversarial-stress', plans);
-  } catch (e) { obs.threw = true; obs.error = _err(e); return obs; }
+  } catch (e) {
+    obs.threw = true;
+    obs.error = _err(e);
+    return obs;
+  }
 
   const budget = _makeBudget(payload.budget);
   const expectsFloor = obs.expectInvariants.includes(INVARIANTS.BUDGET_FLOOR_HONORED);
@@ -163,19 +194,30 @@ async function _driveResilience(vector, payload) {
 function _driveFurnace(vector, payload) {
   const obs = _baseObservation(vector);
   let furnace;
-  try { furnace = require('../structuredFurnace'); } catch (e) { obs.threw = true; obs.error = _err(e); return obs; }
+  try {
+    furnace = require('../structuredFurnace');
+  } catch (e) {
+    obs.threw = true;
+    obs.error = _err(e);
+    return obs;
+  }
 
   if (payload.kind === 'nl') {
     try {
       const env = furnace.intercept(payload.value);
       // 返回即应是已封印信封：顺手验封以证其真。
       obs.outcome = { sealed: !!(env && env.sealed), level: env && env.level };
-      try { furnace.assertForged(env); } catch { /* 真信封不该在此抛；抛了说明封印自检失败 */ }
+      try {
+        furnace.assertForged(env);
+      } catch {
+        /* 真信封不该在此抛；抛了说明封印自检失败 */
+      }
     } catch (e) {
       if (e instanceof furnace.FurnaceRejection) {
         // 设计内拒损：不是破防，是「不放原文过界」的正确行为。
         obs.rejected = true;
-        obs.outcome = typeof e.toJSON === 'function' ? e.toJSON() : { kind: 'rejection', message: e.message };
+        obs.outcome =
+          typeof e.toJSON === 'function' ? e.toJSON() : { kind: 'rejection', message: e.message };
       } else {
         obs.threw = true;
         obs.error = _err(e);
@@ -214,16 +256,35 @@ function _buildForgery(furnace, payload) {
   }
   if (payload.mode === 'fake-brand') {
     // 伪造品牌 + 乱填 seal：摘要必不符。
-    return { [BRAND]: true, sealed: true, payload: payload.payload, seal: payload.seal || 'deadbeef'.repeat(8) };
+    return {
+      [BRAND]: true,
+      sealed: true,
+      payload: payload.payload,
+      seal: payload.seal || 'deadbeef'.repeat(8),
+    };
   }
   if (payload.mode === 'tamper') {
     // 取一份真封印信封，篡改 payload（seal 变陈旧）。真信封拿不到则降级为 fake-brand。
     let env = null;
-    try { env = furnace.intercept('打开文件 report.txt 并总结其要点', { forceLevel: 'L0' }); } catch { env = null; }
-    if (env && env.payload) {
-      return { [BRAND]: true, sealed: true, seal: env.seal, payload: { ...env.payload, ...(payload.tamperWith || {}) } };
+    try {
+      env = furnace.intercept('打开文件 report.txt 并总结其要点', { forceLevel: 'L0' });
+    } catch {
+      env = null;
     }
-    return { [BRAND]: true, sealed: true, payload: { kind: 'ActionIntent', ...(payload.tamperWith || {}) }, seal: '00'.repeat(16) };
+    if (env && env.payload) {
+      return {
+        [BRAND]: true,
+        sealed: true,
+        seal: env.seal,
+        payload: { ...env.payload, ...(payload.tamperWith || {}) },
+      };
+    }
+    return {
+      [BRAND]: true,
+      sealed: true,
+      payload: { kind: 'ActionIntent', ...(payload.tamperWith || {}) },
+      seal: '00'.repeat(16),
+    };
   }
   return { payload: payload.payload || {} };
 }
@@ -236,31 +297,48 @@ function _buildForgery(furnace, payload) {
  */
 async function stress(vector) {
   if (!vector || typeof vector.build !== 'function') {
-    return { ..._baseObservation(vector || {}), threw: true, error: { name: 'HarnessError', message: '无效向量' } };
+    return {
+      ..._baseObservation(vector || {}),
+      threw: true,
+      error: { name: 'HarnessError', message: '无效向量' },
+    };
   }
   const start = _now();
   let payload;
-  try { payload = vector.build(); } catch (e) {
-    const obs = _baseObservation(vector); obs.threw = true; obs.error = _err(e); return obs;
+  try {
+    payload = vector.build();
+  } catch (e) {
+    const obs = _baseObservation(vector);
+    obs.threw = true;
+    obs.error = _err(e);
+    return obs;
   }
 
   const driver = _driverFor(vector.target);
   if (!driver) {
     const obs = _baseObservation(vector);
-    obs.threw = true; obs.error = { name: 'HarnessError', message: `无驱动器：target=${vector.target}` };
+    obs.threw = true;
+    obs.error = { name: 'HarnessError', message: `无驱动器：target=${vector.target}` };
     return obs;
   }
 
-  const raced = await _withDeadline(Promise.resolve().then(() => driver(vector, payload)), _deadlineMs());
+  const raced = await _withDeadline(
+    Promise.resolve().then(() => driver(vector, payload)),
+    _deadlineMs()
+  );
   let obs;
   if (raced.__timedOut) {
     // 硬死线兜底：被测子系统真的卡死 → BOUNDED 破防，而非拖垮战役。
     obs = _baseObservation(vector);
     obs.bounded = false;
-    obs.error = { name: 'DeadlineExceeded', message: `驱动超过死线 ${_deadlineMs()}ms（疑似卡死）` };
+    obs.error = {
+      name: 'DeadlineExceeded',
+      message: `驱动超过死线 ${_deadlineMs()}ms（疑似卡死）`,
+    };
   } else if (raced.__error) {
     obs = _baseObservation(vector);
-    obs.threw = true; obs.error = _err(raced.__error);
+    obs.threw = true;
+    obs.error = _err(raced.__error);
   } else {
     obs = raced.__value;
   }
@@ -270,16 +348,22 @@ async function stress(vector) {
 
 function _driverFor(target) {
   switch (target) {
-    case TARGET.FAILSAFE: return _driveFailsafe;
-    case TARGET.RESILIENCE: return _driveResilience;
-    case TARGET.FURNACE: return _driveFurnace;
-    default: return null;
+    case TARGET.FAILSAFE:
+      return _driveFailsafe;
+    case TARGET.RESILIENCE:
+      return _driveResilience;
+    case TARGET.FURNACE:
+      return _driveFurnace;
+    default:
+      return null;
   }
 }
 
 // ── 内部助手 ─────────────────────────────────────────────────────────────
 function _makeBudget(spec) {
-  if (!spec || typeof spec !== 'object') return null;
+  if (!spec || typeof spec !== 'object') {
+    return null;
+  }
   const { makeStepBudget, makeTokenBudget } = require('../resilience');
   if (spec.type === 'token') {
     const spent = Number(spec.spent) || 0;
@@ -297,13 +381,19 @@ function _isSalvage(s) {
 }
 
 function _err(e) {
-  if (!e) return { name: 'Error', message: 'unknown' };
+  if (!e) {
+    return { name: 'Error', message: 'unknown' };
+  }
   return { name: e.name || 'Error', message: String(e.message || e).slice(0, 500) };
 }
 
 function _now() {
   // 非 Workflow 上下文，Date.now 可用；包一层防边缘环境缺失。
-  try { return Date.now(); } catch { return 0; }
+  try {
+    return Date.now();
+  } catch {
+    return 0;
+  }
 }
 
 module.exports = {

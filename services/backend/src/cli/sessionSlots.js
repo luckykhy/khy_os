@@ -48,7 +48,9 @@ const SLOT_MAX = {
 function slotsEnabled(env) {
   const e = env || {};
   const raw = e.KHY_SESSION_SLOTS;
-  if (raw === undefined || raw === null) return true;
+  if (raw === undefined || raw === null) {
+    return true;
+  }
   return !FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -60,7 +62,9 @@ const _truncate = require('../utils/truncateEllipsis');
 
 /** 浅拷贝一份 metadata(绝不就地改入参;非对象 → 空对象)。 */
 function _cloneMeta(metadata) {
-  if (!metadata || typeof metadata !== 'object') return {};
+  if (!metadata || typeof metadata !== 'object') {
+    return {};
+  }
   return Object.assign({}, metadata);
 }
 
@@ -119,7 +123,9 @@ function mergeSystemPrompt(layers) {
   const parts = [];
   for (const layer of ordered) {
     const s = _str(layer).trim();
-    if (s) parts.push(s);
+    if (s) {
+      parts.push(s);
+    }
   }
   return _truncate(parts.join('\n\n'), SLOT_MAX.systemPrompt);
 }
@@ -136,7 +142,9 @@ function mergeSystemPrompt(layers) {
  */
 function writeSlot(metadata, slot, text) {
   const name = _str(slot);
-  if (SLOT_NAMES.indexOf(name) === -1) return null;
+  if (SLOT_NAMES.indexOf(name) === -1) {
+    return null;
+  }
   const next = _cloneMeta(metadata);
   next[name] = _truncate(text, SLOT_MAX[name] || 4000);
   return next;

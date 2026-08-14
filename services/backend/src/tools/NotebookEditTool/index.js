@@ -2,9 +2,10 @@
  * NotebookEditTool — replace/insert/delete cells in Jupyter notebooks (.ipynb).
  * Aligned with Claude Code's NotebookEdit tool.
  */
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { BaseTool } = require('../_baseTool');
 
 class NotebookEditTool extends BaseTool {
   static toolName = 'NotebookEdit';
@@ -13,8 +14,12 @@ class NotebookEditTool extends BaseTool {
   static aliases = ['notebook_edit', 'edit_notebook'];
   static searchHint = 'jupyter notebook ipynb cell edit replace insert delete';
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Completely replaces the contents of a specific cell in a Jupyter notebook (.ipynb file) with new source.
@@ -30,8 +35,16 @@ Use edit_mode=insert to add a new cell; edit_mode=delete to remove a cell.`;
         notebook_path: { type: 'string', description: 'Absolute path to the .ipynb file.' },
         cell_number: { type: 'number', description: '0-indexed cell number to edit.' },
         cell_id: { type: 'string', description: 'Cell ID to edit (alternative to cell_number).' },
-        cell_type: { type: 'string', enum: ['code', 'markdown'], description: 'Cell type. Required for insert.' },
-        edit_mode: { type: 'string', enum: ['replace', 'insert', 'delete'], description: 'Edit mode. Defaults to replace.' },
+        cell_type: {
+          type: 'string',
+          enum: ['code', 'markdown'],
+          description: 'Cell type. Required for insert.',
+        },
+        edit_mode: {
+          type: 'string',
+          enum: ['replace', 'insert', 'delete'],
+          description: 'Edit mode. Defaults to replace.',
+        },
         new_source: { type: 'string', description: 'New source content for the cell.' },
       },
     };
@@ -61,23 +74,27 @@ Use edit_mode=insert to add a new cell; edit_mode=delete to remove a cell.`;
       // Find cell index
       let cellIndex = params.cell_number;
       if (params.cell_id && cellIndex === undefined) {
-        cellIndex = notebook.cells.findIndex(c => c.id === params.cell_id);
+        cellIndex = notebook.cells.findIndex((c) => c.id === params.cell_id);
         if (cellIndex < 0) {
           return { error: `Cell ID "${params.cell_id}" not found.` };
         }
       }
 
-      const sourceLines = (new_source || '').split('\n').map((l, i, arr) =>
-        i < arr.length - 1 ? l + '\n' : l
-      );
+      const sourceLines = (new_source || '')
+        .split('\n')
+        .map((l, i, arr) => (i < arr.length - 1 ? l + '\n' : l));
 
       switch (edit_mode) {
         case 'replace': {
           if (cellIndex === undefined || cellIndex < 0 || cellIndex >= notebook.cells.length) {
-            return { error: `Cell index ${cellIndex} out of range (0-${notebook.cells.length - 1}).` };
+            return {
+              error: `Cell index ${cellIndex} out of range (0-${notebook.cells.length - 1}).`,
+            };
           }
           notebook.cells[cellIndex].source = sourceLines;
-          if (params.cell_type) notebook.cells[cellIndex].cell_type = params.cell_type;
+          if (params.cell_type) {
+            notebook.cells[cellIndex].cell_type = params.cell_type;
+          }
           // Clear outputs for code cells
           if (notebook.cells[cellIndex].cell_type === 'code') {
             notebook.cells[cellIndex].outputs = [];
@@ -95,9 +112,10 @@ Use edit_mode=insert to add a new cell; edit_mode=delete to remove a cell.`;
             newCell.outputs = [];
             newCell.execution_count = null;
           }
-          const insertAt = (cellIndex !== undefined && cellIndex >= 0)
-            ? Math.min(cellIndex + 1, notebook.cells.length)
-            : notebook.cells.length;
+          const insertAt =
+            cellIndex !== undefined && cellIndex >= 0
+              ? Math.min(cellIndex + 1, notebook.cells.length)
+              : notebook.cells.length;
           notebook.cells.splice(insertAt, 0, newCell);
           break;
         }

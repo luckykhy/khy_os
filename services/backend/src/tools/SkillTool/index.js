@@ -14,8 +14,12 @@ class SkillTool extends BaseTool {
   static searchHint = 'skill slash command invoke execute plugin';
   static alwaysLoad = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Execute a skill within the main conversation
@@ -89,7 +93,9 @@ Important:
           error: `Skill "${skill}" is not model-invocable (disable-model-invocation). A human must run it via \`khy skill run ${skill}\`.`,
         };
       }
-    } catch { /* registry unavailable — fall through to normal resolution */ }
+    } catch {
+      /* registry unavailable — fall through to normal resolution */
+    }
 
     // Level-2 skill loading (s07): resolve by registry NAME, never by a path
     // built from caller input. The manifest registry (src/skills) looks skills
@@ -107,7 +113,9 @@ Important:
           message: `技能 /${skill} 执行成功`,
         };
       }
-    } catch { /* manifest registry unavailable — fall through */ }
+    } catch {
+      /* manifest registry unavailable — fall through */
+    }
 
     try {
       // Marketplace registry (installed + quant builtin skills).
@@ -133,7 +141,9 @@ Important:
             message: `命令 /${skill} 执行成功`,
           };
         }
-      } catch { /* command registry not available */ }
+      } catch {
+        /* command registry not available */
+      }
 
       return {
         success: false,

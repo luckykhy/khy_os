@@ -8,13 +8,15 @@
 
 const fs = require('fs');
 const path = require('path');
+
+const _resolveEnvPaths = require('../utils/resolveGatewayEnvPaths');
+
 const { detectEnvCorruption, repairEnvLines } = require('./configRepairPolicy');
 
 /**
  * 解析 .env 路径(复用 config.js 的逻辑)。
  * @returns {{canonicalPath: string, targets: string[]}}
  */
-const _resolveEnvPaths = require('../utils/resolveGatewayEnvPaths');
 
 /**
  * 检测并修复配置文件(如果损坏)。

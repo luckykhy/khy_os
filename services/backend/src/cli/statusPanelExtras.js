@@ -35,7 +35,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_STATUS_PANEL_DETAIL 默认开;{0,false,off,no} 关。 */
 function statusPanelDetailEnabled(env = process.env) {
   const raw = env && env.KHY_STATUS_PANEL_DETAIL;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -61,25 +63,35 @@ function _int(v) {
 function buildStatusPanelExtras(state, opts = {}, env = process.env) {
   const empty = { model: null, account: null, gitSuffix: '' };
   try {
-    if (!statusPanelDetailEnabled(env)) return empty;
-    if (!state || typeof state !== 'object') return empty;
+    if (!statusPanelDetailEnabled(env)) {
+      return empty;
+    }
+    if (!state || typeof state !== 'object') {
+      return empty;
+    }
 
-    const labelFn = opts && typeof opts.formatModelLabel === 'function'
-      ? opts.formatModelLabel
-      : (m) => m;
+    const labelFn =
+      opts && typeof opts.formatModelLabel === 'function' ? opts.formatModelLabel : (m) => m;
 
     // ── Model(+adapter 后缀,镜像状态栏 hudRenderer.js:399-405 的语义)──
     let model = null;
     const rawModel = _str(state.lastModel);
     if (rawModel) {
       let friendly;
-      try { friendly = String(labelFn(rawModel) || rawModel); } catch { friendly = rawModel; }
-      if (!friendly) friendly = rawModel;
+      try {
+        friendly = String(labelFn(rawModel) || rawModel);
+      } catch {
+        friendly = rawModel;
+      }
+      if (!friendly) {
+        friendly = rawModel;
+      }
       const adapter = _str(state.lastAdapter);
       // 仅当 adapter 存在且与模型名不同才加 `/adapter`(与状态栏一致)。
-      model = adapter && adapter !== rawModel && adapter !== friendly
-        ? `${friendly}/${adapter}`
-        : friendly;
+      model =
+        adapter && adapter !== rawModel && adapter !== friendly
+          ? `${friendly}/${adapter}`
+          : friendly;
     }
 
     // ── Account(镜像状态栏 :394-395 / /hud 面板 :508-509)──
@@ -90,8 +102,12 @@ function buildStatusPanelExtras(state, opts = {}, env = process.env) {
     const ahead = _int(git.ahead);
     const behind = _int(git.behind);
     let gitSuffix = '';
-    if (ahead > 0) gitSuffix += ` +${ahead} ahead`;
-    if (behind > 0) gitSuffix += ` -${behind} behind`;
+    if (ahead > 0) {
+      gitSuffix += ` +${ahead} ahead`;
+    }
+    if (behind > 0) {
+      gitSuffix += ` -${behind} behind`;
+    }
 
     return { model, account, gitSuffix };
   } catch {

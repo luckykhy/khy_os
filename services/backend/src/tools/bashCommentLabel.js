@@ -20,7 +20,9 @@
 const MAX_LABEL_CHARS = 160; // CC MAX_COMMAND_DISPLAY_CHARS
 
 function _gateOff(env) {
-  const v = String((env && env.KHY_BASH_COMMENT_LABEL) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_BASH_COMMENT_LABEL) || '')
+    .trim()
+    .toLowerCase();
   return v === '0' || v === 'false' || v === 'off' || v === 'no';
 }
 
@@ -32,11 +34,15 @@ function _gateOff(env) {
  */
 function extractBashCommentLabel(command, env) {
   try {
-    if (_gateOff(env || (typeof process !== 'undefined' ? process.env : undefined))) return undefined;
+    if (_gateOff(env || (typeof process !== 'undefined' ? process.env : undefined))) {
+      return undefined;
+    }
     const cmd = String(command == null ? '' : command);
     const nl = cmd.indexOf('\n');
     const firstLine = (nl === -1 ? cmd : cmd.slice(0, nl)).trim();
-    if (!firstLine.startsWith('#') || firstLine.startsWith('#!')) return undefined;
+    if (!firstLine.startsWith('#') || firstLine.startsWith('#!')) {
+      return undefined;
+    }
     const label = firstLine.replace(/^#+\s*/, '');
     return label || undefined;
   } catch {
@@ -52,7 +58,9 @@ function extractBashCommentLabel(command, env) {
  */
 function extractBashCommentLabelForDisplay(command, env) {
   const label = extractBashCommentLabel(command, env);
-  if (!label) return undefined;
+  if (!label) {
+    return undefined;
+  }
   return label.length > MAX_LABEL_CHARS ? label.slice(0, MAX_LABEL_CHARS) + '…' : label;
 }
 
