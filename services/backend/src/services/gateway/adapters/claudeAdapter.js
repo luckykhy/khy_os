@@ -401,6 +401,32 @@ const DIRECT_SIMPLE_MAX_ROUNDS = Math.max(
 
 // Known Claude Code models (detected dynamically where possible)
 const KNOWN_MODELS = [
+  // Claude 5 family (latest)
+  {
+    id: 'claude-opus-5',
+    name: 'Claude Opus 5.0',
+    isDefault: true,
+    tier: 'ultra',
+    category: 'reasoning',
+    contextWindow: 2000000,
+  },
+  {
+    id: 'claude-sonnet-5',
+    name: 'Claude Sonnet 5.0',
+    isDefault: false,
+    tier: 'high',
+    category: 'general',
+    contextWindow: 2000000,
+  },
+  {
+    id: 'claude-fable-5',
+    name: 'Claude Fable 5.0',
+    isDefault: false,
+    tier: 'medium',
+    category: 'fast',
+    contextWindow: 1000000,
+  },
+  // Claude 4 family (legacy)
   {
     id: 'claude-opus-4-8',
     name: 'Claude Opus 4.8',
@@ -428,7 +454,7 @@ const KNOWN_MODELS = [
   {
     id: 'claude-sonnet-4-6',
     name: 'Claude Sonnet 4.6',
-    isDefault: true,
+    isDefault: false,
     tier: 'high',
     category: 'general',
     contextWindow: 1000000,
