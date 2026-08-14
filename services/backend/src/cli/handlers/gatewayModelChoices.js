@@ -159,35 +159,64 @@ const _modelDeepProbeInFlight = new Map();
  * the relevant explanatory notices have already been emitted in that case.
  */
 async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {} } = {}) {
-  const gateway = require('../../services/gateway/aiGateway');
-  const autoSync = await withTimeout(
-    maybeAutoSyncSwitchCenterForGateway('gateway-model'),
-    10000,
-    'switch-center-sync'
-  ).catch(() => null);
-  if (!gateway.isInitialized()) {
-    await withTimeout(gateway.init(), 15000, 'gateway-init').catch(() => {});
-  }
-  if (autoSync && autoSync.synced && (autoSync.changed || autoSync.activeChanged)) {
-    try {
-      await withTimeout(gateway.refreshAdapters(), 15000, 'refresh-adapters');
-    } catch {
-      /* best effort */
+  try {
+    // Quick fail mode: skip expensive initialization if explicitly disabled
+    const quickFailMode = String(process.env.KHY_MODEL_QUICK_FAIL || 'false').toLowerCase() === 'true';
+
+    onNotice('正在初始化网关...');
+    const gateway = require('../../services/gateway/aiGateway');
+
+    if (!quickFailMode) {
+      onNotice('正在同步 switch-center...');
+      const autoSync = await withTimeout(
+        maybeAutoSyncSwitchCenterForGateway('gateway-model'),
+        10000,
+        'switch-center-sync'
+      ).catch(() => null);
+
+      if (!gateway.isInitialized()) {
+        onNotice('正在初始化网关适配器...');
+        await withTimeout(gateway.init(), 15000, 'gateway-init').catch((err) => {
+          onNotice(`网关初始化失败: ${err?.message || 'unknown'}`);
+        });
+      }
+
+      if (autoSync && autoSync.synced && (autoSync.changed || autoSync.activeChanged)) {
+        try {
+          onNotice('正在刷新适配器...');
+          await withTimeout(gateway.refreshAdapters(), 15000, 'refresh-adapters');
+        } catch {
+          /* best effort */
+        }
+        onNotice(
+          `已自动同步 switch-center: ${autoSync.profileName || autoSync.profileId || 'windsurf-auto'} (${autoSync.modelsCount || 0} models)`
+        );
+      }
+    } else {
+      onNotice('快速失败模式：跳过耗时初始化');
+      // Ensure gateway is at least minimally initialized
+      if (!gateway.isInitialized()) {
+        try {
+          await Promise.race([
+            gateway.init(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('init timeout')), 3000))
+          ]);
+        } catch {
+          onNotice('快速初始化失败，使用当前状态');
+        }
+      }
     }
-    onNotice(
-      `已自动同步 switch-center: ${autoSync.profileName || autoSync.profileId || 'windsurf-auto'} (${autoSync.modelsCount || 0} models)`
-    );
-  }
 
-  const statuses = gateway.getStatus();
-  const enabledAdapters = statuses.filter((s) => s.enabled);
-  const verboseAdapterDetails =
-    String(process.env.KHY_MODEL_VERBOSE_ADAPTER_DETAILS || 'false').toLowerCase() === 'true';
+    onNotice('正在获取适配器状态...');
+    const statuses = gateway.getStatus();
+    const enabledAdapters = statuses.filter((s) => s.enabled);
+    const verboseAdapterDetails =
+      String(process.env.KHY_MODEL_VERBOSE_ADAPTER_DETAILS || 'false').toLowerCase() === 'true';
 
-  if (enabledAdapters.length === 0) {
-    onError('无已启用 AI 通道');
-    return { modelChoices: [], preferredIssueAfterProbe: null, empty: true };
-  }
+    if (enabledAdapters.length === 0) {
+      onError('无已启用 AI 通道');
+      return { modelChoices: [], preferredIssueAfterProbe: null, empty: true };
+    }
 
   if (verboseAdapterDetails) {
     const windsurfStatus = statuses.find((s) => String(s.type || '').toLowerCase() === 'windsurf');
@@ -655,7 +684,29 @@ async function applyGatewayModelSelection(selected, options = {}) {
 
 async function handleGatewaySelectModel(args = [], options = {}) {
   try {
-    const built = await buildGatewayModelChoices({ onNotice: printInfo, onError: printError });
+    // Add overall timeout protection for the entire build process
+    const buildTimeoutMs = Math.max(
+      20000,
+      parseInt(process.env.KHY_MODEL_BUILD_TIMEOUT_MS || '45000', 10) || 45000
+    );
+
+    let built;
+    try {
+      built = await Promise.race([
+        buildGatewayModelChoices({ onNotice: printInfo, onError: printError }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('构建模型列表超时')), buildTimeoutMs)
+        )
+      ]);
+    } catch (err) {
+      if (err && err.message === '构建模型列表超时') {
+        printError('模型列表构建超时，请检查网络连接和适配器配置');
+        printInfo('提示: 可以尝试禁用不使用的适配器或使用 gateway status 命令');
+        return;
+      }
+      throw err;
+    }
+
     if (built.empty) {
       return;
     }
