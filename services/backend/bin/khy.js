@@ -756,7 +756,14 @@ async function ensureAuthenticated() {
               // Auto-login failed, try auto-register if user doesn't exist
               printInfo(`用户不存在，正在自动注册...`);
               try {
-                const registerResult = await auth.register(defaultUsername, autoPassword);
+                // Add timeout to prevent hanging
+                const registerPromise = auth.register(defaultUsername, autoPassword);
+                const timeoutPromise = new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('注册超时')), 10000)
+                );
+
+                const registerResult = await Promise.race([registerPromise, timeoutPromise]);
+
                 if (registerResult.success) {
                   console.log('');
                   printSuccess(`✓ 自动注册并登录成功! 欢迎, ${registerResult.username}`);
@@ -764,9 +771,11 @@ async function ensureAuthenticated() {
                   return true;
                 } else {
                   printInfo(`自动注册失败: ${registerResult.error || 'unknown'}`);
+                  printInfo(`提示: 后端服务可能未运行，请先启动后端或手动登录`);
                 }
               } catch (regErr) {
-                printInfo(`自动注册失败，将进入手动登录`);
+                printInfo(`自动注册失败: ${regErr.message || 'unknown'}`);
+                printInfo(`提示: 如需使用完整功能，请先运行 'start-all.bat' 启动后端服务`);
               }
             }
           } catch (err) {
@@ -774,6 +783,12 @@ async function ensureAuthenticated() {
           }
           console.log('');
         }
+      }
+
+      // Skip manual login prompt if we're in non-interactive mode
+      if (!isInteractiveTerminal()) {
+        printError('自动登录失败且非交互模式，无法继续');
+        process.exit(1);
       }
 
       const answers = await inquirer.prompt([
