@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-pm2 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-pm2<span class="sep">›</span>cli-anything-pm2</div>
+      <header class="hero reveal"><h1>cli-anything-pm2</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-pm2">cli-anything-pm2</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#process">process</a></li><li class="lvl-3"><a href="#lifecycle">lifecycle</a></li><li class="lvl-3"><a href="#logs">logs</a></li><li class="lvl-3"><a href="#system">system</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-pm2&quot;<br>description: &gt;-<br>  Command-line interface for PM2 - A stateless CLI for Node.js process management via the PM2 CLI. List, start, stop, restart processes, view logs, and manage system configuration.</p>
+<hr>
+<h1 id="cli-anything-pm2">cli-anything-pm2<a class="anchor" href="#cli-anything-pm2" aria-label="锚点">#</a></h1>
+<p>A stateless command-line interface for PM2 process management.<br>Communicates via the PM2 CLI subprocess. No local state or session.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install -e .</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>PM2 installed globally (<code>npm install -g pm2</code>)</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-pm2 --help
+
+# Start interactive REPL mode
+cli-anything-pm2
+
+# Run with JSON output (for agent consumption)
+cli-anything-pm2 --json process list
+cli-anything-pm2 --json system version</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-pm2
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="process">process<a class="anchor" href="#process" aria-label="锚点">#</a></h3>
+<p>Process inspection commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List all PM2 processes</td></tr><tr><td><code>describe &lt;name&gt;</code></td><td>Get detailed info for a process</td></tr><tr><td><code>metrics</code></td><td>Get metrics for all processes</td></tr></tbody></table>
+<h3 id="lifecycle">lifecycle<a class="anchor" href="#lifecycle" aria-label="锚点">#</a></h3>
+<p>Process lifecycle commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>start &lt;script&gt; --name &lt;name&gt;</code></td><td>Start a new process</td></tr><tr><td><code>stop &lt;name&gt;</code></td><td>Stop a process</td></tr><tr><td><code>restart &lt;name&gt;</code></td><td>Restart a process</td></tr><tr><td><code>delete &lt;name&gt;</code></td><td>Delete a process</td></tr></tbody></table>
+<h3 id="logs">logs<a class="anchor" href="#logs" aria-label="锚点">#</a></h3>
+<p>Log management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>view &lt;name&gt; --lines 50</code></td><td>View recent logs</td></tr><tr><td><code>flush [name]</code></td><td>Flush logs</td></tr></tbody></table>
+<h3 id="system">system<a class="anchor" href="#system" aria-label="锚点">#</a></h3>
+<p>System-level commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>save</code></td><td>Save current process list</td></tr><tr><td><code>startup</code></td><td>Generate startup script</td></tr><tr><td><code>version</code></td><td>Get PM2 version</td></tr></tbody></table>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-pm2 process list
+
+# JSON output for agents
+cli-anything-pm2 --json process list</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li></ol>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-openscreen/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-openscreen</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-qgis/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-qgis</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-pm2/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

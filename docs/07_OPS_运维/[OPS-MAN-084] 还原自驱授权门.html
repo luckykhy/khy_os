@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-084] 还原自驱授权门 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-084] 还原自驱授权门</div>
+      <header class="hero reveal"><h1>[OPS-MAN-084] 还原自驱授权门</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-084-还原自驱授权门">[OPS-MAN-084] 还原自驱授权门</a></li><li class="lvl-2"><a href="#这一层在解决什么">这一层在解决什么</a></li><li class="lvl-2"><a href="#三档授权与降级逻辑">三档授权与降级逻辑</a></li><li class="lvl-2"><a href="#判定优先级-安全优先-宁可不动不可擅动">判定优先级（安全优先，宁可不动不可擅动）</a></li><li class="lvl-2"><a href="#覆盖风险怎么判">覆盖风险怎么判</a></li><li class="lvl-2"><a href="#保证-继承项目章程">保证（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-084-还原自驱授权门">[OPS-MAN-084] 还原自驱授权门<a class="anchor" href="#ops-man-084-还原自驱授权门" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-authorize.js --gen-doc</code> 确定性生成，请勿手改；<br>授权逻辑改在 <code>scripts/lib/restoreAutonomyGate.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层在解决什么">这一层在解决什么<a class="anchor" href="#这一层在解决什么" aria-label="锚点">#</a></h2>
+<p>还原家族已有五层，本文件是<strong>第六层，也是它的头</strong>：</p>
+<ol><li>三面镜子 <code>restore-check</code> / <code>verify-install</code> / <code>hydration-doctor</code>（<strong>看</strong>）；</li><li><code>restore-plan</code>（OPS-MAN-075）把三者合成为有序还原方案（<strong>排序</strong>）；</li><li><code>restore-conflicts</code>（OPS-MAN-076）检测三镜子是否互相矛盾（<strong>矛盾</strong>）；</li><li><code>restore-resolve</code>（OPS-MAN-079）把矛盾升级成有序恢复链，标出何处交人（<strong>走出</strong>）；</li><li><code>restore-converge</code>（OPS-MAN-082）agent 跑完一步后判进展、防死循环（<strong>收敛</strong>）；</li><li><code>restore-authorize</code>（本文件）在<strong>开跑任何 move 之前</strong>判定「该不该在这台机器上</li></ol>
+<p>自动动手」（<strong>授权</strong>）。</p>
+<p>前五层回答的是执行<strong>过程</strong>的问题（怎么做、做完了没）。<code>converge</code> 关的是循环的<strong>尾</strong>；<br>本层关的是循环的<strong>头</strong>——<strong>「我到底该不该自动开跑？」</strong> 这是安全 agent 的「should I?」<br>先于「how」：动手之前，先确认这一步不会擅自覆盖用户既有可用数据、链里没藏危险动作、<br>该交人时能交到人。</p>
+<pre><code class="language-bash">node scripts/restore-authorize.js --json   # 自驱 agent 动手前先读这个
+# authorized → 自驱整条链；ask-first → 每步问人；forbidden → 整条交人</code></pre>
+<h2 id="三档授权与降级逻辑">三档授权与降级逻辑<a class="anchor" href="#三档授权与降级逻辑" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>授权</th><th>触发</th><th>含义</th></tr></thead><tbody><tr><td><code>authorized</code></td><td>链干净·无覆盖风险·无危险动作</td><td>agent 可自驱整条还原链</td></tr><tr><td><code>ask-first</code></td><td>有覆盖风险 / 链要交人，<strong>且有人在场</strong></td><td>每步前向人确认，不得静默自驱</td></tr><tr><td><code>forbidden</code></td><td>含危险动作；或有覆盖风险却<strong>问不到人</strong></td><td>不得自驱，整条交人</td></tr></tbody></table>
+<h2 id="判定优先级-安全优先-宁可不动不可擅动">判定优先级（安全优先，宁可不动不可擅动）<a class="anchor" href="#判定优先级-安全优先-宁可不动不可擅动" aria-label="锚点">#</a></h2>
+<ol><li><strong>危险动作最高优先</strong>：恢复链任一 move 命中破坏性 shell（rm/push/publish）→</li></ol>
+<p>直接 <code>forbidden</code>，即便有人在场也绝不让 agent 自驱危险动作（恒久红线）。</p>
+<ol><li><strong>链要交人 / 有覆盖风险</strong>：有人在场 → <code>ask-first</code>；问不到人 → <code>forbidden</code></li></ol>
+<p>（既有风险又无人确认，安全默认就是不动这台机器）。</p>
+<ol><li><strong>干净环境</strong> → <code>authorized</code>。</li><li><strong>facts 畸形 / 判定异常</strong> → <code>ask-first</code>（不确定绝不 <code>authorized</code>，但也不硬堵，交人看一眼）。</li></ol>
+<h2 id="覆盖风险怎么判">覆盖风险怎么判<a class="anchor" href="#覆盖风险怎么判" aria-label="锚点">#</a></h2>
+<p>CLI 探测 <code>~/.khy</code> 下是否已有用户数据（配置 / 代理节点 / 任务）。有 = 这台机器上已经<br>有人在用 khy，无人值守地「还原」可能把它们盖掉——用户从没同意过。探测失败一律保守<br>当「有风险」（宁可 <code>ask-first</code> 也不擅自覆盖）。是否有人在场由 stdin 是否 TTY 判定。</p>
+<h2 id="保证-继承项目章程">保证（继承项目章程）<a class="anchor" href="#保证-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>纯计算、零 IO、绝不抛：判定过程异常一律安全降级 <code>ask-first</code>（不确定<strong>绝不</strong> <code>authorized</code>）。</li><li>只<strong>读事实做判定</strong>，绝不触 IO、绝不执行 move——动手是 agent 的事，授权是本门的事。</li><li>危险 action 原文经隐去后才回传；授权门自身绝不复述 rm/push/publish。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-083] 依赖感知波次调度.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-083] 依赖感知波次调度（拆任务 → 有序并行）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-085] 还原补救追索.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-085] 还原补救追索</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-084] 还原自驱授权门.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

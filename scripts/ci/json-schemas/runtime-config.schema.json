@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Runtime Configuration File",
+  "description": "Generic .khy/*.json runtime config files. This is the fallback schema for config files that don't match a more specific schema. Per protocol, top-level must be Object or Array.",
+  "oneOf": [
+    { "type": "object" },
+    { "type": "array" }
+  ]
+}

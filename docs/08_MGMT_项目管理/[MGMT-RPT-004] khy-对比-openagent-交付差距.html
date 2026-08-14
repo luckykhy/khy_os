@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS vs oh-my-openagent 任务交付差距分析 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY OS vs oh-my-openagent 任务交付差距分析</div>
+      <header class="hero reveal"><h1>KHY OS vs oh-my-openagent 任务交付差距分析</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-vs-oh-my-openagent-任务交付差距分析">KHY OS vs oh-my-openagent 任务交付差距分析</a></li><li class="lvl-2"><a href="#概述">概述</a></li><li class="lvl-2"><a href="#1-量化限制">1. 量化限制</a></li><li class="lvl-2"><a href="#2-五大关键差距">2. 五大关键差距</a></li><li class="lvl-3"><a href="#差距-1-缺少持久化执行循环-p0">差距 1：缺少持久化执行循环 — P0</a></li><li class="lvl-3"><a href="#差距-2-缺少-intentgate-模式切换-p0">差距 2：缺少 IntentGate 模式切换 — P0</a></li><li class="lvl-3"><a href="#差距-3-编辑不可靠-无-hashline-p1">差距 3：编辑不可靠（无 Hashline）— P1</a></li><li class="lvl-3"><a href="#差距-4-缺少-hook-组合系统-p1">差距 4：缺少 Hook 组合系统 — P1</a></li><li class="lvl-3"><a href="#差距-5-缺少并行-team-mode-p2">差距 5：缺少并行 Team Mode — P2</a></li><li class="lvl-2"><a href="#3-ssm-项目失败全过程">3. SSM 项目失败全过程</a></li><li class="lvl-2"><a href="#4-修复路线图">4. 修复路线图</a></li><li class="lvl-3"><a href="#p0-阻塞项-决定能否交付任何项目">P0 — 阻塞项（决定能否交付任何项目）</a></li><li class="lvl-3"><a href="#p1-质量项-减少修复循环的迭代次数">P1 — 质量项（减少修复循环的迭代次数）</a></li><li class="lvl-3"><a href="#p2-竞争力对齐-长期">P2 — 竞争力对齐（长期）</a></li><li class="lvl-3"><a href="#p0-完成后的预期成效">P0 完成后的预期成效</a></li><li class="lvl-2"><a href="#5-对比矩阵">5. 对比矩阵</a></li><li class="lvl-2"><a href="#参考">参考</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-004 | 阶段: 项目管理 | 原路径: docs/khy-对比-openagent-交付差距.md --&gt;</p>
+<h1 id="khy-os-vs-oh-my-openagent-任务交付差距分析">KHY OS vs oh-my-openagent 任务交付差距分析<a class="anchor" href="#khy-os-vs-oh-my-openagent-任务交付差距分析" aria-label="锚点">#</a></h1>
+<blockquote><p>分析日期：2026-05-16<br>KHY OS 版本：当前 main 分支<br>oh-my-openagent 版本：v4.1.2<br>触发事件：KHY 无法独立完成一个多文件 SSM（Spring + MyBatis）项目</p></blockquote>
+<hr>
+<h2 id="概述">概述<a class="anchor" href="#概述" aria-label="锚点">#</a></h2>
+<p>KHY 已具备必需的编码工具（writeFile、editFile、scaffoldFiles、shellCommand、buildProject、runTests），但<strong>循环引擎太弱</strong>，无法驱动这些工具走完完整的项目「构建—修复—测试」生命周期。AI 在到达可用状态之前就被中途截断。</p>
+<hr>
+<h2 id="1-量化限制">1. 量化限制<a class="anchor" href="#1-量化限制" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>KHY 当前</th><th>真实项目所需</th><th>oh-my-openagent</th></tr></thead><tbody><tr><td>循环迭代次数</td><td>10（通过环境变量最大 100）</td><td>20-30</td><td>无硬性上限（Ralph Loop）</td></tr><tr><td>墙钟超时</td><td>120s（通过环境变量最大 600s）</td><td>300-600s</td><td>基于活跃度的空闲超时</td></tr><tr><td>Shell 输出上限</td><td>50 KB</td><td>200 KB+（Maven/Gradle 日志）</td><td>流式，无截断</td></tr><tr><td>编辑可靠性</td><td>字符串匹配（old → new）</td><td>逐行哈希校验</td><td>Hashline xxh32 内容哈希</td></tr><tr><td>失败恢复</td><td>重试 + 指数退避</td><td>检查点 + 续跑</td><td>Boulder State 持久化</td></tr><tr><td>并行 agent</td><td>串行（cliAgentRunner）</td><td>2-4 并发</td><td>Team Mode + 邮箱协议</td></tr><tr><td>模式切换</td><td>无</td><td>意图触发</td><td>IntentGate 关键词检测</td></tr><tr><td>Hook 组合</td><td>内联硬编码</td><td>5 层故障隔离</td><td>Session → ToolGuard → Transform → Continuation → Skill</td></tr></tbody></table>
+<hr>
+<h2 id="2-五大关键差距">2. 五大关键差距<a class="anchor" href="#2-五大关键差距" aria-label="锚点">#</a></h2>
+<h3 id="差距-1-缺少持久化执行循环-p0">差距 1：缺少持久化执行循环 — P0<a class="anchor" href="#差距-1-缺少持久化执行循环-p0" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：<code>toolUseLoop.js</code> 默认 10 次迭代 / 120s 硬超时。一个典型的 SSM 项目工作流需要：</p>
+<pre><code>create structure → write pom.xml → write Java classes → mvn install →
+read errors → fix code → rebuild → write tests → run tests → fix → rerun</code></pre>
+<p>这很容易超过 20 轮和 300 秒。</p>
+<p><strong>oh-my-openagent 方案</strong>：Ralph Loop + Boulder State</p>
+<ul><li>无迭代硬上限——只要还有有效工作，循环就持续</li><li>Boulder State 将任务进度保存到磁盘——可在崩溃和会话边界后存活</li><li>跨会话续跑——精确从停止处恢复</li></ul>
+<p><strong>对 KHY 的影响</strong>：AI 在项目编译通过之前就被强制停止。用户看到的是残缺、损坏的输出。</p>
+<p><strong>修复</strong>：实现基于活跃度的空闲超时（仅当 N 秒内无有效工作时才停止），并将迭代上限提升到 50+。为长时间运行的任务增加检查点/续跑能力。</p>
+<hr>
+<h3 id="差距-2-缺少-intentgate-模式切换-p0">差距 2：缺少 IntentGate 模式切换 — P0<a class="anchor" href="#差距-2-缺少-intentgate-模式切换-p0" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：当用户说「创建一个 SSM 项目」时，KHY 没有任何机制去：</p>
+<ul><li>注入编码模式系统提示词（强制结构化任务执行）</li><li>设置 <code>tool_choice: required</code>（强制 AI 调用工具，而非仅仅聊天）</li><li>在执行过程中抑制对话式废话</li></ul>
+<p><strong>oh-my-openagent 方案</strong>：IntentGate 关键词检测器</p>
+<ul><li>魔法词（<code>ultrawork</code>、<code>search</code>、<code>analyze</code>、<code>team</code>、<code>hyperplan</code>）触发模式注入</li><li>每种模式注入专门的系统提示词 + 工具约束</li><li><code>ultrawork</code> 模式：长系统提示词，强调自主完成、强制工具使用、不完成不停止</li></ul>
+<p><strong>对 KHY 的影响</strong>：AI 用建议来回应（「你可以创建一个 pom.xml，里面……」）而不是真正去创建文件。在较弱的模型上尤其严重。</p>
+<p><strong>修复</strong>：在 agenticHarnessService 中增加 IntentGate 层。检测项目创建/编码关键词 → 注入编码模式提示词 + 强制工具使用。</p>
+<hr>
+<h3 id="差距-3-编辑不可靠-无-hashline-p1">差距 3：编辑不可靠（无 Hashline）— P1<a class="anchor" href="#差距-3-编辑不可靠-无-hashline-p1" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：<code>editFile</code> 使用纯字符串匹配（<code>old_string</code> → <code>new_string</code>）。当文件存在重复或相似的内容块时，编辑可能命中错误位置。在一个 200 文件的 Java 项目中，编辑错误会累积并引发级联失败。</p>
+<p><strong>oh-my-openagent 方案</strong>：Hashline LINE#ID 系统</p>
+<ul><li>每一行获得一个由 xxh32 内容哈希派生的 2 字符 ID（字母表：<code>ZPMQVRWSNKTXJBYH</code>）</li><li>编辑工具在应用前校验目标行内容与哈希匹配</li><li>过期编辑（AI 读取后文件已变更）会被拒绝并返回清晰的错误</li></ul>
+<p><strong>对 KHY 的影响</strong>：静默损坏——AI 以为编辑成功，实则改了错误的块。调试成本成倍增加。</p>
+<p><strong>修复</strong>：为 editFile 增加内容指纹校验。应用前，先验证 <code>old_string</code> 出现在预期位置。不匹配时，返回带当前文件状态的错误。</p>
+<hr>
+<h3 id="差距-4-缺少-hook-组合系统-p1">差距 4：缺少 Hook 组合系统 — P1<a class="anchor" href="#差距-4-缺少-hook-组合系统-p1" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：工具行为在 toolCalling.js、toolUseLoop.js 以及各个工具文件中以内联硬编码方式散落。不存在用于横切关注点的拦截层。</p>
+<p><strong>oh-my-openagent 方案</strong>：5 层 hook 组合</p>
+<table><thead><tr><th>层级</th><th>用途</th><th>示例</th></tr></thead><tbody><tr><td>Session</td><td>生命周期事件（启动、结束、错误）</td><td>自动保存会话轨迹</td></tr><tr><td>ToolGuard</td><td>工具前/后校验（16 类）</td><td>拦截危险的 shell 命令</td></tr><tr><td>Transform</td><td>输入/输出转换</td><td>压缩大型工具结果</td></tr><tr><td>Continuation</td><td>循环控制</td><td>Ralph Loop 续跑逻辑</td></tr><tr><td>Skill</td><td>技能特定行为</td><td>注入领域上下文</td></tr></tbody></table>
+<p>KHY 缺失的关键 hook：</p>
+<ul><li><strong>Comment Checker</strong>：外部二进制程序，扫描 Write/Edit 输出中的 AI 生成的水货注释（<code>// This function does X</code>、<code>// TODO: implement</code>）并拦截</li><li><strong>Edit Error Recovery</strong>：在 editFile 失败时，自动注入「先 READ 文件再重试」的引导</li><li><strong>ToolGuard validators</strong>：16 项执行前检查（路径安全、输出大小、限流）</li></ul>
+<p>所有 hook 都受配置开关控制（<code>isHookEnabled()</code>）且故障隔离（<code>safeCreateHook</code>——hook 崩溃不会拖垮循环）。</p>
+<p><strong>对 KHY 的影响</strong>：错误不会被自动恢复。质量无法在工具边界处强制保障。每次修复都要改动核心循环代码。</p>
+<p><strong>修复</strong>：设计 3 层 hook 注册表（ToolGuard + Transform + Continuation）。首批实现 Edit Error Recovery 和 Comment Checker 两个 hook。</p>
+<hr>
+<h3 id="差距-5-缺少并行-team-mode-p2">差距 5：缺少并行 Team Mode — P2<a class="anchor" href="#差距-5-缺少并行-team-mode-p2" aria-label="锚点">#</a></h3>
+<p><strong>问题</strong>：<code>cliAgentRunner</code> 串行派发 agent。对于大型项目，单个 agent 顺序完成所有事情。</p>
+<p><strong>oh-my-openagent 方案</strong>：Team Mode</p>
+<ul><li>带角色分配的并行多 agent（coder、tester、reviewer）</li><li>用于 agent 间通信的邮箱协议</li><li>背压：若某个 agent 被阻塞，其他 agent 继续</li><li>确认机制：agent 确认收到共享产物</li></ul>
+<p><strong>对 KHY 的影响</strong>：大型项目耗时翻 N 倍。无专业分工——单个 agent 必须在写代码、跑构建、修错误、写测试之间反复切换上下文。</p>
+<p><strong>修复</strong>：为 cliAgentRunner 扩展邮箱协议和并发派发。优先级较低——P0/P1 修复的 ROI 更高。</p>
+<hr>
+<h2 id="3-ssm-项目失败全过程">3. SSM 项目失败全过程<a class="anchor" href="#3-ssm-项目失败全过程" aria-label="锚点">#</a></h2>
+<p>当用户要求 KHY 创建一个 SSM 项目时会发生什么：</p>
+<pre><code>Round 1:  scaffoldFiles → create directory structure          ✅ (~2s)
+Round 2:  writeFile × 5 → pom.xml files                      ✅ (~3s)
+Round 3:  writeFile × 20 → Java entity/mapper/service classes ✅ (~5s)
+Round 4:  shellCommand → mvn clean install                    ⚠️ (~45s, may timeout)
+Round 5:  AI reads truncated Maven error (50KB cap)           ⚠️ (incomplete context)
+Round 6:  editFile → fix first compilation error              ⚠️ (may hit wrong location)
+Round 7:  shellCommand → mvn clean install again              ⚠️ (~45s)
+Round 8:  More errors, more fixes needed                      ⚠️
+Round 9:  Still fixing...                                     ⚠️
+Round 10: HARD LIMIT REACHED — loop terminates                ❌</code></pre>
+<p><strong>结果</strong>：用户得到一个半成品、无法编译的项目。剩余工作：</p>
+<ul><li>10+ 个编译错误未修复</li><li>未编写测试</li><li>未配置 application.yml</li><li>无 MyBatis mapper XML 文件</li><li>构建从未成功</li></ul>
+<hr>
+<h2 id="4-修复路线图">4. 修复路线图<a class="anchor" href="#4-修复路线图" aria-label="锚点">#</a></h2>
+<h3 id="p0-阻塞项-决定能否交付任何项目">P0 — 阻塞项（决定能否交付任何项目）<a class="anchor" href="#p0-阻塞项-决定能否交付任何项目" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>修复</th><th>文件</th><th>工作量</th></tr></thead><tbody><tr><td>1</td><td><strong>基于活跃度的空闲超时</strong>——用空闲检测替代硬性 120s（在工具完成、AI 回复、流式 chunk 时重置）</td><td><code>toolUseLoop.js</code>、<code>agenticHarnessService.js</code></td><td>中</td></tr><tr><td>2</td><td><strong>提升迭代上限</strong>——默认 30，最大 100，可通过环境变量配置</td><td><code>toolUseLoop.js</code></td><td>小</td></tr><tr><td>3</td><td><strong>IntentGate 模式注入</strong>——检测编码/项目关键词 → 注入系统提示词 + 强制 tool_choice</td><td><code>intentGate.js</code>（新增）、<code>agenticHarnessService.js</code></td><td>中</td></tr><tr><td>4</td><td><strong>Shell 输出扩容</strong>——50KB → 200KB，从大型日志中自动提取 ERROR/FAILURE 行</td><td><code>toolSandbox.js</code>、<code>shellCommand</code> 工具</td><td>小</td></tr></tbody></table>
+<h3 id="p1-质量项-减少修复循环的迭代次数">P1 — 质量项（减少修复循环的迭代次数）<a class="anchor" href="#p1-质量项-减少修复循环的迭代次数" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>修复</th><th>文件</th><th>工作量</th></tr></thead><tbody><tr><td>5</td><td><strong>Edit Error Recovery hook</strong>——在 editFile 失败时，自动重新读取文件 + 用新内容重试</td><td><code>toolCalling.js</code> 或新增 hook 层</td><td>小</td></tr><tr><td>6</td><td><strong>内容指纹校验</strong>——应用编辑前先验证 old_string 的位置</td><td><code>editFile</code> 工具</td><td>中</td></tr><tr><td>7</td><td><strong>构建错误摘要器</strong>——解析 Maven/Gradle/npm 输出，提取可操作的错误清单</td><td><code>toolUseLoop.js</code> 中的新工具函数</td><td>中</td></tr></tbody></table>
+<h3 id="p2-竞争力对齐-长期">P2 — 竞争力对齐（长期）<a class="anchor" href="#p2-竞争力对齐-长期" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>修复</th><th>文件</th><th>工作量</th></tr></thead><tbody><tr><td>8</td><td><strong>3 层 hook 组合</strong>——ToolGuard + Transform + Continuation，带配置开关</td><td>新增 <code>hookRegistry.js</code></td><td>大</td></tr><tr><td>9</td><td><strong>Comment Checker</strong>——拦截 Write/Edit 输出中的 AI 水货注释</td><td>新增 hook</td><td>中</td></tr><tr><td>10</td><td><strong>Team Mode</strong>——带邮箱协议的并行 agent</td><td><code>cliAgentRunner.js</code> 重构</td><td>大</td></tr><tr><td>11</td><td><strong>Boulder State</strong>——跨会话长任务的检查点/续跑</td><td>新增持久化层</td><td>大</td></tr></tbody></table>
+<h3 id="p0-完成后的预期成效">P0 完成后的预期成效<a class="anchor" href="#p0-完成后的预期成效" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>指标</th><th>之前</th><th>P0 之后</th></tr></thead><tbody><tr><td>SSM 项目完成度</td><td>❌ 在第 10 轮失败</td><td>✅ 20-30 轮内完成</td></tr><tr><td>墙钟预算</td><td>120s 硬性</td><td>600s+ 基于活跃度</td></tr><tr><td>AI 在「创建项目」时的行为</td><td>话痨，只建议不执行</td><td>强制工具使用，自主执行</td></tr><tr><td>Maven 错误可见性</td><td>在 50KB 处截断</td><td>完整错误被提取</td></tr></tbody></table>
+<hr>
+<h2 id="5-对比矩阵">5. 对比矩阵<a class="anchor" href="#5-对比矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>能力</th><th>KHY OS</th><th>oh-my-openagent</th><th>Claude Code</th><th>Qwen Code</th></tr></thead><tbody><tr><td>最大循环迭代</td><td>10</td><td>无限</td><td>~200</td><td>~100</td></tr><tr><td>超时模型</td><td>硬性墙钟</td><td>基于活跃度的空闲</td><td>基于活跃度</td><td>硬性 + 空闲混合</td></tr><tr><td>编辑校验</td><td>字符串匹配</td><td>Hashline xxh32</td><td>唯一字符串匹配</td><td>AST 感知</td></tr><tr><td>错误恢复</td><td>手动重试</td><td>自动 hook</td><td>自动重试</td><td>自动重试</td></tr><tr><td>模式切换</td><td>无</td><td>IntentGate 关键词</td><td>Plan 模式切换</td><td>Task/chat 模式</td></tr><tr><td>并行 agent</td><td>串行</td><td>Team Mode 邮箱</td><td>后台 agent</td><td>串行</td></tr><tr><td>Hook 系统</td><td>无</td><td>5 层组合</td><td>前/后 hook</td><td>插件 hook</td></tr><tr><td>跨会话状态</td><td>无</td><td>Boulder State</td><td>任务持久化</td><td>会话恢复</td></tr></tbody></table>
+<hr>
+<h2 id="参考">参考<a class="anchor" href="#参考" aria-label="锚点">#</a></h2>
+<ul><li>oh-my-openagent 源码：<code>/tmp/oh-my-openagent-dev/oh-my-openagent-dev/</code></li><li>对齐日志：<code>docs/07_OPS_运维/[OPS-MAN-020] openagent-对齐日志.md</code></li><li>对齐维度：<code>AGENTS.md</code> 第 257-344 行</li><li>KHY 工具循环：<code>backend/src/services/toolUseLoop.js</code></li><li>KHY agentic harness：<code>backend/src/services/agenticHarnessService.js</code></li><li>KHY 工具沙箱：<code>backend/src/services/toolSandbox.js</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-003] khy-对比-hermes-成长架构.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS vs Hermes Agent — 成长型架构对齐分析</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-005] khy-对比-qwen-code-差距分析.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS vs Qwen Code 全面差距对比</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-004] khy-对比-openagent-交付差距.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

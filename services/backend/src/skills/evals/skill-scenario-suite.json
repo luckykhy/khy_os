@@ -1,0 +1,268 @@
+{
+  "version": "1.1.0",
+  "target": {
+    "skillsDir": "backend/src/skills/built-in",
+    "promptFilename": "prompt.md"
+  },
+  "thresholds": {
+    "minOverallPassRate": 1,
+    "minEvalPassRate": 1,
+    "maxFailedAssertions": 0
+  },
+  "regressionThresholds": {
+    "passRateDrop": 0.05,
+    "newFailureCount": 1
+  },
+  "evals": [
+    {
+      "id": "verify-change-verification",
+      "skill": "verify",
+      "prompt": "Validate recent code changes with targeted checks and clear summary",
+      "assertions": [
+        {
+          "id": "verify-detect-changes",
+          "type": "prompt-regex",
+          "pattern": "Detect Changes"
+        },
+        {
+          "id": "verify-run-checks",
+          "type": "prompt-regex",
+          "pattern": "Run Checks"
+        },
+        {
+          "id": "verify-read-only",
+          "type": "prompt-regex",
+          "pattern": "read-only operation"
+        }
+      ]
+    },
+    {
+      "id": "commit-safe-workflow",
+      "skill": "commit",
+      "prompt": "Create commit with safe staging and message discipline",
+      "assertions": [
+        {
+          "id": "commit-inspect-status",
+          "type": "prompt-regex",
+          "pattern": "git status"
+        },
+        {
+          "id": "commit-no-amend-without-request",
+          "type": "prompt-regex",
+          "pattern": "Never amend an existing commit unless the user explicitly requests it"
+        },
+        {
+          "id": "commit-no-no-verify",
+          "type": "prompt-regex",
+          "pattern": "Never use .*--no-verify"
+        }
+      ]
+    },
+    {
+      "id": "loop-iterative-test-fix",
+      "skill": "loop",
+      "prompt": "Iterative test-fix loop with bounded iterations and progress report",
+      "assertions": [
+        {
+          "id": "loop-max-iterations",
+          "type": "prompt-regex",
+          "pattern": "Maximum iterations: 10"
+        },
+        {
+          "id": "loop-progress-format",
+          "type": "prompt-regex",
+          "pattern": "Iteration 3/10"
+        },
+        {
+          "id": "loop-no-disable-tests",
+          "type": "prompt-regex",
+          "pattern": "Never disable or skip tests"
+        }
+      ]
+    },
+    {
+      "id": "stuck-alternative-paths",
+      "skill": "stuck",
+      "prompt": "Find alternative approaches and rank them with trade-offs",
+      "assertions": [
+        {
+          "id": "stuck-multi-angle",
+          "type": "prompt-regex",
+          "pattern": "Analyze from Multiple Angles"
+        },
+        {
+          "id": "stuck-rank-suggestions",
+          "type": "prompt-regex",
+          "pattern": "Rank Suggestions"
+        },
+        {
+          "id": "stuck-quick-win",
+          "type": "prompt-regex",
+          "pattern": "Quick Win"
+        }
+      ]
+    },
+    {
+      "id": "remember-persistent-safety",
+      "skill": "remember",
+      "prompt": "Persist user memory safely without secrets",
+      "assertions": [
+        {
+          "id": "remember-storage-targets",
+          "type": "prompt-regex",
+          "pattern": "CLAUDE\\.md"
+        },
+        {
+          "id": "remember-no-overwrite",
+          "type": "prompt-regex",
+          "pattern": "Never overwrite existing memory entries"
+        },
+        {
+          "id": "remember-no-secrets",
+          "type": "prompt-regex",
+          "pattern": "do not store passwords, API keys"
+        }
+      ]
+    },
+    {
+      "id": "batch-sequential-execution",
+      "skill": "batch",
+      "prompt": "Run multiple commands in sequence with error handling",
+      "assertions": [
+        { "id": "batch-sequential", "type": "prompt-regex", "pattern": "Execute Sequentially" },
+        { "id": "batch-stop-on-error", "type": "prompt-regex", "pattern": "--stop-on-error" },
+        { "id": "batch-confirm-destructive", "type": "prompt-regex", "pattern": "destructive operations" }
+      ]
+    },
+    {
+      "id": "claude-api-usage-guide",
+      "skill": "claude-api",
+      "prompt": "Guide on using Anthropic API with best practices",
+      "assertions": [
+        { "id": "claude-api-auth", "type": "prompt-regex", "pattern": "x-api-key" },
+        { "id": "claude-api-tool-use", "type": "prompt-regex", "pattern": "tool_use" },
+        { "id": "claude-api-backoff", "type": "prompt-regex", "pattern": "exponential backoff" }
+      ]
+    },
+    {
+      "id": "create-mcp-server-scaffold",
+      "skill": "create-mcp-server",
+      "prompt": "Scaffold a new MCP server with proper structure",
+      "assertions": [
+        { "id": "mcp-protocol", "type": "prompt-regex", "pattern": "MCP" },
+        { "id": "mcp-stdio-transport", "type": "prompt-regex", "pattern": "stdio transport" },
+        { "id": "mcp-sdk-dep", "type": "prompt-regex", "pattern": "@modelcontextprotocol/sdk" }
+      ]
+    },
+    {
+      "id": "create-skill-scaffold",
+      "skill": "create-skill",
+      "prompt": "Create a custom skill with manifest and prompt",
+      "assertions": [
+        { "id": "skill-manifest-gen", "type": "prompt-regex", "pattern": "manifest\\.json" },
+        { "id": "skill-user-dir", "type": "prompt-regex", "pattern": "~/.khy/skills/" },
+        { "id": "skill-handler-optional", "type": "prompt-regex", "pattern": "handler\\.js" }
+      ]
+    },
+    {
+      "id": "debug-systematic-workflow",
+      "skill": "debug",
+      "prompt": "Systematic debugging with reproduce-isolate-fix workflow",
+      "assertions": [
+        { "id": "debug-reproduce", "type": "prompt-regex", "pattern": "Reproduce" },
+        { "id": "debug-root-cause", "type": "prompt-regex", "pattern": "root cause" },
+        { "id": "debug-no-auto-fix", "type": "prompt-regex", "pattern": "Do not apply fixes automatically" }
+      ]
+    },
+    {
+      "id": "dream-autonomous-safety",
+      "skill": "dream",
+      "prompt": "Background autonomous agent with safety boundaries",
+      "assertions": [
+        { "id": "dream-autonomous", "type": "prompt-regex", "pattern": "Autonomously" },
+        { "id": "dream-no-force-push", "type": "prompt-regex", "pattern": "Never force-push" },
+        { "id": "dream-iteration-bound", "type": "prompt-regex", "pattern": "20 subtask iterations" }
+      ]
+    },
+    {
+      "id": "hunter-security-scan",
+      "skill": "hunter",
+      "prompt": "Hunt for bugs and security vulnerabilities systematically",
+      "assertions": [
+        { "id": "hunter-security", "type": "prompt-regex", "pattern": "Security Scan" },
+        { "id": "hunter-injection", "type": "prompt-regex", "pattern": "SQL injection" },
+        { "id": "hunter-severity-sort", "type": "prompt-regex", "pattern": "sorted by severity" }
+      ]
+    },
+    {
+      "id": "init-project-scaffold",
+      "skill": "init-project",
+      "prompt": "Initialize a new project with best practices",
+      "assertions": [
+        { "id": "init-git", "type": "prompt-regex", "pattern": "git init" },
+        { "id": "init-claude-md", "type": "prompt-regex", "pattern": "CLAUDE\\.md" },
+        { "id": "init-no-overengineer", "type": "prompt-regex", "pattern": "Do NOT add unnecessary complexity" }
+      ]
+    },
+    {
+      "id": "keybindings-reference",
+      "skill": "keybindings",
+      "prompt": "Display keyboard shortcut reference",
+      "assertions": [
+        { "id": "keybindings-ctrl-c", "type": "prompt-regex", "pattern": "Ctrl\\+C" },
+        { "id": "keybindings-vim", "type": "prompt-regex", "pattern": "Vim Mode" },
+        { "id": "keybindings-platform", "type": "prompt-regex", "pattern": "platform differences" }
+      ]
+    },
+    {
+      "id": "pdf-analysis-workflow",
+      "skill": "pdf",
+      "prompt": "Read and analyze PDF documents safely",
+      "assertions": [
+        { "id": "pdf-read-tool", "type": "prompt-regex", "pattern": "Read tool" },
+        { "id": "pdf-page-ranges", "type": "prompt-regex", "pattern": "pages" },
+        { "id": "pdf-max-pages", "type": "prompt-regex", "pattern": "20 pages per read request" }
+      ]
+    },
+    {
+      "id": "review-pr-checklist",
+      "skill": "review-pr",
+      "prompt": "Thorough PR review with structured checklist",
+      "assertions": [
+        { "id": "review-pr-gh", "type": "prompt-regex", "pattern": "gh pr" },
+        { "id": "review-pr-checklist-section", "type": "prompt-regex", "pattern": "Review checklist" },
+        { "id": "review-pr-verdict", "type": "prompt-regex", "pattern": "APPROVE / REQUEST_CHANGES / COMMENT" }
+      ]
+    },
+    {
+      "id": "simplify-code-quality",
+      "skill": "simplify",
+      "prompt": "Review and simplify changed code for quality",
+      "assertions": [
+        { "id": "simplify-git-diff", "type": "prompt-regex", "pattern": "git diff" },
+        { "id": "simplify-no-api-change", "type": "prompt-regex", "pattern": "Do not change public API signatures" },
+        { "id": "simplify-no-new-deps", "type": "prompt-regex", "pattern": "Do not introduce new dependencies" }
+      ]
+    },
+    {
+      "id": "skillify-extraction",
+      "skill": "skillify",
+      "prompt": "Extract reusable skill from conversation",
+      "assertions": [
+        { "id": "skillify-analyze", "type": "prompt-regex", "pattern": "Analyze Conversation" },
+        { "id": "skillify-manifest", "type": "prompt-regex", "pattern": "manifest\\.json" },
+        { "id": "skillify-prompt-gen", "type": "prompt-regex", "pattern": "prompt\\.md" }
+      ]
+    },
+    {
+      "id": "update-config-safety",
+      "skill": "update-config",
+      "prompt": "Safely update configuration files with validation",
+      "assertions": [
+        { "id": "config-claude-md", "type": "prompt-regex", "pattern": "CLAUDE\\.md" },
+        { "id": "config-settings-json", "type": "prompt-regex", "pattern": "settings\\.json" },
+        { "id": "config-validate-json", "type": "prompt-regex", "pattern": "Validate JSON syntax" }
+      ]
+    }
+  ]
+}

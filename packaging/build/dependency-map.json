@@ -1,0 +1,77 @@
+{
+  "groups": {
+    "core": [
+      "chalk",
+      "dotenv",
+      "winston",
+      "winston-daily-rotate-file",
+      "moment",
+      "iconv-lite",
+      "node-stream-zip"
+    ],
+    "ai": [
+      "axios",
+      "ws",
+      "ink",
+      "react",
+      "@alcalzone/ansi-tokenize",
+      "ora",
+      "inquirer"
+    ],
+    "database": [
+      "pg",
+      "sequelize",
+      "better-sqlite3",
+      "redis"
+    ],
+    "server": [
+      "express",
+      "express-rate-limit",
+      "express-validator",
+      "cors",
+      "helmet",
+      "multer",
+      "jsonwebtoken",
+      "bcryptjs",
+      "prom-client"
+    ],
+    "telemetry": [
+      "@opentelemetry/exporter-trace-otlp-http",
+      "@opentelemetry/instrumentation-express",
+      "@opentelemetry/instrumentation-http",
+      "@opentelemetry/resources",
+      "@opentelemetry/sdk-node",
+      "@opentelemetry/sdk-trace-base",
+      "@opentelemetry/semantic-conventions"
+    ],
+    "auth": [
+      "@simplewebauthn/server",
+      "jsonwebtoken",
+      "bcryptjs"
+    ],
+    "optional": [
+      "@aws/codewhisperer-streaming-client",
+      "node-llama-cpp",
+      "node-pty",
+      "glob",
+      "https-proxy-agent",
+      "string-width"
+    ],
+    "build": [
+      "@babel/preset-react",
+      "@babel/register",
+      "cheerio",
+      "cli-table3",
+      "qrcode",
+      "node-cron"
+    ]
+  },
+  "moduleMapping": {
+    "khy-ai": ["core", "ai"],
+    "khy-gateway": ["core", "server", "ai"],
+    "khy-quant": ["core", "database", "build"],
+    "khy-server": ["core", "server", "database", "auth", "telemetry"],
+    "khy-tools": ["core", "ai", "build"],
+    "khy": ["core", "ai", "database", "server", "auth", "telemetry", "build", "optional"]
+  }
+}

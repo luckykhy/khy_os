@@ -1,0 +1,15 @@
+{
+  "name": "verify",
+  "description": "Verify that recent changes work correctly by running tests and checks",
+  "trigger": "/verify",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "testing",
+    "verification"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

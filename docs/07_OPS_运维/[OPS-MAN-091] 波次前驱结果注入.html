@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-091] 波次前驱结果注入（下游波不再盲跑 — 信息有序） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-091] 波次前驱结果注入（下游波不再盲跑 — 信息有序）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-091] 波次前驱结果注入（下游波不再盲跑 — 信息有序）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-091-波次前驱结果注入-下游波不再盲跑-信息有序">[OPS-MAN-091] 波次前驱结果注入（下游波不再盲跑 — 信息有序）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-有序但盲跑-一段印证设计意图的死代码">为什么需要它（真实缺口 = 有序但盲跑 + 一段印证设计意图的死代码）</a></li><li class="lvl-2"><a href="#单一真源与分层">单一真源与分层</a></li><li class="lvl-2"><a href="#语义与保守降级-绝不因坏依赖卡死或注入噪声">语义与保守降级（绝不因坏依赖卡死或注入噪声）</a></li><li class="lvl-2"><a href="#门与安全边界">门与安全边界</a></li><li class="lvl-2"><a href="#怎么验证">怎么验证</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-091-波次前驱结果注入-下游波不再盲跑-信息有序">[OPS-MAN-091] 波次前驱结果注入（下游波不再盲跑 — 信息有序）<a class="anchor" href="#ops-man-091-波次前驱结果注入-下游波不再盲跑-信息有序" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼第三发（收结果的完整闭环）。承 [OPS-MAN-083] 依赖感知波次调度（补「时间有序」）<br>与 [OPS-MAN-087] 波次执行故障感知（补「收结果的诚实」）。本条补上最后一半——<br><strong>信息有序</strong>：下游波的子智能体不再对前驱波的产出视而不见。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>khy 已能把目标拆成有序波次、并行执行、依赖失败则跳过下游并如实汇报。但下游波<br>fork 出的每个子智能体仍在<strong>盲跑</strong>——<code>implement</code> 看不到 <code>explore</code> 发现了什么，<br><code>verify</code> 看不到 <code>implement</code> 改了什么。这是<strong>时间有序而非信息有序</strong>。本条在下游波<br>成员的 prompt 前置其<strong>直接前驱</strong>的结果文本块 <code>[前驱结果 t&lt;n&gt;]: &lt;text&gt;</code>（4000 字<br>在末换行处截断、确定性升序），让「收回来的结果」真正喂回后续波。</p>
+<h2 id="为什么需要它-真实缺口-有序但盲跑-一段印证设计意图的死代码">为什么需要它（真实缺口 = 有序但盲跑 + 一段印证设计意图的死代码）<a class="anchor" href="#为什么需要它-真实缺口-有序但盲跑-一段印证设计意图的死代码" aria-label="锚点">#</a></h2>
+<p><strong>深挖缺陷（铁证 file:line）：</strong> <code>agenticHarnessService._tryAutoDecompose</code> 多波<br><code>else</code> 分支里，<code>_runOneWave(runSubtasks)</code> 把每波子任务原样交给既有并行原语——<br>子任务的 prompt 只含它自己的任务描述，<strong>从不携带前驱波的产出</strong>。波次按序跑了、<br>失败也诚实跳过了，但下游子智能体拿到的<strong>信息</strong>和单波盲跑时完全一样。</p>
+<p><strong>印证设计意图的死代码：</strong> <code>services/backend/src/services/subAgentOrchestrator.js:352-382</code><br>的 <code>executeDependencyAware</code> 早已完整实现本条要补的语义——把每个前驱的结果文本<br>以 <code>[Predecessor &lt;id&gt; result]: &lt;text&gt;</code> 注入下游 agent 上下文，4000 字在末换行处<br>截断。但它<strong>零调用者</strong> = 纯死代码。本条<strong>不唤醒那段死代码</strong>（会碰 72KB god-file /<br>orchestrator，违反外科手术式改动 B3），而是在<strong>已拥有的波次执行层</strong> + 纯叶复刻<br>同一语义。</p>
+<h2 id="单一真源与分层">单一真源与分层<a class="anchor" href="#单一真源与分层" aria-label="锚点">#</a></h2>
+<ul><li>纯叶子 <code>services/backend/src/services/orchestrator/dependencyWaveScheduler.js</code></li></ul>
+<p>新增四个纯函数（零 IO、绝不抛、确定性）：</p>
+<ul><li><code>buildPredecessorContext(subtask, edges, globalIdx, priorResultsByGlobalIdx)</code></li></ul>
+<p>→ 上下文块字符串（或 <code>''</code>）。对全局索引 <code>g</code> 遍历 <code>edges[g]</code>（<strong>升序</strong>）的每个<br>    <strong>直接</strong>依赖 <code>d</code>，查 <code>priorResultsByGlobalIdx.get(d)</code> 取文本、截断、格式化<br>    <code>[前驱结果 t&lt;d+1&gt;]: &lt;text&gt;</code>，非空行以 <code>\n</code> 连接。无依赖/无文本/畸形 → <code>''</code>。</p>
+<ul><li><code>injectPredecessorContext(promptText, contextBlock)</code> → 有块则</li></ul>
+<p><code>块 + '\n\n---\n\n' + prompt</code>；空块 → prompt 原样（字节回退）。</p>
+<ul><li><code>_extractResultText(resultObj)</code>：<code>text || output</code>，**空串兜底、绝不用</li></ul>
+<p><code>'(无输出)'</code> 占位符**（空文本必须跳过，不注入无意义噪声行）。</p>
+<ul><li><code>_truncateDepText(depText)</code>：<strong>逐字节复刻死代码</strong>——<code>cut = lastIndexOf('\n', 4000)</code>，</li></ul>
+<p>仅在 <code>cut &gt; 0</code> 时用换行切点，报告数是 <code>length - 4000</code>（原始溢出量，<strong>非</strong> <code>length - cut</code>）。</p>
+<ul><li>薄接线 <code>agenticHarnessService._tryAutoDecompose</code> 多波 <code>else</code> 分支</li></ul>
+<p>（门 <code>KHY_DEP_WAVE_CONTEXT_INJECT</code> default-on，<strong>独立于 fault-stop 门</strong>）：<br>  维护 <code>priorResultsByGlobalIdx = new Map()</code>（globalIdx → <strong>真跑过</strong>成员的内层<br>  result 对象；跳过成员无文本、不记录）。<strong>仅在 <code>runSubtasks</code> 的 push 处</strong>注入到<br>  <strong>浅克隆</strong> <code>{...st, prompt: injected}</code>——无注入则保持对象身份（零 clone churn），<br>  且注入的 prompt <strong>绝不上溯污染</strong> <code>wave</code>/<code>plan.subtasks</code>（gate-off 路径靠对象身份<br>  <code>indexOf</code> 定位）。</p>
+<h2 id="语义与保守降级-绝不因坏依赖卡死或注入噪声">语义与保守降级（绝不因坏依赖卡死或注入噪声）<a class="anchor" href="#语义与保守降级-绝不因坏依赖卡死或注入噪声" aria-label="锚点">#</a></h2>
+<p>| 情形 | 行为 |</p>
+<p>| 门关 <code>KHY_DEP_WAVE_CONTEXT_INJECT=0/false/off/no</code> | push 原 <code>st</code>、Map 不填（逐字节回退今日盲跑多波路径） |</p>
+<p>| 单波 / 无解析边 / 缺 <code>waveGlobalIndex</code> | 恒 no-op（无前驱可注入） |</p>
+<p>| 前驱有结果文本 | 注入 <code>[前驱结果 t&lt;n&gt;]: &lt;text&gt;</code>（升序、4000 截断） |</p>
+<p>| 前驱结果空文本（<code>text</code>/<code>output</code> 皆空） | 跳过该依赖，不注入噪声行 |</p>
+<p>| 某成员无任何有文本前驱 | 块为 <code>''</code> → prompt 原样、保持对象身份 |</p>
+<p>| 只注入<strong>直接</strong>依赖 | 直接父的产出已传递性含祖父所需，避免 4000 预算被冗余爆掉（与死代码一致） |</p>
+<p>| <code>buildPredecessorContext</code> 畸形入参 | 返回 <code>''</code>、绝不抛 |</p>
+<h2 id="门与安全边界">门与安全边界<a class="anchor" href="#门与安全边界" aria-label="锚点">#</a></h2>
+<ul><li>门 <code>KHY_DEP_WAVE_CONTEXT_INJECT</code> default-on，仅 <code>0/false/off/no</code> 关闭；关闭后</li></ul>
+<p>多波循环逐字节退化为今日的「有序但盲跑」执行（无回归）。sibling 门直读 env，<br>  <strong>不进 flagRegistry</strong>（同 <code>KHY_DEP_WAVE_SCHEDULE</code> / <code>KHY_DEP_WAVE_FAULT_STOP</code><br>  先例）。三门各自独立。</p>
+<ul><li><strong>不碰</strong> <code>AgentTool/index.js</code>（72KB god-file 核心，已核实 positional 非 mutating</li></ul>
+<p>消费 <code>params.subtasks</code>，故浅克隆子任务安全流经）、<code>subAgentOrchestrator.js</code><br>  （含那段死代码 <code>executeDependencyAware</code>，本条不唤醒，仅作语义佐证）、<br>  <code>taskDecomposer.js</code> / <code>mergeResults</code>。</p>
+<ul><li>诚实边界：只注入<strong>直接依赖</strong>的产出（不注入祖父）；只在<strong>多波</strong>（真有已解析边）</li></ul>
+<p>时生效；确定性策略产无依赖子任务 → 单波 → 逐字节退化今日行为。fault-stop OFF<br>  时依赖已失败的下游仍会跑：此时仍注入失败依赖的现有文本（用户已 opt-out 跳过，<br>  失败的部分产出仍是上下文），但空文本跳过不注入噪声。dev 机验证止于纯叶单测<br>  （build + inject + truncation + 畸形全覆盖）+ 接线语法/jest 回归，不实跑多智能体<br>  端到端注入（需真 LLM 渠道 + 真子任务产出）。决策逻辑全下沉进纯<br>  <code>buildPredecessorContext</code> / <code>injectPredecessorContext</code> 以求可测，wiring 是薄胶水。</p>
+<h2 id="怎么验证">怎么验证<a class="anchor" href="#怎么验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:dep-wave-schedule          # 纯叶：21 既有 + 16 新（context/inject/truncate/extract）= 37/37
+npm run test:maintainer:safety          # 已并入的 must 守卫集（含本测文件）</code></pre>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<ol><li>要改「前驱结果如何渲染进下游 prompt」：改纯函数 <code>buildPredecessorContext</code></li></ol>
+<p>（标签格式 <code>[前驱结果 t&lt;n&gt;]</code>）与 <code>injectPredecessorContext</code>（分隔规则）。保持纯<br>   函数、保持畸形入参返回 <code>''</code>、绝不抛。</p>
+<ol><li>要改截断预算：改 <code>_MAX_DEP_TEXT</code>（当前 4000，与死代码 <code>subAgentOrchestrator</code></li></ol>
+<p>的 <code>MAX_DEP</code> 对齐）。保持 <code>cut &gt; 0</code> 规则与 <code>length - _MAX_DEP_TEXT</code> 报告数不变，<br>   否则同步更新钉死这两点的 node:test。</p>
+<ol><li>要改「哪些前驱算直接依赖」：那由 <code>planWaves</code> 的 <code>edges</code> 决定（本条只消费），</li></ol>
+<p>见 [OPS-MAN-083] / [OPS-MAN-087]。</p>
+<ol><li>改完跑 <code>npm run test:dep-wave-schedule</code>（必须绿）。</li></ol>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push；真 key/token 不进包、不落盘。</li><li>全 additive；不删既有行为；门关逐字节回退（<code>KHY_DEP_WAVE_CONTEXT_INJECT=off</code></li></ul>
+<p>→ push 原 <code>st</code>、Map 不填 = 今日盲跑行为）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-090] 还原导航器.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-090] 还原导航器</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-092] 跳过与失败在最终报告分列.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-092] 跳过与失败在最终报告分列（收结果的诚实最后一公里）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-091] 波次前驱结果注入.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

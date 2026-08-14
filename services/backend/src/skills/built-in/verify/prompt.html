@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify — Change Verification · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>verify<span class="sep">›</span>Verify — Change Verification</div>
+      <header class="hero reveal"><h1>Verify — Change Verification</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#verify-change-verification">Verify — Change Verification</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="verify-change-verification">Verify — Change Verification<a class="anchor" href="#verify-change-verification" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Verify that recent changes work correctly by running all relevant tests, lint checks, and type checks.</p>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Detect Changes</strong>: Run <code>git diff --name-only</code> and <code>git diff --cached --name-only</code> to identify recently changed files.</li><li><strong>Identify Relevant Checks</strong>: Based on changed files, determine which checks to run:<ul><li><strong>JavaScript/TypeScript</strong>: <code>npm test</code>, <code>npx eslint</code>, <code>npx tsc --noEmit</code></li><li><strong>Python</strong>: <code>pytest</code>, <code>ruff check</code>, <code>mypy</code></li><li><strong>Rust</strong>: <code>cargo test</code>, <code>cargo clippy</code></li><li><strong>Go</strong>: <code>go test ./...</code>, <code>go vet ./...</code></li><li><strong>General</strong>: Any project-specific test scripts in <code>package.json</code> or <code>Makefile</code>.</li></ul></li><li><strong>Run Checks</strong>: Execute each check and capture output.</li><li><strong>Report Results</strong>: Provide a clear summary:<ul><li>Total checks run</li><li>Passed / Failed counts</li><li>For failures: file, line number, and error message</li><li>Suggested fixes for common issues</li></ul></li></ol>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Always check for a project-level test configuration (package.json scripts, Makefile targets, CI config) before assuming default commands.</li><li>Run the most targeted tests first (unit tests for changed files), then broader checks.</li><li>If no test framework is detected, report that and suggest setting one up.</li><li>Do not modify any code during verification — this is a read-only operation.</li><li>If tests fail, provide actionable suggestions but do not auto-fix unless the user asks.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/using-agent-skills/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Using Agent Skills</div></a><a class="next" href="../../../../../../services/backend/src/skills/devops/git-workflow/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Git Workflow Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/verify/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

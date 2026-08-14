@@ -1,0 +1,15 @@
+{
+  "name": "skillify",
+  "description": "Convert a conversation into a reusable skill",
+  "trigger": "/skillify",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "skill",
+    "creation"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

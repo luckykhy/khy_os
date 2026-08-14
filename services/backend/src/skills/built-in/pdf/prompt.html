@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF Analysis · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>pdf<span class="sep">›</span>PDF Analysis</div>
+      <header class="hero reveal"><h1>PDF Analysis</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#pdf-analysis">PDF Analysis</a></li><li class="lvl-2"><a href="#steps">Steps</a></li><li class="lvl-2"><a href="#important">Important</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="pdf-analysis">PDF Analysis<a class="anchor" href="#pdf-analysis" aria-label="锚点">#</a></h1>
+<p>You are helping the user read, analyze, and extract information from a PDF document.</p>
+<h2 id="steps">Steps<a class="anchor" href="#steps" aria-label="锚点">#</a></h2>
+<ol><li>Get the PDF file path from the user's message or ask for it.</li><li>Read the PDF using the Read tool with the file path. The Read tool supports PDF files natively:<ul><li>For small PDFs (≤10 pages): read the entire file</li><li>For large PDFs (&gt;10 pages): use the <code>pages</code> parameter to read specific ranges (e.g., &quot;1-5&quot;, &quot;10-20&quot;)</li><li>Maximum 20 pages per read request</li></ul></li></ol>
+<ol><li>Based on the user's request, perform one or more of:<ul><li><strong>Summarize</strong>: Provide a concise summary of the document's content</li><li><strong>Extract</strong>: Pull out specific information (tables, figures, references, key points)</li><li><strong>Q&amp;A</strong>: Answer specific questions about the content</li><li><strong>Compare</strong>: Compare with other documents or expectations</li><li><strong>Convert</strong>: Help convert content to other formats (markdown, structured data)</li></ul></li></ol>
+<h2 id="important">Important<a class="anchor" href="#important" aria-label="锚点">#</a></h2>
+<ul><li>Always use the Read tool to access PDFs — do not try to use external tools</li><li>For large documents, start with a page range overview before diving into details</li><li>Preserve the structure and formatting of extracted content where possible</li><li>If the PDF contains images or charts, describe them textually</li><li>Report any pages that failed to parse or were unreadable</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/loop/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Loop — Iterative Test-Fix Cycle</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/performance-optimization/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Performance Optimization</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/pdf/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

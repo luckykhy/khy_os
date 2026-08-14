@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-safari · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-safari<span class="sep">›</span>cli-anything-safari</div>
+      <header class="hero reveal"><h1>cli-anything-safari</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-safari">cli-anything-safari</a></li><li class="lvl-2"><a href="#when-to-use-this-cli">When to use this CLI</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-3"><a href="#prerequisites">Prerequisites</a></li><li class="lvl-3"><a href="#install-the-cli">Install the CLI</a></li><li class="lvl-2"><a href="#command-structure">Command Structure</a></li><li class="lvl-2"><a href="#usage-examples">Usage Examples</a></li><li class="lvl-3"><a href="#discover-the-tool-surface">Discover the tool surface</a></li><li class="lvl-3"><a href="#call-a-tool-schema-driven">Call a tool (schema-driven)</a></li><li class="lvl-3"><a href="#navigate-and-read-in-one-round-trip">Navigate and read in one round-trip</a></li><li class="lvl-3"><a href="#form-fill-bulk">Form fill (bulk)</a></li><li class="lvl-3"><a href="#network-monitoring">Network monitoring</a></li><li class="lvl-3"><a href="#storage">Storage</a></li><li class="lvl-3"><a href="#raw-json-escape-hatch">Raw JSON escape hatch</a></li><li class="lvl-3"><a href="#interactive-repl">Interactive REPL</a></li><li class="lvl-2"><a href="#json-output">JSON Output</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#agent-specific-guidance">Agent-Specific Guidance</a></li><li class="lvl-3"><a href="#finding-the-right-tool">Finding the right tool</a></li><li class="lvl-3"><a href="#tool-selection-strategy">Tool selection strategy</a></li><li class="lvl-3"><a href="#refs-expire">Refs Expire</a></li><li class="lvl-3"><a href="#tab-ownership-safety">Tab Ownership Safety</a></li><li class="lvl-3"><a href="#error-handling">Error Handling</a></li><li class="lvl-3"><a href="#url-validation">URL Validation</a></li><li class="lvl-3"><a href="#multi-session-warning">Multi-Session Warning</a></li><li class="lvl-2"><a href="#links">Links</a></li><li class="lvl-2"><a href="#security-considerations">Security Considerations</a></li><li class="lvl-3"><a href="#url-validation-2">URL Validation</a></li><li class="lvl-3"><a href="#tab-isolation">Tab Isolation</a></li><li class="lvl-3"><a href="#profile-isolation">Profile Isolation</a></li><li class="lvl-3"><a href="#javascript-execution">JavaScript Execution</a></li><li class="lvl-3"><a href="#clipboard">Clipboard</a></li><li class="lvl-2"><a href="#regenerating-the-tool-registry">Regenerating the tool registry</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-safari&quot;<br>description: &gt;-<br>  Safari browser automation CLI on macOS via safari-mcp. Controls real Safari<br>  (native, keeps logins) by wrapping the safari-mcp MCP server. Every one of<br>  the 84 MCP tools is exposed 1:1 with schema-accurate arguments — guaranteed<br>  parity, no manual drift.</p>
+<hr>
+<h1 id="cli-anything-safari">cli-anything-safari<a class="anchor" href="#cli-anything-safari" aria-label="锚点">#</a></h1>
+<p>A command-line interface for Safari browser automation on macOS. Wraps the<br><a href="https://github.com/achiya-automation/safari-mcp" target="_blank" rel="noopener"><code>safari-mcp</code></a> Node.js MCP<br>server in a Python Click CLI.</p>
+<p><strong>Feature parity is guaranteed.</strong> Every Click command is generated<br>automatically from <code>safari-mcp</code>'s tool schema (bundled as<br><code>resources/tools.json</code>). All 84 tools are reachable with the exact<br>argument names and types the MCP server expects.</p>
+<h2 id="when-to-use-this-cli">When to use this CLI<a class="anchor" href="#when-to-use-this-cli" aria-label="锚点">#</a></h2>
+<p>Each CLI invocation spawns a fresh subprocess, so there is per-call<br>overhead. If your agent speaks MCP natively (Claude Code, Cursor, Cline,<br>etc.), using <code>safari-mcp</code> directly over MCP stdio will be faster.</p>
+<p><strong>Use this CLI when:</strong></p>
+<ul><li>Your agent framework does <strong>not</strong> speak MCP (Codex CLI, GitHub Copilot</li></ul>
+<p>CLI, custom scripts, older agent frameworks).</p>
+<ul><li>You need to <strong>script browser automation from bash</strong> —</li></ul>
+<p><code>cli-anything-safari --json tool snapshot | jq '...'</code>.</p>
+<ul><li>You run in <strong>CI/CD</strong> and want cron-able, subprocess-friendly output.</li><li>You're <strong>debugging interactively</strong> from Terminal.</li></ul>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<h3 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h3>
+<ol><li><strong>macOS</strong> — Safari MCP is macOS-only.</li><li><strong>Safari</strong> — already installed on macOS.</li><li><strong>Node.js 18+</strong> — <code>brew install node</code> or from https://nodejs.org/</li><li><strong>Python 3.10+</strong></li><li><strong>Enable Apple Events for Safari</strong>: Safari → Develop → Allow JavaScript from Apple Events</li></ol>
+<h3 id="install-the-cli">Install the CLI<a class="anchor" href="#install-the-cli" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd safari/agent-harness
+pip install -e .</code></pre>
+<p>The first <code>tool</code> call will download the <code>safari-mcp</code> npm package (one-time, a few MB).</p>
+<h2 id="command-structure">Command Structure<a class="anchor" href="#command-structure" aria-label="锚点">#</a></h2>
+<p>The CLI has 5 top-level commands:</p>
+<table><thead><tr><th>Command</th><th>Purpose</th></tr></thead><tbody><tr><td><code>tool</code></td><td>Call any of safari-mcp's <strong>84 tools</strong> (dynamic, schema-driven)</td></tr><tr><td><code>tools</code></td><td>Inspect the bundled tool registry (<code>list</code>, <code>describe</code>, <code>count</code>)</td></tr><tr><td><code>raw</code></td><td>Escape hatch — call a tool by full name with raw JSON args</td></tr><tr><td><code>session</code></td><td>In-memory session state (last URL, current tab)</td></tr><tr><td><code>repl</code></td><td>Interactive REPL (default when no subcommand given)</td></tr></tbody></table>
+<h2 id="usage-examples">Usage Examples<a class="anchor" href="#usage-examples" aria-label="锚点">#</a></h2>
+<h3 id="discover-the-tool-surface">Discover the tool surface<a class="anchor" href="#discover-the-tool-surface" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Count of tools (sanity check — must match safari-mcp's registered tools)
+cli-anything-safari tools count
+# → 84
+
+# List every tool
+cli-anything-safari tools list
+cli-anything-safari tools list --filter click   # filter by substring
+
+# Full schema for one tool (JSON or human format)
+cli-anything-safari tools describe safari_scroll
+cli-anything-safari --json tools describe safari_click</code></pre>
+<h3 id="call-a-tool-schema-driven">Call a tool (schema-driven)<a class="anchor" href="#call-a-tool-schema-driven" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Navigate
+cli-anything-safari tool navigate --url https://example.com
+
+# Take a snapshot (preferred over screenshot — structured text with ref IDs)
+cli-anything-safari --json tool snapshot
+
+# Click by ref (refs come from snapshot; they expire on the next snapshot!)
+cli-anything-safari tool click --ref 0_5
+
+# Click by selector or visible text
+cli-anything-safari tool click --selector &quot;#submit&quot;
+cli-anything-safari tool click --text &quot;Log in&quot;
+
+# Fill a field
+cli-anything-safari tool fill --selector &quot;#email&quot; --value &quot;user@example.com&quot;
+
+# Scroll by direction/amount (NOT x/y — note the schema!)
+cli-anything-safari tool scroll --direction down --amount 500
+
+# Drag one element onto another
+cli-anything-safari tool drag \
+    --source-selector &quot;.card&quot; \
+    --target-selector &quot;.trash&quot;
+
+# Screenshot — returns base64 JPEG in stdout. Decode with:
+cli-anything-safari --json tool screenshot --full-page \
+    | python3 -c &quot;import sys,json,base64; \
+        d=json.load(sys.stdin); \
+        open('/tmp/shot.jpg','wb').write(base64.b64decode(d['data']))&quot;
+
+# Save as PDF (this one writes to disk directly)
+cli-anything-safari tool save-pdf --path /tmp/page.pdf
+
+# Evaluate JavaScript (note: parameter is --script, not --code)
+cli-anything-safari tool evaluate --script &quot;document.title&quot;</code></pre>
+<h3 id="navigate-and-read-in-one-round-trip">Navigate and read in one round-trip<a class="anchor" href="#navigate-and-read-in-one-round-trip" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-safari --json tool navigate-and-read --url https://example.com</code></pre>
+<h3 id="form-fill-bulk">Form fill (bulk)<a class="anchor" href="#form-fill-bulk" aria-label="锚点">#</a></h3>
+<p><code>safari_fill_form</code> takes an <strong>array</strong> of <code>{selector, value}</code> objects.<br>Pass it as a JSON string:</p>
+<pre><code class="language-bash">cli-anything-safari tool fill-form --fields '[
+  {&quot;selector&quot;: &quot;#email&quot;,    &quot;value&quot;: &quot;user@example.com&quot;},
+  {&quot;selector&quot;: &quot;#password&quot;, &quot;value&quot;: &quot;hunter2&quot;}
+]'</code></pre>
+<p>Run <code>cli-anything-safari tools describe safari_fill_form</code> to see the<br>exact schema, including any new fields safari-mcp adds upstream.</p>
+<h3 id="network-monitoring">Network monitoring<a class="anchor" href="#network-monitoring" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-safari tool start-network-capture
+cli-anything-safari tool navigate --url https://example.com
+cli-anything-safari --json tool network
+cli-anything-safari tool performance-metrics</code></pre>
+<h3 id="storage">Storage<a class="anchor" href="#storage" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-safari tool get-cookies
+cli-anything-safari tool set-cookie --name session --value abc123 --domain example.com
+cli-anything-safari tool local-storage --key theme
+# export-storage returns JSON to stdout — no --path arg. Pipe to a file:
+cli-anything-safari --json tool export-storage &gt; /tmp/storage.json</code></pre>
+<h3 id="raw-json-escape-hatch">Raw JSON escape hatch<a class="anchor" href="#raw-json-escape-hatch" aria-label="锚点">#</a></h3>
+<p>When you need to pass a complex nested object or want to drive the CLI from<br>a pre-built JSON blob:</p>
+<pre><code class="language-bash">cli-anything-safari raw safari_evaluate \
+    --json-args '{&quot;code&quot;:&quot;[...document.querySelectorAll(\&quot;a\&quot;)].map(a =&gt; a.href)&quot;}'</code></pre>
+<h3 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-safari</code></pre>
+<p>The REPL banner prints the absolute path to this SKILL.md so agents can<br>self-discover capabilities.</p>
+<h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
+<p>All commands support <code>--json</code> as a global flag:</p>
+<pre><code class="language-bash">cli-anything-safari --json tool snapshot
+cli-anything-safari --json tool list-tabs
+cli-anything-safari --json tools list</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains a small amount of in-memory state for REPL display only:</p>
+<ul><li><strong><code>last_url</code></strong> — last URL the CLI navigated to (updated after every</li></ul>
+<p>successful <code>tool navigate</code>, <code>tool navigate-and-read</code>, or<br>  <code>tool new-tab</code>)</p>
+<ul><li><strong><code>current_tab_index</code></strong> — last known active tab index</li></ul>
+<p>There is <strong>no persistent session</strong>, no undo/redo, no document model.<br>Every CLI invocation starts with fresh state. Safari MCP itself is<br>stateless per-call: each <code>tool</code> command spawns a fresh<br><code>npx safari-mcp</code> subprocess, performs the action, and exits. This is a<br>deliberate design choice; see <code>HARNESS.md</code> and <code>TEST.md</code> for the<br>reasoning behind the deviation from the standard undo/redo pattern.</p>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): indented key-value text for <code>dict</code></li></ul>
+<p>results, bullet lists for arrays, plain text otherwise</p>
+<ul><li><strong>Machine-readable</strong> (<code>--json</code> flag): structured JSON for agent</li></ul>
+<p>consumption</p>
+<pre><code class="language-bash"># Human output
+cli-anything-safari tool snapshot
+
+# JSON output for agents
+cli-anything-safari --json tool snapshot
+cli-anything-safari --json tools list
+cli-anything-safari --json tools describe safari_click</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output.</li><li><strong>Check return codes</strong> — 0 for success, non-zero for errors (URL</li></ol>
+<p>validation failures, MCP call failures, invalid JSON args).</p>
+<ol><li><strong>Parse stderr</strong> for error messages; use stdout for data.</li><li><strong>File-handling tools have inconsistent path arg names</strong> — always</li></ol>
+<p>check <code>tools describe &lt;name&gt;</code> first:</p>
+<ul><li><code>tool save-pdf --path /tmp/x.pdf</code></li><li><code>tool upload-file --selector ... --file-path /tmp/x.txt</code> (note: <code>--file-path</code>, not <code>--path</code>)</li><li><code>tool export-storage</code> — no path arg; pipe JSON output to a file</li><li><code>tool import-storage --path /tmp/x.json</code></li><li><code>tool screenshot</code> / <code>screenshot-element</code> — return base64 in</li></ul>
+<p>the JSON response, no path arg (decode it yourself)</p>
+<ol><li><strong>Snapshot before click</strong> — refs from <code>tool snapshot</code> expire on the</li></ol>
+<p>next snapshot. Always snapshot → find ref → click in close<br>   succession.</p>
+<ol><li><strong>Discover tools via <code>tools list</code></strong> — the bundled registry is the</li></ol>
+<p>source of truth for what's available. Do not hard-code tool names<br>   that may change upstream.</p>
+<ol><li><strong>Use <code>tools describe &lt;name&gt;</code></strong> to learn the exact schema (required</li></ol>
+<p>args, enum choices, JSON-typed args) before constructing a call.<br>   <strong>Never assume parameter names from the description</strong> — for example,<br>   <code>safari_evaluate</code> takes <code>--script</code> (not <code>--code</code>) even though the<br>   description says &quot;JavaScript code to execute&quot;.</p>
+<h2 id="agent-specific-guidance">Agent-Specific Guidance<a class="anchor" href="#agent-specific-guidance" aria-label="锚点">#</a></h2>
+<h3 id="finding-the-right-tool">Finding the right tool<a class="anchor" href="#finding-the-right-tool" aria-label="锚点">#</a></h3>
+<p>Use the introspection commands. The CLI is <strong>guaranteed</strong> to reflect the<br>MCP server 1:1:</p>
+<pre><code class="language-bash"># Find all click-related tools
+cli-anything-safari tools list --filter click
+
+# Get the full schema (including every argument with type, description,
+# required/optional, enum choices, defaults)
+cli-anything-safari --json tools describe safari_click</code></pre>
+<h3 id="tool-selection-strategy">Tool selection strategy<a class="anchor" href="#tool-selection-strategy" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>tool snapshot</code></strong> over <code>tool screenshot</code> — structured text with ref IDs</li></ol>
+<p>is orders of magnitude cheaper and carries the refs needed for clicks.</p>
+<ol><li><strong><code>tool click --ref</code></strong> over <code>tool click --selector</code> — refs are stable</li></ol>
+<p>within a single snapshot, selectors may be brittle.</p>
+<ol><li><strong><code>tool navigate-and-read</code></strong> over <code>navigate</code> + <code>read-page</code> — saves one</li></ol>
+<p>round-trip.</p>
+<ol><li><strong><code>tool click-and-read</code></strong> over <code>click</code> + <code>read-page</code> — saves one round-trip.</li><li><strong><code>tool native-click</code></strong> only when regular click fails with 405/403 (WAF</li></ol>
+<p>blocks, G2, Cloudflare) — it physically moves the cursor.</p>
+<h3 id="refs-expire">Refs Expire<a class="anchor" href="#refs-expire" aria-label="锚点">#</a></h3>
+<p>Refs from <code>tool snapshot</code> expire when you take a new snapshot:</p>
+<ul><li>First snapshot: refs <code>0_1</code>, <code>0_2</code>, <code>0_3</code>...</li><li>Second snapshot: refs <code>1_1</code>, <code>1_2</code>, <code>1_3</code>...</li></ul>
+<p>Always snapshot → click in close succession. If in doubt, snapshot again.</p>
+<h3 id="tab-ownership-safety">Tab Ownership Safety<a class="anchor" href="#tab-ownership-safety" aria-label="锚点">#</a></h3>
+<p>Safari MCP tracks tab ownership per session. Tools that modify a tab<br>(navigate, click, fill) are <strong>blocked</strong> on tabs the session did not open.<br>To operate on a specific page, always start with <code>tool new-tab --url ...</code>.</p>
+<h3 id="error-handling">Error Handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h3>
+<p>Common errors:</p>
+<ul><li><code>npx not found</code> → install Node.js 18+</li><li><code>safari-mcp package not found on npm registry</code> → check network</li><li><code>Not macOS</code> → harness is macOS-only</li><li><code>AppleScript denied</code> → enable &quot;Allow JavaScript from Apple Events&quot; in Safari → Develop</li><li><code>Blocked URL scheme: file</code> → URL validation rejected the input (by design)</li></ul>
+<h3 id="url-validation">URL Validation<a class="anchor" href="#url-validation" aria-label="锚点">#</a></h3>
+<p>The CLI validates URLs before passing them to <code>safari_navigate</code>,<br><code>safari_navigate_and_read</code>, and <code>safari_new_tab</code>. Blocked schemes:<br><code>file</code>, <code>javascript</code>, <code>data</code>, <code>vbscript</code>, <code>about</code>, <code>chrome</code>, <code>safari</code>,<br><code>webkit</code>, <code>x-apple</code>, and other browser-internal schemes. The <code>raw</code><br>command <strong>also</strong> enforces this for navigation tools.</p>
+<h3 id="multi-session-warning">Multi-Session Warning<a class="anchor" href="#multi-session-warning" aria-label="锚点">#</a></h3>
+<p>Safari MCP enforces a single active session by killing stale Node.js<br>processes older than 10 seconds. If you run two CLI instances at once,<br>one will kill the other's backend. <strong>There is currently no daemon<br>mode</strong> — for latency-sensitive workflows, drive the CLI from a<br>long-lived Python script that imports<br>`<code>cli_anything.safari.utils.safari_backend.call()</code>` directly to avoid<br>re-spawning the subprocess on every invocation.</p>
+<h2 id="links">Links<a class="anchor" href="#links" aria-label="锚点">#</a></h2>
+<ul><li><a href="https://github.com/achiya-automation/safari-mcp" target="_blank" rel="noopener">Safari MCP GitHub</a></li><li><a href="https://www.npmjs.com/package/safari-mcp" target="_blank" rel="noopener">Safari MCP on npm</a></li><li><a href="https://github.com/HKUDS/CLI-Anything" target="_blank" rel="noopener">CLI-Anything</a></li><li><a href="https://github.com/HKUDS/CLI-Anything/blob/main/cli-anything-plugin/guides/mcp-backend.md" target="_blank" rel="noopener">MCP Backend Pattern Guide</a></li></ul>
+<h2 id="security-considerations">Security Considerations<a class="anchor" href="#security-considerations" aria-label="锚点">#</a></h2>
+<h3 id="url-validation-2">URL Validation<a class="anchor" href="#url-validation-2" aria-label="锚点">#</a></h3>
+<p>All navigation tools (<code>tool navigate</code>, <code>tool navigate-and-read</code>, <code>tool<br>new-tab</code>, and <code>raw safari_navigate*</code>) pass the <code>url</code> argument through<br><code>utils/security.py</code> which blocks dangerous schemes and optionally blocks<br>private networks (set <code>CLI_ANYTHING_SAFARI_BLOCK_PRIVATE=1</code>).</p>
+<h3 id="tab-isolation">Tab Isolation<a class="anchor" href="#tab-isolation" aria-label="锚点">#</a></h3>
+<p>Safari MCP enforces per-session tab ownership upstream — tools cannot<br>operate on tabs the session did not open.</p>
+<h3 id="profile-isolation">Profile Isolation<a class="anchor" href="#profile-isolation" aria-label="锚点">#</a></h3>
+<p>Set <code>SAFARI_PROFILE</code> env var to use a separate Safari profile for<br>automation:</p>
+<pre><code class="language-bash">export SAFARI_PROFILE=&quot;Automation&quot;
+cli-anything-safari tool navigate --url https://example.com</code></pre>
+<p>This keeps cookies/logins/history separate from the user's main browsing.</p>
+<h3 id="javascript-execution">JavaScript Execution<a class="anchor" href="#javascript-execution" aria-label="锚点">#</a></h3>
+<p><code>tool evaluate</code> and <code>tool run-script</code> run arbitrary JavaScript in the page<br>context. Treat untrusted input with the same care as any dynamic code<br>execution path.</p>
+<h3 id="clipboard">Clipboard<a class="anchor" href="#clipboard" aria-label="锚点">#</a></h3>
+<p><code>tool clipboard-read</code> and <code>tool clipboard-write</code> touch the system<br>clipboard. Be careful when running inside a user's active session —<br>overwriting the clipboard mid-task is disruptive.</p>
+<h2 id="regenerating-the-tool-registry">Regenerating the tool registry<a class="anchor" href="#regenerating-the-tool-registry" aria-label="锚点">#</a></h2>
+<p>If you upgrade <code>safari-mcp</code>, regenerate the bundled schema:</p>
+<pre><code class="language-bash">python scripts/extract_tools.py \
+    &quot;$(npm root -g)/safari-mcp/index.js&quot; \
+    cli_anything/safari/resources/tools.json</code></pre>
+<p>The parity test (<code>test_parity.py</code>) pins the expected tool count; update<br>it when the upstream tool list changes.</p>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li><strong>Full documentation:</strong> <code>cli_anything/safari/README.md</code> in the package</li><li><strong>Test coverage:</strong> <code>cli_anything/safari/tests/TEST.md</code> in the package</li><li><strong>Architecture analysis:</strong> <code>safari/agent-harness/SAFARI.md</code></li><li><strong>Methodology:</strong> <code>cli-anything-plugin/HARNESS.md</code></li><li><strong>MCP backend pattern:</strong> <code>cli-anything-plugin/guides/mcp-backend.md</code></li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0 — targets safari-mcp 2.7.8 (84 tools). Bundled tool registry is<br>regenerated via <code>scripts/extract_tools.py</code> when safari-mcp upgrades.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-rms/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-rms</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-sbox/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">s&amp;box CLI</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-safari/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

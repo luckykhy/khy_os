@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⑤ 什么是 Skill（技能） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>⑤ 什么是 Skill（技能）</div>
+      <header class="hero reveal"><h1>⑤ 什么是 Skill（技能）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#⑤-什么是-skill-技能">⑤ 什么是 Skill（技能）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么需要-skill">二、为什么需要 Skill？</a></li><li class="lvl-2"><a href="#三-一个-skill-里通常有什么">三、一个 Skill 里通常有什么？</a></li><li class="lvl-2"><a href="#四-解剖一个真实-skill-khy-release-safety">四、解剖一个真实 Skill：`khy-release-safety`</a></li><li class="lvl-3"><a href="#4-1-登记表-manifest-json-什么时候用-写在这里">4.1 登记表 `manifest.json`——&quot;什么时候用&quot;写在这里</a></li><li class="lvl-3"><a href="#4-2-正文-prompt-md-步骤-红线-写在这里">4.2 正文 `prompt.md`——&quot;步骤 + 红线&quot;写在这里</a></li><li class="lvl-2"><a href="#五-skill-和-普通-prompt-一次性指令-有什么不同">五、Skill 和&quot;普通 prompt（一次性指令）&quot;有什么不同？</a></li><li class="lvl-2"><a href="#六-skill-和前面几个概念的关系">六、Skill 和前面几个概念的关系</a></li><li class="lvl-2"><a href="#七-skill-对新手-小模型特别友好">七、Skill 对新手 / 小模型特别友好</a></li><li class="lvl-2"><a href="#八-常见误区-照着避坑">八、常见误区（照着避坑）</a></li><li class="lvl-2"><a href="#九-动手小实验-思想实验">九、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-a-拆开一个真实-skill-的结构-10-分钟">实验 A：拆开一个真实 Skill 的结构（10 分钟）</a></li><li class="lvl-3"><a href="#实验-b-思想实验-把你自己的一件事写成-skill-不用真写文件">实验 B：思想实验——把你自己的一件事写成 Skill（不用真写文件）</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系-有真实例子可看">十、和 Khy-OS 的关系（有真实例子可看）</a></li><li class="lvl-2"><a href="#十一-五个概念-最终合体">十一、五个概念，最终合体</a></li><li class="lvl-2"><a href="#十二-下一步去哪">十二、下一步去哪</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="⑤-什么是-skill-技能">⑤ 什么是 Skill（技能）<a class="anchor" href="#⑤-什么是-skill-技能" aria-label="锚点">#</a></h1>
+<blockquote><p>这是概念系列的<strong>最后一篇</strong>。建议先按顺序读完前四篇——<a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent 智能体</a>、<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">② Tool Calling 工具调用</a>、<a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ Tool Loop 工具循环</a>、<a href="./[CONCEPT-04]%20什么是MCP-模型上下文协议.html">④ MCP 模型上下文协议</a>——因为 Skill 是<strong>站在它们肩膀上</strong>的东西。前四篇讲&quot;AI 有哪些零件、怎么动起来&quot;；这一篇讲：怎么把&quot;一套固定的做事套路&quot;打包成 AI 能一键调用的<strong>技能</strong>，让它每次都按专家水平做事。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>Skill（技能）= 把&quot;做某一类事情的标准套路（什么时候用 + 分几步 + 用哪些工具 + 哪些红线）&quot;写成一份手册，打包登记好，让 AI 需要时自动照着做。</strong></p>
+<p>一次说不清？换四个生活比喻，从四个角度看同一件事：</p>
+<table><thead><tr><th>比喻</th><th>Skill 对应的是什么</th><th>关键点</th></tr></thead><tbody><tr><td><strong>新员工操作手册</strong></td><td>老员工把&quot;怎么正确干这件事&quot;写下来交给新人</td><td>新人不用聪明，照做就不出错</td></tr><tr><td><strong>菜谱</strong></td><td>&quot;红烧肉&quot;的固定做法：先焯水、再上色、后炖煮</td><td>步骤、火候、放什么料，全写死</td></tr><tr><td><strong>乐谱</strong></td><td>一首曲子的音符和节奏</td><td>谁来弹，都按同一份谱，不会跑调</td></tr><tr><td><strong>手术清单（checklist）</strong></td><td>手术前&quot;核对病人、核对部位、清点纱布&quot;的逐项打勾</td><td><strong>靠打勾而不是靠记忆</strong>，漏一项就停</td></tr><tr><td><strong>装修施工图</strong></td><td>水电走线、承重墙位置都标好</td><td>施工队照图施工，不会砸错墙</td></tr></tbody></table>
+<p>这五个比喻的<strong>共同内核</strong>：把&quot;专家脑子里那套经验&quot;从个人身上取出来，<strong>固化成一份谁都能照做的剧本</strong>。这就是 Skill。</p>
+<blockquote><p>⚠️ 特别记住那条<strong>手术清单</strong>的比喻——它点出了 Skill 最重要的价值：<strong>不是让人变聪明，而是让人靠&quot;逐项核对&quot;而不是&quot;靠脑子记&quot;来避免犯错。</strong> 后面讲&quot;对小模型友好&quot;时，这条会反复回来。</p></blockquote>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 划重点</div><p>Skill 的魔力不是&quot;让 AI 更聪明&quot;，而是把 <span class="popover" tabindex="0"><span class="popover-anchor">专家的套路</span><span class="popover-tip" role="tooltip">什么时候用 + 分几步 + 用哪些工具 + 哪些红线</span></span> 固化成一份剧本，让<strong>再普通的 AI（甚至小模型）照着做也不容易出错</strong>。这跟你的项目纪律是同一个思路：靠核对，不靠记忆。</p></div></aside>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">🤔 Skill 和你随手打的一句&quot;帮我发个版&quot;有什么本质区别？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">📋 一句性指令说完就忘，每次都要重讲、还可能漏步骤；Skill 是<strong>打包登记</strong>好的手册——写清&quot;什么时候该用它、分几步、哪些红线不能碰&quot;，AI 需要时<strong>自动</strong>照着做，稳定可复用。</div></div></div>
+<hr>
+<h2 id="二-为什么需要-skill">二、为什么需要 Skill？<a class="anchor" href="#二-为什么需要-skill" aria-label="锚点">#</a></h2>
+<p>因为有些事情，<strong>每次做法都差不多</strong>，但细节很多、容易漏、顺序不能错。与其每次都靠 AI&quot;临场发挥、现场想&quot;，不如把正确套路<strong>沉淀下来</strong>，保证每次都按最佳方式做。</p>
+<p>举个 Khy-OS 里真实存在的例子——&quot;<strong>安全地发布一个新版本</strong>&quot;这件事，套路是固定的：</p>
+<ol><li>三个渠道的版本号要改成一致（历史上真的出过版本号对不齐的事故）；</li><li>跑纯净性审计，确认没把密钥打进包；</li><li>先干跑（dry-run）再真发；</li><li>发完要装到一个干净环境验证能装上；</li><li>发布前先备份、心里过一遍回退路径。</li></ol>
+<p>这套流程如果每次都靠 AI 现想，<strong>迟早有一天会漏一步</strong>——而发布是<strong>不可逆的外向动作</strong>，漏一步可能就是线上事故。把它写死在一份&quot;发布安全技能&quot;里，AI 每次发布就照着做，<strong>不会漏步、不会走错顺序</strong>。</p>
+<pre class="mermaid">flowchart TB
+  T([触发：用户说'发布新版本']) --&gt; M{匹配到 whenToUse？}
+  M -- 命中 --&gt; S[加载 Skill：发布安全手册]
+  M -- 没命中 --&gt; X[不加载 · 走普通流程]
+  S --&gt; A1[步骤1 版本号三处对齐]
+  A1 --&gt; A2[步骤2 纯净性审计 · 零密钥]
+  A2 --&gt; A3[步骤3 dry-run 干跑]
+  A3 --&gt; A4[步骤4 真发布]
+  A4 --&gt; A5[步骤5 干净环境验证能装]
+  A5 --&gt; D([完成])</pre>
+<p>注意上图开头那个<strong>菱形判断</strong>：Skill 不是&quot;永远都在生效&quot;，而是<strong>先看这次任务匹不匹配它的触发条件</strong>，匹配上了才加载。这一点很关键，第八节&quot;常见误区&quot;会专门讲。</p>
+<hr>
+<h2 id="三-一个-skill-里通常有什么">三、一个 Skill 里通常有什么？<a class="anchor" href="#三-一个-skill-里通常有什么" aria-label="锚点">#</a></h2>
+<p>一份 Skill 手册，通常由这四块组成（对照菜谱来记）：</p>
+<table><thead><tr><th>组成</th><th>作用</th><th>菜谱比喻</th></tr></thead><tbody><tr><td><strong>什么时候用（触发条件 / whenToUse）</strong></td><td>告诉 AI 遇到哪类任务该拿出这份手册</td><td>封面写着&quot;这是<strong>红烧肉</strong>的菜谱&quot;——做红烧肉才翻它</td></tr><tr><td><strong>步骤（流程）</strong></td><td>一步步该做什么、按什么顺序</td><td>先焯水、再上色、后炖煮</td></tr><tr><td><strong>要用的工具</strong></td><td>这套流程会用到哪些<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具调用</a></td><td>需要锅、铲、酱油</td></tr><tr><td><strong>红线 / 注意事项</strong></td><td>绝对不能做的事</td><td>别放糖太多、别烧干、别用铁锅炒酸的</td></tr></tbody></table>
+<p>所以 Skill <strong>不是一种新的&quot;能力零件&quot;</strong>。它没有给 AI 增加任何新的底层本领——它是<strong>把已有能力（<a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具</a> + <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">循环</a>）按最佳顺序编排好的剧本</strong>。</p>
+<p>打个比方：会用刀、会用锅、会开火，这些是<strong>能力</strong>（工具）；&quot;红烧肉先焯水再炖&quot;这套顺序，是<strong>Skill</strong>。Skill 不给你多长一只手，它教你已有的手该按什么顺序动。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 能力零件[&quot;已有能力（Skill 不改这些）&quot;]
+    T1[🛠️ 工具A 读文件]
+    T2[🛠️ 工具B 跑命令]
+    T3[🛠️ 工具C 改文件]
+  end
+  subgraph 剧本[&quot;📖 Skill = 编排顺序&quot;]
+    S1[第1步 用工具A] --&gt; S2[第2步 用工具B] --&gt; S3[第3步 用工具C]
+  end
+  S1 -. 调用 .-&gt; T1
+  S2 -. 调用 .-&gt; T2
+  S3 -. 调用 .-&gt; T3</pre>
+<hr>
+<h2 id="四-解剖一个真实-skill-khy-release-safety">四、解剖一个真实 Skill：<code>khy-release-safety</code><a class="anchor" href="#四-解剖一个真实-skill-khy-release-safety" aria-label="锚点">#</a></h2>
+<p>光讲抽象结构不够，我们<strong>真的拆开一个</strong> Khy-OS 里存在的 Skill 看看。它就在 <a href="../AI协作预设包/skills/khy-release-safety"><code>docs/AI协作预设包/skills/khy-release-safety</code></a> 目录里，由两个文件组成：一个 <code>manifest.json</code>（登记表：告诉系统&quot;我是谁、什么时候该用我&quot;），一个 <code>prompt.md</code>（正文：具体怎么做）。</p>
+<h3 id="4-1-登记表-manifest-json-什么时候用-写在这里">4.1 登记表 <code>manifest.json</code>——&quot;什么时候用&quot;写在这里<a class="anchor" href="#4-1-登记表-manifest-json-什么时候用-写在这里" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;khy-release-safety&quot;,
+  &quot;description&quot;: &quot;Khy-OS 发布前自保清单：pip 是唯一命脉……准备发布 pip 包、或改动可能影响分发时激活，按最小闭环逐项确认。&quot;,
+  &quot;user_invocable&quot;: true,
+  &quot;trigger&quot;: &quot;/khy-release-safety&quot;,
+  &quot;when_to_use&quot;: &quot;准备打包发布 pip、或不确定改动能否安全发布时。&quot;
+}</code></pre>
+<p>看这几个字段——它们正好对应上一节表格里的&quot;<strong>什么时候用</strong>&quot;：</p>
+<ul><li><code>when_to_use</code>：<strong>这就是触发条件</strong>。它明确写着&quot;准备打包发布 pip、或不确定改动能否安全发布时&quot;。AI 遇到发布类任务，才会把这份手册拿出来。</li><li><code>trigger</code> / <code>user_invocable</code>：用户也可以<strong>手动</strong>打 <code>/khy-release-safety</code> 主动把它叫出来。</li><li><code>description</code>：一句话自我介绍，帮系统在众多 Skill 里挑对的那一份。</li></ul>
+<h3 id="4-2-正文-prompt-md-步骤-红线-写在这里">4.2 正文 <code>prompt.md</code>——&quot;步骤 + 红线&quot;写在这里<a class="anchor" href="#4-2-正文-prompt-md-步骤-红线-写在这里" aria-label="锚点">#</a></h3>
+<p>正文把&quot;发布安全&quot;这套专家经验拆成了几块（这里是真实内容的走查）：</p>
+<p><strong>① 铁事实（先记住的前提）</strong></p>
+<ul><li>改了仓库源码，pip 用户拿不到——除非重新打包发版；</li><li>版本号要多处一致，别只改一处。</li></ul>
+<p><strong>② 发布最小闭环（按顺序，红就停）</strong>——这就是<strong>步骤</strong>：</p>
+<ul><li>只读体检无红 → 守卫全绿 → 上帝组件没恶化（单文件 ≤2500 行）。</li></ul>
+<p><strong>③ 绝对不要（红线）</strong>——这就是<strong>注意事项</strong>：</p>
+<ul><li>❌ 守卫红了硬发；</li><li>❌ 用 <code>--no-verify</code> 跳过钩子；</li><li>❌ 没重打包就以为 pip 用户拿到了新改动；</li><li>❌ 只改一处版本号就发。</li></ul>
+<p><strong>④ 发布是不可逆的外向动作</strong>——发布前必须明确向用户确认，得到点头再执行。</p>
+<p>把这份手册画成流程，就是一条清清楚楚的&quot;施工图&quot;：</p>
+<pre class="mermaid">flowchart TB
+  START([触发：要发布 / 改动影响分发]) --&gt; F1[铁事实：源码改了必须重打包]
+  F1 --&gt; F2[铁事实：版本号多处一致]
+  F2 --&gt; C1[只读体检无红]
+  C1 --&gt; C2{守卫全绿？}
+  C2 -- 红 --&gt; STOP1[🛑 先修 · 绝不 --no-verify]
+  C2 -- 绿 --&gt; C3{上帝组件没恶化？}
+  C3 -- 超 2500 行 --&gt; STOP2[🛑 先拆解]
+  C3 -- 没超 --&gt; C4[向用户明确确认要发布]
+  C4 --&gt; OK([确认后才真发])</pre>
+<p>对照这张图，你会发现：<strong>一份好的 Skill，其实就是把一张&quot;红了就停&quot;的施工图，用文字固定下来。</strong> 谁来执行——高手 AI、普通 AI、还是照着做的新人——走的都是同一条路，红灯都会在同一处亮。</p>
+<hr>
+<h2 id="五-skill-和-普通-prompt-一次性指令-有什么不同">五、Skill 和&quot;普通 prompt（一次性指令）&quot;有什么不同？<a class="anchor" href="#五-skill-和-普通-prompt-一次性指令-有什么不同" aria-label="锚点">#</a></h2>
+<p>这是最容易混淆的一点。你可能会想：&quot;我每次发布前，自己敲一段话提醒 AI'记得对齐版本号、别把密钥打进包'，不也一样吗？&quot;</p>
+<p>不一样。区别在于<strong>可复用、被登记、需要时自动加载</strong>：</p>
+<table><thead><tr><th>维度</th><th>普通 prompt（一次性指令）</th><th>Skill（技能）</th></tr></thead><tbody><tr><td><strong>寿命</strong></td><td>说完就过去了，下次要重说</td><td><strong>写一次，永久留存</strong></td></tr><tr><td><strong>谁记得</strong></td><td>靠你（人）每次记得敲</td><td>系统<strong>登记</strong>在册，AI 自己会想起</td></tr><tr><td><strong>怎么触发</strong></td><td>你手动打字</td><td>匹配 <code>whenToUse</code> <strong>自动加载</strong>（也可手动叫）</td></tr><tr><td><strong>一致性</strong></td><td>你今天敲的和上周敲的可能不一样</td><td>每次都是<strong>同一份</strong>，不会走样</td></tr><tr><td><strong>本质</strong></td><td>一句话</td><td>一套<strong>结构化手册</strong>（触发+步骤+工具+红线）</td></tr></tbody></table>
+<p>一句话概括：<strong>普通 prompt 是&quot;这次你帮我记着点&quot;；Skill 是&quot;以后这类事都照这本手册做，不用我再提醒&quot;。</strong></p>
+<pre class="mermaid">flowchart TB
+  subgraph P[&quot;普通 prompt&quot;]
+    P1[你手打提醒] --&gt; P2[AI 这次照做] --&gt; P3[❌ 说完就忘 · 下次重来]
+  end
+  subgraph K[&quot;Skill&quot;]
+    K1[写成手册 · 登记入册] --&gt; K2[whenToUse 匹配] --&gt; K3[✅ 自动加载 · 每次都在]
+    K3 -.下次同类任务.-&gt; K2
+  end</pre>
+<p>所以：<strong>如果一件事你只做一次，用普通 prompt 就够了；如果一件事会反复做、且做错代价高，就该把它沉淀成 Skill。</strong></p>
+<div class="quiz reveal" data-multi="0"><div class="quiz-q">🧠 下面哪种情况最值得沉淀成一个 Skill？</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">A</span><span class="quiz-text">你只想问一次&quot;今天天气怎么样&quot;</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">&quot;发布上线&quot;这种会反复做、步骤多、做错代价高的事</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">一句话就能说清、也只做一次的小事</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">随口让 AI 改一个错别字</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 Skill 的性价比来自&quot;反复用 + 做错代价高&quot;。一次性的小事用普通 prompt 就够了；越是高频、多步、易错的流程，写成带红线的 checklist 越划算——让 AI 靠核对而不是靠记忆。</div></div>
+<hr>
+<h2 id="六-skill-和前面几个概念的关系">六、Skill 和前面几个概念的关系<a class="anchor" href="#六-skill-和前面几个概念的关系" aria-label="锚点">#</a></h2>
+<p>这是理解 Skill 的关键，务必看这张图：</p>
+<pre class="mermaid">flowchart TB
+  SKILL[&quot;📖 Skill 技能&lt;br/&gt;（做某类事的剧本）&quot;]
+  LOOP[&quot;🔁 Tool Loop 工具循环&lt;br/&gt;（想→做→看→判）&quot;]
+  CALL[&quot;🛠️ Tool Calling 工具调用&lt;br/&gt;（用一个具体工具）&quot;]
+  SKILL -- &quot;指导（给循环一份剧本）&quot; --&gt; LOOP
+  LOOP -- &quot;每步发起一次&quot; --&gt; CALL</pre>
+<ul><li><a href="./[CONCEPT-02]%20什么是ToolCalling-工具调用.html">工具调用</a> 是<strong>单个动作</strong>（用一次锅）；</li><li><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">工具循环</a> 是<strong>反复做动作直到完成</strong>（一直炒到熟）；</li><li><strong>Skill 是给这个循环一份&quot;该按什么套路做&quot;的剧本</strong>（先焯水再炖的菜谱）。</li></ul>
+<p>一句话：<strong>Skill 让 Agent 的循环变得&quot;有章法&quot;，而不是每次从零乱试。</strong></p>
+<p>没有 Skill，循环也能转——但它是<strong>摸着石头过河</strong>：试一步、看一步、再想下一步。有了 Skill，循环手里就多了一张<strong>地图</strong>：知道下一步该干嘛、哪里有坑。两者不冲突，Skill 是循环的&quot;导航&quot;，不是循环的替代品。</p>
+<hr>
+<h2 id="七-skill-对新手-小模型特别友好">七、Skill 对新手 / 小模型特别友好<a class="anchor" href="#七-skill-对新手-小模型特别友好" aria-label="锚点">#</a></h2>
+<p>这是 Skill 一个很实在的价值：<strong>降低对&quot;聪明程度&quot;的依赖。</strong></p>
+<p>回到第一节那个<strong>手术清单</strong>的比喻——顶尖外科医生也用清单，不是因为他记不住，而是因为<strong>&quot;靠核对&quot;比&quot;靠记忆&quot;更可靠</strong>。Skill 对 AI 是一样的道理：</p>
+<ul><li>一个<strong>很聪明</strong>的 AI，也许不用手册也能把发布做对；</li><li>但一个<strong>普通</strong>的 AI（或新手工程师）就容易漏步、搞错顺序；</li><li>而<strong>同一个</strong>聪明 AI，在累了、上下文很长、被别的事分心时，<strong>也会漏</strong>。</li></ul>
+<p>有了 Skill，就等于把&quot;专家的经验&quot;写进了手册，<strong>让普通选手也能打出专家水平，让高手在状态不好时也不翻车</strong>。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 没有Skill[&quot;❌ 没有 Skill&quot;]
+    N1[高手 AI] --&gt; NG[✅ 大概率做对]
+    N2[普通 / 小模型] --&gt; NB[⚠️ 容易漏步走错]
+  end
+  subgraph 有Skill[&quot;✅ 有 Skill 兜底&quot;]
+    Y1[高手 AI] --&gt; YG[✅ 稳定做对]
+    Y2[普通 / 小模型] --&gt; YG2[✅ 照手册也能做对]
+  end</pre>
+<p>这正是 Khy-OS 反复强调的核心理念之一：为<strong>弱智用户 / 小模型兜底</strong>——把正确套路固化下来，<strong>谁来都不容易出错</strong>。Skill 是这个理念最直接的载体：它把工程纪律从&quot;需要理解才能遵守&quot;变成&quot;照着打勾就能遵守&quot;。</p>
+<p>把&quot;靠核对、不靠记忆&quot;演成一幕小短剧。同一件&quot;发布上线&quot;的活，看有没有那份手册差在哪：</p>
+<div class="scene"><div class="scene-title">同一份发布手册：谁来都不容易翻车</div><div class="scene-caption reveal">场景一：没有 Skill，全靠 AI 临场发挥。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">小模型</b>发布嘛……版本号我改了 pip 这处，应该够了吧？直接发！</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">😱</span><div class="scene-bubble"><b class="scene-who">线上</b>💥 npm 那处版本号没对齐，双渠道版本分裂，事故了。</div></div><div class="scene-caption reveal">场景二：给它一份&quot;发布安全&quot;Skill——一张&quot;红了就停&quot;的施工图。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">📋</span><div class="scene-bubble"><b class="scene-who">发布手册</b>第①步：三处版本号对齐。第②步：纯净性审计，零密钥。第③步：dry-run 干跑。第④步：真发。第⑤步：干净环境验证能装。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">小模型</b>那我照着 <span class="popover" tabindex="0"><span class="popover-anchor">逐项打勾</span><span class="popover-tip" role="tooltip">靠核对而不是靠记忆——这正是&quot;手术清单&quot;的精髓</span></span>：①版本三处对齐✅ ②审计零密钥✅ ③干跑✅ ④真发✅ ⑤验证能装✅</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🎉</span><div class="scene-bubble"><b class="scene-who">线上</b>稳稳上线，一步没漏。</div></div><div class="scene-caption reveal">就算换成状态最好的高手 AI，走的也是同一条路、红灯亮在同一处——Skill 让普通选手打出专家水平，也让高手在累了、分心时不翻车。</div></div>
+<hr>
+<h2 id="八-常见误区-照着避坑">八、常见误区（照着避坑）<a class="anchor" href="#八-常见误区-照着避坑" aria-label="锚点">#</a></h2>
+<p>新手对 Skill 最容易踩的几个坑，逐条对照：</p>
+<p><strong>误区 1：以为 Skill 是一种&quot;新的底层能力&quot;</strong></p>
+<ul><li>❌ &quot;装了这个 Skill，AI 就多了一项它本来不会的本事。&quot;</li><li>✅ Skill <strong>不增加任何底层能力</strong>，它只是<strong>把已有工具按最佳顺序编排</strong>。会用刀会用锅是能力，&quot;先焯水再炖&quot;是 Skill。</li></ul>
+<p><strong>误区 2：以为 Skill 就是一个函数 / 一段代码</strong></p>
+<ul><li>❌ &quot;Skill 是不是就是调一个 <code>release()</code> 函数？&quot;</li><li>✅ Skill 更像<strong>一份写给 AI 看的手册（自然语言 + 结构）</strong>，它指导 AI 在<a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">循环</a>里<strong>依次发起多个工具调用</strong>并在中间做判断，不是一次调用就返回结果的函数。</li></ul>
+<p><strong>误区 3：以为&quot;写了 Skill 就一定会被用上&quot;</strong></p>
+<ul><li>❌ &quot;我加了个 Skill，AI 怎么没按它做？&quot;</li><li>✅ Skill 要<strong>匹配 <code>whenToUse</code> 才会被加载</strong>（回看第二节流程图开头那个菱形判断）。触发条件没写清、或这次任务对不上，它就<strong>静静躺着不被激活</strong>。写 Skill，<code>whenToUse</code> 和写步骤一样重要。</li></ul>
+<p><strong>误区 4：以为 Skill 和 <a href="./[CONCEPT-04]%20什么是MCP-模型上下文协议.html">MCP</a> 是一回事</strong></p>
+<ul><li>❌ &quot;Skill 和 MCP 不都是给 AI 加东西吗？&quot;</li><li>✅ 两者层次完全不同：<strong>MCP 是&quot;插座&quot;，负责把新工具接进来（扩展 AI 有哪些工具）</strong>；<strong>Skill 是&quot;剧本&quot;，负责教 AI 已有工具该按什么顺序用</strong>。一个管&quot;有什么工具&quot;，一个管&quot;工具怎么用&quot;。</li></ul>
+<p><strong>误区 5：以为 Skill 越多越好、把所有话都塞进去</strong></p>
+<ul><li>❌ &quot;我把发布、排障、上手全写进一个超大 Skill。&quot;</li><li>✅ Skill 应该<strong>一个技能管一类事</strong>（一份菜谱只教一道菜）。混在一起会导致 <code>whenToUse</code> 模糊、该触发时触发不准。看 Khy-OS 的做法：发布、安全改动、排障各自独立成一个 Skill。</li></ul>
+<hr>
+<h2 id="九-动手小实验-思想实验">九、动手小实验 / 思想实验<a class="anchor" href="#九-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>看懂了不算会，<strong>打开真东西摸一摸</strong>才算。下面两个小任务，不需要写代码，只需要&quot;读&quot;：</p>
+<h3 id="实验-a-拆开一个真实-skill-的结构-10-分钟">实验 A：拆开一个真实 Skill 的结构（10 分钟）<a class="anchor" href="#实验-a-拆开一个真实-skill-的结构-10-分钟" aria-label="锚点">#</a></h3>
+<ol><li>打开目录 <a href="../AI协作预设包/skills"><code>docs/AI协作预设包/skills</code></a>，你会看到一排子目录，<strong>每个子目录就是一个 Skill</strong>。</li><li>随便挑一个，比如 <a href="../AI协作预设包/skills/khy-troubleshoot"><code>khy-troubleshoot</code></a>（排障）或 <a href="../AI协作预设包/skills/khy-onboarding"><code>khy-onboarding</code></a>（新人上手），进去看。</li><li>找到里面的 <code>manifest.json</code>，读它的 <code>when_to_use</code> 字段——<strong>这就是这份手册&quot;什么时候被拿出来用&quot;</strong>。</li><li>再读 <code>prompt.md</code>，用第三节那张表去对照：哪几段是<strong>步骤</strong>？哪几段是<strong>红线（绝对不要）</strong>？哪里提到了要用的<strong>工具</strong>？</li></ol>
+<pre class="mermaid">flowchart LR
+  D1[打开 skills 目录] --&gt; D2[挑一个子目录]
+  D2 --&gt; D3[读 manifest.json&lt;br/&gt;找 when_to_use]
+  D3 --&gt; D4[读 prompt.md&lt;br/&gt;标出步骤 / 红线 / 工具]
+  D4 --&gt; D5([✅ 你已看懂一个 Skill 的解剖])</pre>
+<h3 id="实验-b-思想实验-把你自己的一件事写成-skill-不用真写文件">实验 B：思想实验——把你自己的一件事写成 Skill（不用真写文件）<a class="anchor" href="#实验-b-思想实验-把你自己的一件事写成-skill-不用真写文件" aria-label="锚点">#</a></h3>
+<p>在脑子里（或纸上）想：<strong>你反复做、且做错很烦的一件事</strong>是什么？比如&quot;每次改完代码提交前的检查&quot;。试着用四块结构把它写出来：</p>
+<ul><li><strong>什么时候用</strong>：改完代码、准备提交时。</li><li><strong>步骤</strong>：跑测试 → 看有没有红 → 确认没提交多余文件 → 写清楚 commit 说明。</li><li><strong>要用的工具</strong>：跑测试的命令、看 diff 的命令。</li><li><strong>红线</strong>：❌ 测试红了硬提交；❌ 把密钥 / 临时文件提交进去。</li></ul>
+<p>写完你会发现——<strong>你刚刚就设计了一个 Skill</strong>。这正是 Khy-OS 里那些 <code>khy-*</code> 手册诞生的方式：把工程师脑子里的经验，固化成谁都能照做的剧本。</p>
+<hr>
+<h2 id="十-和-khy-os-的关系-有真实例子可看">十、和 Khy-OS 的关系（有真实例子可看）<a class="anchor" href="#十-和-khy-os-的关系-有真实例子可看" aria-label="锚点">#</a></h2>
+<p>Khy-OS 里已经有一批真实的 Skill，就放在这个目录：</p>
+<ul><li><a href="../AI协作预设包/skills"><code>docs/AI协作预设包/skills</code></a></li></ul>
+<p>打开看看，每个子目录就是一个技能，这是当前<strong>真实存在</strong>的一批：</p>
+<table><thead><tr><th>Skill 目录</th><th>管的是哪类事</th><th>对应 Khy-OS 纪律</th></tr></thead><tbody><tr><td><a href="../AI协作预设包/skills/khy-release-safety"><code>khy-release-safety</code></a></td><td>发布安全（本文的解剖对象）</td><td>红线：密钥不入包、版本三处一致</td></tr><tr><td><a href="../AI协作预设包/skills/khy-safe-change"><code>khy-safe-change</code></a></td><td>安全改动（外科手术式改动的套路）</td><td>章程 B3：只动该动的</td></tr><tr><td><a href="../AI协作预设包/skills/khy-honest-closure"><code>khy-honest-closure</code></a></td><td>诚实收尾（没验证过不许说做完）</td><td>章程 B2：没跑过验证不许说&quot;修好了&quot;</td></tr><tr><td><a href="../AI协作预设包/skills/khy-onboarding"><code>khy-onboarding</code></a></td><td>新人上手</td><td>先读 <code>.ai/</code>、看懂再动手</td></tr><tr><td><a href="../AI协作预设包/skills/khy-pick-task"><code>khy-pick-task</code></a></td><td>挑任务 / 定优先级</td><td>目标驱动、先列 plan</td></tr><tr><td><a href="../AI协作预设包/skills/khy-troubleshoot"><code>khy-troubleshoot</code></a></td><td>排障套路</td><td>先定位再动手</td></tr><tr><td><a href="../AI协作预设包/skills/khy-gateway-fix"><code>khy-gateway-fix</code></a></td><td>网关类问题修复</td><td>对症的固定排查路径</td></tr><tr><td><a href="../AI协作预设包/skills/khy-weak-model-guardrails"><code>khy-weak-model-guardrails</code></a></td><td>给弱模型的护栏</td><td>直接对应&quot;为小模型兜底&quot;理念</td></tr></tbody></table>
+<p>这些 Skill 把 Khy-OS 的工程纪律（章程里的 <strong>B1 先想再写 / B2 目标驱动 / B3 外科手术式改动</strong>、以及各条红线）<strong>变成了 AI 可以直接照做的手册</strong>。换句话说：章程是&quot;法律条文&quot;，Skill 是&quot;照着法律办事的操作流程&quot;——前者讲道理，后者能落地。</p>
+<p>特别看一眼 <a href="../AI协作预设包/skills/khy-weak-model-guardrails"><code>khy-weak-model-guardrails</code></a> 这个名字——它几乎是把第七节&quot;为小模型兜底&quot;的理念直接写成了一个 Skill。<strong>这就是 Khy-OS 用 Skill 兑现&quot;让弱智用户 / 小模型也不容易出错&quot;承诺的地方。</strong></p>
+<hr>
+<h2 id="十一-五个概念-最终合体">十一、五个概念，最终合体<a class="anchor" href="#十一-五个概念-最终合体" aria-label="锚点">#</a></h2>
+<p>恭喜你读到这里！把五个概念拼起来，就是一个完整的 AI 编程助手：</p>
+<pre class="mermaid">flowchart TB
+  A[&quot;① Agent 智能体&lt;br/&gt;本体：会自己干活&quot;]
+  B[&quot;② Tool Calling 工具调用&lt;br/&gt;手：用一个工具&quot;]
+  C[&quot;③ Tool Loop 工具循环&lt;br/&gt;节奏：反复直到完成&quot;]
+  D[&quot;④ MCP 协议&lt;br/&gt;插座：标准接入新工具&quot;]
+  E[&quot;⑤ Skill 技能&lt;br/&gt;剧本：按最佳套路做事&quot;]
+  A --&gt; C
+  C --&gt; B
+  D -. 扩展工具来源（有什么工具） .-&gt; B
+  E -. 指导循环怎么走（工具怎么用） .-&gt; C</pre>
+<p>用一个&quot;厨房&quot;的比喻把它们串成一句话：</p>
+<ul><li><strong>Agent</strong> 是<strong>厨师本人</strong>（会自己张罗一桌菜的身体）；</li><li><strong>Tool Calling</strong> 是<strong>厨师的手</strong>（拿起某一件炊具做一个动作）；</li><li><strong>Tool Loop</strong> 是<strong>做菜的节奏</strong>（尝一口、调一下、再尝，直到做好）；</li><li><strong>MCP</strong> 是<strong>厨房的插座</strong>（能不断插上新的电器 / 新工具）；</li><li><strong>Skill</strong> 是<strong>菜谱</strong>（每道菜都按最佳顺序做，不靠临场瞎试）。</li></ul>
+<p>五者缺一不可：有身体没手做不了事，有手没节奏会乱，有节奏没插座扩展不了能力，有能力没菜谱则每次都在碰运气。<strong>Khy-OS 把这五样都配齐、并且特别用 Skill 给&quot;手不稳的厨师&quot;兜底</strong>——这就是你读完这一整个系列该带走的整体图景。</p>
+<hr>
+<h2 id="十二-下一步去哪">十二、下一步去哪<a class="anchor" href="#十二-下一步去哪" aria-label="锚点">#</a></h2>
+<p>你已经掌握了看懂 AI 编程助手所需的<strong>全部核心概念</strong>。接下来建议：</p>
+<ol><li>回到<a href="../index.html">文档站首页</a>，浏览 Khy-OS 的其它文档，现在你能看懂它们在讲什么了。</li><li>想动手实践，去 <a href="../07_OPS_运维"><code>docs/07_OPS_运维</code></a> 找上手 / 安装类文档；发布相关的权威手册就在那里（<code>[OPS-MAN-042] 发布手册</code>）。</li><li>想看这些概念的真实代码实现，去 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a>。</li><li>想真正摸一个 Skill，回到第九节的<strong>实验 A</strong>，打开 <a href="../AI协作预设包/skills"><code>docs/AI协作预设包/skills</code></a> 挑一个读它的手册结构。</li></ol>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 恭喜你读完了核心五篇！</div><p>到这里，Agent、Tool Calling、Tool Loop、MCP、Skill 这五块地基你已经踩实了 🎉。如果你还想往下挖——比如&quot;前面一直说的<strong>大模型</strong>到底是什么？&quot;&quot;它为什么会<strong>忘事</strong>？&quot;&quot;它怎么<strong>记住</strong>我给的资料？&quot;——那就顺着<strong>进阶链</strong>继续：先从 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 什么是 LLM（大语言模型）</a> 开始，一路读到 RAG、机器学习、深度学习。</p></div></aside>
+<p>👉 继续深入：<a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 什么是 LLM（大语言模型）</a>　｜　👈 回到 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-04] 什么是MCP-模型上下文协议.html"><div class="dir">← 上一篇</div><div class="ttl">④ 什么是 MCP（模型上下文协议）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-06] 什么是LLM-大语言模型.html"><div class="dir">下一篇 →</div><div class="ttl">⑥ 什么是 LLM（大语言模型）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-05] 什么是Skill-技能.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

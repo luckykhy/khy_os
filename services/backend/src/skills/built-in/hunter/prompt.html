@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hunter — Bug and Security Issue Hunter · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>hunter<span class="sep">›</span>Hunter — Bug and Security Issue Hunter</div>
+      <header class="hero reveal"><h1>Hunter — Bug and Security Issue Hunter</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#hunter-bug-and-security-issue-hunter">Hunter — Bug and Security Issue Hunter</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="hunter-bug-and-security-issue-hunter">Hunter — Bug and Security Issue Hunter<a class="anchor" href="#hunter-bug-and-security-issue-hunter" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Systematically hunt for bugs, security vulnerabilities, race conditions, memory leaks, and code smells across the codebase.</p>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Scope</strong>: Determine what to scan:<ul><li>If the user specifies files/directories, focus there.</li><li>Otherwise, scan recently changed files (<code>git diff --name-only HEAD~5</code>).</li></ul></li></ol>
+<ol><li><strong>Security Scan</strong>: Look for:<ul><li>SQL injection, XSS, command injection, path traversal</li><li>Hardcoded secrets, API keys, or credentials</li><li>Insecure use of <code>eval()</code>, <code>exec()</code>, <code>child_process</code>, or <code>Function()</code></li><li>Missing authentication or authorization checks</li><li>SSRF vulnerabilities in URL handling</li><li>Insecure deserialization</li></ul></li></ol>
+<ol><li><strong>Bug Scan</strong>: Look for:<ul><li>Null/undefined reference errors</li><li>Off-by-one errors and boundary conditions</li><li>Race conditions in async code (missing <code>await</code>, unhandled promises)</li><li>Resource leaks (unclosed file handles, database connections, event listeners)</li><li>Error handling gaps (empty catch blocks, swallowed errors)</li></ul></li></ol>
+<ol><li><strong>Code Quality Scan</strong>: Look for:<ul><li>Dead code and unused variables/imports</li><li>Overly complex functions (high cyclomatic complexity)</li><li>Copy-pasted code blocks that should be abstracted</li><li>Inconsistent error handling patterns</li><li>Missing input validation</li></ul></li></ol>
+<ol><li><strong>Report</strong>: Present findings sorted by severity (Critical &gt; High &gt; Medium &gt; Low):<ul><li>File and line number</li><li>Issue category</li><li>Description of the problem</li><li>Suggested fix</li></ul></li></ol>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Prioritize security issues over code quality issues.</li><li>Provide concrete evidence (code snippets) for each finding.</li><li>Suggest fixes, not just problems.</li><li>Avoid false positives — only report issues you are confident about.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/git-workflow-and-versioning/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Git Workflow and Versioning</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/idea-refine/examples.html"><div class="dir">下一篇 →</div><div class="ttl">Ideation Session Examples</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/hunter/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

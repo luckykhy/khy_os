@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feature Access 收口与代理/登录解耦修复记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>Feature Access 收口与代理/登录解耦修复记录</div>
+      <header class="hero reveal"><h1>Feature Access 收口与代理/登录解耦修复记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#feature-access-收口与代理-登录解耦修复记录">Feature Access 收口与代理/登录解耦修复记录</a></li><li class="lvl-2"><a href="#1-修复目标">1. 修复目标</a></li><li class="lvl-2"><a href="#2-原始问题">2. 原始问题</a></li><li class="lvl-3"><a href="#2-1-khy-claude-代理启动链路耦合过深">2.1 `khy claude` 代理启动链路耦合过深</a></li><li class="lvl-3"><a href="#2-2-登录判断散落在多层入口">2.2 登录判断散落在多层入口</a></li><li class="lvl-3"><a href="#2-3-feature-key-label-多处手写">2.3 feature key / label 多处手写</a></li><li class="lvl-2"><a href="#3-修复方法">3. 修复方法</a></li><li class="lvl-3"><a href="#3-1-先把-khy-claude-从外层代理-cli-链路中解耦">3.1 先把 `khy claude` 从外层代理 CLI 链路中解耦</a></li><li class="lvl-3"><a href="#3-2-用-authguard-收口登录边界">3.2 用 `authGuard` 收口登录边界</a></li><li class="lvl-3"><a href="#3-3-把调用侧逐步切到-requirefeatureaccess">3.3 把调用侧逐步切到 `requireFeatureAccess(...)`</a></li><li class="lvl-3"><a href="#3-4-引入-featurekeybuilder-把命名逻辑从策略层和调用层拿出来">3.4 引入 `featureKeyBuilder`，把命名逻辑从策略层和调用层拿出来</a></li><li class="lvl-3"><a href="#3-5-再把-family-前缀做成-registry">3.5 再把 family 前缀做成 registry</a></li><li class="lvl-3"><a href="#3-6-标记-内部兼容层-helper">3.6 标记“内部兼容层 helper”</a></li><li class="lvl-2"><a href="#4-最终行为结果">4. 最终行为结果</a></li><li class="lvl-3"><a href="#4-1-登录边界">4.1 登录边界</a></li><li class="lvl-3"><a href="#4-2-khy-claude-可用性">4.2 `khy claude` 可用性</a></li><li class="lvl-3"><a href="#4-3-维护边界">4.3 维护边界</a></li><li class="lvl-2"><a href="#5-涉及文件">5. 涉及文件</a></li><li class="lvl-2"><a href="#6-验证方法">6. 验证方法</a></li><li class="lvl-3"><a href="#python-侧">Python 侧</a></li><li class="lvl-3"><a href="#node-js-侧">Node / JS 侧</a></li><li class="lvl-2"><a href="#7-这次修复采用的方法论">7. 这次修复采用的方法论</a></li><li class="lvl-3"><a href="#7-1-最小落点">7.1 最小落点</a></li><li class="lvl-3"><a href="#7-2-先收口-再抽象">7.2 先收口，再抽象</a></li><li class="lvl-3"><a href="#7-3-兼容层保留-但禁止继续扩散">7.3 兼容层保留，但禁止继续扩散</a></li><li class="lvl-2"><a href="#8-后续维护建议">8. 后续维护建议</a></li><li class="lvl-2"><a href="#9-总结">9. 总结</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-009 | 阶段: 实现 | 原路径: docs/修复记录/特性访问与代理解耦-2026-06-01.md --&gt;</p>
+<h1 id="feature-access-收口与代理-登录解耦修复记录">Feature Access 收口与代理/登录解耦修复记录<a class="anchor" href="#feature-access-收口与代理-登录解耦修复记录" aria-label="锚点">#</a></h1>
+<p><strong>日期</strong>: 2026-06-01<br><strong>范围</strong>: <code>khy claude</code> 代理启动链路、登录边界集中化、feature naming 单一来源</p>
+<hr>
+<h2 id="1-修复目标">1. 修复目标<a class="anchor" href="#1-修复目标" aria-label="锚点">#</a></h2>
+<p>这一轮修复主要解决三类问题：</p>
+<ol><li><code>khy claude</code> 的可用性不应该依赖 KHY 账号登录。</li><li>代理/IDE/管理入口的登录边界不能散落在各个 handler 和 adapter 中。</li><li>feature key 与 fallback label 不能在多层代码里重复手写，否则后续极易漂移。</li></ol>
+<p>对应的工程目标是：</p>
+<ul><li><strong>高内聚</strong>：登录策略集中到 <code>authGuard</code>。</li><li><strong>低耦合</strong>：<code>khy claude</code> 与外层完整 CLI / router / auth 链路解耦。</li><li><strong>最小改动</strong>：不重写整套架构，只沿现有链路切最小落点。</li><li><strong>单一来源</strong>：feature key / family prefix / label 尽量只从一处生成。</li></ul>
+<hr>
+<h2 id="2-原始问题">2. 原始问题<a class="anchor" href="#2-原始问题" aria-label="锚点">#</a></h2>
+<h3 id="2-1-khy-claude-代理启动链路耦合过深">2.1 <code>khy claude</code> 代理启动链路耦合过深<a class="anchor" href="#2-1-khy-claude-代理启动链路耦合过深" aria-label="锚点">#</a></h3>
+<p>原先 <code>khy claude</code> 需要经过外层 <code>khy proxy start</code> 风格的链路，隐含依赖：</p>
+<ul><li>Python launcher</li><li>Node CLI bridge</li><li>router</li><li>proxy handler</li><li>某些未来可能变化的 auth / bootstrap 行为</li></ul>
+<p>这会带来两个风险：</p>
+<ol><li>代理是本地能力，却被外层 CLI 语义绑住。</li><li>一旦 router / handler / 登录逻辑变化，<code>khy claude</code> 可能被无关改动误伤。</li></ol>
+<h3 id="2-2-登录判断散落在多层入口">2.2 登录判断散落在多层入口<a class="anchor" href="#2-2-登录判断散落在多层入口" aria-label="锚点">#</a></h3>
+<p>修复前存在多处直接 <code>requireLogin(...)</code>：</p>
+<ul><li><code>gateway relay</code></li><li><code>webRelayAdapter</code></li><li><code>clipboardRelayAdapter</code></li><li>某些 IDE / 管理入口逻辑</li></ul>
+<p>结果是：</p>
+<ul><li>谁该登录、谁不该登录，没有统一策略面。</li><li>改一个入口很容易漏掉另一个入口。</li><li>行为判断和业务代码耦合在一起，不利于维护。</li></ul>
+<h3 id="2-3-feature-key-label-多处手写">2.3 feature key / label 多处手写<a class="anchor" href="#2-3-feature-key-label-多处手写" aria-label="锚点">#</a></h3>
+<p>例如：</p>
+<ul><li><code>gateway.relay</code></li><li><code>gateway.manage.open</code></li><li><code>proxy.relay.web</code></li><li><code>claude.launch</code></li><li><code>'gateway manage'</code></li><li><code>'web relay'</code></li></ul>
+<p>这些字符串一旦分散在：</p>
+<ul><li><code>authGuard</code></li><li>handler</li><li>adapter</li><li>测试</li></ul>
+<p>就会出现两个长期问题：</p>
+<ol><li>命名漂移：策略层和调用层不一致。</li><li>小模型/新维护者容易在错误位置补字符串，越修越散。</li></ol>
+<hr>
+<h2 id="3-修复方法">3. 修复方法<a class="anchor" href="#3-修复方法" aria-label="锚点">#</a></h2>
+<h3 id="3-1-先把-khy-claude-从外层代理-cli-链路中解耦">3.1 先把 <code>khy claude</code> 从外层代理 CLI 链路中解耦<a class="anchor" href="#3-1-先把-khy-claude-从外层代理-cli-链路中解耦" aria-label="锚点">#</a></h3>
+<p>核心思路不是大改架构，而是让 <code>khy claude</code> 优先直接拉起后端代理守护进程：</p>
+<ul><li>优先直接启动 <code>backend/scripts/proxy-daemon.js</code></li><li>只有直接启动不可用时，才回退到原 CLI 方式</li></ul>
+<p>这样做的好处：</p>
+<ul><li><code>khy claude</code> 不再依赖完整外层命令分发链路。</li><li>反向代理能力回归为“本地 runtime 能力”。</li><li>即使未来 CLI 登录或 router 调整，<code>khy claude</code> 仍更稳定。</li></ul>
+<h3 id="3-2-用-authguard-收口登录边界">3.2 用 <code>authGuard</code> 收口登录边界<a class="anchor" href="#3-2-用-authguard-收口登录边界" aria-label="锚点">#</a></h3>
+<p>新增并推广统一入口：</p>
+<ul><li><code>getFeatureAccess(featureKey, fallbackLabel)</code></li><li><code>requireFeatureAccess(featureKey, fallbackLabel)</code></li></ul>
+<p>策略统一集中在 <code>authGuard</code>：</p>
+<ul><li><code>gateway.relay.*</code> → 需要登录</li><li><code>gateway.manage.*</code> → 不需要登录</li><li><code>proxy.*</code> → 不需要登录</li><li><code>claude|codex|cursor|kiro|trae.*</code> → 不需要登录</li><li>未匹配 feature → 默认需要登录</li></ul>
+<p>这一步的关键不是“让所有入口都免登录”，而是：</p>
+<ul><li><strong>谁应该登录</strong>，由策略层声明。</li><li><strong>业务入口只消费策略</strong>，不再自己做分散判断。</li></ul>
+<h3 id="3-3-把调用侧逐步切到-requirefeatureaccess">3.3 把调用侧逐步切到 <code>requireFeatureAccess(...)</code><a class="anchor" href="#3-3-把调用侧逐步切到-requirefeatureaccess" aria-label="锚点">#</a></h3>
+<p>被收口的入口包括：</p>
+<ul><li><code>gateway relay</code></li><li><code>gateway manage</code></li><li><code>webRelayAdapter</code></li><li><code>clipboardRelayAdapter</code></li><li>IDE 命令入口</li></ul>
+<p>这一步完成后，<code>backend/src</code> 中不再保留散落在业务层的 <code>requireLogin(...)</code> 调用，<code>requireLogin</code> 只保留在 <code>authGuard</code> 内部作为策略执行细节。</p>
+<h3 id="3-4-引入-featurekeybuilder-把命名逻辑从策略层和调用层拿出来">3.4 引入 <code>featureKeyBuilder</code>，把命名逻辑从策略层和调用层拿出来<a class="anchor" href="#3-4-引入-featurekeybuilder-把命名逻辑从策略层和调用层拿出来" aria-label="锚点">#</a></h3>
+<p>新增 <code>backend/src/services/featureKeyBuilder.js</code>，分阶段承接：</p>
+<ol><li>key builder</li><li>label builder</li><li>family prefix builder</li><li>family regex builder</li><li>prefix registry</li></ol>
+<p>它现在承担三类职责：</p>
+<ul><li><strong>命名生成</strong>：如 <code>gateway.manage.status</code>、<code>proxy.relay.web</code></li><li><strong>标签生成</strong>：如 <code>gateway manage</code>、<code>web relay</code></li><li><strong>family 规则生成</strong>：如 <code>gateway/manage</code>、<code>proxy/root</code>、<code>ide/families</code></li></ul>
+<h3 id="3-5-再把-family-前缀做成-registry">3.5 再把 family 前缀做成 registry<a class="anchor" href="#3-5-再把-family-前缀做成-registry" aria-label="锚点">#</a></h3>
+<p>目前 registry 已收口到 builder：</p>
+<ul><li><code>gateway.root / relay / manage</code></li><li><code>proxy.root / relay</code></li><li><code>ide.families</code></li></ul>
+<p>策略层和部分调用层已经改为直接用：</p>
+<ul><li><code>getFeatureFamilyPrefix(...)</code></li><li><code>buildFeatureFamilyPrefixRegex(...)</code></li><li><code>joinFeatureKey(...)</code></li></ul>
+<p>这意味着：</p>
+<ul><li><code>authGuard</code> 基本不再知道具体前缀长什么样。</li><li><code>gateway/proxy</code> 的部分调用侧也不再依赖专用 helper。</li></ul>
+<h3 id="3-6-标记-内部兼容层-helper">3.6 标记“内部兼容层 helper”<a class="anchor" href="#3-6-标记-内部兼容层-helper" aria-label="锚点">#</a></h3>
+<p>为了不一次性强推全量替换，仍保留一组专用 helper，但明确标记为：</p>
+<ul><li><strong>内部兼容层</strong></li><li><strong>后续新代码不应优先依赖</strong></li></ul>
+<p>推荐新代码优先使用：</p>
+<ul><li><code>getFeatureFamilyPrefix(...)</code></li><li><code>buildFeatureFamilyPrefixRegex(...)</code></li><li><code>joinFeatureKey(...)</code></li></ul>
+<p>这样既避免大爆炸式重构，又给后续维护设了清晰边界。</p>
+<hr>
+<h2 id="4-最终行为结果">4. 最终行为结果<a class="anchor" href="#4-最终行为结果" aria-label="锚点">#</a></h2>
+<h3 id="4-1-登录边界">4.1 登录边界<a class="anchor" href="#4-1-登录边界" aria-label="锚点">#</a></h3>
+<p>当前策略结果：</p>
+<ul><li><code>proxy.*</code>：免登录</li><li><code>gateway.manage.*</code>：免登录</li><li><code>claude|codex|cursor|kiro|trae.*</code>：免登录</li><li><code>gateway.relay.*</code>：需要登录</li><li>未知 feature：默认需要登录</li></ul>
+<h3 id="4-2-khy-claude-可用性">4.2 <code>khy claude</code> 可用性<a class="anchor" href="#4-2-khy-claude-可用性" aria-label="锚点">#</a></h3>
+<p>当前行为目标已经达成：</p>
+<ul><li><code>khy claude</code> 可以在<strong>没有 KHY 账号登录</strong>时使用本地代理能力。</li><li>代理优先作为本地守护能力启动，而不是被完整外层 CLI 链路绑死。</li></ul>
+<h3 id="4-3-维护边界">4.3 维护边界<a class="anchor" href="#4-3-维护边界" aria-label="锚点">#</a></h3>
+<p>当前维护原则已经从代码层面落下：</p>
+<ul><li>登录策略改动优先改 <code>authGuard</code></li><li>feature naming 改动优先改 <code>featureKeyBuilder</code></li><li>新代码应优先使用 family API，不继续扩散专用 helper</li></ul>
+<hr>
+<h2 id="5-涉及文件">5. 涉及文件<a class="anchor" href="#5-涉及文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>作用</th></tr></thead><tbody><tr><td><code>khy_platform/cli.py</code></td><td><code>khy claude</code> 启动链路解耦，优先直启代理守护进程</td></tr><tr><td><code>unit_tests/test_claude_proxy_bootstrap.py</code></td><td>Python 侧代理启动链路回归测试</td></tr><tr><td><code>backend/src/services/authGuard.js</code></td><td>登录策略集中化</td></tr><tr><td><code>backend/src/services/featureKeyBuilder.js</code></td><td>feature naming / family prefix / label / registry 单一来源</td></tr><tr><td><code>backend/src/cli/handlers/gateway.js</code></td><td><code>gateway relay</code> / <code>gateway manage</code> 接入统一策略</td></tr><tr><td><code>backend/src/cli/handlers/ide.js</code></td><td>IDE 入口接入统一策略</td></tr><tr><td><code>backend/src/services/gateway/adapters/webRelayAdapter.js</code></td><td>Web relay 接入统一策略</td></tr><tr><td><code>backend/src/services/gateway/adapters/clipboardRelayAdapter.js</code></td><td>Clipboard relay 接入统一策略</td></tr><tr><td><code>backend/tests/security/authGuard.exports.test.js</code></td><td>登录策略与边界测试</td></tr><tr><td><code>backend/tests/security/featureKeyBuilder.test.js</code></td><td>naming / registry / family API 测试</td></tr><tr><td><code>backend/tests/gateway/relayAccessBoundary.test.js</code></td><td>relay 调用侧边界测试</td></tr><tr><td><code>backend/tests/cli/ide.access.test.js</code></td><td>IDE 入口边界测试</td></tr></tbody></table>
+<hr>
+<h2 id="6-验证方法">6. 验证方法<a class="anchor" href="#6-验证方法" aria-label="锚点">#</a></h2>
+<p>本轮修复使用的是<strong>最小验证闭环</strong>，避免把无关模块一起拉进来：</p>
+<h3 id="python-侧">Python 侧<a class="anchor" href="#python-侧" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python3 -m py_compile khy_platform/cli.py
+python3 -m unittest unit_tests.test_claude_proxy_bootstrap unit_tests.test_proxy_endpoint_discovery</code></pre>
+<h3 id="node-js-侧">Node / JS 侧<a class="anchor" href="#node-js-侧" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node --check backend/src/services/authGuard.js
+node --check backend/src/services/featureKeyBuilder.js
+node --check backend/src/cli/handlers/gateway.js
+node --check backend/src/cli/handlers/ide.js
+node --check backend/src/services/gateway/adapters/webRelayAdapter.js
+node --check backend/src/services/gateway/adapters/clipboardRelayAdapter.js
+npm --prefix backend test -- --runTestsByPath \
+  tests/security/featureKeyBuilder.test.js \
+  tests/security/authGuard.exports.test.js \
+  tests/gateway/relayAccessBoundary.test.js \
+  tests/cli/ide.access.test.js</code></pre>
+<p>验证目标不是“把全仓库都跑一遍”，而是：</p>
+<ul><li>改哪一层，就验证哪一层</li><li>先保证边界正确，再考虑扩大验证面</li></ul>
+<hr>
+<h2 id="7-这次修复采用的方法论">7. 这次修复采用的方法论<a class="anchor" href="#7-这次修复采用的方法论" aria-label="锚点">#</a></h2>
+<h3 id="7-1-最小落点">7.1 最小落点<a class="anchor" href="#7-1-最小落点" aria-label="锚点">#</a></h3>
+<p>没有直接重写代理系统、路由系统或权限系统，而是按下面顺序逐层收口：</p>
+<ol><li>先解除最危险耦合点：<code>khy claude</code> → 外层代理 CLI</li><li>再集中登录策略</li><li>再统一调用入口</li><li>再统一命名来源</li><li>最后给兼容 helper 做边界标记</li></ol>
+<h3 id="7-2-先收口-再抽象">7.2 先收口，再抽象<a class="anchor" href="#7-2-先收口-再抽象" aria-label="锚点">#</a></h3>
+<p>不是先设计“大而全的权限框架”，而是先把散点收回来，再一点点抽象成：</p>
+<ul><li><code>requireFeatureAccess(...)</code></li><li><code>featureKeyBuilder</code></li><li><code>FEATURE_PREFIX_REGISTRY</code></li></ul>
+<p>这样可以避免一次性过度设计。</p>
+<h3 id="7-3-兼容层保留-但禁止继续扩散">7.3 兼容层保留，但禁止继续扩散<a class="anchor" href="#7-3-兼容层保留-但禁止继续扩散" aria-label="锚点">#</a></h3>
+<p>本轮没有强制移除所有旧 helper，而是：</p>
+<ul><li>保留兼容包装函数</li><li>在 builder 内明确标注其性质</li><li>把新代码引导到通用 family API</li></ul>
+<p>这比“一口气全部替换”更稳，也更适合脏工作区和持续演进中的代码库。</p>
+<hr>
+<h2 id="8-后续维护建议">8. 后续维护建议<a class="anchor" href="#8-后续维护建议" aria-label="锚点">#</a></h2>
+<p>后续如果还要继续沿这条线优化，建议遵守以下顺序：</p>
+<ol><li>新增 feature 时，先补 <code>featureKeyBuilder</code>，不要先在 handler 里手写字符串。</li><li>新增登录边界时，先补 <code>authGuard</code> 规则，再接入调用侧。</li><li>新代码优先使用：<ul><li><code>getFeatureFamilyPrefix(...)</code></li><li><code>buildFeatureFamilyPrefixRegex(...)</code></li><li><code>joinFeatureKey(...)</code></li></ul></li><li>只有为了兼容旧代码时，才继续使用内部兼容层 helper。</li><li>如果某个兼容 helper 已无外部必要依赖，可以在后续单独清理，但不要和业务改动混在同一轮里做。</li></ol>
+<hr>
+<h2 id="9-总结">9. 总结<a class="anchor" href="#9-总结" aria-label="锚点">#</a></h2>
+<p>这次修复本质上不是“加了一些 helper”，而是把原本分散在：</p>
+<ul><li>Python launcher</li><li>CLI handler</li><li>adapter</li><li>auth boundary</li><li>测试</li></ul>
+<p>中的三种职责重新分层：</p>
+<ul><li><strong>运行时启动职责</strong>：交给最短链路处理</li><li><strong>登录策略职责</strong>：交给 <code>authGuard</code></li><li><strong>命名职责</strong>：交给 <code>featureKeyBuilder</code></li></ul>
+<p>最终效果是：</p>
+<ul><li><code>khy claude</code> 更独立</li><li>代理与 IDE 入口边界更清晰</li><li>feature naming 更集中</li><li>小模型或新维护者更不容易把范围改散</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-008] 修复-桥接状态刷屏.html"><div class="dir">← 上一篇</div><div class="ttl">Bugfix: Claude 中转桥接状态刷屏</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-010] 网关适配器可用性严格化-本地安装与登录-2026-06-10.html"><div class="dir">下一篇 →</div><div class="ttl">网关 IDE 适配器「可用」状态严格化修复（必须本地安装且登录）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-009] 特性访问与代理解耦-2026-06-01.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

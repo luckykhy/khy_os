@@ -1,0 +1,10 @@
+{
+  "name": "create-skill",
+  "description": "Create a new custom skill with manifest, prompt template, and optional handler",
+  "user_invocable": true,
+  "trigger": "/create-skill",
+  "aliases": ["/new-skill"],
+  "category": "system",
+  "tags": ["skill", "create", "custom", "plugin", "extension"],
+  "platforms": ["khy-os"]
+}

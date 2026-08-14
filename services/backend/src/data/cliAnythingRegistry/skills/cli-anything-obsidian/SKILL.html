@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-obsidian · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-obsidian<span class="sep">›</span>cli-anything-obsidian</div>
+      <header class="hero reveal"><h1>cli-anything-obsidian</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-obsidian">cli-anything-obsidian</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#vault">Vault</a></li><li class="lvl-3"><a href="#search">Search</a></li><li class="lvl-3"><a href="#note">Note</a></li><li class="lvl-3"><a href="#command">Command</a></li><li class="lvl-3"><a href="#server">Server</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#list-and-read-notes">List and Read Notes</a></li><li class="lvl-3"><a href="#create-and-update-notes">Create and Update Notes</a></li><li class="lvl-3"><a href="#search-2">Search</a></li><li class="lvl-3"><a href="#commands">Commands</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#api-key-configuration">API Key Configuration</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-obsidian&quot;<br>description: &gt;-<br>  Command-line interface for Obsidian — Knowledge management and note-taking via Obsidian Local REST API. Designed for AI agents and power users who need to manage notes, search the vault, and execute commands without the GUI.</p>
+<hr>
+<h1 id="cli-anything-obsidian">cli-anything-obsidian<a class="anchor" href="#cli-anything-obsidian" aria-label="锚点">#</a></h1>
+<p>Knowledge management and note-taking via the Obsidian Local REST API. Designed for AI agents and power users who need to manage notes, search the vault, and execute commands without the GUI.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-obsidian package:</p>
+<pre><code class="language-bash">pip install cli-anything-obsidian</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>Obsidian must be installed and running with the <a href="https://github.com/coddingtonbear/obsidian-local-rest-api" target="_blank" rel="noopener">Local REST API plugin</a> enabled</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-obsidian --help
+
+# Start interactive REPL mode
+cli-anything-obsidian
+
+# List vault files
+cli-anything-obsidian vault list
+
+# Run with JSON output (for agent consumption)
+cli-anything-obsidian --json vault list</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-obsidian
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="vault">Vault<a class="anchor" href="#vault" aria-label="锚点">#</a></h3>
+<p>Vault file management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List files in the vault or a subdirectory</td></tr><tr><td><code>read</code></td><td>Read the content of a note</td></tr><tr><td><code>create</code></td><td>Create a new note</td></tr><tr><td><code>update</code></td><td>Overwrite an existing note</td></tr><tr><td><code>delete</code></td><td>Delete a note from the vault</td></tr><tr><td><code>append</code></td><td>Append content to an existing note</td></tr></tbody></table>
+<h3 id="search">Search<a class="anchor" href="#search" aria-label="锚点">#</a></h3>
+<p>Vault search commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>query</code></td><td>Search using Obsidian query syntax</td></tr><tr><td><code>simple</code></td><td>Plain text search across the vault</td></tr></tbody></table>
+<h3 id="note">Note<a class="anchor" href="#note" aria-label="锚点">#</a></h3>
+<p>Active note commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>active</code></td><td>Get the currently active note in Obsidian</td></tr><tr><td><code>open</code></td><td>Open a note in the Obsidian editor</td></tr></tbody></table>
+<h3 id="command">Command<a class="anchor" href="#command" aria-label="锚点">#</a></h3>
+<p>Obsidian command palette commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List all available Obsidian commands</td></tr><tr><td><code>execute</code></td><td>Execute a command by its ID</td></tr></tbody></table>
+<h3 id="server">Server<a class="anchor" href="#server" aria-label="锚点">#</a></h3>
+<p>Server status and info commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Check if the Obsidian Local REST API is running</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session state commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show current session state</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="list-and-read-notes">List and Read Notes<a class="anchor" href="#list-and-read-notes" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List all vault files
+cli-anything-obsidian vault list
+
+# List files in a subdirectory
+cli-anything-obsidian vault list &quot;Daily Notes&quot;
+
+# Read a note
+cli-anything-obsidian vault read &quot;Projects/my-project.md&quot;</code></pre>
+<h3 id="create-and-update-notes">Create and Update Notes<a class="anchor" href="#create-and-update-notes" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Create a new note
+cli-anything-obsidian vault create &quot;Projects/new-project.md&quot; --content &quot;# New Project&quot;
+
+# Update (overwrite) a note
+cli-anything-obsidian vault update &quot;Projects/new-project.md&quot; --content &quot;# Updated Content&quot;
+
+# Append to a note
+cli-anything-obsidian vault append &quot;Projects/new-project.md&quot; --content &quot;\n## New Section&quot;</code></pre>
+<h3 id="search-2">Search<a class="anchor" href="#search-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Plain text search (GET /search/simple/)
+cli-anything-obsidian search simple &quot;meeting notes&quot;
+
+# Dataview DQL query — default --type dql, sent as
+# application/vnd.olrapi.dataview.dql+txt
+cli-anything-obsidian search query 'TABLE file.link FROM &quot;Projects&quot;'
+
+# JsonLogic query — application/vnd.olrapi.jsonlogic+json
+cli-anything-obsidian search query --type jsonlogic \
+  '{&quot;==&quot;:[{&quot;var&quot;:&quot;frontmatter.status&quot;},&quot;active&quot;]}'</code></pre>
+<h3 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List available commands
+cli-anything-obsidian command list
+
+# Execute a command by ID
+cli-anything-obsidian command execute &quot;editor:toggle-bold&quot;</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session for exploratory use.</p>
+<pre><code class="language-bash">cli-anything-obsidian
+# Enter commands interactively
+# Use 'help' to see available commands</code></pre>
+<h3 id="api-key-configuration">API Key Configuration<a class="anchor" href="#api-key-configuration" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Via flag
+cli-anything-obsidian --api-key YOUR_KEY vault list
+
+# Via environment variable (recommended for agents)
+export OBSIDIAN_API_KEY=YOUR_KEY
+cli-anything-obsidian vault list</code></pre>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains lightweight session state:</p>
+<ul><li><strong>API key</strong>: Configurable via <code>--api-key</code> or <code>OBSIDIAN_API_KEY</code> environment variable</li><li><strong>Host URL</strong>: Defaults to <code>https://localhost:27124</code>; configurable via <code>--host</code></li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-obsidian vault list
+
+# JSON output for agents
+cli-anything-obsidian --json vault list</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Set <code>OBSIDIAN_API_KEY</code></strong> environment variable to avoid passing <code>--api-key</code> on every call</li><li><strong>Verify Obsidian is running</strong> with <code>server status</code> before other commands</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.1.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-obs-studio/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-obsstudio</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-ollama/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-ollama</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-obsidian/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

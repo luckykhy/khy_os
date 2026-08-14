@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESIGN-ARCH-061 更新包学习：取其精华弃其糟粕（upstream archive study） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH-061 更新包学习：取其精华弃其糟粕（upstream archive study）</div>
+      <header class="hero reveal"><h1>DESIGN-ARCH-061 更新包学习：取其精华弃其糟粕（upstream archive study）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-061-更新包学习-取其精华弃其糟粕-upstream-archive-study">DESIGN-ARCH-061 更新包学习：取其精华弃其糟粕（upstream archive study）</a></li><li class="lvl-2"><a href="#一-动机与非目标">一、动机与非目标</a></li><li class="lvl-3"><a href="#动机">动机</a></li><li class="lvl-3"><a href="#非目标">非目标</a></li><li class="lvl-2"><a href="#二-架构-四纯叶子-一服务-facade-一工具壳">二、架构：四纯叶子 + 一服务 facade + 一工具壳</a></li><li class="lvl-2"><a href="#三-取其精华弃其糟粕-分类决策">三、取其精华弃其糟粕：分类决策</a></li><li class="lvl-2"><a href="#三-补-移植计划-能改-不能改-先改-后改">三·补 移植计划：能改/不能改 + 先改/后改</a></li><li class="lvl-2"><a href="#四-编排与诚实边界">四、编排与诚实边界</a></li><li class="lvl-2"><a href="#五-门控与回退">五、门控与回退</a></li><li class="lvl-2"><a href="#六-测试与守卫">六、测试与守卫</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-061-更新包学习-取其精华弃其糟粕-upstream-archive-study">DESIGN-ARCH-061 更新包学习：取其精华弃其糟粕（upstream archive study）<a class="anchor" href="#design-arch-061-更新包学习-取其精华弃其糟粕-upstream-archive-study" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>核心判断</strong>：Khy 开发过程中参考了大量开源项目。这些项目更新时，把新版压缩包交给 Khyos，<br>应当能<strong>只读、有界</strong>地甄别其中的<strong>精华</strong>（源码 / CHANGELOG / 测试 / 理据文档）与<strong>糟粕</strong><br>（vendored 依赖 / 构建产物 / 压缩混淆 / 二进制 / lockfile / 密钥），产出一份<strong>策展阅读清单</strong>，<br>而<strong>绝不自动整包合并</strong>。自动合并在此场景是真危险的：许可证冲突、语义冲突、把糟粕一并引入。<br>因此本能力刻意止步于<strong>忠告</strong>——列清单、给下一步，由模型/人据此选择性移植。</p>
+<p>本设计遵循 [DESIGN-ARCH-059]（能力即代码）与 [DESIGN-ARCH-013]（弱模型兼容）：把一个<br>「弱模型缺此能力时只会手动解压、cat 一堆随机文件 flail、极易走死循环」的缺口，收敛为<strong>一个有界工具</strong>。</p>
+<p><strong>扩充（goal 2026-07-06）</strong>：除「取其精华弃其糟粕」外，还要点明——<strong>哪些能改代码、哪些不能改</strong><br>（移植安全性：许可证/法律文件与糟粕<strong>绝不移植</strong>），以及<strong>哪些先改、哪些后改</strong>（移植顺序：先读理解 →<br>先改接口/契约/配置 → 再改实现 → 最后改测试）。这两维仍是<strong>纯逻辑忠告</strong>，不改变「绝不自动合并」红线。</p></blockquote>
+<hr>
+<h2 id="一-动机与非目标">一、动机与非目标<a class="anchor" href="#一-动机与非目标" aria-label="锚点">#</a></h2>
+<h3 id="动机">动机<a class="anchor" href="#动机" aria-label="锚点">#</a></h3>
+<ul><li><strong>provenance 复用</strong>：Khy 引用过的开源项目（DeepSeek-TUI、Hermes、OpenCode、Claude Code……）散记在</li></ul>
+<p><code>docs/07_OPS_运维/[OPS-MAN-016]</code>、<code>docs/08_MGMT_项目管理/[MGMT-RPT-009]</code>、<code>CC_ALIGNMENT_AUDIT.md</code><br>  等<strong>散文档</strong>里，此前无任何机器可读的「更新包 → 该读什么」路径。</p>
+<ul><li><strong>有界替代手动解压</strong>：弱模型缺能力时即兴 <code>unzip</code> + 遍历 <code>cat</code>，无上限、无甄别、易失败。本工具零解压</li></ul>
+<p>（无 zip-slip）、条目有上限、精华清单有 Top-N。</p>
+<ul><li><strong>诚实止于忠告</strong>：不自动改 Khy 源码。取舍留给掌握许可证/语义上下文的模型或人。</li></ul>
+<h3 id="非目标">非目标<a class="anchor" href="#非目标" aria-label="锚点">#</a></h3>
+<ul><li><strong>不自动合并</strong>：绝不把上游代码 patch 进仓库。这是刻意红线，不是 v1 缺口。</li><li><strong>不做语义 diff</strong>：基线对比按「相对路径 + 大小」启发式判新增/改动/删除；同大小不同内容会漏判——诚实标注、</li></ul>
+<p>不夸大为「内容级 diff」。</p>
+<ul><li><strong>不解压</strong>：只借 <code>archiveInspectService</code> 列 manifest；落盘解压另有 <code>unpackTool</code>，不在本能力内。</li></ul>
+<hr>
+<h2 id="二-架构-四纯叶子-一服务-facade-一工具壳">二、架构：四纯叶子 + 一服务 facade + 一工具壳<a class="anchor" href="#二-架构-四纯叶子-一服务-facade-一工具壳" aria-label="锚点">#</a></h2>
+<p>复用既有基础设施，不新建并行注册表：</p>
+<table><thead><tr><th>#</th><th>组成</th><th>位置</th><th>纯叶子?</th><th>门控</th></tr></thead><tbody><tr><td>1</td><td>分类/打分/识别引擎</td><td><code>services/backend/src/services/upstreamStudyCatalog.js</code></td><td>是（零 IO）</td><td><code>KHY_UPSTREAM_STUDY_CATALOG</code></td></tr><tr><td>2</td><td>ASCII 报告渲染</td><td><code>services/backend/src/services/upstreamStudyReport.js</code></td><td>是（零 IO）</td><td><code>KHY_UPSTREAM_STUDY_REPORT</code></td></tr><tr><td>3</td><td>移植计划决策（能改/不能改 + 先改/后改）</td><td><code>services/backend/src/services/upstreamStudyPlan.js</code></td><td>是（零 IO）</td><td><code>KHY_UPSTREAM_STUDY_PLAN</code></td></tr><tr><td>4</td><td>编排 facade（列举→分类→基线 diff→Top-N→移植计划→报告）</td><td><code>services/backend/src/services/upstreamStudy/index.js</code></td><td>否（做 fs / 调 inspect）</td><td>—（受父门控）</td></tr><tr><td>5</td><td>工具壳（自动发现 + 门关哑导出）</td><td><code>services/backend/src/tools/UpstreamStudyTool/index.js</code></td><td>否</td><td><code>KHY_UPSTREAM_STUDY_TOOL</code></td></tr></tbody></table>
+<p>数值调优（<code>flagRegistry.resolveNumeric</code>）：<code>KHY_UPSTREAM_STUDY_TOP</code>（默认 25）、<br><code>KHY_UPSTREAM_STUDY_MAX_FILE_KB</code>（默认 256，超此判「过大不宜直读」）、<br><code>KHY_UPSTREAM_STUDY_BLOB_MB</code>（默认 5，超此的源码扩展名归 oversized 糟粕）。</p>
+<blockquote><p>只读复用：manifest 列举走 <code>archiveInspectService.inspectArchive</code>（零解压、zip-slip-free、条目上限<br><code>KHY_ARCHIVE_MAX_LIST_ENTRIES</code> 默认 2000）；基线遍历走有界栈式 walk（复用 <code>_walkBudget</code> 的 wall-clock<br>预算 + <code>MAX_BASELINE_ENTRIES</code> 上限，<code>lstat</code> 不跟 symlink），与 DiskAnalyze 同构。</p></blockquote>
+<hr>
+<h2 id="三-取其精华弃其糟粕-分类决策">三、取其精华弃其糟粕：分类决策<a class="anchor" href="#三-取其精华弃其糟粕-分类决策" aria-label="锚点">#</a></h2>
+<p><code>classifyEntry(entry, env)</code> → <code>{verdict:'essence'|'dross'|'neutral', bucket, reason, tooLarge?}</code>。<br><strong>先判糟粕，再判精华</strong>（node_modules 里的 <code>.js</code> 仍是 vendored，不因扩展名翻案）：</p>
+<ul><li><strong>糟粕桶</strong>：<code>os-junk</code>（.DS_Store/Thumbs.db）→ <code>secret</code>（.env/.pem/.key/id_rsa）→ <code>vendored</code></li></ul>
+<p>（node_modules/vendor/dist/build/target/<strong>pycache</strong>/.next/coverage）→ <code>lockfile</code><br>  （package-lock.json/yarn.lock/Cargo.lock/go.sum）→ <code>minified</code>（.min.js/.bundle.js/.map）→<br>  <code>binary</code>（图像/音视频/字体/归档/.wasm/.node）→ <code>oversized</code>（源码扩展名但超 BLOB 阈值）。</p>
+<ul><li><strong>精华桶</strong>（<code>BUCKET_BASE</code> 打分权重）：<code>changelog</code>(100) &gt; <code>source</code>(60) &gt; <code>test</code>(50) &gt; <code>doc</code>(40) &gt; <code>config</code>(30)。</li></ul>
+<p><code>scoreEssence(entry, diff, env)</code>：基础桶权重叠加 diff 信号——<code>+40</code> 改动、<code>+25</code> 新增、<code>−30</code> 过大、<br><code>±5</code> 目录深度微调。清单按分降序、同分按路径排，切 Top-N。<strong>门关任一 → 恒 neutral / 0 分</strong>（逐字节回退）。</p>
+<p><code>recognizeProject(entries, archiveName, env)</code>：把 <code>KNOWN_REFERENCES</code>（deepseek-tui / hermes / opencode /<br>claude-code，各带 marker 与指向档）与包名+前 400 条路径比对，命中即点名并指向对应 provenance 文档。</p>
+<hr>
+<h2 id="三-补-移植计划-能改-不能改-先改-后改">三·补 移植计划：能改/不能改 + 先改/后改<a class="anchor" href="#三-补-移植计划-能改-不能改-先改-后改" aria-label="锚点">#</a></h2>
+<p>纯叶子 <code>upstreamStudyPlan.js</code>（门控 <code>KHY_UPSTREAM_STUDY_PLAN</code>，parent=<code>KHY_UPSTREAM_STUDY_TOOL</code>）在精华/糟粕<br>之上再叠<strong>两维决策</strong>，只看已列到的 <code>{path, bucket}</code> 元数据，零 IO、绝不抛：</p>
+<p><strong>① <code>portabilityOf(item, env)</code> → 能改/不能改</strong>（移植安全性）：</p>
+<ul><li><code>forbidden</code>（<strong>绝不移植</strong>）：许可证/法律文件（<code>LICENSE</code>/<code>COPYING</code>/<code>NOTICE</code>/<code>AUTHORS</code>/<code>PATENTS</code>…——照搬会把</li></ul>
+<p>上游许可与著作权引入 Khy），以及一切非精华桶（糟粕：vendored / 生成物 / 二进制 / 密钥 / lockfile）。</p>
+<ul><li><code>caution</code>（<strong>谨慎，不能整段覆盖</strong>）：<code>config</code>（构建/依赖清单，只手动核对差异）、<code>changelog</code>（读它理解改动，</li></ul>
+<p>本身不是要搬进 Khy 的代码）。</p>
+<ul><li><code>safe</code>（<strong>可择优移植</strong>）：<code>source</code> / <code>test</code> / 一般 <code>doc</code>（仍须逐处核对，非整段搬运）。</li></ul>
+<p><strong>② <code>portWaveOf(item, env)</code> → 先改/后改</strong>（移植顺序波次，单一真源 <code>WAVES</code> 冻结四波）：</p>
+<ul><li><strong>0 先读·理解改动（不移植代码）</strong>：<code>changelog</code> 桶，或名含 <code>migration</code>/<code>upgrade</code>/<code>breaking</code>/<code>readme</code> 的文档。</li><li><strong>1 先改·接口/契约/配置（实现依赖它们）</strong>：<code>config</code>、<code>.d.ts</code>、<code>.proto</code>/<code>.graphql</code>/<code>.thrift</code>/<code>.avsc</code>、</li></ul>
+<p>或 basename 含 <code>types</code>/<code>schema</code>/<code>interface</code>/<code>api</code>/<code>dto</code>/<code>model</code>/<code>constants</code> 的源码。</p>
+<ul><li><strong>2 再改·具体实现</strong>：普通源码 / 其余一般文档。</li><li><strong>3 最后·测试（移植完用它验证）</strong>：<code>test</code> 桶。</li></ul>
+<p><code>buildStudyPlan(items, env)</code> 把 Top-N 精华排成计划：能改的按波次分组（空波过滤）、不能改的进 <code>forbidden</code> 桶，<br>附 <code>note:「先后仅为建议顺序；能改/不能改仅为移植安全性提示——最终由你逐处核对，绝不整包合并。」</code><br><strong>门关任一 → <code>portabilityOf</code> 返空档、<code>portWaveOf</code>/<code>buildStudyPlan</code> 返 null</strong>（逐字节回退：facade 不产 <code>plan</code><br>字段、精华项不带 <code>portability</code>/<code>wave</code>、报告不渲染「移植计划」段）。</p>
+<blockquote><p>诚实：这仍是<strong>忠告层</strong>——<code>forbidden</code> 是安全网（例如 <code>LICENSE.md</code> 被归成 doc 精华时仍拦下），但挡不住有人<br>无视它照抄；真正的移植取舍由掌握许可证/语义上下文的人或模型逐处核对。裸 <code>LICENSE</code>（无扩展名）在 catalog<br>早判 <code>neutral</code>、根本不入精华清单，故不会作为「可移植项」出现，无需再进 <code>forbidden</code>。</p></blockquote>
+<hr>
+<h2 id="四-编排与诚实边界">四、编排与诚实边界<a class="anchor" href="#四-编排与诚实边界" aria-label="锚点">#</a></h2>
+<p><code>study(opts, deps)</code>（DI：<code>inspect</code> / <code>fsImpl</code> / <code>now</code> 全可注入，便于无依赖单测）：</p>
+<ol><li>校验 archive → <code>inspect</code> 只读列举（失败即 <code>success:false</code> 诚实上报，绝不 throw）。</li><li><code>_commonTopDir</code> 剥公共顶层目录（<code>Proj-main/</code>），使基线相对路径可比对。</li><li>可选 <code>_walkBaseline</code> 把旧版目录读成 <code>Map(rel→size)</code>，逐条算 <code>isNew</code>/<code>isChanged</code>；上游没有的旧文件计入</li></ol>
+<p><code>removed</code>（≤200 条）。</p>
+<ol><li>每条分类 → 糟粕桶计数 + 精华打分排序 Top-N → 渲染报告。</li></ol>
+<p><strong>全链 fail-soft</strong>：任何异常都收敛为 <code>{success:false, error}</code>，不炸整次抓取。诚实取舍已在上文非目标列明：<br>不自动合并、不做内容级 diff、同大小不同内容会漏判。工具返回体固定附 <code>hint:「不要整包合并」</code>。</p>
+<hr>
+<h2 id="五-门控与回退">五、门控与回退<a class="anchor" href="#五-门控与回退" aria-label="锚点">#</a></h2>
+<p>五门全 <code>default-on / off:'CANON'</code>，catalog/report/plan 均以 <code>KHY_UPSTREAM_STUDY_TOOL</code> 为 parent（父关 → 子恒关）。<br><code>KHY_UPSTREAM_STUDY_TOOL=0</code> 时工具壳导出 benign 非工具对象，<code>tools/index.js</code> 自动发现整体跳过——<br><strong>工具不注册，等价于今日无此工具</strong>（活验：gate-on 148 工具含 UpstreamStudy；gate-off 147 且消失）。</p>
+<h2 id="六-测试与守卫">六、测试与守卫<a class="anchor" href="#六-测试与守卫" aria-label="锚点">#</a></h2>
+<ul><li><code>upstreamStudyCatalog.test.js</code>（11）：精华/糟粕桶、糟粕优先、tooLarge、打分序、recognizeProject、阈值、常量冻结、门关透传、坏输入不抛。</li><li><code>upstreamStudyReport.test.js</code>（6）：盒式报告关键片段、确定性、门关 legacy 单行、空 diff/空精华、坏输入不抛、<code>_humanBytes</code> 边界。</li><li><code>upstreamStudyPlan.test.js</code>（15）：portability 三判（forbidden/caution/safe）、portWave 四波、buildStudyPlan 分组+forbidden+空波过滤、门关逐字节回退、坏输入不抛、<code>WAVES</code> 冻结。</li><li><code>upstreamStudy.test.js</code>（13）：DI 假 inspect + mock fs 基线，分类计数、识别、Top-N、diff 新增/改动/删除、门关全 neutral、plan 波次分组+精华项带 portability+报告含移植计划段、门关 PLAN 逐字节回退、inspect 失败/抛出、<code>_commonTopDir</code>/<code>_relOf</code>、工具只读、门关哑导出。</li><li><code>flagRegistry.test.js</code> 扩：7 新 flag 的 default-on / parent（含 <code>KHY_UPSTREAM_STUDY_PLAN</code>）/ numeric。</li><li>三守卫（node --check、leaf-contract、change-safety）+ flag-registry 净（三叶子无 leaf-io 告警）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-060] khy 功能接线与编排总图.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-060] khy 功能接线与编排总图</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-061] 更新包学习-取其精华弃其糟粕.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

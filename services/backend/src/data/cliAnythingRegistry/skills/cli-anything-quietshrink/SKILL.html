@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>quietshrink — Agent Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-quietshrink<span class="sep">›</span>quietshrink — Agent Skill</div>
+      <header class="hero reveal"><h1>quietshrink — Agent Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#quietshrink-agent-skill">quietshrink — Agent Skill</a></li><li class="lvl-2"><a href="#when-to-use-it">When to use it</a></li><li class="lvl-2"><a href="#commands">Commands</a></li><li class="lvl-2"><a href="#quality-presets">Quality presets</a></li><li class="lvl-2"><a href="#json-output-schema">JSON output schema</a></li><li class="lvl-2"><a href="#decision-flow-for-agents">Decision flow for agents</a></li><li class="lvl-2"><a href="#errors-and-recovery">Errors and recovery</a></li><li class="lvl-2"><a href="#source">Source</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-quietshrink&quot;<br>description: Compress macOS screen recordings with zero CPU stress using Apple Silicon's hardware HEVC encoder. Typically reduces file size 70-90% while staying visually lossless. Computer stays silent during encoding.</p>
+<hr>
+<h1 id="quietshrink-agent-skill">quietshrink — Agent Skill<a class="anchor" href="#quietshrink-agent-skill" aria-label="锚点">#</a></h1>
+<p>You have access to <code>cli-anything-quietshrink</code>, a CLI for compressing video files on macOS Apple Silicon. It uses the Media Engine (hardware HEVC encoder), not the CPU, so encoding is fast and silent.</p>
+<h2 id="when-to-use-it">When to use it<a class="anchor" href="#when-to-use-it" aria-label="锚点">#</a></h2>
+<ul><li>User wants to compress a screen recording, screencast, or any .mov/.mp4 file</li><li>File is too large to share (chat, email, GitHub)</li><li>Need smaller files but cannot tolerate visible quality loss</li><li>Apple Silicon Mac (M1/M2/M3/M4) — best results</li></ul>
+<p><strong>Don't</strong> use this on non-screen content (camera footage, vlogs) — savings will be much smaller because there are no duplicate frames to drop.</p>
+<h2 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Compress with default transparent quality
+cli-anything-quietshrink compress &lt;input&gt; [output]
+
+# Compress with specific preset
+cli-anything-quietshrink compress -q tiny &lt;input&gt;     # smallest
+cli-anything-quietshrink compress -q transparent &lt;input&gt;  # default, visually lossless
+cli-anything-quietshrink compress -q pristine &lt;input&gt;     # near-source quality
+
+# Inspect a file before compressing
+cli-anything-quietshrink probe &lt;input&gt;
+
+# List quality presets
+cli-anything-quietshrink presets
+
+# Verify environment
+cli-anything-quietshrink doctor</code></pre>
+<p>All commands accept <code>--json</code> for machine-readable output.</p>
+<h2 id="quality-presets">Quality presets<a class="anchor" href="#quality-presets" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Preset</th><th>q</th><th>Typical reduction</th><th>SSIM</th><th>Use case</th></tr></thead><tbody><tr><td><code>tiny</code></td><td>50</td><td>~90%</td><td>~0.95</td><td>Chat/email — small artifacts OK</td></tr><tr><td><code>balanced</code></td><td>55</td><td>~88%</td><td>~0.99</td><td>Docs/sharing — high quality</td></tr><tr><td><code>transparent</code> (default)</td><td>60</td><td>~87%</td><td>~0.99+</td><td><strong>Anything important</strong> — visually lossless</td></tr><tr><td><code>pristine</code></td><td>70</td><td>~84%</td><td>~0.997</td><td>Archival — near-source</td></tr></tbody></table>
+<h2 id="json-output-schema">JSON output schema<a class="anchor" href="#json-output-schema" aria-label="锚点">#</a></h2>
+<p><code>compress</code> returns:</p>
+<pre><code class="language-json">{
+  &quot;input&quot;: &quot;/path/to/input.mov&quot;,
+  &quot;output&quot;: &quot;/path/to/output.mov&quot;,
+  &quot;input_size&quot;: 105952129,
+  &quot;output_size&quot;: 12345678,
+  &quot;saved_bytes&quot;: 93606451,
+  &quot;saved_percent&quot;: 88.3,
+  &quot;duration_seconds&quot;: 193.3,
+  &quot;elapsed_seconds&quot;: 87,
+  &quot;encoding_speed&quot;: &quot;2.2x&quot;,
+  &quot;quality_preset&quot;: &quot;transparent&quot;,
+  &quot;q_value&quot;: 60,
+  &quot;gop&quot;: 600
+}</code></pre>
+<p><code>probe</code> returns:</p>
+<pre><code class="language-json">{
+  &quot;path&quot;: &quot;...&quot;,
+  &quot;size_bytes&quot;: 105952129,
+  &quot;size_mb&quot;: 101.04,
+  &quot;codec&quot;: &quot;h264&quot;,
+  &quot;width&quot;: 3024,
+  &quot;height&quot;: 1964,
+  &quot;framerate&quot;: &quot;120/1&quot;,
+  &quot;duration_seconds&quot;: 193.31
+}</code></pre>
+<h2 id="decision-flow-for-agents">Decision flow for agents<a class="anchor" href="#decision-flow-for-agents" aria-label="锚点">#</a></h2>
+<pre><code>User wants to share a recording
+  ├─ Is it on Apple Silicon Mac? → use quietshrink
+  │  ├─ For chat/email/quick share → -q tiny
+  │  ├─ For docs/important sharing → -q transparent (default)
+  │  └─ For archival/editing → -q pristine
+  └─ Not on Mac? → falls back to software, less efficient</code></pre>
+<p>Before processing, run <code>doctor</code> to verify environment.<br>For unfamiliar files, run <code>probe</code> to understand resolution/codec/duration.</p>
+<h2 id="errors-and-recovery">Errors and recovery<a class="anchor" href="#errors-and-recovery" aria-label="锚点">#</a></h2>
+<ul><li><code>ffmpeg not found</code> → <code>brew install ffmpeg</code></li><li><code>hevc_videotoolbox not available</code> → <code>brew reinstall ffmpeg</code></li><li><code>compression_failed</code> → check input file isn't corrupted; try <code>--verbose</code> mode to see ffmpeg errors</li></ul>
+<h2 id="source">Source<a class="anchor" href="#source" aria-label="锚点">#</a></h2>
+<ul><li>Main repo: https://github.com/achiya-automation/quietshrink</li><li>Bash CLI: <code>quietshrink</code> command (via the install script)</li><li>Why this approach works: see <a href="https://github.com/achiya-automation/quietshrink/blob/main/WHY.md" target="_blank" rel="noopener">WHY.md</a></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-qgis/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-qgis</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-rekordbox/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-rekordbox</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-quietshrink/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

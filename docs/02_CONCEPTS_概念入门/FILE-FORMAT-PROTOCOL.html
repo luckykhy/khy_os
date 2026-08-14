@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khy-os 文件格式协议 (File Format Protocol) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>khy-os 文件格式协议 (File Format Protocol)</div>
+      <header class="hero reveal"><h1>khy-os 文件格式协议 (File Format Protocol)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-文件格式协议-file-format-protocol">khy-os 文件格式协议 (File Format Protocol)</a></li><li class="lvl-2"><a href="#1-协议原则">1. 协议原则</a></li><li class="lvl-2"><a href="#2-格式分类协议">2. 格式分类协议</a></li><li class="lvl-3"><a href="#2-1-核心数据格式">2.1 核心数据格式</a></li><li class="lvl-3"><a href="#2-2-配置格式">2.2 配置格式</a></li><li class="lvl-3"><a href="#2-3-文档格式">2.3 文档格式</a></li><li class="lvl-3"><a href="#2-4-代码格式">2.4 代码格式</a></li><li class="lvl-3"><a href="#2-5-禁止使用的格式">2.5 禁止使用的格式</a></li><li class="lvl-2"><a href="#3-目录级别格式协议">3. 目录级别格式协议</a></li><li class="lvl-2"><a href="#4-命名约定">4. 命名约定</a></li><li class="lvl-2"><a href="#5-协议执行与门控">5. 协议执行与门控</a></li><li class="lvl-2"><a href="#7-关联文档">7. 关联文档</a></li><li class="lvl-2"><a href="#6-版本与修订">6. 版本与修订</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-文件格式协议-file-format-protocol">khy-os 文件格式协议 (File Format Protocol)<a class="anchor" href="#khy-os-文件格式协议-file-format-protocol" aria-label="锚点">#</a></h1>
+<blockquote><p>本文档为 khy-os 多语言工作台的文件格式使用协议。所有新代码、配置和数据文件必须遵守本协议。<br>违反本协议的 PR 将无法通过 <code>check-change-safety</code> 门控。</p></blockquote>
+<hr>
+<h2 id="1-协议原则">1. 协议原则<a class="anchor" href="#1-协议原则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>原则</th><th>说明</th></tr></thead><tbody><tr><td><strong>显式优于隐式</strong></td><td>文件扩展名和目录结构必须自解释，不需要额外文档即可推断用途</td></tr><tr><td><strong>单一职责</strong></td><td>每种格式有且仅有一个核心职责（配置 / 数据 / 日志 / 文档 / 代码）</td></tr><tr><td><strong>机器可读优先</strong></td><td>优先选择可被工具链（lint、parse、audit、version-sync）自动处理或校验的格式</td></tr><tr><td><strong>向后兼容</strong></td><td>不废弃已使用的格式，仅在新场景中应用本协议</td></tr></tbody></table>
+<hr>
+<h2 id="2-格式分类协议">2. 格式分类协议<a class="anchor" href="#2-格式分类协议" aria-label="锚点">#</a></h2>
+<h3 id="2-1-核心数据格式">2.1 核心数据格式<a class="anchor" href="#2-1-核心数据格式" aria-label="锚点">#</a></h3>
+<h4 id="json-强层级-强机器校验-小文件">JSON — 强层级、强机器校验、小文件<a class="anchor" href="#json-强层级-强机器校验-小文件" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>维度</th><th>取值</th></tr></thead><tbody><tr><td>复杂度</td><td>高</td></tr><tr><td>层级支持</td><td>强（嵌套对象 / 数组）</td></tr><tr><td>体积</td><td>小（&lt; 100 KB 单文件）</td></tr><tr><td>机器可读性</td><td>极强（原生 JS <code>JSON.parse</code>）</td></tr><tr><td>人类可读性</td><td>中</td></tr></tbody></table>
+<p><strong>适用场景（khy-os 内）：</strong></p>
+<table><thead><tr><th>用途</th><th>目录</th><th>示例</th></tr></thead><tbody><tr><td><strong>npm / 包清单</strong></td><td><code>*/package.json</code></td><td><code>package.json</code>, <code>services/backend/package.json</code>, <code>platform/packages/shared/package.json</code></td></tr><tr><td><strong>项目配置</strong></td><td>根目录、服务目录</td><td><code>esbuild.config.js</code> (JSON 内容), <code>jsconfig.json</code>, <code>babel.config.json</code>, <code>.eslintrc.json</code></td></tr><tr><td><strong>运行时状态</strong></td><td><code>.khy/</code></td><td><code>api_keys.json</code>, <code>integrity_manifest.json</code>, <code>version_cache.json</code>, <code>model_overrides.json</code>, <code>arena-*.json</code>, <code>cognitive_snapshots/*.json</code></td></tr><tr><td><strong>审计记录</strong></td><td><code>.khy/receipts/</code>, <code>.khy/approvals/</code></td><td><code>RCPT-*.json</code>, <code>ledger.json</code></td></tr><tr><td><strong>会话归档</strong></td><td><code>.khy/conversations/</code></td><td><code>*.json</code>（对话历史，单文件单会话）</td></tr><tr><td><strong>构建输出</strong></td><td><code>dist/</code></td><td><code>MANIFEST.json</code>, 模块元数据</td></tr><tr><td><strong>模块定义</strong></td><td><code>packaging/</code></td><td><code>modules.json</code>, <code>dependency-map.json</code>, <code>native-modules.json</code></td></tr><tr><td><strong>AI 前端状态</strong></td><td><code>apps/ai-frontend/dist/vendor/</code></td><td><code>MANIFEST.json</code></td></tr></tbody></table>
+<p><strong>命名约定：</strong></p>
+<pre><code>&lt;feature&gt;.json                    — 单文件配置
+&lt;feature&gt;-&lt;id&gt;.json              — 按 ID 分片的运行时状态（arena-&lt;id&gt;.json）
+RCPT-&lt;hash&gt;.json                  — 审计回执（时间戳或内容哈希后缀）</code></pre>
+<p><strong>协议约束：</strong></p>
+<ol><li><code>.khy/</code> 下的运行时 JSON 文件<strong>必须</strong>包含 <code>&quot;version&quot;</code> 字段（用于迁移兼容性检查）：<ul><li><strong>格式</strong>：语义化版本字符串（如 <code>&quot;1.0.0&quot;</code>）或整数 schema 版本，同一文件族内必须统一；</li><li><strong>缺失处理</strong>：加载器检测到缺失 <code>version</code> 时<strong>应</strong>报出明确的迁移错误（禁止静默按默认版本处理）；</li><li><strong>版本超范围</strong>：版本高于当前支持范围时<strong>应</strong>拒绝加载并提示升级。</li></ul></li><li>审计 / 回执类 JSON <strong>必须</strong>包含 <code>&quot;ts&quot;</code>（ISO 8601 时间戳）和 <code>&quot;actor&quot;</code>（操作者标识）</li><li>所有 JSON 文件通过 <code>JSON.parse</code> 解析后<strong>必须</strong>是 Array 或 Object（禁止顶层 String / Number / null）</li><li><code>package.json</code> 以外的 JSON 配置文件<strong>禁止</strong>包含 <code>&quot;scripts&quot;</code> 字段（避免与 npm 混淆）</li></ol>
+<p><strong>JSON Schema 注册表（<code>scripts/ci/json-schemas/</code>）：</strong></p>
+<table><thead><tr><th>Schema 文件</th><th>管控对象</th></tr></thead><tbody><tr><td><code>arena-session.schema.json</code></td><td><code>.khy/arena/arena-*.json</code></td></tr><tr><td><code>receipt.schema.json</code></td><td><code>.khy/receipts/RCPT-*.json</code></td></tr><tr><td><code>integrity-manifest.schema.json</code></td><td><code>.khy/integrity_manifest.json</code></td></tr><tr><td><code>runtime-config.schema.json</code></td><td><code>.khy/*.json</code>（通用运行时配置）</td></tr></tbody></table>
+<blockquote><p>新 JSON 格式上线前<strong>必须</strong>在 <code>scripts/ci/json-schemas/</code> 注册 schema，并由 <code>release-gate.js</code> 校验。</p></blockquote>
+<hr>
+<h4 id="jsonl-中层级-流式写入-极小文件">JSONL — 中层级、流式写入、极小文件<a class="anchor" href="#jsonl-中层级-流式写入-极小文件" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>维度</th><th>取值</th></tr></thead><tbody><tr><td>复杂度</td><td>中</td></tr><tr><td>层级支持</td><td>单层对象（每行一个）</td></tr><tr><td>体积</td><td>极小（&lt; 100 KB/文件，总集可能很大）</td></tr><tr><td>机器可读性</td><td>强（逐行解析，可 <code>tail -f</code>）</td></tr><tr><td>人类可读性</td><td>中</td></tr></tbody></table>
+<p><strong>适用场景（khy-os 内）：</strong></p>
+<table><thead><tr><th>用途</th><th>目录</th><th>示例</th></tr></thead><tbody><tr><td><strong>审计日志</strong></td><td><code>.khy/audit/</code></td><td><code>sess_*.jsonl</code>, <code>trace-events.jsonl</code></td></tr><tr><td><strong>会话轨迹</strong></td><td><code>.khy/sessions/</code>, <code>khy-Trajectory/</code></td><td><code>*.jsonl</code></td></tr><tr><td><strong>安装账本</strong></td><td><code>.khy/</code></td><td><code>.install-ledger.jsonl</code></td></tr><tr><td><strong>A/B 测试数据</strong></td><td><code>scripts/ab-traces/</code></td><td><code>*.jsonl</code></td></tr><tr><td><strong>变更溯源</strong></td><td><code>scripts/</code></td><td>各类 trace 文件</td></tr></tbody></table>
+<p><strong>命名约定：</strong></p>
+<pre><code>&lt;feature&gt;.jsonl               — 单文件追加日志
+sess_&lt;id&gt;.jsonl               — 按会话分片
+trace-events.jsonl            — 全局追踪流</code></pre>
+<p><strong>协议约束：</strong></p>
+<ol><li>每行<strong>必须</strong>是完整的 JSON 对象（不得跨行，禁止 pretty-print）</li><li>每个 JSON 对象<strong>必须</strong>包含顶层 <code>&quot;ts&quot;</code> 字段（毫秒时间戳或 ISO 8601）</li><li>每行长度<strong>不得超过 64 KB</strong>（防止单条事件过大导致流式解析卡顿）</li><li>追加写入<strong>必须</strong>使用 <code>JSON.stringify(obj) + '\n'</code>，禁止 trailing comma</li><li>旧文件压缩归档为 <code>.jsonl.gz</code>（如 <code>trace-events.jsonl.1.gz</code>），保持原始文件名可追溯</li><li>读取 JSONL <strong>必须</strong>使用流式 parser（逐行 <code>JSON.parse</code>），禁止一次性 <code>readFileSync</code> 大文件</li></ol>
+<hr>
+<h3 id="2-2-配置格式">2.2 配置格式<a class="anchor" href="#2-2-配置格式" aria-label="锚点">#</a></h3>
+<h4 id="toml-平铺结构-项目级配置-小文件">TOML — 平铺结构、项目级配置、小文件<a class="anchor" href="#toml-平铺结构-项目级配置-小文件" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>维度</th><th>取值</th></tr></thead><tbody><tr><td>复杂度</td><td>中</td></tr><tr><td>层级支持</td><td>弱（仅 <code>[section]</code> + <code>key = value</code>，无嵌套）</td></tr><tr><td>体积</td><td>小（&lt; 10 KB）</td></tr><tr><td>机器可读性</td><td>强（Python <code>tomllib</code> / <code>tomli</code> 原生支持）</td></tr><tr><td>人类可读性</td><td>极强</td></tr></tbody></table>
+<p><strong>适用场景（khy-os 内）：</strong></p>
+<table><thead><tr><th>用途</th><th>目录</th><th>示例</th></tr></thead><tbody><tr><td><strong>Python 项目配置</strong></td><td>根目录、子项目</td><td><code>pyproject.toml</code>, <code>software/khyquant/pyproject.toml</code></td></tr><tr><td><strong>部署配置</strong></td><td>根目录</td><td><code>fly.staging.toml</code></td></tr><tr><td><strong>Rust/Moonbit 互操作</strong></td><td><code>.khy/</code></td><td><code>.crates.toml</code></td></tr></tbody></table>
+<p><strong>协议约束：</strong></p>
+<ol><li><strong>仅用于项目元数据和构建配置</strong>，禁止用于运行时状态或业务数据</li><li><code>pyproject.toml</code> 是<strong>唯一</strong>的 Python 包版本真源（SSoT），<code>services/backend/package.json</code> 和 <code>packaging/npm/package.json</code> 的版本必须与之同步（由 <code>check-version-sync.js</code> 强制）</li><li>TOML 键名<strong>必须</strong>使用 <code>snake_case</code>（与 Python 风格对齐）</li><li><code>[project]</code> 表内的 <code>version</code> 字段<strong>必须</strong>使用双引号字符串：<code>version = &quot;1.1.8&quot;</code></li><li>禁止在 TOML 中使用 inline table 存储超过 3 个键的复杂结构（应拆分为独立 section）</li></ol>
+<hr>
+<h4 id="yaml-强层级-ci-cd-配置-中文件">YAML — 强层级、CI/CD 配置、中文件<a class="anchor" href="#yaml-强层级-ci-cd-配置-中文件" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>维度</th><th>取值</th></tr></thead><tbody><tr><td>复杂度</td><td>高</td></tr><tr><td>层级支持</td><td>强（缩进、列表、锚点）</td></tr><tr><td>体积</td><td>中（&lt; 50 KB）</td></tr><tr><td>机器可读性</td><td>中（缩进敏感，anchor/alias 难以静态校验）</td></tr><tr><td>人类可读性</td><td>极强</td></tr></tbody></table>
+<p><strong>适用场景（khy-os 内）：</strong></p>
+<table><thead><tr><th>用途</th><th>目录</th><th>示例</th></tr></thead><tbody><tr><td><strong>CI/CD 工作流</strong></td><td><code>.github/workflows/</code></td><td><code>dual-channel-release.yml</code>, <code>docker.yml</code>, <code>build-executables.yml</code> 等</td></tr><tr><td><strong>ML 训练配置</strong></td><td><code>software/khyquant/ml/</code></td><td><code>config.yaml</code></td></tr><tr><td><strong>Dependabot 配置</strong></td><td><code>.github/</code></td><td><code>dependabot.yml</code></td></tr></tbody></table>
+<p><strong>协议约束：</strong></p>
+<ol><li><strong>仅用于 CI/CD 和 ML 配置</strong>，禁止用于运行时状态或应用数据</li><li>GitHub Actions 工作流文件名<strong>必须</strong>使用 <code>kebab-case</code> 并以 <code>.yml</code> 结尾（不用 <code>.yaml</code>）</li><li>YAML 文件<strong>必须</strong>在 CI 中通过 <code>actionlint</code> 或 <code>yamllint</code> 校验</li><li>禁止使用 YAML anchor/alias（<code>&amp;</code>, <code>*</code>）—— 降低可读性和可维护性</li><li>禁止在 YAML 中硬编码 secrets（必须使用 GitHub Secrets / <code>${{ secrets.* }}</code>）</li></ol>
+<hr>
+<h4 id="env-键值对-运行时敏感配置">.env — 键值对、运行时敏感配置<a class="anchor" href="#env-键值对-运行时敏感配置" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>维度</th><th>取值</th></tr></thead><tbody><tr><td>复杂度</td><td>低</td></tr><tr><td>层级支持</td><td>无（扁平键值对）</td></tr><tr><td>体积</td><td>极小（&lt; 5 KB）</td></tr><tr><td>机器可读性</td><td>中（需解析器处理引号、export、注释）</td></tr><tr><td>人类可读性</td><td>中</td></tr></tbody></table>
+<p><strong>适用场景（khy-os 内）：</strong></p>
+<table><thead><tr><th>用途</th><th>目录</th><th>示例</th></tr></thead><tbody><tr><td><strong>服务环境变量</strong></td><td><code>services/</code>, <code>services/backend/</code></td><td><code>.env</code>, <code>.env.example</code></td></tr><tr><td><strong>运行时 secrets</strong></td><td><code>.khy/</code></td><td><code>.env</code></td></tr><tr><td><strong>前端环境变量</strong></td><td><code>apps/ai-frontend/</code></td><td><code>.env</code>（Vite 注入）</td></tr></tbody></table>
+<p><strong>协议约束：</strong></p>
+<ol><li><strong><code>.env</code> 文件禁止提交到 Git</strong>（<code>.gitignore</code> 已覆盖），仅保留 <code>.env.example</code> 作为模板</li><li><code>.env.example</code> <strong>必须</strong>包含所有必需环境变量的注释说明</li><li><code>.env</code> 值<strong>禁止</strong>使用未加引号的裸字符串（<code>KEY=value with spaces</code> 会静默截断）</li><li>密钥类变量命名<strong>必须</strong>以 <code>_SECRET</code>、<code>_TOKEN</code> 或 <code>_KEY</code> 结尾，便于审计扫描</li><li>读取 <code>.env</code> <strong>必须</strong>使用 <code>dotenv</code> 库，禁止手动正则解析</li></ol>
+<hr>
+<h3 id="2-3-文档格式">2.3 文档格式<a class="anchor" href="#2-3-文档格式" aria-label="锚点">#</a></h3>
+<h4 id="markdown-md-主要文档格式">Markdown (.md) — 主要文档格式<a class="anchor" href="#markdown-md-主要文档格式" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>维度</th><th>取值</th></tr></thead><tbody><tr><td>复杂度</td><td>低</td></tr><tr><td>层级支持</td><td>强（标题层级）</td></tr><tr><td>体积</td><td>中（&lt; 50 KB）</td></tr><tr><td>机器可读性</td><td>中（可解析为 AST）</td></tr><tr><td>人类可读性</td><td>极强</td></tr></tbody></table>
+<p><strong>适用场景（khy-os 内）：</strong></p>
+<table><thead><tr><th>用途</th><th>目录</th><th>示例</th></tr></thead><tbody><tr><td><strong>项目文档</strong></td><td>根目录、<code>docs/</code></td><td><code>README.md</code>, <code>AGENTS.md</code>, <code>CONCEPT-*.md</code></td></tr><tr><td><strong>架构决策</strong></td><td><code>docs/</code></td><td><code>DESIGN-ARCH-*.md</code></td></tr><tr><td><strong>变更日志</strong></td><td>根目录</td><td><code>CHANGELOG.md</code></td></tr><tr><td><strong>用户记忆</strong></td><td><code>.khy/memory/</code></td><td><code>MEMORY.md</code>, 各类 memory 文件</td></tr><tr><td><strong>扩展文档</strong></td><td><code>extensions/</code>, <code>tools/</code></td><td><code>README.md</code></td></tr></tbody></table>
+<p><strong>协议约束：</strong></p>
+<ol><li><strong>所有 Markdown 文件必须使用 LF 换行</strong>（<code>\n</code>），禁止 CRLF</li><li>标题层级<strong>不得跳级</strong>（<code>#</code> → <code>##</code> → <code>###</code>，禁止 <code>#</code> → <code>###</code>）</li><li>代码块<strong>必须</strong>指定语言标识：\<code>\</code>\<code>javascript 而非 \</code>\<code>\</code></li><li>链接<strong>必须</strong>使用相对路径（禁止绝对路径如 <code>/docs/xxx.md</code>）</li><li>表格<strong>必须</strong>使用 pipe 语法，对齐列</li><li>行宽<strong>不超过 120 字符</strong>（理由：适配标准终端与 diff 审阅宽度；长 URL 与表格行可豁免）</li></ol>
+<hr>
+<h4 id="html-html-渲染输出">HTML (.html) — 渲染输出<a class="anchor" href="#html-html-渲染输出" aria-label="锚点">#</a></h4>
+<p><strong>适用场景：</strong></p>
+<table><thead><tr><th>用途</th><th>目录</th></tr></thead><tbody><tr><td><strong>文档渲染输出</strong></td><td><code>docs/</code>（<code>.md</code> 的渲染产物）</td></tr><tr><td><strong>前端入口</strong></td><td><code>apps/ai-frontend/index.html</code></td></tr><tr><td><strong>工具页面</strong></td><td><code>tools/khyos-markdown/</code></td></tr></tbody></table>
+<p><strong>协议约束：</strong></p>
+<ol><li><code>docs/</code> 下的 <code>.html</code> 是 <code>.md</code> 的渲染产物，<strong>禁止手动编辑</strong>，由 <code>docs_site.py</code> 自动生成</li><li>前端 <code>index.html</code> <strong>必须</strong>包含 <code>&lt;meta charset=&quot;utf-8&quot;&gt;</code></li><li>禁止使用内联 <code>&lt;style&gt;</code> 和 <code>&lt;script&gt;</code>（除非是单文件工具）</li></ol>
+<hr>
+<h3 id="2-4-代码格式">2.4 代码格式<a class="anchor" href="#2-4-代码格式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>格式</th><th>角色</th><th>协议要点</th></tr></thead><tbody><tr><td><strong>JavaScript (.js)</strong></td><td>主要实现语言</td><td>ES modules (<code>import</code>/<code>export</code>)，严格模式 <code>'use strict'</code>，顶部必须加 shebang <code>#!/usr/bin/env node</code></td></tr><tr><td><strong>TypeScript (.ts)</strong></td><td>类型标注（可选）</td><td>与 <code>.js</code> 混用，编译输出到 <code>dist/</code></td></tr><tr><td><strong>Python (.py)</strong></td><td>平台启动器、ML、数据</td><td>UTF-8 编码，顶部必须加 shebang <code>#!/usr/bin/env python3</code></td></tr><tr><td><strong>Vue (.vue)</strong></td><td>前端组件</td><td><code>&lt;script setup&gt;</code> 语法，单文件组件</td></tr><tr><td><strong>Moonbit (.mbt)</strong></td><td>内核 / WASM</td><td>Moonbit 模块系统，<code>moon.pkg.json</code> 清单</td></tr><tr><td><strong>C (.c/.h)</strong></td><td>内核</td><td>严格 80 列，函数注释遵循 kernel-doc 风格</td></tr><tr><td><strong>Assembly (.asm)</strong></td><td>引导 / 用户态测试</td><td>NASM 语法，全局标签大写</td></tr><tr><td><strong>SQL (.sql)</strong></td><td>数据库 schema / 迁移</td><td>大写 SQL 关键字，每个语句独占一行</td></tr><tr><td><strong>Shell (.sh)</strong></td><td>构建 / 部署</td><td><code>set -euo pipefail</code>，函数命名 <code>snake_case</code></td></tr><tr><td><strong>Batch (.bat)</strong></td><td>Windows 启动</td><td><code>@echo off</code>，REM 注释</td></tr><tr><td><strong>PowerShell (.ps1)</strong></td><td>Windows 部署</td><td><code>#</code> 注释，cmdlet 命名 <code>Verb-Noun</code></td></tr></tbody></table>
+<hr>
+<h3 id="2-5-禁止使用的格式">2.5 禁止使用的格式<a class="anchor" href="#2-5-禁止使用的格式" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>格式</th><th>状态</th><th>原因</th><th>替代方案</th></tr></thead><tbody><tr><td><strong>XML</strong></td><td><strong>禁止新增使用</strong></td><td>项目不涉及 SOAP/SVG，XML 增加解析复杂度</td><td>使用 JSON（数据）或 Markdown（文档）</td></tr><tr><td><strong>INI</strong></td><td><strong>禁止新增使用</strong></td><td>无 section 嵌套能力，值类型有限</td><td>使用 TOML（配置）或 <code>.env</code>（简单键值）</td></tr><tr><td><strong>CSV</strong></td><td><strong>仅存量保留</strong></td><td>无 schema，易出错</td><td>新增数据交换使用 JSONL 或 JSON</td></tr><tr><td><strong>Protocol Buffers</strong></td><td><strong>不使用</strong></td><td>增加编译依赖，项目规模不需要</td><td>使用 JSON / JSONL</td></tr><tr><td><strong>YAML（非 CI/CD）</strong></td><td><strong>禁止</strong></td><td>缩进敏感，安全风险（任意对象注入）</td><td>使用 TOML 或 JSON</td></tr></tbody></table>
+<hr>
+<h2 id="3-目录级别格式协议">3. 目录级别格式协议<a class="anchor" href="#3-目录级别格式协议" aria-label="锚点">#</a></h2>
+<pre><code>khy-os/
+├── .github/                    # YAML only (workflows, dependabot)
+│   └── workflows/
+├── .khy/                       # JSON + JSONL + TOML + .env + DB + PNG
+│   ├── *.json                  #  运行时配置（小，结构化）
+│   ├── *.jsonl                 #  审计/会话日志（流式追加）
+│   ├── .crates.toml            #  Moonbit 互操作配置
+│   ├── .env                    #  敏感运行时变量
+│   ├── *.db                    #  SQLite 持久化
+│   └── cognitive_snapshots/    #  JSON（快照）
+├── docs/                       # Markdown (.md) + 渲染 HTML
+├── scripts/                    # JavaScript (.js) + Shell (.sh) + Python (.py) + JSONL
+├── services/
+│   ├── backend/                # JS + JSON + .env + SQL + PY + Dockerfile
+│   └── ai-backend/             # JS + JSON + Dockerfile
+├── platform/                   # PY + JS + JSON + Moonbit + PNG
+├── packaging/                  # JS + JSON + MD
+├── kernel/                     # C + H + ASM + MBT + LD + Makefile + Dockerfile
+├── software/
+│   └── khyquant/               # JS + PY + JSON + YAML + Vue + CSS + HTML
+├── apps/
+│   └── ai-frontend/            # Vue + JS + CSS + HTML + JSON + Dockerfile
+├── extensions/                 # JS + JSON + MD + HTML
+├── tools/                      # JS + JSON + CSS + MD + HTML + PNG
+├── .github/                    # YAML (CI/CD)
+├── pyproject.toml              # Python 项目元数据（版本真源）
+├── fly.staging.toml            # Fly.io 部署配置
+├── CHANGELOG.md                # 变更日志
+├── Dockerfile                  # 容器镜像定义
+├── .dockerignore               # Docker 上下文排除
+└── [root package.json]         # npm workspace 根清单</code></pre>
+<hr>
+<h2 id="4-命名约定">4. 命名约定<a class="anchor" href="#4-命名约定" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件类型</th><th>约定</th><th>示例</th></tr></thead><tbody><tr><td>包清单</td><td><code>package.json</code></td><td><code>services/backend/package.json</code></td></tr><tr><td>运行时状态（单文件）</td><td><code>&lt;noun&gt;.json</code></td><td><code>integrity_manifest.json</code></td></tr><tr><td>运行时状态（分片）</td><td><code>&lt;noun&gt;-&lt;id&gt;.json</code></td><td><code>arena-abc123.json</code></td></tr><tr><td>审计回执</td><td><code>RCPT-&lt;hash&gt;.json</code></td><td><code>RCPT-a1b2c3d4.json</code></td></tr><tr><td>日志（流式）</td><td><code>&lt;feature&gt;.jsonl</code></td><td><code>trace-events.jsonl</code></td></tr><tr><td>会话日志</td><td><code>sess_&lt;id&gt;.jsonl</code></td><td><code>sess_T.jsonl</code></td></tr><tr><td>CI 工作流</td><td><code>&lt;action&gt;-&lt;target&gt;.yml</code></td><td><code>dual-channel-release.yml</code></td></tr><tr><td>配置文件</td><td><code>&lt;tool&gt;.config.&lt;ext&gt;</code></td><td><code>esbuild.config.js</code>, <code>babel.config.json</code></td></tr><tr><td>版本日志</td><td><code>CHANGELOG.md</code></td><td>根目录唯一</td></tr><tr><td>架构决策</td><td><code>DESIGN-ARCH-&lt;NNN&gt;-&lt;slug&gt;.md</code></td><td><code>DESIGN-ARCH-001-agent-bridge.md</code></td></tr></tbody></table>
+<hr>
+<h2 id="5-协议执行与门控">5. 协议执行与门控<a class="anchor" href="#5-协议执行与门控" aria-label="锚点">#</a></h2>
+<p>本协议由以下工具强制执行：</p>
+<table><thead><tr><th>工具</th><th>检查项</th><th>触发时机</th></tr></thead><tbody><tr><td><code>check-version-sync.js</code></td><td>4+2 文件版本一致性</td><td>CI on every push</td></tr><tr><td><code>changelog-new.js</code></td><td>CHANGELOG.md 版本头匹配</td><td>CI on tag push</td></tr><tr><td><code>release-gate.js</code></td><td>预发布确定性检查</td><td>CI on tag push</td></tr><tr><td><code>check-change-safety.js</code></td><td>变更安全规则</td><td>预提交 / CI</td></tr><tr><td><code>check-node-syntax.js</code></td><td>JS 语法</td><td>CI</td></tr><tr><td><code>check-python-syntax.js</code></td><td>PY 语法</td><td>CI</td></tr><tr><td><code>actionlint</code></td><td>YAML CI 语法</td><td>CI（待集成）</td></tr><tr><td><code>json-schemas/</code></td><td>JSON 结构合规</td><td>release-gate</td></tr><tr><td><code>.prettierrc</code> + <code>.eslintrc.*</code></td><td>代码风格</td><td>CI</td></tr></tbody></table>
+<p><strong>新增格式或变更格式用途</strong> → 必须更新本文档 → 必须更新对应门控脚本 → 必须通过 <code>release-gate.js</code>。</p>
+<hr>
+<h2 id="7-关联文档">7. 关联文档<a class="anchor" href="#7-关联文档" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文档</th><th>关系</th></tr></thead><tbody><tr><td><span class="deadlink" title="目标不存在：./COMMUNICATION-PROTOCOL.html"><code>COMMUNICATION-PROTOCOL.md</code></span>（规划中，尚未创建）</td><td>互补：本文件定义「存什么」，该文件定义「怎么传」。HTTP/WebSocket/IPC/SSE 等通信信封格式请参见该文件。</td></tr><tr><td><code>scripts/ci/json-schemas/*.schema.json</code></td><td>实现：<code>.khy/</code> 下 JSON 文件的 JSON Schema 校验定义</td></tr><tr><td><code>scripts/ci/validate-json-schemas.js</code></td><td>实现：Schema 校验执行器</td></tr><tr><td><code>scripts/ci/validate-protocol-contracts.js</code></td><td>实现：通信协议契约校验执行器</td></tr><tr><td><code>scripts/release/lib/releaseGateStages.js</code></td><td>集成：两个校验均已加入发布门禁</td></tr></tbody></table>
+<hr>
+<h2 id="6-版本与修订">6. 版本与修订<a class="anchor" href="#6-版本与修订" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>版本</th><th>日期</th><th>变更</th></tr></thead><tbody><tr><td>1.0.0</td><td>2026-07-26</td><td>初始版本，覆盖 JSON/JSONL/TOML/YAML/.env/Markdown 核心协议</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html"><div class="dir">← 上一篇</div><div class="ttl">概念入门总览：从零看懂 AI 编程助手</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/FILE-FORMAT-PROTOCOL.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

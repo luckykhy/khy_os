@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按 ID 恢复会话 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>按 ID 恢复会话</div>
+      <header class="hero reveal"><h1>按 ID 恢复会话</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#按-id-恢复会话">按 ID 恢复会话</a></li><li class="lvl-2"><a href="#支持的恢复格式">支持的恢复格式</a></li><li class="lvl-2"><a href="#历史记录视图">历史记录视图</a></li><li class="lvl-2"><a href="#只读或受限环境">只读或受限环境</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-026 | 阶段: 运维 | 原路径: docs/指南/会话恢复-按id.md --&gt;</p>
+<h1 id="按-id-恢复会话">按 ID 恢复会话<a class="anchor" href="#按-id-恢复会话" aria-label="锚点">#</a></h1>
+<p>本指南介绍全新的会话恢复流程：</p>
+<ol><li>当一个会话结束时，KHY 会打印：<ul><li><code>khy resume &lt;session-id&gt;</code></li><li><code>run codex resume &lt;session-id&gt;</code></li></ul></li><li>你可以直接用以下命令恢复上下文：</li></ol>
+<pre><code class="language-bash">khy resume &lt;session-id&gt;</code></pre>
+<h2 id="支持的恢复格式">支持的恢复格式<a class="anchor" href="#支持的恢复格式" aria-label="锚点">#</a></h2>
+<p><code>khy resume</code> 现在同时支持：</p>
+<ul><li>索引：<code>khy resume 1</code></li><li>会话 ID：<code>khy resume 019e33c8-2378-7830-aead-66bb6d72fa0d</code></li></ul>
+<p>在不产生歧义时，也支持使用简短的唯一前缀。</p>
+<h2 id="历史记录视图">历史记录视图<a class="anchor" href="#历史记录视图" aria-label="锚点">#</a></h2>
+<p>使用：</p>
+<pre><code class="language-bash">khy history list</code></pre>
+<p>现在每一行都包含会话 ID，因此你可以复制后直接运行：</p>
+<pre><code class="language-bash">khy resume &lt;session-id&gt;</code></pre>
+<h2 id="只读或受限环境">只读或受限环境<a class="anchor" href="#只读或受限环境" aria-label="锚点">#</a></h2>
+<p>如果 KHY 在退出时无法写入新的快照，它会回退到最近一个可恢复的会话，并仍然打印：</p>
+<ul><li><code>khy resume &lt;latest-session-id&gt;</code></li><li><code>run codex resume &lt;latest-session-id&gt;</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-025] windows-vmware-清单.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS Windows 构建 + VMware 交付指南</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-027] 快速开始.html"><div class="dir">下一篇 →</div><div class="ttl">KHY-OS 快速开始 — 安装与使用</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-026] 会话恢复-按id.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

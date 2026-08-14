@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫</div>
+      <header class="hero reveal"><h1>[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-111-纯文本模型图片-ocr-兜底截断诚实告诫">[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫</a></li><li class="lvl-2"><a href="#一-背景与缺口-goal-2026-07-12">一、背景与缺口(/goal 2026-07-12)</a></li><li class="lvl-2"><a href="#二-修复-全-additive-逐字节可回退">二、修复(全 additive,逐字节可回退)</a></li><li class="lvl-3"><a href="#暴露死字段-services-backend-src-services-ocrsnippetservice-js">暴露死字段 `services/backend/src/services/ocrSnippetService.js`</a></li><li class="lvl-3"><a href="#转发-services-backend-src-services-gateway-aigateway-js">转发 `services/backend/src/services/gateway/aiGateway.js`</a></li><li class="lvl-3"><a href="#纯叶-services-backend-src-services-gateway-ocrtruncationnotice-js">纯叶 `services/backend/src/services/gateway/ocrTruncationNotice.js`</a></li><li class="lvl-3"><a href="#接线-services-backend-src-services-gateway-aigatewaygeneratemethod-js">接线 `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`</a></li><li class="lvl-2"><a href="#三-诚实边界">三、诚实边界</a></li><li class="lvl-2"><a href="#四-验收-全绿">四、验收(全绿)</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-111-纯文本模型图片-ocr-兜底截断诚实告诫">[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫<a class="anchor" href="#ops-man-111-纯文本模型图片-ocr-兜底截断诚实告诫" aria-label="锚点">#</a></h1>
+<blockquote><p>状态:已实现(未提交,待用户点头)。承接 [OPS-MAN-104] 低置信、[OPS-MAN-109] 覆盖率两条诚实告诫,补<strong>正交</strong>的第三条诚实维度。<br>门控:<code>KHY_OCR_TRUNCATION_NOTICE</code>(default-on,<code>0/false/off/no</code> 关 → 逐字节回退)。</p></blockquote>
+<h2 id="一-背景与缺口-goal-2026-07-12">一、背景与缺口(/goal 2026-07-12)<a class="anchor" href="#一-背景与缺口-goal-2026-07-12" aria-label="锚点">#</a></h2>
+<p>当运行模型为<strong>纯文本 / 非多模态</strong>、且识图模型不可用时,khy 落到本地 OCR 兜底,把提取到的文字<br>当作「请据此作答」的权威依据注入 prompt。gateway 三处注入点都以:</p>
+<pre><code class="language-js">extractImageOcrDetails(images, { maxImages: 3, maxChars: 1200 })</code></pre>
+<p>提取。<code>ocrSnippetService.js</code> 内部对每张图的 OCR 全文做 <code>_truncate(text, maxChars)</code>——<strong>超过<br>1200 字符的稠密图片(整页文档、长截图、密集表格)尾部被静默裁掉</strong>,只在文本里追加一个内嵌<br>英文标记 <code>...[truncated]</code>。这个标记从不作为结构化信号 <code>truncated</code> 离开 service:输出对象里没有<br>它,<code>extractImageOcrDetails</code> 的明细里也没有它。</p>
+<p>于是模型收到一段看似完整、实则被砍掉尾部的 OCR 文本,并被告知「请据此作答」。用户发了一张稠密<br>发票 / 合同 / 长截图时,模型基于<strong>残缺</strong>文本自信作答、把「文本里没提到」当成「事实上不存在」而<br>毫不知情——又一处「silent truncation reads as covered everything」反模式:截断已在代码里发生,却从不<br>向作答的模型披露。</p>
+<p><strong>与 OPS-104 / OPS-109 的三条正交关系</strong>(同一 consumer = OCR 注入点上三条互相独立的诚实轴):</p>
+<table><thead><tr><th>维度</th><th>叶子</th><th>管什么</th></tr></thead><tbody><tr><td>准确性</td><td><code>ocrConfidenceCaveat</code>(104)</td><td>识别出的字可能是<strong>错</strong>的</td></tr><tr><td>跨图完整性</td><td><code>ocrCoverageNotice</code>(109)</td><td>注入文本可能没覆盖<strong>全部图片</strong></td></tr><tr><td><strong>单图内完整性</strong></td><td><code>ocrTruncationNotice</code>(本条 111)</td><td>单张图的文本可能被<strong>截断了尾部</strong></td></tr></tbody></table>
+<p>三者可同时出现、互不替代。</p>
+<h2 id="二-修复-全-additive-逐字节可回退">二、修复(全 additive,逐字节可回退)<a class="anchor" href="#二-修复-全-additive-逐字节可回退" aria-label="锚点">#</a></h2>
+<h3 id="暴露死字段-services-backend-src-services-ocrsnippetservice-js">暴露死字段 <code>services/backend/src/services/ocrSnippetService.js</code><a class="anchor" href="#暴露死字段-services-backend-src-services-ocrsnippetservice-js" aria-label="锚点">#</a></h3>
+<p>新增 <code>_truncateInfo(text, maxChars)</code>:与既有 <code>_truncate</code> 产出<strong>逐字节等价</strong>的 text,但额外返回<br><code>{ text, truncated }</code> 的 <code>truncated</code> 布尔。<code>extractImageOcrSnippet</code>(同步)与 <code>extractImageOcrSnippetAsync</code><br>(异步)两个输出点改用它,在结果对象里补 <code>truncated</code> 字段。PDF OCR 路径<br>(<code>extractScannedPdfOcrSnippet*</code>)<strong>刻意不动</strong>——不在 gateway 图片热路径上,遵守外科手术式改动。</p>
+<h3 id="转发-services-backend-src-services-gateway-aigateway-js">转发 <code>services/backend/src/services/gateway/aiGateway.js</code><a class="anchor" href="#转发-services-backend-src-services-gateway-aigateway-js" aria-label="锚点">#</a></h3>
+<p><code>extractImageOcrDetails</code> 推入明细时补 <code>truncated: ocrResult.truncated === true</code>;向后兼容包装<br><code>extractImageOcrTexts</code> 仍 <code>.map((d) =&gt; d.text)</code> 不受影响。</p>
+<h3 id="纯叶-services-backend-src-services-gateway-ocrtruncationnotice-js">纯叶 <code>services/backend/src/services/gateway/ocrTruncationNotice.js</code><a class="anchor" href="#纯叶-services-backend-src-services-gateway-ocrtruncationnotice-js" aria-label="锚点">#</a></h3>
+<ul><li><code>countTruncated(details)</code> → 统计 <code>d.truncated === true</code> 的条数(严格布尔;非数组 / 含 null / 标量 → 0,绝不抛)。</li><li><code>buildTruncationNotice({ count, total, env })</code> → <code>count &gt;= 1</code> 时渲染一句诚实告诫,否则 <code>null</code>。</li></ul>
+<p>门关 / <code>count</code> 非有限 / <code>count &lt; 1</code> / 异常 → <code>null</code>。<code>total</code> 已知时报 <code>其中 N/M 张</code>,未知时报 <code>其中 N 张</code>。</p>
+<ul><li>门 <code>KHY_OCR_TRUNCATION_NOTICE</code>(default-on),登记于 <code>flagRegistry.js</code>(与 sibling</li></ul>
+<p><code>KHY_OCR_LOW_CONFIDENCE_CAVEAT</code> / <code>KHY_OCR_COVERAGE_NOTICE</code> 并列)。</p>
+<h3 id="接线-services-backend-src-services-gateway-aigatewaygeneratemethod-js">接线 <code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code><a class="anchor" href="#接线-services-backend-src-services-gateway-aigatewaygeneratemethod-js" aria-label="锚点">#</a></h3>
+<p>新增助手 <code>_appendOcrTruncationNotice(prompt, ocrDetails)</code>(fail-soft),在<strong>三处</strong> OCR 注入点、<br>紧随 <code>_appendOcrCoverageNotice</code> 之后、<code>_appendVisionKeyOffer</code> 之前追加:</p>
+<ol><li>失败总结分支(全部视觉候选失败后剥图 + OCR 兜底);</li><li><code>ocr-fallback</code> 分支(当前 provider 无任何视觉候选);</li><li>adapter 级联分支(适配器不支持图像时的 OCR 辅助)。</li></ol>
+<h2 id="三-诚实边界">三、诚实边界<a class="anchor" href="#三-诚实边界" aria-label="锚点">#</a></h2>
+<ul><li>只在<strong>真有截断</strong>(<code>countTruncated &gt;= 1</code>)时告诫;无截断 / 门关 / 畸形 → <code>null</code>,逐字节回退,绝不误报。</li><li>告诫是<strong>装饰</strong>:不改成败归属、不改剥图 / 清图不变量;任何异常 fail-safe 视为「不告诫」,绝不外抛。</li><li><code>_truncateInfo</code> 的 text 与旧 <code>_truncate</code> <strong>逐字节等价</strong>——只是把此前只在文本内留痕的截断事实,</li></ul>
+<p>额外提升为一个可被 gateway 消费的结构化布尔。</p>
+<h2 id="四-验收-全绿">四、验收(全绿)<a class="anchor" href="#四-验收-全绿" aria-label="锚点">#</a></h2>
+<ul><li>纯叶单测 <code>ocrTruncationNotice.test.js</code> 12/12(门控、<code>countTruncated</code> 严格布尔、<code>buildTruncationNotice</code></li></ul>
+<p>分母有无、<code>count&lt;1</code>/非有限/门关/畸形回 null)。</p>
+<ul><li>接线端到端 <code>imageOcrTruncationWiring.test.js</code> 3/3(真实 <code>generate()</code> 走 ocr-fallback,DI 注入</li></ul>
+<p><code>truncated:true</code> → 最终 prompt 含 <code>其中 1/2 张</code> + <code>因长度上限被截断</code>;无截断不误报;门关逐字节回退)。</p>
+<ul><li><code>npm run test:ocr-truncation-notice</code> 聚合两文件;并入 <code>test:maintainer:safety</code>。</li><li><code>node --check</code> 全过;<code>arch:god</code> 无新增超限;三守卫 <code>--changed</code> 净;<code>flag-registry</code> 不误报;</li></ul>
+<p><code>maintainer:check</code> + <code>metadata</code> 二次幂等;secret clean。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-110] 还原解密套件可执行性对账.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-110] 还原解密套件可执行性对账</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-112] 纯文本模型图片 OCR 兜底语言包可用性诚实告诫.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-112] 纯文本模型图片 OCR 兜底 —— 语言包可用性诚实告诫</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

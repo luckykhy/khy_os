@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-141] 代理内核安装显式 CLI 表面接线（能力存在但未接线 → 补接线） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-141] 代理内核安装显式 CLI 表面接线（能力存在但未接线 → 补接线）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-141] 代理内核安装显式 CLI 表面接线（能力存在但未接线 → 补接线）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-141-代理内核安装显式-cli-表面接线-能力存在但未接线-补接线">[OPS-MAN-141] 代理内核安装显式 CLI 表面接线（能力存在但未接线 → 补接线）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#断桥判据-为什么这是真缺口">断桥判据（为什么这是真缺口）</a></li><li class="lvl-2"><a href="#本次改动-全-additive-门-khy-proxy-core-install-cli-default-on-门关字节回退到-proxy-help">本次改动（全 additive · 门 `KHY_PROXY_CORE_INSTALL_CLI` default-on · 门关字节回退到 proxy help）</a></li><li class="lvl-2"><a href="#用户表面">用户表面</a></li><li class="lvl-2"><a href="#验收-本次全绿">验收（本次全绿）</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-141-代理内核安装显式-cli-表面接线-能力存在但未接线-补接线">[OPS-MAN-141] 代理内核安装显式 CLI 表面接线（能力存在但未接线 → 补接线）<a class="anchor" href="#ops-man-141-代理内核安装显式-cli-表面接线-能力存在但未接线-补接线" aria-label="锚点">#</a></h1>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>代理内核 mihomo 的 <code>install()</code> 能力此前<strong>只有自动触发路径</strong>（raw 节点 <code>start()</code> 时<br><code>proxyCoreManager.js</code> 自动调用），<strong>无任何显式/主动的用户表面</strong>；离机（headless / pip 安装）<br>用户必须先配置并启动一个 raw 节点才能间接触发。本次给它接上 <code>khy proxy core install|status</code><br>显式命令，补齐「能力存在但没接线」的缺口。</p>
+<h2 id="断桥判据-为什么这是真缺口">断桥判据（为什么这是真缺口）<a class="anchor" href="#断桥判据-为什么这是真缺口" aria-label="锚点">#</a></h2>
+<ul><li><code>proxyCoreInstaller.install()</code> 是一个<strong>幂等、fail-soft、结构化返回</strong>的成熟能力</li></ul>
+<p>（已装→existing / PATH 采纳→adopted / 门关→disabled+guidance / 否则→官方 HTTPS 下载+SHA256 校验）。</p>
+<ul><li>唯一消费者是 <code>proxyCoreManager.js:243</code> 的 <code>start(node)</code> <strong>自动安装</strong>分支。</li><li>结论：能力完备，但<strong>没有面向用户的主动入口</strong>。无头/离机用户看不到、够不到 =「没接线」。</li></ul>
+<h2 id="本次改动-全-additive-门-khy-proxy-core-install-cli-default-on-门关字节回退到-proxy-help">本次改动（全 additive · 门 <code>KHY_PROXY_CORE_INSTALL_CLI</code> default-on · 门关字节回退到 proxy help）<a class="anchor" href="#本次改动-全-additive-门-khy-proxy-core-install-cli-default-on-门关字节回退到-proxy-help" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>services/backend/src/cli/handlers/proxyCoreInstallHandler.js</code></td><td><strong>新叶</strong>：纯格式化器（<code>formatDownloadHint</code> / <code>formatCoreInstallResult</code> / <code>formatCoreStatus</code>）+ fail-soft <code>runCore</code>。失败<strong>始终</strong>追加「你可以手动下载:」+ 精确 URL + 落盘路径。</td></tr><tr><td><code>services/backend/src/services/flagRegistry.js</code></td><td>登记 <code>KHY_PROXY_CORE_INSTALL_CLI</code>（default-on）。</td></tr><tr><td><code>services/backend/src/cli/handlers/proxy.js</code></td><td><code>handleProxyCore(action)</code> 门控包装（门关→<code>handleProxyHelp</code> 字节回退）+ 导出 + help 行。</td></tr><tr><td><code>services/backend/src/cli/router.js</code></td><td><code>subCommand === 'core'</code> → <code>proxy.handleProxyCore(...)</code> 分派。</td></tr><tr><td><code>services/backend/tests/cli/proxyCoreInstallHandler.test.js</code></td><td>20 例：格式化器全变体 + fake installer 驱动 runCore + 源级 wiring（readFileSync+regex）。</td></tr></tbody></table>
+<h2 id="用户表面">用户表面<a class="anchor" href="#用户表面" aria-label="锚点">#</a></h2>
+<pre><code>khy proxy core status     # 查看内核是否安装 + 未装时去哪下载（精确 URL + 落盘路径）
+khy proxy core install    # 幂等安装：已装即返回 / PATH 采纳 / 门控官方 HTTPS 下载 + SHA256</code></pre>
+<h2 id="验收-本次全绿">验收（本次全绿）<a class="anchor" href="#验收-本次全绿" aria-label="锚点">#</a></h2>
+<ul><li><code>node --test .../proxyCoreInstallHandler.test.js</code> → 20/20 pass。</li><li>LIVE：真 installer 经 runCore <code>status</code>（零网络）→ 精确输出下载 URL + <code>~/.khyquant/bin/mihomo</code>。</li><li>门关：<code>KHY_PROXY_CORE_INSTALL_CLI=0</code> → <code>handleProxyCore</code> 回退到 proxy help（字节回退）。</li><li>回归：<code>proxyCoreInstaller</code> + <code>proxyCoreManager</code> 既有套件 38/38 pass。</li><li>守卫：change-safety / agent-rules / leaf-contract / flag-registry / maintainer:check 全 exit0。</li><li>god-file：新叶 138 行；<code>proxy.js</code> 2460；<code>router.js</code> 2495（均 &lt; 2500）。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ul><li>「能力存在但没接线」的判据 = 能力完备且 fail-soft，但<strong>唯一消费者是内部自动路径</strong>，无用户主动入口。</li><li>离机/无头场景优先补 <strong>CLI 表面</strong>（可离线验证、契合 pip 安装现实），而非 Web 按钮。</li><li>门关必须<strong>字节回退</strong>到既有行为（这里回退到 proxy help）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-140] OCR成功读出但模型仍谎称没收到图的确定性纠正脚注.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-140] OCR 成功读出但模型仍谎称「没收到图」的确定性纠正脚注</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-142] 失败墙推迟到OCR结果已知后减少心灵噪音.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-142] 失败墙推迟到 OCR 结果已知后(减少心灵噪音)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-141] 代理内核安装显式CLI表面接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

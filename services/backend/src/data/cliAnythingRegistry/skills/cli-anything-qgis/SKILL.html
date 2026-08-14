@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-qgis · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-qgis<span class="sep">›</span>cli-anything-qgis</div>
+      <header class="hero reveal"><h1>cli-anything-qgis</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-qgis">cli-anything-qgis</a></li><li class="lvl-2"><a href="#requirements">Requirements</a></li><li class="lvl-2"><a href="#agent-guidance">Agent guidance</a></li><li class="lvl-2"><a href="#what-this-cli-covers">What this CLI covers</a></li><li class="lvl-2"><a href="#command-groups">Command groups</a></li><li class="lvl-3"><a href="#project">`project`</a></li><li class="lvl-3"><a href="#layer">`layer`</a></li><li class="lvl-3"><a href="#feature">`feature`</a></li><li class="lvl-3"><a href="#layout">`layout`</a></li><li class="lvl-3"><a href="#export">`export`</a></li><li class="lvl-3"><a href="#process">`process`</a></li><li class="lvl-3"><a href="#session">`session`</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-project-and-add-a-writable-layer">Create a project and add a writable layer</a></li><li class="lvl-3"><a href="#add-features-and-inspect-them">Add features and inspect them</a></li><li class="lvl-3"><a href="#create-and-export-a-layout">Create and export a layout</a></li><li class="lvl-3"><a href="#inspect-or-run-processing-algorithms">Inspect or run processing algorithms</a></li><li class="lvl-3"><a href="#repl">REPL</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-qgis&quot;<br>description: Stateful QGIS CLI for projects, writable layers, features, layouts, exports, and qgis_process operations using the real QGIS runtime.</p>
+<hr>
+<h1 id="cli-anything-qgis">cli-anything-qgis<a class="anchor" href="#cli-anything-qgis" aria-label="锚点">#</a></h1>
+<p>Use this skill when you need to inspect or modify QGIS projects from the terminal through the real QGIS runtime.</p>
+<h2 id="requirements">Requirements<a class="anchor" href="#requirements" aria-label="锚点">#</a></h2>
+<ul><li>QGIS installed with <code>qgis_process</code> on <code>PATH</code></li><li>PyQGIS importable from the Python environment running the CLI</li><li>Python 3.10+</li></ul>
+<h2 id="agent-guidance">Agent guidance<a class="anchor" href="#agent-guidance" aria-label="锚点">#</a></h2>
+<ul><li>Prefer <code>--json</code> for all machine-driven use.</li><li>For one-shot commands, pass <code>--project &lt;path&gt;</code> when operating on an existing project.</li><li>Running <code>cli-anything-qgis</code> with no subcommand starts a stateful REPL.</li><li>Layout export is backed by real QGIS processing algorithms:<ul><li><code>native:printlayouttopdf</code></li><li><code>native:printlayouttoimage</code></li></ul></li></ul>
+<h2 id="what-this-cli-covers">What this CLI covers<a class="anchor" href="#what-this-cli-covers" aria-label="锚点">#</a></h2>
+<ul><li>create, open, save, and inspect <code>.qgs</code> / <code>.qgz</code> projects</li><li>create writable GeoPackage-backed vector layers</li><li>add features via WKT geometry and typed <code>key=value</code> attributes</li><li>create print layouts and add map/label items</li><li>export layouts to PDF or image</li><li>inspect and run generic <code>qgis_process</code> algorithms</li><li>inspect session status and history</li></ul>
+<h2 id="command-groups">Command groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project"><code>project</code><a class="anchor" href="#project" aria-label="锚点">#</a></h3>
+<ul><li><code>new -o/--output [--title] [--crs]</code></li><li><code>open PATH</code></li><li><code>save [PATH]</code></li><li><code>info</code></li><li><code>set-crs CRS</code></li></ul>
+<h3 id="layer"><code>layer</code><a class="anchor" href="#layer" aria-label="锚点">#</a></h3>
+<ul><li><code>create-vector --name --geometry --crs [--field name:type ...]</code></li><li><code>list</code></li><li><code>info LAYER</code></li><li><code>remove LAYER</code></li></ul>
+<h3 id="feature"><code>feature</code><a class="anchor" href="#feature" aria-label="锚点">#</a></h3>
+<ul><li><code>add --layer LAYER --wkt WKT [--attr key=value ...]</code></li><li><code>list --layer LAYER [--limit N]</code></li></ul>
+<h3 id="layout"><code>layout</code><a class="anchor" href="#layout" aria-label="锚点">#</a></h3>
+<ul><li><code>create --name [--page-size] [--orientation]</code></li><li><code>list</code></li><li><code>info LAYOUT</code></li><li><code>remove LAYOUT</code></li><li><code>add-map --layout LAYOUT --x --y --width --height [--extent xmin,ymin,xmax,ymax]</code></li><li><code>add-label --layout LAYOUT --text TEXT --x --y --width --height [--font-size N]</code></li></ul>
+<h3 id="export"><code>export</code><a class="anchor" href="#export" aria-label="锚点">#</a></h3>
+<ul><li><code>presets</code></li><li><code>pdf OUTPUT --layout LAYOUT [--dpi] [--force-vector] [--force-raster] [--georeference/--no-georeference] [--overwrite]</code></li><li><code>image OUTPUT --layout LAYOUT [--dpi] [--overwrite]</code></li></ul>
+<h3 id="process"><code>process</code><a class="anchor" href="#process" aria-label="锚点">#</a></h3>
+<ul><li><code>list</code></li><li><code>help ALGORITHM_ID</code></li><li><code>run ALGORITHM_ID [--param KEY=VALUE ...]</code></li></ul>
+<h3 id="session"><code>session</code><a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<ul><li><code>status</code></li><li><code>history [--limit N]</code></li></ul>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-project-and-add-a-writable-layer">Create a project and add a writable layer<a class="anchor" href="#create-a-project-and-add-a-writable-layer" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-qgis --json project new -o demo.qgz --title &quot;Demo&quot; --crs EPSG:4326
+cli-anything-qgis --json --project demo.qgz layer create-vector \
+  --name places \
+  --geometry point \
+  --field name:string \
+  --field score:int</code></pre>
+<h3 id="add-features-and-inspect-them">Add features and inspect them<a class="anchor" href="#add-features-and-inspect-them" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-qgis --json --project demo.qgz feature add \
+  --layer places \
+  --wkt &quot;POINT(1 2)&quot; \
+  --attr name=HQ \
+  --attr score=5
+
+cli-anything-qgis --json --project demo.qgz feature list --layer places --limit 10</code></pre>
+<h3 id="create-and-export-a-layout">Create and export a layout<a class="anchor" href="#create-and-export-a-layout" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-qgis --json --project demo.qgz layout create --name Main
+cli-anything-qgis --json --project demo.qgz layout add-map --layout Main --x 10 --y 20 --width 180 --height 120
+cli-anything-qgis --json --project demo.qgz layout add-label --layout Main --text &quot;Demo map&quot; --x 10 --y 8 --width 100 --height 10
+cli-anything-qgis --json --project demo.qgz export pdf output.pdf --layout Main --overwrite</code></pre>
+<h3 id="inspect-or-run-processing-algorithms">Inspect or run processing algorithms<a class="anchor" href="#inspect-or-run-processing-algorithms" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-qgis --json process help native:buffer
+cli-anything-qgis --json --project demo.qgz process run native:buffer \
+  --param INPUT=/tmp/demo_data.gpkg|layername=places \
+  --param DISTANCE=1 \
+  --param SEGMENTS=8 \
+  --param END_CAP_STYLE=0 \
+  --param JOIN_STYLE=0 \
+  --param MITER_LIMIT=2 \
+  --param DISSOLVE=false \
+  --param OUTPUT=/tmp/buffer.geojson</code></pre>
+<h3 id="repl">REPL<a class="anchor" href="#repl" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-qgis</code></pre>
+<p>Example interactive flow:</p>
+<pre><code class="language-text">project new -o demo.qgz --title &quot;Demo&quot;
+layer create-vector --name places --geometry point --field name:string
+feature add --layer places --wkt &quot;POINT(1 2)&quot; --attr name=HQ
+layout create --name Main
+session status
+quit</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-pm2/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-pm2</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-quietshrink/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">quietshrink — Agent Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-qgis/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

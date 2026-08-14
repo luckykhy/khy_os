@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>项目痛点诊断报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>项目痛点诊断报告</div>
+      <header class="hero reveal"><h1>项目痛点诊断报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#项目痛点诊断报告">项目痛点诊断报告</a></li><li class="lvl-2"><a href="#一-严重问题-critical">一、严重问题（Critical）</a></li><li class="lvl-3"><a href="#req-2026-001-service-层级反转-真实循环依赖">REQ-2026-001 — service 层级反转 + 真实循环依赖</a></li><li class="lvl-2"><a href="#二-高风险问题-high">二、高风险问题（High）</a></li><li class="lvl-3"><a href="#req-2026-002-repl-js-单函数-8000-行超巨上帝函数">REQ-2026-002 — repl.js 单函数 8000 行超巨上帝函数</a></li><li class="lvl-3"><a href="#req-2026-003-guardrailstate-无界-map-真实内存泄漏">REQ-2026-003 — `_guardrailState` 无界 Map（真实内存泄漏）</a></li><li class="lvl-3"><a href="#req-2026-004-网关每次错误事件做同步-读-改-写-磁盘">REQ-2026-004 — 网关每次错误事件做同步「读-改-写」磁盘</a></li><li class="lvl-3"><a href="#req-2026-005-new-function-以-字符白名单-充当算术沙箱-脆弱设计">REQ-2026-005 — `new Function` 以「字符白名单」充当算术沙箱（脆弱设计）</a></li><li class="lvl-3"><a href="#req-2026-006-97-处空-catch-静默吞错-含每消息热路径">REQ-2026-006 — 97 处空 catch 静默吞错（含每消息热路径）</a></li><li class="lvl-2"><a href="#三-改进建议-medium-low">三、改进建议（Medium / Low）</a></li><li class="lvl-3"><a href="#req-2026-007-n-1-查询-medium">REQ-2026-007 — N+1 查询（Medium）</a></li><li class="lvl-3"><a href="#req-2026-008-超长函数-gateway-tooluseloop-medium">REQ-2026-008 — 超长函数（gateway/toolUseLoop）（Medium）</a></li><li class="lvl-3"><a href="#req-2026-009-独立迭代被串行-await-medium">REQ-2026-009 — 独立迭代被串行 await（Medium）</a></li><li class="lvl-3"><a href="#req-2026-010-sleep-与-env-整数解析重复实现-medium">REQ-2026-010 — sleep() 与 env 整数解析重复实现（Medium）</a></li><li class="lvl-3"><a href="#req-2026-011-sql-标识符拼接-low-仅内部常量">REQ-2026-011 — SQL 标识符拼接（Low，仅内部常量）</a></li><li class="lvl-3"><a href="#req-2026-012-仪表盘请求每次同步读-todo-文件-low">REQ-2026-012 — 仪表盘请求每次同步读 todo 文件（Low）</a></li><li class="lvl-2"><a href="#四-架构演进路径">四、架构演进路径</a></li><li class="lvl-3"><a href="#短期-1-周内-止血">短期（1 周内 · 止血）</a></li><li class="lvl-3"><a href="#中期-1-月内-重构">中期（1 月内 · 重构）</a></li><li class="lvl-2"><a href="#四之二-修复落地状态-2026-06-13-复盘">四之二、修复落地状态（2026-06-13 复盘）</a></li><li class="lvl-2"><a href="#五-诊断方法说明">五、诊断方法说明</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="项目痛点诊断报告">项目痛点诊断报告<a class="anchor" href="#项目痛点诊断报告" aria-label="锚点">#</a></h1>
+<ul><li><strong>项目名称</strong>：Khy-OS / <code>services/backend</code>（khy-os-backend v0.1.98）</li><li><strong>审计时间</strong>：2026-06-13</li><li><strong>健康度评分</strong>：<strong>6 / 10</strong>（功能完整、测试覆盖充分、治理体系活跃；但承载严重结构性债务：超巨函数、跨层循环依赖、真实无界内存泄漏、网关热路径同步 I/O）</li><li><strong>技术栈</strong>：Node.js + Express 服务端；Sequelize / better-sqlite3 / pg / redis 数据层；ws WebSocket；ink + react 终端 UI（TUI）；winston 日志；prom-client + OpenTelemetry 可观测；jsonwebtoken / bcryptjs / helmet / express-rate-limit 安全栈。规模：<code>src/</code> 下 916 个 JS 文件、约 300,316 LOC、436 个测试文件、43 个直接依赖。版本控制健康（50 commits，最近 2026-06-12）。</li></ul>
+<blockquote><p><strong>审计方法纪律</strong>：本报告所有结论均来自工具化客观证据（<code>grep</code> 静态模式扫描、<code>require()</code> 互边环检测、函数行距测量、调用点回溯），每个问题精确到 <code>文件路径:行号</code>，并附根因推演与可操作的 <code>suggested_fix</code>。无任何&quot;凭直觉臆测&quot;的笼统结论。</p></blockquote>
+<hr>
+<h2 id="一-严重问题-critical">一、严重问题（Critical）<a class="anchor" href="#一-严重问题-critical" aria-label="锚点">#</a></h2>
+<h3 id="req-2026-001-service-层级反转-真实循环依赖">REQ-2026-001 — service 层级反转 + 真实循环依赖<a class="anchor" href="#req-2026-001-service-层级反转-真实循环依赖" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-001&quot;,
+  &quot;title&quot;: &quot;service 层直接依赖 cli 表现层，形成跨层循环依赖，靠 lazy require 掩盖&quot;,
+  &quot;category&quot;: &quot;架构与耦合&quot;,
+  &quot;priority&quot;: &quot;Critical&quot;,
+  &quot;description&quot;: &quot;业务/服务层 src/services/* 至少 12 处直接 require('../cli/*')，其中 toolCalling.js:2223 require('../cli/ui/permissionDialog') 与 permissionDialog.js:143 require('../../services/toolCalling') 构成确证的双向 2-环（互边均经逐行 grep 验证）。全仓另有约 17 处把 require('../cli/*') 内联进服务函数体（如 queryEngine.js:366,637,858,876,888），这是 import-time 环已存在、被刻意推迟到调用时的事实信号。&quot;,
+  &quot;root_cause&quot;: &quot;缺少明确的分层契约：表现层（cli/ui、cli/ai、cli/hooks）与服务层互相反向引用。权限对话框渲染本应由表现层发起，却被服务层 toolCalling 反向拉起；服务层又被表现层拉回取工具定义，形成环。lazy/inline require 是规避 Node import-time 死锁的补丁，而非解耦。&quot;,
+  &quot;impact&quot;: &quot;①服务层无法脱离 cli 独立单测或独立复用（多租户网关 / SDK 复用受阻）；②环使任一侧重构都可能触发隐性加载顺序 bug；③inline require 散落使依赖关系对静态分析与 .ai/ 元数据不可见，侵蚀可维护性地板。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/services/toolCalling.js:2223；services/backend/src/cli/ui/permissionDialog.js:143,184；services/backend/src/services/queryEngine.js:366,637,858,876,888；services/backend/src/services/preflightPermission.js:139；services/backend/src/services/inputPreprocessor.js:623；services/backend/src/services/toolUseLoop.js:62；services/backend/src/services/contextCompressor.js:402,549；services/backend/src/services/planModeService.js:976；services/backend/src/services/extensionMarketplace.js:27；services/backend/src/services/remote/index.js:406&quot;,
+  &quot;suggested_fix&quot;: &quot;引入单向依赖契约（cli → services，禁止反向）。将权限对话框/输入渲染抽象为服务层定义的接口（如 PermissionPrompter port），由 cli 在启动时注入实现（依赖倒置）；服务层只持有接口引用，不 require 任何 cli/* 模块。先以 toolCalling↔permissionDialog 这一确证环作试点，再批量清理 12 处反向 require。可加一条 ESLint no-restricted-imports 规则禁止 src/services/** 引入 ../cli/**，把约束固化为 CI 门禁。&quot;,
+  &quot;related_modules&quot;: [&quot;toolCalling&quot;, &quot;cli/ui/permissionDialog&quot;, &quot;queryEngine&quot;, &quot;serviceRegistry&quot;],
+  &quot;tags&quot;: [&quot;circular-dependency&quot;, &quot;layering-violation&quot;, &quot;dependency-inversion&quot;, &quot;testability&quot;]
+}</code></pre>
+<hr>
+<h2 id="二-高风险问题-high">二、高风险问题（High）<a class="anchor" href="#二-高风险问题-high" aria-label="锚点">#</a></h2>
+<h3 id="req-2026-002-repl-js-单函数-8000-行超巨上帝函数">REQ-2026-002 — repl.js 单函数 8000 行超巨上帝函数<a class="anchor" href="#req-2026-002-repl-js-单函数-8000-行超巨上帝函数" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-002&quot;,
+  &quot;title&quot;: &quot;cli/repl.js 整个文件实质是一个 8000+ 行的 startRepl 闭包&quot;,
+  &quot;category&quot;: &quot;架构与耦合&quot;,
+  &quot;priority&quot;: &quot;High&quot;,
+  &quot;description&quot;: &quot;src/cli/repl.js 共 8124 LOC，仅导出 module.exports = { startRepl }（:8124）。startRepl 从 :97 延伸至文件尾，函数体约 8027 LOC，内嵌约 326 个嵌套 function/arrow。输入循环、路由、网关调用（:330,:454,:3074）、工具循环（:5979）、查询引擎（:5734）全部塞在同一闭包作用域内。&quot;,
+  &quot;root_cause&quot;: &quot;无任何分解：所有状态以闭包变量捕获，导致逻辑无法被抽出为独立可测单元；随特性叠加持续就地膨胀。&quot;,
+  &quot;impact&quot;: &quot;①单元测试几乎不可能（无法隔离任一子逻辑）；②任何改动都需在 8000 行作用域内推理，回归风险极高；③16 处 empty catch 集中于此文件，错误黑洞最深。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/cli/repl.js:97（startRepl 起点，体长约 8027 行）&quot;,
+  &quot;suggested_fix&quot;: &quot;按职责切出独立模块并以参数/上下文对象传递状态而非闭包捕获：replInputLoop、replRouter、replGatewayBridge、replToolLoopAdapter。优先抽出无状态纯逻辑（路由判定、命令解析）形成可测函数。目标是把 startRepl 收敛到 &lt; 300 行的编排骨架。&quot;,
+  &quot;related_modules&quot;: [&quot;cli/repl&quot;, &quot;cli/router&quot;, &quot;toolUseLoop&quot;],
+  &quot;tags&quot;: [&quot;god-function&quot;, &quot;closure-state&quot;, &quot;untestable&quot;, &quot;size&quot;]
+}</code></pre>
+<h3 id="req-2026-003-guardrailstate-无界-map-真实内存泄漏">REQ-2026-003 — <code>_guardrailState</code> 无界 Map（真实内存泄漏）<a class="anchor" href="#req-2026-003-guardrailstate-无界-map-真实内存泄漏" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-003&quot;,
+  &quot;title&quot;: &quot;toolGuards._guardrailState 每次工具调用新增键且永不淘汰，长会话内存泄漏&quot;,
+  &quot;category&quot;: &quot;性能与效率&quot;,
+  &quot;priority&quot;: &quot;High&quot;,
+  &quot;description&quot;: &quot;src/services/toolGuards.js:453 const _guardrailState = new Map()，:495 _guardrailState.set(fingerprint, state)，键为 `${toolName}::${hash(params)}`，即每个不同参数的工具调用产生新键。无 size 上限、无 TTL。唯一清理函数 resetGuardrailState（:557，导出于 :736）经全 src grep 确认零调用方（dead code）。toolCallGuardrail 在每次工具调用时被 toolUseLoop.js:2686,3110 与 toolExecutionEngine.js:524 触发。&quot;,
+  &quot;root_cause&quot;: &quot;清理入口写了但从未接线，per-event 累加器退化为无界缓存；自主长任务/长会话下随工具调用数线性增长。&quot;,
+  &quot;impact&quot;: &quot;长时间运行的自主 agent 会话（本项目核心场景）内存单调增长，最终 OOM 或 GC 抖动；与既有'内存泄漏治理'主线（backend 5 处无界结构修复）同类未覆盖项。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/services/toolGuards.js:453,495,557,736&quot;,
+  &quot;suggested_fix&quot;: &quot;将 _guardrailState 改为带上限 + TTL 的 LRU（复用仓库内已验证的有界缓存范式，如 bootstrapBudget.js 的 LRU 或 ragRetrievalService 的 MAX_CACHE_ENTRIES+TTL）；或在会话结束/工具循环收尾处真正调用 resetGuardrailState。补一条断言测试：连续 N 次不同参数调用后 _guardrailState.size 不超过上限。&quot;,
+  &quot;related_modules&quot;: [&quot;toolGuards&quot;, &quot;toolUseLoop&quot;, &quot;toolExecutionEngine&quot;],
+  &quot;tags&quot;: [&quot;memory-leak&quot;, &quot;unbounded-cache&quot;, &quot;dead-code&quot;, &quot;long-session&quot;]
+}</code></pre>
+<h3 id="req-2026-004-网关每次错误事件做同步-读-改-写-磁盘">REQ-2026-004 — 网关每次错误事件做同步「读-改-写」磁盘<a class="anchor" href="#req-2026-004-网关每次错误事件做同步-读-改-写-磁盘" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-004&quot;,
+  &quot;title&quot;: &quot;runtimeDiagnosticsStore 在每个网关错误/停顿事件上同步读+写 JSON 文件&quot;,
+  &quot;category&quot;: &quot;性能与效率&quot;,
+  &quot;priority&quot;: &quot;High&quot;,
+  &quot;description&quot;: &quot;src/services/gateway/runtimeDiagnosticsStore.js:151 writeDiagnostic() 先 readState()（同步 fs.readFileSync :140）再 writeState()（同步 fs.writeFileSync :134），即每次 record() 都做一次同步读 + 同步写。record() 被各适配器在请求/流处理的错误与停顿路径调用：apiAdapter.js:150,160、claudeAdapter.js:216、codexAdapter.js:198,218、ollamaAdapter.js:157,167、relayApiAdapter.js:73,83。&quot;,
+  &quot;root_cause&quot;: &quot;诊断状态持久化用同步整文件 JSON read-modify-write，置于高频错误事件路径，阻塞事件循环。&quot;,
+  &quot;impact&quot;: &quot;故障/重试高发时（恰是最需要吞吐的时刻）事件循环被同步磁盘 I/O 串行阻塞，放大网关延迟、加剧雪崩。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/services/gateway/runtimeDiagnosticsStore.js:134,140,151&quot;,
+  &quot;suggested_fix&quot;: &quot;内存中维护诊断状态，改为异步去抖批量落盘（如 setTimeout/微批 + fs.promises.writeFile）；或换用 append-only 日志 + 周期快照，避免每事件全文件读改写。至少把同步调用替换为异步并在写入失败时降级为内存计数。&quot;,
+  &quot;related_modules&quot;: [&quot;gateway/runtimeDiagnosticsStore&quot;, &quot;gateway/adapters/*&quot;],
+  &quot;tags&quot;: [&quot;sync-io&quot;, &quot;event-loop-block&quot;, &quot;hot-path&quot;, &quot;gateway&quot;]
+}</code></pre>
+<h3 id="req-2026-005-new-function-以-字符白名单-充当算术沙箱-脆弱设计">REQ-2026-005 — <code>new Function</code> 以「字符白名单」充当算术沙箱（脆弱设计）<a class="anchor" href="#req-2026-005-new-function-以-字符白名单-充当算术沙箱-脆弱设计" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-005&quot;,
+  &quot;title&quot;: &quot;localBrainService 计算器用字符级白名单守卫 new Function，允许标识符字母穿透&quot;,
+  &quot;category&quot;: &quot;安全与健壮性&quot;,
+  &quot;priority&quot;: &quot;High&quot;,
+  &quot;description&quot;: &quot;src/services/localBrainService.js:437 const result = new Function(`\&quot;use strict\&quot;; return (${expr});`)()。其守卫（:433）为 if (/[a-zA-Z]/.test(expr) &amp;&amp; !/^[\\d\\s+\\-*/().%,Math.powsqrtPIceilfloorabsroundlogEe]+$/.test(expr)) 拒绝——这是一个『字符集合』白名单而非『算术文法』解析。该字符集合并集含 c,o,n,s,t,r,u 等字母，故 constructor、Math 等标识符可整体通过字符校验。对照正确实现 khyUpgradeRuntime.js:1149 safeEvalExpression 仅允许 /^[0-9+\\-*/().%^\\s]+$/（无字母），是安全的。&quot;,
+  &quot;root_cause&quot;: &quot;用动态代码执行（new Function）实现数学求值，再以手写字符黑/白名单补救。字符级白名单无法表达『仅算术表达式』的文法约束，标识符字符被并入合法集合，安全保证不成立。&quot;,
+  &quot;impact&quot;: &quot;当前无字符串字面量字符（引号不在白名单）使完整 RCE 链受限，但防护建立在脆弱前提上：任意一次白名单字符扩充或上游 expr 取值变化都可能打开 Function 构造器路径。属高危设计债，须根除而非微调正则。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/services/localBrainService.js:433,437&quot;,
+  &quot;suggested_fix&quot;: &quot;废弃 new Function 求值，改用真正的算术表达式解析器（递归下降 / 既有 mathjs-like 受限求值器，仅支持数字、四则、幂、括号、白名单 Math 函数的 AST 求值），或直接复用 khyUpgradeRuntime.safeEvalExpression 的纯数字字符正则路径。统一项目内『安全数学求值』为单一真源。&quot;,
+  &quot;related_modules&quot;: [&quot;localBrainService&quot;, &quot;khyUpgradeRuntime&quot;],
+  &quot;tags&quot;: [&quot;code-injection-risk&quot;, &quot;new-function&quot;, &quot;input-validation&quot;, &quot;sandbox&quot;]
+}</code></pre>
+<h3 id="req-2026-006-97-处空-catch-静默吞错-含每消息热路径">REQ-2026-006 — 97 处空 catch 静默吞错（含每消息热路径）<a class="anchor" href="#req-2026-006-97-处空-catch-静默吞错-含每消息热路径" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-006&quot;,
+  &quot;title&quot;: &quot;全仓 97 处空 catch 块静默吞错，部分位于每条用户消息必经路径&quot;,
+  &quot;category&quot;: &quot;可维护与规范&quot;,
+  &quot;priority&quot;: &quot;High&quot;,
+  &quot;description&quot;: &quot;src 下（不含 tests）共 97 处 catch (e) {} / } catch {} 静默吞错。热路径样本：queryEngine.js:824,829 吞掉 extractKnowledge() 与 recordHabit() 错误（每条已处理用户消息触发）、:878,890 吞掉 saveConversation()/loadConversation() 错误；routes/admin.js:88 吞掉 sequelize.authenticate() 失败仅留布尔。集中区：repl.js（16 处，最多）、ai.js（12 处）、selfOptimizer.js（约 10 处）、plugin-loader（6 处）、crashRecovery（5 处）、gateway/proxyServer.js（3 处）。&quot;,
+  &quot;root_cause&quot;: &quot;以空 catch 抑制非预期异常换取『不崩』，但错误信息在最需要诊断的子系统（崩溃恢复、插件加载、网关代理）被彻底丢弃，违背项目既定『零静默失败/精准归因』红线。&quot;,
+  &quot;impact&quot;: &quot;①故障不可观测：会话保存失败、知识抽取失败、DB 认证失败全部无声；②与本项目 DESIGN-ARCH-028『零静默失败』规范直接冲突；③调试时无日志线索，平均修复时间被显著拉长。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/services/queryEngine.js:824,829,878,890；services/backend/src/routes/admin.js:88；services/backend/src/services/selfOptimizer.js:161,179,427,554,568,582；services/backend/src/services/crashRecovery.js（5 处）；services/backend/src/plugin-loader/index.js（6 处）；services/backend/src/cli/repl.js（16 处）；services/backend/src/cli/ai.js（12 处）&quot;,
+  &quot;suggested_fix&quot;: &quot;区分两类：真正的『可忽略清理』（如 try{fs.unlinkSync()}catch{}）保留但加注释；其余一律至少 logger.debug/warn 记录错误（含上下文），接入既有 failsafe 归因（E01–E08）。可加 ESLint no-empty + 自定义规则禁止无注释空 catch，并将网关/恢复/持久化路径的吞错升级为结构化告警。&quot;,
+  &quot;related_modules&quot;: [&quot;queryEngine&quot;, &quot;crashRecovery&quot;, &quot;plugin-loader&quot;, &quot;gateway/proxyServer&quot;, &quot;failsafe&quot;],
+  &quot;tags&quot;: [&quot;silent-failure&quot;, &quot;error-swallowing&quot;, &quot;observability&quot;, &quot;lint&quot;]
+}</code></pre>
+<hr>
+<h2 id="三-改进建议-medium-low">三、改进建议（Medium / Low）<a class="anchor" href="#三-改进建议-medium-low" aria-label="锚点">#</a></h2>
+<h3 id="req-2026-007-n-1-查询-medium">REQ-2026-007 — N+1 查询（Medium）<a class="anchor" href="#req-2026-007-n-1-查询-medium" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-007&quot;,
+  &quot;title&quot;: &quot;公告与系统设置存在循环内逐行查询的 N+1 模式&quot;,
+  &quot;category&quot;: &quot;性能与效率&quot;,
+  &quot;priority&quot;: &quot;Medium&quot;,
+  &quot;description&quot;: &quot;routes/announcement.js:109-113 for (announcement of rows) { await AnnouncementRead.count({ where:{ announcement_id: announcement.id } }) }，每行一次 COUNT；systemSettingService.js:80-81 setMultipleSettings 对每个 key 一次 await SystemSetting.findOne；:341-342 初始化 seeding 同型（启动期，较低）。&quot;,
+  &quot;root_cause&quot;: &quot;应用层循环驱动 ORM 单点查询，未用聚合/批量查询。&quot;,
+  &quot;impact&quot;: &quot;公告数 / 设置项数增长时数据库往返线性放大，接口延迟与连接占用上升。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/routes/announcement.js:109-113；services/backend/src/services/systemSettingService.js:80-81,341-342&quot;,
+  &quot;suggested_fix&quot;: &quot;announcement 改单条 GROUP BY announcement_id 聚合一次取回全部已读计数后内存合并；systemSetting 改 findAll({ where:{ key: keys } }) 一次取回再 bulk upsert。&quot;,
+  &quot;related_modules&quot;: [&quot;routes/announcement&quot;, &quot;systemSettingService&quot;],
+  &quot;tags&quot;: [&quot;n+1&quot;, &quot;orm&quot;, &quot;query-batching&quot;]
+}</code></pre>
+<h3 id="req-2026-008-超长函数-gateway-tooluseloop-medium">REQ-2026-008 — 超长函数（gateway/toolUseLoop）（Medium）<a class="anchor" href="#req-2026-008-超长函数-gateway-tooluseloop-medium" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-008&quot;,
+  &quot;title&quot;: &quot;handleGatewayConfig(1068 行) 与 runToolUseLoop(3175 行) 超长函数&quot;,
+  &quot;category&quot;: &quot;架构与耦合&quot;,
+  &quot;priority&quot;: &quot;Medium&quot;,
+  &quot;description&quot;: &quot;cli/handlers/gateway.js:2447-3515 handleGatewayConfig 约 1068 LOC；该文件 6783 LOC、36 导出、151 顶层函数，CLI 命令分发与进程生命周期/网络探活（_probeUrlReachable:4933、_waitPidExit:5131）混杂。services/toolUseLoop.js:766-3941 runToolUseLoop 约 3175 LOC；该文件同时是核心循环实现 + 约 8 个模块的 re-export 门面（导出块 :6449 列约 75 名）。&quot;,
+  &quot;root_cause&quot;: &quot;命令分发与底层进程/IPC 管线耦合；核心循环与 barrel 聚合职责混在单文件。&quot;,
+  &quot;impact&quot;: &quot;单测困难、改动半径大、re-export 门面掩盖真实依赖。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/cli/handlers/gateway.js:2447-3515；services/backend/src/services/toolUseLoop.js:766-3941,6449&quot;,
+  &quot;suggested_fix&quot;: &quot;gateway.js 把进程/网络探活（_probeUrlReachable/_waitPidExit/_waitAiManageRuntimeReady）抽到 gatewayProcessUtil 模块，handleGatewayConfig 按子命令拆分。toolUseLoop.js 把 re-export 门面拆成独立 barrel（index 聚合），runToolUseLoop 抽出 turn 处理 / 工具结果归一 / 压缩触发为子函数。&quot;,
+  &quot;related_modules&quot;: [&quot;cli/handlers/gateway&quot;, &quot;toolUseLoop&quot;],
+  &quot;tags&quot;: [&quot;god-function&quot;, &quot;facade&quot;, &quot;size&quot;]
+}</code></pre>
+<h3 id="req-2026-009-独立迭代被串行-await-medium">REQ-2026-009 — 独立迭代被串行 await（Medium）<a class="anchor" href="#req-2026-009-独立迭代被串行-await-medium" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-009&quot;,
+  &quot;title&quot;: &quot;多处对相互独立的异步迭代串行 await，可并行化&quot;,
+  &quot;category&quot;: &quot;性能与效率&quot;,
+  &quot;priority&quot;: &quot;Medium&quot;,
+  &quot;description&quot;: &quot;keyHealthProbe.js:88-93 probeAll 对每个 key 串行 await probeKey（各打不同端点，完全独立，总延迟=求和）；aiGateway.js:2727-2731 refreshAdapters 串行 await detectAsync；:2920-2924 _refreshModelsBackground 串行 await listModels。&quot;,
+  &quot;root_cause&quot;: &quot;对独立任务用顺序 for-await 而非并发聚合。&quot;,
+  &quot;impact&quot;: &quot;健康探测/适配器刷新总耗时随数量线性增长，拖慢就绪与诊断。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/services/keyHealthProbe.js:88-93；services/backend/src/services/gateway/aiGateway.js:2727-2731,2920-2924&quot;,
+  &quot;suggested_fix&quot;: &quot;改 Promise.all（或带并发上限的 pMap）并发执行；probeAll/refreshAdapters/_refreshModelsBackground 三处均适用。注意 _resolveContextWindowAsync:2982 含 break 早退，属有意顺序，保持不动。&quot;,
+  &quot;related_modules&quot;: [&quot;keyHealthProbe&quot;, &quot;gateway/aiGateway&quot;],
+  &quot;tags&quot;: [&quot;concurrency&quot;, &quot;promise-all&quot;, &quot;latency&quot;]
+}</code></pre>
+<h3 id="req-2026-010-sleep-与-env-整数解析重复实现-medium">REQ-2026-010 — sleep() 与 env 整数解析重复实现（Medium）<a class="anchor" href="#req-2026-010-sleep-与-env-整数解析重复实现-medium" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-010&quot;,
+  &quot;title&quot;: &quot;已有 utils/sleep.js 却 11 处内联 sleep；_int env 解析三处分叉签名&quot;,
+  &quot;category&quot;: &quot;可维护与规范&quot;,
+  &quot;priority&quot;: &quot;Medium&quot;,
+  &quot;description&quot;: &quot;src/utils/sleep.js:12 存在规范实现，但 ciStatusService、ollamaModelManager、mcp/oauthTokenStore、telemetryService、gateway/aiGateway、tools/_fileLock、toolCalling、gateway/adapters/_fingerprint、cli/handlers/daemon、cli/handlers/gateway、routes/largeTasks 共 11 文件各自内联 new Promise(r=&gt;setTimeout). _int 在 inputSanitizer.js:68(v,def)、metaToolEngine.js:29(name,def)、buildProject.js:96(s) 三种不同签名；裸 parseInt(process.env...) 散布（ai.js 33×、gateway.js 18×、repl.js 15×、aiGateway.js 11×）。&quot;,
+  &quot;root_cause&quot;: &quot;共享 util 未被采用；缺统一 env-config 访问器，边界/默认值各自实现且不一致。&quot;,
+  &quot;impact&quot;: &quot;重复代码、行为漂移（默认值/边界处理不一致）、改一处难覆盖全部。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/utils/sleep.js:12；services/backend/src/services/inputSanitizer.js:68；services/backend/src/services/metaToolEngine.js:29；services/backend/src/tools/buildProject.js:96&quot;,
+  &quot;suggested_fix&quot;: &quot;全仓 sleep 统一 import utils/sleep；新增 utils/envInt(name, def, {min,max}) 单一真源替换三处 _int 与裸 parseInt(process.env)。&quot;,
+  &quot;related_modules&quot;: [&quot;utils/sleep&quot;, &quot;inputSanitizer&quot;, &quot;metaToolEngine&quot;],
+  &quot;tags&quot;: [&quot;duplication&quot;, &quot;dry&quot;, &quot;config&quot;]
+}</code></pre>
+<h3 id="req-2026-011-sql-标识符拼接-low-仅内部常量">REQ-2026-011 — SQL 标识符拼接（Low，仅内部常量）<a class="anchor" href="#req-2026-011-sql-标识符拼接-low-仅内部常量" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-011&quot;,
+  &quot;title&quot;: &quot;accountPool 以模板字符串拼接表名/列名执行 DDL&quot;,
+  &quot;category&quot;: &quot;安全与健壮性&quot;,
+  &quot;priority&quot;: &quot;Low&quot;,
+  &quot;description&quot;: &quot;accountPool.js:798 _db.query(`PRAGMA table_info(${table})`)；:801 _db.query(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`)。table/name/definition 当前均为 ensurePoolSchema 内部 schema 常量，非用户可控，故不可注入。&quot;,
+  &quot;root_cause&quot;: &quot;SQL 标识符无法参数化绑定，迁移代码以字符串插值拼接 DDL，形成模式坏味。&quot;,
+  &quot;impact&quot;: &quot;当前无注入面；但若未来 table/name 来源变为外部输入则立即转为高危。属预防性技术债。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/services/accountPool.js:798,801&quot;,
+  &quot;suggested_fix&quot;: &quot;对标识符做严格白名单校验（/^[A-Za-z_][A-Za-z0-9_]*$/）或维护受控的列定义常量表，禁止任何外部值流入；加注释标注『仅接受内部常量』约束。&quot;,
+  &quot;related_modules&quot;: [&quot;accountPool&quot;],
+  &quot;tags&quot;: [&quot;sql-identifier&quot;, &quot;ddl&quot;, &quot;defense-in-depth&quot;]
+}</code></pre>
+<h3 id="req-2026-012-仪表盘请求每次同步读-todo-文件-low">REQ-2026-012 — 仪表盘请求每次同步读 todo 文件（Low）<a class="anchor" href="#req-2026-012-仪表盘请求每次同步读-todo-文件-low" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;requirement_id&quot;: &quot;REQ-2026-012&quot;,
+  &quot;title&quot;: &quot;largeTasks 仪表盘 GET 每请求同步 existsSync+readFileSync 扫候选 todo 文件&quot;,
+  &quot;category&quot;: &quot;性能与效率&quot;,
+  &quot;priority&quot;: &quot;Low&quot;,
+  &quot;description&quot;: &quot;routes/largeTasks.js:99-100 _readPendingTodos() 内 fs.existsSync()+fs.readFileSync()，被 :816 的 GET 仪表盘处理器每请求调用，且对 _candidateTodoStateFiles() 列表循环多次同步 stat+read。&quot;,
+  &quot;root_cause&quot;: &quot;每请求阻塞式磁盘读取 todo 状态文件，无缓存。&quot;,
+  &quot;impact&quot;: &quot;仪表盘高频刷新时同步 I/O 阻塞事件循环，单实例下放大延迟（影响面小于网关，故 Low）。&quot;,
+  &quot;location&quot;: &quot;services/backend/src/routes/largeTasks.js:99-100,816&quot;,
+  &quot;suggested_fix&quot;: &quot;改 fs.promises 异步读 + 短 TTL 内存缓存（如 1–2s），或在 todo 写入处主动失效缓存，避免每请求扫盘。&quot;,
+  &quot;related_modules&quot;: [&quot;routes/largeTasks&quot;],
+  &quot;tags&quot;: [&quot;sync-io&quot;, &quot;dashboard&quot;, &quot;cache&quot;]
+}</code></pre>
+<hr>
+<h2 id="四-架构演进路径">四、架构演进路径<a class="anchor" href="#四-架构演进路径" aria-label="锚点">#</a></h2>
+<blockquote><p>前置声明：本项目<strong>具备健康版本控制</strong>（50 commits）、<strong>结构组织良好</strong>（按 services/cli/routes/tools 分层 + 318 个子系统目录 + 436 测试 + .ai/ 元数据 + 40+ 设计规范），<strong>不触发</strong>「无 VCS / 结构极度混乱 → 暂停深度诊断、先做基础治理」条款。可直接进入针对性重构。</p></blockquote>
+<h3 id="短期-1-周内-止血">短期（1 周内 · 止血）<a class="anchor" href="#短期-1-周内-止血" aria-label="锚点">#</a></h3>
+<ol><li><strong>REQ-2026-003 内存泄漏</strong>：把 <code>_guardrailState</code> 改 LRU+TTL 或接线 <code>resetGuardrailState</code>，补 size 上限断言测试。（运行时危害最直接，改动局部、收益高）</li><li><strong>REQ-2026-004 网关同步 I/O</strong>：<code>runtimeDiagnosticsStore</code> 改异步去抖落盘，解除故障高发期事件循环阻塞。</li><li><strong>REQ-2026-005 脆弱沙箱</strong>：<code>localBrainService</code> 求值统一到纯数字正则路径或 AST 求值，根除 <code>new Function</code> 字符白名单。</li><li><strong>REQ-2026-006 静默吞错（热路径子集）</strong>：先处理 <code>queryEngine</code>（每消息）、<code>crashRecovery</code>、<code>gateway/proxyServer</code>、<code>routes/admin.js:88</code> 的空 catch，接入 failsafe 结构化归因；加 <code>no-empty</code> lint 防回潮。</li></ol>
+<h3 id="中期-1-月内-重构">中期（1 月内 · 重构）<a class="anchor" href="#中期-1-月内-重构" aria-label="锚点">#</a></h3>
+<ol><li><strong>REQ-2026-001 分层契约</strong>：以依赖倒置切断 service→cli 反向引用，先做 <code>toolCalling↔permissionDialog</code> 试点，落 ESLint <code>no-restricted-imports</code>（<code>src/services/**</code> 禁 <code>../cli/**</code>）作 CI 门禁，再批量清理 12 处 + 17 处 inline require。</li><li><strong>REQ-2026-002 / 008 上帝函数</strong>：<code>repl.js startRepl</code> 按职责抽 4 模块、状态改上下文对象传递（目标编排骨架 &lt; 300 行）；<code>gateway.js</code>/<code>toolUseLoop.js</code> 分离进程工具 / re-export 门面 / 核心循环。</li><li><strong>REQ-2026-007 / 009 / 010</strong>：N+1 改聚合查询、独立迭代改 <code>Promise.all</code>、<code>sleep</code>/<code>envInt</code> 收敛单一真源。</li><li><strong>REQ-2026-011 / 012</strong>：DDL 标识符白名单校验、仪表盘读取异步化 + 短 TTL 缓存。</li></ol>
+<hr>
+<h2 id="四之二-修复落地状态-2026-06-13-复盘">四之二、修复落地状态（2026-06-13 复盘）<a class="anchor" href="#四之二-修复落地状态-2026-06-13-复盘" aria-label="锚点">#</a></h2>
+<blockquote><p>本轮按「短期止血 + 安全可控的中期项」推进，每项附测试与回归。三处 8000 行级上帝函数（REQ-001 分层反转、REQ-002 / 008 上帝函数）作为「中期 1 月重构」按原路线图<strong>显式延后</strong>——不在缺乏前置拆分的情况下引入会立即失败的 ESLint 门禁。</p></blockquote>
+<table><thead><tr><th>REQ</th><th>严重度</th><th>状态</th><th>落地说明</th></tr></thead><tbody><tr><td>REQ-2026-001</td><td>Critical</td><td>⏸ 延后（中期）</td><td>service→cli 分层反转，需依赖倒置试点 + CI 门禁，按路线图 1 月内重构。</td></tr><tr><td>REQ-2026-002</td><td>High</td><td>⏸ 延后（中期）</td><td><code>repl.js startRepl</code> ≈8000 行上帝函数，按职责抽 4 模块属大重构，延后。</td></tr><tr><td>REQ-2026-003</td><td>High</td><td>✅ 已修复</td><td><code>_guardrailState</code> 改 LRU+TTL（<code>KHY_GUARDRAIL_MAX_ENTRIES</code>/<code>KHY_GUARDRAIL_TTL_MS</code> 可调，默认 2000/30min），<code>_recordGuardrailState</code> + <code>_evictGuardrailState</code> 写入即驱逐；补 size 上限 + TTL 驱逐两测试。</td></tr><tr><td>REQ-2026-004</td><td>High</td><td>✅ 已缓解</td><td>消除每事件同步<strong>读</strong>：<code>runtimeDiagnosticsStore</code> 内存缓存合并基线（<code>readMergeBase</code>），热路径 <code>writeDiagnostic</code> 不再读盘。<strong>写仍同步</strong>——<code>gatewayAdapters.stability.test.js</code> 依赖「新 require 的适配器无 flush 即可读盘」的持久化契约，异步去抖会破坏该契约，故保留同步写。公共 <code>readState</code> 仍读盘以反映外部/跨进程写。</td></tr><tr><td>REQ-2026-005</td><td>High</td><td>✅ 已修复</td><td>根除 <code>new Function</code> 字符白名单沙箱，改递归下降算术解析器 <code>_safeEvalArithmetic</code>（仅数字 / <code>+ - * / % **</code> / 括号 / 一元 / 白名单 <code>Math.pow</code>·<code>Math.sqrt</code>·<code>Math.PI</code>）；任意标识符 / 动态代码一律抛错。新增 <code>localBrainSafeEval.test.js</code> 6 测试覆盖正例与注入拒绝。</td></tr><tr><td>REQ-2026-006</td><td>High</td><td>✅ 部分修复（热路径）</td><td>每消息热路径空 catch 接入结构化日志：<code>queryEngine</code> <code>_postProcess</code>/<code>loadConversation</code>/<code>clearHistory</code> 改 <code>logger.debug</code>，<code>routes/admin.js:88</code> 改 <code>logger.warn</code>。<code>gateway/proxyServer.js</code> 的 SSE 写出 catch 系「向可能已关闭的 socket best-effort 写」，记录只会产生 broken-pipe 噪音，<strong>有意保持静默</strong>。未引入 <code>no-empty</code> lint（会对其余 90+ 处历史空 catch 立即失败，属中期治理）。</td></tr><tr><td>REQ-2026-007</td><td>Medium</td><td>✅ 已修复</td><td><code>announcement.js</code> 阅读统计改单次 <code>GROUP BY</code> 聚合；<code>systemSettingService</code> <code>setMultipleSettings</code>/<code>initializeDefaultSettings</code> 改单次 <code>findAll</code> + <code>bulkCreate</code>，消除逐键 N+1。修正既有单测的 mock（findOne→findAll）与点号键断言（数组形）。</td></tr><tr><td>REQ-2026-008</td><td>Medium</td><td>⏸ 延后（中期）</td><td><code>gateway.js</code>/<code>toolUseLoop.js</code> 超长函数，随 REQ-002 同期重构。</td></tr><tr><td>REQ-2026-009</td><td>Medium</td><td>✅ 已修复</td><td>独立迭代串行 await 改并发：<code>keyHealthProbe.probeAll</code>、<code>aiGateway.refreshAdapters</code>、<code>aiGateway._refreshModelsBackground</code> 改 <code>Promise.all</code>。<code>_resolveContextWindowAsync:2982</code> 的 break 系刻意短路，保留。</td></tr><tr><td>REQ-2026-010</td><td>Medium</td><td>✅ 已修复（含纠偏）</td><td>5 处模块级 <code>sleep</code>/<code>delay</code>/<code>_sleep</code> 重复实现收敛到 <code>utils/sleep</code>（ollamaModelManager·oauthTokenStore·daemon·gateway·_fingerprint）；<code>_fileLock.js</code>（零依赖契约 DESIGN-ARCH-022）与 <code>_retryWithBackoff.sleepAbortable</code>（signal 契约）<strong>不动</strong>。<code>_int</code> 经核查实为三种不同契约（inputSanitizer 值式 + 可注入 env；metaToolEngine env 名式 + 正数回退；buildProject 编译输出字符串解析），<strong>非真重复</strong>，保留各自语义；新建 <code>utils/envInt</code> 作为新代码路径单一真源（REQ-003 已采用）。</td></tr><tr><td>REQ-2026-011</td><td>Low</td><td>✅ 已修复</td><td><code>accountPool.ensureColumn</code> 增 <code>_assertSqlIdentifier</code> 严格标识符白名单（<code>/^[A-Za-z_][A-Za-z0-9_]*$/</code>）作纵深防御，杜绝未来调用方经标识符注入。</td></tr><tr><td>REQ-2026-012</td><td>Low</td><td>✅ 已修复</td><td><code>largeTasks._readPendingTodos</code> 拆分为可缓存的文件读取 + 按请求切片，加短 TTL 缓存（<code>KHY_LARGE_TASK_TODO_TTL_MS</code>，默认 2s），消除仪表盘每请求同步读盘。</td></tr></tbody></table>
+<p><strong>回归结果</strong>：直接触达的测试套件全绿——<code>localBrainSafeEval</code>(6) / <code>toolGuardsExtended</code>(18) / <code>gatewayAdapters.stability</code>(24) / <code>systemSettingService</code>(9) / <code>keyHealthProbe</code>(14) / <code>largeTasks.route</code>(25) / <code>queryEngine</code>×5 + <code>toolGuards</code> 核心(32) 等。唯一失败 <code>aiGateway.stability › clearAdapterFailure</code> 经 stash 对照证实为<strong>既有失败</strong>（在原始代码上同样复现），与本轮改动无关。</p>
+<h2 id="五-诊断方法说明">五、诊断方法说明<a class="anchor" href="#五-诊断方法说明" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>客观方法</th><th>关键工具/证据</th></tr></thead><tbody><tr><td>全局拓扑</td><td>文件计数 / LOC 统计 / 依赖与最大文件度量</td><td><code>find</code>/<code>wc</code>、<code>package.json</code> 解析、最大文件排序（repl.js 8124 / gateway.js 6783 / toolUseLoop.js 6510 …）</td></tr><tr><td>架构与耦合</td><td><code>require()</code> 互边环检测（双向逐行验证）、函数行距测量、跨层 require 扫描</td><td>toolCalling↔permissionDialog 2-环确证；12 处 service→cli 反向 require；startRepl≈8027 行</td></tr><tr><td>安全与健壮性</td><td>危险源静态模式匹配（<code>exec</code>/<code>new Function</code>/<code>eval</code>/<code>vm</code>/SQL 拼接/硬编码密钥）+ 调用点回溯研判可利用性</td><td><code>localBrainService.js:437</code> 字符白名单脆弱沙箱（对照 <code>khyUpgradeRuntime.js:1149</code> 安全实现）；<code>accountPool.js:798/801</code> 仅内部常量不可注入；硬编码密钥扫描<strong>零命中</strong></td></tr><tr><td>性能与效率</td><td>热路径同步 I/O 扫描（区分启动期 vs 每请求）、循环内 ORM 查询、无界缓存（有无 cap/TTL/clearer）、串行独立 await</td><td><code>runtimeDiagnosticsStore</code> 每事件同步读写；<code>_guardrailState</code> 无界 + dead reset（grep 确认零调用）；announcement/systemSetting N+1</td></tr><tr><td>可维护与规范</td><td>空 catch 计数（排除 tests）、超长函数测量、跨文件重复逻辑识别</td><td>97 处空 catch；<code>buildMobileHTML</code>/<code>useQueryBridge</code>/<code>handleMultiProtocol</code> 超长函数；<code>sleep</code> 11 处内联 / <code>_int</code> 三签名</td></tr></tbody></table>
+<p><strong>纪律声明</strong>：本审计严格遵循「每个问题精确到 <code>文件路径:行号</code> + 根因 + 可操作 <code>suggested_fix</code>」铁律，所有数据经工具采集与调用点验证；对仅凭模式匹配命中但经回溯确认不可利用者（如 <code>accountPool</code> 内部常量 DDL、<code>aiGateway:772</code> 受 env 开关保护的 debug 写）已如实降级或标注，不夸大、不臆测。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-019] 架构对比-cc-vs-khy.html"><div class="dir">← 上一篇</div><div class="ttl">Claude Code vs KHY OS：架构深度对比</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-021] 全量审查报告甄别-bundled路径与本仓源码对照-2026-07-14.html"><div class="dir">下一篇 →</div><div class="ttl">[MGMT-RPT-021] 全量审查报告甄别 · bundled 路径与本仓源码对照</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-020] 项目痛点诊断报告-2026-06-13.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

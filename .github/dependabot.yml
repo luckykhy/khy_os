@@ -1,0 +1,55 @@
+version: 2
+updates:
+  # ── GitHub Actions ───────────────────────────────────────────────────────────
+  # Group all Actions updates together so reviewers see one PR per week.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Shanghai
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: scope
+
+  # ── npm (services/backend) ───────────────────────────────────────────────────
+  # The backend has a committed package-lock.json; Dependabot opens PRs for
+  # patch/minor bumps. Group all npm deps to reduce PR noise.
+  - package-ecosystem: npm
+    directory: /services/backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: Asia/Shanghai
+    groups:
+      backend-npm:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  # ── pip (pyproject.toml) ─────────────────────────────────────────────────────
+  # Python deps are declared in pyproject.toml and locked by pip freeze /
+  # poetry (if used). Group all pip updates.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Asia/Shanghai
+    groups:
+      pip:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"

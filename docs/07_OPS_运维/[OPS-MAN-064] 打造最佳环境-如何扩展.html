@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>「打造最佳环境」— 如何扩展（新手 / 小模型手册） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>「打造最佳环境」— 如何扩展（新手 / 小模型手册）</div>
+      <header class="hero reveal"><h1>「打造最佳环境」— 如何扩展（新手 / 小模型手册）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#打造最佳环境-如何扩展-新手-小模型手册">「打造最佳环境」— 如何扩展（新手 / 小模型手册）</a></li><li class="lvl-2"><a href="#这份文档给谁看">这份文档给谁看</a></li><li class="lvl-2"><a href="#一分钟看懂结构">一分钟看懂结构</a></li><li class="lvl-2"><a href="#配方-a-加一个-健康检查-只读探针">配方 A：加一个「健康检查」（只读探针）</a></li><li class="lvl-3"><a href="#第-1-步-打开文件">第 1 步：打开文件</a></li><li class="lvl-3"><a href="#第-2-步-照抄一个探针函数">第 2 步：照抄一个探针函数</a></li><li class="lvl-3"><a href="#第-3-步-在-probes-数组里加一行">第 3 步：在 `_PROBES` 数组里加一行</a></li><li class="lvl-3"><a href="#第-4-步-把函数加进导出-测试要用">第 4 步：把函数加进导出（测试要用）</a></li><li class="lvl-3"><a href="#第-5-步-验证">第 5 步：验证</a></li><li class="lvl-2"><a href="#配方-b-加一个-安全修复">配方 B：加一个「安全修复」</a></li><li class="lvl-3"><a href="#安全铁律-不可违反-违反了会毁用户数据">安全铁律（不可违反 —— 违反了会毁用户数据）</a></li><li class="lvl-3"><a href="#照抄一个修复函数">照抄一个修复函数</a></li><li class="lvl-3"><a href="#在-repairs-数组里加一行-导出">在 `_REPAIRS` 数组里加一行 + 导出</a></li><li class="lvl-2"><a href="#配方-c-让某个检查-修复-只在某些系统跑">配方 C：让某个检查/修复「只在某些系统跑」</a></li><li class="lvl-2"><a href="#开关-万一要临时关掉某一层">开关（万一要临时关掉某一层）</a></li><li class="lvl-2"><a href="#出错了怎么办-自查清单">出错了怎么办（自查清单）</a></li><li class="lvl-2"><a href="#相关文档">相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-064 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-064] 打造最佳环境-如何扩展.md --&gt;</p>
+<h1 id="打造最佳环境-如何扩展-新手-小模型手册">「打造最佳环境」— 如何扩展（新手 / 小模型手册）<a class="anchor" href="#打造最佳环境-如何扩展-新手-小模型手册" aria-label="锚点">#</a></h1>
+<blockquote><p>日期: 2026-07-09<br>状态: 已实施<br>关联文件: <code>services/backend/src/services/envProbes.js</code>, <code>envRepair.js</code>, <code>envPlatform.js</code>, <code>localBrainEnvOptimize.js</code><br>一句话验证: <code>npm run test:maintainer:env-optimize</code></p></blockquote>
+<h2 id="这份文档给谁看">这份文档给谁看<a class="anchor" href="#这份文档给谁看" aria-label="锚点">#</a></h2>
+<p>你是<strong>第一次接手</strong>这块代码的人，或者是一个<strong>小模型</strong>（例如 4B）。你不需要读懂整套自检流水线，也不需要改动核心逻辑。这块功能是<strong>照着模板抄一条就能扩</strong>的——本文档告诉你抄哪一行、抄成什么样、怎么验证没抄错。</p>
+<p>如果你只想改一个东西，直接跳到下面对应的「配方」小节，照抄即可。</p>
+<hr>
+<h2 id="一分钟看懂结构">一分钟看懂结构<a class="anchor" href="#一分钟看懂结构" aria-label="锚点">#</a></h2>
+<p>用户在输入框里打「打造当前系统最佳环境」这句话，系统会依次做四件事，每件事对应一个文件：</p>
+<table><thead><tr><th>你想加什么</th><th>改这一个文件</th><th>往哪个数组里加一条</th></tr></thead><tbody><tr><td>一个新的<strong>健康检查</strong>（只看不改，如「端口被占用」「证书过期」）</td><td><code>envProbes.js</code></td><td><code>_PROBES</code></td></tr><tr><td>一个新的<strong>安全修复</strong>（只补缺失，绝不删东西）</td><td><code>envRepair.js</code></td><td><code>_REPAIRS</code></td></tr><tr><td>一个新的<strong>平台区分</strong>（某检查只在某系统跑）</td><td>给上面那条加一个 <code>platforms</code> 字段</td><td>同上</td></tr></tbody></table>
+<p><strong>关键点</strong>：加一个检查或修复，你<strong>只改一个文件、只加一个对象</strong>。编排层 <code>localBrainEnvOptimize.js</code>、格式化、结论文案、接线<strong>全都不用动</strong>——聚合器会自动把你新加的那条纳入报告。这是设计好的，不是巧合。</p>
+<hr>
+<h2 id="配方-a-加一个-健康检查-只读探针">配方 A：加一个「健康检查」（只读探针）<a class="anchor" href="#配方-a-加一个-健康检查-只读探针" aria-label="锚点">#</a></h2>
+<p><strong>场景举例</strong>：你想让系统在磁盘 inode 快用完时提醒用户。</p>
+<h3 id="第-1-步-打开文件">第 1 步：打开文件<a class="anchor" href="#第-1-步-打开文件" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/services/envProbes.js</code></p>
+<h3 id="第-2-步-照抄一个探针函数">第 2 步：照抄一个探针函数<a class="anchor" href="#第-2-步-照抄一个探针函数" aria-label="锚点">#</a></h3>
+<p>在文件里现有的 <code>_probe...</code> 函数旁边，抄一个新的。规则只有三条：</p>
+<ol><li><strong>只看不改</strong>：只能读系统状态（<code>os</code>、<code>fs.statSync</code> 之类），<strong>绝对不能写文件、删文件、开子进程</strong>。</li><li><strong>健康就返回 <code>null</code></strong>：没问题时返回 <code>null</code>，报告里就不会出现这一条。</li><li><strong>有问题就返回一个对象</strong>：<code>{ severity, detail, hint }</code>。</li></ol>
+<pre><code class="language-javascript">/** inode 耗尽检查 —— 示例，照抄改逻辑即可。 */
+function _probeInodeExhaustion() {
+  let free = 0;
+  try {
+    // ……在这里读你的系统指标（只读！）……
+    free = 100; // 占位：换成真实读取
+  } catch { return null; }        // 读不到就当健康，绝不抛异常
+  if (free &lt; 5) {
+    return {
+      severity: 'high',           // critical &gt; high &gt; warning &gt; info
+      detail: `可用 inode 仅剩 ${free}%`,
+      hint: '清理小文件，否则无法再创建文件',
+    };
+  }
+  return null;                     // 健康 → 返回 null
+}</code></pre>
+<p><code>severity</code> 四选一（从重到轻）：<code>critical</code>、<code>high</code>、<code>warning</code>、<code>info</code>。<code>hint</code> 是给用户的一句「怎么办」，可留空字符串。</p>
+<h3 id="第-3-步-在-probes-数组里加一行">第 3 步：在 <code>_PROBES</code> 数组里加一行<a class="anchor" href="#第-3-步-在-probes-数组里加一行" aria-label="锚点">#</a></h3>
+<p>找到文件底部的 <code>const _PROBES = [ ... ]</code>，在数组里加一条：</p>
+<pre><code class="language-javascript">{ key: 'inode-exhaustion', label: 'inode 耗尽', run: _probeInodeExhaustion },</code></pre>
+<ul><li><code>key</code>：英文短横线命名，全表唯一。</li><li><code>label</code>：中文短标签，会显示在报告里。</li><li><code>run</code>：你刚写的函数名（不要加括号）。</li></ul>
+<h3 id="第-4-步-把函数加进导出-测试要用">第 4 步：把函数加进导出（测试要用）<a class="anchor" href="#第-4-步-把函数加进导出-测试要用" aria-label="锚点">#</a></h3>
+<p>文件底部 <code>module.exports = { ... }</code> 里加一行 <code>_probeInodeExhaustion,</code>。</p>
+<h3 id="第-5-步-验证">第 5 步：验证<a class="anchor" href="#第-5-步-验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm run test:maintainer:env-optimize</code></pre>
+<p>全绿就说明你没抄错。想只跑探针测试：</p>
+<pre><code class="language-bash">node --test services/backend/tests/services/envProbes.test.js</code></pre>
+<hr>
+<h2 id="配方-b-加一个-安全修复">配方 B：加一个「安全修复」<a class="anchor" href="#配方-b-加一个-安全修复" aria-label="锚点">#</a></h2>
+<p><strong>场景举例</strong>：某个必需的目录缺失了，你想自动把它建出来。</p>
+<h3 id="安全铁律-不可违反-违反了会毁用户数据">安全铁律（不可违反 —— 违反了会毁用户数据）<a class="anchor" href="#安全铁律-不可违反-违反了会毁用户数据" aria-label="锚点">#</a></h3>
+<p>修复层 <code>envRepair.js</code> 顶部写着四条铁律，加任何修复都必须守住：</p>
+<ol><li><strong>只创建缺失的东西</strong>（<code>mkdir</code> 补一个缺失目录）。<strong>绝不删除、绝不覆盖、绝不截断</strong>用户已有的任何文件。</li><li><strong>可重复运行</strong>：跑第二遍必须是「什么都没做」（已经健康就返回 <code>null</code>）。</li><li><strong>失败不抛异常</strong>：修不了就返回 <code>{ ok: false }</code> 说明原因，不能让程序崩。</li><li><strong>遇到损坏不要删</strong>：如果路径存在但类型不对（比如本该是目录却是个文件），<strong>不要删它</strong>——那可能是用户的数据。返回 <code>ok:false</code> 交给人工处理。</li></ol>
+<blockquote><p>⚠️ <strong>要删东西？不要在这里做。</strong> 删除是破坏性操作，必须走 <code>磁盘清理</code> 命令的人工确认闸门（riskGate），一句自然语言绝不能绕过它。这块只做「补缺失」，不做「删多余」。</p></blockquote>
+<h3 id="照抄一个修复函数">照抄一个修复函数<a class="anchor" href="#照抄一个修复函数" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">/** 补一个缺失的示例目录 —— 照抄改路径即可。 */
+function _repairExampleDir() {
+  let dir;
+  try { dir = path.join(os.homedir(), '.khy', 'example'); } catch { return null; }
+  if (!dir) return null;
+
+  let stat = null;
+  try { stat = fs.statSync(dir); } catch { stat = null; }
+
+  if (stat &amp;&amp; stat.isDirectory()) return null;          // 已健康 → 不做事（可重复运行）
+  if (stat &amp;&amp; !stat.isDirectory()) {                    // 存在但类型错 → 不删,交人工
+    return { ok: false, changed: false, detail: `路径被文件占用，需人工处理: ${dir}` };
+  }
+  try {
+    fs.mkdirSync(dir, { recursive: true });             // 缺失 → 补上（唯一允许的写操作）
+    return { ok: true, changed: true, detail: `已创建缺失的目录: ${dir}` };
+  } catch (err) {
+    return { ok: false, changed: false, detail: `无法创建 ${dir}（${(err &amp;&amp; err.code) || 'IO error'}）` };
+  }
+}</code></pre>
+<p>返回值三选一：<code>null</code>（健康）、<code>{ok:true, changed:true, detail}</code>（这次补上了）、<code>{ok:false, changed:false, detail}</code>（没补成，交人工）。</p>
+<h3 id="在-repairs-数组里加一行-导出">在 <code>_REPAIRS</code> 数组里加一行 + 导出<a class="anchor" href="#在-repairs-数组里加一行-导出" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">{ key: 'example-dir', label: '示例目录', run: _repairExampleDir, platforms: ['linux', 'windows', 'macos', 'android'] },</code></pre>
+<p>再在 <code>module.exports</code> 里加 <code>_repairExampleDir,</code>。验证同配方 A（<code>npm run test:maintainer:env-optimize</code>）。</p>
+<hr>
+<h2 id="配方-c-让某个检查-修复-只在某些系统跑">配方 C：让某个检查/修复「只在某些系统跑」<a class="anchor" href="#配方-c-让某个检查-修复-只在某些系统跑" aria-label="锚点">#</a></h2>
+<p><strong>场景举例</strong>：Windows 上 PATH 里常有失效目录，但 Linux 不需要查这个。</p>
+<p>这就是「注意 linux/windows/macos/android/ios 系统的区分」那条需求的落地方式。<strong>你不用写任何 <code>if (系统是 Windows)</code> 的判断</strong>——只要在那一条注册项上加一个 <code>platforms</code> 白名单字段：</p>
+<pre><code class="language-javascript">{ key: 'path-integrity', label: 'PATH 完整性', run: _probePathIntegrity, platforms: ['windows'] },</code></pre>
+<ul><li><strong>不写 <code>platforms</code></strong> = 所有系统都跑（最常见）。</li><li><strong>写了</strong> = 只在列表里的系统跑，其它系统自动跳过。</li></ul>
+<p>合法的系统名（全小写）：<code>linux</code>、<code>windows</code>、<code>macos</code>、<code>android</code>、<code>harmonyos</code>、<code>ios</code>。这张表定义在 <code>envPlatform.js</code> 的 <code>_PLATFORM_META</code> 里，附带每个系统的特征（例如 <code>sandboxed</code>=移动沙盒受限、<code>hasLoadAvg</code>=有没有 CPU 负载均值）。</p>
+<p>几条已经生效的例子，可照着模仿：</p>
+<ul><li><code>cpu-load</code>：<code>['linux', 'macos', 'android', 'harmonyos']</code>——排除 Windows（Windows 的负载均值恒为 0，查了没意义）。</li><li><code>path-integrity</code>：<code>['windows']</code>——只有 Windows 会有失效 PATH 的老毛病。</li><li><code>config-home</code>（修复）：<code>['linux', 'windows', 'macos', 'android']</code>——排除 iOS/HarmonyOS（手机沙盒里不能随便在 HOME 建目录）。</li></ul>
+<blockquote><p>想知道当前跑在哪个系统？系统靠 <code>envPlatform.detectPlatform()</code> 判断，它复用仓库已有的 <code>osProfileService</code>（唯一权威，别再另写一套）。测试里可以用 <code>KHY_OS_PROFILE=windows</code> 之类的环境变量临时假装成某个系统。</p></blockquote>
+<hr>
+<h2 id="开关-万一要临时关掉某一层">开关（万一要临时关掉某一层）<a class="anchor" href="#开关-万一要临时关掉某一层" aria-label="锚点">#</a></h2>
+<p>每一层都有独立开关，默认全开。设成 <code>false</code> 就<strong>逐字节退回</strong>到没有这一层时的行为（不是报错，是干净地不出现）：</p>
+<table><thead><tr><th>环境变量</th><th>关掉什么</th></tr></thead><tbody><tr><td><code>KHY_ENV_OPTIMIZE=false</code></td><td>整个「打造最佳环境」意图（这句话会当普通对话交给模型）</td></tr><tr><td><code>KHY_ENV_OPTIMIZE_JUNK_SCAN=false</code></td><td>只读垃圾扫描</td></tr><tr><td><code>KHY_ENV_OPTIMIZE_PROBES=false</code></td><td>所有健康检查探针</td></tr><tr><td><code>KHY_ENV_OPTIMIZE_REPAIR=false</code></td><td>所有安全修复（只检测不修）</td></tr></tbody></table>
+<hr>
+<h2 id="出错了怎么办-自查清单">出错了怎么办（自查清单）<a class="anchor" href="#出错了怎么办-自查清单" aria-label="锚点">#</a></h2>
+<ol><li><strong>测试报「某某未定义」</strong>：你多半忘了在 <code>module.exports</code> 里加你的函数名。</li><li><strong>报告里没出现你的新检查</strong>：确认你在 <code>_PROBES</code> / <code>_REPAIRS</code> 数组里加了那一行，且 <code>run</code> 写的是函数名、没加括号。</li><li><strong><code>npm run maintainer:check</code> 报 MISSING</strong>：你在维护映射表里写了一个不存在的文件路径，改回真实路径。</li><li><strong>守卫报 leaf-io</strong>：<code>envProbes.js</code>/<code>envRepair.js</code> 允许做 IO（它们在文件头明确声明「不是纯叶子」）。如果你新建了别的文件又写了 IO，要么在文件头同样声明不是纯叶子，要么把 IO 挪到调用方。</li><li><strong>不确定改对没有</strong>：跑这一条，全绿即安全：</li></ol>
+<pre><code class="language-bash">   npm run test:maintainer:env-optimize</code></pre>
+<hr>
+<h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
+<ul><li>架构规范：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.md</code></li><li>维护路由表（哪块坏了改哪里）：<code>docs/维护者/维护映射表.json</code>（区域 id：<code>env-optimize</code>）</li><li>项目可维护性总入口：仓库根 <code>.ai/</code>（见 <code>CLAUDE.md</code>）</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-063] cc订阅迁移到新电脑-khy-claude-adopt-env.html"><div class="dir">← 上一篇</div><div class="ttl">CC 订阅迁移到新电脑（khy claude adopt-env）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-065] npm安装加速-npmrc模板.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-065] npm 安装加速 .npmrc 模板（国内镜像）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-064] 打造最佳环境-如何扩展.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

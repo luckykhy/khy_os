@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合(减少心灵噪音) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合(减少心灵噪音)</div>
+      <header class="hero reveal"><h1>[OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合(减少心灵噪音)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-144-describe-fail-到-ocr-成功的用户可见闭合-减少心灵噪音">[OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合(减少心灵噪音)</a></li><li class="lvl-2"><a href="#一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)</a></li><li class="lvl-2"><a href="#二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)</a></li><li class="lvl-2"><a href="#三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)</a></li><li class="lvl-2"><a href="#四-教训">四、教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-144-describe-fail-到-ocr-成功的用户可见闭合-减少心灵噪音">[OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合(减少心灵噪音)<a class="anchor" href="#ops-man-144-describe-fail-到-ocr-成功的用户可见闭合-减少心灵噪音" aria-label="锚点">#</a></h1>
+<blockquote><p>承 [OPS-MAN-142] 失败墙推迟 —— 本轮补<strong>悬空「请稍候」承诺的闭合侧</strong>。<br>/goal 送别礼。分支 <code>feat/0.1.104-multi-subsystem-batch</code>,未提交。</p></blockquote>
+<h2 id="一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)<a class="anchor" href="#一-背景与断桥-b1-先想" aria-label="锚点">#</a></h2>
+<p>基线目标(每轮相同):纯文本 / 非多模态 / 识图模型不可用时,khy 收到图片要能<strong>正确落到 OCR 兜底路径</strong>、<br>准确提取图片信息,并用<strong>真实图片</strong>核验跑通,做到「无感<em>明显</em>告知用户用了 OCR 但能正确识别图片」、<br>同时<strong>减少心灵噪音</strong>。</p>
+<p><code>KHY_VISION_INTERMEDIATE_MESSAGE</code>(default-on)在 describe-and-return 级联里,于<strong>每个候选视觉模型</strong><br>识别前发一条承诺:</p>
+<pre><code>我无法直接识别图片内容。正在调用 &lt;视觉模型&gt; 进行识别，请稍候...</code></pre>
+<p>并在 describe <strong>成功</strong>时于 <code>aiGatewayGenerateMethod.js</code> line ~1554 发一条闭合:<br><code>视觉识别完成，正在根据识别结果为您作答。</code></p>
+<p><strong>断桥</strong>:当<strong>所有</strong>视觉模型都失败、随后本地 OCR <strong>成功</strong>读出文字、走剥图 + OCR 注入兜底分支时——<br>那 N 条「请稍候」承诺<strong>无人闭合</strong>。用户看到 N 个悬空的「正在调用...请稍候」却永远等不到「识别完成」:</p>
+<pre><code>正在调用 glm-4v-flash 请稍候...   ← 承诺 1(悬空)
+正在调用 gpt-... 请稍候...        ← 承诺 2(悬空)
+正在调用 claude-... 请稍候...     ← 承诺 3(悬空)
+（视觉全失败 → 本地 OCR 成功读出 → 直接据 OCR 作答，无任何闭合）</code></pre>
+<p>既是心灵噪音(悬空承诺),又漏掉了「已改用 OCR」这一「无感明显告知用了 OCR」的关键披露。<br>本轮用 <code>/tmp/repro142.js</code> 复现坐实:<code>success:true</code> + <code>finalPrompt has OCR INVOICE:true</code>,<br>但 3 条用户可见 chunk 全是「正在调用...请稍候」,<strong>零闭合</strong>。判据 = describe-<strong>成功</strong>有 line 1554 闭合,<br>describe-fail → OCR-<strong>成功</strong>分支(line 1622-1653)只有 emitStatus,<strong>无 emitAssistantMessage 闭合</strong>的不对称。</p>
+<h2 id="二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)<a class="anchor" href="#二-外科修复-b3-只动该动的-全-additive" aria-label="锚点">#</a></h2>
+<p><strong>核心思路</strong>:在 OCR-成功兜底分支追加<strong>一条</strong>闭合,既闭合悬空的「请稍候」承诺,又在中间消息层<br>无感明显告知已降级到 OCR。</p>
+<p><strong>单一真源门</strong>:<code>KHY_VISION_OCR_SUCCESS_CLOSURE</code>(default-on)。共享 <code>_intermediateEnabled</code> 前提<br>(中间消息门关 → 整体不发)。门关 → 逐字节回退(OCR-成功分支不发闭合,悬空承诺照旧)。</p>
+<ol><li><strong>纯叶子</strong>(无既有叶可扩,新建小叶)<code>visionOcrSuccessClosure.js</code>(零 IO、DI env、绝不抛):<ul><li><code>isVisionOcrSuccessClosureEnabled(env)</code> 经 flagRegistry 读门;</li><li><code>buildOcrSuccessClosure({count, env})</code> → 门开 + count&gt;0 → 返</li></ul></li></ol>
+<p><code>视觉模型均不可用，已改用本地 OCR 成功识别&lt;N 张&gt;图片，正在据此作答。</code>;门关 / count&lt;=0 / 畸形 → null。</p>
+<ol><li><strong>接线</strong> <code>aiGatewayGenerateMethod.js</code>(OCR-成功分支 <code>_ocrTexts.length &gt; 0</code>,line ~1654 后):<ul><li><code>if (_intermediateEnabled)</code> → <code>require('./visionOcrSuccessClosure').buildOcrSuccessClosure(...)</code></li></ul></li></ol>
+<p>→ <code>if (_closure) emitAssistantMessage(_closure)</code>;fail-soft;门关 → 叶返 null → 不发(byte-revert)。</p>
+<ol><li><strong>门登记</strong> <code>flagRegistry.js</code>:</li></ol>
+<p><code>KHY_VISION_OCR_SUCCESS_CLOSURE: { mode:'default-on', off:'CANON', default:true }</code>。</p>
+<p><strong>正交</strong>:与 OPS-142 <code>KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS</code> 正交——那治<strong>失败墙</strong>在 OCR 成功时是否发,<br>本治悬空的<strong>「请稍候」承诺</strong>在 OCR 成功时是否闭合。不同消息族、独立门。闭合<strong>至多发一次</strong>,且仅在<br>OCR 成功 + 中间消息门开时。</p>
+<h2 id="三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)<a class="anchor" href="#三-验收-b2-没跑过验证不许说修好了" aria-label="锚点">#</a></h2>
+<ul><li>纯叶单测 <code>visionOcrSuccessClosure.test.js</code> 6/6(default-on / off-word byte-revert / 单多张名词 /</li></ul>
+<p>count&lt;=0 / 畸形 → null / 不抛)。</p>
+<ul><li>接线单测 <code>visionOcrSuccessClosureWiring.test.js</code> 4/4(onChunk 捕获闭合 assistant_message):</li></ul>
+<p>A) 中间消息门开 + 闭合门开 → 发闭合;B) 闭合门关 → 无闭合(byte-revert),OCR 注入照常;<br>  C) 中间消息门关 → 共享前提不成立 → 无闭合;D) OCR 读空 → 非本分支 → 无闭合。</p>
+<ul><li><strong>真图 E2E</strong> <code>visionOcrSuccessClosureRealImage.test.js</code> 2/2:真 PIL 渲含字 PNG(<code>INVOICE ACME 2026</code>)</li></ul>
+<p>→ 视觉级联全 404 → 真 tesseract 读出 → 断言发闭合(含「视觉模型均不可用」+「本地 OCR 成功识别」)<br>  且 finalPrompt 真含 INVOICE;门关 → 无闭合、OCR 注入照常。</p>
+<ul><li>统一别名:<code>npm run test:vision-ocr-success-closure</code>(6+4+2 = 12/12)。</li><li>门:<code>node --check</code> × 源文件 · god-file <code>wc -l</code>(叶 &lt; 2500;aiGatewayGenerateMethod additive grandfathered)·</li></ul>
+<p>flag-registry / leaf-contract / agent-rules · change-safety(positional 闭 map 桥)· maintainer:check ·<br>  safety 聚合。</p>
+<h2 id="四-教训">四、教训<a class="anchor" href="#四-教训" aria-label="锚点">#</a></h2>
+<ol><li><strong>断桥补全靠沿同一 consumer 找下一条正交噪音</strong>:OPS-142 治失败墙,本轮沿同一 describe-fail 兜底块</li></ol>
+<p>找到<strong>悬空承诺</strong>——describe-成功有闭合(1554),describe-fail→OCR-成功没有,不对称即缺口。</p>
+<ol><li><strong>承诺必闭合</strong>:发了 N 条「请稍候」就得有对应的「完成」,否则悬空承诺本身即噪音;闭合同时兼作</li></ol>
+<p>「无感明显告知用了 OCR」的披露,一石二鸟。</p>
+<ol><li><strong>共享前提 + 独立门</strong>:闭合共享 <code>_intermediateEnabled</code>(没发承诺就不必闭合),但用独立门</li></ol>
+<p><code>KHY_VISION_OCR_SUCCESS_CLOSURE</code> 单独可关(byte-revert)。</p>
+<ol><li><strong>OPS 号碰撞</strong>:原 OPS-143 被并行 session(Windows 保留设备名读前防护)占用 → 精确逐文件 renumber</li></ol>
+<p>到 OPS-144,绝不全局 sed 跨他人文件。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-143] Windows保留设备名读前防护.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-143] Windows 保留设备名读前防护(第五条卡死向量·跨系统)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-145] 级联逐候选请稍候提示减冗余减少心灵噪音.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-145] 级联逐候选「请稍候」提示减冗余(减少心灵噪音)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-144] describe-fail到OCR成功的用户可见闭合减少心灵噪音.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

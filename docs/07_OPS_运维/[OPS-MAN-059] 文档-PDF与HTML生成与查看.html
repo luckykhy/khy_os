@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-059] 文档 · PDF 与 HTML 生成与查看 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-059] 文档 · PDF 与 HTML 生成与查看</div>
+      <header class="hero reveal"><h1>[OPS-MAN-059] 文档 · PDF 与 HTML 生成与查看</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-059-文档-pdf-与-html-生成与查看">[OPS-MAN-059] 文档 · PDF 与 HTML 生成与查看</a></li><li class="lvl-2"><a href="#0-先分清三条路-选对工具-别绕路">0. 先分清三条路（选对工具，别绕路）</a></li><li class="lvl-2"><a href="#1-生成-html-pdf-最常用">1. 生成 HTML + PDF（最常用）</a></li><li class="lvl-3"><a href="#1-1-一个文件-html-pdf">1.1 一个文件 → HTML + PDF</a></li><li class="lvl-3"><a href="#1-2-常用选项">1.2 常用选项</a></li><li class="lvl-3"><a href="#1-3-批量-合订本">1.3 批量 / 合订本</a></li><li class="lvl-2"><a href="#2-没有-chrome-两条退路">2. 没有 Chrome？两条退路</a></li><li class="lvl-2"><a href="#3-一键重生成成长路线全套-preset">3. 一键重生成成长路线全套（preset）</a></li><li class="lvl-2"><a href="#4-澄清-renderdocument-产的是-word-不是-pdf-html">4. 澄清：`renderDocument` 产的是 Word，不是 PDF/HTML</a></li><li class="lvl-2"><a href="#5-交互阅读-khyosmarkdown-工作台">5. 交互阅读：khyosMarkdown 工作台</a></li><li class="lvl-2"><a href="#6-生成-html-的交互与图解特性">6. 生成 HTML 的交互与图解特性</a></li><li class="lvl-2"><a href="#7-排错">7. 排错</a></li><li class="lvl-2"><a href="#8-红线-务必遵守">8. 红线（务必遵守）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-059 | 阶段: 运维 | 主题: 文档 PDF / HTML 生成与查看 --&gt;</p>
+<h1 id="ops-man-059-文档-pdf-与-html-生成与查看">[OPS-MAN-059] 文档 · PDF 与 HTML 生成与查看<a class="anchor" href="#ops-man-059-文档-pdf-与-html-生成与查看" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>参考手册</strong> · 把 <code>docs/</code> 里的 markdown 变成<strong>好看、可打印、可离线</strong>的 HTML / PDF，一条线讲清。</p>
+<p><strong>一句话定位</strong>：仓库里的 <code>.md</code> 是<strong>唯一真源</strong>；<code>.html</code> / <code>.pdf</code> 是从它<strong>确定性生成的产物</strong>。<br>想读得舒服（浮动目录、表格、代码块、中文字体）就生成 HTML；想归档 / 打印 / 发给别人就生成 PDF。</p>
+<p>相关：<code>tools/khyos-markdown/</code>（右键打开任意 <code>.md</code> 的交互工作台）、<br>[IMPL-RPT-023] 文档排版-内容与样式分离、[DESIGN-ARCH-032] 内嵌 MD 工作台、<br>[DESIGN-ARCH-023] 文档排版与格式控制规范。</p></blockquote>
+<hr>
+<h2 id="0-先分清三条路-选对工具-别绕路">0. 先分清三条路（选对工具，别绕路）<a class="anchor" href="#0-先分清三条路-选对工具-别绕路" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>我想做的</th><th>用哪个</th><th>产物</th></tr></thead><tbody><tr><td><strong>随手读某个 <code>.md</code></strong>（阅读 / 小改）</td><td><code>tools/khyos-markdown</code>（右键或命令打开）</td><td>浏览器里实时预览，不落文件</td></tr><tr><td><strong>把 <code>docs/</code> 文档生成漂亮 HTML / PDF</strong></td><td><code>scripts/docs/md-to-pdf.js</code></td><td>自带样式的 <code>.html</code> + 打印版 <code>.pdf</code></td></tr><tr><td><strong>让 AI 排版一篇论文 / 报告（Word）</strong></td><td><code>renderDocument</code> 工具（REPL 内）</td><td><code>.docx</code>（<strong>注意：不产 PDF/HTML</strong>，见 §4）</td></tr></tbody></table>
+<blockquote><p>记住这条分界：<strong>读文档 → khyosMarkdown；发布/归档文档 → md-to-pdf.js；写正式 Word → renderDocument。</strong><br>本文主讲前两条（PDF / HTML），第三条只做澄清避免混淆。</p></blockquote>
+<pre><code class="language-svg">&lt;svg viewBox=&quot;0 0 720 260&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; font-family=&quot;sans-serif&quot; font-size=&quot;13&quot;&gt;
+  &lt;rect x=&quot;290&quot; y=&quot;18&quot; width=&quot;140&quot; height=&quot;46&quot; rx=&quot;8&quot; fill=&quot;#eff4ff&quot; stroke=&quot;#2563eb&quot;/&gt;
+  &lt;text x=&quot;360&quot; y=&quot;40&quot; text-anchor=&quot;middle&quot; fill=&quot;#1f2328&quot; font-weight=&quot;700&quot;&gt;一份 .md&lt;/text&gt;
+  &lt;text x=&quot;360&quot; y=&quot;56&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;11&quot;&gt;唯一真源&lt;/text&gt;
+
+  &lt;line x1=&quot;360&quot; y1=&quot;64&quot; x2=&quot;120&quot; y2=&quot;120&quot; stroke=&quot;#9ab8ff&quot; stroke-width=&quot;1.5&quot;/&gt;
+  &lt;line x1=&quot;360&quot; y1=&quot;64&quot; x2=&quot;360&quot; y2=&quot;120&quot; stroke=&quot;#9ab8ff&quot; stroke-width=&quot;1.5&quot;/&gt;
+  &lt;line x1=&quot;360&quot; y1=&quot;64&quot; x2=&quot;600&quot; y2=&quot;120&quot; stroke=&quot;#9ab8ff&quot; stroke-width=&quot;1.5&quot;/&gt;
+
+  &lt;rect x=&quot;30&quot; y=&quot;120&quot; width=&quot;180&quot; height=&quot;58&quot; rx=&quot;8&quot; fill=&quot;#fff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;120&quot; y=&quot;142&quot; text-anchor=&quot;middle&quot; fill=&quot;#2563eb&quot; font-weight=&quot;700&quot;&gt;读 / 小改&lt;/text&gt;
+  &lt;text x=&quot;120&quot; y=&quot;160&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;11&quot;&gt;khyosMarkdown&lt;/text&gt;
+
+  &lt;rect x=&quot;270&quot; y=&quot;120&quot; width=&quot;180&quot; height=&quot;58&quot; rx=&quot;8&quot; fill=&quot;#fff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;360&quot; y=&quot;142&quot; text-anchor=&quot;middle&quot; fill=&quot;#2563eb&quot; font-weight=&quot;700&quot;&gt;发布 / 归档&lt;/text&gt;
+  &lt;text x=&quot;360&quot; y=&quot;160&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;11&quot;&gt;md-to-pdf.js&lt;/text&gt;
+
+  &lt;rect x=&quot;510&quot; y=&quot;120&quot; width=&quot;180&quot; height=&quot;58&quot; rx=&quot;8&quot; fill=&quot;#fff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;600&quot; y=&quot;142&quot; text-anchor=&quot;middle&quot; fill=&quot;#2563eb&quot; font-weight=&quot;700&quot;&gt;正式 Word&lt;/text&gt;
+  &lt;text x=&quot;600&quot; y=&quot;160&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;11&quot;&gt;renderDocument&lt;/text&gt;
+
+  &lt;rect x=&quot;45&quot; y=&quot;204&quot; width=&quot;150&quot; height=&quot;34&quot; rx=&quot;6&quot; fill=&quot;#f6f8fa&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;120&quot; y=&quot;225&quot; text-anchor=&quot;middle&quot; fill=&quot;#24292f&quot;&gt;浏览器实时预览&lt;/text&gt;
+  &lt;rect x=&quot;285&quot; y=&quot;204&quot; width=&quot;150&quot; height=&quot;34&quot; rx=&quot;6&quot; fill=&quot;#f6f8fa&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;360&quot; y=&quot;225&quot; text-anchor=&quot;middle&quot; fill=&quot;#24292f&quot;&gt;.html + .pdf&lt;/text&gt;
+  &lt;rect x=&quot;525&quot; y=&quot;204&quot; width=&quot;150&quot; height=&quot;34&quot; rx=&quot;6&quot; fill=&quot;#f6f8fa&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;600&quot; y=&quot;225&quot; text-anchor=&quot;middle&quot; fill=&quot;#24292f&quot;&gt;.docx（Word）&lt;/text&gt;
+
+  &lt;line x1=&quot;120&quot; y1=&quot;178&quot; x2=&quot;120&quot; y2=&quot;204&quot; stroke=&quot;#cbd5e1&quot;/&gt;
+  &lt;line x1=&quot;360&quot; y1=&quot;178&quot; x2=&quot;360&quot; y2=&quot;204&quot; stroke=&quot;#cbd5e1&quot;/&gt;
+  &lt;line x1=&quot;600&quot; y1=&quot;178&quot; x2=&quot;600&quot; y2=&quot;204&quot; stroke=&quot;#cbd5e1&quot;/&gt;
+&lt;/svg&gt;</code></pre>
+<blockquote><p>上图：同一份 <code>.md</code> 真源，按目的分流到三条路；三种产物各不重叠（<code>renderDocument</code> 只产 <code>.docx</code>，见 §4）。</p></blockquote>
+<hr>
+<h2 id="1-生成-html-pdf-最常用">1. 生成 HTML + PDF（最常用）<a class="anchor" href="#1-生成-html-pdf-最常用" aria-label="锚点">#</a></h2>
+<p>真源脚本：<code>scripts/docs/md-to-pdf.js</code>。<strong>零新增依赖</strong>——复用仓库已内置的 <code>markdown-it</code><br>（<code>extensions/khy-trae-bridge/node_modules/markdown-it</code>）解析 markdown，用系统的 <strong>google-chrome<br><code>--print-to-pdf</code></strong> 把生成的 HTML 打成 PDF。中文靠 Noto Sans/Serif CJK 渲染。</p>
+<pre><code class="language-svg">&lt;svg viewBox=&quot;0 0 720 150&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; font-family=&quot;sans-serif&quot; font-size=&quot;12.5&quot;&gt;
+  &lt;rect x=&quot;20&quot; y=&quot;52&quot; width=&quot;120&quot; height=&quot;46&quot; rx=&quot;8&quot; fill=&quot;#eff4ff&quot; stroke=&quot;#2563eb&quot;/&gt;
+  &lt;text x=&quot;80&quot; y=&quot;74&quot; text-anchor=&quot;middle&quot; fill=&quot;#1f2328&quot; font-weight=&quot;700&quot;&gt;.md 真源&lt;/text&gt;
+  &lt;text x=&quot;80&quot; y=&quot;90&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;markdown&lt;/text&gt;
+
+  &lt;rect x=&quot;200&quot; y=&quot;52&quot; width=&quot;150&quot; height=&quot;46&quot; rx=&quot;8&quot; fill=&quot;#fff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;275&quot; y=&quot;70&quot; text-anchor=&quot;middle&quot; fill=&quot;#24292f&quot; font-weight=&quot;700&quot;&gt;markdown-it&lt;/text&gt;
+  &lt;text x=&quot;275&quot; y=&quot;87&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;已内置·零新增依赖&lt;/text&gt;
+
+  &lt;rect x=&quot;410&quot; y=&quot;52&quot; width=&quot;130&quot; height=&quot;46&quot; rx=&quot;8&quot; fill=&quot;#f7faff&quot; stroke=&quot;#9ab8ff&quot;/&gt;
+  &lt;text x=&quot;475&quot; y=&quot;74&quot; text-anchor=&quot;middle&quot; fill=&quot;#2563eb&quot; font-weight=&quot;700&quot;&gt;.html&lt;/text&gt;
+  &lt;text x=&quot;475&quot; y=&quot;90&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;自包含·可离线&lt;/text&gt;
+
+  &lt;rect x=&quot;600&quot; y=&quot;52&quot; width=&quot;100&quot; height=&quot;46&quot; rx=&quot;8&quot; fill=&quot;#f6f8fa&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;650&quot; y=&quot;74&quot; text-anchor=&quot;middle&quot; fill=&quot;#24292f&quot; font-weight=&quot;700&quot;&gt;.pdf&lt;/text&gt;
+  &lt;text x=&quot;650&quot; y=&quot;90&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;chrome 打印&lt;/text&gt;
+
+  &lt;line x1=&quot;140&quot; y1=&quot;75&quot; x2=&quot;196&quot; y2=&quot;75&quot; stroke=&quot;#94a3b8&quot; stroke-width=&quot;1.5&quot; marker-end=&quot;url(#ar)&quot;/&gt;
+  &lt;line x1=&quot;350&quot; y1=&quot;75&quot; x2=&quot;406&quot; y2=&quot;75&quot; stroke=&quot;#94a3b8&quot; stroke-width=&quot;1.5&quot; marker-end=&quot;url(#ar)&quot;/&gt;
+  &lt;line x1=&quot;540&quot; y1=&quot;75&quot; x2=&quot;596&quot; y2=&quot;75&quot; stroke=&quot;#94a3b8&quot; stroke-width=&quot;1.5&quot; marker-end=&quot;url(#ar)&quot;/&gt;
+  &lt;text x=&quot;568&quot; y=&quot;42&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;--print-to-pdf&lt;/text&gt;
+  &lt;text x=&quot;475&quot; y=&quot;124&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;--html-only 到此为止（无需 chrome）&lt;/text&gt;
+
+  &lt;defs&gt;
+    &lt;marker id=&quot;ar&quot; markerWidth=&quot;8&quot; markerHeight=&quot;8&quot; refX=&quot;6&quot; refY=&quot;3&quot; orient=&quot;auto&quot;&gt;
+      &lt;path d=&quot;M0,0 L6,3 L0,6 Z&quot; fill=&quot;#94a3b8&quot;/&gt;
+    &lt;/marker&gt;
+  &lt;/defs&gt;
+&lt;/svg&gt;</code></pre>
+<h3 id="1-1-一个文件-html-pdf">1.1 一个文件 → HTML + PDF<a class="anchor" href="#1-1-一个文件-html-pdf" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 在仓库根目录执行
+node scripts/docs/md-to-pdf.js &quot;docs/07_OPS_运维/[OPS-MAN-037] pip安装后-完整还原与全功能开启指南.md&quot;</code></pre>
+<p>默认在<strong>源文件旁边</strong>写出同名 <code>.html</code> 与 <code>.pdf</code>，并打印实际写出的路径。</p>
+<h3 id="1-2-常用选项">1.2 常用选项<a class="anchor" href="#1-2-常用选项" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>选项</th><th>作用</th></tr></thead><tbody><tr><td><code>--out-dir &lt;目录&gt;</code></td><td>产物写到指定目录（默认：与源 <code>.md</code> 同目录）</td></tr><tr><td><code>--html-only</code></td><td>只出 HTML，跳过 PDF（<strong>没装 chrome 时用它</strong>）</td></tr><tr><td><code>--pdf-only</code></td><td>只出 PDF（内部仍会临时渲染一份 HTML，用完删）</td></tr><tr><td><code>--combined &quot;标题&quot; 基名 a.md b.md ...</code></td><td>把多篇合成<strong>一本</strong>（带分页），生成 <code>基名.html</code> / <code>基名.pdf</code></td></tr><tr><td><code>--preset onboarding</code></td><td>一键重生成「使用入门→开发精通」成长路线全套（见 §3）</td></tr></tbody></table>
+<h3 id="1-3-批量-合订本">1.3 批量 / 合订本<a class="anchor" href="#1-3-批量-合订本" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 多个文件各自出一份
+node scripts/docs/md-to-pdf.js a.md b.md c.md --out-dir /tmp/docs-out
+
+# 合成一本（自动在每篇之间分页；目录汇总所有小节）
+node scripts/docs/md-to-pdf.js --combined &quot;运维手册合订本&quot; 运维手册合订 \
+  &quot;docs/07_OPS_运维/[OPS-MAN-037] ....md&quot; \
+  &quot;docs/07_OPS_运维/[OPS-MAN-032] ....md&quot;</code></pre>
+<hr>
+<h2 id="2-没有-chrome-两条退路">2. 没有 Chrome？两条退路<a class="anchor" href="#2-没有-chrome-两条退路" aria-label="锚点">#</a></h2>
+<p>PDF 这一步依赖 headless Chrome。缺它时脚本会<strong>明确报错</strong>（不静默失败），有三种处理：</p>
+<ol><li><strong>装 chrome</strong>（推荐）：装 <code>google-chrome</code> / <code>chromium</code> 任一即可，脚本自动探测。</li><li><strong>指到你已有的 chrome</strong>：设环境变量 <code>KHY_DOCS_CHROME</code>（或 <code>CHROME_PATH</code>）指向浏览器可执行文件。</li></ol>
+<pre><code class="language-bash">   export KHY_DOCS_CHROME=&quot;/usr/bin/chromium&quot;
+   node scripts/docs/md-to-pdf.js &quot;docs/....md&quot;</code></pre>
+<p>探测顺序：<code>KHY_DOCS_CHROME</code> → <code>CHROME_PATH</code> → <code>google-chrome-stable</code> → <code>google-chrome</code><br>   → <code>chromium</code> → <code>chromium-browser</code> → macOS 的 <code>Google Chrome.app</code>。</p>
+<ol><li><strong>只出 HTML，自己手动转 PDF</strong>：</li></ol>
+<pre><code class="language-bash">   node scripts/docs/md-to-pdf.js &quot;docs/....md&quot; --html-only</code></pre>
+<p>然后在任意浏览器打开该 <code>.html</code> → <code>Ctrl/Cmd + P</code> → 目标选「<strong>另存为 PDF</strong>」。<br>   生成的 HTML <strong>内置了打印样式</strong>（<code>@media print</code> / <code>@page A4</code>：隐藏浮动目录、A4 页边距、<br>   代码/表格避免跨页断开），所以浏览器打印出来的版式与脚本自动生成的 PDF 基本一致。</p>
+<blockquote><p>Chrome 打印参数（脚本内固定）：<code>--headless=new --no-pdf-header-footer<br>--run-all-compositor-stages-before-draw --virtual-time-budget=15000</code>；老版本 chrome 拒绝<br><code>--headless=new</code> 时自动回退经典 <code>--headless</code>。<strong>任一步失败都以真实原因非零退出</strong>，不掩盖。</p></blockquote>
+<hr>
+<h2 id="3-一键重生成成长路线全套-preset">3. 一键重生成成长路线全套（preset）<a class="anchor" href="#3-一键重生成成长路线全套-preset" aria-label="锚点">#</a></h2>
+<p><code>OPS-MAN-043</code> / <code>OPS-MAN-044</code> 这两篇「成长路线」文档常一起分发，脚本内置了 <code>onboarding</code> 预设，<br>把两篇各出一份独立 HTML/PDF，再合成一本合订本：</p>
+<pre><code class="language-bash">node scripts/docs/md-to-pdf.js --preset onboarding</code></pre>
+<p>产物（写在 <code>docs/07_OPS_运维/</code> 下）：</p>
+<ul><li><code>[OPS-MAN-043] ....html</code> / <code>.pdf</code></li><li><code>[OPS-MAN-044] ....html</code> / <code>.pdf</code></li><li><code>[OPS-MAN-043+044] 从使用入门到开发精通-合订本.html</code> / <code>.pdf</code></li></ul>
+<blockquote><p>预设的源清单是<strong>单一真源</strong>（脚本内 <code>ONBOARDING_DOCS</code>）。改了这两篇 <code>.md</code> 后重跑此命令即可刷新产物；<br>产物<strong>永远从 <code>.md</code> 重生</strong>，别手改 <code>.html</code> / <code>.pdf</code>（会被下次生成覆盖）。</p></blockquote>
+<hr>
+<h2 id="4-澄清-renderdocument-产的是-word-不是-pdf-html">4. 澄清：<code>renderDocument</code> 产的是 Word，不是 PDF/HTML<a class="anchor" href="#4-澄清-renderdocument-产的是-word-不是-pdf-html" aria-label="锚点">#</a></h2>
+<p>REPL 里的 <code>renderDocument</code>（别名 <code>typeset_document</code> / <code>render_docx</code> 等）是给 AI 写<strong>论文/正式报告</strong>用的<br>「内容与样式分离」排版器：模型只产语义内容，程序按模板确定性排版，<strong>产物是 <code>.docx</code>（Word）</strong>。<br>它<strong>不产 PDF / HTML</strong> —— 若要 PDF，请用 Word/WPS/LibreOffice 打开 <code>.docx</code> 后另存为 PDF。</p>
+<ul><li>设计动机与实现见 [IMPL-RPT-023]（内容与样式分离）、[DESIGN-ARCH-023]（排版规范）。</li><li>真源：<code>services/backend/src/tools/renderDocument.js</code> + <code>src/templates/docstyles/*.json</code>。</li></ul>
+<p>所以：<strong>文档站点用的漂亮 HTML/PDF → §1 的 <code>md-to-pdf.js</code>；AI 写 Word 论文 → <code>renderDocument</code>。</strong> 两条路各司其职。</p>
+<hr>
+<h2 id="5-交互阅读-khyosmarkdown-工作台">5. 交互阅读：khyosMarkdown 工作台<a class="anchor" href="#5-交互阅读-khyosmarkdown-工作台" aria-label="锚点">#</a></h2>
+<p>只想<strong>读</strong>或<strong>小改</strong>某个 <code>.md</code>（不生成产物），用 <code>tools/khyos-markdown</code>：单文件、零外部依赖、断网可用，<br>经本机回环桥接器绕过 <code>file://</code> 的 CORS 限制（细节见 <code>tools/khyos-markdown/README.md</code>）。</p>
+<pre><code class="language-bash"># 打开任意 .md（自动起本机服务 + 开浏览器）
+node tools/khyos-markdown/khyos-md-bridge.js &quot;/path/to/任意 文档.md&quot;
+
+# 无参 → 浏览本仓库 docs/
+node tools/khyos-markdown/khyos-md-bridge.js</code></pre>
+<p>注册系统右键「使用 khyosMarkdown 打开」（Windows 仅 HKCU、Linux 仅 <code>~/.local</code>，无 UAC / sudo）：</p>
+<pre><code class="language-bash"># Linux
+bash tools/khyos-markdown/register-linux.sh
+# Windows（PowerShell，无需管理员）
+powershell -ExecutionPolicy Bypass -File tools/khyos-markdown/register-windows.ps1</code></pre>
+<blockquote><p>想从工作台得到 PDF：浏览器里 <code>Ctrl/Cmd + P</code> → 另存为 PDF 即可；要归档级、带目录的排版版，仍推荐走 §1 的脚本。</p></blockquote>
+<hr>
+<h2 id="6-生成-html-的交互与图解特性">6. 生成 HTML 的交互与图解特性<a class="anchor" href="#6-生成-html-的交互与图解特性" aria-label="锚点">#</a></h2>
+<p><code>md-to-pdf.js</code> 产出的 HTML 不只是&quot;能看&quot;，还内置了一批<strong>在浏览器里交互、打印时自动降级</strong>的能力<br>（全部内联，无 CDN、无外部 JS，断网可用）：</p>
+<pre><code class="language-svg">&lt;svg viewBox=&quot;0 0 720 210&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; font-family=&quot;sans-serif&quot; font-size=&quot;12.5&quot;&gt;
+  &lt;rect x=&quot;20&quot; y=&quot;24&quot; width=&quot;150&quot; height=&quot;160&quot; rx=&quot;10&quot; fill=&quot;#fff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;95&quot; y=&quot;46&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;11&quot; font-weight=&quot;700&quot;&gt;目录（sticky）&lt;/text&gt;
+  &lt;rect x=&quot;34&quot; y=&quot;58&quot; width=&quot;122&quot; height=&quot;18&quot; rx=&quot;4&quot; fill=&quot;#eff4ff&quot; stroke=&quot;#2563eb&quot;/&gt;
+  &lt;text x=&quot;42&quot; y=&quot;71&quot; fill=&quot;#2563eb&quot; font-size=&quot;10.5&quot;&gt;▸ 当前小节高亮&lt;/text&gt;
+  &lt;rect x=&quot;34&quot; y=&quot;82&quot; width=&quot;122&quot; height=&quot;16&quot; rx=&quot;4&quot; fill=&quot;#fafbfc&quot;/&gt;
+  &lt;text x=&quot;42&quot; y=&quot;94&quot; fill=&quot;#374151&quot; font-size=&quot;10.5&quot;&gt;其它小节&lt;/text&gt;
+  &lt;rect x=&quot;34&quot; y=&quot;104&quot; width=&quot;122&quot; height=&quot;16&quot; rx=&quot;4&quot; fill=&quot;#fafbfc&quot;/&gt;
+  &lt;text x=&quot;42&quot; y=&quot;116&quot; fill=&quot;#374151&quot; font-size=&quot;10.5&quot;&gt;滚动即联动&lt;/text&gt;
+
+  &lt;rect x=&quot;200&quot; y=&quot;24&quot; width=&quot;330&quot; height=&quot;160&quot; rx=&quot;10&quot; fill=&quot;#fff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;216&quot; y=&quot;52&quot; fill=&quot;#1f2328&quot; font-size=&quot;14&quot; font-weight=&quot;800&quot;&gt;# 二级标题&lt;/text&gt;
+  &lt;text x=&quot;216&quot; y=&quot;52&quot; fill=&quot;#2563eb&quot; font-size=&quot;11&quot; opacity=&quot;0.6&quot;&gt;#&lt;/text&gt;
+  &lt;text x=&quot;216&quot; y=&quot;76&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;悬停标题显示 # 永久链接（可复制定位）&lt;/text&gt;
+  &lt;rect x=&quot;216&quot; y=&quot;90&quot; width=&quot;300&quot; height=&quot;30&quot; rx=&quot;6&quot; fill=&quot;#f7faff&quot; stroke=&quot;#9ab8ff&quot;/&gt;
+  &lt;text x=&quot;228&quot; y=&quot;109&quot; fill=&quot;#2563eb&quot; font-size=&quot;11&quot;&gt;[OPS-MAN-037] → 自动变成跨文档链接&lt;/text&gt;
+  &lt;rect x=&quot;216&quot; y=&quot;128&quot; width=&quot;300&quot; height=&quot;42&quot; rx=&quot;6&quot; fill=&quot;#fbfcff&quot; stroke=&quot;#e5e7eb&quot;/&gt;
+  &lt;text x=&quot;228&quot; y=&quot;147&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;```svg 手写矢量图 → 直接渲染&lt;/text&gt;
+  &lt;text x=&quot;228&quot; y=&quot;163&quot; fill=&quot;#6b7280&quot; font-size=&quot;10.5&quot;&gt;（打印清晰·可 git diff·无外链）&lt;/text&gt;
+
+  &lt;circle cx=&quot;660&quot; cy=&quot;164&quot; r=&quot;20&quot; fill=&quot;#2563eb&quot;/&gt;
+  &lt;text x=&quot;660&quot; y=&quot;169&quot; text-anchor=&quot;middle&quot; fill=&quot;#fff&quot; font-size=&quot;15&quot; font-weight=&quot;700&quot;&gt;↑&lt;/text&gt;
+  &lt;text x=&quot;660&quot; y=&quot;196&quot; text-anchor=&quot;middle&quot; fill=&quot;#6b7280&quot; font-size=&quot;10&quot;&gt;回到顶部&lt;/text&gt;
+&lt;/svg&gt;</code></pre>
+<table><thead><tr><th>特性</th><th>行为</th><th>打印（PDF）时</th></tr></thead><tbody><tr><td><strong>目录高亮</strong></td><td>滚动时当前小节在左侧目录里高亮（IntersectionObserver）</td><td>目录本就隐藏，无影响</td></tr><tr><td><strong>标题永久链接</strong></td><td>悬停 <code>h2/h3</code> 显示 <code>#</code>，点击即定位并可复制该锚点 URL</td><td>隐藏 <code>#</code>，标题干净</td></tr><tr><td><strong>回到顶部</strong></td><td>滚过约 400px 出现右下角圆钮，点击平滑回顶</td><td>隐藏按钮</td></tr><tr><td><strong>跨文档引用</strong></td><td>正文里的 <code>[OPS-MAN-037]</code> 等编号<strong>自动</strong>变成指向同目录 <code>.html</code> 的链接</td><td>变普通文字（无下划线色块）</td></tr><tr><td><strong>内联 SVG 图解</strong></td><td>markdown 里的 <code> </code>`<code>svg </code> 代码块<strong>直接渲染成矢量图</strong></td><td>矢量图打印清晰、避免跨页断开</td></tr></tbody></table>
+<p><strong>内联 SVG 怎么写</strong>：在 <code>.md</code> 里用 <code> </code>`<code>svg </code> 围栏包一段<strong>手写 <code>&lt;svg&gt;</code></strong>（见本文各图）。脚本会<br><strong>清洗</strong>它（剥离 <code>&lt;script&gt;</code> / <code>on*=</code> 事件 / 外链 <code>href</code>，<code>javascript:</code> 一律拒绝），只放行安全子集，<br>再包进 <code>&lt;figure class=&quot;svg-figure&quot;&gt;</code> 渲染。<strong>好处</strong>：零外部图片文件、打印清晰、可 <code>git diff</code>、断网可用——<br>比 Mermaid（要运行时/CDN，违反离线红线）或截图 PNG（破坏自包含、二进制进 git）都更契合本仓库。</p>
+<blockquote><p>这些特性<strong>只在浏览器里生效</strong>；生成的 PDF 通过内置 <code>@media print</code> 把交互元素全部降级/隐藏，<br>所以打印版<strong>干净、稳定、与旧版一致</strong>。所有脚本 fail-soft：任一步出错都不影响正文阅读。</p></blockquote>
+<hr>
+<h2 id="7-排错">7. 排错<a class="anchor" href="#7-排错" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>症状</th><th>原因</th><th>处理</th></tr></thead><tbody><tr><td><code>markdown-it not found</code></td><td>仓库未完整还原（缺 vendored 依赖）</td><td>在<strong>完整源码树</strong>根目录执行；pip 装的用户先按 [OPS-MAN-037] 还原源码树</td></tr><tr><td><code>No chrome binary found for PDF export</code></td><td>没装 chrome / 未设 <code>KHY_DOCS_CHROME</code></td><td>见 §2：装 chrome、设环境变量、或加 <code>--html-only</code></td></tr><tr><td><code>Chrome did not produce a PDF</code></td><td>chrome 崩溃 / 页面加载超时</td><td>重试；确认 HTML 能在浏览器正常打开；必要时先 <code>--html-only</code> 手动打印</td></tr><tr><td>中文变方框 / 缺字</td><td>系统缺 CJK 字体</td><td>装 <code>Noto Sans CJK SC</code> / <code>Noto Serif CJK SC</code>（Linux：<code>fonts-noto-cjk</code>）</td></tr><tr><td>改了 <code>.md</code> 但 PDF 没变</td><td>忘了重新生成</td><td>产物不会自动跟随；重跑 §1 / §3 的命令</td></tr><tr><td>手改了 <code>.html</code> 却被覆盖</td><td>HTML 是产物不是真源</td><td>只改 <code>.md</code>，再重生成</td></tr></tbody></table>
+<hr>
+<h2 id="8-红线-务必遵守">8. 红线（务必遵守）<a class="anchor" href="#8-红线-务必遵守" aria-label="锚点">#</a></h2>
+<ol><li><strong><code>.md</code> 是唯一真源</strong>：<code>.html</code> / <code>.pdf</code> 一律从它生成，<strong>绝不手改产物</strong>（下次生成即覆盖）。</li><li><strong>零新增依赖</strong>：生成脚本只用仓库已内置的 <code>markdown-it</code> + 系统 chrome，不引入新包。</li><li><strong>失败即报</strong>：PDF 生成任一步失败都以真实原因非零退出，不产出半成品、不静默掩盖。</li><li><strong>离线可用</strong>：生成的 HTML 自包含（内联 CSS + JS、系统字体、内联 SVG），断网也能正常阅读与打印。</li><li><strong>交互不入 PDF</strong>：目录高亮 / 永久链接 / 回顶等只在浏览器生效，<code>@media print</code> 一律降级，保证打印版稳定。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-058] 环境开关与文档命名规范.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-058] 环境开关与文档命名规范</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-060] 高危操作为何被拒与如何放行.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-060] 高危操作为何被拒与如何放行</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-059] 文档-PDF与HTML生成与查看.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

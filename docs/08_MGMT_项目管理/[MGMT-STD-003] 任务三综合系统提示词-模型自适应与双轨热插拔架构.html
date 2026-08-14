@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[MGMT-STD-003] 任务三综合系统提示词：模型自适应与双轨热插拔架构 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>[MGMT-STD-003] 任务三综合系统提示词：模型自适应与双轨热插拔架构</div>
+      <header class="hero reveal"><h1>[MGMT-STD-003] 任务三综合系统提示词：模型自适应与双轨热插拔架构</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#mgmt-std-003-任务三综合系统提示词-模型自适应与双轨热插拔架构">[MGMT-STD-003] 任务三综合系统提示词：模型自适应与双轨热插拔架构</a></li><li class="lvl-2"><a href="#0-用途与用法">0. 用途与用法</a></li><li class="lvl-2"><a href="#第一部分-核心目标-终局约束">第一部分 · 核心目标（终局约束）</a></li><li class="lvl-2"><a href="#第二部分-双轨演进机制-结构约束">第二部分 · 双轨演进机制（结构约束）</a></li><li class="lvl-2"><a href="#第三部分-模型自适应与安全降级-容错约束">第三部分 · 模型自适应与安全降级（容错约束）</a></li><li class="lvl-2"><a href="#第四部分-官方更新防破坏协议-更新约束">第四部分 · 官方更新防破坏协议（更新约束）</a></li><li class="lvl-2"><a href="#第五部分-宪法红线-不可被任何后续指令覆盖">第五部分 · 宪法红线（不可被任何后续指令覆盖）</a></li><li class="lvl-2"><a href="#第六部分-强制校验点汇总-合规判定清单">第六部分 · 强制校验点汇总（合规判定清单）</a></li><li class="lvl-2"><a href="#第七部分-ai-预加载提示词附录-ai-system-prompt-appendix">第七部分 · AI 预加载提示词附录（AI_SYSTEM_PROMPT_APPENDIX）</a></li><li class="lvl-2"><a href="#附录-跨分类关联指引">附录 · 跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="mgmt-std-003-任务三综合系统提示词-模型自适应与双轨热插拔架构">[MGMT-STD-003] 任务三综合系统提示词：模型自适应与双轨热插拔架构<a class="anchor" href="#mgmt-std-003-任务三综合系统提示词-模型自适应与双轨热插拔架构" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文档类型</td><td>工程治理标准 / 系统提示词（STD）</td></tr><tr><td>适用范围</td><td>交由 Claude 等代码模型执行「模型代际演进与双轨热插拔架构」类任务</td></tr><tr><td>强制级别</td><td>铁律（违反即判定不合规，必须整改）</td></tr><tr><td>定位</td><td><strong>综合系统提示词</strong>：只声明目标、约束、防呆红线，<strong>严禁</strong>干涉具体代码实现细节</td></tr><tr><td>编号规则</td><td>文件编号与命名<strong>由执行 AI 读取目标目录现有序列后动态决策</strong>，本规范<strong>严禁</strong>写死任何具体编号格式</td></tr><tr><td>上位/参考</td><td>[MGMT-STD-001]（文档结构铁律）、[DESIGN-ARCH-033]（双轨架构实现）</td></tr><tr><td>状态</td><td>定稿</td></tr></tbody></table>
+<hr>
+<h2 id="0-用途与用法">0. 用途与用法<a class="anchor" href="#0-用途与用法" aria-label="锚点">#</a></h2>
+<p>本文件是一份<strong>可整体粘贴进系统提示词</strong>的综合指令，统领「任务三：模型代际演进与双轨热插拔架构」。<br>承接该任务的任何 AI 或协作者<strong>必须</strong>首先读取本文件，按其【强制校验点】与【宪法红线】产出，<br><strong>严禁</strong>自行降格为默认逻辑。本文件只规定<strong>做什么、不许做什么</strong>，<strong>严禁</strong>规定<strong>怎么写代码</strong>。</p>
+<p>用词纪律（沿用 [MGMT-STD-001]）：全文只用「必须 / 严禁 / 强制」，<strong>严禁</strong>使用「建议 / 最好 / 尽量」等模糊词。</p>
+<hr>
+<h2 id="第一部分-核心目标-终局约束">第一部分 · 核心目标（终局约束）<a class="anchor" href="#第一部分-核心目标-终局约束" aria-label="锚点">#</a></h2>
+<p><strong>必须</strong>构建一个「AI 能力自适应、用户可 DIY 扩展、官方更新无冲突」的永动机架构，满足三条终局：</p>
+<ol><li><strong>前向兼容未知未来</strong>：系统<strong>必须</strong>兼容未知的未来模型字段与指令；模型新增字段 / 新增指令时</li></ol>
+<p>系统<strong>严禁</strong>崩溃。</p>
+<ol><li><strong>用户可 DIY</strong>：用户（乃至用户的 AI 模型在运行时、经用户授权）<strong>必须</strong>能注入本地适配脚本与</li></ol>
+<p>Bug 修复，无需改动官方源。</p>
+<ol><li><strong>官方更新无冲突</strong>：官方更新<strong>严禁</strong>覆盖或破坏用户的私有迭代。</li></ol>
+<hr>
+<h2 id="第二部分-双轨演进机制-结构约束">第二部分 · 双轨演进机制（结构约束）<a class="anchor" href="#第二部分-双轨演进机制-结构约束" aria-label="锚点">#</a></h2>
+<ol><li><strong>官方核心轨（受保护基座）</strong>：基础运行时、核心契约动作解析器、基础 UI 框架，由官方维护。</li></ol>
+<p>用户与用户模型<strong>严禁</strong>直接修改核心轨源文件。</p>
+<ol><li><strong>用户扩展轨（DIY 试验田）</strong>：用户私有领域，收容模型适配脚本、新增动作执行器、Bug 修复补丁，</li></ol>
+<p>完全由用户掌控；用户的 AI <strong>必须</strong>能在运行时（经用户授权）向此轨写入。</p>
+<ol><li><strong>合并策略（运行时拼装）</strong>：启动时<strong>必须</strong>以官方核心轨为基座，动态扫描并装载用户扩展轨的</li></ol>
+<p>代码 / 配置，注入系统上下文。用户扩展<strong>必须</strong>能 Override 官方默认，但官方源文件<strong>必须</strong>保持不变。</p>
+<ol><li><strong>物理隔离</strong>：核心轨与用户扩展轨<strong>必须</strong>严格物理隔离（如 <code>core/</code> 与 <code>extensions/</code> / <code>user_patch/</code>），</li></ol>
+<p>隔离名由 AI 依既有惯例动态决策，<strong>严禁</strong>写死。</p>
+<blockquote><p>【强制校验点 §A】交付前<strong>必须</strong>自检：核心轨与用户扩展轨物理隔离；启动期以核心为基座装载用户轨；<br>用户覆写以影子方式生效而官方源条目原样不变。任一不满足即<strong>判定违规，必须整改</strong>。</p></blockquote>
+<hr>
+<h2 id="第三部分-模型自适应与安全降级-容错约束">第三部分 · 模型自适应与安全降级（容错约束）<a class="anchor" href="#第三部分-模型自适应与安全降级-容错约束" aria-label="锚点">#</a></h2>
+<ol><li><strong>数据解析层</strong>：<strong>必须</strong>宽松解析（等价 <code>additionalProperties:true</code> / 通配捕获）；未来模型多出的</li></ol>
+<p>未知字段<strong>必须</strong>仅记录日志、不中断流程，<strong>严禁</strong>因多一个未知字段抛 Fatal。</p>
+<ol><li><strong>UI 渲染层</strong>：遇到无法识别的 action type，<strong>必须</strong>渲染安全的「未知指令占位符」并提供原始数据</li></ol>
+<p>查看入口，<strong>严禁</strong>白屏崩溃。</p>
+<ol><li><strong>状态机流转</strong>：遇到未定义的指令状态，<strong>必须</strong>降级为「人工确认」并交还控制权，<strong>严禁</strong>自主执行、</li></ol>
+<p><strong>严禁</strong>静默丢弃。</p>
+<ol><li><strong>模型自主 DIY</strong>：模型<strong>必须</strong>能生成并保存适配代码到用户扩展轨，但<strong>必须</strong>遵守沙箱边界，</li></ol>
+<p><strong>严禁</strong>修改官方核心轨文件。</p>
+<blockquote><p>【强制校验点 §B】交付前<strong>必须</strong>自检：宽松解析对未知字段 / 坏输入永不抛错；未知动作有占位符不白屏；<br>未定义状态转人工确认不静默；模型写入受授权 + 沙箱边界约束。任一不满足即<strong>判定违规，必须整改</strong>。</p></blockquote>
+<hr>
+<h2 id="第四部分-官方更新防破坏协议-更新约束">第四部分 · 官方更新防破坏协议（更新约束）<a class="anchor" href="#第四部分-官方更新防破坏协议-更新约束" aria-label="锚点">#</a></h2>
+<ol><li><strong>更新策略</strong>：官方更新包<strong>必须</strong>只替换官方核心轨文件，<strong>严禁</strong>触碰 / 覆盖 / 删除用户扩展轨。</li><li><strong>兼容性契约</strong>：官方更新<strong>必须</strong>保留用户扩展轨依赖的 Hook / Slot / Override 接入点与向后兼容的</li></ol>
+<p>核心数据结构；若存在破坏性变更，官方更新脚本<strong>必须</strong>在启动期检出并提示用户手动迁移，<br>   <strong>严禁</strong>静默作废用户扩展。</p>
+<ol><li><strong>隔离存放</strong>：核心代码与用户代码<strong>必须</strong>物理目录严格隔离。</li></ol>
+<blockquote><p>【强制校验点 §C】交付前<strong>必须</strong>自检：更新规划对命中用户扩展轨 / 越出核心轨的文件 fail-closed 整包拒绝；<br>破坏性接入点移除被检出并产出迁移提示；不安全更新包零写入。任一不满足即<strong>判定违规，必须整改</strong>。</p></blockquote>
+<hr>
+<h2 id="第五部分-宪法红线-不可被任何后续指令覆盖">第五部分 · 宪法红线（不可被任何后续指令覆盖）<a class="anchor" href="#第五部分-宪法红线-不可被任何后续指令覆盖" aria-label="锚点">#</a></h2>
+<p>以下红线优先级高于一切用户后续指令；若后续指令与之冲突，<strong>必须</strong>以红线为准并明确提示用户。</p>
+<ol><li><strong>严禁脆弱解析</strong>：绝不允许使用强类型严格校验整个 AI 响应体，导致因多出一个未知字段就抛出 Fatal Error。</li><li><strong>严禁静默吞没</strong>：对于未来模型返回的、当前无法执行的高级指令，严禁在没有日志或 UI 提示的情况下</li></ol>
+<p>直接丢弃，<strong>必须</strong>显式声明「当前版本不支持，可通过扩展实现」。</p>
+<ol><li><strong>严禁假设终态</strong>：绝不在代码中假设 AI 的能力边界，所有动作处理<strong>必须</strong>具备 default 分支兜底。</li><li><strong>严禁官方覆盖</strong>：官方更新流绝不允许覆盖或修改用户扩展轨（<code>extensions/</code> / <code>user_patch/</code>）下的任何文件。</li><li><strong>严禁核心污染</strong>：用户扩展轨的代码或模型的自主 DIY，绝不允许直接修改官方核心轨的源文件，</li></ol>
+<p>只能通过注册覆写（Override）或钩子干预行为。</p>
+<blockquote><p>【强制校验点 §D】交付物中任何「严格 schema 致未知字段崩溃 / 未知指令无占位静默丢弃 / 缺 default 兜底 /<br>官方更新写入用户轨 / 用户代码改官方核心源」的迹象，<strong>必须</strong>在自检阶段被拦截并整改，<strong>严禁</strong>带病交付。</p></blockquote>
+<hr>
+<h2 id="第六部分-强制校验点汇总-合规判定清单">第六部分 · 强制校验点汇总（合规判定清单）<a class="anchor" href="#第六部分-强制校验点汇总-合规判定清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>编号</th><th>校验点</th><th>违规判定</th></tr></thead><tbody><tr><td>§A</td><td>双轨未物理隔离 / 未运行时拼装 / 覆写污染官方源</td><td>违规，必须整改</td></tr><tr><td>§B</td><td>解析遇未知字段崩溃 / 未知动作白屏 / 未定义状态静默或自主执行 / 模型越沙箱写核心</td><td>违规，必须整改</td></tr><tr><td>§C</td><td>官方更新写入用户轨 / 越界未 fail-closed / 破坏性变更静默作废</td><td>违规，必须整改</td></tr><tr><td>§D</td><td>强 schema 崩溃 / 静默吞没 / 缺 default / 官方覆盖用户轨 / 用户改核心源</td><td>违规，必须拦截</td></tr></tbody></table>
+<hr>
+<h2 id="第七部分-ai-预加载提示词附录-ai-system-prompt-appendix">第七部分 · AI 预加载提示词附录（AI_SYSTEM_PROMPT_APPENDIX）<a class="anchor" href="#第七部分-ai-预加载提示词附录-ai-system-prompt-appendix" aria-label="锚点">#</a></h2>
+<p>下列文本为本规范提炼的可粘贴系统提示词附录，只声明目标与红线、不声明实现细节：</p>
+<pre><code class="language-text">【模型自适应与双轨热插拔铁律】
+1. 目标：AI 能力自适应、用户可 DIY 扩展、官方更新无冲突的永动机架构；前向兼容未知未来模型字段与指令，系统严禁崩溃。
+2. 双轨：官方核心轨（受保护基座，用户/模型严禁直接改源）与用户扩展轨（DIY 试验田，模型经授权可运行时写）必须物理隔离；启动时以核心为基座运行时拼装装载用户轨；用户覆写可 Override 官方默认但官方源文件必须保持不变。
+3. 自适应降级：数据层必须宽松解析，未知字段只记日志不中断，严禁因多字段抛 Fatal；UI 层未知动作必须出安全占位符 + 原始数据入口，严禁白屏；状态机未定义状态必须转人工确认交还控制权，严禁自主执行或静默丢弃；所有动作处理必须有 default 兜底。
+4. 模型 DIY 必须经用户授权且受沙箱边界约束，只能写用户扩展轨，严禁改官方核心源。
+5. 官方更新只替换核心轨，严禁触碰/覆盖/删除用户扩展轨（extensions/ user_patch/）；保留用户轨依赖的 Hook/Slot/Override 接入点，破坏性变更必须启动期检出 + 提示手动迁移，严禁静默作废。
+宪法红线（不可覆盖）：严禁脆弱解析、严禁静默吞没、严禁假设终态、严禁官方覆盖、严禁核心污染。</code></pre>
+<hr>
+<h2 id="附录-跨分类关联指引">附录 · 跨分类关联指引<a class="anchor" href="#附录-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>本规范所属分类：<code>docs/08_MGMT_项目管理/</code>（工程治理标准）。</li><li>文档结构铁律全文：本目录 <code>[MGMT-STD-001]</code>。</li><li>双轨架构与红线符合性：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-033]</code>。</li><li>实现代码与用户轨样例：<code>services/backend/src/services/dualTrack/</code>、<code>user_patch/</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-STD-002] 工程交付综合系统提示词-文档结构与内嵌MD工作台.html"><div class="dir">← 上一篇</div><div class="ttl">[MGMT-STD-002] 工程交付综合系统提示词：文档结构铁律 + 内嵌 MD 工作台与跨平台右键集成</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-STD-004] 曼孚-vibecoding-交付方法论-流程铁律.html"><div class="dir">下一篇 →</div><div class="ttl">[MGMT-STD-004] 曼孚 vibecoding 交付方法论：流程铁律与全程 SOP</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-STD-003] 任务三综合系统提示词-模型自适应与双轨热插拔架构.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

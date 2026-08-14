@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>架构设计：Agent ⇄ OS 双向协议（KHY Agent Bridge） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>kernel<span class="sep">›</span>docs<span class="sep">›</span>架构设计：Agent ⇄ OS 双向协议（KHY Agent Bridge）</div>
+      <header class="hero reveal"><h1>架构设计：Agent ⇄ OS 双向协议（KHY Agent Bridge）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#架构设计-agent-os-双向协议-khy-agent-bridge">架构设计：Agent ⇄ OS 双向协议（KHY Agent Bridge）</a></li><li class="lvl-2"><a href="#0-用户已澄清的四点硬需求-不再重复询问">0. 用户已澄清的四点硬需求（不再重复询问）</a></li><li class="lvl-2"><a href="#1-现状约束-已核实源码-架构必须落在这些事实上">1. 现状约束（已核实源码，架构必须落在这些事实上）</a></li><li class="lvl-2"><a href="#2-关键决策-com2-作为独立-agent-控制通道">2. 关键决策：COM2 作为独立 agent 控制通道</a></li><li class="lvl-2"><a href="#3-分层架构">3. 分层架构</a></li><li class="lvl-2"><a href="#4-帧格式-结构化-request-response">4. 帧格式（结构化 request-response）</a></li><li class="lvl-2"><a href="#5-三个面">5. 三个面</a></li><li class="lvl-3"><a href="#5-1-控制面-agent-os-复用既有内核能力-几乎零新逻辑">5.1 控制面（agent → OS）—— 复用既有内核能力，几乎零新逻辑</a></li><li class="lvl-3"><a href="#5-2-决策面-os-agent-反向-需求2-核心-最具新意">5.2 决策面（OS → agent，反向）—— 需求2 核心，最具新意</a></li><li class="lvl-3"><a href="#5-3-事件面-os-agent-单向-fire-and-forget-event-帧">5.3 事件面（OS → agent，单向 fire-and-forget）—— EVENT 帧</a></li><li class="lvl-2"><a href="#6-四需求-架构映射">6. 四需求 → 架构映射</a></li><li class="lvl-2"><a href="#7-实施阶段-紧增量-每步-qemu-可验证-零回归">7. 实施阶段（紧增量，每步 QEMU 可验证，零回归）</a></li><li class="lvl-2"><a href="#8-工程约束-agents-md-硬约束-勿违反">8. 工程约束（AGENTS.md 硬约束，勿违反）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="架构设计-agent-os-双向协议-khy-agent-bridge">架构设计：Agent ⇄ OS 双向协议（KHY Agent Bridge）<a class="anchor" href="#架构设计-agent-os-双向协议-khy-agent-bridge" aria-label="锚点">#</a></h1>
+<blockquote><p>设计日期：2026-06-11。本文是「内核与 agent 深度协同」pivot 的动手前综合架构，<br>是后续所有实现阶段的权威依据。上游背景见<br><code>kernel/docs/进度交接-内核与agent协同pivot.md</code>，内核能力现状见记忆<br><code>project_kernel_real_os_phases.md</code>（已到阶段30，syscall 面 1–55 完整）。</p></blockquote>
+<h2 id="0-用户已澄清的四点硬需求-不再重复询问">0. 用户已澄清的四点硬需求（不再重复询问）<a class="anchor" href="#0-用户已澄清的四点硬需求-不再重复询问" aria-label="锚点">#</a></h2>
+<ol><li><strong>两者都要能接</strong>：内置 KHY Node agent + 外部 agent（如 Claude Code）都要能连。</li><li><strong>双向</strong>：agent→OS 控制，且 OS 内部能反过来调 agent 求决策。</li><li><strong>OS 作 agent 宿主但松耦合</strong>：KHY-OS 能托管 agent，但 agent 必须也能独立运行。</li><li><strong>系统内自然语言配置</strong>：系统中能配置模型、用自然语言与 KHY 交互。</li></ol>
+<h2 id="1-现状约束-已核实源码-架构必须落在这些事实上">1. 现状约束（已核实源码，架构必须落在这些事实上）<a class="anchor" href="#1-现状约束-已核实源码-架构必须落在这些事实上" aria-label="锚点">#</a></h2>
+<ul><li><strong>COM1 串口已被人类 TTY 独占</strong>。<code>serial.c::serial_print</code> 是全内核输出路径；</li></ul>
+<p><code>console.c::console_getchar_nonblock</code> 把 <code>serial_getchar_nonblock</code> 当键盘兜底<br>  输入。→ <strong>agent 协议不能裸跑 COM1</strong>，否则与 shell 抢字节。</p>
+<ul><li><strong>无 virtio 驱动</strong>。<code>net.c</code> 仅 loopback 玩具（<code>net_send</code> 直接回环进本地</li></ul>
+<p>rx_queue，不出机器）；<code>SYSCALL_NET_SEND/RECV</code>(8/9) 是该玩具的入口，不可作<br>  跨机通道。</p>
+<ul><li><strong><code>ipc.c</code> 是内核内 task 间端口消息</strong>（<code>IPC_MAX_PORTS</code> 端口 + 定深队列 +</li></ul>
+<p><code>ipc_call</code> 请求/应答阻塞）。它<strong>不跨机器</strong>，但其 <code>sched_block_current</code> /<br>  <code>sched_unblock</code> 的 lost-wakeup-safe 阻塞模式，正可复用为「内核 task 等 agent<br>  回决策」的等待原语。</p>
+<ul><li><strong>调度</strong>：单核，协作式 <code>yield</code> + 抢占式时钟。<code>serial_putchar</code> 已有 bounded</li></ul>
+<p>poll（<code>SERIAL_TX_POLL_LIMIT</code>）——「外设永不 wedge 内核」是既定纪律，新通道<br>  必须沿用。</p>
+<ul><li><strong>持久化已就绪</strong>：<code>/disk</code> 经 persist hook 跨重启（阶段14 嵌套目录 + 阶段30</li></ul>
+<p>时间戳），故 agent 配置可落 <code>/disk/etc/agent.conf</code>。</p>
+<ul><li><strong>QEMU 启动</strong>：<code>-cdrom ... -serial stdio</code>，单串口。</li></ul>
+<h2 id="2-关键决策-com2-作为独立-agent-控制通道">2. 关键决策：COM2 作为独立 agent 控制通道<a class="anchor" href="#2-关键决策-com2-作为独立-agent-控制通道" aria-label="锚点">#</a></h2>
+<p>QEMU 可挂第二串口：<code>-serial stdio</code>（COM1 = 人类）+ <code>-serial &lt;chardev&gt;</code><br>（COM2 = agent，chardev 为 unix socket / pty / tcp）。</p>
+<ul><li>COM1 留给人（shell / 自然语言 REPL），COM2 专供 agent 帧协议——**物理隔离，</li></ul>
+<p>零争用**。</p>
+<ul><li>host 侧 agent 连 COM2 的 chardev（socket），驱动协议。</li><li><strong>松耦合天然成立</strong>：COM2 未连时内核照常跑（满足需求3 agent 可缺席）；</li></ul>
+<p>host agent 进程不依赖内核存在，可独立运行（满足需求3 反向）。</p>
+<p>选 COM2 而非 virtio 的理由：零新驱动栈、零触碰核心路径、最小回归面，符合内核<br>一贯的「零回归紧增量」纪律。virtio-vsock 留作后续高带宽演进项。</p>
+<h2 id="3-分层架构">3. 分层架构<a class="anchor" href="#3-分层架构" aria-label="锚点">#</a></h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  HOST 侧 (Node)                                              │
+│  ┌──────────────┐         ┌────────────────────────────┐   │
+│  │ 内置 KHY     │         │ 外部 agent (Claude Code …) │   │
+│  │ Node agent   │         │ 经 MCP / SDK                │   │
+│  └──────┬───────┘         └─────────────┬──────────────┘   │
+│         └────────────┬───────────────────┘                  │
+│                      ▼                                       │
+│           ┌─────────────────────────┐                       │
+│           │ khy-bridge (host 单一真源)│                      │
+│           │ · 帧编解码 (COBS+CRC16)  │                       │
+│           │ · 二进制 ⇄ JSON 翻译     │                       │
+│           │ · seq 关联请求/响应       │                       │
+│           │ · OS→agent 回调泵         │                       │
+│           └───────────┬─────────────┘                       │
+│                       │ COM2 chardev (unix socket / pty)     │
+└───────────────────────┼─────────────────────────────────────┘
+                        │  结构化帧 (request / response / event)
+┌───────────────────────┼─────────────────────────────────────┐
+│  KERNEL 侧            ▼                                       │
+│           ┌─────────────────────────┐                       │
+│           │ agentbus.c  (新)         │                       │
+│           │ · COM2 驱动 (泛化 serial)│                       │
+│           │ · COBS 解帧/组帧 + CRC16 │                       │
+│           │ · 帧路由到 handler        │                       │
+│           │ · OS→agent 出站环形队列   │                       │
+│           └────┬───────────────┬─────┘                       │
+│                │               │                             │
+│        ┌───────▼────┐   ┌──────▼──────────────┐              │
+│        │ 控制面      │   │ 决策面 (反向)        │              │
+│        │ A→OS 动作   │   │ OS→A 求决策          │              │
+│        │ 复用既有    │   │ SYSCALL_AGENT_ASK    │              │
+│        │ vfs_/proc_  │   │ + ipc 式 block/wake  │              │
+│        │ 内核 API    │   │ + 超时兜底           │              │
+│        └────────────┘   └─────────────────────┘              │
+│                │  事件面: FAULT / exit / disk-full → EVENT 帧 │
+└───────────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>复杂度放强侧原则</strong>：内核侧用定长二进制 op-code 帧（不在内核写 JSON 解析器，<br>风险大、代码多）；host（Node）负责二进制 ⇄ JSON 翻译，把语义复杂度留给能力强、<br>易测的一侧。</p>
+<h2 id="4-帧格式-结构化-request-response">4. 帧格式（结构化 request-response）<a class="anchor" href="#4-帧格式-结构化-request-response" aria-label="锚点">#</a></h2>
+<p>COBS 帧分隔（<code>0x00</code> 作帧边界，COBS 编码消除载荷内的 0 字节，自同步），每帧：</p>
+<pre><code>[type:1][seq:4][code:2][len:2][payload:len][crc16:2]</code></pre>
+<ul><li><code>type</code>：<code>REQUEST</code>(0x01) / <code>RESPONSE</code>(0x02) / <code>EVENT</code>(0x03) /</li></ul>
+<p><code>DECISION_REQ</code>(0x04) / <code>DECISION_RESP</code>(0x05)</p>
+<ul><li><code>seq</code>：关联请求与响应（入站、出站各自独立序列空间）</li><li><code>code</code>：verb / 结果码（控制面动作号，或决策面意图号）</li><li><code>payload</code>：紧凑结构——内核侧定长 struct + 有限变长字符串槽；host 侧映射为 JSON</li><li><code>crc16</code>：链路完整性（串口可能丢/串字节，CRC 兜底，坏帧丢弃重传）</li></ul>
+<h2 id="5-三个面">5. 三个面<a class="anchor" href="#5-三个面" aria-label="锚点">#</a></h2>
+<h3 id="5-1-控制面-agent-os-复用既有内核能力-几乎零新逻辑">5.1 控制面（agent → OS）—— 复用既有内核能力，几乎零新逻辑<a class="anchor" href="#5-1-控制面-agent-os-复用既有内核能力-几乎零新逻辑" aria-label="锚点">#</a></h3>
+<p>帧 <code>code</code> 映射到已实现的内核函数，把现成后端挂到帧 handler：</p>
+<ul><li><strong>FS</strong>：read / write / stat / list / mkdir / unlink / rename → 直调 <code>vfs_*</code></li></ul>
+<p>（<code>from_user=0</code> 走内核路径，或带 agent 身份过 DAC）</p>
+<ul><li><strong>PROC</strong>：spawn(ELF) / kill / wait / ps → <code>process_create_from_elf_argv</code> /</li></ul>
+<p><code>sched_kill_task</code> / 进程表枚举</p>
+<ul><li><strong>SYS</strong>：uptime / time / meminfo → 既有 syscall 后端</li></ul>
+<p>这些阶段基本是「把已有内核函数接到帧路由」，新增逻辑极少。</p>
+<h3 id="5-2-决策面-os-agent-反向-需求2-核心-最具新意">5.2 决策面（OS → agent，反向）—— 需求2 核心，最具新意<a class="anchor" href="#5-2-决策面-os-agent-反向-需求2-核心-最具新意" aria-label="锚点">#</a></h3>
+<p>内核内某 task 想问 agent「该怎么办」时：</p>
+<ol><li>新增 <code>SYSCALL_AGENT_ASK</code>（下一个号 <strong>56</strong>）：构造决策请求（自然语言串 +</li></ol>
+<p>可选结构化上下文），经 agentbus 出站队列发 <code>DECISION_REQ</code> 帧。</p>
+<ol><li>调用 task 复用 ipc 式 block/wakeup 语义阻塞等待（lost-wakeup-safe，参照</li></ol>
+<p><code>ipc_send</code>/<code>ipc_recv</code> 的 crit_enter + sched_block_current 模式）。</p>
+<ol><li>host agent 推理后回 <code>DECISION_RESP</code>（带同 seq），agentbus 唤醒 task 返回结果。</li><li><strong>超时 / agent 缺席</strong>：返回 <code>EAGAIN</code> 或默认决策——agent 不在也绝不挂死内核</li></ol>
+<p>（沿用 serial bounded-poll 哲学）。<br>应用：OOM 杀谁、未知文件类型如何处理、shell 自然语言命令解析成动作。</p>
+<h3 id="5-3-事件面-os-agent-单向-fire-and-forget-event-帧">5.3 事件面（OS → agent，单向 fire-and-forget）—— EVENT 帧<a class="anchor" href="#5-3-事件面-os-agent-单向-fire-and-forget-event-帧" aria-label="锚点">#</a></h3>
+<p>进程退出、<code>[FAULT]</code>、磁盘满等异步通知 push 给 agent，无需回应。复用既有<br><code>[FAULT]</code> 钩子点与进程退出路径。出站队列满则丢弃（松耦合，不阻塞内核）。</p>
+<h2 id="6-四需求-架构映射">6. 四需求 → 架构映射<a class="anchor" href="#6-四需求-架构映射" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>需求</th><th>落地</th></tr></thead><tbody><tr><td>1 双 agent 接入</td><td>host <code>khy-bridge</code> 单一真源：内置 KHY agent in-process 调用；外部 Claude Code 经 MCP server / SDK 工具暴露 bridge 能力，复用项目既有网关/适配器基础设施</td></tr><tr><td>2 双向</td><td>控制面（5.1）= agent→OS；决策面（5.2）= OS→agent</td></tr><tr><td>3 松耦合</td><td>内核：COM2 未连/队列满 → 立即返「无 agent」码，功能完整独立。host：agent 进程不依赖内核，独立 CLI/SDK 运行。COM2 socket 解耦，任一侧可独立启停</td></tr><tr><td>4 自然语言配置</td><td>shell 内置 <code>ai &lt;自然语言&gt;</code> → 决策面 → agent 回结构化动作 → 内核执行；模型/endpoint 配置落 <code>/disk/etc/agent.conf</code>（持久化已就绪），bridge 读它决定连哪个 agent/模型</td></tr></tbody></table>
+<h2 id="7-实施阶段-紧增量-每步-qemu-可验证-零回归">7. 实施阶段（紧增量，每步 QEMU 可验证，零回归）<a class="anchor" href="#7-实施阶段-紧增量-每步-qemu-可验证-零回归" aria-label="锚点">#</a></h2>
+<ul><li><strong>A1 物理通道</strong>：泛化 <code>serial.c</code> 支持 COM1/COM2（端口参数化），Makefile 加</li></ul>
+<p>第二 <code>-serial</code>。验证：host socket echo 往返一字节。</p>
+<ul><li><strong>A2 帧层</strong>：<code>agentbus.c</code> —— COBS 解/组帧 + CRC16 + seq。验证：一帧回环往返。</li><li><strong>A3 控制面（只读）</strong>：先接 stat / list / read（最安全）。host 发 REQUEST</li></ul>
+<p>读 <code>/proc/version</code> 验证内容。</p>
+<ul><li><strong>A4 控制面（写 + proc）</strong>：write / spawn / kill / ps。</li><li><strong>A5 决策面</strong>：<code>SYSCALL_AGENT_ASK</code>(56) + block/wakeup + 超时兜底。userland</li></ul>
+<p>程序问 agent，验证往返与超时不挂死。</p>
+<ul><li><strong>A6 事件面</strong>：FAULT / exit push EVENT 帧。</li><li><strong>A7 host bridge + 双 agent</strong>：Node <code>khy-bridge</code> + MCP/SDK 暴露，接通内置与</li></ul>
+<p>外部 agent。</p>
+<ul><li><strong>A8 自然语言配置</strong>：shell <code>ai</code> 命令 + <code>/disk/etc/agent.conf</code> 读取。</li></ul>
+<h2 id="8-工程约束-agents-md-硬约束-勿违反">8. 工程约束（AGENTS.md 硬约束，勿违反）<a class="anchor" href="#8-工程约束-agents-md-硬约束-勿违反" aria-label="锚点">#</a></h2>
+<ul><li>零硬编码；状态诚实（干净降级打诚实码，不打 <code>KERNEL PANIC</code>）；活跃度重置超时。</li><li>外设永不 wedge 内核：新通道所有 poll 必须 bounded（参照 <code>SERIAL_TX_POLL_LIMIT</code>）。</li><li>不主动 commit/push。</li><li>新增 userland 程序流程：写 <code>.asm</code> → <code>bash tools_gen_blob.sh &lt;name&gt;</code> →</li></ul>
+<p>接 <code>ramfs.c</code>(#include + vfs_write_file) + <code>Makefile</code>(USERLAND_PROGS + ramfs.o<br>  依赖行) → make → QEMU 验证。</p>
+<ul><li>测试命令模式：</li></ul>
+<p><code>(sleep 8; printf 'run /bin/X.elf\n'; sleep 4) | timeout 20 qemu-system-x86_64 -cdrom build/khy-os-kernel.iso -serial stdio -display none -no-reboot</code></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../kernel/bridge/README-联调.html"><div class="dir">← 上一篇</div><div class="ttl">khy-bridge 实战联调指南</div></a><a class="next" href="../../kernel/docs/进度交接-内核与agent协同pivot.html"><div class="dir">下一篇 →</div><div class="ttl">进度交接：内核「真实 OS」长弧 + agent 协同 pivot</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="kernel/docs/架构-agent-os双向协议.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

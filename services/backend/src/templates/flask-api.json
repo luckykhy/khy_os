@@ -1,0 +1,72 @@
+{
+  "name": "flask-api",
+  "description": "Flask REST API project with blueprints",
+  "triggers": ["Flask", "flask api", "flask server", "Flask后端", "Flask服务", "Python后端"],
+  "variables": {
+    "projectName": { "default": "my-flask-app", "description": "Project name" },
+    "port": { "default": "5000", "description": "Server port" }
+  },
+  "directories": [
+    "app",
+    "app/routes",
+    "app/models",
+    "app/services",
+    "tests",
+    "unit_tests",
+    "API_tests"
+  ],
+  "files": [
+    {
+      "path": "requirements.txt",
+      "content": "flask>=3.0.0\nflask-cors>=4.0.0\npython-dotenv>=1.0.0\ngunicorn>=22.0.0"
+    },
+    {
+      "path": "app/__init__.py",
+      "content": "from flask import Flask\nfrom flask_cors import CORS\n\ndef create_app():\n    app = Flask(__name__)\n    CORS(app)\n    app.config.from_mapping(SECRET_KEY='dev')\n\n    from .routes import main_bp\n    app.register_blueprint(main_bp, url_prefix='/api')\n\n    @app.get('/health')\n    def health():\n        return {'status': 'ok'}\n\n    return app"
+    },
+    {
+      "path": "app/routes/__init__.py",
+      "content": "from flask import Blueprint, jsonify\n\nmain_bp = Blueprint('main', __name__)\n\n@main_bp.get('/')\ndef index():\n    return jsonify(message='Welcome to {projectName} API')\n\n@main_bp.get('/users')\ndef list_users():\n    return jsonify([{'id': 1, 'name': 'Alice'}, {'id': 2, 'name': 'Bob'}])"
+    },
+    {
+      "path": "run.py",
+      "content": "from app import create_app\n\napp = create_app()\n\nif __name__ == '__main__':\n    app.run(host='0.0.0.0', port={port}, debug=True)"
+    },
+    {
+      "path": "tests/test_app.py",
+      "content": "import pytest\nfrom app import create_app\n\n@pytest.fixture\ndef client():\n    app = create_app()\n    app.config['TESTING'] = True\n    with app.test_client() as client:\n        yield client\n\ndef test_health(client):\n    resp = client.get('/health')\n    assert resp.status_code == 200\n    assert resp.json['status'] == 'ok'\n\ndef test_users(client):\n    resp = client.get('/api/users')\n    assert resp.status_code == 200\n    assert len(resp.json) == 2"
+    },
+    {
+      "path": ".gitignore",
+      "content": "__pycache__/\n*.pyc\n.env\nvenv/\n*.egg-info/"
+    },
+    {
+      "path": "Dockerfile",
+      "content": "# Stage 1: Build dependencies\nFROM python:3.12-slim AS builder\n\nWORKDIR /app\n\nCOPY requirements.txt .\nRUN pip install --no-cache-dir --prefix=/install -r requirements.txt\n\n# Stage 2: Production image\nFROM python:3.12-slim\n\nWORKDIR /app\n\nCOPY --from=builder /install /usr/local\nCOPY app/ ./app/\nCOPY run.py .\n\nEXPOSE {port}\n\nCMD [\"gunicorn\", \"--bind\", \"0.0.0.0:{port}\", \"--workers\", \"4\", \"app:create_app()\"]"
+    },
+    {
+      "path": "docker-compose.yml",
+      "content": "version: \"3.9\"\n\nservices:\n  app:\n    build: .\n    ports:\n      - \"{port}:{port}\"\n    environment:\n      - DATABASE_URL=postgresql://postgres:postgres@db:5432/{projectName}\n      - FLASK_ENV=production\n    depends_on:\n      - db\n    restart: unless-stopped\n\n  db:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: postgres\n      POSTGRES_PASSWORD: postgres\n      POSTGRES_DB: {projectName}\n    volumes:\n      - pgdata:/var/lib/postgresql/data\n    ports:\n      - \"5432:5432\"\n    restart: unless-stopped\n\nvolumes:\n  pgdata:"
+    },
+    {
+      "path": ".dockerignore",
+      "content": "__pycache__\n.venv\n.git\n.env\n*.pyc"
+    },
+    {
+      "path": "unit_tests/test_services.py",
+      "content": "\"\"\"Unit tests for business logic / service functions.\"\"\"\nimport pytest\n\n\ndef test_placeholder_service_returns_expected():\n    \"\"\"Smoke test: verify basic service logic is importable and callable.\"\"\"\n    # Replace with actual service imports once app/services/ has modules.\n    result = True\n    assert result is True\n\n\ndef test_user_data_structure():\n    \"\"\"Verify user dict schema expected by routes.\"\"\"\n    user = {\"id\": 1, \"name\": \"Alice\"}\n    assert \"id\" in user\n    assert \"name\" in user\n    assert isinstance(user[\"id\"], int)\n    assert isinstance(user[\"name\"], str)"
+    },
+    {
+      "path": "API_tests/test_api.py",
+      "content": "\"\"\"Integration tests using the Flask test client.\"\"\"\nimport pytest\nfrom app import create_app\n\n\n@pytest.fixture\ndef client():\n    app = create_app()\n    app.config[\"TESTING\"] = True\n    with app.test_client() as c:\n        yield c\n\n\ndef test_health_returns_200(client):\n    resp = client.get(\"/health\")\n    assert resp.status_code == 200\n    data = resp.get_json()\n    assert data[\"status\"] == \"ok\"\n\n\ndef test_api_users_returns_200_and_list(client):\n    resp = client.get(\"/api/users\")\n    assert resp.status_code == 200\n    data = resp.get_json()\n    assert isinstance(data, list)\n    assert len(data) >= 1"
+    },
+    {
+      "path": "run_tests.sh",
+      "content": "#!/usr/bin/env bash\nset -euo pipefail\n\necho \"==> Installing dependencies...\"\npip install -r requirements.txt\npip install pytest\n\necho \"==> Running unit tests and API tests...\"\npython -m pytest unit_tests/ API_tests/ -v"
+    },
+    {
+      "path": "README.md",
+      "content": "# {projectName}\n\nA production-ready REST API built with **Flask 3** and **Python 3.12**.\n\n## Tech Stack\n\n- **Framework:** Flask 3 with Blueprints\n- **Language:** Python 3.12\n- **Server:** Gunicorn (production) / Flask dev server (development)\n- **Database:** PostgreSQL 16 (via Docker)\n- **Containerization:** Docker & Docker Compose\n\n## Quick Start (Docker)\n\n```bash\ndocker compose up --build\n```\n\nThe API will be available at `http://<HOST>:{port}`.\n\n## Manual Setup\n\n```bash\npython -m venv .venv\nsource .venv/bin/activate\npip install -r requirements.txt\npython run.py\n```\n\n## API Endpoints\n\n| Method | Path         | Description           |\n|--------|--------------|-----------------------|\n| GET    | /health      | Health check          |\n| GET    | /api/        | Welcome message       |\n| GET    | /api/users   | List all users        |\n\n## Running Tests\n\n```bash\nbash run_tests.sh\n```\n\nOr manually:\n\n```bash\npip install pytest\npython -m pytest unit_tests/ API_tests/ -v\n```\n\n## Project Structure\n\n```\n{projectName}/\n├── app/\n│   ├── __init__.py        # App factory\n│   ├── routes/            # API blueprints\n│   ├── models/            # Data models\n│   └── services/          # Business logic\n├── tests/                 # Legacy tests\n├── unit_tests/            # Unit tests\n├── API_tests/             # Integration / API tests\n├── Dockerfile             # Multi-stage production build\n├── docker-compose.yml     # App + PostgreSQL stack\n├── requirements.txt       # Python dependencies\n├── run.py                 # Dev entry point\n├── run_tests.sh           # Test runner script\n└── README.md\n```"
+    }
+  ]
+}

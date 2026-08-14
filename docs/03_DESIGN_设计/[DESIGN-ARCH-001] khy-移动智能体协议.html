@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 移动智能体协议 (v1.0) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>KHY 移动智能体协议 (v1.0)</div>
+      <header class="hero reveal"><h1>KHY 移动智能体协议 (v1.0)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-移动智能体协议-v1-0">KHY 移动智能体协议 (v1.0)</a></li><li class="lvl-2"><a href="#1-设计目标">1. 设计目标</a></li><li class="lvl-2"><a href="#2-规范化-schema">2. 规范化 Schema</a></li><li class="lvl-2"><a href="#3-出站流式信封">3. 出站流式信封</a></li><li class="lvl-2"><a href="#4-审批工单契约">4. 审批工单契约</a></li><li class="lvl-2"><a href="#5-跨设备交接契约">5. 跨设备交接契约</a></li><li class="lvl-2"><a href="#6-脱敏规则-强制">6. 脱敏规则（强制）</a></li><li class="lvl-2"><a href="#7-最小示例">7. 最小示例</a></li><li class="lvl-3"><a href="#7-1-approval-ticket-流式事件">7.1 `approval_ticket` 流式事件</a></li><li class="lvl-3"><a href="#7-2-handover-snapshot-流式事件">7.2 `handover_snapshot` 流式事件</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-001 | 阶段: 设计 | 原路径: docs/指南/khy-移动智能体协议.md --&gt;</p>
+<h1 id="khy-移动智能体协议-v1-0">KHY 移动智能体协议 (v1.0)<a class="anchor" href="#khy-移动智能体协议-v1-0" aria-label="锚点">#</a></h1>
+<p>本指南定义了 KHY-OS 在“本地超级管理员 + 远程 SSH 操作员 + 移动端安全转译器”愿景下面向移动端的协议。</p>
+<h2 id="1-设计目标">1. 设计目标<a class="anchor" href="#1-设计目标" aria-label="锚点">#</a></h2>
+<ul><li>本地数据主权：绝不向移动端发送完整源文件或明文凭证。</li><li>风险分级授权：高风险操作必须生成审批工单。</li><li>移动优先的流式传输：为卡片式渲染提供简洁、结构化的负载。</li><li>三端连续性：本地桌面、移动端与远程 SSH 会话必须共享同一套脱敏与审批管线。</li></ul>
+<h2 id="2-规范化-schema">2. 规范化 Schema<a class="anchor" href="#2-规范化-schema" aria-label="锚点">#</a></h2>
+<p>Schema 文件：</p>
+<ul><li><code>backend/src/contracts/mobile/approval-ticket.schema.json</code></li><li><code>backend/src/contracts/mobile/mobile-stream-event.schema.json</code></li><li><code>backend/src/contracts/mobile/device-handover-snapshot.schema.json</code></li></ul>
+<h2 id="3-出站流式信封">3. 出站流式信封<a class="anchor" href="#3-出站流式信封" aria-label="锚点">#</a></h2>
+<p>所有移动端推送事件必须符合 <code>mobile-stream-event.schema.json</code>。</p>
+<p>必填的顶层字段：</p>
+<ul><li><code>version</code>、<code>event_id</code>、<code>trace_id</code>、<code>sequence</code>、<code>ts</code></li><li><code>stream</code>、<code>kind</code>、<code>severity</code>、<code>title</code>、<code>payload</code></li><li><code>redaction_applied</code></li></ul>
+<p>支持的 <code>kind</code>：</p>
+<ul><li><code>status</code></li><li><code>batch_step</code></li><li><code>approval_ticket</code></li><li><code>diff_preview</code></li><li><code>test_result</code></li><li><code>handover_snapshot</code></li><li><code>task_state</code></li><li><code>final_summary</code></li></ul>
+<h2 id="4-审批工单契约">4. 审批工单契约<a class="anchor" href="#4-审批工单契约" aria-label="锚点">#</a></h2>
+<p>对高风险操作使用 <code>approval-ticket.schema.json</code>。</p>
+<p>最小必填字段：</p>
+<ul><li><code>ticket_id</code></li><li><code>risk_level</code></li><li><code>requested_action</code></li><li><code>target</code></li><li><code>reason</code></li><li><code>impact_summary</code></li><li><code>command_preview</code></li><li><code>expires_at</code></li><li><code>choices</code>（<code>approve</code>、<code>reject</code>、<code>edit_then_approve</code>）</li></ul>
+<h2 id="5-跨设备交接契约">5. 跨设备交接契约<a class="anchor" href="#5-跨设备交接契约" aria-label="锚点">#</a></h2>
+<p>当用户在移动端、本地终端与远程 SSH 环境之间切换时，使用 <code>device-handover-snapshot.schema.json</code>。</p>
+<p>快照必须包含：</p>
+<ul><li>最近的关键操作（最多 3 条）</li><li>正在运行的后台任务</li><li>待处理的审批</li><li>剩余的待办事项</li></ul>
+<p>推荐的远程元数据（适用时）：</p>
+<ul><li>活动的 SSH 主机别名</li><li>远程工作区路径</li><li>远程会话健康状态（<code>connected</code> / <code>reconnecting</code> / <code>disconnected</code>）</li></ul>
+<h2 id="6-脱敏规则-强制">6. 脱敏规则（强制）<a class="anchor" href="#6-脱敏规则-强制" aria-label="锚点">#</a></h2>
+<p>在向移动端发送任何负载之前：</p>
+<ul><li>将疑似密钥的值（<code>password</code>、<code>token</code>、<code>secret</code>、私钥）替换为掩码形式。</li><li>对于代码变更，仅发送 diff 摘录。</li><li>对于日志，仅发送末尾摘要（建议最多：最后 10 行）。</li></ul>
+<h2 id="7-最小示例">7. 最小示例<a class="anchor" href="#7-最小示例" aria-label="锚点">#</a></h2>
+<h3 id="7-1-approval-ticket-流式事件">7.1 <code>approval_ticket</code> 流式事件<a class="anchor" href="#7-1-approval-ticket-流式事件" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;version&quot;: &quot;1.0&quot;,
+  &quot;event_id&quot;: &quot;ev_6jk4m9p2r1&quot;,
+  &quot;trace_id&quot;: &quot;tr_20260516_6e9a3f21&quot;,
+  &quot;sequence&quot;: 25,
+  &quot;ts&quot;: &quot;2026-05-16T10:31:12Z&quot;,
+  &quot;stream&quot;: &quot;ops&quot;,
+  &quot;kind&quot;: &quot;approval_ticket&quot;,
+  &quot;severity&quot;: &quot;warn&quot;,
+  &quot;title&quot;: &quot;High-risk operation approval&quot;,
+  &quot;payload&quot;: {
+    &quot;ticket_id&quot;: &quot;ap_h8k2m9q1v4&quot;,
+    &quot;risk_level&quot;: &quot;high&quot;,
+    &quot;requested_action&quot;: &quot;Kill high-memory process&quot;,
+    &quot;target&quot;: &quot;chromium-render (PID 892)&quot;,
+    &quot;reason&quot;: &quot;Memory usage remains above threshold for 120s.&quot;,
+    &quot;impact_summary&quot;: &quot;Process termination may lose unsaved renderer state.&quot;,
+    &quot;command_preview&quot;: [&quot;kill -9 892&quot;],
+    &quot;expires_at&quot;: &quot;2026-05-16T10:35:00Z&quot;,
+    &quot;choices&quot;: [&quot;approve&quot;, &quot;reject&quot;, &quot;edit_then_approve&quot;]
+  },
+  &quot;redaction_applied&quot;: true
+}</code></pre>
+<h3 id="7-2-handover-snapshot-流式事件">7.2 <code>handover_snapshot</code> 流式事件<a class="anchor" href="#7-2-handover-snapshot-流式事件" aria-label="锚点">#</a></h3>
+<pre><code class="language-json">{
+  &quot;version&quot;: &quot;1.0&quot;,
+  &quot;event_id&quot;: &quot;ev_91dzk2q4m6&quot;,
+  &quot;trace_id&quot;: &quot;tr_20260516_6e9a3f21&quot;,
+  &quot;sequence&quot;: 42,
+  &quot;ts&quot;: &quot;2026-05-16T11:00:00Z&quot;,
+  &quot;stream&quot;: &quot;sync&quot;,
+  &quot;kind&quot;: &quot;handover_snapshot&quot;,
+  &quot;severity&quot;: &quot;info&quot;,
+  &quot;title&quot;: &quot;Session handover snapshot&quot;,
+  &quot;payload&quot;: {
+    &quot;recent_actions&quot;: [
+      &quot;Killed stuck python training process (PID 882).&quot;,
+      &quot;Switched model to claude-3.5-sonnet and reran tests.&quot;,
+      &quot;Auth patch applied; git commit still pending.&quot;
+    ],
+    &quot;background_tasks&quot;: [
+      &quot;npm run dev (PID 1024, port 8080)&quot;
+    ],
+    &quot;pending_approvals&quot;: [],
+    &quot;todos&quot;: [
+      &quot;Commit auth patch&quot;
+    ]
+  },
+  &quot;redaction_applied&quot;: true
+}</code></pre>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-002] Khyos-CB-SSP-数学建模与实现映射.html"><div class="dir">下一篇 →</div><div class="ttl">Khyos CB-SSP 数学建模与实现映射（落地规格）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-001] khy-移动智能体协议.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

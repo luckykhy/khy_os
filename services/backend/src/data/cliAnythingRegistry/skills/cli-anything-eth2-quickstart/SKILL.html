@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-eth2-quickstart · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-eth2-quickstart<span class="sep">›</span>cli-anything-eth2-quickstart</div>
+      <header class="hero reveal"><h1>cli-anything-eth2-quickstart</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-eth2-quickstart">cli-anything-eth2-quickstart</a></li><li class="lvl-2"><a href="#when-to-use">When To Use</a></li><li class="lvl-2"><a href="#core-commands">Core Commands</a></li><li class="lvl-2"><a href="#safety-rules">Safety Rules</a></li><li class="lvl-2"><a href="#runtime-expectations">Runtime Expectations</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-eth2-quickstart&quot;<br>description: &gt;-<br>  Use eth2-quickstart to autonomously deploy a hardened Ethereum node, install<br>  execution and consensus clients, configure validator metadata, expose RPC<br>  safely, and inspect node health with structured JSON output.</p>
+<hr>
+<h1 id="cli-anything-eth2-quickstart">cli-anything-eth2-quickstart<a class="anchor" href="#cli-anything-eth2-quickstart" aria-label="锚点">#</a></h1>
+<p>Agent-native harness for the <code>chimera-defi/eth2-quickstart</code> automation repo.<br>This CLI wraps the repo's canonical shell scripts instead of replacing them.</p>
+<h2 id="when-to-use">When To Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<p>Use this skill when the task involves:</p>
+<ul><li>bootstrapping a fresh Ethereum node host</li><li>installing execution and consensus clients with explicit client diversity</li><li>enabling MEV-Boost or Commit-Boost workflows</li><li>exposing RPC through Nginx or Caddy</li><li>updating validator fee recipient or graffiti settings without handling secrets</li><li>checking machine-readable health with <code>--json</code></li></ul>
+<h2 id="core-commands">Core Commands<a class="anchor" href="#core-commands" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Canonical machine-readable health
+cli-anything-eth2-quickstart --json health-check
+
+# Phase 2 install with explicit client choices
+cli-anything-eth2-quickstart --json install-clients \
+  --network mainnet \
+  --execution-client geth \
+  --consensus-client lighthouse \
+  --mev mev-boost \
+  --confirm
+
+# Guided node setup
+cli-anything-eth2-quickstart --json setup-node \
+  --phase auto \
+  --execution-client geth \
+  --consensus-client prysm \
+  --mev commit-boost \
+  --confirm
+
+# Validator metadata only; no key import
+cli-anything-eth2-quickstart --json configure-validator \
+  --consensus-client prysm \
+  --fee-recipient 0x1111111111111111111111111111111111111111 \
+  --graffiti &quot;CLI-Anything&quot;
+
+# Install nginx-backed RPC exposure
+cli-anything-eth2-quickstart --json start-rpc \
+  --web-stack nginx \
+  --server-name rpc.example.org \
+  --confirm</code></pre>
+<h2 id="safety-rules">Safety Rules<a class="anchor" href="#safety-rules" aria-label="锚点">#</a></h2>
+<ul><li>Always use <code>--json</code> for agent parsing.</li><li>Require human confirmation before <code>setup-node</code>, <code>install-clients</code>, or <code>start-rpc</code>.</li><li>Do not generate validator keys.</li><li>Do not remove secrets or wallet material.</li><li>Treat <code>configure-validator</code> as metadata and operator-guidance only.</li><li>Respect the reboot boundary between Phase 1 and Phase 2.</li></ul>
+<h2 id="runtime-expectations">Runtime Expectations<a class="anchor" href="#runtime-expectations" aria-label="锚点">#</a></h2>
+<ul><li>Operates on a local <code>eth2-quickstart</code> checkout.</li><li>Discovers repo root from <code>--repo-root</code>, <code>ETH2QS_REPO_ROOT</code>, or current working directory.</li><li>Writes compatible overrides into <code>config/user_config.env</code> when flags map directly to repo settings.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-drawio/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-drawio</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-exa/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Exa CLI Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-eth2-quickstart/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

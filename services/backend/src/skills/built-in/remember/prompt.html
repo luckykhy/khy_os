@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remember — Persistent Memory · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>remember<span class="sep">›</span>Remember — Persistent Memory</div>
+      <header class="hero reveal"><h1>Remember — Persistent Memory</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#remember-persistent-memory">Remember — Persistent Memory</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#input-format">Input Format</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="remember-persistent-memory">Remember — Persistent Memory<a class="anchor" href="#remember-persistent-memory" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Save user-specified information to persistent memory files (CLAUDE.md or dedicated memory files) so it is available in future conversations.</p>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Parse Input</strong>: Extract the key information the user wants to remember.</li><li><strong>Categorize</strong>: Determine the best storage location:<ul><li><strong>Project-level</strong> (<code>CLAUDE.md</code> in project root): Project conventions, architecture decisions, coding standards.</li><li><strong>User-level</strong> (<code>~/.claude/CLAUDE.md</code>): Personal preferences, global settings, cross-project notes.</li><li><strong>Memory files</strong> (<code>~/.claude/projects/&lt;project&gt;/memory/</code>): Detailed project-specific knowledge.</li></ul></li><li><strong>Check for Duplicates</strong>: Read the target file first to avoid storing duplicate information.</li><li><strong>Write</strong>: Append the new information in a structured format:<ul><li>Use clear, concise bullet points.</li><li>Include a brief category label (e.g., <code>[architecture]</code>, <code>[convention]</code>, <code>[preference]</code>).</li><li>Add a date stamp if the information is time-sensitive.</li></ul></li><li><strong>Confirm</strong>: Tell the user exactly what was saved and where.</li></ol>
+<h2 id="input-format">Input Format<a class="anchor" href="#input-format" aria-label="锚点">#</a></h2>
+<ul><li>Natural language: &quot;Remember that we use PostgreSQL for the main database&quot;</li><li>Key-value: &quot;db=PostgreSQL&quot;</li><li>Multi-line notes are supported</li></ul>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Never overwrite existing memory entries — always append or update.</li><li>Keep entries concise (1-2 lines each).</li><li>If the user asks to forget something, remove the specific entry and confirm.</li><li>Respect privacy: do not store passwords, API keys, or other secrets in memory files.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/planning-and-task-breakdown/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Planning and Task Breakdown</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/review-pr/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Pull Request Review Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/remember/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

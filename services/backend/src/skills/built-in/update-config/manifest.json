@@ -1,0 +1,15 @@
+{
+  "name": "update-config",
+  "description": "Update project or global configuration files",
+  "trigger": "/update-config",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "config",
+    "settings"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khyos 架构重塑：作为「受约束·有预算·随机最短路径求解器」的全局最优设计 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>Khyos 架构重塑：作为「受约束·有预算·随机最短路径求解器」的全局最优设计</div>
+      <header class="hero reveal"><h1>Khyos 架构重塑：作为「受约束·有预算·随机最短路径求解器」的全局最优设计</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-架构重塑-作为-受约束-有预算-随机最短路径求解器-的全局最优设计">Khyos 架构重塑：作为「受约束·有预算·随机最短路径求解器」的全局最优设计</a></li><li class="lvl-2"><a href="#0-核心论断-tl-dr">0. 核心论断（TL;DR）</a></li><li class="lvl-2"><a href="#1-第一性原理-khyos-的数学本质">1. 第一性原理：Khyos 的数学本质</a></li><li class="lvl-3"><a href="#1-1-为什么是-pomdp-而不是普通图搜索">1.1 为什么是 POMDP 而不是普通图搜索</a></li><li class="lvl-3"><a href="#1-2-状态-state">1.2 状态（State）</a></li><li class="lvl-3"><a href="#1-3-动作-action-与-可行性投影">1.3 动作（Action）与**可行性投影**</a></li><li class="lvl-3"><a href="#1-4-转移-transition">1.4 转移（Transition）</a></li><li class="lvl-3"><a href="#1-5-目标函数-objective-本设计的灵魂">1.5 目标函数（Objective）——本设计的灵魂</a></li><li class="lvl-2"><a href="#2-用数学语言重述现有-khyos">2. 用数学语言重述现有 Khyos</a></li><li class="lvl-3"><a href="#2-1-规划-无价值函数的单步贪心-rollout">2.1 规划 = 无价值函数的单步贪心 rollout</a></li><li class="lvl-3"><a href="#2-2-外层-固定次数的盲目重试环-而非收敛搜索">2.2 外层 = 固定次数的盲目重试环（而非收敛搜索）</a></li><li class="lvl-3"><a href="#2-3-动作空间-约束投影-pi-mathcal-c-的精确实现">2.3 动作空间 = 约束投影 $\Pi_{\mathcal C}$ 的精确实现</a></li><li class="lvl-3"><a href="#2-4-调度-两套范式拼接-一个-未命名的劣化老虎机">2.4 调度 = 两套范式拼接 + 一个**未命名的劣化老虎机**</a></li><li class="lvl-3"><a href="#2-5-反思-外部测量算子-防环补丁">2.5 反思 = 外部测量算子 + 防环补丁</a></li><li class="lvl-2"><a href="#3-批判性审查-思想实验">3. 批判性审查（思想实验）</a></li><li class="lvl-3"><a href="#3-1-完备性-模型能处理所有边界吗">3.1 完备性：模型能处理所有边界吗？</a></li><li class="lvl-3"><a href="#3-2-效率-组合爆炸与复杂度">3.2 效率：组合爆炸与复杂度</a></li><li class="lvl-3"><a href="#3-3-一致性-局部最优是否损害全局-最深的病灶">3.3 一致性：局部最优是否损害全局？——**最深的病灶**</a></li><li class="lvl-2"><a href="#4-全局最优重构">4. 全局最优重构</a></li><li class="lvl-3"><a href="#4-a-规划器-贪心-rollout-可逆性分层的-lrta">4.A 规划器：贪心 rollout → **可逆性分层的 LRTA\***</a></li><li class="lvl-3"><a href="#4-b-启发式-h-s-用验收包统一规划-执行-反思的同一目标">4.B 启发式 $h(s)$：用验收包统一规划/执行/反思的同一目标</a></li><li class="lvl-3"><a href="#4-c-调度统一-一个资源-代价模型治三层">4.C 调度统一：一个资源-代价模型治三层</a></li><li class="lvl-3"><a href="#4-d-约束格-把散落的-if-分支形式化为偏序">4.D 约束格：把散落的 if 分支形式化为偏序</a></li><li class="lvl-2"><a href="#5-为何新设计全局最优-逐条论证">5. 为何新设计全局最优（逐条论证）</a></li><li class="lvl-2"><a href="#6-落地映射-最小改动-不推倒">6. 落地映射（最小改动，不推倒）</a></li><li class="lvl-2"><a href="#7-风险-边界与诚实的局限">7. 风险、边界与诚实的局限</a></li><li class="lvl-3"><a href="#附-一页纸的数学全景">附：一页纸的数学全景</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-003 | 阶段: 设计 | 原路径: docs/架构/Khyos-数学重塑-受约束随机最短路径.md --&gt;</p>
+<h1 id="khyos-架构重塑-作为-受约束-有预算-随机最短路径求解器-的全局最优设计">Khyos 架构重塑：作为「受约束·有预算·随机最短路径求解器」的全局最优设计<a class="anchor" href="#khyos-架构重塑-作为-受约束-有预算-随机最短路径求解器-的全局最优设计" aria-label="锚点">#</a></h1>
+<blockquote><p>文档性质：首席科学家级架构设计文档（数学本质 → 现状重述 → 批判审查 → 全局最优重构 → 落地映射）<br>范围：用户态智能体（<code>services/backend/src</code> 的 agent loop / 工具 / 调度 / 反思）为主，自研 C 内核（<code>kernel/src</code>）为对照与上提范式来源<br>日期：2026-06-11</p></blockquote>
+<hr>
+<h2 id="0-核心论断-tl-dr">0. 核心论断（TL;DR）<a class="anchor" href="#0-核心论断-tl-dr" aria-label="锚点">#</a></h2>
+<p>把 Khyos 一切表象（ReAct 循环、16 适配器、循环检测器、目标模式、Ralph 续轮、交付门）剥到底，它在数学上是<strong>同一个问题的一个退化解</strong>：</p>
+<blockquote><p><strong>在部分可观测、随机转移、带硬约束、带资源预算的状态空间中，寻找一条从初始状态到「可验证目标状态」的最小代价路径。</strong><br>即一个 <strong>Constrained, Budgeted, Stochastic Shortest-Path（受约束·有预算·随机最短路径，下称 CB-SSP）</strong> 问题，定义在<strong>信念状态（belief state）</strong>之上的 POMDP。</p></blockquote>
+<p>而 Khyos 当前对这个问题的求解，是它的<strong>最弱形式</strong>：</p>
+<table><thead><tr><th>维度</th><th>CB-SSP 应有的结构</th><th>Khyos 现状</th><th>退化代价</th></tr></thead><tbody><tr><td>策略</td><td>价值引导的最优策略 π*</td><td><strong>单步贪心采样</strong> `a ~ LLM(·\</td><td>s)`，无价值函数、无前瞻</td></tr><tr><td>搜索</td><td>带 visited 集 + 代价单调的 best-first</td><td><strong>纯线性前向链</strong>，无 frontier / 无回溯</td><td>需 10 个检测器手工补「防环」</td></tr><tr><td>重试</td><td>收敛的迭代加深（价值回填）</td><td><strong>固定次数盲目重跑</strong>（Ralph ≤3、remediation ≤3）</td><td>重试不学习，不保证逼近最优</td></tr><tr><td>目标</td><td>单一全局代价函数 J，三子系统共享</td><td><strong>规划/调度/反思各优化各的</strong>，无共享 J</td><td>局部优化损害全局（见 §4.3）</td></tr><tr><td>调度</td><td>统一资源-代价模型</td><td><strong>两套范式拼接</strong>（内核干净 RR ╱ 用户态 ad-hoc 罚分）</td><td>魔数遍地、名实不符、双断路器并存</td></tr></tbody></table>
+<p><strong>本文论证：只要把这五个退化项还原成 CB-SSP 的正则结构，绝大多数现有组件不必推倒——它们恰好是新模型缺了「黏合剂」的零件。</strong> 最关键的发现是：**Ralph 续轮环在结构上已经是 LRTA\<em>（实时学习 A\</em>）的外层试验环，只差一个价值回填步骤**；补上它，盲目重试当场变成可证明收敛的学习式搜索，几乎零额外成本。</p>
+<hr>
+<h2 id="1-第一性原理-khyos-的数学本质">1. 第一性原理：Khyos 的数学本质<a class="anchor" href="#1-第一性原理-khyos-的数学本质" aria-label="锚点">#</a></h2>
+<h3 id="1-1-为什么是-pomdp-而不是普通图搜索">1.1 为什么是 POMDP 而不是普通图搜索<a class="anchor" href="#1-1-为什么是-pomdp-而不是普通图搜索" aria-label="锚点">#</a></h3>
+<p>一个&quot;能安全高效完成系统操作任务的智能体&quot;，其根本困难不在于&quot;动作多&quot;，而在于<strong>它看不见真实世界</strong>。真实世界状态</p>
+<p>$$<br>w \in W = (\text{文件系统} \times \text{进程表} \times \text{网络} \times \text{内存} \times \dots)<br>$$</p>
+<p>是巨大且<strong>不可直接观测</strong>的。智能体唯一的世界信息来自工具调用的<strong>返回值（观测）</strong>。因此它真正持有并操作的，是一个<strong>信念状态</strong>而非世界状态。这把问题从&quot;在 $W$ 上找路径&quot;升格为&quot;在信念空间上做决策&quot;——一个 <strong>POMDP</strong>。</p>
+<blockquote><p>这一点不是学究式区分，而是直接解释了 Khyos 为什么会自发演化出 <code>verificationAgent.adversarialVerify()</code>（<code>verificationAgent.js:373</code>）：目标谓词 <code>Goal(w)</code> 定义在<strong>真实世界 $w$</strong> 上，而智能体只有<strong>信念 $b$</strong>；二者之间的鸿沟（belief–goal gap）必须靠一次<strong>重新观测</strong>来坍缩——派一个只读 agent 重新读世界、强制吐 <code>VERDICT: PASS/FAIL</code>，本质是 POMDP 里的<strong>测量算子</strong>。Khyos 已经摸到了正确的数学，只是没有把它命名、没有把它纳入统一框架。</p></blockquote>
+<h3 id="1-2-状态-state">1.2 状态（State）<a class="anchor" href="#1-2-状态-state" aria-label="锚点">#</a></h3>
+<p>定义智能体状态为四元组：</p>
+<p>$$<br>s = (h,\; b,\; r,\; c)<br>$$</p>
+<ul><li>$h$：对话/历史，即上下文窗口——智能体的<strong>工作记忆</strong>。<code>toolUseLoop.js</code> 的 <code>messages</code> 即此。</li><li>$b$：对真实世界 $w$ 的<strong>信念</strong>（由历次观测累积）。Khyos 中没有显式 $b$ 对象，它隐式散落在 $h$ 里——<strong>这是第一个可形式化的缺口</strong>。</li><li>$r = (r_\text{tok}, r_\text{time}, r_\text{iter}, r_\$)$：<strong>资源向量</strong>。对应 <code>IterationBudget</code>（<code>toolUseLoop.js:96</code>）、<code>usageTracker</code>、墙钟 600s。</li><li>$c$：约束/权限上下文（活跃 profile、已授予的审批、guard 状态）。对应 <code>riskGate</code>/<code>requestPermission</code>/<code>toolProfile</code>。</li></ul>
+<h3 id="1-3-动作-action-与-可行性投影">1.3 动作（Action）与<strong>可行性投影</strong><a class="anchor" href="#1-3-动作-action-与-可行性投影" aria-label="锚点">#</a></h3>
+<p>全动作集 $A_\text{full}$ = 工具注册表（<code>tools/index.js</code>）。但任一状态下<strong>可行</strong>的动作是其受约束子集：</p>
+<p>$$<br>A(s) \;=\; \Pi_{\mathcal C}(s)\big(A_\text{full}\big) \;=\; A_\text{full} \cap \mathrm{Feasible}(s)<br>$$</p>
+<p>其中 $\Pi_{\mathcal C}$ 是<strong>约束投影算子</strong>，$\mathcal C$ 是六维约束集（探针实测）：</p>
+<p>$$<br>\mathcal C = \{\underbrace{\text{工具可用性}}_{\text{policy/skill/profile/deferral}},\; \underbrace{\text{用户授权}}_{\text{per-tool/once/forever}},\; \underbrace{\text{FS 边界}}_{\text{越界/先读/TOCTOU}},\; \underbrace{\text{网络}}_{\text{SSRF/DNS-pin}},\; \underbrace{\text{资源}}_{\text{timeout/rate/size}},\; \underbrace{\text{能力闸}}_{\text{capabilityGate}}\}<br>$$</p>
+<p><strong>关键的、Khyos 尚未形式化的结构——动作的可逆性分层：</strong></p>
+<p>$$<br>A(s) = A_\text{safe}(s) \;\dot\cup\; A_\text{commit}(s)<br>$$</p>
+<ul><li>$A_\text{safe}$：<strong>可逆/只读</strong>动作（read、grep、search、dry-run、<code>--check</code>）。执行它们<strong>不改变 $w$</strong>，只改变 $b$（信息增益）。</li><li>$A_\text{commit}$：<strong>不可逆</strong>动作（write、<code>rm</code>、kill、网络副作用）。一旦执行无法回溯——**这是 Khyos 与经典 A\* 的根本区别：真实世界没有「撤销」按钮。**</li></ul>
+<p>这个分层是后文整个重构的支点（§5）。</p>
+<h3 id="1-4-转移-transition">1.4 转移（Transition）<a class="anchor" href="#1-4-转移-transition" aria-label="锚点">#</a></h3>
+<p>$$<br>s' = T(s, a, \omega), \qquad \omega \sim P(\cdot \mid s, a)<br>$$</p>
+<p>$\omega$ 是随机结果（LLM 非确定性 ⊕ 真实世界返回）。转移核 $P$ <strong>未知、仅可采样</strong>——每次&quot;采样&quot;就是一次真实工具执行，代价高昂且 $A_\text{commit}$ 部分不可重采。这正是为什么不能做朴素树搜索。</p>
+<h3 id="1-5-目标函数-objective-本设计的灵魂">1.5 目标函数（Objective）——本设计的灵魂<a class="anchor" href="#1-5-目标函数-objective-本设计的灵魂" aria-label="锚点">#</a></h3>
+<p>用户要求的&quot;不仅衡量是否完成，还要量化完成得好不好&quot;，就是给出<strong>单一标量代价</strong>。定义每步代价为资源与风险的加权和：</p>
+<p>$$<br>g(s,a,s') \;=\; \lambda_\text{time}\,\Delta t \;+\; \lambda_\text{tok}\,\Delta\text{tok} \;+\; \lambda_\$\,\Delta\$ \;+\; \lambda_\text{risk}\,\mathrm{Risk}(a) \;+\; \lambda_\text{irrev}\,\mathrm{Irrev}(a)<br>$$</p>
+<ul><li>$\mathrm{Risk}(a)$ 来自 <code>riskGate.assess()</code>，$\mathrm{Irrev}(a)$ 来自 §1.3 的可逆性分层（<code>isDestructive</code> 元数据已有）。</li><li>$\lambda$ 是策略权重向量——<strong>这就是&quot;高效/省资源/安全&quot;三目标的统一旋钮</strong>，把 Khyos 散落各处的度量（<code>elapsedMs</code>、<code>onCost</code>、risk level）第一次收进同一个标量。</li></ul>
+<p>总目标：在硬约束与预算下，求最小<strong>期望累计代价 + 终端势</strong>的策略：</p>
+<p>$$<br>\boxed{\;\pi^\* = \arg\min_{\pi}\; \mathbb{E}\!\left[\sum_{t=0}^{T} g(s_t,a_t,s_{t+1}) \;+\; \Phi(s_T)\right]\;}<br>$$</p>
+<p>$$<br>\text{s.t.}\quad<br>\underbrace{a_t \in A(s_t)\ \forall t}_{\text{硬约束（guards）}},\qquad<br>\underbrace{r_T \preceq R_\text{max}}_{\text{预算（IterationBudget）}},\qquad<br>\underbrace{\mathrm{Verify}(s_T)=\text{PASS}}_{\text{目标（delivery gate）}}<br>$$</p>
+<p>终端势 $\Phi(s_T)$：若目标已验证则 $0$，否则 $+\infty$（或&quot;未满足验收项数 × 大常数&quot;，给 anytime 部分解打分）。</p>
+<blockquote><p>这一个式子同时统一了三件 Khyos 今天分开做的事：<strong>预算</strong>（约束二）、<strong>安全</strong>（约束一 + $\lambda_\text{risk}$）、<strong>验收</strong>（约束三）。下文所有重构都是&quot;如何高效地近似求解这个 $\pi^\*$&quot;。</p></blockquote>
+<hr>
+<h2 id="2-用数学语言重述现有-khyos">2. 用数学语言重述现有 Khyos<a class="anchor" href="#2-用数学语言重述现有-khyos" aria-label="锚点">#</a></h2>
+<p>把四路探针测到的真实逻辑，逐块翻译进 §1 的框架。</p>
+<h3 id="2-1-规划-无价值函数的单步贪心-rollout">2.1 规划 = 无价值函数的单步贪心 rollout<a class="anchor" href="#2-1-规划-无价值函数的单步贪心-rollout" aria-label="锚点">#</a></h3>
+<p><code>toolUseLoop.js:1213</code> 的主循环 <code>while(!budget.depleted)</code>，每轮把 $h$ 发给 LLM，由 <code>stop_reason=tool_use</code> 直接产出下一批动作（<code>:1757</code>），执行后回灌。用 §1 语言：</p>
+<p>$$<br>\pi_\text{khy}(s) \;=\; \text{sample}\; a \sim \mathrm{LLM}(\cdot \mid h), \qquad \text{无 } \arg\min_a\big[g(s,a)+V(s')\big]<br>$$</p>
+<ul><li><strong>没有价值函数 $V$</strong>，没有对 $g$ 的任何显式优化，没有前瞻。<code>&lt;execution_plan&gt;</code>（<code>:6150</code>）只是<strong>软进度轨道</strong>，不驱动决策。</li><li><code>planModeService</code> 提供&quot;先 plan→审批→逐步执行&quot;，但只有 <strong>per-step 重试</strong>（<code>:914</code>），<strong>无全局 replan</strong>。</li><li>这是教科书意义上的 <strong>greedy / 深度优先且无启发</strong>：完备性差，逃逸局部最优的唯一手段是外层盲目重跑。</li></ul>
+<h3 id="2-2-外层-固定次数的盲目重试环-而非收敛搜索">2.2 外层 = 固定次数的盲目重试环（而非收敛搜索）<a class="anchor" href="#2-2-外层-固定次数的盲目重试环-而非收敛搜索" aria-label="锚点">#</a></h3>
+<p><code>agenticHarnessService.js</code> 套了两层串行负反馈：</p>
+<p>$$<br>\text{Ralph 续轮: } \texttt{while(maxIterationsReached \&amp;\&amp; round &lt; 3)}\quad(\text{:365})<br>$$<br>$$<br>\text{交付门 remediation: } \texttt{while(!gate.passed \&amp;\&amp; round &lt; 3)}\quad(\text{:480})<br>$$</p>
+<p>用 §1 语言：这是<strong>对同一个 SSP 实例的多次独立试验（trials）</strong>。问题在于——<strong>每次试验之间不传递任何学到的价值</strong>：第 $k$ 轮失败的教训不会变成第 $k{+}1$ 轮的启发 $h(s)$。它是 <em>restart</em>，不是 <em>learning restart</em>。</p>
+<h3 id="2-3-动作空间-约束投影-pi-mathcal-c-的精确实现">2.3 动作空间 = 约束投影 $\Pi_{\mathcal C}$ 的精确实现<a class="anchor" href="#2-3-动作空间-约束投影-pi-mathcal-c-的精确实现" aria-label="锚点">#</a></h3>
+<p>探针证实 Khyos 已经<strong>实现了 $\Pi_{\mathcal C}$</strong>，只是没命名：</p>
+<ul><li><code>toolProfile.js</code> 的 minimal/coding/analysis/full 白名单 = 对 LLM 隐藏工具的投影。</li><li><code>executeTool</code>（<code>toolCalling.js:2299</code>）= 单一漏斗，六维约束在此逐一施加，违例返回结构化 <code>ToolError</code>（硬拒）。</li><li><code>guardApproval.js</code> = <strong>约束松弛算子</strong>：把软越界动作通过&quot;人工审批转移&quot;提升回 $A(s)$，代价为 $\lambda_\text{human}$（中断成本）。</li></ul>
+<p>数学上这是一个<strong>约束格（lattice）</strong>，但代码里是散落的 if 分支（见 §4.1、§5.4）。</p>
+<h3 id="2-4-调度-两套范式拼接-一个-未命名的劣化老虎机">2.4 调度 = 两套范式拼接 + 一个<strong>未命名的劣化老虎机</strong><a class="anchor" href="#2-4-调度-两套范式拼接-一个-未命名的劣化老虎机" aria-label="锚点">#</a></h3>
+<ul><li><strong>内核侧（<code>sched.c:270</code>）</strong>：纯轮转 RR + 10ms 固定时间片抢占（<code>timer.c:43</code>）+ bitmap first-fit 物理页（<code>pmm.c:45</code>）。<strong>干净、对称、无启发式——是全系统最接近最优的部分。</strong></li><li><strong>适配器路由（<code>aiGateway.js:2115</code>）</strong>：<code>score = basePriority×10 + Σpenalty</code>，按 score 升序选适配器。用 §1 语言，这是一个<strong>手工搓的、未调参的多臂老虎机（MAB）</strong>：score 是臂的劣化估计，cooldown 是探索惩罚，但权重全是魔数、无 regret 保证。</li><li><strong>账号池（<code>accountPool.js:3121</code>）</strong>：配置名曰 <code>'Balance'</code>，SQL 实为 <code>ORDER BY last_used_at DESC</code>（<strong>最近使用优先、粘性</strong>）——<strong>名实不符</strong>：声称负载均衡，实做反均衡。</li><li><strong>工作流（<code>workflowExecutor.js</code>）</strong>：单游标顺序解释器 + FIFO 乐观锁认领（<code>workflowRunWorker.js:116</code>），<strong>非抢占</strong>——一个长 run 阻塞后续（<code>tick</code> 每拍只认领一个）。</li></ul>
+<h3 id="2-5-反思-外部测量算子-防环补丁">2.5 反思 = 外部测量算子 + 防环补丁<a class="anchor" href="#2-5-反思-外部测量算子-防环补丁" aria-label="锚点">#</a></h3>
+<ul><li><code>verificationAgent.adversarialVerify</code>（<code>:373</code>）= §1.1 的<strong>信念坍缩测量</strong>，强制 <code>VERDICT</code>。</li><li><code>toolLoopDetector.js</code>（10 检测器，<code>:28</code>）= <strong>对「无 visited 集 + 无代价单调」的搜索缺陷的事后补丁</strong>。在正则 SSP 里，环由 $g$ 的单调递增 + visited 集<strong>结构性杜绝</strong>，根本不需要 pingPong / genericRepeat / circuitBreaker 这一堆探测器。</li><li><code>boulderState.js</code>（SQLite WAL + 文件快照，<code>:32</code>/<code>:125</code>）= <strong>状态 $s$ 的持久化检查点</strong>，已支持跨进程 resume 与工作区漂移检测——这是把 $s$ 外化的良好基础（正好补 §1.2 的 $b$ 缺口）。</li></ul>
+<blockquote><p><strong>重述结论（数学形状）</strong>：Khyos = 在 belief-POMDP 上跑的<strong>无启发、无回溯的贪心前向链</strong>，外包<strong>固定次数的非学习重启</strong>，用<strong>事后防环补丁</strong>维持稳定，用<strong>外部测量</strong>判定终止；调度层是<strong>干净内核 RR</strong> 与<strong>未调参启发式</strong>的拼接。它处处碰到了 CB-SSP 的正确零件，却没有把它们装进同一台机器。</p></blockquote>
+<hr>
+<h2 id="3-批判性审查-思想实验">3. 批判性审查（思想实验）<a class="anchor" href="#3-批判性审查-思想实验" aria-label="锚点">#</a></h2>
+<h3 id="3-1-完备性-模型能处理所有边界吗">3.1 完备性：模型能处理所有边界吗？<a class="anchor" href="#3-1-完备性-模型能处理所有边界吗" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>边界</th><th>当前行为</th><th>数学缺陷</th></tr></thead><tbody><tr><td>权限不足</td><td>动作被 guard 硬拒 / 或 fail-closed 阻塞</td><td>$A(s)$ 可能<strong>变空</strong>而无定义的 fallback → 违反<strong>活性（liveness）</strong>：应保证 $A(s)$ 永不空（至少含 <code>ask_user</code> / <code>abort_with_reason</code>），否则是未定义挂起而非合法终态</td></tr><tr><td>命令失败</td><td><code>errorClassifier</code> 分类 → 线性重试</td><td>失败 = 高 $g$ 的随机转移；正确做法是<strong>绕路</strong>（搜索到次优动作），但无回溯 → 只能原地重试到硬上限</td></tr><tr><td>资源耗尽</td><td>grace 轮收尾</td><td>已具 <strong>anytime</strong> 雏形，但未形式化&quot;始终可返回已验证的最优部分解&quot;</td></tr><tr><td>belief–goal 鸿沟</td><td>末端跑一次 verify</td><td>验证<strong>只在终点</strong>，中途无信念校准 → 走偏要到最后才发现，remediation 成本被推到最贵的时刻</td></tr><tr><td>不可逆动作</td><td>与可逆动作同等对待</td><td><strong>最危险的缺口</strong>：无 $\mathrm{Irrev}$ 分层 → 在信念不足时就 commit，制造大量返工</td></tr></tbody></table>
+<h3 id="3-2-效率-组合爆炸与复杂度">3.2 效率：组合爆炸与复杂度<a class="anchor" href="#3-2-效率-组合爆炸与复杂度" aria-label="锚点">#</a></h3>
+<ul><li><strong>贪心 ReAct</strong>：$O(\text{depth})$ 次 LLM 调用，breadth 不爆——<strong>便宜但不完备</strong>。逃逸局部最优靠 Ralph 盲重启，期望试验次数无界（最坏在 ≤3 上限处直接放弃）。</li><li><strong>朴素 belief 上的全 A\</strong>*：$O(b^d)$（$b$=分支因子，$d$=深度）——<strong>组合爆炸</strong>。每个节点 = 一次 LLM 调用 + 一次真实副作用，且 $A_\text{commit}$ 不可重采，<strong>绝对不可行</strong>。</li><li>故两端都不行：贪心太弱，全搜索太贵。<strong>最优区间在中间</strong>（§5.1）。</li></ul>
+<h3 id="3-3-一致性-局部最优是否损害全局-最深的病灶">3.3 一致性：局部最优是否损害全局？——<strong>最深的病灶</strong><a class="anchor" href="#3-3-一致性-局部最优是否损害全局-最深的病灶" aria-label="锚点">#</a></h3>
+<p>三个子系统<strong>各自优化各自的目标，彼此不知道对方的代价</strong>：</p>
+<ol><li><strong>规划</strong>优化&quot;让 LLM 满意地产出下一步&quot;（无显式目标）；</li><li><strong>调度</strong>优化&quot;适配器可用性罚分&quot;（<code>aiGateway</code> 的 score）；</li><li><strong>反思/验收</strong>优化&quot;acceptance pack 是否满足&quot;（<code>buildAcceptancePack</code>）。</li></ol>
+<p>三者<strong>没有共享的 $J$</strong>。后果（可观测的真实矛盾）：</p>
+<ul><li>适配器路由为降低 score 切到一个<strong>便宜但能力弱</strong>的适配器，导致规划层多花 5 轮才达成同一验收项——局部省了适配器代价，全局 $J$ 暴涨。</li><li><strong>验收标准（acceptance pack）只在终点用作裁判，却不在规划中用作指南</strong>——规划是&quot;盲走&quot;，走完才被 gate 评判。这等于考试不发考纲、交卷才告诉你考什么。</li><li><strong>两套断路器并存</strong>（规范的 <code>circuitBreaker.js</code> 三态机 vs <code>aiGateway</code> 内联指数退避），主路径用后者——同一概念两套实现、未统一。</li><li><strong><code>'Balance'</code> 名实不符</strong>——配置承诺均衡，实现是粘性 MRU。</li></ul>
+<blockquote><p>一句话：<strong>Khyos 缺一个&quot;全局代价中枢&quot;，让规划、调度、验收都对着同一个 $J$ 优化。</strong> 这正是 §1.5 那个 $J(\pi)$ 要解决的。</p></blockquote>
+<hr>
+<h2 id="4-全局最优重构">4. 全局最优重构<a class="anchor" href="#4-全局最优重构" aria-label="锚点">#</a></h2>
+<p>设计原则：<strong>不推倒重来</strong>。把现有零件接到 §1 的 CB-SSP 框架上，补齐缺失的&quot;黏合剂&quot;。共四项改造（A–D）。</p>
+<h3 id="4-a-规划器-贪心-rollout-可逆性分层的-lrta">4.A 规划器：贪心 rollout → <strong>可逆性分层的 LRTA\</strong>*<a class="anchor" href="#4-a-规划器-贪心-rollout-可逆性分层的-lrta" aria-label="锚点">#</a></h3>
+<p>**核心洞察：Ralph 续轮环已经是 LRTA\<em>（Learning Real-Time A\</em>）的外层试验环，只差价值回填。**</p>
+<p>LRTA\* 是为&quot;动作有真实代价、不能自由回溯、需多次试验逐步逼近最优&quot;而生的实时搜索算法——<strong>与智能体处境天然同构</strong>。它维护一张启发表 $h(s)$（到目标的代价-去估计），每步做有界前瞻后执行一步，并<strong>回填</strong>：</p>
+<p>$$<br>h(s) \;\leftarrow\; \min_{a \in A(s)} \big[\, g(s,a) + h\big(T(s,a)\big) \,\big]<br>$$</p>
+<p>多次试验后 $h \to h^\*$，路径<strong>可证明收敛到最优</strong>。把它落到 Khyos：</p>
+<ol><li><strong>可逆性分层执行</strong>（§1.3 的支点）：<ul><li>对 $A_\text{safe}$（只读/可逆）：<strong>允许有界前瞻 / beam（宽度 $k{\le}3$）</strong>。因为只读动作不改 $w$、只锐化信念 $b$，可廉价并行试探（best-of-N 在只读子空间是安全的）。用它<strong>在 commit 前把 $b$ 的不确定性降到阈值以下</strong>。</li><li>对 $A_\text{commit}$（不可逆）：<strong>禁止投机分支</strong>，做<strong>一步最优承诺</strong> $a^\* = \arg\min_a[g(s,a)+h(s')]$，并对高 $\mathrm{Irrev}$ 动作强制 plan-then-confirm（已有 <code>requestPermission</code> 通道）。</li></ul></li><li>**Ralph 环 = LRTA\* 试验环<strong>：把 <code>agenticHarnessService.js:365</code> 的盲重跑，改成&quot;重跑前先用上一轮的 $(s,a,\text{结果})$ 回填 $h$&quot;。</strong>几乎零新增成本**（$h$ 存进已有的 <code>boulderState</code> SQLite），却把&quot;不学习的 restart&quot;升级为&quot;收敛的 learning restart&quot;。</li></ol>
+<p><strong>复杂度</strong>：每次 commit 前的前瞻仅在 $A_\text{safe}$ 上、宽度 $k$、深度 $1$~$2$，额外<strong>只读</strong>代价 $O(k)$（不触发副作用、可缓存）；不可逆动作绝不分支 → <strong>避免 $b^d$ 爆炸</strong>。试验维度上 LRTA\* 在重复 trial 下收敛到最优 → <strong>避免贪心的不完备</strong>。这就是 §3.2 说的&quot;中间最优区间&quot;。</p>
+<h3 id="4-b-启发式-h-s-用验收包统一规划-执行-反思的同一目标">4.B 启发式 $h(s)$：用验收包统一规划/执行/反思的同一目标<a class="anchor" href="#4-b-启发式-h-s-用验收包统一规划-执行-反思的同一目标" aria-label="锚点">#</a></h3>
+<p><strong>直接消灭 §3.3 的一致性病灶。</strong> <code>buildAcceptancePack()</code> 已枚举目标谓词 $\{\phi_1,\dots,\phi_m\}$（验收项）。定义：</p>
+<p>$$<br>h(s) \;=\; \sum_{i:\ \phi_i \text{ 在信念 } b \text{ 下未满足}} \widehat{c}(\phi_i)<br>$$</p>
+<p>$\widehat c(\phi_i)$ = 满足第 $i$ 项验收的估计代价（保守下估，每项 $\ge 1$ 个动作 → <strong>可采纳（admissible）</strong> → A\<em>/LRTA\</em> 最优性成立）。</p>
+<p>效果：</p>
+<ul><li><strong>规划层</strong>现在每步都对着&quot;还差哪些验收项&quot;做 $\arg\min$ —— 考纲提前发，不再盲走。</li><li><strong>反思层</strong>的 delivery gate 从&quot;终点裁判&quot;变成&quot;全程启发&quot;——<strong>同一个 acceptance pack 同时充当目标、启发、终止判据</strong>，三子系统第一次共享 $J$。</li><li><strong>中途信念校准</strong>：当 $h(s)$ 停滞或上升时，触发一次只读 verify（廉价 $A_\text{safe}$ 测量）校准 $b$，把&quot;走偏&quot;在最便宜的时刻发现，而非拖到终点 remediation。</li></ul>
+<h3 id="4-c-调度统一-一个资源-代价模型治三层">4.C 调度统一：一个资源-代价模型治三层<a class="anchor" href="#4-c-调度统一-一个资源-代价模型治三层" aria-label="锚点">#</a></h3>
+<p>把内核的<strong>干净纪律上提</strong>，把用户态的<strong>启发式正规化</strong>，让 CPU、适配器、账号、worker 服从同一抽象：<em>在代价 $g$ 下把受限资源分配给竞争需求</em>。</p>
+<ol><li><strong>适配器路由：手搓 MAB → UCB1 老虎机。</strong> 现状 <code>score=basePriority×10+Σpenalty</code> 是没有 regret 保证的劣化老虎机。换成 UCB1：</li></ol>
+<p>$$<br>   \text{select}\;\arg\max_a\Big[\underbrace{\hat\mu_a}_{\text{成功率×速度}} + \underbrace{\sqrt{\tfrac{2\ln N}{n_a}}}_{\text{探索项}}\Big]<br>   $$<br>   cooldown 自然成为探索项的一部分，<strong>魔数自动调参</strong>，且有<strong>对数 regret 上界</strong>。用户 failover 顺序作为先验注入 $\hat\mu_a$ 初值（保留现有 <code>failoverOrderStore</code>）。</p>
+<ol><li><strong>账号池：兑现 <code>'Balance'</code> 的承诺。</strong> 把粘性 MRU（<code>ORDER BY last_used_at DESC</code>）改为真正的<strong>最少负载 / power-of-two-choices</strong>（随机取两个账号、选负载低者）——名实相符，且对热点账号限流有可证明的均衡性。</li><li><strong>工作流 worker：把内核的「时间片 + 抢占」上提。</strong> 现状单游标非抢占 → 长 run 饿死短 run。给 worker 一个 <strong>quantum</strong>（每 $N$ 步经 <code>boulderState</code> 落盘检查点即可让出），把 RR + 抢占从内核搬到工作流层 → <strong>两套调度范式合一</strong>：同一个 (ready-queue, quantum, preempt) 抽象既治内核任务又治 agent 工作流。</li><li><strong>统一断路器</strong>：废弃 <code>aiGateway</code> 内联退避，全栈改用规范的 <code>circuitBreaker.js</code> 三态机（CLOSED/OPEN/HALF_OPEN）——消除&quot;双实现并存&quot;。</li></ol>
+<h3 id="4-d-约束格-把散落的-if-分支形式化为偏序">4.D 约束格：把散落的 if 分支形式化为偏序<a class="anchor" href="#4-d-约束格-把散落的-if-分支形式化为偏序" aria-label="锚点">#</a></h3>
+<p>把六维约束的&quot;硬拒 / 可审批 / 放行&quot;形式化为一个<strong>约束格</strong>（偏序 $\sqsubseteq$）：</p>
+<p>$$<br>\bot\ (\text{红线，恒不可行})\;\sqsubset\; \text{approvable-soft}\ (\text{经人工转移可行})\;\sqsubset\; \top\ (\text{恒可行})<br>$$</p>
+<ul><li>红线（pathTraversal、SSRF、critical-destructive）= 格底 $\bot$，$\Pi_{\mathcal C}$ 直接抹去，<strong>任何审批不可松弛</strong>。</li><li>软约束（editBoundary、priorRead、fileStale）= 中间元，<code>guardApproval</code> 是把它<strong>沿格向上提升</strong>到 $\top$ 的松弛算子，代价 $\lambda_\text{human}$ 计入 $g$。</li><li>这样&quot;硬 vs 可审批&quot;从一堆 if 变成一个清晰偏序，新增 guard 只需声明它在格中的位置，<strong>$A(s)$ 永不为空</strong>（格顶恒含 <code>ask_user</code>/<code>abort</code>，补 §3.1 活性缺口）。</li></ul>
+<hr>
+<h2 id="5-为何新设计全局最优-逐条论证">5. 为何新设计全局最优（逐条论证）<a class="anchor" href="#5-为何新设计全局最优-逐条论证" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>病灶（§3）</th><th>旧方案</th><th>新方案</th><th>为何更优</th></tr></thead><tbody><tr><td>规划无价值、靠盲重试</td><td>贪心 + Ralph restart</td><td>LRTA\* + 价值回填</td><td>多 trial <strong>可证明收敛到最优</strong>；复用现有 Ralph 环与 SQLite，近零成本</td></tr><tr><td>防环靠 10 个补丁</td><td>toolLoopDetector</td><td>代价单调 + visited 集</td><td>环被<strong>结构性杜绝</strong>；检测器降级为可选监控而非正确性依赖</td></tr><tr><td>三子系统无共享目标</td><td>各优化各的</td><td>统一 $J$ + 验收包做启发</td><td>消除局部优化害全局；规划/调度/反思<strong>对同一 $J$ 优化</strong></td></tr><tr><td>不可逆动作无保护</td><td>一视同仁</td><td>可逆性分层</td><td>只在信念充分时 commit → <strong>返工/remediation 锐减</strong></td></tr><tr><td>走偏末端才发现</td><td>终点 verify</td><td>$h(s)$ 停滞触发只读校准</td><td>在<strong>最便宜时刻</strong>纠偏，而非最贵时刻</td></tr><tr><td>适配器魔数老虎机</td><td>罚分 score</td><td>UCB1</td><td><strong>对数 regret 上界 + 自动调参</strong></td></tr><tr><td>账号名实不符</td><td>粘性 MRU</td><td>真 LRU/P2C</td><td>名实相符、可证明均衡</td></tr><tr><td>长 run 饿死</td><td>非抢占单游标</td><td>quantum + 抢占</td><td>公平性，与内核范式统一</td></tr><tr><td>双断路器</td><td>内联 + 类并存</td><td>统一三态机</td><td>单一真源</td></tr></tbody></table>
+<p><strong>全局最优的含义</strong>：不是某个函数更快，而是**整个系统第一次服从同一个最优性判据 $\pi^\<em>=\arg\min J$</em>*——规划在 $J$ 下选动作，调度在 $J$ 下分资源，反思用 $J$ 的终端势判完成。子系统不再各自为政。</p>
+<hr>
+<h2 id="6-落地映射-最小改动-不推倒">6. 落地映射（最小改动，不推倒）<a class="anchor" href="#6-落地映射-最小改动-不推倒" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>新模型构件</th><th>复用的现有零件</th><th>需补的&quot;黏合剂&quot;</th></tr></thead><tbody><tr><td>状态 $s=(h,b,r,c)$</td><td><code>messages</code> + <code>boulderState</code> + <code>IterationBudget</code> + <code>riskGate</code></td><td>显式 $b$（信念对象，挂进 boulder 快照）</td></tr><tr><td>启发 $h(s)$</td><td><code>buildAcceptancePack</code> / <code>acceptanceCriteria.js</code></td><td>把验收项数→代价估计，暴露给规划层</td></tr><tr><td>LRTA\* 回填</td><td><code>agenticHarnessService</code> Ralph 环 + SQLite</td><td>一行回填 <code>h(s)←min[g+h(s')]</code>，存 boulder.db</td></tr><tr><td>可逆性分层</td><td>工具元数据 <code>isReadOnly</code>/<code>isDestructive</code></td><td>在 <code>executeTool</code> 入口按分层路由（前瞻 vs 承诺）</td></tr><tr><td>UCB1 路由</td><td><code>aiGateway</code> 罚分骨架 + <code>failoverOrderStore</code></td><td>把 score 换成 UCB 公式，penalty→探索项</td></tr><tr><td>抢占工作流</td><td><code>workflowRunWorker</code> + <code>boulderState</code> 检查点</td><td>quantum 计数 + 让出 + ready-queue</td></tr><tr><td>约束格</td><td>六维 guards + <code>guardApproval</code></td><td>给每个 guard 标注格位置（⊥/soft/⊤）</td></tr><tr><td>统一断路器</td><td>现成 <code>circuitBreaker.js</code></td><td>把 <code>aiGateway</code> 内联退避替换为它</td></tr></tbody></table>
+<p><strong>推荐实施顺序</strong>（按&quot;收益/风险&quot;排序）：</p>
+<ol><li><strong>§4.B 启发 $h(s)$</strong>（验收包做启发）——纯增量、立刻消灭一致性病灶、零回归风险。</li><li>**§4.A LRTA\* 回填**——复用 Ralph 环，把盲重试变学习重试。</li><li><strong>§4.C-1 UCB 路由 + §4.C-4 统一断路器</strong>——隔离在 gateway 层，可灰度。</li><li><strong>§4.D 约束格</strong> + <strong>§4.A 可逆性分层执行</strong>——触及 executeTool，需充分回归测试。</li><li><strong>§4.C-3 抢占工作流</strong>——最大改动，最后做。</li></ol>
+<hr>
+<h2 id="7-风险-边界与诚实的局限">7. 风险、边界与诚实的局限<a class="anchor" href="#7-风险-边界与诚实的局限" aria-label="锚点">#</a></h2>
+<ul><li><strong>$h(s)$ 的可采纳性依赖代价估计保守</strong>。若高估，A\<em>/LRTA\</em> 失去最优性保证（退化为加权 A\*，仍完备、仅次优）。建议初期用&quot;未满足验收项数 × 1&quot;的极保守估计，宁可慢不可错。</li><li><strong>belief $b$ 的维护成本</strong>。显式信念对象会增加状态体积；用 <code>boulderState</code> 的文件快照 + 增量 diff 控制，只追踪与当前验收项相关的世界切片，而非全 $W$。</li><li>**LRTA\* 收敛是&quot;多 trial 渐近&quot;**，单次任务未必触达最优——但这恰好匹配 Ralph 环的 ≤3 轮预算：每轮都比上轮严格不差（价值单调），即&quot;有限预算内的单调改进&quot;，已优于现状的&quot;无单调性盲重启&quot;。</li><li><strong>不可逆动作的根本不可搜索性</strong>是物理事实，非算法可消除。本设计的回应是&quot;用廉价只读搜索换取昂贵不可逆承诺的正确率&quot;，把搜索预算花在可逆侧——这是该约束下的最优策略，而非绕过约束。</li><li><strong>内核侧无需重构</strong>：<code>sched.c</code> 的 RR + 10ms 抢占 + first-fit 已是其作用域内的近最优；本设计是把这套纪律<strong>向上传播</strong>到用户态，而非反向。最干净的数学在系统最底层，重塑是让它向上生长。</li></ul>
+<hr>
+<h3 id="附-一页纸的数学全景">附：一页纸的数学全景<a class="anchor" href="#附-一页纸的数学全景" aria-label="锚点">#</a></h3>
+<p>$$<br>\underbrace{s=(h,b,r,c)}_{\text{信念态}}\ \xrightarrow[\ a\in A_\text{safe}\dot\cup A_\text{commit}\ ]{\ \pi^\<em>=\arg\min_a[g(s,a)+h(s')]\ }\ \underbrace{s'=T(s,a,\omega)}_{\text{随机转移}}<br>$$<br>$$<br>J(\pi)=\mathbb E\Big[\textstyle\sum g(s,a,s')+\Phi(s_T)\Big],\quad<br>\Pi_{\mathcal C}:\bot\sqsubset\text{soft}\sqsubset\top,\quad<br>h\leftarrow\min_a[g+h\circ T]\ \text{(LRTA\</em> 回填，跨 Ralph trial)}<br>$$</p>
+<blockquote><p>一个目标函数 $J$ 统辖规划、调度、反思；一个投影 $\Pi_{\mathcal C}$ 统辖安全；一个回填规则把盲目重试变成收敛搜索。这就是 Khyos 应有的、全局最优的数学灵魂。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-002] Khyos-CB-SSP-数学建模与实现映射.html"><div class="dir">← 上一篇</div><div class="ttl">Khyos CB-SSP 数学建模与实现映射（落地规格）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-004] _cbssp_progress.html"><div class="dir">下一篇 →</div><div class="ttl">CB-SSP 数学重塑 · 实施进度</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-003] Khyos-数学重塑-受约束随机最短路径.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

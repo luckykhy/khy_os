@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>executeCode 进程级真隔离修复 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>executeCode 进程级真隔离修复</div>
+      <header class="hero reveal"><h1>executeCode 进程级真隔离修复</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#executecode-进程级真隔离修复">executeCode 进程级真隔离修复</a></li><li class="lvl-2"><a href="#一-缺陷本质">一、缺陷本质</a></li><li class="lvl-2"><a href="#二-修复方案-把代码移出本进程的-v8-域">二、修复方案：把代码移出本进程的 V8 域</a></li><li class="lvl-2"><a href="#三-极值推演-对生产模块实测">三、极值推演（对生产模块实测）</a></li><li class="lvl-2"><a href="#四-遗留风险-已记录-非致命">四、遗留风险（已记录，非致命）</a></li><li class="lvl-2"><a href="#五-白皮书残留项更新">五、白皮书残留项更新</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-001 | 阶段: 实现 | 原路径: docs/修复记录/executeCode-进程级真隔离-2026-06-10.md --&gt;</p>
+<h1 id="executecode-进程级真隔离修复">executeCode 进程级真隔离修复<a class="anchor" href="#executecode-进程级真隔离修复" aria-label="锚点">#</a></h1>
+<p><strong>日期</strong>：2026-06-10<br><strong>域</strong>：执行臂（Agent 网关 / 工具执行器 — 零信任域）<br><strong>级别</strong>：🔴 需人工介入 → ✅ 已解决<br><strong>文件</strong>：<code>services/backend/src/tools/executeCode.js</code></p>
+<hr>
+<h2 id="一-缺陷本质">一、缺陷本质<a class="anchor" href="#一-缺陷本质" aria-label="锚点">#</a></h2>
+<p><code>executeCode</code> 工具执行 Agent 可控的任意 JavaScript。历史实现用 <code>vm.runInNewContext</code><br>并注入宿主域 intrinsics，逃逸轻而易举：<code>Date.constructor(&quot;return process&quot;)()</code> 直达宿主<br>RCE（fs / child_process / 环境变量外泄）。</p>
+<p>12 小时重构引擎的第 6 次循环做了<strong>进程内 vm 加固</strong>（默认禁用 + 严格 IIFE + 不注入宿主对象），<br>极值推演发现仍有 1/7 向量逃逸：</p>
+<pre><code class="language-js">globalThis.constructor.constructor(&quot;return process&quot;)()  // → [object process]</code></pre>
+<p>根因：vm 上下文的<strong>全局对象本身不可避免是宿主对象</strong>，<code>globalThis.constructor</code> 即宿主<br><code>Object</code>，<code>.constructor</code> 即宿主 <code>Function</code>，于是重新桥回宿主域。Node 官方文档原文：<br><em>&quot;the vm module is not a security mechanism. Do not use it to run untrusted code.&quot;</em><br>进程内 vm <strong>无法</strong>密封此逃逸，遂标记 🔴 需人工介入。</p>
+<h2 id="二-修复方案-把代码移出本进程的-v8-域">二、修复方案：把代码移出本进程的 V8 域<a class="anchor" href="#二-修复方案-把代码移出本进程的-v8-域" aria-label="锚点">#</a></h2>
+<p>真正的隔离要求代码离开主进程 realm。新实现在<strong>全新 fork 的 <code>node --permission</code> 子进程</strong><br>中执行用户代码（Node Permission Model，Node 20+/24 稳定）：</p>
+<ul><li><strong>不授予任何 <code>--allow-*</code></strong>：即便内层 vm 被逃逸，代码落在一个<strong>无能力</strong>进程里 ——</li></ul>
+<p>文件读写、子进程派生、worker 线程、原生插件全部由 Node 在系统调用边界拒绝。</p>
+<ul><li><strong>最小 env</strong>：子进程只拿到源码字符串（<code>__KHY_SRC__</code>），不继承任何宿主密钥。</li><li><strong>双超时</strong>：内层 vm 超时（默认 5s）界定同步代码；外层进程超时（默认 8s）是</li></ul>
+<p><code>SIGKILL</code> 硬兜底。</p>
+<ul><li><strong>fail-closed</strong>：无 sentinel 结果（被杀 / 启动失败）一律返回结构化错误，<strong>绝不回退</strong></li></ul>
+<p>进程内执行。</p>
+<p>三层纵深防御：</p>
+<ol><li>默认禁用，仅 <code>KHY_ENABLE_EXECUTE_CODE=1</code> 时运行（运维知情决策）。</li><li>子进程内仍走严格模式 vm 包装（不注入宿主对象，顶层 <code>this === undefined</code>）。</li><li>子进程本身无 fs / process / worker / addon 能力。</li></ol>
+<p>关键标记位于文件头 <code>[SAFE]</code> 注释块与各 Layer 注释。</p>
+<h2 id="三-极值推演-对生产模块实测">三、极值推演（对生产模块实测）<a class="anchor" href="#三-极值推演-对生产模块实测" aria-label="锚点">#</a></h2>
+<p><code>KHY_ENABLE_EXECUTE_CODE=1</code>，6 个逃逸向量 + 功能 + 超时 + 默认禁用：</p>
+<table><thead><tr><th>向量</th><th>结果</th></tr></thead><tbody><tr><td><code>globalThis.constructor.constructor</code> → <code>fs.readFileSync('/etc/passwd')</code></td><td>contained</td></tr><tr><td><code>this.constructor.constructor</code> → <code>process.env.HOME</code></td><td>contained</td></tr><tr><td><code>Date.constructor</code> → <code>process.pid</code></td><td>contained</td></tr><tr><td><code>globalThis.constructor.constructor</code> → <code>child_process.execSync('id')</code></td><td>contained</td></tr><tr><td><code>globalThis.constructor.constructor</code> → <code>fs.writeFileSync('/tmp/khy_pwn_prod')</code></td><td>contained</td></tr><tr><td><code>globalThis.constructor.constructor</code> → <code>JSON.stringify(process.env)</code> 外泄</td><td>contained（仅见 <code>__KHY_SRC__</code>）</td></tr></tbody></table>
+<ul><li><strong>总逃逸数：0</strong></li><li>合法代码：<code>Math.max(2,40)+...</code> → 46；<code>JSON.stringify</code> 正常；多行 map/reduce → 14。</li><li>失控循环 <code>while(true){}</code>：vm 超时 5047ms 被杀，返回结构化超时错误。</li><li><code>/tmp/khy_pwn_prod</code> 未创建。</li><li>默认禁用路径：正确拒绝。</li></ul>
+<p>回归：<code>jest 'tools|security|executeCode'</code> → <strong>15 suites / 167 tests 全绿，零回归</strong>。</p>
+<p><strong>推演通过。</strong></p>
+<h2 id="四-遗留风险-已记录-非致命">四、遗留风险（已记录，非致命）<a class="anchor" href="#四-遗留风险-已记录-非致命" aria-label="锚点">#</a></h2>
+<p>Node Permission Model <strong>尚不拦截出站网络</strong>。逃逸代码仍可开 socket —— 但来自一个<br><strong>无文件系统访问、env 无密钥</strong>的进程，本地无物可读、无密可泄，爆炸半径有界。<br>彻底封网络需 OS 级沙箱（seccomp / namespaces）或 isolated-vm，列为未来工作，不阻断本次闭环。</p>
+<h2 id="五-白皮书残留项更新">五、白皮书残留项更新<a class="anchor" href="#五-白皮书残留项更新" aria-label="锚点">#</a></h2>
+<p>原 🔴 需人工介入条目（executeCode opt-in vm 逃逸）<strong>降级为 ✅ 已解决</strong>。<br>处置从「已默认禁用兜底」升级为「默认禁用 + 进程级权限沙箱真隔离，逃逸即无能力」。</p>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-002] kiro-连接修复-2026-06-05.html"><div class="dir">下一篇 →</div><div class="ttl">Kiro 连接修复（CW SDK 缺失 + 级联 404）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-001] executeCode-进程级真隔离-2026-06-10.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

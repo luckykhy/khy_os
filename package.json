@@ -1,0 +1,18 @@
+{
+  "name": "Khy-OS",
+  "private": true,
+  "workspaces": [
+    "platform/packages/shared",
+    "services/backend",
+    "services/ai-backend"
+  ],
+  "scripts": {
+    "preinstall": "node scripts/install/link-shared-dev.js"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.4.2"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.9.0": true
+  }
+}

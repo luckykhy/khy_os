@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>《khyos 文档排版与格式控制规范》 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>《khyos 文档排版与格式控制规范》</div>
+      <header class="hero reveal"><h1>《khyos 文档排版与格式控制规范》</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-文档排版与格式控制规范">《khyos 文档排版与格式控制规范》</a></li><li class="lvl-2"><a href="#0-问题陈述">0. 问题陈述</a></li><li class="lvl-2"><a href="#1-设计目标与硬约束">1. 设计目标与硬约束</a></li><li class="lvl-3"><a href="#1-1-核心诉求-必须满足">1.1 核心诉求（必须满足）</a></li><li class="lvl-3"><a href="#1-2-防呆规则-不可违反">1.2 防呆规则（不可违反）</a></li><li class="lvl-2"><a href="#2-架构-内容与样式分离">2. 架构：内容与样式分离</a></li><li class="lvl-2"><a href="#3-语义内容-schema-模型唯一被允许的输出">3. 语义内容 Schema（模型唯一被允许的输出）</a></li><li class="lvl-2"><a href="#4-样式模板系统-格式的唯一真源">4. 样式模板系统（格式的唯一真源）</a></li><li class="lvl-2"><a href="#5-确定性渲染管线-python-docx">5. 确定性渲染管线（python-docx）</a></li><li class="lvl-2"><a href="#6-格式校验闭环-写后必验-绝不退回模型">6. 格式校验闭环（写后必验，绝不退回模型）</a></li><li class="lvl-2"><a href="#7-工具入口与边界">7. 工具入口与边界</a></li><li class="lvl-2"><a href="#8-测试与验证">8. 测试与验证</a></li><li class="lvl-2"><a href="#9-与既有规范的关系">9. 与既有规范的关系</a></li><li class="lvl-2"><a href="#10-模板解析与覆盖语义-走查">10. 模板解析与覆盖语义（走查）</a></li><li class="lvl-2"><a href="#11-边界用例与失败模式">11. 边界用例与失败模式</a></li><li class="lvl-2"><a href="#12-从-createdocument-迁移建议">12. 从 `createDocument` 迁移建议</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khyos-文档排版与格式控制规范">《khyos 文档排版与格式控制规范》<a class="anchor" href="#khyos-文档排版与格式控制规范" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：DESIGN-ARCH-023<br>主题：解决 agent 写论文/报告时无法精确控制字体、颜色、页面、换页等格式的问题<br>范围：<code>services/backend</code> 文档生成工具层 + 样式模板层<br>关联实现：<br><code>src/services/typeset/contentSchema.js</code>、<code>src/services/typeset/markdownToAst.js</code>、<br><code>src/services/typeset/styleTemplates.js</code>、<code>src/templates/docstyles/*.json</code>、<br><code>src/services/docTypeset.py</code>、<code>src/tools/renderDocument.js</code>、<code>src/agents/constraints.js</code><br>测试：<code>tests/services/typeset/*.test.js</code>、<code>tests/tools/renderDocument.test.js</code></p></blockquote>
+<hr>
+<h2 id="0-问题陈述">0. 问题陈述<a class="anchor" href="#0-问题陈述" aria-label="锚点">#</a></h2>
+<p>khyos 原有的文档生成路径（<code>src/tools/createDocument.js</code> → <code>src/services/docHelper.py</code><br>的 <code>text2docx</code>）是<strong>内容生成与格式排版彻底耦合</strong>的反面教材：它把模型给出的文本<br><strong>按换行符一段段裸塞进 docx</strong>，没有任何字体/字号/页边距/行距/换页控制。要让产物&quot;像一篇<br>论文&quot;，唯一办法就是让模型自己在文本里写排版代码——<code>\textbf</code>、<code>\vspace</code>、docx 的<br><code>w:rPr</code> XML、HTML <code>&lt;font&gt;</code> 标签……</p>
+<p>这正是格式错乱的根源：<strong>模型对&quot;格式代码&quot;的输出是不确定的</strong>。同一个排版意图，模型这次写<br><code>\textbf{}</code>、下次写 <code>**</code>、再下次写 <code>&lt;b&gt;</code>；字号一会儿&quot;三号&quot;一会儿&quot;16pt&quot;一会儿忘了写；<br>中文字体设了 <code>font.name</code> 却漏了 <code>eastAsia</code> 导致整篇中文回退默认字体。<strong>只要把格式决策权<br>留在模型手里，排版就无法稳定复现。</strong></p>
+<p>本规范的解法：<strong>把格式决策权从模型手里彻底收走</strong>，建立&quot;内容与样式分离&quot;架构——<br>模型只产出<strong>语义结构</strong>，程序按<strong>样式模板</strong>确定性地排版。</p>
+<blockquote><p>注意：本方案<strong>只新增</strong>排版工具与模板，<strong>不触碰</strong> <code>createDocument</code> 老路径，也<strong>不修改</strong><br>核心调度器（<code>toolUseLoop</code> / <code>toolExecutionEngine</code>）与任何无关业务逻辑（防呆④）。</p></blockquote>
+<hr>
+<h2 id="1-设计目标与硬约束">1. 设计目标与硬约束<a class="anchor" href="#1-设计目标与硬约束" aria-label="锚点">#</a></h2>
+<h3 id="1-1-核心诉求-必须满足">1.1 核心诉求（必须满足）<a class="anchor" href="#1-1-核心诉求-必须满足" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>诉求</th><th>本方案如何满足</th></tr></thead><tbody><tr><td>①</td><td><strong>模型只管语义，不管样式</strong></td><td>模型只输出语义 AST（标题/段落/列表/表格…）或 Markdown；任何底层排版代码在 <code>contentSchema.validateDocument()</code> 处<strong>被拒绝</strong>，强制回到结构化路径。</td></tr><tr><td>②</td><td><strong>模板驱动</strong></td><td>所有格式需求都落为 <code>src/templates/docstyles/*.json</code> 的配置项（页面/段落/字体/换页），由 <code>docTypeset.py</code> 确定性执行，<strong>不存在&quot;模型记格式&quot;</strong>。</td></tr><tr><td>③</td><td><strong>原子化排版 API</strong></td><td><code>docTypeset.py</code> 封装 <code>_set_run_font</code> / <code>_apply_paragraph_format</code> / <code>_set_page</code> / <code>_add_page_number</code> 等原子原语，内部处理 docx 底层细节；<strong>模型永远拼不到排版字符串</strong>。</td></tr></tbody></table>
+<h3 id="1-2-防呆规则-不可违反">1.2 防呆规则（不可违反）<a class="anchor" href="#1-2-防呆规则-不可违反" aria-label="锚点">#</a></h3>
+<ol><li><strong>拦截任何底层排版代码</strong>（LaTeX 命令、LaTeX 宏、HTML/XML 标签含 docx <code>w:</code> 标签、内联</li></ol>
+<p>CSS、RTF 控制字）——一经发现即<strong>拒绝并提示走结构化输入</strong>，绝不静默渲染或让其污染文档。<br>   唯一例外：<code>code</code> 代码块的<strong>正文</strong>，它被原样渲染进等宽样式、<strong>永不被解释</strong>，故对其豁免扫描。</p>
+<ol><li><strong>渲染引擎必须处理中文</strong>：<code>docTypeset.py</code> 在 <code>_set_run_font</code> 中<strong>每一个 run 都同时</strong>设置</li></ol>
+<p><code>w:rFonts/@w:eastAsia</code>；写后校验阶段再次核查，<strong>对漏设 eastAsia 的 run 直接打补丁补上</strong><br>   （python-docx 只设 <code>font.name</code> 而不设 eastAsia 时，中文会静默回退，这是必踩的坑）。</p>
+<ol><li><strong>换页是确定性 API</strong>：换页<strong>只</strong>来自结构化的 <code>{type:&quot;pagebreak&quot;}</code> 块、Markdown 的</li></ol>
+<p><code>[[newpage]]</code> / <code>&lt;&lt;&lt;pagebreak&gt;&gt;&gt;</code> 哨兵行，或模板的&quot;H1 前自动换页&quot;策略——<strong>绝不依赖</strong><br>   模型在正文里插入空行/换行符占位（空行、<code>---</code> 水平线一律<strong>不</strong>触发换页）。</p>
+<ol><li><strong>只新增、不修改核心</strong>：本规范仅新增排版工具与模板；唯一对既有文件的改动是在</li></ol>
+<p><code>src/agents/constraints.js</code> 的 <code>HARD_PROHIBITIONS</code> 增加一条&quot;禁止手写排版代码、改用<br>   renderDocument&quot;的红线——这是禁令单一真源，属于本目标范畴，非核心调度器/无关业务。</p>
+<hr>
+<h2 id="2-架构-内容与样式分离">2. 架构：内容与样式分离<a class="anchor" href="#2-架构-内容与样式分离" aria-label="锚点">#</a></h2>
+<pre><code>模型  ──► 语义内容（Markdown 或 文档 AST）              只有语义，零格式代码
+          │
+renderDocument 工具（src/tools/renderDocument.js）
+          │  1) _toAst：Markdown→AST 或解析 AST JSON
+          │  2) validateDocument：防呆拦截任何排版代码  ← 模型若夹带 \textbf/&lt;b&gt; 在此被拒
+          │  3) resolveTemplate：选定样式模板(+覆盖)
+          │  4) 路径展开与封禁（限定项目/家目录子树）
+          │  5) 写临时 payload JSON，交给渲染器
+          ▼
+docTypeset.py（确定性渲染器，python-docx）
+          │  按模板把 AST 逐块映射为 docx 底层对象
+          │  （H1→&quot;黑体三号居中+前置换页&quot;，正文→&quot;宋体小四 1.5 倍行距首行缩进 2 字符&quot;…）
+          │  写后必验：反解 docx，核查 A4/eastAsia/标题字号，不合即就地打补丁
+          ▼
+最终 .docx（格式由模板决定，确定性可复现）</code></pre>
+<p><strong>三层职责</strong></p>
+<ul><li><strong>语义层</strong>（<code>contentSchema.js</code> / <code>markdownToAst.js</code>）：定义模型唯一被允许输出的 AST；把</li></ul>
+<p>Markdown 确定性地解析成 AST；在此拦截一切排版代码。</p>
+<ul><li><strong>样式层</strong>（<code>styleTemplates.js</code> / <code>docstyles/*.json</code>）：格式的<strong>唯一</strong>决策处——页面、段落、</li></ul>
+<p>逐层级字体/字号/加粗/对齐、换页策略。模板是纯数据，用户可覆盖。</p>
+<ul><li><strong>渲染层</strong>（<code>docTypeset.py</code>）：把 AST × 模板确定性地落成 docx，并写后校验+打补丁。</li></ul>
+<hr>
+<h2 id="3-语义内容-schema-模型唯一被允许的输出">3. 语义内容 Schema（模型唯一被允许的输出）<a class="anchor" href="#3-语义内容-schema-模型唯一被允许的输出" aria-label="锚点">#</a></h2>
+<p>闭合的块文法（<code>contentSchema.js</code> 的 <code>BLOCK_TYPES</code>）：</p>
+<table><thead><tr><th>块类型</th><th>形状</th><th>说明</th></tr></thead><tbody><tr><td><code>heading</code></td><td><code>{level:1..6, text}</code></td><td>标题，层级映射模板 <code>fonts.heading{N}</code></td></tr><tr><td><code>paragraph</code></td><td><code>{text}</code> 或 <code>{runs:[{text,bold?,italic?}]}</code></td><td>正文；强调是<strong>语义 run 标记</strong>，非格式代码</td></tr><tr><td><code>list</code></td><td><code>{ordered:bool, items:[string]}</code></td><td>有序/无序列表</td></tr><tr><td><code>table</code></td><td><code>{header?:[string], rows:[[string]]}</code></td><td>表格</td></tr><tr><td><code>quote</code></td><td><code>{text}</code></td><td>引文</td></tr><tr><td><code>code</code></td><td><code>{text, lang?}</code></td><td>代码（等宽，正文豁免排版扫描）</td></tr><tr><td><code>pagebreak</code></td><td><code>{}</code></td><td><strong>唯一</strong>的显式换页方式（防呆③）</td></tr><tr><td><code>figure</code></td><td><code>{path?, caption?}</code></td><td>图片+题注</td></tr><tr><td><code>reference</code></td><td><code>{entries:[string]}</code></td><td>参考文献（GB/T 7714 / IEEE 编号悬挂缩进）</td></tr></tbody></table>
+<p><strong>防呆拦截</strong>（<code>FORMAT_CODE_PATTERNS</code>）：在任何文本片段中检测并拒绝<br>LaTeX 命令（<code>\textbf|\vspace|\newpage|\section|…</code>）、LaTeX 宏（<code>\word{</code>）、HTML/XML 标签<br>（<code>&lt;b&gt;</code>/<code>&lt;font&gt;</code>/<code>&lt;w:rPr&gt;</code>…，要求标签名紧跟 <code>&lt;</code>，使 <code>a &lt; b</code> 这类不等式不被误判）、<br>内联 CSS（<code>style=&quot;…font/color…&quot;</code>）、RTF 控制字。<code>code</code> 块正文豁免。</p>
+<blockquote><p>强调（<code>**bold**</code> / <code>*italic*</code>）映射为 run 的 <code>bold/italic</code> <strong>语义标记</strong>，由模板用自己的<br>强调字体渲染——它表达&quot;这里是重点&quot;，不是&quot;用某字体某字号&quot;，因此<strong>不是格式代码</strong>。</p></blockquote>
+<hr>
+<h2 id="4-样式模板系统-格式的唯一真源">4. 样式模板系统（格式的唯一真源）<a class="anchor" href="#4-样式模板系统-格式的唯一真源" aria-label="锚点">#</a></h2>
+<p>模板是 <code>src/templates/docstyles/</code> 下的纯 JSON，结构：</p>
+<pre><code class="language-jsonc">{
+  &quot;name&quot;: &quot;gbt7714&quot;, &quot;label&quot;: &quot;…&quot;, &quot;description&quot;: &quot;…&quot;,
+  &quot;page&quot;:      { &quot;size&quot;: &quot;A4&quot;, &quot;margins&quot;: {top,bottom,left,right,unit}, &quot;header&quot;: {...}, &quot;footer&quot;: { &quot;pageNumber&quot;: true } },
+  &quot;paragraph&quot;: { &quot;lineSpacing&quot;: 1.5, &quot;lineSpacingRule&quot;: &quot;multiple&quot;, &quot;spaceBefore&quot;: 0, &quot;spaceAfter&quot;: 0, &quot;firstLineIndentChars&quot;: 2 },
+  &quot;fonts&quot;: {
+    &quot;default&quot;:  { &quot;ascii&quot;, &quot;eastAsia&quot;, &quot;size&quot;, &quot;sizeLabel&quot;, &quot;bold&quot;, &quot;color&quot; },
+    &quot;title&quot;:    { …, &quot;align&quot;: &quot;center&quot; },
+    &quot;heading1&quot;: { …, &quot;align&quot;: &quot;center&quot;, &quot;pageBreakBefore&quot;: true },   // 一级标题前自动换页
+    &quot;heading2..4&quot;, &quot;quote&quot;, &quot;code&quot;, &quot;caption&quot;, &quot;reference&quot;, &quot;list&quot;, &quot;tableCell&quot;
+  },
+  &quot;pagination&quot;: { &quot;pageBreakBeforeHeading1&quot;: true },
+  &quot;list&quot;: { &quot;indentChars&quot;: 2 },
+  &quot;table&quot;: { &quot;style&quot;: &quot;Table Grid&quot;, &quot;headerBold&quot;: true }
+}</code></pre>
+<p><strong>内置三基线</strong></p>
+<table><thead><tr><th>模板</th><th>用途</th><th>关键映射</th></tr></thead><tbody><tr><td><code>default</code></td><td>通用 A4</td><td>完整基线，所有 font 键齐备（其它模板叠加其上继承）</td></tr><tr><td><code>gbt7714</code></td><td>国标中文学术</td><td>H1 黑体三号(16pt)居中<strong>前置换页</strong>；正文宋体小四(12pt) 1.5 倍行距首行缩进 2 字符；参考文献宋体五号悬挂缩进</td></tr><tr><td><code>ieee</code></td><td>IEEE 英文</td><td>Times New Roman 正文，标题 Times 加粗分级，紧凑行距（双栏需后处理，本基线单栏近似）</td></tr></tbody></table>
+<p><strong>解析与覆盖</strong>（<code>resolveTemplate(spec, overrides)</code>）：<code>spec</code> 可为内置名 / 绝对路径 JSON /<br>内联对象；非 default 模板一律<strong>叠加在 default 之上</strong>以继承完整基线；<code>overrides</code> 再深合并，<br>用户可只改一个键（如 <code>{paragraph:{lineSpacing:2}}</code>）而无需重述基线。</p>
+<p>中文字号→磅值对照：二号 22 / 三号 16 / 小三 13 / 四号 14 / 小四 12 / 五号 10.5。</p>
+<hr>
+<h2 id="5-确定性渲染管线-python-docx">5. 确定性渲染管线（python-docx）<a class="anchor" href="#5-确定性渲染管线-python-docx" aria-label="锚点">#</a></h2>
+<p><code>docTypeset.py</code> 的<strong>原子排版原语</strong>（模型永远碰不到，内部封装底层 XML）：</p>
+<table><thead><tr><th>原语</th><th>职责</th></tr></thead><tbody><tr><td><code>_set_run_font(run, spec, default)</code></td><td>设 <code>font.name</code> + <code>rFonts</code> 的 ascii/hAnsi/cs/<strong>eastAsia</strong> + 字号(Pt)/加粗/斜体/小型大写/颜色。<strong>每个 run 必盖 eastAsia</strong>（防呆②）</td></tr><tr><td><code>_apply_paragraph_format(p, spec, base)</code></td><td>对齐、行距(multiple/exact)、段前段后、首行缩进(Pt(size×chars))、<code>page_break_before</code></td></tr><tr><td><code>_apply_left_indent_chars</code> / <code>_apply_hanging_indent_chars</code></td><td>左缩进 / 悬挂缩进（按&quot;N 字符&quot;≈N×字号磅值近似 CJK 字宽）</td></tr><tr><td><code>_set_page(section, page)</code></td><td>A4(210×297mm 的 EMU) / Letter 尺寸 + 页边距(Cm) + 页眉页脚距离</td></tr><tr><td><code>_add_page_number(p)</code></td><td>插入 <code>PAGE</code> 域</td></tr></tbody></table>
+<p><strong>块渲染器</strong>：<code>_render_heading</code>（按 <code>pagination.pageBreakBeforeHeading1</code> 且非首块时自动前置<br>换页）、<code>_render_paragraph</code>（按 run 的 bold/italic）、<code>_render_list</code>（手动 <code>•</code>/<code>N.</code> 前缀）、<br><code>_render_quote</code>、<code>_render_code</code>（逐行一段、等宽、不缩进）、<code>_render_table</code>（Table Grid、表头<br>加粗）、<code>_render_figure</code>（路径存在则 <code>add_picture</code> + 题注）、<code>_render_reference</code>（编号悬挂缩进）。</p>
+<p><code>_render_document(ast, template, output_path)</code> 设页面 → 可选标题 → 逐块渲染（用 <code>seen_content</code><br>追踪首个内容块以正确实施&quot;H1 前换页&quot;）→ 保存。</p>
+<p><strong>渲染时序</strong>（一次 <code>renderDocument</code> 调用的完整路径）：</p>
+<pre><code>模型            renderDocument.js              docTypeset.py            磁盘
+ │  content+template   │                            │                    │
+ ├────────────────────►│ _toAst                     │                    │
+ │                     ├─ validateDocument 防呆 ──┐  │                    │
+ │                     │   含排版代码？ ──是──► 拒绝(success:false,hint)  │
+ │                     │   ▼否                    │  │                    │
+ │                     ├─ resolveTemplate(模板+overrides)                 │
+ │                     ├─ 路径展开+封禁(项目/家目录子树)                  │
+ │                     ├─ 写临时 payload.json {ast,template,output} ──────┼──►│
+ │                     ├─ findPython + spawn ──────►│ render(payload)     │
+ │                     │      (滑动空闲超时)         ├─ _set_page A4       │
+ │                     │                            ├─ 逐块渲染(原子原语) │
+ │                     │                            ├─ save ──────────────┼──►│ .docx
+ │                     │                            ├─ _verify_and_patch ─┼──►│ 反解
+ │                     │                            │   A4? eastAsia? H1? │   │
+ │                     │                            │   不合→打补丁→重存 ─┼──►│ .docx'
+ │                     │◄── JSON{success,validation,patched} ────────────┤   │
+ │◄── success+validation│ 清理临时 payload(finally)                      │   │</code></pre>
+<p>关键不变量：<strong>排版代码在第二步即被拦，永远到不了渲染器</strong>；<strong>渲染器内的校验闭环保证产物<br>合规，不确定性不外溢回模型</strong>。</p>
+<hr>
+<h2 id="6-格式校验闭环-写后必验-绝不退回模型">6. 格式校验闭环（写后必验，绝不退回模型）<a class="anchor" href="#6-格式校验闭环-写后必验-绝不退回模型" aria-label="锚点">#</a></h2>
+<p><code>_verify_and_patch(output_path, template)</code> 在保存后<strong>反向解析</strong> docx，逐项核查并<strong>就地打补丁</strong>：</p>
+<table><thead><tr><th>校验项</th><th>不合时的修复</th></tr></thead><tbody><tr><td>页面尺寸是否 A4（EMU 容差 36000=1mm）</td><td>直接改 section 的 <code>page_width/height</code></td></tr><tr><td><strong>每个有文本的 run 是否都设了 eastAsia</strong></td><td>缺失则用 XML 补上 <code>w:rFonts/@w:eastAsia</code>（防呆②的兜底）</td></tr><tr><td>H1 字号是否符合模板</td><td>抽检不符则修正</td></tr></tbody></table>
+<p>返回 <code>{pageSizeA4, eastAsiaApplied, headingSizeOk, patched:[…]}</code>，有补丁则重新保存。<br><strong>任何不合都在引擎内修复，绝不把文件退回模型重写</strong>（防呆：消除二次不确定性）。</p>
+<hr>
+<h2 id="7-工具入口与边界">7. 工具入口与边界<a class="anchor" href="#7-工具入口与边界" aria-label="锚点">#</a></h2>
+<p><code>src/tools/renderDocument.js</code>（扁平 <code>defineTool</code>，自动被 <code>src/tools/index.js</code> 发现）：</p>
+<ul><li>入参：<code>content</code>（必填，语义 Markdown 或 AST JSON）、<code>outputPath</code>（必填）、<code>template</code>（可选，</li></ul>
+<p><code>default|gbt7714|ieee</code> 或绝对路径）、<code>title</code>（可选）、<code>overrides</code>（可选模板补丁）。</p>
+<ul><li>流程：<code>_toAst</code>（防呆拦截）→ <code>resolveTemplate</code> → 路径展开+封禁（限项目 CWD / 家目录子树，</li></ul>
+<p>与 createDocument 一致；展开后再封禁一次，因 <code>validateInput</code> 只见到原始路径）→ 写临时<br>  payload → <code>findPython</code> → <code>_runTypeset</code>（滑动空闲超时，有输出即重置）→ 附 <code>template</code> 来源<br>  → finally 清理临时文件。</p>
+<ul><li><code>isEnabled()</code>：需 python3/python 在位且 <code>docTypeset.py</code> 存在，否则该工具不挂载。</li></ul>
+<p><strong>约束注入</strong>：<code>constraints.js</code> 的 <code>HARD_PROHIBITIONS</code> 增红线——禁止为排版手写<br>LaTeX/docx-XML/HTML/CSS/RTF，要产出正式 Word/论文必须调 <code>renderDocument</code> 给语义内容+模板；<br>换页用 <code>[[newpage]]</code> 或 <code>{type:&quot;pagebreak&quot;}</code>，绝不用空行。</p>
+<p><strong>边界（防呆④）</strong>：不改 <code>createDocument</code> 老路径、不改核心调度器、不改无关业务逻辑；<br>仅在工具层与模板层新增，外加上述一条禁令红线。</p>
+<hr>
+<h2 id="8-测试与验证">8. 测试与验证<a class="anchor" href="#8-测试与验证" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>测试文件</th><th>覆盖</th></tr></thead><tbody><tr><td><code>tests/services/typeset/contentSchema.test.js</code></td><td>块文法校验；防呆拦截 LaTeX/HTML/docx-XML/内联 CSS/RTF；不等式 <code>a &lt; b</code> 不误判；code 块正文豁免</td></tr><tr><td><code>tests/services/typeset/markdownToAst.test.js</code></td><td>标题/段落/列表/引文/代码/表格解析；<code>[[newpage]]</code>/<code>&lt;&lt;&lt;pagebreak&gt;&gt;&gt;</code> 换页；水平线/空行<strong>不</strong>换页；强调→语义 run</td></tr><tr><td><code>tests/services/typeset/styleTemplates.test.js</code></td><td>三模板发现；gbt7714 国标签名；未知模板报错列出内置；内联模板继承 default 基线；overrides 深合并</td></tr><tr><td><code>tests/tools/renderDocument.test.js</code></td><td>工具契约；防呆拒绝 LaTeX/HTML；未知模板列可选项；路径封禁拒写 <code>/etc</code>；<strong>端到端</strong>（有 python-docx 时）渲染真 .docx 并反解断言 A4 + 标题在位 + <strong>每个中文 run 的 eastAsia 全覆盖</strong></td></tr></tbody></table>
+<p>合计 <strong>60/60</strong> 通过（含端到端渲染断言 <code>pageSizeA4=true</code> 与 <code>missing_eastAsia=0</code>）。</p>
+<hr>
+<h2 id="9-与既有规范的关系">9. 与既有规范的关系<a class="anchor" href="#9-与既有规范的关系" aria-label="锚点">#</a></h2>
+<ul><li>复用 <code>createDocument</code> 的子进程/路径封禁范式（<code>findPython</code>、<code>validateNoPathTraversal</code>、</li></ul>
+<p>展开后再封禁），但<strong>另起</strong>确定性管线，不改老路径。</p>
+<ul><li>与 [DESIGN-ARCH-022]（多实例并发文件控制）正交：<code>renderDocument</code> 走工具层写入，天然受</li></ul>
+<p>其单文件锁保护，无需额外协调。</p>
+<ul><li>禁令进入 <code>constraints.js</code> 单一真源，与&quot;内置 agent 禁令单一真源&quot;一脉相承。</li></ul>
+<hr>
+<h2 id="10-模板解析与覆盖语义-走查">10. 模板解析与覆盖语义（走查）<a class="anchor" href="#10-模板解析与覆盖语义-走查" aria-label="锚点">#</a></h2>
+<p><code>resolveTemplate(spec, overrides)</code> 的确定性合并是&quot;任何格式需求 = 模板配置项&quot;得以成立的关键。</p>
+<p><strong>输入三态</strong>：</p>
+<ul><li>内置名（<code>&quot;gbt7714&quot;</code>）→ 命中 <code>_loadBuiltins()</code> 缓存。</li><li>绝对路径 / 含分隔符的路径（<code>&quot;/home/me/x.json&quot;</code>）→ 读文件解析。</li><li>内联对象（<code>{name, fonts:{…}}</code>）→ 直接用。</li></ul>
+<p><strong>两段式合并</strong>（保证部分模板也能拿到完整基线）：</p>
+<pre><code>base = (内置名命中 default) ? default
+                            : deepMerge(default, 选中模板)   // 选中模板叠加在 default 上
+final = overrides ? deepMerge(base, overrides) : base        // 用户覆盖再叠加</code></pre>
+<p><code>_deepMerge</code> 规则：对象递归合并，<strong>数组与标量整体替换</strong>。</p>
+<p><strong>为什么先叠 default</strong>：用户/文件模板可能只写了 <code>fonts.heading1</code>，没写 <code>fonts.code</code> /<br><code>page.margins</code>。先叠在 default 之上，渲染器就一定能取到每个 font key 与页面参数，<strong>不会因<br>模板不全而 KeyError</strong>。<code>styleTemplates.test.js</code> 的 <code>inline partial template inherits the full<br>default baseline</code> 正是守此不变量。</p>
+<p><strong>走查例</strong>：<code>resolveTemplate(&quot;gbt7714&quot;, {paragraph:{lineSpacing:2}})</code></p>
+<ol><li><code>gbt7714</code> 非 default → <code>base = deepMerge(default, gbt7714)</code>：得到国标全字段。</li><li><code>overrides</code> 非空 → <code>final = deepMerge(base, {paragraph:{lineSpacing:2}})</code>：仅 <code>lineSpacing</code></li></ol>
+<p>变 2，<code>firstLineIndentChars:2</code>、H1 字号 16 等<strong>全部保留</strong>。</p>
+<hr>
+<h2 id="11-边界用例与失败模式">11. 边界用例与失败模式<a class="anchor" href="#11-边界用例与失败模式" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>情形</th><th>行为</th><th>依据</th></tr></thead><tbody><tr><td>内容夹带 <code>\textbf</code> / <code>&lt;b&gt;</code> / <code>&lt;w:rPr&gt;</code> / 内联 CSS / RTF</td><td>渲染前 <code>success:false</code> + hint，<strong>绝不渲染</strong></td><td>防呆①</td></tr><tr><td>不等式散文 <code>a &lt; b 与 x &gt; y</code></td><td><strong>不</strong>误判为标签，正常渲染</td><td>HTML 正则要求标签名紧跟 <code>&lt;</code></td></tr><tr><td>code 块正文含 <code>\textbf{}</code> / <code>&lt;b&gt;</code></td><td><strong>豁免</strong>扫描，原样进等宽样式，永不解释</td><td><code>validateBlock</code> 对 <code>type==='code'</code> 跳过扫描</td></tr><tr><td>多个空行 / <code>---</code> 水平线</td><td><strong>不</strong>换页（空行=段落分隔，水平线被忽略）</td><td>防呆③</td></tr><tr><td>自定义模板漏某 font 的 <code>eastAsia</code></td><td>渲染时该 run 漏设 → <strong>写后校验补丁补上</strong></td><td><code>_verify_and_patch</code></td></tr><tr><td>页面被某种原因写成非 A4</td><td>写后校验直接改回 A4</td><td><code>_verify_and_patch</code></td></tr><tr><td>未知模板名</td><td><code>success:false</code> + <code>availableTemplates</code> 列表</td><td><code>resolveTemplate</code></td></tr><tr><td>输出路径越界（如 <code>/etc</code>、<code>/tmp</code>）</td><td>拒写</td><td><code>validateNoPathTraversal</code>（展开后再封禁）</td></tr><tr><td>内容 &gt; 4MB</td><td>拒绝</td><td><code>MAX_CONTENT_SIZE</code></td></tr><tr><td>渲染器久无输出</td><td>60s 滑动空闲超时杀子进程</td><td><code>_runTypeset</code> arm()</td></tr><tr><td>python / python-docx 缺失</td><td>工具 <code>isEnabled()</code> 假，不挂载</td><td><code>_checkEnabled</code></td></tr><tr><td>块数 &gt; 20000</td><td>拒绝</td><td><code>MAX_BLOCKS</code></td></tr></tbody></table>
+<hr>
+<h2 id="12-从-createdocument-迁移建议">12. 从 <code>createDocument</code> 迁移建议<a class="anchor" href="#12-从-createdocument-迁移建议" aria-label="锚点">#</a></h2>
+<p>两者<strong>并存</strong>，按需选择：</p>
+<table><thead><tr><th>维度</th><th><code>createDocument</code>（旧）</th><th><code>renderDocument</code>（新）</th></tr></thead><tbody><tr><td>定位</td><td>文本→docx 直存，无样式</td><td>精确排版（论文/正式报告）</td></tr><tr><td>输入</td><td>纯文本</td><td>语义 Markdown / AST</td></tr><tr><td>格式控制</td><td>无（按行裸塞）</td><td>模板驱动，确定性</td></tr><tr><td>中文</td><td>不保证</td><td>eastAsia 强制+校验</td></tr><tr><td>换页</td><td>无</td><td>确定性 API</td></tr></tbody></table>
+<p><strong>迁移要点</strong>：</p>
+<ol><li>把原先靠&quot;模型在文本里写格式&quot;的用法，改为<strong>纯语义内容 + 选模板</strong>；格式诉求转成模板键值</li></ol>
+<p>或 <code>overrides</code>，不要再往内容里塞任何排版代码。</p>
+<ol><li>需要的特殊格式若内置模板未覆盖，<strong>新增/自定义一份 JSON 模板</strong>（叠加在 default 上只写差异），</li></ol>
+<p>而非在调用处拼字符串。</p>
+<ol><li>老路径不动：仅&quot;随手转个 docx、不在意排版&quot;的场景继续用 <code>createDocument</code>。</li></ol>
+<blockquote><p>不做强制替换——<code>createDocument</code> 仍有其轻量场景价值，本规范只为&quot;需要精确排版&quot;的需求提供<br>确定性通道。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-022] khyos多实例并发文件控制规范.html"><div class="dir">← 上一篇</div><div class="ttl">《khyos 多实例并发文件控制规范》</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-025] khyos元规划协议与动态约束注入规范.html"><div class="dir">下一篇 →</div><div class="ttl">《khyos 元规划协议与动态约束注入规范》</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-023] khyos文档排版与格式控制规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

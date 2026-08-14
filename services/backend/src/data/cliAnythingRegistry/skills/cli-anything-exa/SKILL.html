@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exa CLI Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-exa<span class="sep">›</span>Exa CLI Skill</div>
+      <header class="hero reveal"><h1>Exa CLI Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#exa-cli-skill">Exa CLI Skill</a></li><li class="lvl-2"><a href="#identity">Identity</a></li><li class="lvl-2"><a href="#what-this-cli-does">What This CLI Does</a></li><li class="lvl-2"><a href="#prerequisites">Prerequisites</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#command-reference">Command Reference</a></li><li class="lvl-3"><a href="#search-web-search">search — Web search</a></li><li class="lvl-3"><a href="#contents-fetch-page-contents">contents — Fetch page contents</a></li><li class="lvl-3"><a href="#server-status-verify-api-key-and-connectivity">server status — Verify API key and connectivity</a></li><li class="lvl-2"><a href="#json-output">JSON Output</a></li><li class="lvl-2"><a href="#common-agent-patterns">Common Agent Patterns</a></li><li class="lvl-3"><a href="#fast-keyword-lookup">Fast keyword lookup</a></li><li class="lvl-3"><a href="#deep-research-on-a-topic">Deep research on a topic</a></li><li class="lvl-3"><a href="#academic-paper-discovery">Academic paper discovery</a></li><li class="lvl-3"><a href="#company-intelligence">Company intelligence</a></li><li class="lvl-3"><a href="#news-monitoring">News monitoring</a></li><li class="lvl-3"><a href="#fetch-full-content-for-summarisation">Fetch full content for summarisation</a></li><li class="lvl-2"><a href="#interactive-repl">Interactive REPL</a></li><li class="lvl-2"><a href="#notes">Notes</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-exa&quot;<br>description: &gt;-<br>  Agent-native CLI for Exa web search and content retrieval workflows.</p>
+<hr>
+<h1 id="exa-cli-skill">Exa CLI Skill<a class="anchor" href="#exa-cli-skill" aria-label="锚点">#</a></h1>
+<h2 id="identity">Identity<a class="anchor" href="#identity" aria-label="锚点">#</a></h2>
+<ul><li><strong>Name</strong>: cli-anything-exa</li><li><strong>Version</strong>: 1.0.0</li><li><strong>Category</strong>: search</li><li><strong>Entry Point</strong>: <code>cli-anything-exa</code></li></ul>
+<h2 id="what-this-cli-does">What This CLI Does<a class="anchor" href="#what-this-cli-does" aria-label="锚点">#</a></h2>
+<p>Provides an agent-native command-line interface to the Exa API — a neural search engine<br>optimised for AI agent workflows. Supports web search across multiple modes (fast, deep,<br>deep-reasoning) and fetching full-text or highlighted page contents.</p>
+<h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
+<ul><li>Python &gt;= 3.10</li><li><code>pip install cli-anything-exa</code></li><li><code>export EXA_API_KEY=&quot;your-api-key&quot;</code> (get one at https://dashboard.exa.ai/api-keys)</li></ul>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=exa/agent-harness</code></pre>
+<h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
+<h3 id="search-web-search">search — Web search<a class="anchor" href="#search-web-search" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa search &quot;&lt;query&gt;&quot; [OPTIONS]
+
+Options:
+  --type       auto|fast|instant|deep|deep-reasoning  (default: auto)
+  --num-results / -n   1–100  (default: 10)
+  --category   company|people|research-paper|news|personal-site|financial-report
+  --content    highlights|text|summary|none  (default: highlights)
+  --freshness  smart|always|never  (default: smart)
+  --include-domains DOMAIN   (repeatable)
+  --exclude-domains DOMAIN   (repeatable)
+  --from DATE   ISO 8601 start published date
+  --to   DATE   ISO 8601 end published date
+  --location CC  Two-letter country code for geo-bias</code></pre>
+<h3 id="contents-fetch-page-contents">contents — Fetch page contents<a class="anchor" href="#contents-fetch-page-contents" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa contents &lt;url&gt; [url ...] [--content text|highlights|summary] [--freshness smart|always|never]</code></pre>
+<h3 id="server-status-verify-api-key-and-connectivity">server status — Verify API key and connectivity<a class="anchor" href="#server-status-verify-api-key-and-connectivity" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa server status</code></pre>
+<h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
+<p>All commands support <code>--json</code> at the root level for machine-readable output:</p>
+<pre><code class="language-bash">cli-anything-exa --json search &quot;latest LLM papers&quot; --num-results 5</code></pre>
+<h2 id="common-agent-patterns">Common Agent Patterns<a class="anchor" href="#common-agent-patterns" aria-label="锚点">#</a></h2>
+<h3 id="fast-keyword-lookup">Fast keyword lookup<a class="anchor" href="#fast-keyword-lookup" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa --json search &quot;site:arxiv.org transformer architectures&quot; --type fast --content highlights</code></pre>
+<h3 id="deep-research-on-a-topic">Deep research on a topic<a class="anchor" href="#deep-research-on-a-topic" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa --json search &quot;EU AI Act compliance requirements 2024&quot; --type deep --content text</code></pre>
+<h3 id="academic-paper-discovery">Academic paper discovery<a class="anchor" href="#academic-paper-discovery" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa --json search &quot;retrieval augmented generation&quot; --category research-paper --num-results 20</code></pre>
+<h3 id="company-intelligence">Company intelligence<a class="anchor" href="#company-intelligence" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa --json search &quot;Anthropic funding history&quot; --category company</code></pre>
+<h3 id="news-monitoring">News monitoring<a class="anchor" href="#news-monitoring" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa --json search &quot;AI regulation news&quot; --category news --from 2024-01-01</code></pre>
+<h3 id="fetch-full-content-for-summarisation">Fetch full content for summarisation<a class="anchor" href="#fetch-full-content-for-summarisation" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-exa --json contents https://example.com/article --content text</code></pre>
+<h2 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cli-anything-exa   # No subcommand → enters REPL</code></pre>
+<p>Type commands without the <code>cli-anything-exa</code> prefix. Type <code>exit</code> or <code>quit</code> to leave.</p>
+<h2 id="notes">Notes<a class="anchor" href="#notes" aria-label="锚点">#</a></h2>
+<ul><li><code>highlights</code> content mode is 10× more token-efficient than <code>text</code> — prefer it for agent pipelines</li><li><code>--type deep</code> triggers multi-step reasoning; slower but synthesises across many sources</li><li><code>--category company</code> and <code>--category people</code> do not support date or domain-exclude filters</li><li>Cost per query is included in JSON output under <code>cost_dollars</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-eth2-quickstart/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-eth2-quickstart</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-firefly-iii/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Firefly III CLI</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-exa/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

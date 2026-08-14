@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作流引擎（khy workflow） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>工作流引擎（khy workflow）</div>
+      <header class="hero reveal"><h1>工作流引擎（khy workflow）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#工作流引擎-khy-workflow">工作流引擎（`khy workflow`）</a></li><li class="lvl-2"><a href="#一-入口与全部子命令">一、入口与全部子命令</a></li><li class="lvl-2"><a href="#二-典型用法">二、典型用法</a></li><li class="lvl-2"><a href="#三-存储与边界">三、存储与边界</a></li><li class="lvl-2"><a href="#四-相关文档">四、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-057 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-057] 工作流引擎-khy-workflow.md --&gt;</p>
+<h1 id="工作流引擎-khy-workflow">工作流引擎（<code>khy workflow</code>）<a class="anchor" href="#工作流引擎-khy-workflow" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy workflow</code>（别名 <code>khy wf</code>）把 <strong>Coze 导出的工作流</strong>导入 KHY，并以图执行——校验端口连通性后，跑真实的 LLM / 工具节点。本文讲清导入、查看、校验、运行、删除的全部子命令与边界。</p>
+<p>实现：<code>services/backend/src/cli/handlers/workflow.js</code>，dispatch 在 <code>router.js:4664-4668</code>。</p></blockquote>
+<hr>
+<h2 id="一-入口与全部子命令">一、入口与全部子命令<a class="anchor" href="#一-入口与全部子命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy workflow import &lt;coze文件&gt; [--name &lt;名&gt;]</code></td><td>导入 Coze 工作流（别名 <code>add</code>，导入后自动校验）</td></tr><tr><td><code>khy workflow list</code>（或 <code>ls</code>）</td><td>列出已导入工作流</td></tr><tr><td>`khy workflow show &lt;名称&gt; [--mermaid\</td><td>--json]`</td></tr><tr><td><code>khy workflow validate &lt;名称&gt;</code>（或 <code>check</code>）</td><td>严格校验图（端口/连通性）</td></tr><tr><td><code>khy workflow run &lt;名称&gt; [k=v…] [选项]</code></td><td>运行工作流（真实执行）</td></tr><tr><td><code>khy workflow rm &lt;名称&gt;</code>（或 <code>delete</code>）</td><td>删除</td></tr></tbody></table>
+<p><strong><code>run</code> 选项</strong>：位置参数 <code>k=v</code>、<code>--input k=v</code>（显式输入）、<code>--json</code>（机读输出）、<code>--quantum &lt;N&gt;</code>（步进/配额）、<code>--userId &lt;id&gt;</code>。校验不通过的图会被<strong>拒绝运行</strong>。</p>
+<hr>
+<h2 id="二-典型用法">二、典型用法<a class="anchor" href="#二-典型用法" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 1) 从 Coze 导出工作流文件，导入并命名
+khy workflow import ./my-coze-flow.json --name my-flow
+
+# 2) 看看长什么样
+khy workflow list
+khy workflow show my-flow --mermaid       # 出 Mermaid 流程图
+khy workflow validate my-flow             # 严格校验
+
+# 3) 运行（传入参数）
+khy workflow run my-flow topic=&quot;发布说明&quot; --input lang=zh --json
+
+# 4) 删除
+khy workflow rm my-flow</code></pre>
+<hr>
+<h2 id="三-存储与边界">三、存储与边界<a class="anchor" href="#三-存储与边界" aria-label="锚点">#</a></h2>
+<ul><li>工作流存于 <code>&lt;dataHome&gt;/workflows/&lt;slug&gt;.json</code>（slug 由名称生成）。</li><li><code>run</code> 会调用<strong>真实的 LLM / 工具</strong>，所以确保网关已配好（见 [OPS-MAN-003]）。</li><li><strong>CLI 不批量枚举 Coze</strong>：命令行这条路只处理「单个导出文件的导入/执行」，并不去 Coze 平台批量拉取工作流列表——批量编辑请用 Coze 的 Web 编辑器，再逐个导出导入。</li></ul>
+<hr>
+<h2 id="四-相关文档">四、相关文档<a class="anchor" href="#四-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-003] ai-管理-访问与登录 —— <code>run</code> 依赖的网关配置。</li><li>[DESIGN-ARCH-009] 可视化拖拽工作流编辑器 —— 工作流的设计层背景。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-056] 按需依赖自愈-khy-deps.html"><div class="dir">← 上一篇</div><div class="ttl">按需依赖自愈（khy deps）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-058] 环境开关与文档命名规范.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-058] 环境开关与文档命名规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-057] 工作流引擎-khy-workflow.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X / Twitter 长推草稿 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>X / Twitter 长推草稿</div>
+      <header class="hero reveal"><h1>X / Twitter 长推草稿</h1></header>
+      
+      <article class="doc-body">
+<h1 id="x-twitter-长推草稿">X / Twitter 长推草稿<a class="anchor" href="#x-twitter-长推草稿" aria-label="锚点">#</a></h1>
+<p>置顶这条长推。把<strong>演示 GIF 放在第 1 条推文上</strong>——在 X 上视频就是全部。<br>让每条推文都能独立成立。</p>
+<blockquote><p>说明：X 主要面向英文受众，以下推文正文请保持英文原文照发。中文仅为对内备注。</p></blockquote>
+<hr>
+<p><strong>1/</strong><br>I built an AI-native OS. Mostly by myself.</p>
+<p>A hand-written kernel + a Claude-Code-class terminal agent + a gateway over 16 AI<br>backends — in one <code>pip install</code>.</p>
+<p>Here's what that actually means 🧵<br>[attach assets/demo.gif]</p>
+<p><strong>2/</strong><br>Layer 1: a real kernel, in C.</p>
+<p>Preemptive scheduler, demand paging, copy-on-write fork, POSIX-style signals,<br>pipes, per-process fd tables, ELF + PE dual loader.</p>
+<p>It boots under QEMU. Still experimental — but it's a kernel, not a Linux wrapper.</p>
+<p><strong>3/</strong><br>Layer 2: the terminal <em>is</em> an agent.</p>
+<p>Streaming TUI, a tool-calling loop with structured results + loop detection,<br>permission gating, sub-agents, goal mode.</p>
+<p>Same shape as Claude Code / Qwen Code — but yours, self-hostable.</p>
+<p><strong>4/</strong><br>Layer 3: zero vendor lock-in.</p>
+<p>One API in front of 16 backends — Claude, Qwen, Cursor, Kiro, Ollama, Codex… —<br>with cascade failover + circuit breaking.</p>
+<p>Bring your own keys. A channel dies, it routes around it.</p>
+<p><strong>5/</strong><br>It ships two ways from one codebase:</p>
+<p>pip install khy-os<br>  npm i -g @khy-os/khy-os</p>
+<p>byte-identical workshop, self-healing multi-language dev env.</p>
+<p><strong>6/</strong><br>Honest caveats, because they matter:<br>• kernel = learning-grade, not a daily driver<br>• &quot;Claude-Code-class&quot; = the loop/TUI feature set, not &quot;beats it everywhere&quot;<br>• source-available (free to run/study/use non-commercially), not OSI open source</p>
+<p><strong>7/</strong><br>Why build all of it instead of one piece?</p>
+<p>To see if one person + AI could credibly go kernel-to-agent — and to have a<br>machine where the whole stack, down to the syscall, is AI-native.</p>
+<p>⭐ Repo + demo: &lt;link&gt;<br>RTs help more than you'd think.</p>
+<pre><code></code></pre>
+<hr>
+<p><strong>备注：</strong> 发出长推后，再在最后一条推文下回复一次仓库链接<br>（有些客户端会隐藏推文串尾部的链接）。对任何好问题用引用推文 + 真实<br>回答的方式，让话题持续浮现。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-007] SHOW_HN.html"><div class="dir">← 上一篇</div><div class="ttl">Show HN 文案草稿</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-009] pip-打包对等-发布说明-2026-05-17.html"><div class="dir">下一篇 →</div><div class="ttl">发布说明：Pip 打包对等性（2026-05-17）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-008] TWITTER.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

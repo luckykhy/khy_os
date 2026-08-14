@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>跨平台交付工具 (Cross-Platform Delivery Tool) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>platform<span class="sep">›</span>delivery<span class="sep">›</span>跨平台交付工具 (Cross-Platform Delivery Tool)</div>
+      <header class="hero reveal"><h1>跨平台交付工具 (Cross-Platform Delivery Tool)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#跨平台交付工具-cross-platform-delivery-tool">跨平台交付工具 (Cross-Platform Delivery Tool)</a></li><li class="lvl-2"><a href="#快速开始">快速开始</a></li><li class="lvl-2"><a href="#api-接口">API 接口</a></li><li class="lvl-3"><a href="#post-api-delivery-send">POST /api/delivery/send</a></li><li class="lvl-3"><a href="#get-api-delivery-status-taskid">GET /api/delivery/status/:taskId</a></li><li class="lvl-3"><a href="#get-api-delivery-tasks">GET /api/delivery/tasks</a></li><li class="lvl-3"><a href="#get-api-delivery-adapters">GET /api/delivery/adapters</a></li><li class="lvl-3"><a href="#get-api-delivery-templates">GET /api/delivery/templates</a></li><li class="lvl-3"><a href="#post-api-delivery-validate">POST /api/delivery/validate</a></li><li class="lvl-3"><a href="#post-api-delivery-retry-taskid">POST /api/delivery/retry/:taskId</a></li><li class="lvl-2"><a href="#架构">架构</a></li><li class="lvl-2"><a href="#prompt-模板">Prompt 模板</a></li><li class="lvl-2"><a href="#diffengine-校验规则">DiffEngine 校验规则</a></li><li class="lvl-2"><a href="#给其他-agent-写-prompt-的最佳实践">给其他 Agent 写 Prompt 的最佳实践</a></li><li class="lvl-3"><a href="#1-角色定义">1. 角色定义</a></li><li class="lvl-3"><a href="#2-输入格式">2. 输入格式</a></li><li class="lvl-3"><a href="#3-规则分层">3. 规则分层</a></li><li class="lvl-3"><a href="#4-输出格式">4. 输出格式</a></li><li class="lvl-3"><a href="#5-异常处理">5. 异常处理</a></li><li class="lvl-3"><a href="#6-示例">6. 示例</a></li><li class="lvl-2"><a href="#目录结构">目录结构</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="跨平台交付工具-cross-platform-delivery-tool">跨平台交付工具 (Cross-Platform Delivery Tool)<a class="anchor" href="#跨平台交付工具-cross-platform-delivery-tool" aria-label="锚点">#</a></h1>
+<p>将同一份内容投递到 Slack、Notion、Markdown、Webhook、Email、API 等多个平台，<br>并通过 DiffEngine 进行一致性校验。</p>
+<h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
+<pre><code class="language-js">const { DeliveryController } = require('./platform/delivery/deliveryController');
+
+const controller = new DeliveryController({
+  platforms: {
+    slack: { botToken: process.env.SLACK_TOKEN, channel: '#general' },
+    notion: { apiKey: process.env.NOTION_TOKEN, defaultPageId: 'xxx' },
+    markdown: { outputDir: './deliveries' },
+  },
+  maxConcurrency: 3,
+});
+
+await controller.init();
+
+const report = await controller.deliver({
+  content: '# Hello World\n\nThis is a test message.',
+  platforms: ['markdown', 'slack', 'notion'],
+  priority: 1,
+  metadata: { author: 'khy', tags: ['test'] },
+});
+
+console.log(report);</code></pre>
+<h2 id="api-接口">API 接口<a class="anchor" href="#api-接口" aria-label="锚点">#</a></h2>
+<h3 id="post-api-delivery-send">POST /api/delivery/send<a class="anchor" href="#post-api-delivery-send" aria-label="锚点">#</a></h3>
+<p>投递内容到指定平台。</p>
+<pre><code class="language-bash">curl -X POST http://localhost:3000/api/delivery/send \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;content&quot;: &quot;# Report\n\nSales: $1.2M&quot;,
+    &quot;platforms&quot;: [&quot;markdown&quot;, &quot;slack&quot;],
+    &quot;priority&quot;: 1
+  }'</code></pre>
+<h3 id="get-api-delivery-status-taskid">GET /api/delivery/status/:taskId<a class="anchor" href="#get-api-delivery-status-taskid" aria-label="锚点">#</a></h3>
+<p>查询任务状态。</p>
+<h3 id="get-api-delivery-tasks">GET /api/delivery/tasks<a class="anchor" href="#get-api-delivery-tasks" aria-label="锚点">#</a></h3>
+<p>列出所有任务（支持 ?status=completed&amp;platforms=slack,notion）。</p>
+<h3 id="get-api-delivery-adapters">GET /api/delivery/adapters<a class="anchor" href="#get-api-delivery-adapters" aria-label="锚点">#</a></h3>
+<p>查看所有适配器状态。</p>
+<h3 id="get-api-delivery-templates">GET /api/delivery/templates<a class="anchor" href="#get-api-delivery-templates" aria-label="锚点">#</a></h3>
+<p>列出所有 Prompt 模板。</p>
+<h3 id="post-api-delivery-validate">POST /api/delivery/validate<a class="anchor" href="#post-api-delivery-validate" aria-label="锚点">#</a></h3>
+<p>验证输入（不实际投递）。</p>
+<h3 id="post-api-delivery-retry-taskid">POST /api/delivery/retry/:taskId<a class="anchor" href="#post-api-delivery-retry-taskid" aria-label="锚点">#</a></h3>
+<p>重试失败的任务。</p>
+<h2 id="架构">架构<a class="anchor" href="#架构" aria-label="锚点">#</a></h2>
+<pre><code>User Request
+    │
+    ▼
+DeliveryController
+    │
+    ├── TaskStore (persistence)
+    ├── TaskQueue (concurrency control)
+    │
+    ▼
+Orchestrator
+    │
+    ├── SlackAdapter ──────► Slack Web API
+    ├── NotionAdapter ─────► Notion REST API
+    ├── MarkdownAdapter ───► File System
+    ├── WebhookAdapter ────► HTTP POST
+    ├── EmailAdapter ──────► SMTP
+    └── ApiAdapter ────────► Arbitrary API
+    │
+    ▼
+DiffEngine (consistency check)
+    │
+    ▼
+Delivery Report</code></pre>
+<h2 id="prompt-模板">Prompt 模板<a class="anchor" href="#prompt-模板" aria-label="锚点">#</a></h2>
+<p>所有平台适配器的 Prompt 模板存储在 <code>platform/delivery/adapters/prompts/</code>：</p>
+<table><thead><tr><th>模板</th><th>用途</th></tr></thead><tbody><tr><td><code>slack.prompt.md</code></td><td>Slack Block Kit 消息生成</td></tr><tr><td><code>notion.prompt.md</code></td><td>Notion 页面/数据库条目创建</td></tr><tr><td><code>markdown.prompt.md</code></td><td>Markdown 文件生成</td></tr><tr><td><code>webhook.prompt.md</code></td><td>Webhook HTTP POST 调用</td></tr><tr><td><code>email.prompt.md</code></td><td>邮件生成</td></tr><tr><td><code>api.prompt.md</code></td><td>REST API 调用</td></tr></tbody></table>
+<h2 id="diffengine-校验规则">DiffEngine 校验规则<a class="anchor" href="#diffengine-校验规则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>规则</th><th>级别</th><th>说明</th></tr></thead><tbody><tr><td>R1 语义一致性</td><td>CRITICAL</td><td>各平台核心信息完全一致</td></tr><tr><td>R2 截断检查</td><td>HIGH</td><td>内容未超出平台限制</td></tr><tr><td>R3 格式合规</td><td>MEDIUM</td><td>投递格式符合平台规范</td></tr><tr><td>R4 链接有效性</td><td>MEDIUM</td><td>链接可访问</td></tr><tr><td>R5 敏感信息泄露</td><td>CRITICAL</td><td>密钥未泄露</td></tr><tr><td>R6 平台特性</td><td>LOW</td><td>利用平台最佳实践</td></tr></tbody></table>
+<h2 id="给其他-agent-写-prompt-的最佳实践">给其他 Agent 写 Prompt 的最佳实践<a class="anchor" href="#给其他-agent-写-prompt-的最佳实践" aria-label="锚点">#</a></h2>
+<h3 id="1-角色定义">1. 角色定义<a class="anchor" href="#1-角色定义" aria-label="锚点">#</a></h3>
+<p>开头明确 Agent 的身份和职责范围，避免模糊。</p>
+<h3 id="2-输入格式">2. 输入格式<a class="anchor" href="#2-输入格式" aria-label="锚点">#</a></h3>
+<p>用 JSON Schema 明确输入字段，Agent 才能正确解析。</p>
+<h3 id="3-规则分层">3. 规则分层<a class="anchor" href="#3-规则分层" aria-label="锚点">#</a></h3>
+<ul><li><strong>必须遵守</strong>（违反则失败）：用 <code>必须</code>、<code>禁止</code>、<code>永远不要</code></li><li><strong>优先执行</strong>（有更好）：用 <code>优先</code>、<code>建议</code>、<code>推荐</code></li><li><strong>可选优化</strong>：用 <code>可以</code>、<code>可选</code>、<code>建议</code></li></ul>
+<h3 id="4-输出格式">4. 输出格式<a class="anchor" href="#4-输出格式" aria-label="锚点">#</a></h3>
+<p>固定输出 JSON schema，包含 success、error、data 字段。</p>
+<h3 id="5-异常处理">5. 异常处理<a class="anchor" href="#5-异常处理" aria-label="锚点">#</a></h3>
+<p>列出每个平台可能的错误码及处理策略。</p>
+<h3 id="6-示例">6. 示例<a class="anchor" href="#6-示例" aria-label="锚点">#</a></h3>
+<p>每个 Prompt 至少包含一个输入→输出示例。</p>
+<h2 id="目录结构">目录结构<a class="anchor" href="#目录结构" aria-label="锚点">#</a></h2>
+<pre><code>platform/delivery/
+├── deliveryController.js      # 主入口
+├── orchestrator/
+│   ├── orchestratorAgent.js   # 调度总控实现
+│   └── orchestrator.prompt.md # 调度总控 Prompt
+├── adapters/
+│   ├── baseAdapter.js         # 适配器基类
+│   ├── index.js               # 导出
+│   ├── promiseTimeout.js      # 超时工具
+│   ├── slackAdapter.js        # Slack
+│   ├── notionAdapter.js       # Notion
+│   ├── markdownAdapter.js     # Markdown 文件
+│   ├── webhookAdapter.js      # Webhook
+│   ├── emailAdapter.js        # Email
+│   ├── apiAdapter.js          # REST API
+│   └── prompts/
+│       ├── slack.prompt.md
+│       ├── notion.prompt.md
+│       ├── markdown.prompt.md
+│       ├── webhook.prompt.md
+│       ├── email.prompt.md
+│       └── api.prompt.md
+├── diff/
+│   ├── diffEngine.js          # 一致性校验器
+│   └── diff.prompt.md         # DiffEngine Prompt
+├── tasks/
+│   ├── taskStore.js           # 持久化 (SQLite/JSON)
+│   └── taskQueue.js           # 任务队列
+├── templates/
+│   └── templateRegistry.js    # Prompt 模板管理
+└── routes/
+    └── delivery.routes.js     # Express 路由</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../platform/delivery/orchestrator/orchestrator.prompt.html"><div class="dir">← 上一篇</div><div class="ttl">调度总控 Agent (Orchestrator) Prompt</div></a><a class="next" href="../../platform/packages/moonbit-plugin-sdk/README.mbt.html"><div class="dir">下一篇 →</div><div class="ttl">khyos/moonbitpluginsdk</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="platform/delivery/README.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

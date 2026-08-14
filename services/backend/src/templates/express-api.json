@@ -1,0 +1,68 @@
+{
+  "name": "express-api",
+  "description": "Express.js REST API with ES modules",
+  "triggers": ["Express", "express api", "express server", "node api", "Node后端", "Express后端", "Express服务"],
+  "variables": {
+    "projectName": { "default": "my-api", "description": "Project name" },
+    "port": { "default": "3000", "description": "Server port" }
+  },
+  "directories": [
+    "src",
+    "src/routes",
+    "src/middleware",
+    "src/controllers",
+    "src/models",
+    "unit_tests",
+    "API_tests"
+  ],
+  "files": [
+    {
+      "path": "package.json",
+      "content": "{\n  \"name\": \"{projectName}\",\n  \"version\": \"1.0.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"start\": \"node src/index.js\",\n    \"dev\": \"node --watch src/index.js\"\n  },\n  \"dependencies\": {\n    \"express\": \"^4.19.2\",\n    \"cors\": \"^2.8.5\"\n  }\n}"
+    },
+    {
+      "path": "src/index.js",
+      "content": "import express from 'express';\nimport cors from 'cors';\nimport { router } from './routes/index.js';\n\nconst app = express();\nconst PORT = process.env.PORT || {port};\n\napp.use(cors());\napp.use(express.json());\napp.use('/api', router);\n\napp.get('/health', (req, res) => res.json({ status: 'ok' }));\n\napp.listen(PORT, () => console.log(`Server running on port ${PORT}`));"
+    },
+    {
+      "path": "src/routes/index.js",
+      "content": "import { Router } from 'express';\n\nexport const router = Router();\n\nrouter.get('/', (req, res) => {\n  res.json({ message: 'Welcome to {projectName} API' });\n});\n\nrouter.get('/users', (req, res) => {\n  res.json([{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]);\n});"
+    },
+    {
+      "path": "src/middleware/errorHandler.js",
+      "content": "export function errorHandler(err, req, res, next) {\n  console.error(err.stack);\n  res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });\n}"
+    },
+    {
+      "path": ".gitignore",
+      "content": "node_modules/\n.env\ndist/"
+    },
+    {
+      "path": "Dockerfile",
+      "content": "# Stage 1: Install production dependencies\nFROM node:20-alpine AS deps\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --omit=dev\n\n# Stage 2: Production image\nFROM node:20-alpine\nWORKDIR /app\nCOPY --from=deps /app/node_modules ./node_modules\nCOPY package*.json ./\nCOPY src ./src\nEXPOSE {port}\nCMD [\"node\", \"src/index.js\"]"
+    },
+    {
+      "path": "docker-compose.yml",
+      "content": "version: '3.8'\n\nservices:\n  app:\n    build: .\n    ports:\n      - \"{port}:{port}\"\n    environment:\n      - PORT={port}\n      - MONGO_URL=mongodb://db:27017/{projectName}\n    depends_on:\n      - db\n    restart: unless-stopped\n\n  db:\n    image: mongo:7\n    volumes:\n      - mongo_data:/data/db\n    restart: unless-stopped\n\nvolumes:\n  mongo_data:"
+    },
+    {
+      "path": ".dockerignore",
+      "content": "node_modules\n.git\n.env\ndist"
+    },
+    {
+      "path": "unit_tests/routes.test.js",
+      "content": "import { describe, it } from 'node:test';\nimport assert from 'node:assert/strict';\nimport http from 'node:http';\nimport express from 'express';\nimport { router } from '../src/routes/index.js';\n\nfunction request(app, path) {\n  return new Promise((resolve, reject) => {\n    const server = app.listen(0, () => {\n      const port = server.address().port;\n      http.get(`http://127.0.0.1:${port}${path}`, (res) => {\n        let body = '';\n        res.on('data', (chunk) => { body += chunk; });\n        res.on('end', () => {\n          server.close();\n          resolve({ status: res.statusCode, body: JSON.parse(body) });\n        });\n      }).on('error', (err) => { server.close(); reject(err); });\n    });\n  });\n}\n\ndescribe('Health endpoint', () => {\n  it('GET /health returns { status: ok }', async () => {\n    const app = express();\n    app.get('/health', (req, res) => res.json({ status: 'ok' }));\n    const res = await request(app, '/health');\n    assert.equal(res.status, 200);\n    assert.deepStrictEqual(res.body, { status: 'ok' });\n  });\n});\n\ndescribe('API routes', () => {\n  it('GET /api returns welcome message', async () => {\n    const app = express();\n    app.use('/api', router);\n    const res = await request(app, '/api');\n    assert.equal(res.status, 200);\n    assert.ok(res.body.message);\n  });\n});"
+    },
+    {
+      "path": "API_tests/api.test.js",
+      "content": "import { describe, it, before, after } from 'node:test';\nimport assert from 'node:assert/strict';\nimport http from 'node:http';\nimport express from 'express';\nimport cors from 'cors';\nimport { router } from '../src/routes/index.js';\n\nlet server;\nlet baseUrl;\n\nfunction fetch(path) {\n  return new Promise((resolve, reject) => {\n    http.get(`${baseUrl}${path}`, (res) => {\n      let body = '';\n      res.on('data', (chunk) => { body += chunk; });\n      res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(body) }));\n    }).on('error', reject);\n  });\n}\n\ndescribe('Integration: /api/users', () => {\n  before(() => {\n    return new Promise((resolve) => {\n      const app = express();\n      app.use(cors());\n      app.use(express.json());\n      app.use('/api', router);\n      app.get('/health', (req, res) => res.json({ status: 'ok' }));\n      server = app.listen(0, () => {\n        baseUrl = `http://127.0.0.1:${server.address().port}`;\n        resolve();\n      });\n    });\n  });\n\n  after(() => {\n    return new Promise((resolve) => server.close(resolve));\n  });\n\n  it('GET /api/users returns 200 and an array', async () => {\n    const res = await fetch('/api/users');\n    assert.equal(res.status, 200);\n    assert.ok(Array.isArray(res.body));\n    assert.ok(res.body.length > 0);\n  });\n\n  it('GET /health returns 200', async () => {\n    const res = await fetch('/health');\n    assert.equal(res.status, 200);\n    assert.deepStrictEqual(res.body, { status: 'ok' });\n  });\n});"
+    },
+    {
+      "path": "run_tests.sh",
+      "content": "#!/usr/bin/env bash\nset -euo pipefail\n\necho \"Installing dependencies...\"\nnpm ci\n\necho \"Running unit and integration tests...\"\nnode --test unit_tests/ API_tests/\n\necho \"All tests passed.\""
+    },
+    {
+      "path": "README.md",
+      "content": "# {projectName}\n\nA production-ready REST API built with Express 4 and Node.js 20.\n\n## Tech Stack\n\n- **Runtime:** Node.js 20 (Alpine)\n- **Framework:** Express 4\n- **Database:** MongoDB 7 (via Docker)\n- **Testing:** Node.js built-in test runner (`node:test`)\n\n## Quick Start (Docker)\n\n```bash\ndocker compose up --build\n```\n\nThe API will be available at `http://<HOST>:{port}`.\n\n## Manual Setup\n\n```bash\nnpm ci\nnpm run dev\n```\n\n## API Endpoints\n\n| Method | Path         | Description           |\n|--------|--------------|-----------------------|\n| GET    | /health      | Health check          |\n| GET    | /api         | Welcome message       |\n| GET    | /api/users   | List all users        |\n\n## Running Tests\n\n```bash\n# Via script\nbash run_tests.sh\n\n# Manual\nnpm ci\nnode --test unit_tests/ API_tests/\n```\n\n## Project Structure\n\n```\n{projectName}/\n├── src/\n│   ├── index.js            # Entry point\n│   ├── routes/index.js     # API routes\n│   ├── middleware/          # Express middleware\n│   ├── controllers/        # Route controllers\n│   └── models/             # Data models\n├── unit_tests/             # Unit tests\n├── API_tests/              # Integration tests\n├── Dockerfile              # Multi-stage Docker build\n├── docker-compose.yml      # Docker Compose orchestration\n├── run_tests.sh            # Test runner script\n└── package.json\n```"
+    }
+  ]
+}

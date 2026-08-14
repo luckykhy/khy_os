@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skillify — Conversation to Skill Converter · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>skillify<span class="sep">›</span>Skillify — Conversation to Skill Converter</div>
+      <header class="hero reveal"><h1>Skillify — Conversation to Skill Converter</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#skillify-conversation-to-skill-converter">Skillify — Conversation to Skill Converter</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="skillify-conversation-to-skill-converter">Skillify — Conversation to Skill Converter<a class="anchor" href="#skillify-conversation-to-skill-converter" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Analyze the current conversation and extract a reusable skill with a proper manifest.json and prompt.md.</p>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Analyze Conversation</strong>: Review the conversation history to identify:<ul><li>What task was performed</li><li>What steps were followed</li><li>What tools and techniques were used</li><li>What decisions were made and why</li></ul></li></ol>
+<ol><li><strong>Extract Pattern</strong>: Generalize the specific task into a reusable pattern:<ul><li>Replace specific file names with placeholders</li><li>Replace project-specific details with generic instructions</li><li>Identify required inputs and optional parameters</li></ul></li></ol>
+<ol><li><strong>Generate manifest.json</strong>:<ul><li><code>name</code>: Short, descriptive kebab-case name</li><li><code>command</code>: Slash command (e.g., <code>/my-skill</code>)</li><li><code>description</code>: One-line description of what the skill does</li><li><code>version</code>: Start at <code>1.0.0</code></li><li><code>userInvocable</code>: <code>true</code></li><li><code>tags</code>: 2-4 relevant tags</li></ul></li></ol>
+<ol><li><strong>Generate prompt.md</strong>:<ul><li>Clear purpose statement</li><li>Step-by-step workflow</li><li>Input format and options</li><li>Guidelines and edge cases</li><li>15-30 lines of actionable instructions</li></ul></li></ol>
+<ol><li><strong>Output</strong>: Present both files for review before saving.</li></ol>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Focus on the repeatable pattern, not the specific instance.</li><li>Write prompt.md instructions that work across different projects and languages.</li><li>Include error handling guidance in the prompt.</li><li>Test the skill description by asking: &quot;Would someone understand what this does from the description alone?&quot;</li><li>Save to the project's skill directory or suggest the user's global skill directory.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/simplify/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Code Simplification Skill</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/source-driven-development/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Source-Driven Development</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/skillify/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-068] 离机还原自检清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-068] 离机还原自检清单</div>
+      <header class="hero reveal"><h1>[OPS-MAN-068] 离机还原自检清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-068-离机还原自检清单">[OPS-MAN-068] 离机还原自检清单</a></li><li class="lvl-2"><a href="#这份清单是干什么的">这份清单是干什么的</a></li><li class="lvl-2"><a href="#一句话真相-包里有什么-没有什么">一句话真相：包里有什么、没有什么</a></li><li class="lvl-2"><a href="#自检会检查这些项">自检会检查这些项</a></li><li class="lvl-2"><a href="#人工还原步骤-照着做">人工还原步骤（照着做）</a></li><li class="lvl-2"><a href="#红线-继承项目章程">红线（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-068-离机还原自检清单">[OPS-MAN-068] 离机还原自检清单<a class="anchor" href="#ops-man-068-离机还原自检清单" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-check.js --gen-doc</code> 确定性生成，请勿手改；<br>规则改在 <code>scripts/lib/restoreReadiness.js</code> 的 <code>_RULES</code>，再重新生成。</p></blockquote>
+<h2 id="这份清单是干什么的">这份清单是干什么的<a class="anchor" href="#这份清单是干什么的" aria-label="锚点">#</a></h2>
+<p>khyos 只有两条离机渠道，二者缺一不可、互为冗余：</p>
+<ul><li><strong>pip</strong>：<code>pip install khy-os</code></li><li><strong>npm</strong>：<code>npm install -g @khy-os/khy-os</code></li></ul>
+<p>在<strong>任意新机器</strong>上装好后，跑一句自检就知道能不能完整还原：</p>
+<pre><code class="language-bash">node scripts/restore-check.js      # 或 npm run restore-check</code></pre>
+<p>它会探测本机事实（Node/npm/tar/bundled/版本同步/目录可写……），<br>给出「就绪 / 未就绪」+ 每条拦路项与提醒的<strong>照抄即用修法</strong>。</p>
+<h2 id="一句话真相-包里有什么-没有什么">一句话真相：包里有什么、没有什么<a class="anchor" href="#一句话真相-包里有什么-没有什么" aria-label="锚点">#</a></h2>
+<ul><li>两条渠道的包都自带 <strong>bundled 后端源码 + 加密全量源码快照</strong>（<code>khy restore</code> 可解）。</li><li>两条渠道都<strong>不打包 <code>node_modules</code></strong>：后端 44 个依赖在<strong>首次运行时联网</strong> <code>npm install</code> 补齐。</li><li>Node.js 运行时<strong>不打包</strong>：缺失时 khy 首启自动下载便携版（<code>KHY_AUTO_INSTALL_NODE</code> 默认开）。</li><li>结论：<strong>装好包 + 首次联网跑一次 = 完整还原</strong>。想离线还原，须在有网机器先跑通一次再整目录拷走。</li></ul>
+<h2 id="自检会检查这些项">自检会检查这些项<a class="anchor" href="#自检会检查这些项" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>级别</th><th>症状</th><th>修法</th></tr></thead><tbody><tr><td><code>node-missing</code></td><td>拦路</td><td>Node.js 不可用或版本过低（khyos 后端是 Node 运行时，没有它无法启动）</td><td>khy 会在首启自动下载便携版 Node（KHY_AUTO_INSTALL_NODE 默认开）；若被禁用或下载失败，请手动装 Node ≥ 20 后重跑 khy。</td></tr><tr><td><code>npm-missing</code></td><td>拦路</td><td>npm 不可用（首启需 npm 把后端 44 个依赖 hydrate 出来）</td><td>安装随 Node 附带的 npm（装 Node ≥ 20 通常自带）；装好后重跑 khy，bootstrap 会自动补齐 node_modules。</td></tr><tr><td><code>bundle-missing</code></td><td>拦路</td><td>bundled 后端源码缺失（包不完整，还原无从谈起）</td><td>重新安装官方包：pip 通道 <code>pip install --force-reinstall khy-os</code>，或 npm 通道 <code>npm install -g @khy-os/khy-os</code>；两条渠道的包都自带 bundled 源码。</td></tr><tr><td><code>offline-no-modules</code></td><td>拦路</td><td>离线且后端依赖未 hydrate（两条渠道都不打包 node_modules，首启须联网补齐）</td><td>接入能访问 npm registry 的网络后重跑 khy 完成首启 hydrate；确需离线，请在有网机器上先跑通一次，再把整个已 hydrate 的 khyos 目录整体拷到离线机。</td></tr><tr><td><code>versions-drift</code></td><td>拦路</td><td>pip / npm / backend 版本不一致（双渠道漂移会导致还原到半新半旧的裂脑状态）</td><td>统一到同一版本：<code>khy update</code> 会按当前渠道同步；或重装官方包让三处版本归一（红线要求 pip khy-os 与 npm @khy-os/khy-os 版本必须相等）。</td></tr><tr><td><code>tar-missing</code></td><td>提醒</td><td>系统 tar 不可用（khy restore 解包源码快照依赖它，缺它则整份工作树快照无法展开）</td><td>装系统 tar：Linux/macOS 自带；Windows 10 1803+ 自带，老版本 Windows 请装 tar 或用 7-Zip 手动解 _source 快照。</td></tr><tr><td><code>modules-not-hydrated</code></td><td>提醒</td><td>后端依赖尚未 hydrate（首次运行会联网 npm install，属正常，耗时几分钟）</td><td>首启会自动补齐；想提前跑通就先执行一次 khy（或 khy doctor），等 node_modules 落好即算还原完成。</td></tr><tr><td><code>install-readonly</code></td><td>提醒</td><td>安装目录不可写（bootstrap 要往包内写 node_modules / .env，只读会让首启失败）</td><td>改用用户级安装：<code>pip install --user khy-os</code>，或把 npm 全局前缀指向可写目录后重装。</td></tr><tr><td><code>single-channel</code></td><td>提醒</td><td>仅装了一条渠道（pip 与 npm 是仅有的两条离机渠道，留一条备用更稳）</td><td>可选：另一条渠道也装上做冗余——pip 用户加 <code>npm install -g @khy-os/khy-os</code>，npm 用户加 <code>pip install khy-os</code>；两者共存由 khy update 渠道感知同步。</td></tr></tbody></table>
+<h2 id="人工还原步骤-照着做">人工还原步骤（照着做）<a class="anchor" href="#人工还原步骤-照着做" aria-label="锚点">#</a></h2>
+<ol><li>装任一渠道的包（两条都装更稳）：</li></ol>
+<pre><code class="language-bash">   pip install khy-os
+   npm install -g @khy-os/khy-os</code></pre>
+<ol><li>跑自检，按拦路项逐条修：</li></ol>
+<pre><code class="language-bash">   node scripts/restore-check.js</code></pre>
+<ol><li>首次运行 khy（会联网 hydrate 后端依赖，耗时几分钟，属正常）：</li></ol>
+<pre><code class="language-bash">   khy doctor</code></pre>
+<ol><li>需要还原完整工作树快照时：</li></ol>
+<pre><code class="language-bash">   khy restore</code></pre>
+<h2 id="红线-继承项目章程">红线（继承项目章程）<a class="anchor" href="#红线-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>真 key/token 永不进包、不落盘；占位 key 一眼假。</li><li>pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本号必须一致（自检的 <code>versions-drift</code> 项守此线）。</li><li>本清单不教任何 commit/push/rm/curl/publish 类危险动作。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-067] 症状分诊速查表.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-067] Khy-OS 症状分诊速查表</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-069] 已装副本完整性自检清单.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-069] 已装副本完整性自检清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-068] 离机还原自检清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

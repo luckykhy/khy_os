@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>事后分析：Windows 上 khy os build 为何之前失败、现在成功 (2026-06-26) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>事后分析：Windows 上 khy os build 为何之前失败、现在成功 (2026-06-26)</div>
+      <header class="hero reveal"><h1>事后分析：Windows 上 khy os build 为何之前失败、现在成功 (2026-06-26)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#事后分析-windows-上-khy-os-build-为何之前失败-现在成功-2026-06-26">事后分析：Windows 上 `khy os build` 为何之前失败、现在成功 (2026-06-26)</a></li><li class="lvl-2"><a href="#0-一句话结论-先给非工程师">0. 一句话结论（先给非工程师）</a></li><li class="lvl-2"><a href="#1-必须先分清-两个完全不同的失败">1. 必须先分清：两个完全不同的失败</a></li><li class="lvl-2"><a href="#2-构建期-三轮闭环-0-1-133-0-1-134-0-1-135">2. 构建期：三轮闭环（0.1.133 → 0.1.134 → 0.1.135）</a></li><li class="lvl-3"><a href="#2-0-背景-windows-上-khy-os-build-走哪条路">2.0 背景：Windows 上 `khy os build` 走哪条路</a></li><li class="lvl-3"><a href="#2-1-轮一-0-1-133-未守卫的-include">2.1 轮一（→ 0.1.133）：未守卫的 `#include `</a></li><li class="lvl-3"><a href="#2-2-轮二-0-1-134-同类第二处-控制台-utf-8-设码块">2.2 轮二（→ 0.1.134）：同类第二处——控制台 UTF-8 设码块</a></li><li class="lvl-3"><a href="#2-3-轮三-0-1-135-真-根因换层-coff-vs-elf-目标格式">2.3 轮三（→ 0.1.135）：真·根因换层——COFF vs ELF 目标格式</a></li><li class="lvl-3"><a href="#2-4-为什么发布前能确信修对了-无-clang-的本机">2.4 为什么发布前能确信修对了（无 clang 的本机）</a></li><li class="lvl-2"><a href="#3-运行期-qemu-img-not-found-待-0-1-136">3. 运行期：`qemu-img not found`（待 0.1.136）</a></li><li class="lvl-3"><a href="#3-1-现象与根因">3.1 现象与根因</a></li><li class="lvl-3"><a href="#3-2-修复-纯加法-fail-soft-降级">3.2 修复（纯加法 + fail-soft 降级）</a></li><li class="lvl-3"><a href="#3-3-发布状态-诚实标注">3.3 发布状态（诚实标注）</a></li><li class="lvl-2"><a href="#4-通用教训">4. 通用教训</a></li><li class="lvl-2"><a href="#5-用户怎么验证">5. 用户怎么验证</a></li><li class="lvl-2"><a href="#6-更新-2026-06-28-便携-qemu-仍未固定-提示绝不虚假承诺-自动下载">6. 更新（2026-06-28）：便携 QEMU 仍未固定，提示绝不虚假承诺&quot;自动下载&quot;</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-OTHER-004 | 阶段: 项目管理 | 原路径: (新建) --&gt;</p>
+<h1 id="事后分析-windows-上-khy-os-build-为何之前失败-现在成功-2026-06-26">事后分析：Windows 上 <code>khy os build</code> 为何之前失败、现在成功 (2026-06-26)<a class="anchor" href="#事后分析-windows-上-khy-os-build-为何之前失败-现在成功-2026-06-26" aria-label="锚点">#</a></h1>
+<blockquote><p>关联：构建方案见 <code>docs/07_OPS_运维/[OPS-MAN-036] khyos跨平台构建-Windows支持方案.md</code>。<br>本文是该方案「原生 LLVM 后端」在<strong>真实 Windows 用户机</strong>上落地时,三轮构建失败 +<br>一轮运行失败的根因复盘。代码细节散在 <code>kernel/vendor/moonbit/runtime.c</code>、<br><code>kernel/Makefile</code>、<code>services/backend/src/cli/handlers/khyos.js</code>、<br><code>platform/packages/shared/src/runtime/khyos/</code>。</p></blockquote>
+<h2 id="0-一句话结论-先给非工程师">0. 一句话结论（先给非工程师）<a class="anchor" href="#0-一句话结论-先给非工程师" aria-label="锚点">#</a></h2>
+<p>之前不是「Windows 不支持」,而是<strong>内核源码里几处「只在 Windows 编译器下才会走到」的代码分支,<br>在我们的 Linux 开发机 / CI 上从不触发,因此一路潜伏到真实 Windows 用户构建时才一层层暴露</strong>。<br>每修好一层,就露出更深的下一层,共三轮才挖到真根因(目标文件格式)。第三轮一招治本后,<br><strong>真实 Windows 机器上 <code>pip install --upgrade khy-os &amp;&amp; khy os build</code> 已端到端构建出可启动 ISO</strong><br>（0.1.135,已发布并经用户实机验证）。</p>
+<p>构建通了之后,<strong>运行</strong>内核又遇到一个独立的小问题（<code>qemu-img not found</code>),这一轮也已修复<br>（代码就位,待维护者固定便携 QEMU 资产后随 0.1.136 发布）。</p>
+<h2 id="1-必须先分清-两个完全不同的失败">1. 必须先分清：两个完全不同的失败<a class="anchor" href="#1-必须先分清-两个完全不同的失败" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>命令</th><th>之前的报错</th><th>性质</th></tr></thead><tbody><tr><td><strong>构建期</strong></td><td><code>khy os build</code></td><td>编译 / 链接内核时报错</td><td>内核工具链 × Windows 编译器的兼容问题（三轮）</td></tr><tr><td><strong>运行期</strong></td><td>打开「KHY OS 内核终端」</td><td><code>qemu-img not found</code></td><td>运行内核所需 QEMU 未自动置备（一轮）</td></tr></tbody></table>
+<p>二者根因不同、修复不同、发布版本不同,下面分开讲。</p>
+<hr>
+<h2 id="2-构建期-三轮闭环-0-1-133-0-1-134-0-1-135">2. 构建期：三轮闭环（0.1.133 → 0.1.134 → 0.1.135）<a class="anchor" href="#2-构建期-三轮闭环-0-1-133-0-1-134-0-1-135" aria-label="锚点">#</a></h2>
+<h3 id="2-0-背景-windows-上-khy-os-build-走哪条路">2.0 背景：Windows 上 <code>khy os build</code> 走哪条路<a class="anchor" href="#2-0-背景-windows-上-khy-os-build-走哪条路" aria-label="锚点">#</a></h3>
+<p>自研内核是 <strong>freestanding x86_64 ELF / multiboot 镜像</strong>,本质需要 GNU/ELF 工具链。<br><code>khy os build</code> 在 Windows 上的首选后端是「<strong>原生 LLVM + Limine</strong>」：clang / ld.lld / nasm /<br>Limine / xorriso 等按 sha256 钉死、按需下载到 <code>~/.khyos/cache/</code>，无需 WSL/Docker（见 OPS-MAN-036 §8）。<br>这条路<strong>几乎全程成功</strong>——问题都出在最后一两步,所以极具迷惑性。</p>
+<blockquote><p>关键认知：日志里同时出现的 WSL <code>make: not found</code> / Docker <code>registry-1.docker.io 连不上</code> /<br>QEMU 未装,都是<strong>兜底后端各因环境另外失败</strong>,与真 bug 无关。原生 LLVM 才是首选路径,<br>修好它即通。排障时务必盯住原生路径的报错,别被兜底噪声带偏。</p></blockquote>
+<h3 id="2-1-轮一-0-1-133-未守卫的-include">2.1 轮一（→ 0.1.133）：未守卫的 <code>#include &lt;windows.h&gt;</code><a class="anchor" href="#2-1-轮一-0-1-133-未守卫的-include" aria-label="锚点">#</a></h3>
+<p><strong>报错</strong></p>
+<pre><code>vendor/moonbit/runtime.c:298: fatal error: 'windows.h' file not found
+make: *** [Makefile:116: build/moonbit_runtime.o] Error 1</code></pre>
+<p><strong>根因</strong>：内核用 <code>-ffreestanding -nostdlib -nostdinc</code> 编（裸机,无系统头），<br><strong>根本不该 include 宿主 <code>windows.h</code></strong>。但 <code>runtime.c</code> 里 MoonBit 运行时的 host 栈回溯设施有一段：</p>
+<pre><code class="language-c">#ifdef _WIN32
+#include &lt;windows.h&gt;      // + DbgHelp / CaptureStackBackTrace / SymInitialize
+#endif</code></pre>
+<p>这段<strong>没有</strong>被本文件其它地方都在用的 <code>MOONBIT_NATIVE_NO_SYS_HEADER</code>（“无 libc / 无系统头”闸）守卫。</p>
+<p><strong>为何只在 Windows 炸</strong>：Linux 原生 gcc <strong>从不定义</strong> <code>_WIN32</code>，整段被预处理跳过,所以这个洞<br>在 Linux 上<strong>永远不可见</strong>。而 llvm-mingw 的 clang 是 Windows-targeting 工具链,<strong>即便在编内核也定义<br><code>_WIN32</code></strong> → 走进 windows.h 分支 → <code>-nostdinc</code> 下找不到 → fatal。</p>
+<p><strong>修复</strong>：两处加守卫——</p>
+<pre><code class="language-c">#if defined(_WIN32) &amp;&amp; !defined(MOONBIT_NATIVE_NO_SYS_HEADER)</code></pre>
+<p>（<code>#ifdef _WIN32</code> 的 include 块 + <code>moonbit_panic</code> 内 <code>#ifdef _MSC_VER</code> 块）。<br>freestanding 下该 <code>#if</code> 为假,整块编译掉,与 Linux 行为一致。</p>
+<h3 id="2-2-轮二-0-1-134-同类第二处-控制台-utf-8-设码块">2.2 轮二（→ 0.1.134）：同类第二处——控制台 UTF-8 设码块<a class="anchor" href="#2-2-轮二-0-1-134-同类第二处-控制台-utf-8-设码块" aria-label="锚点">#</a></h3>
+<p>0.1.133 发布后用户复跑,clang 编过更多文件,<strong>又</strong>在 <code>runtime.c</code> 后段炸。<br>原因：<code>moonbit_println</code> 里另有<strong>一对仅 <code>#ifdef _WIN32</code></strong> 的 Win32 控制台设码块<br>（<code>GetConsoleOutputCP</code> / <code>SetConsoleOutputCP(CP_UTF8)</code>，皆 windows.h 符号）,<br><strong>同样裸露未守卫</strong>。第一处修好后它才暴露出来。</p>
+<p><strong>教训（写进了复盘）</strong>：我先前「其余 <code>_WIN32</code> 分支应该都嵌在 NO_SYS_HEADER 内」的判断<strong>是错的</strong>。<br>正确做法不是凭「应该都守住了」断言,而是 <strong>grep 全树 + 预处理实证逐块确认</strong>。<br>最终全量复核确认整个 kernel 树只剩这几处需要守卫,其余裸 <code>_WIN32</code> 都已在 NO_SYS_HEADER 块内。</p>
+<p><strong>修复</strong>：两处同样改 <code>#if defined(_WIN32) &amp;&amp; !defined(MOONBIT_NATIVE_NO_SYS_HEADER)</code>。</p>
+<h3 id="2-3-轮三-0-1-135-真-根因换层-coff-vs-elf-目标格式">2.3 轮三（→ 0.1.135）：真·根因换层——COFF vs ELF 目标格式<a class="anchor" href="#2-3-轮三-0-1-135-真-根因换层-coff-vs-elf-目标格式" aria-label="锚点">#</a></h3>
+<p>windows.h 全部守住后,clang <strong>编过了全部 <code>.c</code></strong>,却在<strong>链接</strong>阶段炸：</p>
+<pre><code>ld.lld: error: build/agentask.o: unknown file type   （所有 C object 同症）</code></pre>
+<p><strong>真根因不在源码,在目标文件格式</strong>：</p>
+<ul><li>llvm-mingw 的 clang <strong>默认 Windows 目标</strong> → 既产 <strong>COFF/PE</strong> object，又定义 <code>_WIN32</code>（这正是前两轮 windows.h 被触发的<strong>同一总因</strong>）。</li><li>但本内核是 <strong>ELF</strong>：<code>boot/*.asm</code> 用 <code>nasm -f elf64</code>，<code>linker.ld</code> 是 GNU/ELF 脚本。</li><li><code>ld.lld</code> 因此跑 ELF 模式：接受了 nasm 的 ELF object，却<strong>拒绝</strong> clang 产的 COFF C object → <code>unknown file type</code>。</li></ul>
+<p><strong>一招治本</strong>：强制 clang 输出裸机 ELF —— <code>--target=x86_64-elf</code>：</p>
+<ol><li>object 变 ELF → 可被 <code>ld.lld -T linker.ld</code> 链接；</li><li><code>_WIN32</code> <strong>不再定义</strong> → 前两轮的 windows.h / console 分支<strong>自然编译掉</strong>；</li><li>使 Windows clang 构建与<strong>已知良好的 Linux gcc 构建行为一致</strong>——所以这条路比原来的</li></ol>
+<p>“Windows-target clang” <strong>更低风险</strong>,而非更高。</p>
+<p><strong>落地（三处,纯加法,作用域精确）</strong>：</p>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>kernel/Makefile</code></td><td>新 <code>EXTRA_CFLAGS =</code>（空默认,命令行可覆盖）追加进 <code>CFLAGS</code>（自动流入 <code>MOONBIT_CFLAGS</code>）</td></tr><tr><td><code>khyos.js</code> <code>_toolchainMakeVars</code></td><td><code>if (env.KHY_EXTRA_CFLAGS) vars.push('EXTRA_CFLAGS=' + …)</code></td></tr><tr><td><code>khyos.js</code> <code>_buildViaNativeToolchain</code></td><td><strong>仅</strong> native-llvm 的 childEnv 注入 <code>KHY_EXTRA_CFLAGS=--target=x86_64-elf</code></td></tr></tbody></table>
+<blockquote><p>精确作用域很关键：<code>--target</code> <strong>只</strong>给 native-llvm clang。WSL / Docker / QEMU appliance / 强制 native-gcc<br>都用 <code>process.env</code>（无此键）→ 各自的 gcc 不受影响（gcc 不认 <code>--target=x86_64-elf</code>，若误传会 exit 1）。</p></blockquote>
+<h3 id="2-4-为什么发布前能确信修对了-无-clang-的本机">2.4 为什么发布前能确信修对了（无 clang 的本机）<a class="anchor" href="#2-4-为什么发布前能确信修对了-无-clang-的本机" aria-label="锚点">#</a></h3>
+<p>开发机没有 llvm-mingw clang,无法直接复跑 Windows 构建,所以用两手代理实证：</p>
+<ul><li><code>make --eval</code> 验证 <code>EXTRA_CFLAGS</code> 确实流进 <code>CFLAGS</code> / <code>MOONBIT_CFLAGS</code>；</li><li>本机 gcc + <code>MOONBIT_PREBUILT=1</code> 跑<strong>完整全量内核构建</strong> <code>make build/khy-os.bin</code> exit 0。</li></ul>
+<p>这与 clang <code>--target=x86_64-elf</code> <strong>同构</strong>（同 ELF object / 同 <code>_WIN32</code> 未定义 / 同 freestanding，<br>  只差编译器二进制）：<code>ld -T linker.ld</code> 把<strong>全部</strong> object（含此前 Windows 首炸的 <code>agentask.o</code>）链成<br>  有效 <code>ELF 64-bit LSB executable x86-64</code>。</p>
+<p><strong>✅ 真实 Windows 机端到端验证（0.1.135）</strong>：用户日志实证<br><code>clang.exe … --target=x86_64-elf … -c vendor/moonbit/runtime.c</code> →<br><code>ld.lld.exe -T linker.ld -o build/khy-os.bin &lt;全部 object&gt;</code>（<code>unknown file type</code> 消失）→<br>xorriso 产 ISO → Limine 安装 → <code>✓ 内核 ISO 构建完成 khy-os-kernel.iso</code>。</p>
+<table><thead><tr><th>版本</th><th>修了什么</th><th>结果</th></tr></thead><tbody><tr><td>0.1.133</td><td>轮一：第一处 windows.h 守卫</td><td>暴露轮二</td></tr><tr><td>0.1.134</td><td>轮二：console-CP 设码块守卫</td><td>暴露轮三</td></tr><tr><td><strong>0.1.135</strong></td><td>轮三：<strong>COFF→ELF（<code>--target=x86_64-elf</code>）一招治本</strong></td><td><strong>构建通过（实机验证）</strong></td></tr></tbody></table>
+<hr>
+<h2 id="3-运行期-qemu-img-not-found-待-0-1-136">3. 运行期：<code>qemu-img not found</code>（待 0.1.136）<a class="anchor" href="#3-运行期-qemu-img-not-found-待-0-1-136" aria-label="锚点">#</a></h2>
+<h3 id="3-1-现象与根因">3.1 现象与根因<a class="anchor" href="#3-1-现象与根因" aria-label="锚点">#</a></h3>
+<p>构建成功、ISO 已产后,打开「KHY OS 内核终端」遇：</p>
+<pre><code>[内核] qemu-img not found — install QEMU to create the KHY OS disk image</code></pre>
+<p>根因：<strong>构建</strong>工具链会按需 sha256 固定下载到 <code>~/.khyos/cache/</code>，但<strong>运行</strong>内核所需的 QEMU 不会——<br>仍要求用户手动装 QEMU 并加 PATH。体验不一致。</p>
+<h3 id="3-2-修复-纯加法-fail-soft-降级">3.2 修复（纯加法 + fail-soft 降级）<a class="anchor" href="#3-2-修复-纯加法-fail-soft-降级" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>改动</th><th>文件</th><th>作用</th></tr></thead><tbody><tr><td>去掉 qemu-img 依赖</td><td><code>khyos/diskImage.js</code></td><td>KhyFS 盘是 <code>format=raw</code> 的定长全零文件,改用 Node <code>fs.ftruncateSync</code> 原生创建,<strong>彻底移除 qemu-img</strong>（用户所见错误从根上消失）</td></tr><tr><td>运行路径自动置备</td><td><code>khyos/KhyOsRunner.js</code></td><td><code>start()</code> 顶部 <code>_ensureRuntimeQemu()</code>：显式覆盖 → PATH 探测 → 自动下载便携 QEMU（复用 <code>ensurePortableQemu</code>）→ 失败优雅降级到「装 QEMU」提示</td></tr><tr><td>进度呈现</td><td>Web / TUI</td><td>下载便携 QEMU 时显示「正在下载… N%」</td></tr><tr><td><code>doctor</code> 诚实反映</td><td><code>handlers/khyos.js</code></td><td>删 qemu-img 检查,改提示「首次运行自动下载」</td></tr></tbody></table>
+<p>设计与构建工具链一致：<strong>首次运行内核时,若无 QEMU 则按 sha256 固定下载便携版</strong>,从此运行也零手动装。</p>
+<h3 id="3-3-发布状态-诚实标注">3.3 发布状态（诚实标注）<a class="anchor" href="#3-3-发布状态-诚实标注" aria-label="锚点">#</a></h3>
+<p>代码全部就位、测试齐全（19 例新测 + 105 例回归零回归）。但<strong>便携 QEMU zip 资产需维护者在联网机上<br>构建/上传 + 固定 sha256 + 重建 wheel</strong>（沙箱无网络,固定是必经的维护者一次性步骤）。<br>因此 <strong>0.1.136 尚未发布</strong>；在资产固定前,运行期<strong>优雅降级</strong>到「装 QEMU」提示<br>（已不再是误导性的 <code>qemu-img not found</code>）。</p>
+<hr>
+<h2 id="4-通用教训">4. 通用教训<a class="anchor" href="#4-通用教训" aria-label="锚点">#</a></h2>
+<ol><li><strong>「只在某平台/某编译器才走到」的条件编译是潜伏 bug 的温床</strong>——CI 不覆盖那条分支就等于没测。</li></ol>
+<p><code>_WIN32</code> 这类宏在 Linux 上永远为假,洞可以潜伏很久。</p>
+<ol><li><strong>别凭「应该都对」断言,要 grep 全树 + 预处理/链接实证</strong>（轮二就是吃了这个亏）。</li><li><strong>一层报错可能掩盖更深的真根因</strong>——windows.h（编译）修完才看见 COFF/ELF（链接）。修到「行为与已知良好路径一致」才算到底。</li><li><strong>诚实区分首选路径与兜底噪声</strong>：日志里一堆失败,只有原生路径那条才是真问题。</li><li><strong>构建通 ≠ 能用</strong>：构建期与运行期是两套依赖,要分别置备。</li></ol>
+<hr>
+<h2 id="5-用户怎么验证">5. 用户怎么验证<a class="anchor" href="#5-用户怎么验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell">pip install --upgrade khy-os
+khy os build          # 应产出 khy-os-kernel.iso（0.1.135 已实机验证通过）
+khy os doctor         # 体检：QEMU 缺失会给出真实的安装指引（见下方 2026-06-28 更新）
+khy os                # 运行内核；无 QEMU 时给出装 QEMU+PATH / 设 KHY_QEMU 的真实步骤</code></pre>
+<blockquote><p>内核源码改动经 <code>setup.py</code> 打包进 wheel 的 <code>bundled/</code> 副本,<strong>用户须升级 wheel 重装才生效</strong>。<br>临时绕过本地构建：设 <code>KHY_KERNEL_ISO=&lt;现成iso&gt;</code> 或 <code>KHY_KERNEL_ISO_URL</code> + <code>KHY_KERNEL_ISO_SHA256</code>。</p></blockquote>
+<hr>
+<h2 id="6-更新-2026-06-28-便携-qemu-仍未固定-提示绝不虚假承诺-自动下载">6. 更新（2026-06-28）：便携 QEMU 仍未固定，提示绝不虚假承诺&quot;自动下载&quot;<a class="anchor" href="#6-更新-2026-06-28-便携-qemu-仍未固定-提示绝不虚假承诺-自动下载" aria-label="锚点">#</a></h2>
+<p>本事后分析在 2026-06-26 记录了&quot;首次运行自动下载便携 QEMU&quot;的<strong>设计意图</strong>（见 §3.2 表格的&quot;运行路径自动置备&quot;&quot;doctor 诚实反映&quot;两行，以及 §5 验证步骤）。§3.3 当时已诚实标注：<br><strong>便携 QEMU 资产需维护者在联网机上固定 sha256 + 重建 wheel，0.1.136 尚未发布。</strong></p>
+<p>截至本次更新，<strong>该便携 QEMU 资产至今仍未固定</strong>——<code>khyos-manifest.json</code> 的 <code>qemu.win32-x64</code> pin 的 <code>url</code>/<code>sha256</code> 仍为空。<br>因此 <code>ensurePortableQemu()</code> 在 <code>!url || !sha256</code> 即返回 null，<strong>永远不会真的下载</strong>。</p>
+<p>为避免&quot;误导性承诺&quot;（与本项目&quot;出错原因必须具体真实&quot;的红线冲突），运行期与 <code>khy os doctor</code> 的缺-QEMU 提示已改为<strong>诚实门控</strong>：</p>
+<ul><li>仅当便携 QEMU <strong>真被固定</strong>（<code>isPortableQemuPinned()</code> 为真）时，才会出现&quot;首次运行自动下载&quot;措辞；</li><li>否则给出<strong>真实可执行的下一步</strong>：装 <code>qemu-system-x86_64</code> 并加入 PATH（Windows 可用 https://qemu.weilnetz.de/w64/），或设 <code>KHY_QEMU</code> 指向已装的可执行文件。</li></ul>
+<p>维护者一旦真正固定便携 QEMU 资产，上述措辞会<strong>自动变诚实</strong>（机制已就绪，无需再改代码）。<br>详见红线：<code>.ai/GUARDS.md</code>「缺 QEMU 的指引绝不承诺会自动下载，除非便携 QEMU 真被 pin」。</p>
+<blockquote><p>一句话：§3.2/§5 里&quot;自动下载&quot;是当时的<strong>目标</strong>而非<strong>已发生的事实</strong>；在资产固定前，请以本节为准——<strong>提示只给真实安装步骤，不承诺下载</strong>。</p></blockquote>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-OTHER-003] 索引.html"><div class="dir">← 上一篇</div><div class="ttl">文档索引</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-001] khy-os-体验改进计划-2026-05-26.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 功能扫描与体验改进建议（2026-05-26）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-OTHER-004] 事后分析-Windows内核构建为何之前失败现在成功-2026-06-26.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

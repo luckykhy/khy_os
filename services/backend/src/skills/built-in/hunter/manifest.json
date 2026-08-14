@@ -1,0 +1,16 @@
+{
+  "name": "hunter",
+  "description": "Hunt for bugs, security issues, or code smells in the codebase",
+  "trigger": "/hunter",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "security",
+    "bugs",
+    "quality"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

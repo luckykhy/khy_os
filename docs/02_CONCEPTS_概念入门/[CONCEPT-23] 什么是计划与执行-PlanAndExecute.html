@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>㉓ 什么是计划与执行（Plan-and-Execute） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>㉓ 什么是计划与执行（Plan-and-Execute）</div>
+      <header class="hero reveal"><h1>㉓ 什么是计划与执行（Plan-and-Execute）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#㉓-什么是计划与执行-plan-and-execute">㉓ 什么是计划与执行（Plan-and-Execute）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么需要它-走一步看一步-扛不住的三种活">二、为什么需要它？——&quot;走一步看一步&quot;扛不住的三种活</a></li><li class="lvl-3"><a href="#场景一-步骤太多-走着走着就忘了要去哪">场景一：步骤太多，走着走着就忘了要去哪</a></li><li class="lvl-3"><a href="#场景二-步骤之间有先后-顺序错了就得推倒重来">场景二：步骤之间有先后，顺序错了就得推倒重来</a></li><li class="lvl-3"><a href="#场景三-活儿太大-没个整体章法就容易顾此失彼">场景三：活儿太大，没个整体章法就容易顾此失彼</a></li><li class="lvl-2"><a href="#三-核心比喻-三张-先谋后动-的画面">三、核心比喻：三张&quot;先谋后动&quot;的画面</a></li><li class="lvl-3"><a href="#比喻一-盖房子-先出施工图纸-再动工">比喻一：盖房子——先出施工图纸，再动工</a></li><li class="lvl-3"><a href="#比喻二-将军打仗-先定完整作战计划-再分段推进">比喻二：将军打仗——先定完整作战计划，再分段推进</a></li><li class="lvl-3"><a href="#比喻三-出远门-先列一张行程单-再照单出发">比喻三：出远门——先列一张行程单，再照单出发</a></li><li class="lvl-2"><a href="#四-拆开看-计划-执行-重新规划-三个动作">四、拆开看：计划、执行、重新规划——三个动作</a></li><li class="lvl-2"><a href="#五-和-react-的区别与结合-蓝图派-vs-摸路派">五、和 ReAct 的区别与结合——蓝图派 vs 摸路派</a></li><li class="lvl-2"><a href="#六-感觉一下-一次-先规划再执行-的全过程">六、感觉一下：一次&quot;先规划再执行&quot;的全过程</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-计划一旦定了-就必须一条道走到黑">误区 1：以为&quot;计划一旦定了，就必须一条道走到黑&quot;</a></li><li class="lvl-3"><a href="#误区-2-把-计划与执行-和-⑲-react-concept-19-20什么是react-智能体推理模式-md-走一步看一步-搞混">误区 2：把&quot;计划与执行&quot;和&quot;[⑲ ReAct](./[CONCEPT-19]%20什么是ReAct-智能体推理模式.md) 走一步看一步&quot;搞混</a></li><li class="lvl-3"><a href="#误区-3-以为-计划拆得越细-步骤越多-就一定越好">误区 3：以为&quot;计划拆得越细、步骤越多，就一定越好&quot;</a></li><li class="lvl-3"><a href="#误区-4-以为-重新规划-之前的计划全白费了">误区 4：以为&quot;重新规划 = 之前的计划全白费了&quot;</a></li><li class="lvl-3"><a href="#误区-5-以为-计划与执行是很高级-跟我没关系-的东西">误区 5：以为&quot;计划与执行是很高级、跟我没关系&quot;的东西</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-你当一次-总规划师-办一场搬家">实验：你当一次&quot;总规划师&quot;，办一场搬家</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系">十、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十一-小结-下一步">十一、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="㉓-什么是计划与执行-plan-and-execute">㉓ 什么是计划与执行（Plan-and-Execute）<a class="anchor" href="#㉓-什么是计划与执行-plan-and-execute" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">⑲ 什么是 ReAct</a> 和 <a href="./[CONCEPT-20]%20什么是智能体编排-Orchestration.html">⑳ 什么是智能体编排</a>。那两篇讲了&quot;AI 走一步看一步的想—做—看纪律&quot;和&quot;一个总指挥把大任务拆开、派给一群专才&quot;。这一篇要回答一个更&quot;先动脑后动手&quot;的问题：<strong>面对一个又大又杂、几十步才做得完的活，AI 是应该埋头一步步摸着石头过河，还是应该先坐下来、把整件事从头到尾捋出一份&quot;总计划&quot;，再照着计划一段段落地？</strong> 这门&quot;先谋后动、先出图纸再动工&quot;的本事，就是本篇的主角——<strong>计划与执行（Plan-and-Execute）</strong>。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>计划与执行 = 面对一个大任务，AI 先不急着动手，而是先制定一份&quot;总计划&quot;——把大任务拆成一串有序的小步骤；然后再照着这份计划，一步步执行；执行途中若发现走偏了，还能停下来&quot;重新规划&quot;、改一版新计划再继续。</strong></p>
+<p>如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>走一步看一步，像摸黑赶路；计划与执行，像出门前先摊开地图、把整条路线画好，再照着路线一段段走——心里始终有一张&quot;全程蓝图&quot;，而不是走到哪算哪。</strong></p></blockquote>
+<p>这一句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话：<strong>先有蓝图，再落地。</strong></p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>你可能会问：&quot;AI 不是已经会 <a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">想—做—看</a>、一步步把活干完了吗？为啥还要先列个计划？&quot;——好问题！因为&quot;走一步看一步&quot;有个软肋：<strong>它脑子里没有全局蓝图，容易只顾眼前、走着走着就<span class="popover" tabindex="0"><span class="popover-anchor">跑偏或绕远</span><span class="popover-tip" role="tooltip">就像你去一个没去过的城市，不看地图、只顾&quot;眼前这条路看着能走&quot;，很可能兜大圈子，甚至走进死胡同再折返</span></span>。</strong> 活儿越大、步骤越多，这种&quot;只顾眼前&quot;的毛病就越致命。先把整件事拆成一份有序的&quot;总计划&quot;，就等于<strong>出发前先在脑子里把全程走了一遍</strong>——哪一步先、哪一步后、一共几步，心里有数，落地时就又稳又不绕。这一篇不用懂代码，抓住&quot;盖房先出图纸再动工&quot;就行～ 🐣</p></div></aside>
+<p>一句话摆清它和前几篇的关系：<strong><a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">⑲ ReAct</a> 是&quot;走一步、看一步、再想下一步&quot;的贴地纪律；计划与执行，是在动手之前先&quot;抬头看全程、画好整张蓝图&quot;——一个管&quot;全局怎么排&quot;，一个管&quot;每一步怎么走&quot;，两者最好合起来用。</strong></p>
+<hr>
+<h2 id="二-为什么需要它-走一步看一步-扛不住的三种活">二、为什么需要它？——&quot;走一步看一步&quot;扛不住的三种活<a class="anchor" href="#二-为什么需要它-走一步看一步-扛不住的三种活" aria-label="锚点">#</a></h2>
+<p>一个会 ReAct 的 AI 已经很能干了，那为什么还要先&quot;列计划&quot;？因为有三种活，纯靠&quot;走一步看一步&quot;干起来又乱又险：</p>
+<h3 id="场景一-步骤太多-走着走着就忘了要去哪">场景一：步骤太多，走着走着就忘了要去哪<a class="anchor" href="#场景一-步骤太多-走着走着就忘了要去哪" aria-label="锚点">#</a></h3>
+<p>一个大任务可能要几十步才做得完。纯靠&quot;走一步看一步&quot;，AI 很容易<strong>只盯着眼前这一步</strong>，做到第二十步时早忘了整件事的目标是什么、还剩哪些没做。<strong>先列一份总计划，就等于给自己钉了一张&quot;全程清单&quot;</strong>——每做完一步，抬头看一眼清单，就知道走到哪了、下一步是什么、离终点还有多远。</p>
+<h3 id="场景二-步骤之间有先后-顺序错了就得推倒重来">场景二：步骤之间有先后，顺序错了就得推倒重来<a class="anchor" href="#场景二-步骤之间有先后-顺序错了就得推倒重来" aria-label="锚点">#</a></h3>
+<p>有些步骤必须<strong>先做 A 才能做 B</strong>（先打好地基才能砌墙）。纯靠&quot;走一步看一步&quot;，AI 可能一时兴起先砌了墙，回头才发现地基没打——只能推倒重来。<strong>先规划，就是在动手前先把&quot;谁先谁后&quot;排清楚</strong>，避免做到一半发现顺序全错。</p>
+<h3 id="场景三-活儿太大-没个整体章法就容易顾此失彼">场景三：活儿太大，没个整体章法就容易顾此失彼<a class="anchor" href="#场景三-活儿太大-没个整体章法就容易顾此失彼" aria-label="锚点">#</a></h3>
+<p>大任务往往牵一发动全身。没有全局蓝图，AI 干着干着就容易顾了这头忘了那头。<strong>一份总计划，逼着 AI 在动手前先把整件事&quot;想通一遍&quot;</strong>——哪些环节、各自要产出什么、怎么串起来，全局在胸，落地才不慌。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 摸黑[&quot;😓 走一步看一步（没有蓝图）&quot;]
+    A1[&quot;🤖 只顾眼前这一步&quot;] --&gt; A2[&quot;😵 走偏 / 绕远 / 顺序错 / 忘了目标&quot;]
+  end
+  subgraph 蓝图[&quot;🗺️ 先规划再执行（有蓝图）&quot;]
+    B0[&quot;🧠 先出总计划：&lt;br/&gt;①②③④ 有序排好&quot;]
+    B0 --&gt; B1[&quot;✅ 照计划逐段落地&quot;]
+    B1 --&gt; B2[&quot;🎯 又稳又不绕，&lt;br/&gt;随时知道走到哪&quot;]
+  end</pre>
+<p><strong>所以计划与执行的价值就一句话：把&quot;走一步看一步、容易迷路&quot;的大活，换成&quot;先画好全程蓝图、再照图落地&quot;——又稳、又有序、还随时知道自己走到哪一步。</strong></p>
+<hr>
+<h2 id="三-核心比喻-三张-先谋后动-的画面">三、核心比喻：三张&quot;先谋后动&quot;的画面<a class="anchor" href="#三-核心比喻-三张-先谋后动-的画面" aria-label="锚点">#</a></h2>
+<p>&quot;计划与执行&quot;听着抽象，用三个你熟悉的画面就能焊死它。</p>
+<h3 id="比喻一-盖房子-先出施工图纸-再动工">比喻一：盖房子——先出施工图纸，再动工<a class="anchor" href="#比喻一-盖房子-先出施工图纸-再动工" aria-label="锚点">#</a></h3>
+<p>盖一栋楼，没有哪个靠谱的工头会<strong>抄起砖头就往上垒</strong>。他一定是先请设计师出一份<strong>施工图纸</strong>：先打地基、再立框架、再砌墙、再装水电、最后装修——<strong>一步不能乱、顺序全画死在图上</strong>。图纸就是&quot;总计划&quot;；照着图纸一层层盖，就是&quot;执行&quot;。<strong>先有图，再动工。</strong></p>
+<h3 id="比喻二-将军打仗-先定完整作战计划-再分段推进">比喻二：将军打仗——先定完整作战计划，再分段推进<a class="anchor" href="#比喻二-将军打仗-先定完整作战计划-再分段推进" aria-label="锚点">#</a></h3>
+<p>一位将军不会带着大军<strong>莽头就冲</strong>。他会先摊开地图，定一份<strong>完整的作战计划</strong>：先取哪座关隘、再断哪条粮道、最后合围哪座城——<strong>整场仗分成几段、每段的目标是什么，谋定于动手之前</strong>。定好计划，才分段推进；哪一段遇到意外，再回来改计划。</p>
+<h3 id="比喻三-出远门-先列一张行程单-再照单出发">比喻三：出远门——先列一张行程单，再照单出发<a class="anchor" href="#比喻三-出远门-先列一张行程单-再照单出发" aria-label="锚点">#</a></h3>
+<p>你要去一个陌生城市玩三天。聪明的做法不是&quot;到了再说&quot;，而是先列一张<strong>行程单</strong>：第一天去哪、第二天去哪、几点的车、住哪家店——<strong>把整趟行程先在纸上走一遍</strong>。有了行程单，你到了当地就照单执行，不慌不乱；临时哪个景点关门，再改改行程单接着玩。</p>
+<pre class="mermaid">flowchart TB
+  GOAL[&quot;🎯 一个又大又杂的目标&quot;]
+  GOAL --&gt; PLAN[&quot;🧠 先规划（Plan）&lt;br/&gt;出图纸 / 定作战计划 / 列行程单&lt;br/&gt;把大任务拆成有序的 ①②③④&quot;]
+  PLAN --&gt; S1[&quot;① 第一步&quot;]
+  S1 --&gt; S2[&quot;② 第二步&quot;]
+  S2 --&gt; S3[&quot;③ 第三步&quot;]
+  S3 --&gt; S4[&quot;④ 第四步&quot;]
+  S4 --&gt; DONE[&quot;✅ 一步步执行到位&lt;br/&gt;（Execute）&quot;]</pre>
+<p>三个比喻的<strong>共同内核</strong>：<strong>动手之前，先把整件事从头到尾拆成一份有序的计划；然后才照着计划，一段一段落地。</strong> 图纸、作战计划、行程单，说的都是同一件事——<strong>先谋后动，先蓝图后落地。</strong> 记住这一点，计划与执行是什么就再也不会忘。</p>
+<hr>
+<h2 id="四-拆开看-计划-执行-重新规划-三个动作">四、拆开看：计划、执行、重新规划——三个动作<a class="anchor" href="#四-拆开看-计划-执行-重新规划-三个动作" aria-label="锚点">#</a></h2>
+<p>&quot;计划与执行&quot;其实藏着三个动作，一看就懂：</p>
+<table><thead><tr><th>动作</th><th>大白话</th><th>像什么</th></tr></thead><tbody><tr><td><strong>规划（Plan）</strong></td><td>动手前，把大任务拆成一串有序的小步骤</td><td>出发前画好整条路线图</td></tr><tr><td><strong>执行（Execute）</strong></td><td>照着计划，一步一步落地干</td><td>照着路线图一段段走</td></tr><tr><td><strong>重新规划（Re-plan）</strong></td><td>执行中发现走偏 / 计划不管用了，就改一版新计划再继续</td><td>路被封了，重新规划一条新路线</td></tr></tbody></table>
+<p>前两个动作好懂——<strong>先想清楚要走的整条路，再照着走。</strong> 真正让&quot;计划与执行&quot;变得可靠、而不是死板的，是第三个动作：<strong>重新规划。</strong></p>
+<p>一份计划是&quot;动手前&quot;拍的脑袋，它不可能百分百料中现实。执行到一半，很可能发现：<strong>第三步的前提根本不成立、或者冒出了一个计划里没想到的新情况。</strong> 这时候，一个聪明的做法<strong>不是硬着头皮照旧计划撞南墙</strong>，而是——<strong>停下来，根据眼前的新情况，改一版新计划，再接着执行。</strong></p>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 一句话点睛</div><p>计划与执行最容易被误解的一点：<strong>它不是&quot;计划一旦定死，就必须一条道走到黑&quot;。</strong> 恰恰相反——<strong>好的计划与执行，是&quot;带着一份计划出发，但允许中途改计划&quot;。</strong> 计划给你全局的方向感（不至于走一步看一步地迷路），重新规划给你随机应变的灵活性（不至于死板地撞南墙）。<strong>方向感 + 灵活性，缺一不可。</strong> 只会定计划不会改，是死板；只会临场发挥不会规划，是莽撞。</p></div></aside>
+<hr>
+<h2 id="五-和-react-的区别与结合-蓝图派-vs-摸路派">五、和 ReAct 的区别与结合——蓝图派 vs 摸路派<a class="anchor" href="#五-和-react-的区别与结合-蓝图派-vs-摸路派" aria-label="锚点">#</a></h2>
+<p>新手最容易把&quot;计划与执行&quot;和 <a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">⑲ ReAct</a> 搞混，因为它俩都是&quot;AI 怎么一步步把活干完&quot;。但它们的<strong>出发姿势完全相反</strong>：</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">🤔 猜猜看：先列完整计划再执行，和走一步看一步，各自强在哪？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">✅ Plan-and-Execute（先谋后动）：全局规划，步骤有序、不迷路、省 token，适合步骤多有先后的大活；ReAct（走一步看一步）：更灵活、随时应变、抗意外，适合&quot;边走边看才知道下一步&quot;的活。前者稳，后者活。</div></div></div>
+<table><thead><tr><th></th><th><strong>ReAct（走一步看一步）</strong></th><th><strong>计划与执行（先谋后动）</strong></th></tr></thead><tbody><tr><td>有没有全局蓝图</td><td><strong>没有</strong>。做完一步，才想下一步</td><td><strong>有</strong>。动手前先把全程拆成一份计划</td></tr><tr><td>像什么</td><td>摸黑赶路，走到哪看到哪</td><td>出发前先摊开地图画好路线</td></tr><tr><td>长处</td><td>灵活，随时应变，适合&quot;边走边看才知道下一步&quot;的活</td><td>有序、不迷路，适合&quot;步骤多、有先后&quot;的大活</td></tr><tr><td>短处</td><td>步骤一多容易只顾眼前、绕远、忘了目标</td><td>一开始的计划可能不完全对（所以要留&quot;重新规划&quot;）</td></tr></tbody></table>
+<p>但真正的高手，<strong>从来不是二选一，而是把两者合起来用</strong>：</p>
+<p><strong>先用&quot;计划与执行&quot;定下全局蓝图（大方向不迷路），再在执行每一小步时用&quot;ReAct&quot;贴地想—做—看（每一步都落到实处），一旦某步的现实和计划对不上，就用<a href="./[CONCEPT-22]%20什么是反思-Reflection.html">反思</a>看清问题、触发&quot;重新规划&quot;改一版计划。</strong></p>
+<pre class="mermaid">flowchart TB
+  PLAN[&quot;🗺️ 计划与执行：先出总计划 ①②③④&lt;br/&gt;（管全局，不迷路）&quot;]
+  PLAN --&gt; STEP[&quot;🔧 执行某一步时，用 ReAct&lt;br/&gt;想—做—看，把这一步落到实处&quot;]
+  STEP --&gt; CHECK{&quot;这一步的结果&lt;br/&gt;和计划对得上吗？&quot;}
+  CHECK --&gt;|&quot;对得上&quot;| NEXT[&quot;➡️ 照计划走下一步&quot;]
+  CHECK --&gt;|&quot;对不上&quot;| REPLAN[&quot;🔄 反思 → 重新规划&lt;br/&gt;改一版新计划再继续&quot;]
+  REPLAN --&gt; PLAN
+  NEXT --&gt; PLAN</pre>
+<p><strong>一句话记住它俩的关系：计划与执行管&quot;全局怎么排&quot;（抬头看路），ReAct 管&quot;每一步怎么走&quot;（低头走路）——抬头看路才不迷路，低头走路才走得实，两者合一，才是既有章法又能应变的高手。</strong></p>
+<hr>
+<h2 id="六-感觉一下-一次-先规划再执行-的全过程">六、感觉一下：一次&quot;先规划再执行&quot;的全过程<a class="anchor" href="#六-感觉一下-一次-先规划再执行-的全过程" aria-label="锚点">#</a></h2>
+<p><strong>⚠️ 郑重提醒：下面这段你完全不用会写。</strong> 放它在这，只是让你<strong>亲眼看一眼</strong>——一个 AI 接到&quot;帮我把一篇乱糟糟的旧文档整理成一份规范报告&quot;这种大活时，是怎么&quot;先谋后动、分段克敌&quot;的。请只体会那个<strong>先列计划 → 逐步执行 → 中途改计划</strong>的节奏：</p>
+<pre><code class="language-text">🙋 你的目标：把这份乱糟糟的旧文档，整理成一份规范、好读的报告
+
+🧠 AI（先规划，不急着动手）：这活儿有好几摊，我先列一份总计划——
+   ① 通读全文，搞清楚它到底讲了几件事
+   ② 把内容按主题分成几大块
+   ③ 每一块重写成通顺的段落
+   ④ 加上标题和目录
+   ⑤ 最后统一检查一遍格式
+
+📋 计划列好了，开始照单执行：
+   ✅ ①通读全文 …… 完成：发现它其实讲了三件事
+   ✅ ②按主题分块 …… 完成：分成了&quot;背景 / 现状 / 建议&quot;三块
+   ⚠️ ③重写段落 …… 干到一半发现：原文&quot;现状&quot;那块引用的数据自相矛盾！
+                     照原计划直接重写，等于把错的数据也抄进去了。
+
+🔄 AI（触发重新规划）：计划里没料到会有&quot;数据打架&quot;。停一下，改计划——
+   在&quot;③重写&quot;前，插一步「③.5 核对并标注可疑数据」，再接着往下走。
+
+📋 照新计划继续：
+   ✅ ③.5 核对数据 …… 完成：标出两处矛盾，交给你确认
+   ✅ ③ 重写段落 …… 完成
+   ✅ ④ 加标题目录 …… 完成
+   ✅ ⑤ 统一检查格式 …… 完成
+✅ 最终交付：一份分「背景/现状/建议」、标题目录齐全、
+            可疑数据已标注的规范报告。</code></pre>
+<p>看到那个&quot;先列出①②③④⑤ → 照单一步步做 → 中途发现意外就插一步改计划 → 再照新计划走完&quot;了吗？<strong>这就是计划与执行的真身。</strong> AI 没有莽头就写，而是<strong>先把整件事拆成有序的一串小步，照着落地，遇到计划外的情况就改计划、再继续</strong>——始终心里有一张&quot;全程蓝图&quot;。</p>
+<p><strong>整个过程里，那份&quot;总计划&quot;就像一张地图：它让 AI 无论走到第几步，都清楚自己在哪、下一步去哪、终点是什么。</strong> 这就是为什么&quot;先谋后动&quot;能稳稳啃下&quot;走一步看一步会迷路&quot;的大活。</p>
+<p>把这场&quot;先列计划 → 照单执行 → 中途改计划&quot;演成一幕小短剧——重点看它撞到意外时不是硬着头皮往下抄，而是停下来改计划：</p>
+<div class="scene"><div class="scene-title">先谋后动：计划赶不上变化，那就改计划</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>把这份乱糟糟的旧文档，整理成一份规范好读的报告。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧠</span><div class="scene-bubble"><b class="scene-who">规划 AI</b>这活儿好几摊，我先不动手，列一份总计划——①通读全文 ②按主题分块 ③每块重写 ④加标题目录 ⑤统一查格式。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">📋</span><div class="scene-bubble"><b class="scene-who">旁白</b>蓝图先画好，再照单一步步落地。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🖐️</span><div class="scene-bubble"><b class="scene-who">执行 AI</b>①通读全文……✅ 完成，发现它其实讲了三件事。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🖐️</span><div class="scene-bubble"><b class="scene-who">执行 AI</b>②按主题分块……✅ 完成，分成「背景 / 现状 / 建议」三块。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🖐️</span><div class="scene-bubble"><b class="scene-who">执行 AI</b>③重写段落……干到一半发现不对：原文「现状」那块引用的数据自相矛盾！</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">😱</span><div class="scene-bubble"><b class="scene-who">执行 AI</b>要是照原计划直接重写，等于把错的数据也一起抄进去了。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🔄</span><div class="scene-bubble"><b class="scene-who">规划 AI</b>计划里没料到「数据打架」。停一下——在③前面插一步 <span class="popover" tabindex="0"><span class="popover-anchor">③.5 核对并标注可疑数据</span><span class="popover-tip" role="tooltip">计划与执行的灵魂不在&quot;列了计划&quot;，而在&quot;遇到计划外情况敢停下来改计划&quot;——这正是它比死板脚本强的地方</span></span>，再接着往下走。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🖐️</span><div class="scene-bubble"><b class="scene-who">执行 AI</b>③.5 核对数据✅ → ③ 重写✅ → ④ 标题目录✅ → ⑤ 查格式✅。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🎉</span><div class="scene-bubble"><b class="scene-who">最终交付</b>一份分「背景/现状/建议」、标题目录齐全、可疑数据已标注的规范报告。</div></div><div class="scene-caption reveal">始终心里有一张全程蓝图，又肯在撞到意外时改图——这就是&quot;先谋后动&quot;能啃下大活的真身。</div></div>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请务必逐条读完。这些误解会让你对&quot;计划与执行&quot;的理解跑偏。</p>
+<h3 id="误区-1-以为-计划一旦定了-就必须一条道走到黑">误区 1：以为&quot;计划一旦定了，就必须一条道走到黑&quot;<a class="anchor" href="#误区-1-以为-计划一旦定了-就必须一条道走到黑" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：计划与执行嘛，就是先定死一份计划，然后不管发生什么都照着做完。</li><li>✅ <strong>正确理解</strong>：<strong>恰恰相反，好的计划与执行一定留着&quot;重新规划&quot;这一手。</strong> 计划是动手前拍的脑袋，不可能百分百料中现实。执行中一旦发现走偏、或冒出计划外的情况，就该停下来改一版新计划再继续。<strong>方向感（有计划）+ 灵活性（能改计划），缺一不可。</strong> 死守旧计划撞南墙，恰恰是不会用它。</li></ul>
+<h3 id="误区-2-把-计划与执行-和-⑲-react-concept-19-20什么是react-智能体推理模式-md-走一步看一步-搞混">误区 2：把&quot;计划与执行&quot;和&quot;<a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">⑲ ReAct</a> 走一步看一步&quot;搞混<a class="anchor" href="#误区-2-把-计划与执行-和-⑲-react-concept-19-20什么是react-智能体推理模式-md-走一步看一步-搞混" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：这俩不都是&quot;AI 一步步干活&quot;吗？没啥区别吧。</li><li>✅ <strong>正确理解</strong>：<strong>出发姿势相反。</strong> ReAct 是<strong>没有全局蓝图</strong>、做完一步才想下一步（摸黑赶路）；计划与执行是<strong>动手前先把全程拆成一份计划</strong>（先画好路线图）。前者胜在灵活应变，后者胜在有序不迷路。而且它俩<strong>最好合起来用</strong>：先规划定全局，执行每一步时用 ReAct 贴地想—做—看。</li></ul>
+<h3 id="误区-3-以为-计划拆得越细-步骤越多-就一定越好">误区 3：以为&quot;计划拆得越细、步骤越多，就一定越好&quot;<a class="anchor" href="#误区-3-以为-计划拆得越细-步骤越多-就一定越好" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：那我把计划拆成一百步、事无巨细，是不是最稳？</li><li>✅ <strong>正确理解</strong>：<strong>不是。</strong> 计划拆得过细，一来 AI 在&quot;列计划&quot;上就耗掉大量精力，二来现实稍有变化，冗长的计划就大面积作废、得反复重排，反而更累更乱。<strong>好的计划是&quot;拆到刚好能指导下一段行动&quot;的粗细</strong>——大方向清楚、关键先后排对即可，细节留给执行时的 ReAct 去临场处理。</li></ul>
+<h3 id="误区-4-以为-重新规划-之前的计划全白费了">误区 4：以为&quot;重新规划 = 之前的计划全白费了&quot;<a class="anchor" href="#误区-4-以为-重新规划-之前的计划全白费了" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：中途要改计划，那不等于前面的规划全做了无用功？</li><li>✅ <strong>正确理解</strong>：<strong>不等于。</strong> 重新规划通常只是<strong>在原计划上打补丁</strong>——插一步、调个顺序、换一段做法，而不是把整份计划推倒重来。而且正因为&quot;先有过一份计划&quot;，AI 才能一眼看出&quot;现实和计划哪里对不上&quot;、精准地改哪一处。<strong>没有原计划做参照，你连&quot;哪里偏了&quot;都发现不了。</strong></li></ul>
+<h3 id="误区-5-以为-计划与执行是很高级-跟我没关系-的东西">误区 5：以为&quot;计划与执行是很高级、跟我没关系&quot;的东西<a class="anchor" href="#误区-5-以为-计划与执行是很高级-跟我没关系-的东西" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：什么规划、重规划，听着好专业，那是搞算法的事，跟我学 Khy-OS 没关系。</li><li>✅ <strong>正确理解</strong>：<strong>它离你近得很。</strong> 你在 Khy-OS 里交给 AI 一个多步骤的大活时，它常常就是&quot;先列一份 plan、每步带一个 verify、一步步验着往下走&quot;——这正是计划与执行在你眼皮底下发生。理解它，你才看得懂&quot;为什么它面对大任务不慌，能一步步稳稳做到位&quot;。<strong>它不是空中楼阁，是你手边工具每天在用的真本事。</strong></li></ul>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 下面关于&quot;计划与执行（Plan-and-Execute）&quot;的说法，哪些是对的？（多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">它是&quot;动手前先把大任务拆成一串有序的小步骤，再照着一步步执行&quot;</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">执行中若发现走偏或冒出计划外的情况，可以&quot;重新规划&quot;、改一版新计划再继续</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">计划一旦定了，不管发生什么都必须一条道走到黑</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">它和 ReAct（走一步看一步）是完全一样的东西</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">E</span><span class="quiz-text">它常和 ReAct 结合：先规划定全局，执行每一步时用 ReAct 想—做—看</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 对。像盖房先出施工图纸、将军先定作战计划、出门先列行程单——先有蓝图，再落地。<br>对。计划是动手前拍的脑袋，留着&quot;重新规划&quot;这一手，才既有方向感又能随机应变。<br>错。死守旧计划撞南墙恰恰是不会用它。好的计划与执行一定允许中途改计划。<br>错。ReAct 没有全局蓝图、走一步看一步；计划与执行动手前先出全程蓝图。两者出发姿势相反，最好合起来用。<br>对。计划与执行管&quot;全局怎么排&quot;，ReAct 管&quot;每一步怎么走&quot;，抬头看路+低头走路，合一才是高手。</div></div>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如在脑子里走一遍。下面的思想实验不用写代码，只用想。</p>
+<h3 id="实验-你当一次-总规划师-办一场搬家">实验：你当一次&quot;总规划师&quot;，办一场搬家<a class="anchor" href="#实验-你当一次-总规划师-办一场搬家" aria-label="锚点">#</a></h3>
+<p>任务：&quot;这个周末，把一整个家从旧房搬到新房。&quot; 这活儿又大又杂，闷头乱搬保准手忙脚乱、丢三落四。试试先当&quot;总规划师&quot;，把它<strong>先谋后动</strong>地排出来：</p>
+<pre class="mermaid">flowchart TB
+  GOAL[&quot;🎯 目标：周末把家搬到新房&quot;]
+  GOAL --&gt; P[&quot;🧠 先规划：拆成有序的五步&quot;]
+  P --&gt; S1[&quot;① 打包（书、衣服、厨具分箱贴标签）&quot;]
+  S1 --&gt; S2[&quot;② 约搬家车（定好时间）&quot;]
+  S2 --&gt; S3[&quot;③ 装车运输&quot;]
+  S3 --&gt; S4[&quot;④ 到新房卸货，按房间归位&quot;]
+  S4 --&gt; S5[&quot;⑤ 拆箱、整理、检查有没有丢件&quot;]
+  S5 --&gt; DONE[&quot;🏠 搬家完成&quot;]</pre>
+<p>走完这一遍，请你回答自己三个问题：</p>
+<ol><li>你会不会不打包、不约车，抄起东西就往外搬？——<strong>不会</strong>。那样多半是搬了下楼才发现车没来、东西没装箱散一地。<strong>先规划、排好①②③④⑤ 的顺序，才不至于乱套。</strong></li><li>&quot;约搬家车&quot;和&quot;打包&quot;能不能不分先后？——<strong>&quot;装车&quot;必须等&quot;打包完+车到了&quot;才能干</strong>，这就是&quot;步骤有先后&quot;。规划的价值，正是把这种先后排清楚。</li><li>假如打包到一半，发现新房那间小卧室根本放不下大衣柜——<strong>这时你会怎么办？</strong> ——你会<strong>停下来改计划</strong>：要么把大衣柜标成&quot;送人/暂存&quot;，要么调整归位方案。<strong>这就是&quot;重新规划&quot;</strong>——计划外的情况冒出来了，改一版再继续，而不是硬把衣柜塞进去。</li></ol>
+<p><strong>关键体会</strong>：你刚刚亲手当了一回&quot;计划与执行&quot;的规划师。你会发现，它一点都不神秘——<strong>它就是你办大事时天然会用的&quot;先想清楚整件事、再照着一步步做、遇到意外就调整&quot;的智慧</strong>。把这份人人都懂的智慧交给 AI，就是&quot;计划与执行&quot;。</p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>计划与执行不是孤立的——它和前面好几个概念手拉着手。</p>
+<pre class="mermaid">flowchart TB
+  PAE[&quot;🗺️ 计划与执行（先谋后动的全局章法）&quot;]
+  REACT[&quot;⑲ ReAct&lt;br/&gt;（执行每一步时的想—做—看）&quot;]
+  REFLECT[&quot;㉒ 反思&lt;br/&gt;（发现走偏 → 触发重新规划）&quot;]
+  ORCH[&quot;⑳ 智能体编排&lt;br/&gt;（把计划里的步骤派给一群专才）&quot;]
+  TL[&quot;③ Tool Loop&lt;br/&gt;（每一步落地时反复用工具）&quot;]
+  AGENT[&quot;① Agent&lt;br/&gt;（会做计划与执行的，本身是个 Agent）&quot;]
+  PAE --&gt;|&quot;执行每步时用&quot;| REACT
+  PAE --&gt;|&quot;靠它发现偏差、触发&quot;| REFLECT
+  PAE --&gt;|&quot;步骤多时可交给&quot;| ORCH
+  PAE --&gt;|&quot;每步落地靠&quot;| TL
+  AGENT --&gt;|&quot;具备&quot;| PAE</pre>
+<table><thead><tr><th>概念</th><th>一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-19]%20什么是ReAct-智能体推理模式.html">⑲ ReAct</a></td><td>计划管&quot;全局怎么排&quot;，ReAct 管&quot;<strong>每一步怎么走</strong>&quot;——抬头看路 + 低头走路</td><td>有了路线图，还得一步一步真的走</td></tr><tr><td><a href="./[CONCEPT-22]%20什么是反思-Reflection.html">㉒ 反思</a></td><td>靠<strong>反思</strong>发现&quot;现实和计划对不上&quot;，从而触发<strong>重新规划</strong></td><td>走错了先反省，才知道要改路线</td></tr><tr><td><a href="./[CONCEPT-20]%20什么是智能体编排-Orchestration.html">⑳ 智能体编排</a></td><td>计划拆出的步骤，可以<strong>派给一群子智能体</strong>分头执行</td><td>施工图画好，各工种照图分头开工</td></tr><tr><td><a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">③ Tool Loop</a></td><td>计划里的<strong>每一步落地时，往往在跑一个工具循环</strong></td><td>照图纸砌墙那一步，本身要反复搬砖抹泥</td></tr><tr><td><a href="./[CONCEPT-01]%20什么是Agent-智能体.html">① Agent</a></td><td>会&quot;先规划再执行&quot;的，本身就是一个 <strong>Agent</strong> 的能力</td><td>一个靠谱的干活人，天生会先谋后动</td></tr></tbody></table>
+<p>一句话串起来：<strong>计划与执行是站在&quot;全局章法&quot;这一层——它先把大任务拆成一份有序的计划，把每一步交给 ReAct 想—做—看（步骤多时还能派给编排里的一群子智能体），靠反思发现偏差、触发重新规划，让一个 Agent 既有蓝图、又能落地、还能应变。</strong></p>
+<hr>
+<h2 id="十-和-khy-os-的关系">十、和 Khy-OS 的关系<a class="anchor" href="#十-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>这一节和你手上的项目关系很紧：</p>
+<p><strong>Khy-OS 面对多步骤的大任务时，走的正是&quot;先列 plan、每步带 verify、一步步验着往前&quot;的计划与执行。</strong></p>
+<p>当你在 Khy-OS 里交给它一个又大又杂的活——比如&quot;给这个模块加一个新功能，并保证不弄坏现有的东西&quot;——它并不会莽头就改代码。作为一个成熟的 <a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">harness</a>，它会：</p>
+<ul><li><strong>先想清楚要改什么、为什么、影响面</strong>（这就是&quot;先规划&quot;，出一份总计划）；</li><li>把大目标<strong>拆成一步步可验证的小任务</strong>（有序的 ①②③④）；</li><li><strong>每做完一步，就跑一个 verify</strong> 验证这一步真的做对了，才走下一步；</li><li>一旦某一步的验证亮红灯、或冒出计划外的情况，就<strong>停下来、重新规划</strong>、改一版再继续。</li></ul>
+<p>这正是本文讲的计划与执行。Khy-OS 章程里那句&quot;<strong>多步任务先列 plan、每步带 verify</strong>&quot;，几乎就是&quot;计划与执行&quot;的教科书式定义——<strong>先有全局蓝图，再一段段落地，每段都验过才算数，走偏了就改计划。</strong></p>
+<blockquote><p>💡 换个角度说：<strong>学会&quot;计划与执行&quot;，你就摸到了 AI 干大活为什么&quot;稳&quot;的秘密。</strong> 一个只会走一步看一步的 AI，做大项目时容易迷路、返工；而一个懂得&quot;先谋后动、分段推进、随机改图&quot;的 AI，面对再大的活也能有条不紊。你从入行第一站就理解它，日后无论是用 AI 办大事，还是看懂那些&quot;任务规划&quot;的新闻，都不会觉得高深莫测——因为你早就知道：<strong>那不过是先画一张地图，再照着地图一段一段稳稳地走。</strong></p></blockquote>
+<blockquote><p>⚠️ 诚实说一句边界：计划与执行具体怎么实现（计划怎么表示、什么时候触发重新规划、和 ReAct 怎么交织），属于设计与实现层面，各家做法不同、也在快速演进。Khy-OS 的具体机制你可以在 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 与项目章程里深入了解。本文只讲&quot;计划与执行是什么、为什么需要它&quot;这一层概念地图。</p></blockquote>
+<hr>
+<h2 id="十一-小结-下一步">十一、小结 + 下一步<a class="anchor" href="#十一-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>计划与执行 = 面对大任务，AI 先制定一份&quot;总计划&quot;（把大任务拆成一串有序的小步骤），再照着计划一步步执行；途中发现走偏就&quot;重新规划&quot;</strong>——先谋后动，先蓝图后落地。</li><li><strong>为什么需要它</strong>：有三种活纯靠&quot;走一步看一步&quot;扛不住——步骤太多易迷路、步骤有先后易返工、活太大易顾此失彼；先出全程蓝图，落地才又稳又有序。</li><li><strong>核心比喻</strong>：<strong>盖房先出施工图纸</strong>、<strong>将军先定作战计划</strong>、<strong>出门先列行程单</strong>——都是&quot;动手前先把整件事排成有序计划，再照单落地&quot;。</li><li><strong>三个动作</strong>：规划（拆成有序小步）、执行（照计划落地）、重新规划（走偏就改一版）——<strong>方向感 + 灵活性，缺一不可。</strong></li><li><strong>和 ReAct 的区别与结合</strong>：ReAct 没蓝图、走一步看一步（低头走路）；计划与执行先出全程蓝图（抬头看路）。两者最好合用——先规划定全局，执行每步用 ReAct。</li><li><strong>五大误区</strong>：不是定死一条道走到黑（要留重新规划）、和 ReAct 出发姿势相反、不是拆得越细越好、重新规划≠前功尽弃、它离你很近不高深。</li><li><strong>和 Khy-OS 的关系</strong>：面对多步大任务，Khy-OS&quot;先列 plan、每步带 verify、走偏就重规划&quot;，正是计划与执行的教科书式实践。</li></ul>
+<p>🎉 <strong>恭喜，你摸到了 AI 干大活&quot;稳如老将&quot;的秘诀！</strong> 从&quot;走一步看一步&quot;，到&quot;先谋后动、分段克敌、随机改图&quot;——你现在既懂贴地的每一步，也懂全局的一张图。这套从概念到章法的完整地图，已经在你脑子里连成一片了。</p>
+<p>👈 回 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a> 看看还有哪些能温故知新。<br>👈 上一篇 <a href="./[CONCEPT-22]%20什么是反思-Reflection.html">㉒ 什么是反思</a>——回顾 AI 如何回头挑自己的错、越做越好。<br>👉 下一篇 <a href="./[CONCEPT-24]%20什么是思维树-TreeOfThoughts.html">㉔ 什么是思维树</a>——不止一条思路，像树一样分叉多条、择优而行。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-22] 什么是反思-Reflection.html"><div class="dir">← 上一篇</div><div class="ttl">㉒ 什么是反思（Reflection / Reflexion）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-24] 什么是思维树-TreeOfThoughts.html"><div class="dir">下一篇 →</div><div class="ttl">㉔ 什么是思维树（Tree of Thoughts, ToT）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-23] 什么是计划与执行-PlanAndExecute.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

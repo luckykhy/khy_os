@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trae 适配器官方登录态扫描修复报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>Trae 适配器官方登录态扫描修复报告</div>
+      <header class="hero reveal"><h1>Trae 适配器官方登录态扫描修复报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#trae-适配器官方登录态扫描修复报告">Trae 适配器官方登录态扫描修复报告</a></li><li class="lvl-2"><a href="#一-问题背景">一、问题背景</a></li><li class="lvl-2"><a href="#二-windows-端逆向调查关键发现">二、Windows 端逆向调查关键发现</a></li><li class="lvl-3"><a href="#2-1-加密方案">2.1 加密方案</a></li><li class="lvl-3"><a href="#2-2-端点与协议">2.2 端点与协议</a></li><li class="lvl-3"><a href="#2-3-state-vscdb">2.3 state.vscdb</a></li><li class="lvl-2"><a href="#三-实施改动">三、实施改动</a></li><li class="lvl-3"><a href="#3-1-traeofficialartifacts-js-5-处">3.1 `traeOfficialArtifacts.js`（5 处）</a></li><li class="lvl-3"><a href="#3-2-traeadapter-js-6-处">3.2 `traeAdapter.js`（6 处）</a></li><li class="lvl-2"><a href="#四-状态模型-修复后">四、状态模型（修复后）</a></li><li class="lvl-2"><a href="#五-凭据优先级-修复后">五、凭据优先级（修复后）</a></li><li class="lvl-2"><a href="#六-已知限制">六、已知限制</a></li><li class="lvl-2"><a href="#七-验证">七、验证</a></li><li class="lvl-3"><a href="#语法检查">语法检查</a></li><li class="lvl-3"><a href="#功能验证">功能验证</a></li><li class="lvl-3"><a href="#验证结果">验证结果</a></li><li class="lvl-2"><a href="#八-待第三轮调查后实施">八、待第三轮调查后实施</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-014 | 阶段: 实现 | 原路径: docs/指南/trae-适配器-官方扫描修复-2026-05-25.md --&gt;</p>
+<h1 id="trae-适配器官方登录态扫描修复报告">Trae 适配器官方登录态扫描修复报告<a class="anchor" href="#trae-适配器官方登录态扫描修复报告" aria-label="锚点">#</a></h1>
+<blockquote><p>日期: 2026-05-25<br>涉及文件: <code>traeAdapter.js</code> · <code>traeOfficialArtifacts.js</code><br>状态: 已实施，语法验证通过，功能验证通过</p></blockquote>
+<hr>
+<h2 id="一-问题背景">一、问题背景<a class="anchor" href="#一-问题背景" aria-label="锚点">#</a></h2>
+<p>Trae adapter 此前存在三个核心缺陷：</p>
+<ol><li><strong>无 Nirvana 即盲区</strong> — 没有 Nirvana 换号软件时，<code>getStatus()</code> 报告&quot;未检测到 Trae token&quot;，即使用户已在官方 Trae IDE 中登录</li><li><strong>加密 blob 误判</strong> — <code>iCubeAuthInfo://icube.cloudide</code> 的 base64 解码结果被 fallback 到通用 <code>base64-binary</code>，无法区分 Trae 自定义加密、DPAPI、Chromium v10/v11</li><li><strong>端点盲选</strong> — <code>resolveTraeApiBases()</code> 和 <code>getRelayProfile()</code> 会将 <code>api.trae.ai/v1</code> 等非 OpenAI 兼容端点盲加到候选列表，导致 <code>listModels()</code> / <code>generate()</code> 打到 404 或 HTML 页面</li></ol>
+<hr>
+<h2 id="二-windows-端逆向调查关键发现">二、Windows 端逆向调查关键发现<a class="anchor" href="#二-windows-端逆向调查关键发现" aria-label="锚点">#</a></h2>
+<p>通过两轮 Windows 实机调查（storage.json/state.vscdb 读取 + 安装包 main.js 逆向），确认以下事实：</p>
+<h3 id="2-1-加密方案">2.1 加密方案<a class="anchor" href="#2-1-加密方案" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项目</th><th>结论</th></tr></thead><tbody><tr><td><code>iCubeAuthInfo://icube.cloudide</code></td><td>base64 → 二进制，前缀 <code>74 63 05 10 00 00</code>（&quot;tc&quot; + 自定义字节）</td></tr><tr><td><code>iCubeAuthInfo://usertag</code></td><td>同上，相同前缀</td></tr><tr><td>加密实施者</td><td>Electron 主进程 <code>EncryptionMainService</code>，底层调用 <code>safeStorage.encryptString()</code></td></tr><tr><td>解密后内容</td><td>JSON 字符串 → <code>{ token, refreshToken, expiredAt, userId, host, userRegion, account: { username, email, ... } }</code></td></tr><tr><td>外部可解密</td><td><strong>否</strong> — safeStorage 密钥绑定 Electron 主进程，外部进程无法调用</td></tr></tbody></table>
+<h3 id="2-2-端点与协议">2.2 端点与协议<a class="anchor" href="#2-2-端点与协议" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项目</th><th>结论</th></tr></thead><tbody><tr><td><code>iCubeServerData://icube.cloudide</code></td><td>明文 JSON，含 <code>entitlementInfo</code>/<code>commercialActivityInfo</code>，<strong>无</strong> <code>apiHost</code>/<code>endpoint</code> 字段</td></tr><tr><td>真实 API 主机（日志）</td><td><code>grow-normal.trae.ai</code>、<code>core-normal.trae.ai</code></td></tr><tr><td>API 鉴权方式</td><td><code>x-cloudide-token: &lt;token&gt;</code>（非 Bearer、非 Cookie）</td></tr><tr><td><code>GetThirdPartyToken</code></td><td>返回飞书/Lark token，非 OpenAI 兼容，无用</td></tr><tr><td><code>get_detail_param</code></td><td>配置详情接口，非模型列表</td></tr><tr><td>本地监听端口</td><td>无常驻端口，仅 SSO 登录时临时随机端口</td></tr></tbody></table>
+<h3 id="2-3-state-vscdb">2.3 state.vscdb<a class="anchor" href="#2-3-state-vscdb" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项目</th><th>结论</th></tr></thead><tbody><tr><td>额外明文 token</td><td>无</td></tr><tr><td><code>secret://</code> entry</td><td>存在 <code>secret://{&quot;extensionId&quot;:&quot;trae.ai-code-completion&quot;,&quot;key&quot;:&quot;isActivated&quot;}</code>，值为 <code>v10</code> Chromium 加密</td></tr><tr><td>可用 auth 线索</td><td>无 — 仅 UI 状态和扩展激活标记</td></tr></tbody></table>
+<hr>
+<h2 id="三-实施改动">三、实施改动<a class="anchor" href="#三-实施改动" aria-label="锚点">#</a></h2>
+<h3 id="3-1-traeofficialartifacts-js-5-处">3.1 <code>traeOfficialArtifacts.js</code>（5 处）<a class="anchor" href="#3-1-traeofficialartifacts-js-5-处" aria-label="锚点">#</a></h3>
+<h4 id="3-1-1-trae-自定义加密前缀识别">3.1.1 Trae 自定义加密前缀识别<a class="anchor" href="#3-1-1-trae-自定义加密前缀识别" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>decodeTraeOfficialAuthBlob()</code></p>
+<p>新增 <code>74 63 05 10 00 00</code> 六字节前缀匹配，优先于 DPAPI / v10/v11 判断：</p>
+<pre><code>schemeHint: 'trae-custom-encrypted'
+encryptionService: 'electron-safeStorage'</code></pre>
+<p>返回结构新增 <code>encryptionService</code> 字段（<code>'electron-safeStorage'</code> | <code>null</code>）。</p>
+<h4 id="3-1-2-vscdb-buffer-安全序列化">3.1.2 vscdb Buffer 安全序列化<a class="anchor" href="#3-1-2-vscdb-buffer-安全序列化" aria-label="锚点">#</a></h4>
+<p><strong>新增函数</strong>: <code>_safeStringify(val)</code></p>
+<p>vscdb 中 <code>value</code> 列可能是 <code>Buffer</code>（v10/v11 加密或 Trae 自定义加密），不能直接 <code>String()</code> 转换。新函数处理三种情况：</p>
+<ul><li><code>v10</code>/<code>v11</code> 前缀 → <code>&lt;chromium-encrypted:v10:base64...&gt;</code></li><li><code>tc\x05\x10</code> 前缀 → <code>&lt;trae-encrypted:base64...&gt;</code></li><li>其他 → UTF-8 字符串</li></ul>
+<h4 id="3-1-3-secret-entry-识别">3.1.3 <code>secret://</code> entry 识别<a class="anchor" href="#3-1-3-secret-entry-识别" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>extractTraeOfficialArtifactsFromDb()</code></p>
+<p>新增 <code>SECRET_KEY_PATTERN = /^secret:\/\//</code> 匹配，识别 Electron SecretStorage entry。匹配到的 entry 写入 <code>result.secretEntries[]</code>，标记 <code>encrypted: true/false</code>。</p>
+<h4 id="3-1-4-sql-查询扩展">3.1.4 SQL 查询扩展<a class="anchor" href="#3-1-4-sql-查询扩展" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>_readRelevantRowsFromVscdb()</code></p>
+<p>LIKE 模式从 7 条增加到 8 条，新增 <code>'secret://%trae%'</code>。</p>
+<h4 id="3-1-5-serverdata-url-深层扫描">3.1.5 ServerData URL 深层扫描<a class="anchor" href="#3-1-5-serverdata-url-深层扫描" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>_tryParseServerData()</code> + <strong>新增</strong> <code>_extractUrlHintsFromObject()</code></p>
+<p><code>iCubeServerData</code> 实际不含 <code>apiHost</code>/<code>endpoint</code> 顶层字段。新增递归扫描（3 层深度限制），提取嵌套对象中形如 <code>https://*.trae.ai</code> 或 <code>https://*.trae.cn</code> 的 URL 到 <code>endpointHints</code>。</p>
+<h3 id="3-2-traeadapter-js-6-处">3.2 <code>traeAdapter.js</code>（6 处）<a class="anchor" href="#3-2-traeadapter-js-6-处" aria-label="锚点">#</a></h3>
+<h4 id="3-2-1-原生端点列表扩展">3.2.1 原生端点列表扩展<a class="anchor" href="#3-2-1-原生端点列表扩展" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>resolveTraeApiBases()</code></p>
+<p><code>TRAE_NATIVE_HOSTS</code> 数组新增 <code>grow-normal.trae.ai</code>、<code>core-normal.trae.ai</code>，这些主机使用 Trae 原生协议（<code>x-cloudide-token</code> + 非 OpenAI 格式），不进入 OpenAI 兼容端点候选列表。</p>
+<h4 id="3-2-2-cw-端点候选扩展">3.2.2 CW 端点候选扩展<a class="anchor" href="#3-2-2-cw-端点候选扩展" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>_resolveTraeCWEndpoints()</code></p>
+<p>CN 用户和国际用户的候选列表均增加 <code>grow-normal.trae.ai</code>、<code>core-normal.trae.ai</code>，排在 <code>adaptive-api</code> 之后。</p>
+<h4 id="3-2-3-nativeapi-多端点级联">3.2.3 NativeAPI 多端点级联<a class="anchor" href="#3-2-3-nativeapi-多端点级联" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>fetchModelsFromNativeApi()</code></p>
+<p>改为遍历 <code>_resolveTraeCWEndpoints()</code> 返回的前 4 个端点（而非只试单个 <code>_resolveTraeCWEndpoint()</code>），并增加 HTML 响应检测 + 探活缓存写入。</p>
+<h4 id="3-2-4-nativeapi-移除-cookie-前置条件">3.2.4 NativeAPI 移除 Cookie 前置条件<a class="anchor" href="#3-2-4-nativeapi-移除-cookie-前置条件" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>listModels()</code></p>
+<p>原来仅在 <code>_token.sessionCookies &amp;&amp; !isCookieExpired()</code> 时才尝试 <code>fetchModelsFromNativeApi</code>。现在改为有 <code>accessToken</code> 即可尝试（Cookie 增强成功率但非必须）。</p>
+<h4 id="3-2-5-relay-fallback-修复">3.2.5 Relay fallback 修复<a class="anchor" href="#3-2-5-relay-fallback-修复" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>getRelayProfile()</code></p>
+<p>移除 <code>|| 'https://api.trae.ai/v1'</code> 盲 fallback。无可用 OpenAI 兼容端点时抛出明确错误。</p>
+<h4 id="3-2-6-加密态状态描述增强">3.2.6 加密态状态描述增强<a class="anchor" href="#3-2-6-加密态状态描述增强" aria-label="锚点">#</a></h4>
+<p><strong>函数</strong>: <code>getStatus()</code></p>
+<p><code>statusLevel='encrypted'</code> 时，从 <code>authBlobAnalysis.schemeHint</code> 推导中文描述：</p>
+<table><thead><tr><th>schemeHint</th><th>显示</th></tr></thead><tbody><tr><td><code>trae-custom-encrypted</code></td><td>Electron safeStorage 加密</td></tr><tr><td><code>dpapi</code></td><td>Windows DPAPI 加密</td></tr><tr><td><code>chromium-safe-storage-v10</code></td><td>Chromium v10 加密</td></tr><tr><td>其他</td><td>加密格式未知</td></tr></tbody></table>
+<hr>
+<h2 id="四-状态模型-修复后">四、状态模型（修复后）<a class="anchor" href="#四-状态模型-修复后" aria-label="锚点">#</a></h2>
+<p><code>getStatus()</code> 现在返回分层结构化状态：</p>
+<pre><code>┌─────────────────────┬────────────────────────────────────────────────────────┐
+│ 字段                 │ 说明                                                   │
+├─────────────────────┼────────────────────────────────────────────────────────┤
+│ installDetected     │ 磁盘上有 Trae/Nirvana 目录                             │
+│ officialArtifacts   │ 找到 iCube 登录痕迹（即使加密）                          │
+│   .detected         │ boolean                                                │
+│   .sources          │ 发现 artifact 的路径列表                                │
+│   .authBlobPresent  │ iCubeAuthInfo://icube.cloudide 存在                    │
+│   .userTagBlobPresent│ iCubeAuthInfo://usertag 存在                          │
+│   .serverDataPresent│ iCubeServerData://icube.cloudide 存在                  │
+│   .credentialMode   │ 'none' | 'encrypted' | 'plaintext'                    │
+│   .authBlobAnalysis │ 加密方案分析（schemeHint / encryptionService）           │
+│ credentialMode      │ 全局凭据模式                                            │
+│ sessionVerified     │ token 成功调用过 API                                    │
+│ available           │ 派生：sessionVerified 或有可用明文 token/cookie          │
+│ statusLevel         │ 'verified' | 'pending' | 'encrypted' | 'installed' | 'missing' │
+│ endpoints           │ 各端点探活状态 [{endpoint, status: 'ok'|'fail'|'untested'}] │
+└─────────────────────┴────────────────────────────────────────────────────────┘</code></pre>
+<p>五种状态级别的含义：</p>
+<table><thead><tr><th>statusLevel</th><th>条件</th><th>用户可见描述</th></tr></thead><tbody><tr><td><code>verified</code></td><td>available + sessionVerified</td><td>Token 有效，已验证 + Cookie (N 个模型)</td></tr><tr><td><code>pending</code></td><td>available + !sessionVerified</td><td>Token 检测到，待验证 (N 个模型)</td></tr><tr><td><code>encrypted</code></td><td>officialArtifactsDetected + credentialMode=encrypted</td><td>Trae 已登录，检测到加密登录态（Electron safeStorage 加密，外部无法解密）</td></tr><tr><td><code>installed</code></td><td>installDetected + 无 artifacts</td><td>Trae 已安装，未检测到登录态 — 请先登录 Trae IDE</td></tr><tr><td><code>missing</code></td><td>其他</td><td>未检测到 Trae 安装</td></tr></tbody></table>
+<hr>
+<h2 id="五-凭据优先级-修复后">五、凭据优先级（修复后）<a class="anchor" href="#五-凭据优先级-修复后" aria-label="锚点">#</a></h2>
+<pre><code>1. 官方 Trae 可验证会话  (officialCred.token + sessionVerified)
+2. Nirvana 明文 token      (storage.json 中 traeAuth.accessToken 等)
+3. Nirvana session cookie  (trae_local_cache.json 60天有效)
+4. 账号池 token            (pool:trae)
+5. 官方加密态 artifacts    (不可用于调用，但在 getStatus 中体现)</code></pre>
+<hr>
+<h2 id="六-已知限制">六、已知限制<a class="anchor" href="#六-已知限制" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>限制</th><th>原因</th><th>后续方向</th></tr></thead><tbody><tr><td>无法从 safeStorage 解密 iCubeAuthInfo</td><td>Electron safeStorage 密钥绑定主进程</td><td>等第三轮调查确认 sandbox IPC token 落盘位置</td></tr><tr><td>解密后 token 使用 <code>x-cloudide-token</code> 头</td><td>Trae 原生协议，非 Bearer</td><td>需适配专属请求头格式</td></tr><tr><td>真实 API 端点动态拼接</td><td><code>getApi(Kc.ugApi, path)</code> 运行时决定</td><td>需确认 <code>host</code> 字段典型值</td></tr><tr><td>Trae 无本地代理端口</td><td>仅 SSO 登录时临时端口</td><td>不可行路径</td></tr></tbody></table>
+<hr>
+<h2 id="七-验证">七、验证<a class="anchor" href="#七-验证" aria-label="锚点">#</a></h2>
+<h3 id="语法检查">语法检查<a class="anchor" href="#语法检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node -c backend/src/services/gateway/adapters/traeOfficialArtifacts.js  # OK
+node -c backend/src/services/gateway/adapters/traeAdapter.js            # OK</code></pre>
+<h3 id="功能验证">功能验证<a class="anchor" href="#功能验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Trae 自定义加密 blob 识别
+node -e &quot;
+const a = require('./backend/src/services/gateway/adapters/traeOfficialArtifacts');
+const b = Buffer.alloc(200); b[0]=0x74;b[1]=0x63;b[2]=0x05;b[3]=0x10;b[4]=0;b[5]=0;
+const r = a.decodeTraeOfficialAuthBlob(b.toString('base64'));
+console.log(r.schemeHint);           // trae-custom-encrypted
+console.log(r.encryptionService);    // electron-safeStorage
+console.log(r.decryptable);          // false
+&quot;
+
+# 端到端: 模拟含加密 blob 的 storage.json → credentialMode=encrypted
+node -e &quot;
+const a = require('./backend/src/services/gateway/adapters/traeOfficialArtifacts');
+const b = Buffer.alloc(200); b[0]=0x74;b[1]=0x63;b[2]=0x05;b[3]=0x10;b[4]=0;b[5]=0;
+const mock = {
+  'iCubeAuthInfo://icube.cloudide': b.toString('base64'),
+  'iCubeServerData://icube.cloudide': JSON.stringify({region:'cn-east',userId:'u123'}),
+};
+const r = a.extractTraeOfficialArtifactsFromStorage(mock, '/mock');
+console.log(r.officialArtifactsDetected);  // true
+console.log(r.credentialMode);             // encrypted
+const c = a.resolveTraeOfficialCredential({artifacts: r});
+console.log(c.credentialMode);             // encrypted
+console.log(c.authBlobAnalysis.schemeHint); // trae-custom-encrypted
+&quot;</code></pre>
+<h3 id="验证结果">验证结果<a class="anchor" href="#验证结果" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>测试项</th><th>结果</th></tr></thead><tbody><tr><td><code>tc 05 10</code> 前缀识别</td><td><code>trae-custom-encrypted</code> + <code>electron-safeStorage</code></td></tr><tr><td>DPAPI 前缀识别</td><td><code>dpapi</code></td></tr><tr><td>v10/v11 前缀识别</td><td><code>chromium-safe-storage-v10</code>/<code>v11</code></td></tr><tr><td>无 Nirvana 时 officialArtifactsDetected</td><td><code>true</code></td></tr><tr><td>加密态 credentialMode</td><td><code>encrypted</code>（不再是 <code>none</code>）</td></tr><tr><td>端点不再盲选</td><td><code>resolveTraeApiBases()</code> 空列表时不会 fallback 到 <code>api.trae.ai/v1</code></td></tr><tr><td>getRelayProfile 无端点时</td><td>抛出明确错误而非返回无效 URL</td></tr></tbody></table>
+<hr>
+<h2 id="八-待第三轮调查后实施">八、待第三轮调查后实施<a class="anchor" href="#八-待第三轮调查后实施" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>方向</th><th>触发条件</th><th>实施内容</th></tr></thead><tbody><tr><td>sandbox token 直读</td><td>确认 sandbox 将 token 写入可读文件/DB</td><td>新增读取路径到 <code>readTraeToken()</code></td></tr><tr><td><code>x-cloudide-token</code> 协议适配</td><td>确认 <code>host</code> 字段典型值</td><td><code>callTraeByHttp</code> 新增 Trae 原生协议分支</td></tr><tr><td>扩展 API token 导出</td><td>确认 AuthenticationProvider 可用</td><td>提供用户安装的轻量 Trae 扩展</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-013] khy-claude-认证冲突修复.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 与 Claude Code 认证冲突修复</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-015] 修复记录时间线.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 修复记录时间线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-014] trae-适配器-官方扫描修复-2026-05-25.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

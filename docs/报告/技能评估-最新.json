@@ -1,0 +1,195 @@
+{
+  "generatedAt": "2026-05-19T06:30:01.930Z",
+  "configPath": "backend/src/skills/evals/skill-eval-baseline.json",
+  "configVersion": "1.0.0",
+  "thresholds": {
+    "minOverallScore": 0.88,
+    "minSkillScore": 0.84,
+    "maxCriticalFailures": 0,
+    "maxWarningFailures": 24
+  },
+  "thresholdChecks": [
+    {
+      "name": "overallScore",
+      "pass": true,
+      "detail": "1.000 >= 0.880"
+    },
+    {
+      "name": "minSkillScore",
+      "pass": true,
+      "detail": "1.000 >= 0.840"
+    },
+    {
+      "name": "criticalFailures",
+      "pass": true,
+      "detail": "0 <= 0"
+    },
+    {
+      "name": "warningFailures",
+      "pass": true,
+      "detail": "0 <= 24"
+    }
+  ],
+  "summary": {
+    "checkedSkills": 19,
+    "overallScore": 1,
+    "minSkillScore": 1,
+    "criticalFailures": 0,
+    "warningFailures": 0,
+    "pass": true
+  },
+  "skills": [
+    {
+      "skill": "batch",
+      "path": "backend/src/skills/built-in/batch",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "claude-api",
+      "path": "backend/src/skills/built-in/claude-api",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "commit",
+      "path": "backend/src/skills/built-in/commit",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "create-mcp-server",
+      "path": "backend/src/skills/built-in/create-mcp-server",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "create-skill",
+      "path": "backend/src/skills/built-in/create-skill",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "debug",
+      "path": "backend/src/skills/built-in/debug",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "dream",
+      "path": "backend/src/skills/built-in/dream",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "hunter",
+      "path": "backend/src/skills/built-in/hunter",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "init-project",
+      "path": "backend/src/skills/built-in/init-project",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "keybindings",
+      "path": "backend/src/skills/built-in/keybindings",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "loop",
+      "path": "backend/src/skills/built-in/loop",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "pdf",
+      "path": "backend/src/skills/built-in/pdf",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "remember",
+      "path": "backend/src/skills/built-in/remember",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "review-pr",
+      "path": "backend/src/skills/built-in/review-pr",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "simplify",
+      "path": "backend/src/skills/built-in/simplify",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "skillify",
+      "path": "backend/src/skills/built-in/skillify",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "stuck",
+      "path": "backend/src/skills/built-in/stuck",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "update-config",
+      "path": "backend/src/skills/built-in/update-config",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    },
+    {
+      "skill": "verify",
+      "path": "backend/src/skills/built-in/verify",
+      "score": 1,
+      "passedChecks": 8,
+      "totalChecks": 8,
+      "failedChecks": []
+    }
+  ]
+}

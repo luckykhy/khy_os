@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS v0.1.27 发布说明 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>KHY OS v0.1.27 发布说明</div>
+      <header class="hero reveal"><h1>KHY OS v0.1.27 发布说明</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-v0-1-27-发布说明">KHY OS v0.1.27 发布说明</a></li><li class="lvl-2"><a href="#一-上下文管理修复-压缩后-api-400-错误">一、上下文管理修复（压缩后 API 400 错误）</a></li><li class="lvl-3"><a href="#问题描述">问题描述</a></li><li class="lvl-3"><a href="#修复内容">修复内容</a></li><li class="lvl-2"><a href="#二-无响应-bug-修复-终端卡死-无回复">二、无响应 Bug 修复（终端卡死/无回复）</a></li><li class="lvl-3"><a href="#问题描述-2">问题描述</a></li><li class="lvl-3"><a href="#修复内容-2">修复内容</a></li><li class="lvl-2"><a href="#三-图片分析修复-windows-剪贴板图片无法识别">三、图片分析修复（Windows 剪贴板图片无法识别）</a></li><li class="lvl-3"><a href="#问题描述-3">问题描述</a></li><li class="lvl-3"><a href="#根因">根因</a></li><li class="lvl-3"><a href="#修复">修复</a></li><li class="lvl-2"><a href="#四-redis-提示污染输入框修复">四、Redis 提示污染输入框修复</a></li><li class="lvl-3"><a href="#问题描述-4">问题描述</a></li><li class="lvl-3"><a href="#修复-2">修复</a></li><li class="lvl-2"><a href="#五-g1-g8-p0-对齐实现-本轮前完成">五、G1-G8 P0 对齐实现（本轮前完成）</a></li><li class="lvl-2"><a href="#六-变更文件总览">六、变更文件总览</a></li><li class="lvl-3"><a href="#核心修改">核心修改</a></li><li class="lvl-3"><a href="#新增文件">新增文件</a></li><li class="lvl-2"><a href="#七-验证方法">七、验证方法</a></li><li class="lvl-2"><a href="#八-参考来源">八、参考来源</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-014 | 阶段: 部署 | 原路径: docs/指南/发布说明-0.1.27.md --&gt;</p>
+<h1 id="khy-os-v0-1-27-发布说明">KHY OS v0.1.27 发布说明<a class="anchor" href="#khy-os-v0-1-27-发布说明" aria-label="锚点">#</a></h1>
+<p><strong>发布日期</strong>: 2026-05-21<br><strong>PyPI</strong>: https://pypi.org/project/khy-os/0.1.27/</p>
+<hr>
+<h2 id="一-上下文管理修复-压缩后-api-400-错误">一、上下文管理修复（压缩后 API 400 错误）<a class="anchor" href="#一-上下文管理修复-压缩后-api-400-错误" aria-label="锚点">#</a></h2>
+<h3 id="问题描述">问题描述<a class="anchor" href="#问题描述" aria-label="锚点">#</a></h3>
+<p>多轮对话后触发上下文压缩，下一次请求返回 HTTP 400。根因为三个缺陷叠加：</p>
+<ol><li>压缩后角色交替规则被破坏（连续 user-user 或 assistant-assistant）</li><li>安全系数三层叠加（<code>estimateTokens</code> 1.2x × <code>_estimateContextTokens</code> 1.2x × <code>contextRouter</code> 1.2x = 有效 1.44x），导致过早触发压缩</li><li>已压缩内容被二次全量压缩，摘要质量退化</li></ol>
+<h3 id="修复内容">修复内容<a class="anchor" href="#修复内容" aria-label="锚点">#</a></h3>
+<h4 id="a1-统一角色交替守卫">A1. 统一角色交替守卫<a class="anchor" href="#a1-统一角色交替守卫" aria-label="锚点">#</a></h4>
+<p><strong>文件</strong>: <code>backend/src/services/contextCompressor.js</code></p>
+<p>新增 <code>enforceRoleAlternation(messages)</code> 函数，替代所有散落的手动桥接修复：</p>
+<ul><li>分离开头 system 消息</li><li>确保对话以 user 开头</li><li>连续同角色消息之间自动插入 <code>[continued]</code> 占位</li><li>tool/system 角色归一化处理</li></ul>
+<p><strong>集成点</strong>: <code>ai.js</code> <code>_buildStructuredMessages()</code> 末尾统一调用。</p>
+<h4 id="a2-消除安全系数叠加">A2. 消除安全系数叠加<a class="anchor" href="#a2-消除安全系数叠加" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>位置</th><th>改动</th></tr></thead><tbody><tr><td><code>khyUpgradeRuntime.js</code> <code>estimateTokens()</code></td><td>移除 <code>× 1.2</code>，返回原始估计</td></tr><tr><td><code>ai.js</code> <code>_estimateContextTokens()</code></td><td>移除 <code>× 1.2</code></td></tr><tr><td><code>contextRouter.js</code> <code>SAFETY_MARGIN</code></td><td>保留 <code>1.2</code>（唯一应用点）</td></tr></tbody></table>
+<h4 id="a3-硬地板-上下文限制提升">A3. 硬地板 + 上下文限制提升<a class="anchor" href="#a3-硬地板-上下文限制提升" aria-label="锚点">#</a></h4>
+<p><strong>文件</strong>: <code>contextRouter.js</code>、<code>khyUpgradeRuntime.js</code>、<code>ai.js</code></p>
+<ul><li>新增 <code>HARD_FLOOR_TOKENS = 32768</code>：低于此阈值直接返回 <code>fits</code>，不触发任何压缩，保护 prefix cache</li><li><code>CONTEXT_TOKEN_LIMIT</code> 从 65536 提升到 131072</li><li><code>_resolveTaskScale()</code> small 阈值从 <code>len ≤ 120</code> 调整为 <code>len ≤ 40</code></li><li><code>_resolveContextBudget()</code> smallCap 从 32000 提升到 65536</li></ul>
+<p>参考来源：DeepSeek-TUI 500K 硬地板设计。</p>
+<h4 id="a4-防止双重压缩-增量摘要">A4. 防止双重压缩 + 增量摘要<a class="anchor" href="#a4-防止双重压缩-增量摘要" aria-label="锚点">#</a></h4>
+<p><strong>文件</strong>: <code>contextCompressor.js</code></p>
+<ul><li><code>compress()</code> 开头检测消息中是否已包含 <code>[Compressed context summary]</code> 或 <code>[ContextCompact v2</code> 标记</li><li>已有摘要时调用 <code>_incrementalUpdate()</code> 增量更新，而非全量重新压缩</li><li><code>ai.js</code> 硬守卫：已包含摘要的消息只允许 tool truncation，禁止重新 <code>buildSlidingWindow</code></li></ul>
+<p>参考来源：Hermes Agent 增量摘要模式。</p>
+<h4 id="a5-反抖动-session-恢复保护">A5. 反抖动 + Session 恢复保护<a class="anchor" href="#a5-反抖动-session-恢复保护" aria-label="锚点">#</a></h4>
+<p><strong>文件</strong>: <code>contextCompressor.js</code>、<code>ai.js</code></p>
+<ul><li><strong>冷却期</strong>: 两次压缩最小间隔 30 秒 (<code>COMPRESSION_COOLDOWN_MS</code>)</li><li><strong>低效跳过</strong>: 连续 2 次压缩效率低于 10% 时自动跳过下一次</li><li><strong>Session 恢复</strong>: <code>autoResumeLastSession()</code> 恢复时调用 <code>markSessionResumed()</code>，防止对已压缩内容立即重新压缩</li></ul>
+<p>参考来源：Hermes Agent 反抖动机制。</p>
+<hr>
+<h2 id="二-无响应-bug-修复-终端卡死-无回复">二、无响应 Bug 修复（终端卡死/无回复）<a class="anchor" href="#二-无响应-bug-修复-终端卡死-无回复" aria-label="锚点">#</a></h2>
+<h3 id="问题描述-2">问题描述<a class="anchor" href="#问题描述-2" aria-label="锚点">#</a></h3>
+<p>用户反馈&quot;有问无回答，有求无应，有选择无响应&quot;，具体表现：</p>
+<ul><li>请求挂起不返回</li><li>菜单选择无反应</li><li>readline 不恢复到输入状态</li></ul>
+<h3 id="修复内容-2">修复内容<a class="anchor" href="#修复内容-2" aria-label="锚点">#</a></h3>
+<h4 id="b1-gateway-绝对超时">B1. Gateway 绝对超时<a class="anchor" href="#b1-gateway-绝对超时" aria-label="锚点">#</a></h4>
+<p><strong>文件</strong>: <code>ai.js</code> <code>_gatewayGenerate()</code></p>
+<p>新增 <code>GATEWAY_ABSOLUTE_TIMEOUT_MS = 300000</code>（5 分钟）绝对生命周期超时。之前只检查空闲时间（<code>silentFor</code>），适配器发送 keepalive 心跳时可无限挂起。</p>
+<h4 id="b2-工具循环绝对超时">B2. 工具循环绝对超时<a class="anchor" href="#b2-工具循环绝对超时" aria-label="锚点">#</a></h4>
+<p><strong>文件</strong>: <code>toolUseLoop.js</code></p>
+<ul><li>新增 <code>TOOL_LOOP_ABSOLUTE_TIMEOUT_MS = 180000</code>（3 分钟）</li><li>每次迭代检查绝对时间，超时后返回已有结果 + 超时提示（不是空回复）</li><li><code>effectiveMaxIterations</code> 上限从 160 降低到 60</li></ul>
+<h4 id="b3-finally-块防御性包裹">B3. finally 块防御性包裹<a class="anchor" href="#b3-finally-块防御性包裹" aria-label="锚点">#</a></h4>
+<p><strong>文件</strong>: <code>repl.js</code></p>
+<p>主 AI 处理的 finally 块中，将粘贴队列清理和 burst buffer 清理放入<strong>独立的</strong> try-catch：</p>
+<pre><code>try { /* paste queue cleanup */ } catch (e) { console.error(...) }
+try { /* burst buffer cleanup */ } catch (e) { console.error(...) }
+// readline 恢复始终执行
+try { rl.prompt(); } catch {}</code></pre>
+<p>之前任何一段清理抛异常会阻塞后续的 readline 恢复，导致终端永久无响应。</p>
+<h4 id="b4-关键-catch-块加日志">B4. 关键 catch 块加日志<a class="anchor" href="#b4-关键-catch-块加日志" aria-label="锚点">#</a></h4>
+<p>在 5 个高风险空 catch 块添加 <code>console.error</code> 日志，便于诊断问题：</p>
+<table><thead><tr><th>位置</th><th>用途</th></tr></thead><tbody><tr><td><code>ai.js</code> 模型状态获取</td><td><code>[ai] 模型状态获取失败</code></td></tr><tr><td><code>ai.js</code> directGenerate 回退</td><td><code>[ai] directGenerate 回退失败</code></td></tr><tr><td><code>ai.js</code> context routing 异常</td><td><code>[ai] context routing 异常, 回退到 slidingWindow</code></td></tr><tr><td><code>repl.js</code> stdin 恢复</td><td><code>[repl] 模型选择/stdin 恢复失败</code></td></tr><tr><td><code>repl.js</code> AI 内联选择</td><td><code>[repl] AI 内联选择失败</code></td></tr></tbody></table>
+<hr>
+<h2 id="三-图片分析修复-windows-剪贴板图片无法识别">三、图片分析修复（Windows 剪贴板图片无法识别）<a class="anchor" href="#三-图片分析修复-windows-剪贴板图片无法识别" aria-label="锚点">#</a></h2>
+<h3 id="问题描述-3">问题描述<a class="anchor" href="#问题描述-3" aria-label="锚点">#</a></h3>
+<p>Windows 上通过剪贴板桥接粘贴图片后，AI 返回 &quot;ERROR: Tool failed&quot;，6% ctx 后无下文。</p>
+<h3 id="根因">根因<a class="anchor" href="#根因" aria-label="锚点">#</a></h3>
+<p><code>multiFreeService.js</code> 的 <code>callOpenAI()</code> 和 <code>callAnthropic()</code> 中，当使用 <code>structuredMessages</code>（多轮对话模式）时，图片注入逻辑被完全跳过：</p>
+<pre><code class="language-javascript">// 问题代码
+const messages = opts.structuredMessages?.length &gt; 0
+  ? opts.structuredMessages          // ← 直接用原始消息，图片丢失！
+  : [{ role: 'user', content: messageContent }]; // ← 只有这条路径包含图片</code></pre>
+<p>KHY 多轮对话始终使用 <code>structuredMessages</code>，因此图片永远不会被发送给模型。</p>
+<h3 id="修复">修复<a class="anchor" href="#修复" aria-label="锚点">#</a></h3>
+<p><strong>文件</strong>: <code>backend/src/services/multiFreeService.js</code></p>
+<p><code>callOpenAI()</code> 和 <code>callAnthropic()</code> 中新增：当 <code>structuredMessages</code> 存在且有 <code>images</code> 时，找到最后一条 user 消息，将图片 blocks 注入到其 <code>content</code> 数组中：</p>
+<ul><li>OpenAI: <code>{ type: 'image_url', image_url: { url: 'data:mime;base64,...', detail: 'auto' } }</code></li><li>Anthropic: <code>{ type: 'image', source: { type: 'base64', media_type, data } }</code></li></ul>
+<hr>
+<h2 id="四-redis-提示污染输入框修复">四、Redis 提示污染输入框修复<a class="anchor" href="#四-redis-提示污染输入框修复" aria-label="锚点">#</a></h2>
+<h3 id="问题描述-4">问题描述<a class="anchor" href="#问题描述-4" aria-label="锚点">#</a></h3>
+<p>启动时 <code>⚠ Redis 不可用，使用内存缓存降级</code> 消息通过 <code>console.log</code> 打印到 stdout，和 readline 输入框冲突，显示在提示符区域。</p>
+<h3 id="修复-2">修复<a class="anchor" href="#修复-2" aria-label="锚点">#</a></h3>
+<p><strong>文件</strong>: <code>packages/shared/src/services/cacheService.js</code>（+ 2 个 bundled 副本）</p>
+<p>Redis 连接/降级消息改为仅在 <code>DEBUG</code> 模式下通过 <code>console.error</code>（stderr）输出。Redis 不可用是本地开发的预期场景，静默降级即可。</p>
+<hr>
+<h2 id="五-g1-g8-p0-对齐实现-本轮前完成">五、G1-G8 P0 对齐实现（本轮前完成）<a class="anchor" href="#五-g1-g8-p0-对齐实现-本轮前完成" aria-label="锚点">#</a></h2>
+<p>本版本同时包含了三项目（DeepSeek-TUI / Hermes Agent / OpenCode）P0 对齐的 8 项改进：</p>
+<table><thead><tr><th>编号</th><th>改进</th><th>文件</th></tr></thead><tbody><tr><td>G1</td><td>LineBuffer 流式行缓冲</td><td><code>backend/src/cli/lineBuffer.js</code> (新)</td></tr><tr><td>G2</td><td>AdaptiveChunker 自适应分块（Smooth/CatchUp/Severe 三模式）</td><td><code>backend/src/cli/lineBuffer.js</code></td></tr><tr><td>G4</td><td>主题系统 + 调色板颜色深度适配</td><td><code>backend/src/cli/palette.js</code> (新) + 6 个主题 JSON</td></tr><tr><td>G5</td><td>权限确认 diff 预览（红/绿对比）</td><td><code>backend/src/cli/ui/permissionDialog.js</code></td></tr><tr><td>G6</td><td>原子写入（tmp+fsync+rename）</td><td><code>backend/src/services/sessionPersistence.js</code></td></tr><tr><td>G7</td><td>ErrorEnvelope 结构化错误</td><td><code>backend/src/services/errorClassifier.js</code></td></tr><tr><td>G8</td><td>OnboardingWizard 引导向导</td><td><code>backend/src/cli/onboarding.js</code> (新)</td></tr></tbody></table>
+<hr>
+<h2 id="六-变更文件总览">六、变更文件总览<a class="anchor" href="#六-变更文件总览" aria-label="锚点">#</a></h2>
+<h3 id="核心修改">核心修改<a class="anchor" href="#核心修改" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动摘要</th></tr></thead><tbody><tr><td><code>backend/src/services/contextCompressor.js</code></td><td>A1 角色守卫 + A4 增量摘要 + A5 反抖动</td></tr><tr><td><code>backend/src/services/contextRouter.js</code></td><td>A3 硬地板 32K</td></tr><tr><td><code>backend/src/services/khyUpgradeRuntime.js</code></td><td>A2 去 1.2x + A3 上下文 131K</td></tr><tr><td><code>backend/src/cli/ai.js</code></td><td>A1-A5 集成 + B1 绝对超时 + B4 日志</td></tr><tr><td><code>backend/src/services/toolUseLoop.js</code></td><td>B2 工具循环超时 180s</td></tr><tr><td><code>backend/src/cli/repl.js</code></td><td>B3 finally 保护 + G1/G2 集成 + B4 日志</td></tr><tr><td><code>backend/src/services/multiFreeService.js</code></td><td>图片注入修复（OpenAI + Anthropic）</td></tr><tr><td><code>packages/shared/src/services/cacheService.js</code></td><td>Redis 提示静默化</td></tr></tbody></table>
+<h3 id="新增文件">新增文件<a class="anchor" href="#新增文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>用途</th></tr></thead><tbody><tr><td><code>backend/src/cli/lineBuffer.js</code></td><td>G1+G2 流式行缓冲 + 自适应分块</td></tr><tr><td><code>backend/src/cli/palette.js</code></td><td>G4 颜色深度检测 + 适配</td></tr><tr><td><code>backend/src/cli/themes/*.json</code> (6个)</td><td>G4 主题定义</td></tr><tr><td><code>backend/src/cli/onboarding.js</code></td><td>G8 引导向导</td></tr></tbody></table>
+<hr>
+<h2 id="七-验证方法">七、验证方法<a class="anchor" href="#七-验证方法" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 模块加载验证
+node -e &quot;require('./backend/src/services/contextCompressor')&quot;
+node -e &quot;require('./backend/src/services/contextRouter')&quot;
+node -e &quot;require('./backend/src/services/multiFreeService')&quot;
+
+# 单元测试
+npx jest backend/tests/services/errorClassifier.test.js --no-coverage
+npx jest backend/tests/services/cleanupService.test.js --no-coverage
+npx jest backend/tests/cli/router.test.js --no-coverage
+
+# 功能验证
+# 1. 多轮对话 → 压缩触发 → 下一轮不 400
+# 2. Windows 粘贴图片 → AI 正常返回分析结果
+# 3. 恢复会话 → 不重复压缩 → 正常响应
+# 4. 启动 → 无 Redis 提示污染输入框</code></pre>
+<hr>
+<h2 id="八-参考来源">八、参考来源<a class="anchor" href="#八-参考来源" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项目</th><th>借鉴内容</th></tr></thead><tbody><tr><td>DeepSeek-TUI</td><td>硬地板设计、500K cycle boundary、LineBuffer 流式管道</td></tr><tr><td>Hermes Agent</td><td>增量摘要、反抖动冷却、双层触发机制</td></tr><tr><td>OpenCode</td><td>实际 token 触发、overflow 自动重放、原子写入</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-013] pypi-发布手册-0.1.17-0.1.18.html"><div class="dir">← 上一篇</div><div class="ttl">PyPI 发布手册（0.1.17 补丁 + 0.1.18 多平台）</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-015] 源码还原与手工发布.html"><div class="dir">下一篇 →</div><div class="ttl">源码还原与手工发布</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-014] 发布说明-0.1.27.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,511 @@
+[
+  {
+    "id": 0,
+    "title": "项目总览与愿景",
+    "summary": "KHY OS 是什么、为什么做、目录结构、三大工程规则",
+    "topics": [
+      {
+        "id": "overview",
+        "title": "项目定位",
+        "desc": "KHY OS 是 Agentic OS — AI 编程终端 + 量化交易平台 + 微内核操作系统",
+        "files": [
+          "README.md"
+        ]
+      },
+      {
+        "id": "rules",
+        "title": "三大工程规则",
+        "desc": "零硬编码、状态透明、活跃度超时 — 所有代码的硬约束",
+        "files": [
+          "AGENTS.md"
+        ]
+      },
+      {
+        "id": "structure",
+        "title": "目录结构",
+        "desc": "10+ 顶层目录各自的职责：backend、frontend、kernel、packages",
+        "files": [
+          "docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md"
+        ]
+      },
+      {
+        "id": "integration",
+        "title": "应用接入",
+        "desc": "外部项目如何接入 KHY OS 享受平台能力 — 4 个层级从 API 调用到完整扩展",
+        "files": [
+          "docs/07_OPS_运维/[OPS-MAN-012] khy-os-应用接入指南.md"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1,
+    "title": "启动链路",
+    "summary": "Python → Node.js 的启动过程，参数如何传递到 CLI",
+    "topics": [
+      {
+        "id": "python_entry",
+        "title": "Python 入口",
+        "desc": "pip install 后 khy 命令如何启动",
+        "files": [
+          "khy_platform/cli.py",
+          "khy_platform/_bootstrap.py"
+        ]
+      },
+      {
+        "id": "node_entry",
+        "title": "Node.js 入口",
+        "desc": "khy.js 如何初始化并进入 REPL",
+        "files": [
+          "backend/bin/khy.js"
+        ]
+      },
+      {
+        "id": "bootstrap",
+        "title": "启动序列",
+        "desc": "数据库迁移、预加载、性能分析器、优雅关闭",
+        "files": [
+          "backend/src/bootstrap/"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "CLI 路由系统",
+    "summary": "命令如何从用户输入到达正确的 handler",
+    "topics": [
+      {
+        "id": "router",
+        "title": "命令路由器",
+        "desc": "parseInput 解析 + switch(command) 分发",
+        "files": [
+          "backend/src/cli/router.js"
+        ]
+      },
+      {
+        "id": "aliases",
+        "title": "别名系统",
+        "desc": "300+ 中文/拼音/英文别名映射",
+        "files": [
+          "backend/src/cli/aliases.js"
+        ]
+      },
+      {
+        "id": "schema",
+        "title": "命令模式定义",
+        "desc": "ROUTER_COMMANDS + 子命令 + slash 命令注册",
+        "files": [
+          "backend/src/constants/commandSchema.js"
+        ]
+      },
+      {
+        "id": "handlers",
+        "title": "Handler 模式",
+        "desc": "31 个 handler 模块的统一 pattern",
+        "files": [
+          "backend/src/cli/handlers/"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "title": "AI 网关",
+    "summary": "统一的多模型适配层 — 16+ 适配器级联调用",
+    "topics": [
+      {
+        "id": "gateway_core",
+        "title": "网关核心",
+        "desc": "适配器发现、优先级排序、级联 fallback",
+        "files": [
+          "backend/src/services/gateway/aiGateway.js"
+        ]
+      },
+      {
+        "id": "base_adapter",
+        "title": "适配器协议层",
+        "desc": "统一请求构造/响应解析契约 — 所有适配器必须产出的 canonical 形状",
+        "files": [
+          "backend/src/services/gateway/adapters/_protocolPipeline.js",
+          "backend/src/services/gateway/adapters/_canonicalTypes.js"
+        ]
+      },
+      {
+        "id": "ollama_adapter",
+        "title": "Ollama 适配器",
+        "desc": "最简单的适配器 — 本地 LLM 调用",
+        "files": [
+          "backend/src/services/gateway/adapters/ollamaAdapter.js"
+        ]
+      },
+      {
+        "id": "claude_adapter",
+        "title": "Claude 适配器",
+        "desc": "Bridge/Direct 双模式、stream 处理",
+        "files": [
+          "backend/src/services/gateway/adapters/claudeAdapter.js"
+        ]
+      },
+      {
+        "id": "key_selector",
+        "title": "密钥选择器",
+        "desc": "多账号池、令牌轮转、冷却机制",
+        "files": [
+          "backend/src/services/gateway/keySelector.js"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "title": "工具系统",
+    "summary": "50+ 工具的注册、发现、执行、安全守护",
+    "topics": [
+      {
+        "id": "base_tool",
+        "title": "工具基类",
+        "desc": "BaseTool 定义：name/schema/execute/risk 协议",
+        "files": [
+          "backend/src/tools/_baseTool.js"
+        ]
+      },
+      {
+        "id": "file_tools",
+        "title": "文件工具",
+        "desc": "Read/Edit/Write 三件套 + 时间戳防覆盖",
+        "files": [
+          "backend/src/tools/FileReadTool/index.js",
+          "backend/src/tools/FileEditTool/index.js"
+        ]
+      },
+      {
+        "id": "shell_tool",
+        "title": "Shell 工具",
+        "desc": "命令执行、Windows 兼容、破坏性警告",
+        "files": [
+          "backend/src/tools/shellCommand.js"
+        ]
+      },
+      {
+        "id": "tool_calling",
+        "title": "工具调用编排",
+        "desc": "executeTool 单入口 + 并发控制",
+        "files": [
+          "backend/src/services/toolCalling.js"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "title": "工具循环引擎",
+    "summary": "Agentic Loop — AI 如何自主调用工具直到任务完成",
+    "topics": [
+      {
+        "id": "loop_core",
+        "title": "主循环",
+        "desc": "while(!budget.depleted) 的迭代逻辑",
+        "files": [
+          "backend/src/services/toolUseLoop.js"
+        ]
+      },
+      {
+        "id": "nudge",
+        "title": "Nudge 机制",
+        "desc": "模型不调工具时如何推动继续",
+        "files": [
+          "backend/src/services/toolUseLoop.js"
+        ]
+      },
+      {
+        "id": "guards",
+        "title": "安全守护",
+        "desc": "工具黑名单、沙箱、循环检测",
+        "files": [
+          "backend/src/services/toolGuards.js",
+          "backend/src/services/toolSandbox.js"
+        ]
+      },
+      {
+        "id": "context",
+        "title": "上下文管理",
+        "desc": "压缩、路由、滑动窗口",
+        "files": [
+          "backend/src/services/contextCompressor.js",
+          "backend/src/services/contextRouter.js"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "title": "REPL 交互层",
+    "summary": "用户输入处理、AI 响应渲染、快捷键",
+    "topics": [
+      {
+        "id": "repl_core",
+        "title": "REPL 主循环",
+        "desc": "readline + AI chat + 工具执行",
+        "files": [
+          "backend/src/cli/repl.js"
+        ]
+      },
+      {
+        "id": "renderer",
+        "title": "AI 渲染器",
+        "desc": "Markdown→终端、表格、代码块、Mermaid",
+        "files": [
+          "backend/src/cli/aiRenderer.js"
+        ]
+      },
+      {
+        "id": "shortcuts",
+        "title": "快捷键与模式",
+        "desc": "Ctrl+O 展开、Vim 模式、Tab 补全",
+        "files": [
+          "backend/src/cli/repl.js"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "title": "量化核心",
+    "summary": "回测引擎、策略执行、市场数据分析",
+    "topics": [
+      {
+        "id": "backtest",
+        "title": "回测引擎",
+        "desc": "策略历史模拟、性能指标计算",
+        "files": [
+          "backend/src/services/backtestEngine.js"
+        ]
+      },
+      {
+        "id": "strategy",
+        "title": "策略引擎",
+        "desc": "策略定义、信号生成、风险管理",
+        "files": [
+          "backend/src/services/strategyEngine.js"
+        ]
+      },
+      {
+        "id": "analysis",
+        "title": "分析引擎",
+        "desc": "技术指标、K线分析、综合评分",
+        "files": [
+          "backend/src/services/stockAnalysisEngine.js"
+        ]
+      },
+      {
+        "id": "data",
+        "title": "数据服务",
+        "desc": "多源行情数据聚合",
+        "files": [
+          "backend/src/services/comprehensiveDataService.js"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "title": "前端系统",
+    "summary": "Vue 3 + Vite 交易 UI 和 AI 管理控制台",
+    "topics": [
+      {
+        "id": "frontend_arch",
+        "title": "前端架构",
+        "desc": "Vite + Vue Router + Pinia + Element Plus",
+        "files": [
+          "software/khyquant/frontend/src/main.js",
+          "software/khyquant/frontend/src/App.vue"
+        ]
+      },
+      {
+        "id": "trading_ui",
+        "title": "交易界面",
+        "desc": "K线图、交易面板、持仓管理",
+        "files": [
+          "software/khyquant/frontend/src/views/Trading.vue"
+        ]
+      },
+      {
+        "id": "ai_console",
+        "title": "AI 管理控制台",
+        "desc": "网关管理、模型配置",
+        "files": [
+          "apps/ai-frontend/src/views/AIGateway.vue"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "title": "高级子系统",
+    "summary": "多Agent协调、WASM沙箱、OS内核、技能系统",
+    "topics": [
+      {
+        "id": "coordinator",
+        "title": "多Agent协调",
+        "desc": "TaskBoard + WorkerAgent + IPC",
+        "files": [
+          "backend/src/coordinator/taskBoard.js",
+          "backend/src/coordinator/workerAgent.js"
+        ]
+      },
+      {
+        "id": "wasm",
+        "title": "WASM 沙箱",
+        "desc": "MoonBit 插件安全执行",
+        "files": [
+          "backend/src/services/wasm-sandbox/"
+        ]
+      },
+      {
+        "id": "kernel",
+        "title": "OS 内核",
+        "desc": "x86 内核概览（引导/中断/IPC/ELF）— 深入学习见第 11 层「内核与 Agent 协同」",
+        "files": [
+          "kernel/src/main.c",
+          "kernel/boot/boot.asm"
+        ]
+      },
+      {
+        "id": "skills",
+        "title": "技能系统",
+        "desc": "内建技能 + 远程发现 + 自主学习",
+        "files": [
+          "backend/src/skills/index.js",
+          "backend/src/services/skillLearningService.js"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "title": "内核与 Agent 协同",
+    "summary": "自研 x86_64 混合内核 + agent⇄OS 双向协议：从引导/内存/调度/系统调用/VFS，到 A1–A8 八阶段 agent 协同（控制面/决策面/事件面三面 + host 桥 + 双 agent + 系统内自然语言配置）",
+    "topics": [
+      {
+        "id": "kernel_boot",
+        "title": "引导与内核入口",
+        "desc": "从 GRUB 进入 64 位长模式、建 GDT/IDT、跳进 C 的 kernel_main 并按序初始化各子系统",
+        "files": [
+          "kernel/boot/boot.asm",
+          "kernel/src/main.c"
+        ]
+      },
+      {
+        "id": "kernel_memory",
+        "title": "内存管理：物理页 + 虚拟页 + 内核堆",
+        "desc": "PMM 位图管物理页、VMM 建页表与按需分页/COW fork、kheap 内核堆分配",
+        "files": [
+          "kernel/src/pmm.c",
+          "kernel/src/vmm.c",
+          "kernel/src/kheap.c"
+        ]
+      },
+      {
+        "id": "kernel_proc_sched",
+        "title": "进程与抢占式调度",
+        "desc": "进程/线程结构、fork、时间片轮转抢占调度、故障进程被干净杀掉打 [FAULT] 而非 PANIC",
+        "files": [
+          "kernel/src/process.c",
+          "kernel/src/sched.c"
+        ]
+      },
+      {
+        "id": "kernel_syscall",
+        "title": "系统调用与 IPC",
+        "desc": "int 0x80 系统调用入口、第 56 号 SYSCALL_AGENT_ASK、lost-wakeup-safe 阻塞/唤醒 IPC",
+        "files": [
+          "kernel/src/syscall.c",
+          "kernel/src/ipc.c"
+        ]
+      },
+      {
+        "id": "kernel_vfs",
+        "title": "虚拟文件系统与跨重启持久化",
+        "desc": "VFS 节点树、ramfs/diskfs、persist 钩子把 /disk 子树镜像到 KhyFS 实现跨重启持久化",
+        "files": [
+          "kernel/src/vfs.c",
+          "kernel/src/diskfs.c",
+          "kernel/src/persist.c"
+        ]
+      },
+      {
+        "id": "agent_channel",
+        "title": "A1–A2 物理通道与帧协议",
+        "desc": "COM2 独立串口物理隔离的 agent 通道；COBS 分帧 + CRC16 校验的定长二进制帧机（纯逻辑无 I/O）",
+        "files": [
+          "kernel/src/serial.c",
+          "kernel/src/agentbus.c",
+          "kernel/src/agentframe.c"
+        ]
+      },
+      {
+        "id": "agent_control",
+        "title": "A3–A4 控制面（agent→OS）",
+        "desc": "agent 经 STAT/LIST/READ/WRITE/MKDIR/REMOVE/PS 操作 OS；/bin 越权 EPERM 守卫 + 路径规范化防 .. 逃逸",
+        "files": [
+          "kernel/src/agentctl.c"
+        ]
+      },
+      {
+        "id": "agent_decision",
+        "title": "A5 决策面（OS→agent 求决策）",
+        "desc": "内核反过来问 agent「能否放行」；等待表 + 超时兜底，agent 不在/不答也绝不挂死内核（松耦合底线）",
+        "files": [
+          "kernel/src/agentask.c"
+        ]
+      },
+      {
+        "id": "agent_event",
+        "title": "A6 事件面（OS→agent 单向 push）",
+        "desc": "进程 SPAWN/EXIT/FAULT 生产者 O(1) 入环、消费者在 bridge 任务排空，绝不为发事件在中断/锁里做 I/O",
+        "files": [
+          "kernel/src/agentevent.c"
+        ]
+      },
+      {
+        "id": "agent_nl_config",
+        "title": "A8 系统内自然语言配置（需求4）",
+        "desc": "shell ai <自然语言> → 决策面 → agent 回结构化动作 SET/GET/SAY；配置落 /disk/etc/agent.conf 跨重启",
+        "files": [
+          "kernel/src/agentconf.c",
+          "kernel/src/shell.c"
+        ]
+      },
+      {
+        "id": "host_bridge",
+        "title": "A7 host 桥：二进制帧 ⇄ JSON",
+        "desc": "纯 Node 零依赖把 COM2 帧翻译成三面 JSON API；协议单一真源（逐字节镜像内核线格）便于审计",
+        "files": [
+          "kernel/bridge/khy-bridge.js",
+          "kernel/bridge/khy-protocol.js",
+          "kernel/bridge/khy-frame.js"
+        ]
+      },
+      {
+        "id": "dual_agent",
+        "title": "A7b 双 agent + 真模型大脑",
+        "desc": "内置 in-process agent 与外部 Claude Code（经 MCP）共用同一桥；brain 可注入接 AI 网关，失败自动降级规则脑",
+        "files": [
+          "kernel/bridge/khy-agent.js",
+          "kernel/bridge/khy-mcp.js",
+          "kernel/bridge/khy-brain-gateway.js"
+        ]
+      },
+      {
+        "id": "kernel_tutorial",
+        "title": "小白精讲：从零读懂全程",
+        "desc": "配套教程通读 A1–A8 八阶段全过程 + 八条工程纪律，附进度交接台账，建议最后整体串讲",
+        "files": [
+          "kernel/docs/小白教程-Khyos-agent协同从零精讲.md",
+          "kernel/docs/进度交接-内核与agent协同pivot.md"
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TUI 交互式工具授权污染终端修复（终端掉回 cooked 模式） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>TUI 交互式工具授权污染终端修复（终端掉回 cooked 模式）</div>
+      <header class="hero reveal"><h1>TUI 交互式工具授权污染终端修复（终端掉回 cooked 模式）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tui-交互式工具授权污染终端修复-终端掉回-cooked-模式">TUI 交互式工具授权污染终端修复（终端掉回 cooked 模式）</a></li><li class="lvl-2"><a href="#概述">概述</a></li><li class="lvl-2"><a href="#一-现象">一、现象</a></li><li class="lvl-2"><a href="#二-根因">二、根因</a></li><li class="lvl-3"><a href="#关键事实-ink-权限解析值是原语-不是对象">关键事实：ink 权限解析值是原语，不是对象</a></li><li class="lvl-2"><a href="#三-修复架构">三、修复架构</a></li><li class="lvl-2"><a href="#四-文件改动">四、文件改动</a></li><li class="lvl-3"><a href="#services-backend-src-services-toolcalling-js">`services/backend/src/services/toolCalling.js`</a></li><li class="lvl-3"><a href="#services-backend-src-services-preflightpermission-js">`services/backend/src/services/preflightPermission.js`</a></li><li class="lvl-3"><a href="#services-backend-src-services-tooluseloop-js">`services/backend/src/services/toolUseLoop.js`</a></li><li class="lvl-2"><a href="#五-零回归保证">五、零回归保证</a></li><li class="lvl-2"><a href="#六-验证">六、验证</a></li><li class="lvl-3"><a href="#测试陷阱-已踩坑记录">测试陷阱（已踩坑记录）</a></li><li class="lvl-3"><a href="#端到端-需人工确认">端到端（需人工确认）</a></li><li class="lvl-2"><a href="#七-备注-同族潜在缺陷-本次范围外">七、备注（同族潜在缺陷，本次范围外）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-005 | 阶段: 实现 | 原路径: docs/修复记录/tui-权限授权掉cooked模式修复-2026-06-09.md --&gt;</p>
+<h1 id="tui-交互式工具授权污染终端修复-终端掉回-cooked-模式">TUI 交互式工具授权污染终端修复（终端掉回 cooked 模式）<a class="anchor" href="#tui-交互式工具授权污染终端修复-终端掉回-cooked-模式" aria-label="锚点">#</a></h1>
+<p>修复日期：2026-06-09 · 分支：restructure/full-forest</p>
+<hr>
+<h2 id="概述">概述<a class="anchor" href="#概述" aria-label="锚点">#</a></h2>
+<p>在 KHY ink TUI 中，当 AI 需要交互式批准工具调用（写文件、执行命令等）时，<br>终端会&quot;卡死&quot;并掉回 <strong>cooked 模式</strong>：</p>
+<ul><li>↑ 上键不再回溯历史，而是回显 <code>^[[A</code></li><li>回车不再提交，而是插入换行符</li><li>普通字符被终端自身回显到<strong>输入框下方</strong>，变成原始行编辑</li></ul>
+<p>本质是 ink 失去了 <code>process.stdin</code> 的 <strong>raw 模式所有权</strong>。本次将所有交互式授权<br>统一改道 ink 原生授权通道 <code>onControlRequest</code>（→ <code>PermissionsPrompt</code> 覆盖层），<br>彻底不再触碰 raw 模式；无 host 通道时（经典 REPL / 子代理 / CI）字节级保持现状。</p>
+<hr>
+<h2 id="一-现象">一、现象<a class="anchor" href="#一-现象" aria-label="锚点">#</a></h2>
+<p>用户连发三条反馈，均指向同一现象：</p>
+<ol><li>&quot;我上键的历史回溯消失了&quot; —— 截图显示输入区出现 <code>^[[A^[[A^[[A^[[A^[[A</code>，</li></ol>
+<p>同时可见 AI 工具调用（writeFile×2 + shell_command(ls ~/Desktop/)）与<br>   &quot;ask permissions (shift+tab to cycle)&quot;。</p>
+<ol><li>&quot;我发现刚在 khy 卡死时，回车键盘，也变成了换行符。&quot;</li><li>&quot;我发现在一些情况下，我的输入放到了输入框之下，变成文本编辑。&quot;</li></ol>
+<p><code>^[[A</code>（↑ 的转义序列被原样回显）+ 回车变换行 + 字符回显到帧外，三者合起来是<br><strong>终端从 raw 模式掉回 cooked 模式</strong>的教科书级特征。</p>
+<hr>
+<h2 id="二-根因">二、根因<a class="anchor" href="#二-根因" aria-label="锚点">#</a></h2>
+<p>ink 通过 <code>useInput</code> 持有 raw 模式。但经典权限 UI<br><code>services/backend/src/cli/ui/permissionDialog.js</code> 中的 <code>promptChoiceMenu</code><br>（被 <code>formatPermissionDialog</code> / <code>formatBatchPermissionDialog</code> 调用）直接对共享<br><code>process.stdin</code> 执行 <code>setRawMode(false)</code> + readline。当 AI 工具需要<strong>交互式授权</strong>时，<br>这段经典 UI 在 ink 会话中运行，把终端切到 cooked 模式 → 键盘泄漏到 ink 帧之外。</p>
+<p>触发路径有二（同一根因）：</p>
+<table><thead><tr><th>#</th><th>路径</th><th>入口</th><th>经典弹窗</th></tr></thead><tbody><tr><td>1</td><td>批量预检</td><td><code>toolUseLoop.js</code> → <code>runPreflight</code></td><td><code>formatBatchPermissionDialog</code>（首轮 ≥2 工具时，正是截图的 writeFile×2 + shell_command）</td></tr><tr><td>2</td><td>单工具授权</td><td><code>toolCalling.js</code> → <code>requestPermission</code></td><td><code>formatPermissionDialog</code>（ask 模式下任一非自动放行工具）</td></tr></tbody></table>
+<p>ink 原生授权通道 <code>onControlRequest</code>（→ <code>PermissionsPrompt</code> 覆盖层，<strong>不碰 raw 模式</strong>）<br><strong>已经</strong>透传到 <code>executeTool</code> 的 traceContext，但 <code>requestPermission</code> 与 <code>runPreflight</code><br><strong>没有去用它</strong>，而是落到了经典 raw-mode 弹窗。</p>
+<h3 id="关键事实-ink-权限解析值是原语-不是对象">关键事实：ink 权限解析值是原语，不是对象<a class="anchor" href="#关键事实-ink-权限解析值是原语-不是对象" aria-label="锚点">#</a></h3>
+<p>ink bridge 对非 AskUserQuestion 的 <code>can_use_tool</code> 请求渲染 <code>PermissionsPrompt</code>，<br>用户按 y/n/a 后 <code>resolveControl(true | false | 'always')</code> 解决该 Promise。<br>因此权限 <code>onControlRequest</code> 的解析值是<strong>原语</strong> <code>true</code> / <code>'always'</code> / <code>false</code>，<br><strong>不是</strong> <code>{behavior}</code> 对象。<code>toolUseLoop._readControlDecision</code> 只认对象、对原语返回<br><code>'deny'</code>，故新分支<strong>必须自行</strong>映射原语，不能复用它。</p>
+<hr>
+<h2 id="三-修复架构">三、修复架构<a class="anchor" href="#三-修复架构" aria-label="锚点">#</a></h2>
+<p>只在存在 host 通道时改道；否则字节级走旧路径。</p>
+<pre><code>executeTool(traceContext.onControlRequest)
+        │
+        ├─ runPreflight(toolCalls, { onControlRequest })
+        │       └─ onControlRequest 存在 → return 空集（逐个授权交给 per-tool）
+        │       └─ 否则 → formatBatchPermissionDialog（经典，不变）
+        │
+        └─ requestPermission(key, params, onControlRequest)
+                └─ 所有既有提前返回（permStore allow/deny、preflight 命中、
+                │   safe/low 自动放行、dangerousMode、isApproved、critical 红线）保持不动
+                └─ onControlRequest 存在 → 构造 can_use_tool 请求 → ink PermissionsPrompt
+                │       _decisionFromControl(原语) → allow / allow-always / deny
+                │       复用落库（approveTool + permStore.approve/deny）→ return，绝不碰 raw 模式
+                └─ 否则 → formatPermissionDialog（经典，不变）</code></pre>
+<hr>
+<h2 id="四-文件改动">四、文件改动<a class="anchor" href="#四-文件改动" aria-label="锚点">#</a></h2>
+<h3 id="services-backend-src-services-toolcalling-js"><code>services/backend/src/services/toolCalling.js</code><a class="anchor" href="#services-backend-src-services-toolcalling-js" aria-label="锚点">#</a></h3>
+<ul><li>新增纯函数 <code>_decisionFromControl(resp)</code>：把 ink 原语映射为决策，并对将来可能的</li></ul>
+<p>对象形状（<code>{behavior}</code>、<code>control_response</code> 包裹）做容错。</p>
+<pre><code class="language-js">  // true → allow；'always' / 'allow-always' → allow-always；其余 → deny</code></pre>
+<ul><li><code>requestPermission(toolName, params, onControlRequest = null)</code>：在**全部既有提前返回</li></ul>
+<p>之后<strong>、调用 <code>formatPermissionDialog</code> </strong>之前**，新增分支：</p>
+<pre><code class="language-js">  if (typeof onControlRequest === 'function') {
+    let ctrlResp = null;
+    try {
+      ctrlResp = await onControlRequest({
+        requestId: `perm_${Date.now()}_${...}`,
+        request: { subtype: 'can_use_tool', tool_name: toolName, input: params },
+      });
+    } catch { ctrlResp = null; }
+    const decision = _decisionFromControl(ctrlResp);
+    // 镜像经典弹窗的落库，使后续调用短路
+    if (decision === 'allow-always') { approveTool(permissionKey, true); permStore.approve(key, 'forever'); }
+    else if (decision === 'allow')   { permStore.approve(key, 'once'); }
+    else                             { permStore.deny(key, 'session'); }
+    return decision; // 绝不触碰 raw 模式
+  }</code></pre>
+<ul><li><code>executeTool</code> 调用点：把 <code>traceContext.onControlRequest</code> 传入 <code>requestPermission</code>。</li></ul>
+<h3 id="services-backend-src-services-preflightpermission-js"><code>services/backend/src/services/preflightPermission.js</code><a class="anchor" href="#services-backend-src-services-preflightpermission-js" aria-label="锚点">#</a></h3>
+<ul><li><code>runPreflight(toolCalls, options)</code> 顶部新增 ink 守卫：</li></ul>
+<pre><code class="language-js">  // Ink/host 通道存在 → 改用 per-tool 交互式授权，绝不跑经典 raw-mode 批量弹窗
+  if (typeof options.onControlRequest === 'function') {
+    return { approved, denied }; // 空集
+  }</code></pre>
+<h3 id="services-backend-src-services-tooluseloop-js"><code>services/backend/src/services/toolUseLoop.js</code><a class="anchor" href="#services-backend-src-services-tooluseloop-js" aria-label="锚点">#</a></h3>
+<ul><li>预检调用点：<code>runPreflight(toolCalls)</code> → <code>runPreflight(toolCalls, { onControlRequest })</code></li></ul>
+<p>（<code>onControlRequest</code> 已在该作用域内）。</p>
+<hr>
+<h2 id="五-零回归保证">五、零回归保证<a class="anchor" href="#五-零回归保证" aria-label="锚点">#</a></h2>
+<ul><li><code>onControlRequest</code> 缺省时（经典 REPL、子代理、CI、WS fire-and-forget），</li></ul>
+<p>所有路径与今日<strong>字节一致</strong>。</p>
+<ul><li>新分支纯增量，仅在存在 host 通道时激活；所有既有自动放行 / 拒绝 / 红线提前返回</li></ul>
+<p>都先于新分支执行。</p>
+<ul><li>不改 <code>permissionStore</code> 决策语义，不改经典 <code>permissionDialog.js</code></li></ul>
+<p>（仅&quot;在 ink 下不再被调用&quot;）。</p>
+<hr>
+<h2 id="六-验证">六、验证<a class="anchor" href="#六-验证" aria-label="锚点">#</a></h2>
+<p>测试文件：<code>services/backend/tests/toolCalling.permissionControlChannel.test.js</code>（5/5 绿）</p>
+<table><thead><tr><th>用例</th><th>断言</th></tr></thead><tbody><tr><td>onControlRequest 返回 <code>true</code></td><td>决策 <code>allow</code>，请求形状 <code>can_use_tool</code>，<code>permStore.approve(once)</code>，<strong>未调用 <code>stdin.setRawMode</code></strong></td></tr><tr><td>返回 <code>'always'</code></td><td>决策 <code>allow-always</code>，<code>permStore.approve(forever)</code>，未调用 setRawMode</td></tr><tr><td>返回 <code>false</code></td><td>决策 <code>deny</code>，<code>permStore.deny(session)</code>，未调用 setRawMode</td></tr><tr><td>无通道</td><td>回落经典 <code>formatPermissionDialog</code>（路径不变）</td></tr><tr><td><code>runPreflight</code> 带 onControlRequest</td><td>返回空集，<strong>绝不</strong>打开批量弹窗</td></tr></tbody></table>
+<p>相邻回归套件：<code>toolUseLoop.intentGate / verificationGate / harnessProfile /<br>deliveryConclusion / guardrails / structuredContext</code> + <code>toolCalling.openAppAlias</code>，全绿。</p>
+<h3 id="测试陷阱-已踩坑记录">测试陷阱（已踩坑记录）<a class="anchor" href="#测试陷阱-已踩坑记录" aria-label="锚点">#</a></h3>
+<ol><li><strong><code>os.homedir()</code> 在 macOS 忽略 <code>process.env.HOME</code></strong>（走 getpwuid）。</li></ol>
+<p><code>PERMISSIONS_FILE = ~/.khyquant/tool_permissions.json</code> 在模块加载期由<br>   <code>os.homedir()</code> 解析，故重定向 HOME 无效；必须<br>   <code>jest.doMock('os', () =&gt; ({ ...jest.requireActual('os'), homedir: () =&gt; tmpHome }))</code>，<br>   否则 <code>approveTool</code> 的持久化会污染真实文件并跨测试泄漏（<code>isApproved</code> 提前短路成<br>   <code>allow</code>，导致 false 用例错误返回 allow）。</p>
+<ol><li><strong>rtk hook 对 jest 报 <code>Exec format error</code></strong>，须直跑 hoisted 二进制：</li></ol>
+<p><code>cd services/backend &amp;&amp; node ../../node_modules/jest/bin/jest.js &lt;file&gt; --runInBand --rootDir .</code>。</p>
+<h3 id="端到端-需人工确认">端到端（需人工确认）<a class="anchor" href="#端到端-需人工确认" aria-label="锚点">#</a></h3>
+<p>在 ink TUI（ask 模式）让模型一次发 ≥2 个写 / 执行工具，确认：<br>弹出 ink 的 <code>PermissionsPrompt</code>（y/n/a）；授权前后 ↑ 历史回溯、回车提交、普通输入<br>全部正常；终端不再掉 cooked、无 <code>^[[A</code> 泄漏。</p>
+<hr>
+<h2 id="七-备注-同族潜在缺陷-本次范围外">七、备注（同族潜在缺陷，本次范围外）<a class="anchor" href="#七-备注-同族潜在缺陷-本次范围外" aria-label="锚点">#</a></h2>
+<ul><li><code>toolUseLoop._readControlDecision</code>（exec-approval 路径）同样只认对象、对 ink 原语返回</li></ul>
+<p><code>deny</code>，属同族缺陷。本次先用独立的 <code>_decisionFromControl</code> 规避；如需一并修复，可让<br>  <code>_readControlDecision</code> 也接受原语 <code>true</code> / <code>'always'</code>，但那会改动 exec-approval 行为，<br>  应单列评估。</p>
+<ul><li>预存在失败 <code>tests/toolCalling.shellForkClassify.test.js</code>：forest 重构后</li></ul>
+<p><code>shell_command</code> 已移出 <code>BUILTIN_TOOLS</code>（HEAD 同样 0 命中），与本次修复无关。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-004] tui-叙事与选择覆盖层-2026-06-01.html"><div class="dir">← 上一篇</div><div class="ttl">TUI 高级工程师叙事模式 + 交互选择覆盖层</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-006] tui-流式与上下文显示-2026-06-01.html"><div class="dir">下一篇 →</div><div class="ttl">TUI 流式显示与上下文窗口修复记录</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-005] tui-权限授权掉cooked模式修复-2026-06-09.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>
