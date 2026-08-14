@@ -9,7 +9,7 @@
 # the version dynamically from this file / installed metadata.
 
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=84.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
