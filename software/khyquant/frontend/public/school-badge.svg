@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="95" fill="#E31E24" stroke="#E31E24" stroke-width="2"/>
+  <circle cx="100" cy="100" r="85" fill="none" stroke="white" stroke-width="2"/>
+  <circle cx="100" cy="100" r="65" fill="#E31E24"/>
+  
+  <!-- 火焰图案 -->
+  <path d="M 100 70 Q 90 85 90 95 Q 90 105 100 110 Q 110 105 110 95 Q 110 85 100 70 Z" fill="white"/>
+  <path d="M 100 75 Q 95 85 95 92 Q 95 98 100 102 Q 105 98 105 92 Q 105 85 100 75 Z" fill="#E31E24"/>
+  
+  <!-- 书本底座 -->
+  <path d="M 70 110 L 70 115 Q 100 120 130 115 L 130 110 Q 100 115 70 110 Z" fill="white"/>
+  <path d="M 75 115 L 75 118 Q 100 122 125 118 L 125 115 Q 100 119 75 115 Z" fill="white"/>
+  
+  <!-- 1907 文字 -->
+  <text x="100" y="140" font-family="Arial" font-size="12" fill="white" text-anchor="middle" font-weight="bold">1907</text>
+  
+  <!-- 外圈中文 -->
+  <path id="topArc" d="M 30,100 A 70,70 0 0,1 170,100" fill="none"/>
+  <text font-family="SimSun" font-size="16" fill="white" font-weight="bold">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">
+      南阳师范学院
+    </textPath>
+  </text>
+  
+  <!-- 外圈英文 -->
+  <path id="bottomArc" d="M 170,100 A 70,70 0 0,1 30,100" fill="none"/>
+  <text font-family="Arial" font-size="11" fill="white" font-weight="bold">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">
+      Nanyang Normal University
+    </textPath>
+  </text>
+</svg>
