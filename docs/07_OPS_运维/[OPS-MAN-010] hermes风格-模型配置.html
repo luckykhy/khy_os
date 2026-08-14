@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 中的 Hermes 风格模型配置 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY 中的 Hermes 风格模型配置</div>
+      <header class="hero reveal"><h1>KHY 中的 Hermes 风格模型配置</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-中的-hermes-风格模型配置">KHY 中的 Hermes 风格模型配置</a></li><li class="lvl-2"><a href="#方式一-命令行配置-推荐">方式一：命令行配置（推荐）</a></li><li class="lvl-2"><a href="#方式二-交互式向导">方式二：交互式向导</a></li><li class="lvl-2"><a href="#方式三-前端管理界面-ai-gateway-标签页">方式三：前端管理界面（AI Gateway 标签页）</a></li><li class="lvl-2"><a href="#键映射-hermes-风格-khy-环境变量">键映射（Hermes 风格 -&gt; KHY 环境变量）</a></li><li class="lvl-2"><a href="#为什么-model-default-很重要">为什么 `model.default` 很重要</a></li><li class="lvl-2"><a href="#api-key-格式兼容性">API Key 格式兼容性</a></li><li class="lvl-2"><a href="#openclaw-兼容配置">OpenClaw 兼容配置</a></li><li class="lvl-2"><a href="#opencode-兼容配置">OpenCode 兼容配置</a></li><li class="lvl-3"><a href="#方案-a-直接传参">方案 A：直接传参</a></li><li class="lvl-3"><a href="#方案-b-从-opencode-json-导入">方案 B：从 `opencode.json` 导入</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-010 | 阶段: 运维 | 原路径: docs/指南/hermes风格-模型配置.md --&gt;</p>
+<h1 id="khy-中的-hermes-风格模型配置">KHY 中的 Hermes 风格模型配置<a class="anchor" href="#khy-中的-hermes-风格模型配置" aria-label="锚点">#</a></h1>
+<p>本指南将 Hermes 风格的模型配置映射到 KHY CLI。</p>
+<h2 id="方式一-命令行配置-推荐">方式一：命令行配置（推荐）<a class="anchor" href="#方式一-命令行配置-推荐" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy config set model.provider custom
+khy config set model.base_url https://your-provider.com/v1
+khy config set model.api_key &quot;sk-xxxxx&quot;
+khy config set model.name your-model-id
+khy config set model.default custom/your-model-id</code></pre>
+<p>快速检查：</p>
+<pre><code class="language-bash">khy config get model.default
+khy config list</code></pre>
+<h2 id="方式二-交互式向导">方式二：交互式向导<a class="anchor" href="#方式二-交互式向导" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy setup   # full initialization wizard
+# or
+khy model   # model/provider selection only</code></pre>
+<p>对于 OpenAI 兼容的自定义服务商，填写：</p>
+<ul><li>Base URL：<code>https://your-provider.com/v1</code></li><li>API Key：你的密钥</li><li>模型名称：<code>your-model-id</code></li></ul>
+<h2 id="方式三-前端管理界面-ai-gateway-标签页">方式三：前端管理界面（AI Gateway 标签页）<a class="anchor" href="#方式三-前端管理界面-ai-gateway-标签页" aria-label="锚点">#</a></h2>
+<p>对于管理员用户，KHY 现已支持可视化配置流程，位于：</p>
+<ul><li><code>Admin Dashboard -&gt; AI Gateway -&gt; 模型与 API Key 配置</code></li></ul>
+<p>该界面设计为兼容 Hermes/OpenClaw/OpenCode 风格的输入。</p>
+<p>步骤：</p>
+<ol><li>选择一个预设配置（<code>Hermes</code>、<code>OpenClaw</code>、<code>OpenCode</code> 或 <code>Custom</code>）。</li><li>填写 <code>Base URL</code> 和 <code>Model ID</code>（模型是动态的，并不固定为单一值）。</li><li>可选地以灵活格式粘贴 API key（<code>sk-xxx</code>、<code>Bearer sk-xxx</code>、<code>key=...</code>、多行、JSON 数组/对象）。</li><li>选择兼容性（<code>openai</code>、<code>anthropic</code>、<code>unknown</code>）。</li><li>点击保存。</li></ol>
+<p>行为细节：</p>
+<ul><li>如果 Base URL 缺少 <code>/v1</code>，KHY 会自动规范化并显示保存提示。</li><li>如果 <code>Clear Key</code> 处于关闭状态且 API key 输入为空，则保留现有密钥不变。</li><li>如果 <code>Clear Key</code> 处于开启状态，KHY 会移除 <code>RELAY_API_KEY</code> 和 <code>RELAY_API_KEYS</code>。</li></ul>
+<h2 id="键映射-hermes-风格-khy-环境变量">键映射（Hermes 风格 -&gt; KHY 环境变量）<a class="anchor" href="#键映射-hermes-风格-khy-环境变量" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Input key</th><th>Written env vars</th></tr></thead><tbody><tr><td><code>model.provider=custom</code></td><td><code>GATEWAY_PREFERRED_ADAPTER=relay_api</code>, <code>GATEWAY_PREFERRED_STRICT=true</code></td></tr><tr><td><code>model.base_url=...</code></td><td><code>RELAY_API_ENDPOINT=...</code> (+ prefers <code>relay_api</code>)</td></tr><tr><td><code>model.api_key=...</code></td><td><code>RELAY_API_KEY=...</code> (+ prefers <code>relay_api</code>)</td></tr><tr><td><code>model.name=...</code></td><td><code>RELAY_API_MODEL=...</code> (+ prefers <code>relay_api</code>)</td></tr><tr><td><code>model.default=custom/&lt;model&gt;</code></td><td><code>GATEWAY_PREFERRED_ADAPTER=relay_api</code>, <code>GATEWAY_PREFERRED_MODEL=&lt;model&gt;</code>, <code>GATEWAY_PREFERRED_STRICT=true</code>, <code>RELAY_API_MODEL=&lt;model&gt;</code></td></tr></tbody></table>
+<h2 id="为什么-model-default-很重要">为什么 <code>model.default</code> 很重要<a class="anchor" href="#为什么-model-default-很重要" aria-label="锚点">#</a></h2>
+<p><code>model.default</code> 会同时固定适配器和模型路由（<code>provider/model</code>），以实现确定性路由。<br>若不设置它，运行时仍可能通过适配器默认值工作，但模型选择会不够明确。</p>
+<h2 id="api-key-格式兼容性">API Key 格式兼容性<a class="anchor" href="#api-key-格式兼容性" aria-label="锚点">#</a></h2>
+<p><code>khy config set model.api_key ...</code> 支持多格式输入（与网关/密钥池所用的解析器相同）：</p>
+<ul><li>单个密钥：<code>sk-xxx</code></li><li>多个密钥（逗号/分号/换行分隔）：<code>sk-a,sk-b</code></li><li>Bearer 风格：<code>Bearer sk-xxx</code></li><li>KV 风格：<code>key=sk-xxx</code> 或 <code>token: sk-xxx</code></li><li>JSON 数组/对象形式</li></ul>
+<p>当提供多个密钥时：</p>
+<ul><li>主密钥 -&gt; <code>RELAY_API_KEY</code></li><li>完整列表 -&gt; <code>RELAY_API_KEYS</code>（逗号拼接）</li></ul>
+<h2 id="openclaw-兼容配置">OpenClaw 兼容配置<a class="anchor" href="#openclaw-兼容配置" aria-label="锚点">#</a></h2>
+<p>KHY 还支持 OpenClaw 风格的非交互式自定义服务商配置：</p>
+<pre><code class="language-bash">khy config openclaw \
+  --custom-base-url &quot;https://your-provider.com/v1&quot; \
+  --custom-model-id &quot;&lt;your-model-id&gt;&quot; \
+  --custom-api-key &quot;sk-xxxxx&quot; \
+  --custom-compatibility openai</code></pre>
+<p>说明：</p>
+<ul><li><code>--custom-model-id</code> 是动态的且为必填项。它并不固定为单一值。</li><li><code>--custom-api-key</code> 是可选的（类似 OpenClaw 自定义服务商流程）。若省略，运行时仍可能需要鉴权。</li><li>支持的兼容性取值：<code>openai</code>、<code>anthropic</code>、<code>unknown</code>。</li></ul>
+<h2 id="opencode-兼容配置">OpenCode 兼容配置<a class="anchor" href="#opencode-兼容配置" aria-label="锚点">#</a></h2>
+<p>KHY 还支持 OpenCode 风格的配置输入。</p>
+<h3 id="方案-a-直接传参">方案 A：直接传参<a class="anchor" href="#方案-a-直接传参" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy config opencode \
+  --base-url &quot;https://your-provider.com/v1&quot; \
+  --model-id &quot;&lt;your-model-id&gt;&quot; \
+  --api-key &quot;sk-xxxxx&quot; \
+  --compatibility openai</code></pre>
+<h3 id="方案-b-从-opencode-json-导入">方案 B：从 <code>opencode.json</code> 导入<a class="anchor" href="#方案-b-从-opencode-json-导入" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy config opencode \
+  --config &quot;~/.config/opencode/opencode.json&quot; \
+  --provider &quot;&lt;provider-name&gt;&quot;</code></pre>
+<p>说明：</p>
+<ul><li><code>model-id</code> 是动态的；它并不固定为单一值。</li><li>如果 base URL 未以 <code>/v1</code> 结尾，KHY 会自动将其规范化为 <code>/v1</code> 端点并打印警告。</li><li><code>api-key</code> 是可选的；若省略，运行时仍可能需要鉴权。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-009] github-分支保护基线.html"><div class="dir">← 上一篇</div><div class="ttl">GitHub Branch Protection Baseline</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 学习文档（中文）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-010] hermes风格-模型配置.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

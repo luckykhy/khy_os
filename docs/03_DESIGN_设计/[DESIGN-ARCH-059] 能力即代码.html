@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DESIGN-ARCH-059 能力即代码（capability-as-code） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>DESIGN-ARCH-059 能力即代码（capability-as-code）</div>
+      <header class="hero reveal"><h1>DESIGN-ARCH-059 能力即代码（capability-as-code）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-059-能力即代码-capability-as-code">DESIGN-ARCH-059 能力即代码（capability-as-code）</a></li><li class="lvl-2"><a href="#一-动机与非目标">一、动机与非目标</a></li><li class="lvl-3"><a href="#动机">动机</a></li><li class="lvl-3"><a href="#非目标-后续演进">非目标（后续演进）</a></li><li class="lvl-2"><a href="#二-什么是-一条能力">二、什么是「一条能力」</a></li><li class="lvl-2"><a href="#三-机制层-part-a-薄约定-非新注册表">三、机制层（Part A）：薄约定，非新注册表</a></li><li class="lvl-3"><a href="#3-1-definetool-的-capability-元数据块">3.1 `defineTool` 的 `capability` 元数据块</a></li><li class="lvl-3"><a href="#3-2-薄门面-services-backend-src-services-capabilityregistry-js">3.2 薄门面 `services/backend/src/services/capabilityRegistry.js`</a></li><li class="lvl-3"><a href="#3-3-用户可见视图-khy-capability-list-show">3.3 用户可见视图 `khy capability list|show`</a></li><li class="lvl-2"><a href="#四-首个实例-part-b-word-标题字号-颜色">四、首个实例（Part B）：Word 标题字号/颜色</a></li><li class="lvl-3"><a href="#关键实现要点-踩坑沉淀">关键实现要点（踩坑沉淀）</a></li><li class="lvl-2"><a href="#四之二-第二个实例-统一格式转换-convertfile">四之二、第二个实例：统一格式转换（convertFile）</a></li><li class="lvl-3"><a href="#关键实现要点-踩坑沉淀-2">关键实现要点（踩坑沉淀）</a></li><li class="lvl-2"><a href="#四之三-第三个实例-角色扮演-adoptrole">四之三、第三个实例：角色扮演（adoptRole）</a></li><li class="lvl-3"><a href="#正确扮演-的安全分层-本能力的内核">「正确扮演」的安全分层（本能力的内核）</a></li><li class="lvl-3"><a href="#关键实现要点-踩坑沉淀-3">关键实现要点（踩坑沉淀）</a></li><li class="lvl-2"><a href="#五-编写新能力的清单-复制即用">五、编写新能力的清单（复制即用）</a></li><li class="lvl-2"><a href="#六-风险与对策">六、风险与对策</a></li><li class="lvl-2"><a href="#七-3-tree-铁律">七、3-tree 铁律</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-059-能力即代码-capability-as-code">DESIGN-ARCH-059 能力即代码（capability-as-code）<a class="anchor" href="#design-arch-059-能力即代码-capability-as-code" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>核心判断</strong>：Khyos 的「学习」不能过度依赖助手记忆，更应该以<strong>代码</strong>实现。<br>每次「教 Khyos 做一件事」，若只落成助手私有记忆，则只有助手可见、不随产品分发、<br>无测试会过期、还会让 <code>MEMORY.md</code> 膨胀。能力应沉淀为<strong>可执行模块 + 测试 + 自动发现</strong>，<br>经 canonical 3-tree 入仓、随 wheel/npm 分发给<strong>所有用户</strong>。</p>
+<p>本文档把「一条能力如何落地为代码」固化为可复制的编写约定。<br>关键设计结论：<strong>不新建第 5 套并行注册表</strong>。现有工具注册表（<code>defineTool</code> +<br><code>tools/index.js</code> 自动发现）已把<strong>一份描述符</strong>扇出到 <strong>CLI + agent + MCP</strong> 三个面；<br>唯一缺口是「测试作为一等公民」。因此本机制 = 在现有工具注册表上加一层<br><strong>薄约定 + 元数据 + 一个用户可见的 <code>khy capability</code> 视图</strong>，而非重写。</p></blockquote>
+<hr>
+<h2 id="一-动机与非目标">一、动机与非目标<a class="anchor" href="#一-动机与非目标" aria-label="锚点">#</a></h2>
+<h3 id="动机">动机<a class="anchor" href="#动机" aria-label="锚点">#</a></h3>
+<ul><li><strong>可分发</strong>：能力随 wheel/npm 进入每个用户的安装，而非只活在某次会话的助手记忆里。</li><li><strong>可验证</strong>：每条能力自带同位 node:test，回归会跑、不会悄悄过期。</li><li><strong>可发现</strong>：<code>khy capability list/show</code> 让用户（与未来的自己）看到「学过哪些能力、测试在哪、是否还在」。</li><li><strong>不膨胀记忆</strong>：<code>MEMORY.md</code> 有体积上限（24.4KB）。能力入代码后，对应的「能力型记忆」应当删除，</li></ul>
+<p>避免与仓库重复（见记忆 <code>feedback_learning_as_code</code>）。</p>
+<h3 id="非目标-后续演进">非目标（后续演进）<a class="anchor" href="#非目标-后续演进" aria-label="锚点">#</a></h3>
+<ul><li>能力的<strong>动态创建</strong>：已有 <code>metaToolEngine</code> + <code>CreateToolTool</code>，本约定不与其重叠。</li><li><code>khy capability verify</code> <strong>真跑测试</strong>：v1 仅做「测试文件存在性」检查；跑 <code>node --test</code> 留 v1.1。</li></ul>
+<hr>
+<h2 id="二-什么是-一条能力">二、什么是「一条能力」<a class="anchor" href="#二-什么是-一条能力" aria-label="锚点">#</a></h2>
+<p>一条能力 = 以下五件套，全部经 canonical 树入仓：</p>
+<table><thead><tr><th>#</th><th>组成</th><th>位置约定</th><th>说明</th></tr></thead><tbody><tr><td>1</td><td><strong>共享核心</strong>（single source of truth）</td><td><code>services/backend/src/cli/handlers/&lt;域&gt;.js</code></td><td>真正干活的纯函数，结构化返回、<strong>绝不抛栈</strong>；带 DI seam（注入 spawn / findPython 便于无依赖测试）</td></tr><tr><td>2</td><td><strong><code>defineTool</code> 描述符 + <code>capability</code> 块</strong></td><td><code>services/backend/src/tools/&lt;name&gt;.js</code></td><td>agent / MCP 面的入口；<code>execute()</code> 委派共享核心</td></tr><tr><td>3</td><td><strong>CLI handler 包装</strong></td><td>复用同一 <code>handlers/&lt;域&gt;.js</code></td><td><code>khy &lt;域&gt; &lt;子命令&gt;</code> 命令；与工具共享同一核心</td></tr><tr><td>4</td><td><strong>同位 node:test</strong></td><td><code>services/backend/tests/&lt;name&gt;.test.js</code></td><td>契约测试（纯 JS）+ 注入 spawn 的编排断言 +（若依赖外部库）库探活门控的 e2e</td></tr><tr><td>5</td><td><strong>（若需第三方库）依赖归属</strong></td><td><code>pyproject.toml</code> 的 extra</td><td>例如 <code>doc</code> extra 补 <code>python-docx</code>；运行时<strong>惰性导入 + needsDep 兜底</strong></td></tr></tbody></table>
+<hr>
+<h2 id="三-机制层-part-a-薄约定-非新注册表">三、机制层（Part A）：薄约定，非新注册表<a class="anchor" href="#三-机制层-part-a-薄约定-非新注册表" aria-label="锚点">#</a></h2>
+<h3 id="3-1-definetool-的-capability-元数据块">3.1 <code>defineTool</code> 的 <code>capability</code> 元数据块<a class="anchor" href="#3-1-definetool-的-capability-元数据块" aria-label="锚点">#</a></h3>
+<p><code>services/backend/src/tools/_baseTool.js</code>：<code>defineTool</code> 内部构造<strong>显式对象字面量、不 spread config</strong><br>（未知字段会被静默丢弃）。因此 <code>capability</code> 必须像 <code>_pendingCommands</code> 一样<strong>显式附加</strong>，<br>且必须在 <code>Object.freeze(tool)</code> <strong>之前</strong>：</p>
+<pre><code class="language-js">// ── Capability-as-code metadata (optional) ───────────────────────
+if (config.capability &amp;&amp; typeof config.capability === 'object') {
+  tool.capability = Object.freeze({ ...config.capability });
+}
+return Object.freeze(tool);</code></pre>
+<p>字段约定：</p>
+<pre><code class="language-js">capability: {
+  summary:     '一句话能力说明（用户可见）',
+  learnedFrom: '&lt;时间&gt; 来源/教学场景',
+  tests:       ['tests/&lt;name&gt;.test.js'],        // 相对 backend 包根
+  surfaces:    ['cli', 'agent', 'mcp'],          // 该能力暴露的面
+}</code></pre>
+<p><strong>安全性</strong>：<code>toFunctionDef()</code> 只输出白名单 <code>{name, description, parameters, aliases?}</code>，<br><code>capability</code> <strong>永不泄漏给模型</strong>。元数据为普通可枚举属性，便于注册表过滤。</p>
+<h3 id="3-2-薄门面-services-backend-src-services-capabilityregistry-js">3.2 薄门面 <code>services/backend/src/services/capabilityRegistry.js</code><a class="anchor" href="#3-2-薄门面-services-backend-src-services-capabilityregistry-js" aria-label="锚点">#</a></h3>
+<p>无 spawn、无 DI、无测试运行器，仅查询既有工具注册表：</p>
+<ul><li><code>listCapabilities()</code> → 过滤带 <code>.capability</code> 的工具，返回 <code>[{name, summary, learnedFrom, surfaces, tests}]</code>，按名称排序。</li><li><code>describeCapability(name)</code> → 在上基础上对每个声明的 <code>tests</code> 路径做 <code>fs.existsSync</code>，</li></ul>
+<p>附 <code>testsResolved</code>（<code>{path, absPath, exists}</code>）与 <code>testsPresent</code>（全部存在）。未找到返回 <code>null</code>。</p>
+<ul><li>导出 <code>PACKAGE_ROOT</code>（= <code>services/backend</code>）。</li></ul>
+<h3 id="3-3-用户可见视图-khy-capability-list-show">3.3 用户可见视图 <code>khy capability list|show</code><a class="anchor" href="#3-3-用户可见视图-khy-capability-list-show" aria-label="锚点">#</a></h3>
+<ul><li><code>commandSchema</code>：<code>ROUTER_COMMANDS</code> 加 <code>'capability'</code>；<code>ROUTER_SUB_COMMANDS</code> 加 <code>capability:['list','show']</code>。</li><li><code>router.js</code>：<code>case 'capability'</code> → <code>cli/handlers/capability.js</code> <code>handleCapability(parsed)</code>。</li><li><code>list</code>（缺省）打印能力表（能力 / 说明 / 可用面 / 带测试）；<code>show &lt;name&gt;</code> 列出测试路径与「存在:是/否」。</li></ul>
+<p>这是「自动发现 + 测试可定位」对用户的可见保证。</p>
+<hr>
+<h2 id="四-首个实例-part-b-word-标题字号-颜色">四、首个实例（Part B）：Word 标题字号/颜色<a class="anchor" href="#四-首个实例-part-b-word-标题字号-颜色" aria-label="锚点">#</a></h2>
+<p>把上述约定走通的第一条真实能力。来源：用户教学「把 Word 文档的标题/表题改成指定字号与颜色」。</p>
+<table><thead><tr><th>组成</th><th>落点</th></tr></thead><tbody><tr><td>共享核心</td><td><code>cli/handlers/doc.js</code> <code>runTitleStyle(opts, deps={})</code> — 路径解析 + 输入/输出双路径 <code>validateNoPathTraversal</code> 封禁 + spawn <code>docHelper.py title-style</code> + 结构化返回</td></tr><tr><td>Python 核心</td><td><code>services/docHelper.py</code> <code>title-style</code> 子命令 — 惰性 <code>from docx import Document; from docx.shared import Pt, RGBColor</code>，缺依赖返 <code>{needsDep:true, hint:'pip install khy-os[doc]'}</code></td></tr><tr><td>工具描述符</td><td><code>tools/docTitleStyle.js</code> <code>defineTool</code>（<code>filesystem</code>/<code>medium</code>/非只读，<code>isEnabled</code> 探 python），<code>execute()</code> 调 <code>runTitleStyle</code></td></tr><tr><td>CLI</td><td><code>khy doc title &lt;in.docx&gt; [--match 文字] [--style 样式] [--size pt] [--color hex]</code></td></tr><tr><td>测试</td><td><code>tests/docTitleStyle.test.js</code>（16 断言）+ <code>tests/capabilityRegistry.test.js</code></td></tr><tr><td>依赖</td><td><code>pyproject.toml</code> <code>doc</code> extra 补 <code>python-docx&gt;=1.1.0</code></td></tr></tbody></table>
+<h3 id="关键实现要点-踩坑沉淀">关键实现要点（踩坑沉淀）<a class="anchor" href="#关键实现要点-踩坑沉淀" aria-label="锚点">#</a></h3>
+<ul><li><strong>定位</strong>：按精确文本 <code>match</code> <strong>或</strong>按段落样式 <code>style</code>；样式集含本地化中文名</li></ul>
+<p><code>标题</code>/<code>标题 1</code>/<code>标题 2</code>/<code>题注</code>（用户多为中文文档）。</p>
+<ul><li><strong>多 run 标题</strong>：Word 常把标题文字拆成多个 run，须遍历<strong>全部 run</strong> 设</li></ul>
+<p><code>run.font.size = Pt(...)</code>、<code>run.font.color.rgb = RGBColor.from_string(hex)</code>（6 位 hex、无 <code>#</code>）。</p>
+<ul><li><strong>不覆盖源</strong>：<code>output</code> 缺省 → 同级 <code>*.styled.docx</code>。</li><li><strong>写路径封禁</strong>：输入/输出双路径经 <code>validateNoPathTraversal</code>（限项目树 <code>KHYQUANT_CWD</code> 或用户家/桌面等可信根）。</li><li><strong>已知限制</strong>：表题自动编号 <code>图 1</code>/<code>表 1</code> 由 SEQ 域生成，普通 run 改不到，只改字面 run。</li></ul>
+<hr>
+<h2 id="四之二-第二个实例-统一格式转换-convertfile">四之二、第二个实例：统一格式转换（convertFile）<a class="anchor" href="#四之二-第二个实例-统一格式转换-convertfile" aria-label="锚点">#</a></h2>
+<p>复制同一约定走通的第二条能力——验证「能力即代码」可复制，而非一次性脚手架。<br>来源：用户教学「教 Khyos 正确做格式转换，比如图片转 PDF 或转可编辑的 txt」。<strong>这条学习<br>从未存过记忆，直接落成代码 + 测试 + 自动发现</strong>，正是本 DESIGN 的初衷示范。</p>
+<table><thead><tr><th>组成</th><th>落点</th></tr></thead><tbody><tr><td>共享核心</td><td><code>cli/handlers/convert.js</code> <code>runConvert(opts, deps={})</code> — 输入归一（单文件/逗号分隔多文件/目录枚举按名排序）+ 源/目标判定 + 路由表 + 输出路径 <code>validateNoPathTraversal</code>/<code>validateNotUNCPath</code> 封禁 + spawn 子命令 + 结构化返回</td></tr><tr><td>Python 核心</td><td><code>services/docHelper.py</code> 新增 <code>img2pdf</code>/<code>pdf2txt</code>/<code>docx2txt</code>/<code>txt2docx</code> 四子命令（惰性导入 Pillow/pypdf/python-docx，缺依赖返 <code>{needsDep:true}</code>）</td></tr><tr><td>工具描述符</td><td><code>tools/convertFile.js</code> <code>defineTool</code>（<code>filesystem</code>/<code>medium</code>/非只读，<code>isEnabled</code> 探 python），<code>execute()</code> 调 <code>runConvert</code></td></tr><tr><td>CLI</td><td>`khy convert &lt;文件\</td></tr><tr><td>测试</td><td><code>tests/convertFile.test.js</code>（18 用例：契约 3 + 注入 spawn 路由 11 + python 门控 e2e 4）</td></tr><tr><td>依赖</td><td><code>pyproject.toml</code> <code>doc</code> extra 补 <code>pypdf&gt;=4.0.0</code>（PDF 文本层提取）</td></tr></tbody></table>
+<p><strong>转换矩阵（源 → 目标）</strong>：</p>
+<table><thead><tr><th>源\目标</th><th>pdf</th><th>txt</th><th>docx</th></tr></thead><tbody><tr><td>image</td><td>✓ 单张/多图合并</td><td>✓ OCR</td><td>—</td></tr><tr><td>pdf</td><td>—</td><td>✓ 文本层提取</td><td>✓ pdf2docx</td></tr><tr><td>docx</td><td>—</td><td>✓ 段落文本</td><td>—</td></tr><tr><td>txt</td><td>—</td><td>—</td><td>✓ 逐行段落</td></tr></tbody></table>
+<h3 id="关键实现要点-踩坑沉淀-2">关键实现要点（踩坑沉淀）<a class="anchor" href="#关键实现要点-踩坑沉淀-2" aria-label="锚点">#</a></h3>
+<ul><li><strong>PNG alpha/调色板存 PDF 报错</strong> → 存前一律 <code>Image.convert(&quot;RGB&quot;)</code>。</li><li><strong>多图合并</strong> → 首张 <code>first.save(out, &quot;PDF&quot;, save_all=True, append_images=others)</code>；目录/多图按</li></ul>
+<p>文件名 <code>localeCompare</code> 排序，输出名 <code>*.merged.pdf</code> 不覆盖源。</p>
+<ul><li><strong>扫描件 PDF 无文本层</strong> → <code>pdf2txt</code> 提取为空时返 <code>{success:false, hint:'疑似扫描件，改用图片→TXT(OCR)'}</code>，不假装成功。</li><li><strong>图片→TXT 复用既有 <code>ocr</code></strong> → docHelper 的 <code>ocr</code> 只回文本不落盘，由 Node 侧把（多图拼接的）文本写 <code>.txt</code>。</li><li><strong>大文本走 argv</strong> → <code>txt2docx</code> 从<strong>文件</strong>读，不把内容塞命令行。</li><li><strong>格式判定优先级</strong> → <code>--to</code> 显式 &gt; 输出扩展名 &gt; 按源默认（image→pdf / pdf→txt / docx→txt / txt→docx）。</li><li><strong>写路径封禁</strong> → 仅封<strong>输出</strong>路径（读路径按既有工具惯例不封，扩展名已门控）；<code>bin/khy.js</code> 启动会把</li></ul>
+<p><code>KHYQUANT_CWD</code> 重置为 backend 目录，故 CLI 写目标须落项目树或用户家/桌面/文档/下载等可信根。</p>
+<hr>
+<h2 id="四之三-第三个实例-角色扮演-adoptrole">四之三、第三个实例：角色扮演（adoptRole）<a class="anchor" href="#四之三-第三个实例-角色扮演-adoptrole" aria-label="锚点">#</a></h2>
+<p>走通同一约定的第三条能力，也是<strong>首个行为型实例</strong>——前两条都在转换<strong>文件</strong>，这条转换的是<br><strong>agent 自己怎么回应</strong>。来源：用户教学「教 Khyos <strong>正确</strong>根据提示词扮演角色，比如『你现在是一位<br>资深律师』」。它证明「能力即代码」不止适用于文件工具，<strong>行为/提示词层的能力同样照此约定落地</strong>：<br>核心是 <strong>JS 服务 + 系统提示词段注入</strong>，无 Python、无文件转换。</p>
+<table><thead><tr><th>组成</th><th>落点</th></tr></thead><tbody><tr><td>行为核心</td><td><code>services/roleService.js</code> —— <code>synthesizeRole</code>（命中预设套模板 / 否则自由合成，尾部恒附 <code>SAFETY_FOOTER</code>）、<code>detectRoleIntent</code>（保守正则识别 set/clear，跳过疑问句/闲聊）、会话级活动角色存储 + <code>roleStamp()</code>、<code>persistRole</code>/<code>unpersistRole</code>（写/清 persona.md 受管栅栏区）</td></tr><tr><td>共享核心 + CLI</td><td><code>cli/handlers/role.js</code> <code>runRole(opts, deps)</code> —— 工具/CLI/斜杠/自动识别共用；<code>handleRole(parsed)</code> 为 <code>khy role</code> 入口</td></tr><tr><td>工具描述符</td><td><code>tools/adoptRole.js</code> <code>defineTool</code>（<code>system</code>/<code>low</code>/非只读/并发安全，纯 JS 默认 enabled），<code>execute()</code> 调 <code>runRole</code></td></tr><tr><td>提示词注入</td><td><code>constants/prompts.js</code> <code>getRoleSection(cwd)</code>（紧接 <code>getPersonaSection</code> 后）+ 动态段（persona <strong>之后</strong>，cacheKey 折 <code>roleStamp()</code>）；<code>khyUpgradeRuntime.js</code> 顶层 prompt cacheKey 同样折入 <code>roleStamp</code></td></tr><tr><td>对话自动识别</td><td><code>cli/repl.js</code> 在每轮发送前（<strong>仅交互式 CLI</strong>）跑 <code>detectRoleIntent</code>→<code>runRole</code>，并打印一行透明提示；<code>KHY_ROLE_AUTODETECT=0</code> 关</td></tr><tr><td>会话清理</td><td><code>cli/ai.js</code> <code>clearHistory()</code> 单一收口调 <code>clearActiveRole()</code>（<code>/new</code>/<code>/reset</code>/<code>/clear</code>/双 Ctrl+C 临时角色不残留）</td></tr><tr><td>CLI/斜杠</td><td><code>commandSchema</code> <code>ROUTER_COMMANDS</code> 加 <code>'role'</code>；<code>router.js</code> <code>case 'role'</code>；<code>repl.js</code> extras 加 <code>/role</code></td></tr><tr><td>测试</td><td><code>tests/roleService.test.js</code>（24 用例：检测/合成/安全/存储/共核/工具契约/段注入）</td></tr><tr><td>依赖</td><td>无（纯 JS）</td></tr></tbody></table>
+<h3 id="正确扮演-的安全分层-本能力的内核">「正确扮演」的安全分层（本能力的内核）<a class="anchor" href="#正确扮演-的安全分层-本能力的内核" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>：角色段在硬禁令 / 项目规则 / persona 红线<strong>之下</strong>。段头（<code># role (temporary)</code>）重申：</li></ul>
+<p>角色仅塑造表达/措辞/专业视角，<strong>绝不</strong>覆盖上方边界，冲突一律以上方为准。</p>
+<ul><li><strong>不可协商安全页脚</strong>：每个合成角色块尾部固定追加 <code>SAFETY_FOOTER</code>（不泄密钥/不绕人工确认/不替用户做不可逆决策/角色非越权理由）。</li><li><strong>越权拒绝</strong>：<code>REFUSAL_PATTERNS</code> 把「忽略所有规则 / 开发者模式 / 越狱 / DAN / no restrictions / ignore (all|previous) rules」类提示<strong>直接拒绝</strong>，不合成为角色。</li><li><strong>注入扫描 fail-closed</strong>：自由/持久化文本走 <code>instructionFileService.scanForPromptInjection</code>（命中即拒）；扫描器不可用时自由角色也拒绝，预设（可信）放行。</li><li><strong>临时 vs 持久</strong>：默认<strong>仅本次对话</strong>（进程内单例存储）；唯有用户显式 <code>--save</code>/「保存角色」才写入 persona.md</li></ul>
+<p>的<strong>受管栅栏区</strong>（<code>&lt;!-- khy:role:start --&gt;…&lt;!-- khy:role:end --&gt;</code>，幂等替换，不与手写内容纠缠）。</p>
+<ul><li><strong>多租户隔离</strong>：活动角色存储与对话自动识别<strong>仅交互式 CLI 单进程单用户启用</strong>；多租户 web 守护进程不跑自动识别、存储恒空，web 用户经各自 persona 持久（见风险表）。</li><li><strong>透明</strong>：每次采纳/退出都打印一行明示（符合工具透明要求，不黑箱扮演）。</li></ul>
+<h3 id="关键实现要点-踩坑沉淀-3">关键实现要点（踩坑沉淀）<a class="anchor" href="#关键实现要点-踩坑沉淀-3" aria-label="锚点">#</a></h3>
+<ul><li><strong>进程内单例 + 同轮生效</strong>：活动角色是模块单例；REPL 在 <code>makeSystemPrompt</code> 之前设角色，<code>getRoleSection</code></li></ul>
+<p>当轮即读到——「你现在是律师，帮我看这份合同」一句话同轮就以律师身份回应。</p>
+<ul><li><strong>缓存即时失效</strong>：<code>roleStamp()</code>（set/clear 自增序号，空时 <code>'none'</code>）折入段 cacheKey 与顶层 prompt cacheKey，</li></ul>
+<p>采纳/退出角色立刻使旧提示词缓存失效。</p>
+<ul><li><strong>检测保守</strong>：仅祈使设角色句式命中，疑问句（<code>你是谁?</code>/<code>你现在是什么模型？</code>）与普通闲聊一律不触发，避免误扮演。</li><li><strong>DI 可测</strong>：<code>persistRole(role, cwd, {writeFile, readFile, existsSync, mkdir, dest})</code> 注入文件副作用，</li></ul>
+<p>栅栏区幂等替换断言无需碰真实 persona.md。</p>
+<ul><li><strong>scan 显式优先</strong>：<code>synthesizeRole(prompt, {scan})</code> 用 <code>'scan' in opts</code> 区分「未提供」与「显式 null」，</li></ul>
+<p>使「扫描器不可用」分支可测。</p>
+<hr>
+<h2 id="五-编写新能力的清单-复制即用">五、编写新能力的清单（复制即用）<a class="anchor" href="#五-编写新能力的清单-复制即用" aria-label="锚点">#</a></h2>
+<ol><li>在 <code>cli/handlers/&lt;域&gt;.js</code> 写共享核心：纯函数、结构化返回、<code>deps={}</code> 注入外部副作用、绝不抛栈。</li><li>在 <code>tools/&lt;name&gt;.js</code> <code>defineTool</code>，<code>execute()</code> 委派共享核心，并加 <code>capability</code> 块（含 <code>tests</code>）。</li><li>若需顶层 CLI 命令：<code>commandSchema</code> 加 token + 子命令，<code>router.js</code> 加 <code>case</code>，handler 复用同一核心。</li></ol>
+<p>（注意：若工具已通过顶层路由暴露 CLI，<strong>不要</strong>再在 <code>defineTool</code> 里加 <code>_pendingCommands</code>，避免重复。）</p>
+<ol><li>写同位 <code>tests/&lt;name&gt;.test.js</code>：契约 + 注入 spawn 的编排（无外部依赖）+ 外部库探活门控的 e2e。</li><li>若依赖第三方库：<code>pyproject.toml</code> 对应 extra 补依赖；运行时惰性导入 + <code>needsDep</code> 兜底。</li><li>跑 <code>node --test tests/&lt;name&gt;.test.js tests/capabilityRegistry.test.js</code> + 相关回归。</li><li><strong>能力落地后</strong>：删除对应的「能力型记忆」及其 <code>MEMORY.md</code> 索引行（遵循 <code>feedback_learning_as_code</code>）。</li><li>重建 wheel 传播到 bundled 镜像。</li></ol>
+<hr>
+<h2 id="六-风险与对策">六、风险与对策<a class="anchor" href="#六-风险与对策" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>风险</th><th>对策</th></tr></thead><tbody><tr><td>CI 无 python-docx</td><td>e2e 用 <code>import docx</code> 探活门控 skip；契约/编排测试纯 JS（注入 spawn），不依赖 python</td></tr><tr><td><code>defineTool</code> 静默丢字段</td><td><code>capability</code> 显式附加，且必须在 <code>Object.freeze</code> 之前</td></tr><tr><td>元数据泄漏给模型</td><td><code>toFunctionDef()</code> 白名单输出，<code>capability</code> 不在其中</td></tr><tr><td>任意写</td><td>输入/输出双路径 <code>validateNoPathTraversal</code>；缺省输出走 <code>*.styled.docx</code> 不覆盖源</td></tr><tr><td>中文文档样式名</td><td>样式集含本地化中文名 + 提供精确文本 <code>match</code> 选择器</td></tr><tr><td>两个测试运行器混用</td><td><code>jest.config.js</code> 按 <code>require('node:test')</code> 标记自动忽略 node:test 套件，两运行器干净分离</td></tr></tbody></table>
+<hr>
+<h2 id="七-3-tree-铁律">七、3-tree 铁律<a class="anchor" href="#七-3-tree-铁律" aria-label="锚点">#</a></h2>
+<p>仅改 canonical：<code>services/backend/src/...</code>、<code>platform/khy_platform/...</code>、<code>pyproject.toml</code>、<code>docs/...</code>。<br><code>platform/khy_os/bundled/...</code> 由 <code>setup.py BuildWithBundle</code> <strong>生成</strong>，不手改。<br>重建 wheel 传播：<code>KHY_OFFLINE_BUILD=1 bash scripts/release/build-platform-wheel.sh</code>。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-058] 细粒度权限策略与记忆主动化引擎.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-ARCH-058 细粒度权限策略中间件 + 记忆主动化引擎 + 记忆定期蒸馏</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-060] khy 功能接线与编排总图.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-060] khy 功能接线与编排总图</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-059] 能力即代码.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

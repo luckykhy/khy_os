@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-106] unpack 未知格式自救（通用解包器兜底 + 受控安装） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-106] unpack 未知格式自救（通用解包器兜底 + 受控安装）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-106] unpack 未知格式自救（通用解包器兜底 + 受控安装）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-106-unpack-未知格式自救-通用解包器兜底-受控安装">[OPS-MAN-106] unpack 未知格式自救（通用解包器兜底 + 受控安装）</a></li><li class="lvl-2"><a href="#直击需求">直击需求</a></li><li class="lvl-2"><a href="#做法-两层自救">做法：两层自救</a></li><li class="lvl-2"><a href="#架构">架构</a></li><li class="lvl-2"><a href="#门-开关">门 / 开关</a></li><li class="lvl-2"><a href="#安全边界">安全边界</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-106-unpack-未知格式自救-通用解包器兜底-受控安装">[OPS-MAN-106] unpack 未知格式自救（通用解包器兜底 + 受控安装）<a class="anchor" href="#ops-man-106-unpack-未知格式自救-通用解包器兜底-受控安装" aria-label="锚点">#</a></h1>
+<h2 id="直击需求">直击需求<a class="anchor" href="#直击需求" aria-label="锚点">#</a></h2>
+<p>用户在 Windows 上让 khy 解包 <code>app.asar</code>，旧构建报<br><code>Unsupported archive format: .asar</code> 直接退出，PowerShell 兜底也失败。用户定调：</p>
+<blockquote><p>遇到未知格式时，需要 khy 自己想办法解决，比如安装某个插件，或者依赖等。</p></blockquote>
+<p>排查发现 <code>.asar</code> 在 HEAD 已由原生解析器支持（<code>_extractAsar</code>），Windows 那次失败是<strong>旧构建</strong>。<br>真正的缺口是 unpack 内建只认 <code>zip 族 / tar* / gz / asar</code>，撞到<br><code>.7z / .rar / .bz2 / .xz / .lzma / .zst / .lz4 / .cab / .iso / .deb / .rpm</code><br>仍旧一句 <code>Unsupported archive format</code> 退出——khy 不自救。</p>
+<h2 id="做法-两层自救">做法：两层自救<a class="anchor" href="#做法-两层自救" aria-label="锚点">#</a></h2>
+<ol><li><strong>探测并使用已装的通用解包器</strong>（默认开）。撞到内建不认的格式时，回退到机器上已装的</li></ol>
+<p><code>7z / bsdtar / unar / unrar</code> 就地解包。</p>
+<ol><li><strong>一个都没装时——先指路，受控才代装</strong>（默认只指路）。给出<strong>按平台的精确安装命令</strong>，</li></ol>
+<p>交调用方/用户决定；只有在 <code>KHY_UNPACK_AUTO_INSTALL=1</code> <strong>且</strong>本次调用显式 <code>install:true</code><br>   （模型须先在对话里征询用户点头）时，才代为执行安装命令并重试一次。对齐红线<br>   「禁止 AI 擅自动手」——装软件是改用户系统的动作，默认不擅自做。</p>
+<h2 id="架构">架构<a class="anchor" href="#架构" aria-label="锚点">#</a></h2>
+<ul><li><strong>SSOT 叶子</strong> <code>services/backend/src/services/reverseEngineer/genericExtractor.js</code></li></ul>
+<p>（确定性只读解析器 + 解包驱动，<strong>非零 IO 纯叶</strong>：做 <code>which/where</code> 探测并驱动子进程）：</p>
+<ul><li><code>GENERIC_FORMATS</code>：扩展名 → 候选解包器优先序（7z 覆盖面最广优先）+ 推荐安装包。</li><li><code>PKG_INSTALL</code> / <code>PM_CMD</code> / <code>_PM_ORDER</code>：逻辑包名 → 各包管理器真实包名 → 装包命令构造。</li><li><code>detectGenericFormat</code> / <code>pickExtractor</code> / <code>detectPackageManager</code> / <code>buildInstallCommand</code>：</li></ul>
+<p>纯映射/选择逻辑，平台与可执行探测都可<strong>注入</strong>（<code>opts.platform</code> / <code>opts.has</code>）以确定性单测。</p>
+<ul><li><code>extractWith</code> / <code>listWith</code>：数组式 argv 驱动子进程，fail-closed（任何失败 → <code>{ok:false}</code>）。</li></ul>
+<p><code>_verifyNoEscape</code>（逃逸拒绝 + 符号链接剥除）、<code>_sumTreeSize</code>（超 <code>MAX_UNPACK_BYTES</code> 则删目录）。</p>
+<h2 id="门-开关">门 / 开关<a class="anchor" href="#门-开关" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>环境变量</th><th>默认</th><th>语义</th></tr></thead><tbody><tr><td><code>KHY_UNPACK_GENERIC</code></td><td>on</td><td>通用解包器兜底层。off（<code>0/false/off/no</code>）→ 逐字节回退旧 Unsupported。</td></tr><tr><td><code>KHY_UNPACK_AUTO_INSTALL</code></td><td>off</td><td>代装层。仅 <code>1/true/on/yes</code> 开；还需本次调用显式 <code>install:true</code>。</td></tr></tbody></table>
+<p>二门均<strong>未登记进 flagRegistry</strong>（未注册 → 守卫保守放行，对齐 memoryOpsNotice / portableCli 先例）。</p>
+<h2 id="安全边界">安全边界<a class="anchor" href="#安全边界" aria-label="锚点">#</a></h2>
+<ul><li>输出目录仍受 <code>validateNoPathTraversal</code> 限域（工程树 / 用户 home 子目录）。</li><li>解包后逐树复核逃逸 + 剥符号链接 + 体积上限（超限即删）。</li><li>代装命令只经受控门 + 显式 <code>install:true</code> 才可达；<strong>绝不写 key</strong>。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/services/reverseEngineer/genericExtractor.js
+node --check services/backend/src/tools/unpackTool.js
+npm run test:unpack-generic   # 纯函数确定性 + 门关回退 + 真实 7z 端到端往返（无 7z 则跳过，不假绿）</code></pre>
+<p>真实 <code>7z</code> 往返测试：<code>7z a</code> 造真 <code>.7z</code>，经 unpack 公开 API 解包并逐字节校验内容；本机无 7z<br>则 <code>test.skip</code>（不伪造绿）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-105] 还原快照格式兼容性对账.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-105] 还原快照格式兼容性对账</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-107] 还原来源可溯性对账.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-107] 还原来源可溯性对账</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-106] unpack 未知格式自救.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

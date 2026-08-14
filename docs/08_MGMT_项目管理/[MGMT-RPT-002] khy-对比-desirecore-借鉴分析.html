@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS vs DesireCore — 委派式 Agent OS 借鉴分析 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY OS vs DesireCore — 委派式 Agent OS 借鉴分析</div>
+      <header class="hero reveal"><h1>KHY OS vs DesireCore — 委派式 Agent OS 借鉴分析</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-vs-desirecore-委派式-agent-os-借鉴分析">KHY OS vs DesireCore — 委派式 Agent OS 借鉴分析</a></li><li class="lvl-2"><a href="#0-desirecore-是什么">0. DesireCore 是什么</a></li><li class="lvl-2"><a href="#第一梯队-架构级-能改变-khy-形态">第一梯队 · 架构级，能改变 KHY 形态</a></li><li class="lvl-3"><a href="#1-agentfs-文件驱动的智能体存储-每个-agent-一个-git-仓库-最高价值-已落地">1. AgentFS — 文件驱动的智能体存储，每个 agent 一个 git 仓库 ⭐最高价值 ✅ 已落地</a></li><li class="lvl-3"><a href="#2-五类核心资产模型-已落地">2. 五类核心资产模型 ✅ 已落地</a></li><li class="lvl-3"><a href="#3-三层可控性-可见-可控-可逆-信任阶梯">3. 三层可控性 = 可见 / 可控 / 可逆（信任阶梯）</a></li><li class="lvl-2"><a href="#第二梯队-可控性-委派模型-直接可落地">第二梯队 · 可控性/委派模型，直接可落地</a></li><li class="lvl-3"><a href="#4-固化-灵活-人闸门-三类步骤-已落地">4. 固化 / 灵活 / 人闸门 三类步骤 ✅ 已落地</a></li><li class="lvl-3"><a href="#5-六原语-教-演-问-立-做-复-已落地-教学分流">5. 六原语：教 / 演 / 问 / 立 / 做 / 复 ✅ 已落地（教学分流）</a></li><li class="lvl-3"><a href="#6-四级风险分级-允许并记住-ai-自主审批-已落地-学习型自动审批">6. 四级风险分级 + 「允许并记住」+ AI 自主审批 ✅ 已落地（学习型自动审批）</a></li><li class="lvl-2"><a href="#第三梯队-记忆与自动化机制-中等价值">第三梯队 · 记忆与自动化机制，中等价值</a></li><li class="lvl-3"><a href="#7-三域记忆-核心-关系-共享">7. 三域记忆：核心 / 关系 / 共享</a></li><li class="lvl-3"><a href="#8-auto-dream-无损遗忘">8. Auto Dream 无损遗忘</a></li><li class="lvl-3"><a href="#9-心跳监控-heartbeat-已落地">9. 心跳监控（Heartbeat）✅ 已落地</a></li><li class="lvl-3"><a href="#10-智能任务编排引擎">10. 智能任务编排引擎</a></li><li class="lvl-2"><a href="#第四梯队-理念-叙事-低直接价值">第四梯队 · 理念/叙事，低直接价值</a></li><li class="lvl-3"><a href="#11-命名与定位叙事">11. 命名与定位叙事</a></li><li class="lvl-3"><a href="#12-byok-算力模型">12. BYOK 算力模型</a></li><li class="lvl-2"><a href="#结论-决策建议">结论（决策建议）</a></li><li class="lvl-2"><a href="#相关文档">相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-002 | 阶段: 项目管理 | 原路径: docs/khy-对比-desirecore-借鉴分析.md --&gt;</p>
+<h1 id="khy-os-vs-desirecore-委派式-agent-os-借鉴分析">KHY OS vs DesireCore — 委派式 Agent OS 借鉴分析<a class="anchor" href="#khy-os-vs-desirecore-委派式-agent-os-借鉴分析" aria-label="锚点">#</a></h1>
+<blockquote><p>分析日期：2026-06-09<br>对标对象：DesireCore 文档站（Docusaurus 3.9，i18n zh-Hans 默认；产品定位「委派式交互的 Agent 操作系统」）<br>目的：从 DesireCore 的产品架构中提取 KHY OS 可借鉴的设计，按<strong>对 KHY 的价值从高到低</strong>排序，并标注 KHY 现状与真正的增量</p></blockquote>
+<hr>
+<h2 id="0-desirecore-是什么">0. DesireCore 是什么<a class="anchor" href="#0-desirecore-是什么" aria-label="锚点">#</a></h2>
+<p>一个定位「Agent OS / 委派式交互的智能体操作系统」的桌面竞品。核心叙事：<strong>让 AI 从「没记忆的临时工」进化为「可培养、可托管、可治理的智能体」</strong>，交互范式由 <code>人问 AI 答 → 人教 AI 做事</code>、<code>Interaction → Delegation</code>。</p>
+<p>本分析仅基于其公开文档（11 篇核心概念 + 教学/记忆/自动化/安全功能文档），属只读对标，未改动 KHY 任何代码。</p>
+<hr>
+<h2 id="第一梯队-架构级-能改变-khy-形态">第一梯队 · 架构级，能改变 KHY 形态<a class="anchor" href="#第一梯队-架构级-能改变-khy-形态" aria-label="锚点">#</a></h2>
+<h3 id="1-agentfs-文件驱动的智能体存储-每个-agent-一个-git-仓库-最高价值-已落地">1. AgentFS — 文件驱动的智能体存储，每个 agent 一个 git 仓库 ⭐最高价值 ✅ 已落地<a class="anchor" href="#1-agentfs-文件驱动的智能体存储-每个-agent-一个-git-仓库-最高价值-已落地" aria-label="锚点">#</a></h3>
+<p>布局（受 Linux FS 启发）：</p>
+<pre><code>~/.desirecore/
+  users/&lt;user&gt;/...              # 用户间隔离
+  agents/&lt;id&gt;/
+    agent.json                  # 元数据
+    persona.md                  # 人格
+    principles.md               # 原则/红线
+    memory/                     # 记忆账本
+    skills/                     # 技能
+    workflows/                  # 流程
+    tools/                      # 可调用工具与权限
+    heartbeat/HEARTBEAT.md      # 巡检清单</code></pre>
+<ul><li><strong>每个 agent 本身就是一个 git 仓库</strong>，并用 <strong>L0/L1/L2 分层加载</strong>省 token。</li><li><strong>为什么高价值</strong>：把「智能体的人格/规则/记忆/技能」从数据库行变成<strong>可版本化、可 diff、可回滚、可导出的文件资产</strong>。KHY 已有 owner 密钥治理、receipts、rewind，但 agent 状态多半还在 DB 里。一旦落成文件 + git，KHY 刚完成的「加密源码快照 + <code>khy restore</code>」机制可天然复用到「智能体资产的备份与还原」。</li><li><strong>KHY 增量</strong>：引入「每个 agent = git repo」+ L0/L1/L2 分层加载，直接缓解长记忆膨胀与上下文成本。</li></ul>
+<h3 id="2-五类核心资产模型-已落地">2. 五类核心资产模型 ✅ 已落地<a class="anchor" href="#2-五类核心资产模型-已落地" aria-label="锚点">#</a></h3>
+<p>把一个智能体明确拆成五份独立可治理的资产：</p>
+<table><thead><tr><th>资产</th><th>含义</th></tr></thead><tbody><tr><td>Persona（人格档案）</td><td>智能体是谁——风格、语气、价值取向</td></tr><tr><td>Playbook（行为手册）</td><td>怎么做事——SOP、规则、边界</td></tr><tr><td>Memory（记忆账本）</td><td>记住什么——事实、偏好、上下文</td></tr><tr><td>Tool Body（工具身体）</td><td>能做什么——可调用工具与权限</td></tr><tr><td>Receipts（行动回执）</td><td>做过什么——证据链与可回滚点</td></tr></tbody></table>
+<ul><li><strong>为什么高价值</strong>：极清晰的心智模型与目录契约。KHY 散落的「系统提示/规则/记忆/工具权限/审计」可借这个五分法收敛成统一 schema。Receipts KHY 已有，缺的是把前四类同样资产化。</li></ul>
+<h3 id="3-三层可控性-可见-可控-可逆-信任阶梯">3. 三层可控性 = 可见 / 可控 / 可逆（信任阶梯）<a class="anchor" href="#3-三层可控性-可见-可控-可逆-信任阶梯" aria-label="锚点">#</a></h3>
+<ul><li><strong>L1 可见</strong>：实时状态 + 决策依据 + 文件 diff + 工具调用全透明。</li><li><strong>L2 可控</strong>：<code>allow / ask / deny</code> 权限分级 + 实时中断 + 人闸门。</li><li><strong>L3 可逆</strong>：Patch 级 / Turn 级 / Session 级三级回滚 + 版本快照。</li><li>三层缺一不可（只可见不可控=被迫旁观；只可控不可逆=犯错代价大；只可逆不可见=不知何时该救）。</li><li><strong>为什么高价值</strong>：可直接当<strong>产品验收标准</strong>。KHY 已有 rewind/undo（对应 L3），值得对标补齐的是<strong>决策来源追溯</strong>（「为什么做这步」→追溯到你哪条指令）和 <strong>Patch/Turn/Session 三级回滚粒度</strong>。</li></ul>
+<hr>
+<h2 id="第二梯队-可控性-委派模型-直接可落地">第二梯队 · 可控性/委派模型，直接可落地<a class="anchor" href="#第二梯队-可控性-委派模型-直接可落地" aria-label="锚点">#</a></h2>
+<h3 id="4-固化-灵活-人闸门-三类步骤-已落地">4. 固化 / 灵活 / 人闸门 三类步骤 ✅ 已落地<a class="anchor" href="#4-固化-灵活-人闸门-三类步骤-已落地" aria-label="锚点">#</a></h3>
+<p>每个执行步骤打标签：<strong>固化</strong>（规则确定、像程序执行）/ <strong>灵活</strong>（需 AI 判断）/ <strong>人闸门</strong>（必须人确认才继续）。在计划阶段就标注（如合同审查：<code>[固化]检查违约金比例</code> … <code>[人闸门]生成报告等确认</code>）。</p>
+<ul><li><strong>为什么高价值</strong>：用极轻的三态标签同时表达「自动化程度」与「卡点位置」，让同一条 workflow 里高危步骤自动暂停。KHY 任务编排可直接引入这个枚举。</li></ul>
+<h3 id="5-六原语-教-演-问-立-做-复-已落地-教学分流">5. 六原语：教 / 演 / 问 / 立 / 做 / 复 ✅ 已落地（教学分流）<a class="anchor" href="#5-六原语-教-演-问-立-做-复-已落地-教学分流" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>原语</th><th>发起方</th><th>含义</th></tr></thead><tbody><tr><td>教 Teach</td><td>人</td><td>告诉怎么做、为什么、例外</td></tr><tr><td>演 Demonstrate</td><td>人</td><td>给示例/反例，让其模仿归纳</td></tr><tr><td>问 Clarify</td><td>agent</td><td>主动追问缺失信息</td></tr><tr><td>立 Plan</td><td>agent</td><td>给计划、拆步骤、标风险点</td></tr><tr><td>做 Execute</td><td>agent</td><td>在权限边界内执行</td></tr><tr><td>复 Reflect</td><td>agent</td><td>提交回执、复盘、写回手册</td></tr></tbody></table>
+<ul><li>关键是<strong>教学意图 vs 委派意图的自动识别</strong>：「以后邮件都用正式语气」→写规则不执行；「帮我写周报」→直接委派。</li><li><strong>为什么高价值</strong>：把「对话」升级成「培养 + 委派」的方法论骨架。最实用的是<strong>意图自动分流</strong>（教学 / 单任务 / 复杂编排三通道），KHY 入口路由可借鉴。</li></ul>
+<blockquote><p><strong>落地（2026-06）</strong>：<code>intentGate.detectTeaching()</code> 在 chat() 入口（紧接问候极速路径后）识别教学意图并分流——人格（「你是…」）→ <code>persona.md</code>、红线（「绝不…」）→ <code>principles.md</code>、偏好（「以后…」）→ <code>memory/MEMORY.md</code>，写入<strong>当前激活同伴</strong>的 AgentFS 资产并由 git 自动快照；任务动词（「帮我写…」「run…」）优先判定为委派，照常进入工具链。<code>teachingService.captureTeaching()</code> 负责追加；无激活同伴时不静默丢弃，提示先 <code>companion use &lt;id&gt;</code>。开关 <code>KHY_TEACH_GATE=off</code> 可关闭，plan-step 跟进（<code>_isFollowUp</code>）与 study 模式豁免。测试：<code>intentGate.teaching.test.js</code>、<code>teachingService.test.js</code>。</p></blockquote>
+<h3 id="6-四级风险分级-允许并记住-ai-自主审批-已落地-学习型自动审批">6. 四级风险分级 + 「允许并记住」+ AI 自主审批 ✅ 已落地（学习型自动审批）<a class="anchor" href="#6-四级风险分级-允许并记住-ai-自主审批-已落地-学习型自动审批" aria-label="锚点">#</a></h3>
+<ul><li>风险四级：低（只读，自动）/ 中（改数据，弹确认）/ 高（Shell、批量改、Git，详细确认 + 来源追溯）/ 关键（不可逆，醒目警告，部分预设直接阻止如改 <code>.env</code>、<code>rm -rf</code>）。</li><li><strong>来源追溯</strong>：确认框含「为什么 agent 要执行这个操作（追溯到你哪条指令）」。</li><li><strong>「允许并记住」</strong>沉淀为权限规则；<strong>AI 自主审批</strong>从历史审批习惯学习、自动放行低风险常规操作（类比垃圾邮件过滤），高/关键风险永不可自动化；可按风险等级 / 操作类别 / 按 agent 三维配置。</li><li><strong>为什么高价值</strong>：KHY 已有 owner 密钥与危险操作拦截，可借鉴的是这套<strong>渐进式审批 UX</strong>——从用户行为学习、逐步减少打扰，同时守住高危卡点。</li></ul>
+<blockquote><p><strong>落地（2026-06）</strong>：四级分级（<code>riskGate</code>）、「允许并记住」（<code>permissionStore</code> forever 规则）、关键红线不可覆盖（<code>toolCalling</code> <code>criticalGate</code>，yolo/dangerous/历史 remember 都拦不住）此前已有。本次新增 <strong>AI 自主审批</strong> = <code>approvalLedger.js</code> 学习账本：记录每个工具 key 的历史批准/拒绝；<code>permissionStore.check()</code> 在会话授权之后加一层 <code>shouldAutoApprove</code>。<strong>安全护栏（硬编码）</strong>：默认关闭（需 <code>KHY_AUTO_APPROVE=on</code> 显式 opt-in）；仅 safe/低风险且<strong>非破坏性</strong>可学习；批准 ≥ 阈值（默认 3，<code>KHY_AUTO_APPROVE_THRESHOLD</code> 可配）且<strong>零拒绝</strong>才放行；<strong>一次拒绝即清零信任</strong>；关键红线仍由 <code>criticalGate</code> 兜底，学习层的 allow 在 critical 时被忽略；账本写盘 best-effort，不可用即降级为照常 ask。CLI：<code>security approvals</code>（查看 / <code>reset</code> 清空）。来源追溯（确认框追溯到用户指令）散落多处，<strong>留作后续</strong>。测试：<code>approvalLedger.test.js</code>、<code>permissionStore.learned.test.js</code>。</p></blockquote>
+<hr>
+<h2 id="第三梯队-记忆与自动化机制-中等价值">第三梯队 · 记忆与自动化机制，中等价值<a class="anchor" href="#第三梯队-记忆与自动化机制-中等价值" aria-label="锚点">#</a></h2>
+<h3 id="7-三域记忆-核心-关系-共享">7. 三域记忆：核心 / 关系 / 共享<a class="anchor" href="#7-三域记忆-核心-关系-共享" aria-label="锚点">#</a></h3>
+<ul><li><strong>核心记忆</strong>：出厂人格，全用户共享、交互不改。</li><li><strong>关系记忆</strong>：你与某 agent 的私密「日记」，带类型标签 <code>preference / fact / decision / commitment / milestone / lesson</code>。</li><li><strong>共享记忆</strong>：跨 agent，写入需明确同意。</li><li><strong>价值</strong>：记忆<strong>带类型标签 + 按「域」分权限</strong>比单一记忆池精细。KHY 已有记忆系统，可借鉴这套<strong>类型枚举</strong>与<strong>关系域私密 / 共享域需授权</strong>的边界。</li></ul>
+<h3 id="8-auto-dream-无损遗忘">8. Auto Dream 无损遗忘<a class="anchor" href="#8-auto-dream-无损遗忘" aria-label="锚点">#</a></h3>
+<p>后台周期性「做梦」：扫描 → 关联 → 提炼 → 重组，把 20 条零散记忆合并成 1 份结构化画像，<strong>原始记忆保留在版本历史可回溯</strong>（不是删除，是整理书架）。生命周期 <code>活跃 → 近期 → 归档 → 💤Dream → 压缩 → 清理</code>，可 Pin 保护。</p>
+<ul><li><strong>价值</strong>：解决长期记忆膨胀的优雅方案；若引入 AgentFS（第 1 点），Dream 可作为其记忆压缩层。关键设计点是「无损 + 可回溯来源」。</li></ul>
+<h3 id="9-心跳监控-heartbeat-已落地">9. 心跳监控（Heartbeat）✅ 已落地<a class="anchor" href="#9-心跳监控-heartbeat-已落地" aria-label="锚点">#</a></h3>
+<p><code>HEARTBEAT.md</code> 定义巡检清单，支持清单模式与带 <code>interval</code> 的任务模式；agent 定期主动看邮箱/CI/日历，无变化静默（绿色 pill），有事才通知；24h 去重；<strong>通知只提醒，真要执行操作仍走审批卡片</strong>（心跳不绕过确认）。</p>
+<ul><li><strong>价值</strong>：把「被动等指令」变「主动巡检」的轻量实现，纯文件配置。KHY 已有 node-cron，可借鉴<strong><code>.md</code> 声明式巡检 + 静默/通知二态 + 不绕过审批</strong>的产品约定。</li></ul>
+<blockquote><p><strong>落地（2026-06）</strong>：调度引擎（<code>heartbeatRunner</code> 相位对齐 + 洪泛保护、<code>heartbeatCooldown</code> intent 矩阵）与 AgentFS <code>heartbeat/HEARTBEAT.md</code> 资产/种子模板此前已移植但<strong>从未接线</strong>。本次新增<strong>巡检主干</strong> <code>heartbeatService.js</code>：<code>parseChecklist()</code> 解析当前激活同伴的 <code>HEARTBEAT.md</code>（活动条目 = 非注释的 <code>- …</code>；种子全为 <code># - …</code> 注释 → 未启用）→ <code>## 数据源</code> / <code>## 判断标准</code> 两段；<code>patrol()</code> 产出<strong>静默/通知二态</strong>，事件经 <strong>24h 去重账本</strong>（<code>getDataDir('heartbeat')/events.json</code>，仿 <code>approvalLedger</code>）过滤。<strong>安全不变量</strong>：静默优先（无清单/全注释/无 findings → silent）；同一事件 key 24h 内只提醒一次；<strong>心跳绝不绕过审批</strong>——本服务只返回提醒数据、<strong>无任何 execute/run-tool 能力</strong>（测试断言导出面不含此类），任何操作仍走 #6 的 <code>permissionStore</code>/<code>criticalGate</code>；去重写盘 best-effort，失败 fail-open（至多重复提醒，无害）。<strong>不伪造邮箱/CI 集成</strong>——真实数据源探针留可插拔接缝（caller 传 <code>findings</code>）。开关 <code>KHY_HEARTBEAT=off</code> 整体关闭。CLI：<code>companion heartbeat [status|run|reset]</code>（<code>run</code> 为 dry-run 演示静默态）。测试：<code>heartbeatService.test.js</code>（11 例）。</p></blockquote>
+<h3 id="10-智能任务编排引擎">10. 智能任务编排引擎<a class="anchor" href="#10-智能任务编排引擎" aria-label="锚点">#</a></h3>
+<p>「项目经理」模型：意图识别 → 任务拆解（分析依赖、自动判定并行/串行）→ 能力自动匹配（技能标签 + 历史表现 + 当前负载）→ 全程状态追踪（超时/失败自动重分配）→ 汇总回执。固化模式（SOP）与灵活模式（AI 动态规划）可混用。</p>
+<ul><li><strong>价值</strong>：多 agent 协作的完整心智模型。KHY 多为单 agent 场景，可单独摘取<strong>自动并行/串行依赖判定</strong>与<strong>汇总回执</strong>。</li></ul>
+<hr>
+<h2 id="第四梯队-理念-叙事-低直接价值">第四梯队 · 理念/叙事，低直接价值<a class="anchor" href="#第四梯队-理念-叙事-低直接价值" aria-label="锚点">#</a></h2>
+<h3 id="11-命名与定位叙事">11. 命名与定位叙事<a class="anchor" href="#11-命名与定位叙事" aria-label="锚点">#</a></h3>
+<p>DesireCore = Desire（沉淀用户长期意愿）+ Core（核心运行时）。叙事：临时工 → 可培养/可托管/可治理的智能体；「数字同伴 vs 工具」对比 ChatGPT/Zapier/LangChain/UiPath。仅作产品叙事参考。</p>
+<h3 id="12-byok-算力模型">12. BYOK 算力模型<a class="anchor" href="#12-byok-算力模型" aria-label="锚点">#</a></h3>
+<p>不产模型、只连接管理 20+ 供应商；自带 Key、供应商直接结算、随时切换、不锁定；default 映射 <code>chat/fast/reasoning/vision/embedding/tts/asr</code> 按服务类型选模型。</p>
+<ul><li><strong>说明</strong>：KHY 已有 AccountPool/Gateway/账号池，<strong>基本已具备</strong>，价值最低，仅 default 服务类型映射表可参考。</li></ul>
+<hr>
+<h2 id="结论-决策建议">结论（决策建议）<a class="anchor" href="#结论-决策建议" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>优先投入前三点</strong>：AgentFS（文件 + git 化的智能体资产）、五类核心资产模型、三层可控性框架——能改变 KHY 的存储与治理形态，且可复用刚做完的「加密快照 + <code>khy restore</code>」机制。</p>
+<p><strong>第二梯队</strong>（三态步骤、六原语意图分流、渐进式审批）是低成本高回报的 UX 借鉴。</p>
+<p>其余多数概念 KHY 已有雏形（receipts、rewind、记忆、账号池），抄具体设计点即可，不必照搬整套。</p></blockquote>
+<hr>
+<h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
+<ul><li><a href="%5BMGMT-RPT-016%5D%20竞品情报图谱.html">竞品情报图谱</a></li><li><a href="%5BMGMT-RPT-003%5D%20khy-对比-hermes-成长架构.html">KHY OS vs Hermes Agent — 成长型架构</a></li><li><a href="%5BMGMT-RPT-004%5D%20khy-对比-openagent-交付差距.html">KHY OS vs OpenAgent — 交付差距</a></li><li><a href="%5BMGMT-RPT-005%5D%20khy-对比-qwen-code-差距分析.html">KHY OS vs Qwen Code — 差距分析</a></li><li><a href="%5BMGMT-PLAN-006%5D%20智能体-操作系统-路线图.html">智能体操作系统路线图</a></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-001] deepseek-tui-对标.html"><div class="dir">← 上一篇</div><div class="ttl">DeepSeek-TUI 对齐 — khy 对齐清单</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-003] khy-对比-hermes-成长架构.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS vs Hermes Agent — 成长型架构对齐分析</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-002] khy-对比-desirecore-借鉴分析.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

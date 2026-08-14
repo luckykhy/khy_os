@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security Checklist · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>code-review-and-quality<span class="sep">›</span>references<span class="sep">›</span>Security Checklist</div>
+      <header class="hero reveal"><h1>Security Checklist</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#security-checklist">Security Checklist</a></li><li class="lvl-2"><a href="#table-of-contents">Table of Contents</a></li><li class="lvl-2"><a href="#pre-commit-checks">Pre-Commit Checks</a></li><li class="lvl-2"><a href="#authentication">Authentication</a></li><li class="lvl-2"><a href="#authorization">Authorization</a></li><li class="lvl-2"><a href="#input-validation">Input Validation</a></li><li class="lvl-2"><a href="#security-headers">Security Headers</a></li><li class="lvl-2"><a href="#cors-configuration">CORS Configuration</a></li><li class="lvl-2"><a href="#data-protection">Data Protection</a></li><li class="lvl-2"><a href="#dependency-security">Dependency Security</a></li><li class="lvl-2"><a href="#error-handling">Error Handling</a></li><li class="lvl-2"><a href="#owasp-top-10-quick-reference">OWASP Top 10 Quick Reference</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="security-checklist">Security Checklist<a class="anchor" href="#security-checklist" aria-label="锚点">#</a></h1>
+<p>Quick reference for web application security. Use alongside the <code>security-and-hardening</code> skill.</p>
+<h2 id="table-of-contents">Table of Contents<a class="anchor" href="#table-of-contents" aria-label="锚点">#</a></h2>
+<ul><li><a href="#pre-commit-checks">Pre-Commit Checks</a></li><li><a href="#authentication">Authentication</a></li><li><a href="#authorization">Authorization</a></li><li><a href="#input-validation">Input Validation</a></li><li><a href="#security-headers">Security Headers</a></li><li><a href="#cors-configuration">CORS Configuration</a></li><li><a href="#data-protection">Data Protection</a></li><li><a href="#dependency-security">Dependency Security</a></li><li><a href="#error-handling">Error Handling</a></li><li><a href="#owasp-top-10-quick-reference">OWASP Top 10 Quick Reference</a></li></ul>
+<h2 id="pre-commit-checks">Pre-Commit Checks<a class="anchor" href="#pre-commit-checks" aria-label="锚点">#</a></h2>
+<ul><li>[ ] No secrets in code (<code>git diff --cached | grep -i &quot;password\|secret\|api_key\|token&quot;</code>)</li><li>[ ] <code>.gitignore</code> covers: <code>.env</code>, <code>.env.local</code>, <code>*.pem</code>, <code>*.key</code></li><li>[ ] <code>.env.example</code> uses placeholder values (not real secrets)</li></ul>
+<h2 id="authentication">Authentication<a class="anchor" href="#authentication" aria-label="锚点">#</a></h2>
+<ul><li>[ ] Passwords hashed with bcrypt (≥12 rounds), scrypt, or argon2</li><li>[ ] Session cookies: <code>httpOnly</code>, <code>secure</code>, <code>sameSite: 'lax'</code></li><li>[ ] Session expiration configured (reasonable max-age)</li><li>[ ] Rate limiting on login endpoint (≤10 attempts per 15 minutes)</li><li>[ ] Password reset tokens: time-limited (≤1 hour), single-use</li><li>[ ] Account lockout after repeated failures (optional, with notification)</li><li>[ ] MFA supported for sensitive operations (optional but recommended)</li></ul>
+<h2 id="authorization">Authorization<a class="anchor" href="#authorization" aria-label="锚点">#</a></h2>
+<ul><li>[ ] Every protected endpoint checks authentication</li><li>[ ] Every resource access checks ownership/role (prevents IDOR)</li><li>[ ] Admin endpoints require admin role verification</li><li>[ ] API keys scoped to minimum necessary permissions</li><li>[ ] JWT tokens validated (signature, expiration, issuer)</li></ul>
+<h2 id="input-validation">Input Validation<a class="anchor" href="#input-validation" aria-label="锚点">#</a></h2>
+<ul><li>[ ] All user input validated at system boundaries (API routes, form handlers)</li><li>[ ] Validation uses allowlists (not denylists)</li><li>[ ] String lengths constrained (min/max)</li><li>[ ] Numeric ranges validated</li><li>[ ] Email, URL, and date formats validated with proper libraries</li><li>[ ] File uploads: type restricted, size limited, content verified</li><li>[ ] SQL queries parameterized (no string concatenation)</li><li>[ ] HTML output encoded (use framework auto-escaping)</li><li>[ ] URLs validated before redirect (prevent open redirect)</li></ul>
+<h2 id="security-headers">Security Headers<a class="anchor" href="#security-headers" aria-label="锚点">#</a></h2>
+<pre><code>Content-Security-Policy: default-src 'self'; script-src 'self'
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 0  (disabled, rely on CSP)
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()</code></pre>
+<h2 id="cors-configuration">CORS Configuration<a class="anchor" href="#cors-configuration" aria-label="锚点">#</a></h2>
+<pre><code class="language-typescript">// Restrictive (recommended)
+cors({
+  origin: ['https://yourdomain.com', 'https://app.yourdomain.com'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+})
+
+// NEVER use in production:
+cors({ origin: '*' })  // Allows any origin</code></pre>
+<h2 id="data-protection">Data Protection<a class="anchor" href="#data-protection" aria-label="锚点">#</a></h2>
+<ul><li>[ ] Sensitive fields excluded from API responses (<code>passwordHash</code>, <code>resetToken</code>, etc.)</li><li>[ ] Sensitive data not logged (passwords, tokens, full CC numbers)</li><li>[ ] PII encrypted at rest (if required by regulation)</li><li>[ ] HTTPS for all external communication</li><li>[ ] Database backups encrypted</li></ul>
+<h2 id="dependency-security">Dependency Security<a class="anchor" href="#dependency-security" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Audit dependencies
+npm audit
+
+# Fix automatically where possible
+npm audit fix
+
+# Check for critical vulnerabilities
+npm audit --audit-level=critical
+
+# Keep dependencies updated
+npx npm-check-updates</code></pre>
+<h2 id="error-handling">Error Handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h2>
+<pre><code class="language-typescript">// Production: generic error, no internals
+res.status(500).json({
+  error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' }
+});
+
+// NEVER in production:
+res.status(500).json({
+  error: err.message,
+  stack: err.stack,         // Exposes internals
+  query: err.sql,           // Exposes database details
+});</code></pre>
+<h2 id="owasp-top-10-quick-reference">OWASP Top 10 Quick Reference<a class="anchor" href="#owasp-top-10-quick-reference" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>Vulnerability</th><th>Prevention</th></tr></thead><tbody><tr><td>1</td><td>Broken Access Control</td><td>Auth checks on every endpoint, ownership verification</td></tr><tr><td>2</td><td>Cryptographic Failures</td><td>HTTPS, strong hashing, no secrets in code</td></tr><tr><td>3</td><td>Injection</td><td>Parameterized queries, input validation</td></tr><tr><td>4</td><td>Insecure Design</td><td>Threat modeling, spec-driven development</td></tr><tr><td>5</td><td>Security Misconfiguration</td><td>Security headers, minimal permissions, audit deps</td></tr><tr><td>6</td><td>Vulnerable Components</td><td><code>npm audit</code>, keep deps updated, minimal deps</td></tr><tr><td>7</td><td>Auth Failures</td><td>Strong passwords, rate limiting, session management</td></tr><tr><td>8</td><td>Data Integrity Failures</td><td>Verify updates/dependencies, signed artifacts</td></tr><tr><td>9</td><td>Logging Failures</td><td>Log security events, don't log secrets</td></tr><tr><td>10</td><td>SSRF</td><td>Validate/allowlist URLs, restrict outbound requests</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/skills/built-in/code-review-and-quality/references/performance-checklist.html"><div class="dir">← 上一篇</div><div class="ttl">Performance Checklist</div></a><a class="next" href="../../../../../../../services/backend/src/skills/built-in/code-simplification/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Code Simplification</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/code-review-and-quality/references/security-checklist.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

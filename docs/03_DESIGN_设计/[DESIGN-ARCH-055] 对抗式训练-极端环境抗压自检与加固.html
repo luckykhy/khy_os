@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-055] 对抗式训练 —— 极端环境抗压自检与加固 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-055] 对抗式训练 —— 极端环境抗压自检与加固</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-055] 对抗式训练 —— 极端环境抗压自检与加固</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-055-对抗式训练-极端环境抗压自检与加固">[DESIGN-ARCH-055] 对抗式训练 —— 极端环境抗压自检与加固</a></li><li class="lvl-2"><a href="#1-背景与目标">1. 背景与目标</a></li><li class="lvl-2"><a href="#2-设计原则-与全局工程铁律一致">2. 设计原则（与全局工程铁律一致）</a></li><li class="lvl-2"><a href="#3-抗压不变量-survivalcriteria-js-单一真源">3. 抗压不变量（`survivalCriteria.js` —— 单一真源）</a></li><li class="lvl-2"><a href="#4-四步闭环-5-模块">4. 四步闭环（5 模块）</a></li><li class="lvl-3"><a href="#4-1-attackvectors-js-对抗向量单一真源">4.1 `attackVectors.js` —— 对抗向量单一真源</a></li><li class="lvl-3"><a href="#4-2-survivalcriteria-js-抗压不变量评分器">4.2 `survivalCriteria.js` —— 抗压不变量评分器</a></li><li class="lvl-3"><a href="#4-3-stressharness-js-极端环境施压器">4.3 `stressHarness.js` —— 极端环境施压器</a></li><li class="lvl-3"><a href="#4-4-hardeningloop-js-破防-需求-加固回路">4.4 `hardeningLoop.js` —— 破防 → 需求 加固回路</a></li><li class="lvl-3"><a href="#4-5-index-js-门面-adversarialtrainer">4.5 `index.js` —— 门面 `AdversarialTrainer`</a></li><li class="lvl-2"><a href="#5-验证">5. 验证</a></li><li class="lvl-2"><a href="#6-由本引擎逼出并已修复的真实破口">6. 由本引擎逼出并已修复的真实破口</a></li><li class="lvl-2"><a href="#7-后续增强-未接线-留后续-pr">7. 后续增强（未接线，留后续 PR）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-055-对抗式训练-极端环境抗压自检与加固">[DESIGN-ARCH-055] 对抗式训练 —— 极端环境抗压自检与加固<a class="anchor" href="#design-arch-055-对抗式训练-极端环境抗压自检与加固" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：已实现（确定性核心 + 活防御驱动 + 破防收口 + 真实破口已修复）<br>子系统：<code>services/backend/src/services/adversarial/</code><br>测试：<code>services/backend/tests/services/adversarial/adversarialEngine.test.js</code>（12 例绿）<br>加固落地：<code>services/backend/src/services/resilience/budgetExecutor.js</code>（<code>makeStepBudget</code> 语义修正）</p></blockquote>
+<h2 id="1-背景与目标">1. 背景与目标<a class="anchor" href="#1-背景与目标" aria-label="锚点">#</a></h2>
+<p>Khy-OS 已有一整套<strong>防御方</strong>与<strong>从失败中学习</strong>的生态：<code>resilience</code>（有限窗口降级 + 强制兜底，<br>ARCH-029）、<code>selfHeal</code>（先救后报微循环，ARCH-029）、<code>failsafe</code>（零静默失败归因 E01–E08，<br>ARCH-028）、<code>evoEngine</code>（自举创世闭环自愈，ARCH-037）、<code>dualTrackForge</code>（一切 Bug 皆需求，<br>ARCH-038）、<code>structuredFurnace</code>（万物结构化熔炉，ARCH-036）。</p>
+<p>但这套生态的 friction（阻力信号）全是<strong>被动</strong>的：只有线上真实失败经 <code>frictionBridge</code> 旁路抄送<br>才会留痕。缺的是一支<strong>主动红队</strong>——在防御从未见过的极端/敌对条件下系统性施压，逼出抗压短板，<br><strong>在它们于生产中被真实触发之前</strong>就找到并修复。</p>
+<p>本设计补上这个缺口：一个零侵入的对抗式训练子系统，对各防御子系统的<strong>公开契约</strong>发起极端攻击，<br>按统一「抗压不变量」判定是否破防，并把破防收口进既有进化生态。再用它<strong>实际跑一遍</strong>，找出真实<br>破口并完成抗压修复（§6）。</p>
+<h2 id="2-设计原则-与全局工程铁律一致">2. 设计原则（与全局工程铁律一致）<a class="anchor" href="#2-设计原则-与全局工程铁律一致" aria-label="锚点">#</a></h2>
+<ul><li><strong>零侵入</strong>（防呆①）：只驱动各防御子系统已导出的公开 API，绝不对任何热路径动刀。所有开关都在</li></ul>
+<p>本子系统门面，被测子系统代码零改动（唯一例外是 §6 在 <code>resilience</code> 源头修复的真实破口）。</p>
+<ul><li><strong>判定与驱动分离</strong>：「怎么打」（<code>stressHarness</code>）与「算不算活」（<code>survivalCriteria</code>）正交解耦，</li></ul>
+<p>使抗压不变量成为跨子系统统一的合格线，而非每个攻击各判各的。</p>
+<ul><li><strong>确定性可复现</strong>（防呆②）：向量 <code>build()</code> 无随机、无时钟（退化输入用固定构造），同一战役多次</li></ul>
+<p>运行结论一致——对抗结果可被测试锁定、可被回归守护。</p>
+<ul><li><strong>永不抛、有界</strong>（防呆③）：单条向量翻车被规约成一条破防记录，绝不拖垮整场战役；每次驱动包在</li></ul>
+<p>硬死线内（默认 3s），被测子系统真卡死则规约为 BOUNDED 破防，施压器自身永不被拖挂。</p>
+<ul><li><strong>非破坏默认</strong>（防呆④）：把破防沉淀进 <code>evoLedger</code> 的 harden 档<strong>默认关闭</strong>——纯评测不污染进化</li></ul>
+<p>需求池；显式开启才沉淀。</p>
+<ul><li><strong>评分器有牙、fail-closed</strong>（防呆⑤）：评分器零依赖、永不抛；判定器自身异常折叠成一条保守的</li></ul>
+<p>NO_THROW 破防（宁可误报破防，不可漏报）。100% 存活只有在「引擎能真正判出破防」被独立证明后<br>  才有意义——故负控用例与「注入旧 bug 端到端抓 bug」的元测试是一等公民。</p>
+<h2 id="3-抗压不变量-survivalcriteria-js-单一真源">3. 抗压不变量（<code>survivalCriteria.js</code> —— 单一真源）<a class="anchor" href="#3-抗压不变量-survivalcriteria-js-单一真源" aria-label="锚点">#</a></h2>
+<p>一支防御在极端/敌对输入下「活下来」不是「没报错」，而是六条硬不变量在施压全程恒成立。任一破防<br>即记一笔 breach（附归因）：</p>
+<table><thead><tr><th>不变量</th><th>含义</th></tr></thead><tbody><tr><td><code>NO_THROW</code></td><td>非预期异常零容忍——设计内拒损（FurnaceRejection / 验封拒绝）不算</td></tr><tr><td><code>BOUNDED</code></td><td>有界——绝不无限重试/死循环，必在迭代或时间封顶内终止</td></tr><tr><td><code>NO_SILENT_FAILURE</code></td><td>零静默失败——绝不「返回空且无归因」，必带 E0x 码 / 兜底 / 显式拒损</td></tr><tr><td><code>ALWAYS_SALVAGE</code></td><td>强制兜底——降级耗尽后必交付结构化 salvage，绝不躺平</td></tr><tr><td><code>BUDGET_FLOOR_HONORED</code></td><td>预算地板——极限预算下绝不越界燃烧，地板必被尊重</td></tr><tr><td><code>FORGERY_REJECTED</code></td><td>封印不可伪造——裸/篡改/跨进程伪造的 payload 必被验封拒绝</td></tr></tbody></table>
+<p><code>evaluate(observation)</code> 逐条检查该向量要求的不变量子集，汇总 breaches；<code>summarize(results)</code> 给出<br>存活率与按不变量/子系统的破防分布。</p>
+<h2 id="4-四步闭环-5-模块">4. 四步闭环（5 模块）<a class="anchor" href="#4-四步闭环-5-模块" aria-label="锚点">#</a></h2>
+<pre><code>武器库(attackVectors) → 施压器(stressHarness) → 评分器(survivalCriteria) → 加固回路(hardeningLoop)
+ ──「打什么」───────────   ──「怎么打」──────────   ──「算不算活」──────────   ──「沉淀成需求」──
+                                                                              门面: index.js</code></pre>
+<h3 id="4-1-attackvectors-js-对抗向量单一真源">4.1 <code>attackVectors.js</code> —— 对抗向量单一真源<a class="anchor" href="#4-1-attackvectors-js-对抗向量单一真源" aria-label="锚点">#</a></h3>
+<p>声明式冻结目录（~19 向量）。每条 <code>{id, family, target, severity, description, build(), expectInvariants[]}</code>。</p>
+<ul><li><code>TARGET</code>：<code>resilience</code> / <code>failsafe</code> / <code>structuredFurnace</code>（施压器据此路由驱动器）。</li><li><code>FAMILY</code>：畸形回复 / 资源枯竭 / 故障风暴 / 死循环诱饵 / 高熵混沌 / 封印伪造 / 退化输入。</li><li>退化原料确定性构造：孤立高代理对（半个 emoji）、200 层深嵌套、32 个控制字、256KB 噪声、拒绝</li></ul>
+<p>套话前缀。<code>build()</code> 产出纯数据：<code>llm-reply</code> / <code>raw-error</code> / <code>fault-plan</code>（failEvery/throwEvery/<br>  identicalSignature/budget/floorPct）/ <code>unknown-intent</code> / <code>nl</code> / <code>forge-attempt</code>（bare/fake-brand/tamper）。</p>
+<h3 id="4-2-survivalcriteria-js-抗压不变量评分器">4.2 <code>survivalCriteria.js</code> —— 抗压不变量评分器<a class="anchor" href="#4-2-survivalcriteria-js-抗压不变量评分器" aria-label="锚点">#</a></h3>
+<p>见 §3。纯函数、零依赖、永不抛、fail-closed。</p>
+<h3 id="4-3-stressharness-js-极端环境施压器">4.3 <code>stressHarness.js</code> —— 极端环境施压器<a class="anchor" href="#4-3-stressharness-js-极端环境施压器" aria-label="锚点">#</a></h3>
+<p>把一条向量真正打到对应活防御上，规约成标准 observation。三路驱动器：</p>
+<ul><li><strong>RESILIENCE</strong>：构造 3 层降级树 + 恒失败/恒抛 runner + 极限预算适配器，驱动 <code>ResilienceCoordinator.run</code>；</li></ul>
+<p>死循环诱饵用三层共用同一 (tool, params) 签名逼死循环检测斩断；捕获 <code>calls</code>/<code>salvage</code>/<code>circuit</code>。</p>
+<ul><li><strong>FAILSAFE</strong>：驱动 <code>SafeResponseWrapper.validateLLM</code> / <code>classify</code>，捕获 E0x 归因结构。</li><li><strong>FURNACE</strong>：驱动 <code>intercept</code>（敌对 NL 坍缩或显式拒损）与 <code>assertForged</code>（伪造 payload 验封）。</li><li>每次驱动包硬死线；无界/卡死 → BOUNDED 破防。</li></ul>
+<h3 id="4-4-hardeningloop-js-破防-需求-加固回路">4.4 <code>hardeningLoop.js</code> —— 破防 → 需求 加固回路<a class="anchor" href="#4-4-hardeningloop-js-破防-需求-加固回路" aria-label="锚点">#</a></h3>
+<p>每条 breach 经 <code>evoEngine.frictionBridge.observeFailure</code> 沉淀为进化需求（确定性、fail-soft、自带<br>去重、落 evoLedger 观测分支）。不变量 → <code>evoRequirement.SIGNALS.*</code> 稳定映射。可选注入<br><code>DualTrackForge</code> 做双轨二次沉淀。永不抛、永不阻断战役。</p>
+<h3 id="4-5-index-js-门面-adversarialtrainer">4.5 <code>index.js</code> —— 门面 <code>AdversarialTrainer</code><a class="anchor" href="#4-5-index-js-门面-adversarialtrainer" aria-label="锚点">#</a></h3>
+<p><code>runCampaign({target?, family?, vectorIds?, harden?})</code>：逐向量 build → stress → evaluate →（可选）<br>harden，产出 <code>{results, observations, summary, breaches, hardened}</code>。便捷入口 <code>runDefaultCampaign()</code>。</p>
+<h2 id="5-验证">5. 验证<a class="anchor" href="#5-验证" aria-label="锚点">#</a></h2>
+<p><code>node --test tests/services/adversarial/adversarialEngine.test.js</code> → 12 例绿：</p>
+<ul><li>武器库自洽（唯一 id / 合法 target / build 确定性 / 合法 expectInvariants / 三子系统全覆盖）；</li><li>评分器<strong>有牙</strong>：六类破防各一条负控必判破防 + 干净观测绝不误报 + 判定器异常 fail-closed；</li><li>全量向量打<strong>活防御</strong> → 100% 存活；每子系统向量被真实驱动；无效向量规约为 threw；</li><li>加固回路：破防经注入 bridge 沉淀且 friction 携完整归因；存活不沉淀；bridge 抛错被吞；</li><li>§6 真实破口的活体回归 + <strong>元测试</strong>（注入旧 buggy 预算语义 → 引擎端到端判出 BUDGET_FLOOR 破防）。</li></ul>
+<p>邻近回归：<code>resilience</code> / <code>selfHeal</code> / <code>dualTrackForge</code> / <code>evoEngine</code> 共 120 例绿，零回归。</p>
+<h2 id="6-由本引擎逼出并已修复的真实破口">6. 由本引擎逼出并已修复的真实破口<a class="anchor" href="#6-由本引擎逼出并已修复的真实破口" aria-label="锚点">#</a></h2>
+<p><strong><code>makeStepBudget(0)</code> 静默退化为缺省 3 步</strong>（<code>resilience/budgetExecutor.js</code>）。</p>
+<p>旧实现 <code>Math.max(1, Number(totalSteps) || MAX_FALLBACK_DEPTH)</code>：因 <code>0</code> 是 falsy，<code>Number(0) || MAX</code><br>求值为 <code>MAX</code>。后果——调用方声明「已无预算」（0 步），执行器却仍获得缺省 3 步预算，越过地板烧掉<br>最多 3 个 Plan，<strong>预算地板形同虚设</strong>。这是一条隐藏在巧合背后的 <code>BUDGET_FLOOR_HONORED</code> 破防。</p>
+<p>修复：<strong>显式数字一律照单全收</strong>（向下取整、夹到 ≥0），只有「压根没给可解析数字」（undefined /<br>NaN / 非数）才回落缺省。<code>Number.isFinite(n) ? Math.max(0, Math.floor(n)) : MAX_FALLBACK_DEPTH</code>；<br><code>snapshot()</code> 在 <code>total===0</code> 时返回 <code>remainingPct:0</code>，使地板闸门立即熔断、绝不空转烧 Plan。</p>
+<p>安全性：仓内仅有的两处内部调用均传 <code>tree.plans.length</code>（恒 ≥1），不受影响；语义变化只触及显式<br>0/负的「真枯竭」场景。<code>zero-step-budget</code> 向量去掉施压器旧旁路后<strong>经公开工厂</strong>驱动，成为该修复的<br>活体回归守护——工厂一旦退回旧 <code>||default</code> 行为，0 步预算会静默变 3 步，引擎当即判出破防。</p>
+<h2 id="7-后续增强-未接线-留后续-pr">7. 后续增强（未接线，留后续 PR）<a class="anchor" href="#7-后续增强-未接线-留后续-pr" aria-label="锚点">#</a></h2>
+<ul><li>把 agent 主循环模型作为 <code>brain</code> 注入 <code>DualTrackForge</code>，对破防做 L2 架构级需求增益（当前仅</li></ul>
+<p>确定性 frictionBridge 主沉淀）。</p>
+<ul><li>周期性自动战役（如 <code>khy selfcheck --adversarial</code>）+ 破防趋势台账，把对抗训练纳入 CI 门禁。</li><li>扩展武器库到 <code>selfHeal</code> 微循环与 <code>evoEngine</code> 沙箱毒性闸门的直接施压（当前经 resilience 间接覆盖）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-054] AI逆向工程-从产物还原与自验软件.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-054] AI 逆向工程 —— 从产物还原与自验软件</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-056] khyos桌面操控-眼耳嘴与模拟操作.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-056] Khyos 桌面操控 —— 眼、耳、嘴与模拟操作</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-055] 对抗式训练-极端环境抗压自检与加固.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

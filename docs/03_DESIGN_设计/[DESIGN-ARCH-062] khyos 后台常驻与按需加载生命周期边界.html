@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-062-khyos-后台常驻与按需加载生命周期边界">[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界</a></li><li class="lvl-2"><a href="#1-问题-为什么要清这条边界">1. 问题(为什么要清这条边界)</a></li><li class="lvl-2"><a href="#2-三层-tier-定义">2. 三层 tier 定义</a></li><li class="lvl-2"><a href="#3-单一真源-servicelifecyclepolicy-js-纯叶子">3. 单一真源:serviceLifecyclePolicy.js(纯叶子)</a></li><li class="lvl-2"><a href="#4-操作化-deferredprefetch-由策略驱动-不只是文档">4. 操作化:deferredPrefetch 由策略驱动(不只是文档)</a></li><li class="lvl-2"><a href="#5-防漂移守卫-scripts-check-lifecycle-policy-js">5. 防漂移守卫:scripts/check-lifecycle-policy.js</a></li><li class="lvl-2"><a href="#6-新增后台服务的规程">6. 新增后台服务的规程</a></li><li class="lvl-2"><a href="#7-用户可控-per-id-覆盖与-escape-hatch">7. 用户可控:per-id 覆盖与 escape hatch</a></li><li class="lvl-2"><a href="#8-有意排除-边界说明">8. 有意排除(边界说明)</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-062-khyos-后台常驻与按需加载生命周期边界">[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界<a class="anchor" href="#design-arch-062-khyos-后台常驻与按需加载生命周期边界" aria-label="锚点">#</a></h1>
+<ul><li>状态:定稿</li><li>关联代码:<ul><li><code>services/backend/src/services/serviceLifecyclePolicy.js</code>(纯叶子 SSoT)</li><li><code>services/backend/src/bootstrap/prefetch.js</code>(deferredPrefetch 策略驱动)</li><li><code>scripts/check-lifecycle-policy.js</code>(防漂移守卫)</li><li><code>services/backend/tests/services/serviceLifecyclePolicy.test.js</code>(契约测试)</li><li><code>flagRegistry.js</code> 主门 <code>KHY_LIFECYCLE_POLICY</code></li></ul></li></ul>
+<h2 id="1-问题-为什么要清这条边界">1. 问题(为什么要清这条边界)<a class="anchor" href="#1-问题-为什么要清这条边界" aria-label="锚点">#</a></h2>
+<p>khyos 里「有的功能需要后台常驻、有的功能只在需要时加载」。这条边界<strong>客观存在但一直是隐式的</strong>——它散落在:</p>
+<ul><li><code>bootstrap/prefetch.js#deferredPrefetch</code> 的硬编码 <code>setTimeout</code> 阶梯(2s/3s/4s/5s/6s/8s + <code>setImmediate</code>);</li><li>daemon 进程(<code>daemonEntry.js</code> / <code>aiManagementServer.js</code>)内部的 start 调用点;</li><li>各子系统自己的 <code>KHY_*</code> 门(<code>KHY_CHANGE_WATCH</code>、<code>KHY_DISABLE_KEYPOOL_WATCH</code>、<code>KHY_SELF_EDIT_WATCH</code> …)。</li></ul>
+<p>没有单一真源,也没有守卫防漂移:新增一个后台服务时,<strong>没有任何机制强制作者声明它属于哪一层、该不该常驻</strong>。<br>时间一长,谁常驻、谁一次性、谁按需就只能靠读遍全部代码才能回答——这正是要清的边界。</p>
+<blockquote><p>勘察结论:khyos 的惰性纪律其实<strong>很好</strong>(~90 个 timer 都 <code>.unref()</code>、有统一<br><code>bootstrap/shutdown.js#addShutdownHook</code>、入口链高度惰性)。两个曾被怀疑的 eager 热点经读码确认<br><strong>已处于合适位置</strong>:①<code>tools/index.js</code> 已由 <code>KHY_DEFER_TOOLS</code> 惰性加载;②<code>aiGateway</code> 顶部 require<br>全部 17 个 adapter,但 <code>new AIGateway()</code> 在 require 时即构造、<code>_doInit</code> 对全部 adapter 跑检测——<br>所以顶部 require 改惰性是 <strong>no-op</strong>,延迟构造对 warmup 无效且会拖慢 first-chat。gateway 本身已在<br><code>+300ms warmup</code>(轻量)或首次 chat(完整)之后才载入,不在同步冷启动路径。<br>故本设计<strong>不 refactor adapter</strong>,只把「决定」显式化 + 守卫防它回退到冷路径。</p></blockquote>
+<h2 id="2-三层-tier-定义">2. 三层 tier 定义<a class="anchor" href="#2-三层-tier-定义" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>tier</th><th>含义</th><th>需 shutdown 取消</th><th>例</th></tr></thead><tbody><tr><td><code>resident</code></td><td>起长生命 timer / watcher / server(<strong>常驻</strong>)</td><td>是</td><td>cleanupService 周期清理、resourceGuard 内存监视、securityMonitor、daemon http/心跳、apiKeyPoolWatcher、changeWatch</td></tr><tr><td><code>startup-oneshot</code></td><td>启动后跑一次即返回(<strong>一次性</strong>)</td><td>否</td><td>fileIntegrity 校验、updateNotice、projectMemoryPrune、ideAdapterRecovery、skillLearning、hardwareProfileNotice、gatewayWarmup</td></tr><tr><td><code>on-demand</code></td><td>首次使用才惰性载入(<strong>按需</strong>),从不进同步冷启动路径</td><td>视资源</td><td>aiGateway+17 adapter、tools、router handler、连通性自检、deviceApps、mcp/lsp/localLLM 子进程</td></tr></tbody></table>
+<p>process 维度正交:<code>cli-startup</code>(deferredPrefetch 里跑)| <code>daemon</code>(daemonEntry 独立进程)| <code>lazy</code>。</p>
+<h2 id="3-单一真源-servicelifecyclepolicy-js-纯叶子">3. 单一真源:serviceLifecyclePolicy.js(纯叶子)<a class="anchor" href="#3-单一真源-servicelifecyclepolicy-js-纯叶子" aria-label="锚点">#</a></h2>
+<p>一张冻结表 <code>LIFECYCLE</code>,每个后台子系统一条:<code>{ id, tier, process, mode, gate, gateInverted,<br>delayMs, immediate, unref, shutdownHook, startSymbol, note }</code>。配套纯查询函数(零 IO、确定性、<br>fail-soft 绝不抛、返回值与冻结表隔离):</p>
+<ul><li><code>isPolicyEnabled(env)</code> — 主门 <code>KHY_LIFECYCLE_POLICY</code>(默认开,flagRegistry-first + 本地 CANON 回退)。</li><li><code>listByTier</code> / <code>listByProcess</code> — 分类查询(深拷贝)。</li><li><code>gateEnabled(id, env)</code> — 该条目 gate 是否开(禁用式 <code>KHY_DISABLE_*</code> 语义已内建)。</li><li><code>perIdOverride(id, env)</code> — 读约定名 <code>KHY_LIFECYCLE_&lt;ID&gt;</code>;仅主门开时生效。</li><li><code>isResident(id, env)</code> — 存在 ∧ tier=resident ∧ gate 开 ∧ 未被 per-id 覆盖关。</li><li><code>listStartupSchedule(env, mode)</code> — <strong>deferredPrefetch 消费的唯一入口</strong>。</li><li><code>describe</code> / <code>allGates</code> / <code>allIds</code> — 守卫与自省用。</li></ul>
+<h2 id="4-操作化-deferredprefetch-由策略驱动-不只是文档">4. 操作化:deferredPrefetch 由策略驱动(不只是文档)<a class="anchor" href="#4-操作化-deferredprefetch-由策略驱动-不只是文档" aria-label="锚点">#</a></h2>
+<p><code>deferredPrefetch</code> 把原来每个 <code>setTimeout</code> 的 body <strong>逐字节</strong>搬进一个 <code>RUNNERS</code> 映射(id ↔ 策略<br>cli-startup 条目一一对应),主体改为:</p>
+<pre><code class="language-js">for (const entry of policy.listStartupSchedule(process.env, mode)) {
+  const run = RUNNERS[entry.id];
+  if (!run) continue;
+  if (entry.immediate) setImmediate(run);       // 不进 timers,与原 setImmediate 语义一致
+  else timers.push(setTimeout(run, entry.delayMs));
+}</code></pre>
+<p><strong>判定与执行分离</strong>:策略决定「跑什么 / 何时 / 是否启用」,prefetch 只持有「怎么跑」。<br>延迟值、emit 文案、调度顺序全部源自策略且策略值 = 改造前现值 → <strong>零功能回归</strong>。<br>轻量模式 gatewayWarmup 的 <code>!== 'false'</code> 门判定保留在 runner body 内,逐字节保留原语义。</p>
+<h2 id="5-防漂移守卫-scripts-check-lifecycle-policy-js">5. 防漂移守卫:scripts/check-lifecycle-policy.js<a class="anchor" href="#5-防漂移守卫-scripts-check-lifecycle-policy-js" aria-label="锚点">#</a></h2>
+<p>纯读文件 + 正则,退出码非 0 即 fail(并入仓库既有 <code>check-*.js</code> 守卫批处理):</p>
+<ul><li><strong>A</strong> 主门 <code>KHY_LIFECYCLE_POLICY</code> 已在 flagRegistry 登记;</li><li><strong>A2</strong> 策略声明的每个非空 gate 在 <code>services/backend/src</code> 里可见(防拼写错误 / 引用已删 flag);</li><li><strong>B</strong> <code>prefetch.js</code> 的 <code>RUNNERS</code> 键集合 <strong>===</strong> 策略 cli-startup 条目 id 集合(双向;新增/删除</li></ul>
+<p>prefetch 任务而不同步策略 → fail);</p>
+<ul><li><strong>C</strong> 策略 <code>daemon</code> 条目的 <code>startSymbol</code> 在 daemonEntry / aiManagementServer 源码可见;</li><li><strong>D</strong> on-demand 边界防回退:<code>aiGateway</code> 不得出现在 <code>bin/khy.js</code> / <code>cli/bootstrap.js</code> 顶部 require;</li></ul>
+<p><code>tools/index.js</code> 含 <code>KHY_DEFER_TOOLS</code>。</p>
+<h2 id="6-新增后台服务的规程">6. 新增后台服务的规程<a class="anchor" href="#6-新增后台服务的规程" aria-label="锚点">#</a></h2>
+<ol><li>在 <code>serviceLifecyclePolicy.js</code> 的 <code>LIFECYCLE</code> 加一条,显式声明 <code>tier</code> / <code>process</code> /(如有门)<code>gate</code>;</li><li>若是 cli-startup 任务:在 <code>prefetch.js</code> 的 <code>RUNNERS</code> 加同名 runner(守卫 B 会强制两边同步);</li><li>若引入新 <code>KHY_*</code> 门:在 <code>flagRegistry.js</code> 登记;</li><li>若是 daemon 常驻:填 <code>startSymbol</code>(守卫 C 会验它在源码可见);</li><li>若是重子系统:确保它是 <code>on-demand</code> 且不进冷启动路径(守卫 D 兜底)。</li></ol>
+<h2 id="7-用户可控-per-id-覆盖与-escape-hatch">7. 用户可控:per-id 覆盖与 escape hatch<a class="anchor" href="#7-用户可控-per-id-覆盖与-escape-hatch" aria-label="锚点">#</a></h2>
+<ul><li><code>KHY_LIFECYCLE_&lt;ID&gt;=off|0|false</code> 关闭单个 startup 服务(如 <code>KHY_LIFECYCLE_CLEANUPSERVICE=off</code>),</li></ul>
+<p>仅主门开时生效(动态约定名,不逐个进 flagRegistry)。</p>
+<ul><li><code>KHY_LIFECYCLE_POLICY=0</code> 主门关 → <code>listStartupSchedule</code> 回退<strong>全量</strong>(忽略 per-id 覆盖)≈ 改造前</li></ul>
+<p>逐字节行为,是最后的 escape hatch。</p>
+<h2 id="8-有意排除-边界说明">8. 有意排除(边界说明)<a class="anchor" href="#8-有意排除-边界说明" aria-label="锚点">#</a></h2>
+<ul><li><strong>不 refactor aiGateway 的 17 adapter</strong>(见 §1,顶部 require 改惰性是 no-op)——只声明为 on-demand + 守卫防回退。</li><li><strong>不改各服务自身的 start/stop 实现</strong>——只把「启动决定」提到策略;timer/unref/shutdownHook 全不动。</li><li><strong>不改 daemon 进程的 start 顺序</strong>——本次只操作化 <strong>cli-startup 这一处控制点</strong>(风险最小);daemon</li></ul>
+<p>也策略驱动留作后续。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-061] 更新包学习-取其精华弃其糟粕.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-ARCH-061 更新包学习：取其精华弃其糟粕（upstream archive study）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-062] khyos 后台常驻与按需加载生命周期边界.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

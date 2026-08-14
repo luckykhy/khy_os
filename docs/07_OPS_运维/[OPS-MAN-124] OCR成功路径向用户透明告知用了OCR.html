@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-124] OCR 成功路径：向用户透明告知「用了 OCR」 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-124] OCR 成功路径：向用户透明告知「用了 OCR」</div>
+      <header class="hero reveal"><h1>[OPS-MAN-124] OCR 成功路径：向用户透明告知「用了 OCR」</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-124-ocr-成功路径-向用户透明告知-用了-ocr">[OPS-MAN-124] OCR 成功路径：向用户透明告知「用了 OCR」</a></li><li class="lvl-2"><a href="#背景-承-rounds-8-10-从-ocr-失败诚实跨到-ocr-成功透明">背景（承 Rounds 8–10：从 OCR-失败诚实跨到 OCR-成功透明）</a></li><li class="lvl-2"><a href="#断桥">断桥</a></li><li class="lvl-2"><a href="#修复-全-additive-独立门-khy-ocr-usage-disclosure-default-on-门关逐字节回退">修复（全 additive · 独立门 `KHY_OCR_USAGE_DISCLOSURE` default-on · 门关逐字节回退）</a></li><li class="lvl-2"><a href="#诚实边界-红线">诚实边界（红线）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-124-ocr-成功路径-向用户透明告知-用了-ocr">[OPS-MAN-124] OCR 成功路径：向用户透明告知「用了 OCR」<a class="anchor" href="#ops-man-124-ocr-成功路径-向用户透明告知-用了-ocr" aria-label="锚点">#</a></h1>
+<h2 id="背景-承-rounds-8-10-从-ocr-失败诚实跨到-ocr-成功透明">背景（承 Rounds 8–10：从 OCR-失败诚实跨到 OCR-成功透明）<a class="anchor" href="#背景-承-rounds-8-10-从-ocr-失败诚实跨到-ocr-成功透明" aria-label="锚点">#</a></h2>
+<p>当模型不支持看图（纯文本 / 非多模态 / 识图模型不可用）时，khy 应落到 OCR 兜底路径<br>（gateway → <code>ocrSnippetService.js</code> → <code>docHelper.py</code> → tesseract）。前几轮（OPS-118/120/122）<br>守的都是<strong>OCR-失败 / 读不出</strong>一侧的不变量——「非视觉模型永不收到裸图」「绝不谎称没收到图」。<br>本轮（Round 11）把轴移到<strong>OCR-成功</strong>一侧：当 OCR <strong>干净成功</strong>、图片文字被准确读出时，最终回答<br>是否<strong>无感但明显</strong>地告诉用户「这次是用 OCR 读的图，不是原生看图」。</p>
+<p>用户本轮新增诉求原文：<strong>「Khy 无法正确读图降级到 OCR，要能无感明显告知用户用了 OCR 但能正确识别图片」。</strong></p>
+<h2 id="断桥">断桥<a class="anchor" href="#断桥" aria-label="锚点">#</a></h2>
+<p>三处 OCR 成功注入点——Site 1（prep 期描述级联失败）、Site 2（prep 期 ocr-fallback）、<br>Site 3（post-failure 救援网）——注入 prompt 的结构都是：</p>
+<pre><code>[以下为图片 OCR 识别文本，请据此作答]   ← 面向【模型】的头
+【图片1 OCR 文本】…                      ← OCR 读出的文字
++ 六条【条件型】告诫（_appendOcr*）        ← 只在结果有缺陷时才触发</code></pre>
+<p>六条 <code>_appendOcr*</code> 告诫（低置信 / 覆盖率 / 单图截断 / 语言包 / 方向 / 分辨率）<strong>全是条件型</strong>：</p>
+<table><thead><tr><th>告诫</th><th>触发条件</th></tr></thead><tbody><tr><td><code>_appendOcrLowConfidenceCaveat</code></td><td>OCR 自评置信偏低</td></tr><tr><td><code>_appendOcrCoverageNotice</code></td><td>有图超上限被丢 / 读不出</td></tr><tr><td><code>_appendOcrTruncationNotice</code></td><td>单图 OCR 全文超上限被截断</td></tr><tr><td><code>_appendOcrLanguageNotice</code></td><td>请求语言被本机缺包窄化</td></tr><tr><td><code>_appendOcrOrientationNotice</code></td><td>图被 docHelper 自动旋正</td></tr><tr><td><code>_appendOcrResolutionNotice</code></td><td>低分辨率图被 docHelper 自动放大</td></tr></tbody></table>
+<p><strong>当 OCR 干净成功时，这六条一条都不触发</strong>。于是注入 prompt 里只剩一个面向<strong>模型</strong>的<br>「请据此作答」头——它让模型据 OCR 文本作答，却从不要求模型<strong>告诉用户</strong>这段内容是经 OCR 读取<br>而非原生看图：</p>
+<pre><code>OCR 干净成功 → 六条条件型告诫全静默
+→ 模型收到 OCR 文本 + 「请据此作答」头
+→ 模型像自己「亲眼看图」一样作答
+→ 用户全程不知道用了 OCR</code></pre>
+<p>这违反本轮「要能无感明显告知用户用了 OCR」的诉求：能力（准确识别）已经具备，缺的是<br><strong>成功路径上一条面向用户的「用了 OCR」透明披露</strong>。</p>
+<h2 id="修复-全-additive-独立门-khy-ocr-usage-disclosure-default-on-门关逐字节回退">修复（全 additive · 独立门 <code>KHY_OCR_USAGE_DISCLOSURE</code> default-on · 门关逐字节回退）<a class="anchor" href="#修复-全-additive-独立门-khy-ocr-usage-disclosure-default-on-门关逐字节回退" aria-label="锚点">#</a></h2>
+<p>把「OCR 成功 ⟹ 向用户透明告知用了 OCR」补成一条与六条条件型告诫<strong>正交</strong>的<strong>无条件</strong>披露：</p>
+<ol><li><strong>纯叶 <code>gateway/ocrUsageNotice.js</code></strong>：<ul><li><code>isEnabled(env)</code>：default-on，仅显式 <code>0/false/off/no</code> 关闭；env 经 opts 注入可测。</li><li><code>buildUsageDisclosure({ count, env })</code>：门开且 <code>count&gt;0</code>（OCR 成功提取到文本的图片数）时</li></ul></li></ol>
+<p><strong>无条件</strong>返回一句面向模型的指令，要求它在正常作答的同时，用一句<strong>自然、简短</strong>的话向用户<br>     <strong>明确</strong>说明「本次图片内容是通过 OCR 文字识别读取的」——无感（不长篇、不影响正文）但明显<br>     （用户务必清楚用了 OCR）。门关 / <code>count</code> 缺失或非正 / 畸形 → <code>null</code>，逐字节回退。fail-soft：绝不抛。</p>
+<ol><li><strong><code>aiGatewayGenerateMethod.js</code></strong>：新增 <code>_appendOcrUsageDisclosure(prompt, { count })</code> 辅助</li></ol>
+<p>（镜像既有 <code>_appendOcr*</code> 形制），在<strong>三处 OCR 成功注入点</strong>的 <code>_appendOcrResolutionNotice</code><br>   调用之后<strong>无条件</strong>接线：</p>
+<pre><code class="language-js">   prompt = _appendOcrResolutionNotice(prompt, ocrDetails);
+   // OCR 成功路径「使用 OCR 透明告知」(无条件):上面六条告诫都是条件型,干净成功时全静默,模型
+   // 据 OCR 文本作答却从不告诉用户用了 OCR。本条要求模型无感但明显地向用户披露。门关回退。
+   prompt = _appendOcrUsageDisclosure(prompt, { count: ocrTexts.length });</code></pre>
+<p>三处站点：Site 1（约 1569，<code>_ocrTexts.length</code>）、Site 2（约 1664，<code>ocrTexts.length</code>）、<br>   Site 3 post-failure 救援网（约 2832，<code>ocrTexts.length</code>）。</p>
+<ol><li><strong><code>flagRegistry.js</code></strong>：登记</li></ol>
+<p><code>KHY_OCR_USAGE_DISCLOSURE: { mode: 'default-on', off: 'CANON', default: true }</code>。</p>
+<p><strong>逐字节回退</strong>：<code>KHY_OCR_USAGE_DISCLOSURE=off</code>（或叶子不可用）→ <code>_appendOcrUsageDisclosure</code><br>原样返回 prompt → 等同历史「据 OCR 文本作答但不向用户披露」的行为（证明纯 additive）。</p>
+<h2 id="诚实边界-红线">诚实边界（红线）<a class="anchor" href="#诚实边界-红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>无条件 vs 条件型</strong>：六条 <code>_appendOcr*</code> 披露的是 OCR 结果的<strong>缺陷</strong>（准确性 / 完整性 / 语言 /</li></ul>
+<p>方向 / 分辨率）——只在有缺陷时才触发；本条披露的是<strong>方法本身</strong>（读图用的是 OCR 而非原生看图）<br>  ——在干净<strong>成功</strong>时也触发，恰好补上六条全静默的那个场景。</p>
+<ul><li><strong>无感但明显</strong>：措辞刻意要求模型「一句自然、简短的话」「不要长篇解释、不要影响正文回答」</li></ul>
+<p>（无感），同时「务必让用户清楚知道这次用的是 OCR 而非原生看图」（明显）。</p>
+<ul><li><strong>能力不回退</strong>：披露只<strong>追加</strong>在 OCR 文本之后，绝不改动 OCR 读出的文字本身——准确识别的能力</li></ul>
+<p>不受门控影响（门关时 OCR 文字照旧注入，只是不披露方法）。</p>
+<ul><li><strong>只在成功时披露</strong>：<code>count&gt;0</code> 才触发；OCR 无文本（读不出）→ 不注入披露（那条路径由</li></ul>
+<p>OPS-118/120/122 的「剥图必留痕」底线覆盖，语义不同：那是「收到图但读不出」，本条是<br>  「读出来了，且是用 OCR 读的」）。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li>纯叶单测：<code>node --test services/backend/tests/gateway/ocrUsageNotice.test.js</code>（8/8）：FLAG 名、</li></ul>
+<p><code>isEnabled</code> 门控（默认开 / off-words 关）、<code>buildUsageDisclosure</code> 的<strong>无条件</strong>渲染（<code>count&gt;0</code> 即注入、<br>  单复数措辞）与门关 / <code>count</code> 缺失或畸形 / 无参兜底的抑制。</p>
+<ul><li>端到端接线：<code>ocrUsageDisclosureWiring.test.js</code>（4/4，复用 OPS-122 双适配器 harness——视觉可用模型</li></ul>
+<p><code>gpt-4o</code> 逼 keep-routing → #1 运行时 404 拒图触发 post-failure 救援网 Site 3，#2 记录型文本适配器<br>  承接续跑，OCR 明细由 DI 桩控）：</p>
+<ul><li>A) 修复点：OCR <strong>成功</strong> + 披露门<strong>开</strong>（默认）→ prompt 同含 OCR 文本（<code>OCR 图像文本识别结果</code></li></ul>
+<p>/ <code>发票 金额 100</code>）+ 披露指令（<code>通过 OCR 文字识别读取</code> / <code>向用户明确说明</code>），下游文本适配器据实作答；</p>
+<ul><li>B) 披露门<strong>关</strong>（<code>KHY_OCR_USAGE_DISCLOSURE=off</code>）→ <strong>逐字节回退</strong>（仍含 OCR 文本但无披露指令）；</li><li>C) 无回归：OCR <strong>无文本</strong>（读不出）→ 不注入披露（<code>count&gt;0</code> 才触发）。</li></ul>
+<p>tesseract/eng/Pillow 或本机 tesseract 未从该图读出目标词时干净 skip）：PIL 渲染含清晰文字的真 PNG<br>  （<code>INVOICE 1234</code>，让<strong>真 tesseract 读出</strong>），模型 <code>gpt-4o</code>（视觉可用 → keep → 图保留到主级联），<br>  DI 一个<strong>逐字节镜像生产实现</strong>（base64 → <code>saveBase64ToTemp</code> → 真 tesseract）的 <code>extractImageOcrDetails</code>，<br>  双适配器级联（#1 运行时 404 拒图触发 <code>_visionFallback</code>，#2 记录型文本适配器承接续跑），断言：<br>  修复点 prompt 同含真 tesseract 读出的文字（<code>/INVOICE/</code>）+ 披露指令（<code>通过 OCR 文字识别读取</code>），<br>  下游据实作答；并附门关逐字节回退分支（仍含 OCR 文字但无披露）。</p>
+<ul><li>聚合：<code>npm run test:ocr-usage-disclosure</code>（14/14），并入 <code>test:maintainer:safety</code>（609/609）。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<p>Rounds 8–10 全在加固 <strong>OCR-失败 / 读不出</strong>一侧的诚实（「绝不谎称没收到图」，OPS-118/120/122 三站点<br>同一「剥图必留痕」不变量）。本轮把诚实轴移到 <strong>OCR-成功</strong>一侧：不是「读不出时别撒谎」，而是<br>「读出来了、且用的是 OCR 时，要<strong>无感但明显</strong>地让用户知道方法是 OCR」。判据 = 找「六条现有诚实告诫<br>全是<strong>条件型</strong>（只在结果有缺陷时触发），却没有一条在<strong>干净成功</strong>路径上<strong>无条件</strong>披露读图<strong>方法</strong>」的缺口；<br>修法 = 一条独立 default-on 门 + 无条件披露叶子，在三处 OCR 成功注入点的既有 <code>_appendOcr*</code> 链尾接线，<br>并保留逐字节回退。方法论：相同提示词每轮新收获 = 沿同一 consumer（OCR 兜底路径）找下一条<strong>正交轴</strong>——<br>这次从「失败诚实」跨到「成功透明」，覆盖六条条件型告诫全静默的那个场景。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-123] readFile按格式路由到提取器·接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-123] readFile 按格式路由到已存在提取器 · 接线（让 khy 真正「读」各种格式，而非拒绝/卡死）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-125] readFile特殊文件读前防护·接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-125] readFile 特殊文件（FIFO/套接字/设备）读前防护 · 接线（让 khy 不再因读到会阻塞的非常规文件而永久卡死）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-124] OCR成功路径向用户透明告知用了OCR.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

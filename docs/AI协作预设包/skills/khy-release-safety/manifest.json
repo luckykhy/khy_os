@@ -1,0 +1,12 @@
+{
+  "name": "khy-release-safety",
+  "description": "Khy-OS 发布前自保清单：pip 是唯一命脉，改了源码必须重打包、版本号多处一致、守卫全绿、上帝组件不恶化、能回退。准备发布 pip 包、或改动可能影响分发时激活，按最小闭环逐项确认。",
+  "user_invocable": true,
+  "trigger": "/khy-release-safety",
+  "aliases": ["/khy-release", "/发布自保"],
+  "category": "khy-guidance",
+  "tags": ["khy-os", "release", "pip", "version", "guard", "rollback"],
+  "platforms": ["khy-os"],
+  "when_to_use": "准备打包发布 pip、或不确定改动能否安全发布时。",
+  "context": "inline"
+}

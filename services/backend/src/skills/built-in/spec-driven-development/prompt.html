@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spec-Driven Development · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>spec-driven-development<span class="sep">›</span>Spec-Driven Development</div>
+      <header class="hero reveal"><h1>Spec-Driven Development</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#spec-driven-development">Spec-Driven Development</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#the-gated-workflow">The Gated Workflow</a></li><li class="lvl-3"><a href="#phase-1-specify">Phase 1: Specify</a></li><li class="lvl-3"><a href="#phase-2-plan">Phase 2: Plan</a></li><li class="lvl-3"><a href="#phase-3-tasks">Phase 3: Tasks</a></li><li class="lvl-3"><a href="#phase-4-implement">Phase 4: Implement</a></li><li class="lvl-2"><a href="#keeping-the-spec-alive">Keeping the Spec Alive</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="spec-driven-development">Spec-Driven Development<a class="anchor" href="#spec-driven-development" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Write a structured specification before writing any code. The spec is the shared source of truth between you and the human engineer — it defines what we're building, why, and how we'll know it's done. Code without a spec is guessing.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Starting a new project or feature</li><li>Requirements are ambiguous or incomplete</li><li>The change touches multiple files or modules</li><li>You're about to make an architectural decision</li><li>The task would take more than 30 minutes to implement</li></ul>
+<p><strong>When NOT to use:</strong> Single-line fixes, typo corrections, or changes where requirements are unambiguous and self-contained.</p>
+<h2 id="the-gated-workflow">The Gated Workflow<a class="anchor" href="#the-gated-workflow" aria-label="锚点">#</a></h2>
+<p>Spec-driven development has four phases. Do not advance to the next phase until the current one is validated.</p>
+<pre><code>SPECIFY ──→ PLAN ──→ TASKS ──→ IMPLEMENT
+   │          │        │          │
+   ▼          ▼        ▼          ▼
+ Human      Human    Human      Human
+ reviews    reviews  reviews    reviews</code></pre>
+<h3 id="phase-1-specify">Phase 1: Specify<a class="anchor" href="#phase-1-specify" aria-label="锚点">#</a></h3>
+<p>Start with a high-level vision. Ask the human clarifying questions until requirements are concrete.</p>
+<p><strong>Surface assumptions immediately.</strong> Before writing any spec content, list what you're assuming:</p>
+<pre><code>ASSUMPTIONS I'M MAKING:
+1. This is a web application (not native mobile)
+2. Authentication uses session-based cookies (not JWT)
+3. The database is PostgreSQL (based on existing Prisma schema)
+4. We're targeting modern browsers only (no IE11)
+→ Correct me now or I'll proceed with these.</code></pre>
+<p>Don't silently fill in ambiguous requirements. The spec's entire purpose is to surface misunderstandings <em>before</em> code gets written — assumptions are the most dangerous form of misunderstanding.</p>
+<p><strong>Write a spec document covering these six core areas:</strong></p>
+<ol><li><strong>Objective</strong> — What are we building and why? Who is the user? What does success look like?</li><li><strong>Commands</strong> — Full executable commands with flags, not just tool names.</li></ol>
+<pre><code>   Build: npm run build
+   Test: npm test -- --coverage
+   Lint: npm run lint --fix
+   Dev: npm run dev</code></pre>
+<ol><li><strong>Project Structure</strong> — Where source code lives, where tests go, where docs belong.</li></ol>
+<pre><code>   src/           → Application source code
+   src/components → React components
+   src/lib        → Shared utilities
+   tests/         → Unit and integration tests
+   e2e/           → End-to-end tests
+   docs/          → Documentation</code></pre>
+<ol><li><strong>Code Style</strong> — One real code snippet showing your style beats three paragraphs describing it. Include naming conventions, formatting rules, and examples of good output.</li><li><strong>Testing Strategy</strong> — What framework, where tests live, coverage expectations, which test levels for which concerns.</li><li><strong>Boundaries</strong> — Three-tier system:<ul><li><strong>Always do:</strong> Run tests before commits, follow naming conventions, validate inputs</li><li><strong>Ask first:</strong> Database schema changes, adding dependencies, changing CI config</li><li><strong>Never do:</strong> Commit secrets, edit vendor directories, remove failing tests without approval</li></ul></li></ol>
+<p><strong>Spec template:</strong></p>
+<pre><code class="language-markdown"># Spec: [Project/Feature Name]
+
+## Objective
+[What we're building and why. User stories or acceptance criteria.]
+
+## Tech Stack
+[Framework, language, key dependencies with versions]
+
+## Commands
+[Build, test, lint, dev — full commands]
+
+## Project Structure
+[Directory layout with descriptions]
+
+## Code Style
+[Example snippet + key conventions]
+
+## Testing Strategy
+[Framework, test locations, coverage requirements, test levels]
+
+## Boundaries
+- Always: [...]
+- Ask first: [...]
+- Never: [...]
+
+## Success Criteria
+[How we'll know this is done — specific, testable conditions]
+
+## Open Questions
+[Anything unresolved that needs human input]</code></pre>
+<p><strong>Reframe instructions as success criteria.</strong> When receiving vague requirements, translate them into concrete conditions:</p>
+<pre><code>REQUIREMENT: &quot;Make the dashboard faster&quot;
+
+REFRAMED SUCCESS CRITERIA:
+- Dashboard LCP &lt; 2.5s on 4G connection
+- Initial data load completes in &lt; 500ms
+- No layout shift during load (CLS &lt; 0.1)
+→ Are these the right targets?</code></pre>
+<p>This lets you loop, retry, and problem-solve toward a clear goal rather than guessing what &quot;faster&quot; means.</p>
+<h3 id="phase-2-plan">Phase 2: Plan<a class="anchor" href="#phase-2-plan" aria-label="锚点">#</a></h3>
+<p>With the validated spec, generate a technical implementation plan:</p>
+<ol><li>Identify the major components and their dependencies</li><li>Determine the implementation order (what must be built first)</li><li>Note risks and mitigation strategies</li><li>Identify what can be built in parallel vs. what must be sequential</li><li>Define verification checkpoints between phases</li></ol>
+<p>The plan should be reviewable: the human should be able to read it and say &quot;yes, that's the right approach&quot; or &quot;no, change X.&quot;</p>
+<h3 id="phase-3-tasks">Phase 3: Tasks<a class="anchor" href="#phase-3-tasks" aria-label="锚点">#</a></h3>
+<p>Break the plan into discrete, implementable tasks:</p>
+<ul><li>Each task should be completable in a single focused session</li><li>Each task has explicit acceptance criteria</li><li>Each task includes a verification step (test, build, manual check)</li><li>Tasks are ordered by dependency, not by perceived importance</li><li>No task should require changing more than ~5 files</li></ul>
+<p><strong>Task template:</strong></p>
+<pre><code class="language-markdown">- [ ] Task: [Description]
+  - Acceptance: [What must be true when done]
+  - Verify: [How to confirm — test command, build, manual check]
+  - Files: [Which files will be touched]</code></pre>
+<h3 id="phase-4-implement">Phase 4: Implement<a class="anchor" href="#phase-4-implement" aria-label="锚点">#</a></h3>
+<p>Execute tasks one at a time following <code>skills/incremental-implementation/SKILL.md</code> (<code>incremental-implementation</code>) and <code>skills/test-driven-development/SKILL.md</code> (<code>test-driven-development</code>). Use <code>skills/context-engineering/SKILL.md</code> (<code>context-engineering</code>) to load the right spec sections and source files at each step rather than flooding the agent with the entire spec.</p>
+<h2 id="keeping-the-spec-alive">Keeping the Spec Alive<a class="anchor" href="#keeping-the-spec-alive" aria-label="锚点">#</a></h2>
+<p>The spec is a living document, not a one-time artifact:</p>
+<ul><li><strong>Update when decisions change</strong> — If you discover the data model needs to change, update the spec first, then implement.</li><li><strong>Update when scope changes</strong> — Features added or cut should be reflected in the spec.</li><li><strong>Commit the spec</strong> — The spec belongs in version control alongside the code.</li><li><strong>Reference the spec in PRs</strong> — Link back to the spec section that each PR implements.</li></ul>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;This is simple, I don't need a spec&quot;</td><td>Simple tasks don't need <em>long</em> specs, but they still need acceptance criteria. A two-line spec is fine.</td></tr><tr><td>&quot;I'll write the spec after I code it&quot;</td><td>That's documentation, not specification. The spec's value is in forcing clarity <em>before</em> code.</td></tr><tr><td>&quot;The spec will slow us down&quot;</td><td>A 15-minute spec prevents hours of rework. Waterfall in 15 minutes beats debugging in 15 hours.</td></tr><tr><td>&quot;Requirements will change anyway&quot;</td><td>That's why the spec is a living document. An outdated spec is still better than no spec.</td></tr><tr><td>&quot;The user knows what they want&quot;</td><td>Even clear requests have implicit assumptions. The spec surfaces those assumptions.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Starting to write code without any written requirements</li><li>Asking &quot;should I just start building?&quot; before clarifying what &quot;done&quot; means</li><li>Implementing features not mentioned in any spec or task list</li><li>Making architectural decisions without documenting them</li><li>Skipping the spec because &quot;it's obvious what to build&quot;</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>Before proceeding to implementation, confirm:</p>
+<ul><li>[ ] The spec covers all six core areas</li><li>[ ] The human has reviewed and approved the spec</li><li>[ ] Success criteria are specific and testable</li><li>[ ] Boundaries (Always/Ask First/Never) are defined</li><li>[ ] The spec is saved to a file in the repository</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/source-driven-development/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Source-Driven Development</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/stuck/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Stuck — Alternative Approach Finder</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/spec-driven-development/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

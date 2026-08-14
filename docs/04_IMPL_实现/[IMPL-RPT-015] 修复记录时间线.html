@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 修复记录时间线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>KHY OS 修复记录时间线</div>
+      <header class="hero reveal"><h1>KHY OS 修复记录时间线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-修复记录时间线">KHY OS 修复记录时间线</a></li><li class="lvl-2"><a href="#一-收录范围">一、收录范围</a></li><li class="lvl-2"><a href="#二-时间线总表">二、时间线总表</a></li><li class="lvl-2"><a href="#三-阶段观察">三、阶段观察</a></li><li class="lvl-3"><a href="#2026-05-09-2026-05-19">2026-05-09 → 2026-05-19</a></li><li class="lvl-3"><a href="#2026-05-21-2026-05-27">2026-05-21 → 2026-05-27</a></li><li class="lvl-3"><a href="#2026-05-29-2026-05-31">2026-05-29 → 2026-05-31</a></li><li class="lvl-2"><a href="#四-按问题类型归档">四、按问题类型归档</a></li><li class="lvl-3"><a href="#4-1-终端-cli-显示">4.1 终端 / CLI 显示</a></li><li class="lvl-3"><a href="#4-2-网关-传输-超时">4.2 网关 / 传输 / 超时</a></li><li class="lvl-3"><a href="#4-3-认证-登录态-外部兼容">4.3 认证 / 登录态 / 外部兼容</a></li><li class="lvl-3"><a href="#4-4-运行时发现-端口-守护进程">4.4 运行时发现 / 端口 / 守护进程</a></li><li class="lvl-2"><a href="#五-当前高频修复主题">五、当前高频修复主题</a></li><li class="lvl-2"><a href="#六-维护约定">六、维护约定</a></li><li class="lvl-2"><a href="#七-使用方式">七、使用方式</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-015 | 阶段: 实现 | 原路径: docs/指南/修复记录时间线.md --&gt;</p>
+<h1 id="khy-os-修复记录时间线">KHY OS 修复记录时间线<a class="anchor" href="#khy-os-修复记录时间线" aria-label="锚点">#</a></h1>
+<blockquote><p>作用：汇总项目中的重大修复、事故复盘与关键稳定性修正，方便快速回溯“问题是什么、什么时候修、修到了哪篇文档”<br>更新时间：2026-06-10</p></blockquote>
+<hr>
+<h2 id="一-收录范围">一、收录范围<a class="anchor" href="#一-收录范围" aria-label="锚点">#</a></h2>
+<p>本页只收录对以下维度有明显影响的修复：</p>
+<ol><li>终端交互与交付体验</li><li>AI 网关稳定性与超时机制</li><li>认证、会话、兼容性冲突</li><li>守护进程、端口发现、运行时可达性</li><li>导致严重故障的事故复盘</li></ol>
+<p>不收录普通功能迭代、一般性优化和纯规划路线图。</p>
+<blockquote><p><strong>另一类 bug 见 [IMPL-RPT-032]</strong>：根因隐蔽、修复方法可迁移的一类（TUI vs 经典 REPL 界面漂移、<br>half-wired 半接线、幽灵显示、前端「按类别聚合」的结构陷阱）。本页收 P0/P1 硬故障，<br>[IMPL-RPT-032] 收「有学习价值」的定位法与套路。</p></blockquote>
+<hr>
+<h2 id="二-时间线总表">二、时间线总表<a class="anchor" href="#二-时间线总表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>日期</th><th>级别</th><th>主题</th><th>核心问题</th><th>文档</th></tr></thead><tbody><tr><td>2026-06-10</td><td>P1</td><td>网关 IDE 适配器可用性严格化</td><td>Cursor/Windsurf/Warp 未安装却显示「可用」；可用性只看 token、从不 AND 安装+真实登录</td><td><a href="%5BIMPL-RPT-010%5D%20网关适配器可用性严格化-本地安装与登录-2026-06-10.html">网关适配器可用性严格化</a></td></tr><tr><td>2026-05-31</td><td>P0</td><td>终端提示符泄漏与交付空行修复</td><td><code>❯</code> busy prompt 泄漏到正式输出前缀；执行过程与正文粘连</td><td><a href="%5BIMPL-RPT-019%5D%20终端提示符泄漏与交付空行修复-2026-05-31.html">终端提示符泄漏与交付空行修复</a></td></tr><tr><td>2026-05-29</td><td>P0</td><td>网关断链问题修复</td><td>多层 idle watchdog、错误分类过激、SSE 尾包丢失导致“经常断链”</td><td><a href="%5BIMPL-RPT-020%5D%20网关传输韧性修复-2026-05-29.html">网关传输韧性修复</a></td></tr><tr><td>2026-05-27</td><td>P0</td><td>KHY 与 Claude Code 认证冲突修复</td><td>KHY 向 Claude 设置中注入本地 key，污染外部 Anthropic 登录态，触发 401</td><td><a href="%5BIMPL-RPT-013%5D%20khy-claude-认证冲突修复.html">KHY Claude 认证冲突修复</a></td></tr><tr><td>2026-05-25</td><td>P1</td><td>Trae 官方登录态扫描修复</td><td>无法识别官方 IDE 加密登录态，端点候选错误，导致状态误判与调用失败</td><td><a href="%5BIMPL-RPT-014%5D%20trae-适配器-官方扫描修复-2026-05-25.html">Trae 适配器官方扫描修复</a></td></tr><tr><td>2026-05-21</td><td>P1</td><td>守护进程端口发现修复</td><td>多入口启动后端口漂移，但下游仍硬连 9090，导致白屏、504、WS 失败</td><td><a href="%5BIMPL-RPT-017%5D%20守护进程端口发现修复.html">守护进程端口发现修复</a></td></tr><tr><td>2026-05-19</td><td>P1</td><td>网关超时优化与 REPL 输入框边框修复</td><td><code>/gateway</code> 卡住过久；REPL 输入边框首次后消失</td><td><a href="%5BIMPL-RPT-021%5D%20网关超时与帧修复.html">网关超时与帧修复</a></td></tr><tr><td>2026-05-24</td><td>P1</td><td>剪贴板粘贴修复</td><td>终端粘贴内容被自动发送给 AI，用户无法编辑后再提交</td><td><a href="%5BIMPL-RPT-016%5D%20剪贴板粘贴修复.html">剪贴板粘贴修复</a></td></tr><tr><td>2026-05-09</td><td>P0 事故</td><td>终端崩溃事后分析</td><td>ISO 构建中断后清理逻辑破坏宿主机 <code>/dev</code> 与 <code>/dev/pts</code></td><td><a href="../08_MGMT_项目管理/%5BMGMT-OTHER-002%5D%20事后分析-终端崩溃-2026-05-09.html">终端崩溃事后分析</a></td></tr></tbody></table>
+<hr>
+<h2 id="三-阶段观察">三、阶段观察<a class="anchor" href="#三-阶段观察" aria-label="锚点">#</a></h2>
+<h3 id="2026-05-09-2026-05-19">2026-05-09 → 2026-05-19<a class="anchor" href="#2026-05-09-2026-05-19" aria-label="锚点">#</a></h3>
+<p>这一阶段的重点是<strong>防止系统级和交互级的硬故障</strong>：</p>
+<ul><li>先处理了最严重的宿主终端破坏事故</li><li>随后开始修复 <code>/gateway</code> 卡死和 REPL 输入边框错乱</li></ul>
+<p>关键词：</p>
+<ul><li>mount/cleanup 安全</li><li>timeout 上限</li><li>终端输入框稳定性</li></ul>
+<h3 id="2026-05-21-2026-05-27">2026-05-21 → 2026-05-27<a class="anchor" href="#2026-05-21-2026-05-27" aria-label="锚点">#</a></h3>
+<p>这一阶段的重点是<strong>连通性与兼容性</strong>：</p>
+<ul><li>daemon 端口漂移后的发现机制</li><li>第三方 IDE / Claude / Trae 的认证与登录态兼容</li></ul>
+<p>关键词：</p>
+<ul><li>runtime 发现文件</li><li>外部认证保护</li><li>加密 artifact 识别</li></ul>
+<h3 id="2026-05-29-2026-05-31">2026-05-29 → 2026-05-31<a class="anchor" href="#2026-05-29-2026-05-31" aria-label="锚点">#</a></h3>
+<p>这一阶段的重点是<strong>AI 交付链路韧性与终端交付质量</strong>：</p>
+<ul><li>先修网关断链、尾包丢失、误熔断</li><li>再修终端 busy prompt 泄漏与“过程/正文”边界不清</li></ul>
+<p>关键词：</p>
+<ul><li>sliding idle timeout</li><li>SSE flush</li><li>scrollback 纯净</li><li>delivery boundary</li></ul>
+<hr>
+<h2 id="四-按问题类型归档">四、按问题类型归档<a class="anchor" href="#四-按问题类型归档" aria-label="锚点">#</a></h2>
+<h3 id="4-1-终端-cli-显示">4.1 终端 / CLI 显示<a class="anchor" href="#4-1-终端-cli-显示" aria-label="锚点">#</a></h3>
+<ul><li><a href="%5BIMPL-RPT-019%5D%20终端提示符泄漏与交付空行修复-2026-05-31.html">终端提示符泄漏与交付空行修复</a></li><li><a href="%5BIMPL-RPT-021%5D%20网关超时与帧修复.html">网关超时与帧修复</a></li><li><a href="%5BIMPL-RPT-016%5D%20剪贴板粘贴修复.html">剪贴板粘贴修复</a></li><li><a href="../08_MGMT_项目管理/%5BMGMT-OTHER-002%5D%20事后分析-终端崩溃-2026-05-09.html">终端崩溃事后分析</a></li></ul>
+<h3 id="4-2-网关-传输-超时">4.2 网关 / 传输 / 超时<a class="anchor" href="#4-2-网关-传输-超时" aria-label="锚点">#</a></h3>
+<ul><li><a href="%5BIMPL-RPT-020%5D%20网关传输韧性修复-2026-05-29.html">网关传输韧性修复</a></li><li><a href="%5BIMPL-RPT-021%5D%20网关超时与帧修复.html">网关超时与帧修复</a></li></ul>
+<h3 id="4-3-认证-登录态-外部兼容">4.3 认证 / 登录态 / 外部兼容<a class="anchor" href="#4-3-认证-登录态-外部兼容" aria-label="锚点">#</a></h3>
+<ul><li><a href="%5BIMPL-RPT-010%5D%20网关适配器可用性严格化-本地安装与登录-2026-06-10.html">网关适配器可用性严格化</a></li><li><a href="%5BIMPL-RPT-013%5D%20khy-claude-认证冲突修复.html">KHY Claude 认证冲突修复</a></li><li><a href="%5BIMPL-RPT-014%5D%20trae-适配器-官方扫描修复-2026-05-25.html">Trae 适配器官方扫描修复</a></li></ul>
+<h3 id="4-4-运行时发现-端口-守护进程">4.4 运行时发现 / 端口 / 守护进程<a class="anchor" href="#4-4-运行时发现-端口-守护进程" aria-label="锚点">#</a></h3>
+<ul><li><a href="%5BIMPL-RPT-017%5D%20守护进程端口发现修复.html">守护进程端口发现修复</a></li></ul>
+<hr>
+<h2 id="五-当前高频修复主题">五、当前高频修复主题<a class="anchor" href="#五-当前高频修复主题" aria-label="锚点">#</a></h2>
+<p>从现有记录看，项目中的“大修复”主要集中在四类：</p>
+<ol><li><strong>终端渲染状态机不稳定</strong><ul><li>prompt、frame、paste、正文边界、scrollback</li></ul></li><li><strong>网关链路过于激进</strong><ul><li>硬超时、误判断链、错误分类放大</li></ul></li><li><strong>多入口运行时缺少统一发现机制</strong><ul><li>实际端口变化后，下游消费者感知不到</li></ul></li><li><strong>外部工具/IDE 的登录态边界不清</strong><ul><li>KHY 注入行为覆盖或污染用户自己的认证配置</li></ul></li></ol>
+<p>这四类问题在后续开发中应被视为高风险区。</p>
+<hr>
+<h2 id="六-维护约定">六、维护约定<a class="anchor" href="#六-维护约定" aria-label="锚点">#</a></h2>
+<p>后续新增重大修复文档时，建议同时做三件事：</p>
+<ol><li>在对应文档中写清：<ul><li>问题现象</li><li>根因</li><li>修复方案</li><li>验证结果</li></ul></li><li>在 <a href="../08_MGMT_项目管理/%5BMGMT-OTHER-003%5D%20索引.html">文档索引</a> 的“修复记录”中补入口</li><li>在本页“时间线总表”顶部追加一行</li></ol>
+<p>推荐字段：</p>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td>日期</td><td>修复落地日期</td></tr><tr><td>级别</td><td><code>P0</code> / <code>P1</code> / <code>事故</code></td></tr><tr><td>主题</td><td>一句话命名</td></tr><tr><td>核心问题</td><td>最直接的用户可见症状</td></tr><tr><td>文档</td><td>详细修复报告链接</td></tr></tbody></table>
+<hr>
+<h2 id="七-使用方式">七、使用方式<a class="anchor" href="#七-使用方式" aria-label="锚点">#</a></h2>
+<p>如果你是：</p>
+<ul><li><strong>开发者</strong>：先看本页定位历史修复，再进具体报告看实现细节</li><li><strong>回归测试人员</strong>：优先看最近两周的 P0/P1 修复，构造复现场景</li><li><strong>产品/验收人员</strong>：从“核心问题”列判断某次修复是不是用户真实痛点</li></ul>
+<p>本页不代替详细修复报告，它是项目级“修复导航页”。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-014] trae-适配器-官方扫描修复-2026-05-25.html"><div class="dir">← 上一篇</div><div class="ttl">Trae 适配器官方登录态扫描修复报告</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-016] 剪贴板粘贴修复.html"><div class="dir">下一篇 →</div><div class="ttl">剪贴板粘贴修复</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-015] 修复记录时间线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

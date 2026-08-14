@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>终端 TUI 有框输入区重构方案 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>终端 TUI 有框输入区重构方案</div>
+      <header class="hero reveal"><h1>终端 TUI 有框输入区重构方案</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#终端-tui-有框输入区重构方案">终端 TUI 有框输入区重构方案</a></li><li class="lvl-2"><a href="#一-问题定义">一、问题定义</a></li><li class="lvl-2"><a href="#二-为什么现架构注定不稳">二、为什么现架构注定不稳</a></li><li class="lvl-2"><a href="#三-从-claude-code-学到的关键结论">三、从 Claude Code 学到的关键结论</a></li><li class="lvl-2"><a href="#四-总体方案">四、总体方案</a></li><li class="lvl-3"><a href="#4-1-总体方向">4.1 总体方向</a></li><li class="lvl-3"><a href="#4-2-范围控制">4.2 范围控制</a></li><li class="lvl-2"><a href="#五-为什么必须使用-alternate-screen">五、为什么必须使用 alternate screen</a></li><li class="lvl-2"><a href="#六-目标架构">六、目标架构</a></li><li class="lvl-3"><a href="#6-1-runtime-alternatescreen-js">6.1 `runtime/alternateScreen.js`</a></li><li class="lvl-3"><a href="#6-2-runtime-terminalinput-js">6.2 `runtime/terminalInput.js`</a></li><li class="lvl-3"><a href="#6-3-runtime-screenrenderer-js">6.3 `runtime/screenRenderer.js`</a></li><li class="lvl-3"><a href="#6-4-store-replstore-js">6.4 `store/replStore.js`</a></li><li class="lvl-3"><a href="#6-5-layout-appshell-js">6.5 `layout/AppShell.js`</a></li><li class="lvl-3"><a href="#6-6-components-promptframe-js">6.6 `components/PromptFrame.js`</a></li><li class="lvl-3"><a href="#6-7-components-transcriptviewport-js">6.7 `components/TranscriptViewport.js`</a></li><li class="lvl-3"><a href="#6-8-components-footerbar-js">6.8 `components/FooterBar.js`</a></li><li class="lvl-3"><a href="#6-9-components-overlayhost-js">6.9 `components/OverlayHost.js`</a></li><li class="lvl-3"><a href="#6-10-adapters-replcontroller-js">6.10 `adapters/replController.js`</a></li><li class="lvl-2"><a href="#七-与现有代码的边界">七、与现有代码的边界</a></li><li class="lvl-3"><a href="#7-1-可以直接复用的部分">7.1 可以直接复用的部分</a></li><li class="lvl-3"><a href="#7-2-必须废弃的终端做法">7.2 必须废弃的终端做法</a></li><li class="lvl-3"><a href="#7-3-可作为-fallback-保留的路径">7.3 可作为 fallback 保留的路径</a></li><li class="lvl-2"><a href="#八-实施阶段">八、实施阶段</a></li><li class="lvl-3"><a href="#phase-1-抽离控制层-不改业务">Phase 1: 抽离控制层，不改业务</a></li><li class="lvl-3"><a href="#phase-2-建立最小-tui-shell">Phase 2: 建立最小 TUI Shell</a></li><li class="lvl-3"><a href="#phase-3-接入流式输出与工具进度">Phase 3: 接入流式输出与工具进度</a></li><li class="lvl-3"><a href="#phase-4-迁移-overlay-与交互增强">Phase 4: 迁移 overlay 与交互增强</a></li><li class="lvl-3"><a href="#phase-5-灰度切换与-fallback">Phase 5: 灰度切换与 fallback</a></li><li class="lvl-2"><a href="#九-测试方案">九、测试方案</a></li><li class="lvl-3"><a href="#9-1-纯布局测试">9.1 纯布局测试</a></li><li class="lvl-3"><a href="#9-2-virtual-screen-快照测试">9.2 virtual screen 快照测试</a></li><li class="lvl-3"><a href="#9-3-真实-pty-端到端测试">9.3 真实 PTY 端到端测试</a></li><li class="lvl-2"><a href="#十-验收标准">十、验收标准</a></li><li class="lvl-2"><a href="#十一-明确不做的事">十一、明确不做的事</a></li><li class="lvl-2"><a href="#十二-最终结论">十二、最终结论</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-031 | 阶段: 运维 | 原路径: docs/指南/终端-tui-有框输入区重构方案-2026-05-31.md --&gt;</p>
+<h1 id="终端-tui-有框输入区重构方案">终端 TUI 有框输入区重构方案<a class="anchor" href="#终端-tui-有框输入区重构方案" aria-label="锚点">#</a></h1>
+<blockquote><p>⚠️ <strong>已归档 / 被取代</strong>：本方案设计的自研 TUI 运行时（<code>runtime/alternateScreen.js</code> / <code>runtime/terminalInput.js</code> / <code>runtime/screenRenderer.js</code> / <code>store/replStore.js</code> 等）未按此方案实施；2026-06-05 起 TUI 已直接迁移至官方 Ink 运行时（<code>backend/src/cli/tui/ink-components/</code>），上述自研模块均已删除。本文仅作历史方案保留，最新 TUI 实现请参阅 <a href="../04_IMPL_实现/%5BIMPL-RPT-003%5D%20tui-inquirer闪退修复-2026-06-05.html">tui-inquirer闪退修复-2026-06-05.md</a>。</p></blockquote>
+<blockquote><p>日期: 2026-05-31<br>状态: 方案已确认，待实施<br>目标范围: <code>backend/src/cli/repl.js</code> 所代表的 full REPL 交互层<br>关联背景: <code>docs/04_IMPL_实现/[IMPL-RPT-021] 网关超时与帧修复.md</code> · <code>docs/04_IMPL_实现/[IMPL-RPT-019] 终端提示符泄漏与交付空行修复-2026-05-31.md</code></p></blockquote>
+<hr>
+<h2 id="一-问题定义">一、问题定义<a class="anchor" href="#一-问题定义" aria-label="锚点">#</a></h2>
+<p>当前 KHY 的 full REPL 希望同时满足四个目标：</p>
+<ol><li>保留带边框的活动输入区</li><li>支持持续滚动的终端输出</li><li>允许流式正文、工具日志、状态行混合打印</li><li>在终端 resize 时不变形、不残影、不污染 scrollback</li></ol>
+<p>这四个目标在当前 <code>readline + ANSI 相对补画</code> 架构下彼此冲突。</p>
+<p>用户已经多次在真实终端中复现以下问题：</p>
+<ol><li>拉伸后输入框边框变形</li><li>上下边线残留到 scrollback</li><li><code>❯</code> 提示符泄漏到正式输出前</li><li>为止血而做的 resize 降级，会让边框直接消失</li></ol>
+<p>结论很明确：</p>
+<ul><li>继续补 <code>repl.js</code> 里的 ANSI 光标移动细节，只会反复修局部症状</li><li>如果产品目标仍然是“稳定保留有框输入区”，就必须切换到正式 TUI 架构</li></ul>
+<hr>
+<h2 id="二-为什么现架构注定不稳">二、为什么现架构注定不稳<a class="anchor" href="#二-为什么现架构注定不稳" aria-label="锚点">#</a></h2>
+<p>当前 full REPL 的关键路径是：</p>
+<ol><li><code>readline.createInterface()</code> 接管输入</li><li><code>rl.prompt()</code> / <code>rl._refreshLine()</code> 驱动输入重绘</li><li><code>process.stdout.write()</code> 和 <code>console.log()</code> 在主屏 scrollback 上持续追加内容</li><li>活动输入框边框通过相对 ANSI 光标移动临时补画</li></ol>
+<p>这类架构的问题不是“有一个 escape sequence 写错了”，而是<strong>终端所有权冲突</strong>：</p>
+<ol><li><code>readline</code> 认为自己拥有当前输入行</li><li>业务输出认为自己可以随时往 stdout 追加日志</li><li>边框系统认为自己可以在输入区上下插入临时装饰</li><li>resize 会让输入换行行数、光标绝对位置、已渲染边框宽度同时失效</li></ol>
+<p>于是任何一个环节先动，另外两个环节就会被动失真。</p>
+<p>这也是为什么前面即使修掉了：</p>
+<ul><li>busy prompt 泄漏</li><li>执行过程与正文之间的空行</li><li>resize 时边框残影</li></ul>
+<p>最终还是会在真实终端里继续看到“有框输入区”本身不稳定。</p>
+<hr>
+<h2 id="三-从-claude-code-学到的关键结论">三、从 Claude Code 学到的关键结论<a class="anchor" href="#三-从-claude-code-学到的关键结论" aria-label="锚点">#</a></h2>
+<p>对 <code>/home/kodehu03/Downloads/Claude-Code-main.zip</code> 的检查结果表明：</p>
+<ol><li>Claude Code 使用 <code>React + Ink</code></li><li>终端尺寸变化通过 <code>useTerminalSize()</code> 触发布局重排</li><li>输入区和边框属于组件树的一部分，不靠 <code>readline</code> 上方的相对 ANSI 补画</li><li>整个交互期的布局由 fullscreen / TUI shell 统一管理</li></ol>
+<p>这说明 Claude 稳定的根因不是“它更会写 ANSI”，而是：</p>
+<p><strong>它把输入区、正文区、状态区都收进了一个统一的保留态布局系统里。</strong></p>
+<p>对 KHY 的启示不是“抄几个 escape sequence”，而是要改下面这件事：</p>
+<p><strong>从即时 stdout 输出模型，切换到状态驱动的 retained-mode TUI。</strong></p>
+<hr>
+<h2 id="四-总体方案">四、总体方案<a class="anchor" href="#四-总体方案" aria-label="锚点">#</a></h2>
+<h3 id="4-1-总体方向">4.1 总体方向<a class="anchor" href="#4-1-总体方向" aria-label="锚点">#</a></h3>
+<p>保留“有框输入区”，但不再允许它依附在主屏 scrollback 上通过 ANSI 临时补画。</p>
+<p>full REPL 迁移到新的 TUI Shell：</p>
+<ol><li>启动 full REPL 时进入 alternate screen</li><li>输入区固定在底部布局槽内</li><li>正文区变成应用内 transcript viewport</li><li>所有输出先写入状态树，再由 renderer 统一刷屏</li><li>resize 时基于新终端尺寸整屏重排，而不是局部修补</li></ol>
+<h3 id="4-2-范围控制">4.2 范围控制<a class="anchor" href="#4-2-范围控制" aria-label="锚点">#</a></h3>
+<p>第一阶段只改 full REPL：</p>
+<ul><li>改: <code>backend/src/cli/repl.js</code></li><li>不改: <code>liteRepl.js</code></li><li>不改: one-shot 非 TTY 路径</li><li>不改: 现有 AI/工具业务逻辑</li></ul>
+<p>原因：</p>
+<ol><li>full REPL 是当前“有框输入区”问题的主战场</li><li><code>liteRepl.js</code> 仍可作为保守 fallback</li><li>先控制爆炸半径，避免一次性重写全部 CLI</li></ol>
+<hr>
+<h2 id="五-为什么必须使用-alternate-screen">五、为什么必须使用 alternate screen<a class="anchor" href="#五-为什么必须使用-alternate-screen" aria-label="锚点">#</a></h2>
+<p>如果继续留在主屏 scrollback：</p>
+<ol><li>应用内固定输入区与终端自然滚动会互相争抢底部空间</li><li>长输出后回看依赖宿主终端，而非应用自身布局</li><li>输入框边框一旦需要“贴底固定”，就仍然要使用相对 ANSI 补画</li></ol>
+<p>这会把问题重新带回来。</p>
+<p>因此本方案明确要求：</p>
+<ol><li>full REPL 进入 alternate screen 运行</li><li>主屏 scrollback 在进入前完整保留</li><li>交互期间的回看由 transcript viewport 负责</li><li>退出时恢复主屏，不污染宿主 shell 历史</li></ol>
+<p>这和项目规则不冲突：</p>
+<ul><li>主屏 scrollback 不会被破坏</li><li>也不需要使用 scroll region</li><li>输入区稳定性由应用布局保证，不由终端自然滚动“碰运气”</li></ul>
+<hr>
+<h2 id="六-目标架构">六、目标架构<a class="anchor" href="#六-目标架构" aria-label="锚点">#</a></h2>
+<p>建议新增目录：</p>
+<pre><code class="language-text">backend/src/cli/tui/
+├── runtime/
+│   ├── alternateScreen.js
+│   ├── terminalInput.js
+│   ├── screenRenderer.js
+│   └── terminalCapabilities.js
+├── store/
+│   ├── replStore.js
+│   └── actions.js
+├── layout/
+│   └── AppShell.js
+├── components/
+│   ├── TranscriptViewport.js
+│   ├── PromptFrame.js
+│   ├── FooterBar.js
+│   ├── StatusOverlay.js
+│   └── OverlayHost.js
+└── adapters/
+    └── replController.js</code></pre>
+<h3 id="6-1-runtime-alternatescreen-js">6.1 <code>runtime/alternateScreen.js</code><a class="anchor" href="#6-1-runtime-alternatescreen-js" aria-label="锚点">#</a></h3>
+<p>职责：</p>
+<ol><li>进入 / 退出 alternate screen</li><li>统一管理光标显示状态</li><li>管理 bracketed paste</li><li>处理退出时的终端恢复</li></ol>
+<p>要求：</p>
+<ol><li>任何异常退出都必须恢复主屏和光标</li><li>不允许把终端残留在 raw mode</li><li>不允许残留 alternate screen</li></ol>
+<h3 id="6-2-runtime-terminalinput-js">6.2 <code>runtime/terminalInput.js</code><a class="anchor" href="#6-2-runtime-terminalinput-js" aria-label="锚点">#</a></h3>
+<p>职责：</p>
+<ol><li>放弃 <code>readline</code></li><li>改为 raw stdin + keypress 解析</li><li>自己维护文本缓冲、光标、历史、选择、粘贴事件</li></ol>
+<p>必须支持：</p>
+<ol><li>左右移动</li><li>多行输入与自动换行</li><li>历史上下导航</li><li>bracketed paste</li><li>中文输入法共存</li><li><code>/s</code>、<code>/i</code>、普通输入排队</li></ol>
+<h3 id="6-3-runtime-screenrenderer-js">6.3 <code>runtime/screenRenderer.js</code><a class="anchor" href="#6-3-runtime-screenrenderer-js" aria-label="锚点">#</a></h3>
+<p>职责：</p>
+<ol><li>持有上一帧 virtual screen</li><li>根据布局结果生成下一帧</li><li>只输出最小 diff，避免整屏闪烁</li></ol>
+<p>要求：</p>
+<ol><li>resize 时允许整屏重绘</li><li>普通输入时只刷新受影响区域</li><li>输出策略必须和业务状态解耦</li></ol>
+<h3 id="6-4-store-replstore-js">6.4 <code>store/replStore.js</code><a class="anchor" href="#6-4-store-replstore-js" aria-label="锚点">#</a></h3>
+<p>这是整套 TUI 的单一状态源。</p>
+<p>至少包含以下状态：</p>
+<ol><li><code>terminal</code>: <code>rows</code> / <code>columns</code> / color depth / capability flags</li><li><code>prompt</code>: <code>value</code> / <code>cursor</code> / <code>mode</code> / <code>historyIndex</code></li><li><code>transcript</code>: 消息块、工具块、状态块</li><li><code>footer</code>: 模型、tokens、git、permission mode</li><li><code>overlay</code>: slash picker、@ 文件选择、权限确认、计划面板</li><li><code>activity</code>: busy / streaming / tool running / interrupt requested</li><li><code>viewport</code>: transcript scrollTop / stickyBottom / unseen divider</li></ol>
+<p>原则：</p>
+<ol><li>业务逻辑只能 dispatch action</li><li>组件不能直接写 stdout</li><li>renderer 不能自己推导业务状态</li></ol>
+<h3 id="6-5-layout-appshell-js">6.5 <code>layout/AppShell.js</code><a class="anchor" href="#6-5-layout-appshell-js" aria-label="锚点">#</a></h3>
+<p>主布局拆成三块：</p>
+<ol><li>主体 transcript viewport</li><li>底部 prompt frame</li><li>footer / overlay 区域</li></ol>
+<p>其中：</p>
+<ol><li>transcript 负责“看历史”</li><li>prompt frame 负责“当前输入”</li><li>overlay 负责 slash picker、文件候选、权限框</li></ol>
+<h3 id="6-6-components-promptframe-js">6.6 <code>components/PromptFrame.js</code><a class="anchor" href="#6-6-components-promptframe-js" aria-label="锚点">#</a></h3>
+<p>这是本次重构的中心组件。</p>
+<p>职责：</p>
+<ol><li>画出稳定的上边框、输入区、下边框</li><li>根据终端宽度自动换行</li><li>光标始终留在框内</li><li>在 resize 后保持几何完整</li></ol>
+<p>关键要求：</p>
+<ol><li>它只基于 <code>prompt state + terminal size</code> 计算自身布局</li><li>不允许直接读 <code>process.stdout</code> 当前光标位置</li><li>不允许再出现“先画边框，再移动光标回填输入”这种流程</li></ol>
+<h3 id="6-7-components-transcriptviewport-js">6.7 <code>components/TranscriptViewport.js</code><a class="anchor" href="#6-7-components-transcriptviewport-js" aria-label="锚点">#</a></h3>
+<p>职责：</p>
+<ol><li>承接现有 AI 回复、工具输出、状态行、完成面板</li><li>支持自动 stick 到底部</li><li>支持用户向上翻看历史</li><li>支持 resize 时重新换行布局</li></ol>
+<p>它将取代当前“输出直接写进宿主 scrollback”的行为。</p>
+<h3 id="6-8-components-footerbar-js">6.8 <code>components/FooterBar.js</code><a class="anchor" href="#6-8-components-footerbar-js" aria-label="锚点">#</a></h3>
+<p>现有 <code>hudRenderer</code> 里的数据仍然能用，但底部渲染方式不能再复用。</p>
+<p>可以保留：</p>
+<ol><li>git/model/token/cost 数据源</li><li>状态拼接逻辑</li></ol>
+<p>不能保留：</p>
+<ol><li><code>save/restore cursor</code> 写到底行</li><li>定时强刷宿主终端最后一行</li></ol>
+<p>新 FooterBar 只渲染应用布局树里的 footer。</p>
+<h3 id="6-9-components-overlayhost-js">6.9 <code>components/OverlayHost.js</code><a class="anchor" href="#6-9-components-overlayhost-js" aria-label="锚点">#</a></h3>
+<p>负责承接现有这些“临时层”：</p>
+<ol><li>slash picker</li><li><code>@</code> 文件选择</li><li>权限确认</li><li>计划面板</li><li>提示补全候选</li></ol>
+<p>原则：</p>
+<ol><li>overlay 只覆盖布局层</li><li>不再通过 <code>console.log</code> 在 prompt 周围临时插行</li></ol>
+<h3 id="6-10-adapters-replcontroller-js">6.10 <code>adapters/replController.js</code><a class="anchor" href="#6-10-adapters-replcontroller-js" aria-label="锚点">#</a></h3>
+<p>这是业务适配层。</p>
+<p>职责：</p>
+<ol><li>把现有 <code>router</code></li><li><code>ai</code></li><li><code>toolUseLoop</code></li><li><code>taskPanelState</code></li><li>状态流 <code>onChunk</code> / <code>onStatus</code></li></ol>
+<p>统一转成 store action。</p>
+<p>它的意义是：</p>
+<p><strong>保留现有业务能力，替换掉终端渲染壳。</strong></p>
+<hr>
+<h2 id="七-与现有代码的边界">七、与现有代码的边界<a class="anchor" href="#七-与现有代码的边界" aria-label="锚点">#</a></h2>
+<h3 id="7-1-可以直接复用的部分">7.1 可以直接复用的部分<a class="anchor" href="#7-1-可以直接复用的部分" aria-label="锚点">#</a></h3>
+<p>以下内容应尽量复用：</p>
+<ol><li><code>router.js</code> 的命令路由</li><li><code>ai.js</code> 的对话入口</li><li><code>toolUseLoop</code> 的工具循环</li><li><code>hudRenderer</code> 的状态数据模型</li><li><code>panels.js</code> / <code>toolDisplay.js</code> 的文本摘要逻辑</li><li><code>formatters.js</code> 的宽度计算与 markdown 渲染能力</li></ol>
+<h3 id="7-2-必须废弃的终端做法">7.2 必须废弃的终端做法<a class="anchor" href="#7-2-必须废弃的终端做法" aria-label="锚点">#</a></h3>
+<p>以下做法在 full TUI 模式下必须退出主路径：</p>
+<ol><li><code>readline</code> 拥有输入行</li><li>monkey-patch <code>rl._refreshLine()</code></li><li>业务层直接 <code>console.log()</code> 到交互主屏</li><li>通过相对 ANSI 在输入区上下补画边框</li><li>把临时状态写到底行再 restore cursor</li></ol>
+<h3 id="7-3-可作为-fallback-保留的路径">7.3 可作为 fallback 保留的路径<a class="anchor" href="#7-3-可作为-fallback-保留的路径" aria-label="锚点">#</a></h3>
+<p>以下路径应继续保留：</p>
+<ol><li><code>liteRepl.js</code></li><li>非 TTY 模式</li><li>诊断模式 / 应急降级模式</li></ol>
+<p>建议引入：</p>
+<pre><code class="language-text">KHY_FULL_TUI=1</code></pre>
+<p>用于第一阶段灰度切换。</p>
+<hr>
+<h2 id="八-实施阶段">八、实施阶段<a class="anchor" href="#八-实施阶段" aria-label="锚点">#</a></h2>
+<h3 id="phase-1-抽离控制层-不改业务">Phase 1: 抽离控制层，不改业务<a class="anchor" href="#phase-1-抽离控制层-不改业务" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ol><li>从 <code>repl.js</code> 中剥离“业务控制”与“终端输出”</li><li>把 <code>onChunk</code>、<code>onStatus</code>、<code>line input</code> 等都改为 action 驱动</li></ol>
+<p>交付物：</p>
+<ol><li><code>replController.js</code></li><li><code>replStore.js</code></li><li>一套最小 action 定义</li></ol>
+<p>完成标志：</p>
+<ol><li>旧 REPL 仍可运行</li><li>TUI 壳还未替换</li><li>业务输出可同时流向旧 stdout 和新 store mock</li></ol>
+<h3 id="phase-2-建立最小-tui-shell">Phase 2: 建立最小 TUI Shell<a class="anchor" href="#phase-2-建立最小-tui-shell" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ol><li>进入 alternate screen</li><li>渲染 transcript viewport</li><li>渲染稳定的 framed prompt</li><li>渲染 footer</li></ol>
+<p>第一阶段不做复杂 overlay。</p>
+<p>完成标志：</p>
+<ol><li>纯输入、纯输出、纯 resize 都稳定</li><li>用户可以在框内输入并提交</li><li>AI 回复能进入 transcript viewport</li></ol>
+<h3 id="phase-3-接入流式输出与工具进度">Phase 3: 接入流式输出与工具进度<a class="anchor" href="#phase-3-接入流式输出与工具进度" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ol><li><code>thinking</code></li><li><code>tool_progress</code></li><li><code>tool_result</code></li><li>正文流式输出</li></ol>
+<p>全部进入 transcript 统一渲染。</p>
+<p>完成标志：</p>
+<ol><li>不再需要 busy prompt 临时补画</li><li>正文和过程边界由布局管理</li><li>不再依赖宿主 scrollback 的视觉秩序</li></ol>
+<h3 id="phase-4-迁移-overlay-与交互增强">Phase 4: 迁移 overlay 与交互增强<a class="anchor" href="#phase-4-迁移-overlay-与交互增强" aria-label="锚点">#</a></h3>
+<p>迁移：</p>
+<ol><li>slash picker</li><li><code>@</code> 文件候选</li><li>权限对话框</li><li>计划面板</li><li>任务状态视图</li></ol>
+<p>完成标志：</p>
+<ol><li>旧 REPL 的大部分“临时输出型 UI”都退出主路径</li><li>prompt 区和 overlay 区都由统一布局管理</li></ol>
+<h3 id="phase-5-灰度切换与-fallback">Phase 5: 灰度切换与 fallback<a class="anchor" href="#phase-5-灰度切换与-fallback" aria-label="锚点">#</a></h3>
+<p>策略：</p>
+<ol><li>默认仍走 legacy full REPL</li><li>开环境变量切换到 full TUI</li><li>在真实 PTY 回归稳定后再考虑默认开启</li></ol>
+<hr>
+<h2 id="九-测试方案">九、测试方案<a class="anchor" href="#九-测试方案" aria-label="锚点">#</a></h2>
+<p>这类重构不能只靠 mock <code>stdout.write</code>。</p>
+<p>必须同时具备三层测试。</p>
+<h3 id="9-1-纯布局测试">9.1 纯布局测试<a class="anchor" href="#9-1-纯布局测试" aria-label="锚点">#</a></h3>
+<p>验证：</p>
+<ol><li>不同 <code>rows/columns</code> 下 prompt frame 的几何结果</li><li>长输入、多行输入、中文宽字符输入时的换行位置</li><li>footer 与 overlay 不互相挤压</li></ol>
+<h3 id="9-2-virtual-screen-快照测试">9.2 virtual screen 快照测试<a class="anchor" href="#9-2-virtual-screen-快照测试" aria-label="锚点">#</a></h3>
+<p>验证：</p>
+<ol><li>resize 前后边框完整</li><li>transcript 换行稳定</li><li>光标位置始终落在输入框内</li></ol>
+<h3 id="9-3-真实-pty-端到端测试">9.3 真实 PTY 端到端测试<a class="anchor" href="#9-3-真实-pty-端到端测试" aria-label="锚点">#</a></h3>
+<p>必须新增 pseudo-terminal 测试，覆盖：</p>
+<ol><li><code>120 -&gt; 48 -&gt; 97 -&gt; 33</code> 连续 resize</li><li>长输入过程中 resize</li><li>流式正文输出过程中 resize</li><li>工具输出 + overlay + resize 组合场景</li></ol>
+<p>原因：</p>
+<p>当前这一类 bug 之所以反复出现，就是因为 mock 环境通过了，真实终端才暴露问题。</p>
+<hr>
+<h2 id="十-验收标准">十、验收标准<a class="anchor" href="#十-验收标准" aria-label="锚点">#</a></h2>
+<p>完成后必须满足以下标准：</p>
+<ol><li><strong>输入框稳定</strong><ul><li>连续 resize 时，边框始终完整</li><li>上下边线不丢失，不歪斜，不残留</li></ul></li></ol>
+<ol><li><strong>光标稳定</strong><ul><li>长输入换行后光标位置正确</li><li>中文宽字符与 emoji 不导致错位</li></ul></li></ol>
+<ol><li><strong>输出隔离</strong><ul><li>AI/tool/status 输出只进入 transcript viewport</li><li>不允许踩进输入框区域</li></ul></li></ol>
+<ol><li><strong>scrollback 安全</strong><ul><li>主屏 shell scrollback 不被污染</li><li>退出 TUI 后 shell 恢复正常</li></ul></li></ol>
+<ol><li><strong>恢复能力</strong><ul><li>任何异常退出都恢复光标、raw mode、alternate screen</li></ul></li></ol>
+<hr>
+<h2 id="十一-明确不做的事">十一、明确不做的事<a class="anchor" href="#十一-明确不做的事" aria-label="锚点">#</a></h2>
+<p>本方案第一轮明确不做：</p>
+<ol><li>同时重写 <code>liteRepl.js</code></li><li>把所有 CLI 命令都迁成 React/JSX 风格组件</li><li>一上来就引入完整外部 Ink 依赖</li><li>在第一阶段处理所有 overlay 细节</li></ol>
+<p>原因：</p>
+<ol><li>这会把问题从“输入框稳定性”扩展成“全 CLI 基础设施重建”</li><li>项目当前更需要先收住最痛的真实终端问题</li></ol>
+<hr>
+<h2 id="十二-最终结论">十二、最终结论<a class="anchor" href="#十二-最终结论" aria-label="锚点">#</a></h2>
+<p>如果 KHY 想长期保留“有框输入区”，那么：</p>
+<ol><li>不应继续在 <code>readline + 主屏 stdout + ANSI 相对补画</code> 上做局部修补</li><li>full REPL 需要迁移到正式 TUI Shell</li><li>该 TUI 必须拥有自己的布局树、状态树和 transcript viewport</li><li>resize 之后应该“重排”，而不是“补画”</li></ol>
+<p>因此这不是一次普通 bugfix，而是一次<strong>交互壳层重构</strong>。</p>
+<p>这次重构的目标不是把边框重新画出来，而是把“边框为什么总会坏”这一类问题从架构层面移除。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-030] 移动端远程指南.html"><div class="dir">← 上一篇</div><div class="ttl">KHY Remote — 移动端连接指南</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-032] 网关-自定义provider配置-agnes.html"><div class="dir">下一篇 →</div><div class="ttl">网关 · 自定义 Provider 配置（以 Agnes 为例）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-031] 终端-tui-有框输入区重构方案-2026-05-31.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

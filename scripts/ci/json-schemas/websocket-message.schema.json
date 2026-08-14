@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WebSocket Message Envelope",
+  "description": "khy-os WebSocket 消息标准信封。",
+  "type": "object",
+  "required": ["type"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "消息类型标识（snake_case）"
+    },
+    "requestId": {
+      "type": "string",
+      "description": "请求关联 ID（request-response 模式时使用）"
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Unix 毫秒时间戳（可选）"
+    },
+    "payload": {
+      "type": "object",
+      "description": "业务载荷容器"
+    },
+    "data": {
+      "description": "响应数据（success 消息时使用）",
+      "oneOf": [
+        { "type": "object" },
+        { "type": "array" },
+        { "type": "null" }
+      ]
+    },
+    "message": {
+      "type": "string",
+      "description": "人类可读描述"
+    },
+    "error": {
+      "type": "string",
+      "description": "错误描述"
+    }
+  },
+  "additionalProperties": true
+}

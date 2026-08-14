@@ -1,0 +1,10 @@
+{
+  "name": "review-pr",
+  "description": "Review a pull request for correctness, style, and potential issues",
+  "user_invocable": true,
+  "trigger": "/review-pr",
+  "aliases": ["/pr-review", "/pr"],
+  "category": "devops",
+  "tags": ["git", "pull-request", "code-review"],
+  "platforms": ["khy-os", "khy-quant"]
+}

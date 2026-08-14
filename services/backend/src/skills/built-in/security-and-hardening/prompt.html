@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security and Hardening · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>security-and-hardening<span class="sep">›</span>Security and Hardening</div>
+      <header class="hero reveal"><h1>Security and Hardening</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#security-and-hardening">Security and Hardening</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#the-three-tier-boundary-system">The Three-Tier Boundary System</a></li><li class="lvl-3"><a href="#always-do-no-exceptions">Always Do (No Exceptions)</a></li><li class="lvl-3"><a href="#ask-first-requires-human-approval">Ask First (Requires Human Approval)</a></li><li class="lvl-3"><a href="#never-do">Never Do</a></li><li class="lvl-2"><a href="#owasp-top-10-prevention">OWASP Top 10 Prevention</a></li><li class="lvl-3"><a href="#1-injection-sql-nosql-os-command">1. Injection (SQL, NoSQL, OS Command)</a></li><li class="lvl-3"><a href="#2-broken-authentication">2. Broken Authentication</a></li><li class="lvl-3"><a href="#3-cross-site-scripting-xss">3. Cross-Site Scripting (XSS)</a></li><li class="lvl-3"><a href="#4-broken-access-control">4. Broken Access Control</a></li><li class="lvl-3"><a href="#5-security-misconfiguration">5. Security Misconfiguration</a></li><li class="lvl-3"><a href="#6-sensitive-data-exposure">6. Sensitive Data Exposure</a></li><li class="lvl-2"><a href="#input-validation-patterns">Input Validation Patterns</a></li><li class="lvl-3"><a href="#schema-validation-at-boundaries">Schema Validation at Boundaries</a></li><li class="lvl-3"><a href="#file-upload-safety">File Upload Safety</a></li><li class="lvl-2"><a href="#triaging-npm-audit-results">Triaging npm audit Results</a></li><li class="lvl-2"><a href="#rate-limiting">Rate Limiting</a></li><li class="lvl-2"><a href="#secrets-management">Secrets Management</a></li><li class="lvl-2"><a href="#security-review-checklist">Security Review Checklist</a></li><li class="lvl-2"><a href="#see-also">See Also</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="security-and-hardening">Security and Hardening<a class="anchor" href="#security-and-hardening" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Security-first development practices for web applications. Treat every external input as hostile, every secret as sacred, and every authorization check as mandatory. Security isn't a phase — it's a constraint on every line of code that touches user data, authentication, or external systems.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Building anything that accepts user input</li><li>Implementing authentication or authorization</li><li>Storing or transmitting sensitive data</li><li>Integrating with external APIs or services</li><li>Adding file uploads, webhooks, or callbacks</li><li>Handling payment or PII data</li></ul>
+<h2 id="the-three-tier-boundary-system">The Three-Tier Boundary System<a class="anchor" href="#the-three-tier-boundary-system" aria-label="锚点">#</a></h2>
+<h3 id="always-do-no-exceptions">Always Do (No Exceptions)<a class="anchor" href="#always-do-no-exceptions" aria-label="锚点">#</a></h3>
+<ul><li><strong>Validate all external input</strong> at the system boundary (API routes, form handlers)</li><li><strong>Parameterize all database queries</strong> — never concatenate user input into SQL</li><li><strong>Encode output</strong> to prevent XSS (use framework auto-escaping, don't bypass it)</li><li><strong>Use HTTPS</strong> for all external communication</li><li><strong>Hash passwords</strong> with bcrypt/scrypt/argon2 (never store plaintext)</li><li><strong>Set security headers</strong> (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)</li><li><strong>Use httpOnly, secure, sameSite cookies</strong> for sessions</li><li><strong>Run <code>npm audit</code></strong> (or equivalent) before every release</li></ul>
+<h3 id="ask-first-requires-human-approval">Ask First (Requires Human Approval)<a class="anchor" href="#ask-first-requires-human-approval" aria-label="锚点">#</a></h3>
+<ul><li>Adding new authentication flows or changing auth logic</li><li>Storing new categories of sensitive data (PII, payment info)</li><li>Adding new external service integrations</li><li>Changing CORS configuration</li><li>Adding file upload handlers</li><li>Modifying rate limiting or throttling</li><li>Granting elevated permissions or roles</li></ul>
+<h3 id="never-do">Never Do<a class="anchor" href="#never-do" aria-label="锚点">#</a></h3>
+<ul><li><strong>Never commit secrets</strong> to version control (API keys, passwords, tokens)</li><li><strong>Never log sensitive data</strong> (passwords, tokens, full credit card numbers)</li><li><strong>Never trust client-side validation</strong> as a security boundary</li><li><strong>Never disable security headers</strong> for convenience</li><li><strong>Never use <code>eval()</code> or <code>innerHTML</code></strong> with user-provided data</li><li><strong>Never store sessions in client-accessible storage</strong> (localStorage for auth tokens)</li><li><strong>Never expose stack traces</strong> or internal error details to users</li></ul>
+<h2 id="owasp-top-10-prevention">OWASP Top 10 Prevention<a class="anchor" href="#owasp-top-10-prevention" aria-label="锚点">#</a></h2>
+<h3 id="1-injection-sql-nosql-os-command">1. Injection (SQL, NoSQL, OS Command)<a class="anchor" href="#1-injection-sql-nosql-os-command" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// BAD: SQL injection via string concatenation
+const query = `SELECT * FROM users WHERE id = '${userId}'`;
+
+// GOOD: Parameterized query
+const user = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+
+// GOOD: ORM with parameterized input
+const user = await prisma.user.findUnique({ where: { id: userId } });</code></pre>
+<h3 id="2-broken-authentication">2. Broken Authentication<a class="anchor" href="#2-broken-authentication" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Password hashing
+import { hash, compare } from 'bcrypt';
+
+const SALT_ROUNDS = 12;
+const hashedPassword = await hash(plaintext, SALT_ROUNDS);
+const isValid = await compare(plaintext, hashedPassword);
+
+// Session management
+app.use(session({
+  secret: process.env.SESSION_SECRET,  // From environment, not code
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,     // Not accessible via JavaScript
+    secure: true,       // HTTPS only
+    sameSite: 'lax',    // CSRF protection
+    maxAge: 24 * 60 * 60 * 1000,  // 24 hours
+  },
+}));</code></pre>
+<h3 id="3-cross-site-scripting-xss">3. Cross-Site Scripting (XSS)<a class="anchor" href="#3-cross-site-scripting-xss" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// BAD: Rendering user input as HTML
+element.innerHTML = userInput;
+
+// GOOD: Use framework auto-escaping (React does this by default)
+return &lt;div&gt;{userInput}&lt;/div&gt;;
+
+// If you MUST render HTML, sanitize first
+import DOMPurify from 'dompurify';
+const clean = DOMPurify.sanitize(userInput);</code></pre>
+<h3 id="4-broken-access-control">4. Broken Access Control<a class="anchor" href="#4-broken-access-control" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Always check authorization, not just authentication
+app.patch('/api/tasks/:id', authenticate, async (req, res) =&gt; {
+  const task = await taskService.findById(req.params.id);
+
+  // Check that the authenticated user owns this resource
+  if (task.ownerId !== req.user.id) {
+    return res.status(403).json({
+      error: { code: 'FORBIDDEN', message: 'Not authorized to modify this task' }
+    });
+  }
+
+  // Proceed with update
+  const updated = await taskService.update(req.params.id, req.body);
+  return res.json(updated);
+});</code></pre>
+<h3 id="5-security-misconfiguration">5. Security Misconfiguration<a class="anchor" href="#5-security-misconfiguration" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Security headers (use helmet for Express)
+import helmet from 'helmet';
+app.use(helmet());
+
+// Content Security Policy
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: [&quot;'self'&quot;],
+    scriptSrc: [&quot;'self'&quot;],
+    styleSrc: [&quot;'self'&quot;, &quot;'unsafe-inline'&quot;],  // Tighten if possible
+    imgSrc: [&quot;'self'&quot;, 'data:', 'https:'],
+    connectSrc: [&quot;'self'&quot;],
+  },
+}));
+
+// CORS — restrict to known origins
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000',
+  credentials: true,
+}));</code></pre>
+<h3 id="6-sensitive-data-exposure">6. Sensitive Data Exposure<a class="anchor" href="#6-sensitive-data-exposure" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Never return sensitive fields in API responses
+function sanitizeUser(user: UserRecord): PublicUser {
+  const { passwordHash, resetToken, ...publicFields } = user;
+  return publicFields;
+}
+
+// Use environment variables for secrets
+const API_KEY = process.env.STRIPE_API_KEY;
+if (!API_KEY) throw new Error('STRIPE_API_KEY not configured');</code></pre>
+<h2 id="input-validation-patterns">Input Validation Patterns<a class="anchor" href="#input-validation-patterns" aria-label="锚点">#</a></h2>
+<h3 id="schema-validation-at-boundaries">Schema Validation at Boundaries<a class="anchor" href="#schema-validation-at-boundaries" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">import { z } from 'zod';
+
+const CreateTaskSchema = z.object({
+  title: z.string().min(1).max(200).trim(),
+  description: z.string().max(2000).optional(),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  dueDate: z.string().datetime().optional(),
+});
+
+// Validate at the route handler
+app.post('/api/tasks', async (req, res) =&gt; {
+  const result = CreateTaskSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(422).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid input',
+        details: result.error.flatten(),
+      },
+    });
+  }
+  // result.data is now typed and validated
+  const task = await taskService.create(result.data);
+  return res.status(201).json(task);
+});</code></pre>
+<h3 id="file-upload-safety">File Upload Safety<a class="anchor" href="#file-upload-safety" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Restrict file types and sizes
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+function validateUpload(file: UploadedFile) {
+  if (!ALLOWED_TYPES.includes(file.mimetype)) {
+    throw new ValidationError('File type not allowed');
+  }
+  if (file.size &gt; MAX_SIZE) {
+    throw new ValidationError('File too large (max 5MB)');
+  }
+  // Don't trust the file extension — check magic bytes if critical
+}</code></pre>
+<h2 id="triaging-npm-audit-results">Triaging npm audit Results<a class="anchor" href="#triaging-npm-audit-results" aria-label="锚点">#</a></h2>
+<p>Not all audit findings require immediate action. Use this decision tree:</p>
+<pre><code>npm audit reports a vulnerability
+├── Severity: critical or high
+│   ├── Is the vulnerable code reachable in your app?
+│   │   ├── YES --&gt; Fix immediately (update, patch, or replace the dependency)
+│   │   └── NO (dev-only dep, unused code path) --&gt; Fix soon, but not a blocker
+│   └── Is a fix available?
+│       ├── YES --&gt; Update to the patched version
+│       └── NO --&gt; Check for workarounds, consider replacing the dependency, or add to allowlist with a review date
+├── Severity: moderate
+│   ├── Reachable in production? --&gt; Fix in the next release cycle
+│   └── Dev-only? --&gt; Fix when convenient, track in backlog
+└── Severity: low
+    └── Track and fix during regular dependency updates</code></pre>
+<p><strong>Key questions:</strong></p>
+<ul><li>Is the vulnerable function actually called in your code path?</li><li>Is the dependency a runtime dependency or dev-only?</li><li>Is the vulnerability exploitable given your deployment context (e.g., a server-side vulnerability in a client-only app)?</li></ul>
+<p>When you defer a fix, document the reason and set a review date.</p>
+<h2 id="rate-limiting">Rate Limiting<a class="anchor" href="#rate-limiting" aria-label="锚点">#</a></h2>
+<pre><code class="language-typescript">import rateLimit from 'express-rate-limit';
+
+// General API rate limit
+app.use('/api/', rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,                   // 100 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+
+// Stricter limit for auth endpoints
+app.use('/api/auth/', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,  // 10 attempts per 15 minutes
+}));</code></pre>
+<h2 id="secrets-management">Secrets Management<a class="anchor" href="#secrets-management" aria-label="锚点">#</a></h2>
+<pre><code>.env files:
+  ├── .env.example  → Committed (template with placeholder values)
+  ├── .env          → NOT committed (contains real secrets)
+  └── .env.local    → NOT committed (local overrides)
+
+.gitignore must include:
+  .env
+  .env.local
+  .env.*.local
+  *.pem
+  *.key</code></pre>
+<p><strong>Always check before committing:</strong></p>
+<pre><code class="language-bash"># Check for accidentally staged secrets
+git diff --cached | grep -i &quot;password\|secret\|api_key\|token&quot;</code></pre>
+<h2 id="security-review-checklist">Security Review Checklist<a class="anchor" href="#security-review-checklist" aria-label="锚点">#</a></h2>
+<pre><code class="language-markdown">### Authentication
+- [ ] Passwords hashed with bcrypt/scrypt/argon2 (salt rounds ≥ 12)
+- [ ] Session tokens are httpOnly, secure, sameSite
+- [ ] Login has rate limiting
+- [ ] Password reset tokens expire
+
+### Authorization
+- [ ] Every endpoint checks user permissions
+- [ ] Users can only access their own resources
+- [ ] Admin actions require admin role verification
+
+### Input
+- [ ] All user input validated at the boundary
+- [ ] SQL queries are parameterized
+- [ ] HTML output is encoded/escaped
+
+### Data
+- [ ] No secrets in code or version control
+- [ ] Sensitive fields excluded from API responses
+- [ ] PII encrypted at rest (if applicable)
+
+### Infrastructure
+- [ ] Security headers configured (CSP, HSTS, etc.)
+- [ ] CORS restricted to known origins
+- [ ] Dependencies audited for vulnerabilities
+- [ ] Error messages don't expose internals</code></pre>
+<h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="锚点">#</a></h2>
+<p>For detailed security checklists and pre-commit verification steps, see <code>references/security-checklist.md</code>.</p>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;This is an internal tool, security doesn't matter&quot;</td><td>Internal tools get compromised. Attackers target the weakest link.</td></tr><tr><td>&quot;We'll add security later&quot;</td><td>Security retrofitting is 10x harder than building it in. Add it now.</td></tr><tr><td>&quot;No one would try to exploit this&quot;</td><td>Automated scanners will find it. Security by obscurity is not security.</td></tr><tr><td>&quot;The framework handles security&quot;</td><td>Frameworks provide tools, not guarantees. You still need to use them correctly.</td></tr><tr><td>&quot;It's just a prototype&quot;</td><td>Prototypes become production. Security habits from day one.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>User input passed directly to database queries, shell commands, or HTML rendering</li><li>Secrets in source code or commit history</li><li>API endpoints without authentication or authorization checks</li><li>Missing CORS configuration or wildcard (<code>*</code>) origins</li><li>No rate limiting on authentication endpoints</li><li>Stack traces or internal errors exposed to users</li><li>Dependencies with known critical vulnerabilities</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After implementing security-relevant code:</p>
+<ul><li>[ ] <code>npm audit</code> shows no critical or high vulnerabilities</li><li>[ ] No secrets in source code or git history</li><li>[ ] All user input validated at system boundaries</li><li>[ ] Authentication and authorization checked on every protected endpoint</li><li>[ ] Security headers present in response (check with browser DevTools)</li><li>[ ] Error responses don't expose internal details</li><li>[ ] Rate limiting active on auth endpoints</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/review-pr/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Pull Request Review Skill</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/security-and-hardening/references/security-checklist.html"><div class="dir">下一篇 →</div><div class="ttl">Security Checklist</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/security-and-hardening/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

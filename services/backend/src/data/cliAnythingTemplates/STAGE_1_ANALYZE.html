@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stage 1: Codebase Analysis · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingTemplates<span class="sep">›</span>Stage 1: Codebase Analysis</div>
+      <header class="hero reveal"><h1>Stage 1: Codebase Analysis</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#stage-1-codebase-analysis">Stage 1: Codebase Analysis</a></li><li class="lvl-2"><a href="#objective">Objective</a></li><li class="lvl-2"><a href="#inputs">Inputs</a></li><li class="lvl-2"><a href="#steps">Steps</a></li><li class="lvl-2"><a href="#output">Output</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="stage-1-codebase-analysis">Stage 1: Codebase Analysis<a class="anchor" href="#stage-1-codebase-analysis" aria-label="锚点">#</a></h1>
+<h2 id="objective">Objective<a class="anchor" href="#objective" aria-label="锚点">#</a></h2>
+<p>Deeply understand the target software's capabilities, architecture, and workflows to produce a Standard Operating Procedure (SOP) document.</p>
+<h2 id="inputs">Inputs<a class="anchor" href="#inputs" aria-label="锚点">#</a></h2>
+<ul><li><code>stage0_result.json</code> from Stage 0</li></ul>
+<h2 id="steps">Steps<a class="anchor" href="#steps" aria-label="锚点">#</a></h2>
+<ol><li><strong>Read core source files</strong> — identify:<ul><li>Main entry points and CLI commands</li><li>Core classes and functions</li><li>Configuration and state management</li><li>File format support (input/output)</li><li>External dependencies</li></ul></li></ol>
+<ol><li><strong>Read documentation</strong> — scan README, docs/, man pages, <code>--help</code> output</li><li><strong>Identify key workflows</strong> — what does a typical user do with this software?<ul><li>Creation workflow (new project/document/scene)</li><li>Editing workflow (modify, transform, adjust)</li><li>Export workflow (render, compile, save)</li><li>Batch workflow (multiple files, automation)</li></ul></li></ol>
+<ol><li><strong>Map capabilities</strong> — for each workflow, list:<ul><li>Required parameters</li><li>Optional parameters with defaults</li><li>Output types and formats</li><li>Error conditions</li></ul></li></ol>
+<ol><li><strong>Generate <code>&lt;SOFTWARE&gt;.md</code></strong> (SOP document):</li></ol>
+<pre><code class="language-markdown">   # &lt;SOFTWARE&gt; Analysis
+
+   ## Overview
+   &lt;what the software does, primary use case&gt;
+
+   ## Key Capabilities
+   &lt;numbered list of what can be controlled&gt;
+
+   ## Workflows
+   ### 1. &lt;workflow name&gt;
+   - Steps: ...
+   - Parameters: ...
+   - Output: ...
+
+   ## State Model
+   &lt;what state needs to be tracked between operations&gt;
+
+   ## Error Patterns
+   &lt;common failure modes and how to detect them&gt;</code></pre>
+<h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
+<ul><li><code>&lt;SOFTWARE&gt;.md</code> — the SOP analysis document</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_0_ACQUIRE.html"><div class="dir">← 上一篇</div><div class="ttl">Stage 0: Source Acquisition</div></a><a class="next" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_2_DESIGN.html"><div class="dir">下一篇 →</div><div class="ttl">Stage 2: Architecture Design</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingTemplates/STAGE_1_ANALYZE.html";</script>
+<script src="../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

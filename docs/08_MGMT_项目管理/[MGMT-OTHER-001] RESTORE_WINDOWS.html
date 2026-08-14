@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>还原后重建指南（Windows / Linux 通用） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>还原后重建指南（Windows / Linux 通用）</div>
+      <header class="hero reveal"><h1>还原后重建指南（Windows / Linux 通用）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#还原后重建指南-windows-linux-通用">还原后重建指南（Windows / Linux 通用）</a></li><li class="lvl-2"><a href="#1-重起-git-历史">1. 重起 git 历史</a></li><li class="lvl-2"><a href="#2-安装依赖-各-npm-workspace">2. 安装依赖（各 npm workspace）</a></li><li class="lvl-2"><a href="#3-构建内核-iso-可选-需要时再做">3. 构建内核 ISO（可选，需要时再做）</a></li><li class="lvl-2"><a href="#4-构建前端-可选">4. 构建前端（可选）</a></li><li class="lvl-2"><a href="#5-运行时前置依赖">5. 运行时前置依赖</a></li><li class="lvl-2"><a href="#完整性">完整性</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-OTHER-001 | 阶段: 项目管理 | 原路径: docs/RESTORE_WINDOWS.md --&gt;</p>
+<h1 id="还原后重建指南-windows-linux-通用">还原后重建指南（Windows / Linux 通用）<a class="anchor" href="#还原后重建指南-windows-linux-通用" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件随<strong>加密源码快照</strong>一起分发。<code>khy restore</code> 会把它解出，并在还原完成后打印摘要。</p></blockquote>
+<p><code>khy restore</code> 还原的是发布那一刻的 <strong>完整工作树</strong>——即这个项目<strong>全部已跟踪源码的当前内容<br>（含尚未提交的改动）</strong>，外加<strong>未被 <code>.gitignore</code> 忽略的未跟踪新文件</strong>（包含 <code>kernel/</code> 裸机内核<br>源码、文档、配置、训练数据等），并<strong>保持原始目录结构</strong>。</p>
+<blockquote><p><strong>关键保证（针对「云电脑到期、文件无法拷贝下载、只能 pip/npm 发布」场景）：</strong> 快照默认捕获<br><strong>工作树</strong>而非最后一次 commit，所以<strong>未提交的工作不会丢</strong>。<code>snapshot.json</code> 的<br><code>captureMode: &quot;working-tree&quot;</code> 与 <code>dirty: true</code> 即表示本次快照含未提交改动。<br>（需要「只要已提交内容」时，发布前设 <code>KHY_SNAPSHOT_FROM=head</code>。）</p></blockquote>
+<p>它<strong>不包含</strong>「能在本机自己重新构建出来」的产物、以及被 <code>.gitignore</code> 忽略的内容，这些只需按<br>下面说明重建即可：</p>
+<table><thead><tr><th>不在快照里</th><th>为什么</th><th>如何重建</th></tr></thead><tbody><tr><td><code>node_modules/</code></td><td>体积大、平台相关</td><td><code>npm install</code>（见下）</td></tr><tr><td>内核 ISO <code>build/khy-os-kernel.iso</code></td><td>可由源码构建</td><td><code>kernel/</code> 下 <code>make</code>（见 <code>kernel/README.md</code>）</td></tr><tr><td>前端 <code>dist/</code></td><td>构建产物</td><td>各前端目录 <code>npm run build</code></td></tr><tr><td><code>.git/</code> 历史</td><td>821M，超 PyPI/npm 限制</td><td>在还原目录 <code>git init</code>（见下）</td></tr><tr><td><code>.env</code> / 密钥</td><td>不入包（安全）</td><td>自行从 <code>~/.khyquant/config.json</code> 或团队渠道补齐</td></tr></tbody></table>
+<hr>
+<h2 id="1-重起-git-历史">1. 重起 git 历史<a class="anchor" href="#1-重起-git-历史" aria-label="锚点">#</a></h2>
+<p>快照不携带提交历史。进入还原目录后：</p>
+<pre><code class="language-bash">git init
+git add -A
+git commit -m &quot;restore from khy source snapshot&quot;</code></pre>
+<h2 id="2-安装依赖-各-npm-workspace">2. 安装依赖（各 npm workspace）<a class="anchor" href="#2-安装依赖-各-npm-workspace" aria-label="锚点">#</a></h2>
+<p>本仓库是 npm workspaces 单仓。<code>@khy/shared</code> 等内部包通过 workspace 解析，<br>在仓库根执行一次即可：</p>
+<pre><code class="language-bash"># 仓库根目录
+npm install</code></pre>
+<blockquote><p>若只想跑后端：<code>cd services/backend &amp;&amp; npm install</code>。后端对 <code>@khy/shared</code> 的依赖在源码里写作<br><code>file:./vendor/shared</code>；从 npm 包还原时 <code>vendor/shared</code> 已随包带上，从 pip 快照还原时<br>由根 workspace（<code>platform/packages/shared</code>）解析，二者都无需手动处理。</p></blockquote>
+<h2 id="3-构建内核-iso-可选-需要时再做">3. 构建内核 ISO（可选，需要时再做）<a class="anchor" href="#3-构建内核-iso-可选-需要时再做" aria-label="锚点">#</a></h2>
+<p>推荐用一键命令（自动选后端、跨平台）：</p>
+<pre><code class="language-bash">khy os build    # 定位源码 → 体检工具链 → 构建，产出 build/khy-os-kernel.iso</code></pre>
+<p>或手动直跑 Makefile：</p>
+<pre><code class="language-bash">cd kernel
+make            # 产出 build/khy-os-kernel.iso（Linux/macOS/WSL2）</code></pre>
+<p>工具链与依赖见 <code>kernel/README.md</code>（默认需 <code>nasm</code>/<code>gcc</code>/<code>ld</code>/<code>grub-mkrescue</code>/<code>qemu</code>，还需 MoonBit <code>moon</code>）。<br><strong>Windows 上</strong> <code>khy os build</code> 已能 auto 级联：<strong>首选原生 LLVM+Limine 后端</strong>（无需 WSL/Docker/VM，<br>首次按 sha256 钉死自动下载工具链到 <code>~/.khyos/cache</code>，用 Limine 取代无 Windows 版的 <code>grub-mkrescue</code>），<br>不可用时回退 WSL2 → Docker → QEMU 构建器虚拟机。完整说明见 [OPS-MAN-036] §8。</p>
+<h2 id="4-构建前端-可选">4. 构建前端（可选）<a class="anchor" href="#4-构建前端-可选" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 主前端
+cd frontend &amp;&amp; npm install &amp;&amp; npm run build
+# AI 管理前端
+cd apps/ai-frontend &amp;&amp; npm install &amp;&amp; npm run build
+# 量化前端
+cd software/khyquant/frontend &amp;&amp; npm install &amp;&amp; npm run build</code></pre>
+<h2 id="5-运行时前置依赖">5. 运行时前置依赖<a class="anchor" href="#5-运行时前置依赖" aria-label="锚点">#</a></h2>
+<ul><li><strong>Node.js</strong>（运行后端/CLI）。</li><li><strong>Python 3.10+</strong>（pip 入口 <code>khy</code> / 量化部分）。</li><li><strong>QEMU</strong>（<code>qemu-system-x86_64</code> + <code>qemu-img</code>，仅在用 <code>khy os</code> 跑裸机内核时需要）。<ul><li>Windows：从 https://qemu.weilnetz.de/ 安装并加入 PATH，或设 <code>KHY_QEMU</code> 指向可执行文件。</li></ul></li></ul>
+<hr>
+<h2 id="完整性">完整性<a class="anchor" href="#完整性" aria-label="锚点">#</a></h2>
+<p>快照内 <code>snapshot.json</code> 记录了明文 <code>sha256</code>、文件数、源 commit。<code>khy restore</code> 解密后会<strong>校验<br>sha256</strong>，不匹配即报错并中止，确保「一字不差」。</p>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-OTHER-002] 事后分析-终端崩溃-2026-05-09.html"><div class="dir">下一篇 →</div><div class="ttl">事后分析：ISO 构建破坏宿主终端 (2026-05-09)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-OTHER-001] RESTORE_WINDOWS.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

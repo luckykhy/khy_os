@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-034] 动态自适应约束求解引擎 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-034] 动态自适应约束求解引擎</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-034] 动态自适应约束求解引擎</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-034-动态自适应约束求解引擎">[DESIGN-ARCH-034] 动态自适应约束求解引擎</a></li><li class="lvl-2"><a href="#1-目标">1. 目标</a></li><li class="lvl-2"><a href="#2-与既有地基的关系-零重复造轮子">2. 与既有地基的关系（零重复造轮子）</a></li><li class="lvl-2"><a href="#3-三段能力探测-3-1">3. 三段能力探测（§3.1）</a></li><li class="lvl-2"><a href="#4-求解矩阵-3-核心-constraintmatrix-js">4. 求解矩阵（§3 核心，`constraintMatrix.js`）</a></li><li class="lvl-2"><a href="#5-复合进既有阶梯-毫秒级-index-js">5. 复合进既有阶梯（毫秒级，`index.js`）</a></li><li class="lvl-3"><a href="#5-1-接管-executetool-漏斗-toolfunnelguard-js">5.1 接管 `executeTool` 漏斗（`toolFunnelGuard.js`）</a></li><li class="lvl-2"><a href="#6-防呆符合性">6. 防呆符合性</a></li><li class="lvl-2"><a href="#7-交付物">7. 交付物</a></li><li class="lvl-2"><a href="#8-验收">8. 验收</a></li><li class="lvl-2"><a href="#9-跨分类关联指引">9. 跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-034-动态自适应约束求解引擎">[DESIGN-ARCH-034] 动态自适应约束求解引擎<a class="anchor" href="#design-arch-034-动态自适应约束求解引擎" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文档类型</td><td>架构设计（ARCH）</td></tr><tr><td>适用范围</td><td><code>services/backend/src/services/metaConstraint/</code></td></tr><tr><td>强制级别</td><td>设计基线（实现须符合本文「防呆符合性」一节）</td></tr><tr><td>上位治理</td><td>[DESIGN-ARCH-025]（元规划协议与动态约束注入）、[DESIGN-ARCH-024]（元帅双模式）、[MGMT-STD-001]（文档结构铁律）</td></tr><tr><td>状态</td><td>定稿</td></tr></tbody></table>
+<hr>
+<h2 id="1-目标">1. 目标<a class="anchor" href="#1-目标" aria-label="锚点">#</a></h2>
+<p>在<strong>单一模型调用链路</strong>中废弃「按最低智商全局加锁」的静态约束，改为按模型<strong>实时智力边界</strong>（能力向量）动态配发约束锁具：对强模型执行<strong>宾客原则</strong>（释放最大自由度、校验损耗趋零），对弱模型实施<strong>高压电笼</strong>（重点关押、代码级物理阻断越权）。一句话——约束随能力毫秒级求解，执行前动态挂载，绝不提前加锁也绝不漏锁。</p>
+<h2 id="2-与既有地基的关系-零重复造轮子">2. 与既有地基的关系（零重复造轮子）<a class="anchor" href="#2-与既有地基的关系-零重复造轮子" aria-label="锚点">#</a></h2>
+<p>本引擎<strong>不新增任何模型知识，不复制约束代数</strong>，而是把两套现成单一真源桥接起来：</p>
+<ul><li>能力分级单一真源：<code>marshal/capabilityVector.js</code>（由 <code>modelTier</code> 投影出 <code>{reasoning,planning,instruction,jsonStrict}</code> 向量与分数）。</li><li>约束阶梯单一真源：<code>metaplan/constraintStrategy.js</code>（<code>Prompt_Soft ⊏ Code_Hard ⊏ System_Block</code> 单调格 + <code>escalate</code> 取上确界）与 <code>metaplan/constraintInjection.js</code>（按级挂载拦截器）。</li></ul>
+<p><strong>填补的真实缺口</strong>：[DESIGN-ARCH-025] 元规划的约束级别由<strong>模型自评风险</strong>驱动，其覆盖层只有「信任熔断 + 宪法红线」，<strong>没有任何一层用能力向量配发约束</strong>。本引擎补上这条「能力 → 约束地板」的求解层。</p>
+<h2 id="3-三段能力探测-3-1">3. 三段能力探测（§3.1）<a class="anchor" href="#3-三段能力探测-3-1" aria-label="锚点">#</a></h2>
+<p><code>capabilityProbe.js</code> 把能力向量的 <code>reasoning</code> 维度投影为三段裁决：</p>
+<table><thead><tr><th>段</th><th>含义</th><th>默认归属</th><th>reasoning 线（env 可调）</th></tr></thead><tbody><tr><td><code>guest</code> 宾客</td><td>释放最大自由度</td><td>T0 / T1</td><td><code>≥ KHY_METACONSTRAINT_GUEST_REASONING</code>（默认 75）</td></tr><tr><td><code>standard</code> 标准</td><td>按风险常规管控</td><td>T2</td><td>介于两线之间</td></tr><tr><td><code>cage</code> 电笼</td><td>重点关押</td><td>T3</td><td><code>&lt; KHY_METACONSTRAINT_CAGE_REASONING</code>（默认 50，且恒 &lt; guest 线）</td></tr></tbody></table>
+<h2 id="4-求解矩阵-3-核心-constraintmatrix-js">4. 求解矩阵（§3 核心，<code>constraintMatrix.js</code>）<a class="anchor" href="#4-求解矩阵-3-核心-constraintmatrix-js" aria-label="锚点">#</a></h2>
+<p><code>band × riskClass → 约束地板</code>（地板，非天花板）：</p>
+<table><thead><tr><th>band＼risk</th><th>creative</th><th>logic</th><th>irreversible</th></tr></thead><tbody><tr><td>guest</td><td>Prompt_Soft</td><td>Prompt_Soft</td><td><strong>Code_Hard</strong></td></tr><tr><td>standard</td><td>Prompt_Soft</td><td>Code_Hard</td><td>System_Block</td></tr><tr><td>cage</td><td><strong>Code_Hard</strong></td><td>Code_Hard</td><td>System_Block</td></tr></tbody></table>
+<ul><li>宾客原则：强模型 creative/logic 均零校验损耗；不可逆操作仍至少挂代码校验（轻于电笼）。</li><li>高压电笼：弱模型<strong>连改注释都过代码级拦截器</strong>，越权由代码层物理阻断而非软提示。</li></ul>
+<p>风险分级 <code>riskClassifier.js</code>：<code>creative</code>（注释/Markdown/只读）/ <code>logic</code>（源码、非只读 shell）/ <code>irreversible</code>（删除、drop/truncate、强推、依赖清单/锁文件、机密）。fail-safe：无法识别 → <code>logic</code>，绝不下探到 <code>creative</code>。</p>
+<h2 id="5-复合进既有阶梯-毫秒级-index-js">5. 复合进既有阶梯（毫秒级，<code>index.js</code>）<a class="anchor" href="#5-复合进既有阶梯-毫秒级-index-js" aria-label="锚点">#</a></h2>
+<p><code>MetaConstraintSolver</code>：</p>
+<ul><li><code>solve({modelId, selfReport, action})</code> → <code>{band, riskClass, floor, rationale}</code>，纯计算。</li><li><code>reconcile(floor, declaredStrategy)</code> → 与模型自选策略求上确界（<code>escalate</code>），取更严者。</li><li><code>applyToTicket(ticket, {modelId})</code> → <strong>零侵入</strong>地把能力地板叠加进 metaplan 票据：抬升 <code>effectiveStrategy</code>、重解析 <code>injection</code>，返回<strong>新票据</strong>（不改原票据）。</li></ul>
+<h3 id="5-1-接管-executetool-漏斗-toolfunnelguard-js">5.1 接管 <code>executeTool</code> 漏斗（<code>toolFunnelGuard.js</code>）<a class="anchor" href="#5-1-接管-executetool-漏斗-toolfunnelguard-js" aria-label="锚点">#</a></h3>
+<p><code>applyToTicket</code> 是纯计算接缝，本身不执行。<code>toolFunnelGuard.enforce()</code> 把它接到唯一的工具调度漏斗 <code>executeTool</code>（位于系统调用网关之后、<code>requestPermission</code> 之前），按<strong>执行该动作的模型</strong>求出地板并对<strong>这一次具体调用</strong>真正挂锁：</p>
+<table><thead><tr><th>地板</th><th>漏斗动作</th></tr></thead><tbody><tr><td><code>Prompt_Soft</code></td><td>直接放行（宾客原则，零校验损耗）</td></tr><tr><td><code>Code_Hard</code></td><td>对候选 <code>content</code> 跑 <code>injection.runHardValidation</code>（AST/语法），不过即 fail-closed 拦截；无 content/无可识别语言 → 无可校验内容 → 放行</td></tr><tr><td><code>System_Block</code></td><td>极危/不可逆要求显式确认；网关已盖 <code>EXEC_APPROVED</code> 戳者免二次打断；无确认通道 → fail-closed</td></tr></tbody></table>
+<p>铁律：<code>KHY_METACONSTRAINT=off</code> 整体旁路；能力层任何<strong>异常</strong>一律 fail-open 落回既有管线（既有权限/网关/锁仍把关），唯独「已判 System_Block 却拿不到确认通道」走 fail-closed（安全方向）。执行模型由 <code>toolUseLoop</code> 经 <code>traceContext.model</code> 穿入，缺省回落 <code>GATEWAY_PREFERRED_MODEL</code>。</p>
+<p>完整有效约束栈（全部经 <code>escalate</code> 单调上确界，只升不降）：</p>
+<pre><code>能力地板(本引擎) ⊔ 模型自选 ⊔ 防偷懒升级 ⊔ 信任熔断 ⊔ 宪法红线</code></pre>
+<h2 id="6-防呆符合性">6. 防呆符合性<a class="anchor" href="#6-防呆符合性" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>防呆</th><th>落点</th></tr></thead><tbody><tr><td>① 未知模型 fail-safe</td><td>未知/空模型经 <code>modelTier</code> 落 T2 ⇒ <code>standard</code>，绝不当作 <code>guest</code></td></tr><tr><td>② 自评只能加锁不能减锁</td><td><code>selfReport</code> 仅单调收紧 band；模型自称更强一律忽略，自承置信偏低则收紧</td></tr><tr><td>③ 能力地板进同一单调格</td><td>经 <code>escalate</code> 上确界叠加，只能加锁；红线/熔断已锁的更严级绝不被放松</td></tr><tr><td>④ 零侵入</td><td>复合 marshal/metaplan，自身不持有副本；<code>applyToTicket</code> 不改原票据；接管 <code>executeTool</code> 经独立守卫 <code>toolFunnelGuard.js</code>，不改调度器/tool-use loop</td></tr><tr><td>⑤ 宾客 ≠ 无防护</td><td>guest 的不可逆操作仍至少 Code_Hard，宪法红线仍是顶层不可覆盖地板</td></tr></tbody></table>
+<h2 id="7-交付物">7. 交付物<a class="anchor" href="#7-交付物" aria-label="锚点">#</a></h2>
+<pre><code>services/backend/src/services/metaConstraint/
+  capabilityProbe.js     能力向量探测与三段分级（§3.1）
+  riskClassifier.js      动作风险分级（creative/logic/irreversible）
+  constraintMatrix.js    能力×风险 求解矩阵（§3 核心）
+  index.js               MetaConstraintSolver 门面（solve/reconcile/applyToTicket）
+  toolFunnelGuard.js     接管 executeTool 漏斗的能力地板守卫（§5.1）
+services/backend/tests/services/metaConstraint/metaConstraint.test.js   24 用例
+services/backend/tests/services/metaConstraint/toolFunnelGuard.test.js  13 用例</code></pre>
+<h2 id="8-验收">8. 验收<a class="anchor" href="#8-验收" aria-label="锚点">#</a></h2>
+<p><code>node --test tests/services/metaConstraint/metaConstraint.test.js</code> → <strong>24 用例绿</strong>：三段分级 5 + 风险分级 4 + 求解矩阵 5 + 同动作能力差异 3 + reconcile LUB 3 + applyToTicket 零侵入 4。邻近子系统回归（metaplan 38 + marshal 28）<strong>66/66 绿，零回归</strong>。</p>
+<h2 id="9-跨分类关联指引">9. 跨分类关联指引<a class="anchor" href="#9-跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>同源治理脉络：元规划约束注入 <code>[DESIGN-ARCH-025]</code>、元帅双模式能力向量 <code>[DESIGN-ARCH-024]</code>、弱模型兼容 <code>[DESIGN-ARCH-013]</code>。</li><li>实现代码：<code>services/backend/src/services/metaConstraint/</code>；复用 <code>marshal/capabilityVector.js</code>、<code>metaplan/</code>。</li><li>文档结构与索引铁律：<code>docs/08_MGMT_项目管理/[MGMT-STD-001]</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-032] 内嵌MD工作台与跨平台右键集成.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-032] 内嵌 MD 工作台与跨平台右键集成</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-036] 万物结构化熔炉引擎.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-036] 万物结构化熔炉引擎</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-034] 动态自适应约束求解引擎.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

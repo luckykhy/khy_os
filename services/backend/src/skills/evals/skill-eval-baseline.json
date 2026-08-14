@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "target": {
+    "skillsDir": "backend/src/skills/built-in",
+    "promptFilename": "prompt.md"
+  },
+  "checks": [
+    {
+      "id": "manifest-name",
+      "severity": "critical",
+      "weight": 2,
+      "description": "manifest has a non-empty name"
+    },
+    {
+      "id": "manifest-description",
+      "severity": "critical",
+      "weight": 2,
+      "description": "manifest has a non-empty description"
+    },
+    {
+      "id": "trigger-or-command",
+      "severity": "critical",
+      "weight": 2,
+      "description": "manifest has trigger or command starting with /"
+    },
+    {
+      "id": "user-invocable-flag",
+      "severity": "critical",
+      "weight": 2,
+      "description": "manifest declares user_invocable or userInvocable as boolean"
+    },
+    {
+      "id": "prompt-asset",
+      "severity": "critical",
+      "weight": 2,
+      "description": "skill directory contains prompt.md"
+    },
+    {
+      "id": "tags-array",
+      "severity": "warning",
+      "weight": 1,
+      "description": "manifest includes non-empty tags array"
+    },
+    {
+      "id": "category-field",
+      "severity": "warning",
+      "weight": 1,
+      "description": "manifest declares category field"
+    },
+    {
+      "id": "platforms-field",
+      "severity": "warning",
+      "weight": 1,
+      "description": "manifest declares non-empty platforms array"
+    }
+  ],
+  "thresholds": {
+    "minOverallScore": 0.88,
+    "minSkillScore": 0.84,
+    "maxCriticalFailures": 0,
+    "maxWarningFailures": 24
+  }
+}

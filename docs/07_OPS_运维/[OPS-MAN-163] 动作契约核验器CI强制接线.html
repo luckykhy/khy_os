@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-163] 动作契约极小核验器 V 的 CI 强制接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-163] 动作契约极小核验器 V 的 CI 强制接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-163] 动作契约极小核验器 V 的 CI 强制接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-163-动作契约极小核验器-v-的-ci-强制接线">[OPS-MAN-163] 动作契约极小核验器 V 的 CI 强制接线</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#缺口判据">缺口判据</a></li><li class="lvl-2"><a href="#为何重要-安全">为何重要(安全)</a></li><li class="lvl-2"><a href="#改动-全-additive-零运行时改动">改动(全 additive·零运行时改动)</a></li><li class="lvl-2"><a href="#验收-全绿">验收(全绿)</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-163-动作契约极小核验器-v-的-ci-强制接线">[OPS-MAN-163] 动作契约极小核验器 V 的 CI 强制接线<a class="anchor" href="#ops-man-163-动作契约极小核验器-v-的-ci-强制接线" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼系列·「能力存在但没接线 → 负责接线」。<br>同 OPS-MAN-155 / 162 模式:安全/守卫原语接进 CI 发布门禁,零运行时改动。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/syscallGateway/actionContractVerifier.js</code> 是一枚<strong>零依赖、纯函数、可独立审计的 fail-closed 动作契约核验器 V</strong>——<code>V(contract, states) = ok</code> 才放行 Agent 动作,契约的 <code>Φ_pre</code>/<code>Φ_post</code> 是<strong>可机检谓词数据</strong>(绝不当代码执行)。它有 314 行 22 例的详尽测试(覆盖 P1-P8 全部投毒路径),<strong>全绿</strong>——但该测试<strong>不在任何 npm 脚本里</strong>,从不 CI 强制。本次把它接进发布门禁 <code>test:maintainer:safety</code>,并把它的门 <code>KHY_ACTION_CONTRACT</code> 登记进 flagRegistry SSOT。</p>
+<h2 id="缺口判据">缺口判据<a class="anchor" href="#缺口判据" aria-label="锚点">#</a></h2>
+<ul><li><code>verify()</code> 全仓零生产消费者(syscallGateway 是 live 子系统,但核验器只被其自身测试调用;header 明写「仅供未来接入网关的缝按需短路」)。</li><li><code>grep</code> 确认 <code>actionContractVerifier.test.js</code> <strong>不在任何 <code>scripts</code> 值</strong>里 → 22 例安全不变量测试从不运行于 CI。</li><li><code>KHY_ACTION_CONTRACT</code> 未登记 flagRegistry(叶读 env 直判,功能不受影响,但 SSOT 不完整)。</li></ul>
+<h2 id="为何重要-安全">为何重要(安全)<a class="anchor" href="#为何重要-安全" aria-label="锚点">#</a></h2>
+<p>核验器是<strong>安全原语</strong>:它的价值全在于 fail-closed 铁律永不松动。header 自证切断 8 条投毒路径:</p>
+<table><thead><tr><th>投毒</th><th>攻击</th><th>切断</th></tr></thead><tbody><tr><td>P1 谓词即代码</td><td>契约携 <code>{op:'js',src}</code> 妄图让 V 执行</td><td>只在冻结 AXIOMS 封闭集 switch;绝不 eval/反射</td></tr><tr><td>P2 原型污染</td><td>路径 <code>__proto__.x</code> 越权</td><td><code>_get</code> 只走自有属性,原型段判缺失</td></tr><tr><td>P3 fail-open 兜底</td><td>故意抛异常赌「出错=放行」</td><td>每个 catch 返 <code>ok:false</code>,永不返 true</td></tr><tr><td>P4 ReDoS</td><td>正则炸弹卡死 V</td><td>正则刻意不在公理集,整个 ReDoS 面消灭</td></tr><tr><td>P5 资源耗尽</td><td>万层嵌套爆栈</td><td>节点/深度/args 硬上限,超限 fail-closed</td></tr><tr><td>P6 量词绑定走私</td><td><code>as:'__proto__'</code> 污染作用域</td><td>as 非法名 fail-closed,<code>_bindScope</code> 浅拷自有属性</td></tr><tr><td>P7 量词 DoS</td><td>超长数组施量词</td><td><code>MAX_QUANT_ELEMS</code> 上限 + 元素计入预算</td></tr><tr><td>P8 ref 路径逃逸</td><td><code>ref:'__proto__.polluted'</code> 读原型</td><td>ref 走 <code>_get</code>,缺失路径 fail-closed</td></tr></tbody></table>
+<p>不 CI 强制时,任何一次重构都能把某条切断悄悄改回 fail-open,而无门亮红。接进发布门 = 这份 fail-closed 契约从 1.0.0 起被每次提交/发布锁死。</p>
+<h2 id="改动-全-additive-零运行时改动">改动(全 additive·零运行时改动)<a class="anchor" href="#改动-全-additive-零运行时改动" aria-label="锚点">#</a></h2>
+<ol><li><code>package.json</code> 的 <code>test:maintainer:safety</code>(= 发布门禁前提)追加 <code>services/backend/tests/actionContractVerifier.test.js</code> = 首个 CI 消费者。</li><li>flagRegistry 登记 <code>KHY_ACTION_CONTRACT: { mode:'default-on', off:'CANON', default:true }</code>——<strong>净零行数</strong>(凝练本人 OPS-160 的 <code>KHY_FPF_CHARACTERIZATION</code> 注释由上方独立行改行内尾注,腾出一行),god-file 维持 2499 未触 2500。</li></ol>
+<p>★<strong>刻意不动核验器叶</strong>:header 契约明写「零依赖:全文件无任何 require;纯计算」——这是它可独立审计的一部分。故叶的 <code>isEnabled</code> 保持读 <code>env.KHY_ACTION_CONTRACT</code> 直判(CANON off-words <code>{0,false,off,no}</code>),<strong>绝不</strong>引入 <code>require('flagRegistry')</code>。registry 登记项 <code>{default-on, off:'CANON'}</code> 精确文档化叶的实际 env 行为(两者一致),仅作 SSOT 文档,无功能耦合。</p>
+<h2 id="验收-全绿">验收(全绿)<a class="anchor" href="#验收-全绿" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/services/flagRegistry.js                     # OK,2499 行未超
+node --test  services/backend/tests/actionContractVerifier.test.js             # 22/22 pass
+node --test  scripts/tests/flag-registry.test.js                               # 12/12(注册表自净)
+npm run test:maintainer:safety                                                 # 聚合含新测,fail0
+npm run maintainer:check                                                       # EXIT0
+node scripts/check-change-safety.js &lt;本次切片…&gt;                                 # no findings</code></pre>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>「测试存在但不在任何 npm 脚本」= 一种隐形孤儿:能力+测试都在,却从不 CI 强制,不变量可静默回退——安全原语尤其危险。</li><li>接线可以是把已有详尽测试接进发布门(零运行时改动);给安全不变量一个 CI 消费者就是接线。</li><li>叶的「零依赖」契约必须尊重:核验器是可独立审计原语,绝不为了「统一走 flagRegistry」而给它加 require;flagRegistry 只作 SSOT 文档登记,叶读 env 直判保持自洽。</li><li>god-file 边缘(2499)加 flag 必净零:凝练本人先前注释,绝不动他人行,<code>wc -l</code> 复核 ≤2499。</li><li>先跑 live 测确认 22/22 全绿,才能把它锁进发布门(否则一登记发布门就红)。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-162] CLI-Web管理面平价守卫接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-162] CLI/Web 管理面平价守卫接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-164] 视觉池失败状态人话化减少心灵噪音.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-164] 视觉池失败状态「人话化」减少心灵噪音</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-163] 动作契约核验器CI强制接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

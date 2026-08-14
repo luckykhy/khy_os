@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-045] 非活跃通道生命周期治理 — 僵尸后台收回与日志越权阻断 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-045] 非活跃通道生命周期治理 — 僵尸后台收回与日志越权阻断</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-045] 非活跃通道生命周期治理 — 僵尸后台收回与日志越权阻断</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-045-非活跃通道生命周期治理-僵尸后台收回与日志越权阻断">[DESIGN-ARCH-045] 非活跃通道生命周期治理 — 僵尸后台收回与日志越权阻断</a></li><li class="lvl-2"><a href="#1-问题-通道切换只是-路由指派-旧通道不死">1. 问题：通道切换只是「路由指派」，旧通道不死</a></li><li class="lvl-2"><a href="#2-设计-生命周期钩子-双层-弃用-语义">2. 设计：生命周期钩子 + 双层「弃用」语义</a></li><li class="lvl-3"><a href="#2-1-网关基石-通道生命周期感知-aigateway-js">2.1 网关基石 — 通道生命周期感知（`aiGateway.js`）</a></li><li class="lvl-3"><a href="#2-2-通道局部-kiro-自我降级-kiroadapter-js">2.2 通道局部 — Kiro 自我降级（`kiroAdapter.js`）</a></li><li class="lvl-3"><a href="#2-3-切换入口-cli-ai-js">2.3 切换入口（`cli/ai.js`）</a></li><li class="lvl-3"><a href="#2-4-web-daemon-切换入口-aimanagementserver-js-复盘补强">2.4 web/daemon 切换入口（`aiManagementServer.js`，复盘补强）</a></li><li class="lvl-2"><a href="#3-硬性约束的工程化保证">3. 硬性约束的工程化保证</a></li><li class="lvl-2"><a href="#4-关键设计抉择-弃用-必须是显式信号-不是-最近未用">4. 关键设计抉择：「弃用」必须是显式信号，不是「最近未用」</a></li><li class="lvl-2"><a href="#5-验收">5. 验收</a></li><li class="lvl-2"><a href="#6-非目标-刻意不动-honor-硬约束">6. 非目标（刻意不动，honor 硬约束）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-045-非活跃通道生命周期治理-僵尸后台收回与日志越权阻断">[DESIGN-ARCH-045] 非活跃通道生命周期治理 — 僵尸后台收回与日志越权阻断<a class="anchor" href="#design-arch-045-非活跃通道生命周期治理-僵尸后台收回与日志越权阻断" aria-label="锚点">#</a></h1>
+<p>状态：已实现（[EvoRequirement]「非活跃通道后台僵尸行为与日志越权」闭环）<br>依赖前序：[DESIGN-ARCH-006] 网关适配器协议 · [DESIGN-ARCH-031] 网关日志租界隔离<br>实现位置：<code>services/backend/src/services/gateway/aiGateway.js</code>（网关基石） · <code>services/backend/src/services/gateway/adapters/kiroAdapter.js</code>（通道局部） · <code>services/backend/src/cli/ai.js</code>（CLI 切换入口） · <code>services/backend/src/services/aiManagementServer.js</code>（web/daemon 切换入口）<br>验收测试：<code>services/backend/tests/services/gateway/channelLifecycle.test.js</code>（8 例） · <code>services/backend/tests/services/gateway/channelLogGating.test.js</code>（3 例） · <code>services/backend/tests/aiManagementServer.webChannelSwitchReconcile.test.js</code>（4 例）</p>
+<hr>
+<h2 id="1-问题-通道切换只是-路由指派-旧通道不死">1. 问题：通道切换只是「路由指派」，旧通道不死<a class="anchor" href="#1-问题-通道切换只是-路由指派-旧通道不死" aria-label="锚点">#</a></h2>
+<p>用户已切到 API 直连通道，功能上确实走直连。但被弃用的 Kiro 通道仍在后台：</p>
+<ul><li><strong>僵尸后台任务</strong>：网关每 5 分钟的后台模型刷新 <code>_refreshModelsBackground</code> 仍对每个适配器</li></ul>
+<p>调 <code>listModels()</code>，Kiro 的 <code>listModels</code> → <code>getAccessToken({autoOpenLogin:true})</code> →<br>  <code>maybeOpenKiroLogin</code>，触发 Token 刷新网络请求，甚至弹出 IDE 登录。</p>
+<ul><li><strong>日志越权</strong>：Kiro 内部的 Token 失效以 <code>[kiroAdapter] Kiro login required</code> 等 WARN 级别</li></ul>
+<p>直接打到 UI 主控台，误导用户对当前系统状态的判断。</p>
+<p>根因：切换机制只改路由偏好（<code>GATEWAY_PREFERRED_ADAPTER</code>），未对旧通道执行<strong>状态降级</strong>或<br><strong>资源收回</strong>；日志输出缺乏<strong>通道上下文感知</strong>，非活跃通道的异常越权冒泡到 UI。</p>
+<h2 id="2-设计-生命周期钩子-双层-弃用-语义">2. 设计：生命周期钩子 + 双层「弃用」语义<a class="anchor" href="#2-设计-生命周期钩子-双层-弃用-语义" aria-label="锚点">#</a></h2>
+<h3 id="2-1-网关基石-通道生命周期感知-aigateway-js">2.1 网关基石 — 通道生命周期感知（<code>aiGateway.js</code>）<a class="anchor" href="#2-1-网关基石-通道生命周期感知-aigateway-js" aria-label="锚点">#</a></h3>
+<ul><li><code>_resolveActiveChannelKey()</code>：从 <code>GATEWAY_PREFERRED_ADAPTER</code> 解析当前活跃通道键。<ul><li><code>auto</code> / 空 → <code>null</code>（<strong>无任何通道被弃用</strong>，每个通道照常工作）。</li><li>具体 key（大小写归一到注册键，<code>localllm</code>→<code>localLLM</code>）→ 该通道活跃，其余皆弃用。</li><li>未注册的偏好 → <code>null</code>（绝不把某个真实通道误判成弃用）。</li></ul></li><li><code>_syncChannelLifecycle()</code>：把「活跃/弃用」状态用<strong>鸭子类型</strong> <code>setChannelActive(active)</code> 下推到</li></ul>
+<p>每个声明了该钩子的适配器；无钩子者安全跳过（非侵入），钩子抛错被吞（fail-safe，绝不影响路由）。</p>
+<ul><li><code>_refreshModelsBackground()</code>：刷新前先 <code>_syncChannelLifecycle()</code>，再 <code>if (activeKey &amp;&amp; entry.key !== activeKey) return;</code></li></ul>
+<p>——显式选定下，<strong>弃用通道的后台网络工作被完全跳过</strong>（僵尸任务收回）。auto 模式 <code>activeKey===null</code>，<br>  条件恒假，所有通道照常刷新（不误杀）。</p>
+<ul><li><code>setActiveChannel(key)</code>：公开切换入口，写偏好并<strong>立即</strong>对齐生命周期（弃用通道当即静默，</li></ul>
+<p>不等下一个后台 tick）。<code>init()</code> 末尾与 <code>refreshAdapters()</code> 末尾各调一次 <code>_syncChannelLifecycle()</code> 兜底。</p>
+<h3 id="2-2-通道局部-kiro-自我降级-kiroadapter-js">2.2 通道局部 — Kiro 自我降级（<code>kiroAdapter.js</code>）<a class="anchor" href="#2-2-通道局部-kiro-自我降级-kiroadapter-js" aria-label="锚点">#</a></h3>
+<ul><li>模块级 <code>_channelActive</code>（默认 <code>true</code>），由网关经 <code>setChannelActive</code> 驱动。激活→恢复 token 文件</li></ul>
+<p>watcher；弃用→停 watcher（释放 <code>fs.watch</code> 句柄）。幂等。</p>
+<ul><li><code>_isDeprecatedChannel()</code>：<strong>显式弃用</strong>判定——<code>_channelActive===false</code>，<strong>或</strong> <code>GATEWAY_PREFERRED_ADAPTER</code></li></ul>
+<p>指向另一真实通道（非 <code>kiro</code>/<code>auto</code>）。<strong>auto 模式永不算弃用</strong>。</p>
+<ul><li><code>_emitChannelWarn(text)</code>：弃用通道的内部异常（Token 刷新失败 / login required）降级到</li></ul>
+<p><code>debugLog</code>，<strong>绝不</strong>上 UI 主控台；活跃通道与 auto 模式保留原有 WARN 可见性。</p>
+<ul><li><code>maybeOpenKiroLogin</code>：在显式弃用通道下提前返回，<strong>绝不</strong>拉起 IDE/浏览器（副作用在源头封堵，</li></ul>
+<p>不只是日志层）。</p>
+<h3 id="2-3-切换入口-cli-ai-js">2.3 切换入口（<code>cli/ai.js</code>）<a class="anchor" href="#2-3-切换入口-cli-ai-js" aria-label="锚点">#</a></h3>
+<p><code>/gateway</code> 切换在设 <code>GATEWAY_PREFERRED_ADAPTER</code> 后调 <code>gw.setActiveChannel(s.type)</code>，使切换瞬间生效。</p>
+<h3 id="2-4-web-daemon-切换入口-aimanagementserver-js-复盘补强">2.4 web/daemon 切换入口（<code>aiManagementServer.js</code>，复盘补强）<a class="anchor" href="#2-4-web-daemon-切换入口-aimanagementserver-js-复盘补强" aria-label="锚点">#</a></h3>
+<p><strong>复盘发现</strong>：CLI 路径（§2.3）切换后立即对齐，但 <strong>web/daemon 配置保存路径</strong> 不然。两个 web 端点<br>（<code>handleUpdateConfig</code> 与 <code>handleAiGatewayConfigPut</code>）都收敛到 <code>applyGatewayConfigPatch</code>，它原先<strong>只把<br><code>GATEWAY_PREFERRED_ADAPTER</code> 写进 <code>.env</code></strong>，从不触发 <code>_syncChannelLifecycle</code>。于是经 web/管理面切换通道后，<br>被弃用通道（如 kiro）的 token 文件 watcher 仍活、<code>Kiro login required</code> 仍越权冒泡——直到下一次 30s 后台<br>tick 才被收回。这段窗口正是症状的 web 复现路径。</p>
+<p><strong>修复</strong>：<code>applyGatewayConfigPatch</code> 在原子写入 <code>.env</code> 后，若本次补丁触及 <code>preferredAdapter</code>，立即<br><code>getGateway().setActiveChannel(process.env.GATEWAY_PREFERRED_ADAPTER || '')</code>，与 CLI 路径同样<strong>瞬间对齐</strong>，<br>不等后台 tick。空串 → auto 模式 → 全通道恢复活跃（不误杀，honor 硬约束）。整段包在 <code>try/catch</code> 中——<br>生命周期对齐是 best-effort，<strong>绝不因对齐失败而破坏配置落盘</strong>。</p>
+<h2 id="3-硬性约束的工程化保证">3. 硬性约束的工程化保证<a class="anchor" href="#3-硬性约束的工程化保证" aria-label="锚点">#</a></h2>
+<blockquote><p>绝对不能因为修复此问题，导致<strong>活跃通道</strong>的必要后台任务或关键错误日志被误杀。</p></blockquote>
+<p>两条铁律落到代码与测试：</p>
+<ol><li><strong>auto 模式 ≠ 弃用</strong>。网关 <code>activeKey===null</code> 时不跳过任何通道；适配器 <code>_isDeprecatedChannel()</code></li></ol>
+<p>在 auto 模式恒 <code>false</code>。<code>channelLogGating.test.js</code> 的「auto 模式 deliberate login 照常拉起」用例<br>   守护这条——它正是历史 <code>kiroAdapter.autoLogin</code> 契约的复刻（早期把「空闲」误当「弃用」会回归此契约）。</p>
+<ol><li><strong>活跃通道从不被跳过/静默</strong>。<code>if (activeKey &amp;&amp; entry.key !== activeKey)</code> 永不命中活跃键；</li></ol>
+<p>活跃通道的 <code>_emitChannelWarn</code> 走 <code>console.warn</code>。<code>channelLogGating.test.js</code> 的活跃用例断言<br>   活跃通道照常报 <code>login required</code> 且照常拉起登录。</p>
+<h2 id="4-关键设计抉择-弃用-必须是显式信号-不是-最近未用">4. 关键设计抉择：「弃用」必须是显式信号，不是「最近未用」<a class="anchor" href="#4-关键设计抉择-弃用-必须是显式信号-不是-最近未用" aria-label="锚点">#</a></h2>
+<p>早期实现用 <code>_isActiveChannel()</code>（含 <code>_kiroRecentlyActive()</code> 空闲启发式）做门控，导致 auto 模式<br>冷启动下 <code>getAccessToken({autoOpenLogin:true})</code> 被误挡——把「空闲」当成「弃用」，违反既有 autoLogin<br>契约。最终改为 <code>_isDeprecatedChannel()</code>：弃用 ⇔ 网关显式下推 deactivation <strong>或</strong> 用户显式切到别的通道。<br>auto/空闲一律保留原行为。网关 <code>_resolveActiveChannelKey</code> 与适配器 <code>_isDeprecatedChannel</code> 两层语义对齐：<br><code>auto/空 → 不弃用任何通道</code>。</p>
+<h2 id="5-验收">5. 验收<a class="anchor" href="#5-验收" aria-label="锚点">#</a></h2>
+<ul><li><code>channelLifecycle.test.js</code>（8 例）：键解析归一/auto→null/弃用收 false 活跃收 true/无钩子跳过/钩子抛错 fail-safe/</li></ul>
+<p><code>setActiveChannel</code> 即时对齐/<code>setChannelActive</code> 幂等。</p>
+<ul><li><code>channelLogGating.test.js</code>（3 例，症状级，零真实网络/IDE）：弃用通道 <code>getAccessToken</code> 仍如实抛</li></ul>
+<p><code>No Kiro token</code> 但<strong>零 WARN、零 IDE 拉起</strong>；活跃通道与 auto 模式照常报 WARN 且照常拉起登录。</p>
+<ul><li><code>webChannelSwitchReconcile.test.js</code>（4 例，web 路径补强，stub <code>setActiveChannel</code> + 隔离 <code>.env</code>）：</li></ul>
+<p>web 切换 <code>preferredAdapter</code> → 立即对齐（不等后台 tick）/ 清空 → 以空串调用回到 auto 全活跃 /<br>  与通道无关的配置变更不触碰生命周期 / <code>setActiveChannel</code> 抛错不影响配置落盘（fail-safe，硬约束）。</p>
+<ul><li>邻近回归：<code>gatewayLogLease.test.js</code>（22 例）零回归；三模块（kiroAdapter / aiGateway / cli/ai）冒烟加载干净。</li></ul>
+<h2 id="6-非目标-刻意不动-honor-硬约束">6. 非目标（刻意不动，honor 硬约束）<a class="anchor" href="#6-非目标-刻意不动-honor-硬约束" aria-label="锚点">#</a></h2>
+<ul><li>不接管全局 console-patch 式的 <code>gatewayLogLease</code>（env 门控、风险面大）——本次只做外科手术式的</li></ul>
+<p>适配器局部 + 网关改动。</p>
+<ul><li>不动 codex 心跳、trae <code>_refreshInterval</code> 等其它适配器的独立定时器——它们与本症状无关，</li></ul>
+<p>贸然收回有误杀活跃通道后台任务的风险。后续如需，应各自实现 <code>setChannelActive</code> 钩子并独立验收。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-044] Agent自愈微循环-诊断修复重试.html"><div class="dir">← 上一篇</div><div class="ttl">DESIGN-ARCH-044 · Agent 自愈微循环：诊断-修复-重试（先救后报）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-046] 聊天状态污染与回复截断治理-原子轮提交与空结果重试与截断信号保真.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-046] 聊天状态污染与回复截断治理 — 原子轮提交、空结果自动重试与截断信号保真</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-045] 非活跃通道生命周期治理-僵尸后台收回与日志越权阻断.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

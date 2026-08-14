@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-069] 已装副本完整性自检清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-069] 已装副本完整性自检清单</div>
+      <header class="hero reveal"><h1>[OPS-MAN-069] 已装副本完整性自检清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-069-已装副本完整性自检清单">[OPS-MAN-069] 已装副本完整性自检清单</a></li><li class="lvl-2"><a href="#这份清单是干什么的">这份清单是干什么的</a></li><li class="lvl-2"><a href="#为什么必须搬到你的机器上跑">为什么必须搬到你的机器上跑</a></li><li class="lvl-2"><a href="#它检查这些运行时关键文件-缺任一-khy-可能起不来">它检查这些运行时关键文件（缺任一 = khy 可能起不来）</a></li><li class="lvl-2"><a href="#结果怎么读">结果怎么读</a></li><li class="lvl-2"><a href="#与其它自检的分工">与其它自检的分工</a></li><li class="lvl-2"><a href="#红线-继承项目章程">红线（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-069-已装副本完整性自检清单">[OPS-MAN-069] 已装副本完整性自检清单<a class="anchor" href="#ops-man-069-已装副本完整性自检清单" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/verify-install.js --gen-doc</code> 确定性生成，请勿手改；<br>关键路径改在 <code>scripts/lib/installIntegrity.js</code> 的 <code>CRITICAL_BUNDLE_PATHS</code>，再重新生成。</p></blockquote>
+<h2 id="这份清单是干什么的">这份清单是干什么的<a class="anchor" href="#这份清单是干什么的" aria-label="锚点">#</a></h2>
+<p>前面几件送别礼检查「周遭」（环境、版本、依赖）；这一件检查<strong>装进来的东西本身</strong>：<br>你从 pip / npm 装好之后，运行时关键文件是不是齐的？下载有没有被截断？某个文件<br>有没有没被打进 bundle？在<strong>任意新机器上、离线</strong>跑一句就知道：</p>
+<pre><code class="language-bash">node scripts/verify-install.js      # 或 npm run verify-install</code></pre>
+<h2 id="为什么必须搬到你的机器上跑">为什么必须搬到你的机器上跑<a class="anchor" href="#为什么必须搬到你的机器上跑" aria-label="锚点">#</a></h2>
+<p>发布侧本就有完整性校验（<code>scripts/release/pip_packaging_rules.py</code> 的<br><code>REQUIRED_WHEEL_PATHS</code>、npm 的 <code>REQUIRED_PATHS</code>），但那是在<strong>构建机</strong>上、对<br><strong>刚构建的产物</strong>跑的。构建机一旦报废，另一台机器上的「装了一半 / 下载截断 /<br>文件缺失」就无人可查。本自检把这份保证搬到<strong>每一台幸存者的机器</strong>，可离线运行。</p>
+<p>本清单的关键路径逐条源自 <code>REQUIRED_WHEEL_PATHS</code>（发布门权威清单，来自真实生产<br>事故——ai-backend 鉴权中间件曾掉出打包，令每条代理/网关路由 500）。两处由测试<br><code>scripts/tests/installIntegrity.test.js</code> 的反漂移断言强制一致，杜绝各说各话。</p>
+<h2 id="它检查这些运行时关键文件-缺任一-khy-可能起不来">它检查这些运行时关键文件（缺任一 = khy 可能起不来）<a class="anchor" href="#它检查这些运行时关键文件-缺任一-khy-可能起不来" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>关键路径（相对 bundle 根）</th><th>缺失意味着</th></tr></thead><tbody><tr><td><code>services/backend/bin/khy.js</code></td><td>后端 CLI 入口缺失——包不完整，khy 无法启动。</td></tr><tr><td><code>services/backend/server.js</code></td><td>后端服务入口缺失——管理后端无法拉起。</td></tr><tr><td><code>services/backend/src/models/index.js</code></td><td>数据层入口缺失——启动即崩。</td></tr><tr><td><code>services/ai-backend/src/middleware/auth.js</code></td><td>AI 后端鉴权中间件缺失——每条代理/网关路由会 500（历史事故点）。</td></tr><tr><td><code>apps/ai-frontend/src/main.js</code></td><td>前端入口缺失——管理页打不开。</td></tr><tr><td><code>kernel/Makefile</code></td><td>内核构建根缺失——workshop 不完整。</td></tr><tr><td><code>scripts/lib/leafContractGuard.js</code></td><td>纯叶子契约守卫缺失——无 AI 维护时的护栏丢了。</td></tr></tbody></table>
+<h2 id="结果怎么读">结果怎么读<a class="anchor" href="#结果怎么读" aria-label="锚点">#</a></h2>
+<ul><li><strong>完整</strong>：关键文件全在，已装副本可用——放心跑 khy。</li><li><strong>不完整</strong>：列出缺了哪些文件。统一修法是重装官方包补齐：</li></ul>
+<pre><code class="language-bash">  pip install --force-reinstall khy-os
+  npm install -g @khy-os/khy-os</code></pre>
+<ul><li><strong>无法定位 bundle</strong>：包没装好或严重不完整，按上面重装。</li></ul>
+<h2 id="与其它自检的分工">与其它自检的分工<a class="anchor" href="#与其它自检的分工" aria-label="锚点">#</a></h2>
+<ul><li><code>restore-check</code>（OPS-MAN-068）：查<strong>环境</strong>能否还原（Node/npm/tar/版本同步）。</li><li><code>verify-install</code>（本清单）：查<strong>已装副本本身</strong>是否完整无损。</li><li>两者互补：环境齐了但文件缺了，或文件全了但环境缺了，都还原不成。</li></ul>
+<h2 id="红线-继承项目章程">红线（继承项目章程）<a class="anchor" href="#红线-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>真 key/token 永不进包、不落盘；占位 key 一眼假。</li><li>pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本号必须一致。</li><li>本清单不教任何 commit/push/rm/curl/publish 类危险动作。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-068] 离机还原自检清单.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-068] 离机还原自检清单</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-070] 首启依赖hydration自检清单.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-070] 首启依赖 hydration 自检清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-069] 已装副本完整性自检清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

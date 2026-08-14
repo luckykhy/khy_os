@@ -1,0 +1,19 @@
+{
+  "id": "cqrs",
+  "kind": "concept",
+  "name": "CQRS",
+  "category": "architecture",
+  "triggers": ["CQRS", "Command Query Responsibility Segregation", "读写分离", "命令查询分离"],
+  "summary": "命令查询职责分离：写模型(Command)与读模型(Query)分开，各自优化；常配合事件溯源(Event Sourcing)与读模型投影。",
+  "whenToUse": [
+    "读写负载差异极大、读模型需多种形态。",
+    "复杂领域已用 DDD，写侧一致性与读侧性能诉求冲突。"
+  ],
+  "antiPatterns": [
+    "简单 CRUD 强行拆读写，徒增复杂度与最终一致性问题。",
+    "命令端返回查询数据，混淆职责。",
+    "忽视读模型最终一致带来的延迟语义。"
+  ],
+  "minimalSkeleton": "Command: 改状态，不返回数据\nCommand Handler → 写模型 → 发领域事件\nProjection: 消费事件 → 更新读模型\nQuery: 只读读模型，不碰写模型",
+  "relatedArchetypes": []
+}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Eval Baseline · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>evals<span class="sep">›</span>Skill Eval Baseline</div>
+      <header class="hero reveal"><h1>Skill Eval Baseline</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#skill-eval-baseline">Skill Eval Baseline</a></li><li class="lvl-2"><a href="#files">Files</a></li><li class="lvl-2"><a href="#runner">Runner</a></li><li class="lvl-2"><a href="#what-this-baseline-checks">What This Baseline Checks</a></li><li class="lvl-2"><a href="#pass-conditions">Pass Conditions</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="skill-eval-baseline">Skill Eval Baseline<a class="anchor" href="#skill-eval-baseline" aria-label="锚点">#</a></h1>
+<p>This directory defines the first repeatable skill quality gate inspired by the<br>oh-my-openagent eval workflow.</p>
+<h2 id="files">Files<a class="anchor" href="#files" aria-label="锚点">#</a></h2>
+<ul><li><code>skill-eval-config.schema.json</code>: schema for baseline config structure</li><li><code>skill-eval-baseline.json</code>: initial scoring checks and CI thresholds</li><li><code>skill-eval-report.schema.json</code>: schema for generated report payload</li><li><code>skill-scenario-suite.json</code>: scenario assertions over skill prompt behavior</li><li><code>skill-scenario-report.schema.json</code>: schema for scenario report payload</li></ul>
+<h2 id="runner">Runner<a class="anchor" href="#runner" aria-label="锚点">#</a></h2>
+<p>Run from repository root:</p>
+<pre><code class="language-bash">node scripts/ci/check-skill-evals.js</code></pre>
+<p>Optional report output:</p>
+<pre><code class="language-bash">node scripts/ci/check-skill-evals.js --report docs/报告/技能评估-最新.json</code></pre>
+<p>Scenario eval:</p>
+<pre><code class="language-bash">node scripts/ci/check-skill-scenarios.js --report docs/报告/技能场景评估-最新.json</code></pre>
+<h2 id="what-this-baseline-checks">What This Baseline Checks<a class="anchor" href="#what-this-baseline-checks" aria-label="锚点">#</a></h2>
+<ul><li>Manifest required fields (<code>name</code>, <code>description</code>, <code>trigger</code>/<code>command</code>)</li><li>Invocable flag consistency (<code>user_invocable</code> or <code>userInvocable</code>)</li><li>Prompt asset presence (<code>prompt.md</code>)</li><li>Metadata quality fields (<code>tags</code>, <code>category</code>, <code>platforms</code>)</li><li>Prompt-level scenario assertions for key built-in skills (verify, commit, loop, stuck, remember)</li></ul>
+<h2 id="pass-conditions">Pass Conditions<a class="anchor" href="#pass-conditions" aria-label="锚点">#</a></h2>
+<p>Thresholds are loaded from <code>skill-eval-baseline.json</code> and enforced in CI.<br>If any threshold fails, the script exits with non-zero status.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/skills/devops/git-workflow/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">Git Workflow Skill</div></a><a class="next" href="../../../../../services/backend/src/skills/monitor-perf/system-monitor/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">System Monitor Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/skills/evals/README.html";</script>
+<script src="../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

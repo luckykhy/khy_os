@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🆘 Khy-OS 紧急恢复卡片（出事时翻这一页就够） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>传承<span class="sep">›</span>🆘 Khy-OS 紧急恢复卡片（出事时翻这一页就够）</div>
+      <header class="hero reveal"><h1>🆘 Khy-OS 紧急恢复卡片（出事时翻这一页就够）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-紧急恢复卡片-出事时翻这一页就够">🆘 Khy-OS 紧急恢复卡片（出事时翻这一页就够）</a></li><li class="lvl-2"><a href="#0-万能两步-不知道哪坏了-先做这两步">0. 万能两步（不知道哪坏了，先做这两步）</a></li><li class="lvl-2"><a href="#1-cli-坏了-khy-敲了没反应-提示-command-not-found">1. CLI 坏了（`khy` 敲了没反应 / 提示 command not found）</a></li><li class="lvl-2"><a href="#2-更新坏了-更新完整个跑不起来">2. 更新坏了（更新完整个跑不起来）</a></li><li class="lvl-2"><a href="#3-发布坏了-构建-上传-pypi-出错">3. 发布坏了（构建/上传 PyPI 出错）</a></li><li class="lvl-2"><a href="#4-回滚到上一个好版本-升级搞砸了的救命操作">4. 回滚到上一个好版本（升级搞砸了的救命操作）</a></li><li class="lvl-2"><a href="#5-双击入口也坏了-选单打不开-提示找不到清单">5. 双击入口也坏了（选单打不开 / 提示找不到清单）</a></li><li class="lvl-2"><a href="#6-日志-求助寄到哪">6. 日志/求助寄到哪</a></li><li class="lvl-2"><a href="#7-速查表-一页全在这">7. 速查表（一页全在这）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-紧急恢复卡片-出事时翻这一页就够">🆘 Khy-OS 紧急恢复卡片（出事时翻这一页就够）<a class="anchor" href="#khy-os-紧急恢复卡片-出事时翻这一页就够" aria-label="锚点">#</a></h1>
+<blockquote><p>写给<strong>慌乱中的维护者</strong>（也许不是工程师，也许半夜一个人）。</p>
+<p>这一页不需要你懂代码。每种「坏了」都给两条路：<strong>先双击、敲不动再复制命令</strong>。<br>每条命令都能直接复制到终端运行。<strong>记不住没关系——把这一页存成书签即可。</strong></p>
+<p>黄金法则三句话：</p>
+<ol><li><strong>先留证再动手</strong>：任何修复前，先「导出诊断日志」，免得越修越查不清。</li><li><strong>改之前先备份</strong>：更新/回滚前先「备份关键数据配置」。</li><li><strong>拿不准就回滚</strong>：回滚是设计得最安全的一步——未确认绝不动你的代码。</li></ol></blockquote>
+<hr>
+<h2 id="0-万能两步-不知道哪坏了-先做这两步">0. 万能两步（不知道哪坏了，先做这两步）<a class="anchor" href="#0-万能两步-不知道哪坏了-先做这两步" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>想干什么</th><th>双击（不必懂命令）</th><th>或复制这条命令</th></tr></thead><tbody><tr><td>先体检看哪红了</td><td><code>维护-一键健康体检</code></td><td><code>node services/backend/bin/khy.js health</code></td></tr><tr><td>留证求助</td><td><code>维护-导出诊断日志</code></td><td><code>node maintenance/lib/ops.js diagnostics</code></td></tr></tbody></table>
+<p>诊断日志会同时生成<strong>人读版 <code>.md</code></strong> 和<strong>机读版 <code>.json</code></strong>，落在 <code>maintenance/logs/</code>。<br>求助时：<code>.md</code> 发给维护者看，<code>.json</code> 发给 AI 助手解析。<strong>两份都不含密钥</strong>，可放心外发。</p>
+<hr>
+<h2 id="1-cli-坏了-khy-敲了没反应-提示-command-not-found">1. CLI 坏了（<code>khy</code> 敲了没反应 / 提示 command not found）<a class="anchor" href="#1-cli-坏了-khy-敲了没反应-提示-command-not-found" aria-label="锚点">#</a></h2>
+<p><code>khy</code> 这个简写入口可能掉了，但<strong>后备入口几乎总能用</strong>——它直接调后端，不依赖简写：</p>
+<pre><code class="language-bash"># 主路径（简写，可能已坏）：
+khy --version
+# 后备路径（直连后端，绕过简写）：
+node services/backend/bin/khy.js --version</code></pre>
+<ul><li>后备入口能打印版本 → 简写坏了而已，重装一次：双击 <code>维护-一键重装依赖</code>，或</li></ul>
+<p><code>node maintenance/lib/ops.js reinstall</code>。</p>
+<ul><li>后备入口也没反应 → 多半是依赖坏了，同样先「一键重装依赖」；仍不行就<strong>导出诊断日志发出去</strong>。</li></ul>
+<blockquote><p>记住：本卡片里所有 <code>node maintenance/lib/ops.js ...</code> 命令都<strong>不经过 <code>khy</code> 简写</strong>，<br>所以即使简写彻底坏了，这些救援命令照样能跑。</p></blockquote>
+<hr>
+<h2 id="2-更新坏了-更新完整个跑不起来">2. 更新坏了（更新完整个跑不起来）<a class="anchor" href="#2-更新坏了-更新完整个跑不起来" aria-label="锚点">#</a></h2>
+<p>按顺序，能停在哪步就停在哪步：</p>
+<ol><li><strong>先留证</strong>：双击 <code>维护-导出诊断日志</code>（或 <code>node maintenance/lib/ops.js diagnostics</code>）。</li><li><strong>快速烟雾测试</strong>看命脉断在哪：双击 <code>维护-快速烟雾测试更新发布回滚后</code>，或</li></ol>
+<p><code>node maintenance/lib/ops.js smoke</code>。它几秒钟告诉你哪条命脉断了，并给「下一步」。</p>
+<ol><li><strong>依赖坏了</strong>（找不到模块/import 报错）→ 双击 <code>维护-一键重装依赖</code>。</li><li><strong>还不行就回滚</strong>到上一个好版本（见第 4 节）。</li></ol>
+<hr>
+<h2 id="3-发布坏了-构建-上传-pypi-出错">3. 发布坏了（构建/上传 PyPI 出错）<a class="anchor" href="#3-发布坏了-构建-上传-pypi-出错" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node maintenance/lib/ops.js post-verify   # 发布后验证：版本一致 + dist 产物 + twine check</code></pre>
+<p>或双击 <code>维护-发布后验证</code>。它会逐项告诉你哪不对、怎么修：</p>
+<ul><li><strong>版本号不一致</strong> → 按 <code>AGENTS.md</code> 的「Version Sync」把三处改齐（pyproject / <code>__init__</code> / package.json）。</li><li><strong>dist 下没产物</strong> → 先双击 <code>维护-一键构建发布产物</code>。</li><li><strong>twine check 没过</strong> → 看输出里产物元数据问题。</li></ul>
+<p>全绿之后，<strong>登记这个好版本免去日后记忆</strong>：双击 <code>维护-登记最近稳定版免记忆回滚</code>，或<br><code>node maintenance/lib/ops.js bless</code>。它把当前 version/commit/tag/产物校验值写进<br><code>maintenance/stable-release.json</code>，<strong>以后回滚自动用它</strong>。</p>
+<hr>
+<h2 id="4-回滚到上一个好版本-升级搞砸了的救命操作">4. 回滚到上一个好版本（升级搞砸了的救命操作）<a class="anchor" href="#4-回滚到上一个好版本-升级搞砸了的救命操作" aria-label="锚点">#</a></h2>
+<p>这是设计得<strong>最安全</strong>的一步：工作区不干净会拒绝、未输入 <code>y</code> 绝不改动你的代码<br>（有自动化测试守着这条性质）。</p>
+<pre><code class="language-bash"># 先备份，再回滚：
+node maintenance/lib/ops.js backup
+node maintenance/lib/ops.js rollback           # 交互确认，输入 y 才真的切</code></pre>
+<p>双击版：先 <code>维护-备份关键数据配置</code>，再 <code>维护-回滚到最近稳定版本</code>。</p>
+<ul><li>提示「<strong>工作区有未提交改动</strong>」→ 它在保护你的改动。先 <code>git stash</code>（暂存），再重跑回滚。</li><li>回滚后 → 双击 <code>维护-一键健康体检</code> 确认可用；想回到最新开发线：<code>git checkout &lt;你原来的分支&gt;</code>。</li></ul>
+<p>回滚目标从哪来？优先 <code>maintenance/stable-release.json</code> 登记的版本（见第 3 节的 bless）；<br>没登记就自动退回到仓库里最高的版本标签。<strong>你不必记住版本号。</strong></p>
+<hr>
+<h2 id="5-双击入口也坏了-选单打不开-提示找不到清单">5. 双击入口也坏了（选单打不开 / 提示找不到清单）<a class="anchor" href="#5-双击入口也坏了-选单打不开-提示找不到清单" aria-label="锚点">#</a></h2>
+<p>双击启动器背后有<strong>备用救援清单</strong> <code>maintenance/rescue-catalog.json</code> 兜底——<br>主清单（维护映射表 / tasks.json）被改坏时会自动回退，所以入口一般不会整体失效。<br>看到窗口里出现「维护清单回退」字样属正常兜底，不是失败。</p>
+<p>主清单修好后，刷新一次救援清单：</p>
+<pre><code class="language-bash">npm run maintenance:generate</code></pre>
+<p>连 Node 都找不到（双击毫无反应）→ 安装 Node 20+（https://nodejs.org）后重试。</p>
+<hr>
+<h2 id="6-日志-求助寄到哪">6. 日志/求助寄到哪<a class="anchor" href="#6-日志-求助寄到哪" aria-label="锚点">#</a></h2>
+<ul><li><strong>诊断文件</strong>：<code>maintenance/logs/diagnostics-&lt;时间戳&gt;.md</code>（人读）和 <code>.json</code>（机读）。</li><li><strong>每次双击的运行日志</strong>：<code>maintenance/logs/</code> 下带时间戳的文件（窗口结尾会打印路径）。</li><li>求助时把上面的文件<strong>整个发出去</strong>，并说一句「我双击了哪个文件 / 跑了哪条命令」。</li></ul>
+<p>日志含平台和每一步成败，足够维护者或 AI 定位。<strong>这些文件不含 API 密钥，可放心外发。</strong></p>
+<hr>
+<h2 id="7-速查表-一页全在这">7. 速查表（一页全在这）<a class="anchor" href="#7-速查表-一页全在这" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>症状</th><th>双击</th><th>命令（不经 <code>khy</code> 简写，最抗坏）</th></tr></thead><tbody><tr><td>不知哪坏了</td><td><code>维护-一键健康体检</code></td><td><code>node services/backend/bin/khy.js health</code></td></tr><tr><td>求助留证</td><td><code>维护-导出诊断日志</code></td><td><code>node maintenance/lib/ops.js diagnostics</code></td></tr><tr><td>查命脉断在哪</td><td><code>维护-快速烟雾测试更新发布回滚后</code></td><td><code>node maintenance/lib/ops.js smoke</code></td></tr><tr><td><code>khy</code> 没反应</td><td><code>维护-一键重装依赖</code></td><td><code>node services/backend/bin/khy.js --version</code></td></tr><tr><td>依赖坏了</td><td><code>维护-一键重装依赖</code></td><td><code>node maintenance/lib/ops.js reinstall</code></td></tr><tr><td>改前备份</td><td><code>维护-备份关键数据配置</code></td><td><code>node maintenance/lib/ops.js backup</code></td></tr><tr><td>升级搞砸回滚</td><td><code>维护-回滚到最近稳定版本</code></td><td><code>node maintenance/lib/ops.js rollback</code></td></tr><tr><td>发布出错</td><td><code>维护-发布后验证</code></td><td><code>node maintenance/lib/ops.js post-verify</code></td></tr><tr><td>登记好版本</td><td><code>维护-登记最近稳定版免记忆回滚</code></td><td><code>node maintenance/lib/ops.js bless</code></td></tr><tr><td>双击入口坏了</td><td>（主清单修好后）<code>维护-更新项目到最新</code></td><td><code>npm run maintenance:generate</code></td></tr></tbody></table>
+<blockquote><p>更系统的说明见同目录 <code>KHY-OS-传承书.md</code>。这一页只为<strong>慌乱时快速止血</strong>。</p></blockquote>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/传承/KHY-OS-传承书.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 传承书 · 无 AI 也能维护的生存宪法</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/传承/紧急恢复卡片.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessibility Checklist · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>shipping-and-launch<span class="sep">›</span>references<span class="sep">›</span>Accessibility Checklist</div>
+      <header class="hero reveal"><h1>Accessibility Checklist</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#accessibility-checklist">Accessibility Checklist</a></li><li class="lvl-2"><a href="#table-of-contents">Table of Contents</a></li><li class="lvl-2"><a href="#essential-checks">Essential Checks</a></li><li class="lvl-3"><a href="#keyboard-navigation">Keyboard Navigation</a></li><li class="lvl-3"><a href="#screen-readers">Screen Readers</a></li><li class="lvl-3"><a href="#visual">Visual</a></li><li class="lvl-3"><a href="#forms">Forms</a></li><li class="lvl-3"><a href="#content">Content</a></li><li class="lvl-2"><a href="#common-html-patterns">Common HTML Patterns</a></li><li class="lvl-3"><a href="#buttons-vs-links">Buttons vs. Links</a></li><li class="lvl-3"><a href="#form-labels">Form Labels</a></li><li class="lvl-3"><a href="#aria-roles">ARIA Roles</a></li><li class="lvl-3"><a href="#accessible-lists">Accessible Lists</a></li><li class="lvl-2"><a href="#testing-tools">Testing Tools</a></li><li class="lvl-2"><a href="#quick-reference-aria-live-regions">Quick Reference: ARIA Live Regions</a></li><li class="lvl-2"><a href="#common-anti-patterns">Common Anti-Patterns</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="accessibility-checklist">Accessibility Checklist<a class="anchor" href="#accessibility-checklist" aria-label="锚点">#</a></h1>
+<p>Quick reference for WCAG 2.1 AA compliance. Use alongside the <code>frontend-ui-engineering</code> skill.</p>
+<h2 id="table-of-contents">Table of Contents<a class="anchor" href="#table-of-contents" aria-label="锚点">#</a></h2>
+<ul><li><a href="#essential-checks">Essential Checks</a></li><li><a href="#common-html-patterns">Common HTML Patterns</a></li><li><a href="#testing-tools">Testing Tools</a></li><li><a href="#quick-reference-aria-live-regions">Quick Reference: ARIA Live Regions</a></li><li><a href="#common-anti-patterns">Common Anti-Patterns</a></li></ul>
+<h2 id="essential-checks">Essential Checks<a class="anchor" href="#essential-checks" aria-label="锚点">#</a></h2>
+<h3 id="keyboard-navigation">Keyboard Navigation<a class="anchor" href="#keyboard-navigation" aria-label="锚点">#</a></h3>
+<ul><li>[ ] All interactive elements focusable via Tab key</li><li>[ ] Focus order follows visual/logical order</li><li>[ ] Focus is visible (outline/ring on focused elements)</li><li>[ ] Custom widgets have keyboard support (Enter to activate, Escape to close)</li><li>[ ] No keyboard traps (user can always Tab away from a component)</li><li>[ ] Skip-to-content link at top of page - visible (at least) on keyboard focus</li><li>[ ] Modals trap focus while open, return focus on close</li></ul>
+<h3 id="screen-readers">Screen Readers<a class="anchor" href="#screen-readers" aria-label="锚点">#</a></h3>
+<ul><li>[ ] All images have <code>alt</code> text (or <code>alt=&quot;&quot;</code> for decorative images)</li><li>[ ] All form inputs have associated labels (<code>&lt;label&gt;</code> or <code>aria-label</code>)</li><li>[ ] Buttons and links have descriptive text (not &quot;Click here&quot;)</li><li>[ ] Icon-only buttons have <code>aria-label</code></li><li>[ ] Page has one <code>&lt;h1&gt;</code> and headings don't skip levels</li><li>[ ] Dynamic content changes announced (<code>aria-live</code> regions)</li><li>[ ] Tables have <code>&lt;th&gt;</code> headers with scope</li></ul>
+<h3 id="visual">Visual<a class="anchor" href="#visual" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Text contrast ≥ 4.5:1 (normal text) or ≥ 3:1 (large text, 18px+)</li><li>[ ] UI components contrast ≥ 3:1 against background</li><li>[ ] Color is not the only way to convey information</li><li>[ ] Text resizable to 200% without breaking layout</li><li>[ ] No content that flashes more than 3 times per second</li></ul>
+<h3 id="forms">Forms<a class="anchor" href="#forms" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Every input has a visible label</li><li>[ ] Required fields indicated (not by color alone)</li><li>[ ] Error messages specific and associated with the field</li><li>[ ] Error state visible by more than color (icon, text, border)</li><li>[ ] Form submission errors summarized and focusable</li><li>[ ] Known fields use autocomplete (for example <code>type=&quot;email&quot; autocomplete=&quot;email&quot;</code>)</li></ul>
+<h3 id="content">Content<a class="anchor" href="#content" aria-label="锚点">#</a></h3>
+<ul><li>[ ] Language declared (<code>&lt;html lang=&quot;en&quot;&gt;</code>)</li><li>[ ] Page has a descriptive <code>&lt;title&gt;</code></li><li>[ ] Links distinguish from surrounding text (not by color alone)</li><li>[ ] Touch targets ≥ 44x44px on mobile</li><li>[ ] Meaningful empty states (not blank screens)</li></ul>
+<h2 id="common-html-patterns">Common HTML Patterns<a class="anchor" href="#common-html-patterns" aria-label="锚点">#</a></h2>
+<h3 id="buttons-vs-links">Buttons vs. Links<a class="anchor" href="#buttons-vs-links" aria-label="锚点">#</a></h3>
+<pre><code class="language-html">&lt;!-- Use &lt;button&gt; for actions --&gt;
+&lt;button onClick={handleDelete}&gt;Delete Task&lt;/button&gt;
+
+&lt;!-- Use &lt;a&gt; for navigation --&gt;
+&lt;a href=&quot;/tasks/123&quot;&gt;View Task&lt;/a&gt;
+
+&lt;!-- NEVER use div/span as buttons --&gt;
+&lt;div onClick={handleDelete}&gt;Delete&lt;/div&gt;  &lt;!-- BAD --&gt;</code></pre>
+<h3 id="form-labels">Form Labels<a class="anchor" href="#form-labels" aria-label="锚点">#</a></h3>
+<pre><code class="language-html">&lt;!-- Explicit label association --&gt;
+&lt;label htmlFor=&quot;email&quot;&gt;Email address&lt;/label&gt;
+&lt;input id=&quot;email&quot; type=&quot;email&quot; required /&gt;
+
+&lt;!-- Implicit wrapping --&gt;
+&lt;label&gt;
+  Email address
+  &lt;input type=&quot;email&quot; required /&gt;
+&lt;/label&gt;
+
+&lt;!-- Hidden label (visible label preferred) --&gt;
+&lt;input type=&quot;search&quot; aria-label=&quot;Search tasks&quot; /&gt;</code></pre>
+<h3 id="aria-roles">ARIA Roles<a class="anchor" href="#aria-roles" aria-label="锚点">#</a></h3>
+<pre><code class="language-html">&lt;!-- Navigation --&gt;
+&lt;nav aria-label=&quot;Main navigation&quot;&gt;...&lt;/nav&gt;
+&lt;nav aria-label=&quot;Footer links&quot;&gt;...&lt;/nav&gt;
+
+&lt;!-- Status messages --&gt;
+&lt;div role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;Task saved&lt;/div&gt;
+
+&lt;!-- Alert messages --&gt;
+&lt;div role=&quot;alert&quot;&gt;Error: Title is required&lt;/div&gt;
+
+&lt;!-- Modal dialogs --&gt;
+&lt;dialog aria-modal=&quot;true&quot; aria-labelledby=&quot;dialog-title&quot;&gt;
+  &lt;h2 id=&quot;dialog-title&quot;&gt;Confirm Delete&lt;/h2&gt;
+  ...
+&lt;/dialog&gt;
+
+&lt;!-- Loading states --&gt;
+&lt;div aria-busy=&quot;true&quot; aria-label=&quot;Loading tasks&quot;&gt;
+  &lt;Spinner /&gt;
+&lt;/div&gt;</code></pre>
+<h3 id="accessible-lists">Accessible Lists<a class="anchor" href="#accessible-lists" aria-label="锚点">#</a></h3>
+<pre><code class="language-html">&lt;ul role=&quot;list&quot; aria-label=&quot;Tasks&quot;&gt;
+  &lt;li&gt;
+    &lt;input type=&quot;checkbox&quot; id=&quot;task-1&quot; aria-label=&quot;Complete: Buy groceries&quot; /&gt;
+    &lt;label htmlFor=&quot;task-1&quot;&gt;Buy groceries&lt;/label&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;</code></pre>
+<h2 id="testing-tools">Testing Tools<a class="anchor" href="#testing-tools" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Automated audit
+npx axe-core          # Programmatic accessibility testing
+npx pa11y             # CLI accessibility checker
+
+# In browser
+# Chrome DevTools → Lighthouse → Accessibility
+# Chrome DevTools → Elements → Accessibility tree
+
+# Screen reader testing
+# macOS: VoiceOver (Cmd + F5)
+# Windows: NVDA (free) or JAWS
+# Linux: Orca</code></pre>
+<h2 id="quick-reference-aria-live-regions">Quick Reference: ARIA Live Regions<a class="anchor" href="#quick-reference-aria-live-regions" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Value</th><th>Behavior</th><th>Use For</th></tr></thead><tbody><tr><td><code>aria-live=&quot;polite&quot;</code></td><td>Announced at next pause</td><td>Status updates, saved confirmations</td></tr><tr><td><code>aria-live=&quot;assertive&quot;</code></td><td>Announced immediately</td><td>Errors, time-sensitive alerts</td></tr><tr><td><code>role=&quot;status&quot;</code></td><td>Same as <code>polite</code></td><td>Status messages</td></tr><tr><td><code>role=&quot;alert&quot;</code></td><td>Same as <code>assertive</code></td><td>Error messages</td></tr></tbody></table>
+<h2 id="common-anti-patterns">Common Anti-Patterns<a class="anchor" href="#common-anti-patterns" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Anti-Pattern</th><th>Problem</th><th>Fix</th></tr></thead><tbody><tr><td><code>div</code> as button</td><td>Not focusable, no keyboard support</td><td>Use <code>&lt;button&gt;</code></td></tr><tr><td>Missing <code>alt</code> text</td><td>Images invisible to screen readers</td><td>Add descriptive <code>alt</code></td></tr><tr><td>Color-only states</td><td>Invisible to color-blind users</td><td>Add icons, text, or patterns</td></tr><tr><td>Autoplaying media</td><td>Disorienting, can't be stopped</td><td>Add controls, don't autoplay</td></tr><tr><td>Custom dropdown with no ARIA</td><td>Unusable by keyboard/screen reader</td><td>Use native <code>&lt;select&gt;</code> or proper ARIA listbox</td></tr><tr><td>Removing focus outlines</td><td>Users can't see where they are</td><td>Style outlines, don't remove them</td></tr><tr><td>Empty links/buttons</td><td>&quot;Link&quot; announced with no description</td><td>Add text or <code>aria-label</code></td></tr><tr><td><code>tabindex &gt; 0</code></td><td>Breaks natural tab order</td><td>Use <code>tabindex=&quot;0&quot;</code> or <code>-1</code> only</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/skills/built-in/shipping-and-launch/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Shipping and Launch</div></a><a class="next" href="../../../../../../../services/backend/src/skills/built-in/shipping-and-launch/references/performance-checklist.html"><div class="dir">下一篇 →</div><div class="ttl">Performance Checklist</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/shipping-and-launch/references/accessibility-checklist.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

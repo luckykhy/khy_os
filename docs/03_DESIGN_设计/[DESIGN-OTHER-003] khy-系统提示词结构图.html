@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 系统提示词结构图 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>KHY 系统提示词结构图</div>
+      <header class="hero reveal"><h1>KHY 系统提示词结构图</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-系统提示词结构图">KHY 系统提示词结构图</a></li><li class="lvl-2"><a href="#结论">结论</a></li><li class="lvl-2"><a href="#总体结构图">总体结构图</a></li><li class="lvl-2"><a href="#1-主-system-prompt">1. 主 system prompt</a></li><li class="lvl-3"><a href="#静态区顺序">静态区顺序</a></li><li class="lvl-3"><a href="#动态区顺序">动态区顺序</a></li><li class="lvl-2"><a href="#2-runtime-选择逻辑">2. Runtime 选择逻辑</a></li><li class="lvl-2"><a href="#3-指令注入链">3. 指令注入链</a></li><li class="lvl-2"><a href="#4-compact-handoff-prompt">4. Compact / Handoff Prompt</a></li><li class="lvl-2"><a href="#5-agent-prompt-层">5. Agent Prompt 层</a></li><li class="lvl-3"><a href="#agent-tool-prompt">Agent tool prompt</a></li><li class="lvl-3"><a href="#内建代理">内建代理</a></li><li class="lvl-3"><a href="#运行时角色模板">运行时角色模板</a></li><li class="lvl-2"><a href="#6-tool-prompt-层">6. Tool Prompt 层</a></li><li class="lvl-3"><a href="#文件工具">文件工具</a></li><li class="lvl-3"><a href="#搜索工具">搜索工具</a></li><li class="lvl-3"><a href="#命令工具">命令工具</a></li><li class="lvl-2"><a href="#7-输出后处理">7. 输出后处理</a></li><li class="lvl-2"><a href="#8-测试与保障">8. 测试与保障</a></li><li class="lvl-2"><a href="#结论-2">结论</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-OTHER-003 | 阶段: 设计 | 原路径: docs/指南/khy-系统提示词结构图.md --&gt;</p>
+<h1 id="khy-系统提示词结构图">KHY 系统提示词结构图<a class="anchor" href="#khy-系统提示词结构图" aria-label="锚点">#</a></h1>
+<h2 id="结论">结论<a class="anchor" href="#结论" aria-label="锚点">#</a></h2>
+<p><code>khy</code> 现在不是“只有一段 system prompt”，而是一个分层的 prompt 体系。真正决定行为的，不只有主 system prompt，还包括 runtime 选择逻辑、目录指令注入、compact / handoff prompt、子代理 prompt、工具 prompt，以及最终输出后处理。</p>
+<h2 id="总体结构图">总体结构图<a class="anchor" href="#总体结构图" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">khy prompt stack
+├─ 1. Main system prompt
+│  ├─ static sections (cacheable)
+│  ├─ __SYSTEM_PROMPT_DYNAMIC_BOUNDARY__
+│  └─ dynamic sections (per-session)
+├─ 2. Runtime assembly and fallback
+│  ├─ modular prompt for cloud models
+│  └─ legacy HARDCORE_SYSTEM_PROMPT for local/small models
+├─ 3. Instruction injection
+│  ├─ khy.md (4 levels)
+│  ├─ CLAUDE.md compatibility
+│  └─ AGENTS.md compatibility
+├─ 4. Compaction and handoff prompt
+├─ 5. Agent prompt layer
+└─ 6. Tool prompt layer</code></pre>
+<h2 id="1-主-system-prompt">1. 主 system prompt<a class="anchor" href="#1-主-system-prompt" aria-label="锚点">#</a></h2>
+<ul><li>主入口文件: <code>backend/src/constants/prompts.js</code></li><li>主组装函数: <code>getSystemPrompt()</code></li><li>扁平化输出函数: <code>assembleSystemPrompt()</code></li><li>cache boundary 标记: <code>SYSTEM_PROMPT_DYNAMIC_BOUNDARY</code></li></ul>
+<h3 id="静态区顺序">静态区顺序<a class="anchor" href="#静态区顺序" aria-label="锚点">#</a></h3>
+<p><code>getSystemPrompt()</code> 里的静态区按下面顺序拼装:</p>
+<ol><li><code>getSimpleIntroSection()</code></li><li><code>getSimpleSystemSection()</code></li><li><code>getDoingTasksSection()</code></li><li><code>getExecutionDisciplineSection()</code></li><li><code>getScopeMinimizationSection()</code></li><li><code>getPlanningAndRecoverySection()</code></li><li><code>getPlanningAndVerificationSection()</code></li><li><code>getTaskAndProgressManagementSection()</code></li><li><code>getErrorHandlingAndFallbackSection()</code></li><li><code>getMultiAgentCollaborationSection()</code></li><li><code>getSessionMemoryAndContextSection()</code></li><li><code>getSecurityAndPermissionBoundariesSection()</code></li><li><code>getActionsSection()</code></li><li><code>getSensitiveDataSection()</code></li><li><code>getFileOperationsSection()</code></li><li><code>getCommandExecutionSection()</code></li><li><code>getSearchAndExplorationSection()</code></li><li><code>getResponseFormattingSection()</code></li><li><code>getUsingYourToolsSection()</code></li><li><code>getToneAndStyleSection()</code></li><li><code>getOutputEfficiencySection()</code></li><li><code>getGitOperationsSection()</code></li></ol>
+<p>这说明前面学的“11 节规则”并不是全部 prompt；它们只是静态区里最核心的一层。</p>
+<h3 id="动态区顺序">动态区顺序<a class="anchor" href="#动态区顺序" aria-label="锚点">#</a></h3>
+<p>动态区在 cache boundary 之后，按 session / cwd / model / tools 实时注入:</p>
+<ol><li><code>memory</code></li><li><code>env_info</code></li><li><code>language</code></li><li><code>output_style</code></li><li><code>mcp_instructions</code></li><li><code>project_instructions</code></li><li><code>git_status</code></li><li><code>khy_specific</code></li><li><code>model_guidance</code></li></ol>
+<p>其中:</p>
+<ul><li><code>language</code> 决定默认中文回复</li><li><code>project_instructions</code> 注入仓库内 <code>khy.md / CLAUDE.md / AGENTS.md</code></li><li><code>git_status</code> 把当前分支、状态、最近提交带进 prompt</li><li><code>model_guidance</code> 会按 <code>GPT / Gemini / DeepSeek / generic</code> 注入额外执行纪律</li></ul>
+<h2 id="2-runtime-选择逻辑">2. Runtime 选择逻辑<a class="anchor" href="#2-runtime-选择逻辑" aria-label="锚点">#</a></h2>
+<ul><li>入口文件: <code>backend/src/services/khyUpgradeRuntime.js</code></li><li>关键函数: <code>makeSystemPrompt()</code></li></ul>
+<p>运行时不是无脑只用一套 prompt，而是按模型和适配器选路:</p>
+<ul><li>云模型 / 云适配器优先走 modular prompt</li><li>本地模型 / 小模型保留 <code>HARDCORE_SYSTEM_PROMPT</code> 作为 legacy 外壳</li><li>环境变量可强制切换:<ul><li><code>KHY_MODULAR_PROMPT=1</code></li><li><code>KHY_CLAUDE_PROMPT=1</code></li><li><code>KHY_LEGACY_PROMPT=1</code></li></ul></li></ul>
+<p>重要的是，legacy 路径并不等于“老 prompt 完全独立”。<code>makeSystemPrompt()</code> 里仍会同步拼装同一批核心 section，只是给小模型保留更短、更硬的外层壳。</p>
+<h2 id="3-指令注入链">3. 指令注入链<a class="anchor" href="#3-指令注入链" aria-label="锚点">#</a></h2>
+<ul><li>入口文件: <code>backend/src/services/instructionFileService.js</code></li></ul>
+<p><code>khy.md</code> 指令发现顺序是四层:</p>
+<ol><li><code>~/.khyquant/khy.md</code> / <code>KHY.md</code></li><li><code>&lt;git-root&gt;/khy.md</code> / <code>KHY.md</code></li><li><code>&lt;git-root&gt;/.khy/rules/*.md</code></li><li><code>&lt;cwd&gt;/khy.md</code> / <code>KHY.md</code></li></ol>
+<p>兼容层再补:</p>
+<ul><li><code>CLAUDE.md</code></li><li><code>.claude/CLAUDE.md</code></li><li><code>AGENTS.md</code></li></ul>
+<p>冲突优先级固定为:</p>
+<pre><code class="language-text">KHY instructions &gt; CLAUDE instructions &gt; AGENTS instructions</code></pre>
+<p>这里还有两层关键保护:</p>
+<ul><li>如果高优先级 <code>khy.md</code> 已定义语言规则，会剥离低优先级文件里的 English-only lock</li><li><code>scanForPromptInjection()</code> 会扫描注入内容，命中危险行时改写为 <code>[REDACTED: ...]</code></li></ul>
+<h2 id="4-compact-handoff-prompt">4. Compact / Handoff Prompt<a class="anchor" href="#4-compact-handoff-prompt" aria-label="锚点">#</a></h2>
+<ul><li>入口文件: <code>backend/src/services/compact/prompt.js</code></li></ul>
+<p>这里不是主 system prompt，而是“长会话压缩”和“续接”专用 prompt:</p>
+<ul><li><code>getCompactPrompt()</code>：压缩整段历史</li><li><code>getPartialCompactPrompt()</code>：只压缩 recent messages</li><li><code>getAnchoredCompactPrompt()</code>：基于旧摘要增量更新</li></ul>
+<p>这层的硬约束非常明确:</p>
+<ul><li>开头先注入 <code>NO_TOOLS_PREAMBLE</code></li><li>明确禁止调用任何工具</li><li>输出必须是纯文本</li><li>固定要求 <code>&lt;analysis&gt;</code> + <code>&lt;summary&gt;</code> 结构</li></ul>
+<p><code>getAnchoredCompactPrompt()</code> 还额外引入 anchored summary 模板，要求保留:</p>
+<ul><li>Goal</li><li>Constraints &amp; Preferences</li><li>Progress</li><li>Key Decisions</li><li>Next Steps</li><li>Critical Context</li><li>Relevant Files</li></ul>
+<h2 id="5-agent-prompt-层">5. Agent Prompt 层<a class="anchor" href="#5-agent-prompt-层" aria-label="锚点">#</a></h2>
+<h3 id="agent-tool-prompt">Agent tool prompt<a class="anchor" href="#agent-tool-prompt" aria-label="锚点">#</a></h3>
+<ul><li>入口文件: <code>backend/src/agents/prompt.js</code></li></ul>
+<p>这一层负责告诉主代理:</p>
+<ul><li>什么时候该委托</li><li>什么时候不该委托</li><li>怎么给子代理明确 ownership</li><li>已有 agent 有上下文时应继续复用，而不是重复 spawn</li></ul>
+<h3 id="内建代理">内建代理<a class="anchor" href="#内建代理" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/src/agents/built-in/generalPurposeAgent.js</code><ul><li>默认执行代理</li><li>强调“完整交付，但不 gold-plate”</li><li>强调 smallest sufficient scope、focused verification、least privilege</li></ul></li><li><code>backend/src/agents/built-in/exploreAgent.js</code><ul><li>严格只读</li><li>禁止创建 / 修改 / 删除文件</li><li>搜索优先走 <code>Glob / Grep / Read</code></li></ul></li><li><code>backend/src/agents/built-in/planAgent.js</code><ul><li>严格只读</li><li>输出 goal、impacted files、implementation steps、risks、validation strategy</li></ul></li><li><code>backend/src/agents/built-in/verificationAgent.js</code><ul><li>目标不是“证明它能跑”，而是“尽量把它打坏”</li><li>输出必须以 <code>VERDICT: PASS|FAIL|PARTIAL</code> 结束</li></ul></li></ul>
+<h3 id="运行时角色模板">运行时角色模板<a class="anchor" href="#运行时角色模板" aria-label="锚点">#</a></h3>
+<ul><li>入口文件: <code>backend/src/services/cliAgentRunner.js</code></li></ul>
+<p>这里除了 built-in agent，还维护了运行时角色模板，例如:</p>
+<ul><li><code>explore</code></li><li><code>planner</code></li><li><code>coder</code></li><li><code>implement</code></li><li><code>verify</code></li><li><code>general-purpose</code></li></ul>
+<p>也就是说，KHY 的“多智能体规则”并不是只写在一处，而是同时下沉到了 agent tool prompt、built-in agent prompt、runtime role prompt 三层。</p>
+<h2 id="6-tool-prompt-层">6. Tool Prompt 层<a class="anchor" href="#6-tool-prompt-层" aria-label="锚点">#</a></h2>
+<p>真正把“文件读写 / 搜索 / 命令执行纪律”钉死的，很多时候不是主 system prompt，而是具体工具 prompt。</p>
+<h3 id="文件工具">文件工具<a class="anchor" href="#文件工具" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/src/tools/FileReadTool/index.js</code><ul><li>绝对路径</li><li>先做最小必要读取</li><li>大文件优先 offset / limit 或先 Grep</li><li>支持 <code>.ipynb</code>、图片 OCR / base64</li></ul></li><li><code>backend/src/tools/FileEditTool/index.js</code><ul><li>必须先 Read</li><li><code>old_string</code> 必须精确匹配</li><li>倾向一次一个 focused edit</li><li>禁止借修 bug 顺手做无关 cleanup</li></ul></li><li><code>backend/src/tools/FileWriteTool/index.js</code><ul><li>已存在文件必须先 Read 再覆盖</li><li>修改现有文件时优先 <code>Edit</code></li><li>新文件必须写完整 UTF-8 内容</li><li>未明确要求时禁止主动创建文档文件</li></ul></li></ul>
+<h3 id="搜索工具">搜索工具<a class="anchor" href="#搜索工具" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/src/tools/GlobTool/index.js</code><ul><li>只负责按路径 / 文件名模式找文件</li><li>明确禁止把 Glob 当内容搜索</li></ul></li><li><code>backend/src/tools/GrepTool/index.js</code><ul><li>明确要求搜索任务走 Grep，而不是 shell <code>grep/rg</code></li><li>用于找函数、类、路由、标识符、配置键</li><li>结果过多时要缩小 path / glob / type</li></ul></li></ul>
+<h3 id="命令工具">命令工具<a class="anchor" href="#命令工具" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/src/tools/shellCommand.js</code><ul><li>有专用工具时，禁止把搜索 / 读文件 / 改文件绕回 shell</li><li>强调 destructive check、stderr / exit code 诊断、git safety</li><li>自带 build error summary、危险 git 命令警告、commit message 注入防护</li></ul></li></ul>
+<h2 id="7-输出后处理">7. 输出后处理<a class="anchor" href="#7-输出后处理" aria-label="锚点">#</a></h2>
+<ul><li>入口函数: <code>postProcessOutput()</code></li><li>位置: <code>backend/src/services/khyUpgradeRuntime.js</code></li></ul>
+<p>这层不再增加 token，而是直接在本地收口输出:</p>
+<ul><li>去掉开头 filler</li><li>把嵌套 bullet 压平</li><li>清理泄漏的 <code>&lt;think&gt;</code> 或内部推理文本</li></ul>
+<p>所以有些“回复格式规则”并不只靠 prompt 约束，而是 prompt + runtime 后处理双保险。</p>
+<h2 id="8-测试与保障">8. 测试与保障<a class="anchor" href="#8-测试与保障" aria-label="锚点">#</a></h2>
+<ul><li>测试文件: <code>backend/tests/promptLearningRules.test.js</code></li></ul>
+<p>这组测试已经把以下内容固化成可回归检查:</p>
+<ul><li>execution discipline</li><li>scope minimization</li><li>planning / verification</li><li>task tracking</li><li>error handling</li><li>multi-agent collaboration</li><li>session memory / compaction</li><li>security boundaries</li><li>file operations</li><li>command execution</li><li>search and exploration</li><li>response formatting</li><li>agent / tool prompt 联动</li></ul>
+<h2 id="结论-2">结论<a class="anchor" href="#结论-2" aria-label="锚点">#</a></h2>
+<p>如果只问一句话，当前 <code>khy</code> 的答案是:</p>
+<pre><code class="language-text">“这 11 节已经不只是聊天里的原则，而是被拆进了主 system prompt、agent prompt、tool prompt、runtime fallback、compact prompt 和测试里。” </code></pre>
+<p>所以它现在更像“prompt architecture”，而不是“单条超长系统提示词”。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-OTHER-002] _cbssp_分阶段防闪退提示词.html"><div class="dir">← 上一篇</div><div class="ttl">Khyos CB-SSP 重塑 · 分阶段防闪退提示词</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-OTHER-004] 特性访问-提示词胶囊-2026-06-01.html"><div class="dir">下一篇 →</div><div class="ttl">Feature Access / Proxy Boundary 系统提示词 Capsule</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-OTHER-003] khy-系统提示词结构图.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

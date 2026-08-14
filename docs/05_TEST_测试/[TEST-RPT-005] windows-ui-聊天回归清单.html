@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows UI Chat 回归检查清单 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>05_TEST_测试<span class="sep">›</span>Windows UI Chat 回归检查清单</div>
+      <header class="hero reveal"><h1>Windows UI Chat 回归检查清单</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#windows-ui-chat-回归检查清单">Windows UI Chat 回归检查清单</a></li><li class="lvl-2"><a href="#适用范围">适用范围</a></li><li class="lvl-2"><a href="#前置条件">前置条件</a></li><li class="lvl-2"><a href="#测试用例">测试用例</a></li><li class="lvl-3"><a href="#tc-01-arrowup-arrowdown-历史泄漏防护">TC-01 `ArrowUp` / `ArrowDown` 历史泄漏防护</a></li><li class="lvl-3"><a href="#tc-02-输入法回车安全-中文-ime">TC-02 输入法回车安全（中文 IME）</a></li><li class="lvl-3"><a href="#tc-03-思考窗流式输出">TC-03 思考窗流式输出</a></li><li class="lvl-3"><a href="#tc-04-停止生成行为">TC-04 停止生成行为</a></li><li class="lvl-3"><a href="#tc-05-长文本换行与溢出">TC-05 长文本换行与溢出</a></li><li class="lvl-3"><a href="#tc-06-windows-缩放下头部与导航稳定性">TC-06 Windows 缩放下头部与导航稳定性</a></li><li class="lvl-2"><a href="#通过标准">通过标准</a></li><li class="lvl-2"><a href="#失败记录模板">失败记录模板</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: TEST-RPT-005 | 阶段: 测试 | 原路径: docs/指南/windows-ui-聊天回归清单.md --&gt;</p>
+<h1 id="windows-ui-chat-回归检查清单">Windows UI Chat 回归检查清单<a class="anchor" href="#windows-ui-chat-回归检查清单" aria-label="锚点">#</a></h1>
+<h2 id="适用范围">适用范围<a class="anchor" href="#适用范围" aria-label="锚点">#</a></h2>
+<p>本清单用于发版前验证 Windows 下 AI 对话页面兼容性，重点覆盖：</p>
+<ul><li>思考窗与流式输出行为</li><li>键盘输入安全（<code>ArrowUp</code> 历史泄漏 / IME 回车处理）</li><li>高 DPI 缩放与窄屏下的布局稳定性</li></ul>
+<p>建议测试环境：</p>
+<ul><li>Windows 10/11</li><li>Chrome、Edge</li><li>显示缩放：100%、125%、150%</li></ul>
+<h2 id="前置条件">前置条件<a class="anchor" href="#前置条件" aria-label="锚点">#</a></h2>
+<ol><li>前后端服务均已启动且可访问。</li><li>可正常登录并进入 <code>AI 对话</code> 页面。</li><li>至少有一个可用 AI 通道（流式或普通回退通道）。</li></ol>
+<h2 id="测试用例">测试用例<a class="anchor" href="#测试用例" aria-label="锚点">#</a></h2>
+<h3 id="tc-01-arrowup-arrowdown-历史泄漏防护">TC-01 <code>ArrowUp</code> / <code>ArrowDown</code> 历史泄漏防护<a class="anchor" href="#tc-01-arrowup-arrowdown-历史泄漏防护" aria-label="锚点">#</a></h3>
+<p>步骤：</p>
+<ol><li>打开 <code>AI 对话</code> 页面。</li><li>保持输入框为空。</li><li>连续按 <code>ArrowUp</code>。</li><li>连续按 <code>ArrowDown</code>。</li></ol>
+<p>预期：</p>
+<ul><li>输入框保持为空。</li><li>不会回填历史聊天内容。</li><li>不会出现重复草稿或异常回显。</li></ul>
+<h3 id="tc-02-输入法回车安全-中文-ime">TC-02 输入法回车安全（中文 IME）<a class="anchor" href="#tc-02-输入法回车安全-中文-ime" aria-label="锚点">#</a></h3>
+<p>步骤：</p>
+<ol><li>切换中文输入法。</li><li>在输入框中开始组词（候选框可见）。</li><li>按 <code>Enter</code> 确认组词。</li><li>组词结束后再次按 <code>Enter</code>。</li></ol>
+<p>预期：</p>
+<ul><li>组词阶段：仅上屏，不发送消息。</li><li>组词结束后：<code>Enter</code> 发送消息。</li><li><code>Shift+Enter</code> 插入换行。</li></ul>
+<h3 id="tc-03-思考窗流式输出">TC-03 思考窗流式输出<a class="anchor" href="#tc-03-思考窗流式输出" aria-label="锚点">#</a></h3>
+<p>步骤：</p>
+<ol><li>发送中等或较长问题。</li><li>观察生成过程中的思考窗与回答区。</li></ol>
+<p>预期：</p>
+<ul><li>思考窗出现状态时间线（含状态更新/完成信息）。</li><li>助手回答区逐步增长（流式体验）。</li><li>最终状态为完成。</li></ul>
+<h3 id="tc-04-停止生成行为">TC-04 停止生成行为<a class="anchor" href="#tc-04-停止生成行为" aria-label="锚点">#</a></h3>
+<p>步骤：</p>
+<ol><li>发送较长问题。</li><li>在输出仍进行中点击 <code>停止生成</code>。</li></ol>
+<p>预期：</p>
+<ul><li>输出快速停止。</li><li>思考窗记录“停止”动作。</li><li>手动停止后不会静默回退并继续生成。</li><li>若停止前尚无输出，助手消息显示 <code>已停止生成。</code>。</li></ul>
+<h3 id="tc-05-长文本换行与溢出">TC-05 长文本换行与溢出<a class="anchor" href="#tc-05-长文本换行与溢出" aria-label="锚点">#</a></h3>
+<p>步骤：</p>
+<ol><li>发送包含长路径、长 URL、长日志或无空格长串的文本。</li></ol>
+<p>预期：</p>
+<ul><li>聊天气泡正确换行。</li><li>页面无横向撑爆或布局错位。</li></ul>
+<h3 id="tc-06-windows-缩放下头部与导航稳定性">TC-06 Windows 缩放下头部与导航稳定性<a class="anchor" href="#tc-06-windows-缩放下头部与导航稳定性" aria-label="锚点">#</a></h3>
+<p>步骤：</p>
+<ol><li>在 125%、150% 显示缩放下打开页面。</li><li>缩窄浏览器窗口（接近平板/移动宽度）。</li><li>在总览页和聊天页之间切换。</li></ol>
+<p>预期：</p>
+<ul><li>头部操作区与菜单可正常使用。</li><li>品牌区、菜单区、操作按钮无重叠。</li><li>页面内边距与可读性保持正常。</li></ul>
+<h2 id="通过标准">通过标准<a class="anchor" href="#通过标准" aria-label="锚点">#</a></h2>
+<p>满足以下条件方可放行发版：</p>
+<ul><li>6/6 用例通过</li><li>0 个阻塞级问题</li><li>0 个输入安全回归</li></ul>
+<h2 id="失败记录模板">失败记录模板<a class="anchor" href="#失败记录模板" aria-label="锚点">#</a></h2>
+<p>若任一用例失败，请记录：</p>
+<ul><li>Windows 版本</li><li>浏览器及版本</li><li>显示缩放比例</li><li>复现步骤与截图/录屏</li><li>控制台报错（如有）</li></ul>
+<p>执行留档建议使用：</p>
+<ul><li><code>docs/05_TEST_测试/[TEST-RPT-003] windows-ui-聊天回归报告模板.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/05_TEST_测试/[TEST-RPT-004] windows-ui-聊天回归报告示例-2026-05-20.html"><div class="dir">← 上一篇</div><div class="ttl">Windows UI Chat 回归执行记录（示例）</div></a><a class="next" href="../../docs/05_TEST_测试/[TEST-RPT-006] khy-os-交付验证-2026-05-09.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 交付验证（2026-05-09）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/05_TEST_测试/[TEST-RPT-005] windows-ui-聊天回归清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

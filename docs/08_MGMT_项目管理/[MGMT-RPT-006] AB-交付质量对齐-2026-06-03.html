@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY vs Claude Code: AB 全面对齐报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY vs Claude Code: AB 全面对齐报告</div>
+      <header class="hero reveal"><h1>KHY vs Claude Code: AB 全面对齐报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-vs-claude-code-ab-全面对齐报告">KHY vs Claude Code: AB 全面对齐报告</a></li><li class="lvl-2"><a href="#1-测试总览">1. 测试总览</a></li><li class="lvl-1"><a href="#第一阶段-ui-互动感对齐">第一阶段: UI 互动感对齐</a></li><li class="lvl-2"><a href="#2-claude-code-输出时间线参考">2. Claude Code 输出时间线参考</a></li><li class="lvl-2"><a href="#3-20-项功能矩阵-f1-f20">3. 20 项功能矩阵 (F1-F20)</a></li><li class="lvl-2"><a href="#4-v1-三轮时间线对照-51-tests">4. v1 三轮时间线对照 (51 tests)</a></li><li class="lvl-3"><a href="#r1-小任务-修复-readme-md-的错别字">R1 — 小任务: &quot;修复 README.md 的错别字&quot;</a></li><li class="lvl-3"><a href="#r2-中任务-为登录表单添加输入验证">R2 — 中任务: &quot;为登录表单添加输入验证&quot;</a></li><li class="lvl-3"><a href="#r3-大任务-重构-auth-模块-测试-文档">R3 — 大任务: &quot;重构 auth 模块 + 测试 + 文档&quot;</a></li><li class="lvl-2"><a href="#5-v2-精确时间线对照-62-tests">5. v2 精确时间线对照 (62 tests)</a></li><li class="lvl-3"><a href="#cc-1-cc-34-逐帧验证">CC-1 ~ CC-34: 逐帧验证</a></li><li class="lvl-3"><a href="#gap-1-gap-8-差距检测-已全部修复">GAP-1 ~ GAP-8: 差距检测 (已全部修复)</a></li><li class="lvl-1"><a href="#第二阶段-交付质量对齐">第二阶段: 交付质量对齐</a></li><li class="lvl-2"><a href="#6-测试概述">6. 测试概述</a></li><li class="lvl-3"><a href="#三轮任务定义">三轮任务定义</a></li><li class="lvl-2"><a href="#7-r1-表格绘制">7. R1: 表格绘制</a></li><li class="lvl-3"><a href="#7-1-管线剖析">7.1 管线剖析</a></li><li class="lvl-3"><a href="#7-2-khy-vs-cc-对照">7.2 KHY vs CC 对照</a></li><li class="lvl-3"><a href="#7-3-测试覆盖-12-tests">7.3 测试覆盖 (12 tests)</a></li><li class="lvl-2"><a href="#8-r2-网络搜索汇总">8. R2: 网络搜索汇总</a></li><li class="lvl-3"><a href="#8-1-管线剖析">8.1 管线剖析</a></li><li class="lvl-3"><a href="#8-2-khy-vs-cc-对照">8.2 KHY vs CC 对照</a></li><li class="lvl-3"><a href="#8-3-cw-排除安全性分析">8.3 CW 排除安全性分析</a></li><li class="lvl-3"><a href="#8-4-测试覆盖-10-tests">8.4 测试覆盖 (10 tests)</a></li><li class="lvl-2"><a href="#9-r3-创建简单网页">9. R3: 创建简单网页</a></li><li class="lvl-3"><a href="#9-1-管线剖析">9.1 管线剖析</a></li><li class="lvl-3"><a href="#9-2-khy-vs-cc-对照">9.2 KHY vs CC 对照</a></li><li class="lvl-3"><a href="#9-3-安全性审计结果">9.3 安全性审计结果</a></li><li class="lvl-3"><a href="#9-4-测试覆盖-12-tests">9.4 测试覆盖 (12 tests)</a></li><li class="lvl-1"><a href="#修复记录与总结">修复记录与总结</a></li><li class="lvl-2"><a href="#10-修复记录">10. 修复记录</a></li><li class="lvl-3"><a href="#10-1-第一阶段修复-4-项-repl-js">10.1 第一阶段修复 (4 项, repl.js)</a></li><li class="lvl-3"><a href="#10-2-第二阶段修复-1-项-formatters-js">10.2 第二阶段修复 (1 项, formatters.js)</a></li><li class="lvl-3"><a href="#10-3-确认无需修复的关注点">10.3 确认无需修复的关注点</a></li><li class="lvl-2"><a href="#11-尚存真实差距-cc-能做但-khy-缺失或不足">11. 尚存真实差距 (CC 能做但 KHY 缺失或不足)</a></li><li class="lvl-3"><a href="#11-1-diff-内联渲染-有实现但有冗余">11.1 Diff 内联渲染: 有实现但有冗余</a></li><li class="lvl-3"><a href="#11-2-交付一体化-tooluseloop-vs-queryengine-路径割裂">11.2 交付一体化: toolUseLoop vs QueryEngine 路径割裂</a></li><li class="lvl-3"><a href="#11-3-任务规划-被动提取-vs-主动编排">11.3 任务规划: 被动提取 vs 主动编排</a></li><li class="lvl-3"><a href="#11-4-执行简报-有面板无内容">11.4 执行简报: 有面板无内容</a></li><li class="lvl-2"><a href="#12-khy-独有优势-cc-不具备">12. KHY 独有优势 (CC 不具备)</a></li><li class="lvl-2"><a href="#13-全量测试矩阵">13. 全量测试矩阵</a></li><li class="lvl-3"><a href="#三套-ab-测试总览">三套 AB 测试总览</a></li><li class="lvl-3"><a href="#覆盖维度">覆盖维度</a></li><li class="lvl-2"><a href="#14-结论">14. 结论</a></li><li class="lvl-3"><a href="#已对齐">已对齐</a></li><li class="lvl-3"><a href="#尚存差距">尚存差距</a></li><li class="lvl-3"><a href="#下一步">下一步</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-006 | 阶段: 项目管理 | 原路径: docs/报告/AB-交付质量对齐-2026-06-03.md --&gt;</p>
+<h1 id="khy-vs-claude-code-ab-全面对齐报告">KHY vs Claude Code: AB 全面对齐报告<a class="anchor" href="#khy-vs-claude-code-ab-全面对齐报告" aria-label="锚点">#</a></h1>
+<p><strong>Date:</strong> 2026-06-03<br><strong>Scope:</strong> KHY vs Claude Code, UI 互动感 + 任务交付质量全链路对照<br><strong>Method:</strong> 代码审计 + 单元测试 (147 tests, 3 test suites)<br><strong>Result:</strong> 147 tests 全通过, 5 项已修复, 4 项结构性差距待修复 (P0-P3)</p>
+<hr>
+<h2 id="1-测试总览">1. 测试总览<a class="anchor" href="#1-测试总览" aria-label="锚点">#</a></h2>
+<p>本次 AB 对齐分为 <strong>两大阶段</strong>:</p>
+<table><thead><tr><th>阶段</th><th>关注层面</th><th>测试套件</th><th>测试数</th></tr></thead><tbody><tr><td>第一阶段: UI 互动感</td><td>终端输出时间线 + 20 项 CC 功能覆盖</td><td>v1 + v2</td><td>113</td></tr><tr><td>第二阶段: 交付质量</td><td>三类小任务端到端交付管线</td><td>v3</td><td>34</td></tr><tr><td><strong>合计</strong></td><td></td><td></td><td><strong>147</strong></td></tr></tbody></table>
+<hr>
+<h1 id="第一阶段-ui-互动感对齐">第一阶段: UI 互动感对齐<a class="anchor" href="#第一阶段-ui-互动感对齐" aria-label="锚点">#</a></h1>
+<h2 id="2-claude-code-输出时间线参考">2. Claude Code 输出时间线参考<a class="anchor" href="#2-claude-code-输出时间线参考" aria-label="锚点">#</a></h2>
+<p>KHY 需要完整复现 Claude Code 的终端输出序列:</p>
+<pre><code>╔══════════════════════════════════════════════════════════════╗
+║  Claude Code output timeline (reference)                    ║
+║                                                             ║
+║  1. User message (dark bg)                                  ║
+║  2. Spinner &quot;Thinking...&quot; (elapsed + tokens + stall color)  ║
+║  3. [thinking indicator if extended thinking]               ║
+║  4. Tool call start: ⏺ Read(file.js)                       ║
+║     - intent line above: &quot;Reading file contents&quot;            ║
+║  5. Tool call result: ● Read(file.js) 0.1s                 ║
+║     ⎿ 245 lines                                            ║
+║  6. [repeat 4-5 for each tool]                              ║
+║  7. Streamed markdown response                              ║
+║  8. Cost/model line: ╰─ claude-3.5 · 2.3s · ↑12k ↓1.5k    ║
+║  9. Dim separator ─                                         ║
+║ 10. Prompt &gt;                                                ║
+║                                                             ║
+║  Multi-tool: [2/5] prefix from 2nd call onward              ║
+║  Agent: ToolUseTracker tree → collapse to &quot;Done&quot; summary    ║
+║  Bash: command preview box (bg color block)                 ║
+║  Edit: diff preview (+/- lines)                             ║
+║  Interrupt: dim &quot;⏸ Interrupted&quot;                             ║
+║  Compaction: &quot;✻ Conversation compacted&quot;                     ║
+║  Exit: session recap (tokens, cost, time, top tools)        ║
+╚══════════════════════════════════════════════════════════════╝</code></pre>
+<h2 id="3-20-项功能矩阵-f1-f20">3. 20 项功能矩阵 (F1-F20)<a class="anchor" href="#3-20-项功能矩阵-f1-f20" aria-label="锚点">#</a></h2>
+<p>CC 的 20 项核心交互功能, KHY 逐项对照:</p>
+<table><thead><tr><th>ID</th><th>功能</th><th>CC 实现</th><th>KHY 实现</th><th>对齐</th></tr></thead><tbody><tr><td>F1</td><td>Spinner + elapsed + tokens + stall</td><td>Ink spinner</td><td><code>DynamicSpinner</code> (弹跳 + 3s 黄/8s 红停滞检测)</td><td>✅</td></tr><tr><td>F2</td><td>Tool call start (icon+name+params+intent)</td><td><code>⏺ Read(file.js)</code> + intent</td><td><code>printToolCallStart</code> (6 族图标 + intent 描述)</td><td>✅</td></tr><tr><td>F3</td><td>Tool call result (overwrite+dot+elapsed)</td><td>原地覆写 start 行</td><td><code>printToolCallResult</code> (绿/红点 + 耗时)</td><td>✅</td></tr><tr><td>F4</td><td>Bash 命令预览框</td><td>bg color block</td><td><code>printToolCallStart('Bash')</code> 背景色 <code>$ cmd</code> 框</td><td>✅</td></tr><tr><td>F5</td><td>文件操作统计 (+N -M lines)</td><td>Added/removed stats</td><td><code>printFileOperation</code> (Added N line, removed M line)</td><td>✅</td></tr><tr><td>F6</td><td>Step 计数器 [N/M]</td><td>第 2 个工具起显示</td><td><code>setStepTotal</code> + <code>_stepCounter</code> (第 2 个起显示)</td><td>✅</td></tr><tr><td>F7</td><td>任务计划跟踪 + 折叠</td><td>checklist</td><td><code>TaskPlanTracker</code> (&gt;3 完成折叠为摘要行)</td><td>✅</td></tr><tr><td>F8</td><td>完成面板 (files+cmds+summary)</td><td>框线面板</td><td><code>printCompletionPanel</code> (改动/新建/命令/摘要/统计)</td><td>✅</td></tr><tr><td>F9</td><td>执行简报面板</td><td>框线面板</td><td><code>printExecutionBrief</code> (需求/分析/计划/文件)</td><td>✅</td></tr><tr><td>F10</td><td>费用/Token 透明度</td><td><code>╰─ model · time · ↑in ↓out · $cost</code></td><td><code>printTurnCost</code> (模型/耗时/token/费用/适配器)</td><td>✅</td></tr><tr><td>F11</td><td>级联透明度</td><td>多适配器日志</td><td><code>printCascadeSteps</code> (16 适配器级联可视化)</td><td>✅</td></tr><tr><td>F12</td><td>思考指示器 + 动词轮换</td><td>Thinking...</td><td>8+ 动词轮换 (中/英: 思考中/分析中/Thinking/Analyzing...)</td><td>✅</td></tr><tr><td>F13</td><td>Markdown 渲染 (code+tables+headers)</td><td>Ink markdown</td><td><code>renderMarkdownLite</code> (10 语言高亮 + box-drawing 表格)</td><td>✅</td></tr><tr><td>F14</td><td>用户消息深色背景</td><td>dark bg block</td><td><code>renderUserMessage</code> (ANSI 背景色块)</td><td>✅</td></tr><tr><td>F15</td><td>Agent/Subagent 树 (ToolUseTracker)</td><td>tree display + collapse</td><td><code>ToolUseTracker</code> (header → tool 列表 → Done 摘要)</td><td>✅</td></tr><tr><td>F16</td><td>可展开输出 (ctrl+o)</td><td>expandable</td><td><code>ExpandableSection</code> + <code>printCollapseCounter</code> (ctrl+o 提示)</td><td>✅</td></tr><tr><td>F17</td><td>权限对话框</td><td>permission dialog</td><td><code>permissionDialog</code> 模块</td><td>✅</td></tr><tr><td>F18</td><td>上下文压缩通知</td><td>&quot;✻ Conversation compacted&quot;</td><td><code>printCompactionResult</code> + <code>printCompactingNotice</code></td><td>✅</td></tr><tr><td>F19</td><td>会话回顾 (退出时)</td><td>session recap</td><td><code>printSessionRecap</code> (token/cost/time/top tools)</td><td>✅</td></tr><tr><td>F20</td><td>工具去重 (重复调用折叠)</td><td>15s dedup window</td><td><code>printToolCallStart</code> 内置 15s dedup + 合并提示</td><td>✅</td></tr></tbody></table>
+<p><strong>结果: 20/20 全部覆盖。</strong></p>
+<h2 id="4-v1-三轮时间线对照-51-tests">4. v1 三轮时间线对照 (51 tests)<a class="anchor" href="#4-v1-三轮时间线对照-51-tests" aria-label="锚点">#</a></h2>
+<h3 id="r1-小任务-修复-readme-md-的错别字">R1 — 小任务: &quot;修复 README.md 的错别字&quot;<a class="anchor" href="#r1-小任务-修复-readme-md-的错别字" aria-label="锚点">#</a></h3>
+<p>CC 时间线: Read → Edit → Done (3 tool calls, &lt;10s)</p>
+<table><thead><tr><th>测试</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>F2</td><td>tool start 显示 icon + name + file path</td><td>✅</td></tr><tr><td>F3</td><td>tool result 显示结果 + 耗时</td><td>✅</td></tr><tr><td>F2b</td><td>intent 描述 (读取意图)</td><td>✅</td></tr><tr><td>F5</td><td>文件操作 +1/-1 统计</td><td>✅</td></tr><tr><td>F6</td><td>首次调用不显示 step counter</td><td>✅</td></tr><tr><td>F10</td><td>printTurnCost 函数存在</td><td>✅</td></tr><tr><td>F11</td><td>printCascadeSteps 函数存在</td><td>✅</td></tr><tr><td>F14</td><td>用户消息渲染</td><td>✅</td></tr></tbody></table>
+<h3 id="r2-中任务-为登录表单添加输入验证">R2 — 中任务: &quot;为登录表单添加输入验证&quot;<a class="anchor" href="#r2-中任务-为登录表单添加输入验证" aria-label="锚点">#</a></h3>
+<p>CC 时间线: Read×3 → Grep → Edit×2 → Bash(test) → Done (7 tools)</p>
+<table><thead><tr><th>测试</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>F6</td><td>[2/7] step counter 从第 2 个显示</td><td>✅</td></tr><tr><td>F4</td><td>Bash 命令预览框 <code>$ npm test</code></td><td>✅</td></tr><tr><td>F7</td><td>TaskPlanTracker 4 任务 checklist</td><td>✅</td></tr><tr><td>F7b</td><td>任务 start → complete 状态更新</td><td>✅</td></tr><tr><td>F9</td><td>执行简报面板 (需求/分析/文件)</td><td>✅</td></tr><tr><td>F2c</td><td>Grep 显示 pattern 参数</td><td>✅</td></tr><tr><td>F20</td><td>重复调用去重/合并</td><td>✅</td></tr><tr><td>F13</td><td>Markdown 代码块渲染</td><td>✅</td></tr><tr><td>F18</td><td>上下文压缩通知函数存在</td><td>✅</td></tr></tbody></table>
+<h3 id="r3-大任务-重构-auth-模块-测试-文档">R3 — 大任务: &quot;重构 auth 模块 + 测试 + 文档&quot;<a class="anchor" href="#r3-大任务-重构-auth-模块-测试-文档" aria-label="锚点">#</a></h3>
+<p>CC 时间线: 15+ tool calls, subagent, multi-file, &gt;60s</p>
+<table><thead><tr><th>测试</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>F15</td><td>ToolUseTracker 树形显示</td><td>✅</td></tr><tr><td>F15b</td><td>ToolUseTracker 完成 → Done 摘要</td><td>✅</td></tr><tr><td>F7c</td><td>&gt;3 完成任务折叠为摘要行</td><td>✅</td></tr><tr><td>F8</td><td>完成面板: 文件改动/命令/摘要/统计</td><td>✅</td></tr><tr><td>F8b</td><td>完成面板: string summary 兼容 (回归)</td><td>✅</td></tr><tr><td>F15c</td><td>renderAgentProgress 多 Agent 树</td><td>✅</td></tr><tr><td>F16</td><td>ExpandableSection 存储 + toggle</td><td>✅</td></tr><tr><td>F19</td><td>printSessionRecap 函数存在</td><td>✅</td></tr><tr><td>F1</td><td>DynamicSpinner 全部方法 (start/stop/setPhase/setTokens/setEffort/resetTimer)</td><td>✅</td></tr><tr><td>F12</td><td>8+ 思考动词轮换</td><td>✅</td></tr><tr><td>F17</td><td>permissionDialog 模块加载</td><td>✅</td></tr><tr><td>F16b</td><td>printCollapseCounter + ctrl+o 提示</td><td>✅</td></tr><tr><td>F15d</td><td>renderAgentDone 摘要行 (24 tool uses · 60.9k tokens · 2m 15s)</td><td>✅</td></tr><tr><td>F5b</td><td>printInlineDiff 彩色 +/- 行</td><td>✅</td></tr></tbody></table>
+<h2 id="5-v2-精确时间线对照-62-tests">5. v2 精确时间线对照 (62 tests)<a class="anchor" href="#5-v2-精确时间线对照-62-tests" aria-label="锚点">#</a></h2>
+<h3 id="cc-1-cc-34-逐帧验证">CC-1 ~ CC-34: 逐帧验证<a class="anchor" href="#cc-1-cc-34-逐帧验证" aria-label="锚点">#</a></h3>
+<p>v2 套件对每一帧输出做精确检查:</p>
+<p><strong>小任务 (CC-1 ~ CC-10):</strong></p>
+<table><thead><tr><th>ID</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>CC-1</td><td>用户消息暗色背景 + 文字内容</td><td>✅</td></tr><tr><td>CC-2</td><td>Spinner elapsed + tokens + stall (3s 黄/8s 红)</td><td>✅</td></tr><tr><td>CC-3</td><td>intent 行 (工具调用前)</td><td>✅</td></tr><tr><td>CC-4</td><td>tool start icon + display name + params</td><td>✅</td></tr><tr><td>CC-5</td><td>tool result detail + elapsed (0.1s)</td><td>✅</td></tr><tr><td>CC-6</td><td>Edit 工具显示 file path + diff info</td><td>✅</td></tr><tr><td>CC-7</td><td>文件操作 Added 1 line, removed 1 line</td><td>✅</td></tr><tr><td>CC-8</td><td>printTurnCost + printCascadeSteps 存在</td><td>✅</td></tr><tr><td>CC-9</td><td>8+ 思考动词</td><td>✅</td></tr><tr><td>CC-10</td><td>首次调用不显示 [1]</td><td>✅</td></tr></tbody></table>
+<p><strong>中任务 (CC-11 ~ CC-21):</strong></p>
+<table><thead><tr><th>ID</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>CC-11</td><td>[2/5] step counter (with setStepTotal)</td><td>✅</td></tr><tr><td>CC-12</td><td>[2] auto-increment (without total)</td><td>✅</td></tr><tr><td>CC-13</td><td>Bash 预览框 <code>$ npm test</code> + <code>$</code> 前缀</td><td>✅</td></tr><tr><td>CC-14</td><td>Write 工具显示 file + line count</td><td>✅</td></tr><tr><td>CC-15</td><td>TaskPlanTracker 5 任务 + 待处理状态</td><td>✅</td></tr><tr><td>CC-16</td><td>任务 start → complete 生命周期</td><td>✅</td></tr><tr><td>CC-17</td><td>执行简报: 需求/分析/步骤/文件</td><td>✅</td></tr><tr><td>CC-18</td><td>Markdown 代码块 (含函数高亮)</td><td>✅</td></tr><tr><td>CC-19</td><td>工具去重 (15s window)</td><td>✅</td></tr><tr><td>CC-20</td><td>折叠计数器 + ctrl+o 提示</td><td>✅</td></tr><tr><td>CC-21</td><td>压缩通知函数</td><td>✅</td></tr></tbody></table>
+<p><strong>大任务 (CC-22 ~ CC-34):</strong></p>
+<table><thead><tr><th>ID</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>CC-22</td><td>ToolUseTracker header + tool 计数</td><td>✅</td></tr><tr><td>CC-23</td><td>ToolUseTracker finish → &quot;Done&quot; + 2 tool uses + 12.5k tokens + ctrl+o</td><td>✅</td></tr><tr><td>CC-24</td><td>&gt;3 完成折叠 + 进行中/待处理独立列出</td><td>✅</td></tr><tr><td>CC-25</td><td>完成面板全部 section (改动/新建/命令/摘要/统计/耗时)</td><td>✅</td></tr><tr><td>CC-26</td><td>string summary 兼容 (回归保护)</td><td>✅</td></tr><tr><td>CC-27</td><td>Agent 进度树 (completed/running/pending + tokens + detail)</td><td>✅</td></tr><tr><td>CC-28</td><td>Agent Done 摘要 (24 tool uses · 60.9k tokens · 2m 15s)</td><td>✅</td></tr><tr><td>CC-29</td><td>inline diff 彩色渲染 (context/add/remove)</td><td>✅</td></tr><tr><td>CC-30</td><td>ExpandableSection 存储 + toggle + 多段</td><td>✅</td></tr><tr><td>CC-31</td><td>printSessionRecap 存在</td><td>✅</td></tr><tr><td>CC-32</td><td>permissionDialog 模块</td><td>✅</td></tr><tr><td>CC-33</td><td>ProcessTracker 生命周期 (start/complete/fail)</td><td>✅</td></tr><tr><td>CC-34</td><td>压缩通知渲染 (compacted + token count)</td><td>✅</td></tr></tbody></table>
+<h3 id="gap-1-gap-8-差距检测-已全部修复">GAP-1 ~ GAP-8: 差距检测 (已全部修复)<a class="anchor" href="#gap-1-gap-8-差距检测-已全部修复" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>差距</th><th>修复内容</th><th>文件</th></tr></thead><tbody><tr><td>GAP-1</td><td>printTurnCost 在 QE 路径未调用</td><td><code>streamState._qeCost</code> 累积 + done 后调用 <code>printTurnCost</code></td><td><code>repl.js:7228,7249</code></td></tr><tr><td>GAP-2</td><td>工具输出截断无告警</td><td><code>_formatToolResult</code> 末尾追加 <code>[已截断 N 字符]</code></td><td><code>repl.js:2893</code></td></tr><tr><td>GAP-3</td><td>Ctrl+C/Esc 中断信息冗长</td><td>改为简洁 <code>⏸ Interrupted</code></td><td><code>repl.js:2404,9264</code></td></tr><tr><td>GAP-4</td><td>回复结束无分隔线</td><td>finally 块添加 dim <code>─</code> 分隔符</td><td><code>repl.js:9175</code></td></tr><tr><td>GAP-5</td><td>工具族图标需区分</td><td>6 族图标 (bash/read/write/edit/grep/agent) 各不相同</td><td><code>renderTheme.js</code></td></tr><tr><td>GAP-6</td><td>工具显示名本地化</td><td><code>TOOL_DISPLAY_NAMES</code> 中文映射</td><td><code>renderTheme.js</code></td></tr><tr><td>GAP-7</td><td>阶段标签缺工具级粒度</td><td><code>PHASE_LABELS</code> 新增 17 个 <code>tool:*</code> 标签</td><td><code>renderTheme.js</code></td></tr><tr><td>GAP-8</td><td>diff 渲染模块</td><td><code>diffRenderer.js</code> 存在且可加载</td><td>已有</td></tr></tbody></table>
+<hr>
+<h1 id="第二阶段-交付质量对齐">第二阶段: 交付质量对齐<a class="anchor" href="#第二阶段-交付质量对齐" aria-label="锚点">#</a></h1>
+<h2 id="6-测试概述">6. 测试概述<a class="anchor" href="#6-测试概述" aria-label="锚点">#</a></h2>
+<p>第二阶段检查 <strong>实际任务交付能力</strong>: 模型通过 KHY 工具链能否完成真实小任务, 交付物质量是否对齐 Claude Code。</p>
+<h3 id="三轮任务定义">三轮任务定义<a class="anchor" href="#三轮任务定义" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Round</th><th>任务描述</th><th>覆盖管线</th><th>CC 参照</th></tr></thead><tbody><tr><td>R1</td><td>用工具绘制一个表格</td><td>markdownRenderer → formatters → ANSI output</td><td>CC Ink markdown renderer</td></tr><tr><td>R2</td><td>用网络搜索工具搜索新闻汇总</td><td>WebSearchTool → webSearchService → 4 后端级联</td><td>CC web_search (Anthropic native)</td></tr><tr><td>R3</td><td>做一个简单的网页</td><td>FileWriteTool → fs → auto-mkdir → LSP</td><td>CC Write tool</td></tr></tbody></table>
+<hr>
+<h2 id="7-r1-表格绘制">7. R1: 表格绘制<a class="anchor" href="#7-r1-表格绘制" aria-label="锚点">#</a></h2>
+<h3 id="7-1-管线剖析">7.1 管线剖析<a class="anchor" href="#7-1-管线剖析" aria-label="锚点">#</a></h3>
+<pre><code>Model 输出 Markdown 表格
+  → markdownRenderer.renderMarkdownLite()
+    → _renderMarkdownTables()       # 识别 pipe-delimited 表格块
+      → _parseTableData()           # 解析行列, CJK-aware 列宽
+      → _formatTableFromData()      # box-drawing 渲染 + 比例缩放
+      → _renderSideBySideTables()   # 宽终端并排 (&gt;120 cols)
+    → _highlightCodeLine()          # 代码高亮 (如果表格在代码块内)
+  → ANSI 输出 → 终端</code></pre>
+<h3 id="7-2-khy-vs-cc-对照">7.2 KHY vs CC 对照<a class="anchor" href="#7-2-khy-vs-cc-对照" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>能力</th><th>Claude Code (Ink)</th><th>KHY</th><th>对齐</th></tr></thead><tbody><tr><td>Box-drawing 边框</td><td>╭╮╰╯│─</td><td>╭╮╰╯│─┬┴┼├┤</td><td>✅ KHY 更完整 (含交叉符)</td></tr><tr><td>表头高亮</td><td>Bold</td><td>Bold + Cyan (TTY)</td><td>✅</td></tr><tr><td>CJK 列宽</td><td>string-width</td><td>string-width + manual fallback</td><td>✅ KHY 双路径兜底</td></tr><tr><td>比例缩放</td><td>Ink 自动 layout</td><td>proportional shrink (min 3 chars)</td><td>✅</td></tr><tr><td>并排表格</td><td>无</td><td>&gt;120 cols 自动并排 + 统一列宽</td><td>✅ KHY 独有</td></tr><tr><td>单元格内 Markdown</td><td>无</td><td>bold/italic/code 解析</td><td>✅ KHY 独有</td></tr><tr><td>语法高亮</td><td>10 语言</td><td>10 语言 (JS/TS/Py/Bash/JSON/Go/Rust/SQL/CSS/HTML)</td><td>✅</td></tr></tbody></table>
+<h3 id="7-3-测试覆盖-12-tests">7.3 测试覆盖 (12 tests)<a class="anchor" href="#7-3-测试覆盖-12-tests" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>DQ-1.1</td><td>基本 box-drawing 渲染 (╭╰│┬┴┼)</td><td>✅</td></tr><tr><td>DQ-1.2</td><td>表头行分隔 (├┤ separator)</td><td>✅</td></tr><tr><td>DQ-1.3</td><td>单元格内 bold/code 格式保留</td><td>✅</td></tr><tr><td>DQ-2.1</td><td>displayWidth CJK = 2</td><td>✅</td></tr><tr><td>DQ-2.2</td><td>CJK 表格列对齐 (│ 数量一致)</td><td>✅</td></tr><tr><td>DQ-2.3</td><td>truncateToWidth CJK 截断 + 省略号</td><td>✅</td></tr><tr><td>DQ-3.1</td><td>窄终端比例缩放 (60 cols)</td><td>✅</td></tr><tr><td>DQ-3.2</td><td>最小列宽 3 chars (40 cols + 5 列)</td><td>✅</td></tr><tr><td>DQ-4.1</td><td>宽终端并排渲染 (140 cols)</td><td>✅</td></tr><tr><td>GAP-A.1</td><td>displayWidth / truncateToWidth CJK 区间一致</td><td>✅ (修复后)</td></tr><tr><td>GAP-A.2</td><td>emoji 宽度一致性</td><td>✅</td></tr></tbody></table>
+<hr>
+<h2 id="8-r2-网络搜索汇总">8. R2: 网络搜索汇总<a class="anchor" href="#8-r2-网络搜索汇总" aria-label="锚点">#</a></h2>
+<h3 id="8-1-管线剖析">8.1 管线剖析<a class="anchor" href="#8-1-管线剖析" aria-label="锚点">#</a></h3>
+<pre><code>Model 调用 WebSearch(query)
+  → WebSearchTool.execute()
+    → webSearchService.search()
+      → 级联后端:
+        1. Baidu (无需 API key, cheerio 解析)
+        2. Bing China (无需 key, cn.bing.com)
+        3. Kiro MCP (若有 MCP server)
+        4. DuckDuckGo (ddg lite, 无需 key)
+      → _sanitizeProviderText()  # 防注入清洗
+    → 格式化 Markdown 结果 (编号标题 + 摘要 + URL)
+  → Model 收到搜索结果 → 生成汇总</code></pre>
+<h3 id="8-2-khy-vs-cc-对照">8.2 KHY vs CC 对照<a class="anchor" href="#8-2-khy-vs-cc-对照" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>能力</th><th>Claude Code</th><th>KHY</th><th>对齐</th></tr></thead><tbody><tr><td>搜索后端</td><td>Anthropic web_search (单后端)</td><td>4 后端级联 (Baidu→Bing→Kiro→DDG)</td><td>✅ KHY 更强</td></tr><tr><td>需要 API key</td><td>需要 (Anthropic API 内置)</td><td>不需要 (Baidu/Bing/DDG 免费)</td><td>✅ KHY 零配置</td></tr><tr><td>域名过滤</td><td>allowed_domains / blocked_domains</td><td>allowed_domains / blocked_domains</td><td>✅</td></tr><tr><td>防注入清洗</td><td>服务端处理</td><td>_sanitizeProviderText (本地)</td><td>✅</td></tr><tr><td>CW 格式兼容</td><td>web_search 被排除 (native tool)</td><td>WebSearch 大小写不同, 不被排除</td><td>✅</td></tr><tr><td>中国网络可用</td><td>需代理</td><td>Baidu/Bing CN 直连</td><td>✅ KHY 独有</td></tr><tr><td>结果格式</td><td>嵌入模型上下文</td><td>Markdown 编号列表</td><td>✅</td></tr></tbody></table>
+<h3 id="8-3-cw-排除安全性分析">8.3 CW 排除安全性分析<a class="anchor" href="#8-3-cw-排除安全性分析" aria-label="锚点">#</a></h3>
+<p><code>_toolSchemaConverter.anthropicToCW()</code> 默认排除集: <code>new Set(['web_search', 'websearch'])</code></p>
+<ul><li><code>Set.has()</code> 是 <strong>大小写敏感</strong> 的</li><li>KHY 的工具名是 <code>WebSearch</code> (Pascal case)</li><li><code>Set.has('WebSearch')</code> → <code>false</code> → <strong>不被排除</strong></li><li>因此 KHY 的 WebSearch 可以安全转换到 CW 格式 (Kiro adapter)</li></ul>
+<h3 id="8-4-测试覆盖-10-tests">8.4 测试覆盖 (10 tests)<a class="anchor" href="#8-4-测试覆盖-10-tests" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>DQ-5.1</td><td>WebSearchTool 模块加载 + alwaysLoad</td><td>✅</td></tr><tr><td>DQ-5.2</td><td>schema.query required</td><td>✅</td></tr><tr><td>DQ-5.3</td><td>schema 支持 allowed/blocked_domains</td><td>✅</td></tr><tr><td>DQ-6.1</td><td>webSearchService 多后端方法</td><td>✅</td></tr><tr><td>DQ-6.2</td><td>search() 导出函数</td><td>✅</td></tr><tr><td>DQ-7.1</td><td>CW 默认排除 web_search</td><td>✅</td></tr><tr><td>DQ-7.2</td><td>CW 可通过 excludeNames 包含 web_search</td><td>✅</td></tr><tr><td>DQ-7.3</td><td>KHY WebSearch 经 CW 转换后保留</td><td>✅</td></tr><tr><td>DQ-8.1</td><td>_sanitizeProviderText 防注入</td><td>✅</td></tr><tr><td>GAP-B.1</td><td>CW 排除大小写安全</td><td>✅</td></tr></tbody></table>
+<hr>
+<h2 id="9-r3-创建简单网页">9. R3: 创建简单网页<a class="anchor" href="#9-r3-创建简单网页" aria-label="锚点">#</a></h2>
+<h3 id="9-1-管线剖析">9.1 管线剖析<a class="anchor" href="#9-1-管线剖析" aria-label="锚点">#</a></h3>
+<pre><code>Model 调用 Write(file_path, content)
+  → FileWriteTool.validateInput()
+    → validateNotUNCPath()          # Windows UNC 拦截
+    → validateNoPathTraversal()     # ../.. 拦截
+  → FileWriteTool.execute()
+    → 环境变量展开 ($VAR / %VAR%)
+    → ~ 展开 (homedir)
+    → path.resolve(cwd, rawPath)
+    → Read-before-write 检查 (_readTracker)
+    → 自动创建父目录 (mkdirSync recursive)
+    → 文件历史快照 (fileHistoryService)
+    → writeFileSync(path, content, 'utf-8')
+    → LSP 诊断注入 (若 LSP 可用)
+  → 返回 { success, path, bytes, _lspDiagnostics? }</code></pre>
+<h3 id="9-2-khy-vs-cc-对照">9.2 KHY vs CC 对照<a class="anchor" href="#9-2-khy-vs-cc-对照" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>能力</th><th>Claude Code (Write)</th><th>KHY (FileWriteTool)</th><th>对齐</th></tr></thead><tbody><tr><td>Schema</td><td>file_path + content</td><td>file_path + content</td><td>✅ 完全一致</td></tr><tr><td>绝对路径要求</td><td>prompt 指导</td><td>prompt 指导</td><td>✅</td></tr><tr><td>Read-before-write</td><td>已读检查</td><td>_readTracker 检查</td><td>✅</td></tr><tr><td>路径遍历防护</td><td>有</td><td>validateNoPathTraversal</td><td>✅</td></tr><tr><td>UNC 路径防护</td><td>有</td><td>validateNotUNCPath</td><td>✅</td></tr><tr><td>自动建目录</td><td>mkdirSync recursive</td><td>mkdirSync recursive</td><td>✅</td></tr><tr><td>UTF-8 编码</td><td>固定 utf-8</td><td>固定 utf-8</td><td>✅</td></tr><tr><td>字节数返回</td><td>有</td><td>Buffer.byteLength</td><td>✅</td></tr><tr><td>破坏性检测</td><td>isDestructive</td><td>isDestructive (existsSync)</td><td>✅</td></tr><tr><td>LSP 诊断</td><td>Ink 内置</td><td>_lspDiagnostics 注入</td><td>✅</td></tr><tr><td>文件快照/回滚</td><td>无</td><td>fileHistoryService</td><td>✅ KHY 独有</td></tr><tr><td>~ 展开</td><td>有</td><td>有</td><td>✅</td></tr><tr><td>Prompt 指导</td><td>complete + no placeholder</td><td>complete + no scaffold</td><td>✅</td></tr></tbody></table>
+<h3 id="9-3-安全性审计结果">9.3 安全性审计结果<a class="anchor" href="#9-3-安全性审计结果" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>检查项</th><th>状态</th><th>备注</th></tr></thead><tbody><tr><td>路径遍历 <code>../../../etc/passwd</code></td><td>✅ 拦截</td><td>validateNoPathTraversal</td></tr><tr><td>UNC <code>\\server\share</code></td><td>✅ 拦截 (Win)</td><td>validateNotUNCPath</td></tr><tr><td>环境变量注入 <code>$HOME</code></td><td>✅ 安全</td><td>简单替换, 无 shell exec</td></tr><tr><td>~ 展开顺序</td><td>⚠️ 注意</td><td>~ 展开在 path.resolve 之前, 但在 validateInput 之后</td></tr><tr><td>已有文件覆写</td><td>✅ 保护</td><td>read-before-write + fileHistoryService 快照</td></tr></tbody></table>
+<h3 id="9-4-测试覆盖-12-tests">9.4 测试覆盖 (12 tests)<a class="anchor" href="#9-4-测试覆盖-12-tests" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>ID</th><th>检查项</th><th>状态</th></tr></thead><tbody><tr><td>DQ-9.1</td><td>schema: file_path + content required</td><td>✅</td></tr><tr><td>DQ-9.2</td><td>risk = high</td><td>✅</td></tr><tr><td>DQ-9.3</td><td>isDestructive 不存在文件 = false</td><td>✅</td></tr><tr><td>DQ-10.1</td><td>路径遍历拦截</td><td>✅</td></tr><tr><td>DQ-10.2</td><td>UNC 拦截 (Windows)</td><td>✅</td></tr><tr><td>DQ-10.3</td><td>~ 展开为绝对路径</td><td>✅</td></tr><tr><td>DQ-11.1</td><td>HTML 文件实际写盘</td><td>✅</td></tr><tr><td>DQ-11.2</td><td>自动创建嵌套父目录</td><td>✅</td></tr><tr><td>DQ-11.3</td><td>UTF-8 字节数准确</td><td>✅</td></tr><tr><td>DQ-11.4</td><td>未读文件覆写被拒绝</td><td>✅</td></tr><tr><td>DQ-12.1</td><td>prompt 要求完整内容</td><td>✅</td></tr><tr><td>DQ-12.2</td><td>prompt 对齐 CC Write 指导</td><td>✅</td></tr></tbody></table>
+<hr>
+<hr>
+<h1 id="修复记录与总结">修复记录与总结<a class="anchor" href="#修复记录与总结" aria-label="锚点">#</a></h1>
+<h2 id="10-修复记录">10. 修复记录<a class="anchor" href="#10-修复记录" aria-label="锚点">#</a></h2>
+<h3 id="10-1-第一阶段修复-4-项-repl-js">10.1 第一阶段修复 (4 项, repl.js)<a class="anchor" href="#10-1-第一阶段修复-4-项-repl-js" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>问题</th><th>修复</th><th>行号</th></tr></thead><tbody><tr><td>1</td><td>printTurnCost 在 QueryEngine 路径未调用</td><td><code>streamState._qeCost</code> 累积 + done 后调用 <code>printTurnCost</code></td><td><code>repl.js:7228,7249</code></td></tr><tr><td>2</td><td>工具输出截断无告警</td><td><code>_formatToolResult</code> 追加 <code>[已截断 N 字符]</code></td><td><code>repl.js:2893</code></td></tr><tr><td>3</td><td>Ctrl+C/Esc 中断信息冗长</td><td>改为 <code>⏸ Interrupted</code></td><td><code>repl.js:2404,9264</code></td></tr><tr><td>4</td><td>回复结束无分隔线</td><td>finally 块添加 dim <code>─</code></td><td><code>repl.js:9175</code></td></tr></tbody></table>
+<h3 id="10-2-第二阶段修复-1-项-formatters-js">10.2 第二阶段修复 (1 项, formatters.js)<a class="anchor" href="#10-2-第二阶段修复-1-项-formatters-js" aria-label="锚点">#</a></h3>
+<h4 id="gap-a-truncatetowidth-cjk-范围不一致-已修复">GAP-A: <code>truncateToWidth</code> CJK 范围不一致 (已修复)<a class="anchor" href="#gap-a-truncatetowidth-cjk-范围不一致-已修复" aria-label="锚点">#</a></h4>
+<p><strong>文件:</strong> <code>backend/src/cli/formatters.js:279-301</code></p>
+<p><strong>问题:</strong> <code>truncateToWidth</code> 的 CJK 宽字符检测范围与 <code>displayWidth</code> 不一致:</p>
+<table><thead><tr><th>差异点</th><th><code>displayWidth</code></th><th><code>truncateToWidth</code> (修复前)</th></tr></thead><tbody><tr><td>0x2E80-0x303E</td><td>精确: 0x2E80-0x303E</td><td>粗范围: 0x2E80-0x9FFF (包含所有子区间)</td></tr><tr><td>0xA000-0xA4CF (Yi 文字)</td><td>✅ 有</td><td>❌ 缺失</td></tr><tr><td>0x0300-0x036F (combining)</td><td>width = 0</td><td>❌ 未处理 (算 width 1)</td></tr><tr><td>ANSI escape</td><td>N/A (先 stripAnsi)</td><td>❌ 未跳过 (算 width 1)</td></tr></tbody></table>
+<p><strong>修复内容:</strong></p>
+<ol><li>统一 CJK 区间为 13 个精确子区间 (与 <code>displayWidth</code> 一致)</li><li>增加 <code>0xA000-0xA4CF</code> Yi 文字区间</li><li>增加 combining characters (<code>0x0300-0x036F</code>) 零宽处理</li><li>增加 ANSI escape (<code>0x1B</code>) 跳过</li></ol>
+<p><strong>影响范围:</strong> 表格渲染中文截断、工具输出截断、任何通过 <code>truncateToWidth</code> 的 CJK 文本</p>
+<h3 id="10-3-确认无需修复的关注点">10.3 确认无需修复的关注点<a class="anchor" href="#10-3-确认无需修复的关注点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>关注点</th><th>分析结论</th></tr></thead><tbody><tr><td>WebSearch CW 排除</td><td><code>Set.has</code> 大小写敏感, <code>WebSearch</code> ≠ <code>websearch</code>, 无风险</td></tr><tr><td>FileWrite ~ 展开顺序</td><td>~ 展开在 <code>validateInput</code> 之后, 但 <code>path.resolve</code> 会标准化, 安全性不受影响</td></tr><tr><td>FileWrite 环境变量展开</td><td>简单字符串替换, 无 <code>exec</code>/<code>spawn</code>, 不存在命令注入</td></tr></tbody></table>
+<hr>
+<h2 id="11-尚存真实差距-cc-能做但-khy-缺失或不足">11. 尚存真实差距 (CC 能做但 KHY 缺失或不足)<a class="anchor" href="#11-尚存真实差距-cc-能做但-khy-缺失或不足" aria-label="锚点">#</a></h2>
+<p>以下差距不是面板函数缺不缺的问题，而是 <strong>端到端交付体验</strong> 的结构性差距。</p>
+<h3 id="11-1-diff-内联渲染-有实现但有冗余">11.1 Diff 内联渲染: 有实现但有冗余<a class="anchor" href="#11-1-diff-内联渲染-有实现但有冗余" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>对比项</th><th>Claude Code</th><th>KHY</th></tr></thead><tbody><tr><td>Edit 后自动显示 diff</td><td>✅ 内建于 tool result</td><td>✅ <code>maybeRenderWriteDiff</code> → <code>renderStructuredDiff</code> 自动触发</td></tr><tr><td>渲染格式</td><td><code>11 │-old</code> / <code>11 │+new</code> 紧贴工具结果行</td><td>类似但缩进层级不同 (独立段落)</td></tr><tr><td>Word-level diff 高亮</td><td>✅</td><td>✅ <code>wordDiff</code> 字级别着色</td></tr></tbody></table>
+<p><strong>问题:</strong> <code>toolDisplay.js</code> 中的 <code>printInlineDiff</code> (第 569-603 行) 是 <strong>死代码</strong> — 它被定义、导出、测试覆盖，但 <strong>从未在任何生产路径中调用</strong>。实际走的是 <code>diffRenderer.js</code> → <code>renderStructuredDiff</code> 路径。两套 diff 渲染实现并存，增加维护负担。</p>
+<h3 id="11-2-交付一体化-tooluseloop-vs-queryengine-路径割裂">11.2 交付一体化: toolUseLoop vs QueryEngine 路径割裂<a class="anchor" href="#11-2-交付一体化-tooluseloop-vs-queryengine-路径割裂" aria-label="锚点">#</a></h3>
+<p>这是 <strong>最大的结构性差距</strong>。KHY 有两条响应路径，但只有 toolUseLoop 路径具备完整的交付体验:</p>
+<table><thead><tr><th>能力</th><th>CC</th><th>KHY toolUseLoop</th><th>KHY QueryEngine</th></tr></thead><tbody><tr><td>完成面板 (printCompletionPanel)</td><td>✅ 内建</td><td>✅ 已接入 (<code>repl.js:8782</code>)</td><td>❌ <strong>缺失</strong></td></tr><tr><td>执行简报 (printExecutionBrief)</td><td>✅ 内建</td><td>⚠️ 已接入但无 AI steps</td><td>❌ <strong>缺失</strong></td></tr><tr><td>Post-edit 语法检查</td><td>✅ 内建</td><td>✅ <code>verificationAgent.quickSyntaxCheck</code></td><td>❌ <strong>缺失</strong></td></tr><tr><td>LSP 诊断注入</td><td>✅ 内建</td><td>✅ <code>_pendingLspDiagnostics</code></td><td>❌ <strong>缺失</strong></td></tr><tr><td>Coding mode 自动验证 nudge</td><td>✅ 内建</td><td>✅ 一次性 <code>npm test</code> 提醒</td><td>❌ <strong>缺失</strong></td></tr><tr><td>3+ 文件写入验证 nudge</td><td>✅ 内建</td><td>✅ 自动提醒验证</td><td>❌ <strong>缺失</strong></td></tr><tr><td>交付完整性检查 (跑偏检测)</td><td>✅ 内建</td><td>✅ 关键词覆盖率 &lt;30% 则 nudge</td><td>⚠️ 仅短回复/无工具 nudge</td></tr><tr><td>结构化执行摘要</td><td>✅ 内建</td><td>✅ <code>_buildDeliverySummary</code></td><td>❌ <strong>缺失</strong></td></tr><tr><td>回归闸门</td><td>❌ CC 无</td><td>✅ <strong>KHY 独有</strong></td><td>❌ <strong>缺失</strong></td></tr></tbody></table>
+<p><strong>结论:</strong> 当 <code>KHY_QUERY_ENGINE=true</code> 时，用户得到的是一个 <strong>功能孤岛</strong> — 工具能调用、结果能显示，但没有完成面板、没有自动验证、没有交付摘要。这与 CC 的 &quot;问题→分析→执行→验证→总结&quot; 全链路体验有本质差距。</p>
+<h3 id="11-3-任务规划-被动提取-vs-主动编排">11.3 任务规划: 被动提取 vs 主动编排<a class="anchor" href="#11-3-任务规划-被动提取-vs-主动编排" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>对比项</th><th>Claude Code</th><th>KHY</th></tr></thead><tbody><tr><td>规划方式</td><td>内部主动规划，执行前就有 plan</td><td><strong>被动提取</strong>: AI 回复后正则匹配 &quot;执行计划&quot; 关键词，<code>extractFromResponse</code> 事后提取</td></tr><tr><td>进度追踪</td><td>执行每步时自动更新 plan 状态</td><td>TaskPlanTracker 的 <code>start()/complete()</code> 需显式调用</td></tr><tr><td>规划显示</td><td>可选显示，内部始终有</td><td>依赖 AI 是否在回复中输出编号列表</td></tr></tbody></table>
+<p>CC 的规划是 <strong>编排层行为</strong> — 模型决定做什么，系统追踪执行进度。KHY 的规划是 <strong>文本解析行为</strong> — 系统从 AI 的自由文本中碰运气提取步骤列表。如果 AI 没有主动列出步骤，TaskPlanTracker 就不会触发。</p>
+<h3 id="11-4-执行简报-有面板无内容">11.4 执行简报: 有面板无内容<a class="anchor" href="#11-4-执行简报-有面板无内容" aria-label="锚点">#</a></h3>
+<p><code>printExecutionBrief</code> 面板在 toolUseLoop 路径中已接入 (<code>ai.js:4087</code>)，但:</p>
+<ul><li><code>opts.steps</code> 参数面板支持但 <strong>发射端没有传</strong> — 用户看不到 &quot;我打算做 X, Y, Z&quot; 的步骤列表</li><li>只传了静态分析结果 (规模/文件数/知识库上下文数)</li><li>CC 的简报包含模型规划的具体步骤，KHY 只有统计数字</li></ul>
+<hr>
+<h2 id="12-khy-独有优势-cc-不具备">12. KHY 独有优势 (CC 不具备)<a class="anchor" href="#12-khy-独有优势-cc-不具备" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>能力</th><th>说明</th></tr></thead><tbody><tr><td>表格并排渲染</td><td>终端 &gt;120 cols 时自动将相邻表格并排显示</td></tr><tr><td>表格统一列宽</td><td>相邻表格列数相同时统一列宽</td></tr><tr><td>单元格内 Markdown</td><td><code>**bold**</code> / `<code> </code>code<code> </code><code> / </code><em>italic</em>` 在表格内生效</td></tr><tr><td>4 后端搜索级联</td><td>Baidu → Bing CN → Kiro MCP → DuckDuckGo, 中国直连</td></tr><tr><td>零 API key 搜索</td><td>三个免费后端无需配置</td></tr><tr><td>文件写入快照</td><td>fileHistoryService 自动在覆写前创建快照, 支持 /rollback</td></tr><tr><td>LSP 诊断注入</td><td>写入后自动收集编译错误返回给模型</td></tr><tr><td>回归闸门</td><td>toolUseLoop 路径独有，CC 无此能力</td></tr><tr><td>交付完整性检测</td><td>关键词覆盖率跑偏检测 + 结论 nudge</td></tr></tbody></table>
+<hr>
+<h2 id="13-全量测试矩阵">13. 全量测试矩阵<a class="anchor" href="#13-全量测试矩阵" aria-label="锚点">#</a></h2>
+<h3 id="三套-ab-测试总览">三套 AB 测试总览<a class="anchor" href="#三套-ab-测试总览" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>测试套件</th><th>文件</th><th>测试数</th><th>关注层面</th></tr></thead><tbody><tr><td>v1 Interactivity</td><td><code>ab_test_interactivity.test.js</code></td><td>51</td><td>UI 显示元素 (3 轮 × F1-F20)</td></tr><tr><td>v2 Timeline</td><td><code>ab_interactivity_v2.test.js</code></td><td>62</td><td>精确时间线 (CC-1~34 + F1-20 + GAP-1~8)</td></tr><tr><td>v3 Delivery</td><td><code>ab_delivery_quality.test.js</code></td><td>34</td><td>任务交付质量 (DQ-1~12 + GAP-A~C)</td></tr><tr><td><strong>合计</strong></td><td></td><td><strong>147</strong></td><td><strong>0 failures</strong></td></tr></tbody></table>
+<h3 id="覆盖维度">覆盖维度<a class="anchor" href="#覆盖维度" aria-label="锚点">#</a></h3>
+<pre><code>UI 层 (v1+v2: 113 tests)
+├── Spinner / Thinking indicator
+├── Tool call start/result + Step N/M
+├── Bash preview / File stats / Inline diff
+├── Task tracker + Completion panel
+├── Cost / Cascade / Permission
+├── Markdown rendering / Agent tree
+├── Interrupt / Compaction / Session recap
+└── Tool dedup (15s window)
+
+交付层 (v3: 34 tests)
+├── Table rendering (box-drawing, CJK, shrink, side-by-side)
+├── WebSearch (schema, cascade, CW compat, sanitize)
+├── FileWrite (schema, security, write, auto-mkdir, UTF-8, read-guard)
+└── Gap detection (CJK range, CW exclusion, env expansion)</code></pre>
+<hr>
+<h2 id="14-结论">14. 结论<a class="anchor" href="#14-结论" aria-label="锚点">#</a></h2>
+<h3 id="已对齐">已对齐<a class="anchor" href="#已对齐" aria-label="锚点">#</a></h3>
+<p><strong>UI 互动感 (F1-F20):</strong> 20/20 全部覆盖。发现 4 项实现差距, 全部修复。113 tests 通过。</p>
+<p><strong>单工具交付 (表格/搜索/网页):</strong> 三条管线功能完整, 对齐 CC。7 项 KHY 独有优势 (并排表格/级联搜索/文件快照等)。34 tests 通过。</p>
+<h3 id="尚存差距">尚存差距<a class="anchor" href="#尚存差距" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>差距</th><th>严重程度</th><th>性质</th></tr></thead><tbody><tr><td>QE 路径缺少完成面板/执行简报/自动验证/交付摘要</td><td><strong>P0</strong></td><td>功能孤岛 — 两条路径能力严重不对等</td></tr><tr><td>任务规划是被动文本提取而非主动编排</td><td><strong>P1</strong></td><td>架构差距 — CC 的 plan 是编排层行为</td></tr><tr><td>执行简报面板有框架无内容 (不传 steps)</td><td><strong>P2</strong></td><td>接入不完整</td></tr><tr><td><code>printInlineDiff</code> 是死代码, 与 <code>renderStructuredDiff</code> 功能重叠</td><td><strong>P3</strong></td><td>冗余 — 需清理</td></tr></tbody></table>
+<h3 id="下一步">下一步<a class="anchor" href="#下一步" aria-label="锚点">#</a></h3>
+<ol><li><strong>P0</strong>: QE 路径补齐完成面板 + 自动验证 + 交付摘要 (对齐 toolUseLoop 能力)</li><li><strong>P1</strong>: TaskPlanTracker 改为编排层驱动 (工具调用前生成 plan, 执行中自动 update)</li><li><strong>P2</strong>: <code>printExecutionBrief</code> 发射端补传 <code>steps</code> 字段</li><li><strong>P3</strong>: 删除 <code>toolDisplay.printInlineDiff</code> 死代码</li></ol>
+<p><strong>总计 5 项已修复, 4 项待修复, 147 tests, 0 failures。</strong></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-005] khy-对比-qwen-code-差距分析.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS vs Qwen Code 全面差距对比</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-007] cli-基准对比-2026-05-19.html"><div class="dir">下一篇 →</div><div class="ttl">KHY 对比 5 大主流 CLI 工具：任务能力基准评测</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-006] AB-交付质量对齐-2026-06-03.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

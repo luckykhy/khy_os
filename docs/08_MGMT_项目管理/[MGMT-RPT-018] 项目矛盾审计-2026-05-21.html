@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 项目矛盾审计与修复报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY OS 项目矛盾审计与修复报告</div>
+      <header class="hero reveal"><h1>KHY OS 项目矛盾审计与修复报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-项目矛盾审计与修复报告">KHY OS 项目矛盾审计与修复报告</a></li><li class="lvl-2"><a href="#一-扫描方法">一、扫描方法</a></li><li class="lvl-2"><a href="#二-发现与修复清单">二、发现与修复清单</a></li><li class="lvl-3"><a href="#2-1-版本号对齐-7-1-个文件">2.1 版本号对齐（7 + 1 个文件）</a></li><li class="lvl-3"><a href="#2-2-依赖声明修复">2.2 依赖声明修复</a></li><li class="lvl-3"><a href="#2-3-ai-backend-缺失模块-致命崩溃修复">2.3 ai-backend 缺失模块（致命崩溃修复）</a></li><li class="lvl-3"><a href="#2-4-配置默认值矛盾">2.4 配置默认值矛盾</a></li><li class="lvl-3"><a href="#2-5-硬编码密码-rule-1-安全违规">2.5 硬编码密码（Rule 1 安全违规）</a></li><li class="lvl-3"><a href="#2-6-docker-ci-配置修复">2.6 Docker/CI 配置修复</a></li><li class="lvl-3"><a href="#2-7-数据源模块引用修复">2.7 数据源模块引用修复</a></li><li class="lvl-3"><a href="#2-8-pyproject-toml-依赖上限对齐">2.8 pyproject.toml 依赖上限对齐</a></li><li class="lvl-2"><a href="#三-已识别但暂缓修复的问题">三、已识别但暂缓修复的问题</a></li><li class="lvl-2"><a href="#四-修复文件汇总">四、修复文件汇总</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-018 | 阶段: 项目管理 | 原路径: docs/指南/项目矛盾审计-2026-05-21.md --&gt;</p>
+<h1 id="khy-os-项目矛盾审计与修复报告">KHY OS 项目矛盾审计与修复报告<a class="anchor" href="#khy-os-项目矛盾审计与修复报告" aria-label="锚点">#</a></h1>
+<p><strong>审计日期</strong>: 2026-05-21<br><strong>审计范围</strong>: 全项目（版本/依赖/Docker/CI/配置/安全/死代码）<br><strong>修复状态</strong>: 全部已修复</p>
+<hr>
+<h2 id="一-扫描方法">一、扫描方法<a class="anchor" href="#一-扫描方法" aria-label="锚点">#</a></h2>
+<p>通过 5 个并行探索代理对项目进行全面矛盾扫描：</p>
+<ol><li><strong>版本号与依赖矛盾</strong> — package.json / pyproject.toml 版本一致性、幽灵依赖、缺失依赖</li><li><strong>端口/URL/环境变量矛盾</strong> — 默认端口冲突、环境变量名分裂、Docker 端口映射</li><li><strong>死代码与引用矛盾</strong> — require 引用不存在的文件、已删除模块的残留引用</li><li><strong>Docker/CI/构建配置矛盾</strong> — Dockerfile vs docker-compose、CI 脚本缺失、MANIFEST.in 一致性</li><li><strong>配置默认值与规则矛盾</strong> — AGENTS.md 三大规则违反、硬编码密码、注释与代码不一致</li></ol>
+<hr>
+<h2 id="二-发现与修复清单">二、发现与修复清单<a class="anchor" href="#二-发现与修复清单" aria-label="锚点">#</a></h2>
+<h3 id="2-1-版本号对齐-7-1-个文件">2.1 版本号对齐（7 + 1 个文件）<a class="anchor" href="#2-1-版本号对齐-7-1-个文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修复前</th><th>修复后</th></tr></thead><tbody><tr><td><code>frontend/package.json</code></td><td><code>1.0.0</code></td><td><code>0.1.25</code></td></tr><tr><td><code>packages/khy-chain/package.json</code></td><td><code>1.0.0</code></td><td><code>0.1.25</code></td></tr><tr><td><code>packages/khy-hello/package.json</code></td><td><code>1.0.0</code></td><td><code>0.1.25</code></td></tr><tr><td><code>packages/khy-quant/package.json</code></td><td><code>1.0.0</code></td><td><code>0.1.25</code></td></tr><tr><td><code>packages/plugin-sdk/package.json</code></td><td><code>1.0.0</code></td><td><code>0.1.25</code></td></tr><tr><td><code>packages/sdk/package.json</code></td><td><code>1.0.0</code></td><td><code>0.1.25</code></td></tr><tr><td><code>packages/vscode-extension/package.json</code></td><td><code>0.1.0</code></td><td><code>0.1.25</code></td></tr></tbody></table>
+<blockquote><p>注：<code>packages/sdk-python/pyproject.toml</code> (1.0.0) 为独立 SDK 包，保持独立版本号。</p></blockquote>
+<hr>
+<h3 id="2-2-依赖声明修复">2.2 依赖声明修复<a class="anchor" href="#2-2-依赖声明修复" aria-label="锚点">#</a></h3>
+<h4 id="缺失依赖-会导致运行-构建失败">缺失依赖（会导致运行/构建失败）<a class="anchor" href="#缺失依赖-会导致运行-构建失败" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>包</th><th>文件</th><th>操作</th><th>原因</th></tr></thead><tbody><tr><td><code>moment</code></td><td><code>backend/package.json</code></td><td><strong>添加</strong> <code>^2.30.1</code></td><td><code>klineDataService.js</code>、<code>enhancedMockDataService.js</code> 顶层 require</td></tr><tr><td><code>@element-plus/icons-vue</code></td><td><code>ai-frontend/package.json</code></td><td><strong>添加</strong> <code>^2.3.1</code></td><td><code>AIDashboard.vue</code>、<code>AIGateway.vue</code> import 会构建失败</td></tr></tbody></table>
+<h4 id="幽灵依赖-声明但从未使用">幽灵依赖（声明但从未使用）<a class="anchor" href="#幽灵依赖-声明但从未使用" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>包</th><th>文件</th><th>操作</th><th>验证</th></tr></thead><tbody><tr><td><code>commander</code></td><td><code>backend/package.json</code></td><td><strong>移除</strong></td><td>全项目 0 处 <code>require('commander')</code></td></tr><tr><td><code>@capacitor/status-bar</code></td><td><code>frontend/package.json</code></td><td><strong>移除</strong></td><td>全 <code>frontend/src/</code> 0 处 import</td></tr></tbody></table>
+<hr>
+<h3 id="2-3-ai-backend-缺失模块-致命崩溃修复">2.3 ai-backend 缺失模块（致命崩溃修复）<a class="anchor" href="#2-3-ai-backend-缺失模块-致命崩溃修复" aria-label="锚点">#</a></h3>
+<p><strong>根因</strong>: ai-backend 的服务文件从 backend 复制而来，但部分内部依赖模块未同步复制。</p>
+<table><thead><tr><th>缺失模块</th><th>严重性</th><th>修复方式</th></tr></thead><tbody><tr><td><code>multiFreeService.js</code></td><td><strong>致命</strong> — <code>llmService.js</code> 顶层 require 崩溃</td><td><code>llmService.js</code> 改为 try/catch + backend 路径回退 + 空壳存根</td></tr><tr><td><code>selfOptimizer.js</code></td><td>高 — <code>toolCalling.js</code> 5 处引用</td><td>创建存根文件，提供 <code>isProtectedPath</code>/<code>applyOptimization</code>/<code>proposeCodeChange</code></td></tr><tr><td><code>cloudSync.js</code></td><td>高 — <code>modelTrainingService.js</code> 无 try/catch</td><td>创建存根文件，<code>isLoggedIn()</code> 返回 false</td></tr><tr><td><code>growthService.js</code></td><td>高 — <code>knowledgeTeachingService.js</code> 延迟加载无 catch</td><td>创建存根文件，提供空操作方法</td></tr></tbody></table>
+<p><strong>存根文件位置</strong>: <code>ai-backend/src/services/</code> 下新增 3 个文件，每个存根包含 JSDoc 注释说明用途和局限。</p>
+<hr>
+<h3 id="2-4-配置默认值矛盾">2.4 配置默认值矛盾<a class="anchor" href="#2-4-配置默认值矛盾" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>文件</th><th>行号</th><th>修复</th></tr></thead><tbody><tr><td>ollamaAdapter 双重读取 <code>process.env.OLLAMA_HOST</code></td><td><code>backend/.../ollamaAdapter.js</code></td><td>144</td><td>移除冗余 env 读取，统一使用 <code>serviceDefaults.OLLAMA_HOST</code></td></tr><tr><td>rateLimiter 注释自相矛盾</td><td><code>backend/.../rateLimiter.js</code></td><td>4,7</td><td>统一为 &quot;fixed time window (window resets entirely on expiry)&quot;</td></tr><tr><td>Python 进程空闲超时不一致</td><td><code>comprehensiveDataService.js</code></td><td>6417</td><td>15000ms → 10000ms（与其余 4 处一致）</td></tr><tr><td><code>futures: true</code> 但代码 throw</td><td><code>comprehensiveDataStaticConfig.js</code></td><td>27,69</td><td>akshare/adata 的 <code>futures</code> 改为 <code>false</code>，添加注释</td></tr></tbody></table>
+<hr>
+<h3 id="2-5-硬编码密码-rule-1-安全违规">2.5 硬编码密码（Rule 1 安全违规）<a class="anchor" href="#2-5-硬编码密码-rule-1-安全违规" aria-label="锚点">#</a></h3>
+<p><strong>AGENTS.md Rule 1 要求零硬编码</strong>。以下 4 处密码从字面量改为环境变量 + 回退默认值：</p>
+<table><thead><tr><th>文件</th><th>行号</th><th>修复前</th><th>修复后</th></tr></thead><tbody><tr><td><code>adminService.js</code></td><td>18</td><td><code>'khyguanli0203'</code></td><td>`process.env.KHY_ADMIN_PASSWORD \</td></tr><tr><td><code>aiManagementServer.js</code></td><td>528</td><td><code>'admin123'</code></td><td>`process.env.DEFAULT_ADMIN_PASSWORD \</td></tr><tr><td><code>modelTrainingService.js</code></td><td>701</td><td><code>'khy2026'</code></td><td>`process.env.KHY_EXPORT_PASSWORD \</td></tr><tr><td><code>ownerControlService.js</code></td><td>15</td><td>固定 Set</td><td>支持 <code>process.env.KHY_STUDY_SECRET</code> 扩展</td></tr></tbody></table>
+<p><strong>新增环境变量（可选）</strong>:</p>
+<ul><li><code>KHY_ADMIN_PASSWORD</code> — 管理后台密码</li><li><code>DEFAULT_ADMIN_PASSWORD</code> — AI 管理初始密码</li><li><code>KHY_EXPORT_PASSWORD</code> — 模型导出密码</li><li><code>KHY_STUDY_SECRET</code> — 学习模式额外密钥</li></ul>
+<hr>
+<h3 id="2-6-docker-ci-配置修复">2.6 Docker/CI 配置修复<a class="anchor" href="#2-6-docker-ci-配置修复" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>问题</th><th>文件</th><th>修复</th></tr></thead><tbody><tr><td>backend→ai-backend 缺少 <code>depends_on</code></td><td><code>docker-compose.yml</code></td><td>ai-backend 添加 <code>depends_on: backend: condition: service_healthy</code></td></tr><tr><td><code>BACKEND_PORT</code> 语义矛盾</td><td><code>docker-compose.yml</code></td><td>backend 环境变量中显式设置 <code>BACKEND_PORT: 3000</code>（内部端口）</td></tr><tr><td>ai-backend <code>KHYQUANT_ROOT</code> 指向不存在路径</td><td><code>ai-backend/server.js</code></td><td>添加 <code>fs.existsSync</code> 检测，Docker 环境自动回退到 <code>__dirname</code></td></tr><tr><td>CI quality-gates 缺 <code>npm ci</code></td><td><code>.github/workflows/ci.yml</code></td><td>添加 <code>npm ci --ignore-scripts</code> 步骤</td></tr></tbody></table>
+<hr>
+<h3 id="2-7-数据源模块引用修复">2.7 数据源模块引用修复<a class="anchor" href="#2-7-数据源模块引用修复" aria-label="锚点">#</a></h3>
+<p><code>comprehensiveDataService.js</code> 三个 case 分支 require 不存在的模块文件：</p>
+<table><thead><tr><th>数据源</th><th>原代码</th><th>修复</th></tr></thead><tbody><tr><td><code>eastmoney</code></td><td><code>require('./eastMoneyDataSource')</code></td><td>直接 throw 明确错误信息</td></tr><tr><td><code>sina</code></td><td><code>require('./sinaDataSource')</code></td><td>直接 throw 明确错误信息</td></tr><tr><td><code>tencent</code></td><td><code>require('./tencentDataSource')</code></td><td>直接 throw 明确错误信息</td></tr></tbody></table>
+<p>错误消息统一引导用户使用已实现的 akshare 或 adata 数据源。</p>
+<hr>
+<h3 id="2-8-pyproject-toml-依赖上限对齐">2.8 pyproject.toml 依赖上限对齐<a class="anchor" href="#2-8-pyproject-toml-依赖上限对齐" aria-label="锚点">#</a></h3>
+<p><code>packages/backend/pyproject.toml</code> 中 7 个 Python 依赖缺少上限约束，与根 <code>pyproject.toml</code> 不一致。已全部补齐：</p>
+<table><thead><tr><th>依赖</th><th>修复前</th><th>修复后</th></tr></thead><tbody><tr><td><code>requests</code></td><td><code>&gt;=2.25.0</code></td><td><code>&gt;=2.25.0,&lt;3.0.0</code></td></tr><tr><td><code>akshare</code></td><td><code>&gt;=1.12.0</code></td><td><code>&gt;=1.12.0,&lt;2.0.0</code></td></tr><tr><td><code>scipy</code></td><td><code>&gt;=1.10.0</code></td><td><code>&gt;=1.10.0,&lt;2.0.0</code></td></tr><tr><td><code>ta</code></td><td><code>&gt;=0.11.0</code></td><td><code>&gt;=0.11.0,&lt;1.0.0</code></td></tr><tr><td><code>tqdm</code></td><td><code>&gt;=4.65.0</code></td><td><code>&gt;=4.65.0,&lt;5.0.0</code></td></tr><tr><td><code>pyyaml</code></td><td><code>&gt;=6.0</code></td><td><code>&gt;=6.0,&lt;7.0.0</code></td></tr><tr><td><code>loguru</code></td><td><code>&gt;=0.7.0</code></td><td><code>&gt;=0.7.0,&lt;1.0.0</code></td></tr></tbody></table>
+<hr>
+<h2 id="三-已识别但暂缓修复的问题">三、已识别但暂缓修复的问题<a class="anchor" href="#三-已识别但暂缓修复的问题" aria-label="锚点">#</a></h2>
+<p>以下问题属于大范围国际化或低优先级设计选择，不在本次修复范围内：</p>
+<table><thead><tr><th>问题</th><th>原因</th></tr></thead><tbody><tr><td>~60 处英文用户面向字符串</td><td>需要统一的国际化改造，涉及 30+ 文件</td></tr><tr><td>~15 处 setTimeout 裸字面量</td><td>多为短计算保护（&lt;5s），非 Rule 3 违规</td></tr><tr><td><code>AI_MGMT_PORT</code> vs <code>KHY_DAEMON_PORT</code> 变量名分裂</td><td>两个入口路径的历史设计，已有 runtime 文件发现机制兜底</td></tr><tr><td>Docker SQLite 模式下 backend/ai-backend 使用独立 volume</td><td>设计选择——隔离 vs 共享取决于部署方案</td></tr><tr><td><code>https-proxy-agent</code>/<code>glob</code>/<code>node-pty</code> 等可选依赖未声明</td><td>均有 try/catch 保护，降级而非崩溃</td></tr></tbody></table>
+<hr>
+<h2 id="四-修复文件汇总">四、修复文件汇总<a class="anchor" href="#四-修复文件汇总" aria-label="锚点">#</a></h2>
+<p>本次审计共修改/新增 <strong>23 个文件</strong>：</p>
+<p><strong>修改的文件</strong>:</p>
+<ol><li><code>frontend/package.json</code> — 版本 + 移除 @capacitor/status-bar</li><li><code>packages/khy-chain/package.json</code> — 版本</li><li><code>packages/khy-hello/package.json</code> — 版本</li><li><code>packages/khy-quant/package.json</code> — 版本</li><li><code>packages/plugin-sdk/package.json</code> — 版本</li><li><code>packages/sdk/package.json</code> — 版本</li><li><code>packages/vscode-extension/package.json</code> — 版本</li><li><code>backend/package.json</code> — 添加 moment、移除 commander</li><li><code>ai-frontend/package.json</code> — 添加 @element-plus/icons-vue</li><li><code>ai-backend/src/services/llmService.js</code> — 安全加载 + 回退链</li><li><code>backend/src/services/gateway/adapters/ollamaAdapter.js</code> — 移除双重 env 读取</li><li><code>backend/src/services/rateLimiter.js</code> — 修正注释</li><li><code>backend/src/services/comprehensiveDataService.js</code> — 超时一致 + 数据源引用</li><li><code>backend/src/services/comprehensiveDataStaticConfig.js</code> — futures: false</li><li><code>backend/src/services/adminService.js</code> — 密码外部化</li><li><code>backend/src/services/aiManagementServer.js</code> — 密码外部化</li><li><code>backend/src/services/modelTrainingService.js</code> — 密码外部化</li><li><code>backend/src/services/ownerControlService.js</code> — 密码外部化</li><li><code>docker-compose.yml</code> — depends_on + BACKEND_PORT</li><li><code>.github/workflows/ci.yml</code> — npm ci 步骤</li><li><code>ai-backend/server.js</code> — KHYQUANT_ROOT 安全回退</li><li><code>packages/backend/pyproject.toml</code> — 依赖上限约束</li></ol>
+<p><strong>新增的文件</strong>:</p>
+<ol><li><code>ai-backend/src/services/selfOptimizer.js</code> — 存根</li><li><code>ai-backend/src/services/cloudSync.js</code> — 存根</li><li><code>ai-backend/src/services/growthService.js</code> — 存根</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-017] 项目矛盾审计-2026-05-21-r2.html"><div class="dir">← 上一篇</div><div class="ttl">项目矛盾审计报告（第二轮） — 2026-05-21</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-019] 架构对比-cc-vs-khy.html"><div class="dir">下一篇 →</div><div class="ttl">Claude Code vs KHY OS：架构深度对比</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-018] 项目矛盾审计-2026-05-21.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

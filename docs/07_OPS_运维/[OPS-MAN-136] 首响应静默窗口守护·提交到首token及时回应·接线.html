@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-136] 首响应静默窗口守护 · 提交提示词到首个模型 token 之间及时回应（让 khy 在交互终端里不再「提交后一片死寂」） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-136] 首响应静默窗口守护 · 提交提示词到首个模型 token 之间及时回应（让 khy 在交互终端里不再「提交后一片死寂」）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-136] 首响应静默窗口守护 · 提交提示词到首个模型 token 之间及时回应（让 khy 在交互终端里不再「提交后一片死寂」）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-136-首响应静默窗口守护-提交提示词到首个模型-token-之间及时回应-让-khy-在交互终端里不再-提交后一片死寂">[OPS-MAN-136] 首响应静默窗口守护 · 提交提示词到首个模型 token 之间及时回应（让 khy 在交互终端里不再「提交后一片死寂」）</a></li><li class="lvl-2"><a href="#这一层闭合什么-提交提示词-首个模型-token-之间是-静默窗口">这一层闭合什么：提交提示词 → 首个模型 token 之间是**静默窗口**</a></li><li class="lvl-2"><a href="#离机场景为什么也吃这一亏">离机场景为什么也吃这一亏</a></li><li class="lvl-2"><a href="#这一层怎么做-全-additive-门-default-on-di-计时器可测-绝不卡死">这一层怎么做（全 additive · 门 default-on · DI 计时器可测 · 绝不卡死）</a></li><li class="lvl-3"><a href="#判定叶-纯叶子-di-计时器调度器-绝不抛">判定叶（纯叶子 + DI 计时器调度器·绝不抛）</a></li><li class="lvl-3"><a href="#接线-replsession-js-外科-四处">接线 `replSession.js`（外科·四处）</a></li><li class="lvl-2"><a href="#中途选项也要及时回应-selection-变体-门-khy-first-response-ack-selection">中途选项也要及时回应（selection 变体 · 门 `KHY_FIRST_RESPONSE_ACK_SELECTION`）</a></li><li class="lvl-2"><a href="#工具迭代之间也要及时回应-resume-变体-门-khy-first-response-ack-resume">工具迭代之间也要及时回应（resume 变体 · 门 `KHY_FIRST_RESPONSE_ACK_RESUME`）</a></li><li class="lvl-2"><a href="#图片提示词也要及时回应-image-变体-门-khy-first-response-ack-image">图片提示词也要及时回应（image 变体 · 门 `KHY_FIRST_RESPONSE_ACK_IMAGE`）</a></li><li class="lvl-2"><a href="#和-turnackvoice-的分工-正交-不重叠">和 turnAckVoice 的分工（正交，不重叠）</a></li><li class="lvl-2"><a href="#恒久红线">恒久红线</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#how-to-extend-抄写式">HOW-TO-EXTEND（抄写式）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-136-首响应静默窗口守护-提交提示词到首个模型-token-之间及时回应-让-khy-在交互终端里不再-提交后一片死寂">[OPS-MAN-136] 首响应静默窗口守护 · 提交提示词到首个模型 token 之间及时回应（让 khy 在交互终端里不再「提交后一片死寂」）<a class="anchor" href="#ops-man-136-首响应静默窗口守护-提交提示词到首个模型-token-之间及时回应-让-khy-在交互终端里不再-提交后一片死寂" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件为手写维护文档（此层是运行时接线，无 <code>--gen-doc</code> 生成器）。承接 turn 级即时确认<br><code>turnAckVoice</code>（门 <code>KHY_TURN_ACK</code>）——那一层只在<strong>首个工具即将派发</strong>时出，本层补它够不到的<br>「首个模型 token 迟迟不来」这段静默窗口。<br>判定叶：<code>services/backend/src/cli/firstResponseAckVoice.js</code>（纯叶子 + DI 计时器调度器·绝不抛）。<br>接线：<code>services/backend/src/cli/replSession.js</code>（create/arm 于 <code>spinner.start('request')</code>、<br>markChunk 于 onChunk 首 chunk、disarm 于 finally）。</p></blockquote>
+<h2 id="这一层闭合什么-提交提示词-首个模型-token-之间是-静默窗口">这一层闭合什么：提交提示词 → 首个模型 token 之间是<strong>静默窗口</strong><a class="anchor" href="#这一层闭合什么-提交提示词-首个模型-token-之间是-静默窗口" aria-label="锚点">#</a></h2>
+<p>用户 <code>/goal</code>：「当我向 Khy 输入提示词时，khy 要及时回应」。</p>
+<p>复盘交互路径发现一段<strong>看不到任何动静</strong>的窗口：</p>
+<ul><li>交互 raw-mode 终端里，动态 spinner 被 <strong>render-suppress</strong>（<code>spinner.js:122</code></li></ul>
+<p><code>if (process.stdin.isRaw &amp;&amp; blockInRawMode) return;</code>）——提交那刻起，屏幕上<strong>不转圈、不打字</strong>；</p>
+<ul><li>现有 <code>turnAckVoice</code> 的即时确认只在<strong>本轮首个工具即将派发</strong>时才出（<code>replSession.js</code> onChunk 的</li></ul>
+<p><code>tool_use</code> 分支），那已经是<strong>模型跑起来、chunk 已经到</strong>之后的事；</p>
+<ul><li>于是从<strong>用户敲下回车</strong>到<strong>第一个模型 chunk 到达</strong>之间，若模型 / 网络慢（首 token 就要等几秒），</li></ul>
+<p>用户对着一个纹丝不动的终端，<strong>无从判断 khy 是在思考还是卡死了</strong>。</p>
+<p><code>grep</code>「提交 → 首 token 之间主动出声」的消费者 = 零。这正是本轮要补的断桥。</p>
+<h2 id="离机场景为什么也吃这一亏">离机场景为什么也吃这一亏<a class="anchor" href="#离机场景为什么也吃这一亏" aria-label="锚点">#</a></h2>
+<p>这台云电脑过期，源码靠 pip / npm 还原到别人的机器上复活。别人第一次跑起 khy、敲下第一句提示词，<br>若首 token 慢，看到的就是一个死寂的终端——<strong>第一印象就是「这工具卡死了」</strong>。及时的一句<br>「收到，正在为你连接模型，请稍候…」是最廉价、最有效的信任建立。</p>
+<h2 id="这一层怎么做-全-additive-门-default-on-di-计时器可测-绝不卡死">这一层怎么做（全 additive · 门 default-on · DI 计时器可测 · 绝不卡死）<a class="anchor" href="#这一层怎么做-全-additive-门-default-on-di-计时器可测-绝不卡死" aria-label="锚点">#</a></h2>
+<h3 id="判定叶-纯叶子-di-计时器调度器-绝不抛">判定叶（纯叶子 + DI 计时器调度器·绝不抛）<a class="anchor" href="#判定叶-纯叶子-di-计时器调度器-绝不抛" aria-label="锚点">#</a></h3>
+<p><code>firstResponseAckVoice.js</code>：</p>
+<ul><li><code>isEnabled(env)</code> —— 门控 <code>KHY_FIRST_RESPONSE_ACK</code>（default-on；仅 CANON 4 词</li></ul>
+<p><code>{0,false,off,no}</code> 关）。flagRegistry 优先，本地 CANON 回退。</p>
+<ul><li><code>firstResponseAckDelayMs(env)</code> —— 静默窗口阈值（ms）。经 <code>flagRegistry.resolveNumeric</code> 读</li></ul>
+<p><code>KHY_FIRST_RESPONSE_ACK_MS</code>（numeric，默认 <strong>1200</strong>，clamp <strong>[200,60000]</strong>）；注册表不可用时<br>  本地读 env + clamp；畸形 → 默认 1200。</p>
+<ul><li><code>computeFirstResponseAck({ turnIndex, elapsedMs, env })</code> —— 纯函数产句：门控关 / 异常 → <code>''</code>；</li></ul>
+<p>否则按 <code>turnIndex</code> 在 <code>_ACK_LINES</code>（5 条 wait-aware 短句）里轮换取一句，<code>elapsedMs ≥ 1000</code> 时<br>  附「（已等待约 Ns）」。绝不抛。</p>
+<ul><li><code>createFirstResponseAckScheduler({ turnIndex, env, deps })</code> —— <strong>DI 计时器调度器</strong>，把</li></ul>
+<p><code>setTimeout / clearTimeout / emit / now</code> 全经 <code>deps</code> 注入（缺省回退全局），使异步时序<strong>可用假<br>  计时器单测</strong>。返回句柄：</p>
+<ul><li><code>arm()</code> —— 请求发出那刻调用。门控关 / 缺 <code>emit</code> / 缺 <code>setTimeout</code> / 已 arm / 已 done →</li></ul>
+<p><strong>no-op 返回 false</strong>（逐字节回退无提示）；否则挂计时器返回 true。计时器到点且<strong>仍无 chunk</strong><br>    → 计算 elapsed、产句、<code>emit(line)</code>（每回合至多 emit 一次）。</p>
+<ul><li><code>markChunk()</code> —— <strong>首个 chunk 到达</strong>（模型已开始响应）→ <code>clearTimeout</code> 取消未决提示。幂等。</li><li><code>disarm()</code> —— 请求边界（finally）兜底取消。幂等。</li><li><code>get fired</code> / <code>get armed</code> —— 供测试 / 接线观测。</li><li>所有方法 <code>try/catch</code> 吞异常，<strong>绝不抛</strong>。</li></ul>
+<h3 id="接线-replsession-js-外科-四处">接线 <code>replSession.js</code>（外科·四处）<a class="anchor" href="#接线-replsession-js-外科-四处" aria-label="锚点">#</a></h3>
+<ul><li><strong>holder 声明</strong>（<code>try</code> 之外、与 <code>finally</code> 同作用域）：<code>let _firstResponseAckScheduler = null;</code></li></ul>
+<p>—— 让 onChunk（markChunk）、arm 点、finally（disarm）三处都能看见同一句柄。</p>
+<ul><li><strong>create + arm</strong>：在 <code>spinner.start('request')</code> 之后创建调度器（那里 <code>renderer</code> /</li></ul>
+<p><code>_turnAckEmitted</code> / <code>_turnAckIndex</code> 均在作用域内），<code>emit</code> 回调 =<br>  <code>renderer.printStepDetail(line)</code> <strong>并置 <code>_turnAckEmitted = true</code></strong>（已代码级回应用户 → 抑制后续<br>  turnAck，避免同回合两处叠话），随即 <code>arm()</code>。整体 try/catch fail-soft。</p>
+<ul><li><strong>markChunk</strong>：onChunk 顶部（TUI record 之后）——任何 chunk 到达 = 模型已开始响应 → 取消未决提示。</li><li><strong>disarm</strong>：finally 里 <code>spinner.stop()</code> 之后——无论正常完成 / abort / 错误,兜底取消未决计时器,</li></ul>
+<p>杜绝「回合已结束,过期计时器仍打出一句 stale 等待提示」。</p>
+<h2 id="中途选项也要及时回应-selection-变体-门-khy-first-response-ack-selection">中途选项也要及时回应（selection 变体 · 门 <code>KHY_FIRST_RESPONSE_ACK_SELECTION</code>）<a class="anchor" href="#中途选项也要及时回应-selection-变体-门-khy-first-response-ack-selection" aria-label="锚点">#</a></h2>
+<p>用户 <code>/goal</code> 的第二半句：「<strong>包括中途的选项也要依据用户的选择及时回应</strong>」。</p>
+<p>同一段静默窗口在<strong>中途选项</strong>处会<strong>再来一次</strong>：当模型请求一个需要用户决策的工具时，<br><code>replSession.js</code> 的 <code>handleControlRequest</code> 会弹出交互卡片——<code>AskUserQuestion</code> 选项、<br>L2（红线）确认、或权限 <code>Allow / Deny</code>。用户选完，决策回传给工具循环、<strong>模型据此恢复流式</strong>，<br>而恢复到「第一个恢复 chunk 到来」之间，又是一段 raw-mode spinner 被抑制的死寂窗口。<br>本回合最初那次「提交守护」早已被此前的 chunk <code>markChunk</code> 消费掉（<code>_done</code>），<br>覆盖不到这段恢复窗口。</p>
+<p>这一层就补它：</p>
+<ul><li><strong>判定叶</strong>（同一个 <code>firstResponseAckVoice.js</code>，全 additive）新增 <code>variant: 'submit' | 'selection'</code></li></ul>
+<p>参数（缺省 <code>'submit'</code>，对既有调用方<strong>逐字节等价</strong>）。<code>variant: 'selection'</code> 走<br>  <code>_SELECTION_ACK_LINES</code>（措辞传达「收到了你的选择·正在据此继续」，<strong>不复述用户选了什么</strong>——<br>  那由 <code>qaEchoLines</code> 做静态回显），并额外过 selection 子门 <code>isSelectionEnabled</code>。</p>
+<ul><li><strong>子门</strong> <code>KHY_FIRST_RESPONSE_ACK_SELECTION</code>（default-on，父门 <code>KHY_FIRST_RESPONSE_ACK</code>）：</li></ul>
+<p>父门关则整体关；子门单独 CANON 4 词 <code>{0,false,off,no}</code> 关 → 逐字节回退到「选择后无提示」。</p>
+<ul><li><strong>接线</strong>：<code>handleControlRequest</code> 的 <code>finally</code>（<code>spinner.start('request')</code> 之后，覆盖</li></ul>
+<p>AskUserQuestion / L2 / 权限三条决策路径的<strong>单一缝</strong>）——先 <code>disarm</code> 任何残留句柄，再新建一个<br>  <code>variant: 'selection'</code> 调度器并 <code>arm</code>。首个恢复 chunk 到达即由 onChunk 顶部的 <code>markChunk</code> 取消；<br>  回合 <code>finally</code> 的 <code>disarm</code> 兜底。<code>emit</code> 同样置 <code>_turnAckEmitted = true</code>，与 turnAck 不叠话。</p>
+<p>这是「无感·明显告知」的又一正交层：模型恢复快 → 永远不出这句；恢复慢 → 用户看到<br>「收到你的选择，正在据此继续…」，知道自己的选择已被 khy 接住、正在推进。</p>
+<h2 id="工具迭代之间也要及时回应-resume-变体-门-khy-first-response-ack-resume">工具迭代之间也要及时回应（resume 变体 · 门 <code>KHY_FIRST_RESPONSE_ACK_RESUME</code>）<a class="anchor" href="#工具迭代之间也要及时回应-resume-变体-门-khy-first-response-ack-resume" aria-label="锚点">#</a></h2>
+<p>用户 <code>/goal</code>「khy 要及时回应，不论我发送任何的提示词……立刻及时回应」的<strong>处理全程</strong>面：<br>一条提示词往往触发一整轮 agentic 工具循环（读文件、跑命令、再读、再改……）。主模型调用是<br><strong>单次</strong> <code>ai().chat(message, { onChunk })</code>，其「自然工具循环」把所有迭代都通过<strong>同一个 onChunk</strong><br>流式回来——于是 <code>spinner.start('request')</code> 处那次「提交守护」<strong>一回合只 arm 一次</strong>、被本回合<br><strong>首个 chunk</strong> <code>markChunk</code> 消费掉（<code>_done</code>），<code>turnAckVoice</code> 也<strong>一回合至多一次</strong>（<code>_turnAckEmitted</code>）。</p>
+<p>结果：在<strong>第 2、3、…N 次工具迭代</strong>里，「一个工具刚返回 → 模型据此续跑出下一个 chunk」之间，<br>若模型迟迟不开口（交互 raw-mode 下 spinner 被 render-suppress），<strong>又是一段像卡死的死寂</strong>——<br>这正是真实 agentic 工作里 khy 最常「看起来卡死」的窗口，也直接对应送别礼的第三诉求<br>「让它不要再次……长时间卡死」。</p>
+<p>这一层就补它：</p>
+<ul><li><strong>判定叶</strong>（同一个 <code>firstResponseAckVoice.js</code>，全 additive）新增 <code>variant: 'resume'</code>，走</li></ul>
+<p><code>_RESUME_ACK_LINES</code>（措辞传达「工具已收到结果·正在继续处理」，<strong>不复述工具结果内容</strong>——<br>  那已由 step 行渲染），并额外过 resume 子门 <code>isResumeEnabled</code>。</p>
+<ul><li><strong>子门</strong> <code>KHY_FIRST_RESPONSE_ACK_RESUME</code>（default-on，父门 <code>KHY_FIRST_RESPONSE_ACK</code>）：</li></ul>
+<p>父门关则整体关；子门单独 CANON 4 词 <code>{0,false,off,no}</code> 关 → 逐字节回退到「工具返回后无提示」。</p>
+<ul><li><strong>接线</strong>：<code>replSession.js</code> 的 onChunk 里定义一个 hoisted 辅助 <code>_rearmResumeAck()</code>——先 <code>disarm</code></li></ul>
+<p>任何残留句柄，再新建一个 <code>variant: 'resume'</code> 调度器并 <code>arm</code>。在<strong>每个「工具已收尾」信号处</strong><br>  调用它：<code>tool_result</code> 分支末、<code>tool_complete</code> 分支末。下一个 chunk 到达即由 onChunk 顶部的<br>  <code>markChunk</code> 取消；回合 <code>finally</code> 的 <code>disarm</code> 兜底。</p>
+<p><strong>为什么在多个工具收尾信号处都重装</strong>：<code>markChunk</code> 在 onChunk 顶部对<strong>任何</strong> chunk 生效（提交守护<br>本就该被首 chunk 取消）。若只在 <code>tool_result</code> 重装，紧随其后的 <code>tool_complete</code>（同一工具的富完成）<br>会在其顶部 <code>markChunk</code> 把刚装的 resume 守护取消掉，之后的静默便再次失守。于是在<strong>每个工具收尾<br>chunk</strong> 处都重装：模型输出类 chunk（<code>text</code> / <code>thinking</code> / <code>assistant_preface</code> / <code>tool_use</code>）<strong>不重装</strong>，<br>故模型一开口即被取消且不再复活——「最后一个工具收尾 → 模型下一 chunk」这段窗口稳稳被守住。<br>快循环（工具秒回、模型秒续）永远等不到阈值，一句都不出；只有真正 &gt;阈值 的慢续跑才出声。</p>
+<p>正交四层：<code>turnAck</code>（首工具·模型已开口）· submit（提交→首 token·模型没开口）· selection（中途<br>选项已选→模型恢复）· <strong>resume（工具返回→模型续跑·工具循环迭代之间）</strong>。同一回合可出多句 resume<br>（每段真·慢间隔一句），互为「仍在为你处理」的定期安抚，绝不在快循环里刷屏。</p>
+<h2 id="图片提示词也要及时回应-image-变体-门-khy-first-response-ack-image">图片提示词也要及时回应（image 变体 · 门 <code>KHY_FIRST_RESPONSE_ACK_IMAGE</code>）<a class="anchor" href="#图片提示词也要及时回应-image-变体-门-khy-first-response-ack-image" aria-label="锚点">#</a></h2>
+<p>用户 <code>/goal</code>「<strong>不论我发送任何的提示词</strong>，khy 都要立刻及时回应」的<strong>图片分析</strong>面：当用户发出<br>一条图片提示词（<code>/paste</code>、<code>图片识别</code>、<code>分析这张图 &lt;path&gt;</code>、剪贴板自动识别），处理路径<strong>不是</strong><br>主回合那次流式 <code>ai().chat(message, { onChunk })</code>，而是一条<strong>独立的非流式</strong><br><code>await ai().chat(prompt, { images })</code> 子流——<strong>没有 <code>onChunk</code> 流、没有 <code>markChunk</code></strong>，<br>只有一个长 <code>await</code>，期间终端<strong>全程静默</strong>。</p>
+<p>这段静默恰恰最长、最像卡死：视觉级联（vision 模型 → OCR 兜底）是全链路最耗时的一环；更糟的是<br>模型偶尔会谎称「没有收到图片」。一句<strong>先确认「图片确已收到」再告知「正在识别」</strong>的短句，<br>既补住这段窗口，又即时反驳那种假阴性——用户第一时间就知道「khy 拿到我的图了，正在看」。</p>
+<p>这一层就补它：</p>
+<ul><li><strong>判定叶</strong>（同一个 <code>firstResponseAckVoice.js</code>，全 additive）新增 <code>variant: 'image'</code>，走</li></ul>
+<p><code>_IMAGE_ACK_LINES</code>（措辞刻意<strong>先确认图片已收到</strong>、再传达「正在识别·别急」，<strong>不复述用户<br>  提示词原话</strong>），并额外过 image 子门 <code>isImageEnabled</code>。</p>
+<ul><li><strong>子门</strong> <code>KHY_FIRST_RESPONSE_ACK_IMAGE</code>（default-on，父门 <code>KHY_FIRST_RESPONSE_ACK</code>）：</li></ul>
+<p>父门关则整体关；子门单独 CANON 4 词 <code>{0,false,off,no}</code> 关 → 逐字节回退到「图片分析无提示」。</p>
+<ul><li><strong>接线</strong>：<code>replSession.js</code> 里定义一个<strong>自包含</strong>的 hoisted 辅助 <code>_armImageAck()</code>（内部</li></ul>
+<p>lazy-require <code>aiRenderer</code>、用 <code>_replTurnAckSeq++</code> 轮换、创建 <code>variant: 'image'</code> 调度器并 <code>arm</code>，<br>  返回句柄；门控关 / 叶缺失 / 异常 → 返回 <code>null</code>）。在<strong>三处</strong>非流式图片 <code>ai().chat({images})</code><br>  子流的 <code>await</code> <strong>之前</strong> <code>_imgAck = _armImageAck()</code>、在其 <code>await</code> 完成 / 异常的收尾处 <code>disarm</code>：</p>
+<ul><li>剪贴板图片自动识别子流（<code>_onceImagePrompt</code>）；</li><li><code>/paste</code> 菜单选择子流（<code>selected.flag === 'paste'</code>，无 finally → 成功、catch 两处各 disarm）；</li><li>主图片命令子流（<code>imageMatch || pasteMatch || inlineImage || clipboardAssist</code>，有</li></ul>
+<p><code>finally { _busy = false; }</code> → 在 finally 里 disarm）。</p>
+<p><strong>为什么 image 变体没有 <code>markChunk</code></strong>：这三条子流是<strong>非流式</strong>的单次 <code>await</code>，不存在「首个<br>chunk」这个取消信号。于是 <code>disarm</code>（在 <code>await</code> 完成 / 异常兜底处调用）就是<strong>唯一</strong>的取消路径——<br>答复在阈值内落地 → <code>disarm</code> 取消，一句不出；只有 <code>await</code> 真的拖过阈值（视觉级联慢）才 emit。<br><code>holder</code>（<code>let _imgAck = null;</code>）<strong>必须声明在 <code>try</code> 之前</strong>，让 <code>finally</code> / <code>catch</code> 都能看见它<br>（block-scoped <code>let</code> 声明在 <code>try</code> 体内则 <code>finally</code> 不可见 → ReferenceError）。<br>image emit <strong>不置</strong> <code>_turnAckEmitted</code>——图片子流不走主回合的流式 tool loop，turnAck 不会触发，<br>无叠话风险。</p>
+<p>正交五层：<code>turnAck</code>（首工具·模型已开口）· submit（提交→首 token）· selection（中途选项已选→<br>模型恢复）· resume（工具返回→模型续跑）· <strong>image（图片提示词→非流式 <code>ai().chat</code> 完整答复落地）</strong>。</p>
+<h2 id="和-turnackvoice-的分工-正交-不重叠">和 turnAckVoice 的分工（正交，不重叠）<a class="anchor" href="#和-turnackvoice-的分工-正交-不重叠" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>层</th><th>触发时机</th><th>面向的窗口</th></tr></thead><tbody><tr><td><code>firstResponseAckVoice</code>（OPS-135，本层）</td><td>请求发出后、<strong>首个模型 chunk 到来之前</strong></td><td>提交 → 首 token 的静默窗口（模型还没开口）</td></tr><tr><td><code>turnAckVoice</code>（<code>KHY_TURN_ACK</code>）</td><td>本轮<strong>首个工具即将派发</strong>时</td><td>模型已开口、要跑工具的耗时轮次</td></tr></tbody></table>
+<p>接线方在本层 emit 时置 <code>_turnAckEmitted = true</code>，两者<strong>同回合至多出一句</strong>，不叠话。</p>
+<h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>只加不改</strong>：门 <code>KHY_FIRST_RESPONSE_ACK</code> default-on，关 → <code>arm()</code> no-op、逐字节回退到「无提示」</li></ul>
+<p>的历史行为（连计时器都不挂，无开销）。</p>
+<ul><li><strong>绝不卡死、绝不误伤</strong>：调度器纯计时器 + fail-soft，任何异常吞成 no-op；<code>emit</code> 回调抛错也不影响</li></ul>
+<p>主流程；首个 chunk 一到即取消，正常快响应的回合<strong>永远不会出这句</strong>。</p>
+<ul><li><strong>不碰密钥 / 不碰用户输入内容</strong>：只产固定短句（按 turnIndex 轮换），不复述用户原话、不读任何文件。</li><li><strong>确定性</strong>：无随机（按 turnIndex 轮换）；异步时序经 DI 计时器，单测用假计时器完全可控。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/cli/firstResponseAckVoice.js
+node --check services/backend/src/cli/replSession.js
+node --check services/backend/src/services/flagRegistry.js
+npm run test:first-response-ack                # 纯叶 + DI 假计时器 68/68 全绿
+npm run test:maintainer:safety                 # 聚合无回归
+node scripts/check-flag-registry.js            # KHY_FIRST_RESPONSE_ACK(+_MS numeric / _SELECTION / _RESUME / _IMAGE 子门) 登记</code></pre>
+<p><strong>LIVE 真计时器证据</strong>（用真实 <code>setTimeout</code> / <code>clearTimeout</code>，不用假计时器）：</p>
+<ul><li>A 静默超过 delay（<code>KHY_FIRST_RESPONSE_ACK_MS=250</code>，真等 450ms，无 chunk）→ <code>emit</code> 真的触发，</li></ul>
+<p>打出「收到，正在为你连接模型，请稍候…」。</p>
+<ul><li>B 首 chunk 快速到达（60ms 内 <code>markChunk()</code>）→ <code>clearTimeout</code> 真的取消 → 再等 450ms <code>emit</code> 从不触发。</li><li>C 门 <code>KHY_FIRST_RESPONSE_ACK=0</code> → <code>arm()</code> 返回 false、计时器从不挂、<code>emit</code> 从不触发（字节等价）。</li><li>D <code>disarm()</code>（finally 兜底）在 fire 前调用 → <code>emit</code> 从不触发。</li></ul>
+<h2 id="how-to-extend-抄写式">HOW-TO-EXTEND（抄写式）<a class="anchor" href="#how-to-extend-抄写式" aria-label="锚点">#</a></h2>
+<p>改静默窗口默认阈值 → 改 flagRegistry 的 <code>KHY_FIRST_RESPONSE_ACK_MS.default</code>（并同步叶内<br><code>_DEFAULT_DELAY_MS</code>）。加 / 改等待短句 → 改 <code>_ACK_LINES</code>（保持 ≥2 条且互异，治相邻回合重复）。<br>接线新的「首响应窗口」消费者（如 TUI 侧）→ 复用同一个 <code>createFirstResponseAckScheduler</code>，注入该端的<br><code>emit</code> 渲染回调即可，判定逻辑一处不动。<strong>切勿</strong>把 <code>emit</code> 放进热路径每 chunk 调用——它只由计时器<br>在「静默到点」时触发一次。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-135] 工作流列表载入本页降级不泄漏全局横幅.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-135] 工作流列表载入本页降级 · 不泄漏全局横幅</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-137] 网页代理内核二进制去哪下载·接确切官方URL到前端横幅.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-137] 网页代理内核二进制去哪下载 · 把确切官方 URL 接到前端横幅</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-136] 首响应静默窗口守护·提交到首token及时回应·接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

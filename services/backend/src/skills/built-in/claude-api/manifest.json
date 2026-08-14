@@ -1,0 +1,15 @@
+{
+  "name": "claude-api",
+  "description": "Guide for using the Anthropic API and Claude models",
+  "trigger": "/claude-api",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "api",
+    "guide"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

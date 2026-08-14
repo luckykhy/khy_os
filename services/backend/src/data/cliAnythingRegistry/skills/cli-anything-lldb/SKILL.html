@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLDB CLI Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-lldb<span class="sep">›</span>LLDB CLI Skill</div>
+      <header class="hero reveal"><h1>LLDB CLI Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#lldb-cli-skill">LLDB CLI Skill</a></li><li class="lvl-2"><a href="#capabilities">Capabilities</a></li><li class="lvl-2"><a href="#quick-commands">Quick Commands</a></li><li class="lvl-2"><a href="#debug-adapter-protocol">Debug Adapter Protocol</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#target">target</a></li><li class="lvl-3"><a href="#process">process</a></li><li class="lvl-3"><a href="#breakpoint">breakpoint</a></li><li class="lvl-3"><a href="#thread-frame-step">thread / frame / step</a></li><li class="lvl-3"><a href="#expr-memory-core">expr / memory / core</a></li><li class="lvl-2"><a href="#agent-usage-notes">Agent Usage Notes</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-lldb&quot;<br>description: Stateful LLDB debugging via LLDB Python API<br>version: 1.0.0<br>command: cli-anything-lldb<br>install: pip install cli-anything-lldb<br>requires:</p>
+<ul><li>lldb (Python bindings)</li><li>click&gt;=8.0</li><li>prompt-toolkit&gt;=3.0</li></ul>
+<p>categories:</p>
+<ul><li>debugging</li><li>native</li><li>lldb</li></ul>
+<hr>
+<h1 id="lldb-cli-skill">LLDB CLI Skill<a class="anchor" href="#lldb-cli-skill" aria-label="锚点">#</a></h1>
+<p>Use this CLI to run structured LLDB debugging workflows with JSON output.</p>
+<h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="锚点">#</a></h2>
+<ul><li>Create debug target from executable path</li><li>Launch process or attach by pid/name</li><li>Manage breakpoints (set/list/delete/enable/disable)</li><li>Inspect threads, frames, locals, and backtrace</li><li>Evaluate expressions in current frame</li><li>Read/find process memory</li><li>Load core dumps</li><li>Interactive REPL with persistent session state</li><li>Formal stdio Debug Adapter Protocol server for AI/editor clients</li></ul>
+<h2 id="quick-commands">Quick Commands<a class="anchor" href="#quick-commands" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cli-anything-lldb --json target create --exe /path/to/exe
+cli-anything-lldb --json process launch --arg foo --arg bar
+cli-anything-lldb --json breakpoint set --function main
+cli-anything-lldb --json breakpoint set --function PluginEntry --allow-pending
+cli-anything-lldb --json process continue
+cli-anything-lldb --json process interrupt
+cli-anything-lldb --json thread backtrace --limit 20
+cli-anything-lldb --json frame locals
+cli-anything-lldb --json expr &quot;myVar&quot;
+cli-anything-lldb --json memory read --address 0x1000 --size 64
+cli-anything-lldb --json session close</code></pre>
+<h2 id="debug-adapter-protocol">Debug Adapter Protocol<a class="anchor" href="#debug-adapter-protocol" aria-label="锚点">#</a></h2>
+<p>Use the DAP entry point when an AI client needs a real debug adapter lifecycle<br>instead of shelling out separate CLI commands:</p>
+<pre><code class="language-bash">cli-anything-lldb-dap
+cli-anything-lldb-dap --profile /path/to/stop-rules.json</code></pre>
+<p>or:</p>
+<pre><code class="language-bash">cli-anything-lldb dap
+cli-anything-lldb dap --profile /path/to/stop-rules.json</code></pre>
+<p>The DAP server speaks stdio <code>Content-Length</code> frames and must have exclusive<br>stdout. Do not print logs to stdout around it. Supported requests include<br><code>initialize</code>, <code>launch</code>, <code>attach</code>, <code>configurationDone</code>, <code>setBreakpoints</code>,<br><code>setFunctionBreakpoints</code>, <code>threads</code>, <code>stackTrace</code>, <code>scopes</code>, <code>variables</code>,<br><code>setVariable</code>, <code>evaluate</code>, <code>continue</code>, <code>pause</code>, <code>next</code>, <code>stepIn</code>, <code>stepOut</code>,<br><code>source</code>, <code>loadedSources</code>, <code>readMemory</code>, <code>modules</code>, <code>exceptionInfo</code>,<br><code>disassemble</code>, and <code>disconnect</code>.</p>
+<p>DAP variables can expose child references for structs/classes/arrays. Use<br><code>setVariable</code> only while stopped; LLDB may reject writes to optimized-out or<br>read-only values.</p>
+<p>For long-running GUI debuggees, DAP <code>continue</code> is non-blocking from the client's<br>point of view: the adapter sends the response and <code>continued</code> event first, then<br>waits for LLDB on a background thread. DAP <code>pause</code> uses LLDB async interrupt.<br>If an agent needs to change breakpoints while the debuggee is running, the<br>adapter interrupts first and waits for a stopped state before mutating LLDB<br>breakpoints; if the target does not stop in time, retry after an explicit<br><code>pause</code>/<code>stopped</code> cycle.</p>
+<p>For GUI apps that stop on debugger-internal startup or shader-JIT breakpoints,<br><code>launch</code> and <code>attach</code> accept the non-standard boolean argument<br><code>autoContinueInternalBreakpoints</code>. Enable it only when those internal stops are<br>noise for the task; the adapter emits an <code>output</code> event before auto-continuing.<br>For target-specific noise, prefer structured stop rules through inline<br><code>stopRules</code> or an external <code>stopRuleProfile</code>/<code>--profile</code> JSON file. Rules can<br>match by <code>reason</code>, <code>module</code>, <code>function</code>, and/or <code>regex</code>, then either <code>stop</code> with<br>clear <code>cliAnythingStop.origin</code> metadata or <code>continue</code> automatically. Use<br>profiles for apps such as C4D so their NVIDIA shader-JIT/startup traps live<br>outside the generic adapter.</p>
+<p>DAP <code>stopped</code> events include <code>body.cliAnythingStop.origin</code>: <code>manualPause</code> for a<br>client pause request, <code>internalTrap</code> for a matched internal rule, and <code>debuggee</code><br>for ordinary program stops. Existing <code>cli-anything-lldb-dap</code> processes do not<br>hot-load new code or profile contents; restart the adapter and re-attach or<br>re-launch before expecting new rules to apply.</p>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="target">target<a class="anchor" href="#target" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-lldb --json target create --exe /path/to/exe [--arch x86_64]
+cli-anything-lldb --json target info</code></pre>
+<h3 id="process">process<a class="anchor" href="#process" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-lldb --json process launch [--arg ARG ...] [--env KEY=VALUE ...] [--cwd DIR] [--stop-at-entry]
+cli-anything-lldb --json process attach --pid 1234
+cli-anything-lldb --json process attach --name myapp --wait-for
+cli-anything-lldb --json process continue
+cli-anything-lldb --json process interrupt
+cli-anything-lldb --json process detach
+cli-anything-lldb --json process info</code></pre>
+<h3 id="breakpoint">breakpoint<a class="anchor" href="#breakpoint" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-lldb --json breakpoint set --function main
+cli-anything-lldb --json breakpoint set --file main.c --line 42 --condition &quot;i &gt; 10&quot;
+cli-anything-lldb --json breakpoint set --function LateLoadedSymbol --allow-pending
+cli-anything-lldb --json breakpoint list
+cli-anything-lldb --json breakpoint delete --id 1
+cli-anything-lldb --json breakpoint enable --id 1
+cli-anything-lldb --json breakpoint disable --id 1</code></pre>
+<h3 id="thread-frame-step">thread / frame / step<a class="anchor" href="#thread-frame-step" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-lldb --json thread list
+cli-anything-lldb --json thread select --id 11111
+cli-anything-lldb --json thread backtrace --limit 50
+cli-anything-lldb --json frame select --index 0
+cli-anything-lldb --json frame info
+cli-anything-lldb --json frame locals
+cli-anything-lldb --json step over
+cli-anything-lldb --json step into
+cli-anything-lldb --json step out</code></pre>
+<h3 id="expr-memory-core">expr / memory / core<a class="anchor" href="#expr-memory-core" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-lldb --json expr &quot;argc&quot;
+cli-anything-lldb --json memory read --address 0x1000 --size 128
+cli-anything-lldb --json memory find &quot;needle&quot; --start 0x1000 --size 4096
+cli-anything-lldb --json core load --path /path/to/core</code></pre>
+<h2 id="agent-usage-notes">Agent Usage Notes<a class="anchor" href="#agent-usage-notes" aria-label="锚点">#</a></h2>
+<ul><li>Prefer <code>--json</code> for all automated flows.</li><li>Separate non-REPL invocations share a persistent session daemon by default.</li><li>Use <code>--session-file PATH</code> or <code>CLI_ANYTHING_LLDB_SESSION_FILE</code> to pin an explicit session for a task.</li><li>Run <code>cli-anything-lldb --json session close</code> when finished so attached processes detach and launched debuggees are cleaned up.</li><li>Use REPL when a human-like interactive shell is more convenient, not because persistence requires it.</li><li>Unresolved CLI breakpoints fail by default; pass <code>--allow-pending</code> only when a future module/symbol load is expected.</li><li>DAP unresolved breakpoints use protocol semantics: <code>verified: false</code> until resolved.</li><li>DAP <code>continue</code> is non-blocking for long-running GUI processes, and DAP <code>pause</code> uses async interrupt.</li><li>DAP breakpoint changes during an active continue first interrupt and wait for a stopped state before mutating LLDB.</li><li>Use DAP stop-rule profiles for app-specific internal traps; restart and re-attach/re-launch after profile changes.</li><li><code>memory find</code> uses a chunked scan capped at 1 MiB per call.</li><li>Call <code>target create</code> before process or core commands.</li><li>Expect structured errors: <code>{&quot;error&quot;: &quot;...&quot;, &quot;type&quot;: &quot;...&quot;}</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-libreoffice/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-libreoffice</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-macrocli/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">MacroCLI CLI</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-lldb/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-unrealinsights · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-unrealinsights<span class="sep">›</span>cli-anything-unrealinsights</div>
+      <header class="hero reveal"><h1>cli-anything-unrealinsights</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-unrealinsights">cli-anything-unrealinsights</a></li><li class="lvl-2"><a href="#prerequisites">Prerequisites</a></li><li class="lvl-2"><a href="#core-commands">Core Commands</a></li><li class="lvl-3"><a href="#backend-discovery">Backend discovery</a></li><li class="lvl-3"><a href="#trace-session-state">Trace session state</a></li><li class="lvl-3"><a href="#trace-store-discovery">Trace Store discovery</a></li><li class="lvl-3"><a href="#capture-orchestration">Capture orchestration</a></li><li class="lvl-3"><a href="#continuous-capture-session-control">Continuous capture session control</a></li><li class="lvl-3"><a href="#live-trace-control-backend">Live trace control backend</a></li><li class="lvl-3"><a href="#gui-co-pilot">GUI co-pilot</a></li><li class="lvl-3"><a href="#offline-exporters">Offline exporters</a></li><li class="lvl-3"><a href="#batch-response-files">Batch response files</a></li><li class="lvl-3"><a href="#analyze-summaries">Analyze summaries</a></li><li class="lvl-2"><a href="#json-output-guidance">JSON Output Guidance</a></li><li class="lvl-2"><a href="#notes">Notes</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-unrealinsights&quot;<br>description: &quot;Capture Unreal Engine traces, inspect Trace Store files, keep Unreal Insights GUI open, and export/summarize timing/counter data.&quot;</p>
+<hr>
+<h1 id="cli-anything-unrealinsights">cli-anything-unrealinsights<a class="anchor" href="#cli-anything-unrealinsights" aria-label="锚点">#</a></h1>
+<p>Use this CLI when you need agent-friendly access to Unreal Insights trace capture<br>and exporter workflows on Windows.</p>
+<h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
+<ul><li>Windows</li><li>Unreal Engine tools installed with <code>UnrealInsights.exe</code></li><li>Verified with UE 5.5; headless timing exporters include compatibility handling</li></ul>
+<p>for UE 5.3-style command parsing where possible</p>
+<ul><li>Optional explicit env vars:<ul><li><code>UNREALINSIGHTS_EXE</code></li><li><code>UNREAL_TRACE_SERVER_EXE</code></li><li><code>UNREALINSIGHTS_TRACE</code></li></ul></li></ul>
+<h2 id="core-commands">Core Commands<a class="anchor" href="#core-commands" aria-label="锚点">#</a></h2>
+<h3 id="backend-discovery">Backend discovery<a class="anchor" href="#backend-discovery" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json backend info</code></pre>
+<p>To use a source-built engine's matching <code>UnrealInsights.exe</code>:</p>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json backend ensure-insights `
+  --engine-root 'D:\code\D5\d5render-ue5_3'</code></pre>
+<p>This first looks for <code>Engine\Binaries\Win64\UnrealInsights.exe</code> under the<br>specified engine root, then builds it with that engine's <code>Build.bat</code> if needed.</p>
+<h3 id="trace-session-state">Trace session state<a class="anchor" href="#trace-session-state" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights trace set D:\captures\session.utrace
+cli-anything-unrealinsights --json trace info</code></pre>
+<h3 id="trace-store-discovery">Trace Store discovery<a class="anchor" href="#trace-store-discovery" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json store info
+cli-anything-unrealinsights --json store list --live-only
+cli-anything-unrealinsights --json store latest --set-current</code></pre>
+<h3 id="capture-orchestration">Capture orchestration<a class="anchor" href="#capture-orchestration" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json capture run `
+  --project 'D:\Projects\MyGame\MyGame.uproject' `
+  --engine-root 'D:\Program Files\Epic Games\UE_5.5' `
+  --output-trace D:\captures\boot.utrace `
+  --channels &quot;default,bookmark&quot; `
+  --exec-cmd &quot;Trace.Bookmark BootStart&quot; `
+  --wait --timeout 300</code></pre>
+<p>You can also keep using the explicit form:</p>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json capture run `
+  'D:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe' `
+  --target-arg 'D:\Projects\MyGame\MyGame.uproject'</code></pre>
+<h3 id="continuous-capture-session-control">Continuous capture session control<a class="anchor" href="#continuous-capture-session-control" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json capture start `
+  --project 'D:\Projects\MyGame\MyGame.uproject' `
+  --engine-root 'D:\Program Files\Epic Games\UE_5.5' `
+  --output-trace D:\captures\live_session.utrace
+
+cli-anything-unrealinsights --json capture status
+cli-anything-unrealinsights --json capture snapshot D:\captures\live_snapshot.utrace
+cli-anything-unrealinsights --json capture stop</code></pre>
+<p>This is the preferred flow when an agent needs to start profiling now and stop<br>or snapshot later in a follow-up turn.</p>
+<p>If a tracked capture session is still running, <code>capture start</code> now requires<br><code>--replace</code> so the previous process is stopped before a new one is launched.</p>
+<h3 id="live-trace-control-backend">Live trace control backend<a class="anchor" href="#live-trace-control-backend" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">$env:UNREALINSIGHTS_LIVE_EXEC='ushell-wrapper --pid {pid} --cmd &quot;{cmd}&quot;'
+cli-anything-unrealinsights --json live processes
+cli-anything-unrealinsights --json live trace-status --pid 1234
+cli-anything-unrealinsights --json live bookmark --pid 1234 &quot;BeforeExport&quot;
+cli-anything-unrealinsights --json live stop-trace --pid 1234</code></pre>
+<p>Live command delivery requires <code>UNREALINSIGHTS_LIVE_EXEC</code> or <code>--backend-command</code>.<br>If no backend is configured, live commands return a JSON error and do not claim<br>success. <code>live stop-trace</code> stops trace collection without killing the UE process;<br><code>capture stop</code> still terminates the harness-launched process tree.</p>
+<h3 id="gui-co-pilot">GUI co-pilot<a class="anchor" href="#gui-co-pilot" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json gui status
+cli-anything-unrealinsights --json gui open --trace D:\captures\session.utrace
+cli-anything-unrealinsights --json gui open-latest</code></pre>
+<p>GUI commands omit <code>-NoUI</code> and <code>-AutoQuit</code> so Unreal Insights remains open.</p>
+<h3 id="offline-exporters">Offline exporters<a class="anchor" href="#offline-exporters" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json -t D:\captures\session.utrace export threads D:\out\threads.csv
+cli-anything-unrealinsights --json -t D:\captures\session.utrace export timer-stats D:\out\stats.csv --region=EXPORT_CAPTURE
+cli-anything-unrealinsights --json -t D:\captures\session.utrace export counter-values D:\out\counter_values.csv --counter=*</code></pre>
+<p>Prefer equals-form wildcard filters such as <code>--timers=*</code> and <code>--counter=*</code>.<br>The harness passes simple values to UnrealInsights without inner quotes so<br>wildcards remain usable inside <code>-ExecOnAnalysisCompleteCmd</code>.</p>
+<h3 id="batch-response-files">Batch response files<a class="anchor" href="#batch-response-files" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json -t D:\captures\session.utrace batch run-rsp D:\out\exports.rsp</code></pre>
+<h3 id="analyze-summaries">Analyze summaries<a class="anchor" href="#analyze-summaries" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">cli-anything-unrealinsights --json -t D:\captures\session.utrace analyze summary --out D:\out\summary
+cli-anything-unrealinsights --json analyze summary --skip-export --out D:\out\summary</code></pre>
+<p>The summary reports top timers, focused GameThread/RenderThread/RHIThread<br>hotspots, wait/task-related timers, counter peaks, and uncovered domains for<br>future Memory/Network/Slate/Asset/Cooking analysis.</p>
+<p><code>analyze summary</code> also returns <code>export_status</code> and<br><code>summary.diagnostics.export_status_counts</code> so agents can distinguish successful<br>exports from trace/filter combinations that completed but produced no rows.</p>
+<h2 id="json-output-guidance">JSON Output Guidance<a class="anchor" href="#json-output-guidance" aria-label="锚点">#</a></h2>
+<ul><li>Prefer <code>--json</code> for agent workflows.</li><li>Export commands return:<ul><li><code>trace_path</code></li><li><code>exec_command</code></li><li><code>output_files</code></li><li><code>output_status</code></li><li><code>status_message</code></li><li><code>log_path</code></li><li><code>exit_code</code></li><li><code>warnings</code></li><li><code>errors</code></li><li><code>succeeded</code></li></ul></li><li>Capture returns:<ul><li><code>command</code></li><li><code>trace_path</code></li><li><code>trace_exists</code></li><li><code>trace_size</code></li><li><code>pid</code> or <code>exit_code</code></li></ul></li><li>Continuous capture status returns:<ul><li><code>pid</code></li><li><code>running</code></li><li><code>target_exe</code></li><li><code>project_path</code></li><li><code>trace_path</code></li><li><code>trace_size</code></li><li><code>started_at</code></li></ul></li><li>Trace Store commands return:<ul><li><code>store_dir</code></li><li><code>trace_count</code></li><li><code>traces</code></li><li><code>latest</code></li></ul></li><li>Live commands return:<ul><li><code>pid</code></li><li><code>live_command</code></li><li><code>backend</code></li><li><code>exit_code</code></li><li><code>succeeded</code></li></ul></li><li>Analyze summary returns:<ul><li><code>exports</code></li><li><code>export_status</code></li><li><code>summary.top_timers</code></li><li><code>summary.focus_threads</code></li><li><code>summary.wait_timers</code></li><li><code>summary.counter_peaks</code></li><li><code>summary.diagnostics</code></li><li><code>summary.uncovered_domains</code></li></ul></li></ul>
+<p>Treat <code>output_status == &quot;ok&quot;</code> as a materialized export. Treat<br><code>output_status == &quot;no_output&quot;</code> as an empty trace/filter result, not a backend<br>crash. Use <code>exporter_error</code>, <code>process_failed</code>, and <code>timed_out</code> for retry or<br>debugging decisions.</p>
+<h2 id="notes">Notes<a class="anchor" href="#notes" aria-label="锚点">#</a></h2>
+<ul><li>v1 is Windows-first.</li><li>v1 includes Trace Store browsing, GUI open/status, pluggable live command delivery,</li></ul>
+<p>and timing/counter summaries.</p>
+<ul><li><code>capture stop</code> is a best-effort stop of the harness-launched process tree.</li><li><code>capture snapshot</code> is a best-effort filesystem snapshot of the active trace.</li><li>Regression tests auto-discover the UE <code>example_trace.decomp.utrace</code> sample</li></ul>
+<p>when present; the binary trace is not vendored.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unimol-tools/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">Uni-Mol Tools - Molecular Property Prediction CLI</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-videocaptioner/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-videocaptioner</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-unrealinsights/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

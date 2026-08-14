@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-047] 轨迹溯源标准 — 溯源信封、防篡改哈希链与注入隔离 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-047] 轨迹溯源标准 — 溯源信封、防篡改哈希链与注入隔离</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-047] 轨迹溯源标准 — 溯源信封、防篡改哈希链与注入隔离</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-047-轨迹溯源标准-溯源信封-防篡改哈希链与注入隔离">[DESIGN-ARCH-047] 轨迹溯源标准 — 溯源信封、防篡改哈希链与注入隔离</a></li><li class="lvl-2"><a href="#1-威胁模型-经外部-agent-中转的轨迹投毒">1. 威胁模型：经外部 agent 中转的轨迹投毒</a></li><li class="lvl-2"><a href="#2-khytrace-信封-schema-khytrace-js-单一真源">2. `_khyTrace` 信封 schema（`khyTrace.js` 单一真源）</a></li><li class="lvl-2"><a href="#3-分阶段-每阶段独立可测可叫停">3. 分阶段（每阶段独立可测可叫停）</a></li><li class="lvl-3"><a href="#phase-1-溯源标签-基线-always-on-非侵入">PHASE 1 — 溯源标签（基线，ALWAYS-ON，非侵入）</a></li><li class="lvl-3"><a href="#phase-2-防篡改哈希链-always-on-fail-soft">PHASE 2 — 防篡改哈希链（ALWAYS-ON，fail-soft）</a></li><li class="lvl-3"><a href="#phase-3-隔离注入调用-gated-安全核心">PHASE 3 — 隔离注入调用（GATED，安全核心）</a></li><li class="lvl-3"><a href="#phase-4-正文矛盾核对-always-on-fail-open-无模型调用">PHASE 4 — 正文矛盾核对（ALWAYS-ON，fail-OPEN，无模型调用）</a></li><li class="lvl-3"><a href="#phase-5-人机双投影-khy-trace-命令">PHASE 5 — 人机双投影 + `khy trace` 命令</a></li><li class="lvl-2"><a href="#4-热路径零回归策略">4. 热路径零回归策略</a></li><li class="lvl-2"><a href="#5-全局防呆红线">5. 全局防呆红线</a></li><li class="lvl-2"><a href="#6-排序与依赖">6. 排序与依赖</a></li><li class="lvl-2"><a href="#7-端到端验证">7. 端到端验证</a></li><li class="lvl-2"><a href="#8-编号说明">8. 编号说明</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-047-轨迹溯源标准-溯源信封-防篡改哈希链与注入隔离">[DESIGN-ARCH-047] 轨迹溯源标准 — 溯源信封、防篡改哈希链与注入隔离<a class="anchor" href="#design-arch-047-轨迹溯源标准-溯源信封-防篡改哈希链与注入隔离" aria-label="锚点">#</a></h1>
+<p>状态：已实现（PHASE 1–5 全闭环；用户需求「经其他 agent 中转时防轨迹投毒 + 人机双可读的轨迹标准」）<br>依赖前序：</p>
+<ul><li>[DESIGN-ARCH-026] khyos 系统级服务调用审批网关（中转工具调用复用同一权限闸）</li><li>[DESIGN-ARCH-031]/[DESIGN-ARCH-045] 网关日志租界与日志越权阻断（<code>khy trace</code> 可见性约束，隔离原文不回显）</li><li>[DESIGN-ARCH-022] 多实例跨进程文件锁（sidecar 链原子写思路）</li></ul>
+<p>实现位置：</p>
+<ul><li><code>services/backend/src/services/trajectoryProvenance/</code>（新核子系统，6 纯模块 + barrel）<ul><li><code>khyTrace.js</code>——<code>_khyTrace</code> 信封 schema 单一真源（producer/trust/kind 枚举 frozen）</li><li><code>provenanceClassifier.js</code>——入站 adapter/provider 信号 → producer/trust 分类</li><li><code>traceProjection.js</code>——规范记录 →(a)内联标签 (b)<code>khy trace</code> 回放行（确定性，纯函数）</li><li><code>traceChain.js</code>——防篡改 sidecar 哈希链（镜像 <code>evoEngine/evoLedger</code>）</li><li><code>quarantinePolicy.js</code>——中转工具调用隔离决策（纯，env 闸 + fail-CLOSED）</li><li><code>claimReconciler.js</code>——正文动作声称 vs 本地工具日志的确定性核对（无模型，fail-OPEN）</li></ul></li><li><code>services/backend/src/services/sessionPersistence.js</code>——<code>appendMessage</code> 盖 <code>_khyTrace</code> + 落 sidecar 链；新增只读 <code>verifyTraceChain</code></li><li><code>services/backend/src/services/gateway/adapters/codexAdapter.js</code>——移除 codex-direct 无条件全局 dangerous mode，改走隔离闸</li><li><code>services/backend/src/cli/ai.js</code>——助手 turn 持久化 seam 串溯源分类 + 正文矛盾核对</li><li><code>services/backend/src/cli/tui/hooks/useQueryBridge.js</code>、<code>ink-components/ToolLines.js</code>——透传并渲染 <code>_khyTrace</code> 内联标签</li><li><code>services/backend/src/cli/handlers/trace.js</code>（新）+ <code>router.js</code> + <code>constants/commandSchema.js</code> + <code>cli/aliases.js</code>——<code>khy trace</code> 命令接线</li></ul>
+<p>验收测试（node:test，仿 evoEngine 布局；共 75 例）：</p>
+<ul><li><code>tests/services/trajectoryProvenance/p1Labels.test.js</code>（22 例：信封 schema + 分类矩阵 + 标签快照）</li><li><code>tests/services/trajectoryProvenance/p2Chain.test.js</code>（12 例：append/verify/篡改定位 + appendMessage 端到端落链 + fail-soft）</li><li><code>tests/services/trajectoryProvenance/p3Quarantine.test.js</code>（16 例：env 解析 + decide 矩阵 + 不变式断言 + codexAdapter 结构守卫）</li><li><code>tests/services/trajectoryProvenance/p4Reconcile.test.js</code>（16 例：6 动作族双语 + 壳命令满足 + 失败工具 + 确定性 + fail-open）</li><li><code>tests/services/trajectoryProvenance/p5Trace.test.js</code>（9 例：verifyTraceChain 三态 + 投影确定性 + handler 只读 + 隔离不回显）</li><li><code>tests/cli/router.test.js</code>（+ <code>trace</code>/<code>trace verify</code>/别名 <code>轨迹</code>·<code>gj</code>/<code>轨迹 verify</code> 解析，47 例全绿）</li></ul>
+<hr>
+<h2 id="1-威胁模型-经外部-agent-中转的轨迹投毒">1. 威胁模型：经外部 agent 中转的轨迹投毒<a class="anchor" href="#1-威胁模型-经外部-agent-中转的轨迹投毒" aria-label="锚点">#</a></h2>
+<p>KhyOS 可把请求<strong>经任意外部 agent 中转</strong>（codex / claude-code / 任意中转 provider）。外部 agent 回传的内容会流进<br>KHY 自己的对话轨迹。现状是「半防御」的信任边界（已对代码核实）：</p>
+<table><thead><tr><th>面</th><th>现状</th><th>风险</th></tr></thead><tbody><tr><td>工具<strong>结果</strong></td><td>已被不信任——KHY 一律丢弃外部结果、本地重跑</td><td>✅ 保留</td></tr><tr><td>工具<strong>调用请求</strong></td><td>照单全收并直接驱动本地执行</td><td><strong>调用注入</strong></td></tr><tr><td>助手<strong>正文 + thinking</strong></td><td>原样存轨迹、原样渲染，无溯源、无核对</td><td><strong>夹带伪造</strong>（正文写「我已删库 / 测试全过」却从未发生）</td></tr><tr><td>codex-direct 执行</td><td>执行前强开全局 dangerous mode 自动批准</td><td><strong>无人值守执行</strong></td></tr><tr><td>JSONL transcript</td><td>无溯源标记、无防篡改</td><td>本地验证过的 turn 与外部「声称」的 turn 人机皆不可分</td></tr></tbody></table>
+<p><strong>目标产出</strong>：一套轨迹溯源标准——每条轨迹条目带 <code>_khyTrace</code> 信封（谁产的 / 可信级别 / 是否本地验证），<br>防篡改哈希链，主动隔离注入调用，确定性正文矛盾核对；同一份结构化记录，机器读 JSONL，人读确定性标签视图 +<br><code>khy trace</code> 命令。</p>
+<hr>
+<h2 id="2-khytrace-信封-schema-khytrace-js-单一真源">2. <code>_khyTrace</code> 信封 schema（<code>khyTrace.js</code> 单一真源）<a class="anchor" href="#2-khytrace-信封-schema-khytrace-js-单一真源" aria-label="锚点">#</a></h2>
+<pre><code>PRODUCER = { KHY_LOCAL:'khy-local', CODEX:'codex', CLAUDE_CODE:'claude-code', RELAY:'relay' }
+TRUST    = { VERIFIED:'verified', CLAIMED:'claimed', QUARANTINED:'quarantined' }
+KIND     = { TEXT, THINKING, TOOL_CALL, TOOL_RESULT }
+_khyTrace = { v:1, producer, producerId, trust, kind, at, contradictions:[], seal }</code></pre>
+<p>确定性人读字形（<code>traceProjection</code>）：</p>
+<table><thead><tr><th>trust</th><th>字形</th><th>含义</th></tr></thead><tbody><tr><td>VERIFIED</td><td><code>✓ KHY executed</code></td><td>KHY 本地亲自执行/产生</td></tr><tr><td>CLAIMED</td><td><code>⟳ {producer} claims</code>（带 id 时 <code>⟳ relay:up1 claims</code>）</td><td>外部 agent 声称，未本地验证</td></tr><tr><td>QUARANTINED</td><td><code>⚠ quarantined</code></td><td>中转调用被隔离，未执行</td></tr><tr><td>矛盾</td><td><code>⚠ unverified claim: &quot;X&quot; (no Delete ran)</code></td><td>正文声称的动作无对应本地成功工具</td></tr><tr><td>链</td><td><code>✓ chain intact (N entries)</code> / <code>⚠ chain broken @ #K — reason</code> / <code>chain: unavailable</code></td><td>链校验页脚</td></tr></tbody></table>
+<p><strong>双向防呆姿态</strong>（§5 红线 1 的具体化）：</p>
+<ul><li><strong>标注层 fail-SAFE-TO-OURS</strong>：缺 trace ⇒ 默认 <code>khy-local/verified</code>，绝不把本地内容误标为外部。</li><li><strong>执行层 fail-CLOSED</strong>：只有显式 <code>khy-local</code> 才视为可信；未知/缺失 producer → 隔离。</li></ul>
+<p>即 <code>quarantinePolicy._isRelayedForExec(p) === (p !== PRODUCER.KHY_LOCAL)</code>，与标注层取向相反。</p>
+<hr>
+<h2 id="3-分阶段-每阶段独立可测可叫停">3. 分阶段（每阶段独立可测可叫停）<a class="anchor" href="#3-分阶段-每阶段独立可测可叫停" aria-label="锚点">#</a></h2>
+<h3 id="phase-1-溯源标签-基线-always-on-非侵入">PHASE 1 — 溯源标签（基线，ALWAYS-ON，非侵入）<a class="anchor" href="#phase-1-溯源标签-基线-always-on-非侵入" aria-label="锚点">#</a></h3>
+<p>每条轨迹条目带 <code>_khyTrace</code>；机器读 JSONL 字段，人见内联标签。<strong>不改派发行为</strong>。</p>
+<ul><li>分类：producer ← adapter 身份（原生→KHY_LOCAL；allow-list claude-code/codex/relay）；非 KHY 的正文/thinking→CLAIMED。</li><li>串接：<code>appendMessage</code> 接受 <code>msg._khyTrace</code>（显式优先），否则据 role + <code>_khyProvenance</code> 提示 <code>makeTrace</code> 盖戳写成 JSONL 顶层字段（增量、向后兼容，旧 reader 忽略未知字段）。</li><li>人读：<code>useQueryBridge.projectToolResultForView</code> 仿 <code>_khyWriteDiff</code> 透传 <code>_khyTrace</code>；<code>ToolLines.js</code> 渲字形。</li></ul>
+<h3 id="phase-2-防篡改哈希链-always-on-fail-soft">PHASE 2 — 防篡改哈希链（ALWAYS-ON，fail-soft）<a class="anchor" href="#phase-2-防篡改哈希链-always-on-fail-soft" aria-label="锚点">#</a></h3>
+<p>检测 transcript 事后被改/被插；<strong>只告警不阻断</strong>。</p>
+<ul><li>决策：<strong>镜像 evoLedger 做 sidecar 链</strong>（<code>&lt;session&gt;.trace-chain.json</code>），不折进 JSONL 行。理由：JSONL append-only、多消费者，逐行嵌 prevHash 会把每个 reader 耦合进链算、单行损坏污染重建。</li><li>链记录确定性 hash over <code>{seq,uuid,prevHash,producer,trust,contentHash,at}</code>；<code>contentHash=sha256(内容)</code> 把消息绑进链而不拷贝正文。<code>verify()</code> 定位首坏块；<code>verifyAgainstEntries()</code> 交叉核对盘上 JSONL 正文（抓「改正文」「删行」）。</li><li>另有进程私有 HMAC <code>seal</code>（仅活会话内增益，<strong>不参与跨进程 verify</strong>，避免读不出 seal 误报断链）。</li><li>接线：<code>appendMessage</code> 写完 JSONL 行后 <code>traceChain.append(...)</code>，<strong>try/catch best-effort——链失败绝不让消息写入失败</strong>。</li></ul>
+<h3 id="phase-3-隔离注入调用-gated-安全核心">PHASE 3 — 隔离注入调用（GATED，安全核心）<a class="anchor" href="#phase-3-隔离注入调用-gated-安全核心" aria-label="锚点">#</a></h3>
+<p>中转工具调用请求<strong>必须走常规权限/审批闸</strong>；<strong>杀掉 codex-direct 静默自动批准</strong>，且不破坏合法本地 agent loop。</p>
+<ul><li>区分中转 vs 本地：旧 <code>toolCalling._dangerousMode</code> 进程级、origin-blind = 漏洞根。改用 <code>_khyTrace.producer</code>，<code>!=khy-local</code> 即「中转」。</li><li><code>codexAdapter.js</code>：<strong>移除</strong> executeTool 循环外那圈无条件 <code>enableDangerousMode()</code>；每个中转 functionCall 经 <code>quarantinePolicy.decide()</code> 裁决——本地→ALLOW、闸关（逃生口）→ALLOW、已预批准→ALLOW、交互→GATE、非交互且无批准→QUARANTINE（返工具结果 error、标 <code>trust=QUARANTINED</code>、发 <code>⚠ quarantined</code>，<strong>绝不自动跑</strong>）。</li><li>闸：env <code>KHY_TRAJECTORY_QUARANTINE</code>（默认 <strong>ON</strong>；<code>=0/false/off/no</code> 迁移逃生口）。</li><li>不变式断言：<code>assertNoAutoDangerous()</code>——origin=relay 且闸开且将自动开 dangerous ⇒ throw，codex-direct 永不再静默翻全局 dangerous mode。</li></ul>
+<h3 id="phase-4-正文矛盾核对-always-on-fail-open-无模型调用">PHASE 4 — 正文矛盾核对（ALWAYS-ON，fail-OPEN，无模型调用）<a class="anchor" href="#phase-4-正文矛盾核对-always-on-fail-open-无模型调用" aria-label="锚点">#</a></h3>
+<p>中转正文标 CLAIMED；确定性把动作声称与本地 <code>toolCallLog</code> 交叉核对；矛盾发 <code>⚠ unverified claim</code>。</p>
+<ul><li><code>claimReconciler.js</code>：版本化<strong>中英双语 动词→工具族</strong> allow-list 词库（delete/write/edit/test/commit/deploy 6 族，纯正则）；每条声称查本地日志是否有同族<strong>成功</strong>工具（认 <code>success===true</code> 或 <code>result.success===true</code>，含壳命令满足）；缺/失败 → 矛盾 <code>{claim,expectedTool,found:false}</code> 写入 <code>_khyTrace.contradictions</code>。</li><li><strong>fail-OPEN</strong>：仅咨询性，任何异常/畸形输入 → 空矛盾，绝不阻断 turn、绝不改模型正文。</li><li>接线（<code>ai.js</code>）：仅当 producer != khy-local 时对中转正文跑，结果注入 <code>_khyProvenance.contradictions</code> → <code>appendMessage</code> → <code>_khyTrace.contradictions</code> → 投影。</li></ul>
+<h3 id="phase-5-人机双投影-khy-trace-命令">PHASE 5 — 人机双投影 + <code>khy trace</code> 命令<a class="anchor" href="#phase-5-人机双投影-khy-trace-命令" aria-label="锚点">#</a></h3>
+<p>一条规范结构化记录（JSONL <code>_khyTrace</code> + sidecar 链），两个渲染器。</p>
+<ul><li>(a) 内联（P1/P4 已做）。(b) <code>khy trace</code> 只读命令：<ul><li><code>khy trace</code> / <code>trace show [session]</code>——回放整条轨迹（字形 + 矛盾标记 + 链状态页脚）</li><li><code>trace list</code>——列出会话 + 各自链完整性</li><li><code>trace verify [session]</code>——只跑链校验</li></ul></li><li>接线：<code>commandSchema</code> 加 <code>'trace'</code> 命令 + <code>trace:['list','show','verify']</code> 子命令；<code>router.js case 'trace'</code>；别名 <code>'轨迹'</code>/<code>gj</code>（裸别名，router 守卫保 <code>轨迹 verify</code> 仍路由 <code>trace verify</code>）。</li><li>路径解析复用 <code>sessionPersistence.verifyTraceChain</code>（内部 <code>_jsonlPath</code> 单一真源，不向 handler 泄露私有内部）。</li><li>防呆：纯只读（不改 transcript/链）；未知 session 友好报错不崩；链缺仍渲（<code>chain: unavailable</code>）；<strong>遵 gatewayLogLease 可见性——隔离条目只展示标签、不回显原文</strong>（<code>[内容已隔离，不予回显]</code>）。</li></ul>
+<hr>
+<h2 id="4-热路径零回归策略">4. 热路径零回归策略<a class="anchor" href="#4-热路径零回归策略" aria-label="锚点">#</a></h2>
+<ul><li><strong>P1 标签 + P2 链 + P4 核对：ALWAYS-ON</strong> 但严格增量 &amp; fail-soft——只附 <code>_khyTrace</code>/sidecar，绝不改模型可见内容/派发/阻断写入；热路径控制流不变，新增活全在 <code>try/catch</code> best-effort 尾部。</li><li><strong>P3 隔离：GATED</strong>（<code>KHY_TRAJECTORY_QUARANTINE</code>，默认 ON + <code>=0</code> 逃生口），因它改<strong>执行</strong>行为；本地 loop 由 origin 检查显式排除 + 专项无回归测试。</li><li>理由：溯源/证据必须无处不在才可信（可选标签对溯源无意义）；改执行的防御才给 kill switch。</li></ul>
+<h2 id="5-全局防呆红线">5. 全局防呆红线<a class="anchor" href="#5-全局防呆红线" aria-label="锚点">#</a></h2>
+<ol><li>标签 <strong>fail-SAFE-TO-OURS</strong>（缺 trace⇒khy-local/verified）；执行 <strong>fail-CLOSED</strong>（中转调用未批准即 deny）。</li><li>链 &amp; 核对是证据/咨询：断链或矛盾<strong>告警不 brick</strong> 会话。</li><li>链无 update/delete；仅原子追加；链写在消息写临界区外。</li><li>codex-direct 永不再为中转调用自动开全局 dangerous mode（断言守卫）。</li><li><code>_khyTrace</code> 绝不注入模型可见内容（无 prompt 面泄漏 / 无自投毒）；<code>khy trace</code> 不回显隔离原文。</li><li>枚举 frozen；未知 producer 归 <code>relay:&lt;raw&gt;</code>，热路径永不抛。</li></ol>
+<h2 id="6-排序与依赖">6. 排序与依赖<a class="anchor" href="#6-排序与依赖" aria-label="锚点">#</a></h2>
+<p>P1（schema+标签）→ P2（链，需条目可绑）→ P3（隔离，需 P1 origin 标）→ P4（核对，需 toolCallLog + P1 claimed 正文）→ P5（命令，需全记录）。各阶段独立上线 + 验证；唯 P3 可经 env 叫停/回滚而不丢 P1/P2/P4 价值。</p>
+<h2 id="7-端到端验证">7. 端到端验证<a class="anchor" href="#7-端到端验证" aria-label="锚点">#</a></h2>
+<ul><li>单测：<code>node --test services/backend/tests/services/trajectoryProvenance/p{1..5}*.test.js</code>（75 例全绿）+ <code>jest router</code>。</li><li>防回归：<code>jest codexAdapter toolUseLoop proxyServer</code>（62 例绿，1 例 <code>progressPrefaceDefault</code> 计时 flaky，隔离重跑绿）。</li><li>手动 P1/P5：经 relay provider 跑一轮 → <code>khy trace</code> 看 producer/trust 字形 + 链 intact。</li><li>手动 P2：手改一行 JSONL → <code>khy trace verify</code> 报 <code>⚠ chain broken @ #K</code>。</li><li>手动 P3：codex-direct piped 跑带 Delete 的中转调用 → quarantined 未执行；<code>KHY_TRAJECTORY_QUARANTINE=0</code> 验证逃生口。</li><li>手动 P4：让中转模型正文谎称「测试全过」而不调 test 工具 → 轨迹与 <code>khy trace</code> 标 <code>⚠ unverified claim</code>。</li></ul>
+<h2 id="8-编号说明">8. 编号说明<a class="anchor" href="#8-编号说明" aria-label="锚点">#</a></h2>
+<p>ARCH 号 <strong>047</strong>：核 <code>docs/03_DESIGN_设计/</code> 现存最高 046，取最高 +1，避免索引扰动（历史缺号不补）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-046] 聊天状态污染与回复截断治理-原子轮提交与空结果重试与截断信号保真.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-046] 聊天状态污染与回复截断治理 — 原子轮提交、空结果自动重试与截断信号保真</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-048] khyos轨迹回放与确定性复现.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-048] khyos 轨迹回放与确定性复现 — 回放账本、内容寻址复现包与分档重放引擎</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-047] 轨迹溯源标准-溯源信封与防篡改链与注入隔离.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

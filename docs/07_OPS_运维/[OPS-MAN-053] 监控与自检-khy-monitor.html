@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>监控与自检（khy monitor） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>监控与自检（khy monitor）</div>
+      <header class="hero reveal"><h1>监控与自检（khy monitor）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#监控与自检-khy-monitor">监控与自检（`khy monitor`）</a></li><li class="lvl-2"><a href="#一-selfcheck-系统健康自检">一、selfcheck：系统健康自检</a></li><li class="lvl-2"><a href="#二-aimonitor-ai-请求遥测">二、aiMonitor：AI 请求遥测</a></li><li class="lvl-2"><a href="#三-相关文档">三、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-053 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-053] 监控与自检-khy-monitor.md --&gt;</p>
+<h1 id="监控与自检-khy-monitor">监控与自检（<code>khy monitor</code>）<a class="anchor" href="#监控与自检-khy-monitor" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy monitor</code> 有两族能力：① <strong>selfcheck</strong>——周期性给系统打健康分（资源/进程完整性/威胁扫描/服务健康/plugin-doctor/网关），含自动修复；② <strong>aiMonitor</strong>——AI 请求遥测（dashboard / 工具用量 / 日志）。本文讲清两族的全部子命令与调参。</p>
+<p>实现：<code>services/backend/src/services/baseSelfCheckService.js</code> + <code>services/backend/src/services/aiMonitor</code>，dispatch 在 <code>router.js:3230</code>（内联）。</p></blockquote>
+<hr>
+<h2 id="一-selfcheck-系统健康自检">一、selfcheck：系统健康自检<a class="anchor" href="#一-selfcheck-系统健康自检" aria-label="锚点">#</a></h2>
+<p>周期性自检循环，给出 <strong>0–100 分</strong>（healthy / degraded / critical），覆盖：资源压力、进程完整性、周期威胁扫描、服务健康、周期 plugin-doctor、网关健康，并尝试自动修复。</p>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy monitor selfcheck start [--interval &lt;ms&gt;]</code></td><td>启动自检循环（<strong>启动时立即跑一次</strong>）</td></tr><tr><td><code>khy monitor selfcheck stop</code></td><td>停止</td></tr><tr><td><code>khy monitor selfcheck status</code></td><td>状态（含日志路径）</td></tr><tr><td><code>khy monitor selfcheck run [--deep]</code></td><td>立即跑一次（<code>--deep</code> 深度检查）</td></tr><tr><td><code>khy monitor selfcheck tail [--n &lt;行数&gt;]</code></td><td>查看自检日志尾部（默认 10 行）</td></tr></tbody></table>
+<ul><li><strong><code>--interval</code> 默认 300000ms（5 分钟）</strong>，会被夹在 <strong>15 秒 ~ 24 小时</strong>之间。</li><li>日志路径：<code>KHY_SELF_CHECK_LOG_FILE</code> 或 <code>&lt;dataHome&gt;/selfcheck.log</code>（<strong>10MB × 2 轮转</strong>）。</li><li>诸多 <code>KHY_SELF_CHECK_*</code> 环境变量可调阈值/开关。</li></ul>
+<pre><code class="language-bash">khy monitor selfcheck start --interval 600000   # 每 10 分钟自检一次
+khy monitor selfcheck run --deep                # 立刻来一次深度体检
+khy monitor selfcheck status                    # 看状态 + 日志在哪
+khy monitor selfcheck tail --n 30               # 看最近 30 行
+khy monitor selfcheck stop</code></pre>
+<hr>
+<h2 id="二-aimonitor-ai-请求遥测">二、aiMonitor：AI 请求遥测<a class="anchor" href="#二-aimonitor-ai-请求遥测" aria-label="锚点">#</a></h2>
+<p>观测 KHY 对外的 AI 请求（适配器命中、时延、工具用量等）。</p>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy monitor dashboard</code></td><td>遥测总览面板</td></tr><tr><td><code>khy monitor tools</code></td><td>工具用量统计</td></tr><tr><td><code>khy monitor status</code></td><td><strong>默认动作</strong>，请求状态概览</td></tr><tr><td><code>khy monitor tail</code></td><td>查看请求日志尾部</td></tr><tr><td><code>khy monitor clear</code></td><td>清空遥测数据</td></tr></tbody></table>
+<pre><code class="language-bash">khy monitor                 # = khy monitor status
+khy monitor dashboard
+khy monitor tools
+khy monitor tail</code></pre>
+<hr>
+<h2 id="三-相关文档">三、相关文档<a class="anchor" href="#三-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-052] 安全守护（<code>khy security</code>）—— 安全扫描与权限模式。</li><li>[OPS-MAN-029] 磁盘守卫-防膨胀机制 —— 与自检互补的磁盘侧防护。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-052] 安全守护-khy-security.html"><div class="dir">← 上一篇</div><div class="ttl">安全守护（khy security）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-054] 变更裁决-khy-verdict.html"><div class="dir">下一篇 →</div><div class="ttl">变更裁决（khy verdict）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-053] 监控与自检-khy-monitor.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

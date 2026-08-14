@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orchestration Patterns · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>doubt-driven-development<span class="sep">›</span>references<span class="sep">›</span>Orchestration Patterns</div>
+      <header class="hero reveal"><h1>Orchestration Patterns</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#orchestration-patterns">Orchestration Patterns</a></li><li class="lvl-2"><a href="#endorsed-patterns">Endorsed patterns</a></li><li class="lvl-3"><a href="#1-direct-invocation-no-orchestration">1. Direct invocation (no orchestration)</a></li><li class="lvl-3"><a href="#2-single-persona-slash-command">2. Single-persona slash command</a></li><li class="lvl-3"><a href="#3-parallel-fan-out-with-merge">3. Parallel fan-out with merge</a></li><li class="lvl-3"><a href="#4-sequential-pipeline-as-user-driven-slash-commands">4. Sequential pipeline as user-driven slash commands</a></li><li class="lvl-3"><a href="#5-research-isolation-context-preservation">5. Research isolation (context preservation)</a></li><li class="lvl-2"><a href="#claude-code-compatibility">Claude Code compatibility</a></li><li class="lvl-3"><a href="#where-personas-live">Where personas live</a></li><li class="lvl-3"><a href="#subagents-vs-agent-teams">Subagents vs. Agent Teams</a></li><li class="lvl-3"><a href="#platform-enforced-rules">Platform-enforced rules</a></li><li class="lvl-3"><a href="#built-in-subagents-to-know-about">Built-in subagents to know about</a></li><li class="lvl-3"><a href="#frontmatter-restrictions-for-plugin-agents">Frontmatter restrictions for plugin agents</a></li><li class="lvl-3"><a href="#spawning-multiple-subagents-in-parallel">Spawning multiple subagents in parallel</a></li><li class="lvl-2"><a href="#worked-example-agent-teams-for-competing-hypothesis-debugging">Worked example: Agent Teams for competing-hypothesis debugging</a></li><li class="lvl-3"><a href="#the-scenario">The scenario</a></li><li class="lvl-3"><a href="#why-this-is-not-a-ship-job">Why this is *not* a `/ship` job</a></li><li class="lvl-3"><a href="#setup-one-time-per-environment">Setup (one-time, per-environment)</a></li><li class="lvl-3"><a href="#the-trigger-prompt">The trigger prompt</a></li><li class="lvl-3"><a href="#what-happens">What happens</a></li><li class="lvl-3"><a href="#when-to-clean-up">When to clean up</a></li><li class="lvl-3"><a href="#cost-expectation">Cost expectation</a></li><li class="lvl-3"><a href="#anti-pattern-in-this-scenario">Anti-pattern in this scenario</a></li><li class="lvl-3"><a href="#when-not-to-use-agent-teams">When *not* to use Agent Teams</a></li><li class="lvl-2"><a href="#anti-patterns">Anti-patterns</a></li><li class="lvl-3"><a href="#a-router-persona-meta-orchestrator">A. Router persona (&quot;meta-orchestrator&quot;)</a></li><li class="lvl-3"><a href="#b-persona-that-calls-another-persona">B. Persona that calls another persona</a></li><li class="lvl-3"><a href="#c-sequential-orchestrator-that-paraphrases">C. Sequential orchestrator that paraphrases</a></li><li class="lvl-3"><a href="#d-deep-persona-trees">D. Deep persona trees</a></li><li class="lvl-2"><a href="#decision-flow">Decision flow</a></li><li class="lvl-2"><a href="#when-to-add-a-new-pattern-to-this-catalog">When to add a new pattern to this catalog</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="orchestration-patterns">Orchestration Patterns<a class="anchor" href="#orchestration-patterns" aria-label="锚点">#</a></h1>
+<p>Reference catalog of agent orchestration patterns this repo endorses, plus anti-patterns to avoid. Read this before adding a new slash command that coordinates multiple personas, or before introducing a new persona that &quot;wraps&quot; existing ones.</p>
+<p>The governing rule: <strong>the user (or a slash command) is the orchestrator. Personas do not invoke other personas.</strong> Skills are mandatory hops inside a persona's workflow.</p>
+<hr>
+<h2 id="endorsed-patterns">Endorsed patterns<a class="anchor" href="#endorsed-patterns" aria-label="锚点">#</a></h2>
+<h3 id="1-direct-invocation-no-orchestration">1. Direct invocation (no orchestration)<a class="anchor" href="#1-direct-invocation-no-orchestration" aria-label="锚点">#</a></h3>
+<p>Single persona, single perspective, single artifact. The default and the cheapest option.</p>
+<pre><code>user → code-reviewer → report → user</code></pre>
+<p><strong>Use when:</strong> the work is one perspective on one artifact and you can describe it in one sentence.</p>
+<p><strong>Examples:</strong></p>
+<ul><li>&quot;Review this PR&quot; → <code>code-reviewer</code></li><li>&quot;Find security issues in <code>auth.ts</code>&quot; → <code>security-auditor</code></li><li>&quot;What tests are missing for the checkout flow?&quot; → <code>test-engineer</code></li></ul>
+<p><strong>Cost:</strong> one round trip. The baseline you should always compare orchestrated patterns against.</p>
+<hr>
+<h3 id="2-single-persona-slash-command">2. Single-persona slash command<a class="anchor" href="#2-single-persona-slash-command" aria-label="锚点">#</a></h3>
+<p>A slash command that wraps one persona with the project's skills. Saves the user from re-explaining the workflow every time.</p>
+<pre><code>/review → code-reviewer (with code-review-and-quality skill) → report</code></pre>
+<p><strong>Use when:</strong> the same single-persona invocation happens repeatedly with the same setup.</p>
+<p><strong>Examples in this repo:</strong> <code>/review</code>, <code>/test</code>, <code>/code-simplify</code>.</p>
+<p><strong>Cost:</strong> same as direct invocation. The slash command is just a saved prompt.</p>
+<p><strong>Anti-signal:</strong> if the slash command's body is mostly &quot;decide which persona to call,&quot; delete it and let the user call the persona directly.</p>
+<hr>
+<h3 id="3-parallel-fan-out-with-merge">3. Parallel fan-out with merge<a class="anchor" href="#3-parallel-fan-out-with-merge" aria-label="锚点">#</a></h3>
+<p>Multiple personas operate on the same input concurrently, each producing an independent report. A merge step (in the main agent's context) synthesizes them into a single decision.</p>
+<pre><code>                    ┌─→ code-reviewer    ─┐
+/ship → fan out  ───┼─→ security-auditor ─┤→ merge → go/no-go + rollback
+                    └─→ test-engineer    ─┘</code></pre>
+<p><strong>Use when:</strong></p>
+<ul><li>The sub-tasks are genuinely independent (no shared mutable state, no ordering dependency)</li><li>Each sub-agent benefits from its own context window</li><li>The merge step is small enough to stay in the main context</li><li>Wall-clock latency matters</li></ul>
+<p><strong>Examples in this repo:</strong> <code>/ship</code>.</p>
+<p><strong>Cost:</strong> N parallel sub-agent contexts + one merge turn. Higher than direct invocation, but faster wall-clock and produces better reports because each sub-agent stays focused on its single perspective.</p>
+<p><strong>Validation checklist before adopting this pattern:</strong></p>
+<ul><li>[ ] Can I run all sub-agents at the same time without ordering issues?</li><li>[ ] Does each persona produce a different <em>kind</em> of finding, not just the same finding from a different angle?</li><li>[ ] Will the merge step fit in the main agent's remaining context?</li><li>[ ] Is the user's wait time long enough that parallelism is actually noticeable?</li></ul>
+<p>If any answer is &quot;no,&quot; fall back to direct invocation or a single-persona command.</p>
+<hr>
+<h3 id="4-sequential-pipeline-as-user-driven-slash-commands">4. Sequential pipeline as user-driven slash commands<a class="anchor" href="#4-sequential-pipeline-as-user-driven-slash-commands" aria-label="锚点">#</a></h3>
+<p>The user runs slash commands in a defined order, carrying context (or commit history) between them. There is no orchestrator agent — the user IS the orchestrator.</p>
+<pre><code>user runs:  /spec  →  /plan  →  /build  →  /test  →  /review  →  /ship</code></pre>
+<p><strong>Use when:</strong> the workflow has dependencies (each step needs the previous step's output) and human judgment between steps adds value.</p>
+<p><strong>Examples in this repo:</strong> the entire DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP lifecycle.</p>
+<p><strong>Cost:</strong> one sub-agent context per step. Free for the orchestration layer because there is no orchestrator agent.</p>
+<p><strong>Why not automate it:</strong> an LLM &quot;lifecycle orchestrator&quot; would (a) lose nuance between steps because it has to summarize for hand-off, (b) skip the human checkpoints that catch wrong-direction work early, and (c) double the token cost via paraphrasing turns.</p>
+<hr>
+<h3 id="5-research-isolation-context-preservation">5. Research isolation (context preservation)<a class="anchor" href="#5-research-isolation-context-preservation" aria-label="锚点">#</a></h3>
+<p>When a task requires reading large amounts of material that shouldn't pollute the main context, spawn a research sub-agent that returns only a digest.</p>
+<pre><code>main agent → research sub-agent (reads 50 files) → digest → main agent continues</code></pre>
+<p><strong>Use when:</strong></p>
+<ul><li>The main session needs to stay focused on a downstream task</li><li>The investigation result is much smaller than the input it consumes</li><li>The decision quality benefits from the main agent having room to think after</li></ul>
+<p><strong>Examples:</strong> &quot;Find every call site of this deprecated API across the monorepo,&quot; &quot;Summarize what these 30 ADRs say about caching.&quot;</p>
+<p><strong>Cost:</strong> one isolated sub-agent context. Worth it any time the alternative is loading hundreds of files into the main context.</p>
+<p><strong>On Claude Code, use the built-in <code>Explore</code> subagent</strong> rather than defining a custom research persona. <code>Explore</code> runs on Haiku, is denied write/edit tools, and is purpose-built for this pattern. Define a custom research subagent only when <code>Explore</code> doesn't fit (e.g. you need a domain-specific system prompt the model wouldn't infer).</p>
+<hr>
+<h2 id="claude-code-compatibility">Claude Code compatibility<a class="anchor" href="#claude-code-compatibility" aria-label="锚点">#</a></h2>
+<p>This catalog is harness-agnostic, but most readers will run it on Claude Code. Here's how each pattern maps onto Claude Code's primitives — and where the platform enforces our rules for us.</p>
+<h3 id="where-personas-live">Where personas live<a class="anchor" href="#where-personas-live" aria-label="锚点">#</a></h3>
+<p>Plugin subagents go in <code>agents/</code> at the plugin root. This repo is a plugin (<code>.claude-plugin/plugin.json</code>), so <code>agents/code-reviewer.md</code>, <code>agents/security-auditor.md</code>, and <code>agents/test-engineer.md</code> are auto-discovered when the plugin is enabled. No path configuration needed.</p>
+<h3 id="subagents-vs-agent-teams">Subagents vs. Agent Teams<a class="anchor" href="#subagents-vs-agent-teams" aria-label="锚点">#</a></h3>
+<p>Claude Code has two parallelism primitives. Pattern 3 (parallel fan-out with merge) maps to <strong>subagents</strong>. If you need teammates that talk to each other, use <strong>Agent Teams</strong> instead.</p>
+<table><thead><tr><th></th><th>Subagents</th><th>Agent Teams</th></tr></thead><tbody><tr><td>Coordination</td><td>Main agent fans out, sub-agents only report back</td><td>Teammates message each other, share a task list</td></tr><tr><td>Context</td><td>Own context window per subagent</td><td>Own context window per teammate</td></tr><tr><td>When to use</td><td>Independent tasks producing reports</td><td>Collaborative work needing discussion</td></tr><tr><td>Status</td><td>Stable</td><td>Experimental — requires <code>CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</code></td></tr><tr><td>Cost</td><td>Lower</td><td>Higher — each teammate is a separate Claude instance</td></tr></tbody></table>
+<p><strong>The personas in this repo work in both modes.</strong> When spawned as subagents (e.g. by <code>/ship</code>), they report findings to the main session. When spawned as teammates (<code>Spawn a teammate using the security-auditor agent type…</code>), they can challenge each other's findings directly. The persona definition is the same; only the spawning context changes.</p>
+<p>One subtlety: the <code>skills</code> and <code>mcpServers</code> frontmatter fields in a persona are honored when it runs as a subagent but <strong>ignored when it runs as a teammate</strong> — teammates load skills and MCP servers from your project and user settings, the same as a regular session. If a persona depends on a specific skill or MCP server being loaded, configure it at the session level so it's available in both modes.</p>
+<h3 id="platform-enforced-rules">Platform-enforced rules<a class="anchor" href="#platform-enforced-rules" aria-label="锚点">#</a></h3>
+<p>Two rules in this catalog aren't just convention — Claude Code enforces them:</p>
+<ul><li><strong>&quot;Subagents cannot spawn other subagents&quot;</strong> (verbatim from the docs). Anti-pattern B (persona-calls-persona) and Anti-pattern D (deep persona trees) cannot exist on Claude Code by construction.</li><li><strong>&quot;No nested teams&quot;</strong> — teammates cannot spawn their own teams. Same anti-patterns blocked at the team level.</li></ul>
+<p>This means you can adopt the patterns in this catalog without worrying about contributors accidentally building the anti-patterns. They'll just fail to load.</p>
+<h3 id="built-in-subagents-to-know-about">Built-in subagents to know about<a class="anchor" href="#built-in-subagents-to-know-about" aria-label="锚点">#</a></h3>
+<p>Before defining a custom subagent, check whether one of these covers the role:</p>
+<table><thead><tr><th>Built-in</th><th>Purpose</th></tr></thead><tbody><tr><td><code>Explore</code></td><td>Read-only codebase search and analysis. Use this for Pattern 5 (research isolation).</td></tr><tr><td><code>Plan</code></td><td>Read-only research during plan mode.</td></tr><tr><td><code>general-purpose</code></td><td>Multi-step tasks needing both exploration and modification.</td></tr></tbody></table>
+<p>Don't redefine these. Layer your specialist personas (code-reviewer, security-auditor, test-engineer) on top of them.</p>
+<h3 id="frontmatter-restrictions-for-plugin-agents">Frontmatter restrictions for plugin agents<a class="anchor" href="#frontmatter-restrictions-for-plugin-agents" aria-label="锚点">#</a></h3>
+<p>Plugin subagents do <strong>not</strong> support the <code>hooks</code>, <code>mcpServers</code>, or <code>permissionMode</code> frontmatter fields — these are silently ignored. If a future persona needs any of those, the user must copy the file into <code>.claude/agents/</code> or <code>~/.claude/agents/</code> instead.</p>
+<p>The fields that DO work in plugin agents are: <code>name</code>, <code>description</code>, <code>tools</code>, <code>disallowedTools</code>, <code>model</code>, <code>maxTurns</code>, <code>skills</code>, <code>memory</code>, <code>background</code>, <code>effort</code>, <code>isolation</code>, <code>color</code>, <code>initialPrompt</code>. Use <code>model</code> per-persona if you want to optimize cost (e.g. Haiku for <code>test-engineer</code> coverage scans, Sonnet for <code>code-reviewer</code>, Opus for <code>security-auditor</code>).</p>
+<h3 id="spawning-multiple-subagents-in-parallel">Spawning multiple subagents in parallel<a class="anchor" href="#spawning-multiple-subagents-in-parallel" aria-label="锚点">#</a></h3>
+<p>In Claude Code, parallel fan-out (Pattern 3) requires issuing <strong>multiple Agent tool calls in a single assistant turn</strong>. Sequential turns serialize execution. <code>/ship</code> calls this out explicitly. Any new orchestrator command should do the same.</p>
+<hr>
+<h2 id="worked-example-agent-teams-for-competing-hypothesis-debugging">Worked example: Agent Teams for competing-hypothesis debugging<a class="anchor" href="#worked-example-agent-teams-for-competing-hypothesis-debugging" aria-label="锚点">#</a></h2>
+<p>This example shows when to reach for <strong>Agent Teams</strong> instead of <code>/ship</code>'s subagent fan-out. The two patterns look similar from a distance — both spawn the same three personas — but the value comes from a different place.</p>
+<h3 id="the-scenario">The scenario<a class="anchor" href="#the-scenario" aria-label="锚点">#</a></h3>
+<blockquote><p><em>Checkout occasionally hangs for ~30 seconds before completing. It happens roughly once every 50 sessions. No errors in logs. Started after last week's release.</em></p></blockquote>
+<p>Plausible root causes (mutually exclusive, all fit the symptoms):</p>
+<ol><li>A race condition in the new payment-confirmation flow</li><li>An auth check that occasionally falls through to a slow synchronous network call</li><li>A missing index on a query that scales with cart size</li><li>A flaky third-party API where the SDK retries silently before timing out</li></ol>
+<p>A single agent will pick the first plausible theory and stop investigating. A <code>/ship</code>-style subagent fan-out would have each persona report independently — but their reports never meet, so nothing rules out the wrong theories.</p>
+<p>This is exactly the case the Agent Teams docs describe: <em>&quot;With multiple independent investigators actively trying to disprove each other, the theory that survives is much more likely to be the actual root cause.&quot;</em></p>
+<h3 id="why-this-is-not-a-ship-job">Why this is <em>not</em> a <code>/ship</code> job<a class="anchor" href="#why-this-is-not-a-ship-job" aria-label="锚点">#</a></h3>
+<table><thead><tr><th></th><th><code>/ship</code> (subagents)</th><th>Agent Teams</th></tr></thead><tbody><tr><td>Sub-agents see</td><td>The same diff, different lenses</td><td>A shared task list, each other's messages</td></tr><tr><td>Output</td><td>Three independent reports → one merge</td><td>Adversarial debate → consensus root cause</td></tr><tr><td>Right when</td><td>You want a verdict on a known artifact</td><td>You want to <em>find</em> the artifact among hypotheses</td></tr></tbody></table>
+<p><code>/ship</code> is a verdict; Agent Teams is an investigation.</p>
+<h3 id="setup-one-time-per-environment">Setup (one-time, per-environment)<a class="anchor" href="#setup-one-time-per-environment" aria-label="锚点">#</a></h3>
+<p>Agent Teams is experimental. In <code>~/.claude/settings.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;env&quot;: {
+    &quot;CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS&quot;: &quot;1&quot;
+  }
+}</code></pre>
+<p>Requires Claude Code v2.1.32 or later. The personas in this repo are picked up automatically — no team-config files to author by hand.</p>
+<h3 id="the-trigger-prompt">The trigger prompt<a class="anchor" href="#the-trigger-prompt" aria-label="锚点">#</a></h3>
+<p>Type into the lead session, in natural language:</p>
+<pre><code>Users report checkout hangs for ~30 seconds intermittently after last
+week's release. No errors in logs.
+
+Create an agent team to debug this with competing hypotheses. Spawn
+three teammates using the existing agent types:
+
+  - code-reviewer  — investigate race conditions and blocking calls
+                     in the checkout code path
+  - security-auditor — investigate auth checks, session handling,
+                       and any synchronous network calls added recently
+  - test-engineer  — propose tests that would distinguish between the
+                     hypotheses and check coverage gaps in checkout
+
+Have them message each other directly to challenge each other's
+theories. Update findings as consensus emerges. Only converge when
+two teammates agree they can disprove the others'.</code></pre>
+<p>The lead spawns three teammates referencing the existing persona names. The persona body is <strong>appended</strong> to each teammate's system prompt as additional instructions (on top of the team-coordination instructions the lead installs); the trigger prompt above becomes their task.</p>
+<h3 id="what-happens">What happens<a class="anchor" href="#what-happens" aria-label="锚点">#</a></h3>
+<ol><li>Each teammate runs in its own context window, exploring the codebase from its own lens.</li><li>Teammates use <code>message</code> to send findings to each other directly. The lead doesn't have to relay.</li><li>The shared task list shows who's investigating what — visible at any time with <code>Ctrl+T</code> (in-process mode) or in a tmux pane (split mode).</li><li>When <code>code-reviewer</code> finds a <code>Promise.all</code> that should be sequential, it messages <code>security-auditor</code> to confirm the auth call isn't part of the race. <code>security-auditor</code> checks and replies — either confirming the race is the real issue or producing counter-evidence.</li><li><code>test-engineer</code> proposes a focused integration test for whichever theory is winning, which the team uses to verify before declaring consensus.</li><li>The lead synthesizes the converged finding and presents it to you.</li></ol>
+<p>You can interrupt at any teammate by cycling with <code>Shift+Down</code> and typing — useful for redirecting an investigator who's gone down a wrong path.</p>
+<h3 id="when-to-clean-up">When to clean up<a class="anchor" href="#when-to-clean-up" aria-label="锚点">#</a></h3>
+<p>When the investigation lands on a root cause, tell the lead:</p>
+<pre><code>Clean up the team</code></pre>
+<p>Always cleanup through the lead, not a teammate (per the docs: teammates lack full team context for cleanup).</p>
+<h3 id="cost-expectation">Cost expectation<a class="anchor" href="#cost-expectation" aria-label="锚点">#</a></h3>
+<p>Three Sonnet teammates running for ~10–15 minutes of investigation costs noticeably more than the same three personas spawned as subagents by <code>/ship</code>. The justification is <em>quality of conclusion</em> — for production debugging where the wrong fix is expensive, the extra tokens are a bargain. For a routine PR review, stick with <code>/ship</code>.</p>
+<h3 id="anti-pattern-in-this-scenario">Anti-pattern in this scenario<a class="anchor" href="#anti-pattern-in-this-scenario" aria-label="锚点">#</a></h3>
+<p>Do <strong>not</strong> rebuild this as a <code>/debug</code> slash command that fans out subagents. Subagents can't message each other — you'd lose the adversarial debate that makes the pattern work. If a workflow keeps coming up, document the trigger prompt above as a snippet rather than wrapping it in a slash command that misuses subagents.</p>
+<h3 id="when-not-to-use-agent-teams">When <em>not</em> to use Agent Teams<a class="anchor" href="#when-not-to-use-agent-teams" aria-label="锚点">#</a></h3>
+<ul><li>Production-bound verdict on a known diff → use <code>/ship</code> (subagents).</li><li>One specialist perspective on one artifact → direct persona invocation.</li><li>Sequential lifecycle (spec → plan → build) → user-driven slash commands (Pattern 4).</li><li>Read-heavy research with a small digest → built-in <code>Explore</code> subagent.</li></ul>
+<p>Reach for Agent Teams only when teammates <strong>need</strong> to challenge each other to produce the right answer.</p>
+<hr>
+<h2 id="anti-patterns">Anti-patterns<a class="anchor" href="#anti-patterns" aria-label="锚点">#</a></h2>
+<h3 id="a-router-persona-meta-orchestrator">A. Router persona (&quot;meta-orchestrator&quot;)<a class="anchor" href="#a-router-persona-meta-orchestrator" aria-label="锚点">#</a></h3>
+<p>A persona whose job is to decide which other persona to call.</p>
+<pre><code>/work → router-persona → &quot;this needs a review&quot; → code-reviewer → router (paraphrases) → user</code></pre>
+<p><strong>Why it fails:</strong></p>
+<ul><li>Pure routing layer with no domain value</li><li>Adds two paraphrasing hops → information loss + roughly 2× token cost</li><li>The user already knew they wanted a review; they could have called <code>/review</code> directly</li><li>Replicates the work that slash commands and intent mapping in <code>AGENTS.md</code> already do</li></ul>
+<p><strong>What to do instead:</strong> add or refine slash commands. Document intent → command mapping in <code>AGENTS.md</code>.</p>
+<hr>
+<h3 id="b-persona-that-calls-another-persona">B. Persona that calls another persona<a class="anchor" href="#b-persona-that-calls-another-persona" aria-label="锚点">#</a></h3>
+<p>A <code>code-reviewer</code> that internally invokes <code>security-auditor</code> when it sees auth code.</p>
+<p><strong>Why it fails:</strong></p>
+<ul><li>Personas were designed to produce a single perspective; chaining them defeats that</li><li>The summary the calling persona passes loses context the called persona needs</li><li>Failure modes multiply (which persona's output format wins? whose rules apply?)</li><li>Hides cost from the user</li></ul>
+<p><strong>What to do instead:</strong> have the calling persona <em>recommend</em> a follow-up audit in its report. The user or a slash command runs the second pass.</p>
+<hr>
+<h3 id="c-sequential-orchestrator-that-paraphrases">C. Sequential orchestrator that paraphrases<a class="anchor" href="#c-sequential-orchestrator-that-paraphrases" aria-label="锚点">#</a></h3>
+<p>An agent that calls <code>/spec</code>, then <code>/plan</code>, then <code>/build</code>, etc. on the user's behalf.</p>
+<p><strong>Why it fails:</strong></p>
+<ul><li>Loses the human checkpoints that catch wrong-direction work</li><li>Each hand-off summarizes context — accumulated drift over a long pipeline</li><li>Doubles token cost: orchestrator turn + sub-agent turn for every step</li><li>Removes user agency at exactly the points where judgment matters most</li></ul>
+<p><strong>What to do instead:</strong> keep the user as the orchestrator. Document the recommended sequence in <code>README.md</code> and let users invoke it.</p>
+<hr>
+<h3 id="d-deep-persona-trees">D. Deep persona trees<a class="anchor" href="#d-deep-persona-trees" aria-label="锚点">#</a></h3>
+<p><code>/ship</code> calls a <code>pre-ship-coordinator</code> that calls a <code>quality-coordinator</code> that calls <code>code-reviewer</code>.</p>
+<p><strong>Why it fails:</strong></p>
+<ul><li>Each layer adds latency and tokens with no decision value</li><li>Debugging becomes a multi-level investigation</li><li>The leaf personas lose context to multiple summarization steps</li></ul>
+<p><strong>What to do instead:</strong> keep the orchestration depth at most 1 (slash command → personas). The merge happens in the main agent.</p>
+<hr>
+<h2 id="decision-flow">Decision flow<a class="anchor" href="#decision-flow" aria-label="锚点">#</a></h2>
+<p>When considering a new orchestrated workflow, walk this flow:</p>
+<pre><code>Is the work one perspective on one artifact?
+├── Yes → Direct invocation. Stop.
+└── No  → Will the same composition repeat?
+         ├── No  → Direct invocation, ad hoc. Stop.
+         └── Yes → Are sub-tasks independent?
+                  ├── No  → Sequential slash commands run by user (Pattern 4).
+                  └── Yes → Parallel fan-out with merge (Pattern 3).
+                           Validate against the checklist above.
+                           If any check fails → fall back to single-persona command (Pattern 2).</code></pre>
+<hr>
+<h2 id="when-to-add-a-new-pattern-to-this-catalog">When to add a new pattern to this catalog<a class="anchor" href="#when-to-add-a-new-pattern-to-this-catalog" aria-label="锚点">#</a></h2>
+<p>Add a new entry only after:</p>
+<ol><li>You've used the pattern at least twice in real work</li><li>You can name a concrete artifact in this repo that demonstrates it</li><li>You can explain why an existing pattern wouldn't have worked</li><li>You can describe its anti-pattern shadow (what people will mistakenly build instead)</li></ol>
+<p>Premature catalog entries become aspirational documentation that no one follows.</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/skills/built-in/doubt-driven-development/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Doubt-Driven Development</div></a><a class="next" href="../../../../../../../services/backend/src/skills/built-in/dream/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Dream — Background Autonomous Agent</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/doubt-driven-development/references/orchestration-patterns.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

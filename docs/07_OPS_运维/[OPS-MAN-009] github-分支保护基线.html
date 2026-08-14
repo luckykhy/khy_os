@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitHub Branch Protection Baseline · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>GitHub Branch Protection Baseline</div>
+      <header class="hero reveal"><h1>GitHub Branch Protection Baseline</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#github-branch-protection-baseline">GitHub Branch Protection Baseline</a></li><li class="lvl-2"><a href="#目标分支">目标分支</a></li><li class="lvl-2"><a href="#必需的-pull-request-规则">必需的 Pull Request 规则</a></li><li class="lvl-2"><a href="#必需的-status-check">必需的 Status Check</a></li><li class="lvl-2"><a href="#可选但推荐的规则">可选但推荐的规则</a></li><li class="lvl-2"><a href="#release-工作流权限">Release 工作流权限</a></li><li class="lvl-2"><a href="#操作流程">操作流程</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-009 | 阶段: 运维 | 原路径: docs/指南/github-分支保护基线.md --&gt;</p>
+<h1 id="github-branch-protection-baseline">GitHub Branch Protection Baseline<a class="anchor" href="#github-branch-protection-baseline" aria-label="锚点">#</a></h1>
+<p>本指南定义了 <code>main</code> 分支的最小化 branch protection 策略，用于强制执行 CI/CD 质量门禁。</p>
+<h2 id="目标分支">目标分支<a class="anchor" href="#目标分支" aria-label="锚点">#</a></h2>
+<ul><li><code>main</code></li></ul>
+<h2 id="必需的-pull-request-规则">必需的 Pull Request 规则<a class="anchor" href="#必需的-pull-request-规则" aria-label="锚点">#</a></h2>
+<p>在 GitHub branch protection 中为 <code>main</code> 启用以下选项：</p>
+<ol><li>合并前必须经过 pull request</li><li>必需的审批数：至少 <code>1</code></li><li>当推送新提交时，自动撤销过期的 pull request 审批</li><li>合并前必须解决所有评论会话（conversation resolution）</li><li>合并前必须通过 status check</li><li>合并前分支必须为最新（up to date）</li><li>包含管理员（administrators，推荐）</li></ol>
+<h2 id="必需的-status-check">必需的 Status Check<a class="anchor" href="#必需的-status-check" aria-label="锚点">#</a></h2>
+<p>将以下检查标记为 <strong>required</strong>：</p>
+<ol><li><code>Quality Gates</code></li><li><code>Security Audit</code></li><li><code>Agent Rules Check</code></li><li><code>Backend Tests</code></li><li><code>Frontend Build</code></li><li><code>Python Package Check</code></li><li><code>CodeQL Analyze (javascript-typescript)</code></li><li><code>CodeQL Analyze (python)</code></li></ol>
+<p>说明：</p>
+<ul><li><code>Backend Tests</code> 是一个聚合门禁作业。任何一个后端分片（shard）失败时它都会失败。</li><li>不要直接选择分片作业名称（<code>Backend Tests (Shard x/3)</code>）作为必需的检查。</li><li><code>Dependency Review</code> 仅在 pull request 时运行；在 CI 中保持启用，但不要将其设为 push 事件的必需检查。</li></ul>
+<h2 id="可选但推荐的规则">可选但推荐的规则<a class="anchor" href="#可选但推荐的规则" aria-label="锚点">#</a></h2>
+<ol><li>要求签名提交（signed commits）</li><li>限制可推送到匹配分支的人员</li><li>要求线性历史（linear history）</li><li>不允许强制推送（force push）</li><li>不允许删除（deletions）</li></ol>
+<h2 id="release-工作流权限">Release 工作流权限<a class="anchor" href="#release-工作流权限" aria-label="锚点">#</a></h2>
+<p>对于 release 相关的工作流（<code>release-preflight.yml</code>、<code>release.yml</code>），需要配置仓库 secrets：</p>
+<ol><li><code>PYPI_API_TOKEN</code>（仅在 <code>publish_pypi=true</code> 时必需）</li></ol>
+<h2 id="操作流程">操作流程<a class="anchor" href="#操作流程" aria-label="锚点">#</a></h2>
+<ol><li>所有 feature 分支都向 <code>main</code> 提交 PR。</li><li>CI（<code>CI</code> 工作流）必须通过必需的检查。</li><li>开启 PR 前先运行本地门禁：<code>npm run check:quality-gates</code>。</li><li>在计划发布前手动运行 <code>Release Preflight</code>。</li><li>先以 <code>dry_run=true</code> 运行 <code>Release</code>。</li><li>在 dry run 通过后，再以 <code>dry_run=false</code> 运行 <code>Release</code>。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-008] deepseek-tui-资源清理对齐.html"><div class="dir">← 上一篇</div><div class="ttl">DeepSeek-TUI 资源回收与临时文件清理对齐清单</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-010] hermes风格-模型配置.html"><div class="dir">下一篇 →</div><div class="ttl">KHY 中的 Hermes 风格模型配置</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-009] github-分支保护基线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

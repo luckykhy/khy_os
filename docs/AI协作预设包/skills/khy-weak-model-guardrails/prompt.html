@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>弱模型专属护栏（在 Khy-OS 上稳扎稳打） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>skills<span class="sep">›</span>khy-weak-model-guardrails<span class="sep">›</span>弱模型专属护栏（在 Khy-OS 上稳扎稳打）</div>
+      <header class="hero reveal"><h1>弱模型专属护栏（在 Khy-OS 上稳扎稳打）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#弱模型专属护栏-在-khy-os-上稳扎稳打">弱模型专属护栏（在 Khy-OS 上稳扎稳打）</a></li><li class="lvl-2"><a href="#核心心法-一次只做一步">核心心法：一次只做一步</a></li><li class="lvl-2"><a href="#上下文与截断-小模型最容易栽的地方">上下文与截断（小模型最容易栽的地方）</a></li><li class="lvl-2"><a href="#工具调用-照约定-别自创格式">工具调用（照约定，别自创格式）</a></li><li class="lvl-2"><a href="#改代码时-务必配合-khy-safe-change">改代码时（务必配合 `/khy-safe-change`）</a></li><li class="lvl-2"><a href="#卡住了怎么办">卡住了怎么办</a></li><li class="lvl-2"><a href="#收尾">收尾</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="弱模型专属护栏-在-khy-os-上稳扎稳打">弱模型专属护栏（在 Khy-OS 上稳扎稳打）<a class="anchor" href="#弱模型专属护栏-在-khy-os-上稳扎稳打" aria-label="锚点">#</a></h1>
+<p>如果你是较小/较弱的模型，或任务复杂、上下文吃紧——照这份做，能少犯错、不半途崩。</p>
+<h2 id="核心心法-一次只做一步">核心心法：一次只做一步<a class="anchor" href="#核心心法-一次只做一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>把大任务拆成小步</strong>，一步只改一个文件、只做一件事。做完一步、确认无误，再下一步。</li><li>每步动手前用一句话说清&quot;这一步要干什么&quot;，做完用一句话说&quot;这一步结果&quot;。</li><li>不确定就<strong>先只读</strong>（读文件、grep、体检），别急着写。</li></ul>
+<h2 id="上下文与截断-小模型最容易栽的地方">上下文与截断（小模型最容易栽的地方）<a class="anchor" href="#上下文与截断-小模型最容易栽的地方" aria-label="锚点">#</a></h2>
+<ul><li><strong>别让工具输出撑爆上下文</strong>：读大文件用行范围（<code>offset/limit</code>）；<code>grep</code> 加过滤别拉全仓；<code>git diff</code> 限定文件。</li><li><strong>怀疑被截断</strong>：如果你的回复像是中途断了（没有结论、代码没闭合），<strong>明说&quot;我可能被截断了&quot;</strong>，然后分多次输出，别假装完整。</li><li>一次输出别塞太多代码；长内容分块给。</li></ul>
+<h2 id="工具调用-照约定-别自创格式">工具调用（照约定，别自创格式）<a class="anchor" href="#工具调用-照约定-别自创格式" aria-label="锚点">#</a></h2>
+<ul><li>工具调用参数是 <strong>JSON</strong>，<strong>不要把 JSON 包在 ``<code>代码块</code>`` 里</strong>——直接产结构化调用。</li><li>参数名照工具定义写，别猜别改名。</li><li>有的 provider 不接受 <code>role:'tool'</code> 消息——<strong>别去破坏 khy 已有的兼容层</strong>，它会帮你转换；你只管正常调用工具。</li><li>一次一个工具调用更稳；没把握就别并发一堆。</li></ul>
+<h2 id="改代码时-务必配合-khy-safe-change">改代码时（务必配合 <code>/khy-safe-change</code>）<a class="anchor" href="#改代码时-务必配合-khy-safe-change" aria-label="锚点">#</a></h2>
+<ul><li><strong>只加不改</strong>：新逻辑写成纯叶子 + <code>KHY_</code> 门控（默认开）+ 关掉逐字节回退。</li><li><strong>一次只碰一个文件</strong>。要改多个文件时，一个一个来，每个都能单独回退。</li><li>改完<strong>立刻</strong>：跑相关单测、看守卫是否绿。红了就地修，别往下堆。</li><li>拿不准某函数/文件在不在 → <strong>先 grep/读确认</strong>，别凭记忆引用（防幻觉）。</li></ul>
+<h2 id="卡住了怎么办">卡住了怎么办<a class="anchor" href="#卡住了怎么办" aria-label="锚点">#</a></h2>
+<ul><li>卡住别硬编。说清&quot;卡在哪、试了什么、需要什么&quot;，请用户决定，或激活 <code>/khy-troubleshoot</code> 分类排错。</li><li>每轮最多问一个澄清问题，且先给出你能给的答案再问。</li></ul>
+<h2 id="收尾">收尾<a class="anchor" href="#收尾" aria-label="锚点">#</a></h2>
+<p>做完激活 <code>/khy-honest-closure</code>：如实说改了什么、接到哪、测了几个绿、有没有没做的。<strong>跑了工具 ≠ 做完了。</strong></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/AI协作预设包/skills/khy-troubleshoot/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 错误自查（先分类，再对症）</div></a><a class="next" href="../../../../docs/AI协作预设包/skills/README.html"><div class="dir">下一篇 →</div><div class="ttl">🧩 Khy 指导 Skill 集合 · 总说明</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/AI协作预设包/skills/khy-weak-model-guardrails/prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

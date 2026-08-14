@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-121] readFile 二进制/压缩文件读前防护 · 接线（止住把 tar.gz 当文本注入模型导致卡死） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-121] readFile 二进制/压缩文件读前防护 · 接线（止住把 tar.gz 当文本注入模型导致卡死）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-121] readFile 二进制/压缩文件读前防护 · 接线（止住把 tar.gz 当文本注入模型导致卡死）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-121-readfile-二进制-压缩文件读前防护-接线-止住把-tar-gz-当文本注入模型导致卡死">[OPS-MAN-121] readFile 二进制/压缩文件读前防护 · 接线（止住把 tar.gz 当文本注入模型导致卡死）</a></li><li class="lvl-2"><a href="#这一层闭合什么-把已存在的-detectfile-isbinary-能力接进读工具">这一层闭合什么：把已存在的 `detectFile.isBinary` 能力接进读工具</a></li><li class="lvl-2"><a href="#真实故障-分析含-tar-gz-的目录-卡死-1h">真实故障：分析含 `.tar.gz` 的目录 → 卡死 1h+</a></li><li class="lvl-2"><a href="#修法-读前保守二进制探测-快速信息性拒绝">修法：读前保守二进制探测 → 快速信息性拒绝</a></li><li class="lvl-2"><a href="#保守边界-绝不误伤文本">保守边界（绝不误伤文本）</a></li><li class="lvl-2"><a href="#恒久红线">恒久红线</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-121-readfile-二进制-压缩文件读前防护-接线-止住把-tar-gz-当文本注入模型导致卡死">[OPS-MAN-121] readFile 二进制/压缩文件读前防护 · 接线（止住把 tar.gz 当文本注入模型导致卡死）<a class="anchor" href="#ops-man-121-readfile-二进制-压缩文件读前防护-接线-止住把-tar-gz-当文本注入模型导致卡死" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件为手写维护文档（此层是工具接线，无 <code>--gen-doc</code> 生成器）。<br>判定逻辑改在 <code>services/backend/src/tools/readBinaryGuard.js</code>（纯叶），<br>接线改在 <code>services/backend/src/tools/readFile.js</code> 的 <code>execute</code>。</p></blockquote>
+<h2 id="这一层闭合什么-把已存在的-detectfile-isbinary-能力接进读工具">这一层闭合什么：把已存在的 <code>detectFile.isBinary</code> 能力接进读工具<a class="anchor" href="#这一层闭合什么-把已存在的-detectfile-isbinary-能力接进读工具" aria-label="锚点">#</a></h2>
+<p><code>services/formatInspect/fileFormatDetector.js</code> 早已提供 magic-bytes + NUL/非可打印启发的<br><code>detectFile(absPath).isBinary</code> 判定，<strong>写工具</strong> <code>replaceAtLocation.js</code> 与文档工具<br><code>inspectDocument.js</code> 都在消费它拒绝二进制——<strong>唯独读工具 <code>tools/readFile.js</code> 从不消费</strong>。<br>= <strong>能力存在、没接线的代码</strong>（非对称消费：写路径有防护、读路径漏了）。</p>
+<h2 id="真实故障-分析含-tar-gz-的目录-卡死-1h">真实故障：分析含 <code>.tar.gz</code> 的目录 → 卡死 1h+<a class="anchor" href="#真实故障-分析含-tar-gz-的目录-卡死-1h" aria-label="锚点">#</a></h2>
+<p>现场：agent「分析 <code>D:\moonbit-linux</code> 项目」，目录含 MoonBit 工具链下载包。读取序列里<br>文本 <code>.sha256</code> 秒读；卡住的是 <code>moonbit-linux-x86_64.tar.gz</code>（二进制 gzip 压缩包），<br>「等待响应」1h2m34s。</p>
+<p>根因（已复现）：<code>readFile.js</code> 只有「大小上限」防护（默认 2MB），<strong>完全没有二进制探测</strong>。<br>默认门控 <code>KHY_FILE_READ_LIMIT</code> 开 → 超限走「有界窗口」把前 2MB <strong>当文本解码</strong>；未超限则<br>全量解码（<code>readTextFileSmart</code>）。于是 tar.gz 的二进制字节被解码成含 NUL 的 mojibake，以<br><strong><code>success: true</code></strong> 注入模型上下文。这坨含 NUL 字节的二进制垃圾 payload 发给（尤其中转/<br>relay 的）模型端点后让请求卡死/超时。文本 <code>.sha256</code> 同目录秒读，正好印证是二进制文件毒化<br>了请求。</p>
+<h2 id="修法-读前保守二进制探测-快速信息性拒绝">修法：读前保守二进制探测 → 快速信息性拒绝<a class="anchor" href="#修法-读前保守二进制探测-快速信息性拒绝" aria-label="锚点">#</a></h2>
+<p>在 <code>readFile.execute</code> 里 <code>stat</code> + 目录检查之后、大小/解码之前插入防护：</p>
+<pre><code class="language-js">try {
+  const { binaryReadGuardEnabled, isBinaryForRead, buildBinaryReadRefusal } = require('./readBinaryGuard');
+  if (binaryReadGuardEnabled(process.env)) {
+    const { detectFile } = require('../services/formatInspect/fileFormatDetector');
+    const fmt = detectFile(filePath);            // 只读 head/tail 16KB,~1-6ms,有界
+    if (isBinaryForRead(fmt)) {
+      return { success: false, error: buildBinaryReadRefusal({...}), binary: true, format, size };
+    }
+  }
+} catch { /* 探测失败 → 回退历史文本读取行为 */ }</code></pre>
+<ul><li>拒绝消息点明<strong>类型 + 大小</strong>，并把 agent 重定向到正确工具：<code>analyzeBinary</code>（ELF/PE）/</li></ul>
+<p><code>UpstreamStudy</code>（只读列出压缩包目录、零解压）/ 先校验解压后再读文本；并给逃生门<br>  <code>KHY_READFILE_BINARY_GUARD=0</code>。</p>
+<ul><li><code>detectFile</code> 只读 head/tail（16KB/4KB），耗时 ~1-6ms，不会像旧路径那样解码 2MB 二进制。</li></ul>
+<h2 id="保守边界-绝不误伤文本">保守边界（绝不误伤文本）<a class="anchor" href="#保守边界-绝不误伤文本" aria-label="锚点">#</a></h2>
+<ul><li><code>isBinaryForRead(fmt)</code> 仅当 <code>fmt.isBinary === true</code> 才拦；<code>fmt</code> 缺失 / 非对象 / isBinary</li></ul>
+<p>非严格 true → 一律放行，让正常文本读取继续。源码 / html / json / 纯文本 → <code>isBinary:false</code>。</p>
+<ul><li><strong>fail-soft</strong>：探测抛错 → try/catch 跳过防护，回退历史文本读取（绝不因防护让正常读取失败）。</li><li><strong>门控 <code>KHY_READFILE_BINARY_GUARD</code></strong>（default-on；env ∈ {0,false,off,no} 归一后关）：</li></ul>
+<p>关 → 完全旁路，逐字节回退旧的「解码注入」行为。</p>
+<h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
+<ul><li>纯叶 <code>readBinaryGuard.js</code> 零 IO、绝不抛；真正的探测 IO 在 <code>detectFile</code>（既有薄层）里。</li><li>只碰文件类型/大小元数据，不触任何密钥/内容值；<code>Number(null)===0</code> 陷阱已显式排除</li></ul>
+<p>（size 缺失 → 「未知大小」，不当 0 B）。</p>
+<ul><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:readfile-binary-guard      # 纯叶单测（9 用例）
+# LIVE：假 tar.gz → success:false 6ms（无垃圾注入）；.txt → success:true 行为不变；
+#       KHY_READFILE_BINARY_GUARD=0 + tar.gz → 回退旧解码注入（字节等价）。</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-120] 剥图必留痕最小底线与OCR功能门解耦.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-122] post-failure救援网剥图必留痕解耦.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-122] post-failure 救援网：剥图必留痕与「OCR 无文本」分支解耦</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-121] readFile二进制文件读前防护·接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 加法式改动纪律（改代码前照做） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>skills<span class="sep">›</span>khy-safe-change<span class="sep">›</span>Khy-OS 加法式改动纪律（改代码前照做）</div>
+      <header class="hero reveal"><h1>Khy-OS 加法式改动纪律（改代码前照做）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-加法式改动纪律-改代码前照做">Khy-OS 加法式改动纪律（改代码前照做）</a></li><li class="lvl-2"><a href="#九条铁律-r1-r9">九条铁律（R1–R9）</a></li><li class="lvl-2"><a href="#可照抄的模板">可照抄的模板</a></li><li class="lvl-2"><a href="#动手前先声明-每次">动手前先声明（每次）</a></li><li class="lvl-2"><a href="#fail-open-vs-fail-closed-别搞反">fail-open vs fail-closed 别搞反</a></li><li class="lvl-2"><a href="#做完">做完</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-加法式改动纪律-改代码前照做">Khy-OS 加法式改动纪律（改代码前照做）<a class="anchor" href="#khy-os-加法式改动纪律-改代码前照做" aria-label="锚点">#</a></h1>
+<p>在 Khy-OS 改代码<strong>只有一种被接受的姿势</strong>。严格照做，否则守卫会拦、或把项目改坏。</p>
+<h2 id="九条铁律-r1-r9">九条铁律（R1–R9）<a class="anchor" href="#九条铁律-r1-r9" aria-label="锚点">#</a></h2>
+<ul><li><strong>R1 加法式</strong>：新逻辑只加不改。先 <code>grep</code> 有没有现成实现可复用；绝不为同一概念写第二份真源。</li><li><strong>R2 纯叶子</strong>：新逻辑写成一个<strong>纯叶子模块</strong>——零 IO、确定性、<strong>绝不抛异常</strong>（坏输入返安全默认）、可单测、不 <code>require</code> 重依赖。</li><li><strong>R3 门控</strong>：用一个 <code>KHY_XXX</code> 环境变量门控，<strong>默认开</strong>；登记到 <code>services/backend/src/services/flagRegistry.js</code>；父门控关 → 子门控必关。</li><li><strong>R4 逐字节回退</strong>：<code>KHY_XXX</code> 关闭时，行为和改动前<strong>逐字节相同</strong>。接线处 <code>try/catch</code>，叶子异常 fail-soft 回退旧行为。</li><li><strong>R5 严格超集</strong>：只在旧路径<strong>漏做/做错</strong>处补正，绝不改变既有正确路径的输出；安全向只多封锁/多清理，不放宽。</li><li><strong>R6 真接线</strong>：必须能从 <code>executeTool</code>（<code>toolCalling.js</code>）/ <code>toolUseLoop.js</code> / <code>aiManagementServer.js</code> 之一被 <code>require</code> 到才算&quot;在产&quot;。<strong>隔离单测全绿 ≠ 在产。</strong></li><li><strong>R7 守卫绿</strong>：改完跑相关单测；提交前守卫 <code>scripts/check-*.js</code>（git 钩子自动触发）必须<strong>全绿</strong>；绝不用 <code>git --no-verify</code> 跳过。</li><li><strong>R8 不建上帝组件</strong>：单文件不超 <strong>2500 行</strong>；拆分把内聚分节抽成纯叶子，原文件同名别名 re-export 保契约。</li><li><strong>R9 诚实收尾</strong>：如实说测了什么/几个绿/跳过了什么/哪些没做。（收尾模板见 <code>/khy-honest-closure</code>。）</li></ul>
+<h2 id="可照抄的模板">可照抄的模板<a class="anchor" href="#可照抄的模板" aria-label="锚点">#</a></h2>
+<p><strong>纯叶子模板</strong>（新建 <code>services/backend/src/services/xxxGuard.js</code>）：</p>
+<pre><code class="language-js">function isEnabled(env = process.env) {
+  try {
+    const v = env &amp;&amp; env.KHY_XXX;
+    if (v == null) return true;                 // 默认开
+    return !['0', 'false', 'off', 'no'].includes(String(v).trim().toLowerCase());
+  } catch { return true; }
+}
+function decide(input) {
+  try {
+    // 纯计算，坏输入返安全默认
+    return { ok: true, value: /* ... */ };
+  } catch { return null; }                       // 绝不抛
+}
+module.exports = { isEnabled, decide };</code></pre>
+<p><strong>接线模板</strong>（在真实消费点接入，保留旧值兜底）：</p>
+<pre><code class="language-js">let result = legacyValue;
+try {
+  const leaf = require('./xxxGuard');
+  if (leaf.isEnabled(process.env)) {
+    const d = leaf.decide(input);
+    if (d) result = d.value;
+  }
+} catch { /* 保持 legacyValue，逐字节回退旧行为 */ }</code></pre>
+<p><strong>验回退</strong>：临时设 <code>KHY_XXX=off</code> 跑同样输入，输出应与改动前<strong>逐字节相同</strong>。</p>
+<h2 id="动手前先声明-每次">动手前先声明（每次）<a class="anchor" href="#动手前先声明-每次" aria-label="锚点">#</a></h2>
+<p>一句话说清：</p>
+<blockquote><p>我要改 <code>&lt;文件&gt;</code>，新增纯叶子 <code>&lt;xxxGuard&gt;</code>（门控 <code>KHY_XXX</code>，默认开），接线在 <code>&lt;真实入口&gt;</code>；关掉 <code>KHY_XXX</code> 逐字节回退旧行为。</p></blockquote>
+<p>用户确认后再改。</p>
+<h2 id="fail-open-vs-fail-closed-别搞反">fail-open vs fail-closed 别搞反<a class="anchor" href="#fail-open-vs-fail-closed-别搞反" aria-label="锚点">#</a></h2>
+<ul><li>能力/约束<strong>求解</strong>异常 → fail-<strong>open</strong> 回旧管线（不因求解器崩了就卡死功能）。</li><li>红线/审批<strong>判定</strong> → 必须 fail-<strong>closed</strong>（判定失败按&quot;不放行&quot;处理）。</li></ul>
+<h2 id="做完">做完<a class="anchor" href="#做完" aria-label="锚点">#</a></h2>
+<p>跑相关单测 + 提交前守卫全绿，然后激活 <code>/khy-honest-closure</code> 诚实收尾。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/AI协作预设包/skills/khy-release-safety/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 发布前自保（pip 是命脉）</div></a><a class="next" href="../../../../docs/AI协作预设包/skills/khy-troubleshoot/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 错误自查（先分类，再对症）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/AI协作预设包/skills/khy-safe-change/prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

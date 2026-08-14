@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>/model 命令修复说明 (2026-06-04) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>/model 命令修复说明 (2026-06-04)</div>
+      <header class="hero reveal"><h1>/model 命令修复说明 (2026-06-04)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#model-命令修复说明-2026-06-04">/model 命令修复说明 (2026-06-04)</a></li><li class="lvl-2"><a href="#问题描述">问题描述</a></li><li class="lvl-2"><a href="#核心修复-model-导致进程退出-最终真因-确诊">核心修复：/model 导致进程退出（最终真因 = 确诊）</a></li><li class="lvl-2"><a href="#次要修复-保留-无害加固">次要修复（保留，无害加固）</a></li><li class="lvl-3"><a href="#修复-1-添加取消提示">修复 1: 添加取消提示</a></li><li class="lvl-3"><a href="#修复-2-添加-claude-opus-4-8-4-7">修复 2: 添加 Claude Opus 4.8/4.7</a></li><li class="lvl-2"><a href="#应用修复">应用修复</a></li><li class="lvl-3"><a href="#当前状态检测">当前状态检测</a></li><li class="lvl-3"><a href="#解决方案-重启-khy-进程">解决方案：重启 KHY 进程</a></li><li class="lvl-2"><a href="#验证修复">验证修复</a></li><li class="lvl-2"><a href="#技术细节">技术细节</a></li><li class="lvl-3"><a href="#为什么需要重启">为什么需要重启？</a></li><li class="lvl-3"><a href="#相关文件">相关文件</a></li><li class="lvl-2"><a href="#后续建议">后续建议</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-022 | 阶段: 实现 | 原路径: docs/维护者/HOTFIX_MODEL_SELECTION.md --&gt;</p>
+<h1 id="model-命令修复说明-2026-06-04">/model 命令修复说明 (2026-06-04)<a class="anchor" href="#model-命令修复说明-2026-06-04" aria-label="锚点">#</a></h1>
+<h2 id="问题描述">问题描述<a class="anchor" href="#问题描述" aria-label="锚点">#</a></h2>
+<ol><li><strong>输入 <code>/model</code> 后整个 khy 进程直接退出回到 bash</strong>（核心问题，二次定位）</li><li>用户在选择界面取消时无提示</li><li>Claude Opus 4.8 模型缺失，无法在模型列表中选择</li></ol>
+<h2 id="核心修复-model-导致进程退出-最终真因-确诊">核心修复：/model 导致进程退出（最终真因 = 确诊）<a class="anchor" href="#核心修复-model-导致进程退出-最终真因-确诊" aria-label="锚点">#</a></h2>
+<p><strong>症状</strong>：在 AI 会话中输入 <code>/model</code>，khy 直接退回 shell。</p>
+<p><strong>真因</strong>：<code>backend/src/cli/repl.js</code> 的 <code>startRepl</code> 发生未提交回归，把<br>TUI 门控 <code>if (KHY_FULL_TUI === '1' &amp;&amp; stdout.isTTY)</code> 改成了无条件<br><code>if (stdout.isTTY)</code>，导致真实终端默认进入 <strong>Ink TUI</strong>。Ink 独占 stdin<br>raw mode，而 Ink 里 <code>/model</code> 仍走 <code>handleGatewaySelectModel</code> →<br><code>promptWithReplGuard</code> → <code>inquirer.prompt</code>。inquirer 抢 stdin 并在释放时<br>让 Ink 退出整个 app（<code>waitUntilExit()</code> resolve）→ 进程结束回 bash。</p>
+<p><strong>诊断关键</strong>：用 <code>node-pty</code> 真实 PTY 驱动 khy 抓到调用栈<br><code>startRepl → startInkApp</code>，确认运行的是 Ink 而非经典 readline。我此前所有<br>改动都打在经典 readline 路径（非 TTY 分支），运行时根本不走。</p>
+<p><strong>修复</strong>：恢复 <code>KHY_FULL_TUI=1</code> 灰度门控（对齐 commit e53012c<br>&quot;TUI 降级为灰度&quot;：默认经典 REPL，Ink 仅 opt-in）。</p>
+<pre><code class="language-javascript">const tuiRequested = process.env.KHY_FULL_TUI === '1' || options.fullTui;
+if (tuiRequested &amp;&amp; process.stdout.isTTY) { /* startInkApp */ }
+// 默认 fall through → 经典 readline REPL（/model 正常工作）</code></pre>
+<p><strong>验证</strong>：PTY 实测 <code>/model</code> 触发通道探测（&quot;检测各通道连通性...&quot;），<br>进程存活不退出。经典 REPL 的 <code>/model</code> 已被老版 <code>bundled.zip</code> 证明正常。</p>
+<p><strong>遗留待办</strong>：若将来默认启用 Ink，必须先把 <code>/model</code> 等 inquirer 交互移植<br>为原生 Ink 组件（参考 <code>QuestionPrompt.js</code>），否则 Ink 下必崩。</p>
+<h2 id="次要修复-保留-无害加固">次要修复（保留，无害加固）<a class="anchor" href="#次要修复-保留-无害加固" aria-label="锚点">#</a></h2>
+<h3 id="修复-1-添加取消提示">修复 1: 添加取消提示<a class="anchor" href="#修复-1-添加取消提示" aria-label="锚点">#</a></h3>
+<p><strong>文件</strong>: <code>backend/src/cli/handlers/gateway.js:3730</code></p>
+<pre><code class="language-javascript">if (!selectedValue) {
+  printInfo('已取消模型选择');  // 新增提示
+  return;
+}</code></pre>
+<h3 id="修复-2-添加-claude-opus-4-8-4-7">修复 2: 添加 Claude Opus 4.8/4.7<a class="anchor" href="#修复-2-添加-claude-opus-4-8-4-7" aria-label="锚点">#</a></h3>
+<p><strong>文件</strong>: <code>backend/src/services/gateway/adapters/claudeAdapter.js:99</code></p>
+<pre><code class="language-javascript">const KNOWN_MODELS = [
+  { id: 'claude-opus-4-8', name: 'Claude Opus 4.8', ... },  // 新增
+  { id: 'claude-opus-4-7', name: 'Claude Opus 4.7', ... },  // 新增
+  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', ... },
+  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', ... },
+  { id: 'claude-haiku-4-5-latest', name: 'Claude Haiku 4.5', ... },
+];</code></pre>
+<h2 id="应用修复">应用修复<a class="anchor" href="#应用修复" aria-label="锚点">#</a></h2>
+<h3 id="当前状态检测">当前状态检测<a class="anchor" href="#当前状态检测" aria-label="锚点">#</a></h3>
+<p>检测到 <strong>5 个旧 khy 进程</strong>仍在运行，它们加载的是修改前的代码：</p>
+<pre><code class="language-bash">$ ps aux | grep khy
+kodehu03  319270  ... 12:33 (203分钟运行时长)
+kodehu03  540289  ... 17:16 (200分钟运行时长)
+kodehu03  545126  ... 17:21 (93分钟运行时长)
+kodehu03  859871  ... 21:32 (37分钟运行时长)
+kodehu03  869439  ... 21:40 (33分钟运行时长)</code></pre>
+<h3 id="解决方案-重启-khy-进程">解决方案：重启 KHY 进程<a class="anchor" href="#解决方案-重启-khy-进程" aria-label="锚点">#</a></h3>
+<h4 id="方法-1-优雅重启-推荐">方法 1: 优雅重启（推荐）<a class="anchor" href="#方法-1-优雅重启-推荐" aria-label="锚点">#</a></h4>
+<p>在每个运行 khy 的终端窗口中：</p>
+<ol><li>按 <code>Ctrl+C</code> 中断当前会话</li><li>重新运行 <code>khy</code> 命令</li></ol>
+<h4 id="方法-2-强制终止所有进程">方法 2: 强制终止所有进程<a class="anchor" href="#方法-2-强制终止所有进程" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># 终止所有 khy 进程
+pkill -f &quot;node.*khy.js&quot;
+
+# 或者逐个终止
+kill 319270 540289 545126 859871 869439
+
+# 然后重新启动 khy
+khy</code></pre>
+<h4 id="方法-3-仅重启当前终端的会话">方法 3: 仅重启当前终端的会话<a class="anchor" href="#方法-3-仅重启当前终端的会话" aria-label="锚点">#</a></h4>
+<p>如果你只想修复当前终端：</p>
+<ol><li>记下当前会话的对话历史（如果需要）</li><li><code>Ctrl+C</code> 退出</li><li>重新运行 <code>khy</code></li></ol>
+<h2 id="验证修复">验证修复<a class="anchor" href="#验证修复" aria-label="锚点">#</a></h2>
+<p>重启后验证：</p>
+<pre><code class="language-bash"># 1. 测试 /model 命令
+/model
+
+# 2. 应该看到：
+#    - Claude Opus 4.8 出现在列表中
+#    - 按 Esc 时显示&quot;已取消模型选择&quot;而不是静默退出
+
+# 3. 测试选择 Claude Opus 4.8
+/model
+# 选择 &quot;Claude Opus 4.8&quot;
+# 应该成功切换</code></pre>
+<h2 id="技术细节">技术细节<a class="anchor" href="#技术细节" aria-label="锚点">#</a></h2>
+<h3 id="为什么需要重启">为什么需要重启？<a class="anchor" href="#为什么需要重启" aria-label="锚点">#</a></h3>
+<p>Node.js 进程启动时会将所有代码加载到内存中：</p>
+<ul><li><strong>代码缓存</strong>: 修改磁盘上的 <code>.js</code> 文件不会影响已运行的进程</li><li><strong>模块系统</strong>: <code>require()</code> 只在首次加载时读取文件，之后使用缓存</li><li><strong>热重载限制</strong>: KHY 不支持热重载（HMR），必须重启进程</li></ul>
+<h3 id="相关文件">相关文件<a class="anchor" href="#相关文件" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/src/cli/handlers/gateway.js</code> - /model 命令逻辑</li><li><code>backend/src/services/gateway/adapters/claudeAdapter.js</code> - Claude 模型定义</li><li><code>backend/src/services/gateway/aiGateway.js</code> - 网关核心</li></ul>
+<h2 id="后续建议">后续建议<a class="anchor" href="#后续建议" aria-label="锚点">#</a></h2>
+<p>为防止类似问题，建议：</p>
+<ol><li><strong>定期重启</strong>: 开发环境下修改代码后立即重启</li><li><strong>版本检查</strong>: 添加 <code>/version</code> 命令显示当前运行的代码版本</li><li><strong>热重载</strong>: 考虑未来添加配置文件热重载功能（仅限配置，不包括代码）</li></ol>
+<hr>
+<p>修复完成时间: 2026-06-04 22:30<br>修复者: Claude Opus 4.8</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-021] 网关超时与帧修复.html"><div class="dir">← 上一篇</div><div class="ttl">网关超时优化与 REPL 输入框边框修复</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-023] 文档排版-内容与样式分离-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">《文档排版——内容与样式分离》实现报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-022] HOTFIX_MODEL_SELECTION.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

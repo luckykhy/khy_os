@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linux System Administration · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>system-admin<span class="sep">›</span>linux-admin<span class="sep">›</span>Linux System Administration</div>
+      <header class="hero reveal"><h1>Linux System Administration</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#linux-system-administration">Linux System Administration</a></li><li class="lvl-2"><a href="#when-to-activate">When to Activate</a></li><li class="lvl-2"><a href="#core-principles">Core Principles</a></li><li class="lvl-2"><a href="#common-tasks">Common Tasks</a></li><li class="lvl-3"><a href="#service-management">Service Management</a></li><li class="lvl-3"><a href="#port-management">Port Management</a></li><li class="lvl-3"><a href="#disk-usage">Disk Usage</a></li><li class="lvl-3"><a href="#process-monitoring">Process Monitoring</a></li><li class="lvl-2"><a href="#safety-rules">Safety Rules</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: linux-admin<br>version: 1.0.0<br>description: Linux system administration for KHY-Quant OS deployment — systemd services, networking, disk management, security hardening. Triggered for system management tasks.<br>layer: system<br>lifecycle: operations<br>tags: [linux, sysadmin, systemd, networking, filesystem, security]<br>platforms: [khy-quant, claude-code, cosh]<br>dependencies: []</p>
+<hr>
+<h1 id="linux-system-administration">Linux System Administration<a class="anchor" href="#linux-system-administration" aria-label="锚点">#</a></h1>
+<p>System management skill for KHY-Quant OS deployments.</p>
+<h2 id="when-to-activate">When to Activate<a class="anchor" href="#when-to-activate" aria-label="锚点">#</a></h2>
+<ul><li>User manages systemd services (start/stop/enable/disable)</li><li>User configures networking (firewall, DNS, ports)</li><li>User manages disk, filesystems, or storage</li><li>User asks about system resource monitoring</li><li>User performs security hardening or user management</li></ul>
+<h2 id="core-principles">Core Principles<a class="anchor" href="#core-principles" aria-label="锚点">#</a></h2>
+<ol><li><strong>Least privilege</strong> — run services as dedicated users, not root</li><li><strong>Idempotent scripts</strong> — running twice produces the same result</li><li><strong>Audit trail</strong> — log all configuration changes</li></ol>
+<h2 id="common-tasks">Common Tasks<a class="anchor" href="#common-tasks" aria-label="锚点">#</a></h2>
+<h3 id="service-management">Service Management<a class="anchor" href="#service-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># KHY-Quant backend service
+sudo systemctl status khy-backend
+sudo systemctl restart khy-backend
+journalctl -u khy-backend -f --no-pager</code></pre>
+<h3 id="port-management">Port Management<a class="anchor" href="#port-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Check what's using a port
+ss -tlnp | grep :3000
+# Open firewall port
+sudo firewall-cmd --add-port=3000/tcp --permanent
+sudo firewall-cmd --reload</code></pre>
+<h3 id="disk-usage">Disk Usage<a class="anchor" href="#disk-usage" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">df -h
+du -sh /home/*/KHY-Quant* 2&gt;/dev/null</code></pre>
+<h3 id="process-monitoring">Process Monitoring<a class="anchor" href="#process-monitoring" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Find Node.js processes
+pgrep -af node
+# System resource overview
+top -bn1 | head -20</code></pre>
+<h2 id="safety-rules">Safety Rules<a class="anchor" href="#safety-rules" aria-label="锚点">#</a></h2>
+<ul><li>Never run <code>rm -rf /</code> or delete system directories</li><li>Always back up config files before modifying</li><li>Use <code>--dry-run</code> flags when available</li><li>Check disk space before large operations</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/security/cve-query/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">CVE Query Skill</div></a><a class="next" href="../../../../../../services/backend/wasm-indicators/AGENTS.html"><div class="dir">下一篇 →</div><div class="ttl">Project Agents.md Guide</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/system-admin/linux-admin/SKILL.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

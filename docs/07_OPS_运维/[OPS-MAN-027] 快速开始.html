@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY-OS 快速开始 — 安装与使用 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY-OS 快速开始 — 安装与使用</div>
+      <header class="hero reveal"><h1>KHY-OS 快速开始 — 安装与使用</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-快速开始-安装与使用">KHY-OS 快速开始 — 安装与使用</a></li><li class="lvl-2"><a href="#pip-安装后-先读哪篇">📦 pip 安装后，先读哪篇？</a></li><li class="lvl-2"><a href="#目录">目录</a></li><li class="lvl-3"><a href="#第一部分-windows">第一部分：Windows</a></li><li class="lvl-3"><a href="#第二部分-macos">第二部分：macOS</a></li><li class="lvl-3"><a href="#第三部分-linux-服务器">第三部分：Linux 服务器</a></li><li class="lvl-3"><a href="#第四部分-通用">第四部分：通用</a></li><li class="lvl-1"><a href="#第一部分-windows-2">第一部分：Windows</a></li><li class="lvl-2"><a href="#a1-环境准备-windows">A1. 环境准备（Windows）</a></li><li class="lvl-3"><a href="#node-js-20">Node.js（&gt;= 20）</a></li><li class="lvl-3"><a href="#python-3-8">Python（&gt;= 3.8）</a></li><li class="lvl-3"><a href="#git-可选-但推荐">Git（可选，但推荐）</a></li><li class="lvl-2"><a href="#a2-安装-khy-os-windows">A2. 安装 KHY-OS（Windows）</a></li><li class="lvl-3"><a href="#安装扩展组件-可选">安装扩展组件（可选）</a></li><li class="lvl-3"><a href="#升级">升级</a></li><li class="lvl-2"><a href="#a3-首次运行与初始化-windows">A3. 首次运行与初始化（Windows）</a></li><li class="lvl-3"><a href="#系统诊断">系统诊断</a></li><li class="lvl-2"><a href="#a4-ai-配置-windows">A4. AI 配置（Windows）</a></li><li class="lvl-3"><a href="#方式一-使用云端-api-key-推荐">方式一：使用云端 API Key（推荐）</a></li><li class="lvl-3"><a href="#方式二-使用本地模型-ollama">方式二：使用本地模型（Ollama）</a></li><li class="lvl-3"><a href="#查看-ai-状态">查看 AI 状态</a></li><li class="lvl-2"><a href="#a5-日常使用-windows">A5. 日常使用（Windows）</a></li><li class="lvl-3"><a href="#交互式-repl-主要模式">交互式 REPL（主要模式）</a></li><li class="lvl-3"><a href="#单次-ai-查询">单次 AI 查询</a></li><li class="lvl-3"><a href="#数据命令">数据命令</a></li><li class="lvl-3"><a href="#web-界面-两个-别混淆">Web 界面（两个，别混淆）</a></li><li class="lvl-3"><a href="#网关管理">网关管理</a></li><li class="lvl-2"><a href="#a6-从-windows-进行移动端远程控制">A6. 从 Windows 进行移动端远程控制</a></li><li class="lvl-2"><a href="#a7-故障排查-windows">A7. 故障排查（Windows）</a></li><li class="lvl-3"><a href="#找不到-khy-命令">找不到 &quot;khy&quot; 命令</a></li><li class="lvl-3"><a href="#npm-install-失败">npm install 失败</a></li><li class="lvl-3"><a href="#初始化期间找不到-node-js">初始化期间找不到 Node.js</a></li><li class="lvl-3"><a href="#端口冲突-server-或-bridge">端口冲突（server 或 bridge）</a></li><li class="lvl-3"><a href="#中文字符乱码">中文字符乱码</a></li><li class="lvl-1"><a href="#第二部分-macos-2">第二部分：macOS</a></li><li class="lvl-2"><a href="#m1-环境准备与安装-macos">M1. 环境准备与安装（macOS）</a></li><li class="lvl-2"><a href="#m2-首次运行-ai-配置与日常使用-macos">M2. 首次运行、AI 配置与日常使用（macOS）</a></li><li class="lvl-1"><a href="#第三部分-linux-服务器-2">第三部分：Linux 服务器</a></li><li class="lvl-2"><a href="#b1-环境准备-linux">B1. 环境准备（Linux）</a></li><li class="lvl-3"><a href="#node-js-20-2">Node.js（&gt;= 20）</a></li><li class="lvl-3"><a href="#python-3-8-2">Python（&gt;= 3.8）</a></li><li class="lvl-3"><a href="#构建工具-用于原生-npm-包">构建工具（用于原生 npm 包）</a></li><li class="lvl-2"><a href="#b2-安装-khy-os-linux">B2. 安装 KHY-OS（Linux）</a></li><li class="lvl-3"><a href="#安装扩展组件-可选-2">安装扩展组件（可选）</a></li><li class="lvl-3"><a href="#升级-2">升级</a></li><li class="lvl-2"><a href="#b3-首次运行与初始化-linux">B3. 首次运行与初始化（Linux）</a></li><li class="lvl-3"><a href="#系统诊断-2">系统诊断</a></li><li class="lvl-2"><a href="#b4-ai-配置-linux">B4. AI 配置（Linux）</a></li><li class="lvl-3"><a href="#设置-api-key">设置 API Key</a></li><li class="lvl-3"><a href="#使用本地模型">使用本地模型</a></li><li class="lvl-3"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#b5-日常使用-linux">B5. 日常使用（Linux）</a></li><li class="lvl-3"><a href="#交互式-repl">交互式 REPL</a></li><li class="lvl-3"><a href="#单次查询">单次查询</a></li><li class="lvl-3"><a href="#web-服务器">Web 服务器</a></li><li class="lvl-3"><a href="#后台-repl-tmux">后台 REPL（tmux）</a></li><li class="lvl-2"><a href="#b6-后台服务-linux">B6. 后台服务（Linux）</a></li><li class="lvl-3"><a href="#查找后端路径">查找后端路径</a></li><li class="lvl-3"><a href="#创建服务">创建服务</a></li><li class="lvl-3"><a href="#管理">管理</a></li><li class="lvl-2"><a href="#b7-使用-nginx-公网部署-linux">B7. 使用 nginx 公网部署（Linux）</a></li><li class="lvl-3"><a href="#有域名-nginx-ssl">有域名（nginx + SSL）</a></li><li class="lvl-3"><a href="#无域名-仅-ip">无域名（仅 IP）</a></li><li class="lvl-3"><a href="#快速-nginx-配置-仅-bridge">快速 nginx 配置（仅 Bridge）</a></li><li class="lvl-2"><a href="#b8-故障排查-linux">B8. 故障排查（Linux）</a></li><li class="lvl-3"><a href="#找不到-khy-命令-2">找不到 &quot;khy&quot; 命令</a></li><li class="lvl-3"><a href="#npm-install-因权限错误失败">npm install 因权限错误失败</a></li><li class="lvl-3"><a href="#npm-registry-缓慢-中国">npm registry 缓慢（中国）</a></li><li class="lvl-3"><a href="#端口已被占用">端口已被占用</a></li><li class="lvl-3"><a href="#sqlite-报-database-locked">SQLite 报 &quot;database locked&quot;</a></li><li class="lvl-1"><a href="#第三部分-通用">第三部分：通用</a></li><li class="lvl-2"><a href="#c1-命令参考">C1. 命令参考</a></li><li class="lvl-3"><a href="#顶层命令">顶层命令</a></li><li class="lvl-3"><a href="#数据与交易">数据与交易</a></li><li class="lvl-3"><a href="#ai-与模型">AI 与模型</a></li><li class="lvl-3"><a href="#工具与系统">工具与系统</a></li><li class="lvl-3"><a href="#部署">部署</a></li><li class="lvl-2"><a href="#c2-ai-服务商配置">C2. AI 服务商配置</a></li><li class="lvl-3"><a href="#云端服务商">云端服务商</a></li><li class="lvl-3"><a href="#本地模型-ollama">本地模型（Ollama）</a></li><li class="lvl-3"><a href="#代理配置-中国">代理配置（中国）</a></li><li class="lvl-2"><a href="#c3-斜杠命令-repl">C3. 斜杠命令（REPL）</a></li><li class="lvl-3"><a href="#最常用">最常用</a></li><li class="lvl-3"><a href="#ai-功能">AI 功能</a></li><li class="lvl-3"><a href="#系统">系统</a></li><li class="lvl-3"><a href="#数据与交易-2">数据与交易</a></li><li class="lvl-2"><a href="#c4-常见问题">C4. 常见问题</a></li><li class="lvl-3"><a href="#问-khy-和-khyquant-有什么区别">问：`khy` 和 `khyquant` 有什么区别？</a></li><li class="lvl-3"><a href="#问-不用-ai-能用-khy-吗">问：不用 AI 能用 KHY 吗？</a></li><li class="lvl-3"><a href="#问-如何使用中文命令">问：如何使用中文命令？</a></li><li class="lvl-3"><a href="#问-如何更新-khy">问：如何更新 KHY？</a></li><li class="lvl-3"><a href="#问-数据存储在哪里">问：数据存储在哪里？</a></li><li class="lvl-3"><a href="#问-可以运行多个实例吗">问：可以运行多个实例吗？</a></li><li class="lvl-3"><a href="#问-运行本地-ai-模型的最低硬件要求">问：运行本地 AI 模型的最低硬件要求？</a></li><li class="lvl-3"><a href="#问-除了-目录-khy-还往哪里写文件">问：除了 `` 目录，KHY 还往哪里写文件？</a></li><li class="lvl-2"><a href="#c5-两个-web-界面与两套手机访问-到底用哪个">C5. 两个 Web 界面与两套手机访问，到底用哪个？</a></li><li class="lvl-3"><a href="#两个-web-界面">两个 Web 界面</a></li><li class="lvl-3"><a href="#两套手机访问">两套手机访问</a></li><li class="lvl-2"><a href="#c6-插件开发-进阶">C6. 插件开发（进阶）</a></li><li class="lvl-3"><a href="#插件骨架长什么样">插件骨架长什么样</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-027 | 阶段: 运维 | 原路径: docs/指南/快速开始.md --&gt;</p>
+<h1 id="khy-os-快速开始-安装与使用">KHY-OS 快速开始 — 安装与使用<a class="anchor" href="#khy-os-快速开始-安装与使用" aria-label="锚点">#</a></h1>
+<p>在 <strong>Windows、macOS 和 Linux</strong> 上安装并运行 KHY-OS 的完整指南。</p>
+<h2 id="pip-安装后-先读哪篇">📦 pip 安装后，先读哪篇？<a class="anchor" href="#pip-安装后-先读哪篇" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你的情况</th><th>读这篇</th></tr></thead><tbody><tr><td>第一次安装，想要一条龙逐步操作</td><td><strong>本文</strong> [OPS-MAN-027] 快速开始（👈 你在这里）</td></tr><tr><td>0 基础，想要「装完 → 配 AI → 日常 → 进阶 → 高手」成长阶梯</td><td>[OPS-MAN-043] 从 0 到高手</td></tr><tr><td>装完想知道「能干什么」，功能逐项清单</td><td>[OPS-MAN-023] 完整功能清单</td></tr><tr><td>按「我想要某种体验」反查该配什么</td><td>[OPS-MAN-024] 按需配置体验</td></tr><tr><td>还原可读源码树 / 构建自研内核 ISO，开启全部能力</td><td>[OPS-MAN-037] 完整还原与全功能</td></tr><tr><td>只想确认运行 / 构建环境要求</td><td>[OPS-MAN-028] 环境要求</td></tr></tbody></table>
+<blockquote><p><strong>命令前缀图例</strong>（全文统一）：</p>
+<ul><li><code>$</code> / <code>PS&gt;</code> = 在<strong>系统终端</strong>（Linux/macOS 的 shell、Windows 的 PowerShell）里直接运行。</li><li><code>khy &gt;</code> = 先运行 <code>khy</code> <strong>进入 REPL</strong> 之后，在 REPL 内输入。</li><li>四个入口命令 <code>khy</code> / <code>khy-os</code> / <code>khy-quant</code> / <code>khyquant</code> 完全等价，本文统一用 <code>khy</code>。</li></ul></blockquote>
+<blockquote><p><strong>装完第一件事永远是体检</strong>（不是直接开聊）：</p>
+<pre><code class="language-bash">khy preflight     # 体检 Node/依赖/PATH，给可粘贴的修复命令（不启动后端，最快）
+khy where         # 看装到哪了、依赖是否就绪（不是 PATH 垫片，是真实后端目录）
+khy doctor        # 尝试自动修复（会启动后端做更深的检查）</code></pre>
+<p>环境要求（硬性）：<strong>Node.js ≥ 20</strong>（后端 engines 约束；若本机没装，首次运行会自动下载便携版 Node，可用 <code>KHY_AUTO_INSTALL_NODE=0</code> 关闭）、<strong>Python ≥ 3.8</strong>（pip 安装门槛，<code>pyproject.toml</code> <code>requires-python</code>）。<br>当前稳定版以 <code>khy --version</code> 为准（本文撰写时为 <code>0.1.140</code>）。</p></blockquote>
+<hr>
+<h2 id="目录">目录<a class="anchor" href="#目录" aria-label="锚点">#</a></h2>
+<h3 id="第一部分-windows">第一部分：Windows<a class="anchor" href="#第一部分-windows" aria-label="锚点">#</a></h3>
+<ol><li>环境准备（Windows）</li><li>安装 KHY-OS（Windows）</li><li>首次运行与初始化（Windows）</li><li>AI 配置（Windows）</li><li>日常使用（Windows）</li><li>从 Windows 进行移动端远程控制</li><li>故障排查（Windows）</li></ol>
+<h3 id="第二部分-macos">第二部分：macOS<a class="anchor" href="#第二部分-macos" aria-label="锚点">#</a></h3>
+<p>M1. 环境准备与安装（macOS）<br>M2. 首次运行、AI 配置与日常使用（macOS）</p>
+<h3 id="第三部分-linux-服务器">第三部分：Linux 服务器<a class="anchor" href="#第三部分-linux-服务器" aria-label="锚点">#</a></h3>
+<ol><li>环境准备（Linux）</li><li>安装 KHY-OS（Linux）</li><li>首次运行与初始化（Linux）</li><li>AI 配置（Linux）</li><li>日常使用（Linux）</li><li>后台服务（Linux）</li><li>使用 nginx 公网部署（Linux）</li><li>故障排查（Linux）</li></ol>
+<h3 id="第四部分-通用">第四部分：通用<a class="anchor" href="#第四部分-通用" aria-label="锚点">#</a></h3>
+<ol><li>命令参考</li><li>AI 服务商配置</li><li>斜杠命令（REPL）</li><li>常见问题</li><li>两个 Web 界面与两套手机访问，到底用哪个？</li></ol>
+<hr>
+<h1 id="第一部分-windows-2">第一部分：Windows<a class="anchor" href="#第一部分-windows-2" aria-label="锚点">#</a></h1>
+<h2 id="a1-环境准备-windows">A1. 环境准备（Windows）<a class="anchor" href="#a1-环境准备-windows" aria-label="锚点">#</a></h2>
+<h3 id="node-js-20">Node.js（&gt;= 20）<a class="anchor" href="#node-js-20" aria-label="锚点">#</a></h3>
+<blockquote><p>khy 后端基于 Ink 6 的 TUI，<strong>要求 Node.js ≥ 20</strong>（这是 <code>services/backend/package.json</code> 的硬性 engines 约束）。</p></blockquote>
+<ol><li>从 https://nodejs.org/ 下载（推荐 LTS 版本，确保 ≥ 20）</li><li>运行安装程序，勾选 &quot;Add to PATH&quot;</li><li>打开 <strong>PowerShell</strong> 并验证：</li></ol>
+<pre><code class="language-powershell">node -v    # Should show v20.x or higher
+npm -v     # Should show 10.x or higher</code></pre>
+<h3 id="python-3-8">Python（&gt;= 3.8）<a class="anchor" href="#python-3-8" aria-label="锚点">#</a></h3>
+<ol><li>从 https://www.python.org/downloads/ 下载</li><li><strong>重要</strong>：安装时勾选 &quot;Add Python to PATH&quot;</li><li>验证：</li></ol>
+<pre><code class="language-powershell">python --version   # Should show 3.8+
+pip --version</code></pre>
+<blockquote><p>如果 <code>python</code> 无法运行，请尝试 <code>python3</code> 或 <code>py -3</code>。</p></blockquote>
+<h3 id="git-可选-但推荐">Git（可选，但推荐）<a class="anchor" href="#git-可选-但推荐" aria-label="锚点">#</a></h3>
+<p>从 https://git-scm.com/download/win 下载 —— 便于版本控制和更新。</p>
+<hr>
+<h2 id="a2-安装-khy-os-windows">A2. 安装 KHY-OS（Windows）<a class="anchor" href="#a2-安装-khy-os-windows" aria-label="锚点">#</a></h2>
+<p>打开 <strong>PowerShell</strong>（或 CMD）：</p>
+<pre><code class="language-powershell">pip install khy-os</code></pre>
+<p>验证安装：</p>
+<pre><code class="language-powershell">khy --version</code></pre>
+<h3 id="安装扩展组件-可选">安装扩展组件（可选）<a class="anchor" href="#安装扩展组件-可选" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># Data analysis (pandas, akshare)
+pip install &quot;khy-os[data]&quot;
+
+# Machine learning (scikit-learn, xgboost, lightgbm)
+pip install &quot;khy-os[ml]&quot;
+
+# Everything
+pip install &quot;khy-os[full]&quot;</code></pre>
+<h3 id="升级">升级<a class="anchor" href="#升级" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">pip install --upgrade khy-os</code></pre>
+<hr>
+<h2 id="a3-首次运行与初始化-windows">A3. 首次运行与初始化（Windows）<a class="anchor" href="#a3-首次运行与初始化-windows" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell">khy</code></pre>
+<p>首次启动会触发自动初始化：</p>
+<ul><li>安装 Node.js npm 依赖</li><li>生成 <code>.env</code> 配置文件</li><li>创建 SQLite 数据库</li><li>打印欢迎信息</li></ul>
+<p>这可能需要 1-2 分钟。完成后，你将进入<strong>交互式 REPL</strong>：</p>
+<pre><code>╭─────────────────────────────────╮
+│  KHY OS v0.1.x                  │
+│  Type /help for commands        │
+╰─────────────────────────────────╯
+khy &gt;</code></pre>
+<p>输入 <code>/help</code> 查看所有可用命令，或输入 <code>/exit</code> 退出。</p>
+<h3 id="系统诊断">系统诊断<a class="anchor" href="#系统诊断" aria-label="锚点">#</a></h3>
+<p>运行内置的 doctor 来验证一切正常：</p>
+<pre><code>khy &gt; doctor</code></pre>
+<p>或在 REPL 之外运行：</p>
+<pre><code class="language-powershell">khy doctor</code></pre>
+<hr>
+<h2 id="a4-ai-配置-windows">A4. AI 配置（Windows）<a class="anchor" href="#a4-ai-配置-windows" aria-label="锚点">#</a></h2>
+<p>KHY-OS 至少需要配置一个 AI 服务商才能使用 AI 功能。</p>
+<h3 id="方式一-使用云端-api-key-推荐">方式一：使用云端 API Key（推荐）<a class="anchor" href="#方式一-使用云端-api-key-推荐" aria-label="锚点">#</a></h3>
+<p>最省心的方式是交互式网关配置向导，它会引导你选服务商、填 Key、并写入正确位置：</p>
+<pre><code class="language-powershell">khy gateway config         # 在系统终端运行（推荐，canonical 入口）</code></pre>
+<p>或在 REPL 内运行等价命令：</p>
+<pre><code>khy &gt; /apikey              # /apikey 是别名，等价于 khy gateway config</code></pre>
+<p>按照向导配置你的 API Key。支持的服务商：</p>
+<table><thead><tr><th>Provider</th><th>Environment Variable</th><th>Get Key From</th></tr></thead><tbody><tr><td>Anthropic (Claude)</td><td><code>ANTHROPIC_API_KEY</code></td><td>https://console.anthropic.com/</td></tr><tr><td>OpenAI</td><td><code>OPENAI_API_KEY</code></td><td>https://platform.openai.com/</td></tr><tr><td>DeepSeek</td><td><code>DEEPSEEK_API_KEY</code></td><td>https://platform.deepseek.com/</td></tr><tr><td>Google (Gemini)</td><td><code>GOOGLE_API_KEY</code></td><td>https://aistudio.google.com/</td></tr><tr><td>OpenRouter</td><td><code>OPENROUTER_API_KEY</code></td><td>https://openrouter.ai/</td></tr></tbody></table>
+<p>如果你想手动设置，也可以用环境变量，或直接编辑 <code>.env</code> 文件：</p>
+<pre><code class="language-powershell"># PowerShell — 仅当前会话临时生效
+$env:ANTHROPIC_API_KEY = &quot;sk-ant-...&quot;
+
+# 永久写入 .env：.env 位于「bundled 后端目录」内，先用 khy where 查出真实路径再编辑。
+# 注意：不存在 ~/.khy-os 这样的目录，请勿手写该路径。
+khy where                  # 看 “backend dir” 那一行，即 .env 所在目录
+notepad (python -c &quot;from khy_platform.cli import get_bundle_dir; print(get_bundle_dir())&quot;)\.env</code></pre>
+<h3 id="方式二-使用本地模型-ollama">方式二：使用本地模型（Ollama）<a class="anchor" href="#方式二-使用本地模型-ollama" aria-label="锚点">#</a></h3>
+<p>从 https://ollama.ai/ 安装 Ollama。<strong>前提：Ollama 服务必须在后台运行</strong>——<br>先用 <code>ollama list</code>（或访问 http://localhost:11434）确认服务已起来，否则拉取模型会连接失败。<br>确认后拉取一个模型，再让网关自动发现它：</p>
+<pre><code class="language-powershell">ollama pull qwen2.5:7b     # 用 ollama 自己拉取（标签需真实存在，如 qwen2.5 系列）
+khy gateway detect         # 让 KHY 网关自动发现本地 Ollama 及其模型</code></pre>
+<blockquote><p>进入 REPL 后可用 <code>/model</code> 切换到刚拉取的 Ollama 模型。</p></blockquote>
+<h3 id="查看-ai-状态">查看 AI 状态<a class="anchor" href="#查看-ai-状态" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">khy gateway status         # 列出已配置的服务商及在线状态（装完未配 key 属正常）
+khy gateway detect         # 自动检测可用服务商（含本地 Ollama）</code></pre>
+<hr>
+<h2 id="a5-日常使用-windows">A5. 日常使用（Windows）<a class="anchor" href="#a5-日常使用-windows" aria-label="锚点">#</a></h2>
+<h3 id="交互式-repl-主要模式">交互式 REPL（主要模式）<a class="anchor" href="#交互式-repl-主要模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">khy</code></pre>
+<p>这是使用 KHY-OS 的主要方式。在 REPL 内：</p>
+<pre><code>khy &gt; 帮我分析一下最近的A股走势
+khy &gt; 查看沪深300指数
+khy &gt; backtest list
+khy &gt; quote 600519</code></pre>
+<h3 id="单次-ai-查询">单次 AI 查询<a class="anchor" href="#单次-ai-查询" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">khy ai &quot;summarize the current market conditions&quot;
+khy -p &quot;explain what a moving average crossover strategy is&quot;</code></pre>
+<h3 id="数据命令">数据命令<a class="anchor" href="#数据命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">khy data list              # List available data sources
+khy data fetch 600519      # Fetch stock data
+khy quote 600519           # Quick stock quote</code></pre>
+<h3 id="web-界面-两个-别混淆">Web 界面（两个，别混淆）<a class="anchor" href="#web-界面-两个-别混淆" aria-label="锚点">#</a></h3>
+<p>KHY 有<strong>两个不同的 Web 服务</strong>，新手最容易搞混：</p>
+<table><thead><tr><th>命令</th><th>是什么</th><th>默认端口</th><th>何时用</th></tr></thead><tbody><tr><td><code>khy server start</code></td><td>量化 / 项目 Web UI（旧 server.js）</td><td><code>:3000</code>（<code>--port</code> 或 <code>PORT</code> 覆盖）</td><td>看行情、回测、项目图形界面</td></tr><tr><td><code>khychat</code>（REPL 内）</td><td><strong>AI 网关管理页 / 对话页</strong>（Vue 前端）</td><td>API <code>:9090</code>、前端 <code>:8090</code></td><td>配置 AI 服务商、网页里和 AI 对话</td></tr></tbody></table>
+<pre><code class="language-powershell">khy server start           # 量化 Web UI → http://localhost:3000</code></pre>
+<p>在浏览器打开 http://localhost:3000 即可使用量化图形界面。<br>要打开 <strong>AI 网关管理 / 对话页</strong>，则进入 REPL 后运行 <code>khychat</code>（详见undefined节）。</p>
+<h3 id="网关管理">网关管理<a class="anchor" href="#网关管理" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">khy gateway status         # View AI gateway status
+khy gateway detect         # Auto-detect available AI providers
+khy pool list              # View API key pool</code></pre>
+<hr>
+<h2 id="a6-从-windows-进行移动端远程控制">A6. 从 Windows 进行移动端远程控制<a class="anchor" href="#a6-从-windows-进行移动端远程控制" aria-label="锚点">#</a></h2>
+<p>在同一局域网下，从手机访问 KHY 的网关管理 / 对话页。<strong>推荐 <code>khy mobile</code></strong>（扫码即用）：</p>
+<pre><code class="language-powershell">khy mobile                 # 生成二维码，手机扫码访问；默认端口 9090
+khy mobile 192.168.1.9:9090   # 也可指定 主机:端口</code></pre>
+<p>手机与电脑需在同一局域网。二维码指向 <code>http://&lt;本机内网IP&gt;:9090/admin/ai-gateway</code>。</p>
+<blockquote><p><strong>高级 / 底层用法 <code>khy bridge</code></strong>：<code>khy bridge start</code> 是更底层的移动远程服务（端口 <code>:9222</code>，<br>用 PIN + 账号认证），适合需要账号体系或自建反代的场景：</p>
+<pre><code>📱 Mobile: http://192.168.1.5:9222/  PIN: 836201</code></pre>
+<p>一般用户用 <code>khy mobile</code> 即可。两者区别与进阶配置详见 <a href="%5BOPS-MAN-030%5D%20移动端远程指南.html">移动端远程指南.md</a>。</p></blockquote>
+<hr>
+<h2 id="a7-故障排查-windows">A7. 故障排查（Windows）<a class="anchor" href="#a7-故障排查-windows" aria-label="锚点">#</a></h2>
+<h3 id="找不到-khy-命令">找不到 &quot;khy&quot; 命令<a class="anchor" href="#找不到-khy-命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># Check Python Scripts is in PATH
+python -m site --user-site
+# Usually: C:\Users\&lt;you&gt;\AppData\Roaming\Python\Python3x\Scripts
+
+# Or use module directly
+python -m khy_platform.cli</code></pre>
+<p>如果 pip 安装到了用户目录，请将其添加到 PATH：</p>
+<pre><code class="language-powershell"># Find the Scripts directory
+python -c &quot;import sysconfig; print(sysconfig.get_path('scripts'))&quot;
+
+# Add to PATH permanently (PowerShell)
+[Environment]::SetEnvironmentVariable(&quot;PATH&quot;, $env:PATH + &quot;;&quot; + &quot;C:\Users\&lt;you&gt;\AppData\Local\Programs\Python\Python3x\Scripts&quot;, &quot;User&quot;)</code></pre>
+<h3 id="npm-install-失败">npm install 失败<a class="anchor" href="#npm-install-失败" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># If behind a corporate proxy
+npm config set proxy http://127.0.0.1:7890
+npm config set https-proxy http://127.0.0.1:7890
+
+# If npm registry is slow (use China mirror)
+npm config set registry https://registry.npmmirror.com</code></pre>
+<h3 id="初始化期间找不到-node-js">初始化期间找不到 Node.js<a class="anchor" href="#初始化期间找不到-node-js" aria-label="锚点">#</a></h3>
+<p>确保 Node.js 已加入 PATH：</p>
+<pre><code class="language-powershell">node -v
+# If not found, reinstall Node.js and check &quot;Add to PATH&quot;</code></pre>
+<h3 id="端口冲突-server-或-bridge">端口冲突（server 或 bridge）<a class="anchor" href="#端口冲突-server-或-bridge" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># Find what's using a port
+netstat -ano | findstr :3000
+netstat -ano | findstr :9222
+
+# Kill by PID
+taskkill /PID &lt;pid&gt; /F</code></pre>
+<h3 id="中文字符乱码">中文字符乱码<a class="anchor" href="#中文字符乱码" aria-label="锚点">#</a></h3>
+<p>设置终端编码：</p>
+<pre><code class="language-powershell"># PowerShell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+chcp 65001</code></pre>
+<p>或使用 <strong>Windows Terminal</strong>（推荐），它对 Unicode 的支持更好。</p>
+<hr>
+<h1 id="第二部分-macos-2">第二部分：macOS<a class="anchor" href="#第二部分-macos-2" aria-label="锚点">#</a></h1>
+<blockquote><p>macOS 上的日常使用、AI 配置、命令与 Linux 完全一致（都是 Unix shell）。本部分只补 macOS 特有的<br><strong>安装前置</strong>；装好后请直接照「第三部分：Linux」的 B3 起步骤操作。</p></blockquote>
+<h2 id="m1-环境准备与安装-macos">M1. 环境准备与安装（macOS）<a class="anchor" href="#m1-环境准备与安装-macos" aria-label="锚点">#</a></h2>
+<p>推荐用 <a href="https://brew.sh/" target="_blank" rel="noopener">Homebrew</a> 一次装齐前置：</p>
+<pre><code class="language-bash"># 没有 Homebrew 先装它（官网命令），然后：
+brew install node python git      # Node ≥ 20、Python ≥ 3.8、git
+
+node -v        # 确认 ≥ v20
+python3 --version   # 确认 ≥ 3.8
+
+# 安装 KHY-OS
+pip3 install khy-os
+# 可选扩展：pip3 install &quot;khy-os[data]&quot; / &quot;[ml]&quot; / &quot;[full]&quot;
+
+khy --version  # 验证</code></pre>
+<blockquote><p>如果装完提示 <code>khy: command not found</code>，是 pip 的可执行目录不在 PATH。查出并加入：</p>
+<pre><code class="language-bash">python3 -c &quot;import sysconfig; print(sysconfig.get_path('scripts'))&quot;   # 打印 Scripts 目录
+echo 'export PATH=&quot;'$(python3 -c &quot;import sysconfig; print(sysconfig.get_path('scripts'))&quot;)':$PATH&quot;' &gt;&gt; ~/.zshrc
+source ~/.zshrc</code></pre></blockquote>
+<h2 id="m2-首次运行-ai-配置与日常使用-macos">M2. 首次运行、AI 配置与日常使用（macOS）<a class="anchor" href="#m2-首次运行-ai-配置与日常使用-macos" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy preflight   # 先体检
+khy             # 首次运行：自动装依赖 / 建库 / 写 .env，然后进入 REPL</code></pre>
+<ul><li><strong>AI 配置</strong>：<code>khy gateway config</code>（与 Windows A4 / Linux B4 相同）。</li><li><strong>本地模型（Ollama）</strong>：<code>brew install ollama</code>，<code>ollama serve</code> 起服务，<code>ollama pull qwen2.5:7b</code>，再 <code>khy gateway detect</code>。</li><li><strong>Web 界面 / 手机访问 / 日常命令</strong>：完全照「第三部分：Linux」的 B5、以及通用部分的 C 节。<code>khy mobile</code> 在 macOS 同样可用。</li></ul>
+<hr>
+<h1 id="第三部分-linux-服务器-2">第三部分：Linux 服务器<a class="anchor" href="#第三部分-linux-服务器-2" aria-label="锚点">#</a></h1>
+<h2 id="b1-环境准备-linux">B1. 环境准备（Linux）<a class="anchor" href="#b1-环境准备-linux" aria-label="锚点">#</a></h2>
+<h3 id="node-js-20-2">Node.js（&gt;= 20）<a class="anchor" href="#node-js-20-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Ubuntu/Debian
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# CentOS/RHEL
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo yum install -y nodejs
+
+# Verify
+node -v
+npm -v</code></pre>
+<h3 id="python-3-8-2">Python（&gt;= 3.8）<a class="anchor" href="#python-3-8-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python3 --version    # Need &gt;= 3.8; most modern distros already ship 3.10+
+
+# If not:
+# Ubuntu/Debian
+sudo apt-get install -y python3 python3-pip
+
+# CentOS/RHEL
+sudo dnf install -y python3 python3-pip</code></pre>
+<h3 id="构建工具-用于原生-npm-包">构建工具（用于原生 npm 包）<a class="anchor" href="#构建工具-用于原生-npm-包" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Ubuntu/Debian
+sudo apt-get install -y build-essential
+
+# CentOS/RHEL
+sudo dnf groupinstall -y &quot;Development Tools&quot;</code></pre>
+<hr>
+<h2 id="b2-安装-khy-os-linux">B2. 安装 KHY-OS（Linux）<a class="anchor" href="#b2-安装-khy-os-linux" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install khy-os
+
+# Verify
+khy --version</code></pre>
+<h3 id="安装扩展组件-可选-2">安装扩展组件（可选）<a class="anchor" href="#安装扩展组件-可选-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">pip install &quot;khy-os[data]&quot;     # Data analysis
+pip install &quot;khy-os[ml]&quot;       # Machine learning
+pip install &quot;khy-os[full]&quot;     # Everything</code></pre>
+<h3 id="升级-2">升级<a class="anchor" href="#升级-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">pip install --upgrade khy-os</code></pre>
+<hr>
+<h2 id="b3-首次运行与初始化-linux">B3. 首次运行与初始化（Linux）<a class="anchor" href="#b3-首次运行与初始化-linux" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy</code></pre>
+<p>首次启动会自动初始化：</p>
+<ul><li>为后端依赖执行 <code>npm install</code></li><li>生成 <code>.env</code> 文件</li><li>创建 SQLite 数据库</li></ul>
+<p>初始化完成后，你将进入交互式 REPL：</p>
+<pre><code>khy &gt;</code></pre>
+<h3 id="系统诊断-2">系统诊断<a class="anchor" href="#系统诊断-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy doctor</code></pre>
+<p>检查 Node.js、Python、数据库、网络连通性以及 AI 服务商状态。</p>
+<hr>
+<h2 id="b4-ai-配置-linux">B4. AI 配置（Linux）<a class="anchor" href="#b4-ai-配置-linux" aria-label="锚点">#</a></h2>
+<h3 id="设置-api-key">设置 API Key<a class="anchor" href="#设置-api-key" aria-label="锚点">#</a></h3>
+<p>最省心的是交互式向导（推荐）：</p>
+<pre><code class="language-bash">khy gateway config     # canonical 入口，引导选服务商 / 填 Key / 写入正确位置</code></pre>
+<p>也可以手动设置环境变量或直接编辑 <code>.env</code>：</p>
+<pre><code class="language-bash"># 方式一：环境变量（临时，仅当前会话）
+export ANTHROPIC_API_KEY=&quot;sk-ant-...&quot;
+
+# 方式二：写入 shell 配置（持久）
+echo 'export ANTHROPIC_API_KEY=&quot;sk-ant-...&quot;' &gt;&gt; ~/.bashrc
+source ~/.bashrc
+
+# 方式三：直接编辑 .env（位于 bundled 后端目录，路径由 get_bundle_dir() 推导）
+nano $(python3 -c &quot;from khy_platform.cli import get_bundle_dir; print(get_bundle_dir())&quot;)/.env</code></pre>
+<h3 id="使用本地模型">使用本地模型<a class="anchor" href="#使用本地模型" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 安装 Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# 前提：确认 Ollama 服务在运行（Linux 安装脚本通常已注册为 systemd 服务）
+ollama list        # 能列出即服务就绪；否则 `systemctl start ollama` 或 `ollama serve`
+
+# 用 ollama 拉取一个真实存在的模型标签，再让网关发现它
+ollama pull qwen2.5:7b
+khy gateway detect     # 自动发现本地 Ollama 及其模型</code></pre>
+<h3 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy gateway status     # 已配置的服务商及在线状态
+khy gateway detect     # 自动检测可用服务商（含本地 Ollama）</code></pre>
+<hr>
+<h2 id="b5-日常使用-linux">B5. 日常使用（Linux）<a class="anchor" href="#b5-日常使用-linux" aria-label="锚点">#</a></h2>
+<h3 id="交互式-repl">交互式 REPL<a class="anchor" href="#交互式-repl" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy</code></pre>
+<p>在 REPL 内，可以使用任意命令，或用自然语言向 AI 提问：</p>
+<pre><code>khy &gt; 帮我分析上证指数
+khy &gt; quote 600519
+khy &gt; data fetch 000001
+khy &gt; backtest list</code></pre>
+<h3 id="单次查询">单次查询<a class="anchor" href="#单次查询" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy ai &quot;what is the current sentiment on A-shares?&quot;
+khy -p &quot;explain RSI indicator&quot;</code></pre>
+<h3 id="web-服务器">Web 服务器<a class="anchor" href="#web-服务器" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy server start
+# Open http://localhost:3000</code></pre>
+<h3 id="后台-repl-tmux">后台 REPL（tmux）<a class="anchor" href="#后台-repl-tmux" aria-label="锚点">#</a></h3>
+<p>在服务器上保持会话持续运行：</p>
+<pre><code class="language-bash"># Create a tmux session
+tmux new -s khy
+
+# Run khy inside
+khy
+
+# Detach: Ctrl+B then D
+# Reattach later:
+tmux attach -t khy</code></pre>
+<hr>
+<h2 id="b6-后台服务-linux">B6. 后台服务（Linux）<a class="anchor" href="#b6-后台服务-linux" aria-label="锚点">#</a></h2>
+<p>在生产环境中，可将 KHY 作为 systemd 服务运行，开机自启动。</p>
+<h3 id="查找后端路径">查找后端路径<a class="anchor" href="#查找后端路径" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">BACKEND_DIR=$(python3 -c &quot;from khy_platform.cli import get_bundle_dir; print(get_bundle_dir())&quot;)
+NODE_BIN=$(which node)
+echo &quot;Backend: $BACKEND_DIR&quot;
+echo &quot;Node: $NODE_BIN&quot;</code></pre>
+<h3 id="创建服务">创建服务<a class="anchor" href="#创建服务" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">sudo tee /etc/systemd/system/khy-backend.service &gt; /dev/null &lt;&lt; EOF
+[Unit]
+Description=KHY Backend API Server
+After=network.target
+
+[Service]
+Type=simple
+User=$(whoami)
+WorkingDirectory=$BACKEND_DIR
+ExecStart=$NODE_BIN server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=khy-backend
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable khy-backend
+sudo systemctl start khy-backend</code></pre>
+<h3 id="管理">管理<a class="anchor" href="#管理" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">sudo systemctl status khy-backend    # Check status
+sudo systemctl restart khy-backend   # Restart
+journalctl -u khy-backend -f         # Follow logs</code></pre>
+<p>如需完整的多服务部署（backend + AI + bridge + nginx），请参阅：</p>
+<ul><li><a href="../06_DEPLOY_部署/%5BDEPLOY-MAN-016%5D%20部署指南-域名.html">部署指南-域名.md</a> —— 带 SSL 的域名部署</li><li><a href="../06_DEPLOY_部署/%5BDEPLOY-MAN-017%5D%20部署指南-无域名.html">部署指南-无域名.md</a> —— 仅 IP 部署</li></ul>
+<hr>
+<h2 id="b7-使用-nginx-公网部署-linux">B7. 使用 nginx 公网部署（Linux）<a class="anchor" href="#b7-使用-nginx-公网部署-linux" aria-label="锚点">#</a></h2>
+<blockquote><p>说明：<code>khy deploy</code> 是<strong>通用项目部署器</strong>（<code>khy deploy &lt;目标&gt; [源] --start …</code>，子命令<br><code>list/status/stop/logs</code>），<strong>不是</strong>一键 nginx/SSL/域名部署命令。khy 自身的公网部署<br>（nginx + SSL + systemd）走下面的专项指南，按文档步骤执行。</p></blockquote>
+<h3 id="有域名-nginx-ssl">有域名（nginx + SSL）<a class="anchor" href="#有域名-nginx-ssl" aria-label="锚点">#</a></h3>
+<p>带域名与 SSL 的完整部署请参阅 <a href="../06_DEPLOY_部署/%5BDEPLOY-MAN-016%5D%20部署指南-域名.html">部署指南-域名.md</a>，<br>其中给出 nginx 反代、证书申请/续期与 systemd 守护的逐步命令。</p>
+<h3 id="无域名-仅-ip">无域名（仅 IP）<a class="anchor" href="#无域名-仅-ip" aria-label="锚点">#</a></h3>
+<p>逐步手动部署请参阅 <a href="../06_DEPLOY_部署/%5BDEPLOY-MAN-017%5D%20部署指南-无域名.html">部署指南-无域名.md</a>。</p>
+<h3 id="快速-nginx-配置-仅-bridge">快速 nginx 配置（仅 Bridge）<a class="anchor" href="#快速-nginx-配置-仅-bridge" aria-label="锚点">#</a></h3>
+<p>如果你只想把移动端远程控制页面放在 nginx 后面：</p>
+<pre><code class="language-bash">khy bridge nginx --prefix /remote</code></pre>
+<p>这会生成一段 nginx 配置片段，你可以将其粘贴到你的 server 块中。</p>
+<hr>
+<h2 id="b8-故障排查-linux">B8. 故障排查（Linux）<a class="anchor" href="#b8-故障排查-linux" aria-label="锚点">#</a></h2>
+<h3 id="找不到-khy-命令-2">找不到 &quot;khy&quot; 命令<a class="anchor" href="#找不到-khy-命令-2" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Check where pip installed it
+python3 -m site --user-base
+# Usually: ~/.local/bin/khy
+
+# Add to PATH
+echo 'export PATH=&quot;$HOME/.local/bin:$PATH&quot;' &gt;&gt; ~/.bashrc
+source ~/.bashrc
+
+# Or use directly
+python3 -m khy_platform.cli</code></pre>
+<h3 id="npm-install-因权限错误失败">npm install 因权限错误失败<a class="anchor" href="#npm-install-因权限错误失败" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Don't use sudo with npm — fix ownership instead
+sudo chown -R $(whoami) ~/.npm
+npm cache clean --force
+
+# Or use a Node version manager (nvm)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 20</code></pre>
+<h3 id="npm-registry-缓慢-中国">npm registry 缓慢（中国）<a class="anchor" href="#npm-registry-缓慢-中国" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm config set registry https://registry.npmmirror.com</code></pre>
+<h3 id="端口已被占用">端口已被占用<a class="anchor" href="#端口已被占用" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">sudo lsof -i :3000
+sudo kill $(sudo lsof -t -i :3000)</code></pre>
+<h3 id="sqlite-报-database-locked">SQLite 报 &quot;database locked&quot;<a class="anchor" href="#sqlite-报-database-locked" aria-label="锚点">#</a></h3>
+<p>通常是由于多个进程访问同一个数据库：</p>
+<pre><code class="language-bash"># Check for stale processes
+ps aux | grep node | grep khy
+
+# Kill duplicates
+kill &lt;pid&gt;</code></pre>
+<hr>
+<h1 id="第三部分-通用">第三部分：通用<a class="anchor" href="#第三部分-通用" aria-label="锚点">#</a></h1>
+<h2 id="c1-命令参考">C1. 命令参考<a class="anchor" href="#c1-命令参考" aria-label="锚点">#</a></h2>
+<h3 id="顶层命令">顶层命令<a class="anchor" href="#顶层命令" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>khy</code></td><td>启动交互式 REPL（首次自动初始化）</td></tr><tr><td><code>khy preflight</code></td><td>启动依赖体检（不启动后端，最快）</td></tr><tr><td><code>khy where</code></td><td>真实安装位置（backend 目录 / 依赖是否就绪）</td></tr><tr><td><code>khy gateway config</code></td><td>配置 AI 服务商 / Key（canonical）</td></tr><tr><td><code>khy ai &quot;...&quot;</code></td><td>单次 AI 查询</td></tr><tr><td><code>khy -p &quot;...&quot;</code></td><td>单次 AI 输出（适合管道）</td></tr><tr><td><code>khy server start</code></td><td>启动量化 Web UI（默认端口 3000）</td></tr><tr><td><code>khy doctor</code></td><td>系统诊断（会启动后端）</td></tr><tr><td><code>khy --version</code></td><td>显示版本</td></tr><tr><td><code>khy --help</code></td><td>显示帮助</td></tr></tbody></table>
+<h3 id="数据与交易">数据与交易<a class="anchor" href="#数据与交易" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>khy quote &lt;code&gt;</code></td><td>股票行情（例如 <code>600519</code>）</td></tr><tr><td><code>khy data list</code></td><td>列出数据源</td></tr><tr><td><code>khy data fetch &lt;code&gt;</code></td><td>获取股票数据</td></tr><tr><td><code>khy backtest list</code></td><td>列出回测</td></tr><tr><td><code>khy analyze &lt;code&gt;</code></td><td>技术分析</td></tr><tr><td><code>khy search &lt;keyword&gt;</code></td><td>搜索股票</td></tr></tbody></table>
+<h3 id="ai-与模型">AI 与模型<a class="anchor" href="#ai-与模型" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>khy gateway config</code></td><td>配置 AI 服务商 / Key（canonical 入口）</td></tr><tr><td><code>khy gateway status</code></td><td>网关状态 / 已配置服务商</td></tr><tr><td><code>khy gateway detect</code></td><td>自动检测服务商（含本地 Ollama）</td></tr><tr><td><code>ollama pull &lt;model&gt;</code></td><td>用 ollama 下载本地模型（标签需真实存在）</td></tr><tr><td><code>khy claude</code></td><td>经 KHY 代理启动 Claude Code（需全局 <code>claude</code> CLI）</td></tr><tr><td><code>khy pool list</code></td><td>API key 池</td></tr></tbody></table>
+<blockquote><p>旧命令 <code>khy ai status</code> / <code>khy models pull</code> 仍可用，但推荐改用上表的 <code>khy gateway *</code> / <code>ollama pull</code>。</p></blockquote>
+<h3 id="工具与系统">工具与系统<a class="anchor" href="#工具与系统" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>khy mobile</code></td><td>手机扫码访问网关管理页（推荐，:9090 + 二维码）</td></tr><tr><td><code>khy bridge start</code></td><td>移动端远程服务器（高级 / 底层，:9222 + PIN）</td></tr><tr><td><code>khy bridge status</code></td><td>Bridge 服务器状态</td></tr><tr><td><code>khy plugin list</code></td><td>列出插件</td></tr><tr><td><code>khy skill list</code></td><td>列出技能</td></tr><tr><td><code>khy log tail</code></td><td>跟踪错误日志</td></tr><tr><td><code>khy config list</code></td><td>查看配置</td></tr></tbody></table>
+<h3 id="部署">部署<a class="anchor" href="#部署" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>khy deploy &lt;目标&gt; [源] --start</code></td><td>通用项目部署（自动探测/安装/构建/启动）</td></tr><tr><td><code>khy deploy list</code></td><td>列出所有部署</td></tr><tr><td><code>khy deploy status [name]</code></td><td>查看部署状态</td></tr><tr><td><code>khy deploy stop [name]</code></td><td>停止已启动的部署</td></tr><tr><td><code>khy deploy logs [name]</code></td><td>查看部署日志</td></tr><tr><td><code>khy bridge nginx --prefix /remote</code></td><td>为移动端远程页生成 nginx 配置片段</td></tr></tbody></table>
+<hr>
+<h2 id="c2-ai-服务商配置">C2. AI 服务商配置<a class="anchor" href="#c2-ai-服务商配置" aria-label="锚点">#</a></h2>
+<h3 id="云端服务商">云端服务商<a class="anchor" href="#云端服务商" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Provider</th><th>Key</th><th>Models</th></tr></thead><tbody><tr><td>Anthropic</td><td><code>ANTHROPIC_API_KEY</code></td><td>Claude 4.5, Claude 4</td></tr><tr><td>OpenAI</td><td><code>OPENAI_API_KEY</code></td><td>GPT-4o, o3, o4-mini</td></tr><tr><td>DeepSeek</td><td><code>DEEPSEEK_API_KEY</code></td><td>DeepSeek-V3, R1</td></tr><tr><td>Google</td><td><code>GOOGLE_API_KEY</code></td><td>Gemini 2.5 Pro/Flash</td></tr><tr><td>OpenRouter</td><td><code>OPENROUTER_API_KEY</code></td><td>200+ 个模型</td></tr><tr><td>Groq</td><td><code>GROQ_API_KEY</code></td><td>LLaMA, Mixtral（快速）</td></tr></tbody></table>
+<h3 id="本地模型-ollama">本地模型（Ollama）<a class="anchor" href="#本地模型-ollama" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh    # Linux
+# Or download from https://ollama.ai              # Windows / macOS
+
+# 用 ollama 拉取模型（标签需真实存在）
+ollama pull qwen2.5:7b       # 4.7 GB, good for most tasks
+ollama pull llama3.1:8b      # 4.7 GB, strong general model
+ollama pull deepseek-r1:7b   # 4.1 GB, reasoning-focused
+
+khy gateway detect           # 让 KHY 网关发现本地 Ollama 及其模型
+
+# Use（没有 `khy ai run` 子命令；用一次性查询，模型由网关当前选择决定）
+khy ai &quot;hello&quot;
+# 在 REPL 内可用 /model 切到刚拉取的 ollama 模型</code></pre>
+<h3 id="代理配置-中国">代理配置（中国）<a class="anchor" href="#代理配置-中国" aria-label="锚点">#</a></h3>
+<p>如果你处于防火墙之后，需要通过代理访问 API：</p>
+<pre><code>khy &gt; /proxy</code></pre>
+<p>或设置环境变量：</p>
+<pre><code class="language-bash">export HTTPS_PROXY=http://127.0.0.1:7890
+export HTTP_PROXY=http://127.0.0.1:7890</code></pre>
+<hr>
+<h2 id="c3-斜杠命令-repl">C3. 斜杠命令（REPL）<a class="anchor" href="#c3-斜杠命令-repl" aria-label="锚点">#</a></h2>
+<p>在交互式 REPL（<code>khy</code>）内，使用 <code>/</code> 命令：</p>
+<h3 id="最常用">最常用<a class="anchor" href="#最常用" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>/help</code></td><td>显示所有命令</td></tr><tr><td><code>/model</code></td><td>切换 AI 模型</td></tr><tr><td><code>/apikey</code></td><td>配置 API Key</td></tr><tr><td><code>/cost</code></td><td>查看 token 用量</td></tr><tr><td><code>/history</code></td><td>对话历史</td></tr><tr><td><code>/exit</code></td><td>保存并退出</td></tr></tbody></table>
+<h3 id="ai-功能">AI 功能<a class="anchor" href="#ai-功能" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>/plan</code></td><td>AI 先规划再执行</td></tr><tr><td><code>/max</code></td><td>最高精度模式</td></tr><tr><td><code>/fast</code></td><td>快速响应模式</td></tr><tr><td><code>/thinking</code></td><td>切换思考过程显示</td></tr><tr><td><code>/compact</code></td><td>压缩上下文</td></tr><tr><td><code>/websearch</code></td><td>网络搜索</td></tr><tr><td><code>/image</code></td><td>图像分析</td></tr><tr><td><code>/review</code></td><td>代码审查</td></tr></tbody></table>
+<h3 id="系统">系统<a class="anchor" href="#系统" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>/doctor</code></td><td>系统诊断</td></tr><tr><td><code>/gateway</code></td><td>AI 网关管理</td></tr><tr><td><code>/proxy</code></td><td>代理设置</td></tr><tr><td><code>/config</code></td><td>配置</td></tr><tr><td><code>/update</code></td><td>检查更新</td></tr><tr><td><code>/self</code></td><td>查看能力</td></tr></tbody></table>
+<h3 id="数据与交易-2">数据与交易<a class="anchor" href="#数据与交易-2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>/subscribe</code></td><td>AI 订阅指南</td></tr><tr><td><code>/growth</code></td><td>学习进度</td></tr><tr><td><code>/knowledge</code></td><td>知识库</td></tr><tr><td><code>/arena</code></td><td>多模型对比</td></tr><tr><td><code>/skill</code></td><td>技能管理</td></tr></tbody></table>
+<hr>
+<h2 id="c4-常见问题">C4. 常见问题<a class="anchor" href="#c4-常见问题" aria-label="锚点">#</a></h2>
+<h3 id="问-khy-和-khyquant-有什么区别">问：<code>khy</code> 和 <code>khyquant</code> 有什么区别？<a class="anchor" href="#问-khy-和-khyquant-有什么区别" aria-label="锚点">#</a></h3>
+<p>两者都可用。<code>khy</code> 是平台外壳（推荐），<code>khyquant</code> 是为兼容旧版量化应用保留的名称。它们指向同一个程序。</p>
+<h3 id="问-不用-ai-能用-khy-吗">问：不用 AI 能用 KHY 吗？<a class="anchor" href="#问-不用-ai-能用-khy-吗" aria-label="锚点">#</a></h3>
+<p>可以。数据获取、回测、Web 服务器和插件系统都无需 AI 即可工作。只有 AI 对话和 AI 驱动的功能（分析、代码审查等）才需要 API Key 或本地模型。</p>
+<h3 id="问-如何使用中文命令">问：如何使用中文命令？<a class="anchor" href="#问-如何使用中文命令" aria-label="锚点">#</a></h3>
+<p>KHY 在 REPL 中支持中文命令别名：</p>
+<pre><code>khy &gt; 行情 600519       # = quote 600519
+khy &gt; 回测               # = backtest list
+khy &gt; 分析 000001       # = analyze 000001
+khy &gt; 买入              # = order buy</code></pre>
+<h3 id="问-如何更新-khy">问：如何更新 KHY？<a class="anchor" href="#问-如何更新-khy" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">pip install --upgrade khy-os</code></pre>
+<p>或在 REPL 内：</p>
+<pre><code>khy &gt; /update</code></pre>
+<h3 id="问-数据存储在哪里">问：数据存储在哪里？<a class="anchor" href="#问-数据存储在哪里" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Data</th><th>Location</th></tr></thead><tbody><tr><td>SQLite 数据库</td><td><code>&lt;backend&gt;/data/</code></td></tr><tr><td>配置</td><td><code>&lt;backend&gt;/.env</code></td></tr><tr><td>用户账号（bridge）</td><td><code>&lt;backend&gt;/data/bridge-users.db</code></td></tr><tr><td>对话历史</td><td><code>&lt;backend&gt;/data/</code></td></tr><tr><td>npm 包</td><td><code>&lt;backend&gt;/node_modules/</code></td></tr></tbody></table>
+<p>查找后端目录：</p>
+<pre><code class="language-bash">python3 -c &quot;from khy_platform.cli import get_bundle_dir; print(get_bundle_dir())&quot;</code></pre>
+<h3 id="问-可以运行多个实例吗">问：可以运行多个实例吗？<a class="anchor" href="#问-可以运行多个实例吗" aria-label="锚点">#</a></h3>
+<p>可以，但要使用不同的端口：</p>
+<pre><code class="language-bash">PORT=3001 khy server start
+BRIDGE_PORT=9223 khy bridge start</code></pre>
+<h3 id="问-运行本地-ai-模型的最低硬件要求">问：运行本地 AI 模型的最低硬件要求？<a class="anchor" href="#问-运行本地-ai-模型的最低硬件要求" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Model Size</th><th>RAM Required</th><th>GPU (Optional)</th></tr></thead><tbody><tr><td>4B 参数</td><td>4 GB</td><td>任意 4GB+ 显存</td></tr><tr><td>8B 参数</td><td>8 GB</td><td>任意 6GB+ 显存</td></tr><tr><td>14B 参数</td><td>16 GB</td><td>10GB+ 显存</td></tr><tr><td>32B 参数</td><td>32 GB</td><td>16GB+ 显存</td></tr></tbody></table>
+<p>CPU 推理可以工作，但明显更慢。对于 &gt;= 8B 的模型，推荐使用 GPU（NVIDIA CUDA 或 Apple M 系列）。</p>
+<h3 id="问-除了-目录-khy-还往哪里写文件">问：除了 <code>&lt;backend&gt;</code> 目录，KHY 还往哪里写文件？<a class="anchor" href="#问-除了-目录-khy-还往哪里写文件" aria-label="锚点">#</a></h3>
+<p><code>.env</code>、数据库、首启标记都在 <strong>bundled 后端目录</strong>（<code>khy where</code> 的 <code>backend dir</code>）。此外还有几个家目录子目录：</p>
+<table><thead><tr><th>用途</th><th>位置</th></tr></thead><tbody><tr><td>内核构建缓存 / 状态</td><td><code>~/.khyos/cache</code></td></tr><tr><td>自动下载的便携 Node</td><td><code>~/.khyquant/node</code>（Windows：<code>%LOCALAPPDATA%\khy\node</code>）</td></tr><tr><td>代理 / Claude 相关</td><td><code>~/.khy</code>（兼容 <code>~/.khyquant</code>）</td></tr></tbody></table>
+<blockquote><p>历史提示：早期的「<code>khychat</code> 打不开页面 / Windows <code>spawn EINVAL</code>」问题已于 <code>0.1.95</code> 修复，<br>当前版本无需关注；遇到任何异常先 <code>khy preflight</code> 体检即可。</p></blockquote>
+<hr>
+<h2 id="c5-两个-web-界面与两套手机访问-到底用哪个">C5. 两个 Web 界面与两套手机访问，到底用哪个？<a class="anchor" href="#c5-两个-web-界面与两套手机访问-到底用哪个" aria-label="锚点">#</a></h2>
+<p>新手最容易困惑的两组「看起来重复」的命令，一张表讲清：</p>
+<h3 id="两个-web-界面">两个 Web 界面<a class="anchor" href="#两个-web-界面" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>命令</th><th>是什么</th><th>默认端口</th><th>何时用</th></tr></thead><tbody><tr><td><code>khy server start</code></td><td>量化 / 项目 Web UI</td><td><code>:3000</code></td><td>行情、回测、项目图形界面</td></tr><tr><td><code>khychat</code>（REPL 内）</td><td>AI 网关管理页 / 网页对话页</td><td>API <code>:9090</code> / 前端 <code>:8090</code></td><td>配 AI 服务商、网页和 AI 对话</td></tr></tbody></table>
+<p>打开 AI 网关管理 / 对话页（进入 <code>khy</code> REPL 后）：</p>
+<pre><code>khy &gt; khychat                  # 启动管理后端 + 前端，并打开浏览器到 /admin/ai-gateway
+khy &gt; gateway manage status    # 查看运行状态
+khy &gt; gateway manage stop      # 停止</code></pre>
+<blockquote><p><code>khychat</code> 是 REPL 内命令（等价于 <code>gateway manage open</code>）。可用 <code>--api-port</code> / <code>--frontend-port</code> 覆盖端口。</p></blockquote>
+<h3 id="两套手机访问">两套手机访问<a class="anchor" href="#两套手机访问" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>命令</th><th>端口</th><th>认证</th><th>适合</th></tr></thead><tbody><tr><td><code>khy mobile</code>（推荐）</td><td><code>:9090</code></td><td>扫二维码</td><td>一般用户，同局域网即开即用</td></tr><tr><td><code>khy bridge start</code></td><td><code>:9222</code></td><td>PIN + 账号</td><td>高级 / 需账号体系或自建反代</td></tr></tbody></table>
+<p>一般用户<strong>用 <code>khy mobile</code> 即可</strong>；<code>khy bridge</code> 是更底层的方案。进阶配置见 <a href="%5BOPS-MAN-030%5D%20移动端远程指南.html">移动端远程指南.md</a>。</p>
+<hr>
+<h2 id="c6-插件开发-进阶">C6. 插件开发（进阶）<a class="anchor" href="#c6-插件开发-进阶" aria-label="锚点">#</a></h2>
+<p>KHY 支持用插件扩展自己的命令、工具和数据源。<code>khy plugin</code> 提供了从脚手架到体检的一条龙开发链路。</p>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy plugin init</code></td><td>交互式脚手架，生成一个新插件骨架（别名 <code>create</code>/<code>new</code>）</td></tr><tr><td><code>khy plugin dev [dir]</code></td><td>开发模式：前端起 Vite，纯后端则监听 <code>src/</code> 改动热重载</td></tr><tr><td><code>khy plugin doctor [dir]</code></td><td>体检：校验 manifest、语法检查、依赖解析、<code>activate()</code> 冒烟、命令/工具一致性</td></tr><tr><td><code>khy plugin list</code></td><td>列出已安装插件及其健康/告警状态（别名 <code>ls</code>）</td></tr><tr><td><code>khy plugin link [dir]</code></td><td>把本地插件目录软链进数据目录的 <code>plugins/</code>，便于本地调试</td></tr><tr><td><code>khy plugin unlink &lt;name&gt;</code></td><td>取消软链</td></tr></tbody></table>
+<p><code>plugin doctor</code> 常用开关：<code>--strict</code>（告警即失败）、<code>--deep</code>（轻量执行命令/工具）、<code>--json</code>（机器可读输出 + 退出码）。</p>
+<h3 id="插件骨架长什么样">插件骨架长什么样<a class="anchor" href="#插件骨架长什么样" aria-label="锚点">#</a></h3>
+<ul><li><strong>SDK</strong>：插件依赖 <code>@khy/plugin-sdk</code>（peerDependency）。</li><li><strong>manifest 不是独立文件</strong>——它是插件 <code>package.json</code> 里的 <code>khy</code> 字段，关键项：</li></ul>
+<pre><code class="language-jsonc">{
+  &quot;name&quot;: &quot;khy-myplugin&quot;,
+  &quot;peerDependencies&quot;: { &quot;@khy/plugin-sdk&quot;: &quot;^1.0.0&quot; },
+  &quot;khy&quot;: {
+    &quot;namespace&quot;: &quot;myplugin&quot;,          // 1-12 位小写字母数字
+    &quot;displayName&quot;: &quot;My Plugin&quot;,
+    &quot;main&quot;: &quot;src/index.js&quot;,
+    &quot;permissions&quot;: { &quot;network&quot;: false, &quot;database&quot;: false, &quot;spawn&quot;: false },
+    &quot;contributions&quot;: { &quot;commands&quot;: [], &quot;tools&quot;: [], &quot;dataSources&quot;: [] }
+  }
+}</code></pre>
+<pre><code class="language-bash">khy plugin init                 # 按提示填 namespace / 模板 / 权限
+khy plugin doctor ./khy-myplugin --strict
+khy plugin link ./khy-myplugin  # 链入后即可在 khy 里调用你的命令</code></pre>
+<blockquote><p>注意区分：上面是<strong>写插件</strong>（作者工具链）。网关侧还有一个 <code>khy plugin gateway</code>（请求/响应拦截器链，<code>pluginChain</code>），那是<strong>运行期网关</strong>概念，和写插件不是一回事。</p></blockquote>
+<p>实现定位：<code>services/backend/src/cli/handlers/plugin-dev.js</code>；SDK 在 <code>platform/packages/plugin-sdk/</code>。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-026] 会话恢复-按id.html"><div class="dir">← 上一篇</div><div class="ttl">按 ID 恢复会话</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-028] 环境要求.html"><div class="dir">下一篇 →</div><div class="ttl">环境要求</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-027] 快速开始.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

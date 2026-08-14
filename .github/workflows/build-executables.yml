@@ -1,0 +1,106 @@
+name: Build Standalone Executables
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Module to build (leave empty for all)'
+        required: false
+        default: ''
+      platform:
+        description: 'Platform (win-x64, linux-x64, macos-x64, macos-arm64, or empty for all)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win-x64
+          - os: ubuntu-latest
+            platform: linux-x64
+          - os: macos-latest
+            platform: macos-x64
+          - os: macos-latest
+            platform: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: services/backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: services/backend
+        run: npm ci
+
+      - name: Lint
+        working-directory: services/backend
+        run: npm run lint
+
+      - name: Test
+        working-directory: services/backend
+        run: npm run test:node
+
+      # esbuild is required by packaging/build/esbuild-modules.js and
+      # @yao-pkg/pkg by packaging/build/pack-executable.js (pkg@5 is
+      # unmaintained and has no node20 base binaries). Versions are pinned
+      # and installed with --no-save so root package.json/lock stay untouched.
+      - name: Install build toolchain (esbuild + pkg)
+        run: npm install --no-save --ignore-scripts --workspaces=false esbuild@0.28.1 @yao-pkg/pkg@6.21.0
+
+      - name: Bundle modules (esbuild)
+        run: node packaging/build/esbuild-modules.js --prod ${{ github.event.inputs.module && format('--module {0}', github.event.inputs.module) || '' }}
+
+      - name: Package executables (pkg)
+        run: node packaging/build/pack-executable.js --all --platform ${{ matrix.platform }}
+
+      - name: Verify executables
+        run: node packaging/build/verify-executable.js --platform ${{ matrix.platform }}
+
+      - name: Audit executables purity
+        run: node packaging/npm/scripts/audit-purity.js --platform ${{ matrix.platform }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: khy-os-${{ matrix.platform }}
+          path: dist/executables/${{ matrix.platform }}/
+          retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    # softprops/action-gh-release needs contents:write to create the release;
+    # the default GITHUB_TOKEN is read-only and fails with 403 otherwise.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}

@@ -1,0 +1,35 @@
+{
+  "modules": [
+    {
+      "package": "better-sqlite3",
+      "description": "SQLite3 bindings with prebuilt binaries",
+      "assets": [
+        "better-sqlite3/build/Release/better_sqlite3.node",
+        "better-sqlite3/prebuilds/**/*"
+      ],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"],
+      "optional": false
+    },
+    {
+      "package": "node-pty",
+      "description": "PTY bindings for terminal emulation",
+      "assets": [
+        "node-pty/build/Release/pty.node",
+        "node-pty/build/Release/winpty-agent.exe",
+        "node-pty/build/Release/winpty.dll"
+      ],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"],
+      "optional": true
+    },
+    {
+      "package": "node-llama-cpp",
+      "description": "LLaMA model inference bindings",
+      "assets": [
+        "node-llama-cpp/build/**/*.node",
+        "node-llama-cpp/bins/**/*"
+      ],
+      "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"],
+      "optional": true
+    }
+  ]
+}

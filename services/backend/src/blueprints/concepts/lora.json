@@ -1,0 +1,19 @@
+{
+  "id": "lora",
+  "kind": "concept",
+  "name": "LoRA",
+  "category": "ai-ml",
+  "triggers": ["LoRA", "Low-Rank Adaptation", "低秩适配", "参数高效微调", "PEFT"],
+  "summary": "低秩适配：冻结预训练大模型权重，只在各层注入可训练的低秩矩阵(A·B)，以极少参数完成微调，省显存、可热插拔多个适配器；QLoRA 再叠量化进一步省显存。",
+  "whenToUse": [
+    "有限算力下把大模型微调到特定任务/领域/风格。",
+    "需为多任务维护多个轻量适配器、按需切换。"
+  ],
+  "antiPatterns": [
+    "秩 r 设过小欠拟合、过大失去高效优势。",
+    "对需大幅改变知识的任务硬用 LoRA(可能不如全参微调)。",
+    "适配器与基座版本错配导致加载失败。"
+  ],
+  "minimalSkeleton": "冻结基座权重 W\n每层加 ΔW = A·B (低秩, 仅训 A、B)\n推理: W + ΔW; 可合并或热插拔\nQLoRA: 基座 4bit 量化 + LoRA",
+  "relatedArchetypes": []
+}

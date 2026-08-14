@@ -1,0 +1,36 @@
+#!/sbin/openrc-run
+# KHY OS Backend Service
+# Starts the Node.js backend in OS-mode (no idle shutdown, fixed port).
+
+description="KHY OS backend service"
+command="/usr/bin/node"
+command_args="/opt/khy-os/backend/bin/khy-os-init.js"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/khy-os/backend.log"
+error_log="/var/log/khy-os/backend.log"
+start_stop_daemon_args="--env KHY_OS_MODE=true"
+retry="SIGTERM/5/SIGKILL/3"
+
+depend() {
+    need localmount
+    after network
+    use dns logger
+}
+
+start_pre() {
+    checkpath -d -m 0755 -o root:root /var/log/khy-os
+    checkpath -d -m 0755 -o root:root /var/lib/khy-os
+
+    # Source conf.d overrides
+    if [ -f /etc/conf.d/khy-os-backend ]; then
+        . /etc/conf.d/khy-os-backend
+    fi
+}
+
+healthcheck() {
+    local port="${PORT:-3000}"
+    wget -q -O /dev/null "http://127.0.0.1:${port}/health" 2>/dev/null
+}
+
+healthcheck_timer=30

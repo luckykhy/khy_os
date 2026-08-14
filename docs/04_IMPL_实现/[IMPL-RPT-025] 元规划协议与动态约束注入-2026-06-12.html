@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>元规划协议与动态约束注入 — 实现报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>元规划协议与动态约束注入 — 实现报告</div>
+      <header class="hero reveal"><h1>元规划协议与动态约束注入 — 实现报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#元规划协议与动态约束注入-实现报告">元规划协议与动态约束注入 — 实现报告</a></li><li class="lvl-2"><a href="#1-目标">1. 目标</a></li><li class="lvl-2"><a href="#2-自调查结论-1-僵化逻辑定位">2. 自调查结论（§1，僵化逻辑定位）</a></li><li class="lvl-2"><a href="#3-改动清单">3. 改动清单</a></li><li class="lvl-3"><a href="#3-1-新增-services-backend-src-services-metaplan-7-个模块-零侵入">3.1 新增（`services/backend/src/services/metaplan/`，7 个模块，零侵入）</a></li><li class="lvl-3"><a href="#3-2-测试">3.2 测试</a></li><li class="lvl-2"><a href="#4-关键实现决策">4. 关键实现决策</a></li><li class="lvl-2"><a href="#5-验证">5. 验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="元规划协议与动态约束注入-实现报告">元规划协议与动态约束注入 — 实现报告<a class="anchor" href="#元规划协议与动态约束注入-实现报告" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：IMPL-RPT-025<br>日期：2026-06-12<br>关联设计：[DESIGN-ARCH-025] khyos 元规划协议与动态约束注入规范<br>关联测试：[TEST-RPT-009] 元规划协议与动态约束注入 — 测试报告</p></blockquote>
+<hr>
+<h2 id="1-目标">1. 目标<a class="anchor" href="#1-目标" aria-label="锚点">#</a></h2>
+<p>闭环「JS/混合语言环境下的灵活执行 vs 约束」矛盾：让模型在执行前先自决<strong>用哪些执行器 + 上多重的锁</strong>，<br>系统据此<strong>按需配发锁具，绝不提前加锁</strong>——低风险极速、高风险绝不裸奔；模型自决失误时熔断自愈。</p>
+<h2 id="2-自调查结论-1-僵化逻辑定位">2. 自调查结论（§1，僵化逻辑定位）<a class="anchor" href="#2-自调查结论-1-僵化逻辑定位" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>僵化点</th><th>证据</th><th>损耗</th></tr></thead><tbody><tr><td>执行器硬编码指派，模型无选择权</td><td><code>toolCalling.js:2609-2642</code> 对 <code>descriptor.source</code> 硬 <code>switch</code></td><td>无法按任务选 AST 写手 vs 裸替换</td></tr><tr><td>编辑工具无 AST 安全网</td><td><code>editFile.js:110-145</code> 纯 <code>String.indexOf/slice/split</code></td><td>语法错误可直写磁盘</td></tr><tr><td>守卫一刀切、无风险分级</td><td><code>toolGuards.js:358-413</code> 按文件名模式统一施加；<code>riskGate.stepType</code> 仅审计</td><td>改注释与重构同路径</td></tr><tr><td>安全 Prompt 无条件整段注入</td><td><code>generalPurposeAgent.js:34-36</code> 整段 <code>EXECUTION_DISCIPLINE+HARD_PROHIBITIONS</code></td><td>低风险白烧 Token</td></tr></tbody></table>
+<h2 id="3-改动清单">3. 改动清单<a class="anchor" href="#3-改动清单" aria-label="锚点">#</a></h2>
+<h3 id="3-1-新增-services-backend-src-services-metaplan-7-个模块-零侵入">3.1 新增（<code>services/backend/src/services/metaplan/</code>，7 个模块，零侵入）<a class="anchor" href="#3-1-新增-services-backend-src-services-metaplan-7-个模块-零侵入" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>行为</th></tr></thead><tbody><tr><td><code>constraintStrategy.js</code></td><td>三级约束枚举 + 单调升级格 <code>escalate</code>（LUB）；未知策略 fail-safe 取最严</td></tr><tr><td><code>executorRegistry.js</code></td><td>§4 武器库闭集（4 执行器）+ <code>validateToolchain</code>（<strong>防呆②</strong> 拒捏造）+ <code>describeForModel</code>（菜单单一真源）</td></tr><tr><td><code>metaPlanSchema.js</code></td><td>§2 元规划契约：<code>buildMetaPlanSchema</code>（enum 来自活注册表）+ <code>parseMetaPlan</code>（<strong>防呆①</strong>）+ <code>validateMetaPlan</code>（防偷懒升级）</td></tr><tr><td><code>codeInterceptors.js</code></td><td>§3 真实拦截器：<code>babel</code>/<code>python_ast</code>/<code>vm</code>/<code>balance</code>；缺工具链 fail-safe <code>{ok:true,skipped:true}</code>，永不卡死</td></tr><tr><td><code>constraintInjection.js</code></td><td>§3 注入引擎：<code>resolveInjection</code>（挂什么锁）+ <code>runHardValidation</code>（真跑校验，Soft 快放行）</td></tr><tr><td><code>constitutionalRedLines.js</code></td><td>§5 宪法红线：删库/暴露机密/删核心依赖，按动作匹配强制 <code>System_Block</code>（<strong>防呆④</strong> 不可覆盖）</td></tr><tr><td><code>trustCircuitBreaker.js</code></td><td>§5 信任熔断状态机：类型级扣分 + 连续 2 次翻车全会话锁定（<strong>防呆③</strong>）</td></tr><tr><td><code>index.js</code></td><td><code>MetaPlanCoordinator</code> 四步编排闭环 + 再导出全部子模块（唯一集成面）</td></tr></tbody></table>
+<h3 id="3-2-测试">3.2 测试<a class="anchor" href="#3-2-测试" aria-label="锚点">#</a></h3>
+<p><code>tests/services/metaplan/metaPlanSubsystem.test.js</code>（node:test，31 用例）。</p>
+<h2 id="4-关键实现决策">4. 关键实现决策<a class="anchor" href="#4-关键实现决策" aria-label="锚点">#</a></h2>
+<ol><li><strong>真拦截器非桩</strong>：JS 走项目已装的 <code>@babel/parser</code>（回退内置 <code>vm</code>）；Python 走 <code>python3 -c ast.parse</code></li></ol>
+<p>子进程；跨语言退化为括号/引号配平。已实测坏代码被打回、好代码通过。</p>
+<ol><li><strong>fail-safe 降级</strong>：任何校验器在工具链缺失时返回 <code>{ok:true, skipped:true}</code>，<strong>不比今天更差</strong>，</li></ol>
+<p>绝不因缺 babel/python 卡死 agent；校验器永不向上抛异常。</p>
+<ol><li><strong>override 单调取严</strong>：熔断地板、宪法红线均只经 <code>escalate</code> 加锁；<code>ingestMetaPlan</code> 把红线置于叠加最后，</li></ol>
+<p>使「不可覆盖」一目了然。</p>
+<ol><li><strong>防偷懒确定性升级</strong>：<code>Prompt_Soft</code> 缺/短 <code>risk_dissent</code>（&lt; <code>KHY_METAPLAN_MIN_DISSENT</code>，默认 12）</li></ol>
+<p>自动升 <code>Code_Hard</code>，原因入 <code>escalations[]</code>。</p>
+<ol><li><strong>零侵入</strong>（防呆⑤）：全部新文件自成子目录，未改 <code>toolCalling</code>/<code>editFile</code>/守卫/网关；<code>MetaPlanCoordinator</code></li></ol>
+<p>供调度器按需调用，接线为后续单独 PR（与 [DESIGN-ARCH-024] 同样的渐进策略）。</p>
+<ol><li><strong>零硬编码</strong>：阈值全部命名默认值 + 环境覆盖（<code>KHY_METAPLAN_MIN_DISSENT</code>、<code>KHY_METAPLAN_SESSION_TRIP</code>、</li></ol>
+<p><code>KHY_PYTHON_BIN</code>）。</p>
+<h2 id="5-验证">5. 验证<a class="anchor" href="#5-验证" aria-label="锚点">#</a></h2>
+<ul><li><code>node -e &quot;require('./src/services/metaplan')&quot;</code> → 全部导出加载。</li><li><code>node --test tests/services/metaplan/metaPlanSubsystem.test.js</code> → <strong>tests 31 / pass 31 / fail 0</strong>。</li><li>真校验冒烟：坏 JS/坏 Python/不配平括号被拒，好代码通过；裸执行器放行。</li><li>未触碰任何既有模块，无回归面。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-024] 元帅双模式任命与约束-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">元帅（Marshal）双模式任命与约束 — 实现报告</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-026] 生态架构重塑日志-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">生态架构重塑日志（Eco-Arch Log）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-025] 元规划协议与动态约束注入-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

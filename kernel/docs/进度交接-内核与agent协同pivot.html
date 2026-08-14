@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>进度交接：内核「真实 OS」长弧 + agent 协同 pivot · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>kernel<span class="sep">›</span>docs<span class="sep">›</span>进度交接：内核「真实 OS」长弧 + agent 协同 pivot</div>
+      <header class="hero reveal"><h1>进度交接：内核「真实 OS」长弧 + agent 协同 pivot</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#进度交接-内核-真实-os-长弧-agent-协同-pivot">进度交接：内核「真实 OS」长弧 + agent 协同 pivot</a></li><li class="lvl-2"><a href="#1-本轮已闭合-已实测-green-零回归">1. 本轮已闭合（已实测 GREEN，零回归）</a></li><li class="lvl-2"><a href="#2-目标已-pivot-新主目标-a1-已动工">2. 目标已 pivot（新主目标，A1 已动工）</a></li><li class="lvl-3"><a href="#综合架构已定-2026-06-11">综合架构已定（2026-06-11）</a></li><li class="lvl-3"><a href="#进度-阶段-a1-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A1 已闭合（2026-06-11，QEMU 实测 GREEN）</a></li><li class="lvl-3"><a href="#阶段-a7b-双-agent-实接已闭合-2026-06-11-qemu-实测-green-8-阶段-a1-a8-全部完成">阶段 A7b 双 agent 实接已闭合（2026-06-11，QEMU 实测 GREEN）—— 8 阶段 A1–A8 全部完成</a></li><li class="lvl-3"><a href="#后续增强已完成-2026-06-11-qemu-实测-green-真模型决策-claude-code-mcp-联调就位">后续增强已完成（2026-06-11，QEMU 实测 GREEN）—— 真模型决策 + Claude Code MCP 联调就位</a></li><li class="lvl-3"><a href="#后续可选-非路线图-按需">后续可选（非路线图，按需）</a></li><li class="lvl-3"><a href="#进度-阶段-a2-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A2 已闭合（2026-06-11，QEMU 实测 GREEN）</a></li><li class="lvl-3"><a href="#进度-阶段-a3-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A3 已闭合（2026-06-11，QEMU 实测 GREEN）</a></li><li class="lvl-3"><a href="#进度-阶段-a4-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A4 已闭合（2026-06-11，QEMU 实测 GREEN）</a></li><li class="lvl-3"><a href="#进度-阶段-a5-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A5 已闭合（2026-06-11，QEMU 实测 GREEN）</a></li><li class="lvl-3"><a href="#进度-阶段-a6-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A6 已闭合（2026-06-11，QEMU 实测 GREEN）</a></li><li class="lvl-3"><a href="#进度-阶段-a7-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A7 已闭合（2026-06-11，QEMU 实测 GREEN）</a></li><li class="lvl-3"><a href="#进度-阶段-a8-已闭合-2026-06-11-qemu-实测-green-系统内自然语言交互-持久化模型配置-需求4">进度：阶段 A8 已闭合（2026-06-11，QEMU 实测 GREEN）= 系统内自然语言交互 + 持久化模型配置（需求4）</a></li><li class="lvl-2"><a href="#3-剩余真实-os-缺口候选-背景-非当前优先">3. 剩余真实 OS 缺口候选（背景，非当前优先）</a></li><li class="lvl-2"><a href="#4-工程约束-agents-md-硬约束-勿违反">4. 工程约束（AGENTS.md 硬约束，勿违反）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="进度交接-内核-真实-os-长弧-agent-协同-pivot">进度交接：内核「真实 OS」长弧 + agent 协同 pivot<a class="anchor" href="#进度交接-内核-真实-os-长弧-agent-协同-pivot" aria-label="锚点">#</a></h1>
+<blockquote><p>记录日期：2026-06-10。本文用于跨会话防进度丢失，权威细节以记忆<br><code>project_kernel_real_os_phases.md</code> 为准，本文是高层索引。</p></blockquote>
+<h2 id="1-本轮已闭合-已实测-green-零回归">1. 本轮已闭合（已实测 GREEN，零回归）<a class="anchor" href="#1-本轮已闭合-已实测-green-零回归" aria-label="锚点">#</a></h2>
+<ul><li><strong>阶段30 时间戳跨重启持久化</strong>：文件 mtime/atime/ctime 跨重启稳定，</li></ul>
+<p>不再 replay 重戳为 &quot;now&quot;。</p>
+<ul><li><code>diskfs</code> slot 64B→128B，携带三个 32 位 epoch 时间戳；<code>DISKFS_VERSION 1→2</code></li></ul>
+<p>（旧盘 mount 失败→reformat）；<code>SLOTS_PER_SECTOR 8→4</code>、<code>DIR_SECTS 8→16</code>、<br>    <code>DATA_LBA 9→17</code>。</p>
+<ul><li><code>persist.c</code>：每次 save 后 <code>persist_times()</code> 把节点三戳落盘；replay 重建</li></ul>
+<p>节点后 <code>vfs_set_times()</code> 恢复原始戳（不 fire hook，避免回写）。</p>
+<ul><li><code>vfs_set_times()</code>：直接设节点三戳、<strong>不触发任何 change hook</strong>（replay 专用）。</li><li>测试：<code>userland/ptimetest.asm</code> 两阶段（经 <code>/disk/pmark</code> 标记区分首启/次启），</li></ul>
+<p>QEMU <code>-hda</code> 双启：boot1→SETUP 退0；boot2→<code>mtime survived reboot<br>    byte-for-byte -&gt; OK</code> 退0。回归 filetest 持久化 + 11 个 stat-ABI/核心测试全绿。</p>
+<ul><li><strong>关键 gotcha（务必牢记）</strong>：<code>int 0x80</code> 返回经 <code>iret</code> 恢复调用方 RFLAGS，</li></ul>
+<p><strong>不依据 rax 设标志位</strong>。故 syscall 后直接 <code>js/jns/jz</code> 读到的是上一条<br>    <code>test/cmp</code> 的陈旧标志，不是 syscall 结果。<strong>每个 syscall 后的条件跳转前<br>    必须自己 <code>test rax, rax</code></strong>。</p>
+<h2 id="2-目标已-pivot-新主目标-a1-已动工">2. 目标已 pivot（新主目标，A1 已动工）<a class="anchor" href="#2-目标已-pivot-新主目标-a1-已动工" aria-label="锚点">#</a></h2>
+<p>原 <code>/goal</code>「内核从玩具→真实 OS」仍是长弧背景，但用户已重定义主目标为：<br><strong>做一个能与 agent 结合/协同的 OS</strong>（否则单独造系统意义不大）。</p>
+<p>用户澄清的四点硬需求：</p>
+<ol><li><strong>两者都要能接</strong>：内置 KHY Node agent + 外部 agent（如 Claude Code）都要能连。</li><li><strong>双向</strong>：不只是 agent→OS 控制，OS 内部也能反过来调 agent 求决策。</li><li><strong>OS 作 agent 宿主但松耦合</strong>：KHY-OS 能托管 agent 本身，但 agent 不能完全</li></ol>
+<p>依赖它（必须也能独立运行）。</p>
+<ol><li><strong>系统内自然语言配置</strong>：系统中要能配置模型、用自然语言与 KHY 交互。</li></ol>
+<h3 id="综合架构已定-2026-06-11">综合架构已定（2026-06-11）<a class="anchor" href="#综合架构已定-2026-06-11" aria-label="锚点">#</a></h3>
+<p>完整架构见 <code>kernel/docs/架构-agent-os双向协议.md</code>。要点：物理通道选 <strong>COM2 独立<br>串口</strong>（COM1 已被人类 TTY 独占，COM2 物理隔离零争用、零新驱动栈）；内核侧只做<br>定长二进制 op-code 帧（COBS+CRC16），host(Node) 负责二进制⇄JSON 翻译（复杂度放<br>强侧）；三个面=控制面(agent→OS,复用 vfs_/process_)、决策面(OS→agent,新<br>SYSCALL_AGENT_ASK=56 复用 ipc block/wakeup,超时兜底)、事件面(OS→agent 单向)；<br>8 阶段 A1–A8。</p>
+<h3 id="进度-阶段-a1-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A1 已闭合（2026-06-11，QEMU 实测 GREEN）<a class="anchor" href="#进度-阶段-a1-已闭合-2026-06-11-qemu-实测-green" aria-label="锚点">#</a></h3>
+<p><strong>A1 物理通道 = COM2 双向字节传输打通。</strong></p>
+<ul><li><code>serial.h/.c</code>：I/O 核心按 base port 参数化（<code>serial_init_port</code>/<code>port_putchar</code>/</li></ul>
+<p><code>port_has_data</code>，COM1 API 字节不变），新增 COM2 raw 原语 <code>serial_com2_init/<br>  putchar/has_data/getchar_nonblock</code>（二进制无 CRLF 翻译，bounded poll 同<br>  <code>SERIAL_TX_POLL_LIMIT</code>，绝不 wedge 内核）。<code>SERIAL_COM2 0x2F8</code>。</p>
+<ul><li><code>agentbus.h/.c</code>（新）：<code>agentbus_init()</code> 初始化 COM2；<code>agentbus_task()</code> 轮询</li></ul>
+<p>COM2 RX 字节回写 TX（<strong>A1 raw echo 桩，A2 替换为帧机</strong>，init/task 脚手架永久）。<br>  松耦合：无 host 连接时通道空闲，内核照常跑。</p>
+<ul><li><code>main.c</code>：<code>net_init</code> 后调 <code>agentbus_init</code>；建 <code>agent-bridge</code> 服务任务</li></ul>
+<p>（同 vfs/net-service 模式）。</p>
+<ul><li><code>Makefile</code>：<code>run-agent</code> 目标——COM1=<code>-serial stdio</code>、COM2=`-serial unix:</li></ul>
+<p>$(AGENT_SOCK),server,nowait`（<strong>QEMU 按声明顺序分配串口，顺序不可乱</strong>）。</p>
+<ul><li><code>kernel/tools/agentbus_echo_test.py</code>（新）：A1 host 验证。boot QEMU(COM1→log,</li></ul>
+<p>COM2→unix socket)→连 socket→发 <code>PING-khy-agentbus-A1\n</code>→校验逐字节 echo 回来。</p>
+<ul><li><strong>实测</strong>：echo 往返字节完全相等 <code>[PASS]</code>；COM1 log 同时含 KHY OS banner +</li></ul>
+<p>AGENTBUS 初始化行（通道隔离）；回归 COM1 shell 经串口跑 <code>stattest.elf -&gt;<br>  OK</code> + 干净 reap，build 绿。</p>
+<h3 id="阶段-a7b-双-agent-实接已闭合-2026-06-11-qemu-实测-green-8-阶段-a1-a8-全部完成">阶段 A7b 双 agent 实接已闭合（2026-06-11，QEMU 实测 GREEN）—— 8 阶段 A1–A8 全部完成<a class="anchor" href="#阶段-a7b-双-agent-实接已闭合-2026-06-11-qemu-实测-green-8-阶段-a1-a8-全部完成" aria-label="锚点">#</a></h3>
+<p><strong>需求1 落地：内置 KHY Node agent（in-process）与外部 agent（Claude Code，经 MCP）<br>共用同一 <code>KhyBridge</code> 实现连同一个 OS，零协议逻辑重复。</strong> 纯 host 侧（Node stdlib，<br>零依赖、零内核改动）。</p>
+<ul><li><code>bridge/khy-tools.js</code>（新）：<code>makeTools(bridge)</code> —— OS 能力面<strong>单一真源</strong>，返回工具</li></ul>
+<p>描述符 <code>{name, description, inputSchema(JSON Schema), handler}</code> 列表：khy_list/<br>  khy_stat/khy_read/khy_write/khy_mkdir/khy_remove/khy_ps/khy_get_config。每个 handler<br>  只调一个 <code>KhyBridge</code> 方法 → 控制面仍是通往内核的唯一路径。inputSchema 用 JSON Schema，<br>  既有网关/适配器可直接挂载零翻译。</p>
+<ul><li><code>bridge/khy-agent.js</code>（新）：内置 in-process agent <code>KhyAgent</code>。<code>start()</code> 连桥→</li></ul>
+<p><code>readConfig()</code> 读 <code>/disk/etc/agent.conf</code>（接 A8 需求4）→ <code>onDecision</code> 绑 brain 服务<br>  决策面。<strong>brain 可注入</strong>（默认 <code>defaultBrain</code> 纯规则、零网络、永远应答，内核永不阻塞；<br>  生产可换成调项目 AI 网关、按系统内配置的模型应答 → 需求3 松耦合）。<code>call(name,args)</code><br>  走与外部 agent 相同的工具面 in-process 驱动 OS。</p>
+<ul><li><code>bridge/khy-mcp.js</code>（新）：外部 agent 入口。手写纯 Node MCP（newline-delimited</li></ul>
+<p>JSON-RPC 2.0 over stdio，无 MCP SDK → 保零依赖松耦合）。<code>KhyMcpServer</code> 实现<br>  initialize/ping/tools/list/tools/call；tool 失败按 MCP 走 in-band <code>isError</code>（非<br>  JSON-RPC error）；非 JSON 行丢弃绝不 desync；诊断只走 stderr，stdout 仅协议字节。<br>  <code>main()</code> 从 <code>KHY_COM2_SOCK</code>/<code>--socket</code> 取 COM2，SIGTERM/SIGINT/stdin-close 优雅退出。</p>
+<ul><li><code>bridge/index.js</code>：导出 `{ KhyBridge, KhyStatusError, makeTools, KhyAgent,</li></ul>
+<p>defaultBrain, KhyMcpServer, frame, protocol }` —— 一处 require 即得三面+双 agent 前端。</p>
+<ul><li><code>kernel/tools/agentbus_dualagent_test.js</code>（新）：A7b host e2e，QEMU <code>-hda</code> 盘。</li></ul>
+<p><strong>Phase 1（内置 agent in-process）</strong>：<code>KhyAgent</code> 连 COM2 服务决策面，COM1 驱动<br>  <code>ai use model claude-opus</code>→shell <code>[ai] set model</code>、<code>agentask delete everything</code>→DENY、<br>  <code>agentask may I proceed?</code>→ALLOW，并 in-process <code>call('khy_list')</code>/<code>call('khy_get_config')</code><br>  直驱控制面。<strong>Phase 2（外部 agent 经 MCP）</strong>：内置 agent 脱开后 spawn <code>khy-mcp.js</code> 子进程<br>  指向同一 COM2，走真 MCP JSON-RPC（initialize→serverInfo.name=khy-os；tools/list 含全 8 工具；<br>  tools/call khy_write+khy_read 往返；khy_get_config 读到 <strong>Phase 1 内置 agent 写的同一份配置</strong><br>  → 同一 OS 同一桥；khy_ps 见 agent-bridge）。<strong>12/12 PASS。</strong></p>
+<ul><li><strong>回归零</strong>：A7b 不改内核（host-only Node），内核二进制不变；仍全跑 —— A3/A4 ctl、</li></ul>
+<p>A5 ask、A6 event(+事件落地)、A7 bridge 11/11、A8 nl 10/10，全绿零回归。</p>
+<p><strong>8 阶段路线图 A1–A8 至此全部闭合。</strong> 四点硬需求全部落地：①双 agent 实接（A7b）<br>②双向（控制面 A3/A4 + 决策面 A5 + 事件面 A6）③宿主但松耦合（zero-dep host、可注入<br>brain、agent 可独立跑）④系统内自然语言配置（A8 <code>ai &lt;NL&gt;</code> + <code>/disk/etc/agent.conf</code>）。</p>
+<h3 id="后续增强已完成-2026-06-11-qemu-实测-green-真模型决策-claude-code-mcp-联调就位">后续增强已完成（2026-06-11，QEMU 实测 GREEN）—— 真模型决策 + Claude Code MCP 联调就位<a class="anchor" href="#后续增强已完成-2026-06-11-qemu-实测-green-真模型决策-claude-code-mcp-联调就位" aria-label="锚点">#</a></h3>
+<p>两项「后续可选」均已落地，纯 host 侧、零内核改动（本轮无 .c/.h 改动，内核二进制不变）。</p>
+<p><strong>① 内置 brain 接项目 AI 网关（真模型决策）</strong></p>
+<ul><li><code>bridge/khy-brain-gateway.js</code>（新）：<code>makeGatewayBrain(opts)</code> 返回 `async (question,</li></ul>
+<p>code, config)<code> brain。走纯 Node stdlib（http/https/fs/os，**仍零依赖**）POST 项目网关<br>  OpenAI 兼容端点 </code>/v1/chat/completions<code>。按面整形输出：GENERIC→严格 </code>ALLOW|DENY<code>、<br>  NL→单行 </code>SET|GET|SAY<code> 动作（首词大写以匹配内核 </code>ai_apply_action<code> 的 </code>strncmp(&quot;SET &quot;,4)<code>）。<br>  **配置解析**：URL=</code>KHY_GATEWAY_URL<code> 或 </code>http://${PROXY_HOST||127.0.0.1}:${PROXY_PORT||9100}<code>；<br>  token=</code>PROXY_AUTH_TOKEN<code> 或读 </code>~/.khy/proxy_server_auth.json<code> 的 </code>authToken<code>；模型=<br>  **config.model（in-system 配置，需求4）优先** &gt; </code>KHY_BRAIN_MODEL<code> &gt; 默认；超时=<br>  </code>KHY_BRAIN_TIMEOUT_MS<code>(默认 2500ms &lt; 内核 3s ask 死线)。**松耦合硬保证**：任何失败<br>  (网络/401/超时/解析) 都 </code>try/catch<code> 降级回 </code>defaultBrain` 规则脑，绝不抛错、绝不返回<br>  null → 内核永远拿到合法答案永不挂死。</p>
+<ul><li><code>bridge/khy-agent-run.js</code>（新）：可执行 launcher。把内置 <code>KhyAgent</code> 用 <code>makeGatewayBrain()</code></li></ul>
+<p>挂上活内核 COM2 服决策面；<code>--socket</code>/<code>KHY_COM2_SOCK</code>/<code>AGENT_SOCK</code> 取 socket(默认<br>  <code>/tmp/khy-agent.sock</code>)；SIGHUP 触发 <code>refreshConfig()</code> 让用户改完模型免重启即生效；诊断只走 stderr。</p>
+<ul><li><code>bridge/index.js</code>：导出加 <code>makeGatewayBrain</code>。</li><li><code>tools/agentbus_gateway_brain_test.js</code>（新）：<strong>8/8 全 PASS</strong>。hermetic 假网关(stand-in 真模型,</li></ul>
+<p>校 bearer token + 记录每请求 model + 按面回 ALLOW/DENY 或 SET/GET/SAY)，其余全真(真内核 QEMU+<br>  真 KhyBridge COM2+真 makeGatewayBrain HTTP 客户端)。证：<code>ai switch to model gpt-4o-mini</code>→模型<br>  SET→内核落盘;<code>refreshConfig</code> 后<strong>配置模型路由 brain</strong>(网关实收 model=gpt-4o-mini);<code>ai which<br>  model</code>→模型 GET→shell 回显值;destructive agentask→模型 DENY、benign→ALLOW;网关真 HTTP 往返+<br>  鉴权(requests≥4,401=0);<strong>杀网关后 agentask 仍答(规则脑兜底)→内核永不阻塞</strong>(优雅降级实证)。</p>
+<p><strong>② khy-mcp.js 注册进 Claude Code MCP client（真外部联调）</strong></p>
+<ul><li><code>khy-mcp.js</code>：<code>main()</code> 加 <code>connectWithWait()</code>——有界等待 COM2 socket 出现并重试 connect</li></ul>
+<p>(上限 <code>KHY_MCP_CONNECT_TIMEOUT_MS</code> 默认 30s,0=单次)，故先开 Claude Code 再 <code>make run-agent</code><br>  也能自动挂上；attach 后日志走 stderr。</p>
+<ul><li>仓库根 <code>.mcp.json</code>（新,project-scoped）：声明 <code>khy-os</code> MCP server =</li></ul>
+<p><code>node kernel/bridge/khy-mcp.js --socket /tmp/khy-agent.sock</code>，env <code>KHY_MCP_CONNECT_TIMEOUT_MS=60000</code>。<br>  Claude Code 在仓库根即发现该 server（首次 <code>/mcp</code> 批准 project server），或<br>  <code>claude mcp add khy-os -- node kernel/bridge/khy-mcp.js --socket /tmp/khy-agent.sock</code>。</p>
+<ul><li><code>kernel/bridge/README-联调.md</code>（新）：两路线实战指南(路线A 内置 agent+网关真模型决策;</li></ul>
+<p>路线B Claude Code 经 MCP 驱动 OS)+先决条件+环境变量表+单连接约束(COM2 一次一个客户端,A/B 二选一)。</p>
+<ul><li><strong>回归零</strong>：A7b dualagent 12/12(走新 khy-mcp wait-for-socket 路径)、A8 nl 10/10、A7 bridge 11/11、</li></ul>
+<p>A3/A4 ctl、A5 ask、A6 event 全绿；本轮无内核源改动内核二进制不变。</p>
+<h3 id="后续可选-非路线图-按需">后续可选（非路线图，按需）<a class="anchor" href="#后续可选-非路线图-按需" aria-label="锚点">#</a></h3>
+<ul><li>路线 A 默认指向真网关 <code>127.0.0.1:9100</code>；起真网关 + 配真账号(Kiro/Claude/…)即得真大模型决策。</li><li>把 <code>khy-mcp.js</code> 真接进一次 Claude Code 会话跑 khy_list/khy_read/khy_write 实操 KHY-OS 文件。</li></ul>
+<p><strong>不</strong>重复询问已澄清的四点。</p>
+<h3 id="进度-阶段-a2-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A2 已闭合（2026-06-11，QEMU 实测 GREEN）<a class="anchor" href="#进度-阶段-a2-已闭合-2026-06-11-qemu-实测-green" aria-label="锚点">#</a></h3>
+<p><strong>A2 帧层 = COBS+CRC16 结构化帧往返打通。</strong></p>
+<ul><li><code>agentframe.h/.c</code>（新）：纯编解码无 I/O。<code>agentframe_crc16</code>(CRC-16/CCITT-FALSE</li></ul>
+<p>poly 0x1021 init 0xFFFF)+<code>cobs_encode/decode</code>+<code>agentframe_encode</code>(逻辑帧→CRC→<br>  COBS→尾 0x00)/<code>agentframe_decode</code>(COBS 解→校验 len 一致性+CRC→解析)。帧<br>  <code>[type:1][seq:4LE][code:2LE][len:2LE][payload][crc16:2LE]</code>，type=REQUEST(0x01)/<br>  RESPONSE(0x02)/EVENT(0x03)/DECISION_REQ(0x04)/DECISION_RESP(0x05)。PAYLOAD_MAX<br>  1024，WIRE/RAW 缓冲由它派生（COBS 开销 ceil(n/254)+1）。</p>
+<ul><li><code>agentbus.c</code>：A1 raw echo 换成<strong>帧机</strong>——RX 累积器按 0x00 切帧（溢出 latch</li></ul>
+<p><code>rx_overflow</code>，下个 0x00 重同步，绝不发截断帧）→<code>agentframe_decode</code>→<br>  <code>dispatch_frame</code>：REQUEST 回 RESPONSE 同 seq/code/payload（<strong>A2 帧级 echo，A3<br>  换真 handler</strong>）。坏帧静默丢弃。in/out_frame+tx_buf 用 static（结构 ~1KB 避栈）。</p>
+<ul><li><code>kernel/tools/agentbus_frame_test.py</code>（新）：host 帧编解码（CRC/COBS/帧 parity）</li></ul>
+<p>+三检查：①好 REQUEST 回 RESPONSE echo 同 seq/code/payload ②坏 CRC 帧被丢弃无回<br>  ③垃圾字节+0x00 后好帧仍往返（RX 重同步）。</p>
+<ul><li><strong>实测</strong>三检查全 <code>[PASS]</code>；回归 COM1 shell 经串口跑 `pipesrc|pipedst -&gt;</li></ul>
+<p>pipeline OK` + agentbus A2 帧机初始化行在，build 绿。</p>
+<h3 id="进度-阶段-a3-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A3 已闭合（2026-06-11，QEMU 实测 GREEN）<a class="anchor" href="#进度-阶段-a3-已闭合-2026-06-11-qemu-实测-green" aria-label="锚点">#</a></h3>
+<p><strong>A3 控制面（只读）= agent 第一次真正「看见」OS 文件系统。</strong></p>
+<ul><li><code>agentctl.h/.c</code>（新）：控制面 = agent→OS 方向。三只读 verb：STAT/LIST/READ</li></ul>
+<p>（<code>code</code> 0x0001/0x0002/0x0003），直调内核 <code>vfs_stat</code>/<code>vfs_list_dir_at</code>/<br>  <code>vfs_read_file_at</code>（<code>from_user=0</code>，无 per-process 权限检查）。每个 RESPONSE<br>  payload <strong>首字节为 status</strong>（OK 0x00 / ENOENT 0x01 / EINVAL 0x02），错误时只回<br>  该字节。线格：STAT 回 <code>[type:1][mode:2][uid:4][gid:4][size:8][mtime:8][atime:8]<br>  [ctime:8]</code>；LIST 请求带 <code>[start:4]</code>、回 <code>[count:2]</code>+每条 <code>[type:1][size:8]<br>  [namelen:1][name]</code>，host 按 count 翻页直至 0（每页上限 16，整页 931B 必入帧）；<br>  READ 请求带 <code>[offset:8][len:4]</code>、回 <code>[nread:4][bytes]</code>，len 钳到 1019、host 按<br>  offset 翻页。坏请求只回 EINVAL，绝不越界/wedge。</p>
+<ul><li><code>agentbus.c</code>：<code>dispatch_frame</code> 帧级 echo→<code>agentctl_handle(req,&amp;out_frame)</code>+发回。</li></ul>
+<p>传输/RX-TX/帧机不变（A2 的帧级 echo 已被取代）。init/task 日志改 stage A3。</p>
+<ul><li><code>kernel/tools/agentbus_ctl_test.py</code>（新）：host 控制面验证（codec parity+payload</li></ul>
+<p>解析+翻页/翻偏移助手）。六检查：①STAT /etc/motd=FILE size77 ②READ /etc/motd 全<br>  量 77B banner 对 ③LIST / 含 bin/etc/proc/tmp/var/net 全 DIR ④LIST /bin 翻页 37<br>  条含 init.elf ⑤STAT 不存在→ENOENT ⑥READ 目录→EINVAL。</p>
+<ul><li><strong>实测</strong>六检查全 <code>[PASS]</code>；回归 COM1 shell 经串口跑 <code>stattest.elf -&gt; OK</code> + 干净</li></ul>
+<p>reap，agentbus A3 控制面初始化行在，无 FAULT/PANIC，双通道共存，build 绿。</p>
+<ul><li>Makefile 无需改（<code>C_SRC = wildcard src/*.c</code> 自动纳入新 <code>.c</code>）。</li></ul>
+<h3 id="进度-阶段-a4-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A4 已闭合（2026-06-11，QEMU 实测 GREEN）<a class="anchor" href="#进度-阶段-a4-已闭合-2026-06-11-qemu-实测-green" aria-label="锚点">#</a></h3>
+<p><strong>A4 控制面（写+proc）= agent 能安全地改 OS、看进程。</strong></p>
+<ul><li><code>agentctl.h/.c</code>：在 A3 三只读 verb 上新增四 verb——<strong>WRITE</strong>(0x0004,</li></ul>
+<p><code>[mode:1][pathlen:2][path][data]</code>，mode 0 覆写/1 追加，回 <code>[written:4]</code>，<br>  直调 <code>vfs_write_file</code>)、<strong>MKDIR</strong>(0x0005，已存在回 EEXIST)、<strong>REMOVE</strong>(0x0006，<br>  文件 <code>vfs_remove</code>/空目录 <code>vfs_rmdir</code>)、<strong>PS</strong>(0x0007，请求 <code>[start:4]</code> 翻页，回<br>  <code>[count:2]</code>+每条 <code>[pid:4][task_id:4][state:1][is_user:1][namelen:1][name]</code>，<br>  快照 <code>process_list</code> 进 static 数组避栈)。新 status：EEXIST 0x03、EPERM 0x04。</p>
+<ul><li><strong>越权边界</strong>：<code>guard_mutation()</code> 先 <code>vfs_realpath(.,follow_final=0)</code> 规范化，再禁</li></ul>
+<p><code>/bin</code> 及其子路径的写/建/删（保护内嵌 Ring 3 程序区），并操作规范化后的 <code>canon</code><br>  防 TOCTOU/<code>..</code> 逃逸。规范化失败→EINVAL，受保护→EPERM。坏请求只回错误状态不 wedge。</p>
+<ul><li><code>agentbus.c</code>：dispatch 仍通用调 <code>agentctl_handle</code>（A4 只是 verb 集变大）；init/task</li></ul>
+<p>日志改 stage A4 + 列全 verb。</p>
+<ul><li><code>kernel/tools/agentbus_ctl_test.py</code>（扩展）：A3 六检查 + A4 六检查共 12 全 <code>[PASS]</code>：</li></ul>
+<p>WRITE→READ 回环 24B、append 后 48B、MKDIR 建目录+再建 EEXIST、REMOVE 文件转 ENOENT<br>  +空目录 OK、<code>/bin</code> 写/建/删 + <code>/bin/../bin/</code> 逃逸全 EPERM 且 init.elf 仍在、PS 列<br>  8 个任务含 agent-bridge。回归 COM1 <code>filetest.elf -&gt; OK</code> + 干净 reap，无 FAULT/PANIC。</p>
+<h3 id="进度-阶段-a5-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A5 已闭合（2026-06-11，QEMU 实测 GREEN）<a class="anchor" href="#进度-阶段-a5-已闭合-2026-06-11-qemu-实测-green" aria-label="锚点">#</a></h3>
+<p><strong>A5 决策面（OS→agent 求决策）= 内核第一次反过来「问」agent，且永不被它挂死。</strong></p>
+<ul><li><code>agentask.h/.c</code>（新）：决策面 = OS→agent 方向。等待表（8 槽）耦合 <strong>阻塞的调用方</strong></li></ul>
+<p>与 <strong>异步 DECISION_RESP</strong>。<code>agent_ask(code,payload,len,out,out_cap,*out_len,<br>  timeout_ms)</code> 内核原语：占槽→分配内核 seq（高位段 <code>0x80000000</code> 避与 agent REQUEST<br>  seq 撞）→盖死线→经 <code>agentbus_send_frame</code> 发 <code>DECISION_REQ</code> 帧→<code>sched_block_current</code><br>  阻塞。<strong>完全复刻 ipc.c 的 mask-interrupts crit + block-while-masked</strong>：占槽/发帧/<br>  自阻塞是相对响应者/超时者的<strong>单一临界区</strong>，关掉与 ipc 同款 lost-wakeup 窗口。<br>  <code>agentask_on_response(resp)</code> 按 seq 命中槽→拷 payload→<code>WAIT_ANSWERED</code>→唤醒；未知<br>  seq（超时后迟到/重复回复）忽略。<code>agentask_tick()</code> 每个 bridge loop 跑一次，过死线<br>  的槽标 <code>WAIT_TIMEDOUT</code> 并唤醒——<strong>agent 不在/不答绝不挂死内核</strong>（松耦合硬约束）。</p>
+<ul><li><code>agentbus.c</code>：<code>agentbus_send</code>→公开 <code>agentbus_send_frame</code>（决策面发 DECISION_REQ</li></ul>
+<p>复用）。<code>dispatch_frame</code> 改 switch 按 type 路由：REQUEST→<code>agentctl_handle</code>，<br>  <strong>DECISION_RESP→<code>agentask_on_response</code></strong>，OS-origin 类型（RESPONSE/EVENT/<br>  DECISION_REQ）入站一律忽略。<code>agentbus_task</code> 每轮先 <code>agentask_tick()</code> 再读 RX<br>  （即便无数据也能超时）。init 调 <code>agentask_init</code>，日志改 stage A5。</p>
+<ul><li><code>syscall.h/.c</code>：新 <code>SYSCALL_AGENT_ASK=56</code>。`sys_agent_ask(from_user,q_ptr,out_ptr,</li></ul>
+<p>out_cap,code,timeout_ms)<code>：</code>read_user_str<code> 拷问题（</code>SYSCALL_AGENT_QMAX=256<code>），<br>  </code>uok<code> 验出缓冲可写，直接把 **用户 out 指针** 交给 </code>agent_ask<code>（拷回在调用方上下文<br>  跑、CR3 不变，落对页）。OK 回写入字节数，否则回负 </code>AGENT_ASK_*`（TIMEOUT 时调用方<br>  上默认）。Ring 3 与内核走同一原语。</p>
+<ul><li><code>shell.c</code>：新 <code>agentask &lt;question&gt;</code> 命令（内核 shell 任务直调 <code>agent_ask</code>，与 Ring 3</li></ul>
+<p>经 syscall 同路径），argv 重拼成一句（shell 无引号），打印 decision / timeout 默认 /<br>  槽满 / 非法。help 加一行。</p>
+<ul><li><code>tools/agentbus_ask_test.py</code>（新）：COM1=unix sock（驱动 shell 输命令+读输出）、</li></ul>
+<p>COM2=unix sock（host 扮 agent，后台线程读帧、可答可哑）。四检查全 <code>[PASS]</code>：①agent<br>  答→收到 DECISION_REQ 载荷=问题原文、shell 打 <code>decision: ALLOW</code> ②agent 哑→死线 <strong>恰<br>  3.0s</strong> 触发、shell 打 timeout 默认、<code>1.0&lt;elapsed&lt;5.0</code>（真等过、非秒错） ③超时后 shell<br>  仍活、新 ask 答 <code>DENY</code>（槽已释放、内核续跑）。回归：A3/A4 控制面 12 检查仍全绿（双面<br>  共存于同一 bridge 任务）；COM1 人类 shell 跑 <code>stattest.elf -&gt; OK</code> 干净 reap 退 0，无<br>  FAULT/PANIC；build 绿（Makefile wildcard 自动纳入新 <code>.c</code>）。</p>
+<h3 id="进度-阶段-a6-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A6 已闭合（2026-06-11，QEMU 实测 GREEN）<a class="anchor" href="#进度-阶段-a6-已闭合-2026-06-11-qemu-实测-green" aria-label="锚点">#</a></h3>
+<p><strong>A6 事件面（OS→agent 单向 push）= 内核第一次主动「告诉」agent 进程生命周期，且永不为它停留。</strong></p>
+<ul><li><code>agentevent.h/.c</code>（新）：事件面 = OS→agent 单向、fire-and-forget（不进等待表、不等回复，</li></ul>
+<p>agent 不在/不读也无所谓）。难点在<strong>事件源头的上下文</strong>：进程退出/故障在 cli 临界区内、<br>  reaper 在 <code>schedule()</code> 内持锁——这些地方做串口 I/O 不安全。故拆 <strong>生产者/消费者</strong>：</p>
+<ul><li>生产者 <code>agentevent_post(code,pid,aux,info,name)</code>：O(1)、零分配、关中断短临界区（nest-safe，</li></ul>
+<p>存/复原 RFLAGS，可在已 cli 的退出/故障/创建路径里调），<strong>只入环、不做 I/O</strong>。压紧定长<br>    记录（按值拷 name，绝不事后回指已释放的 process 槽）。环满则丢弃并计数（fire-and-forget<br>    丢一条可接受，为保证投递而挂死内核不可接受）。</p>
+<ul><li>消费者 <code>agentevent_drain()</code>：<strong>只在 agent-bridge 任务</strong>跑，逐条出环（出环在同款短临界区内）</li></ul>
+<p>→每条编码成一个 <code>EVENT(0x03)</code> 帧经 COM2 发出（<strong>发送在临界区外</strong>），所有串口 TX 都留在 bridge<br>    一个任务上。每次调用至多排空一环容量（64），flooding 生产者也困不住 bridge。</p>
+<ul><li>事件码 SPAWN/EXIT/FAULT（0x0001/2/3），统一载荷 <code>[pid:4][aux:4][info:4][namelen:1][name]</code>，</li></ul>
+<p>三字段按码解释：SPAWN(pid=子,aux=父,info=tid)/EXIT(pid,aux=tid,info=退出码)/<br>    FAULT(pid,aux=0,info=trap 向量)。事件 seq 高位段 <code>0x40000000</code> 避撞 REQUEST/decision seq。</p>
+<ul><li>挂点（全是「只入环」零 I/O，安全）：<code>process.c</code> <code>process_mark_exited</code>（EXIT，cli 内）+</li></ul>
+<p><code>process_create_from_elf_argv</code> 与 <code>process_fork</code>（SPAWN，task→pid 绑定后 cli 内）；<code>idt.c</code><br>  故障路径（FAULT，中断已关，在 <code>process_mark_exited</code> 前 post，带 trap 向量）。<strong>故障进程同时发<br>  FAULT(带向量) + EXIT(退出码=128+向量)</strong>——agent 按 pid 关联两条，既知原因又知生命周期终结。</p>
+<ul><li><code>agentbus.c</code>：<code>agentbus_task</code> 每轮在 <code>agentask_tick()</code> 后调 <code>agentevent_drain()</code> 排空事件；</li></ul>
+<p><code>agentbus_init</code> 调 <code>agentevent_init</code>；日志改 stage A6。<strong>顺带硬化 <code>agentbus_send_frame</code></strong>：<br>  它现在有三类跨任务调用方（bridge 的控制响应 + 事件排空、阻塞在 <code>agent_ask</code> 的任意任务发<br>  DECISION_REQ），共享 static <code>tx_buf</code>；用短关中断临界区把 encode+写串口序列化（COM2 TX 是<br>  bounded poll，临界区有限、绝不 wedge；nest-safe，agent_ask 已在自己 cli 段里调它），关掉<br>  A5 起就潜伏的 tx_buf 撞写窗口。</p>
+<ul><li><code>tools/agentbus_event_test.py</code>（新）：COM1=sock（驱 shell + 后台 <code>Com1Reader</code> 持续排空，</li></ul>
+<p><strong>防 COM1 serial_print 背压</strong>——否则阻塞读 COM2 时正在跑的程序 COM1 输出会卡 bounded poll，<br>  事件假性迟到）、COM2=sock（<code>EventCollector</code> 后台线程收 EVENT 帧）。三检查全 <code>[PASS]</code>：<br>  ①<code>run /bin/stattest.elf</code>→收到 SPAWN(name=/bin/stattest.elf)+同 pid EXIT(code=0) ②<code>run<br>  /bin/fault.elf</code>→收到 FAULT(vector=14)+同 pid EXIT(code=142) ③事件推送后 shell 仍答 <code>echo</code><br>  （fire-and-forget 永不挂死内核）。<strong>实测事件落地 +0.0~0.1s</strong>（bridge 排空即时，先前数秒迟到<br>  纯属测试未排空 COM1 的背压假象）。回归：A3/A4 控制面 12 检查 + A5 决策面 4 检查全绿（三面<br>  共存于同一 bridge），COM1 人类 shell 跑 stattest/fault 干净 reap、无 KERNEL PANIC，build 绿<br>  （Makefile wildcard 自动纳入新 <code>.c</code>）。</p>
+<h3 id="进度-阶段-a7-已闭合-2026-06-11-qemu-实测-green">进度：阶段 A7 已闭合（2026-06-11，QEMU 实测 GREEN）<a class="anchor" href="#进度-阶段-a7-已闭合-2026-06-11-qemu-实测-green" aria-label="锚点">#</a></h3>
+<p><strong>A7 host 桥 = 第一次有 agent 用 JSON（而非手搓字节）开全三面，host 单一真源就位。</strong></p>
+<ul><li><code>kernel/bridge/</code>（新，纯 Node stdlib 零依赖——满足松耦合：agent 进程独立于内核运行）：<ul><li><code>khy-frame.js</code>：<code>agentframe.c</code> 的纯 JS 移植。导出 <code>TYPE/HEADER/PAYLOAD_MAX</code>、</li></ul></li></ul>
+<p><code>crc16</code>(CRC-16/CCITT-FALSE，KAT &quot;123456789&quot;→0x29b1 已校)、<code>cobsEncode/cobsDecode</code>、<br>    <code>encodeFrame/decodeFrame</code>、<code>class FrameSplitter</code>(按 0x00 切帧、坏帧丢弃 + 重同步，<br>    与内核 rx_overflow 同纪律)。</p>
+<ul><li><code>khy-protocol.js</code>：三面 payload⇄JSON 的<strong>单一真源</strong>，逐字节镜像内核线格</li></ul>
+<p>（control=agentctl.c、event=agentevent.c、码值=agentctl.h/agentevent.h）。请求<br>    构造器 <code>statReq/listReq/readReq/writeReq/pathReq/psReq</code> + 解析器 <code>splitStatus/<br>    parseStat/parseListPage/parseReadPage/parseWritten/parsePsPage/parseEvent</code>。<br>    翻译集中在此一处，便于对内核审计。</p>
+<ul><li><code>khy-bridge.js</code>：<code>class KhyBridge extends EventEmitter</code>。控制面 async API</li></ul>
+<p><code>stat/list/read/write/mkdir/remove/ps</code>（REQUEST↔RESPONSE 按 seq 关联 + 每请求<br>    超时，链路卡死也不挂住调用方；list/read/ps 自动翻页）；决策面 <code>onDecision(fn)</code><br>    （fn 同步/异步均可，回 DECISION_RESP 同 seq；无 handler 或 fn 抛错都发<br>    defaultDecision，<strong>内核调用方必解阻塞</strong>）；事件面 <code>on('event', fn)</code><br>    （fire-and-forget，spawn/exit/fault 解析为 JSON）。<code>rawVerb</code> 不抛错跑负向用例。<br>    bridge REQUEST seq 从 1 起，与内核 decision(0x80000000)/event(0x40000000) seq 段<br>    天然不撞。</p>
+<ul><li><code>index.js</code>：单入口 <code>{ KhyBridge, KhyStatusError, frame, protocol }</code>，供 (a) 内置</li></ul>
+<p>KHY Node agent in-process 调用、(b) 外部 agent(Claude Code) 的 MCP/SDK 薄包装——<br>    两者共用同一 bridge 实现（需求1），不重复协议逻辑。</p>
+<ul><li><code>tools/agentbus_bridge_test.js</code>（新）：Node e2e，COM1=sock(驱 shell + 后台持续排空</li></ul>
+<p>防背压)、COM2=sock(KhyBridge)。<strong>11/11 全 <code>[PASS]</code></strong>：控制面 list/stat/read/write/<br>  append/ps + ENOENT 负向（全走 COM2 JSON）；决策面 <code>agentask may I proceed?</code>→bridge 见<br>  问题原文、shell 打 <code>decision: ALLOW</code>；事件面 SPAWN(pid=8 name=/bin/stattest.elf)+<br>  EXIT(code=0)、FAULT(pid=9 vector=14)+配对 EXIT(code=142)；流量后控制面仍响应（liveness）。</p>
+<ul><li><strong>零内核改动</strong>：A7 全是 host 侧 <code>kernel/bridge/*.js</code> + <code>tools/agentbus_bridge_test.js</code>，</li></ul>
+<p>内核二进制与 A6 验证版逐字节相同→<strong>构造上零内核回归</strong>；仍重跑 A3/A4(12)+A5(4)+A6(3)<br>  全绿确认三面共存无回归。</p>
+<h3 id="进度-阶段-a8-已闭合-2026-06-11-qemu-实测-green-系统内自然语言交互-持久化模型配置-需求4">进度：阶段 A8 已闭合（2026-06-11，QEMU 实测 GREEN）= 系统内自然语言交互 + 持久化模型配置（需求4）<a class="anchor" href="#进度-阶段-a8-已闭合-2026-06-11-qemu-实测-green-系统内自然语言交互-持久化模型配置-需求4" aria-label="锚点">#</a></h3>
+<p><strong>A8 闭环：人在系统内用自然语言下令/配模型 → agent 回结构化动作 → 内核执行/持久化 → host 桥读回配置。</strong></p>
+<ul><li><code>agentconf.h/.c</code>（新）：OS 自有、跨重启的 agent 配置，存于持久 <code>/disk</code> 子树的</li></ul>
+<p><code>/disk/etc/agent.conf</code>（<code>key=value</code> 行式小文件，整文件改写）。<code>agentconf_set(key,value)</code><br>  规范键/值（键禁 <code>=</code>/空白/换行，值禁换行，长度上限）→确保 <code>/disk/etc</code> 存在→读旧文件→<br>  丢同键旧行+追加新行→<code>vfs_write_file</code> 覆写；<code>agentconf_get(key,out,cap)</code> 扫行回值。<strong>松耦合</strong>：<br>  <code>/disk</code> 未挂载→返 <code>AGENTCONF_ENODISK</code> 诚实降级，绝不 wedge。持久化全走 <code>/disk</code> 普通 VFS 调用，<br>  由 persist.c 钩子镜像到 KhyFS，自动跨重启（无需特判）。</p>
+<ul><li><code>agentask.h</code>：新增决策面 intent 码 <code>AGENT_INTENT_GENERIC=0x0000</code>（agentask 是/否裁决）+</li></ul>
+<p><code>AGENT_INTENT_NL=0x0001</code>（<code>ai</code> 自然语言命令，agent 回一行结构化动作）。<code>code</code> 字段告诉 agent<br>  如何读问题、回什么形状的答案。</p>
+<ul><li><code>shell.c</code>：新 <code>ai &lt;自然语言&gt;</code> 命令——经决策面 <code>agent_ask(AGENT_INTENT_NL,...)</code> 把人话发给 agent，</li></ul>
+<p>收回一行结构化动作交 <code>ai_apply_action</code> 执行。动作文法刻意极小（智能全在 host agent 侧）：<br>  <code>SAY &lt;文本&gt;</code>（打印 agent 答复，也是无法识别时的兜底，纯散文答复照样工作）/<code>SET &lt;键&gt; &lt;值…&gt;</code><br>  （<code>agentconf_set</code> 落 <code>/disk/etc/agent.conf</code>，即配模型）/<code>GET &lt;键&gt;</code>（<code>agentconf_get</code> 打印配置值）。<br>  无 agent 在 COM2→超时即诚实报「no agent connected」，shell 绝不挂死。<code>agentask</code> 改用具名<br>  <code>AGENT_INTENT_GENERIC</code>（行为不变）。</p>
+<ul><li><code>bridge/khy-bridge.js</code>：新 <code>readConfig(path='/disk/etc/agent.conf')</code>——经<strong>控制面</strong>读该文件、解析</li></ul>
+<p><code>key=value</code> 成对象，供 bridge「按配置决定连哪个 agent/模型」（需求4 的「bridge 读它」）。文件缺失<br>  （未配置/无盘）回 <code>{}</code> 不抛错，未配置系统照样连。闭环：人话配置由内核落盘→bridge 经控制面读回。</p>
+<ul><li><code>tools/agentbus_nl_test.js</code>（新）：Node e2e，QEMU 带 <code>-hda</code> 全新零盘（KhyFS 首挂自格式化）+COM1 sock</li></ul>
+<p>（驱 shell）+COM2 sock（KhyBridge，规则版 agent：NL→动作，generic→ALLOW）。<strong>10/10 全 <code>[PASS]</code></strong>：<br>  /disk 持久挂载；<code>ai use model claude-opus</code>→shell 打 <code>[ai] set model = claude-opus</code> 且<br>  <code>bridge.readConfig()</code> 经控制面读回 <code>model=claude-opus</code>；<code>ai which model</code>→<code>GET model</code>→打回值；<br>  <code>ai set endpoint ...</code>→整文件改写保留首键、两键并存；<code>ai hello</code>→SAY 散文答复；<code>/disk/etc/agent.conf</code><br>  实为 54B 文件含两 <code>key=value</code> 行；<strong>回归</strong> generic agentask 仍 <code>decision: ALLOW</code>；流量后控制面仍响应。</p>
+<ul><li><strong>跨重启实证</strong>：另跑两次启动复用同一盘——boot1 用自然语言写 model，boot2 不重写 <code>readConfig()</code> 仍</li></ul>
+<p>得 <code>{model:'claude-opus'}</code> → 配置真落盘跨重启（非仅内存）。</p>
+<ul><li><strong>回归</strong>：内核此轮有改动（shell.c+新 agentconf.c+agentask.h），仍重跑 A3/A4(12)+A5(4)+A6(3)+A7(11)</li></ul>
+<p>全绿，三面+NL 共存零回归，build 绿（Makefile wildcard 自动纳入 agentconf.c）。</p>
+<h2 id="3-剩余真实-os-缺口候选-背景-非当前优先">3. 剩余真实 OS 缺口候选（背景，非当前优先）<a class="anchor" href="#3-剩余真实-os-缺口候选-背景-非当前优先" aria-label="锚点">#</a></h2>
+<p>ELF 动态加载/共享库、真实文件系统互操作（ext2 读）、硬链接（多 name 共享<br>inode 引用计数，需拆 vfs_node→dentry+inode）、目录 rename（子树重持久化，需<br>persist 多 key 重写）、共享 open file description（dup/dup2 当前各自 offset<br>拷贝非共享，真 POSIX 需独立 OFD 层带引用计数）。<br>（时间戳跨重启持久化已由阶段30 闭合。）</p>
+<h2 id="4-工程约束-agents-md-硬约束-勿违反">4. 工程约束（AGENTS.md 硬约束，勿违反）<a class="anchor" href="#4-工程约束-agents-md-硬约束-勿违反" aria-label="锚点">#</a></h2>
+<ul><li>零硬编码；状态诚实（干净杀进程打 <code>[FAULT]</code> 不得打 <code>KERNEL PANIC</code>）；活跃度重置超时。</li><li>不主动 commit/push。</li><li>新增 userland 程序：写 <code>.asm</code> → <code>bash tools_gen_blob.sh &lt;name&gt;</code> → 接 <code>ramfs.c</code></li></ul>
+<p>（#include + vfs_write_file）+ <code>Makefile</code>（USERLAND_PROGS + ramfs.o 依赖行）→<br>  make → QEMU 验证。</p>
+<ul><li>测试命令模式：</li></ul>
+<p><code>(sleep 8; printf 'run /bin/X.elf\n'; sleep 4) | timeout 20 qemu-system-x86_64 -cdrom build/khy-os-kernel.iso -serial stdio -display none -no-reboot</code></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../kernel/docs/架构-agent-os双向协议.html"><div class="dir">← 上一篇</div><div class="ttl">架构设计：Agent ⇄ OS 双向协议（KHY Agent Bridge）</div></a><a class="next" href="../../kernel/docs/小白教程-Khyos-agent协同从零精讲.html"><div class="dir">下一篇 →</div><div class="ttl">KHY-OS 小白精讲：从零看懂「一个会跟 AI 协同的操作系统」</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="kernel/docs/进度交接-内核与agent协同pivot.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

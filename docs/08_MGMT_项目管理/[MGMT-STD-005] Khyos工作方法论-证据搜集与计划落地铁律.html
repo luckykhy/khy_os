@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[MGMT-STD-005] Khyos 工作方法论：证据搜集 → 做计划 → 计划正确落地（流程铁律） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>[MGMT-STD-005] Khyos 工作方法论：证据搜集 → 做计划 → 计划正确落地（流程铁律）</div>
+      <header class="hero reveal"><h1>[MGMT-STD-005] Khyos 工作方法论：证据搜集 → 做计划 → 计划正确落地（流程铁律）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#mgmt-std-005-khyos-工作方法论-证据搜集-做计划-计划正确落地-流程铁律">[MGMT-STD-005] Khyos 工作方法论：证据搜集 → 做计划 → 计划正确落地（流程铁律）</a></li><li class="lvl-2"><a href="#0-用途与一句话定位">0. 用途与一句话定位</a></li><li class="lvl-2"><a href="#1-心智模型-先建立认知-再谈流程">1. 心智模型（先建立认知，再谈流程）</a></li><li class="lvl-2"><a href="#2-十条工作红线-触碰任一即可能干错事">2. 十条工作红线（触碰任一即可能干错事）</a></li><li class="lvl-2"><a href="#3-第一段-怎么搜集证据-evidence">3. 第一段——怎么搜集证据（Evidence）</a></li><li class="lvl-3"><a href="#3-1-搜集手法-按可靠性从高到低">3.1 搜集手法（按可靠性从高到低）</a></li><li class="lvl-3"><a href="#3-2-证据搜集的三条铁律">3.2 证据搜集的三条铁律</a></li><li class="lvl-2"><a href="#4-第二段-怎么做计划-plan">4. 第二段——怎么做计划（Plan）</a></li><li class="lvl-3"><a href="#4-1-先对齐-用-enterplanmode">4.1 先对齐，用 EnterPlanMode</a></li><li class="lvl-3"><a href="#4-2-计划必须回答的五个问题">4.2 计划必须回答的五个问题</a></li><li class="lvl-3"><a href="#4-3-分层纪律-本仓范式">4.3 分层纪律（本仓范式）</a></li><li class="lvl-2"><a href="#5-第三段-怎么让计划正确落地-land">5. 第三段——怎么让计划正确落地（Land）</a></li><li class="lvl-3"><a href="#5-1-落地即验证-缺一不可">5.1 落地即验证（缺一不可）</a></li><li class="lvl-3"><a href="#5-2-不可逆-对外动作-先取证-再确认">5.2 不可逆 / 对外动作：先取证，再确认</a></li><li class="lvl-3"><a href="#5-3-诚实报告">5.3 诚实报告</a></li><li class="lvl-3"><a href="#5-4-落地后反哺">5.4 落地后反哺</a></li><li class="lvl-2"><a href="#6-全程-sop-一次任务的标准动作序列">6. 全程 SOP（一次任务的标准动作序列）</a></li><li class="lvl-2"><a href="#7-三个本会话的真实范例-证据-计划-落地">7. 三个本会话的真实范例（证据 → 计划 → 落地）</a></li><li class="lvl-2"><a href="#8-与活源的关系-本文件不是唯一真源">8. 与活源的关系（本文件不是唯一真源）</a></li><li class="lvl-2"><a href="#跨分类关联指引">跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="mgmt-std-005-khyos-工作方法论-证据搜集-做计划-计划正确落地-流程铁律">[MGMT-STD-005] Khyos 工作方法论：证据搜集 → 做计划 → 计划正确落地（流程铁律）<a class="anchor" href="#mgmt-std-005-khyos-工作方法论-证据搜集-做计划-计划正确落地-流程铁律" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文档类型</td><td>工程治理标准 / AI 工作方法论（STD）</td></tr><tr><td>适用范围</td><td>Khyos（及任何驱动 AI）<strong>接手本仓任何非平凡任务</strong>时的通用工作流。凡「改代码 / 加功能 / 修 bug / 发版 / 写文档」都适用</td></tr><tr><td>强制级别</td><td>铁律（违反红线 = 改错东西 / 造重复 / 不可逆事故 / 假绿交付）</td></tr><tr><td>触发关键词</td><td>搜集证据 / 做计划 / 落地 / 方法论 / 怎么干 / 从哪下手</td></tr><tr><td>上位 / 参考</td><td>[MGMT-STD-001]（文档结构铁律）；[MGMT-STD-004]（曼孚交付方法论·下游客户交付专用）；活源真相 = 本仓 <code>scripts/check-*.js</code> 四守卫 + <code>services/backend/src/services/planModeService.js</code> + <code>services/backend/src/services/docsFreshness/</code></td></tr><tr><td>状态</td><td>定稿</td></tr></tbody></table>
+<hr>
+<h2 id="0-用途与一句话定位">0. 用途与一句话定位<a class="anchor" href="#0-用途与一句话定位" aria-label="锚点">#</a></h2>
+<p><strong>一句话定位</strong>：这是 Khyos 的<strong>通用工作方法论</strong>——先<strong>搜集证据</strong>（跑真解析器 / 读真源，不凭记忆），再<strong>做计划</strong>（分层、门控、可回退、先对齐后动手），最后<strong>正确落地</strong>（守卫验证、诚实报告、不可逆动作先取证再确认）。</p>
+<p>[MGMT-STD-004] 管「怎么给曼孚客户交付」，本文管「Khyos 自己怎么把任何一件工程活干对」。两者互补不互抄。</p>
+<p>用词纪律（沿用 [MGMT-STD-001]）：红线只用「必须 / 严禁 / 强制」，严禁「建议 / 最好 / 尽量」。</p>
+<blockquote><p>本方法论的每一条都<strong>锚定本仓真实机制</strong>，不讲空道理。每节末尾的「活源锚点」指向可核实的代码/脚本——那是这条铁律的证据，也是学习入口。</p></blockquote>
+<hr>
+<h2 id="1-心智模型-先建立认知-再谈流程">1. 心智模型（先建立认知，再谈流程）<a class="anchor" href="#1-心智模型-先建立认知-再谈流程" aria-label="锚点">#</a></h2>
+<p>三段闭环，缺一不可：</p>
+<pre><code>  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+  │ ① 搜集证据   │ ──▶ │ ② 做计划     │ ──▶ │ ③ 正确落地   │
+  │ 跑解析器/读源 │     │ 分层·门控·  │     │ 守卫·诚实·   │
+  │ 不凭记忆     │     │ 可回退·对齐  │     │ 不可逆先确认 │
+  └─────────────┘     └─────────────┘     └─────────────┘
+         ▲                                        │
+         └────────────── 落地后验证反哺证据 ◀──────┘</code></pre>
+<p>三条认知红线：</p>
+<ol><li><strong>证据 &gt; 记忆 &gt; 猜测</strong>。判「X 存在吗 / X 是什么」必须跑真解析路径或读真源，<strong>严禁</strong>按名硬比、凭训练记忆、凭等价表分类。分类既造假阴（「已覆盖」实则无）又造假阳（「缺」实则有）。</li><li><strong>计划先对齐，再动手</strong>。非平凡任务先 EnterPlanMode 探索 + 出计划 + 用户批准，再写代码。计划里就把「门控 / 可回退 / 红线」定死。</li><li><strong>落地要验证 + 诚实</strong>。跑守卫、跑测试、跑端到端；测试失败就说失败并附输出；不可逆/对外动作先取证（dry-run）再经用户确认。</li></ol>
+<hr>
+<h2 id="2-十条工作红线-触碰任一即可能干错事">2. 十条工作红线（触碰任一即可能干错事）<a class="anchor" href="#2-十条工作红线-触碰任一即可能干错事" aria-label="锚点">#</a></h2>
+<ol><li><strong>严禁凭记忆断言「有没有 / 是什么」</strong>——跑真解析器或读真源。（活源锚点：判 CC 工具是否在 khy 有，要跑 <code>claudeCompat.normalizeToolName</code> 真解析路径，不查等价表。）</li><li><strong>严禁在成熟体系里造重复</strong>——先诊断该主题归宿（已覆盖→补链接；真缺口→才新建）。用户原词全仓 grep 无命中 = 真小缺口的信号。</li><li><strong>严禁手动维护本可派生的映射</strong>——能从既有约定派生就派生（零维护面）。（活源锚点：<code>docsFreshness/docPathIndex.js</code> 靠解析正文既有约定派生 source→doc，不写映射表。）</li><li><strong>严禁无门控地改既有行为</strong>——新能力挂 <code>KHY_*</code> 门控，默认值明确，关闭 = 逐字节回退今日行为。</li><li><strong>严禁不可逆/对外动作直接真跑</strong>——先 dry-run 取证，再经用户确认。（活源锚点：<code>publish-dual.sh --dry-run</code> 演练全流程不上传；发版是不可逆公开动作。）</li><li><strong>严禁落地后不验证就报完成</strong>——三守卫 <code>--changed</code> + 测试 + 端到端，缺一不可。（活源锚点：<code>scripts/check-{leaf-contract,model-hardcoding,agent-rules,change-safety}.js</code>。）</li><li><strong>严禁把「分类了」当「穷尽了」</strong>——不美观/覆盖类扫描要跑到穷尽（逐条命中裁定），不是找几个候选。</li><li><strong>严禁碰不属于本任务的东西</strong>——合并冲突文件、别人的产物、gitignored 镜像树，红线 by construction 隔离。</li><li><strong>严禁假绿</strong>——测试失败/步骤跳过/部分完成，如实说；「跑了但没交付」要静默截断兜底。</li><li><strong>严禁未经要求就 commit/push/发布</strong>——这些是对外/难回退动作，默认只做到「可交付」，动作等用户明确要求。</li></ol>
+<hr>
+<h2 id="3-第一段-怎么搜集证据-evidence">3. 第一段——怎么搜集证据（Evidence）<a class="anchor" href="#3-第一段-怎么搜集证据-evidence" aria-label="锚点">#</a></h2>
+<p><strong>目标</strong>：在动手前，把「现状真相」摸清到可以下判断的程度。凭的是<strong>跑出来的事实</strong>，不是记忆。</p>
+<h3 id="3-1-搜集手法-按可靠性从高到低">3.1 搜集手法（按可靠性从高到低）<a class="anchor" href="#3-1-搜集手法-按可靠性从高到低" aria-label="锚点">#</a></h3>
+<ol><li><strong>跑真解析器</strong>（最可靠）：要判某命令/工具/路径是否存在、解析成什么，直接调它的真解析函数看结果。例：<code>parseInput('/docs check')</code> 返回 <code>{command:'docs',subCommand:'check'}</code> 才算「命令存在且路由对」。</li><li><strong>读真源脚本</strong>：写 how-to 或判行为，读那个脚本照实写，不照记忆写。例：写 PDF 生成文档前读 <code>scripts/docs/md-to-pdf.js</code>，确认它「零依赖复用 vendored markdown-it + 系统 chrome」。</li><li><strong>跑 grep/find 穷尽扫</strong>：判「某特性被谁消费 / 某原词是否出现」——<code>grep -rn</code> 逐条命中，不抽样。</li><li><strong>端到端探针</strong>：造隔离环境（tmp 目录 / fake HOME）真跑一遍，看真实输出。</li><li><strong>查外部权威端点</strong>：判线上状态查真端点，不查会缓存滞后的聚合接口。例：确认 PyPI 是否已发某版本，查版本专属端点 <code>pypi.org/pypi/khy-os/0.1.148/json</code>，不信滞后的 <code>/khy-os/json</code> 聚合。</li></ol>
+<h3 id="3-2-证据搜集的三条铁律">3.2 证据搜集的三条铁律<a class="anchor" href="#3-2-证据搜集的三条铁律" aria-label="锚点">#</a></h3>
+<ul><li><strong>跑真解析路径，不按名硬比</strong>。第一次探针若漏了预处理步骤（如 <code>normalizeToolName</code> 前置），会误报——要摸到<strong>完整</strong>解析链。</li><li><strong>重取权威清单</strong>。记忆里的旧审计可能比真源旧（例：真 zip 39 个工具 ≠ 旧审计记的 29）。有权威源就重取。</li><li><strong>诚实排除要读源实证</strong>。判「这条不算缺口」要读源给证据（是 stub？是云特有？是内部 IPC？），不凭断言。</li></ul>
+<p><strong>活源锚点</strong>：<code>services/backend/src/services/claudeCompat.js</code>（<code>normalizeToolName</code> + <code>TOOL_ALIASES</code> 冻结 SSOT）；本会话文档新鲜度系统的 <code>docPathIndex.extractSourcePaths</code> 派生映射即「解析既有约定 = 证据」的范式。</p>
+<hr>
+<h2 id="4-第二段-怎么做计划-plan">4. 第二段——怎么做计划（Plan）<a class="anchor" href="#4-第二段-怎么做计划-plan" aria-label="锚点">#</a></h2>
+<p><strong>目标</strong>：把摸清的现状，变成一份<strong>分层、可回退、先对齐</strong>的执行计划。计划本身就是防止「改错东西」的护栏。</p>
+<h3 id="4-1-先对齐-用-enterplanmode">4.1 先对齐，用 EnterPlanMode<a class="anchor" href="#4-1-先对齐-用-enterplanmode" aria-label="锚点">#</a></h3>
+<p>非平凡任务（新功能 / 多文件改动 / 多种可行方案 / 需求不清）<strong>必须</strong>先进 plan mode：探索代码 → 出计划 → 需求不清用 AskUserQuestion 澄清 → ExitPlanMode 请用户批准 → 才动手。Khyos 内置 <code>planModeService</code> 就是把这条工作流固化成机制。</p>
+<p><strong>活源锚点</strong>：<code>services/backend/src/services/planModeService.js</code> / <code>planModeSink.js</code>。</p>
+<h3 id="4-2-计划必须回答的五个问题">4.2 计划必须回答的五个问题<a class="anchor" href="#4-2-计划必须回答的五个问题" aria-label="锚点">#</a></h3>
+<p>一份合格计划里必须写死：</p>
+<ol><li><strong>复用还是新建</strong>？先列「已核实的现成基建」，能复用绝不新建（例：镜像 <code>precommitCheck._gitSoft</code>，不另写 git 包装）。</li><li><strong>命名避碰了吗</strong>？新命令/函数名先 grep，撞了就换（例：<code>maintain freshness</code> 已占 → 用 <code>docs check</code>）。</li><li><strong>门控叫什么、默认什么</strong>？每个新能力一个 <code>KHY_*</code>，默认值明确，关 = 字节回退。</li><li><strong>怎么回退 / 红线在哪</strong>？合并冲突文件不碰、只改有 bug 那侧、只 <code>git add</code> 自己产物——红线尽量 by construction（结构上不可能违反），而非靠记得。</li><li><strong>怎么验证</strong>？计划末尾就列出验证清单（守卫 + 测试 + 端到端 + 回归）。</li></ol>
+<h3 id="4-3-分层纪律-本仓范式">4.3 分层纪律（本仓范式）<a class="anchor" href="#4-3-分层纪律-本仓范式" aria-label="锚点">#</a></h3>
+<ul><li><strong>纯叶子 + 门控 + node:test</strong>：纯逻辑落 <code>services/.../&lt;x&gt;.js</code>（零 IO、确定性、never-throw、<code>&lt;x&gt;Enabled(env)</code> 门控），配 <code>tests/services/&lt;x&gt;.test.js</code>。</li><li><strong>薄 IO 壳</strong>：IO/编排落单独的 runner/service，镜像已有壳（如 <code>precommitCheck</code>），fail-soft。</li><li><strong>叶子绝不 import 需模型/网络的层</strong>——保确定性路径（pre-commit/CI）离线可跑。</li></ul>
+<p><strong>活源锚点</strong>：<code>scripts/check-leaf-contract.js</code> + <code>scripts/lib/leafContractGuard.js</code> 就是这条分层纪律的自动守卫；<code>docsFreshness/</code> 四叶子 + <code>docsFreshnessRunner.js</code> 薄壳是范例。</p>
+<hr>
+<h2 id="5-第三段-怎么让计划正确落地-land">5. 第三段——怎么让计划正确落地（Land）<a class="anchor" href="#5-第三段-怎么让计划正确落地-land" aria-label="锚点">#</a></h2>
+<p><strong>目标</strong>：把计划变成<strong>验证过、诚实、可交付</strong>的改动。落地不是「写完代码」，是「写完 + 验证 + 如实报告」。</p>
+<h3 id="5-1-落地即验证-缺一不可">5.1 落地即验证（缺一不可）<a class="anchor" href="#5-1-落地即验证-缺一不可" aria-label="锚点">#</a></h3>
+<ol><li><strong>三/四守卫 <code>--changed</code></strong>：<code>check-leaf-contract</code> / <code>check-model-hardcoding</code> / <code>check-agent-rules</code> / <code>check-change-safety</code>。0 error 才算过；预存 WARN 要指明「与本改动无关」。</li><li><strong><code>node --check</code> 新/改文件</strong>：语法门。</li><li><strong>单元测试</strong>：新叶子的 node:test 全绿。</li><li><strong>端到端探针</strong>：隔离环境真跑，覆盖「门控开 / 门控关字节回退 / 边界 / 退出码」四态。</li><li><strong>回归</strong>：跑相邻既有测试套，证明没打破别的。</li></ol>
+<h3 id="5-2-不可逆-对外动作-先取证-再确认">5.2 不可逆 / 对外动作：先取证，再确认<a class="anchor" href="#5-2-不可逆-对外动作-先取证-再确认" aria-label="锚点">#</a></h3>
+<ul><li><strong>先 dry-run</strong>：发版、删除、覆盖类动作，先跑演练模式看审计是否过、看会动什么。（活源锚点：<code>publish-dual.sh --dry-run</code> 走完构建+纯度审计+<code>twine check</code> 但不上传。）</li><li><strong>再经用户确认</strong>：dry-run 干净 ≠ 自动真跑。真上传/真删除<strong>必须</strong>等用户明确要。一处授权不延伸到下一处。</li><li><strong>落地后查真端点验证</strong>：发布后查版本专属端点确认线上生效，别信滞后的聚合接口。</li></ul>
+<h3 id="5-3-诚实报告">5.3 诚实报告<a class="anchor" href="#5-3-诚实报告" aria-label="锚点">#</a></h3>
+<ul><li>测试失败 → 说失败 + 附输出，绝不粉饰。</li><li>步骤跳过 → 说跳过。</li><li>部分完成 → 说部分，别报「全部完成」。</li><li>「环境已干净」要诚实（数据清了但包还在，就别谎称全净）。</li><li>改动前若发现现状与描述矛盾（不是你建的 / 内容与描述不符），<strong>先如实反映</strong>，不闷头执行。</li></ul>
+<h3 id="5-4-落地后反哺">5.4 落地后反哺<a class="anchor" href="#5-4-落地后反哺" aria-label="锚点">#</a></h3>
+<p>正确落地会产出<strong>新的可复用知识</strong>：写进项目记忆（一事一文件 + <code>MEMORY.md</code> 一行索引），链接相关记忆 <code>[[name]]</code>。这让下一次的「证据搜集」起点更高。</p>
+<hr>
+<h2 id="6-全程-sop-一次任务的标准动作序列">6. 全程 SOP（一次任务的标准动作序列）<a class="anchor" href="#6-全程-sop-一次任务的标准动作序列" aria-label="锚点">#</a></h2>
+<pre><code>接到任务
+  │
+  ├─ ① 搜集证据
+  │    ├─ 跑真解析器 / 读真源（不凭记忆）
+  │    ├─ grep 原词 + 穷尽扫（判缺口 / 判归宿）
+  │    └─ 诊断：已覆盖→补链接？真缺口→新建？
+  │
+  ├─ ② 做计划（非平凡任务 EnterPlanMode）
+  │    ├─ 列复用基建 · 命名避碰 grep
+  │    ├─ 定门控名+默认 · 定红线（尽量 by construction）
+  │    ├─ 分层（纯叶子+门控+test / 薄壳）
+  │    ├─ 需求不清 → AskUserQuestion
+  │    └─ ExitPlanMode → 用户批准
+  │
+  ├─ ③ 落地
+  │    ├─ 实现（match 周边代码风格）
+  │    ├─ 守卫 --changed + node --check + 单测 + 端到端 + 回归
+  │    ├─ 不可逆/对外动作：dry-run 取证 → 用户确认 → 真跑 → 查端点验证
+  │    └─ 诚实报告（失败/跳过/部分 如实说）
+  │
+  └─ ④ 反哺：写项目记忆 + MEMORY.md 索引</code></pre>
+<hr>
+<h2 id="7-三个本会话的真实范例-证据-计划-落地">7. 三个本会话的真实范例（证据 → 计划 → 落地）<a class="anchor" href="#7-三个本会话的真实范例-证据-计划-落地" aria-label="锚点">#</a></h2>
+<p>这套方法论不是空谈——本会话三件事全按它走：</p>
+<table><thead><tr><th>任务</th><th>① 证据</th><th>② 计划</th><th>③ 落地</th></tr></thead><tbody><tr><td><strong>文档新鲜度系统</strong></td><td>grep 证实 200+ 文档已一致引用源码路径（无需手写映射）；<code>maintain freshness</code> 已占</td><td>四层能力 × 三触发经 AskUserQuestion 定；EnterPlanMode 出计划批准；纯叶子+门控+薄壳</td><td>68/68 测 + 三守卫净 + E2E 真仓 48 改动→55 suspect + 门控关字节回退</td></tr><tr><td><strong>pip 发版 0.1.148</strong></td><td>查 PyPI 端点确认线上是 0.1.147、0.1.148 未发；<code>git status</code> 摸清未提交改动规模</td><td>AskUserQuestion 定「就发 0.1.148 不含未提交 + 仅 pip 先 dry-run」</td><td>dry-run 审计全绿 → 用户确认 → 真上传 → 查版本专属端点确认 0.1.148 生效</td></tr><tr><td><strong>本方法论文档</strong></td><td>读 <code>.ai/</code> 判 GUARDS 是机器生成不可手改；grep 证实 MGMT-STD-004 是交付专用非通用工作流；锚点全部核实存在</td><td>定为新 <code>[MGMT-STD-005]</code>，每条锚定真实机制</td><td>守卫核对 + 索引登记 + 交叉链接 + 记忆反哺</td></tr></tbody></table>
+<hr>
+<h2 id="8-与活源的关系-本文件不是唯一真源">8. 与活源的关系（本文件不是唯一真源）<a class="anchor" href="#8-与活源的关系-本文件不是唯一真源" aria-label="锚点">#</a></h2>
+<p>本文件是<strong>方法论的成文表达</strong>；真正的执行约束活在代码与守卫里：</p>
+<ul><li>分层纪律的强制者 = <code>scripts/check-leaf-contract.js</code>（叶子契约守卫）。</li><li>「不散落模型名」的强制者 = <code>scripts/check-model-hardcoding.js</code>。</li><li>「状态文案要有动作/目标/进度」的强制者 = <code>scripts/check-agent-rules.js</code>。</li><li>改动安全的强制者 = <code>scripts/check-change-safety.js</code>。</li><li>plan-before-code 的机制层 = <code>services/backend/src/services/planModeService.js</code>。</li><li>「证据派生而非手工维护」的范例 = <code>services/backend/src/services/docsFreshness/</code>。</li></ul>
+<p>守卫与代码若与本文冲突，<strong>以守卫/代码为准</strong>，并回来修本文。</p>
+<hr>
+<h2 id="跨分类关联指引">跨分类关联指引<a class="anchor" href="#跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>下游客户交付专用方法论：[MGMT-STD-004]（曼孚 vibecoding）。</li><li>khy 自身 vibe/spec-coding 能力的<strong>量化验收标准</strong>：[MGMT-STD-006]。本文管「怎么把活干对」，STD-006 管「怎么<em>量化确认</em> khy 具备并达成该能力」。</li><li>文档结构与索引铁律：[MGMT-STD-001]。</li><li>文档新鲜度机制（本方法论「证据派生」范例的实现）：<code>docs/07_OPS_运维/</code> 环境开关与文档规范类 + 活源 <code>services/backend/src/services/docsFreshness/</code>。</li><li>工作流引擎：[OPS-MAN-057] 工作流引擎-khy-workflow。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-STD-004] 曼孚-vibecoding-交付方法论-流程铁律.html"><div class="dir">← 上一篇</div><div class="ttl">[MGMT-STD-004] 曼孚 vibecoding 交付方法论：流程铁律与全程 SOP</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.html"><div class="dir">下一篇 →</div><div class="ttl">[MGMT-STD-006] khy「vibe-coding / spec-coding 能力对齐 Claude Code」可量化验收标准</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-STD-005] Khyos工作方法论-证据搜集与计划落地铁律.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

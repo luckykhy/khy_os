@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🧑 使用说明 · 这套包怎么用（给你自己看） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>给人看<span class="sep">›</span>🧑 使用说明 · 这套包怎么用（给你自己看）</div>
+      <header class="hero reveal"><h1>🧑 使用说明 · 这套包怎么用（给你自己看）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#使用说明-这套包怎么用-给你自己看">🧑 使用说明 · 这套包怎么用（给你自己看）</a></li><li class="lvl-2"><a href="#一句话-这套包解决什么">一句话：这套包解决什么</a></li><li class="lvl-2"><a href="#目录怎么分-最重要">目录怎么分（最重要）</a></li><li class="lvl-2"><a href="#标准流程-照这个顺序做">标准流程（照这个顺序做）</a></li><li class="lvl-3"><a href="#第-1-步-开一个新-ai-会话-先发-开场白-必做">第 1 步 · 开一个新 AI 会话，先发「开场白」（必做）</a></li><li class="lvl-3"><a href="#第-2-步-要它改代码前-发-铁律速查卡">第 2 步 · 要它改代码前，发「铁律速查卡」</a></li><li class="lvl-3"><a href="#第-3-步-派活-排错">第 3 步 · 派活 / 排错</a></li><li class="lvl-2"><a href="#什么情况打开哪个文件-速查">什么情况打开哪个文件（速查）</a></li><li class="lvl-2"><a href="#贴给-ai-前-你自己要守住的-5-件事">贴给 AI 前，你自己要守住的 5 件事</a></li><li class="lvl-2"><a href="#和已有文档的关系">和已有文档的关系</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 受众: 人(你自己) | 用途: 怎么用这套包 · 复制哪段给谁 --&gt;<br>&lt;!-- 这些是给你（人）看的操作说明。要发给 AI 的内容在 ../给AI看/ 。 --&gt;</p>
+<h1 id="使用说明-这套包怎么用-给你自己看">🧑 使用说明 · 这套包怎么用（给你自己看）<a class="anchor" href="#使用说明-这套包怎么用-给你自己看" aria-label="锚点">#</a></h1>
+<blockquote><p>这一篇是<strong>写给你（人）</strong>的。它告诉你：这套东西是干嘛的、遇到什么情况打开哪个文件、复制哪一段发给 AI。<br>你<strong>不需要记住任何技术细节</strong>，只需要会<strong>复制粘贴</strong>。</p></blockquote>
+<hr>
+<h2 id="一句话-这套包解决什么">一句话：这套包解决什么<a class="anchor" href="#一句话-这套包解决什么" aria-label="锚点">#</a></h2>
+<p>以后你没有强 AI 陪着开发了，只能用<strong>弱模型或陌生的大模型</strong>，而且<strong>只能靠 pip 发布</strong>。<br>这套包把「怎么跟 AI 讲清项目、怎么让它别把项目改坏、遇到错误怎么修、下一步做什么」<br><strong>全部写成可以直接复制粘贴给 AI 的现成文字</strong>，你照着贴就行。</p>
+<hr>
+<h2 id="目录怎么分-最重要">目录怎么分（最重要）<a class="anchor" href="#目录怎么分-最重要" aria-label="锚点">#</a></h2>
+<p>这个包分成两半，<strong>别搞混</strong>：</p>
+<table><thead><tr><th>目录</th><th>给谁看</th><th>里面是什么</th></tr></thead><tbody><tr><td><strong><code>给AI看/</code></strong></td><td><strong>AI</strong></td><td>直接复制、整段发给 AI 的内容（开场白、铁律、错误手册、任务卡）</td></tr><tr><td><strong><code>给人看/</code></strong></td><td><strong>你</strong></td><td>怎么操作、怎么选、怎么排错、发展方向怎么定（就是你现在看的这些）</td></tr></tbody></table>
+<p><strong>规则</strong>：</p>
+<ul><li>要<strong>发给 AI</strong> 的时候 → 去 <code>给AI看/</code> 复制。</li><li>你自己<strong>想知道怎么办</strong> 的时候 → 看 <code>给人看/</code>。</li></ul>
+<hr>
+<h2 id="标准流程-照这个顺序做">标准流程（照这个顺序做）<a class="anchor" href="#标准流程-照这个顺序做" aria-label="锚点">#</a></h2>
+<h3 id="第-1-步-开一个新-ai-会话-先发-开场白-必做">第 1 步 · 开一个新 AI 会话，先发「开场白」（必做）<a class="anchor" href="#第-1-步-开一个新-ai-会话-先发-开场白-必做" aria-label="锚点">#</a></h3>
+<p>打开 <code>给AI看/项目情况说明-开场白.md</code>，看对方是什么模型：</p>
+<table><thead><tr><th>对方模型</th><th>复制哪一档</th></tr></thead><tbody><tr><td>强模型 / 大上下文（如某家旗舰大模型）</td><td><strong>A · 全量开场白</strong></td></tr><tr><td>普通模型</td><td><strong>B · 精简开场白</strong></td></tr><tr><td>本地小模型（≤7B，如 qwen/phi/deepseek-coder）</td><td><strong>C · 小模型极简开场白</strong></td></tr></tbody></table>
+<p>把那一档 ``` 代码块里的整段文字，作为新会话的<strong>第一条消息</strong>发出去。</p>
+<h3 id="第-2-步-要它改代码前-发-铁律速查卡">第 2 步 · 要它改代码前，发「铁律速查卡」<a class="anchor" href="#第-2-步-要它改代码前-发-铁律速查卡" aria-label="锚点">#</a></h3>
+<p>打开 <code>给AI看/协作铁律.md</code>，复制顶部「铁律速查卡」那段，发给它。<br>这是<strong>保命的一步</strong>——它规定 AI 只能用「一个开关就能关掉恢复原样」的方式改代码。</p>
+<h3 id="第-3-步-派活-排错">第 3 步 · 派活 / 排错<a class="anchor" href="#第-3-步-派活-排错" aria-label="锚点">#</a></h3>
+<ul><li><strong>想让它干活</strong>：打开 <code>给AI看/任务派发卡.md</code>，挑一张卡，连同「派发头」一起发给它。</li></ul>
+<p>不知道挑哪张？看 <code>给人看/发展路径-决策与选活.md</code> 的决策树。</p>
+<ul><li><strong>它出错了</strong>：打开 <code>给AI看/错误自查手册.md</code>，找最像的一条发给它；</li></ul>
+<p>或直接对它说「对照错误自查手册逐条自审你刚才的改动」。<br>  自己想快速判断是什么错？看 <code>给人看/排错速查-给人.md</code>。</p>
+<hr>
+<h2 id="什么情况打开哪个文件-速查">什么情况打开哪个文件（速查）<a class="anchor" href="#什么情况打开哪个文件-速查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你的处境</th><th>打开</th></tr></thead><tbody><tr><td>刚开新 AI 会话</td><td><code>给AI看/项目情况说明-开场白.md</code>（复制一档发它）</td></tr><tr><td>要它动手改代码</td><td><code>给AI看/协作铁律.md</code>（复制速查卡发它）</td></tr><tr><td>想派个活但没头绪</td><td><code>给人看/发展路径-决策与选活.md</code>（决策树）→ <code>给AI看/任务派发卡.md</code>（挑卡发它）</td></tr><tr><td>AI 报错 / 我怀疑它改坏了</td><td><code>给人看/排错速查-给人.md</code>（判断）→ <code>给AI看/错误自查手册.md</code>（发它去修）</td></tr><tr><td>我自己怕把项目搞坏 / 要发布</td><td><code>给人看/命脉自保清单-给人.md</code></td></tr></tbody></table>
+<hr>
+<h2 id="贴给-ai-前-你自己要守住的-5-件事">贴给 AI 前，你自己要守住的 5 件事<a class="anchor" href="#贴给-ai-前-你自己要守住的-5-件事" aria-label="锚点">#</a></h2>
+<p>即使 AI 全忘了，这 5 条你要守住（完整版在 <code>.ai/GUARDS.md</code> 和 <code>docs/传承/</code>）：</p>
+<ol><li><strong>pip 是命脉</strong>：改完必须还能打成 wheel 发布。手册见 <code>docs/07_OPS_运维/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.md</code>。</li><li><strong>守卫是免疫系统</strong>：提交前 git 钩子自动跑守卫。<strong>守卫红了不许提交</strong>，别让 AI 用 <code>--no-verify</code> 硬闯。</li><li><strong>单文件不超 2500 行</strong>：别让 AI 把代码堆成一坨。</li><li><strong>改动要能一键关掉回原样</strong>：这是最重要的安全网（详见 <code>给AI看/协作铁律.md</code>）。</li><li><strong>不确定就先只读体检</strong>：<code>node services/backend/bin/khy.js maintain freshness</code>；慌了看 <code>docs/传承/紧急恢复卡片.md</code>。</li></ol>
+<hr>
+<h2 id="和已有文档的关系">和已有文档的关系<a class="anchor" href="#和已有文档的关系" aria-label="锚点">#</a></h2>
+<p>这套包<strong>不替代</strong>已有文档，只是加一层「发给 AI 用」的外壳：</p>
+<ul><li>无 AI 也能维护的人类手册：<code>docs/传承/KHY-OS-传承书.md</code></li><li>再造一个 khyos 的蓝图：<code>docs/传承/KHY-OS-复制蓝图-如何再造一个khyos智能体.md</code></li><li>机器可读项目地图/红线：<code>.ai/MAP.md</code>、<code>.ai/GUARDS.md</code>、<code>.ai/GUARDS-AI.md</code></li></ul>
+<p>冲突时以 <code>.ai/</code> 和 <code>docs/传承/</code> 为准（它们由守卫/钩子保持最新）。</p>
+<hr>
+<p><em>本包由原作者在「最后一天使用强 AI」时刻意沉淀，目标：换任何 AI 都能接着干，且不把项目越改越坏。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/给人看/排错速查-给人.html"><div class="dir">← 上一篇</div><div class="ttl">🔎 排错速查（给你自己看）</div></a><a class="next" href="../../../docs/AI协作预设包/给人看/总说明-一页速览.html"><div class="dir">下一篇 →</div><div class="ttl">⚡ 一页速览（给你自己 · 先看这一篇）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/给人看/使用说明-怎么用这套包.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

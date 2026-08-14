@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation and ADRs · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>documentation-and-adrs<span class="sep">›</span>Documentation and ADRs</div>
+      <header class="hero reveal"><h1>Documentation and ADRs</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#documentation-and-adrs">Documentation and ADRs</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#architecture-decision-records-adrs">Architecture Decision Records (ADRs)</a></li><li class="lvl-3"><a href="#when-to-write-an-adr">When to Write an ADR</a></li><li class="lvl-3"><a href="#adr-template">ADR Template</a></li><li class="lvl-3"><a href="#adr-lifecycle">ADR Lifecycle</a></li><li class="lvl-2"><a href="#inline-documentation">Inline Documentation</a></li><li class="lvl-3"><a href="#when-to-comment">When to Comment</a></li><li class="lvl-3"><a href="#when-not-to-comment">When NOT to Comment</a></li><li class="lvl-3"><a href="#document-known-gotchas">Document Known Gotchas</a></li><li class="lvl-2"><a href="#api-documentation">API Documentation</a></li><li class="lvl-3"><a href="#inline-with-types-preferred-for-typescript">Inline with Types (Preferred for TypeScript)</a></li><li class="lvl-3"><a href="#openapi-swagger-for-rest-apis">OpenAPI / Swagger for REST APIs</a></li><li class="lvl-2"><a href="#readme-structure">README Structure</a></li><li class="lvl-2"><a href="#changelog-maintenance">Changelog Maintenance</a></li><li class="lvl-2"><a href="#documentation-for-agents">Documentation for Agents</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="documentation-and-adrs">Documentation and ADRs<a class="anchor" href="#documentation-and-adrs" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Document decisions, not just code. The most valuable documentation captures the <em>why</em> — the context, constraints, and trade-offs that led to a decision. Code shows <em>what</em> was built; documentation explains <em>why it was built this way</em> and <em>what alternatives were considered</em>. This context is essential for future humans and agents working in the codebase.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Making a significant architectural decision</li><li>Choosing between competing approaches</li><li>Adding or changing a public API</li><li>Shipping a feature that changes user-facing behavior</li><li>Onboarding new team members (or agents) to the project</li><li>When you find yourself explaining the same thing repeatedly</li></ul>
+<p><strong>When NOT to use:</strong> Don't document obvious code. Don't add comments that restate what the code already says. Don't write docs for throwaway prototypes.</p>
+<h2 id="architecture-decision-records-adrs">Architecture Decision Records (ADRs)<a class="anchor" href="#architecture-decision-records-adrs" aria-label="锚点">#</a></h2>
+<p>ADRs capture the reasoning behind significant technical decisions. They're the highest-value documentation you can write.</p>
+<h3 id="when-to-write-an-adr">When to Write an ADR<a class="anchor" href="#when-to-write-an-adr" aria-label="锚点">#</a></h3>
+<ul><li>Choosing a framework, library, or major dependency</li><li>Designing a data model or database schema</li><li>Selecting an authentication strategy</li><li>Deciding on an API architecture (REST vs. GraphQL vs. tRPC)</li><li>Choosing between build tools, hosting platforms, or infrastructure</li><li>Any decision that would be expensive to reverse</li></ul>
+<h3 id="adr-template">ADR Template<a class="anchor" href="#adr-template" aria-label="锚点">#</a></h3>
+<p>Store ADRs in <code>docs/decisions/</code> with sequential numbering:</p>
+<pre><code class="language-markdown"># ADR-001: Use PostgreSQL for primary database
+
+## Status
+Accepted | Superseded by ADR-XXX | Deprecated
+
+## Date
+2025-01-15
+
+## Context
+We need a primary database for the task management application. Key requirements:
+- Relational data model (users, tasks, teams with relationships)
+- ACID transactions for task state changes
+- Support for full-text search on task content
+- Managed hosting available (for small team, limited ops capacity)
+
+## Decision
+Use PostgreSQL with Prisma ORM.
+
+## Alternatives Considered
+
+### MongoDB
+- Pros: Flexible schema, easy to start with
+- Cons: Our data is inherently relational; would need to manage relationships manually
+- Rejected: Relational data in a document store leads to complex joins or data duplication
+
+### SQLite
+- Pros: Zero configuration, embedded, fast for reads
+- Cons: Limited concurrent write support, no managed hosting for production
+- Rejected: Not suitable for multi-user web application in production
+
+### MySQL
+- Pros: Mature, widely supported
+- Cons: PostgreSQL has better JSON support, full-text search, and ecosystem tooling
+- Rejected: PostgreSQL is the better fit for our feature requirements
+
+## Consequences
+- Prisma provides type-safe database access and migration management
+- We can use PostgreSQL's full-text search instead of adding Elasticsearch
+- Team needs PostgreSQL knowledge (standard skill, low risk)
+- Hosting on managed service (Supabase, Neon, or RDS)</code></pre>
+<h3 id="adr-lifecycle">ADR Lifecycle<a class="anchor" href="#adr-lifecycle" aria-label="锚点">#</a></h3>
+<pre><code>PROPOSED → ACCEPTED → (SUPERSEDED or DEPRECATED)</code></pre>
+<ul><li><strong>Don't delete old ADRs.</strong> They capture historical context.</li><li>When a decision changes, write a new ADR that references and supersedes the old one.</li></ul>
+<h2 id="inline-documentation">Inline Documentation<a class="anchor" href="#inline-documentation" aria-label="锚点">#</a></h2>
+<h3 id="when-to-comment">When to Comment<a class="anchor" href="#when-to-comment" aria-label="锚点">#</a></h3>
+<p>Comment the <em>why</em>, not the <em>what</em>:</p>
+<pre><code class="language-typescript">// BAD: Restates the code
+// Increment counter by 1
+counter += 1;
+
+// GOOD: Explains non-obvious intent
+// Rate limit uses a sliding window — reset counter at window boundary,
+// not on a fixed schedule, to prevent burst attacks at window edges
+if (now - windowStart &gt; WINDOW_SIZE_MS) {
+  counter = 0;
+  windowStart = now;
+}</code></pre>
+<h3 id="when-not-to-comment">When NOT to Comment<a class="anchor" href="#when-not-to-comment" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// Don't comment self-explanatory code
+function calculateTotal(items: CartItem[]): number {
+  return items.reduce((sum, item) =&gt; sum + item.price * item.quantity, 0);
+}
+
+// Don't leave TODO comments for things you should just do now
+// TODO: add error handling  ← Just add it
+
+// Don't leave commented-out code
+// const oldImplementation = () =&gt; { ... }  ← Delete it, git has history</code></pre>
+<h3 id="document-known-gotchas">Document Known Gotchas<a class="anchor" href="#document-known-gotchas" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">/**
+ * IMPORTANT: This function must be called before the first render.
+ * If called after hydration, it causes a flash of unstyled content
+ * because the theme context isn't available during SSR.
+ *
+ * See ADR-003 for the full design rationale.
+ */
+export function initializeTheme(theme: Theme): void {
+  // ...
+}</code></pre>
+<h2 id="api-documentation">API Documentation<a class="anchor" href="#api-documentation" aria-label="锚点">#</a></h2>
+<p>For public APIs (REST, GraphQL, library interfaces):</p>
+<h3 id="inline-with-types-preferred-for-typescript">Inline with Types (Preferred for TypeScript)<a class="anchor" href="#inline-with-types-preferred-for-typescript" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">/**
+ * Creates a new task.
+ *
+ * @param input - Task creation data (title required, description optional)
+ * @returns The created task with server-generated ID and timestamps
+ * @throws {ValidationError} If title is empty or exceeds 200 characters
+ * @throws {AuthenticationError} If the user is not authenticated
+ *
+ * @example
+ * const task = await createTask({ title: 'Buy groceries' });
+ * console.log(task.id); // &quot;task_abc123&quot;
+ */
+export async function createTask(input: CreateTaskInput): Promise&lt;Task&gt; {
+  // ...
+}</code></pre>
+<h3 id="openapi-swagger-for-rest-apis">OpenAPI / Swagger for REST APIs<a class="anchor" href="#openapi-swagger-for-rest-apis" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml">paths:
+  /api/tasks:
+    post:
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskInput'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '422':
+          description: Validation error</code></pre>
+<h2 id="readme-structure">README Structure<a class="anchor" href="#readme-structure" aria-label="锚点">#</a></h2>
+<p>Every project should have a README that covers:</p>
+<pre><code class="language-markdown"># Project Name
+
+One-paragraph description of what this project does.
+
+## Quick Start
+1. Clone the repo
+2. Install dependencies: `npm install`
+3. Set up environment: `cp .env.example .env`
+4. Run the dev server: `npm run dev`
+
+## Commands
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm test` | Run tests |
+| `npm run build` | Production build |
+| `npm run lint` | Run linter |
+
+## Architecture
+Brief overview of the project structure and key design decisions.
+Link to ADRs for details.
+
+## Contributing
+How to contribute, coding standards, PR process.</code></pre>
+<h2 id="changelog-maintenance">Changelog Maintenance<a class="anchor" href="#changelog-maintenance" aria-label="锚点">#</a></h2>
+<p>For shipped features:</p>
+<pre><code class="language-markdown"># Changelog
+
+## [1.2.0] - 2025-01-20
+### Added
+- Task sharing: users can share tasks with team members (#123)
+- Email notifications for task assignments (#124)
+
+### Fixed
+- Duplicate tasks appearing when rapidly clicking create button (#125)
+
+### Changed
+- Task list now loads 50 items per page (was 20) for better UX (#126)</code></pre>
+<h2 id="documentation-for-agents">Documentation for Agents<a class="anchor" href="#documentation-for-agents" aria-label="锚点">#</a></h2>
+<p>Special consideration for AI agent context:</p>
+<ul><li><strong>CLAUDE.md / rules files</strong> — Document project conventions so agents follow them</li><li><strong>Spec files</strong> — Keep specs updated so agents build the right thing</li><li><strong>ADRs</strong> — Help agents understand why past decisions were made (prevents re-deciding)</li><li><strong>Inline gotchas</strong> — Prevent agents from falling into known traps</li></ul>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;The code is self-documenting&quot;</td><td>Code shows what. It doesn't show why, what alternatives were rejected, or what constraints apply.</td></tr><tr><td>&quot;We'll write docs when the API stabilizes&quot;</td><td>APIs stabilize faster when you document them. The doc is the first test of the design.</td></tr><tr><td>&quot;Nobody reads docs&quot;</td><td>Agents do. Future engineers do. Your 3-months-later self does.</td></tr><tr><td>&quot;ADRs are overhead&quot;</td><td>A 10-minute ADR prevents a 2-hour debate about the same decision six months later.</td></tr><tr><td>&quot;Comments get outdated&quot;</td><td>Comments on <em>why</em> are stable. Comments on <em>what</em> get outdated — that's why you only write the former.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Architectural decisions with no written rationale</li><li>Public APIs with no documentation or types</li><li>README that doesn't explain how to run the project</li><li>Commented-out code instead of deletion</li><li>TODO comments that have been there for weeks</li><li>No ADRs in a project with significant architectural choices</li><li>Documentation that restates the code instead of explaining intent</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After documenting:</p>
+<ul><li>[ ] ADRs exist for all significant architectural decisions</li><li>[ ] README covers quick start, commands, and architecture overview</li><li>[ ] API functions have parameter and return type documentation</li><li>[ ] Known gotchas are documented inline where they matter</li><li>[ ] No commented-out code remains</li><li>[ ] Rules files (CLAUDE.md etc.) are current and accurate</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/deprecation-and-migration/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Deprecation and Migration</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/doubt-driven-development/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Doubt-Driven Development</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/documentation-and-adrs/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

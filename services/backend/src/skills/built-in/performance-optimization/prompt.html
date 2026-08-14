@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance Optimization · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>performance-optimization<span class="sep">›</span>Performance Optimization</div>
+      <header class="hero reveal"><h1>Performance Optimization</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#performance-optimization">Performance Optimization</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#core-web-vitals-targets">Core Web Vitals Targets</a></li><li class="lvl-2"><a href="#the-optimization-workflow">The Optimization Workflow</a></li><li class="lvl-3"><a href="#step-1-measure">Step 1: Measure</a></li><li class="lvl-3"><a href="#where-to-start-measuring">Where to Start Measuring</a></li><li class="lvl-3"><a href="#step-2-identify-the-bottleneck">Step 2: Identify the Bottleneck</a></li><li class="lvl-3"><a href="#step-3-fix-common-anti-patterns">Step 3: Fix Common Anti-Patterns</a></li><li class="lvl-2"><a href="#performance-budget">Performance Budget</a></li><li class="lvl-2"><a href="#see-also">See Also</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="performance-optimization">Performance Optimization<a class="anchor" href="#performance-optimization" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Measure before optimizing. Performance work without measurement is guessing — and guessing leads to premature optimization that adds complexity without improving what matters. Profile first, identify the actual bottleneck, fix it, measure again. Optimize only what measurements prove matters.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Performance requirements exist in the spec (load time budgets, response time SLAs)</li><li>Users or monitoring report slow behavior</li><li>Core Web Vitals scores are below thresholds</li><li>You suspect a change introduced a regression</li><li>Building features that handle large datasets or high traffic</li></ul>
+<p><strong>When NOT to use:</strong> Don't optimize before you have evidence of a problem. Premature optimization adds complexity that costs more than the performance it gains.</p>
+<h2 id="core-web-vitals-targets">Core Web Vitals Targets<a class="anchor" href="#core-web-vitals-targets" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Metric</th><th>Good</th><th>Needs Improvement</th><th>Poor</th></tr></thead><tbody><tr><td><strong>LCP</strong> (Largest Contentful Paint)</td><td>≤ 2.5s</td><td>≤ 4.0s</td><td>&gt; 4.0s</td></tr><tr><td><strong>INP</strong> (Interaction to Next Paint)</td><td>≤ 200ms</td><td>≤ 500ms</td><td>&gt; 500ms</td></tr><tr><td><strong>CLS</strong> (Cumulative Layout Shift)</td><td>≤ 0.1</td><td>≤ 0.25</td><td>&gt; 0.25</td></tr></tbody></table>
+<h2 id="the-optimization-workflow">The Optimization Workflow<a class="anchor" href="#the-optimization-workflow" aria-label="锚点">#</a></h2>
+<pre><code>1. MEASURE  → Establish baseline with real data
+2. IDENTIFY → Find the actual bottleneck (not assumed)
+3. FIX      → Address the specific bottleneck
+4. VERIFY   → Measure again, confirm improvement
+5. GUARD    → Add monitoring or tests to prevent regression</code></pre>
+<h3 id="step-1-measure">Step 1: Measure<a class="anchor" href="#step-1-measure" aria-label="锚点">#</a></h3>
+<p>Two complementary approaches — use both:</p>
+<ul><li><strong>Synthetic (Lighthouse, DevTools Performance tab):</strong> Controlled conditions, reproducible. Best for CI regression detection and isolating specific issues.</li><li><strong>RUM (web-vitals library, CrUX):</strong> Real user data in real conditions. Required to validate that a fix actually improved user experience.</li></ul>
+<p><strong>Frontend:</strong></p>
+<pre><code class="language-bash"># Synthetic: Lighthouse in Chrome DevTools (or CI)
+# Chrome DevTools → Performance tab → Record
+# Chrome DevTools MCP → Performance trace
+
+# RUM: Web Vitals library in code
+import { onLCP, onINP, onCLS } from 'web-vitals';
+
+onLCP(console.log);
+onINP(console.log);
+onCLS(console.log);</code></pre>
+<p><strong>Backend:</strong></p>
+<pre><code class="language-bash"># Response time logging
+# Application Performance Monitoring (APM)
+# Database query logging with timing
+
+# Simple timing
+console.time('db-query');
+const result = await db.query(...);
+console.timeEnd('db-query');</code></pre>
+<h3 id="where-to-start-measuring">Where to Start Measuring<a class="anchor" href="#where-to-start-measuring" aria-label="锚点">#</a></h3>
+<p>Use the symptom to decide what to measure first:</p>
+<pre><code>What is slow?
+├── First page load
+│   ├── Large bundle? --&gt; Measure bundle size, check code splitting
+│   ├── Slow server response? --&gt; Measure TTFB in DevTools Network waterfall
+│   │   ├── DNS long? --&gt; Add dns-prefetch / preconnect for known origins
+│   │   ├── TCP/TLS long? --&gt; Enable HTTP/2, check edge deployment, keep-alive
+│   │   └── Waiting (server) long? --&gt; Profile backend, check queries and caching
+│   └── Render-blocking resources? --&gt; Check network waterfall for CSS/JS blocking
+├── Interaction feels sluggish
+│   ├── UI freezes on click? --&gt; Profile main thread, look for long tasks (&gt;50ms)
+│   ├── Form input lag? --&gt; Check re-renders, controlled component overhead
+│   └── Animation jank? --&gt; Check layout thrashing, forced reflows
+├── Page after navigation
+│   ├── Data loading? --&gt; Measure API response times, check for waterfalls
+│   └── Client rendering? --&gt; Profile component render time, check for N+1 fetches
+└── Backend / API
+    ├── Single endpoint slow? --&gt; Profile database queries, check indexes
+    ├── All endpoints slow? --&gt; Check connection pool, memory, CPU
+    └── Intermittent slowness? --&gt; Check for lock contention, GC pauses, external deps</code></pre>
+<h3 id="step-2-identify-the-bottleneck">Step 2: Identify the Bottleneck<a class="anchor" href="#step-2-identify-the-bottleneck" aria-label="锚点">#</a></h3>
+<p>Common bottlenecks by category:</p>
+<p><strong>Frontend:</strong></p>
+<table><thead><tr><th>Symptom</th><th>Likely Cause</th><th>Investigation</th></tr></thead><tbody><tr><td>Slow LCP</td><td>Large images, render-blocking resources, slow server</td><td>Check network waterfall, image sizes</td></tr><tr><td>High CLS</td><td>Images without dimensions, late-loading content, font shifts</td><td>Check layout shift attribution</td></tr><tr><td>Poor INP</td><td>Heavy JavaScript on main thread, large DOM updates</td><td>Check long tasks in Performance trace</td></tr><tr><td>Slow initial load</td><td>Large bundle, many network requests</td><td>Check bundle size, code splitting</td></tr></tbody></table>
+<p><strong>Backend:</strong></p>
+<table><thead><tr><th>Symptom</th><th>Likely Cause</th><th>Investigation</th></tr></thead><tbody><tr><td>Slow API responses</td><td>N+1 queries, missing indexes, unoptimized queries</td><td>Check database query log</td></tr><tr><td>Memory growth</td><td>Leaked references, unbounded caches, large payloads</td><td>Heap snapshot analysis</td></tr><tr><td>CPU spikes</td><td>Synchronous heavy computation, regex backtracking</td><td>CPU profiling</td></tr><tr><td>High latency</td><td>Missing caching, redundant computation, network hops</td><td>Trace requests through the stack</td></tr></tbody></table>
+<h3 id="step-3-fix-common-anti-patterns">Step 3: Fix Common Anti-Patterns<a class="anchor" href="#step-3-fix-common-anti-patterns" aria-label="锚点">#</a></h3>
+<h4 id="n-1-queries-backend">N+1 Queries (Backend)<a class="anchor" href="#n-1-queries-backend" aria-label="锚点">#</a></h4>
+<pre><code class="language-typescript">// BAD: N+1 — one query per task for the owner
+const tasks = await db.tasks.findMany();
+for (const task of tasks) {
+  task.owner = await db.users.findUnique({ where: { id: task.ownerId } });
+}
+
+// GOOD: Single query with join/include
+const tasks = await db.tasks.findMany({
+  include: { owner: true },
+});</code></pre>
+<h4 id="unbounded-data-fetching">Unbounded Data Fetching<a class="anchor" href="#unbounded-data-fetching" aria-label="锚点">#</a></h4>
+<pre><code class="language-typescript">// BAD: Fetching all records
+const allTasks = await db.tasks.findMany();
+
+// GOOD: Paginated with limits
+const tasks = await db.tasks.findMany({
+  take: 20,
+  skip: (page - 1) * 20,
+  orderBy: { createdAt: 'desc' },
+});</code></pre>
+<h4 id="missing-image-optimization-frontend">Missing Image Optimization (Frontend)<a class="anchor" href="#missing-image-optimization-frontend" aria-label="锚点">#</a></h4>
+<pre><code class="language-html">&lt;!-- BAD: No dimensions, no format optimization --&gt;
+&lt;img src=&quot;/hero.jpg&quot; /&gt;
+
+&lt;!-- GOOD: Hero / LCP image — art direction + resolution switching, high priority --&gt;
+&lt;!--
+  Two techniques combined:
+  - Art direction (media): different crop/composition per breakpoint
+  - Resolution switching (srcset + sizes): right file size per screen density
+--&gt;
+&lt;picture&gt;
+  &lt;!-- Mobile: portrait crop (8:10) --&gt;
+  &lt;source
+    media=&quot;(max-width: 767px)&quot;
+    srcset=&quot;/hero-mobile-400.avif 400w, /hero-mobile-800.avif 800w&quot;
+    sizes=&quot;100vw&quot;
+    width=&quot;800&quot;
+    height=&quot;1000&quot;
+    type=&quot;image/avif&quot;
+  /&gt;
+  &lt;source
+    media=&quot;(max-width: 767px)&quot;
+    srcset=&quot;/hero-mobile-400.webp 400w, /hero-mobile-800.webp 800w&quot;
+    sizes=&quot;100vw&quot;
+    width=&quot;800&quot;
+    height=&quot;1000&quot;
+    type=&quot;image/webp&quot;
+  /&gt;
+  &lt;!-- Desktop: landscape crop (2:1) --&gt;
+  &lt;source
+    srcset=&quot;/hero-800.avif 800w, /hero-1200.avif 1200w, /hero-1600.avif 1600w&quot;
+    sizes=&quot;(max-width: 1200px) 100vw, 1200px&quot;
+    width=&quot;1200&quot;
+    height=&quot;600&quot;
+    type=&quot;image/avif&quot;
+  /&gt;
+  &lt;source
+    srcset=&quot;/hero-800.webp 800w, /hero-1200.webp 1200w, /hero-1600.webp 1600w&quot;
+    sizes=&quot;(max-width: 1200px) 100vw, 1200px&quot;
+    width=&quot;1200&quot;
+    height=&quot;600&quot;
+    type=&quot;image/webp&quot;
+  /&gt;
+  &lt;img
+    src=&quot;/hero-desktop.jpg&quot;
+    width=&quot;1200&quot;
+    height=&quot;600&quot;
+    fetchpriority=&quot;high&quot;
+    alt=&quot;Hero image description&quot;
+  /&gt;
+&lt;/picture&gt;
+
+&lt;!-- GOOD: Below-the-fold image — lazy loaded + async decoding --&gt;
+&lt;img
+  src=&quot;/content.webp&quot;
+  width=&quot;800&quot;
+  height=&quot;400&quot;
+  loading=&quot;lazy&quot;
+  decoding=&quot;async&quot;
+  alt=&quot;Content image description&quot;
+/&gt;</code></pre>
+<h4 id="unnecessary-re-renders-react">Unnecessary Re-renders (React)<a class="anchor" href="#unnecessary-re-renders-react" aria-label="锚点">#</a></h4>
+<pre><code class="language-tsx">// BAD: Creates new object on every render, causing children to re-render
+function TaskList() {
+  return &lt;TaskFilters options={{ sortBy: 'date', order: 'desc' }} /&gt;;
+}
+
+// GOOD: Stable reference
+const DEFAULT_OPTIONS = { sortBy: 'date', order: 'desc' } as const;
+function TaskList() {
+  return &lt;TaskFilters options={DEFAULT_OPTIONS} /&gt;;
+}
+
+// Use React.memo for expensive components
+const TaskItem = React.memo(function TaskItem({ task }: Props) {
+  return &lt;div&gt;{/* expensive render */}&lt;/div&gt;;
+});
+
+// Use useMemo for expensive computations
+function TaskStats({ tasks }: Props) {
+  const stats = useMemo(() =&gt; calculateStats(tasks), [tasks]);
+  return &lt;div&gt;{stats.completed} / {stats.total}&lt;/div&gt;;
+}</code></pre>
+<h4 id="large-bundle-size">Large Bundle Size<a class="anchor" href="#large-bundle-size" aria-label="锚点">#</a></h4>
+<pre><code class="language-typescript">// Modern bundlers (Vite, webpack 5+) handle named imports with tree-shaking automatically,
+// provided the dependency ships ESM and is marked `sideEffects: false` in package.json.
+// Profile before changing import styles — the real gains come from splitting and lazy loading.
+
+// GOOD: Dynamic import for heavy, rarely-used features
+const ChartLibrary = lazy(() =&gt; import('./ChartLibrary'));
+
+// GOOD: Route-level code splitting wrapped in Suspense
+const SettingsPage = lazy(() =&gt; import('./pages/Settings'));
+
+function App() {
+  return (
+    &lt;Suspense fallback={&lt;Spinner /&gt;}&gt;
+      &lt;SettingsPage /&gt;
+    &lt;/Suspense&gt;
+  );
+}</code></pre>
+<h4 id="missing-caching-backend">Missing Caching (Backend)<a class="anchor" href="#missing-caching-backend" aria-label="锚点">#</a></h4>
+<pre><code class="language-typescript">// Cache frequently-read, rarely-changed data
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+let cachedConfig: AppConfig | null = null;
+let cacheExpiry = 0;
+
+async function getAppConfig(): Promise&lt;AppConfig&gt; {
+  if (cachedConfig &amp;&amp; Date.now() &lt; cacheExpiry) {
+    return cachedConfig;
+  }
+  cachedConfig = await db.config.findFirst();
+  cacheExpiry = Date.now() + CACHE_TTL;
+  return cachedConfig;
+}
+
+// HTTP caching headers for static assets
+app.use('/static', express.static('public', {
+  maxAge: '1y',           // Cache for 1 year
+  immutable: true,        // Never revalidate (use content hashing in filenames)
+}));
+
+// Cache-Control for API responses
+res.set('Cache-Control', 'public, max-age=300'); // 5 minutes</code></pre>
+<h2 id="performance-budget">Performance Budget<a class="anchor" href="#performance-budget" aria-label="锚点">#</a></h2>
+<p>Set budgets and enforce them:</p>
+<pre><code>JavaScript bundle: &lt; 200KB gzipped (initial load)
+CSS: &lt; 50KB gzipped
+Images: &lt; 200KB per image (above the fold)
+Fonts: &lt; 100KB total
+API response time: &lt; 200ms (p95)
+Time to Interactive: &lt; 3.5s on 4G
+Lighthouse Performance score: ≥ 90</code></pre>
+<p><strong>Enforce in CI:</strong></p>
+<pre><code class="language-bash"># Bundle size check
+npx bundlesize --config bundlesize.config.json
+
+# Lighthouse CI
+npx lhci autorun</code></pre>
+<h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="锚点">#</a></h2>
+<p>For detailed performance checklists, optimization commands, and anti-pattern reference, see <code>references/performance-checklist.md</code>.</p>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;We'll optimize later&quot;</td><td>Performance debt compounds. Fix obvious anti-patterns now, defer micro-optimizations.</td></tr><tr><td>&quot;It's fast on my machine&quot;</td><td>Your machine isn't the user's. Profile on representative hardware and networks.</td></tr><tr><td>&quot;This optimization is obvious&quot;</td><td>If you didn't measure, you don't know. Profile first.</td></tr><tr><td>&quot;Users won't notice 100ms&quot;</td><td>Research shows 100ms delays impact conversion rates. Users notice more than you think.</td></tr><tr><td>&quot;The framework handles performance&quot;</td><td>Frameworks prevent some issues but can't fix N+1 queries or oversized bundles.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Optimization without profiling data to justify it</li><li>N+1 query patterns in data fetching</li><li>List endpoints without pagination</li><li>Images without dimensions, lazy loading, or responsive sizes</li><li>Bundle size growing without review</li><li>No performance monitoring in production</li><li><code>React.memo</code> and <code>useMemo</code> everywhere (overusing is as bad as underusing)</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After any performance-related change:</p>
+<ul><li>[ ] Before and after measurements exist (specific numbers)</li><li>[ ] The specific bottleneck is identified and addressed</li><li>[ ] Core Web Vitals are within &quot;Good&quot; thresholds</li><li>[ ] Bundle size hasn't increased significantly</li><li>[ ] No N+1 queries in new data fetching code</li><li>[ ] Performance budget passes in CI (if configured)</li><li>[ ] Existing tests still pass (optimization didn't break behavior)</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/pdf/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">PDF Analysis</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/performance-optimization/references/performance-checklist.html"><div class="dir">下一篇 →</div><div class="ttl">Performance Checklist</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/performance-optimization/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

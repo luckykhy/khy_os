@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-075] Agent 还原方案合成器 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-075] Agent 还原方案合成器</div>
+      <header class="hero reveal"><h1>[OPS-MAN-075] Agent 还原方案合成器</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-075-agent-还原方案合成器">[OPS-MAN-075] Agent 还原方案合成器</a></li><li class="lvl-2"><a href="#这份方案是干什么的">这份方案是干什么的</a></li><li class="lvl-2"><a href="#autonomy-判据-agent-创新点">autonomy 判据（agent 创新点）</a></li><li class="lvl-2"><a href="#还原概念-依赖顺序-自主度">还原概念 · 依赖顺序 · 自主度</a></li><li class="lvl-2"><a href="#保证-继承项目章程">保证（继承项目章程）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-075-agent-还原方案合成器">[OPS-MAN-075] Agent 还原方案合成器<a class="anchor" href="#ops-man-075-agent-还原方案合成器" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-plan.js --gen-doc</code> 确定性生成，请勿手改；<br>策略改在 <code>scripts/lib/agentRestorePlan.js</code> 的 <code>_CONCERN_POLICY</code>，再重新生成。</p></blockquote>
+<h2 id="这份方案是干什么的">这份方案是干什么的<a class="anchor" href="#这份方案是干什么的" aria-label="锚点">#</a></h2>
+<p>khyos 已有三面独立自检镜子，各照一角：</p>
+<ul><li><code>restore-check</code>（OPS-MAN-068）：这台机器能不能还原？</li><li><code>verify-install</code>（OPS-MAN-069）：已装副本完整吗？</li><li><code>hydration-doctor</code>（OPS-MAN-070）：首启水合成功了吗？</li></ul>
+<p>三面镜子症状常重叠、级别互不排序。本合成器把三者<strong>合成为一份有序、<br>去重、每步带 autonomy 分类的还原方案</strong>——一个落地在陌生机器上的 agent<br>读它就知道：哪些步骤它<strong>可以自己幂等执行</strong>，到哪一步<strong>必须停下交给人</strong>。</p>
+<pre><code class="language-bash">node scripts/restore-plan.js            # 人读
+node scripts/restore-plan.js --json     # landing agent 直接消费</code></pre>
+<h2 id="autonomy-判据-agent-创新点">autonomy 判据（agent 创新点）<a class="anchor" href="#autonomy-判据-agent-创新点" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>agent</code>（可无人值守）</strong>：修法是跑 khyos 自身的幂等命令</li></ul>
+<p>（<code>khy</code> / <code>khy doctor</code> / <code>khy update</code> / 重跑首启水合），只依赖「网络已就绪」，<br>  无需人工决策 / 提权 / 装系统软件。</p>
+<ul><li><strong><code>human</code>（须人工介入）</strong>：需装或卸系统软件、改安装位置 / 权限、</li></ul>
+<p>提供网络、或重装官方包——涉及人的决策或宿主权限，agent 必须止步升级。</p>
+<p>合成器给出 <code>firstHumanStep</code>：agent 按序执行到该步前全自动，到该步停下交人。<br>保守合并：一个概念下只要掺入任一 <code>human</code> 项，整步判 <code>human</code>（宁可多喊人，不越界代做）。</p>
+<h2 id="还原概念-依赖顺序-自主度">还原概念 · 依赖顺序 · 自主度<a class="anchor" href="#还原概念-依赖顺序-自主度" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>顺序</th><th>概念</th><th>步骤标题</th><th>自主度</th><th>确认命令</th><th>归并的镜子规则</th></tr></thead><tbody><tr><td>10</td><td><code>node-runtime</code></td><td>Node 运行时缺失或版本过低</td><td>AGENT 可自动</td><td><code>node --version</code></td><td><code>node-missing</code>、<code>portable-node-missing</code></td></tr><tr><td>15</td><td><code>npm-tool</code></td><td>npm 工具缺失</td><td>AGENT 可自动</td><td><code>npm --version</code></td><td><code>npm-missing</code></td></tr><tr><td>20</td><td><code>bundle-source</code></td><td>bundled 后端源码 / 源码快照不完整</td><td>HUMAN 需人工</td><td><code>node scripts/verify-install.js</code></td><td><code>bundle-missing</code>、<code>bundle-file-missing</code>、<code>bundle-unresolved</code>、<code>seed-missing</code></td></tr><tr><td>30</td><td><code>network-hydrate</code></td><td>离线，无法联网水合后端依赖</td><td>HUMAN 需人工</td><td><code>khy doctor</code></td><td><code>offline-no-modules</code></td></tr><tr><td>40</td><td><code>hydrate-modules</code></td><td>后端依赖 node_modules 尚未水合</td><td>AGENT 可自动</td><td><code>node scripts/hydration-doctor.js</code></td><td><code>no-node-modules</code>、<code>modules-not-hydrated</code>、<code>missing-critical-package</code></td></tr><tr><td>45</td><td><code>heal-markers</code></td><td>水合残留标记 / 断链需修复</td><td>AGENT 可自动</td><td><code>node scripts/hydration-doctor.js</code></td><td><code>shared-link-broken</code>、<code>splitbrain-marker</code></td></tr><tr><td>50</td><td><code>version-sync</code></td><td>pip / npm / backend 版本不一致</td><td>AGENT 可自动</td><td><code>khy --version</code></td><td><code>versions-drift</code></td></tr><tr><td>60</td><td><code>tar-tool</code></td><td>系统 tar 解包工具缺失</td><td>HUMAN 需人工</td><td><code>tar --version</code></td><td><code>tar-missing</code></td></tr><tr><td>65</td><td><code>writable-install</code></td><td>安装目录不可写</td><td>HUMAN 需人工</td><td><code>node scripts/restore-check.js</code></td><td><code>install-readonly</code></td></tr><tr><td>70</td><td><code>channel-redundancy</code></td><td>仅装了单条离机渠道</td><td>HUMAN 需人工</td><td><code>khy --version</code></td><td><code>single-channel</code></td></tr><tr><td>80</td><td><code>optional</code></td><td>可选组件降级</td><td>AGENT 可自动</td><td><code>node scripts/hydration-doctor.js</code></td><td><code>optional-degraded</code></td></tr></tbody></table>
+<h2 id="保证-继承项目章程">保证（继承项目章程）<a class="anchor" href="#保证-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>纯合成、零 IO、绝不抛：任何异常退化为安全空方案。</li><li>修法/确认命令绝不含 commit/push/rm/curl/publish 类危险动作；来源修法若不慎命中，隐去并强制该步交人。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-074] 首启崩溃真实原因加方法归因.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-074] 首启崩溃：真实原因 + 方法归因</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-076] 三面镜子矛盾冲突检测.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-076] 三面镜子矛盾冲突检测</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-075] Agent 还原方案合成器.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

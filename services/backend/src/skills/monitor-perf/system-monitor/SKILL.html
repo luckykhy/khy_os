@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Monitor Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>monitor-perf<span class="sep">›</span>system-monitor<span class="sep">›</span>System Monitor Skill</div>
+      <header class="hero reveal"><h1>System Monitor Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#system-monitor-skill">System Monitor Skill</a></li><li class="lvl-2"><a href="#when-to-activate">When to Activate</a></li><li class="lvl-2"><a href="#monitoring-pipeline">Monitoring Pipeline</a></li><li class="lvl-3"><a href="#step-1-quick-health-check">Step 1: Quick Health Check</a></li><li class="lvl-3"><a href="#step-2-deep-diagnostics">Step 2: Deep Diagnostics</a></li><li class="lvl-3"><a href="#step-3-khy-quant-specific">Step 3: KHY-Quant Specific</a></li><li class="lvl-3"><a href="#step-4-recommendations">Step 4: Recommendations</a></li><li class="lvl-2"><a href="#alert-thresholds">Alert Thresholds</a></li><li class="lvl-2"><a href="#cross-platform-notes">Cross-Platform Notes</a></li><li class="lvl-2"><a href="#safety-rules">Safety Rules</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: system-monitor<br>version: 1.0.0<br>description: System monitoring and performance tuning — CPU, memory, disk, network, and process metrics. Triggered when user asks about system health or performance.<br>layer: system<br>lifecycle: operations<br>category: monitor-perf<br>tags: [monitoring, performance, cpu, memory, disk, network, metrics]<br>platforms: [khy-quant, claude-code, cosh]<br>dependencies: []</p>
+<hr>
+<h1 id="system-monitor-skill">System Monitor Skill<a class="anchor" href="#system-monitor-skill" aria-label="锚点">#</a></h1>
+<p>Real-time system health monitoring and performance diagnostics.</p>
+<h2 id="when-to-activate">When to Activate<a class="anchor" href="#when-to-activate" aria-label="锚点">#</a></h2>
+<ul><li>User asks about system resource usage (CPU, memory, disk)</li><li>User reports slow performance or high load</li><li>User wants to monitor a specific process</li><li>User asks about network throughput or connections</li><li>User wants to set up alerting thresholds</li></ul>
+<h2 id="monitoring-pipeline">Monitoring Pipeline<a class="anchor" href="#monitoring-pipeline" aria-label="锚点">#</a></h2>
+<h3 id="step-1-quick-health-check">Step 1: Quick Health Check<a class="anchor" href="#step-1-quick-health-check" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># One-liner system overview
+uptime &amp;&amp; free -h &amp;&amp; df -h / &amp;&amp; echo &quot;---&quot; &amp;&amp; ps aux --sort=-%mem | head -6</code></pre>
+<h3 id="step-2-deep-diagnostics">Step 2: Deep Diagnostics<a class="anchor" href="#step-2-deep-diagnostics" aria-label="锚点">#</a></h3>
+<h4 id="cpu-analysis">CPU Analysis<a class="anchor" href="#cpu-analysis" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># Per-core utilization
+mpstat -P ALL 1 3 2&gt;/dev/null || top -bn1 | head -5
+# Top CPU consumers
+ps aux --sort=-%cpu | head -10</code></pre>
+<h4 id="memory-analysis">Memory Analysis<a class="anchor" href="#memory-analysis" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># Detailed memory breakdown
+free -h
+cat /proc/meminfo | head -20 2&gt;/dev/null
+# Top memory consumers
+ps aux --sort=-%mem | head -10</code></pre>
+<h4 id="disk-i-o">Disk I/O<a class="anchor" href="#disk-i-o" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># I/O statistics
+iostat -x 1 3 2&gt;/dev/null || df -h
+# Find large files
+du -sh /home/*/Khy-OS* 2&gt;/dev/null</code></pre>
+<h4 id="network">Network<a class="anchor" href="#network" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># Active connections
+ss -tunp | head -20
+# Network interface stats
+ip -s link 2&gt;/dev/null || netstat -i</code></pre>
+<h3 id="step-3-khy-quant-specific">Step 3: KHY-Quant Specific<a class="anchor" href="#step-3-khy-quant-specific" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Node.js process health
+pgrep -af &quot;node.*khy&quot; | head -5
+# Backend API response time
+curl -o /dev/null -s -w &quot;%{time_total}s&quot; http://localhost:3000/api/health 2&gt;/dev/null
+# Database connection check
+ls -la ~/.khyquant/data/*.db 2&gt;/dev/null</code></pre>
+<h3 id="step-4-recommendations">Step 4: Recommendations<a class="anchor" href="#step-4-recommendations" aria-label="锚点">#</a></h3>
+<p>Based on findings, suggest:</p>
+<ul><li>Resource bottlenecks and fixes</li><li>Process optimization (restart, reconfigure)</li><li>Capacity planning advice</li></ul>
+<h2 id="alert-thresholds">Alert Thresholds<a class="anchor" href="#alert-thresholds" aria-label="锚点">#</a></h2>
+<ul><li>CPU &gt; 80% sustained: warning</li><li>Memory &gt; 85%: warning</li><li>Disk &gt; 90%: critical</li><li>Load average &gt; 2x CPU cores: warning</li></ul>
+<h2 id="cross-platform-notes">Cross-Platform Notes<a class="anchor" href="#cross-platform-notes" aria-label="锚点">#</a></h2>
+<ul><li>Linux: full /proc, systemd, ss support</li><li>macOS: use <code>vm_stat</code>, <code>diskutil</code>, <code>lsof</code></li><li>Windows: use <code>Get-Process</code>, <code>Get-Counter</code>, <code>wmic</code></li></ul>
+<h2 id="safety-rules">Safety Rules<a class="anchor" href="#safety-rules" aria-label="锚点">#</a></h2>
+<ul><li>Read-only operations only — never kill processes without confirmation</li><li>Respect user privacy — do not inspect process arguments that may contain secrets</li><li>Use <code>-n</code> / <code>--no-dns</code> flags to avoid slow DNS lookups</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/evals/README.html"><div class="dir">← 上一篇</div><div class="ttl">Skill Eval Baseline</div></a><a class="next" href="../../../../../../services/backend/src/skills/quant/quant-analysis/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Quantitative Analysis Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/monitor-perf/system-monitor/SKILL.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

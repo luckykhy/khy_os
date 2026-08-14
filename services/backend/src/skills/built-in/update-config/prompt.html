@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Update Config — Configuration File Manager · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>update-config<span class="sep">›</span>Update Config — Configuration File Manager</div>
+      <header class="hero reveal"><h1>Update Config — Configuration File Manager</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#update-config-configuration-file-manager">Update Config — Configuration File Manager</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#supported-configuration-files">Supported Configuration Files</a></li><li class="lvl-3"><a href="#claude-md-project-instructions">CLAUDE.md (Project Instructions)</a></li><li class="lvl-3"><a href="#settings-json-claude-code-settings">settings.json (Claude Code Settings)</a></li><li class="lvl-3"><a href="#hooks-json-automation-hooks">hooks.json (Automation Hooks)</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="update-config-configuration-file-manager">Update Config — Configuration File Manager<a class="anchor" href="#update-config-configuration-file-manager" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>Guide the user through updating project or global configuration files such as CLAUDE.md, settings.json, and hooks.json.</p>
+<h2 id="supported-configuration-files">Supported Configuration Files<a class="anchor" href="#supported-configuration-files" aria-label="锚点">#</a></h2>
+<h3 id="claude-md-project-instructions">CLAUDE.md (Project Instructions)<a class="anchor" href="#claude-md-project-instructions" aria-label="锚点">#</a></h3>
+<ul><li><strong>Location</strong>: Project root (<code>./CLAUDE.md</code>) or user home (<code>~/.claude/CLAUDE.md</code>)</li><li><strong>Purpose</strong>: Persistent instructions that are loaded into every conversation</li><li><strong>Format</strong>: Markdown with clear sections and bullet points</li><li><strong>Common updates</strong>: Coding conventions, project architecture notes, tool preferences</li></ul>
+<h3 id="settings-json-claude-code-settings">settings.json (Claude Code Settings)<a class="anchor" href="#settings-json-claude-code-settings" aria-label="锚点">#</a></h3>
+<ul><li><strong>Location</strong>: <code>~/.claude/settings.json</code> (global) or <code>.claude/settings.json</code> (project)</li><li><strong>Purpose</strong>: Configure Claude Code behavior, permissions, and MCP servers</li><li><strong>Key fields</strong>:<ul><li><code>permissions</code>: Allowed and denied tool patterns</li><li><code>env</code>: Environment variables</li><li><code>mcpServers</code>: MCP server configurations</li></ul></li></ul>
+<h3 id="hooks-json-automation-hooks">hooks.json (Automation Hooks)<a class="anchor" href="#hooks-json-automation-hooks" aria-label="锚点">#</a></h3>
+<ul><li><strong>Location</strong>: <code>.claude/hooks.json</code></li><li><strong>Purpose</strong>: Define automated actions triggered by events</li><li><strong>Events</strong>: <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Notification</code>, <code>Stop</code></li><li><strong>Format</strong>: Array of hook objects with <code>event</code>, <code>pattern</code>, and <code>command</code></li></ul>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Identify</strong>: Ask what the user wants to configure (or infer from context).</li><li><strong>Read Current</strong>: Read the existing config file to understand current state.</li><li><strong>Propose Change</strong>: Show the specific edit that will be made.</li><li><strong>Apply</strong>: After user confirmation, apply the change using Edit tool.</li><li><strong>Verify</strong>: Read the file back to confirm the change was applied correctly.</li></ol>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Always read the file before modifying it to avoid overwriting existing settings.</li><li>Use Edit tool for targeted changes, not Write tool for full rewrites.</li><li>Validate JSON syntax before writing settings.json or hooks.json.</li><li>Warn the user if a change might affect security (e.g., broadening permissions).</li><li>Back up the original content in the conversation in case rollback is needed.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/test-driven-development/references/testing-patterns.html"><div class="dir">← 上一篇</div><div class="ttl">Testing Patterns Reference</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/using-agent-skills/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Using Agent Skills</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/update-config/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

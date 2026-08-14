@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stage 2: Architecture Design · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingTemplates<span class="sep">›</span>Stage 2: Architecture Design</div>
+      <header class="hero reveal"><h1>Stage 2: Architecture Design</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#stage-2-architecture-design">Stage 2: Architecture Design</a></li><li class="lvl-2"><a href="#objective">Objective</a></li><li class="lvl-2"><a href="#inputs">Inputs</a></li><li class="lvl-2"><a href="#steps">Steps</a></li><li class="lvl-2"><a href="#output">Output</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="stage-2-architecture-design">Stage 2: Architecture Design<a class="anchor" href="#stage-2-architecture-design" aria-label="锚点">#</a></h1>
+<h2 id="objective">Objective<a class="anchor" href="#objective" aria-label="锚点">#</a></h2>
+<p>Design the CLI command structure, state model, and output format based on the SOP analysis.</p>
+<h2 id="inputs">Inputs<a class="anchor" href="#inputs" aria-label="锚点">#</a></h2>
+<ul><li><code>&lt;SOFTWARE&gt;.md</code> from Stage 1</li></ul>
+<h2 id="steps">Steps<a class="anchor" href="#steps" aria-label="锚点">#</a></h2>
+<ol><li><strong>Design Command Groups</strong> — map each workflow to a Click/Commander command group:</li></ol>
+<pre><code>   cli-anything-&lt;SOFTWARE&gt;
+   ├── project    (create, open, save, close, info)
+   ├── &lt;domain1&gt;  (domain-specific commands)
+   ├── &lt;domain2&gt;  (domain-specific commands)
+   ├── export     (render, compile, convert)
+   └── session    (undo, redo, history, snapshot)</code></pre>
+<ol><li><strong>Design State Model</strong>:<ul><li>What is the &quot;project&quot; concept? (file, workspace, session)</li><li>What state changes between commands? (selections, settings, layers)</li><li>Deep-copy undo/redo: each command snapshots state before execution</li></ul></li></ol>
+<ol><li><strong>Design Output Format</strong>:<ul><li>Human-readable: clear terminal output with color hints</li><li>JSON (<code>--json</code>): structured output for agent consumption</li></ul></li></ol>
+<pre><code class="language-json">   {
+     &quot;status&quot;: &quot;success|error&quot;,
+     &quot;command&quot;: &quot;&lt;command.subcommand&gt;&quot;,
+     &quot;data&quot;: { ... },
+     &quot;metadata&quot;: { &quot;duration_ms&quot;: 123, &quot;software_version&quot;: &quot;x.y.z&quot; }
+   }</code></pre>
+<ol><li><strong>Design Backend Calls</strong>:<ul><li>Map each command to specific software invocations</li><li>Define subprocess timeout per command category</li><li>Define error detection patterns (exit codes, stderr patterns)</li></ul></li></ol>
+<ol><li><strong>Generate <code>architecture.json</code></strong>:</li></ol>
+<pre><code class="language-json">   {
+     &quot;commandGroups&quot;: [...],
+     &quot;stateModel&quot;: {...},
+     &quot;outputFormat&quot;: {...},
+     &quot;backendCalls&quot;: [...]
+   }</code></pre>
+<h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
+<ul><li><code>architecture.json</code> — the complete design specification</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_1_ANALYZE.html"><div class="dir">← 上一篇</div><div class="ttl">Stage 1: Codebase Analysis</div></a><a class="next" href="../../../../../services/backend/src/data/cliAnythingTemplates/STAGE_3_IMPLEMENT.html"><div class="dir">下一篇 →</div><div class="ttl">Stage 3: Implementation</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingTemplates/STAGE_2_DESIGN.html";</script>
+<script src="../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

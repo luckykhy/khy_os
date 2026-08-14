@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khy 发布工具包 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>khy 发布工具包</div>
+      <header class="hero reveal"><h1>khy 发布工具包</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-发布工具包">khy 发布工具包</a></li><li class="lvl-2"><a href="#钩子-到处都用">钩子（到处都用）</a></li><li class="lvl-2"><a href="#起飞前清单-在任何地方发帖之前做">起飞前清单（在任何地方发帖之前做）</a></li><li class="lvl-2"><a href="#上线当天序列-时机很重要">上线当天序列（时机很重要）</a></li><li class="lvl-2"><a href="#标题-a-b-选项-凭直觉选">标题 A/B 选项（凭直觉选）</a></li><li class="lvl-2"><a href="#什么会毁掉一次上线-要避免">什么会毁掉一次上线（要避免）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-发布工具包">khy 发布工具包<a class="anchor" href="#khy-发布工具包" aria-label="锚点">#</a></h1>
+<p>把 khy 从「已推到 GitHub」带到「登上首页」所需的一切。这些都是草稿——<br>把口吻改成你自己的，但结构是按各平台实际奖励什么样的帖子而调校过的。</p>
+<blockquote><p><strong>关于「病毒式传播」的唯一实话：</strong> 你无法<em>强求</em>它，但你可以<br>消除一个项目<em>传不开</em>的每一个理由。一份出色的 README、一段 30 秒的<br>「惊叹」、零摩擦的安装，以及一个人们愿意复述的故事。khy 有实质<br>（一个人做的 AI 原生 OS）。这个工具包让实质变得可读。</p></blockquote>
+<h2 id="钩子-到处都用">钩子（到处都用）<a class="anchor" href="#钩子-到处都用" aria-label="锚点">#</a></h2>
+<blockquote><p>**一个人做的 AI 原生 OS：手写内核 + Claude-Code 级智能体</p>
+<ul><li>16 后端 AI 网关，一次 <code>pip install</code> 即得。**</li></ul></blockquote>
+<p>「这一切都是一个人做出来的」这个角度，就是传播机制。人们分享的是<br><em>奇观</em>和<em>故事</em>，不是功能清单。</p>
+<h2 id="起飞前清单-在任何地方发帖之前做">起飞前清单（在任何地方发帖之前做）<a class="anchor" href="#起飞前清单-在任何地方发帖之前做" aria-label="锚点">#</a></h2>
+<ul><li>[ ] <strong>录好演示</strong>（<code>docs/06_DEPLOY_部署/[DEPLOY-MAN-001] DEMO.md</code>）→ 提交 <code>assets/demo.gif</code>。没有</li></ul>
+<p>演示 = 只能拿到一小部分 star。这是杠杆最大的单项。</p>
+<ul><li>[ ] 把 README 徽章里的 GitHub slug <code>kodehu03/khy-os</code> 换成真实的。</li><li>[ ] 设置 GitHub 仓库 <strong>About</strong>：描述 + topics（<code>docs/06_DEPLOY_部署/[DEPLOY-MAN-006] REPO_META.md</code>）。</li><li>[ ] 上传一张<strong>社交预览图</strong>（Settings → Social preview）——用 banner。</li><li>[ ] 验证 <code>pip install khy-os</code> 与 <code>npm i -g @khy-os/khy-os</code> 在干净机器上可用。</li><li>[ ] 打开 <strong>Discussions</strong>；预置 1–2 个起始话题。</li><li>[ ] 从 git remote 里<strong>清除泄露的 GitLab token</strong>（见仓库安全说明）。</li><li>[ ] 确保 CI 为绿，这样徽章才会绿。</li></ul>
+<h2 id="上线当天序列-时机很重要">上线当天序列（时机很重要）<a class="anchor" href="#上线当天序列-时机很重要" aria-label="锚点">#</a></h2>
+<ol><li><strong>周二–周四，约 08:00 ET</strong>——Hacker News 与 Reddit 流量的最佳窗口。</li><li>先发 <strong>Show HN</strong>（<code>docs/06_DEPLOY_部署/[DEPLOY-MAN-007] SHOW_HN.md</code>）。守在电脑前 3–4</li></ol>
+<p>小时，快速回复每一条评论——早期互动决定排名。</p>
+<ol><li>约 2 小时后，发到 <strong>r/programming</strong> + <strong>r/LocalLLaMA</strong></li></ol>
+<p>（<code>docs/06_DEPLOY_部署/[DEPLOY-MAN-005] REDDIT.md</code>）。不要同时交叉发帖；错开时间。</p>
+<ol><li>发 <strong>X/Twitter 长推</strong>（<code>docs/06_DEPLOY_部署/[DEPLOY-MAN-008] TWITTER.md</code>）并置顶。</li><li>可选：把 <strong>Product Hunt</strong> 排到下一个周二</li></ol>
+<p>（<code>docs/06_DEPLOY_部署/[DEPLOY-MAN-002] PRODUCT_HUNT.md</code>）。</p>
+<h2 id="标题-a-b-选项-凭直觉选">标题 A/B 选项（凭直觉选）<a class="anchor" href="#标题-a-b-选项-凭直觉选" aria-label="锚点">#</a></h2>
+<ul><li>&quot;Show HN: khy – a one-person AI-native OS (hand-written kernel + agentic CLI)&quot;</li><li>&quot;Show HN: I built an OS where the terminal is an AI agent&quot;</li><li>&quot;Show HN: khy – Claude Code, a 16-backend gateway, and a real kernel, in one install&quot;</li></ul>
+<h2 id="什么会毁掉一次上线-要避免">什么会毁掉一次上线（要避免）<a class="anchor" href="#什么会毁掉一次上线-要避免" aria-label="锚点">#</a></h2>
+<ul><li>没有演示。（先修这个。）</li><li>过度宣称。HN 会对「OS」和「Claude-Code 级」施加压力测试——保留 README</li></ul>
+<p>里已有的「QEMU 已测试 / 实验性」这些限定说明。</p>
+<ul><li>发完就消失。头一小时的回复比帖子本身更重要。</li><li>在帖子正文里乞讨 star。让作品自己去要。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-003] PUBLISHING.html"><div class="dir">← 上一篇</div><div class="ttl">把 khy 发布到 GitHub —— 起飞前检查</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-005] REDDIT.html"><div class="dir">下一篇 →</div><div class="ttl">Reddit 文案草稿</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-004] README.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

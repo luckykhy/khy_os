@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>网关 IDE 适配器「可用」状态严格化修复（必须本地安装且登录） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>网关 IDE 适配器「可用」状态严格化修复（必须本地安装且登录）</div>
+      <header class="hero reveal"><h1>网关 IDE 适配器「可用」状态严格化修复（必须本地安装且登录）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#网关-ide-适配器-可用-状态严格化修复-必须本地安装且登录">网关 IDE 适配器「可用」状态严格化修复（必须本地安装且登录）</a></li><li class="lvl-2"><a href="#概述">概述</a></li><li class="lvl-2"><a href="#一-现象">一、现象</a></li><li class="lvl-2"><a href="#二-根因-已读源码确认">二、根因（已读源码确认）</a></li><li class="lvl-3"><a href="#根因-1-可用性只看-有没有-token-从不-and-安装检测">根因 1：可用性只看「有没有 token」，从不 AND 安装检测</a></li><li class="lvl-3"><a href="#根因-2-模块级-available-缓存陈旧">根因 2：模块级 `_available` 缓存陈旧</a></li><li class="lvl-2"><a href="#三-修复架构">三、修复架构</a></li><li class="lvl-3"><a href="#单一真源分类器-idetokenmixin-js">单一真源分类器 — `_ideTokenMixin.js`</a></li><li class="lvl-3"><a href="#四个-ide-适配器套用同一模式-cursor-windsurf-trae-kiro">四个 IDE 适配器套用同一模式（cursor / windsurf / trae / kiro）</a></li><li class="lvl-3"><a href="#warp-重写-warpadapter-js">Warp 重写 — `warpAdapter.js`</a></li><li class="lvl-3"><a href="#陈旧缓存修复-同步-getstatus-路径">陈旧缓存修复（同步 getStatus 路径）</a></li><li class="lvl-3"><a href="#trae-文案诚实化">trae 文案诚实化</a></li><li class="lvl-2"><a href="#四-文件改动">四、文件改动</a></li><li class="lvl-2"><a href="#五-opt-in-开关与回滚">五、opt-in 开关与回滚</a></li><li class="lvl-2"><a href="#六-零回归保证">六、零回归保证</a></li><li class="lvl-2"><a href="#七-验证">七、验证</a></li><li class="lvl-3"><a href="#新增测试套件-39-用例全绿">新增测试套件（39 用例全绿）</a></li><li class="lvl-3"><a href="#手动-e2e-本机无任何-ide">手动 E2E（本机无任何 IDE）</a></li><li class="lvl-3"><a href="#回归">回归</a></li><li class="lvl-2"><a href="#八-备注">八、备注</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-010 | 阶段: 实现 | 原路径: docs/修复记录/网关适配器可用性严格化-本地安装与登录-2026-06-10.md --&gt;</p>
+<h1 id="网关-ide-适配器-可用-状态严格化修复-必须本地安装且登录">网关 IDE 适配器「可用」状态严格化修复（必须本地安装且登录）<a class="anchor" href="#网关-ide-适配器-可用-状态严格化修复-必须本地安装且登录" aria-label="锚点">#</a></h1>
+<p>修复日期：2026-06-10 · 分支：feat/workflow-provider-export-and-mcp</p>
+<hr>
+<h2 id="概述">概述<a class="anchor" href="#概述" aria-label="锚点">#</a></h2>
+<p>网关状态面板把 <strong>Cursor / Windsurf / Warp</strong> 显示为「可用」，但这些 IDE 本机根本<br>没有安装。「可用」必须如实反映本地真实状态，否则用户会被误导去选用一个发不出请求<br>的通道。</p>
+<p>本次将适配器可用性判定收紧为严格语义：</p>
+<pre><code>available = 本地已安装(installedLocally) &amp;&amp; 本地真实登录(hasGenuineLocalLogin)</code></pre>
+<p>导入 / 账号池（Nirvana 换号缓存、pool）凭证单独存在<strong>不再</strong>算「可用」，仅经显式<br>开关 <code>KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS=1</code> 恢复旧行为。Warp 必须有真实<br>Warp 登录态——剪贴板工具（xclip/pbcopy）只是传输手段，不再作为可用性门槛。</p>
+<blockquote><p><strong>路由 / 请求路径不变</strong>：pool / 导入 token 仍可驱动实际请求；本次只把「能发请求」<br>与「本地是否可用」解耦，仅改可用性 / 显示判定。</p></blockquote>
+<hr>
+<h2 id="一-现象">一、现象<a class="anchor" href="#一-现象" aria-label="锚点">#</a></h2>
+<p>在未安装任何 IDE 的机器上打开网关状态面板：</p>
+<ul><li>Cursor / Windsurf / Warp 显示「可用」——明显错误。</li></ul>
+<p>用户反馈原话：</p>
+<blockquote><p>cursor,windsurf,warp 这些 ide 都没有安装为什么显示可用这是不对的</p></blockquote>
+<hr>
+<h2 id="二-根因-已读源码确认">二、根因（已读源码确认）<a class="anchor" href="#二-根因-已读源码确认" aria-label="锚点">#</a></h2>
+<h3 id="根因-1-可用性只看-有没有-token-从不-and-安装检测">根因 1：可用性只看「有没有 token」，从不 AND 安装检测<a class="anchor" href="#根因-1-可用性只看-有没有-token-从不-and-安装检测" aria-label="锚点">#</a></h3>
+<ul><li><strong>cursor</strong> <code>detect()</code>：<code>_available = !!(_token &amp;&amp; hasTokenShape)</code>，且保留 <code>pool:</code></li></ul>
+<p>来源 token 使其长期可用。</p>
+<ul><li><strong>windsurf</strong> <code>detect()</code>：算出了 <code>_installPath</code> 却没用，<code>_available = !!_token</code>。</li><li><strong>trae</strong> <code>detect()</code>：token 可能来自 Nirvana 换号缓存（<code>TRAE_STORAGE_PATHS</code> /</li></ul>
+<p><code>NIRVANA_TRAE_CACHE_PATHS</code> 混合了原生与导入路径）。</p>
+<ul><li><strong>kiro</strong> <code>detect()</code>：后台 pool token 直接翻转 <code>_available = true</code>，无任何开关。</li><li><strong>warp</strong> <code>detect()</code>：<code>= clipboardRelayAdapter.detect()</code>——只要有 xclip/pbcopy</li></ul>
+<p>就算可用，与 Warp 是否安装 / 登录毫无关系。</p>
+<h3 id="根因-2-模块级-available-缓存陈旧">根因 2：模块级 <code>_available</code> 缓存陈旧<a class="anchor" href="#根因-2-模块级-available-缓存陈旧" aria-label="锚点">#</a></h3>
+<p>只有 <code>destroy()</code> / <code>refreshAdapters()</code> / 强制 <code>detect(true)</code> 才会重置；<br>credentialWatcher 只往 pool 写 token，从不重置适配器缓存。<br><code>aiGateway.getStatus()</code> 同步聚合各适配器 <code>getStatus()</code>，直接返回陈旧 <code>_available</code>。</p>
+<hr>
+<h2 id="三-修复架构">三、修复架构<a class="anchor" href="#三-修复架构" aria-label="锚点">#</a></h2>
+<h3 id="单一真源分类器-idetokenmixin-js">单一真源分类器 — <code>_ideTokenMixin.js</code><a class="anchor" href="#单一真源分类器-idetokenmixin-js" aria-label="锚点">#</a></h3>
+<p>新增并导出 4 个助手，作为所有适配器共享的唯一判定来源：</p>
+<ul><li><code>allowImportedCredentials()</code>：<strong>唯一</strong>读取 <code>KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS</code></li></ul>
+<p>的地方（默认 OFF=严格），适配器不得直接读 <code>process.env</code>。</p>
+<ul><li><code>classifyTokenSource(token)</code> → <code>'local' | 'pool' | 'nirvana'</code>，复用各</li></ul>
+<p><code>readXToken()</code> 已写入的 <code>source</code> / <code>path</code> 字段：</p>
+<ul><li><code>pool</code>：<code>source</code> 以 <code>pool:</code> 开头；</li><li><code>nirvana</code>：<code>source</code> ∈ {<code>nirvana-cache</code>,<code>nirvana</code>} 或 <code>path</code> 命中 Nirvana 路径；</li><li><code>local</code>：其余（原生 IDE 存储）。</li></ul>
+<p><code>isNativeLoginToken(token) || (allowImportedCredentials() &amp;&amp; isLikelyCredentialToken(accessToken))</code>。</p>
+<blockquote><p><strong>设计要点</strong>：从 IDE <strong>自身原生存储</strong>读到的 token 即「真实登录」凭据——它本身<br>已是「安装 + 登录」的权威证明，故 <code>isNativeLoginToken</code> 命中时短路为可用，无需再<br>二次 <code>ideDetector</code> 校验。导入 / 池凭证则必须额外满足开关。</p></blockquote>
+<h3 id="四个-ide-适配器套用同一模式-cursor-windsurf-trae-kiro">四个 IDE 适配器套用同一模式（cursor / windsurf / trae / kiro）<a class="anchor" href="#四个-ide-适配器套用同一模式-cursor-windsurf-trae-kiro" aria-label="锚点">#</a></h3>
+<pre><code class="language-js">function _computeAvailable(token) {
+  if (isNativeLoginToken(token)) return true;          // 原生登录=权威证明
+  return _installed() &amp;&amp; countsTowardAvailability(token); // 否则须本地安装+开关
+}</code></pre>
+<ul><li><code>_installed()</code> → <code>ideDetector.findInstallation(name) || findDataPath(name)</code>。</li><li>收紧「纯 pool 来源即可用」分支；<strong>保留</strong> <code>_token</code> 赋值供 <code>generate()</code> / 请求使用。</li><li><code>detectAsync()</code> 仍可用 pool token 路由，但其上报的<strong>可用布尔值</strong>必须过</li></ul>
+<p><code>countsTowardAvailability</code>。</p>
+<h3 id="warp-重写-warpadapter-js">Warp 重写 — <code>warpAdapter.js</code><a class="anchor" href="#warp-重写-warpadapter-js" aria-label="锚点">#</a></h3>
+<ul><li>新增只读、不写 pool 的 <code>accountPool.detectWarpLocalLogin()</code>，内部复用</li></ul>
+<p><code>importWarpCandidates()</code>（已读 <code>WARP_STORAGE_PATHS</code> 并提取<br>  <code>warpAuth.accessToken</code> / email / expiresAt），返回 <code>{installed, hasLogin, email}</code>，<br>  保持 <code>WARP_STORAGE_PATHS</code> 单一真源。</p>
+<ul><li><code>detect()</code>：<code>_available = installed &amp;&amp; hasLogin</code>；剪贴板中继降级为</li></ul>
+<p><code>transport: 'clipboard-relay'</code> 标注，不再作为门槛。</p>
+<ul><li><code>getStatus()</code> 三态文案：已登录（剪贴板可用 / 不可用）、已安装未登录、未安装。</li></ul>
+<h3 id="陈旧缓存修复-同步-getstatus-路径">陈旧缓存修复（同步 getStatus 路径）<a class="anchor" href="#陈旧缓存修复-同步-getstatus-路径" aria-label="锚点">#</a></h3>
+<p>每个适配器 <code>getStatus()</code> 改为 <code>detect(true)</code> <strong>同步重算</strong>——<br><code>findInstallation||findDataPath</code>（廉价 <code>fs.existsSync</code>）+ 原生 <code>readXToken()</code>。<br>安装 / 登录消失即刻降级为不可用，绕开 60s <code>_detectCache</code>。</p>
+<h3 id="trae-文案诚实化">trae 文案诚实化<a class="anchor" href="#trae-文案诚实化" aria-label="锚点">#</a></h3>
+<p>trae <code>getStatus()</code> 的「已安装 / 未安装」判定改用严格 <code>ideDetector</code> 信号<br>（<code>_traeStrictInstalled()</code>），不再被 Nirvana 换号缓存污染的 <code>detectInstallation()</code><br>误报「已安装」。</p>
+<hr>
+<h2 id="四-文件改动">四、文件改动<a class="anchor" href="#四-文件改动" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>src/services/gateway/adapters/_ideTokenMixin.js</code></td><td>新增并导出 4 个共享助手（开关 + 来源分类 + 可用性判定），单一真源</td></tr><tr><td><code>src/services/gateway/adapters/cursorAdapter.js</code></td><td><code>detect()</code> / <code>getStatus()</code> 套用严格模式 + 同步重算</td></tr><tr><td><code>src/services/gateway/adapters/windsurfAdapter.js</code></td><td>启用 <code>_installPath</code>，<code>detect()</code> 套用 <code>_computeAvailable</code></td></tr><tr><td><code>src/services/gateway/adapters/traeAdapter.js</code></td><td><code>detect()</code> 区分原生 / Nirvana；<code>getStatus()</code> 文案改用严格安装信号</td></tr><tr><td><code>src/services/gateway/adapters/kiroAdapter.js</code></td><td>后台 pool 可用性加开关 + 安装门控；<code>getStatus()</code> 同步重算</td></tr><tr><td><code>src/services/gateway/adapters/warpAdapter.js</code></td><td>重写 detect / getStatus（真实安装+登录，剪贴板仅传输）</td></tr><tr><td><code>src/services/accountPool.js</code></td><td>新增只读导出 <code>detectWarpLocalLogin()</code></td></tr></tbody></table>
+<hr>
+<h2 id="五-opt-in-开关与回滚">五、opt-in 开关与回滚<a class="anchor" href="#五-opt-in-开关与回滚" aria-label="锚点">#</a></h2>
+<ul><li><code>KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS</code>：默认 <strong>OFF = 严格</strong>。</li><li>仅经 <code>allowImportedCredentials()</code> 读取（单一真源）。设为 <code>1</code> / <code>true</code> / <code>on</code> / <code>yes</code></li></ul>
+<p>→ pool / 导入 token 计入可用，<strong>恢复旧行为</strong>（即回滚路径）。</p>
+<ul><li>与现有 <code>{PREFIX}_TOKEN_PRIORITY</code>（仅排序路由候选）相互独立。</li></ul>
+<hr>
+<h2 id="六-零回归保证">六、零回归保证<a class="anchor" href="#六-零回归保证" aria-label="锚点">#</a></h2>
+<ul><li>行为变更受开关控制，默认严格；路由 / generate 路径不动，pool token 仍用于请求。</li><li>新检测均为同步 <code>fs.existsSync</code> + 适配器已有读取，性能开销可忽略。</li></ul>
+<hr>
+<h2 id="七-验证">七、验证<a class="anchor" href="#七-验证" aria-label="锚点">#</a></h2>
+<p>仓库根 <code>/home/kodehu03/Khy-OS</code> 运行（<strong>勿用</strong> <code>npx jest</code> / <code>jest</code> bin，rtk 钩子会报<br><code>Exec format error</code>）：</p>
+<pre><code>node node_modules/jest-cli/bin/jest.js --rootDir services/backend &lt;pattern&gt;</code></pre>
+<h3 id="新增测试套件-39-用例全绿">新增测试套件（39 用例全绿）<a class="anchor" href="#新增测试套件-39-用例全绿" aria-label="锚点">#</a></h3>
+<ul><li><code>tests/gateway/strictAvailability.test.js</code>（24）——共享分类器全矩阵：开关解析、</li></ul>
+<p>local/pool/nirvana 分类、原生登录、导入凭证开关开 / 关。</p>
+<ul><li><code>tests/gateway/warpAdapter.strictAvailability.test.js</code>（5）——未装 / 已装未登录 /</li></ul>
+<p>已登录 / 剪贴板缺失 / 登出后 getStatus 同步降级。</p>
+<ul><li><code>tests/gateway/cursorAdapter.strictAvailability.test.js</code>（4，代表四个 IDE 适配器）</li></ul>
+<p>——已装+原生登录可用、干净机不可用、已装未登录不可用、原生 token 为安装权威证明。</p>
+<h3 id="手动-e2e-本机无任何-ide">手动 E2E（本机无任何 IDE）<a class="anchor" href="#手动-e2e-本机无任何-ide" aria-label="锚点">#</a></h3>
+<pre><code>warp     =&gt; available: false | 未检测到 Warp 安装
+cursor   =&gt; available: false | 未检测到 Cursor 安装
+windsurf =&gt; available: false | 未检测到 Windsurf 安装或 token
+trae     =&gt; available: false | 未检测到 Trae 安装
+kiro     =&gt; available: false | 未检测到 Kiro token …</code></pre>
+<p>——用户原始投诉（cursor / windsurf / warp 显示可用）已解决。</p>
+<h3 id="回归">回归<a class="anchor" href="#回归" aria-label="锚点">#</a></h3>
+<p>相关网关套件全过。<code>tests/gateway</code> 目录中 5 个失败套件（7 用例：<br><code>gatewayDebugPrompt</code> / <code>gatewayStatus.endpointVisibility</code> /<br><code>gatewayStatus.preferredAdapterHint</code> / <code>gateway/aiGateway.exports</code> /<br><code>gatewayManage.portDrift.integration</code>）经 <code>git stash</code> 验证在 HEAD 上<strong>同样失败</strong>，<br>属预存问题，与本次改动无关。<strong>本次零回归。</strong></p>
+<hr>
+<h2 id="八-备注">八、备注<a class="anchor" href="#八-备注" aria-label="锚点">#</a></h2>
+<ul><li>测试陷阱：<code>CURSOR_STORAGE_PATHS</code> / <code>CURSOR_DB_PATHS</code> 等 env 覆盖在模块加载期</li></ul>
+<p>并入路径表，故 cursor 适配器测试须<strong>在 require 之前</strong>设置；并 <code>jest.doMock</code><br>  <code>ideDetector</code> 以确定性控制安装态。</p>
+<ul><li>可选未做（§5b）：在 <code>credentialWatcherService</code> 检测到本地登录文件增删后调用</li></ul>
+<p><code>aiGateway.invalidateDetectCache(provider)</code> 更快反映真实登录——严格默认下 pool<br>  写入不改可用性，仅为体验优化、非正确性必需。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-009] 特性访问与代理解耦-2026-06-01.html"><div class="dir">← 上一篇</div><div class="ttl">Feature Access 收口与代理/登录解耦修复记录</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-011] 航天级重构白皮书-2026-06-10.html"><div class="dir">下一篇 →</div><div class="ttl">《Khyos 12 小时重构白皮书》</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-010] 网关适配器可用性严格化-本地安装与登录-2026-06-10.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

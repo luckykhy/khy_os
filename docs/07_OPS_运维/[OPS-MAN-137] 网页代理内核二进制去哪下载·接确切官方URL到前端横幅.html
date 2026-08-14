@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-137] 网页代理内核二进制去哪下载 · 把确切官方 URL 接到前端横幅 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-137] 网页代理内核二进制去哪下载 · 把确切官方 URL 接到前端横幅</div>
+      <header class="hero reveal"><h1>[OPS-MAN-137] 网页代理内核二进制去哪下载 · 把确切官方 URL 接到前端横幅</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-137-网页代理内核二进制去哪下载-把确切官方-url-接到前端横幅">[OPS-MAN-137] 网页代理内核二进制去哪下载 · 把确切官方 URL 接到前端横幅</a></li><li class="lvl-2"><a href="#断桥-真实缺口">断桥(真实缺口)</a></li><li class="lvl-2"><a href="#修法-全-additive-门-khy-proxy-core-download-hint-default-on">修法(全 additive,门 `KHY_PROXY_CORE_DOWNLOAD_HINT` default-on)</a></li><li class="lvl-2"><a href="#验证门-全绿">验证门(全绿)</a></li><li class="lvl-2"><a href="#门关回退语义-向后兼容坐实">门关回退语义(向后兼容坐实)</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-137-网页代理内核二进制去哪下载-把确切官方-url-接到前端横幅">[OPS-MAN-137] 网页代理内核二进制去哪下载 · 把确切官方 URL 接到前端横幅<a class="anchor" href="#ops-man-137-网页代理内核二进制去哪下载-把确切官方-url-接到前端横幅" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼收尾之一(用户诉求 2026-07-13:「网页中代理的二进制要去哪里下载」)。<br>类别:<strong>能力存在但没接线</strong>(数据在 SSOT 里,却没接到人面前)。</p></blockquote>
+<h2 id="断桥-真实缺口">断桥(真实缺口)<a class="anchor" href="#断桥-真实缺口" aria-label="锚点">#</a></h2>
+<p><code>proxyCoreInstaller.js</code> 是 mihomo 内核<strong>自动下载的单一真源</strong>:</p>
+<ul><li>固定版本 <code>PINNED_VERSION = 'v1.18.10'</code></li><li>官方固定资产基址 <code>RELEASE_BASE = github.com/MetaCubeX/mihomo/releases/download/&lt;ver&gt;</code></li><li>逐平台资产表 <code>ASSETS</code>(linux/darwin/win32 × x64/arm64)</li><li>落地路径 <code>~/.khyquant/bin/mihomo</code></li></ul>
+<p><strong>但确切下载 URL 从没接到任何人可见的面</strong>:</p>
+<table><thead><tr><th>面</th><th>接线前</th><th>问题</th></tr></thead><tbody><tr><td>前端横幅 <code>ProxyManagement.vue</code></td><td>&quot;请下载 mihomo 内核放到 <code>~/.khyquant/bin/</code>&quot;</td><td><strong>从不说去哪下</strong></td></tr><tr><td>后端 core-missing 指引 <code>proxyCoreManager.js:157</code></td><td>&quot;请下载 mihomo(clash-meta)内核放到 …/bin/&quot;</td><td><strong>不含 URL</strong></td></tr></tbody></table>
+<p>小白/离机用户对着&quot;请下载 mihomo&quot;四个字发懵——URL 明明就在仓库里(installer 的 ASSETS + RELEASE_BASE),只是没接出来。</p>
+<h2 id="修法-全-additive-门-khy-proxy-core-download-hint-default-on">修法(全 additive,门 <code>KHY_PROXY_CORE_DOWNLOAD_HINT</code> default-on)<a class="anchor" href="#修法-全-additive-门-khy-proxy-core-download-hint-default-on" aria-label="锚点">#</a></h2>
+<p>三层接线,SSOT 单点扩展,零路由/成败判定改动:</p>
+<ol><li><strong>SSOT 叶暴露描述符</strong> <code>proxyCoreInstaller.describeCoreDownload(platform?, arch?)</code>(纯函数·零 IO·绝不抛):</li></ol>
+<p>复用既有 <code>resolveAsset</code> / <code>_binaryPath</code> / <code>PINNED_VERSION</code>,返回<br>   <code>{ supported, version, url, assetFile, kind, dest, binDir, releasesPage, platform, arch }</code>。</p>
+<ul><li>受支持平台 → 确切官方固定 URL + 资产名 + 落地路径。</li><li>冷门平台 → <code>supported:false</code> 但<strong>仍给</strong> releases 总页 + 落地路径(绝不留死路)。</li></ul>
+<ol><li><strong>coreManager 接线</strong>(门 <code>KHY_PROXY_CORE_DOWNLOAD_HINT</code>):<ul><li><code>getStatus(env)</code> 附 <code>download</code> 描述符(fail-soft:门关→null / installer 抛→null,不拖垮 status)。</li><li><code>_coreMissingResult(installAttempt, env)</code>:门开且受支持 → guidance <strong>直接含确切 URL</strong>;</li></ul></li></ol>
+<p>门关/冷门平台 → <strong>逐字节回退</strong>旧无 URL 文案。附结构化 <code>download</code> 字段供前端消费。</p>
+<ol><li><strong>前端横幅接线</strong> <code>ProxyManagement.vue</code>:<ul><li>派生 <code>coreDownload = egressStatus.coreStatus.download</code>。</li><li>内核未装横幅:显示可点下载 URL(<code>&lt;a target=_blank&gt;</code>)+ 版本 + 落地目录 <code>&lt;code&gt;</code> + <strong>一键复制</strong>(<code>copyText</code>)。</li><li>无描述符(门关/冷门平台)→ 回退到&quot;官方 releases&quot;通用兜底链接。</li></ul></li></ol>
+<ol><li><strong>flagRegistry</strong> 登记 <code>KHY_PROXY_CORE_DOWNLOAD_HINT</code>(default-on parent,off:CANON)。</li></ol>
+<h2 id="验证门-全绿">验证门(全绿)<a class="anchor" href="#验证门-全绿" aria-label="锚点">#</a></h2>
+<pre><code>node --check ×6(installer/manager/flagRegistry/两测/wiring 测)     OK
+test:maintainer:proxy-egress                                        91/91 pass fail0
+  ├─ describeCoreDownload 4 例(支持/win32-zip/冷门/缺省探测)
+  ├─ getStatus.download 门开/门关/抛异常 fail-soft 3 例
+  └─ core-missing guidance 含 URL(门开)/ 回退无 URL(门关)2 例
+前端 build --prefix apps/ai-frontend                                ✓ 6.61s exit0(SFC 语法门)
+useProxies.egress.wiring.test.js                                    11/11(+2 新:横幅 URL/dest/copyText 接线 · 冷门兜底链接)
+arch:god                                                            我改文件全 &lt;2500(最大 flagRegistry 2366);4 超限 pre-existing 我不在列
+check:node-syntax                                                   4328 files passed
+change-safety(显式 positional 7 文件)                              exit0 · 自动 surface test:maintainer:proxy-egress + 前端 build = map 桥闭合
+agent-rules(显式 7 文件)                                           0 error 1 warn(proxyCoreManager:324 SIGKILL fixed-timeout = pre-existing,不在我 diff)
+leaf-contract                                                       passed
+flag-registry                                                       structurally sound
+maintainer:check                                                   REAL_EXIT=0(proxy-egress 全 paths OK)</code></pre>
+<h2 id="门关回退语义-向后兼容坐实">门关回退语义(向后兼容坐实)<a class="anchor" href="#门关回退语义-向后兼容坐实" aria-label="锚点">#</a></h2>
+<p><code>KHY_PROXY_CORE_DOWNLOAD_HINT=0</code> → <code>getStatus.download=null</code>、core-missing guidance 逐字节回退旧无 URL 文案、<br>core-missing 结果无 <code>download</code> 字段。旧消费者(仅读 <code>reason</code>/<code>guidance</code>)完全不受影响。<br>既有 core-missing 测试注入的 installer 只有 <code>install</code> 无 <code>describeCoreDownload</code> → <code>_coreDownload</code> catch 返 null → 旧文案保留,零回归。</p>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>「能力存在但没接线」= 数据在 SSOT 却没接到人面前;判据 = 前端/后端都说&quot;下载 X&quot;却从不给 URL,而 URL 明明是仓库常量。</li><li>SSOT 单点扩展(installer 加纯叶描述符)优于到处硬编码 URL——自动下载与人可读指引走同一真源,版本 bump 只改一处。</li><li>冷门平台绝不留死路:无预置资产也给 releases 总页 + 落地路径。</li><li>门关逐字节回退 + fail-soft(取指引异常→null 不拖垮 status)= 纯透明性叠加,不碰任何路由/成败。</li></ol>
+<p>不 commit(feat/0.1.104-multi-subsystem-batch)。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-136] 首响应静默窗口守护·提交到首token及时回应·接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-136] 首响应静默窗口守护 · 提交提示词到首个模型 token 之间及时回应（让 khy 在交互终端里不再「提交后一片死寂」）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-138] 空OCR剥图路径模型仍谎称没收到图的确定性纠正脚注.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-138] 空 OCR 剥图路径——模型仍谎称「没收到图」的确定性纠正脚注</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-137] 网页代理内核二进制去哪下载·接确切官方URL到前端横幅.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

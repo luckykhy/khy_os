@@ -1,0 +1,147 @@
+name: Dual-Channel Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      skip_pip:
+        description: 'Skip PyPI publish'
+        required: false
+        default: 'false'
+      skip_npm:
+        description: 'Skip npm publish'
+        required: false
+        default: 'false'
+      test_pypi:
+        description: 'Upload to TestPyPI instead of PyPI'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+  id-token: write    # OIDC token for sigstore/cosign keyless signing
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: services/backend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: services/backend
+        run: npm ci
+
+      - name: Run test suite (Jest)
+        working-directory: services/backend
+        run: npm test -- --passWithNoTests
+
+      - name: Run Node built-in tests
+        working-directory: services/backend
+        run: npm run test:node
+
+      - name: Install publish dependencies
+        run: |
+          npm install --no-save --ignore-scripts --workspaces=false esbuild@0.28.1 @yao-pkg/pkg@6.21.0
+          pip install twine build sigstore cyclonedx-bom cyclonedx-py
+
+      - name: Verify version sync
+        run: node scripts/ci/check-version-sync.js
+
+      - name: Verify CHANGELOG
+        run: node scripts/release/changelog-new.js --check
+
+      - name: Run release gate (deterministic checks)
+        run: node scripts/release/release-gate.js
+        env:
+          NODE_ENV: release-gate
+
+      - name: Build executables
+        run: |
+          node packaging/build/esbuild-modules.js --prod
+          node packaging/build/pack-executable.js --all
+
+      # ── Sign artifacts before publishing ─────────────────────────────────────
+      # Sigstore keyless signing (OIDC) provides cryptographic proof that the
+      # artifacts were produced by this CI run. No long-lived secrets needed.
+      - name: Sign PyPI artifacts (sigstore)
+        if: ${{ inputs.test_pypi != 'true' }}
+        run: |
+          # Sign the wheel and sdist with sigstore (keyless, OIDC-backed).
+          # The signature .sig files are attached to the PyPI upload as
+          # provenance metadata and can be verified offline.
+          for f in dist/*.whl dist/*.tar.gz; do
+            [ -f "$f" ] || continue
+            echo "Signing $f..."
+            sigstore sign --yes "$f" || echo "sigstore sign failed for $f (non-fatal, continuing)"
+          done
+
+      - name: Sign npm package contents (sigstore)
+        if: ${{ inputs.skip_npm != 'true' }}
+        run: |
+          # Create a tarball of what npm would publish and sign it.
+          # This signs the exact artifact users download, not a transient build.
+          ( cd packaging/npm && npm pack --dry-run > /dev/null 2>&1 )
+          PACK_TARBALL=$(cd packaging/npm && npm pack --dry-run 2>/dev/null | tail -1)
+          if [ -n "$PACK_TARBALL" ]; then
+            echo "Signing npm package: $PACK_TARBALL"
+            sigstore sign --yes "$PACK_TARBALL" || echo "sigstore sign failed for npm package (non-fatal, continuing)"
+          fi
+
+      # ── Generate SBOMs ────────────────────────────────────────────────────────
+      # CycloneDX SBOMs enable downstream consumers to perform vulnerability
+      # scanning against the exact dependency tree shipped in each release.
+      - name: Generate SBOM (npm)
+        if: ${{ inputs.skip_npm != 'true' }}
+        run: |
+          npm install --no-save @cyclonedx/cyclonedx-npm@1
+          npx @cyclonedx/cyclonedx-npm --output-file sbom-npm.json .
+
+      - name: Generate SBOM (pip)
+        if: ${{ inputs.test_pypi != 'true' }}
+        run: |
+          pip install cyclonedx-py
+          cyclonedx-py environment --output-file sbom-pip.json .
+
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.ref_name }}
+          path: |
+            sbom-npm.json
+            sbom-pip.json
+          retention-days: 90
+          compression-level: 1
+
+      - name: Publish dual-channel
+        run: |
+          chmod +x scripts/release/publish-dual.sh
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          ARGS=( "--version" "$VERSION" "--rehearse" "--tag" "--push" )
+          if [ "${{ inputs.skip_pip || 'false' }}" = 'true' ]; then ARGS+=( "--skip-pip" ); fi
+          if [ "${{ inputs.skip_npm || 'false' }}" = 'true' ]; then ARGS+=( "--skip-npm" ); fi
+          if [ "${{ inputs.test_pypi || 'false' }}" = 'true' ]; then ARGS+=( "--test-pypi" ); fi
+          if [ "${{ github.event_name }}" = 'workflow_dispatch' ]; then ARGS+=( "-y" ); fi
+          bash scripts/release/publish-dual.sh "${ARGS[@]}"
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pip 发布后:外网机 pip install → 还原真实源码 → 推送 GitHub · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>pip 发布后:外网机 pip install → 还原真实源码 → 推送 GitHub</div>
+      <header class="hero reveal"><h1>pip 发布后:外网机 pip install → 还原真实源码 → 推送 GitHub</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#pip-发布后-外网机-pip-install-还原真实源码-推送-github">pip 发布后:外网机 `pip install` → 还原真实源码 → 推送 GitHub</a></li><li class="lvl-2"><a href="#0-一句话原理-一个必须先知道的限制">0. 一句话原理 + 一个必须先知道的限制</a></li><li class="lvl-2"><a href="#1-内网机-正常-pip-发布-你已会-只确认一点">1. 内网机:正常 pip 发布(你已会,只确认一点)</a></li><li class="lvl-2"><a href="#2-外网机-pip-install">2. 外网机:`pip install`</a></li><li class="lvl-2"><a href="#3-外网机-还原真实源码">3. 外网机:还原真实源码</a></li><li class="lvl-3"><a href="#3-1-首选-khy-restore-免密-一条命令">3.1 首选:`khy restore`(免密,一条命令)</a></li><li class="lvl-3"><a href="#3-2-回退-a-包里没有快照-旧包-从运行时负载重建">3.2 回退 A:包里没有快照(旧包) → 从运行时负载重建</a></li><li class="lvl-3"><a href="#3-3-回退-b-完全不用-khy-命令-直接解-sdist-最朴素">3.3 回退 B:完全不用 khy 命令 → 直接解 sdist(最朴素)</a></li><li class="lvl-2"><a href="#4-外网机-git-init-提交-推送-github">4. 外网机:`git init` → 提交 → 推送 GitHub</a></li><li class="lvl-3"><a href="#4-1-先准备-github-鉴权-https-push-必须">4.1 先准备 GitHub 鉴权(HTTPS push 必须)</a></li><li class="lvl-3"><a href="#4-2-方式一-推荐-用内置-khy-publish-git-push-一把梭">4.2 方式一(推荐):用内置 `khy publish git-push` 一把梭</a></li><li class="lvl-3"><a href="#4-3-方式二-纯手工-git-不依赖-khy-命令">4.3 方式二:纯手工 git(不依赖 khy 命令)</a></li><li class="lvl-2"><a href="#5-需要-完整提交历史-时-git-bundle-摆渡-pip-链路替代">5. 需要「完整提交历史」时:git bundle 摆渡(pip 链路替代)</a></li><li class="lvl-2"><a href="#6-可选-推完之后-让还原的源码能跑起来">6. (可选)推完之后,让还原的源码能跑起来</a></li><li class="lvl-2"><a href="#7-tl-dr">7. TL;DR</a></li><li class="lvl-2"><a href="#8-常见坑">8. 常见坑</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-012 | 阶段: 部署 | 原路径: docs/指南/pip发布后-github发布手册.md --&gt;</p>
+<h1 id="pip-发布后-外网机-pip-install-还原真实源码-推送-github">pip 发布后:外网机 <code>pip install</code> → 还原真实源码 → 推送 GitHub<a class="anchor" href="#pip-发布后-外网机-pip-install-还原真实源码-推送-github" aria-label="锚点">#</a></h1>
+<blockquote><p>真实场景:<strong>内网机只能 <code>pip</code> 发布(<code>twine</code> → PyPI)、上不了 GitHub;外网机只能 <code>pip install</code><br>(没有仓库 checkout、没有 git bundle、不能直连内网 GitLab),但能上 github.com。</strong></p>
+<p>桥梁就是 <strong>PyPI 本身</strong>:khy OS 的 pip 包里<strong>内嵌了完整真实源码的加密快照</strong>。<br>外网机 <code>pip install</code> 之后,用 <code>khy restore</code> 把源码还原出来,再 <code>git init</code> + push 到 GitHub。</p></blockquote>
+<p>适用版本:0.1.94+ · 相关:<a href="%5BDEPLOY-MAN-015%5D%20源码还原与手工发布.html">源码还原与手工发布</a></p>
+<hr>
+<h2 id="0-一句话原理-一个必须先知道的限制">0. 一句话原理 + 一个必须先知道的限制<a class="anchor" href="#0-一句话原理-一个必须先知道的限制" aria-label="锚点">#</a></h2>
+<p><strong>原理</strong>:每次 pip 构建时,<code>makeSourceSnapshot.js</code> 会跑 <code>git archive HEAD</code>,把当时<strong>所有被跟踪<br>的源文件</strong>(原始目录布局)加密成 <code>_source/snapshot.json</code> 一起打进包。<code>khy restore</code> 免密解密还原。</p>
+<p><strong>限制(务必先读)</strong>:快照是 <code>git archive</code>,即<strong>发布那一刻的源码树,不含 <code>.git</code>、没有提交历史</strong>。<br>所以这条 PyPI 链路推到 GitHub 的是一个<strong>单次快照提交</strong>,不是原始的逐条 commit 历史。<br>快照头里记录了原始 commit SHA(还原时会打印 <code>commit xxxxxxxx</code>),可写进提交信息留痕。</p>
+<table><thead><tr><th>你想要的</th><th>用哪条路</th></tr></thead><tbody><tr><td><strong>只要把当前版本的源码放上 GitHub</strong>(绝大多数情况)</td><td>✅ 本文档:<code>pip install</code> → <code>khy restore</code> → push</td></tr><tr><td><strong>要完整 git 提交历史</strong></td><td>❌ pip 包做不到(无 <code>.git</code>)。改用 <code>git bundle</code> 摆渡,见本文 §5</td></tr></tbody></table>
+<hr>
+<h2 id="1-内网机-正常-pip-发布-你已会-只确认一点">1. 内网机:正常 pip 发布(你已会,只确认一点)<a class="anchor" href="#1-内网机-正常-pip-发布-你已会-只确认一点" aria-label="锚点">#</a></h2>
+<p>确认包里<strong>真的带了源码快照</strong>——否则外网机还原不出来。</p>
+<pre><code class="language-bash">cd /home/kodehu03/Khy-OS
+
+# 正常发布(任选)
+python -m build &amp;&amp; twine check dist/* &amp;&amp; twine upload dist/*
+#   或:bash scripts/release/publish-dual.sh 0.1.95
+
+# 自检:构建出的 wheel 里应包含 _source/snapshot.json
+unzip -l dist/khy_os-0.1.94-py3-none-any.whl | grep _source/
+#   能看到 _source/snapshot.json + 加密归档 → 快照已就绪</code></pre>
+<blockquote><p>源码快照<strong>免密</strong>:<code>DEFAULT_SOURCE_SECRET</code> 已内嵌进构建,<code>khy restore</code> 自动解密,<br>外网机不需要任何密钥。(仅当还原<strong>旧版本用自定义密钥加的快照</strong>时才需 <code>--secret</code>。)</p></blockquote>
+<hr>
+<h2 id="2-外网机-pip-install">2. 外网机:<code>pip install</code><a class="anchor" href="#2-外网机-pip-install" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 装指定版本(和内网刚发的对齐),独立环境更干净
+python -m venv ~/khy-venv &amp;&amp; source ~/khy-venv/bin/activate   # 可选
+pip install &quot;khy-os==0.1.94&quot;
+
+khy --version        # 应输出 0.1.94,确认装对版本</code></pre>
+<blockquote><p>只想拿源码、不想真正安装运行时,也可以只<strong>下载</strong>不安装:<br><code>pip download khy-os==0.1.94 --no-deps -d /tmp/whl</code>,再走 §3 的「方式 B / 回退」。</p></blockquote>
+<hr>
+<h2 id="3-外网机-还原真实源码">3. 外网机:还原真实源码<a class="anchor" href="#3-外网机-还原真实源码" aria-label="锚点">#</a></h2>
+<h3 id="3-1-首选-khy-restore-免密-一条命令">3.1 首选:<code>khy restore</code>(免密,一条命令)<a class="anchor" href="#3-1-首选-khy-restore-免密-一条命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy restore --into ./khy-os-src</code></pre>
+<p>它会:在已安装环境里定位内嵌的 <code>_source/</code> 快照 → 免密解密 → 校验 → 按<strong>原始目录布局</strong><br>解压到 <code>./khy-os-src</code>,并打印 <code>共 N 个文件 · commit xxxxxxxxxxxx · 目录布局原样</code>。<br><strong>记下这个 commit SHA</strong>,§4 提交时写进去留痕。</p>
+<h3 id="3-2-回退-a-包里没有快照-旧包-从运行时负载重建">3.2 回退 A:包里没有快照(旧包) → 从运行时负载重建<a class="anchor" href="#3-2-回退-a-包里没有快照-旧包-从运行时负载重建" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy publish origin-code --out ./khy-os-src
+#   旧的自定义密钥快照才需要:khy publish origin-code --secret &lt;密钥&gt; --out ./khy-os-src</code></pre>
+<h3 id="3-3-回退-b-完全不用-khy-命令-直接解-sdist-最朴素">3.3 回退 B:完全不用 khy 命令 → 直接解 sdist(最朴素)<a class="anchor" href="#3-3-回退-b-完全不用-khy-命令-直接解-sdist-最朴素" aria-label="锚点">#</a></h3>
+<p>sdist(<code>.tar.gz</code>)本身就是<strong>原始源码布局</strong>,解压即得:</p>
+<pre><code class="language-bash">pip download khy-os==0.1.94 --no-deps --no-binary :all: -d /tmp/src
+tar -xzf /tmp/src/khy_os-*.tar.gz -C /tmp/src
+mv /tmp/src/khy_os-0.1.94 ./khy-os-src      # 目录里就是 kernel/ services/ platform/ ...</code></pre>
+<blockquote><p>三种方式还原出的都是<strong>纯源码</strong>:按纯净规则<strong>不含</strong> <code>node_modules</code> / <code>site-packages</code> /<br><code>_build</code> / <code>target</code> 和原生二进制(<code>*.wasm</code> 例外)。这对「推 GitHub」毫无影响——这些本来<br>就在 <code>.gitignore</code> 里、不该进仓库。要<strong>运行</strong>才需自愈拉依赖(见 §6)。</p></blockquote>
+<hr>
+<h2 id="4-外网机-git-init-提交-推送-github">4. 外网机:<code>git init</code> → 提交 → 推送 GitHub<a class="anchor" href="#4-外网机-git-init-提交-推送-github" aria-label="锚点">#</a></h2>
+<p>还原出来的目录<strong>没有 <code>.git</code></strong>,需要新建 git 仓库再推。</p>
+<h3 id="4-1-先准备-github-鉴权-https-push-必须">4.1 先准备 GitHub 鉴权(HTTPS push 必须)<a class="anchor" href="#4-1-先准备-github-鉴权-https-push-必须" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 推荐:GitHub CLI 登录(它会自动配好 git 凭证)
+gh auth login          # 选 GitHub.com → HTTPS → 浏览器/Token 登录
+# 或:用 PAT 配 credential helper / ~/.netrc(别把 token 写进 remote URL)</code></pre>
+<h3 id="4-2-方式一-推荐-用内置-khy-publish-git-push-一把梭">4.2 方式一(推荐):用内置 <code>khy publish git-push</code> 一把梭<a class="anchor" href="#4-2-方式一-推荐-用内置-khy-publish-git-push-一把梭" aria-label="锚点">#</a></h3>
+<p>进入还原目录,先 <code>git init</code> 建仓,再让内置命令处理 remote + 提交 + push:</p>
+<pre><code class="language-bash">cd ./khy-os-src
+git init -b main
+
+khy publish git-push \
+  --repo acme/khy-os \          # owner/repo,也可给完整 URL
+  --platform github \           # github | gitee | gitlab
+  --auto-commit \               # 把还原的源码全量自动提交
+  --commit-message &quot;snapshot: khy-os v0.1.94 (origin commit &lt;粘贴§3的SHA&gt;)&quot; \
+  --set-upstream                # 首推建立 main 的上游
+#   --ssh          用 SSH 地址(git@github.com:...)而非 HTTPS
+#   --branch xxx   推到别的分支(默认当前分支/main)
+#   --dry-run      只打印将执行的 git push,不真推</code></pre>
+<p><code>git-push</code> 会:校验是 git 仓库 → 没 remote 就按 <code>--repo</code>+<code>--platform</code> 自动 <code>git remote add</code><br>→ 有未提交改动且带 <code>--auto-commit</code> 就 <code>git add -A &amp;&amp; git commit</code> → <code>git push [-u] &lt;remote&gt; &lt;branch&gt;</code>。<br>远程已存在且地址不同要改,需加 <code>--force-remote</code>。</p>
+<h3 id="4-3-方式二-纯手工-git-不依赖-khy-命令">4.3 方式二:纯手工 git(不依赖 khy 命令)<a class="anchor" href="#4-3-方式二-纯手工-git-不依赖-khy-命令" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd ./khy-os-src
+git init -b main
+git add -A
+git commit -m &quot;snapshot: khy-os v0.1.94 (origin commit &lt;§3的SHA&gt;)&quot;
+git remote add origin https://github.com/acme/khy-os.git
+git push -u origin main
+#   覆盖远端已有内容(确认要覆盖再用):git push -u origin main --force-with-lease</code></pre>
+<blockquote><p>若 GitHub 上该仓库已有历史,而你推的是单快照,默认 push 会因非快进被拒。<br>确认要用快照覆盖,再用 <code>--force-with-lease</code>;<strong>否则别强推</strong>,先确认覆盖的是什么。</p></blockquote>
+<hr>
+<h2 id="5-需要-完整提交历史-时-git-bundle-摆渡-pip-链路替代">5. 需要「完整提交历史」时:git bundle 摆渡(pip 链路替代)<a class="anchor" href="#5-需要-完整提交历史-时-git-bundle-摆渡-pip-链路替代" aria-label="锚点">#</a></h2>
+<p>pip 包不含 <code>.git</code>,拿不到逐条历史。要<strong>带历史</strong>推 GitHub,只能在<strong>有仓库的内网机</strong>打 bundle:</p>
+<pre><code class="language-bash"># 内网机(有 .git 的真仓库里)
+git bundle create khy-os.bundle --all          # 或只要 main 和 tag: main v0.1.94
+git bundle verify khy-os.bundle
+#   把 khy-os.bundle 用 U盘 / scp 拷到外网机
+
+# 外网机
+git clone khy-os.bundle khy-os &amp;&amp; cd khy-os    # 带完整历史
+git remote set-url origin https://github.com/acme/khy-os.git
+git push origin main --tags                    # 历史 + tag 一起上</code></pre>
+<blockquote><p>即只要历史就走 bundle,只要源码就走 pip(§2–§4)。两者互不依赖。</p></blockquote>
+<hr>
+<h2 id="6-可选-推完之后-让还原的源码能跑起来">6. (可选)推完之后,让还原的源码能跑起来<a class="anchor" href="#6-可选-推完之后-让还原的源码能跑起来" aria-label="锚点">#</a></h2>
+<p>还原是纯源码,运行前要触发自愈拉运行依赖:</p>
+<pre><code class="language-bash">cd ./khy-os-src
+khy postinstall        # 拉 Node 运行时依赖(等价 run_postinstall)
+khy dev-setup          # 补 Python dev 工具 + 检测 C/MoonBit 工具链
+# 或仓库根直接:npm install</code></pre>
+<p>自愈遵守「永不中断」:依赖拉取失败会被 catch、打印可手动复制的恢复命令、并返回 0。</p>
+<hr>
+<h2 id="7-tl-dr">7. TL;DR<a class="anchor" href="#7-tl-dr" aria-label="锚点">#</a></h2>
+<pre><code>[内网机] twine upload  ──► PyPI(包内嵌 _source 加密源码快照)
+                              │
+[外网机] pip install khy-os==X.Y.Z
+         khy restore --into ./khy-os-src      # 免密还原真实源码(无 .git)
+         cd khy-os-src &amp;&amp; git init -b main
+         khy publish git-push --repo acme/khy-os --platform github --auto-commit --set-upstream
+                              │
+                         github.com ✓(单快照提交,头里记录原始 commit SHA)
+
+要完整历史? → 内网机 git bundle 摆渡(§5),不走 pip。</code></pre>
+<hr>
+<h2 id="8-常见坑">8. 常见坑<a class="anchor" href="#8-常见坑" aria-label="锚点">#</a></h2>
+<ol><li><strong>以为推上去带历史</strong>:pip 链路是 <code>git archive</code> 快照,<strong>没有历史</strong>,只有一个 commit。要历史走 §5。</li><li><strong><code>khy restore</code> 报「未找到快照」</strong>:包太旧没内嵌快照 → 用 §3.2 <code>khy publish origin-code</code> 或 §3.3 解 sdist。</li><li><strong>push 报鉴权失败</strong>:HTTPS push 要先 <code>gh auth login</code> 或配 credential helper;别把 PAT 明文写进 remote URL。</li><li><strong>push 被拒(non-fast-forward)</strong>:GitHub 上已有历史而你推快照 → 想清楚再 <code>--force-with-lease</code>,别盲目强推。</li><li><strong>还原目录没有 <code>node_modules</code> 跑不起来</strong>:纯净规则使然,<code>khy postinstall &amp;&amp; khy dev-setup</code> 自愈(§6)。</li><li><strong>版本对不上</strong>:<code>pip install</code> 时显式钉版本 <code>khy-os==X.Y.Z</code>,和内网发布版本一致;<code>khy --version</code> 复核。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.html"><div class="dir">← 上一篇</div><div class="ttl">pip 安装后完整部署与推送指南</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-013] pypi-发布手册-0.1.17-0.1.18.html"><div class="dir">下一篇 →</div><div class="ttl">PyPI 发布手册（0.1.17 补丁 + 0.1.18 多平台）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-012] pip发布后-github发布手册.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-113] 还原字段效应探针（雅可比透镜） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-113] 还原字段效应探针（雅可比透镜）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-113] 还原字段效应探针（雅可比透镜）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-113-还原字段效应探针-雅可比透镜">[OPS-MAN-113] 还原字段效应探针（雅可比透镜）</a></li><li class="lvl-2"><a href="#这一层闭合什么-把-死字段-的静态狩猎升级成动态守卫">这一层闭合什么：把「死字段」的静态狩猎升级成动态守卫</a></li><li class="lvl-2"><a href="#为什么必须-一批上下文-而不是单个真头">为什么必须「一批上下文」而不是单个真头</a></li><li class="lvl-2"><a href="#判定档">判定档</a></li><li class="lvl-2"><a href="#恒久红线-继承全家族-密钥卫生">恒久红线（继承全家族 + 密钥卫生）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-113-还原字段效应探针-雅可比透镜">[OPS-MAN-113] 还原字段效应探针（雅可比透镜）<a class="anchor" href="#ops-man-113-还原字段效应探针-雅可比透镜" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-effect-probe.js --gen-doc</code> 确定性生成，请勿手改；<br>判定逻辑改在 <code>scripts/lib/restoreEffectProbe.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层闭合什么-把-死字段-的静态狩猎升级成动态守卫">这一层闭合什么：把「死字段」的静态狩猎升级成动态守卫<a class="anchor" href="#这一层闭合什么-把-死字段-的静态狩猎升级成动态守卫" aria-label="锚点">#</a></h2>
+<p>还原家族已逐层给快照头字段接了消费者：信封 <code>format</code>/<code>formatVersion</code>（105）、来源<br><code>captureMode</code>/<code>includesUncommitted</code>/<code>dirty</code>/<code>gitCommit</code>（107）、内层归档<br><code>plaintextFormat</code>/<code>layout</code>（108）、解密套件 <code>crypto.algo</code>/<code>crypto.kdf</code>（110）。</p>
+<p>但「某字段是否<strong>真的</strong>驱动某道门」一直靠人肉 <code>grep</code> 静态确认——而 <code>grep</code> 会被<br><strong>「读了但读完即弃」的假消费者</strong>骗过（字段被读、结果被丢，语法上「有消费者」，行为上却是死的）。<br>本层是那个缺失的<strong>动态回归守卫</strong>：对每个契约字段做<strong>有限差分</strong>——扰动它（删除 / 换成同类型<br>的异物值）、跑还原门面板、量最终裁决 <code>(status, ok)</code> 的改变。字段的「雅可比」≈0<br>（任何上下文扰动它、任何门都不反应）= <strong>行为上证死</strong>，无论它语法上是否被读。</p>
+<h2 id="为什么必须-一批上下文-而不是单个真头">为什么必须「一批上下文」而不是单个真头<a class="anchor" href="#为什么必须-一批上下文-而不是单个真头" aria-label="锚点">#</a></h2>
+<p>思想源自 Anthropic《Verbalizable Representations Form a Global Workspace in Language<br>Models》的 <strong>Jacobian lens</strong>：用一个中间量对输出的一阶因果效应、<strong>在一大批上下文上求平均</strong>，<br>才能把「恰好在这条 trace 里被用到」和「随时准备被用到（load-bearing）」区分开。</p>
+<p>落到还原家族：来源门 <code>restoreProvenance</code> 用的是<strong>冗余 OR</strong> 信号——<br><code>includesUncommitted===true || dirty===true</code> 判脏，<code>captureMode===&quot;HEAD&quot; || includesUncommitted===false</code> 判净。<br>在真头上两个脏信号同时为真，单独扰动其一、另一仍兜住裁决 → <strong>单上下文会把<br><code>captureMode</code>/<code>includesUncommitted</code>/<code>dirty</code> 误报成死字段</strong>。用「隔离语料」后各信号能被单独证明：</p>
+<table><thead><tr><th>上下文</th><th>构造</th><th>隔离出的字段</th></tr></thead><tbody><tr><td><code>real</code></td><td>真快照头原样</td><td>format/formatVersion/crypto.*/plaintextFormat/layout/gitCommit</td></tr><tr><td><code>clean-head</code></td><td><code>captureMode=HEAD</code>、删 includesUncommitted/dirty</td><td><code>captureMode</code></td></tr><tr><td><code>clean-worktree</code></td><td><code>captureMode=working-tree</code>、<code>includesUncommitted=false</code>、删 dirty</td><td><code>includesUncommitted</code></td></tr><tr><td><code>dirty-flag</code></td><td><code>captureMode=working-tree</code>、删 includesUncommitted、<code>dirty=true</code></td><td><code>dirty</code></td></tr></tbody></table>
+<p>字段在<strong>任一</strong>上下文动了<strong>任一</strong>门 → <code>load-bearing</code>；在整个语料上都不动 → <code>dead</code>。</p>
+<h2 id="判定档">判定档<a class="anchor" href="#判定档" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>未注入门面板 / 上下文语料为空</td><td><code>unverifiable</code>：证据不足，绝不臆断字段有效</td><td>✗</td></tr><tr><td>2</td><td>有契约字段在整个语料上不动任何门</td><td><code>regression</code>：死字段（消费者被摘 / 从未接线）</td><td>✗</td></tr><tr><td>3</td><td>全部契约字段均 load-bearing</td><td><code>ok</code>：还原家族字段接线无回归</td><td>✓</td></tr></tbody></table>
+<ul><li>契约字段（<code>CONTRACT_FIELDS</code>）= 各门<strong>被接线去消费</strong>的 header 字段；契约里出现即代表</li></ul>
+<p>「必须有门消费它」，<code>dead</code> 就是红灯。新增门后按叶子 HOW-TO-EXTEND 同步契约 + 隔离语料。</p>
+<ul><li>非契约字段（<code>archive</code>/<code>sha256</code>/<code>fileCount</code>/<code>version</code>/<code>createdAt</code>/<code>notes</code> 等）本面板不消费，</li></ul>
+<p>报为 <code>unmonitored</code>（仅供参考）：它们应由<strong>别处</strong>消费（<code>fileCount</code> → 095 完整性对账、<br>  <code>sha256</code> → 传输完整性、<code>version</code> → 横幅）；若某个 <code>unmonitored</code> 字段其实哪儿都没消费，<br>  那就是一个<strong>新的死字段</strong>，值得顺着查。</p>
+<ul><li><code>--json</code> 在非 <code>ok</code> 时<strong>退出码 2</strong>：CI / 自驱 agent 据此发现「还原字段接线出现回归」。</li></ul>
+<h2 id="恒久红线-继承全家族-密钥卫生">恒久红线（继承全家族 + 密钥卫生）<a class="anchor" href="#恒久红线-继承全家族-密钥卫生" aria-label="锚点">#</a></h2>
+<ul><li>证据不足（无门 / 无语料）一律判 <code>unverifiable</code>：绝不臆造绿灯。</li><li><strong>绝不读、绝不打印、绝不扰动任何密钥/口令/明文材料</strong>：契约字段不含 <code>crypto.salt</code>/<code>iv</code>/<code>authTag</code>，</li></ul>
+<p>extras 只扫顶层键、绝不下探 <code>crypto</code>；输出只含字段路径、效应标签、上下文名、门名，绝不含快照头取值。</p>
+<ul><li>扰动全部<strong>确定性</strong>（删除 + 写死的异物值，绝不用随机 / 时间）；叶子纯计算、零 IO、绝不改入参、绝不抛。</li><li><code>ok===true</code> 仅当 <code>status === ok</code>（有门、有语料、零 dead）。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-112] 纯文本模型图片 OCR 兜底语言包可用性诚实告诫.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-112] 纯文本模型图片 OCR 兜底 —— 语言包可用性诚实告诫</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-114] 还原字段归属探针（label preservation）.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-114] 还原字段归属探针（label preservation）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

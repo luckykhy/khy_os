@@ -1,0 +1,75 @@
+{
+  "name": "go-api",
+  "description": "Go HTTP API project with standard library",
+  "triggers": ["Go", "go mod init", "golang", "Go后端", "Go服务", "Go API"],
+  "variables": {
+    "module": { "default": "github.com/user/myapp", "description": "Go module path" },
+    "port": { "default": "8080", "description": "Server port" }
+  },
+  "directories": [
+    "cmd/server",
+    "internal/handler",
+    "internal/model",
+    "internal/service",
+    "unit_tests",
+    "API_tests"
+  ],
+  "files": [
+    {
+      "path": "go.mod",
+      "content": "module {module}\n\ngo 1.22"
+    },
+    {
+      "path": "cmd/server/main.go",
+      "content": "package main\n\nimport (\n\t\"fmt\"\n\t\"log\"\n\t\"net/http\"\n\n\t\"{module}/internal/handler\"\n)\n\nfunc main() {\n\tmux := http.NewServeMux()\n\thandler.RegisterRoutes(mux)\n\n\taddr := \":{port}\"\n\tfmt.Printf(\"Server starting on %s\\n\", addr)\n\tlog.Fatal(http.ListenAndServe(addr, mux))\n}"
+    },
+    {
+      "path": "internal/handler/routes.go",
+      "content": "package handler\n\nimport \"net/http\"\n\nfunc RegisterRoutes(mux *http.ServeMux) {\n\tmux.HandleFunc(\"GET /health\", healthHandler)\n\tmux.HandleFunc(\"GET /api/users\", listUsersHandler)\n}"
+    },
+    {
+      "path": "internal/handler/health.go",
+      "content": "package handler\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n)\n\nfunc healthHandler(w http.ResponseWriter, r *http.Request) {\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(map[string]string{\"status\": \"ok\"})\n}"
+    },
+    {
+      "path": "internal/handler/users.go",
+      "content": "package handler\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\n\t\"{module}/internal/model\"\n)\n\nfunc listUsersHandler(w http.ResponseWriter, r *http.Request) {\n\tusers := []model.User{\n\t\t{ID: 1, Name: \"Alice\"},\n\t\t{ID: 2, Name: \"Bob\"},\n\t}\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(users)\n}"
+    },
+    {
+      "path": "internal/model/user.go",
+      "content": "package model\n\ntype User struct {\n\tID   int    `json:\"id\"`\n\tName string `json:\"name\"`\n}"
+    },
+    {
+      "path": ".gitignore",
+      "content": "bin/\n*.exe\n.env"
+    },
+    {
+      "path": "Dockerfile",
+      "content": "# Build stage\nFROM golang:1.22-alpine AS builder\n\nWORKDIR /app\n\nCOPY go.mod go.sum* ./\nRUN go mod download\n\nCOPY . .\n\nRUN CGO_ENABLED=0 GOOS=linux go build -ldflags=\"-s -w\" -o server ./cmd/server\n\n# Final stage\nFROM alpine:3.19\n\nRUN apk --no-cache add ca-certificates tzdata\n\nWORKDIR /app\n\nCOPY --from=builder /app/server .\n\nEXPOSE {port}\n\nENTRYPOINT [\"./server\"]"
+    },
+    {
+      "path": "docker-compose.yml",
+      "content": "version: \"3.9\"\n\nservices:\n  app:\n    build: .\n    ports:\n      - \"{port}:{port}\"\n    depends_on:\n      db:\n        condition: service_healthy\n    environment:\n      - DB_HOST=db\n      - DB_PORT=5432\n      - DB_USER=postgres\n      - DB_PASSWORD=postgres\n      - DB_NAME=appdb\n\n  db:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: postgres\n      POSTGRES_PASSWORD: postgres\n      POSTGRES_DB: appdb\n    ports:\n      - \"5432:5432\"\n    volumes:\n      - pgdata:/var/lib/postgresql/data\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U postgres\"]\n      interval: 5s\n      timeout: 5s\n      retries: 5\n\nvolumes:\n  pgdata:"
+    },
+    {
+      "path": ".dockerignore",
+      "content": "bin/\n.git\n.env\n*.exe"
+    },
+    {
+      "path": "unit_tests/handler_test.go",
+      "content": "package unit_tests\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n\n\t\"{module}/internal/handler\"\n)\n\nfunc TestHealthHandler(t *testing.T) {\n\tmux := http.NewServeMux()\n\thandler.RegisterRoutes(mux)\n\n\treq := httptest.NewRequest(http.MethodGet, \"/health\", nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\n\tvar body map[string]string\n\tif err := json.NewDecoder(rr.Body).Decode(&body); err != nil {\n\t\tt.Fatalf(\"failed to decode response: %v\", err)\n\t}\n\tif body[\"status\"] != \"ok\" {\n\t\tt.Errorf(\"expected status \\\"ok\\\", got %q\", body[\"status\"])\n\t}\n}\n\nfunc TestListUsersHandler(t *testing.T) {\n\tmux := http.NewServeMux()\n\thandler.RegisterRoutes(mux)\n\n\treq := httptest.NewRequest(http.MethodGet, \"/api/users\", nil)\n\trr := httptest.NewRecorder()\n\tmux.ServeHTTP(rr, req)\n\n\tif rr.Code != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", rr.Code)\n\t}\n\n\tvar users []map[string]interface{}\n\tif err := json.NewDecoder(rr.Body).Decode(&users); err != nil {\n\t\tt.Fatalf(\"failed to decode response: %v\", err)\n\t}\n\tif len(users) == 0 {\n\t\tt.Error(\"expected non-empty users array\")\n\t}\n}"
+    },
+    {
+      "path": "API_tests/api_test.go",
+      "content": "package API_tests\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n\t\"net/http/httptest\"\n\t\"testing\"\n\n\t\"{module}/internal/handler\"\n)\n\nfunc setupServer() *httptest.Server {\n\tmux := http.NewServeMux()\n\thandler.RegisterRoutes(mux)\n\treturn httptest.NewServer(mux)\n}\n\nfunc TestAPIHealth(t *testing.T) {\n\tts := setupServer()\n\tdefer ts.Close()\n\n\tresp, err := http.Get(ts.URL + \"/health\")\n\tif err != nil {\n\t\tt.Fatalf(\"request failed: %v\", err)\n\t}\n\tdefer resp.Body.Close()\n\n\tif resp.StatusCode != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", resp.StatusCode)\n\t}\n\n\tvar body map[string]string\n\tif err := json.NewDecoder(resp.Body).Decode(&body); err != nil {\n\t\tt.Fatalf(\"failed to decode response: %v\", err)\n\t}\n\tif body[\"status\"] != \"ok\" {\n\t\tt.Errorf(\"expected status \\\"ok\\\", got %q\", body[\"status\"])\n\t}\n}\n\nfunc TestAPIListUsers(t *testing.T) {\n\tts := setupServer()\n\tdefer ts.Close()\n\n\tresp, err := http.Get(ts.URL + \"/api/users\")\n\tif err != nil {\n\t\tt.Fatalf(\"request failed: %v\", err)\n\t}\n\tdefer resp.Body.Close()\n\n\tif resp.StatusCode != http.StatusOK {\n\t\tt.Fatalf(\"expected status 200, got %d\", resp.StatusCode)\n\t}\n\n\tvar users []map[string]interface{}\n\tif err := json.NewDecoder(resp.Body).Decode(&users); err != nil {\n\t\tt.Fatalf(\"failed to decode response: %v\", err)\n\t}\n\tif len(users) == 0 {\n\t\tt.Error(\"expected non-empty users array\")\n\t}\n}"
+    },
+    {
+      "path": "run_tests.sh",
+      "content": "#!/usr/bin/env bash\nset -euo pipefail\n\necho \"Running unit tests...\"\ngo test ./unit_tests/... -v\n\necho \"\"\necho \"Running API integration tests...\"\ngo test ./API_tests/... -v\n\necho \"\"\necho \"All tests passed.\""
+    },
+    {
+      "path": "README.md",
+      "content": "# {module}\n\nA production-ready Go HTTP API built with the standard library.\n\n## Tech Stack\n\n- **Go 1.22** — leveraging the enhanced `net/http` routing (method patterns)\n- **PostgreSQL 16** — via Docker Compose\n- **Docker** — multi-stage build for minimal production images\n\n## Quick Start (Docker)\n\n```bash\ndocker compose up --build\n```\n\nThe API will be available at `http://<HOST>:{port}`.\n\n## Manual Setup\n\n```bash\n# Install dependencies\ngo mod download\n\n# Run the server\ngo run ./cmd/server\n```\n\n## API Endpoints\n\n| Method | Path         | Description          |\n|--------|--------------|----------------------|\n| GET    | /health      | Health check         |\n| GET    | /api/users   | List all users       |\n\n## Running Tests\n\n```bash\n# Run all tests\nbash run_tests.sh\n\n# Or run individually\ngo test ./unit_tests/... -v\ngo test ./API_tests/... -v\n```\n\n## Project Structure\n\n```\n.\n├── cmd/server/          # Application entrypoint\n├── internal/\n│   ├── handler/         # HTTP handlers and routes\n│   ├── model/           # Data models\n│   └── service/         # Business logic\n├── unit_tests/          # Unit tests\n├── API_tests/           # Integration / API tests\n├── Dockerfile           # Multi-stage Docker build\n├── docker-compose.yml   # Docker Compose orchestration\n└── run_tests.sh         # Test runner script\n```"
+    }
+  ]
+}

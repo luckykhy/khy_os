@@ -1,0 +1,21 @@
+{
+  "name": "source-driven-development",
+  "description": "Grounds every implementation decision in official documentation. Use when you want authoritative, source-cited code free from outdated patterns. Use when building with any framework or library where correctness matters.",
+  "user_invocable": true,
+  "trigger": "/source-driven-development",
+  "aliases": [
+    "/source-dd"
+  ],
+  "category": "methodology",
+  "tags": [
+    "source",
+    "research",
+    "sdd"
+  ],
+  "platforms": [
+    "khy-os",
+    "khy-quant"
+  ],
+  "context": "inline",
+  "source": "agent-skills (vendored, built-in)"
+}

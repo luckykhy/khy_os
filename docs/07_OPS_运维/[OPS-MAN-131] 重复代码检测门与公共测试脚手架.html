@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-131] 重复代码检测门 + OCR 网关公共测试脚手架 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-131] 重复代码检测门 + OCR 网关公共测试脚手架</div>
+      <header class="hero reveal"><h1>[OPS-MAN-131] 重复代码检测门 + OCR 网关公共测试脚手架</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-131-重复代码检测门-ocr-网关公共测试脚手架">[OPS-MAN-131] 重复代码检测门 + OCR 网关公共测试脚手架</a></li><li class="lvl-2"><a href="#背景-goal-2026-07-12">背景（goal 2026-07-12）</a></li><li class="lvl-2"><a href="#两件事">两件事</a></li><li class="lvl-3"><a href="#1-公共测试脚手架-services-backend-tests-gateway-ocrgatewayharness-js">1) 公共测试脚手架 `services/backend/tests/gateway/_ocrGatewayHarness.js`</a></li><li class="lvl-3"><a href="#2-自研重复代码检测-scripts-check-duplication-js-scripts-lib-duplicationguard-js">2) 自研重复代码检测 `scripts/check-duplication.js` + `scripts/lib/duplicationGuard.js`</a></li><li class="lvl-2"><a href="#命令">命令</a></li><li class="lvl-2"><a href="#verify-会亮红灯-未完成">verify（会亮红灯 = 未完成）</a></li><li class="lvl-2"><a href="#how-to-extend">HOW-TO-EXTEND</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-131-重复代码检测门-ocr-网关公共测试脚手架">[OPS-MAN-131] 重复代码检测门 + OCR 网关公共测试脚手架<a class="anchor" href="#ops-man-131-重复代码检测门-ocr-网关公共测试脚手架" aria-label="锚点">#</a></h1>
+<blockquote><p>症状 → 子系统速查：当你看到「测试文件里成片复制粘贴的脚手架」「想统一维护重复函数」<br>「CI 该拦下大段抄代码」时读本手册。单一真源见 <code>docs/维护者/维护映射表.json</code> 的<br><code>ci-duplication-guard</code> area。</p></blockquote>
+<h2 id="背景-goal-2026-07-12">背景（goal 2026-07-12）<a class="anchor" href="#背景-goal-2026-07-12" aria-label="锚点">#</a></h2>
+<p>用户诉求（逐字）：<strong>「第一，把所有重复的函数提取成公共库，统一维护。第二，在 CI 里加了<br>重复代码检测，超过三行相同就报警。」</strong></p>
+<p>OCR 网关测试族（<code>services/backend/tests/gateway/</code> 下 20 个 <code>.test.js</code>）在过去十几轮送别礼<br>里反复复制粘贴同一套测试脚手架（<code>_wireGateway</code> / <code>_makeRecordingAdapter</code> /<br><code>_makeRejectAdapter</code> / <code>_realExtractImageOcrDetails</code> / <code>_haveTesseract</code> / <code>_findPython</code> /<br>PIL 渲图 / env 存还原）。人肉盯梢挡不住复制粘贴；本次把它一次性抽成公共库并加机器门。</p>
+<h2 id="两件事">两件事<a class="anchor" href="#两件事" aria-label="锚点">#</a></h2>
+<h3 id="1-公共测试脚手架-services-backend-tests-gateway-ocrgatewayharness-js">1) 公共测试脚手架 <code>services/backend/tests/gateway/_ocrGatewayHarness.js</code><a class="anchor" href="#1-公共测试脚手架-services-backend-tests-gateway-ocrgatewayharness-js" aria-label="锚点">#</a></h3>
+<p><strong>参数化工厂</strong>，一处实现吸收 20 个文件的差异（最终 content 串、单/级联适配器形态、<br>是否捕获图、describe 分支、prompt 文案、env key 列表、渲染文字），与各文件原地 harness<br><strong>逐字节等价</strong>。下划线前缀 → 不被 <code>*.test.js</code> 选中。<strong>本文件确有 IO</strong>（spawnSync/fs/<br>imageService），头注释<strong>不作</strong>「纯叶子/零 IO」声明（否则 <code>check-leaf-contract</code> 的 leaf-io<br>规则命中）。</p>
+<p>导出 API：<code>makeRecordingAdapter(opts)→handle</code>（<code>handle.finalPrompt/finalImages</code> 实时观测，<br>取代 20 处 <code>let _finalPrompt</code>）、<code>makeRejectAdapter()</code>、<code>wireSingle</code>/<code>wireCascade</code>、<br><code>realExtractImageOcrDetails</code>、<code>haveTesseractLang</code>/<code>tesseractPresent</code>/<code>findPython</code>/<br><code>findPythonWithPil</code>、<code>renderPng</code>、<code>makeRunner</code>（<code>run</code>/<code>runCapture</code>/<code>uniq</code>）、<code>envSandbox</code>、<br><code>imagesStripped</code>。</p>
+<p>迁移契约：各测试文件读法从 module 变量改为句柄字段<br>（<code>let _finalPrompt</code> → <code>const rec = makeRecordingAdapter(...); rec.finalPrompt</code>），<br>测试体/断言/describe-test 名/env key/content 串/特性注释<strong>全部保持不变</strong>。</p>
+<h3 id="2-自研重复代码检测-scripts-check-duplication-js-scripts-lib-duplicationguard-js">2) 自研重复代码检测 <code>scripts/check-duplication.js</code> + <code>scripts/lib/duplicationGuard.js</code><a class="anchor" href="#2-自研重复代码检测-scripts-check-duplication-js-scripts-lib-duplicationguard-js" aria-label="锚点">#</a></h3>
+<p>仿本仓 <code>check-leaf-contract</code> / <code>check-agent-rules</code> 的「薄 CLI + 纯 guard 核心」分层。</p>
+<ul><li><code>scripts/lib/duplicationGuard.js</code>：纯叶子判定核心（只用 <code>crypto</code>/<code>path</code>，零 IO、确定性、</li></ul>
+<p>fail-soft）。主闸 <code>KHY_DUPLICATION_GUARD</code>（显式 <code>0/false/off/no</code> 关）。集合级<br>  <code>assess({files,baseline,mode,minBlock,env}) → {findings,classes}</code>。</p>
+<ul><li><code>scripts/check-duplication.js</code>：一切 IO（递归 walk / 读文件 / 读写基线 / git diff）。</li><li><code>.duplication-baseline.json</code>（仓库根）：存量重复白名单，指纹 = 归一化窗口内容 hash</li></ul>
+<p>（非 file+line，抗位移；抽公共库删掉重复副本后其 hash 自动从语料消失）。</p>
+<p><strong>算法</strong>：行归一化（trim + 折叠空白，跳过空行/纯注释/纯结构标点）→ 滑窗 <code>MIN_BLOCK=4</code><br>有效行（即「超过三行」）→ sha1 → 某 hash ≥2 处出现即克隆类 → 同文件相邻窗口合并极大跨度 →<br>每（文件,跨度）一条 finding。</p>
+<p><strong>阶段化（用户决策：先告警 + 基线，迁移后转硬门）</strong>：</p>
+<ul><li>阶段一 <code>DEFAULT_MODE='warn'</code>：全部 → warning，存量重复绝不红 CI。独立存在，</li></ul>
+<p><strong>不</strong>进阻塞聚合 <code>check:small-model:safety</code>。</p>
+<ul><li>阶段二 <code>--gate</code> / <code>KHY_DUPLICATION_MODE=gate</code>：∈基线 → warning、∉基线 → error（新重复挡回）。</li><li><strong>翻转成硬门 = 一处可评审 diff</strong>：改 <code>DEFAULT_MODE</code> 为 <code>'gate'</code> + 重跑 <code>--write-baseline</code></li></ul>
+<p>（迁移后基线应更小）+ 把 <code>check:duplication</code> 并入安全聚合。</p>
+<h2 id="命令">命令<a class="anchor" href="#命令" aria-label="锚点">#</a></h2>
+<pre><code>npm run check:duplication            # warn 扫默认 scope（services/backend/tests/gateway）
+npm run check:duplication:strict     # 有 warning 即 exit 1
+npm run check:duplication:gate       # 硬门:∉基线 → error
+npm run check:duplication:baseline   # 生成/刷新 .duplication-baseline.json
+npm run test:maintainer:duplication  # 两支测试(guard 核心 in-process + CLI e2e)</code></pre>
+<h2 id="verify-会亮红灯-未完成">verify（会亮红灯 = 未完成）<a class="anchor" href="#verify-会亮红灯-未完成" aria-label="锚点">#</a></h2>
+<pre><code>node --check scripts/lib/duplicationGuard.js scripts/check-duplication.js
+node --test scripts/tests/duplicationGuard.test.js scripts/tests/check-duplication.test.js
+npm run check:duplication            # warn:存量重复只告警不红</code></pre>
+<h2 id="how-to-extend">HOW-TO-EXTEND<a class="anchor" href="#how-to-extend" aria-label="锚点">#</a></h2>
+<ul><li>扩大扫描范围：<code>scripts/check-duplication.js</code> 顶部 <code>DEFAULT_SCOPE</code>（或跑时传 positional 目录）。</li><li>调整「几行算重复」：<code>duplicationGuard.js</code> 的 <code>DEFAULT_MIN_BLOCK</code>（当前 4 = 超过三行）。</li><li>加跳过类别（如导入行）：<code>duplicationGuard.js</code> 的 <code>COMMENT_LINE_RE</code> / <code>PUNCT_ONLY_RE</code> / <code>isSignificant</code>。</li><li>翻转硬门：见上「阶段二」，改 <code>DEFAULT_MODE</code> + 重写基线 + 并入聚合，一处 diff。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-130] 还原来源可溯性·接线运行时横幅.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-130] 还原来源可溯性 · 接线运行时横幅（让 khy restore 诚实告知「这份源码等于哪个 git 状态」）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-132] prep期OCR兜底非verbose实时状态告知已降级到OCR.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-132] prep 期 OCR 兜底非-verbose 实时状态告知已降级到 OCR</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-131] 重复代码检测门与公共测试脚手架.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

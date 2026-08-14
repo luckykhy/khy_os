@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://khy-os.dev/schemas/mobile/approval-ticket.schema.json",
+  "title": "KHY Mobile Approval Ticket",
+  "type": "object",
+  "required": [
+    "version",
+    "ticket_id",
+    "trace_id",
+    "risk_level",
+    "requested_action",
+    "target",
+    "reason",
+    "impact_summary",
+    "command_preview",
+    "created_at",
+    "expires_at",
+    "status",
+    "requires_confirmation",
+    "choices",
+    "redaction_applied"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "ticket_id": {
+      "type": "string",
+      "pattern": "^ap_[a-z0-9]{8,32}$"
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 64
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "requested_action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "type",
+        "display"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "process",
+            "file",
+            "git",
+            "network",
+            "deployment",
+            "system",
+            "other"
+          ]
+        },
+        "display": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "pid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "host": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "additionalProperties": false
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400
+    },
+    "impact_summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "command_preview": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 300
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "expired",
+        "cancelled"
+      ]
+    },
+    "requires_confirmation": {
+      "type": "boolean"
+    },
+    "choices": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "approve",
+          "reject",
+          "edit_then_approve"
+        ]
+      }
+    },
+    "redaction_applied": {
+      "type": "boolean"
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "diff_excerpt": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "log_tail": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "test_summary": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "resource_snapshot": {
+          "type": "object",
+          "properties": {
+            "cpu_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "mem_used_gb": {
+              "type": "number",
+              "minimum": 0
+            },
+            "mem_total_gb": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "version": "1.0",
+      "ticket_id": "ap_h8k2m9q1v4",
+      "trace_id": "tr_20260516_8f2cd19a",
+      "risk_level": "high",
+      "requested_action": "Kill high-memory process",
+      "target": {
+        "type": "process",
+        "display": "chromium-render (PID 892)",
+        "pid": 892
+      },
+      "reason": "Memory usage remains above threshold for 120s.",
+      "impact_summary": "Process will be terminated immediately and unsaved renderer state may be lost.",
+      "command_preview": [
+        "kill -9 892"
+      ],
+      "created_at": "2026-05-16T10:30:00Z",
+      "expires_at": "2026-05-16T10:35:00Z",
+      "status": "pending",
+      "requires_confirmation": true,
+      "choices": [
+        "approve",
+        "reject",
+        "edit_then_approve"
+      ],
+      "redaction_applied": true,
+      "context": {
+        "log_tail": [
+          "PID 892 RSS=3.2GB",
+          "Memory pressure level: high"
+        ]
+      }
+    }
+  ]
+}

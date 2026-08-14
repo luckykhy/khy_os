@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-089] 还原学习应用器 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-089] 还原学习应用器</div>
+      <header class="hero reveal"><h1>[OPS-MAN-089] 还原学习应用器</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-089-还原学习应用器">[OPS-MAN-089] 还原学习应用器</a></li><li class="lvl-2"><a href="#这一层闭合什么-一条断桥-产出了学习-却无人消费">这一层闭合什么：一条断桥(产出了学习，却无人消费)</a></li><li class="lvl-2"><a href="#怎么应用-只标注-不删除-不重排-诚实边界">怎么应用：只标注，不删除，不重排(诚实边界)</a></li><li class="lvl-2"><a href="#纯度与安全边界-继承项目章程">纯度与安全边界(继承项目章程)</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-089-还原学习应用器">[OPS-MAN-089] 还原学习应用器<a class="anchor" href="#ops-man-089-还原学习应用器" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-apply.js --gen-doc</code> 确定性生成，请勿手改；<br>应用逻辑改在 <code>scripts/lib/restoreSkipApplier.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层闭合什么-一条断桥-产出了学习-却无人消费">这一层闭合什么：一条断桥(产出了学习，却无人消费)<a class="anchor" href="#这一层闭合什么-一条断桥-产出了学习-却无人消费" aria-label="锚点">#</a></h2>
+<p>策略台账(OPS-MAN-088)跨会话学出 <code>recommendedSkips</code>——这台机器上已被反复证明无用的策略。<br>但它的<strong>消费点为零</strong>：台账花力气产出了学习，恢复链却从不读它，于是 agent 仍会按原序把<br>已证死的策略再走一遍。<strong>上游产出、下游能吃、中间无人接线 = 死字段</strong>。本层就是那个缺失的<br>消费者，把 <code>recommendedSkips</code> 应用到 resolver 的 <code>moves</code> 上，让「学到的」变成「用上的」。</p>
+<p>端到端闭环(本 CLI 接线)：</p>
+<pre><code>gatherAssessments(三面镜子) -&gt; detectRestoreConflicts(矛盾) -&gt; resolveRestoreConflicts(有序恢复链)
+  -&gt; readAllSessions + deriveStrategyLedger(跨会话学出死策略) -&gt; applyLearnedSkips(标注到链上)</code></pre>
+<pre><code class="language-bash">node scripts/restore-apply.js --json   # 自驱 agent 读它决定跳哪步、试哪步</code></pre>
+<h2 id="怎么应用-只标注-不删除-不重排-诚实边界">怎么应用：只标注，不删除，不重排(诚实边界)<a class="anchor" href="#怎么应用-只标注-不删除-不重排-诚实边界" aria-label="锚点">#</a></h2>
+<p>台账划下红线：「学习只做减法，<strong>绝不重排安全恢复链顺序</strong>」。本层严格遵守，逐 move 标注：</p>
+<table><thead><tr><th>标注</th><th>含义</th></tr></thead><tbody><tr><td><code>learnedDead</code></td><td>该 move 的 strategy 属于跨会话已证死的集合</td></tr><tr><td><code>safeToSkip</code></td><td>已证死<strong>且</strong>跳过它不搁浅任何冲突(它 covers 的每个冲突都另有非死 move 兜底)<strong>且</strong>不是安全网</td></tr><tr><td><code>mustTryDespiteDead</code></td><td>已证死但<strong>是唯一出路</strong>或<strong>是 escalate 安全网</strong> → 仍须一试或升级交人</td></tr></tbody></table>
+<ul><li><strong>保序</strong>：<code>plan</code> 与输入 <code>moves</code> 顺序逐一对应，绝不重排(reprobe→reconcile→</li></ul>
+<p>trust-pessimistic→escalate 的安全序由风险决定，不可因学习颠覆)。</p>
+<ul><li><strong>不删</strong>：绝不移除任何 move。学习是<strong>建议性标注</strong>，执行者(agent)再决定跳不跳。</li><li><strong>不搁浅冲突</strong>：死策略若是某冲突的唯一出路，绝不建议跳过——否则等于静默放弃还原，</li></ul>
+<p>比「再试一次已知无用」更危险。</p>
+<ul><li><strong>不吞交人出口</strong>：<code>escalate</code> 是最后的人力安全网，<strong>永远</strong> <code>safeToSkip=false</code>。</li></ul>
+<h2 id="纯度与安全边界-继承项目章程">纯度与安全边界(继承项目章程)<a class="anchor" href="#纯度与安全边界-继承项目章程" aria-label="锚点">#</a></h2>
+<ul><li>叶子纯计算、零 IO、绝不抛：畸形 moves / 空 skips → 原样透传全部 move、零跳过建议(保守)。</li><li>读盘串链在本 CLI；应用判定在叶子。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-088] 还原策略台账.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-088] 还原策略台账</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-090] 还原导航器.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-090] 还原导航器</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-089] 还原学习应用器.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

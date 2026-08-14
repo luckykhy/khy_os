@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Y-code (星瑶) → Khyos: Implementation Plan · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>Y-code (星瑶) → Khyos: Implementation Plan</div>
+      <header class="hero reveal"><h1>Y-code (星瑶) → Khyos: Implementation Plan</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#y-code-星瑶-khyos-implementation-plan">Y-code (星瑶) → Khyos: Implementation Plan</a></li><li class="lvl-2"><a href="#executive-summary">Executive Summary</a></li><li class="lvl-2"><a href="#gap-analysis">Gap Analysis</a></li><li class="lvl-3"><a href="#features-y-code-has-that-khyos-should-adopt">Features Y-code Has That Khyos Should Adopt</a></li><li class="lvl-3"><a href="#features-khyos-has-that-y-code-lacks-no-action-needed">Features Khyos Has That Y-code Lacks (no action needed)</a></li><li class="lvl-2"><a href="#implementation-progress">Implementation Progress</a></li><li class="lvl-3"><a href="#phase-1-core-architecture-done">Phase 1: Core Architecture ✅ DONE</a></li><li class="lvl-3"><a href="#phase-2-remaining-not-yet-implemented">Phase 2: Remaining (not yet implemented)</a></li><li class="lvl-2"><a href="#phase-2-remaining-not-yet-implemented-2">Phase 2 Remaining (not yet implemented)</a></li><li class="lvl-2"><a href="#phase-3-output-quality-formatting-new-patterns-from-deep-source-analysis">Phase 3: Output Quality &amp; Formatting (new patterns from deep source analysis)</a></li><li class="lvl-3"><a href="#pattern-deep-dives">Pattern Deep-Dives</a></li><li class="lvl-3"><a href="#implementation-log">Implementation Log</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="y-code-星瑶-khyos-implementation-plan">Y-code (星瑶) → Khyos: Implementation Plan<a class="anchor" href="#y-code-星瑶-khyos-implementation-plan" aria-label="锚点">#</a></h1>
+<h2 id="executive-summary">Executive Summary<a class="anchor" href="#executive-summary" aria-label="锚点">#</a></h2>
+<p>Y-code (https://gitee.com/feng-chenhao/xingyao-y-code.git) is a terminal AI coding assistant<br>that shares the same &quot;Claude Code-aligned&quot; philosophy as Khyos but with some mature patterns<br>Khyos can benefit from. Khyos already has a richer platform (web UI, multi-tenant, IDE bridges,<br>workflow editor, marketplace), but lacks some refined UX and architecture patterns Y-code has<br>pioneered.</p>
+<h2 id="gap-analysis">Gap Analysis<a class="anchor" href="#gap-analysis" aria-label="锚点">#</a></h2>
+<h3 id="features-y-code-has-that-khyos-should-adopt">Features Y-code Has That Khyos Should Adopt<a class="anchor" href="#features-y-code-has-that-khyos-should-adopt" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>Feature</th><th>Y-code Pattern</th><th>Khyos Gap</th><th>Priority</th></tr></thead><tbody><tr><td>1</td><td><strong>Stable + Dynamic Prompt Architecture</strong></td><td>System prompt split into stable prefix (cross-turn cached) + dynamic context (per-turn time/plan/model). Stable prefix padded to 2048-token boundaries for DeepSeep cache hit.</td><td>Khyos builds system prompt every turn from scratch with <code>makeSystemPrompt()</code>. No explicit stable/dynamic split for cache optimization.</td><td><strong>HIGH</strong></td></tr><tr><td>2</td><td><strong>ToolSpec metadata-driven permissions</strong></td><td>Frozen dataclass with <code>requires_permission</code>, <code>parallel_safe</code>, <code>cancellable</code>, <code>mutates_files</code>, <code>activity_description</code> flags driving automatic permission checks.</td><td>Khyos tools have permission checks but they're implicit/hardcoded in execution paths.</td><td><strong>HIGH</strong></td></tr><tr><td>3</td><td><strong>Source text compression</strong></td><td>Strip trailing whitespace + merge consecutive blank lines before sending file content to LLM (saves 10-20% tokens, preserves semantics).</td><td>No pre-send source compression in Khyos.</td><td><strong>HIGH</strong></td></tr><tr><td>4</td><td><strong>Tool call argument resilience</strong></td><td>3-level JSON repair + schema-based argument filtering removes hallucinated params.</td><td>Unknown if Khyos handles LLM hallucinated tool arguments.</td><td><strong>MEDIUM</strong></td></tr><tr><td>5</td><td><strong>Long-term memory (KAIROS)</strong></td><td>Daily logs + MEMORY.md index + <code>build_memory_system_section()</code> injected into stable prompt + dream consolidation background thread.</td><td>Khyos has memoryEngine and memdir but no daily log pattern or auto-consolidation.</td><td><strong>HIGH</strong></td></tr><tr><td>6</td><td><strong>Session undo + checkpoint</strong></td><td><code>/undo</code> rolls back last file modification + wipes model memory. <code>/checkpoint restore</code> rolls back entire turn.</td><td>Khyos has session persistence but no undo/checkpoint.</td><td><strong>MEDIUM</strong></td></tr><tr><td>7</td><td><strong>Session share/export</strong></td><td><code>/share</code> exports conversation as MD/HTML/JSON.</td><td>Not found in Khyos.</td><td><strong>LOW</strong></td></tr><tr><td>8</td><td><strong>Git worktree management</strong></td><td><code>/worktree</code> manages multi-branch parallel workspaces.</td><td>Khyos has &quot;Projects&quot; but not git worktree isolation.</td><td><strong>MEDIUM</strong></td></tr></tbody></table>
+<h3 id="features-khyos-has-that-y-code-lacks-no-action-needed">Features Khyos Has That Y-code Lacks (no action needed)<a class="anchor" href="#features-khyos-has-that-y-code-lacks-no-action-needed" aria-label="锚点">#</a></h3>
+<ul><li>Web-based multi-user platform (Y-code is single-user TUI)</li><li>Multi-tenant architecture with PostgreSQL</li><li>Visual workflow editor (drag-and-drop Vue Flow)</li><li>30+ IDE adapters (Cursor, Trae, Kiro, Warp, etc.)</li><li>LLM Gateway with circuit breaking + rate limiting</li><li>Plugin marketplace (Coze-compatible OpenAPI)</li><li>IDE bridge system for remote development</li><li>11 built-in agents with Claude Code alignment</li></ul>
+<h2 id="implementation-progress">Implementation Progress<a class="anchor" href="#implementation-progress" aria-label="锚点">#</a></h2>
+<h3 id="phase-1-core-architecture-done">Phase 1: Core Architecture ✅ DONE<a class="anchor" href="#phase-1-core-architecture-done" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>Feature</th><th>Status</th><th>Files</th></tr></thead><tbody><tr><td>1</td><td><strong>Source text compression</strong></td><td>✅ Done</td><td><code>services/backend/src/utils/sourceTextCompressor.js</code></td></tr><tr><td>2</td><td><strong>Tool result compression</strong></td><td>✅ Done</td><td><code>services/backend/src/services/toolResultCompressor.js</code></td></tr><tr><td>3</td><td><strong>Long-term memory (KAIROS)</strong></td><td>✅ Done</td><td><code>services/backend/src/services/memoryKairos.js</code></td></tr><tr><td>4</td><td><strong>Stable + Dynamic prompt assembly</strong></td><td>✅ Done</td><td><code>services/backend/src/services/promptAssemblyService.js</code></td></tr><tr><td>5</td><td><strong>FileReadTool integrate compress</strong></td><td>✅ Done</td><td><code>tools/FileReadTool/index.js</code> (+compress param)</td></tr><tr><td>6</td><td><strong>Runtime export integration</strong></td><td>✅ Done</td><td><code>services/backend/src/services/khyUpgradeRuntime.js</code></td></tr><tr><td>7</td><td><strong>Wire toolResultCompressor into contextRouter</strong></td><td>✅ Done</td><td><code>preCompressToolResults()</code> added before truncation in <code>contextRouter.js</code> + <code>_toolResultNormalizer.js</code></td></tr><tr><td>8</td><td><strong>Wire memoryKairos into aiChatCore</strong></td><td>✅ Done</td><td>Daily log + memory tag extraction appended after each turn (fire-and-forget)</td></tr><tr><td>9</td><td><strong>Wire sourceTextCompressor into more tools</strong></td><td>✅ Done</td><td>Added to <code>_toolResultNormalizer.js</code> <code>mapToolResultToModelBlock()</code> — covers ALL tools globally</td></tr><tr><td>10</td><td><strong>Wiring toolResultCompressor into additional tools</strong></td><td>✅ Done</td><td>Applied in <code>_toolResultNormalizer.js</code> + <code>contextRouter.js</code> pre-send pipeline</td></tr><tr><td>11</td><td><strong>Wire memoryKairos into existing memory section</strong></td><td>✅ Done</td><td>Appended to system prompt via <code>buildMemorySystemSection()</code> in <code>promptAssemblyService.js</code></td></tr></tbody></table>
+<h3 id="phase-2-remaining-not-yet-implemented">Phase 2: Remaining (not yet implemented)<a class="anchor" href="#phase-2-remaining-not-yet-implemented" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr></thead><tbody><tr><td>7</td><td><strong>Session undo/checkpoint</strong></td><td>Pending</td><td>Needs DB schema + CLI handlers</td></tr><tr><td>8</td><td><strong>Session share/export</strong></td><td>Pending</td><td>MD/HTML/JSON export of conversations</td></tr><tr><td>9</td><td><strong>ToolSpec metadata refactor</strong></td><td>Pending</td><td>Low priority — existing tools work</td></tr><tr><td>10</td><td><strong>Git worktree management</strong></td><td>Pending</td><td>Low priority — Khyos has Projects</td></tr></tbody></table>
+<h2 id="phase-2-remaining-not-yet-implemented-2">Phase 2 Remaining (not yet implemented)<a class="anchor" href="#phase-2-remaining-not-yet-implemented-2" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr></thead><tbody><tr><td>7</td><td><strong>Session undo/checkpoint</strong></td><td>Pending</td><td>Needs DB schema + CLI handlers</td></tr><tr><td>8</td><td><strong>Session share/export</strong></td><td>Pending</td><td>MD/HTML/JSON export of conversations</td></tr><tr><td>9</td><td><strong>ToolSpec metadata refactor</strong></td><td>Pending</td><td>Low priority — existing tools work</td></tr><tr><td>10</td><td><strong>Git worktree management</strong></td><td>Pending</td><td>Low priority — Khyos has Projects</td></tr></tbody></table>
+<h2 id="phase-3-output-quality-formatting-new-patterns-from-deep-source-analysis">Phase 3: Output Quality &amp; Formatting (new patterns from deep source analysis)<a class="anchor" href="#phase-3-output-quality-formatting-new-patterns-from-deep-source-analysis" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>Feature</th><th>Y-code Source</th><th>Khyos Gap</th><th>Priority</th></tr></thead><tbody><tr><td>11</td><td><strong>Tool result sanitization</strong></td><td><code>tool_presenter.py</code> — <code>sanitize_tool_display_text()</code> strips ANSI/control chars, cookies, secrets, API keys from tool results before display</td><td>Khyos passes raw tool results directly to frontend without sanitization</td><td><strong>MEDIUM</strong></td></tr><tr><td>12</td><td><strong>Tool progress aggregation</strong></td><td><code>tool_progress.py</code> — <code>ToolProgressAggregator</code> batches adjacent read/search tool calls into single &quot;已读取3个文件 · 0.8s&quot; lines, detects parallel execution</td><td>Khyos shows each tool call as separate line — noisy when LLM issues parallel reads</td><td><strong>MEDIUM</strong></td></tr><tr><td>13</td><td><strong>Session memory compression</strong></td><td><code>memory_compressor.py</code> — LLM-based session history compression: retain recent N messages, summarize older ones via secondary (cheap) model, optimistic concurrency guard</td><td>Khyos has memoryKairos but not session-level LLM compression of conversation history</td><td><strong>HIGH</strong></td></tr><tr><td>14</td><td><strong>Turn event standardization</strong></td><td><code>turn_renderer.py</code> — <code>TurnRenderer</code> processes structured turn events (thinking_delta, tool_started, tool_finished, diff_ready, plan_updated), sanitizes protocol text, splits text at code-block/thinking-tag boundaries</td><td>Khyos renders tool results as raw JSON — no structured event pipeline for progressive display</td><td><strong>MEDIUM</strong></td></tr><tr><td>15</td><td><strong>Frontend markdown theme system</strong></td><td><code>themes.py</code> — 9 curated terminal color themes (cyan, matrix, nord, cyberpunk, dracula, lava, sunset, amber, white)</td><td>Khyos has light/dark toggle but no theme diversity or terminal-style color system</td><td><strong>LOW</strong></td></tr></tbody></table>
+<h3 id="pattern-deep-dives">Pattern Deep-Dives<a class="anchor" href="#pattern-deep-dives" aria-label="锚点">#</a></h3>
+<h4 id="11-tool-result-sanitization-tool-presenter-py">11. Tool Result Sanitization (<code>tool_presenter.py</code>)<a class="anchor" href="#11-tool-result-sanitization-tool-presenter-py" aria-label="锚点">#</a></h4>
+<pre><code class="language-python"># 5-layer sanitization pipeline:
+# 1. Strip ANSI escape codes
+# 2. Mask cookie headers: &quot;cookie: sk-abc...&quot; → &quot;cookie: ***&quot;
+# 3. Strip control characters (0x00-0x1f except \n)
+# 4. Mask named secrets: api_key=xxx → api_key=***
+# 5. Mask Bearer tokens and OpenAI keys (sk-...)
+# 6. Collapse whitespace + truncate to limit</code></pre>
+<p><strong>Khyos adoption</strong>: Server-side <code>sanitizeToolDisplayText()</code> that sanitizes ALL tool results before sending to frontend.</p>
+<h4 id="12-tool-progress-aggregation-tool-progress-py">12. Tool Progress Aggregation (<code>tool_progress.py</code>)<a class="anchor" href="#12-tool-progress-aggregation-tool-progress-py" aria-label="锚点">#</a></h4>
+<pre><code class="language-python"># Key insight: adjacent read_file/search_code calls → single summary line
+# &quot;已读取 3 个文件 · 1.2s&quot; instead of 3 separate lines
+# Parallel reads → &quot;正在并行读取 3 个文件&quot;
+# Mutation tools with diff → &quot;+5 / -2 行&quot; inline</code></pre>
+<p><strong>Khyos adoption</strong>: Backend aggregates tool results per-turn, returns <code>toolProgress</code> block with batch summary.</p>
+<h4 id="13-session-memory-compression-memory-compressor-py">13. Session Memory Compression (<code>memory_compressor.py</code>)<a class="anchor" href="#13-session-memory-compression-memory-compressor-py" aria-label="锚点">#</a></h4>
+<pre><code class="language-python"># Flow:
+# 1. Read all messages, retain last N (default 8)
+# 2. Pack older messages → call LLM (prefer cheap secondary model) for summary
+# 3. Safety: tool_call groups must not be split (orphan check)
+# 4. Concurrency: reentrant lock per session + optimistic boundary check
+# 5. Summary prompt: decisions, files, bugs, current goal — strictly word-limited</code></pre>
+<p><strong>Khyos adoption</strong>: <code>memoryCompressor.js</code> for session-level LLM compression of conversation history.</p>
+<h4 id="14-turn-event-standardizer-turn-renderer-py">14. Turn Event Standardizer (<code>turn_renderer.py</code>)<a class="anchor" href="#14-turn-event-standardizer-turn-renderer-py" aria-label="锚点">#</a></h4>
+<pre><code class="language-python"># Structured event types:
+# thinking_delta → consumed, not rendered
+# thinking_finished → flush via thinking_stream buffer
+# tool_started/tool_requested → track in progress aggregator
+# tool_finished → format via tool_presenter
+# diff_ready → parse diff stats, emit &quot;+5/-2&quot; summary
+# plan_updated → render plan status with ANSI colors
+# Error handling → dedup, suppress duplicates</code></pre>
+<p><strong>Khyos adoption</strong>: Turn event types for structured streaming of tool execution results.</p>
+<h4 id="15-theme-system-themes-py">15. Theme System (<code>themes.py</code>)<a class="anchor" href="#15-theme-system-themes-py" aria-label="锚点">#</a></h4>
+<pre><code class="language-python"># 9 themes, each with 8 color slots:
+# border, label, status_main, status_text, status_sep,
+# text_input, menu_current, menu_current_meta
+# Pure CSS hex values — easily portable to web</code></pre>
+<p><strong>Khyos adoption</strong>: Frontend theme presets as CSS custom properties.</p>
+<h3 id="implementation-log">Implementation Log<a class="anchor" href="#implementation-log" aria-label="锚点">#</a></h3>
+<p><strong>2026-08-08</strong>: Implemented 4 new services + 2 integration points:</p>
+<ol><li><code>sourceTextCompressor.js</code> — strips trailing whitespace + merges blank lines (saves 10-20% tokens)</li><li><code>toolResultCompressor.js</code> — pre-send truncation of tool results (head+tail for large results)</li><li><code>memoryKairos.js</code> — daily logs + MEMORY.md index + dream consolidation via LLM</li><li><code>promptAssemblyService.js</code> — stable prefix (cached across turns) + dynamic context (per-turn)</li><li><code>FileReadTool/index.js</code> — added <code>compress</code> parameter to Read tool</li><li><code>khyUpgradeRuntime.js</code> — exported prompt assembly functions</li></ol>
+<p><strong>2026-08-10</strong>: Wired Phase 3 services into production pipelines + additional patterns:</p>
+<ol><li><code>toolResultSanitizer.js</code> — 6-layer sanitization pipeline (ANSI/cookie/secrets/Bearer/OpenAI key/whitespace)</li><li><code>toolProgressAggregator.js</code> — batches adjacent read/search calls into summary lines, parallel detection</li><li><code>memoryCompressor.js</code> — LLM-based session compression with reentrant guard + tool-call pair safety</li><li><code>turnEventStandardizer.js</code> — 8 structured event types for progressive streaming display</li><li>Wired <code>triggerCycleBoundary</code> into aiChatCore.js tool loop — auto-compress at 192K tokens (env <code>KHY_CYCLE_THRESHOLD_TOKENS</code>)</li><li>Wired <code>sourceTextCompressor</code> into <code>_toolResultNormalizer.js</code> — lossless whitespace compression before truncation</li><li>Wired plan retry protection — step status advances to 'blocked' after 2+ failures, forcing root-cause analysis</li><li>Wired dream consolidation into aiChatCore.js — fires every N turns (env <code>KHY_DREAM_CONSOLIDATE_INTERVAL</code>, default 10)</li></ol>
+<p><strong>2026-08-10 (phase 2)</strong>: High-value patterns from deep source analysis:</p>
+<ol><li>Tool argument hallucination filter — <code>toolCalling.js</code> filters LLM-fabricated params by schema (only keeps schema-declared keys + internal keys like <code>cancel_event</code>). Matches Y-code <code>tool_registry.py:57-61</code>.</li><li>Failed subagent self-healing injection — already wired in <code>aiChatCore.js:2887</code> via <code>_buildStepRecoveryPrompt</code> + <code>aiGatewayGenerateHelpers.js:335</code>. When tools fail, model receives recovery guidance to retry with different approach.</li><li>Plan state machine guard — already satisfied architecturally: Khyos does NOT expose plan management tools to LLM (state managed by execution engine internally). Y-code's plan guard is unnecessary in Khyos's different architecture.</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/RELIABILITY-PROTOCOL.html"><div class="dir">← 上一篇</div><div class="ttl">khy-os 长任务可靠性协议 (Reliability Protocol)</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/ycode-inspiration-plan.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

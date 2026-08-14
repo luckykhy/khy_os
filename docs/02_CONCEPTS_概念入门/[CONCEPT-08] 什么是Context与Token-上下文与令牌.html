@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⑧ 什么是 Context 与 Token（上下文与令牌） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>⑧ 什么是 Context 与 Token（上下文与令牌）</div>
+      <header class="hero reveal"><h1>⑧ 什么是 Context 与 Token（上下文与令牌）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#⑧-什么是-context-与-token-上下文与令牌">⑧ 什么是 Context 与 Token（上下文与令牌）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-token-是什么-模型眼里的-字块">二、Token 是什么？——模型眼里的&quot;字块&quot;</a></li><li class="lvl-2"><a href="#三-为什么普通人也要懂-token">三、为什么普通人也要懂 token？</a></li><li class="lvl-2"><a href="#四-context-上下文窗口-是什么-一张有限大的桌子">四、Context（上下文窗口）是什么？——一张有限大的桌子</a></li><li class="lvl-2"><a href="#五-上下文溢出-为什么它-忘了我前面说的">五、上下文溢出：为什么它&quot;忘了我前面说的&quot;</a></li><li class="lvl-2"><a href="#六-上下文管理-桌子满了怎么办">六、上下文管理：桌子满了怎么办？</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为模型永久记住了所有对话">误区 1：以为模型永久记住了所有对话</a></li><li class="lvl-3"><a href="#误区-2-以为-token-字数">误区 2：以为 token = 字数</a></li><li class="lvl-3"><a href="#误区-3-以为上下文窗口越大越好-且没代价">误区 3：以为上下文窗口越大越好、且没代价</a></li><li class="lvl-3"><a href="#误区-4-以为清空-新开对话它还记得">误区 4：以为清空/新开对话它还记得</a></li><li class="lvl-3"><a href="#误区-5-以为一个中文字就是一个-token">误区 5：以为一个中文字就是一个 token</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-a-估一段话大概多少-token">实验 A：估一段话大概多少 token</a></li><li class="lvl-3"><a href="#实验-b-思想实验-把一本书塞进有限窗口">实验 B：思想实验——把一本书塞进有限窗口</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系">十、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十一-小结-下一步">十一、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="⑧-什么是-context-与-token-上下文与令牌">⑧ 什么是 Context 与 Token（上下文与令牌）<a class="anchor" href="#⑧-什么是-context-与-token-上下文与令牌" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ 什么是 Prompt（提示词）</a>。上一篇讲&quot;你怎么把话说给模型听&quot;；这一篇讲一个更底层的真相——<strong>模型不是按&quot;字&quot;读你的话，而是按&quot;token（令牌）&quot;读；而且它一次能看到的 token 有一个上限，这个上限就叫 Context（上下文窗口）。</strong> 读完你就会明白：为什么 AI 会&quot;忘了你前面说的&quot;、为什么用 AI 是要花钱的、为什么&quot;把整本书塞给它&quot;不现实。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p>先把两个词一次讲清，它们是一对：</p>
+<ul><li><strong>Token（令牌）= 大模型眼里的&quot;字块&quot;。</strong> 文本在进模型之前，会被切成一小片一小片，每一片就是一个 token。模型不认识&quot;字&quot;，只认识这些切好的&quot;字块&quot;。</li><li><strong>Context（上下文窗口）= 模型一次能同时看到的 token 总量上限。</strong> 就像一张桌子的桌面大小——你能同时摊开多少资料，取决于桌子有多大。桌子外的东西，模型<strong>看不到</strong>。</li></ul>
+<p>如果只记一句话，就记这句：</p>
+<blockquote><p><strong>文本先被切成 token，模型只能在一张有限大的&quot;桌子&quot;（上下文窗口）上同时看这么多 token。</strong></p></blockquote>
+<p>这一句话是整篇的骨架。后面所有比喻、图、误区，都是在把这句话讲透。</p>
+<aside class="callout callout-note reveal"><div class="callout-mascot" aria-hidden="true">🐧</div><div class="callout-body"><div class="callout-title">📌 小笔记</div><p>两个词一起记最省事：<span class="popover" tabindex="0"><span class="popover-anchor">Token</span><span class="popover-tip" role="tooltip">文本被切成的&quot;字块&quot;——模型不认字，只认这些切好的小片</span></span> 是&quot;桌上的一张张纸&quot;，<span class="popover" tabindex="0"><span class="popover-anchor">Context</span><span class="popover-tip" role="tooltip">模型一次能同时看到的 token 上限——像一张桌子的桌面大小</span></span> 是&quot;桌子有多大&quot;。这篇会反复用&quot;桌子&quot;这个比喻，你只要记住一句话：<strong>桌子外的东西，模型看不见，等于不存在。</strong> AI 会&quot;忘事&quot;、用它要花钱，根子全在这里～ 🐧</p></div></aside>
+<hr>
+<h2 id="二-token-是什么-模型眼里的-字块">二、Token 是什么？——模型眼里的&quot;字块&quot;<a class="anchor" href="#二-token-是什么-模型眼里的-字块" aria-label="锚点">#</a></h2>
+<p>你打字是一个字一个字打的，但模型<strong>不是一个字一个字读的</strong>。它读之前，你的文字会先被一个叫&quot;分词器（tokenizer）&quot;的东西<strong>剪成小片段</strong>，每一片就是一个 token。</p>
+<p>用三个比喻从不同角度看同一件事：</p>
+<table><thead><tr><th>比喻</th><th>Token 对应什么</th><th>关键点</th></tr></thead><tbody><tr><td><strong>乐高积木块</strong></td><td>模型用一块块积木拼出理解，而不是一个个字母</td><td>最小拼装单位是&quot;块&quot;，不是&quot;字母&quot;</td></tr><tr><td><strong>把文章剪成小纸片</strong></td><td>分词器拿剪刀把句子剪成一堆小纸片</td><td>有的纸片是一个词，有的是半个词</td></tr><tr><td><strong>超市里的&quot;份装&quot;</strong></td><td>散装米被分装成一袋袋，按袋卖</td><td>模型按&quot;袋&quot;（token）处理和计费，不按&quot;粒&quot;</td></tr></tbody></table>
+<p>一个 token <strong>到底多大</strong>？没有固定答案，但可以给你一个直觉：</p>
+<ul><li>一个<strong>英文单词</strong>，常常是 1 个 token；但长单词会被拆成好几块，比如 <code>unbelievable</code> 可能被剪成 <code>un</code> + <code>believ</code> + <code>able</code> 三片。</li><li>一个<strong>中文字</strong>，大约相当于 <strong>1 到 2 个 token</strong>（不同模型不一样）。所以&quot;你好世界&quot;这四个字，可能是 4 到 8 个 token，而不是 4 个。</li><li>一个<strong>空格、标点</strong>也可能各占一小片。</li></ul>
+<pre class="mermaid">flowchart LR
+  TXT[&quot;📝 原文：&lt;br/&gt;'我爱编程 unbelievable'&quot;] --&gt; TK[&quot;✂️ 分词器（tokenizer）&lt;br/&gt;剪成小片&quot;]
+  TK --&gt; T1[&quot;'我'&quot;]
+  TK --&gt; T2[&quot;'爱'&quot;]
+  TK --&gt; T3[&quot;'编程'&quot;]
+  TK --&gt; T4[&quot;'un'&quot;]
+  TK --&gt; T5[&quot;'believ'&quot;]
+  TK --&gt; T6[&quot;'able'&quot;]
+  T1 &amp; T2 &amp; T3 &amp; T4 &amp; T5 &amp; T6 --&gt; LLM[&quot;🧠 模型只看到这一串 token&quot;]</pre>
+<p><strong>记住这个反直觉的点：token ≠ 字数。</strong> 你以为发了 100 个字，模型眼里可能是 150 个 token。后面算钱、算容量，都得按 token 算，不能按字数拍脑袋。</p>
+<p>翻卡自测这个最容易记错的点：</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">正面：&quot;你好世界&quot;这四个中文字，是 4 个 token 吗？发 100 个字就是 100 个 token 吗？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">反面：<strong>不是。token ≠ 字数。</strong> 一个中文字大约是 1～2 个 token（因模型而异），所以&quot;你好世界&quot;可能是 4～8 个 token；一个长英文词还会被切成好几块（<code>unbelievable</code> → <code>un</code>+<code>believ</code>+<code>able</code>）。所以你发 100 个字，模型眼里可能是 150 个 token。算容量、算钱都要按 token，不能按字数拍脑袋——只能估个大概，别当成精确相等。</div></div></div>
+<hr>
+<h2 id="三-为什么普通人也要懂-token">三、为什么普通人也要懂 token？<a class="anchor" href="#三-为什么普通人也要懂-token" aria-label="锚点">#</a></h2>
+<p>你可能想：&quot;切成什么样是模型内部的事，跟我有什么关系？&quot;关系很大，就两条，但都直接掏你口袋、卡你脖子：</p>
+<table><thead><tr><th>原因</th><th>一句话</th><th>生活比喻</th></tr></thead><tbody><tr><td><strong>① 按 token 计费</strong></td><td>用 AI 的钱，是按你发进去 + 它吐出来的 token 数量算的</td><td>打车按里程计价，不按你说了几句话</td></tr><tr><td><strong>② token 有上限</strong></td><td>一次能塞进去的 token 有天花板，超了就装不下</td><td>行李箱有容积，塞不下就得取东西</td></tr></tbody></table>
+<p><strong>第一条（花钱）</strong>：几乎所有大模型服务，都是&quot;数 token 收费&quot;。你发的问题（输入 token）+ 它写的回答（输出 token），加起来越多，越贵。所以&quot;啰嗦&quot;是有成本的——同样一件事，说得精简能省钱。这也是为什么 Khy-OS 这类工具会想方设法&quot;节省 token&quot;。</p>
+<p><strong>第二条（装不下）</strong>：这就引出了下一节的主角——上下文窗口。</p>
+<hr>
+<h2 id="四-context-上下文窗口-是什么-一张有限大的桌子">四、Context（上下文窗口）是什么？——一张有限大的桌子<a class="anchor" href="#四-context-上下文窗口-是什么-一张有限大的桌子" aria-label="锚点">#</a></h2>
+<p>模型一次能&quot;同时看到&quot;的 token 是<strong>有上限</strong>的。这个&quot;一次能看多少&quot;的容量，就是<strong>上下文窗口（context window）</strong>。</p>
+<p>最好的比喻是<strong>一张桌子</strong>：</p>
+<ul><li>你把资料（你的问题、之前的对话、文件内容）一张张摊到桌面上；</li><li>桌面大小是固定的（比如能摊 20 万个 token）；</li><li><strong>桌子满了，想放新的，就得先拿走旧的</strong>；</li><li>最关键的一点：<strong>模型只能看见桌上的东西。桌子外面、或者被你收进抽屉的东西，它完全看不见，等于不存在。</strong></li></ul>
+<pre class="mermaid">flowchart TB
+  subgraph DESK[&quot;🪑 上下文窗口 = 一张有限大的桌子&quot;]
+    D1[&quot;📄 系统设定 / Prompt&quot;]
+    D2[&quot;📄 前面的对话&quot;]
+    D3[&quot;📄 刚读进来的文件内容&quot;]
+    D4[&quot;📄 你这次的提问&quot;]
+  end
+  OUT[&quot;📦 桌子外的东西&lt;br/&gt;（模型看不见 = 等于不存在）&quot;]
+  DESK --&gt; LLM[&quot;🧠 模型只根据桌面上的 token 思考&quot;]
+  OUT -. &quot;看不到&quot; .-x LLM</pre>
+<p>不同模型桌子大小差很多：有的能摊几千 token，有的能摊几十万 token。<strong>但再大的桌子也是有限的</strong>——这是理解后面一切&quot;遗忘&quot;现象的根。</p>
+<blockquote><p>⚠️ 划重点：模型<strong>没有记忆</strong>。它不是&quot;记住&quot;了你的对话，而是每一轮，宿主都把&quot;该让它看的东西&quot;重新摊到桌上给它看一遍。它的&quot;记性&quot;，其实是每次都把资料重新铺一遍的假象。桌上没铺的，它就真的不知道。</p></blockquote>
+<hr>
+<h2 id="五-上下文溢出-为什么它-忘了我前面说的">五、上下文溢出：为什么它&quot;忘了我前面说的&quot;<a class="anchor" href="#五-上下文溢出-为什么它-忘了我前面说的" aria-label="锚点">#</a></h2>
+<p>现在可以解释那个最让人困惑的现象了：<strong>跟 AI 聊久了，它好像忘了开头说过的话。</strong></p>
+<p>原因不是它&quot;记性差&quot;，而是<strong>桌子放不下了</strong>。</p>
+<p>对话越聊越长，token 越堆越多。当总量超过桌子大小时，宿主必须<strong>拿走一部分旧的</strong>，才能给新的腾地方。通常最先被拿走的，就是<strong>最早的那几轮对话</strong>。于是——</p>
+<ul><li>你开头说&quot;我叫小明，喜欢用 Python&quot;；</li><li>聊了很久很久之后，这句话被挤出了桌面；</li><li>你再问&quot;我刚才说我喜欢什么语言来着？&quot;——它<strong>真的看不到那句话了</strong>，只能瞎猜或说不记得。</li></ul>
+<p>这就叫<strong>上下文溢出 / 上下文遗忘</strong>。</p>
+<pre class="mermaid">flowchart LR
+  subgraph BEFORE[&quot;🪑 桌子还没满&quot;]
+    B1[&quot;开头：我叫小明&quot;]
+    B2[&quot;中间对话...&quot;]
+    B3[&quot;最新提问&quot;]
+  end
+  subgraph AFTER[&quot;🪑 桌子满了，挤掉最旧的&quot;]
+    A0[&quot;❌ '我叫小明' 被挤出去&quot;]
+    A2[&quot;中间对话...&quot;]
+    A3[&quot;最新提问&quot;]
+    A4[&quot;更新的对话&quot;]
+  end
+  BEFORE -- &quot;对话变长，超出上限&quot; --&gt; AFTER</pre>
+<p>用<strong>白板</strong>比喻最贴切：白板就那么大，写满了要写新的，就得擦掉一块旧的。被擦掉的内容，不是&quot;忘了&quot;，是<strong>物理上没了</strong>。模型的&quot;遗忘&quot;就是这么回事——不是脑子坏了，是桌面/白板放不下了。</p>
+<p>把这场&quot;聊着聊着就忘了开头&quot;的经历演成一幕小短剧——你会看到它不是记性差，是那句话被挤下了桌面：</p>
+<div class="scene"><div class="scene-title">桌子满了，开头那句话被挤出去了</div><div class="scene-caption reveal">对话刚开始，桌子空空的。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>你好，我叫小明，喜欢用 Python。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">AI</b>你好小明！记下了，你喜欢 Python。（这句话稳稳摊在桌上）</div></div><div class="scene-caption reveal">……你们又聊了很久很久，桌子一点点被新内容堆满……</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">📋</span><div class="scene-bubble"><b class="scene-who">旁白</b>桌子满了！为了放新内容，最早那句&quot;我叫小明，喜欢用 Python&quot;被挤出了桌面。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>对了，我刚才说我喜欢什么语言来着？</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">AI</b>抱歉……我这张桌上已经看不到那句话了，你能再说一次吗？</div></div><div class="scene-caption reveal">它不是记性差，是那句话在物理上已经不在它眼前了——这就是上下文溢出。</div></div>
+<hr>
+<h2 id="六-上下文管理-桌子满了怎么办">六、上下文管理：桌子满了怎么办？<a class="anchor" href="#六-上下文管理-桌子满了怎么办" aria-label="锚点">#</a></h2>
+<p>既然桌子有限，聪明的做法就是<strong>管理桌面</strong>——决定&quot;什么该留、什么该走、什么可以压缩&quot;。这就是<strong>上下文管理（context management）</strong>。常见三招：</p>
+<table><thead><tr><th>手段</th><th>做了什么</th><th>生活比喻</th></tr></thead><tbody><tr><td><strong>截断（truncation）</strong></td><td>直接扔掉最旧的部分</td><td>桌子满了，把最早那摞纸拿走</td></tr><tr><td><strong>摘要压缩（summarization）</strong></td><td>把一大段旧对话浓缩成几句要点再留下</td><td>把十页会议记录缩成半页纪要</td></tr><tr><td><strong>只留相关的（filtering）</strong></td><td>只把和当前任务有关的资料摊上桌</td><td>做这道菜，只把这道菜的料摆出来</td></tr></tbody></table>
+<p>其中<strong>摘要压缩</strong>特别聪明：它不是简单扔掉旧对话，而是先&quot;读一遍、记要点、写成短短一段&quot;，再用这段短的替换掉又长又占地方的原文。这样既省了桌面空间，又保住了关键信息。</p>
+<pre class="mermaid">flowchart TB
+  FULL[&quot;📚 又长又占地方的旧对话&lt;br/&gt;（吃掉半张桌子）&quot;] --&gt; SUM[&quot;✍️ 压缩成要点&lt;br/&gt;（几句话）&quot;]
+  SUM --&gt; SLOT[&quot;🪑 桌上只占一小块&lt;br/&gt;（腾出空间放新内容）&quot;]</pre>
+<p>但管理终归是&quot;screen 有限桌面上的取舍&quot;，它<strong>不能凭空变出更大的桌子</strong>。当你需要的信息<strong>远远超过</strong>桌子能装的量（比如&quot;读完这 500 个文件再回答&quot;），光靠桌面管理就不够了——你需要一个<strong>外部的仓库</strong>，用到哪一块，才去取哪一块摊上桌。</p>
+<p>这个&quot;按需从外部仓库取用&quot;的思路，就是后面会讲的 <strong>RAG（检索增强生成）</strong> 要解决的问题（见第九节和 <a href="./[CONCEPT-11]%20什么是RAG-检索增强生成.html">⑪ RAG</a>）。你可以先记一句话：<strong>上下文窗口是&quot;桌面&quot;，RAG 是&quot;身后那排随取随用的书架&quot;。</strong></p>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请逐条读完，这几个误解会让你对 AI 的行为一直困惑。</p>
+<h3 id="误区-1-以为模型永久记住了所有对话">误区 1：以为模型永久记住了所有对话<a class="anchor" href="#误区-1-以为模型永久记住了所有对话" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我跟它说过的话，它都记在脑子里，永远都在。</li><li>✅ <strong>正确理解</strong>：模型<strong>没有长期记忆</strong>。它每一轮只看&quot;这次被摊上桌的 token&quot;。桌子放不下的旧对话会被挤走，它就真的看不到了。所谓&quot;记得&quot;，是宿主每轮把资料重新铺给它看的假象。</li></ul>
+<h3 id="误区-2-以为-token-字数">误区 2：以为 token = 字数<a class="anchor" href="#误区-2-以为-token-字数" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我发了 100 个字，就是 100 个 token。</li><li>✅ <strong>正确理解</strong>：token 是&quot;字块&quot;，不是&quot;字&quot;。一个中文字可能是 1～2 个 token，一个长英文词可能被切成好几个 token。<strong>算容量、算钱都要按 token，不是按字数。</strong></li></ul>
+<h3 id="误区-3-以为上下文窗口越大越好-且没代价">误区 3：以为上下文窗口越大越好、且没代价<a class="anchor" href="#误区-3-以为上下文窗口越大越好-且没代价" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：桌子越大越好，把所有东西都摊上去准没错。</li><li>✅ <strong>正确理解</strong>：桌子大是好事，但<strong>摊得越多，越花钱、越慢</strong>，模型还可能被无关信息干扰、抓不住重点（&quot;东西太多反而找不到&quot;）。桌子大不等于该把它塞满——<strong>摊上桌的每一样都在花钱、都在分散注意力</strong>。</li></ul>
+<h3 id="误区-4-以为清空-新开对话它还记得">误区 4：以为清空/新开对话它还记得<a class="anchor" href="#误区-4-以为清空-新开对话它还记得" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我新开一个对话，它应该还记得我上次聊的。</li><li>✅ <strong>正确理解</strong>：清空或新开对话，等于<strong>换了一张干净的空桌子</strong>。上一张桌上的东西没了。它不会&quot;记得&quot;上次——除非那些信息被专门存进了某种外部记忆再喂回来。</li></ul>
+<h3 id="误区-5-以为一个中文字就是一个-token">误区 5：以为一个中文字就是一个 token<a class="anchor" href="#误区-5-以为一个中文字就是一个-token" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：&quot;你好&quot;两个字就是 2 个 token。</li><li>✅ <strong>正确理解</strong>：中文的切法因模型而异，一个常用字可能是 1 个 token，生僻字或组合可能占更多。<strong>不要用&quot;字数&quot;精确等于&quot;token 数&quot;</strong>，只能估个大概。</li></ul>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>看懂不算会，动手（或在脑内）走一遍才算。</p>
+<h3 id="实验-a-估一段话大概多少-token">实验 A：估一段话大概多少 token<a class="anchor" href="#实验-a-估一段话大概多少-token" aria-label="锚点">#</a></h3>
+<p>拿这句话来估：</p>
+<blockquote><p>&quot;今天天气不错，我想去公园散步，顺便买杯咖啡。&quot;</p></blockquote>
+<p>粗略估法（够用就行，别追求精确）：</p>
+<ol><li>数一下中文字：大约 20 个字（含标点）。</li><li>按&quot;1 个中文字 ≈ 1～2 个 token&quot;估：大约 <strong>20～40 个 token</strong>。</li><li>如果混了英文词，一个短词算 1 个 token，长词多算几个。</li></ol>
+<p>结论：你随口一句话，就是几十个 token。一段几百字的说明，轻松上千 token。<strong>你现在能感觉到&quot;文字是要占容量的&quot;了。</strong></p>
+<pre class="mermaid">flowchart LR
+  S[&quot;'今天天气不错，我想去公园散步...'&quot;] --&gt; C[&quot;数中文字 ≈ 20&quot;]
+  C --&gt; E[&quot;×1~2 → 估 20~40 token&quot;]
+  E --&gt; R([&quot;✅ 你已经会估 token 了&quot;])</pre>
+<h3 id="实验-b-思想实验-把一本书塞进有限窗口">实验 B：思想实验——把一本书塞进有限窗口<a class="anchor" href="#实验-b-思想实验-把一本书塞进有限窗口" aria-label="锚点">#</a></h3>
+<p>想象你要让 AI&quot;读完一本 500 页的书再回答问题&quot;，但它的桌子只能摊下大约 50 页那么多 token。会发生什么？</p>
+<ul><li><strong>一次全塞</strong>：塞不下，超出的部分直接掉地上（截断），它只看到了一部分书，回答自然片面。</li><li><strong>硬压缩</strong>：把 500 页压成 50 页摘要摊上桌——省了空间，但<strong>细节丢了</strong>，问它某个具体段落它答不上来。</li><li><strong>聪明的办法</strong>：书放在<strong>桌子旁边的书架上</strong>（外部仓库），你问哪一章，就<strong>只把那一章抽出来摊上桌</strong>——这就是 RAG 的思路。</li></ul>
+<p>走完这个思想实验，你就同时理解了&quot;上下文的极限&quot;和&quot;为什么需要外部记忆&quot;。</p>
+<div class="quiz reveal" data-multi="0"><div class="quiz-q">🧠 跟 AI 聊很久后，它&quot;忘了&quot;你开头说的话，最主要的原因是？</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">A</span><span class="quiz-text">模型故意不理你</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">对话太长超出了上下文窗口，最旧的内容被挤出了&quot;桌面&quot;</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">模型的长期记忆出了 bug</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">token 算错了</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 模型没有长期记忆，它只看&quot;这一轮摊上桌的 token&quot;。桌子（上下文窗口）有上限，聊久了旧内容被截断/压缩挤走，于是它&quot;看不到&quot;开头那句话了——不是忘，是桌面放不下了。</div></div>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>Context 和 Token 是很底层的一层，几乎每个概念都踩在它上面。理清关系，整张心智地图就连起来了。</p>
+<pre class="mermaid">flowchart TB
+  TOKEN[&quot;🧩 Token 令牌&lt;br/&gt;文本被切成的字块&quot;]
+  CTX[&quot;🪑 Context 上下文窗口&lt;br/&gt;一次能看的 token 上限&quot;]
+  PROMPT[&quot;💬 Prompt 提示词&lt;br/&gt;你说给模型的话&quot;]
+  TOOL[&quot;🔧 工具调用结果&lt;br/&gt;读来的文件 / 命令输出&quot;]
+  RAG[&quot;📚 RAG 检索增强&lt;br/&gt;按需从外部取用&quot;]
+  PROMPT -- &quot;占用&quot; --&gt; CTX
+  TOOL -- &quot;也占用&quot; --&gt; CTX
+  CTX -- &quot;由一个个&quot; --&gt; TOKEN
+  RAG -- &quot;绕过窗口限制&quot; --&gt; CTX</pre>
+<table><thead><tr><th>概念</th><th>和上下文/token 的关系</th><th>一句话</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ Prompt（提示词）</a></td><td>你写的每一句 prompt 都要<strong>切成 token 摊上桌</strong>，占用窗口</td><td>prompt 越长越占地方、越花钱</td></tr><tr><td><strong>工具调用的结果</strong></td><td>模型读来的文件、跑命令的输出，也要<strong>摊上桌</strong>，一样吃 token</td><td>读个大文件，可能一下占掉半张桌</td></tr><tr><td><a href="./[CONCEPT-11]%20什么是RAG-检索增强生成.html">⑪ RAG（检索增强生成）</a></td><td>用&quot;检索 → 只取相关片段&quot;绕开窗口装不下的问题</td><td>桌子旁的书架，用哪本抽哪本</td></tr></tbody></table>
+<p>一句话串起来：<strong>你说的话（Prompt）、它读来的东西（工具结果）都要占桌子（Context）；桌子由 token 铺成、有上限；装不下时，就靠 RAG 从外部按需取用。</strong></p>
+<hr>
+<h2 id="十-和-khy-os-的关系">十、和 Khy-OS 的关系<a class="anchor" href="#十-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>Khy-OS 是一个会连续读文件、跑命令、多轮对话的 AI 编程助手——这意味着它<strong>天天在和&quot;桌子快满了&quot;作斗争</strong>。所以上下文管理是它绕不开的一部分：</p>
+<ul><li><strong>上下文管理 / 压缩</strong>：一次任务可能要读很多文件、来回很多轮，token 很容易堆到窗口上限。Khy-OS 会做上下文的取舍与压缩（比如把很长的历史浓缩成要点再保留），让&quot;桌面&quot;始终装得下当前最该看的东西。这类机制，就是本文第六节讲的&quot;截断 / 摘要 / 只留相关&quot;在真实工具里的落地。</li><li><strong>缓存前缀（cache）</strong>：每轮对话里，开头那一大段固定内容（系统设定、工具清单等）常常是不变的。Khy-OS 会利用&quot;缓存前缀&quot;这类机制，避免每轮都为同样的开头重复付 token 的钱——这正是&quot;按 token 计费&quot;逼出来的省钱智慧。</li></ul>
+<p>这些都属于 Khy-OS 上下文相关设计的一部分。想进一步了解它在设计层面怎么处理上下文，可以去看设计类文档（参见 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a>）。本文只到&quot;概念&quot;为止，不涉及具体函数实现。</p>
+<blockquote><p>⚠️ 这里只讲&quot;概念级&quot;的直觉——<strong>桌子有限，所以要管理；token 花钱，所以要节省</strong>。具体的压缩策略、缓存怎么命中、如何分级，属于设计与实现层面，本文不展开。</p></blockquote>
+<hr>
+<h2 id="十一-小结-下一步">十一、小结 + 下一步<a class="anchor" href="#十一-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>Token（令牌）</strong> = 模型眼里的&quot;字块&quot;，文本进模型前先被切成一片片。<strong>token ≠ 字数</strong>。</li><li><strong>Context（上下文窗口）</strong> = 模型一次能同时看到的 token 上限，像一张有限大的桌子。<strong>桌子外的东西模型看不见。</strong></li><li>懂 token 有两个现实理由：<strong>① 按 token 计费（花钱）② 有上限（装不下）</strong>。</li><li>聊久了它&quot;忘了开头&quot;，不是记性差，是<strong>桌子放不下、旧内容被挤走</strong>（上下文溢出）。</li><li>应对靠<strong>上下文管理</strong>（截断 / 摘要压缩 / 只留相关）；当信息远超桌面容量时，需要<strong>外部记忆（RAG）</strong>按需取用。</li><li>五大误区：模型不会永久记住、token 不等于字数、窗口不是越大越好没代价、清空对话就是换空桌子、一个中文字不一定是一个 token。</li></ul>
+<p>理解了&quot;桌子放不下整座图书馆&quot;，你自然会问：<strong>那怎么在海量资料里，快速找到跟当前问题最相关的那几页？</strong> 这就要靠把文字变成&quot;可比较相似度的坐标&quot;——也就是下一篇的主角。</p>
+<p>👉 <a href="./[CONCEPT-09]%20什么是Embedding-向量.html">⑨ 什么是 Embedding（向量）</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-07] 什么是Prompt-提示词.html"><div class="dir">← 上一篇</div><div class="ttl">⑦ 什么是 Prompt（提示词）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-09] 什么是Embedding-向量.html"><div class="dir">下一篇 →</div><div class="ttl">⑨ 什么是 Embedding（嵌入 / 向量）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-08] 什么是Context与Token-上下文与令牌.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

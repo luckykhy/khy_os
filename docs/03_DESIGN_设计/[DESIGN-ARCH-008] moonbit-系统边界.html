@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoonBit OS 边界 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>MoonBit OS 边界</div>
+      <header class="hero reveal"><h1>MoonBit OS 边界</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#moonbit-os-边界">MoonBit OS 边界</a></li><li class="lvl-2"><a href="#定位">定位</a></li><li class="lvl-2"><a href="#为何如此划分">为何如此划分</a></li><li class="lvl-2"><a href="#当前-khy-os-映射">当前 Khy OS 映射</a></li><li class="lvl-2"><a href="#构建与交付">构建与交付</a></li><li class="lvl-2"><a href="#wasm-abi">WASM ABI</a></li><li class="lvl-2"><a href="#设计准则">设计准则</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-008 | 阶段: 设计 | 原路径: docs/架构/moonbit-系统边界.md --&gt;</p>
+<h1 id="moonbit-os-边界">MoonBit OS 边界<a class="anchor" href="#moonbit-os-边界" aria-label="锚点">#</a></h1>
+<h2 id="定位">定位<a class="anchor" href="#定位" aria-label="锚点">#</a></h2>
+<ul><li>内核与硬件控制保留在宿主机 Linux（或 hypervisor 栈）中。</li><li>MoonBit 用于编译为 WASM 的纯计算模块。</li><li>I/O、网络、文件与进程管理保留在宿主机服务中。</li></ul>
+<h2 id="为何如此划分">为何如此划分<a class="anchor" href="#为何如此划分" aria-label="锚点">#</a></h2>
+<ul><li>保持 OS 交付路径对 VMware 与裸机工作流的稳定性。</li><li>避免计算密集型模块出现跨平台原生二进制的泛滥。</li><li>保留严格的回滚路径：仅通过环境变量/配置即可切换计算引擎。</li></ul>
+<h2 id="当前-khy-os-映射">当前 Khy OS 映射<a class="anchor" href="#当前-khy-os-映射" aria-label="锚点">#</a></h2>
+<ul><li>宿主机层：<ul><li><code>khy_platform/cli.py</code></li><li><code>backend/bin/khy.js</code></li><li><code>backend/src/services/*</code>（I/O、网络、编排）</li></ul></li><li>MoonBit/WASM 层：<ul><li><code>backend/wasm-indicators/</code>（纯指标算法）</li><li><code>backend/src/services/wasmAppService.js</code>（WASM 应用导出执行）</li><li><code>scripts/moonbit/run-wasm-indicators-tests-offline.sh</code>（离线验证）</li></ul></li></ul>
+<h2 id="构建与交付">构建与交付<a class="anchor" href="#构建与交付" aria-label="锚点">#</a></h2>
+<ul><li>统一组件构建入口：<ul><li><code>scripts/build-khy-os.sh</code></li></ul></li><li>VMware 镜像规划/构建：<ul><li><code>scripts/khytogo/make-khytogo.sh --mode vmware-plan|vmware-create</code></li></ul></li><li>便携包：<ul><li><code>scripts/portable/build-usb-portable.sh</code></li></ul></li></ul>
+<h2 id="wasm-abi">WASM ABI<a class="anchor" href="#wasm-abi" aria-label="锚点">#</a></h2>
+<ul><li><code>numeric-v1</code>：向导出函数传入位置式数值参数。</li><li><code>string-v2</code>：宿主机编码 UTF-8 载荷并传入 <code>(ptr,len)</code>，模块以 <code>i64</code> 返回打包后的 <code>(ptr,len)</code>。</li><li><code>json-v2</code>：宿主机通过 <code>string-v2</code> 传输发送 JSON 字符串，并强制执行 JSON 输出解析。</li></ul>
+<h2 id="设计准则">设计准则<a class="anchor" href="#设计准则" aria-label="锚点">#</a></h2>
+<p><code>Kernel untouched, sandbox accelerated.</code></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-007] m1-微内核-ipc-moonbit.html"><div class="dir">← 上一篇</div><div class="ttl">M1 微内核 + IPC + MoonBit 接口草案</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-009] 可视化拖拽工作流编辑器-2026-06-09.html"><div class="dir">下一篇 →</div><div class="ttl">可视化拖拽工作流编辑器（MVP / Phase 1）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-008] moonbit-系统边界.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

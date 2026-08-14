@@ -1,0 +1,12 @@
+{
+  "name": "khy-troubleshoot",
+  "description": "Khy-OS 错误自查手册：按 P(流程)/W(小模型)/B(代码缺陷原型)/G(网关)/E(环境) 五类快速定位并给出修法。遇到报错、行为异常、或怀疑自己改坏时激活，先分类再对症。",
+  "user_invocable": true,
+  "trigger": "/khy-troubleshoot",
+  "aliases": ["/khy-debug", "/排错"],
+  "category": "khy-guidance",
+  "tags": ["khy-os", "troubleshoot", "error", "self-check", "debug"],
+  "platforms": ["khy-os"],
+  "when_to_use": "出现报错、功能没生效、行为和预期不符、或怀疑改动破坏了既有行为时。",
+  "context": "inline"
+}

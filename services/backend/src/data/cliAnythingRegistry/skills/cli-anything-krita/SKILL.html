@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-krita · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-krita<span class="sep">›</span>cli-anything-krita</div>
+      <header class="hero reveal"><h1>cli-anything-krita</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-krita">cli-anything-krita</a></li><li class="lvl-2"><a href="#prerequisites">Prerequisites</a></li><li class="lvl-2"><a href="#command-reference">Command Reference</a></li><li class="lvl-3"><a href="#project-management">Project Management</a></li><li class="lvl-3"><a href="#layer-management">Layer Management</a></li><li class="lvl-3"><a href="#filters">Filters</a></li><li class="lvl-3"><a href="#canvas-operations">Canvas Operations</a></li><li class="lvl-3"><a href="#export">Export</a></li><li class="lvl-3"><a href="#session-undo-redo">Session (Undo/Redo)</a></li><li class="lvl-3"><a href="#status">Status</a></li><li class="lvl-2"><a href="#agent-usage-json-mode">Agent Usage (JSON Mode)</a></li><li class="lvl-2"><a href="#example-workflow">Example Workflow</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-krita&quot;<br>description: &quot;CLI harness for Krita digital painting — manage projects, layers, filters, and export via command line. Use when automating Krita workflows, batch processing images, or operating Krita without a GUI.&quot;</p>
+<hr>
+<h1 id="cli-anything-krita">cli-anything-krita<a class="anchor" href="#cli-anything-krita" aria-label="锚点">#</a></h1>
+<p>CLI harness for <strong>Krita</strong>, the professional open-source digital painting application.</p>
+<h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
+<ul><li><strong>Krita</strong> installed on the system</li><li><strong>Python 3.10+</strong></li></ul>
+<p>Install the CLI:</p>
+<pre><code class="language-bash">cd krita/agent-harness &amp;&amp; pip install -e .</code></pre>
+<h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
+<h3 id="project-management">Project Management<a class="anchor" href="#project-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-krita project new -n &quot;My Art&quot; -w 2048 -h 2048 -o project.json
+cli-anything-krita project open project.json
+cli-anything-krita --project project.json project save
+cli-anything-krita --project project.json project info</code></pre>
+<h3 id="layer-management">Layer Management<a class="anchor" href="#layer-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-krita -p project.json layer add &quot;Sketch&quot; -t paintlayer
+cli-anything-krita -p project.json layer add &quot;Colors&quot; --opacity 200
+cli-anything-krita -p project.json layer add &quot;Group&quot; -t grouplayer
+cli-anything-krita -p project.json layer remove &quot;Sketch&quot;
+cli-anything-krita -p project.json layer list
+cli-anything-krita -p project.json layer set &quot;Colors&quot; opacity 180
+cli-anything-krita -p project.json layer set &quot;Colors&quot; visible false
+cli-anything-krita -p project.json layer set &quot;Colors&quot; blending_mode multiply</code></pre>
+<p>Layer types: <code>paintlayer</code>, <code>grouplayer</code>, <code>vectorlayer</code>, <code>filterlayer</code>, <code>filllayer</code>, <code>clonelayer</code>, <code>filelayer</code></p>
+<h3 id="filters">Filters<a class="anchor" href="#filters" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-krita -p project.json filter apply blur -l &quot;Background&quot;
+cli-anything-krita -p project.json filter apply sharpen
+cli-anything-krita -p project.json filter apply levels -c '{&quot;shadows&quot;: 10, &quot;highlights&quot;: 240}'
+cli-anything-krita filter list</code></pre>
+<p>Available: blur, sharpen, desaturate, levels, curves, brightness-contrast, hue-saturation, color-balance, unsharp-mask, posterize, threshold</p>
+<h3 id="canvas-operations">Canvas Operations<a class="anchor" href="#canvas-operations" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-krita -p project.json canvas resize -w 4096 -h 4096
+cli-anything-krita -p project.json canvas resize --resolution 600
+cli-anything-krita -p project.json canvas info</code></pre>
+<h3 id="export">Export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-krita -p project.json export render output.png -p png --overwrite
+cli-anything-krita -p project.json export render output.jpg -p jpeg
+cli-anything-krita -p project.json export render output.psd -p psd
+cli-anything-krita -p project.json export animation ./frames/ -p png
+cli-anything-krita export presets
+cli-anything-krita export formats</code></pre>
+<p>Presets: png, png-web, jpeg, jpeg-web, jpeg-low, tiff, tiff-lzw, psd, pdf, svg, webp, gif, bmp</p>
+<h3 id="session-undo-redo">Session (Undo/Redo)<a class="anchor" href="#session-undo-redo" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-krita session undo
+cli-anything-krita session redo
+cli-anything-krita session history</code></pre>
+<h3 id="status">Status<a class="anchor" href="#status" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-krita status</code></pre>
+<h2 id="agent-usage-json-mode">Agent Usage (JSON Mode)<a class="anchor" href="#agent-usage-json-mode" aria-label="锚点">#</a></h2>
+<p>All commands support <code>--json</code> for machine-readable output:</p>
+<pre><code class="language-bash">cli-anything-krita --json -p project.json project info
+cli-anything-krita --json -p project.json layer list
+cli-anything-krita --json status</code></pre>
+<h2 id="example-workflow">Example Workflow<a class="anchor" href="#example-workflow" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 1. Create project
+cli-anything-krita --json project new -n &quot;Illustration&quot; -w 3000 -h 4000 -o art.json
+
+# 2. Set up layer stack
+cli-anything-krita --json -p art.json layer add &quot;Background&quot; -t paintlayer
+cli-anything-krita --json -p art.json layer add &quot;Sketch&quot; -t paintlayer --opacity 180
+cli-anything-krita --json -p art.json layer add &quot;Inking&quot; -t paintlayer
+cli-anything-krita --json -p art.json layer add &quot;Colors&quot; -t paintlayer
+cli-anything-krita --json -p art.json layer add &quot;Effects&quot; -t paintlayer --opacity 128
+
+# 3. Apply effects
+cli-anything-krita --json -p art.json filter apply blur -l &quot;Background&quot;
+
+# 4. Export
+cli-anything-krita --json -p art.json export render final.png -p png --overwrite</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-kdenlive/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-kdenlive</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-libreoffice/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-libreoffice</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-krita/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

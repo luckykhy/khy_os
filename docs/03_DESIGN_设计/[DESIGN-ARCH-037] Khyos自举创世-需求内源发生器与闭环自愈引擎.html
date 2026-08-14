@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-037] Khyos 自举创世——需求内源发生器与闭环自愈引擎 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-037] Khyos 自举创世——需求内源发生器与闭环自愈引擎</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-037] Khyos 自举创世——需求内源发生器与闭环自愈引擎</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-037-khyos-自举创世-需求内源发生器与闭环自愈引擎">[DESIGN-ARCH-037] Khyos 自举创世——需求内源发生器与闭环自愈引擎</a></li><li class="lvl-2"><a href="#1-目标与定位">1. 目标与定位</a></li><li class="lvl-3"><a href="#1-1-接入点-frictionbridge-executetool">1.1 接入点（frictionBridge → executeTool）</a></li><li class="lvl-2"><a href="#2-meta-plan-扫栈自决">2. Meta-Plan（扫栈自决）</a></li><li class="lvl-2"><a href="#3-架构蓝图-达尔文式闭环">3. 架构蓝图：达尔文式闭环</a></li><li class="lvl-3"><a href="#模块职责-src-services-evoengine">模块职责（`src/services/evoEngine/`）</a></li><li class="lvl-3"><a href="#三级自举演进协议-3-2">三级自举演进协议（§3.2）</a></li><li class="lvl-2"><a href="#4-场景验证-一次完整的-l1-演进流">4. 场景验证：一次完整的 L1 演进流</a></li><li class="lvl-2"><a href="#5-防呆规则与硬边界">5. 防呆规则与硬边界</a></li><li class="lvl-2"><a href="#6-验证">6. 验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-037-khyos-自举创世-需求内源发生器与闭环自愈引擎">[DESIGN-ARCH-037] Khyos 自举创世——需求内源发生器与闭环自愈引擎<a class="anchor" href="#design-arch-037-khyos-自举创世-需求内源发生器与闭环自愈引擎" aria-label="锚点">#</a></h1>
+<blockquote><p>架构与设计规范 · 遵循 [MGMT-STD-001] · 关联 [DESIGN-ARCH-025] 元规划约束注入、[DESIGN-ARCH-044] 自愈微循环、[DESIGN-ARCH-033] 双轨热插拔、[DESIGN-ARCH-034] 动态约束求解</p></blockquote>
+<h2 id="1-目标与定位">1. 目标与定位<a class="anchor" href="#1-目标与定位" aria-label="锚点">#</a></h2>
+<p>为 Khyos 植入<strong>需求内源发生器与闭环自愈引擎</strong>，废弃「人类提需求 → Agent 实现」的低效链路：系统在<strong>运行态</strong>自主发现痛点、推演需求规格、生成候选代码、沙箱验证并受控热融合，实现系统级达尔文式进化。</p>
+<p>协作而非替代：自成一个纯子系统 <code>src/services/evoEngine/</code>，经 <code>frictionBridge</code> 旁路<strong>接入</strong>（非接管）<code>executeTool</code> 单漏斗——工具真实失败时顺手抄送一份 friction，核心循环始终权威产出/降级它自己的结果。代码生成为<strong>注入式</strong>（<code>codeGenerator</code>）——引擎本身不内嵌模型，使其模型无关、可确定性单测。</p>
+<h3 id="1-1-接入点-frictionbridge-executetool">1.1 接入点（frictionBridge → executeTool）<a class="anchor" href="#1-1-接入点-frictionbridge-executetool" aria-label="锚点">#</a></h3>
+<p><code>frictionBridge.observeFailure(friction)</code> 是离线引擎接进运行态的唯一接缝，做<strong>轻量感知 + 留痕</strong>：经 <code>PainPointScanner</code> 归因铸造 <code>EvoRequirement</code>，落入 <code>evoLedger</code> 的 <code>observations</code> 分支作运行态痛点<strong>待办积压</strong>，供离线 <code>SelfBootstrapEngine.evolve</code> 消费。<strong>绝不</strong>在此热路径跑代码生成或沙箱。</p>
+<ul><li>接入位置：<code>executeTool</code> 的两个失败出口——软失败（<code>result.success === false</code>，依赖自愈后仍未愈）与硬抛 <code>catch (err)</code>。助手 <code>_observeEvoFriction</code> 定义在外层 <code>try</code> 之前，使两个出口都能引用。</li><li>fail-soft 三连：有界去重（同一痛点签名每进程只留痕一次，<code>SEEN_CAP=2000</code> 淘汰最旧）、永不抛、永不阻断工具结果。</li><li>接入开关 <code>KHY_EVO_ENGINE</code>（默认<strong>关闭</strong>，置 <code>on</code> 启用）——新生的自进化观测默认不介入。</li><li>非对称设计：观测（friction-in）廉价（scan→requirement→积压）在热路径；昂贵的 <code>evolve</code>（codeGenerator + 沙箱）留在热路径之外离线消费积压。</li></ul>
+<h2 id="2-meta-plan-扫栈自决">2. Meta-Plan（扫栈自决）<a class="anchor" href="#2-meta-plan-扫栈自决" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>决策</th><th>选择</th><th>复用既有真源</th></tr></thead><tbody><tr><td>归因从何来</td><td>不臆造，复用三源合一诊断</td><td><code>selfHeal/errorDiagnostician.ErrorDiagnostician</code></td></tr><tr><td>演进级如何升</td><td>单调取严的最小上界格</td><td>镜像 <code>metaplan/constraintStrategy</code></td></tr><tr><td>沙箱边界</td><td><code>vm</code> 空冻结上下文 + 超时 + 静态毒性</td><td>新增（与 dualTrack 物理隔离同精神）</td></tr><tr><td>沙箱→热载信任</td><td>HMAC 凭证（每进程随机密钥）+ timingSafeEqual</td><td>新增</td></tr><tr><td>黑历史不可篡改</td><td>append-only 哈希链落盘</td><td><code>utils/dataHome.getProjectDataDir</code></td></tr><tr><td>失控保险</td><td>分支熔断 / 引擎只读 / 回滚</td><td>镜像 <code>metaplan/trustCircuitBreaker</code></td></tr></tbody></table>
+<h2 id="3-架构蓝图-达尔文式闭环">3. 架构蓝图：达尔文式闭环<a class="anchor" href="#3-架构蓝图-达尔文式闭环" aria-label="锚点">#</a></h2>
+<pre><code>阻力捕获 ──► 归因铸造 ──► 代码生成 ──► 沙箱验证 ──► 热融合
+PainPoint    EvoRequirement  codeGenerator  Organogenesis   HostPatcher
+Scanner      (evoLevels      (注入式)        Sandbox         (三闸门)
+             分级 L0/L1/L2)                  (影子+毒性+差异)
+   │              │                              │               │
+   └──────────────┴──────── evoLedger 不可变哈希链全程留痕 ───────┴──── EvoTrustBreaker
+                                  (防呆⑤)                              (熔断/只读/回滚 防呆③④)</code></pre>
+<h3 id="模块职责-src-services-evoengine">模块职责（<code>src/services/evoEngine/</code>）<a class="anchor" href="#模块职责-src-services-evoengine" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模块</th><th>职责</th><th>§对应</th></tr></thead><tbody><tr><td><code>painPointScanner.js</code></td><td>感知端：四类阻力信号 → 元认知归因（缺工具/规则误杀/阈值僵化/逻辑死角）→ 铸造 <code>EvoRequirement</code>；不生码不碰沙箱</td><td>§3.1</td></tr><tr><td><code>evoRequirement.js</code></td><td>需求七要素真源；缺归因 Why 即抛；签名稳定（数字归一）为熔断计数锚点</td><td>§3.1</td></tr><tr><td><code>evoLevels.js</code></td><td>L0⊏L1⊏L2 升级格；<code>planL2</code> 为防呆②唯一闸门</td><td>§3.2</td></tr><tr><td><code>organogenesisSandbox.js</code></td><td>静态毒性 + <code>vm</code> 影子执行 + 差异校验；仅 passed 签发 HMAC 凭证</td><td>§3.3</td></tr><tr><td><code>hostPatcher.js</code></td><td>三闸门（凭证/宪法/只读）→ 演进轨影子注册表，绝不覆写核心</td><td>§3.3</td></tr><tr><td><code>evoTrustBreaker.js</code></td><td>分支熔断 + 引擎只读 + 回滚；守护受保护不变量；自举逻辑只读</td><td>§3.4</td></tr><tr><td><code>evoLedger.js</code></td><td>append-only 哈希链不可变日志；无 update/delete API</td><td>防呆⑤</td></tr><tr><td><code>index.js</code></td><td><code>SelfBootstrapEngine</code> 门面，编排全闭环</td><td>§4</td></tr></tbody></table>
+<h3 id="三级自举演进协议-3-2">三级自举演进协议（§3.2）<a class="anchor" href="#三级自举演进协议-3-2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>级别</th><th>触发</th><th>行动</th><th>落点</th></tr></thead><tbody><tr><td>L0 启发式缝合</td><td>边缘 Case、无系统性风险</td><td>改 Prompt / 注入 If-Then</td><td>记忆区补丁</td></tr><tr><td>L1 器官新生</td><td>能力拓扑空洞，缺工具/解析器</td><td>自主编码新函数并注册</td><td>新增代码 + 注册条目</td></tr><tr><td>L2 宪法修正</td><td>核心流转（压缩/网关）系统性缺陷</td><td>重构核心引擎/元约束</td><td><strong>强制降级 L0 + 3 步验证</strong></td></tr></tbody></table>
+<h2 id="4-场景验证-一次完整的-l1-演进流">4. 场景验证：一次完整的 L1 演进流<a class="anchor" href="#4-场景验证-一次完整的-l1-演进流" aria-label="锚点">#</a></h2>
+<blockquote><p>场景：Khyos 因现有解析器无法处理特殊格式（<code>k=v;k2=v2</code>）数据报错，自主推演需求，编写新解析器，沙箱验证通过后热注册生效。</p></blockquote>
+<table><thead><tr><th>步骤</th><th>阶段</th><th>输入</th><th>引擎动作</th><th>产物 / 留痕</th></tr></thead><tbody><tr><td>①</td><td>阻力捕获</td><td><code>tool-failure</code>：<code>parser cannot handle format: unsupported</code>，surface=<code>dataParser</code></td><td><code>PainPointScanner.scan</code> 经 ErrorDiagnostician 归因</td><td>Why=<code>missing-tool</code> 能力空洞</td></tr><tr><td>②</td><td>需求铸造</td><td>归因 + surface</td><td><code>evoRequirement.forge</code>，<code>classify</code>→<strong>L1</strong></td><td><code>EvoRequirement{id, level:L1, executionLevel:L1, 验收标准}</code>；ledger <code>requirement</code></td></tr><tr><td>③</td><td>代码生成</td><td>EvoRequirement</td><td>注入式 <code>codeGenerator</code> 产出候选器官 <code>organ()</code> + 探针</td><td><code>{code, entry, probes}</code>；ledger <code>code</code></td></tr><tr><td>④</td><td>沙箱验证</td><td>候选器官</td><td>静态毒性✔ → <code>vm</code> 影子执行探针 → solved &amp;&amp; !regressed</td><td><code>verdict{passed:true, passToken}</code>；ledger <code>sandbox</code></td></tr><tr><td>⑤</td><td>热融合</td><td>verdict + 代码</td><td><code>HostPatcher.applyPatch</code> 过三闸门 → 影子注册表登记 <code>parser:kv-semicolon</code></td><td><code>{ok, patchId}</code>；ledger <code>hotload</code></td></tr><tr><td>⑥</td><td>生效</td><td>—</td><td><code>patcher.resolve('parser:kv-semicolon')('a=1;b=2')</code> → <code>{a:'1',b:'2'}</code></td><td>新器官在演进轨可调用，核心源文件零改动</td></tr></tbody></table>
+<p>毒性/退化/未解决任一不成立 → ④ 否决，不签发凭证，⑤ 永不可达（防呆①）。</p>
+<h2 id="5-防呆规则与硬边界">5. 防呆规则与硬边界<a class="anchor" href="#5-防呆规则与硬边界" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>铁律</th><th>落点</th></tr></thead><tbody><tr><td>①</td><td>绝不跳过沙箱直接注入宿主（系统级自杀）</td><td>沙箱仅 passed 签发 HMAC <code>passToken</code>；<code>HostPatcher</code> 必校验 <code>verifyToken</code>，无/伪造凭证抛 <code>SandboxBypassError</code></td></tr><tr><td>②</td><td>L2 必须输出架构对比 + 爆炸半径，且强制降级 L0 执行 3 步验证</td><td><code>evoLevels.planL2</code> 缺 <code>architectureDiff</code>/<code>blastRadius</code> 即 invalid；<code>forge</code> 据此设 <code>executionLevel=L0, validationSteps=3</code>；需求闸门拦死裸 L2</td></tr><tr><td>③</td><td>绝不允许演进引擎修改信任熔断机制与防呆规则</td><td><code>EvoTrustBreaker.PROTECTED_INVARIANTS</code>（熔断/日志/沙箱/红线/constraints）；热载命中抛 <code>ConstitutionViolation</code>；<code>evoLedger</code> 无 update/delete</td></tr><tr><td>④</td><td>连续 2 次沙箱失败强制熔断引擎锁定只读</td><td><code>recordSandboxResult</code> 跨痛点连续失败计数达阈 → <code>isEngineReadOnly()</code>，<code>HostPatcher</code> 拒一切热载</td></tr><tr><td>⑤</td><td>所有自举演进历史以不可变日志持久化，绝不允许模型篡改</td><td><code>evoLedger</code> append-only 哈希链；<code>verify()</code> 当场定位任何篡改/断链</td></tr></tbody></table>
+<p>§3.4 补充：同一痛点连续 2 次沙箱失败 → 熔断该分支 + 架构级人类告警；已热载补丁后续 3 次任务引发新异常 → 强制回滚卸载。</p>
+<h2 id="6-验证">6. 验证<a class="anchor" href="#6-验证" aria-label="锚点">#</a></h2>
+<p><code>tests/services/evoEngine/evoEngine.test.js</code>：28 测试全绿，覆盖六条防呆 + 分支熔断 + 回滚 + 端到端 L1 演进流。邻近子系统（metaplan/selfHeal/cognitiveSnapshot）80 测试零回归。测试经 <code>KHY_PROJECT_DATA_HOME</code> 隔离至临时领地，不污染真实 <code>.khy</code> 数据区。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-036] 万物结构化熔炉引擎.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-036] 万物结构化熔炉引擎</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-041] Khyos意图精准裁决-意图光谱解析与动态提权网关.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-041] Khyos意图精准裁决 — 意图光谱解析与动态提权网关</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-037] Khyos自举创世-需求内源发生器与闭环自愈引擎.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.pnp.*
+.yarn/
+
+# Build outputs
+dist/
+build/
+# Exception: packaging/build/ holds CI build scripts (source, not output).
+# The broad build/ rule above must not swallow them, or the
+# Build Standalone Executables workflow fails with MODULE_NOT_FOUND.
+!packaging/build/
+!packaging/build/*.js
+!packaging/build/*.json
+*.iso
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Local data directories
+.khy/
+.khyquant/
+.khyquant-data/
+.khy-Trajectory/
+khy-Trajectory/
+# Legacy root-level khyquant data locations — migrated to .khy/khyquant/{cache,data,temp}
+# on 2026-08-13; rules kept so legacy code paths never leak them back into git.
+/cache/
+/data/
+.khyos/
+.runtime/
+.khy-runtime/
+
+# khyquant runtime scratch (lives in .khy/khyquant/temp since 2026-08-13 migration)
+/software/temp/
+/software/data/
+
+# Backend runtime stamp / marker files (written at install/configure time)
+.khy_*
+.agnes-test-*/
+
+# IDE / OS artifacts
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+
+# Logs & temp
+logs/
+*.log
+tmp/
+.tmp/
+*.pid
+*.seed
+
+# Platform packages
+platform/packages/
+
+# Frontend build artifacts
+apps/ai-frontend/dist/
+apps/ai-frontend/.vite/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Git
+.gitignore.orig
+
+# Misc
+*.orig
+*.rej
+.cache/
+
+# Large binary archives (encrypted snapshot & prebuild)
+_source/khy-os-source.tar.gz.enc
+_bs3_prebuild.tar.gz
+
+
+# Debug/test artifacts
+_dbg_*
+_repl_*
+_smoke_*
+
+# Vendored tooling & reference material (kept out of git)
+tools/deepseek-eyes/
+docs/_ref/
+
+# Root-level scratch / ad-hoc probe scripts (keep project root clean)
+/__*
+/_fix_*
+/jest-full-output.txt
+/test-results.txt
+/test_*.js
+/test_*.py
+
+# Windows device-name redirection artifacts (PowerShell `> NUL` creates literal files)
+NUL
+nul

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-087] 波次执行故障感知（依赖失败 → 跳过下游，如实汇报） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-087] 波次执行故障感知（依赖失败 → 跳过下游，如实汇报）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-087] 波次执行故障感知（依赖失败 → 跳过下游，如实汇报）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-087-波次执行故障感知-依赖失败-跳过下游-如实汇报">[OPS-MAN-087] 波次执行故障感知（依赖失败 → 跳过下游，如实汇报）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-有序但不感知故障-一段印证设计意图的死代码">为什么需要它（真实缺口 = 有序但不感知故障 + 一段印证设计意图的死代码）</a></li><li class="lvl-2"><a href="#单一真源与分层">单一真源与分层</a></li><li class="lvl-2"><a href="#语义与保守降级-绝不因坏依赖卡死">语义与保守降级（绝不因坏依赖卡死）</a></li><li class="lvl-2"><a href="#门与安全边界">门与安全边界</a></li><li class="lvl-2"><a href="#怎么验证">怎么验证</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-087-波次执行故障感知-依赖失败-跳过下游-如实汇报">[OPS-MAN-087] 波次执行故障感知（依赖失败 → 跳过下游，如实汇报）<a class="anchor" href="#ops-man-087-波次执行故障感知-依赖失败-跳过下游-如实汇报" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼第二发（收结果的诚实闭环）。承 [OPS-MAN-083] 依赖感知波次调度：<br>那一刀补上了「有序」（把带依赖的子任务编译成有序波次）。本条补上「收结果」<br>这一半的诚实性——依赖已失败的下游子任务<strong>不再盲跑在坏前提上</strong>。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>khy 已能把目标拆成有序波次并行执行、收结果。但当上游某波子任务<strong>失败</strong>时，<br>下一波仍会照常拉起那些依赖指向已失败上游的子智能体——<code>verify</code> 跑在一个建立于<br>失败 <code>explore</code> 之上的 <code>implement</code> 上，并被当成正常结果汇报。本条让波次执行<br><strong>感知故障</strong>：依赖已失败（或已被跳过）的下游子任务被短路成 <code>skipped（依赖失败，<br>已跳过）</code> 并<strong>如实计入失败</strong>，绝不盲跑、绝不假报成功。</p>
+<h2 id="为什么需要它-真实缺口-有序但不感知故障-一段印证设计意图的死代码">为什么需要它（真实缺口 = 有序但不感知故障 + 一段印证设计意图的死代码）<a class="anchor" href="#为什么需要它-真实缺口-有序但不感知故障-一段印证设计意图的死代码" aria-label="锚点">#</a></h2>
+<p><strong>深挖缺陷（铁证 file:line）：</strong></p>
+<ol><li><code>agenticHarnessService._tryAutoDecompose</code> 的多波循环<strong>无条件按序跑每一波</strong>。</li></ol>
+<p>上游波失败后，下一波照常 fork 依赖已失败上游的子智能体。</p>
+<ol><li>波次调度器 <code>planWaves</code> 内部算出了每子任务的解析依赖边（<code>deps[i]</code>），却在</li></ol>
+<p>分层后<strong>即丢弃</strong>——执行层拿不到边，无从判断「我的依赖真的成功了吗」。</p>
+<ol><li>后果：结果被「收回来」了，但<strong>不诚实</strong>——一个立在坍塌地基上的子任务被当成</li></ol>
+<p>正常 run 汇报，而非「因依赖失败而跳过」。</p>
+<p><strong>印证设计意图的死代码：</strong> <code>services/backend/src/services/subAgentOrchestrator.js:296</code><br>的 <code>executeDependencyAware(tasks)</code> <strong>早已完整实现</strong>本条要补的语义——拓扑分层 +<br><strong>故障传播</strong>（依赖失败 → <code>{status:'skipped', reason:'dependency X failed'}</code>）+<br>前驱结果注入下游上下文。但它<strong>零调用者</strong>（src / bundled / tests 全无）= 纯死代码；<br>活路径 <code>AgentTool._runOrchestrated</code> 走的是扁平 <code>_mapSettledLimited</code>，无任何依赖感知。<br>本条<strong>不唤醒那段死代码</strong>（会碰 72KB god-file / orchestrator），而是在<strong>已拥有的<br>波次执行层</strong>补上同一语义的最小诚实闭环。</p>
+<h2 id="单一真源与分层">单一真源与分层<a class="anchor" href="#单一真源与分层" aria-label="锚点">#</a></h2>
+<ul><li>纯叶子 <code>services/backend/src/services/orchestrator/dependencyWaveScheduler.js</code>：<ul><li><code>planWaves</code> 追加两个 additive 返回键：<ul><li><code>edges: Set&lt;number&gt;[]</code>——按 0-based 全局位置的<strong>已解析</strong>依赖边集（悬空引用早被</li></ul></li></ul></li></ul>
+<p><code>_normalizeDeps</code> 丢弃，故 edges 只含真实边）。</p>
+<ul><li><code>waveGlobalIndex: number[][]</code>——与 <code>waves</code> 同形，每项是该子任务在源数组的位置</li></ul>
+<p>（分层时 <code>ready</code> 数组本就持有索引，顺手记下；<strong>无 <code>indexOf</code></strong>，结构性消除<br>      重复对象命中风险）。</p>
+<ul><li>新纯函数 <code>partitionWaveBySurvivors(waveGlobalIdx, edges, failedGlobalIdxSet)</code></li></ul>
+<p>→ <code>{toRun, toSkip}</code>：某波成员全局索引 <code>g</code> 被跳过 iff <code>edges[g]</code> 与<br>    <code>failedGlobalIdxSet</code> 有交集。纯函数、绝不抛、畸形入参保守全 <code>toRun</code>。</p>
+<ul><li>薄接线 <code>agenticHarnessService._tryAutoDecompose</code> 多波 <code>else</code> 分支</li></ul>
+<p>（门 <code>KHY_DEP_WAVE_FAULT_STOP</code> default-on）：跨波累积 <code>failedGlobalIdx</code><br>  （真失败 + 被跳过都计入 → <strong>传递闭包</strong>），每波只把 <code>toRun</code> 交既有并行原语<br>  <code>_runOneWave</code>，为每个 <code>toSkip</code> 合成 <code>{success:false, skipped:true,<br>  error:'依赖失败，已跳过'}</code> 项并 <code>failCount++</code>。合成项经既有 <code>mergeResults</code><br>  正确渲染成「失败: 依赖失败，已跳过」——<strong>不碰 mergeResults / taskDecomposer</strong>。</p>
+<h2 id="语义与保守降级-绝不因坏依赖卡死">语义与保守降级（绝不因坏依赖卡死）<a class="anchor" href="#语义与保守降级-绝不因坏依赖卡死" aria-label="锚点">#</a></h2>
+<p>| 情形 | 行为 |</p>
+<p>| 门关 <code>KHY_DEP_WAVE_FAULT_STOP=0/false/off/no</code> | 无条件跑每波（逐字节回退今日行为） |</p>
+<p>| 单波 / 无解析边 / 缺 <code>waveGlobalIndex</code> | fault-stop 恒为 no-op，跑所有 |</p>
+<p>| 某波成员依赖已失败/已跳过 | 短路为 skip 失败项，<code>failCount++</code>，其索引并入 failed 集 |</p>
+<p>| 被跳过节点的下游 | 传递跳过（skip 索引进 failed 集 → 下游 partition 命中） |</p>
+<p>| 悬空依赖 | edges 只含已解析边，悬空永不触发跳过 |</p>
+<p>| <code>partitionWaveBySurvivors</code> 畸形入参 | 保守全 <code>toRun</code>、绝不抛 |</p>
+<h2 id="门与安全边界">门与安全边界<a class="anchor" href="#门与安全边界" aria-label="锚点">#</a></h2>
+<ul><li>门 <code>KHY_DEP_WAVE_FAULT_STOP</code> default-on，仅 <code>0/false/off/no</code> 关闭；关闭后</li></ul>
+<p>多波循环逐字节退化为今日的无条件按序执行（无回归）。sibling 门直读 env，<br>  <strong>不进 flagRegistry</strong>（同 <code>KHY_DEP_WAVE_SCHEDULE</code> 先例）。</p>
+<ul><li><strong>不碰</strong> <code>AgentTool/index.js</code>（72KB god-file 核心）、<code>subAgentOrchestrator.js</code></li></ul>
+<p>（含那段死代码 <code>executeDependencyAware</code>，本条不唤醒）。</p>
+<ul><li>诚实边界：故障感知只做「依赖失败 → 跳过下游 + 如实汇报」；<strong>不</strong>做前驱结果</li></ul>
+<p>注入下游上下文（那是死代码 <code>executeDependencyAware</code> 的更进一步能力，唤醒它需碰<br>  orchestrator，超本条外科范围——标注为未来工作）。只在<strong>多波</strong>（真有已解析边）时<br>  生效；确定性策略产无依赖子任务 → 单波 → 逐字节退化今日行为。dev 机验证止于纯叶<br>  单测（edges + partition 全覆盖）+ 接线语法/回归，不实跑多智能体端到端故障传播<br>  （需真 LLM 渠道 + 真失败子任务）。决策逻辑全下沉进纯 <code>partitionWaveBySurvivors</code><br>  以求可测，wiring 是薄胶水。</p>
+<h2 id="怎么验证">怎么验证<a class="anchor" href="#怎么验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:dep-wave-schedule          # 纯叶：11 既有 + 10 新（edges + partition）= 21/21
+npm run test:maintainer:safety          # 已并入的 must 守卫集（含本测文件）</code></pre>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<ol><li>要改「哪些下游算被依赖失败连累」的判定：改纯函数 <code>partitionWaveBySurvivors</code></li></ol>
+<p>（成员 <code>g</code> 跳过 iff <code>edges[g]</code> ∩ <code>failed ≠ ∅</code>）。保持纯函数、保持畸形入参<br>   保守全 <code>toRun</code>、绝不抛。</p>
+<ol><li>若 <code>planWaves</code> 暴露的边形状变了，同步更新 <code>edges</code> 的构造（<code>t&lt;n&gt;</code> id ↔ 全局</li></ol>
+<p>索引 <code>n-1</code>）与相应 node:test。</p>
+<ol><li>改完跑 <code>npm run test:dep-wave-schedule</code>（必须绿）。</li></ol>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push；真 key/token 不进包、不落盘。</li><li>全 additive；不删既有行为；门关逐字节回退（<code>KHY_DEP_WAVE_FAULT_STOP=off</code></li></ul>
+<p>→ 无条件跑每波 = 今日行为）。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-086] 还原轨迹日志.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-086] 还原轨迹日志</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-088] 还原策略台账.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-088] 还原策略台账</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-087] 波次执行故障感知.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

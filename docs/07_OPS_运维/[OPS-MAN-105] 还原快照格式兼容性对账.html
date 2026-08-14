@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-105] 还原快照格式兼容性对账 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-105] 还原快照格式兼容性对账</div>
+      <header class="hero reveal"><h1>[OPS-MAN-105] 还原快照格式兼容性对账</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-105-还原快照格式兼容性对账">[OPS-MAN-105] 还原快照格式兼容性对账</a></li><li class="lvl-2"><a href="#这一层闭合什么-format-formatversion-是死字段">这一层闭合什么：format / formatVersion 是死字段</a></li><li class="lvl-2"><a href="#判定档-格式契约门-最保守优先">判定档：格式契约门（最保守优先）</a></li><li class="lvl-2"><a href="#恒久红线-继承全家族">恒久红线（继承全家族）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-105-还原快照格式兼容性对账">[OPS-MAN-105] 还原快照格式兼容性对账<a class="anchor" href="#ops-man-105-还原快照格式兼容性对账" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-check-format.js --gen-doc</code> 确定性生成，请勿手改；<br>判定逻辑改在 <code>scripts/lib/snapshotFormatCompat.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层闭合什么-format-formatversion-是死字段">这一层闭合什么：format / formatVersion 是死字段<a class="anchor" href="#这一层闭合什么-format-formatversion-是死字段" aria-label="锚点">#</a></h2>
+<p>快照构建期 <code>makeSourceSnapshot.js</code> 给每个快照头（<code>snapshot.json</code>）盖两枚契约印章：</p>
+<ul><li><code>format: &quot;khy-source-snapshot&quot;</code> —— 「这确实是 khy 源码快照，不是别的什么 tar」；</li><li><code>formatVersion: 1</code> —— 「快照头 / 密文布局的 schema 版本」。</li></ul>
+<p>这两枚印章随 pip/npm 包漂洋过海到陌生机器。但还原 / 自愈侧<br>（<code>sourceHealService.decrypt</code>、<code>cli/handlers/publish.js</code> 的 restore 处理器）<br><strong>只校验 <code>crypto.algo === &quot;aes-256-gcm&quot;</code>，从不校验 <code>format</code> / <code>formatVersion</code></strong>——<br><code>grep &quot;khy-source-snapshot&quot;</code> 在整个还原代码库里 <strong>零消费者</strong>。后果在离机场景最毒：</p>
+<ul><li>陌生机器上装的是<strong>旧</strong> khy（旧还原代码），却拿到一个<strong>未来</strong> <code>formatVersion=2</code> 的快照</li></ul>
+<p>（密文 / 头布局已变但 <code>crypto.algo</code> 仍是 aes-256-gcm）→ 旧代码盲目解密：要么抛一句<br>  密码学天书（<code>unable to authenticate data</code>），要么更糟——静默按旧布局误解析新快照；</p>
+<ul><li>或者 <code>snapshot.json</code> 根本不是 khy 快照（复制错目录 / 第三方 tar）→ 没有任何一层</li></ul>
+<p>先问一句「这是我认识的格式吗」，直接进解密。</p>
+<p><code>format</code> / <code>formatVersion</code> 上游花心思盖章、跨渠道送达、下游能读，却<strong>在还原前无人据此把关</strong><br>= 死字段（断桥）。本层就是那个缺失的<strong>前置</strong>消费者：在完整性对账（第十二层 095）之前，<br>先回答最基础的一问——「这个快照的格式，本机 khy 的还原代码到底看不看得懂？」</p>
+<pre><code class="language-bash">node scripts/restore-check-format.js ./Khy-OS --json    # ① 先判格式：本机看得懂吗？
+khy restore ./Khy-OS                                    # ② 格式兼容才敢解密还原
+node scripts/restore-verify-complete.js ./Khy-OS --json # ③ 再对账数量：真完整吗？（095）</code></pre>
+<h2 id="判定档-格式契约门-最保守优先">判定档：格式契约门（最保守优先）<a class="anchor" href="#判定档-格式契约门-最保守优先" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>头非对象 / <code>format</code> 非串 / <code>formatVersion</code> 非有限数</td><td><code>unverifiable</code>：证据不足，绝不谎报 supported</td><td>✗</td></tr><tr><td>2</td><td><code>format !== &quot;khy-source-snapshot&quot;</code></td><td><code>alien</code>：这不是 khy 源码快照，别信别解密</td><td>✗</td></tr><tr><td>3</td><td><code>formatVersion &gt; MAX</code></td><td><code>too-new</code>：快照比本机还原代码更新，<strong>先升级 khy</strong></td><td>✗</td></tr><tr><td>4</td><td><code>formatVersion &lt; MIN</code></td><td><code>too-old</code>：格式过旧，勿用当前解析误读</td><td>✗</td></tr><tr><td>5</td><td><code>MIN ≤ formatVersion ≤ MAX</code> 且档 2 通过</td><td><code>supported</code>：唯一可安心继续还原的档</td><td>✓</td></tr></tbody></table>
+<ul><li>本机能理解的区间由叶子常量 <code>MIN_FORMAT_VERSION</code> / <code>MAX_FORMAT_VERSION</code> 定义</li></ul>
+<p>（当前均为 <code>1</code>）；快照布局做不向后兼容变更时按叶子 HOW-TO-EXTEND 递增。</p>
+<ul><li><code>--json</code> 在非 <code>supported</code> 时<strong>退出码 2</strong>：陌生机器上的自驱 agent 据此<strong>不敢盲目解密</strong>。</li></ul>
+<h2 id="恒久红线-继承全家族">恒久红线（继承全家族）<a class="anchor" href="#恒久红线-继承全家族" aria-label="锚点">#</a></h2>
+<ul><li>证据不足 / 格式陌生 / 版本超纲一律<strong>拒绝放行</strong>：绝不臆造 <code>supported</code>。</li><li><code>ok===true</code> 仅当 <code>status === supported</code>；其余一律 <code>ok:false</code>。</li><li>这是<strong>前置</strong>门（先于完整性对账 095、授权 088、导航 090）——看不懂格式，后面所有诊断都无意义。</li><li>叶子纯计算、零 IO、绝不抛；真正读 <code>snapshot.json</code> 的 IO 在 CLI 里、fail-soft。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-106] unpack 未知格式自救.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-106] unpack 未知格式自救（通用解包器兜底 + 受控安装）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-105] 还原快照格式兼容性对账.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

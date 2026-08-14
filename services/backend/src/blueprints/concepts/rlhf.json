@@ -1,0 +1,19 @@
+{
+  "id": "rlhf",
+  "kind": "concept",
+  "name": "RLHF",
+  "category": "ai-ml",
+  "triggers": ["RLHF", "Reinforcement Learning from Human Feedback", "人类反馈强化学习", "人类反馈"],
+  "summary": "基于人类反馈的强化学习：用人类偏好数据训一个奖励模型，再用强化学习(如 PPO)优化语言模型，使输出更符合人类期望(有用/无害)。DPO 是其简化替代。",
+  "whenToUse": [
+    "对齐 LLM 行为到人类偏好(对话助手的有用/安全)。",
+    "已有 SFT 基座，需进一步偏好优化。"
+  ],
+  "antiPatterns": [
+    "奖励模型过拟合/被钻空子(reward hacking)。",
+    "偏好数据有偏，放大标注者偏见。",
+    "在没有 SFT 基座时直接上 RLHF。"
+  ],
+  "minimalSkeleton": "1. SFT: 监督微调得基座\n2. 收集人类偏好对 → 训奖励模型(RM)\n3. RL(PPO/DPO): 用 RM 优化策略模型\n加 KL 正则防偏离基座",
+  "relatedArchetypes": []
+}

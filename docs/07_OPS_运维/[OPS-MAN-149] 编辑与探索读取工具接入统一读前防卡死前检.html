@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检</div>
+      <header class="hero reveal"><h1>[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-149-编辑与探索读取工具接入统一读前防卡死前检">[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检</a></li><li class="lvl-2"><a href="#背景与缺口">背景与缺口</a></li><li class="lvl-2"><a href="#修复-全-additive-复用-ops-147-合成叶">修复(全 additive,复用 OPS-147 合成叶)</a></li><li class="lvl-2"><a href="#验证-全绿">验证(全绿)</a></li><li class="lvl-2"><a href="#教训">教训</a></li><li class="lvl-2"><a href="#补记-unpack-流式读取-execute-chokepoint-防御平价">补记 — `unpack`(流式读取)execute-chokepoint 防御平价</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-149-编辑与探索读取工具接入统一读前防卡死前检">[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检<a class="anchor" href="#ops-man-149-编辑与探索读取工具接入统一读前防卡死前检" aria-label="锚点">#</a></h1>
+<h2 id="背景与缺口">背景与缺口<a class="anchor" href="#背景与缺口" aria-label="锚点">#</a></h2>
+<p>OPS-147 建立了合成读前防卡死前检 <code>filePreReadHangGuard.classifyPreReadHang</code>,并接入两个次级读取工具(<code>inspectDocument</code> / <code>replaceAtLocation</code>)。系统盘点<strong>所有会触碰字节的模型可调工具</strong>后,仍有两个未接:</p>
+<ul><li><code>editFile.js</code>(别名 <code>edit_file</code> / <code>edit</code> / <code>replace</code>)—— 模型<strong>最常用</strong>的编辑工具。<code>execute()</code> 在 <code>existsSync</code> 后立刻 <code>const original = fs.readFileSync(absPath, 'utf-8')</code>(第 103 行),<strong>零防卡死守卫</strong>。模型把 <code>edit</code> 指向 FIFO / 设备节点 / <code>/proc·/sys</code> 阻塞项时永久卡死——与 OPS-147 修的 <code>replaceAtLocation</code> 同一形状(模型直供路径 + <code>existsSync</code> 后立即 <code>readFileSync</code>)。</li><li><code>exploreTool.js</code>(别名 <code>search_codebase</code> / <code>find_code</code> / <code>codebase_search</code>)—— 代码库探索工具。第 126 行的 <code>for</code> 循环遍历搜索命中的文件,第 134 行 <code>fs.readFileSync(absPath, 'utf8')</code> 逐个读取。若探索树里混入 FIFO / 阻塞伪文件,<code>readFileSync</code> 永久卡死;循环外层的 <code>catch</code> <strong>只接抛错,不接卡死</strong>。命中路径由工具自身的 glob/grep 产出(非模型直供),但目标机上项目目录含命名管道 / 套接字文件即触发。</li></ul>
+<h2 id="修复-全-additive-复用-ops-147-合成叶">修复(全 additive,复用 OPS-147 合成叶)<a class="anchor" href="#修复-全-additive-复用-ops-147-合成叶" aria-label="锚点">#</a></h2>
+<p>复用 <code>filePreReadHangGuard.classifyPreReadHang({absPath, stat, env})</code>(合成 Windows 保留设备名 + FIFO/套接字/设备 + <code>/proc·/sys</code> 阻塞伪文件三向量,各沿用族门 default-on,门关 byte-revert,绝不抛)。这正是「多个只需拒绝的读工具共用一个合成前检叶」的价值:新增消费者只加一次调用,零改动叶。</p>
+<ul><li><code>editFile.js</code>:<code>existsSync</code> 后、<code>readFileSync</code> 前,<code>fs.statSync</code> + <code>classifyPreReadHang</code>,命中即 <code>return { success:false, error, blockedRead:kind }</code>(与 replaceAtLocation 对称)。</li><li><code>exploreTool.js</code>:循环里<strong>已有</strong> <code>const stat = fs.statSync(absPath)</code>(第 129 行),在其后、<code>readFileSync</code> 前插 <code>classifyPreReadHang</code>(<strong>复用已算好的 stat,零额外 IO</strong>),命中即 <code>fileContents.push({ path, preview: '[skipped — &lt;kind&gt; would hang the reader]' })</code> 并 <code>continue</code>(跳过并留痕,与既有「跳过不可读文件」语义一致,而非硬失败整个探索)。</li></ul>
+<p>两处均 <code>try/catch</code> fail-soft,异常回退历史行为。</p>
+<h2 id="验证-全绿">验证(全绿)<a class="anchor" href="#验证-全绿" aria-label="锚点">#</a></h2>
+<pre><code>node --check editFile.js / exploreTool.js / filePreReadHangGuard.test.js   # OK
+node --test tests/tools/filePreReadHangGuard.test.js                       # 16/16 pass</code></pre>
+<p>行为证据:</p>
+<table><thead><tr><th>工具</th><th>目标</th><th>结果</th><th>耗时</th></tr></thead><tbody><tr><td>editFile.execute</td><td>FIFO(cwd 内)</td><td>success:false · blockedRead=special:fifo</td><td>7ms</td></tr><tr><td>editFile.execute</td><td>正常文本文件</td><td>success:true · 内容正确改为 <code>hello khy</code></td><td>—</td></tr></tbody></table>
+<p><code>exploreTool</code> 的端到端行为驱动在本机<strong>无法完整跑通</strong>:本环境 <code>require('glob')</code> 解析到<strong>旧版 API</strong>(<code>glob()</code> 返回 Glob 对象而非 <code>Promise&lt;string[]&gt;</code>),导致 <code>_runGlob</code> 的 <code>.slice()</code> 抛错被吞 → <code>files_found</code> 恒空 → 读循环不可达。这是<strong>先存的、与本次改动正交的环境版本问题</strong>(目标机 glob v9+ 正常)。故 <code>exploreTool</code> 由以下手段验证:① <code>node --check</code>;② 源级接线断言(守卫夹在既有 <code>statSync</code> 与 <code>readFileSync</code> 之间且命中 <code>continue</code>);③ 合成叶对 FIFO 的已证分类行为(叶测 16/16)。诚实上报,不假称跑过端到端。</p>
+<p>门禁:</p>
+<pre><code>change-safety(我 5 文件 positional)   # no findings · exit0
+check-leaf-contract / check-flag-registry / check-agent-rules   # passed(复用族门,无新门)
+check:node-syntax                      # passed
+wc -l   # editFile / exploreTool / filePreReadHangGuard.js / test —— 均 &lt; 2500(arch:god)
+maintainer:check                       # exit0(map 条目已扩 editFile/exploreTool + OPS-148)
+维护映射表.json                        # JSON valid</code></pre>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>防卡死向量要按「<strong>哪些工具触碰字节</strong>」<strong>全量盘点</strong>——<code>editFile</code> 是模型最常用的编辑工具,却与 <code>replaceAtLocation</code> 同形状漏接;系统枚举 <code>readFileSync|detectFile|createReadStream</code> 才能扫全。</li><li><code>exploreTool</code> 的循环外 <code>catch</code> <strong>只接抛错不接卡死</strong>——<code>readFileSync</code> 卡死不抛异常,守卫必须<strong>读前</strong>拦截,<code>continue</code> 跳过并留痕。</li><li>复用合成叶:新增消费者只加一次调用,<code>exploreTool</code> 复用循环里已算的 <code>stat</code>(零额外 IO)。</li><li>端到端驱动跑不通时,<strong>诚实甄别是环境问题(旧版 glob)还是本次缺陷</strong>,并退回可跑的最强验证(源级接线 + 叶行为),不假称跑过。</li><li><code>editFile</code> / <code>replaceAtLocation</code> 写路径限 cwd 内(traversal 检查先于本守卫),FIFO 行为测的临时管道须落 cwd 内。</li><li>不 commit(feat/0.1.104);1.0.0 发布与真机手动门由用户执行。</li></ol>
+<h2 id="补记-unpack-流式读取-execute-chokepoint-防御平价">补记 — <code>unpack</code>(流式读取)execute-chokepoint 防御平价<a class="anchor" href="#补记-unpack-流式读取-execute-chokepoint-防御平价" aria-label="锚点">#</a></h2>
+<p><code>grep -rlE &quot;createReadStream&quot; services/backend/src/tools/*.js</code> 只剩 <code>unpackTool.js</code> 一个流式读工具未接。<br>它经 <code>createReadStream → gunzip</code> 管道解包,对 FIFO/阻塞伪文件会<strong>永久卡死</strong>(实测直调 execute 卡死 = exit 124)。</p>
+<p><strong>可达性诚实甄别:</strong> <code>unpack</code> 的特殊文件防护此前<strong>只在 <code>validateInput.isFile()</code></strong>。而框架<br>(<code>toolCalling.js:1912-1932</code>)只对 <code>source === 'registry'</code> 强制 <code>validateInput</code>;<code>builtin</code> 分支仅跑<br>schema 级 <code>validateParams</code>(无 <code>isFile</code>)。<code>unpack</code> 当前是 registry-only 且无直调 execute 的调用者,故<br><strong>当前 FIFO 不可达</strong>(validateInput 在 0ms 拦下,且 <code>_withToolTimeout</code> 兜底 ~2min)。</p>
+<p><strong>为何仍接:</strong> 这是与 5 个同族读工具(readFile / FileReadTool / inspectDocument / editFile /<br>exploreTool / replaceAtLocation)一致的<strong>防御平价</strong> —— 它们的守卫都落在 <strong>execute 体内</strong>(source-无关),<br>唯 <code>unpack</code> 的防护是 source-dependent。把 <code>classifyPreReadHang</code> 接进 <code>unpack.execute()</code> chokepoint,<br>使其对未来 builtin 暴露 / 直调 execute 亦稳,并把「~2min 超时才结束的卡死」变为「1ms 干净拒绝」。全 additive、<br>复用现有合成叶与族门(<strong>无新门</strong>)、族门关 <code>KHY_READFILE_SPECIAL_GUARD=0</code> → byte-revert(实测关门后重新卡死 = 证明改动即守卫本身)。</p>
+<p>验证:<code>node --test services/backend/tests/tools/filePreReadHangGuard.test.js</code> <strong>19/19 绿</strong><br>(新增:源级接线断言 + execute 直调 FIFO 拒绝 <code>special:fifo</code> + 正常 <code>.gz</code> 往返非回归)。</p>
+<p><strong>教训补充:</strong> ①「已被 validateInput 挡住」不等于「防御到位」——框架的 validateInput 强制是<br><strong>source-dependent</strong>,守卫应落在 execute chokepoint 才 source-无关;②源级 token-index 排序断言不可靠——<br><code>validateInput</code> 与 <code>execute</code> 共享同名 helper token(<code>_detectFormat</code>/<code>createReadStream</code>),须用<strong>行为测</strong><br>(直调 execute FIFO 拒绝)证运行期顺序;③可达性分析要诚实上报「当前不可达但防御不一致」,不夸大为「修复卡死漏洞」。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-148] Site1-prep状态与OCR成功闭合跨层去重减少心灵噪音.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-148] Site1 prep 状态与 OCR 成功闭合的跨层去重(减少心灵噪音)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-150] 级联中间提示显示归一去provider前缀减少心灵噪音.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-150] 级联中间提示显示归一去 provider 前缀(减少心灵噪音)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

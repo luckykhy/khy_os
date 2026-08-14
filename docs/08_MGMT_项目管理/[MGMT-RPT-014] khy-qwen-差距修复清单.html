@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 与 qwen-code 差距修复清单（执行版） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY 与 qwen-code 差距修复清单（执行版）</div>
+      <header class="hero reveal"><h1>KHY 与 qwen-code 差距修复清单（执行版）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-与-qwen-code-差距修复清单-执行版">KHY 与 qwen-code 差距修复清单（执行版）</a></li><li class="lvl-2"><a href="#0-目标结果-2-周">0. 目标结果（2 周）</a></li><li class="lvl-2"><a href="#1-已完成基线">1. 已完成基线</a></li><li class="lvl-2"><a href="#2-第-1-周-p0-稳定性与正确性">2. 第 1 周（P0 稳定性与正确性）</a></li><li class="lvl-3"><a href="#p0-1-model-首次打开一致性">P0-1. `/model` 首次打开一致性</a></li><li class="lvl-3"><a href="#p0-2-provider-model-标识归一化">P0-2. Provider/Model 标识归一化</a></li><li class="lvl-3"><a href="#p0-3-执行器错误归因与恢复路径">P0-3. 执行器错误归因与恢复路径</a></li><li class="lvl-3"><a href="#p0-4-基于活动的超时统一-禁止硬杀">P0-4. 基于活动的超时统一（禁止硬杀）</a></li><li class="lvl-3"><a href="#p0-5-状态管线-action-target-progress">P0-5. 状态管线：Action + Target + Progress</a></li><li class="lvl-2"><a href="#3-第-2-周-p1-能力与可运维性">3. 第 2 周（P1 能力与可运维性）</a></li><li class="lvl-3"><a href="#p1-1-程序级模糊意图路由-不只依赖模型">P1-1. 程序级模糊意图路由（不只依赖模型）</a></li><li class="lvl-3"><a href="#p1-2-审批-权限-ux-对齐">P1-2. 审批 / 权限 UX 对齐</a></li><li class="lvl-3"><a href="#p1-3-配置分层与-schema-迁移">P1-3. 配置分层与 Schema 迁移</a></li><li class="lvl-3"><a href="#p1-4-记忆-会话生命周期对齐">P1-4. 记忆 / 会话生命周期对齐</a></li><li class="lvl-3"><a href="#p1-5-测试矩阵与回归闸门">P1-5. 测试矩阵与回归闸门</a></li><li class="lvl-2"><a href="#4-交付与签收">4. 交付与签收</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-014 | 阶段: 项目管理 | 原路径: docs/指南/khy-qwen-差距修复清单.md --&gt;</p>
+<h1 id="khy-与-qwen-code-差距修复清单-执行版">KHY 与 qwen-code 差距修复清单（执行版）<a class="anchor" href="#khy-与-qwen-code-差距修复清单-执行版" aria-label="锚点">#</a></h1>
+<p>更新日期：2026-05-14  <br>范围：CLI AI 运行时、网关模型选择、工具执行、超时与状态管线  <br>参考基线：<code>/home/kodehu03/Downloads/qwen-code-main.zip</code></p>
+<h2 id="0-目标结果-2-周">0. 目标结果（2 周）<a class="anchor" href="#0-目标结果-2-周" aria-label="锚点">#</a></h2>
+<ol><li><code>/model</code> 首次打开结果稳定，且与第二次打开结果接近（冷启动一致性）。</li><li>对正在持续推进的长任务不做硬超时强杀；超时必须基于活动度判定。</li><li>程序启动类意图（例如&quot;打开飞书&quot;&quot;打开 PDF 编辑器&quot;）优先使用 <code>open_app</code>，并具备可靠的回退路径。</li><li>执行器错误（例如 <code>fork: retry: Resource temporarily unavailable</code>）需被正确归类，不得误报为主机资源耗尽。</li><li>状态输出始终遵循 <code>Action + Target + Progress</code>，且不出现固定的&quot;卡在 8s&quot;显示。</li></ol>
+<h2 id="1-已完成基线">1. 已完成基线<a class="anchor" href="#1-已完成基线" aria-label="锚点">#</a></h2>
+<ul><li>[x] AI 等待行流程中的等待状态推进不再固定冻结在 <code>8s</code>。</li><li>[x] REPL 路径下 <code>ai-chat</code> 看门狗超时已与请求超时预算对齐。</li><li>[x] 大任务超时预算已放宽，并在网关/codex 适配器路径中正确传递。</li></ul>
+<p>说明：本清单在当前基线之上继续推进，聚焦于剩余的系统性差距。</p>
+<h2 id="2-第-1-周-p0-稳定性与正确性">2. 第 1 周（P0 稳定性与正确性）<a class="anchor" href="#2-第-1-周-p0-稳定性与正确性" aria-label="锚点">#</a></h2>
+<h3 id="p0-1-model-首次打开一致性">P0-1. <code>/model</code> 首次打开一致性<a class="anchor" href="#p0-1-model-首次打开一致性" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>解决&quot;首次 <code>/model</code> 不完整、第二次 <code>/model</code> 才完整&quot;的不一致问题。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/cli/handlers/gateway.js</code></li><li><code>backend/src/services/gateway/modelDiscovery.js</code></li><li><code>backend/src/services/gateway/channelHealthBroadcaster.js</code></li><li><code>backend/src/services/gateway/aiGateway.js</code></li></ul>
+<p>实现：</p>
+<ol><li>引入带时间戳与置信度评分的持久化探测快照（<code>lastStrictSnapshot</code>）。</li><li>首次 <code>/model</code> 由 <code>snapshot + fast delta</code> 渲染，而非仅依赖快速探测。</li><li>将严格探测移至后台刷新，并按 epoch/version 合并，而非盲目覆盖。</li><li>在诊断输出中暴露&quot;快照时间 + 置信度 + 探测阶段&quot;。</li></ol>
+<p>验收标准：</p>
+<ol><li>冷启动：正常网络下，首次与第二次 <code>/model</code> 的模型数量差异不超过 1 个瞬态项。</li><li>UI 清晰标注各项为 <code>snapshot</code>、<code>fast-probe</code> 或 <code>strict-verified</code>。</li><li>任何隐藏通道都不会在无阶段/来源标签的情况下静默重现。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">khy gateway status
+khy gateway model</code></pre>
+<p>手动：</p>
+<ol><li>启动全新会话，在 20 秒内运行两次 <code>/model</code>。</li><li>对比模型集合与置信度标签。</li></ol>
+<h3 id="p0-2-provider-model-标识归一化">P0-2. Provider/Model 标识归一化<a class="anchor" href="#p0-2-provider-model-标识归一化" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>修复&quot;codex 适配器把 <code>claude-*</code> 显示为 codex 原生模型&quot;的问题。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/services/gateway/modelDiscovery.js</code></li><li><code>backend/src/services/gateway/modelRouter.js</code></li><li><code>backend/src/services/gateway/protocolConverter/codex.js</code></li><li><code>backend/src/cli/handlers/gateway.js</code></li></ul>
+<p>实现：</p>
+<ol><li>为发现的模型添加来源 Provider 元数据（<code>originProvider</code>、<code>servedByAdapter</code>）。</li><li>拆分显示分组：<code>Native</code>、<code>Routed</code>、<code>Relay</code>。</li><li>默认过滤：在适配器原生列表中隐藏跨 Provider 模型，除非用户启用&quot;显示 routed/relay 模型&quot;。</li><li>若选中 routed 模型，在确认前显式展示执行路由。</li></ol>
+<p>验收标准：</p>
+<ol><li><code>codex</code> 列表默认仅展示 codex 原生 ID。</li><li>跨 Provider 模型仅在 routed/relay 区块中可见，并带清晰标签。</li><li>选择确认信息包含 <code>adapter + upstream provider + route mode</code>。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">cd backend &amp;&amp; npm test -- modelRouter.test.js gatewayModelSelection.strictProbe.test.js</code></pre>
+<h3 id="p0-3-执行器错误归因与恢复路径">P0-3. 执行器错误归因与恢复路径<a class="anchor" href="#p0-3-执行器错误归因与恢复路径" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>避免在执行器/沙箱路径失败时得出&quot;系统资源耗尽&quot;的错误结论。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/services/toolCalling.js</code></li><li><code>backend/src/services/toolUseLoop.js</code></li><li><code>backend/src/services/errorClassifier.js</code></li><li><code>backend/src/cli/repl.js</code></li><li><code>backend/src/cli/liteRepl.js</code></li></ul>
+<p>实现：</p>
+<ol><li>将 <code>executor_unavailable</code> 提升为一级错误类别，并附带结构化字段（<code>scope</code>、<code>retryable</code>、<code>suggestedAction</code>）。</li><li>在程序启动意图 + shell 执行器不可用时：在最终失败前通过 <code>open_app</code> 自动恢复。</li><li>错误输出必须显式区分：<ul><li>执行器/沙箱约束</li><li>适配器超时</li><li>已确认的主机资源压力</li></ul></li><li>对于超时退出，需包含&quot;已完成步骤 vs 待处理步骤&quot;摘要。</li></ol>
+<p>验收标准：</p>
+<ol><li><code>fork</code> 失败不再输出泛化的主机资源耗尽结论。</li><li>当 shell 探测失败时，程序启动请求自动尝试 <code>open_app</code> 恢复。</li><li>最终失败文本包含未完成工作的披露。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">cd backend &amp;&amp; npm test -- toolCalling.shellForkClassify.test.js toolUseLoop.appLaunchRecovery.test.js</code></pre>
+<h3 id="p0-4-基于活动的超时统一-禁止硬杀">P0-4. 基于活动的超时统一（禁止硬杀）<a class="anchor" href="#p0-4-基于活动的超时统一-禁止硬杀" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>移除对活跃长任务的固定挂钟时间强杀逻辑。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/services/resourceGuard.js</code></li><li><code>backend/src/cli/ai.js</code></li><li><code>backend/src/cli/repl.js</code></li><li><code>backend/src/cli/liteRepl.js</code></li><li><code>backend/src/services/gateway/aiGateway.js</code></li><li><code>backend/src/services/gateway/adapters/codexAdapter.js</code></li></ul>
+<p>实现：</p>
+<ol><li>添加统一的活动心跳契约（<code>onChunk</code>、<code>onToolResult</code>、<code>onStatus</code>、<code>onLoopAdvance</code>）。</li><li>用滑动空闲超时 + 可选的最大生命周期（用于死锁兜底）替换硬挂钟超时。</li><li>让超时预算具备 Profile 感知能力（<code>small</code>、<code>normal</code>、<code>large</code>），并可由用户覆盖。</li><li>超时消息必须报告：<ul><li>最后一次活动的时间戳</li><li>已完成步骤</li><li>最后一次成功的工具/模型事件</li></ul></li></ol>
+<p>验收标准：</p>
+<ol><li>长时间活跃任务不会仅因挂钟时间超限而被强杀。</li><li>空闲超时仅在配置的空闲窗口内无任何进展事件时触发。</li><li>日志包含支撑超时决策的活动证据。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">cd backend &amp;&amp; npm test -- aiGateway.stability.test.js aiGateway.stability.regressions.test.js aiCli.concurrentPreferredIsolation.test.js</code></pre>
+<h3 id="p0-5-状态管线-action-target-progress">P0-5. 状态管线：Action + Target + Progress<a class="anchor" href="#p0-5-状态管线-action-target-progress" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>让运行时状态透明且动态，杜绝含糊/不透明的等待文本。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/cli/repl.js</code></li><li><code>backend/src/cli/liteRepl.js</code></li><li><code>backend/src/cli/aiRenderer.js</code></li><li><code>backend/src/cli/agentRenderer.js</code></li></ul>
+<p>实现：</p>
+<ol><li>定义状态 Schema：<code>{action, target, progress, elapsedMs, source}</code>。</li><li>用结构化行替换泛化文本，例如：<ul><li><code>Adapter claude probing connectivity (attempt 2/3, 6s)</code></li><li><code>Codex adapter waiting for first token (elapsed 14s)</code></li></ul></li><li>按语义键去抖，而不仅按原始文本去抖。</li><li>在支持/不支持回车符（carriage-return）的终端中，保持实时行更新稳定。</li></ol>
+<p>验收标准：</p>
+<ol><li>AI 运行时路径中不出现孤立的含糊状态行。</li><li>等待期间进度数字/时间持续更新。</li><li>混合适配器产生带来源标签的状态行。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">node scripts/check-agent-rules.js --changed</code></pre>
+<p>手动：</p>
+<ol><li>触发一个短任务和一个长任务；验证状态清晰度与推进情况。</li></ol>
+<h2 id="3-第-2-周-p1-能力与可运维性">3. 第 2 周（P1 能力与可运维性）<a class="anchor" href="#3-第-2-周-p1-能力与可运维性" aria-label="锚点">#</a></h2>
+<h3 id="p1-1-程序级模糊意图路由-不只依赖模型">P1-1. 程序级模糊意图路由（不只依赖模型）<a class="anchor" href="#p1-1-程序级模糊意图路由-不只依赖模型" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>为模糊的用户语言添加确定性的预路由，而不是仅依赖模型推理。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/cli/router.js</code></li><li><code>backend/src/cli/aliases.js</code></li><li><code>backend/src/services/toolUseLoop.js</code></li><li><code>backend/src/services/toolCalling.js</code></li><li><code>backend/src/services/shellToToolMapper.js</code></li></ul>
+<p>实现：</p>
+<ol><li>在工具循环前添加轻量级意图分类器：<code>app_launch</code>、<code>file_edit</code>、<code>diagnosis</code>、<code>web_lookup</code>。</li><li>对 <code>app_launch</code>，强制工具优先级：先 <code>open_app</code>，再 shell 回退。</li><li>扩展模糊词库，覆盖中文错别字、拼音变体、重复字符。</li><li>记录意图决策轨迹以便事后复盘。</li></ol>
+<p>验收标准：</p>
+<ol><li>模糊请求仍能以高一致性映射到预期的工具路径。</li><li>程序启动场景下首工具误触发率下降。</li><li>调试日志中可获取意图轨迹。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">cd backend &amp;&amp; npm test -- toolUseLoop.guardrails.test.js toolUseLoop.appLaunchRewrite.test.js toolCalling.openAppAlias.test.js</code></pre>
+<h3 id="p1-2-审批-权限-ux-对齐">P1-2. 审批 / 权限 UX 对齐<a class="anchor" href="#p1-2-审批-权限-ux-对齐" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>让权限工作流具备清晰的模式语义与持久化的信任规则。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/services/execApproval.js</code></li><li><code>backend/src/services/permissionStore.js</code></li><li><code>backend/src/cli/ui/permissionDialog.js</code></li><li><code>backend/src/permissions/rules.js</code></li></ul>
+<p>实现：</p>
+<ol><li>将审批模式（<code>strict</code>、<code>on-failure</code>、<code>never</code> 等）统一为单一规范枚举。</li><li>持久化按命令与按前缀的信任决策，并带作用域（<code>session</code>、<code>workspace</code>、<code>global</code>）。</li><li>改进权限提示内容：操作、目标路径/命令、风险等级、复用规则。</li></ol>
+<p>验收标准：</p>
+<ol><li>当作用域内已存在规则时，同一命令路径不再重复询问。</li><li>提示文本明确且可审计。</li><li>规则冲突解析具备确定性。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">cd backend &amp;&amp; npm test -- toolRegistryMcp.test.js hook-lifecycle.test.js</code></pre>
+<h3 id="p1-3-配置分层与-schema-迁移">P1-3. 配置分层与 Schema 迁移<a class="anchor" href="#p1-3-配置分层与-schema-迁移" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>让行为在 env/profile/session 覆盖下可复现。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/config/env.js</code></li><li><code>backend/src/config/settingsWhitelist.js</code></li><li><code>backend/src/routes/settings.js</code></li><li><code>backend/src/services/gateway/aiGateway.js</code></li></ul>
+<p>实现：</p>
+<ol><li>强制配置优先级：default &lt; user &lt; workspace &lt; env &lt; CLI override。</li><li>为网关/超时/模型过滤添加 Schema 校验与迁移。</li><li>提供 <code>khy doctor</code> 诊断，展示每个键的生效配置来源。</li></ol>
+<p>验收标准：</p>
+<ol><li>生效的配置值始终包含来源轨迹。</li><li>旧配置格式自动迁移并带警告。</li><li>不存在向隐式硬编码值的静默回退。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">cd backend &amp;&amp; npm test -- proxyConfig.routing.test.js proxyConfigService.socks5Compatibility.test.js</code></pre>
+<h3 id="p1-4-记忆-会话生命周期对齐">P1-4. 记忆 / 会话生命周期对齐<a class="anchor" href="#p1-4-记忆-会话生命周期对齐" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>改善长会话的稳定性与可恢复性。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/src/services/memoryDreaming.js</code></li><li><code>backend/src/services/sessionFileRepair.js</code></li><li><code>backend/src/services/sessionTraceSummary.js</code></li><li><code>backend/src/services/compact/index.js</code></li><li><code>backend/src/services/query/compactPipeline.js</code></li></ul>
+<p>实现：</p>
+<ol><li>统一会话压缩触发条件与摘要阈值。</li><li>让记忆写入具备崩溃安全性（原子替换 + 完整性标记）。</li><li>为部分损坏的会话文件添加恢复路径。</li></ol>
+<p>验收标准：</p>
+<ol><li>长对话在压缩后仍保持回复质量。</li><li>会话损坏可被自动修复或清晰隔离。</li><li>压缩事件在状态日志中可见。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">cd backend &amp;&amp; npm test -- agent-context.test.js aiCli.feedback.stability.test.js</code></pre>
+<h3 id="p1-5-测试矩阵与回归闸门">P1-5. 测试矩阵与回归闸门<a class="anchor" href="#p1-5-测试矩阵与回归闸门" aria-label="锚点">#</a></h3>
+<p>目标：</p>
+<ul><li>将近期事故模式转化为强制回归检查。</li></ul>
+<p>待修改文件：</p>
+<ul><li><code>backend/tests/gatewayModelSelection.strictProbe.test.js</code></li><li><code>backend/tests/toolUseLoop.appLaunchRecovery.test.js</code></li><li><code>backend/tests/toolCalling.shellForkClassify.test.js</code></li><li><code>backend/tests/aiGateway.stability.regressions.test.js</code></li><li><code>scripts/check-agent-rules.js</code></li></ul>
+<p>实现：</p>
+<ol><li>添加首次运行 <code>/model</code> 一致性场景。</li><li>添加 executor-unavailable + open_app 自动恢复场景。</li><li>添加长时间运行的活跃任务超时不强杀场景。</li><li>在 CI 中对变更文件强制执行检查脚本。</li></ol>
+<p>验收标准：</p>
+<ol><li>新回归可在本地复现，并在 CI 中被捕获。</li><li>P0 场景成为发布门禁。</li></ol>
+<p>验证：</p>
+<pre><code class="language-bash">cd backend &amp;&amp; npm test -- gatewayModelSelection.strictProbe.test.js toolUseLoop.appLaunchRecovery.test.js toolCalling.shellForkClassify.test.js aiGateway.stability.regressions.test.js
+node scripts/check-agent-rules.js --changed</code></pre>
+<h2 id="4-交付与签收">4. 交付与签收<a class="anchor" href="#4-交付与签收" aria-label="锚点">#</a></h2>
+<p>发布门禁：</p>
+<ol><li>所有 P0 项均通过验收标准与验证命令。</li><li>变更文件中不引入新的硬编码端点/路径违规。</li><li>超时行为在至少一个长时间活跃任务和一个真正空闲停滞任务上得到验证。</li></ol>
+<p>跟踪规则：</p>
+<ol><li>每一项需附带 PR 链接 + 测试证据 + 前后对比的 CLI 输出记录。</li><li>任何未通过的验收检查都必须重新打开对应的清单项。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-013] cc-对标-第六轮-2026-05-26.html"><div class="dir">← 上一篇</div><div class="ttl">KHY → Claude Code 对标第六轮：结构性修复报告 (2026-05-26)</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-015] khy-ux-交互对标.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 交互模式对标分析与优化路线图</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-014] khy-qwen-差距修复清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

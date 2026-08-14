@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khyos CB-SSP 数学建模与实现映射（落地规格） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>Khyos CB-SSP 数学建模与实现映射（落地规格）</div>
+      <header class="hero reveal"><h1>Khyos CB-SSP 数学建模与实现映射（落地规格）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-cb-ssp-数学建模与实现映射-落地规格">Khyos CB-SSP 数学建模与实现映射（落地规格）</a></li><li class="lvl-2"><a href="#0-一页纸总览">0. 一页纸总览</a></li><li class="lvl-2"><a href="#1-状态空间与符号总表">1. 状态空间与符号总表</a></li><li class="lvl-2"><a href="#2-阶段-b-启发式-h-s-4-b">2. 阶段 B —— 启发式 $h(s)$（§4.B）</a></li><li class="lvl-2"><a href="#3-阶段-a-可逆性分层-lrta-4-a">3. 阶段 A —— 可逆性分层 LRTA\*（§4.A）</a></li><li class="lvl-3"><a href="#3-1-价值回填">3.1 价值回填</a></li><li class="lvl-3"><a href="#3-2-可逆性分层执行">3.2 可逆性分层执行</a></li><li class="lvl-2"><a href="#4-阶段-c-统一资源-代价调度-4-c">4. 阶段 C —— 统一资源-代价调度（§4.C）</a></li><li class="lvl-3"><a href="#4-1-c-1-适配器路由-ucb1">4.1 C-1 适配器路由 UCB1</a></li><li class="lvl-3"><a href="#4-2-c-2-账号池真均衡-p2c">4.2 C-2 账号池真均衡（P2C）</a></li><li class="lvl-3"><a href="#4-3-c-3-工作流-quantum-抢占">4.3 C-3 工作流 quantum 抢占</a></li><li class="lvl-3"><a href="#4-4-c-4-统一断路器">4.4 C-4 统一断路器</a></li><li class="lvl-2"><a href="#5-阶段-d-约束格形式化-4-d">5. 阶段 D —— 约束格形式化（§4.D）</a></li><li class="lvl-3"><a href="#5-1-格定义">5.1 格定义</a></li><li class="lvl-3"><a href="#5-2-分类-黄金回归既有契约">5.2 分类（黄金回归既有契约）</a></li><li class="lvl-3"><a href="#5-3-松弛算子-guardapproval-lambda">5.3 松弛算子（guardApproval = $\lambda$）</a></li><li class="lvl-3"><a href="#5-4-活性投影-pi-mathcal-c">5.4 活性投影 $\Pi_{\mathcal C}$</a></li><li class="lvl-2"><a href="#6-全局一致性-单一-j-中枢-逐条闭合-3-3-病灶">6. 全局一致性：单一 $J$ 中枢（逐条闭合 §3.3 病灶）</a></li><li class="lvl-2"><a href="#7-边界与诚实的局限-未接入项">7. 边界与诚实的局限（未接入项）</a></li><li class="lvl-2"><a href="#附-测试即证明索引">附：测试即证明索引</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-002 | 阶段: 设计 | 原路径: docs/架构/Khyos-CB-SSP-数学建模与实现映射.md --&gt;</p>
+<h1 id="khyos-cb-ssp-数学建模与实现映射-落地规格">Khyos CB-SSP 数学建模与实现映射（落地规格）<a class="anchor" href="#khyos-cb-ssp-数学建模与实现映射-落地规格" aria-label="锚点">#</a></h1>
+<blockquote><p>配套文档：</p>
+<ul><li>设计意图 → <a href="%5BDESIGN-ARCH-003%5D%20Khyos-数学重塑-受约束随机最短路径.html"><code>Khyos-数学重塑-受约束随机最短路径.md</code></a>（&quot;为什么这样设计&quot;）</li><li>实施进度 → <a href="%5BDESIGN-ARCH-004%5D%20_cbssp_progress.html"><code>_cbssp_progress.md</code></a>（B→A→C→D 落地记录）</li></ul>
+<p>本文档是<strong>落地后的形式化规格</strong>：&quot;系统现在是什么数学对象、每个构件满足什么性质、<br>哪条测试证明了哪条性质、性质对应哪段代码&quot;。设计文档讲动机，本文档讲<strong>契约与证明</strong>。<br>所有符号沿用设计文档 §1。代码锚点以 <code>services/backend/src/services/</code> 为根。</p></blockquote>
+<hr>
+<h2 id="0-一页纸总览">0. 一页纸总览<a class="anchor" href="#0-一页纸总览" aria-label="锚点">#</a></h2>
+<p>Khyos agent 被建模为 belief-POMDP 上的<strong>受约束·有预算·随机最短路径（CB-SSP）</strong>问题：</p>
+<p>$$<br>\boxed{\;\pi^\* = \arg\min_{\pi}\; \mathbb{E}\!\left[\sum_{t=0}^{T} g(s_t,a_t,s_{t+1}) + \Phi(s_T)\right]\;}<br>\quad\text{s.t.}\quad a_t\in A(s_t),\; r_T\preceq R_\text{max},\; \mathrm{Verify}(s_T)=\text{PASS}<br>$$</p>
+<p>四项落地把&quot;散落的正确零件&quot;装进同一台求解器，全部为<strong>加性黏合剂</strong>（不推倒核心文件）：</p>
+<table><thead><tr><th>阶段</th><th>数学对象</th><th>核心性质</th><th>模块</th><th>测试</th></tr></thead><tbody><tr><td><strong>B</strong></td><td>启发式 $h(s)$</td><td>可采纳性（admissibility）</td><td><code>heuristic.js</code></td><td><code>heuristic.test.js</code> (16)</td></tr><tr><td><strong>A</strong></td><td>LRTA\* 价值回填 + 可逆性分层</td><td>跨试验单调不增；不可逆绝不投机</td><td><code>lrtaBackfill.js</code> / <code>reversibility.js</code></td><td>(13)+(15)</td></tr><tr><td><strong>C</strong></td><td>统一资源-代价调度</td><td>UCB1 次线性 regret；P2C Θ(ln ln N)；抢占透明性；退避等价</td><td><code>ucbRouter.js</code> / <code>accountSelector.js</code> / <code>workflowExecutor.js</code> / <code>circuitBreaker.js</code></td><td>(11)+(13)+(15)+(全绿)</td></tr><tr><td><strong>D</strong></td><td>约束格 $\langle\{\bot,\text{SOFT},\top\},\sqsubseteq\rangle$ + $\Pi_{\mathcal C}$</td><td>红线不可约束；活性 $A(s)\neq\varnothing$</td><td><code>constraintLattice.js</code></td><td><code>constraintLattice.test.js</code> (30) + glue (8)</td></tr></tbody></table>
+<p><strong>统一性论断</strong>：四阶段都把各自的局部度量折进同一个标量 $J$——规划用 $h$ 下估 $J$ 的剩余、<br>调度用 $g$ 的资源分量选臂、约束格用 $\lambda_\text{human}$ 把人审代价计入 $g$、验收用 $\Phi$ 封顶。<br>三子系统第一次对着同一个 $J$ 优化（消除设计文档 §3.3 的&quot;最深病灶&quot;）。</p>
+<hr>
+<h2 id="1-状态空间与符号总表">1. 状态空间与符号总表<a class="anchor" href="#1-状态空间与符号总表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>符号</th><th>含义</th><th>落地载体</th></tr></thead><tbody><tr><td>$s=(h,b,r,c)$</td><td>状态 = (历史, 信念, 资源向量, 约束)</td><td>boulderState（SQLite + 快照）外化 $s$</td></tr><tr><td>$A(s)=A_\text{full}\cap \mathrm{Feasible}(s)$</td><td>可行动作集；分层 $A_\text{safe}\cup A_\text{commit}$</td><td>toolProfile 白名单 + executeTool 漏斗</td></tr><tr><td>$g(s,a,s')$</td><td>单步代价 = $\lambda_\text{time}\Delta t+\lambda_\text{tok}\Delta\text{tok}+\lambda_\$\Delta\$+\lambda_\text{risk}\mathrm{Risk}+\lambda_\text{irrev}\mathrm{Irrev}$</td><td>各 $\lambda$ 为 env 旋钮</td></tr><tr><td>$\Phi(s_T)$</td><td>终端势：已验证则 $0$，否则未满足验收项数 × 大常数</td><td>buildAcceptancePack</td></tr><tr><td>$h(s)$</td><td>到目标的代价-去估计（启发式，可采纳下估）</td><td><code>heuristic.js</code>（阶段 B）</td></tr><tr><td>$H_k(s)$</td><td>第 $k$ 次试验学到的回填启发值</td><td><code>lrtaBackfill.js</code>（阶段 A）</td></tr><tr><td>$\Pi_{\mathcal C}$</td><td>约束投影算子：裁剪 $A_\text{full}\to A(s)$</td><td><code>constraintLattice.js</code>（阶段 D）</td></tr></tbody></table>
+<p>零硬编码原则：所有阈值/权重/时间片/格位经 <strong>env + 命名常量默认值</strong>，默认值与旧行为逐点等价。</p>
+<hr>
+<h2 id="2-阶段-b-启发式-h-s-4-b">2. 阶段 B —— 启发式 $h(s)$（§4.B）<a class="anchor" href="#2-阶段-b-启发式-h-s-4-b" aria-label="锚点">#</a></h2>
+<p><strong>定义.</strong> 给定验收包谓词集 $\mathcal P=\mathcal P_\text{req}\cup\mathcal P_\text{opt}$，未满足必需项数 $u_\text{req}$、<br>未满足可选项数 $u_\text{opt}$，单项代价 $\kappa$（<code>KHY_HEURISTIC_COST_PER_CRITERION</code>）：</p>
+<p>$$<br>h(s) = \kappa\, u_\text{req}, \qquad<br>h_\text{stall}(s) = \kappa\,(u_\text{req} + w_\text{opt}\, u_\text{opt})<br>$$</p>
+<p><strong>命题 B.1（可采纳性）.</strong> $h(s)\le h^\<em>(s)$，其中 $h^\</em>$ 为到目标的真实最小剩余代价。<br><em>证明要点</em>：每个未满足必需谓词至少需要一个使其为真的动作，单动作代价 $\ge\kappa$ 的保守下界 ⇒ $h$ 不高估。<br><strong>测试</strong>：<code>heuristic.test.js</code> 断言 $h\le$ 真实剩余、$h=0\iff$ 全部满足、满足一项 $h$ 严格下降。</p>
+<p><strong>命题 B.2（停滞检测）.</strong> 若 $h_\text{stall}$ 在一轮内未严格下降且仍有剩余，<code>shouldCalibrate</code> 触发只读校准。<br><em>意义</em>：把&quot;走偏要到终点才发现&quot;（设计文档 §3.1 belief–goal 鸿沟）提前到中途。</p>
+<p><strong>接入</strong>：<code>agenticHarnessService._attachHeuristic()</code> 仅作<strong>附加遥测</strong>，零控制流改动，<br>env 门 <code>KHY_HEURISTIC_ENABLED</code> 默认开。</p>
+<hr>
+<h2 id="3-阶段-a-可逆性分层-lrta-4-a">3. 阶段 A —— 可逆性分层 LRTA\*（§4.A）<a class="anchor" href="#3-阶段-a-可逆性分层-lrta-4-a" aria-label="锚点">#</a></h2>
+<h3 id="3-1-价值回填">3.1 价值回填<a class="anchor" href="#3-1-价值回填" aria-label="锚点">#</a></h3>
+<p><strong>定义.</strong> 第 $k$ 次试验后，对访问状态回填运行最小值：</p>
+<p>$$<br>H_k(s) = \min\big(H_{k-1}(s),\; g_k(s) + h_k(s)\big), \qquad<br>g_k = w_\text{step}\cdot(\text{本轮迭代数})\ \ge 0<br>$$</p>
+<p><strong>命题 A.1（跨试验单调不增）.</strong> $\forall k:\; H_k(s)\le H_{k-1}(s)$。<br><em>证明</em>：取运行最小值 ⇒ 逐点不增；$g_k\ge0$ 不破坏下估方向。这把 Ralph 的<strong>盲目重启</strong>变成<br><strong>学习重启</strong>（learning restart）：第 $k$ 轮失败的教训经 $H$ 传给第 $k{+}1$ 轮。<br><strong>测试</strong>：<code>lrtaBackfill.test.js</code> 断言 min 公式、跨 trial 单调、sidecar 持久化往返。</p>
+<p><strong>持久化</strong>：隔离 sidecar <code>&lt;dataHome&gt;/boulder/lrta/&lt;cwdHash&gt;.json</code>，<strong>不动 checkpoint schema</strong>，<br>下一 trial/会话热启动（<code>_seedLearnedHeuristic</code>）。env 门 <code>KHY_LRTA_ENABLED</code> 默认开，best-effort。</p>
+<blockquote><p><strong>锚点修正</strong>（已核实）：设计文档写&quot;在 Ralph 环（:365）回填&quot;，实测 $h(s)$ 只在有 delivery<br>gate 信号的 <strong>remediation 试验环</strong>（~:487）可观测，故回填落此环——它正是 §2.2 两 trial 环之一。</p></blockquote>
+<h3 id="3-2-可逆性分层执行">3.2 可逆性分层执行<a class="anchor" href="#3-2-可逆性分层执行" aria-label="锚点">#</a></h3>
+<p><strong>定义.</strong> $\mathrm{classify}(a)=\text{safe}$（只读且非破坏）$\mid \text{commit}$（其余，含未知，保守）。<br>投机前瞻 $\mathrm{Lookahead}_k$ 只在 $A_\text{safe}$ 上展开，束宽 $k\le 3$（<code>KHY_LOOKAHEAD_WIDTH</code> clamp $[0,3]$）。</p>
+<p><strong>命题 A.2（不可逆绝不投机）.</strong> 若 <code>traceContext.speculative=true</code> 则任何 commit 动作在权限/执行<strong>之前</strong><br>被硬拒。<em>意义</em>：信念不足时绝不 commit（堵住设计文档 §3.1&quot;最危险的缺口&quot;）；前瞻只产生只读代价 ⇒<br><strong>预算守恒</strong>。fail-closed：守卫不可用则拒绝投机。默认（非投机）路径零回归。<br><strong>测试</strong>：<code>reversibility.test.js</code> 断言投机 commit 在 handler 前被拒（handler 未调用）、真只读工具放行。</p>
+<hr>
+<h2 id="4-阶段-c-统一资源-代价调度-4-c">4. 阶段 C —— 统一资源-代价调度（§4.C）<a class="anchor" href="#4-阶段-c-统一资源-代价调度-4-c" aria-label="锚点">#</a></h2>
+<p>一个资源-代价模型治三层；内核 RR（<code>sched.c</code>，全系统最干净的数学）作为纪律范本上提。</p>
+<h3 id="4-1-c-1-适配器路由-ucb1">4.1 C-1 适配器路由 UCB1<a class="anchor" href="#4-1-c-1-适配器路由-ucb1" aria-label="锚点">#</a></h3>
+<p>$$<br>a^\* = \arg\max_a\Big[\hat\mu_a + c\sqrt{\tfrac{2\ln N}{n_a}} - \mathrm{cooldownDamp}_a\Big],<br>\qquad r = \text{success}\,?\,\mathrm{speed}(\text{latency}) : 0 \in[0,1]<br>$$</p>
+<p><strong>命题 C.1（次线性 regret）.</strong> UCB1 的累计 regret $R(T)=O(\ln T)$ ⇒ $R(T)/T\to 0$。<br><strong>测试</strong>：<code>ucbRouter.test.js</code> 用 3 臂 Bernoulli + LCG 确定性，断言 $R(T)/T$ 随 $T$ 严格下降、<br>最优臂占比 &gt;70%、远低于线性界。<strong>默认关</strong>（<code>KHY_UCB_ROUTING</code>），开启时只<strong>重排</strong> eligible 不动可选集 ⇒ 零回归。</p>
+<h3 id="4-2-c-2-账号池真均衡-p2c">4.2 C-2 账号池真均衡（P2C）<a class="anchor" href="#4-2-c-2-账号池真均衡-p2c" aria-label="锚点">#</a></h3>
+<p><strong>定义.</strong> $\mathrm{loadKey}(a)=$ 使用近度（<code>last_used_at</code>）；<code>selectPowerOfTwo</code> 抽 2 取较闲。</p>
+<p><strong>命题 C.2（最大负载界）.</strong> Power-of-two-choices 把最大负载从随机分配的 $\Theta(\tfrac{\ln N}{\ln\ln N})$<br>降到 $\Theta(\ln\ln N)$。<strong>测试</strong>：<code>accountSelector.test.js</code> 断言 LRU 重复选择=完美轮转（$\max-\min\le1$）、<br>P2C 最大负载 $&lt;1.25\cdot(T/N)$ 且显著低于均匀随机。纠正了 <code>'Balance'</code> 名实不符（旧实为粘性 MRU）。</p>
+<h3 id="4-3-c-3-工作流-quantum-抢占">4.3 C-3 工作流 quantum 抢占<a class="anchor" href="#4-3-c-3-工作流-quantum-抢占" aria-label="锚点">#</a></h3>
+<p><strong>定义.</strong> 单游标解释器每执行 $Q$ 个节点让出耐久检查点 $\{\text{paused},\text{pause}:\{\text{kind:quantum},\text{nodeId},\text{loopState}\}\}$，<br>让出点指向<strong>下一待执行节点</strong>。</p>
+<p><strong>命题 C.3（抢占透明性）.</strong> 对任意 $Q$，跨任意让出/恢复序列，最终 vars、节点执行序列、log 与<br>不间断运行<strong>逐一相同</strong>。<em>证明要点</em>：让出只持久化游标与 loopState，不改变转移函数；<code>isQuantumResume</code><br>区分 answer-resume（注入并跳过）与 quantum-resume（仅定位游标、正常执行），避免幻影答案。<br><strong>测试</strong>：<code>workflowExecutor.quantum.test.js</code>（$Q\in\{1,2,3,5,7,100\}$ 逐一等价）+ 跨进程恢复。<br><strong>ready-queue 公平</strong>：让出的 run <code>updatedAt</code> 刷新沉队尾（quantum 开启时 <code>ORDER BY updatedAt ASC</code>），<br>关闭时保持 <code>id ASC</code> FIFO ⇒ 默认零行为变更。</p>
+<h3 id="4-4-c-4-统一断路器">4.4 C-4 统一断路器<a class="anchor" href="#4-4-c-4-统一断路器" aria-label="锚点">#</a></h3>
+<p><strong>定义.</strong> 唯一真源纯函数 $\mathrm{backoff}(\text{base},\text{attempt},m,\text{cap},N)=\min(\text{cap},\,\text{base}\cdot m^{\mathrm{clamp}(\text{attempt},0,N)})$。</p>
+<p><strong>命题 C.4（零回归等价）.</strong> 该式对 aiGateway 三处旧内联指数退避公式在<strong>全输入域逐点等价</strong>。<br><strong>测试</strong>：<code>circuitBreakerBackoff.test.js</code> 对三条旧公式全输入域逐点等价 + cap/步数饱和。消双实现。</p>
+<hr>
+<h2 id="5-阶段-d-约束格形式化-4-d">5. 阶段 D —— 约束格形式化（§4.D）<a class="anchor" href="#5-阶段-d-约束格形式化-4-d" aria-label="锚点">#</a></h2>
+<p>把设计文档 §2.3 已实现但<strong>散落为 if 分支</strong>的 $\Pi_{\mathcal C}$ 提升为命名的代数结构。</p>
+<h3 id="5-1-格定义">5.1 格定义<a class="anchor" href="#5-1-格定义" aria-label="锚点">#</a></h3>
+<p>三元有限全序格 $\mathcal L=\langle\{\bot,\text{SOFT},\top\},\sqsubseteq\rangle$，秩 $\mathrm{rank}(\bot)=0&lt;\mathrm{rank}(\text{SOFT})=1&lt;\mathrm{rank}(\top)=2$：</p>
+<p>$$<br>\bot\ \text{（红线，不可行且不可约束）}\ \sqsubseteq\ \text{SOFT（可审批）}\ \sqsubseteq\ \top\ \text{（可行）}<br>$$</p>
+<p>$a\sqsubseteq b \iff \mathrm{rank}(a)\le\mathrm{rank}(b)$；$\sqcup=\max_\text{rank}$（lub），$\sqcap=\min_\text{rank}$（glb）。<br>全序 ⇒ 自动满足偏序三公理与格公理。<strong>测试</strong>：<code>constraintLattice.test.js</code> 断言自反/反对称/传递、<br>链 $\bot\sqsubset\text{SOFT}\sqsubset\top$、join/meet=lub/glb。</p>
+<h3 id="5-2-分类-黄金回归既有契约">5.2 分类（黄金回归既有契约）<a class="anchor" href="#5-2-分类-黄金回归既有契约" aria-label="锚点">#</a></h3>
+<p>两层分类，单一真源：</p>
+<ul><li><strong>声明天花板</strong> $\mathrm{pos}_\text{src}(\text{source})$：pathTraversal / rateLimit / ssrf / loop-dedup guardrail /</li></ul>
+<p>critical-destructive $\mapsto\bot$；editBoundary / priorRead / fileStale $\mapsto\text{SOFT}$。<br>  env <code>KHY_LATTICE_REDLINE_SOURCES</code> <strong>仅可追加</strong>红线（紧化，永不降级）。</p>
+<ul><li><strong>运行态</strong> $\mathrm{pos}(g)$：$\text{allow}\mapsto\top$；$\text{block}\wedge\text{approvable}\mapsto\text{SOFT}$，</li></ul>
+<p><strong>但声明红线源恒 $\bot$</strong>（防误设 approvable 提权，纵深防御）；其余 $\text{block}\mapsto\bot$。</p>
+<p><strong>命题 D.1（黄金回归）.</strong> $\mathrm{pos}$ 对每个既有 guard 结果的分类<strong>逐一复现</strong>当前 <code>approvable</code> 契约<br>（含 editBoundary 的 sensitive-home-write 块无 approvable $\mapsto\bot$ 的旁路）。<br><em>意义</em>：把&quot;硬守卫永不设 approvable&quot;这条<strong>隐式注释契约</strong>变成<strong>强制可测的代数命题</strong>——<br>任一 guard 改变其 approvable 发射，测试即报警（tripwire）。</p>
+<h3 id="5-3-松弛算子-guardapproval-lambda">5.3 松弛算子（guardApproval = $\lambda$）<a class="anchor" href="#5-3-松弛算子-guardapproval-lambda" aria-label="锚点">#</a></h3>
+<p>$$<br>\mathrm{relax}(x,\text{approved}) =<br>\begin{cases}<br>\top &amp; x=\text{SOFT}\wedge\text{approved}\\<br>x &amp; \text{otherwise}<br>\end{cases}<br>$$</p>
+<p><strong>命题 D.2（红线不可约束 / 不动点）.</strong> $\mathrm{relax}(\bot,\cdot)=\bot$ 对任意审批。<br>即 $\bot$ 是 $\mathrm{relax}$ 的<strong>不动点</strong>——没有任何人工审批能把红线提升回 $A(s)$。<br><strong>命题 D.3（单调 + 幂等）.</strong> $x\sqsubseteq\mathrm{relax}(x,\cdot)$（只升不降）且 $\mathrm{relax}\circ\mathrm{relax}=\mathrm{relax}$。<br>SOFT 经审批升 $\top$ 的代价 $\lambda_\text{human}$ 折入 $g$（中断成本），与 §1.5 的 $\lambda_\text{irrev}$ 同源。<br><strong>测试</strong>：<code>constraintLattice.test.js</code> 断言 $\mathrm{relax}(\bot,\text{approved})=\bot$、误设 approvable 仍 $\bot$、<br>单调、幂等。<strong>强制黏合</strong>：<code>guardApproval.requestGuardApproval</code> 入口 <code>isRedLineSource</code> 为真直接拒——<br>红线即便交互通道同意也<strong>不弹窗</strong>（<code>guardApproval.test.js</code> GA-8：通道从未被触达）。</p>
+<h3 id="5-4-活性投影-pi-mathcal-c">5.4 活性投影 $\Pi_{\mathcal C}$<a class="anchor" href="#5-4-活性投影-pi-mathcal-c" aria-label="锚点">#</a></h3>
+<p><strong>命题 D.4（活性 $A(s)\neq\varnothing$）.</strong> 格顶恒含逃逸地板 $F=\{\texttt{ask\_user},\texttt{abort}\}$<br>（env <code>KHY_LIVENESS_FALLBACK</code> 可扩展），$\Pi_{\mathcal C}$ 保证</p>
+<p>$$<br>\Pi_{\mathcal C}(A_\text{full})(s) = \big(A_\text{full}\cap\mathrm{Feasible}(s)\big)\cup\big[\,\text{若裁空则}\ F\,\big]\neq\varnothing<br>$$</p>
+<p><em>填补设计文档 §3.1 的活性缺口</em>：权限不足导致 $A(s)$ 变空时不再是&quot;未定义挂起&quot;，而是合法的<br>&quot;询问/中止&quot;终态。<strong>实现锚点</strong>：唯一会把 $A(s)$ 裁空的两处逐调用谓词<br><code>toolCalling._checkToolPolicy</code>（blocklist+allowlist）与 <code>_checkActiveSkillPolicy</code>，<br>返回 block 前过 <code>feasibleUnderPolicy</code> ⇒ 逃逸地板穿透任何 allow/block/skill 名单。<br><strong>测试</strong>：<code>constraintLattice.test.js</code>（<code>ensureLiveness</code> 永非空）+ <code>toolPolicyLiveness.test.js</code><br>（地板穿透三类名单、env 可扩展）。</p>
+<hr>
+<h2 id="6-全局一致性-单一-j-中枢-逐条闭合-3-3-病灶">6. 全局一致性：单一 $J$ 中枢（逐条闭合 §3.3 病灶）<a class="anchor" href="#6-全局一致性-单一-j-中枢-逐条闭合-3-3-病灶" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>设计文档 §3.3 病灶</th><th>落地闭合</th></tr></thead><tbody><tr><td>三子系统不共享 $J$</td><td>$h$（B）下估 $J$ 剩余、$g$ 资源分量（C）选臂、$\lambda_\text{human}$（D）计入 $g$、$\Phi$ 封顶——同一 $J$</td></tr><tr><td>验收只当裁判不当指南</td><td>$h(s)=$ 未满足验收项代价 ⇒ acceptance pack <strong>既是考纲又是裁判</strong>（B.1 + B.2 中途校准）</td></tr><tr><td>适配器局部省钱全局暴涨</td><td>UCB1 回报含 speed ⇒ 臂估计耦合&quot;达成验收的真实速度&quot;，不再只看可用性罚分（C.1）</td></tr><tr><td>两套断路器</td><td><code>computeBackoffMs</code> 唯一真源，消内联双实现（C.4）</td></tr><tr><td><code>'Balance'</code> 名实不符</td><td>P2C 真均衡（C.2）</td></tr><tr><td>$A(s)$ 可空（活性）</td><td>$\Pi_{\mathcal C}$ 保证 $A(s)\neq\varnothing$（D.4）</td></tr></tbody></table>
+<p><strong>一句话</strong>：规划（$h/H$）、调度（$g$ 资源分量）、反思/约束（$\Phi$、约束格、$\lambda_\text{human}$）<br>现在都对着同一个 $J$ 说话——这正是设计文档 §1.5 那个 $\pi^\*$ 要求的全局代价中枢。</p>
+<hr>
+<h2 id="7-边界与诚实的局限-未接入项">7. 边界与诚实的局限（未接入项）<a class="anchor" href="#7-边界与诚实的局限-未接入项" aria-label="锚点">#</a></h2>
+<ul><li>新增模块均 <strong>env 门控 + 默认安全</strong>（默认值与旧行为逐点等价），best-effort 出错回退原行为。</li><li>投机前瞻（A.2 的 $\mathrm{Lookahead}_k$）目前仅落地<strong>结构保证</strong>（不可逆绝不投机），</li></ul>
+<p>尚<strong>未接入主循环的前瞻驱动</strong>——lookahead 驱动决策可作后续可灰度增量。</p>
+<ul><li>LRTA\* 收敛性（多 trial → 最优）依赖 $h$ 可采纳 + $g$ 非负两前提，二者已测；</li></ul>
+<p>但真实 LLM 转移的随机性使&quot;有限试验内收敛&quot;为经验性而非最坏情形保证。</p>
+<ul><li>出站网络隔离等 OS 级沙箱约束不在本格内（属内核/容器层），约束格只覆盖工具层六维守卫。</li></ul>
+<hr>
+<h2 id="附-测试即证明索引">附：测试即证明索引<a class="anchor" href="#附-测试即证明索引" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命题</th><th>测试文件</th><th>关键断言</th></tr></thead><tbody><tr><td>B.1 可采纳性</td><td><code>heuristic.test.js</code></td><td>$h\le$ 真实剩余、单调、$h=0\iff$ goal</td></tr><tr><td>A.1 单调不增</td><td><code>lrtaBackfill.test.js</code></td><td>$H_k\le H_{k-1}$、持久化往返</td></tr><tr><td>A.2 不投机</td><td><code>reversibility.test.js</code></td><td>投机 commit 在 handler 前被拒</td></tr><tr><td>C.1 次线性 regret</td><td><code>ucbRouter.test.js</code></td><td>$R(T)/T\downarrow$、最优臂 &gt;70%</td></tr><tr><td>C.2 Θ(ln ln N)</td><td><code>accountSelector.test.js</code></td><td>轮转 $\max-\min\le1$、P2C $&lt;$ 均匀随机</td></tr><tr><td>C.3 抢占透明</td><td><code>workflowExecutor.quantum.test.js</code> (+worker)</td><td>$Q$ 任意值逐一等价 + 跨进程恢复</td></tr><tr><td>C.4 退避等价</td><td><code>circuitBreakerBackoff.test.js</code></td><td>三旧公式全输入域逐点等价</td></tr><tr><td>D.1 黄金回归</td><td><code>constraintLattice.test.js</code></td><td>每 guard 结果分类复现 approvable 契约</td></tr><tr><td>D.2 红线不可约束</td><td><code>constraintLattice.test.js</code> + <code>guardApproval.test.js</code> GA-8</td><td>$\mathrm{relax}(\bot)=\bot$、红线不弹窗</td></tr><tr><td>D.3 单调幂等</td><td><code>constraintLattice.test.js</code></td><td>单调、幂等</td></tr><tr><td>D.4 活性</td><td><code>constraintLattice.test.js</code> + <code>toolPolicyLiveness.test.js</code></td><td>$A(s)\neq\varnothing$、地板穿透名单</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-001] khy-移动智能体协议.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 移动智能体协议 (v1.0)</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-003] Khyos-数学重塑-受约束随机最短路径.html"><div class="dir">下一篇 →</div><div class="ttl">Khyos 架构重塑：作为「受约束·有预算·随机最短路径求解器」的全局最优设计</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-002] Khyos-CB-SSP-数学建模与实现映射.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

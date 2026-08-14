@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-chromadb · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-chromadb<span class="sep">›</span>cli-anything-chromadb</div>
+      <header class="hero reveal"><h1>cli-anything-chromadb</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-chromadb">cli-anything-chromadb</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#server">server</a></li><li class="lvl-3"><a href="#collection">collection</a></li><li class="lvl-3"><a href="#document">document</a></li><li class="lvl-3"><a href="#query">query</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-chromadb&quot;<br>description: &gt;-<br>  Command-line interface for ChromaDB - A stateless CLI for managing vector database collections, documents, and semantic search. Designed for AI agents and automation via the ChromaDB HTTP API v2.</p>
+<hr>
+<h1 id="cli-anything-chromadb">cli-anything-chromadb<a class="anchor" href="#cli-anything-chromadb" aria-label="锚点">#</a></h1>
+<p>A stateless command-line interface for ChromaDB vector database, built on the HTTP API v2. Designed for AI agents and power users who need to manage collections, documents, and run semantic queries without a browser UI.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-chromadb package:</p>
+<pre><code class="language-bash">pip install cli-anything-chromadb</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>ChromaDB server running at localhost:8000 (or specify via --host)</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-chromadb --help
+
+# Start interactive REPL mode
+cli-anything-chromadb
+
+# Check server health
+cli-anything-chromadb --json server heartbeat
+
+# List all collections
+cli-anything-chromadb --json collection list
+
+# Semantic search
+cli-anything-chromadb --json query search --collection hub_knowledge --text &quot;How to deploy&quot;</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-chromadb
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="server">server<a class="anchor" href="#server" aria-label="锚点">#</a></h3>
+<p>Server health and version commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>heartbeat</code></td><td>Check ChromaDB server health</td></tr><tr><td><code>version</code></td><td>Get ChromaDB server version</td></tr></tbody></table>
+<h3 id="collection">collection<a class="anchor" href="#collection" aria-label="锚点">#</a></h3>
+<p>Manage ChromaDB collections.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list</code></td><td>List all collections</td></tr><tr><td><code>create --name NAME</code></td><td>Create a new collection</td></tr><tr><td><code>delete --name NAME</code></td><td>Delete a collection</td></tr><tr><td><code>info NAME</code></td><td>Get collection info</td></tr></tbody></table>
+<h3 id="document">document<a class="anchor" href="#document" aria-label="锚点">#</a></h3>
+<p>Manage documents in collections.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>add --collection C --id ID --document TEXT</code></td><td>Add document(s)</td></tr><tr><td><code>get --collection C</code></td><td>Get documents</td></tr><tr><td><code>delete --collection C --id ID</code></td><td>Delete document(s)</td></tr><tr><td><code>count --collection C</code></td><td>Count documents</td></tr></tbody></table>
+<h3 id="query">query<a class="anchor" href="#query" aria-label="锚点">#</a></h3>
+<p>Semantic search against collections.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>search --collection C --text T</code></td><td>Semantic search</td></tr></tbody></table>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-chromadb server heartbeat
+
+# JSON output for agents
+cli-anything-chromadb --json server heartbeat</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use <code>--host</code></strong> to connect to non-default ChromaDB instances</li></ol>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-calibre/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-calibre</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-cloudanalyzer/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-cloudanalyzer</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-chromadb/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

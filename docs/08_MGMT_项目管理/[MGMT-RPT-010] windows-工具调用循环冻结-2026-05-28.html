@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows 工具调用冻结排查与快速修复（2026-05-28） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>Windows 工具调用冻结排查与快速修复（2026-05-28）</div>
+      <header class="hero reveal"><h1>Windows 工具调用冻结排查与快速修复（2026-05-28）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#windows-工具调用冻结排查与快速修复-2026-05-28">Windows 工具调用冻结排查与快速修复（2026-05-28）</a></li><li class="lvl-2"><a href="#范围">范围</a></li><li class="lvl-2"><a href="#观察到的复现信号">观察到的复现信号</a></li><li class="lvl-2"><a href="#根因假设-已在代码层面验证">根因假设（已在代码层面验证）</a></li><li class="lvl-3"><a href="#h1-带符号前缀的伪工具调用未被完全解析">H1. 带符号前缀的伪工具调用未被完全解析</a></li><li class="lvl-3"><a href="#h2-search-别名与空参数处理不匹配">H2. `Search()` 别名与空参数处理不匹配</a></li><li class="lvl-3"><a href="#h3-前缀抑制可能造成-半截回复-的感知">H3. 前缀抑制可能造成&quot;半截回复&quot;的感知</a></li><li class="lvl-2"><a href="#已实施的快速修复-今晚">已实施的快速修复（今晚）</a></li><li class="lvl-3"><a href="#修复-a-扩展带前缀的工具调用解析">修复 A. 扩展带前缀的工具调用解析</a></li><li class="lvl-3"><a href="#修复-b-确保-search-别名规范化">修复 B. 确保 `search` 别名规范化</a></li><li class="lvl-3"><a href="#修复-c-从用户上下文补全空的-search-关键字">修复 C. 从用户上下文补全空的 `Search()` 关键字</a></li><li class="lvl-2"><a href="#今晚完成的验证">今晚完成的验证</a></li><li class="lvl-2"><a href="#linux-部署指引-供明天使用">Linux 部署指引（供明天使用）</a></li><li class="lvl-3"><a href="#1-拉取或-cherry-pick-这些确切的文件">1. 拉取或 cherry-pick 这些确切的文件</a></li><li class="lvl-3"><a href="#2-在-linux-上运行针对性回归测试">2. 在 Linux 上运行针对性回归测试</a></li><li class="lvl-3"><a href="#3-可选的运行时健全性检查-cli">3. 可选的运行时健全性检查（CLI）</a></li><li class="lvl-2"><a href="#推迟的事项-今晚未完成">推迟的事项（今晚未完成）</a></li><li class="lvl-2"><a href="#明天任务清单">明天任务清单</a></li><li class="lvl-2"><a href="#当前状态">当前状态</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-010 | 阶段: 项目管理 | 原路径: docs/报告/windows-工具调用循环冻结-2026-05-28.md --&gt;</p>
+<h1 id="windows-工具调用冻结排查与快速修复-2026-05-28">Windows 工具调用冻结排查与快速修复（2026-05-28）<a class="anchor" href="#windows-工具调用冻结排查与快速修复-2026-05-28" aria-label="锚点">#</a></h1>
+<h2 id="范围">范围<a class="anchor" href="#范围" aria-label="锚点">#</a></h2>
+<ul><li>问题来源：Windows CLI 运行时（用户观察到 <code>khy os v0.1.57</code>）。</li><li>症状类别：<ol><li>模型说&quot;我将要做 ...&quot;并打印一行看似工具调用的内容（例如 <code>⌕ Search()</code> / <code>◆ Write()</code>），但随后并没有真正的工具执行。</li><li>用户输入 <code>继续</code>，会话不断重放排队的输入；最终返回 <code>AI 未返回有效回复</code> 或表现为冻结。</li></ol></li></ul>
+<h2 id="观察到的复现信号">观察到的复现信号<a class="anchor" href="#观察到的复现信号" aria-label="锚点">#</a></h2>
+<ul><li>REPL 显示如下分阶段输出行：<ul><li><code>⌕ Search()</code></li><li><code>▶ Bash()</code></li><li><code>◆ Write()</code></li></ul></li><li>随后没有任何有意义的工具结果被消费，队列重放行持续出现：<ul><li><code>继续处理排队输入: &quot;...&quot;</code></li></ul></li></ul>
+<h2 id="根因假设-已在代码层面验证">根因假设（已在代码层面验证）<a class="anchor" href="#根因假设-已在代码层面验证" aria-label="锚点">#</a></h2>
+<h3 id="h1-带符号前缀的伪工具调用未被完全解析">H1. 带符号前缀的伪工具调用未被完全解析<a class="anchor" href="#h1-带符号前缀的伪工具调用未被完全解析" aria-label="锚点">#</a></h3>
+<ul><li>位置：<code>backend/src/services/toolUseLoop.js</code>（<code>_parseToolCalls</code>）。</li><li>修复前：解析器能识别 <code>▶ ToolName(...)</code> 和裸写的 <code>ToolName(...)</code>，但某些模型/终端常见的 UI 前缀（<code>⌕</code>、<code>◆</code> 等）未被覆盖。</li><li>影响：模型输出在用户看来像是在使用工具，但解析器在某些情况下返回不了可执行的工具调用。</li></ul>
+<h3 id="h2-search-别名与空参数处理不匹配">H2. <code>Search()</code> 别名与空参数处理不匹配<a class="anchor" href="#h2-search-别名与空参数处理不匹配" aria-label="锚点">#</a></h3>
+<ul><li>位置：<code>backend/src/services/claudeCompat.js</code> + <code>toolUseLoop</code> 补丁阶段。</li><li>修复前：<ul><li>在回退解析路径中，<code>Search()</code> 可能仍保留为非规范的 <code>Search</code> 而非规范的 <code>search</code>。</li><li>对于 <code>search</code> 工具，空的 <code>Search()</code> 没有 <code>keyword</code>，因此执行可能失败或被下游行为跳过。</li></ul></li><li>影响：额外的无进展轮次和提示循环。</li></ul>
+<h3 id="h3-前缀抑制可能造成-半截回复-的感知">H3. 前缀抑制可能造成&quot;半截回复&quot;的感知<a class="anchor" href="#h3-前缀抑制可能造成-半截回复-的感知" aria-label="锚点">#</a></h3>
+<ul><li>位置：<code>backend/src/cli/ai.js</code>（<code>_createStreamToolInterceptor</code>、<code>suppressPrefixOnToolCall</code>）。</li><li>当前行为：在工具循环模式下，工具标记之前的短前缀可能被缓冲/抑制，以避免噪音式的开场白。</li><li>风险：如果模型产生混合的叙述文本 + 工具标记风格，用户可能感知到文本缺失/半截。</li><li>今晚状态：已记录并推迟，待后续谨慎跟进（避免破坏流式输出 UX）。</li></ul>
+<h2 id="已实施的快速修复-今晚">已实施的快速修复（今晚）<a class="anchor" href="#已实施的快速修复-今晚" aria-label="锚点">#</a></h2>
+<h3 id="修复-a-扩展带前缀的工具调用解析">修复 A. 扩展带前缀的工具调用解析<a class="anchor" href="#修复-a-扩展带前缀的工具调用解析" aria-label="锚点">#</a></h3>
+<ul><li>文件：<code>backend/src/services/toolUseLoop.js</code></li><li>改动：<ul><li>扩展 Format-5 正则以解析带符号前缀的调用：<ul><li>从仅支持 <code>▶ ToolName(...)</code></li><li>扩展为 <code>[▶⌕◆⏺⎿] ToolName(...)</code></li></ul></li></ul></li><li>预期影响：<ul><li><code>⌕ Search()</code> / <code>◆ Write(...)</code> 现在会被解析为真正的工具调用。</li></ul></li></ul>
+<h3 id="修复-b-确保-search-别名规范化">修复 B. 确保 <code>search</code> 别名规范化<a class="anchor" href="#修复-b-确保-search-别名规范化" aria-label="锚点">#</a></h3>
+<ul><li>文件：<code>backend/src/services/claudeCompat.js</code></li><li>改动：<ul><li>添加别名映射：<code>search -&gt; search</code>。</li></ul></li><li>预期影响：<ul><li>回退解析器不再将 <code>Search</code> 留为非规范形式。</li></ul></li></ul>
+<h3 id="修复-c-从用户上下文补全空的-search-关键字">修复 C. 从用户上下文补全空的 <code>Search()</code> 关键字<a class="anchor" href="#修复-c-从用户上下文补全空的-search-关键字" aria-label="锚点">#</a></h3>
+<ul><li>文件：<code>backend/src/services/toolUseLoop.js</code></li><li>改动：<ul><li>新增 <code>_patchEmptyLocalSearchKeyword(toolCalls, userMessage)</code>。</li><li>在 shell/search 补丁器之后挂入预执行补丁阶段。</li></ul></li><li>行为：<ul><li>如果工具调用是 <code>search</code> 且没有 <code>keyword/query</code>，则从清洗后的用户消息中填充 <code>keyword</code>。</li></ul></li></ul>
+<h2 id="今晚完成的验证">今晚完成的验证<a class="anchor" href="#今晚完成的验证" aria-label="锚点">#</a></h2>
+<ul><li>语法加载检查：<ul><li><code>node -e &quot;require('./backend/src/services/claudeCompat'); require('./backend/src/services/toolUseLoop'); console.log('ok')&quot;</code></li><li>结果：<code>ok</code></li></ul></li><li>新增回归测试：<ul><li><code>backend/tests/toolUseLoop.symbolParsingRegression.test.js</code></li><li>覆盖：<ol><li>解析 <code>⌕ Search()</code> 和 <code>◆ Write(...)</code></li><li>通过用户上下文补全空的 <code>Search()</code> 关键字</li></ol></li></ul></li><li>运行测试：<ul><li><code>npm --prefix backend test -- backend/tests/toolUseLoop.symbolParsingRegression.test.js</code></li><li>结果：PASS (2/2)</li></ul></li></ul>
+<h2 id="linux-部署指引-供明天使用">Linux 部署指引（供明天使用）<a class="anchor" href="#linux-部署指引-供明天使用" aria-label="锚点">#</a></h2>
+<h3 id="1-拉取或-cherry-pick-这些确切的文件">1. 拉取或 cherry-pick 这些确切的文件<a class="anchor" href="#1-拉取或-cherry-pick-这些确切的文件" aria-label="锚点">#</a></h3>
+<ul><li><code>backend/src/services/toolUseLoop.js</code></li><li><code>backend/src/services/claudeCompat.js</code></li><li><code>backend/tests/toolUseLoop.symbolParsingRegression.test.js</code></li></ul>
+<h3 id="2-在-linux-上运行针对性回归测试">2. 在 Linux 上运行针对性回归测试<a class="anchor" href="#2-在-linux-上运行针对性回归测试" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">npm --prefix backend test -- backend/tests/toolUseLoop.symbolParsingRegression.test.js</code></pre>
+<h3 id="3-可选的运行时健全性检查-cli">3. 可选的运行时健全性检查（CLI）<a class="anchor" href="#3-可选的运行时健全性检查-cli" aria-label="锚点">#</a></h3>
+<ul><li>用于验证的提示词模式：<ul><li>&quot;你真的具有工具调用能力吗&quot;</li><li>要求演示一次文件搜索。</li></ul></li><li>通过标准：<ul><li>带符号前缀的行应导致真正的工具执行和最终回复，而不是无尽的队列重放。</li></ul></li></ul>
+<h2 id="推迟的事项-今晚未完成">推迟的事项（今晚未完成）<a class="anchor" href="#推迟的事项-今晚未完成" aria-label="锚点">#</a></h2>
+<ol><li>流拦截器安全性优化（<code>ai.js</code>）</li><li>目标：在 <code>suppressPrefixOnToolCall=true</code> 时，避免过度抑制有意义的短前缀。</li><li>候选策略：<ul><li>仅对纯填充内容保留抑制。</li><li>在工具标记之前保留语义前缀（阶段标签、带编号的步骤标签）。</li></ul></li></ol>
+<ol><li><code>repl.js</code> 中的队列重放保护</li><li>目标：当跨多轮检测不到向前推进信号时，硬停止重复的内部重放。</li><li>候选策略：<ul><li>跟踪 <code>(queuedText hash + no-progress rounds)</code>，超过阈值后带明确诊断信息退出。</li></ul></li></ol>
+<ol><li>端到端的 Windows 专项测试套件</li><li>为以下场景添加模拟会话记录测试：<ul><li><code>⌕ Search()</code> -&gt; <code>continue</code> -&gt; 无限重放不再发生。</li></ul></li></ol>
+<h2 id="明天任务清单">明天任务清单<a class="anchor" href="#明天任务清单" aria-label="锚点">#</a></h2>
+<ol><li>在 <code>backend/src/cli/ai.js</code> 中实现保守的拦截器优化，并为前缀保留添加单元测试。</li><li>在 <code>backend/src/cli/repl.js</code> 中添加 REPL 无进展重放保护。</li><li>添加集成风格的回归测试（mock chat stream + tool loop + queue drain）。</li><li>运行与工具循环和 REPL 相关的完整后端测试子集。</li></ol>
+<h2 id="当前状态">当前状态<a class="anchor" href="#当前状态" aria-label="锚点">#</a></h2>
+<ul><li>针对解析器/别名/空参数路径的快速解锁修复已就位。</li><li>高风险的流式行为变更被有意推迟，以避免深夜引入回归。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-009] hermes-成长架构-学习清单-2026-05-17.html"><div class="dir">← 上一篇</div><div class="ttl">Hermes Growth Architecture → KHY 学习清单 (2026-05-17)</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-011] 三项目深度学习-2026-05-21.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 三项目深度学习报告 — UX 体验与产品交付能力</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-010] windows-工具调用循环冻结-2026-05-28.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

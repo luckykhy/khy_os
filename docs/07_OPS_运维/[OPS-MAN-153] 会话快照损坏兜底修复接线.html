@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-153] 会话快照损坏兜底修复接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-153] 会话快照损坏兜底修复接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-153] 会话快照损坏兜底修复接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-153-会话快照损坏兜底修复接线">[OPS-MAN-153] 会话快照损坏兜底修复接线</a></li><li class="lvl-2"><a href="#背景-能力存在但没接线">背景（能力存在但没接线）</a></li><li class="lvl-2"><a href="#接线">接线</a></li><li class="lvl-2"><a href="#门控-byte-revert-不变量">门控（byte-revert 不变量）</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-153-会话快照损坏兜底修复接线">[OPS-MAN-153] 会话快照损坏兜底修复接线<a class="anchor" href="#ops-man-153-会话快照损坏兜底修复接线" aria-label="锚点">#</a></h1>
+<h2 id="背景-能力存在但没接线">背景（能力存在但没接线）<a class="anchor" href="#背景-能力存在但没接线" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/sessionFileRepair.js</code> 是一枚<strong>全实现且有单测</strong>的叶子<br>（<code>repairSessionFile</code> / <code>tryParsePartialJson</code> / <code>extractValidMessages</code> / <code>validateSession</code><br>/ <code>validateSessionFile</code>），但此前<strong>唯一的消费者是它自己的单测</strong>——生产代码里没有任何<br>路径调用它。这正是送别礼要清理的「能力存在，但没接线」孤儿叶。</p>
+<p>同时，<code>sessionPersistence.restoreSession</code> 的「退回 JSON 快照」兜底路径此前是：</p>
+<pre><code class="language-js">try {
+  const raw = fs.readFileSync(_filePath(sessionId), 'utf-8');
+  return { ...JSON.parse(raw), _source: 'json' };
+} catch {
+  const checkpoint = loadCheckpoint(sessionId);
+  if (checkpoint) return { ...checkpoint, _source: 'checkpoint' };
+  return null;
+}</code></pre>
+<p>即：JSON 快照一旦损坏/截断（写盘中途断电、磁盘满写坏、传输截断），<code>JSON.parse</code> 抛错<br>→ <strong>整段会话直接丢给 checkpoint 或 null</strong>。这与送别礼诉求「换电脑/换系统后<strong>完整的<br>简单的还原</strong>」直接冲突——本可 salvage 的会话被整段丢弃。</p>
+<h2 id="接线">接线<a class="anchor" href="#接线" aria-label="锚点">#</a></h2>
+<p>在 <code>restoreSession</code> 的 JSON 快照 <code>catch</code> 分支里，在回退到 checkpoint/null <strong>之前</strong>，<br>先经门控委派 <code>sessionFileRepair</code> 叶尝试修复/salvage：</p>
+<ol><li><code>repairSessionFile(snapPath, { dryRun:false, backup:true })</code><ul><li>若返回 <code>repaired:true</code>（叶发现无效消息 → 丢弃 → 原子重写 + <code>.bak</code> 备份）：</li></ul></li></ol>
+<p>re-read 干净结果，<code>_source:'json-repaired'</code> 还原。</p>
+<ol><li>若 <code>repaired:false</code>（截断前缀 partial-parse 出的对象本身「有效无警告」，叶按约定</li></ol>
+<p>不落盘，但磁盘仍是坏的）：最后一搏用<strong>同叶</strong> <code>tryParsePartialJson</code> 从原始字节<br>   salvage 出可用会话（<code>messages</code> 非空才采纳），同样 <code>_source:'json-repaired'</code>。</p>
+<ol><li>以上任何异常 → fail-soft 落回既有 checkpoint/null 兜底。</li></ol>
+<h2 id="门控-byte-revert-不变量">门控（byte-revert 不变量）<a class="anchor" href="#门控-byte-revert-不变量" aria-label="锚点">#</a></h2>
+<ul><li><code>KHY_SESSION_FILE_REPAIR</code>（<code>flagRegistry</code>，<code>mode: default-on</code>，off: CANON）。</li><li>关（env ∈ <code>{0,false,off,no}</code>）→ <strong>完全跳过</strong>修复分支，逐字节回退到旧的</li></ul>
+<p>checkpoint/null 兜底；不 require 修复叶、不生成 <code>.bak</code>。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node services/backend/tests/services/sessionFileRepairWiring.test.js   # 8/8 接线+门控+源级断言
+node --check services/backend/src/services/sessionPersistence.js
+node --check services/backend/src/services/flagRegistry.js</code></pre>
+<p><code>sessionFileRepairWiring.test.js</code> 覆盖：</p>
+<ul><li>叶基线（<code>repairSessionFile</code> 重写+<code>.bak</code>；<code>tryParsePartialJson</code> salvage）；</li><li><code>restoreSession</code> 修复重写路径 → <code>_source:'json-repaired'</code>、<code>.bak</code> 生成；</li><li><code>restoreSession</code> partial-salvage 路径（<code>repaired:false</code> → <code>tryParsePartialJson</code>）；</li><li><strong>门控关</strong>（<code>KHY_SESSION_FILE_REPAIR=0</code>）→ 损坏快照返回 <code>null</code>、绝不生成 <code>.bak</code>（byte-revert）；</li><li>合法快照不受影响 → <code>_source:'json'</code>（零回归）；</li><li>源级接线断言（require 叶、调 <code>repairSessionFile</code>、用 <code>tryParsePartialJson</code>、读门控、</li></ul>
+<p>off-word 模式）+ 门控 default-on 登记。</p>
+<p>叶自身的既有单测 <code>services/backend/tests/services/sessionFileRepair.test.js</code>（jest）<br>继续覆盖叶行为。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-152] 交付门人类可读报告落盘接线.html"><div class="dir">← 上一篇</div><div class="ttl">OPS-MAN-152 交付门人类可读报告落盘接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-154] 任务模板执行手册注入接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-154] 任务模板执行手册注入接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-153] 会话快照损坏兜底修复接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS vs Hermes Agent — 成长型架构对齐分析 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY OS vs Hermes Agent — 成长型架构对齐分析</div>
+      <header class="hero reveal"><h1>KHY OS vs Hermes Agent — 成长型架构对齐分析</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-vs-hermes-agent-成长型架构对齐分析">KHY OS vs Hermes Agent — 成长型架构对齐分析</a></li><li class="lvl-2"><a href="#1-hermes-agent-项目定位">1. Hermes Agent 项目定位</a></li><li class="lvl-2"><a href="#2-六大核心架构模式">2. 六大核心架构模式</a></li><li class="lvl-3"><a href="#2-1-零清单自动发现">2.1 零清单自动发现</a></li><li class="lvl-3"><a href="#2-2-七类可插拔扩展点">2.2 七类可插拔扩展点</a></li><li class="lvl-3"><a href="#2-3-分级故障转移-凭证池">2.3 分级故障转移 + 凭证池</a></li><li class="lvl-3"><a href="#2-4-上下文分层保护">2.4 上下文分层保护</a></li><li class="lvl-3"><a href="#2-5-配置四层优先级">2.5 配置四层优先级</a></li><li class="lvl-3"><a href="#2-6-版本演进策略">2.6 版本演进策略</a></li><li class="lvl-2"><a href="#3-readme-agents-md-深度补充-8-项新发现">3. README/AGENTS.md 深度补充（8 项新发现）</a></li><li class="lvl-3"><a href="#3-1-闭环学习系统">3.1 闭环学习系统</a></li><li class="lvl-3"><a href="#3-2-七种终端后端">3.2 七种终端后端</a></li><li class="lvl-3"><a href="#3-3-cron-调度系统">3.3 Cron 调度系统</a></li><li class="lvl-3"><a href="#3-4-子代理委派约束">3.4 子代理委派约束</a></li><li class="lvl-3"><a href="#3-5-skin-theme-纯数据引擎">3.5 Skin/Theme 纯数据引擎</a></li><li class="lvl-3"><a href="#3-6-供应链安全策略">3.6 供应链安全策略</a></li><li class="lvl-3"><a href="#3-7-agents-md-工程规范">3.7 AGENTS.md 工程规范</a></li><li class="lvl-3"><a href="#3-8-kanban-多代理编排">3.8 Kanban 多代理编排</a></li><li class="lvl-2"><a href="#4-khy-os-对齐清单-按优先级排序">4. KHY OS 对齐清单（按优先级排序）</a></li><li class="lvl-3"><a href="#p0-立即可做-价值高">P0 — 立即可做，价值高</a></li><li class="lvl-3"><a href="#p1-近期应做-防止技术债">P1 — 近期应做，防止技术债</a></li><li class="lvl-3"><a href="#p2-中期规划-提升竞争力">P2 — 中期规划，提升竞争力</a></li><li class="lvl-3"><a href="#p3-远期目标-差异化能力">P3 — 远期目标，差异化能力</a></li><li class="lvl-3"><a href="#4-1-claude-会话发现统一执行映射-2026-05-17">4.1 Claude 会话发现统一执行映射（2026-05-17）</a></li><li class="lvl-2"><a href="#5-架构对比总结">5. 架构对比总结</a></li><li class="lvl-2"><a href="#6-结论">6. 结论</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-003 | 阶段: 项目管理 | 原路径: docs/khy-对比-hermes-成长架构.md --&gt;</p>
+<h1 id="khy-os-vs-hermes-agent-成长型架构对齐分析">KHY OS vs Hermes Agent — 成长型架构对齐分析<a class="anchor" href="#khy-os-vs-hermes-agent-成长型架构对齐分析" aria-label="锚点">#</a></h1>
+<blockquote><p>分析日期：2026-05-17<br>对标版本：hermes-agent v0.14.0 (808 commits, 633 PRs, 215 contributors)<br>目的：识别 Hermes Agent 的成长型架构模式，提取 KHY OS 可借鉴的设计</p></blockquote>
+<hr>
+<h2 id="1-hermes-agent-项目定位">1. Hermes Agent 项目定位<a class="anchor" href="#1-hermes-agent-项目定位" aria-label="锚点">#</a></h2>
+<p>Hermes Agent 是 Nous Research 构建的<strong>自进化 AI 代理</strong>，核心卖点：</p>
+<ul><li>唯一内置学习闭环的 agent——从经验创建技能、使用中改进、主动持久化知识</li><li>不绑定笔记本——22 个平台(Telegram/Discord/Slack/WhatsApp 等)统一网关</li><li>任意模型——200+ 模型零代码切换，无锁定</li><li>随处运行——7 种终端后端，$5 VPS 到 GPU 集群</li></ul>
+<p><strong>规模指标</strong>：80+ 工具、22 网关平台、8+ LLM 提供商、18+ 语言、~17k 测试、MIT 许可（Hermes）</p>
+<hr>
+<h2 id="2-六大核心架构模式">2. 六大核心架构模式<a class="anchor" href="#2-六大核心架构模式" aria-label="锚点">#</a></h2>
+<h3 id="2-1-零清单自动发现">2.1 零清单自动发现<a class="anchor" href="#2-1-零清单自动发现" aria-label="锚点">#</a></h3>
+<pre><code>tools/registry.py  (零依赖单例)
+    ↑ 模块级 registry.register() — 导入即注册
+tools/*.py
+    ↑ model_tools.discover_builtin_tools() — AST 扫描
+run_agent.py / cli.py / gateway</code></pre>
+<ul><li>新增工具只需在文件里调 <code>registry.register()</code>，无中央清单维护</li><li><code>check_fn</code> + 30s TTL 缓存动态探测工具可用性</li><li>工具集系统 (<code>toolsets.py</code>) 把工具分组为 <code>web</code>/<code>terminal</code>/<code>debugging</code> 等，支持递归 <code>includes</code></li></ul>
+<p><strong>KHY 对标</strong>：<code>commandRegistry.js</code> 已有类似模式，但工具层（toolCalling/shellCommand）尚未统一到注册表。</p>
+<h3 id="2-2-七类可插拔扩展点">2.2 七类可插拔扩展点<a class="anchor" href="#2-2-七类可插拔扩展点" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>扩展类型</th><th>抽象接口</th><th>发现方式</th></tr></thead><tbody><tr><td>工具</td><td><code>registry.register()</code></td><td>目录扫描+AST</td></tr><tr><td>LLM 提供商</td><td><code>*_adapter.py</code> (8+)</td><td>配置选择</td></tr><tr><td>内存提供商</td><td><code>MemoryProvider</code> 基类</td><td><code>plugins/memory/</code> 目录</td></tr><tr><td>上下文引擎</td><td><code>ContextEngine</code> 抽象类</td><td><code>plugins/context_engine/</code></td></tr><tr><td>网关平台</td><td><code>BasePlatformAdapter</code></td><td><code>platform_registry</code> 单例</td></tr><tr><td>技能</td><td><code>.hermes.md</code> 元数据</td><td>三目录扫描(内置/可选/用户)</td></tr><tr><td>CLI 命令</td><td><code>PluginContext.register_cli_command()</code></td><td>插件生命周期钩子</td></tr></tbody></table>
+<p><strong>核心原则</strong>：添加任何新能力都不需要修改核心代码。插件通过 <code>register(ctx)</code> 回调注入能力，核心代码只暴露接口。</p>
+<p><strong>AGENTS.md 硬性规则</strong>：&quot;plugins MUST NOT modify core files. If a plugin needs a capability the framework doesn't expose, expand the generic plugin surface — never hardcode plugin-specific logic into core.&quot;</p>
+<p><strong>KHY 对标</strong>：skills 通过 <code>manifest.json</code> 声明但缺少统一的 <code>PluginContext</code> 注入；各 service 各自 <code>require()</code> 依赖。</p>
+<h3 id="2-3-分级故障转移-凭证池">2.3 分级故障转移 + 凭证池<a class="anchor" href="#2-3-分级故障转移-凭证池" aria-label="锚点">#</a></h3>
+<pre><code>错误分类 (error_classifier.py)
+    → context_overflow   → 压缩，不故障转移
+    → rate_limit/billing → 凭证轮换 (credential_pool round-robin)
+    → model_not_found    → 故障转移到备用模型
+    → server_error       → 指数退避 + 重试
+    → auth               → 刷新 OAuth token
+    → auth_permanent     → 中止</code></pre>
+<p>凭证池支持多 API Key 轮换 + OAuth 自动刷新，错误不导致会话中断。</p>
+<p><strong>KHY 对标</strong>：<code>aiGateway.js</code> 有 adapter fallback 但无错误分类枚举，单 Key 无轮换。</p>
+<h3 id="2-4-上下文分层保护">2.4 上下文分层保护<a class="anchor" href="#2-4-上下文分层保护" aria-label="锚点">#</a></h3>
+<pre><code>[保护的前 3 条] → 系统提示 + 首轮用户消息（永不压缩）
+[可压缩历史]   → 当使用率 &gt; 75% 触发压缩
+[保护的后 6 条] → 最近对话（永不压缩）</code></pre>
+<ul><li><code>protect_first_n</code> 可配置（v0.14 新增）</li><li>上下文引擎可插拔（内置摘要压缩器 vs LCM 插件）</li><li><strong>Prompt 缓存保护规则</strong>：命令默认延迟生效（下个 session），<code>--now</code> 才立即失效</li></ul>
+<p><strong>KHY 对标</strong>：<code>promptCacheService.js</code> 有缓存但无分层保护，无延迟失效机制。</p>
+<h3 id="2-5-配置四层优先级">2.5 配置四层优先级<a class="anchor" href="#2-5-配置四层优先级" aria-label="锚点">#</a></h3>
+<pre><code>优先级: CLI 标志 &gt; 环境变量 &gt; ~/.hermes/config.yaml &gt; 代码默认值</code></pre>
+<ul><li>支持 <code>${ENV_VAR}</code> 插值、<code>~</code> 路径展开</li><li>多 Profile 隔离：<code>get_hermes_home()</code> 统一路径入口</li><li>三个配置加载器：<code>load_cli_config()</code>(CLI) / <code>load_config()</code>(子命令) / 直接 YAML(Gateway)</li></ul>
+<p><strong>KHY 对标</strong>：配置通过 <code>.env</code> + 代码默认值两层，缺少 YAML 配置层和 Profile 隔离。</p>
+<h3 id="2-6-版本演进策略">2.6 版本演进策略<a class="anchor" href="#2-6-版本演进策略" aria-label="锚点">#</a></h3>
+<ul><li>v0.2 → v0.14：每版增强抽象但保持 API 兼容</li><li><code>uv.lock</code> 哈希验证 + 依赖精确固定</li><li>特性通过配置标志渐进激活</li><li>RELEASE_*.md 详尽记录每版变更</li></ul>
+<hr>
+<h2 id="3-readme-agents-md-深度补充-8-项新发现">3. README/AGENTS.md 深度补充（8 项新发现）<a class="anchor" href="#3-readme-agents-md-深度补充-8-项新发现" aria-label="锚点">#</a></h2>
+<h3 id="3-1-闭环学习系统">3.1 闭环学习系统<a class="anchor" href="#3-1-闭环学习系统" aria-label="锚点">#</a></h3>
+<p>Hermes 自称&quot;唯一内置学习闭环的代理&quot;，包含 5 个子系统：</p>
+<table><thead><tr><th>子系统</th><th>实现</th><th>KHY 现状</th></tr></thead><tbody><tr><td>技能自创建</td><td>复杂任务后自动从经验创建技能</td><td>无</td></tr><tr><td>技能自改进</td><td>Curator 后台巡检 + 使用中改进</td><td>无</td></tr><tr><td>主动持久化</td><td>周期性 nudge 提醒 agent 存储知识</td><td>无</td></tr><tr><td>跨会话搜索</td><td>FTS5 全文搜索 + LLM 摘要</td><td>无 session 持久化</td></tr><tr><td>用户建模</td><td>Honcho 辩证式画像</td><td>无</td></tr></tbody></table>
+<p><strong>Curator 详细设计</strong>：</p>
+<ul><li>生命周期：<code>active → stale → archived</code>（永不删除，归档到 <code>~/.hermes/skills/.archive/</code>）</li><li>追踪字段：<code>use_count</code>/<code>view_count</code>/<code>patch_count</code>/<code>last_activity_at</code>/<code>state</code>/<code>pinned</code></li><li>Pinned 技能免除所有自动转换和 LLM review</li><li>配置：<code>stale_after_days</code>/<code>archive_after_days</code>/<code>interval_hours</code>/<code>min_idle_hours</code></li><li>CLI：<code>hermes curator status/run/pause/resume/pin/unpin/archive/restore/prune/backup/rollback</code></li></ul>
+<h3 id="3-2-七种终端后端">3.2 七种终端后端<a class="anchor" href="#3-2-七种终端后端" aria-label="锚点">#</a></h3>
+<p><code>tools/environments/</code> 实现：</p>
+<table><thead><tr><th>后端</th><th>特点</th></tr></thead><tbody><tr><td>local</td><td>本地执行</td></tr><tr><td>Docker</td><td>容器隔离</td></tr><tr><td>SSH</td><td>远程执行</td></tr><tr><td>Singularity</td><td>HPC 容器</td></tr><tr><td>Modal</td><td>Serverless，空闲休眠</td></tr><tr><td>Daytona</td><td>Serverless 持久化</td></tr><tr><td>Vercel Sandbox</td><td>边缘计算</td></tr></tbody></table>
+<p><strong>KHY 对标</strong>：仅 local，<code>remoteSsh.js</code> 仅骨架。应统一 <code>BasePlatformAdapter</code> 接口。</p>
+<h3 id="3-3-cron-调度系统">3.3 Cron 调度系统<a class="anchor" href="#3-3-cron-调度系统" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>特性</th><th>描述</th></tr></thead><tbody><tr><td>格式</td><td>自然语言 / duration / 5-field cron / ISO 时间戳</td></tr><tr><td>硬中断</td><td>3 分钟强制终止防失控</td></tr><tr><td>no_agent 模式</td><td>纯脚本监控，stdout 有输出才投递</td></tr><tr><td>context_from</td><td>链式——A 输出注入 B prompt</td></tr><tr><td>跨平台投递</td><td>结果可发到任何已连接平台</td></tr><tr><td>安全</td><td>组装 prompt 扫描注入攻击</td></tr></tbody></table>
+<p><strong>KHY 对标</strong>：无调度系统。<code>backgroundTaskManager.js</code> 可作为基础扩展。</p>
+<h3 id="3-4-子代理委派约束">3.4 子代理委派约束<a class="anchor" href="#3-4-子代理委派约束" aria-label="锚点">#</a></h3>
+<pre><code>delegate_task:
+  role: &quot;leaf&quot;          # 不能再委派
+  role: &quot;orchestrator&quot;  # 可再委派，受深度限制
+
+约束:
+  max_spawn_depth: 2           # 防递归
+  max_concurrent_children: 3   # 并发上限
+  child_timeout_seconds: ...   # 超时杀
+  subagent_auto_approve: ...   # 自动审批
+  inherit_mcp_toolsets: ...    # MCP 继承</code></pre>
+<p><strong>KHY 对标</strong>：<code>workerAgent.js</code>/<code>processAgent.js</code> 无深度限制和超时杀。</p>
+<h3 id="3-5-skin-theme-纯数据引擎">3.5 Skin/Theme 纯数据引擎<a class="anchor" href="#3-5-skin-theme-纯数据引擎" aria-label="锚点">#</a></h3>
+<pre><code class="language-yaml"># ~/.hermes/skins/cyberpunk.yaml
+name: cyberpunk
+colors:
+  banner_border: &quot;#FF00FF&quot;
+spinner:
+  thinking_verbs: [&quot;jacking in&quot;, &quot;decrypting&quot;]
+branding:
+  agent_name: &quot;Cyber Agent&quot;</code></pre>
+<ul><li>4 个内置 skin + 用户 <code>~/.hermes/skins/</code> 目录</li><li>覆盖：banner 颜色、spinner 表情/动词/翅膀、工具前缀、品牌文字</li><li><code>/skin &lt;name&gt;</code> 运行时切换，零代码变更</li></ul>
+<p><strong>KHY 对标</strong>：<code>aiRenderer.js</code> 颜色硬编码，应抽取为 JSON/YAML 配置。</p>
+<h3 id="3-6-供应链安全策略">3.6 供应链安全策略<a class="anchor" href="#3-6-供应链安全策略" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>来源类型</th><th>固定方式</th><th>示例</th></tr></thead><tbody><tr><td>PyPI</td><td><code>&gt;=floor,&lt;next_major</code></td><td><code>httpx&gt;=0.28.1,&lt;1</code></td></tr><tr><td>Git URL</td><td>Commit SHA</td><td><code>git+https://...@&lt;40-char-sha&gt;</code></td></tr><tr><td>GitHub Actions</td><td>SHA + 注释</td><td><code>uses: actions/checkout@&lt;sha&gt;  # v4</code></td></tr><tr><td>CI-only pip</td><td><code>==exact</code></td><td><code>pyyaml==6.0.2</code></td></tr></tbody></table>
+<p>起因：litellm 供应链攻击(PR #2796) + Mini Shai-Hulud 蠕虫(2026-05)。</p>
+<p><strong>KHY 对标</strong>：<code>package.json</code> 应检查裸 <code>&gt;=</code> 依赖，补上限。</p>
+<h3 id="3-7-agents-md-工程规范">3.7 AGENTS.md 工程规范<a class="anchor" href="#3-7-agents-md-工程规范" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>规范</th><th>描述</th></tr></thead><tbody><tr><td>插件不修改核心</td><td>需要能力则扩展 plugin surface</td></tr><tr><td>Prompt 缓存不破</td><td>命令默认延迟生效，<code>--now</code> 立即</td></tr><tr><td>不写变更探测器测试</td><td>测试合约关系而非快照值</td></tr><tr><td>统一路径入口</td><td><code>get_hermes_home()</code> 多 Profile 安全</td></tr><tr><td>竞品迁移</td><td>OpenClaw 一键迁移设置/记忆/技能/Key</td></tr><tr><td>不用 simple_term_menu</td><td>Ghost-duplication bug，改用 curses</td></tr><tr><td>不用 <code>\033[K]</code></td><td>prompt_toolkit 下泄露字符</td></tr></tbody></table>
+<h3 id="3-8-kanban-多代理编排">3.8 Kanban 多代理编排<a class="anchor" href="#3-8-kanban-多代理编排" aria-label="锚点">#</a></h3>
+<p>v0.13 引入持久化 Kanban 看板：</p>
+<table><thead><tr><th>特性</th><th>描述</th></tr></thead><tbody><tr><td>持久化</td><td>SQLite 看板</td></tr><tr><td>心跳检测</td><td>worker 定期 heartbeat</td></tr><tr><td>Zombie 回收</td><td>自动检测僵尸 worker</td></tr><tr><td>幻觉门控</td><td>检测 worker 虚假声称完成</td></tr><tr><td>自动阻塞</td><td>5 次连续失败自动 block 防 spin loop</td></tr><tr><td>多租户</td><td>Tenant 隔离 + Board 硬边界</td></tr><tr><td>Dashboard</td><td>Web UI 可视化</td></tr><tr><td>重试</td><td>per-task <code>max_retries</code></td></tr></tbody></table>
+<p><strong>KHY 对标</strong>：<code>largeTaskOrchestrator.js</code> 更基础，缺少心跳/幻觉门控/自动阻塞。</p>
+<hr>
+<h2 id="4-khy-os-对齐清单-按优先级排序">4. KHY OS 对齐清单（按优先级排序）<a class="anchor" href="#4-khy-os-对齐清单-按优先级排序" aria-label="锚点">#</a></h2>
+<h3 id="p0-立即可做-价值高">P0 — 立即可做，价值高<a class="anchor" href="#p0-立即可做-价值高" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项目</th><th>复杂度</th><th>KHY 现状</th><th>具体行动</th></tr></thead><tbody><tr><td>1</td><td>技能生命周期(Curator)</td><td>中</td><td>skills 静态 manifest.json</td><td>给每个 skill 加 <code>use_count</code>/<code>last_activity_at</code>；实现 active→stale→archived；pin 保护</td></tr><tr><td>2</td><td>子代理深度限制+超时杀</td><td>低</td><td>workerAgent 无约束</td><td>加 <code>maxSpawnDepth=2</code>/<code>maxConcurrentChildren=3</code>/<code>childTimeoutMs</code></td></tr></tbody></table>
+<h3 id="p1-近期应做-防止技术债">P1 — 近期应做，防止技术债<a class="anchor" href="#p1-近期应做-防止技术债" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项目</th><th>复杂度</th><th>KHY 现状</th><th>具体行动</th></tr></thead><tbody><tr><td>3</td><td>Cron 调度+跨渠道投递</td><td>中</td><td>无调度</td><td>扩展 backgroundTaskManager，支持 cron 表达式 + 3 分钟硬中断</td></tr><tr><td>4</td><td>Prompt 缓存保护</td><td>低</td><td>promptCacheService 无保护</td><td>修改工具/技能的 system prompt 默认延迟到下个 session 生效</td></tr><tr><td>5</td><td>依赖上限固定</td><td>低</td><td>package.json 未审计</td><td>审计所有 <code>&gt;=</code> 依赖，补 <code>&lt;next_major</code> 上限</td></tr><tr><td>6</td><td>错误分类枚举</td><td>低</td><td>Gateway 有 fallback 无分类</td><td>新建 <code>errorClassifier.js</code>，区分 auth/rate_limit/context_overflow/server_error</td></tr></tbody></table>
+<h3 id="p2-中期规划-提升竞争力">P2 — 中期规划，提升竞争力<a class="anchor" href="#p2-中期规划-提升竞争力" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项目</th><th>复杂度</th><th>KHY 现状</th><th>具体行动</th></tr></thead><tbody><tr><td>7</td><td>终端后端抽象</td><td>高</td><td>只有 local</td><td>定义 <code>BaseTerminalBackend</code> 接口，先实现 Docker+SSH</td></tr><tr><td>8</td><td>Skin/Theme 引擎</td><td>低</td><td>aiRenderer 硬编码</td><td>抽取颜色/spinner/品牌到 YAML 配置</td></tr><tr><td>9</td><td>Session 持久化+FTS5</td><td>中</td><td>无 session 持久化</td><td>SQLite WAL + FTS5 全文搜索</td></tr><tr><td>10</td><td>凭证池+自动轮换</td><td>中</td><td>单 Key</td><td>多 Key round-robin + OAuth 刷新</td></tr></tbody></table>
+<h3 id="p3-远期目标-差异化能力">P3 — 远期目标，差异化能力<a class="anchor" href="#p3-远期目标-差异化能力" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>项目</th><th>复杂度</th><th>KHY 现状</th><th>具体行动</th></tr></thead><tbody><tr><td>11</td><td>Kanban 多代理编排</td><td>高</td><td>largeTaskOrchestrator 基础</td><td>SQLite 看板+心跳+幻觉门控</td></tr><tr><td>12</td><td>用户建模(Honcho式)</td><td>高</td><td>无</td><td>辩证式用户画像</td></tr><tr><td>13</td><td>PluginContext 统一注入</td><td>中</td><td>各 service 各自 require</td><td>统一 register(ctx) 回调</td></tr></tbody></table>
+<h3 id="4-1-claude-会话发现统一执行映射-2026-05-17">4.1 Claude 会话发现统一执行映射（2026-05-17）<a class="anchor" href="#4-1-claude-会话发现统一执行映射-2026-05-17" aria-label="锚点">#</a></h3>
+<p>为避免 Hermes 相关结论分散在多份笔记中，以下把 Claude 会话新增发现统一映射到 KHY 的落地入口。</p>
+<table><thead><tr><th>Claude 发现</th><th>优先级</th><th>统一落点</th><th>执行入口</th><th>处理策略</th></tr></thead><tbody><tr><td>闭环学习系统（技能自创建/改进/持久化/跨会话搜索/用户建模）</td><td>P0/P2/P3</td><td>本文 3.1、4（#1/#9/#12）</td><td><code>backend/src/skills/</code> + <code>backend/src/services/sessionPersistence.js</code></td><td>分阶段推进：先做 <code>use_count/last_activity_at</code> 与 Curator 生命周期，再扩展 FTS5 与用户建模</td></tr><tr><td>七种终端后端抽象（local/docker/ssh/singularity/modal/daytona/vercel）</td><td>P2</td><td>本文 3.2、4（#7）</td><td><code>backend/src/services/toolSandbox.js</code>、<code>backend/src/services/remote/</code></td><td>先统一 <code>BasePlatformAdapter</code> 接口，再按 local→docker→ssh 递进扩展</td></tr><tr><td>Cron 调度（多格式输入、链式 context、跨渠道投递）</td><td>P1</td><td>本文 3.3、4（#3）</td><td><code>backend/src/services/backgroundTaskManager.js</code>、<code>backend/src/services/channels/</code></td><td>采用“可观测进展 + 空闲超时”模式；Hermes 的固定硬中断做法在 KHY 需改为符合 Rule 3 的 activity-based timeout</td></tr><tr><td>子代理委派约束（深度/并发/超时）</td><td>P0</td><td>本文 3.4、4（#2）</td><td><code>backend/src/coordinator/workerAgent.js</code>、<code>backend/src/coordinator/processAgent.js</code></td><td>增加 <code>maxSpawnDepth</code>、<code>maxConcurrentChildren</code>、<code>childTimeoutMs</code>，并输出清晰状态日志</td></tr><tr><td>Skin/Theme 纯数据引擎</td><td>P2</td><td>本文 3.5、4（#8）</td><td><code>backend/src/cli/aiRenderer.js</code></td><td>抽离颜色/文案/spinner 到 JSON/YAML，可运行时切换</td></tr><tr><td>供应链依赖固定策略</td><td>P1</td><td>本文 3.6、4（#5）</td><td><code>package.json</code>、<code>pyproject.toml</code>、CI workflow</td><td>审计宽范围依赖并加上界；CI-only 依赖走精确 pin</td></tr><tr><td>AGENTS.md 工程规范迁移</td><td>P1</td><td>本文 3.7、4（#4）</td><td><code>backend/src/services/promptCacheService.js</code> + 测试规范</td><td>先落地“默认延迟失效，<code>--now</code> 立即生效”与合约测试导向</td></tr><tr><td>Kanban 多代理编排（持久化+心跳+幻觉门控）</td><td>P3</td><td>本文 3.8、4（#11）</td><td><code>backend/src/tasks/largeTaskOrchestrator.js</code>、<code>backend/src/tasks/largeTaskRuntimeStore.js</code></td><td>先补心跳与失败阻断，再演进到看板化与可视化</td></tr></tbody></table>
+<p>统一引用建议：</p>
+<ul><li>战略对齐与优先级：本文件（<code>docs/KHY_VS_HERMES_AGENT_GROWTH_ARCHITECTURE.md</code>）</li><li>可执行任务拆解：<code>docs/08_MGMT_项目管理/[MGMT-RPT-008] hermes-khy-p0-执行任务-2026-05-17.md</code></li><li>代码级学习清单：<code>docs/08_MGMT_项目管理/[MGMT-RPT-009] hermes-成长架构-学习清单-2026-05-17.md</code></li></ul>
+<hr>
+<h2 id="5-架构对比总结">5. 架构对比总结<a class="anchor" href="#5-架构对比总结" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>Hermes Agent</th><th>KHY OS</th><th>差距</th></tr></thead><tbody><tr><td>扩展性</td><td>7 类可插拔扩展点</td><td>commandRegistry + skills</td><td>缺 PluginContext 统一注入</td></tr><tr><td>学习能力</td><td>闭环(自创技能+Curator+FTS5)</td><td>无</td><td><strong>最大差距</strong></td></tr><tr><td>故障恢复</td><td>分级分类+凭证池+自动重试</td><td>单层 fallback</td><td>缺错误分类</td></tr><tr><td>调度</td><td>Cron+跨渠道+no_agent</td><td>无</td><td>完全缺失</td></tr><tr><td>多代理</td><td>Kanban+心跳+幻觉门控</td><td>largeTask 基础</td><td>缺持久化+可靠性</td></tr><tr><td>安全</td><td>供应链 checker+依赖固定</td><td>基础</td><td>缺审计</td></tr><tr><td>测试</td><td>~17k 测试，CI parity</td><td>有但覆盖率待评估</td><td>—</td></tr><tr><td>平台</td><td>22 网关平台</td><td>CLI + Web</td><td>定位不同</td></tr><tr><td>部署</td><td>7 终端后端+Serverless</td><td>仅 local</td><td>待扩展</td></tr><tr><td>主题</td><td>Skin 引擎，纯数据</td><td>硬编码</td><td>低成本改进</td></tr></tbody></table>
+<hr>
+<h2 id="6-结论">6. 结论<a class="anchor" href="#6-结论" aria-label="锚点">#</a></h2>
+<p>Hermes Agent 的&quot;成长型架构&quot;核心在于：</p>
+<ol><li><strong>前置抽象</strong>：每个系统预留扩展点（接口、注册表、钩子）</li><li><strong>自动发现</strong>：无需修改核心代码即可添加工具/平台/插件</li><li><strong>闭环学习</strong>：技能从经验中创建、使用中改进、自动归档</li><li><strong>分级容错</strong>：错误不导致失败，智能路由到替代方案</li><li><strong>增量部署</strong>：版本向后兼容，特性通过标志切换</li></ol>
+<p>KHY OS 最大的借鉴价值在 <strong>闭环学习(Curator)</strong> 和 <strong>分级故障转移(error_classifier)</strong> 两个方向，这两个能以中等成本带来最大的架构升级。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-002] khy-对比-desirecore-借鉴分析.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS vs DesireCore — 委派式 Agent OS 借鉴分析</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-004] khy-对比-openagent-交付差距.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS vs oh-my-openagent 任务交付差距分析</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-003] khy-对比-hermes-成长架构.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

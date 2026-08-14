@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>元帅（Marshal）双模式任命与约束 — 实现报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>元帅（Marshal）双模式任命与约束 — 实现报告</div>
+      <header class="hero reveal"><h1>元帅（Marshal）双模式任命与约束 — 实现报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#元帅-marshal-双模式任命与约束-实现报告">元帅（Marshal）双模式任命与约束 — 实现报告</a></li><li class="lvl-2"><a href="#1-目标">1. 目标</a></li><li class="lvl-2"><a href="#2-改动清单">2. 改动清单</a></li><li class="lvl-3"><a href="#2-1-新增-services-backend-src-services-marshal-9-个纯模块">2.1 新增（`services/backend/src/services/marshal/`，9 个纯模块）</a></li><li class="lvl-3"><a href="#2-2-修改">2.2 修改</a></li><li class="lvl-3"><a href="#2-3-测试">2.3 测试</a></li><li class="lvl-2"><a href="#3-关键实现决策">3. 关键实现决策</a></li><li class="lvl-2"><a href="#4-验证">4. 验证</a></li><li class="lvl-2"><a href="#5-现状">5. 现状</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="元帅-marshal-双模式任命与约束-实现报告">元帅（Marshal）双模式任命与约束 — 实现报告<a class="anchor" href="#元帅-marshal-双模式任命与约束-实现报告" aria-label="锚点">#</a></h1>
+<blockquote><p>文档编号：IMPL-RPT-024<br>日期：2026-06-12<br>关联设计：[DESIGN-ARCH-024] khyos 元帅双模式任命与约束规范<br>关联测试：[TEST-RPT-008] 元帅双模式任命 — 测试报告</p></blockquote>
+<hr>
+<h2 id="1-目标">1. 目标<a class="anchor" href="#1-目标" aria-label="锚点">#</a></h2>
+<p>闭环「主控模型（元帅）自动选举 ⇄ 用户强制指定」的矛盾：任何在线模型都能被任命为元帅，<br>且无论谁当元帅系统都稳定运行——强主放权、弱主上镣铐、连续失败可弹劾移交，全程不损坏项目文件、<br>不违背用户意志。</p>
+<h2 id="2-改动清单">2. 改动清单<a class="anchor" href="#2-改动清单" aria-label="锚点">#</a></h2>
+<h3 id="2-1-新增-services-backend-src-services-marshal-9-个纯模块">2.1 新增（<code>services/backend/src/services/marshal/</code>，9 个纯模块）<a class="anchor" href="#2-1-新增-services-backend-src-services-marshal-9-个纯模块" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>行为</th></tr></thead><tbody><tr><td><code>capabilityVector.js</code></td><td>层级→连续能力向量 + 加权分数 + 强/弱裁决（阈值 <code>KHY_MARSHAL_STRONG_THRESHOLD</code>，默认 65）</td></tr><tr><td><code>marshalAppointment.js</code></td><td>双模式任命：<code>electMarshal</code>（reasoning 最高）/ <code>appointMarshal</code>（用户指定，<strong>防呆②</strong> 不在线即报错）</td></tr><tr><td><code>strategySOP.js</code></td><td>预置战略库 6 意图（含 2 个只读逃生地板）+ <code>buildChoiceSchema</code> 闭枚举 + <code>isLegalChoice</code> 校验</td></tr><tr><td><code>ruleEngineGuard.js</code></td><td><strong>防呆①</strong> 二次校验：弱主 + 不可逆 + 未授权 → 降级须审批；红线硬拦截；逃生地板恒可行；强主 commit 豁免</td></tr><tr><td><code>weakMasterProtocol.js</code></td><td>渲染选择题 Prompt（<strong>防呆③</strong> 需求逐字围栏）+ <code>extractFirstJson</code> 解析 + 确定性单微步展开</td></tr><tr><td><code>strongMasterProtocol.js</code></td><td>强主赋能：全权 / 跨级指挥 / 自我反省；精简 Prompt 原样接受自由计划</td></tr><tr><td><code>contextBaton.js</code></td><td>无缝切换载体；<code>businessRequest</code> <code>Object.defineProperty</code> 冻结（<strong>防呆③</strong>）；mutator 返回新接力棒</td></tr><tr><td><code>impeachment.js</code></td><td>降级弹劾状态机；连续失败阈值（<code>KHY_MARSHAL_IMPEACH_THRESHOLD</code>，默认 2）；逐字精确逼宫文案</td></tr><tr><td><code>index.js</code></td><td><code>MarshalCoordinator</code> 编排——唯一对外集成面，再导出全部子模块</td></tr></tbody></table>
+<h3 id="2-2-修改">2.2 修改<a class="anchor" href="#2-2-修改" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>platform/khy_platform/cli.py</code></td><td><code>_run_claude_code_launcher</code> 解析 <code>--marshal &lt;model&gt;</code> / <code>--marshal=</code>；<code>_build_khy_proxy_env(marshal=…)</code> 透传 <code>KHY_MARSHAL</code>；用法文档补一行。透传层不做能力封锁（用户意志至上）。</td></tr></tbody></table>
+<h3 id="2-3-测试">2.3 测试<a class="anchor" href="#2-3-测试" aria-label="锚点">#</a></h3>
+<p><code>tests/services/marshal/marshalSubsystem.test.js</code>（node:test，35 用例）。</p>
+<h2 id="3-关键实现决策">3. 关键实现决策<a class="anchor" href="#3-关键实现决策" aria-label="锚点">#</a></h2>
+<ol><li><strong>复用既有单一真源，零重复造轮</strong>：能力分层走 <code>modelTier</code>，可逆性走 <code>reversibility</code>，红线/活性走</li></ol>
+<p><code>constraintLattice</code>，JSON 恢复走 <code>safeJsonParse.extractFirstJson</code>，拆解走 <code>taskDecomposer</code>（仅确定性策略）。</p>
+<ol><li><strong>防呆落到代码而非仅 Prompt</strong>：<ul><li>① <code>ruleEngineGuard.vetAction</code> 对弱主不可逆动作返回 <code>allowed:false, requiresApproval:true</code>；</li><li>② <code>appointMarshal</code> 对不在线指定返回 <code>{error:'model_not_in_pool'}</code>；</li><li>③ <code>contextBaton</code> 冻结 <code>businessRequest</code>，渲染器逐字嵌入；</li><li>④ 全部为新文件，未触碰 toolUseLoop / 网关等核心业务逻辑。</li></ul></li><li><strong>零侵入接线</strong>：<code>MarshalCoordinator</code> 是唯一集成面，宿主按需接 <code>KHY_MARSHAL</code>；当前不强行改写核心循环</li></ol>
+<p>（依防呆④留作另行评审的可选增强）。</p>
+<ol><li><strong>零硬编码</strong>：所有阈值带命名默认值 + 环境覆盖；选举确定性（并列按 reasoning→池序）。</li></ol>
+<h2 id="4-验证">4. 验证<a class="anchor" href="#4-验证" aria-label="锚点">#</a></h2>
+<ul><li><code>python3 -m py_compile platform/khy_platform/cli.py</code> → OK。</li><li><code>node -e &quot;require('./src/services/marshal')&quot;</code> → 9 导出全部加载。</li><li><code>node --test tests/services/marshal/marshalSubsystem.test.js</code> → <strong>tests 35 / pass 35 / fail 0</strong>。</li><li>既有 <code>reversibility</code> / <code>constraintLattice</code> 等模块未被修改，无回归面。</li></ul>
+<h2 id="5-现状">5. 现状<a class="anchor" href="#5-现状" aria-label="锚点">#</a></h2>
+<p>目标 10 全部六阶段闭环；三场景（自动选举 / 强主指定 / 弱主指定）端到端跑通，含弹劾→无损移交。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-023] 文档排版-内容与样式分离-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">《文档排版——内容与样式分离》实现报告</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-025] 元规划协议与动态约束注入-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">元规划协议与动态约束注入 — 实现报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-024] 元帅双模式任命与约束-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

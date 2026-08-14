@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>磁盘守卫 — 防膨胀机制 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>磁盘守卫 — 防膨胀机制</div>
+      <header class="hero reveal"><h1>磁盘守卫 — 防膨胀机制</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#磁盘守卫-防膨胀机制">磁盘守卫 — 防膨胀机制</a></li><li class="lvl-2"><a href="#背景">背景</a></li><li class="lvl-2"><a href="#防护机制总览">防护机制总览</a></li><li class="lvl-3"><a href="#checkpoint-三重防护">checkpoint 三重防护</a></li><li class="lvl-2"><a href="#执行机制">执行机制</a></li><li class="lvl-2"><a href="#旧版数据清理">旧版数据清理</a></li><li class="lvl-3"><a href="#linux-macos">Linux / macOS</a></li><li class="lvl-3"><a href="#windows-powershell">Windows (PowerShell)</a></li><li class="lvl-3"><a href="#判断是否需要清理">判断是否需要清理</a></li><li class="lvl-2"><a href="#开发注意事项">开发注意事项</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-029 | 阶段: 运维 | 原路径: docs/指南/磁盘守卫-防膨胀机制.md --&gt;</p>
+<h1 id="磁盘守卫-防膨胀机制">磁盘守卫 — 防膨胀机制<a class="anchor" href="#磁盘守卫-防膨胀机制" aria-label="锚点">#</a></h1>
+<blockquote><p>日期: 2026-06-02<br>状态: 已实施<br>关联文件: <code>backend/src/services/cleanupService.js</code>, <code>backend/src/services/workspace/checkpointService.js</code></p></blockquote>
+<h2 id="背景">背景<a class="anchor" href="#背景" aria-label="锚点">#</a></h2>
+<p>v0.1.82 之前，KHY 存在多处无限制追加日志和归档的问题。典型案例：<code>checkpointService</code> 对非 git 目录执行 <code>tar-full</code> 备份，曾将整个 home 目录打包，单次产生 <strong>99 GB</strong> 数据导致磁盘爆满。</p>
+<p>审计发现 <strong>14 个无限增长源头</strong>，已在 cleanupService 中统一覆盖。</p>
+<hr>
+<h2 id="防护机制总览">防护机制总览<a class="anchor" href="#防护机制总览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>数据源</th><th>磁盘路径</th><th>增长方式</th><th>防护措施</th></tr></thead><tbody><tr><td>trace-events.jsonl</td><td><code>~/.khy/audit/trace-events.jsonl</code></td><td>每次 API 调用追加</td><td><strong>10 MB 轮转</strong> + gzip 归档</td></tr><tr><td>audit/sessions/</td><td><code>~/.khy/audit/sessions/*.jsonl</code></td><td>每会话一个文件</td><td><strong>7 天自动清除</strong></td></tr><tr><td>audit/summaries/</td><td><code>~/.khy/audit/summaries/*</code></td><td>每会话两个文件</td><td><strong>上限 50 个文件</strong></td></tr><tr><td>audit/exports/</td><td><code>~/.khy/audit/exports/*</code></td><td>导出时产生</td><td><strong>上限 10 个文件</strong></td></tr><tr><td>security.log</td><td><code>~/.khyquant/security.log</code></td><td>安全事件追加</td><td><strong>5 MB 轮转</strong> + 2 份 gzip</td></tr><tr><td>scan.log</td><td><code>~/.khyquant/scan.log</code></td><td>每次扫描追加</td><td><strong>5 MB 轮转</strong></td></tr><tr><td>skill-ledger/audit.jsonl</td><td><code>~/.khyquant/skill-ledger/audit.jsonl</code></td><td>技能认证事件</td><td><strong>5 MB 轮转</strong></td></tr><tr><td>telemetry audit.log</td><td><code>~/.khy/audit.log</code></td><td>遥测审计事件</td><td><strong>5 MB 轮转</strong></td></tr><tr><td>interaction_records.jsonl</td><td><code>~/.khyquant/training/interaction_records.jsonl</code></td><td>训练数据记录</td><td><strong>10,000 行 / 50 MB</strong></td></tr><tr><td>interaction_quarantine.jsonl</td><td><code>~/.khy/training/interaction_quarantine.jsonl</code></td><td>隔离记录</td><td><strong>5,000 行 / 20 MB</strong></td></tr><tr><td>每日记忆日志</td><td><code>~/.khy/memory/logs/YYYY/MM/*.md</code></td><td>每天一个文件</td><td><strong>90 天自动清除</strong></td></tr><tr><td>会话文件</td><td><code>~/.khy/sessions/*.jsonl</code></td><td>每会话一个文件</td><td><strong>7 天自动清除</strong></td></tr><tr><td>任务输出</td><td><code>~/.khy/tmp/tasks/*.output</code></td><td>每任务一个文件</td><td><strong>24 小时自动清除</strong></td></tr><tr><td>checkpoint 归档</td><td><code>~/.khyquant/checkpoints/</code></td><td>保存检查点时</td><td><strong>10 个/项目, 单文件 200 MB, 总量 500 MB</strong></td></tr></tbody></table>
+<h3 id="checkpoint-三重防护">checkpoint 三重防护<a class="anchor" href="#checkpoint-三重防护" aria-label="锚点">#</a></h3>
+<ol><li><strong>禁止打包 home 目录</strong> — 非 git 项目不再 tar 整个 <code>~/</code></li><li><strong>扩大排除列表</strong> — <code>node_modules</code>, <code>.git</code>, <code>__pycache__</code>, <code>.venv</code>, <code>dist</code>, <code>build</code>, <code>.next</code>, <code>.cache</code>, <code>.khyquant</code>, <code>.claude</code>, <code>*.tar.gz</code>, <code>*.zip</code>, <code>*.iso</code> 等</li><li><strong>体积硬上限</strong> — 单个 tar 超过 200 MB 自动删除，每个项目最多 10 个 checkpoint，全局总量不超过 500 MB</li></ol>
+<hr>
+<h2 id="执行机制">执行机制<a class="anchor" href="#执行机制" aria-label="锚点">#</a></h2>
+<pre><code>启动 → 3 秒后首次全量清理（19 个目标）
+     → 之后每 2 小时自动巡检
+     → 进程退出时停止定时器</code></pre>
+<p>入口: <code>bootstrap/prefetch.js</code> → <code>cleanupService.runCleanup({ trigger: 'startup' })</code> → <code>startPeriodicCleanup()</code></p>
+<p>手动触发: CLI 中执行 <code>khy cleanup</code> 或 <code>khy settings</code> 中查看存储报告。</p>
+<hr>
+<h2 id="旧版数据清理">旧版数据清理<a class="anchor" href="#旧版数据清理" aria-label="锚点">#</a></h2>
+<h3 id="linux-macos">Linux / macOS<a class="anchor" href="#linux-macos" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 查看占用
+du -sh ~/.khyquant/checkpoints/ ~/.khy/audit/
+
+# 清理检查点
+rm -rf ~/.khyquant/checkpoints/
+
+# 清理全部旧审计数据
+rm -rf ~/.khy/audit/sessions/ ~/.khy/audit/summaries/ ~/.khy/audit/exports/
+truncate -s 0 ~/.khy/audit/trace-events.jsonl</code></pre>
+<h3 id="windows-powershell">Windows (PowerShell)<a class="anchor" href="#windows-powershell" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># 查看 .khyquant 各子目录占用
+Get-ChildItem &quot;$env:USERPROFILE\.khyquant&quot; -Directory |
+  ForEach-Object {
+    $size = (Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue |
+             Measure-Object -Property Length -Sum).Sum
+    &quot;{0,10:N1} MB  {1}&quot; -f ($size/1MB), $_.Name
+  }
+
+# 查看检查点占用
+Get-ChildItem &quot;$env:USERPROFILE\.khyquant\checkpoints&quot; -Recurse |
+  Measure-Object -Property Length -Sum |
+  ForEach-Object { &quot;{0:N2} GB&quot; -f ($_.Sum / 1GB) }
+
+# 删除全部检查点
+Remove-Item &quot;$env:USERPROFILE\.khyquant\checkpoints&quot; -Recurse -Force
+
+# 删除旧审计数据
+Remove-Item &quot;$env:USERPROFILE\.khy\audit\sessions&quot; -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item &quot;$env:USERPROFILE\.khy\audit\summaries&quot; -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item &quot;$env:USERPROFILE\.khy\audit\exports&quot; -Recurse -Force -ErrorAction SilentlyContinue
+Set-Content &quot;$env:USERPROFILE\.khy\audit\trace-events.jsonl&quot; &quot;&quot;</code></pre>
+<h3 id="判断是否需要清理">判断是否需要清理<a class="anchor" href="#判断是否需要清理" aria-label="锚点">#</a></h3>
+<p>如果以下任一情况出现，建议手动清理：</p>
+<ul><li><code>~/.khyquant/checkpoints/</code> 超过 500 MB</li><li><code>~/.khy/audit/</code> 超过 50 MB</li><li>磁盘使用率超过 80%</li></ul>
+<p>升级到包含此修复的版本后，系统会在启动时自动执行清理，后续无需手动干预。</p>
+<hr>
+<h2 id="开发注意事项">开发注意事项<a class="anchor" href="#开发注意事项" aria-label="锚点">#</a></h2>
+<p>新增任何写磁盘的功能时，必须回答以下问题：</p>
+<ol><li><strong>是追加还是覆写？</strong> 追加模式必须设轮转上限</li><li><strong>文件是否会累积？</strong> 多文件模式必须设 TTL 或数量上限</li><li><strong>最坏情况多大？</strong> 计算 <code>单次写入量 × 最大频率 × 无人干预天数</code></li><li><strong>清理谁负责？</strong> 写入 cleanupService 的 <code>runCleanup()</code> 流程中</li></ol>
+<p>违反以上规则的 PR 应被拒绝。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-028] 环境要求.html"><div class="dir">← 上一篇</div><div class="ttl">环境要求</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-030] 移动端远程指南.html"><div class="dir">下一篇 →</div><div class="ttl">KHY Remote — 移动端连接指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-029] 磁盘守卫-防膨胀机制.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

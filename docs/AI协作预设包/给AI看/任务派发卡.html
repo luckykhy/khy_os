@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🎫 任务派发卡 · 发给 AI 当需求 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>给AI看<span class="sep">›</span>🎫 任务派发卡 · 发给 AI 当需求</div>
+      <header class="hero reveal"><h1>🎫 任务派发卡 · 发给 AI 当需求</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#任务派发卡-发给-ai-当需求">🎫 任务派发卡 · 发给 AI 当需求</a></li><li class="lvl-2"><a href="#派发头-每次派活先发这段">派发头（每次派活先发这段）</a></li><li class="lvl-2"><a href="#卡-接手先跑的命脉自检-每个新-ai-第一件事">卡 · 接手先跑的命脉自检（每个新 AI 第一件事）</a></li><li class="lvl-2"><a href="#卡-t1-边界-安全审查一个未覆盖的输入路径">卡 T1 · 边界/安全审查一个未覆盖的输入路径</a></li><li class="lvl-2"><a href="#卡-t2-拆一个上帝组件">卡 T2 · 拆一个上帝组件</a></li><li class="lvl-2"><a href="#卡-t3-补一个模型-provider-适配缺口">卡 T3 · 补一个模型/provider 适配缺口</a></li><li class="lvl-2"><a href="#卡-t4-补一个弱模型兼容缺口">卡 T4 · 补一个弱模型兼容缺口</a></li><li class="lvl-2"><a href="#卡-t5-给一个已有功能补-诚实出口">卡 T5 · 给一个已有功能补&quot;诚实出口&quot;</a></li><li class="lvl-2"><a href="#中期方向卡-项目稳了再派-范围略大">中期方向卡（项目稳了再派，范围略大）</a></li><li class="lvl-2"><a href="#卡-m1-联网搜索-网页读取鲁棒性">卡 M1 · 联网搜索/网页读取鲁棒性</a></li><li class="lvl-2"><a href="#卡-m2-mcp-生态-server-client-双向">卡 M2 · MCP 生态（server/client 双向）</a></li><li class="lvl-2"><a href="#卡-m3-视觉-多模态路由完善">卡 M3 · 视觉/多模态路由完善</a></li><li class="lvl-2"><a href="#卡-m4-cli-tui-与-claude-code-键位-体验对齐">卡 M4 · CLI/TUI 与 Claude Code 键位/体验对齐</a></li><li class="lvl-2"><a href="#卡-m5-内置模型开箱可用体验">卡 M5 · 内置模型开箱可用体验</a></li><li class="lvl-2"><a href="#远期方向-别让弱模型直接动手-先写-design-arch-0nn-设计文档想清接线点">远期方向（别让弱模型直接动手，先写 [DESIGN-ARCH-0NN] 设计文档想清接线点）</a></li><li class="lvl-2"><a href="#每次收尾都要更新的两件事-提醒-ai">每次收尾都要更新的两件事（提醒 AI）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 受众: AI(直接投喂) | 用途: 想派活时，把某张卡整段发给 AI 当需求 --&gt;<br>&lt;!-- 这些是发给 AI 读的任务卡。人类的选活决策树在 ../给人看/发展路径-决策与选活.md 。 --&gt;</p>
+<h1 id="任务派发卡-发给-ai-当需求">🎫 任务派发卡 · 发给 AI 当需求<a class="anchor" href="#任务派发卡-发给-ai-当需求" aria-label="锚点">#</a></h1>
+<blockquote><p>每张卡都是<strong>一段可直接发给 AI 的需求</strong>。选一张，连同下面的「派发头」一起发给 AI。<br>所有卡都遵守 <code>协作铁律.md</code>：叶子 + 默认开门控 + 逐字节回退 + 守卫绿。</p></blockquote>
+<hr>
+<h2 id="派发头-每次派活先发这段">派发头（每次派活先发这段）<a class="anchor" href="#派发头-每次派活先发这段" aria-label="锚点">#</a></h2>
+<pre><code>下面是这次的任务。开始前先按&quot;铁律速查卡&quot;办事：
+先告诉我你要改哪个文件、加哪个 KHY_ 门控、关掉后怎么逐字节回退，我确认后再动手。
+做完按&quot;诚实收尾模板&quot;汇报。任务如下：</code></pre>
+<hr>
+<h2 id="卡-接手先跑的命脉自检-每个新-ai-第一件事">卡 · 接手先跑的命脉自检（每个新 AI 第一件事）<a class="anchor" href="#卡-接手先跑的命脉自检-每个新-ai-第一件事" aria-label="锚点">#</a></h2>
+<pre><code>接手第一步，按顺序确认命脉没退化，把结果如实报我：
+1) 只读体检：node services/backend/bin/khy.js maintain freshness
+2) 守卫是否全绿：跑 scripts/check-*.js（或做一次空提交看 pre-commit 钩子）。
+3) 版本号是否一致（backend package.json 与发布版本）。
+4) 上帝组件待办有没有恶化：npm --prefix services/backend run arch:god
+任何一项红/异常，先修它，别做新功能。全绿再来找我要任务。</code></pre>
+<hr>
+<h2 id="卡-t1-边界-安全审查一个未覆盖的输入路径">卡 T1 · 边界/安全审查一个未覆盖的输入路径<a class="anchor" href="#卡-t1-边界-安全审查一个未覆盖的输入路径" aria-label="锚点">#</a></h2>
+<pre><code>任务：在处理外部/不可信输入的代码里，找一个还没做边界硬化的点，按&quot;严格超集+门控&quot;补上。
+入口：搜 startsWith / fromCodePoint / toString('utf-8') / new RegExp / parseInt 等易错原语。
+做法：参照错误自查手册 B 类（边界锚定/大小写折叠/越界码点/SSRF等价形/破坏性flag归一）。
+     写成纯叶子 + KHY_ 门控（默认开），登记 flagRegistry，异常 fail-soft。
+验收：新增单测覆盖坏输入；门控关掉逐字节回退；守卫全绿。
+风险：低（只多封锁/多清理，是严格超集）。</code></pre>
+<h2 id="卡-t2-拆一个上帝组件">卡 T2 · 拆一个上帝组件<a class="anchor" href="#卡-t2-拆一个上帝组件" aria-label="锚点">#</a></h2>
+<pre><code>任务：从超 2500 行的文件里，抽一个内聚分节成纯叶子模块。
+入口：npm --prefix services/backend run arch:god（给出超限文件与现成拆分缝）。
+     当前超限最重：toolUseLoop.js / cli/repl.js / cli/handlers/gateway.js / gateway/aiGateway.js。
+做法：选一个&quot;现成横幅分节&quot;→抽成纯叶子→原文件用同名别名 re-export 保契约不变。
+     先例：localBrainCalc/localBrainTextOps/localBrainSessionContext/localBrainFileLookup。
+验收：对外行为逐字节不变；相关单测绿；arch:god 该文件行数下降；守卫全绿。
+风险：中（务必只搬移不改逻辑，保证 re-export 契约不变）。</code></pre>
+<h2 id="卡-t3-补一个模型-provider-适配缺口">卡 T3 · 补一个模型/provider 适配缺口<a class="anchor" href="#卡-t3-补一个模型-provider-适配缺口" aria-label="锚点">#</a></h2>
+<pre><code>任务：适配一个新模型或 provider（鉴权/请求字段/能力名单）。
+入口：aiGateway.js(normalizeModelForAdapter/协议流水线)、modelRouter.js、providerPresets、apiKeyPool。
+做法：参照错误自查手册 G 类——通道家族防护(G1)、默认值收敛单一真源(G2)、
+     鉴权形态(G3)、请求侧字段透传(G4)、视觉能力名单(G5)。写成叶子+门控。
+验收：新模型可用；不泄漏给别家通道；守卫 check-model-hardcoding 绿；门控关回退。
+风险：中（易泄漏模型名致 404，务必补对称家族防护）。</code></pre>
+<h2 id="卡-t4-补一个弱模型兼容缺口">卡 T4 · 补一个弱模型兼容缺口<a class="anchor" href="#卡-t4-补一个弱模型兼容缺口" aria-label="锚点">#</a></h2>
+<pre><code>任务：让某个小模型(≤7B)更稳地跑工具循环。
+入口：docs/03_DESIGN_设计/[DESIGN-ARCH-013] 弱模型兼容.md + toolUseLoop.js。
+做法：对照错误自查手册 W 类，找一个还没兼容好的失败模式补上(别破坏已有四层兼容)。
+验收：用该小模型实测工具循环不再截断/拒收/解析失败；门控关回退。
+风险：低-中。</code></pre>
+<h2 id="卡-t5-给一个已有功能补-诚实出口">卡 T5 · 给一个已有功能补&quot;诚实出口&quot;<a class="anchor" href="#卡-t5-给一个已有功能补-诚实出口" aria-label="锚点">#</a></h2>
+<pre><code>任务：某功能失败时只甩原始报错、没有定性总结和出路——补上。
+入口：参照 visionFailureSummary(识图失败→定性+脱敏真因+配置邀约)与 resultGuard(静默截断检测)。
+做法：写纯叶子做&quot;分类失败原因+脱敏+给用户下一步&quot;，门控默认开，失败 fail-soft 回旧文案。
+验收：失败路径给出可读、不泄密、有出路的提示；门控关逐字节回退旧文案。
+风险：低。</code></pre>
+<hr>
+<h2 id="中期方向卡-项目稳了再派-范围略大">中期方向卡（项目稳了再派，范围略大）<a class="anchor" href="#中期方向卡-项目稳了再派-范围略大" aria-label="锚点">#</a></h2>
+<h2 id="卡-m1-联网搜索-网页读取鲁棒性">卡 M1 · 联网搜索/网页读取鲁棒性<a class="anchor" href="#卡-m1-联网搜索-网页读取鲁棒性" aria-label="锚点">#</a></h2>
+<pre><code>任务：提升联网搜索召回或网页读取鲁棒性（多样引擎/字符集解码/超时硬截止）。
+入口：webSearchService(ENGINE_REGISTRY)、webFetchDecode、WebFetchTool。
+做法：加独立引擎/补解码/补硬截止，各走叶子+门控(先例 mojeekEngine/webFetchDecode)。
+验收：目标场景可用；门控关回退；守卫绿。风险：低-中。</code></pre>
+<h2 id="卡-m2-mcp-生态-server-client-双向">卡 M2 · MCP 生态（server/client 双向）<a class="anchor" href="#卡-m2-mcp-生态-server-client-双向" aria-label="锚点">#</a></h2>
+<pre><code>任务：完善 MCP —— 对外暴露原生工具(stdio+HTTP/SSE)或 khy mcp add &lt;预设&gt; 一键装开源 server。
+入口：mcpServer*(协议叶子+IO薄壳)、mcpServerPresets、CLI khy mcp。
+红线：tools/call 与本地模型走同一 executeTool 权限门控不开后门；非 loopback 无 token 拒启动。
+验收：目标能力可用；权限不被绕过；守卫绿。风险：中。</code></pre>
+<h2 id="卡-m3-视觉-多模态路由完善">卡 M3 · 视觉/多模态路由完善<a class="anchor" href="#卡-m3-视觉-多模态路由完善" aria-label="锚点">#</a></h2>
+<pre><code>任务：文本模型看不了图时透明路由到视觉模型再返回；能力名单随新模型族更新。
+入口：visionCapability/visionRouting、glmVisionModel、modernVisionHints、recognizeImage 工具。
+验收：带图请求正确路由；名单更新精确不误伤；门控关回退。风险：中。</code></pre>
+<h2 id="卡-m4-cli-tui-与-claude-code-键位-体验对齐">卡 M4 · CLI/TUI 与 Claude Code 键位/体验对齐<a class="anchor" href="#卡-m4-cli-tui-与-claude-code-键位-体验对齐" aria-label="锚点">#</a></h2>
+<pre><code>任务：补一个键位/会话恢复/拓扑的真缺口(已对齐 ~90%)。
+入口：useTextInput/App.js/keybindingCatalog(SSOT，驱动 /keybindings 与 ? 浮层)。
+做法：按真缺口补，别引入重映射引擎。验收：新键位生效；守卫绿。风险：低-中。</code></pre>
+<h2 id="卡-m5-内置模型开箱可用体验">卡 M5 · 内置模型开箱可用体验<a class="anchor" href="#卡-m5-内置模型开箱可用体验" aria-label="锚点">#</a></h2>
+<pre><code>任务：让 pip 安装后某 provider 默认&quot;已配置&quot;可见，且可经自然语言/网页替换真 key。
+入口：apiKeyPool(BUILTIN_PROVIDER_KEYS，占位 priority 0/用户 key priority 10)、nlProviderResolver、前端 AIGateway.vue。
+验收：安装后可见&quot;已配置&quot;，真 key 恒盖占位；门控关回退。风险：低-中。</code></pre>
+<hr>
+<h2 id="远期方向-别让弱模型直接动手-先写-design-arch-0nn-设计文档想清接线点">远期方向（别让弱模型直接动手，先写 [DESIGN-ARCH-0NN] 设计文档想清接线点）<a class="anchor" href="#远期方向-别让弱模型直接动手-先写-design-arch-0nn-设计文档想清接线点" aria-label="锚点">#</a></h2>
+<ul><li><strong>F1 内核侧能力深化</strong>：kernel/ 调度/IPC/文件系统/网络演进；host 桥能力扩展。前置读 .ai/MAP.md 启动流程+.ai/GUARDS.md。</li><li><strong>F2 生态应用扩展</strong>：走 platform/khy_platform/app_protocol.py 契约接更多应用。红线：数据主权物理隔离(底座~/.khyos/ vs 应用~/.&lt;app&gt;/)；发现≠激活。</li><li><strong>F3 治理层收敛</strong>：把 .ai/GUARDS-AI.md §2 标&quot;应统一/收敛目标&quot;的重复真源逐个收敛。每次写一行到 .ai/GOVERNANCE-LEDGER.md。</li><li><strong>F4 跨平台构建分发</strong>：见 [OPS-MAN-036] Windows支持方案、[OPS-MAN-042] 发布手册。</li></ul>
+<hr>
+<h2 id="每次收尾都要更新的两件事-提醒-ai">每次收尾都要更新的两件事（提醒 AI）<a class="anchor" href="#每次收尾都要更新的两件事-提醒-ai" aria-label="锚点">#</a></h2>
+<pre><code>1) 重要治理写一行到 .ai/GOVERNANCE-LEDGER.md（接线点/开关/默认/E2E 证据）。
+2) 新文档回写对应目录 00_INDEX 和 docs/00_INDEX_文档索引.md。</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/给AI看/错误自查手册.html"><div class="dir">← 上一篇</div><div class="ttl">🐞 错误自查手册 · 发给 AI，让它逐条对照</div></a><a class="next" href="../../../docs/AI协作预设包/给AI看/项目情况说明-开场白.html"><div class="dir">下一篇 →</div><div class="ttl">📨 项目情况说明 · 发给 AI 的开场白</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/给AI看/任务派发卡.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

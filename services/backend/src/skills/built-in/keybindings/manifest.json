@@ -1,0 +1,15 @@
+{
+  "name": "keybindings",
+  "description": "Show available keyboard shortcuts and keybindings",
+  "trigger": "/keybindings",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "help",
+    "keyboard"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

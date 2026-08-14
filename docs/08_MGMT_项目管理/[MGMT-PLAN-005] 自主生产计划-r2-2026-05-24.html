@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY 自主生产能力提升计划 (Round 2) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY 自主生产能力提升计划 (Round 2)</div>
+      <header class="hero reveal"><h1>KHY 自主生产能力提升计划 (Round 2)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-自主生产能力提升计划-round-2">KHY 自主生产能力提升计划 (Round 2)</a></li><li class="lvl-2"><a href="#一-十维能力现状评分">一、十维能力现状评分</a></li><li class="lvl-2"><a href="#二-p0-改进项-管道核心能力">二、P0 改进项 (管道核心能力)</a></li><li class="lvl-3"><a href="#p0-1-会话持久化升级-jsonl-parentuuid-链-fts5-搜索">P0-1: 会话持久化升级 — JSONL + parentUuid 链 + FTS5 搜索</a></li><li class="lvl-3"><a href="#p0-2-任务自主分解-kanban-状态机-cas-认领-子任务链">P0-2: 任务自主分解 — Kanban 状态机 + CAS 认领 + 子任务链</a></li><li class="lvl-3"><a href="#p0-3-结构化错误信封-恢复提示">P0-3: 结构化错误信封 + 恢复提示</a></li><li class="lvl-2"><a href="#三-p1-改进项-质量与韧性">三、P1 改进项 (质量与韧性)</a></li><li class="lvl-3"><a href="#p1-1-对抗性验证-agent-verdict-协议">P1-1: 对抗性验证 Agent — VERDICT 协议</a></li><li class="lvl-3"><a href="#p1-2-记忆系统-可插拔-provider-上下文围栏">P1-2: 记忆系统 — 可插拔 Provider + 上下文围栏</a></li><li class="lvl-3"><a href="#p1-3-幻觉检测门-任务-文件双重验证">P1-3: 幻觉检测门 — 任务+文件双重验证</a></li><li class="lvl-2"><a href="#四-p2-改进项-平台能力">四、P2 改进项 (平台能力)</a></li><li class="lvl-3"><a href="#p2-1-跨平台安全沙箱-macos-seatbelt-windows-job-object">P2-1: 跨平台安全沙箱 — macOS Seatbelt + Windows Job Object</a></li><li class="lvl-3"><a href="#p2-2-三源可观测-rollup-审计-会话-运行时">P2-2: 三源可观测 Rollup — 审计+会话+运行时</a></li><li class="lvl-3"><a href="#p2-3-配置自调优-fastmode-状态机-智能终端检测">P2-3: 配置自调优 — FastMode 状态机 + 智能终端检测</a></li><li class="lvl-2"><a href="#五-文件影响矩阵">五、文件影响矩阵</a></li><li class="lvl-2"><a href="#六-实施顺序">六、实施顺序</a></li><li class="lvl-2"><a href="#七-验证策略">七、验证策略</a></li><li class="lvl-2"><a href="#八-khy-独有优势-保持不动">八、KHY 独有优势 (保持不动)</a></li><li class="lvl-2"><a href="#九-实施完成记录">九、实施完成记录</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-PLAN-005 | 阶段: 项目管理 | 原路径: docs/指南/自主生产计划-r2-2026-05-24.md --&gt;</p>
+<h1 id="khy-自主生产能力提升计划-round-2">KHY 自主生产能力提升计划 (Round 2)<a class="anchor" href="#khy-自主生产能力提升计划-round-2" aria-label="锚点">#</a></h1>
+<blockquote><p>日期: 2026-05-24<br>参考项目: Hermes Agent / Claude Code / DeepSeek-TUI<br>前序: Round 1 已完成 11 项管道阻塞+可靠性修复 (见 THREE_PROJECT_IMPROVEMENT_PLAN_2026-05-24.md)<br>本轮聚焦: <strong>项目独自生产能力</strong> — 会话持久化、任务自主分解、自验证、记忆系统、错误自愈、安全沙箱、可观测性</p></blockquote>
+<hr>
+<h2 id="一-十维能力现状评分">一、十维能力现状评分<a class="anchor" href="#一-十维能力现状评分" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>维度</th><th>KHY 现状</th><th>Claude Code</th><th>Hermes Agent</th><th>DeepSeek-TUI</th><th>差距优先级</th></tr></thead><tbody><tr><td>D1</td><td>会话持久化</td><td>JSON 文件+原子写 (5/10)</td><td>JSONL+parentUuid (8/10)</td><td>SQLite WAL+FTS5 (9/10)</td><td>Actor+原子写 (7/10)</td><td><strong>P0</strong></td></tr><tr><td>D2</td><td>任务自主分解</td><td>taskBoard+workerAgent (6/10)</td><td>Coordinator+Fork (8/10)</td><td>Kanban+CAS (9/10)</td><td>—</td><td><strong>P0</strong></td></tr><tr><td>D3</td><td>自验证</td><td>verificationAgent+deliveryGate (7/10)</td><td>对抗性 Agent+VERDICT (9/10)</td><td>幻觉门+诊断 (8/10)</td><td>CI Gate (7/10)</td><td><strong>P1</strong></td></tr><tr><td>D4</td><td>记忆系统</td><td>RAG+知识教学 (6/10)</td><td>CLAUDE.md+compact (7/10)</td><td>插件化 Provider (8/10)</td><td>BM25 归档 (6/10)</td><td><strong>P1</strong></td></tr><tr><td>D5</td><td>错误自愈</td><td>retryByErrorKind (7/10)</td><td>—</td><td>结构化信封+恢复提示 (9/10)</td><td>分层错误 (7/10)</td><td><strong>P1</strong></td></tr><tr><td>D6</td><td>安全沙箱</td><td>bwrap (仅Linux) (5/10)</td><td>Seatbelt+bubblewrap (8/10)</td><td>—</td><td>三平台 (9/10)</td><td><strong>P2</strong></td></tr><tr><td>D7</td><td>可观测性</td><td>telemetryService (5/10)</td><td>GrowthBook (7/10)</td><td>—</td><td>三源 Rollup (8/10)</td><td><strong>P2</strong></td></tr><tr><td>D8</td><td>配置自调优</td><td>systemSetting (5/10)</td><td>FastMode 状态机 (8/10)</td><td>—</td><td>智能终端检测 (8/10)</td><td><strong>P2</strong></td></tr><tr><td>D9</td><td>输出质量</td><td>acceptanceCriteria (7/10)</td><td>流式清洗+结构化 (8/10)</td><td>上下文围栏 (8/10)</td><td>—</td><td>P3</td></tr><tr><td>D10</td><td>多代理协调</td><td>workerAgent mailbox (7/10)</td><td>Fork+Coordinator (9/10)</td><td>MoA 聚合 (7/10)</td><td>七角色 (7/10)</td><td>P3</td></tr></tbody></table>
+<hr>
+<h2 id="二-p0-改进项-管道核心能力">二、P0 改进项 (管道核心能力)<a class="anchor" href="#二-p0-改进项-管道核心能力" aria-label="锚点">#</a></h2>
+<h3 id="p0-1-会话持久化升级-jsonl-parentuuid-链-fts5-搜索">P0-1: 会话持久化升级 — JSONL + parentUuid 链 + FTS5 搜索<a class="anchor" href="#p0-1-会话持久化升级-jsonl-parentuuid-链-fts5-搜索" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: Claude Code JSONL transcript + Hermes SQLite WAL/FTS5 + DeepSeek-TUI 原子写<br><strong>痛点</strong>: 当前 JSON 文件级存储无增量追加、无搜索索引、崩溃恢复弱</p>
+<p><strong>方案</strong>:</p>
+<ul><li>修改 <code>backend/src/services/sessionPersistence.js</code>:<ul><li>底层从 JSON 切换为 <strong>append-only JSONL</strong>，每条消息带 <code>uuid</code> + <code>parentUuid</code> (~60行)</li><li>崩溃恢复: 从 JSONL 最后一行反向遍历重建对话链 (~30行)</li><li>保留原子写检查点作为快照备份 (~10行)</li></ul></li><li>修改 <code>backend/src/services/sessionSearchIndex.js</code>:<ul><li>增加 <strong>SQLite FTS5 索引</strong>，中文 trigram 分词 (~80行)</li><li>写入时同步更新 FTS5 表 (~20行)</li><li>搜索接口: <code>searchSessions(query, {limit, since})</code> (~30行)</li></ul></li><li>预计 ~230行</li></ul>
+<h3 id="p0-2-任务自主分解-kanban-状态机-cas-认领-子任务链">P0-2: 任务自主分解 — Kanban 状态机 + CAS 认领 + 子任务链<a class="anchor" href="#p0-2-任务自主分解-kanban-状态机-cas-认领-子任务链" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: Hermes Agent Kanban CAS + Claude Code Coordinator 模式<br><strong>痛点</strong>: taskBoard 文件锁不可靠，缺少子任务链和自动状态流转</p>
+<p><strong>方案</strong>:</p>
+<ul><li>修改 <code>backend/src/coordinator/taskBoard.js</code>:<ul><li>底层从文件切换为 SQLite (复用 sessionSearchIndex 的 DB) (~40行)</li><li><code>claimTask()</code> 使用 <code>BEGIN IMMEDIATE + WHERE status='ready' AND claim_lock IS NULL</code> 实现 CAS (~30行)</li><li>状态机: <code>triage → todo → ready → running → blocked/done → archived</code> (~20行)</li><li>子任务链: <code>parent_id</code> 字段 + 依赖完成检查 (~25行)</li></ul></li><li>修改 <code>backend/src/coordinator/workerAgent.js</code>:<ul><li><code>completeTask()</code> 增加子任务验证门: 验证报告的子卡片是否真实存在 (~30行)</li><li>连续失败检测: <code>consecutive_failures &gt;= max_retries</code> → dead_letter (~15行)</li></ul></li><li>预计 ~160行</li></ul>
+<h3 id="p0-3-结构化错误信封-恢复提示">P0-3: 结构化错误信封 + 恢复提示<a class="anchor" href="#p0-3-结构化错误信封-恢复提示" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: Hermes Agent ClassifiedError + FailoverReason 18种分类<br><strong>痛点</strong>: <code>retryByErrorKind</code> 只返回分类字符串，调用方需自行决定恢复策略</p>
+<p><strong>方案</strong>:</p>
+<ul><li>修改 <code>backend/src/services/retryWithBackoff.js</code>:<ul><li>新增 <code>ClassifiedError</code> 类: <code>{ reason, retryable, shouldCompress, shouldRotateCredential, shouldFallback, retryAfter, detail }</code> (~40行)</li><li><code>classifyError()</code> 返回 <code>ClassifiedError</code> 实例而非字符串 (~30行更新)</li><li>新增 <code>FailoverReason</code> 枚举 (18种，含 <code>AUTH_PERMANENT/BILLING/IMAGE_TOO_LARGE/THINKING_SIGNATURE</code> 等) (~25行)</li></ul></li><li>修改 <code>backend/src/services/gateway/aiGateway.js</code>:<ul><li><code>generate()</code> 错误处理路径使用 <code>ClassifiedError</code> 自动执行恢复:<ul><li><code>shouldCompress</code> → 触发 ReactiveCompact</li><li><code>shouldRotateCredential</code> → 调用 keySelector 切换凭证</li><li><code>shouldFallback</code> → 尝试 fallback model (~40行)</li></ul></li></ul></li><li>预计 ~135行</li></ul>
+<hr>
+<h2 id="三-p1-改进项-质量与韧性">三、P1 改进项 (质量与韧性)<a class="anchor" href="#三-p1-改进项-质量与韧性" aria-label="锚点">#</a></h2>
+<h3 id="p1-1-对抗性验证-agent-verdict-协议">P1-1: 对抗性验证 Agent — VERDICT 协议<a class="anchor" href="#p1-1-对抗性验证-agent-verdict-协议" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: Claude Code Verification Agent (read-only + disallowedTools + VERDICT)<br><strong>痛点</strong>: verificationAgent 只跑静态 lint/test，不尝试破坏实现</p>
+<p><strong>方案</strong>:</p>
+<ul><li>修改 <code>backend/src/services/verificationAgent.js</code>:<ul><li>新增 <code>adversarialVerify()</code> 模式: 使用 AI 审查变更，尝试找边界用例 (~80行)</li><li>VERDICT 协议: <code>VERDICT: PASS | FAIL | PARTIAL</code> 结构化输出解析 (~20行)</li><li>工具白名单: 只允许 read_file/grep/glob/shell(只读命令)，禁止写入工具 (~15行)</li></ul></li><li>修改 <code>backend/src/services/deliveryGate.js</code>:<ul><li><code>evaluateDelivery()</code> 增加可选 adversarial 阶段 (~20行)</li><li>自动重试: FAIL → 生成修复 prompt → 重跑 → 再验证 (最多2轮) (~30行)</li></ul></li><li>预计 ~165行</li></ul>
+<h3 id="p1-2-记忆系统-可插拔-provider-上下文围栏">P1-2: 记忆系统 — 可插拔 Provider + 上下文围栏<a class="anchor" href="#p1-2-记忆系统-可插拔-provider-上下文围栏" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: Hermes Agent MemoryProvider ABC + StreamingContextScrubber<br><strong>痛点</strong>: RAG 直接注入 prompt，无围栏标记；无法扩展外部记忆后端</p>
+<p><strong>方案</strong>:</p>
+<ul><li>新建 <code>backend/src/services/memoryProvider.js</code> (~120行):<ul><li><code>MemoryProvider</code> 基类: <code>initialize/prefetch/syncTurn/shutdown</code> 生命周期</li><li><code>BuiltinProvider</code>: 封装现有 ragRetrievalService (~30行)</li><li><code>MemoryManager</code>: 内建 + 最多1个外部 provider (~40行)</li><li><code>buildMemoryContextBlock()</code>: <code>&lt;memory-context&gt;</code> XML 围栏 (~15行)</li><li>流式清洗: 状态机过滤跨 chunk 的围栏标签 (~35行)</li></ul></li><li>修改 <code>backend/src/services/toolUseLoop.js</code>:<ul><li>system prompt 组装时调用 <code>memoryManager.buildMemoryContextBlock()</code> (~10行)</li></ul></li><li>预计 ~130行</li></ul>
+<h3 id="p1-3-幻觉检测门-任务-文件双重验证">P1-3: 幻觉检测门 — 任务+文件双重验证<a class="anchor" href="#p1-3-幻觉检测门-任务-文件双重验证" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: Hermes Agent <code>_verify_created_cards</code> + <code>_scan_prose_for_phantom_ids</code><br><strong>痛点</strong>: worker 报告完成但实际未创建文件/子任务</p>
+<p><strong>方案</strong>:</p>
+<ul><li>修改 <code>backend/src/coordinator/workerAgent.js</code>:<ul><li><code>completeTask()</code> 增加文件存在性验证: 扫描 output 中引用的路径 (~30行)</li><li>phantom ID 扫描: 正则匹配 <code>task_xxxx</code> 格式，验证是否存在 (~20行)</li><li>验证失败 → 任务保持 running + 注入修复提示 (~15行)</li></ul></li><li>修改 <code>backend/src/services/deliveryGate.js</code>:<ul><li><code>evaluateDelivery()</code> 增加幻觉文件检测 (~20行)</li></ul></li><li>预计 ~85行</li></ul>
+<hr>
+<h2 id="四-p2-改进项-平台能力">四、P2 改进项 (平台能力)<a class="anchor" href="#四-p2-改进项-平台能力" aria-label="锚点">#</a></h2>
+<h3 id="p2-1-跨平台安全沙箱-macos-seatbelt-windows-job-object">P2-1: 跨平台安全沙箱 — macOS Seatbelt + Windows Job Object<a class="anchor" href="#p2-1-跨平台安全沙箱-macos-seatbelt-windows-job-object" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: DeepSeek-TUI 三平台沙箱 + Claude Code Seatbelt 策略<br><strong>痛点</strong>: bwrap 沙箱仅 Linux 可用，macOS/Windows 无 OS 级隔离</p>
+<p><strong>方案</strong>:</p>
+<ul><li>修改 <code>backend/src/services/toolSandbox.js</code>:<ul><li>macOS: 动态生成 SBPL 策略 + <code>sandbox-exec</code> 执行 (~80行)</li><li>Windows: Job Object 限制 (通过 PowerShell <code>New-ProcessJob</code>) (~50行)</li><li>统一 <code>SandboxManager.prepare()</code> 接口，按平台自动选择 backend (~30行)</li></ul></li><li>预计 ~160行</li></ul>
+<h3 id="p2-2-三源可观测-rollup-审计-会话-运行时">P2-2: 三源可观测 Rollup — 审计+会话+运行时<a class="anchor" href="#p2-2-三源可观测-rollup-审计-会话-运行时" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: DeepSeek-TUI <code>metrics.rs</code> 三源聚合<br><strong>痛点</strong>: telemetryService 只有内存计数器，缺离线分析</p>
+<p><strong>方案</strong>:</p>
+<ul><li>修改 <code>backend/src/services/telemetryService.js</code>:<ul><li>审计日志: append-only JSONL (<code>~/.khyquant/audit.log</code>) (~30行)</li><li>三源 Rollup: audit + session + runtime 聚合到统一指标 (~60行)</li><li>Per-tool stats: 调用数/成功率/P50/P95 延迟 (~40行)</li><li><code>khy metrics</code> CLI 子命令 + <code>--since 7d</code> 时间过滤 (~30行)</li></ul></li><li>预计 ~160行</li></ul>
+<h3 id="p2-3-配置自调优-fastmode-状态机-智能终端检测">P2-3: 配置自调优 — FastMode 状态机 + 智能终端检测<a class="anchor" href="#p2-3-配置自调优-fastmode-状态机-智能终端检测" aria-label="锚点">#</a></h3>
+<p><strong>借鉴</strong>: Claude Code FastMode + DeepSeek-TUI <code>apply_env_overrides()</code><br><strong>痛点</strong>: 无自适应降级，终端能力不检测</p>
+<p><strong>方案</strong>:</p>
+<ul><li>新建 <code>backend/src/services/adaptiveConfig.js</code> (~120行):<ul><li>FastMode 状态机: <code>active → cooldown(rate_limit|overloaded) → active</code> (~40行)</li><li>智能终端检测: TERM_PROGRAM/SSH_CLIENT/ConHost → 自动降级动画/颜色 (~40行)</li><li>环境信号优先级: env &gt; terminal detection &gt; 用户设置 &gt; 默认值 (~25行)</li><li><code>getEffectiveConfig()</code> 合并所有层级返回最终配置 (~15行)</li></ul></li><li>修改 <code>backend/src/services/gateway/aiGateway.js</code>:<ul><li>rate_limit/overloaded 错误触发 FastMode cooldown (~15行)</li></ul></li><li>预计 ~135行</li></ul>
+<hr>
+<h2 id="五-文件影响矩阵">五、文件影响矩阵<a class="anchor" href="#五-文件影响矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动项</th><th>预计行数</th><th>新/改</th></tr></thead><tbody><tr><td><code>backend/src/services/sessionPersistence.js</code></td><td>P0-1</td><td>~100</td><td>改</td></tr><tr><td><code>backend/src/services/sessionSearchIndex.js</code></td><td>P0-1</td><td>~130</td><td>改</td></tr><tr><td><code>backend/src/coordinator/taskBoard.js</code></td><td>P0-2</td><td>~115</td><td>改</td></tr><tr><td><code>backend/src/coordinator/workerAgent.js</code></td><td>P0-2, P1-3</td><td>~110</td><td>改</td></tr><tr><td><code>backend/src/services/retryWithBackoff.js</code></td><td>P0-3</td><td>~95</td><td>改</td></tr><tr><td><code>backend/src/services/gateway/aiGateway.js</code></td><td>P0-3, P2-3</td><td>~55</td><td>改</td></tr><tr><td><code>backend/src/services/verificationAgent.js</code></td><td>P1-1</td><td>~115</td><td>改</td></tr><tr><td><code>backend/src/services/deliveryGate.js</code></td><td>P1-1, P1-3</td><td>~70</td><td>改</td></tr><tr><td><code>backend/src/services/memoryProvider.js</code></td><td>P1-2</td><td>~120</td><td><strong>新</strong></td></tr><tr><td><code>backend/src/services/toolUseLoop.js</code></td><td>P1-2</td><td>~10</td><td>改</td></tr><tr><td><code>backend/src/services/toolSandbox.js</code></td><td>P2-1</td><td>~160</td><td>改</td></tr><tr><td><code>backend/src/services/telemetryService.js</code></td><td>P2-2</td><td>~160</td><td>改</td></tr><tr><td><code>backend/src/services/adaptiveConfig.js</code></td><td>P2-3</td><td>~120</td><td><strong>新</strong></td></tr></tbody></table>
+<p><strong>总计</strong>: ~1360行 (新建 2 文件, 修改 11 文件)</p>
+<hr>
+<h2 id="六-实施顺序">六、实施顺序<a class="anchor" href="#六-实施顺序" aria-label="锚点">#</a></h2>
+<pre><code>Phase 1 (P0): 管道核心
+  ├── P0-1: JSONL 持久化 + FTS5 搜索
+  ├── P0-2: Kanban SQLite + CAS 认领
+  └── P0-3: 结构化错误信封
+
+Phase 2 (P1): 质量韧性
+  ├── P1-1: 对抗性验证 Agent
+  ├── P1-2: 可插拔记忆 Provider
+  └── P1-3: 幻觉检测门
+
+Phase 3 (P2): 平台能力
+  ├── P2-1: 跨平台沙箱
+  ├── P2-2: 三源 Rollup
+  └── P2-3: 配置自调优</code></pre>
+<h2 id="七-验证策略">七、验证策略<a class="anchor" href="#七-验证策略" aria-label="锚点">#</a></h2>
+<p>每项改动完成后:</p>
+<ol><li><code>node -c</code> 语法检查所有修改文件</li><li>相关测试文件 <code>npx jest --forceExit</code></li><li>Phase 结束后全量回归 <code>npx jest backend/tests/ --forceExit</code></li></ol>
+<hr>
+<h2 id="八-khy-独有优势-保持不动">八、KHY 独有优势 (保持不动)<a class="anchor" href="#八-khy-独有优势-保持不动" aria-label="锚点">#</a></h2>
+<p>以下能力三大参考项目均不具备，应作为差异化保留:</p>
+<ul><li><code>acceptanceCriteria.js</code> — 机器可读验收标准</li><li><code>deliveryGate.js</code> — 后循环交付验证门</li><li><code>knowledgeTeachingService.js</code> — 知识教学+XP 等级系统</li><li><code>selfProfile.js</code> — 自我画像三重输出</li><li><code>workerAgent.js</code> mailbox — ACK 消息队列</li><li><code>canonicalState.js</code> — 六维规范状态快照</li></ul>
+<hr>
+<h2 id="九-实施完成记录">九、实施完成记录<a class="anchor" href="#九-实施完成记录" aria-label="锚点">#</a></h2>
+<blockquote><p>Round 2 全部 9 项已于 <strong>2026-05-24</strong> 完成实施。</p></blockquote>
+<table><thead><tr><th>#</th><th>改进项</th><th>优先级</th><th>状态</th><th>修改/新建文件</th></tr></thead><tbody><tr><td>P0-1</td><td>JSONL 持久化 + FTS5 搜索</td><td>P0</td><td><strong>完成</strong></td><td>sessionPersistence.js, sessionSearchIndex.js</td></tr><tr><td>P0-2</td><td>Kanban SQLite + CAS 认领</td><td>P0</td><td><strong>完成</strong></td><td>taskBoard.js (重写)</td></tr><tr><td>P0-3</td><td>结构化错误信封 + 恢复提示</td><td>P0</td><td><strong>完成</strong></td><td>retryWithBackoff.js</td></tr><tr><td>P1-1</td><td>对抗性验证 Agent + VERDICT</td><td>P1</td><td><strong>完成</strong></td><td>verificationAgent.js, deliveryGate.js</td></tr><tr><td>P1-2</td><td>可插拔记忆 Provider + 上下文围栏</td><td>P1</td><td><strong>完成</strong></td><td>memoryProvider.js (新建)</td></tr><tr><td>P1-3</td><td>幻觉检测门</td><td>P1</td><td><strong>完成</strong></td><td>workerAgent.js</td></tr><tr><td>P2-1</td><td>跨平台安全沙箱</td><td>P2</td><td><strong>完成</strong></td><td>toolSandbox.js</td></tr><tr><td>P2-2</td><td>三源可观测 Rollup</td><td>P2</td><td><strong>完成</strong></td><td>telemetryService.js</td></tr><tr><td>P2-3</td><td>配置自调优 FastMode</td><td>P2</td><td><strong>完成</strong></td><td>adaptiveConfig.js (新建), aiGateway.js</td></tr></tbody></table>
+<p><strong>全量语法检查</strong>: 12 文件均通过 <code>node -c</code>。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-004] 三项目改进计划-2026-05-24.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 三项目取长补短深度分析</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-006] 智能体-操作系统-路线图.html"><div class="dir">下一篇 →</div><div class="ttl">Khy OS Agentic OS 实施路线图</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-PLAN-005] 自主生产计划-r2-2026-05-24.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

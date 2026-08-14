@@ -1,0 +1,15 @@
+{
+  "name": "stuck",
+  "description": "Help when you're stuck — suggests alternative approaches",
+  "trigger": "/stuck",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "help",
+    "alternatives"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

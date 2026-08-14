@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自定义供应商接入指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>自定义供应商接入指南</div>
+      <header class="hero reveal"><h1>自定义供应商接入指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#自定义供应商接入指南">自定义供应商接入指南</a></li><li class="lvl-2"><a href="#一-两种接入方式一览">一、两种接入方式一览</a></li><li class="lvl-2"><a href="#二-一键预设-新落地清单">二、一键预设（新落地清单）</a></li><li class="lvl-2"><a href="#三-khy-gateway-add-用法">三、`khy gateway add` 用法</a></li><li class="lvl-2"><a href="#四-手动编辑-custom-providers-json">四、手动编辑 `custom_providers.json`</a></li><li class="lvl-2"><a href="#五-servicetype-11-种取值与选择建议">五、`serviceType`：11 种取值与选择建议</a></li><li class="lvl-2"><a href="#六-切换默认模型-model-overrides-json">六、切换默认模型（`model_overrides.json`）</a></li><li class="lvl-2"><a href="#七-各供应商-api-key-获取与-env-端点覆盖">七、各供应商 API Key 获取与 `env` 端点覆盖</a></li><li class="lvl-2"><a href="#八-常见问题">八、常见问题</a></li><li class="lvl-2"><a href="#关联文档">关联文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-172 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-172] 自定义供应商接入指南.md --&gt;</p>
+<h1 id="自定义供应商接入指南">自定义供应商接入指南<a class="anchor" href="#自定义供应商接入指南" aria-label="锚点">#</a></h1>
+<blockquote><p>把任意 OpenAI/Anthropic/Gemini 兼容的模型供应商接进 khy 网关（gateway）。本文覆盖<strong>一键预设</strong>与<strong>手动编辑 <code>custom_providers.json</code></strong> 两条路径、<code>serviceType</code> 各值含义、字段说明、<code>khy gateway add</code> 命令用法、默认模型切换（<code>model_overrides.json</code>），以及各供应商 API Key 获取与 <code>env</code> 端点覆盖。</p>
+<p>实现依据（核实来源）：</p>
+<ul><li>一键预设单一真源：<code>services/backend/src/services/gateway/providerPresets.js</code></li><li>预设端点默认值：<code>services/backend/src/constants/serviceDefaults.js</code></li><li>注册逻辑与 11 种 <code>serviceType</code>：<code>services/backend/src/services/customProviderRegistrar.js</code></li><li>元数据落盘（<code>custom_providers.json</code> 字段）：<code>services/backend/src/services/customProviderRegistry.js</code></li><li>CLI 入口：<code>services/backend/src/cli/handlers/gatewayProviderKeyPool.js</code>（<code>handleGatewayAdd</code>）</li><li>默认模型覆盖：<code>services/backend/src/services/gateway/modelCuration.js</code></li></ul></blockquote>
+<hr>
+<h2 id="一-两种接入方式一览">一、两种接入方式一览<a class="anchor" href="#一-两种接入方式一览" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>方式</th><th>适合谁</th><th>入口</th><th>是否需写 Key</th></tr></thead><tbody><tr><td>一键预设（preset）</td><td>用主流供应商（OpenRouter/Groq/Together/Ollama/DeepSeek…）</td><td><code>khy gateway add</code> / Web 网关卡片</td><td>需要（Ollama 例外）</td></tr><tr><td>手动编辑 <code>custom_providers.json</code></td><td>私有/自建/未收录的 OpenAI 兼容端点</td><td>编辑 <code>.khy/custom_providers.json</code></td><td>Key 走号池，端点写文件</td></tr></tbody></table>
+<blockquote><p>预设只是<strong>帮你填好表单</strong>（公开的 base URL、协议、默认模型、Key 获取链接），Key 永远由你自己提供；<code>getProviderPresets()</code> 会主动剥除任何 <code>key</code>/<code>apiKey</code> 字段（零硬编码密钥）。</p></blockquote>
+<hr>
+<h2 id="二-一键预设-新落地清单">二、一键预设（新落地清单）<a class="anchor" href="#二-一键预设-新落地清单" aria-label="锚点">#</a></h2>
+<p><code>providerPresets.js</code> 是内置常用供应商的单一真源。以下为本次新增/迁移的 5 个 OpenAI 线协议（<code>apiFormat: 'openai'</code>）预设，端点默认值取自 <code>serviceDefaults.js</code>，均可用 <code>env</code> 覆盖：</p>
+<table><thead><tr><th>预设 id</th><th>名称</th><th>分类 category</th><th>默认端点（env 覆盖变量）</th><th>默认模型 defaultModel</th><th>Key 示例</th></tr></thead><tbody><tr><td><code>openrouter</code></td><td>OpenRouter（聚合网关）</td><td>aggregator</td><td><code>https://openrouter.ai/api/v1</code>（<code>KHY_OPENROUTER_BASE_URL</code>）</td><td>无固定默认（按需选）</td><td><code>sk-or-v1-…</code></td></tr><tr><td><code>groq</code></td><td>Groq</td><td>official</td><td><code>https://api.groq.com/openai/v1</code>（<code>KHY_GROQ_BASE_URL</code>）</td><td><code>llama-3.3-70b-versatile</code></td><td><code>gsk_…</code></td></tr><tr><td><code>together</code></td><td>Together AI</td><td>aggregator</td><td><code>https://api.together.xyz/v1</code>（<code>KHY_TOGETHER_BASE_URL</code>）</td><td><code>meta-llama/Llama-3.3-70B-Instruct-Turbo</code></td><td>—</td></tr><tr><td><code>ollama</code></td><td>本地 Ollama</td><td>local</td><td><code>http://localhost:11434/v1</code>（由 <code>OLLAMA_HOST</code> 派生；<code>KHY_OLLAMA_OPENAI_BASE_URL</code> 可覆盖整串）</td><td><code>llama3.2</code></td><td><code>ollama</code>（占位，本地不校验）</td></tr><tr><td><code>deepseek</code></td><td>DeepSeek</td><td>official</td><td><code>https://api.deepseek.com/v1</code>（<code>KHY_DEEPSEEK_BASE_URL</code>）</td><td><code>deepseek-chat</code></td><td>—</td></tr></tbody></table>
+<p>说明：</p>
+<ul><li><strong>端点单一真源</strong>：以上默认 URL 只在 <code>serviceDefaults.js</code> 出现一次，<code>providerPresets.js</code> 从中 import；自建镜像/私有部署改这一处即可。</li><li><strong>Ollama 是本地</strong>：服务端会忽略它的 key，但表单仍需一个占位符（填 <code>ollama</code>）以通过校验；端点由 <code>OLLAMA_HOST</code>（默认 <code>http://localhost:11434</code>）派生出 <code>/v1</code> OpenAI 兼容线。</li><li><strong>临时新增/覆盖预设</strong>：设置 <code>env KHY_PROVIDER_PRESETS</code>（一个 JSON 数组），按 <code>id</code> 合并——覆盖内置端点或新增一个私有预设，无需改代码。示例：</li></ul>
+<pre><code class="language-bash">  export KHY_PROVIDER_PRESETS='[{&quot;id&quot;:&quot;myrouter&quot;,&quot;label&quot;:&quot;My Router&quot;,&quot;baseUrl&quot;:&quot;https://router.example.com/v1&quot;,&quot;apiFormat&quot;:&quot;openai&quot;,&quot;defaultModel&quot;:&quot;gpt-4o-mini&quot;}]'</code></pre>
+<blockquote><p>除上述 5 个外，<code>providerPresets.js</code> 还内置 <code>openai</code>/<code>anthropic</code>/<code>gemini</code>/<code>vertex</code>/<code>agnes</code>/<code>moonshot</code>/<code>qwen</code>/<code>zhipu</code> 等；完整清单以源文件 <code>PROVIDER_PRESETS</code> 为准。</p></blockquote>
+<hr>
+<h2 id="三-khy-gateway-add-用法">三、<code>khy gateway add</code> 用法<a class="anchor" href="#三-khy-gateway-add-用法" aria-label="锚点">#</a></h2>
+<p><code>khy gateway add</code> 快捷接入一个 OpenAI 兼容自定义 Provider（端点 + Key + 模型）。不带参数进入交互式；带参数为非交互式（脚本/CI 友好）。</p>
+<pre><code class="language-bash">khy gateway add \
+  --name &lt;display-name&gt; \
+  [--pool-key &lt;id&gt;] \
+  --base-url &lt;url&gt; \
+  --api-key &lt;key&gt; \
+  --model-id &lt;model&gt; \
+  [--extra-models a,b] \
+  [--tier T0|T1|T2|T3] \
+  [--test] \
+  [--json]</code></pre>
+<p>参数说明（核实自 <code>_collectGatewayAddCliInput</code> / <code>_buildGatewayAddUsagePayload</code>）：</p>
+<table><thead><tr><th>选项</th><th>含义</th></tr></thead><tbody><tr><td><code>--name</code></td><td>显示名称（如 <code>Agnes AI</code>），必填</td></tr><tr><td><code>--pool-key</code></td><td>号池内部 id（小写字母/数字/连字符，字母或数字开头）；省略则由名称推导</td></tr><tr><td><code>--base-url</code></td><td>供应商 base URL（如 <code>https://api.deepseek.com/v1</code>），必填</td></tr><tr><td><code>--api-key</code></td><td>API Key（支持一个或多个，<code>parseApiKeyEntries</code> 格式），必填</td></tr><tr><td><code>--model-id</code></td><td>默认模型 id，必填</td></tr><tr><td><code>--extra-models</code></td><td>追加模型 id，逗号分隔</td></tr><tr><td><code>--tier</code></td><td>可选能力档位 <code>T0</code>~<code>T3</code>；省略 = 自动分类（<code>modelTier</code> 正则）</td></tr><tr><td><code>--test</code></td><td>添加后做一次连通性测试</td></tr><tr><td><code>--json</code></td><td>机读输出</td></tr></tbody></table>
+<p>执行后 <code>registerCustomProvider()</code> 会：① 把 Key 写入号池（<code>apiKeyPool</code>）；② 把 provider 元数据落盘到 <code>custom_providers.json</code>；③ 合并路由 <code>env</code>（<code>GATEWAY_API_POOL_SERVICE_MAP</code> / <code>GATEWAY_API_POOL_DEFAULT_MODEL_MAP</code> / <code>PROXY_MODEL_ROUTE_MAP</code>，同步写 <code>.env</code>）；④ 指定 <code>--tier</code> 时并入 <code>KHY_MODEL_TIER_MAP</code>。</p>
+<blockquote><p>内置 poolKey（<code>deepseek</code>/<code>qwen</code>/<code>glm</code>/<code>doubao</code>/<code>wenxin</code>）不能作为自定义名称。</p></blockquote>
+<hr>
+<h2 id="四-手动编辑-custom-providers-json">四、手动编辑 <code>custom_providers.json</code><a class="anchor" href="#四-手动编辑-custom-providers-json" aria-label="锚点">#</a></h2>
+<p>对于未收录或私有的 OpenAI 兼容端点，可直接编辑 <code>.khy/custom_providers.json</code>（数组，每个元素是一个 provider）。字段说明（核实自 <code>customProviderRegistry.saveProvider</code>）：</p>
+<table><thead><tr><th>字段</th><th>必填</th><th>含义</th></tr></thead><tbody><tr><td><code>name</code></td><td>是</td><td>显示名称</td></tr><tr><td><code>poolKey</code></td><td>是</td><td>号池内部 id（小写字母/数字/连字符）；不可与内置 poolKey 冲突</td></tr><tr><td><code>endpoint</code></td><td>是</td><td>base URL（如 <code>https://api.example.com/v1</code>）</td></tr><tr><td><code>serviceType</code></td><td>否</td><td>线协议服务，默认 <code>openai</code>；取值见第五节（11 种）</td></tr><tr><td><code>defaultModel</code></td><td>否</td><td>默认模型 id</td></tr><tr><td><code>models</code></td><td>否</td><td>该 provider 暴露的模型 id 数组</td></tr><tr><td><code>defaults</code></td><td>否</td><td>元数据默认 <code>{ contextWindow, maxOutputTokens }</code>，供动态 max_tokens 策略兜底</td></tr><tr><td><code>proxy</code></td><td>否</td><td>该 provider 专用出站代理（如 <code>http://127.0.0.1:7890</code>）</td></tr></tbody></table>
+<p>最小可用示例（仓库现有 <code>Example Provider</code> 条目）：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;Example Provider&quot;,
+  &quot;poolKey&quot;: &quot;example-provider&quot;,
+  &quot;endpoint&quot;: &quot;https://api.example.com/v1&quot;,
+  &quot;defaultModel&quot;: &quot;example-chat&quot;,
+  &quot;serviceType&quot;: &quot;openai&quot;,
+  &quot;models&quot;: [&quot;example-chat&quot;]
+}</code></pre>
+<p>带元数据默认与代理的完整示例（对照现有 <code>Agnes</code> 条目）：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;Agnes&quot;,
+  &quot;poolKey&quot;: &quot;agnes&quot;,
+  &quot;endpoint&quot;: &quot;https://apihub.agnes-ai.com/v1&quot;,
+  &quot;proxy&quot;: &quot;http://127.0.0.1:7890&quot;,
+  &quot;defaultModel&quot;: &quot;agnes-2.0-flash&quot;,
+  &quot;serviceType&quot;: &quot;openai&quot;,
+  &quot;models&quot;: [&quot;agnes-2.0-flash&quot;, &quot;agnes-2.5-flash&quot;],
+  &quot;defaults&quot;: { &quot;contextWindow&quot;: 512000, &quot;maxOutputTokens&quot;: 65536 }
+}</code></pre>
+<blockquote><p>API Key 不写在本文件里——它走号池（<code>khy gateway add --api-key …</code> 或 <code>khy gateway key</code>）。本文件只存端点/模型等公开元数据。</p></blockquote>
+<hr>
+<h2 id="五-servicetype-11-种取值与选择建议">五、<code>serviceType</code>：11 种取值与选择建议<a class="anchor" href="#五-servicetype-11-种取值与选择建议" aria-label="锚点">#</a></h2>
+<p><code>serviceType</code>（在注册器里对应 <code>service</code>，即号池键的线协议）决定网关按哪种 wire 协议调用该供应商。合法取值（核实自 <code>customProviderRegistrar.VALID_SERVICES</code>）：</p>
+<pre><code>openai · anthropic · zhipu · google · groq · openrouter · trae · xunfei · baidu · alibaba · huggingface</code></pre>
+<p>选择建议：</p>
+<ul><li><strong><code>openai</code>（默认，绝大多数情况）</strong>：端点提供 <code>/v1/chat/completions</code> OpenAI 兼容线。OpenRouter/Together/Groq/Ollama/DeepSeek/Moonshot/千问兼容模式等都归这里。</li><li><strong><code>anthropic</code></strong>：端点提供 Anthropic 兼容 <code>/v1/messages</code> 线（如某些本地反代）。</li><li><strong><code>google</code></strong>：Gemini 原生线。</li><li><strong><code>zhipu</code> / <code>xunfei</code> / <code>baidu</code> / <code>alibaba</code> / <code>huggingface</code> / <code>trae</code></strong>：对应各家专有线；仅当端点确实是该家专有协议时才选。</li><li><strong><code>groq</code> / <code>openrouter</code></strong>：这两家本身走 OpenAI 兼容线，通常用 <code>openai</code> 即可；仅当需要走该服务的专门分支路由时才显式指定。</li></ul>
+<blockquote><p>不确定就填 <code>openai</code>——本仓库现有自定义 provider 全部是 <code>openai</code>。</p></blockquote>
+<hr>
+<h2 id="六-切换默认模型-model-overrides-json">六、切换默认模型（<code>model_overrides.json</code>）<a class="anchor" href="#六-切换默认模型-model-overrides-json" aria-label="锚点">#</a></h2>
+<p>网关的 <code>api</code> 适配器默认模型持久化在 <code>&lt;dataHome&gt;/model_overrides.json</code>（默认 <code>.khy/</code>；<code>env KHY_MODEL_OVERRIDES_FILE</code> 可覆盖路径）。模型 id 形如 <code>api:&lt;poolKey&gt;:&lt;model&gt;</code>。</p>
+<p>当前示例：</p>
+<pre><code class="language-json">{
+  &quot;api&quot;: {
+    &quot;defaultModel&quot;: &quot;api:sensenova:deepseek-v4-flash&quot;
+  }
+}</code></pre>
+<p>切换方式：</p>
+<ul><li><strong>交互式</strong>：<code>khy gateway model</code>（从可用模型列表里选），或按供应商切换。</li><li><strong>手动</strong>：编辑 <code>model_overrides.json</code> 的 <code>api.defaultModel</code>，改成目标 <code>api:&lt;poolKey&gt;:&lt;model&gt;</code>（例如 <code>api:agnes:agnes-2.0-flash</code>）。</li></ul>
+<blockquote><p>该文件只存「用户意图的覆盖」，原始模型列表仍由各适配器实时产出；<code>applyOverrides</code> 把两者合并。</p></blockquote>
+<hr>
+<h2 id="七-各供应商-api-key-获取与-env-端点覆盖">七、各供应商 API Key 获取与 <code>env</code> 端点覆盖<a class="anchor" href="#七-各供应商-api-key-获取与-env-端点覆盖" aria-label="锚点">#</a></h2>
+<p>Key 获取入口（公开 console 链接，取自各预设 <code>links.console</code>）：</p>
+<table><thead><tr><th>供应商</th><th>获取 Key</th><th>端点覆盖 env</th></tr></thead><tbody><tr><td>OpenRouter</td><td>https://openrouter.ai/keys</td><td><code>KHY_OPENROUTER_BASE_URL</code></td></tr><tr><td>Groq</td><td>https://console.groq.com/keys</td><td><code>KHY_GROQ_BASE_URL</code></td></tr><tr><td>Together AI</td><td>https://api.together.ai/settings/api-keys</td><td><code>KHY_TOGETHER_BASE_URL</code></td></tr><tr><td>DeepSeek</td><td>https://platform.deepseek.com/api_keys</td><td><code>KHY_DEEPSEEK_BASE_URL</code></td></tr><tr><td>Ollama（本地）</td><td>无需 Key（填占位 <code>ollama</code>）</td><td><code>KHY_OLLAMA_OPENAI_BASE_URL</code>（或改 <code>OLLAMA_HOST</code>）</td></tr></tbody></table>
+<p>端点覆盖示例（自建镜像 / 私有网关）：</p>
+<pre><code class="language-bash">export KHY_DEEPSEEK_BASE_URL=&quot;https://your-mirror.example.com/deepseek/v1&quot;
+export KHY_OLLAMA_OPENAI_BASE_URL=&quot;http://192.168.1.50:11434/v1&quot;</code></pre>
+<hr>
+<h2 id="八-常见问题">八、常见问题<a class="anchor" href="#八-常见问题" aria-label="锚点">#</a></h2>
+<ul><li><strong>添加后模型选择器里看不到？</strong> 确认 Key 已入号池、<code>models</code> 里含目标模型；用 <code>khy gateway add --test</code> 做连通性验证。</li><li><strong>端点带尾斜杠？</strong> 注册时会自动剥除 <code>endpoint</code> 末尾的 <code>/</code>。</li><li><strong>想临时试一个新供应商但不落盘？</strong> 用 <code>env KHY_PROVIDER_PRESETS</code> 注入一个预设，重启会话即可，无需改文件。</li></ul>
+<hr>
+<h2 id="关联文档">关联文档<a class="anchor" href="#关联文档" aria-label="锚点">#</a></h2>
+<ul><li>MCP 工具接入：<code>[OPS-MAN-173] MCP工具接入快速上手.md</code></li><li>自定义 provider 案例（Agnes 全流程）：<code>[OPS-MAN-032] 网关-自定义provider配置-agnes.md</code></li><li>多模型类型 Provider 配置对账：<code>[OPS-MAN-096] 多模型类型 Provider 配置对账.md</code></li><li>账号池与多租户：<code>[OPS-MAN-045] 账号池与多租户-深度指南.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-171] 技能包规范-manifest与prompt模板.html"><div class="dir">← 上一篇</div><div class="ttl">技能包规范（manifest.json / SKILL.md）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-173] MCP工具接入快速上手.html"><div class="dir">下一篇 →</div><div class="ttl">MCP 工具接入快速上手</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-172] 自定义供应商接入指南.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

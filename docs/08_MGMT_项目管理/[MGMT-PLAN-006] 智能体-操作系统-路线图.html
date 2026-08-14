@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy OS Agentic OS 实施路线图 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>Khy OS Agentic OS 实施路线图</div>
+      <header class="hero reveal"><h1>Khy OS Agentic OS 实施路线图</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-agentic-os-实施路线图">Khy OS Agentic OS 实施路线图</a></li><li class="lvl-2"><a href="#现有能力-vs-anolisa-差距矩阵">现有能力 vs ANOLISA 差距矩阵</a></li><li class="lvl-2"><a href="#阶段一-copilot-shell-增强-预计-3-周">阶段一：Copilot Shell 增强（预计 3 周）</a></li><li class="lvl-3"><a href="#1-1-hooks-系统">1.1 Hooks 系统</a></li><li class="lvl-3"><a href="#1-2-技能标准化-skill-md-格式">1.2 技能标准化（SKILL.md 格式）</a></li><li class="lvl-3"><a href="#1-3-pty-模式">1.3 PTY 模式</a></li><li class="lvl-3"><a href="#1-4-非交互模式-headless-sdk">1.4 非交互模式（Headless / SDK）</a></li><li class="lvl-3"><a href="#1-5-扩展系统">1.5 扩展系统</a></li><li class="lvl-2"><a href="#阶段二-agent-sec-core-安全内核-预计-4-周">阶段二：Agent Sec Core 安全内核（预计 4 周）</a></li><li class="lvl-3"><a href="#2-1-prompt-注入检测器">2.1 Prompt 注入检测器</a></li><li class="lvl-3"><a href="#2-2-代码扫描引擎">2.2 代码扫描引擎</a></li><li class="lvl-3"><a href="#2-3-技能签名与验证">2.3 技能签名与验证</a></li><li class="lvl-3"><a href="#2-4-沙箱命令分级">2.4 沙箱命令分级</a></li><li class="lvl-2"><a href="#阶段三-agentsight-可观测性-预计-5-周">阶段三：AgentSight 可观测性（预计 5 周）</a></li><li class="lvl-3"><a href="#3-1-用户态监控-node-js-无需-root">3.1 用户态监控（Node.js，无需 root）</a></li><li class="lvl-3"><a href="#3-2-genai-语义事件模型">3.2 GenAI 语义事件模型</a></li><li class="lvl-3"><a href="#3-3-agent-进程自动发现">3.3 Agent 进程自动发现</a></li><li class="lvl-3"><a href="#3-4-ebpf-探针-内核级-需-root">3.4 eBPF 探针（内核级，需 root）</a></li><li class="lvl-2"><a href="#阶段四-tokenless-token-优化-预计-2-周">阶段四：Tokenless Token 优化（预计 2 周）</a></li><li class="lvl-3"><a href="#4-1-schema-压缩器">4.1 Schema 压缩器</a></li><li class="lvl-3"><a href="#4-2-response-压缩器">4.2 Response 压缩器</a></li><li class="lvl-3"><a href="#4-3-命令重写器">4.3 命令重写器</a></li><li class="lvl-3"><a href="#4-4-token-统计">4.4 Token 统计</a></li><li class="lvl-2"><a href="#阶段五-os-skills-技能库-预计-3-周">阶段五：OS Skills 技能库（预计 3 周）</a></li><li class="lvl-3"><a href="#5-1-技能框架">5.1 技能框架</a></li><li class="lvl-3"><a href="#5-2-内置技能集">5.2 内置技能集</a></li><li class="lvl-3"><a href="#5-3-远程技能仓库">5.3 远程技能仓库</a></li><li class="lvl-2"><a href="#阶段六-ws-ckpt-工作区快照-预计-3-周">阶段六：ws-ckpt 工作区快照（预计 3 周）</a></li><li class="lvl-3"><a href="#6-1-用户态快照-跨平台">6.1 用户态快照（跨平台）</a></li><li class="lvl-3"><a href="#6-2-内核级快照-linux-btrfs">6.2 内核级快照（Linux btrfs）</a></li><li class="lvl-3"><a href="#6-3-自动检查点">6.3 自动检查点</a></li><li class="lvl-2"><a href="#阶段七-moonbit-wasm-沙箱运行时-预计-4-周">阶段七：MoonBit WASM 沙箱运行时（预计 4 周）</a></li><li class="lvl-3"><a href="#7-1-wasm-沙箱运行时">7.1 WASM 沙箱运行时</a></li><li class="lvl-3"><a href="#7-2-moonbit-插件-sdk">7.2 MoonBit 插件 SDK</a></li><li class="lvl-3"><a href="#7-3-unikernel-部署模式">7.3 Unikernel 部署模式</a></li><li class="lvl-3"><a href="#7-4-组件化-os-架构">7.4 组件化 OS 架构</a></li><li class="lvl-2"><a href="#阶段八-os-发行版集成-预计-4-周">阶段八：OS 发行版集成（预计 4 周）</a></li><li class="lvl-3"><a href="#8-1-rpm-deb-打包">8.1 RPM/DEB 打包</a></li><li class="lvl-3"><a href="#8-2-系统服务化">8.2 系统服务化</a></li><li class="lvl-3"><a href="#8-3-iso-ova-镜像-内核级">8.3 ISO/OVA 镜像（内核级）</a></li><li class="lvl-2"><a href="#实施优先级">实施优先级</a></li><li class="lvl-2"><a href="#文件组织预览">文件组织预览</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-PLAN-006 | 阶段: 项目管理 | 原路径: docs/智能体-操作系统-路线图.md --&gt;</p>
+<h1 id="khy-os-agentic-os-实施路线图">Khy OS Agentic OS 实施路线图<a class="anchor" href="#khy-os-agentic-os-实施路线图" aria-label="锚点">#</a></h1>
+<blockquote><p>目标：将 Khy OS 从量化交易平台升级为 <strong>Agentic OS</strong> — 既支持内核级部署（定制 Linux 发行版），也支持用户态安装（<code>npm install -g</code> / <code>pip install</code>）。对标 ANOLISA 全部六大组件 + MoonBit WASM 沙箱架构，分阶段落地。</p>
+<p>架构红线：<strong>&quot;内核绝不动，沙箱任你卷&quot;</strong> — 微内核层用 C/Rust，沙箱/应用层用 MoonBit WASM。</p></blockquote>
+<hr>
+<h2 id="现有能力-vs-anolisa-差距矩阵">现有能力 vs ANOLISA 差距矩阵<a class="anchor" href="#现有能力-vs-anolisa-差距矩阵" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>ANOLISA 组件</th><th>Khy OS 已有</th><th>差距</th></tr></thead><tbody><tr><td>Copilot Shell (AI CLI)</td><td>CLI REPL + AI Gateway + 多适配器 + 工具系统</td><td>缺 Hooks 系统、扩展市场、i18n、PTY 模式、非交互模式</td></tr><tr><td>Agent Sec Core (安全内核)</td><td>securityGuardService, authGuard, toolSandbox, fileIntegrity, antivirus</td><td>缺 Prompt 注入检测、代码扫描引擎、技能签名验证</td></tr><tr><td>AgentSight (可观测性)</td><td>aiMonitor, auditLog, tokenUsageService, telemetry</td><td>缺 eBPF 探针、SSL 流量拦截、GenAI 语义事件、进程自动发现</td></tr><tr><td>Tokenless (Token 优化)</td><td>无</td><td>全新实现 — Schema 压缩、Response 压缩、命令重写</td></tr><tr><td>OS Skills (技能库)</td><td>skillRegistry, skillLearningService, 19个内置工具</td><td>缺 SKILL.md 标准格式、远程技能发现、技能优先级链</td></tr><tr><td>ws-ckpt (工作区快照)</td><td>无</td><td>全新实现 — btrfs/overlayfs 快照、守护进程</td></tr></tbody></table>
+<hr>
+<h2 id="阶段一-copilot-shell-增强-预计-3-周">阶段一：Copilot Shell 增强（预计 3 周）<a class="anchor" href="#阶段一-copilot-shell-增强-预计-3-周" aria-label="锚点">#</a></h2>
+<p>强化现有 CLI 为完整的 AI 编程终端。</p>
+<h3 id="1-1-hooks-系统">1.1 Hooks 系统<a class="anchor" href="#1-1-hooks-系统" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/cli/hooks/</code></li><li><strong>实现</strong>: hookRegistry → hookPlanner → hookRunner 三层架构</li><li><strong>事件</strong>: <code>PreToolUse</code>, <code>PostToolUse</code>, <code>PrePrompt</code>, <code>PostResponse</code></li><li><strong>配置</strong>: <code>~/.khyquant/hooks.json</code> 声明式挂钩</li><li><strong>参考</strong>: ANOLISA <code>packages/core/src/hooks/</code></li></ul>
+<h3 id="1-2-技能标准化-skill-md-格式">1.2 技能标准化（SKILL.md 格式）<a class="anchor" href="#1-2-技能标准化-skill-md-格式" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/skills/</code> + <code>~/.khyquant/skills/</code></li><li><strong>格式</strong>: YAML frontmatter + Markdown body（同 ANOLISA 的 SKILL.md）</li><li><strong>字段</strong>: name, version, description, layer, lifecycle, tags, platforms, dependencies</li><li><strong>发现链</strong>: 项目目录 &gt; 用户目录 &gt; 内置 &gt; 远程仓库</li><li><strong>现有改造</strong>: 将 skillRegistry.js 适配新格式</li></ul>
+<h3 id="1-3-pty-模式">1.3 PTY 模式<a class="anchor" href="#1-3-pty-模式" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/cli/pty.js</code></li><li><strong>实现</strong>: 使用 <code>node-pty</code> 创建伪终端，支持 sudo、交互式命令</li><li><strong>集成</strong>: CLI 的 <code>/bash</code> 命令切换到 PTY 子 shell</li></ul>
+<h3 id="1-4-非交互模式-headless-sdk">1.4 非交互模式（Headless / SDK）<a class="anchor" href="#1-4-非交互模式-headless-sdk" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/cli/nonInteractive.js</code></li><li><strong>实现</strong>: JSON stdin/stdout 协议，支持外部进程调用 CLI</li><li><strong>用途</strong>: CI/CD 集成、IDE 扩展后端、ACP 协议对接</li></ul>
+<h3 id="1-5-扩展系统">1.5 扩展系统<a class="anchor" href="#1-5-扩展系统" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/cli/extensions/</code></li><li><strong>实现</strong>: extensionManager（安装/卸载/启用/禁用）、MCP 服务器管理</li><li><strong>扩展格式</strong>: <code>openclaw.plugin.json</code>（兼容 ANOLISA）</li></ul>
+<hr>
+<h2 id="阶段二-agent-sec-core-安全内核-预计-4-周">阶段二：Agent Sec Core 安全内核（预计 4 周）<a class="anchor" href="#阶段二-agent-sec-core-安全内核-预计-4-周" aria-label="锚点">#</a></h2>
+<p>OS 级安全能力，保护 AI Agent 的每一次操作。</p>
+<h3 id="2-1-prompt-注入检测器">2.1 Prompt 注入检测器<a class="anchor" href="#2-1-prompt-注入检测器" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/security/promptScanner/</code></li><li><strong>三层检测</strong>:<ul><li><code>ruleEngine.js</code> — 正则规则引擎（关键词、模式匹配）</li><li><code>semanticDetector.js</code> — 语义分析（向量相似度检测已知攻击模式）</li><li><code>mlClassifier.js</code> — ML 分类器（DeBERTa/PromptGuard 模型推理）</li></ul></li><li><strong>pipeline</strong>: preprocessor → detectors[] → verdict → audit</li><li><strong>参考</strong>: ANOLISA <code>agent-sec-cli/src/prompt_scanner/</code></li></ul>
+<h3 id="2-2-代码扫描引擎">2.2 代码扫描引擎<a class="anchor" href="#2-2-代码扫描引擎" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/security/codeScanner/</code></li><li><strong>实现</strong>:<ul><li><code>codeExtractor.js</code> — 从 Markdown/对话中提取代码块</li><li><code>regexEngine.js</code> — 基于规则的危险代码检测</li><li><code>ruleLoader.js</code> — YAML 规则加载器</li></ul></li><li><strong>规则覆盖</strong>: 命令注入、文件系统越权、网络外连、密钥泄露</li><li><strong>参考</strong>: ANOLISA <code>agent-sec-cli/src/code_scanner/</code></li></ul>
+<h3 id="2-3-技能签名与验证">2.3 技能签名与验证<a class="anchor" href="#2-3-技能签名与验证" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/security/skillLedger/</code></li><li><strong>实现</strong>:<ul><li>ed25519 密钥对生成</li><li><code>sign-skill.sh</code> 签名工具</li><li><code>verifier.js</code> 运行时签名验证</li></ul></li><li><strong>流程</strong>: 技能加载前验证签名 → 签名不合法则拒绝执行</li><li><strong>参考</strong>: ANOLISA <code>agent-sec-cli/src/asset_verify/</code></li></ul>
+<h3 id="2-4-沙箱命令分级">2.4 沙箱命令分级<a class="anchor" href="#2-4-沙箱命令分级" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: 增强现有 <code>toolSandbox.js</code></li><li><strong>实现</strong>: 命令分级（safe / moderate / dangerous / critical）</li><li><strong>策略</strong>: safe 自动放行 → moderate 需确认 → dangerous 需 sudo → critical 禁止</li><li><strong>参考</strong>: ANOLISA <code>agent-sec-cli/src/sandbox/classify_command.py</code></li></ul>
+<hr>
+<h2 id="阶段三-agentsight-可观测性-预计-5-周">阶段三：AgentSight 可观测性（预计 5 周）<a class="anchor" href="#阶段三-agentsight-可观测性-预计-5-周" aria-label="锚点">#</a></h2>
+<p>eBPF 零侵入监控 + 用户态可观测性双模架构。</p>
+<h3 id="3-1-用户态监控-node-js-无需-root">3.1 用户态监控（Node.js，无需 root）<a class="anchor" href="#3-1-用户态监控-node-js-无需-root" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/agentsight/</code></li><li><strong>增强现有</strong>: 统一 aiMonitor + auditLog + tokenUsageService</li><li><strong>数据管线</strong>: Interceptor → Parser → Aggregator → Analyzer → Storage</li><li><strong>存储</strong>: SQLite（已有）+ 可选远程导出</li></ul>
+<h3 id="3-2-genai-语义事件模型">3.2 GenAI 语义事件模型<a class="anchor" href="#3-2-genai-语义事件模型" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/agentsight/genai/</code></li><li><strong>事件类型</strong>:<ul><li><code>llm.call</code> — LLM API 调用（模型、token、耗时）</li><li><code>tool.use</code> — 工具调用（工具名、参数、结果）</li><li><code>agent.step</code> — Agent 步骤（推理链、决策点）</li></ul></li><li><strong>格式</strong>: 兼容 OpenTelemetry GenAI Semantic Conventions</li><li><strong>参考</strong>: ANOLISA <code>src/agentsight/src/atif/</code></li></ul>
+<h3 id="3-3-agent-进程自动发现">3.3 Agent 进程自动发现<a class="anchor" href="#3-3-agent-进程自动发现" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/agentsight/discover.js</code></li><li><strong>实现</strong>: 扫描 <code>/proc</code>，监控 <code>execve</code>（通过 child_process），识别已知 AI Agent 进程</li><li><strong>识别</strong>: claude-code, copilot, cursor, cosh, openai-codex 等</li></ul>
+<h3 id="3-4-ebpf-探针-内核级-需-root">3.4 eBPF 探针（内核级，需 root）<a class="anchor" href="#3-4-ebpf-探针-内核级-需-root" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/agentsight/ebpf/</code></li><li><strong>语言</strong>: C (BPF) + Rust (用户态加载器) 或 Python (bcc)</li><li><strong>探针</strong>:<ul><li><code>sslsniff.bpf.c</code> — SSL_read/SSL_write uprobe，捕获明文 LLM API 流量</li><li><code>proctrace.bpf.c</code> — execve 追踪，构建进程树</li><li><code>procmon.bpf.c</code> — 进程创建/退出监控</li></ul></li><li><strong>降级</strong>: 非 root 环境自动回退到用户态监控（3.1）</li><li><strong>参考</strong>: ANOLISA <code>src/agentsight/src/bpf/</code></li></ul>
+<hr>
+<h2 id="阶段四-tokenless-token-优化-预计-2-周">阶段四：Tokenless Token 优化（预计 2 周）<a class="anchor" href="#阶段四-tokenless-token-优化-预计-2-周" aria-label="锚点">#</a></h2>
+<p>减少 LLM API 调用的 token 消耗，直接降本。</p>
+<h3 id="4-1-schema-压缩器">4.1 Schema 压缩器<a class="anchor" href="#4-1-schema-压缩器" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/tokenless/schemaCompressor.js</code></li><li><strong>实现</strong>: JSON Schema → 极简类型标注（如 <code>{name:s, age:i, items:[{id:i,qty:i}]}</code>）</li><li><strong>目标</strong>: 工具定义 schema 压缩 60-80%</li><li><strong>集成</strong>: AI Gateway pluginChain 前置压缩</li></ul>
+<h3 id="4-2-response-压缩器">4.2 Response 压缩器<a class="anchor" href="#4-2-response-压缩器" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/tokenless/responseCompressor.js</code></li><li><strong>实现</strong>: 对 LLM 返回的长文本做结构化摘要、去重、缩写</li><li><strong>集成</strong>: AI Gateway 后置处理</li></ul>
+<h3 id="4-3-命令重写器">4.3 命令重写器<a class="anchor" href="#4-3-命令重写器" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/tokenless/commandRewriter.js</code></li><li><strong>实现</strong>: 将冗长的自然语言指令重写为紧凑的结构化指令</li><li><strong>场景</strong>: 多轮对话中的历史消息压缩</li></ul>
+<h3 id="4-4-token-统计">4.4 Token 统计<a class="anchor" href="#4-4-token-统计" aria-label="锚点">#</a></h3>
+<ul><li><strong>集成</strong>: 增强现有 tokenUsageService</li><li><strong>实现</strong>: 记录压缩前/后 token 数，计算节省比例</li><li><strong>参考</strong>: ANOLISA <code>tokenless/crates/tokenless-stats/</code></li></ul>
+<hr>
+<h2 id="阶段五-os-skills-技能库-预计-3-周">阶段五：OS Skills 技能库（预计 3 周）<a class="anchor" href="#阶段五-os-skills-技能库-预计-3-周" aria-label="锚点">#</a></h2>
+<p>系统管理、安全、DevOps 技能集。</p>
+<h3 id="5-1-技能框架">5.1 技能框架<a class="anchor" href="#5-1-技能框架" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/skills/</code></li><li><strong>标准</strong>: 每个技能一个目录，包含 <code>SKILL.md</code>（定义）+ 可选的执行脚本</li><li><strong>加载器</strong>: 解析 YAML frontmatter，按 layer/lifecycle/tags 索引</li></ul>
+<h3 id="5-2-内置技能集">5.2 内置技能集<a class="anchor" href="#5-2-内置技能集" aria-label="锚点">#</a></h3>
+<ul><li><strong>system-admin/</strong>: Linux 系统管理、systemd、网络、磁盘</li><li><strong>security/</strong>: CVE 查询、漏洞扫描、安全加固</li><li><strong>devops/</strong>: Git 工作流、CI/CD、容器管理</li><li><strong>monitor-perf/</strong>: 性能监控、资源分析</li><li><strong>ai/</strong>: 模型管理、MCP 配置、Agent 部署</li><li><strong>quant/</strong>: 量化交易专属技能（策略回测、数据获取、信号分析）</li></ul>
+<h3 id="5-3-远程技能仓库">5.3 远程技能仓库<a class="anchor" href="#5-3-远程技能仓库" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/skillMarketplace.js</code></li><li><strong>实现</strong>: 远程 Git 仓库拉取、本地缓存、版本管理</li><li><strong>安全</strong>: 下载后经 skillLedger 签名验证才可加载</li></ul>
+<hr>
+<h2 id="阶段六-ws-ckpt-工作区快照-预计-3-周">阶段六：ws-ckpt 工作区快照（预计 3 周）<a class="anchor" href="#阶段六-ws-ckpt-工作区快照-预计-3-周" aria-label="锚点">#</a></h2>
+<p>AI Agent 工作区的秒级快照与回滚。</p>
+<h3 id="6-1-用户态快照-跨平台">6.1 用户态快照（跨平台）<a class="anchor" href="#6-1-用户态快照-跨平台" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/workspace/</code></li><li><strong>实现</strong>: Git worktree + tar 增量备份</li><li><strong>命令</strong>: <code>khyquant workspace save/restore/list/diff</code></li><li><strong>适用</strong>: 任何文件系统，无需 root</li></ul>
+<h3 id="6-2-内核级快照-linux-btrfs">6.2 内核级快照（Linux btrfs）<a class="anchor" href="#6-2-内核级快照-linux-btrfs" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/workspace/btrfs/</code></li><li><strong>实现</strong>: btrfs subvolume snapshot（COW，毫秒级）</li><li><strong>守护进程</strong>: systemd 服务，Unix Socket IPC</li><li><strong>降级</strong>: 非 btrfs 自动回退到用户态方案（6.1）</li></ul>
+<h3 id="6-3-自动检查点">6.3 自动检查点<a class="anchor" href="#6-3-自动检查点" aria-label="锚点">#</a></h3>
+<ul><li><strong>触发</strong>: 工具执行前自动创建检查点</li><li><strong>策略</strong>: 可配置频率（每次/每分钟/手动）</li><li><strong>清理</strong>: 自动过期，保留最近 N 个</li></ul>
+<hr>
+<h2 id="阶段七-moonbit-wasm-沙箱运行时-预计-4-周">阶段七：MoonBit WASM 沙箱运行时（预计 4 周）<a class="anchor" href="#阶段七-moonbit-wasm-沙箱运行时-预计-4-周" aria-label="锚点">#</a></h2>
+<p>双模架构：Unikernel 极简部署 + 组件化 OS 应用沙箱。</p>
+<h3 id="7-1-wasm-沙箱运行时">7.1 WASM 沙箱运行时<a class="anchor" href="#7-1-wasm-沙箱运行时" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>backend/src/services/wasm-sandbox/</code></li><li><strong>实现</strong>: 嵌入 Wasmtime/Wasmer 运行时（Node.js N-API 绑定）</li><li><strong>能力</strong>: 加载 MoonBit 编译的 <code>.wasm</code> 模块，在沙箱中执行</li><li><strong>隔离</strong>: WASM 天然沙箱，模块只能通过显式 Host Function 访问系统资源</li><li><strong>用途</strong>: 插件执行、策略运算、指标计算、第三方扩展</li></ul>
+<h3 id="7-2-moonbit-插件-sdk">7.2 MoonBit 插件 SDK<a class="anchor" href="#7-2-moonbit-插件-sdk" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>packages/moonbit-plugin-sdk/</code></li><li><strong>实现</strong>: MoonBit 语言编写的插件标准接口</li><li><strong>接口</strong>: <code>init()</code>, <code>execute(input: Bytes) -&gt; Bytes</code>, <code>metadata() -&gt; PluginMeta</code></li><li><strong>构建</strong>: <code>moon build --target wasm</code> → 产物 &lt; 100KB</li><li><strong>示例插件</strong>:<ul><li>技术指标计算（MA/RSI/MACD，纯 WASM，零依赖）</li><li>Schema 压缩器（阶段四的 Tokenless 可选用 MoonBit 实现极致性能版）</li><li>自定义策略评分器</li></ul></li></ul>
+<h3 id="7-3-unikernel-部署模式">7.3 Unikernel 部署模式<a class="anchor" href="#7-3-unikernel-部署模式" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>scripts/unikernel/</code></li><li><strong>实现</strong>: 将核心 API 网关编译为 MoonBit WASM → 跑在 Firecracker 微虚拟机上</li><li><strong>目标</strong>: 冷启动 &lt; 5ms，镜像 &lt; 500KB</li><li><strong>适用</strong>: 无状态 API 网关节点、Serverless 策略执行器、边缘行情转发节点</li></ul>
+<h3 id="7-4-组件化-os-架构">7.4 组件化 OS 架构<a class="anchor" href="#7-4-组件化-os-架构" aria-label="锚点">#</a></h3>
+<ul><li><strong>架构</strong>:</li></ul>
+<pre><code>┌──────────────────────────────────────────────────────┐
+│                    应用层 (MoonBit WASM)              │
+│  ┌──────────┐  ┌──────────┐  ┌────────────────────┐  │
+│  │ 策略引擎 │  │ 指标计算 │  │ 第三方量化插件     │  │
+│  └────┬─────┘  └────┬─────┘  └──────────┬─────────┘  │
+├───────┼─────────────┼───────────────────┼────────────┤
+│       │   WASM 虚拟机运行时 (Wasmtime)  │            │
+│       │   Host Functions: fs/net/db/ai  │            │
+├───────┴─────────────┴───────────────────┴────────────┤
+│             Khy OS Core (Node.js / Rust)             │
+│    AI Gateway · 安全内核 · 可观测性 · 技能系统       │
+├──────────────────────────────────────────────────────┤
+│           微内核层 (Linux Kernel / Firecracker)       │
+│    内存 · 调度 · IPC · 设备驱动                      │
+└──────────────────────────────────────────────────────┘</code></pre>
+<ul><li><strong>Host Functions 白名单</strong>: 文件读写(受限路径)、网络请求(受限域名)、数据库查询(只读)、AI 推理调用</li><li><strong>安全</strong>: 插件无法越权，所有系统调用必须经过 Host Function 网关 + Agent Sec Core 审计</li></ul>
+<hr>
+<h2 id="阶段八-os-发行版集成-预计-4-周">阶段八：OS 发行版集成（预计 4 周）<a class="anchor" href="#阶段八-os-发行版集成-预计-4-周" aria-label="锚点">#</a></h2>
+<p>打包为可安装的操作系统层。</p>
+<h3 id="8-1-rpm-deb-打包">8.1 RPM/DEB 打包<a class="anchor" href="#8-1-rpm-deb-打包" aria-label="锚点">#</a></h3>
+<ul><li><strong>位置</strong>: <code>scripts/packaging/</code></li><li><strong>产物</strong>: <code>khy-quant-os</code>, <code>khy-copilot-shell</code>, <code>khy-agent-sec</code>, <code>khy-agentsight</code>, <code>khy-tokenless</code>, <code>khy-os-skills</code>, <code>khy-ws-ckpt</code>, <code>khy-wasm-runtime</code></li><li><strong>依赖</strong>: Node.js 20+, Python 3.10+, 可选 Rust runtime</li></ul>
+<h3 id="8-2-系统服务化">8.2 系统服务化<a class="anchor" href="#8-2-系统服务化" aria-label="锚点">#</a></h3>
+<ul><li><strong>实现</strong>: systemd unit files</li><li><strong>服务</strong>: khy-backend, khy-agentsight-daemon, khy-ws-ckpt-daemon</li><li><strong>配置</strong>: <code>/etc/khyquant/</code> 统一配置目录</li></ul>
+<h3 id="8-3-iso-ova-镜像-内核级">8.3 ISO/OVA 镜像（内核级）<a class="anchor" href="#8-3-iso-ova-镜像-内核级" aria-label="锚点">#</a></h3>
+<ul><li><strong>基础</strong>: Debian/Ubuntu minimal 或 Anolis OS</li><li><strong>预装</strong>: 全部组件 + 预配置 + 首次启动向导</li><li><strong>目标</strong>: 开箱即用的 AI 量化操作系统</li></ul>
+<hr>
+<h2 id="实施优先级">实施优先级<a class="anchor" href="#实施优先级" aria-label="锚点">#</a></h2>
+<pre><code>阶段一 ──┐
+         ├── 阶段二 ──┐
+阶段四 ──┘            ├── 阶段三 ── 阶段六 ──┐
+                      │                      ├── 阶段八
+         阶段五 ──────┘            阶段七 ───┘</code></pre>
+<ul><li><strong>阶段一 + 四</strong> 可并行（CLI 增强 + Token 优化，无依赖）</li><li><strong>阶段二</strong> 依赖阶段一的 Hooks 系统（安全拦截需要挂钩点）</li><li><strong>阶段五</strong> 依赖阶段一的技能标准化</li><li><strong>阶段三</strong> 依赖阶段二（安全事件需上报可观测性系统）</li><li><strong>阶段六</strong> 依赖阶段三（快照操作需审计记录）</li><li><strong>阶段七</strong> 独立可并行（WASM 沙箱是独立子系统）</li><li><strong>阶段八</strong> 最后集成打包，依赖所有前置阶段</li></ul>
+<hr>
+<h2 id="文件组织预览">文件组织预览<a class="anchor" href="#文件组织预览" aria-label="锚点">#</a></h2>
+<pre><code>backend/
+├── src/
+│   ├── cli/
+│   │   ├── hooks/              # [新] Hooks 系统
+│   │   ├── extensions/         # [新] 扩展管理
+│   │   ├── pty.js              # [新] PTY 模式
+│   │   └── nonInteractive.js   # [新] 非交互模式
+│   ├── services/
+│   │   ├── security/           # [新] 安全内核
+│   │   │   ├── promptScanner/
+│   │   │   ├── codeScanner/
+│   │   │   └── skillLedger/
+│   │   ├── agentsight/         # [新] 可观测性
+│   │   │   ├── genai/
+│   │   │   ├── ebpf/
+│   │   │   └── discover.js
+│   │   ├── tokenless/          # [新] Token 优化
+│   │   │   ├── schemaCompressor.js
+│   │   │   ├── responseCompressor.js
+│   │   │   └── commandRewriter.js
+│   │   ├── workspace/          # [新] 工作区快照
+│   │   │   ├── btrfs/
+│   │   │   └── gitWorktree.js
+│   │   └── wasm-sandbox/       # [新] WASM 沙箱运行时
+│   │       ├── runtime.js      # Wasmtime N-API 绑定
+│   │       ├── hostFunctions.js # Host Function 白名单
+│   │       └── pluginLoader.js # 插件加载器
+│   └── skills/                 # [新] 技能库
+│       ├── system-admin/
+│       ├── security/
+│       ├── devops/
+│       ├── ai/
+│       └── quant/
+packages/
+├── moonbit-plugin-sdk/         # [新] MoonBit 插件 SDK
+│   ├── src/
+│   │   ├── lib.mbt            # 插件标准接口
+│   │   └── examples/
+│   └── moon.pkg.json
+scripts/
+├── packaging/                  # [新] 系统打包
+│   ├── rpm/
+│   ├── deb/
+│   └── iso/
+└── unikernel/                  # [新] Unikernel 构建
+    ├── firecracker.json
+    └── build-unikernel.sh</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-005] 自主生产计划-r2-2026-05-24.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 自主生产能力提升计划 (Round 2)</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-PLAN-007] Khy-OS远景演进路线图-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">《Khy-OS 远景演进路线图 — 从当前基线到「开机即进 Khy-OS」》</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-PLAN-006] 智能体-操作系统-路线图.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-intelwatch · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-intelwatch<span class="sep">›</span>cli-anything-intelwatch</div>
+      <header class="hero reveal"><h1>cli-anything-intelwatch</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-intelwatch">cli-anything-intelwatch</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#example-scenarios">Example Scenarios</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-intelwatch&quot;<br>description: &gt;-<br>  Zero friction. Full context. Competitive intelligence, M&amp;A due diligence, and OSINT directly from your terminal. Uses Node.js/npx.</p>
+<hr>
+<h1 id="cli-anything-intelwatch">cli-anything-intelwatch<a class="anchor" href="#cli-anything-intelwatch" aria-label="锚点">#</a></h1>
+<p>Intelwatch bridges the gap between hacker OSINT and B2B Sales/M&amp;A data. It executes complex financial data aggregation, technology stack detection, and AI-powered due diligence in seconds.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-intelwatch package:</p>
+<pre><code class="language-bash">pip install cli-anything-intelwatch</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Node.js &gt;=18 must be installed and accessible via <code>npx</code></li><li>Run <code>node -v</code> and <code>npx -v</code> to ensure your system meets the requirements</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-intelwatch --help
+
+# Generate a deep profile for a company
+cli-anything-intelwatch profile kpmg.fr
+
+# Generate a profile with AI Due Diligence
+cli-anything-intelwatch profile kpmg.fr --ai</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li>Provide the domain name (e.g., <code>doctolib.fr</code>)</li><li>Use the <code>--ai</code> flag to let Intelwatch perform due diligence automatically</li><li>The output is human-readable and provides a deep breakdown of the company</li><li>Ensure <code>npx</code> is available on the machine</li></ol>
+<h2 id="example-scenarios">Example Scenarios<a class="anchor" href="#example-scenarios" aria-label="锚点">#</a></h2>
+<ul><li><strong>M&amp;A Due Diligence:</strong> <code>cli-anything-intelwatch profile company-name.com --ai</code></li><li><strong>Sales Intelligence:</strong> <code>cli-anything-intelwatch profile target-client.com</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-inkscape/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-inkscape</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-iterm2-ctl/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-iterm2</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-intelwatch/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

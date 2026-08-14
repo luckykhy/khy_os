@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-042] 发布手册：pip 与 npm（无 AI 也能照做） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-042] 发布手册：pip 与 npm（无 AI 也能照做）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-042] 发布手册：pip 与 npm（无 AI 也能照做）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-042-发布手册-pip-与-npm-无-ai-也能照做">[OPS-MAN-042] 发布手册：pip 与 npm（无 AI 也能照做）</a></li><li class="lvl-2"><a href="#0-一句话结论">0. 一句话结论</a></li><li class="lvl-2"><a href="#1-一次性准备-每台新机器只配一次">1. 一次性准备（每台新机器只配一次）</a></li><li class="lvl-3"><a href="#1-1-pypi-凭证">1.1 PyPI 凭证</a></li><li class="lvl-3"><a href="#1-2-npm-凭证-只有要发-npm-渠道才需要">1.2 npm 凭证（只有要发 npm 渠道才需要）</a></li><li class="lvl-2"><a href="#2-版本号住在哪里-4-个文件-脚本会自动同步">2. 版本号住在哪里（4 个文件，脚本会自动同步）</a></li><li class="lvl-2"><a href="#3-标准发布流程-推荐-用脚本">3. 标准发布流程（推荐：用脚本）</a></li><li class="lvl-3"><a href="#步骤">步骤</a></li><li class="lvl-3"><a href="#脚本选项速查">脚本选项速查</a></li><li class="lvl-3"><a href="#审计门禁是什么">审计门禁是什么</a></li><li class="lvl-2"><a href="#4-手动两步法-不想用脚本-或脚本坏了时的兜底">4. 手动两步法（不想用脚本、或脚本坏了时的兜底）</a></li><li class="lvl-3"><a href="#验证发布成功">验证发布成功</a></li><li class="lvl-2"><a href="#5-ci-发布-github-actions-最省心-可审计">5. CI 发布（GitHub Actions，最省心、可审计）</a></li><li class="lvl-2"><a href="#6-发布前自查清单-机械照勾">6. 发布前自查清单（机械照勾）</a></li><li class="lvl-2"><a href="#7-常见坑">7. 常见坑</a></li><li class="lvl-2"><a href="#8-相关文件索引">8. 相关文件索引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-042-发布手册-pip-与-npm-无-ai-也能照做">[OPS-MAN-042] 发布手册：pip 与 npm（无 AI 也能照做）<a class="anchor" href="#ops-man-042-发布手册-pip-与-npm-无-ai-也能照做" aria-label="锚点">#</a></h1>
+<blockquote><p>目的：把&quot;发布一个新版本&quot;变成<strong>照抄命令</strong>就能完成的机械流程，不依赖 AI、不依赖记忆。<br>适用：把 <code>khy-os</code> 发到 PyPI、把 <code>@khy-os/khy-os</code> 发到 npm。<br>单一真源脚本：<code>scripts/release/publish-dual.sh</code>（双渠道、审计门禁、可打 tag）。</p></blockquote>
+<hr>
+<h2 id="0-一句话结论">0. 一句话结论<a class="anchor" href="#0-一句话结论" aria-label="锚点">#</a></h2>
+<p><strong>正常情况下，你只需要跑一条命令：</strong></p>
+<pre><code class="language-bash">bash scripts/release/publish-dual.sh &lt;新版本号&gt; --tag --push -y</code></pre>
+<p>例：发 0.1.126 → <code>bash scripts/release/publish-dual.sh 0.1.126 --tag --push -y</code></p>
+<p>这条命令会：①把版本号同步进 4 个文件 → ②pip 干净构建+纯净度审计 → ③npm 组装+审计 → ④两边都审计通过后才上传（pip 走 twine，npm 走 npm publish）→ ⑤提交版本号改动 + 打 <code>v&lt;版本&gt;</code> 标签并推送远端。</p>
+<p>如果只想发其中一个渠道，加 <code>--skip-npm</code>（只发 pip）或 <code>--skip-pip</code>（只发 npm）。</p>
+<blockquote><p>如果你不放心，<strong>先加 <code>--dry-run</code> 彩排一遍</strong>（构建+审计全跑，但不真正上传、不打 tag）。看到全绿再去掉 <code>--dry-run</code> 真发。</p></blockquote>
+<hr>
+<h2 id="1-一次性准备-每台新机器只配一次">1. 一次性准备（每台新机器只配一次）<a class="anchor" href="#1-一次性准备-每台新机器只配一次" aria-label="锚点">#</a></h2>
+<h3 id="1-1-pypi-凭证">1.1 PyPI 凭证<a class="anchor" href="#1-1-pypi-凭证" aria-label="锚点">#</a></h3>
+<p>发 pip 需要 <code>twine</code> 和一个 PyPI Token。</p>
+<ol><li>安装工具：<code>python3 -m pip install --upgrade build twine</code></li><li>去 https://pypi.org/manage/account/token/ 生成 API Token（scope 选 <code>khy-os</code> 项目，或整账号）。</li><li>写入 <code>~/.pypirc</code>：</li></ol>
+<pre><code class="language-ini">[pypi]
+  username = __token__
+  password = pypi-XXXXXXXX你的token整段XXXXXXXX</code></pre>
+<blockquote><p>权限收紧：<code>chmod 600 ~/.pypirc</code>。<br>验证：<code>twine check</code>（在有 dist/ 时）应能跑通；<code>python3 -m twine --version</code> 能打印版本即装好。</p></blockquote>
+<h3 id="1-2-npm-凭证-只有要发-npm-渠道才需要">1.2 npm 凭证（只有要发 npm 渠道才需要）<a class="anchor" href="#1-2-npm-凭证-只有要发-npm-渠道才需要" aria-label="锚点">#</a></h3>
+<ol><li>安装 Node ≥ 20、npm。</li><li><code>npm login</code>（或在 CI 用 <code>NPM_TOKEN</code>）。</li><li>验证：<code>npm whoami</code> 能打印你的用户名 = 已登录。脚本预检会卡这一步。</li></ol>
+<blockquote><p>只发 pip 的话，加 <code>--skip-npm</code>，就不需要 npm 登录。</p></blockquote>
+<hr>
+<h2 id="2-版本号住在哪里-4-个文件-脚本会自动同步">2. 版本号住在哪里（4 个文件，脚本会自动同步）<a class="anchor" href="#2-版本号住在哪里-4-个文件-脚本会自动同步" aria-label="锚点">#</a></h2>
+<p><code>publish-dual.sh</code> 接受版本号后，自动改这 4 处，你<strong>不用手改</strong>：</p>
+<table><thead><tr><th>文件</th><th>作用</th></tr></thead><tbody><tr><td><code>pyproject.toml</code> <code>[project] version</code></td><td><strong>pip 构建的真源</strong>（wheel/sdist 的版本由它决定）</td></tr><tr><td><code>platform/khy_platform/__init__.py</code></td><td>运行时 <code>__version__</code>——其实是 <code>_detect_version()</code> 动态读取（先读已安装元数据，再回退读最近的 <code>pyproject.toml</code>），<strong>没有硬编码常量</strong>，所以只要 pyproject 对了它就对</td></tr><tr><td><code>packaging/npm/package.json</code> <code>version</code></td><td>npm 渠道 <code>@khy-os/khy-os</code> 的版本</td></tr><tr><td><code>services/backend/package.json</code> <code>version</code></td><td><code>khy --version</code> 报告的版本</td></tr></tbody></table>
+<blockquote><p>校验：仓库里有 <code>npm run check:version-sync</code> 检查这几处是否一致；CI 发布前会自动跑。</p></blockquote>
+<hr>
+<h2 id="3-标准发布流程-推荐-用脚本">3. 标准发布流程（推荐：用脚本）<a class="anchor" href="#3-标准发布流程-推荐-用脚本" aria-label="锚点">#</a></h2>
+<h3 id="步骤">步骤<a class="anchor" href="#步骤" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 1) 确认在干净的工作区、对的分支上
+git status
+
+# 2) 先彩排（不上传）
+bash scripts/release/publish-dual.sh 0.1.126 --dry-run
+
+# 3) 彩排全绿后，真发 + 打 tag + 推送
+bash scripts/release/publish-dual.sh 0.1.126 --tag --push -y</code></pre>
+<h3 id="脚本选项速查">脚本选项速查<a class="anchor" href="#脚本选项速查" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>选项</th><th>含义</th></tr></thead><tbody><tr><td><code>&lt;version&gt;</code> 或 <code>--version X.Y.Z</code></td><td>目标版本号（首位置参数即可）</td></tr><tr><td><code>--dry-run</code></td><td>构建+审计全跑，但<strong>不上传</strong>、不打 tag（<code>twine check</code> / <code>npm publish --dry-run</code>）</td></tr><tr><td><code>--skip-pip</code></td><td>只发 npm</td></tr><tr><td><code>--skip-npm</code></td><td>只发 pip</td></tr><tr><td><code>--test-pypi</code></td><td>pip 上传到 <strong>TestPyPI</strong> 而非正式 PyPI（演练真实上传用）</td></tr><tr><td><code>--no-isolation</code></td><td>不用 build 隔离构建 wheel/sdist（离线/无法联网装构建依赖时用）</td></tr><tr><td><code>--tag</code></td><td>发布成功后提交版本号改动 + 打注解 tag <code>vX.Y.Z</code></td></tr><tr><td><code>--push</code></td><td>推送分支和 tag 到远端（隐含 <code>--tag</code>）</td></tr><tr><td><code>--remote NAME</code></td><td>推送到哪个远端（默认 origin，否则第一个配置的远端）</td></tr><tr><td><code>-y</code> / <code>--yes</code></td><td>不交互确认，直接执行</td></tr></tbody></table>
+<h3 id="审计门禁是什么">审计门禁是什么<a class="anchor" href="#审计门禁是什么" aria-label="锚点">#</a></h3>
+<p>&quot;纯净度审计&quot;= 保证打出来的 sdist/wheel <strong>不含</strong> <code>.iso</code>、<code>node_modules</code>、外部依赖树；<strong>必须含</strong> 内核源码 + <code>kernel/vendor</code> + <code>kernel/iso/boot/limine/limine.conf</code> + 钉死的工具链 manifest。任一渠道审计失败，<strong>在上传前</strong>就整体中止，不会发出半成品。</p>
+<hr>
+<h2 id="4-手动两步法-不想用脚本-或脚本坏了时的兜底">4. 手动两步法（不想用脚本、或脚本坏了时的兜底）<a class="anchor" href="#4-手动两步法-不想用脚本-或脚本坏了时的兜底" aria-label="锚点">#</a></h2>
+<p>脚本本质就是下面这两步（pip 侧），可以手动复刻：</p>
+<pre><code class="language-bash"># 第 1 步：构建 + 纯净度审计（只构建审计，不上传）
+bash scripts/release/build-and-audit-pip-purity.sh --no-isolation
+#   产物落在 dist/ ：khy_os-&lt;版本&gt;-py3-none-any.whl 和 khy_os-&lt;版本&gt;.tar.gz
+#   审计行打印 “PURE” 即干净
+
+# 第 2 步：上传到 PyPI
+python3 -m twine upload dist/*</code></pre>
+<blockquote><p>注意：手动法<strong>只发了 pip</strong>。npm 渠道（<code>@khy-os/khy-os</code>）需另外 <code>cd packaging/npm &amp;&amp; npm publish --access public</code>（先 <code>npm run prepack</code> 组装）。<br>手动法<strong>也不会</strong>自动同步那 4 个版本文件，发布前要先手改 <code>pyproject.toml</code> 等（见 §2），否则打出来还是旧版本号。</p></blockquote>
+<h3 id="验证发布成功">验证发布成功<a class="anchor" href="#验证发布成功" aria-label="锚点">#</a></h3>
+<p>PyPI 的聚合 JSON 接口有缓存延迟，<strong>别只看项目主页</strong>。用<strong>按版本</strong>接口确认最快：</p>
+<pre><code class="language-bash">curl -s https://pypi.org/pypi/khy-os/0.1.126/json | head -c 200
+#   返回 200 + 该版本 JSON = 已上线；404 = 还没上去或还在同步
+pip install khy-os==0.1.126     # 能装上即真上线</code></pre>
+<hr>
+<h2 id="5-ci-发布-github-actions-最省心-可审计">5. CI 发布（GitHub Actions，最省心、可审计）<a class="anchor" href="#5-ci-发布-github-actions-最省心-可审计" aria-label="锚点">#</a></h2>
+<p>仓库有 <code>.github/workflows/release.yml</code>，手动触发即可发布，<strong>不需要本机配凭证</strong>（凭证在仓库 Secrets 里）。</p>
+<ol><li>先把版本号改好并合进目标分支（或让脚本 <code>--tag --push</code> 推上去）。</li><li>GitHub → Actions → <strong>Release</strong> → <strong>Run workflow</strong>，填：<ul><li><code>ref</code>：从哪个分支/tag/SHA 发；</li><li><code>publish_pypi</code>：勾上（需仓库已配 <code>PYPI_API_TOKEN</code> Secret）；</li><li><code>dry_run</code>：先勾上试跑一次，确认无误再关掉真发。</li></ul></li><li>它会从 <code>pyproject.toml</code> 解析版本、跑 <code>check:version-sync</code>、构建、<code>twine upload</code>、建 GitHub Release 并打 <code>v&lt;版本&gt;</code> tag。</li></ol>
+<blockquote><p>前置：仓库 Settings → Secrets 里要有 <code>PYPI_API_TOKEN</code>（npm 渠道则需 <code>NPM_TOKEN</code>）。</p></blockquote>
+<hr>
+<h2 id="6-发布前自查清单-机械照勾">6. 发布前自查清单（机械照勾）<a class="anchor" href="#6-发布前自查清单-机械照勾" aria-label="锚点">#</a></h2>
+<ul><li>[ ] 工作区干净 <code>git status</code>，在正确分支上</li><li>[ ] 想好新版本号（语义：补丁位 +1，如 0.1.125 → 0.1.126）</li><li>[ ] <code>--dry-run</code> 彩排通过（pip 审计 PURE / npm 审计通过）</li><li>[ ] 凭证就绪：<code>twine</code> + <code>~/.pypirc</code>（pip）；<code>npm whoami</code> 已登录（npm，仅双渠道时）</li><li>[ ] 真发：去掉 <code>--dry-run</code>，加 <code>--tag --push -y</code></li><li>[ ] 验证：<code>curl .../pypi/khy-os/&lt;版本&gt;/json</code> 返回 200 + <code>pip install khy-os==&lt;版本&gt;</code> 成功</li><li>[ ] （双渠道）<code>npm view @khy-os/khy-os version</code> 显示新版本</li></ul>
+<hr>
+<h2 id="7-常见坑">7. 常见坑<a class="anchor" href="#7-常见坑" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>现象</th><th>原因 / 解法</th></tr></thead><tbody><tr><td>PyPI 主页还显示旧版本</td><td>聚合接口缓存延迟；查<strong>按版本</strong>接口 <code>/pypi/khy-os/&lt;版本&gt;/json</code> 才准</td></tr><tr><td><code>twine upload</code> 报 400 文件已存在</td><td>该版本号已发过，PyPI 不允许覆盖；<strong>版本号 +1 重发</strong></td></tr><tr><td>构建依赖装不上 / 离线</td><td>加 <code>--no-isolation</code> 用本地已装依赖构建</td></tr><tr><td>npm 预检失败 <code>npm whoami</code></td><td>没登录；<code>npm login</code>，或只发 pip 加 <code>--skip-npm</code></td></tr><tr><td>审计 FAIL 提到 <code>.iso</code>/<code>node_modules</code></td><td>包里混进了不该有的产物；别强发，先查 <code>MANIFEST.in</code>（用 <code>python scripts/release/render_manifest.py</code> 重生，<strong>勿手改</strong>）</td></tr><tr><td><code>khy --version</code> 和 PyPI 版本对不上</td><td><code>services/backend/package.json</code> 没同步；用脚本发布会自动同步，手动法要记得改</td></tr></tbody></table>
+<hr>
+<h2 id="8-相关文件索引">8. 相关文件索引<a class="anchor" href="#8-相关文件索引" aria-label="锚点">#</a></h2>
+<ul><li>发布脚本（双渠道，单一真源）：<code>scripts/release/publish-dual.sh</code></li><li>pip 构建+审计（手动法第 1 步）：<code>scripts/release/build-and-audit-pip-purity.sh</code></li><li>MANIFEST 重生（确定性，勿手改）：<code>scripts/release/render_manifest.py</code></li><li>打包规则真源：<code>scripts/release/pip_packaging_rules.py</code></li><li>版本一致性校验：<code>npm run check:version-sync</code></li><li>CI 发布工作流：<code>.github/workflows/release.yml</code></li><li>安装布局参考：<code>[OPS-MAN-022] pip-安装布局参考.md</code></li><li>pip 安装后完整还原：<code>[OPS-MAN-037] pip安装后-完整还原与全功能开启指南.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-041] 通过KHY学习模式-从0到1面试大厂Agent岗-路线图-2026-06-15.html"><div class="dir">← 上一篇</div><div class="ttl">通过 KHY 学习模式：从 0 到 1 拿下大厂 Agent 岗的底气</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-043] 从0到高手-新手成长路线与pip安装后清单.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-043] 从 0 到高手：新手成长路线与 pip 安装后清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

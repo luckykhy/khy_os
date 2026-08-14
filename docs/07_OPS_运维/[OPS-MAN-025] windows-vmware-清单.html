@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS Windows 构建 + VMware 交付指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY OS Windows 构建 + VMware 交付指南</div>
+      <header class="hero reveal"><h1>KHY OS Windows 构建 + VMware 交付指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-windows-构建-vmware-交付指南">KHY OS Windows 构建 + VMware 交付指南</a></li><li class="lvl-2"><a href="#1-选择正确的路径">1. 选择正确的路径</a></li><li class="lvl-3"><a href="#路径-a-windows-pip-安装-iso">路径 A. Windows + pip 安装 + ISO</a></li><li class="lvl-3"><a href="#路径-b-linux-源码树-raw-vmdk">路径 B. Linux 源码树 + raw/VMDK</a></li><li class="lvl-2"><a href="#2-路径-a-windows-pip-install-iso">2. 路径 A：Windows + pip install + ISO</a></li><li class="lvl-3"><a href="#2-1-前置条件">2.1 前置条件</a></li><li class="lvl-3"><a href="#2-2-安装并验证-khy">2.2 安装并验证 KHY</a></li><li class="lvl-3"><a href="#2-3-构建-iso">2.3 构建 ISO</a></li><li class="lvl-3"><a href="#2-4-验证产物">2.4 验证产物</a></li><li class="lvl-3"><a href="#2-5-创建-vmware-虚拟机">2.5 创建 VMware 虚拟机</a></li><li class="lvl-3"><a href="#2-6-在虚拟机内进行冒烟测试">2.6 在虚拟机内进行冒烟测试</a></li><li class="lvl-2"><a href="#3-路径-b-linux-源码树-raw-vmdk">3. 路径 B：Linux 源码树 + raw/VMDK</a></li><li class="lvl-3"><a href="#3-1-前置条件">3.1 前置条件</a></li><li class="lvl-3"><a href="#3-2-查看镜像方案">3.2 查看镜像方案</a></li><li class="lvl-3"><a href="#3-3-构建-raw-镜像及可选的-vmdk">3.3 构建 raw 镜像及可选的 VMDK</a></li><li class="lvl-3"><a href="#3-4-在-vmware-中挂载磁盘">3.4 在 VMware 中挂载磁盘</a></li><li class="lvl-2"><a href="#4-故障排查">4. 故障排查</a></li><li class="lvl-3"><a href="#windows-iso-路径">Windows ISO 路径</a></li><li class="lvl-3"><a href="#linux-raw-vmdk-路径">Linux raw/VMDK 路径</a></li><li class="lvl-2"><a href="#5-裸机准备须知">5. 裸机准备须知</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-025 | 阶段: 运维 | 原路径: docs/指南/windows-vmware-清单.md --&gt;</p>
+<h1 id="khy-os-windows-构建-vmware-交付指南">KHY OS Windows 构建 + VMware 交付指南<a class="anchor" href="#khy-os-windows-构建-vmware-交付指南" aria-label="锚点">#</a></h1>
+<p>本指南介绍两条受支持的 VMware 交付路径：</p>
+<ol><li>Windows + <code>pip install khy-os</code> -&gt; 构建 <code>khy-os.iso</code> -&gt; 在 VMware 中挂载 ISO</li><li>Linux 源码树 -&gt; 构建 <code>.raw</code> / <code>.vmdk</code> -&gt; 在 VMware 中使用现有磁盘</li></ol>
+<p>如果你只需要让 KHY OS 在 Windows 上的 VMware 中启动，推荐使用 ISO 路径。</p>
+<h2 id="1-选择正确的路径">1. 选择正确的路径<a class="anchor" href="#1-选择正确的路径" aria-label="锚点">#</a></h2>
+<h3 id="路径-a-windows-pip-安装-iso">路径 A. Windows + pip 安装 + ISO<a class="anchor" href="#路径-a-windows-pip-安装-iso" aria-label="锚点">#</a></h3>
+<p>在以下情况使用此路径：</p>
+<ol><li>你使用的是 Windows</li><li>你通过 <code>pip install khy-os</code> 安装了 KHY</li><li>你需要一个可在 VMware 中启动的 ISO</li></ol>
+<p>说明：</p>
+<ol><li>此路径由 <code>khy iso build</code> 直接支持</li><li>仅为构建 ISO 时，你无需克隆源码仓库</li><li>需要 Docker Desktop，因为 ISO 是在容器内构建的</li></ol>
+<h3 id="路径-b-linux-源码树-raw-vmdk">路径 B. Linux 源码树 + raw/VMDK<a class="anchor" href="#路径-b-linux-源码树-raw-vmdk" aria-label="锚点">#</a></h3>
+<p>在以下情况使用此路径：</p>
+<ol><li>你需要 <code>.raw</code> 或 <code>.vmdk</code> 磁盘镜像，而非 ISO</li><li>你想在 VMware 中挂载一块现有虚拟磁盘</li><li>你能够运行特权 Linux 命令，例如 <code>losetup</code>、<code>mount</code>、<code>chroot</code> 和 <code>grub-install</code></li></ol>
+<p>说明：</p>
+<ol><li>这不是标准的 Windows <code>pip</code> 流程</li><li>raw/VMDK 脚本位于源码树中，而非仅面向 Windows 的 ISO 交付路径</li><li>如果 WSL 缺少环回设备或引导加载器支持，请改用原生 Linux 虚拟机或物理机</li></ol>
+<h2 id="2-路径-a-windows-pip-install-iso">2. 路径 A：Windows + pip install + ISO<a class="anchor" href="#2-路径-a-windows-pip-install-iso" aria-label="锚点">#</a></h2>
+<h3 id="2-1-前置条件">2.1 前置条件<a class="anchor" href="#2-1-前置条件" aria-label="锚点">#</a></h3>
+<ol><li>带 <code>pip</code> 的 Python</li><li>Docker Desktop</li><li>PowerShell 5+ 或 PowerShell 7</li><li>VMware Workstation Pro/Player</li><li>推荐：以 WSL2 作为 Docker 后端</li></ol>
+<h3 id="2-2-安装并验证-khy">2.2 安装并验证 KHY<a class="anchor" href="#2-2-安装并验证-khy" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">py -m pip install -U khy-os
+khy --version</code></pre>
+<p>预期结果：</p>
+<ol><li><code>khy</code> 在 <code>PATH</code> 中可用</li><li>版本命令正常输出</li></ol>
+<h3 id="2-3-构建-iso">2.3 构建 ISO<a class="anchor" href="#2-3-构建-iso" aria-label="锚点">#</a></h3>
+<p>默认构建：</p>
+<pre><code class="language-powershell">khy iso build --output C:\khy\dist\khy-os.iso</code></pre>
+<p>说明：</p>
+<ol><li><code>khy iso build</code> 是 <code>pip</code> 安装方式推荐使用的命令</li><li>该命令在内部调用捆绑的 Windows 辅助脚本与 Docker 构建器</li><li>可选择任意可写的输出路径；<code>C:\khy\dist\khy-os.iso</code> 仅为示例</li></ol>
+<p>如果你是在克隆的源码树中操作，以下等效命令同样有效：</p>
+<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File scripts\alpine\windows-iso-preflight.ps1 -Output dist\khy-os.iso
+powershell -ExecutionPolicy Bypass -File scripts\alpine\build-iso-windows.ps1 -Output dist\khy-os.iso</code></pre>
+<p>仅在需要使 Docker 缓存失效时才强制执行完整重建：</p>
+<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File scripts\alpine\build-iso-windows.ps1 -Output dist\khy-os.iso -NoCache</code></pre>
+<h3 id="2-4-验证产物">2.4 验证产物<a class="anchor" href="#2-4-验证产物" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">Get-Item C:\khy\dist\khy-os.iso | Select-Object FullName,Length,LastWriteTime
+Get-FileHash C:\khy\dist\khy-os.iso -Algorithm SHA256</code></pre>
+<p>检查：</p>
+<ol><li>文件存在</li><li>大小非零</li><li>哈希命令成功完成</li></ol>
+<h3 id="2-5-创建-vmware-虚拟机">2.5 创建 VMware 虚拟机<a class="anchor" href="#2-5-创建-vmware-虚拟机" aria-label="锚点">#</a></h3>
+<p>使用以下基线设置：</p>
+<ol><li>客户机操作系统：Linux 64 位，例如 <code>Other Linux 5.x or newer</code></li><li>固件：优先 BIOS；同样支持 UEFI</li><li>CPU：2 vCPU 或更高</li><li>内存：4 GB 或更高</li><li>磁盘：32 GB 或更高</li><li>网络：首次启动使用 NAT</li><li>CD/DVD：挂载 <code>khy-os.iso</code> 并启用 <code>Connect at power on</code></li><li>如果 UEFI 启动失败，请禁用 Secure Boot 后重试</li></ol>
+<p>在 GRUB 菜单中，按以下顺序尝试各项：</p>
+<ol><li><code>KHY OS (VMware / Hyper-V)</code></li><li><code>KHY OS (safe graphics)</code></li></ol>
+<h3 id="2-6-在虚拟机内进行冒烟测试">2.6 在虚拟机内进行冒烟测试<a class="anchor" href="#2-6-在虚拟机内进行冒烟测试" aria-label="锚点">#</a></h3>
+<p>启动后：</p>
+<pre><code class="language-bash">khy --version
+khy doctor
+khy gateway status
+khy app list
+khy ai status</code></pre>
+<p>预期结果：</p>
+<ol><li>无内核 panic 或重启循环</li><li>CLI 在多条命令间保持响应</li><li><code>khy doctor</code> 不报告会阻断基本运行时的硬性失败</li></ol>
+<h2 id="3-路径-b-linux-源码树-raw-vmdk">3. 路径 B：Linux 源码树 + raw/VMDK<a class="anchor" href="#3-路径-b-linux-源码树-raw-vmdk" aria-label="锚点">#</a></h2>
+<p>仅在你确实需要 VMware 磁盘镜像时才使用此路径。</p>
+<h3 id="3-1-前置条件">3.1 前置条件<a class="anchor" href="#3-1-前置条件" aria-label="锚点">#</a></h3>
+<ol><li>一个克隆的 KHY 源码树</li><li>通过 <code>sudo</code> 获得的 root 权限</li><li><code>parted</code>、<code>losetup</code>、<code>rsync</code>、<code>grub-install</code>、<code>mkfs.vfat</code>、<code>mkfs.ext4</code></li><li>可选：如需 <code>.vmdk</code>，则需 <code>qemu-img</code></li></ol>
+<p>快速环境参考：</p>
+<pre><code class="language-bash">bash scripts/khytogo/make-khytogo.sh --mode vmware-plan</code></pre>
+<h3 id="3-2-查看镜像方案">3.2 查看镜像方案<a class="anchor" href="#3-2-查看镜像方案" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">bash scripts/khytogo/make-khytogo.sh \
+  --mode vmware-plan \
+  --image-path dist/khy-os-vmware.raw \
+  --image-size-gib 32 \
+  --image-root-size-gib 24 \
+  --convert-vmdk</code></pre>
+<p>这会在任何破坏性或特权构建步骤运行前，打印计划中的布局。</p>
+<h3 id="3-3-构建-raw-镜像及可选的-vmdk">3.3 构建 raw 镜像及可选的 VMDK<a class="anchor" href="#3-3-构建-raw-镜像及可选的-vmdk" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">sudo bash scripts/khytogo/make-khytogo.sh \
+  --mode vmware-create \
+  --image-path dist/khy-os-vmware.raw \
+  --image-size-gib 32 \
+  --image-root-size-gib 24 \
+  --execute \
+  --confirm-image dist/khy-os-vmware.raw \
+  --convert-vmdk</code></pre>
+<p>替代封装脚本：</p>
+<pre><code class="language-bash">sudo bash scripts/install/install-khy.sh \
+  --as system \
+  --system-mode vmware-create \
+  --image-path dist/khy-os-vmware.raw \
+  --image-size-gib 32 \
+  --image-root-size-gib 24 \
+  --execute \
+  --confirm-image dist/khy-os-vmware.raw \
+  --convert-vmdk</code></pre>
+<p>预期结果：</p>
+<ol><li>生成 <code>dist/khy-os-vmware.raw</code></li><li>启用 <code>--convert-vmdk</code> 时生成 <code>dist/khy-os-vmware.vmdk</code></li><li>VMware 能够以现有镜像方式启动该磁盘，并启用 EFI</li></ol>
+<h3 id="3-4-在-vmware-中挂载磁盘">3.4 在 VMware 中挂载磁盘<a class="anchor" href="#3-4-在-vmware-中挂载磁盘" aria-label="锚点">#</a></h3>
+<ol><li>新建一个虚拟机</li><li>选择 <code>Use an existing virtual disk</code></li><li>选择生成的 <code>.vmdk</code></li><li>如果你的 VMware 模板要求，请启用 EFI 固件</li><li>启动虚拟机，并运行与路径 A 相同的冒烟测试</li></ol>
+<h2 id="4-故障排查">4. 故障排查<a class="anchor" href="#4-故障排查" aria-label="锚点">#</a></h2>
+<h3 id="windows-iso-路径">Windows ISO 路径<a class="anchor" href="#windows-iso-路径" aria-label="锚点">#</a></h3>
+<ol><li><code>Docker daemon is not running</code></li></ol>
+<p>启动 Docker Desktop 后重试</p>
+<ol><li><code>ISO build script not found in this installation</code></li></ol>
+<p>重新安装 <code>khy-os</code>，以确保捆绑的 <code>scripts/alpine</code> 载荷存在</p>
+<ol><li>VMware 启动后黑屏</li></ol>
+<p>改用 <code>KHY OS (safe graphics)</code> 重试，或切换虚拟机固件模式</p>
+<h3 id="linux-raw-vmdk-路径">Linux raw/VMDK 路径<a class="anchor" href="#linux-raw-vmdk-路径" aria-label="锚点">#</a></h3>
+<ol><li><code>vmware-create mode must run as root</code></li></ol>
+<p>使用 <code>sudo</code> 重新运行该命令</p>
+<ol><li><code>Missing command: qemu-img</code></li></ol>
+<p>安装 <code>qemu-utils</code> 或你所用发行版的等效包</p>
+<ol><li>在 WSL 下环回设备、挂载或 grub 安装失败</li></ol>
+<p>将 raw/VMDK 构建迁移到原生 Linux 虚拟机或主机上</p>
+<h2 id="5-裸机准备须知">5. 裸机准备须知<a class="anchor" href="#5-裸机准备须知" aria-label="锚点">#</a></h2>
+<p>在写入 USB 介质前：</p>
+<ol><li>校验 SHA256</li><li>保持 BIOS 模式与你的机器一致</li><li>如果未签名内核策略阻止启动，请禁用 Secure Boot</li><li>保留一个备用 USB，内含此前已知可用的 ISO</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-024] pip安装后-按需配置体验.html"><div class="dir">← 上一篇</div><div class="ttl">pip 安装后 — 按需配置体验</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-026] 会话恢复-按id.html"><div class="dir">下一篇 →</div><div class="ttl">按 ID 恢复会话</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-025] windows-vmware-清单.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY AI 快速通道（AI Fast Lane） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY AI 快速通道（AI Fast Lane）</div>
+      <header class="hero reveal"><h1>KHY AI 快速通道（AI Fast Lane）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-ai-快速通道-ai-fast-lane">KHY AI 快速通道（AI Fast Lane）</a></li><li class="lvl-2"><a href="#目标">目标</a></li><li class="lvl-2"><a href="#60-秒认知">60 秒认知</a></li><li class="lvl-2"><a href="#ai-最小必读路径-按顺序">AI 最小必读路径（按顺序）</a></li><li class="lvl-2"><a href="#常见任务快速定位">常见任务快速定位</a></li><li class="lvl-2"><a href="#标准交接模板-复制给-ai">标准交接模板（复制给 AI）</a></li><li class="lvl-2"><a href="#命令入口">命令入口</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-001 | 阶段: 运维 | 原路径: docs/指南/ai-快速通道.md --&gt;</p>
+<h1 id="khy-ai-快速通道-ai-fast-lane">KHY AI 快速通道（AI Fast Lane）<a class="anchor" href="#khy-ai-快速通道-ai-fast-lane" aria-label="锚点">#</a></h1>
+<h2 id="目标">目标<a class="anchor" href="#目标" aria-label="锚点">#</a></h2>
+<p>给任何 AI 一个统一入口，用最少上下文先理解 KHY 项目，避免每次任务都全仓扫描。</p>
+<h2 id="60-秒认知">60 秒认知<a class="anchor" href="#60-秒认知" aria-label="锚点">#</a></h2>
+<ol><li>启动入口是 <code>khy</code>，Python 启动器在 <code>platform/khy_platform/cli.py</code>。</li><li>业务核心在 Node.js：<code>services/backend/</code>。</li><li>命令分发在 <code>services/backend/src/cli/router.js</code>，具体逻辑在 <code>services/backend/src/cli/handlers/*</code>。</li><li>AI 网关与管理页主链路在：<ul><li><code>services/backend/src/cli/handlers/gateway.js</code></li><li><code>services/backend/src/services/aiManagementServer.js</code></li><li><code>services/backend/scripts/ai-manage-daemon.js</code></li><li><code>services/backend/src/services/changeRegressionGate.js</code>（低级模型改动回归门禁入口，兼容旧 <code>bugfixRegressionGate.js</code>）</li></ul></li><li>管理前端在 <code>apps/ai-frontend/</code>（Vue + Vite），入口桥接在：<ul><li><code>apps/ai-frontend/src/main.js</code></li><li><code>apps/ai-frontend/src/router/index.js</code></li></ul></li></ol>
+<h2 id="ai-最小必读路径-按顺序">AI 最小必读路径（按顺序）<a class="anchor" href="#ai-最小必读路径-按顺序" aria-label="锚点">#</a></h2>
+<ol><li><code>AGENTS.md</code></li><li><code>README.md</code></li><li><code>platform/khy_platform/cli.py</code></li><li><code>services/backend/bin/khy.js</code></li><li><code>services/backend/src/cli/router.js</code></li><li><code>services/backend/src/cli/handlers/gateway.js</code></li><li><code>services/backend/src/services/aiManagementServer.js</code></li><li><code>services/backend/scripts/ai-manage-daemon.js</code></li><li><code>apps/ai-frontend/src/main.js</code></li><li><code>apps/ai-frontend/src/router/index.js</code></li></ol>
+<h2 id="常见任务快速定位">常见任务快速定位<a class="anchor" href="#常见任务快速定位" aria-label="锚点">#</a></h2>
+<ul><li>命令不生效 / 走错分支：<code>services/backend/src/cli/router.js</code></li><li>网关模型选择 / 管理页启动失败：<code>services/backend/src/cli/handlers/gateway.js</code></li><li>管理 API / WebSocket / 登录态：<code>services/backend/src/services/aiManagementServer.js</code></li><li>守护进程超时 / 空闲回收 / 前端进程：<code>services/backend/scripts/ai-manage-daemon.js</code></li><li>管理页闪烁 / 路由异常 / 保活桥接：<code>apps/ai-frontend/src/main.js</code>, <code>apps/ai-frontend/src/router/index.js</code></li><li>低级模型修复/新增后质量变差：<code>services/backend/src/services/changeRegressionGate.js</code>, <code>services/backend/src/services/agenticHarnessService.js</code></li></ul>
+<h2 id="标准交接模板-复制给-ai">标准交接模板（复制给 AI）<a class="anchor" href="#标准交接模板-复制给-ai" aria-label="锚点">#</a></h2>
+<pre><code class="language-text">你现在维护 KHY-OS。
+先阅读以下文件（按顺序）再开始改动：
+1) AGENTS.md
+2) docs/07_OPS_运维/[OPS-MAN-001] ai-快速通道.md
+3) services/backend/src/cli/router.js
+4) services/backend/src/cli/handlers/gateway.js
+5) services/backend/src/services/aiManagementServer.js
+6) services/backend/scripts/ai-manage-daemon.js
+7) apps/ai-frontend/src/main.js
+8) apps/ai-frontend/src/router/index.js
+
+要求：
+- 遵守 AGENTS.md 工程规则
+- 仅做最小必要改动
+- 给出验证命令与结果</code></pre>
+<h2 id="命令入口">命令入口<a class="anchor" href="#命令入口" aria-label="锚点">#</a></h2>
+<ul><li><code>khy docs ai-fastlane</code>：打开本快速通道并生成上下文包（<code>~/.khy/ai_fastlane_context.md</code>）。</li><li><code>khy docs ai-fastlane copy</code>：一键复制上下文包到系统剪贴板（同时落盘到本地文件）。</li><li>菜单入口：<code>menu -&gt; 教程文档 -&gt; AI 快速通道</code>。</li></ul>
+      </article>
+      <nav class="pager"><span></span><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-002] ai-管理-新api对齐.html"><div class="dir">下一篇 →</div><div class="ttl">AI 管理页 NewAPI 对齐说明（对比度 + 配置能力）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-001] ai-快速通道.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

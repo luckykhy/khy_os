@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-cloudcompare · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-cloudcompare<span class="sep">›</span>cli-anything-cloudcompare</div>
+      <header class="hero reveal"><h1>cli-anything-cloudcompare</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-cloudcompare">cli-anything-cloudcompare</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#global-options">Global Options</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#1-project-project-management-3-commands">1. project — Project Management (3 commands)</a></li><li class="lvl-3"><a href="#2-session-session-management-4-commands">2. session — Session Management (4 commands)</a></li><li class="lvl-3"><a href="#3-cloud-point-cloud-operations-21-commands">3. cloud — Point Cloud Operations (21 commands)</a></li><li class="lvl-3"><a href="#4-mesh-mesh-operations-3-commands">4. mesh — Mesh Operations (3 commands)</a></li><li class="lvl-3"><a href="#5-distance-distance-computation-2-commands">5. distance — Distance Computation (2 commands)</a></li><li class="lvl-3"><a href="#6-transform-transformations-and-registration-2-commands">6. transform — Transformations and Registration (2 commands)</a></li><li class="lvl-3"><a href="#7-export-export-clouds-and-meshes-4-commands">7. export — Export Clouds and Meshes (4 commands)</a></li><li class="lvl-3"><a href="#8-info-installation-info-1-command">8. info — Installation Info (1 command)</a></li><li class="lvl-3"><a href="#9-repl-interactive-repl-1-command">9. repl — Interactive REPL (1 command)</a></li><li class="lvl-2"><a href="#supported-file-formats">Supported File Formats</a></li><li class="lvl-2"><a href="#typical-workflows">Typical Workflows</a></li><li class="lvl-3"><a href="#workflow-1-lidar-pre-processing-pipeline">Workflow 1: LiDAR Pre-processing Pipeline</a></li><li class="lvl-3"><a href="#workflow-2-change-detection-between-two-scans">Workflow 2: Change Detection Between Two Scans</a></li><li class="lvl-3"><a href="#workflow-3-height-slice-extraction">Workflow 3: Height Slice Extraction</a></li><li class="lvl-3"><a href="#workflow-4-surface-reconstruction">Workflow 4: Surface Reconstruction</a></li><li class="lvl-2"><a href="#error-handling">Error Handling</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-cloudcompare&quot;<br>description: &quot;Command-line interface for CloudCompare — Agent-friendly harness for CloudCompare, the open-source 3D point cloud and mesh processing software. Supports 41 commands across 9 groups: project management, session control, point cloud operations (subsample, filter, segment, analyze), mesh operations, distance computation (C2C, C2M), transformations (ICP, matrix), export (LAS/LAZ/PLY/PCD/OBJ/STL/E57), and interactive REPL.&quot;</p>
+<hr>
+<h1 id="cli-anything-cloudcompare">cli-anything-cloudcompare<a class="anchor" href="#cli-anything-cloudcompare" aria-label="锚点">#</a></h1>
+<p>Agent-friendly command-line harness for <a href="https://cloudcompare.org" target="_blank" rel="noopener">CloudCompare</a> — the open-source 3D point cloud and mesh processing software.</p>
+<p><strong>41 commands</strong> across 9 groups.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install cli-anything-cloudcompare</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>CloudCompare installed on your system<ul><li>Linux (Flatpak): <code>flatpak install flathub org.cloudcompare.CloudCompare</code></li><li>macOS/Windows: download from https://cloudcompare.org</li></ul></li></ul>
+<p><strong>Tested with:</strong> CloudCompare 2.13.2 (Flatpak, Linux)</p>
+<h2 id="global-options">Global Options<a class="anchor" href="#global-options" aria-label="锚点">#</a></h2>
+<p>These options must be placed <strong>before</strong> the subcommand:</p>
+<pre><code class="language-bash">cli-anything-cloudcompare [--project FILE] [--json] COMMAND [ARGS]...</code></pre>
+<table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody><tr><td><code>-p, --project TEXT</code></td><td>Path to project JSON file</td></tr><tr><td><code>--json</code></td><td>Output results as JSON (for agent consumption)</td></tr></tbody></table>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="1-project-project-management-3-commands">1. project — Project Management (3 commands)<a class="anchor" href="#1-project-project-management-3-commands" aria-label="锚点">#</a></h3>
+<h4 id="project-new">project new<a class="anchor" href="#project-new" aria-label="锚点">#</a></h4>
+<p>Create a new empty project file.</p>
+<pre><code class="language-bash"># Create a project with default name
+cli-anything-cloudcompare project new -o myproject.json
+
+# Create a project with a custom name
+cli-anything-cloudcompare project new -o myproject.json -n &quot;Bridge Survey 2024&quot;
+
+# JSON output for agents
+cli-anything-cloudcompare --json project new -o myproject.json</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>-n/--name TEXT</code></p>
+<h4 id="project-info">project info<a class="anchor" href="#project-info" aria-label="锚点">#</a></h4>
+<p>Show project info and loaded entities.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json project info
+
+# JSON output
+cli-anything-cloudcompare --project myproject.json --json project info</code></pre>
+<h4 id="project-status">project status<a class="anchor" href="#project-status" aria-label="锚点">#</a></h4>
+<p>Show quick project status (cloud count, mesh count, last operation).</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json project status</code></pre>
+<hr>
+<h3 id="2-session-session-management-4-commands">2. session — Session Management (4 commands)<a class="anchor" href="#2-session-session-management-4-commands" aria-label="锚点">#</a></h3>
+<h4 id="session-save">session save<a class="anchor" href="#session-save" aria-label="锚点">#</a></h4>
+<p>Save the current project state to disk.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json session save</code></pre>
+<h4 id="session-history">session history<a class="anchor" href="#session-history" aria-label="锚点">#</a></h4>
+<p>Show recent operation history.</p>
+<pre><code class="language-bash"># Show last 10 operations (default)
+cli-anything-cloudcompare --project myproject.json session history
+
+# Show last 5 operations
+cli-anything-cloudcompare --project myproject.json session history -n 5</code></pre>
+<p>Options: <code>-n/--last INTEGER</code></p>
+<h4 id="session-set-format">session set-format<a class="anchor" href="#session-set-format" aria-label="锚点">#</a></h4>
+<p>Update the default export format for future operations.</p>
+<pre><code class="language-bash"># Set default cloud export to LAS
+cli-anything-cloudcompare --project myproject.json session set-format --cloud-fmt LAS --cloud-ext las
+
+# Set default mesh export to OBJ
+cli-anything-cloudcompare --project myproject.json session set-format --mesh-fmt OBJ --mesh-ext obj
+
+# Set both cloud and mesh defaults
+cli-anything-cloudcompare --project myproject.json session set-format \
+  --cloud-fmt PLY --cloud-ext ply \
+  --mesh-fmt STL --mesh-ext stl</code></pre>
+<p>Options: <code>--cloud-fmt TEXT</code>, <code>--cloud-ext TEXT</code>, <code>--mesh-fmt TEXT</code>, <code>--mesh-ext TEXT</code></p>
+<h4 id="session-undo">session undo<a class="anchor" href="#session-undo" aria-label="锚点">#</a></h4>
+<p>Remove the last operation from history (soft undo — does not delete output files).</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json session undo</code></pre>
+<hr>
+<h3 id="3-cloud-point-cloud-operations-21-commands">3. cloud — Point Cloud Operations (21 commands)<a class="anchor" href="#3-cloud-point-cloud-operations-21-commands" aria-label="锚点">#</a></h3>
+<p>All cloud commands take <code>CLOUD_INDEX</code> (0-based integer from <code>cloud list</code>) and most accept <code>--add-to-project</code> to register the output back into the project.</p>
+<h4 id="cloud-add">cloud add<a class="anchor" href="#cloud-add" aria-label="锚点">#</a></h4>
+<p>Add a point cloud file to the project.</p>
+<pre><code class="language-bash"># Add a LAS file
+cli-anything-cloudcompare --project myproject.json cloud add /data/scan.las
+
+# Add with a label
+cli-anything-cloudcompare --project myproject.json cloud add /data/scan.las -l &quot;roof scan&quot;</code></pre>
+<p>Options: <code>-l/--label TEXT</code></p>
+<h4 id="cloud-list">cloud list<a class="anchor" href="#cloud-list" aria-label="锚点">#</a></h4>
+<p>List all clouds currently in the project.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json cloud list
+
+# JSON output for parsing indices
+cli-anything-cloudcompare --project myproject.json --json cloud list</code></pre>
+<h4 id="cloud-convert">cloud convert<a class="anchor" href="#cloud-convert" aria-label="锚点">#</a></h4>
+<p>Convert a cloud from one format to another (format determined by file extension).</p>
+<pre><code class="language-bash"># LAS → PLY
+cli-anything-cloudcompare cloud convert /data/scan.las /data/scan.ply
+
+# PCD → LAS
+cli-anything-cloudcompare cloud convert /data/cloud.pcd /data/cloud.las</code></pre>
+<h4 id="cloud-subsample">cloud subsample<a class="anchor" href="#cloud-subsample" aria-label="锚点">#</a></h4>
+<p>Reduce the number of points using RANDOM, SPATIAL, or OCTREE method.</p>
+<pre><code class="language-bash"># Random: keep 100 000 points
+cli-anything-cloudcompare --project myproject.json cloud subsample 0 \
+  -o /data/sub_random.las -m random -n 100000
+
+# Spatial: minimum distance 0.05 m between points
+cli-anything-cloudcompare --project myproject.json cloud subsample 0 \
+  -o /data/sub_spatial.las -m spatial -n 0.05
+
+# Octree: level 8
+cli-anything-cloudcompare --project myproject.json cloud subsample 0 \
+  -o /data/sub_octree.las -m octree -n 8 --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>-m/--method [random|spatial|octree]</code>, <code>-n/--param FLOAT</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-crop">cloud crop<a class="anchor" href="#cloud-crop" aria-label="锚点">#</a></h4>
+<p>Crop a cloud to an axis-aligned bounding box.</p>
+<pre><code class="language-bash"># Keep points inside the box
+cli-anything-cloudcompare --project myproject.json cloud crop 0 \
+  -o /data/cropped.las \
+  --xmin 0.0 --ymin 0.0 --zmin 0.0 \
+  --xmax 10.0 --ymax 10.0 --zmax 5.0
+
+# Keep points OUTSIDE the box
+cli-anything-cloudcompare --project myproject.json cloud crop 0 \
+  -o /data/exterior.las \
+  --xmin 0.0 --ymin 0.0 --zmin 0.0 \
+  --xmax 10.0 --ymax 10.0 --zmax 5.0 --outside</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--xmin/ymin/zmin/xmax/ymax/zmax FLOAT</code> (all required), <code>--outside</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-normals">cloud normals<a class="anchor" href="#cloud-normals" aria-label="锚点">#</a></h4>
+<p>Compute surface normals via the octree method.</p>
+<pre><code class="language-bash"># Compute normals at octree level 6
+cli-anything-cloudcompare --project myproject.json cloud normals 0 \
+  -o /data/with_normals.ply --level 6
+
+# Compute normals oriented toward +Z
+cli-anything-cloudcompare --project myproject.json cloud normals 0 \
+  -o /data/with_normals.ply --level 6 --orientation plus_z --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--level INTEGER</code> (1–10), <code>--orientation [plus_x|plus_y|plus_z|minus_x|minus_y|minus_z]</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-invert-normals">cloud invert-normals<a class="anchor" href="#cloud-invert-normals" aria-label="锚点">#</a></h4>
+<p>Flip all normal vectors in the cloud.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json cloud invert-normals 0 \
+  -o /data/flipped_normals.ply --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--add-to-project</code></p>
+<h4 id="cloud-filter-sor">cloud filter-sor<a class="anchor" href="#cloud-filter-sor" aria-label="锚点">#</a></h4>
+<p>Statistical Outlier Removal — removes isolated noise points.</p>
+<pre><code class="language-bash"># Default parameters (k=6 neighbours, 1.0 std ratio)
+cli-anything-cloudcompare --project myproject.json cloud filter-sor 0 \
+  -o /data/denoised.las
+
+# Custom parameters
+cli-anything-cloudcompare --project myproject.json cloud filter-sor 0 \
+  -o /data/denoised.las --nb-points 12 --std-ratio 2.0 --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--nb-points INTEGER</code>, <code>--std-ratio FLOAT</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-noise-filter">cloud noise-filter<a class="anchor" href="#cloud-noise-filter" aria-label="锚点">#</a></h4>
+<p>Remove noisy points using the PCL noise filter (KNN or radius mode).</p>
+<pre><code class="language-bash"># KNN mode (default)
+cli-anything-cloudcompare --project myproject.json cloud noise-filter 0 \
+  -o /data/clean.las --knn 8 --noisiness 1.0
+
+# Radius mode
+cli-anything-cloudcompare --project myproject.json cloud noise-filter 0 \
+  -o /data/clean.las --radius 0.1 --use-radius --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--knn INTEGER</code>, <code>--noisiness FLOAT</code>, <code>--radius FLOAT</code>, <code>--use-radius</code>, <code>--absolute</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-filter-csf">cloud filter-csf<a class="anchor" href="#cloud-filter-csf" aria-label="锚点">#</a></h4>
+<p>Ground filtering using the Cloth Simulation Filter (CSF) algorithm. Separates ground from off-ground points (buildings, vegetation).</p>
+<pre><code class="language-bash"># Extract ground only — mixed terrain
+cli-anything-cloudcompare --project myproject.json cloud filter-csf 0 \
+  --ground /data/ground.las --scene relief
+
+# Split ground + off-ground — urban scene
+cli-anything-cloudcompare --project myproject.json cloud filter-csf 0 \
+  --ground /data/ground.las \
+  --offground /data/buildings.las \
+  --scene flat --cloth-resolution 0.5 --class-threshold 0.3
+
+# Steep forested slope with slope post-processing
+cli-anything-cloudcompare --project myproject.json cloud filter-csf 0 \
+  --ground /data/terrain.las --scene slope --proc-slope --add-to-project</code></pre>
+<p>Options: <code>-g/--ground TEXT</code> (required), <code>-u/--offground TEXT</code>, <code>--scene [slope|relief|flat]</code>, <code>--cloth-resolution FLOAT</code>, <code>--class-threshold FLOAT</code>, <code>--max-iteration INTEGER</code>, <code>--proc-slope</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-filter-sf">cloud filter-sf<a class="anchor" href="#cloud-filter-sf" aria-label="锚点">#</a></h4>
+<p>Filter a cloud by scalar field value range (keep points where SF ∈ [min, max]).</p>
+<pre><code class="language-bash"># Keep points with SF value between 10 and 50
+cli-anything-cloudcompare --project myproject.json cloud filter-sf 0 \
+  -o /data/filtered.las --min 10.0 --max 50.0
+
+# Filter using a specific SF index
+cli-anything-cloudcompare --project myproject.json cloud filter-sf 0 \
+  -o /data/filtered.las --min 0.0 --max 1.5 --sf-index 2 --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--min FLOAT</code> (required), <code>--max FLOAT</code> (required), <code>--sf-index INTEGER</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-sf-from-coord">cloud sf-from-coord<a class="anchor" href="#cloud-sf-from-coord" aria-label="锚点">#</a></h4>
+<p>Convert a coordinate axis (X/Y/Z) to a scalar field. Commonly used to create a height (Z) scalar field.</p>
+<pre><code class="language-bash"># Create Z scalar field (height)
+cli-anything-cloudcompare --project myproject.json cloud sf-from-coord 0 \
+  -o /data/with_z_sf.las --dim z --add-to-project
+
+# Create X scalar field with a specific active index
+cli-anything-cloudcompare --project myproject.json cloud sf-from-coord 0 \
+  -o /data/with_x_sf.las --dim x --sf-index 0</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--dim [x|y|z]</code> (default: z), <code>--sf-index INTEGER</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-sf-filter-z">cloud sf-filter-z<a class="anchor" href="#cloud-sf-filter-z" aria-label="锚点">#</a></h4>
+<p>Convenience command: convert Z → scalar field and filter by height range in one step.</p>
+<pre><code class="language-bash"># Extract points between z=1.0 m and z=2.5 m
+cli-anything-cloudcompare --project myproject.json cloud sf-filter-z 0 \
+  -o /data/slice.las --min 1.0 --max 2.5 --add-to-project
+
+# Only apply upper bound
+cli-anything-cloudcompare --project myproject.json cloud sf-filter-z 0 \
+  -o /data/below_5m.las --max 5.0</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--min FLOAT</code>, <code>--max FLOAT</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-sf-to-rgb">cloud sf-to-rgb<a class="anchor" href="#cloud-sf-to-rgb" aria-label="锚点">#</a></h4>
+<p>Convert the active scalar field to RGB colours.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json cloud sf-to-rgb 0 \
+  -o /data/coloured.ply --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--add-to-project</code></p>
+<h4 id="cloud-rgb-to-sf">cloud rgb-to-sf<a class="anchor" href="#cloud-rgb-to-sf" aria-label="锚点">#</a></h4>
+<p>Convert RGB colours to a scalar field (luminance value).</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json cloud rgb-to-sf 0 \
+  -o /data/luminance.las --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--add-to-project</code></p>
+<h4 id="cloud-curvature">cloud curvature<a class="anchor" href="#cloud-curvature" aria-label="锚点">#</a></h4>
+<p>Compute curvature scalar field (MEAN or GAUSS).</p>
+<pre><code class="language-bash"># Mean curvature with radius 0.5 m
+cli-anything-cloudcompare --project myproject.json cloud curvature 0 \
+  -o /data/curvature.las --type mean --radius 0.5
+
+# Gaussian curvature
+cli-anything-cloudcompare --project myproject.json cloud curvature 0 \
+  -o /data/curvature.las --type gauss --radius 0.5 --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--type [mean|gauss]</code>, <code>-r/--radius FLOAT</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-roughness">cloud roughness<a class="anchor" href="#cloud-roughness" aria-label="锚点">#</a></h4>
+<p>Compute roughness scalar field (deviation from local best-fit plane).</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json cloud roughness 0 \
+  -o /data/roughness.las --radius 0.2 --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>-r/--radius FLOAT</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-density">cloud density<a class="anchor" href="#cloud-density" aria-label="锚点">#</a></h4>
+<p>Compute point density scalar field.</p>
+<pre><code class="language-bash"># KNN density
+cli-anything-cloudcompare --project myproject.json cloud density 0 \
+  -o /data/density.las --type knn --radius 0.5
+
+# Surface density
+cli-anything-cloudcompare --project myproject.json cloud density 0 \
+  -o /data/density.las --type surface --radius 1.0 --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>-r/--radius FLOAT</code>, <code>--type [knn|surface|volume]</code>, <code>--add-to-project</code></p>
+<h4 id="cloud-segment-cc">cloud segment-cc<a class="anchor" href="#cloud-segment-cc" aria-label="锚点">#</a></h4>
+<p>Segment cloud into connected components (clusters). Each component is saved as a separate file.</p>
+<pre><code class="language-bash"># Segment with octree level 8, minimum 100 points per component
+cli-anything-cloudcompare --project myproject.json cloud segment-cc 0 \
+  -o /data/components/ --octree-level 8 --min-points 100
+
+# Save components as PLY files
+cli-anything-cloudcompare --project myproject.json cloud segment-cc 0 \
+  -o /data/components/ --octree-level 6 --min-points 50 --fmt ply</code></pre>
+<p>Options: <code>-o/--output-dir TEXT</code> (required), <code>--octree-level INTEGER</code>, <code>--min-points INTEGER</code>, <code>--fmt TEXT</code></p>
+<h4 id="cloud-merge">cloud merge<a class="anchor" href="#cloud-merge" aria-label="锚点">#</a></h4>
+<p>Merge all clouds in the project into a single cloud.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json cloud merge \
+  -o /data/merged.las --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--add-to-project</code></p>
+<h4 id="cloud-mesh-delaunay">cloud mesh-delaunay<a class="anchor" href="#cloud-mesh-delaunay" aria-label="锚点">#</a></h4>
+<p>Build a 2.5-D Delaunay triangulation mesh from a cloud.</p>
+<pre><code class="language-bash"># Basic Delaunay mesh
+cli-anything-cloudcompare --project myproject.json cloud mesh-delaunay 0 \
+  -o /data/surface.obj
+
+# Best-fit plane with max edge length limit
+cli-anything-cloudcompare --project myproject.json cloud mesh-delaunay 0 \
+  -o /data/surface.ply --best-fit --max-edge-length 2.0 --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>--best-fit</code>, <code>--max-edge-length FLOAT</code>, <code>--add-to-project</code></p>
+<hr>
+<h3 id="4-mesh-mesh-operations-3-commands">4. mesh — Mesh Operations (3 commands)<a class="anchor" href="#4-mesh-mesh-operations-3-commands" aria-label="锚点">#</a></h3>
+<h4 id="mesh-add">mesh add<a class="anchor" href="#mesh-add" aria-label="锚点">#</a></h4>
+<p>Add a mesh file to the project.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json mesh add /data/model.obj
+
+# Add with label
+cli-anything-cloudcompare --project myproject.json mesh add /data/model.ply -l &quot;building model&quot;</code></pre>
+<p>Options: <code>-l/--label TEXT</code></p>
+<h4 id="mesh-list">mesh list<a class="anchor" href="#mesh-list" aria-label="锚点">#</a></h4>
+<p>List all meshes in the project.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare --project myproject.json mesh list
+
+# JSON output
+cli-anything-cloudcompare --project myproject.json --json mesh list</code></pre>
+<h4 id="mesh-sample">mesh sample<a class="anchor" href="#mesh-sample" aria-label="锚点">#</a></h4>
+<p>Sample a point cloud from a mesh surface.</p>
+<pre><code class="language-bash"># Sample 50 000 points from mesh at index 0
+cli-anything-cloudcompare --project myproject.json mesh sample 0 \
+  -o /data/sampled.las -n 50000
+
+# Add sampled cloud back to project
+cli-anything-cloudcompare --project myproject.json mesh sample 0 \
+  -o /data/sampled.las -n 100000 --add-to-project</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>-n/--count INTEGER</code>, <code>--add-to-project</code></p>
+<hr>
+<h3 id="5-distance-distance-computation-2-commands">5. distance — Distance Computation (2 commands)<a class="anchor" href="#5-distance-distance-computation-2-commands" aria-label="锚点">#</a></h3>
+<h4 id="distance-c2c">distance c2c<a class="anchor" href="#distance-c2c" aria-label="锚点">#</a></h4>
+<p>Compute cloud-to-cloud distances. Adds a distance scalar field to the compared cloud.</p>
+<pre><code class="language-bash"># Compare cloud 1 to reference cloud 0
+cli-anything-cloudcompare --project myproject.json distance c2c \
+  --compare 1 --reference 0 -o /data/distances.las
+
+# Split into X/Y/Z components at octree level 8
+cli-anything-cloudcompare --project myproject.json distance c2c \
+  --compare 1 --reference 0 -o /data/distances.las \
+  --split-xyz --octree-level 8 --add-to-project</code></pre>
+<p>Options: <code>--compare TEXT</code> (required), <code>--reference TEXT</code> (required), <code>-o/--output TEXT</code> (required), <code>--split-xyz</code>, <code>--octree-level INTEGER</code>, <code>--add-to-project</code></p>
+<h4 id="distance-c2m">distance c2m<a class="anchor" href="#distance-c2m" aria-label="锚点">#</a></h4>
+<p>Compute cloud-to-mesh distances. Adds a distance scalar field to the cloud.</p>
+<pre><code class="language-bash"># Basic cloud-to-mesh distance
+cli-anything-cloudcompare --project myproject.json distance c2m \
+  --cloud 0 --mesh 0 -o /data/c2m_dist.las
+
+# With flipped normals and unsigned distances
+cli-anything-cloudcompare --project myproject.json distance c2m \
+  --cloud 0 --mesh 0 -o /data/c2m_dist.las \
+  --flip-normals --unsigned --add-to-project</code></pre>
+<p>Options: <code>--cloud INTEGER</code> (required), <code>--mesh INTEGER</code> (required), <code>-o/--output TEXT</code> (required), <code>--flip-normals</code>, <code>--unsigned</code>, <code>--add-to-project</code></p>
+<hr>
+<h3 id="6-transform-transformations-and-registration-2-commands">6. transform — Transformations and Registration (2 commands)<a class="anchor" href="#6-transform-transformations-and-registration-2-commands" aria-label="锚点">#</a></h3>
+<h4 id="transform-apply">transform apply<a class="anchor" href="#transform-apply" aria-label="锚点">#</a></h4>
+<p>Apply a 4×4 rigid-body transformation matrix to a cloud.</p>
+<pre><code class="language-bash"># Apply a transformation matrix from file
+cli-anything-cloudcompare --project myproject.json transform apply 0 \
+  -o /data/transformed.las -m /data/matrix.txt
+
+# Apply the inverse transformation
+cli-anything-cloudcompare --project myproject.json transform apply 0 \
+  -o /data/transformed.las -m /data/matrix.txt --inverse --add-to-project</code></pre>
+<p>The matrix file must contain 4 rows of 4 space-separated values:</p>
+<pre><code>1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1</code></pre>
+<p>Options: <code>-o/--output TEXT</code> (required), <code>-m/--matrix TEXT</code> (required), <code>--inverse</code>, <code>--add-to-project</code></p>
+<h4 id="transform-icp">transform icp<a class="anchor" href="#transform-icp" aria-label="锚点">#</a></h4>
+<p>Run ICP (Iterative Closest Point) registration to align one cloud to another.</p>
+<pre><code class="language-bash"># Basic ICP alignment
+cli-anything-cloudcompare --project myproject.json transform icp \
+  --aligned 1 --reference 0 -o /data/aligned.las
+
+# ICP with overlap and iteration control
+cli-anything-cloudcompare --project myproject.json transform icp \
+  --aligned 1 --reference 0 -o /data/aligned.las \
+  --max-iter 50 --overlap 80 --min-error-diff 1e-6 --add-to-project</code></pre>
+<p>Options: <code>--aligned INTEGER</code> (required), <code>--reference INTEGER</code> (required), <code>-o/--output TEXT</code> (required), <code>--max-iter INTEGER</code>, <code>--min-error-diff FLOAT</code>, <code>--overlap FLOAT</code>, <code>--add-to-project</code></p>
+<hr>
+<h3 id="7-export-export-clouds-and-meshes-4-commands">7. export — Export Clouds and Meshes (4 commands)<a class="anchor" href="#7-export-export-clouds-and-meshes-4-commands" aria-label="锚点">#</a></h3>
+<h4 id="export-formats">export formats<a class="anchor" href="#export-formats" aria-label="锚点">#</a></h4>
+<p>List all available export format presets.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare export formats
+
+# JSON output
+cli-anything-cloudcompare --json export formats</code></pre>
+<h4 id="export-cloud">export cloud<a class="anchor" href="#export-cloud" aria-label="锚点">#</a></h4>
+<p>Export a cloud to a target format.</p>
+<pre><code class="language-bash"># Export cloud at index 0 as LAS
+cli-anything-cloudcompare --project myproject.json export cloud 0 /data/output.las
+
+# Export as PLY using preset
+cli-anything-cloudcompare --project myproject.json export cloud 0 /data/output.ply -f ply
+
+# Overwrite if file exists
+cli-anything-cloudcompare --project myproject.json export cloud 0 /data/output.las -f las --overwrite</code></pre>
+<p>Supported presets: <code>las</code>, <code>laz</code>, <code>ply</code>, <code>pcd</code>, <code>xyz</code>, <code>asc</code>, <code>csv</code>, <code>bin</code>, <code>e57</code></p>
+<p>Options: <code>-f/--preset TEXT</code>, <code>--overwrite</code></p>
+<h4 id="export-mesh">export mesh<a class="anchor" href="#export-mesh" aria-label="锚点">#</a></h4>
+<p>Export a mesh to a target format.</p>
+<pre><code class="language-bash"># Export mesh at index 0 as OBJ
+cli-anything-cloudcompare --project myproject.json export mesh 0 /data/model.obj
+
+# Export as STL
+cli-anything-cloudcompare --project myproject.json export mesh 0 /data/model.stl -f stl --overwrite</code></pre>
+<p>Supported presets: <code>obj</code>, <code>stl</code>, <code>ply</code>, <code>bin</code></p>
+<p>Options: <code>-f/--preset TEXT</code>, <code>--overwrite</code></p>
+<h4 id="export-batch">export batch<a class="anchor" href="#export-batch" aria-label="锚点">#</a></h4>
+<p>Batch export all project clouds to a directory.</p>
+<pre><code class="language-bash"># Export all clouds as LAS
+cli-anything-cloudcompare --project myproject.json export batch \
+  -d /data/exports/ -f las
+
+# Overwrite existing files
+cli-anything-cloudcompare --project myproject.json export batch \
+  -d /data/exports/ -f ply --overwrite</code></pre>
+<p>Options: <code>-d/--output-dir TEXT</code> (required), <code>-f/--preset TEXT</code>, <code>--overwrite</code></p>
+<hr>
+<h3 id="8-info-installation-info-1-command">8. info — Installation Info (1 command)<a class="anchor" href="#8-info-installation-info-1-command" aria-label="锚点">#</a></h3>
+<p>Show CloudCompare installation path and version.</p>
+<pre><code class="language-bash">cli-anything-cloudcompare info
+
+# JSON output
+cli-anything-cloudcompare --json info</code></pre>
+<hr>
+<h3 id="9-repl-interactive-repl-1-command">9. repl — Interactive REPL (1 command)<a class="anchor" href="#9-repl-interactive-repl-1-command" aria-label="锚点">#</a></h3>
+<p>Start the interactive REPL session with history and undo support.</p>
+<pre><code class="language-bash"># Start REPL without a project
+cli-anything-cloudcompare repl
+
+# Start REPL with an existing project
+cli-anything-cloudcompare repl -p myproject.json
+
+# Equivalent: run without subcommand
+cli-anything-cloudcompare --project myproject.json</code></pre>
+<p>Options: <code>-p/--project TEXT</code></p>
+<p>Inside the REPL, type <code>help</code> to list available commands or <code>session undo</code> to revert the last operation.</p>
+<hr>
+<h2 id="supported-file-formats">Supported File Formats<a class="anchor" href="#supported-file-formats" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Format</th><th>Extension</th><th>Read</th><th>Write</th><th>Notes</th></tr></thead><tbody><tr><td>LAS</td><td><code>.las</code></td><td>✓</td><td>✓</td><td>LiDAR standard, supports intensity/RGB</td></tr><tr><td>LAZ</td><td><code>.laz</code></td><td>✓</td><td>✓</td><td>Compressed LAS</td></tr><tr><td>PLY</td><td><code>.ply</code></td><td>✓</td><td>✓</td><td>ASCII or binary</td></tr><tr><td>PCD</td><td><code>.pcd</code></td><td>✓</td><td>✓</td><td>PCL format</td></tr><tr><td>XYZ</td><td><code>.xyz</code></td><td>✓</td><td>✓</td><td>Plain text XYZ</td></tr><tr><td>ASC</td><td><code>.asc</code></td><td>✓</td><td>✓</td><td>ASCII with header</td></tr><tr><td>CSV</td><td><code>.csv</code></td><td>✓</td><td>✓</td><td>Comma-separated</td></tr><tr><td>E57</td><td><code>.e57</code></td><td>✓</td><td>✓</td><td>ASTM scanner exchange</td></tr><tr><td>BIN</td><td><code>.bin</code></td><td>✓</td><td>✓</td><td>CloudCompare native binary</td></tr><tr><td>OBJ</td><td><code>.obj</code></td><td>✓</td><td>✓</td><td>Mesh (Wavefront)</td></tr><tr><td>STL</td><td><code>.stl</code></td><td>✓</td><td>✓</td><td>Mesh (3D printing)</td></tr></tbody></table>
+<hr>
+<h2 id="typical-workflows">Typical Workflows<a class="anchor" href="#typical-workflows" aria-label="锚点">#</a></h2>
+<h3 id="workflow-1-lidar-pre-processing-pipeline">Workflow 1: LiDAR Pre-processing Pipeline<a class="anchor" href="#workflow-1-lidar-pre-processing-pipeline" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">P=myproject.json
+
+# 1. Create project and load scan
+cli-anything-cloudcompare project new -o $P
+cli-anything-cloudcompare --project $P cloud add /data/scan.las
+cli-anything-cloudcompare --project $P cloud list  # note index → 0
+
+# 2. Denoise
+cli-anything-cloudcompare --project $P cloud filter-sor 0 \
+  -o /data/denoised.las --nb-points 6 --std-ratio 1.0 --add-to-project
+
+# 3. Subsample to 5 cm grid
+cli-anything-cloudcompare --project $P cloud subsample 1 \
+  -o /data/subsampled.las -m spatial -n 0.05 --add-to-project
+
+# 4. Extract ground plane (CSF)
+cli-anything-cloudcompare --project $P cloud filter-csf 2 \
+  --ground /data/ground.las --offground /data/objects.las \
+  --scene relief --add-to-project
+
+# 5. Export result
+cli-anything-cloudcompare --project $P export cloud 3 /data/ground_final.las -f las --overwrite</code></pre>
+<h3 id="workflow-2-change-detection-between-two-scans">Workflow 2: Change Detection Between Two Scans<a class="anchor" href="#workflow-2-change-detection-between-two-scans" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">P=compare.json
+cli-anything-cloudcompare project new -o $P
+cli-anything-cloudcompare --project $P cloud add /data/scan_2023.las   # index 0
+cli-anything-cloudcompare --project $P cloud add /data/scan_2024.las   # index 1
+
+# ICP alignment (align 2024 to 2023)
+cli-anything-cloudcompare --project $P transform icp \
+  --aligned 1 --reference 0 -o /data/aligned_2024.las \
+  --overlap 90 --add-to-project   # index 2
+
+# Cloud-to-cloud distance
+cli-anything-cloudcompare --project $P distance c2c \
+  --compare 2 --reference 0 -o /data/change_map.las --add-to-project
+
+# Export as LAS with distance scalar field
+cli-anything-cloudcompare --project $P export cloud 3 /data/change_map_final.las --overwrite</code></pre>
+<h3 id="workflow-3-height-slice-extraction">Workflow 3: Height Slice Extraction<a class="anchor" href="#workflow-3-height-slice-extraction" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">P=slice.json
+cli-anything-cloudcompare project new -o $P
+cli-anything-cloudcompare --project $P cloud add /data/building.las
+
+# Extract points at 2–3 m height (floor level)
+cli-anything-cloudcompare --project $P cloud sf-filter-z 0 \
+  -o /data/floor_slice.las --min 2.0 --max 3.0 --add-to-project
+
+# Export
+cli-anything-cloudcompare --project $P export cloud 1 /data/floor_slice_out.las --overwrite</code></pre>
+<h3 id="workflow-4-surface-reconstruction">Workflow 4: Surface Reconstruction<a class="anchor" href="#workflow-4-surface-reconstruction" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">P=mesh.json
+cli-anything-cloudcompare project new -o $P
+cli-anything-cloudcompare --project $P cloud add /data/terrain.las
+
+# Compute normals
+cli-anything-cloudcompare --project $P cloud normals 0 \
+  -o /data/with_normals.ply --level 6 --orientation plus_z --add-to-project
+
+# Delaunay mesh
+cli-anything-cloudcompare --project $P cloud mesh-delaunay 1 \
+  -o /data/terrain_mesh.obj --max-edge-length 1.0 --add-to-project
+
+# Export mesh
+cli-anything-cloudcompare --project $P export mesh 0 /data/terrain_mesh_final.obj --overwrite</code></pre>
+<hr>
+<h2 id="error-handling">Error Handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Exit Code</th><th>Meaning</th></tr></thead><tbody><tr><td><code>0</code></td><td>Success</td></tr><tr><td><code>1</code></td><td>General error (see stderr for details)</td></tr><tr><td><code>2</code></td><td>Invalid arguments</td></tr></tbody></table>
+<p>Common errors:</p>
+<pre><code class="language-bash"># CloudCompare not found
+# → Install CloudCompare; check `cli-anything-cloudcompare info`
+
+# Index out of range
+# → Run `cloud list` or `mesh list` to confirm valid indices
+
+# File already exists (no --overwrite)
+# → Add --overwrite flag to export commands
+
+# fcntl not available (Windows)
+# → File locking is skipped automatically; project save still works</code></pre>
+<hr>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> — 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file arguments</li><li><strong>Verify output files exist</strong> after export operations</li><li><strong>Chain with <code>--add-to-project</code></strong> to build multi-step pipelines without re-loading files</li><li><strong>Use <code>cloud list --json</code></strong> to discover valid cloud indices before each operation</li><li><strong>Use <code>export formats --json</code></strong> to discover available format presets</li></ol>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Component</th><th>Version</th></tr></thead><tbody><tr><td>cli-anything-cloudcompare</td><td>1.0.0</td></tr><tr><td>CloudCompare (tested)</td><td>2.13.2</td></tr><tr><td>Python (minimum)</td><td>3.10</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-cloudanalyzer/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-cloudanalyzer</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-comfyui/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-comfyui</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-cloudcompare/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

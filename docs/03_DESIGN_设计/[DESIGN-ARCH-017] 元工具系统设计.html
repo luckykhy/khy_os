@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyos 元工具系统设计（Meta-Tool / Tool-Forging） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>khyos 元工具系统设计（Meta-Tool / Tool-Forging）</div>
+      <header class="hero reveal"><h1>khyos 元工具系统设计（Meta-Tool / Tool-Forging）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-元工具系统设计-meta-tool-tool-forging">khyos 元工具系统设计（Meta-Tool / Tool-Forging）</a></li><li class="lvl-2"><a href="#0-目标与非目标">0. 目标与非目标</a></li><li class="lvl-2"><a href="#1-架构总览">1. 架构总览</a></li><li class="lvl-2"><a href="#2-触发机制-任务①">2. 触发机制（任务①）</a></li><li class="lvl-2"><a href="#3-生成逻辑-任务②">3. 生成逻辑（任务②）</a></li><li class="lvl-2"><a href="#4-安全审查-任务②-防呆">4. 安全审查（任务②/防呆）</a></li><li class="lvl-2"><a href="#5-注册与集成-任务③">5. 注册与集成（任务③）</a></li><li class="lvl-2"><a href="#6-用户体验-透明性-任务④">6. 用户体验 / 透明性（任务④）</a></li><li class="lvl-2"><a href="#7-防呆-任务③防呆规则">7. 防呆（任务③防呆规则）</a></li><li class="lvl-2"><a href="#8-边界-只改元工具相关模块">8. 边界（只改元工具相关模块）</a></li><li class="lvl-2"><a href="#9-落地检查清单">9. 落地检查清单</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-017 | 阶段: 设计 | 原路径: docs/03_DESIGN_设计/[DESIGN-ARCH-017] 元工具系统设计.md（新建） --&gt;</p>
+<h1 id="khyos-元工具系统设计-meta-tool-tool-forging">khyos 元工具系统设计（Meta-Tool / Tool-Forging）<a class="anchor" href="#khyos-元工具系统设计-meta-tool-tool-forging" aria-label="锚点">#</a></h1>
+<blockquote><p>版本 v1.0（2026-06-12）。本文定义 khyos 生态底座的<strong>元工具系统</strong>：当现有工具<br>无法满足任务需求时，由 Agent 经 LLM <strong>动态生成</strong>一个新工具，经<strong>静态安全扫描 +<br>沙箱冒烟测试</strong>后<strong>自动注册</strong>进工具系统，供后续步骤即时调用。</p>
+<p>关键词 <strong>必须 / 严禁 / 应 / 可</strong> 按 RFC 2119 语义。本系统是<strong>可选能力</strong>，默认关闭，<br>仅当运营者显式设置 <code>KHY_ENABLE_META_TOOL=1</code> 时启用（与 <code>executeCode</code> 同样的<br>「知情启用」纪律）。</p></blockquote>
+<hr>
+<h2 id="0-目标与非目标">0. 目标与非目标<a class="anchor" href="#0-目标与非目标" aria-label="锚点">#</a></h2>
+<p><strong>目标</strong></p>
+<ul><li><strong>动态性</strong>：按任务需求即时铸造工具，而非固定工具集。</li><li><strong>安全性</strong>：生成工具经多层验证（静态扫描 + 沙箱测试 + 运行期强隔离）才可注册/调用。</li><li><strong>透明性</strong>：用户以自然语言感知「正在创建工具…/已创建工具 X」，不暴露内部细节</li></ul>
+<p>（遵循 [DESIGN-ARCH-016] AI Agent 显示规范）。</p>
+<ul><li><strong>兼容性</strong>：仅通过工具注册表<strong>公开 API</strong>（<code>register</code> / <code>defineTool</code>）接入，</li></ul>
+<p>零侵入现有调度循环与业务逻辑。</p>
+<p><strong>非目标</strong></p>
+<ul><li>不生成可访问文件系统 / 进程 / 网络 / 子进程的工具（这类需求应走既有受控工具，</li></ul>
+<p>如 <code>editFile</code> / <code>shellCommand</code> / <code>webSearch</code>，而非新铸）。生成工具是<strong>纯计算</strong>单元。</p>
+<ul><li>不替代 MCP / 内置工具；元工具只补「现有工具集恰好缺一块纯逻辑」的空隙。</li></ul>
+<hr>
+<h2 id="1-架构总览">1. 架构总览<a class="anchor" href="#1-架构总览" aria-label="锚点">#</a></h2>
+<pre><code>┌────────────────────────── Agent 调度循环 (toolUseLoop, 不改) ──────────────────────────┐
+│  模型判断「无现成工具可用」→ 调用元工具 createTool({purpose, name?, input_hint?})       │
+└───────────────────────────────────────────┬───────────────────────────────────────────┘
+                                            │ (普通工具调用，零核心改动)
+                          ┌─────────────────▼──────────────────┐
+                          │  tools/CreateToolTool (agent 可调用) │  ← 自动发现注册
+                          │  · opt-in 门禁 (KHY_ENABLE_META_TOOL) │
+                          │  · 默认 LLM = cli/ai.chat (可注入)    │
+                          └─────────────────┬──────────────────┘
+                                            │ delegate
+                  ┌─────────────────────────▼─────────────────────────┐
+                  │           services/metaToolEngine (引擎)            │
+                  │  ① guard：预算/复杂度/去重/递归防护                 │
+                  │  ② generate：LLM → JSON {name,desc,schema,code}     │
+                  │  ③ staticSafetyScan：危险 API 黑名单（白盒拒绝）    │
+                  │  ④ sandboxTest：sandboxedExec 冒烟（require/process │
+                  │     /global 全封）                                  │
+                  │  ⑤ register：defineTool（运行期再次 sandboxedExec   │
+                  │     强隔离）→ toolRegistry.register                 │
+                  │  ⑥ persist：~/.khy/generated_tools/&lt;name&gt;.json      │
+                  └─────────────────────────┬─────────────────────────┘
+                                            │ register() — 公开 API
+                          ┌─────────────────▼──────────────────┐
+                          │  tools/index.js 注册表 (不改)        │
+                          │  新工具与内置工具同走 execute/权限路径│
+                          └────────────────────────────────────┘</code></pre>
+<p><strong>核心不变量</strong>：生成工具的 <code>execute</code> <strong>必须</strong>把代码体放进 <code>toolSandbox.sandboxedExec</code><br>运行——即便注册后，运行期也跑在 <code>require/process/global/setTimeout</code> 全部被封的 vm<br>上下文里。因此一个生成工具在<strong>任何</strong>时刻都<strong>不可能</strong>触达宿主文件系统/进程/网络。<br>这是「安全性」的物理保证，而非仅靠生成期审查。</p>
+<hr>
+<h2 id="2-触发机制-任务①">2. 触发机制（任务①）<a class="anchor" href="#2-触发机制-任务①" aria-label="锚点">#</a></h2>
+<p>分两级，优先低侵入：</p>
+<ol><li><strong>模型驱动（主，推荐）</strong>：<code>createTool</code> 作为普通工具暴露给模型。其 <code>description</code></li></ol>
+<p>明确告知「<strong>仅当</strong>现有工具都不匹配、且需求是一段可纯计算完成的逻辑时」才调用。<br>   模型在 ReAct 思考中自行判定「工具匹配失败 / 需求超出现有能力」→ 调用之。<br>   这是最自然、零核心改动的触发：把判断权交给已在循环里的模型。</p>
+<ol><li><strong>程序化触发点（次，可选，预留）</strong>：引擎导出 <code>shouldForge(unknownToolName, ctx)</code></li></ol>
+<p>辅助函数，未来可由「未知工具名」路径调用以建议铸造。<strong>当前不接入</strong>调度循环，<br>   以遵守「不碰核心业务逻辑」；接入点以 <code># TODO: [MetaTool-Trigger-Unresolved]</code><br>   标注（见引擎导出），由后续按需启用。</p>
+<p><strong>严禁</strong>在待机/无任务时主动铸造工具（零噪音，遵循 DESIGN-ARCH-016 §4）。</p>
+<hr>
+<h2 id="3-生成逻辑-任务②">3. 生成逻辑（任务②）<a class="anchor" href="#3-生成逻辑-任务②" aria-label="锚点">#</a></h2>
+<p><code>generateToolDefinition({ purpose, name?, inputHint? }, { llm })</code>：</p>
+<ul><li>LLM 提示词<strong>强约束</strong>输出<strong>单个 JSON 对象</strong>：</li></ul>
+<p><code>{ name, description, category, risk, inputSchema, code }</code></p>
+<ul><li><code>name</code>：<code>^[a-zA-Z][a-zA-Z0-9_]{2,39}$</code>，<strong>严禁</strong>与现有工具同名（防覆盖）。</li><li><code>inputSchema</code>：<code>{ &lt;param&gt;: { type, required?, description?, enum? } }</code>，参数数 ≤ 8。</li><li><code>code</code>：<strong>纯 JavaScript 函数体</strong>，签名约定 <code>(params) =&gt; &lt;return&gt;</code>，<strong>严禁</strong></li></ul>
+<p><code>require</code> / <code>process</code> / <code>import</code> / 网络 / 文件系统 / <code>eval</code> / <code>Function</code>。<br>    仅允许纯计算（数学、字符串、数组、JSON、正则）。</p>
+<ul><li><code>risk</code>：强制规约为 <code>safe</code>（运行期沙箱隔离，无副作用）。</li></ul>
+<blockquote><p>LLM 由调用方<strong>注入</strong>（DI）。<code>CreateToolTool</code> 默认提供 <code>cli/ai.chat</code>，测试注入<br>假 LLM。引擎<strong>不</strong>硬依赖任何具体模型/网关，保证可测与解耦。</p></blockquote>
+<hr>
+<h2 id="4-安全审查-任务②-防呆">4. 安全审查（任务②/防呆）<a class="anchor" href="#4-安全审查-任务②-防呆" aria-label="锚点">#</a></h2>
+<p>四道闸，任一不过即<strong>拒绝注册</strong>：</p>
+<table><thead><tr><th>闸</th><th>机制</th><th>拒绝条件</th></tr></thead><tbody><tr><td>G1 复杂度</td><td>代码长度 ≤ <code>KHY_META_TOOL_MAX_CODE</code>（默认 4000 字符）；参数 ≤ 8</td><td>超限</td></tr><tr><td>G2 静态扫描</td><td>危险标识黑名单（<code>require</code>、<code>process</code>、<code>child_process</code>、<code>fs</code>、<code>eval</code>、<code>Function(</code>、<code>globalThis</code>、<code>import(</code>、<code>__proto__</code>、<code>constructor.constructor</code>、<code>fetch</code>、<code>http</code>、<code>net</code>、<code>dns</code>、<code>while(true)</code> 无界循环等）</td><td>命中任一</td></tr><tr><td>G3 沙箱冒烟</td><td>把 <code>code</code> 包成函数，在 <code>toolSandbox.sandboxedExec</code>（vm，<code>require/process/global/setTimeout</code> 全封，超时 ≤ 2s）里以样例输入跑一次</td><td>语法错误 / 加载即抛 / 超时</td></tr><tr><td>G4 运行期隔离</td><td>注册后的 <code>execute</code> <strong>始终</strong>经 <code>sandboxedExec</code> 运行（非仅测试期）</td><td>—（这是保证，不是检查）</td></tr></tbody></table>
+<blockquote><p>G2 是<strong>白盒拒绝</strong>（黑名单命中即拒），G3 是<strong>动态确认</strong>（能在受限 vm 里加载运行），<br>G4 是<strong>运行期物理隔离</strong>（即便绕过 G2/G3 也无能力可用）。三者叠加 = 纵深防御。<br>若宿主装有 <code>semgrep</code>，<strong>可</strong>额外调用 <code>tools/securityScan</code> 加扫；缺失则静默跳过，<br><strong>严禁</strong>因缺可选依赖而报错。</p></blockquote>
+<hr>
+<h2 id="5-注册与集成-任务③">5. 注册与集成（任务③）<a class="anchor" href="#5-注册与集成-任务③" aria-label="锚点">#</a></h2>
+<ul><li>通过 `defineTool({ name, description, category:'custom', risk:'safe', inputSchema,</li></ul>
+<p>execute })<code> 构造，</code>execute<code> 内部 </code>sandboxedExec(wrappedCode, { timeoutMs })`。</p>
+<ul><li>调 <code>toolRegistry.register(tool)</code>（<strong>公开 API</strong>，写入 <code>_tools</code> Map）→ 同会话即可被</li></ul>
+<p>模型发现与调用，与内置工具同走 <code>execute</code> / 权限 / 结果归一路径。<strong>零核心改动</strong>。</p>
+<ul><li>持久化到 <code>~/.khy/generated_tools/&lt;name&gt;.json</code>（定义 + 元数据）。引擎导出</li></ul>
+<p><code>loadPersistedGeneratedTools()</code>，由 <code>CreateToolTool</code> 首次加载时调用以恢复历史工具；<br>  <strong>不</strong>自动写入核心启动流程（避免侵入）。</p>
+<hr>
+<h2 id="6-用户体验-透明性-任务④">6. 用户体验 / 透明性（任务④）<a class="anchor" href="#6-用户体验-透明性-任务④" aria-label="锚点">#</a></h2>
+<p>遵循 [DESIGN-ARCH-016]：</p>
+<ul><li><strong>进度</strong>（开发者层，结构化，经 <code>diagnostics</code>/<code>agentDevLog</code>，对用户不可见）：</li></ul>
+<p><code>phase: tool, action: meta.forge, detail: &lt;purpose 摘要&gt;</code>。</p>
+<ul><li><strong>结果</strong>（用户层，自然语言，工具 <code>content</code> 返回）：<ul><li>成功：<code>🛠️ 已为你新建工具「X」：&lt;一句话用途&gt;。已通过安全扫描与沙箱测试，现在可直接使用。</code></li><li>拒绝：<code>未能新建该工具（&lt;人话原因，如“涉及受限操作”&gt;）。已改用现有能力继续。</code></li></ul></li><li><strong>严禁</strong>向用户回显生成的源码、JSON、堆栈、内部字段。</li></ul>
+<hr>
+<h2 id="7-防呆-任务③防呆规则">7. 防呆（任务③防呆规则）<a class="anchor" href="#7-防呆-任务③防呆规则" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>风险</th><th>对策</th></tr></thead><tbody><tr><td>无限生成 / 循环铸造</td><td>每会话铸造数上限 <code>KHY_META_TOOL_MAX_PER_SESSION</code>（默认 5），超限拒绝并提示</td></tr><tr><td>重复生成同一工具</td><td>按 <code>name</code> 与 <code>purpose</code> 归一指纹去重：已存在→直接复用，不重铸</td></tr><tr><td>递归（工具造工具）</td><td>生成工具<strong>严禁</strong>调用 <code>createTool</code>（G2 黑名单含工具名）；且沙箱无注册表句柄</td></tr><tr><td>复杂度爆炸</td><td>G1 代码/参数上限</td></tr><tr><td>误启用</td><td>默认关闭，<code>KHY_ENABLE_META_TOOL=1</code> 显式开启</td></tr><tr><td>破坏既有工具</td><td><code>name</code> 与现有工具同名即拒（不覆盖内置/MCP/已生成）</td></tr></tbody></table>
+<hr>
+<h2 id="8-边界-只改元工具相关模块">8. 边界（只改元工具相关模块）<a class="anchor" href="#8-边界-只改元工具相关模块" aria-label="锚点">#</a></h2>
+<ul><li><strong>新增</strong>：<code>services/backend/src/services/metaToolEngine.js</code>、</li></ul>
+<p><code>services/backend/src/tools/CreateToolTool/index.js</code>、对应测试。</p>
+<ul><li><strong>复用（不改）</strong>：<code>tools/index.js</code>（<code>register</code>/<code>defineTool</code>）、</li></ul>
+<p><code>services/toolSandbox.js</code>（<code>sandboxedExec</code>）、<code>gateway/safeJsonParse.js</code>、<code>cli/ai.js</code>。</p>
+<ul><li><strong>零改动</strong>：<code>toolUseLoop.js</code> 调度循环、任何业务算法与 Prompt。</li><li>不确定/未就绪的接入点以 <code># TODO: [MetaTool-*-Unresolved]</code> 标注并优雅降级，</li></ul>
+<p><strong>严禁</strong>盲调不存在的接口。</p>
+<hr>
+<h2 id="9-落地检查清单">9. 落地检查清单<a class="anchor" href="#9-落地检查清单" aria-label="锚点">#</a></h2>
+<ul><li>[ ] 默认关闭，<code>KHY_ENABLE_META_TOOL=1</code> 才启用（§0）</li><li>[ ] LLM 可注入，引擎不硬依赖具体网关（§3）</li><li>[ ] 生成 JSON 经 <code>extractFirstJson</code> 容错解析，重试有上限（§3）</li><li>[ ] G1 复杂度 / G2 静态扫描 / G3 沙箱冒烟 全过才注册（§4）</li><li>[ ] 运行期 <code>execute</code> 始终经 <code>sandboxedExec</code>（§4 G4）</li><li>[ ] 经公开 <code>register</code>/<code>defineTool</code> 注册，零核心改动（§5）</li><li>[ ] 同名拒绝、purpose 去重、会话铸造数上限、递归防护（§7）</li><li>[ ] 用户层自然语言、无内部字段；开发者层结构化（§6 / DESIGN-ARCH-016）</li><li>[ ] 失败一律降级为人话 + 不抛崩 Agent（§6）</li><li>[ ] 仅新增元工具模块，未碰调度循环与业务逻辑（§8）</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-016] AI_Agent显示规范.html"><div class="dir">← 上一篇</div><div class="ttl">khyos 生态 AI Agent 显示规范</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-018] Agent提示词复用机制.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-018] khyos Agent 提示词复用机制</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-017] 元工具系统设计.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 使用说明（CLI 精简版） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY OS 使用说明（CLI 精简版）</div>
+      <header class="hero reveal"><h1>KHY OS 使用说明（CLI 精简版）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-使用说明-cli-精简版">KHY OS 使用说明（CLI 精简版）</a></li><li class="lvl-2"><a href="#1-命令入口">1. 命令入口</a></li><li class="lvl-2"><a href="#2-安装与升级">2. 安装与升级</a></li><li class="lvl-3"><a href="#2-1-新安装">2.1 新安装</a></li><li class="lvl-3"><a href="#2-2-升级">2.2 升级</a></li><li class="lvl-3"><a href="#2-3-可选依赖">2.3 可选依赖</a></li><li class="lvl-3"><a href="#2-4-docker-部署安装-详细">2.4 Docker 部署安装（详细）</a></li><li class="lvl-2"><a href="#3-首次启动">3. 首次启动</a></li><li class="lvl-2"><a href="#4-常用-cli-命令">4. 常用 CLI 命令</a></li><li class="lvl-3"><a href="#4-1-基础检查">4.1 基础检查</a></li><li class="lvl-3"><a href="#4-2-数据库相关">4.2 数据库相关</a></li><li class="lvl-3"><a href="#4-3-模型相关">4.3 模型相关</a></li><li class="lvl-3"><a href="#4-4-进入交互">4.4 进入交互</a></li><li class="lvl-3"><a href="#4-5-指令文件优先级">4.5 指令文件优先级</a></li><li class="lvl-2"><a href="#5-典型使用流程">5. 典型使用流程</a></li><li class="lvl-3"><a href="#5-1-新机器上手">5.1 新机器上手</a></li><li class="lvl-3"><a href="#5-2-日常使用">5.2 日常使用</a></li><li class="lvl-2"><a href="#6-常见问题">6. 常见问题</a></li><li class="lvl-3"><a href="#6-1-提示-the-system-cannot-find-the-path-specified">6.1 提示 `The system cannot find the path specified.`</a></li><li class="lvl-3"><a href="#6-2-首次启动出现-seed-警告">6.2 首次启动出现 seed 警告</a></li><li class="lvl-3"><a href="#6-3-如何确认版本已经升级">6.3 如何确认版本已经升级</a></li><li class="lvl-2"><a href="#7-关键路径-只读参考">7. 关键路径（只读参考）</a></li><li class="lvl-2"><a href="#8-git-发布-公开仓库">8. Git 发布（公开仓库）</a></li><li class="lvl-2"><a href="#9-相关文档">9. 相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-014 | 阶段: 运维 | 原路径: docs/指南/khy-os-用户指南-仅cli.md --&gt;</p>
+<h1 id="khy-os-使用说明-cli-精简版">KHY OS 使用说明（CLI 精简版）<a class="anchor" href="#khy-os-使用说明-cli-精简版" aria-label="锚点">#</a></h1>
+<p>本文档只介绍 <code>khy</code> 的安装、CLI 常用功能与基础排障。</p>
+<p>适用范围：</p>
+<ul><li>个人使用</li><li>对外分发</li><li>培训/上手说明</li></ul>
+<p>不包含内容：</p>
+<ul><li>网络通道实现细节</li><li>网络访问限制规避相关内容</li></ul>
+<p>合规边界：</p>
+<ul><li>仅提供产品功能使用说明。</li><li>不提供任何绕过网络监管、访问受限网络资源或规避审计的操作指引。</li></ul>
+<h2 id="1-命令入口">1. 命令入口<a class="anchor" href="#1-命令入口" aria-label="锚点">#</a></h2>
+<ul><li>主命令：<code>khy</code></li><li>兼容命令：<code>khyquant</code>、<code>khy-quant</code>、<code>khy-os</code></li></ul>
+<p>建议统一使用 <code>khy</code>。</p>
+<h2 id="2-安装与升级">2. 安装与升级<a class="anchor" href="#2-安装与升级" aria-label="锚点">#</a></h2>
+<h3 id="2-1-新安装">2.1 新安装<a class="anchor" href="#2-1-新安装" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python -m pip install -U khy-os
+khy --version</code></pre>
+<p>Windows PowerShell：</p>
+<pre><code class="language-powershell">python.exe -m pip install -U khy-os
+khy --version</code></pre>
+<h3 id="2-2-升级">2.2 升级<a class="anchor" href="#2-2-升级" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python -m pip install --upgrade khy-os
+khy --version</code></pre>
+<h3 id="2-3-可选依赖">2.3 可选依赖<a class="anchor" href="#2-3-可选依赖" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python -m pip install -U &quot;khy-os[data]&quot;
+python -m pip install -U &quot;khy-os[ml]&quot;
+python -m pip install -U &quot;khy-os[doc]&quot;
+python -m pip install -U &quot;khy-os[full]&quot;</code></pre>
+<h3 id="2-4-docker-部署安装-详细">2.4 Docker 部署安装（详细）<a class="anchor" href="#2-4-docker-部署安装-详细" aria-label="锚点">#</a></h3>
+<p>适用场景：</p>
+<ul><li>你希望把 KHY OS 部署为容器服务</li><li>使用者不需要本地 Python/Node 运行环境，只需 Docker</li></ul>
+<p>前置条件：</p>
+<ul><li>Docker Engine 已安装（建议 24+）</li><li><code>docker compose</code> 可用（Compose v2 插件）</li></ul>
+<p>先在“导出机器”生成部署包（导出机器可通过 <code>pip</code> 安装 <code>khy-os</code>）：</p>
+<pre><code class="language-bash">python -m pip install -U khy-os
+khy publish pip-dir-bundle --out ./dist/docker-bundles --name khy-os-pip-share</code></pre>
+<p>说明：</p>
+<ul><li>Linux/macOS 默认导出 <code>.tar.gz</code></li><li>Windows 默认导出 <code>.zip</code></li></ul>
+<p>在“部署机器”执行：</p>
+<ol><li>解压部署包  </li></ol>
+<p>Linux/macOS：</p>
+<pre><code class="language-bash">tar -xzf khy-os-pip-share*.tar.gz
+cd khy-os-pip-share*</code></pre>
+<p>Windows PowerShell：</p>
+<pre><code class="language-powershell">Expand-Archive .\khy-os-pip-share*.zip -DestinationPath .\khy-os-pip-share -Force
+cd .\khy-os-pip-share</code></pre>
+<ol><li>初始化环境文件</li></ol>
+<pre><code class="language-bash">cp .env.example .env</code></pre>
+<p>Windows PowerShell：</p>
+<pre><code class="language-powershell">Copy-Item .env.example .env</code></pre>
+<ol><li>启动服务</li></ol>
+<pre><code class="language-bash">docker compose up -d --build</code></pre>
+<ol><li>检查运行状态</li></ol>
+<pre><code class="language-bash">docker compose ps
+docker compose logs -f khy-backend</code></pre>
+<ol><li>健康检查（可选）</li></ol>
+<pre><code class="language-bash">curl http://127.0.0.1:13000/health</code></pre>
+<ol><li>停止与重启</li></ol>
+<pre><code class="language-bash">docker compose stop
+docker compose start
+docker compose restart</code></pre>
+<ol><li>升级流程</li></ol>
+<ul><li>在导出机器升级并重新导出新版本包</li><li>在部署机器替换为新包目录后执行：</li></ul>
+<pre><code class="language-bash">docker compose down
+docker compose up -d --build</code></pre>
+<p>数据说明：</p>
+<ul><li>默认使用 Docker 卷保存数据（例如 <code>backend_data</code>）</li><li><code>docker compose down</code> 不会删除卷数据</li><li>若执行 <code>docker compose down -v</code> 会删除卷，请谨慎使用</li></ul>
+<h2 id="3-首次启动">3. 首次启动<a class="anchor" href="#3-首次启动" aria-label="锚点">#</a></h2>
+<p>第一次执行 <code>khy</code> 时会自动完成初始化：</p>
+<ol><li>检查并安装 Node.js 依赖</li><li>生成或复用 <code>.env</code></li><li>初始化数据库与基础数据</li><li>注册默认应用</li></ol>
+<p>执行命令：</p>
+<pre><code class="language-bash">khy</code></pre>
+<p>看到 <code>Setup complete!</code> 即代表初始化流程完成。</p>
+<h2 id="4-常用-cli-命令">4. 常用 CLI 命令<a class="anchor" href="#4-常用-cli-命令" aria-label="锚点">#</a></h2>
+<h3 id="4-1-基础检查">4.1 基础检查<a class="anchor" href="#4-1-基础检查" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy --version
+khy --help
+khy doctor</code></pre>
+<h3 id="4-2-数据库相关">4.2 数据库相关<a class="anchor" href="#4-2-数据库相关" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy db status
+khy db init
+khy db seed</code></pre>
+<h3 id="4-3-模型相关">4.3 模型相关<a class="anchor" href="#4-3-模型相关" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy models list
+khy models pull qwen2.5:7b</code></pre>
+<h3 id="4-4-进入交互">4.4 进入交互<a class="anchor" href="#4-4-进入交互" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy</code></pre>
+<p>在交互界面中可以直接输入自然语言问题。</p>
+<h3 id="4-5-指令文件优先级">4.5 指令文件优先级<a class="anchor" href="#4-5-指令文件优先级" aria-label="锚点">#</a></h3>
+<p>如果同一项目里同时存在多种协作指令文件，KHY 的冲突优先级为：</p>
+<ol><li><code>khy.md</code> / <code>KHY.md</code></li><li><code>CLAUDE.md</code> / <code>.claude/CLAUDE.md</code></li><li><code>AGENTS.md</code></li></ol>
+<p>也就是：</p>
+<ol><li><code>khy</code> 规则最高</li><li><code>claude</code> 规则次之</li><li><code>agents</code> 规则最低</li></ol>
+<h2 id="5-典型使用流程">5. 典型使用流程<a class="anchor" href="#5-典型使用流程" aria-label="锚点">#</a></h2>
+<h3 id="5-1-新机器上手">5.1 新机器上手<a class="anchor" href="#5-1-新机器上手" aria-label="锚点">#</a></h3>
+<ol><li><code>python -m pip install -U khy-os</code></li><li><code>khy --version</code></li><li><code>khy</code>（完成首次初始化）</li><li><code>khy doctor</code></li><li><code>khy db status</code></li></ol>
+<h3 id="5-2-日常使用">5.2 日常使用<a class="anchor" href="#5-2-日常使用" aria-label="锚点">#</a></h3>
+<ol><li><code>khy</code></li><li>在交互界面提问或执行命令</li><li>需要时执行 <code>khy models list</code> / <code>khy db status</code> 查看状态</li></ol>
+<h2 id="6-常见问题">6. 常见问题<a class="anchor" href="#6-常见问题" aria-label="锚点">#</a></h2>
+<h3 id="6-1-提示-the-system-cannot-find-the-path-specified">6.1 提示 <code>The system cannot find the path specified.</code><a class="anchor" href="#6-1-提示-the-system-cannot-find-the-path-specified" aria-label="锚点">#</a></h3>
+<p>通常是某些可选工具未安装或未加入 PATH。</p>
+<p>优先检查：</p>
+<pre><code class="language-bash">khy doctor
+khy --help</code></pre>
+<p>如果当前已能正常进入 <code>khy</code> 并对话，通常不影响核心使用。</p>
+<h3 id="6-2-首次启动出现-seed-警告">6.2 首次启动出现 seed 警告<a class="anchor" href="#6-2-首次启动出现-seed-警告" aria-label="锚点">#</a></h3>
+<p>常见提示：</p>
+<ul><li><code>Database seed did not confirm success</code></li><li><code>Database seed not confirmed; will retry on next startup</code></li></ul>
+<p>处理方式：</p>
+<ol><li>再次运行 <code>khy</code> 让系统自动重试</li><li>或手动执行：</li></ol>
+<pre><code class="language-bash">khy db seed
+khy db status</code></pre>
+<h3 id="6-3-如何确认版本已经升级">6.3 如何确认版本已经升级<a class="anchor" href="#6-3-如何确认版本已经升级" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy --version
+python -m pip show khy-os</code></pre>
+<h2 id="7-关键路径-只读参考">7. 关键路径（只读参考）<a class="anchor" href="#7-关键路径-只读参考" aria-label="锚点">#</a></h2>
+<ul><li>数据目录：<code>~/.khy/</code></li><li>兼容目录：<code>~/.khyquant/</code></li><li>运行环境文件：<code>&lt;backend&gt;/.env</code></li></ul>
+<h2 id="8-git-发布-公开仓库">8. Git 发布（公开仓库）<a class="anchor" href="#8-git-发布-公开仓库" aria-label="锚点">#</a></h2>
+<p>目标：发布“CLI 精简版”文档与可公开代码到公开仓库。</p>
+<p>建议分支命名：</p>
+<ul><li><code>release/public-vX.Y.Z</code></li></ul>
+<p>发布步骤：</p>
+<ol><li>同步主线并创建公开发布分支</li></ol>
+<pre><code class="language-bash">git fetch --all --prune
+git checkout main
+git pull
+git checkout -b release/public-vX.Y.Z</code></pre>
+<ol><li>执行基础检查</li></ol>
+<pre><code class="language-bash">khy --version
+khy doctor</code></pre>
+<ol><li>执行公开版合规检查（确认不包含内部/敏感内容）</li></ol>
+<pre><code class="language-bash">rg -n &quot;网络访问限制规避|仅内部|internal only|private only&quot; docs/</code></pre>
+<ol><li>提交改动</li></ol>
+<pre><code class="language-bash">git add -- .
+git commit -m &quot;docs: prepare public release vX.Y.Z&quot;</code></pre>
+<ol><li>配置公开仓库远程（首次）</li></ol>
+<pre><code class="language-bash">git remote add origin-public git@github.com:Program-master-leader/khy_os.git</code></pre>
+<p>如果已存在 <code>origin-public</code>，改用：</p>
+<pre><code class="language-bash">git remote set-url origin-public git@github.com:Program-master-leader/khy_os.git</code></pre>
+<ol><li>GitHub API（PAT）填写位置（使用 HTTPS 推送时）</li></ol>
+<p>如果你不使用 SSH，而是使用 HTTPS 推送，则“GitHub API”指的是 GitHub Personal Access Token（PAT）。</p>
+<p>先把远程改为 HTTPS：</p>
+<pre><code class="language-bash">git remote set-url origin-public https://github.com/Program-master-leader/khy_os.git</code></pre>
+<p>然后执行推送命令时，按提示填写：</p>
+<ul><li><code>Username for 'https://github.com'</code>：你的 GitHub 用户名</li><li><code>Password for 'https://&lt;username&gt;@github.com'</code>：粘贴你的 GitHub PAT</li></ul>
+<p><code>khy publish git-push</code> 也是走本地 Git 凭据，不单独在 <code>khy</code> 命令参数里填写 PAT。</p>
+<ol><li>推送到公开仓库</li></ol>
+<pre><code class="language-bash">git push -u origin-public release/public-vX.Y.Z</code></pre>
+<ol><li>创建公开版本标签并推送</li></ol>
+<pre><code class="language-bash">git tag -a vX.Y.Z-public -m &quot;public release vX.Y.Z&quot;
+git push origin-public vX.Y.Z-public</code></pre>
+<ol><li>可选：使用内置发布命令（等价能力）</li></ol>
+<pre><code class="language-bash">khy publish git-push --platform github --repo Program-master-leader/khy_os --remote origin-public --set-upstream</code></pre>
+<h2 id="9-相关文档">9. 相关文档<a class="anchor" href="#9-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>完整版使用文档：<code>docs/07_OPS_运维/[OPS-MAN-015] khy-os-用户指南.md</code></li><li>Docker 部署与导出指南：<code>docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md</code></li><li>开发文档：<code>docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md</code></li><li>测试文档：<code>docs/05_TEST_测试/[TEST-RPT-002] khy-os-测试指南.md</code></li><li>学习文档：<code>docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 开发文档（中文）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-015] khy-os-用户指南.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 使用说明（完整版）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-014] khy-os-用户指南-仅cli.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

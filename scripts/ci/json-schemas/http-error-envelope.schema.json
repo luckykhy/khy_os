@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HTTP Error Response Envelope",
+  "description": "所有 khy-os HTTP 错误响应的标准信封。",
+  "type": "object",
+  "required": ["success", "message"],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "const": false,
+      "description": "必须为 false"
+    },
+    "message": {
+      "type": "string",
+      "description": "人类可读错误描述"
+    },
+    "statusCode": {
+      "type": "integer",
+      "description": "HTTP 状态码镜像（可选但推荐）"
+    },
+    "errorType": {
+      "type": "string",
+      "description": "错误分类标签",
+      "enum": ["validation", "auth", "not_found", "conflict", "rate_limit", "server"]
+    },
+    "error": {
+      "type": "string",
+      "description": "可选：调试级错误详情"
+    },
+    "errors": {
+      "type": "array",
+      "description": "可选：多个校验错误",
+      "items": { "type": "string" }
+    },
+    "requestId": {
+      "type": "string",
+      "description": "可选：请求关联 ID"
+    }
+  },
+  "additionalProperties": true
+}

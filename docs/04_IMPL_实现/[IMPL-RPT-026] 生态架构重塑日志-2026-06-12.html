@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>生态架构重塑日志（Eco-Arch Log） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>生态架构重塑日志（Eco-Arch Log）</div>
+      <header class="hero reveal"><h1>生态架构重塑日志（Eco-Arch Log）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#生态架构重塑日志-eco-arch-log">生态架构重塑日志（Eco-Arch Log）</a></li><li class="lvl-2"><a href="#一-五步执行结果">一、五步执行结果</a></li><li class="lvl-3"><a href="#步骤-1-剥离硬依赖-动态发现">步骤 1 — 剥离硬依赖 → 动态发现 ✅</a></li><li class="lvl-3"><a href="#步骤-2-应用生命周期协议">步骤 2 — 应用生命周期协议 ✅</a></li><li class="lvl-3"><a href="#步骤-3-khyquant-双模自适应入口">步骤 3 — khyquant 双模自适应入口 ✅</a></li><li class="lvl-3"><a href="#步骤-4-底座-应用-db-物理隔离-路径所有权-解析器层-活体迁移留待人工">步骤 4 — 底座/应用 DB 物理隔离（路径所有权）✅（解析器层）/ ⚠️（活体迁移留待人工）</a></li><li class="lvl-3"><a href="#步骤-5-模型-缓存-日志路径独立-标准层">步骤 5 — 模型/缓存/日志路径独立 ✅（标准层）</a></li><li class="lvl-2"><a href="#二-验收证据">二、验收证据</a></li><li class="lvl-2"><a href="#三-遗留-eco-arch-unresolved-须人工带回滚迁移">三、遗留（`[Eco-Arch-Unresolved]` — 须人工带回滚迁移）</a></li><li class="lvl-2"><a href="#四-改动文件清单">四、改动文件清单</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="生态架构重塑日志-eco-arch-log">生态架构重塑日志（Eco-Arch Log）<a class="anchor" href="#生态架构重塑日志-eco-arch-log" aria-label="锚点">#</a></h1>
+<blockquote><p>目标：确立 <strong>khyos = 生态底座、khyquant = 首款应用</strong>，建立「应用接入标准」，<br>让 khyquant 成为符合标准的示范应用，实现<strong>底座与应用绝对解耦</strong>。<br>执行方式：无人值守一口气执行，保守防呆（不确定就保留+标注，绝不盲删导致崩溃）。</p></blockquote>
+<p>唯一契约文档：<span class="deadlink" title="目标不存在：docs/03_DESIGN_设计/%5BDESIGN-ARCH-011%5D%20应用接入标准.html"><code>docs/生态架构/应用接入标准.md</code></span></p>
+<hr>
+<h2 id="一-五步执行结果">一、五步执行结果<a class="anchor" href="#一-五步执行结果" aria-label="锚点">#</a></h2>
+<h3 id="步骤-1-剥离硬依赖-动态发现">步骤 1 — 剥离硬依赖 → 动态发现 ✅<a class="anchor" href="#步骤-1-剥离硬依赖-动态发现" aria-label="锚点">#</a></h3>
+<ul><li>全量扫描 khyos 核心源码（<code>platform/khy_platform</code>、<code>platform/khy_os</code>）对应用包的导入。</li><li>结论：<strong>底座核心零应用硬依赖</strong>。<code>khy_platform</code> 中不存在任何 <code>import khy_quant</code>。</li><li>唯一对 <code>khy_quant_backend</code>（底座<strong>自身</strong> Node 后端的独立打包）的探测，已包在</li></ul>
+<p><code>try/except ImportError</code> 内（<code>platform/khy_platform/cli.py:62</code>）——属底座定位自身后端，非依赖应用。</p>
+<ul><li>底座经 <code>importlib.metadata</code> 的 <code>khyos.apps</code> entry_points 组 + <code>~/.khyos/apps/</code> 注册表目录</li></ul>
+<p><strong>双路动态发现</strong>应用，有则加载、无则跳过、永不崩溃。</p>
+<h3 id="步骤-2-应用生命周期协议">步骤 2 — 应用生命周期协议 ✅<a class="anchor" href="#步骤-2-应用生命周期协议" aria-label="锚点">#</a></h3>
+<ul><li>新建单一真源 <span class="deadlink" title="目标不存在：platform/khy_platform/app_protocol.py"><code>platform/khy_platform/app_protocol.py</code></span>（<strong>零应用导入</strong>）：<ul><li>路径主权：<code>base_home()</code>→<code>~/.khyos</code>，<code>app_home(name)</code>→<code>~/.&lt;name&gt;</code>（含路径穿越防护），</li></ul></li></ul>
+<p><code>STANDARD_SUBDIRS = (data, cache, models, logs)</code>，<code>ensure_home()</code>。</p>
+<ul><li>协议基类 <code>KhyApp</code>（抽象 <code>standalone_init()</code> / <code>eco_init(ctx)</code>）+ <code>AppManifest</code> / <code>EcoContext</code>。</li><li>发现：<code>discover_apps()</code> 合并 entry_points（优先）与注册表，按 <code>name</code> 去重，<strong>任何异常不抛出</strong>。</li></ul>
+<h3 id="步骤-3-khyquant-双模自适应入口">步骤 3 — khyquant 双模自适应入口 ✅<a class="anchor" href="#步骤-3-khyquant-双模自适应入口" aria-label="锚点">#</a></h3>
+<ul><li>新建 <span class="deadlink" title="目标不存在：software/khyquant/khy_quant/app.py"><code>software/khyquant/khy_quant/app.py</code></span>：<code>KhyQuant(KhyApp)</code> 示范实现，</li></ul>
+<p>对底座标准模块的导入做守卫——<strong>独立安装无底座也不崩溃</strong>。</p>
+<ul><li><code>khy_quant/cli.py</code>：<code>_detect_mode()</code>（<code>KHYOS_ECO_MODE</code> 优先，否则探测底座 <code>app_protocol</code> 可导入，</li></ul>
+<p>默认 <code>standalone</code>）+ <code>_ensure_app_home()</code>，经 <code>KHYQUANT_MODE</code> / <code>KHYQUANT_HOME</code> 下传 Node 运行时。</p>
+<ul><li><code>pyproject.toml</code> 声明 <code>[project.entry-points.&quot;khyos.apps&quot;] khyquant = &quot;khy_quant.app:create_app&quot;</code>。</li></ul>
+<h3 id="步骤-4-底座-应用-db-物理隔离-路径所有权-解析器层-活体迁移留待人工">步骤 4 — 底座/应用 DB 物理隔离（路径所有权）✅（解析器层）/ ⚠️（活体迁移留待人工）<a class="anchor" href="#步骤-4-底座-应用-db-物理隔离-路径所有权-解析器层-活体迁移留待人工" aria-label="锚点">#</a></h3>
+<ul><li><code>services/backend/src/utils/dataHome.js</code> 新增<strong>底座归属解析器</strong> <code>getBaseHome()</code>→<code>~/.khyos</code></li></ul>
+<p>（<code>KHYOS_HOME</code> 可覆盖）、<code>getBaseDataDir()</code>，与应用数据家 <code>getDataHome()</code> 物理分离。</p>
+<ul><li><strong>纯增量、不迁移活体数据</strong>：维持应用现有数据家，保证运行中的 khyquant 不被破坏。</li><li>真正的「混用硬编码 <code>~/.khyquant</code> 与解析器 <code>~/.khy</code> 收敛」「底座/应用表物理拆分」</li></ul>
+<p>涉及活体数据迁移 → 见下方 <code>[Eco-Arch-Unresolved]</code>，按防呆规则不在无人值守流程内盲目执行。</p>
+<h3 id="步骤-5-模型-缓存-日志路径独立-标准层">步骤 5 — 模型/缓存/日志路径独立 ✅（标准层）<a class="anchor" href="#步骤-5-模型-缓存-日志路径独立-标准层" aria-label="锚点">#</a></h3>
+<ul><li>标准固化为 <code>~/.&lt;app&gt;/{data,cache,models,logs}</code>，由 <code>app_protocol.ensure_home()</code> 统一创建。</li><li>底座自身落 <code>~/.khyos/{data,cache,models,logs}</code>。红线：互不读写对方目录/DB，跨域只走公共 API。</li></ul>
+<hr>
+<h2 id="二-验收证据">二、验收证据<a class="anchor" href="#二-验收证据" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>验收项</th><th>结果</th></tr></thead><tbody><tr><td>协议单测 <code>tests/unit/test_eco_app_protocol.py</code></td><td><strong>9 passed</strong></td></tr><tr><td><code>dataHome</code> 底座路径隔离 jest</td><td><strong>4 passed</strong></td></tr><tr><td>khyos 核心硬依赖应用包扫描</td><td><strong>0</strong>（仅 <code>khy_quant_backend</code> 守卫探测，try/except）</td></tr><tr><td>空环境 <code>discover_apps()</code></td><td><code>[]</code>（无应用不崩溃）</td></tr><tr><td>写底座注册表 → 再发现</td><td><code>~/.khyos/apps/khyquant.json</code> → <code>[(khyquant, 0.1.78, registry)]</code></td></tr><tr><td>数据主权隔离</td><td><code>~/.khyos</code> ≠ <code>~/.khyquant</code>，互不为子目录</td></tr><tr><td>示范应用合规</td><td><code>isinstance(KhyApp)</code> 真、双模 init 落 <code>~/.khyquant/data</code></td></tr></tbody></table>
+<hr>
+<h2 id="三-遗留-eco-arch-unresolved-须人工带回滚迁移">三、遗留（<code>[Eco-Arch-Unresolved]</code> — 须人工带回滚迁移）<a class="anchor" href="#三-遗留-eco-arch-unresolved-须人工带回滚迁移" aria-label="锚点">#</a></h2>
+<ol><li><strong>应用数据家收敛</strong>：后端 <code>getDataHome()</code> 默认 <code>~/.khy</code> 与多个服务硬编码 <code>~/.khyquant</code> 混用，</li></ol>
+<p>需统一到单一应用数据家（标注于 <code>dataHome.js</code>）。</p>
+<ol><li><strong>底座/应用表物理拆分</strong>：把真正归属底座的表/文件迁出到 <code>~/.khyos/data/khyos.db</code>，需迁移脚本。</li></ol>
+<p>二者均为<strong>活体数据迁移</strong>，无人值守流程内只建立解析器与标准、不动用户现存数据。</p>
+<hr>
+<h2 id="四-改动文件清单">四、改动文件清单<a class="anchor" href="#四-改动文件清单" aria-label="锚点">#</a></h2>
+<p><strong>底座（khyos）</strong></p>
+<ul><li><code>platform/khy_platform/app_protocol.py</code>（新增·协议/发现/路径主权单一真源）</li><li><code>platform/khy_platform/cli.py</code>（新增 <code>khy apps</code> 命令）</li><li><code>platform/khy_platform/_bootstrap.py</code>（注册清单写 <code>~/.khyos/apps/</code>，兼容旧位）</li><li><code>services/backend/src/utils/dataHome.js</code>（新增 <code>getBaseHome</code> / <code>getBaseDataDir</code>，纯增量）</li><li><code>tests/unit/test_eco_app_protocol.py</code>、<code>services/backend/tests/utils/dataHome.baseHome.test.js</code>（新增测试）</li></ul>
+<p><strong>应用（khyquant）</strong></p>
+<ul><li><code>software/khyquant/khy_quant/app.py</code>（新增·KhyApp 示范实现）</li><li><code>software/khyquant/khy_quant/cli.py</code>（双模自适应入口）</li><li><code>software/khyquant/pyproject.toml</code>（声明 <code>khyos.apps</code> entry_point）</li></ul>
+<p><strong>文档</strong></p>
+<ul><li><code>docs/生态架构/应用接入标准.md</code>（生态唯一契约）</li><li><code>eco_arch_log.md</code>（本日志）</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-025] 元规划协议与动态约束注入-2026-06-12.html"><div class="dir">← 上一篇</div><div class="ttl">元规划协议与动态约束注入 — 实现报告</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-027] 前后端对接与交互重构日志-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">前后端对接与交互重构日志（夜间无人值守）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-026] 生态架构重塑日志-2026-06-12.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

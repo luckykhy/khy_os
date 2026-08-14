@@ -1,0 +1,12 @@
+{
+  "name": "khy-onboarding",
+  "description": "接手 Khy-OS 项目前必读：一次讲清项目是什么、改代码去哪、必须遵守的红线，让不熟悉本项目的模型快速进入状态。任何模型开始为本项目工作前先激活。",
+  "user_invocable": true,
+  "trigger": "/khy-onboarding",
+  "aliases": ["/khy-start", "/接手"],
+  "category": "khy-guidance",
+  "tags": ["khy-os", "onboarding", "weak-model", "guidance", "context"],
+  "platforms": ["khy-os"],
+  "when_to_use": "开始为 Khy-OS 做任何开发/修改之前；或模型明显不了解本项目结构与纪律时。",
+  "context": "inline"
+}

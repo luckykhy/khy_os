@@ -1,0 +1,228 @@
+{
+  "generatedAt": "2026-05-19T06:19:43.025Z",
+  "suitePath": "backend/src/skills/evals/skill-scenario-suite.json",
+  "suiteVersion": "1.1.0",
+  "thresholds": {
+    "minOverallPassRate": 1,
+    "minEvalPassRate": 1,
+    "maxFailedAssertions": 0
+  },
+  "thresholdChecks": [
+    {
+      "name": "overallPassRate",
+      "pass": true,
+      "detail": "1.000 >= 1.000"
+    },
+    {
+      "name": "minEvalPassRate",
+      "pass": true,
+      "detail": "1.000 >= 1.000"
+    },
+    {
+      "name": "failedAssertions",
+      "pass": true,
+      "detail": "0 <= 0"
+    }
+  ],
+  "summary": {
+    "totalEvals": 19,
+    "totalAssertions": 57,
+    "passedAssertions": 57,
+    "failedAssertions": 0,
+    "overallPassRate": 1,
+    "minEvalPassRate": 1,
+    "pass": true
+  },
+  "evals": [
+    {
+      "index": 1,
+      "id": "verify-change-verification",
+      "skill": "verify",
+      "promptPath": "backend/src/skills/built-in/verify/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 2,
+      "id": "commit-safe-workflow",
+      "skill": "commit",
+      "promptPath": "backend/src/skills/built-in/commit/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 3,
+      "id": "loop-iterative-test-fix",
+      "skill": "loop",
+      "promptPath": "backend/src/skills/built-in/loop/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 4,
+      "id": "stuck-alternative-paths",
+      "skill": "stuck",
+      "promptPath": "backend/src/skills/built-in/stuck/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 5,
+      "id": "remember-persistent-safety",
+      "skill": "remember",
+      "promptPath": "backend/src/skills/built-in/remember/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 6,
+      "id": "batch-sequential-execution",
+      "skill": "batch",
+      "promptPath": "backend/src/skills/built-in/batch/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 7,
+      "id": "claude-api-usage-guide",
+      "skill": "claude-api",
+      "promptPath": "backend/src/skills/built-in/claude-api/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 8,
+      "id": "create-mcp-server-scaffold",
+      "skill": "create-mcp-server",
+      "promptPath": "backend/src/skills/built-in/create-mcp-server/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 9,
+      "id": "create-skill-scaffold",
+      "skill": "create-skill",
+      "promptPath": "backend/src/skills/built-in/create-skill/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 10,
+      "id": "debug-systematic-workflow",
+      "skill": "debug",
+      "promptPath": "backend/src/skills/built-in/debug/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 11,
+      "id": "dream-autonomous-safety",
+      "skill": "dream",
+      "promptPath": "backend/src/skills/built-in/dream/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 12,
+      "id": "hunter-security-scan",
+      "skill": "hunter",
+      "promptPath": "backend/src/skills/built-in/hunter/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 13,
+      "id": "init-project-scaffold",
+      "skill": "init-project",
+      "promptPath": "backend/src/skills/built-in/init-project/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 14,
+      "id": "keybindings-reference",
+      "skill": "keybindings",
+      "promptPath": "backend/src/skills/built-in/keybindings/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 15,
+      "id": "pdf-analysis-workflow",
+      "skill": "pdf",
+      "promptPath": "backend/src/skills/built-in/pdf/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 16,
+      "id": "review-pr-checklist",
+      "skill": "review-pr",
+      "promptPath": "backend/src/skills/built-in/review-pr/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 17,
+      "id": "simplify-code-quality",
+      "skill": "simplify",
+      "promptPath": "backend/src/skills/built-in/simplify/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 18,
+      "id": "skillify-extraction",
+      "skill": "skillify",
+      "promptPath": "backend/src/skills/built-in/skillify/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    },
+    {
+      "index": 19,
+      "id": "update-config-safety",
+      "skill": "update-config",
+      "promptPath": "backend/src/skills/built-in/update-config/prompt.md",
+      "passedAssertions": 3,
+      "totalAssertions": 3,
+      "passRate": 1,
+      "failures": []
+    }
+  ]
+}

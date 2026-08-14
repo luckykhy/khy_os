@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-shotcut · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-shotcut<span class="sep">›</span>cli-anything-shotcut</div>
+      <header class="hero reveal"><h1>cli-anything-shotcut</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-shotcut">cli-anything-shotcut</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#project">Project</a></li><li class="lvl-3"><a href="#timeline">Timeline</a></li><li class="lvl-3"><a href="#filter-group">Filter Group</a></li><li class="lvl-3"><a href="#media">Media</a></li><li class="lvl-3"><a href="#export">Export</a></li><li class="lvl-3"><a href="#transition-group">Transition Group</a></li><li class="lvl-3"><a href="#composite-group">Composite Group</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-3"><a href="#preview">Preview</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#export-project">Export Project</a></li><li class="lvl-3"><a href="#deterministic-timeline-reconstruction">Deterministic Timeline Reconstruction</a></li><li class="lvl-3"><a href="#audio-automation">Audio Automation</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-shotcut&quot;<br>description: &gt;-<br>  Command-line interface for Shotcut - A stateful command-line interface for video editing, built on the MLT XML format. Designed for AI ag...</p>
+<hr>
+<h1 id="cli-anything-shotcut">cli-anything-shotcut<a class="anchor" href="#cli-anything-shotcut" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for video editing, built on the MLT XML format. Designed for AI agents and power users who need to create and edit Shotcut projects without a GUI.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-shotcut package:</p>
+<pre><code class="language-bash">pip install cli-anything-shotcut</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li><code>melt</code> (MLT CLI) — required for rendering and playback</li><li><code>ffmpeg</code> / <code>ffprobe</code> — required for media probing</li><li><code>shotcut</code> must be installed on your system</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-shotcut --help
+
+# Start interactive REPL mode
+cli-anything-shotcut
+
+# Create a new project
+cli-anything-shotcut project new -o project.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-shotcut --json project info -p project.json</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session with undo/redo support:</p>
+<pre><code class="language-bash">cli-anything-shotcut
+# or with a project:
+cli-anything-shotcut --project my_project.mlt</code></pre>
+<h4 id="repl-commands">REPL Commands<a class="anchor" href="#repl-commands" aria-label="锚点">#</a></h4>
+<p><strong>Workflow:</strong> Always <code>media import</code> first to get a <code>clip_id</code>, then use <code>add-clip</code> to place it on the timeline.</p>
+<p><strong>Project &amp; Session:</strong></p>
+<ul><li><code>new [profile]</code> — Create new project (default: <code>hd1080p30</code>)</li><li><code>open &lt;path&gt;</code> — Open <code>.mlt</code> file</li><li><code>save [path]</code> — Save project</li><li><code>info</code> — Show project info</li><li><code>xml</code> — Print raw MLT XML</li><li><code>status</code> — Show session status</li><li><code>undo</code> / <code>redo</code> — Navigate operation history</li></ul>
+<p><strong>Media (two-step model):</strong></p>
+<ul><li><code>media import &lt;file&gt; [--caption name]</code> — Import file into project bin, returns <code>clip_id</code> (e.g., <code>clip0</code>)</li><li><code>media</code> — List all imported media</li><li><code>probe &lt;file&gt;</code> — Analyze a media file</li></ul>
+<p><strong>Timeline:</strong></p>
+<ul><li><code>add-track &lt;video|audio&gt; [name]</code> — Add a track</li><li><code>tracks</code> — List all tracks</li><li><code>show</code> — Visual timeline overview</li><li><code>add-clip &lt;clip_id&gt; &lt;track&gt; [in] [out] [--at time]</code> — Place imported clip on track</li><li><code>clips &lt;track&gt;</code> — List clips on a track</li><li><code>remove-clip &lt;track&gt; &lt;clip&gt;</code> — Remove a clip</li><li><code>trim &lt;track&gt; &lt;clip&gt; [--in tc] [--out tc]</code> — Trim clip</li><li><code>split &lt;track&gt; &lt;clip&gt; &lt;at&gt;</code> — Split clip at timecode</li></ul>
+<p><strong>Filters:</strong></p>
+<ul><li><code>list-filters [video|audio]</code> — Browse available filters</li><li><code>filter-info &lt;name&gt;</code> — Show filter details</li><li><code>add-filter &lt;name&gt; [--track n] [--clip n] [key=val ...]</code> — Add filter to clip, track, or global</li><li><code>filters [--track n] [--clip n]</code> — List active filters</li><li><code>remove-filter &lt;idx&gt; [--track n] [--clip n]</code> — Remove filter by index</li><li><code>set-filter &lt;idx&gt; &lt;param&gt; &lt;value&gt; [--track n] [--clip n]</code> — Set filter parameter</li><li><code>volume-envelope [--track n] [--clip n] TIME=LEVEL ...</code> — Keyframed volume (e.g., <code>00:00:00.000=1.0 00:00:03.000=0.35</code>)</li><li><code>duck [--track n] [--clip n] START..END ...</code> — Ducking envelope (e.g., <code>00:00:06.000..00:00:09.000</code>)</li></ul>
+<p><strong>Export:</strong></p>
+<ul><li><code>presets</code> — List export presets</li><li><code>render &lt;output&gt; [--preset name]</code> — Render to video file</li></ul>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project">Project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
+<p>Project management: new, open, save, info.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new blank project</td></tr><tr><td><code>open</code></td><td>Open an existing .mlt project file</td></tr><tr><td><code>save</code></td><td>Save the current project</td></tr><tr><td><code>info</code></td><td>Show detailed project information</td></tr><tr><td><code>profiles</code></td><td>List available video profiles</td></tr><tr><td><code>xml</code></td><td>Print the raw MLT XML of the current project</td></tr></tbody></table>
+<h3 id="timeline">Timeline<a class="anchor" href="#timeline" aria-label="锚点">#</a></h3>
+<p>Timeline operations: tracks, clips, trimming.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>show</code></td><td>Show the timeline overview</td></tr><tr><td><code>tracks</code></td><td>List all tracks</td></tr><tr><td><code>add-track</code></td><td>Add a new track to the timeline</td></tr><tr><td><code>remove-track</code></td><td>Remove a track by index</td></tr><tr><td><code>add-clip</code></td><td>Add an imported clip to a track by clip_id; supports <code>--at</code> for absolute placement</td></tr><tr><td><code>remove-clip</code></td><td>Remove a clip from a track</td></tr><tr><td><code>move-clip</code></td><td>Move a clip between tracks or positions</td></tr><tr><td><code>trim</code></td><td>Trim a clip's in/out points</td></tr><tr><td><code>split</code></td><td>Split a clip into two at the given timecode</td></tr><tr><td><code>clips</code></td><td>List all clips on a track</td></tr><tr><td><code>add-blank</code></td><td>Add a blank gap to a track</td></tr><tr><td><code>set-name</code></td><td>Set a track's display name</td></tr><tr><td><code>mute</code></td><td>Mute or unmute a track</td></tr><tr><td><code>hide</code></td><td>Hide or unhide a video track</td></tr></tbody></table>
+<h3 id="filter-group">Filter Group<a class="anchor" href="#filter-group" aria-label="锚点">#</a></h3>
+<p>Filter operations: add, remove, configure effects.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list-available</code></td><td>List all available filters</td></tr><tr><td><code>info</code></td><td>Show detailed info about a filter and its parameters</td></tr><tr><td><code>add</code></td><td>Add a filter to a clip, track, or globally</td></tr><tr><td><code>remove</code></td><td>Remove a filter by index</td></tr><tr><td><code>set</code></td><td>Set a parameter on a filter</td></tr><tr><td><code>list</code></td><td>List active filters on a target</td></tr><tr><td><code>volume-envelope</code></td><td>Create or replace a keyframed volume envelope on a track or clip</td></tr><tr><td><code>duck</code></td><td>Build a practical ducking envelope over one or more time windows</td></tr></tbody></table>
+<h3 id="media">Media<a class="anchor" href="#media" aria-label="锚点">#</a></h3>
+<p>Media operations: probe, list, check files.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>import</code></td><td>Import a media file into the project bin</td></tr><tr><td><code>probe</code></td><td>Analyze a media file's properties</td></tr><tr><td><code>list</code></td><td>List all media clips in the current project</td></tr><tr><td><code>check</code></td><td>Check all media files for existence</td></tr><tr><td><code>thumbnail</code></td><td>Generate a thumbnail from a video file</td></tr></tbody></table>
+<h3 id="export">Export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
+<p>Export/render operations.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>presets</code></td><td>List available export presets</td></tr><tr><td><code>preset-info</code></td><td>Show details of an export preset</td></tr><tr><td><code>render</code></td><td>Render the project to a video file</td></tr></tbody></table>
+<h3 id="transition-group">Transition Group<a class="anchor" href="#transition-group" aria-label="锚点">#</a></h3>
+<p>Transition operations: dissolve, wipe, and other transitions.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list-available</code></td><td>List all available transition types</td></tr><tr><td><code>info</code></td><td>Show detailed info about a transition type</td></tr><tr><td><code>add</code></td><td>Add a transition between two tracks</td></tr><tr><td><code>remove</code></td><td>Remove a transition by index</td></tr><tr><td><code>set</code></td><td>Set a parameter on a transition</td></tr><tr><td><code>list</code></td><td>List all transitions on the timeline</td></tr></tbody></table>
+<h3 id="composite-group">Composite Group<a class="anchor" href="#composite-group" aria-label="锚点">#</a></h3>
+<p>Compositing: blend modes, PIP, opacity.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>blend-modes</code></td><td>List all available blend modes</td></tr><tr><td><code>set-blend</code></td><td>Set the blend mode for a track</td></tr><tr><td><code>get-blend</code></td><td>Get the current blend mode for a track</td></tr><tr><td><code>set-opacity</code></td><td>Set the opacity of a track (0.0-1.0)</td></tr><tr><td><code>pip</code></td><td>Set picture-in-picture position for a clip</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session management: status, undo, redo.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show current session status</td></tr><tr><td><code>undo</code></td><td>Undo the last operation</td></tr><tr><td><code>redo</code></td><td>Redo the last undone operation</td></tr><tr><td><code>save</code></td><td>Save session state to disk</td></tr><tr><td><code>list</code></td><td>List all saved sessions</td></tr></tbody></table>
+<h3 id="preview">Preview<a class="anchor" href="#preview" aria-label="锚点">#</a></h3>
+<p>Preview bundles and live preview sessions for iterative editing review.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>preview recipes</code></td><td>List preview recipes</td></tr><tr><td><code>preview capture</code></td><td>Render a low-res preview bundle</td></tr><tr><td><code>preview latest</code></td><td>Return the latest existing bundle</td></tr><tr><td><code>preview live start</code></td><td>Start a live preview session and publish the first bundle</td></tr><tr><td><code>preview live push</code></td><td>Publish a new bundle into the live session</td></tr><tr><td><code>preview live status</code></td><td>Query current live-session state without rendering</td></tr><tr><td><code>preview live stop</code></td><td>Stop the live session without deleting artifacts</td></tr></tbody></table>
+<p>Typical <code>quick</code> bundle contents:</p>
+<ul><li><code>preview.mp4</code></li><li>several sampled frames</li><li>midpoint <code>hero.png</code></li><li><code>summary.json</code> with project facts</li></ul>
+<p>Poll mode is supported:</p>
+<pre><code class="language-bash">cli-anything-shotcut --json --project edit.mlt preview live start --recipe quick --mode poll --source-poll-ms 500</code></pre>
+<p><code>preview live status --json</code> includes session refs and a compact<br><code>trajectory_summary</code> so agents can cheaply understand the latest few publishes.</p>
+<p>Viewer commands:</p>
+<pre><code class="language-bash">cli-hub previews inspect /path/to/bundle-or-session
+cli-hub previews html /path/to/bundle-or-session -o page.html
+cli-hub previews watch /path/to/session --open
+cli-hub previews open /path/to/bundle-or-session</code></pre>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new shotcut project file.</p>
+<pre><code class="language-bash">cli-anything-shotcut project new -o myproject.json
+# Or with JSON output for programmatic use
+cli-anything-shotcut --json project new -o myproject.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-shotcut
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
+<p>Export the project to a final output format.</p>
+<pre><code class="language-bash">cli-anything-shotcut --project myproject.json export render output.mp4 --overwrite</code></pre>
+<h3 id="deterministic-timeline-reconstruction">Deterministic Timeline Reconstruction<a class="anchor" href="#deterministic-timeline-reconstruction" aria-label="锚点">#</a></h3>
+<p>For rebuilds, prefer absolute placement over append-only clip insertion:</p>
+<pre><code class="language-bash">cli-anything-shotcut --project myproject.mlt media import intro.mp4
+cli-anything-shotcut --project myproject.mlt timeline add-clip clip0 \
+  --track 1 --in 00:00:00.000 --out 00:00:04.000 --at 00:00:00.000
+
+cli-anything-shotcut --project myproject.mlt media import broll.mp4
+cli-anything-shotcut --project myproject.mlt timeline add-clip clip1 \
+  --track 1 --in 00:00:10.000 --out 00:00:16.000 --at 00:00:08.000</code></pre>
+<ul><li><code>--at</code> inserts blanks automatically when the target time lands in empty space.</li><li>The CLI rejects overlap with an existing clip.</li><li>Prefer explicit <code>--in</code> and <code>--out</code> values so later absolute placement remains unambiguous.</li></ul>
+<h3 id="audio-automation">Audio Automation<a class="anchor" href="#audio-automation" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-shotcut --project myproject.mlt filter volume-envelope \
+  --track 2 \
+  --point 00:00:00.000=1.0 \
+  --point 00:00:03.000=0.35 \
+  --point 00:00:05.000=1.0
+
+cli-anything-shotcut --project myproject.mlt filter duck \
+  --track 2 \
+  --window 00:00:06.000..00:00:09.000 \
+  --window 00:00:15.000..00:00:18.000 \
+  --normal 1.0 --duck 0.25</code></pre>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-shotcut project info -p project.json
+
+# JSON output for agents
+cli-anything-shotcut --json project info -p project.json</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after export operations</li><li><strong>Prefer <code>timeline add-clip --at</code></strong> when recreating a known edit</li><li><strong>Review final renders</strong> after keyframed volume or ducking changes</li><li><strong>Use <code>preview capture</code> or <code>preview live ...</code> to validate pacing, cuts, and filter effects visually</strong></li><li><strong>Read returned artifact paths</strong> such as <code>hero.png</code> and <code>preview.mp4</code>; JSON payloads reference files on disk</li><li><strong>Use <code>preview live status --json</code> before reading the full <code>trajectory.json</code></strong></li><li><strong>Use <code>cli-hub previews ...</code> only to inspect/open existing bundles or live sessions</strong></li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-seaclip/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-seaclip</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-slay-the-spire-ii/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-slay-the-spire-ii</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-shotcut/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

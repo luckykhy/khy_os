@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 发布前自保（pip 是命脉） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>skills<span class="sep">›</span>khy-release-safety<span class="sep">›</span>Khy-OS 发布前自保（pip 是命脉）</div>
+      <header class="hero reveal"><h1>Khy-OS 发布前自保（pip 是命脉）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-发布前自保-pip-是命脉">Khy-OS 发布前自保（pip 是命脉）</a></li><li class="lvl-2"><a href="#铁事实-先记住">铁事实（先记住）</a></li><li class="lvl-2"><a href="#发布最小闭环-按顺序-红就停">发布最小闭环（按顺序，红就停）</a></li><li class="lvl-2"><a href="#版本号一致性">版本号一致性</a></li><li class="lvl-2"><a href="#权威发布手册">权威发布手册</a></li><li class="lvl-2"><a href="#发布前的自保动作">发布前的自保动作</a></li><li class="lvl-2"><a href="#绝对不要">绝对不要</a></li><li class="lvl-2"><a href="#发布是不可逆的外向动作">发布是不可逆的外向动作</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-发布前自保-pip-是命脉">Khy-OS 发布前自保（pip 是命脉）<a class="anchor" href="#khy-os-发布前自保-pip-是命脉" aria-label="锚点">#</a></h1>
+<p><strong>pip 是本项目唯一分发渠道</strong>。发布前按这份最小闭环逐项确认，<strong>任何一步红就别发</strong>。</p>
+<h2 id="铁事实-先记住">铁事实（先记住）<a class="anchor" href="#铁事实-先记住" aria-label="锚点">#</a></h2>
+<ol><li><strong>改了仓库源码，pip 用户拿不到</strong>——除非重新打包发版。pip 包是打包时的源码快照。</li><li><strong>版本号要多处一致</strong>——别只改一处（历史上出过 backend <code>package.json</code> 与发布版本不一致）。</li></ol>
+<h2 id="发布最小闭环-按顺序-红就停">发布最小闭环（按顺序，红就停）<a class="anchor" href="#发布最小闭环-按顺序-红就停" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 1) 只读体检无红
+node services/backend/bin/khy.js maintain freshness
+
+# 2) 守卫全绿（做一次提交自动触发 pre-commit 钩子；红了先修，绝不 --no-verify）
+git add -A &amp;&amp; git commit -m &quot;...&quot;        # 钩子自动跑 scripts/check-*.js
+
+# 3) 上帝组件没恶化（单文件 ≤2500 行）
+npm --prefix services/backend run arch:god</code></pre>
+<h2 id="版本号一致性">版本号一致性<a class="anchor" href="#版本号一致性" aria-label="锚点">#</a></h2>
+<p>发布前确认这些地方版本号一致（至少）：</p>
+<ul><li><code>services/backend/package.json</code></li><li>pip 包版本（<code>platform/khy_platform/</code> 相关配置）</li><li>发布 tag / release note</li></ul>
+<p>改版本号就<strong>一次性全改齐</strong>，别漏。</p>
+<h2 id="权威发布手册">权威发布手册<a class="anchor" href="#权威发布手册" aria-label="锚点">#</a></h2>
+<p><strong><code>docs/07_OPS_运维/[OPS-MAN-042] 发布手册-pip与npm-无AI照做.md</code></strong>——无 AI 也能照做。打 wheel、上传 PyPI 的完整步骤以它为准。</p>
+<h2 id="发布前的自保动作">发布前的自保动作<a class="anchor" href="#发布前的自保动作" aria-label="锚点">#</a></h2>
+<ul><li>发布前<strong>先备份</strong>：双击 <code>维护-备份关键数据配置</code>（或按手册）。</li><li>心里过一遍回退路径：坏了怎么回滚（双击 <code>维护-回滚到最近稳定版本</code>，或 <code>git checkout &lt;好哈希&gt; -- &lt;文件&gt;</code>）。</li></ul>
+<h2 id="绝对不要">绝对不要<a class="anchor" href="#绝对不要" aria-label="锚点">#</a></h2>
+<ul><li>❌ 守卫红了硬发。守卫红 = 有真问题。</li><li>❌ 用 <code>--no-verify</code> 跳过钩子发布。</li><li>❌ 没重打包就以为 pip 用户拿到了新改动。</li><li>❌ 只改一处版本号就发。</li></ul>
+<h2 id="发布是不可逆的外向动作">发布是不可逆的外向动作<a class="anchor" href="#发布是不可逆的外向动作" aria-label="锚点">#</a></h2>
+<p>发布前<strong>明确向用户确认</strong>：&quot;我要发布版本 X 到 pip，守卫全绿、版本号已对齐、已备份——确认发布吗？&quot; 得到确认再执行。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/AI协作预设包/skills/khy-pick-task/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 选活与发展路径（不知做什么时）</div></a><a class="next" href="../../../../docs/AI协作预设包/skills/khy-safe-change/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 加法式改动纪律（改代码前照做）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/AI协作预设包/skills/khy-release-safety/prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源码还原与手工发布 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>源码还原与手工发布</div>
+      <header class="hero reveal"><h1>源码还原与手工发布</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#源码还原与手工发布">源码还原与手工发布</a></li><li class="lvl-2"><a href="#1-背景-双渠道-单一工作坊">1. 背景：双渠道、单一工作坊</a></li><li class="lvl-2"><a href="#2-版本号的三处真源">2. 版本号的三处真源</a></li><li class="lvl-2"><a href="#3-发布前提-凭证">3. 发布前提（凭证）</a></li><li class="lvl-2"><a href="#4-一键双渠道发布-推荐">4. 一键双渠道发布（推荐）</a></li><li class="lvl-3"><a href="#全部开关">全部开关</a></li><li class="lvl-3"><a href="#执行流程">执行流程</a></li><li class="lvl-2"><a href="#5-手工分步发布-兜底">5. 手工分步发布（兜底）</a></li><li class="lvl-3"><a href="#5-1-改版本号">5.1 改版本号</a></li><li class="lvl-3"><a href="#5-2-发布-pip-khy-os">5.2 发布 pip（`khy-os`）</a></li><li class="lvl-3"><a href="#5-3-发布-npm-khy-os-khy-os">5.3 发布 npm（`@khy-os/khy-os`）</a></li><li class="lvl-2"><a href="#6-源码还原">6. 源码还原</a></li><li class="lvl-3"><a href="#6-1-从-pip-发行物还原">6.1 从 pip 发行物还原</a></li><li class="lvl-3"><a href="#6-2-从-npm-发行物还原">6.2 从 npm 发行物还原</a></li><li class="lvl-3"><a href="#6-3-还原后重建运行依赖-self-heal">6.3 还原后重建运行依赖（self-heal）</a></li><li class="lvl-2"><a href="#7-发布后验证">7. 发布后验证</a></li><li class="lvl-2"><a href="#8-常见坑">8. 常见坑</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-015 | 阶段: 部署 | 原路径: docs/指南/源码还原与手工发布.md --&gt;</p>
+<h1 id="源码还原与手工发布">源码还原与手工发布<a class="anchor" href="#源码还原与手工发布" aria-label="锚点">#</a></h1>
+<blockquote><p>维护者文档。记录两件事：</p>
+<ol><li><strong>源码还原</strong> —— 如何从已发布的 pip / npm 发行物（或已安装环境）取回完整的多语言工作坊源码。</li><li><strong>手工发布</strong> —— 如何自己动手把 khy OS 同时发布到 PyPI（<code>khy-os</code>）与 npm（<code>@khy-os/khy-os</code>），不依赖 Claude 代劳。</li></ol></blockquote>
+<p>日期：2026-06-10 · 适用版本：0.1.94+</p>
+<p>相关文档：<a href="../07_OPS_运维/%5BOPS-MAN-022%5D%20pip-安装布局参考.html">pip 安装布局参考</a> · <a href="%5BDEPLOY-MAN-013%5D%20pypi-发布手册-0.1.17-0.1.18.html">PyPI 发布手册 0.1.17–0.1.18</a>（已归档）</p>
+<hr>
+<h2 id="1-背景-双渠道-单一工作坊">1. 背景：双渠道、单一工作坊<a class="anchor" href="#1-背景-双渠道-单一工作坊" aria-label="锚点">#</a></h2>
+<p>khy OS 通过两个平行渠道发行，二者携带<strong>完全一致</strong>的多语言「工作坊」源码（Node 后端 + C/asm 内核 + MoonBit WASM SDK + 前端 dist + Python 胶水 + dev 工具链版本锁）：</p>
+<table><thead><tr><th>渠道</th><th>包名</th><th>编排中枢</th><th>被自愈的「其他语言」</th></tr></thead><tbody><tr><td>pip</td><td><code>khy-os</code></td><td>Python</td><td>Node 运行时（npm）、C/MoonBit 工具链</td></tr><tr><td>npm</td><td><code>@khy-os/khy-os</code></td><td>Node</td><td>Python 工具（pip）、C/MoonBit 工具链</td></tr></tbody></table>
+<p>npm 渠道的 <code>prepack</code>（<code>packaging/npm/scripts/assemble.js</code>）直接<strong>复用 pip 渠道的 bundle</strong>（<code>platform/khy_os/bundled/</code>），所以两边工作坊字节级一致。</p>
+<blockquote><p><strong>纯净规则（重要）</strong>：发行物里<strong>不含</strong>任何第三方依赖树（<code>node_modules</code> / <code>site-packages</code> / <code>_build</code> / <code>target</code> 等）和原生二进制（<code>*.o/.so/.bin/.elf/...</code>）。<code>*.wasm</code> 是例外（前端离线基线运行时资产，随包）。这意味着还原出来的是<strong>纯源码</strong>，运行前需要触发自愈拉取运行依赖（见 §6.3）。</p></blockquote>
+<hr>
+<h2 id="2-版本号的三处真源">2. 版本号的三处真源<a class="anchor" href="#2-版本号的三处真源" aria-label="锚点">#</a></h2>
+<p>每次发布前都要同步，三者必须一致（PyPI / npm 都拒绝重复发布同版本）：</p>
+<table><thead><tr><th>文件</th><th>作用</th></tr></thead><tbody><tr><td><code>platform/khy_platform/__init__.py</code></td><td>pip <strong>单一真源</strong>，<code>setup.py</code> 动态读取（<code>__version__ = &quot;X.Y.Z&quot;</code>）</td></tr><tr><td><code>packaging/npm/package.json</code></td><td>npm 渠道清单的 <code>&quot;version&quot;</code></td></tr><tr><td><code>services/backend/package.json</code></td><td><code>khy --version</code> 实际读取的就是它，不同步会和发布版本对不上</td></tr></tbody></table>
+<p><code>publish-dual.sh</code>（§4）会自动同步这三处；手工发布（§5）需手动改。</p>
+<hr>
+<h2 id="3-发布前提-凭证">3. 发布前提（凭证）<a class="anchor" href="#3-发布前提-凭证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># pip：~/.pypirc 配好 [pypi] 的 API token（已就绪则无需再做）
+#   [pypi]
+#   username = __token__
+#   password = pypi-AgEN...     ← PyPI API token
+
+# npm：scoped 包 @khy-os/khy-os 首次发布前必须登录
+npm login            # 按提示输入账号 / 邮箱 / OTP
+npm whoami           # 确认登录成功</code></pre>
+<blockquote><p><strong>源码不再加锁</strong>：发布真实源码（<code>origin-code</code> / <code>git-push</code>）与还原（<code>khy restore</code>）都<strong>不再需要任何密码</strong>——发行物始终内嵌完整真实源码（用固定默认密钥加密），<code>khy restore</code> 会自动解密。仅当还原<strong>由自定义密钥加密的旧快照</strong>时才需 <code>--secret &lt;密钥&gt;</code> / <code>KHY_SOURCE_PUBLISH_SECRET</code>。模型导出（<code>train export</code> / <code>train upload</code>）同样已取消密码，学习模式（<code>/study on</code>）也不再需要密码。</p></blockquote>
+<hr>
+<h2 id="4-一键双渠道发布-推荐">4. 一键双渠道发布（推荐）<a class="anchor" href="#4-一键双渠道发布-推荐" aria-label="锚点">#</a></h2>
+<p>脚本：<code>scripts/release/publish-dual.sh</code>。<strong>审计门控</strong>——两个渠道审计全绿之前不上传任何东西；任一审计失败立即中止。</p>
+<pre><code class="language-bash">cd /home/kodehu03/Khy-OS
+
+# 正式双发（会先打印发布计划并要求确认）
+bash scripts/release/publish-dual.sh 0.1.95
+
+# 彩排：改版本号 + 跑完整构建/审计，但只 twine check / npm --dry-run，不真正上传
+bash scripts/release/publish-dual.sh 0.1.95 --dry-run
+
+# 发布成功后：提交版本改动 + 打 annotated tag v0.1.95
+bash scripts/release/publish-dual.sh 0.1.95 --tag
+
+# 再 push 分支 + tag 到 remote（--push 自动隐含 --tag；默认 origin，否则第一个 remote）
+bash scripts/release/publish-dual.sh 0.1.95 --push</code></pre>
+<h3 id="全部开关">全部开关<a class="anchor" href="#全部开关" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>开关</th><th>作用</th></tr></thead><tbody><tr><td><code>&lt;version&gt;</code> / <code>--version X.Y.Z</code></td><td>目标版本（位置参数或具名皆可）</td></tr><tr><td><code>--dry-run</code></td><td>全流程构建 + 审计，但不上传（<code>twine check</code> + <code>npm publish --dry-run</code>），也不 tag/push</td></tr><tr><td><code>--skip-pip</code></td><td>只发 npm</td></tr><tr><td><code>--skip-npm</code></td><td>只发 pip</td></tr><tr><td><code>--test-pypi</code></td><td>pip 上传到 TestPyPI 而非正式 PyPI</td></tr><tr><td><code>--no-isolation</code></td><td>离线构建 wheel/sdist（复用已装的 build/setuptools/wheel，不解析网络）</td></tr><tr><td><code>--tag</code></td><td>发布成功后提交版本改动 + 打 annotated tag <code>vX.Y.Z</code>（仅本地）</td></tr><tr><td><code>--push</code></td><td>额外把分支与 tag push 到 remote（隐含 <code>--tag</code>）</td></tr><tr><td><code>--remote NAME</code></td><td>指定 push 的 remote</td></tr><tr><td><code>-y</code> / <code>--yes</code></td><td>跳过确认提示</td></tr></tbody></table>
+<h3 id="执行流程">执行流程<a class="anchor" href="#执行流程" aria-label="锚点">#</a></h3>
+<ol><li><strong>Preflight</strong>：检查 <code>python3/twine</code>（pip）、<code>node/npm</code>（npm）、<code>perl</code>、<code>git</code>（仅 <code>--tag/--push</code>）；正式发布强制 <code>npm whoami</code> 必须通过；<code>--tag</code> 时校验 <code>vX.Y.Z</code> 不存在、remote 存在。</li><li><strong>版本同步</strong>：写入 §2 的三处真源。</li><li><strong>审计门控</strong>：先 <code>build-and-audit-pip-purity.sh</code>（隔离构建 + 纯净/完整审计），再 <code>npm run audit:purity &amp;&amp; npm test</code>。</li><li><strong>依次发布</strong>：<code>twine upload</code> → <code>npm publish --access public</code>。</li><li><strong>可选 git</strong>：提交版本改动 → annotated tag → push（仅在真实发布且带 <code>--tag/--push</code> 时）。</li></ol>
+<hr>
+<h2 id="5-手工分步发布-兜底">5. 手工分步发布（兜底）<a class="anchor" href="#5-手工分步发布-兜底" aria-label="锚点">#</a></h2>
+<p>当不想用一键脚本，或需要逐步排查时，按下面两步走。</p>
+<h3 id="5-1-改版本号">5.1 改版本号<a class="anchor" href="#5-1-改版本号" aria-label="锚点">#</a></h3>
+<p>把 §2 的三个文件里的版本号改成新版本（例如 <code>0.1.95</code>）。</p>
+<h3 id="5-2-发布-pip-khy-os">5.2 发布 pip（<code>khy-os</code>）<a class="anchor" href="#5-2-发布-pip-khy-os" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd /home/kodehu03/Khy-OS
+
+# (1) 隔离构建 + 纯净/完整双审计
+bash scripts/release/build-and-audit-pip-purity.sh
+#   网络不通时离线兜底：
+#   KHY_OFFLINE_BUILD=1 bash scripts/release/build-and-audit-pip-purity.sh --no-isolation
+
+# (2) 审计全绿后上传
+python3 -m twine upload dist/*
+#   先在 TestPyPI 演练：python3 -m twine upload --repository testpypi dist/*</code></pre>
+<h3 id="5-3-发布-npm-khy-os-khy-os">5.3 发布 npm（<code>@khy-os/khy-os</code>）<a class="anchor" href="#5-3-发布-npm-khy-os-khy-os" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd /home/kodehu03/Khy-OS/packaging/npm
+
+# (1) 纯净 + 完整审计（内部 npm pack 触发 prepack 组装工作坊）+ 单测
+npm run audit:purity
+npm test
+
+# (2) 审计绿后发布；scope 包首次必须带 --access public
+npm publish --access public
+#   先彩排：npm publish --dry-run</code></pre>
+<blockquote><p>⚠️ <code>prepack</code>（<code>assemble.js</code>）在<strong>维护端</strong>需要 Python（它复用 pip bundle，缺失时会 <code>python setup.py build_py</code> 建一次）。终端用户安装时是纯 Node。</p></blockquote>
+<hr>
+<h2 id="6-源码还原">6. 源码还原<a class="anchor" href="#6-源码还原" aria-label="锚点">#</a></h2>
+<p>发行物携带完整工作坊源码，可在<strong>无源码 checkout</strong> 的情况下取回。</p>
+<h3 id="6-1-从-pip-发行物还原">6.1 从 pip 发行物还原<a class="anchor" href="#6-1-从-pip-发行物还原" aria-label="锚点">#</a></h3>
+<p>发行布局：</p>
+<ul><li><strong>sdist</strong>（<code>*.tar.gz</code>）：<strong>原始源码布局</strong> —— <code>kernel/Makefile</code>、<code>kernel/src</code>、<code>kernel/boot</code>、<code>platform/khy_platform/_resources/dev-constraints.txt</code> 等，直接对应仓库目录结构。最干净的还原源。</li><li><strong>wheel</strong>（<code>*.whl</code>）：<strong>安装态布局</strong> —— 工作坊在 <code>khy_os/bundled/...</code>，Python 胶水在 <code>khy_platform/</code>。</li></ul>
+<pre><code class="language-bash"># 方式 A：只下载源码分发（sdist），解压即得完整原始工作坊
+pip download khy-os --no-deps --no-binary :all: -d /tmp/khy-src
+tar -xzf /tmp/khy-src/khy_os-*.tar.gz -C /tmp/khy-src
+ls /tmp/khy-src/khy_os-*/         # kernel/ services/ platform/ ...
+
+# 方式 B：下载 wheel 并解压（取 bundled 工作坊）
+pip download khy-os --no-deps -d /tmp/khy-whl
+unzip -q /tmp/khy-whl/khy_os-*.whl -d /tmp/khy-whl/x
+ls /tmp/khy-whl/x/khy_os/bundled/   # 同一份工作坊
+
+# 方式 C：从已安装环境定位
+python3 -c &quot;import khy_platform; print('glue   :', khy_platform.INSTALL_PATH)&quot;
+python3 -c &quot;import khy_os, os; print('bundle :', os.path.join(os.path.dirname(khy_os.__file__), 'bundled'))&quot;</code></pre>
+<h3 id="6-2-从-npm-发行物还原">6.2 从 npm 发行物还原<a class="anchor" href="#6-2-从-npm-发行物还原" aria-label="锚点">#</a></h3>
+<p>发行布局：tarball 根为 <code>package/</code>，工作坊在 <code>package/bundled/...</code>；安装后位于 <code>node_modules/@khy-os/khy-os/bundled/...</code>。</p>
+<pre><code class="language-bash"># 方式 A：直接拉取已发布 tarball 并解压
+npm pack @khy-os/khy-os --pack-destination /tmp/khy-npm
+tar -xzf /tmp/khy-npm/khy-os-*.tgz -C /tmp/khy-npm
+ls /tmp/khy-npm/package/bundled/    # services/backend kernel platform ...
+
+# 方式 B：从已安装环境定位（index.js 在包入口导出绝对路径）
+node -e &quot;const m=require('@khy-os/khy-os'); console.log('install:', m.getInstallPath()); console.log('bundle :', m.getBundleRoot()); console.log('backend:', m.getBackendDir());&quot;</code></pre>
+<h3 id="6-3-还原后重建运行依赖-self-heal">6.3 还原后重建运行依赖（self-heal）<a class="anchor" href="#6-3-还原后重建运行依赖-self-heal" aria-label="锚点">#</a></h3>
+<p>因纯净规则不含 <code>node_modules</code>，还原出来的工作坊<strong>不能直接运行</strong>，需触发自愈拉取运行依赖：</p>
+<pre><code class="language-bash"># pip 渠道：安装期自愈（也可在首次启动时自动触发）
+khy postinstall            # 等价于 khy_platform.run_postinstall()
+khy dev-setup              # 编译期：补 Python dev 工具 + 检测 C/MoonBit 工具链
+
+# npm 渠道：postinstall 在 `npm install @khy-os/khy-os` 时已自动跑；手工兜底：
+node node_modules/@khy-os/khy-os/bin/khy.js postinstall
+node node_modules/@khy-os/khy-os/bin/khy.js dev-setup</code></pre>
+<p>自愈遵守「永不中断」硬契约：任何依赖拉取失败都会被 catch、打印可复制的手动恢复命令、并返回 0（npm 渠道尤其关键——非 0 的 postinstall 会中断整个 <code>npm install</code>）。</p>
+<hr>
+<h2 id="7-发布后验证">7. 发布后验证<a class="anchor" href="#7-发布后验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># pip
+pip install --upgrade khy-os &amp;&amp; khy --version
+
+# npm（全新目录里装，验证 postinstall 自愈真的跑）
+mkdir -p /tmp/verify &amp;&amp; cd /tmp/verify &amp;&amp; npm init -y &gt;/dev/null
+npm install @khy-os/khy-os &amp;&amp; npx khy --version</code></pre>
+<p><code>khy --version</code> 应输出刚发布的版本号（即 §2 第三处真源同步后的值）。</p>
+<hr>
+<h2 id="8-常见坑">8. 常见坑<a class="anchor" href="#8-常见坑" aria-label="锚点">#</a></h2>
+<ol><li><strong>重复版本被拒</strong>：PyPI / npm 都不允许重发同版本号 —— 先升 §2 三处真源。</li><li><strong><code>khy --version</code> 与发布版本不符</strong>：忘了同步 <code>services/backend/package.json</code>。<code>publish-dual.sh</code> 会自动处理。</li><li><strong>npm scope 包首发报权限错</strong>：首次必须带 <code>npm publish --access public</code>。</li><li><strong><code>prepack</code> 在维护端报缺 Python</strong>：npm 渠道构建复用 pip bundle，维护机需 Python3；终端用户安装不需要。</li><li><strong>审计报含 <code>node_modules</code>/<code>_build</code></strong>：多为工作树里<strong>未跟踪</strong>的构建产物被扫入分发。pip 端靠 <code>MANIFEST.in</code> 显式 prune + 审计兜底；npm 端靠 <code>assemble.js</code> 的 <code>PRUNE_DIRS</code> + <code>.npmignore</code>。</li><li><strong><code>*.wasm</code> 被误判</strong>：<code>*.wasm</code> 是合法的离线基线资产，审计脚本已豁免；若报错检查是否在 <code>_build/target</code> 缓存目录下（那是目录规则命中，删缓存即可）。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-014] 发布说明-0.1.27.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS v0.1.27 发布说明</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-016] 部署指南-域名.html"><div class="dir">下一篇 →</div><div class="ttl">KHY-OS 服务器部署指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-015] 源码还原与手工发布.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

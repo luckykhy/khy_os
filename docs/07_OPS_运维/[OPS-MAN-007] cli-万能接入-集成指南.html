@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS × CLI-Anything 集成指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>KHY OS × CLI-Anything 集成指南</div>
+      <header class="hero reveal"><h1>KHY OS × CLI-Anything 集成指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-cli-anything-集成指南">KHY OS × CLI-Anything 集成指南</a></li><li class="lvl-2"><a href="#概述">概述</a></li><li class="lvl-2"><a href="#快速开始">快速开始</a></li><li class="lvl-3"><a href="#搜索可用工具">搜索可用工具</a></li><li class="lvl-3"><a href="#安装工具">安装工具</a></li><li class="lvl-3"><a href="#列出已安装的工具">列出已安装的工具</a></li><li class="lvl-3"><a href="#直接调用工具">直接调用工具</a></li><li class="lvl-3"><a href="#同步注册表">同步注册表</a></li><li class="lvl-2"><a href="#生成新的-cli-工具">生成新的 CLI 工具</a></li><li class="lvl-3"><a href="#python-cli-默认">Python CLI（默认）</a></li><li class="lvl-3"><a href="#node-js-cli">Node.js CLI</a></li><li class="lvl-3"><a href="#7-阶段流水线">7 阶段流水线</a></li><li class="lvl-2"><a href="#架构">架构</a></li><li class="lvl-3"><a href="#自动注册">自动注册</a></li><li class="lvl-3"><a href="#在-ai-对话中使用">在 AI 对话中使用</a></li><li class="lvl-3"><a href="#注册表来源">注册表来源</a></li><li class="lvl-2"><a href="#中文别名">中文别名</a></li><li class="lvl-2"><a href="#文件位置">文件位置</a></li><li class="lvl-2"><a href="#为注册表做贡献">为注册表做贡献</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-007 | 阶段: 运维 | 原路径: docs/指南/cli-万能接入-集成指南.md --&gt;</p>
+<h1 id="khy-os-cli-anything-集成指南">KHY OS × CLI-Anything 集成指南<a class="anchor" href="#khy-os-cli-anything-集成指南" aria-label="锚点">#</a></h1>
+<h2 id="概述">概述<a class="anchor" href="#概述" aria-label="锚点">#</a></h2>
+<p>CLI-Anything 是一个生态系统，可将任意专业软件转化为 AI agent 可控制的 CLI 工具，并输出结构化 JSON。KHY OS 原生集成了该能力，使用户可以：</p>
+<ul><li><strong>搜索</strong> CLI-Anything 注册表中的可用工具</li><li>通过单条命令<strong>安装</strong> CLI 工具</li><li>借助 7 阶段 AI 流水线为任意软件<strong>生成</strong>新的 CLI 封装</li><li>在 AI 对话中无缝<strong>使用</strong>已安装的工具</li></ul>
+<h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
+<h3 id="搜索可用工具">搜索可用工具<a class="anchor" href="#搜索可用工具" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy app cli-search blender
+khy app cli-search gimp
+khy app cli-search ffmpeg</code></pre>
+<h3 id="安装工具">安装工具<a class="anchor" href="#安装工具" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy app cli-install blender</code></pre>
+<p>安装完成后，该工具会自动注册为 KHY app、tool 和 skill。</p>
+<h3 id="列出已安装的工具">列出已安装的工具<a class="anchor" href="#列出已安装的工具" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy app cli-list</code></pre>
+<h3 id="直接调用工具">直接调用工具<a class="anchor" href="#直接调用工具" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy app cli-invoke blender render --scene myscene.blend --json
+khy app cli-invoke gimp export --file image.xcf --format png --json</code></pre>
+<h3 id="同步注册表">同步注册表<a class="anchor" href="#同步注册表" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy app cli-sync</code></pre>
+<p>强制刷新注册表缓存，重新发现已安装的 CLI，并更新 KHY 注册信息。</p>
+<h2 id="生成新的-cli-工具">生成新的 CLI 工具<a class="anchor" href="#生成新的-cli-工具" aria-label="锚点">#</a></h2>
+<p>对于任何尚无 CLI-Anything 封装的软件，KHY 都可以为其生成一个：</p>
+<h3 id="python-cli-默认">Python CLI（默认）<a class="anchor" href="#python-cli-默认" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy app cli-gen https://github.com/user/my-software
+khy app cli-gen /path/to/local/software</code></pre>
+<h3 id="node-js-cli">Node.js CLI<a class="anchor" href="#node-js-cli" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy app cli-gen https://github.com/user/my-software --runtime node</code></pre>
+<h3 id="7-阶段流水线">7 阶段流水线<a class="anchor" href="#7-阶段流水线" aria-label="锚点">#</a></h3>
+<p>生成过程遵循 7 个阶段：</p>
+<table><thead><tr><th>阶段</th><th>名称</th><th>描述</th></tr></thead><tbody><tr><td>0</td><td>Source Acquisition</td><td>克隆仓库或校验本地路径</td></tr><tr><td>1</td><td>Codebase Analysis</td><td>AI 分析软件能力 → SOP.md</td></tr><tr><td>2</td><td>Architecture Design</td><td>设计命令分组、状态模型、输出格式</td></tr><tr><td>3</td><td>Implementation</td><td>生成 CLI 代码（Click/Commander）</td></tr><tr><td>4</td><td>Test Planning</td><td>编写带场景的 TEST.md</td></tr><tr><td>5</td><td>Test Implementation</td><td>生成测试代码</td></tr><tr><td>6</td><td>Documentation</td><td>运行测试 + 生成 SKILL.md</td></tr><tr><td>7</td><td>Packaging</td><td>setup.py/package.json + 安装 + KHY 注册</td></tr></tbody></table>
+<p>该流水线支持检查点——若中断，会从最后一个已完成的阶段恢复。</p>
+<h2 id="架构">架构<a class="anchor" href="#架构" aria-label="锚点">#</a></h2>
+<pre><code>┌────────────────────────────────────────────────┐
+│  KHY OS CLI                                    │
+│  khy app cli-gen/search/install/list/sync      │
+├────────────────────────────────────────────────┤
+│  cliAnythingService.js  (bridge)               │
+│  ┌───────────┐ ┌──────────┐ ┌───────────────┐ │
+│  │ Registry   │ │ Discovery│ │ Registration  │ │
+│  │ CDN+cache  │ │ PATH     │ │ tool+skill+app│ │
+│  └───────────┘ └──────────┘ └───────────────┘ │
+├────────────────────────────────────────────────┤
+│  cliAnythingGenerator.js  (7-stage pipeline)   │
+├────────────────────────────────────────────────┤
+│  CLIAnythingTool.js       SKILL.md → manifest  │
+│  (BaseTool wrapper)       (auto-convert)       │
+└────────────────────────────────────────────────┘
+         ↕ subprocess --json
+┌────────────────────────────────────────────────┐
+│  cli-anything-* CLIs on PATH                   │
+│  cli-anything-blender, cli-anything-gimp, ...  │
+└────────────────────────────────────────────────┘</code></pre>
+<h3 id="自动注册">自动注册<a class="anchor" href="#自动注册" aria-label="锚点">#</a></h3>
+<p>当某个 <code>cli-anything-*</code> 工具被安装时，KHY OS 会自动：</p>
+<ol><li><strong>注册为 App</strong> —— 使用 <code>appRegistry.register()</code>，并设置 <code>runtime: 'external'</code></li><li><strong>注册为 Tool</strong> —— 通过 <code>defineTool()</code> 创建供 AI 使用的 <code>cli_anything__&lt;name&gt;</code> 工具</li><li><strong>转换 SKILL.md</strong> —— 在 <code>~/.khy/skills/cli-anything-&lt;name&gt;/</code> 生成 <code>manifest.json</code> + <code>prompt.md</code></li></ol>
+<h3 id="在-ai-对话中使用">在 AI 对话中使用<a class="anchor" href="#在-ai-对话中使用" aria-label="锚点">#</a></h3>
+<p>注册完成后，AI 可以自动发现并使用 CLI 工具：</p>
+<blockquote><p>用户：&quot;用 Blender 渲染这个场景&quot;<br>AI：[以 <code>render</code> 命令调用 <code>cli_anything__blender</code> 工具]</p></blockquote>
+<h3 id="注册表来源">注册表来源<a class="anchor" href="#注册表来源" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>来源</th><th>URL</th><th>描述</th></tr></thead><tbody><tr><td>Harness</td><td><code>hkuds.github.io/CLI-Anything/registry.json</code></td><td>官方 CLI-Anything 注册表</td></tr><tr><td>Public</td><td><code>hkuds.github.io/CLI-Anything/public_registry.json</code></td><td>社区贡献的工具</td></tr><tr><td>Local</td><td>PATH scan for <code>cli-anything-*</code></td><td>本地已安装但不在注册表中</td></tr></tbody></table>
+<h2 id="中文别名">中文别名<a class="anchor" href="#中文别名" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>别名</th><th>命令</th></tr></thead><tbody><tr><td><code>cli生成</code></td><td><code>khy app cli-gen</code></td></tr><tr><td><code>cli搜索</code></td><td><code>khy app cli-search</code></td></tr><tr><td><code>cli安装</code></td><td><code>khy app cli-install</code></td></tr><tr><td><code>cli列表</code></td><td><code>khy app cli-list</code></td></tr><tr><td><code>cli卸载</code></td><td><code>khy app cli-uninstall</code></td></tr><tr><td><code>cli调用</code></td><td><code>khy app cli-invoke</code></td></tr><tr><td><code>cli同步</code></td><td><code>khy app cli-sync</code></td></tr><tr><td><code>软件接入</code></td><td><code>khy app cli-gen</code></td></tr><tr><td><code>工具生成</code></td><td><code>khy app cli-gen</code></td></tr><tr><td><code>agent工具</code></td><td><code>khy app cli-list</code></td></tr></tbody></table>
+<h2 id="文件位置">文件位置<a class="anchor" href="#文件位置" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>路径</th><th>描述</th></tr></thead><tbody><tr><td><code>~/.khy/cli-anything/registry.json</code></td><td>缓存的 harness 注册表</td></tr><tr><td><code>~/.khy/cli-anything/public_registry.json</code></td><td>缓存的 public 注册表</td></tr><tr><td><code>~/.khy/cli-anything/installed.json</code></td><td>已发现的已安装 CLI</td></tr><tr><td><code>~/.khy/cli-anything/generated/&lt;SOFTWARE&gt;/</code></td><td>AI 生成的 CLI 输出</td></tr><tr><td><code>~/.khy/skills/cli-anything-&lt;name&gt;/</code></td><td>转换后的 KHY skills</td></tr></tbody></table>
+<h2 id="为注册表做贡献">为注册表做贡献<a class="anchor" href="#为注册表做贡献" aria-label="锚点">#</a></h2>
+<p>要将你生成的 CLI 添加到 public 注册表：</p>
+<ol><li>在本地生成并测试你的 CLI</li><li>发布到 PyPI 或 npm</li><li>向 <code>github.com/HKUDS/CLI-Anything</code> 提交 PR，在 <code>public_registry.json</code> 中加入你工具的条目</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-006] cli-万能接入-abu-案例.html"><div class="dir">← 上一篇</div><div class="ttl">CLI-Anything 接入案例：Abu-Cowork (阿布)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-008] deepseek-tui-资源清理对齐.html"><div class="dir">下一篇 →</div><div class="ttl">DeepSeek-TUI 资源回收与临时文件清理对齐清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-007] cli-万能接入-集成指南.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

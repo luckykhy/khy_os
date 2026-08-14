@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-n8n · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-n8n<span class="sep">›</span>cli-anything-n8n</div>
+      <header class="hero reveal"><h1>cli-anything-n8n</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-n8n">cli-anything-n8n</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#configuration">Configuration</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-n8n&quot;<br>description: &gt;-<br>  Command-line interface for n8n workflow automation platform.<br>  Manages workflows, executions, credentials, variables, and tags.<br>  Based on n8n Public API v1.1.1 (n8n &gt;= 1.0.0).</p>
+<hr>
+<h1 id="cli-anything-n8n">cli-anything-n8n<a class="anchor" href="#cli-anything-n8n" aria-label="锚点">#</a></h1>
+<p>CLI harness for n8n workflow automation — built with the CLI-Anything pattern.<br>Verified against n8n OpenAPI spec v1.1.1.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install cli-anything-n8n</code></pre>
+<h2 id="configuration">Configuration<a class="anchor" href="#configuration" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">cli-anything-n8n config set base_url https://your-n8n-instance.com
+cli-anything-n8n config set api_key your-api-key
+
+# Or environment variables
+export N8N_BASE_URL=https://your-n8n-instance.com
+export N8N_API_KEY=your-api-key
+export N8N_TIMEOUT=60  # optional, default 30s</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Group</th><th>Commands</th></tr></thead><tbody><tr><td>workflow</td><td>list, get, create, update, delete, activate, deactivate, tags, set-tags, transfer</td></tr><tr><td>execution</td><td>list, get, delete, retry</td></tr><tr><td>credential</td><td>create, delete, schema, transfer</td></tr><tr><td>variable</td><td>list, create, update, delete</td></tr><tr><td>tag</td><td>list, get, create, update, delete</td></tr><tr><td>config</td><td>show, set</td></tr></tbody></table>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<ul><li>Always use <code>--json</code> flag for structured output</li><li>Use <code>@file.json</code> to pass complex JSON from files</li><li>Check return codes: 0 = success, non-zero = error</li><li>All IDs are strings, not integers</li><li>API key is always masked in <code>config show</code> output</li><li>Not available in public API: data tables, credential listing, execution stop</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-musescore/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">MuseScore CLI Skill</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-notebooklm/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-notebooklm</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-n8n/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "test-driven-development",
+  "description": "Drives development with tests. Use when implementing any logic, fixing any bug, or changing any behavior. Use when you need to prove that code works, when a bug report arrives, or when you're about to modify existing functionality.",
+  "user_invocable": true,
+  "trigger": "/test-driven-development",
+  "aliases": [
+    "/tdd"
+  ],
+  "category": "testing",
+  "tags": [
+    "tdd",
+    "testing",
+    "red-green"
+  ],
+  "platforms": [
+    "khy-os",
+    "khy-quant"
+  ],
+  "context": "inline",
+  "source": "agent-skills (vendored, built-in)"
+}

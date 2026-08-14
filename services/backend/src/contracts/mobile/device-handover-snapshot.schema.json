@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://khy-os.dev/schemas/mobile/device-handover-snapshot.schema.json",
+  "title": "KHY Device Handover Snapshot",
+  "type": "object",
+  "required": [
+    "version",
+    "snapshot_id",
+    "trace_id",
+    "source_device",
+    "target_device",
+    "generated_at",
+    "time_window_minutes",
+    "recent_actions",
+    "background_tasks",
+    "pending_approvals",
+    "todos",
+    "redaction_applied"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "snapshot_id": {
+      "type": "string",
+      "pattern": "^hs_[a-z0-9]{8,32}$"
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 64
+    },
+    "source_device": {
+      "type": "string",
+      "enum": [
+        "mobile",
+        "local_terminal"
+      ]
+    },
+    "target_device": {
+      "type": "string",
+      "enum": [
+        "mobile",
+        "local_terminal"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "time_window_minutes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 240
+    },
+    "recent_actions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "at",
+          "status",
+          "summary"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "warn",
+              "wait",
+              "error"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "background_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "label",
+          "status"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "paused",
+              "retry_wait",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "uptime_sec": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "pending_approvals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ticket_id",
+          "risk_level",
+          "requested_action",
+          "expires_at"
+        ],
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "pattern": "^ap_[a-z0-9]{8,32}$"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
+          },
+          "requested_action": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "todos": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
+    },
+    "redaction_applied": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "version": "1.0",
+      "snapshot_id": "hs_1k2m3n4p5q",
+      "trace_id": "tr_20260516_3f91a2bd",
+      "source_device": "mobile",
+      "target_device": "local_terminal",
+      "generated_at": "2026-05-16T10:45:00Z",
+      "time_window_minutes": 60,
+      "recent_actions": [
+        {
+          "at": "2026-05-16T10:05:00Z",
+          "status": "ok",
+          "summary": "Killed stuck python training process (PID 882)."
+        },
+        {
+          "at": "2026-05-16T10:10:00Z",
+          "status": "ok",
+          "summary": "Switched model to claude-3.5-sonnet and reran tests."
+        },
+        {
+          "at": "2026-05-16T10:15:00Z",
+          "status": "warn",
+          "summary": "Auth patch applied; git commit still pending."
+        }
+      ],
+      "background_tasks": [
+        {
+          "task_id": "bg_1024",
+          "label": "npm run dev",
+          "status": "running",
+          "pid": 1024,
+          "port": 8080,
+          "uptime_sec": 1800
+        }
+      ],
+      "pending_approvals": [],
+      "todos": [
+        "Commit auth patch"
+      ],
+      "redaction_applied": true
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-rms · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-rms<span class="sep">›</span>cli-anything-rms</div>
+      <header class="hero reveal"><h1>cli-anything-rms</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-rms">cli-anything-rms</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#authentication">Authentication</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#devices">devices</a></li><li class="lvl-3"><a href="#companies">companies</a></li><li class="lvl-3"><a href="#users">users</a></li><li class="lvl-3"><a href="#tags">tags</a></li><li class="lvl-3"><a href="#alerts">alerts</a></li><li class="lvl-3"><a href="#configs">configs</a></li><li class="lvl-3"><a href="#remote-access">remote-access</a></li><li class="lvl-3"><a href="#logs">logs</a></li><li class="lvl-3"><a href="#location">location</a></li><li class="lvl-3"><a href="#credits">credits</a></li><li class="lvl-3"><a href="#files">files</a></li><li class="lvl-3"><a href="#reports">reports</a></li><li class="lvl-3"><a href="#hotspots">hotspots</a></li><li class="lvl-3"><a href="#passwords">passwords</a></li><li class="lvl-3"><a href="#smtp">smtp</a></li><li class="lvl-3"><a href="#auth">auth</a></li><li class="lvl-3"><a href="#config">config</a></li><li class="lvl-2"><a href="#examples">Examples</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-rms&quot;<br>description: &gt;-<br>  Teltonika RMS device management and monitoring CLI</p>
+<hr>
+<h1 id="cli-anything-rms">cli-anything-rms<a class="anchor" href="#cli-anything-rms" aria-label="锚点">#</a></h1>
+<p>CLI harness for Teltonika RMS (Remote Management System). Manage routers, gateways, and IoT devices via the RMS REST API.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=rms/agent-harness</code></pre>
+<h2 id="authentication">Authentication<a class="anchor" href="#authentication" aria-label="锚点">#</a></h2>
+<p>Set <code>RMS_API_TOKEN</code> environment variable or run <code>cli-anything-rms config set api_token &lt;token&gt;</code>.</p>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="devices">devices<a class="anchor" href="#devices" aria-label="锚点">#</a></h3>
+<ul><li><code>devices list [--status online|offline] [--tag TAG] [--limit N] [--offset N] [--sort FIELD]</code> — List devices</li><li><code>devices get &lt;device_id&gt;</code> — Get device details</li><li><code>devices update &lt;device_id&gt; [--name NAME] [--tag TAG]</code> — Update device</li><li><code>devices delete &lt;device_id&gt;</code> — Delete device</li></ul>
+<h3 id="companies">companies<a class="anchor" href="#companies" aria-label="锚点">#</a></h3>
+<ul><li><code>companies list [--limit N] [--offset N]</code> — List companies</li><li><code>companies get &lt;company_id&gt;</code> — Get company details</li><li><code>companies create --name NAME</code> — Create company</li><li><code>companies update &lt;company_id&gt; [--name NAME]</code> — Update company</li><li><code>companies delete &lt;company_id&gt;</code> — Delete company</li></ul>
+<h3 id="users">users<a class="anchor" href="#users" aria-label="锚点">#</a></h3>
+<ul><li><code>users list [--limit N] [--offset N]</code> — List users</li><li><code>users get &lt;user_id&gt;</code> — Get user details</li><li><code>users invite --email EMAIL [--role ROLE]</code> — Invite user</li><li><code>users update &lt;user_id&gt; [--role ROLE]</code> — Update user</li><li><code>users delete &lt;user_id&gt;</code> — Delete user</li></ul>
+<h3 id="tags">tags<a class="anchor" href="#tags" aria-label="锚点">#</a></h3>
+<ul><li><code>tags list [--limit N] [--offset N]</code> — List tags</li><li><code>tags get &lt;tag_id&gt;</code> — Get tag details</li><li><code>tags create --name NAME</code> — Create tag</li><li><code>tags update &lt;tag_id&gt; [--name NAME]</code> — Update tag</li><li><code>tags delete &lt;tag_id&gt;</code> — Delete tag</li></ul>
+<h3 id="alerts">alerts<a class="anchor" href="#alerts" aria-label="锚点">#</a></h3>
+<ul><li><code>alerts list [--device DEVICE_ID] [--limit N] [--offset N]</code> — List alerts</li><li><code>alerts get &lt;alert_id&gt;</code> — Get alert details</li><li><code>alerts delete &lt;alert_id&gt;</code> — Delete alert</li><li><code>alerts configs list</code> — List alert configurations</li><li><code>alerts configs get &lt;config_id&gt;</code> — Get alert config</li><li><code>alerts configs create --data JSON</code> — Create alert config</li><li><code>alerts configs update &lt;config_id&gt; --data JSON</code> — Update alert config</li><li><code>alerts configs delete &lt;config_id&gt;</code> — Delete alert config</li></ul>
+<h3 id="configs">configs<a class="anchor" href="#configs" aria-label="锚点">#</a></h3>
+<ul><li><code>configs list [--device DEVICE_ID] [--limit N] [--offset N]</code> — List device configurations</li><li><code>configs get &lt;config_id&gt;</code> — Get configuration</li><li><code>configs update &lt;config_id&gt; --data JSON</code> — Update configuration</li></ul>
+<h3 id="remote-access">remote-access<a class="anchor" href="#remote-access" aria-label="锚点">#</a></h3>
+<ul><li><code>remote-access list [--device DEVICE_ID] [--limit N]</code> — List sessions</li><li><code>remote-access get &lt;session_id&gt;</code> — Get session details</li><li><code>remote-access create --device DEVICE_ID [--protocol PROTO] [--port PORT]</code> — Create session</li><li><code>remote-access delete &lt;session_id&gt;</code> — Delete session</li></ul>
+<h3 id="logs">logs<a class="anchor" href="#logs" aria-label="锚点">#</a></h3>
+<ul><li><code>logs list [--device DEVICE_ID] [--limit N] [--offset N]</code> — List logs</li><li><code>logs get &lt;log_id&gt;</code> — Get log details</li><li><code>logs delete &lt;log_id&gt;</code> — Delete log</li></ul>
+<h3 id="location">location<a class="anchor" href="#location" aria-label="锚点">#</a></h3>
+<ul><li><code>location get &lt;device_id&gt;</code> — Get current device location</li><li><code>location history &lt;device_id&gt; [--limit N] [--offset N]</code> — Location history</li></ul>
+<h3 id="credits">credits<a class="anchor" href="#credits" aria-label="锚点">#</a></h3>
+<ul><li><code>credits list [--limit N] [--offset N]</code> — List credits</li><li><code>credits transfer --code CODE</code> — Transfer credits</li><li><code>credits codes [--limit N]</code> — List transfer codes</li></ul>
+<h3 id="files">files<a class="anchor" href="#files" aria-label="锚点">#</a></h3>
+<ul><li><code>files list [--limit N] [--offset N]</code> — List files</li><li><code>files get &lt;file_id&gt;</code> — Get file details</li><li><code>files upload &lt;file_path&gt;</code> — Upload file</li><li><code>files delete &lt;file_id&gt;</code> — Delete file</li></ul>
+<h3 id="reports">reports<a class="anchor" href="#reports" aria-label="锚点">#</a></h3>
+<ul><li><code>reports list [--limit N] [--offset N]</code> — List reports</li><li><code>reports get &lt;report_id&gt;</code> — Get report</li><li><code>reports create --template TEMPLATE_ID [--name NAME]</code> — Create report</li><li><code>reports delete &lt;report_id&gt;</code> — Delete report</li><li><code>reports templates list</code> — List report templates</li></ul>
+<h3 id="hotspots">hotspots<a class="anchor" href="#hotspots" aria-label="锚点">#</a></h3>
+<ul><li><code>hotspots list [--device DEVICE_ID] [--limit N]</code> — List hotspots</li><li><code>hotspots get &lt;hotspot_id&gt;</code> — Get hotspot details</li><li><code>hotspots create --device DEVICE_ID --name NAME</code> — Create hotspot</li><li><code>hotspots update &lt;hotspot_id&gt; [--name NAME]</code> — Update hotspot</li><li><code>hotspots delete &lt;hotspot_id&gt;</code> — Delete hotspot</li></ul>
+<h3 id="passwords">passwords<a class="anchor" href="#passwords" aria-label="锚点">#</a></h3>
+<ul><li><code>passwords get &lt;device_id&gt;</code> — Get device password</li><li><code>passwords update &lt;device_id&gt; --password PASSWORD</code> — Update password</li><li><code>passwords update &lt;device_id&gt; --password-stdin</code> — Update password (reads from stdin, safer)</li></ul>
+<h3 id="smtp">smtp<a class="anchor" href="#smtp" aria-label="锚点">#</a></h3>
+<ul><li><code>smtp list [--limit N] [--offset N]</code> — List SMTP configs</li><li><code>smtp get &lt;config_id&gt;</code> — Get SMTP config</li><li><code>smtp create --host HOST [--port PORT] [--username USER] [--password PASS]</code> — Create SMTP config</li><li><code>smtp update &lt;config_id&gt; [--host HOST] [--port PORT]</code> — Update SMTP config</li><li><code>smtp delete &lt;config_id&gt;</code> — Delete SMTP config</li></ul>
+<h3 id="auth">auth<a class="anchor" href="#auth" aria-label="锚点">#</a></h3>
+<ul><li><code>auth test</code> — Test API connectivity</li><li><code>auth status</code> — Show current auth info</li></ul>
+<h3 id="config">config<a class="anchor" href="#config" aria-label="锚点">#</a></h3>
+<ul><li><code>config set &lt;key&gt; &lt;value&gt;</code> — Set configuration (api_token, default_limit)</li><li><code>config get [key]</code> — Show configuration</li><li><code>config delete &lt;key&gt;</code> — Delete configuration</li><li><code>config path</code> — Show config file path</li></ul>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># List all online devices
+cli-anything-rms devices list --status online
+
+# Get device details as JSON
+cli-anything-rms --json devices get 12345
+
+# Check alerts for a specific device
+cli-anything-rms alerts list --device 12345
+
+# Interactive mode
+cli-anything-rms</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-renderdoc/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">RenderDoc CLI Skill</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-safari/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-safari</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-rms/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

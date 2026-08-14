@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-067] opencode 高含金量功能教学与 khy-os 差距补齐路线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-067] opencode 高含金量功能教学与 khy-os 差距补齐路线</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-067] opencode 高含金量功能教学与 khy-os 差距补齐路线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-067-opencode-高含金量功能教学与-khy-os-差距补齐路线">[DESIGN-ARCH-067] opencode 高含金量功能教学与 khy-os 差距补齐路线</a></li><li class="lvl-2"><a href="#0-opencode-高含金量功能全景-教学大纲">0. opencode 高含金量功能全景(教学大纲)</a></li><li class="lvl-2"><a href="#1-差距详解">1. 差距详解</a></li><li class="lvl-3"><a href="#1-1-references-跨目录引用-opencode-独有-khy-os-缺失">1.1 🔴 References 跨目录引用(opencode 独有,khy-os 缺失)</a></li><li class="lvl-3"><a href="#1-2-lsp-自动诊断反馈循环-opencode-为自动-khy-os-为手动">1.2 🟡 LSP 自动诊断反馈循环(opencode 为自动,khy-os 为手动)</a></li><li class="lvl-3"><a href="#1-3-permissions-auto-模式-外部目录边界">1.3 🟡 Permissions auto 模式 + 外部目录边界</a></li><li class="lvl-2"><a href="#2-分阶段实施路线">2. 分阶段实施路线</a></li><li class="lvl-2"><a href="#3-关联文档">3. 关联文档</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-067-opencode-高含金量功能教学与-khy-os-差距补齐路线">[DESIGN-ARCH-067] opencode 高含金量功能教学与 khy-os 差距补齐路线<a class="anchor" href="#design-arch-067-opencode-高含金量功能教学与-khy-os-差距补齐路线" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>本文是「对照学习 + 差距分析 + 分阶段实施路线」,不是一次性落地稿。</strong><br>以开源 AI 编码代理 opencode(当前环境为 1.18.x,文档核对于 2026-08-06)为对照对象,<br>逐项提炼其<strong>高含金量功能</strong>(教学要点),如实标注 khy-os 中<strong>相同 / khy 特有 / 未做或做法不同</strong>之处,<br>并给出<strong>分阶段补齐路线</strong>(每阶段含验收标准)。</p>
+<p>与 [DESIGN-ARCH-063](对照《Claude Code 架构》)同属「借他山之石」系列,但对象换成 opencode;<br>沿用其<strong>以真实源码行号为准、不猜测、不转抄</strong>的核对纪律。</p>
+<p><strong>阅读者</strong>:负责逐个教学 + 实现的维护者/AI。教学顺序、差距判定、验收标准均以本文为单一真源。</p></blockquote>
+<hr>
+<h2 id="0-opencode-高含金量功能全景-教学大纲">0. opencode 高含金量功能全景(教学大纲)<a class="anchor" href="#0-opencode-高含金量功能全景-教学大纲" aria-label="锚点">#</a></h2>
+<p>按「学习价值 × khy-os 复用价值」排序,共 12 项。每项含:一句话是什么、khy-os 对应实现(真源)、差距级别。</p>
+<table><thead><tr><th>#</th><th>功能</th><th>一句话价值</th><th>khy-os 对应实现(真源)</th><th>差距</th></tr></thead><tbody><tr><td>1</td><td><strong>References 跨目录引用</strong></td><td>把工作区外的文档库/共享库/其他仓库以 <code>@alias</code> 注入上下文</td><td><strong>未发现对应实现</strong></td><td>🔴 真差距</td></tr><tr><td>2</td><td><strong>LSP 自动诊断反馈循环</strong></td><td>自动拉起语言服务器,把诊断喂回 agent 循环</td><td><code>tools/LSPTool/index.js</code>(手动查询式)</td><td>🟡 部分</td></tr><tr><td>3</td><td><strong>Permissions auto 模式 + 目录边界</strong></td><td>全局 <code>--auto</code> 自动批准 + <code>external_directory</code> 边界</td><td><code>permissionStore.js</code>(normal/acceptEdits/auto/yolo)、<code>approvalLedger.js</code></td><td>🟡 部分</td></tr><tr><td>4</td><td><strong>Agent 体系(主/子代理、Plan 模式)</strong></td><td>专业化代理 + 只读计划模式</td><td><code>agents/built-in/</code>(17 个)、<code>subAgentOrchestrator.js</code>、<code>EnterPlanMode/ExitPlanMode</code></td><td>✅ 已覆盖</td></tr><tr><td>5</td><td><strong>Skills 按需加载</strong></td><td>SKILL.md 定义可复用行为,on-demand 加载</td><td><code>SkillTool</code>、<code>skillRegistry</code>、<code>DiscoverSkillsTool</code>、<code>ccSkillBridge</code></td><td>✅ 已覆盖</td></tr><tr><td>6</td><td><strong>MCP(本地+远程+OAuth)</strong></td><td>外接工具生态,含 Streamable HTTP 与 OAuth</td><td><code>services/mcp/</code> 全套 + <code>McpAuthTool</code> + governance</td><td>✅ 已覆盖</td></tr><tr><td>7</td><td><strong>Commands 自定义斜杠命令</strong></td><td><code>/命令</code> + <code>$ARGUMENTS</code>/<code>!shell</code>/<code>@file</code> 模板</td><td><code>commands/ccCommandBridge.js</code>、<code>repl/ccUserCommands.js</code></td><td>✅ 已覆盖</td></tr><tr><td>8</td><td><strong>Custom Tools</strong></td><td>用户自建工具,与内置工具并列</td><td><code>CreateToolTool</code> + 约定式工具发现(<code>tools/index.js</code>)</td><td>✅ 已覆盖</td></tr><tr><td>9</td><td><strong>上下文压缩</strong></td><td>长会话自动摘要续跑</td><td><code>services/contextCompressor.js</code>(智能切点)</td><td>✅ 已覆盖</td></tr><tr><td>10</td><td><strong>/undo /redo 可逆</strong></td><td>撤销/重做消息与文件改动</td><td><code>handlers/rollback.js</code>(<code>rewind</code>/<code>undo</code>)</td><td>✅ 已覆盖</td></tr><tr><td>11</td><td><strong>Rules 分层指令(AGENTS.md)</strong></td><td>项目/全局/CC 兼容分层规则</td><td><code>services/instructionFileService.js</code>、<code>metadataPointers.js</code></td><td>✅ 已覆盖(本地)</td></tr><tr><td>12</td><td><strong>会话分享(/share)</strong></td><td>生成可分享链接</td><td><code>/share</code> 仅导出本地 markdown</td><td>⚪ 产品决策差异</td></tr></tbody></table>
+<blockquote><p>结论:khy-os 已覆盖 opencode 约 80% 核心能力。<strong>值得教学并补齐的是第 1、2、3 项</strong>;其余为「已覆盖,可作教学对照」。</p></blockquote>
+<hr>
+<h2 id="1-差距详解">1. 差距详解<a class="anchor" href="#1-差距详解" aria-label="锚点">#</a></h2>
+<h3 id="1-1-references-跨目录引用-opencode-独有-khy-os-缺失">1.1 🔴 References 跨目录引用(opencode 独有,khy-os 缺失)<a class="anchor" href="#1-1-references-跨目录引用-opencode-独有-khy-os-缺失" aria-label="锚点">#</a></h3>
+<p><strong>opencode 是什么</strong>:在 <code>opencode.json</code> 里用 <code>references</code> 声明工作区外的本地目录(<code>path</code>)或 Git 仓库(<code>repository</code>),<br>带 <code>description</code> 注入 agent 系统上下文、<code>hidden</code> 控制 <code>@</code> 补全可见性。使用方式:</p>
+<ul><li><code>@alias</code> 把引用根作为上下文附加;<code>@alias/</code> 搜索其内部文件。</li><li>agent 在系统上下文里拿到已解析路径 + 描述,相关时自行读取。</li><li>引用目录自动豁免 <code>external_directory</code> 权限边界(只豁免读,编辑仍需权限)。</li></ul>
+<p><strong>khy-os 现状</strong>:全仓未发现等价概念。khy-os 的 <code>@</code> 文件引用(<code>repl/atPicker.js</code>、<code>atMentionInject.js</code>)仅限工作区内的模糊搜索,<br>无「外部目录 / Git 仓库注册 + 描述注入 + 权限边界豁免」机制。</p>
+<p><strong>补齐方案</strong>(待实现阶段细化):</p>
+<ol><li>新增配置区(拟 <code>~/.khyquant/references.json</code> 或 <code>.khy/references.json</code>),字段对齐 opencode:<code>alias/path|repository/branch/description/hidden</code>。</li><li>启动/REPL 会话装配时解析引用,把「别名 + 路径 + 描述」注入系统上下文(纯文本块,<code>@alias</code> 补全数据源)。</li><li>扩展 <code>atPicker</code>/<code>atMentionInject</code> 支持 <code>@alias</code> 与 <code>@alias/子路径</code> 模糊搜索。</li><li>权限边界:读取引用目录走「引用目录豁免」路径,但写/执行仍走既有 permission gate。</li><li>Git 仓库引用:克隆/更新到缓存目录(<code>dataHome</code> 既有体系),可选用 <code>scout</code> 式只读材料化。</li></ol>
+<p><strong>验收</strong>:配置两条引用(本地目录 + Git 仓库)后,<code>@alias</code> 可补全并注入内容;agent 上下文可见描述;越权写被 permission gate 拦截。</p>
+<h3 id="1-2-lsp-自动诊断反馈循环-opencode-为自动-khy-os-为手动">1.2 🟡 LSP 自动诊断反馈循环(opencode 为自动,khy-os 为手动)<a class="anchor" href="#1-2-lsp-自动诊断反馈循环-opencode-为自动-khy-os-为手动" aria-label="锚点">#</a></h3>
+<p><strong>opencode 是什么</strong>:按文件扩展名自动发现并拉起语言服务器(typescript/pyright/eslint/vue/rust 等 30+),<br>把 <code>diagnostics</code> 作为反馈喂给 agent,自动修错。<code>lsp</code> 配置项控制启用/禁用/自定义 server + <code>initialization</code> 选项。<br>文档明确提示「LSP 有内存/不同步代价,多数项目建议直接跑 lint/typecheck 命令更划算」——即这是<strong>可选项</strong>。</p>
+<p><strong>khy-os 现状</strong>:<code>tools/LSPTool/index.js</code> 提供 <code>definition/references/hover/symbols/diagnostics/…</code> 十一种动作,<br>是 agent <strong>主动查询</strong>式;<code>execute()</code> 若无连接 server 直接返回「configure a language server」提示。<br>未见「按文件扩展名自动拉起 server → 自动注入 diagnostics → 触发修复」的自动闭环。</p>
+<p><strong>补齐方案</strong>(待实现阶段细化):</p>
+<ol><li>新增 <code>lspManager</code>:懒扫描工作区扩展名 → 匹配 server 注册表(内置 typescript/pyright/eslint/vue/py 等)→ 拉起进程。</li><li>在工具循环里加「诊断检查点」:agent 改动文件后,对受影响文件跑一次 diagnostics,结果作为 tool result 喂回。</li><li>复用既有 LSP 客户端连接层(查询 LSPTool 依赖的同一 client),避免双协议栈。</li><li>默认关闭(对齐 opencode 谨慎立场),用 flag/配置开启。</li></ol>
+<p><strong>验收</strong>:开启后,改动一个含类型错误的 TS 文件,agent 循环内自动收到该文件 diagnostics 并可据此修复。</p>
+<h3 id="1-3-permissions-auto-模式-外部目录边界">1.3 🟡 Permissions auto 模式 + 外部目录边界<a class="anchor" href="#1-3-permissions-auto-模式-外部目录边界" aria-label="锚点">#</a></h3>
+<p><strong>opencode 是什么</strong>:</p>
+<ul><li><code>opencode --auto</code> 或运行时切换「auto-approve」:未显式 deny 的请求自动批准;<code>deny</code> 仍强制生效。</li><li><code>external_directory</code>:任何触达工作区外的路径操作需边界放行;<code>~</code>/<code>$HOME</code> 通配符;允许后继承工作区默认权限。</li><li>对象语法按工具输入做 glob 级规则,「最后匹配生效」;<code>doom_loop</code> 检测同一工具 3 次重复调用。</li></ul>
+<p><strong>khy-os 现状</strong>:</p>
+<ul><li>权限模式已有 <code>normal / acceptEdits / auto / bypass / yolo</code>(<code>permissionStore.js:6-17</code>),<code>auto</code> 已自动放行常规调用、</li></ul>
+<p>破坏性仍问(对齐 CC <code>--permission-mode</code> 语义);<code>approvalLedger.js</code> 有 <code>KHY_AUTO_APPROVE</code> 门(默认关)。<br>  → <strong>auto 模式本体已覆盖</strong>,但缺「<code>opencode --auto</code> 式的进程级一键开关 + 显式 deny 仍强制的同级 UX」确认。</p>
+<ul><li>工作区外路径:未见 <code>external_directory</code> 语义的显式边界层(搜 <code>external_directory</code> 无命中);</li></ul>
+<p>khy-os 靠 <code>agentFsService</code> + syscallGateway 做沙箱,但「按路径模式放行外部目录」未显式化。</p>
+<p><strong>补齐方案</strong>(待实现阶段细化):</p>
+<ol><li>审计 <code>permissionStore</code>/<code>approvalRouter</code> 是否已覆盖「deny 优先于 auto」;缺则补。</li><li>新增 <code>external_directory</code> 规则面:路径模式(支持 <code>~</code>/<code>$HOME</code>)→ allow/ask/deny,接入既有 permission 判定链。</li><li>为 <code>approvalLedger</code>/permissionStore 提供进程级 auto 开关 CLI(<code>khy --auto</code> / <code>permission auto on|off</code>),显式 deny 不受影响。</li></ol>
+<p><strong>验收</strong>:<code>khy --auto</code> 后常规工具不弹窗,<code>deny</code> 规则仍拦截;配置外部目录放行后,<code>read</code> 允许但 <code>edit</code> 仍按默认。</p>
+<hr>
+<h2 id="2-分阶段实施路线">2. 分阶段实施路线<a class="anchor" href="#2-分阶段实施路线" aria-label="锚点">#</a></h2>
+<blockquote><p>原则:每阶段一小步,先教学(讲清 opencode 机制与 khy-os 对应)、再设计(本文更新/细化)、再实现、再验收。<br>所有改动遵守 khy-os 工程规则(零硬编码 / 状态透明 / 活动超时 / 无滚动区),改动后跑<br><code>node scripts/check-agent-rules.js --changed</code> + 既有单测。</p></blockquote>
+<table><thead><tr><th>阶段</th><th>内容</th><th>输出</th><th>验收</th></tr></thead><tbody><tr><td><strong>P0</strong></td><td>References 跨目录引用(差距 1.1)</td><td>配置 + 装配 + <code>@alias</code> 补全 + 权限边界 + Git 缓存</td><td>见 1.1 验收</td></tr><tr><td><strong>P1</strong></td><td>LSP 自动诊断反馈循环(差距 1.2)</td><td>lspManager + 诊断检查点 + 开关</td><td>见 1.2 验收</td></tr><tr><td><strong>P2</strong></td><td>Permissions auto 开关 + 外部目录边界(差距 1.3)</td><td>规则面 + CLI 开关 + deny 优先审计</td><td>见 1.3 验收</td></tr><tr><td><strong>P3</strong></td><td>已覆盖功能逐一对照教学 + 收尾</td><td>对照文档补记 + 索引更新</td><td>12 项全部有定稿对照</td></tr></tbody></table>
+<p>每阶段动工前,先在本文档对应小节更新「方案」为带文件:行的落地设计(沿 [DESIGN-ARCH-060] 接线铁律)。</p>
+<hr>
+<h2 id="3-关联文档">3. 关联文档<a class="anchor" href="#3-关联文档" aria-label="锚点">#</a></h2>
+<ul><li>系列对照:[DESIGN-ARCH-063] 对照《Claude Code 架构》、[DESIGN-ARCH-061] 更新包学习。</li><li>实现规范:[DESIGN-ARCH-060] khy 功能接线与编排总图(接线五件套)、[DESIGN-ARCH-017] 元工具系统。</li><li>治理上位规范:<code>docs/08_MGMT_项目管理/[MGMT-STD-001]</code>;维护者入口 <code>.ai/</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-066] 前端代理出站桥-选节点实际路由与启用停用开关.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-066] 前端代理出站桥 — 选节点实际路由 + 启用/停用开关</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-OTHER-001] Khyos-数学重塑-实施提示词链.html"><div class="dir">下一篇 →</div><div class="ttl">Khyos 数学重塑 · 实施提示词链</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-067] opencode高含金量功能教学与khy-os差距补齐路线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

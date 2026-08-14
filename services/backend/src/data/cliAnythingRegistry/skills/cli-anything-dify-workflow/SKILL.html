@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dify Workflow CLI Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-dify-workflow<span class="sep">›</span>Dify Workflow CLI Skill</div>
+      <header class="hero reveal"><h1>Dify Workflow CLI Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#dify-workflow-cli-skill">Dify Workflow CLI Skill</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-2"><a href="#agent-guidance">Agent Guidance</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-dify-workflow&quot;<br>description: Wrapper for the Dify workflow DSL CLI. Create, inspect, validate, edit, and export Dify workflow files through a CLI-Anything harness.</p>
+<hr>
+<h1 id="dify-workflow-cli-skill">Dify Workflow CLI Skill<a class="anchor" href="#dify-workflow-cli-skill" aria-label="锚点">#</a></h1>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>Install the upstream Dify workflow CLI first:</p>
+<pre><code class="language-bash">python -m pip install &quot;dify-ai-workflow-tools @ git+https://github.com/Akabane71/dify-workflow-cli.git@main&quot;</code></pre>
+<p>Then install the CLI-Anything harness:</p>
+<pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=dify-workflow/agent-harness</code></pre>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<p>The harness forwards to the upstream <code>dify-workflow</code> CLI.</p>
+<pre><code class="language-bash">cli-anything-dify-workflow guide
+cli-anything-dify-workflow list-node-types
+cli-anything-dify-workflow create -o workflow.yaml --mode workflow --template llm
+cli-anything-dify-workflow inspect workflow.yaml -j
+cli-anything-dify-workflow validate workflow.yaml -j
+cli-anything-dify-workflow edit add-node -f workflow.yaml --type code --title &quot;Process&quot;
+cli-anything-dify-workflow config set-model -f app.yaml --provider openai --name gpt-4o</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<ul><li><code>guide</code></li><li><code>list-node-types</code></li><li><code>create</code></li><li><code>inspect</code></li><li><code>validate</code></li><li><code>checklist</code></li><li><code>edit add-node|remove-node|update-node|add-edge|remove-edge|set-title</code></li><li><code>config set-model|set-prompt|add-variable|set-opening|add-question|add-tool|remove-tool</code></li><li><code>export</code></li><li><code>import</code></li><li><code>diff</code></li><li><code>layout</code></li></ul>
+<h2 id="agent-guidance">Agent Guidance<a class="anchor" href="#agent-guidance" aria-label="锚点">#</a></h2>
+<ul><li>Prefer <code>-j</code> / <code>--json-output</code> on upstream commands when available.</li><li>The harness itself is a wrapper. Real workflow logic is provided by the upstream project.</li><li>If <code>dify-workflow</code> is not on PATH but the <code>dify_workflow</code> Python package is installed, the wrapper falls back to <code>python -m dify_workflow.cli</code>.</li><li>All operations are local file edits on Dify YAML/JSON DSL files.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-comfyui/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-comfyui</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-drawio/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-drawio</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-dify-workflow/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

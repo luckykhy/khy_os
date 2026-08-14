@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-125] readFile 特殊文件（FIFO/套接字/设备）读前防护 · 接线（让 khy 不再因读到会阻塞的非常规文件而永久卡死） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-125] readFile 特殊文件（FIFO/套接字/设备）读前防护 · 接线（让 khy 不再因读到会阻塞的非常规文件而永久卡死）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-125] readFile 特殊文件（FIFO/套接字/设备）读前防护 · 接线（让 khy 不再因读到会阻塞的非常规文件而永久卡死）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-125-readfile-特殊文件-fifo-套接字-设备-读前防护-接线-让-khy-不再因读到会阻塞的非常规文件而永久卡死">[OPS-MAN-125] readFile 特殊文件（FIFO/套接字/设备）读前防护 · 接线（让 khy 不再因读到会阻塞的非常规文件而永久卡死）</a></li><li class="lvl-2"><a href="#这一层闭合什么-按-文件类型-拦下会永久阻塞的读">这一层闭合什么：按「文件类型」拦下会永久阻塞的读</a></li><li class="lvl-2"><a href="#为什么可以安全地在读之前判定">为什么可以安全地在读之前判定</a></li><li class="lvl-2"><a href="#修法-isdirectory-特判之后-detectfile-二进制守卫之前插入类型拦截">修法：isDirectory 特判之后、detectFile / 二进制守卫之前插入类型拦截</a></li><li class="lvl-2"><a href="#三层守卫顺序-都在内容读取之前-逐层放行到下一层">三层守卫顺序（都在内容读取之前，逐层放行到下一层）</a></li><li class="lvl-2"><a href="#门控-fail-soft">门控 / fail-soft</a></li><li class="lvl-2"><a href="#恒久红线">恒久红线</a></li><li class="lvl-2"><a href="#验证">验证</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-125-readfile-特殊文件-fifo-套接字-设备-读前防护-接线-让-khy-不再因读到会阻塞的非常规文件而永久卡死">[OPS-MAN-125] readFile 特殊文件（FIFO/套接字/设备）读前防护 · 接线（让 khy 不再因读到会阻塞的非常规文件而永久卡死）<a class="anchor" href="#ops-man-125-readfile-特殊文件-fifo-套接字-设备-读前防护-接线-让-khy-不再因读到会阻塞的非常规文件而永久卡死" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件为手写维护文档（此层是工具接线，无 <code>--gen-doc</code> 生成器）。承接 OPS-MAN-121 / OPS-MAN-123。<br>判定逻辑改在 <code>services/backend/src/tools/specialFileReadGuard.js</code>（纯叶·零 IO·绝不抛），<br>接线改在 <code>services/backend/src/tools/readFile.js</code> 的 <code>execute</code>。</p></blockquote>
+<h2 id="这一层闭合什么-按-文件类型-拦下会永久阻塞的读">这一层闭合什么：按「文件类型」拦下会永久阻塞的读<a class="anchor" href="#这一层闭合什么-按-文件类型-拦下会永久阻塞的读" aria-label="锚点">#</a></h2>
+<p>OPS-121 给读工具接了「二进制读前拒绝」，OPS-123 又把二进制路由到已存在的提取器。但仍有<br>一类<strong>会让进程永久卡死</strong>的目标从所有守卫下溜过去：<strong>非常规文件</strong>——命名管道（FIFO）、<br>UNIX 域套接字、字符设备（如 <code>/dev/random</code>）、块设备。</p>
+<p>它们的共同特征让每一道既有守卫都失效：</p>
+<ul><li><code>stat.size === 0</code>（或无意义）→ 溜过 OPS-121 之后的「超限」检查；</li><li>不是二进制格式，而 <code>detectFile()</code> 为判格式会去<strong>读 magic 字节</strong>——**读 FIFO 的第一个</li></ul>
+<p>字节就会阻塞等待写端**，于是二进制守卫不但拦不住，<code>detectFile</code> 自己先卡死；</p>
+<ul><li>随后 <code>readTextFileSmart</code> 打开并读取，在无写端的 FIFO / 阻塞设备上<strong>永久挂起</strong>。</li></ul>
+<p>已复现：<code>mkfifo /tmp/hangfifo</code> 后经 <code>readFile.execute</code> 读它，6s 超时仍未返回（EXIT=124）。<br>接线后同一 FIFO <strong>4ms 返回</strong> <code>success:false</code>。</p>
+<p><code>inputValidators.validateNotDevicePath</code> 只是一张<strong>路径精确名单</strong>（<code>/dev/zero</code>、<code>/dev/stdin</code>…），<br>无法按类型拦下任意位置的 FIFO / 套接字 / 自建设备节点 = 典型「守卫存在但覆盖不全 / 能力<br>没接线」。本层按 <strong><code>fs.statSync</code> 返回的类型</strong>拦下。</p>
+<h2 id="为什么可以安全地在读之前判定">为什么可以安全地在读之前判定<a class="anchor" href="#为什么可以安全地在读之前判定" aria-label="锚点">#</a></h2>
+<p>关键事实：<code>fs.statSync</code> 对 FIFO / 设备<strong>只读元数据、瞬时返回、绝不阻塞</strong>（已实测 0ms 返回，<br><code>isFIFO()=true</code>）。<code>readFile.execute</code> 早已算好 <code>stat</code>（用于 size / isDirectory），本层只消费它的<br>类型谓词（<code>isFIFO/isSocket/isCharacterDevice/isBlockDevice</code>），<strong>零额外 IO</strong>，且发生在任何会<br>阻塞的 <code>open/read</code>（detectFile / readTextFileSmart）之前。</p>
+<h2 id="修法-isdirectory-特判之后-detectfile-二进制守卫之前插入类型拦截">修法：isDirectory 特判之后、detectFile / 二进制守卫之前插入类型拦截<a class="anchor" href="#修法-isdirectory-特判之后-detectfile-二进制守卫之前插入类型拦截" aria-label="锚点">#</a></h2>
+<p><code>readFile.execute</code> 在 <code>if (stat.isDirectory())</code> 之后：</p>
+<pre><code class="language-js">try {
+  const { specialReadGuardEnabled, classifySpecialFile, buildSpecialFileRefusal } = require('./specialFileReadGuard');
+  if (specialReadGuardEnabled(process.env)) {
+    const _kind = classifySpecialFile(stat);      // 'fifo'|'socket'|'char-device'|'block-device'|null
+    if (_kind) {
+      return { success:false, error: buildSpecialFileRefusal({ kind:_kind, path:filePath, size:stat.size }),
+               specialFile:_kind, size:stat.size };
+    }
+  }
+} catch { /* 判定失败 → 回退历史读取行为 */ }</code></pre>
+<p><code>classifySpecialFile(stat)</code> 只认明确的 FIFO/套接字/字符设备/块设备；常规文件、目录、<br>stat 缺失 / 非对象 / 谓词非函数或抛错 → 一律 <code>null</code>（放行），绝不误伤常规文件。目录由<br>readFile 既有的 isDirectory 特判处理，本叶对目录返回 null（不接管）。</p>
+<h2 id="三层守卫顺序-都在内容读取之前-逐层放行到下一层">三层守卫顺序（都在内容读取之前，逐层放行到下一层）<a class="anchor" href="#三层守卫顺序-都在内容读取之前-逐层放行到下一层" aria-label="锚点">#</a></h2>
+<ol><li><strong>目录</strong>（fsReadErrorGuard.directoryReadMessage，KHY_FS_ERROR_HUMANIZE）。</li><li><strong>特殊文件</strong>（本层，KHY_READFILE_SPECIAL_GUARD，default-on）：FIFO/套接字/设备 → 快速拒绝，</li></ol>
+<p><strong>绝不卡死</strong>。</p>
+<ol><li><strong>二进制/格式路由</strong>（OPS-123 KHY_READFILE_FORMAT_ROUTE → OPS-121 KHY_READFILE_BINARY_GUARD）。</li><li>常规文本 → 有界窗口读取 + 分页提示。</li></ol>
+<h2 id="门控-fail-soft">门控 / fail-soft<a class="anchor" href="#门控-fail-soft" aria-label="锚点">#</a></h2>
+<ul><li>门 <code>KHY_READFILE_SPECIAL_GUARD</code>（默认开；env ∈ {0,false,off,no} 归一后关）。关 → 逐字节</li></ul>
+<p>回退历史行为（对特殊文件照旧走 detectFile/解码 → 卡死），本防护完全旁路。</p>
+<ul><li>纯叶 <code>classifySpecialFile</code> / <code>buildSpecialFileRefusal</code> 零 IO、绝不抛；任一步抛错 → readFile</li></ul>
+<p>的 try/catch 跳过，回退历史读取路径。</p>
+<h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
+<ul><li>只按 stat 类型判定，不碰任何密钥；无重 IO（复用 readFile 已算好的 stat）。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm run test:readfile-special-guard     # 纯叶单测(15 用例)
+npm run test:readfile-binary-guard      # OPS-121 无回归
+npm run test:readfile-format-route      # OPS-123 无回归
+# LIVE(带 timeout 防自身卡死):
+#   真 mkfifo → readFile.execute 4ms 返回 success:false(不再 6s+ 卡死);
+#   KHY_READFILE_SPECIAL_GUARD=0 + 同 FIFO → 回退历史行为(会卡死,timeout 佐证);
+#   常规文本文件 → 不受影响,照常读出。</code></pre>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-124] OCR成功路径向用户透明告知用了OCR.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-124] OCR 成功路径：向用户透明告知「用了 OCR」</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-126] OCR成功路径确定性脚注兜底告知用了OCR.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-126] OCR 成功路径——确定性脚注兜底告知「用了 OCR」</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-125] readFile特殊文件读前防护·接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "loop",
+  "description": "Iteratively improve code through repeated test-fix cycles",
+  "trigger": "/loop",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "iteration",
+    "testing"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

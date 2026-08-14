@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 选活与发展路径（不知做什么时） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>skills<span class="sep">›</span>khy-pick-task<span class="sep">›</span>Khy-OS 选活与发展路径（不知做什么时）</div>
+      <header class="hero reveal"><h1>Khy-OS 选活与发展路径（不知做什么时）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-选活与发展路径-不知做什么时">Khy-OS 选活与发展路径（不知做什么时）</a></li><li class="lvl-2"><a href="#第一步-只读体检-让项目自己告诉你哪里疼">第一步：只读体检，让项目自己告诉你哪里疼</a></li><li class="lvl-2"><a href="#第二步-按优先级选-从上往下-上面的先做">第二步：按优先级选（从上往下，上面的先做）</a></li><li class="lvl-2"><a href="#第三步-把它收敛成一个加法式小任务">第三步：把它收敛成一个加法式小任务</a></li><li class="lvl-2"><a href="#第四步-执行">第四步：执行</a></li><li class="lvl-2"><a href="#不做什么">不做什么</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-选活与发展路径-不知做什么时">Khy-OS 选活与发展路径（不知做什么时）<a class="anchor" href="#khy-os-选活与发展路径-不知做什么时" aria-label="锚点">#</a></h1>
+<p>想推进项目但没头绪时，照这套定位下一步，并把它变成一个<strong>能安全执行的加法式小任务</strong>。</p>
+<h2 id="第一步-只读体检-让项目自己告诉你哪里疼">第一步：只读体检，让项目自己告诉你哪里疼<a class="anchor" href="#第一步-只读体检-让项目自己告诉你哪里疼" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">node services/backend/bin/khy.js maintain freshness    # 与时俱进体检
+npm --prefix services/backend run arch:god             # 有没有上帝组件(&gt;2500行)
+node services/backend/bin/khy.js health                # 顶层诊断</code></pre>
+<p>守卫红、体检报警、上帝文件超标——<strong>这些是排最前的活</strong>。</p>
+<h2 id="第二步-按优先级选-从上往下-上面的先做">第二步：按优先级选（从上往下，上面的先做）<a class="anchor" href="#第二步-按优先级选-从上往下-上面的先做" aria-label="锚点">#</a></h2>
+<ol><li><strong>命脉</strong>：pip 能不能打包发布？守卫是否全绿？版本号是否一致？——<strong>任何一个坏，先修这个。</strong></li><li><strong>缺陷</strong>：已知 bug、崩溃、安全洞（SSRF/密钥泄漏/破坏性命令绕过/边界未锚定）。</li><li><strong>兼容</strong>：弱模型/陌生模型跑不通的地方（上下文撑爆、截断、JSON 解析、role 兼容、鉴权形态过时、模型名泄漏 404）。</li><li><strong>体验</strong>：CLI/TUI 的小打磨、错误文案更诚实、可读性。</li><li><strong>能力</strong>：新工具、新 provider、新 skill——<strong>最后做，且必须门控可关</strong>。</li></ol>
+<blockquote><p>拿不准就往<strong>靠上</strong>选。稳定和可回退永远优先于新功能。</p></blockquote>
+<h2 id="第三步-把它收敛成一个加法式小任务">第三步：把它收敛成一个加法式小任务<a class="anchor" href="#第三步-把它收敛成一个加法式小任务" aria-label="锚点">#</a></h2>
+<p>一个好任务应满足：</p>
+<ul><li><strong>单一职责</strong>：只解决一个明确问题。</li><li><strong>加法式</strong>：能写成&quot;纯叶子 + <code>KHY_</code> 门控（默认开）+ 关掉逐字节回退&quot;。</li><li><strong>可接线</strong>：能接到 <code>executeTool</code> / <code>toolUseLoop.js</code> / <code>aiManagementServer.js</code> 之一。</li><li><strong>可测</strong>：能写几个单测证明它对，且不破坏既有测试。</li></ul>
+<p>一句话描述清楚再动手，例如：</p>
+<blockquote><p>修 <code>&lt;函数&gt;</code> 在 <code>&lt;场景&gt;</code> 下 <code>&lt;错误行为&gt;</code>；新增纯叶子 <code>&lt;xxxGuard&gt;</code>（门控 <code>KHY_XXX</code> 默认开），接线在 <code>&lt;真实入口&gt;</code>，关掉逐字节回退。</p></blockquote>
+<h2 id="第四步-执行">第四步：执行<a class="anchor" href="#第四步-执行" aria-label="锚点">#</a></h2>
+<ul><li>改代码 → 激活 <code>/khy-safe-change</code></li><li>是弱模型/任务复杂 → 先激活 <code>/khy-weak-model-guardrails</code></li><li>做完 → 激活 <code>/khy-honest-closure</code></li></ul>
+<h2 id="不做什么">不做什么<a class="anchor" href="#不做什么" aria-label="锚点">#</a></h2>
+<ul><li>不做&quot;大重构/批量改&quot;除非先备份且用户明确要。</li><li>不为炫技加复杂度。项目的目标是<strong>换任何 AI 都能接着干，且不越改越坏</strong>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../docs/AI协作预设包/skills/khy-onboarding/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 接手速成（开工前必读）</div></a><a class="next" href="../../../../docs/AI协作预设包/skills/khy-release-safety/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 发布前自保（pip 是命脉）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../";window.__KHY_CUR__="docs/AI协作预设包/skills/khy-pick-task/prompt.html";</script>
+<script src="../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

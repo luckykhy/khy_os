@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 传承书 · 无 AI 也能维护的生存宪法 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>传承<span class="sep">›</span>Khy-OS 传承书 · 无 AI 也能维护的生存宪法</div>
+      <header class="hero reveal"><h1>Khy-OS 传承书 · 无 AI 也能维护的生存宪法</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-传承书-无-ai-也能维护的生存宪法">Khy-OS 传承书 · 无 AI 也能维护的生存宪法</a></li><li class="lvl-2"><a href="#0-三十秒速览-khyos-靠四根支柱活着">0. 三十秒速览：khyos 靠四根支柱活着</a></li><li class="lvl-2"><a href="#1-你必须会的几件事-无-ai-生存操作">1. 你必须会的几件事（无 AI 生存操作）</a></li><li class="lvl-3"><a href="#操作一-安装-重装">操作一 · 安装 / 重装</a></li><li class="lvl-3"><a href="#操作二-体检-判断项目是否还健康-是否跟得上时代">操作二 · 体检（判断项目是否还健康、是否跟得上时代）</a></li><li class="lvl-3"><a href="#操作三-更新依赖-把项目更新到最新">操作三 · 更新依赖 / 把项目更新到最新</a></li><li class="lvl-3"><a href="#操作四-换模型-与时俱进的核心动作">操作四 · 换模型（与时俱进的核心动作）</a></li><li class="lvl-3"><a href="#操作五-通过-pip-发布-唯一的对外渠道">操作五 · 通过 pip 发布（唯一的对外渠道）</a></li><li class="lvl-3"><a href="#操作六-备份关键数据-配置-更新或回滚之前先做">操作六 · 备份关键数据/配置（更新或回滚之前先做）</a></li><li class="lvl-3"><a href="#操作七-回滚到最近稳定版本-升级坏了的救命操作">操作七 · 回滚到最近稳定版本（升级坏了的救命操作）</a></li><li class="lvl-3"><a href="#操作八-出问题先导出诊断-依赖坏了重装-快速验命脉">操作八 · 出问题先导出诊断 / 依赖坏了重装 / 快速验命脉</a></li><li class="lvl-3"><a href="#发布与回滚的固定链路-一条龙">发布与回滚的固定链路（一条龙）</a></li><li class="lvl-3"><a href="#入口冗余-每个关键能力都有两条路-主路径坏了走后备">入口冗余：每个关键能力都有两条路（主路径坏了走后备）</a></li><li class="lvl-2"><a href="#2-守卫免疫系统-每次提交自动拦住-越改越差">2. 守卫免疫系统：每次提交自动拦住「越改越差」</a></li><li class="lvl-2"><a href="#3-ai-与-maintenance-给人和给非工程师的两套入口">3. `.ai/` 与 `maintenance/`：给人和给非工程师的两套入口</a></li><li class="lvl-2"><a href="#4-红灯怎么办-最常见的几种">4. 红灯怎么办（最常见的几种）</a></li><li class="lvl-3"><a href="#出问题先看哪里-三步分诊-别一上来全仓乱翻">出问题先看哪里（三步分诊，别一上来全仓乱翻）</a></li><li class="lvl-2"><a href="#5-绝不能碰的红线">5. 绝不能碰的红线</a></li><li class="lvl-2"><a href="#附录-a-维护者最常用的运维-安全开关-速查">附录 A · 维护者最常用的运维/安全开关（速查）</a></li><li class="lvl-2"><a href="#6-留给你的一句话">6. 留给你的一句话</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="khy-os-传承书-无-ai-也能维护的生存宪法">Khy-OS 传承书 · 无 AI 也能维护的生存宪法<a class="anchor" href="#khy-os-传承书-无-ai-也能维护的生存宪法" aria-label="锚点">#</a></h1>
+<blockquote><p>写给未来的维护者（也许只有你一个人，也许你不是工程师）。</p>
+<p>这份文档不依赖任何 AI 助手就能读懂、照做。它告诉你：khyos 靠什么活着、<br>你必须会做哪几件事、每件事的<strong>确切命令</strong>、以及哪些红线绝不能碰。</p>
+<p>一句话宗旨：<strong>让 khyos 在没有原作者、没有 AI 陪伴的情况下，依然能被一个人维护、<br>随时代更新、并继续通过 pip 发布出去。</strong></p></blockquote>
+<hr>
+<h2 id="0-三十秒速览-khyos-靠四根支柱活着">0. 三十秒速览：khyos 靠四根支柱活着<a class="anchor" href="#0-三十秒速览-khyos-靠四根支柱活着" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>支柱</th><th>是什么</th><th>没了会怎样</th><th>在哪</th></tr></thead><tbody><tr><td><strong>pip 生命线</strong></td><td>唯一的下载与发布渠道（打成 wheel 上传 PyPI）</td><td>无法分发，等于消失</td><td><code>setup.py</code> / <code>pyproject.toml</code></td></tr><tr><td><strong>守卫免疫系统</strong></td><td>提交时自动拦截「越改越差」的机器门禁</td><td>弱模型/手滑会慢慢腐蚀代码</td><td><code>scripts/check-*.js</code> + pre-commit</td></tr><tr><td><strong><code>.ai/</code> 种子文档</strong></td><td>机器可读的项目地图与红线，给人和 AI 看</td><td>新人/新 AI 看不懂结构</td><td><code>.ai/MAP.md</code> <code>.ai/GUARDS.md</code></td></tr><tr><td><strong><code>maintenance/</code> 双击启动器 + <code>khy maintain</code></strong></td><td>不懂命令行也能维护的图形入口</td><td>非技术维护者无从下手</td><td><code>maintenance/*.command</code> <code>.bat</code></td></tr></tbody></table>
+<p><strong>第一件该做的事</strong>：在仓库根目录跑一次体检，它会告诉你当前缺什么、怎么补。</p>
+<pre><code class="language-bash">node services/backend/bin/khy.js maintain freshness   # 与时俱进体检（只读）
+node services/backend/bin/khy.js maintain             # 维护者驾驶舱（只读）
+node services/backend/bin/khy.js health               # 顶层自助诊断</code></pre>
+<p>不会敲命令？<strong>完全不用敲命令</strong>：双击 <code>maintenance/</code> 里名字排最前的<br><code>维护-0-从这里开始</code>（macOS <code>.command</code> / Windows <code>windows\*.bat</code> / Linux <code>linux/*.sh</code>），<br>它会列出全部维护项让你<strong>按编号选</strong>。最常用的几个直达双击入口：</p>
+<table><thead><tr><th>想干什么</th><th>双击这个</th></tr></thead><tbody><tr><td>看现在健不健康</td><td><code>维护-一键健康体检</code></td></tr><tr><td>更新到最新</td><td><code>维护-更新项目到最新</code></td></tr><tr><td>升级前先备份</td><td><code>维护-备份关键数据配置</code></td></tr><tr><td>升级坏了要回滚</td><td><code>维护-回滚到最近稳定版本</code></td></tr><tr><td>依赖坏了重装</td><td><code>维护-一键重装依赖</code></td></tr><tr><td>求助前导出诊断</td><td><code>维护-导出诊断日志</code></td></tr><tr><td>换机器/版本对不上</td><td><code>维护-工具链基线漂移检查</code></td></tr><tr><td>更新/发布/回滚后快速验命脉</td><td><code>维护-快速烟雾测试更新发布回滚后</code></td></tr></tbody></table>
+<blockquote><p>🆘 <strong>慌乱中只想止血</strong>？翻同目录的 <strong><code>紧急恢复卡片.md</code></strong>——一页纸，<br>每种「坏了」都给「先双击、敲不动再复制命令」两条路，命令都不经过 <code>khy</code> 简写（最抗坏）。</p></blockquote>
+<hr>
+<h2 id="1-你必须会的几件事-无-ai-生存操作">1. 你必须会的几件事（无 AI 生存操作）<a class="anchor" href="#1-你必须会的几件事-无-ai-生存操作" aria-label="锚点">#</a></h2>
+<p>下面这些操作覆盖了维护一个 pip 项目的全部最小闭环：<strong>安装、体检、更新、换模型、<br>发布</strong>（操作一～五），以及出事时的<strong>备份、回滚、导出诊断、重装依赖</strong>（操作六～八）。<br>每件事都给了<strong>确切命令</strong>和<strong>双击入口</strong>，照抄/双击即可。出错时先看第 4 节「红灯怎么办」。</p>
+<h3 id="操作一-安装-重装">操作一 · 安装 / 重装<a class="anchor" href="#操作一-安装-重装" aria-label="锚点">#</a></h3>
+<p>khyos 通过 pip 分发，包名 <strong><code>khy-os</code></strong>。</p>
+<pre><code class="language-bash">pip install khy-os                 # 从 PyPI 安装最新版
+pip install --upgrade khy-os       # 升级到最新版
+pip install ./dist/khy_os-*.whl    # 从本地构建产物安装（见操作五）</code></pre>
+<p>安装后验证：</p>
+<pre><code class="language-bash">khy --version                      # 应打印版本号，例如 0.1.131
+khy health                         # 顶层健康自检</code></pre>
+<h3 id="操作二-体检-判断项目是否还健康-是否跟得上时代">操作二 · 体检（判断项目是否还健康、是否跟得上时代）<a class="anchor" href="#操作二-体检-判断项目是否还健康-是否跟得上时代" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy maintain freshness   # 与时俱进：运行时保期 / 模型时效 / 自维护设施 / 守卫覆盖
+khy maintain             # 维护者驾驶舱：元数据 / 架构债 / 巨石预警 / 版本
+khy health               # 运行时 / 安装 / 网络 / 磁盘 / 内存</code></pre>
+<p><code>maintain freshness</code> 是这次传承新增的命令，专门回答「khyos 还跟得上时代吗」：</p>
+<ul><li><strong>运行时保期</strong>：你跑的 Node.js 是否已过官方支持期（过期=安全风险，红灯）。</li><li><strong>模型时效</strong>：当前钉选的首选模型是什么、退役了没（见操作四）。</li><li><strong>自维护设施</strong>：四根支柱还在不在（缺 pip 生命线=红灯）。</li><li><strong>守卫覆盖</strong>：提交门禁是否还接着各机器守卫。</li></ul>
+<p>每个发现都附<strong>「→ 怎么修」</strong>的确切命令。红灯项会让命令以非零退出——可当升级前门禁。</p>
+<h3 id="操作三-更新依赖-把项目更新到最新">操作三 · 更新依赖 / 把项目更新到最新<a class="anchor" href="#操作三-更新依赖-把项目更新到最新" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">git pull --ff-only                                   # 拉最新代码
+npm install                                          # 安装/更新 Node 依赖
+node services/backend/bin/khy.js metadata refresh    # 刷新 .ai/ 派生骨架
+npm run check:small-model:safety                     # 跑提交前安全门禁</code></pre>
+<p>一键版（任一步失败即停，不带病继续）：双击<br><code>maintenance/维护-更新项目到最新.command</code>，或：</p>
+<pre><code class="language-bash">node maintenance/lib/run-task.js update</code></pre>
+<h3 id="操作四-换模型-与时俱进的核心动作">操作四 · 换模型（与时俱进的核心动作）<a class="anchor" href="#操作四-换模型-与时俱进的核心动作" aria-label="锚点">#</a></h3>
+<p><strong>所有模型名只有一个真源</strong>：<code>services/backend/src/constants/models.js</code>。<br>按角色/档位建了具名数组，<strong>每个数组第一项 = 当前生效的首选模型</strong>。<br>换模型只改这一个文件、这一处——绝不要把模型名硬编码回业务逻辑。</p>
+<p>例：把主力 Opus 换成新型号——</p>
+<pre><code class="language-js">// services/backend/src/constants/models.js
+const CLAUDE_OPUS_MODELS = ['claude-opus-X-Y'];   // ← 把新型号放到数组首位即可</code></pre>
+<p>改完验证（守卫会确保你没在别处漏改、也没把模型名硬编码回逻辑）：</p>
+<pre><code class="language-bash">node --test services/backend/tests/modelConstants.test.js   # 单一真源自测
+npm run check:model-hardcoding                              # 防硬编码守卫
+khy maintain freshness                                      # 确认模型时效转绿</code></pre>
+<blockquote><p>为什么这么设计：模型迭代是「与时俱进」最频繁的动作。把模型名收敛到一处，<br>一个非工程师维护者也能安全地换模型，不会「改一处、漏十处」。</p></blockquote>
+<h3 id="操作五-通过-pip-发布-唯一的对外渠道">操作五 · 通过 pip 发布（唯一的对外渠道）<a class="anchor" href="#操作五-通过-pip-发布-唯一的对外渠道" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">khy publish check     # 发布前预检（版本同步 / 纯度 / 迁移）
+khy publish build     # 构建 wheel + sdist 到 dist/
+khy publish pypi      # 上传到 PyPI（需 --yes 确认 + 凭据）</code></pre>
+<p>纯 pip 工具链（不经 khy 包装）：</p>
+<pre><code class="language-bash">npm run check:pip-packaging   # 构建并审计 wheel 纯度（隔离/完整/无依赖泄漏）
+npm run check:version-sync    # 版本号一致性
+python -m build               # 标准构建（产物落 dist/）
+twine upload dist/*           # 上传 PyPI</code></pre>
+<blockquote><p><strong>wheel 纪律（极重要）</strong>：<code>services/backend</code> 的代码<strong>打进 wheel</strong>——改了它，<br>pip 用户必须<strong>重建 wheel 重新发布</strong>才能拿到。<code>services/ai-backend</code> 不进 wheel<br>（守护进程从源码 require，editable 改立即生效）。纯 node 脚本/测试 editable 即生效。</p></blockquote>
+<h3 id="操作六-备份关键数据-配置-更新或回滚之前先做">操作六 · 备份关键数据/配置（更新或回滚之前先做）<a class="anchor" href="#操作六-备份关键数据-配置-更新或回滚之前先做" aria-label="锚点">#</a></h3>
+<p>更新、换模型、回滚之前，先备份一次。它会把 <code>~/.khyos</code> 与 <code>~/.khyquant</code> 下的<br>配置/用量文件复制到 <code>~/.khyos/backups/khy-backup-&lt;时间戳&gt;/</code>，并打印<strong>确切的恢复路径</strong>。</p>
+<pre><code class="language-bash">node maintenance/lib/ops.js backup</code></pre>
+<p>不会敲命令？双击 <code>maintenance/维护-备份关键数据配置.command</code>（或选单里选它）。</p>
+<blockquote><p><strong>恢复方法（无需记路径）</strong>：备份完成后会<strong>直接打印一组可复制的命令</strong>——每个备份文件一行<br><code>cp &quot;&lt;备份里的文件&gt;&quot; &quot;&lt;原位置&gt;&quot;</code>（Windows 是 <code>copy /Y</code>）。出事时把这几行逐行粘到终端执行，<br>配置就回到备份时的样子。不必再手动去找备份目录、自己拼路径。<br>备份里的 <code>config.json</code> 含 API 密钥，请妥善保管、勿外发。</p></blockquote>
+<blockquote><p><strong>更新/回滚前会自动备份一次</strong>：跑 <code>update</code> 任务或 <code>rollback</code> 时，会在动作开始前<br>先自动执行一次 backup（并打印同样的恢复命令），不用你记得手动备份。<br>想关掉这层自动保护：<code>KHY_AUTO_BACKUP=0</code>。</p></blockquote>
+<blockquote><p><strong>只保留最新一个备份，不会无限膨胀</strong>：每次备份完成后会自动清理旧备份，默认<strong>只留最新一个</strong><br>（<code>~/.khyos/backups/</code> 不会越攒越多撑爆磁盘），并打印「已清理 N 个旧备份」。想多留几个：<br><code>KHY_BACKUP_KEEP=3</code>（留最新 3 个）；想关掉自动清理、全部保留（旧行为）：<code>KHY_BACKUP_KEEP=0</code>。<br>清理只动 <code>khy-backup-*</code> 目录，备份文件夹里你自己放的其它东西绝不会被删。</p></blockquote>
+<h3 id="操作七-回滚到最近稳定版本-升级坏了的救命操作">操作七 · 回滚到最近稳定版本（升级坏了的救命操作）<a class="anchor" href="#操作七-回滚到最近稳定版本-升级坏了的救命操作" aria-label="锚点">#</a></h3>
+<p>升级后出问题，用这一步切回上一个「已知良好」的版本。它会：</p>
+<ol><li>自动找到回滚目标——<strong>优先</strong>用 <code>maintenance/stable-release.json</code> 登记的稳定版标签；</li></ol>
+<p>登记的不在了，就退回到仓库里最高的版本标签。</p>
+<ol><li><strong>安全检查</strong>：工作区必须干净（没有未提交改动），否则<strong>拒绝回滚并提示先备份/暂存</strong>，</li></ol>
+<p>绝不会偷偷丢掉你的改动。</p>
+<ol><li>让你<strong>输入 y 确认</strong>后，才真正切换。没确认 = 什么都不改。</li></ol>
+<blockquote><p>放心：「没确认绝不动你的代码」这条是<strong>有自动化测试守着的</strong>（<code>maintenance:test</code> 里会真的跑一遍<br>回滚、确认没确认时代码版本一字不变）。所以即使你手滑双击了回滚，只要不输入 y，什么都不会变。</p></blockquote>
+<pre><code class="language-bash">node maintenance/lib/ops.js rollback        # 交互确认
+KHY_ROLLBACK_CONFIRM=1 node maintenance/lib/ops.js rollback   # 自动确认（脚本/无人值守）</code></pre>
+<p>不会敲命令？双击 <code>maintenance/维护-回滚到最近稳定版本.command</code>。</p>
+<blockquote><p>回滚后跑一次 <code>khy health</code> 确认可用；想回到最新开发线：<code>git checkout &lt;你原来的分支&gt;</code>。<br><strong>发布并验证一个新版本后</strong>，不必再手改 <code>maintenance/stable-release.json</code>——<br>跑一次 <code>node maintenance/lib/ops.js bless</code>（或双击 <code>维护-登记最近稳定版免记忆回滚</code>），<br>它会把当前 <code>version</code>/<code>commit</code>/<code>tag</code>/<code>builtAt</code>/产物 sha256/发布后验证结果<strong>自动写进</strong>该文件，<br>回滚就能自动用它，<strong>维护者不必记住哪个版本是好的</strong>。</p></blockquote>
+<h3 id="操作八-出问题先导出诊断-依赖坏了重装-快速验命脉">操作八 · 出问题先导出诊断 / 依赖坏了重装 / 快速验命脉<a class="anchor" href="#操作八-出问题先导出诊断-依赖坏了重装-快速验命脉" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node maintenance/lib/ops.js diagnostics   # 把版本+git+体检汇成两份文件（人读 .md + 机读 .json，均不含密钥）
+node maintenance/lib/ops.js reinstall     # 删 node_modules 后全新重装依赖（仓库根 + services/backend）
+node maintenance/lib/ops.js smoke         # 快速烟雾测试：后备 CLI/版本一致/四支柱/维护清单可解析（更新/发布/回滚后跑）
+node maintenance/lib/ops.js toolchain     # 工具链基线漂移检查：Node/Python/npm/pip/wheel，逐项给升/降/重装/重建建议</code></pre>
+<p>诊断会<strong>同时</strong>落两份：人读 <code>maintenance/logs/diagnostics-&lt;时间戳&gt;.md</code>（发给维护者）<br>与机读 <code>…-&lt;时间戳&gt;.json</code>（发给 AI 助手，便于解析），均不含密钥。<br><code>smoke</code> 几秒钟告诉你最关键的几条命脉是否还活着，红项直接给「下一步」。<br>双击入口：<code>维护-导出诊断日志</code> / <code>维护-一键重装依赖</code> / <code>维护-快速烟雾测试更新发布回滚后</code>。</p>
+<blockquote><p><strong>工具链基线漂移检查（<code>toolchain</code>）</strong>：装新机器、或 CI 突然报「版本不对」时跑它。<br>它先打印<strong>基线来源</strong>（Node 取 <code>services/backend/package.json</code> 的 <code>engines.node</code>，<br>Python 取 <code>pyproject.toml</code> 的 <code>requires-python</code>——基线只此一处，文档不另写死版本号），<br>再逐项标 <code>✓ 达标 / ⚠ 低于基线 / ✗ 缺失 / · 无声明基线</code>，每个有问题的工具都附<strong>具体命令</strong><br>（如 <code>nvm install --lts</code>、<code>npm install -g npm@latest</code>、<code>python3 -m pip install --upgrade pip</code>、<br>装/升 wheel 后 <code>khy publish build</code> 重建产物）。<strong>只有项目硬性要求的工具缺失才算硬失败</strong><br>（退出码非 0）；npm/pip/wheel 没声明基线时只报告、不报警。维护选单里有一个<strong>独立的<br><code>toolchain</code> 巡检任务</strong>（巡检模式 <code>continueOnError</code>，只报告不阻断）；装新机器或「跟上时代」<br>更新前，顺手跑一次看看工具链有没有漂移。</p></blockquote>
+<h3 id="发布与回滚的固定链路-一条龙">发布与回滚的固定链路（一条龙）<a class="anchor" href="#发布与回滚的固定链路-一条龙" aria-label="锚点">#</a></h3>
+<p>发布是一条<strong>固定、可重复、可回退</strong>的链路，每一环都有双击入口：</p>
+<table><thead><tr><th>顺序</th><th>动作</th><th>双击入口 / 命令</th></tr></thead><tbody><tr><td>1</td><td>发布前检查</td><td><code>维护-发布前检查</code> ·<code>khy publish check</code></td></tr><tr><td>2</td><td>构建产物</td><td><code>维护-一键构建发布产物</code> ·<code>khy publish build</code></td></tr><tr><td>3</td><td>审计纯度</td><td><code>npm run check:pip-packaging</code></td></tr><tr><td>4</td><td>上传发布</td><td><code>khy publish pypi</code>（需 <code>--yes</code> + 凭据）</td></tr><tr><td>5</td><td>发布后验证（<strong>全绿即自动登记</strong>）</td><td><code>维护-发布后验证</code> ·<code>node maintenance/lib/ops.js post-verify</code></td></tr><tr><td>6</td><td>登记稳定版（如需手动）</td><td><code>维护-登记最近稳定版免记忆回滚</code> ·<code>node maintenance/lib/ops.js bless</code></td></tr><tr><td>7</td><td>快速验命脉</td><td><code>维护-快速烟雾测试更新发布回滚后</code> ·<code>node maintenance/lib/ops.js smoke</code></td></tr><tr><td>8</td><td>出错回滚</td><td><code>维护-回滚到最近稳定版本</code> ·<code>node maintenance/lib/ops.js rollback</code></td></tr></tbody></table>
+<p>第 6 步「登记稳定版」是把回滚目标<strong>从记忆里搬进文件</strong>：bless 写进<br><code>maintenance/stable-release.json</code> 后，第 8 步回滚自动认它，维护者不必记版本号。</p>
+<blockquote><p><strong>闭环「发布即登记稳定版」</strong>：第 5 步 <code>post-verify</code> <strong>验证全部通过时会自动执行第 6 步 bless</strong>，<br>把本次版本登记成回滚目标——发布后正常情况下<strong>不必再单独跑 bless</strong>。验证有红项则<strong>绝不</strong>登记<br>（不会把没验过的版本记成「稳定」）。想保留手动登记、关掉这层自动：<code>KHY_AUTO_BLESS=0</code>，<br>此时 post-verify 全绿会改为打印一句手动 bless 提示。发布命令成功后也会提示下一步正是<br><code>node maintenance/lib/ops.js post-verify</code>。</p></blockquote>
+<h3 id="入口冗余-每个关键能力都有两条路-主路径坏了走后备">入口冗余：每个关键能力都有两条路（主路径坏了走后备）<a class="anchor" href="#入口冗余-每个关键能力都有两条路-主路径坏了走后备" aria-label="锚点">#</a></h3>
+<p>设计原则之一是<strong>关键能力不止一条路</strong>。<code>khy</code> 简写入口若损坏，后备入口直连后端、绕过简写：</p>
+<table><thead><tr><th>能力</th><th>主路径（简写）</th><th>后备路径（最抗坏，不经简写）</th></tr></thead><tbody><tr><td>看版本 / 体检</td><td><code>khy --version</code> ·<code>khy health</code></td><td><code>node services/backend/bin/khy.js --version</code> ·<code>… health</code></td></tr><tr><td>备份 / 回滚</td><td>双击 <code>维护-…</code></td><td><code>node maintenance/lib/ops.js backup</code> ·<code>… rollback</code></td></tr><tr><td>导出诊断 / 重装</td><td>双击 <code>维护-…</code></td><td><code>node maintenance/lib/ops.js diagnostics</code> ·<code>… reinstall</code></td></tr><tr><td>发布验证 / 登记 / 烟雾</td><td>双击 <code>维护-…</code></td><td><code>node maintenance/lib/ops.js post-verify</code> ·<code>… bless</code> ·<code>… smoke</code></td></tr><tr><td>双击入口本身</td><td><code>maintenance/*.command</code> 等</td><td>主清单坏了自动回退 <code>maintenance/rescue-catalog.json</code></td></tr></tbody></table>
+<blockquote><p>这就是为什么本传承书与 <code>紧急恢复卡片.md</code> 里的救援命令一律写成<br><code>node services/backend/bin/khy.js …</code> 或 <code>node maintenance/lib/ops.js …</code>——<br>它们不依赖 <code>khy</code> 简写是否还在 PATH 上，<strong>简写彻底坏掉也能救回来</strong>。</p></blockquote>
+<hr>
+<h2 id="2-守卫免疫系统-每次提交自动拦住-越改越差">2. 守卫免疫系统：每次提交自动拦住「越改越差」<a class="anchor" href="#2-守卫免疫系统-每次提交自动拦住-越改越差" aria-label="锚点">#</a></h2>
+<p>khyos 假设未来维护它的可能是能力较弱的模型或非工程师。为此把「该守的规矩」<br>从「人自觉」固化成<strong>提交时的机器门禁</strong>（git pre-commit 自动跑<br><code>npm run check:small-model:safety</code>）。每个守卫都是「纯叶子逻辑库 + 薄 CLI」。</p>
+<table><thead><tr><th>守卫</th><th>拦什么</th><th>自查命令</th></tr></thead><tbody><tr><td><code>check-agent-rules</code></td><td>通用反模式（裸端点、硬编码、危险写法）</td><td><code>npm run check:agent-rules</code></td></tr><tr><td><code>check-leaf-contract</code></td><td>纯叶子契约破坏 + git 冲突标记打进发布</td><td><code>npm run check:leaf-contract</code></td></tr><tr><td><code>check-model-hardcoding</code></td><td>把模型名硬编码回逻辑（绕过单一真源）</td><td><code>npm run check:model-hardcoding</code></td></tr><tr><td><code>check-change-safety</code></td><td>改动集合的安全性</td><td><code>npm run check:change-safety</code></td></tr></tbody></table>
+<p><strong>基线要求</strong>：对当前代码树这些守卫应<strong>零 error</strong>。如果体检报告 <code>守卫覆盖</code> 变黄，<br>说明有守卫从 <code>package.json</code> 的 <code>check:small-model:safety</code> 串里掉了——把它串回去。</p>
+<p>详细红线见 <code>.ai/GUARDS.md</code>（机器可读、随仓库保留）。</p>
+<hr>
+<h2 id="3-ai-与-maintenance-给人和给非工程师的两套入口">3. <code>.ai/</code> 与 <code>maintenance/</code>：给人和给非工程师的两套入口<a class="anchor" href="#3-ai-与-maintenance-给人和给非工程师的两套入口" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>.ai/</code></strong>（先读这里）：<code>MAP.md</code> 是项目地图（技术栈/入口/构建命令/目录树）；</li></ul>
+<p><code>GUARDS.md</code> 是红线与无 AI 维护指南；<code>CONTEXT.yaml</code> 是机器可读契约。<br>  它们由 <code>khy metadata refresh</code> + git pre-commit 钩子确定性地保持最新。</p>
+<ul><li><strong><code>maintenance/</code></strong>：每个常用维护任务都生成了三平台启动器</li></ul>
+<p>（<code>.command</code> / <code>linux/*.sh</code> / <code>windows/*.bat</code>）。不懂命令行的维护者<strong>双击即维护</strong>。<br>  新增维护任务：改 <code>maintenance/tasks.json</code> → 跑 <code>npm run maintenance:generate</code>。</p>
+<p>从这里开始：双击 <code>maintenance/维护-0-从这里开始...</code> 或 <code>node maintenance/lib/run-task.js --menu</code>。</p>
+<hr>
+<h2 id="4-红灯怎么办-最常见的几种">4. 红灯怎么办（最常见的几种）<a class="anchor" href="#4-红灯怎么办-最常见的几种" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>体检/门禁报红</th><th>含义</th><th>照做</th></tr></thead><tbody><tr><td><code>运行时保期：Node X 已停止支持</code></td><td>Node 过了官方 EOL，存安全风险</td><td><code>nvm install --lts &amp;&amp; nvm use --lts</code></td></tr><tr><td><code>自维护设施：缺失 pip 生命线</code></td><td><code>setup.py</code> 不见了</td><td>从 git 历史恢复；没有它无法发布</td></tr><tr><td><code>模型时效：身份模型疑似已退役</code></td><td>钉选的模型被厂商下线</td><td>按操作四换 <code>constants/models.js</code> 首位</td></tr><tr><td><code>守卫覆盖：未接线的守卫</code></td><td>某守卫从提交门禁掉了</td><td>串回 <code>package.json</code> 的 <code>check:small-model:safety</code></td></tr><tr><td><code>check:pip-packaging</code> 失败</td><td>wheel 不纯/不完整</td><td>看审计输出，通常是漏拷文件或依赖泄漏</td></tr><tr><td>git 冲突标记打进发布</td><td><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> 残留在源码里</td><td>leaf-contract 守卫会点名行号，手工解掉</td></tr><tr><td>更新后整个跑不起来了</td><td>新代码或依赖坏了</td><td>先 <code>维护-导出诊断日志</code> 留证；再 <code>维护-回滚到最近稳定版本</code> 切回上一个好版本</td></tr><tr><td>回滚提示「工作区有未提交改动」</td><td>你本地有没保存的改动</td><td>先 <code>维护-备份关键数据配置</code>，再 <code>git stash</code> 暂存，然后重跑回滚</td></tr><tr><td>依赖报错 / 模块找不到</td><td>node_modules 损坏或不全</td><td><code>维护-一键重装依赖</code>（删干净后全新重装）</td></tr></tbody></table>
+<h3 id="出问题先看哪里-三步分诊-别一上来全仓乱翻">出问题先看哪里（三步分诊，别一上来全仓乱翻）<a class="anchor" href="#出问题先看哪里-三步分诊-别一上来全仓乱翻" aria-label="锚点">#</a></h3>
+<ol><li><strong>先体检</strong>：双击 <code>维护-一键健康体检</code>（或 <code>khy health</code> + <code>khy maintain</code>），看红在哪一项。</li><li><strong>再缩范围</strong>：打开 <code>docs/维护者/维护映射表.json</code>，按「现象」找到对应<strong>板块</strong>——</li></ol>
+<p>每个板块写明了「什么时候看它 / 关键文件在哪 / 对应文档 / 最小验证命令」。<br>   先只跑那个板块的最小验证命令，确认问题，<strong>不要</strong>一上来改全仓。</p>
+<ol><li><strong>搞不定就留证求助</strong>：双击 <code>维护-导出诊断日志</code>，把 <code>maintenance/logs/</code> 里这次的</li></ol>
+<p>文件整个发给维护者或 AI 助手。实在恢复不了，<code>维护-回滚到最近稳定版本</code> 切回上一个好版本。</p>
+<hr>
+<h2 id="5-绝不能碰的红线">5. 绝不能碰的红线<a class="anchor" href="#5-绝不能碰的红线" aria-label="锚点">#</a></h2>
+<ol><li><strong>pip 是唯一发布渠道</strong>——不要削弱 <code>setup.py</code> / 发布预检；删了它 khyos 就消失了。</li><li><strong>模型名只有一个真源</strong>——绝不把模型名字面量硬编码回业务逻辑（守卫会拦，别绕过）。</li><li><strong>守卫只增不减</strong>——可以加新守卫，不要为图省事把现有守卫从提交门禁里摘掉。</li><li><strong>确定性真值优先于模型猜测</strong>——能用代码算出唯一答案的（算术/单位换算/公理定理），</li></ol>
+<p>走确定性代码，不靠模型心算（见 <code>.ai/GUARDS.md</code>）。</p>
+<ol><li><strong>纯加法、门控默认开</strong>——新功能用「纯叶子 + 薄接线 + <code>KHY_*</code> 门控默认开」模式，</li></ol>
+<p>保证可随时回退、不破坏既有行为。</p>
+<hr>
+<h2 id="附录-a-维护者最常用的运维-安全开关-速查">附录 A · 维护者最常用的运维/安全开关（速查）<a class="anchor" href="#附录-a-维护者最常用的运维-安全开关-速查" aria-label="锚点">#</a></h2>
+<p>下面这几个环境开关直接影响「更新 / 回滚 / 发布 / 备份」这条命脉，是单人维护者<strong>真正会用到</strong>的少数几个。<br>其余几百个开关都有合理默认、平时不用碰——<strong>全量分类目录见 <code>docs/07_OPS_运维/[OPS-MAN-058] 环境开关与文档命名规范.md</code></strong>。</p>
+<blockquote><p>总原则：所有 <code>KHY_*</code> 功能门控<strong>默认开</strong>，关闭即<strong>逐字节回退</strong>到该功能接入前的历史行为——任何时候都能安全关掉某个新行为，不会把仓库改坏。</p></blockquote>
+<table><thead><tr><th>开关</th><th>默认</th><th>取值</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_AUTO_BACKUP</code></td><td>开</td><td><code>0</code>=关</td><td>跑 <code>update</code> 或 <code>rollback</code> 前自动备份一次（并打印可复制恢复命令）。见操作六</td></tr><tr><td><code>KHY_BACKUP_KEEP</code></td><td><code>1</code></td><td>正整数 / <code>0</code>·<code>all</code>·<code>off</code>·<code>no</code></td><td>备份保留份数：默认只留最新 1 个；<code>=3</code> 留 3 个；<code>=0</code> 关闭清理、全部保留（旧行为）。只清理 <code>khy-backup-*</code> 目录</td></tr><tr><td><code>KHY_AUTO_BLESS</code></td><td>开</td><td><code>0</code>=关</td><td><code>post-verify</code> 全绿时自动登记稳定版（闭环「发布即登记」）；红项绝不登记。见发布链路第 5 步</td></tr><tr><td><code>KHY_ROLLBACK_CONFIRM</code></td><td>关（需交互 <code>y</code>）</td><td><code>1</code>=自动确认</td><td>回滚确认闸门；脚本/无人值守用 <code>=1</code> 跳过交互。没确认绝不动代码。见操作七</td></tr><tr><td><code>KHYOS_HOME</code></td><td><code>~/.khyos</code></td><td>路径</td><td>底座数据家根（含 <code>backups/</code>）。换机器/隔离测试时指到别处</td></tr><tr><td><code>KHY_DATA_HOME</code></td><td><code>~/.khy</code></td><td>路径</td><td>应用数据家（配置 / 用量）</td></tr><tr><td><code>KHY_STABLE_RELEASE_FILE</code></td><td><code>maintenance/stable-release.json</code></td><td>路径</td><td>稳定版登记主记录（一般不改，测试/迁移时用）</td></tr><tr><td><code>KHY_STABLE_RELEASE_SHADOW_FILE</code></td><td><code>maintenance/stable-release.backup.json</code></td><td>路径</td><td>稳定版登记影子冗余副本；主记录损坏时回滚自动退到它</td></tr></tbody></table>
+<blockquote><p>数据家目录的解析真源<strong>只此一处</strong>：<code>services/backend/src/utils/dataHome.js</code>（<code>getBaseHome()</code> / <code>getDataHome()</code>）。<br>所有服务都经它取家目录，绝不硬编码——这也是为什么上面两个 env seam 一改就能整体重定向。</p></blockquote>
+<hr>
+<h2 id="6-留给你的一句话">6. 留给你的一句话<a class="anchor" href="#6-留给你的一句话" aria-label="锚点">#</a></h2>
+<p>khyos 被刻意设计成「即使没有原作者、没有 AI，也能被一个人长期维护」。<br>四根支柱、一套自动守卫、一条体检命令、一摞双击启动器——它们的存在，<br>就是为了让你在任何时代都能回答三个问题：<strong>它还健康吗？它跟得上时代吗？我怎么修？</strong></p>
+<p>跑一次 <code>khy maintain freshness</code>，按「→ 怎么修」照做。这就是全部。</p>
+<p>— 愿 khyos 与时俱进，不被淘汰。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/传承/紧急恢复卡片.html"><div class="dir">← 上一篇</div><div class="ttl">🆘 Khy-OS 紧急恢复卡片（出事时翻这一页就够）</div></a><a class="next" href="../../docs/传承/KHY-OS-复制蓝图-如何再造一个khyos智能体.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 复制蓝图 · 如何从零再造一个 khyos 式智能体</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/传承/KHY-OS-传承书.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+{
+  "name": "vue-typescript",
+  "description": "Vue 3 + TypeScript project with Vite",
+  "triggers": ["Vue", "Vue.js", "Vue3", "vue app", "Vue项目", "Vue前端", "搭建Vue"],
+  "variables": {
+    "projectName": { "default": "my-vue-app", "description": "Project name" },
+    "port": { "default": "5173", "description": "Dev server port" }
+  },
+  "directories": [
+    "src",
+    "src/components",
+    "src/views",
+    "src/router",
+    "src/stores",
+    "src/assets",
+    "public",
+    "unit_tests",
+    "API_tests"
+  ],
+  "files": [
+    {
+      "path": "package.json",
+      "content": "{\n  \"name\": \"{projectName}\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite --port {port}\",\n    \"build\": \"vue-tsc && vite build\",\n    \"preview\": \"vite preview\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"vue\": \"^3.4.31\",\n    \"vue-router\": \"^4.4.0\"\n  },\n  \"devDependencies\": {\n    \"@vitejs/plugin-vue\": \"^5.0.5\",\n    \"@vue/test-utils\": \"^2.4.6\",\n    \"typescript\": \"^5.5.3\",\n    \"vite\": \"^5.3.4\",\n    \"vitest\": \"^2.0.4\",\n    \"vue-tsc\": \"^2.0.26\"\n  }\n}"
+    },
+    {
+      "path": "vite.config.ts",
+      "content": "import { defineConfig } from 'vite';\nimport vue from '@vitejs/plugin-vue';\n\nexport default defineConfig({\n  plugins: [vue()],\n  server: { port: {port} },\n});"
+    },
+    {
+      "path": "tsconfig.json",
+      "content": "{\n  \"compilerOptions\": {\n    \"target\": \"ES2020\",\n    \"module\": \"ESNext\",\n    \"moduleResolution\": \"bundler\",\n    \"strict\": true,\n    \"jsx\": \"preserve\",\n    \"resolveJsonModule\": true,\n    \"isolatedModules\": true,\n    \"esModuleInterop\": true,\n    \"lib\": [\"ES2020\", \"DOM\", \"DOM.Iterable\"],\n    \"skipLibCheck\": true,\n    \"noEmit\": true,\n    \"paths\": { \"@/*\": [\"./src/*\"] }\n  },\n  \"include\": [\"src/**/*.ts\", \"src/**/*.vue\"]\n}"
+    },
+    {
+      "path": "index.html",
+      "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n  <title>{projectName}</title>\n</head>\n<body>\n  <div id=\"app\"></div>\n  <script type=\"module\" src=\"/src/main.ts\"></script>\n</body>\n</html>"
+    },
+    {
+      "path": "src/main.ts",
+      "content": "import { createApp } from 'vue';\nimport App from './App.vue';\nimport router from './router';\n\ncreateApp(App).use(router).mount('#app');"
+    },
+    {
+      "path": "src/App.vue",
+      "content": "<template>\n  <div id=\"app\">\n    <h1>{projectName}</h1>\n    <router-view />\n  </div>\n</template>\n\n<script setup lang=\"ts\">\n</script>"
+    },
+    {
+      "path": "src/router/index.ts",
+      "content": "import { createRouter, createWebHistory } from 'vue-router';\n\nconst routes = [\n  { path: '/', component: () => import('../views/Home.vue') },\n];\n\nexport default createRouter({\n  history: createWebHistory(),\n  routes,\n});"
+    },
+    {
+      "path": "src/views/Home.vue",
+      "content": "<template>\n  <div>\n    <h2>Home</h2>\n    <p>Welcome to {projectName}</p>\n  </div>\n</template>\n\n<script setup lang=\"ts\">\n</script>"
+    },
+    {
+      "path": "src/vite-env.d.ts",
+      "content": "/// <reference types=\"vite/client\" />\ndeclare module '*.vue' {\n  import type { DefineComponent } from 'vue';\n  const component: DefineComponent<{}, {}, any>;\n  export default component;\n}"
+    },
+    {
+      "path": "Dockerfile",
+      "content": "# Stage 1: Build\nFROM node:20-alpine AS build\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nRUN npm run build\n\n# Stage 2: Serve\nFROM nginx:alpine\nCOPY --from=build /app/dist /usr/share/nginx/html\nCOPY nginx.conf /etc/nginx/conf.d/default.conf\nEXPOSE 80\nCMD [\"nginx\", \"-g\", \"daemon off;\"]"
+    },
+    {
+      "path": "docker-compose.yml",
+      "content": "version: \"3.8\"\nservices:\n  app:\n    build: .\n    ports:\n      - \"80:80\""
+    },
+    {
+      "path": ".dockerignore",
+      "content": "node_modules\ndist\n.git\n.env"
+    },
+    {
+      "path": "nginx.conf",
+      "content": "server {\n    listen 80;\n    server_name localhost;\n    root /usr/share/nginx/html;\n    index index.html;\n\n    location / {\n        try_files $uri $uri/ /index.html;\n    }\n\n    location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {\n        expires 1y;\n        add_header Cache-Control \"public, immutable\";\n    }\n}"
+    },
+    {
+      "path": "unit_tests/Home.test.ts",
+      "content": "import { describe, it, expect } from 'vitest';\nimport { mount } from '@vue/test-utils';\nimport Home from '../src/views/Home.vue';\n\ndescribe('Home.vue', () => {\n  it('renders welcome text', () => {\n    const wrapper = mount(Home);\n    expect(wrapper.text()).toContain('Welcome');\n  });\n});"
+    },
+    {
+      "path": "API_tests/e2e.test.ts",
+      "content": "// E2E / API integration tests\n//\n// This directory is reserved for end-to-end tests that exercise the\n// full application stack (browser + server). Recommended frameworks:\n//\n//   - Playwright  (https://playwright.dev)\n//     npm i -D @playwright/test\n//     npx playwright test\n//\n//   - Cypress      (https://www.cypress.io)\n//     npm i -D cypress\n//     npx cypress open\n//\n// Example Playwright test:\n//\n//   import { test, expect } from '@playwright/test';\n//\n//   test('homepage loads', async ({ page }) => {\n//     await page.goto('http://<HOST>:80');\n//     await expect(page.locator('h2')).toContainText('Home');\n//   });\n//\n// Add your E2E tests here once the framework is installed."
+    },
+    {
+      "path": "run_tests.sh",
+      "content": "#!/usr/bin/env bash\nset -euo pipefail\nnpm ci\nnpx vitest run --reporter=verbose"
+    },
+    {
+      "path": "README.md",
+      "content": "# {projectName}\n\nA modern web application built with **Vue 3**, **TypeScript**, and **Vite**.\n\n## Tech Stack\n\n- Vue 3 (Composition API)\n- TypeScript\n- Vite\n- Vue Router\n- Vitest + @vue/test-utils (unit testing)\n- Docker + Nginx (production deployment)\n\n## Docker Quick Start\n\n```bash\ndocker compose up --build\n```\n\nThe app will be available at [http://<HOST>](http://<HOST>).\n\n## Manual Setup\n\n```bash\n# Install dependencies\nnpm ci\n\n# Start dev server\nnpm run dev\n\n# Build for production\nnpm run build\n\n# Preview production build\nnpm run preview\n```\n\n## Running Tests\n\n```bash\n# Unit tests\nnpm test\n\n# Or use the helper script\nbash run_tests.sh\n```\n\n## Project Structure\n\n```\n{projectName}/\n├── src/\n│   ├── assets/\n│   ├── components/\n│   ├── router/\n│   ├── stores/\n│   ├── views/\n│   │   └── Home.vue\n│   ├── App.vue\n│   ├── main.ts\n│   └── vite-env.d.ts\n├── unit_tests/\n│   └── Home.test.ts\n├── API_tests/\n│   └── e2e.test.ts\n├── public/\n├── Dockerfile\n├── docker-compose.yml\n├── nginx.conf\n├── index.html\n├── package.json\n├── tsconfig.json\n├── vite.config.ts\n├── run_tests.sh\n└── README.md\n```"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🧩 Khy 指导 Skill 集合 · 总说明 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>skills<span class="sep">›</span>🧩 Khy 指导 Skill 集合 · 总说明</div>
+      <header class="hero reveal"><h1>🧩 Khy 指导 Skill 集合 · 总说明</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-指导-skill-集合-总说明">🧩 Khy 指导 Skill 集合 · 总说明</a></li><li class="lvl-2"><a href="#给人看-怎么安装到-khy">🧑 给人看 · 怎么安装到 khy</a></li><li class="lvl-2"><a href="#给-ai-看-这套-skill-是什么-何时激活哪个">🤖 给 AI 看 · 这套 skill 是什么、何时激活哪个</a></li><li class="lvl-2"><a href="#集合清单-8-个">集合清单（8 个）</a></li><li class="lvl-2"><a href="#与文档的关系">与文档的关系</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 受众: 人+AI | 用途: skill 集合总说明——怎么安装、有哪些、何时用哪个 --&gt;</p>
+<h1 id="khy-指导-skill-集合-总说明">🧩 Khy 指导 Skill 集合 · 总说明<a class="anchor" href="#khy-指导-skill-集合-总说明" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>这是什么</strong>：一套可安装进 khy 的 skill，专门用来<strong>指导比强模型更弱的模型正确、安全地使用 Khy-OS</strong>。<br>你平时主要用小模型——把这些 skill 装上，小模型在需要时激活对应 skill，就能拿到本项目的<br>改代码纪律、排错手册、收尾规范、发布自保等&quot;现成脑子&quot;，少犯错、不越改越坏。</p></blockquote>
+<p>本 skill 集合是 <a href="../00_INDEX_总入口.html">AI 协作预设包</a> 的可执行版本：文档是给你/AI 读的，skill 是让模型<strong>在 khy 里随时调用</strong>的。</p>
+<hr>
+<h2 id="给人看-怎么安装到-khy">🧑 给人看 · 怎么安装到 khy<a class="anchor" href="#给人看-怎么安装到-khy" aria-label="锚点">#</a></h2>
+<p>每个 skill 是一个目录（含 <code>manifest.json</code> + <code>prompt.md</code>），khy 原生格式，装上后会有 <code>/</code> 斜杠命令。</p>
+<p><strong>方式 A：逐个导入（推荐，最稳）</strong></p>
+<pre><code class="language-bash"># 在仓库根目录，把某个 skill 目录导入
+node services/backend/bin/khy.js skill import docs/AI协作预设包/skills/khy-onboarding
+node services/backend/bin/khy.js skill import docs/AI协作预设包/skills/khy-safe-change
+# ……其余同理</code></pre>
+<p><strong>方式 B：批量导入（一条命令装全部）</strong></p>
+<pre><code class="language-bash">for d in docs/AI协作预设包/skills/*/; do
+  node services/backend/bin/khy.js skill import &quot;$d&quot;
+done</code></pre>
+<p><strong>方式 C：直接放进用户 skill 目录</strong>（khy 启动时自动发现）<br>把 <code>docs/AI协作预设包/skills/</code> 下各目录拷到 <code>~/.khy/skills/</code> 即可。</p>
+<p><strong>装好后验证</strong>：</p>
+<pre><code class="language-bash">node services/backend/bin/khy.js skill list        # 应能看到 khy-onboarding 等</code></pre>
+<p>之后在对话里输入 <code>/khy-onboarding</code> 等即可激活；小模型也能在合适场景自动触发（除非该 skill 设了 disable-model-invocation，本集合默认允许模型调用）。</p>
+<blockquote><p>导入后 skill 落在 <code>~/.khy/skills/&lt;name&gt;/</code>，默认启用。要停用某个：<code>skill disable &lt;name&gt;</code>。</p></blockquote>
+<hr>
+<h2 id="给-ai-看-这套-skill-是什么-何时激活哪个">🤖 给 AI 看 · 这套 skill 是什么、何时激活哪个<a class="anchor" href="#给-ai-看-这套-skill-是什么-何时激活哪个" aria-label="锚点">#</a></h2>
+<p>你是在 Khy-OS 里工作的模型。遇到下面的处境，<strong>主动激活对应 skill</strong> 获取该场景的正确做法：</p>
+<table><thead><tr><th>处境</th><th>激活</th><th>作用</th></tr></thead><tbody><tr><td>刚开始为本项目工作、不了解结构</td><td><code>/khy-onboarding</code></td><td>一次读懂项目/去哪改/红线</td></tr><tr><td>要修改或新增任何代码</td><td><code>/khy-safe-change</code></td><td>加法式改动纪律 + 叶子/接线模板</td></tr><tr><td>你是较弱/较小模型，或任务复杂</td><td><code>/khy-weak-model-guardrails</code></td><td>一次一步、防截断、防上下文爆、工具调用规范</td></tr><tr><td>不知道下一步做什么</td><td><code>/khy-pick-task</code></td><td>优先级决策 + 转成加法式小任务</td></tr><tr><td>出错/没生效/怀疑改坏</td><td><code>/khy-troubleshoot</code></td><td>P/W/B/G/E 五类错误自查</td></tr><tr><td>网关 404 / 鉴权 / 模型路由异常</td><td><code>/khy-gateway-fix</code></td><td>网关五类坑对症修法</td></tr><tr><td>准备发布 pip 或改动影响分发</td><td><code>/khy-release-safety</code></td><td>发布前最小闭环 + 版本一致</td></tr><tr><td>准备说&quot;做完了&quot;</td><td><code>/khy-honest-closure</code></td><td>诚实收尾模板，防未交付截断</td></tr></tbody></table>
+<p><strong>典型串联</strong>：<code>/khy-onboarding</code> → （弱模型再加 <code>/khy-weak-model-guardrails</code>）→ <code>/khy-pick-task</code> → <code>/khy-safe-change</code> → 出错 <code>/khy-troubleshoot</code>（网关问题 <code>/khy-gateway-fix</code>）→ <code>/khy-honest-closure</code> →（发布）<code>/khy-release-safety</code>。</p>
+<hr>
+<h2 id="集合清单-8-个">集合清单（8 个）<a class="anchor" href="#集合清单-8-个" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Skill</th><th>触发</th><th>一句话</th></tr></thead><tbody><tr><td>khy-onboarding</td><td><code>/khy-onboarding</code></td><td>接手速成：项目是什么/去哪改/红线</td></tr><tr><td>khy-safe-change</td><td><code>/khy-safe-change</code></td><td>加法式改动纪律 R1–R9 + 模板</td></tr><tr><td>khy-weak-model-guardrails</td><td><code>/khy-weak-model-guardrails</code></td><td>弱模型护栏：一次一步、防截断</td></tr><tr><td>khy-pick-task</td><td><code>/khy-pick-task</code></td><td>选活决策 + 转加法式小任务</td></tr><tr><td>khy-troubleshoot</td><td><code>/khy-troubleshoot</code></td><td>错误自查 P/W/B/G/E</td></tr><tr><td>khy-gateway-fix</td><td><code>/khy-gateway-fix</code></td><td>网关/模型路由五类坑</td></tr><tr><td>khy-release-safety</td><td><code>/khy-release-safety</code></td><td>发布前自保 + 版本一致</td></tr><tr><td>khy-honest-closure</td><td><code>/khy-honest-closure</code></td><td>诚实收尾防未交付</td></tr></tbody></table>
+<hr>
+<h2 id="与文档的关系">与文档的关系<a class="anchor" href="#与文档的关系" aria-label="锚点">#</a></h2>
+<ul><li><strong>文档</strong>（<code>给人看/</code> <code>给AI看/</code>）：读一遍理解全局，或整段复制粘贴给外部 AI。</li><li><strong>Skill</strong>（本目录）：装进 khy，模型在 khy 会话内<strong>随时激活</strong>，把纪律变成可调用的动作。</li></ul>
+<p>两者内容同源、互补。文档用于&quot;讲清与传阅&quot;，skill 用于&quot;现场执行&quot;。</p>
+<p><em>集合入口：本文件；整套包入口：<a href="../00_INDEX_总入口.html"><code>../00_INDEX_总入口.md</code></a>。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/skills/khy-weak-model-guardrails/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">弱模型专属护栏（在 Khy-OS 上稳扎稳打）</div></a><span></span></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/skills/README.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

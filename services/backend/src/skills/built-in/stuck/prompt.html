@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stuck — Alternative Approach Finder · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>stuck<span class="sep">›</span>Stuck — Alternative Approach Finder</div>
+      <header class="hero reveal"><h1>Stuck — Alternative Approach Finder</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#stuck-alternative-approach-finder">Stuck — Alternative Approach Finder</a></li><li class="lvl-2"><a href="#purpose">Purpose</a></li><li class="lvl-2"><a href="#workflow">Workflow</a></li><li class="lvl-2"><a href="#output-format">Output Format</a></li><li class="lvl-2"><a href="#guidelines">Guidelines</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="stuck-alternative-approach-finder">Stuck — Alternative Approach Finder<a class="anchor" href="#stuck-alternative-approach-finder" aria-label="锚点">#</a></h1>
+<h2 id="purpose">Purpose<a class="anchor" href="#purpose" aria-label="锚点">#</a></h2>
+<p>When the user is stuck on a problem, analyze it from multiple angles and suggest alternative approaches to move forward.</p>
+<h2 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h2>
+<ol><li><strong>Understand the Blockage</strong>: Ask the user (or infer from context):<ul><li>What are they trying to achieve?</li><li>What have they already tried?</li><li>What specific error or obstacle are they facing?</li></ul></li></ol>
+<ol><li><strong>Analyze from Multiple Angles</strong>:<ul><li><strong>Different Algorithm</strong>: Is there a simpler or more standard algorithm for this?</li><li><strong>Different Architecture</strong>: Could the problem be restructured (e.g., sync vs async, push vs pull)?</li><li><strong>Different Tool/Library</strong>: Is there an existing library or tool that solves this?</li><li><strong>Simplify Scope</strong>: Can the problem be broken into smaller, solvable pieces?</li><li><strong>Invert the Problem</strong>: What if you approach it from the opposite direction?</li><li><strong>Prior Art</strong>: Search the codebase for similar solved problems.</li></ul></li></ol>
+<ol><li><strong>Rank Suggestions</strong>: Present 3-5 alternative approaches, ranked by:<ul><li>Likelihood of success</li><li>Implementation effort</li><li>Risk and trade-offs</li></ul></li></ol>
+<ol><li><strong>Quick Win</strong>: Identify the fastest path to a working solution, even if imperfect.</li></ol>
+<h2 id="output-format">Output Format<a class="anchor" href="#output-format" aria-label="锚点">#</a></h2>
+<p>For each suggestion:</p>
+<ul><li><strong>Approach</strong>: One-line description</li><li><strong>How</strong>: Brief implementation outline (3-5 steps)</li><li><strong>Trade-offs</strong>: What you gain and what you give up</li><li><strong>Effort</strong>: Low / Medium / High</li></ul>
+<h2 id="guidelines">Guidelines<a class="anchor" href="#guidelines" aria-label="锚点">#</a></h2>
+<ul><li>Be creative — the user has already tried the obvious approaches.</li><li>Look at how similar problems are solved elsewhere in the codebase.</li><li>Suggest temporary workarounds if a proper fix is complex.</li><li>Sometimes the best advice is to step back and reconsider the requirements.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/spec-driven-development/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Spec-Driven Development</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/test-driven-development/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Test-Driven Development</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/stuck/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[IMPL-RPT-033] 后端公理化重构：网关依赖与定价原子化 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>[IMPL-RPT-033] 后端公理化重构：网关依赖与定价原子化</div>
+      <header class="hero reveal"><h1>[IMPL-RPT-033] 后端公理化重构：网关依赖与定价原子化</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#impl-rpt-033-后端公理化重构-网关依赖与定价原子化">[IMPL-RPT-033] 后端公理化重构：网关依赖与定价原子化</a></li><li class="lvl-2"><a href="#一-背景与动机">一、背景与动机</a></li><li class="lvl-2"><a href="#二-改动概览">二、改动概览</a></li><li class="lvl-3"><a href="#2-1-env-数值解析单一真源-envparse-js-batch-2">2.1 env 数值解析单一真源（`_envParse.js`，Batch 2）</a></li><li class="lvl-3"><a href="#2-2-模型-id-规范化单一真源-modelidparse-js-batch-2">2.2 模型 ID 规范化单一真源（`_modelIdParse.js`，Batch 2）</a></li><li class="lvl-3"><a href="#2-3-token-定价纯叶抽取-壳薄委托-tokenpricing-js-batch-3">2.3 token 定价纯叶抽取 + 壳薄委托（`tokenPricing.js`，Batch 3）</a></li><li class="lvl-3"><a href="#2-4-ai-网关依赖分组注入-fail-fast-aigatewaygeneratemethod-js">2.4 AI 网关依赖分组注入 + fail-fast（`aiGatewayGenerateMethod.js`）</a></li><li class="lvl-3"><a href="#2-5-proxyserver-死码清理">2.5 proxyServer 死码清理</a></li><li class="lvl-3"><a href="#2-6-token-用量路径-portable-aware">2.6 token 用量路径 portable-aware</a></li><li class="lvl-2"><a href="#三-行为不变性与回归保障">三、行为不变性与回归保障</a></li><li class="lvl-2"><a href="#四-变更文件表">四、变更文件表</a></li><li class="lvl-2"><a href="#五-验收与守卫">五、验收与守卫</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="impl-rpt-033-后端公理化重构-网关依赖与定价原子化">[IMPL-RPT-033] 后端公理化重构：网关依赖与定价原子化<a class="anchor" href="#impl-rpt-033-后端公理化重构-网关依赖与定价原子化" aria-label="锚点">#</a></h1>
+<blockquote><p>实现报告 · 遵循 [MGMT-STD-001] 文档铁律 · 对应设计归 docs/03_DESIGN_设计/，本目录索引见 00_INDEX_实现-分类索引.md</p></blockquote>
+<ul><li>日期：2026-07-30</li><li>范围：<code>services/backend/src</code> 后端公理化重构（多批次合并交付）——纯函数原子层抽取（<code>_envParse.js</code> / <code>_modelIdParse.js</code>）、定价数学纯叶抽取（<code>tokenPricing.js</code> + <code>tokenUsageService.js</code> 薄委托）、AI 网关依赖分组注入 + fail-fast（<code>aiGatewayGenerateMethod.js</code>）、<code>proxyServer.js</code> 死码清理、token 用量文件路径 portable-aware。</li><li>状态：定稿（新增单测 + 整体回归通过，三维评审 0 blocker / 0 major / 1 minor）</li></ul>
+<h2 id="一-背景与动机">一、背景与动机<a class="anchor" href="#一-背景与动机" aria-label="锚点">#</a></h2>
+<p>后端网关与用量统计代码在长期演进中积累了几类结构债：</p>
+<ol><li><strong>重复的私有 helper</strong>：<code>_parseMs</code>（env 毫秒解析）在 <code>aiGateway.js</code> 与 <code>adapters/relayApiAdapter.js</code> 各有一份逐字节相同的副本；<code>normalizeModelId</code>（模型 ID 规范化）在 gateway/cli 层存在两组各两份逐字节相同的副本。副本漂移是静默行为分叉的温床。</li><li><strong>定价数学与 I/O 壳混杂</strong>：<code>tokenUsageService.js</code> 同时承担定价常量表、成本公式、token 估算（纯数学）与磁盘持久化、会话累加器、chalk 渲染（I/O 与可变状态），纯数学部分无法独立单测。</li><li><strong>依赖注入静默崩坏</strong>：<code>aiGatewayGenerateMethod.js</code> 经 <code>setAiGatewayGenerateMethodDeps</code> 注入 30 余项宿主 helper，全部为旧扁平形态且无校验——任何一项漏注入都不会在注入期报错，而是在 <code>generate()</code> 对应路径上以 TypeError 静默崩坏（可能被外层 try/catch 吞掉）。</li><li><strong>死码</strong>：<code>proxyServer.js</code> 内存在 4 个全仓零引用的 helper 函数，虚增巨石体积。</li><li><strong>路径语义过时</strong>：token 用量文件固定写入 <code>~/.khyquant/token_usage.json</code>，便携部署（portable）场景下数据逃逸出安装目录。</li></ol>
+<p>本轮重构的公理是「<strong>接口恒等</strong>」：所有抽取/收敛/清理对既有消费方保持导出签名、返回结构、调用点字节级不变；唯一的新行为（fail-fast 抛错）只在「原本就已静默坏掉」的缺依赖场景下触发。</p>
+<h2 id="二-改动概览">二、改动概览<a class="anchor" href="#二-改动概览" aria-label="锚点">#</a></h2>
+<h3 id="2-1-env-数值解析单一真源-envparse-js-batch-2">2.1 env 数值解析单一真源（<code>_envParse.js</code>，Batch 2）<a class="anchor" href="#2-1-env-数值解析单一真源-envparse-js-batch-2" aria-label="锚点">#</a></h3>
+<ul><li>新建 <code>services/backend/src/services/gateway/_envParse.js</code>，收敛两处逐字节相同的 <code>_parseMs(raw, fallback, min = 0)</code>（原 <code>aiGateway.js:287</code>、<code>adapters/relayApiAdapter.js:151</code>）。</li><li>语义契约与被收敛副本逐字节一致：<code>raw ?? fallback</code> → <code>parseInt(..., 10)</code> → 非有限或 <code>&lt;= 0</code> 回退 fallback → <code>Math.max(min, parsed)</code> 抬底、无上限钳制；纯函数、不读 <code>process.env</code>（env 读取留在调用方）。</li><li><strong>刻意不收敛的变体已在文件头登记</strong>：<code>_parsePositiveInt</code> 在 <code>aiGateway.js</code>（默认 max=16）与 <code>relayApiAdapter.js</code>（默认 max=8）默认参数不同，属函数语义差异，非严格等价，不合并；<code>_adapterUtils.parsePositiveInt</code>（max=Infinity）、<code>_parseNonNegativeInt</code>（全仓单实例）等同理。</li><li>各消费方保留同名本地绑定（<code>const _parseMs = require('./_envParse')._parseMs;</code>），调用点逐字节不变。</li></ul>
+<h3 id="2-2-模型-id-规范化单一真源-modelidparse-js-batch-2">2.2 模型 ID 规范化单一真源（<code>_modelIdParse.js</code>，Batch 2）<a class="anchor" href="#2-2-模型-id-规范化单一真源-modelidparse-js-batch-2" aria-label="锚点">#</a></h3>
+<ul><li>新建 <code>services/backend/src/services/gateway/_modelIdParse.js</code>，收敛两组互不等价的 <code>normalizeModelId</code> 副本：<ul><li><strong>变体 A <code>normalizeModelIdTrimQuotes</code></strong>（trim + 去首尾引号、保留内部空白）：原 <code>gateway/proxyServer.js:861</code> 与 <code>cli/handlers/proxy.js:137</code>，body 逐字节相同。</li><li><strong>变体 B <code>normalizeModelIdCompact</code></strong>（trim + 去首尾引号 + 剥除全部空白）：原 <code>gateway/modelDiscovery.js:69</code> 与 <code>gateway/adapters/_ideTokenMixin.js:136</code>，body 逐字节相同。</li></ul></li><li>A 与 B 互不等价（B 额外剥除内部空白），故并列导出、绝不合并；<code>adapters/claudeAdapter.js</code> 的 <code>parseModelId</code>（解析 <code>model::mode</code> 后缀）为全仓唯一实例，不收敛。</li><li>各消费方保留同名本地绑定，调用点逐字节不变。</li></ul>
+<h3 id="2-3-token-定价纯叶抽取-壳薄委托-tokenpricing-js-batch-3">2.3 token 定价纯叶抽取 + 壳薄委托（<code>tokenPricing.js</code>，Batch 3）<a class="anchor" href="#2-3-token-定价纯叶抽取-壳薄委托-tokenpricing-js-batch-3" aria-label="锚点">#</a></h3>
+<ul><li>新建 <code>services/backend/src/services/tokenPricing.js</code>——纯定价/换算数学叶子（零 I/O、零可变状态、确定性、可单测），从 <code>tokenUsageService.js</code> 抽取：<ul><li>常量表 <code>TOKEN_PRICING</code>（USD / 1M tokens）与汇率 <code>USD_TO_CNY</code>（与提取前字面量逐字节一致）；</li><li><code>resolveProviderPricing</code>（<code>table[provider] || table.default</code> 查表语义原样保留，含原型链命中等历史行为）；</li><li><code>calculateCost</code> / <code>estimateCost</code> / <code>sumRecordsCost</code>（<code>getSessionCost</code> 的求和内核）/ <code>estimateTokens</code>。</li></ul></li><li>价格表与汇率一律作参数注入、缺省取内置常量；读取外部价格配置（如 <code>ai_gateway_pricing.json</code>）属 I/O，永远留给调用方。不做四舍五入——舍入/展示精度是壳与渲染层的职责。</li><li><code>tokenUsageService.js</code> 以原签名薄委托本叶子（<code>TOKEN_PRICING</code> / <code>USD_TO_CNY</code> 为同一对象身份的 re-export），消费方（cli/router、routerDispatchOps、replSession、useQueryBridge、aiChatCore、gateway/customerQuotaEnforcer 等）行为逐字段恒等。</li><li><strong>刻意不提取清单已在叶子文件头登记</strong>：<code>loadUsageData</code>/<code>saveUsageData</code>（fs）、<code>recordUsage</code>/<code>_sessionUsage</code>（可变累加器）、<code>todayKey</code>/<code>monthKey</code>（时钟）、<code>formatUsageReport</code> 等（chalk 渲染壳）均留在壳内。</li></ul>
+<h3 id="2-4-ai-网关依赖分组注入-fail-fast-aigatewaygeneratemethod-js">2.4 AI 网关依赖分组注入 + fail-fast（<code>aiGatewayGenerateMethod.js</code>）<a class="anchor" href="#2-4-ai-网关依赖分组注入-fail-fast-aigatewaygeneratemethod-js" aria-label="锚点">#</a></h3>
+<ul><li><code>setAiGatewayGenerateMethodDeps</code> 的注入契约升级为 <strong>DEP_GROUPS 五个语义分组</strong>（分组表即 setter 契约的单一真源）：<ul><li><code>validation</code>（10 项）：入参解析 / 错误分类 / 适配器谓词（<code>_parseMs</code>、<code>_parsePositiveInt</code>、<code>classifyError</code> 等）；</li><li><code>failover</code>（12 项）：级联恢复 / 中止 / 模型与池路由（<code>createLinkedAbortController</code>、<code>normalizeModelForAdapter</code> 等）；</li><li><code>languageRecovery</code>（7 项）：khy 中文一致性恢复；</li><li><code>ocrRescue</code>（3 项）：视觉 OCR 兜底（<code>_appendVisionKeyOffer</code>、<code>extractImageOcrDetails</code>、<code>tryRateLimitOcrRescue</code>）;</li><li><code>diagnostics</code>（3 项）：<code>_advDiag</code> / <code>_modelSwitch</code> / <code>_traceAudit</code> 三个 set-once 模块 let。</li></ul></li><li><strong>fail-fast 校验</strong>：35 项中仅 <code>diagnostics</code> 三项可选（方法体内全程 <code>if (x)</code> 守卫、可合法为 null），其余 32 项为必选（方法体内均为裸调用）。setter 对<strong>合并后</strong>模块状态做一次性校验，缺失必选项时在注入期立即点名抛错（<code>注入 aiGatewayGenerateMethod 依赖失败:必选 32 项中已注入 N 项、缺失 M 项(组名.项名, ...)</code>），把「运行到对应路径才静默崩坏」提前为「注入期显式失败」；注入齐备时行为零变化。</li><li><strong>旧扁平形态兼容</strong>：setter 同时接受分组形态（生产注入点 <code>aiGateway.js</code> 已改为分组传入）与旧扁平形态（测试桩逐项增量覆盖），两种形态到达模块 let 的绑定值逐项一致；未知键静默忽略，旧测试桩传入不破。</li><li>遗留注入项 <code>extractImageOcrTexts</code> 已移除（Batch 5）：方法体内零调用；源函数仍在 <code>aiGateway.js</code> 供 rate-limit OCR 兜底内部使用。</li></ul>
+<h3 id="2-5-proxyserver-死码清理">2.5 proxyServer 死码清理<a class="anchor" href="#2-5-proxyserver-死码清理" aria-label="锚点">#</a></h3>
+<ul><li>删除 <code>services/backend/src/services/gateway/proxyServer.js</code> 内 4 个全仓零引用的 helper：<code>reservoirGetDegraded</code>、<code>withFallbackMeta</code>、<code>extractOpenAIContent</code>、<code>sanitizeIpHeaders</code>。</li><li>删除后全仓（<code>services/backend</code>）对这四个标识符检索为 0 命中；纯减法、无行为影响。</li></ul>
+<h3 id="2-6-token-用量路径-portable-aware">2.6 token 用量路径 portable-aware<a class="anchor" href="#2-6-token-用量路径-portable-aware" aria-label="锚点">#</a></h3>
+<ul><li><code>tokenUsageService.js</code> 的用量文件解析改为惰性双层：<code>_usageFile()</code> 优先经 <code>utils/dataHome.getAppHome()</code> 解析到应用数据家目录下的 <code>token_usage.json</code>（便携部署时数据留在安装目录内）；<code>dataHome</code> 不可用时回退 <code>_legacyUsageFile()</code>（<code>~/.khyquant/token_usage.json</code>，legacy 位置）。</li></ul>
+<h2 id="三-行为不变性与回归保障">三、行为不变性与回归保障<a class="anchor" href="#三-行为不变性与回归保障" aria-label="锚点">#</a></h2>
+<ul><li><strong>导出面恒等</strong>：<code>tokenUsageService.js</code> 的 21 个导出键（<code>recordUsage</code> … <code>TOKEN_PRICING</code>、<code>USD_TO_CNY</code>、<code>_fmtTokenCount</code>）逐一保持不变；<code>TOKEN_PRICING</code> / <code>USD_TO_CNY</code> 与叶子内常量为同一对象身份。</li><li><strong>调用点逐字节等价</strong>：<code>_parseMs</code> / <code>normalizeModelId*</code> 的所有消费方以同名本地绑定接入单一真源，调用处代码零改动。</li><li><strong>fail-fast 仅覆盖既有静默故障域</strong>：依赖注入齐备时 <code>generate()</code> 行为零变化；OCR 告诫链路（覆盖率/截断/语言/旋转/分辨率）的三个网关注入点行为保持不变。</li><li><strong>新增 4 个测试文件</strong>：<ul><li><code>services/backend/tests/gateway/envParse.test.js</code></li><li><code>services/backend/tests/gateway/modelIdParse.test.js</code></li><li><code>services/backend/tests/gateway/aiGatewayGenerateMethodDepsFailFast.test.js</code></li><li><code>services/backend/tests/services/tokenPricing.test.js</code></li></ul></li><li><strong>回归基线</strong>：整体 Jest 失败套件名集合零新增（基线 133 → 本轮后 131，只减不增）；<code>scripts/check-agent-rules.js</code> 对触及文件零新增 error；三维评审（正确性/一致性/可维护性）结论 0 blocker / 0 major / 1 minor。</li></ul>
+<h2 id="四-变更文件表">四、变更文件表<a class="anchor" href="#四-变更文件表" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>改动摘要</th></tr></thead><tbody><tr><td><code>services/backend/src/services/gateway/_envParse.js</code></td><td>新增：<code>_parseMs</code> 单一真源（纯函数原子层）；文件头登记不收敛变体</td></tr><tr><td><code>services/backend/src/services/gateway/_modelIdParse.js</code></td><td>新增：<code>normalizeModelIdTrimQuotes</code> / <code>normalizeModelIdCompact</code> 两变体并列导出</td></tr><tr><td><code>services/backend/src/services/tokenPricing.js</code></td><td>新增：纯定价数学叶（<code>TOKEN_PRICING</code> / <code>USD_TO_CNY</code> / <code>resolveProviderPricing</code> / <code>calculateCost</code> / <code>estimateCost</code> / <code>sumRecordsCost</code> / <code>estimateTokens</code>）</td></tr><tr><td><code>services/backend/src/services/tokenUsageService.js</code></td><td>定价数学薄委托 <code>tokenPricing</code>；<code>_usageFile()</code> portable-aware（<code>getAppHome()</code> 优先、legacy home 回退）；21 导出键不变</td></tr><tr><td><code>services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></td><td><code>DEP_GROUPS</code> 五分组 + <code>setAiGatewayGenerateMethodDeps</code> fail-fast 校验；兼容旧扁平桩；移除遗留注入项 <code>extractImageOcrTexts</code></td></tr><tr><td><code>services/backend/src/services/gateway/aiGateway.js</code></td><td>生产注入点改为分组形态传入（绑定值逐项一致）</td></tr><tr><td><code>services/backend/src/services/gateway/proxyServer.js</code></td><td>删除 4 个零引用死函数（<code>reservoirGetDegraded</code> / <code>withFallbackMeta</code> / <code>extractOpenAIContent</code> / <code>sanitizeIpHeaders</code>）</td></tr><tr><td><code>services/backend/src/services/gateway/adapters/relayApiAdapter.js</code></td><td><code>_parseMs</code> 改为同名 require 绑定 <code>_envParse</code></td></tr><tr><td><code>services/backend/src/services/gateway/modelDiscovery.js</code> · <code>adapters/_ideTokenMixin.js</code> · <code>cli/handlers/proxy.js</code></td><td><code>normalizeModelId</code> 改为同名 require 绑定 <code>_modelIdParse</code> 对应变体</td></tr><tr><td><code>services/backend/tests/gateway/envParse.test.js</code> 等 4 个测试</td><td>新增：原子层 / 定价叶 / fail-fast setter 的单测覆盖</td></tr></tbody></table>
+<h2 id="五-验收与守卫">五、验收与守卫<a class="anchor" href="#五-验收与守卫" aria-label="锚点">#</a></h2>
+<p>针对性测试（工作目录 <code>services/backend</code>）：</p>
+<pre><code class="language-bash">npm test -- --runInBand \
+  tests/gateway/envParse.test.js \
+  tests/gateway/modelIdParse.test.js \
+  tests/gateway/aiGatewayGenerateMethodDepsFailFast.test.js \
+  tests/services/tokenPricing.test.js</code></pre>
+<p>守卫脚本（仓库根）：</p>
+<pre><code class="language-bash">node scripts/check-agent-rules.js \
+  services/backend/src/services/gateway/_envParse.js \
+  services/backend/src/services/gateway/_modelIdParse.js \
+  services/backend/src/services/tokenPricing.js \
+  services/backend/src/services/tokenUsageService.js \
+  services/backend/src/services/gateway/aiGatewayGenerateMethod.js \
+  services/backend/src/services/gateway/proxyServer.js</code></pre>
+<p>验收要点：</p>
+<ul><li>上述 4 个新测试套件全部通过；整体回归失败套件名集合相对基线只减不增（133 → 131）。</li><li><code>check-agent-rules</code> 对触及文件 0 新增 error。</li><li>任何后续向 <code>generate()</code> 新增宿主依赖时，必须同步登记进 <code>DEP_GROUPS</code> 对应分组（该表即 setter 契约的单一真源），否则 fail-fast 校验不会保护它。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-032] 有学习价值的Bug汇编-UX漂移与half-wired.html"><div class="dir">← 上一篇</div><div class="ttl">[IMPL-RPT-032] 有学习价值的 Bug 汇编：UX 漂移与 half-wired 一类</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-040] CC-zip1 命令对齐账本.html"><div class="dir">下一篇 →</div><div class="ttl">[IMPL-RPT-040] CC-zip(1) 命令对齐账本(claude-code-main (1).zip)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-033] 后端公理化重构-网关与定价原子化-2026-07-30.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

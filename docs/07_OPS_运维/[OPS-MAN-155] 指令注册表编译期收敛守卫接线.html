@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-155] 指令注册表编译期收敛守卫接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-155] 指令注册表编译期收敛守卫接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-155] 指令注册表编译期收敛守卫接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-155-指令注册表编译期收敛守卫接线">[OPS-MAN-155] 指令注册表编译期收敛守卫接线</a></li><li class="lvl-2"><a href="#背景与缺口-能力存在但没接线">背景与缺口(能力存在但没接线)</a></li><li class="lvl-2"><a href="#为什么这道守卫重要-khyos-自审报告-1">为什么这道守卫重要(khyos 自审报告 #1)</a></li><li class="lvl-2"><a href="#改动-全-additive-零运行时行为变更">改动(全 additive,零运行时行为变更)</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#未来如何维护-给弱智用户-小模型">未来如何维护(给弱智用户/小模型)</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-155-指令注册表编译期收敛守卫接线">[OPS-MAN-155] 指令注册表编译期收敛守卫接线<a class="anchor" href="#ops-man-155-指令注册表编译期收敛守卫接线" aria-label="锚点">#</a></h1>
+<h2 id="背景与缺口-能力存在但没接线">背景与缺口(能力存在但没接线)<a class="anchor" href="#背景与缺口-能力存在但没接线" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/directiveRegistryAudit.js</code> 是一枚<strong>全实现的纯审计原语</strong>,<br>其文件头明确写道:</p>
+<blockquote><p>契约(纯叶子):零 IO、确定性、绝不抛。无门控——这是<strong>审计原语</strong>(被守卫测试消费),<br>不改任何运行时行为,故无需逃生阀。</p></blockquote>
+<p>它导出三个纯函数:</p>
+<ul><li><code>auditDirectiveRegistry(registry, composedKeys)</code> → <code>{ unregistered[], orphaned[], duplicates[], ok }</code></li><li><code>auditRegistryShape(registry, allowedTiers=['guard','protocol'])</code> → <code>{ badTier[], emptyLabel[], ok }</code></li><li><code>extractComposedKeys(source)</code> → 从 <code>composeDirectives(...)</code> 实参块纯文本解析 <code>key:'xxx'</code></li></ul>
+<p><strong>缺口</strong>:文件头说它「被守卫测试消费」,但仓库里<strong>没有任何守卫消费它</strong>——既无测试,<br>也不在任何 CI 套件脚本里。能力完备却完全休眠,正是送别礼「能力存在但没接线 → 负责接线」<br>所指。</p>
+<h2 id="为什么这道守卫重要-khyos-自审报告-1">为什么这道守卫重要(khyos 自审报告 #1)<a class="anchor" href="#为什么这道守卫重要-khyos-自审报告-1" aria-label="锚点">#</a></h2>
+<p>自审报告把「系统提示词膨胀 + 多协议冲突」列为<strong>最严重</strong>问题,根因写明:<br><strong>叠加式协议堆叠、无编译期冲突检测</strong>。</p>
+<p>具体机理:<code>directiveComposer.composeDirectives</code> 对<strong>未注册 key</strong> 静默走 <code>protocol</code> 兜底<br>(<code>meta ? meta.tier : 'protocol'</code>)。这条兜底是韧性设计(绝不丢指令),但同时是<strong>漂移入口</strong>:<br><code>aiChatCore.js</code> 新增一路意图指令却忘了在 <code>DIRECTIVE_REGISTRY</code> 登记 → 它被无声当成 protocol、<br>无 tier 语义、协调头里用裸 key 当 label,协议越堆越乱且无人察觉。</p>
+<p>本接线把 <code>directiveRegistryAudit</code> 变成它设计意图里的那个<strong>编译期收敛机制</strong>:在 CI/提交期<br>断言「注册表 vs aiChatCore.js 实际 compose 的 key 集合」双向一致。</p>
+<h2 id="改动-全-additive-零运行时行为变更">改动(全 additive,零运行时行为变更)<a class="anchor" href="#改动-全-additive-零运行时行为变更" aria-label="锚点">#</a></h2>
+<p>新增守卫测试并登记进 CI 安全套件——<strong>不改任何运行时代码</strong>(审计原语无门控,不需要):</p>
+<ol><li>新增 <code>services/backend/tests/services/directiveRegistryAudit.guard.test.js</code>(node:test 风格):<ul><li>叶纯函数单元:一致→ok;检出 unregistered/orphaned/duplicates;shape 检出非法 tier/空 label;</li></ul></li></ol>
+<p><code>extractComposedKeys</code> 仅在 compose 块内抽取、无调用→空数组不抛。</p>
+<ul><li><strong>接线守卫</strong>:require 真 <code>directiveComposer.DIRECTIVE_REGISTRY</code>,读真 <code>cli/aiChatCore.js</code> 源,</li></ul>
+<p><code>extractComposedKeys</code> → <code>auditDirectiveRegistry</code> 断言 <code>ok===true</code>(unregistered/orphaned/<br>     duplicates 皆空);<code>auditRegistryShape</code> 断言 <code>ok===true</code>。</p>
+<ol><li><code>package.json</code> 的 <code>test:maintainer:safety</code> 套件追加该测试文件——这是<strong>激活/接线</strong>:</li></ol>
+<p>让审计原语第一次拥有真正的生产消费者,在 CI 每次跑。</p>
+<p>现场审计结果(接线时):<code>DIRECTIVE_REGISTRY</code> 登记 21 key == <code>aiChatCore.js</code> compose 21 key,<br><code>unregistered:[], orphaned:[], duplicates:[], ok:true</code>,shape <code>ok:true</code>——不变量当场成立,<br>守卫锁定绿线。21 个 compose key:intentAssurance, intent, multimodalIntent, promptIntentRepair,<br>clarification, diskCleanupClarify, searchNecessity, groundTruth, mathSolve, testWriting,<br>inlineImageOcrGuard, deterministicFacts, errorEnumeration, changeWatch, nlConfig, nlAction,<br>philosophyDesign, laziness, installConfigGuard, goal, deliverySummaryFormat。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --test services/backend/tests/services/directiveRegistryAudit.guard.test.js   # 7/7 绿
+npm run test:maintainer:safety                                                     # 聚合 908 pass / 0 fail / 8 skip
+node --check services/backend/src/services/directiveRegistryAudit.js
+npm run maintainer:check                                                           # 映射表 + 元数据一致</code></pre>
+<h2 id="未来如何维护-给弱智用户-小模型">未来如何维护(给弱智用户/小模型)<a class="anchor" href="#未来如何维护-给弱智用户-小模型" aria-label="锚点">#</a></h2>
+<ul><li>在 <code>aiChatCore.js</code> 新增/删除一路 <code>composeDirectives</code> 的 <code>key:'xxx'</code> 时,<strong>必须</strong>同步在</li></ul>
+<p><code>directiveComposer.DIRECTIVE_REGISTRY</code> 登记该 key(给正确 <code>tier</code>: <code>'guard'</code> 或 <code>'protocol'</code>,<br>  以及非空 <code>label</code>)。否则本守卫红灯:</p>
+<ul><li><code>unregistered</code> 非空 = compose 了却没登记(会落 protocol 兜底,协议漂移);</li><li><code>orphaned</code> 非空 = 登记了却从不 compose(死条目,请移除或接进 compose);</li><li><code>duplicates</code> 非空 = compose 列表里同一 key 重复。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-154] 任务模板执行手册注入接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-154] 任务模板执行手册注入接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-156] 取来即执行安全守卫接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-156] 取来即执行安全守卫接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-155] 指令注册表编译期收敛守卫接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

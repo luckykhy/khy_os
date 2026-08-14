@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>剪贴板粘贴修复 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>剪贴板粘贴修复</div>
+      <header class="hero reveal"><h1>剪贴板粘贴修复</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#剪贴板粘贴修复">剪贴板粘贴修复</a></li><li class="lvl-2"><a href="#问题背景">问题背景</a></li><li class="lvl-2"><a href="#根因分析">根因分析</a></li><li class="lvl-3"><a href="#问题-1-burst-检测时间判断-bug">问题 1：Burst 检测时间判断 bug</a></li><li class="lvl-3"><a href="#问题-2-finally-块绕过粘贴保护">问题 2：finally 块绕过粘贴保护</a></li><li class="lvl-3"><a href="#问题-3-busyqueuewithmerge-自动排队">问题 3：`_busyQueueWithMerge` 自动排队</a></li><li class="lvl-3"><a href="#问题-4-shouldbatchinputline-在空闲状态不生效">问题 4：`_shouldBatchInputLine` 在空闲状态不生效</a></li><li class="lvl-3"><a href="#问题-5-ghost-enter-事件">问题 5：Ghost Enter 事件</a></li><li class="lvl-2"><a href="#方案-采用-deepseek-tui-风格的粘贴突发检测">方案：采用 DeepSeek-TUI 风格的粘贴突发检测</a></li><li class="lvl-2"><a href="#实现">实现</a></li><li class="lvl-3"><a href="#三层粘贴检测">三层粘贴检测</a></li><li class="lvl-3"><a href="#粘贴突发检测状态机">粘贴突发检测状态机</a></li><li class="lvl-3"><a href="#关键常量">关键常量</a></li><li class="lvl-3"><a href="#storependingpaste-统一入口">`_storePendingPaste` — 统一入口</a></li><li class="lvl-3"><a href="#ghost-enter-防护">Ghost Enter 防护</a></li><li class="lvl-3"><a href="#finally-块保护">Finally 块保护</a></li><li class="lvl-2"><a href="#修改文件">修改文件</a></li><li class="lvl-3"><a href="#新增状态变量">新增状态变量</a></li><li class="lvl-2"><a href="#测试验证">测试验证</a></li><li class="lvl-2"><a href="#参考资料">参考资料</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-016 | 阶段: 实现 | 原路径: docs/指南/剪贴板粘贴修复.md --&gt;</p>
+<h1 id="剪贴板粘贴修复">剪贴板粘贴修复<a class="anchor" href="#剪贴板粘贴修复" aria-label="锚点">#</a></h1>
+<blockquote><p>修复日期：2026-05-24<br>涉及模块：<code>backend/src/cli/repl.js</code><br>状态：已实施</p></blockquote>
+<hr>
+<h2 id="问题背景">问题背景<a class="anchor" href="#问题背景" aria-label="锚点">#</a></h2>
+<p>khy REPL 中粘贴内容会被<strong>自动发送</strong>给 AI，用户无法在粘贴后添加提示词或编辑内容。</p>
+<p>期望行为（对齐 Claude Code）：</p>
+<ul><li>短粘贴（≤5 行）：直接显示在 readline 中，可编辑</li><li>长粘贴（&gt;5 行）：折叠为 <code>[Pasted text #N +M lines]</code> 标签</li><li>用户可以在标签前后输入提示词</li><li>只有用户主动按 Enter 才发送</li></ul>
+<h2 id="根因分析">根因分析<a class="anchor" href="#根因分析" aria-label="锚点">#</a></h2>
+<h3 id="问题-1-burst-检测时间判断-bug">问题 1：Burst 检测时间判断 bug<a class="anchor" href="#问题-1-burst-检测时间判断-bug" aria-label="锚点">#</a></h3>
+<p>粘贴作为单个 stdin chunk 到达时，Node.js <code>emitKeypressEvents</code> 同步处理所有字符。<br><code>Date.now()</code> 在同一 event loop tick 返回相同值，导致 <code>elapsed === 0</code>。</p>
+<pre><code class="language-javascript">// BUG: elapsed === 0 时 (0 &gt; 0) 为 false，burst 永远检测不到
+if (elapsed &gt; 0 &amp;&amp; elapsed &lt;= BURST_CHAR_INTERVAL_MS) {
+
+// FIX: 用 _burstLastCharAt &gt; 0 判断是否有前序字符
+if (_burstLastCharAt &gt; 0 &amp;&amp; elapsed &lt;= BURST_CHAR_INTERVAL_MS) {</code></pre>
+<h3 id="问题-2-finally-块绕过粘贴保护">问题 2：finally 块绕过粘贴保护<a class="anchor" href="#问题-2-finally-块绕过粘贴保护" aria-label="锚点">#</a></h3>
+<p>AI 完成后的 <code>finally</code> 清理代码中，有独立的 <code>_busyQueueAccum</code> flush 逻辑，<br>直接把多行内容推入 <code>_queuedInputs</code> 并自动执行，绕过了 <code>_storePendingPaste</code>。</p>
+<pre><code class="language-javascript">// BUG: 直接推入队列自动执行
+_queuedInputs.push(`&lt;pasted-content&gt;\n${merged}\n&lt;/pasted-content&gt;`);
+
+// FIX: 调用 _storePendingPaste 等待用户确认
+_storePendingPaste(merged, null, '', false);</code></pre>
+<h3 id="问题-3-busyqueuewithmerge-自动排队">问题 3：<code>_busyQueueWithMerge</code> 自动排队<a class="anchor" href="#问题-3-busyqueuewithmerge-自动排队" aria-label="锚点">#</a></h3>
+<p>多行粘贴通过 <code>_busyQueueWithMerge</code> 累积后，自动推入 <code>_queuedInputs</code>，<br>不经过用户确认。</p>
+<h3 id="问题-4-shouldbatchinputline-在空闲状态不生效">问题 4：<code>_shouldBatchInputLine</code> 在空闲状态不生效<a class="anchor" href="#问题-4-shouldbatchinputline-在空闲状态不生效" aria-label="锚点">#</a></h3>
+<p>空闲状态下第一行到达时，<code>_shouldBatchInputLine</code> 返回 false，<br>直接穿过 batch 检测被执行。</p>
+<h3 id="问题-5-ghost-enter-事件">问题 5：Ghost Enter 事件<a class="anchor" href="#问题-5-ghost-enter-事件" aria-label="锚点">#</a></h3>
+<p>粘贴尾部的 <code>\n</code> 产生幽灵 Enter 事件，在 <code>_pendingPaste</code> 设置后<br>立即触发 flush 发送。</p>
+<h2 id="方案-采用-deepseek-tui-风格的粘贴突发检测">方案：采用 DeepSeek-TUI 风格的粘贴突发检测<a class="anchor" href="#方案-采用-deepseek-tui-风格的粘贴突发检测" aria-label="锚点">#</a></h2>
+<p>对比了 4 个项目的粘贴处理方案后，采用 DeepSeek-TUI 的<strong>快速按键启发式检测</strong>：</p>
+<table><thead><tr><th>项目</th><th>检测方式</th><th>防止自动发送</th><th>适用场景</th></tr></thead><tbody><tr><td><strong>Claude Code</strong></td><td>bracketed paste + isPasted flag</td><td><code>if (isPasting &amp;&amp; key.return) return</code></td><td>React/Ink TUI</td></tr><tr><td><strong>DeepSeek-TUI</strong></td><td>bracketed paste + 快速按键启发式</td><td>120ms Enter 抑制窗口</td><td>Rust 终端</td></tr><tr><td><strong>LibreChat</strong></td><td>浏览器 onPaste 事件</td><td>Enter-to-Send 可配</td><td>Web 应用</td></tr><tr><td><strong>oh-my-openagent</strong></td><td>委托 opencode</td><td>—</td><td>插件层</td></tr></tbody></table>
+<p>选择 DeepSeek-TUI 方案的原因：</p>
+<ol><li>khy 和 DeepSeek 面临相同问题——终端环境，无法依赖浏览器事件</li><li>双层检测覆盖所有终端类型（有/无 bracketed paste）</li><li>在 <code>_ttyWrite</code> keypress 层直接拦截，不与 readline <code>line</code> 事件竞争</li></ol>
+<h2 id="实现">实现<a class="anchor" href="#实现" aria-label="锚点">#</a></h2>
+<h3 id="三层粘贴检测">三层粘贴检测<a class="anchor" href="#三层粘贴检测" aria-label="锚点">#</a></h3>
+<pre><code>Terminal Input
+    │
+    ├─ Layer 1: Bracketed Paste (_ttyWrite)
+    │   检测 \x1b[200~ ... \x1b[201~ 标记
+    │   设置 _pasteCapturing = true，缓冲所有内容
+    │   → _finishPasteCapture → _storePendingPaste
+    │
+    ├─ Layer 2: Raw Stdin Large Chunk (prependListener)
+    │   检测 length &gt;= 40 &amp;&amp; newlines &gt;= 2
+    │   设置 _rawPasteActive = true，_ttyWrite 吞掉所有 keypress
+    │   → _flushRawPaste → _storePendingPaste
+    │
+    └─ Layer 3: Paste-Burst Heuristic (_ttyWrite, DeepSeek style)
+        追踪连续字符间隔，3+ 字符在 12ms 内 → 判定为粘贴
+        缓冲所有字符，Enter → 换行而非提交
+        150ms 静默后 → _flushBurst → _storePendingPaste</code></pre>
+<h3 id="粘贴突发检测状态机">粘贴突发检测状态机<a class="anchor" href="#粘贴突发检测状态机" aria-label="锚点">#</a></h3>
+<pre><code>                    ┌─ char, elapsed &gt; 12ms ─→ reset consecutive=1
+                    │
+[Idle] ─ char ─→ [Counting]
+                    │
+                    ├─ 2nd char, ≤12ms ─→ consecutive=2
+                    │
+                    └─ 3rd char, ≤12ms ─→ [Active]
+                                            │
+                        ┌─ char ─→ buffer, reset timer
+                        ├─ Enter ─→ buffer '\n', reset timer
+                        └─ 150ms silence ─→ _flushBurst → _storePendingPaste</code></pre>
+<h3 id="关键常量">关键常量<a class="anchor" href="#关键常量" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">BURST_CHAR_INTERVAL_MS = 12   // DeepSeek uses 8ms; 12ms for Node overhead
+BURST_MIN_CHARS        = 3    // 3+ rapid chars → paste
+BURST_SUPPRESS_MS      = 150  // suppress Enter for 150ms after last char</code></pre>
+<h3 id="storependingpaste-统一入口"><code>_storePendingPaste</code> — 统一入口<a class="anchor" href="#storependingpaste-统一入口" aria-label="锚点">#</a></h3>
+<p>无论哪层检测到粘贴，统一走 <code>_storePendingPaste(text, writeFn, prefix, autoCommittedLine)</code>：</p>
+<ul><li><strong>短粘贴</strong>（≤5 行 &amp;&amp; ≤500 字符）：内容直接写入 readline，可编辑</li><li><strong>长粘贴</strong>：设置 <code>_pendingPaste</code>，注入 <code>[Pasted text #N +M lines]</code> 标签</li><li>Busy/非 busy 行为一致：都等用户按 Enter</li></ul>
+<h3 id="ghost-enter-防护">Ghost Enter 防护<a class="anchor" href="#ghost-enter-防护" aria-label="锚点">#</a></h3>
+<pre><code class="language-javascript">// 600ms 时间窗口：_storePendingPaste 后的空 Enter 一律视为幽灵事件
+const msSincePaste = Date.now() - _pendingPasteSetAt;
+if (msSincePaste &lt; 600) {
+    // 静默吞掉，重新注入标签
+    return;
+}</code></pre>
+<h3 id="finally-块保护">Finally 块保护<a class="anchor" href="#finally-块保护" aria-label="锚点">#</a></h3>
+<p>AI 完成后的 <code>finally</code> 清理代码中：</p>
+<ul><li>多行 <code>_busyQueueAccum</code> → <code>_storePendingPaste</code> 而非 <code>_queuedInputs.push</code></li><li><code>_burstActive</code> 残留 → flush 到 <code>_storePendingPaste</code></li><li><code>_pendingPaste !== null</code> → 阻止 <code>_queuedInputs</code> 自动 dequeue</li></ul>
+<h2 id="修改文件">修改文件<a class="anchor" href="#修改文件" aria-label="锚点">#</a></h2>
+<ul><li><code>backend/src/cli/repl.js</code> — 所有修改集中在此文件</li></ul>
+<h3 id="新增状态变量">新增状态变量<a class="anchor" href="#新增状态变量" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Variable</th><th>Scope</th><th>Purpose</th></tr></thead><tbody><tr><td><code>_burstLastCharAt</code></td><td>outer</td><td>上一个 plain char 的时间戳</td></tr><tr><td><code>_burstConsecutive</code></td><td>outer</td><td>连续快速字符计数</td></tr><tr><td><code>_burstActive</code></td><td>outer</td><td>burst 模式是否激活</td></tr><tr><td><code>_burstBuf</code></td><td>outer</td><td>burst 缓冲区</td></tr><tr><td><code>_burstWindowUntil</code></td><td>outer</td><td>Enter 抑制窗口截止时间</td></tr><tr><td><code>_burstFlushTimer</code></td><td>outer</td><td>150ms flush 定时器</td></tr><tr><td><code>_pendingPasteSetAt</code></td><td>outer</td><td><code>_storePendingPaste</code> 调用时间戳</td></tr><tr><td><code>_pasteCapturing</code></td><td>outer</td><td>提升自 <code>_ttyWrite</code> 闭包，line handler 可检查</td></tr></tbody></table>
+<h2 id="测试验证">测试验证<a class="anchor" href="#测试验证" aria-label="锚点">#</a></h2>
+<ol><li><strong>空闲状态粘贴</strong>：粘贴多行 → 应显示 <code>[Pasted text #N +M lines]</code>，不自动发送</li><li><strong>Busy 状态粘贴</strong>：AI 运行时粘贴 → 同上，显示标签 + hint</li><li><strong>粘贴后加提示词</strong>：粘贴后输入 &quot;分析这段代码&quot; → Enter → 发送粘贴内容 + 提示词</li><li><strong>短粘贴</strong>：粘贴 3 行 → 内容直接显示在 readline 可编辑</li><li><strong>单行输入</strong>：正常输入 Enter → 应正常发送（~90ms 延迟不可感知）</li><li><strong>SSH/tmux</strong>：无 bracketed paste 的终端 → burst 检测应生效</li></ol>
+<h2 id="参考资料">参考资料<a class="anchor" href="#参考资料" aria-label="锚点">#</a></h2>
+<ul><li>DeepSeek-TUI paste-burst: <code>crates/tui/src/tui/paste_burst.rs</code></li><li>Claude Code paste handler: <code>src/hooks/usePasteHandler.ts</code></li><li>Claude Code submit handler: <code>src/utils/handlePromptSubmit.ts</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-015] 修复记录时间线.html"><div class="dir">← 上一篇</div><div class="ttl">KHY OS 修复记录时间线</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-017] 守护进程端口发现修复.html"><div class="dir">下一篇 →</div><div class="ttl">守护进程端口发现机制 — 设计文档与学习指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-016] 剪贴板粘贴修复.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多渠道发布工具箱（scripts/release/publish/） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>scripts<span class="sep">›</span>release<span class="sep">›</span>publish<span class="sep">›</span>多渠道发布工具箱（scripts/release/publish/）</div>
+      <header class="hero reveal"><h1>多渠道发布工具箱（scripts/release/publish/）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#多渠道发布工具箱-scripts-release-publish">多渠道发布工具箱（scripts/release/publish/）</a></li><li class="lvl-2"><a href="#快速开始">快速开始</a></li><li class="lvl-2"><a href="#通用参数">通用参数</a></li><li class="lvl-2"><a href="#安全red-line">安全red line</a></li><li class="lvl-2"><a href="#源码还原-fresh-machine">源码还原（fresh-machine）</a></li><li class="lvl-2"><a href="#共享库">共享库</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="多渠道发布工具箱-scripts-release-publish">多渠道发布工具箱（scripts/release/publish/）<a class="anchor" href="#多渠道发布工具箱-scripts-release-publish" aria-label="锚点">#</a></h1>
+<p>引导式发布脚本：把 khy-os 发布到 <strong>pip / npm / GitHub / GitLab / Gitee</strong> 五个渠道。</p>
+<p>设计目标——<strong>离机可用</strong>：这些脚本随源码快照一起打进 pip/npm 包。在一台只装了<br><code>pip install khy-os</code>（没有工作树、没有 <code>.git</code>）的全新机器上，任意脚本都会先<br><code>khy restore</code> 还原完整源码、必要时 <code>git init</code> 建仓，然后再发布。你只需要设置好<br>仓库地址并提供一个 token。</p>
+<table><thead><tr><th>脚本</th><th>渠道</th><th>仓库地址</th><th>凭据环境变量（优先级从高到低）</th></tr></thead><tbody><tr><td><code>publish-pip.sh</code></td><td>PyPI（khy-os）</td><td><strong>默认原仓库</strong>，无需设置</td><td><code>TWINE_PASSWORD</code> / <code>PYPI_TOKEN</code> / <code>PYPI_API_TOKEN</code></td></tr><tr><td><code>publish-npm.sh</code></td><td>npm（@khy-os/khy-os）</td><td>引导（默认 npmjs.org）</td><td><code>NPM_TOKEN</code> / <code>NODE_AUTH_TOKEN</code> / <code>NPM_AUTH_TOKEN</code></td></tr><tr><td><code>publish-github.sh</code></td><td>GitHub 源码</td><td>引导 <code>owner/repo</code></td><td><code>GITHUB_TOKEN</code> / <code>GH_TOKEN</code></td></tr><tr><td><code>publish-gitlab.sh</code></td><td>GitLab 源码</td><td>引导 <code>owner/repo</code></td><td><code>GITLAB_TOKEN</code> / <code>GL_TOKEN</code> / <code>CI_JOB_TOKEN</code></td></tr><tr><td><code>publish-gitee.sh</code></td><td>Gitee 源码</td><td>引导 <code>owner/repo</code>（+用户名）</td><td><code>GITEE_TOKEN</code></td></tr></tbody></table>
+<blockquote><p>pip 与其它渠道的区别：<strong>pip 默认发到 khy-os 的原始 PyPI 仓库</strong>，只要 token；<br>其它渠道只需引导设置仓库地址 + 输入 token，即可还原源码并发布。</p></blockquote>
+<h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># pip —— 默认原仓库，只需 token
+PYPI_TOKEN=pypi-xxxx bash scripts/release/publish/publish-pip.sh
+
+# npm —— 引导 registry + token
+NPM_TOKEN=npm_xxxx bash scripts/release/publish/publish-npm.sh
+
+# GitHub / GitLab —— owner/repo + token
+GITHUB_TOKEN=ghp_xxxx bash scripts/release/publish/publish-github.sh --repo kodehu03/khy-os
+GITLAB_TOKEN=glpat_xx bash scripts/release/publish/publish-gitlab.sh --repo kodehu03/khy-os
+
+# Gitee —— 需要账号用户名
+GITEE_TOKEN=xxxx bash scripts/release/publish/publish-gitee.sh --repo kodehu03/khy-os --user kodehu03</code></pre>
+<p>不带凭据环境变量运行时，脚本会<strong>隐藏输入</strong>（不回显）提示你键入 token。</p>
+<h2 id="通用参数">通用参数<a class="anchor" href="#通用参数" aria-label="锚点">#</a></h2>
+<ul><li><code>--dry-run</code> —— 走完整流程但<strong>不真实上传/推送</strong>（pip=<code>twine check</code>，npm=<code>npm publish --dry-run</code>，</li></ul>
+<p>git=跳过 <code>git push</code>）。用于安全彩排。</p>
+<ul><li><code>-y, --yes</code> —— 非交互模式；此模式下 token <strong>必须</strong>来自环境变量。</li><li><code>-h, --help</code> —— 每个脚本的完整参数说明。</li></ul>
+<p>git 渠道额外：<code>--repo SLUG</code>、<code>--user NAME</code>、<code>--branch NAME</code>、<code>--force</code>（<code>--force-with-lease</code>）。<br>pip 额外：<code>--repository NAME</code>、<code>--test-pypi</code>、<code>--no-isolation</code>、<code>--skip-build</code>。<br>npm 额外：<code>--registry URL</code>、<code>--access public|restricted</code>、<code>--skip-tests</code>。</p>
+<h2 id="安全red-line">安全red line<a class="anchor" href="#安全red-line" aria-label="锚点">#</a></h2>
+<ul><li><strong>Token 绝不回显、绝不落盘为持久配置</strong>：git 渠道用一次性 token URL 直接</li></ul>
+<p><code>git push &lt;url&gt;</code>，token 不写进 <code>.git/config</code>；同时登记一个<strong>免 token</strong> 的持久<br>  remote 供你后续手动使用。npm 渠道把 authToken 写进一次性 <code>.npmrc</code>，发布后<br>  <code>trap</code> 立即删除（若检测到你已有 <code>.npmrc</code> 则复用、不覆盖）。</p>
+<ul><li><strong>打印的 URL 一律脱敏</strong>（<code>user:token@</code> → <code>***@</code>）。</li><li><strong>发布前先审计</strong>：pip 复用隔离构建 + 纯净度审计（node_modules/模型/二进制绝不</li></ul>
+<p>进包）；npm 复用 <code>audit:purity</code> + 单元测试。任一失败即在上传前中止。</p>
+<h2 id="源码还原-fresh-machine">源码还原（fresh-machine）<a class="anchor" href="#源码还原-fresh-machine" aria-label="锚点">#</a></h2>
+<p>脚本按此顺序定位源码树：</p>
+<ol><li><code>KHY_PUBLISH_ROOT</code>（显式覆盖，必须是有效源码树）</li><li>脚本所在的就地 checkout</li><li>自动 <code>khy restore &quot;$KHY_RESTORE_DIR&quot; --force</code>（默认 <code>./khy-os-src</code>）——从 pip/npm</li></ol>
+<p>包内嵌的加密快照还原完整源码</p>
+<p>还原出的快照是 <code>git archive</code>（不含 <code>.git</code>），git 渠道会自动 <code>git init</code> + 提交，<br>然后推送。</p>
+<h2 id="共享库">共享库<a class="anchor" href="#共享库" aria-label="锚点">#</a></h2>
+<ul><li><code>_common.sh</code> —— 日志、隐藏输入、<code>ensure_source_tree</code>、<code>ensure_git_repo</code>、</li></ul>
+<p>per-forge token URL 构造、<code>push_with_token</code>、<code>resolve_token</code>。</p>
+<ul><li><code>_git-forge.sh</code> —— 三个 git 渠道的共享驱动；<code>publish-github/gitlab/gitee.sh</code></li></ul>
+<p>只是声明 <code>PLATFORM=</code> 的薄封装。</p>
+<p>以 <code>_</code> 开头的文件是库，不直接执行。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../scripts/README.html"><div class="dir">← 上一篇</div><div class="ttl">scripts/ — 项目管理与自动化脚本</div></a><a class="next" href="../../../scripts/release/README-runtime-placement.html"><div class="dir">下一篇 →</div><div class="ttl">内网 / 离线主机:本地放置推理 runner(方案 A)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="scripts/release/publish/README.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

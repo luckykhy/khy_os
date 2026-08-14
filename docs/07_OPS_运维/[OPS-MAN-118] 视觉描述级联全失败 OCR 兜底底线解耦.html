@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-118] 视觉描述级联全失败 → OCR 兜底底线与「失败说明门」解耦 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-118] 视觉描述级联全失败 → OCR 兜底底线与「失败说明门」解耦</div>
+      <header class="hero reveal"><h1>[OPS-MAN-118] 视觉描述级联全失败 → OCR 兜底底线与「失败说明门」解耦</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-118-视觉描述级联全失败-ocr-兜底底线与-失败说明门-解耦">[OPS-MAN-118] 视觉描述级联全失败 → OCR 兜底底线与「失败说明门」解耦</a></li><li class="lvl-2"><a href="#背景-前六条都在-ocr-路径-内部-这条在到达-ocr-路径-之前">背景（前六条都在 OCR 路径**内部**，这条在到达 OCR 路径**之前**）</a></li><li class="lvl-2"><a href="#断桥-2026-07-12-用户实测-khy-无法正确读图">断桥（2026-07-12 用户实测「Khy 无法正确读图」）</a></li><li class="lvl-2"><a href="#修复-全-additive-独立门-khy-vision-describe-fail-ocr-floor-default-on-门关逐字节回退">修复（全 additive · 独立门 `KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR` default-on · 门关逐字节回退）</a></li><li class="lvl-2"><a href="#诚实边界-红线">诚实边界（红线）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-118-视觉描述级联全失败-ocr-兜底底线与-失败说明门-解耦">[OPS-MAN-118] 视觉描述级联全失败 → OCR 兜底底线与「失败说明门」解耦<a class="anchor" href="#ops-man-118-视觉描述级联全失败-ocr-兜底底线与-失败说明门-解耦" aria-label="锚点">#</a></h1>
+<h2 id="背景-前六条都在-ocr-路径-内部-这条在到达-ocr-路径-之前">背景（前六条都在 OCR 路径<strong>内部</strong>，这条在到达 OCR 路径<strong>之前</strong>）<a class="anchor" href="#背景-前六条都在-ocr-路径-内部-这条在到达-ocr-路径-之前" aria-label="锚点">#</a></h2>
+<p>当模型不支持看图（纯文本 / 非多模态 / 识图模型不可用）时，khy 应落到 OCR 兜底路径<br>（gateway → <code>ocrSnippetService.js</code> → <code>docHelper.py</code> → tesseract），把图里文字提取出来注入<br>提示词让文本模型据此作答。围绕「准确识别图片」，前六条轴都在<strong>加固 OCR 路径内部的诚实性</strong>：</p>
+<table><thead><tr><th>OPS</th><th>轴</th><th>层次</th></tr></thead><tbody><tr><td>OPS-MAN-104</td><td>置信度（accuracy）</td><td>OCR 路径内</td></tr><tr><td>OPS-MAN-109</td><td>覆盖度（coverage）</td><td>OCR 路径内</td></tr><tr><td>OPS-MAN-111</td><td>单图截断（completeness）</td><td>OCR 路径内</td></tr><tr><td>OPS-MAN-112</td><td>语言包可用性（language）</td><td>OCR 路径内</td></tr><tr><td>OPS-MAN-115</td><td>方向自动校正（orientation·纠正型）</td><td>OCR 路径内</td></tr><tr><td>OPS-MAN-116</td><td>低分辨率自动放大（resolution·纠正型）</td><td>OCR 路径内</td></tr><tr><td><strong>OPS-MAN-118</strong></td><td><strong>描述级联全失败 → 可靠到达 OCR 底线（control-flow）</strong></td><td><strong>OCR 路径之前</strong></td></tr></tbody></table>
+<p>本条是<strong>上游控制流</strong>轴：前六条都假定「已经落到 OCR 路径」，本条保证在视觉描述级联<br>（describe-and-return）<strong>全部失败</strong>时，khy <strong>一定到达</strong>剥图 + OCR + 诚实底线，而不会在到达之前<br>就把读不出的图甩给刚刚失败的视觉模型、让文本模型谎称「没收到图片」。</p>
+<h2 id="断桥-2026-07-12-用户实测-khy-无法正确读图">断桥（2026-07-12 用户实测「Khy 无法正确读图」）<a class="anchor" href="#断桥-2026-07-12-用户实测-khy-无法正确读图" aria-label="锚点">#</a></h2>
+<p>用户在一台 Windows 机（<code>D:\Python312\python.exe</code>）发图 + 结构化提示：<br>「请先描述图片中的关键信息，再推断我想完成的目标，并给出下一步可执行操作」。khy 先后尝试<br>视觉模型 <code>glm/glm-4.6v-flash</code>、<code>glm-4v-flash</code>，全部 404（<code>model_not_found</code>）→ <code>socket hang up</code><br>网络错误；随后文本模型<strong>幻觉</strong>回复：</p>
+<blockquote><p>我注意到你发了一条结构化提示，但消息里没有附带图片。<br>关键发现：当前对话中没有任何图片附件。我无法描述不存在的内容。</p></blockquote>
+<p>根因：<code>aiGatewayGenerateMethod.js</code> 里 describe-and-return 级联全失败后，那段<br>「<strong>剥图 + OCR 兜底 + 『图片确实收到但读不出』诚实底线</strong>」的<strong>安全不变量</strong>代码，被历史地嵌进<br><code>if (_summaryOn)</code>（<code>_summaryOn = KHY_VISION_FAILURE_SUMMARY</code>，一个<strong>纯装饰</strong>的人可见失败说明门）。<br>当用户把失败说明门<strong>关掉</strong>时，底线被<strong>一并跳过</strong> → 控制流落到 switch 替换，把读不出的图<strong>留着</strong><br>改投<strong>刚刚 404 的视觉模型</strong> → 最终文本模型在<strong>毫无「图片存在」说明</strong>下作答 → 于是如实却荒谬地<br>回「消息里没有附带图片」。<strong>安全底线不该由一个装饰门控开关。</strong></p>
+<h2 id="修复-全-additive-独立门-khy-vision-describe-fail-ocr-floor-default-on-门关逐字节回退">修复（全 additive · 独立门 <code>KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR</code> default-on · 门关逐字节回退）<a class="anchor" href="#修复-全-additive-独立门-khy-vision-describe-fail-ocr-floor-default-on-门关逐字节回退" aria-label="锚点">#</a></h2>
+<p>把「安全底线」与「失败说明」<strong>解耦</strong>，各自独立门控：</p>
+<ol><li><strong>纯叶 <code>gateway/visionOcrFallback.js</code></strong> 新增 <code>isDescribeFailFloorEnabled(env)</code>：</li></ol>
+<p>default-on，仅显式 <code>0/false/off/no</code> 关闭；env 经 opts 注入可测，绝不抛。</p>
+<ol><li><strong><code>aiGatewayGenerateMethod.js</code>（Site 1，describe 级联失败救援）</strong>：把原来单一的</li></ol>
+<p><code>if (_summaryOn) { 发说明 + 底线体 }</code> 拆成两段——</p>
+<ul><li><code>if (_summaryOn) { 只发人可见失败说明 }</code>（装饰，维持原样）；</li><li><code>if (_summaryOn || _floorOn) { 底线体 }</code>（剥图 + OCR 兜底 + 诚实底线，<strong>字节不变</strong>，</li></ul>
+<p>只有守卫条件变了）。<br>   底线体本身（<code>extractImageOcrDetails</code> 提取、OCR 有文本 → 注入 OCR 块 + 六条告诫 + key 邀约 +<br>     剥图，OCR 无文本 → <code>buildVisionUnreadableNote</code> 底线 + 剥图，<code>hasImageInput=false</code>、<br>     <code>_describeDone=true</code>）逐字节照旧。</p>
+<ol><li><strong><code>flagRegistry.js</code></strong>：登记 <code>KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR: { mode: 'default-on', off: 'CANON', default: true }</code>。</li></ol>
+<p><strong>逐字节回退</strong>：<code>_floorOn</code> 关 → <code>if (_summaryOn || false)</code> ≡ 原 <code>if (_summaryOn)</code>；两门同时关 →<br>完全等同历史行为（图留着、切到 switch-model 目标）。</p>
+<h2 id="诚实边界-红线">诚实边界（红线）<a class="anchor" href="#诚实边界-红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>两不变量强制</strong>：描述级联全失败时，无论失败说明是否展示，都保证「**非视觉模型永不收到</li></ul>
+<p>裸图<strong>」（剥图）且「</strong>绝不谎称没收到图**」（底线注入 <code>绝不能说没有收到图片</code>）。</p>
+<ul><li><strong>底线是安全、说明是装饰</strong>：安全不变量不再由装饰门 <code>KHY_VISION_FAILURE_SUMMARY</code> 决定去留；</li></ul>
+<p>失败说明依旧可独立开关，互不牵连。</p>
+<ul><li><strong>门关即回退</strong>：<code>KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR=off</code> → 逐字节还原历史行为（把断桥交回，</li></ul>
+<p>证明本轮改动是纯 additive 的解耦）。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li>纯叶：<code>node --test services/backend/tests/visionOcrFallback.test.js</code>（25/25，含新门默认开 /</li></ul>
+<p>仅显式关闭 / 畸形不抛 3 例）。</p>
+<ul><li>接线（断桥闭合）：<code>visionDescribeFailFloorWiring.test.js</code>（4/4，自带录制 adapter + DI，</li></ul>
+<p><code>KHY_VISION_FALLBACK_MODEL</code> 钉视觉模型逼出 switch-model、describe-pass 恒返 404）：</p>
+<ul><li>A) 失败说明<strong>开</strong> + OCR 有文本 → 剥图 + 注入 OCR 文本，原文本模型作答；</li><li>B) 失败说明<strong>开</strong> + OCR 无文本 → 剥图 + 注入 <code>[图像无法读取]…绝不能说没有收到图片</code> 底线；</li><li>C) <strong>修复点</strong>：失败说明<strong>关</strong> + OCR 无文本 → <strong>仍</strong>剥图 + 底线，由<strong>原文本模型</strong>（非已 404 的</li></ul>
+<p>视觉模型）作答——精确复现并堵死用户的「消息里没有附带图片」幻觉；</p>
+<ul><li>D) 底线门<strong>关</strong> + 失败说明关 → <strong>逐字节回退</strong>（图留着、切到 <code>glm-4v-flash</code>、不注入底线）。</li></ul>
+<p>tesseract/eng/Pillow 干净 skip）：用 PIL 渲染真 PNG &quot;INVOICE ACME 2026&quot;（对话到达时携 base64），<br>  在 <code>KHY_VISION_FAILURE_SUMMARY=off</code>（<strong>用户失败配置</strong>）下，DI 一个<strong>逐字节镜像生产实现</strong><br>  （base64 → 临时文件 → <strong>真 tesseract</strong>）的 <code>extractImageOcrDetails</code>，断言：最终<strong>文本模型</strong><br>  prompt 命中 <code>/INVOICE/</code>（<strong>准确识别</strong>）+ 含「以下为图片 OCR 识别文本」+ 图被剥离 +<br>  <code>model === 'text-only-model'</code>。证明纯文本模型 + 视觉全 404 + 失败说明关下，khy 仍准确读出真图。</p>
+<ul><li>聚合：<code>npm run test:vision-describe-fail-floor</code>（三文件，30/30），并入 <code>test:maintainer:safety</code>。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<p>安全不变量绝不该由<strong>装饰门</strong>决定去留。前六条诚实轴都在「已经落到 OCR 路径」的前提下加固，<br>本轮的断桥在<strong>更上游</strong>：一段「剥图 + OCR + 底线」的安全代码被历史地藏进一个纯装饰的失败说明门<br>（<code>_summaryOn</code>），用户一关说明门，安全底线随之蒸发，控制流落到把读不出的图甩给刚 404 的视觉模型，<br>文本模型于是如实却荒谬地否认收到过图片。判据 = 找到「保证正确性的安全代码」与「纯展示的装饰开关」<br>被错误地耦合在同一个 <code>if</code> 里；修法 = 用独立 default-on 门把安全底线<strong>解耦</strong>出来，让它在描述级联<br>全失败时<strong>无条件</strong>执行，同时保留装饰门的独立开关与逐字节回退。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-117] 还原完整性对账·运行时接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-117] 还原完整性对账 · 运行时接线（让 khy restore 横幅诚实）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-119] 还原解密前兼容性预检·运行时接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-119] 还原「解密前」兼容性预检 · 运行时接线（让套件不兼容不再谎报口令错）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-118] 视觉描述级联全失败 OCR 兜底底线解耦.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

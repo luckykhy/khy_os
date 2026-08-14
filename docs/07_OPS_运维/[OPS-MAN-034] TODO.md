@@ -1,0 +1,327 @@
+<!-- 文档分类: OPS-MAN-034 | 阶段: 运维 | 原路径: docs/维护者/TODO.md -->
+# 当前协作待办
+
+更新时间: 2026-06-01
+
+范围约束:
+- 当前只聚焦 `backend/src/cli/*`、`backend/src/services/*`、`backend/tests/*`
+- 暂不触碰 `khy_os-0.1.78/` 的批量删除项
+- 在工作树大面积脏变更未澄清前，优先做小范围、可验证修复
+
+当前已确认状态:
+- `npm run check:version-sync` 通过，版本同步为 `0.1.80`
+- v0.1.80 新增: TUI 工作叙事协议 + 交互选择覆盖层 + 表格渲染修复 + 默认 admin05 登录
+- `node scripts/check-agent-rules.js --changed` 当前通过，无规则告警；`claudeAdapter.js` 的 3 个固定超时告警已改为 activity-based kill escalation
+- `npm --prefix backend test -- --runInBand backend/tests/initDoctor.codingAgentSmoke.test.js backend/tests/services/traceAuditService.requestId.test.js` 通过
+- `khy doctor` 当前结果为 `20 通过 · 5 警告 · 0 失败`
+- `Codex` 运行时诊断已持久化到 `~/.khy/gateway/codex_runtime_diagnostics.json`
+  - 持久化结构现为双槽位：`latest` + `lastFirstResponseTimeout`
+  - 目的：避免后续 `provider_fallback_recovered` / healed 记录覆盖最近一次首响 stall 证据
+  - `khy doctor` 新起进程后也能跨进程读取，并在 `Codex 自愈状态` 中追加 `最近首响阻塞`
+- 已新增通用 `runtimeDiagnosticsStore`
+  - 新文件: `backend/src/services/gateway/runtimeDiagnosticsStore.js`
+  - 统一持久化结构: `latest` + `latestByTrigger` + `latestByCategory`
+  - 当前已接入 `codex` 与 `claude`
+  - `doctor` 现已按活跃 adapter 通用消费；非 `codex` 通道会显示 `${adapterName} 运行时诊断`
+- `首段语言一致性` 已从误报失败修正为信息态
+- `最近交付链路` 已从误报告警修正为“仅记录最终交付事件”的信息态
+- `KHY_GATEWAY_DEBUG_PROMPT=1` 证据已采集：`/tmp/khy_gateway_prompt_debug.log` 明确显示 `codex/cursor/claude` 请求前均已注入 `KHY Protocol Priority` 与 `KHY PRIORITY DIRECTIVE`
+- 已采到 `Codex CLI` 启动噪声的原始证据：
+  - `codex exec --json` 在真实模型正文前就会输出 `thread.started` / `turn.started` / `error: Reconnecting...`
+  - 同时 `stderr` 还会输出 `WARNING: proceeding, even though we could not update PATH...`、`Reading prompt from stdin...`、`failed to record rollout items: channel closed`
+  - 结论: 先前 `firstResponseTimer` 被“任意子进程字节”过早清掉，导致请求虽然没有真实模型进展，却不会按首响超时收口
+- 已新增可重复采样入口:
+  - `khy gateway sample codex --attempts 4 --timeout-ms 12000 --json`
+  - 该命令会串行运行 strict Codex 样本，并聚合 `promptInjected / firstChunk / timeout / requestId`
+  - 已用真实命令验证: `requestId=7824e04010a6cafcbc79682c6b91b080`，输出目录 `/tmp/khy-gateway-sample-codex-1780207669060`
+- 本地审计历史已证实 `Codex CLI (mindflow)` 存在真实且间歇性的中文偏航，不再只是理论风险
+- 已定位 `summary_only` 的主要成因：`toolUseLoop -> chat/aiGateway` 曾漏传 `sessionId/requestId/_diagTraceId`，导致 `agent.delivery.final` 与 `llm.request/response` 分落不同 trace
+- 已补齐 `ai.chat -> aiGateway.generate` 的最后一跳 trace 透传；当前 `~/.khy/audit` recent `summary_only` 仍主要是修复前历史样本与本地测试伪请求
+- 已完成真实 home-audit live run 验证：
+  - one-shot `startRepl({ oneShot: true })` 只走 `ai.chat`，可验证 `llm.request/response`，但不会产出 `agent.delivery.final`
+  - 交互 REPL + `toolUseLoop` 的真实请求 `requestId=d8af0a2c6e0d8b8430668dc9b2845e82` 已在同一 requestId 上落下 `llm.request`、`llm.response`、`agent.tool.call/result`、`agent.delivery.final`
+  - `node backend/bin/khy.js gateway status --json` 已同步反映最新受约束闭环请求 `requestId=8eb49ea7c0c2f6d98ff5e4bdabfdafbf`：`latestDeliveryRequest.status=completed`，`latestLanguageConsistency.requestId` 也已对齐
+  - 新的真实约束闭环请求 `requestId=8eb49ea7c0c2f6d98ff5e4bdabfdafbf` 已证明“不要调用任何工具 / 不要搜索 / 不要读取文件”会被前置约束和执行层拦截共同尊重，最终 `agent.delivery.final.totalToolCalls=0`
+  - 上述请求同一 `requestId` 仍保留了 `llm.request`、`agent.language.first_chunk`、`llm.response`、`agent.delivery.final`，说明当前结论已从“协议优先级风险猜测”推进到“约束守卫生效且可审计”的结论
+  - 本地本次执行 `node backend/bin/khy.js gateway status --json` 在当前环境约 `11s` 返回，消费端可用但仍偏慢
+- 已量化 `summary_only` 残留现状：
+  - 扫描最近 `1000` 个 session，共发现 `96` 个带 `agent.delivery.final` 的 request，其中 `summary_only=15`（`15.63%`）
+  - 但最近 `50` 个 request 里 `summary_only=2`（`4%`）；最近 `20` 个 session 中已降到 `0`
+  - 最新 `summary_only` 样本为 `requestId=94e0350b2aae0904ab1289b8fe0dfc57`，时间 `2026-05-31T03:32:54.754Z`；之后已出现 `requestId=d8af0a2c6e0d8b8430668dc9b2845e82` 与 `8eb49ea7c0c2f6d98ff5e4bdabfdafbf` 的真实闭环请求
+  - 当前 `summary_only` 样本都表现为单条 `agent.delivery.final`、`source=tool-loop`、`eventCount=1`、`totalToolCalls=0`、`hasConclusion=false`
+- 新发现: 修复后仍存在多条 `eventCount=1` 但 `status=completed` 的 request（如 `requestId=7d03583eb9b8eaf5cbd0922d6c1214c1`，时间 `2026-05-31T04:19:04.703Z`），说明“只落最终交付事件”的问题并未完全消失，只是部分样本因 `hasConclusion=true` 不再落入 `summary_only`
+- 已完成旁路补审计:
+  - `backend/src/cli/ai.js` 里的 `khy-fastpath` 与 `_directGenerate -> multiFreeService.generateResponse` 已补 `llm.request/response`
+  - 真实 home-audit live run `requestId=11111111111111111111111111111111` 已证明 `toolUseLoop + khy-fastpath` 现在会同时落下 `agent.loop.start`、`llm.request`、`llm.response`、`agent.delivery.final`，不再是单条 final 事件
+- 已定位近期 `eventCount=1` 且 `status=completed` 的主要来源:
+  - `traceAudit.logEvent()` 在缺少 `sessionId` 时会自动生成 `sess_*`
+  - `toolUseLoop` 即使没有显式 session，也会落 `agent.delivery.final`
+  - Jest 默认此前会把这类测试事件写进 `~/.khy/audit`，从而制造大量 `finalReplyLength=5`、`hasConclusion=true`、`source=tool-loop` 的单事件 session
+  - 典型噪音已与测试对上：`sess-trace-pass` 来自 `backend/tests/toolUseLoop.structuredContext.test.js`，其 `Done.` 恰好对应 `finalReplyLength=5`
+- 已修复测试污染 home-audit 的根因:
+  - `backend/src/services/traceAuditService.js` 现在在 `NODE_ENV=test` 或存在 `JEST_WORKER_ID` 且未显式设置 `KHY_TRACE_AUDIT_DIR` 时，默认落到 `/tmp/khy-audit-jest/worker-*`
+  - 这会阻止后续 Jest 继续把单事件 session 写进 `~/.khy/audit`
+- 当前工作树共有 `1510` 条变更，其中 `1480` 条是 `khy_os-0.1.78/` 整包删除
+- 已完成 `khy_os-0.1.78/` 删除归因:
+  - `git log --diff-filter=AD --all -- '*khy_os-*'` 仅显示 `df9589f` 新增 `khy_os-0.1.74/` 与 `2e3a0d6` 新增 `khy_os-0.1.78/`，不存在既定的历史清理链路
+  - 顶层当前仍保留 `khy_os-0.1.74/`（约 `158M`，`1472` 个 tracked files），而 `khy_os-0.1.78/` 处于不对称整包删除态（`1480` 个删除）
+  - 根目录 `setup.py` 仅打包当前源码树生成的 `khy_os/bundled/**/*`；CI/release 也只消费根目录 `pyproject.toml`、`setup.py`、`scripts/*`
+  - 结论: `khy_os-0.1.78/` 不是运行时/构建时硬依赖，但当前删除形态更像误删或半途清理，不应混入本轮协议/审计修复提交
+  - 处理建议: 本轮继续不触碰该目录内容；若要治理版本快照，单独发起对称清理或迁移，并补仓库层策略说明
+- 已把 `Codex CLI (mindflow)` 的语言约束前置到请求入口:
+  - `backend/src/services/gateway/aiGateway.js` 现在会在中文请求命中 `codex` 时，显式注入 `# Language` 中文约束块
+  - 该约束会稳定进入 `codexAdapter.buildCliPrompt()` 的 flatten prompt，而不再只依赖通用优先级提示和事后纠偏
+  - 聚焦回归已通过: `backend/tests/aiGateway.languageConsistency.test.js`、`backend/tests/gatewayAdapters.stability.test.js`
+- 已补 live audit 证据，但暂未拿到可用首段正文样本:
+  - 真实 REPL 请求 `requestId=2eee500e765b48120e7c3d9b2d4ee429` 已证明 `Codex CLI (mindflow)` 实际请求中确实包含前置 `# Language` 中文约束
+  - 对应 `/tmp/khy-live-audit-codex-20260531/prompt.log` 明确记录: `system_preview=# Language KHY expected output: Simplified Chinese...`
+  - 该请求随后被上游传输异常拖入长时间 `Reconnecting...`，最终人工中断；因此只拿到了 `final_response=请求已取消`，没有可用于判断英文首段是否下降的正文首块
+  - 更轻量的 print-mode 请求 `requestId=d07601333b3d92857c87fbc4a20ea838` 也已发出并记录同样的前置 `# Language` 注入，但截至检查时仅落下 `llm.request` / `diag.model_request`，仍无 `llm.response`
+  - 新 one-shot 请求 `requestId=80aceeb617b47ee17a9d88eacb96bf14`（审计目录 `/tmp/khy-live-audit-codex-20260531c`）再次落盘同样证据：
+    - `prompt.log` 记录 `system_preview=# Language KHY expected output: Simplified Chinese...`
+    - `prompt_preview` 记录 `[KHY PRIORITY DIRECTIVE] ... Default to Chinese ...`
+  - 该请求在早期观测窗口内一度只落下 `llm.request` / `diag.model_request`，表现得像“响应前卡死”
+  - 但后续继续复盘同一 `requestId` 可见它最终演化为：
+    - `typeCounts = { llm.request, diag.model_request, agent.language.final_response, llm.response }`
+    - 当前 `latestDeliveryRequest.status=response_only`
+    - `latestDeliveryRequest.brokenStage=null`
+    - `latestLanguageConsistency.status=aligned`
+    - `latestLanguageConsistency.adapter=API 中转`
+    - `latestLanguageConsistency.source=final_response`
+  - 结论: 这条真实样本不是“永久卡在响应前”，而是更接近“Codex 超时后回退到 API 中转，并生成了中文最终答复”；由于该请求属于 one-shot `ai.chat`，当前已把它从 `delivery_event_missing` 误报修正为 `response_only`，不再误判成 tool-loop 断链；它仍然证明 KHY 前置中文协议已经真实进了请求，但暂时仍不能用于衡量英文首段下降幅度
+  - 新增一条“尽量只走 Codex”的 strict 样本 `requestId=5c2edb3db439327f7c900e6adac1a467`（审计目录 `/tmp/khy-live-audit-codex-strict-20260531`）：
+    - 环境约束:
+      - `GATEWAY_PREFERRED_STRICT=true`
+      - `GATEWAY_STRICT_AUTO_RELAX_ON_PROCESS=false`
+      - `GATEWAY_ADAPTER_MAX_ATTEMPTS=1`
+      - `KHY_GATEWAY_THROW_FALLBACK=false`
+    - `prompt.log` 再次确认真实请求中存在前置 `# Language` 中文约束与 `[KHY PRIORITY DIRECTIVE]`
+    - 截至本轮采样窗口结束，`trace-events.jsonl` 仍只有 `llm.request` 与 `diag.model_request`
+    - 同目录 `gateway status --json` 已显示:
+      - `latestDeliveryRequest.status=incomplete`
+      - `latestDeliveryRequest.brokenStage=before_tool_call`
+      - `latestLanguageConsistency.reason=awaiting_model_output_for_request`
+      - `latestLanguageConsistency.blockedBy=pre_response_stall`
+  - 新 strict 样本 `requestId=b4f5bfcc0e08e2802267cbfb670e4c83`（审计目录 `/tmp/khy-live-audit-codex-firstresp-20260531c`）已验证修复后的收口行为：
+    - 环境约束:
+      - `GATEWAY_PREFERRED_ADAPTER=codex`
+      - `GATEWAY_PREFERRED_STRICT=true`
+      - `GATEWAY_STRICT_AUTO_RELAX_ON_PROCESS=false`
+      - `GATEWAY_ADAPTER_MAX_ATTEMPTS=1`
+      - `GATEWAY_CODEX_OPENAI_FALLBACK_ENABLED=false`
+      - `GATEWAY_CODEX_FIRST_RESPONSE_TIMEOUT_MS=8000`
+      - `KHY_GATEWAY_THROW_FALLBACK=false`
+    - `prompt.log` 再次确认真实请求中存在前置 `# Language` 中文约束与 `[KHY PRIORITY DIRECTIVE]`
+    - 同一请求在约 `8s` 后明确结束为：
+      - `Codex [timeout]: codex first response timeout after 8000ms without meaningful model progress`
+      - `latestDeliveryRequest.status=response_only`
+      - `latestLanguageConsistency.status=aligned`
+    - 结论: 真实链路已不再因启动噪声长期挂成 `incomplete`；当前可把 `pre_response_stall` 的主要成因收敛为“Codex 在首个有意义模型进展前只输出启动/传输噪声”
+  - 新批量 strict 采样 `/tmp/khy-codex-batch-20260531a`（4 次串行 one-shot，`GATEWAY_CODEX_FIRST_RESPONSE_TIMEOUT_MS=12000`）结果：
+    - `run-1` `requestId=64b3602bc3c16dd2735b3fb433e70b7d`
+    - `run-2` `requestId=9d73bc065d1a1ec07a7125904555303a`
+    - `run-3` `requestId=305a652cf0a0246397b4c7059539bd55`
+    - `run-4` `requestId=48f410236e59deb219fb71252dd2f33e`
+    - 4/4 均确认 `promptInjected=true`
+    - 4/4 均未落下 `agent.language.first_chunk`
+    - 4/4 最终都以 `llm.response.success=false`、`errorType=timeout` 收口
+    - 4/4 的最终语言审计都只来自中文失败文案 `agent.language.final_response`，不是 Codex 正文首块
+    - 结论: 在当前上游窗口里，前置 `# Language` 注入已稳定，但“英文首段是否下降”仍无法直接量化，因为可用样本池暂时是 `0` 条成功首块、`4` 条响应前超时
+  - 新批量 strict 采样 `/tmp/khy-codex-batch-20260531b`（4 次串行 one-shot，新增“确定性降偏航第二阶段”后复测，`HOME=/tmp/khy-gateway-sample-home`）结果：
+    - `run-1` `requestId=780ea813dfdb17dcffa3a8e65964636b`
+    - `run-2` `requestId=a24363d5651528c20332ec4988000ab1`
+    - `run-3` `requestId=40510d3964437b3a7a092884d1577707`
+    - `run-4` `requestId=4c39b115ede5f5168a987d6d4bfd52f6`
+    - 4/4 均确认 `promptInjected=true`
+    - 4/4 仍未落下 `agent.language.first_chunk`
+    - 4/4 仍以 `llm.response.success=false`、`errorType=timeout` 收口
+    - `run-1/prompt.log` 再次确认真实请求中存在前置 `# Language` 中文约束与 `[KHY PRIORITY DIRECTIVE]`
+    - `run-1/stdout.log`、`stderr.log` 均为 `0` 字节；4 个 run 的 trace event 仍只有 `llm.request`、`diag.model_request`、`agent.language.final_response`、`llm.response`
+    - 结论: 新的确定性降偏航措施已由单测覆盖，但在真实链路里仍未拿到可判定首块；当前主阻塞依旧是 Codex 在正文前超时，而不是纠偏链没有生效
+  - 新 live 证据 `/tmp/khy-codex-evidence-20260531c` / `requestId=01e01a13c20511d589b7d00cb0557465` 已把“外层 hard timeout 为何遮住 adapter 证据”收敛成结论：
+    - `prompt.log` 新增 `codex_exec` 生命周期记录后可见：
+      - 第 1 次 `spawn` 在 `8s` 时已触发 `first_response_timeout_fired` 并 `done(reject)`
+      - 但 adapter 随后又因错误文案里的 `sandbox/transport` 线索立即起了第 2 次 `spawn`
+      - 第 2 次重试把总墙钟时间拖过了 sample harness 的 `hardTimeoutMs=16000`，从而再次只剩 `llm.request` / `diag.model_request`
+    - 结论: 之前“证据被 hard timeout 吃掉”的直接原因不是首响 watchdog 没工作，而是 `codexAdapter.generate()` 在首响 timeout 之后仍走了“去 sandbox 再试一次”的内部重试
+  - 新 live 证据 `/tmp/khy-codex-evidence-20260531d` / `requestId=b8729bb5909f4b2bfdc1e04622f70ba8` 已验证本轮修正生效：
+    - `prompt.log` 只剩 1 次 `codex_exec stage=spawn`
+    - 同一请求在约 `8s` 内直接落下 `llm.response.success=false`、`errorType=timeout`
+    - `typeCounts = { llm.request, diag.model_request, agent.language.final_response, llm.response }`
+    - `hardTimeout=false`
+    - 结论: “响应前卡死”目前已从“outer hard timeout 掩盖真实原因”收敛为“Codex websocket 在首个 meaningful progress 前持续 `Operation not permitted` / reconnect 噪声，最终由首响 timeout 正常收口”
+  - 新对照试验已把“响应前卡死”继续拆成 3 条独立条件：
+    - 沙箱内 DNS/网络限制：
+      - `nslookup ai.mindflow.com.cn` 报 `socket(): Operation not permitted`
+      - Node `dns.lookup` 报 `EAI_AGAIN`
+      - Python `getaddrinfo` 报 `Temporary failure in name resolution`
+      - 结论: 在当前 AI 沙箱里，Codex CLI 的网络链路会被环境限制直接放大成 reconnect/timeout
+    - `HOME=/tmp/...` 的临时主目录会单独破坏 Codex CLI：
+      - 裸命令 `HOME=/tmp/khy-codex-home-probe codex exec ...` 在沙箱外也会复现
+      - 典型日志：`Refusing to create helper binaries under temporary dir "/tmp"`、`tls handshake eof`、`error sending request for url (https://api.openai.com/v1/responses)`
+      - 结论: 之前多次 `HOME=/tmp/...` sample 失败，不应再被解读成 KHY 主链路本身故障
+    - 正常 `HOME` 下，完整 KHY → Codex CLI 路径在紧凑 prompt 模式下可成功，但真实首响约 `11s~13s`：
+      - `requestId=f8631565c0e7eb5177e5f323c3ca02f7`：`--timeout-ms 20000` 成功，`durationMs=13366`
+      - `requestId=25a10bf7bd8398c4ac5e8b2ee565ffb1`：新的 `gateway sample` 默认 `20000ms` 也成功，`durationMs=11314`
+      - 对应输出目录：
+        - `/tmp/khy-codex-evidence-20260531j`
+        - `/tmp/khy-codex-evidence-20260531k`
+      - 结论: 正常环境下当前主问题已从“永远卡死”收敛成“旧的 8s / 12s 采样窗口过短，会误杀健康样本”
+  - 已完成 `codexAdapter.buildCliPrompt()` 的 CLI 紧凑化改造：
+    - 现在优先用 `options.messages` 构造最近对话 + 当前请求，不再把整段 flattened prompt 原样写入 stdin
+    - live 证据显示 `stdin_write bytes` 已从 `37964` 降到 `654`
+    - 这次改造本身没有单独解决 `HOME=/tmp` 或沙箱 DNS 限制，但为正常 `HOME` 下成功采样创造了更稳定前提
+  - 已把 `gateway sample codex` 默认首响窗口从 `12000ms` 上调到 `20000ms`
+    - 原因: 正常 `HOME` + 紧凑 prompt 的健康成功样本真实耗时已测到 `11.3s` 与 `13.3s`
+    - 同时在非 JSON 模式下，若检测到 `HOME` 位于 `/tmp`，会显式提示“临时 HOME 可能造成 tls handshake eof / reconnect 假故障”
+    - 现在在 `gateway sample --json` 输出里，也会结构化附带 `environment.homeRisk`，明确给出 `homeDir`、`tmpDir`、`isTempHome`、`hint` 与 `recommendation`
+    - 新批量正常 `HOME` 采样 `/tmp/khy-codex-batch-20260531c`（3 次串行 one-shot，`HOME=/home/kodehu03`）结果：
+      - `run-1` `requestId=a5629039e22daf62877bec2939267969`，`durationMs=9657`
+      - `run-2` `requestId=050e6611e692e3faa42698e18a765082`，`durationMs=9954`
+      - `run-3` `requestId=73ac0c2c60537fdcdb099d9d7d3315f6`，`durationMs=10911`
+      - `3/3` 均 `promptInjected=true`、`firstChunk=zh`、`llm.response.success=true`
+      - 结论: 结合此前 `11314ms` / `13366ms` 成功样本，当前正常 `HOME` 下 `20000ms` 仍有足够余量；现阶段暂不需要再拆 `strict/normal` 两套默认窗口
+  - 已把“临时 HOME 风险”下沉到 `codexAdapter` 本身：
+    - 现在即使不是通过 `gateway sample` 入口，只要 `HOME` 落在临时目录且 Codex 失败命中 timeout / reconnect / tls 相关模式，最终错误文案也会附带：
+      - `home_hint=temp_home:<path>`
+      - `codex_cli_temp_home_may_break_tls_or_helper_setup`
+    - 同时会额外发出一条状态提示，明确指出 `HOME` 位于临时目录可能破坏 helper/bin 或 TLS 会话
+    - 回归已补：
+      - `backend/tests/gatewayAdapters.stability.test.js`
+  - 已把“临时 HOME 风险”继续上浮到常用诊断面：
+    - `gateway status --json` 现在会输出 `environment.homeRisk`
+    - `gateway status` 在活跃通道为 `codex` 且 `HOME` 位于 `/tmp` 时，会直接打印环境提示
+    - `khy doctor` 现在新增 `Codex HOME 环境` 检查项
+    - 实机验证：
+      - 当前 `HOME=/home/kodehu03`
+      - `khy gateway status --json` 已真实返回 `environment.homeRisk.isTempHome=false`
+      - `khy doctor` 已真实显示 `Codex HOME 环境 — HOME=/home/kodehu03 不在临时目录`
+  - 结论补充: 当自动放宽 strict、adapter 内重试和 direct fallback 都被尽量压掉后，Codex 仍可能在首段正文出现前停住；这进一步证明当前主要阻塞点是 `Codex CLI (mindflow)` 自身响应前卡死，而不是回退链路污染了语言审计
+- 已完成诊断分流改造：把“语言偏航”和“无语言事件”拆成更具体的 request 态
+  - `backend/src/services/traceAuditService.js` 现在在 `getLatestLanguageConsistencySummary()` 中优先锚定最近 request，而不是盲目回看旧的语言事件
+  - 当请求仍停在模型响应前时，会返回 `reason=awaiting_model_output_for_request`、`blockedBy=pre_response_stall`
+  - 当已经收到模型响应但没落下语言审计事件时，会返回 `reason=language_audit_missing_after_response`、`blockedBy=language_audit_gap`
+  - `getRequestTraceSummary()` 现在也会保留这些“未完成但同 requestId 相关”的语言诊断，而不是直接丢掉
+  - 回归已通过:
+    - `backend/tests/services/traceAuditService.requestId.test.js`
+    - `backend/tests/initDoctor.codingAgentSmoke.test.js`
+- 已修正 one-shot / standalone chat 的交付误报:
+  - `backend/src/services/traceAuditService.js` 现在会把“有 `llm.request` + `llm.response`、但无 `agent.delivery.final`、且不带 tool-loop 迹象”的请求归类为 `response_only`
+  - `doctor` 侧已把 `response_only` 视为信息态，不再当作最近交付链路断裂
+  - 真实审计目录 `/tmp/khy-live-audit-codex-20260531c` 已验证：`requestId=80aceeb617b47ee17a9d88eacb96bf14` 当前 `latestDeliveryRequest.status=response_only`
+- 已把“协议优先级风险”从猜测推进为有证据支撑的现象结论:
+  - KHY 前置协议确实进入了真实 Codex 请求，而不是只存在于本地拼装逻辑
+  - 历史审计样本仍出现过英文首段偏航，因此风险的本质不再是“KHY 有没有注入协议”，而是“上游/适配器链路仍可能在 KHY 之后施加更强约束，或在生成阶段发生语言偏航”
+  - 当前剩余未闭合问题只剩量化层面：前置 `# Language` 注入后，英文首段出现频率是否已经下降
+- 已澄清更大范围 `aiGateway` 回归阻塞并非源码语法错误:
+  - `node -c backend/src/services/gateway/adapters/traeAdapter.js` 通过
+  - `npm --prefix backend test -- --runInBand --no-cache backend/tests/aiGateway.stability.regressions.test.js` 全部 `23` 项通过
+  - 结论: 先前 `extractMessageText` 重复声明报错更像 Jest/Babel 缓存脏，不是当前 `traeAdapter.js` 源码需要修复
+
+## 3 件最紧急的事
+
+- [x] 澄清 `khy_os-0.1.78/` 的 `1480` 个删除是否应保留
+  - 结论: 这批删除不影响当前构建/运行，但现态不符合仓库既有模式，更像误删或未完成的快照清理
+  - 处理策略: 不把这批删除混入本轮修复；如需治理，单独做 `khy_os-*` 快照整理
+
+- [x] 找到为何近期仍有 request 只落 `agent.delivery.final`
+  - 结论: 近期大部分 `eventCount=1` 且 `status=completed` 样本是 Jest 测试噪音，不是线上真实闭环退化
+  - 根因: `toolUseLoop` 在无 session 情况下仍会写 `agent.delivery.final`，而 `traceAudit.logEvent()` 会自动分配 `sess_*`
+  - 已修复: 测试运行默认改写到 `/tmp/khy-audit-jest/worker-*`，避免继续污染 `~/.khy/audit`
+
+- [x] 为 `Codex CLI (mindflow)` 设计确定性降偏航措施
+  - 已知结论: KHY 注入已发生，但 `requestId=039eae08f5640088a115cdff7267cbcf`、`d5869d9478f26d4ca1c157507d222881`、`bfd5df1e0206efa8bde5bed87e9647db`、`ae947e8f6602ca6fd5237cbc85eed11c` 仍出现英文首段
+  - 新进展: `requestId=8eb49ea7c0c2f6d98ff5e4bdabfdafbf` 已证明即便 Codex 首段偏到英文，约束守卫也能阻止违规工具调用并把交付收敛到 `totalToolCalls=0`
+  - 当前进展: 已新增“请求前显式 `# Language` 中文约束块”并补回归，当前链路从“事后纠偏”升级成“前置约束 + 执行层守卫”
+  - 本轮新增: 为 `codex` 单独预留 1 次语言纠偏重试额度，不再受普通 `maxAdapterAttempts=1` 卡死
+  - 本轮新增: 首段语言守卫现在对非流式调用也生效；即使调用方不消费 chunk，也会在首个可判定英文块出现时中断并重试
+  - 本轮新增: 若首块只是不确定噪声（如 `...`），语言审计会继续看最终正文，不再因为模糊首块而放过英文终稿
+  - 本轮新增: `codexAdapter` 在首响 timeout 时会附带 `stage / last_event / recent` 证据串，可直接区分“完全无输出”和“只出现 thread/turn/reconnect 启动噪声”
+  - 本轮新增: `codexAdapter` 首响 timeout 证据已升级为 stall 指纹 + milestone 快照（`stall / first_thread_started_ms / first_turn_started_ms / first_transport_warning_ms / counts`）
+  - 本轮修正: 首响 timeout 即使证据串里包含 `Reconnecting...`，也不会再被误分类成 reconnect 自愈分支
+  - 最新 live strict run `requestId=af80c39ec863d86a22b6e00eeff53b8a` 已把当前主结论固定下来：`stall=turn_started_reconnect_loop`，即请求已进入 `turn.started`，但在任何 reasoning/tool/assistant 输出前就反复掉进 reconnect
+  - 本轮新增: `doctor` 现在会跨进程读取持久化的 Codex runtime diagnostics；隔离 `KHY_DATA_HOME=/tmp/khy-doctor-verify-defaultfix` 的实机 sample `requestId=f59e2c343b67808555cdda2e61e7248e` 已验证，新进程 `khy doctor` 会直接显示 `检测到首响阻塞，未触发自愈`，并带出 `stall=turn_started_reconnect_loop`
+  - 本轮补强: 默认共享 `~/.khy` 环境下，即使 `latest` 已被 `provider_fallback_recovered` 覆盖，`doctor` 仍会在同一行追加 `最近首响阻塞`，不再把 stall 证据吞掉
+  - 本轮扩展: 这套持久化/doctor 消费链已不再写死在 `codex`；`claudeAdapter` 现已记录 `bridge_handshake_timeout` / `bridge_idle_timeout` / `bridge_no_stream_events` / `bridge_fallback_recovered`
+  - 最新 live run `requestId=80aceeb617b47ee17a9d88eacb96bf14` 再次证明前置中文协议已实际进请求；该请求后续演化为 `codex timeout -> API 中转 fallback -> response_only`，当前阻塞点更像上游可用性/回退链路收口，而不是注入缺失
+  - 最新 strict live run `requestId=5c2edb3db439327f7c900e6adac1a467` 进一步证明：即使尽量禁止放宽 strict 与 direct fallback，Codex 也可能在 `before_tool_call` 停住，尚未给出可审计首段正文
+  - 目标: 把“间歇性偏航”继续压缩成可控行为，而不是只保留告警
+
+## 10 件最迫切的事
+
+- [x] 判定 `khy_os-0.1.78/` 批量删除的归属和处理策略
+- [ ] 为 `khy_os-*` 版本快照建立独立治理方案（保留、迁移或对称清理）
+- [ ] 用 live audit 验证前置 `# Language` 注入后，`Codex CLI (mindflow)` 的可见英文首段是否继续下降
+- [x] 为 “0 成功首块 / 多次响应前超时” 的窗口补一套可重复采样方法，避免每次手工拼环境变量
+  - 已新增 `gateway sample codex`
+  - 已补测试:
+    - `backend/tests/gatewaySample.test.js`
+    - `backend/tests/gatewayAdapters.stability.test.js`
+- [x] 区分“语言偏航”与“上游响应前卡死”两类 Codex 故障，避免把传输阻塞误判成语言回归
+- [ ] 判断是否需要为 Jest gateway 回归默认加 `--no-cache` 或清理缓存策略，避免伪语法错误干扰验收
+- [x] 统计 recent audit 中 `summary_only` 交付记录的占比和来源
+- [x] 用真实 REPL live request 验证 `llm.request -> llm.response -> agent.delivery.final` 已能在同一 `requestId` 闭环
+- [x] 用真实 REPL live request 验证“不要调用任何工具 / 不要搜索 / 不要读取文件”已被约束守卫尊重，且 `agent.delivery.final.totalToolCalls=0`
+- [x] 追踪 `toolUseLoop` 到 `aiGateway` 的 request/session 透传缺口
+- [x] 确认哪些入口会跳过 `llm.request` / `llm.response` 记录
+- [x] 采集 `KHY_GATEWAY_DEBUG_PROMPT=1` 日志并归档最小证据
+- [x] 复核 `Codex CLI (mindflow)` 下是否存在追加隐藏 system prompt 的稳定迹象
+- [x] 评估 `gateway status --json` 在当前环境下的稳定性和耗时
+- [x] 定位修复后 `eventCount=1` 且 `status=completed` 的 delivery-only 请求来源
+- [x] 把 `latestLanguageConsistency` 的“无事件”状态细分成 request 级别的等待/缺口诊断
+- [x] 把 one-shot `ai.chat` 的 `delivery_event_missing` 误报降级为 `response_only`
+- [ ] 梳理当前工作树里与本轮修复相关的改动集合，准备独立提交边界
+  - 当前最小边界可先收敛到:
+    - `backend/src/services/toolUseLoop.js`
+    - `backend/src/cli/ai.js`
+    - `backend/src/services/traceAuditService.js`
+    - `backend/tests/toolUseLoop.webSearchNoToolNudge.test.js`
+    - `backend/tests/aiCli.greetingFastpath.test.js`
+    - `backend/tests/services/traceAuditService.requestId.test.js`
+    - `TODO.md`
+  - 说明: `backend/tests/aiCli.requestTraceForwarding.test.js` 当前仍是未跟踪文件，若保留本轮 `_directGenerate` 审计回归，应一并纳入
+- [ ] 决定是否把“delivery summary-only”文案同步暴露到 `gateway status --json` 消费端文档
+- [ ] 复查 `doctor` 其他“无样本”分支是否都已降级为信息态
+
+## 本轮已完成
+
+- [x] 修复 `repl.tasks.interaction` 里的本地问候回归
+- [x] 修复 `repl.tasks.interaction` 里的 quick-task 回归
+- [x] 对齐 `intentGate` 测试与当前 `_intentDirective` 契约
+- [x] 把 `backend/src/cli/mermaid.js` 纳入版本控制
+- [x] 把 `backend/src/cli/renderTheme.js` 纳入版本控制
+- [x] 把 `backend/src/cli/transparency.js` 纳入版本控制
+- [x] 把 `backend/src/cli/wordDiff.js` 纳入版本控制
+- [x] 审核 `toolUseLoop` 放宽循环上限和时长后的副作用
+- [x] 给 `contentBlockUtils.ensureToolResultPairing()` 补回归测试
+- [x] 清理 `aiRenderer` 当前 2 个固定 `setTimeout` 告警
+- [x] 修复 `doctor` 中“首段语言一致性”误报失败
+- [x] 修复 `doctor` / `gateway trace` 中“最近交付链路”误报告警
+- [x] 采集 `KHY_GATEWAY_DEBUG_PROMPT=1` 证据并确认 `Codex CLI (mindflow)` 风险为真实且间歇发生
+- [x] 为 `codex` 落地最小中文纠偏：拦截可见英文首段、追加恢复指令重试、无重试额度时切到下一通道
+- [x] 为 `codex` 落地确定性降偏航第二阶段：增加专用纠偏重试额度、覆盖非流式首段守卫、把模糊首块回退到最终正文判定
+- [x] 为 `codexAdapter` 落地首响 timeout 进展证据：记录 `stall / stage / last_event / milestones / recent`，并修正证据串导致的 reconnect 误分类
+- [x] 补齐 `language_mismatch` 在抛错路径的回归测试，并把语言一致性 summary 改为优先保留 `first_chunk` 证据
+- [x] 把语言审计 `expectedLanguage` 改为按请求推断，显式英文请求不再记成 `zh` 偏航
+- [x] 修复 `toolUseLoop` 调 `chat/aiGateway` 时的 trace 透传缺口，避免 `summary_only` 审计被拆到不同 request
+- [x] 修复 `ai.chat` 调 `aiGateway.generate` 时的 trace 透传缺口，并确认剩余跳过 `llm.*` 的入口主要是 `khy-fastpath`、`_directGenerate` 与本地 deterministic fallback
+- [x] 通过真实 home-audit live run 确认交互 REPL 的 `toolUseLoop` 链路已闭环；`gateway status --json` 消费端也能正确读取该结果
+- [x] 为显式“不要调用工具/搜索/读文件”约束补三层守卫：前置 directive、自动工具注入抑制、违规 tool call 执行拦截，并用 `requestId=8eb49ea7c0c2f6d98ff5e4bdabfdafbf` 验证 `totalToolCalls=0`
+- [x] 复核 `gateway status --json` 已能消费最新受约束闭环请求；当前环境本次返回耗时约 `11s`
+- [x] 扫描最近 `1000` 个 session 量化 `summary_only`：总体 `15/96=15.63%`，最近 `50` 个 request 降到 `2/50=4%`，最近 `20` 个 session 已为 `0`
+- [x] 为 `khy-fastpath` 与 `_directGenerate` 补齐 `llm.request/response` 审计，并用 `requestId=11111111111111111111111111111111` 证明 `toolUseLoop + khy-fastpath` 已不再只落最终交付事件
+- [x] 找到 `eventCount=1` 且 `status=completed` 的主要来源是 Jest 测试写入 home-audit，并把默认测试审计目录切到 `/tmp/khy-audit-jest/worker-*`
+- [x] 把 `latestLanguageConsistency` 从“泛化 no_language_event”升级成 request 级别诊断，区分 `awaiting_model_output_for_request` 与 `language_audit_missing_after_response`
+- [x] 把 one-shot `ai.chat` / standalone request 从 `delivery_event_missing` 误报修正为 `response_only`
+- [x] 把 `codex first response timeout` 从“任意子进程输出”改成“有意义模型进展”判定，并用真实 strict 样本验证能在启动噪声场景下快速收口
+- [x] 新增 `gateway sample codex` 作为可重复 live audit 入口，并验证真实 JSON 输出可直接聚合 `promptInjected / firstChunk / timeout`
+
+## 最小验证命令
+
+```bash
+npm --prefix backend test -- --runInBand backend/tests/initDoctor.codingAgentSmoke.test.js backend/tests/services/traceAuditService.requestId.test.js
+node backend/bin/khy.js doctor
+node backend/bin/khy.js gateway trace 8fa6d06702483153eb4d178d1413764d
+node scripts/check-agent-rules.js --changed
+npm run check:version-sync
+```

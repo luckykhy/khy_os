@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划：精准而非全知 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划：精准而非全知</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划：精准而非全知</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-052-任务驱动读取与搜索范围规划-精准而非全知">[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划：精准而非全知</a></li><li class="lvl-2"><a href="#1-问题">1. 问题</a></li><li class="lvl-2"><a href="#2-设计原则">2. 设计原则</a></li><li class="lvl-2"><a href="#3-流水线">3. 流水线</a></li><li class="lvl-2"><a href="#4-置信度与停止">4. 置信度与停止</a></li><li class="lvl-2"><a href="#5-防呆">5. 防呆</a></li><li class="lvl-2"><a href="#6-实证">6. 实证</a></li><li class="lvl-2"><a href="#7-接入点">7. 接入点</a></li><li class="lvl-2"><a href="#8-关联">8. 关联</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="design-arch-052-任务驱动读取与搜索范围规划-精准而非全知">[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划：精准而非全知<a class="anchor" href="#design-arch-052-任务驱动读取与搜索范围规划-精准而非全知" aria-label="锚点">#</a></h1>
+<blockquote><p>子系统 <code>services/backend/src/services/contextScope/</code><br>目标:khy 拿到任务后,确定性地判断<strong>该读哪些文件、该搜什么</strong>,做到准确读取,而非全量扫描追求全知。</p></blockquote>
+<h2 id="1-问题">1. 问题<a class="anchor" href="#1-问题" aria-label="锚点">#</a></h2>
+<p>agent 之前&quot;读什么&quot;靠两条路:</p>
+<ol><li>模型在 <code>toolUseLoop.js</code> 里临场选 Read/Grep/Glob —— 无引导,可能漏读关键文件,也可能为求稳读太多。</li><li><code>cli/ai.js</code> 一个启发式<strong>预取</strong>:把原始用户消息丢给 <code>exploreTool</code>,由它正则猜 glob/grep,2s 超时。猜得粗。</li></ol>
+<p>更关键的缺口:仓库<strong>确定性生成</strong> <code>.ai/MAP.md</code> + <code>.ai/CONTEXT.yaml</code>(每文件符号表、调用链),但<strong>运行时从不读取</strong>。项目自己有一张&quot;文件→符号&quot;地图,agent 却用不上。</p>
+<p>且没有任何&quot;读够了就停&quot;的判据 —— 要么不规划,要么倾向读全。</p>
+<h2 id="2-设计原则">2. 设计原则<a class="anchor" href="#2-设计原则" aria-label="锚点">#</a></h2>
+<ul><li><strong>确定性地板 + 可选模型增强</strong>:无模型也能产出可用计划;模型只在地板之上<strong>裁剪/重排</strong>,绝不扩张。</li><li><strong>精准而非全知</strong>:强制充分性停止 —— 读到能动手的置信度即止。</li><li><strong>单一真源</strong>:候选文件只来自 <code>任务信号 ∪ .ai 索引 ∪ glob</code>,零硬编码文件清单。</li><li><strong>零侵入</strong>:<code>KHY_CONTEXT_SCOPE=1</code> 开关接入 <code>agenticHarnessService.buildContextPacket</code>,默认关闭。</li></ul>
+<h2 id="3-流水线">3. 流水线<a class="anchor" href="#3-流水线" aria-label="锚点">#</a></h2>
+<pre><code>task → extractSignals → buildIndex(.ai/) → rankCandidates
+     → applyBudget(充分性停止) → buildSearchPlan → ScopePlan</code></pre>
+<table><thead><tr><th>模块</th><th>职责</th></tr></thead><tbody><tr><td><code>taskSignalExtractor.js</code></td><td>任务文本 → <code>{identifiers, fileHints, dirHints, extHints, quoted, keywords, intent}</code>,纯函数,识 camelCase/snake_case/PascalCase/dotted、路径、扩展名、引号串、中英关键词,去停用词。</td></tr><tr><td><code>aiMapIndex.js</code></td><td>解析 <code>.ai/CONTEXT.yaml</code>+<code>MAP.md</code>+<code>SKELETON.auto.md</code> → <code>文件→{符号,关键词}</code> 正排 + <code>关键词→文件</code> 倒排。按 mtime 缓存。<strong>填补 <code>.ai/</code> 运行时从不被读取的缺口</strong>。缺失即 <code>ok:false</code> 优雅降级。</td></tr><tr><td><code>scopeRanker.js</code></td><td>信号 × 索引 → 带理由的排序候选。权重:精确符号 10 &gt; 文件名直指 9 &gt; 部分符号 7 &gt; 文件名含标识符 6 &gt; <code>.ai</code> 关键词 5 &gt; 目录 3 / 关键词 3 / 扩展 2 / 近期文件 +2 / 多信号 +2。</td></tr><tr><td><code>budgetController.js</code></td><td><strong>&quot;不全知&quot;内核</strong>。硬上限 maxFiles(默认 8) + 边际递减(分数 &lt; 0.18×峰值即停) + 置信度饱和(≥0.85 即停)。永远返回 stopReason。</td></tr><tr><td><code>searchPlanBuilder.js</code></td><td>信号 → 具体 <code>{globs, grepPatterns, searchQueries}</code>,直接驱动 <code>exploreTool</code> 的 <code>patterns</code>/<code>grep_pattern</code> 覆写,取代其盲目正则推断。Web 搜索仅在显式外部标记或仓库内无目标时发出。</td></tr><tr><td><code>index.js</code></td><td><code>ContextScopePlanner.planScope()</code> 门面:确定性地板 + 可选 <code>modelPlanner</code>(超时 4s,只能在候选全集内选,经 <code>enforceBudget</code> 夹回硬上限)。</td></tr></tbody></table>
+<h2 id="4-置信度与停止">4. 置信度与停止<a class="anchor" href="#4-置信度与停止" aria-label="锚点">#</a></h2>
+<p>置信度 = <code>1 − e^(−Σ选中分数 / 18)</code>:强而具体的命中快速饱和,弱而零散的命中难达标。停止原因恒为五者之一:<code>budget_full</code> / <code>diminishing_returns</code> / <code>confidence_satisfied</code> / <code>exhausted</code> / <code>no_candidates</code>,<strong>绝不输出&quot;读全部&quot;</strong>。</p>
+<h2 id="5-防呆">5. 防呆<a class="anchor" href="#5-防呆" aria-label="锚点">#</a></h2>
+<ol><li><strong>硬预算上限</strong>:模型增强后经 <code>enforceBudget</code> 夹回 maxFiles,且只能取候选全集内的路径 —— 模型无法新增文件、无法越界。</li><li><strong>强制充分性停止</strong>:<code>applyBudget</code> 永远带 stopReason。</li><li><strong><code>.ai/</code> 缺失优雅降级</strong>:空索引,计划仍由信号+glob 产出,绝不抛错。</li><li><strong>零硬编码文件清单</strong>:候选全部派生自信号/索引/glob。</li><li><strong>模型失败/超时</strong>:回退确定性地板,绝不阻塞或抛错。</li></ol>
+<h2 id="6-实证">6. 实证<a class="anchor" href="#6-实证" aria-label="锚点">#</a></h2>
+<p><code>tests/contextScopePlanner.test.js</code> 22 例全绿。真实仓库验证:任务&quot;修复 syscall_dispatch 在 fork 时的 trap frame&quot;经 <code>.ai/CONTEXT.yaml</code>(179 文件)精准定位 <code>kernel/src/syscall.c</code>+<code>process.c</code>+<code>isr.asm</code>,停止于 <code>confidence_satisfied</code>(conf=0.857),grep 计划 <code>syscall_dispatch</code> —— 而非全量扫描内核。</p>
+<h2 id="7-接入点">7. 接入点<a class="anchor" href="#7-接入点" aria-label="锚点">#</a></h2>
+<ul><li>已接 <code>agenticHarnessService.buildContextPacket</code>:<code>KHY_CONTEXT_SCOPE=1</code> 时输出 <code>scopePlan</code> 字段,关闭时为 <code>null</code>。</li><li>后续可用 <code>scopePlan.searchPlan</code> 驱动 <code>cli/ai.js</code> 预取替换启发式 <code>exploreTool</code> 推断(待后续 PR)。</li></ul>
+<h2 id="8-关联">8. 关联<a class="anchor" href="#8-关联" aria-label="锚点">#</a></h2>
+<ul><li>复用 <code>.ai/</code> 种子文档(<code>projectMetadataService</code> 生产,本子系统首个运行时消费者)。</li><li>与 <code>[[project_maintainability_metadata]]</code>、<code>taskDecomposer</code>、<code>ragRetrievalService</code> 互补:本子系统管&quot;读什么/搜什么的范围&quot;,后者管&quot;任务拆解/知识检索&quot;。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-051] 单人维护者健康驾驶舱.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-051] 单人维护者健康驾驶舱</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-053] 命令与第三方应用输出折叠-几行预览与Ctrl+O展开.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-053] 命令与第三方应用输出折叠：几行预览与 Ctrl+O 展开</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-052] 任务驱动读取与搜索范围规划-精准而非全知.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-slay-the-spire-ii · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-slay-the-spire-ii<span class="sep">›</span>cli-anything-slay-the-spire-ii</div>
+      <header class="hero reveal"><h1>cli-anything-slay-the-spire-ii</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-slay-the-spire-ii">cli-anything-slay-the-spire-ii</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-3"><a href="#1-install-the-cli">1. Install the CLI</a></li><li class="lvl-3"><a href="#2-build-and-install-the-bridge-mod">2. Build and install the bridge mod</a></li><li class="lvl-3"><a href="#3-enable-the-mod-and-verify">3. Enable the mod and verify</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#state-inspection">State Inspection</a></li><li class="lvl-3"><a href="#main-menu">Main Menu</a></li><li class="lvl-3"><a href="#combat">Combat</a></li><li class="lvl-3"><a href="#map-room-flow">Map &amp; Room Flow</a></li><li class="lvl-3"><a href="#rewards">Rewards</a></li><li class="lvl-3"><a href="#events-rest-sites">Events &amp; Rest Sites</a></li><li class="lvl-3"><a href="#shop">Shop</a></li><li class="lvl-3"><a href="#card-relic-selection-overlays">Card/Relic Selection Overlays</a></li><li class="lvl-3"><a href="#raw-action">Raw Action</a></li><li class="lvl-2"><a href="#decision-states">Decision States</a></li><li class="lvl-2"><a href="#configuration">Configuration</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-slay-the-spire-ii&quot;<br>description: &gt;-<br>  Command-line interface for Slay the Spire 2 - Control the real game through a local bridge mod HTTP API. Reads normalized game state and sends action commands for combat, navigation, rewards, and menu management.</p>
+<hr>
+<h1 id="cli-anything-slay-the-spire-ii">cli-anything-slay-the-spire-ii<a class="anchor" href="#cli-anything-slay-the-spire-ii" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for controlling the real Slay the Spire 2<br>game through the local <code>STS2_Bridge</code> mod. The CLI reads normalized game state<br>and sends action commands via a local HTTP API at <code>localhost:15526</code>.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI requires a bridge mod that runs inside the game process. Both the CLI<br>and the bridge are distributed from the same repository:</p>
+<pre><code>https://github.com/HKUDS/CLI-Anything</code></pre>
+<h3 id="1-install-the-cli">1. Install the CLI<a class="anchor" href="#1-install-the-cli" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">git clone https://github.com/HKUDS/CLI-Anything.git
+cd CLI-Anything/slay_the_spire_ii/agent-harness
+pip install -e .</code></pre>
+<h3 id="2-build-and-install-the-bridge-mod">2. Build and install the bridge mod<a class="anchor" href="#2-build-and-install-the-bridge-mod" aria-label="锚点">#</a></h3>
+<p>The bridge mod is a <code>.NET 9</code> plugin that must be compiled and installed into<br>the game directory. Full instructions are in the repository README, but the<br>short version is:</p>
+<pre><code class="language-bash">cd CLI-Anything/slay_the_spire_ii/agent-harness/bridge/plugin
+./build.sh
+cd ../install
+./install_bridge.sh</code></pre>
+<p>If the build script cannot auto-detect the game data directory, set<br><code>STS2_GAME_DATA_DIR</code> explicitly:</p>
+<pre><code class="language-bash">STS2_GAME_DATA_DIR=&quot;/path/to/data_sts2&quot; ./build.sh</code></pre>
+<h3 id="3-enable-the-mod-and-verify">3. Enable the mod and verify<a class="anchor" href="#3-enable-the-mod-and-verify" aria-label="锚点">#</a></h3>
+<p>Launch Slay the Spire 2 via Steam, enable the <code>STS2_Bridge</code> mod in the mod<br>manager, then verify the connection:</p>
+<pre><code class="language-bash">cli-anything-sts2 state</code></pre>
+<p>If this returns JSON, the CLI and bridge are connected.</p>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>Slay the Spire 2 (Steam) with <code>STS2_Bridge</code> mod enabled</li><li><code>.NET 9 SDK</code> (only needed to build the bridge mod)</li></ul>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Read normalized game state (always start here)
+cli-anything-sts2 state
+
+# Start interactive REPL mode (default)
+cli-anything-sts2
+
+# Show all available commands
+cli-anything-sts2 --help</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="state-inspection">State Inspection<a class="anchor" href="#state-inspection" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>state</code></td><td>Normalized state with <code>decision</code> field</td></tr><tr><td><code>raw-state</code></td><td>Raw bridge JSON</td></tr></tbody></table>
+<h3 id="main-menu">Main Menu<a class="anchor" href="#main-menu" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>continue-game</code></td><td>Continue a saved run</td></tr><tr><td><code>start-game --character IRONCLAD --ascension 0</code></td><td>Start a new run</td></tr><tr><td><code>abandon-game</code></td><td>Abandon the current save</td></tr><tr><td><code>return-to-main-menu</code></td><td>Return to menu from any screen</td></tr></tbody></table>
+<p>Characters: <code>IRONCLAD</code>, <code>SILENT</code>, <code>DEFECT</code>, <code>NECROBINDER</code>, <code>REGENT</code></p>
+<h3 id="combat">Combat<a class="anchor" href="#combat" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>play-card &lt;index&gt; [--target &lt;enemy_id&gt;]</code></td><td>Play a card from hand</td></tr><tr><td><code>use-potion &lt;slot&gt; [--target &lt;enemy_id&gt;]</code></td><td>Use a potion</td></tr><tr><td><code>end-turn</code></td><td>End the current turn</td></tr></tbody></table>
+<h3 id="map-room-flow">Map &amp; Room Flow<a class="anchor" href="#map-room-flow" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>choose-map &lt;index&gt;</code></td><td>Select a map node</td></tr><tr><td><code>proceed</code></td><td>Leave the current room</td></tr></tbody></table>
+<h3 id="rewards">Rewards<a class="anchor" href="#rewards" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>claim-reward &lt;index&gt;</code></td><td>Claim a combat reward</td></tr><tr><td><code>pick-card-reward &lt;index&gt;</code></td><td>Pick a card reward</td></tr><tr><td><code>skip-card-reward</code></td><td>Skip the card reward</td></tr><tr><td><code>claim-treasure-relic &lt;index&gt;</code></td><td>Claim a treasure relic</td></tr><tr><td><code>select-relic &lt;index&gt;</code></td><td>Select a relic</td></tr><tr><td><code>skip-relic-selection</code></td><td>Skip relic selection</td></tr></tbody></table>
+<h3 id="events-rest-sites">Events &amp; Rest Sites<a class="anchor" href="#events-rest-sites" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>event &lt;index&gt;</code></td><td>Choose an event option</td></tr><tr><td><code>advance-dialogue</code></td><td>Advance dialogue-only events</td></tr><tr><td><code>rest &lt;index&gt;</code></td><td>Choose a campfire action</td></tr></tbody></table>
+<h3 id="shop">Shop<a class="anchor" href="#shop" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>shop-buy &lt;index&gt;</code></td><td>Buy from the shop</td></tr></tbody></table>
+<h3 id="card-relic-selection-overlays">Card/Relic Selection Overlays<a class="anchor" href="#card-relic-selection-overlays" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>select-card &lt;index&gt;</code></td><td>Select a card in overlay</td></tr><tr><td><code>confirm-selection</code></td><td>Confirm the current selection</td></tr><tr><td><code>cancel-selection</code></td><td>Cancel the current selection</td></tr><tr><td><code>combat-select-card &lt;index&gt;</code></td><td>Select a card during combat overlay</td></tr><tr><td><code>combat-confirm-selection</code></td><td>Confirm combat card selection</td></tr></tbody></table>
+<h3 id="raw-action">Raw Action<a class="anchor" href="#raw-action" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>action &lt;name&gt; --kv key=value</code></td><td>Send a raw bridge action</td></tr></tbody></table>
+<h2 id="decision-states">Decision States<a class="anchor" href="#decision-states" aria-label="锚点">#</a></h2>
+<p>The <code>state</code> command returns JSON with a <code>decision</code> field indicating the current<br>game screen. Route your next command based on this value:</p>
+<table><thead><tr><th>Decision</th><th>Meaning</th><th>Typical Next Commands</th></tr></thead><tbody><tr><td><code>menu</code></td><td>Main menu</td><td><code>continue-game</code>, <code>start-game</code></td></tr><tr><td><code>combat_play</code></td><td>In combat, your turn</td><td><code>play-card</code>, <code>use-potion</code>, <code>end-turn</code></td></tr><tr><td><code>hand_select</code></td><td>Card selection overlay</td><td><code>combat-select-card</code>, <code>combat-confirm-selection</code></td></tr><tr><td><code>map_select</code></td><td>Map node selection</td><td><code>choose-map</code></td></tr><tr><td><code>game_over</code></td><td>Run ended</td><td><code>return-to-main-menu</code></td></tr><tr><td><code>combat_rewards</code></td><td>Post-combat rewards</td><td><code>claim-reward</code>, <code>proceed</code></td></tr><tr><td><code>card_reward</code></td><td>Card reward pick</td><td><code>pick-card-reward</code>, <code>skip-card-reward</code></td></tr><tr><td><code>event_choice</code></td><td>Event screen</td><td><code>event</code>, <code>advance-dialogue</code></td></tr><tr><td><code>rest_site</code></td><td>Campfire</td><td><code>rest</code></td></tr><tr><td><code>shop</code></td><td>Shop screen</td><td><code>shop-buy</code>, <code>proceed</code></td></tr><tr><td><code>card_select</code></td><td>Card selection screen</td><td><code>select-card</code>, <code>confirm-selection</code></td></tr><tr><td><code>relic_select</code></td><td>Relic selection</td><td><code>select-relic</code>, <code>skip-relic-selection</code></td></tr><tr><td><code>treasure</code></td><td>Treasure room</td><td><code>claim-treasure-relic</code>, <code>proceed</code></td></tr></tbody></table>
+<h2 id="configuration">Configuration<a class="anchor" href="#configuration" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Option</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>--base-url</code></td><td><code>http://localhost:15526</code></td><td>Bridge API URL</td></tr><tr><td><code>--timeout</code></td><td><code>10.0</code></td><td>HTTP timeout in seconds</td></tr></tbody></table>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<ol><li><strong>Always read <code>state</code> first</strong> to get the <code>decision</code> field</li><li><strong>Re-read state after each action</strong> - indices and energy change during combat</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stdout</strong> for JSON output</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-shotcut/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-shotcut</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-threemf/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-3mf</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-slay-the-spire-ii/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

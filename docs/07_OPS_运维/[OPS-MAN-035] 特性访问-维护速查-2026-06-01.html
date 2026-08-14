@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feature Access 与代理解耦维护速记 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>Feature Access 与代理解耦维护速记</div>
+      <header class="hero reveal"><h1>Feature Access 与代理解耦维护速记</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#feature-access-与代理解耦维护速记">Feature Access 与代理解耦维护速记</a></li><li class="lvl-2"><a href="#1-这份速记是干什么的">1. 这份速记是干什么的</a></li><li class="lvl-2"><a href="#2-先记结论">2. 先记结论</a></li><li class="lvl-3"><a href="#运行时行为">运行时行为</a></li><li class="lvl-3"><a href="#架构分工">架构分工</a></li><li class="lvl-2"><a href="#3-先看哪几个文件">3. 先看哪几个文件</a></li><li class="lvl-2"><a href="#4-修改原则">4. 修改原则</a></li><li class="lvl-3"><a href="#如果你要改-谁该登录">如果你要改“谁该登录”</a></li><li class="lvl-3"><a href="#如果你要改-feature-key-前缀-label">如果你要改 feature key / 前缀 / label</a></li><li class="lvl-3"><a href="#如果你看到这些-helper">如果你看到这些 helper</a></li><li class="lvl-2"><a href="#5-你最容易改错的地方">5. 你最容易改错的地方</a></li><li class="lvl-3"><a href="#错误-1-在业务层直接写登录判断">错误 1：在业务层直接写登录判断</a></li><li class="lvl-3"><a href="#错误-2-在多个文件里手写同一个-feature-key">错误 2：在多个文件里手写同一个 feature key</a></li><li class="lvl-3"><a href="#错误-3-把-khy-claude-又绑回完整-cli-链路">错误 3：把 `khy claude` 又绑回完整 CLI 链路</a></li><li class="lvl-2"><a href="#6-最小验证命令">6. 最小验证命令</a></li><li class="lvl-3"><a href="#python-侧">Python 侧</a></li><li class="lvl-3"><a href="#node-js-侧">Node / JS 侧</a></li><li class="lvl-2"><a href="#7-一句话工作流">7. 一句话工作流</a></li><li class="lvl-2"><a href="#8-什么时候去看长文档">8. 什么时候去看长文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-035 | 阶段: 运维 | 原路径: docs/维护者/特性访问-维护速查-2026-06-01.md --&gt;</p>
+<h1 id="feature-access-与代理解耦维护速记">Feature Access 与代理解耦维护速记<a class="anchor" href="#feature-access-与代理解耦维护速记" aria-label="锚点">#</a></h1>
+<p><strong>日期</strong>: 2026-06-01<br><strong>适用对象</strong>: <code>khy</code>、小模型维护者、首次接手代理/登录边界问题的开发者</p>
+<hr>
+<h2 id="1-这份速记是干什么的">1. 这份速记是干什么的<a class="anchor" href="#1-这份速记是干什么的" aria-label="锚点">#</a></h2>
+<p>当你遇到下面这类问题时，先看这份，再决定要不要读长文档：</p>
+<ul><li><code>khy claude</code> 为什么没登录也能用</li><li><code>gateway relay</code> 为什么要登录，但 <code>gateway manage</code> 不要</li><li>代理、IDE、管理入口的登录边界该改哪</li><li>feature key / label 该去哪里加，不要写散</li></ul>
+<p>详细背景与完整修复过程见：</p>
+<ul><li><code>docs/04_IMPL_实现/[IMPL-RPT-009] 特性访问与代理解耦-2026-06-01.md</code></li></ul>
+<hr>
+<h2 id="2-先记结论">2. 先记结论<a class="anchor" href="#2-先记结论" aria-label="锚点">#</a></h2>
+<h3 id="运行时行为">运行时行为<a class="anchor" href="#运行时行为" aria-label="锚点">#</a></h3>
+<ul><li><code>proxy.*</code>：免登录</li><li><code>gateway.manage.*</code>：免登录</li><li><code>claude|codex|cursor|kiro|trae.*</code>：免登录</li><li><code>gateway.relay.*</code>：需要登录</li><li>未匹配 feature：默认需要登录</li></ul>
+<h3 id="架构分工">架构分工<a class="anchor" href="#架构分工" aria-label="锚点">#</a></h3>
+<ul><li>启动链路问题：先看 <code>khy_platform/cli.py</code></li><li>登录策略问题：先看 <code>backend/src/services/authGuard.js</code></li><li>feature key / family prefix / label 命名：先看 <code>backend/src/services/featureKeyBuilder.js</code></li></ul>
+<hr>
+<h2 id="3-先看哪几个文件">3. 先看哪几个文件<a class="anchor" href="#3-先看哪几个文件" aria-label="锚点">#</a></h2>
+<p>按优先级：</p>
+<ol><li><code>khy_platform/cli.py</code></li><li><code>backend/src/services/authGuard.js</code></li><li><code>backend/src/services/featureKeyBuilder.js</code></li><li><code>backend/src/cli/handlers/gateway.js</code></li><li><code>backend/src/cli/handlers/ide.js</code></li><li><code>backend/src/services/gateway/adapters/webRelayAdapter.js</code></li><li><code>backend/src/services/gateway/adapters/clipboardRelayAdapter.js</code></li></ol>
+<hr>
+<h2 id="4-修改原则">4. 修改原则<a class="anchor" href="#4-修改原则" aria-label="锚点">#</a></h2>
+<h3 id="如果你要改-谁该登录">如果你要改“谁该登录”<a class="anchor" href="#如果你要改-谁该登录" aria-label="锚点">#</a></h3>
+<p>不要先改 handler 或 adapter。</p>
+<p>先改：</p>
+<ul><li><code>backend/src/services/authGuard.js</code></li></ul>
+<p>然后再看调用侧是否需要接入 <code>requireFeatureAccess(...)</code>。</p>
+<h3 id="如果你要改-feature-key-前缀-label">如果你要改 feature key / 前缀 / label<a class="anchor" href="#如果你要改-feature-key-前缀-label" aria-label="锚点">#</a></h3>
+<p>不要在 handler 里直接写新字符串。</p>
+<p>先改：</p>
+<ul><li><code>backend/src/services/featureKeyBuilder.js</code></li></ul>
+<p>优先使用：</p>
+<ul><li><code>getFeatureFamilyPrefix(...)</code></li><li><code>buildFeatureFamilyPrefixRegex(...)</code></li><li><code>joinFeatureKey(...)</code></li></ul>
+<h3 id="如果你看到这些-helper">如果你看到这些 helper<a class="anchor" href="#如果你看到这些-helper" aria-label="锚点">#</a></h3>
+<p>下面这些已经是<strong>内部兼容层</strong>，新代码不要优先依赖：</p>
+<ul><li><code>buildGatewayRelayFeatureKey</code></li><li><code>buildGatewayManageFeaturePrefix</code></li><li><code>buildGatewayManageFeatureKey</code></li><li><code>buildIdeFeaturePrefixRegex</code></li><li><code>buildIdeLaunchFeatureKey</code></li><li><code>buildProxyFeaturePrefix</code></li><li><code>buildProxyRelayFeatureKey</code></li></ul>
+<p>它们还保留着，是为了兼容旧调用，不是推荐入口。</p>
+<hr>
+<h2 id="5-你最容易改错的地方">5. 你最容易改错的地方<a class="anchor" href="#5-你最容易改错的地方" aria-label="锚点">#</a></h2>
+<h3 id="错误-1-在业务层直接写登录判断">错误 1：在业务层直接写登录判断<a class="anchor" href="#错误-1-在业务层直接写登录判断" aria-label="锚点">#</a></h3>
+<p>不要这样做：</p>
+<ul><li>在 handler 里直接写 <code>requireLogin(...)</code></li><li>在 adapter 里自己决定某个入口要不要登录</li></ul>
+<p>正确做法：</p>
+<ul><li>统一走 <code>requireFeatureAccess(featureKey, fallbackLabel)</code></li></ul>
+<h3 id="错误-2-在多个文件里手写同一个-feature-key">错误 2：在多个文件里手写同一个 feature key<a class="anchor" href="#错误-2-在多个文件里手写同一个-feature-key" aria-label="锚点">#</a></h3>
+<p>不要把这些散着写：</p>
+<ul><li><code>gateway.relay</code></li><li><code>gateway.manage.open</code></li><li><code>proxy.relay.web</code></li></ul>
+<p>正确做法：</p>
+<ul><li>family prefix 从 <code>featureKeyBuilder</code> 取</li><li>再用 <code>joinFeatureKey(...)</code> 组合</li></ul>
+<h3 id="错误-3-把-khy-claude-又绑回完整-cli-链路">错误 3：把 <code>khy claude</code> 又绑回完整 CLI 链路<a class="anchor" href="#错误-3-把-khy-claude-又绑回完整-cli-链路" aria-label="锚点">#</a></h3>
+<p><code>khy claude</code> 现在优先直接拉起代理守护进程。</p>
+<p>如果你未来改代理启动逻辑，不要轻易把它重新改回“必须经过完整外层命令分发链路”。</p>
+<hr>
+<h2 id="6-最小验证命令">6. 最小验证命令<a class="anchor" href="#6-最小验证命令" aria-label="锚点">#</a></h2>
+<h3 id="python-侧">Python 侧<a class="anchor" href="#python-侧" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">python3 -m py_compile khy_platform/cli.py
+python3 -m unittest unit_tests.test_claude_proxy_bootstrap unit_tests.test_proxy_endpoint_discovery</code></pre>
+<h3 id="node-js-侧">Node / JS 侧<a class="anchor" href="#node-js-侧" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">node --check backend/src/services/authGuard.js
+node --check backend/src/services/featureKeyBuilder.js
+node --check backend/src/cli/handlers/gateway.js
+node --check backend/src/cli/handlers/ide.js
+node --check backend/src/services/gateway/adapters/webRelayAdapter.js
+node --check backend/src/services/gateway/adapters/clipboardRelayAdapter.js
+npm --prefix backend test -- --runTestsByPath \
+  tests/security/featureKeyBuilder.test.js \
+  tests/security/authGuard.exports.test.js \
+  tests/gateway/relayAccessBoundary.test.js \
+  tests/cli/ide.access.test.js</code></pre>
+<hr>
+<h2 id="7-一句话工作流">7. 一句话工作流<a class="anchor" href="#7-一句话工作流" aria-label="锚点">#</a></h2>
+<p>看到代理/登录边界问题时，用这个顺序：</p>
+<ol><li>先确认是启动链路问题，还是登录策略问题</li><li>启动链路看 <code>cli.py</code></li><li>登录策略看 <code>authGuard.js</code></li><li>命名与前缀看 <code>featureKeyBuilder.js</code></li><li>调用层只做最小接线</li><li>只跑最小验证，不要一上来全仓库乱测</li></ol>
+<hr>
+<h2 id="8-什么时候去看长文档">8. 什么时候去看长文档<a class="anchor" href="#8-什么时候去看长文档" aria-label="锚点">#</a></h2>
+<p>如果你遇到下面任意一种情况，直接读长文档：</p>
+<ul><li>不知道为什么要这样分层</li><li>想知道这轮修复完整演进顺序</li><li>想继续清理兼容 helper</li><li>想理解为什么 <code>khy claude</code> 要和外层 CLI 解耦</li></ul>
+<p>长文档：</p>
+<ul><li><code>docs/04_IMPL_实现/[IMPL-RPT-009] 特性访问与代理解耦-2026-06-01.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-034] TODO.html"><div class="dir">← 上一篇</div><div class="ttl">当前协作待办</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-036] khyos跨平台构建-Windows支持方案.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-036] khyos 跨平台构建（Windows 支持）方案</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-035] 特性访问-维护速查-2026-06-01.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

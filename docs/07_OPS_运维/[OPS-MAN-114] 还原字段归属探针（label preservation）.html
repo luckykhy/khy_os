@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-114] 还原字段归属探针（label preservation） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-114] 还原字段归属探针（label preservation）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-114] 还原字段归属探针（label preservation）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-114-还原字段归属探针-label-preservation">[OPS-MAN-114] 还原字段归属探针（label preservation）</a></li><li class="lvl-2"><a href="#这一层闭合什么-效应探针-数得到-但-看不见打在哪-的盲区">这一层闭合什么：效应探针「数得到」但「看不见打在哪」的盲区</a></li><li class="lvl-2"><a href="#思想来源-jacobian-lens-的-4-3-2-label-preservation">思想来源：Jacobian lens 的 §4.3.2「label preservation」</a></li><li class="lvl-2"><a href="#怎么判-实际反应门集-vs-声明属主门">怎么判：实际反应门集 vs 声明属主门</a></li><li class="lvl-2"><a href="#恒久红线-继承全家族-密钥卫生">恒久红线（继承全家族 + 密钥卫生）</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-114-还原字段归属探针-label-preservation">[OPS-MAN-114] 还原字段归属探针（label preservation）<a class="anchor" href="#ops-man-114-还原字段归属探针-label-preservation" aria-label="锚点">#</a></h1>
+<blockquote><p>本文件由 <code>scripts/restore-field-attribution.js --gen-doc</code> 确定性生成，请勿手改；<br>判定逻辑改在 <code>scripts/lib/restoreFieldAttribution.js</code>，再重新生成。</p></blockquote>
+<h2 id="这一层闭合什么-效应探针-数得到-但-看不见打在哪-的盲区">这一层闭合什么：效应探针「数得到」但「看不见打在哪」的盲区<a class="anchor" href="#这一层闭合什么-效应探针-数得到-但-看不见打在哪-的盲区" aria-label="锚点">#</a></h2>
+<p>效应探针（OPS-113）只<strong>数</strong>「某快照头字段动了几道还原门」——它是 breadth-blind，只问<br>「≥1 门反应吗？」。这抓得住「消费者被摘」（死字段），却抓不住<strong>消费者被挪到错的门</strong>。</p>
+<p>设想一次重构把 <code>crypto.algo</code> 的效应从 <code>crypto(110)</code> 挪到了 <code>provenance(107)</code>（来源门的<br>裁决开始随加密算法而变）。OPS-113 依旧<strong>全绿</strong>——<code>crypto.algo</code> 仍然 ≥1 门反应。但这是<br><strong>真串扰</strong>：git 溯源的诚实裁决竟被加密算法左右 = 关注点泄漏；而且加密字段一旦能左右<br>非加密裁决，还是<strong>安全隐患</strong>。本层就是那个缺失的<strong>归属回归守卫</strong>。</p>
+<h2 id="思想来源-jacobian-lens-的-4-3-2-label-preservation">思想来源：Jacobian lens 的 §4.3.2「label preservation」<a class="anchor" href="#思想来源-jacobian-lens-的-4-3-2-label-preservation" aria-label="锚点">#</a></h2>
+<p>源自 Anthropic《Verbalizable Representations Form a Global Workspace in Language Models》。<br>论文里，广播头（broadcast head）必须<strong>同时</strong>过两道独立评分：</p>
+<ul><li><strong>gain</strong>：把一个方向放大得够广（≈ 本字段<strong>有没有</strong>效应）；</li><li><strong>label preservation</strong>：把方向 <code>v_i</code> 忠实地映<strong>回它自己</strong>（<code>cos(W_OV v_i, v_i)</code> 高），</li></ul>
+<p>而不是把它和别的方向 <code>v_j</code> <strong>打散</strong>混在一起（scrambled label）。</p>
+<p>两条正交。落到 khy 还原家族：</p>
+<table><thead><tr><th>论文</th><th>khy 探针</th><th>问的问题</th><th>抓的回归</th></tr></thead><tbody><tr><td>gain / breadth</td><td>效应探针 OPS-113</td><td>字段<strong>有没有</strong>效应？</td><td>消费者被摘（死字段）</td></tr><tr><td>label preservation</td><td>归属探针 OPS-114（本层）</td><td>效应打在<strong>对的门</strong>上没？</td><td>消费者被挪错门（串扰）</td></tr></tbody></table>
+<h2 id="怎么判-实际反应门集-vs-声明属主门">怎么判：实际反应门集 vs 声明属主门<a class="anchor" href="#怎么判-实际反应门集-vs-声明属主门" aria-label="锚点">#</a></h2>
+<p>声明属主直接取自 OPS-113 <code>CONTRACT_FIELDS</code> 每字段的 <code>wiredBy</code>（如 <code>OPS-107</code>），与门名里的<br>编号（如 <code>provenance(107)</code>）按<strong>数字令牌</strong>匹配。对每个契约字段：</p>
+<table><thead><tr><th>归属档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td><code>faithful</code></td><td>恰好只反应其声明的属主门</td><td>label preserved</td><td>✓</td></tr><tr><td><code>cross-talk</code></td><td>反应了<strong>非</strong>属主门</td><td>串扰 / 关注点泄漏（OPS-113 看不见）</td><td>✗</td></tr><tr><td><code>partial</code></td><td>缺失某个声明的属主门（仅多属主 <code>wiredBy</code> 可能）</td><td>声明的消费者掉了一个</td><td>✗</td></tr><tr><td><code>dead</code></td><td>一门都不反应</td><td>OPS-113 领域，此处照实报</td><td>✗</td></tr><tr><td><code>unattributed</code></td><td>字段无 <code>wiredBy</code> / 取不出编号</td><td>无从判归属，保守非 ok</td><td>✗</td></tr></tbody></table>
+<ul><li><code>ok===true</code> 仅当<strong>每个</strong>契约字段都 <code>faithful</code>；否则 <code>miswired</code>。</li><li>若某字段<strong>本应</strong>被多道门消费（真正的广播字段），把 <code>wiredBy</code> 写成含多个编号的串</li></ul>
+<p>（如 <code>OPS-105+108</code>）——本层按「门名含其中任一编号即算属主」，缺任一属主门 → <code>partial</code>。</p>
+<ul><li><code>--json</code> 在非 <code>ok</code> 时<strong>退出码 2</strong>：CI / 自驱 agent 据此发现「还原字段归属出现回归」。</li></ul>
+<h2 id="恒久红线-继承全家族-密钥卫生">恒久红线（继承全家族 + 密钥卫生）<a class="anchor" href="#恒久红线-继承全家族-密钥卫生" aria-label="锚点">#</a></h2>
+<ul><li>证据不足（上游效应探针无字段：无门 / 无语料 / 结果畸形）一律判 <code>unverifiable</code>：绝不臆造绿灯。</li><li><strong>绝不读、绝不打印、绝不扰动任何密钥/口令/明文材料</strong>：入参 <code>probeResult</code> 已由 OPS-113 保证</li></ul>
+<p>不含快照头取值；本层只碰字段路径与门名，输出只含路径、门名、OPS 号、归属标签，绝不含 header 取值。</p>
+<ul><li>叶子纯计算、零 IO、绝不改入参、绝不抛；采事实复用 OPS-113 的 <code>buildEffectProbe</code>（确定性扰动）。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-113] 还原字段效应探针（雅可比透镜）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-115] 纯文本模型图片 OCR 兜底方向自动校正.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-115] 纯文本模型图片 OCR 兜底 —— 方向自动校正（第一条纠正型轴）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-114] 还原字段归属探针（label preservation）.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

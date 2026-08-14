@@ -1,0 +1,22 @@
+# khy 按技术栈(node)生成的忽略项
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+.env.*.local
+*.tmp
+.idea/
+.vscode/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+dist/
+build/
+coverage/
+.next/
+.nuxt/
+.cache/

@@ -1,0 +1,12 @@
+{
+  "name": "khy-honest-closure",
+  "description": "Khy-OS 诚实收尾规范：做完一件事时如实报告改了什么、接到哪个真实入口、怎么回退、测了几个绿、跳过了什么、哪些没做。防止弱模型把『跑了工具但没交付结论』当作完成。每次准备说『做完了』时激活。",
+  "user_invocable": true,
+  "trigger": "/khy-honest-closure",
+  "aliases": ["/khy-closure", "/收尾"],
+  "category": "khy-guidance",
+  "tags": ["khy-os", "closure", "honesty", "report", "verification"],
+  "platforms": ["khy-os"],
+  "when_to_use": "完成一项修改、准备向用户汇报『做完了』之前。",
+  "context": "inline"
+}

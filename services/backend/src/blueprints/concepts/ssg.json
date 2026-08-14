@@ -1,0 +1,18 @@
+{
+  "id": "ssg",
+  "kind": "concept",
+  "name": "SSG",
+  "category": "frontend",
+  "triggers": ["SSG", "Static Site Generation", "静态站点生成"],
+  "summary": "静态站点生成：构建时预渲染出静态 HTML，部署到 CDN，访问零服务端计算，极快且廉价；内容更新需重新构建(或 ISR 增量)。",
+  "whenToUse": [
+    "内容相对稳定：文档、博客、营销页、产品官网。",
+    "追求极致加载速度与低成本、强 SEO。"
+  ],
+  "antiPatterns": [
+    "高频变化/个性化内容用纯 SSG（应 SSR 或客户端取数）。",
+    "海量页面全量构建导致构建时间爆炸（需 ISR/按需）。"
+  ],
+  "minimalSkeleton": "构建时: 数据 + 模板 → 预渲染静态 HTML\n部署: 静态文件上 CDN\n动态部分: 客户端 fetch 或 ISR 增量再生",
+  "relatedArchetypes": []
+}

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-098] 并行写冲突检测（多子任务改同一文件时如实告警） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-098] 并行写冲突检测（多子任务改同一文件时如实告警）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-098] 并行写冲突检测（多子任务改同一文件时如实告警）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-098-并行写冲突检测-多子任务改同一文件时如实告警">[OPS-MAN-098] 并行写冲突检测（多子任务改同一文件时如实告警）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么需要它-真实缺口-并行写-写冲突在报告里不可见">为什么需要它（真实缺口 = 并行写-写冲突在报告里不可见）</a></li><li class="lvl-2"><a href="#单一真源与形状">单一真源与形状</a></li><li class="lvl-2"><a href="#语义与保守降级-绝不误报">语义与保守降级（绝不误报）</a></li><li class="lvl-2"><a href="#门与安全边界">门与安全边界</a></li><li class="lvl-2"><a href="#怎么验证">怎么验证</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-098-并行写冲突检测-多子任务改同一文件时如实告警">[OPS-MAN-098] 并行写冲突检测（多子任务改同一文件时如实告警）<a class="anchor" href="#ops-man-098-并行写冲突检测-多子任务改同一文件时如实告警" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼第七发（「收结果」维度·并行写冲突诚实）。承 [OPS-MAN-083] 依赖感知波次调度、<br>[OPS-MAN-087] 波次执行故障感知、[OPS-MAN-091] 波次前驱结果注入、<br>[OPS-MAN-092] 跳过与失败在最终报告分列、[OPS-MAN-093] 确定性顺序链拆解、<br>[OPS-MAN-094] 角色→工具作用域。前六发覆盖「拆任务 → 有序并行 → 收结果」的<br>调度/执行/报告/调工具链；本条补上「收结果」维度里<strong>另一个正交诚实维度</strong>——<br>当多个并行子任务改<strong>同一个文件</strong>时，如实告警可能的写-写覆盖，而非静默坍缩。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>每个并行子智能体的结果携带 <code>filesModified</code> 数组（producer：<code>agenticHarnessService.js:1018</code>）。<br><code>mergeResults</code>（<code>taskDecomposer.js</code>）把所有子任务的 <code>filesModified</code> 折进一个<strong>去重<br>Set</strong>，footer 渲成 <code>- 修改文件: a.js, b.js</code>。Set 去重把「同一文件被两个并行子任务<br>都改过」<strong>静默坍缩成一条</strong>——用户看报告无法区分「3 个文件各改一次」与「2 个文件、<br>其中一个被两个并行 agent 同时改（last-write-wins、一份工作被静默覆盖丢失）」。本条<br>新增纯叶 <code>mergeFileConflicts.js</code>（<code>detectFileConflicts</code> + <code>formatConflictWarning</code>），<br><code>mergeResults</code> 消费它，footer 额外渲一行 <code>⚠️ 并行写冲突（…）: shared.js（子任务 1, 3）</code>。</p>
+<h2 id="为什么需要它-真实缺口-并行写-写冲突在报告里不可见">为什么需要它（真实缺口 = 并行写-写冲突在报告里不可见）<a class="anchor" href="#为什么需要它-真实缺口-并行写-写冲突在报告里不可见" aria-label="锚点">#</a></h2>
+<p><strong>深挖缺陷（铁证 file:line，producer / consumer / 断桥）：</strong></p>
+<ul><li><strong>Producer</strong>：<code>services/backend/src/services/agenticHarnessService.js:1018</code></li></ul>
+<p><code>filesModified: result.filesModified || []</code>——每个子智能体结果带「改了哪些文件」。<br>  同一波次（wave）内多个子任务<strong>真并行执行</strong>（<code>planWaves</code> 波内并行，OPS-083）。</p>
+<ul><li><strong>Consumer（渲染最后一公里）</strong>：<code>services/backend/src/services/taskDecomposer.js</code></li></ul>
+<p>的 <code>mergeResults</code> 把所有 <code>filesModified</code> 无条件 <code>allFilesModified.add(f)</code> 折进一个<br>  <strong>去重 Set</strong>，footer 渲成一行「修改文件」。</p>
+<ul><li><strong>断桥</strong>：Set 去重使「同一文件被 ≥2 个并行子任务改过」<strong>坍缩成一条</strong>，用户报告</li></ul>
+<p>完全看不到这是并行写重叠。<strong>离机还原 / 无人值守多智能体场景最危险的一类静默数据<br>  丢失</strong>——两个并行 agent 都声称成功、报告只显示一个文件名、其中一份工作已丢。</p>
+<p><strong>后果：</strong> 用户 / 维护者拿到「修改文件: config.js」，无从得知 config.js 是被两个<br>并行子任务同时改的（其中一个的改动可能已被覆盖）。诚实的报告应把「静默丢失」变成<br>「可见告警」，让人有机会复查。</p>
+<p><strong>与前六发的区别（透镜一·同一 consumer 的多个正交诚实维度）：</strong> 092 也改<br><code>mergeResults</code>，但那是 <strong>skip≠fail 的状态诚实</strong>（一个子任务的状态）；本条是<strong>并行<br>写-写冲突的诚实</strong>（跨子任务的文件重叠）——同一渲染出口的<strong>另一个正交诚实维度</strong>。<br>这就是「相同提示词、每轮新收获」：同一函数、不同断桥。找法=对同一 consumer 问<br>「它对结果诚实吗？在<strong>哪几个正交维度</strong>上诚实/不诚实？」</p>
+<h2 id="单一真源与形状">单一真源与形状<a class="anchor" href="#单一真源与形状" aria-label="锚点">#</a></h2>
+<ul><li><code>detectFileConflicts(subtaskFiles)</code>（<code>services/backend/src/services/orchestrator/mergeFileConflicts.js</code>）</li></ul>
+<p>是唯一的冲突检测策略函数，纯、零 IO、绝不抛。入参 <code>[{label, files}]</code>，返回被<br>  ≥<code>_CONFLICT_MIN</code>(=2) 个<strong>不同</strong>子任务改过的文件 <code>[{file, labels}]</code>。</p>
+<ul><li><code>formatConflictWarning(conflicts)</code> 渲成一行 footer 告警字符串，空 → <code>''</code>。</li><li><strong>消费点</strong>：<code>mergeResults</code> 的 footer 段——收集 <code>perSubtaskFiles</code>（只对真跑过、</li></ul>
+<p>非跳过、有 filesModified 的子任务），在既有「修改文件」行后追加告警行。既有 skip<br>  (092)/fail/success 渲染与去重 Set <strong>一字不改</strong>（纯加性）。</p>
+<h2 id="语义与保守降级-绝不误报">语义与保守降级（绝不误报）<a class="anchor" href="#语义与保守降级-绝不误报" aria-label="锚点">#</a></h2>
+<p>| 情形 | 行为 |</p>
+<p>| 门关 <code>KHY_MERGE_FILE_CONFLICT=0/false/off/no</code> | <code>detectFileConflicts</code> 返回 <code>[]</code> = 逐字节回退今日「只去重、不告警」 |</p>
+<p>| 门开 + 同一文件被 ≥2 个不同子任务改 | 返回冲突项，footer 渲 <code>⚠️ 并行写冲突（…）</code> |</p>
+<p>| 门开 + 每个文件只被 1 个子任务改 | 无冲突（不误报单文件单改） |</p>
+<p>| 门开 + 同一子任务重复列同一文件 | label Set 去重后 &lt;2 → 不算冲突 |</p>
+<p>| 跳过项（092，无 filesModified） | 天然不参与冲突检测 |</p>
+<p>| 畸形输入（null/非数组/项无 files/文件名非字符串/空串） | 安全跳过，绝不抛 |</p>
+<h2 id="门与安全边界">门与安全边界<a class="anchor" href="#门与安全边界" aria-label="锚点">#</a></h2>
+<ul><li>门 <code>KHY_MERGE_FILE_CONFLICT</code> default-on，仅 <code>0/false/off/no</code> 关闭；关闭后</li></ul>
+<p><code>detectFileConflicts</code> 返回 <code>[]</code>，footer 无告警行 = 逐字节退化今日行为（无回归）。<br>  门直读 env，<strong>不进 flagRegistry</strong>（同 <code>KHY_DEP_WAVE_SCHEDULE</code> / <code>_FAULT_STOP</code> /<br>  <code>_CONTEXT_INJECT</code> / <code>KHY_MERGE_SKIP_DISTINCT</code> / <code>KHY_SEQ_CHAIN_DECOMPOSE</code> /<br>  <code>KHY_ROLE_TOOL_SCOPE</code> 六个 sibling 门先例，各自独立）。</p>
+<ul><li><strong>路径 trim 不 lowercase</strong>：Linux fs 大小写敏感，<code>A.js</code> 与 <code>a.js</code> 是<strong>不同文件</strong>，</li></ul>
+<p>强行 lowercase 会误报两个不同文件为冲突——诚实边界，只 trim 空白。</p>
+<ul><li><strong>只如实告知，不阻止 / 仲裁冲突</strong>：真正阻止并行写需运行时文件锁（超纯叶范围）。</li></ul>
+<p>本条只把「静默丢失」变「可见告警」，让人有机会复查。</p>
+<ul><li><strong>不碰</strong> god-file / orchestrator 主体 / <code>AgentTool</code> wiring；只加纯叶 + 薄接线</li></ul>
+<p><code>mergeResults</code> footer + 登记。</p>
+<h2 id="怎么验证">怎么验证<a class="anchor" href="#怎么验证" aria-label="锚点">#</a></h2>
+<pre><code>npm run test:merge-file-conflict        # 本条 node:test（检测 + 门关回退 + 接线 mergeResults 联通 18/18）
+npm run test:maintainer:safety          # 已并入的 must 守卫集（含本测文件）</code></pre>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<ol><li>要改<strong>冲突阈值</strong>（如 ≥3 才告警）：改 <code>mergeFileConflicts.js</code> 的 <code>_CONFLICT_MIN</code></li></ol>
+<p>一处。加一条 node:test 覆盖新阈值。</p>
+<ol><li>要改<strong>告警文案</strong>：改 <code>formatConflictWarning</code>。</li><li><strong>别加 lowercase 归一</strong>：路径大小写敏感（见「门与安全边界」），lowercase 会</li></ol>
+<p>把 <code>A.js</code>/<code>a.js</code> 误报为同一文件冲突。</p>
+<ol><li>要真正<strong>阻止</strong>并行写（不只告警）：那需要运行时文件锁 / 波次内串行化改同一文件的</li></ol>
+<p>子任务，属于 orchestrator 主体的运行时改动（碰 god-file），本条刻意不做。</p>
+<ol><li>改完跑 <code>npm run test:merge-file-conflict</code>（必须绿）。</li></ol>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push；真 key/token 不进包、不落盘。</li><li>全 additive；门关（<code>KHY_MERGE_FILE_CONFLICT=off</code>）→ <code>detectFileConflicts</code> 返回</li></ul>
+<p><code>[]</code> = 逐字节回退今日「只去重、不告警」。既有渲染/计数一字不改。不碰 god-file。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-097] 角色工具作用域接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-097] 角色工具作用域接线（把 OPS-094 的死缝接活）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-099] 空产出成功检测.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-099] 空产出成功检测（成功但零产出的子任务如实告警）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-098] 并行写冲突检测.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

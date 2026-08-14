@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Simplification · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>code-simplification<span class="sep">›</span>Code Simplification</div>
+      <header class="hero reveal"><h1>Code Simplification</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#code-simplification">Code Simplification</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#the-five-principles">The Five Principles</a></li><li class="lvl-3"><a href="#1-preserve-behavior-exactly">1. Preserve Behavior Exactly</a></li><li class="lvl-3"><a href="#2-follow-project-conventions">2. Follow Project Conventions</a></li><li class="lvl-3"><a href="#3-prefer-clarity-over-cleverness">3. Prefer Clarity Over Cleverness</a></li><li class="lvl-3"><a href="#4-maintain-balance">4. Maintain Balance</a></li><li class="lvl-3"><a href="#5-scope-to-what-changed">5. Scope to What Changed</a></li><li class="lvl-2"><a href="#the-simplification-process">The Simplification Process</a></li><li class="lvl-3"><a href="#step-1-understand-before-touching-chesterton-s-fence">Step 1: Understand Before Touching (Chesterton's Fence)</a></li><li class="lvl-3"><a href="#step-2-identify-simplification-opportunities">Step 2: Identify Simplification Opportunities</a></li><li class="lvl-3"><a href="#step-3-apply-changes-incrementally">Step 3: Apply Changes Incrementally</a></li><li class="lvl-3"><a href="#step-4-verify-the-result">Step 4: Verify the Result</a></li><li class="lvl-2"><a href="#language-specific-guidance">Language-Specific Guidance</a></li><li class="lvl-3"><a href="#typescript-javascript">TypeScript / JavaScript</a></li><li class="lvl-3"><a href="#python">Python</a></li><li class="lvl-3"><a href="#react-jsx">React / JSX</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="code-simplification">Code Simplification<a class="anchor" href="#code-simplification" aria-label="锚点">#</a></h1>
+<blockquote><p>Inspired by the <a href="https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md" target="_blank" rel="noopener">Claude Code Simplifier plugin</a>. Adapted here as a model-agnostic, process-driven skill for any AI coding agent.</p></blockquote>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Simplify code by reducing complexity while preserving exact behavior. The goal is not fewer lines — it's code that is easier to read, understand, modify, and debug. Every simplification must pass a simple test: &quot;Would a new team member understand this faster than the original?&quot;</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>After a feature is working and tests pass, but the implementation feels heavier than it needs to be</li><li>During code review when readability or complexity issues are flagged</li><li>When you encounter deeply nested logic, long functions, or unclear names</li><li>When refactoring code written under time pressure</li><li>When consolidating related logic scattered across files</li><li>After merging changes that introduced duplication or inconsistency</li></ul>
+<p><strong>When NOT to use:</strong></p>
+<ul><li>Code is already clean and readable — don't simplify for the sake of it</li><li>You don't understand what the code does yet — comprehend before you simplify</li><li>The code is performance-critical and the &quot;simpler&quot; version would be measurably slower</li><li>You're about to rewrite the module entirely — simplifying throwaway code wastes effort</li></ul>
+<h2 id="the-five-principles">The Five Principles<a class="anchor" href="#the-five-principles" aria-label="锚点">#</a></h2>
+<h3 id="1-preserve-behavior-exactly">1. Preserve Behavior Exactly<a class="anchor" href="#1-preserve-behavior-exactly" aria-label="锚点">#</a></h3>
+<p>Don't change what the code does — only how it expresses it. All inputs, outputs, side effects, error behavior, and edge cases must remain identical. If you're not sure a simplification preserves behavior, don't make it.</p>
+<pre><code>ASK BEFORE EVERY CHANGE:
+→ Does this produce the same output for every input?
+→ Does this maintain the same error behavior?
+→ Does this preserve the same side effects and ordering?
+→ Do all existing tests still pass without modification?</code></pre>
+<h3 id="2-follow-project-conventions">2. Follow Project Conventions<a class="anchor" href="#2-follow-project-conventions" aria-label="锚点">#</a></h3>
+<p>Simplification means making code more consistent with the codebase, not imposing external preferences. Before simplifying:</p>
+<pre><code>1. Read CLAUDE.md / project conventions
+2. Study how neighboring code handles similar patterns
+3. Match the project's style for:
+   - Import ordering and module system
+   - Function declaration style
+   - Naming conventions
+   - Error handling patterns
+   - Type annotation depth</code></pre>
+<p>Simplification that breaks project consistency is not simplification — it's churn.</p>
+<h3 id="3-prefer-clarity-over-cleverness">3. Prefer Clarity Over Cleverness<a class="anchor" href="#3-prefer-clarity-over-cleverness" aria-label="锚点">#</a></h3>
+<p>Explicit code is better than compact code when the compact version requires a mental pause to parse.</p>
+<pre><code class="language-typescript">// UNCLEAR: Dense ternary chain
+const label = isNew ? 'New' : isUpdated ? 'Updated' : isArchived ? 'Archived' : 'Active';
+
+// CLEAR: Readable mapping
+function getStatusLabel(item: Item): string {
+  if (item.isNew) return 'New';
+  if (item.isUpdated) return 'Updated';
+  if (item.isArchived) return 'Archived';
+  return 'Active';
+}</code></pre>
+<pre><code class="language-typescript">// UNCLEAR: Chained reduces with inline logic
+const result = items.reduce((acc, item) =&gt; ({
+  ...acc,
+  [item.id]: { ...acc[item.id], count: (acc[item.id]?.count ?? 0) + 1 }
+}), {});
+
+// CLEAR: Named intermediate step
+const countById = new Map&lt;string, number&gt;();
+for (const item of items) {
+  countById.set(item.id, (countById.get(item.id) ?? 0) + 1);
+}</code></pre>
+<h3 id="4-maintain-balance">4. Maintain Balance<a class="anchor" href="#4-maintain-balance" aria-label="锚点">#</a></h3>
+<p>Simplification has a failure mode: over-simplification. Watch for these traps:</p>
+<ul><li><strong>Inlining too aggressively</strong> — removing a helper that gave a concept a name makes the call site harder to read</li><li><strong>Combining unrelated logic</strong> — two simple functions merged into one complex function is not simpler</li><li><strong>Removing &quot;unnecessary&quot; abstraction</strong> — some abstractions exist for extensibility or testability, not complexity</li><li><strong>Optimizing for line count</strong> — fewer lines is not the goal; easier comprehension is</li></ul>
+<h3 id="5-scope-to-what-changed">5. Scope to What Changed<a class="anchor" href="#5-scope-to-what-changed" aria-label="锚点">#</a></h3>
+<p>Default to simplifying recently modified code. Avoid drive-by refactors of unrelated code unless explicitly asked to broaden scope. Unscoped simplification creates noise in diffs and risks unintended regressions.</p>
+<h2 id="the-simplification-process">The Simplification Process<a class="anchor" href="#the-simplification-process" aria-label="锚点">#</a></h2>
+<h3 id="step-1-understand-before-touching-chesterton-s-fence">Step 1: Understand Before Touching (Chesterton's Fence)<a class="anchor" href="#step-1-understand-before-touching-chesterton-s-fence" aria-label="锚点">#</a></h3>
+<p>Before changing or removing anything, understand why it exists. This is Chesterton's Fence: if you see a fence across a road and don't understand why it's there, don't tear it down. First understand the reason, then decide if the reason still applies.</p>
+<pre><code>BEFORE SIMPLIFYING, ANSWER:
+- What is this code's responsibility?
+- What calls it? What does it call?
+- What are the edge cases and error paths?
+- Are there tests that define the expected behavior?
+- Why might it have been written this way? (Performance? Platform constraint? Historical reason?)
+- Check git blame: what was the original context for this code?</code></pre>
+<p>If you can't answer these, you're not ready to simplify. Read more context first.</p>
+<h3 id="step-2-identify-simplification-opportunities">Step 2: Identify Simplification Opportunities<a class="anchor" href="#step-2-identify-simplification-opportunities" aria-label="锚点">#</a></h3>
+<p>Scan for these patterns — each one is a concrete signal, not a vague smell:</p>
+<p><strong>Structural complexity:</strong></p>
+<table><thead><tr><th>Pattern</th><th>Signal</th><th>Simplification</th></tr></thead><tbody><tr><td>Deep nesting (3+ levels)</td><td>Hard to follow control flow</td><td>Extract conditions into guard clauses or helper functions</td></tr><tr><td>Long functions (50+ lines)</td><td>Multiple responsibilities</td><td>Split into focused functions with descriptive names</td></tr><tr><td>Nested ternaries</td><td>Requires mental stack to parse</td><td>Replace with if/else chains, switch, or lookup objects</td></tr><tr><td>Boolean parameter flags</td><td><code>doThing(true, false, true)</code></td><td>Replace with options objects or separate functions</td></tr><tr><td>Repeated conditionals</td><td>Same <code>if</code> check in multiple places</td><td>Extract to a well-named predicate function</td></tr></tbody></table>
+<p><strong>Naming and readability:</strong></p>
+<table><thead><tr><th>Pattern</th><th>Signal</th><th>Simplification</th></tr></thead><tbody><tr><td>Generic names</td><td><code>data</code>, <code>result</code>, <code>temp</code>, <code>val</code>, <code>item</code></td><td>Rename to describe the content: <code>userProfile</code>, <code>validationErrors</code></td></tr><tr><td>Abbreviated names</td><td><code>usr</code>, <code>cfg</code>, <code>btn</code>, <code>evt</code></td><td>Use full words unless the abbreviation is universal (<code>id</code>, <code>url</code>, <code>api</code>)</td></tr><tr><td>Misleading names</td><td>Function named <code>get</code> that also mutates state</td><td>Rename to reflect actual behavior</td></tr><tr><td>Comments explaining &quot;what&quot;</td><td><code>// increment counter</code> above <code>count++</code></td><td>Delete the comment — the code is clear enough</td></tr><tr><td>Comments explaining &quot;why&quot;</td><td><code>// Retry because the API is flaky under load</code></td><td>Keep these — they carry intent the code can't express</td></tr></tbody></table>
+<p><strong>Redundancy:</strong></p>
+<table><thead><tr><th>Pattern</th><th>Signal</th><th>Simplification</th></tr></thead><tbody><tr><td>Duplicated logic</td><td>Same 5+ lines in multiple places</td><td>Extract to a shared function</td></tr><tr><td>Dead code</td><td>Unreachable branches, unused variables, commented-out blocks</td><td>Remove (after confirming it's truly dead)</td></tr><tr><td>Unnecessary abstractions</td><td>Wrapper that adds no value</td><td>Inline the wrapper, call the underlying function directly</td></tr><tr><td>Over-engineered patterns</td><td>Factory-for-a-factory, strategy-with-one-strategy</td><td>Replace with the simple direct approach</td></tr><tr><td>Redundant type assertions</td><td>Casting to a type that's already inferred</td><td>Remove the assertion</td></tr></tbody></table>
+<h3 id="step-3-apply-changes-incrementally">Step 3: Apply Changes Incrementally<a class="anchor" href="#step-3-apply-changes-incrementally" aria-label="锚点">#</a></h3>
+<p>Make one simplification at a time. Run tests after each change. <strong>Submit refactoring changes separately from feature or bug fix changes.</strong> A PR that refactors and adds a feature is two PRs — split them.</p>
+<pre><code>FOR EACH SIMPLIFICATION:
+1. Make the change
+2. Run the test suite
+3. If tests pass → commit (or continue to next simplification)
+4. If tests fail → revert and reconsider</code></pre>
+<p>Avoid batching multiple simplifications into a single untested change. If something breaks, you need to know which simplification caused it.</p>
+<p><strong>The Rule of 500:</strong> If a refactoring would touch more than 500 lines, invest in automation (codemods, sed scripts, AST transforms) rather than making the changes by hand. Manual edits at that scale are error-prone and exhausting to review.</p>
+<h3 id="step-4-verify-the-result">Step 4: Verify the Result<a class="anchor" href="#step-4-verify-the-result" aria-label="锚点">#</a></h3>
+<p>After all simplifications, step back and evaluate the whole:</p>
+<pre><code>COMPARE BEFORE AND AFTER:
+- Is the simplified version genuinely easier to understand?
+- Did you introduce any new patterns inconsistent with the codebase?
+- Is the diff clean and reviewable?
+- Would a teammate approve this change?</code></pre>
+<p>If the &quot;simplified&quot; version is harder to understand or review, revert. Not every simplification attempt succeeds.</p>
+<h2 id="language-specific-guidance">Language-Specific Guidance<a class="anchor" href="#language-specific-guidance" aria-label="锚点">#</a></h2>
+<h3 id="typescript-javascript">TypeScript / JavaScript<a class="anchor" href="#typescript-javascript" aria-label="锚点">#</a></h3>
+<pre><code class="language-typescript">// SIMPLIFY: Unnecessary async wrapper
+// Before
+async function getUser(id: string): Promise&lt;User&gt; {
+  return await userService.findById(id);
+}
+// After
+function getUser(id: string): Promise&lt;User&gt; {
+  return userService.findById(id);
+}
+
+// SIMPLIFY: Verbose conditional assignment
+// Before
+let displayName: string;
+if (user.nickname) {
+  displayName = user.nickname;
+} else {
+  displayName = user.fullName;
+}
+// After
+const displayName = user.nickname || user.fullName;
+
+// SIMPLIFY: Manual array building
+// Before
+const activeUsers: User[] = [];
+for (const user of users) {
+  if (user.isActive) {
+    activeUsers.push(user);
+  }
+}
+// After
+const activeUsers = users.filter((user) =&gt; user.isActive);
+
+// SIMPLIFY: Redundant boolean return
+// Before
+function isValid(input: string): boolean {
+  if (input.length &gt; 0 &amp;&amp; input.length &lt; 100) {
+    return true;
+  }
+  return false;
+}
+// After
+function isValid(input: string): boolean {
+  return input.length &gt; 0 &amp;&amp; input.length &lt; 100;
+}</code></pre>
+<h3 id="python">Python<a class="anchor" href="#python" aria-label="锚点">#</a></h3>
+<pre><code class="language-python"># SIMPLIFY: Verbose dictionary building
+# Before
+result = {}
+for item in items:
+    result[item.id] = item.name
+# After
+result = {item.id: item.name for item in items}
+
+# SIMPLIFY: Nested conditionals with early return
+# Before
+def process(data):
+    if data is not None:
+        if data.is_valid():
+            if data.has_permission():
+                return do_work(data)
+            else:
+                raise PermissionError(&quot;No permission&quot;)
+        else:
+            raise ValueError(&quot;Invalid data&quot;)
+    else:
+        raise TypeError(&quot;Data is None&quot;)
+# After
+def process(data):
+    if data is None:
+        raise TypeError(&quot;Data is None&quot;)
+    if not data.is_valid():
+        raise ValueError(&quot;Invalid data&quot;)
+    if not data.has_permission():
+        raise PermissionError(&quot;No permission&quot;)
+    return do_work(data)</code></pre>
+<h3 id="react-jsx">React / JSX<a class="anchor" href="#react-jsx" aria-label="锚点">#</a></h3>
+<pre><code class="language-tsx">// SIMPLIFY: Verbose conditional rendering
+// Before
+function UserBadge({ user }: Props) {
+  if (user.isAdmin) {
+    return &lt;Badge variant=&quot;admin&quot;&gt;Admin&lt;/Badge&gt;;
+  } else {
+    return &lt;Badge variant=&quot;default&quot;&gt;User&lt;/Badge&gt;;
+  }
+}
+// After
+function UserBadge({ user }: Props) {
+  const variant = user.isAdmin ? 'admin' : 'default';
+  const label = user.isAdmin ? 'Admin' : 'User';
+  return &lt;Badge variant={variant}&gt;{label}&lt;/Badge&gt;;
+}
+
+// SIMPLIFY: Prop drilling through intermediate components
+// Before — consider whether context or composition solves this better.
+// This is a judgment call — flag it, don't auto-refactor.</code></pre>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;It's working, no need to touch it&quot;</td><td>Working code that's hard to read will be hard to fix when it breaks. Simplifying now saves time on every future change.</td></tr><tr><td>&quot;Fewer lines is always simpler&quot;</td><td>A 1-line nested ternary is not simpler than a 5-line if/else. Simplicity is about comprehension speed, not line count.</td></tr><tr><td>&quot;I'll just quickly simplify this unrelated code too&quot;</td><td>Unscoped simplification creates noisy diffs and risks regressions in code you didn't intend to change. Stay focused.</td></tr><tr><td>&quot;The types make it self-documenting&quot;</td><td>Types document structure, not intent. A well-named function explains <em>why</em> better than a type signature explains <em>what</em>.</td></tr><tr><td>&quot;This abstraction might be useful later&quot;</td><td>Don't preserve speculative abstractions. If it's not used now, it's complexity without value. Remove it and re-add when needed.</td></tr><tr><td>&quot;The original author must have had a reason&quot;</td><td>Maybe. Check git blame — apply Chesterton's Fence. But accumulated complexity often has no reason; it's just the residue of iteration under pressure.</td></tr><tr><td>&quot;I'll refactor while adding this feature&quot;</td><td>Separate refactoring from feature work. Mixed changes are harder to review, revert, and understand in history.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>Simplification that requires modifying tests to pass (you likely changed behavior)</li><li>&quot;Simplified&quot; code that is longer and harder to follow than the original</li><li>Renaming things to match your preferences rather than project conventions</li><li>Removing error handling because &quot;it makes the code cleaner&quot;</li><li>Simplifying code you don't fully understand</li><li>Batching many simplifications into one large, hard-to-review commit</li><li>Refactoring code outside the scope of the current task without being asked</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After completing a simplification pass:</p>
+<ul><li>[ ] All existing tests pass without modification</li><li>[ ] Build succeeds with no new warnings</li><li>[ ] Linter/formatter passes (no style regressions)</li><li>[ ] Each simplification is a reviewable, incremental change</li><li>[ ] The diff is clean — no unrelated changes mixed in</li><li>[ ] Simplified code follows project conventions (checked against CLAUDE.md or equivalent)</li><li>[ ] No error handling was removed or weakened</li><li>[ ] No dead code was left behind (unused imports, unreachable branches)</li><li>[ ] A teammate or review agent would approve the change as a net improvement</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/code-review-and-quality/references/security-checklist.html"><div class="dir">← 上一篇</div><div class="ttl">Security Checklist</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/commit/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Git Commit Skill</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/code-simplification/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

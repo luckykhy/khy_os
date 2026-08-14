@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Review and Quality · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>code-review-and-quality<span class="sep">›</span>Code Review and Quality</div>
+      <header class="hero reveal"><h1>Code Review and Quality</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#code-review-and-quality">Code Review and Quality</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#the-five-axis-review">The Five-Axis Review</a></li><li class="lvl-3"><a href="#1-correctness">1. Correctness</a></li><li class="lvl-3"><a href="#2-readability-simplicity">2. Readability &amp; Simplicity</a></li><li class="lvl-3"><a href="#3-architecture">3. Architecture</a></li><li class="lvl-3"><a href="#4-security">4. Security</a></li><li class="lvl-3"><a href="#5-performance">5. Performance</a></li><li class="lvl-2"><a href="#change-sizing">Change Sizing</a></li><li class="lvl-2"><a href="#change-descriptions">Change Descriptions</a></li><li class="lvl-2"><a href="#review-process">Review Process</a></li><li class="lvl-3"><a href="#step-1-understand-the-context">Step 1: Understand the Context</a></li><li class="lvl-3"><a href="#step-2-review-the-tests-first">Step 2: Review the Tests First</a></li><li class="lvl-3"><a href="#step-3-review-the-implementation">Step 3: Review the Implementation</a></li><li class="lvl-3"><a href="#step-4-categorize-findings">Step 4: Categorize Findings</a></li><li class="lvl-3"><a href="#step-5-verify-the-verification">Step 5: Verify the Verification</a></li><li class="lvl-2"><a href="#multi-model-review-pattern">Multi-Model Review Pattern</a></li><li class="lvl-2"><a href="#dead-code-hygiene">Dead Code Hygiene</a></li><li class="lvl-2"><a href="#review-speed">Review Speed</a></li><li class="lvl-2"><a href="#handling-disagreements">Handling Disagreements</a></li><li class="lvl-2"><a href="#honesty-in-review">Honesty in Review</a></li><li class="lvl-2"><a href="#dependency-discipline">Dependency Discipline</a></li><li class="lvl-2"><a href="#the-review-checklist">The Review Checklist</a></li><li class="lvl-2"><a href="#see-also">See Also</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="code-review-and-quality">Code Review and Quality<a class="anchor" href="#code-review-and-quality" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Multi-dimensional code review with quality gates. Every change gets reviewed before merge — no exceptions. Review covers five axes: correctness, readability, architecture, security, and performance.</p>
+<p><strong>The approval standard:</strong> Approve a change when it definitely improves overall code health, even if it isn't perfect. Perfect code doesn't exist — the goal is continuous improvement. Don't block a change because it isn't exactly how you would have written it. If it improves the codebase and follows the project's conventions, approve it.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Before merging any PR or change</li><li>After completing a feature implementation</li><li>When another agent or model produced code you need to evaluate</li><li>When refactoring existing code</li><li>After any bug fix (review both the fix and the regression test)</li></ul>
+<h2 id="the-five-axis-review">The Five-Axis Review<a class="anchor" href="#the-five-axis-review" aria-label="锚点">#</a></h2>
+<p>Every review evaluates code across these dimensions:</p>
+<h3 id="1-correctness">1. Correctness<a class="anchor" href="#1-correctness" aria-label="锚点">#</a></h3>
+<p>Does the code do what it claims to do?</p>
+<ul><li>Does it match the spec or task requirements?</li><li>Are edge cases handled (null, empty, boundary values)?</li><li>Are error paths handled (not just the happy path)?</li><li>Does it pass all tests? Are the tests actually testing the right things?</li><li>Are there off-by-one errors, race conditions, or state inconsistencies?</li></ul>
+<h3 id="2-readability-simplicity">2. Readability &amp; Simplicity<a class="anchor" href="#2-readability-simplicity" aria-label="锚点">#</a></h3>
+<p>Can another engineer (or agent) understand this code without the author explaining it?</p>
+<ul><li>Are names descriptive and consistent with project conventions? (No <code>temp</code>, <code>data</code>, <code>result</code> without context)</li><li>Is the control flow straightforward (avoid nested ternaries, deep callbacks)?</li><li>Is the code organized logically (related code grouped, clear module boundaries)?</li><li>Are there any &quot;clever&quot; tricks that should be simplified?</li><li><strong>Could this be done in fewer lines?</strong> (1000 lines where 100 suffice is a failure)</li><li><strong>Are abstractions earning their complexity?</strong> (Don't generalize until the third use case)</li><li>Would comments help clarify non-obvious intent? (But don't comment obvious code.)</li><li>Are there dead code artifacts: no-op variables (<code>_unused</code>), backwards-compat shims, or <code>// removed</code> comments?</li></ul>
+<h3 id="3-architecture">3. Architecture<a class="anchor" href="#3-architecture" aria-label="锚点">#</a></h3>
+<p>Does the change fit the system's design?</p>
+<ul><li>Does it follow existing patterns or introduce a new one? If new, is it justified?</li><li>Does it maintain clean module boundaries?</li><li>Is there code duplication that should be shared?</li><li>Are dependencies flowing in the right direction (no circular dependencies)?</li><li>Is the abstraction level appropriate (not over-engineered, not too coupled)?</li></ul>
+<h3 id="4-security">4. Security<a class="anchor" href="#4-security" aria-label="锚点">#</a></h3>
+<p>For detailed security guidance, see <code>security-and-hardening</code>. Does the change introduce vulnerabilities?</p>
+<ul><li>Is user input validated and sanitized?</li><li>Are secrets kept out of code, logs, and version control?</li><li>Is authentication/authorization checked where needed?</li><li>Are SQL queries parameterized (no string concatenation)?</li><li>Are outputs encoded to prevent XSS?</li><li>Are dependencies from trusted sources with no known vulnerabilities?</li><li>Is data from external sources (APIs, logs, user content, config files) treated as untrusted?</li><li>Are external data flows validated at system boundaries before use in logic or rendering?</li></ul>
+<h3 id="5-performance">5. Performance<a class="anchor" href="#5-performance" aria-label="锚点">#</a></h3>
+<p>For detailed profiling and optimization, see <code>performance-optimization</code>. Does the change introduce performance problems?</p>
+<ul><li>Any N+1 query patterns?</li><li>Any unbounded loops or unconstrained data fetching?</li><li>Any synchronous operations that should be async?</li><li>Any unnecessary re-renders in UI components?</li><li>Any missing pagination on list endpoints?</li><li>Any large objects created in hot paths?</li></ul>
+<h2 id="change-sizing">Change Sizing<a class="anchor" href="#change-sizing" aria-label="锚点">#</a></h2>
+<p>Small, focused changes are easier to review, faster to merge, and safer to deploy. Target these sizes:</p>
+<pre><code>~100 lines changed   → Good. Reviewable in one sitting.
+~300 lines changed   → Acceptable if it's a single logical change.
+~1000 lines changed  → Too large. Split it.</code></pre>
+<p><strong>What counts as &quot;one change&quot;:</strong> A single self-contained modification that addresses one thing, includes related tests, and keeps the system functional after submission. One part of a feature — not the whole feature.</p>
+<p><strong>Splitting strategies when a change is too large:</strong></p>
+<table><thead><tr><th>Strategy</th><th>How</th><th>When</th></tr></thead><tbody><tr><td><strong>Stack</strong></td><td>Submit a small change, start the next one based on it</td><td>Sequential dependencies</td></tr><tr><td><strong>By file group</strong></td><td>Separate changes for groups needing different reviewers</td><td>Cross-cutting concerns</td></tr><tr><td><strong>Horizontal</strong></td><td>Create shared code/stubs first, then consumers</td><td>Layered architecture</td></tr><tr><td><strong>Vertical</strong></td><td>Break into smaller full-stack slices of the feature</td><td>Feature work</td></tr></tbody></table>
+<p><strong>When large changes are acceptable:</strong> Complete file deletions and automated refactoring where the reviewer only needs to verify intent, not every line.</p>
+<p><strong>Separate refactoring from feature work.</strong> A change that refactors existing code and adds new behavior is two changes — submit them separately. Small cleanups (variable renaming) can be included at reviewer discretion.</p>
+<h2 id="change-descriptions">Change Descriptions<a class="anchor" href="#change-descriptions" aria-label="锚点">#</a></h2>
+<p>Every change needs a description that stands alone in version control history.</p>
+<p><strong>First line:</strong> Short, imperative, standalone. &quot;Delete the FizzBuzz RPC&quot; not &quot;Deleting the FizzBuzz RPC.&quot; Must be informative enough that someone searching history can understand the change without reading the diff.</p>
+<p><strong>Body:</strong> What is changing and why. Include context, decisions, and reasoning not visible in the code itself. Link to bug numbers, benchmark results, or design docs where relevant. Acknowledge approach shortcomings when they exist.</p>
+<p><strong>Anti-patterns:</strong> &quot;Fix bug,&quot; &quot;Fix build,&quot; &quot;Add patch,&quot; &quot;Moving code from A to B,&quot; &quot;Phase 1,&quot; &quot;Add convenience functions.&quot;</p>
+<h2 id="review-process">Review Process<a class="anchor" href="#review-process" aria-label="锚点">#</a></h2>
+<h3 id="step-1-understand-the-context">Step 1: Understand the Context<a class="anchor" href="#step-1-understand-the-context" aria-label="锚点">#</a></h3>
+<p>Before looking at code, understand the intent:</p>
+<pre><code>- What is this change trying to accomplish?
+- What spec or task does it implement?
+- What is the expected behavior change?</code></pre>
+<h3 id="step-2-review-the-tests-first">Step 2: Review the Tests First<a class="anchor" href="#step-2-review-the-tests-first" aria-label="锚点">#</a></h3>
+<p>Tests reveal intent and coverage:</p>
+<pre><code>- Do tests exist for the change?
+- Do they test behavior (not implementation details)?
+- Are edge cases covered?
+- Do tests have descriptive names?
+- Would the tests catch a regression if the code changed?</code></pre>
+<h3 id="step-3-review-the-implementation">Step 3: Review the Implementation<a class="anchor" href="#step-3-review-the-implementation" aria-label="锚点">#</a></h3>
+<p>Walk through the code with the five axes in mind:</p>
+<pre><code>For each file changed:
+1. Correctness: Does this code do what the test says it should?
+2. Readability: Can I understand this without help?
+3. Architecture: Does this fit the system?
+4. Security: Any vulnerabilities?
+5. Performance: Any bottlenecks?</code></pre>
+<h3 id="step-4-categorize-findings">Step 4: Categorize Findings<a class="anchor" href="#step-4-categorize-findings" aria-label="锚点">#</a></h3>
+<p>Label every comment with its severity so the author knows what's required vs optional:</p>
+<table><thead><tr><th>Prefix</th><th>Meaning</th><th>Author Action</th></tr></thead><tbody><tr><td><em>(no prefix)</em></td><td>Required change</td><td>Must address before merge</td></tr><tr><td><strong>Critical:</strong></td><td>Blocks merge</td><td>Security vulnerability, data loss, broken functionality</td></tr><tr><td><strong>Nit:</strong></td><td>Minor, optional</td><td>Author may ignore — formatting, style preferences</td></tr><tr><td><strong>Optional:</strong> / <strong>Consider:</strong></td><td>Suggestion</td><td>Worth considering but not required</td></tr><tr><td><strong>FYI</strong></td><td>Informational only</td><td>No action needed — context for future reference</td></tr></tbody></table>
+<p>This prevents authors from treating all feedback as mandatory and wasting time on optional suggestions.</p>
+<h3 id="step-5-verify-the-verification">Step 5: Verify the Verification<a class="anchor" href="#step-5-verify-the-verification" aria-label="锚点">#</a></h3>
+<p>Check the author's verification story:</p>
+<pre><code>- What tests were run?
+- Did the build pass?
+- Was the change tested manually?
+- Are there screenshots for UI changes?
+- Is there a before/after comparison?</code></pre>
+<h2 id="multi-model-review-pattern">Multi-Model Review Pattern<a class="anchor" href="#multi-model-review-pattern" aria-label="锚点">#</a></h2>
+<p>Use different models for different review perspectives:</p>
+<pre><code>Model A writes the code
+    │
+    ▼
+Model B reviews for correctness and architecture
+    │
+    ▼
+Model A addresses the feedback
+    │
+    ▼
+Human makes the final call</code></pre>
+<p>This catches issues that a single model might miss — different models have different blind spots.</p>
+<p><strong>Example prompt for a review agent:</strong></p>
+<pre><code>Review this code change for correctness, security, and adherence to
+our project conventions. The spec says [X]. The change should [Y].
+Flag any issues as Critical, Important, or Suggestion.</code></pre>
+<h2 id="dead-code-hygiene">Dead Code Hygiene<a class="anchor" href="#dead-code-hygiene" aria-label="锚点">#</a></h2>
+<p>After any refactoring or implementation change, check for orphaned code:</p>
+<ol><li>Identify code that is now unreachable or unused</li><li>List it explicitly</li><li><strong>Ask before deleting:</strong> &quot;Should I remove these now-unused elements: [list]?&quot;</li></ol>
+<p>Don't leave dead code lying around — it confuses future readers and agents. But don't silently delete things you're not sure about. When in doubt, ask.</p>
+<pre><code>DEAD CODE IDENTIFIED:
+- formatLegacyDate() in src/utils/date.ts — replaced by formatDate()
+- OldTaskCard component in src/components/ — replaced by TaskCard
+- LEGACY_API_URL constant in src/config.ts — no remaining references
+→ Safe to remove these?</code></pre>
+<h2 id="review-speed">Review Speed<a class="anchor" href="#review-speed" aria-label="锚点">#</a></h2>
+<p>Slow reviews block entire teams. The cost of context-switching to review is less than the waiting cost imposed on others.</p>
+<ul><li><strong>Respond within one business day</strong> — this is the maximum, not the target</li><li><strong>Ideal cadence:</strong> Respond shortly after a review request arrives, unless deep in focused coding. A typical change should complete multiple review rounds in a single day</li><li><strong>Prioritize fast individual responses</strong> over quick final approval. Quick feedback reduces frustration even if multiple rounds are needed</li><li><strong>Large changes:</strong> Ask the author to split them rather than reviewing one massive changeset</li></ul>
+<h2 id="handling-disagreements">Handling Disagreements<a class="anchor" href="#handling-disagreements" aria-label="锚点">#</a></h2>
+<p>When resolving review disputes, apply this hierarchy:</p>
+<ol><li><strong>Technical facts and data</strong> override opinions and preferences</li><li><strong>Style guides</strong> are the absolute authority on style matters</li><li><strong>Software design</strong> must be evaluated on engineering principles, not personal preference</li><li><strong>Codebase consistency</strong> is acceptable if it doesn't degrade overall health</li></ol>
+<p><strong>Don't accept &quot;I'll clean it up later.&quot;</strong> Experience shows deferred cleanup rarely happens. Require cleanup before submission unless it's a genuine emergency. If surrounding issues can't be addressed in this change, require filing a bug with self-assignment.</p>
+<h2 id="honesty-in-review">Honesty in Review<a class="anchor" href="#honesty-in-review" aria-label="锚点">#</a></h2>
+<p>When reviewing code — whether written by you, another agent, or a human:</p>
+<ul><li><strong>Don't rubber-stamp.</strong> &quot;LGTM&quot; without evidence of review helps no one.</li><li><strong>Don't soften real issues.</strong> &quot;This might be a minor concern&quot; when it's a bug that will hit production is dishonest.</li><li><strong>Quantify problems when possible.</strong> &quot;This N+1 query will add ~50ms per item in the list&quot; is better than &quot;this could be slow.&quot;</li><li><strong>Push back on approaches with clear problems.</strong> Sycophancy is a failure mode in reviews. If the implementation has issues, say so directly and propose alternatives.</li><li><strong>Accept override gracefully.</strong> If the author has full context and disagrees, defer to their judgment. Comment on code, not people — reframe personal critiques to focus on the code itself.</li></ul>
+<h2 id="dependency-discipline">Dependency Discipline<a class="anchor" href="#dependency-discipline" aria-label="锚点">#</a></h2>
+<p>Part of code review is dependency review:</p>
+<p><strong>Before adding any dependency:</strong></p>
+<ol><li>Does the existing stack solve this? (Often it does.)</li><li>How large is the dependency? (Check bundle impact.)</li><li>Is it actively maintained? (Check last commit, open issues.)</li><li>Does it have known vulnerabilities? (<code>npm audit</code>)</li><li>What's the license? (Must be compatible with the project.)</li></ol>
+<p><strong>Rule:</strong> Prefer standard library and existing utilities over new dependencies. Every dependency is a liability.</p>
+<h2 id="the-review-checklist">The Review Checklist<a class="anchor" href="#the-review-checklist" aria-label="锚点">#</a></h2>
+<pre><code class="language-markdown">## Review: [PR/Change title]
+
+### Context
+- [ ] I understand what this change does and why
+
+### Correctness
+- [ ] Change matches spec/task requirements
+- [ ] Edge cases handled
+- [ ] Error paths handled
+- [ ] Tests cover the change adequately
+
+### Readability
+- [ ] Names are clear and consistent
+- [ ] Logic is straightforward
+- [ ] No unnecessary complexity
+
+### Architecture
+- [ ] Follows existing patterns
+- [ ] No unnecessary coupling or dependencies
+- [ ] Appropriate abstraction level
+
+### Security
+- [ ] No secrets in code
+- [ ] Input validated at boundaries
+- [ ] No injection vulnerabilities
+- [ ] Auth checks in place
+- [ ] External data sources treated as untrusted
+
+### Performance
+- [ ] No N+1 patterns
+- [ ] No unbounded operations
+- [ ] Pagination on list endpoints
+
+### Verification
+- [ ] Tests pass
+- [ ] Build succeeds
+- [ ] Manual verification done (if applicable)
+
+### Verdict
+- [ ] **Approve** — Ready to merge
+- [ ] **Request changes** — Issues must be addressed</code></pre>
+<h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="锚点">#</a></h2>
+<ul><li>For detailed security review guidance, see <code>references/security-checklist.md</code></li><li>For performance review checks, see <code>references/performance-checklist.md</code></li></ul>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;It works, that's good enough&quot;</td><td>Working code that's unreadable, insecure, or architecturally wrong creates debt that compounds.</td></tr><tr><td>&quot;I wrote it, so I know it's correct&quot;</td><td>Authors are blind to their own assumptions. Every change benefits from another set of eyes.</td></tr><tr><td>&quot;We'll clean it up later&quot;</td><td>Later never comes. The review is the quality gate — use it. Require cleanup before merge, not after.</td></tr><tr><td>&quot;AI-generated code is probably fine&quot;</td><td>AI code needs more scrutiny, not less. It's confident and plausible, even when wrong.</td></tr><tr><td>&quot;The tests pass, so it's good&quot;</td><td>Tests are necessary but not sufficient. They don't catch architecture problems, security issues, or readability concerns.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>PRs merged without any review</li><li>Review that only checks if tests pass (ignoring other axes)</li><li>&quot;LGTM&quot; without evidence of actual review</li><li>Security-sensitive changes without security-focused review</li><li>Large PRs that are &quot;too big to review properly&quot; (split them)</li><li>No regression tests with bug fix PRs</li><li>Review comments without severity labels — makes it unclear what's required vs optional</li><li>Accepting &quot;I'll fix it later&quot; — it never happens</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After review is complete:</p>
+<ul><li>[ ] All Critical issues are resolved</li><li>[ ] All Important issues are resolved or explicitly deferred with justification</li><li>[ ] Tests pass</li><li>[ ] Build succeeds</li><li>[ ] The verification story is documented (what changed, how it was verified)</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/claude-api/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Claude API — Anthropic API Usage Guide</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/code-review-and-quality/references/performance-checklist.html"><div class="dir">下一篇 →</div><div class="ttl">Performance Checklist</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/code-review-and-quality/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

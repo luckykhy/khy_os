@@ -1,0 +1,37 @@
+{
+  "name": "gbt7714",
+  "label": "国标 GB/T 7714 中文学术论文",
+  "description": "符合中文高校学位/期刊常见排版：一级标题黑体三号居中且自动换页，正文宋体小四 1.5 倍行距首行缩进 2 字符，参考文献宋体五号悬挂缩进。",
+  "page": {
+    "size": "A4",
+    "margins": { "top": 2.54, "bottom": 2.54, "left": 3.18, "right": 3.18, "unit": "cm" },
+    "header": { "distance": 1.5, "unit": "cm", "text": "" },
+    "footer": { "distance": 1.75, "unit": "cm", "pageNumber": true }
+  },
+  "paragraph": {
+    "lineSpacing": 1.5,
+    "lineSpacingRule": "multiple",
+    "spaceBefore": 0,
+    "spaceAfter": 0,
+    "firstLineIndentChars": 2
+  },
+  "fonts": {
+    "default": { "ascii": "Times New Roman", "eastAsia": "宋体", "size": 12, "sizeLabel": "小四", "bold": false, "color": "000000" },
+    "title":    { "ascii": "SimHei", "eastAsia": "黑体", "size": 22, "sizeLabel": "二号", "bold": true, "align": "center", "spaceBefore": 0, "spaceAfter": 18 },
+    "heading1": { "ascii": "SimHei", "eastAsia": "黑体", "size": 16, "sizeLabel": "三号", "bold": true, "align": "center", "spaceBefore": 0, "spaceAfter": 12, "pageBreakBefore": true },
+    "heading2": { "ascii": "SimHei", "eastAsia": "黑体", "size": 14, "sizeLabel": "四号", "bold": true, "align": "left", "spaceBefore": 12, "spaceAfter": 6 },
+    "heading3": { "ascii": "SimHei", "eastAsia": "黑体", "size": 13, "sizeLabel": "小三", "bold": true, "align": "left", "spaceBefore": 6, "spaceAfter": 6 },
+    "heading4": { "ascii": "SimHei", "eastAsia": "黑体", "size": 12, "sizeLabel": "小四", "bold": true, "align": "left", "spaceBefore": 6, "spaceAfter": 6 },
+    "quote":    { "ascii": "Times New Roman", "eastAsia": "楷体", "size": 12, "sizeLabel": "小四", "italic": false, "indentChars": 2, "color": "404040" },
+    "code":     { "ascii": "Consolas", "eastAsia": "宋体", "size": 10.5, "sizeLabel": "五号", "color": "1A1A1A" },
+    "caption":  { "ascii": "Times New Roman", "eastAsia": "宋体", "size": 10.5, "sizeLabel": "五号", "align": "center" },
+    "reference":{ "ascii": "Times New Roman", "eastAsia": "宋体", "size": 10.5, "sizeLabel": "五号", "hangingIndentChars": 2 },
+    "list":     { "ascii": "Times New Roman", "eastAsia": "宋体", "size": 12, "sizeLabel": "小四" },
+    "tableCell":{ "ascii": "Times New Roman", "eastAsia": "宋体", "size": 10.5, "sizeLabel": "五号" }
+  },
+  "pagination": {
+    "pageBreakBeforeHeading1": true
+  },
+  "list": { "indentChars": 2 },
+  "table": { "style": "Table Grid", "headerBold": true }
+}

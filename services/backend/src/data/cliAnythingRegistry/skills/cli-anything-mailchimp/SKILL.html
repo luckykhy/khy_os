@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-mailchimp · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-mailchimp<span class="sep">›</span>cli-anything-mailchimp</div>
+      <header class="hero reveal"><h1>cli-anything-mailchimp</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-mailchimp">cli-anything-mailchimp</a></li><li class="lvl-2"><a href="#identity">Identity</a></li><li class="lvl-2"><a href="#what-this-cli-does">What This CLI Does</a></li><li class="lvl-2"><a href="#prerequisites">Prerequisites</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#command-reference">Command Reference</a></li><li class="lvl-3"><a href="#root">Root</a></li><li class="lvl-3"><a href="#lists-audiences">Lists (Audiences)</a></li><li class="lvl-3"><a href="#campaigns">Campaigns</a></li><li class="lvl-3"><a href="#reports">Reports</a></li><li class="lvl-3"><a href="#automations">Automations</a></li><li class="lvl-3"><a href="#e-commerce">E-commerce</a></li><li class="lvl-3"><a href="#other-resources">Other Resources</a></li><li class="lvl-2"><a href="#json-output">JSON Output</a></li><li class="lvl-2"><a href="#common-agent-patterns">Common Agent Patterns</a></li><li class="lvl-2"><a href="#interactive-repl">Interactive REPL</a></li><li class="lvl-2"><a href="#notes">Notes</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-mailchimp&quot;<br>description: CLI harness for the Mailchimp Marketing API v3.0 — 303 commands across 30 resource groups (lists, campaigns, reports, automations, ecommerce, templates, and more). Supports JSON output and interactive REPL mode.</p>
+<hr>
+<h1 id="cli-anything-mailchimp">cli-anything-mailchimp<a class="anchor" href="#cli-anything-mailchimp" aria-label="锚点">#</a></h1>
+<h2 id="identity">Identity<a class="anchor" href="#identity" aria-label="锚点">#</a></h2>
+<p>An agent-native CLI for the <a href="https://mailchimp.com/developer/marketing/docs/fundamentals/" target="_blank" rel="noopener">Mailchimp Marketing API v3.0</a>, built on the <a href="https://github.com/HKUDS/CLI-Anything" target="_blank" rel="noopener">CLI-Anything</a> framework.</p>
+<h2 id="what-this-cli-does">What This CLI Does<a class="anchor" href="#what-this-cli-does" aria-label="锚点">#</a></h2>
+<ul><li>Manage <strong>audiences (lists)</strong> — create, update, delete lists; add/update/archive members; manage merge fields, segments, tags, and webhooks.</li><li>Run <strong>campaigns</strong> — create, schedule, send, pause, replicate, and analyse email campaigns.</li><li>Read <strong>reports</strong> — open rates, click rates, bounce stats, unsubscribes, email activity, geographic data.</li><li>Control <strong>automations</strong> — create and manage automated email workflows.</li><li>Manage <strong>e-commerce</strong> — stores, orders, customers, products, carts, and promo codes.</li><li>Use <strong>templates, file manager, landing pages, SMS campaigns, surveys</strong>, and all other Marketing API resources.</li></ul>
+<h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
+<ul><li>Python 3.10+</li><li><code>MAILCHIMP_API_KEY</code> environment variable set to your API key (including datacenter suffix, e.g. <code>abc123-us8</code>)</li></ul>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># From the CLI-Anything repo (once merged):
+pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=mailchimp/agent-harness
+
+# During development:
+cd mailchimp/agent-harness &amp;&amp; pip install -e .</code></pre>
+<h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
+<h3 id="root">Root<a class="anchor" href="#root" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>cli-anything-mailchimp ping</code></td><td>Health check — confirms API connectivity</td></tr><tr><td><code>cli-anything-mailchimp root list</code></td><td>Get account info</td></tr><tr><td><code>cli-anything-mailchimp --json &lt;cmd&gt;</code></td><td>Output any command as JSON</td></tr><tr><td><code>cli-anything-mailchimp</code></td><td>Launch interactive REPL</td></tr></tbody></table>
+<h3 id="lists-audiences">Lists (Audiences)<a class="anchor" href="#lists-audiences" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>lists list</code></td><td>List all audiences</td></tr><tr><td><code>lists get &lt;LIST_ID&gt;</code></td><td>Get audience info</td></tr><tr><td><code>lists create --data '&lt;json&gt;'</code></td><td>Create audience</td></tr><tr><td><code>lists update &lt;LIST_ID&gt; --data '&lt;json&gt;'</code></td><td>Update audience</td></tr><tr><td><code>lists delete &lt;LIST_ID&gt;</code></td><td>Delete audience</td></tr><tr><td><code>lists list-lists-id-members &lt;LIST_ID&gt;</code></td><td>List members</td></tr><tr><td><code>lists get-lists-id-members-id &lt;LIST_ID&gt; &lt;SUBSCRIBER_HASH&gt;</code></td><td>Get member by MD5 hash</td></tr><tr><td><code>lists create-lists-id-members &lt;LIST_ID&gt; --data '&lt;json&gt;'</code></td><td>Add member</td></tr><tr><td><code>lists list-lists-id-merge-fields &lt;LIST_ID&gt;</code></td><td>List merge fields</td></tr><tr><td><code>lists create-lists-id-merge-fields &lt;LIST_ID&gt; --data '&lt;json&gt;'</code></td><td>Add merge field</td></tr><tr><td><code>lists list-lists-id-segments &lt;LIST_ID&gt;</code></td><td>List segments</td></tr><tr><td><code>lists list-list-member-tags &lt;LIST_ID&gt; &lt;SUBSCRIBER_HASH&gt;</code></td><td>List member tags</td></tr><tr><td><code>lists create-list-member-tags &lt;LIST_ID&gt; &lt;SUBSCRIBER_HASH&gt; --data '&lt;json&gt;'</code></td><td>Add/remove member tags</td></tr><tr><td><code>lists list-lists-id-webhooks &lt;LIST_ID&gt;</code></td><td>List webhooks</td></tr><tr><td><code>lists create-lists-id-webhooks &lt;LIST_ID&gt; --data '&lt;json&gt;'</code></td><td>Add webhook</td></tr></tbody></table>
+<h3 id="campaigns">Campaigns<a class="anchor" href="#campaigns" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>campaigns list</code></td><td>List campaigns</td></tr><tr><td><code>campaigns get &lt;CAMPAIGN_ID&gt;</code></td><td>Get campaign info</td></tr><tr><td><code>campaigns create --data '&lt;json&gt;'</code></td><td>Create campaign</td></tr><tr><td><code>campaigns update &lt;CAMPAIGN_ID&gt; --data '&lt;json&gt;'</code></td><td>Update campaign settings</td></tr><tr><td><code>campaigns delete &lt;CAMPAIGN_ID&gt;</code></td><td>Delete campaign</td></tr><tr><td><code>campaigns send &lt;CAMPAIGN_ID&gt;</code></td><td>Send campaign immediately</td></tr><tr><td><code>campaigns schedule &lt;CAMPAIGN_ID&gt; --data '&lt;json&gt;'</code></td><td>Schedule campaign</td></tr><tr><td><code>campaigns cancel-send &lt;CAMPAIGN_ID&gt;</code></td><td>Cancel scheduled send</td></tr><tr><td><code>campaigns pause &lt;CAMPAIGN_ID&gt;</code></td><td>Pause RSS campaign</td></tr><tr><td><code>campaigns resume &lt;CAMPAIGN_ID&gt;</code></td><td>Resume RSS campaign</td></tr><tr><td><code>campaigns replicate &lt;CAMPAIGN_ID&gt;</code></td><td>Duplicate campaign</td></tr><tr><td><code>campaigns list-content &lt;CAMPAIGN_ID&gt;</code></td><td>Get campaign content</td></tr><tr><td><code>campaigns list-send-checklist &lt;CAMPAIGN_ID&gt;</code></td><td>Pre-send checklist</td></tr></tbody></table>
+<h3 id="reports">Reports<a class="anchor" href="#reports" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>reports list</code></td><td>List all campaign reports</td></tr><tr><td><code>reports get &lt;CAMPAIGN_ID&gt;</code></td><td>Get campaign summary report</td></tr><tr><td><code>reports list-email-activity &lt;CAMPAIGN_ID&gt;</code></td><td>Per-subscriber open/click activity</td></tr><tr><td><code>reports list-click-details &lt;CAMPAIGN_ID&gt;</code></td><td>Link click breakdown</td></tr><tr><td><code>reports list-open-details &lt;CAMPAIGN_ID&gt;</code></td><td>Per-subscriber opens</td></tr><tr><td><code>reports list-unsubscribed &lt;CAMPAIGN_ID&gt;</code></td><td>Unsubscribers</td></tr><tr><td><code>reports list-locations &lt;CAMPAIGN_ID&gt;</code></td><td>Geographic breakdown</td></tr><tr><td><code>reports list-domain-performance &lt;CAMPAIGN_ID&gt;</code></td><td>Per-domain stats</td></tr></tbody></table>
+<h3 id="automations">Automations<a class="anchor" href="#automations" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>automations list</code></td><td>List automations</td></tr><tr><td><code>automations get &lt;WORKFLOW_ID&gt;</code></td><td>Get automation info</td></tr><tr><td><code>automations create --data '&lt;json&gt;'</code></td><td>Create automation</td></tr><tr><td><code>automations pause &lt;WORKFLOW_ID&gt;</code></td><td>Pause automation</td></tr><tr><td><code>automations start &lt;WORKFLOW_ID&gt;</code></td><td>Start automation</td></tr><tr><td><code>automations archive &lt;WORKFLOW_ID&gt;</code></td><td>Archive automation</td></tr><tr><td><code>automations list-emails &lt;WORKFLOW_ID&gt;</code></td><td>List automation emails</td></tr></tbody></table>
+<h3 id="e-commerce">E-commerce<a class="anchor" href="#e-commerce" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>ecommerce list-ecommerce-stores</code></td><td>List stores</td></tr><tr><td><code>ecommerce get &lt;STORE_ID&gt;</code></td><td>Get store info</td></tr><tr><td><code>ecommerce create --data '&lt;json&gt;'</code></td><td>Add store</td></tr><tr><td><code>ecommerce list-ecommerce-stores-id-orders &lt;STORE_ID&gt;</code></td><td>List orders</td></tr><tr><td><code>ecommerce list-ecommerce-stores-id-products &lt;STORE_ID&gt;</code></td><td>List products</td></tr><tr><td><code>ecommerce list-ecommerce-stores-id-customers &lt;STORE_ID&gt;</code></td><td>List customers</td></tr><tr><td><code>ecommerce list-ecommerce-stores-id-carts &lt;STORE_ID&gt;</code></td><td>List carts</td></tr><tr><td><code>ecommerce list-ecommerce-stores-id-promocodes &lt;PROMO_RULE_ID&gt; &lt;STORE_ID&gt;</code></td><td>List promo codes</td></tr></tbody></table>
+<h3 id="other-resources">Other Resources<a class="anchor" href="#other-resources" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>Group</th><th>Description</th></tr></thead><tbody><tr><td><code>templates</code></td><td>Email templates (list, get, create, update, delete)</td></tr><tr><td><code>template-folders</code></td><td>Template folders</td></tr><tr><td><code>campaign-folders</code></td><td>Campaign folders</td></tr><tr><td><code>file-manager</code></td><td>Files and folders in the file manager</td></tr><tr><td><code>landing-pages</code></td><td>Landing pages (list, create, publish, unpublish)</td></tr><tr><td><code>sms-campaigns</code></td><td>SMS campaigns (10 operations)</td></tr><tr><td><code>surveys</code></td><td>Surveys (list, get, publish)</td></tr><tr><td><code>reporting</code></td><td>Facebook ad and landing page reporting</td></tr><tr><td><code>search-campaigns</code></td><td>Search campaigns by query</td></tr><tr><td><code>search-members</code></td><td>Search members across all audiences</td></tr><tr><td><code>batches</code></td><td>Batch API operations</td></tr><tr><td><code>batch-webhooks</code></td><td>Batch operation webhooks</td></tr><tr><td><code>verified-domains</code></td><td>Email domain verification</td></tr><tr><td><code>authorized-apps</code></td><td>OAuth connected apps</td></tr><tr><td><code>connected-sites</code></td><td>Connected site integrations</td></tr><tr><td><code>conversations</code></td><td>Inbox conversations</td></tr><tr><td><code>activity-feed</code></td><td>Account activity feed</td></tr><tr><td><code>account-exports</code></td><td>Account data exports</td></tr></tbody></table>
+<h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
+<p>All commands support <code>--json</code> at the root level:</p>
+<pre><code class="language-bash"># List all audiences as JSON
+cli-anything-mailchimp --json lists list
+
+# Get a campaign report as JSON
+cli-anything-mailchimp --json reports get abc123def
+
+# Pipe to jq — use the native Mailchimp field name for the resource
+cli-anything-mailchimp --json lists list | jq '.lists[].name'
+cli-anything-mailchimp --json campaigns list | jq '.campaigns[].id'</code></pre>
+<p><strong>Envelope shapes</strong> (native Mailchimp API response — use the resource-specific key):</p>
+<pre><code class="language-json">// List endpoints — key matches the resource name (lists, campaigns, members, etc.)
+{&quot;lists&quot;: [...], &quot;total_items&quot;: 42, &quot;_links&quot;: [...]}
+{&quot;campaigns&quot;: [...], &quot;total_items&quot;: 10, &quot;_links&quot;: [...]}
+
+// Single resource GET / POST / PATCH
+{&quot;id&quot;: &quot;abc123&quot;, &quot;name&quot;: &quot;My List&quot;, ...}
+
+// DELETE
+{&quot;ok&quot;: true, &quot;message&quot;: &quot;Deleted.&quot;}
+
+// Error
+{&quot;ok&quot;: false, &quot;message&quot;: &quot;Resource Not Found: ...&quot;, &quot;data&quot;: {...}}</code></pre>
+<h2 id="common-agent-patterns">Common Agent Patterns<a class="anchor" href="#common-agent-patterns" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># Get account health
+cli-anything-mailchimp --json ping | jq '.health_status'
+
+# List all audience IDs and names
+cli-anything-mailchimp --json lists list | jq '.lists[] | {id, name}'
+
+# Find all subscribed members in an audience
+cli-anything-mailchimp --json lists list-lists-id-members &lt;list_id&gt; --status subscribed | jq '.members[].email_address'
+
+# Create a campaign and get its send checklist
+cli-anything-mailchimp --json campaigns create --data '{&quot;type&quot;:&quot;regular&quot;,&quot;settings&quot;:{&quot;subject_line&quot;:&quot;Hello&quot;,&quot;from_name&quot;:&quot;Me&quot;,&quot;reply_to&quot;:&quot;me@example.com&quot;}}' | jq '.id'
+cli-anything-mailchimp --json campaigns list-send-checklist &lt;campaign_id&gt; | jq '.items[] | select(.result == false)'
+
+# Get unsubscribes for a sent campaign
+cli-anything-mailchimp --json reports list-unsubscribed &lt;campaign_id&gt; | jq '.unsubscribes[].email_address'
+
+# Add a member to an audience (subscriber hash = MD5 of lowercased email)
+cli-anything-mailchimp --json lists create-members &lt;list_id&gt; --data '{&quot;email_address&quot;:&quot;user@example.com&quot;,&quot;status&quot;:&quot;subscribed&quot;}'
+
+# Search for a member across all audiences
+cli-anything-mailchimp --json search-members list --query &quot;user@example.com&quot; | jq '.exact_matches.members[]'</code></pre>
+<h2 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h2>
+<p>Run <code>cli-anything-mailchimp</code> with no arguments to enter the REPL:</p>
+<pre><code>◆  cli-anything · Mailchimp
+   v0.1.0
+   Type help for commands, quit to exit
+
+◆ mailchimp ❯ ping
+  ✓ {&quot;health_status&quot;: &quot;Everything's Chimpy!&quot;}
+
+◆ mailchimp ❯ --json lists list
+{&quot;lists&quot;: [...], &quot;total_items&quot;: 3, &quot;_links&quot;: [...]}
+
+◆ mailchimp ❯ quit</code></pre>
+<h2 id="notes">Notes<a class="anchor" href="#notes" aria-label="锚点">#</a></h2>
+<ul><li><strong>Subscriber hash</strong>: Mailchimp identifies members by the MD5 hash of their lowercased email. Compute with <code>python -c &quot;import hashlib; email='email@example.com'; print(hashlib.md5(email.strip().lower().encode()).hexdigest())&quot;</code>.</li><li><strong>Body payloads</strong>: All POST/PATCH/PUT commands accept <code>--data '&lt;json&gt;'</code>. See <a href="https://mailchimp.com/developer/marketing/api/" target="_blank" rel="noopener">Mailchimp API docs</a> for the schema of each endpoint.</li><li><strong>Datacenter</strong>: Your API key ends in <code>-us8</code>, <code>-eu2</code>, etc. The CLI extracts this automatically — include it in <code>MAILCHIMP_API_KEY</code>.</li><li><strong>Rate limits</strong>: The Marketing API rate-limits at 10 concurrent connections and a rolling per-account limit. For bulk operations, use the <code>batches</code> group.</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-macrocli/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">MacroCLI CLI</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-mermaid/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-mermaid</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-mailchimp/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

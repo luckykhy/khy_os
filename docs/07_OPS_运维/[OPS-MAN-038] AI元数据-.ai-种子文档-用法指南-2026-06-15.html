@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 元数据（.ai/ 种子文档）用法指南 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>AI 元数据（.ai/ 种子文档）用法指南</div>
+      <header class="hero reveal"><h1>AI 元数据（.ai/ 种子文档）用法指南</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ai-元数据-ai-种子文档-用法指南">AI 元数据（`.ai/` 种子文档）用法指南</a></li><li class="lvl-2"><a href="#1-一句话定位">1. 一句话定位</a></li><li class="lvl-2"><a href="#2-三件套-机器自有模式">2. 三件套（机器自有模式）</a></li><li class="lvl-2"><a href="#3-它是怎么生成的-确定性地板-可选模型增强">3. 它是怎么生成的（确定性地板 + 可选模型增强）</a></li><li class="lvl-2"><a href="#4-它怎么-随项目变化自动更新-不靠-ai">4. 它怎么「随项目变化自动更新」（不靠 AI）</a></li><li class="lvl-2"><a href="#5-人工撰写-机器派生骨架-本仓库就是这种">5. 人工撰写 + 机器派生骨架（本仓库就是这种）</a></li><li class="lvl-2"><a href="#6-让其它-ai-工具默认读到-ai">6. 让其它 AI 工具默认读到 `.ai/`</a></li><li class="lvl-2"><a href="#7-cli-速查-khy-metadata-别名-meta-maintain">7. CLI 速查（`khy metadata`，别名 `meta` / `maintain`）</a></li><li class="lvl-2"><a href="#8-环境变量-全部有界-有安全默认">8. 环境变量（全部有界、有安全默认）</a></li><li class="lvl-2"><a href="#9-设计上值得学习的几点">9. 设计上值得学习的几点</a></li><li class="lvl-2"><a href="#10-快速上手清单">10. 快速上手清单</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ai-元数据-ai-种子文档-用法指南">AI 元数据（<code>.ai/</code> 种子文档）用法指南<a class="anchor" href="#ai-元数据-ai-种子文档-用法指南" aria-label="锚点">#</a></h1>
+<blockquote><p>面向使用者与维护者的学习文档。<br>对应实现：<code>services/backend/src/services/projectMetadataService.js</code>、<code>metadataPointers.js</code>、<code>metadataHook.js</code>，<br>CLI 入口 <code>services/backend/src/cli/handlers/metadata.js</code>（<code>khy metadata …</code>）。<br>设计规范：<code>docs/03_DESIGN_设计/</code> 中 DESIGN-ARCH 元数据相关条目。</p></blockquote>
+<hr>
+<h2 id="1-一句话定位">1. 一句话定位<a class="anchor" href="#1-一句话定位" aria-label="锚点">#</a></h2>
+<p><code>.ai/</code> 是 khy 给<strong>每个项目</strong>自动生成的一套「种子文档」，目标只有一个：</p>
+<blockquote><p><strong>即便有一天没有 AI 可用，人类或低算力模型也能据此快速理解并安全维护这个项目。</strong></p></blockquote>
+<p>它不是给 AI「喂切片」的向量库，而是给任何读者（人或模型）的一张<strong>导航地图 + 一份红线清单</strong>。<br>核心理念与「用会思考的 Agent，而不是会检索的 RAG」一脉相承：<br><strong>不预先把代码切碎，而是提供坐标，让读者按需展开去读真实代码。</strong></p>
+<hr>
+<h2 id="2-三件套-机器自有模式">2. 三件套（机器自有模式）<a class="anchor" href="#2-三件套-机器自有模式" aria-label="锚点">#</a></h2>
+<p>生成在项目根目录 <code>.ai/</code> 下：</p>
+<table><thead><tr><th>文件</th><th>角色</th><th>内容来源</th><th>读它来回答</th></tr></thead><tbody><tr><td><code>MAP.md</code></td><td><strong>骨架与导航</strong></td><td>确定性扫描</td><td>「去哪找代码？」目录职责、入口点、技术栈、构建/运行/测试命令、目录树、关键文件符号速览</td></tr><tr><td><code>CONTEXT.yaml</code></td><td><strong>契约与符号</strong></td><td>manifest + 正则</td><td>「谁调用谁？有哪些符号？」机器可读的栈/入口/构建/依赖/逐文件符号清单</td></tr><tr><td><code>GUARDS.md</code></td><td><strong>红线与无-AI 维护指南</strong></td><td>探测事实 + 通用红线 + 人工占位</td><td>「哪些不能碰？」改动前必读的约束、如何在没有 AI 的情况下维护</td></tr></tbody></table>
+<p>辅助文件：</p>
+<ul><li><code>.metahash.json</code> —— 内容指纹 + 归属类型（<code>auto</code> / <code>skeleton</code>），是「随变化更新」的判定依据。</li><li><code>SKELETON.auto.md</code> —— <strong>仅当三件套是人工撰写时</strong>才出现的机器派生层（见 §5）。</li></ul>
+<blockquote><p>阅读顺序建议：<code>MAP.md</code>（去哪找）→ <code>CONTEXT.yaml</code>（谁调用谁）→ <code>GUARDS.md</code>（哪些不能碰）。</p></blockquote>
+<hr>
+<h2 id="3-它是怎么生成的-确定性地板-可选模型增强">3. 它是怎么生成的（确定性地板 + 可选模型增强）<a class="anchor" href="#3-它是怎么生成的-确定性地板-可选模型增强" aria-label="锚点">#</a></h2>
+<p>这套系统最关键的工程原则是 <strong>「确定性地板」</strong>：</p>
+<ul><li><strong>完全不依赖任何模型/网络</strong>即可生成 —— 这是「万一 AI 用不了」时的硬保证。</li><li>生成过程是纯 Node stdlib（<code>fs</code>/<code>path</code>），零第三方依赖，可在任何 khy 派生环境运行。</li><li><strong>可选模型增强</strong>（<code>opts.enhance</code> + <code>KHY_META_MODEL_ENHANCE=1</code>）只做语义润色，</li></ul>
+<p>失败时<strong>静默降级</strong>回确定性产物，绝不阻塞、绝不抛错打断调用它的任务。</p>
+<p>生成流水线（<code>_collectContext</code> → 渲染）：</p>
+<ol><li><strong>BFS 扫描目录树</strong>（<code>_scanTree</code>）：深度/文件数双上限，跳过 <code>node_modules</code>/<code>.git</code>/<code>dist</code> 等噪音目录，</li></ol>
+<p>目录内稳定排序保证产物<strong>可复现</strong>（无时间戳、无随机数）。</p>
+<ol><li><strong>技术栈探测</strong>（<code>_detectStack</code>）：基于 <code>package.json</code> / <code>pyproject.toml</code> / <code>Cargo.toml</code> / <code>Makefile</code>…</li></ol>
+<p>推断语言、入口点、安装/构建/运行/测试命令、主要依赖、配置文件。</p>
+<ol><li><strong>轻量符号抽取</strong>（<code>_extractSymbols</code>）：按语言用正则抽函数/类/结构体<strong>声明签名</strong>（不解析 AST），</li></ol>
+<p>按顶层模块<strong>轮询配额</strong>挑文件（<code>_selectSymbolFiles</code>），保证大型 monorepo 里每个主要模块都被代表。</p>
+<ol><li><strong>渲染</strong>三件套 + 计算指纹 + 写 <code>.metahash.json</code> + 给各 AI 工具入口文件回链（§6）。</li></ol>
+<hr>
+<h2 id="4-它怎么-随项目变化自动更新-不靠-ai">4. 它怎么「随项目变化自动更新」（不靠 AI）<a class="anchor" href="#4-它怎么-随项目变化自动更新-不靠-ai" aria-label="锚点">#</a></h2>
+<p>这是整套设计的精髓 —— <strong>内容指纹（fingerprint）</strong>：</p>
+<ul><li><code>_computeFingerprint</code> 只对<strong>结构事实</strong>取 SHA-256：文件清单+大小、栈、入口、构建命令、依赖、符号、</li></ul>
+<p>以及全量源文件的 <code>path|size</code> 列表。<strong>不含任何时间戳/随机数</strong>。</p>
+<ul><li>因此：<strong>项目结构不变 → 指纹不变 → 不重写文件</strong>（git 噪音最小化）；</li></ul>
+<p><strong>结构一变 → 指纹翻转 → 可被无-AI 的机制确定性地检测到「该刷新了」。</strong></p>
+<ul><li><code>TOOL_VERSION</code>（当前 <code>khy-metadata/3</code>）并入哈希：模板逻辑升级时，旧产物自动判定为 stale。</li></ul>
+<p><code>refreshProjectMetadata</code> 按 <code>.ai/MAP.md</code> 的<strong>归属</strong>分三种情形处理（绝不误伤人工文档）：</p>
+<table><thead><tr><th>情形</th><th><code>MAP.md</code> 状态</th><th>行为</th></tr></thead><tbody><tr><td>1. 缺失</td><td>不存在</td><td>首次生成完整三件套</td></tr><tr><td>2. 机器自有</td><td>带 <code>khy-metadata:auto</code> 标记</td><td>比对指纹：变了覆盖三件套，没变跳过</td></tr><tr><td>3. 人工撰写</td><td>无标记</td><td><strong>绝不碰三件套</strong>，只刷新派生层 <code>SKELETON.auto.md</code></td></tr></tbody></table>
+<blockquote><p>判定归属看一行 HTML 注释标记 <code>&lt;!-- khy-metadata:auto … --&gt;</code>。<br><strong>删掉这行标记 = 宣告人工接管</strong>，此后 refresh 永不覆盖该文件。</p></blockquote>
+<hr>
+<h2 id="5-人工撰写-机器派生骨架-本仓库就是这种">5. 人工撰写 + 机器派生骨架（本仓库就是这种）<a class="anchor" href="#5-人工撰写-机器派生骨架-本仓库就是这种" aria-label="锚点">#</a></h2>
+<p>本仓库 <code>Khy-OS</code> 自己的 <code>.ai/MAP.md</code>、<code>GUARDS.md</code> 是<strong>人工精写的</strong>（内核种子文档，含手核实的红线，<br>如「串口不是 IRQ 驱动」「syscall 号是 ABI 不可重排」等），所以它们<strong>不带</strong> auto 标记、永不被覆盖。</p>
+<p>与此同时，机器会维护一个 <code>SKELETON.auto.md</code>（派生骨架层），随代码漂移自动刷新「可机械推导的事实」。<br>这就实现了<strong>两全</strong>：</p>
+<ul><li>人工文档负责<strong>意图与红线</strong>（机器推不出来的知识）。</li><li>机器派生层负责<strong>随代码变化的结构事实</strong>（人工维护易过时的部分）。</li></ul>
+<p><code>.metahash.json</code> 里 <code>kind: skeleton</code> 即标记当前是这种「人工 + 派生」并存模式。</p>
+<hr>
+<h2 id="6-让其它-ai-工具默认读到-ai">6. 让其它 AI 工具默认读到 <code>.ai/</code><a class="anchor" href="#6-让其它-ai-工具默认读到-ai" aria-label="锚点">#</a></h2>
+<p><code>metadataPointers.linkAgentPointers</code> 会向 6 个约定入口文件<strong>幂等注入</strong>一段指针块，<br>把 Claude Code / Codex / Copilot / Cursor / Windsurf / Cline 等都引导到 <code>.ai/</code>：</p>
+<ul><li><code>AGENTS.md</code>、<code>CLAUDE.md</code>、<code>.github/copilot-instructions.md</code>、<code>.cursor/rules/*.mdc</code>、<code>.windsurfrules</code>、<code>.clinerules</code></li></ul>
+<p>幂等意味着：已链接则返回空、不会每次提交都产生噪音。手动触发：<code>khy metadata link</code>。</p>
+<hr>
+<h2 id="7-cli-速查-khy-metadata-别名-meta-maintain">7. CLI 速查（<code>khy metadata</code>，别名 <code>meta</code> / <code>maintain</code>）<a class="anchor" href="#7-cli-速查-khy-metadata-别名-meta-maintain" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy metadata                 # = gen：对当前目录生成，已存在则跳过
+khy metadata gen [--force] [path]      # 生成（--force 覆盖已有）
+khy metadata refresh [--force] [path]  # 随变化就地更新（非破坏；人工 .ai/ 只刷新派生骨架）
+khy metadata check [path]    # 缺失或 stale 时退出非零 —— 用作 CI / 提交前门禁
+khy metadata show [path]     # 打印各文件存在状态 + 归属 + 是否最新
+khy metadata link [path]     # 让 AI 入口文件指向 .ai/
+khy metadata hook &lt;install|uninstall|status&gt; [path]  # 装/卸 git pre-commit 自动刷新钩子</code></pre>
+<p><strong>推荐工作流</strong>：</p>
+<pre><code class="language-bash">khy metadata gen             # 首次：补齐三件套
+khy metadata hook install    # 装钩子：此后每次 git commit 自动 refresh 并 git add .ai/，无需 AI</code></pre>
+<ul><li><code>hook install</code> 检测到已有<strong>非 khy</strong> 的 pre-commit 钩子时<strong>不覆盖</strong>，而是打印片段让你手工合并。</li><li><code>check</code> 退出码为 1 时适合卡在 CI：保证元数据不与代码脱节。</li></ul>
+<hr>
+<h2 id="8-环境变量-全部有界-有安全默认">8. 环境变量（全部有界、有安全默认）<a class="anchor" href="#8-环境变量-全部有界-有安全默认" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>变量</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_META_ENABLED</code></td><td><code>true</code></td><td>agent 运行后是否自动补元数据（<code>maybeGenerateAfterRun</code>）</td></tr><tr><td><code>KHY_META_MIN_FILES</code></td><td><code>3</code></td><td>agent 写入多少新文件才判定「生成了项目」并触发元数据</td></tr><tr><td><code>KHY_META_MAX_DEPTH</code></td><td><code>6</code></td><td>扫描最大深度（monorepo 友好）</td></tr><tr><td><code>KHY_META_MAX_FILES</code></td><td><code>4000</code></td><td>扫描文件数上限</td></tr><tr><td><code>KHY_META_MAX_SYMBOL_FILES</code></td><td><code>120</code></td><td>参与符号抽取的源文件数上限</td></tr><tr><td><code>KHY_META_MAX_SYMBOLS_PER_FILE</code></td><td><code>30</code></td><td>每文件抽取符号数上限</td></tr><tr><td><code>KHY_META_MAX_FILE_BYTES</code></td><td><code>256KiB</code></td><td>单文件读取上限（超出跳过）</td></tr><tr><td><code>KHY_META_MAX_TREE_ENTRIES</code></td><td><code>200</code></td><td>目录树渲染条目上限</td></tr><tr><td><code>KHY_META_MODEL_ENHANCE</code></td><td><code>false</code></td><td>是否启用可选模型语义增强（失败自动降级）</td></tr><tr><td><code>KHY_META_POINTER_TARGETS</code></td><td>（内置 6 个）</td><td>覆盖要回链的 AI 入口文件清单</td></tr></tbody></table>
+<hr>
+<h2 id="9-设计上值得学习的几点">9. 设计上值得学习的几点<a class="anchor" href="#9-设计上值得学习的几点" aria-label="锚点">#</a></h2>
+<ol><li><strong>确定性地板 + 可选增强</strong>：核心能力零模型零网络也能跑，模型只做锦上添花且失败即降级。</li></ol>
+<p>这是「AI 辅助但不依赖 AI」的范本 —— 与本项目 <code>/learn</code> 三模式、依赖自愈等子系统同构。</p>
+<ol><li><strong>内容指纹驱动更新</strong>：用纯结构哈希（无时间戳）作为「该不该刷新」的确定性信号，</li></ol>
+<p>既能最小化 git 噪音，又能让 git 钩子这种无脑机制可靠地触发更新。</p>
+<ol><li><strong>归属标记保护人工产物</strong>：一行注释标记区分「机器自有」与「人工接管」，</li></ol>
+<p>机器永不覆盖人工知识，却仍能维护可机械推导的派生层 —— 人机各司其职。</p>
+<ol><li><strong>全程有界 + fail-soft</strong>：所有阈值走 env 有上限，任何异常被吞成结构化结果，</li></ol>
+<p>绝不抛错打断生成它的宿主任务。这是「基础设施级代码」的纪律。</p>
+<ol><li><strong>导航而非切片</strong>：<code>.ai/</code> 给的是坐标（去哪 grep、从哪个入口进），不是预切的相似度片段。</li></ol>
+<p>读者据此<strong>按需展开真实代码</strong>，逻辑关联不被破坏 —— 正是 Agent 范式优于 RAG 的体现。</p>
+<hr>
+<h2 id="10-快速上手清单">10. 快速上手清单<a class="anchor" href="#10-快速上手清单" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 1. 看看当前项目的元数据状态
+khy metadata show
+
+# 2. 没有就生成
+khy metadata gen
+
+# 3. 装钩子，让它随提交自动保鲜
+khy metadata hook install
+
+# 4. 改完代码后（若没装钩子）手动刷新
+khy metadata refresh
+
+# 5. CI 里加一道门禁
+khy metadata check    # 退出码非零即代表元数据过期/缺失</code></pre>
+<p>读三件套时记住一句话：<br><strong><code>MAP</code> 告诉你「在哪」，<code>CONTEXT</code> 告诉你「连着谁」，<code>GUARDS</code> 告诉你「别碰啥」。</strong></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-037] pip安装后-完整还原与全功能开启指南.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-037] pip 安装后：完整还原项目 · 开启全部功能</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-039] 文档排版-用法指南-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">文档排版用法指南：让 agent 写出格式精确的 Word</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-038] AI元数据-.ai-种子文档-用法指南-2026-06-15.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

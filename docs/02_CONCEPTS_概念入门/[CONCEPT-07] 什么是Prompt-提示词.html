@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⑦ 什么是 Prompt（提示词） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>⑦ 什么是 Prompt（提示词）</div>
+      <header class="hero reveal"><h1>⑦ 什么是 Prompt（提示词）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#⑦-什么是-prompt-提示词">⑦ 什么是 Prompt（提示词）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么-prompt-这么重要">二、为什么 Prompt 这么重要？</a></li><li class="lvl-2"><a href="#三-一个好-prompt-里通常有什么">三、一个好 Prompt 里通常有什么？</a></li><li class="lvl-2"><a href="#四-system-prompt-和-user-prompt-有什么区别">四、system prompt 和 user prompt 有什么区别？</a></li><li class="lvl-2"><a href="#五-prompt-工程小技巧-大白话版">五、Prompt 工程小技巧（大白话版）</a></li><li class="lvl-2"><a href="#六-常见误区-新手最容易踩的坑">六、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-prompt-越长越好">误区 1：以为 Prompt 越长越好</a></li><li class="lvl-3"><a href="#误区-2-以为一句话它就能懂你全部意图">误区 2：以为一句话它就能懂你全部意图</a></li><li class="lvl-3"><a href="#误区-3-以为改-prompt-能让它-算数变准">误区 3：以为改 Prompt 能让它&quot;算数变准&quot;</a></li><li class="lvl-3"><a href="#误区-4-以为-system-和-user-是一回事">误区 4：以为 system 和 user 是一回事</a></li><li class="lvl-3"><a href="#误区-5-以为对它说-请-谢谢-能让结果更好">误区 5：以为对它说&quot;请&quot;&quot;谢谢&quot;能让结果更好</a></li><li class="lvl-2"><a href="#七-动手小实验-思想实验">七、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验-a-同一件事-两种问法">实验 A：同一件事，两种问法</a></li><li class="lvl-3"><a href="#实验-b-脑内推演-把你的一句话补成-需求文档">实验 B：脑内推演——把你的一句话补成&quot;需求文档&quot;</a></li><li class="lvl-2"><a href="#八-和其它概念的关系">八、和其它概念的关系</a></li><li class="lvl-2"><a href="#九-和-khy-os-的关系">九、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十-小结-下一步">十、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="⑦-什么是-prompt-提示词">⑦ 什么是 Prompt（提示词）<a class="anchor" href="#⑦-什么是-prompt-提示词" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 什么是 LLM（大语言模型）</a>——你得先知道&quot;大脑长什么样&quot;，才好谈&quot;怎么跟它说话&quot;。这一篇讲的就是：你对着那颗大脑说的每一句话，叫 <strong>Prompt（提示词）</strong>，它决定了大脑给你什么样的回答。读完这篇，你会明白一个扎心的真相：<strong>很多时候不是模型笨，是你没问清楚。</strong></p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>Prompt（提示词）= 你对大模型说的那句话、给它的那段输入。它是你&quot;点菜的方式&quot;——你怎么问，很大程度上决定了它怎么答。</strong></p>
+<p>如果只记一句，就记这句：</p>
+<blockquote><p><strong>模型是大脑，Prompt 是你递给大脑的&quot;任务纸条&quot;。纸条写得清不清楚，答案就清不清楚。</strong></p></blockquote>
+<p>这一句是整篇的骨架。后面所有比喻、图、误区，都在反复讲透它。</p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>&quot;提示词工程&quot;听起来像门玄学？其实它就是 <span class="popover" tabindex="0"><span class="popover-anchor">把话说清楚</span><span class="popover-tip" role="tooltip">该说什么、给谁、什么场景——把脑子里默认的前提一条条摊到明面上</span></span>这一件事。你不用会编程，只要会&quot;把需求讲明白&quot;，就已经在做 Prompt 工程了。这篇会教你从&quot;随便来点吃的&quot;升级到&quot;一份不辣的番茄鸡蛋盖饭&quot;——差别就这么大～ 🐥</p></div></aside>
+<hr>
+<h2 id="二-为什么-prompt-这么重要">二、为什么 Prompt 这么重要？<a class="anchor" href="#二-为什么-prompt-这么重要" aria-label="锚点">#</a></h2>
+<p>因为<strong>同一个模型，问法不同，效果天差地别</strong>。计算机界有一句老话叫 <strong>&quot;垃圾进，垃圾出（Garbage In, Garbage Out）&quot;</strong>——你喂进去的是含糊的、残缺的信息，吐出来的自然也是含糊的、跑偏的答案。</p>
+<p>模型不是不聪明，而是它<strong>只能根据你给的那点信息去猜你想要什么</strong>。你给的信息越模糊，它猜错的空间就越大。</p>
+<p>换几个生活场景体会一下&quot;问法决定答案&quot;：</p>
+<ul><li><strong>点菜比喻</strong>：你对服务员说&quot;随便来点吃的&quot;，端上来是什么全看厨房心情；你说&quot;一份不辣的番茄鸡蛋盖饭、米饭多一点&quot;，端上来的才是你想要的。<strong>Prompt 就是你点菜的那句话。</strong></li><li><strong>打车比喻</strong>：你说&quot;往那边开&quot;，司机一脸懵；你说&quot;去人民广场地铁站 2 号口&quot;，他一脚油门就到。<strong>目的地说得越具体，到得越准。</strong></li><li><strong>找人帮忙比喻</strong>：你甩给同事一句&quot;帮我搞个表格&quot;，他做出来八成不是你要的；你说清&quot;按月份统计销售额、带小计、用柱状图&quot;，他一次就做对。</li></ul>
+<p>所以 Prompt 是你手里的<strong>指挥棒</strong>：模型的能力是固定的，但你挥棒的方式，决定了这场演奏是和谐还是杂音。</p>
+<pre class="mermaid">flowchart LR
+  subgraph 烂Prompt[&quot;😵 含糊的 Prompt&quot;]
+    B1[&quot;'帮我写个函数'&quot;] --&gt; B2[&quot;🧠 模型只能瞎猜&lt;br/&gt;猜语言、猜功能、猜格式&quot;] --&gt; B3[&quot;🎲 结果全看运气&quot;]
+  end
+  subgraph 好Prompt[&quot;😎 清楚的 Prompt&quot;]
+    G1[&quot;'写一个 Python 函数&lt;br/&gt;带类型注解和错误处理&lt;br/&gt;并给用法示例'&quot;] --&gt; G2[&quot;🧠 模型目标明确&quot;] --&gt; G3[&quot;✅ 一次就对&quot;]
+  end</pre>
+<hr>
+<h2 id="三-一个好-prompt-里通常有什么">三、一个好 Prompt 里通常有什么？<a class="anchor" href="#三-一个好-prompt-里通常有什么" aria-label="锚点">#</a></h2>
+<p>一份讲究的 Prompt，往往由这六块拼起来。<strong>最好的类比是&quot;给外包公司写需求文档&quot;</strong>——你把活外包出去，写得越清楚，对方越不会做歪。</p>
+<table><thead><tr><th>组成</th><th>作用</th><th>给外包写需求的比喻</th></tr></thead><tbody><tr><td><strong>角色设定</strong></td><td>让模型&quot;扮演&quot;某个身份，定它的口吻和专业度</td><td>&quot;你们要派一个资深后端工程师来做&quot;</td></tr><tr><td><strong>任务指令</strong></td><td>到底要它干什么（核心动作）</td><td>&quot;开发一个用户登录接口&quot;</td></tr><tr><td><strong>上下文 / 背景</strong></td><td>相关的前提信息、已有材料</td><td>&quot;我们后端用 Python、数据库是 MySQL&quot;</td></tr><tr><td><strong>示例（举例）</strong></td><td>给一两个&quot;我要的东西长这样&quot;的样板</td><td>&quot;参考竞品这个页面的样式&quot;</td></tr><tr><td><strong>输出格式要求</strong></td><td>要什么形式的结果（JSON？表格？纯代码？）</td><td>&quot;交付物要一个 .py 文件加一份说明&quot;</td></tr><tr><td><strong>约束 / 红线</strong></td><td>绝对不能做的、必须遵守的边界</td><td>&quot;不许用付费库、必须处理异常&quot;</td></tr></tbody></table>
+<p>不是每次都要六块全上——<strong>问个简单问题，一句话就够；越复杂、越怕做歪的活，越要把这六块补齐</strong>。就像找人帮个小忙口头说一声就行，但真要外包一个项目，就得写正经需求文档。</p>
+<pre class="mermaid">flowchart TB
+  P[&quot;📝 一份讲究的 Prompt&quot;]
+  P --&gt; R[&quot;🎭 角色设定&lt;br/&gt;你是谁&quot;]
+  P --&gt; T[&quot;🎯 任务指令&lt;br/&gt;干什么&quot;]
+  P --&gt; C[&quot;📚 上下文&lt;br/&gt;背景是啥&quot;]
+  P --&gt; E[&quot;🖼️ 示例&lt;br/&gt;我要的长这样&quot;]
+  P --&gt; F[&quot;📐 输出格式&lt;br/&gt;结果什么形式&quot;]
+  P --&gt; L[&quot;🚧 约束红线&lt;br/&gt;不许干什么&quot;]</pre>
+<hr>
+<h2 id="四-system-prompt-和-user-prompt-有什么区别">四、system prompt 和 user prompt 有什么区别？<a class="anchor" href="#四-system-prompt-和-user-prompt-有什么区别" aria-label="锚点">#</a></h2>
+<p>你可能听过 <strong>system prompt（系统提示词）</strong> 和 <strong>user prompt（用户提示词）</strong> 两个词。它们都是&quot;喂给模型的话&quot;，但地位不一样。用一个<strong>新员工入职</strong>的比喻一下子就懂：</p>
+<table><thead><tr><th>类型</th><th>白话</th><th>入职比喻</th><th>特点</th></tr></thead><tbody><tr><td><strong>system prompt</strong></td><td>岗前培训：定人设、定规矩、定说话风格</td><td>入职第一天的《员工手册》和《岗位培训》</td><td>设定一次，之后<strong>每一轮对话都默默生效</strong></td></tr><tr><td><strong>user prompt</strong></td><td>这一次具体要干的活</td><td>老板今天派给你的<strong>这一个</strong>具体任务</td><td>每次都不同，就是你当下打的那句话</td></tr></tbody></table>
+<ul><li><strong>system prompt</strong> 就像<strong>岗前培训</strong>：告诉这个&quot;新员工&quot;——你是一个严谨的 Python 工程师、回答要简洁、不许瞎编、遇到危险操作要先确认。这些规矩<strong>定好之后，它接下来做每一件事都会记着</strong>。</li><li><strong>user prompt</strong> 就是你<strong>这一次</strong>丢给它的具体任务：&quot;帮我看看这段代码为什么报错&quot;。</li></ul>
+<p>一句话区分：<strong>system 定&quot;它是个什么样的人、守什么规矩&quot;；user 定&quot;这次让它干哪件具体的活&quot;。</strong> 前者是长期人设，后者是当下任务。</p>
+<pre class="mermaid">flowchart TB
+  subgraph 一次设定[&quot;🎓 system prompt（岗前培训 · 设一次）&quot;]
+    S[&quot;你是资深 Python 工程师&lt;br/&gt;回答简洁 · 不许瞎编&lt;br/&gt;危险操作先确认&quot;]
+  end
+  subgraph 每次不同[&quot;🗣️ user prompt（这次的活 · 每轮都变）&quot;]
+    U1[&quot;第1轮：帮我写个登录函数&quot;]
+    U2[&quot;第2轮：这里为什么报错？&quot;]
+    U3[&quot;第3轮：加上单元测试&quot;]
+  end
+  S -. 始终笼罩在每一轮之上 .-&gt; U1
+  S -. 始终笼罩在每一轮之上 .-&gt; U2
+  S -. 始终笼罩在每一轮之上 .-&gt; U3</pre>
+<blockquote><p>⚠️ 记住这张图的关键：<strong>system prompt 不是&quot;第 0 轮对话&quot;，它是罩在所有 user 对话头顶上的那层&quot;规矩&quot;，一直在起作用。</strong> 后面误区那一节会讲，很多人以为 system 和 user 一样，其实差得远。</p></blockquote>
+<p>翻卡自测，看你能不能一句话讲清这个最容易混的区别：</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">正面：<code>system prompt</code> 和 <code>user prompt</code> 都是&quot;喂给模型的话&quot;，它俩到底差在哪？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">反面：<strong>system = 长期人设/规矩（设一次，罩在每一轮之上）；user = 这一次的具体任务（每轮都变）。</strong> 打个入职比方：system 是《员工手册》和岗前培训（&quot;你是严谨的工程师、危险操作先确认&quot;——之后每件事都记着）；user 是老板今天派的这一个活（&quot;帮我看看这段代码为啥报错&quot;）。把规矩写进 system 才会每轮生效；写进某一次 user，说完这轮就可能淡忘。</div></div></div>
+<hr>
+<h2 id="五-prompt-工程小技巧-大白话版">五、Prompt 工程小技巧（大白话版）<a class="anchor" href="#五-prompt-工程小技巧-大白话版" aria-label="锚点">#</a></h2>
+<p>&quot;Prompt 工程（Prompt Engineering）&quot;听起来高大上，其实就是<strong>怎么把话说清楚</strong>的一些实用招数。下面五招，白话讲，学会就能立刻用上。</p>
+<table><thead><tr><th>技巧</th><th>大白话</th><th>生活比喻</th></tr></thead><tbody><tr><td><strong>① 说清楚</strong></td><td>别用&quot;那个&quot;&quot;搞一下&quot;，把要什么、给谁、什么场景讲明白</td><td>点菜说清&quot;不要香菜、少油&quot;，而不是&quot;随便&quot;</td></tr><tr><td><strong>② 给例子（few-shot）</strong></td><td>甩一两个&quot;我想要的样子&quot;给它照着做</td><td>理发时直接给发型师看一张照片</td></tr><tr><td><strong>③ 让它一步步想（分步 / 思维链）</strong></td><td>说&quot;请分步骤思考&quot;，别逼它一口答完</td><td>让学生写出解题过程，而不是只写答案</td></tr><tr><td><strong>④ 指定格式</strong></td><td>明说要 JSON / 表格 / 只要代码不要废话</td><td>报销时说&quot;给我发票 PDF&quot;，而不是&quot;给我凭证&quot;</td></tr><tr><td><strong>⑤ 设边界</strong></td><td>划清红线：&quot;只用标准库&quot;&quot;不超过 50 行&quot;&quot;别改其它文件&quot;</td><td>装修前说好&quot;这面承重墙不许动&quot;</td></tr></tbody></table>
+<p>几招稍微展开一点：</p>
+<ul><li><strong>给例子（few-shot）</strong> 特别管用。你与其费半天口舌描述&quot;我要什么风格&quot;，不如直接甩一个样板：&quot;照这个格式再写三条&quot;。模型看样板学得比听描述快得多——<strong>这跟人一样，看一眼照片胜过听你形容十句。</strong></li><li><strong>让它一步步想</strong>：复杂问题让模型&quot;先想再答&quot;，往往比逼它直接蹦答案更靠谱。就像考试时让学生写出推导过程，中间的思考能减少低级失误。</li><li><strong>设边界</strong>很容易被忽略，但极其重要。你不划红线，它就可能&quot;顺手&quot;多做一堆你没让它做的事（比如顺手把别的文件也改了）。<strong>明确说&quot;只做 X，别碰 Y&quot;，能省掉大量返工。</strong></li></ul>
+<pre class="mermaid">flowchart LR
+  Q[&quot;😕 模糊提问&lt;br/&gt;'帮我优化下代码'&quot;]
+  Q --&gt; STEP1[&quot;① 说清楚：优化哪段？为了什么？&quot;]
+  STEP1 --&gt; STEP2[&quot;② 给例子：期望优化后长这样&quot;]
+  STEP2 --&gt; STEP3[&quot;③ 分步想：先分析瓶颈再改&quot;]
+  STEP3 --&gt; STEP4[&quot;④ 指定格式：给改后代码+改动说明&quot;]
+  STEP4 --&gt; STEP5[&quot;⑤ 设边界：不许改函数签名&quot;]
+  STEP5 --&gt; A[&quot;😀 精准答案&quot;]</pre>
+<hr>
+<h2 id="六-常见误区-新手最容易踩的坑">六、常见误区（新手最容易踩的坑）<a class="anchor" href="#六-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请逐条读完，这些误解会让你对 Prompt 的作用产生错觉。</p>
+<h3 id="误区-1-以为-prompt-越长越好">误区 1：以为 Prompt 越长越好<a class="anchor" href="#误区-1-以为-prompt-越长越好" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我把话写得又臭又长、把能想到的都塞进去，模型就答得越好。</li><li>✅ <strong>正确理解</strong>：<strong>清楚 ≠ 冗长。</strong> 一堆废话和重复反而会淹没关键要求，让模型抓不住重点。好 Prompt 是<strong>信息密度高</strong>——该说的说全，废话一句不留。就像好的需求文档是精准，不是厚。</li></ul>
+<h3 id="误区-2-以为一句话它就能懂你全部意图">误区 2：以为一句话它就能懂你全部意图<a class="anchor" href="#误区-2-以为一句话它就能懂你全部意图" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：&quot;帮我做个网站&quot;，它就该知道我要什么风格、什么功能、什么技术栈。</li><li>✅ <strong>正确理解</strong>：模型<strong>不会读心</strong>。你脑子里默认的前提（&quot;当然是中文的&quot;&quot;当然要能登录&quot;），它一概不知道。<strong>你没说的，它只能猜。</strong> 想要什么，就得明说出来。</li></ul>
+<h3 id="误区-3-以为改-prompt-能让它-算数变准">误区 3：以为改 Prompt 能让它&quot;算数变准&quot;<a class="anchor" href="#误区-3-以为改-prompt-能让它-算数变准" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：它算错了一道数学题，我把 Prompt 改得更好就能让它算对。</li><li>✅ <strong>正确理解</strong>：Prompt 能改善的是<strong>&quot;怎么表达、怎么组织、往哪个方向使劲&quot;</strong>，但改不了模型<strong>本身能力的天花板</strong>。模型不擅长精确计算，是它的底层特性（回看 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM</a>——它是&quot;猜下一个词&quot;，不是&quot;跑计算器&quot;）。这种事该让它<strong>调用工具</strong>去算，而不是指望换个说法它就变准。<strong>Prompt 是指挥棒，指挥不出乐队没有的音。</strong></li></ul>
+<h3 id="误区-4-以为-system-和-user-是一回事">误区 4：以为 system 和 user 是一回事<a class="anchor" href="#误区-4-以为-system-和-user-是一回事" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：反正都是给模型的话，写在哪儿都一样。</li><li>✅ <strong>正确理解</strong>：<strong>system 是长期人设 / 规矩，罩在每一轮之上；user 是这一次的具体任务。</strong> 把&quot;你是严谨的工程师、危险操作先确认&quot;这类规矩写进 system，它才会<strong>每轮都守着</strong>；写进某一次 user，说完这轮可能就淡忘了。放错地方，效果差很多。</li></ul>
+<h3 id="误区-5-以为对它说-请-谢谢-能让结果更好">误区 5：以为对它说&quot;请&quot;&quot;谢谢&quot;能让结果更好<a class="anchor" href="#误区-5-以为对它说-请-谢谢-能让结果更好" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：我客气一点、多夸它几句，它就会更卖力、答得更好。</li><li>✅ <strong>正确理解</strong>：礼貌用语<strong>基本不影响答案质量</strong>——模型不会因为你说&quot;请&quot;就更努力，它没有情绪也不会&quot;偷懒&quot;。真正影响结果的是<strong>信息说得清不清楚</strong>，不是语气客不客气。（当然，礼貌没坏处，但别指望靠它提升质量。）</li></ul>
+<hr>
+<h2 id="七-动手小实验-思想实验">七、动手小实验 / 思想实验<a class="anchor" href="#七-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如亲手对比一次。下面这个实验，能让你<strong>当场看到 Prompt 的威力</strong>。</p>
+<h3 id="实验-a-同一件事-两种问法">实验 A：同一件事，两种问法<a class="anchor" href="#实验-a-同一件事-两种问法" aria-label="锚点">#</a></h3>
+<p>打开任意一个 AI 助手，先后发这两句，对比它给你的东西：</p>
+<p><strong>第一次（含糊版）：</strong></p>
+<pre><code>写个函数</code></pre>
+<p>你多半会得到一个<strong>没头没尾</strong>的东西：它得替你猜——什么语言？干什么用的？要不要注释？多半随便给你一个 <code>add(a, b)</code> 之类的玩具。</p>
+<p><strong>第二次（清楚版）：</strong></p>
+<pre><code>写一个 Python 函数，要求：
+1. 功能是读取一个 JSON 文件并返回里面的数据
+2. 带完整的类型注解
+3. 处理文件不存在、内容不是合法 JSON 这两种错误
+4. 最后给一个调用它的用法示例</code></pre>
+<p>这次你会拿到一个<strong>能直接用</strong>的函数：类型注解齐全、错误处理到位、还附带示范。<strong>同一个模型、同样几秒钟，结果一个天上一个地下——差别全在你那句 Prompt 上。</strong></p>
+<pre class="mermaid">flowchart LR
+  M[&quot;🧠 同一个模型&quot;]
+  P1[&quot;😐 '写个函数'&quot;] --&gt; M --&gt; R1[&quot;🧸 玩具代码&lt;br/&gt;没类型 · 没错误处理&quot;]
+  P2[&quot;🎯 '写 Python 函数&lt;br/&gt;+类型注解+错误处理&lt;br/&gt;+用法示例'&quot;] --&gt; M --&gt; R2[&quot;🏗️ 能直接用的代码&quot;]</pre>
+<p>把&quot;同一个模型、两种问法&quot;演成一幕小短剧——注意从头到尾模型没变、也没变笨，变的只有你那句 Prompt：</p>
+<div class="scene"><div class="scene-title">同一个模型，两种问法两种命运</div><div class="scene-caption reveal">场景一：含糊地问。</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>写个函数。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">AI</b>呃……什么语言？干什么用的？——我只能猜了。（丢出）<code>def add(a, b): return a + b</code></div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>这不是我要的……（但你其实也没说清）</div></div><div class="scene-caption reveal">场景二：换一种问法，把默认前提一条条摊到明面上。</div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>写一个 Python 函数：读取 JSON 文件返回数据、带类型注解、处理&quot;文件不存在/非法 JSON&quot;两种错误、最后给个用法示例。</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🤖</span><div class="scene-bubble"><b class="scene-who">AI</b>目标清楚！（丢出一段带类型注解、错误处理齐全、附用法示例的函数）拿去直接用。</div></div><div class="scene-caption reveal">同一个模型、同样几秒钟，结果一个天上一个地下——差别全在你那句 Prompt 上。</div></div>
+<h3 id="实验-b-脑内推演-把你的一句话补成-需求文档">实验 B：脑内推演——把你的一句话补成&quot;需求文档&quot;<a class="anchor" href="#实验-b-脑内推演-把你的一句话补成-需求文档" aria-label="锚点">#</a></h3>
+<p>在脑子里挑一件你想让 AI 帮的事，比如&quot;帮我整理这段数据&quot;。然后用第三节那六块结构，把它从一句话补成一份小小的需求：</p>
+<ul><li><strong>角色</strong>：你是一个数据分析师。</li><li><strong>任务</strong>：把我给的销售流水按月份汇总。</li><li><strong>上下文</strong>：数据是 CSV，有日期、金额两列。</li><li><strong>示例</strong>：输出参照&quot;2026-01：12,300 元&quot;这种格式。</li><li><strong>输出格式</strong>：给我一个 Markdown 表格。</li><li><strong>约束</strong>：金额保留整数、别丢掉任何一个月。</li></ul>
+<p>补完你会发现——<strong>你刚刚就把一句含糊的话，变成了一份让 AI 几乎不可能做歪的 Prompt。</strong> 这就是&quot;写 Prompt&quot;这门手艺的全部秘密：<strong>把脑子里的默认前提，一条条摊到明面上。</strong></p>
+<hr>
+<h2 id="八-和其它概念的关系">八、和其它概念的关系<a class="anchor" href="#八-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>Prompt 不是孤立的，它是你和整个 AI 体系打交道的&quot;入口&quot;。理清它和邻居的关系，心智模型就完整了。</p>
+<pre class="mermaid">flowchart LR
+  PROMPT[&quot;📝 Prompt 提示词&lt;br/&gt;你说的话&quot;]
+  LLM[&quot;🧠 LLM 大语言模型&lt;br/&gt;接话的大脑&quot;]
+  SKILL[&quot;📖 Skill 技能&lt;br/&gt;打包好的优质 Prompt+流程&quot;]
+  CTX[&quot;📦 Context 上下文&lt;br/&gt;话都装在这里&quot;]
+  PROMPT -- &quot;喂给&quot; --&gt; LLM
+  SKILL -- &quot;本质就是一份高质量的&quot; --&gt; PROMPT
+  PROMPT -- &quot;会占用&quot; --&gt; CTX</pre>
+<table><thead><tr><th>概念</th><th>一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM</a></td><td>Prompt 是&quot;喂给&quot; LLM 这颗大脑的输入，大脑照着它产出回答</td><td>纸条 vs 大脑</td></tr><tr><td><a href="./[CONCEPT-05]%20什么是Skill-技能.html">⑤ Skill</a></td><td><strong>Skill 本质就是一份&quot;打包好、登记好的高质量 Prompt + 流程&quot;</strong></td><td>随手写的便条 vs 印好的操作手册</td></tr><tr><td>⑧ Context / Token（下一篇）</td><td>你说的每句 Prompt 都要<strong>占地方</strong>，装在模型的&quot;上下文&quot;里，还是有限的</td><td>说的话越多，越占内存</td></tr></tbody></table>
+<p>这里有个很重要的连接：<strong>你现在应该能看穿 <a href="./[CONCEPT-05]%20什么是Skill-技能.html">Skill</a> 的真面目了</strong>——所谓 Skill，说白了就是<strong>一份被专家写好、反复打磨、登记在册、需要时自动加载的高质量 Prompt（外加流程编排）</strong>。你自己每次手打的是&quot;一次性 Prompt&quot;；Skill 是&quot;把最好的那版 Prompt 存下来，以后自动用&quot;。它们本是同根生。</p>
+<p>而你每说一句话，都会<strong>占用模型的&quot;上下文&quot;空间</strong>——这个空间不是无限的。这就自然引出了下一篇要讲的 <strong>Context 与 Token</strong>。</p>
+<hr>
+<h2 id="九-和-khy-os-的关系">九、和 Khy-OS 的关系<a class="anchor" href="#九-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>你在 Khy-OS 里跟 AI 说的每一句话，都是一次 <strong>user prompt</strong>。而 Khy-OS 在背后，早就替你准备好了一大套 <strong>system prompt（系统提示词）</strong>——它就是那份&quot;岗前培训&quot;，定好了 AI 该守的规矩：比如&quot;危险命令要拦&quot;&quot;发布前要确认&quot;&quot;改动要外科手术式、别顺手重构&quot;等等。</p>
+<p>Khy-OS 把这类&quot;给 AI 定规矩&quot;的工作，当成一门正经手艺来做——<strong>系统提示词工程（system prompt engineering）就是它的重要组成部分</strong>。它不仅有系统提示词，还有一套<strong>指令注册表</strong>机制，把散落的规矩集中登记、避免互相打架（想想看：规矩堆太多、还互相矛盾，AI 就会犯迷糊）。</p>
+<ul><li><strong>你打的</strong>：user prompt——这一次具体让它干的活。</li><li><strong>Khy-OS 铺垫好的</strong>：system prompt——罩在你每句话之上的那层长期规矩。</li><li><strong>Skill 是什么</strong>：把某类任务的&quot;最佳 Prompt + 流程&quot;打包成手册，需要时自动加载（回看 <a href="./[CONCEPT-05]%20什么是Skill-技能.html">⑤ Skill</a>）。</li></ul>
+<p>关于系统提示词、指令注册表这套机制是怎么设计和落地的，你可以在设计类文档里进一步了解（参见 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a>）。本文只讲概念：<strong>你说的话（Prompt）+ Khy-OS 定的规矩（system prompt），共同决定了 AI 这一趟怎么帮你干活。</strong></p>
+<hr>
+<h2 id="十-小结-下一步">十、小结 + 下一步<a class="anchor" href="#十-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>Prompt = 你对大模型说的话 / 给它的输入</strong>，是你&quot;点菜的方式&quot;，怎么问很大程度决定怎么答。</li><li><strong>为什么重要</strong>：同一个模型，问法不同，效果天差地别——<strong>垃圾进，垃圾出</strong>。Prompt 是你手里的指挥棒。</li><li><strong>好 Prompt 的六块</strong>：角色设定、任务指令、上下文、示例、输出格式、约束红线（像给外包写需求文档）。</li><li><strong>system vs user</strong>：system 是&quot;岗前培训&quot;（长期人设 / 规矩，罩在每轮之上），user 是&quot;这次的活&quot;（当下具体任务）。</li><li><strong>五个小技巧</strong>：说清楚、给例子、让它一步步想、指定格式、设边界。</li><li><strong>五大误区</strong>：不是越长越好、它不会读心、改 Prompt 改不了模型能力天花板、system 和 user 不一样、礼貌用语不影响质量。</li><li><strong>和邻居的关系</strong>：Prompt 喂给 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">LLM</a>；<a href="./[CONCEPT-05]%20什么是Skill-技能.html">Skill</a> 本质就是打包好的高质量 Prompt；Prompt 会占用<strong>上下文</strong>空间——而这个空间是有限的。</li></ul>
+<p>既然每句话都要占&quot;上下文&quot;、还要按&quot;Token&quot;计量，那这个空间到底是什么、有多大、满了会怎样？下一篇揭晓。</p>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 为什么&quot;同一个模型，问法不同，效果天差地别&quot;？（可多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">模型不会读心，你没说的前提它只能猜，说得越含糊猜错空间越大</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">一个好 Prompt 会把角色、任务、上下文、示例、格式、约束讲清楚，模型目标明确</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">因为对它说&quot;请&quot;&quot;谢谢&quot;它就会更卖力</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">因为 Prompt 写得越长，模型就一定答得越好</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 前两个对：模型只能根据你给的信息去猜你想要什么，把默认前提摊开、把六要素讲清，它才不会做歪。后两个是典型误区——礼貌用语基本不影响质量，而&quot;越长越好&quot;是错的（清楚 ≠ 冗长，废话会淹没关键要求）。这题选对，说明你抓住了 Prompt 的核心：信息密度，不是字数也不是语气。</div></div>
+<p>👉 <a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">⑧ 什么是 Context 与 Token（上下文与令牌）</a></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-06] 什么是LLM-大语言模型.html"><div class="dir">← 上一篇</div><div class="ttl">⑥ 什么是 LLM（大语言模型）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-08] 什么是Context与Token-上下文与令牌.html"><div class="dir">下一篇 →</div><div class="ttl">⑧ 什么是 Context 与 Token（上下文与令牌）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-07] 什么是Prompt-提示词.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

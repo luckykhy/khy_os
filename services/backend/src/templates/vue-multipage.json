@@ -1,0 +1,134 @@
+{
+  "name": "vue-multipage",
+  "description": "Large multi-page Vue 3 + TypeScript admin dashboard (Vite + Pinia + Vue Router + Vitest)",
+  "triggers": ["vue-multipage", "多页面前端", "大型前端", "多页面", "管理后台", "后台管理", "前端项目", "vue admin", "vue后台", "vue dashboard", "admin dashboard"],
+  "variables": {
+    "projectName": { "default": "my-admin-app", "description": "Project name" },
+    "port": { "default": "5173", "description": "Dev server port" },
+    "apiBase": { "default": "/api", "description": "Backend API base path, injected via VITE_API_BASE" }
+  },
+  "directories": [
+    "src",
+    "src/views",
+    "src/components",
+    "src/layouts",
+    "src/router",
+    "src/stores",
+    "src/api",
+    "src/types",
+    "src/assets",
+    "public",
+    "unit_tests",
+    "API_tests"
+  ],
+  "files": [
+    {
+      "path": "package.json",
+      "content": "{\n  \"name\": \"{projectName}\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite --port {port}\",\n    \"build\": \"vue-tsc && vite build\",\n    \"preview\": \"vite preview\",\n    \"test\": \"vitest run\"\n  },\n  \"dependencies\": {\n    \"pinia\": \"^2.1.7\",\n    \"vue\": \"^3.4.31\",\n    \"vue-router\": \"^4.4.0\"\n  },\n  \"devDependencies\": {\n    \"@vitejs/plugin-vue\": \"^5.0.5\",\n    \"@vue/test-utils\": \"^2.4.6\",\n    \"jsdom\": \"^24.1.0\",\n    \"typescript\": \"^5.5.3\",\n    \"vite\": \"^5.3.4\",\n    \"vitest\": \"^2.0.4\",\n    \"vue-tsc\": \"^2.0.26\"\n  }\n}"
+    },
+    {
+      "path": "vite.config.ts",
+      "content": "import { fileURLToPath, URL } from 'node:url';\nimport { defineConfig } from 'vitest/config';\nimport vue from '@vitejs/plugin-vue';\n\nexport default defineConfig({\n  plugins: [vue()],\n  resolve: {\n    alias: {\n      '@': fileURLToPath(new URL('./src', import.meta.url)),\n    },\n  },\n  server: { port: {port} },\n  test: {\n    environment: 'jsdom',\n  },\n});"
+    },
+    {
+      "path": "tsconfig.json",
+      "content": "{\n  \"compilerOptions\": {\n    \"target\": \"ES2020\",\n    \"module\": \"ESNext\",\n    \"moduleResolution\": \"bundler\",\n    \"strict\": true,\n    \"jsx\": \"preserve\",\n    \"resolveJsonModule\": true,\n    \"isolatedModules\": true,\n    \"esModuleInterop\": true,\n    \"lib\": [\"ES2020\", \"DOM\", \"DOM.Iterable\"],\n    \"skipLibCheck\": true,\n    \"noEmit\": true,\n    \"baseUrl\": \".\",\n    \"paths\": { \"@/*\": [\"./src/*\"] }\n  },\n  \"include\": [\"src/**/*.ts\", \"src/**/*.d.ts\", \"src/**/*.vue\"]\n}"
+    },
+    {
+      "path": "index.html",
+      "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n  <title>{projectName}</title>\n</head>\n<body>\n  <div id=\"app\"></div>\n  <script type=\"module\" src=\"/src/main.ts\"></script>\n</body>\n</html>"
+    },
+    {
+      "path": "src/main.ts",
+      "content": "import { createApp } from 'vue';\nimport { createPinia } from 'pinia';\nimport App from './App.vue';\nimport router from './router';\n\nconst app = createApp(App);\napp.use(createPinia());\napp.use(router);\napp.mount('#app');"
+    },
+    {
+      "path": "src/App.vue",
+      "content": "<template>\n  <router-view />\n</template>\n\n<script setup lang=\"ts\">\n</script>"
+    },
+    {
+      "path": "src/vite-env.d.ts",
+      "content": "/// <reference types=\"vite/client\" />\n\ndeclare module '*.vue' {\n  import type { DefineComponent } from 'vue';\n  const component: DefineComponent<{}, {}, any>;\n  export default component;\n}\n\ninterface ImportMetaEnv {\n  readonly VITE_API_BASE: string;\n}\n\ninterface ImportMeta {\n  readonly env: ImportMetaEnv;\n}"
+    },
+    {
+      "path": ".gitignore",
+      "content": "node_modules\ndist\ndist-ssr\n*.local\n.env\n.DS_Store"
+    },
+    {
+      "path": ".env.example",
+      "content": "# API base URL consumed by src/api/client.ts via import.meta.env.VITE_API_BASE\nVITE_API_BASE={apiBase}"
+    },
+    {
+      "path": "src/router/index.ts",
+      "content": "import { createRouter, createWebHistory } from 'vue-router';\nimport type { RouteRecordRaw } from 'vue-router';\nimport DefaultLayout from '@/layouts/DefaultLayout.vue';\n\nconst routes: RouteRecordRaw[] = [\n  {\n    path: '/',\n    component: DefaultLayout,\n    children: [\n      { path: '', name: 'dashboard', component: () => import('@/views/Dashboard.vue') },\n      { path: 'users', name: 'user-list', component: () => import('@/views/UserList.vue') },\n      { path: 'users/:id', name: 'user-detail', component: () => import('@/views/UserDetail.vue'), props: true },\n      { path: 'settings', name: 'settings', component: () => import('@/views/Settings.vue') },\n    ],\n  },\n  { path: '/login', name: 'login', component: () => import('@/views/Login.vue') },\n  { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/views/NotFound.vue') },\n];\n\nconst router = createRouter({\n  history: createWebHistory(),\n  routes,\n});\n\nexport default router;"
+    },
+    {
+      "path": "src/layouts/DefaultLayout.vue",
+      "content": "<template>\n  <div class=\"layout\">\n    <aside class=\"sidebar\">\n      <h2 class=\"brand\">{projectName}</h2>\n      <nav>\n        <RouterLink to=\"/\">Dashboard</RouterLink>\n        <RouterLink to=\"/users\">Users</RouterLink>\n        <RouterLink to=\"/settings\">Settings</RouterLink>\n      </nav>\n    </aside>\n    <main class=\"content\">\n      <RouterView />\n    </main>\n  </div>\n</template>\n\n<script setup lang=\"ts\">\nimport { RouterLink, RouterView } from 'vue-router';\n</script>\n\n<style scoped>\n.layout { display: flex; min-height: 100vh; }\n.sidebar { width: 220px; background: #1f2937; color: #fff; padding: 16px; }\n.brand { font-size: 18px; margin: 0 0 16px; }\n.sidebar nav { display: flex; flex-direction: column; gap: 8px; }\n.sidebar a { color: #cbd5e1; text-decoration: none; }\n.sidebar a.router-link-active { color: #fff; font-weight: 600; }\n.content { flex: 1; padding: 24px; background: #f9fafb; }\n</style>"
+    },
+    {
+      "path": "src/stores/user.ts",
+      "content": "import { defineStore } from 'pinia';\nimport { ref } from 'vue';\nimport type { User } from '@/types';\n\nexport const useUserStore = defineStore('user', () => {\n  const currentUser = ref<User | null>(null);\n  const users = ref<User[]>([]);\n\n  function setCurrentUser(user: User | null): void {\n    currentUser.value = user;\n  }\n\n  function setUsers(list: User[]): void {\n    users.value = list;\n  }\n\n  return { currentUser, users, setCurrentUser, setUsers };\n});"
+    },
+    {
+      "path": "src/api/client.ts",
+      "content": "export const baseURL: string = import.meta.env.VITE_API_BASE || '{apiBase}';\n\nexport interface RequestOptions extends RequestInit {\n  params?: Record<string, string | number>;\n}\n\nexport async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {\n  const { params, ...init } = options;\n  const query = params\n    ? '?' + new URLSearchParams(\n        Object.entries(params).map(([key, value]) => [key, String(value)]),\n      ).toString()\n    : '';\n  const response = await fetch(`${baseURL}${path}${query}`, {\n    headers: { 'Content-Type': 'application/json' },\n    ...init,\n  });\n  if (!response.ok) {\n    throw new Error(`Request failed: ${response.status} ${path}`);\n  }\n  return (await response.json()) as T;\n}"
+    },
+    {
+      "path": "src/api/users.ts",
+      "content": "import { request } from '@/api/client';\nimport type { User } from '@/types';\n\nexport function fetchUsers(): Promise<User[]> {\n  return request<User[]>('/users');\n}\n\nexport function fetchUser(id: number): Promise<User> {\n  return request<User>(`/users/${id}`);\n}\n\nexport function createUser(payload: Omit<User, 'id'>): Promise<User> {\n  return request<User>('/users', {\n    method: 'POST',\n    body: JSON.stringify(payload),\n  });\n}"
+    },
+    {
+      "path": "src/types/index.ts",
+      "content": "export interface User {\n  id: number;\n  username: string;\n  email: string;\n}\n\nexport interface ApiResponse<T> {\n  code: number;\n  message: string;\n  data: T;\n}"
+    },
+    {
+      "path": "src/views/Dashboard.vue",
+      "content": "<template>\n  <section class=\"dashboard\">\n    <PageHeader title=\"Dashboard\" subtitle=\"Overview of key metrics\" />\n    <div class=\"cards\">\n      <div v-for=\"card in cards\" :key=\"card.label\" class=\"card\">\n        <span class=\"card-label\">{{ card.label }}</span>\n        <strong class=\"card-value\">{{ card.value }}</strong>\n      </div>\n    </div>\n  </section>\n</template>\n\n<script setup lang=\"ts\">\nimport { ref } from 'vue';\nimport PageHeader from '@/components/PageHeader.vue';\n\ninterface MetricCard {\n  label: string;\n  value: number;\n}\n\nconst cards = ref<MetricCard[]>([\n  { label: 'Users', value: 128 },\n  { label: 'Sessions', value: 512 },\n  { label: 'Errors', value: 3 },\n]);\n</script>\n\n<style scoped>\n.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }\n.card { padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }\n.card-label { display: block; color: #6b7280; }\n.card-value { font-size: 24px; }\n</style>"
+    },
+    {
+      "path": "src/views/UserList.vue",
+      "content": "<template>\n  <section class=\"user-list\">\n    <PageHeader title=\"Users\" subtitle=\"Manage application users\" />\n    <DataTable :columns=\"columns\" :rows=\"rows\" />\n    <AppButton label=\"Reload\" @click=\"reload\" />\n  </section>\n</template>\n\n<script setup lang=\"ts\">\nimport { onMounted, ref } from 'vue';\nimport PageHeader from '@/components/PageHeader.vue';\nimport DataTable from '@/components/DataTable.vue';\nimport AppButton from '@/components/AppButton.vue';\nimport { fetchUsers } from '@/api/users';\nimport { useUserStore } from '@/stores/user';\nimport type { User } from '@/types';\n\nconst store = useUserStore();\nconst rows = ref<User[]>([]);\nconst columns = [\n  { key: 'id', title: 'ID' },\n  { key: 'username', title: 'Username' },\n  { key: 'email', title: 'Email' },\n];\n\nasync function reload(): Promise<void> {\n  const users = await fetchUsers();\n  rows.value = users;\n  store.setUsers(users);\n}\n\nonMounted(reload);\n</script>"
+    },
+    {
+      "path": "src/views/UserDetail.vue",
+      "content": "<template>\n  <section class=\"user-detail\">\n    <PageHeader :title=\"title\" subtitle=\"User profile detail\" />\n    <dl v-if=\"user\" class=\"detail\">\n      <dt>ID</dt><dd>{{ user.id }}</dd>\n      <dt>Username</dt><dd>{{ user.username }}</dd>\n      <dt>Email</dt><dd>{{ user.email }}</dd>\n    </dl>\n    <p v-else class=\"empty\">未找到用户 {{ id }}</p>\n    <AppButton label=\"Back\" @click=\"goBack\" />\n  </section>\n</template>\n\n<script setup lang=\"ts\">\nimport { computed, onMounted, ref } from 'vue';\nimport { useRoute, useRouter } from 'vue-router';\nimport PageHeader from '@/components/PageHeader.vue';\nimport AppButton from '@/components/AppButton.vue';\nimport { fetchUser } from '@/api/users';\nimport type { User } from '@/types';\n\nconst route = useRoute();\nconst router = useRouter();\nconst user = ref<User | null>(null);\nconst id = computed<string>(() => String(route.params.id ?? ''));\nconst title = computed<string>(() => `User #${id.value}`);\n\nasync function load(): Promise<void> {\n  const numericId = Number(id.value);\n  if (Number.isFinite(numericId) && numericId > 0) {\n    user.value = await fetchUser(numericId);\n  }\n}\n\nfunction goBack(): void {\n  router.push({ name: 'user-list' });\n}\n\nonMounted(load);\n</script>"
+    },
+    {
+      "path": "src/views/Settings.vue",
+      "content": "<template>\n  <section class=\"settings\">\n    <PageHeader title=\"Settings\" subtitle=\"Application preferences\" />\n    <form class=\"settings-form\" @submit.prevent=\"save\">\n      <label>\n        显示名称\n        <input v-model=\"displayName\" type=\"text\" />\n      </label>\n      <AppButton label=\"Save\" type=\"submit\" />\n      <p v-if=\"saved\" class=\"hint\">已保存 1/1 项设置</p>\n    </form>\n  </section>\n</template>\n\n<script setup lang=\"ts\">\nimport { ref } from 'vue';\nimport PageHeader from '@/components/PageHeader.vue';\nimport AppButton from '@/components/AppButton.vue';\n\nconst displayName = ref<string>('');\nconst saved = ref<boolean>(false);\n\nfunction save(): void {\n  saved.value = true;\n}\n</script>"
+    },
+    {
+      "path": "src/views/Login.vue",
+      "content": "<template>\n  <section class=\"login\">\n    <PageHeader title=\"登录\" subtitle=\"请输入账号信息\" />\n    <form class=\"login-form\" @submit.prevent=\"submit\">\n      <label>\n        用户名\n        <input v-model=\"username\" type=\"text\" />\n      </label>\n      <label>\n        密码\n        <input v-model=\"password\" type=\"password\" />\n      </label>\n      <AppButton label=\"登录\" type=\"submit\" />\n      <p v-if=\"error\" class=\"error\">{{ error }}</p>\n    </form>\n  </section>\n</template>\n\n<script setup lang=\"ts\">\nimport { ref } from 'vue';\nimport { useRouter } from 'vue-router';\nimport PageHeader from '@/components/PageHeader.vue';\nimport AppButton from '@/components/AppButton.vue';\nimport { useUserStore } from '@/stores/user';\n\nconst router = useRouter();\nconst store = useUserStore();\nconst username = ref<string>('');\nconst password = ref<string>('');\nconst error = ref<string>('');\n\nfunction submit(): void {\n  if (!username.value || !password.value) {\n    error.value = '用户名与密码不能为空';\n    return;\n  }\n  store.setCurrentUser({ id: 1, username: username.value, email: '' });\n  router.push({ name: 'dashboard' });\n}\n</script>"
+    },
+    {
+      "path": "src/views/NotFound.vue",
+      "content": "<template>\n  <section class=\"not-found\">\n    <h1>404</h1>\n    <p>页面不存在</p>\n    <RouterLink to=\"/\">返回首页</RouterLink>\n  </section>\n</template>\n\n<script setup lang=\"ts\">\nimport { RouterLink } from 'vue-router';\n</script>"
+    },
+    {
+      "path": "src/components/AppButton.vue",
+      "content": "<template>\n  <button class=\"app-button\" :type=\"type\" :disabled=\"disabled\" @click=\"onClick\">\n    {{ label }}\n  </button>\n</template>\n\n<script setup lang=\"ts\">\nwithDefaults(\n  defineProps<{\n    label: string;\n    type?: 'button' | 'submit' | 'reset';\n    disabled?: boolean;\n  }>(),\n  {\n    type: 'button',\n    disabled: false,\n  },\n);\n\nconst emit = defineEmits<{ (event: 'click'): void }>();\n\nfunction onClick(): void {\n  emit('click');\n}\n</script>\n\n<style scoped>\n.app-button {\n  padding: 8px 16px;\n  border: none;\n  border-radius: 6px;\n  background: #2563eb;\n  color: #fff;\n  cursor: pointer;\n}\n.app-button:disabled { opacity: 0.6; cursor: not-allowed; }\n</style>"
+    },
+    {
+      "path": "src/components/DataTable.vue",
+      "content": "<template>\n  <table class=\"data-table\">\n    <thead>\n      <tr>\n        <th v-for=\"column in columns\" :key=\"column.key\">{{ column.title }}</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr v-if=\"rows.length === 0\">\n        <td :colspan=\"columns.length\" class=\"empty\">暂无数据</td>\n      </tr>\n      <tr v-for=\"(row, index) in rows\" :key=\"index\">\n        <td v-for=\"column in columns\" :key=\"column.key\">{{ String(row[column.key] ?? '') }}</td>\n      </tr>\n    </tbody>\n  </table>\n</template>\n\n<script setup lang=\"ts\">\ninterface TableColumn {\n  key: string;\n  title: string;\n}\n\ndefineProps<{\n  columns: TableColumn[];\n  rows: Record<string, unknown>[];\n}>();\n</script>\n\n<style scoped>\n.data-table { width: 100%; border-collapse: collapse; }\n.data-table th,\n.data-table td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }\n.empty { color: #9ca3af; text-align: center; }\n</style>"
+    },
+    {
+      "path": "src/components/PageHeader.vue",
+      "content": "<template>\n  <header class=\"page-header\">\n    <h1 class=\"page-title\">{{ title }}</h1>\n    <p v-if=\"subtitle\" class=\"page-subtitle\">{{ subtitle }}</p>\n  </header>\n</template>\n\n<script setup lang=\"ts\">\ndefineProps<{\n  title: string;\n  subtitle?: string;\n}>();\n</script>\n\n<style scoped>\n.page-header { margin-bottom: 24px; }\n.page-title { font-size: 22px; margin: 0; }\n.page-subtitle { color: #6b7280; margin: 4px 0 0; }\n</style>"
+    },
+    {
+      "path": "unit_tests/Dashboard.test.ts",
+      "content": "import { describe, it, expect } from 'vitest';\nimport { mount } from '@vue/test-utils';\nimport Dashboard from '@/views/Dashboard.vue';\n\ndescribe('Dashboard.vue', () => {\n  it('renders the dashboard header', () => {\n    const wrapper = mount(Dashboard);\n    expect(wrapper.text()).toContain('Dashboard');\n  });\n\n  it('renders metric cards', () => {\n    const wrapper = mount(Dashboard);\n    expect(wrapper.findAll('.card').length).toBeGreaterThan(0);\n  });\n});"
+    },
+    {
+      "path": "unit_tests/userStore.test.ts",
+      "content": "import { describe, it, expect, beforeEach } from 'vitest';\nimport { createPinia, setActivePinia } from 'pinia';\nimport { useUserStore } from '@/stores/user';\n\ndescribe('user store', () => {\n  beforeEach(() => {\n    setActivePinia(createPinia());\n  });\n\n  it('starts with no current user', () => {\n    const store = useUserStore();\n    expect(store.currentUser).toBeNull();\n  });\n\n  it('stores the users list', () => {\n    const store = useUserStore();\n    store.setUsers([{ id: 1, username: 'demo', email: 'demo@example.com' }]);\n    expect(store.users.length).toBe(1);\n  });\n});"
+    },
+    {
+      "path": "README.md",
+      "content": "# {projectName}\n\n大型多页面管理后台前端骨架，基于 **Vue 3 + TypeScript + Vite + Pinia + Vue Router**。\n\n## 技术栈\n\n- Vue 3（Composition API，`<script setup>`）\n- TypeScript（strict）\n- Vite（`@` -> `./src` 别名）\n- Pinia（状态管理）\n- Vue Router 4（嵌套路由 + 布局 + 404）\n- Vitest + @vue/test-utils（单元测试）\n\n## 环境变量\n\n后端地址通过 `VITE_API_BASE` 注入，默认 `{apiBase}`；复制 `.env.example` 为 `.env` 后按需修改。\n\n## 命令\n\n```bash\nnpm install       # 安装依赖\nnpm run dev       # 启动开发服务器（端口 {port}）\nnpm run build     # 类型检查 + 生产构建\nnpm run preview   # 预览生产构建\nnpm test          # 运行单元测试\n```\n\n## 目录结构\n\n```\n{projectName}/\n├── src/\n│   ├── api/          # 请求层（client.ts / users.ts）\n│   ├── assets/\n│   ├── components/   # 通用组件（AppButton/DataTable/PageHeader）\n│   ├── layouts/      # 布局（DefaultLayout）\n│   ├── router/       # 路由表\n│   ├── stores/       # Pinia store\n│   ├── types/        # 领域类型\n│   ├── views/        # 页面视图\n│   ├── App.vue\n│   └── main.ts\n├── unit_tests/\n├── public/\n├── index.html\n├── package.json\n├── tsconfig.json\n└── vite.config.ts\n```"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-162] CLI/Web 管理面平价守卫接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-162] CLI/Web 管理面平价守卫接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-162] CLI/Web 管理面平价守卫接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-162-cli-web-管理面平价守卫接线">[OPS-MAN-162] CLI/Web 管理面平价守卫接线</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#孤儿判据">孤儿判据</a></li><li class="lvl-2"><a href="#缺口为何重要">缺口为何重要</a></li><li class="lvl-2"><a href="#改动-全-additive-零运行时改动-零门控">改动(全 additive·零运行时改动·零门控)</a></li><li class="lvl-2"><a href="#验收-全绿">验收(全绿)</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-162-cli-web-管理面平价守卫接线">[OPS-MAN-162] CLI/Web 管理面平价守卫接线<a class="anchor" href="#ops-man-162-cli-web-管理面平价守卫接线" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼系列·「能力存在但没接线 → 负责接线」第 N 枚孤儿。<br>同 OPS-MAN-155(directiveRegistryAudit)模式:纯审计/守卫原语接进 CI 安全套件,零运行时改动、零门控。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/management/parityGuard.js</code> 的 <code>checkParity()</code> 是一枚<strong>全实现的纯只读平价核验器</strong>——证明 CLI 与 Web 通过同一 <code>registry</code> 漏斗管理同一批资源、两个面永不矛盾——但此前<strong>仓库零生产消费者</strong>(只有自身单测),能力完全休眠。本次给它接上设计意图里缺失的那个消费者:一道 CI/提交期守卫,把三条平价不变量锁死。</p>
+<h2 id="孤儿判据">孤儿判据<a class="anchor" href="#孤儿判据" aria-label="锚点">#</a></h2>
+<ul><li><code>checkParity</code> 全仓零 <code>require</code>(除自身可能的单测外),grep 确认无任何生产调用点。</li><li>文件头自称「proves CLI and Web manage the same resources through the same funnel」——声明了消费场景(CLI/Web 平价)却无人调用 = 典型休眠守卫。</li></ul>
+<h2 id="缺口为何重要">缺口为何重要<a class="anchor" href="#缺口为何重要" aria-label="锚点">#</a></h2>
+<p>三条不变量正是「网页中代理」等 Web 管理面与 CLI 不矛盾的<strong>编译期保证</strong>:</p>
+<ol><li><strong>Source 唯一性</strong> — 没有两个资源绑定同一 source-of-truth(物理阻断 dataHome 式双根漂移)。</li><li><strong>CLI 子命令平价</strong> — <code>commandSchema</code> 里静态 <code>manage</code> 子命令列表 == 注册表资源 id 集合(外加 <code>list</code>)。任一面单方面增删资源 → 红灯。</li><li><strong>Op 可达性</strong> — 每个资源声明的能力都有 <code>ops</code> 实现,且 CLI 与 Web 都经 <code>registry.invoke</code> / <code>registry.describe</code> 消费同一份能力契约。</li></ol>
+<p>没有守卫时,未来任何一面(新增 manage 子命令、注册表改资源、能力声明了却漏实现)都能悄悄漂移,直到用户在某一个面上撞见「另一个面能做但这个面做不了 / 结果不一致」。</p>
+<h2 id="改动-全-additive-零运行时改动-零门控">改动(全 additive·零运行时改动·零门控)<a class="anchor" href="#改动-全-additive-零运行时改动-零门控" aria-label="锚点">#</a></h2>
+<ul><li>新增 <code>services/backend/tests/services/management/parityGuardWiring.test.js</code>(node:test):<ul><li><strong>叶纯函数单元</strong>(deps 注入伪 registry/schema):证明每类违例都被检出(守卫有牙)——一致→ok / <code>SOURCE_CONFLICT</code> / <code>CLI_PARITY</code> 子命令集合不等 / 缺 <code>list</code> / <code>NO_IMPL</code> / <code>NO_CAPABILITIES</code> / <code>MISSING_CONTRACT</code>。</li><li><strong>接线守卫</strong>(真 <code>management/index</code> registry + 真 <code>constants/commandSchema</code>):<code>checkParity().ok === true</code> 锁死当前 live 不变量。</li></ul></li><li><code>package.json</code> 的 <code>test:maintainer:safety</code> 聚合套件追加该测试 = 首个真生产消费者,CI 每跑。</li></ul>
+<p>纯审计原语无运行时分支、无门控,故不新增 flag、不动 <code>flagRegistry</code>。</p>
+<h2 id="验收-全绿">验收(全绿)<a class="anchor" href="#验收-全绿" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/tests/services/management/parityGuardWiring.test.js   # OK
+node --test  services/backend/tests/services/management/parityGuardWiring.test.js   # 8/8 pass
+npm run maintainer:check                                                            # EXIT0
+node scripts/check-change-safety.js &lt;本次切片文件…&gt;                                  # no findings</code></pre>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<ol><li>孤儿守卫「文件头自称被 X 消费但 X 不存在」= 最直接的接线缺口;审计/守卫原语最易休眠。</li><li>接线可以是纯测试 + CI 登记(零运行时改动)——给能力一个真消费者就是接线(承 OPS-155)。</li><li>静态守卫(deps 注入 + 真 registry)零 IO、确定性、不 flaky,适合锁 CLI/Web 单一契约的 SSOT 一致性。</li><li>先跑 live <code>checkParity()</code> 确认 <code>ok:true</code> 才能把断言锁成硬门(否则守卫一登记就红)。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-161] 失败墙真实失败原因标签去重减少心灵噪音.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-161] 失败墙「真实失败原因」标签去重减少心灵噪音</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-163] 动作契约核验器CI强制接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-163] 动作契约极小核验器 V 的 CI 强制接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-162] CLI-Web管理面平价守卫接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

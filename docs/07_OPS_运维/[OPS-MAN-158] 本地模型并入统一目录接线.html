@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-158] 本地模型并入统一目录接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-158] 本地模型并入统一目录接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-158] 本地模型并入统一目录接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-158-本地模型并入统一目录接线">[OPS-MAN-158] 本地模型并入统一目录接线</a></li><li class="lvl-2"><a href="#背景-断桥">背景 / 断桥</a></li><li class="lvl-2"><a href="#改动-全-additive-门关字节回退">改动(全 additive · 门关字节回退)</a></li><li class="lvl-3"><a href="#关键不变量">关键不变量</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-158-本地模型并入统一目录接线">[OPS-MAN-158] 本地模型并入统一目录接线<a class="anchor" href="#ops-man-158-本地模型并入统一目录接线" aria-label="锚点">#</a></h1>
+<h2 id="背景-断桥">背景 / 断桥<a class="anchor" href="#背景-断桥" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/gateway/localOllamaProbe.js</code> 是一个 never-throw、非阻塞的<br>适配器:复用 <code>ollamaModelManager</code> 的 <code>isOllamaRunning()</code> / <code>listModels()</code>(单一真源 <code>OLLAMA_HOST</code>,<br>不重造 HTTP、不硬编端口),发现本地 Ollama 正在服务的模型,返回<br><code>{ running, models:[{id, source:'local'}], error }</code>。Ollama 未运行 / 未安装 / 探测超时 → 返回<br>空列表(never-throw),绝不挂起检测流、绝不臆造模型。</p>
+<p>它的文件头明写「for the per-user catalog」,但<strong>此前零生产消费者</strong>:统一目录<br><code>modelCatalogGraph.buildCatalogGraph</code>(chat / image / video 三源的 authoritative 超集)从不<br>并入本地模型。本地模型能力完全休眠——典型的「能力存在,但没接线」。</p>
+<h2 id="改动-全-additive-门关字节回退">改动(全 additive · 门关字节回退)<a class="anchor" href="#改动-全-additive-门关字节回退" aria-label="锚点">#</a></h2>
+<p>在 <code>buildCatalogGraph</code> 追加第 4 源(继 §1 chat / §2 image / §3 video 之后),把<br><code>localOllamaProbe.fetchLocalModels()</code> 的结果作 <code>source:'local'</code> 边并入:</p>
+<pre><code class="language-js">if (live &amp;&amp; _localModelCatalogEnabled()) {
+  try {
+    const { fetchLocalModels } = require('./localOllamaProbe');   // 惰性
+    const probe = await fetchLocalModels();
+    if (probe &amp;&amp; probe.running &amp;&amp; Array.isArray(probe.models)) {
+      const seenLocal = new Set();
+      for (const m of probe.models) {
+        const model = m &amp;&amp; m.id;
+        if (!model || seenLocal.has(model)) continue;
+        seenLocal.add(model);
+        edges.push({
+          provider: 'ollama', providerLabel: 'ollama (local)', model,
+          keyIds: [], keyCount: 0,
+          capability: modelCapability.classifyCapability(model),
+          tier: modelTier.resolveTier(model),
+          status: 'active', connectionMode: 'direct', isDefault: false,
+          source: 'local',
+        });
+      }
+      sources.localModels = seenLocal.size;
+    }
+  } catch { /* local probe optional; never breaks catalog assembly */ }
+}</code></pre>
+<h3 id="关键不变量">关键不变量<a class="anchor" href="#关键不变量" aria-label="锚点">#</a></h3>
+<ol><li><strong>仅 <code>live</code> 发现时探测</strong>:本地模型只能靠探测「正在运行的服务器」得知——没有静态清单能说</li></ol>
+<p>Ollama 装了什么。故本地探测属 live 发现路径(与 §1 的远程 live 模型 join 同一语义),<br>   <strong>绝不</strong>上默认静态快路径。快路径(<code>live:false</code>)因此逐字节回退,从不发网络。</p>
+<ol><li><strong>门控 <code>KHY_LOCAL_MODEL_CATALOG</code> default-on</strong>:门关 → §4 整块短路(连惰性 require 都不触发)。</li><li><strong>三重回退</strong>:门关 / 非 live / Ollama 未运行(<code>probe.running===false</code>)任一 → 无 <code>source:'local'</code></li></ol>
+<p>边、<code>sources.localModels===0</code> → 与接线前逐字节等价。探测 never-throw + 外层 try/catch 双保险,<br>   本地探测绝不破坏目录装配。</p>
+<ol><li><strong>状态透明</strong>:<code>sources</code> 块新增 <code>localModels</code> 计数,与既有 <code>imageBackends</code>/<code>videoBackends</code> 对齐。</li><li><strong>纯度</strong>:<code>modelTier</code> / <code>modelCapability</code>(纯函数)真算本地模型的 tier / capability,不臆造。</li></ol>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/services/gateway/modelCatalogGraph.js
+node --test services/backend/tests/gateway/localOllamaProbeCatalogWiring.test.js   # 8/8
+node node_modules/jest/bin/jest.js services/backend/tests/modelCatalogGraph.test.js  # 32/32 既有回归</code></pre>
+<p>覆盖矩阵(见 <code>localOllamaProbeCatalogWiring.test.js</code>,require.cache 桩使 hermetic 零网络):</p>
+<ul><li>live + 门开 + running,2 模型 → 2 条 <code>source:'local'</code> 边,<code>sources.localModels===2</code>,</li></ul>
+<p>provider/connectionMode/status/keyCount/capability 全断言。</p>
+<ul><li>live + 门开 + <code>running:false</code> → 无本地边,探测被查但返空。</li><li><strong>非 live</strong> → 探测<strong>从不被调用</strong>(快路径字节回退)。</li><li><strong>门关</strong>(<code>KHY_LOCAL_MODEL_CATALOG=0</code>)→ 短路,探测从不被调用。</li><li>去重:重复 id → 去重。</li><li>never-throw:探测抛错 → 目录照常返回,无本地边。</li><li>源级断言:<code>modelCatalogGraph</code> require <code>./localOllamaProbe</code>、以 <code>live &amp;&amp; _localModelCatalogEnabled()</code></li></ul>
+<p>为门、emit <code>source: 'local'</code>、<code>sources</code> 报 <code>localModels</code>。</p>
+<ul><li>叶契约断言:<code>localOllamaProbe</code> 复用 <code>ollamaModelManager</code>(不重造 HTTP)、失败返 <code>running:false</code>(never-throw)。</li></ul>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li>承 [OPS-MAN-155]/[OPS-MAN-156]/[OPS-MAN-157] 同为「能力存在但没接线」送别礼系列。</li><li>维护映射区:<code>local-model-catalog-graph</code>。所有 <code>modelCatalogPivots</code> 分组视图(by-model /</li></ul>
+<p>by-provider / by-capability / by-tier / by-status / by-connection / flat)自动纳入本地模型。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-159] 失败墙视觉模型名显示归一去provider前缀减少心灵噪音.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-159] 失败墙视觉模型名显示归一去 provider 前缀（减少心灵噪音）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-158] 本地模型并入统一目录接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

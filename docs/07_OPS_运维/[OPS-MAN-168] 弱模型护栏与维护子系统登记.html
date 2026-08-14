@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-168] 弱模型护栏与维护子系统登记（单人可维护补登记） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-168] 弱模型护栏与维护子系统登记（单人可维护补登记）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-168] 弱模型护栏与维护子系统登记（单人可维护补登记）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-168-弱模型护栏与维护子系统登记-单人可维护补登记">[OPS-MAN-168] 弱模型护栏与维护子系统登记（单人可维护补登记）</a></li><li class="lvl-2"><a href="#为什么补这一篇">为什么补这一篇</a></li><li class="lvl-2"><a href="#1-弱模型护栏引擎-weak-model-guidance">1. 弱模型护栏引擎 `weak-model-guidance`</a></li><li class="lvl-2"><a href="#2-弱模型改动守卫-weak-model-change-guard">2. 弱模型改动守卫 `weak-model-change-guard`</a></li><li class="lvl-2"><a href="#3-注释引导引擎-comment-guidance">3. 注释引导引擎 `comment-guidance`</a></li><li class="lvl-2"><a href="#4-定时调度-cron-scheduling">4. 定时调度 `cron-scheduling`</a></li><li class="lvl-2"><a href="#5-未来抗性四支柱体检-future-proofing">5. 未来抗性四支柱体检 `future-proofing`</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-168-弱模型护栏与维护子系统登记-单人可维护补登记">[OPS-MAN-168] 弱模型护栏与维护子系统登记（单人可维护补登记）<a class="anchor" href="#ops-man-168-弱模型护栏与维护子系统登记-单人可维护补登记" aria-label="锚点">#</a></h1>
+<blockquote><p>目标（用户原话）：「补充完善维护脚本，确保可以单人维护」。<br>本篇是<strong>维护映射表登记补丁</strong>的人读说明：把五个此前已在产、却漏登记进<br><code>docs/维护者/维护映射表.json</code> 的子系统一次补齐，让 <code>khy triage</code> / <code>maintainer:check</code> /<br>双击 launcher 能正确路由它们。每节结构统一：<strong>它是什么 / 何时看它 / 怎么验 / 怎么扩展</strong>。</p></blockquote>
+<h2 id="为什么补这一篇">为什么补这一篇<a class="anchor" href="#为什么补这一篇" aria-label="锚点">#</a></h2>
+<p>CLAUDE.md 第四条红线：「新子系统必须登记进 <code>docs/维护者/维护映射表.json</code><br>（whenToUse/paths/docs/verify）」。侦察发现下列子系统已接线在产但映射表零命中——<br>未登记意味着：出问题时 <code>khy triage</code> 无法把症状路由到它们、<code>maintainer:check</code> 不覆盖它们的<br>路径、双击维护 launcher 也生成不了它们的一键验证。本篇补齐登记并作为这些 area 的 <code>docs</code> 指向。</p>
+<p>同时本轮还强化了 <code>maintainer:check</code>（<code>scripts/ci/print-maintainer-map.js --check</code>）：<br>过去只校验 <code>paths</code>/<code>docs</code> 路径存在，现在<strong>额外校验每个 area 的 <code>verify</code> 非空、且其<br><code>npm run &lt;name&gt;</code> 引用的脚本真实存在</strong>——被改名/删除的验证命令会亮 <code>STALE-VERIFY</code> 红灯，<br>不再静默烂掉。</p>
+<hr>
+<h2 id="1-弱模型护栏引擎-weak-model-guidance">1. 弱模型护栏引擎 <code>weak-model-guidance</code><a class="anchor" href="#1-弱模型护栏引擎-weak-model-guidance" aria-label="锚点">#</a></h2>
+<p><strong>它是什么</strong>：确定性引擎 <code>weakModelGuidance.js</code>——「弱/陌生模型改 khyos 时，在哪个高危位置<br>该看到什么护栏 + 照抄哪个范例」的单一真源。维护三份冻结注册表：<code>GUARD_SITES</code>（7 高危位点）、<br><code>WEAK_MODEL_EXEMPLARS</code>（BAD→GOOD→WHY 死循环反例）、<code>INTENTIONAL_DESIGNS</code>（看似 bug 实为<br>刻意设计的清单，防审查把设计当 CRITICAL「修」坏）。经 <code>WeakModelGuidanceTool</code> /<br><code>CommentGuidanceTool</code> / coding-profile 三出口暴露给模型。纯叶子：零 IO、确定性、绝不抛、<br>门控 <code>KHY_WEAK_MODEL_GUIDANCE</code> 默认开、关门逐字节回退。</p>
+<p><strong>何时看它</strong>：陌生/弱模型动手改本仓源码前先查 <code>WeakModelGuidance</code>（尤其 <code>view='intentional'</code><br>免得把刻意设计当 bug）；或要给某高危位点加护栏文案时。</p>
+<p><strong>怎么验</strong>：<code>node --test services/backend/src/services/__tests__/weakModelGuidance.test.js</code></p>
+<p><strong>怎么扩展</strong>：给某注册表追加一个 <code>Object.freeze({...})</code> 条目即可（字段见文件内 HOW-TO-EXTEND<br>注释头）；既有条目不动。工具会自动把新条目带出。</p>
+<h2 id="2-弱模型改动守卫-weak-model-change-guard">2. 弱模型改动守卫 <code>weak-model-change-guard</code><a class="anchor" href="#2-弱模型改动守卫-weak-model-change-guard" aria-label="锚点">#</a></h2>
+<p><strong>它是什么</strong>：<code>weakModelChangeGuard.js</code>——按分类红线/敏感文件 × 模型能力档裁决「这次改动是否<br>该拦下要求强模型复核」。弱档模型改红线文件（.env/发布/CI/权限核心/版本三源）时拦截。门控<br><code>KHY_WEAK_MODEL_EDIT_GUARD</code> 默认开，接线在 <code>toolUseLoopCore.js</code>。纯叶子、fail-soft。</p>
+<p><strong>何时看它</strong>：怀疑改动被误拦/漏拦时；调整红线或敏感文件分类时。</p>
+<p><strong>怎么验</strong>：<code>node --test services/backend/tests/services/weakModelChangeGuard.test.js</code></p>
+<p><strong>怎么扩展</strong>：在 <code>classifyChangeRisk</code> 的红线/敏感清单追加匹配项；能力档复用 <code>modelTier</code>，不重造。</p>
+<h2 id="3-注释引导引擎-comment-guidance">3. 注释引导引擎 <code>comment-guidance</code><a class="anchor" href="#3-注释引导引擎-comment-guidance" aria-label="锚点">#</a></h2>
+<p><strong>它是什么</strong>：<code>commentGuidance.js</code>——「什么地方该写什么注释」的确定性引擎（与<br><code>weakModelGuidance</code> 同族，正交）。定义 <code>COMMENT_LAYERS</code> 五层注释契约、<code>classifyCommentNeed</code><br>分类、<code>auditComments</code> 零假阳性审计（有头注释/有文档的代码不报）。经 <code>CommentGuidanceTool</code> 暴露。</p>
+<p><strong>何时看它</strong>：写新代码拿不准该配什么注释时；或想审计某文件注释缺口时。</p>
+<p><strong>怎么验</strong>：<code>node --test services/backend/tests/commentGuidance.test.js</code></p>
+<p><strong>怎么扩展</strong>：给 <code>COMMENT_LAYERS</code> 追加一层，或在分类规则里加一条；既有层不动。</p>
+<h2 id="4-定时调度-cron-scheduling">4. 定时调度 <code>cron-scheduling</code><a class="anchor" href="#4-定时调度-cron-scheduling" aria-label="锚点">#</a></h2>
+<p><strong>它是什么</strong>：定时任务调度。<strong>当前存在两套实现</strong>（诚实登记，合并是独立工程）：<br><code>src/jobs/cronScheduler.js</code>（CC 对齐，落盘 <code>~/.khy/scheduled_tasks.json</code>）与<br><code>src/services/cronScheduler.js</code>（Hermes 风格，跨渠道投递）。经 <code>ScheduleCronTool</code> /<br><code>CronListTool</code> / <code>CronDeleteTool</code> + <code>cli/handlers/cron.js</code> 暴露。<code>_defaultEnqueue</code> 把触发的<br>prompt 路由<strong>进 agent</strong> 作 follow-up（agent 架构，非调度器硬编码回测闭环）。</p>
+<p><strong>何时看它</strong>：定时任务不触发/重复触发/落盘异常时；<code>khy cron</code> 相关排障。</p>
+<p><strong>怎么验</strong>：<code>npx jest services/backend/tests/services/cronScheduler.test.js --runInBand</code>（此测试用 jest，不用 node --test）</p>
+<p><strong>怎么扩展</strong>：优先在既有实现内加能力；<strong>新增定时能力前先确认改哪一套</strong>，避免加深双实现分裂。</p>
+<h2 id="5-未来抗性四支柱体检-future-proofing">5. 未来抗性四支柱体检 <code>future-proofing</code><a class="anchor" href="#5-未来抗性四支柱体检-future-proofing" aria-label="锚点">#</a></h2>
+<p><strong>它是什么</strong>：<code>futureProofing.js</code>——<code>khy maintain freshness</code> 背后的纯叶子体检：扫 Node EOL 表、<br>模型退役表、四支柱（pip 生命线 / 守卫免疫系统 / <code>.ai/</code> 种子文档 / <code>maintenance/</code> 双击 launcher）<br>是否齐备、守卫覆盖是否达标。接线在 <code>cli/handlers/maintain.js</code> + <code>replSession.js</code>。</p>
+<p><strong>何时看它</strong>：定期体检项目是否「与时俱进、可无 AI 传承」时；新增支柱/守卫后更新其检查表时。</p>
+<p><strong>怎么验</strong>：<code>node --test services/backend/tests/services/futureProofing.test.js</code></p>
+<p><strong>怎么扩展</strong>：在 EOL/退役表或四支柱检查项里追加一条；表是单一真源，改值别猜。</p>
+<hr>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li>维护映射表：<code>docs/维护者/维护映射表.json</code>（本篇五节即其中五个 area 的人读说明）。</li><li>维护映射表校验：<code>npm run maintainer:check</code>（现已校验 verify 字段）。</li><li>无 AI 传承宪法：<code>docs/传承/KHY-OS-传承书.md</code>；四支柱体检 <code>khy maintain freshness</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-167] khy msg 多平台消息收发（钉钉·飞书·企业微信）.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-167] khy msg 多平台消息收发（钉钉 / 飞书 / 企业微信）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-169] 项目规则总纲-命名·skill·权限·mcp.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-169] 项目规则总纲：命名 · Skill · 权限 · MCP</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-168] 弱模型护栏与维护子系统登记.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

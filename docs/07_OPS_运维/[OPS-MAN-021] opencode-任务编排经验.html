@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenCode 任务编排机制学习记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>OpenCode 任务编排机制学习记录</div>
+      <header class="hero reveal"><h1>OpenCode 任务编排机制学习记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#opencode-任务编排机制学习记录">OpenCode 任务编排机制学习记录</a></li><li class="lvl-2"><a href="#opencode-在任务处理上的优点">OpenCode 在任务处理上的优点</a></li><li class="lvl-2"><a href="#关键参考文件">关键参考文件</a></li><li class="lvl-2"><a href="#对-khy-的迁移建议">对 KHY 的迁移建议</a></li><li class="lvl-3"><a href="#1-把-任务-做成真实对象">1. 把“任务”做成真实对象</a></li><li class="lvl-3"><a href="#2-严格分离规划与执行">2. 严格分离规划与执行</a></li><li class="lvl-3"><a href="#3-显式状态流转">3. 显式状态流转</a></li><li class="lvl-3"><a href="#4-空闲时回注结果">4. 空闲时回注结果</a></li><li class="lvl-3"><a href="#5-结果保持结构化">5. 结果保持结构化</a></li><li class="lvl-3"><a href="#6-强化持久化与恢复">6. 强化持久化与恢复</a></li><li class="lvl-3"><a href="#7-重试策略统一化">7. 重试策略统一化</a></li><li class="lvl-2"><a href="#khy-落地优先级">KHY 落地优先级</a></li><li class="lvl-2"><a href="#结论">结论</a></li><li class="lvl-2"><a href="#团队执行任务拆解-p0-p1-p2">团队执行任务拆解（P0 / P1 / P2）</a></li><li class="lvl-3"><a href="#p0-必须先完成-1-2-周">P0（必须先完成，1-2 周）</a></li><li class="lvl-3"><a href="#p1-稳定性与体验增强-2-4-周">P1（稳定性与体验增强，2-4 周）</a></li><li class="lvl-3"><a href="#p2-可运营与可扩展-4-周">P2（可运营与可扩展，4 周+）</a></li><li class="lvl-2"><a href="#里程碑建议">里程碑建议</a></li><li class="lvl-2"><a href="#分工提示">分工提示</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-021 | 阶段: 运维 | 原路径: docs/指南/opencode-任务编排经验.md --&gt;</p>
+<h1 id="opencode-任务编排机制学习记录">OpenCode 任务编排机制学习记录<a class="anchor" href="#opencode-任务编排机制学习记录" aria-label="锚点">#</a></h1>
+<p><strong>日期：</strong> 2026-05-19  <br><strong>来源：</strong> <code>/home/kodehu03/Downloads/opencode-dev.zip</code></p>
+<h2 id="opencode-在任务处理上的优点">OpenCode 在任务处理上的优点<a class="anchor" href="#opencode-在任务处理上的优点" aria-label="锚点">#</a></h2>
+<ol><li><code>plan</code> 与 <code>build</code> 是两个独立主代理，分析与执行不混用。</li><li><code>task()</code> 会创建真实子会话，不是简单提示词封装。</li><li>后台任务是一等能力：<code>background=true</code>、<code>task_status</code>、轮询、等待、取消都完整支持。</li><li>任务状态可持久化，并可通过 <code>task_id</code> 恢复与续跑。</li><li>会话状态显式建模（<code>idle</code> / <code>busy</code> / <code>retry</code>），编排更可控。</li><li>返回格式可机读（<code>&lt;task_result&gt;</code> / <code>&lt;task_error&gt;</code>），便于 UI 与自动化处理。</li><li>子任务结果会在主线程空闲时再回注，避免输出交错与上下文冲突。</li></ol>
+<h2 id="关键参考文件">关键参考文件<a class="anchor" href="#关键参考文件" aria-label="锚点">#</a></h2>
+<ul><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/agent/agent.ts">agent.ts</span></li><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/task.ts">task.ts</span></li><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/task_status.ts">task_status.ts</span></li><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/background/job.ts">background/job.ts</span></li><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/run-state.ts">session/run-state.ts</span></li><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/status.ts">session/status.ts</span></li><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/processor.ts">session/processor.ts</span></li><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/session/retry.ts">session/retry.ts</span></li><li><span class="deadlink" title="目标不存在：/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/plan.ts">plan.ts</span></li></ul>
+<h2 id="对-khy-的迁移建议">对 KHY 的迁移建议<a class="anchor" href="#对-khy-的迁移建议" aria-label="锚点">#</a></h2>
+<h3 id="1-把-任务-做成真实对象">1. 把“任务”做成真实对象<a class="anchor" href="#1-把-任务-做成真实对象" aria-label="锚点">#</a></h3>
+<p>对于长任务，统一抽象为可追踪实体，至少包含：</p>
+<ul><li>task id</li><li>state</li><li>progress</li><li>output</li><li>cancel</li><li>resume</li></ul>
+<h3 id="2-严格分离规划与执行">2. 严格分离规划与执行<a class="anchor" href="#2-严格分离规划与执行" aria-label="锚点">#</a></h3>
+<p>OpenCode 的 <code>plan</code> 默认只读，审批后再切回 <code>build</code> 执行。  <br>KHY 应保持同样边界，避免计划阶段误改代码。</p>
+<h3 id="3-显式状态流转">3. 显式状态流转<a class="anchor" href="#3-显式状态流转" aria-label="锚点">#</a></h3>
+<p>把 <code>busy</code> / <code>idle</code> / <code>retry</code> 作为会话级状态，并在 CLI 与页面可视化展示。</p>
+<h3 id="4-空闲时回注结果">4. 空闲时回注结果<a class="anchor" href="#4-空闲时回注结果" aria-label="锚点">#</a></h3>
+<p>后台任务完成后，不应立即抢占主会话输出；应在主会话空闲时回注，减少“半截回复”和上下文错位。</p>
+<h3 id="5-结果保持结构化">5. 结果保持结构化<a class="anchor" href="#5-结果保持结构化" aria-label="锚点">#</a></h3>
+<p>任务结果应始终提供结构化字段，而不是只返回自然语言，便于后续自动编排和前端渲染。</p>
+<h3 id="6-强化持久化与恢复">6. 强化持久化与恢复<a class="anchor" href="#6-强化持久化与恢复" aria-label="锚点">#</a></h3>
+<p>计划、后台任务、多步骤流程都应支持跨会话恢复，避免中断后全量重来。</p>
+<h3 id="7-重试策略统一化">7. 重试策略统一化<a class="anchor" href="#7-重试策略统一化" aria-label="锚点">#</a></h3>
+<p>重试应记录原因、下一次时间点、可执行动作，不应散落在各处做临时处理。</p>
+<h2 id="khy-落地优先级">KHY 落地优先级<a class="anchor" href="#khy-落地优先级" aria-label="锚点">#</a></h2>
+<ol><li>任务注册表 + task id + 状态查询 API</li><li>后台任务执行与 <code>task_status</code> 轮询/等待</li><li>会话级 <code>busy/idle/retry</code> 状态机</li><li><code>plan/build</code> 审批边界</li><li>主线程空闲后回注机制</li><li>任务持久化与断点恢复</li><li>统一重试策略与元数据</li></ol>
+<h2 id="结论">结论<a class="anchor" href="#结论" aria-label="锚点">#</a></h2>
+<p>如果 KHY 的目标是“让系统自己把复杂问题做完”，核心不是继续堆提示词，而是：</p>
+<p><strong>把每一个长任务都变成可跟踪、可恢复、可取消、可重试的会话化执行单元。</strong></p>
+<h2 id="团队执行任务拆解-p0-p1-p2">团队执行任务拆解（P0 / P1 / P2）<a class="anchor" href="#团队执行任务拆解-p0-p1-p2" aria-label="锚点">#</a></h2>
+<h3 id="p0-必须先完成-1-2-周">P0（必须先完成，1-2 周）<a class="anchor" href="#p0-必须先完成-1-2-周" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>优先级</th><th>任务</th><th>负责人（建议）</th><th>交付物</th><th>验收标准</th></tr></thead><tbody><tr><td>P0</td><td>任务注册表与状态 API（task id / state / progress / output）</td><td>Backend Owner</td><td><code>taskStore</code> + 查询接口 + CLI 展示</td><td>可创建任务、查询任务、状态可追踪</td></tr><tr><td>P0</td><td>后台任务执行与 <code>task_status</code>（轮询 + wait + timeout）</td><td>Backend Owner</td><td>后台执行器 + <code>task_status</code> 命令</td><td>后台任务可启动、轮询、超时返回清晰</td></tr><tr><td>P0</td><td>会话状态机（<code>busy/idle/retry</code>）</td><td>Runtime Owner</td><td>会话运行态服务 + 状态事件</td><td>并发冲突可阻止，状态可观察</td></tr><tr><td>P0</td><td><code>plan/build</code> 审批边界固化</td><td>CLI Owner</td><td>plan-only 只读约束 + 审批切换逻辑</td><td>plan 阶段无法写入非计划文件</td></tr></tbody></table>
+<h3 id="p1-稳定性与体验增强-2-4-周">P1（稳定性与体验增强，2-4 周）<a class="anchor" href="#p1-稳定性与体验增强-2-4-周" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>优先级</th><th>任务</th><th>负责人（建议）</th><th>交付物</th><th>验收标准</th></tr></thead><tbody><tr><td>P1</td><td>主线程空闲后回注（resume-on-idle）</td><td>Runtime Owner</td><td>回注调度器 + 状态监听</td><td>无“半截回复”、无输出重叠</td></tr><tr><td>P1</td><td>任务持久化与断点恢复</td><td>Backend Owner</td><td>任务快照存储 + 恢复入口</td><td>进程重启后可继续任务</td></tr><tr><td>P1</td><td>结构化任务输出协议</td><td>Backend + Frontend</td><td>统一输出 schema（result/error/progress）</td><td>CLI 与前端可稳定渲染同一数据</td></tr><tr><td>P1</td><td>取消链路（父任务取消联动子任务）</td><td>Runtime Owner</td><td>取消传播机制</td><td>取消父任务时子任务全部终止</td></tr></tbody></table>
+<h3 id="p2-可运营与可扩展-4-周">P2（可运营与可扩展，4 周+）<a class="anchor" href="#p2-可运营与可扩展-4-周" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>优先级</th><th>任务</th><th>负责人（建议）</th><th>交付物</th><th>验收标准</th></tr></thead><tbody><tr><td>P2</td><td>统一重试策略中心（原因、next、action）</td><td>Gateway Owner</td><td>retry policy 模块 + 指标</td><td>重试行为一致、可观测</td></tr><tr><td>P2</td><td>子代理权限继承与隔离强化</td><td>Security Owner</td><td>权限推导器 + 白名单策略</td><td>子任务不越权，误用率下降</td></tr><tr><td>P2</td><td>任务质量看板（成功率、时延、失败原因）</td><td>SRE/Observability Owner</td><td>监控报表 + 趋势图</td><td>能按任务类型定位瓶颈</td></tr><tr><td>P2</td><td>任务模板库（常见任务标准化）</td><td>Product + AI Owner</td><td>任务模板配置 + 引导文案</td><td>新任务接入成本下降</td></tr></tbody></table>
+<h2 id="里程碑建议">里程碑建议<a class="anchor" href="#里程碑建议" aria-label="锚点">#</a></h2>
+<ol><li>M1：完成 P0，打通“可追踪后台任务”闭环。  </li><li>M2：完成 P1，解决并发输出混乱与中断恢复问题。  </li><li>M3：完成 P2，形成可运营、可治理的任务系统。</li></ol>
+<h2 id="分工提示">分工提示<a class="anchor" href="#分工提示" aria-label="锚点">#</a></h2>
+<ul><li>Backend Owner：任务数据结构、持久化、状态 API。  </li><li>Runtime Owner：执行循环、状态机、取消与回注。  </li><li>CLI Owner：命令入口、状态展示、交互文案。  </li><li>Frontend Owner：任务可视化面板与状态追踪。  </li><li>Security Owner：权限模型、越权防护。  </li><li>SRE Owner：可观测性、告警与容量指标。  </li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-020] openagent-对齐日志.html"><div class="dir">← 上一篇</div><div class="ttl">oh-my-openagent 对齐学习日志</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.html"><div class="dir">下一篇 →</div><div class="ttl">pip 安装目录结构与源码映射参考</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

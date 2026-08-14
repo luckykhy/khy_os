@@ -1,0 +1,14 @@
+# khyos-markdown: ensure shell scripts keep LF line endings on all platforms
+tools/khyos-markdown/khyosmarkdown         text eol=lf
+tools/khyos-markdown/khyosmarkdown.command  text eol=lf
+tools/khyos-markdown/register-linux.sh      text eol=lf
+tools/khyos-markdown/unregister-linux.sh    text eol=lf
+
+# All shell scripts must keep LF line endings (CRLF breaks shebang on Linux/macOS)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows scripts must keep CRLF line endings (CMD misparses multi-line blocks with LF-only)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

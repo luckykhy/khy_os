@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TUI 流式显示与上下文窗口修复记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>TUI 流式显示与上下文窗口修复记录</div>
+      <header class="hero reveal"><h1>TUI 流式显示与上下文窗口修复记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tui-流式显示与上下文窗口修复记录">TUI 流式显示与上下文窗口修复记录</a></li><li class="lvl-2"><a href="#1-spinner-结束后不变为完成态">1. Spinner 结束后不变为完成态</a></li><li class="lvl-3"><a href="#现象">现象</a></li><li class="lvl-3"><a href="#根因">根因</a></li><li class="lvl-3"><a href="#修复">修复</a></li><li class="lvl-3"><a href="#涉及文件">涉及文件</a></li><li class="lvl-2"><a href="#2-中文断行-今天-被拆到两行">2. 中文断行（&quot;今天&quot; 被拆到两行）</a></li><li class="lvl-3"><a href="#现象-2">现象</a></li><li class="lvl-3"><a href="#根因-2">根因</a></li><li class="lvl-3"><a href="#修复-2">修复</a></li><li class="lvl-3"><a href="#涉及文件-2">涉及文件</a></li><li class="lvl-2"><a href="#3-claude-opus-4-显示-200k-而非-1m-上下文">3. Claude Opus 4 显示 200k 而非 1M 上下文</a></li><li class="lvl-3"><a href="#现象-3">现象</a></li><li class="lvl-3"><a href="#根因-3">根因</a></li><li class="lvl-3"><a href="#修复-3">修复</a></li><li class="lvl-3"><a href="#涉及文件-3">涉及文件</a></li><li class="lvl-2"><a href="#4-上下文窗口全面去硬编码">4. 上下文窗口全面去硬编码</a></li><li class="lvl-3"><a href="#现象-4">现象</a></li><li class="lvl-3"><a href="#修复-4">修复</a></li><li class="lvl-3"><a href="#涉及文件-4">涉及文件</a></li><li class="lvl-2"><a href="#5-cjk-孤字避免-wraptext-优化">5. CJK 孤字避免（wrapText 优化）</a></li><li class="lvl-3"><a href="#现象-5">现象</a></li><li class="lvl-3"><a href="#修复-5">修复</a></li><li class="lvl-3"><a href="#涉及文件-5">涉及文件</a></li><li class="lvl-2"><a href="#验证方法">验证方法</a></li><li class="lvl-2"><a href="#全部修改文件清单">全部修改文件清单</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-006 | 阶段: 实现 | 原路径: docs/修复记录/tui-流式与上下文显示-2026-06-01.md --&gt;</p>
+<h1 id="tui-流式显示与上下文窗口修复记录">TUI 流式显示与上下文窗口修复记录<a class="anchor" href="#tui-流式显示与上下文窗口修复记录" aria-label="锚点">#</a></h1>
+<blockquote><p>⚠️ <strong>已归档 / 被取代</strong>：本文档描述的自研 TUI 运行时（<code>replStore.js</code>(Flux store) / <code>tuiShell.js</code> / <code>TranscriptViewport.js</code> 等）已于 2026-06-05 全面迁移至官方 Ink 运行时（<code>backend/src/cli/tui/ink-components/</code>），上述文件均已删除。本文仅作历史修复记录保留，最新 TUI 行为请参阅 <a href="%5BIMPL-RPT-003%5D%20tui-inquirer闪退修复-2026-06-05.html">tui-inquirer闪退修复-2026-06-05.md</a>。</p></blockquote>
+<p><strong>日期</strong>: 2026-06-01<br><strong>版本</strong>: v0.1.79 → v0.1.80<br><strong>范围</strong>: TUI 流式渲染、Spinner 状态机、中文断行、上下文窗口动态化</p>
+<hr>
+<h2 id="1-spinner-结束后不变为完成态">1. Spinner 结束后不变为完成态<a class="anchor" href="#1-spinner-结束后不变为完成态" aria-label="锚点">#</a></h2>
+<h3 id="现象">现象<a class="anchor" href="#现象" aria-label="锚点">#</a></h3>
+<p>AI 回复完成后，状态行仍显示 <code>✦ 正在输出... (64s)</code>，未切换为 <code>✳ 完成 · 64.0s</code> 的灰色终止态。</p>
+<h3 id="根因">根因<a class="anchor" href="#根因" aria-label="锚点">#</a></h3>
+<p><code>StreamingChunker</code> 使用 <code>setImmediate</code> 异步 flush 队列。当 <code>ai().chat()</code> 的 Promise resolve 时：</p>
+<pre><code>时序:
+  1. chat() resolve
+  2. .finally() → turnComplete dispatch → activity.state = 'done'
+  3. setImmediate 回调触发 → chunker flush 残留 chunk
+  4. CHUNK_RECEIVED dispatch → activity.state 被覆盖回 'streaming'
+  5. 后续无 turnComplete，state 永久停在 'streaming'</code></pre>
+<p><code>replStore.js</code> 中 <code>CHUNK_RECEIVED</code> 和 <code>STREAMING_BLOCK_START</code> 两个 action 无条件将 <code>activity.state</code> 设为 <code>'streaming'</code>，覆盖了已到达的 <code>'done'</code> 终态。</p>
+<h3 id="修复">修复<a class="anchor" href="#修复" aria-label="锚点">#</a></h3>
+<p>三处协同修复，消除竞争条件：</p>
+<p><strong>a) replStore.js — 终态保护</strong></p>
+<p><code>CHUNK_RECEIVED</code> 和 <code>STREAMING_BLOCK_START</code> 不再覆盖 <code>done</code> 状态：</p>
+<pre><code class="language-javascript">// before
+activity: { ...state.activity, state: 'streaming' },
+
+// after
+activity: {
+  ...state.activity,
+  state: state.activity.state === 'done' ? 'done' : 'streaming',
+},</code></pre>
+<p><strong>b) tuiShell.js — 同步 drain</strong></p>
+<p><code>chat()</code> 返回后、<code>streamingBlockEnd</code> 之前，同步清空 chunker 残留队列：</p>
+<pre><code class="language-javascript">const result = await ai().chat(text, { onChunk, onStatus });
+chunker.drain();   // ← 新增：同步 flush 残留 chunk
+// Finalize any open streaming block ...</code></pre>
+<p><strong>c) StreamingChunker — 新增 <code>drain()</code> 方法</strong></p>
+<pre><code class="language-javascript">drain() {
+  if (this._queue.length === 0) return;
+  const coalesced = this._coalesce();
+  for (const item of coalesced) this._dispatch(item);
+  this._queue.length = 0;
+  this._scheduled = false;
+}</code></pre>
+<p><strong>d) tuiShell.js — turnComplete 后强制渲染</strong></p>
+<pre><code class="language-javascript">processInput(trimmed).finally(() =&gt; {
+  _setBusy(false);
+  store.dispatch(actions.turnComplete({}));
+  _renderScheduled = false;
+  setImmediate(_doRenderAndTrack);  // 绕过 debounce，立即渲染 done 态
+});</code></pre>
+<h3 id="涉及文件">涉及文件<a class="anchor" href="#涉及文件" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>backend/src/cli/tui/store/replStore.js</code></td><td><code>CHUNK_RECEIVED</code>、<code>STREAMING_BLOCK_START</code> 终态保护</td></tr><tr><td><code>backend/src/cli/tui/tuiShell.js</code></td><td><code>StreamingChunker.drain()</code>、同步 drain 调用、强制渲染</td></tr></tbody></table>
+<hr>
+<h2 id="2-中文断行-今天-被拆到两行">2. 中文断行（&quot;今天&quot; 被拆到两行）<a class="anchor" href="#2-中文断行-今天-被拆到两行" aria-label="锚点">#</a></h2>
+<h3 id="现象-2">现象<a class="anchor" href="#现象-2" aria-label="锚点">#</a></h3>
+<p>AI 回复中 &quot;...等等。今&quot; 在一行末尾，&quot;天有什么...&quot; 在下一行开头，中间还有空行。&quot;今天&quot; 作为一个语义单元被拆开。</p>
+<h3 id="根因-2">根因<a class="anchor" href="#根因-2" aria-label="锚点">#</a></h3>
+<p><strong>不是</strong> <code>wrapText</code> 的 bug。AI 模型（Claude）在流式输出时，token 边界恰好落在 &quot;今&quot; 和 &quot;天&quot; 之间，输出中包含了 <code>\n</code>：</p>
+<pre><code>实际模型输出: &quot;...等等。今\n天有什么...&quot;</code></pre>
+<p><code>wrapText</code> 按 <code>\n</code> 切分后，&quot;今&quot; 和 &quot;天&quot; 被分到不同的行/段落。</p>
+<h3 id="修复-2">修复<a class="anchor" href="#修复-2" aria-label="锚点">#</a></h3>
+<p>在 <code>wrapText</code> 入口添加正则预处理，将 CJK 字符间的孤立 <code>\n</code> 合并为连续文本：</p>
+<pre><code class="language-javascript">// TranscriptViewport.js — wrapText 入口
+let cleaned = String(text).replace(
+  /(?&lt;=[\u2e80-\u9fff\uf900-\ufaff\ufe30-\ufe6f\uff01-\uff60])\n(?=[\u2e80-\u9fff\uf900-\ufaff\ufe30-\ufe6f\uff01-\uff60])/g,
+  ''
+);</code></pre>
+<p>规则：</p>
+<ul><li><code>CJK字\nCJK字</code> → 合并（<code>今\n天</code> → <code>今天</code>）</li><li><code>CJK字\n\nCJK字</code> → 保留段落分隔（<code>。\n\n第</code> 不变）</li><li><code>English\nEnglish</code> → 保留（不影响英文换行）</li></ul>
+<h3 id="涉及文件-2">涉及文件<a class="anchor" href="#涉及文件-2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>backend/src/cli/tui/components/TranscriptViewport.js</code></td><td><code>wrapText</code> 入口 CJK <code>\n</code> 合并</td></tr></tbody></table>
+<hr>
+<h2 id="3-claude-opus-4-显示-200k-而非-1m-上下文">3. Claude Opus 4 显示 200k 而非 1M 上下文<a class="anchor" href="#3-claude-opus-4-显示-200k-而非-1m-上下文" aria-label="锚点">#</a></h2>
+<h3 id="现象-3">现象<a class="anchor" href="#现象-3" aria-label="锚点">#</a></h3>
+<p>欢迎页和 footer 显示 <code>上下文: 200k</code>，但 Claude Opus 4.6 实际支持 1M。</p>
+<h3 id="根因-3">根因<a class="anchor" href="#根因-3" aria-label="锚点">#</a></h3>
+<p><code>ai.js</code> 中 <code>MODEL_CAPABILITIES</code> 静态表记录了错误值：</p>
+<pre><code class="language-javascript">'claude-opus-4': { ..., context: 200000, ... },  // 应为 1000000
+'claude-sonnet-4': { ..., context: 200000, ... }, // 应为 1000000</code></pre>
+<p>且 <code>_resolveModelContextLimit()</code> 完全依赖硬编码表，不查询 gateway 实测数据。</p>
+<h3 id="修复-3">修复<a class="anchor" href="#修复-3" aria-label="锚点">#</a></h3>
+<p><strong>a) 修正 MODEL_CAPABILITIES 中的 Claude 4 系列 context 值</strong></p>
+<pre><code class="language-javascript">'claude-opus-4':   { ..., context: 1000000, ... },
+'claude-sonnet-4': { ..., context: 1000000, ... },</code></pre>
+<p><strong>b) <code>_resolveModelContextLimit()</code> 优先查 gateway 实测数据</strong></p>
+<pre><code class="language-javascript">function _resolveModelContextLimit(modelHint = '') {
+  // 1. Gateway adapter-reported real data (single source of truth)
+  try {
+    const gw = require('../services/gateway/aiGateway');
+    const instance = typeof gw.getInstance === 'function' ? gw.getInstance() : gw;
+    if (instance?.getModelContextWindow) {
+      const dynamic = instance.getModelContextWindow(lower);
+      if (dynamic &gt; 0) return dynamic;
+    }
+  } catch { /* gateway not ready yet */ }
+
+  // 2. Fallback: MODEL_CAPABILITIES static table
+  // 3. Unknown model → 128000
+}</code></pre>
+<h3 id="涉及文件-3">涉及文件<a class="anchor" href="#涉及文件-3" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>backend/src/cli/ai.js</code></td><td><code>MODEL_CAPABILITIES</code> context 值修正 + <code>_resolveModelContextLimit</code> gateway 优先</td></tr></tbody></table>
+<hr>
+<h2 id="4-上下文窗口全面去硬编码">4. 上下文窗口全面去硬编码<a class="anchor" href="#4-上下文窗口全面去硬编码" aria-label="锚点">#</a></h2>
+<h3 id="现象-4">现象<a class="anchor" href="#现象-4" aria-label="锚点">#</a></h3>
+<p>所有模型的 context window 都来自硬编码表（<code>MODEL_CONTEXT_LIMITS</code> / <code>MODEL_CAPABILITIES</code>），新增模型需要手动更新代码。</p>
+<h3 id="修复-4">修复<a class="anchor" href="#修复-4" aria-label="锚点">#</a></h3>
+<p>建立单一数据源架构：<strong>适配器实测 → gateway 缓存 → UI 显示</strong>。</p>
+<p><strong>a) 删除 <code>hudRenderer.js</code> 的 <code>MODEL_CONTEXT_LIMITS</code> 硬编码表</strong></p>
+<p><code>getContextLimit()</code> 完全委托给 gateway：</p>
+<pre><code class="language-javascript">function getContextLimit(model) {
+  if (!model) return 0;
+  try {
+    const gw = require('../services/gateway/aiGateway');
+    const instance = typeof gw.getInstance === 'function' ? gw.getInstance() : gw;
+    if (instance?.getModelContextWindow) {
+      return instance.getModelContextWindow(model);
+    }
+  } catch { /* gateway not ready */ }
+  return 0;
+}</code></pre>
+<p><strong>b) <code>aiGateway.js</code> — 未知模型异步查询</strong></p>
+<pre><code class="language-javascript">getModelContextWindow(modelId) {
+  // 1. 精确缓存命中
+  // 2. 部分匹配（版本后缀）
+  // 3. 环境变量 KHY_CONTEXT_WINDOW
+  // 4. 未命中 → 触发后台异步查询，返回 0
+  this._resolveContextWindowAsync(modelId);
+  return 0;
+}
+
+_resolveContextWindowAsync(modelId) {
+  // 去重 + 遍历可用适配器的 listModels()
+  // 找到后写入 _contextWindowCache，下次查询命中
+}</code></pre>
+<p><strong>c) generate 成功后自动缓存</strong></p>
+<pre><code class="language-javascript">// finishResult 中
+if (result?.success) {
+  const usedModel = result.model || response?.model || options.model;
+  if (usedModel &amp;&amp; !this._contextWindowCache.has(usedModel)) {
+    this._resolveContextWindowAsync(usedModel);
+  }
+}</code></pre>
+<p><strong>d) 数据流向</strong></p>
+<pre><code>适配器 listModels()          → contextWindow 字段
+  ↓
+aiGateway._contextWindowCache  → Map&lt;modelId, number&gt;
+  ↓
+hudRenderer.getContextLimit()  → 委托 gateway
+  ↓
+ai.js._resolveModelContextLimit() → 优先 gateway，fallback MODEL_CAPABILITIES
+  ↓
+FooterBar / 欢迎页            → 显示真实值，0 时隐藏</code></pre>
+<h3 id="涉及文件-4">涉及文件<a class="anchor" href="#涉及文件-4" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>backend/src/cli/hudRenderer.js</code></td><td>删除 <code>MODEL_CONTEXT_LIMITS</code> 表，<code>getContextLimit</code> 委托 gateway</td></tr><tr><td><code>backend/src/services/gateway/aiGateway.js</code></td><td><code>_resolveContextWindowAsync</code>、generate 后自动缓存</td></tr><tr><td><code>backend/src/cli/ai.js</code></td><td><code>_resolveModelContextLimit</code> gateway 优先</td></tr></tbody></table>
+<hr>
+<h2 id="5-cjk-孤字避免-wraptext-优化">5. CJK 孤字避免（wrapText 优化）<a class="anchor" href="#5-cjk-孤字避免-wraptext-优化" aria-label="锚点">#</a></h2>
+<h3 id="现象-5">现象<a class="anchor" href="#现象-5" aria-label="锚点">#</a></h3>
+<p>行末刚好只剩一个 CJK 字符位置时，会出现孤字（如 &quot;今&quot; 独占行末，后续内容换行）。</p>
+<h3 id="修复-5">修复<a class="anchor" href="#修复-5" aria-label="锚点">#</a></h3>
+<p>在 <code>wrapText</code> 的 greedy wrap 中添加孤字检测：</p>
+<pre><code class="language-javascript">const widthAfter = currentWidth + tok.cw;
+const remaining = maxWidth - widthAfter;
+// 如果当前 CJK 字符放入后，剩余空间不足以容纳下一个 CJK 字符
+// 且下一个字符不是避头标点 → 提前换行，避免孤字
+if (tok.cw === 2 &amp;&amp; remaining &gt;= 0 &amp;&amp; remaining &lt; 2 &amp;&amp; ti + 1 &lt; tokens.length) {
+  const next = tokens[ti + 1];
+  if (next.cw === 2 &amp;&amp; !_NO_LINE_START.has(next.ch)) {
+    lines.push(current + '\x1b[0m');
+    current = ''; currentWidth = 0;
+    continue;
+  }
+}</code></pre>
+<h3 id="涉及文件-5">涉及文件<a class="anchor" href="#涉及文件-5" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>backend/src/cli/tui/components/TranscriptViewport.js</code></td><td>wrapText 孤字检测</td></tr></tbody></table>
+<hr>
+<h2 id="验证方法">验证方法<a class="anchor" href="#验证方法" aria-label="锚点">#</a></h2>
+<ol><li><strong>Spinner 终态</strong>: 发送 &quot;你好&quot;，等回复完成后确认状态行变为 <code>✳ 完成 · Xs</code>（灰色）</li><li><strong>中文断行</strong>: 确认长中文回复中不出现 CJK 词内拆行</li><li><strong>上下文显示</strong>: footer 显示 <code>ctx (1m)</code> 而非 <code>ctx (200k)</code>（使用 Claude Opus 4 时）</li><li><strong>未知模型</strong>: 使用 Ollama 本地模型，确认首次显示 <code>0% ctx</code> 后自动更新为实际值</li></ol>
+<h2 id="全部修改文件清单">全部修改文件清单<a class="anchor" href="#全部修改文件清单" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>#</th><th>文件</th><th>修复项</th></tr></thead><tbody><tr><td>1</td><td><code>backend/src/cli/tui/store/replStore.js</code></td><td>Spinner 终态保护</td></tr><tr><td>2</td><td><code>backend/src/cli/tui/tuiShell.js</code></td><td>chunker drain + 强制渲染</td></tr><tr><td>3</td><td><code>backend/src/cli/tui/components/TranscriptViewport.js</code></td><td>CJK <code>\n</code> 合并 + 孤字避免</td></tr><tr><td>4</td><td><code>backend/src/cli/ai.js</code></td><td>context 值修正 + gateway 优先</td></tr><tr><td>5</td><td><code>backend/src/cli/hudRenderer.js</code></td><td>删除硬编码表</td></tr><tr><td>6</td><td><code>backend/src/services/gateway/aiGateway.js</code></td><td>异步查询 + 自动缓存</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-005] tui-权限授权掉cooked模式修复-2026-06-09.html"><div class="dir">← 上一篇</div><div class="ttl">TUI 交互式工具授权污染终端修复（终端掉回 cooked 模式）</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-007] v0.1.84-修复说明.html"><div class="dir">下一篇 →</div><div class="ttl">v0.1.84 缺陷修复</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-006] tui-流式与上下文显示-2026-06-01.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+{
+  "id": "vue-multipage",
+  "kind": "archetype",
+  "label": "Vue 多页面管理后台（Vue3 + TS + Vite）",
+  "templateName": "vue-multipage",
+  "triggers": [
+    "大型前端",
+    "多页面",
+    "多页面前端",
+    "管理后台",
+    "后台管理",
+    "前端项目",
+    "admin",
+    "dashboard",
+    "vue后台",
+    "vue admin",
+    "vue dashboard"
+  ],
+  "summary": "大型多页面前端工程：Vue3 + TypeScript + Vite，Pinia 管状态、Vue Router 管路由与布局、Vitest 做单测，逐里程碑交付可 npm run build 的管理后台骨架。",
+  "stack": {
+    "language": "TypeScript 5",
+    "framework": "Vue 3 (Composition API)",
+    "build": "Vite",
+    "state": "Pinia",
+    "router": "Vue Router 4",
+    "test": "Vitest + @vue/test-utils"
+  },
+  "conventions": [
+    "视图放 src/views、通用组件放 src/components、布局放 src/layouts、状态放 src/stores，按目录分层。",
+    "模块间用 @ 别名(→ ./src)导入，禁止长相对路径；别名在 vite.config.ts 与 tsconfig.json 两侧一致。",
+    "所有后端调用统一走 src/api/client.ts，baseURL 由 import.meta.env.VITE_API_BASE 提供，默认 /api，严禁在代码里写死主机端口。",
+    "TypeScript 严格模式；组件用 <script setup lang=ts>，props/emits 用泛型声明，响应式状态显式标注类型。",
+    "代码风格：2 空格缩进、单引号、分号；面向用户文案用中文，代码与注释用英文。"
+  ],
+  "build": {
+    "install": "npm install",
+    "run": "npm run dev",
+    "port": 5173
+  },
+  "verify": [
+    "npm install  # 安装全部依赖(含 devDependencies)",
+    "npm run build  # vue-tsc 严格类型检查 + vite 生产构建，必须成功退出并产出 dist",
+    "npm test  # 运行 vitest 单元测试样例"
+  ],
+  "milestones": [
+    {
+      "id": "m1-skeleton",
+      "title": "骨架与构建配置",
+      "goal": "搭起 Vite + Vue3 + TS 工程与严格类型配置，确保空壳能 vue-tsc 通过并 vite build 成功。",
+      "conventions": [
+        "package.json 的 build 脚本必须是 'vue-tsc && vite build'，让类型错误即构建失败。",
+        "vite.config.ts 配置 @ → ./src 别名，server.port 用占位符 {port} 注入。",
+        "tsconfig.json 开 strict，paths 对齐 @/*，include 覆盖 src 下 ts/d.ts/vue。"
+      ],
+      "steps": [
+        "写 package.json：依赖 vue/vue-router/pinia，devDeps 含 vite/typescript/vue-tsc/vitest/@vue/test-utils/@vitejs/plugin-vue/jsdom；scripts 含 dev/build/preview/test。",
+        "写 vite.config.ts：plugin-vue + @ 别名 + server.port={port} + vitest jsdom 环境。",
+        "写 tsconfig.json：strict + bundler 解析 + @/* paths。",
+        "写 index.html：#app 挂载点 + /src/main.ts 入口脚本。",
+        "写 src/main.ts：createApp 注册 pinia 与 router 后 mount('#app')。",
+        "写 src/App.vue：仅承载 <router-view />。",
+        "写 src/vite-env.d.ts：*.vue 模块声明 + VITE_API_BASE 的 ImportMetaEnv 增强。",
+        "写 .gitignore 与 .env.example(含 VITE_API_BASE)。"
+      ],
+      "files": [
+        "package.json",
+        "vite.config.ts",
+        "tsconfig.json",
+        "index.html",
+        "src/main.ts",
+        "src/App.vue",
+        "src/vite-env.d.ts",
+        ".gitignore",
+        ".env.example"
+      ],
+      "acceptance": [
+        "npm install 成功装齐依赖",
+        "vue-tsc 对空壳源码无类型报错",
+        "@ 别名在 vite 与 tsconfig 两侧一致可解析"
+      ]
+    },
+    {
+      "id": "m2-router-layout",
+      "title": "路由与布局",
+      "goal": "建立带侧边栏的默认布局与全站路由表：业务视图嵌套在 DefaultLayout 下，Login 独立，含 404 兜底。",
+      "conventions": [
+        "路由用 createWebHistory；业务视图作为 DefaultLayout 的 children 渲染进 <router-view />。",
+        "Login 与 404(NotFound) 走独立顶层路由；404 用 /:pathMatch(.*)* 通配。",
+        "视图组件全部懒加载(() => import('@/views/*.vue'))，缩小首屏体积。"
+      ],
+      "steps": [
+        "写 src/router/index.ts：RouteRecordRaw[] 配置 dashboard/user-list/user-detail/settings 为 DefaultLayout children，login 与 not-found 为顶层路由。",
+        "写 src/layouts/DefaultLayout.vue：左侧 <RouterLink> 导航 + 右侧 <RouterView /> 内容区。"
+      ],
+      "files": [
+        "src/router/index.ts",
+        "src/layouts/DefaultLayout.vue"
+      ],
+      "acceptance": [
+        "路由引用的每个视图文件在后续里程碑真实创建",
+        "DefaultLayout 渲染出侧边栏与嵌套 router-view",
+        "未知路径命中 404 视图"
+      ]
+    },
+    {
+      "id": "m3-state",
+      "title": "状态管理",
+      "goal": "用 Pinia 提供示例用户 store，供页面与登录流程共享当前用户与用户列表。",
+      "conventions": [
+        "store 用 setup 语法(defineStore(id, () => {...}))，导出 ref 状态与操作函数。",
+        "store 的领域类型来自 src/types(下一里程碑定义)，禁止在 store 内重复定义模型。"
+      ],
+      "steps": [
+        "写 src/stores/user.ts：currentUser/users 两个 ref + setCurrentUser/setUsers 两个 action。"
+      ],
+      "files": [
+        "src/stores/user.ts"
+      ],
+      "acceptance": [
+        "useUserStore 可在组件与测试中实例化",
+        "初始 currentUser 为 null",
+        "setUsers 后 users 长度正确"
+      ]
+    },
+    {
+      "id": "m4-api-types",
+      "title": "API 请求层",
+      "goal": "定义领域类型与统一请求封装：所有后端调用经 client.ts，baseURL 走 env 且默认 /api。",
+      "conventions": [
+        "src/types/index.ts 是领域模型单一真源(User/ApiResponse)。",
+        "src/api/client.ts 的 baseURL = import.meta.env.VITE_API_BASE || '/api'，严禁写死主机端口。",
+        "具体资源请求(users)封装在 src/api/users.ts，复用 client 的 request<T>。"
+      ],
+      "steps": [
+        "写 src/types/index.ts：User(id/username/email) 与 ApiResponse<T> 接口。",
+        "写 src/api/client.ts：request<T>(path, options) 基于 fetch，baseURL 来自 env，非 2xx 抛错。",
+        "写 src/api/users.ts：fetchUsers/fetchUser/createUser 三个函数委派 request。"
+      ],
+      "files": [
+        "src/api/client.ts",
+        "src/api/users.ts",
+        "src/types/index.ts"
+      ],
+      "acceptance": [
+        "baseURL 完全由 VITE_API_BASE 驱动，代码中无 host:port 字面量",
+        "request<T> 对非 2xx 响应抛出带状态码的错误",
+        "users API 三函数类型标注完整"
+      ]
+    },
+    {
+      "id": "m5-views",
+      "title": "页面模块",
+      "goal": "实现全部业务视图：仪表盘、用户列表、用户详情、设置、登录，以及 404 页面。",
+      "conventions": [
+        "视图只组合组件与调用 store/api，复用 PageHeader/DataTable/AppButton 等通用组件(下一里程碑定义)。",
+        "列表/详情的数据经 src/api 获取并按需写入 user store。",
+        "所有视图用 <script setup lang=ts> 且响应式状态显式标注类型。"
+      ],
+      "steps": [
+        "写 src/views/Dashboard.vue：PageHeader + 指标卡片网格。",
+        "写 src/views/UserList.vue：DataTable 展示用户 + AppButton 触发 reload 并写入 store。",
+        "写 src/views/UserDetail.vue：按路由 :id 拉取用户详情，含返回列表按钮。",
+        "写 src/views/Settings.vue：设置表单(显示名称) + 保存反馈(含 1/1 进度)。",
+        "写 src/views/Login.vue：账号密码表单，成功后写 store 并跳转 dashboard。",
+        "写 src/views/NotFound.vue：404 提示 + 返回首页链接。"
+      ],
+      "files": [
+        "src/views/Dashboard.vue",
+        "src/views/UserList.vue",
+        "src/views/UserDetail.vue",
+        "src/views/Settings.vue",
+        "src/views/Login.vue",
+        "src/views/NotFound.vue"
+      ],
+      "acceptance": [
+        "路由表引用的 6 个视图全部存在且可懒加载",
+        "UserList 能渲染 DataTable 且点击可重新拉取",
+        "Login 成功后跳转 dashboard"
+      ]
+    },
+    {
+      "id": "m6-components",
+      "title": "通用组件库",
+      "goal": "沉淀跨页面复用的基础组件：按钮、数据表格、页头，统一交互与样式。",
+      "conventions": [
+        "组件 props/emits 用 defineProps/defineEmits 泛型声明，带默认值用 withDefaults。",
+        "组件不直接依赖具体业务数据，一律通过 props 接收，保证可复用。"
+      ],
+      "steps": [
+        "写 src/components/AppButton.vue：label/type/disabled props + click emit。",
+        "写 src/components/DataTable.vue：columns/rows props，空数据展示占位行。",
+        "写 src/components/PageHeader.vue：title/subtitle props。"
+      ],
+      "files": [
+        "src/components/AppButton.vue",
+        "src/components/DataTable.vue",
+        "src/components/PageHeader.vue"
+      ],
+      "acceptance": [
+        "三个组件均可被视图直接导入使用",
+        "AppButton 点击派发 click 事件",
+        "DataTable 在无数据时显示占位行"
+      ]
+    },
+    {
+      "id": "m7-test-verify",
+      "title": "测试与构建验证",
+      "goal": "补 Vitest 单测样例与 README，并执行 npm install + npm run build 完成可交付闭环。",
+      "conventions": [
+        "单测用 @vue/test-utils 挂载组件、用独立 Pinia 实例测 store。",
+        "README 面向用户用中文，给出安装/开发/构建/测试与 VITE_API_BASE 配置说明。"
+      ],
+      "steps": [
+        "写 unit_tests/Dashboard.test.ts：挂载 Dashboard 断言标题与卡片渲染。",
+        "写 unit_tests/userStore.test.ts：验证 user store 初始态与 setUsers。",
+        "写 README.md：项目说明、命令、目录结构、环境变量。",
+        "执行 npm install 装依赖，再执行 npm run build 验证类型检查与生产构建。"
+      ],
+      "files": [
+        "unit_tests/Dashboard.test.ts",
+        "unit_tests/userStore.test.ts",
+        "README.md"
+      ],
+      "acceptance": [
+        "npm install 成功",
+        "npm run build 成功退出(vue-tsc 无类型错误且 vite 产出 dist)",
+        "npm test 运行单测样例通过"
+      ]
+    }
+  ]
+}

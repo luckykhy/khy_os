@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⚖️ 协作铁律 · 发给 AI，要它照做 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>给AI看<span class="sep">›</span>⚖️ 协作铁律 · 发给 AI，要它照做</div>
+      <header class="hero reveal"><h1>⚖️ 协作铁律 · 发给 AI，要它照做</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#协作铁律-发给-ai-要它照做">⚖️ 协作铁律 · 发给 AI，要它照做</a></li><li class="lvl-2"><a href="#铁律速查卡-整段发给-ai">铁律速查卡（整段发给 AI）</a></li><li class="lvl-2"><a href="#r1-r2-展开-纯叶子模块长什么样">R1–R2 展开 · 纯叶子模块长什么样</a></li><li class="lvl-2"><a href="#r3-r4-展开-门控接线与逐字节回退">R3–R4 展开 · 门控接线与逐字节回退</a></li><li class="lvl-2"><a href="#r5-展开-严格超集判据">R5 展开 · 严格超集判据</a></li><li class="lvl-2"><a href="#r6-展开-在产的唯一判据">R6 展开 · 在产的唯一判据</a></li><li class="lvl-2"><a href="#r7-展开-守卫清单-提交前自动跑-红了不许提交">R7 展开 · 守卫清单（提交前自动跑，红了不许提交）</a></li><li class="lvl-2"><a href="#r8-展开-拆上帝组件">R8 展开 · 拆上帝组件</a></li><li class="lvl-2"><a href="#r9-展开-诚实收尾模板-照填发我">R9 展开 · 诚实收尾模板（照填发我）</a></li><li class="lvl-2"><a href="#常见-看起来对其实错-的坑">常见「看起来对其实错」的坑</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 受众: AI(直接投喂) | 用途: 让 AI 改代码前发这份，要它照做 --&gt;<br>&lt;!-- 这些是发给 AI 读的内容。人类使用说明在 ../给人看/ 。 --&gt;</p>
+<h1 id="协作铁律-发给-ai-要它照做">⚖️ 协作铁律 · 发给 AI，要它照做<a class="anchor" href="#协作铁律-发给-ai-要它照做" aria-label="锚点">#</a></h1>
+<blockquote><p>顶部代码块「铁律速查卡」是<strong>直接发给 AI 的</strong>。下面各节是展开解释，AI 需要时可读。</p></blockquote>
+<hr>
+<h2 id="铁律速查卡-整段发给-ai">铁律速查卡（整段发给 AI）<a class="anchor" href="#铁律速查卡-整段发给-ai" aria-label="锚点">#</a></h2>
+<pre><code>在这个项目里改代码，你必须严格遵守以下铁律，违反任何一条都要重做：
+
+【R1 · 加法式改动】新逻辑只加不改。先搜有没有现成实现可复用（grep 关键词），
+   有就复用，没有再新建。绝不为同一个概念写第二份真源。
+
+【R2 · 纯叶子模块】新逻辑写成一个「纯叶子」：
+   零 IO（不读写文件/网络/环境副作用），确定性（同输入同输出），
+   绝不抛异常（输入再坏也返回安全默认值），可单独单测，不 require 重依赖。
+
+【R3 · 默认开的门控】用一个 KHY_XXX 环境变量门控新逻辑，默认开(default-on)。
+   登记到 services/backend/src/services/flagRegistry.js。父门控关→子门控必关。
+
+【R4 · 关闭即逐字节回退】KHY_XXX 关闭时，程序行为必须和你改动前逐字节相同。
+   接线处用 try/catch 包住：叶子异常时 fail-soft 回退旧行为，绝不把异常抛给调用方。
+
+【R5 · 严格超集】新行为是旧行为的严格超集：只在旧路径漏做/做错处补正，
+   绝不改变既有正确路径的任何输出。安全向改动只多封锁/多清理，不放宽。
+
+【R6 · 必须真接线】新逻辑必须能从三个真实入口之一被 require 到才算「在产」：
+   executeTool（toolCalling.js）/ toolUseLoop.js / aiManagementServer.js。
+   隔离单测全绿 ≠ 在产。没接线就别在报告里写「已落地」。
+
+【R7 · 守卫必须绿】改完跑相关单测；提交前守卫(scripts/check-*.js，git 钩子自动触发)必须全绿。
+   守卫红了先修红，绝不用 git --no-verify 跳过。
+
+【R8 · 不建上帝组件】单文件不超过 2500 行。要拆分就把内聚分节抽成纯叶子，
+   原文件用同名别名 re-export 保持对外契约不变。
+
+【R9 · 诚实收尾】做完如实说：测了什么、几个绿、跳过了什么、哪些没做。
+   不确定就说不确定。不许把「跑了工具但没交付结论」当成做完。
+
+做每一步前先说你要改哪个文件、加哪个 KHY_ 门控、关掉后怎么回退，我确认后再改。</code></pre>
+<hr>
+<h2 id="r1-r2-展开-纯叶子模块长什么样">R1–R2 展开 · 纯叶子模块长什么样<a class="anchor" href="#r1-r2-展开-纯叶子模块长什么样" aria-label="锚点">#</a></h2>
+<pre><code class="language-js">'use strict';
+/**
+ * xxxGuard.js — 一句话职责。纯叶子：零 IO、确定性、绝不抛、可单测。
+ * 门控：KHY_XXX（默认开；仅显式 0/false/off/no 关）。
+ */
+function isEnabled(env = process.env) {
+  try {
+    const v = env &amp;&amp; env.KHY_XXX;
+    if (v === undefined || v === null) return true;      // 默认开
+    return !['0', 'false', 'off', 'no'].includes(String(v).trim().toLowerCase());
+  } catch { return true; }
+}
+function decide(input) {
+  try {
+    // ...纯计算，输入坏也返回安全默认...
+    return { ok: true, value: /* ... */ };
+  } catch { return null; }   // 绝不抛
+}
+module.exports = { isEnabled, decide };</code></pre>
+<p>要点：零 IO（IO 留在接线处）；绝不抛（坏输入返 null/安全默认）；<code>env</code> 作参数可注入便于单测；登记 flagRegistry。</p>
+<h2 id="r3-r4-展开-门控接线与逐字节回退">R3–R4 展开 · 门控接线与逐字节回退<a class="anchor" href="#r3-r4-展开-门控接线与逐字节回退" aria-label="锚点">#</a></h2>
+<pre><code class="language-js">let result = legacyValue;              // 旧行为基准
+try {
+  const leaf = require('./xxxGuard');
+  if (leaf.isEnabled(process.env)) {
+    const d = leaf.decide(input);
+    if (d) result = d.value;           // 门开且叶子给出结果才覆盖
+  }
+} catch { /* fail-soft：保持 legacyValue */ }</code></pre>
+<p>验证回退：临时 <code>KHY_XXX=off</code> 跑同一输入，输出应与改动前逐字节相同。</p>
+<h2 id="r5-展开-严格超集判据">R5 展开 · 严格超集判据<a class="anchor" href="#r5-展开-严格超集判据" aria-label="锚点">#</a></h2>
+<ul><li>✅ 旧代码只拦小写 <code>.ssh</code>，你补大小写折叠——只多拦不少拦。</li><li>✅ token 计数边界错档，你只修错那档——旧正确值不变。</li><li>❌ 为「更简洁」重写整个函数导致既有正确输出也变了——这是替换，不是超集。</li></ul>
+<p>安全类改动方向永远是：只多封锁 / 只多清理 / 只多脱敏，绝不放宽既有防线。</p>
+<h2 id="r6-展开-在产的唯一判据">R6 展开 · 在产的唯一判据<a class="anchor" href="#r6-展开-在产的唯一判据" aria-label="锚点">#</a></h2>
+<p>只有能从这三个入口之一被 require 到才算真生效：</p>
+<table><thead><tr><th>入口</th><th>位置</th></tr></thead><tbody><tr><td>executeTool()</td><td>services/backend/src/services/toolCalling.js</td></tr><tr><td>工具循环</td><td>services/backend/src/services/toolUseLoop.js</td></tr><tr><td>守护进程 SSE</td><td>services/backend/src/services/aiManagementServer.js</td></tr></tbody></table>
+<p>自查：<code>grep -rl &quot;require(.*/&lt;你的模块名&gt;&quot; services/backend/src --include=*.js | grep -vE &quot;/&lt;你的模块名&gt;/|tests/&quot;</code><br>若只剩别的治理引擎（而非上面三入口），说明没在产，是死代码。</p>
+<h2 id="r7-展开-守卫清单-提交前自动跑-红了不许提交">R7 展开 · 守卫清单（提交前自动跑，红了不许提交）<a class="anchor" href="#r7-展开-守卫清单-提交前自动跑-红了不许提交" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>守卫</th><th>管什么</th></tr></thead><tbody><tr><td>check-leaf-contract.js</td><td>自称纯叶子的模块是否真零 IO/不抛</td></tr><tr><td>check-flag-registry.js</td><td>KHY_* 是否登记、父子优先级是否一致</td></tr><tr><td>check-model-hardcoding.js</td><td>模型名/默认值是否散落硬编码</td></tr><tr><td>check-tool-contract.js</td><td>工具契约是否合规</td></tr><tr><td>check-change-safety.js</td><td>本次改动是否需补跑检查（如 node-syntax）</td></tr><tr><td>check-agent-rules.js</td><td>agent 规则一致性</td></tr></tbody></table>
+<p>发布另有 scripts/release/release-gate.js（含 node-syntax 阶段）。</p>
+<h2 id="r8-展开-拆上帝组件">R8 展开 · 拆上帝组件<a class="anchor" href="#r8-展开-拆上帝组件" aria-label="锚点">#</a></h2>
+<p>上限 2500 行。看待办：<code>npm --prefix services/backend run arch:god</code>。<br>拆法：抽内聚分节成纯叶子，原文件同名别名 re-export 保契约。<br>先例：localBrainCalc / localBrainTextOps / localBrainSessionContext / localBrainFileLookup。</p>
+<h2 id="r9-展开-诚实收尾模板-照填发我">R9 展开 · 诚实收尾模板（照填发我）<a class="anchor" href="#r9-展开-诚实收尾模板-照填发我" aria-label="锚点">#</a></h2>
+<pre><code>改了：&lt;文件&gt; 加 &lt;KHY_门控&gt;（默认开）
+接线：从 &lt;executeTool/toolUseLoop/aiManagementServer 的哪处&gt; 可达
+回退：KHY_门控=off 时逐字节等价（已验 / 未验）
+测试：&lt;X/Y 绿&gt;；守卫：&lt;全绿 / 哪个红&gt;
+没做/存疑：&lt;如实列出&gt;</code></pre>
+<h2 id="常见-看起来对其实错-的坑">常见「看起来对其实错」的坑<a class="anchor" href="#常见-看起来对其实错-的坑" aria-label="锚点">#</a></h2>
+<ul><li>observe ≠ enforce：KHY_EVO_ENGINE/KHY_STRUCTURED_FURNACE 默认观测模式，里面写阻断/改写会被静默忽略。</li><li>门面类是死的，叶子是活的：MetaPlanCoordinator/MarshalCoordinator 无任何 import；改门面不影响线上。</li><li>fail-open vs fail-closed 别搞反：能力/约束求解异常一律 fail-open；红线/审批判定必须 fail-closed。</li><li>bundled 快照会过期：pip 包内是打包时快照；改了仓库源要重新打包才对已装用户生效。</li><li>规范号别猜：现场扫 <code>find docs -name '*DESIGN-ARCH*' | grep -oE 'DESIGN-ARCH-[0-9]+' | sort -u | tail -1</code> 取最大值+1。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/给AI看/项目情况说明-开场白.html"><div class="dir">← 上一篇</div><div class="ttl">📨 项目情况说明 · 发给 AI 的开场白</div></a><a class="next" href="../../../docs/AI协作预设包/给AI看/总说明-一次读懂全局.html"><div class="dir">下一篇 →</div><div class="ttl">🧠 一次读懂全局 · 发给 AI 的全局速成</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/给AI看/协作铁律.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

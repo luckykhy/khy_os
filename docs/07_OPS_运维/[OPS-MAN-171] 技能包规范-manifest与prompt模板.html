@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>技能包规范（manifest.json / SKILL.md） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>技能包规范（manifest.json / SKILL.md）</div>
+      <header class="hero reveal"><h1>技能包规范（manifest.json / SKILL.md）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#技能包规范-manifest-json-skill-md">技能包规范（`manifest.json` / `SKILL.md`）</a></li><li class="lvl-2"><a href="#一-两种技能包形态">一、两种技能包形态</a></li><li class="lvl-3"><a href="#形态-a-目录式-推荐-cc-对齐">形态 A：目录式（推荐，CC 对齐）</a></li><li class="lvl-3"><a href="#形态-b-单文件式-遗留-claude-code-兼容">形态 B：单文件式（遗留 / Claude Code 兼容）</a></li><li class="lvl-2"><a href="#二-manifest-json-字段规范">二、`manifest.json` 字段规范</a></li><li class="lvl-2"><a href="#三-skill-md-frontmatter-规范">三、`SKILL.md` frontmatter 规范</a></li><li class="lvl-2"><a href="#四-prompt-md-与-handler-js">四、`prompt.md` 与 `handler.js`</a></li><li class="lvl-3"><a href="#prompt-md">`prompt.md`</a></li><li class="lvl-3"><a href="#handler-js-可选">`handler.js`（可选）</a></li><li class="lvl-2"><a href="#五-可复制模板与示范技能包">五、可复制模板与示范技能包</a></li><li class="lvl-2"><a href="#六-相关文档">六、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-171 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-171] 技能包规范-manifest与prompt模板.md --&gt;</p>
+<h1 id="技能包规范-manifest-json-skill-md">技能包规范（<code>manifest.json</code> / <code>SKILL.md</code>）<a class="anchor" href="#技能包规范-manifest-json-skill-md" aria-label="锚点">#</a></h1>
+<blockquote><p>本文说明 khy 技能包（skill package）的目录结构与字段规范，并给出可直接复制的模板。khy 支持两种等价的技能描述方式：<strong>目录式（<code>manifest.json</code> + <code>prompt.md</code>）</strong> 与 <strong>单文件式（<code>SKILL.md</code> + YAML frontmatter）</strong>。</p>
+<p>实现依据（核实来源）：目录式加载与字段归一见 <code>services/backend/src/skills/index.js</code>（<code>_buildSkill</code>）；单文件式解析见 <code>services/backend/src/skills/skillLoader.js</code>（<code>parseSkillFile</code> / <code>_parseYamlSimple</code> / <code>validateSkill</code>）；发现优先级见两者的发现函数；落盘命名见 <code>services/backend/src/services/skillPackageService.js</code>。</p></blockquote>
+<hr>
+<h2 id="一-两种技能包形态">一、两种技能包形态<a class="anchor" href="#一-两种技能包形态" aria-label="锚点">#</a></h2>
+<h3 id="形态-a-目录式-推荐-cc-对齐">形态 A：目录式（推荐，CC 对齐）<a class="anchor" href="#形态-a-目录式-推荐-cc-对齐" aria-label="锚点">#</a></h3>
+<pre><code>skill-name/
+  manifest.json    # 必填：元数据（name、description、trigger…）
+  prompt.md        # 可选：调用时注入的提示词模板
+  handler.js       # 可选：自定义执行逻辑（优先于 prompt.md）</code></pre>
+<ul><li><code>index.js</code> 只加载<strong>含 <code>manifest.json</code></strong> 的子目录。</li><li>执行时：有 <code>handler.js</code> 走处理器；否则返回 <code>prompt.md</code>；两者都缺则报错。因此 <code>prompt.md</code> 与 <code>handler.js</code> <strong>至少要有一个</strong>。</li></ul>
+<h3 id="形态-b-单文件式-遗留-claude-code-兼容">形态 B：单文件式（遗留 / Claude Code 兼容）<a class="anchor" href="#形态-b-单文件式-遗留-claude-code-兼容" aria-label="锚点">#</a></h3>
+<pre><code>skill-name/
+  SKILL.md         # YAML frontmatter + Markdown 正文</code></pre>
+<ul><li><code>skillLoader</code> 递归扫描含 <code>SKILL.md</code> 的目录，解析 frontmatter 为 <code>meta</code>，正文为 <code>body</code>。</li><li>该形态被转换为统一结构后并入技能目录（<code>manifest</code> 形态优先，同名不覆盖）。</li></ul>
+<blockquote><p>说明：<code>khy skill add</code> 的技能定位只要目录里含 <code>SKILL.md</code> <strong>或</strong> <code>manifest.json</code> 即认；但要在 REPL 里作为可调用命令出现并能执行，建议至少提供 <code>manifest.json</code> + <code>prompt.md</code>（或 <code>handler.js</code>），或一个带完整 frontmatter 的 <code>SKILL.md</code>。</p></blockquote>
+<hr>
+<h2 id="二-manifest-json-字段规范">二、<code>manifest.json</code> 字段规范<a class="anchor" href="#二-manifest-json-字段规范" aria-label="锚点">#</a></h2>
+<p>字段命名与归一逻辑核实自 <code>index.js._buildSkill</code>（同时兼容 <code>snake_case</code> / <code>kebab-case</code> / <code>camelCase</code> 若干写法）。</p>
+<table><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody><tr><td><code>name</code></td><td>string</td><td><strong>必填</strong></td><td>技能唯一标识；缺失则该技能被跳过（<code>_buildSkill</code> 返回 null）。落盘目录名也优先取它。</td></tr><tr><td><code>description</code></td><td>string</td><td>建议</td><td>简短描述，出现在技能目录列表里。</td></tr><tr><td><code>trigger</code> / <code>command</code></td><td>string</td><td>可选</td><td>斜杠命令；不带 <code>/</code> 会自动补。缺省为 <code>/&lt;name&gt;</code>。</td></tr><tr><td><code>user_invocable</code> / <code>userInvocable</code></td><td>boolean</td><td>可选</td><td>是否对用户可见可调用。默认 <code>true</code>。</td></tr><tr><td><code>aliases</code></td><td>string[]</td><td>可选</td><td>备用触发词（如 <code>[&quot;/dl-video&quot;]</code>）。</td></tr><tr><td><code>category</code></td><td>string</td><td>可选</td><td>分类，默认 <code>others</code>。</td></tr><tr><td><code>tags</code></td><td>string[]</td><td>可选</td><td>搜索标签。</td></tr><tr><td><code>platforms</code></td><td>string[]</td><td>可选</td><td>适配平台（如 <code>cosh</code>、<code>claude-code</code>、<code>khy-quant</code>）；空视为通用。</td></tr><tr><td><code>paths</code></td><td>string[]</td><td>可选</td><td>glob 条件激活；命中 cwd/最近文件才激活。<code>null</code>/缺省 = 始终激活。</td></tr><tr><td><code>when_to_use</code> / <code>whenToUse</code></td><td>string</td><td>可选</td><td>「何时使用」提示，注入目录时作为 use-when 提示。</td></tr><tr><td><code>allowed-tools</code> / <code>allowed_tools</code> / <code>allowedTools</code></td><td>string[] 或逗号/空格分隔字符串</td><td>可选</td><td>handler 运行时的工具白名单。缺省 = 不限制。</td></tr><tr><td><code>disable-model-invocation</code> 等写法</td><td>boolean</td><td>可选</td><td>为真时模型不能通过 SkillTool 调用（人类 CLI 仍可）。默认 <code>false</code>。</td></tr><tr><td><code>context</code></td><td><code>&quot;inline&quot;</code> \</td><td><code>&quot;fork&quot;</code></td><td>可选</td></tr><tr><td><code>model</code></td><td>string</td><td>可选</td><td>指定模型；缺省 <code>null</code>。</td></tr></tbody></table>
+<p>最小可用 <code>manifest.json</code>：</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;my-skill&quot;,
+  &quot;description&quot;: &quot;One-line description shown in the skill catalog.&quot;,
+  &quot;trigger&quot;: &quot;/my-skill&quot;,
+  &quot;user_invocable&quot;: true
+}</code></pre>
+<hr>
+<h2 id="三-skill-md-frontmatter-规范">三、<code>SKILL.md</code> frontmatter 规范<a class="anchor" href="#三-skill-md-frontmatter-规范" aria-label="锚点">#</a></h2>
+<p>单文件式用 YAML frontmatter 描述元数据，正文是注入给 AI 的指令。字段核实自 <code>skillLoader.validateSkill</code> 的告警项与 <code>_parseYamlSimple</code> 的解析能力。</p>
+<pre><code class="language-markdown">---
+name: linux-admin
+version: 1.0.0
+description: Linux system administration skill
+layer: system              # system | application | domain
+lifecycle: operations      # development | testing | deployment | operations | maintenance
+tags: [linux, sysadmin]
+platforms: [cosh, claude-code, khy-quant]
+dependencies: [shell-scripting]
+---
+
+# Skill Title
+
+... markdown body: instructions for the AI ...</code></pre>
+<ul><li><code>validateSkill</code> 会对缺失 <code>name</code>/<code>version</code>/<code>description</code>/<code>layer</code>/<code>tags</code>/<code>platforms</code> 给出告警（非致命）。</li><li><code>_parseYamlSimple</code> 支持：标量、内联数组 <code>[a, b]</code>、块状列表（<code>key:</code> 后跟 <code>- item</code>）、布尔、数字、带引号字符串。<strong>不支持</strong>嵌套对象等复杂 YAML，请保持扁平。</li><li>无 frontmatter 时，整个文件作为正文，<code>name</code> 兜底取所在目录名。</li></ul>
+<hr>
+<h2 id="四-prompt-md-与-handler-js">四、<code>prompt.md</code> 与 <code>handler.js</code><a class="anchor" href="#四-prompt-md-与-handler-js" aria-label="锚点">#</a></h2>
+<h3 id="prompt-md"><code>prompt.md</code><a class="anchor" href="#prompt-md" aria-label="锚点">#</a></h3>
+<p>纯 Markdown，作为提示词模板在技能被调用时注入。可在正文里描述该技能要做什么、如何使用参数（参数以字符串形式随调用传入）。</p>
+<h3 id="handler-js-可选"><code>handler.js</code>（可选）<a class="anchor" href="#handler-js-可选" aria-label="锚点">#</a></h3>
+<p>导出 <code>execute(args, context)</code> 或本身是函数，返回字符串或可序列化对象（核实自 <code>index.js.executeSkill</code>）：</p>
+<pre><code class="language-javascript">'use strict';
+
+// args: string passed after the trigger; context: { cwd, ... }
+async function execute(args, context) {
+  return `handled: ${args || ''}`;
+}
+
+module.exports = { execute };</code></pre>
+<ul><li>有 <code>handler.js</code> 时优先于 <code>prompt.md</code> 执行。</li><li>若 manifest 声明了 <code>allowed-tools</code>，handler 运行期间该白名单会被强制生效。</li></ul>
+<hr>
+<h2 id="五-可复制模板与示范技能包">五、可复制模板与示范技能包<a class="anchor" href="#五-可复制模板与示范技能包" aria-label="锚点">#</a></h2>
+<p><code>.khy/skills/</code> 下提供了 3 个可直接复制修改的示范技能包（结构与 loader 实际识别格式一致）：</p>
+<table><thead><tr><th>目录</th><th>形态</th><th>组成</th><th>用途</th></tr></thead><tbody><tr><td><code>.khy/skills/example-prompt-skill/</code></td><td>目录式</td><td><code>manifest.json</code> + <code>prompt.md</code></td><td>纯提示词注入型技能的最小模板。</td></tr><tr><td><code>.khy/skills/example-handler-skill/</code></td><td>目录式</td><td><code>manifest.json</code> + <code>prompt.md</code> + <code>handler.js</code></td><td>带自定义 <code>handler.js</code> 的技能模板（本地计算、返回结构化结果）。</td></tr><tr><td><code>.khy/skills/example-legacy-skill/</code></td><td>单文件式</td><td><code>SKILL.md</code></td><td>Claude Code 兼容的遗留 frontmatter 单文件模板。</td></tr></tbody></table>
+<p>复制其一到 <code>&lt;dataHome&gt;/skills/&lt;你的技能名&gt;/</code>，改 <code>name</code>/<code>trigger</code>/正文即可；重启 REPL 后即被自动发现。</p>
+<hr>
+<h2 id="六-相关文档">六、相关文档<a class="anchor" href="#六-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-170] 外部技能安装-khy-skill-add —— 从仓库安装技能的命令、源格式与 FAQ。</li><li>[OPS-MAN-169] 项目规则总纲-命名·skill·权限·mcp —— skill 命名与治理规则。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-170] 外部技能安装-khy-skill-add.html"><div class="dir">← 上一篇</div><div class="ttl">外部技能安装（khy skill add）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-172] 自定义供应商接入指南.html"><div class="dir">下一篇 →</div><div class="ttl">自定义供应商接入指南</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-171] 技能包规范-manifest与prompt模板.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

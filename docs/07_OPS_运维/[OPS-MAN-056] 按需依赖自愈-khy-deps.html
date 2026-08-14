@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按需依赖自愈（khy deps） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>按需依赖自愈（khy deps）</div>
+      <header class="hero reveal"><h1>按需依赖自愈（khy deps）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#按需依赖自愈-khy-deps">按需依赖自愈（`khy deps`）</a></li><li class="lvl-2"><a href="#一-入口与全部子命令">一、入口与全部子命令</a></li><li class="lvl-2"><a href="#二-典型用法">二、典型用法</a></li><li class="lvl-2"><a href="#三-两条安全红线-务必知悉">三、两条安全红线（务必知悉）</a></li><li class="lvl-2"><a href="#四-相关文档">四、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-056 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-056] 按需依赖自愈-khy-deps.md --&gt;</p>
+<h1 id="按需依赖自愈-khy-deps">按需依赖自愈（<code>khy deps</code>）<a class="anchor" href="#按需依赖自愈-khy-deps" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy deps</code>（别名 <code>khy dep</code> / <code>khy dependency</code>）按需探测并<strong>真实安装</strong>外部依赖（如 JDK、各类运行时），让功能在缺依赖时能自愈。它有两条<strong>安全红线</strong>：安装命令<strong>只来自策展注册表</strong>、<strong>绝不自动 sudo</strong>。本文讲清全部子命令与红线。</p>
+<p>实现：<code>services/backend/src/cli/handlers/deps.js</code> + <code>services/backend/src/services/dependency</code>，dispatch 在 <code>router.js:4655-4659</code>。</p></blockquote>
+<hr>
+<h2 id="一-入口与全部子命令">一、入口与全部子命令<a class="anchor" href="#一-入口与全部子命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy deps list</code>（或 <code>ls</code>）</td><td>列出策展注册表中可管理的依赖</td></tr><tr><td><code>khy deps versions &lt;dep&gt;</code></td><td>查看某依赖可用版本</td></tr><tr><td><code>khy deps check</code></td><td>探测本机已装 / 缺失情况</td></tr><tr><td><code>khy deps install &lt;dep&gt;[@ver] [--force]</code></td><td>安装（<strong>真实</strong>，幂等；<code>--force</code> 强装）</td></tr><tr><td><code>khy deps --json</code></td><td>机读输出</td></tr></tbody></table>
+<hr>
+<h2 id="二-典型用法">二、典型用法<a class="anchor" href="#二-典型用法" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy deps list                    # 能管哪些依赖
+khy deps check                   # 现在缺什么
+khy deps versions jdk            # JDK 有哪些版本可装
+khy deps install jdk@17          # 装 JDK 17（已装则幂等跳过）
+khy deps install jdk@17 --force  # 强制重装</code></pre>
+<hr>
+<h2 id="三-两条安全红线-务必知悉">三、两条安全红线（务必知悉）<a class="anchor" href="#三-两条安全红线-务必知悉" aria-label="锚点">#</a></h2>
+<ol><li><strong>只用策展注册表的安装命令</strong>：要装什么、用什么命令装，<strong>只取自 KHY 内置的策展注册表</strong>，<strong>绝不</strong>从模型输出或报错文本里提取命令来执行（<code>deps.js:143-146 / 177-179</code>）。这避免了「模型/日志里出现一条 <code>curl … | sh</code> 就被照跑」的风险。</li><li><strong>绝不自动 sudo</strong>：当某次安装确实需要提权时，KHY <strong>只会警告并请你自己处理</strong>，<strong>不会</strong>替你 <code>sudo</code>。提权动作始终在你手里。</li></ol>
+<blockquote><p>因此 <code>khy deps install</code> 安全可控：它不会偷偷提权，也不会执行不在白名单里的命令。</p></blockquote>
+<hr>
+<h2 id="四-相关文档">四、相关文档<a class="anchor" href="#四-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-055] 可变性分级与变更治理（<code>khy evolve</code>）—— 同属「自持基建」治理线。</li><li>[DESIGN-ARCH-027] Agent依赖自愈机制规范 —— 设计层的依赖自愈原理。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-055] 可变性分级与变更治理-khy-evolve.html"><div class="dir">← 上一篇</div><div class="ttl">可变性分级与变更治理（khy evolve）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-057] 工作流引擎-khy-workflow.html"><div class="dir">下一篇 →</div><div class="ttl">工作流引擎（khy workflow）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-056] 按需依赖自愈-khy-deps.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

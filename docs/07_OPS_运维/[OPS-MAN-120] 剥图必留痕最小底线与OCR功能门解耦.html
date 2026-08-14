@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦</div>
+      <header class="hero reveal"><h1>[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-120-剥图必留痕-最小诚实底线与-ocr-功能门-解耦">[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦</a></li><li class="lvl-2"><a href="#背景-承-ops-118-安全不变量绝不该由装饰门决定去留-再下一层">背景（承 OPS-118「安全不变量绝不该由装饰门决定去留」，再下一层）</a></li><li class="lvl-2"><a href="#断桥">断桥</a></li><li class="lvl-2"><a href="#修复-全-additive-独立门-khy-vision-strip-image-floor-default-on-门关逐字节回退">修复（全 additive · 独立门 `KHY_VISION_STRIP_IMAGE_FLOOR` default-on · 门关逐字节回退）</a></li><li class="lvl-2"><a href="#诚实边界-红线">诚实边界（红线）</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#教训">教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-120-剥图必留痕-最小诚实底线与-ocr-功能门-解耦">[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦<a class="anchor" href="#ops-man-120-剥图必留痕-最小诚实底线与-ocr-功能门-解耦" aria-label="锚点">#</a></h1>
+<h2 id="背景-承-ops-118-安全不变量绝不该由装饰门决定去留-再下一层">背景（承 OPS-118「安全不变量绝不该由装饰门决定去留」，再下一层）<a class="anchor" href="#背景-承-ops-118-安全不变量绝不该由装饰门决定去留-再下一层" aria-label="锚点">#</a></h2>
+<p>当模型不支持看图（纯文本 / 非多模态 / 识图模型不可用）时，khy 应落到 OCR 兜底路径<br>（gateway → <code>ocrSnippetService.js</code> → <code>docHelper.py</code> → tesseract）。围绕「准确识别图片」，<br>前几条诚实轴都在<strong>加固 OCR 路径内部</strong>（置信 104 / 覆盖 109 / 截断 111 / 语言 112 / 方向 115 /<br>分辨率 116），OPS-118 把「剥图 + OCR + 底线」这段安全代码从<strong>装饰门</strong>（<code>KHY_VISION_FAILURE_SUMMARY</code>）<br>里解耦出来，保证描述级联全失败时<strong>一定到达</strong>兜底。</p>
+<p>本条 OPS-120 是<strong>同一类耦合缺陷的更深一层</strong>：即便控制流已可靠到达兜底、且<strong>剥图动作本身是<br>无条件的</strong>，那句「我收到了图但读不出」的<strong>诚实底线说明</strong>仍被耦合进一个<strong>功能门</strong>——<br><code>KHY_VISION_OCR_FALLBACK</code>（OCR <strong>功能</strong>开关，而非装饰）。用户一旦把 OCR 功能门关掉，<br><strong>图照样被剥离，但连一句留痕都不剩</strong> → 文本模型在毫无「图片存在」上下文下作答 → 再次谎称<br>「消息里没有附带图片」。</p>
+<table><thead><tr><th>OPS</th><th>轴</th><th>层次</th></tr></thead><tbody><tr><td>OPS-MAN-118</td><td>描述级联全失败 → 可靠到达 OCR 底线（control-flow）</td><td>装饰门解耦</td></tr><tr><td><strong>OPS-MAN-120</strong></td><td><strong>剥图 ⟹ 必留痕（strip-implies-note）</strong></td><td><strong>功能门解耦</strong></td></tr></tbody></table>
+<h2 id="断桥">断桥<a class="anchor" href="#断桥" aria-label="锚点">#</a></h2>
+<p><code>aiGatewayGenerateMethod.js</code>（Site 1，describe 级联失败救援）里，OCR 提取为空时进入 else 分支：<br>先调用 <code>buildVisionUnreadableNote</code> 生成「图收到但读不出」底线，再<strong>无条件剥图</strong>。问题在于<br><code>buildVisionUnreadableNote</code> 受 <code>KHY_VISION_OCR_FALLBACK</code>（OCR <strong>功能门</strong>）约束——功能门关闭时<br>它返回 <code>null</code>，于是：</p>
+<pre><code>剥图（无条件） + 底线说明（null，被功能门吞掉）
+= 图被剥走 + 零留痕
+→ 文本模型：「我注意到你发了一条结构化提示，但消息里没有附带图片。」</code></pre>
+<p>根因：<strong>剥图</strong>是安全动作（非视觉模型永不收裸图），<strong>留痕</strong>是与之配对的安全不变量<br>（绝不谎称没收到图）；两者本应同生同灭，却被拆开——剥图无条件、留痕却挂在 OCR 功能门下。<br>关闭 OCR 功能 ≠ 允许 khy 对用户撒谎说没收到图片。</p>
+<h2 id="修复-全-additive-独立门-khy-vision-strip-image-floor-default-on-门关逐字节回退">修复（全 additive · 独立门 <code>KHY_VISION_STRIP_IMAGE_FLOOR</code> default-on · 门关逐字节回退）<a class="anchor" href="#修复-全-additive-独立门-khy-vision-strip-image-floor-default-on-门关逐字节回退" aria-label="锚点">#</a></h2>
+<p>把「剥图必留痕」的最小底线与 OCR 功能门<strong>解耦</strong>：</p>
+<ol><li><strong>纯叶 <code>gateway/visionOcrFallback.js</code></strong> 新增：<ul><li><code>isStripImageFloorEnabled(env)</code>：default-on，仅显式 <code>0/false/off/no</code> 关闭；env 经 opts 注入可测。</li><li><code>buildStrippedImageFloorNote({count, env})</code>：返回<strong>不提 OCR</strong> 的最小诚实底线（复用</li></ul></li></ol>
+<p><code>UNREADABLE_NOTE_MARKER</code> = <code>[图像无法读取]</code>），要求文本模型：① 明确告知「收到图但读不出」、<br>     <strong>绝不能说没收到图</strong>；② 给出换视觉模型 / 粘贴图中文字的可行方案；③ 绝不臆测图片内容。<br>     门关或畸形输入 → 返回 <code>null</code>，绝不抛。</p>
+<ol><li><strong><code>aiGatewayGenerateMethod.js</code>（Site 1，空 OCR else 分支）</strong>：在无条件剥图<strong>之前</strong>，当</li></ol>
+<p><code>buildVisionUnreadableNote</code> 返回 <code>null</code>（OCR 功能门关）时，退回 <code>buildStrippedImageFloorNote</code><br>   的最小底线：</p>
+<pre><code class="language-js">   if (!_unreadableNote) {
+     try {
+       _unreadableNote = require('./visionOcrFallback')
+         .buildStrippedImageFloorNote({ count: _imgCount, env: process.env });
+     } catch { /* 叶子不可用 → 门关等价,逐字节回退(剥图无痕) */ }
+   }</code></pre>
+<ol><li><strong><code>flagRegistry.js</code></strong>：登记</li></ol>
+<p><code>KHY_VISION_STRIP_IMAGE_FLOOR: { mode: 'default-on', off: 'CANON', default: true }</code>。</p>
+<p><strong>逐字节回退</strong>：<code>KHY_VISION_STRIP_IMAGE_FLOOR=off</code> → <code>buildStrippedImageFloorNote</code> 返回 <code>null</code> →<br><code>_unreadableNote</code> 仍为空 → 剥图无痕，等同历史行为（把断桥交回，证明纯 additive 解耦）。</p>
+<h2 id="诚实边界-红线">诚实边界（红线）<a class="anchor" href="#诚实边界-红线" aria-label="锚点">#</a></h2>
+<ul><li><strong>剥图 ⟹ 必留痕</strong>：只要非视觉模型的裸图被剥离，就至少留下一句「收到图但读不出」，</li></ul>
+<p>无论 OCR 功能门是否开启。</p>
+<ul><li><strong>底线是安全、OCR 是功能</strong>：安全不变量（绝不谎称没收到图）不再由 OCR 功能门</li></ul>
+<p><code>KHY_VISION_OCR_FALLBACK</code> 决定去留；OCR 功能依旧可独立开关。</p>
+<ul><li><strong>底线不冒充 OCR</strong>：<code>buildStrippedImageFloorNote</code> <strong>刻意不提</strong> OCR——因为此时 OCR 功能门是关的，</li></ul>
+<p>提 OCR 会误导；它只陈述「收到图 + 读不出 + 换视觉模型或粘文字」这一诚实事实。</p>
+<ul><li><strong>门关即回退</strong>：<code>KHY_VISION_STRIP_IMAGE_FLOOR=off</code> → 逐字节还原历史行为（剥图无痕），</li></ul>
+<p>证明本轮改动是纯 additive 的解耦。</p>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<ul><li>纯叶 + 接线：<code>node --test services/backend/tests/gateway/visionStripImageFloorWiring.test.js</code>（8/8）：<ul><li>A) OCR 功能门<strong>关</strong> + 空 OCR + 底线门<strong>开</strong> → <strong>仍</strong>剥图 + 注入最小底线 + 原<strong>文本模型</strong>作答</li></ul></li></ul>
+<p>——精确复现并堵死「消息里没有附带图片」幻觉；</p>
+<ul><li>B) 底线门<strong>关</strong> → <strong>逐字节回退</strong>（剥图无痕，不注入底线）；</li><li>C) OCR 功能门<strong>开</strong> → 走原 <code>buildVisionUnreadableNote</code>（无回归）；</li><li>D) OCR 有文本 → 注入 OCR 块（无回归）。</li></ul>
+<p>tesseract/eng/Pillow 或空白图意外出字时干净 skip）：用 PIL 渲染真 PNG（无字渐变，让<strong>真 tesseract</strong><br>  读出空），在 <code>KHY_VISION_OCR_FALLBACK=off</code>（<strong>用户功能配置</strong>）下，DI 一个<strong>逐字节镜像生产实现</strong><br>  （base64 → <code>saveBase64ToTemp</code> → 真 tesseract）的 <code>extractImageOcrDetails</code>，断言：修复点注入最小底线<br>  （<code>hasFloorNote=true</code>），图被剥离，<code>model === 'text-only-model'</code>；并附门关逐字节回退分支。</p>
+<ul><li>聚合：<code>npm run test:vision-strip-image-floor</code>，并入 <code>test:maintainer:safety</code>。</li></ul>
+<h2 id="教训">教训<a class="anchor" href="#教训" aria-label="锚点">#</a></h2>
+<p>OPS-118 的判据是「安全代码被藏进<strong>装饰门</strong>」；本轮再下一层——安全代码（留痕）被藏进<strong>功能门</strong><br>（OCR）。两者形式不同、危害相同：关掉一个看似无关的开关，就让 khy 对用户撒谎说没收到图片。<br>判据 = 找到「<strong>剥图</strong>（安全动作，无条件执行）」与「<strong>留痕</strong>（配对的安全不变量）」被拆成不同生命周期<br>——一个无条件、一个挂在功能门下；修法 = 用独立 default-on 门把「剥图必留痕」的最小底线解耦出来，<br>让它在功能门关闭时兜住，同时<strong>刻意不提 OCR</strong>（因为此时 OCR 功能是关的），并保留逐字节回退。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-119] 还原解密前兼容性预检·运行时接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-119] 还原「解密前」兼容性预检 · 运行时接线（让套件不兼容不再谎报口令错）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-121] readFile二进制文件读前防护·接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-121] readFile 二进制/压缩文件读前防护 · 接线（止住把 tar.gz 当文本注入模型导致卡死）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-120] 剥图必留痕最小底线与OCR功能门解耦.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[MGMT-STD-004] 曼孚 vibecoding 交付方法论：流程铁律与全程 SOP · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>[MGMT-STD-004] 曼孚 vibecoding 交付方法论：流程铁律与全程 SOP</div>
+      <header class="hero reveal"><h1>[MGMT-STD-004] 曼孚 vibecoding 交付方法论：流程铁律与全程 SOP</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#mgmt-std-004-曼孚-vibecoding-交付方法论-流程铁律与全程-sop">[MGMT-STD-004] 曼孚 vibecoding 交付方法论：流程铁律与全程 SOP</a></li><li class="lvl-2"><a href="#0-用途与用法">0. 用途与用法</a></li><li class="lvl-2"><a href="#1-心智模型-先建立认知-再谈流程">1. 心智模型（先建立认知，再谈流程）</a></li><li class="lvl-2"><a href="#2-八大交付红线-触碰任一即可能判不合格">2. 八大交付红线（触碰任一即可能判不合格）</a></li><li class="lvl-2"><a href="#3-全程-sop-12-步">3. 全程 SOP（12 步）</a></li><li class="lvl-2"><a href="#4-三大关键认知">4. 三大关键认知</a></li><li class="lvl-2"><a href="#5-交付物规范-陪练侧标配">5. 交付物规范 + 陪练侧标配</a></li><li class="lvl-3"><a href="#5-1-交付包结构">5.1 交付包结构</a></li><li class="lvl-3"><a href="#5-2-metadata-json-官方-8-字段-值一律小写">5.2 metadata.json —— 官方 8 字段（值一律小写）</a></li><li class="lvl-3"><a href="#5-3-readme-md-三章节五铁律-高频打回项-放-repo">5.3 README.md 三章节五铁律（高频打回项，放 `repo/`）</a></li><li class="lvl-3"><a href="#5-4-陪练侧-tasks-标配-中文-管理态-严禁-进交付包">5.4 陪练侧 `tasks//` 标配（中文 / 管理态，**严禁**进交付包）</a></li><li class="lvl-2"><a href="#6-平台六维度评分表-每题收尾必填">6. 平台六维度评分表（每题收尾必填）</a></li><li class="lvl-2"><a href="#7-关键脚本清单-只列职责-环境特定">7. 关键脚本清单（只列职责，环境特定）</a></li><li class="lvl-2"><a href="#8-安全纪律-贯穿全程">8. 安全纪律（贯穿全程）</a></li><li class="lvl-2"><a href="#9-与活源的关系">9. 与活源的关系</a></li><li class="lvl-2"><a href="#跨分类关联指引">跨分类关联指引</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="mgmt-std-004-曼孚-vibecoding-交付方法论-流程铁律与全程-sop">[MGMT-STD-004] 曼孚 vibecoding 交付方法论：流程铁律与全程 SOP<a class="anchor" href="#mgmt-std-004-曼孚-vibecoding-交付方法论-流程铁律与全程-sop" aria-label="锚点">#</a></h1>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文档类型</td><td>工程治理标准 / 交付方法论（STD）</td></tr><tr><td>适用范围</td><td>承接「曼孚科技云电脑交付任务」的指挥 / 陪练工作流；任何驱动 AI（Claude / Codex / Trae / Kiro）接手时<strong>必须</strong>先读本文件</td></tr><tr><td>强制级别</td><td>铁律（违反红线即判交付不合规，必须整改）</td></tr><tr><td>触发关键词</td><td>曼孚 / Mindflow / vibecoding / 交付任务 / 接题 / 领题</td></tr><tr><td>上位 / 参考</td><td>[MGMT-STD-001]（文档结构铁律）；活源真相 = <code>~/Desktop/delivery-project-manager</code>（见第 9 章）</td></tr><tr><td>状态</td><td>定稿</td></tr></tbody></table>
+<hr>
+<h2 id="0-用途与用法">0. 用途与用法<a class="anchor" href="#0-用途与用法" aria-label="锚点">#</a></h2>
+<p>本文件把「曼孚交付陪练」的全部方法论压成一套<strong>可执行铁律</strong>，供 Khy 及任何驱动 AI 承接此类工作时遵循。<br>用户<strong>自己说话用中文</strong>时<strong>必须</strong>用中文带；用户<strong>亲自用英文写指令</strong>时才用英文。<strong>严禁</strong>因为用户粘贴的素材（英文题目 / 英文报告 / 英文报错）是英文，就误判成「用户在用英文交流」——那是<strong>待处理的任务素材</strong>，默认仍用中文。</p>
+<p>用词纪律（沿用 [MGMT-STD-001]）：红线条目只用「必须 / 严禁 / 强制」，<strong>严禁</strong>用「建议 / 最好 / 尽量」。</p>
+<blockquote><p><strong>一句话定位</strong>：这是一套<strong>指挥 / 陪练</strong>工作流，帮一位<strong>英语接近零基础</strong>的交付者在曼孚云电脑上接交付任务——挑题、出<strong>全中文</strong>分步指导、把作业 AI 的英文产物解读成中文、和他一起<strong>打磨喂给作业 Claude 的英文提示词</strong>。<strong>陪练工具本身不是交付物</strong>；陪练侧产生的任何中文文件<strong>严禁</strong>进入交付包。</p></blockquote>
+<hr>
+<h2 id="1-心智模型-先建立认知-再谈流程">1. 心智模型（先建立认知，再谈流程）<a class="anchor" href="#1-心智模型-先建立认知-再谈流程" aria-label="锚点">#</a></h2>
+<ol><li><strong>陪练侧 ≠ 交付侧</strong>。驱动 AI（陪练）产出中文指导、进度、提示词草稿；作业 AI（<strong>永远是 Claude Code</strong>）在隔离工作区里产出交付物。两侧物理分离。</li><li><strong>作业端永远是 Claude Code</strong>：曼孚红线只认 Claude Code 轨迹格式。驱动陪练工具的可以是任意 AI，但写交付代码的必须是 Claude Code。</li><li><strong>双层输出格式</strong>：凡要发给作业 Claude / codex 的内容，<strong>必须</strong>用「<strong>中文说明（用户看）+ 可直接复制的英文代码块（用户粘贴去发）</strong>」两层。用户看不懂的任何英文，让他复制回来，翻成中文再告诉他怎么回。</li><li><strong>直接贴英文 prompt = 一道新任务开始</strong>：用户直接贴一段英文题目时，<strong>当作新交付任务</strong>，<strong>严禁</strong>再问「要不要接 / 值不值得」。工作目录默认固定为曼孚云电脑上的开发区；骨架不在就由<strong>驱动侧</strong>脚本建好（<strong>严禁</strong>让作业 Claude 建结构）。</li></ol>
+<hr>
+<h2 id="2-八大交付红线-触碰任一即可能判不合格">2. 八大交付红线（触碰任一即可能判不合格）<a class="anchor" href="#2-八大交付红线-触碰任一即可能判不合格" aria-label="锚点">#</a></h2>
+<ol><li><strong>全程英文</strong>：交互、代码、注释、文档、提交信息全英文；<strong>交付物里出现任何中文即 FAIL</strong>（质检会扫中文）。</li><li><strong>禁子代理 / agent 团队</strong>：开发轨迹一旦扫到子代理（<code>Task</code> / <code>Agent</code> / <code>agent-*.jsonl</code> / sidechain）<strong>直接出局</strong>。</li><li><strong>Dockerfile 必须纯净 = Claude 原始产物</strong>：<strong>严禁</strong>事后给它加任何国内镜像源（pip / npm / apt / Docker Hub 镜像皆不行），<strong>严禁</strong>给 Claude 加底层提示 / 系统提示强制它用国内源。我给 Claude 的任何提示词<strong>严禁</strong>含「use a China/domestic mirror」之类指令。哪怕云电脑拉取慢，也不动 Dockerfile。<ul><li><strong>本地加速例外</strong>（仅限本地构建 / 测试）：驱动侧可临时给 <code>repo/Dockerfile</code> 加镜像源，但<strong>必须</strong>先备份原文件；一旦要让作业 Claude 改文件 <strong>或</strong> 正式提交，<strong>必须</strong>先还原并 <code>diff</code> 验证无差异。</li></ul></li><li><strong>目录隔离 + cwd 硬锁</strong>：作业 Claude 的工作目录<strong>必须</strong>硬锁在 <code>&lt;TASK-ID&gt;/repo/</code>（在 <code>repo/</code> 内启动 <code>claude</code>）；<strong>严禁</strong> <code>/add-dir</code>，<strong>严禁</strong>批准 <code>repo/</code> 树外的访问弹窗。</li><li><strong>结构由驱动侧预建</strong>：交付包一级目录 + <code>metadata.json</code><strong>必须</strong>由驱动侧（脚手架脚本）在<strong>开发前</strong>建好；<strong>严禁</strong>让作业 Claude <code>mkdir docs/ repo/</code> 或写 <code>metadata.json</code>（这类打包动作落进轨迹 = 污染）。作业 Claude <strong>只往 <code>repo/</code> 内写</strong>。</li><li><strong>codex 只质检不改码</strong>：codex 做纯静态审查，<strong>严禁</strong>让它改代码。</li><li><strong>最多 3 次提交</strong>：第 3 次被打回即失败。最后一次提交前<strong>必须</strong>完整终检。</li><li><strong>驱动侧脚本 / 凭据严禁进交付包</strong>：脚手架、质检脚本、令牌、带 token 的 URL 一律不进 <code>TASK-xxx/</code>。</li></ol>
+<hr>
+<h2 id="3-全程-sop-12-步">3. 全程 SOP（12 步）<a class="anchor" href="#3-全程-sop-12-步" aria-label="锚点">#</a></h2>
+<blockquote><p>接手一道题：先读该题进度文件（<code>进度日志.md</code> + <code>status.json</code>）续上，干完一步<strong>必须</strong>写回。</p></blockquote>
+<ol><li><strong>领题 / 进开发区</strong>：进固定开发区，确认 <code>&lt;TASK-ID&gt;/</code> 在不在；不在就用驱动侧脚手架建一级骨架 + <code>metadata.json</code>。</li><li><strong>判题型（5 选 1）</strong>：<code>fullstack</code> / <code>pure_frontend</code> / <code>pure_backend</code> / <code>mobile_app</code> / <code>cross_platform_app</code>（内部定价分类）→ 写 <code>metadata.json</code> 时<strong>归一到官方枚举</strong> <code>fullstack / web / server / android / android</code>。据此当场告诉用户：单价、是否上前端 / 全栈美观提示词套装（纯后端不上）、是否要 <code>docs/api-spec.md</code>（有后端才要）、主要风险点。</li><li><strong>建骨架 + metadata</strong>：驱动侧脚手架幂等建 <code>docs/ repo/ original_sessions/ skills/</code> + 写官方 8 字段 <code>metadata.json</code> + <code>.gitignore</code>；同时把陪练侧 <code>tasks/&lt;TASK-ID&gt;/</code> 标配文件集建齐（见第 5.3）。</li><li><strong>首条消息 = 干净原题 + 开 plan mode</strong>：第一步让用户把<strong>英文原题原样</strong>复制给作业 Claude（在 <code>repo/</code> 下），<strong>前后不加任何包装</strong>（轨迹要审），并<strong>开着计划模式</strong>。</li><li><strong>计划模式审查闭环（核心）</strong>：Claude 出第一版计划 → 让用户选「<strong>否 / No</strong>」不批准（留计划模式、先别写码）→ 驱动侧给一段英文「<strong>硬性要求</strong>」（曼孚验收维度压成英文：可运行不许擅自简化、完整工程结构、真实逻辑禁 mock、分层架构、双测试 <code>unit_tests/</code>+<code>API_tests/</code>+<code>run_tests.sh</code>、生产级错误 / 日志 / 校验、隐含业务闭环、美观度仅前端 / 全栈 / 移动）→ 让 Claude 按红线<strong>重做计划、仍停计划模式</strong> → Claude 回改后英文计划 → <strong>用户整段复制回来，驱动侧翻成中文，两人共审</strong> → 审过才让 Claude 退计划模式开工。<strong>纯后端题删掉「美观度」那条再发。</strong></li><li><strong>澄清问答</strong>：作业 Claude 的澄清问题，驱动侧翻成中文、和用户定答案、再给回精准英文。问答留在会话里（打包时进 <code>docs/questions.md</code>）。</li><li><strong>设计</strong>：作业 Claude 在设计阶段把 <code>design.md</code> / <code>api-spec.md</code> 写进 <strong><code>repo/</code> 内</strong>（打包时由驱动侧挪进任务根 <code>docs/</code>）。</li><li><strong>实现</strong>：作业 Claude 在 <code>repo/</code> 内产出代码 + <code>README.md</code> + 双测试 + Docker。</li><li><strong>codex 质检闭环（核心迭代）</strong>：跑质检脚本（纯后端加 <code>--skip-ui</code>）出 codex 报告 → 驱动侧写<strong>给 codex 的元提示词</strong>，让 codex 把 issues 译中文给用户看 + 整理成一段<strong>给作业 Claude 的英文修复提示词</strong>，并由 codex <strong>定义验收标准</strong>（怎样算全部修复）→ 用户复制回来，驱动侧翻译 + 把关（不含镜像源指令、无子代理）→ 交作业 Claude 修 → <strong>再跑一遍</strong>：codex 认为没问题就提交，还有问题回到本步迭代。</li><li><strong>打包</strong>：驱动侧把 <code>repo/</code> 内的 <code>design.md</code> / <code>api-spec.md</code> 挪进任务根 <code>docs/</code>（普通终端做、不进开发轨迹）；校验交付包结构；<code>README.md</code> <strong>必须</strong>在 <code>repo/</code>。</li><li><strong>轨迹清洗</strong>：用清洗脚本把开发会话原始 projectID 目录打成压缩包进 <code>original_sessions/</code>，<strong>包名 = projectID</strong>；脚本会检测 <code>agent-*.jsonl</code>（有子代理 = 红线 2 出局）。轨迹<strong>只读审计</strong>；如需修复<strong>默认只口述、用户手改</strong>，改前整目录备份，<strong>只替换不删行、行数不变、无中文残留</strong>。</li><li><strong>六维度提交</strong>：填平台「六维度评分表」（见第 6 章），最后一次提交前完整终检。</li></ol>
+<hr>
+<h2 id="4-三大关键认知">4. 三大关键认知<a class="anchor" href="#4-三大关键认知" aria-label="锚点">#</a></h2>
+<ol><li><strong>过检真正决定于提示词质量</strong>：干跑闸门通过 + 轨迹合规<strong>只是机械 / 形式门槛</strong>（结构对、无中文、无污染、脚本能跑）。<strong>能否真正过检取决于交付物实质质量，而它取决于开发中——除原始题目外——喂给 Claude 的英文提示词质量</strong>（澄清 / 设计 / 实现 / 修复）。驱动侧最核心的价值就是<strong>和用户一起打磨这些英文提示词</strong>：把中文意图翻成精准、完整、贴合题目全部显性 + 隐性要求的英文。<strong>严禁</strong>把「干跑过了」当成「稳了」。</li><li><strong>轨迹污染权威 9 条</strong>（开发 session 轨迹会被逐条审；判据是注入内容<strong>是否无关</strong>，不是「有没有注入」）：</li></ol>
+<p>① 工作路径干净（启动 workspace 下无无关文件）；② 文件访问不越界（不 <code>/add-dir</code>、不读无关目录）；③ 对话只围绕题（仅限题目理解 / 开发 / 修改 / 测试 / 排错）；④ 启动环境只注入<strong>相关</strong>上下文（语言锁 / 开发区规则 / 命令代理 / 相关英文 skill <strong>保留</strong>；别的项目记忆 / 闲聊记忆 / 无关 hook / 无关 MCP 才算污染）；⑤ skill 列表干净（纯英文、相关、不自动触发）；⑥ hook 不注入无关上下文；⑦ 多 session 用新接力、不 <code>/resume</code> 回带旧上下文、尽量不 <code>/compact</code>；⑧ dev session 不做与题无关的杂事；⑨ 发现即污染。</p>
+<ul><li><strong>权限模型</strong>：Claude Code 权限是 <code>allow / ask / deny / workspace</code> 四规则组（组合用）。<code>workspace</code> 默认 = 启动路径（让它 = <code>repo/</code>，不加额外目录）。<strong>Bash 只读漏洞</strong>：<code>workspace</code> 只约束 Read/Glob/Grep/Edit，一组内置只读 Bash 命令（<code>cat/grep/find/head/tail/ls</code> 等）能读 <code>repo/</code> 外。对策：<strong>确认 Workspace + 行为约束</strong>（不主动跑 / 不批准任何读 <code>repo/</code> 外的 Bash），不额外加 deny 配置以免污染交付包。</li></ul>
+<hr>
+<h2 id="5-交付物规范-陪练侧标配">5. 交付物规范 + 陪练侧标配<a class="anchor" href="#5-交付物规范-陪练侧标配" aria-label="锚点">#</a></h2>
+<h3 id="5-1-交付包结构">5.1 交付包结构<a class="anchor" href="#5-1-交付包结构" aria-label="锚点">#</a></h3>
+<pre><code>TASK-xxx/
+├─ docs/              # design.md / api-spec.md(有后端必有) / questions.md
+├─ repo/             # README.md + run_tests.sh + unit_tests/ + API_tests/ + Dockerfile + docker-compose.yml + 代码
+├─ original_sessions/ # &lt;projectID&gt;.zip（开发轨迹）
+├─ skills/           # 本题真用到的 agent-skill（纯英文）
+└─ metadata.json     # 官方 8 字段</code></pre>
+<p>代码、<code>README.md</code>、测试、Docker <strong>全在 <code>repo/</code></strong>；<code>docs/</code> 在任务根、不在 <code>repo/</code>。</p>
+<h3 id="5-2-metadata-json-官方-8-字段-值一律小写">5.2 metadata.json —— 官方 8 字段（值一律小写）<a class="anchor" href="#5-2-metadata-json-官方-8-字段-值一律小写" aria-label="锚点">#</a></h3>
+<p>顺序：<code>project_type, prompt, frontend_language, backend_language, frontend_framework, backend_framework, database, cwd</code>。</p>
+<ul><li><code>project_type</code>：<strong>必须</strong>用官方枚举 <code>web / server / fullstack / android / ios / desktop</code>（纯后端 = <code>server</code>、纯前端 = <code>web</code>）。</li><li><code>prompt</code>：原始英文题目全文。</li><li><code>frontend_language</code>：<strong>无前端填 <code>server</code></strong>；有前端填 <code>javascript</code> / <code>typescript</code> 等。</li><li><code>backend_language</code>：<strong>无后端填 <code>none</code></strong>；有后端填 <code>python</code> / <code>java</code> / <code>go</code> 等。</li><li><code>frontend_framework</code> / <code>backend_framework</code> / <code>database</code>：无则留空，有则小写。</li><li><code>cwd</code>：<strong>容器内绝对路径，默认 <code>/app</code></strong>（不是宿主机任务目录）。</li></ul>
+<h3 id="5-3-readme-md-三章节五铁律-高频打回项-放-repo">5.3 README.md 三章节五铁律（高频打回项，放 <code>repo/</code>）<a class="anchor" href="#5-3-readme-md-三章节五铁律-高频打回项-放-repo" aria-label="锚点">#</a></h3>
+<p>三章节：<strong>How to Run</strong>（明确启动命令）、<strong>Services List</strong>（各服务地址 + 端口）、<strong>Verification</strong>（如何验证 + <code>./run_tests.sh</code>）。<br>五铁律：① 启动步骤真实有效 ② 环境隔离（禁「本地能跑」、不依赖本地绝对路径）③ 一键 <code>docker compose up</code> 必起 ④ <code>docker-compose.yml</code> 显式 expose 端口 ⑤ 零私有依赖。<br><strong><code>--build</code> 禁进主启动命令</strong>：主命令<strong>必须</strong>是裸 <code>docker compose up</code>，<code>docker-compose.yml</code> 配 <code>build:</code> 让首次自动构建；README 主命令出现 <code>--build</code> 会被判「不加就跑不起来」= 不合格（<code>--build</code> 仅允许在一次性测试命令里）。</p>
+<h3 id="5-4-陪练侧-tasks-标配-中文-管理态-严禁-进交付包">5.4 陪练侧 <code>tasks/&lt;TASK-ID&gt;/</code> 标配（中文 / 管理态，<strong>严禁</strong>进交付包）<a class="anchor" href="#5-4-陪练侧-tasks-标配-中文-管理态-严禁-进交付包" aria-label="锚点">#</a></h3>
+<p><code>guide.md</code>（中文指导）、<code>进度日志.md</code>（活进度）、<code>status.json</code>（机器态）、<code>需求覆盖.md</code>（原题原子需求 × 落点 × 测试 × 状态）、<code>交付收尾清单.md</code>、<code>视频录制说明.md</code>（纯后端 2 段 / 前端类 3 段）、<code>提交六维度对照.md</code>、<code>submission_attachments/</code>（<strong>英文文件名</strong>证据）、<code>中断恢复指南.md</code>、<code>提示词历史/</code>（每条给 AI 的英文提示词存档、头一句中文说明用途）、<code>Dockerfile.原始备份</code>（有 Docker 的题）、<code>轨迹备份/</code>（需改轨迹时）。</p>
+<hr>
+<h2 id="6-平台六维度评分表-每题收尾必填">6. 平台六维度评分表（每题收尾必填）<a class="anchor" href="#6-平台六维度评分表-每题收尾必填" aria-label="锚点">#</a></h2>
+<p>六维度：① 硬性门槛　② 交付完整性　③ 工程与架构质量　④ 工程细节与专业度　⑤ Prompt 需求理解与适配度　⑥ 美观度（<strong>选填</strong>，纯后端 / 无前端可写「不适用」）。前 5 项必填。</p>
+<p>三条边界：</p>
+<ol><li><strong>说明栏可用中文</strong>（平台评审看的，不属于交付包、不被中文扫描约束）；但<strong>附件文件本身必须无中文</strong>（视频无中文字幕 / 水印、文件名英文）。</li><li>维度 ③④⑤ 引用的报告<strong>必须</strong>是<strong>最终 PASS 轮</strong>的（FAIL 轮报告不能交）。</li><li>附件格式 <strong>mp4 / PDF / PNG</strong>，不支持 <code>.doc</code> / <code>.txt</code>；<code>.md → PDF</code> 用 <code>soffice --headless --convert-to pdf</code>。</li></ol>
+<p>证据映射（题型无关示例）：① final_validation 报告 + 自测视频；② README PDF + 目录树证据；③ design + 修复验收报告；④ 修复验收报告 + 边界状态截帧；⑤ 需求覆盖验证报告；⑥ 界面走查（仅前端 / 全栈 / 移动）。</p>
+<hr>
+<h2 id="7-关键脚本清单-只列职责-环境特定">7. 关键脚本清单（只列职责，环境特定）<a class="anchor" href="#7-关键脚本清单-只列职责-环境特定" aria-label="锚点">#</a></h2>
+<blockquote><p>这些脚本位于曼孚云电脑环境（驱动侧跑，<strong>严禁</strong>贴给作业 Claude）。具体路径随环境而定。</p></blockquote>
+<ul><li><strong>脚手架（scaffold）</strong>：开发前建一级骨架 + 写官方 8 字段 <code>metadata.json</code> + <code>.gitignore</code>；整理交付包时把本题真用到的 skill 拷进 <code>skills/</code>。</li><li><strong>结构校验（validate_package）</strong>：交付包结构 + 英文一致性预检。</li><li><strong>中文检测（check_chinese）</strong>：英文题交付物须为 0 命中。</li><li><strong>轨迹清洗（clean_original_sessions）</strong>：生成 <code>original_sessions/</code>（清洗后轨迹、检测子代理）。</li><li><strong>轨迹检查（trajectory_check）</strong>：<strong>只读</strong>，绝不写 / 改 / 删轨迹。</li><li><strong>质检闸门（run_quality）</strong>：上传前官方质检，自动跑 codex 出报告；六阶段（基础验证 → 静态质检 → 修复验收 → API 测试有效性 → UI 交互 → 最终验证）。<strong>只出报告、不自动提交</strong>；修复 + 用户确认后才提交。<ul><li>⚠️ <strong>安全警示</strong>：质检脚本内含<strong>硬编码凭据（GitLab / GitHub 令牌）</strong>，属敏感。<strong>严禁记录 / 外传 / 进交付包 / 写进任何文档</strong>。</li></ul></li></ul>
+<hr>
+<h2 id="8-安全纪律-贯穿全程">8. 安全纪律（贯穿全程）<a class="anchor" href="#8-安全纪律-贯穿全程" aria-label="锚点">#</a></h2>
+<ol><li>GitLab PAT 等令牌<strong>只许</strong>出现在 <code>git remote</code> 的 URL 里（落在本机 <code>.git/config</code>），<strong>严禁</strong>写进任何被提交的文件 / 文档 / 交付包 / 聊天公开渠道。</li><li>含令牌的脚本、凭据文件<strong>必须</strong>在 <code>.gitignore</code> 内，<strong>严禁</strong>进交付包。</li><li>交付完成后<strong>必须</strong>轮换用过的 PAT。</li><li>本文件及任何 Khy-OS 文档<strong>严禁</strong>抄录上述任何真实令牌值。</li></ol>
+<hr>
+<h2 id="9-与活源的关系">9. 与活源的关系<a class="anchor" href="#9-与活源的关系" aria-label="锚点">#</a></h2>
+<p><code>~/Desktop/delivery-project-manager</code> 是这套方法论的<strong>活源真相</strong>（其 <code>CLAUDE.md</code> / <code>操作手册.md</code> / 各题 <code>tasks/&lt;TASK-ID&gt;/</code> 为权威过程态）。本文件 <code>[MGMT-STD-004]</code> 是 Khy-OS 内的<strong>传承权威副本</strong>，使 Khy 不依赖任一 AI 的私有记忆即可承接曼孚交付陪练。<strong>规则更新以活源为准</strong>，更新后回流同步本档。</p>
+<hr>
+<h2 id="跨分类关联指引">跨分类关联指引<a class="anchor" href="#跨分类关联指引" aria-label="锚点">#</a></h2>
+<ul><li>文档结构 / 索引铁律：见 [MGMT-STD-001]。</li><li>工程交付综合提示词版式参考：见 [MGMT-STD-002]。</li><li>本文件聚焦「曼孚外部交付任务」的陪练方法论，与 Khy-OS 自身工程治理并行，不冲突。</li><li>Khyos 自身的通用工作方法论（证据搜集→做计划→计划落地）：见 [MGMT-STD-005]。本文管「怎么给客户交付」，STD-005 管「Khyos 自己怎么把一件工程活干对」，互补不互抄。</li><li>khy 自身能否<strong>替代 cc</strong> 做 vibe/spec-coding 的量化验收标准：见 [MGMT-STD-006]。<strong>注意研究对象相反</strong>——本文的作业端<strong>永远是 Claude Code</strong>，STD-006 衡量的是 khy 自己能否达到 cc 的编码能力，两者不冲突。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-STD-003] 任务三综合系统提示词-模型自适应与双轨热插拔架构.html"><div class="dir">← 上一篇</div><div class="ttl">[MGMT-STD-003] 任务三综合系统提示词：模型自适应与双轨热插拔架构</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-STD-005] Khyos工作方法论-证据搜集与计划落地铁律.html"><div class="dir">下一篇 →</div><div class="ttl">[MGMT-STD-005] Khyos 工作方法论：证据搜集 → 做计划 → 计划正确落地（流程铁律）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-STD-004] 曼孚-vibecoding-交付方法论-流程铁律.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

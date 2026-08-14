@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incremental Implementation · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>built-in<span class="sep">›</span>incremental-implementation<span class="sep">›</span>Incremental Implementation</div>
+      <header class="hero reveal"><h1>Incremental Implementation</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#incremental-implementation">Incremental Implementation</a></li><li class="lvl-2"><a href="#overview">Overview</a></li><li class="lvl-2"><a href="#when-to-use">When to Use</a></li><li class="lvl-2"><a href="#the-increment-cycle">The Increment Cycle</a></li><li class="lvl-2"><a href="#slicing-strategies">Slicing Strategies</a></li><li class="lvl-3"><a href="#vertical-slices-preferred">Vertical Slices (Preferred)</a></li><li class="lvl-3"><a href="#contract-first-slicing">Contract-First Slicing</a></li><li class="lvl-3"><a href="#risk-first-slicing">Risk-First Slicing</a></li><li class="lvl-2"><a href="#implementation-rules">Implementation Rules</a></li><li class="lvl-3"><a href="#rule-0-simplicity-first">Rule 0: Simplicity First</a></li><li class="lvl-3"><a href="#rule-0-5-scope-discipline">Rule 0.5: Scope Discipline</a></li><li class="lvl-3"><a href="#rule-1-one-thing-at-a-time">Rule 1: One Thing at a Time</a></li><li class="lvl-3"><a href="#rule-2-keep-it-compilable">Rule 2: Keep It Compilable</a></li><li class="lvl-3"><a href="#rule-3-feature-flags-for-incomplete-features">Rule 3: Feature Flags for Incomplete Features</a></li><li class="lvl-3"><a href="#rule-4-safe-defaults">Rule 4: Safe Defaults</a></li><li class="lvl-3"><a href="#rule-5-rollback-friendly">Rule 5: Rollback-Friendly</a></li><li class="lvl-2"><a href="#working-with-agents">Working with Agents</a></li><li class="lvl-2"><a href="#increment-checklist">Increment Checklist</a></li><li class="lvl-2"><a href="#common-rationalizations">Common Rationalizations</a></li><li class="lvl-2"><a href="#red-flags">Red Flags</a></li><li class="lvl-2"><a href="#verification">Verification</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="incremental-implementation">Incremental Implementation<a class="anchor" href="#incremental-implementation" aria-label="锚点">#</a></h1>
+<h2 id="overview">Overview<a class="anchor" href="#overview" aria-label="锚点">#</a></h2>
+<p>Build in thin vertical slices — implement one piece, test it, verify it, then expand. Avoid implementing an entire feature in one pass. Each increment should leave the system in a working, testable state. This is the execution discipline that makes large features manageable.</p>
+<h2 id="when-to-use">When to Use<a class="anchor" href="#when-to-use" aria-label="锚点">#</a></h2>
+<ul><li>Implementing any multi-file change</li><li>Building a new feature from a task breakdown</li><li>Refactoring existing code</li><li>Any time you're tempted to write more than ~100 lines before testing</li></ul>
+<p><strong>When NOT to use:</strong> Single-file, single-function changes where the scope is already minimal.</p>
+<h2 id="the-increment-cycle">The Increment Cycle<a class="anchor" href="#the-increment-cycle" aria-label="锚点">#</a></h2>
+<pre><code>┌──────────────────────────────────────┐
+│                                      │
+│   Implement ──→ Test ──→ Verify ──┐  │
+│       ▲                           │  │
+│       └───── Commit ◄─────────────┘  │
+│              │                       │
+│              ▼                       │
+│          Next slice                  │
+│                                      │
+└──────────────────────────────────────┘</code></pre>
+<p>For each slice:</p>
+<ol><li><strong>Implement</strong> the smallest complete piece of functionality</li><li><strong>Test</strong> — run the test suite (or write a test if none exists)</li><li><strong>Verify</strong> — confirm the slice works as expected (tests pass, build succeeds, manual check)</li><li><strong>Commit</strong> -- save your progress with a descriptive message (see <code>git-workflow-and-versioning</code> for atomic commit guidance)</li><li><strong>Move to the next slice</strong> — carry forward, don't restart</li></ol>
+<h2 id="slicing-strategies">Slicing Strategies<a class="anchor" href="#slicing-strategies" aria-label="锚点">#</a></h2>
+<h3 id="vertical-slices-preferred">Vertical Slices (Preferred)<a class="anchor" href="#vertical-slices-preferred" aria-label="锚点">#</a></h3>
+<p>Build one complete path through the stack:</p>
+<pre><code>Slice 1: Create a task (DB + API + basic UI)
+    → Tests pass, user can create a task via the UI
+
+Slice 2: List tasks (query + API + UI)
+    → Tests pass, user can see their tasks
+
+Slice 3: Edit a task (update + API + UI)
+    → Tests pass, user can modify tasks
+
+Slice 4: Delete a task (delete + API + UI + confirmation)
+    → Tests pass, full CRUD complete</code></pre>
+<p>Each slice delivers working end-to-end functionality.</p>
+<h3 id="contract-first-slicing">Contract-First Slicing<a class="anchor" href="#contract-first-slicing" aria-label="锚点">#</a></h3>
+<p>When backend and frontend need to develop in parallel:</p>
+<pre><code>Slice 0: Define the API contract (types, interfaces, OpenAPI spec)
+Slice 1a: Implement backend against the contract + API tests
+Slice 1b: Implement frontend against mock data matching the contract
+Slice 2: Integrate and test end-to-end</code></pre>
+<h3 id="risk-first-slicing">Risk-First Slicing<a class="anchor" href="#risk-first-slicing" aria-label="锚点">#</a></h3>
+<p>Tackle the riskiest or most uncertain piece first:</p>
+<pre><code>Slice 1: Prove the WebSocket connection works (highest risk)
+Slice 2: Build real-time task updates on the proven connection
+Slice 3: Add offline support and reconnection</code></pre>
+<p>If Slice 1 fails, you discover it before investing in Slices 2 and 3.</p>
+<h2 id="implementation-rules">Implementation Rules<a class="anchor" href="#implementation-rules" aria-label="锚点">#</a></h2>
+<h3 id="rule-0-simplicity-first">Rule 0: Simplicity First<a class="anchor" href="#rule-0-simplicity-first" aria-label="锚点">#</a></h3>
+<p>Before writing any code, ask: &quot;What is the simplest thing that could work?&quot;</p>
+<p>After writing code, review it against these checks:</p>
+<ul><li>Can this be done in fewer lines?</li><li>Are these abstractions earning their complexity?</li><li>Would a staff engineer look at this and say &quot;why didn't you just...&quot;?</li><li>Am I building for hypothetical future requirements, or the current task?</li></ul>
+<pre><code>SIMPLICITY CHECK:
+✗ Generic EventBus with middleware pipeline for one notification
+✓ Simple function call
+
+✗ Abstract factory pattern for two similar components
+✓ Two straightforward components with shared utilities
+
+✗ Config-driven form builder for three forms
+✓ Three form components</code></pre>
+<p>Three similar lines of code is better than a premature abstraction. Implement the naive, obviously-correct version first. Optimize only after correctness is proven with tests.</p>
+<h3 id="rule-0-5-scope-discipline">Rule 0.5: Scope Discipline<a class="anchor" href="#rule-0-5-scope-discipline" aria-label="锚点">#</a></h3>
+<p>Touch only what the task requires.</p>
+<p>Do NOT:</p>
+<ul><li>&quot;Clean up&quot; code adjacent to your change</li><li>Refactor imports in files you're not modifying</li><li>Remove comments you don't fully understand</li><li>Add features not in the spec because they &quot;seem useful&quot;</li><li>Modernize syntax in files you're only reading</li></ul>
+<p>If you notice something worth improving outside your task scope, note it — don't fix it:</p>
+<pre><code>NOTICED BUT NOT TOUCHING:
+- src/utils/format.ts has an unused import (unrelated to this task)
+- The auth middleware could use better error messages (separate task)
+→ Want me to create tasks for these?</code></pre>
+<h3 id="rule-1-one-thing-at-a-time">Rule 1: One Thing at a Time<a class="anchor" href="#rule-1-one-thing-at-a-time" aria-label="锚点">#</a></h3>
+<p>Each increment changes one logical thing. Don't mix concerns:</p>
+<p><strong>Bad:</strong> One commit that adds a new component, refactors an existing one, and updates the build config.</p>
+<p><strong>Good:</strong> Three separate commits — one for each change.</p>
+<h3 id="rule-2-keep-it-compilable">Rule 2: Keep It Compilable<a class="anchor" href="#rule-2-keep-it-compilable" aria-label="锚点">#</a></h3>
+<p>After each increment, the project must build and existing tests must pass. Don't leave the codebase in a broken state between slices.</p>
+<h3 id="rule-3-feature-flags-for-incomplete-features">Rule 3: Feature Flags for Incomplete Features<a class="anchor" href="#rule-3-feature-flags-for-incomplete-features" aria-label="锚点">#</a></h3>
+<p>If a feature isn't ready for users but you need to merge increments:</p>
+<pre><code class="language-typescript">// Feature flag for work-in-progress
+const ENABLE_TASK_SHARING = process.env.FEATURE_TASK_SHARING === 'true';
+
+if (ENABLE_TASK_SHARING) {
+  // New sharing UI
+}</code></pre>
+<p>This lets you merge small increments to the main branch without exposing incomplete work.</p>
+<h3 id="rule-4-safe-defaults">Rule 4: Safe Defaults<a class="anchor" href="#rule-4-safe-defaults" aria-label="锚点">#</a></h3>
+<p>New code should default to safe, conservative behavior:</p>
+<pre><code class="language-typescript">// Safe: disabled by default, opt-in
+export function createTask(data: TaskInput, options?: { notify?: boolean }) {
+  const shouldNotify = options?.notify ?? false;
+  // ...
+}</code></pre>
+<h3 id="rule-5-rollback-friendly">Rule 5: Rollback-Friendly<a class="anchor" href="#rule-5-rollback-friendly" aria-label="锚点">#</a></h3>
+<p>Each increment should be independently revertable:</p>
+<ul><li>Additive changes (new files, new functions) are easy to revert</li><li>Modifications to existing code should be minimal and focused</li><li>Database migrations should have corresponding rollback migrations</li><li>Avoid deleting something in one commit and replacing it in the same commit — separate them</li></ul>
+<h2 id="working-with-agents">Working with Agents<a class="anchor" href="#working-with-agents" aria-label="锚点">#</a></h2>
+<p>When directing an agent to implement incrementally:</p>
+<pre><code>&quot;Let's implement Task 3 from the plan.
+
+Start with just the database schema change and the API endpoint.
+Don't touch the UI yet — we'll do that in the next increment.
+
+After implementing, run `npm test` and `npm run build` to verify
+nothing is broken.&quot;</code></pre>
+<p>Be explicit about what's in scope and what's NOT in scope for each increment.</p>
+<h2 id="increment-checklist">Increment Checklist<a class="anchor" href="#increment-checklist" aria-label="锚点">#</a></h2>
+<p>After each increment, verify:</p>
+<ul><li>[ ] The change does one thing and does it completely</li><li>[ ] All existing tests still pass (<code>npm test</code>)</li><li>[ ] The build succeeds (<code>npm run build</code>)</li><li>[ ] Type checking passes (<code>npx tsc --noEmit</code>)</li><li>[ ] Linting passes (<code>npm run lint</code>)</li><li>[ ] The new functionality works as expected</li><li>[ ] The change is committed with a descriptive message</li></ul>
+<p><strong>Note:</strong> Run each verification command after a change that could affect it. After a successful run, don't repeat the same command unless the code has changed since — re-running on unchanged code adds no information.</p>
+<h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;I'll test it all at the end&quot;</td><td>Bugs compound. A bug in Slice 1 makes Slices 2-5 wrong. Test each slice.</td></tr><tr><td>&quot;It's faster to do it all at once&quot;</td><td>It <em>feels</em> faster until something breaks and you can't find which of 500 changed lines caused it.</td></tr><tr><td>&quot;These changes are too small to commit separately&quot;</td><td>Small commits are free. Large commits hide bugs and make rollbacks painful.</td></tr><tr><td>&quot;I'll add the feature flag later&quot;</td><td>If the feature isn't complete, it shouldn't be user-visible. Add the flag now.</td></tr><tr><td>&quot;This refactor is small enough to include&quot;</td><td>Refactors mixed with features make both harder to review and debug. Separate them.</td></tr><tr><td>&quot;Let me run the build command again just to be sure&quot;</td><td>After a successful run, repeating the same command adds nothing unless the code has changed since. Run it again after subsequent edits, not as reassurance.</td></tr></tbody></table>
+<h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>
+<ul><li>More than 100 lines of code written without running tests</li><li>Multiple unrelated changes in a single increment</li><li>&quot;Let me just quickly add this too&quot; scope expansion</li><li>Skipping the test/verify step to move faster</li><li>Build or tests broken between increments</li><li>Large uncommitted changes accumulating</li><li>Building abstractions before the third use case demands it</li><li>Touching files outside the task scope &quot;while I'm here&quot;</li><li>Creating new utility files for one-time operations</li><li>Running the same build/test command twice in a row without any intervening code change</li></ul>
+<h2 id="verification">Verification<a class="anchor" href="#verification" aria-label="锚点">#</a></h2>
+<p>After completing all increments for a task:</p>
+<ul><li>[ ] Each increment was individually tested and committed</li><li>[ ] The full test suite passes</li><li>[ ] The build is clean</li><li>[ ] The feature works end-to-end as specified</li><li>[ ] No uncommitted changes remain</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/idea-refine/refinement-criteria.html"><div class="dir">← 上一篇</div><div class="ttl">Refinement &amp; Evaluation Criteria</div></a><a class="next" href="../../../../../../services/backend/src/skills/built-in/init-project/prompt.html"><div class="dir">下一篇 →</div><div class="ttl">Initialize Project</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/built-in/incremental-implementation/prompt.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

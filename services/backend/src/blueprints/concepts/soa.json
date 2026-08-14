@@ -1,0 +1,19 @@
+{
+  "id": "soa",
+  "kind": "concept",
+  "name": "SOA",
+  "category": "architecture",
+  "triggers": ["SOA", "Service-Oriented Architecture", "面向服务", "面向服务架构"],
+  "summary": "面向服务架构：把能力拆成可复用、契约化的服务，经企业服务总线/标准协议互调；微服务可视为其细粒度演进。",
+  "whenToUse": [
+    "大型企业系统集成异构能力，强调服务复用与契约。",
+    "需要跨系统编排既有能力而非重写。"
+  ],
+  "antiPatterns": [
+    "ESB 变成单点与瓶颈（'ESB 上帝化'）。",
+    "服务粒度过粗，复用名存实亡。",
+    "契约缺版本治理，升级即破坏下游。"
+  ],
+  "minimalSkeleton": "Service: 自治、契约化(WSDL/OpenAPI)\nContract: 输入输出与协议约定\nBus/Gateway: 路由、协议转换、编排\nRegistry: 服务发现与版本",
+  "relatedArchetypes": []
+}

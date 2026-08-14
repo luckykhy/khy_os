@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firefly III CLI · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-firefly-iii<span class="sep">›</span>Firefly III CLI</div>
+      <header class="hero reveal"><h1>Firefly III CLI</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#firefly-iii-cli">Firefly III CLI</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#prerequisites">Prerequisites</a></li><li class="lvl-2"><a href="#configuration">Configuration</a></li><li class="lvl-3"><a href="#environment-variables-recommended">Environment Variables (Recommended)</a></li><li class="lvl-3"><a href="#command-line-arguments">Command Line Arguments</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-2"><a href="#usage-examples">Usage Examples</a></li><li class="lvl-3"><a href="#account-management">Account Management</a></li><li class="lvl-3"><a href="#transaction-management">Transaction Management</a></li><li class="lvl-3"><a href="#budget-management">Budget Management</a></li><li class="lvl-3"><a href="#category-management">Category Management</a></li><li class="lvl-3"><a href="#tag-management">Tag Management</a></li><li class="lvl-3"><a href="#bill-management">Bill Management</a></li><li class="lvl-3"><a href="#piggy-bank-management">Piggy Bank Management</a></li><li class="lvl-3"><a href="#autocomplete">Autocomplete</a></li><li class="lvl-3"><a href="#currency-management">Currency Management</a></li><li class="lvl-3"><a href="#recurring-transaction-management">Recurring Transaction Management</a></li><li class="lvl-3"><a href="#rule-management">Rule Management</a></li><li class="lvl-3"><a href="#rule-group-management">Rule Group Management</a></li><li class="lvl-3"><a href="#summary-reports">Summary Reports</a></li><li class="lvl-3"><a href="#webhook-management">Webhook Management</a></li><li class="lvl-3"><a href="#insights-and-reports">Insights and Reports</a></li><li class="lvl-3"><a href="#search">Search</a></li><li class="lvl-3"><a href="#data-export">Data Export</a></li><li class="lvl-3"><a href="#system-information">System Information</a></li><li class="lvl-2"><a href="#preset-filtering">Preset Filtering</a></li><li class="lvl-2"><a href="#agent-guidelines">Agent Guidelines</a></li><li class="lvl-3"><a href="#basic-usage">Basic Usage</a></li><li class="lvl-3"><a href="#common-workflows">Common Workflows</a></li><li class="lvl-3"><a href="#error-handling">Error Handling</a></li><li class="lvl-3"><a href="#best-practices">Best Practices</a></li><li class="lvl-2"><a href="#troubleshooting">Troubleshooting</a></li><li class="lvl-3"><a href="#connection-issues">Connection Issues</a></li><li class="lvl-3"><a href="#authentication-issues">Authentication Issues</a></li><li class="lvl-3"><a href="#parameter-validation-errors">Parameter Validation Errors</a></li><li class="lvl-2"><a href="#comparison-with-mcp-version">Comparison with MCP Version</a></li><li class="lvl-2"><a href="#api-coverage">API Coverage</a></li><li class="lvl-2"><a href="#license">License</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-firefly-iii&quot;<br>description: &quot;Firefly III CLI - Personal finance management via CLI-Anything&quot;<br>version: &quot;2.0.0&quot;<br>author: &quot;CLI-Anything Community&quot;</p>
+<hr>
+<h1 id="firefly-iii-cli">Firefly III CLI<a class="anchor" href="#firefly-iii-cli" aria-label="锚点">#</a></h1>
+<p>Firefly III command-line interface based on CLI-Anything specification. Converts MCP mode to stateless CLI mode to avoid Node residual process issues.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">pip install cli-anything-firefly-iii</code></pre>
+<h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
+<ul><li>Python 3.10+</li><li>Running Firefly III instance</li><li>Personal Access Token (PAT)</li></ul>
+<h2 id="configuration">Configuration<a class="anchor" href="#configuration" aria-label="锚点">#</a></h2>
+<h3 id="environment-variables-recommended">Environment Variables (Recommended)<a class="anchor" href="#environment-variables-recommended" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">export FIREFLY_III_BASE_URL=&quot;https://firefly.yourdomain.com&quot;
+export FIREFLY_III_PAT=&quot;your-personal-access-token&quot;</code></pre>
+<h3 id="command-line-arguments">Command Line Arguments<a class="anchor" href="#command-line-arguments" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cli-anything-firefly-iii --base-url https://firefly.yourdomain.com --pat your-token</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Command Group</th><th>Description</th><th>Corresponding API</th></tr></thead><tbody><tr><td><code>accounts</code></td><td>Account management (CRUD)</td><td><code>/api/v1/accounts</code></td></tr><tr><td><code>transactions</code></td><td>Transaction management (CRUD)</td><td><code>/api/v1/transactions</code></td></tr><tr><td><code>budgets</code></td><td>Budget management (CRUD + limits)</td><td><code>/api/v1/budgets</code></td></tr><tr><td><code>categories</code></td><td>Category management (CRUD)</td><td><code>/api/v1/categories</code></td></tr><tr><td><code>tags</code></td><td>Tag management (CRUD)</td><td><code>/api/v1/tags</code></td></tr><tr><td><code>bills</code></td><td>Bill management (CRUD)</td><td><code>/api/v1/bills</code></td></tr><tr><td><code>piggy-banks</code></td><td>Piggy bank management (CRUD + events)</td><td><code>/api/v1/piggy-banks</code></td></tr><tr><td><code>autocomplete</code></td><td>Autocomplete for various entities</td><td><code>/api/v1/autocomplete/*</code></td></tr><tr><td><code>currencies</code></td><td>Currency management (CRUD)</td><td><code>/api/v1/currencies</code></td></tr><tr><td><code>recurrences</code></td><td>Recurring transaction management (CRUD)</td><td><code>/api/v1/recurrences</code></td></tr><tr><td><code>rules</code></td><td>Rule management (CRUD + test/execute)</td><td><code>/api/v1/rules</code></td></tr><tr><td><code>rule-groups</code></td><td>Rule group management (CRUD + execute)</td><td><code>/api/v1/rule-groups</code></td></tr><tr><td><code>summary</code></td><td>Financial summaries</td><td><code>/api/v1/summary/*</code></td></tr><tr><td><code>webhooks</code></td><td>Webhook management (CRUD + trigger)</td><td><code>/api/v1/webhooks</code></td></tr><tr><td><code>insights</code></td><td>Insights and reports</td><td><code>/api/v1/insight/*</code></td></tr><tr><td><code>search</code></td><td>Search</td><td><code>/api/v1/search/*</code></td></tr><tr><td><code>export</code></td><td>Data export</td><td><code>/api/v1/data/export/*</code></td></tr><tr><td><code>info</code></td><td>System information</td><td><code>/api/v1/about</code></td></tr></tbody></table>
+<h2 id="usage-examples">Usage Examples<a class="anchor" href="#usage-examples" aria-label="锚点">#</a></h2>
+<h3 id="account-management">Account Management<a class="anchor" href="#account-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List all accounts
+cli-anything-firefly-iii --json accounts list
+
+# List asset accounts
+cli-anything-firefly-iii --json accounts list --type asset
+
+# Get account details
+cli-anything-firefly-iii --json accounts get --id 123
+
+# Create account
+cli-anything-firefly-iii --json accounts create --name &quot;Cash&quot; --type asset --currency-code USD
+
+# Update account
+cli-anything-firefly-iii --json accounts update --id 123 --name &quot;New Name&quot;
+
+# Delete account
+cli-anything-firefly-iii accounts delete --id 123</code></pre>
+<h3 id="transaction-management">Transaction Management<a class="anchor" href="#transaction-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List transactions
+cli-anything-firefly-iii --json transactions list --limit 10
+
+# List transactions with date range
+cli-anything-firefly-iii --json transactions list --start 2024-01-01 --end 2024-01-31
+
+# Create transaction
+cli-anything-firefly-iii --json transactions create \
+  --description &quot;Grocery&quot; \
+  --amount 50.00 \
+  --source-account 1 \
+  --category &quot;Food&quot;
+
+# Update transaction
+cli-anything-firefly-iii --json transactions update --id 456 --description &quot;Updated&quot;
+
+# Delete transaction
+cli-anything-firefly-iii transactions delete --id 456</code></pre>
+<h3 id="budget-management">Budget Management<a class="anchor" href="#budget-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List budgets
+cli-anything-firefly-iii --json budgets list
+
+# Get budget details
+cli-anything-firefly-iii --json budgets get --id 1
+
+# Create budget
+cli-anything-firefly-iii --json budgets create --name &quot;Monthly Budget&quot;
+
+# Update budget
+cli-anything-firefly-iii --json budgets update --id 1 --name &quot;New Budget Name&quot;
+
+# Delete budget
+cli-anything-firefly-iii budgets delete --id 1
+
+# List budget limits
+cli-anything-firefly-iii --json budgets limits --budget-id 1
+
+# Create budget limit
+cli-anything-firefly-iii --json budgets limit-create --budget-id 1 --amount 1000 --start 2024-01-01 --end 2024-01-31
+
+# Update budget limit
+cli-anything-firefly-iii --json budgets limit-update --id 1 --amount 1500
+
+# Delete budget limit
+cli-anything-firefly-iii budgets limit-delete --id 1</code></pre>
+<h3 id="category-management">Category Management<a class="anchor" href="#category-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List categories
+cli-anything-firefly-iii --json categories list
+
+# Get category
+cli-anything-firefly-iii --json categories get --id 1
+
+# Create category
+cli-anything-firefly-iii --json categories create --name &quot;Food&quot;
+
+# Update category
+cli-anything-firefly-iii --json categories update --id 1 --name &quot;Food &amp; Dining&quot;
+
+# Delete category
+cli-anything-firefly-iii categories delete --id 1</code></pre>
+<h3 id="tag-management">Tag Management<a class="anchor" href="#tag-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List tags
+cli-anything-firefly-iii --json tags list
+
+# Get tag
+cli-anything-firefly-iii --json tags get --id &quot;uuid-here&quot;
+
+# Create tag
+cli-anything-firefly-iii --json tags create --tag &quot;important&quot;
+
+# Update tag
+cli-anything-firefly-iii --json tags update --id &quot;uuid-here&quot; --tag &quot;important-updated&quot;
+
+# Delete tag
+cli-anything-firefly-iii tags delete --id &quot;uuid-here&quot;</code></pre>
+<h3 id="bill-management">Bill Management<a class="anchor" href="#bill-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List bills
+cli-anything-firefly-iii --json bills list
+
+# Get bill
+cli-anything-firefly-iii --json bills get --id 1
+
+# Create bill
+cli-anything-firefly-iii --json bills create \
+  --name &quot;Netflix&quot; \
+  --amount-min 15.99 \
+  --amount-max 15.99 \
+  --frequency monthly
+
+# Update bill
+cli-anything-firefly-iii --json bills update --id 1 --amount-min 19.99
+
+# Delete bill
+cli-anything-firefly-iii bills delete --id 1</code></pre>
+<h3 id="piggy-bank-management">Piggy Bank Management<a class="anchor" href="#piggy-bank-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List piggy banks
+cli-anything-firefly-iii --json piggy-banks list
+
+# Get piggy bank
+cli-anything-firefly-iii --json piggy-banks get --id 1
+
+# Create piggy bank
+cli-anything-firefly-iii --json piggy-banks create \
+  --name &quot;Vacation Fund&quot; \
+  --account-id 1 \
+  --target-amount 5000
+
+# Update piggy bank
+cli-anything-firefly-iii --json piggy-banks update --id 1 --name &quot;New Name&quot;
+
+# Delete piggy bank
+cli-anything-firefly-iii piggy-banks delete --id 1
+
+# List piggy bank events
+cli-anything-firefly-iii --json piggy-banks events --id 1
+
+# Add money to piggy bank
+cli-anything-firefly-iii --json piggy-banks add-money --id 1 --amount 100</code></pre>
+<h3 id="autocomplete">Autocomplete<a class="anchor" href="#autocomplete" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Autocomplete accounts
+cli-anything-firefly-iii --json autocomplete accounts --query &quot;bank&quot;
+
+# Autocomplete categories
+cli-anything-firefly-iii --json autocomplete categories --query &quot;food&quot;
+
+# Autocomplete tags
+cli-anything-firefly-iii --json autocomplete tags --query &quot;important&quot;
+
+# Autocomplete transactions
+cli-anything-firefly-iii --json autocomplete transactions --query &quot;grocery&quot;
+
+# Autocomplete budgets
+cli-anything-firefly-iii --json autocomplete budgets --query &quot;monthly&quot;
+
+# Autocomplete bills
+cli-anything-firefly-iii --json autocomplete bills --query &quot;netflix&quot;
+
+# Autocomplete piggy banks
+cli-anything-firefly-iii --json autocomplete piggy-banks --query &quot;vacation&quot;
+
+# Autocomplete currencies
+cli-anything-firefly-iii --json autocomplete currencies --query &quot;dollar&quot;
+
+# Autocomplete rules
+cli-anything-firefly-iii --json autocomplete rules --query &quot;auto&quot;
+
+# Autocomplete rule groups
+cli-anything-firefly-iii --json autocomplete rule-groups --query &quot;finances&quot;
+
+# Autocomplete recurring
+cli-anything-firefly-iii --json autocomplete recurring --query &quot;rent&quot;
+
+# Autocomplete object groups
+cli-anything-firefly-iii --json autocomplete object-groups --query &quot;group&quot;
+
+# Autocomplete transaction types
+cli-anything-firefly-iii --json autocomplete transaction-types --query &quot;with&quot;</code></pre>
+<h3 id="currency-management">Currency Management<a class="anchor" href="#currency-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List currencies
+cli-anything-firefly-iii --json currencies list
+
+# Get currency
+cli-anything-firefly-iii --json currencies get --id 1
+
+# Create currency
+cli-anything-firefly-iii --json currencies create \
+  --code &quot;CNY&quot; \
+  --name &quot;Chinese Yuan&quot; \
+  --symbol &quot;¥&quot;
+
+# Update currency
+cli-anything-firefly-iii --json currencies update --id 1 --symbol &quot;元&quot;
+
+# Delete currency
+cli-anything-firefly-iii currencies delete --id 1
+
+# Get exchange rates
+cli-anything-firefly-iii --json currencies exchange-rates --from USD --to EUR</code></pre>
+<h3 id="recurring-transaction-management">Recurring Transaction Management<a class="anchor" href="#recurring-transaction-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List recurring transactions
+cli-anything-firefly-iii --json recurrences list
+
+# Get recurring transaction
+cli-anything-firefly-iii --json recurrences get --id 1
+
+# Create recurring transaction
+cli-anything-firefly-iii --json recurrences create \
+  --title &quot;Rent Payment&quot; \
+  --type withdrawal \
+  --amount 1500 \
+  --source-account 1 \
+  --destination-account 2 \
+  --frequency monthly
+
+# Update recurring transaction
+cli-anything-firefly-iii --json recurrences update --id 1 --amount 1600
+
+# Delete recurring transaction
+cli-anything-firefly-iii recurrences delete --id 1</code></pre>
+<h3 id="rule-management">Rule Management<a class="anchor" href="#rule-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List rules
+cli-anything-firefly-iii --json rules list
+
+# Get rule
+cli-anything-firefly-iii --json rules get --id 1
+
+# Create rule
+cli-anything-firefly-iii --json rules create \
+  --title &quot;Auto-tag groceries&quot; \
+  --trigger &quot;description_contains&quot; \
+  --value &quot;grocery&quot; \
+  --action set_category \
+  --action-value &quot;Food&quot;
+
+# Update rule
+cli-anything-firefly-iii --json rules update --id 1 --title &quot;New Title&quot;
+
+# Delete rule
+cli-anything-firefly-iii rules delete --id 1
+
+# Test rule
+cli-anything-firefly-iii --json rules test --id 1
+
+# Execute rule
+cli-anything-firefly-iii --json rules execute --id 1</code></pre>
+<h3 id="rule-group-management">Rule Group Management<a class="anchor" href="#rule-group-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List rule groups
+cli-anything-firefly-iii --json rule-groups list
+
+# Get rule group
+cli-anything-firefly-iii --json rule-groups get --id 1
+
+# Create rule group
+cli-anything-firefly-iii --json rule-groups create --title &quot;Finance Rules&quot;
+
+# Update rule group
+cli-anything-firefly-iii --json rule-groups update --id 1 --title &quot;New Title&quot;
+
+# Delete rule group
+cli-anything-firefly-iii rule-groups delete --id 1
+
+# Execute rule group
+cli-anything-firefly-iii --json rule-groups execute --id 1</code></pre>
+<h3 id="summary-reports">Summary Reports<a class="anchor" href="#summary-reports" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Default summary set
+cli-anything-firefly-iii --json summary default-set --start 2024-01-01 --end 2024-01-31
+
+# Account summary
+cli-anything-firefly-iii --json summary account-summary --start 2024-01-01 --end 2024-01-31
+
+# Available budget summary
+cli-anything-firefly-iii --json summary available-budget --start 2024-01-01 --end 2024-01-31
+
+# Bill summary
+cli-anything-firefly-iii --json summary bill-summary --start 2024-01-01 --end 2024-01-31
+
+# Budget summary
+cli-anything-firefly-iii --json summary budget-summary --start 2024-01-01 --end 2024-01-31
+
+# Category summary
+cli-anything-firefly-iii --json summary category-summary --start 2024-01-01 --end 2024-01-31
+
+# Tag summary
+cli-anything-firefly-iii --json summary tag-summary --start 2024-01-01 --end 2024-01-31
+
+# Transfer summary
+cli-anything-firefly-iii --json summary transfer-summary --start 2024-01-01 --end 2024-01-31</code></pre>
+<h3 id="webhook-management">Webhook Management<a class="anchor" href="#webhook-management" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># List webhooks
+cli-anything-firefly-iii --json webhooks list
+
+# Get webhook
+cli-anything-firefly-iii --json webhooks get --id 1
+
+# Create webhook
+cli-anything-firefly-iii --json webhooks create \
+  --title &quot;My Webhook&quot; \
+  --trigger create \
+  --url &quot;https://example.com/webhook&quot; \
+  --secret &quot;my-secret&quot;
+
+# Update webhook
+cli-anything-firefly-iii --json webhooks update --id 1 --title &quot;New Title&quot;
+
+# Delete webhook
+cli-anything-firefly-iii webhooks delete --id 1
+
+# Trigger webhook manually
+cli-anything-firefly-iii --json webhooks trigger --id 1</code></pre>
+<h3 id="insights-and-reports">Insights and Reports<a class="anchor" href="#insights-and-reports" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Expense report (by category)
+cli-anything-firefly-iii --json insights expense \
+  --start 2024-01-01 \
+  --end 2024-01-31 \
+  --group-by category
+
+# Income report
+cli-anything-firefly-iii --json insights income \
+  --start 2024-01-01 \
+  --end 2024-01-31
+
+# Transfer insights
+cli-anything-firefly-iii --json insights transfer \
+  --start 2024-01-01 \
+  --end 2024-01-31
+
+# Account overview
+cli-anything-firefly-iii --json insights overview \
+  --start 2024-01-01 \
+  --end 2024-01-31</code></pre>
+<h3 id="search">Search<a class="anchor" href="#search" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Search transactions
+cli-anything-firefly-iii --json search transactions --query &quot;grocery&quot;</code></pre>
+<h3 id="data-export">Data Export<a class="anchor" href="#data-export" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Export transactions
+cli-anything-firefly-iii --json export transactions \
+  --start 2024-01-01 \
+  --end 2024-01-31
+
+# Export accounts
+cli-anything-firefly-iii --json export accounts
+
+# Export budgets
+cli-anything-firefly-iii --json export budgets
+
+# Export categories
+cli-anything-firefly-iii --json export categories</code></pre>
+<h3 id="system-information">System Information<a class="anchor" href="#system-information" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># System information
+cli-anything-firefly-iii --json info about
+
+# Connection status
+cli-anything-firefly-iii info status</code></pre>
+<h2 id="preset-filtering">Preset Filtering<a class="anchor" href="#preset-filtering" aria-label="锚点">#</a></h2>
+<p>Use <code>--preset</code> parameter to filter available commands:</p>
+<pre><code class="language-bash"># Default preset
+cli-anything-firefly-iii --preset default accounts list
+
+# Full preset
+cli-anything-firefly-iii --preset full accounts list
+
+# Budget preset
+cli-anything-firefly-iii --preset budget budgets list
+
+# Reporting preset
+cli-anything-firefly-iii --preset reporting insights expense --start 2024-01-01 --end 2024-01-31</code></pre>
+<p>Available presets:</p>
+<ul><li><code>default</code>: Core features (accounts, transactions, categories, tags, bills, search)</li><li><code>full</code>: All features</li><li><code>basic</code>: Basic features (accounts, transactions, categories, tags, search)</li><li><code>budget</code>: Budget-related (accounts, budgets, transactions, summary, insight)</li><li><code>reporting</code>: Reporting-related (accounts, transactions, categories, insight, summary, search)</li><li><code>admin</code>: Admin features (about, configuration, currencies, users, preferences)</li><li><code>automation</code>: Automation (rules, recurrences, webhooks, transactions)</li></ul>
+<h2 id="agent-guidelines">Agent Guidelines<a class="anchor" href="#agent-guidelines" aria-label="锚点">#</a></h2>
+<h3 id="basic-usage">Basic Usage<a class="anchor" href="#basic-usage" aria-label="锚点">#</a></h3>
+<ol><li><strong>Use <code>--json</code> for structured output</strong>: All commands support <code>--json</code> flag, returning JSON format data</li><li><strong>Call <code>info status</code> first to check connection</strong>: Confirm Firefly III connection is normal before executing operations</li><li><strong>Use presets to reduce command count</strong>: Filter unnecessary commands via <code>--preset</code></li></ol>
+<h3 id="common-workflows">Common Workflows<a class="anchor" href="#common-workflows" aria-label="锚点">#</a></h3>
+<h4 id="view-account-balances">View Account Balances<a class="anchor" href="#view-account-balances" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># 1. Check connection
+cli-anything-firefly-iii info status
+
+# 2. List asset accounts
+cli-anything-firefly-iii --json accounts list --type asset
+
+# 3. View account details (get balance)
+cli-anything-firefly-iii --json accounts get --id &lt;account_id&gt;</code></pre>
+<h4 id="record-expense">Record Expense<a class="anchor" href="#record-expense" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># 1. Find expense accounts
+cli-anything-firefly-iii --json accounts list --type expense
+
+# 2. Create transaction
+cli-anything-firefly-iii --json transactions create \
+  --description &quot;Lunch&quot; \
+  --amount 15.50 \
+  --source-account &lt;asset_account_id&gt; \
+  --destination-account &lt;expense_account_id&gt; \
+  --category &quot;Food&quot;</code></pre>
+<h4 id="set-up-recurring-budget">Set Up Recurring Budget<a class="anchor" href="#set-up-recurring-budget" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># 1. Create budget
+cli-anything-firefly-iii --json budgets create --name &quot;Monthly Groceries&quot;
+
+# 2. Set budget limit
+cli-anything-firefly-iii --json budgets limit-create \
+  --budget-id &lt;budget_id&gt; \
+  --amount 500 \
+  --start 2024-01-01 \
+  --end 2024-01-31</code></pre>
+<h4 id="create-automation-rule">Create Automation Rule<a class="anchor" href="#create-automation-rule" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># 1. List rule groups
+cli-anything-firefly-iii --json rule-groups list
+
+# 2. Create rule
+cli-anything-firefly-iii --json rules create \
+  --title &quot;Auto-tag groceries&quot; \
+  --trigger description_contains \
+  --value &quot;grocery&quot; \
+  --action set_category \
+  --action-value &quot;Food&quot;
+
+# 3. Execute rule to apply to existing transactions
+cli-anything-firefly-iii --json rules execute --id &lt;rule_id&gt;</code></pre>
+<h4 id="monthly-financial-report">Monthly Financial Report<a class="anchor" href="#monthly-financial-report" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash"># 1. Expense report
+cli-anything-firefly-iii --json insights expense \
+  --start 2024-01-01 \
+  --end 2024-01-31 \
+  --group-by category
+
+# 2. Income report
+cli-anything-firefly-iii --json insights income \
+  --start 2024-01-01 \
+  --end 2024-01-31
+
+# 3. Budget summary
+cli-anything-firefly-iii --json summary budget-summary \
+  --start 2024-01-01 \
+  --end 2024-01-31
+
+# 4. Export data
+cli-anything-firefly-iii --json export transactions \
+  --start 2024-01-01 \
+  --end 2024-01-31</code></pre>
+<h3 id="error-handling">Error Handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h3>
+<p>Common errors and solutions:</p>
+<ol><li><strong>Connection failed</strong>: Check if FIREFLY_III_BASE_URL is correct</li><li><strong>Authentication failed</strong>: Check if FIREFLY_III_PAT is valid</li><li><strong>Resource not found</strong>: Check if ID is correct</li><li><strong>Parameter error</strong>: Check if required parameters are provided</li><li><strong>Validation error</strong>: Check API documentation for valid parameter values</li></ol>
+<h3 id="best-practices">Best Practices<a class="anchor" href="#best-practices" aria-label="锚点">#</a></h3>
+<ol><li><strong>Use environment variables for credentials</strong>: Avoid exposing PAT in command line</li><li><strong>Use <code>--json</code> for scripting</strong>: Facilitates parsing and processing output</li><li><strong>Use presets to control permissions</strong>: Choose appropriate preset based on scenario</li><li><strong>Query before modifying</strong>: Avoid accidental operations</li><li><strong>Use autocomplete for quick lookups</strong>: Great for finding existing entities</li></ol>
+<h2 id="troubleshooting">Troubleshooting<a class="anchor" href="#troubleshooting" aria-label="锚点">#</a></h2>
+<h3 id="connection-issues">Connection Issues<a class="anchor" href="#connection-issues" aria-label="锚点">#</a></h3>
+<pre><code>Error: Cannot connect to Firefly III instance</code></pre>
+<ul><li>Check if Firefly III instance is running</li><li>Check network connection</li><li>Check if base URL is correct</li></ul>
+<h3 id="authentication-issues">Authentication Issues<a class="anchor" href="#authentication-issues" aria-label="锚点">#</a></h3>
+<pre><code>Error: Authentication failed: Personal Access Token is invalid</code></pre>
+<ul><li>Check if PAT is correct</li><li>Generate new PAT in Firefly III Options &gt; Profile &gt; OAuth</li><li>Ensure PAT has not expired</li></ul>
+<h3 id="parameter-validation-errors">Parameter Validation Errors<a class="anchor" href="#parameter-validation-errors" aria-label="锚点">#</a></h3>
+<pre><code>Error: Request parameter error: [details]</code></pre>
+<ul><li>Check required parameters are provided</li><li>Verify date formats (YYYY-MM-DD)</li><li>Verify currency codes (ISO 4217)</li><li>Verify enum values match allowed choices</li></ul>
+<h2 id="comparison-with-mcp-version">Comparison with MCP Version<a class="anchor" href="#comparison-with-mcp-version" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>Feature</th><th>MCP Version</th><th>CLI-Anything Version</th></tr></thead><tbody><tr><td>Process Lifecycle</td><td>Long-running</td><td>Single call, immediate exit</td></tr><tr><td>Memory Usage</td><td>Continuous</td><td>On-demand, released after</td></tr><tr><td>Communication</td><td>Stdio/SSE</td><td>Command args + stdout</td></tr><tr><td>State Management</td><td>Stateful</td><td>Stateless</td></tr><tr><td>Preset Filtering</td><td>Supported</td><td>Supported</td></tr><tr><td>JSON Output</td><td>Built-in</td><td><code>--json</code> flag</td></tr><tr><td>Full API Coverage</td><td>Partial</td><td>Full API coverage</td></tr></tbody></table>
+<h2 id="api-coverage">API Coverage<a class="anchor" href="#api-coverage" aria-label="锚点">#</a></h2>
+<p>This CLI covers the following Firefly III API endpoints:</p>
+<ul><li>[x] <code>/api/v1/about</code> - System information</li><li>[x] <code>/api/v1/accounts</code> - Account management (full CRUD)</li><li>[x] <code>/api/v1/transactions</code> - Transaction management (full CRUD)</li><li>[x] <code>/api/v1/budgets</code> - Budget management (full CRUD + limits)</li><li>[x] <code>/api/v1/categories</code> - Category management (full CRUD)</li><li>[x] <code>/api/v1/tags</code> - Tag management (full CRUD)</li><li>[x] <code>/api/v1/bills</code> - Bill management (full CRUD)</li><li>[x] <code>/api/v1/piggy-banks</code> - Piggy bank management (full CRUD + events)</li><li>[x] <code>/api/v1/autocomplete/*</code> - All autocomplete endpoints</li><li>[x] <code>/api/v1/currencies</code> - Currency management (full CRUD)</li><li>[x] <code>/api/v1/recurrences</code> - Recurring transaction management (full CRUD)</li><li>[x] <code>/api/v1/rules</code> - Rule management (full CRUD + test/execute)</li><li>[x] <code>/api/v1/rule-groups</code> - Rule group management (full CRUD + execute)</li><li>[x] <code>/api/v1/summary/*</code> - Summary endpoints</li><li>[x] <code>/api/v1/webhooks</code> - Webhook management (full CRUD + trigger)</li><li>[x] <code>/api/v1/insight/*</code> - Insight endpoints</li><li>[x] <code>/api/v1/search/*</code> - Search endpoints</li><li>[x] <code>/api/v1/data/export/*</code> - Export endpoints</li><li>[x] <code>/api/v1/chart/*</code> - Chart endpoints</li><li>[x] <code>/api/v1/configuration</code> - Configuration</li><li>[x] <code>/api/v1/preferences</code> - User preferences</li><li>[x] <code>/api/v1/available_budgets</code> - Available budgets</li><li>[x] <code>/api/v1/object-groups</code> - Object groups</li><li>[x] <code>/api/v1/links</code> - Transaction links</li><li>[x] <code>/api/v1/attachments</code> - Attachments</li><li>[x] <code>/api/v1/currency_exchange_rates</code> - Exchange rates</li><li>[x] <code>/api/v1/data/bulk</code> - Bulk operations</li><li>[x] <code>/api/v1/user-groups</code> - User groups (read-only)</li><li>[x] <code>/api/v1/users</code> - User management (admin)</li></ul>
+<h2 id="license">License<a class="anchor" href="#license" aria-label="锚点">#</a></h2>
+<p>MIT License</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-exa/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">Exa CLI Skill</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-freecad/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-freecad</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-firefly-iii/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

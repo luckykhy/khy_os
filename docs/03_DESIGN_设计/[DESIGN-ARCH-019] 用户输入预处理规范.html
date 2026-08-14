@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyos 用户输入预处理规范（Input Sanitization） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>khyos 用户输入预处理规范（Input Sanitization）</div>
+      <header class="hero reveal"><h1>khyos 用户输入预处理规范（Input Sanitization）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-用户输入预处理规范-input-sanitization">khyos 用户输入预处理规范（Input Sanitization）</a></li><li class="lvl-2"><a href="#0-目标与非目标">0. 目标与非目标</a></li><li class="lvl-2"><a href="#1-自调查结论-接入前现状">1. 自调查结论（接入前现状）</a></li><li class="lvl-2"><a href="#2-处理流程">2. 处理流程</a></li><li class="lvl-2"><a href="#3-防呆-硬约束">3. 防呆（硬约束）</a></li><li class="lvl-2"><a href="#4-配置">4. 配置</a></li><li class="lvl-2"><a href="#5-示例">5. 示例</a></li><li class="lvl-2"><a href="#6-接口">6. 接口</a></li><li class="lvl-2"><a href="#7-边界-只新增预处理模块">7. 边界（只新增预处理模块）</a></li><li class="lvl-2"><a href="#8-落地检查清单">8. 落地检查清单</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-019 | 阶段: 设计 | 原路径: docs/03_DESIGN_设计/[DESIGN-ARCH-019] 用户输入预处理规范.md（新建） --&gt;</p>
+<h1 id="khyos-用户输入预处理规范-input-sanitization">khyos 用户输入预处理规范（Input Sanitization）<a class="anchor" href="#khyos-用户输入预处理规范-input-sanitization" aria-label="锚点">#</a></h1>
+<blockquote><p>版本 v1.0（2026-06-12）。本文定义 khyos 生态底座在<strong>把用户输入送入模型之前</strong>的<br>轻量预处理机制：清洗「乱输入」中的<strong>纯噪声</strong>（控制/零宽字符、乱码替换符、刷屏式<br>重复标点、过量空白/空行、连续重复行），以<strong>降低 token 消耗</strong>、提升模型对有效内容的<br>聚焦，同时<strong>绝不修改有效信息</strong>。</p>
+<p>关键词 <strong>必须 / 严禁 / 应 / 可</strong> 按 RFC 2119 语义。</p></blockquote>
+<hr>
+<h2 id="0-目标与非目标">0. 目标与非目标<a class="anchor" href="#0-目标与非目标" aria-label="锚点">#</a></h2>
+<p><strong>目标</strong></p>
+<ul><li><strong>减少 token 消耗</strong>：过滤刷屏、重复、不可见等纯噪声字符，只保留有效信息。</li><li><strong>正确处理乱输入</strong>：在送入模型前完成清洗 / 结构化 / 矫正，避免模型为无效内容付费。</li><li><strong>轻量集成</strong>：在输入流程的单一收敛点一行接入，<strong>不</strong>改提示词、<strong>不</strong>改模型调用逻辑、</li></ul>
+<p><strong>不</strong>破坏任何核心业务逻辑。</p>
+<p><strong>非目标</strong></p>
+<ul><li><strong>不</strong>做语义改写 / 翻译 / 摘要 / 纠错（那会改动有效信息，且需反向消耗模型 token）。</li><li><strong>不</strong>调用任何 LLM：本模块全部是<strong>确定性字符串变换</strong>，零模型、零网络、零外部依赖。</li><li><strong>不</strong>替代既有 <code>inputPurify</code>（表情/口头禅剥离）与 <code>inputPreprocessor</code>（股票代码/缩写</li></ul>
+<p>归一）；本模块<strong>互补</strong>它们，只负责它们都不处理的「乱输入噪声」一层。</p>
+<hr>
+<h2 id="1-自调查结论-接入前现状">1. 自调查结论（接入前现状）<a class="anchor" href="#1-自调查结论-接入前现状" aria-label="锚点">#</a></h2>
+<p>khyos 在用户输入到达模型前，已有两层与一处安全检查，但<strong>均不针对「乱输入」噪声</strong>：</p>
+<table><thead><tr><th>现有环节</th><th>位置</th><th>作用</th><th>缺口</th></tr></thead><tbody><tr><td><code>securityGuardService.analyzeInput</code></td><td><code>services/securityGuardService.js</code></td><td>安全/越权拦截</td><td>不处理噪声</td></tr><tr><td><code>khyUpgradeRuntime.inputPurify</code></td><td><code>services/khyUpgradeRuntime.js</code></td><td>剥离 emoji / 口头禅 / 客套</td><td>云端原生工具适配器下跳过；不处理重复标点/控制字符/重复行</td></tr><tr><td><code>inputPreprocessor.preprocess</code></td><td><code>services/inputPreprocessor.js</code></td><td>股票代码/缩写归一、trim</td><td>仅旧 <code>queryEngine</code> 全量启用，REPL 仅部分；不处理噪声字符</td></tr></tbody></table>
+<p><strong>结论</strong>：缺一层专门过滤「刷屏标点、控制/零宽字符、乱码替换符、过量空白/空行、<br>连续重复行」的轻量清洗。本规范新增 <code>inputSanitizer.js</code> 补齐，<strong>不改</strong>上述任一环节。</p>
+<hr>
+<h2 id="2-处理流程">2. 处理流程<a class="anchor" href="#2-处理流程" aria-label="锚点">#</a></h2>
+<p>收敛点：<code>cli/ai.js</code> 的 <code>chat()</code>，在<strong>去除指令（directive）之后、拼接多模态上下文<br>（promptAugment）之前</strong>，对<strong>用户原文</strong>调用一次 <code>sanitizeForModel()</code>。仅作用于用户原文，<br>不触及后续上下文、提示词与模型调用。</p>
+<pre><code>用户原文
+  └─ securityGuardService.analyzeInput   （安全拦截，既有，不改）
+  └─ directiveParser.stripDirectives     （指令剥离，既有，不改）
+  └─ inputSanitizer.sanitizeForModel  ◄── 本规范新增（一行接入，失败回退原文）
+  └─ + multimodalInput.promptAugment     （多模态上下文拼接，既有，不改）
+  └─ runtime.inputPurify                 （emoji/口头禅剥离，既有，不改）
+  └─ → 模型</code></pre>
+<p><code>sanitize()</code> 内部管线（纯函数，顺序固定，幂等）：</p>
+<pre><code>保护代码  → 清洗噪声字符 → 矫正(标点/可选字母折叠) → 结构化(空白/空行/重复行) → 还原代码
+(``` 与 `…`)  (控制/零宽/         (刷屏标点折叠)        (多空格→单、行尾、       (占位符
+  抽出占位符    替换符/异常空白)                          空行折叠、重复行去重)     原样放回)</code></pre>
+<p>三类处理对应任务诉求：</p>
+<ul><li><strong>清洗</strong>：删除控制字符（保留 <code>\n</code> <code>\t</code>）、零宽字符/BOM、<code>U+FFFD</code> 替换符；异常空白归一。</li><li><strong>矫正</strong>：折叠刷屏式重复标点（<code>！！！！！！！！！！</code> → <code>！！！</code>）；<strong>可选</strong>字母长串折叠。</li><li><strong>结构化</strong>：行内多空格→单空格、清行尾空白、连续空行折叠、连续重复行去重。</li></ul>
+<hr>
+<h2 id="3-防呆-硬约束">3. 防呆（硬约束）<a class="anchor" href="#3-防呆-硬约束" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>风险</th><th>对策</th></tr></thead><tbody><tr><td>改动有效信息</td><td><strong>字母与数字字符级内容一律不动</strong>；<code>数字串永不折叠</code>（避免 <code>10000000</code>→<code>1000</code>）；矫正只折叠<strong>标点/符号</strong>运行</td></tr><tr><td>破坏代码</td><td>``<code> </code>`<code>围栏</code>`<code> </code><code> 与 </code><code> </code>行内代码<code> </code>` 在清洗前抽出为私有区(PUA)占位符，清洗后<strong>原样还原</strong>，内部一字不改</td></tr><tr><td>处理后退化</td><td>结果变空 / 原文有有效内容(字母/数字/CJK)而结果全无 → <strong>回退原文</strong></td></tr><tr><td>处理异常</td><td>管线任何抛出 → <strong>回退原文</strong>；<code>sanitizeForModel</code> <strong>永不抛</strong>，最坏返回原字符串</td></tr><tr><td>误伤正常输入</td><td>阈值保守（标点连续 ≥4 才折叠、字母折叠默认<strong>关</strong>、空行上限 1）；正常输入零改动</td></tr><tr><td>极端开销</td><td>超长输入（默认 &gt;200000 字符）跳过，原样返回</td></tr><tr><td>误启用</td><td>主开关 <code>KHY_INPUT_SANITIZE=0</code> 可整体关闭；默认开但保守</td></tr></tbody></table>
+<p><strong>核心不变量</strong>：<code>sanitize</code> 只<strong>删除/折叠确定性噪声</strong>，绝不新增、改写、重排有效字符。<br>幂等：<code>sanitize(sanitize(x)) === sanitize(x)</code>。</p>
+<hr>
+<h2 id="4-配置">4. 配置<a class="anchor" href="#4-配置" aria-label="锚点">#</a></h2>
+<p>配置来源（优先级从低到高）：<code>DEFAULTS</code> ← JSON 文件 <code>getDataHome()/input_sanitizer.json</code><br>← 环境变量。任一步失败安全降级到上一层，绝不抛。</p>
+<table><thead><tr><th>配置项</th><th>默认</th><th>env 覆盖</th><th>说明</th></tr></thead><tbody><tr><td><code>enabled</code></td><td><code>true</code></td><td><code>KHY_INPUT_SANITIZE</code></td><td>主开关（0/false/off 关闭）</td></tr><tr><td><code>stripControlChars</code></td><td><code>true</code></td><td>—</td><td>删控制字符（保留 <code>\n</code> <code>\t</code>）</td></tr><tr><td><code>stripZeroWidth</code></td><td><code>true</code></td><td>—</td><td>删零宽字符/BOM/软连字符</td></tr><tr><td><code>stripReplacementChar</code></td><td><code>true</code></td><td>—</td><td>删 <code>U+FFFD</code> 乱码替换符</td></tr><tr><td><code>collapseWhitespace</code></td><td><code>true</code></td><td>—</td><td>行内多空格/制表符→单空格</td></tr><tr><td><code>maxBlankLines</code></td><td><code>1</code></td><td><code>KHY_INPUT_SANITIZE_MAX_BLANK_LINES</code></td><td>连续空行上限</td></tr><tr><td><code>collapsePunctRun</code></td><td><code>true</code></td><td>—</td><td>折叠刷屏标点</td></tr><tr><td><code>maxPunctRun</code></td><td><code>4</code></td><td><code>KHY_INPUT_SANITIZE_MAX_PUNCT_RUN</code></td><td>同一标点连续 ≥ 此数才折叠</td></tr><tr><td><code>punctRunKeep</code></td><td><code>3</code></td><td><code>KHY_INPUT_SANITIZE_PUNCT_KEEP</code></td><td>折叠后保留个数</td></tr><tr><td><code>collapseLetterRuns</code></td><td><code>false</code></td><td><code>KHY_INPUT_SANITIZE_LETTER_RUNS</code></td><td>字母长串折叠（默认关，保守）</td></tr><tr><td><code>maxLetterRun</code> / <code>letterRunKeep</code></td><td><code>8</code> / <code>3</code></td><td>—</td><td>字母折叠阈值/保留</td></tr><tr><td><code>dedupLines</code></td><td><code>true</code></td><td>—</td><td>连续重复行去重</td></tr><tr><td><code>maxLineRepeat</code> / <code>lineRepeatKeep</code></td><td><code>3</code> / <code>3</code></td><td><code>KHY_INPUT_SANITIZE_MAX_LINE_REPEAT</code></td><td>重复行阈值/保留</td></tr><tr><td><code>trimTrailingWs</code></td><td><code>true</code></td><td>—</td><td>行尾空白清除</td></tr><tr><td><code>maxInputChars</code></td><td><code>200000</code></td><td>—</td><td>超长跳过阈值</td></tr></tbody></table>
+<p>JSON 文件示例（<code>~/.khyquant/input_sanitizer.json</code>）：</p>
+<pre><code class="language-json">{ &quot;maxPunctRun&quot;: 3, &quot;collapseLetterRuns&quot;: true, &quot;maxBlankLines&quot;: 0 }</code></pre>
+<hr>
+<h2 id="5-示例">5. 示例<a class="anchor" href="#5-示例" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>输入（乱）</th><th>输出（净）</th><th>说明</th></tr></thead><tbody><tr><td><code>帮我分析下茅台！！！！！！！！！！谢谢？？？？？？</code></td><td><code>帮我分析下茅台！！！谢谢？？？</code></td><td>刷屏标点折叠</td></tr><tr><td><code>成本是10000000元对吧</code></td><td><code>成本是10000000元对吧</code></td><td><strong>数字永不折叠</strong></td></tr><tr><td><code>买入\n买入\n买入\n买入\n买入</code></td><td><code>买入\n买入\n买入</code></td><td>连续重复行去重</td></tr><tr><td><code>第一行\n\n\n\n\n第二行</code></td><td><code>第一行\n\n第二行</code></td><td>空行折叠</td></tr><tr><td><code>贵&lt;ZWSP&gt;州&lt;BOM&gt;茅台</code></td><td><code>贵州茅台</code></td><td>零宽/BOM 清除</td></tr><tr><td><code>请   帮我   查询</code></td><td><code>请 帮我 查询</code></td><td>行内空白归一</td></tr><tr><td>`<code>看这段\n</code>`<code>js\nconst x=1;;;;;;;;\n</code>````</td><td>（代码块原样保留）</td><td>代码保护，内部不动</td></tr><tr><td><code>请帮我查询贵州茅台今天的收盘价。</code></td><td>（不变）</td><td>正常输入零改动</td></tr></tbody></table>
+<hr>
+<h2 id="6-接口">6. 接口<a class="anchor" href="#6-接口" aria-label="锚点">#</a></h2>
+<pre><code class="language-js">const S = require('services/inputSanitizer');
+
+// 便捷接口（接入用）：返回可直接送模型的字符串，永不抛，回退即原文。
+const clean = S.sanitizeForModel(userText);                  // string
+S.sanitizeForModel(userText, { onStats: (r) =&gt; log(r.stats) }); // 可观测 token 节省
+
+// 完整接口（需要统计/原因时）：
+const r = S.sanitize(userText);
+// → { original, sanitized, changed, fellBack, reason,
+//     stats: { beforeChars, afterChars, savedChars, beforeTokens, afterTokens, savedTokens } }
+
+S.loadConfig(env?);  // 解析配置（DEFAULTS ← JSON ← env）
+S.DEFAULTS;          // 冻结的默认配置</code></pre>
+<p><code>reason</code> 取值：<code>disabled</code> / <code>empty</code> / <code>too-large</code> / <code>unchanged</code> / <code>sanitized</code> /<br><code>degenerate-empty</code>（退化回退）/ <code>essential-lost</code>（丢失有效内容回退）/ <code>error:&lt;msg&gt;</code>（异常回退）。</p>
+<hr>
+<h2 id="7-边界-只新增预处理模块">7. 边界（只新增预处理模块）<a class="anchor" href="#7-边界-只新增预处理模块" aria-label="锚点">#</a></h2>
+<ul><li><strong>新增</strong>：<code>services/backend/src/services/inputSanitizer.js</code>、对应测试。</li><li><strong>改动（仅一行接入）</strong>：<code>cli/ai.js chat()</code> 在 directive 剥离后、promptAugment 前</li></ul>
+<p>调用 <code>sanitizeForModel</code>，try/catch 回退原文。</p>
+<ul><li><strong>零改动</strong>：任何提示词、模型调用逻辑、<code>inputPurify</code>、<code>inputPreprocessor</code>、调度循环、业务算法。</li><li>集成点失败一律回退原文，<strong>严禁</strong>阻断主流程。</li></ul>
+<hr>
+<h2 id="8-落地检查清单">8. 落地检查清单<a class="anchor" href="#8-落地检查清单" aria-label="锚点">#</a></h2>
+<ul><li>[x] 纯规则、零模型、零外部依赖、幂等（§0/§3）</li><li>[x] 数字永不折叠、有效字符不改、代码块原样保护（§3）</li><li>[x] 任何异常/退化回退原文，<code>sanitizeForModel</code> 永不抛（§3）</li><li>[x] 阈值保守、正常输入零改动（§3/§5）</li><li>[x] env / JSON 可配置，主开关可整体关闭（§4）</li><li>[x] 单点一行接入，不改提示词与模型调用逻辑（§2/§7）</li><li>[x] token 统计可观测（§6）</li><li>[x] 测试覆盖 清洗/矫正/结构化/代码保护/回退/幂等/配置/统计（42 用例绿）</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-018] Agent提示词复用机制.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-018] khyos Agent 提示词复用机制</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-020] 架构债治理报告.html"><div class="dir">下一篇 →</div><div class="ttl">khyos 架构债治理报告（Architecture Debt Governance）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-019] 用户输入预处理规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

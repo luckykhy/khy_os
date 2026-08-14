@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git Workflow Skill · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>skills<span class="sep">›</span>devops<span class="sep">›</span>git-workflow<span class="sep">›</span>Git Workflow Skill</div>
+      <header class="hero reveal"><h1>Git Workflow Skill</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#git-workflow-skill">Git Workflow Skill</a></li><li class="lvl-2"><a href="#when-to-activate">When to Activate</a></li><li class="lvl-2"><a href="#workflow-patterns">Workflow Patterns</a></li><li class="lvl-3"><a href="#branch-naming-convention">Branch Naming Convention</a></li><li class="lvl-3"><a href="#commit-message-format">Commit Message Format</a></li><li class="lvl-3"><a href="#common-operations">Common Operations</a></li><li class="lvl-3"><a href="#ci-cd-integration">CI/CD Integration</a></li><li class="lvl-2"><a href="#safety-rules">Safety Rules</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: git-workflow<br>version: 1.0.0<br>description: Git workflow management — branching strategies, commit conventions, merge/rebase, conflict resolution, and CI/CD integration. Triggered for version control tasks.<br>layer: application<br>lifecycle: development<br>category: devops<br>tags: [git, workflow, branching, ci-cd, version-control]<br>platforms: [khy-quant, claude-code, cosh]<br>dependencies: []</p>
+<hr>
+<h1 id="git-workflow-skill">Git Workflow Skill<a class="anchor" href="#git-workflow-skill" aria-label="锚点">#</a></h1>
+<p>Version control best practices and workflow automation.</p>
+<h2 id="when-to-activate">When to Activate<a class="anchor" href="#when-to-activate" aria-label="锚点">#</a></h2>
+<ul><li>User asks about branching strategies</li><li>User needs help with merge conflicts</li><li>User wants to set up commit conventions</li><li>User asks about CI/CD integration</li><li>User mentions git rebase, cherry-pick, or bisect</li></ul>
+<h2 id="workflow-patterns">Workflow Patterns<a class="anchor" href="#workflow-patterns" aria-label="锚点">#</a></h2>
+<h3 id="branch-naming-convention">Branch Naming Convention<a class="anchor" href="#branch-naming-convention" aria-label="锚点">#</a></h3>
+<pre><code>feature/&lt;ticket-id&gt;-&lt;short-desc&gt;
+bugfix/&lt;ticket-id&gt;-&lt;short-desc&gt;
+hotfix/&lt;version&gt;-&lt;short-desc&gt;
+release/&lt;version&gt;</code></pre>
+<h3 id="commit-message-format">Commit Message Format<a class="anchor" href="#commit-message-format" aria-label="锚点">#</a></h3>
+<pre><code>&lt;type&gt;(&lt;scope&gt;): &lt;subject&gt;
+
+&lt;body&gt;
+
+&lt;footer&gt;</code></pre>
+<p>Types: feat, fix, docs, style, refactor, perf, test, chore, ci</p>
+<h3 id="common-operations">Common Operations<a class="anchor" href="#common-operations" aria-label="锚点">#</a></h3>
+<h4 id="feature-branch-workflow">Feature Branch Workflow<a class="anchor" href="#feature-branch-workflow" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash">git checkout -b feature/add-backtest-engine
+# ... work ...
+git add -p
+git commit -m &quot;feat(backtest): add multi-strategy engine&quot;
+git push -u origin feature/add-backtest-engine</code></pre>
+<h4 id="interactive-rebase-cleanup-before-merge">Interactive Rebase (cleanup before merge)<a class="anchor" href="#interactive-rebase-cleanup-before-merge" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash">git rebase -i HEAD~5
+# squash, reword, fixup as needed</code></pre>
+<h4 id="conflict-resolution">Conflict Resolution<a class="anchor" href="#conflict-resolution" aria-label="锚点">#</a></h4>
+<pre><code class="language-bash">git merge main
+# resolve conflicts in editor
+git add &lt;resolved-files&gt;
+git merge --continue</code></pre>
+<h3 id="ci-cd-integration">CI/CD Integration<a class="anchor" href="#ci-cd-integration" aria-label="锚点">#</a></h3>
+<ul><li>Pre-commit hooks: lint, format, type-check</li><li>Pre-push hooks: test suite</li><li>Branch protection: require reviews, passing CI</li></ul>
+<h2 id="safety-rules">Safety Rules<a class="anchor" href="#safety-rules" aria-label="锚点">#</a></h2>
+<ul><li>Never force-push to main/master without team agreement</li><li>Always back up branches before destructive rebases</li><li>Use <code>--dry-run</code> for large-scale operations</li><li>Prefer merge commits over squash for audit trails</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../services/backend/src/skills/built-in/verify/prompt.html"><div class="dir">← 上一篇</div><div class="ttl">Verify — Change Verification</div></a><a class="next" href="../../../../../../services/backend/src/skills/evals/README.html"><div class="dir">下一篇 →</div><div class="ttl">Skill Eval Baseline</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../";window.__KHY_CUR__="services/backend/src/skills/devops/git-workflow/SKILL.html";</script>
+<script src="../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

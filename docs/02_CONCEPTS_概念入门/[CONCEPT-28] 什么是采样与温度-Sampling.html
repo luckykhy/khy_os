@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>㉘ 什么是采样与温度（Sampling &amp; Temperature） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>02_CONCEPTS_概念入门<span class="sep">›</span>㉘ 什么是采样与温度（Sampling &amp; Temperature）</div>
+      <header class="hero reveal"><h1>㉘ 什么是采样与温度（Sampling &amp; Temperature）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#㉘-什么是采样与温度-sampling-temperature">㉘ 什么是采样与温度（Sampling &amp; Temperature）</a></li><li class="lvl-2"><a href="#一-一句话定义">一、一句话定义</a></li><li class="lvl-2"><a href="#二-为什么需要它-解开-为什么每次答得不一样">二、为什么需要它？——解开&quot;为什么每次答得不一样&quot;</a></li><li class="lvl-3"><a href="#层一-预测出来的-本就是-一堆词-各自的概率">层一：预测出来的，本就是&quot;一堆词 + 各自的概率&quot;</a></li><li class="lvl-3"><a href="#层二-从清单里挑-就得-掷一次骰子">层二：从清单里挑，就得&quot;掷一次骰子&quot;</a></li><li class="lvl-3"><a href="#层三-温度-决定这骰子有多-野">层三：温度，决定这骰子有多&quot;野&quot;</a></li><li class="lvl-2"><a href="#三-核心比喻-点菜的人-炒菜的火">三、核心比喻：点菜的人 &amp; 炒菜的火</a></li><li class="lvl-3"><a href="#比喻一-一个人怎么点菜">比喻一：一个人怎么点菜</a></li><li class="lvl-3"><a href="#比喻二-炒同一道菜的火候">比喻二：炒同一道菜的火候</a></li><li class="lvl-2"><a href="#四-温度-这个旋钮-拧高-vs-拧低-到底变了什么">四、&quot;温度&quot;这个旋钮：拧高 vs 拧低，到底变了什么</a></li><li class="lvl-2"><a href="#五-还有两个小旋钮-top-p-和-top-k-只在一小撮里掷骰子">五、还有两个小旋钮：top-p 和 top-k——&quot;只在一小撮里掷骰子&quot;</a></li><li class="lvl-2"><a href="#六-感觉一下-同一句话-三种-火候-下的三种续写">六、感觉一下：同一句话，三种&quot;火候&quot;下的三种续写</a></li><li class="lvl-2"><a href="#七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）</a></li><li class="lvl-3"><a href="#误区-1-以为-每次答得不一样-是-ai-出故障了">误区 1：以为&quot;每次答得不一样&quot;是 AI 出故障了</a></li><li class="lvl-3"><a href="#误区-2-以为温度越高-ai-越聪明">误区 2：以为温度越高 = AI 越聪明</a></li><li class="lvl-3"><a href="#误区-3-以为温度改变了模型-知道什么">误区 3：以为温度改变了模型&quot;知道什么&quot;</a></li><li class="lvl-3"><a href="#误区-4-以为温度-0-就-绝对唯一-100-可复现">误区 4：以为温度=0 就&quot;绝对唯一、100% 可复现&quot;</a></li><li class="lvl-3"><a href="#误区-5-以为温度是-高深参数-跟我这种小白没关系">误区 5：以为温度是&quot;高深参数,跟我这种小白没关系&quot;</a></li><li class="lvl-2"><a href="#八-动手小实验-思想实验">八、动手小实验 / 思想实验</a></li><li class="lvl-3"><a href="#实验一-找个能调温度的地方-问它同一个问题两遍">实验一：找个能调温度的地方，问它同一个问题两遍</a></li><li class="lvl-3"><a href="#实验二-你自己当一次-模型-体会掷骰子">实验二：你自己当一次&quot;模型&quot;,体会掷骰子</a></li><li class="lvl-2"><a href="#九-和其它概念的关系">九、和其它概念的关系</a></li><li class="lvl-2"><a href="#十-和-khy-os-的关系">十、和 Khy-OS 的关系</a></li><li class="lvl-2"><a href="#十一-小结-下一步">十一、小结 + 下一步</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="㉘-什么是采样与温度-sampling-temperature">㉘ 什么是采样与温度（Sampling &amp; Temperature）<a class="anchor" href="#㉘-什么是采样与温度-sampling-temperature" aria-label="锚点">#</a></h1>
+<blockquote><p>建议先读 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 什么是 LLM</a> 和 <a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ 什么是 Prompt</a>。那两篇讲了&quot;大模型的本事就是接龙——不停地预测下一个词&quot;，以及&quot;你给的提示词，决定它接什么样的龙&quot;。这一篇要回答一个几乎人人都好奇过的问题：<strong>同一个问题，我一字不差地问它两遍，它为什么每次答得都不完全一样？</strong> 明明是同一个模型、同一句话，怎么就&quot;薛定谔&quot;了？谜底，藏在两个词里——<strong>采样（Sampling）</strong> 和 <strong>温度（Temperature）</strong>。</p></blockquote>
+<hr>
+<h2 id="一-一句话定义">一、一句话定义<a class="anchor" href="#一-一句话定义" aria-label="锚点">#</a></h2>
+<p><strong>采样 = 大模型每预测一步，并不是&quot;锁死&quot;地挑那一个词，而是给一大堆候选词各打一个概率，然后按这些概率&quot;掷一次骰子&quot;，挑出一个词接上去。温度 = 控制这场&quot;掷骰子&quot;有多随机的一个旋钮——温度高，出手更随机、更敢冒险；温度低，出手更稳、更保守；温度≈0，几乎每次都死死咬住&quot;概率最高&quot;的那个词。</strong></p>
+<p>如果你只想记住一句话，就记这句：</p>
+<blockquote><p><strong>大模型接龙时，每一步都在一堆候选词里&quot;掷骰子&quot;选一个（这就是采样）；而&quot;温度&quot;就是那颗骰子的&quot;脾气&quot;——温度越高，骰子越野、越爱蹦出冷门；温度越低，骰子越乖、越只认那个最稳的点数。</strong></p></blockquote>
+<p>这一句话是整篇文档的骨架。后面所有的比喻、图、误区，都是在反复讲透这一句话。</p>
+<aside class="callout callout-ask reveal"><div class="callout-mascot" aria-hidden="true">🐥</div><div class="callout-body"><div class="callout-title">🙋 小白发问</div><p>你可能会问：&quot;它不是很聪明吗？那每一步直接挑'最好的那个词'不就得了，干嘛还要掷骰子、还要随机？&quot;——好问题！因为语言这东西，<strong>&quot;最高分的那个词&quot;并不总是最好的选择</strong>。如果每一步都死认最高分，它写出来的东西会<span class="popover" tabindex="0"><span class="popover-anchor">又干又硬、颠来倒去</span><span class="popover-tip" role="tooltip">温度压到最低时，模型容易陷进&quot;重复循环&quot;——同一句话翻来覆去说，因为它每步都选那个&quot;最安全&quot;的词，反而绕不出来</span></span>，像个背课文的木头人。留一点随机，它才会&quot;灵光一现&quot;，写出有血有肉、有点意外之喜的句子。所以这不是缺陷——<strong>是故意留的一点&quot;活气&quot;。</strong> 这一篇不用懂代码，抓住&quot;掷骰子&quot;和&quot;火候旋钮&quot;这两个画面就行～ 🐣</p></div></aside>
+<p>一句话摆清它和前几篇的关系：<strong><a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ LLM</a> 讲的是&quot;它靠接龙预测下一个词&quot;；这一篇讲的是&quot;预测出那一堆候选词之后，它到底怎么从中挑一个&quot;——采样与温度，就发生在每一步预测之后的那&quot;临门一挑&quot;。</strong></p>
+<hr>
+<h2 id="二-为什么需要它-解开-为什么每次答得不一样">二、为什么需要它？——解开&quot;为什么每次答得不一样&quot;<a class="anchor" href="#二-为什么需要它-解开-为什么每次答得不一样" aria-label="锚点">#</a></h2>
+<p>你一定遇到过：同一个问题问两遍，答案措辞不同、甚至角度都不同。很多人以为是&quot;AI 在偷懒&quot;或&quot;它记性不好&quot;，其实真相是：<strong>这是设计出来的，而且是好事。</strong> 原因有三层：</p>
+<h3 id="层一-预测出来的-本就是-一堆词-各自的概率">层一：预测出来的，本就是&quot;一堆词 + 各自的概率&quot;<a class="anchor" href="#层一-预测出来的-本就是-一堆词-各自的概率" aria-label="锚点">#</a></h3>
+<p>大模型每走一步，脑子里浮现的<strong>从来不是&quot;唯一答案&quot;</strong>，而是一整排候选词，每个都标着一个概率。比如接&quot;今天天气真&quot;，它心里是：<code>好(60%)</code>、<code>不错(25%)</code>、<code>糟(8%)</code>、<code>热(5%)</code>……<strong>它面对的是一张&quot;概率清单&quot;,而不是一个&quot;标准答案&quot;。</strong></p>
+<h3 id="层二-从清单里挑-就得-掷一次骰子">层二：从清单里挑，就得&quot;掷一次骰子&quot;<a class="anchor" href="#层二-从清单里挑-就得-掷一次骰子" aria-label="锚点">#</a></h3>
+<p>既然是概率清单，那到底挑哪个？<strong>按概率掷骰子。</strong> 概率高的词，被掷中的机会大；概率低的词，机会小但不是零。正因为是&quot;掷骰子&quot;，<strong>两次掷的结果就可能不同</strong>——这就是&quot;同一句话答得不一样&quot;的根源。</p>
+<h3 id="层三-温度-决定这骰子有多-野">层三：温度，决定这骰子有多&quot;野&quot;<a class="anchor" href="#层三-温度-决定这骰子有多-野" aria-label="锚点">#</a></h3>
+<p>同样一张概率清单，你可以让骰子&quot;很乖&quot;（几乎只认最高分），也可以让它&quot;很野&quot;（连冷门也常蹦出来）。<strong>这个调节骰子脾气的旋钮，就是温度。</strong> 它不改变模型的知识，只改变&quot;挑词时有多敢冒险&quot;。</p>
+<pre class="mermaid">flowchart LR
+  IN[&quot;🗣️ 接龙到一半：&lt;br/&gt;'今天天气真___'&quot;] --&gt; LIST[&quot;📋 候选词 + 概率&lt;br/&gt;好60% 不错25% 糟8% 热5%…&quot;]
+  LIST --&gt; DICE[&quot;🎲 按概率掷骰子&lt;br/&gt;（这就是采样）&quot;]
+  DICE --&gt; HOT[&quot;🔥 温度高：骰子野&lt;br/&gt;冷门也常被选中&quot;]
+  DICE --&gt; COLD[&quot;❄️ 温度低：骰子乖&lt;br/&gt;几乎只选最高分&quot;]
+  HOT --&gt; OUT[&quot;每次结果更多样&quot;]
+  COLD --&gt; OUT2[&quot;每次结果更雷同&quot;]</pre>
+<p><strong>所以&quot;每次不一样&quot;不是 bug，是采样在掷骰子。</strong> 想让它每次都一样？把温度压到近乎 0，让骰子&quot;乖&quot;到每次都咬死最高分——它就会变得高度确定（但也更死板）。这一点，正是下面要展开的。</p>
+<hr>
+<h2 id="三-核心比喻-点菜的人-炒菜的火">三、核心比喻：点菜的人 &amp; 炒菜的火<a class="anchor" href="#三-核心比喻-点菜的人-炒菜的火" aria-label="锚点">#</a></h2>
+<p>&quot;采样&quot;和&quot;温度&quot;听着像术语，用两个你天天遇到的画面就能焊死它。</p>
+<h3 id="比喻一-一个人怎么点菜">比喻一：一个人怎么点菜<a class="anchor" href="#比喻一-一个人怎么点菜" aria-label="锚点">#</a></h3>
+<p>想象你去一家常去的馆子点菜。<strong>低温的你</strong>，永远点那道招牌菜——稳，绝不出错，但吃一百次是同一个味。<strong>高温的你</strong>，常常&quot;今天试个新的&quot;——可能挖到宝（惊艳的新菜），也可能踩雷（难吃）。</p>
+<p><strong>&quot;候选菜单&quot;就是那张概率清单，&quot;点哪道&quot;就是采样。温度低=永远点招牌（稳、可预期）；温度高=爱尝新菜（有惊喜、也有风险）。</strong> 温度调的不是菜单，是你&quot;敢不敢换口味&quot;的胆量。</p>
+<h3 id="比喻二-炒同一道菜的火候">比喻二：炒同一道菜的火候<a class="anchor" href="#比喻二-炒同一道菜的火候" aria-label="锚点">#</a></h3>
+<p>同样一盘菜，<strong>火大</strong>（高温）：出锅快、镬气足、香得诱人，可一个不留神就<strong>糊了</strong>；<strong>火小</strong>（低温）：稳稳当当绝不烧焦，但味道也<strong>平淡寡味</strong>，四平八稳。</p>
+<p><strong>火候，就是温度。</strong> 火大出奇香也易翻车，火小保平安却少惊喜。<strong>没有&quot;绝对最好的火&quot;,只有&quot;配得上这道菜的火&quot;</strong>——炖汤要文火（低温求稳），爆炒要猛火（高温求香）。</p>
+<pre class="mermaid">flowchart TB
+  MENU[&quot;🍽️ 同一张菜单 / 同一道菜&lt;br/&gt;（模型的候选词 + 概率）&quot;]
+  MENU --&gt;|&quot;低温 = 点招牌 / 文火&quot;| LOW[&quot;🥘 稳、可预期、少惊喜&lt;br/&gt;（保守、偶尔死板重复）&quot;]
+  MENU --&gt;|&quot;高温 = 尝新菜 / 猛火&quot;| HIGH[&quot;🌶️ 多样、有创意、有惊喜&lt;br/&gt;（也更容易跑偏、翻车）&quot;]</pre>
+<p>两个比喻的<strong>共同内核</strong>：<strong>菜单（候选词的概率）是同一张，变的只是你&quot;挑的时候有多敢冒险&quot;这一个旋钮。</strong> 敢冒险=高温（活泼但易偏），求稳妥=低温（可靠但易板）。记住这一点，采样和温度是什么，就再也不会忘。</p>
+<hr>
+<h2 id="四-温度-这个旋钮-拧高-vs-拧低-到底变了什么">四、&quot;温度&quot;这个旋钮：拧高 vs 拧低，到底变了什么<a class="anchor" href="#四-温度-这个旋钮-拧高-vs-拧低-到底变了什么" aria-label="锚点">#</a></h2>
+<p>把温度想成一个从&quot;冷&quot;到&quot;热&quot;的旋钮。它<strong>不改变模型学到的知识，也不改变那张候选词清单</strong>——它只改变&quot;清单里高分词和低分词之间的差距被拉大还是抹平&quot;。</p>
+<div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">🤔 猜猜看：把 temperature（温度）拧高、拧低，输出会往哪两个极端跑？<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">✅ 拧低（→0，冷）：确定、保守、几乎每次一样、可复现，但易死板；拧高（→大，热）：随机、发散、有创意有惊喜，但易跑题胡说。0 近乎贪心咬死最高分词，1+ 更敢蹦冷门词。它是&quot;冒险旋钮&quot;，不是&quot;聪明旋钮&quot;。</div></div></div>
+<ul><li><strong>拧低（温度→0，&quot;冷&quot;）</strong>：把高分词和低分词的差距<strong>拉得极大</strong>，高分那个几乎&quot;一家独大&quot;。于是每一步都近乎咬死概率最高的词——输出<strong>高度确定、几乎每次一样、稳、保守</strong>，但也容易<strong>死板、单调，甚至卡进重复循环</strong>。</li><li><strong>拧高（温度→大，&quot;热&quot;）</strong>：把高分和低分之间的差距<strong>抹平</strong>，冷门词也能常被选中。于是输出<strong>更随机、更多样、更有创意和惊喜</strong>，但也更容易<strong>跑题、胡说、前言不搭后语</strong>。</li></ul>
+<table><thead><tr><th>温度</th><th>骰子的脾气</th><th>输出特点</th><th>适合什么活</th></tr></thead><tbody><tr><td><strong>≈0（很冷）</strong></td><td>几乎只认最高分</td><td>极稳、几乎每次一样、可能死板</td><td>要&quot;准&quot;的活：算数、抽取事实、写规范代码</td></tr><tr><td><strong>中等（温）</strong></td><td>高分为主，偶有变化</td><td>稳中带活、通顺又不呆板</td><td>日常问答、写邮件、大多数场景</td></tr><tr><td><strong>高（很热）</strong></td><td>冷门也常蹦出来</td><td>天马行空、有创意、也易跑偏</td><td>要&quot;奇&quot;的活：头脑风暴、写诗、起名</td></tr></tbody></table>
+<aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 一句话点睛</div><p>温度最反直觉的一点：<strong>它不是&quot;聪明旋钮&quot;,不是拧高就更聪明、拧低就更笨。</strong> 它是&quot;冒险旋钮&quot;——拧高更敢出冷门（活泼但易翻车），拧低更保守（可靠但易死板）。<strong>没有一个万能的&quot;最佳温度&quot;,只有&quot;配得上这件活&quot;的温度</strong>：求真求准的活压低火，求奇求新的活纵高火。调温度的智慧，全在&quot;看菜下火&quot;这四个字。</p></div></aside>
+<hr>
+<h2 id="五-还有两个小旋钮-top-p-和-top-k-只在一小撮里掷骰子">五、还有两个小旋钮：top-p 和 top-k——&quot;只在一小撮里掷骰子&quot;<a class="anchor" href="#五-还有两个小旋钮-top-p-和-top-k-只在一小撮里掷骰子" aria-label="锚点">#</a></h2>
+<p>温度调的是&quot;骰子有多野&quot;，但还有一个问题：<strong>那张候选清单的尾巴上，趴着一大堆概率极低的&quot;馊词&quot;</strong>（八竿子打不着的词）。就算温度不高，万一手滑掷中一个，句子就崩了。怎么办？<strong>干脆先把这些&quot;馊词&quot;从骰盅里拿掉，只在靠谱的一小撮里掷。</strong> 这就是 top-p 和 top-k 干的事：</p>
+<ul><li><strong>top-k</strong>：只保留概率<strong>最高的前 k 个</strong>候选词（比如只留前 20 个），其余全部扔掉，只在这 k 个里掷骰子。</li><li><strong>top-p</strong>：从高到低把候选词的概率<strong>累加</strong>，加到够 p（比如 90%）就打住，只在这&quot;头部一小撮&quot;里掷骰子。</li></ul>
+<p><strong>你完全不用记住它俩的区别。</strong> 只要抓住一个直觉：<strong>它们都是&quot;掷骰子之前，先把明显不靠谱的冷门候选踢出去,只在靠谱的一小撮里选&quot;</strong>——相当于给&quot;敢冒险&quot;上了个保险，让高温也不至于蹦出彻底离谱的词。</p>
+<pre class="mermaid">flowchart LR
+  ALL[&quot;📋 全部候选词&lt;br/&gt;（含长尾一堆'馊词'）&quot;] --&gt; CUT[&quot;✂️ top-p / top-k&lt;br/&gt;踢掉不靠谱的长尾&quot;]
+  CUT --&gt; SMALL[&quot;🎯 只剩靠谱的一小撮&quot;]
+  SMALL --&gt; DICE[&quot;🎲 在这一小撮里&lt;br/&gt;按温度掷骰子&quot;]
+  DICE --&gt; WORD[&quot;✅ 选出下一个词&quot;]</pre>
+<p>一句话收束：<strong>温度管&quot;骰子多野&quot;，top-p/top-k 管&quot;骰盅里留哪些词&quot;——两个旋钮配合，才能既有活气、又不至于胡来。</strong></p>
+<hr>
+<h2 id="六-感觉一下-同一句话-三种-火候-下的三种续写">六、感觉一下：同一句话，三种&quot;火候&quot;下的三种续写<a class="anchor" href="#六-感觉一下-同一句话-三种-火候-下的三种续写" aria-label="锚点">#</a></h2>
+<p><strong>⚠️ 郑重提醒：下面这段你完全不用会写。</strong> 放它在这，只是让你<strong>亲眼看一眼</strong>——同一个开头&quot;从前有座山，&quot;，在低温、中温、高温三种火候下，模型会怎么&quot;掷骰子&quot;接下去。请只体会那个<strong>火候变了、续写的&quot;稳与野&quot;就跟着变</strong>的感觉：</p>
+<pre><code class="language-text">🙋 你给的开头都一样：「从前有座山，」
+
+❄️ 低温（温度≈0，骰子乖到只咬最高分）
+   → 「山上有座庙，庙里有个老和尚。」
+   → 再问一遍：「山上有座庙，庙里有个老和尚。」
+   → 再问一遍：「山上有座庙，庙里有个老和尚。」
+   （几乎每次一模一样——稳，但也最没惊喜）
+
+🌤️ 中温（温度适中，高分为主、偶有变化）
+   → 「山上住着一位采药的老人。」
+   → 再问一遍：「山中云雾缭绕，藏着一座古庙。」
+   （通顺、可靠，又不至于每次雷同）
+
+🔥 高温（温度很高，冷门也常蹦出来）
+   → 「山会在月圆之夜轻轻挪动，去追赶远方的海。」
+   → 再问一遍：「山顶坐着一只不肯下山的旧时光。」
+   （天马行空、有神来之笔——也更容易跑偏、甚至不知所云）</code></pre>
+<p>看到了吗？<strong>开头一字没变、模型也没变，变的只有那一个&quot;温度&quot;旋钮。</strong> 火弱则四平八稳、滴水不漏却了无新意；火旺则天马行空、常有妙笔也常有荒腔走板。<strong>&quot;每次答得不一样&quot;的谜底，全在这颗骰子的火候里。</strong></p>
+<p>把这场&quot;同一句开头、三种火候&quot;演成一幕小短剧——重点看模型没变、开头没变，只拧了温度这一颗旋钮，续写的稳与野就天差地别：</p>
+<div class="scene"><div class="scene-title">三种火候：同一句「从前有座山」，掷出三种续写</div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>都给同一个开头：「从前有座山，」——分别用低温、中温、高温各续一句。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">❄️</span><div class="scene-bubble"><b class="scene-who">低温模型</b>山上有座庙，庙里有个老和尚。（再问一遍还是这句，再问还是——稳，但最没惊喜）</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🙂</span><div class="scene-bubble"><b class="scene-who">旁白</b>温度≈0，骰子乖到只咬最高分的那个词，几乎每次一模一样。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🌤️</span><div class="scene-bubble"><b class="scene-who">中温模型</b>山上住着一位采药的老人。（再问一遍：山中云雾缭绕，藏着一座古庙）</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">🙂</span><div class="scene-bubble"><b class="scene-who">旁白</b>温度适中，高分为主、偶有变化——通顺可靠，又不至于每次雷同。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🔥</span><div class="scene-bubble"><b class="scene-who">高温模型</b>山会在月圆之夜轻轻挪动，去追赶远方的海。（再问：山顶坐着一只不肯下山的旧时光）</div></div><div class="scene-panel scene-left reveal"><span class="scene-avatar" aria-hidden="true">😲</span><div class="scene-bubble"><b class="scene-who">旁白</b>温度很高，冷门词也常蹦出来——有神来之笔，也更容易跑偏、甚至不知所云。</div></div><div class="scene-panel scene-right reveal"><span class="scene-avatar" aria-hidden="true">🧑</span><div class="scene-bubble"><b class="scene-who">你</b>我懂了：模型和开头都没动，变的只有 <span class="popover" tabindex="0"><span class="popover-anchor">那颗骰子的火候</span><span class="popover-tip" role="tooltip">温度就是控制&quot;掷骰子有多野&quot;的旋钮——低温=稳定复现、高温=天马行空，这就是&quot;每次答得不一样&quot;的谜底</span></span>。</div></div><div class="scene-caption reveal">火弱四平八稳、火旺天马行空——&quot;每次答得不一样&quot;的谜底，全在这颗骰子的火候里。</div></div>
+<hr>
+<h2 id="七-常见误区-新手最容易踩的坑">七、常见误区（新手最容易踩的坑）<a class="anchor" href="#七-常见误区-新手最容易踩的坑" aria-label="锚点">#</a></h2>
+<p>这一节请务必逐条读完。这些误解会让你对&quot;采样与温度&quot;的理解跑偏。</p>
+<h3 id="误区-1-以为-每次答得不一样-是-ai-出故障了">误区 1：以为&quot;每次答得不一样&quot;是 AI 出故障了<a class="anchor" href="#误区-1-以为-每次答得不一样-是-ai-出故障了" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：同一句话问两遍答案不同，肯定是它不稳定、出 bug 了。</li><li>✅ <strong>正确理解</strong>：<strong>这是采样在&quot;掷骰子&quot;的正常结果，是设计出来的。</strong> 模型每步面对的是一张概率清单，按概率随机挑一个，两次自然可能不同。想让它每次一样，把温度压到近乎 0 即可——但那样会更死板。<strong>&quot;不一样&quot;是活气，不是故障。</strong></li></ul>
+<h3 id="误区-2-以为温度越高-ai-越聪明">误区 2：以为温度越高 = AI 越聪明<a class="anchor" href="#误区-2-以为温度越高-ai-越聪明" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：温度是不是拧得越高，模型就越有本事、越聪明？</li><li>✅ <strong>正确理解</strong>：<strong>温度不是&quot;聪明旋钮&quot;,是&quot;冒险旋钮&quot;。</strong> 拧高只是让它更敢选冷门词——更有创意，但也更容易跑偏、胡说。拧低更保守可靠，但易死板。<strong>高低无关聪明，只关&quot;稳还是野&quot;，得看你要干什么活。</strong></li></ul>
+<h3 id="误区-3-以为温度改变了模型-知道什么">误区 3：以为温度改变了模型&quot;知道什么&quot;<a class="anchor" href="#误区-3-以为温度改变了模型-知道什么" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：调高温度，是不是让模型&quot;想起&quot;更多知识、懂得更多？</li><li>✅ <strong>正确理解</strong>：<strong>温度一个字的知识都不改。</strong> 那张候选词清单（模型知道什么、每个词多大概率）是它训练好就定死的。温度只调&quot;挑词时高分和低分的差距被拉大还是抹平&quot;——<strong>变的是挑法，不是学识。</strong></li></ul>
+<h3 id="误区-4-以为温度-0-就-绝对唯一-100-可复现">误区 4：以为温度=0 就&quot;绝对唯一、100% 可复现&quot;<a class="anchor" href="#误区-4-以为温度-0-就-绝对唯一-100-可复现" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：把温度设成 0，那它就永远、绝对每次一模一样了吧？</li><li>✅ <strong>正确理解</strong>：<strong>温度≈0 只是让它&quot;近乎&quot;每次都挑最高分</strong>，确定性极高，但工程上仍可能受别的因素（并行计算的微小差异等）影响，不保证在所有环境下逐字节完全一致。<strong>方向没错——低温更确定——但别把它当成&quot;绝对唯一&quot;的铁律。</strong></li></ul>
+<h3 id="误区-5-以为温度是-高深参数-跟我这种小白没关系">误区 5：以为温度是&quot;高深参数,跟我这种小白没关系&quot;<a class="anchor" href="#误区-5-以为温度是-高深参数-跟我这种小白没关系" aria-label="锚点">#</a></h3>
+<ul><li>❌ <strong>错误理解</strong>：采样、温度、top-p 听着好技术，那是调模型的人才碰的，跟我没关系。</li><li>✅ <strong>正确理解</strong>：<strong>它离你很近。</strong> 你觉得 AI &quot;有时一本正经、有时天马行空&quot;，背后就是温度在起作用；很多工具都让你调它。理解了温度，你就能<strong>主动选火候</strong>——要它严谨就压火，要它有创意就纵火。<strong>这是你能亲手拧的一个实用旋钮，不是空中楼阁。</strong></li></ul>
+<div class="quiz reveal" data-multi="1"><div class="quiz-q">🧠 下面关于&quot;采样与温度&quot;的说法，哪些是对的？（多选）</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">大模型每一步是在一堆候选词里&quot;按概率掷骰子&quot;挑一个，这叫采样</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">B</span><span class="quiz-text">温度低更确定、更稳、更保守，温度≈0 时近乎每次都挑概率最高的词</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">温度越高，说明 AI 越聪明、懂得越多</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">同一句话每次答得不一样，说明模型坏了、不稳定</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">E</span><span class="quiz-text">top-p / top-k 的作用是&quot;掷骰子前先踢掉不靠谱的冷门候选，只在一小撮里选&quot;</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 对。它预测出的是一张&quot;候选词+概率&quot;的清单，再按概率随机挑一个接上去——这就是&quot;每次可能不一样&quot;的根源。<br>对。低温把高分词和低分词差距拉大，几乎咬死最高分，输出高度确定但也容易死板。<br>错。温度是&quot;冒险旋钮&quot;不是&quot;聪明旋钮&quot;，它一个字的知识都不改，只改变挑词时敢不敢选冷门。<br>错。那是采样掷骰子的正常结果，是设计出来的&quot;活气&quot;。想每次一样就把温度压到近乎 0。<br>对。它们给&quot;敢冒险&quot;上了个保险，让高温也不至于蹦出彻底离谱的词。</div></div>
+<hr>
+<h2 id="八-动手小实验-思想实验">八、动手小实验 / 思想实验<a class="anchor" href="#八-动手小实验-思想实验" aria-label="锚点">#</a></h2>
+<p>理论看再多，不如亲手（或在脑子里）走一遍。下面两个实验，一个能真做、一个纯用想。</p>
+<h3 id="实验一-找个能调温度的地方-问它同一个问题两遍">实验一：找个能调温度的地方，问它同一个问题两遍<a class="anchor" href="#实验一-找个能调温度的地方-问它同一个问题两遍" aria-label="锚点">#</a></h3>
+<p>很多 AI 工具/游乐场里有&quot;温度（Temperature）&quot;这个滑杆。试试：把温度<strong>调到很低</strong>，让它&quot;给我起 5 个奶茶店的名字&quot;，连问两遍——你会发现两次结果高度相似、四平八稳。再把温度<strong>调到很高</strong>，同样连问两遍——名字会天马行空、脑洞大开，两次也差得远（偶尔还会蹦出个不知所云的）。<strong>你会亲眼看到：火候一变，稳与野立刻跟着变。</strong></p>
+<h3 id="实验二-你自己当一次-模型-体会掷骰子">实验二：你自己当一次&quot;模型&quot;,体会掷骰子<a class="anchor" href="#实验二-你自己当一次-模型-体会掷骰子" aria-label="锚点">#</a></h3>
+<p>给自己一个开头：&quot;周末我想去____。&quot; 现在你脑子里冒出一串候选：<code>公园(很想)</code>、<code>看电影(挺想)</code>、<code>爬山(还行)</code>、<code>蹦极(想都没敢想)</code>。</p>
+<pre class="mermaid">flowchart TB
+  START[&quot;🗣️ 开头：'周末我想去___'&quot;]
+  START --&gt; CAND[&quot;🧠 候选 + 你的偏好&lt;br/&gt;公园(高) 看电影(中) 爬山(低) 蹦极(极低)&quot;]
+  CAND --&gt;|&quot;低温：只选最想的&quot;| L[&quot;🏞️ 永远填'公园'&lt;br/&gt;（稳，但每周都一样）&quot;]
+  CAND --&gt;|&quot;高温：偶尔纵容自己&quot;| H[&quot;🪂 有时蹦出'蹦极'&lt;br/&gt;（有惊喜，也可能踩雷）&quot;]</pre>
+<p>请你回答自己两个问题：</p>
+<ol><li>如果你<strong>每次都只填&quot;最想去&quot;的那个（公园）</strong>，结果会怎样？——<strong>每周都一样，稳当，但也无聊、没惊喜。这就是&quot;低温&quot;。</strong></li><li>如果你<strong>偶尔纵容自己去试&quot;蹦极&quot;</strong>呢？——<strong>周末可能超级难忘，也可能后悔踩雷。这就是&quot;高温&quot;。</strong></li></ol>
+<p><strong>关键体会</strong>：你刚刚亲自&quot;采样&quot;了一回。你会发现，采样和温度一点都不神秘——<strong>它就是你做选择时天然会用的智慧</strong>：想稳就认那个最优选（低温），想有惊喜就给冷门一点机会（高温）。把这份人人都懂的分寸交给模型，就是&quot;采样与温度&quot;。</p>
+<hr>
+<h2 id="九-和其它概念的关系">九、和其它概念的关系<a class="anchor" href="#九-和其它概念的关系" aria-label="锚点">#</a></h2>
+<p>采样与温度，是&quot;接龙预测&quot;这条链上、<strong>最后临门一挑</strong>的那个环节。</p>
+<pre class="mermaid">flowchart TB
+  LLM[&quot;⑥ LLM&lt;br/&gt;（接龙：预测下一个词）&quot;]
+  PRED[&quot;🧠 每步产出：候选词 + 概率清单&quot;]
+  SAMP[&quot;㉘ 采样&lt;br/&gt;（按概率掷骰子挑一个）&quot;]
+  TEMP[&quot;🌡️ 温度&lt;br/&gt;（调骰子多野：稳 or 奇）&quot;]
+  TOPP[&quot;🎯 top-p / top-k&lt;br/&gt;（先踢掉不靠谱的冷门）&quot;]
+  PROMPT[&quot;⑦ Prompt&lt;br/&gt;（你给的开头，决定候选清单长啥样）&quot;]
+  LLM --&gt; PRED
+  PROMPT --&gt;|&quot;影响&quot;| PRED
+  PRED --&gt; TOPP
+  TOPP --&gt; SAMP
+  TEMP --&gt;|&quot;调节&quot;| SAMP
+  SAMP --&gt; LLM</pre>
+<table><thead><tr><th>概念</th><th>一句话关系</th><th>类比</th></tr></thead><tbody><tr><td><a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 什么是 LLM</a></td><td>LLM 的本事是<strong>接龙预测下一个词</strong>；采样就发生在<strong>每一步预测之后</strong>的&quot;临门一挑&quot;</td><td>接龙到一半，该轮到&quot;掷骰子选字&quot;了</td></tr><tr><td><a href="./[CONCEPT-07]%20什么是Prompt-提示词.html">⑦ 什么是 Prompt</a></td><td>你给的 <strong>Prompt</strong> 会影响每一步&quot;候选清单&quot;长什么样，采样再从这张清单里挑</td><td>你出的上半句，决定了下半句能接哪些字</td></tr><tr><td><a href="./[CONCEPT-08]%20什么是Context与Token-上下文与令牌.html">⑧ Context 与 Token</a></td><td>采样挑出的其实是一个个 <strong>Token</strong>，一步步拼成完整回答</td><td>掷一次骰子拼一块积木，块块相连成句</td></tr><tr><td><a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 什么是深度学习</a></td><td>那张&quot;候选词的概率清单&quot;是<strong>深度学习</strong>训练出来的；温度只调挑法、不改它学到的东西</td><td>学识是练出来的，火候是临场拧的</td></tr><tr><td><a href="./[CONCEPT-27]%20什么是多模态-Multimodal.html">㉗ 什么是多模态</a></td><td>就算输入是图、是声音，模型<strong>生成回答</strong>那一刻，照样在做采样与调温</td><td>无论看的听的，开口时都要&quot;掷骰子选字&quot;</td></tr></tbody></table>
+<p>一句话串起来：<strong>LLM 靠接龙预测下一个词，每一步先由 Prompt 和它的学识（深度学习练出的）产出一张&quot;候选词概率清单&quot;,再由 top-p/top-k 踢掉冷门、由温度定下&quot;骰子多野&quot;,最后采样掷骰子挑出一个 Token——如此一步步，拼出你看到的整段回答。</strong></p>
+<hr>
+<h2 id="十-和-khy-os-的关系">十、和 Khy-OS 的关系<a class="anchor" href="#十-和-khy-os-的关系" aria-label="锚点">#</a></h2>
+<p>这一节和你手上的项目关系很实在：</p>
+<p><strong>你在 Khy-OS 里觉得 AI &quot;有时严谨得像法官、有时活泼得像诗人&quot;,背后正是采样与温度在起作用。</strong></p>
+<p>Khy-OS 作为一个成熟的 <a href="./[CONCEPT-16]%20什么是Harness-智能体运行骨架.html">harness</a>，在不同场景下，本就该给模型配不同的&quot;火候&quot;：</p>
+<ul><li><strong>需要&quot;准&quot;的活</strong>（比如生成要能跑的代码、抽取一个确切的字段、做严谨的判断）——就该<strong>压低温度求稳</strong>，让它咬住最靠谱的选择，别天马行空；</li><li><strong>需要&quot;奇&quot;的活</strong>（比如头脑风暴、给方案起名、写点活泼的文案）——就该<strong>适当纵火</strong>，让它多来点创意和惊喜。</li></ul>
+<p>这也解释了一个你可能纳闷的现象：<strong>为什么让它&quot;改代码&quot;时它很稳、很少乱来，而让它&quot;想点子&quot;时又天马行空？</strong> ——不是它&quot;人格分裂&quot;，而是<strong>看菜下火</strong>：该稳的活压低了温度，该活的活放开了火候。</p>
+<p>而这，恰恰呼应了 Khy-OS 章程里 <strong>B2&quot;目标驱动、每步可验证&quot;</strong> 的纪律：<strong>要交付能通过验证的确定结果，就不能让骰子太野。</strong> 越是&quot;红灯会亮、错了就停&quot;的关键环节，越需要低温求稳、求可复现——把那颗骰子，牢牢按在&quot;最靠谱&quot;的那个点数上。</p>
+<blockquote><p>💡 换个角度说：<strong>学会&quot;采样与温度&quot;,你就摸到了 AI 的&quot;性格开关&quot;。</strong> 从此你不再觉得它&quot;忽冷忽热、捉摸不定&quot;——你知道那只是一个旋钮在动。要它靠谱就压火，要它有灵气就纵火。<strong>这份&quot;看菜下火&quot;的分寸感，会让你从&quot;被 AI 的随机吓一跳&quot;,变成&quot;主动拿捏 AI 的火候&quot;。</strong></p></blockquote>
+<blockquote><p>⚠️ 诚实说一句边界：温度、top-p、top-k 具体设成多少最合适，<strong>没有放之四海皆准的数字</strong>，要看模型、看任务、看你想要的效果，得靠试。各家默认值也不同、还在演进。本文只讲&quot;采样与温度是什么、那颗旋钮拧高拧低会怎样&quot;这一层概念地图；具体调参属于实践与调优层面。</p></blockquote>
+<hr>
+<h2 id="十一-小结-下一步">十一、小结 + 下一步<a class="anchor" href="#十一-小结-下一步" aria-label="锚点">#</a></h2>
+<ul><li><strong>采样 = 大模型每一步在&quot;候选词+概率&quot;清单里&quot;按概率掷骰子&quot;挑一个词接上去</strong>——这就是&quot;同一句话每次答得不完全一样&quot;的根源。</li><li><strong>温度 = 调节这颗骰子有多随机的旋钮</strong>：高温更随机、更有创意也更易跑偏；低温更稳、更保守也更易死板；温度≈0 近乎每次都挑概率最高的词（最确定）。</li><li><strong>核心比喻</strong>：<strong>点菜</strong>（低温永远点招牌、高温爱尝新菜）、<strong>炒菜火候</strong>（火大出香也易糊、火小稳当却平淡）——变的只是&quot;敢不敢冒险&quot;这一个旋钮。</li><li><strong>温度改的是&quot;挑法&quot;,不是&quot;学识&quot;</strong>：它不改变模型知道什么，只改变高分词和低分词的差距被拉大还是抹平。</li><li><strong>top-p / top-k</strong>：掷骰子前先踢掉不靠谱的长尾冷门，只在靠谱的一小撮里选——给&quot;敢冒险&quot;上个保险。</li><li><strong>五大误区</strong>：不一样不是故障（是活气）、高温≠更聪明（是更爱冒险）、温度不改学识（只改挑法）、温度=0 是&quot;近乎&quot;确定非&quot;绝对唯一&quot;、它离你很近是你能拧的实用旋钮。</li><li><strong>和 Khy-OS 的关系</strong>：求准的活压低火求稳、求奇的活纵火求创意；越是&quot;验证会亮红灯&quot;的关键环节，越要低温求可复现——正合章程 B2 的纪律。</li></ul>
+<p>🎉 <strong>恭喜，你把 AI 的&quot;随机之谜&quot;彻底看穿了！</strong> 从此&quot;它为什么每次答得不一样&quot;再也难不倒你——你知道那是一颗骰子，而你手里，就攥着那个叫&quot;温度&quot;的火候旋钮。</p>
+<p>👈 回 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a> 看看还有哪些能温故知新。</p>
+<p>👈 上一篇 <a href="./[CONCEPT-27]%20什么是多模态-Multimodal.html">㉗ 什么是多模态</a>——回顾&quot;让 AI 眼耳口鼻齐全地懂世界&quot;。</p>
+<p>👉 概念篇的&quot;算法底子&quot;到这里就全了！接下来 <a href="./[CONCEPT-29]%20什么是API与SDK.html">㉙ 什么是 API 与 SDK</a> 起，是三篇更贴近&quot;你真正开始动手&quot;的实战篇——接入、辨析、避坑。想换种轻松方式把概念再过一遍？也可以去看 <a href="../09_STORY_修仙学AI/00_INDEX_修仙学AI-总目录.html">修仙学 AI 的故事</a>——把这些概念全编成了练功升级的江湖故事。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-27] 什么是多模态-Multimodal.html"><div class="dir">← 上一篇</div><div class="ttl">㉗ 什么是多模态（Multimodal）</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/[CONCEPT-29] 什么是API与SDK.html"><div class="dir">下一篇 →</div><div class="ttl">㉙ 什么是 API 与 SDK</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/02_CONCEPTS_概念入门/[CONCEPT-28] 什么是采样与温度-Sampling.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

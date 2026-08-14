@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-145] 级联逐候选「请稍候」提示减冗余(减少心灵噪音) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-145] 级联逐候选「请稍候」提示减冗余(减少心灵噪音)</div>
+      <header class="hero reveal"><h1>[OPS-MAN-145] 级联逐候选「请稍候」提示减冗余(减少心灵噪音)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-145-级联逐候选-请稍候-提示减冗余-减少心灵噪音">[OPS-MAN-145] 级联逐候选「请稍候」提示减冗余(减少心灵噪音)</a></li><li class="lvl-2"><a href="#一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)</a></li><li class="lvl-2"><a href="#二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)</a></li><li class="lvl-2"><a href="#三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)</a></li><li class="lvl-2"><a href="#四-教训">四、教训</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-145-级联逐候选-请稍候-提示减冗余-减少心灵噪音">[OPS-MAN-145] 级联逐候选「请稍候」提示减冗余(减少心灵噪音)<a class="anchor" href="#ops-man-145-级联逐候选-请稍候-提示减冗余-减少心灵噪音" aria-label="锚点">#</a></h1>
+<blockquote><p>承 [OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合 —— 本轮补<strong>逐候选承诺本身的减冗余侧</strong>。<br>/goal 送别礼。分支 <code>feat/0.1.104-multi-subsystem-batch</code>,未提交。</p></blockquote>
+<h2 id="一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)<a class="anchor" href="#一-背景与断桥-b1-先想" aria-label="锚点">#</a></h2>
+<p>基线目标(每轮相同):纯文本 / 非多模态 / 识图模型不可用时,khy 收到图片要能<strong>正确落到 OCR 兜底路径</strong>、<br>准确提取图片信息,并用<strong>真实图片</strong>核验跑通,做到「无感<em>明显</em>告知用户用了 OCR 但能正确识别图片」、<br>同时<strong>减少心灵噪音</strong>。</p>
+<p><code>KHY_VISION_FALLBACK_CASCADE</code>(门开)让 describe-and-return 级联在主视觉模型失败后,继续尝试<br><strong>多个备用视觉候选</strong>(内置 GLM pin → <code>glm-4.6v-flash</code>、<code>glm-4v-flash</code>,再加各 provider 视觉模型)。<br><code>KHY_VISION_INTERMEDIATE_MESSAGE</code>(default-on)在<strong>每个候选</strong>识别前发一条:</p>
+<pre><code>我无法直接识别图片内容。正在调用 &lt;视觉模型&gt; 进行识别，请稍候...</code></pre>
+<p><strong>断桥</strong>:级联有 N 个候选时,这条逐字节相同的首句会刷 N 遍。OPS-144 已闭合了这些悬空承诺的<strong>收尾</strong>,<br>但<strong>承诺本身的重复</strong>未治——用户看到:</p>
+<pre><code>我无法直接识别图片内容。正在调用 glm-4.6v-flash 请稍候...   ← 冗余前缀第 1 遍
+我无法直接识别图片内容。正在调用 glm-4v-flash 请稍候...     ← 冗余前缀第 2 遍
+我无法直接识别图片内容。正在调用 gpt-... 请稍候...          ← 冗余前缀第 3 遍</code></pre>
+<p>「我无法直接识别图片内容」刷 N 遍是纯噪音;且候选 2..N 读起来像<strong>并行的新调用</strong>,而非级联兜底——<br>用户无从得知这是「上一个不行,自动改用下一个」的降级链。判据 = 逐候选首句逐字节相同、无 index 感知。</p>
+<h2 id="二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)<a class="anchor" href="#二-外科修复-b3-只动该动的-全-additive" aria-label="锚点">#</a></h2>
+<p><strong>核心思路</strong>:让逐候选提示 <strong>index 感知</strong>——第 1 个候选保留完整历史首句(逐字节等价),候选 2..N<br>折成减冗余的级联 reframe。</p>
+<p><strong>单一真源门</strong>:<code>KHY_VISION_CASCADE_ATTEMPT_NOTICE</code>(default-on)。共享 <code>_intermediateEnabled</code> 前提<br>(中间消息门关 → 整体不发)。门关 → 逐字节回退(每个候选都退回完整历史首句)。</p>
+<ol><li><strong>纯叶子</strong>(无既有叶可扩,新建小叶)<code>visionCascadeAttemptNotice.js</code>(零 IO、DI env、绝不抛):<ul><li><code>isCascadeAttemptNoticeEnabled(env)</code> 经 flagRegistry 读门;</li><li><code>buildCascadeAttemptNotice({index, model, prevModel, env})</code>:<ul><li>门关 / index 非有限 / index&lt;=0 → 返完整历史首句</li></ul></li></ul></li></ol>
+<p><code>我无法直接识别图片内容。正在调用 &lt;model&gt; 进行识别，请稍候...</code>(逐字节等价);</p>
+<ul><li>门开 + index&gt;0 → 返 <code>视觉模型 &lt;prev&gt; 不可用，正在改用 &lt;model&gt; 继续识别...</code></li></ul>
+<p>(去冗余前缀、点明级联降级、命名前一模型 + 下一模型);</p>
+<ul><li><code>CASCADE_ATTEMPT_FALLBACK_MARKER = '正在改用'</code>。</li></ul>
+<p>→ <code>if (_note) emitAssistantMessage(_note)</code>;catch → 逐字节回退历史首句;</p>
+<ul><li>循环尾 <code>_prevAttemptModel = _att.model || _prevAttemptModel; _attIdx += 1;</code>。</li></ul>
+<p><code>KHY_VISION_CASCADE_ATTEMPT_NOTICE: { mode:'default-on', off:'CANON', default:true }</code>。</p>
+<p><strong>正交</strong>:与 OPS-144 <code>KHY_VISION_OCR_SUCCESS_CLOSURE</code> 正交——那治悬空承诺在 OCR 成功时的<strong>闭合</strong>,<br>本治逐候选承诺<strong>发出时的重复</strong>。不同关注点(收尾 vs 前缀去冗余)、独立门,同在 <code>_intermediateEnabled</code><br>共享前提下。第 1 个候选完全不变(给用户完整上下文),只把冗余重复折叠。</p>
+<h2 id="三-验收-b2-没跑过验证不许说修好了">三、验收(B2 没跑过验证不许说修好了)<a class="anchor" href="#三-验收-b2-没跑过验证不许说修好了" aria-label="锚点">#</a></h2>
+<ul><li>纯叶单测 <code>visionCascadeAttemptNotice.test.js</code> 8/8(门开 / 门关 · index 0 → legacy · 缺 / 负 index → legacy ·</li></ul>
+<p>index&gt;0 → reframe 无前缀含 MARKER 命名前后模型 · 缺 prevModel → 「上一视觉模型」占位 · 门关全 legacy ·<br>  缺 model → 「视觉模型」占位 · 不抛)。</p>
+<ul><li>接线单测 <code>visionCascadeAttemptNoticeWiring.test.js</code> 3/3(onChunk 捕获 assistant_message,内置 GLM pin</li></ul>
+<p>产 ≥2 候选):A) 门开 → 第 1 条 legacy、其后 reframe 无冗余前缀;B) 本门关 → 每条退回完整历史首句<br>  (byte-revert)零 reframe;C) 提示门关 → 零中间提示。</p>
+<ul><li><strong>真图 E2E</strong> <code>visionCascadeAttemptNoticeRealImage.test.js</code> 2/2:真 PIL 渲含字 PNG(<code>INVOICE ACME 2026</code>)</li></ul>
+<p>→ 视觉级联全 404 → 真 tesseract 读出 → 断言第 1 条 legacy、其后 reframe 且 finalPrompt 真含 INVOICE;<br>  门关 → 每条 legacy、OCR 注入照常。</p>
+<ul><li>统一别名:<code>npm run test:vision-cascade-attempt-notice</code>(8+3+2 = 13/13)。</li><li>门:<code>node --check</code> × 源文件 · god-file <code>wc -l</code>(叶 &lt; 2500;aiGatewayGenerateMethod additive grandfathered)·</li></ul>
+<p>flag-registry / leaf-contract / agent-rules · change-safety(positional 闭 map 桥)· maintainer:check ·<br>  safety 聚合。</p>
+<h2 id="四-教训">四、教训<a class="anchor" href="#四-教训" aria-label="锚点">#</a></h2>
+<ol><li><strong>断桥补全靠沿同一 consumer 找下一条正交噪音</strong>:OPS-144 治悬空承诺的<strong>收尾</strong>,本轮沿同一级联</li></ol>
+<p>逐候选提示块找到<strong>承诺本身的重复</strong>——收尾治了,发出时的冗余没治,即缺口。</p>
+<ol><li><strong>减冗余保留首条上下文</strong>:第 1 个候选完整不动(用户需知「模型不能识图,正在调用视觉模型」),只把</li></ol>
+<p>2..N 的冗余前缀折成级联 reframe,点明降级链而非并行新调用——减噪与明显告知两不误。</p>
+<ol><li><strong>index 感知靠循环状态</strong>:在循环前置 <code>_attIdx</code>/<code>_prevAttemptModel</code>、循环尾自增/记录,纯叶按 index</li></ol>
+<p>分支;门关 / index&lt;=0 逐字节回退历史首句。</p>
+<ol><li><strong>共享前提 + 独立门</strong>:reframe 共享 <code>_intermediateEnabled</code>(没发承诺就不必去冗余),但用独立门</li></ol>
+<p><code>KHY_VISION_CASCADE_ATTEMPT_NOTICE</code> 单独可关(byte-revert)。</p>
+<ol><li><strong>OPS 号双查</strong>:grep 确认 OPS-145 仅我文件持有,无并行 session 碰撞。</li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-144] describe-fail到OCR成功的用户可见闭合减少心灵噪音.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-144] describe-fail 到 OCR 成功的用户可见闭合(减少心灵噪音)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-146] 主读工具FileReadTool防卡死守卫族parity接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-146] 主读工具 FileReadTool 防卡死守卫族 parity 接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-145] 级联逐候选请稍候提示减冗余减少心灵噪音.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

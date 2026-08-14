@@ -1,0 +1,15 @@
+{
+  "name": "debug",
+  "description": "Debug an issue by analyzing logs, errors, and code paths",
+  "trigger": "/debug",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "debugging",
+    "troubleshooting"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
+}

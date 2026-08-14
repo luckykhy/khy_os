@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>khyos 巨型环反转设计（Giant-SCC Inversion Design） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>khyos 巨型环反转设计（Giant-SCC Inversion Design）</div>
+      <header class="hero reveal"><h1>khyos 巨型环反转设计（Giant-SCC Inversion Design）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyos-巨型环反转设计-giant-scc-inversion-design">khyos 巨型环反转设计（Giant-SCC Inversion Design）</a></li><li class="lvl-2"><a href="#0-本轮交付的工具增强-只读分析-零业务改动">0. 本轮交付的工具增强（只读分析，零业务改动）</a></li><li class="lvl-2"><a href="#1-实测现状-2026-06-12-真实代码库">1. 实测现状（2026-06-12，真实代码库）</a></li><li class="lvl-3"><a href="#1-1-巨型环规模">1.1 巨型环规模</a></li><li class="lvl-3"><a href="#1-2-单边切点杠杆-移除单条边后巨型分量缩小的节点数-降序">1.2 单边切点杠杆（移除单条边后巨型分量缩小的节点数，降序）</a></li><li class="lvl-3"><a href="#1-3-r4-抽取漂移现状">1.3 R4 抽取漂移现状</a></li><li class="lvl-2"><a href="#2-反转模式选型-inversion-patterns">2. 反转模式选型（Inversion patterns）</a></li><li class="lvl-3"><a href="#2-1-关键割边的反转草案-toolcalling-cli-router-杠杆-42">2.1 关键割边的反转草案（`toolCalling → cli/router`，杠杆 42）</a></li><li class="lvl-2"><a href="#3-批量破环顺序-实测贪心-回归边界">3. 批量破环顺序（实测贪心 + 回归边界）</a></li><li class="lvl-3"><a href="#批次-1-关键割边-独立高杠杆-最先做">批次 1 — 关键割边（独立高杠杆，最先做）</a></li><li class="lvl-3"><a href="#批次-2-单向通知边-事件-端口-互不依赖">批次 2 — 单向通知边（事件/端口，互不依赖）</a></li><li class="lvl-3"><a href="#批次-3-cli-ai-互缠核-联合移除-最难-专项">批次 3 — `cli/ai` 互缠核（联合移除，最难，专项）</a></li><li class="lvl-3"><a href="#破环进度可度量">破环进度可度量</a></li><li class="lvl-2"><a href="#4-与-r4-抽取漂移的关系-路线图衔接">4. 与 R4 抽取漂移的关系（路线图衔接）</a></li><li class="lvl-2"><a href="#5-下一步-可执行的最小一步">5. 下一步（可执行的最小一步）</a></li><li class="lvl-2"><a href="#6-批次-3-实施纪要与经验修正-2026-06-12">6. 批次 3 实施纪要与经验修正（2026-06-12）</a></li><li class="lvl-3"><a href="#6-1-经验修正-74-核是-services-services-互缠-不是-cli-反向边撑起来的">6.1 经验修正：74 核是 services↔services 互缠，不是 cli 反向边撑起来的</a></li><li class="lvl-3"><a href="#6-2-本轮实际落地-4-条-可靠预加载-的-cli-反向边-r1-23-17">6.2 本轮实际落地：4 条「可靠预加载」的 cli 反向边（R1 23→17）</a></li><li class="lvl-3"><a href="#6-3-主动放弃-permissionpromptport-审批弹窗端口">6.3 主动放弃：`permissionPromptPort`（审批弹窗端口）</a></li><li class="lvl-3"><a href="#6-4-仍然延后-触-chat-热区的-3-条边">6.4 仍然延后：触 `chat()` 热区的 3 条边</a></li><li class="lvl-3"><a href="#6-5-本轮可度量结果">6.5 本轮可度量结果</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-021 | 阶段: 设计 | 原路径: docs/03_DESIGN_设计/[DESIGN-ARCH-021] 巨型环反转设计.md（新建） --&gt;</p>
+<h1 id="khyos-巨型环反转设计-giant-scc-inversion-design">khyos 巨型环反转设计（Giant-SCC Inversion Design）<a class="anchor" href="#khyos-巨型环反转设计-giant-scc-inversion-design" aria-label="锚点">#</a></h1>
+<blockquote><p>版本 v1.0（2026-06-12）。承接 [DESIGN-ARCH-020] 架构债治理报告路线图第 3 步（P2「R1 反转」）。<br>本文是<strong>只读设计稿</strong>：给出瓦解 ~130 节点巨型循环依赖簇（R3）的<strong>反转方案、批量破环<br>顺序、每批回归边界与回滚点</strong>。<strong>不含任何实现</strong>，亦不修改业务代码 / 提示词 / 模型调用。</p>
+<p>数据来源：本轮新增的两个<strong>只读分析子命令</strong>（<code>archDebtScan --scc</code> / <code>--drift</code>，确定性、<br>零依赖、可离线），实测当前代码库得出。<strong>先量化、再设计</strong>，不靠直觉拍脑袋。</p></blockquote>
+<hr>
+<h2 id="0-本轮交付的工具增强-只读分析-零业务改动">0. 本轮交付的工具增强（只读分析，零业务改动）<a class="anchor" href="#0-本轮交付的工具增强-只读分析-零业务改动" aria-label="锚点">#</a></h2>
+<p>为支撑本设计，给自研分析器 <code>scripts/archDebtScan.js</code> 增了两条<strong>纯只读</strong>能力，<br>默认 <code>npm run arch:debt</code> 的行为与退码语义<strong>完全不变</strong>，新能力走独立子命令：</p>
+<table><thead><tr><th>子命令</th><th>能力</th><th>性质</th></tr></thead><tbody><tr><td><code>node scripts/archDebtScan.js --scc</code></td><td><strong>巨型环切点杠杆</strong>：逐条 <code>services→cli</code> 反向边「移除→重算 SCC→量化巨型分量缩小量」，再贪心给出批量破环顺序</td><td>纯内存图算法，增删边即时还原，零写盘</td></tr><tr><td><code>node scripts/archDebtScan.js --drift</code></td><td><strong>R4 抽取漂移</strong>：检出「re-export 助手模块符号、却仍内部调本地同名旧副本」的半截抽取（三证据齐备才报，零误报）</td><td>纯文本词法分析（<code>_blankNonCode</code> 剥注释/字符串），零依赖</td></tr></tbody></table>
+<ul><li>两者均加 <code>--json</code>；退码恒 0（只读，不参与 CI 门禁）。</li><li>合成 fixture 测试 +10 用例（R4 正例 2 / 反例 4 + <code>_blankNonCode</code> + SCC 杠杆/无环/findCycles 零回归），</li></ul>
+<p>连同既有 13 用例共 <strong>23/23 绿</strong>；<code>findCycles</code> 经 <code>_sccComponents</code> 重构后行为字节级不变。</p>
+<ul><li>防呆：<code>analyzeGiantScc</code> / <code>scanDriftR4</code> <strong>绝不 import 或执行</strong>任何业务模块，纯静态分析。</li></ul>
+<hr>
+<h2 id="1-实测现状-2026-06-12-真实代码库">1. 实测现状（2026-06-12，真实代码库）<a class="anchor" href="#1-实测现状-2026-06-12-真实代码库" aria-label="锚点">#</a></h2>
+<h3 id="1-1-巨型环规模">1.1 巨型环规模<a class="anchor" href="#1-1-巨型环规模" aria-label="锚点">#</a></h3>
+<ul><li><strong>最大强连通分量 = 129 节点</strong>（cli 全层 + 多数 services + gateway 适配器纠缠成一团）。</li><li>环内 <code>services→cli</code> <strong>候选反向边 = 13 条</strong>（这些就是 R1 分层倒置在巨型环里的“焊点”）。</li></ul>
+<h3 id="1-2-单边切点杠杆-移除单条边后巨型分量缩小的节点数-降序">1.2 单边切点杠杆（移除单条边后巨型分量缩小的节点数，降序）<a class="anchor" href="#1-2-单边切点杠杆-移除单条边后巨型分量缩小的节点数-降序" aria-label="锚点">#</a></h3>
+<table><thead><tr><th style="text-align:right">杠杆</th><th>反向边</th><th>巨型环</th><th>性质</th></tr></thead><tbody><tr><td style="text-align:right"><strong>42</strong></td><td><code>services/toolCalling.js → cli/router.js</code></td><td>129→87</td><td><strong>关键割边</strong>：SlashCommand 工具回调命令路由器</td></tr><tr><td style="text-align:right">2</td><td><code>services/contextCompressor.js → cli/aiRenderer.js</code></td><td>129→127</td><td>压缩结果渲染（<code>printCompactionResult</code>）</td></tr><tr><td style="text-align:right">2</td><td><code>services/remote/index.js → cli/handlers/publish.js</code></td><td>129→127</td><td>远端发布编排</td></tr><tr><td style="text-align:right">0</td><td><code>services/aiManagementServer.js → cli/ai.js</code></td><td>129→129</td><td>→cli/ai 互缠核（×5，见下）</td></tr><tr><td style="text-align:right">0</td><td><code>services/capabilityAssessment.js → cli/ai.js</code></td><td>129→129</td><td>→cli/ai 互缠核</td></tr><tr><td style="text-align:right">0</td><td><code>services/toolCalling.js → cli/ai.js</code></td><td>129→129</td><td>→cli/ai 互缠核（fallback /status /config /new）</td></tr><tr><td style="text-align:right">0</td><td><code>services/toolUseLoop.js → cli/ai.js</code></td><td>129→129</td><td>→cli/ai 互缠核</td></tr><tr><td style="text-align:right">0</td><td><code>services/ultraplanService.js → cli/ai.js</code></td><td>129→129</td><td>→cli/ai 互缠核</td></tr><tr><td style="text-align:right">0</td><td><code>services/toolCalling.js → cli/hudRenderer.js</code></td><td>129→129</td><td>有状态 HUD</td></tr><tr><td style="text-align:right">0</td><td><code>services/query/compactPipeline.js → cli/hudRenderer.js</code></td><td>129→129</td><td>有状态 HUD</td></tr><tr><td style="text-align:right">0</td><td><code>services/toolCalling.js → cli/ui/permissionDialog.js</code></td><td>129→129</td><td>交互审批 I/O</td></tr><tr><td style="text-align:right">0</td><td><code>services/preflightPermission.js → cli/ui/permissionDialog.js</code></td><td>129→129</td><td>交互审批 I/O</td></tr><tr><td style="text-align:right">0</td><td><code>services/baseSelfCheckService.js → cli/handlers/plugin-dev.js</code></td><td>129→129</td><td>插件开发命令</td></tr></tbody></table>
+<p><strong>读法</strong>：单边杠杆 0 ≠ 无用，而是该边与其它边<strong>并联</strong>支撑同一环（尤其 <code>→cli/ai</code> 的 5 条边<br>互为冗余路径，单独移除任一条，其余仍维系环）。要瓦解必须<strong>联合移除</strong>——这正是批量设计的意义。</p>
+<h3 id="1-3-r4-抽取漂移现状">1.3 R4 抽取漂移现状<a class="anchor" href="#1-3-r4-抽取漂移现状" aria-label="锚点">#</a></h3>
+<p><code>--drift</code> 实测：<strong><code>services/toolUseLoop.js</code> 有 26 处半截抽取</strong>——Phase-1A…1I 的助手模块<br>（<code>toolCallParser</code>/<code>deliveryFormatter</code>/<code>intentHeuristics</code>/<code>taskComplexity</code>/<code>platformRewrite</code> 等）<br><strong>全部已 re-export，但 <code>runToolUseLoop</code> 内部仍调本地旧副本</strong>。典型：</p>
+<ul><li><code>_parseToolCalls</code>：导出走 <code>toolCallParser.parseToolCalls</code>，内部仍调本地 @1803/1809；</li><li><code>_buildToolResultMessage</code>：导出走 <code>deliveryFormatter.buildToolResultMessage</code>，内部仍调本地 ×5；</li><li><code>_stripToolCalls</code>：内部本地副本被调 <strong>16 次</strong>。</li></ul>
+<p><strong>测试跑助手副本、生产跑本地副本</strong>——一旦漂移即「测试绿而行为变」。属 [DESIGN-ARCH-020] §R4<br>标注的<strong>高风险业务热区</strong>，本文<strong>只量化不改</strong>，纳入下方 §4 路线图（专项 + 全回归）。</p>
+<hr>
+<h2 id="2-反转模式选型-inversion-patterns">2. 反转模式选型（Inversion patterns）<a class="anchor" href="#2-反转模式选型-inversion-patterns" aria-label="锚点">#</a></h2>
+<p>巨型环的根因是<strong>服务层为复用 CLI 能力而反向 require cli</strong>（R1）。反转 = 把「谁依赖谁」<br>掉头，让 cli 在启动时把能力<strong>注入/注册</strong>给 services，services 只依赖<strong>抽象</strong>而非 cli 模块。<br>三种候选模式，按边的性质择一：</p>
+<table><thead><tr><th>模式</th><th>机制</th><th>适用</th><th>代价 / 风险</th></tr></thead><tbody><tr><td><strong>A. 端口注册 / IoC（回调注入）</strong></td><td>中立零依赖端口模块；cli 启动时 <code>registerXxx(impl)</code>，services 经 <code>getXxx()</code> 取用，未注册时优雅降级</td><td>单一、明确的能力调用（命令派发、渲染回调、审批提示）</td><td><strong>最低</strong>。已在 P1 用于 <code>sessionSourcePort</code> 验证可行；导出签名不变</td></tr><tr><td><strong>B. 事件总线（单向 push）</strong></td><td>services <code>emit('event', data)</code>，cli 订阅渲染；services 不知 cli 存在</td><td><strong>单向通知</strong>类（HUD 状态、压缩进度、生命周期事件）</td><td>低-中。需统一事件命名；调试需追订阅者</td></tr><tr><td><strong>C. 依赖注入（构造期传参）</strong></td><td>调用方在构造/调用时把依赖作为参数显式传入</td><td>调用点集中、可改签名的少量函数</td><td>中。<strong>触及函数签名 → 违反「导出签名不变」防呆，仅限非热区</strong></td></tr></tbody></table>
+<p><strong>总原则</strong>（承接 P1 的「只下沉纯叶子、业务热区不动」）：</p>
+<ul><li>优先 <strong>A（端口）</strong>——与 P1 已落地的 <code>sessionSourcePort</code> 同范式，零签名变更、可降级、可回滚；</li><li><strong>单向通知</strong>用 <strong>B（事件）</strong>——HUD / 压缩进度天然是 push；</li><li><strong>C（DI）</strong> 仅在调用点极少且非热区时用；触 <code>cli/ai</code> 热区的边一律<strong>不在本轮设计实施范围</strong>，只给方向。</li></ul>
+<h3 id="2-1-关键割边的反转草案-toolcalling-cli-router-杠杆-42">2.1 关键割边的反转草案（<code>toolCalling → cli/router</code>，杠杆 42）<a class="anchor" href="#2-1-关键割边的反转草案-toolcalling-cli-router-杠杆-42" aria-label="锚点">#</a></h3>
+<p>现状：<code>toolCalling.js</code> 的 <code>SlashCommand</code> 工具处理器内 <code>require('../cli/router')</code> 调 <code>router.parseInput/route</code><br>来派发斜杠命令（@1849），并 fallback <code>require('../cli/ai')</code> 处理 <code>/status</code> <code>/config</code> <code>/new</code>。<br><strong>这是服务层工具反向触达 CLI 命令路由器</strong>——单边即占巨型环 42 节点，是<strong>第一优先</strong>。</p>
+<blockquote><p><strong>反转草案（模式 A，端口）</strong>：新增零依赖端口 <code>services/commandDispatchPort.js</code><br>（<code>registerDispatcher({ parseInput, route })</code> / <code>getDispatcher()</code>）。<code>cli/router</code> 启动时自注册；<br><code>SlashCommand</code> 处理器改 <code>getDispatcher()</code>，未注册时返回结构化 <code>{ success:false, reason:'no_dispatcher' }</code><br>优雅降级。<code>/status</code> <code>/config</code> <code>/new</code> 的 <code>cli/ai</code> fallback 同理走 <code>commandDispatchPort</code> 的扩展动作或<br>独立 <code>aiSessionPort</code>。<strong>导出签名不变，纯新增端口 + 改 require 指向</strong>，与 P1 二元环消解同形。</p></blockquote>
+<hr>
+<h2 id="3-批量破环顺序-实测贪心-回归边界">3. 批量破环顺序（实测贪心 + 回归边界）<a class="anchor" href="#3-批量破环顺序-实测贪心-回归边界" aria-label="锚点">#</a></h2>
+<p><code>--scc</code> 贪心实测：<strong>移除 4 条边即把巨型环从 129 压到 74</strong>，之后单边收益耗尽（剩 74 节点为<br><code>cli/ai</code> 互缠核，须联合移除）。据此分 3 批，每批独立可测、可回滚：</p>
+<h3 id="批次-1-关键割边-独立高杠杆-最先做">批次 1 — 关键割边（独立高杠杆，最先做）<a class="anchor" href="#批次-1-关键割边-独立高杠杆-最先做" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>边</th><th>实测效果</th><th>反转模式</th><th>回滚点</th></tr></thead><tbody><tr><td>1</td><td><code>toolCalling.js → cli/router.js</code></td><td>129→<strong>87</strong>（−42）</td><td>A 端口 <code>commandDispatchPort</code></td><td>单 commit；端口未注册即降级，<code>git revert</code> 即恢复旧 require</td></tr></tbody></table>
+<ul><li><strong>回归边界</strong>：SlashCommand 工具全用例 + 斜杠命令派发 e2e（<code>/status</code> <code>/config</code> <code>/new</code> /未知命令 fallback）<ul><li><code>archDebtScan --scc</code> 复测（断言巨型环 ≤87）+ <code>npm run arch:debt</code> 退码 0。</li></ul></li><li><strong>独立性</strong>：此边是<strong>割边</strong>（单边杠杆 42），可单独成 PR、单独验证、单独回滚，<strong>不依赖批次 2/3</strong>。</li></ul>
+<h3 id="批次-2-单向通知边-事件-端口-互不依赖">批次 2 — 单向通知边（事件/端口，互不依赖）<a class="anchor" href="#批次-2-单向通知边-事件-端口-互不依赖" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>#</th><th>边</th><th>贪心增量效果</th><th>反转模式</th></tr></thead><tbody><tr><td>2</td><td><code>contextCompressor.js → cli/aiRenderer.js</code>（<code>printCompactionResult</code>）</td><td>87→<strong>76</strong>（−11）</td><td>B 事件 <code>compaction:result</code> 或 A 渲染端口</td></tr><tr><td>3</td><td><code>compactPipeline.js → cli/hudRenderer.js</code>（<code>setCompacting/clearCompacting</code>）</td><td>75→<strong>74</strong>（−1）</td><td>B 事件 <code>hud:compacting</code> 单向 push</td></tr><tr><td>4</td><td><code>baseSelfCheckService.js → cli/handlers/plugin-dev.js</code></td><td>76→<strong>75</strong>（−1）</td><td>A 端口或改为 cli 侧编排（方向反转）</td></tr></tbody></table>
+<ul><li><strong>回归边界</strong>：压缩结果渲染快照一致（文案/token 数）+ HUD compacting 态切换 + 自检命令链路；</li></ul>
+<p>每条边一个 commit，<code>--scc</code> 复测巨型环单调下降。</p>
+<ul><li><strong>次序</strong>：批次 2 内部三条边互不依赖，可并行评审；贪心顺序仅供「先摘大头」参考。</li></ul>
+<h3 id="批次-3-cli-ai-互缠核-联合移除-最难-专项">批次 3 — <code>cli/ai</code> 互缠核（联合移除，最难，专项）<a class="anchor" href="#批次-3-cli-ai-互缠核-联合移除-最难-专项" aria-label="锚点">#</a></h3>
+<p>剩余 <strong>74 节点核</strong>由 5 条 <code>services→cli/ai</code> 反向边（<code>aiManagementServer</code> / <code>capabilityAssessment</code> /<br><code>toolCalling</code> / <code>toolUseLoop</code> / <code>ultraplanService</code>）+ 审批/HUD 残边并联支撑，<strong>单边杠杆全 0 → 必须联合移除</strong>。</p>
+<ul><li><strong>反转模式</strong>：A 端口为主——抽 <code>aiSessionPort</code>（会话/状态/配置入口）+ <code>aiRenderPort</code>（渲染）+</li></ul>
+<p><code>permissionPromptPort</code>（交互审批），<code>cli/ai</code> 与 <code>cli/ui/permissionDialog</code> 启动自注册，五个服务改经端口取用。</p>
+<ul><li><strong>风险</strong>：<strong>直接触 <code>cli/ai</code> 业务热区（5285 行、含 1700 行 <code>chat()</code>）</strong>——按防呆**本文只给方向，不在</li></ul>
+<p>本轮实施**。须独立专项：先补 <code>cli/ai</code> 入口契约测试做安全网，再逐边端口化，每边全回归。</p>
+<ul><li><strong>回归边界</strong>：全 <code>toolUseLoop.*</code> + 会话持久化 + 审批弹窗 + 网关级联回归；<code>--scc</code> 断言核瓦解至个位数。</li></ul>
+<h3 id="破环进度可度量">破环进度可度量<a class="anchor" href="#破环进度可度量" aria-label="锚点">#</a></h3>
+<pre><code>129 ──批次1(割边)──► 87 ──批次2(通知边×3)──► 74 ──批次3(cli/ai核,专项)──► 个位数
+         −42                 −13                      联合移除</code></pre>
+<p>每批后 <code>npm run arch:debt:baseline</code> 刷新基线<strong>单调收紧</strong>，CI 拦截任何新增反向边。</p>
+<hr>
+<h2 id="4-与-r4-抽取漂移的关系-路线图衔接">4. 与 R4 抽取漂移的关系（路线图衔接）<a class="anchor" href="#4-与-r4-抽取漂移的关系-路线图衔接" aria-label="锚点">#</a></h2>
+<p><code>toolUseLoop.js</code> 同时是<strong>巨型环成员</strong>（→cli/ai，批次 3）<strong>和</strong> 26 处 R4 漂移宿主。两者<strong>解耦次序</strong>：</p>
+<ol><li><strong>先批次 1/2</strong>（割边 + 通知边）——不触 toolUseLoop，安全摘掉环的大头；</li><li><strong>R4 收尾与批次 3 合并专项</strong>：删 toolUseLoop 本地旧副本、统一走助手模块（[DESIGN-ARCH-020] §R4 P2）</li></ol>
+<p>时，顺带把 <code>→cli/ai</code> 反向边端口化。<strong>同一文件、同一全回归窗口</strong>，避免两次扰动业务热区。</p>
+<blockquote><p>防呆红线：R4 删本地副本属「改核心业务行为」，<strong>必须</strong>专项 + 全 <code>toolUseLoop.*</code> 回归 + 灰度，<br>本文与 [DESIGN-ARCH-020] 均<strong>只标注不实施</strong>。</p></blockquote>
+<hr>
+<h2 id="5-下一步-可执行的最小一步">5. 下一步（可执行的最小一步）<a class="anchor" href="#5-下一步-可执行的最小一步" aria-label="锚点">#</a></h2>
+<p><strong>批次 1 单边</strong>：实现 <code>commandDispatchPort</code>，反转 <code>toolCalling → cli/router</code>。这是<strong>唯一的独立割边</strong><br>（单边即 −42），范式与 P1 已验证的 <code>sessionSourcePort</code> 完全一致，<strong>零签名变更、可降级、可单独回滚</strong>，<br>是瓦解巨型环性价比最高的第一刀。完成后 <code>--scc</code> 应实测巨型环 ≤87，基线随之收紧。</p>
+<p><strong>纪律</strong>：每刀一 commit、改后必测、<code>--scc</code>/<code>arch:debt</code> 双复测；触 <code>cli/ai</code> 的批次 3 留专项，不与本轮混做。</p>
+<hr>
+<h2 id="6-批次-3-实施纪要与经验修正-2026-06-12">6. 批次 3 实施纪要与经验修正（2026-06-12）<a class="anchor" href="#6-批次-3-实施纪要与经验修正-2026-06-12" aria-label="锚点">#</a></h2>
+<p>批次 2 落地后（割边 + 通知边×3，巨型环 129→87→<strong>74</strong>，R1 27→23），本轮按 §3 方向尝试批次 3，<br><strong>实测推翻了 §3「联合移除 → 个位数」的前提</strong>。如实记录，避免后人重复误判。</p>
+<h3 id="6-1-经验修正-74-核是-services-services-互缠-不是-cli-反向边撑起来的">6.1 经验修正：74 核是 services↔services 互缠，不是 cli 反向边撑起来的<a class="anchor" href="#6-1-经验修正-74-核是-services-services-互缠-不是-cli-反向边撑起来的" aria-label="锚点">#</a></h3>
+<p><code>--scc</code> 离线复测：对核内每条 <code>services→cli</code> 反向边做「移除后重算 SCC」单边杠杆测量，<br><strong>三条 cli 残边（<code>aiManagementServer→cli/ai</code>、<code>toolCalling</code>/<code>preflightPermission→cli/ui/permissionDialog</code>）<br>单边杠杆全为 0（74→74）</strong>。进一步模拟「一次性移除全部 9 条非 cli→cli 反向边」，巨型环只降到 <strong>56</strong><br>（纯 services 节点）。</p>
+<p><strong>结论</strong>：74 核的强连通性由 <strong>services 内部 56 节点的互相依赖</strong>支撑，cli 反向边只是「挂在核外的尾巴」，<br>不是环的承重墙。§3「把 cli/ai 反向边联合移除核就瓦解到个位数」的因果链不成立。瓦解 74 核须另立<br>设计，正面拆 services↔services 互缠（与 [DESIGN-ARCH-020] §R4 的 <code>toolUseLoop</code> 收尾合并专项），<br><strong>不是再加几个 cli 端口能解决的</strong>。</p>
+<h3 id="6-2-本轮实际落地-4-条-可靠预加载-的-cli-反向边-r1-23-17">6.2 本轮实际落地：4 条「可靠预加载」的 cli 反向边（R1 23→17）<a class="anchor" href="#6-2-本轮实际落地-4-条-可靠预加载-的-cli-反向边-r1-23-17" aria-label="锚点">#</a></h3>
+<p>既然 cli 反向边对巨型环零杠杆，本轮把目标收敛为<strong>纯 R1 分层收益</strong>——只反转那些目标 cli 模块<br><strong>在交互路径中可靠被预加载</strong>的安全边（注册端口范式要求：调用点原 <code>require()</code> 是强制加载语义，<br>端口化后退化为「已加载才用」，故只适用于别处必然先加载的模块）：</p>
+<table><thead><tr><th>端口</th><th>反转边</th><th>目标 cli 模块预加载来源</th></tr></thead><tbody><tr><td><code>modelCapabilityPort</code></td><td><code>capabilityAssessment</code>、<code>toolUseLoop</code> → <code>cli/ai.checkModelCapability</code></td><td><code>cli/ai</code> 经 repl/router/bin 入口必然加载；未注册则预检跳过（best-effort）</td></tr><tr><td><code>aiSessionPort</code></td><td><code>toolCalling</code> → <code>cli/ai</code>（<code>/status</code> <code>/config</code> <code>/new</code>）</td><td>同上；未注册返回结构化 <code>no_ai_session</code></td></tr><tr><td><code>compactionUiPort</code> #3</td><td><code>toolCalling</code> → <code>cli/hudRenderer.updateTodos</code></td><td><code>cli/hudRenderer</code> 经 cli/ai、router、repl 必然加载；未注册 emit no-op</td></tr></tbody></table>
+<p><code>cli/ai</code>、<code>cli/hudRenderer</code> 启动时自注册（合法 cli→services 方向，<strong>导出签名零变更</strong>），<br>3 个端口均为零依赖叶子、未注册时优雅降级。契约测试 <code>tests/services/batch3Ports.test.js</code><br>（13 例 node:test，离线确定性）钉住各端口期望 cli 注册的精确形状。</p>
+<h3 id="6-3-主动放弃-permissionpromptport-审批弹窗端口">6.3 主动放弃：<code>permissionPromptPort</code>（审批弹窗端口）<a class="anchor" href="#6-3-主动放弃-permissionpromptport-审批弹窗端口" aria-label="锚点">#</a></h3>
+<p>按 §3 曾抽 <code>permissionPromptPort</code> 反转 <code>toolCalling</code>/<code>preflightPermission → cli/ui/permissionDialog</code>。<br><strong>前向依赖审计发现 <code>cli/ui/permissionDialog</code> 在生产路径中无任何预加载者</strong>（仅被这两个服务 require）。<br>端口化后它<strong>永不自注册</strong> → 增强审批弹窗永远走 legacy 兜底，<strong>是真实行为回归</strong>，违反「默认行为不变」防呆。<br>故<strong>回退这两条边</strong>，保留原 <code>require('../cli/ui/permissionDialog')</code>，删除该端口。<br>教训：注册端口范式<strong>只适用于目标模块别处必然预加载的反向边</strong>；对「仅在该调用点懒加载」的边，<br>端口化会丢失加载触发，使能力变死。</p>
+<h3 id="6-4-仍然延后-触-chat-热区的-3-条边">6.4 仍然延后：触 <code>chat()</code> 热区的 3 条边<a class="anchor" href="#6-4-仍然延后-触-chat-热区的-3-条边" aria-label="锚点">#</a></h3>
+<p><code>aiManagementServer→cli/ai</code>、<code>toolCalling</code>/<code>ultraplanService</code> 指向 <code>cli/ai</code> 的 <code>chat()</code> 核心链路的边，<br>按防呆<strong>继续延后</strong>——它们触 5285 行 <code>cli/ai</code>（含 ~1700 行 <code>chat()</code>）业务热区，须与 R4 <code>toolUseLoop</code><br>收尾合并成独立专项 + 全网关级联回归，不在本轮架构债治理窗口内。</p>
+<h3 id="6-5-本轮可度量结果">6.5 本轮可度量结果<a class="anchor" href="#6-5-本轮可度量结果" aria-label="锚点">#</a></h3>
+<pre><code>巨型环 R3：74 ──(批次3 cli 反向边对环零杠杆)──► 74   （不变，符合 6.1 修正）
+分层倒置 R1：23 ──(removed 4 条可靠预加载反向边)──► 17  （−6，纯分层收益）</code></pre>
+<p><code>npm run arch:debt</code> 退码 0；基线 <code>--update-baseline</code> 单调收紧至 layering=17，CI 继续拦截新增反向边。<br><strong>修正后的破环路线</strong>：74 核须正面拆 services↔services（56 节点互缠）+ R4 收尾，另立设计专项；<br>cli 反向边治理在 R1 维度收尾，对 R3 巨型环已无更多杠杆。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-020] 架构债治理报告.html"><div class="dir">← 上一篇</div><div class="ttl">khyos 架构债治理报告（Architecture Debt Governance）</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-022] khyos多实例并发文件控制规范.html"><div class="dir">下一篇 →</div><div class="ttl">《khyos 多实例并发文件控制规范》</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-021] 巨型环反转设计.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "code-review-and-quality",
+  "description": "Conducts multi-axis code review. Use before merging any change. Use when reviewing code written by yourself, another agent, or a human. Use when you need to assess code quality across multiple dimensions before it enters the main branch.",
+  "user_invocable": true,
+  "trigger": "/code-review-and-quality",
+  "aliases": [
+    "/code-review"
+  ],
+  "category": "quality",
+  "tags": [
+    "code-review",
+    "quality",
+    "review"
+  ],
+  "platforms": [
+    "khy-os",
+    "khy-quant"
+  ],
+  "context": "inline",
+  "source": "agent-skills (vendored, built-in)"
+}

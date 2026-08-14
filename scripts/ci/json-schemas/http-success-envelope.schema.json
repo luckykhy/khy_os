@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HTTP Success Response Envelope",
+  "description": "所有 khy-os HTTP 成功响应的标准信封。",
+  "type": "object",
+  "required": ["success"],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "const": true,
+      "description": "必须为 true"
+    },
+    "data": {
+      "description": "业务载荷（对象或数组）",
+      "oneOf": [
+        { "type": "object" },
+        { "type": "array" },
+        { "type": "null" }
+      ]
+    },
+    "message": {
+      "type": "string",
+      "description": "可选的人类可读描述"
+    },
+    "pagination": {
+      "type": "object",
+      "description": "分页元数据（分页列表时出现）",
+      "properties": {
+        "page": { "type": "integer" },
+        "pageSize": { "type": "integer" },
+        "total": { "type": "integer" },
+        "totalPages": { "type": "integer" }
+      }
+    },
+    "degraded": {
+      "type": "boolean",
+      "description": "可选：降级模式标记"
+    }
+  },
+  "additionalProperties": true
+}

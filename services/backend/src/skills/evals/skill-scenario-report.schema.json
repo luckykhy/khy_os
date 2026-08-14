@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://khy-os.dev/schemas/skill-scenario-report.schema.json",
+  "title": "KHY Skill Scenario Eval Report",
+  "type": "object",
+  "required": [
+    "generatedAt",
+    "suitePath",
+    "suiteVersion",
+    "thresholds",
+    "thresholdChecks",
+    "summary",
+    "evals"
+  ],
+  "properties": {
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "suitePath": { "type": "string" },
+    "suiteVersion": { "type": "string" },
+    "thresholds": { "type": "object" },
+    "thresholdChecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "pass", "detail"],
+        "properties": {
+          "name": { "type": "string" },
+          "pass": { "type": "boolean" },
+          "detail": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "totalEvals",
+        "totalAssertions",
+        "passedAssertions",
+        "failedAssertions",
+        "overallPassRate",
+        "minEvalPassRate",
+        "pass"
+      ],
+      "properties": {
+        "totalEvals": { "type": "integer", "minimum": 0 },
+        "totalAssertions": { "type": "integer", "minimum": 0 },
+        "passedAssertions": { "type": "integer", "minimum": 0 },
+        "failedAssertions": { "type": "integer", "minimum": 0 },
+        "overallPassRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "minEvalPassRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "pass": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "evals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "id", "skill", "promptPath", "passedAssertions", "totalAssertions", "passRate", "failures"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 1 },
+          "id": { "type": "string" },
+          "skill": { "type": "string" },
+          "promptPath": { "type": "string" },
+          "passedAssertions": { "type": "integer", "minimum": 0 },
+          "totalAssertions": { "type": "integer", "minimum": 0 },
+          "passRate": { "type": "number", "minimum": 0, "maximum": 1 },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "type", "detail"],
+              "properties": {
+                "id": { "type": "string" },
+                "type": { "type": "string" },
+                "detail": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

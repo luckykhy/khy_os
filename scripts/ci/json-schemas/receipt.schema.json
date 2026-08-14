@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Audit Receipt",
+  "description": "Every .khy/receipts/RCPT-*.json file must conform to this schema. New receipts MUST include ts/actor/action/result; existing receipts may omit them.",
+  "type": "object",
+  "required": ["id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Receipt identifier (e.g. RCPT-20260622-133316-9v2l)"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp (REQUIRED for new receipts)"
+    },
+    "actor": {
+      "type": "string",
+      "description": "Who performed the action (REQUIRED for new receipts)"
+    },
+    "action": {
+      "type": "string",
+      "description": "Action name (REQUIRED for new receipts)"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["ok", "fail", "skip"],
+      "description": "Outcome (REQUIRED for new receipts)"
+    },
+    "sessionId": {
+      "type": ["string", "null"]
+    },
+    "traceId": {
+      "type": ["string", "null"]
+    },
+    "requestId": {
+      "type": ["string", "null"]
+    },
+    "status": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "artifacts": {
+      "type": "object"
+    },
+    "riskApproval": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

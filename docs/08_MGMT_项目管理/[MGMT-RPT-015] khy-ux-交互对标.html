@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KHY OS 交互模式对标分析与优化路线图 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>KHY OS 交互模式对标分析与优化路线图</div>
+      <header class="hero reveal"><h1>KHY OS 交互模式对标分析与优化路线图</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-交互模式对标分析与优化路线图">KHY OS 交互模式对标分析与优化路线图</a></li><li class="lvl-2"><a href="#一-对标项目核心交互机制速查">一、对标项目核心交互机制速查</a></li><li class="lvl-3"><a href="#1-1-opencode">1.1 OpenCode</a></li><li class="lvl-3"><a href="#1-2-claude-code">1.2 Claude Code</a></li><li class="lvl-3"><a href="#1-3-deepseek-tui">1.3 DeepSeek TUI</a></li><li class="lvl-3"><a href="#1-4-hermes-agent">1.4 Hermes Agent</a></li><li class="lvl-2"><a href="#二-khy-现状差距分析">二、KHY 现状差距分析</a></li><li class="lvl-3"><a href="#2-1-确认与权限">2.1 确认与权限</a></li><li class="lvl-3"><a href="#2-2-选择与输入">2.2 选择与输入</a></li><li class="lvl-3"><a href="#2-3-命令理解">2.3 命令理解</a></li><li class="lvl-3"><a href="#2-4-反馈展示">2.4 反馈展示</a></li><li class="lvl-2"><a href="#三-改进项清单">三、改进项清单</a></li><li class="lvl-3"><a href="#g1-拼写纠错-levenshtein">G1 — 拼写纠错 (Levenshtein)</a></li><li class="lvl-3"><a href="#g2-模糊命令建议">G2 — 模糊命令建议</a></li><li class="lvl-3"><a href="#g3-风险分级确认">G3 — 风险分级确认</a></li><li class="lvl-3"><a href="#g4-菜单模糊搜索">G4 — 菜单模糊搜索</a></li><li class="lvl-3"><a href="#g5-other-兜底输入">G5 — &quot;Other&quot; 兜底输入</a></li><li class="lvl-3"><a href="#g6-tab-补全">G6 — Tab 补全</a></li><li class="lvl-3"><a href="#g7-动态-spinner-文案">G7 — 动态 spinner 文案</a></li><li class="lvl-3"><a href="#g8-意图模糊澄清-超时降级">G8 — 意图模糊澄清 + 超时降级</a></li><li class="lvl-3"><a href="#g9-preview-面板">G9 — preview 面板</a></li><li class="lvl-3"><a href="#g10-意图预分类增强">G10 — 意图预分类增强</a></li><li class="lvl-2"><a href="#四-实施阶段">四、实施阶段</a></li><li class="lvl-3"><a href="#phase-1-基础交互加固-p0">Phase 1 — 基础交互加固（P0）</a></li><li class="lvl-3"><a href="#phase-2-选择体验优化-p1">Phase 2 — 选择体验优化（P1）</a></li><li class="lvl-3"><a href="#phase-3-智能交互-p2">Phase 3 — 智能交互（P2）</a></li><li class="lvl-2"><a href="#五-对标得分预估">五、对标得分预估</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-015 | 阶段: 项目管理 | 原路径: docs/指南/khy-ux-交互对标.md --&gt;</p>
+<h1 id="khy-os-交互模式对标分析与优化路线图">KHY OS 交互模式对标分析与优化路线图<a class="anchor" href="#khy-os-交互模式对标分析与优化路线图" aria-label="锚点">#</a></h1>
+<blockquote><p>对标项目：OpenCode、Claude Code、DeepSeek TUI、Hermes Agent<br>创建日期：2026-05-21<br>状态：<strong>全部完成</strong> (G1-G10 均已实施，2026-05-21)</p></blockquote>
+<hr>
+<h2 id="一-对标项目核心交互机制速查">一、对标项目核心交互机制速查<a class="anchor" href="#一-对标项目核心交互机制速查" aria-label="锚点">#</a></h2>
+<h3 id="1-1-opencode">1.1 OpenCode<a class="anchor" href="#1-1-opencode" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>机制</th></tr></thead><tbody><tr><td>权限模型</td><td>Effect + Deferred 阻塞，3 级权限（allow / ask / deny）</td></tr><tr><td>选择 UI</td><td><code>DialogSelect</code> + 模糊搜索（fuzzy filter），5 种对话类型</td></tr><tr><td>命令路由</td><td>纯 exact match，无 NLP 路由</td></tr><tr><td>防循环</td><td>doom loop 检测：连续 3 次工具失败后自动停止</td></tr><tr><td>特色</td><td>权限粒度细（按工具+路径组合），模糊搜索体验好</td></tr></tbody></table>
+<h3 id="1-2-claude-code">1.2 Claude Code<a class="anchor" href="#1-2-claude-code" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>机制</th></tr></thead><tbody><tr><td>提问工具</td><td><code>AskUserQuestionTool</code>：Zod schema，1-4 个问题，每题 2-4 选项</td></tr><tr><td>选择 UI</td><td>单选 / 多选（<code>multiSelect</code> 标志位），preview 面板（右侧预览）</td></tr><tr><td>兜底输入</td><td>所有选择自动附加 &quot;Other&quot; 自由输入</td></tr><tr><td>权限模型</td><td>多源竞速：用户审批 / 分类器自动放行 / hook 拦截 / bridge 中转</td></tr><tr><td>Plan Mode</td><td>非平凡任务自动进入规划模式，用户审批后再执行</td></tr><tr><td>反馈展示</td><td>~200 个动态 spinner 动词，工具调用详细展开+折叠</td></tr><tr><td>特色</td><td>preview 面板信息密度高，Plan Mode 降低返工率</td></tr></tbody></table>
+<h3 id="1-3-deepseek-tui">1.3 DeepSeek TUI<a class="anchor" href="#1-3-deepseek-tui" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>机制</th></tr></thead><tbody><tr><td>确认模型</td><td><strong>风险分级 2-key 确认</strong>：低风险 1-key，破坏性操作 staged 2-key</td></tr><tr><td>提问工具</td><td><code>request_user_input</code>：1-3 个问题，每题 2-3 选项 + &quot;Other&quot;</td></tr><tr><td>命令纠错</td><td><strong>Levenshtein 编辑距离</strong>：拼错命令自动建议最接近的候选</td></tr><tr><td>工作区信任</td><td>workspace trust 机制，首次进入新目录需确认</td></tr><tr><td>特色</td><td>2-key 确认对破坏性操作防护最强，拼写纠错实用性高</td></tr></tbody></table>
+<h3 id="1-4-hermes-agent">1.4 Hermes Agent<a class="anchor" href="#1-4-hermes-agent" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>维度</th><th>机制</th></tr></thead><tbody><tr><td>澄清机制</td><td><code>clarify</code> 工具 + <strong>超时降级</strong>：15s 无回复 → &quot;use best judgement&quot;</td></tr><tr><td>忙碌输入</td><td><strong>3 模式状态机</strong>：queue（排队）/ steer（修正方向）/ interrupt（中断）</td></tr><tr><td>工具护栏</td><td>3 级阈值：warn（提示继续）/ block（需确认）/ halt（强制停止）</td></tr><tr><td>多前端</td><td>Gateway 中转，CLI / Web / 移动端共享同一会话</td></tr><tr><td>特色</td><td>超时降级避免阻塞，忙碌输入处理最成熟</td></tr></tbody></table>
+<hr>
+<h2 id="二-khy-现状差距分析">二、KHY 现状差距分析<a class="anchor" href="#二-khy-现状差距分析" aria-label="锚点">#</a></h2>
+<h3 id="2-1-确认与权限">2.1 确认与权限<a class="anchor" href="#2-1-确认与权限" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>能力</th><th>对标最佳实践</th><th>KHY 现状</th><th>差距</th></tr></thead><tbody><tr><td>破坏性操作确认</td><td>DeepSeek 2-key staged</td><td>仅 inquirer confirm</td><td>无风险分级</td></tr><tr><td>权限粒度</td><td>OpenCode 按工具+路径</td><td>全局 Y/n</td><td>太粗</td></tr><tr><td>自动放行安全操作</td><td>Claude Code 分类器</td><td>全部询问或全部放行</td><td>无中间态</td></tr></tbody></table>
+<h3 id="2-2-选择与输入">2.2 选择与输入<a class="anchor" href="#2-2-选择与输入" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>能力</th><th>对标最佳实践</th><th>KHY 现状</th><th>差距</th></tr></thead><tbody><tr><td>模糊搜索</td><td>OpenCode DialogSelect</td><td>无</td><td>选项多时体验差</td></tr><tr><td>preview 面板</td><td>Claude Code 右侧预览</td><td>无</td><td>信息密度低</td></tr><tr><td>&quot;Other&quot; 兜底</td><td>Claude Code / DeepSeek 自动附加</td><td>无</td><td>用户被锁死在预设选项</td></tr><tr><td>多选</td><td>Claude Code multiSelect</td><td>无</td><td>批量操作需多次交互</td></tr></tbody></table>
+<h3 id="2-3-命令理解">2.3 命令理解<a class="anchor" href="#2-3-命令理解" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>能力</th><th>对标最佳实践</th><th>KHY 现状</th><th>差距</th></tr></thead><tbody><tr><td>拼写纠错</td><td>DeepSeek Levenshtein</td><td>无</td><td>拼错直接报错</td></tr><tr><td>Tab 补全</td><td>DeepSeek Tab 补全</td><td>无</td><td>需记忆完整命令</td></tr><tr><td>模糊意图识别</td><td>Hermes clarify + 超时</td><td>无</td><td>模糊输入无引导</td></tr><tr><td>自然语言路由</td><td>Claude Code LLM 分类器</td><td>部分(inputPreprocessor)</td><td>覆盖不足</td></tr></tbody></table>
+<h3 id="2-4-反馈展示">2.4 反馈展示<a class="anchor" href="#2-4-反馈展示" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>能力</th><th>对标最佳实践</th><th>KHY 现状</th><th>差距</th></tr></thead><tbody><tr><td>动态 spinner</td><td>Claude Code ~200 动词</td><td>固定 &quot;思考中&quot;</td><td>用户感知不到进度</td></tr><tr><td>忙碌时新输入</td><td>Hermes 3 模式状态机</td><td>丢弃</td><td>用户输入丢失</td></tr></tbody></table>
+<hr>
+<h2 id="三-改进项清单">三、改进项清单<a class="anchor" href="#三-改进项清单" aria-label="锚点">#</a></h2>
+<h3 id="g1-拼写纠错-levenshtein">G1 — 拼写纠错 (Levenshtein)<a class="anchor" href="#g1-拼写纠错-levenshtein" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P0</li><li><strong>收益</strong>: 高频痛点，直接减少 &quot;未知命令&quot; 挫败感</li><li><strong>工作量</strong>: 小（~50 行）</li><li><strong>实现位置</strong>: <code>backend/src/cli/router.js</code> 未知命令分支</li><li><strong>方案</strong>:<ol><li>收集所有已注册命令名到数组</li><li>对用户输入计算编辑距离，取距离 ≤2 且最小的候选</li><li>提示 <code>未知命令 &quot;gatway&quot;，你是否想执行 &quot;gateway&quot;？(Y/n)</code></li><li>用户确认后直接路由到候选命令</li></ol></li><li><strong>参考</strong>: DeepSeek TUI <code>src/utils/fuzzy.ts</code></li></ul>
+<h3 id="g2-模糊命令建议">G2 — 模糊命令建议<a class="anchor" href="#g2-模糊命令建议" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P0</li><li><strong>收益</strong>: 与 G1 互补，覆盖子命令和参数层面</li><li><strong>工作量</strong>: 小（~30 行，复用 G1 的距离函数）</li><li><strong>实现位置</strong>: <code>backend/src/cli/router.js</code> + <code>commandRegistry.js</code></li><li><strong>方案</strong>:<ol><li>命令匹配失败时，同时搜索子命令层</li><li>显示最多 3 个候选：<code>你是否想执行: 1) gateway config  2) gateway status  3) gateway add</code></li><li>用户输入序号直接执行</li></ol></li></ul>
+<h3 id="g3-风险分级确认">G3 — 风险分级确认<a class="anchor" href="#g3-风险分级确认" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P0</li><li><strong>收益</strong>: 安全性 + 用户信任</li><li><strong>工作量</strong>: 中（~150 行 + 各工具标记风险级别）</li><li><strong>实现位置</strong>: 新建 <code>backend/src/cli/riskConfirm.js</code>，修改 <code>toolSandbox.js</code></li><li><strong>方案</strong>:<ol><li>定义 3 级风险：<code>safe</code>（静默执行）、<code>moderate</code>（单次 Y/n）、<code>dangerous</code>（两步确认）</li><li>每个工具在注册时声明风险级别（默认 moderate）</li><li><code>dangerous</code> 操作流程：<ul><li>第一步：显示影响范围摘要（将删除 X 个文件 / 将重置 Y 配置）</li><li>第二步：要求输入确认词（如输入 &quot;DELETE&quot; 确认删除）</li></ul></li><li>工具调用前统一经过 <code>riskConfirm()</code> 网关</li></ol></li><li><strong>参考</strong>: DeepSeek TUI <code>src/permissions/risk.ts</code></li></ul>
+<h3 id="g4-菜单模糊搜索">G4 — 菜单模糊搜索<a class="anchor" href="#g4-菜单模糊搜索" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P1</li><li><strong>收益</strong>: Provider 列表、模型列表等长菜单体验改善</li><li><strong>工作量</strong>: 中（引入 inquirer-autocomplete-prompt 或自实现）</li><li><strong>实现位置</strong>: <code>backend/src/cli/handlers/gateway.js</code> 等所有 inquirer list 调用</li><li><strong>方案</strong>:<ol><li>选项数 ≥ 5 时自动切换为 autocomplete 类型</li><li>输入字符实时过滤选项</li><li>保持上下箭头选择兼容</li></ol></li><li><strong>参考</strong>: OpenCode <code>internal/tui/dialog_select.go</code></li></ul>
+<h3 id="g5-other-兜底输入">G5 — &quot;Other&quot; 兜底输入<a class="anchor" href="#g5-other-兜底输入" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P1</li><li><strong>收益</strong>: 灵活性，避免用户被预设选项锁死</li><li><strong>工作量</strong>: 小（~20 行 wrapper）</li><li><strong>实现位置</strong>: 封装 inquirer list/rawlist 的 wrapper 函数</li><li><strong>方案</strong>:<ol><li>所有选择菜单末尾自动追加 <code>{ name: '其他 (自由输入)', value: '__other__' }</code></li><li>选择 <code>__other__</code> 后弹出 input prompt</li><li>封装为 <code>askChoice(message, choices, opts)</code> 统一调用</li></ol></li></ul>
+<h3 id="g6-tab-补全">G6 — Tab 补全<a class="anchor" href="#g6-tab-补全" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P1</li><li><strong>收益</strong>: 效率提升，减少记忆负担</li><li><strong>工作量</strong>: 中（~100 行）</li><li><strong>实现位置</strong>: <code>backend/src/cli/repl.js</code> readline completer</li><li><strong>方案</strong>:<ol><li>注册 readline <code>completer</code> 回调</li><li><code>/</code> 开头匹配 slash 命令列表</li><li>已输入命令名后，匹配子命令列表</li><li>支持文件路径补全（<code>./</code> 或 <code>~/</code> 开头时）</li></ol></li><li><strong>参考</strong>: DeepSeek TUI <code>src/repl/completer.ts</code></li></ul>
+<h3 id="g7-动态-spinner-文案">G7 — 动态 spinner 文案<a class="anchor" href="#g7-动态-spinner-文案" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P1</li><li><strong>收益</strong>: 用户感知进度，减少 &quot;卡住了吗&quot; 的疑虑</li><li><strong>工作量</strong>: 小（~40 行）</li><li><strong>实现位置</strong>: <code>backend/src/cli/hudRenderer.js</code> + <code>aiRenderer.js</code></li><li><strong>方案</strong>:<ol><li>维护阶段 → 文案映射表：</li></ol></li></ul>
+<pre><code class="language-js">     const PHASE_LABELS = {
+       'tool:grep': '正在搜索代码...',
+       'tool:read': '正在读取文件...',
+       'tool:edit': '正在编辑文件...',
+       'tool:bash': '正在执行命令...',
+       'thinking': '正在分析...',
+       'generating': '正在生成回复...',
+     };</code></pre>
+<ol><li>工具调用事件触发时更新 spinner 文案</li><li>无事件时默认 &quot;思考中...&quot;</li></ol>
+<h3 id="g8-意图模糊澄清-超时降级">G8 — 意图模糊澄清 + 超时降级<a class="anchor" href="#g8-意图模糊澄清-超时降级" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P2</li><li><strong>收益</strong>: 高级交互，减少无效对话轮次</li><li><strong>工作量</strong>: 大（~200 行）</li><li><strong>实现位置</strong>: <code>backend/src/services/inputPreprocessor.js</code> + 新建 <code>clarifyService.js</code></li><li><strong>方案</strong>:<ol><li>检测多义输入：同一输入匹配到 ≥2 个命令路由时触发</li><li>弹出选项菜单让用户选择意图</li><li>设置 15s 超时，超时后按第一匹配执行并提示</li><li>记录用户选择，相同模式下次自动路由（学习）</li></ol></li><li><strong>参考</strong>: Hermes Agent <code>src/tools/clarify.ts</code></li></ul>
+<h3 id="g9-preview-面板">G9 — preview 面板<a class="anchor" href="#g9-preview-面板" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P2</li><li><strong>收益</strong>: 信息密度提升，配置管理时减少来回查看</li><li><strong>工作量</strong>: 大（需要终端分栏渲染）</li><li><strong>实现位置</strong>: <code>backend/src/cli/ui/previewPanel.js</code>（新建）</li><li><strong>方案</strong>:<ol><li>利用终端宽度，左侧选项列表占 50%，右侧 preview 占 50%</li><li>光标移动时实时更新右侧内容</li><li>需要自定义 inquirer prompt 或使用 ink 组件</li><li>降级方案：终端宽度 &lt; 80 时不显示 preview</li></ol></li><li><strong>参考</strong>: Claude Code <code>AskUserQuestionTool</code> preview 机制</li></ul>
+<h3 id="g10-意图预分类增强">G10 — 意图预分类增强<a class="anchor" href="#g10-意图预分类增强" aria-label="锚点">#</a></h3>
+<ul><li><strong>优先级</strong>: P2</li><li><strong>收益</strong>: 自然语言入口，降低学习曲线</li><li><strong>工作量</strong>: 中（~80 行）</li><li><strong>实现位置</strong>: <code>backend/src/services/inputPreprocessor.js</code></li><li><strong>方案</strong>:<ol><li>扩展关键词 → 命令映射表：</li></ol></li></ul>
+<pre><code class="language-js">     const INTENT_MAP = {
+       '密钥|key|apikey|api_key': 'gateway config',
+       '模型|model': 'gateway status',
+       '代理|proxy|clash': 'gateway config',  // 跳到代理配置子项
+       '初始化|init|setup': 'init',
+       '帮助|help|怎么用': 'help',
+     };</code></pre>
+<ol><li>匹配到时提示 &quot;检测到你可能想执行 <code>gateway config</code>，已跳转&quot;</li><li>多匹配时走 G8 澄清流程</li></ol>
+<hr>
+<h2 id="四-实施阶段">四、实施阶段<a class="anchor" href="#四-实施阶段" aria-label="锚点">#</a></h2>
+<h3 id="phase-1-基础交互加固-p0">Phase 1 — 基础交互加固（P0）<a class="anchor" href="#phase-1-基础交互加固-p0" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>改进项</th><th>预计文件</th></tr></thead><tbody><tr><td>G1</td><td>拼写纠错</td><td>router.js</td></tr><tr><td>G2</td><td>模糊命令建议</td><td>router.js, commandRegistry.js</td></tr><tr><td>G3</td><td>风险分级确认</td><td>新建 riskConfirm.js, toolSandbox.js</td></tr></tbody></table>
+<p><strong>验收标准</strong>:</p>
+<ul><li>拼错命令自动建议正确命令</li><li>破坏性操作需两步确认</li><li>安全操作静默放行</li></ul>
+<h3 id="phase-2-选择体验优化-p1">Phase 2 — 选择体验优化（P1）<a class="anchor" href="#phase-2-选择体验优化-p1" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>改进项</th><th>预计文件</th></tr></thead><tbody><tr><td>G4</td><td>菜单模糊搜索</td><td>gateway.js 等 inquirer 调用</td></tr><tr><td>G5</td><td>&quot;Other&quot; 兜底</td><td>新建 askChoice wrapper</td></tr><tr><td>G6</td><td>Tab 补全</td><td>repl.js</td></tr><tr><td>G7</td><td>动态 spinner</td><td>hudRenderer.js, aiRenderer.js</td></tr></tbody></table>
+<p><strong>验收标准</strong>:</p>
+<ul><li>长菜单可输入过滤</li><li>所有选择菜单有 &quot;其他&quot; 选项</li><li>REPL 中 Tab 补全命令</li><li>spinner 文案随操作阶段变化</li></ul>
+<h3 id="phase-3-智能交互-p2">Phase 3 — 智能交互（P2）<a class="anchor" href="#phase-3-智能交互-p2" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>编号</th><th>改进项</th><th>预计文件</th></tr></thead><tbody><tr><td>G8</td><td>意图澄清 + 超时降级</td><td>inputPreprocessor.js, 新建 clarifyService.js</td></tr><tr><td>G9</td><td>preview 面板</td><td>新建 previewPanel.js</td></tr><tr><td>G10</td><td>意图预分类增强</td><td>inputPreprocessor.js</td></tr></tbody></table>
+<p><strong>验收标准</strong>:</p>
+<ul><li>多义输入弹出选项，超时自动执行</li><li>配置菜单右侧显示预览</li><li>自然语言关键词可触发命令</li></ul>
+<hr>
+<h2 id="五-对标得分预估">五、对标得分预估<a class="anchor" href="#五-对标得分预估" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>当前得分</th><th>Phase 1 后</th><th>Phase 2 后</th><th>Phase 3 后</th><th>行业最佳</th></tr></thead><tbody><tr><td>确认安全性</td><td>2/5</td><td>4/5</td><td>4/5</td><td>4/5</td><td>DeepSeek 5/5</td></tr><tr><td>选择体验</td><td>2/5</td><td>2/5</td><td>4/5</td><td>5/5</td><td>Claude Code 5/5</td></tr><tr><td>命令理解</td><td>1/5</td><td>3/5</td><td>4/5</td><td>5/5</td><td>DeepSeek 4/5</td></tr><tr><td>反馈展示</td><td>3/5</td><td>3/5</td><td>4/5</td><td>4/5</td><td>Claude Code 5/5</td></tr><tr><td><strong>综合</strong></td><td><strong>2.0</strong></td><td><strong>3.0</strong></td><td><strong>4.0</strong></td><td><strong>4.5</strong></td><td><strong>4.75</strong></td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-014] khy-qwen-差距修复清单.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 与 qwen-code 差距修复清单（执行版）</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-016] 竞品情报图谱.html"><div class="dir">下一篇 →</div><div class="ttl">KHY OS 竞品分析图谱 — 全项目对标发现汇总</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-015] khy-ux-交互对标.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

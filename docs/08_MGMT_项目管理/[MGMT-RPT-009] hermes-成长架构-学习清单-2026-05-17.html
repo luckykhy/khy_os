@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hermes Growth Architecture → KHY 学习清单 (2026-05-17) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>08_MGMT_项目管理<span class="sep">›</span>Hermes Growth Architecture → KHY 学习清单 (2026-05-17)</div>
+      <header class="hero reveal"><h1>Hermes Growth Architecture → KHY 学习清单 (2026-05-17)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#hermes-growth-architecture-khy-学习清单-2026-05-17">Hermes Growth Architecture → KHY 学习清单 (2026-05-17)</a></li><li class="lvl-2"><a href="#范围">范围</a></li><li class="lvl-2"><a href="#执行摘要">执行摘要</a></li><li class="lvl-2"><a href="#统一参考笔记-2026-05-17">统一参考笔记 (2026-05-17)</a></li><li class="lvl-2"><a href="#khy-学习清单">KHY 学习清单</a></li><li class="lvl-3"><a href="#1-p0-跨所有界面的命令单一事实来源">1) P0 — 跨所有界面的命令单一事实来源</a></li><li class="lvl-3"><a href="#2-p0-用适配器注册表替代静态网关适配器列表">2) P0 — 用适配器注册表替代静态网关适配器列表</a></li><li class="lvl-3"><a href="#3-p0-收敛插件生命周期-避免三条并行的插件路径">3) P0 — 收敛插件生命周期（避免三条并行的插件路径）</a></li><li class="lvl-3"><a href="#4-p0-面向长会话成长的上下文引擎接口">4) P0 — 面向长会话成长的上下文引擎接口</a></li><li class="lvl-3"><a href="#5-p1-调度器从会话内存迈向持久化自动化">5) P1 — 调度器从会话内存迈向持久化自动化</a></li><li class="lvl-3"><a href="#6-p1-发布纪律-dry-run-变更日志-打标签-产物流水线">6) P1 — 发布纪律：dry-run 变更日志 + 打标签 + 产物流水线</a></li><li class="lvl-3"><a href="#7-p1-打包中的供应链加固策略">7) P1 — 打包中的供应链加固策略</a></li><li class="lvl-3"><a href="#8-p1-会话状态-可检索记忆作为成长基底">8) P1 — 会话状态 + 可检索记忆作为成长基底</a></li><li class="lvl-3"><a href="#9-p2-工具可用性评估缓存与刷新契约">9) P2 — 工具可用性评估缓存与刷新契约</a></li><li class="lvl-3"><a href="#10-p2-测试分层作为架构反馈回路">10) P2 — 测试分层作为架构反馈回路</a></li><li class="lvl-2"><a href="#建议的采纳顺序">建议的采纳顺序</a></li><li class="lvl-3"><a href="#阶段-a-1-2-周-最高-roi">阶段 A（1-2 周，最高 ROI）</a></li><li class="lvl-3"><a href="#阶段-b-2-4-周-成长能力">阶段 B（2-4 周，成长能力）</a></li><li class="lvl-3"><a href="#阶段-c-4-周-规模加固">阶段 C（4+ 周，规模加固）</a></li><li class="lvl-2"><a href="#khy-仓库的即时后续行动">KHY 仓库的即时后续行动</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: MGMT-RPT-009 | 阶段: 项目管理 | 原路径: docs/报告/hermes-成长架构-学习清单-2026-05-17.md --&gt;</p>
+<h1 id="hermes-growth-architecture-khy-学习清单-2026-05-17">Hermes Growth Architecture → KHY 学习清单 (2026-05-17)<a class="anchor" href="#hermes-growth-architecture-khy-学习清单-2026-05-17" aria-label="锚点">#</a></h1>
+<h2 id="范围">范围<a class="anchor" href="#范围" aria-label="锚点">#</a></h2>
+<ul><li>审阅的基线产物：<code>/home/kodehu03/Downloads/hermes-agent-main.zip</code></li><li>解压路径：<code>/tmp/hermes-agent-main/hermes-agent-main</code></li><li>本笔记的目标：总结 <strong>KHY-OS 可以从 Hermes 的成长导向架构中直接学习之处</strong>，并给出具体的采纳行动。</li></ul>
+<h2 id="执行摘要">执行摘要<a class="anchor" href="#执行摘要" aria-label="锚点">#</a></h2>
+<p>KHY 已经具备稳固的基础构件（带空闲超时的工具循环、插件加载器、工具自动发现、大任务运行时存储）。<br>最大的学习机会在于 <strong>架构收敛</strong>：减少重复的注册表/生命周期，使扩展点单一来源且可组合，并将发布/测试纪律正式化。</p>
+<h2 id="统一参考笔记-2026-05-17">统一参考笔记 (2026-05-17)<a class="anchor" href="#统一参考笔记-2026-05-17" aria-label="锚点">#</a></h2>
+<p>关于 Hermes 成长架构的 Claude 会话发现已合并至：</p>
+<ul><li><code>docs/08_MGMT_项目管理/[MGMT-RPT-003] khy-对比-hermes-成长架构.md</code> 的 <code>4.1 Claude 会话发现统一执行映射（2026-05-17）</code> 一节</li></ul>
+<p>请将该节作为唯一的、整合后的跨文档入口，用于查阅：</p>
+<ul><li>优先级对齐（<code>P0/P1/P2/P3</code>），</li><li>KHY 文件级落地区域，</li><li>以及采纳策略（<code>Adopt / Adapt</code> 理由，包括超时策略的适配）。</li></ul>
+<h2 id="khy-学习清单">KHY 学习清单<a class="anchor" href="#khy-学习清单" aria-label="锚点">#</a></h2>
+<h3 id="1-p0-跨所有界面的命令单一事实来源">1) P0 — 跨所有界面的命令单一事实来源<a class="anchor" href="#1-p0-跨所有界面的命令单一事实来源" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>hermes_cli/commands.py</code> 的中央 <code>COMMAND_REGISTRY</code> 及其派生消费者（<code>resolve_command</code>、网关 help/menu/autocomplete）。</li></ul></li><li>KHY 现状：<ul><li><code>backend/src/cli/router.js</code> 维护 <code>COMMANDS</code> + <code>SUB_COMMANDS</code>。</li><li><code>backend/src/cli/commandRegistry.js</code> 单独维护斜杠命令注册表。</li><li><code>backend/src/cli/aliases.js</code> 是另一个命令映射界面。</li></ul></li><li>KHY 可学习：<ul><li>收敛为单一规范的命令定义模型，并由其生成 router/help/autocomplete/slash 映射。</li><li>将别名表仅作为数据保留，而不是又一个路由权威来源。</li></ul></li><li>验证：<ul><li>添加一致性测试，断言 route/help/completion/slash 全部派生自同一命令键集合。</li></ul></li></ul>
+<h3 id="2-p0-用适配器注册表替代静态网关适配器列表">2) P0 — 用适配器注册表替代静态网关适配器列表<a class="anchor" href="#2-p0-用适配器注册表替代静态网关适配器列表" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>gateway/platform_registry.py</code> 基于注册表的适配器创建/校验。</li><li><code>hermes_cli/plugins.py</code> 的 <code>register_platform(...)</code> 用于插件平台注入。</li></ul></li><li>KHY 现状：<ul><li><code>backend/src/services/gateway/aiGateway.js</code> 在构造函数中硬编码 <code>this._adapters</code> 列表。</li></ul></li><li>KHY 可学习：<ul><li>引入 <code>gateway/adapterRegistry.js</code>（<code>register</code>、<code>unregister</code>、<code>list</code>、<code>create</code>），并将静态列表移入引导阶段的注册。</li><li>让插件加载器通过稳定契约注册适配器。</li></ul></li><li>验证：<ul><li>添加一个测试适配器夹具，断言无需编辑 <code>aiGateway.js</code> 即可被发现/选择。</li></ul></li></ul>
+<h3 id="3-p0-收敛插件生命周期-避免三条并行的插件路径">3) P0 — 收敛插件生命周期（避免三条并行的插件路径）<a class="anchor" href="#3-p0-收敛插件生命周期-避免三条并行的插件路径" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>hermes_cli/plugins.py</code> 支持多来源发现 + 启用/禁用策略 + 生命周期钩子（<code>VALID_HOOKS</code>）。</li></ul></li><li>KHY 现状：<ul><li><code>backend/src/plugin-loader/index.js</code>（清单/插件包加载器），</li><li><code>backend/src/cli/plugins.js</code>（用户命令插件），</li><li><code>backend/src/services/gateway/pluginChain.js</code>（仅网关的钩子插件）。</li></ul></li><li>KHY 可学习：<ul><li>定义一个宿主级插件生命周期，具备分层能力（commands/tools/gateway hooks）和共享的启用/禁用策略。</li><li>在迁移期间为旧插件格式保留向后兼容的适配器。</li></ul></li><li>验证：<ul><li>添加集成测试：一个插件在同一包中注册 command + tool + gateway hook，且全部生效。</li></ul></li></ul>
+<h3 id="4-p0-面向长会话成长的上下文引擎接口">4) P0 — 面向长会话成长的上下文引擎接口<a class="anchor" href="#4-p0-面向长会话成长的上下文引擎接口" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>agent/context_engine.py</code> 定义了可插拔的上下文引擎生命周期（<code>should_compress</code>、<code>compress</code>、<code>update_model</code>、会话钩子）。</li></ul></li><li>KHY 现状：<ul><li>上下文/token 行为大多内嵌在循环/UI 路径中（<code>backend/src/services/toolUseLoop.js</code>、<code>backend/src/cli/hudRenderer.js</code>）。</li></ul></li><li>KHY 可学习：<ul><li>在 KHY 中创建 <code>contextEngine</code> 抽象，至少包含 <code>noop</code> + <code>compressor</code> 两种实现。</li><li>将策略从临时的循环代码移入策略对象。</li></ul></li><li>验证：<ul><li>在 <code>noop</code> 与 <code>compressor</code> 下对同一长提示序列做 A/B 测试，比较 token 预算行为 + 最终答案质量。</li></ul></li></ul>
+<h3 id="5-p1-调度器从会话内存迈向持久化自动化">5) P1 — 调度器从会话内存迈向持久化自动化<a class="anchor" href="#5-p1-调度器从会话内存迈向持久化自动化" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>cron/scheduler.py</code> 具备锁保护的 tick 循环、平台投递桥接以及插件平台扩展路径。</li></ul></li><li>KHY 现状：<ul><li><code>backend/src/tools/ScheduleCronTool/index.js</code> 将作业存储在内存 map（<code>_cronJobs</code>）中，仅限会话作用域。</li></ul></li><li>KHY 可学习：<ul><li>将 cron 作业和运行状态持久化到耐久存储。</li><li>支持显式投递目标（CLI/home-channel/webhook），并具备回退与审计追踪。</li></ul></li><li>验证：<ul><li>进程重启恢复测试：调度作业在重启后仍存活，并在预期时间窗口内执行一次。</li></ul></li></ul>
+<h3 id="6-p1-发布纪律-dry-run-变更日志-打标签-产物流水线">6) P1 — 发布纪律：dry-run 变更日志 + 打标签 + 产物流水线<a class="anchor" href="#6-p1-发布纪律-dry-run-变更日志-打标签-产物流水线" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>scripts/release.py</code> 提供 dry-run/publish 模式、semver 版本递增、变更日志生成、标签创建、产物构建、GitHub release。</li></ul></li><li>KHY 现状：<ul><li><code>backend/src/cli/handlers/publish.js</code> 很好地处理了构建/检查/上传，但发布说明/标签编排仍为手动。</li></ul></li><li>KHY 可学习：<ul><li>添加 release dry-run 命令，在发布前输出分类的变更日志以及计划中的版本/标签变更。</li><li>保留当前 <code>publish</code> 路径作为产物上传执行器。</li></ul></li><li>验证：<ul><li>CI release 模拟：dry-run 必须生成确定性的发布说明文件和版本差异摘要。</li></ul></li></ul>
+<h3 id="7-p1-打包中的供应链加固策略">7) P1 — 打包中的供应链加固策略<a class="anchor" href="#7-p1-打包中的供应链加固策略" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>pyproject.toml</code> 记录了精确锁定（exact-pin）策略，并将特定提供方依赖保留在 extras/惰性路径中。</li></ul></li><li>KHY 现状：<ul><li><code>pyproject.toml</code> 在核心/可选依赖中仍使用多个宽泛的版本范围。</li></ul></li><li>KHY 可学习：<ul><li>将依赖分类为：<ul><li>核心精确锁定，</li><li>可选的提供方 extras，</li><li>适当情况下的惰性安装路径。</li></ul></li><li>在打包文档中添加明确的策略说明。</li></ul></li><li>验证：<ul><li>锁文件可复现性检查 + CI 中的依赖漂移告警。</li></ul></li></ul>
+<h3 id="8-p1-会话状态-可检索记忆作为成长基底">8) P1 — 会话状态 + 可检索记忆作为成长基底<a class="anchor" href="#8-p1-会话状态-可检索记忆作为成长基底" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>hermes_state.py</code> 使用 SQLite + FTS5 + 来源标记以及 WAL 回退逻辑，实现稳健的跨会话召回。</li></ul></li><li>KHY 现状：<ul><li>会话与成长数据机制已存在，但尚未围绕单一可检索的状态基底统一。</li></ul></li><li>KHY 可学习：<ul><li>定义一个规范的会话状态存储，带有可检索的对话索引和来源标记。</li><li>向 AI 循环和 skill 层暴露召回原语。</li></ul></li><li>验证：<ul><li>查询基准测试：在合成的多会话历史上测量召回延迟与命中质量。</li></ul></li></ul>
+<h3 id="9-p2-工具可用性评估缓存与刷新契约">9) P2 — 工具可用性评估缓存与刷新契约<a class="anchor" href="#9-p2-工具可用性评估缓存与刷新契约" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>tools/registry.py</code> 包含注册表级可用性检查 + TTL 缓存失效。</li></ul></li><li>KHY 现状：<ul><li><code>backend/src/tools/index.js</code> 具备强大的自动发现/注册，但可用性探测策略仍是逐工具各自实现。</li></ul></li><li>KHY 可学习：<ul><li>添加标准的可用性检查契约 + 短 TTL 缓存 + 配置变更时的失效 API。</li></ul></li><li>验证：<ul><li>工具可用性翻转测试（env/config 切换），并具备确定性的传播延迟边界。</li></ul></li></ul>
+<h3 id="10-p2-测试分层作为架构反馈回路">10) P2 — 测试分层作为架构反馈回路<a class="anchor" href="#10-p2-测试分层作为架构反馈回路" aria-label="锚点">#</a></h3>
+<ul><li>Hermes 证据：<ul><li><code>tests/</code> 按领域拆分（<code>agent</code>、<code>gateway</code>、<code>plugins</code>、<code>e2e</code>、<code>stress</code> 等）。</li></ul></li><li>KHY 现状：<ul><li><code>backend/tests</code> 具备良好的 service/gateway 覆盖，但针对架构特性的专用 stress/e2e 切片仍有限。</li></ul></li><li>KHY 可学习：<ul><li>为以下方面添加显式测试套件：<ul><li>长循环稳定性，</li><li>插件生命周期兼容性，</li><li>发布流水线完整性，</li><li>调度器持久性。</li></ul></li></ul></li><li>验证：<ul><li>带有 unit/integration/e2e/stability 多通道的 CI 矩阵，并附带失败归因标签。</li></ul></li></ul>
+<h2 id="建议的采纳顺序">建议的采纳顺序<a class="anchor" href="#建议的采纳顺序" aria-label="锚点">#</a></h2>
+<h3 id="阶段-a-1-2-周-最高-roi">阶段 A（1-2 周，最高 ROI）<a class="anchor" href="#阶段-a-1-2-周-最高-roi" aria-label="锚点">#</a></h3>
+<ol><li>命令单一来源收敛（清单 #1）</li><li>适配器注册表重构（清单 #2）</li><li>插件生命周期收敛设计 + 兼容性垫片（清单 #3）</li></ol>
+<h3 id="阶段-b-2-4-周-成长能力">阶段 B（2-4 周，成长能力）<a class="anchor" href="#阶段-b-2-4-周-成长能力" aria-label="锚点">#</a></h3>
+<ol><li>上下文引擎抽象落地（清单 #4）</li><li>持久化调度器基础（清单 #5）</li><li>发布 dry-run + 变更日志自动化（清单 #6）</li></ol>
+<h3 id="阶段-c-4-周-规模加固">阶段 C（4+ 周，规模加固）<a class="anchor" href="#阶段-c-4-周-规模加固" aria-label="锚点">#</a></h3>
+<ol><li>依赖策略加固（清单 #7）</li><li>规范的可检索会话状态（清单 #8）</li><li>可用性缓存 + 分层测试通道（清单 #9、#10）</li></ol>
+<h2 id="khy-仓库的即时后续行动">KHY 仓库的即时后续行动<a class="anchor" href="#khy-仓库的即时后续行动" aria-label="锚点">#</a></h2>
+<ol><li>创建一个 <code>command schema</code> 模块，替换重复的命令列表。</li><li>引入 <code>adapterRegistry</code>，并将 <code>aiGateway</code> 静态列表迁移到注册式。</li><li>起草一份统一的插件生命周期契约，映射现有的：<ul><li><code>plugin-loader</code>，</li><li><code>cli/plugins</code>，</li><li><code>gateway/pluginChain</code>。</li></ul></li></ol>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-008] hermes-khy-p0-执行任务-2026-05-17.html"><div class="dir">← 上一篇</div><div class="ttl">KHY P0 执行任务清单（基于 Hermes 学习项）</div></a><a class="next" href="../../docs/08_MGMT_项目管理/[MGMT-RPT-010] windows-工具调用循环冻结-2026-05-28.html"><div class="dir">下一篇 →</div><div class="ttl">Windows 工具调用冻结排查与快速修复（2026-05-28）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/08_MGMT_项目管理/[MGMT-RPT-009] hermes-成长架构-学习清单-2026-05-17.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

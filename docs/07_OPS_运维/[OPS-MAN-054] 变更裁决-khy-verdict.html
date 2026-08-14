@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>变更裁决（khy verdict） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>变更裁决（khy verdict）</div>
+      <header class="hero reveal"><h1>变更裁决（khy verdict）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#变更裁决-khy-verdict">变更裁决（`khy verdict`）</a></li><li class="lvl-2"><a href="#一-它是什么">一、它是什么</a></li><li class="lvl-2"><a href="#二-入口与全部子命令">二、入口与全部子命令</a></li><li class="lvl-2"><a href="#三-典型用法">三、典型用法</a></li><li class="lvl-2"><a href="#四-诚实边界-watch">四、诚实边界（`watch`）</a></li><li class="lvl-2"><a href="#五-相关文档">五、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-054 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-054] 变更裁决-khy-verdict.md --&gt;</p>
+<h1 id="变更裁决-khy-verdict">变更裁决（<code>khy verdict</code>）<a class="anchor" href="#变更裁决-khy-verdict" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy verdict</code> 读取并渲染 KHY 对<strong>自身源码最近一次变更</strong>的「机器裁决」——这次改动是好（✅）、坏（❌）、存疑（❓）还是无关（—）。它还能把裁决以多种格式 <code>emit</code> 给其他 AI/工具一次性消费（含 Claude hook 格式）。本文讲清全部子命令与 <code>watch</code> 的真实形态。</p>
+<p>实现：<code>services/backend/src/cli/handlers/verdict.js</code> + <code>services/backend/src/services/changeWatchService</code>，dispatch 在 <code>router.js:4642</code>。</p></blockquote>
+<hr>
+<h2 id="一-它是什么">一、它是什么<a class="anchor" href="#一-它是什么" aria-label="锚点">#</a></h2>
+<p>KHY 监视自身源码变更并产出一个机器可读的裁决符号：</p>
+<table><thead><tr><th>符号</th><th>含义</th></tr></thead><tbody><tr><td>✅</td><td>变更通过</td></tr><tr><td>❌</td><td>变更有问题</td></tr><tr><td>❓</td><td>存疑 / 需人看</td></tr><tr><td>—</td><td>无相关变更</td></tr></tbody></table>
+<hr>
+<h2 id="二-入口与全部子命令">二、入口与全部子命令<a class="anchor" href="#二-入口与全部子命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy verdict</code>（或 <code>show</code>）</td><td>显示当前裁决</td></tr><tr><td><code>khy verdict check</code></td><td>立即跑一次裁决（<code>checkOnce()</code>）</td></tr><tr><td><code>khy verdict --json</code></td><td>以 JSON 输出</td></tr><tr><td><code>khy verdict emit [--format …] [--consumer &lt;名&gt;] [--peek]</code></td><td>把裁决导出给外部消费者</td></tr><tr><td><code>khy verdict watch</code></td><td>⚠️ <strong>仅信息提示</strong>（见 §四）</td></tr></tbody></table>
+<p><strong><code>emit --format</code></strong>：<code>text</code> / <code>json</code> / <code>claude-hook</code>（生成可被 Claude Code hook 消费的格式）。<code>--consumer</code> 标注消费方，<code>--peek</code> 只看不消费。</p>
+<hr>
+<h2 id="三-典型用法">三、典型用法<a class="anchor" href="#三-典型用法" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy verdict                 # 看最近一次变更的裁决
+khy verdict check           # 强制立即重新裁决
+khy verdict --json          # 机读
+khy verdict emit --format claude-hook --consumer my-hook --peek</code></pre>
+<hr>
+<h2 id="四-诚实边界-watch">四、诚实边界（<code>watch</code>）<a class="anchor" href="#四-诚实边界-watch" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>khy verdict watch</code> 不会自己常驻</strong>：它当前是<strong>信息提示</strong>——真正的持续监视由常驻入口 <code>khy daemon start</code> 承担。想要后台持续裁决，请走 daemon，而不是指望 <code>watch</code> 自起一个长进程。</li><li><code>check</code> / <code>emit</code> 是真实动作；<code>watch</code> 这条只是引导你去用 daemon。</li></ul>
+<hr>
+<h2 id="五-相关文档">五、相关文档<a class="anchor" href="#五-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-055] 可变性分级与变更治理（<code>khy evolve</code>）—— 与裁决互补：评估「这个文件能不能改」。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-053] 监控与自检-khy-monitor.html"><div class="dir">← 上一篇</div><div class="ttl">监控与自检（khy monitor）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-055] 可变性分级与变更治理-khy-evolve.html"><div class="dir">下一篇 →</div><div class="ttl">可变性分级与变更治理（khy evolve）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-054] 变更裁决-khy-verdict.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

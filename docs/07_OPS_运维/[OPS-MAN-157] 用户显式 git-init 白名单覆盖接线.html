@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线</div>
+      <header class="hero reveal"><h1>[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-157-用户显式-git-init-白名单覆盖接线">[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线</a></li><li class="lvl-2"><a href="#背景-断桥">背景 / 断桥</a></li><li class="lvl-2"><a href="#改动-全-additive-门关字节回退">改动(全 additive · 门关字节回退)</a></li><li class="lvl-3"><a href="#关键不变量">关键不变量</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-157-用户显式-git-init-白名单覆盖接线">[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线<a class="anchor" href="#ops-man-157-用户显式-git-init-白名单覆盖接线" aria-label="锚点">#</a></h1>
+<h2 id="背景-断桥">背景 / 断桥<a class="anchor" href="#背景-断桥" aria-label="锚点">#</a></h2>
+<p><code>services/backend/src/services/gitTrackWhitelist.js</code> 是一个全实现的 khy-native 纯叶:<br>维护一份「用户显式声明可 git 化的目录」白名单(JSON 落 <code>~/.khy/git-track-whitelist.json</code>),<br>导出 <code>loadWhitelist / saveWhitelist / isWhitelisted / addToWhitelist / removeFromWhitelist</code>,<br>全部 fail-soft(读写异常返 <code>[]</code> / <code>false</code>)。</p>
+<p>它的设计意图是:自动 git-init 判定(<code>workspaceGitInitPolicy.assessGitInitTarget</code>)对某些<br>「精确系统/共享根」(如 <code>/opt</code>、<code>/srv</code>、<code>/mnt</code>)会<strong>软拒绝</strong>(<code>reason: 'system-dir'</code>),<br>以免误把系统目录变成 git 仓库;但真实场景里用户<strong>确实</strong>可能把项目放在 <code>/opt/myapp</code> 这类<br>路径并希望 git 化。白名单就是让用户对这类<strong>可覆盖的软拒绝</strong>显式声明「我确实要」。</p>
+<p>问题:<strong>此前零生产消费者</strong>。<code>workspaceGitInit.ensureWorkspaceRepo</code> 从不查白名单,能力完全<br>休眠——典型的「能力存在,但没接线」。</p>
+<h2 id="改动-全-additive-门关字节回退">改动(全 additive · 门关字节回退)<a class="anchor" href="#改动-全-additive-门关字节回退" aria-label="锚点">#</a></h2>
+<p>在 IO 服务 <code>workspaceGitInit.ensureWorkspaceRepo</code> 的判定检查处接线:当纯策略叶判<br><code>shouldInit:false</code> 且 <code>reason === 'system-dir'</code> 时,<strong>惰性</strong> require <code>./gitTrackWhitelist</code><br>并查 <code>isWhitelisted(cwd)</code>;命中(<code>=== true</code>)则覆盖软拒绝、继续 init。</p>
+<pre><code class="language-js">const verdict = policy.assessGitInitTarget({ cwd, home, isGitRepo });
+if (!verdict.shouldInit) {
+  let overridden = false;
+  if (verdict.reason === 'system-dir') {        // ← 仅可覆盖软拒绝这一分支
+    try {
+      const { isWhitelisted } = require('./gitTrackWhitelist');
+      overridden = isWhitelisted(cwd) === true;
+    } catch { overridden = false; }             // fail-soft
+  }
+  if (!overridden) return { status: 'skip', reason: verdict.reason, cwd };
+}</code></pre>
+<h3 id="关键不变量">关键不变量<a class="anchor" href="#关键不变量" aria-label="锚点">#</a></h3>
+<ol><li><strong>硬安全约束永不覆盖</strong>:<code>filesystem-root</code>(<code>/</code>、盘符根)、<code>home-dir</code>、<code>ancestor-of-home</code>、</li></ol>
+<p><code>already-repo</code> 这些 reason <strong>不</strong>进入白名单查询分支 → 即使白名单返 <code>true</code> 也照常拒绝。<br>   契约见 gitTrackWhitelist 文件头「文件系统根 / 盘符根永远拒绝」。</p>
+<ol><li><strong>为什么接在 IO 层而非纯策略叶</strong>:<code>workspaceGitInitPolicy</code> 契约是「零 IO」,而白名单是</li></ol>
+<p>fs 读。把 fs 读放进本就做 git 探测/init 的 <code>workspaceGitInit</code> 服务,保住纯叶纯度。</p>
+<ol><li><strong>字节回退</strong>:白名单空(默认)→ <code>isWhitelisted</code> 恒 <code>false</code> → <code>overridden</code> 恒 <code>false</code> →</li></ol>
+<p>与接线前逐字节等价。惰性 require 仅在 <code>system-dir</code> 这一罕见分支加载。</p>
+<ol><li><strong>门控</strong>:复用既有父门 <code>KHY_AUTO_GIT_INIT</code>(整个自动 init 关则本覆盖也不触发)。</li></ol>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/services/workspaceGitInit.js
+node --test services/backend/tests/services/gitTrackWhitelistWiring.test.js   # 7/7</code></pre>
+<p>覆盖矩阵(见 <code>gitTrackWhitelistWiring.test.js</code>):</p>
+<ul><li>system-dir <code>/opt</code> + 白名单 <code>true</code> → 覆盖为 <code>initialized</code>,<code>isWhitelisted</code> 以 cwd 调用。</li><li>system-dir <code>/opt</code> + 白名单 <code>false</code> → 字节回退 <code>skip / system-dir</code>,<code>git init</code> 不跑。</li><li><strong>硬底</strong>:filesystem-root <code>/</code> + 白名单 <code>true</code> → 仍 <code>skip / filesystem-root</code>,白名单<strong>从不被查</strong>。</li><li><strong>硬底</strong>:home-dir + 白名单 <code>true</code> → 仍 <code>skip / home-dir</code>,白名单从不被查。</li><li><strong>不回归</strong>:eligible(HOME 直接子目录)照常 init,白名单从不被查(桩抛错断言未被调用)。</li><li>源级断言:<code>workspaceGitInit</code> require <code>./gitTrackWhitelist</code>、调用 <code>isWhitelisted</code>、以</li></ul>
+<p><code>reason === 'system-dir'</code> 为门。</p>
+<p>测试用 <code>require.cache</code> 桩替换惰性 require 的 gitTrackWhitelist(其 <code>WHITELIST_FILE</code> 硬编码<br><code>os.homedir()</code> 不可 env 注入),确定性覆盖各分支,零真实 fs 写。</p>
+<h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
+<ul><li>承 [OPS-MAN-155] 指令注册表编译期收敛守卫接线、[OPS-MAN-156] 取来即执行安全守卫接线,</li></ul>
+<p>同为「能力存在但没接线」送别礼系列。</p>
+<ul><li>维护映射区:<code>git-track-whitelist-init-override</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-156] 取来即执行安全守卫接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-156] 取来即执行安全守卫接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-158] 本地模型并入统一目录接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-158] 本地模型并入统一目录接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

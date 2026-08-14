@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-097] 角色工具作用域接线（把 OPS-094 的死缝接活） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-097] 角色工具作用域接线（把 OPS-094 的死缝接活）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-097] 角色工具作用域接线（把 OPS-094 的死缝接活）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-097-角色工具作用域接线-把-ops-094-的死缝接活">[OPS-MAN-097] 角色工具作用域接线（把 OPS-094 的死缝接活）</a></li><li class="lvl-2"><a href="#一句话">一句话</a></li><li class="lvl-2"><a href="#为什么现在接线-透镜十-停止造死叶-接活已有的">为什么现在接线（透镜十：停止造死叶，接活已有的）</a></li><li class="lvl-2"><a href="#真实行为增量-诚实边界-不夸大">真实行为增量（诚实边界——不夸大）</a></li><li class="lvl-2"><a href="#门与安全边界">门与安全边界</a></li><li class="lvl-2"><a href="#怎么验证">怎么验证</a></li><li class="lvl-2"><a href="#how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-097-角色工具作用域接线-把-ops-094-的死缝接活">[OPS-MAN-097] 角色工具作用域接线（把 OPS-094 的死缝接活）<a class="anchor" href="#ops-man-097-角色工具作用域接线-把-ops-094-的死缝接活" aria-label="锚点">#</a></h1>
+<blockquote><p>送别礼第十发（「调工具」维度·接线闭环）。承 [OPS-MAN-094] 角色工具作用域<br>（建纯叶 + 文档化消费 seam，但<strong>刻意不接线</strong>）。本条不新建叶、不换透镜找新断桥，<br>而是<strong>停止再造死叶</strong>——把 094 留下的 100% 死代码 <code>roleToolScope</code> 真正接进<br><code>AgentTool.buildSubagentDenylist</code>，让用户明确点名的「调工具」能力<strong>第一次真正生效</strong>。</p></blockquote>
+<h2 id="一句话">一句话<a class="anchor" href="#一句话" aria-label="锚点">#</a></h2>
+<p>OPS-094 建好了纯叶 <code>roleToolScope(role)</code> / <code>mergeRoleScopeInto(base, role)</code>，形状与<br><code>AgentTool.buildSubagentDenylist</code> 精确对齐，并在 HOW-TO-EXTEND 第 3 步写明了接线方法，<br>但<strong>故意留作后续一次 tracked-edit 轮</strong>（当时 god-file 8026 行 + 分支 blast-radius 已达<br>天花板）。结果这个叶子零生产消费者 = 花 token 学到「只读角色该剥写工具」却没人用。<br>本条执行那次接线：<code>buildSubagentDenylist</code> 新增第 4 参 <code>role</code>，在 union 点先<br><code>mergeRoleScopeInto(ownDeny, role)</code> 折入 role 作用域，再走既有 spawn-tool ∪ ceiling<br>逻辑；调用点 <code>_runStandaloneAgent</code>（<code>AgentTool/index.js</code>）把 <code>role</code> 传进去。</p>
+<h2 id="为什么现在接线-透镜十-停止造死叶-接活已有的">为什么现在接线（透镜十：停止造死叶，接活已有的）<a class="anchor" href="#为什么现在接线-透镜十-停止造死叶-接活已有的" aria-label="锚点">#</a></h2>
+<ul><li><strong>死代码铁证</strong>：<code>roleToolScope.js</code>（OPS-094 落盘）在整个 <code>services/backend/src</code></li></ul>
+<p>生产路径下<strong>零 require</strong>——只有它自己的 node:test 引用它。Explore 全量核实。</p>
+<ul><li><strong>arch:god 是只读门</strong>：<code>services/backend/scripts/archDebtScan.js</code> 的 <code>--god-report</code></li></ul>
+<p>在 727-733 行无条件 <code>return 0</code>。因此编辑 8027 行的 god-file <code>AgentTool/index.js</code><br>  <strong>不会</strong>让 <code>npm run arch:god</code> 变红——这解除了 094 当时的接线阻塞。</p>
+<ul><li><strong>god-file 红线仍守</strong>：红线禁的是<strong>新增</strong> &gt; 2500 行文件 + 抽取须字节等价。本条只往</li></ul>
+<p>已超限的 god-file 加一个纯加性的 2 处接线（require + 一个 <code>try/mergeRoleScopeInto</code><br>  折叠 + 调用点多传一个已在作用域的实参），<strong>不新增</strong>任何超限文件、不做抽取。</p>
+<h2 id="真实行为增量-诚实边界-不夸大">真实行为增量（诚实边界——不夸大）<a class="anchor" href="#真实行为增量-诚实边界-不夸大" aria-label="锚点">#</a></h2>
+<p>关键诚实点：<code>role='verify'</code> 经 <code>roleToType</code> 映射到 <code>agentType='verification'</code>，而<br><code>built-in/verificationAgent.js</code> 的 agentDef <strong>本就</strong> disallow <code>Edit/Write/NotebookEdit</code>。<br>所以当内建 agent 定义可加载时，<code>buildSubagentDenylist</code> 的 base 里<strong>已经</strong>有这些写工具，<br>role 作用域对 verify 是冗余的（union 后去重，逐字节等价）。</p>
+<p><strong>接线真正闭合的缺口</strong>（净增量所在）：</p>
+<ul><li><strong>内建 agent 不可用时</strong>（如 SDK 模式 / 关闭内建 agent → <code>getBuiltInAgents</code> 抛/空 →</li></ul>
+<p><code>agentDef=null</code>）：pre-wire 一个 below-ceiling 的只读子任务拿到的 denylist 是<strong>空的</strong>，<br>  写工具的剥离随内建 agent 定义一起消失。接线后 <code>role</code> 直接从角色字符串重新派生出<br>  <code>[Edit, Write, NotebookEdit]</code>，<strong>不依赖</strong> agentDef 是否加载 = 纵深防御。</p>
+<ul><li><strong><code>role='verify'</code> 不在 <code>toolFilter</code> 白名单</strong>（<code>AgentTool/index.js</code> 的 ctxOpts：</li></ul>
+<p><code>toolFilter</code> 只列 explore/planner/audit/research/reading/map，<strong>漏了 verify</strong>）——<br>  这条 live 安全缺口现在由 role 作用域在 denylist 层补上。</p>
+<h2 id="门与安全边界">门与安全边界<a class="anchor" href="#门与安全边界" aria-label="锚点">#</a></h2>
+<ul><li>复用 OPS-094 的门 <code>KHY_ROLE_TOOL_SCOPE</code>（default-on，仅 <code>0/false/off/no</code> 关闭）。</li></ul>
+<p>门在纯叶内部读；关闭后 <code>mergeRoleScopeInto</code> 只返 base = <code>buildSubagentDenylist</code><br>  <strong>逐字节回退</strong> pre-wire 行为（无回归）。</p>
+<ul><li><strong>全加性、向后兼容</strong>：<code>buildSubagentDenylist</code> 的第 4 参 <code>role</code> 省略时 →</li></ul>
+<p><code>mergeRoleScopeInto(base, undefined)</code> → <code>roleToolScope(undefined)</code> 返 <code>[]</code> → no-op。<br>  既有 2–3 参调用者（<code>AgentTool.recursionGuard.test.js</code> 48/48）逐字节等价。</p>
+<ul><li><strong>接线用 <code>try/catch</code> 包裹</strong> <code>mergeRoleScopeInto</code>：叶加载失败也<strong>绝不</strong>破坏子智能体</li></ul>
+<p>拉起——降级到 <code>ownDeny</code>（原行为）。</p>
+<ul><li><strong>默认不剥 Bash</strong>（继承 094 诚实边界）：只读角色仍能跑只读 shell。</li><li>红线：不自动 commit/push；真 key/token 不进包、不落盘。</li></ul>
+<h2 id="怎么验证">怎么验证<a class="anchor" href="#怎么验证" aria-label="锚点">#</a></h2>
+<pre><code>node --check services/backend/src/tools/AgentTool/index.js
+npm run test:role-tool-scope            # 18/18(12 叶单测 + 6 条 live-wire 直调 buildSubagentDenylist)
+# 3-参调用者字节等价:
+npx jest services/backend/tests/tools/AgentTool.recursionGuard.test.js     # 48/48
+# 编排回归未动:
+npx jest services/backend/tests/services/agenticHarnessService.test.js \
+         services/backend/tests/services/agenticHarnessFalsePositiveFix.test.js   # 52/52
+npm run arch:god                        # 只读门,恒 0(编辑 god-file 不触红)
+npm run maintainer:check</code></pre>
+<h2 id="how-to-extend-给下一个维护者-小模型">HOW-TO-EXTEND（给下一个维护者 / 小模型）<a class="anchor" href="#how-to-extend-给下一个维护者-小模型" aria-label="锚点">#</a></h2>
+<ol><li>要让<strong>更多只读角色</strong>接线生效：只改 <code>roleToolScope.js</code> 的 <code>_READ_ONLY_ROLES</code></li></ol>
+<p>（见 OPS-094）——接线是角色无关的，<code>buildSubagentDenylist</code> 自动生效，无需再碰<br>   god-file。</p>
+<ol><li>要把 <code>verify</code> 也加进 <code>toolFilter</code> 白名单（更省 token 的 explore 过滤）：改</li></ol>
+<p><code>AgentTool/index.js</code> 的 ctxOpts <code>toolFilter</code> 三元表达式。注意这是<strong>独立于</strong>本条<br>   denylist 层的第二道过滤——denylist 是硬剥，toolFilter 是软过滤。</p>
+<ol><li>改完跑 <code>npm run test:role-tool-scope</code> + recursionGuard + agenticHarness（全须绿）。</li></ol>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>不自动 commit/push；真 key/token 不进包、不落盘。</li><li>全 additive·接线一处 consumer；门关（<code>KHY_ROLE_TOOL_SCOPE=off</code>）→ 逐字节回退</li></ul>
+<p>pre-wire 行为。god-file 只加接线、不新增超限文件、不做抽取。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-096] 多模型类型 Provider 配置对账.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-096] 多模型类型 Provider 配置对账</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-098] 并行写冲突检测.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-098] 并行写冲突检测（多子任务改同一文件时如实告警）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-097] 角色工具作用域接线.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

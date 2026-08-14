@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-anything-gimp · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../../../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../../../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../../../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../../../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../../../../../docs/index.html">首页</a><span class="sep">›</span>services<span class="sep">›</span>backend<span class="sep">›</span>src<span class="sep">›</span>data<span class="sep">›</span>cliAnythingRegistry<span class="sep">›</span>skills<span class="sep">›</span>cli-anything-gimp<span class="sep">›</span>cli-anything-gimp</div>
+      <header class="hero reveal"><h1>cli-anything-gimp</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#cli-anything-gimp">cli-anything-gimp</a></li><li class="lvl-2"><a href="#installation">Installation</a></li><li class="lvl-2"><a href="#usage">Usage</a></li><li class="lvl-3"><a href="#basic-commands">Basic Commands</a></li><li class="lvl-3"><a href="#repl-mode">REPL Mode</a></li><li class="lvl-2"><a href="#command-groups">Command Groups</a></li><li class="lvl-3"><a href="#project">Project</a></li><li class="lvl-3"><a href="#layer">Layer</a></li><li class="lvl-3"><a href="#canvas">Canvas</a></li><li class="lvl-3"><a href="#filter-group">Filter Group</a></li><li class="lvl-3"><a href="#media">Media</a></li><li class="lvl-3"><a href="#export-group">Export Group</a></li><li class="lvl-3"><a href="#session">Session</a></li><li class="lvl-3"><a href="#draw">Draw</a></li><li class="lvl-2"><a href="#examples">Examples</a></li><li class="lvl-3"><a href="#create-a-new-project">Create a New Project</a></li><li class="lvl-3"><a href="#interactive-repl-session">Interactive REPL Session</a></li><li class="lvl-3"><a href="#export-project">Export Project</a></li><li class="lvl-3"><a href="#layered-composition-workflow">Layered Composition Workflow</a></li><li class="lvl-2"><a href="#state-management">State Management</a></li><li class="lvl-2"><a href="#output-formats">Output Formats</a></li><li class="lvl-2"><a href="#for-ai-agents">For AI Agents</a></li><li class="lvl-2"><a href="#more-information">More Information</a></li><li class="lvl-2"><a href="#version">Version</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: &quot;cli-anything-gimp&quot;<br>description: &gt;-<br>  Command-line interface for Gimp - A stateful command-line interface for image editing, built on Pillow. Designed for AI agents and pow...</p>
+<hr>
+<h1 id="cli-anything-gimp">cli-anything-gimp<a class="anchor" href="#cli-anything-gimp" aria-label="锚点">#</a></h1>
+<p>A stateful command-line interface for image editing, built on Pillow. Designed for AI agents and power users who need to create and manipulate images without a GUI.</p>
+<h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
+<p>This CLI is installed as part of the cli-anything-gimp package:</p>
+<pre><code class="language-bash">pip install cli-anything-gimp</code></pre>
+<p><strong>Prerequisites:</strong></p>
+<ul><li>Python 3.10+</li><li>gimp is recommended for native batch rendering, but layered compositions can</li></ul>
+<p>still render through the built-in Pillow path when GIMP is unavailable or when<br>  deferred <code>draw</code> operations are present</p>
+<h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
+<h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Show help
+cli-anything-gimp --help
+
+# Start interactive REPL mode
+cli-anything-gimp
+
+# Create a new project
+cli-anything-gimp project new -o project.json
+
+# Run with JSON output (for agent consumption)
+cli-anything-gimp --json project info -p project.json</code></pre>
+<h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
+<p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
+<pre><code class="language-bash">cli-anything-gimp
+# Enter commands interactively with tab-completion and history</code></pre>
+<h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
+<h3 id="project">Project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
+<p>Project management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new project</td></tr><tr><td><code>open</code></td><td>Open an existing project</td></tr><tr><td><code>save</code></td><td>Save the current project</td></tr><tr><td><code>info</code></td><td>Show project information</td></tr><tr><td><code>profiles</code></td><td>List available canvas profiles</td></tr><tr><td><code>json</code></td><td>Print raw project JSON</td></tr></tbody></table>
+<h3 id="layer">Layer<a class="anchor" href="#layer" aria-label="锚点">#</a></h3>
+<p>Layer management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>new</code></td><td>Create a new blank layer</td></tr><tr><td><code>add-from-file</code></td><td>Add a layer from an image file</td></tr><tr><td><code>list</code></td><td>List all layers</td></tr><tr><td><code>remove</code></td><td>Remove a layer by index</td></tr><tr><td><code>duplicate</code></td><td>Duplicate a layer</td></tr><tr><td><code>move</code></td><td>Move a layer to a new position</td></tr><tr><td><code>set</code></td><td>Set a layer property (name, opacity, visible, mode, offset_x, offset_y); negative offsets are accepted naturally</td></tr><tr><td><code>flatten</code></td><td>Flatten all visible layers</td></tr><tr><td><code>merge-down</code></td><td>Merge a layer with the one below it</td></tr></tbody></table>
+<h3 id="canvas">Canvas<a class="anchor" href="#canvas" aria-label="锚点">#</a></h3>
+<p>Canvas operations.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>info</code></td><td>Show canvas information</td></tr><tr><td><code>resize</code></td><td>Resize the canvas (without scaling content)</td></tr><tr><td><code>scale</code></td><td>Scale the canvas and all content proportionally</td></tr><tr><td><code>crop</code></td><td>Crop the canvas to a rectangle</td></tr><tr><td><code>mode</code></td><td>Set the canvas color mode</td></tr><tr><td><code>dpi</code></td><td>Set the canvas DPI</td></tr></tbody></table>
+<h3 id="filter-group">Filter Group<a class="anchor" href="#filter-group" aria-label="锚点">#</a></h3>
+<p>Filter management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>list-available</code></td><td>List all available filters</td></tr><tr><td><code>info</code></td><td>Show details about a filter</td></tr><tr><td><code>add</code></td><td>Add a filter to a layer</td></tr><tr><td><code>remove</code></td><td>Remove a filter by index</td></tr><tr><td><code>set</code></td><td>Set a filter parameter</td></tr><tr><td><code>list</code></td><td>List filters on a layer</td></tr></tbody></table>
+<h3 id="media">Media<a class="anchor" href="#media" aria-label="锚点">#</a></h3>
+<p>Media file operations.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>probe</code></td><td>Analyze an image file</td></tr><tr><td><code>list</code></td><td>List media files referenced in the project</td></tr><tr><td><code>check</code></td><td>Check that all referenced media files exist</td></tr><tr><td><code>histogram</code></td><td>Show histogram analysis of an image</td></tr></tbody></table>
+<h3 id="export-group">Export Group<a class="anchor" href="#export-group" aria-label="锚点">#</a></h3>
+<p>Export/render commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>presets</code></td><td>List export presets</td></tr><tr><td><code>preset-info</code></td><td>Show preset details</td></tr><tr><td><code>render</code></td><td>Render the project to an image file; deferred draw ops are applied at render time</td></tr></tbody></table>
+<h3 id="session">Session<a class="anchor" href="#session" aria-label="锚点">#</a></h3>
+<p>Session management commands.</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show session status</td></tr><tr><td><code>undo</code></td><td>Undo the last operation</td></tr><tr><td><code>redo</code></td><td>Redo the last undone operation</td></tr><tr><td><code>history</code></td><td>Show undo history</td></tr></tbody></table>
+<h3 id="draw">Draw<a class="anchor" href="#draw" aria-label="锚点">#</a></h3>
+<p>Drawing operations (applied at render time).</p>
+<table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>text</code></td><td>Draw text on a layer (by converting it to a text layer)</td></tr><tr><td><code>rect</code></td><td>Draw a rectangle (stored as drawing operation)</td></tr></tbody></table>
+<h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
+<h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
+<p>Create a new gimp project file.</p>
+<pre><code class="language-bash">cli-anything-gimp project new -o myproject.json
+# Or with JSON output for programmatic use
+cli-anything-gimp --json project new -o myproject.json</code></pre>
+<h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
+<p>Start an interactive session with undo/redo support.</p>
+<pre><code class="language-bash">cli-anything-gimp
+# Enter commands interactively
+# Use 'help' to see available commands
+# Use 'undo' and 'redo' for history navigation</code></pre>
+<h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
+<p>Export the project to a final output format.</p>
+<pre><code class="language-bash">cli-anything-gimp --project myproject.json export render output.png --overwrite</code></pre>
+<h3 id="layered-composition-workflow">Layered Composition Workflow<a class="anchor" href="#layered-composition-workflow" aria-label="锚点">#</a></h3>
+<p>For overlay-heavy compositions:</p>
+<pre><code class="language-bash">cli-anything-gimp --project poster.gimp-cli.json layer set 0 offset_x -48
+cli-anything-gimp --project poster.gimp-cli.json layer set 0 offset_y 24
+cli-anything-gimp --project poster.gimp-cli.json draw text --layer 0 --text &quot;Launch Night&quot; --x 96 --y 120 --size 72 --color &quot;#f6f1e8&quot;
+cli-anything-gimp --project poster.gimp-cli.json export render output.png --overwrite</code></pre>
+<p>Notes:</p>
+<ul><li><code>layer set</code> now accepts negative <code>offset_x</code> and <code>offset_y</code> values in both command mode and REPL mode.</li><li><code>draw text</code> and <code>draw rect</code> are render-time operations. Treat the exported image, not only the project JSON, as the thing to review.</li><li>For projects with deferred draw ops, expect the Pillow render path to be the stable default even if GIMP is installed.</li></ul>
+<h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
+<p>The CLI maintains session state with:</p>
+<ul><li><strong>Undo/Redo</strong>: Up to 50 levels of history</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
+<h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
+<p>All commands support dual output modes:</p>
+<ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
+<pre><code class="language-bash"># Human output
+cli-anything-gimp project info -p project.json
+
+# JSON output for agents
+cli-anything-gimp --json project info -p project.json</code></pre>
+<h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
+<p>When using this CLI programmatically:</p>
+<ol><li><strong>Always use <code>--json</code> flag</strong> for parseable output</li><li><strong>Check return codes</strong> - 0 for success, non-zero for errors</li><li><strong>Parse stderr</strong> for error messages on failure</li><li><strong>Use absolute paths</strong> for all file operations</li><li><strong>Verify outputs exist</strong> after export operations</li><li><strong>Review rendered outputs</strong> after offset, draw, blend-mode, or filter changes instead of trusting saved project state alone</li></ol>
+<h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>
+<ul><li>Full documentation: See README.md in the package</li><li>Test coverage: See TEST.md in the package</li><li>Methodology: See HARNESS.md in the cli-anything-plugin</li></ul>
+<h2 id="version">Version<a class="anchor" href="#version" aria-label="锚点">#</a></h2>
+<p>1.0.0</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-freecad/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-freecad</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-godot/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">Godot Engine CLI</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../../../../../";window.__KHY_CUR__="services/backend/src/data/cliAnythingRegistry/skills/cli-anything-gimp/SKILL.html";</script>
+<script src="../../../../../../../docs/_assets/nav-data.js"></script>
+<script src="../../../../../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../../../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

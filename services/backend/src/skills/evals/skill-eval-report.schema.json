@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://khy-os.dev/schemas/skill-eval-report.schema.json",
+  "title": "KHY Skill Eval Report",
+  "type": "object",
+  "required": [
+    "generatedAt",
+    "configPath",
+    "configVersion",
+    "thresholds",
+    "thresholdChecks",
+    "summary",
+    "skills"
+  ],
+  "properties": {
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "configPath": { "type": "string" },
+    "configVersion": { "type": "string" },
+    "thresholds": { "type": "object" },
+    "thresholdChecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "pass", "detail"],
+        "properties": {
+          "name": { "type": "string" },
+          "pass": { "type": "boolean" },
+          "detail": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "checkedSkills",
+        "overallScore",
+        "minSkillScore",
+        "criticalFailures",
+        "warningFailures",
+        "pass"
+      ],
+      "properties": {
+        "checkedSkills": { "type": "integer", "minimum": 0 },
+        "overallScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "minSkillScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "criticalFailures": { "type": "integer", "minimum": 0 },
+        "warningFailures": { "type": "integer", "minimum": 0 },
+        "pass": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["skill", "path", "score", "passedChecks", "totalChecks", "failedChecks"],
+        "properties": {
+          "skill": { "type": "string" },
+          "path": { "type": "string" },
+          "score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "passedChecks": { "type": "integer", "minimum": 0 },
+          "totalChecks": { "type": "integer", "minimum": 0 },
+          "failedChecks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "severity", "detail"],
+              "properties": {
+                "id": { "type": "string" },
+                "severity": { "type": "string", "enum": ["critical", "warning"] },
+                "detail": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

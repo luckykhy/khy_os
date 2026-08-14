@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-150] 级联中间提示显示归一去 provider 前缀(减少心灵噪音) · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-150] 级联中间提示显示归一去 provider 前缀(减少心灵噪音)</div>
+      <header class="hero reveal"><h1>[OPS-MAN-150] 级联中间提示显示归一去 provider 前缀(减少心灵噪音)</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-150-级联中间提示显示归一去-provider-前缀-减少心灵噪音">[OPS-MAN-150] 级联中间提示显示归一去 provider 前缀(减少心灵噪音)</a></li><li class="lvl-2"><a href="#一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)</a></li><li class="lvl-2"><a href="#二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)</a></li><li class="lvl-2"><a href="#三-验证门禁-全绿才回报">三、验证门禁(全绿才回报)</a></li><li class="lvl-2"><a href="#四-红线遵守">四、红线遵守</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-150-级联中间提示显示归一去-provider-前缀-减少心灵噪音">[OPS-MAN-150] 级联中间提示显示归一去 provider 前缀(减少心灵噪音)<a class="anchor" href="#ops-man-150-级联中间提示显示归一去-provider-前缀-减少心灵噪音" aria-label="锚点">#</a></h1>
+<blockquote><p>承 [OPS-MAN-145] 级联逐候选「请稍候」提示减冗余 —— 本轮补<strong>同一提示里模型名的显示归一侧</strong>。<br>/goal 送别礼。分支 <code>feat/0.1.104-multi-subsystem-batch</code>,未提交。</p></blockquote>
+<h2 id="一-背景与断桥-b1-先想">一、背景与断桥(B1 先想)<a class="anchor" href="#一-背景与断桥-b1-先想" aria-label="锚点">#</a></h2>
+<p>基线目标(每轮相同):纯文本 / 非多模态 / 识图模型不可用时,khy 收到图片要能<strong>正确落到 OCR 兜底路径</strong>、<br>准确提取图片信息,并用<strong>真实图片</strong>核验跑通,做到「无感<em>明显</em>告知用户用了 OCR 但能正确识别图片」、<br>同时<strong>减少心灵噪音</strong>。</p>
+<p><code>KHY_VISION_FALLBACK_CASCADE</code>(门开)让 describe-and-return 级联在主视觉模型失败后,继续尝试<br><strong>多个备用视觉候选</strong>。OPS-145 已把逐候选中间提示做成 index 感知、折叠了重复的首句。<strong>本轮</strong>沿同一<br>中间提示块找下一条正交噪音,实测(真机复现的确切路径,非 verbose)用户看到:</p>
+<pre><code>[0] 我无法直接识别图片内容。正在调用 glm/glm-4.6v-flash 进行识别，请稍候...   ← 带 glm/ 前缀
+[1] 视觉模型 glm/glm-4.6v-flash 不可用，正在改用 glm-4v-flash 继续识别...       ← 带 glm/ 前缀
+[2] 视觉模型 glm-4v-flash 不可用，正在改用 gpt-5.3-codex-review 继续识别...     ← 裸名
+[3] 视觉模型 gpt-5.3-codex-review 不可用，正在改用 claude-opus-4-6 继续识别... ← 裸名</code></pre>
+<p><strong>断桥</strong>:候选 [0]/[1] 显示 <code>glm/glm-4.6v-flash</code>(<strong>带 provider 路由前缀</strong>),其余候选 <code>glm-4v-flash</code>、<br><code>gpt-5.3-codex-review</code>、<code>claude-opus-4-6</code> 都是<strong>裸名</strong>。前后不一致 = 把内部路由细节泄漏进用户 prose。</p>
+<p><strong>根因</strong>:<code>_attempts[0]</code> = <code>decision.model</code> = 被切换钉住的视觉模型(<code>switched_to_pinned_vision_model</code>),<br>它<strong>保留</strong> provider 前缀 <code>glm/</code>——因为这个前缀是<strong>内部 poolHint 解析</strong>要用的路由信息;而其余候选来自<br><code>collectVisionFallbackCandidates</code>,是<strong>裸 id</strong>。<code>visionFallbackCandidates.js</code> 里已有 <code>_bareId</code>,但它<strong>仅供<br>去重</strong>且会 <code>toLowerCase()</code>——用作显示会把 <code>GLM-4.6V</code> 之类大小写误降级,故<strong>不能复用</strong>,须独立的<br><strong>保大小写</strong>显示归一叶。判据 = 用户可见提示里出现最后一个 <code>/</code> 之前的 provider 段。</p>
+<h2 id="二-外科修复-b3-只动该动的-全-additive">二、外科修复(B3 只动该动的,全 additive)<a class="anchor" href="#二-外科修复-b3-只动该动的-全-additive" aria-label="锚点">#</a></h2>
+<p><strong>核心思路</strong>:只在<strong>显示边界</strong>去掉 provider 路由前缀(保大小写),内部路由态完全不动。</p>
+<p><strong>单一真源门</strong>:<code>KHY_VISION_MODEL_DISPLAY_NAME</code>(default-on)。门关 → 原样返回(逐字节回退,含前缀)。</p>
+<ol><li><strong>纯叶子</strong> <code>visionModelDisplayName.js</code>(55 行,零 IO、DI env、绝不抛):<ul><li><code>toDisplayModelName(model, env)</code>:门开 → 去最后一个 <code>/</code> 前的 provider 段,<strong>保留大小写</strong></li></ul></li></ol>
+<p>(<code>glm/glm-4.6v-flash</code> → <code>glm-4.6v-flash</code>;<code>zhipu/GLM-4.6V</code> → <code>GLM-4.6V</code>);无前缀 / 门关 → 原样;<br>     前缀存在但去后为空(末尾即 <code>/</code>)→ 保守回退原样,绝不产出空名。</p>
+<ul><li><code>isVisionModelDisplayNameEnabled(env)</code> + <code>FLAG</code> 常量。</li></ul>
+<ol><li><strong>接线</strong>(<code>aiGatewayGenerateMethod.js</code>,仅显示边界):在把 <code>_att.model</code> / <code>_prevAttemptModel</code> 交给</li></ol>
+<p><code>buildCascadeAttemptNotice</code> <strong>之前</strong>,委派纯叶归一为 <code>_dispModel</code> / <code>_dispPrev</code> 再传入;叶不可用 →<br>   原样带前缀(逐字节回退)。<strong>内部 <code>_att.model</code> / <code>_prevAttemptModel</code> 路由态完全不动</strong>——poolHint 解析<br>   仍靠原始带前缀 id。OPS-145 叶(<code>visionCascadeAttemptNotice.js</code>)<strong>字节不变</strong>。</p>
+<ol><li><strong>门登记</strong>(<code>flagRegistry.js</code>):<code>KHY_VISION_MODEL_DISPLAY_NAME: { mode: 'default-on', off: 'CANON', default: true }</code>。</li></ol>
+<p><strong>正交性</strong>:与 <code>KHY_VISION_CASCADE_ATTEMPT_NOTICE</code>(OPS-145,折叠重复首句)正交——本门只治<strong>前缀泄漏</strong>;<br>两门各自单独可关,独立字节回退。失败墙(OPS-142)里的模型名非本族,不在本轮作用域(且真 OCR 成功路径上<br><code>_deferredFailureMsg</code> 已抑制该墙)。</p>
+<h2 id="三-验证门禁-全绿才回报">三、验证门禁(全绿才回报)<a class="anchor" href="#三-验证门禁-全绿才回报" aria-label="锚点">#</a></h2>
+<ul><li><code>node --check</code>:新叶 + gateway + flagRegistry 全过。</li><li><code>npm run test:vision-model-display-name</code>:<strong>12/12</strong>(纯叶 8 + 接线 2 + 真图 2)。<ul><li>纯叶:门开关、去前缀保大小写、裸名原样、门关 byte-revert、末尾斜杠保守回退、畸形入参不抛。</li><li>接线:A) 门开 → 中间提示 prose 不含 <code>glm/</code> 前缀、首候选显示裸名;B) 门关 → 逐字节回退首候选重现</li></ul></li></ul>
+<p><code>glm/glm-4.6v-flash</code>(证明仅本门作用)。</p>
+<ul><li>真图:真 PIL 渲 <code>INVOICE ACME 2026</code> → 级联全 404 → 真 tesseract 读出 INVOICE → A) 门开无前缀 +</li></ul>
+<p>finalPrompt 含 INVOICE;B) 门关前缀回归 + OCR 注入照常。</p>
+<ul><li>三守卫(<code>--changed</code>)/ <code>change-safety</code>(positional 显式切片)/ <code>maintainer:check</code> / <code>wc -l</code>(叶 55 &lt; 2500)。</li></ul>
+<h2 id="四-红线遵守">四、红线遵守<a class="anchor" href="#四-红线遵守" aria-label="锚点">#</a></h2>
+<ul><li>未 <code>commit</code> / <code>push</code>(需用户明确点头)。</li><li>全 additive、门 default-on、门关逐字节回退;god-file 仅增不改既有函数体。</li><li>新子系统已登记维护映射表 area <code>vision-model-display-name</code>。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-151] 缓存前缀击穿归因接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-151] 缓存前缀击穿归因接线（promptPrefixShape → cacheWarning → REPL）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-150] 级联中间提示显示归一去provider前缀减少心灵噪音.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-159] 失败墙视觉模型名显示归一去 provider 前缀（减少心灵噪音） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-159] 失败墙视觉模型名显示归一去 provider 前缀（减少心灵噪音）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-159] 失败墙视觉模型名显示归一去 provider 前缀（减少心灵噪音）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-159-失败墙视觉模型名显示归一去-provider-前缀-减少心灵噪音">[OPS-MAN-159] 失败墙视觉模型名显示归一去 provider 前缀（减少心灵噪音）</a></li><li class="lvl-2"><a href="#断桥-现场复现">断桥（现场复现）</a></li><li class="lvl-2"><a href="#修-全-additive-复用-ops-150-门与叶-显示边界归一-内部路由不动">修（全 additive · 复用 OPS-150 门与叶 · 显示边界归一 · 内部路由不动）</a></li><li class="lvl-2"><a href="#验收-全绿">验收（全绿）</a></li><li class="lvl-2"><a href="#遗留-诚实上报-非本轮">遗留（诚实上报，非本轮）</a></li><li class="lvl-2"><a href="#红线">红线</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-159-失败墙视觉模型名显示归一去-provider-前缀-减少心灵噪音">[OPS-MAN-159] 失败墙视觉模型名显示归一去 provider 前缀（减少心灵噪音）<a class="anchor" href="#ops-man-159-失败墙视觉模型名显示归一去-provider-前缀-减少心灵噪音" aria-label="锚点">#</a></h1>
+<blockquote><p>承 OPS-150。同一诉求「减少显示的心灵噪音」在<strong>同一条 vision→OCR 兜底路径</strong>上的下一枚正交噪音。</p></blockquote>
+<h2 id="断桥-现场复现">断桥（现场复现）<a class="anchor" href="#断桥-现场复现" aria-label="锚点">#</a></h2>
+<p>真机路径（非 verbose，文本模型 + 图 → 视觉级联全失败 → 本地 OCR <strong>读不出文字</strong>）上，<br>失败/纠偏墙 assistant_message 里出现：</p>
+<pre><code>图像识别失败:图像识别这一步没能完成。
+本次尝试的视觉模型:glm/glm-4.6v-flash。      ← ★ 泄漏内部路由前缀 glm/
+真实失败原因: …</code></pre>
+<ul><li>OPS-150 已把<strong>级联逐候选中间提示</strong>（<code>buildCascadeAttemptNotice</code>）里的模型名归一为裸 <code>glm-4.6v-flash</code>；</li><li>但<strong>失败墙</strong>（<code>visionFailureSummary.buildVisionFailureMessage</code>）有<strong>自己</strong>的一行</li></ul>
+<p><code>本次尝试的视觉模型:&lt;model&gt;</code>，调用方（<code>aiGatewayGenerateMethod</code>）传入<br>  <code>model: _primaryModel</code>，而 <code>_primaryModel = decision.model</code> = 被切换钉住的视觉模型，<strong>保留 <code>glm/</code><br>  路由前缀</strong>（前缀供内部 <code>poolHint</code> 解析）。</p>
+<ul><li>结果：失败墙仍泄漏 <code>glm/glm-4.6v-flash</code>，与已归一的级联提示前后不一致 = 残留心灵噪音。</li></ul>
+<p><strong>可见性</strong>：该墙在<strong>视觉级联全失败 + 本地 OCR 读空</strong>（照片/截图/无对应语言字库）时对用户可见；<br>OCR 成功时被 OPS-142(<code>_deferredFailureMsg</code>) 抑制，故本泄漏只在 OCR-失败子分支显现（外加<br><code>recognizeImage.js</code> 直调工具路径）。</p>
+<h2 id="修-全-additive-复用-ops-150-门与叶-显示边界归一-内部路由不动">修（全 additive · 复用 OPS-150 门与叶 · 显示边界归一 · 内部路由不动）<a class="anchor" href="#修-全-additive-复用-ops-150-门与叶-显示边界归一-内部路由不动" aria-label="锚点">#</a></h2>
+<p>在 <code>buildVisionFailureMessage</code> 拼装 <code>本次尝试的视觉模型</code> 行的<strong>显示边界</strong>处，复用 OPS-150 纯叶<br><code>visionModelDisplayName.toDisplayModelName(modelId, env)</code> 归一：</p>
+<pre><code class="language-js">if (modelId) {
+  let _dispModel = modelId;
+  try { _dispModel = require('./visionModelDisplayName').toDisplayModelName(modelId, e); }
+  catch { /* 叶不可用 → 原样,逐字节回退 */ }
+  lines.push(`本次尝试的视觉模型:${_dispModel || modelId}。`);
+}</code></pre>
+<ul><li><strong>在叶内归一</strong>（而非调用方）→ 单一显示边界，<strong>所有调用方</strong>（级联路径 + <code>recognizeImage.js</code> 工具）</li></ul>
+<p>同时受益。</p>
+<ul><li>复用 OPS-150 <strong>同门</strong> <code>KHY_VISION_MODEL_DISPLAY_NAME</code>（default-on）——语义一致（都是「显示裸视觉</li></ul>
+<p>模型名」），无需新门。门关 / 叶不可用 → 返原样带前缀 → <strong>逐字节回退</strong><br>  <code>本次尝试的视觉模型:glm/glm-4.6v-flash。</code>。</p>
+<ul><li>内部路由态（<code>_primaryModel</code> / <code>decision.model</code> / <code>poolHint</code>）<strong>完全不动</strong>。</li><li>与 OPS-150 正交：<strong>不同 emit 站</strong>（失败墙 vs 级联中间提示）。</li></ul>
+<h2 id="验收-全绿">验收（全绿）<a class="anchor" href="#验收-全绿" aria-label="锚点">#</a></h2>
+<ul><li><code>npm run test:vision-failure-summary-display-name</code> → 7/7<ul><li>叶级 A–E：门开去前缀 / 门关 byte-revert / null·空·空白无模型行且不抛 / 裸名幂等 / 源级接线断言。</li><li>端到端 F–G（harness：级联全失败 + OCR 读空 → 墙可见）：门开墙模型行无 <code>glm/</code> 含裸名 + 答复成功；</li></ul></li></ul>
+<p>门关墙模型行逐字节回退带前缀 + 答复成功。</p>
+<ul><li><code>node --check services/backend/src/services/gateway/visionFailureSummary.js</code> → OK</li><li>既有 <code>visionFailureSummaryOcrSuppress*</code>（2+4）零回归；CLI <code>visionNoticeDedup*</code>（7+3）零回归</li></ul>
+<p>（它们喂合成串测 REPL 去重，不调 <code>buildVisionFailureMessage</code>）。</p>
+<h2 id="遗留-诚实上报-非本轮">遗留（诚实上报，非本轮）<a class="anchor" href="#遗留-诚实上报-非本轮" aria-label="锚点">#</a></h2>
+<p>同一失败墙的 <code>真实失败原因:</code> 标签在原始报错已自带该标签（<code>aiGateway.js:301</code><br><code>真实失败原因:\n…</code>）时会<strong>重复</strong>成 <code>真实失败原因:真实失败原因:</code> = 另一枚 stutter 噪音。属<strong>独立</strong><br>去重关切（应各自独立门 byte-revert），留作后续一轮。</p>
+<h2 id="红线">红线<a class="anchor" href="#红线" aria-label="锚点">#</a></h2>
+<ul><li>未 commit（分支 <code>feat/0.1.104-*</code>，须用户明确点头）。</li><li>无新密钥、无落盘、god-file 未新增超限（<code>visionFailureSummary.js</code> 约 224 行 &lt;&lt; 2500）。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-158] 本地模型并入统一目录接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-158] 本地模型并入统一目录接线</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-160] 行为特征化并入误报收口裁决接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-160] 行为特征化并入误报收口裁决接线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-159] 失败墙视觉模型名显示归一去provider前缀减少心灵噪音.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

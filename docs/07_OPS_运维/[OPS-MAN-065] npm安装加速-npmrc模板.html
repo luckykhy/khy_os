@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-MAN-065] npm 安装加速 .npmrc 模板（国内镜像） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>[OPS-MAN-065] npm 安装加速 .npmrc 模板（国内镜像）</div>
+      <header class="hero reveal"><h1>[OPS-MAN-065] npm 安装加速 .npmrc 模板（国内镜像）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-065-npm-安装加速-npmrc-模板-国内镜像">[OPS-MAN-065] npm 安装加速 .npmrc 模板（国内镜像）</a></li><li class="lvl-2"><a href="#用法">用法</a></li><li class="lvl-2"><a href="#验证">验证</a></li><li class="lvl-2"><a href="#说明">说明</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="ops-man-065-npm-安装加速-npmrc-模板-国内镜像">[OPS-MAN-065] npm 安装加速 .npmrc 模板（国内镜像）<a class="anchor" href="#ops-man-065-npm-安装加速-npmrc-模板-国内镜像" aria-label="锚点">#</a></h1>
+<p>面向已通过 npm 渠道安装 <code>@khy-os/khy-os</code> 的用户。国内网络直连<br><code>registry.npmjs.org</code> 常常很慢，可用镜像加速下载，同时仍从官方 registry<br>拉取 <code>@khy-os</code> 作用域包（镜像同步有延迟，作用域包固定走官方最稳）。</p>
+<h2 id="用法">用法<a class="anchor" href="#用法" aria-label="锚点">#</a></h2>
+<p>把下面内容保存为用户目录下的 <code>~/.npmrc</code>（Windows 为<br><code>C:\Users\&lt;你&gt;\.npmrc</code>）。已有 <code>~/.npmrc</code> 的话，追加这几行即可。</p>
+<pre><code class="language-ini"># 默认走国内镜像加速普通依赖下载
+registry=https://registry.npmmirror.com/
+
+# @khy-os 作用域固定走官方 registry（镜像同步有延迟，保证拿到最新版）
+@khy-os:registry=https://registry.npmjs.org/</code></pre>
+<p>保存后安装/升级：</p>
+<pre><code class="language-bash">npm install -g @khy-os/khy-os
+# 或升级
+npm update -g @khy-os/khy-os</code></pre>
+<h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">npm config get registry            # 应为 https://registry.npmmirror.com/
+npm view @khy-os/khy-os version    # 应能取到最新版本号
+khy --version</code></pre>
+<h2 id="说明">说明<a class="anchor" href="#说明" aria-label="锚点">#</a></h2>
+<ul><li>这份 <code>~/.npmrc</code> 只影响<strong>下载来源</strong>，不含任何令牌，可放心保存。</li><li>发布方 <code>.npmrc</code>（仓库内 <code>packaging/npm/.npmrc</code>）与本模板无关，令牌只在</li></ul>
+<p>发布时经环境变量 <code>NPM_TOKEN</code> 注入，绝不写入磁盘或提交仓库。</p>
+<ul><li>若你同时用 pip 和 npm 安装了 khy，见自检的「双渠道安装」告警：</li></ul>
+<p><code>khy doctor</code> 会指出哪个是当前生效副本、哪个被 PATH 遮蔽，并给出清理命令。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-064] 打造最佳环境-如何扩展.html"><div class="dir">← 上一篇</div><div class="ttl">「打造最佳环境」— 如何扩展（新手 / 小模型手册）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-066] khyos进化提示词手册-1000条.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-066] Khy-OS 进化提示词手册（1000 条）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-065] npm安装加速-npmrc模板.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

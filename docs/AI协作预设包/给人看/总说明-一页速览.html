@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⚡ 一页速览（给你自己 · 先看这一篇） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>AI协作预设包<span class="sep">›</span>给人看<span class="sep">›</span>⚡ 一页速览（给你自己 · 先看这一篇）</div>
+      <header class="hero reveal"><h1>⚡ 一页速览（给你自己 · 先看这一篇）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#一页速览-给你自己-先看这一篇">⚡ 一页速览（给你自己 · 先看这一篇）</a></li><li class="lvl-2"><a href="#这套包是什么-一句话">这套包是什么（一句话）</a></li><li class="lvl-2"><a href="#项目是什么-一句话">项目是什么（一句话）</a></li><li class="lvl-2"><a href="#这套包怎么分-最重要-别搞混">这套包怎么分（最重要，别搞混）</a></li><li class="lvl-2"><a href="#标准三步-照做">标准三步（照做）</a></li><li class="lvl-2"><a href="#遇事去哪-速查">遇事去哪（速查）</a></li><li class="lvl-2"><a href="#5-条你要守住的铁事实-ai-全忘了也别退">5 条你要守住的铁事实（AI 全忘了也别退）</a></li><li class="lvl-2"><a href="#盯-ai-的三个追问-它说-做完了-时问">盯 AI 的三个追问（它说&quot;做完了&quot;时问）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 受众: 人(你自己) | 用途: 一页速览，30秒掌握全局，这套包最先看这一篇 --&gt;<br>&lt;!-- 这些是给你（人）看的一页速览。给 AI 一次读懂全局的那份在 ../给AI看/总说明-一次读懂全局.md 。 --&gt;</p>
+<h1 id="一页速览-给你自己-先看这一篇">⚡ 一页速览（给你自己 · 先看这一篇）<a class="anchor" href="#一页速览-给你自己-先看这一篇" aria-label="锚点">#</a></h1>
+<blockquote><p>30 秒看懂：<strong>这是什么、这套包怎么用、守住哪几条、遇事去哪。</strong> 看完就能上手。</p></blockquote>
+<hr>
+<h2 id="这套包是什么-一句话">这套包是什么（一句话）<a class="anchor" href="#这套包是什么-一句话" aria-label="锚点">#</a></h2>
+<p>以后你没有强 AI 了，只能用<strong>弱模型/陌生大模型</strong>，还只能靠 <strong>pip</strong> 发布。<br>这套包把「怎么跟 AI 讲清项目 / 让它别改坏 / 出错怎么修 / 下一步做什么」<br><strong>写成现成文字，你复制粘贴给 AI 就行</strong>。你只需要会复制粘贴。</p>
+<hr>
+<h2 id="项目是什么-一句话">项目是什么（一句话）<a class="anchor" href="#项目是什么-一句话" aria-label="锚点">#</a></h2>
+<p><strong>Khy-OS</strong> = 自研 x86_64 C 内核 + Node.js AI 后端（业务主体）+ pip 启动器，命令名 <code>khy</code>，靠 <code>pip install khy-os</code> 分发。</p>
+<hr>
+<h2 id="这套包怎么分-最重要-别搞混">这套包怎么分（最重要，别搞混）<a class="anchor" href="#这套包怎么分-最重要-别搞混" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>目录</th><th>给谁</th><th>你何时进</th></tr></thead><tbody><tr><td>🤖 <code>给AI看/</code></td><td><strong>AI</strong>（整段复制发它）</td><td>要<strong>发东西给 AI</strong> 时</td></tr><tr><td>🧑 <code>给人看/</code></td><td><strong>你</strong>（操作与决策）</td><td>你<strong>拿不准怎么办</strong> 时</td></tr></tbody></table>
+<hr>
+<h2 id="标准三步-照做">标准三步（照做）<a class="anchor" href="#标准三步-照做" aria-label="锚点">#</a></h2>
+<ol><li><strong>讲清项目</strong> → 开新 AI 会话，从 <code>给AI看/项目情况说明-开场白.md</code> 按对方模型选一档（A强/B普通/C小模型），整段发出去。<ul><li>想让 AI 一次就掌握全局？直接发 <code>给AI看/总说明-一次读懂全局.md</code>（自包含）。</li></ul></li><li><strong>立规矩</strong> → 要它改代码前，把 <code>给AI看/协作铁律.md</code> 的「铁律速查卡」发它。</li><li><strong>派活/排错</strong> → 派活去 <code>给AI看/任务派发卡.md</code> 挑卡发；出错去 <code>给AI看/错误自查手册.md</code> 找条发。</li></ol>
+<hr>
+<h2 id="遇事去哪-速查">遇事去哪（速查）<a class="anchor" href="#遇事去哪-速查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>你的处境</th><th>打开</th></tr></thead><tbody><tr><td>刚开新 AI 会话</td><td><code>给AI看/项目情况说明-开场白.md</code>（或 <code>给AI看/总说明-一次读懂全局.md</code>）</td></tr><tr><td>要它改代码</td><td><code>给AI看/协作铁律.md</code></td></tr><tr><td>想派活没头绪</td><td><code>给人看/发展路径-决策与选活.md</code> → <code>给AI看/任务派发卡.md</code></td></tr><tr><td>AI 报错/怀疑改坏</td><td><code>给人看/排错速查-给人.md</code> → <code>给AI看/错误自查手册.md</code></td></tr><tr><td>怕改坏/要发布/要回退</td><td><code>给人看/命脉自保清单-给人.md</code></td></tr><tr><td>想完整了解怎么用</td><td><code>给人看/使用说明-怎么用这套包.md</code></td></tr></tbody></table>
+<hr>
+<h2 id="5-条你要守住的铁事实-ai-全忘了也别退">5 条你要守住的铁事实（AI 全忘了也别退）<a class="anchor" href="#5-条你要守住的铁事实-ai-全忘了也别退" aria-label="锚点">#</a></h2>
+<ol><li><strong>pip 是命脉</strong>——改完要能打成 wheel 发布（手册 <code>docs/07_OPS_运维/[OPS-MAN-042]</code>）。</li><li><strong>守卫红了不许提交</strong>——别让 AI 用 <code>--no-verify</code> 硬闯。</li><li><strong>单文件不超 2500 行</strong>。</li><li><strong>改动要能一键关掉回原样</strong>（默认开的 <code>KHY_</code> 开关 + 逐字节回退）。</li><li><strong>不确定先只读体检</strong>：<code>node services/backend/bin/khy.js maintain freshness</code>；慌了看 <code>docs/传承/紧急恢复卡片.md</code>。</li></ol>
+<hr>
+<h2 id="盯-ai-的三个追问-它说-做完了-时问">盯 AI 的三个追问（它说&quot;做完了&quot;时问）<a class="anchor" href="#盯-ai-的三个追问-它说-做完了-时问" aria-label="锚点">#</a></h2>
+<ol><li>「这改动接到 executeTool / toolUseLoop / aiManagementServer 哪个入口了？」答不上=没生效。</li><li>「把那个 KHY_ 开关设成 off，行为和改之前一样吗？」不一样=破坏了回退。</li><li>「守卫全绿吗？没绕过吧？」</li></ol>
+<hr>
+<p><em>要更细的操作看 <code>使用说明-怎么用这套包.md</code>；整套包入口 <code>../00_INDEX_总入口.md</code>。</em></p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/AI协作预设包/给人看/使用说明-怎么用这套包.html"><div class="dir">← 上一篇</div><div class="ttl">🧑 使用说明 · 这套包怎么用（给你自己看）</div></a><a class="next" href="../../../docs/AI协作预设包/给AI看/错误自查手册.html"><div class="dir">下一篇 →</div><div class="ttl">🐞 错误自查手册 · 发给 AI，让它逐条对照</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/AI协作预设包/给人看/总说明-一页速览.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

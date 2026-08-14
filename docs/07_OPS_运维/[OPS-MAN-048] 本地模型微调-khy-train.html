@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地模型微调（khy train） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>本地模型微调（khy train）</div>
+      <header class="hero reveal"><h1>本地模型微调（khy train）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#本地模型微调-khy-train">本地模型微调（`khy train`）</a></li><li class="lvl-2"><a href="#一-它是什么-不是什么">一、它是什么 / 不是什么</a></li><li class="lvl-2"><a href="#二-入口与全部子命令">二、入口与全部子命令</a></li><li class="lvl-2"><a href="#三-典型用法-可直接照抄">三、典型用法（可直接照抄）</a></li><li class="lvl-2"><a href="#四-存储与环境变量">四、存储与环境变量</a></li><li class="lvl-2"><a href="#五-诚实边界-半实现-桩-务必知悉">五、诚实边界（半实现 / 桩，务必知悉）</a></li><li class="lvl-2"><a href="#六-相关文档">六、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-048 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-048] 本地模型微调-khy-train.md --&gt;</p>
+<h1 id="本地模型微调-khy-train">本地模型微调（<code>khy train</code>）<a class="anchor" href="#本地模型微调-khy-train" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy train</code> 把你和 KHY 的交互记录整理成训练集，用 <strong>LoRA / PEFT</strong> 在<strong>本地</strong>对开源基座做轻量微调——全程生成并运行 Python 脚本，模型与数据都留在本机。本文讲清全部子命令、取值范围与前置条件，并<strong>如实标注半实现部分</strong>。</p>
+<p>实现：<code>services/backend/src/services/modelTrainingService.js</code>，dispatch 在 <code>router.js:2371</code>。</p></blockquote>
+<hr>
+<h2 id="一-它是什么-不是什么">一、它是什么 / 不是什么<a class="anchor" href="#一-它是什么-不是什么" aria-label="锚点">#</a></h2>
+<ul><li><strong>是</strong>：本地轻量微调流水线——收集交互记录 → 导出数据集 → LoRA 微调 → 导出 GGUF/safetensors → 可选上传 Git 仓库。</li><li><strong>不是</strong>：云端训练平台。<code>train cloud</code> 当前是<strong>占位</strong>（见 §六诚实边界）。</li></ul>
+<p>前置（缺失会直接抛错）：</p>
+<ul><li><strong>Python 3.10+</strong> 与 <strong>PyTorch</strong>（<code>trainLocal</code> 检测不到即报错并提示安装）。</li><li>导出 <strong>GGUF</strong> 需要 <code>llama-cpp-python</code>。</li><li>上传到 HuggingFace 需环境变量 <code>HF_TOKEN</code>。</li><li>设备/算力是否够用，先跑 [<code>khy compute</code>](（见 OPS-MAN-049）) 体检（CUDA / MPS / CPU 自动判定）。</li></ul>
+<blockquote><p><strong>数据门槛</strong>：至少 <strong>10 条</strong>交互记录才能训练，建议 <strong>50+</strong> 才有意义。</p></blockquote>
+<hr>
+<h2 id="二-入口与全部子命令">二、入口与全部子命令<a class="anchor" href="#二-入口与全部子命令" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy train status</code></td><td>查看训练环境、记录数、已注册模型</td></tr><tr><td><code>khy train data</code></td><td>查看 / 整理已收集的交互记录</td></tr><tr><td><code>khy train start [选项]</code></td><td>启动一次本地 LoRA 微调</td></tr><tr><td><code>khy train list</code></td><td>列出已训练 / 已注册模型</td></tr><tr><td><code>khy train export [选项]</code></td><td>把模型导出为 GGUF / safetensors</td></tr><tr><td><code>khy train export-data [--format …]</code></td><td>导出训练数据集（不训练）</td></tr><tr><td><code>khy train upload [选项]</code></td><td>上传模型到 Git 仓库（GitHub/Gitee）</td></tr></tbody></table>
+<p><strong><code>start</code> 选项</strong>：</p>
+<table><thead><tr><th>选项</th><th>取值</th><th>默认</th></tr></thead><tbody><tr><td><code>--base &lt;model&gt;</code></td><td><code>qwen-1.5b</code> <code>qwen-3b</code> <code>qwen-7b</code> <code>llama-3b</code> <code>llama-8b</code> <code>deepseek-1.5b</code> <code>deepseek-7b</code> <code>mistral-7b</code></td><td>qwen-1.5b 档</td></tr><tr><td><code>--preset &lt;p&gt;</code></td><td><code>quick</code> / <code>standard</code> / <code>thorough</code></td><td><code>standard</code></td></tr></tbody></table>
+<p><strong><code>export</code> 选项</strong>：<code>--format gguf</code>（默认，配 <code>--quant q4_k_m</code>）/ <code>--format safetensors</code>。<br><strong><code>export-data</code> 选项</strong>：<code>--format alpaca|sharegpt|openai</code>。<br><strong><code>upload</code> 选项</strong>：<code>--platform github|gitee</code> <code>--repo &lt;owner/name&gt;</code>。</p>
+<hr>
+<h2 id="三-典型用法-可直接照抄">三、典型用法（可直接照抄）<a class="anchor" href="#三-典型用法-可直接照抄" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"># 0) 先体检算力（决定用 cuda / mps / cpu、是否 fp16）
+khy compute
+
+# 1) 看看攒了多少交互记录（要 ≥10 条）
+khy train status
+khy train data
+
+# 2) 标准档微调 Qwen-3B
+khy train start --base qwen-3b --preset standard
+
+# 3) 导出成 GGUF（llama.cpp / Ollama 可直接加载），q4_k_m 量化
+khy train export --format gguf --quant q4_k_m
+
+# 4) 仅导出数据集（喂别的训练框架）
+khy train export-data --format openai
+
+# 5) 上传到自己的 GitHub 仓库
+khy train upload --platform github --repo your-name/my-khy-lora</code></pre>
+<hr>
+<h2 id="四-存储与环境变量">四、存储与环境变量<a class="anchor" href="#四-存储与环境变量" aria-label="锚点">#</a></h2>
+<p>训练根目录 <code>TRAINING_DIR</code> 取值优先级：<code>$KHY_TRAINING_DIR</code> → <code>&lt;dataHome&gt;/training</code> → <code>~/.khyquant/training</code>。其下：</p>
+<ul><li><code>datasets/</code> —— 导出的训练集</li><li><code>models/</code> —— 微调产物</li><li><code>interaction_records.jsonl</code> —— 收集的交互记录（训练数据来源）</li><li><code>model_registry.json</code> —— 已训练模型注册表</li></ul>
+<table><thead><tr><th>环境变量</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_TRAINING_DIR</code></td><td>覆盖训练根目录</td></tr><tr><td><code>HF_TOKEN</code></td><td>上传 HuggingFace 用的令牌</td></tr></tbody></table>
+<hr>
+<h2 id="五-诚实边界-半实现-桩-务必知悉">五、诚实边界（半实现 / 桩，务必知悉）<a class="anchor" href="#五-诚实边界-半实现-桩-务必知悉" aria-label="锚点">#</a></h2>
+<ul><li><strong><code>khy train cloud</code> = 占位</strong>：返回一个<strong>假的 job id</strong>，<strong>没有</strong>真实云端训练端点（<code>modelTrainingService.js:633</code>）。当前请只用本地 <code>start</code>。</li><li><strong><code>khy train distill</code>（router 分支）= 仅信息提示</strong>：router 层只打印说明，<strong>不真正调用</strong>已实现的 <code>distill()</code>（<code>router.js:2486-2497</code>）。蒸馏能力在服务层存在但 CLI 这条路未接通。</li><li><strong><code>--password</code> 形同虚设</strong>：export/upload 的密码校验 <code>verifyExportPassword</code> <strong>恒返回 true</strong>（<code>modelTrainingService.js:709</code>），不提供任何真实加密保护，别依赖它。</li><li>本地训练需要真实算力与依赖，缺 PyTorch/llama-cpp-python 会直接失败——这是<strong>真实前置</strong>，不是桩。</li></ul>
+<hr>
+<h2 id="六-相关文档">六、相关文档<a class="anchor" href="#六-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-049] 算力与加速器自检（<code>khy compute</code>）—— 训练前的设备体检。</li><li>[OPS-MAN-050] 成长档案迁移（<code>khy growth</code>）—— 交互/成长数据的另一条迁移线。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-047] 代理服务器深度指南-khy-proxy.html"><div class="dir">← 上一篇</div><div class="ttl">代理服务器深度指南（khy proxy）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-049] 算力与加速器自检-khy-compute.html"><div class="dir">下一篇 →</div><div class="ttl">算力与加速器自检（khy compute）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-048] 本地模型微调-khy-train.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

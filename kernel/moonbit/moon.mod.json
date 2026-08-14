@@ -1,0 +1,10 @@
+{
+  "name": "khy_os/kernel",
+  "version": "0.1.0",
+  "deps": {},
+  "readme": "",
+  "repository": "",
+  "license": "MIT",
+  "keywords": [],
+  "description": "KHY OS kernel MoonBit module"
+}

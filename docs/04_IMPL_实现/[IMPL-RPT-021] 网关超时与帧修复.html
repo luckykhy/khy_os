@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>网关超时优化与 REPL 输入框边框修复 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>04_IMPL_实现<span class="sep">›</span>网关超时优化与 REPL 输入框边框修复</div>
+      <header class="hero reveal"><h1>网关超时优化与 REPL 输入框边框修复</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#网关超时优化与-repl-输入框边框修复">网关超时优化与 REPL 输入框边框修复</a></li><li class="lvl-2"><a href="#问题-1-gateway-命令卡住">问题 1：`/gateway` 命令卡住</a></li><li class="lvl-3"><a href="#现象">现象</a></li><li class="lvl-3"><a href="#根因">根因</a></li><li class="lvl-3"><a href="#修复方案">修复方案</a></li><li class="lvl-3"><a href="#结果">结果</a></li><li class="lvl-2"><a href="#问题-2-repl-输入框边框在首次提示后消失">问题 2：REPL 输入框边框在首次提示后消失</a></li><li class="lvl-3"><a href="#现象-2">现象</a></li><li class="lvl-3"><a href="#根因-两个问题">根因 — 两个问题</a></li><li class="lvl-3"><a href="#修复方案-repl-js-renderinputpromptframe">修复方案（`repl.js` — `renderInputPromptFrame`）</a></li><li class="lvl-3"><a href="#结果-2">结果</a></li><li class="lvl-2"><a href="#变更文件">变更文件</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: IMPL-RPT-021 | 阶段: 实现 | 原路径: docs/指南/网关超时与帧修复.md --&gt;</p>
+<h1 id="网关超时优化与-repl-输入框边框修复">网关超时优化与 REPL 输入框边框修复<a class="anchor" href="#网关超时优化与-repl-输入框边框修复" aria-label="锚点">#</a></h1>
+<blockquote><p>修复日期：2026-05-19<br>涉及模块：<code>backend/src/cli/handlers/gateway.js</code> · <code>backend/src/services/gateway/aiGateway.js</code> · <code>backend/src/cli/repl.js</code></p></blockquote>
+<hr>
+<h2 id="问题-1-gateway-命令卡住">问题 1：<code>/gateway</code> 命令卡住<a class="anchor" href="#问题-1-gateway-命令卡住" aria-label="锚点">#</a></h2>
+<h3 id="现象">现象<a class="anchor" href="#现象" aria-label="锚点">#</a></h3>
+<p>执行 <code>/gateway</code> 或 <code>/gateway status</code> 时，在打印出“正在检测各通道连通性...”之后会阻塞 30-45 秒，期间没有任何可见进度。</p>
+<h3 id="根因">根因<a class="anchor" href="#根因" aria-label="锚点">#</a></h3>
+<p><code>handleGatewayStatus()</code> 通过 <code>gateway.testAdapter()</code> 并行测试所有已启用的适配器，但会逐个顺序 await 每个结果，且没有全局截止时间。每个适配器的测试包含三个阶段，每个阶段都有各自的超时：</p>
+<ol><li><strong><code>init()</code> 检测</strong> — 每个适配器默认 15s</li><li><strong><code>testAdapter()</code> 步骤 1（连通性）</strong> — 默认 10s</li><li><strong><code>testAdapter()</code> 步骤 2（模型列表）</strong> — 默认 10s</li><li><strong><code>testAdapter()</code> 步骤 3（生成探测）</strong> — 因适配器而异：12-30s</li></ol>
+<p>虽然各适配器是并行测试的，但整体的实际耗时由<strong>最慢的适配器</strong>决定。当代理连接失败（12s 超时 + 15s 退避）叠加在上面时，最坏情况下的延迟会超过 45s。</p>
+<h3 id="修复方案">修复方案<a class="anchor" href="#修复方案" aria-label="锚点">#</a></h3>
+<h4 id="a-全局超时包装-gateway-js">A. 全局超时包装（<code>gateway.js</code>）<a class="anchor" href="#a-全局超时包装-gateway-js" aria-label="锚点">#</a></h4>
+<p>新增 <code>GATEWAY_STATUS_TIMEOUT_MS</code>（默认 20s，可通过环境变量配置）。每个适配器结果都用 <code>Promise.race</code> 与一个截止计时器竞争 await。在时限内完成的适配器显示正常结果；未完成的则得到 <code>{ connectivity: { success: false, error: 'global timeout' } }</code>。</p>
+<pre><code class="language-js">const GLOBAL_TEST_TIMEOUT_MS = parseInt(
+  process.env.GATEWAY_STATUS_TIMEOUT_MS || '20000', 10
+) || 20000;
+
+const globalDeadline = Date.now() + GLOBAL_TEST_TIMEOUT_MS;
+for (const [key, promise] of Object.entries(testPromises)) {
+  const remaining = globalDeadline - Date.now();
+  if (remaining &lt;= 0) {
+    testResults[key] = { connectivity: { success: false, latencyMs: 0, error: 'global timeout' } };
+    continue;
+  }
+  testResults[key] = await Promise.race([
+    promise,
+    new Promise(resolve =&gt; setTimeout(() =&gt; resolve(
+      { connectivity: { success: false, latencyMs: 0, error: 'global timeout' } }
+    ), remaining)),
+  ]);
+}</code></pre>
+<h4 id="b-单步超时缩减-aigateway-js">B. 单步超时缩减（<code>aiGateway.js</code>）<a class="anchor" href="#b-单步超时缩减-aigateway-js" aria-label="锚点">#</a></h4>
+<table><thead><tr><th>阶段</th><th>旧默认值</th><th>新默认值</th><th>环境变量覆盖</th></tr></thead><tbody><tr><td><code>init()</code> 适配器检测</td><td>15 000 ms</td><td><strong>8 000 ms</strong></td><td><code>GATEWAY_INIT_TIMEOUT_MS</code></td></tr><tr><td><code>testAdapter</code> 连通性 / 模型列表</td><td>10 000 ms</td><td><strong>6 000 ms</strong></td><td><code>GATEWAY_TEST_TIMEOUT_MS</code></td></tr><tr><td>Codex 生成探测</td><td>12 000 ms</td><td><strong>8 000 ms</strong></td><td><code>GATEWAY_CODEX_TIMEOUT_MS</code></td></tr><tr><td>LocalLLM 生成探测</td><td>30 000 ms</td><td><strong>12 000 ms</strong></td><td><code>GATEWAY_LOCAL_LLM_PROBE_TIMEOUT_MS</code></td></tr><tr><td>Claude CLI 生成探测</td><td>15 000 ms</td><td><strong>10 000 ms</strong></td><td><code>GATEWAY_CLAUDE_PROBE_TIMEOUT_MS</code></td></tr><tr><td>IDE（Cursor/Windsurf）探测</td><td>15 000 ms</td><td><strong>10 000 ms</strong></td><td><code>GATEWAY_IDE_PROBE_TIMEOUT_MS</code></td></tr><tr><td>Relay API 探测</td><td>15 000 ms</td><td><strong>10 000 ms</strong></td><td><code>GATEWAY_RELAY_API_PROBE_TIMEOUT_MS</code></td></tr></tbody></table>
+<p>所有取值仍可通过对应的环境变量覆盖。</p>
+<h3 id="结果">结果<a class="anchor" href="#结果" aria-label="锚点">#</a></h3>
+<p>最坏情况的实际耗时从约 45s 降低到 20s 的硬上限（全局超时），典型情况在 8-12s 内完成。</p>
+<hr>
+<h2 id="问题-2-repl-输入框边框在首次提示后消失">问题 2：REPL 输入框边框在首次提示后消失<a class="anchor" href="#问题-2-repl-输入框边框在首次提示后消失" aria-label="锚点">#</a></h2>
+<h3 id="现象-2">现象<a class="anchor" href="#现象-2" aria-label="锚点">#</a></h3>
+<p>REPL 的 <code>❯</code> 输入提示符在首次出现时（欢迎屏之后）上下各有一条橙色的 <code>─</code> 分隔线。在执行任意命令（如 <code>/model</code>、AI 对话）之后，提示符重新出现时边框消失了。</p>
+<h3 id="根因-两个问题">根因 — 两个问题<a class="anchor" href="#根因-两个问题" aria-label="锚点">#</a></h3>
+<h4 id="问题-a-底部装饰依赖按键输入">问题 A：底部装饰依赖按键输入<a class="anchor" href="#问题-a-底部装饰依赖按键输入" aria-label="锚点">#</a></h4>
+<p>底部分隔线 + 状态栏只由被猴子补丁（monkey-patch）的 <code>rl._refreshLine()</code> 绘制。Node.js 的 <code>readline.prompt()</code> <strong>不会</strong>调用 <code>_refreshLine()</code> —— 它只在后续按键时触发。因此底部装饰在用户键入第一个字符之前是不可见的。</p>
+<p>首个提示符看起来有边框，是因为欢迎屏的方框（<code>╭╮╰╯</code>）在视觉上紧邻 —— 用户把欢迎方框的底边和提示符框架的顶部分隔线混为一谈了。</p>
+<h4 id="问题-b-顶部分隔线被滚动到屏幕外">问题 B：顶部分隔线被滚动到屏幕外<a class="anchor" href="#问题-b-顶部分隔线被滚动到屏幕外" aria-label="锚点">#</a></h4>
+<p><code>renderInputPromptFrame()</code> 依次写入：<code>[git branch]\n</code> → <code>rule\n</code> → <code>_origPrompt()</code>。</p>
+<p>当光标接近可见区域底部时，每个 <code>\n</code> 都可能触发终端滚动。在一段较长的 AI 响应之后，光标通常位于终端的最后一行。写入 <code>rule + '\n'</code> 会使终端滚动，随后 <code>_origPrompt()</code> 写入提示符 —— 但此时滚动已经把分隔线那一行推到了可见视口之上。用户根本看不到它。</p>
+<h3 id="修复方案-repl-js-renderinputpromptframe">修复方案（<code>repl.js</code> — <code>renderInputPromptFrame</code>）<a class="anchor" href="#修复方案-repl-js-renderinputpromptframe" aria-label="锚点">#</a></h3>
+<h4 id="a-立即绘制底部装饰">A. 立即绘制底部装饰<a class="anchor" href="#a-立即绘制底部装饰" aria-label="锚点">#</a></h4>
+<p>在 <code>_origPrompt()</code> 之后，该函数现在会立即使用与 <code>_refreshLine</code> 猴子补丁相同的 ANSI 转义逻辑写入底部分隔线 + 状态栏。这样就消除了对按键输入的依赖。</p>
+<pre><code class="language-js">// After _origPrompt(...args):
+if (_promptFooterEnabled &amp;&amp; _frameRendered &amp;&amp; process.stdout.isTTY &amp;&amp; _cachedBottomRule) {
+  // Move cursor down past prompt, draw bottom rule + footer,
+  // then move cursor back to the prompt position.
+  let out = '';
+  // ... (ANSI cursor movement + draw + return)
+  process.stdout.write(out);
+}</code></pre>
+<h4 id="b-绘制前预留终端行">B. 绘制前预留终端行<a class="anchor" href="#b-绘制前预留终端行" aria-label="锚点">#</a></h4>
+<p>在写入顶部分隔线之前，该函数会通过打印空行再把光标上移的方式预先分配终端空间。这会强制终端在分隔线绘制<em>之前</em>完成滚动，从而确保分隔线保持在可见区域内。</p>
+<pre><code class="language-js">if (_promptFooterEnabled &amp;&amp; process.stdout.isTTY) {
+  // Reserve: status bar + top rule + prompt + gap + bottom rule + footer
+  const reserveRows = 4 + _inputFooterGapRows;
+  process.stdout.write('\n'.repeat(reserveRows) + `\x1b[${reserveRows}A`);
+}</code></pre>
+<p>修复后的顺序：</p>
+<ol><li>写入 <code>reserveRows</code> 个空 <code>\n</code> —— 终端在需要时滚动</li><li>把光标上移 <code>reserveRows</code> 行</li><li>写入 git 分支 + 顶部分隔线 + <code>\n</code></li><li><code>_origPrompt()</code> 渲染 <code>❯ </code></li><li>立即在提示符下方绘制底部分隔线 + 状态栏</li><li>把光标移回提示符位置</li></ol>
+<p>现在无论光标位置或终端填充程度如何，顶部分隔线和底部装饰都会在提示符出现的瞬间可见。</p>
+<h3 id="结果-2">结果<a class="anchor" href="#结果-2" aria-label="锚点">#</a></h3>
+<p>橙色的 <code>─</code> 边框（上 + 下）和 <code>(shift+tab to cycle) ... ctx</code> 状态栏现在在每一个提示周期都会立即可见，而不再只是首次出现时可见。</p>
+<hr>
+<h2 id="变更文件">变更文件<a class="anchor" href="#变更文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>文件</th><th>变更</th></tr></thead><tbody><tr><td><code>backend/src/cli/handlers/gateway.js</code></td><td>在适配器测试外层加入 20s 全局超时包装</td></tr><tr><td><code>backend/src/services/gateway/aiGateway.js</code></td><td>缩减 7 个默认超时值</td></tr><tr><td><code>backend/src/cli/repl.js</code></td><td>在 <code>renderInputPromptFrame()</code> 中预留行 + 立即绘制底部装饰</td></tr></tbody></table>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.html"><div class="dir">← 上一篇</div><div class="ttl">网关断链问题修复记录</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-022] HOTFIX_MODEL_SELECTION.html"><div class="dir">下一篇 →</div><div class="ttl">/model 命令修复说明 (2026-06-04)</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/04_IMPL_实现/[IMPL-RPT-021] 网关超时与帧修复.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>把 khy 发布到 GitHub —— 起飞前检查 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>把 khy 发布到 GitHub —— 起飞前检查</div>
+      <header class="hero reveal"><h1>把 khy 发布到 GitHub —— 起飞前检查</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#把-khy-发布到-github-起飞前检查">把 khy 发布到 GitHub —— 起飞前检查</a></li><li class="lvl-2"><a href="#1-把-github-remote-指向真实仓库">1. 把 `github` remote 指向真实仓库</a></li><li class="lvl-2"><a href="#2-把-gitlab-token-从-remote-url-里挪走-卫生习惯">2. 把 GitLab token 从 remote URL 里挪走（卫生习惯）</a></li><li class="lvl-2"><a href="#3-不要推送密钥">3. 不要推送密钥</a></li><li class="lvl-2"><a href="#4-首次推送后的最终视觉检查">4. 首次推送后的最终视觉检查</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="把-khy-发布到-github-起飞前检查">把 khy 发布到 GitHub —— 起飞前检查<a class="anchor" href="#把-khy-发布到-github-起飞前检查" aria-label="锚点">#</a></h1>
+<p>这些操作在仓库公开之前做一次。它们都不会自动执行——它们涉及你的凭据与<br>remote，所以要由你自己来跑。</p>
+<h2 id="1-把-github-remote-指向真实仓库">1. 把 <code>github</code> remote 指向真实仓库<a class="anchor" href="#1-把-github-remote-指向真实仓库" aria-label="锚点">#</a></h2>
+<p><code>github</code> remote 目前是占位符（<code>acme/khy-os</code>）。把它设为你的真实仓库，<br>并同步更新 README/徽章里的 slug（整个发布工具包中都用 <code>kodehu03/khy-os</code><br>作占位符）。</p>
+<pre><code class="language-bash">git remote set-url github https://github.com/&lt;your-username&gt;/khy-os.git
+git remote -v   # verify</code></pre>
+<p>然后把 <code>README.md</code>、<code>README.zh-CN.md</code> 以及<br><code>.github/ISSUE_TEMPLATE/config.yml</code> + <code>SECURITY.md</code> 中的 <code>kodehu03/khy-os</code><br>替换为 <code>&lt;your-username&gt;/khy-os</code>。</p>
+<h2 id="2-把-gitlab-token-从-remote-url-里挪走-卫生习惯">2. 把 GitLab token 从 remote URL 里挪走（卫生习惯）<a class="anchor" href="#2-把-gitlab-token-从-remote-url-里挪走-卫生习惯" aria-label="锚点">#</a></h2>
+<p><code>origin</code> remote 把一个 GitLab 个人访问令牌直接嵌进了 URL：</p>
+<pre><code>origin  https://oauth2:glpat-XXXXXXXX@gitlab.mindflow.com.cn/kodehu03/khy-quant.git</code></pre>
+<p>这<strong>不会</strong>随代码发布出去（它只存在于本地未被跟踪的 <code>.git/config</code> 中），<br>所以它不是通过仓库泄露。但 remote URL 里的 token 很容易通过<br><code>git remote -v</code>、屏幕共享或复制出去的 <code>.git/config</code> 泄露。把它挪进凭据存储：</p>
+<pre><code class="language-bash"># 1) strip the token from the URL
+git remote set-url origin https://gitlab.mindflow.com.cn/kodehu03/khy-quant.git
+
+# 2) store the credential out-of-band (choose one)
+#    a) cache helper (prompts once, remembers for a while)
+git config --global credential.helper 'cache --timeout=3600'
+#    b) or a ~/.netrc entry (chmod 600):
+#       machine gitlab.mindflow.com.cn login oauth2 password glpat-XXXXXXXX</code></pre>
+<p>然后在 GitLab 里<strong>轮换这个已暴露的 token</strong>（Settings → Access Tokens →<br>撤销 + 重新签发），因为它已经以明文出现过。</p>
+<h2 id="3-不要推送密钥">3. 不要推送密钥<a class="anchor" href="#3-不要推送密钥" aria-label="锚点">#</a></h2>
+<ul><li>确认 <code>.env</code> 已被 gitignore（确实如此）且未被 stage：<code>git status --short | grep .env</code></li><li>仓库自带的密钥脱敏正则（<code>glpat-…</code> 等）位于</li></ul>
+<p><code>services/backend/src/services/toolPipeline.js</code>——那些是检测器，不是<br>  密钥；保留它们。</p>
+<h2 id="4-首次推送后的最终视觉检查">4. 首次推送后的最终视觉检查<a class="anchor" href="#4-首次推送后的最终视觉检查" aria-label="锚点">#</a></h2>
+<ul><li>在 github.com 打开仓库：<code>assets/banner.svg</code> 是否在顶部渲染出来？</li><li>CI / CodeQL 徽章是否为绿（在默认分支上把工作流跑一次）？</li><li>社交预览图是否已设置（Settings → Social preview）？</li><li>About 描述 + topics 是否已设置（<code>docs/06_DEPLOY_部署/[DEPLOY-MAN-006] REPO_META.md</code>）？</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-002] PRODUCT_HUNT.html"><div class="dir">← 上一篇</div><div class="ttl">Product Hunt 文案草稿</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-004] README.html"><div class="dir">下一篇 →</div><div class="ttl">khy 发布工具包</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-003] PUBLISHING.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>
