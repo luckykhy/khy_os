@@ -28,7 +28,9 @@ const { isFlagEnabled } = require('./flagRegistry');
 
 /** CC 归一:小写并去空白/下划线/连字符,让 `Write`/`write_file`/`Edit File` 等归到同一名。 */
 function _norm(name) {
-  return String(name == null ? '' : name).toLowerCase().replace(/[\s_-]/g, '');
+  return String(name == null ? '' : name)
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
 }
 
 const WRITE_TOOLS = new Set(['write', 'writefile', 'createfile']);
@@ -41,8 +43,11 @@ const MULTIEDIT_TOOLS = new Set(['multiedit', 'multieditfile']);
  * @returns {boolean}
  */
 function isEditDiffPreviewEnabled(env = process.env) {
-  try { return isFlagEnabled('KHY_EDIT_DIFF_PREVIEW', env); }
-  catch { return true; }
+  try {
+    return isFlagEnabled('KHY_EDIT_DIFF_PREVIEW', env);
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -61,12 +66,20 @@ function editDiffPreviewToolNames() {
  * @returns {string|null}
  */
 function _applyEdit(content, oldStr, newStr, replaceAll) {
-  if (typeof content !== 'string') return null;
+  if (typeof content !== 'string') {
+    return null;
+  }
   const oldS = oldStr == null ? '' : String(oldStr);
   const newS = newStr == null ? '' : String(newStr);
-  if (oldS === '') return null;
-  if (!content.includes(oldS)) return null;
-  if (replaceAll === true) return content.split(oldS).join(newS);
+  if (oldS === '') {
+    return null;
+  }
+  if (!content.includes(oldS)) {
+    return null;
+  }
+  if (replaceAll === true) {
+    return content.split(oldS).join(newS);
+  }
   const i = content.indexOf(oldS);
   return content.slice(0, i) + newS + content.slice(i + oldS.length);
 }
@@ -83,64 +96,90 @@ function computeEditDiffPreview(toolName, input, opts = {}) {
   try {
     const o = opts || {};
     const env = o.env || process.env;
-    if (!isEditDiffPreviewEnabled(env)) return null;
+    if (!isEditDiffPreviewEnabled(env)) {
+      return null;
+    }
 
-    const params = (input && typeof input === 'object') ? input : {};
+    const params = input && typeof input === 'object' ? input : {};
     const name = _norm(toolName);
     const isWrite = WRITE_TOOLS.has(name);
     const isEdit = EDIT_TOOLS.has(name);
     const isMulti = MULTIEDIT_TOOLS.has(name);
-    if (!isWrite && !isEdit && !isMulti) return null;
+    if (!isWrite && !isEdit && !isMulti) {
+      return null;
+    }
 
     const filePath = params.file_path || params.filePath || params.path || '';
-    if (!filePath || typeof filePath !== 'string') return null;
+    if (!filePath || typeof filePath !== 'string') {
+      return null;
+    }
 
-    const readFile = typeof o.readFile === 'function'
-      ? o.readFile
-      : (p) => require('fs').readFileSync(p, 'utf8');
+    const readFile =
+      typeof o.readFile === 'function' ? o.readFile : (p) => require('fs').readFileSync(p, 'utf8');
 
     let before = '';
     let existed = true;
     try {
       const raw = readFile(filePath);
       before = typeof raw === 'string' ? raw : '';
-    } catch { before = ''; existed = false; }
+    } catch {
+      before = '';
+      existed = false;
+    }
 
     let after = null;
 
     if (isWrite) {
       // Write:after 即 params.content(新文件时 before='' → 全绿新增)。
       const content = params.content;
-      if (typeof content !== 'string') return null;
+      if (typeof content !== 'string') {
+        return null;
+      }
       after = content;
     } else if (isEdit) {
       // Edit:对现有文件内容施加单次 old→new。不存在的文件无从编辑 → 无预览。
-      if (!existed) return null;
+      if (!existed) {
+        return null;
+      }
       const oldStr = params.old_string != null ? params.old_string : params.oldString;
       const newStr = params.new_string != null ? params.new_string : params.newString;
       const replaceAll = params.replace_all === true || params.replaceAll === true;
       after = _applyEdit(before, oldStr, newStr, replaceAll);
-      if (after == null) return null;
+      if (after == null) {
+        return null;
+      }
     } else {
       // MultiEdit:按序施加 edits[]。任一条无法定位 → 整体放弃预览(与「原子」语义一致)。
-      if (!existed) return null;
+      if (!existed) {
+        return null;
+      }
       const edits = Array.isArray(params.edits) ? params.edits : null;
-      if (!edits || !edits.length) return null;
+      if (!edits || !edits.length) {
+        return null;
+      }
       let cur = before;
       for (const e of edits) {
-        if (!e || typeof e !== 'object') return null;
+        if (!e || typeof e !== 'object') {
+          return null;
+        }
         const oldStr = e.old_string != null ? e.old_string : e.oldString;
         const newStr = e.new_string != null ? e.new_string : e.newString;
         const replaceAll = e.replace_all === true || e.replaceAll === true;
         const next = _applyEdit(cur, oldStr, newStr, replaceAll);
-        if (next == null) return null;
+        if (next == null) {
+          return null;
+        }
         cur = next;
       }
       after = cur;
     }
 
-    if (typeof after !== 'string') return null;
-    if (before === after) return null; // 无可见改动 → 不渲染
+    if (typeof after !== 'string') {
+      return null;
+    }
+    if (before === after) {
+      return null;
+    } // 无可见改动 → 不渲染
 
     return { beforeContent: before, afterContent: after, filePath: String(filePath) };
   } catch {

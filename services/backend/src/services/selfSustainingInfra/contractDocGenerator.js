@@ -24,12 +24,27 @@ const DOC_BLOCK = /\/\*\*([\s\S]*?)\*\//g;
 const SIG_PATTERNS = [
   { kind: 'function', re: /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)/ },
   { kind: 'class', re: /^class\s+([A-Za-z_$][\w$]*)/ },
-  { kind: 'const-fn', re: /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/ },
-  { kind: 'const-fn', re: /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*\(([^)]*)\)/ },
+  {
+    kind: 'const-fn',
+    re: /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/,
+  },
+  {
+    kind: 'const-fn',
+    re: /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?function\s*\(([^)]*)\)/,
+  },
   { kind: 'method', re: /^(?:async\s+)?([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{/ },
 ];
 
-const METHOD_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'class']);
+const METHOD_KEYWORDS = new Set([
+  'if',
+  'for',
+  'while',
+  'switch',
+  'catch',
+  'function',
+  'return',
+  'class',
+]);
 
 class ContractDocGenerator {
   /**
@@ -47,7 +62,9 @@ class ContractDocGenerator {
       const body = this._parseDocBody(m[1]);
       const after = src.slice(m.index + m[0].length);
       const sig = this._firstSignature(after);
-      if (!sig) continue;                       // 文件级/段落级注释无签名 → 跳过（非接口契约）
+      if (!sig) {
+        continue;
+      } // 文件级/段落级注释无签名 → 跳过（非接口契约）
       contracts.push({
         name: sig.name,
         kind: sig.kind,
@@ -66,37 +83,56 @@ class ContractDocGenerator {
     const lines = text.split('\n');
     for (const raw of lines) {
       const line = raw.trim();
-      if (!line || line.startsWith('//') || line.startsWith('*') || line.startsWith('/*')) continue;
+      if (!line || line.startsWith('//') || line.startsWith('*') || line.startsWith('/*')) {
+        continue;
+      }
       for (const { kind, re } of SIG_PATTERNS) {
         const mm = re.exec(line);
         if (mm) {
-          if (kind === 'method' && METHOD_KEYWORDS.has(mm[1])) return null;
+          if (kind === 'method' && METHOD_KEYWORDS.has(mm[1])) {
+            return null;
+          }
           // 签名止于声明头（去函数体/箭头/花括号），避免单行实现泄入签名。
           const signature = mm[0].replace(/\s*(=>|\{)\s*$/, '').trim();
           return { kind, name: mm[1], params: mm[2] || '', signature };
         }
       }
-      return null;                              // 第一行有效代码不是声明 → 该块非接口契约
+      return null; // 第一行有效代码不是声明 → 该块非接口契约
     }
     return null;
   }
 
   /** 解析 JSDoc 块体：描述 + @param/@returns/@throws。 */
   _parseDocBody(block) {
-    const lines = String(block).split('\n').map((l) => l.replace(/^\s*\*?\s?/, ''));
+    const lines = String(block)
+      .split('\n')
+      .map((l) => l.replace(/^\s*\*?\s?/, ''));
     const descLines = [];
     const params = [];
     let returns = null;
     const throws = [];
     for (const line of lines) {
       const pm = /^@param\s+\{([^}]*)\}\s+(\[?[\w.$]+\]?)\s*(.*)$/.exec(line);
-      if (pm) { params.push({ type: pm[1].trim(), name: pm[2].trim(), desc: pm[3].trim() }); continue; }
+      if (pm) {
+        params.push({ type: pm[1].trim(), name: pm[2].trim(), desc: pm[3].trim() });
+        continue;
+      }
       const rm = /^@returns?\s+\{([^}]*)\}\s*(.*)$/.exec(line);
-      if (rm) { returns = { type: rm[1].trim(), desc: rm[2].trim() }; continue; }
+      if (rm) {
+        returns = { type: rm[1].trim(), desc: rm[2].trim() };
+        continue;
+      }
       const tm = /^@throws?\s+\{?([^}]*)\}?\s*(.*)$/.exec(line);
-      if (tm) { throws.push({ type: tm[1].trim(), desc: tm[2].trim() }); continue; }
-      if (/^@\w+/.test(line)) continue;         // 其它标签忽略
-      if (line.trim()) descLines.push(line.trim());
+      if (tm) {
+        throws.push({ type: tm[1].trim(), desc: tm[2].trim() });
+        continue;
+      }
+      if (/^@\w+/.test(line)) {
+        continue;
+      } // 其它标签忽略
+      if (line.trim()) {
+        descLines.push(line.trim());
+      }
     }
     return { description: descLines.join(' ').trim(), params, returns, throws };
   }
@@ -107,21 +143,36 @@ class ContractDocGenerator {
    * @returns {string}
    */
   renderMarkdown(modules) {
-    const out = ['# API 契约文档（自动生成 · 代码即唯一真相）', '',
-      '> 本文件由 `ContractDocGenerator` 从源码 JSDoc 契约确定性生成，**请勿手工编辑**（防呆①）。', ''];
+    const out = [
+      '# API 契约文档（自动生成 · 代码即唯一真相）',
+      '',
+      '> 本文件由 `ContractDocGenerator` 从源码 JSDoc 契约确定性生成，**请勿手工编辑**（防呆①）。',
+      '',
+    ];
     for (const mod of modules) {
       out.push(`## ${mod.module}`, '');
-      if (!mod.contracts.length) { out.push('_（无导出契约）_', ''); continue; }
+      if (!mod.contracts.length) {
+        out.push('_（无导出契约）_', '');
+        continue;
+      }
       for (const c of mod.contracts) {
         out.push(`### \`${c.signature}\`  _(${c.kind})_`, '');
-        if (c.description) out.push(c.description, '');
+        if (c.description) {
+          out.push(c.description, '');
+        }
         if (c.params.length) {
           out.push('| 参数 | 类型 | 说明 |', '| --- | --- | --- |');
-          for (const p of c.params) out.push(`| \`${p.name}\` | \`${p.type}\` | ${p.desc || ''} |`);
+          for (const p of c.params) {
+            out.push(`| \`${p.name}\` | \`${p.type}\` | ${p.desc || ''} |`);
+          }
           out.push('');
         }
-        if (c.returns) out.push(`**返回** \`${c.returns.type}\` — ${c.returns.desc || ''}`, '');
-        if (c.throws.length) out.push(`**抛出** ${c.throws.map((t) => `\`${t.type}\``).join(', ')}`, '');
+        if (c.returns) {
+          out.push(`**返回** \`${c.returns.type}\` — ${c.returns.desc || ''}`, '');
+        }
+        if (c.throws.length) {
+          out.push(`**抛出** ${c.throws.map((t) => `\`${t.type}\``).join(', ')}`, '');
+        }
       }
     }
     return out.join('\n');
@@ -136,7 +187,11 @@ class ContractDocGenerator {
     const modules = [];
     for (const f of files) {
       let source = '';
-      try { source = fs.readFileSync(f, 'utf-8'); } catch { continue; }
+      try {
+        source = fs.readFileSync(f, 'utf-8');
+      } catch {
+        continue;
+      }
       modules.push(this.extractContracts(source, path.basename(f)));
     }
     return this.renderMarkdown(modules);

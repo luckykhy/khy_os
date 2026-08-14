@@ -30,7 +30,7 @@
   - 顶部导航栏视觉重构（高对比、阴影、边界线）
 - `apps/ai-frontend/src/views/Login.vue`
   - 登录卡片、标题、提示文本可读性提升
-  - 增加“默认管理员账号填充”按钮（`admin / admin123`）
+  - 增加“默认管理员账号填充”按钮（当时为 `admin / admin123`；后续已改为只填充后端动态解析的用户名，密码见 `.khy/credentials/default-admin.json`）
 - `apps/ai-frontend/src/views/AIGateway.vue`
   - 标题、卡片、提示、配置动作区等统一为高对比风格
 - `apps/ai-frontend/src/views/AIMonitor.vue`

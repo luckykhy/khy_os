@@ -6,9 +6,11 @@
  * 调用纯叶子 gatewayResetPolicy.js 的重置判定与出厂默认值,处理 IO 操作。
  */
 
-const { shouldResetGateway, getFactoryDefaults } = require('./gatewayResetPolicy');
-const { printWarn, printInfo, printSuccess } = require('../cli/formatters');
 const readline = require('readline');
+
+const { printWarn, printInfo, printSuccess } = require('../cli/formatters');
+
+const { shouldResetGateway, getFactoryDefaults } = require('./gatewayResetPolicy');
 
 /**
  * 读取当前网关配置(复用 config.js 的逻辑)。
@@ -26,11 +28,17 @@ function _readCurrentGatewayConfig() {
   if (fs.existsSync(envPath)) {
     const content = fs.readFileSync(envPath, 'utf-8');
     for (const line of content.split(/\r?\n/)) {
-      if (!line || /^\s*#/.test(line)) continue;
+      if (!line || /^\s*#/.test(line)) {
+        continue;
+      }
       const idx = line.indexOf('=');
-      if (idx <= 0) continue;
+      if (idx <= 0) {
+        continue;
+      }
       const key = line.slice(0, idx).trim();
-      if (!key) continue;
+      if (!key) {
+        continue;
+      }
       const rawValue = line.slice(idx + 1).trim();
       envMap[key] = rawValue.replace(/^['"]|['"]$/g, '');
     }
@@ -54,7 +62,11 @@ function _writeEnvPatch(envMap = {}) {
   const syncMirror = String(process.env.KHY_ENV_SYNC_ROOT || 'true').toLowerCase() !== 'false';
 
   const targets = [canonicalPath];
-  if (syncMirror && mirrorPath !== canonicalPath && (fs.existsSync(mirrorPath) || fs.existsSync(canonicalPath))) {
+  if (
+    syncMirror &&
+    mirrorPath !== canonicalPath &&
+    (fs.existsSync(mirrorPath) || fs.existsSync(canonicalPath))
+  ) {
     targets.push(mirrorPath);
   }
 
@@ -71,8 +83,11 @@ function _writeEnvPatch(envMap = {}) {
     for (const [key, value] of Object.entries(envMap)) {
       const regex = new RegExp(`^${key}=.*$`, 'm');
       const line = `${key}=${value}`;
-      if (regex.test(next)) next = next.replace(regex, line);
-      else next = next.trimEnd() + '\n' + line + '\n';
+      if (regex.test(next)) {
+        next = next.replace(regex, line);
+      } else {
+        next = next.trimEnd() + '\n' + line + '\n';
+      }
     }
 
     fs.writeFileSync(file, next);
@@ -98,7 +113,9 @@ async function _askUser(question) {
 
     rl.question(`${question} [y/N] `, (answer) => {
       rl.close();
-      const normalized = String(answer || '').trim().toLowerCase();
+      const normalized = String(answer || '')
+        .trim()
+        .toLowerCase();
       resolve(normalized === 'y' || normalized === 'yes');
     });
   });

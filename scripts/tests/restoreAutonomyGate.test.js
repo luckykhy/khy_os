@@ -193,7 +193,7 @@ test('授权档三值互不相同', () => {
 // ── CLI 契约：facts 注入 + 文档漂移 ──────────────────────────────────────────────
 
 test('CLI gatherAuthorizationFacts 支持 overrides 注入（离线可测）', () => {
-  const { gatherAuthorizationFacts } = require('../restore-authorize');
+  const { gatherAuthorizationFacts } = require('../restore/restore-authorize');
   const facts = gatherAuthorizationFacts({ hasExistingUserData: false, canAskHuman: true });
   assert.strictEqual(facts.hasExistingUserData, false);
   assert.strictEqual(facts.canAskHuman, true);
@@ -201,7 +201,7 @@ test('CLI gatherAuthorizationFacts 支持 overrides 注入（离线可测）', (
 });
 
 test('CLI buildDoc 与授权常量同源', () => {
-  const { buildDoc } = require('../restore-authorize');
+  const { buildDoc } = require('../restore/restore-authorize');
   const doc = buildDoc();
   assert.match(doc, /OPS-MAN-084/);
   assert.ok(doc.includes(AUTH_AUTHORIZED));
@@ -210,7 +210,7 @@ test('CLI buildDoc 与授权常量同源', () => {
 });
 
 test('生成的 OPS-MAN-084 文档已落盘且与 buildDoc 逐字节一致（防漂移）', () => {
-  const { buildDoc, DOC_PATH } = require('../restore-authorize');
+  const { buildDoc, DOC_PATH } = require('../restore/restore-authorize');
   assert.ok(fs.existsSync(DOC_PATH), 'OPS-MAN-084 文档应已生成');
   assert.strictEqual(fs.readFileSync(DOC_PATH, 'utf8'), buildDoc());
 });

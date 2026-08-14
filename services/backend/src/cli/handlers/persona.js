@@ -20,7 +20,10 @@ async function handlePersonaCommand(subCommand, args, options) {
   switch (subCommand) {
     case 'show': {
       const text = svc.loadPersona(cwd);
-      if (!text) { printInfo('No persona.md found. Run `khy persona init` to create one.'); return; }
+      if (!text) {
+        printInfo('No persona.md found. Run `khy persona init` to create one.');
+        return;
+      }
       console.log('');
       console.log(text);
       console.log('');
@@ -32,7 +35,9 @@ async function handlePersonaCommand(subCommand, args, options) {
       const res = svc.scaffold({ dest, force });
       if (res.written) {
         printSuccess(`Persona template written to ${res.dest}`);
-        printInfo('Edit it to shape answer strategy, tone, confirmation, red lines, and uncertainty handling.');
+        printInfo(
+          'Edit it to shape answer strategy, tone, confirmation, red lines, and uncertainty handling.'
+        );
       } else {
         printError(`Refusing to overwrite existing ${res.dest}. Use --force to replace it.`);
       }
@@ -40,10 +45,15 @@ async function handlePersonaCommand(subCommand, args, options) {
     }
     case 'paths': {
       const paths = svc._personaPaths(cwd);
-      if (paths.length === 0) { printInfo('No persona.md files discovered.'); return; }
+      if (paths.length === 0) {
+        printInfo('No persona.md files discovered.');
+        return;
+      }
       console.log('');
       console.log(chalk.bold('  Discovered persona files (precedence order):'));
-      for (const p of paths) console.log(`  • ${p}`);
+      for (const p of paths) {
+        console.log(`  • ${p}`);
+      }
       console.log('');
       return;
     }
@@ -58,7 +68,9 @@ async function handlePersonaCommand(subCommand, args, options) {
       console.log('');
       for (const sec of summary.sections) {
         console.log(`  ${chalk.cyan(sec.title)}`);
-        for (const line of sec.lines) console.log(`    ${chalk.dim(line)}`);
+        for (const line of sec.lines) {
+          console.log(`    ${chalk.dim(line)}`);
+        }
       }
       console.log('');
       printInfo('Full text: khy persona show   |   Edit: khy persona init');

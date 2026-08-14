@@ -43,12 +43,29 @@ function planFill(spec = {}) {
 
     if (isWeb) {
       // Web：委派 WebBrowser。fill 自带清空语义。
-      steps.push({ kind: 'web', action: 'fill', selector: f.selector.trim(), value: f.value, field: idx });
+      steps.push({
+        kind: 'web',
+        action: 'fill',
+        selector: f.selector.trim(),
+        value: f.value,
+        field: idx,
+      });
     } else {
-      steps.push({ kind: 'native', action: 'click', x: Math.trunc(f.x), y: Math.trunc(f.y), field: idx });
+      steps.push({
+        kind: 'native',
+        action: 'click',
+        x: Math.trunc(f.x),
+        y: Math.trunc(f.y),
+        field: idx,
+      });
       if (f.clearFirst) {
         // 全选 + 删除：跨平台用 hotkey(ctrl/cmd + a) 再 key(delete)。
-        steps.push({ kind: 'native', action: 'hotkey', keys: [_selectAllModifier(spec.platform), 'a'], field: idx });
+        steps.push({
+          kind: 'native',
+          action: 'hotkey',
+          keys: [_selectAllModifier(spec.platform), 'a'],
+          field: idx,
+        });
         steps.push({ kind: 'native', action: 'key', key: 'delete', field: idx });
       }
       steps.push({ kind: 'native', action: 'type', text: f.value, field: idx });
@@ -65,13 +82,21 @@ function planFill(spec = {}) {
     if (typeof s === 'object' && typeof s.selector === 'string') {
       steps.push({ kind: 'web', action: 'click', selector: s.selector.trim(), submit: true });
     } else if (typeof s === 'object' && Number.isFinite(s.x) && Number.isFinite(s.y)) {
-      steps.push({ kind: 'native', action: 'click', x: Math.trunc(s.x), y: Math.trunc(s.y), submit: true });
+      steps.push({
+        kind: 'native',
+        action: 'click',
+        x: Math.trunc(s.x),
+        y: Math.trunc(s.y),
+        submit: true,
+      });
     } else {
       steps.push({ kind: 'native', action: 'key', key: 'enter', submit: true });
     }
   }
 
-  if (errors.length) return { ok: false, error: errors.join(' '), steps };
+  if (errors.length) {
+    return { ok: false, error: errors.join(' '), steps };
+  }
   return { ok: true, steps };
 }
 
@@ -91,7 +116,9 @@ function _selectAllModifier(platform) {
  */
 async function executeFill(spec = {}, deps = {}) {
   const plan = planFill({ ...spec, platform: deps.platform });
-  if (!plan.ok) return { success: false, error: plan.error, plan: plan.steps };
+  if (!plan.ok) {
+    return { success: false, error: plan.error, plan: plan.steps };
+  }
 
   const actuator = deps.actuator || require('./inputController');
   const webExecute = deps.webExecute || null;
@@ -100,25 +127,49 @@ async function executeFill(spec = {}, deps = {}) {
   for (const step of plan.steps) {
     let r;
     if (step.kind === 'web') {
-      if (!webExecute) { r = { success: false, error: 'Web 字段需要 webExecute（WebBrowser 委派）但未配置。' }; }
-      else {
-        r = await webExecute(step.action, step.action === 'fill'
-          ? { selector: step.selector, value: step.value }
-          : { selector: step.selector });
+      if (!webExecute) {
+        r = { success: false, error: 'Web 字段需要 webExecute（WebBrowser 委派）但未配置。' };
+      } else {
+        r = await webExecute(
+          step.action,
+          step.action === 'fill'
+            ? { selector: step.selector, value: step.value }
+            : { selector: step.selector }
+        );
       }
     } else {
       switch (step.action) {
-        case 'click': r = await actuator.click(step.x, step.y); break;
-        case 'type': r = await actuator.type(step.text); break;
-        case 'key': r = await actuator.key(step.key); break;
-        case 'hotkey': r = await actuator.hotkey(step.keys); break;
-        default: r = { success: false, error: `未知步骤动作 ${step.action}` };
+        case 'click':
+          r = await actuator.click(step.x, step.y);
+          break;
+        case 'type':
+          r = await actuator.type(step.text);
+          break;
+        case 'key':
+          r = await actuator.key(step.key);
+          break;
+        case 'hotkey':
+          r = await actuator.hotkey(step.keys);
+          break;
+        default:
+          r = { success: false, error: `未知步骤动作 ${step.action}` };
       }
     }
     results.push({ step, result: r });
-    if (deps.onStep) { try { deps.onStep(step, r); } catch { /* 透明回调失败不影响主流程 */ } }
+    if (deps.onStep) {
+      try {
+        deps.onStep(step, r);
+      } catch {
+        /* 透明回调失败不影响主流程 */
+      }
+    }
     if (!r || r.success === false) {
-      return { success: false, error: `第 ${results.length} 步（${step.kind}:${step.action}）失败：${(r && r.error) || '未知'}`, results, plan: plan.steps };
+      return {
+        success: false,
+        error: `第 ${results.length} 步（${step.kind}:${step.action}）失败：${(r && r.error) || '未知'}`,
+        results,
+        plan: plan.steps,
+      };
     }
   }
 

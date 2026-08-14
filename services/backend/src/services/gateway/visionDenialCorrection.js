@@ -83,7 +83,7 @@ const _DENIAL_RE = new RegExp(
     '无法描述不存在的(?:内容|图片|东西)',
     '(?:图片|图像)(?:并?未|没有)(?:成功)?(?:上传|附带|发送)',
   ].join('|'),
-  'i',
+  'i'
 );
 
 // 模型正文是否**已诚实承认**「收到图但读不出/看不了」——命中即视为合规,不再追加纠正(保持无感)。
@@ -96,16 +96,22 @@ const _ACK_RE = new RegExp(
     '当前(?:模型|通道)(?:不支持|无法)[^。\\n]{0,8}(?:视觉|看图|识别图)',
     'OCR',
   ].join('|'),
-  'i',
+  'i'
 );
 
 // 答复正文是否在**否认收到图片**(命中否认句、且**未**同时出现承认句)。
 // 非字符串 / 空 → false(无从判断 → 不追加,保守回退)。同时出现承认+否认(罕见)→ 视为已承认(合规),
 // 不追加,避免与模型自己的诚实说明打架。
 function detectImageDenial(content) {
-  if (typeof content !== 'string' || content.length === 0) return false;
-  if (!_DENIAL_RE.test(content)) return false;
-  if (_ACK_RE.test(content)) return false; // 已诚实承认 → 合规,不纠正
+  if (typeof content !== 'string' || content.length === 0) {
+    return false;
+  }
+  if (!_DENIAL_RE.test(content)) {
+    return false;
+  }
+  if (_ACK_RE.test(content)) {
+    return false;
+  } // 已诚实承认 → 合规,不纠正
   return true;
 }
 
@@ -121,20 +127,28 @@ function buildDenialCorrectionNote({ count, env, ocrTextRead } = {}) {
   const noun = hasCount ? (n === 1 ? '1 张图片' : `${n} 张图片`) : '图片';
   if (ocrTextRead === true) {
     // OCR-成功变体:OCR 已读出文字,却被模型无视且否认收到图。纠正为「图收到了、文字读出来了、模型没用」。
-    if (!isOcrReadDenialEnabled(env)) return null;
-    return `\n\n———\n📎 ${DENIAL_CORRECTION_OCR_READ_MARKER}更正:你确实上传了${noun}。`
-      + `当前模型不支持直接看图,但本地 OCR **已成功读出图中文字**并作为上下文提供给我作答——`
-      + `图片**已经收到**,并非「没有图片」。若上文未据此展开,是模型未采用已读出的 OCR 文本。`
-      + `可行方案:① 直接说「请据 OCR 读出的文字重新作答」,我会据此回答;`
-      + `② 或换用支持视觉的模型(运行 \`khy gateway model\` 选择)以原生看图。`;
+    if (!isOcrReadDenialEnabled(env)) {
+      return null;
+    }
+    return (
+      `\n\n———\n📎 ${DENIAL_CORRECTION_OCR_READ_MARKER}更正:你确实上传了${noun}。` +
+      `当前模型不支持直接看图,但本地 OCR **已成功读出图中文字**并作为上下文提供给我作答——` +
+      `图片**已经收到**,并非「没有图片」。若上文未据此展开,是模型未采用已读出的 OCR 文本。` +
+      `可行方案:① 直接说「请据 OCR 读出的文字重新作答」,我会据此回答;` +
+      `② 或换用支持视觉的模型(运行 \`khy gateway model\` 选择)以原生看图。`
+    );
   }
   // 空 OCR 变体(既有行为,逐字节不变)。
-  if (!isEnabled(env)) return null;
-  return `\n\n———\n📎 ${DENIAL_CORRECTION_MARKER}更正:你确实上传了${noun}。`
-    + `当前模型不支持直接看图,本地 OCR 也未能从图中读出文字(常见于照片/截图/图表等非纯文字图,`
-    + `或缺少对应语言的 OCR 字库),所以我没能识别其内容——但图片**已经收到**,并非「没有图片」。`
-    + `可行方案:① 换用支持视觉的模型(运行 \`khy gateway model\` 选择);`
-    + `② 若图中是文字,确认安装对应语言 OCR 字库后重发;③ 直接把图中文字粘贴过来。`;
+  if (!isEnabled(env)) {
+    return null;
+  }
+  return (
+    `\n\n———\n📎 ${DENIAL_CORRECTION_MARKER}更正:你确实上传了${noun}。` +
+    `当前模型不支持直接看图,本地 OCR 也未能从图中读出文字(常见于照片/截图/图表等非纯文字图,` +
+    `或缺少对应语言的 OCR 字库),所以我没能识别其内容——但图片**已经收到**,并非「没有图片」。` +
+    `可行方案:① 换用支持视觉的模型(运行 \`khy gateway model\` 选择);` +
+    `② 若图中是文字,确认安装对应语言 OCR 字库后重发;③ 直接把图中文字粘贴过来。`
+  );
 }
 
 module.exports = {

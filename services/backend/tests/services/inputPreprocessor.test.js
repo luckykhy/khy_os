@@ -174,3 +174,29 @@ describe('matchIntentRoutes', () => {
     expect(matches[0].route).toBe('gateway status');
   });
 });
+
+describe('preprocess — 代词指代与 KHY_REFERENCE_DISAMBIGUATION 门控', () => {
+  const KEY = 'KHY_REFERENCE_DISAMBIGUATION';
+  let saved;
+  beforeEach(() => { saved = process.env[KEY]; });
+  afterEach(() => {
+    if (saved === undefined) delete process.env[KEY];
+    else process.env[KEY] = saved;
+  });
+
+  test('门控开(默认): 跳过自然语言附加,不加 pronoun_reference 增强', () => {
+    delete process.env[KEY];
+    const result = preprocess('那个东西');
+    const hasPronoun = (result.metadata.enhancements || []).some(e => e.reason === 'pronoun_reference');
+    expect(hasPronoun).toBe(false);
+    expect(result.processed).not.toContain('请根据对话上下文');
+  });
+
+  test('门控关: 保持原行为(附加自然语言提示 + pronoun_reference 增强)', () => {
+    process.env[KEY] = '0';
+    const result = preprocess('那个东西');
+    const hasPronoun = (result.metadata.enhancements || []).some(e => e.reason === 'pronoun_reference');
+    expect(hasPronoun).toBe(true);
+    expect(result.processed).toContain('请根据对话上下文');
+  });
+});

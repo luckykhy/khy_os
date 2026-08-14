@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir } = require('../../utils/dataHome');
 
 /** Absolute path to the pointer file: <dataHome>/remotedev/session.json */
@@ -37,7 +38,9 @@ function readPointer() {
 
 /** Atomically write the descriptor (temp + rename). Returns the descriptor or null. */
 function writePointer(descriptor) {
-  if (!descriptor || typeof descriptor !== 'object') return null;
+  if (!descriptor || typeof descriptor !== 'object') {
+    return null;
+  }
   try {
     const file = pointerPath();
     const tmp = `${file}.tmp-${process.pid}`;

@@ -27,7 +27,9 @@ const path = require('path');
 function scopePath(scope, io = {}) {
   const home = io.homedir || os.homedir();
   const cwd = io.cwd || process.cwd();
-  if (scope === 'project') return path.join(cwd, '.khy', 'mcp.json');
+  if (scope === 'project') {
+    return path.join(cwd, '.khy', 'mcp.json');
+  }
   return path.join(home, '.khy', 'mcp.json');
 }
 
@@ -38,10 +40,16 @@ function scopePath(scope, io = {}) {
  */
 function readConfigFile(filePath) {
   try {
-    if (!fs.existsSync(filePath)) return { mcpServers: {} };
+    if (!fs.existsSync(filePath)) {
+      return { mcpServers: {} };
+    }
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    if (!raw || typeof raw !== 'object') return { mcpServers: {} };
-    if (!raw.mcpServers || typeof raw.mcpServers !== 'object') raw.mcpServers = {};
+    if (!raw || typeof raw !== 'object') {
+      return { mcpServers: {} };
+    }
+    if (!raw.mcpServers || typeof raw.mcpServers !== 'object') {
+      raw.mcpServers = {};
+    }
     return raw;
   } catch {
     // 损坏文件不覆盖:抛给调用方决定(避免静默吃掉用户已有配置)。
@@ -51,7 +59,9 @@ function readConfigFile(filePath) {
 
 function _writeConfigFile(filePath, config) {
   const dir = path.dirname(filePath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`, 'utf-8');
 }
 
@@ -81,7 +91,9 @@ function addServer(name, serverConfig, opts = {}) {
 function removeServer(name, opts = {}) {
   const scope = opts.scope === 'project' ? 'project' : 'user';
   const filePath = scopePath(scope, opts);
-  if (!fs.existsSync(filePath)) return { path: filePath, removed: false };
+  if (!fs.existsSync(filePath)) {
+    return { path: filePath, removed: false };
+  }
   const config = readConfigFile(filePath);
   if (!Object.prototype.hasOwnProperty.call(config.mcpServers, name)) {
     return { path: filePath, removed: false };
@@ -91,9 +103,38 @@ function removeServer(name, opts = {}) {
   return { path: filePath, removed: true };
 }
 
+/**
+ * 启用/禁用一台 server(不改动其余字段)。禁用 = 在该 server 配置上写 `disabled: true`(loadConfig
+ * 会把它映射成 _disabled → connectAll 跳过);启用 = 删掉 `disabled` 字段。不存在 → {found:false}。
+ * @param {string} name
+ * @param {boolean} enabled
+ * @param {{scope?:'user'|'project', homedir?:string, cwd?:string}} [opts]
+ * @returns {{path:string, found:boolean, enabled:boolean}}
+ */
+function setServerEnabled(name, enabled, opts = {}) {
+  const scope = opts.scope === 'project' ? 'project' : 'user';
+  const filePath = scopePath(scope, opts);
+  if (!fs.existsSync(filePath)) {
+    return { path: filePath, found: false, enabled };
+  }
+  const config = readConfigFile(filePath);
+  if (!Object.prototype.hasOwnProperty.call(config.mcpServers, name)) {
+    return { path: filePath, found: false, enabled };
+  }
+  const entry = config.mcpServers[name];
+  if (enabled) {
+    delete entry.disabled;
+  } else {
+    entry.disabled = true;
+  }
+  _writeConfigFile(filePath, config);
+  return { path: filePath, found: true, enabled };
+}
+
 module.exports = {
   scopePath,
   readConfigFile,
   addServer,
   removeServer,
+  setServerEnabled,
 };

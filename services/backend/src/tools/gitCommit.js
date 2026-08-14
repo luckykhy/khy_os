@@ -1,20 +1,49 @@
-const { defineTool, isGitRepo } = require('./_baseTool');
 const { execSync } = require('child_process');
+
+const { defineTool, isGitRepo } = require('./_baseTool');
 const _execCompat = require('./_execCompat');
 
 module.exports = defineTool({
   name: 'gitCommit',
-  description: 'Stage files and create a git commit. Set message to "auto" to generate a commit message via AI.',
+  description:
+    'Stage the given files (git add) and create a commit with the given message. ' +
+    'Use it only when the user asks to commit; set message to "auto" to let AI generate the message. ' +
+    'If files is omitted, only already-staged changes are committed.',
   category: 'git',
   risk: 'medium',
+  searchHint: 'stage add save changes message 提交 暂存 提交代码',
   isReadOnly: false,
   isConcurrencySafe: false,
   isEnabled: isGitRepo,
   inputSchema: {
-    message: { type: 'string', required: true, description: 'Commit message. Use "auto" for AI-generated message.' },
-    files: { type: 'array', required: false, description: 'Files to stage (git add). If empty, commits already staged files.', items: { type: 'string' } },
-    style: { type: 'string', required: false, description: 'Commit style for auto-generation: "conventional" or "descriptive"', enum: ['conventional', 'descriptive'] },
-    noVerify: { type: 'boolean', required: false, description: 'Skip pre-commit self-check (aligns with git --no-verify).' },
+    message: {
+      type: 'string',
+      required: true,
+      description:
+        'Commit message, e.g. "fix: handle empty response". Use the literal string "auto" for an AI-generated message.',
+      example: 'fix: handle empty response',
+    },
+    files: {
+      type: 'array',
+      required: false,
+      description:
+        'File paths to stage before committing, e.g. ["src/app.js"] (default: commit already-staged files only).',
+      items: { type: 'string' },
+    },
+    style: {
+      type: 'string',
+      required: false,
+      description:
+        'Commit-message style for auto-generation: "conventional" (default) or "descriptive".',
+      enum: ['conventional', 'descriptive'],
+      example: 'conventional',
+    },
+    noVerify: {
+      type: 'boolean',
+      required: false,
+      description: 'Skip the pre-commit self-check, like git --no-verify (default: false).',
+      example: false,
+    },
   },
   async execute(params, context) {
     try {
@@ -26,7 +55,7 @@ module.exports = defineTool({
       const _run = (c) => (_nb ? _execCompat.execAsync(c, opts) : execSync(c, opts));
 
       if (params.files && params.files.length > 0) {
-        const fileList = params.files.map(f => `"${f}"`).join(' ');
+        const fileList = params.files.map((f) => `"${f}"`).join(' ');
         await _run(`git add ${fileList}`);
       }
 
@@ -43,7 +72,10 @@ module.exports = defineTool({
           if (result.message) {
             message = result.message;
           } else {
-            return { success: false, error: `Auto message generation failed: ${result.error || 'empty result'}` };
+            return {
+              success: false,
+              error: `Auto message generation failed: ${result.error || 'empty result'}`,
+            };
           }
         } catch (err) {
           return { success: false, error: `Auto message generation failed: ${err.message}` };
@@ -55,7 +87,9 @@ module.exports = defineTool({
       try {
         const { appendCoAuthorTrailer } = require('../constants/gitCoAuthorTrailer');
         message = appendCoAuthorTrailer(message, process.env);
-      } catch { /* fail-soft */ }
+      } catch {
+        /* fail-soft */
+      }
 
       // Pre-commit self-check: warn on secrets/large files/artifacts (only warns,
       // never blocks unless KHY_COMMIT_PRECHECK_BLOCK=on); enqueues offending paths
@@ -69,9 +103,15 @@ module.exports = defineTool({
           noVerify: !!params.noVerify,
         });
         if (chk && chk.shouldBlock) {
-          return { success: false, error: '提交被自检阻断(KHY_COMMIT_PRECHECK_BLOCK=on):存在严重风险。解决后重试,或设 noVerify:true 跳过。' };
+          return {
+            success: false,
+            error:
+              '提交被自检阻断(KHY_COMMIT_PRECHECK_BLOCK=on):存在严重风险。解决后重试,或设 noVerify:true 跳过。',
+          };
         }
-      } catch { /* fail-soft */ }
+      } catch {
+        /* fail-soft */
+      }
 
       const escaped = message.replace(/"/g, '\\"');
       const output = await _run(`git commit -m "${escaped}"`);

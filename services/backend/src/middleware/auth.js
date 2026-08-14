@@ -1,6 +1,7 @@
-const { QueryTypes } = require('sequelize');
-const { User, ApiKey, sequelize } = require('../models');
 const { hashApiKey } = require('@khy/shared/utils/apiKeyHash');
+const { QueryTypes } = require('sequelize');
+
+const { User, ApiKey, sequelize } = require('../models');
 const authSessionService = require('../services/authSessionService');
 
 const API_KEY_SCHEMA_CACHE_MS = 60 * 1000;
@@ -13,7 +14,7 @@ function hasColumn(schema, columnName) {
 
 async function getApiKeySchema() {
   const now = Date.now();
-  if (apiKeySchemaCache && (now - apiKeySchemaCachedAt) < API_KEY_SCHEMA_CACHE_MS) {
+  if (apiKeySchemaCache && now - apiKeySchemaCachedAt < API_KEY_SCHEMA_CACHE_MS) {
     return apiKeySchemaCache;
   }
 
@@ -50,7 +51,9 @@ async function findApiKeyRecord(apiKeyValue) {
   }
 
   const schema = await getApiKeySchema();
-  if (!schema) return null;
+  if (!schema) {
+    return null;
+  }
 
   const whereParts = [];
   const replacements = {
@@ -58,8 +61,12 @@ async function findApiKeyRecord(apiKeyValue) {
     activeValue: true,
   };
 
-  if (hasColumn(schema, 'key_hash')) whereParts.push('key_hash = :keyHash');
-  if (whereParts.length === 0) return null;
+  if (hasColumn(schema, 'key_hash')) {
+    whereParts.push('key_hash = :keyHash');
+  }
+  if (whereParts.length === 0) {
+    return null;
+  }
 
   const activeClause = hasColumn(schema, 'is_active') ? 'AND is_active = :activeValue' : '';
   let rows = [];
@@ -78,24 +85,29 @@ async function findApiKeyRecord(apiKeyValue) {
   }
 
   const row = rows[0];
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
 
   const userId = Number(row.user_id || row.userId || 0);
-  if (!userId) return null;
+  if (!userId) {
+    return null;
+  }
 
   const user = await User.findByPk(userId);
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const touch = async () => {
-    if (!hasColumn(schema, 'last_used_at')) return;
+    if (!hasColumn(schema, 'last_used_at')) {
+      return;
+    }
     try {
-      await sequelize.query(
-        'UPDATE api_keys SET last_used_at = :lastUsedAt WHERE id = :id',
-        {
-          replacements: { lastUsedAt: new Date(), id: Number(row.id) || 0 },
-          type: QueryTypes.UPDATE,
-        }
-      );
+      await sequelize.query('UPDATE api_keys SET last_used_at = :lastUsedAt WHERE id = :id', {
+        replacements: { lastUsedAt: new Date(), id: Number(row.id) || 0 },
+        type: QueryTypes.UPDATE,
+      });
     } catch {
       // best effort
     }
@@ -129,10 +141,12 @@ function sendAuthFailure(res, authResult) {
     });
   }
 
-  if (authResult?.code === 'session_revoked' ||
-      authResult?.code === 'session_expired' ||
-      authResult?.code === 'token_version_mismatch' ||
-      authResult?.code === 'legacy_token_revoked') {
+  if (
+    authResult?.code === 'session_revoked' ||
+    authResult?.code === 'session_expired' ||
+    authResult?.code === 'token_version_mismatch' ||
+    authResult?.code === 'legacy_token_revoked'
+  ) {
     return res.status(401).json({
       success: false,
       message: '登录会话已失效，请重新登录',
@@ -179,6 +193,12 @@ const authMiddleware = async (req, res, next) => {
 };
 
 const adminMiddleware = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: '未认证',
+    });
+  }
   if (req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,

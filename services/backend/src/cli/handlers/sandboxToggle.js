@@ -21,19 +21,24 @@
  * 缺失,本命令如实告知「已写 KHY_OS_SANDBOX=true 但当前平台后端不可用,沙箱仍不生效」,绝不假装。
  */
 
-const { printInfo, printSuccess, printWarn } = require('../formatters');
 const leaf = require('../../services/config/sandboxToggleState');
-const toolSandbox = require('../../services/toolSandbox');
 const envFile = require('../../services/gatewayEnvFile');
+const toolSandbox = require('../../services/toolSandbox');
+const { printInfo, printSuccess, printWarn } = require('../formatters');
 
 /** 由 toolSandbox 探测器收集当前平台的沙箱后端可用性(fail-soft)。 */
 function _detectFacts() {
   let bwrapAvailable = false;
   let seatbeltAvailable = false;
   try {
-    if (process.platform === 'linux') bwrapAvailable = !!toolSandbox._detectBwrap();
-    else if (process.platform === 'darwin') seatbeltAvailable = !!toolSandbox._detectSeatbelt();
-  } catch { /* fail-soft:探测失败按不可用处理 */ }
+    if (process.platform === 'linux') {
+      bwrapAvailable = !!toolSandbox._detectBwrap();
+    } else if (process.platform === 'darwin') {
+      seatbeltAvailable = !!toolSandbox._detectSeatbelt();
+    }
+  } catch {
+    /* fail-soft:探测失败按不可用处理 */
+  }
   return { platform: process.platform, bwrapAvailable, seatbeltAvailable };
 }
 
@@ -49,8 +54,10 @@ function _printState(label) {
   printInfo(`${label}OS 沙箱:${onOff}(KHY_OS_SANDBOX=${state.flag},后端=${state.backend})`);
   printInfo(`  ${state.reason}`);
   if (!state.effective && state.flag !== 'false' && !state.available) {
-    printWarn('  提示:沙箱后端不可用——开启 flag 也不会真正生效,需先安装平台依赖' +
-      '(Linux: bubblewrap;macOS: 自带 sandbox-exec)。');
+    printWarn(
+      '  提示:沙箱后端不可用——开启 flag 也不会真正生效,需先安装平台依赖' +
+        '(Linux: bubblewrap;macOS: 自带 sandbox-exec)。'
+    );
   }
 }
 

@@ -123,8 +123,11 @@ async function answer(userId, runId, payload = {}) {
   const pending = row.pendingJson || {};
   const value = payload.answer;
   // Constrain to a declared option when options were provided.
-  if (Array.isArray(pending.options) && pending.options.length
-      && !pending.options.includes(value)) {
+  if (
+    Array.isArray(pending.options) &&
+    pending.options.length &&
+    !pending.options.includes(value)
+  ) {
     throw httpError(400, `answer must be one of: ${pending.options.join(', ')}`);
   }
   await row.update({

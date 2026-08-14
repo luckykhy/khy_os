@@ -141,7 +141,7 @@ if [[ "$AS" == 'system' ]]; then
     [[ -f "$ISO_SCRIPT" ]] || fail "Missing ISO builder: $ISO_SCRIPT"
     ISO_ARGS=()
     [[ -n "$IMAGE_PATH" ]] && ISO_ARGS+=(--output "$IMAGE_PATH")
-    [[ -n "$SOURCE_ROOT" ]] && ISO_ARGS+=(--mirror "$SOURCE_ROOT")
+    [[ -n "$ALPINE_MIRROR" ]] && ISO_ARGS+=(--mirror "$ALPINE_MIRROR")
     bash "$ISO_SCRIPT" "${ISO_ARGS[@]}"
     ok "Alpine ISO build completed"
     exit 0

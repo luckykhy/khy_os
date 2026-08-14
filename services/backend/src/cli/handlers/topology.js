@@ -40,10 +40,12 @@ function _renderView(svc, topo) {
   const enabled = topo.topologyEnabled(process.env);
   printInfo(
     `会话拓扑(${forest.nodes.length} 个节点 · ${forest.roots.length} 条主干)` +
-    (enabled ? '' : '  ⚠ KHY_SESSION_TOPOLOGY=0:已退化为平铺列表')
+      (enabled ? '' : '  ⚠ KHY_SESSION_TOPOLOGY=0:已退化为平铺列表')
   );
   const lines = topo.renderForestTree(forest, { currentId: current });
-  for (const line of lines) printInfo(line);
+  for (const line of lines) {
+    printInfo(line);
+  }
   if (current && forest.byId[current]) {
     printInfo('');
     printInfo('提示:思路若开始发散,/fork 开一条新分支,而非把当前线越拉越长。');
@@ -73,7 +75,9 @@ function _renderPut(svc, slot, args) {
   const id = args && args[0];
   const text = (args || []).slice(1).join(' ').trim();
   if (!id || !text) {
-    printError(`用法:/topology ${slot === 'insight' ? 'putInsight' : 'putMemory'} <sessionId> <文本>`);
+    printError(
+      `用法:/topology ${slot === 'insight' ? 'putInsight' : 'putMemory'} <sessionId> <文本>`
+    );
     return false;
   }
   const ok = slot === 'insight' ? svc.putInsight(id, text) : svc.putMemory(id, text);
@@ -84,7 +88,9 @@ function _renderPut(svc, slot, args) {
   if (slot === 'insight') {
     printSuccess(`已写入 insight → ${_truncate(id, 16)}:下次进入该会话注入一次即清空。`);
   } else {
-    printSuccess(`已写入 memory → ${_truncate(id, 16)}:外向摘要,绝不注入该节点自身,供跨支/综合读取。`);
+    printSuccess(
+      `已写入 memory → ${_truncate(id, 16)}:外向摘要,绝不注入该节点自身,供跨支/综合读取。`
+    );
   }
   return true;
 }
@@ -113,7 +119,8 @@ async function _renderSynthesize(svc) {
   }
   printSuccess(
     `综合完成:回写 ${res.written.insights} 条分支 insight` +
-    (res.written.rootId ? ` + 根 ${_truncate(res.written.rootId, 12)} 的 memory` : '') + '。'
+      (res.written.rootId ? ` + 根 ${_truncate(res.written.rootId, 12)} 的 memory` : '') +
+      '。'
   );
   if (res.rootSynthesis) {
     printInfo('');
@@ -124,19 +131,21 @@ async function _renderSynthesize(svc) {
 }
 
 function _help() {
-  printInfo([
-    'khy /topology — 把历次 /fork 分叉组织成一张「会话拓扑网」',
-    '',
-    '  /topology                       森林树视图(默认):根 → 分支,标注当前所在节点',
-    '  /topology digest                各分支 digest(id/状态/turns/memory 摘要)',
-    '  /topology putInsight <id> <文本>  写某分支一次性 insight(注入一次即清)',
-    '  /topology putMemory  <id> <文本>  写某分支外向 memory(绝不自注入,仅跨支读)',
-    '  /topology synthesize            跨支综合:读遍所有分支 → 反思 → 回写各支 insight + 根 memory',
-    '',
-    '  Gate: KHY_SESSION_TOPOLOGY=0 → 退化为平铺会话列表(字节级近似历史)。',
-    '        KHY_SESSION_SLOTS=0    → 禁用三槽(putInsight/putMemory 拒绝,注入消失)。',
-    '        KHY_CROSS_BRANCH_SYNTHESIS=0 → 禁用跨支综合。',
-  ].join('\n'));
+  printInfo(
+    [
+      'khy /topology — 把历次 /fork 分叉组织成一张「会话拓扑网」',
+      '',
+      '  /topology                       森林树视图(默认):根 → 分支,标注当前所在节点',
+      '  /topology digest                各分支 digest(id/状态/turns/memory 摘要)',
+      '  /topology putInsight <id> <文本>  写某分支一次性 insight(注入一次即清)',
+      '  /topology putMemory  <id> <文本>  写某分支外向 memory(绝不自注入,仅跨支读)',
+      '  /topology synthesize            跨支综合:读遍所有分支 → 反思 → 回写各支 insight + 根 memory',
+      '',
+      '  Gate: KHY_SESSION_TOPOLOGY=0 → 退化为平铺会话列表(字节级近似历史)。',
+      '        KHY_SESSION_SLOTS=0    → 禁用三槽(putInsight/putMemory 拒绝,注入消失)。',
+      '        KHY_CROSS_BRANCH_SYNTHESIS=0 → 禁用跨支综合。',
+    ].join('\n')
+  );
 }
 
 /**
@@ -152,7 +161,7 @@ async function handleTopology(subCommand, args = [], options = {}) {
   // 子命令可能来自 router 的 subCommand,或落在 args[0](topology 未登记 SUB_COMMANDS)。
   // 后者情形下,put* 的实参从 args[1] 起,故据来源算出剩余实参 rest。
   const hasExplicitSub = subCommand != null && String(subCommand) !== '';
-  const sub = String(hasExplicitSub ? subCommand : (list[0] || 'view')).toLowerCase();
+  const sub = String(hasExplicitSub ? subCommand : list[0] || 'view').toLowerCase();
   const rest = hasExplicitSub ? list : list.slice(1);
 
   try {

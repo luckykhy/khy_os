@@ -11,17 +11,26 @@
  */
 
 const { execSync, spawnSync } = require('child_process');
+
 const log = require('../utils/logger');
 
 // ── Constants ──────────────────────────────────────────────────────
 
 const POLL_INTERVAL_MS = 15000; // 15 seconds between polls
-const MAX_POLL_ATTEMPTS = 40;   // 10 minutes max
+const MAX_POLL_ATTEMPTS = 40; // 10 minutes max
 const TERMINAL_STATES = new Set([
   // GitHub
-  'completed', 'cancelled', 'timed_out', 'action_required', 'stale',
+  'completed',
+  'cancelled',
+  'timed_out',
+  'action_required',
+  'stale',
   // GitLab
-  'success', 'failed', 'canceled', 'skipped', 'manual',
+  'success',
+  'failed',
+  'canceled',
+  'skipped',
+  'manual',
 ]);
 
 // ── Classifiers ────────────────────────────────────────────────────
@@ -35,16 +44,30 @@ const TERMINAL_STATES = new Set([
 function classifyCi(status, conclusion) {
   // GitHub: status = 'completed', conclusion = 'success'|'failure'
   if (status === 'completed' || status === 'success') {
-    if (conclusion === 'success' || !conclusion) return 'pass';
-    if (conclusion === 'failure' || conclusion === 'timed_out') return 'fail';
+    if (conclusion === 'success' || !conclusion) {
+      return 'pass';
+    }
+    if (conclusion === 'failure' || conclusion === 'timed_out') {
+      return 'fail';
+    }
     return 'unknown';
   }
-  if (status === 'failed' || status === 'cancelled' || status === 'canceled') return 'fail';
-  if (status === 'in_progress' || status === 'queued' || status === 'waiting' ||
-      status === 'pending' || status === 'running' || status === 'created') {
+  if (status === 'failed' || status === 'cancelled' || status === 'canceled') {
+    return 'fail';
+  }
+  if (
+    status === 'in_progress' ||
+    status === 'queued' ||
+    status === 'waiting' ||
+    status === 'pending' ||
+    status === 'running' ||
+    status === 'created'
+  ) {
     return 'pending';
   }
-  if (status === 'skipped') return 'pass';
+  if (status === 'skipped') {
+    return 'pass';
+  }
   return 'unknown';
 }
 
@@ -68,7 +91,9 @@ function getGitHubRunStatus(options = {}) {
       { cwd, encoding: 'utf-8', timeout: 15000, stdio: 'pipe' }
     );
     const runs = JSON.parse(output);
-    if (runs.length === 0) return null;
+    if (runs.length === 0) {
+      return null;
+    }
     return runs[0];
   } catch (err) {
     log.debug('GitHub run status check failed:', err.message);
@@ -84,12 +109,14 @@ function getGitHubRunStatus(options = {}) {
  */
 function getGitHubRunJobs(runId, cwd) {
   try {
-    const output = execSync(
-      `gh run view ${runId} --json jobs`,
-      { cwd: cwd || process.cwd(), encoding: 'utf-8', timeout: 15000, stdio: 'pipe' }
-    );
+    const output = execSync(`gh run view ${runId} --json jobs`, {
+      cwd: cwd || process.cwd(),
+      encoding: 'utf-8',
+      timeout: 15000,
+      stdio: 'pipe',
+    });
     const data = JSON.parse(output);
-    return (data.jobs || []).map(j => ({
+    return (data.jobs || []).map((j) => ({
       name: j.name,
       status: j.status,
       conclusion: j.conclusion || '',
@@ -114,14 +141,31 @@ function getGitLabPipelineStatus(options = {}) {
   const branchArg = options.branch ? `--branch ${options.branch}` : '';
 
   try {
-    const result = spawnSync('glab', ['ci', 'list', branchArg, '--per-page', '1', '-F', 'json'].filter(Boolean), {
-      cwd, encoding: 'utf-8', timeout: 15000, stdio: 'pipe',
-    });
-    if (result.status !== 0) return null;
+    const result = spawnSync(
+      'glab',
+      ['ci', 'list', branchArg, '--per-page', '1', '-F', 'json'].filter(Boolean),
+      {
+        cwd,
+        encoding: 'utf-8',
+        timeout: 15000,
+        stdio: 'pipe',
+      }
+    );
+    if (result.status !== 0) {
+      return null;
+    }
     const pipelines = JSON.parse(result.stdout);
-    if (!Array.isArray(pipelines) || pipelines.length === 0) return null;
+    if (!Array.isArray(pipelines) || pipelines.length === 0) {
+      return null;
+    }
     const p = pipelines[0];
-    return { status: p.status, url: p.web_url || '', id: String(p.id), source: p.source, createdAt: p.created_at };
+    return {
+      status: p.status,
+      url: p.web_url || '',
+      id: String(p.id),
+      source: p.source,
+      createdAt: p.created_at,
+    };
   } catch {
     return null;
   }
@@ -162,7 +206,9 @@ function checkCIStatus(options = {}) {
     };
   }
 
-  return { error: 'No CI platform detected. Ensure gh or glab CLI is installed and authenticated.' };
+  return {
+    error: 'No CI platform detected. Ensure gh or glab CLI is installed and authenticated.',
+  };
 }
 
 /**
@@ -190,15 +236,24 @@ async function pollCIStatus(options = {}) {
     }
 
     if (options.onPoll) {
-      try { options.onPoll(result); } catch { /* ignore */ }
+      try {
+        options.onPoll(result);
+      } catch {
+        /* ignore */
+      }
     }
 
     if (result.classification !== 'pending') {
-      return { classification: result.classification, status: result.status, polls, url: result.url };
+      return {
+        classification: result.classification,
+        status: result.status,
+        polls,
+        url: result.url,
+      };
     }
 
     // Wait before next poll
-    await new Promise(resolve => setTimeout(resolve, intervalMs));
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
 
   return { classification: 'pending', status: 'timeout', polls, url: '' };

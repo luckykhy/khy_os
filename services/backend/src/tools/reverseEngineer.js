@@ -19,22 +19,51 @@ const { defineTool } = require('./_baseTool');
 module.exports = defineTool({
   name: 'reverse_engineer',
   description:
-    'Reverse-engineer a compiled artifact (exe/dll/so/dylib/jar/class/wasm/PyInstaller/Node SEA/pkg/zip) to recover and analyze its structure. '
-    + 'Read-only triage (format, architecture, sha256), string/toolchain-fingerprint harvesting, in-band source/bytecode recovery for self-contained bundles, '
-    + 'external decompiler/disassembler discovery (and optional run), plus build-manifest fidelity verification. '
-    + 'Intended for verifying YOUR OWN / authorized software (e.g. khy-built artifacts whose source was lost). Never executes the analyzed binary.',
+    'Reverse-engineer a compiled artifact (exe/dll/so/dylib/jar/class/wasm/PyInstaller/Node SEA/pkg/zip) to recover and analyze its structure. ' +
+    'Read-only triage (format, architecture, sha256), string/toolchain-fingerprint harvesting, in-band source/bytecode recovery for self-contained bundles, ' +
+    'external decompiler/disassembler discovery (and optional run), plus build-manifest fidelity verification. ' +
+    'Intended for verifying YOUR OWN / authorized software (e.g. khy-built artifacts whose source was lost). Never executes the analyzed binary.',
   category: 'execution',
   risk: 'medium',
+  searchHint: 'decompile disassemble binary unpack 逆向 反编译 反汇编',
   isReadOnly: true,
   isConcurrencySafe: true,
 
   inputSchema: {
-    path: { type: 'string', required: true, description: 'Path to the compiled artifact to analyze.' },
-    authorized: { type: 'boolean', required: false, description: 'Assert you own / are authorized to reverse this artifact. Enables source recovery + decompiler orchestration. Auto-true when a khy build manifest is found.' },
-    runTools: { type: 'boolean', required: false, description: 'Actually run discovered external decompilers/disassemblers (default false = probe only).' },
-    outDir: { type: 'string', required: false, description: 'If set, extract recoverable source/bytecode members to this directory (sandboxed, path-traversal guarded).' },
-    manifestPath: { type: 'string', required: false, description: 'Path to a khy build manifest for fidelity verification (defaults to .khy-build-manifest.json next to the artifact).' },
-    maxTools: { type: 'number', required: false, description: 'Max external tools to run per family when runTools=true (default 2).' },
+    path: {
+      type: 'string',
+      required: true,
+      description: 'Path to the compiled artifact to analyze.',
+    },
+    authorized: {
+      type: 'boolean',
+      required: false,
+      description:
+        'Assert you own / are authorized to reverse this artifact. Enables source recovery + decompiler orchestration. Auto-true when a khy build manifest is found.',
+    },
+    runTools: {
+      type: 'boolean',
+      required: false,
+      description:
+        'Actually run discovered external decompilers/disassemblers (default false = probe only).',
+    },
+    outDir: {
+      type: 'string',
+      required: false,
+      description:
+        'If set, extract recoverable source/bytecode members to this directory (sandboxed, path-traversal guarded).',
+    },
+    manifestPath: {
+      type: 'string',
+      required: false,
+      description:
+        'Path to a khy build manifest for fidelity verification (defaults to .khy-build-manifest.json next to the artifact).',
+    },
+    maxTools: {
+      type: 'number',
+      required: false,
+      description: 'Max external tools to run per family when runTools=true (default 2).',
+    },
   },
 
   getActivityDescription(input) {
@@ -69,7 +98,9 @@ module.exports = defineTool({
       const structured = err.toStructuredResult();
       // 透传 depId，使自愈层零文本匹配即可精准接管（resolver.detectFromError 优先取 depId）。
       structured.depId = miss.depId;
-      if (structured.error && typeof structured.error === 'object') structured.error.depId = miss.depId;
+      if (structured.error && typeof structured.error === 'object') {
+        structured.error.depId = miss.depId;
+      }
       // 仍附上已产出的只读报告，安装被拒/跳过时不丢失既有分诊证据。
       structured.data = report;
       return structured;

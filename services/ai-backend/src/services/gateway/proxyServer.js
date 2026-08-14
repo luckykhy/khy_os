@@ -62,13 +62,27 @@ function sanitizeIpHeaders() {
 /**
  * Parse request body as JSON.
  */
+const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10 MB
+
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
-    req.on('data', chunk => { data += chunk; });
+    let totalBytes = 0;
+    req.on('data', (chunk) => {
+      totalBytes += chunk.length;
+      if (totalBytes > MAX_BODY_SIZE) {
+        req.destroy(new Error('Request body too large'));
+        reject(new Error('Payload too large'));
+        return;
+      }
+      data += chunk;
+    });
     req.on('end', () => {
-      try { resolve(JSON.parse(data)); }
-      catch { reject(new Error('Invalid JSON')); }
+      try {
+        resolve(JSON.parse(data));
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
     });
     req.on('error', reject);
   });
@@ -108,9 +122,14 @@ function sendEnforcementRejection(res, verdict) {
   const extra = verdict.retryAfterMs
     ? { 'Retry-After': String(Math.max(1, Math.ceil(verdict.retryAfterMs / 1000))) }
     : {};
-  sendJsonWithHeaders(res, verdict.httpStatus || 403, {
-    error: { message: verdict.message || 'Forbidden', code: verdict.code || 'forbidden' },
-  }, extra);
+  sendJsonWithHeaders(
+    res,
+    verdict.httpStatus || 403,
+    {
+      error: { message: verdict.message || 'Forbidden', code: verdict.code || 'forbidden' },
+    },
+    extra
+  );
 }
 
 /**
@@ -158,14 +177,19 @@ async function handleChatCompletions(req, res) {
   let system;
   const messages = [];
   for (const m of rawMsgs) {
-    if (m.role === 'system') { system = m.content; continue; }
+    if (m.role === 'system') {
+      system = m.content;
+      continue;
+    }
     messages.push(m);
   }
 
   const prompt = [
     system ? `System: ${system}` : '',
-    ...messages.map(m => `${m.role}: ${m.content}`),
-  ].filter(Boolean).join('\n');
+    ...messages.map((m) => `${m.role}: ${m.content}`),
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const { adapterKey, modelId } = parseModel(model);
   const gw = getGateway();
@@ -176,7 +200,7 @@ async function handleChatCompletions(req, res) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'Access-Control-Allow-Origin': process.env.PROXY_CORS_ORIGINS || '*',
     });
 
@@ -191,20 +215,31 @@ async function handleChatCompletions(req, res) {
         if (chunk.type === 'text') {
           fullText += chunk.text;
           sendSSE({
-            id: responseId, object: 'chat.completion.chunk', created,
+            id: responseId,
+            object: 'chat.completion.chunk',
+            created,
             model: model || 'default',
             choices: [{ index: 0, delta: { content: chunk.text }, finish_reason: null }],
           });
         }
       };
       const result = up
-        ? await gw.generate(prompt, { model: up.model, apiKey: up.apiKey, apiEndpoint: up.apiEndpoint, apiFormat: up.apiFormat, apiKeyField: up.apiKeyField, onChunk })
+        ? await gw.generate(prompt, {
+            model: up.model,
+            apiKey: up.apiKey,
+            apiEndpoint: up.apiEndpoint,
+            apiFormat: up.apiFormat,
+            apiKeyField: up.apiKeyField,
+            onChunk,
+          })
         : adapterKey
           ? await gw.generateWithAdapter(adapterKey, prompt, { model: modelId, onChunk })
           : await gw.generate(prompt, { onChunk });
 
       sendSSE({
-        id: responseId, object: 'chat.completion.chunk', created,
+        id: responseId,
+        object: 'chat.completion.chunk',
+        created,
         model: model || 'default',
         choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
       });
@@ -212,41 +247,73 @@ async function handleChatCompletions(req, res) {
       res.end();
 
       const usage = enforcer.deriveUsage(ctx, result, fullText);
-      enforcer.settleOutbound(ctx, { ...usage, model: model || usage.model, status: 'ok', httpStatus: 200 });
+      enforcer.settleOutbound(ctx, {
+        ...usage,
+        model: model || usage.model,
+        status: 'ok',
+        httpStatus: 200,
+      });
     } catch (err) {
       res.write(`data: ${JSON.stringify({ error: { message: err.message } })}\n\n`);
       res.end();
       enforcer.settleOutbound(ctx, {
-        inputTokens: ctx.estInput, outputTokens: 0, estimated: true,
-        model: model || '', status: 'error', httpStatus: 500, error: err.message,
+        inputTokens: ctx.estInput,
+        outputTokens: 0,
+        estimated: true,
+        model: model || '',
+        status: 'error',
+        httpStatus: 500,
+        error: err.message,
       });
     }
   } else {
     // Non-streaming
     try {
       const result = up
-        ? await gw.generate(prompt, { model: up.model, apiKey: up.apiKey, apiEndpoint: up.apiEndpoint, apiFormat: up.apiFormat, apiKeyField: up.apiKeyField })
+        ? await gw.generate(prompt, {
+            model: up.model,
+            apiKey: up.apiKey,
+            apiEndpoint: up.apiEndpoint,
+            apiFormat: up.apiFormat,
+            apiKeyField: up.apiKeyField,
+          })
         : adapterKey
           ? await gw.generateWithAdapter(adapterKey, prompt, { model: modelId })
           : await gw.generate(prompt);
 
       if (!result.success) {
         enforcer.settleOutbound(ctx, {
-          inputTokens: ctx.estInput, outputTokens: 0, estimated: true,
-          model: model || '', status: 'error', httpStatus: 500, error: 'Generation failed',
+          inputTokens: ctx.estInput,
+          outputTokens: 0,
+          estimated: true,
+          model: model || '',
+          status: 'error',
+          httpStatus: 500,
+          error: 'Generation failed',
         });
         return sendJson(res, 500, { error: { message: 'Generation failed' } });
       }
 
       const usage = enforcer.deriveUsage(ctx, result, result.content || '');
-      enforcer.settleOutbound(ctx, { ...usage, model: model || usage.model, status: 'ok', httpStatus: 200 });
+      enforcer.settleOutbound(ctx, {
+        ...usage,
+        model: model || usage.model,
+        status: 'ok',
+        httpStatus: 200,
+      });
 
       sendJson(res, 200, {
         id: `chatcmpl-${crypto.randomUUID()}`,
         object: 'chat.completion',
         created: Math.floor(Date.now() / 1000),
         model: model || 'default',
-        choices: [{ index: 0, message: { role: 'assistant', content: result.content }, finish_reason: 'stop' }],
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content: result.content },
+            finish_reason: 'stop',
+          },
+        ],
         usage: {
           prompt_tokens: usage.inputTokens,
           completion_tokens: usage.outputTokens,
@@ -255,8 +322,13 @@ async function handleChatCompletions(req, res) {
       });
     } catch (err) {
       enforcer.settleOutbound(ctx, {
-        inputTokens: ctx.estInput, outputTokens: 0, estimated: true,
-        model: model || '', status: 'error', httpStatus: 500, error: err.message,
+        inputTokens: ctx.estInput,
+        outputTokens: 0,
+        estimated: true,
+        model: model || '',
+        status: 'error',
+        httpStatus: 500,
+        error: err.message,
       });
       sendJson(res, 500, { error: { message: err.message } });
     }
@@ -288,11 +360,18 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
   // Build flat prompt from canonical messages
   const prompt = [
     canonical.system ? `System: ${canonical.system}` : '',
-    ...canonical.messages.map(m => {
-      const text = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map(b => b.text || '').join('') : '');
+    ...canonical.messages.map((m) => {
+      const text =
+        typeof m.content === 'string'
+          ? m.content
+          : Array.isArray(m.content)
+            ? m.content.map((b) => b.text || '').join('')
+            : '';
       return `${m.role}: ${text}`;
     }),
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const gw = getGateway();
   if (!gw._initialized) await gw.init();
@@ -303,7 +382,7 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'Access-Control-Allow-Origin': process.env.PROXY_CORS_ORIGINS || '*',
     });
 
@@ -312,53 +391,117 @@ async function handleMultiProtocol(req, res, sourceProtocol) {
       const onChunk = (chunk) => {
         if (chunk.type === 'text') {
           fullContent += chunk.text;
-          res.write(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: chunk.text } })}\n\n`);
+          res.write(
+            `data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: chunk.text } })}\n\n`
+          );
         }
       };
       const result = up
-        ? await gw.generate(prompt, { model: up.model, apiKey: up.apiKey, apiEndpoint: up.apiEndpoint, apiFormat: up.apiFormat, apiKeyField: up.apiKeyField, onChunk })
+        ? await gw.generate(prompt, {
+            model: up.model,
+            apiKey: up.apiKey,
+            apiEndpoint: up.apiEndpoint,
+            apiFormat: up.apiFormat,
+            apiKeyField: up.apiKeyField,
+            onChunk,
+          })
         : await gw.generate(prompt, { onChunk });
 
       const usage = enforcer.deriveUsage(ctx, result, fullContent);
       // Build canonical response and convert to output protocol
-      const canonicalResp = { id: `msg_${crypto.randomUUID()}`, model: canonical.model || 'default', content: fullContent, thinking: null, toolCalls: null, stopReason: 'end_turn', usage: { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.inputTokens + usage.outputTokens } };
+      const canonicalResp = {
+        id: `msg_${crypto.randomUUID()}`,
+        model: canonical.model || 'default',
+        content: fullContent,
+        thinking: null,
+        toolCalls: null,
+        stopReason: 'end_turn',
+        usage: {
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          totalTokens: usage.inputTokens + usage.outputTokens,
+        },
+      };
       const formatted = protocolConverter.convertResponse(canonicalResp, outputProtocol);
       res.write(`data: ${JSON.stringify(formatted)}\n\n`);
       res.write('data: [DONE]\n\n');
       res.end();
 
-      enforcer.settleOutbound(ctx, { ...usage, model: canonical.model || usage.model, status: 'ok', httpStatus: 200 });
+      enforcer.settleOutbound(ctx, {
+        ...usage,
+        model: canonical.model || usage.model,
+        status: 'ok',
+        httpStatus: 200,
+      });
     } catch (err) {
       res.write(`data: ${JSON.stringify({ error: { message: err.message } })}\n\n`);
       res.end();
       enforcer.settleOutbound(ctx, {
-        inputTokens: ctx.estInput, outputTokens: 0, estimated: true,
-        model: canonical.model || '', status: 'error', httpStatus: 500, error: err.message,
+        inputTokens: ctx.estInput,
+        outputTokens: 0,
+        estimated: true,
+        model: canonical.model || '',
+        status: 'error',
+        httpStatus: 500,
+        error: err.message,
       });
     }
   } else {
     try {
       const result = up
-        ? await gw.generate(prompt, { model: up.model, apiKey: up.apiKey, apiEndpoint: up.apiEndpoint, apiFormat: up.apiFormat, apiKeyField: up.apiKeyField })
+        ? await gw.generate(prompt, {
+            model: up.model,
+            apiKey: up.apiKey,
+            apiEndpoint: up.apiEndpoint,
+            apiFormat: up.apiFormat,
+            apiKeyField: up.apiKeyField,
+          })
         : await gw.generate(prompt);
       if (!result.success) {
         enforcer.settleOutbound(ctx, {
-          inputTokens: ctx.estInput, outputTokens: 0, estimated: true,
-          model: canonical.model || '', status: 'error', httpStatus: 500, error: 'Generation failed',
+          inputTokens: ctx.estInput,
+          outputTokens: 0,
+          estimated: true,
+          model: canonical.model || '',
+          status: 'error',
+          httpStatus: 500,
+          error: 'Generation failed',
         });
         return sendJson(res, 500, { error: { message: 'Generation failed' } });
       }
 
       const usage = enforcer.deriveUsage(ctx, result, result.content || '');
-      const canonicalResp = { id: `msg_${crypto.randomUUID()}`, model: canonical.model || 'default', content: result.content, thinking: null, toolCalls: null, stopReason: 'end_turn', usage: { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, totalTokens: usage.inputTokens + usage.outputTokens } };
+      const canonicalResp = {
+        id: `msg_${crypto.randomUUID()}`,
+        model: canonical.model || 'default',
+        content: result.content,
+        thinking: null,
+        toolCalls: null,
+        stopReason: 'end_turn',
+        usage: {
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          totalTokens: usage.inputTokens + usage.outputTokens,
+        },
+      };
       const formatted = protocolConverter.convertResponse(canonicalResp, outputProtocol);
       sendJson(res, 200, formatted);
 
-      enforcer.settleOutbound(ctx, { ...usage, model: canonical.model || usage.model, status: 'ok', httpStatus: 200 });
+      enforcer.settleOutbound(ctx, {
+        ...usage,
+        model: canonical.model || usage.model,
+        status: 'ok',
+        httpStatus: 200,
+      });
     } catch (err) {
       enforcer.settleOutbound(ctx, {
-        inputTokens: ctx.estInput, outputTokens: 0, estimated: true,
-        model: canonical.model || '', status: 'error', httpStatus: 500, error: err.message,
+        inputTokens: ctx.estInput,
+        outputTokens: 0,
+        estimated: true,
+        model: canonical.model || '',
+        status: 'error',
+        httpStatus: 500,
+        error: err.message,
       });
       sendJson(res, 500, { error: { message: err.message } });
     }
@@ -388,7 +531,9 @@ async function handleListModels(req, res) {
           is_default: m.isDefault || false,
         });
       }
-    } catch { /* adapter not available */ }
+    } catch {
+      /* adapter not available */
+    }
   }
 
   sendJson(res, 200, { object: 'list', data: allModels });
@@ -407,19 +552,30 @@ function start(portOrOpts) {
     }
 
     const opts = typeof portOrOpts === 'object' && portOrOpts !== null ? portOrOpts : {};
-    const httpPort = opts.port || (typeof portOrOpts === 'number' ? portOrOpts : null) || parseInt(process.env.PROXY_PORT, 10) || 9100;
+    const httpPort =
+      opts.port ||
+      (typeof portOrOpts === 'number' ? portOrOpts : null) ||
+      parseInt(process.env.PROXY_PORT, 10) ||
+      9100;
     const httpsOnly = opts.httpsOnly || process.env.PROXY_HTTPS_ONLY === 'true';
     const authToken = process.env.PROXY_AUTH_TOKEN;
 
     // Resolve TLS cert/key
     const defaultCertDir = getAppDataDir('proxy_certs');
-    const tlsCert = opts.tlsCert || process.env.PROXY_TLS_CERT_FILE || path.join(process.env.PROXY_TLS_DIR || defaultCertDir, 'localhost.crt');
-    const tlsKey = opts.tlsKey || process.env.PROXY_TLS_KEY_FILE || path.join(process.env.PROXY_TLS_DIR || defaultCertDir, 'localhost.key');
-    const httpsPort = opts.httpsPort || parseInt(process.env.PROXY_HTTPS_PORT, 10) || (httpPort + 1);
+    const tlsCert =
+      opts.tlsCert ||
+      process.env.PROXY_TLS_CERT_FILE ||
+      path.join(process.env.PROXY_TLS_DIR || defaultCertDir, 'localhost.crt');
+    const tlsKey =
+      opts.tlsKey ||
+      process.env.PROXY_TLS_KEY_FILE ||
+      path.join(process.env.PROXY_TLS_DIR || defaultCertDir, 'localhost.key');
+    const httpsPort = opts.httpsPort || parseInt(process.env.PROXY_HTTPS_PORT, 10) || httpPort + 1;
 
     // Check if TLS certs exist
     const hasTls = fs.existsSync(tlsCert) && fs.existsSync(tlsKey);
-    const enableHttps = hasTls && (opts.https !== false && process.env.PROXY_HTTPS_DISABLE !== 'true');
+    const enableHttps =
+      hasTls && opts.https !== false && process.env.PROXY_HTTPS_DISABLE !== 'true';
 
     const requestHandler = async (req, res) => {
       // CORS preflight
@@ -439,12 +595,12 @@ function start(portOrOpts) {
       // Data-plane POST endpoints run the full enforcement chain inside their
       // handlers (global token OR managed customer token). Other endpoints keep
       // the legacy global-token gate for backward compatibility.
-      const isDataPlanePost = req.method === 'POST' && (
-        pathname === '/v1/chat/completions'
-        || pathname === '/v1/messages'
-        || pathname === '/v1/responses'
-        || /^\/v1beta\/models\/[^/]+:generateContent$/.test(pathname)
-      );
+      const isDataPlanePost =
+        req.method === 'POST' &&
+        (pathname === '/v1/chat/completions' ||
+          pathname === '/v1/messages' ||
+          pathname === '/v1/responses' ||
+          /^\/v1beta\/models\/[^/]+:generateContent$/.test(pathname));
       if (authToken && !isDataPlanePost) {
         const auth = req.headers.authorization;
         if (!auth || auth !== `Bearer ${authToken}`) {
@@ -463,14 +619,21 @@ function start(portOrOpts) {
           await handleChatCompletions(req, res);
         } else if (req.method === 'POST' && pathname === '/v1/messages') {
           await handleMultiProtocol(req, res, PROTOCOLS.ANTHROPIC);
-        } else if (req.method === 'POST' && pathname.match(/^\/v1beta\/models\/[^/]+:generateContent$/)) {
+        } else if (
+          req.method === 'POST' &&
+          pathname.match(/^\/v1beta\/models\/[^/]+:generateContent$/)
+        ) {
           await handleMultiProtocol(req, res, PROTOCOLS.GEMINI);
         } else if (req.method === 'POST' && pathname === '/v1/responses') {
           await handleMultiProtocol(req, res, PROTOCOLS.CODEX);
         } else if (req.method === 'GET' && pathname === '/v1/models') {
           await handleListModels(req, res);
         } else if (req.method === 'GET' && pathname === '/health') {
-          sendJson(res, 200, { status: 'ok', adapters: IDE_ADAPTERS, protocols: protocolConverter.getSupportedProtocols() });
+          sendJson(res, 200, {
+            status: 'ok',
+            adapters: IDE_ADAPTERS,
+            protocols: protocolConverter.getSupportedProtocols(),
+          });
         } else {
           sendJson(res, 404, { error: { message: 'Not found' } });
         }
@@ -481,14 +644,19 @@ function start(portOrOpts) {
 
     const result = { httpPort: null, httpsPort: null };
     let pending = 0;
-    const done = () => { if (--pending <= 0) resolve(result); };
+    const done = () => {
+      if (--pending <= 0) resolve(result);
+    };
     const fail = (err) => reject(err);
 
     // Start HTTP server (unless httpsOnly)
     if (!httpsOnly) {
       pending++;
       _server = http.createServer(requestHandler);
-      _server.listen(httpPort, () => { result.httpPort = httpPort; done(); });
+      _server.listen(httpPort, () => {
+        result.httpPort = httpPort;
+        done();
+      });
       _server.on('error', fail);
     }
 
@@ -501,7 +669,10 @@ function start(portOrOpts) {
           key: fs.readFileSync(tlsKey),
         };
         _httpsServer = https.createServer(tlsOpts, requestHandler);
-        _httpsServer.listen(httpsPort, () => { result.httpsPort = httpsPort; done(); });
+        _httpsServer.listen(httpsPort, () => {
+          result.httpsPort = httpsPort;
+          done();
+        });
         _httpsServer.on('error', fail);
       } catch (err) {
         console.warn('[proxy] HTTPS startup failed, falling back to HTTP only:', err.message);
@@ -522,29 +693,41 @@ function start(portOrOpts) {
 function stop() {
   return new Promise((resolve) => {
     let pending = 0;
-    const done = () => { if (--pending <= 0) resolve(); };
+    const done = () => {
+      if (--pending <= 0) resolve();
+    };
     if (_server) {
       pending++;
-      _server.close(() => { _server = null; done(); });
+      _server.close(() => {
+        _server = null;
+        done();
+      });
     }
     if (_httpsServer) {
       pending++;
-      _httpsServer.close(() => { _httpsServer = null; done(); });
+      _httpsServer.close(() => {
+        _httpsServer = null;
+        done();
+      });
     }
     if (pending === 0) resolve();
   });
 }
 
-function isRunning() { return !!_server || !!_httpsServer; }
+function isRunning() {
+  return !!_server || !!_httpsServer;
+}
 
 function getPort() {
   return parseInt(process.env.PROXY_PORT, 10) || 9100;
 }
 
 function getHttpsPort() {
-  return parseInt(process.env.PROXY_HTTPS_PORT, 10) || (getPort() + 1);
+  return parseInt(process.env.PROXY_HTTPS_PORT, 10) || getPort() + 1;
 }
 
-function isHttpsRunning() { return !!_httpsServer; }
+function isHttpsRunning() {
+  return !!_httpsServer;
+}
 
 module.exports = { start, stop, isRunning, getPort, getHttpsPort, isHttpsRunning };

@@ -19,9 +19,9 @@
 // ── Capability flags ──
 
 const CAPABILITY = {
-  IMAGE:    0b0001,
-  AUDIO:    0b0010,
-  VIDEO:    0b0100,
+  IMAGE: 0b0001,
+  AUDIO: 0b0010,
+  VIDEO: 0b0100,
   DOCUMENT: 0b1000,
 };
 
@@ -42,11 +42,15 @@ const MIME_CAPABILITY_MAP = {
  * @returns {number} capability flag (0 if unknown)
  */
 function mimeToCapability(mimeType) {
-  if (!mimeType || typeof mimeType !== 'string') return 0;
+  if (!mimeType || typeof mimeType !== 'string') {
+    return 0;
+  }
   const lower = mimeType.toLowerCase();
 
   // Check exact matches first
-  if (MIME_CAPABILITY_MAP[lower]) return MIME_CAPABILITY_MAP[lower];
+  if (MIME_CAPABILITY_MAP[lower]) {
+    return MIME_CAPABILITY_MAP[lower];
+  }
 
   // Check prefix matches
   for (const [prefix, cap] of Object.entries(MIME_CAPABILITY_MAP)) {
@@ -82,7 +86,9 @@ class MediaProviderRegistry {
    * @param {MediaProvider} provider
    */
   register(provider) {
-    if (!provider?.id) throw new Error('Provider must have an id');
+    if (!provider?.id) {
+      throw new Error('Provider must have an id');
+    }
 
     this._providers.set(provider.id, {
       id: provider.id,
@@ -136,15 +142,19 @@ class MediaProviderRegistry {
    */
   findByMimeType(mimeType) {
     const cap = mimeToCapability(mimeType);
-    if (cap === 0) return [];
+    if (cap === 0) {
+      return [];
+    }
 
     const matches = this.findByCapability(cap);
 
     // Further filter by specific format support
-    return matches.filter(p => {
-      if (p.supportedFormats.length === 0) return true; // accepts all in category
+    return matches.filter((p) => {
+      if (p.supportedFormats.length === 0) {
+        return true;
+      } // accepts all in category
       const lower = mimeType.toLowerCase();
-      return p.supportedFormats.some(fmt => {
+      return p.supportedFormats.some((fmt) => {
         if (fmt.endsWith('/*')) {
           return lower.startsWith(fmt.slice(0, -1));
         }
@@ -166,7 +176,7 @@ class MediaProviderRegistry {
 
     // Filter by file size
     if (fileSizeMb > 0) {
-      providers = providers.filter(p => p.maxFileSizeMb >= fileSizeMb);
+      providers = providers.filter((p) => p.maxFileSizeMb >= fileSizeMb);
     }
 
     return providers;
@@ -193,7 +203,9 @@ class MediaProviderRegistry {
    */
   getProviderCapabilities(providerId) {
     const p = this._providers.get(providerId);
-    if (!p) return { image: false, audio: false, video: false, document: false, formats: [] };
+    if (!p) {
+      return { image: false, audio: false, video: false, document: false, formats: [] };
+    }
 
     return {
       image: (p.capabilities & CAPABILITY.IMAGE) !== 0,
@@ -209,15 +221,16 @@ class MediaProviderRegistry {
    */
   setAvailability(providerId, available) {
     const p = this._providers.get(providerId);
-    if (p) p.available = available;
+    if (p) {
+      p.available = available;
+    }
   }
 
   /**
    * Get all registered providers.
    */
   listProviders() {
-    return Array.from(this._providers.values())
-      .sort((a, b) => a.priority - b.priority);
+    return Array.from(this._providers.values()).sort((a, b) => a.priority - b.priority);
   }
 
   /**
@@ -225,7 +238,7 @@ class MediaProviderRegistry {
    */
   getSummary() {
     const all = this.listProviders();
-    const available = all.filter(p => p.available);
+    const available = all.filter((p) => p.available);
     return {
       totalProviders: all.length,
       availableProviders: available.length,

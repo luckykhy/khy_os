@@ -27,30 +27,41 @@
 
 // searchFreshness 是时间意图的单一真源,这里只读取它的 detectFreshness 判定。
 let _freshness = null;
-try { _freshness = require('./searchFreshness'); } catch { /* optional — 退化为本模块自身信号 */ }
+try {
+  _freshness = require('./searchFreshness');
+} catch {
+  /* optional — 退化为本模块自身信号 */
+}
 
 // ── env 门控 ─────────────────────────────────────────────────────────
 // 收敛到 utils/envOnByName 单一真源(逐字节委托,调用点不变)
 const _envOn = require('../../utils/envOnByName');
-function isEnabled(env) { return _envOn(env, 'KHY_SEARCH_NECESSITY'); }
+function isEnabled(env) {
+  return _envOn(env, 'KHY_SEARCH_NECESSITY');
+}
 
 // ── 信号词(保守:宁可判 optional 也不误杀;required 的判据从严但对时效零漏判)──
 
 // 显式联网请求:用户直接点名要搜 / 查。命中即 required(尊重用户明确意图)。
-const EXPLICIT_SEARCH_RE = /(搜索|搜一下|搜下|搜搜|查一下|查查|查询|检索|联网|上网|百度一下|谷歌一下|search\s+(for|the\s+web|online|it)|look\s+(it|this)\s+up|web\s+search|google\s+(it|for))/i;
+const EXPLICIT_SEARCH_RE =
+  /(搜索|搜一下|搜下|搜搜|查一下|查查|查询|检索|联网|上网|百度一下|谷歌一下|search\s+(for|the\s+web|online|it)|look\s+(it|this)\s+up|web\s+search|google\s+(it|for))/i;
 
 // 实时状态:即便没有「最新」字样,这类问题几乎一定需要实时数据。
-const REALTIME_RE = /(股价|股票|汇率|利率|油价|金价|币价|行情|报价|市值|涨跌|实时|天气|气温|路况|航班|班次|赛果|比分|彩票|开奖|stock\s+price|exchange\s+rate|weather|live\s+score)/i;
+const REALTIME_RE =
+  /(股价|股票|汇率|利率|油价|金价|币价|行情|报价|市值|涨跌|实时|天气|气温|路况|航班|班次|赛果|比分|彩票|开奖|stock\s+price|exchange\s+rate|weather|live\s+score)/i;
 
 // 稳定知识:定义 / 概念 / 原理 / 比较等,知识库通常能答。
-const STABLE_KNOWLEDGE_RE = /(什么是|是什么|啥是|解释(一下)?|说明一下|含义|定义|原理|为什么|怎么理解|介绍一下|概念|区别|对比一下|优缺点|利弊|what\s+(is|are|does)\b|why\s+(is|are|does|do)\b|how\s+(does|do|to)\b|explain\b|definition\s+of|difference\s+between)/i;
+const STABLE_KNOWLEDGE_RE =
+  /(什么是|是什么|啥是|解释(一下)?|说明一下|含义|定义|原理|为什么|怎么理解|介绍一下|概念|区别|对比一下|优缺点|利弊|what\s+(is|are|does)\b|why\s+(is|are|does|do)\b|how\s+(does|do|to)\b|explain\b|definition\s+of|difference\s+between)/i;
 
 // 编程 / 技术生成:写 / 改 / 调代码、报错排查 —— 模型直接能做。
-const CODE_TASK_RE = /(写(一?段|一?个)?代码|实现(一个|个)?|帮我写|改一下代码|重构|调试|报错|报个错|堆栈|stack\s*trace|正则表达式|正则|算法|写个函数|代码|脚本|编译|debug|refactor|implement\s+(a|an|the)?|write\s+(a\s+)?(function|code|script|program|class)|fix\s+(this|the|my)\s+(code|bug|error))/i;
+const CODE_TASK_RE =
+  /(写(一?段|一?个)?代码|实现(一个|个)?|帮我写|改一下代码|重构|调试|报错|报个错|堆栈|stack\s*trace|正则表达式|正则|算法|写个函数|代码|脚本|编译|debug|refactor|implement\s+(a|an|the)?|write\s+(a\s+)?(function|code|script|program|class)|fix\s+(this|the|my)\s+(code|bug|error))/i;
 
 // 数学 / 翻译 / 创作 / 头脑风暴:自足任务,不需要联网。
 // 创作类:写(诗/文章/故事/...);允许「写」与文体名之间夹少量限定词(如「写一首关于秋天的诗」)。
-const SELF_CONTAINED_RE = /(翻译|译成|译为|帮我算|计算一下|算一下|等于多少|求解|解方程|写(一?首|一?篇|一?个)?[^,，。!?！？\n]{0,12}?(诗|文章|故事|作文|文案|邮件|信|周报|日报|总结|提纲|大纲|脚本)|起个?名字?|取个?名字?|润色|改写(?!代码)|续写|出个?主意|头脑风暴|想几个|translate|calculate|compute|solve\s+(for|the)|write\s+(a\s+)?(poem|essay|story|email|letter|article)|brainstorm|come\s+up\s+with)/i;
+const SELF_CONTAINED_RE =
+  /(翻译|译成|译为|帮我算|计算一下|算一下|等于多少|求解|解方程|写(一?首|一?篇|一?个)?[^,，。!?！？\n]{0,12}?(诗|文章|故事|作文|文案|邮件|信|周报|日报|总结|提纲|大纲|脚本)|起个?名字?|取个?名字?|润色|改写(?!代码)|续写|出个?主意|头脑风暴|想几个|translate|calculate|compute|solve\s+(for|the)|write\s+(a\s+)?(poem|essay|story|email|letter|article)|brainstorm|come\s+up\s+with)/i;
 
 /**
  * 判定一次查询是否需要联网搜索。
@@ -61,15 +72,24 @@ const SELF_CONTAINED_RE = /(翻译|译成|译为|帮我算|计算一下|算一�
  */
 function assessSearchNeed(query, opts = {}) {
   const env = opts.env;
-  if (!isEnabled(env)) return { need: 'optional', reason: 'disabled', directiveKind: null };
+  if (!isEnabled(env)) {
+    return { need: 'optional', reason: 'disabled', directiveKind: null };
+  }
 
   const q = String(query || '');
-  if (!q.trim()) return { need: 'optional', reason: 'empty', directiveKind: null };
+  if (!q.trim()) {
+    return { need: 'optional', reason: 'empty', directiveKind: null };
+  }
 
   // 1) 时效窗口(复用 searchFreshness 的意图判定)。任何窗口命中 → 时效问题。
   let freshWindow = null;
-  try { if (_freshness && typeof _freshness.detectFreshness === 'function') freshWindow = _freshness.detectFreshness(q); }
-  catch { /* ignore */ }
+  try {
+    if (_freshness && typeof _freshness.detectFreshness === 'function') {
+      freshWindow = _freshness.detectFreshness(q);
+    }
+  } catch {
+    /* ignore */
+  }
 
   const explicit = EXPLICIT_SEARCH_RE.test(q);
   const realtime = REALTIME_RE.test(q);
@@ -80,7 +100,7 @@ function assessSearchNeed(query, opts = {}) {
   if (freshWindow || realtime || explicit) {
     return {
       need: 'required',
-      reason: explicit ? 'explicit-search' : (freshWindow ? 'time-sensitive' : 'realtime-state'),
+      reason: explicit ? 'explicit-search' : freshWindow ? 'time-sensitive' : 'realtime-state',
       freshness: freshWindow || (realtime ? 'auto' : undefined),
       directiveKind: 'required',
     };
@@ -103,7 +123,9 @@ function assessSearchNeed(query, opts = {}) {
  * @returns {string}
  */
 function buildNecessityDirective(assessment, env) {
-  if (!assessment || !isEnabled(env)) return '';
+  if (!assessment || !isEnabled(env)) {
+    return '';
+  }
   if (assessment.directiveKind === 'skip') {
     return [
       '[搜索必要性] 这个问题大概率你的知识库就能直接回答。',
@@ -112,9 +134,10 @@ function buildNecessityDirective(assessment, env) {
     ].join('\n');
   }
   if (assessment.directiveKind === 'required') {
-    const fresh = assessment.freshness && assessment.freshness !== 'auto'
-      ? `(时间窗口约为「${assessment.freshness}」,务必传 freshness)`
-      : '(时效问题务必传 freshness)';
+    const fresh =
+      assessment.freshness && assessment.freshness !== 'auto'
+        ? `(时间窗口约为「${assessment.freshness}」,务必传 freshness)`
+        : '(时效问题务必传 freshness)';
     return [
       '[搜索必要性] 这是时效性 / 需要实时信息的问题,你的记忆很可能已经过期。',
       `请先用 WebSearch 取回最新数据${fresh}再作答,不要仅凭记忆回答。`,
@@ -137,8 +160,12 @@ function buildNecessityDirective(assessment, env) {
  * @returns {{ directive:string, assessment:(object|null) }}
  */
 function routeSearchNecessity({ text, hasMedia = false, env } = {}) {
-  if (!isEnabled(env)) return { directive: '', assessment: null };
-  if (hasMedia) return { directive: '', assessment: null };
+  if (!isEnabled(env)) {
+    return { directive: '', assessment: null };
+  }
+  if (hasMedia) {
+    return { directive: '', assessment: null };
+  }
   const assessment = assessSearchNeed(text, { env });
   const directive = buildNecessityDirective(assessment, env);
   return { directive, assessment };

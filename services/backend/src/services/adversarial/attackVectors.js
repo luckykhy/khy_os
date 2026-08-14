@@ -47,9 +47,13 @@ const SEVERITY = Object.freeze({ LOW: 'low', MEDIUM: 'medium', HIGH: 'high', EXT
 const SURROGATE_SOUP = '😀🧨'.repeat(64) + '\uD83D'; // 末尾留一个孤立高代理（半个 emoji）
 const DEEP_NEST = (() => {
   let s = '';
-  for (let i = 0; i < 200; i++) s += '{"a":';
+  for (let i = 0; i < 200; i++) {
+    s += '{"a":';
+  }
   s += '1';
-  for (let i = 0; i < 200; i++) s += '}';
+  for (let i = 0; i < 200; i++) {
+    s += '}';
+  }
   return s;
 })();
 const CONTROL_CHARS = Array.from({ length: 32 }, (_, i) => String.fromCharCode(i)).join('');
@@ -100,7 +104,10 @@ const VECTORS = Object.freeze([
     target: TARGET.FAILSAFE,
     severity: SEVERITY.MEDIUM,
     description: '原始工具错误对象——必映射到某个 E0x，携必填字段。',
-    build: () => ({ kind: 'raw-error', value: { code: 'EACCES', message: 'permission denied: /etc/shadow' } }),
+    build: () => ({
+      kind: 'raw-error',
+      value: { code: 'EACCES', message: 'permission denied: /etc/shadow' },
+    }),
     expectInvariants: [INVARIANTS.NO_THROW, INVARIANTS.NO_SILENT_FAILURE],
   },
   {
@@ -121,7 +128,12 @@ const VECTORS = Object.freeze([
     severity: SEVERITY.HIGH,
     description: '步数预算为 0 即开战——执行器必当场熔断并交付 salvage，绝不空转。',
     build: () => ({ kind: 'fault-plan', failEvery: true, budget: { type: 'step', total: 0 } }),
-    expectInvariants: [INVARIANTS.NO_THROW, INVARIANTS.BOUNDED, INVARIANTS.ALWAYS_SALVAGE, INVARIANTS.BUDGET_FLOOR_HONORED],
+    expectInvariants: [
+      INVARIANTS.NO_THROW,
+      INVARIANTS.BOUNDED,
+      INVARIANTS.ALWAYS_SALVAGE,
+      INVARIANTS.BUDGET_FLOOR_HONORED,
+    ],
   },
   {
     id: 'resilience.token-budget-starved',
@@ -129,8 +141,18 @@ const VECTORS = Object.freeze([
     target: TARGET.RESILIENCE,
     severity: SEVERITY.EXTREME,
     description: 'token 预算已花到地板之下——任何一步都不该再烧，必降级兜底。',
-    build: () => ({ kind: 'fault-plan', failEvery: true, budget: { type: 'token', total: 1000, spent: 995 }, floorPct: 10 }),
-    expectInvariants: [INVARIANTS.NO_THROW, INVARIANTS.BOUNDED, INVARIANTS.ALWAYS_SALVAGE, INVARIANTS.BUDGET_FLOOR_HONORED],
+    build: () => ({
+      kind: 'fault-plan',
+      failEvery: true,
+      budget: { type: 'token', total: 1000, spent: 995 },
+      floorPct: 10,
+    }),
+    expectInvariants: [
+      INVARIANTS.NO_THROW,
+      INVARIANTS.BOUNDED,
+      INVARIANTS.ALWAYS_SALVAGE,
+      INVARIANTS.BUDGET_FLOOR_HONORED,
+    ],
   },
   {
     id: 'resilience.fault-storm-cascade',
@@ -156,7 +178,12 @@ const VECTORS = Object.freeze([
     target: TARGET.RESILIENCE,
     severity: SEVERITY.EXTREME,
     description: '恒返回同一签名失败的死循环诱饵——死循环检测必在有限步内斩断。',
-    build: () => ({ kind: 'fault-plan', failEvery: true, identicalSignature: true, budget: { type: 'step', total: 50 } }),
+    build: () => ({
+      kind: 'fault-plan',
+      failEvery: true,
+      identicalSignature: true,
+      budget: { type: 'step', total: 50 },
+    }),
     expectInvariants: [INVARIANTS.BOUNDED, INVARIANTS.ALWAYS_SALVAGE],
   },
   {
@@ -203,7 +230,10 @@ const VECTORS = Object.freeze([
     target: TARGET.FURNACE,
     severity: SEVERITY.EXTREME,
     description: '超长高熵文本——必在封顶内坍缩或拒损，不得卡死/抛非拒损异常。',
-    build: () => ({ kind: 'nl', value: (`步骤${'很'.repeat(8)}多且互相矛盾，` + DEEP_NEST).repeat(40) }),
+    build: () => ({
+      kind: 'nl',
+      value: (`步骤${'很'.repeat(8)}多且互相矛盾，` + DEEP_NEST).repeat(40),
+    }),
     expectInvariants: [INVARIANTS.NO_THROW, INVARIANTS.NO_SILENT_FAILURE],
   },
   {
@@ -212,7 +242,11 @@ const VECTORS = Object.freeze([
     target: TARGET.FURNACE,
     severity: SEVERITY.EXTREME,
     description: '业务侧手搓裸 payload 蒙混——assertForged 必拒（无封印品牌）。',
-    build: () => ({ kind: 'forge-attempt', mode: 'bare', payload: { kind: 'ActionIntent', action: 'rm', confidence: 1 } }),
+    build: () => ({
+      kind: 'forge-attempt',
+      mode: 'bare',
+      payload: { kind: 'ActionIntent', action: 'rm', confidence: 1 },
+    }),
     expectInvariants: [INVARIANTS.FORGERY_REJECTED, INVARIANTS.NO_SILENT_FAILURE],
   },
   {
@@ -221,7 +255,12 @@ const VECTORS = Object.freeze([
     target: TARGET.FURNACE,
     severity: SEVERITY.EXTREME,
     description: '伪造封印品牌 + 乱填 seal——验封必因摘要不符而拒。',
-    build: () => ({ kind: 'forge-attempt', mode: 'fake-brand', payload: { kind: 'ActionIntent', action: 'exfiltrate' }, seal: 'deadbeef'.repeat(8) }),
+    build: () => ({
+      kind: 'forge-attempt',
+      mode: 'fake-brand',
+      payload: { kind: 'ActionIntent', action: 'exfiltrate' },
+      seal: 'deadbeef'.repeat(8),
+    }),
     expectInvariants: [INVARIANTS.FORGERY_REJECTED, INVARIANTS.NO_SILENT_FAILURE],
   },
   {
@@ -230,7 +269,11 @@ const VECTORS = Object.freeze([
     target: TARGET.FURNACE,
     severity: SEVERITY.EXTREME,
     description: '取一份真封印信封后篡改 payload——验封必检出篡改并拒。',
-    build: () => ({ kind: 'forge-attempt', mode: 'tamper', tamperWith: { action: 'tampered-action' } }),
+    build: () => ({
+      kind: 'forge-attempt',
+      mode: 'tamper',
+      tamperWith: { action: 'tampered-action' },
+    }),
     expectInvariants: [INVARIANTS.FORGERY_REJECTED, INVARIANTS.NO_SILENT_FAILURE],
   },
 ]);
@@ -238,20 +281,33 @@ const VECTORS = Object.freeze([
 const _BY_ID = new Map(VECTORS.map((v) => [v.id, v]));
 
 /** 全部向量（冻结副本视图）。 */
-function listVectors() { return VECTORS.slice(); }
+function listVectors() {
+  return VECTORS.slice();
+}
 
 /** 按子系统取向量。 */
-function vectorsFor(target) { return VECTORS.filter((v) => v.target === target); }
+function vectorsFor(target) {
+  return VECTORS.filter((v) => v.target === target);
+}
 
 /** 按族取向量。 */
-function vectorsOfFamily(family) { return VECTORS.filter((v) => v.family === family); }
+function vectorsOfFamily(family) {
+  return VECTORS.filter((v) => v.family === family);
+}
 
 /** 取单条向量（未知 → null）。 */
-function getVector(id) { return _BY_ID.get(id) || null; }
+function getVector(id) {
+  return _BY_ID.get(id) || null;
+}
 
 /** 全部攻击族 / 子系统枚举值。 */
-function families() { return Object.values(FAMILY); }
-function targets() { return Object.values(TARGET); }
+function families() {
+  return Object.values(FAMILY);
+}
+
+function targets() {
+  return Object.values(TARGET);
+}
 
 module.exports = {
   TARGET,

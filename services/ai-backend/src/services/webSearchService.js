@@ -86,8 +86,16 @@ async function search(query) {
     return { success: true, results, formatted };
   } catch (err) {
     // Clear cached client on auth errors
-    if (err.message?.includes('401') || err.message?.includes('403') || err.message?.includes('expired')) {
-      try { getKiroAdapter().destroy(); } catch { /* ignore */ }
+    if (
+      err.message?.includes('401') ||
+      err.message?.includes('403') ||
+      err.message?.includes('expired')
+    ) {
+      try {
+        getKiroAdapter().destroy();
+      } catch {
+        /* ignore */
+      }
     }
     return { success: false, error: err.message || 'Web search failed' };
   }
@@ -100,7 +108,7 @@ function formatResults(result) {
   const empty = { results: [], formatted: 'No results found.' };
   if (!result?.content) return empty;
 
-  const textContent = result.content.find(c => c.type === 'text');
+  const textContent = result.content.find((c) => c.type === 'text');
   if (!textContent?.text) return empty;
 
   try {
@@ -109,20 +117,22 @@ function formatResults(result) {
       return { results: [], formatted: textContent.text };
     }
 
-    const results = parsed.results.map(r => ({
+    const results = parsed.results.map((r) => ({
       title: r.title || 'Untitled',
       url: r.url || '',
       snippet: r.snippet || '',
       publishedDate: r.publishedDate || '',
     }));
 
-    const formatted = results.map((r, i) => {
-      const parts = [`### ${i + 1}. ${r.title}`];
-      if (r.url) parts.push(`   ${r.url}`);
-      if (r.snippet) parts.push(`   ${r.snippet}`);
-      if (r.publishedDate) parts.push(`   Published: ${r.publishedDate}`);
-      return parts.join('\n');
-    }).join('\n\n');
+    const formatted = results
+      .map((r, i) => {
+        const parts = [`### ${i + 1}. ${r.title}`];
+        if (r.url) parts.push(`   ${r.url}`);
+        if (r.snippet) parts.push(`   ${r.snippet}`);
+        if (r.publishedDate) parts.push(`   Published: ${r.publishedDate}`);
+        return parts.join('\n');
+      })
+      .join('\n\n');
 
     return { results, formatted };
   } catch {

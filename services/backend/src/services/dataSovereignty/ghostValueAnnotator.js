@@ -40,7 +40,7 @@ class GhostValueAnnotator {
     const ghost = {
       [GHOST_MARK]: true,
       param: String(defeated.param),
-      ghost_value: defeated.value,                    // 仅供模型只读反思，不可入逻辑
+      ghost_value: defeated.value, // 仅供模型只读反思，不可入逻辑
       source: String(defeated.source || 'unknown'),
       tier: defeated.tier,
       tierLabel: labelOf(defeated.tier),
@@ -71,7 +71,9 @@ class GhostValueAnnotator {
   buildGhostBag(defeatedList, winnerByParam = {}) {
     const bag = {};
     for (const d of defeatedList) {
-      if (!this.shouldDemote(d.tier)) continue;
+      if (!this.shouldDemote(d.tier)) {
+        continue;
+      }
       const param = String(d.param);
       (bag[param] || (bag[param] = [])).push(this.annotate(d, winnerByParam[param] || {}));
     }

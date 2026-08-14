@@ -25,14 +25,17 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_LIVE_TIMELINE_LAZY_NORM;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
 // 与今日 StreamingBlock:129-131 表达式逐字节等价的预映射(门控关时的回退路径)。
 function _eagerMap(rawTimeline, normalizeFn) {
   return rawTimeline.map((e) =>
-    (e && e.type === 'text' ? Object.assign({}, e, { text: normalizeFn(e.text) }) : e));
+    e && e.type === 'text' ? Object.assign({}, e, { text: normalizeFn(e.text) }) : e
+  );
 }
 
 /**
@@ -46,8 +49,12 @@ function _eagerMap(rawTimeline, normalizeFn) {
  *   - normalizeText:门控开=normalizeFn(tail 惰性调用);门控关=null(时间线已预映射)
  */
 function resolveTimelineNorm(rawTimeline, normalizeFn, env = process.env) {
-  if (!Array.isArray(rawTimeline)) return { timeline: rawTimeline == null ? null : rawTimeline, normalizeText: null };
-  if (typeof normalizeFn !== 'function') return { timeline: rawTimeline, normalizeText: null };
+  if (!Array.isArray(rawTimeline)) {
+    return { timeline: rawTimeline == null ? null : rawTimeline, normalizeText: null };
+  }
+  if (typeof normalizeFn !== 'function') {
+    return { timeline: rawTimeline, normalizeText: null };
+  }
   try {
     if (isEnabled(env)) {
       // 惰性:原样时间线 + normalizer 下传;tail 只 normalize 它实际触及的尾部 entry。
@@ -56,8 +63,11 @@ function resolveTimelineNorm(rawTimeline, normalizeFn, env = process.env) {
     // 门控关:逐字节回退今日的预映射。
     return { timeline: _eagerMap(rawTimeline, normalizeFn), normalizeText: null };
   } catch {
-    try { return { timeline: _eagerMap(rawTimeline, normalizeFn), normalizeText: null }; }
-    catch { return { timeline: rawTimeline, normalizeText: null }; }
+    try {
+      return { timeline: _eagerMap(rawTimeline, normalizeFn), normalizeText: null };
+    } catch {
+      return { timeline: rawTimeline, normalizeText: null };
+    }
   }
 }
 

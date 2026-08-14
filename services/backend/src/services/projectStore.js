@@ -43,7 +43,9 @@ async function ensureTable() {
 const httpError = require('../utils/httpError');
 
 function normFolders(value) {
-  if (!Array.isArray(value)) return [];
+  if (!Array.isArray(value)) {
+    return [];
+  }
   return value
     .map((f) => String(f == null ? '' : f).trim())
     .filter((f) => f.length > 0)
@@ -51,7 +53,9 @@ function normFolders(value) {
 }
 
 function normName(value) {
-  return String(value == null ? '' : value).trim().slice(0, NAME_MAX);
+  return String(value == null ? '' : value)
+    .trim()
+    .slice(0, NAME_MAX);
 }
 
 // Lightweight projection for the list view (all fields are already light — a
@@ -81,10 +85,15 @@ const toFull = toSummary;
 async function list(userId, options = {}) {
   await ensureTable();
   const where = { userId };
-  if (!options.includeArchived) where.archived = false;
+  if (!options.includeArchived) {
+    where.archived = false;
+  }
   const rows = await UserProject.findAll({
     where,
-    order: [['updatedAt', 'DESC'], ['id', 'DESC']],
+    order: [
+      ['updatedAt', 'DESC'],
+      ['id', 'DESC'],
+    ],
   });
   return rows.map(toSummary);
 }
@@ -92,14 +101,18 @@ async function list(userId, options = {}) {
 async function get(userId, id) {
   await ensureTable();
   const row = await UserProject.findOne({ where: { userId, id } });
-  if (!row) throw httpError(404, 'Project not found');
+  if (!row) {
+    throw httpError(404, 'Project not found');
+  }
   return toFull(row);
 }
 
 async function create(userId, body = {}) {
   await ensureTable();
   const name = normName(body.name);
-  if (!name) throw httpError(400, 'Project name is required');
+  if (!name) {
+    throw httpError(400, 'Project name is required');
+  }
   const row = await UserProject.create({
     userId,
     name,
@@ -117,20 +130,36 @@ async function create(userId, body = {}) {
 async function update(userId, id, body = {}) {
   await ensureTable();
   const row = await UserProject.findOne({ where: { userId, id } });
-  if (!row) throw httpError(404, 'Project not found');
+  if (!row) {
+    throw httpError(404, 'Project not found');
+  }
 
   const patch = {};
   if (body.name != null) {
     const name = normName(body.name);
-    if (!name) throw httpError(400, 'Project name cannot be empty');
+    if (!name) {
+      throw httpError(400, 'Project name cannot be empty');
+    }
     patch.name = name;
   }
-  if (body.description != null) patch.description = String(body.description).slice(0, 500);
-  if (body.icon != null) patch.icon = String(body.icon).slice(0, 32);
-  if (body.color != null) patch.color = String(body.color).slice(0, 32);
-  if (body.primaryPath != null) patch.primaryPath = String(body.primaryPath).slice(0, 500);
-  if (body.folders != null) patch.folders = normFolders(body.folders);
-  if (body.archived != null) patch.archived = !!body.archived;
+  if (body.description != null) {
+    patch.description = String(body.description).slice(0, 500);
+  }
+  if (body.icon != null) {
+    patch.icon = String(body.icon).slice(0, 32);
+  }
+  if (body.color != null) {
+    patch.color = String(body.color).slice(0, 32);
+  }
+  if (body.primaryPath != null) {
+    patch.primaryPath = String(body.primaryPath).slice(0, 500);
+  }
+  if (body.folders != null) {
+    patch.folders = normFolders(body.folders);
+  }
+  if (body.archived != null) {
+    patch.archived = !!body.archived;
+  }
 
   await row.update(patch);
   return toFull(row);
@@ -149,22 +178,31 @@ async function restore(userId, id) {
 async function remove(userId, id) {
   await ensureTable();
   const deleted = await UserProject.destroy({ where: { userId, id } });
-  if (!deleted) throw httpError(404, 'Project not found');
+  if (!deleted) {
+    throw httpError(404, 'Project not found');
+  }
   return { deleted: true, id: Number(id) };
 }
 
 // Drop the oldest rows beyond the per-user cap so the list stays bounded.
 async function pruneOld(userId) {
   const count = await UserProject.count({ where: { userId } });
-  if (count <= MAX_PER_USER) return;
+  if (count <= MAX_PER_USER) {
+    return;
+  }
   const stale = await UserProject.findAll({
     where: { userId },
-    order: [['updatedAt', 'ASC'], ['id', 'ASC']],
+    order: [
+      ['updatedAt', 'ASC'],
+      ['id', 'ASC'],
+    ],
     limit: count - MAX_PER_USER,
     attributes: ['id'],
   });
   const ids = stale.map((r) => r.id);
-  if (ids.length) await UserProject.destroy({ where: { userId, id: ids } });
+  if (ids.length) {
+    await UserProject.destroy({ where: { userId, id: ids } });
+  }
 }
 
 module.exports = {

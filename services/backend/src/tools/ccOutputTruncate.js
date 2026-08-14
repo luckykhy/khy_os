@@ -22,7 +22,9 @@
  */
 
 function ccOutputTruncateEnabled(env = process.env) {
-  const flag = String((env && env.KHY_CC_OUTPUT_TRUNCATE) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_CC_OUTPUT_TRUNCATE) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -39,11 +41,19 @@ const LEGACY_HEAD_MARKER = '\n... [truncated]';
  * @returns {string}
  */
 function ccMiddleTruncate(text, limit) {
-  if (typeof text !== 'string') return text;
-  if (!Number.isFinite(limit) || limit <= 0) return text;
-  if (text.length <= limit) return text;
+  if (typeof text !== 'string') {
+    return text;
+  }
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return text;
+  }
+  if (text.length <= limit) {
+    return text;
+  }
   const half = Math.floor(limit / 2);
-  if (half <= 0) return text.slice(0, limit); // 退化极小 limit:不可能两端,退头截
+  if (half <= 0) {
+    return text.slice(0, limit);
+  } // 退化极小 limit:不可能两端,退头截
   const start = text.slice(0, half);
   const end = text.slice(-half);
   const omitted = text.length - half * 2;
@@ -62,9 +72,15 @@ function ccMiddleTruncate(text, limit) {
  * @returns {string}
  */
 function capOutput(text, limit, env) {
-  if (typeof text !== 'string') return text;
-  if (!Number.isFinite(limit) || limit <= 0) return text;
-  if (text.length <= limit) return text;
+  if (typeof text !== 'string') {
+    return text;
+  }
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return text;
+  }
+  if (text.length <= limit) {
+    return text;
+  }
   if (!ccOutputTruncateEnabled(env)) {
     return text.slice(0, limit) + LEGACY_HEAD_MARKER;
   }

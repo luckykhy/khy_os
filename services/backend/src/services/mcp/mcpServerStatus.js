@@ -34,7 +34,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_MCP_SERVER_STATUS 默认开;{0,false,off,no} 关。 */
 function mcpServerStatusEnabled(env = process.env) {
   const raw = env && env.KHY_MCP_SERVER_STATUS;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -51,8 +53,12 @@ const _STATE_LABEL = {
 
 function _clip(s, max) {
   const str = typeof s === 'string' ? s.trim() : '';
-  if (!str) return '';
-  if (str.length <= max) return str;
+  if (!str) {
+    return '';
+  }
+  if (str.length <= max) {
+    return str;
+  }
   return str.slice(0, Math.max(1, max - 1)) + '…';
 }
 
@@ -71,7 +77,9 @@ function resolveMcpServerState(info = {}, env = process.env) {
       return { state: connected ? 'yes' : 'no', detail: '' };
     }
     // disabled 优先(即便配置里也标了别的态,禁用是最终事实)。
-    if (info && info.disabled) return { state: 'disabled', detail: '' };
+    if (info && info.disabled) {
+      return { state: 'disabled', detail: '' };
+    }
 
     const type = info && typeof info.type === 'string' ? info.type.trim().toLowerCase() : '';
     let state = _STATE_LABEL[type];
@@ -85,14 +93,16 @@ function resolveMcpServerState(info = {}, env = process.env) {
       // 镜像 CC "reconnecting (n/m)…":仅当尝试计数可用才附带。
       const a = Number(info && info.reconnectAttempt);
       const m = Number(info && info.maxReconnectAttempts);
-      if (Number.isFinite(a) && a > 0 && Number.isFinite(m) && m > 0) detail = `${a}/${m}`;
+      if (Number.isFinite(a) && a > 0 && Number.isFinite(m) && m > 0) {
+        detail = `${a}/${m}`;
+      }
     } else if (state === 'failed') {
       // failed → 展示 _lastError 原因(裁剪,避免撑破表格)。
       detail = _clip(info && info.error, 60);
     }
     return { state, detail };
   } catch {
-    return { state: (info && info.connected) ? 'yes' : 'no', detail: '' };
+    return { state: info && info.connected ? 'yes' : 'no', detail: '' };
   }
 }
 

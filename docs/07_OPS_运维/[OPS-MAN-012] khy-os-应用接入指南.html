@@ -63,7 +63,7 @@ client = OpenAI(
 )
 
 resp = client.chat.completions.create(
-    model=&quot;claude/claude-sonnet-4-20250514&quot;,   # 或 ollama/qwen2.5:7b, trae/deepseek-v3
+    model=&quot;claude/claude-sonnet-4-6&quot;,   # 或 ollama/qwen2.5:7b, trae/deepseek-v3
     messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;你好&quot;}],
     stream=True
 )
@@ -78,7 +78,7 @@ const client = new Anthropic({
 });
 
 const msg = await client.messages.create({
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [{ role: 'user', content: '你好' }]
 });</code></pre>
@@ -86,7 +86,7 @@ const msg = await client.messages.create({
 <pre><code class="language-bash">curl http://127.0.0.1:9100/v1/chat/completions \
   -H &quot;Authorization: Bearer khy-your-token&quot; \
   -H &quot;Content-Type: application/json&quot; \
-  -d '{&quot;model&quot;:&quot;claude/claude-sonnet-4-20250514&quot;,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;你好&quot;}]}'</code></pre>
+  -d '{&quot;model&quot;:&quot;claude/claude-sonnet-4-6&quot;,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;你好&quot;}]}'</code></pre>
 <h3 id="3-2-获取-auth-token">3.2 获取 Auth Token<a class="anchor" href="#3-2-获取-auth-token" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash"># 自动生成的 token 在这里
 cat ~/.khy/proxy_server_auth.json
@@ -97,7 +97,7 @@ curl -X POST http://127.0.0.1:9090/api/ai-gateway/customers \
   -d '{&quot;name&quot;:&quot;my-app&quot;,&quot;tier&quot;:&quot;standard&quot;}'</code></pre>
 <h3 id="3-3-模型路由规则">3.3 模型路由规则<a class="anchor" href="#3-3-模型路由规则" aria-label="锚点">#</a></h3>
 <p>在 <code>model</code> 字段中指定适配器前缀即可路由到不同后端：</p>
-<table><thead><tr><th>model 格式</th><th>路由到</th></tr></thead><tbody><tr><td><code>claude/claude-sonnet-4-20250514</code></td><td>Claude 适配器</td></tr><tr><td><code>ollama/qwen2.5:7b</code></td><td>本地 Ollama</td></tr><tr><td><code>trae/deepseek-v3</code></td><td>Trae IDE 适配器</td></tr><tr><td><code>kiro/claude-sonnet-4-20250514</code></td><td>Kiro 适配器</td></tr><tr><td><code>relay/gpt-4o</code></td><td>中转站</td></tr><tr><td><code>deepseek-chat</code></td><td>无前缀时走默认适配器</td></tr></tbody></table>
+<table><thead><tr><th>model 格式</th><th>路由到</th></tr></thead><tbody><tr><td><code>claude/claude-sonnet-4-6</code></td><td>Claude 适配器</td></tr><tr><td><code>ollama/qwen2.5:7b</code></td><td>本地 Ollama</td></tr><tr><td><code>trae/deepseek-v3</code></td><td>Trae IDE 适配器</td></tr><tr><td><code>kiro/claude-sonnet-4-6</code></td><td>Kiro 适配器</td></tr><tr><td><code>relay/gpt-4o</code></td><td>中转站</td></tr><tr><td><code>deepseek-chat</code></td><td>无前缀时走默认适配器</td></tr></tbody></table>
 <h3 id="3-4-管理-api">3.4 管理 API<a class="anchor" href="#3-4-管理-api" aria-label="锚点">#</a></h3>
 <p>端口 9090 提供完整的管理接口：</p>
 <pre><code class="language-bash"># 健康检查
@@ -129,7 +129,7 @@ await khy.connect();
 
 // 发送查询
 const stream = khy.query('帮我分析这段代码的性能问题', {
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-sonnet-4-6',
   tools: true             // 允许使用工具
 });
 

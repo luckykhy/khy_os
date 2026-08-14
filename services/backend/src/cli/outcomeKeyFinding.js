@@ -32,11 +32,17 @@ function rootCauseEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_TOOL_OUTCOME_ROOT_CAUSE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_TOOL_OUTCOME_ROOT_CAUSE;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -65,15 +71,21 @@ const _SIGN_RES = [
 
 /** 收紧一行:折叠内部空白、去首尾空白、超长截断带省略号。 */
 function _clip(line) {
-  const s = String(line || '').replace(/\s+/g, ' ').trim();
-  if (!s) return '';
+  const s = String(line || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) {
+    return '';
+  }
   return s.length > _MAX_REASON ? s.slice(0, _MAX_REASON - 1) + '…' : s;
 }
 
 /** 从一段文本里取最有信息量的一行根因;取不到返回 ''。 */
 function _extractFromText(text) {
   const raw = typeof text === 'string' ? text : '';
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
 
   // ① 命名异常:取最后一条(traceback 末行=真正抛出的异常)。
   let lastNamed = null;
@@ -81,7 +93,9 @@ function _extractFromText(text) {
   let m;
   while ((m = _NAMED_ERR_RE.exec(raw)) !== null) {
     lastNamed = m;
-    if (m.index === _NAMED_ERR_RE.lastIndex) _NAMED_ERR_RE.lastIndex++; // 防零宽死循环
+    if (m.index === _NAMED_ERR_RE.lastIndex) {
+      _NAMED_ERR_RE.lastIndex++;
+    } // 防零宽死循环
   }
   if (lastNamed) {
     const name = lastNamed[1];
@@ -90,10 +104,15 @@ function _extractFromText(text) {
   }
 
   // ② 高频签名:逐行扫,命中第一条即返回该整行。
-  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+  const lines = raw
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
   for (const re of _SIGN_RES) {
     for (const line of lines) {
-      if (re.test(line)) return _clip(line);
+      if (re.test(line)) {
+        return _clip(line);
+      }
     }
   }
   return '';
@@ -107,16 +126,25 @@ function _extractFromText(text) {
  */
 function salientErrorReason(result, env) {
   try {
-    if (!rootCauseEnabled(env)) return null;
-    if (!result || typeof result !== 'object') return null;
+    if (!rootCauseEnabled(env)) {
+      return null;
+    }
+    if (!result || typeof result !== 'object') {
+      return null;
+    }
 
     // error 优先(shellCommand 已把根因组进 error);其次 stderr/output/content/text。
     const errField = result.error;
-    const errText = typeof errField === 'string'
-      ? errField
-      : (errField && typeof errField.message === 'string' ? errField.message : '');
-    const bodyText = [result.stderr, result.output, result.content, result.text]
-      .find((x) => typeof x === 'string' && x) || '';
+    const errText =
+      typeof errField === 'string'
+        ? errField
+        : errField && typeof errField.message === 'string'
+          ? errField.message
+          : '';
+    const bodyText =
+      [result.stderr, result.output, result.content, result.text].find(
+        (x) => typeof x === 'string' && x
+      ) || '';
 
     // 先在 error 里找签名(它更精炼),再退到输出正文。
     let reason = _extractFromText(errText) || _extractFromText(bodyText);

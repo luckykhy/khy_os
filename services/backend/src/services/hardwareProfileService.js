@@ -10,10 +10,10 @@
  *   - desktop-gpu:    with NVIDIA GPU (4-8G VRAM)
  *   - workstation:    32G+ RAM, 12G+ VRAM
  */
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
 const { execSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 // Suppress stderr on all execSync calls to prevent Windows error messages
 const EXEC_OPTS = { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] };
@@ -35,8 +35,12 @@ const VALID_PROFILES = new Set([
  * @returns {string|null} a valid tier name, or null for auto/empty/invalid.
  */
 function _pinnedProfile() {
-  const raw = String(process.env.KHY_HW_PROFILE || '').trim().toLowerCase();
-  if (!raw || raw === 'auto') return null;
+  const raw = String(process.env.KHY_HW_PROFILE || '')
+    .trim()
+    .toLowerCase();
+  if (!raw || raw === 'auto') {
+    return null;
+  }
   return VALID_PROFILES.has(raw) ? raw : null;
 }
 
@@ -58,7 +62,9 @@ const HW_PROBE_CACHE_VERSION = 1;
  * @returns {boolean}
  */
 function _hwProbeCacheEnabled() {
-  const raw = String(process.env.KHY_HW_PROBE_CACHE ?? '').trim().toLowerCase();
+  const raw = String(process.env.KHY_HW_PROBE_CACHE ?? '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -82,14 +88,24 @@ function _hwProbeSignature({ platform, arch, cpuModel, cpuCount, totalRamMB }) {
  *   triple, or null on any miss/mismatch/shape-error (fail-open).
  */
 function _loadHwProbeCache(signature) {
-  if (!_hwProbeCacheEnabled()) return null;
+  if (!_hwProbeCacheEnabled()) {
+    return null;
+  }
   try {
     const data = JSON.parse(fs.readFileSync(_hwProbeCacheFile(), 'utf-8'));
-    if (!data || data.signature !== signature) return null;
-    if (!data.cpuInfo || typeof data.cpuInfo.hasAvx2 !== 'boolean') return null;
-    if (!data.swap || typeof data.swap.totalMB !== 'number') return null;
+    if (!data || data.signature !== signature) {
+      return null;
+    }
+    if (!data.cpuInfo || typeof data.cpuInfo.hasAvx2 !== 'boolean') {
+      return null;
+    }
+    if (!data.swap || typeof data.swap.totalMB !== 'number') {
+      return null;
+    }
     // gpu is legitimately null on a host with no discrete GPU.
-    if (data.gpu !== null && typeof data.gpu !== 'object') return null;
+    if (data.gpu !== null && typeof data.gpu !== 'object') {
+      return null;
+    }
     return { cpuInfo: data.cpuInfo, gpu: data.gpu, swap: data.swap };
   } catch {
     return null;
@@ -101,9 +117,15 @@ function _loadHwProbeCache(signature) {
  * just means the probes run again next launch.
  */
 function _saveHwProbeCache(signature, { cpuInfo, gpu, swap }) {
-  if (!_hwProbeCacheEnabled()) return;
+  if (!_hwProbeCacheEnabled()) {
+    return;
+  }
   try {
-    fs.writeFileSync(_hwProbeCacheFile(), JSON.stringify({ signature, cpuInfo, gpu, swap }), 'utf-8');
+    fs.writeFileSync(
+      _hwProbeCacheFile(),
+      JSON.stringify({ signature, cpuInfo, gpu, swap }),
+      'utf-8'
+    );
   } catch {
     /* best-effort */
   }
@@ -114,7 +136,9 @@ function _saveHwProbeCache(signature, { cpuInfo, gpu, swap }) {
  * @returns {object} Complete hardware profile
  */
 function detectProfile() {
-  if (_cachedProfile) return _cachedProfile;
+  if (_cachedProfile) {
+    return _cachedProfile;
+  }
 
   const totalRamMB = Math.round(os.totalmem() / (1024 * 1024));
   const freeRamMB = Math.round(os.freemem() / (1024 * 1024));
@@ -159,8 +183,8 @@ function detectProfile() {
   }
   const effMemFromOs = osProfile && osProfile.effective ? osProfile.effective.memoryMB : null;
   const effCpuFromOs = osProfile && osProfile.effective ? osProfile.effective.cpuCount : null;
-  const effectiveRamMB = (effMemFromOs != null) ? Math.min(totalRamMB, effMemFromOs) : totalRamMB;
-  const effectiveCpu = (effCpuFromOs != null) ? Math.min(cpuCount, effCpuFromOs) : cpuCount;
+  const effectiveRamMB = effMemFromOs != null ? Math.min(totalRamMB, effMemFromOs) : totalRamMB;
+  const effectiveCpu = effCpuFromOs != null ? Math.min(cpuCount, effCpuFromOs) : cpuCount;
   const effectiveRamGB = Math.round(effectiveRamMB / 1024);
   const effectiveFreeMB = Math.min(freeRamMB, effectiveRamMB);
   const clamped = effectiveRamMB < totalRamMB || effectiveCpu < cpuCount;
@@ -172,11 +196,17 @@ function detectProfile() {
   // overridden. An invalid/"auto"/empty value falls back to auto-classification.
   // Classification/limits use the EFFECTIVE (container-clamped) resources.
   const pinned = _pinnedProfile();
-  const profile = pinned || classifyProfile({ totalRamGB: effectiveRamGB, cpuCount: effectiveCpu, gpu, cpuInfo });
+  const profile =
+    pinned || classifyProfile({ totalRamGB: effectiveRamGB, cpuCount: effectiveCpu, gpu, cpuInfo });
 
   // Calculate safe limits from effective resources, then apply OS behavior
   // modifiers (Windows AV / WSL interop widen timeouts; never tighten).
-  const limits = calculateLimits(profile, { totalRamMB: effectiveRamMB, freeRamMB: effectiveFreeMB, cpuCount: effectiveCpu, gpu });
+  const limits = calculateLimits(profile, {
+    totalRamMB: effectiveRamMB,
+    freeRamMB: effectiveFreeMB,
+    cpuCount: effectiveCpu,
+    gpu,
+  });
   const timeoutMult = osProfile && osProfile.modifiers ? osProfile.modifiers.timeoutMultiplier : 1;
   if (Number.isFinite(timeoutMult) && timeoutMult > 1) {
     limits.shellTimeoutMs = Math.round(limits.shellTimeoutMs * timeoutMult);
@@ -227,7 +257,9 @@ function detectProfile() {
  */
 function parseCpuInfo(cpuModel) {
   const lower = cpuModel.toLowerCase();
-  let brand = 'unknown', generation = 0, hasAvx2 = false;
+  let brand = 'unknown',
+    generation = 0,
+    hasAvx2 = false;
 
   // Intel detection
   const intelMatch = cpuModel.match(/i([3579])-(\d{2,5})/);
@@ -235,12 +267,19 @@ function parseCpuInfo(cpuModel) {
     brand = `Intel Core i${intelMatch[1]}`;
     const modelNum = parseInt(intelMatch[2]);
     // Intel generations: 10xxx=10th, 11xxx=11th, 12xxx=12th, 13xxx=13th, 14xxx=14th
-    if (modelNum >= 14000) generation = 14;
-    else if (modelNum >= 13000) generation = 13;
-    else if (modelNum >= 12000) generation = 12;
-    else if (modelNum >= 11000) generation = 11;
-    else if (modelNum >= 10000) generation = 10;
-    else if (modelNum >= 8000) generation = 8;
+    if (modelNum >= 14000) {
+      generation = 14;
+    } else if (modelNum >= 13000) {
+      generation = 13;
+    } else if (modelNum >= 12000) {
+      generation = 12;
+    } else if (modelNum >= 11000) {
+      generation = 11;
+    } else if (modelNum >= 10000) {
+      generation = 10;
+    } else if (modelNum >= 8000) {
+      generation = 8;
+    }
     hasAvx2 = generation >= 4; // Haswell (4th gen) introduced AVX2
   }
 
@@ -249,9 +288,13 @@ function parseCpuInfo(cpuModel) {
   if (amdMatch) {
     brand = `AMD Ryzen ${amdMatch[1]}`;
     const modelNum = parseInt(amdMatch[2]);
-    if (modelNum >= 7000) generation = 7;
-    else if (modelNum >= 5000) generation = 5;
-    else if (modelNum >= 3000) generation = 3;
+    if (modelNum >= 7000) {
+      generation = 7;
+    } else if (modelNum >= 5000) {
+      generation = 5;
+    } else if (modelNum >= 3000) {
+      generation = 3;
+    }
     hasAvx2 = true; // All Ryzen have AVX2
   }
 
@@ -266,7 +309,9 @@ function parseCpuInfo(cpuModel) {
     try {
       const flags = execSync('grep -m1 flags /proc/cpuinfo 2>/dev/null', EXEC_OPTS);
       hasAvx2 = flags.includes('avx2');
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return { brand, generation, hasAvx2 };
@@ -285,9 +330,11 @@ function detectGpu() {
       { ...EXEC_OPTS, shell: true }
     ).trim();
 
-    if (!output) return null;
+    if (!output) {
+      return null;
+    }
 
-    const [name, vramMB, driver] = output.split(', ').map(s => s.trim());
+    const [name, vramMB, driver] = output.split(', ').map((s) => s.trim());
     return {
       name,
       vramMB: parseInt(vramMB) || 0,
@@ -345,10 +392,15 @@ function detectSwap() {
       };
     }
     if (platform === 'win32') {
-      const ps = 'powershell -NoProfile -Command "(Get-CimInstance Win32_PageFileUsage | '
-        + 'Measure-Object -Property AllocatedBaseSize,CurrentUsage -Sum).Sum -join \',\'"';
+      const ps =
+        'powershell -NoProfile -Command "(Get-CimInstance Win32_PageFileUsage | ' +
+        "Measure-Object -Property AllocatedBaseSize,CurrentUsage -Sum).Sum -join ','\"";
       const output = execSync(ps, EXEC_OPTS).trim();
-      const [allocated, current] = output.split(',').map((n) => parseInt(n, 10) || 0);
+      // Index access instead of array destructuring: a short/empty output would
+      // leave `current` undefined and make freeMB NaN (which JSON-caches as null).
+      const parts = String(output).split(',');
+      const allocated = parseInt(parts[0], 10) || 0;
+      const current = parseInt(parts[1], 10) || 0;
       return { totalMB: allocated, usedMB: current, freeMB: Math.max(0, allocated - current) };
     }
     // Linux
@@ -368,12 +420,24 @@ function detectSwap() {
  * Classify hardware into a named profile.
  */
 function classifyProfile({ totalRamGB, cpuCount, gpu, cpuInfo }) {
-  if (gpu && gpu.vramGB >= 12) return 'workstation';
-  if (gpu && gpu.vramGB >= 4) return 'desktop-gpu';
-  if (totalRamGB <= 4 || cpuCount <= 2) return 'server-minimal';
-  if (totalRamGB <= 8) return 'server-standard';
-  if (totalRamGB <= 16) return 'desktop-cpu';
-  if (totalRamGB <= 32) return 'desktop-cpu';     // no GPU, lots of RAM
+  if (gpu && gpu.vramGB >= 12) {
+    return 'workstation';
+  }
+  if (gpu && gpu.vramGB >= 4) {
+    return 'desktop-gpu';
+  }
+  if (totalRamGB <= 4 || cpuCount <= 2) {
+    return 'server-minimal';
+  }
+  if (totalRamGB <= 8) {
+    return 'server-standard';
+  }
+  if (totalRamGB <= 16) {
+    return 'desktop-cpu';
+  }
+  if (totalRamGB <= 32) {
+    return 'desktop-cpu';
+  } // no GPU, lots of RAM
   return 'workstation';
 }
 
@@ -385,13 +449,13 @@ function calculateLimits(profile, { totalRamMB, freeRamMB, cpuCount, gpu }) {
     case 'server-minimal':
       return {
         nodeHeapMB: Math.min(256, Math.round(totalRamMB * 0.3)),
-        ollamaRamMB: 0,      // no local model on 4G server
-        maxConcurrency: 1,    // single request at a time
-        maxAgents: 1,         // no parallel agents
+        ollamaRamMB: 0, // no local model on 4G server
+        maxConcurrency: 1, // single request at a time
+        maxAgents: 1, // no parallel agents
         enableBacktest: false,
         enableLocalModel: false,
         enableMultiAgent: false,
-        enablePeriodicScan: false,   // save resources
+        enablePeriodicScan: false, // save resources
         cleanupIntervalMs: 7200_000, // every 2h
         shellTimeoutMs: 15_000,
         aiTimeoutMs: 60_000,
@@ -474,8 +538,13 @@ function recommendLocalModels(profile, { totalRamGB, gpu, cpuInfo }) {
 
     case 'server-standard':
       models.push(
-        { id: 'qwen2.5:1.5b', name: 'Qwen 2.5 1.5B', sizeGB: 1.0, reason: '极轻量，8GB 服务器可用' },
-        { id: 'phi3:mini', name: 'Phi-3 Mini 3.8B', sizeGB: 2.3, reason: '微软小模型，推理高效' },
+        {
+          id: 'qwen2.5:1.5b',
+          name: 'Qwen 2.5 1.5B',
+          sizeGB: 1.0,
+          reason: '极轻量，8GB 服务器可用',
+        },
+        { id: 'phi3:mini', name: 'Phi-3 Mini 3.8B', sizeGB: 2.3, reason: '微软小模型，推理高效' }
       );
       break;
 
@@ -483,16 +552,32 @@ function recommendLocalModels(profile, { totalRamGB, gpu, cpuInfo }) {
       // i5 11th, 16GB RAM, no GPU — CPU inference, max ~7B quantized
       if (cpuInfo.hasAvx2) {
         models.push(
-          { id: 'qwen2.5:3b', name: 'Qwen 2.5 3B', sizeGB: 2.0, reason: '推荐首选 — 中文好，CPU 友好', recommended: true },
-          { id: 'qwen2.5:7b-q4_0', name: 'Qwen 2.5 7B (Q4)', sizeGB: 4.0, reason: '4-bit 量化，16GB 可跑但较慢' },
+          {
+            id: 'qwen2.5:3b',
+            name: 'Qwen 2.5 3B',
+            sizeGB: 2.0,
+            reason: '推荐首选 — 中文好，CPU 友好',
+            recommended: true,
+          },
+          {
+            id: 'qwen2.5:7b-q4_0',
+            name: 'Qwen 2.5 7B (Q4)',
+            sizeGB: 4.0,
+            reason: '4-bit 量化，16GB 可跑但较慢',
+          },
           { id: 'llama3.2:3b', name: 'Llama 3.2 3B', sizeGB: 2.0, reason: '英文优秀，速度快' },
           { id: 'phi3:mini', name: 'Phi-3 Mini', sizeGB: 2.3, reason: '微软推理模型，平衡好' },
-          { id: 'deepseek-coder:1.3b', name: 'DeepSeek Coder 1.3B', sizeGB: 0.8, reason: '代码分析专用，极轻量' },
+          {
+            id: 'deepseek-coder:1.3b',
+            name: 'DeepSeek Coder 1.3B',
+            sizeGB: 0.8,
+            reason: '代码分析专用，极轻量',
+          }
         );
       } else {
         models.push(
           { id: 'qwen2.5:1.5b', name: 'Qwen 2.5 1.5B', sizeGB: 1.0, reason: '无 AVX2 环境推荐' },
-          { id: 'phi3:mini', name: 'Phi-3 Mini', sizeGB: 2.3, reason: '兼容性好' },
+          { id: 'phi3:mini', name: 'Phi-3 Mini', sizeGB: 2.3, reason: '兼容性好' }
         );
       }
       break;
@@ -501,24 +586,47 @@ function recommendLocalModels(profile, { totalRamGB, gpu, cpuInfo }) {
       // With GPU — can run larger models
       if (gpu && gpu.vramGB >= 8) {
         models.push(
-          { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B', sizeGB: 4.7, reason: '推荐首选 — GPU 加速，中文最佳', recommended: true },
+          {
+            id: 'qwen2.5:7b',
+            name: 'Qwen 2.5 7B',
+            sizeGB: 4.7,
+            reason: '推荐首选 — GPU 加速，中文最佳',
+            recommended: true,
+          },
           { id: 'llama3.1:8b', name: 'Llama 3.1 8B', sizeGB: 4.7, reason: '通用能力强' },
-          { id: 'deepseek-coder-v2:lite', name: 'DeepSeek Coder V2', sizeGB: 8.9, reason: '代码分析利器' },
+          {
+            id: 'deepseek-coder-v2:lite',
+            name: 'DeepSeek Coder V2',
+            sizeGB: 8.9,
+            reason: '代码分析利器',
+          }
         );
       } else {
         models.push(
-          { id: 'qwen2.5:3b', name: 'Qwen 2.5 3B', sizeGB: 2.0, reason: '推荐 — 小显存首选', recommended: true },
-          { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B', sizeGB: 4.7, reason: '需要 6GB+ VRAM' },
+          {
+            id: 'qwen2.5:3b',
+            name: 'Qwen 2.5 3B',
+            sizeGB: 2.0,
+            reason: '推荐 — 小显存首选',
+            recommended: true,
+          },
+          { id: 'qwen2.5:7b', name: 'Qwen 2.5 7B', sizeGB: 4.7, reason: '需要 6GB+ VRAM' }
         );
       }
       break;
 
     case 'workstation':
       models.push(
-        { id: 'qwen2.5:14b', name: 'Qwen 2.5 14B', sizeGB: 9.0, reason: '推荐首选 — 中文量化分析最佳', recommended: true },
+        {
+          id: 'qwen2.5:14b',
+          name: 'Qwen 2.5 14B',
+          sizeGB: 9.0,
+          reason: '推荐首选 — 中文量化分析最佳',
+          recommended: true,
+        },
         { id: 'qwen2.5:32b', name: 'Qwen 2.5 32B', sizeGB: 20, reason: '顶级中文模型' },
         { id: 'deepseek-v3:latest', name: 'DeepSeek V3', sizeGB: 16, reason: '最强中文开源' },
-        { id: 'llama3.1:70b', name: 'Llama 3.1 70B', sizeGB: 39, reason: '需要 48GB+ RAM/VRAM' },
+        { id: 'llama3.1:70b', name: 'Llama 3.1 70B', sizeGB: 39, reason: '需要 48GB+ RAM/VRAM' }
       );
       break;
   }
@@ -589,8 +697,12 @@ function _hardwareEnvMap(p) {
   // the existing recommender so there is one place that decides those values.
   try {
     const tuning = recommendLocalAiTuning('auto');
-    if (tuning && tuning.env) Object.assign(map, tuning.env);
-  } catch { /* tuning env is best-effort */ }
+    if (tuning && tuning.env) {
+      Object.assign(map, tuning.env);
+    }
+  } catch {
+    /* tuning env is best-effort */
+  }
   return map;
 }
 
@@ -641,15 +753,17 @@ function getAppliedLimits() {
         source[key] = 'hardware';
       }
     }
-    const osInfo = p.os ? {
-      os: p.os.os,
-      kernel: p.os.kernel,
-      isWSL: p.os.isWSL,
-      container: p.os.container,
-      effective: p.effective,
-      pinned: p.os.source === 'pinned',
-      timeoutMultiplier: p.os.modifiers ? p.os.modifiers.timeoutMultiplier : 1,
-    } : null;
+    const osInfo = p.os
+      ? {
+          os: p.os.os,
+          kernel: p.os.kernel,
+          isWSL: p.os.isWSL,
+          container: p.os.container,
+          effective: p.effective,
+          pinned: p.os.source === 'pinned',
+          timeoutMultiplier: p.os.modifiers ? p.os.modifiers.timeoutMultiplier : 1,
+        }
+      : null;
     return { env, source, profile: p.profile, pinned: _pinnedProfile() !== null, os: osInfo };
   } catch {
     return { env: {}, source: {}, profile: 'unknown', pinned: false, os: null };
@@ -737,7 +851,9 @@ function _toEnvMap(preset) {
  */
 function recommendLocalAiTuning(mode = 'auto') {
   const p = detectProfile();
-  const normalized = String(mode || 'auto').trim().toLowerCase();
+  const normalized = String(mode || 'auto')
+    .trim()
+    .toLowerCase();
   let preset;
   let reason = '';
 

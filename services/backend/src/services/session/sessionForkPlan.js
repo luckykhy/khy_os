@@ -57,7 +57,9 @@ function parseForkArgs(args) {
     }
     if (tok.startsWith('--at=')) {
       const v = tok.slice('--at='.length);
-      if (!v) return { title: '', leafUuid: null, valid: false, parseError: 'missing_leaf_uuid' };
+      if (!v) {
+        return { title: '', leafUuid: null, valid: false, parseError: 'missing_leaf_uuid' };
+      }
       leafUuid = v;
       continue;
     }
@@ -75,10 +77,16 @@ function parseForkArgs(args) {
  */
 function deriveForkTitle(sourceTitle, explicitTitle) {
   const explicit = String(explicitTitle == null ? '' : explicitTitle).trim();
-  if (explicit) return explicit.slice(0, _MAX_TITLE_LEN);
+  if (explicit) {
+    return explicit.slice(0, _MAX_TITLE_LEN);
+  }
   const base = String(sourceTitle == null ? '' : sourceTitle).trim();
-  if (!base) return _DEFAULT_FORK_TITLE;
-  if (base.endsWith(_FORK_SUFFIX)) return base.slice(0, _MAX_TITLE_LEN);
+  if (!base) {
+    return _DEFAULT_FORK_TITLE;
+  }
+  if (base.endsWith(_FORK_SUFFIX)) {
+    return base.slice(0, _MAX_TITLE_LEN);
+  }
   return (base + _FORK_SUFFIX).slice(0, _MAX_TITLE_LEN);
 }
 
@@ -89,13 +97,21 @@ function deriveForkTitle(sourceTitle, explicitTitle) {
  * @returns {Array<{role:string, content:*, isMeta?:boolean, isCompactSummary?:boolean}>}
  */
 function _sanitizeMessages(messages) {
-  if (!Array.isArray(messages)) return [];
+  if (!Array.isArray(messages)) {
+    return [];
+  }
   const out = [];
   for (const m of messages) {
-    if (!m || typeof m !== 'object') continue;
+    if (!m || typeof m !== 'object') {
+      continue;
+    }
     const clean = { role: m.role || 'unknown', content: m.content == null ? '' : m.content };
-    if (m.isMeta) clean.isMeta = true;
-    if (m.isCompactSummary) clean.isCompactSummary = true;
+    if (m.isMeta) {
+      clean.isMeta = true;
+    }
+    if (m.isCompactSummary) {
+      clean.isCompactSummary = true;
+    }
     out.push(clean);
   }
   return out;
@@ -112,16 +128,22 @@ function _sanitizeMessages(messages) {
 function buildForkState(params) {
   const p = params || {};
   const snap = p.snapshot;
-  if (!snap || typeof snap !== 'object') return null;
+  if (!snap || typeof snap !== 'object') {
+    return null;
+  }
   const messages = _sanitizeMessages(snap.messages);
-  if (messages.length === 0) return null;
+  if (messages.length === 0) {
+    return null;
+  }
 
   const title = deriveForkTitle(snap.title, p.title);
-  const baseMeta = (snap.metadata && typeof snap.metadata === 'object') ? snap.metadata : {};
+  const baseMeta = snap.metadata && typeof snap.metadata === 'object' ? snap.metadata : {};
   const metadata = Object.assign({}, baseMeta, {
-    forkedFrom: snap.sessionId || (baseMeta.forkedFrom || null),
+    forkedFrom: snap.sessionId || baseMeta.forkedFrom || null,
   });
-  if (Number.isFinite(p.forkedAt)) metadata.forkedAt = p.forkedAt;
+  if (Number.isFinite(p.forkedAt)) {
+    metadata.forkedAt = p.forkedAt;
+  }
 
   // 刀 2:fork 槽继承(对齐 Stello policy none|inherit|compress)。仅当薄壳**显式**传入
   // p.slots.enabled 时生效;否则字节回退(KHY_SESSION_SLOTS=0 或未接线 → legacy 行为不变)。
@@ -167,7 +189,9 @@ function _applyForkSlots(metadata, slotOpt) {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_FORK === undefined ? 'true' : e.KHY_FORK;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 

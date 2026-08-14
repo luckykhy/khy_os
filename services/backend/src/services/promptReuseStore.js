@@ -22,23 +22,59 @@
  * 零外部依赖（仅 Node 内置 crypto/fs/path + 本仓 utils/dataHome）。
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+
 const { getDataDir } = require('../utils/dataHome');
 
 // ── 常量 ─────────────────────────────────────────────────────────────────────
-const MAX_SAMPLES = 5;          // 每个配方最多留存的原始任务样本数（用于展示/二次匹配）
-const MAX_VERSIONS = 20;        // 版本历史上限（防无界增长；只截尾不丢最新）
-const PROMPT_TEXT_CAP = 4000;   // 单条 promptText 存储上限（字符），防超大文本占满磁盘
+const MAX_SAMPLES = 5; // 每个配方最多留存的原始任务样本数（用于展示/二次匹配）
+const MAX_VERSIONS = 20; // 版本历史上限（防无界增长；只截尾不丢最新）
+const PROMPT_TEXT_CAP = 4000; // 单条 promptText 存储上限（字符），防超大文本占满磁盘
 const DEFAULT_THRESHOLD = 0.35; // 相似度默认阈值（§检索逻辑）
-const SMOOTH_PRIOR = 2;         // 贝叶斯平滑：先验「伪样本」数，抑制小样本过拟合
+const SMOOTH_PRIOR = 2; // 贝叶斯平滑：先验「伪样本」数，抑制小样本过拟合
 
 // 极简停用词（中英）：仅用于相似度分词，降低高频虚词权重。不影响存储原文。
 const STOPWORDS = new Set([
-  'the', 'a', 'an', 'of', 'to', 'and', 'or', 'for', 'in', 'on', 'at', 'is', 'are',
-  'be', 'with', 'this', 'that', 'it', 'as', 'by', 'from', 'please', 'help', 'me',
-  '的', '了', '和', '与', '在', '是', '请', '帮', '我', '一个', '这个', '那个', '把', '给',
+  'the',
+  'a',
+  'an',
+  'of',
+  'to',
+  'and',
+  'or',
+  'for',
+  'in',
+  'on',
+  'at',
+  'is',
+  'are',
+  'be',
+  'with',
+  'this',
+  'that',
+  'it',
+  'as',
+  'by',
+  'from',
+  'please',
+  'help',
+  'me',
+  '的',
+  '了',
+  '和',
+  '与',
+  '在',
+  '是',
+  '请',
+  '帮',
+  '我',
+  '一个',
+  '这个',
+  '那个',
+  '把',
+  '给',
 ]);
 
 // ── 目录 / 文件 ──────────────────────────────────────────────────────────────
@@ -47,7 +83,9 @@ function _recipesDir() {
 }
 
 function _safeId(id) {
-  return String(id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+  return String(id)
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 64);
 }
 
 function _filePath(id) {
@@ -72,17 +110,23 @@ function normalizeTokens(text) {
   // 英文/数字词
   const ascii = s.match(/[a-z0-9_]+/g) || [];
   for (const w of ascii) {
-    if (w.length >= 2 && !STOPWORDS.has(w)) tokens.push(w);
+    if (w.length >= 2 && !STOPWORDS.has(w)) {
+      tokens.push(w);
+    }
   }
 
   // 中文（含其它 CJK）逐字符序列 → 相邻二元组
-  const cjk = (s.match(/[一-鿿]/g) || []);
+  const cjk = s.match(/[一-鿿]/g) || [];
   for (let i = 0; i < cjk.length - 1; i++) {
     const bigram = cjk[i] + cjk[i + 1];
-    if (!STOPWORDS.has(bigram)) tokens.push(bigram);
+    if (!STOPWORDS.has(bigram)) {
+      tokens.push(bigram);
+    }
   }
   // 单字兜底（极短中文任务，如「重构」已是二元组；此处覆盖单字场景）
-  if (cjk.length === 1 && !STOPWORDS.has(cjk[0])) tokens.push(cjk[0]);
+  if (cjk.length === 1 && !STOPWORDS.has(cjk[0])) {
+    tokens.push(cjk[0]);
+  }
 
   return [...new Set(tokens)];
 }
@@ -112,11 +156,17 @@ function idFor(text) {
  * @returns {number}
  */
 function similarity(a, b) {
-  if (!a || !b || a.length === 0 || b.length === 0) return 0;
+  if (!a || !b || a.length === 0 || b.length === 0) {
+    return 0;
+  }
   const sa = a instanceof Set ? a : new Set(a);
   const sb = b instanceof Set ? b : new Set(b);
   let inter = 0;
-  for (const t of sa) if (sb.has(t)) inter++;
+  for (const t of sa) {
+    if (sb.has(t)) {
+      inter++;
+    }
+  }
   const denom = sa.size + sb.size;
   return denom === 0 ? 0 : (2 * inter) / denom;
 }
@@ -137,7 +187,9 @@ function computeEffectiveness(stats = {}) {
   const smoothed = (successes + SMOOTH_PRIOR * 0.5) / (uses + SMOOTH_PRIOR);
 
   const fbCount = Number(stats.feedbackCount || 0);
-  if (fbCount <= 0) return _clamp01(smoothed);
+  if (fbCount <= 0) {
+    return _clamp01(smoothed);
+  }
 
   // 反馈均值假定已归一化到 -1..1（负面..正面），映射到 0..1。
   const fbMean = Number(stats.feedbackSum || 0) / fbCount;
@@ -148,9 +200,15 @@ function computeEffectiveness(stats = {}) {
 }
 
 function _clamp01(n) {
-  if (!Number.isFinite(n)) return 0;
-  if (n < 0) return 0;
-  if (n > 1) return 1;
+  if (!Number.isFinite(n)) {
+    return 0;
+  }
+  if (n < 0) {
+    return 0;
+  }
+  if (n > 1) {
+    return 1;
+  }
   return n;
 }
 
@@ -165,7 +223,9 @@ function loadRecipe(id) {
 }
 
 function saveRecipe(recipe) {
-  if (!recipe || !recipe.id) throw new Error('promptReuseStore: recipe.id is required');
+  if (!recipe || !recipe.id) {
+    throw new Error('promptReuseStore: recipe.id is required');
+  }
   // 写入前重算缓存的效果分，保证检索排序一致。
   recipe.effectiveness = computeEffectiveness(recipe.stats);
   fs.writeFileSync(_filePath(recipe.id), JSON.stringify(recipe, null, 2), 'utf-8');
@@ -190,7 +250,7 @@ function deleteRecipe(id) {
 function listRecipes(opts = {}) {
   let files;
   try {
-    files = fs.readdirSync(_recipesDir()).filter(f => f.endsWith('.json'));
+    files = fs.readdirSync(_recipesDir()).filter((f) => f.endsWith('.json'));
   } catch {
     return [];
   }
@@ -198,9 +258,15 @@ function listRecipes(opts = {}) {
   for (const f of files) {
     try {
       const r = JSON.parse(fs.readFileSync(path.join(_recipesDir(), f), 'utf-8'));
-      if (r && r.id) out.push(r);
-    } catch { /* skip corrupt */ }
-    if (opts.limit && out.length >= opts.limit) break;
+      if (r && r.id) {
+        out.push(r);
+      }
+    } catch {
+      /* skip corrupt */
+    }
+    if (opts.limit && out.length >= opts.limit) {
+      break;
+    }
   }
   return out;
 }
@@ -221,13 +287,14 @@ function listRecipes(opts = {}) {
  */
 function recordUsage(entry = {}) {
   const taskText = String(entry.taskText || '').trim();
-  if (!taskText) throw new Error('promptReuseStore.recordUsage: taskText is required');
+  if (!taskText) {
+    throw new Error('promptReuseStore.recordUsage: taskText is required');
+  }
 
   const id = idFor(taskText);
   const now = Date.now();
-  const promptText = entry.promptText != null
-    ? String(entry.promptText).slice(0, PROMPT_TEXT_CAP)
-    : '';
+  const promptText =
+    entry.promptText != null ? String(entry.promptText).slice(0, PROMPT_TEXT_CAP) : '';
   const promptHash = promptText ? _sha1(promptText) : '';
 
   let recipe = loadRecipe(id);
@@ -255,8 +322,12 @@ function recordUsage(entry = {}) {
   } else {
     recipe.stats.uses = Number(recipe.stats.uses || 0) + 1;
     recipe.stats.lastUsedAt = now;
-    if (entry.traceId) recipe.stats.lastTraceId = entry.traceId;
-    if (entry.category && recipe.category === 'general') recipe.category = entry.category;
+    if (entry.traceId) {
+      recipe.stats.lastTraceId = entry.traceId;
+    }
+    if (entry.category && recipe.category === 'general') {
+      recipe.category = entry.category;
+    }
 
     // 版本保留：仅当 promptText 非空且哈希不同于当前版本时追加新版本。
     if (promptText && (!recipe.current || recipe.current.hash !== promptHash)) {
@@ -297,19 +368,27 @@ function recordUsage(entry = {}) {
  */
 function recordOutcome(outcome = {}) {
   const id = outcome.id || (outcome.taskText ? idFor(String(outcome.taskText)) : null);
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
   const recipe = loadRecipe(id);
-  if (!recipe) return null;
+  if (!recipe) {
+    return null;
+  }
 
   const s = recipe.stats;
-  if (outcome.success === true) s.successes = Number(s.successes || 0) + 1;
-  else if (outcome.success === false) s.failures = Number(s.failures || 0) + 1;
+  if (outcome.success === true) {
+    s.successes = Number(s.successes || 0) + 1;
+  } else if (outcome.success === false) {
+    s.failures = Number(s.failures || 0) + 1;
+  }
 
   if (Number.isFinite(outcome.durationMs)) {
     const n = Number(s.successes || 0) + Number(s.failures || 0);
     const prev = Number(s.avgDurationMs || 0);
     // 增量均值（以成功+失败计数为分母）
-    s.avgDurationMs = n > 0 ? Math.round(prev + (outcome.durationMs - prev) / n) : Math.round(outcome.durationMs);
+    s.avgDurationMs =
+      n > 0 ? Math.round(prev + (outcome.durationMs - prev) / n) : Math.round(outcome.durationMs);
   }
 
   if (Number.isFinite(outcome.feedbackScore)) {
@@ -337,29 +416,41 @@ function recordOutcome(outcome = {}) {
  */
 function retrieve(taskText, opts = {}) {
   const text = String(taskText || '').trim();
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
   const threshold = Number.isFinite(opts.threshold) ? opts.threshold : DEFAULT_THRESHOLD;
   const limit = Number.isFinite(opts.limit) ? opts.limit : 3;
   const minUses = Number.isFinite(opts.minUses) ? opts.minUses : 1;
   const minEff = Number.isFinite(opts.minEffectiveness) ? opts.minEffectiveness : 0;
 
   const queryTokens = new Set(normalizeTokens(text));
-  if (queryTokens.size === 0) return [];
+  if (queryTokens.size === 0) {
+    return [];
+  }
 
   const selfId = idFor(text);
   const candidates = [];
   for (const recipe of listRecipes()) {
-    if (!recipe || !recipe.stats) continue;
-    if (Number(recipe.stats.uses || 0) < minUses) continue;
+    if (!recipe || !recipe.stats) {
+      continue;
+    }
+    if (Number(recipe.stats.uses || 0) < minUses) {
+      continue;
+    }
     // 不把「与查询完全同源、且尚无任何效果信号」的配方推给自己当噪音。
     // 但允许同 id 但已有成功记录的配方回流（这正是复用价值所在）。
     const sim = similarity(queryTokens, new Set(recipe.tokens || []));
-    if (sim < threshold) continue;
+    if (sim < threshold) {
+      continue;
+    }
 
     const eff = Number.isFinite(recipe.effectiveness)
       ? recipe.effectiveness
       : computeEffectiveness(recipe.stats);
-    if (eff < minEff) continue;
+    if (eff < minEff) {
+      continue;
+    }
 
     // 综合排序分：相似度为主，效果为权（0.5 基线 + 0.5 效果）。
     const score = sim * (0.5 + 0.5 * eff);

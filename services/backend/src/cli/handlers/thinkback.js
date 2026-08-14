@@ -34,12 +34,18 @@ function _parseDays(subCommand, args) {
   for (let i = 0; i < all.length; i += 1) {
     const tok = all[i];
     let raw = null;
-    if ((tok === '--days' || tok === '-d') && i + 1 < all.length) raw = all[i + 1];
+    if ((tok === '--days' || tok === '-d') && i + 1 < all.length) {
+      raw = all[i + 1];
+    }
     const m = /^--days=(.*)$/.exec(tok);
-    if (m) raw = m[1];
+    if (m) {
+      raw = m[1];
+    }
     if (raw != null) {
       const n = Math.floor(Number(raw));
-      if (Number.isFinite(n) && n >= 1) return Math.min(n, _MAX_DAYS);
+      if (Number.isFinite(n) && n >= 1) {
+        return Math.min(n, _MAX_DAYS);
+      }
       return _DEFAULT_DAYS;
     }
   }
@@ -56,7 +62,9 @@ function _tokenFormatter() {
         return out || String(Math.floor(Number(n) || 0));
       };
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return (n) => String(Math.floor(Number(n) || 0));
 }
 
@@ -83,22 +91,24 @@ async function handleThinkback(subCommand, args = [], _options = {}) {
   let habits = {};
   try {
     habits = require('../../services/usageHabitService').getHabitSummary() || {};
-  } catch { /* best-effort:习惯画像可选 */ }
+  } catch {
+    /* best-effort:习惯画像可选 */
+  }
 
   const periodLabel = `近 ${days} 天`;
   let lines = [];
   try {
-    lines = thinkbackReport.buildThinkbackReport(
-      { history, habits, periodLabel },
-      process.env,
-      { fmtTokens: _tokenFormatter() },
-    );
+    lines = thinkbackReport.buildThinkbackReport({ history, habits, periodLabel }, process.env, {
+      fmtTokens: _tokenFormatter(),
+    });
   } catch (e) {
     printError(`生成使用回顾失败:${e && e.message ? e.message : e}`);
     return true;
   }
 
-  for (const l of lines) printInfo(l);
+  for (const l of lines) {
+    printInfo(l);
+  }
   return true;
 }
 

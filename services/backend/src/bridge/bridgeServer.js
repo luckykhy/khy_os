@@ -15,17 +15,22 @@ const http = require('http');
 const os = require('os');
 
 const DEFAULT_PORT = 9222;
+// Bind to all interfaces by default so LAN collaboration (phone/other devices
+// controlling this CLI) works out of the box. Override with BRIDGE_BIND_HOST
+// (e.g. set BRIDGE_BIND_HOST=127.0.0.1 to force localhost-only access).
+const DEFAULT_BIND_HOST = '0.0.0.0';
 const MAX_PORT_RETRIES = 3;
 const TOKEN_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 const BRIDGE_TIMEOUT_MS = parseInt(process.env.KHY_STARTUP_BRIDGE_TIMEOUT_MS || '5000', 10);
 
 let _httpServer = null;
 let _wss = null;
-let _clients = new Map(); // id → { ws, remoteAddress, connectedAt, authenticated }
+const _clients = new Map(); // id → { ws, remoteAddress, connectedAt, authenticated }
 let _token = null;
 let _pin = null; // 6-digit PIN for mobile login
 let _tokenCreatedAt = 0;
 let _lanIp = null;
+let _bindHost = DEFAULT_BIND_HOST; // actual host the server is bound to (drives display URL)
 
 // ── Message History Ring Buffer (for reconnect replay) ──
 const HISTORY_MAX = 50;
@@ -33,7 +38,9 @@ let _messageHistory = []; // recent broadcast messages for replay
 
 let _chalk;
 function chalk() {
-  if (_chalk) return _chalk;
+  if (_chalk) {
+    return _chalk;
+  }
   const m = require('chalk');
   _chalk = m.default || m;
   return _chalk;
@@ -46,36 +53,48 @@ function chalk() {
 // Wildcard "*" is never used.
 const _corsOriginEnv = String(process.env.BRIDGE_CORS_ORIGIN || '').trim();
 const _corsAllowedOrigins = _corsOriginEnv
-  ? _corsOriginEnv.split(',').map(s => s.trim()).filter(Boolean)
+  ? _corsOriginEnv
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
   : []; // empty → dynamic loopback/LAN check
 
 function _isLoopbackOrigin(origin) {
   try {
     const url = new URL(origin);
     const host = url.hostname;
-    return host === 'localhost'
-      || host === '127.0.0.1'
-      || host === '::1'
-      || host === '[::1]';
-  } catch { return false; }
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+  } catch {
+    return false;
+  }
 }
 
 function _isLanOrigin(origin, lanIp) {
   try {
     const url = new URL(origin);
     const host = url.hostname;
-    if (!lanIp) return false;
+    if (!lanIp) {
+      return false;
+    }
     return host === lanIp || host === String(lanIp).replace(/^::ffff:/, '');
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 function resolveCorsOrigin(origin, lanIp) {
-  if (!origin) return null;
+  if (!origin) {
+    return null;
+  }
   if (_corsAllowedOrigins.length > 0) {
     return _corsAllowedOrigins.includes(origin) ? origin : null;
   }
-  if (_isLoopbackOrigin(origin)) return origin;
-  if (_isLanOrigin(origin, lanIp)) return origin;
+  if (_isLoopbackOrigin(origin)) {
+    return origin;
+  }
+  if (_isLanOrigin(origin, lanIp)) {
+    return origin;
+  }
   return null;
 }
 
@@ -88,24 +107,40 @@ function resolveCorsOrigin(origin, lanIp) {
 function _getLanIp() {
   const interfaces = os.networkInterfaces();
   const virtualKeywords = [
-    'vmware', 'virtualbox', 'vbox', 'virtual', 'vethernet',
-    'docker', 'wsl', 'hyper-v', 'loopback', 'tunnel',
+    'vmware',
+    'virtualbox',
+    'vbox',
+    'virtual',
+    'vethernet',
+    'docker',
+    'wsl',
+    'hyper-v',
+    'loopback',
+    'tunnel',
   ];
   const candidates = [];
 
   for (const ifName in interfaces) {
     const lowerName = ifName.toLowerCase();
-    const isVirtual = virtualKeywords.some(kw => lowerName.includes(kw));
+    const isVirtual = virtualKeywords.some((kw) => lowerName.includes(kw));
 
     for (const iface of interfaces[ifName]) {
-      if (iface.family !== 'IPv4' || iface.internal) continue;
+      if (iface.family !== 'IPv4' || iface.internal) {
+        continue;
+      }
       const ip = iface.address;
-      if (ip.startsWith('169.254')) continue; // APIPA
+      if (ip.startsWith('169.254')) {
+        continue;
+      } // APIPA
 
       let priority = 4;
-      if (ip.startsWith('192.168') && !isVirtual) priority = 1;
-      else if (ip.startsWith('10.') && !isVirtual) priority = 2;
-      else if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip) && !isVirtual) priority = 3;
+      if (ip.startsWith('192.168') && !isVirtual) {
+        priority = 1;
+      } else if (ip.startsWith('10.') && !isVirtual) {
+        priority = 2;
+      } else if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip) && !isVirtual) {
+        priority = 3;
+      }
 
       candidates.push({ ip, priority, name: ifName });
     }
@@ -125,12 +160,19 @@ function _parseJsonBody(req) {
     let size = 0;
     req.on('data', (chunk) => {
       size += chunk.length;
-      if (size > MAX_BODY_SIZE) { req.destroy(); reject(new Error('Body too large')); return; }
+      if (size > MAX_BODY_SIZE) {
+        req.destroy();
+        reject(new Error('Body too large'));
+        return;
+      }
       chunks.push(chunk);
     });
     req.on('end', () => {
-      try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
-      catch { reject(new Error('Invalid JSON')); }
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString()));
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
     });
     req.on('error', reject);
   });
@@ -152,7 +194,9 @@ function _setCorsHeaders(req, res) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
   };
-  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400');
@@ -188,13 +232,20 @@ async function _handleHttpRequest(req, res) {
 
   // Health check
   if (req.method === 'GET' && req.url === '/health') {
-    const clients = [..._clients.values()].filter(c => c.authenticated).length;
+    const clients = [..._clients.values()].filter((c) => c.authenticated).length;
     _jsonResponse(res, 200, { status: 'ok', clients });
     return;
   }
 
   // ── Auth API ──
   if (req.method === 'POST' && req.url === '/api/register') {
+    // Rate limit check
+    const rlKey = _getAuthRateLimitKey(req);
+    const rl = _checkAuthRateLimit(rlKey);
+    if (!rl.allowed) {
+      _jsonResponse(res, 429, { ok: false, error: rl.reason, retryAfterMs: rl.retryAfterMs });
+      return;
+    }
     try {
       const body = await _parseJsonBody(req);
       const auth = require('./bridgeAuth');
@@ -207,6 +258,13 @@ async function _handleHttpRequest(req, res) {
   }
 
   if (req.method === 'POST' && req.url === '/api/login') {
+    // Rate limit check
+    const rlKey = _getAuthRateLimitKey(req);
+    const rl = _checkAuthRateLimit(rlKey);
+    if (!rl.allowed) {
+      _jsonResponse(res, 429, { ok: false, error: rl.reason, retryAfterMs: rl.retryAfterMs });
+      return;
+    }
     try {
       const body = await _parseJsonBody(req);
       const auth = require('./bridgeAuth');
@@ -246,7 +304,7 @@ async function _handleHttpRequest(req, res) {
         const tooLarge = err.code === 'LIMIT_FILE_SIZE';
         _jsonResponse(res, tooLarge ? 413 : 400, {
           success: false,
-          error: tooLarge ? '文件过大' : (err.message || '上传失败'),
+          error: tooLarge ? '文件过大' : err.message || '上传失败',
         });
         return;
       }
@@ -271,7 +329,16 @@ async function _handleHttpRequest(req, res) {
   }
 
   // ── Attachment download / preview ──
+  // Bearer-authenticated like the upload path: with default 0.0.0.0 binding any
+  // LAN peer who guessed an id could otherwise pull attachments without login.
   if (req.method === 'GET' && req.url.startsWith('/api/upload/')) {
+    const authz = String(req.headers['authorization'] || '');
+    const token = authz.startsWith('Bearer ') ? authz.slice(7).trim() : '';
+    const auth = require('./bridgeAuth');
+    if (!token || !auth.validateJwt(token).ok) {
+      _jsonResponse(res, 401, { success: false, error: '未授权,请先登录' });
+      return;
+    }
     const fs = require('fs');
     const uploadStore = require('../services/aiUploadStore');
     const id = req.url.slice('/api/upload/'.length).split('?')[0];
@@ -309,7 +376,13 @@ async function startBridgeServer(port) {
   if (_wss) {
     const actualPort = getPort();
     const lanIp = getLanIp();
-    return { port: actualPort, token: _token, pin: _pin, url: `http://${lanIp}:${actualPort}/`, lanIp };
+    return {
+      port: actualPort,
+      token: _token,
+      pin: _pin,
+      url: _getDisplayUrl(actualPort).url,
+      lanIp,
+    };
   }
 
   // Ensure ws is available
@@ -322,17 +395,23 @@ async function startBridgeServer(port) {
   }
 
   const basePort = port || parseInt(process.env.BRIDGE_PORT) || DEFAULT_PORT;
+  const bindHost = process.env.BRIDGE_BIND_HOST || DEFAULT_BIND_HOST;
+  _bindHost = bindHost; // record actual bind host so display URLs match reality
   _token = generateToken();
   _lanIp = _getLanIp();
 
   // Initialize user database for registration/login
-  try { require('./bridgeAuth').initUserDb(); } catch { /* optional */ }
+  try {
+    require('./bridgeAuth').initUserDb();
+  } catch {
+    /* optional */
+  }
 
   // Try binding with port fallback
   for (let attempt = 0; attempt <= MAX_PORT_RETRIES; attempt++) {
     const tryPort = basePort + attempt;
     try {
-      const result = await _tryStartServer(WebSocketServer, tryPort);
+      const result = await _tryStartServer(WebSocketServer, tryPort, bindHost);
       return result;
     } catch (err) {
       if (err.code === 'EADDRINUSE' && attempt < MAX_PORT_RETRIES) {
@@ -346,7 +425,7 @@ async function startBridgeServer(port) {
   return { port: 0, token: '', pin: '', url: '', lanIp: _lanIp };
 }
 
-function _tryStartServer(WebSocketServer, serverPort) {
+function _tryStartServer(WebSocketServer, serverPort, bindHost) {
   return new Promise((resolve, reject) => {
     const httpSrv = http.createServer(_handleHttpRequest);
     const wss = new WebSocketServer({ noServer: true });
@@ -373,20 +452,24 @@ function _tryStartServer(WebSocketServer, serverPort) {
         userAgent,
         connectedAt: Date.now(),
         authenticated: false,
-        deviceName: '',   // set once the client names this device
-        deviceType: '',   // 'phone' | 'tablet' | 'desktop'
+        deviceName: '', // set once the client names this device
+        deviceType: '', // 'phone' | 'tablet' | 'desktop'
       });
 
       ws.on('message', (data) => _handleMessage(clientId, data));
       ws.on('close', () => {
         const wasAuth = _clients.get(clientId)?.authenticated;
         _clients.delete(clientId);
-        if (wasAuth) _broadcastPresence();
+        if (wasAuth) {
+          _broadcastPresence();
+        }
       });
       ws.on('error', () => {
         const wasAuth = _clients.get(clientId)?.authenticated;
         _clients.delete(clientId);
-        if (wasAuth) _broadcastPresence();
+        if (wasAuth) {
+          _broadcastPresence();
+        }
       });
 
       // Send auth challenge
@@ -398,13 +481,13 @@ function _tryStartServer(WebSocketServer, serverPort) {
       reject(err);
     });
 
-    httpSrv.listen(serverPort, () => {
+    httpSrv.listen(serverPort, bindHost, () => {
       clearTimeout(timeoutHandle);
       _httpServer = httpSrv;
       _wss = wss;
 
       const actualPort = httpSrv.address().port;
-      const url = `http://${_lanIp}:${actualPort}/`;
+      const url = _getDisplayUrl(actualPort).url;
       resolve({ port: actualPort, token: _token, pin: _pin, url, lanIp: _lanIp });
     });
   });
@@ -414,11 +497,17 @@ function _tryStartServer(WebSocketServer, serverPort) {
  * Stop the bridge server.
  */
 async function stopBridgeServer() {
-  if (!_wss && !_httpServer) return;
+  if (!_wss && !_httpServer) {
+    return;
+  }
 
   // Close all client connections
   for (const [, client] of _clients) {
-    try { client.ws.close(1000, 'Server shutting down'); } catch { /* ignore */ }
+    try {
+      client.ws.close(1000, 'Server shutting down');
+    } catch {
+      /* ignore */
+    }
   }
   _clients.clear();
 
@@ -451,13 +540,26 @@ async function stopBridgeServer() {
 
 function _handleMessage(clientId, rawData) {
   const client = _clients.get(clientId);
-  if (!client) return;
+  if (!client) {
+    return;
+  }
 
   let msg;
-  try { msg = JSON.parse(rawData.toString()); } catch { return; }
+  try {
+    msg = JSON.parse(rawData.toString());
+  } catch {
+    return;
+  }
 
   switch (msg.type) {
     case 'auth': {
+      // Apply the same per-IP login rate limit as HTTP auth (shared bucket) so a
+      // LAN attacker cannot bypass it by brute-forcing the 6-digit PIN over WS.
+      const rl = _checkAuthRateLimit(_rateLimitKeyForIp(client.remoteAddress));
+      if (!rl.allowed) {
+        _send(client.ws, { type: 'auth_failed', reason: rl.reason, retryAfterMs: rl.retryAfterMs });
+        return;
+      }
       if (_validateToken(msg.token)) {
         client.authenticated = true;
         // A returning device echoes back the name it stored locally; accept it
@@ -486,39 +588,53 @@ function _handleMessage(clientId, rawData) {
     }
 
     case 'input': {
-      if (!client.authenticated) return;
+      if (!client.authenticated) {
+        return;
+      }
       // Attachment ids (from POST /api/upload) ride alongside the text so the
       // REPL consumer can resolve them back into images / extracted text.
       const attachments = Array.isArray(msg.attachments)
-        ? msg.attachments.filter(a => typeof a === 'string')
+        ? msg.attachments.filter((a) => typeof a === 'string')
         : [];
       _emitBridgeEvent('input', { text: msg.text, attachments, clientId });
       break;
     }
 
     case 'approve': {
-      if (!client.authenticated) return;
+      if (!client.authenticated) {
+        return;
+      }
       _emitBridgeEvent('approve', { requestId: msg.requestId, clientId });
       break;
     }
 
     case 'deny': {
-      if (!client.authenticated) return;
+      if (!client.authenticated) {
+        return;
+      }
       _emitBridgeEvent('deny', { requestId: msg.requestId, clientId });
       break;
     }
 
     case 'set_device': {
-      if (!client.authenticated) return;
+      if (!client.authenticated) {
+        return;
+      }
       // Async name resolution; isolated so a failure never disturbs the socket.
-      _handleSetDevice(clientId, msg).catch(() => { /* never throws to caller */ });
+      _handleSetDevice(clientId, msg).catch(() => {
+        /* never throws to caller */
+      });
       break;
     }
 
     case 'resolve_device': {
-      if (!client.authenticated) return;
+      if (!client.authenticated) {
+        return;
+      }
       // Preview a suggested name WITHOUT committing it (prefills the naming UI).
-      _handleResolveDevice(clientId, msg).catch(() => { /* never throws to caller */ });
+      _handleResolveDevice(clientId, msg).catch(() => {
+        /* never throws to caller */
+      });
       break;
     }
 
@@ -542,11 +658,17 @@ function _handleMessage(clientId, rawData) {
  */
 async function _handleSetDevice(clientId, msg) {
   const client = _clients.get(clientId);
-  if (!client) return;
+  if (!client) {
+    return;
+  }
 
-  const { classifyDevice, formatDeviceName, autoDeviceName } = require('@khy/shared/deviceIdentity');
+  const {
+    classifyDevice,
+    formatDeviceName,
+    autoDeviceName,
+  } = require('@khy/shared/deviceIdentity');
   const userAgent = String(msg.userAgent || client.userAgent || '');
-  const hints = (msg.hints && typeof msg.hints === 'object') ? msg.hints : {};
+  const hints = msg.hints && typeof msg.hints === 'object' ? msg.hints : {};
   const { type, label, platform } = classifyDevice(userAgent, hints);
 
   const xx = typeof msg.xx === 'string' ? msg.xx.trim() : '';
@@ -560,7 +682,9 @@ async function _handleSetDevice(clientId, msg) {
     try {
       const { resolveRealName } = require('./deviceNameResolver');
       real = await resolveRealName({ ip: client.remoteAddress, userAgent, hints });
-    } catch { real = null; }
+    } catch {
+      real = null;
+    }
     if (real && real.name) {
       name = formatDeviceName(real.name, label);
       source = real.source;
@@ -590,11 +714,13 @@ async function _handleSetDevice(clientId, msg) {
  */
 async function _handleResolveDevice(clientId, msg) {
   const client = _clients.get(clientId);
-  if (!client) return;
+  if (!client) {
+    return;
+  }
 
   const { classifyDevice } = require('@khy/shared/deviceIdentity');
   const userAgent = String(msg.userAgent || client.userAgent || '');
-  const hints = (msg.hints && typeof msg.hints === 'object') ? msg.hints : {};
+  const hints = msg.hints && typeof msg.hints === 'object' ? msg.hints : {};
   const { type, label } = classifyDevice(userAgent, hints);
 
   let suggestedXx = '';
@@ -606,7 +732,9 @@ async function _handleResolveDevice(clientId, msg) {
       suggestedXx = real.name;
       source = real.source;
     }
-  } catch { /* keep empty suggestion — UI falls back to auto-naming */ }
+  } catch {
+    /* keep empty suggestion — UI falls back to auto-naming */
+  }
 
   _send(client.ws, { type: 'device_suggestion', suggestedXx, label, deviceType: type, source });
 }
@@ -618,12 +746,18 @@ async function _handleResolveDevice(clientId, msg) {
 function _dedupeDeviceName(name, selfId) {
   const taken = new Set();
   for (const [id, c] of _clients) {
-    if (id !== selfId && c.deviceName) taken.add(c.deviceName);
+    if (id !== selfId && c.deviceName) {
+      taken.add(c.deviceName);
+    }
   }
-  if (!taken.has(name)) return name;
+  if (!taken.has(name)) {
+    return name;
+  }
   for (let n = 2; n < 1000; n++) {
     const candidate = `${name}-${n}`;
-    if (!taken.has(candidate)) return candidate;
+    if (!taken.has(candidate)) {
+      return candidate;
+    }
   }
   return name;
 }
@@ -636,7 +770,9 @@ function _dedupeDeviceName(name, selfId) {
 function _getOnlineCount() {
   let count = 0;
   for (const [, c] of _clients) {
-    if (c.authenticated && c.ws.readyState === 1) count++;
+    if (c.authenticated && c.ws.readyState === 1) {
+      count++;
+    }
   }
   return count;
 }
@@ -661,27 +797,59 @@ function _broadcastPresence() {
   broadcastOutput({ type: 'presence', online: _getOnlineCount(), devices: _getOnlineDevices() });
 }
 
+// Event types kept OUT of the reconnect replay ring buffer.
+//
+// Two reasons to skip:
+//  1. ephemeral / high-frequency fragments (pong, presence, chunk_*) are
+//     emitted many times per turn; keeping them out of the 50-entry ring
+//     prevents a single long turn from evicting the meaningful turn skeleton
+//     (turn_start / turn_complete / approval_request) that devices replay;
+//  2. 'chunk_tool_use' is a mid-turn artifact: replaying it to a reconnecting
+//     device resurrects a tool call whose result never arrives, and the client
+//     renders the scattered block as raw JSON to the user. Only settled-turn
+//     events belong in the replay stream.
+// Live (connected) devices still receive every fragment in real time.
+const REPLAY_SKIP_TYPES = new Set([
+  'pong',
+  'presence',
+  'approval_resolved',
+  'chunk_text',
+  'chunk_thinking',
+  'chunk_tool_result',
+  'chunk_status',
+  'chunk_tool_use',
+]);
+
+/**
+ * Whether a broadcast event type must be excluded from the reconnect replay ring.
+ * @param {string} type - broadcast event type
+ * @returns {boolean}
+ */
+function _shouldSkipHistory(type) {
+  return REPLAY_SKIP_TYPES.has(String(type || ''));
+}
+
+/**
+ * Snapshot of the reconnect replay ring buffer (copy — callers cannot mutate it).
+ * @returns {Array<object>}
+ */
+function _getReplayHistory() {
+  return _messageHistory.slice();
+}
+
 /**
  * Broadcast output to all authenticated clients.
  * @param {object} data - message object with `type` field
  */
 function broadcastOutput(data) {
-  if (!_wss) return;
+  if (!_wss) {
+    return;
+  }
 
   const enriched = { ...data, timestamp: Date.now() };
   const msg = JSON.stringify(enriched);
 
-  // Save to history ring buffer (skip ephemeral / high-frequency types).
-  // Per-chunk streaming fragments (chunk_text/thinking/tool_result/status) are
-  // emitted many times per turn; keeping them out of the 50-entry ring prevents
-  // a single long turn from evicting the meaningful turn skeleton (turn_start /
-  // turn_complete / chunk_tool_use / approval_request) that reconnecting devices
-  // replay. Live (connected) devices still receive every fragment in real time.
-  const skipHistory = new Set([
-    'pong', 'presence', 'approval_resolved',
-    'chunk_text', 'chunk_thinking', 'chunk_tool_result', 'chunk_status',
-  ]);
-  if (!skipHistory.has(data.type)) {
+  if (!_shouldSkipHistory(data.type)) {
     _messageHistory.push(enriched);
     if (_messageHistory.length > HISTORY_MAX) {
       _messageHistory = _messageHistory.slice(-HISTORY_MAX);
@@ -689,8 +857,13 @@ function broadcastOutput(data) {
   }
 
   for (const [, client] of _clients) {
-    if (client.authenticated && client.ws.readyState === 1) { // OPEN
-      try { client.ws.send(msg); } catch { /* ignore */ }
+    if (client.authenticated && client.ws.readyState === 1) {
+      // OPEN
+      try {
+        client.ws.send(msg);
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -705,7 +878,9 @@ function generateToken() {
 }
 
 function _validateToken(token) {
-  if (!token) return false;
+  if (!token) {
+    return false;
+  }
 
   // 1. PIN match (6 digits, time-limited)
   if (_pin && token === _pin) {
@@ -718,31 +893,76 @@ function _validateToken(token) {
       if (crypto.timingSafeEqual(Buffer.from(token), Buffer.from(_token))) {
         return Date.now() - _tokenCreatedAt <= TOKEN_EXPIRY_MS;
       }
-    } catch { /* length mismatch */ }
+    } catch {
+      /* length mismatch */
+    }
   }
 
   // 3. JWT session token (self-contained expiry)
   try {
     const auth = require('./bridgeAuth');
     const result = auth.validateJwt(token);
-    if (result.ok) return true;
-  } catch { /* bridgeAuth not available */ }
+    if (result.ok) {
+      return true;
+    }
+  } catch {
+    /* bridgeAuth not available */
+  }
 
   return false;
 }
 
-function getToken() { return _token; }
-function getPin() { return _pin; }
+function getToken() {
+  return _token;
+}
+
+function getPin() {
+  return _pin;
+}
 
 function getPort() {
-  if (!_httpServer) return 0;
+  if (!_httpServer) {
+    return 0;
+  }
   const addr = _httpServer.address();
   return addr ? addr.port : 0;
 }
 
 function getLanIp() {
-  if (!_lanIp) _lanIp = _getLanIp();
+  if (!_lanIp) {
+    _lanIp = _getLanIp();
+  }
   return _lanIp;
+}
+
+// Hosts that only accept connections from this machine itself. Covers the whole
+// IPv4 loopback block (127.0.0.0/8), localhost, and IPv6 loopback including the
+// IPv4-mapped form, so any loopback bind host is correctly treated as local-only.
+function _isLocalOnlyHost(host) {
+  if (!host) {
+    return false;
+  }
+  const h = String(host).toLowerCase();
+  return (
+    h === 'localhost' || h === '::1' || h === '[::1]' || /^127\./.test(h) || /^::ffff:127\./.test(h)
+  );
+}
+
+/**
+ * Build the collaboration display URL aligned with the ACTUAL bind host.
+ * When bound to 127.0.0.1 we must not advertise the LAN IP (other devices
+ * would hit ERR_CONNECTION_REFUSED); when bound to 0.0.0.0 (or any LAN
+ * address) the LAN IP is the correct, reachable address for phones/other hosts.
+ * @param {number} port
+ * @returns {{ url: string, localOnly: boolean }}
+ */
+function _getDisplayUrl(port) {
+  const lanIp = getLanIp();
+  // Also degrade to local-only when no usable LAN interface exists (getLanIp
+  // falls back to 'localhost'); otherwise we would advertise an unreachable URL.
+  const localOnly = _isLocalOnlyHost(_bindHost) || lanIp === 'localhost';
+  const displayHost = localOnly ? '127.0.0.1' : lanIp;
+  return { url: `http://${displayHost}:${port}/`, localOnly };
 }
 
 // ── Event Emitter ──────────────────────────────────────────────────
@@ -751,7 +971,11 @@ const _eventListeners = [];
 
 function _emitBridgeEvent(event, data) {
   for (const listener of _eventListeners) {
-    try { listener(event, data); } catch { /* ignore */ }
+    try {
+      listener(event, data);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -764,7 +988,9 @@ function onBridgeEvent(listener) {
   _eventListeners.push(listener);
   return () => {
     const idx = _eventListeners.indexOf(listener);
-    if (idx >= 0) _eventListeners.splice(idx, 1);
+    if (idx >= 0) {
+      _eventListeners.splice(idx, 1);
+    }
   };
 }
 
@@ -780,11 +1006,20 @@ function printStatus() {
   const port = getPort();
   const connected = getConnectedClients();
   const clientCount = connected.length;
-  const lanIp = getLanIp();
+  const { url, localOnly } = _getDisplayUrl(port);
 
   console.log(c.bold('\n  Bridge Status'));
   console.log(c.gray('  ' + '\u2500'.repeat(35)));
-  console.log(`  \u534F\u4F5C\u94FE\u63A5:  ${c.green(`http://${lanIp}:${port}`)}`);
+  console.log(`  \u534F\u4F5C\u94FE\u63A5:  ${c.green(url)}`);
+  // In localhost-only mode the LAN IP is unreachable from other devices, so tell
+  // the user exactly how to enable LAN collaboration instead of misleading them.
+  if (localOnly) {
+    console.log(
+      c.yellow(
+        '           \u4EC5\u9650\u672C\u673A\u8BBF\u95EE\uFF0C\u8BBE BRIDGE_BIND_HOST=0.0.0.0 \u5F00\u542F\u5C40\u57DF\u7F51\u534F\u4F5C'
+      )
+    );
+  }
   console.log(`  PIN:     ${_pin ? c.cyan.bold(_pin) : c.gray('none')}`);
   console.log(`  \u5DF2\u8FDE\u63A5:  ${c.cyan(clientCount)} \u4E2A\u5BA2\u6237\u7AEF`);
   // List each connected device by name (falls back to its IP when unnamed).
@@ -804,8 +1039,68 @@ function printToken() {
   }
   const remaining = Math.max(0, TOKEN_EXPIRY_MS - (Date.now() - _tokenCreatedAt));
   console.log(c.bold('\n  Bridge Token'));
-  console.log(c.cyan(`  ${_token}`));
+  console.log(c.cyan(`  ${_token.slice(0, 8)}...${_token.slice(-4)}`));
   console.log(c.gray(`  Expires in ${Math.round(remaining / 60000)} minutes\n`));
+}
+
+// ── Rate Limiting for Auth Endpoints ──────────────────────────────
+// Prevent brute-force attacks on PIN/password auth over LAN.
+
+const _authAttempts = new Map(); // key → { count, firstAttempt, lastAttempt }
+const AUTH_RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute window
+const AUTH_RATE_LIMIT_MAX = 10; // max attempts per window per key
+const AUTH_LOCKOUT_MS = 5 * 60_000; // 5 minute lockout after exceeding limit
+
+function _checkAuthRateLimit(key) {
+  const now = Date.now();
+  const entry = _authAttempts.get(key);
+
+  if (!entry) {
+    _authAttempts.set(key, { count: 1, firstAttempt: now, lastAttempt: now });
+    return { allowed: true };
+  }
+
+  // Check if locked out
+  if (entry.count >= AUTH_RATE_LIMIT_MAX && now - entry.lastAttempt < AUTH_LOCKOUT_MS) {
+    const remainingMs = AUTH_LOCKOUT_MS - (now - entry.lastAttempt);
+    return {
+      allowed: false,
+      retryAfterMs: remainingMs,
+      reason: `Too many attempts. Try again in ${Math.ceil(remainingMs / 1000)}s`,
+    };
+  }
+
+  // Reset window if expired
+  if (now - entry.firstAttempt > AUTH_RATE_LIMIT_WINDOW_MS) {
+    entry.count = 1;
+    entry.firstAttempt = now;
+    entry.lastAttempt = now;
+    return { allowed: true };
+  }
+
+  // Increment attempt
+  entry.count++;
+  entry.lastAttempt = now;
+
+  if (entry.count >= AUTH_RATE_LIMIT_MAX) {
+    return {
+      allowed: false,
+      retryAfterMs: AUTH_LOCKOUT_MS,
+      reason: `Rate limit exceeded (${AUTH_RATE_LIMIT_MAX} attempts per minute). Locked out for 5 minutes.`,
+    };
+  }
+
+  return { allowed: true };
+}
+
+function _getAuthRateLimitKey(req) {
+  // Per-IP rate limiting only; HTTP (/api/register, /api/login) and WS auth
+  // share the same bucket so an attacker cannot bypass one path via the other.
+  return _rateLimitKeyForIp(req.socket && req.socket.remoteAddress);
+}
+
+function _rateLimitKeyForIp(ip) {
+  return ip || 'unknown';
 }
 
 // ── Nginx Config Generator ────────────────────────────────────────
@@ -914,7 +1209,11 @@ function printNginxConfig(opts = {}) {
 // ── Helpers ────────────────────────────────────────────────────────
 
 function _send(ws, data) {
-  try { ws.send(JSON.stringify(data)); } catch { /* ignore */ }
+  try {
+    ws.send(JSON.stringify(data));
+  } catch {
+    /* ignore */
+  }
 }
 
 function getConnectedClients() {
@@ -935,14 +1234,19 @@ function getConnectedClients() {
  * also keeps the live (non-secret) collaboration state visible across a whole
  * session instead of scrolling away after the one-shot `printStatus()` banner.
  * `running` is false (and the footer renders nothing) when no bridge is up.
- * @returns {{running:boolean, url?:string, pin?:string, clientCount?:number, tokenShort?:string}}
+ * @returns {{running:boolean, url?:string, localOnly?:boolean, pin?:string, clientCount?:number, tokenShort?:string}}
  */
 function getStatusSnapshot() {
-  if (!_wss) return { running: false };
+  if (!_wss) {
+    return { running: false };
+  }
   const port = getPort();
+  const { url, localOnly } = _getDisplayUrl(port);
   return {
     running: port > 0,
-    url: `http://${getLanIp()}:${port}`,
+    url,
+    // True when bound to 127.0.0.1: the URL is reachable from this machine only.
+    localOnly,
     pin: _pin || '',
     clientCount: getConnectedClients().length,
     // Short, non-sensitive prefix only — mirrors printStatus(), never the full token.
@@ -954,6 +1258,8 @@ module.exports = {
   startBridgeServer,
   stopBridgeServer,
   broadcastOutput,
+  _shouldSkipHistory,
+  _getReplayHistory,
   onBridgeEvent,
   generateToken,
   getConnectedClients,

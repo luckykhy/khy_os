@@ -27,9 +27,10 @@
  *   - 只增不减：能力地板经 `escalate` 进同一单调格，只能把策略抬严，绝不放松红线/熔断。
  */
 
-const { MetaConstraintSolver } = require('./index');
 const injection = require('../metaplan/constraintInjection');
 const strategy = require('../metaplan/constraintStrategy');
+
+const { MetaConstraintSolver } = require('./index');
 
 const SOFT = strategy.STRATEGIES.PROMPT_SOFT;
 const HARD = strategy.STRATEGIES.CODE_HARD;
@@ -51,15 +52,25 @@ const EXT_TABLE = {
 
 /** Resolve the file path a write-style tool targets, across common param names. */
 function _pathOf(params) {
-  if (!params || typeof params !== 'object') return '';
-  return String(params.path || params.file || params.filename || params.file_path || params.filePath || '');
+  if (!params || typeof params !== 'object') {
+    return '';
+  }
+  return String(
+    params.path || params.file || params.filename || params.file_path || params.filePath || ''
+  );
 }
 
 /** The single candidate content value present at the funnel (write/edit tools). */
 function _contentOf(params) {
-  if (!params || typeof params !== 'object') return null;
-  const c = params.content != null ? params.content
-    : (params.new_string != null ? params.new_string : params.text);
+  if (!params || typeof params !== 'object') {
+    return null;
+  }
+  const c =
+    params.content != null
+      ? params.content
+      : params.new_string != null
+        ? params.new_string
+        : params.text;
   return typeof c === 'string' ? c : null;
 }
 
@@ -97,9 +108,13 @@ function _alreadyApproved(params) {
  * the caller fail-closes (安全方向).
  */
 async function _confirmBlock(traceContext, tool, params, note) {
-  const onCtrl = traceContext && typeof traceContext.onControlRequest === 'function'
-    ? traceContext.onControlRequest : null;
-  if (!onCtrl) return false; // 无确认通道 → 不放行（fail-closed）
+  const onCtrl =
+    traceContext && typeof traceContext.onControlRequest === 'function'
+      ? traceContext.onControlRequest
+      : null;
+  if (!onCtrl) {
+    return false;
+  } // 无确认通道 → 不放行（fail-closed）
   let resp = null;
   try {
     resp = await onCtrl({
@@ -114,10 +129,16 @@ async function _confirmBlock(traceContext, tool, params, note) {
     return false;
   }
   // 与 toolCalling/syscallGateway 同一套解码契约：true / 'always' / {behavior:'allow'} 视为放行。
-  if (resp === true || resp === 'always' || resp === 'allow-always') return true;
-  if (resp === false || resp == null) return false;
-  const r = (resp && resp.response) ? resp.response : resp;
-  if (!r || typeof r !== 'object') return false;
+  if (resp === true || resp === 'always' || resp === 'allow-always') {
+    return true;
+  }
+  if (resp === false || resp == null) {
+    return false;
+  }
+  const r = resp && resp.response ? resp.response : resp;
+  if (!r || typeof r !== 'object') {
+    return false;
+  }
   const b = String(r.behavior || '').toLowerCase();
   return b === 'allow' || b === 'allow-always';
 }
@@ -136,7 +157,9 @@ async function _confirmBlock(traceContext, tool, params, note) {
  *   confirmed?:boolean}>}
  */
 async function enforce(ctx = {}) {
-  if (process.env.KHY_METACONSTRAINT === 'off') return { allow: true, skipped: true };
+  if (process.env.KHY_METACONSTRAINT === 'off') {
+    return { allow: true, skipped: true };
+  }
 
   const { tool, params, traceContext } = ctx;
   try {
@@ -165,7 +188,9 @@ async function enforce(ctx = {}) {
     const cap = ticket.capability || {};
     const meta = { floor, band: cap.band, riskClass: cap.riskClass };
 
-    if (floor === SOFT) return { allow: true, ...meta };
+    if (floor === SOFT) {
+      return { allow: true, ...meta };
+    }
 
     if (floor === HARD) {
       // 高压电笼的牙齿：对候选代码跑 AST/语法拦截器，语法不过坚决打回。
@@ -173,7 +198,11 @@ async function enforce(ctx = {}) {
       if (content && language) {
         const v = injection.runHardValidation(ticket._plan, content, { language });
         if (v && v.passed === false) {
-          const why = (v.violations || []).map((x) => x.error).filter(Boolean).join('；') || '代码级校验未通过。';
+          const why =
+            (v.violations || [])
+              .map((x) => x.error)
+              .filter(Boolean)
+              .join('；') || '代码级校验未通过。';
           return {
             allow: false,
             ...meta,
@@ -185,10 +214,18 @@ async function enforce(ctx = {}) {
     }
 
     // System_Block — 极危/不可逆。网关已确认（盖戳）→ 放行不二次打断。
-    if (_alreadyApproved(params)) return { allow: true, ...meta, preApproved: true };
-    const ok = await _confirmBlock(traceContext, tool, params,
-      `能力地板 [${cap.band}/System_Block]：${cap.riskClass} 高危操作需显式确认`);
-    if (ok) return { allow: true, ...meta, confirmed: true };
+    if (_alreadyApproved(params)) {
+      return { allow: true, ...meta, preApproved: true };
+    }
+    const ok = await _confirmBlock(
+      traceContext,
+      tool,
+      params,
+      `能力地板 [${cap.band}/System_Block]：${cap.riskClass} 高危操作需显式确认`
+    );
+    if (ok) {
+      return { allow: true, ...meta, confirmed: true };
+    }
     return {
       allow: false,
       ...meta,

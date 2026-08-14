@@ -21,7 +21,8 @@
 
 const DEFAULT_MAX_PROBES = 2;
 
-const _NETWORK_RE = /network|timeout|etimedout|econnrefused|econnreset|enotfound|offline|无法连接|超时|404|503/i;
+const _NETWORK_RE =
+  /network|timeout|etimedout|econnrefused|econnreset|enotfound|offline|无法连接|超时|404|503/i;
 
 /**
  * 从结构化失败信号识别知识缺口的类型。不解析模型散文判断对错,只看工具层信号。
@@ -38,18 +39,26 @@ function detectKnowledgeGap(signals = {}) {
   const errors = Array.isArray(signals.errors)
     ? signals.errors.map((e) => String(e || '').toLowerCase())
     : [];
-  const hasUnknownTool = signals.hasUnknownTool === true
-    || errors.some((e) => e.includes('unknown tool'));
-  const hasNetwork = signals.hasNetwork === true
-    || errors.some((e) => _NETWORK_RE.test(e));
-  const hasMisuse = errors.some((e) => e.includes('validation failed')
-    || e.includes('invalid') || e.includes('missing required'));
+  const hasUnknownTool =
+    signals.hasUnknownTool === true || errors.some((e) => e.includes('unknown tool'));
+  const hasNetwork = signals.hasNetwork === true || errors.some((e) => _NETWORK_RE.test(e));
+  const hasMisuse = errors.some(
+    (e) =>
+      e.includes('validation failed') || e.includes('invalid') || e.includes('missing required')
+  );
   const consecutiveFailures = Number.isFinite(signals.consecutiveFailures)
-    ? signals.consecutiveFailures : 0;
+    ? signals.consecutiveFailures
+    : 0;
 
-  if (hasUnknownTool) return { hasGap: true, gapType: 'unknown_tool', hasNetwork };
-  if (hasMisuse) return { hasGap: true, gapType: 'tool_misuse', hasNetwork };
-  if (consecutiveFailures > 0) return { hasGap: true, gapType: 'persistent_failure', hasNetwork };
+  if (hasUnknownTool) {
+    return { hasGap: true, gapType: 'unknown_tool', hasNetwork };
+  }
+  if (hasMisuse) {
+    return { hasGap: true, gapType: 'tool_misuse', hasNetwork };
+  }
+  if (consecutiveFailures > 0) {
+    return { hasGap: true, gapType: 'persistent_failure', hasNetwork };
+  }
   return { hasGap: false, gapType: null, hasNetwork };
 }
 
@@ -65,15 +74,20 @@ function detectKnowledgeGap(signals = {}) {
  * @returns {{ action: string, directive: string }|null}
  */
 function planProbe(gap, ctx = {}) {
-  if (!gap || !gap.hasGap) return null;
+  if (!gap || !gap.hasGap) {
+    return null;
+  }
   const maxProbes = Number.isFinite(ctx.maxProbes) ? ctx.maxProbes : DEFAULT_MAX_PROBES;
   const probesUsed = Number.isFinite(ctx.probesUsed) ? ctx.probesUsed : 0;
-  if (probesUsed >= maxProbes) return null;
+  if (probesUsed >= maxProbes) {
+    return null;
+  }
 
   const tools = Array.isArray(ctx.availableTools) ? ctx.availableTools : [];
-  const searchAvailable = typeof ctx.searchAvailable === 'boolean'
-    ? ctx.searchAvailable
-    : tools.some((t) => /search|web_?fetch|retriev|联网|检索/i.test(String(t && t.name)));
+  const searchAvailable =
+    typeof ctx.searchAvailable === 'boolean'
+      ? ctx.searchAvailable
+      : tools.some((t) => /search|web_?fetch|retriev|联网|检索/i.test(String(t && t.name)));
 
   // 未知工具 / 用错工具:先把真实清单摆出来让模型重选 —— 与网络无关,最该先做。
   if (gap.gapType === 'unknown_tool' || gap.gapType === 'tool_misuse') {
@@ -93,29 +107,41 @@ function _listToolsDirective(tools, gapType) {
   const lines = [];
   for (const t of tools.slice(0, _MAX_TOOLS_LISTED)) {
     const name = String((t && t.name) || '').trim();
-    if (!name) continue;
-    const desc = String((t && t.description) || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+    if (!name) {
+      continue;
+    }
+    const desc = String((t && t.description) || '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 80);
     lines.push(desc ? `- ${name}: ${desc}` : `- ${name}`);
   }
-  const head = gapType === 'unknown_tool'
-    ? '你调用了**不存在**的工具,导致连续失败。'
-    : '你的工具调用参数有误(校验失败),导致连续失败。';
+  const head =
+    gapType === 'unknown_tool'
+      ? '你调用了**不存在**的工具,导致连续失败。'
+      : '你的工具调用参数有误(校验失败),导致连续失败。';
   const list = lines.length ? lines.join('\n') : '(当前无可用工具)';
-  return `[SYSTEM: ${head}下面是当前**真实可用**的工具清单,请只从中选择、用正确的名称与参数重试,`
-    + `不要再凭印象编造工具名或参数:\n${list}\n先选对工具,再继续完成任务。]`;
+  return (
+    `[SYSTEM: ${head}下面是当前**真实可用**的工具清单,请只从中选择、用正确的名称与参数重试,` +
+    `不要再凭印象编造工具名或参数:\n${list}\n先选对工具,再继续完成任务。]`
+  );
 }
 
 function _webSearchDirective() {
-  return '[SYSTEM: 你似乎遇到了**不熟悉的概念、库或报错信息**,仅凭已有知识难以判断。'
-    + '请**先主动用 web_search 工具检索**相关事实(把陌生的术语或报错原文作为查询),'
-    + '拿到可靠信息后再继续——不要凭猜测作答,也不要直接放弃。]';
+  return (
+    '[SYSTEM: 你似乎遇到了**不熟悉的概念、库或报错信息**,仅凭已有知识难以判断。' +
+    '请**先主动用 web_search 工具检索**相关事实(把陌生的术语或报错原文作为查询),' +
+    '拿到可靠信息后再继续——不要凭猜测作答,也不要直接放弃。]'
+  );
 }
 
 function _inspectEnvDirective(offline) {
   const why = offline ? '当前无法联网检索,' : '';
-  return `[SYSTEM: 你似乎遇到了**不熟悉的情况**,${why}请**先主动探查本地环境**来获取事实:`
-    + '阅读相关文件、运行带 --help/--version 的命令、查看目录结构或依赖状态,'
-    + '据此推断这个未知概念/错误的真相,再决定下一步。先查清事实,不要直接放弃。]';
+  return (
+    `[SYSTEM: 你似乎遇到了**不熟悉的情况**,${why}请**先主动探查本地环境**来获取事实:` +
+    '阅读相关文件、运行带 --help/--version 的命令、查看目录结构或依赖状态,' +
+    '据此推断这个未知概念/错误的真相,再决定下一步。先查清事实,不要直接放弃。]'
+  );
 }
 
 module.exports = {

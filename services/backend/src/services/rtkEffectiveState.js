@@ -36,16 +36,24 @@ function isEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_RTK_EFFECTIVE_STATE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_RTK_EFFECTIVE_STATE;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
 
-function _bool(v) { return v === true; }
+function _bool(v) {
+  return v === true;
+}
 
 /**
  * 纯对账:把三个布尔算成三态真值 + 措辞。不看门控(门控由 describeEffectiveState 施加),
@@ -78,7 +86,8 @@ function resolveEffectiveState(input = {}) {
   } else {
     // 关键诚实档:开着但没装 → 未生效。绝不显示为「已启用」。
     status = 'pending-install';
-    label = '已开启,但 rtk 未安装 —— 暂未生效(当前用原生 smartTruncation 兜底,token 仍在压,只是缺 RTK 的 60–90% 深压)';
+    label =
+      '已开启,但 rtk 未安装 —— 暂未生效(当前用原生 smartTruncation 兜底,token 仍在压,只是缺 RTK 的 60–90% 深压)';
     hint = autoInstall
       ? '立即安装:khy rtk install(或首次跑 shell 命令时会自动安装)'
       : '立即安装:khy rtk install(自动安装当前关闭 KHY_RTK_AUTO_INSTALL)';
@@ -95,7 +104,9 @@ function resolveEffectiveState(input = {}) {
  */
 function describeEffectiveState(input = {}, env) {
   try {
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     return resolveEffectiveState(input);
   } catch {
     return null;

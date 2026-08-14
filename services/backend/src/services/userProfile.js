@@ -12,11 +12,24 @@
  * Export/import via `khy profile export` / `khy profile import`.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const PROFILE_DIR = path.join(os.homedir(), '.khyquant');
-const PROFILE_PATH = path.join(PROFILE_DIR, 'profile.json');
+// Lazily resolve the profile directory under the app home (portable-aware).
+// No local caching: preserves getAppHome() live-resolve semantics.
+function _profileDir() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+
+function _profilePath() {
+  return path.join(_profileDir(), 'profile.json');
+}
+
 const MAX_HISTORY_ITEMS = 200;
 const MAX_FREQUENT_ITEMS = 20;
 
@@ -34,29 +47,29 @@ function createDefaultProfile() {
       theme: 'auto',
       defaultCapital: 100000,
       defaultPeriod: '1y',
-      aiMode: false,          // remember AI mode preference
-      favoriteSymbols: [],    // user-pinned symbols
+      aiMode: false, // remember AI mode preference
+      favoriteSymbols: [], // user-pinned symbols
       favoriteStrategies: [], // user-pinned strategies
     },
 
     // ── Behavioral Data (auto-learned) ──────────────────────────
     behavior: {
-      commandFrequency: {},    // { "quote": 45, "backtest": 12, ... }
-      symbolHistory: [],       // recent symbols queried (deduped, ordered by recency)
-      strategyHistory: [],     // recent strategy IDs used
-      sessionCount: 0,         // total sessions started
-      totalCommands: 0,        // total commands executed
-      lastSession: null,       // ISO timestamp of last session
-      errorPatterns: {},       // { "error_type": count } for proactive help
-      timeOfDayUsage: {},      // { "morning": 5, "afternoon": 12, ... }
+      commandFrequency: {}, // { "quote": 45, "backtest": 12, ... }
+      symbolHistory: [], // recent symbols queried (deduped, ordered by recency)
+      strategyHistory: [], // recent strategy IDs used
+      sessionCount: 0, // total sessions started
+      totalCommands: 0, // total commands executed
+      lastSession: null, // ISO timestamp of last session
+      errorPatterns: {}, // { "error_type": count } for proactive help
+      timeOfDayUsage: {}, // { "morning": 5, "afternoon": 12, ... }
     },
 
     // ── Adaptive State (computed from behavior) ─────────────────
     adaptive: {
-      suggestedSymbols: [],    // top N most queried symbols
-      suggestedCommands: [],   // top N most used commands
-      skillLevel: 'beginner',  // beginner → intermediate → advanced
-      contextHints: true,      // show contextual tips (disable once experienced)
+      suggestedSymbols: [], // top N most queried symbols
+      suggestedCommands: [], // top N most used commands
+      skillLevel: 'beginner', // beginner → intermediate → advanced
+      contextHints: true, // show contextual tips (disable once experienced)
     },
 
     // ── Sync Metadata ───────────────────────────────────────────
@@ -79,19 +92,22 @@ function generateDeviceId() {
 let _profile = null;
 
 function ensureDir() {
-  if (!fs.existsSync(PROFILE_DIR)) {
-    fs.mkdirSync(PROFILE_DIR, { recursive: true });
+  const dir = _profileDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 }
 
 function load() {
-  if (_profile) return _profile;
+  if (_profile) {
+    return _profile;
+  }
 
   ensureDir();
 
   try {
-    if (fs.existsSync(PROFILE_PATH)) {
-      const raw = fs.readFileSync(PROFILE_PATH, 'utf-8');
+    if (fs.existsSync(_profilePath())) {
+      const raw = fs.readFileSync(_profilePath(), 'utf-8');
       _profile = JSON.parse(raw);
       // Migrate older versions
       if (!_profile.version || _profile.version < 2) {
@@ -109,12 +125,16 @@ function load() {
 }
 
 function save() {
-  if (!_profile) return;
+  if (!_profile) {
+    return;
+  }
   _profile.updatedAt = new Date().toISOString();
   ensureDir();
   try {
-    fs.writeFileSync(PROFILE_PATH, JSON.stringify(_profile, null, 2), 'utf-8');
-  } catch { /* ignore write errors on readonly FS */ }
+    fs.writeFileSync(_profilePath(), JSON.stringify(_profile, null, 2), 'utf-8');
+  } catch {
+    /* ignore write errors on readonly FS */
+  }
 }
 
 // ── Behavior Tracking ───────────────────────────────────────────────────
@@ -134,7 +154,9 @@ function trackSymbol(symbol) {
 
   // Move to front (most recent first), deduplicate
   const idx = history.indexOf(symbol);
-  if (idx !== -1) history.splice(idx, 1);
+  if (idx !== -1) {
+    history.splice(idx, 1);
+  }
   history.unshift(symbol);
 
   // Cap history size
@@ -151,10 +173,14 @@ function trackStrategy(strategyId) {
   const history = profile.behavior.strategyHistory;
 
   const idx = history.indexOf(strategyId);
-  if (idx !== -1) history.splice(idx, 1);
+  if (idx !== -1) {
+    history.splice(idx, 1);
+  }
   history.unshift(strategyId);
 
-  if (history.length > 50) history.length = 50;
+  if (history.length > 50) {
+    history.length = 50;
+  }
   save();
 }
 
@@ -173,10 +199,15 @@ function trackSessionStart() {
   // Track time of day usage
   const hour = new Date().getHours();
   let period;
-  if (hour < 6) period = 'night';
-  else if (hour < 12) period = 'morning';
-  else if (hour < 18) period = 'afternoon';
-  else period = 'evening';
+  if (hour < 6) {
+    period = 'night';
+  } else if (hour < 12) {
+    period = 'morning';
+  } else if (hour < 18) {
+    period = 'afternoon';
+  } else {
+    period = 'evening';
+  }
 
   const tod = profile.behavior.timeOfDayUsage;
   tod[period] = (tod[period] || 0) + 1;
@@ -266,20 +297,35 @@ function getGreeting() {
   const sessions = profile.behavior.sessionCount;
 
   let timeGreeting;
-  if (hour < 6) timeGreeting = '夜深了，注意休息';
-  else if (hour < 9) timeGreeting = '早上好';
-  else if (hour < 12) timeGreeting = '上午好';
-  else if (hour < 14) timeGreeting = '中午好';
-  else if (hour < 18) timeGreeting = '下午好';
-  else timeGreeting = '晚上好';
+  if (hour < 6) {
+    timeGreeting = '夜深了，注意休息';
+  } else if (hour < 9) {
+    timeGreeting = '早上好';
+  } else if (hour < 12) {
+    timeGreeting = '上午好';
+  } else if (hour < 14) {
+    timeGreeting = '中午好';
+  } else if (hour < 18) {
+    timeGreeting = '下午好';
+  } else {
+    timeGreeting = '晚上好';
+  }
 
-  if (sessions <= 1) return `${timeGreeting}，欢迎使用 khy OS！输入 docs 查看新手教程`;
-  if (sessions <= 5) return `${timeGreeting}，正在熟悉中...试试 menu 打开菜单`;
-  if (sessions <= 20) return timeGreeting;
+  if (sessions <= 1) {
+    return `${timeGreeting}，欢迎使用 khy OS！输入 docs 查看新手教程`;
+  }
+  if (sessions <= 5) {
+    return `${timeGreeting}，正在熟悉中...试试 menu 打开菜单`;
+  }
+  if (sessions <= 20) {
+    return timeGreeting;
+  }
 
   // For experienced users, show relevant market info
   const topSymbol = profile.adaptive.suggestedSymbols[0];
-  if (topSymbol) return `${timeGreeting} · 输入 hq ${topSymbol} 查看最新行情`;
+  if (topSymbol) {
+    return `${timeGreeting} · 输入 hq ${topSymbol} 查看最新行情`;
+  }
   return timeGreeting;
 }
 
@@ -418,6 +464,57 @@ function resetProfile() {
   return _profile;
 }
 
+/**
+ * Aggregate a structured identity summary for reference/identity disambiguation.
+ * Combines the portable deviceId, OS username (os.userInfo().username), skill
+ * level, language and a few preference signals. Every field is safely defaulted
+ * so callers (pure leaves) never see undefined; never throws.
+ *
+ * @returns {{
+ *   deviceId:(string|null), osUser:(string|null), skillLevel:string,
+ *   language:string, preferences:object, sessions:number, totalCommands:number,
+ *   hasIdentity:boolean
+ * }}
+ */
+function getIdentitySummary() {
+  const summary = {
+    deviceId: null,
+    osUser: null,
+    skillLevel: 'beginner',
+    language: 'zh-CN',
+    preferences: {},
+    sessions: 0,
+    totalCommands: 0,
+    hasIdentity: false,
+  };
+  try {
+    const profile = load();
+    summary.deviceId = (profile && profile.deviceId) || null;
+    summary.skillLevel = (profile && profile.adaptive && profile.adaptive.skillLevel) || 'beginner';
+    const prefs = (profile && profile.preferences) || {};
+    summary.language = prefs.language || 'zh-CN';
+    summary.preferences = {
+      theme: prefs.theme,
+      aiMode: prefs.aiMode,
+      favoriteSymbols: Array.isArray(prefs.favoriteSymbols) ? prefs.favoriteSymbols : [],
+      favoriteStrategies: Array.isArray(prefs.favoriteStrategies) ? prefs.favoriteStrategies : [],
+    };
+    const behavior = (profile && profile.behavior) || {};
+    summary.sessions = behavior.sessionCount || 0;
+    summary.totalCommands = behavior.totalCommands || 0;
+  } catch {
+    /* safe fallback: keep defaults */
+  }
+  try {
+    const info = os.userInfo();
+    summary.osUser = (info && info.username) || null;
+  } catch {
+    /* os.userInfo can throw on some sandboxes */
+  }
+  summary.hasIdentity = !!(summary.deviceId || summary.osUser);
+  return summary;
+}
+
 module.exports = {
   // Tracking
   trackCommand,
@@ -435,6 +532,7 @@ module.exports = {
   getAiModePreference,
   setAiModePreference,
   getProfileSummary,
+  getIdentitySummary,
 
   // Favorites
   addFavoriteSymbol,
@@ -446,6 +544,19 @@ module.exports = {
   resetProfile,
 
   // Constants
-  PROFILE_DIR,
-  PROFILE_PATH,
 };
+
+// Lazy getters keep destructured requires working while resolving
+// the portable-aware location at access time (not at require time).
+Object.defineProperty(module.exports, 'PROFILE_DIR', {
+  enumerable: true,
+  get() {
+    return _profileDir();
+  },
+});
+Object.defineProperty(module.exports, 'PROFILE_PATH', {
+  enumerable: true,
+  get() {
+    return _profilePath();
+  },
+});

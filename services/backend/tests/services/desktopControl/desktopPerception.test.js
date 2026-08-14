@@ -223,6 +223,45 @@ describe('uiInspector — 场景感知编排', () => {
     expect(r.success).toBe(true);
     expect(r.count).toBe(0);
   });
+
+  test('desktop:true 在 Windows 上选中桌面图标专用后端（FolderView 枚举）', async () => {
+    const seen = [];
+    const deps = {
+      detect: () => ({ platform: 'win32', perception: { available: true, backend: 'windows-uia' } }),
+      resolveBackend: (platform, kind, id) => {
+        seen.push(id);
+        return registry.backendsFor(platform, kind).find((b) => b.id === id);
+      },
+      execFile: (_c, _a, _o, cb) => cb(null, JSON.stringify([
+        { role: 'icon', name: '此电脑', x: 20, y: 40, w: 40, h: 40, enabled: true },
+        { role: 'icon', name: '回收站', x: 20, y: 120, w: 40, h: 40, enabled: true },
+      ]), ''),
+    };
+    const r = await uiInspector.inspect({ desktop: true }, deps);
+    expect(seen).toContain('windows-desktop-icons');
+    expect(r.success).toBe(true);
+    expect(r.backend).toBe('windows-desktop-icons');
+    expect(r.elements.map((e) => e.name)).toEqual(['此电脑', '回收站']);
+    expect(r.desktop).toBe(true);
+  });
+
+  test('desktop:true 在非 Windows 平台回退普通无障碍树', async () => {
+    const seen = [];
+    const deps = {
+      detect: () => ({ platform: 'linux', perception: { available: true, backend: 'linux-atspi' } }),
+      resolveBackend: (platform, kind, id) => {
+        seen.push(id);
+        return registry.backendsFor(platform, kind).find((b) => b.id === id);
+      },
+      execFile: (_c, _a, _o, cb) => cb(null, JSON.stringify([
+        { role: 'button', name: 'OK', x: 0, y: 0, w: 10, h: 10, enabled: true },
+      ]), ''),
+    };
+    const r = await uiInspector.inspect({ desktop: true }, deps);
+    expect(seen).toEqual(['linux-atspi']);
+    expect(r.backend).toBe('linux-atspi');
+    expect(r.elements[0].name).toBe('OK');
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────

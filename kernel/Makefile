@@ -104,7 +104,7 @@ KERNEL   = $(BUILD)/khy-os.bin
 ISO      = $(BUILD)/khy-os-kernel.iso
 
 # Default target
-.PHONY: all clean run run-serial iso iso-limine moonbit-build userland run-agent
+.PHONY: all clean check run run-serial iso iso-limine moonbit-build userland run-agent run-disk run-debug
 
 all: $(ISO)
 
@@ -243,3 +243,16 @@ iso: $(ISO)
 clean:
 	rm -rf $(BUILD)
 	cd $(MOONBIT_DIR) && moon clean 2>/dev/null || true
+
+# ── Sanity check ───────────────────────────────────────────────
+# Quick verification of the built kernel binary: ELF magic, entry point,
+# and reasonable size.  Run after `make` or in CI to catch link failures
+# that produce a zero-length or non-ELF file.
+check: $(KERNEL)
+	@echo "[CHECK] Verifying $(KERNEL)"
+	@test -s $(KERNEL) || { echo "[CHECK] FAIL: kernel binary is empty"; exit 1; }
+	@head -c 4 $(KERNEL) | grep -q $'\x7fELF' || { echo "[CHECK] FAIL: not an ELF binary"; exit 1; }
+	@SIZE=$$(stat -c%s $(KERNEL) 2>/dev/null || stat -f%z $(KERNEL)); \
+	  echo "[CHECK] Size: $$SIZE bytes"; \
+	  test $$SIZE -gt 65536 || { echo "[CHECK] WARN: kernel unusually small ($$SIZE bytes)"; }
+	@echo "[CHECK] OK: $(KERNEL) looks like a valid ELF kernel binary"

@@ -9,8 +9,8 @@
  * 零 IO、确定性——每个断言显式传 env,不依赖进程环境。
  */
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const gate = require('../goalStopGate');
 
@@ -38,9 +38,9 @@ test('resolveMaxRedrives:默认 1、env 覆盖、非法回退、clamp [0,10]', (
   assert.equal(gate.resolveMaxRedrives({}), gate.GOAL_STOP_GATE_DEFAULT_MAX);
   assert.equal(gate.GOAL_STOP_GATE_DEFAULT_MAX, 1);
   assert.equal(gate.resolveMaxRedrives({ KHY_GOAL_STOP_GATE_MAX: '3' }), 3);
-  assert.equal(gate.resolveMaxRedrives({ KHY_GOAL_STOP_GATE_MAX: '0' }), 0);   // 0 合法(相当于只判达成/清除,不再驱动)
+  assert.equal(gate.resolveMaxRedrives({ KHY_GOAL_STOP_GATE_MAX: '0' }), 0); // 0 合法(相当于只判达成/清除,不再驱动)
   assert.equal(gate.resolveMaxRedrives({ KHY_GOAL_STOP_GATE_MAX: '99' }), 10); // clamp 上限
-  assert.equal(gate.resolveMaxRedrives({ KHY_GOAL_STOP_GATE_MAX: '-2' }), 1);  // 负 → 默认
+  assert.equal(gate.resolveMaxRedrives({ KHY_GOAL_STOP_GATE_MAX: '-2' }), 1); // 负 → 默认
   assert.equal(gate.resolveMaxRedrives({ KHY_GOAL_STOP_GATE_MAX: 'abc' }), 1); // 非法 → 默认
 });
 
@@ -68,7 +68,10 @@ test('looksLikeGoalSatisfied:否定完成 → false(优先级最高)', () => {
 test('looksLikeGoalSatisfied:完成态被未来时计划主导 → false(保守再推)', () => {
   assert.equal(gate.looksLikeGoalSatisfied('已看完文件,接下来我将重构核心模块。'), false);
   assert.equal(gate.looksLikeGoalSatisfied('已完成初步分析,下一步我会写测试。'), false);
-  assert.equal(gate.looksLikeGoalSatisfied("I've finished reading; next I will implement it."), false);
+  assert.equal(
+    gate.looksLikeGoalSatisfied("I've finished reading; next I will implement it."),
+    false
+  );
 });
 
 test('looksLikeGoalSatisfied:空/纯前言/无完成信号 → false', () => {
@@ -90,11 +93,18 @@ test('buildRedriveMessage:含目标文本、二选一、GoalTool(clear)、用户
 });
 
 test('evaluateGoalStop:门控关 → pass(字节回退今日行为)', () => {
-  const v = gate.evaluateGoalStop({ goal: GOAL, reply: '让我先看看。', env: { KHY_GOAL_STOP_GATE: '0' } });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '让我先看看。',
+    env: { KHY_GOAL_STOP_GATE: '0' },
+  });
   assert.equal(v.action, 'pass');
   assert.equal(v.reason, 'gate-off');
   // 父门控关同样 pass
-  assert.equal(gate.evaluateGoalStop({ goal: GOAL, reply: 'x', env: { KHY_GOAL: 'off' } }).action, 'pass');
+  assert.equal(
+    gate.evaluateGoalStop({ goal: GOAL, reply: 'x', env: { KHY_GOAL: 'off' } }).action,
+    'pass'
+  );
 });
 
 test('evaluateGoalStop:无活动目标 → pass', () => {
@@ -104,19 +114,32 @@ test('evaluateGoalStop:无活动目标 → pass', () => {
 
 test('evaluateGoalStop:达成 + 自动清除开 → clear', () => {
   // 声称验证须带证据(证据门默认开),否则会被降级为 evidence-missing redrive
-  const v = gate.evaluateGoalStop({ goal: GOAL, reply: '目标已完成,已验证:\n```\n8 passed\n```', env: {} });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '目标已完成,已验证:\n```\n8 passed\n```',
+    env: {},
+  });
   assert.equal(v.action, 'clear');
   assert.equal(v.reason, 'satisfied');
 });
 
 test('evaluateGoalStop:达成 + 自动清除关 → pass(交由模型自清)', () => {
-  const v = gate.evaluateGoalStop({ goal: GOAL, reply: '目标已完成。', env: { KHY_GOAL_AUTO_CLEAR: '0' } });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '目标已完成。',
+    env: { KHY_GOAL_AUTO_CLEAR: '0' },
+  });
   assert.equal(v.action, 'pass');
   assert.equal(v.reason, 'satisfied');
 });
 
 test('evaluateGoalStop:未达成且预算未耗尽 → redrive(带 message)', () => {
-  const v = gate.evaluateGoalStop({ goal: GOAL, reply: '我先看看代码。', redriveCount: 0, env: {} });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '我先看看代码。',
+    redriveCount: 0,
+    env: {},
+  });
   assert.equal(v.action, 'redrive');
   assert.equal(v.reason, 'not-satisfied');
   assert.ok(v.message && v.message.includes(GOAL.text));
@@ -128,7 +151,12 @@ test('evaluateGoalStop:未达成但预算耗尽 → pass(跨轮由轮次预算�
   assert.equal(v.action, 'pass');
   assert.equal(v.reason, 'redrive-exhausted');
   // max=0:任何未达成都直接 pass(不再驱动)
-  const v0 = gate.evaluateGoalStop({ goal: GOAL, reply: '继续。', redriveCount: 0, env: { KHY_GOAL_STOP_GATE_MAX: '0' } });
+  const v0 = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '继续。',
+    redriveCount: 0,
+    env: { KHY_GOAL_STOP_GATE_MAX: '0' },
+  });
   assert.equal(v0.action, 'pass');
 });
 
@@ -198,14 +226,23 @@ test('buildEvidenceRedriveMessage:含目标文本、要求粘贴输出、GoalToo
 });
 
 test('evaluateGoalStop:声称验证但无证据 → redrive(evidence-missing,带证据文案)', () => {
-  const v = gate.evaluateGoalStop({ goal: GOAL, reply: '全部测试通过,目标已完成。', redriveCount: 0, env: {} });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '全部测试通过,目标已完成。',
+    redriveCount: 0,
+    env: {},
+  });
   assert.equal(v.action, 'redrive');
   assert.equal(v.reason, 'evidence-missing');
   assert.ok(v.message && v.message.includes('具体证据'));
 });
 
 test('evaluateGoalStop:声称验证且有证据 → clear(证据门放行)', () => {
-  const v = gate.evaluateGoalStop({ goal: GOAL, reply: '全部测试通过:\n```\n12 passed, 0 failed\n```\n目标已完成。', env: {} });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '全部测试通过:\n```\n12 passed, 0 failed\n```\n目标已完成。',
+    env: {},
+  });
   assert.equal(v.action, 'clear');
   assert.equal(v.reason, 'satisfied');
 });
@@ -217,13 +254,22 @@ test('evaluateGoalStop:纯"目标已完成"(不声称验证)→ clear(不被证�
 });
 
 test('evaluateGoalStop:证据门关 → 字节回退(声称无证据也 clear)', () => {
-  const v = gate.evaluateGoalStop({ goal: GOAL, reply: '全部测试通过,目标已完成。', env: { KHY_GOAL_EVIDENCE_GATE: '0' } });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '全部测试通过,目标已完成。',
+    env: { KHY_GOAL_EVIDENCE_GATE: '0' },
+  });
   assert.equal(v.action, 'clear');
   assert.equal(v.reason, 'satisfied');
 });
 
 test('evaluateGoalStop:证据缺失但 redrive 预算耗尽 → pass(不自动清除未证实目标)', () => {
-  const v = gate.evaluateGoalStop({ goal: GOAL, reply: '全部测试通过,目标已完成。', redriveCount: 1, env: {} });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL,
+    reply: '全部测试通过,目标已完成。',
+    redriveCount: 1,
+    env: {},
+  });
   assert.equal(v.action, 'pass');
   assert.equal(v.reason, 'evidence-missing-exhausted');
 });
@@ -241,7 +287,10 @@ test('isCompletionContractEnabled:默认开;显式 falsy 关;父门控 KHY_GOAL_
     assert.equal(gate.isCompletionContractEnabled({ KHY_GOAL_COMPLETION_CONTRACT: v }), false, v);
   }
   assert.equal(gate.isCompletionContractEnabled({ KHY_GOAL_STOP_GATE: '0' }), false);
-  assert.equal(gate.isCompletionContractEnabled({ KHY_GOAL: 'off', KHY_GOAL_COMPLETION_CONTRACT: '1' }), false);
+  assert.equal(
+    gate.isCompletionContractEnabled({ KHY_GOAL: 'off', KHY_GOAL_COMPLETION_CONTRACT: '1' }),
+    false
+  );
 });
 
 test('evaluateGoalStop:声明了标准但证据未全覆盖 → redrive(contract-unmet,指名缺哪条)', () => {
@@ -269,7 +318,11 @@ test('evaluateGoalStop:契约未覆盖但预算耗尽 → pass(不自动清除�
 
 test('evaluateGoalStop:契约门关 → 字节回退(不再逐条核对,证据齐即 clear)', () => {
   const reply = '目标已完成:\n```\n12 passed\n```'; // 只满足测试,缺 arch:god
-  const v = gate.evaluateGoalStop({ goal: GOAL_WITH_CONTRACT, reply, env: { KHY_GOAL_COMPLETION_CONTRACT: '0' } });
+  const v = gate.evaluateGoalStop({
+    goal: GOAL_WITH_CONTRACT,
+    reply,
+    env: { KHY_GOAL_COMPLETION_CONTRACT: '0' },
+  });
   assert.equal(v.action, 'clear');
   assert.equal(v.reason, 'satisfied');
 });

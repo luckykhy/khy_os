@@ -34,9 +34,15 @@ function createSseTextDecoder() {
      * @returns {string}
      */
     write(chunk) {
-      if (chunk == null) return '';
-      if (Buffer.isBuffer(chunk)) return decoder.write(chunk);
-      if (typeof chunk === 'string') return chunk;
+      if (chunk == null) {
+        return '';
+      }
+      if (Buffer.isBuffer(chunk)) {
+        return decoder.write(chunk);
+      }
+      if (typeof chunk === 'string') {
+        return chunk;
+      }
       try {
         return decoder.write(Buffer.from(chunk));
       } catch {

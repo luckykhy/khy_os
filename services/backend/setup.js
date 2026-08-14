@@ -47,17 +47,17 @@ const REQUIRED_PYTHON_PACKAGES = ['akshare'];
 const isColorSupported = process.stdout.isTTY && !process.env.NO_COLOR;
 
 const c = {
-  reset:   (s) => isColorSupported ? `\x1b[0m${s}\x1b[0m` : s,
-  bold:    (s) => isColorSupported ? `\x1b[1m${s}\x1b[0m` : s,
-  dim:     (s) => isColorSupported ? `\x1b[2m${s}\x1b[0m` : s,
-  red:     (s) => isColorSupported ? `\x1b[31m${s}\x1b[0m` : s,
-  green:   (s) => isColorSupported ? `\x1b[32m${s}\x1b[0m` : s,
-  yellow:  (s) => isColorSupported ? `\x1b[33m${s}\x1b[0m` : s,
-  blue:    (s) => isColorSupported ? `\x1b[34m${s}\x1b[0m` : s,
-  cyan:    (s) => isColorSupported ? `\x1b[36m${s}\x1b[0m` : s,
+  reset: (s) => (isColorSupported ? `\x1b[0m${s}\x1b[0m` : s),
+  bold: (s) => (isColorSupported ? `\x1b[1m${s}\x1b[0m` : s),
+  dim: (s) => (isColorSupported ? `\x1b[2m${s}\x1b[0m` : s),
+  red: (s) => (isColorSupported ? `\x1b[31m${s}\x1b[0m` : s),
+  green: (s) => (isColorSupported ? `\x1b[32m${s}\x1b[0m` : s),
+  yellow: (s) => (isColorSupported ? `\x1b[33m${s}\x1b[0m` : s),
+  blue: (s) => (isColorSupported ? `\x1b[34m${s}\x1b[0m` : s),
+  cyan: (s) => (isColorSupported ? `\x1b[36m${s}\x1b[0m` : s),
 };
 
-const ok   = (msg) => console.log(c.green('  ✓ ') + msg);
+const ok = (msg) => console.log(c.green('  ✓ ') + msg);
 const fail = (msg) => console.log(c.red('  ✗ ') + msg);
 const warn = (msg) => console.log(c.yellow('  ⚠ ') + msg);
 const info = (msg) => console.log(c.blue('  ℹ ') + msg);
@@ -84,7 +84,9 @@ function isInChina() {
     try {
       const tz2 = fs.readFileSync(timezoneFile, 'utf-8').trim();
       if (tz2.includes('Asia/Shanghai') || tz2.includes('Asia/Chongqing')) return true;
-    } catch { /* file may not exist */ }
+    } catch {
+      /* file may not exist */
+    }
   }
   return false;
 }
@@ -93,7 +95,11 @@ function isInChina() {
 
 function runSilent(cmd, args = []) {
   try {
-    return execFileSync(cmd, args, { encoding: 'utf-8', timeout: 30000, stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    return execFileSync(cmd, args, {
+      encoding: 'utf-8',
+      timeout: 30000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
   } catch {
     return null;
   }
@@ -115,9 +121,10 @@ function runVisible(cmd, args = [], label) {
 function createPrompt() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-  const ask = (question) => new Promise((resolve) => {
-    rl.question(question, (answer) => resolve(answer.trim()));
-  });
+  const ask = (question) =>
+    new Promise((resolve) => {
+      rl.question(question, (answer) => resolve(answer.trim()));
+    });
 
   const confirm = async (question, defaultYes = true) => {
     const hint = defaultYes ? '[Y/n]' : '[y/N]';
@@ -130,11 +137,13 @@ function createPrompt() {
     console.log(`\n  ${question}`);
     options.forEach((opt, i) => {
       const marker = i === 0 ? c.green('→') : ' ';
-      console.log(`    ${marker} ${c.bold(String(i + 1))}. ${opt.label}${opt.desc ? c.dim(' — ' + opt.desc) : ''}`);
+      console.log(
+        `    ${marker} ${c.bold(String(i + 1))}. ${opt.label}${opt.desc ? c.dim(' — ' + opt.desc) : ''}`
+      );
     });
     const answer = await ask(c.dim('  输入编号 (默认 1): '));
     const idx = parseInt(answer || '1', 10) - 1;
-    return (idx >= 0 && idx < options.length) ? options[idx].value : options[0].value;
+    return idx >= 0 && idx < options.length ? options[idx].value : options[0].value;
   };
 
   const close = () => rl.close();
@@ -196,7 +205,11 @@ function generateEnv(options = {}) {
     port = 3000,
     jwtSecret = generateJwtSecret(),
     enableAkshare = true,
-    dbHost, dbPort, dbName, dbUser, dbPassword,
+    dbHost,
+    dbPort,
+    dbName,
+    dbUser,
+    dbPassword,
   } = options;
 
   const lines = [
@@ -291,7 +304,10 @@ async function main() {
       }
       if (!isAuto && prompt) {
         const cont = await prompt.confirm('  是否继续安装（Python 相关功能将不可用）?');
-        if (!cont) { prompt.close(); process.exit(0); }
+        if (!cont) {
+          prompt.close();
+          process.exit(0);
+        }
       }
     }
 
@@ -333,7 +349,11 @@ async function main() {
     if (fs.existsSync(path.join(FRONTEND_DIR, 'package.json'))) {
       info('安装前端依赖...');
       try {
-        execFileSync('npm', ['install', ...registryArgs], { cwd: FRONTEND_DIR, stdio: 'inherit', timeout: 300000 });
+        execFileSync('npm', ['install', ...registryArgs], {
+          cwd: FRONTEND_DIR,
+          stdio: 'inherit',
+          timeout: 300000,
+        });
         ok('前端依赖安装完成');
       } catch {
         warn('前端依赖安装失败 — 可稍后手动安装');
@@ -360,9 +380,15 @@ async function main() {
           ]);
         }
 
-        const pipIndexArgs = pipMirror !== 'default'
-          ? ['-i', PIP_MIRRORS[pipMirror], '--trusted-host', new URL(PIP_MIRRORS[pipMirror]).hostname]
-          : [];
+        const pipIndexArgs =
+          pipMirror !== 'default'
+            ? [
+                '-i',
+                PIP_MIRRORS[pipMirror],
+                '--trusted-host',
+                new URL(PIP_MIRRORS[pipMirror]).hostname,
+              ]
+            : [];
 
         for (const pkg of REQUIRED_PYTHON_PACKAGES) {
           const installed = checkPythonPackage(python.cmd, pkg);
@@ -370,7 +396,11 @@ async function main() {
             ok(`${pkg} 已安装`);
           } else {
             info(`正在安装 ${pkg}...`);
-            const success = runVisible(python.cmd, ['-m', 'pip', 'install', pkg, ...pipIndexArgs], `pip install ${pkg}`);
+            const success = runVisible(
+              python.cmd,
+              ['-m', 'pip', 'install', pkg, ...pipIndexArgs],
+              `pip install ${pkg}`
+            );
             if (success) {
               ok(`${pkg} 安装成功`);
             } else {
@@ -405,7 +435,11 @@ async function main() {
         });
         fs.writeFileSync(ENV_FILE, envContent);
         if (process.platform !== 'win32') {
-          try { fs.chmodSync(ENV_FILE, 0o600); } catch { /* ignore */ }
+          try {
+            fs.chmodSync(ENV_FILE, 0o600);
+          } catch {
+            /* ignore */
+          }
         }
         ok('.env 已生成（默认配置：SQLite + 端口 3000）');
       } else {
@@ -491,7 +525,9 @@ async function main() {
     // ── Done ───────────────────────────────────────────────────────────────
     console.log('');
     console.log(c.green('  ╭────────────────────────────────────────╮'));
-    console.log(c.green('  │') + c.bold(c.green('  ✓ 安装完成！                            ')) + c.green('│'));
+    console.log(
+      c.green('  │') + c.bold(c.green('  ✓ 安装完成！                            ')) + c.green('│')
+    );
     console.log(c.green('  ╰────────────────────────────────────────╯'));
     console.log('');
     console.log(c.bold('  ◉ 快速开始:'));
@@ -504,7 +540,6 @@ async function main() {
 
     if (prompt) prompt.close();
     process.exit(0);
-
   } catch (err) {
     fail(`安装过程出错: ${err.message}`);
     if (prompt) prompt.close();
@@ -546,12 +581,16 @@ async function generateEnvInteractive(prompt) {
 
   fs.writeFileSync(ENV_FILE, envContent);
   if (process.platform !== 'win32') {
-    try { fs.chmodSync(ENV_FILE, 0o600); } catch { /* ignore */ }
+    try {
+      fs.chmodSync(ENV_FILE, 0o600);
+    } catch {
+      /* ignore */
+    }
   }
   ok('.env 配置文件已生成');
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

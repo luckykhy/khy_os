@@ -7,6 +7,7 @@
 'use strict';
 
 const runtime = require('../tasks/largeTaskRuntimeStore');
+
 const { buildBlockedBySuffix } = require('./taskBlockedBySuffix');
 
 const SOURCE = 'tool_task_store';
@@ -43,7 +44,9 @@ function _canonicalStatus(legacyStatus) {
 }
 
 function _toToolTask(task) {
-  if (!task || !task.payload_json || task.payload_json.source !== SOURCE) return null;
+  if (!task || !task.payload_json || task.payload_json.source !== SOURCE) {
+    return null;
+  }
   const payload = task.payload_json;
   return {
     id: task.id,
@@ -66,7 +69,9 @@ function _toToolTask(task) {
 
 function _assertToolTask(taskId) {
   const task = runtime.getTask(taskId);
-  if (!task || !task.payload_json || task.payload_json.source !== SOURCE) return null;
+  if (!task || !task.payload_json || task.payload_json.source !== SOURCE) {
+    return null;
+  }
   return task;
 }
 
@@ -84,14 +89,24 @@ function _assertToolTask(taskId) {
  */
 function canStart(id) {
   const task = _assertToolTask(id);
-  if (!task) return { ok: false, blockers: [], reason: 'not_found' };
+  if (!task) {
+    return { ok: false, blockers: [], reason: 'not_found' };
+  }
   const blockedBy = Array.isArray(task.payload_json.blockedBy) ? task.payload_json.blockedBy : [];
   const blockers = [];
   for (const depId of blockedBy) {
-    if (depId === id) { blockers.push(depId); continue; } // self-dependency: never satisfiable
+    if (depId === id) {
+      blockers.push(depId);
+      continue;
+    } // self-dependency: never satisfiable
     const dep = _assertToolTask(depId);
-    if (!dep) { blockers.push(depId); continue; }          // missing dependency = blocked
-    if (_legacyStatus(dep.status) !== 'completed') blockers.push(depId);
+    if (!dep) {
+      blockers.push(depId);
+      continue;
+    } // missing dependency = blocked
+    if (_legacyStatus(dep.status) !== 'completed') {
+      blockers.push(depId);
+    }
   }
   return { ok: blockers.length === 0, blockers };
 }
@@ -100,8 +115,12 @@ const _LIVE_STATUSES = new Set(['claimed', 'running', 'retry_wait', 'paused', 'p
 
 function _moveToRunning(taskId) {
   const current = runtime.getTask(taskId);
-  if (!current) return null;
-  if (current.status === 'running') return current;
+  if (!current) {
+    return null;
+  }
+  if (current.status === 'running') {
+    return current;
+  }
   if (current.status === 'claimed') {
     return runtime.startTask(taskId, WORKER_ID);
   }
@@ -122,14 +141,21 @@ function _moveToRunning(taskId) {
   if (current.status === 'cancelling') {
     throw new Error(`Cannot move cancelling task to running: ${taskId}`);
   }
-  if (current.status === 'succeeded' || current.status === 'failed' || current.status === 'cancelled' || current.status === 'dead_letter') {
+  if (
+    current.status === 'succeeded' ||
+    current.status === 'failed' ||
+    current.status === 'cancelled' ||
+    current.status === 'dead_letter'
+  ) {
     throw new Error(`Terminal task cannot run: ${taskId}`);
   }
   return current;
 }
 
 function add(task) {
-  if (!task || !task.id) throw new Error('Task must have an id');
+  if (!task || !task.id) {
+    throw new Error('Task must have an id');
+  }
   const status = _canonicalStatus(task.status || 'pending') || 'queued';
   const payload = {
     source: SOURCE,
@@ -175,35 +201,59 @@ function get(id) {
 
 function getTask(id) {
   const task = _assertToolTask(id);
-  if (!task) return undefined;
+  if (!task) {
+    return undefined;
+  }
   const mapped = _toToolTask(task);
   // TaskOutputTool historically waits on "running".
-  if (mapped.status === 'in_progress') mapped.status = 'running';
+  if (mapped.status === 'in_progress') {
+    mapped.status = 'running';
+  }
   return mapped;
 }
 
 function update(id, updates = {}) {
   const existing = _assertToolTask(id);
-  if (!existing) return null;
+  if (!existing) {
+    return null;
+  }
 
   const nextPayload = {
     ...(existing.payload_json || {}),
   };
 
-  if (updates.description !== undefined) nextPayload.description = updates.description;
-  if (updates.activeForm !== undefined) nextPayload.activeForm = updates.activeForm;
-  if (updates.subject !== undefined) nextPayload.subject = updates.subject;
-  if (updates.owner !== undefined) nextPayload.owner = updates.owner || null;
-  if (updates.output !== undefined) nextPayload.output = updates.output;
-  if (updates.blocks !== undefined) nextPayload.blocks = Array.isArray(updates.blocks) ? updates.blocks : [];
-  if (updates.blockedBy !== undefined) nextPayload.blockedBy = Array.isArray(updates.blockedBy) ? updates.blockedBy : [];
-  if (updates.worktree !== undefined) nextPayload.worktree = updates.worktree || null;
+  if (updates.description !== undefined) {
+    nextPayload.description = updates.description;
+  }
+  if (updates.activeForm !== undefined) {
+    nextPayload.activeForm = updates.activeForm;
+  }
+  if (updates.subject !== undefined) {
+    nextPayload.subject = updates.subject;
+  }
+  if (updates.owner !== undefined) {
+    nextPayload.owner = updates.owner || null;
+  }
+  if (updates.output !== undefined) {
+    nextPayload.output = updates.output;
+  }
+  if (updates.blocks !== undefined) {
+    nextPayload.blocks = Array.isArray(updates.blocks) ? updates.blocks : [];
+  }
+  if (updates.blockedBy !== undefined) {
+    nextPayload.blockedBy = Array.isArray(updates.blockedBy) ? updates.blockedBy : [];
+  }
+  if (updates.worktree !== undefined) {
+    nextPayload.worktree = updates.worktree || null;
+  }
   nextPayload.updatedAt = new Date().toISOString();
   runtime.updateTaskFields(id, { payload_json: nextPayload });
 
   if (updates.status) {
     const status = _canonicalStatus(updates.status);
-    if (!status) throw new Error(`Invalid task status: ${updates.status}`);
+    if (!status) {
+      throw new Error(`Invalid task status: ${updates.status}`);
+    }
 
     if (status === 'queued') {
       const latest = runtime.getTask(id);
@@ -220,7 +270,9 @@ function update(id, updates = {}) {
       if (!latest || !_LIVE_STATUSES.has(latest.status)) {
         const gate = canStart(id);
         if (!gate.ok) {
-          throw new Error(`Task ${id} is blocked by incomplete dependencies: ${gate.blockers.join(', ')}`);
+          throw new Error(
+            `Task ${id} is blocked by incomplete dependencies: ${gate.blockers.join(', ')}`
+          );
         }
       }
       _moveToRunning(id);
@@ -250,7 +302,10 @@ function list(statusFilter) {
     } else if (canonical === 'succeeded') {
       tasks = tasks.filter((task) => task.status === 'succeeded');
     } else if (canonical === 'failed') {
-      tasks = tasks.filter((task) => task.status === 'failed' || task.status === 'cancelled' || task.status === 'dead_letter');
+      tasks = tasks.filter(
+        (task) =>
+          task.status === 'failed' || task.status === 'cancelled' || task.status === 'dead_letter'
+      );
     } else {
       tasks = [];
     }
@@ -264,14 +319,23 @@ function listTasks(statusFilter) {
 
 function remove(id) {
   const task = _assertToolTask(id);
-  if (!task) return false;
+  if (!task) {
+    return false;
+  }
   return runtime.deleteTask(id);
 }
 
 function stopTask(id) {
   const task = _assertToolTask(id);
-  if (!task) return false;
-  if (task.status === 'succeeded' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'dead_letter') {
+  if (!task) {
+    return false;
+  }
+  if (
+    task.status === 'succeeded' ||
+    task.status === 'failed' ||
+    task.status === 'cancelled' ||
+    task.status === 'dead_letter'
+  ) {
     return false;
   }
   runtime.cancelTask(id, 'Stopped by TaskStop tool');
@@ -304,9 +368,9 @@ function snapshot() {
   // is no longer blocking — drop it from the "blocked by" annotation so the line
   // reflects only the deps STILL gating this task. Built once over the full set.
   const completedIds = new Set(
-    tasks.filter(t => t.status === 'completed').map(t => String(t.id)),
+    tasks.filter((t) => t.status === 'completed').map((t) => String(t.id))
   );
-  const v2 = tasks.map(t => {
+  const v2 = tasks.map((t) => {
     const icon = t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '→' : '○';
     const blocked = buildBlockedBySuffix(t.blockedBy, completedIds, process.env);
     // CC parity: while in_progress, surface the present-continuous activeForm
@@ -322,12 +386,20 @@ function snapshot() {
   let v1 = '';
   try {
     const TodoWriteTool = require('./TodoWriteTool');
-    if (typeof TodoWriteTool.snapshot === 'function') v1 = TodoWriteTool.snapshot();
-  } catch { /* TodoWrite tool unavailable — V2-only snapshot */ }
+    if (typeof TodoWriteTool.snapshot === 'function') {
+      v1 = TodoWriteTool.snapshot();
+    }
+  } catch {
+    /* TodoWrite tool unavailable — V2-only snapshot */
+  }
 
   const parts = [];
-  if (v2.length) parts.push(v2.join('\n'));
-  if (v1) parts.push(v1);
+  if (v2.length) {
+    parts.push(v2.join('\n'));
+  }
+  if (v1) {
+    parts.push(v1);
+  }
   return parts.join('\n');
 }
 
@@ -342,8 +414,10 @@ function snapshot() {
  * @returns {string}
  */
 function currentActivity() {
-  const active = list().find(t => t.status === 'in_progress');
-  if (!active) return '';
+  const active = list().find((t) => t.status === 'in_progress');
+  if (!active) {
+    return '';
+  }
   return active.activeForm || active.subject || '';
 }
 
@@ -367,16 +441,22 @@ function currentActivity() {
  */
 function claim(id, owner = 'agent') {
   const existing = _assertToolTask(id);
-  if (!existing) return { ok: false, reason: 'not_found' };
+  if (!existing) {
+    return { ok: false, reason: 'not_found' };
+  }
   const tool = _toToolTask(existing);
 
-  if (tool.status === 'completed') return { ok: false, reason: 'already_resolved' };
+  if (tool.status === 'completed') {
+    return { ok: false, reason: 'already_resolved' };
+  }
   if (tool.owner && tool.owner !== owner) {
     return { ok: false, reason: 'already_claimed', owner: tool.owner };
   }
 
   const gate = canStart(id);
-  if (!gate.ok) return { ok: false, reason: 'blocked', blockers: gate.blockers };
+  if (!gate.ok) {
+    return { ok: false, reason: 'blocked', blockers: gate.blockers };
+  }
 
   update(id, { owner, status: 'in_progress' });
   return { ok: true, owner, task: get(id) };
@@ -397,9 +477,13 @@ function claim(id, owner = 'agent') {
  */
 function release(id, expectedOwner) {
   const existing = _assertToolTask(id);
-  if (!existing) return { ok: false, reason: 'not_found' };
+  if (!existing) {
+    return { ok: false, reason: 'not_found' };
+  }
   const tool = _toToolTask(existing);
-  if (tool.status === 'completed') return { ok: false, reason: 'already_resolved' };
+  if (tool.status === 'completed') {
+    return { ok: false, reason: 'already_resolved' };
+  }
   if (expectedOwner !== undefined && tool.owner && tool.owner !== expectedOwner) {
     return { ok: false, reason: 'owner_mismatch', owner: tool.owner };
   }
@@ -436,7 +520,9 @@ function scanUnclaimed() {
 function claimNext(owner = 'agent') {
   for (const candidate of scanUnclaimed()) {
     const res = claim(candidate.id, owner);
-    if (res.ok) return { ok: true, task: res.task };
+    if (res.ok) {
+      return { ok: true, task: res.task };
+    }
   }
   return { ok: false, reason: 'none_available' };
 }
@@ -459,14 +545,20 @@ function claimNext(owner = 'agent') {
  */
 function bindWorktree(taskId, worktreeName) {
   const existing = _assertToolTask(taskId);
-  if (!existing) return { ok: false, reason: 'not_found' };
+  if (!existing) {
+    return { ok: false, reason: 'not_found' };
+  }
   if (!worktreeName || !String(worktreeName).trim()) {
     return { ok: false, reason: 'invalid_name' };
   }
   let validateName = null;
   // Pure validator from the zero-dep leaf — avoids a require cycle back into
   // worktreeManager (DESIGN-ARCH-020, R3).
-  try { ({ validateName } = require('../utils/worktreeName')); } catch { /* optional */ }
+  try {
+    ({ validateName } = require('../utils/worktreeName'));
+  } catch {
+    /* optional */
+  }
   if (typeof validateName === 'function' && !validateName(worktreeName)) {
     return { ok: false, reason: 'invalid_name' };
   }
@@ -475,4 +567,23 @@ function bindWorktree(taskId, worktreeName) {
   return { ok: true, task: get(taskId) };
 }
 
-module.exports = { add, get, getTask, update, list, listTasks, canStart, claim, release, scanUnclaimed, claimNext, bindWorktree, remove, stopTask, clear, count, snapshot, currentActivity };
+module.exports = {
+  add,
+  get,
+  getTask,
+  update,
+  list,
+  listTasks,
+  canStart,
+  claim,
+  release,
+  scanUnclaimed,
+  claimNext,
+  bindWorktree,
+  remove,
+  stopTask,
+  clear,
+  count,
+  snapshot,
+  currentActivity,
+};

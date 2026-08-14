@@ -16,24 +16,42 @@
  *   missing   — no Trae installation found
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
-const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
-const { attachImagesToOpenAIMessages } = require('./_imageCompat');
-const { resolveMessages } = require('./_messageBuilder');
-const { requestJson, collectProxyCandidates } = require('./_proxyTunnel');
+const path = require('path');
+
 const { parseList, dedupe } = require('./_adapterUtils');
-const { consumeSseText } = require('./_sseParser');
-const { anthropicToOpenAI, openAIToolCallsToAnthropic, convertMessagesAnthropicToOpenAI } = require('./_toolSchemaConverter');
+const { getCWModule, parseCWStreamEvents } = require('./_cwStreamParser');
 const {
-  normalizeToken, isLikelyCredentialToken, isTokenExpired, dedupeTokens,
-  isNativeLoginToken, countsTowardAvailability,
-  extractMessageText, mergeAttempts, buildMessages,
+  normalizeToken,
+  isLikelyCredentialToken,
+  isTokenExpired,
+  dedupeTokens,
+  isNativeLoginToken,
+  countsTowardAvailability,
+  extractMessageText,
+  mergeAttempts,
+  buildMessages,
   readWebReadableAsText,
-  normalizeModelId, canonicalModelKey, extractModelIdsFromString,
-  discoverModelsFromSnapshots, buildModelList,
+  normalizeModelId,
+  canonicalModelKey,
+  extractModelIdsFromString,
+  discoverModelsFromSnapshots,
+  buildModelList,
   createTokenManager,
 } = require('./_ideTokenMixin');
+const { attachImagesToOpenAIMessages } = require('./_imageCompat');
+const { resolveMessages } = require('./_messageBuilder');
+const { createProtocolHandler } = require('./_protocolPipeline');
+const { DEFAULT_TIMEOUT_MS } = require('./_protocolPipeline');
+const { requestJson, collectProxyCandidates } = require('./_proxyTunnel');
+const { buildSuccess, buildFailure } = require('./_responseBuilder');
+const { consumeSseText } = require('./_sseParser');
+const {
+  anthropicToOpenAI,
+  openAIToolCallsToAnthropic,
+  convertMessagesAnthropicToOpenAI,
+} = require('./_toolSchemaConverter');
+const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
 const {
   collectTraeOfficialArtifacts,
   resolveTraeOfficialCredential,
@@ -45,12 +63,6 @@ const {
   writeBridgeAuthToken,
   TRAE_REGION_HOST_MAP,
 } = require('./traeOfficialArtifacts');
-const { createProtocolHandler } = require('./_protocolPipeline');
-const { buildSuccess, buildFailure } = require('./_responseBuilder');
-const {
-  getCWModule,
-  parseCWStreamEvents,
-} = require('./_cwStreamParser');
 
 const _openaiHandler = createProtocolHandler({ protocol: 'openai', adapterName: 'trae' });
 const _cwHandler = createProtocolHandler({ protocol: 'codewhisperer', adapterName: 'trae' });
@@ -59,8 +71,24 @@ const TRAE_STORAGE_PATHS = [
   // Nirvana 换号软件 (各种安装位置)
   path.join(os.homedir(), '.config', 'Nirvana', 'User', 'globalStorage', 'storage.json'),
   path.join(os.homedir(), '.config', 'nirvana', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Nirvana', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'nirvana', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Nirvana',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'nirvana',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Nirvana', 'User', 'globalStorage', 'storage.json'),
   path.join(os.homedir(), 'AppData', 'Roaming', 'nirvana', 'User', 'globalStorage', 'storage.json'),
   // Windows: Program Files 安装目录
@@ -70,11 +98,27 @@ const TRAE_STORAGE_PATHS = [
   'C:\\Program Files\\Nirvana\\storage.json',
   // Trae CN (国内版)
   path.join(os.homedir(), '.config', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Trae CN',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
   // Trae 国际版
   path.join(os.homedir(), '.config', 'Trae', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Trae', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Trae',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Trae', 'User', 'globalStorage', 'storage.json'),
 ];
 
@@ -132,21 +176,23 @@ const TRAE_INJECT_MODELS = !/^(0|false|off)$/i.test(
 );
 
 const ACCOUNT_POOL_TYPE = 'trae';
-const { DEFAULT_TIMEOUT_MS } = require('./_protocolPipeline');
 const TIMEOUT_MS = parseInt(process.env.TRAE_TIMEOUT_MS || '', 10) || DEFAULT_TIMEOUT_MS;
-const MODEL_DISCOVERY_CACHE_MS = Math.max(5000, parseInt(process.env.TRAE_MODEL_CACHE_MS || '120000', 10) || 120000);
+const MODEL_DISCOVERY_CACHE_MS = Math.max(
+  5000,
+  parseInt(process.env.TRAE_MODEL_CACHE_MS || '120000', 10) || 120000
+);
 const MODEL_TOKEN_REGEX = /\b[a-zA-Z0-9][a-zA-Z0-9._:-]{2,80}\b/g;
 
 // 结构化检测状态
 let _detectionState = {
-  installDetected: false,            // 磁盘上有 Trae/Nirvana 目录
-  officialArtifactsDetected: false,  // 找到 iCube 等登录痕迹（即使加密）
-  officialArtifactSources: [],       // 发现 artifact 的路径列表
-  credentialMode: 'none',            // 'none' | 'encrypted' | 'plaintext' | 'cookie'
-  sessionVerified: false,            // token 成功调用过 API
-  available: false,                  // 派生：sessionVerified || credentialMode 为 plaintext/cookie
+  installDetected: false, // 磁盘上有 Trae/Nirvana 目录
+  officialArtifactsDetected: false, // 找到 iCube 等登录痕迹（即使加密）
+  officialArtifactSources: [], // 发现 artifact 的路径列表
+  credentialMode: 'none', // 'none' | 'encrypted' | 'plaintext' | 'cookie'
+  sessionVerified: false, // token 成功调用过 API
+  available: false, // 派生：sessionVerified || credentialMode 为 plaintext/cookie
   _checked: false,
-  _officialCredential: null,         // resolveTraeOfficialCredential() 缓存
+  _officialCredential: null, // resolveTraeOfficialCredential() 缓存
 };
 const ENDPOINT_PROBE_CACHE_MS = 5 * 60 * 1000;
 const ENDPOINT_PROBE_CACHE_MAX = 64; // 上限 64 条，防止长时间运行堆积
@@ -161,7 +207,9 @@ function _setProbeCache(key, result) {
   if (_endpointProbeCache.size > ENDPOINT_PROBE_CACHE_MAX) {
     // Map 保持插入顺序 — 删最早插入的
     const first = _endpointProbeCache.keys().next().value;
-    if (first !== undefined) _endpointProbeCache.delete(first);
+    if (first !== undefined) {
+      _endpointProbeCache.delete(first);
+    }
   }
 }
 let _token = null;
@@ -184,10 +232,11 @@ let _sdkLoadError = null;
 let _sdkClient = null;
 let _sdkClientEndpoint = '';
 
-
 function normalizeEndpointBase(raw) {
   const text = String(raw || '').trim();
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
 
   let base = text;
   if (!/^https?:\/\//i.test(base)) {
@@ -198,7 +247,7 @@ function normalizeEndpointBase(raw) {
     const url = new URL(base);
     let pathname = String(url.pathname || '').trim();
     if (pathname.endsWith('/chat/completions')) {
-      pathname = pathname.slice(0, -('/chat/completions'.length));
+      pathname = pathname.slice(0, -'/chat/completions'.length);
     }
     if (!pathname || pathname === '/') {
       pathname = '/v1';
@@ -212,7 +261,9 @@ function normalizeEndpointBase(raw) {
 
 function toRelayEndpointBase(raw) {
   const normalized = normalizeEndpointBase(raw);
-  if (!normalized) return '';
+  if (!normalized) {
+    return '';
+  }
   return normalized
     .replace(/\/chat\/completions$/i, '')
     .replace(/\/models$/i, '')
@@ -229,29 +280,62 @@ function buildModelsUrl(base) {
 
 function isLikelyModelId(id) {
   const model = canonicalModelKey(id);
-  if (!model) return false;
-  if (model.length < 3 || model.length > 64) return false;
-  if (model.startsWith('http') || model.includes('@') || model.includes('\\')) return false;
-  if (/[^a-z0-9._:-]/i.test(model)) return false;
-  if (!/\d/.test(model) && !/(sonnet|haiku|opus|cascade|chat|turbo|lightning|lite|large|medium|plus)/i.test(model)) return false;
+  if (!model) {
+    return false;
+  }
+  if (model.length < 3 || model.length > 64) {
+    return false;
+  }
+  if (model.startsWith('http') || model.includes('@') || model.includes('\\')) {
+    return false;
+  }
+  if (/[^a-z0-9._:-]/i.test(model)) {
+    return false;
+  }
+  if (
+    !/\d/.test(model) &&
+    !/(sonnet|haiku|opus|cascade|chat|turbo|lightning|lite|large|medium|plus)/i.test(model)
+  ) {
+    return false;
+  }
   // 排除看起来像 base64 token/密钥的随机字符串：
   // 无分隔符 (无 . - : _) + 长度>20 → 高概率是加密 token 而非模型 ID
-  if (model.length > 20 && !/[._:-]/.test(model)) return false;
+  if (model.length > 20 && !/[._:-]/.test(model)) {
+    return false;
+  }
   // yi/swe 太短，需要后跟分隔符防止误匹配 hash (如 "mEXYIzGB..." 碰巧含 "yi")
-  return /(gpt|claude|deepseek|qwen|glm|doubao|llama|mistral|moonshot|yi[-._:]|kimi|minimax|gemini|swe[-._:]|sonnet|haiku|opus|cascade)/i.test(model);
+  return /(gpt|claude|deepseek|qwen|glm|doubao|llama|mistral|moonshot|yi[-._:]|kimi|minimax|gemini|swe[-._:]|sonnet|haiku|opus|cascade)/i.test(
+    model
+  );
 }
 
 function modelDisplayName(id) {
   const normalized = normalizeModelId(id);
-  const known = KNOWN_MODELS.find(m => canonicalModelKey(m.id) === canonicalModelKey(normalized));
-  if (known?.name) return known.name;
-  if (/^gpt/i.test(normalized)) return normalized.replace(/^gpt/i, 'GPT');
-  if (/^claude/i.test(normalized)) return normalized.replace(/^claude/i, 'Claude');
-  if (/^deepseek/i.test(normalized)) return normalized.replace(/^deepseek/i, 'DeepSeek');
-  if (/^doubao/i.test(normalized)) return normalized.replace(/^doubao/i, 'Doubao');
-  if (/^minimax/i.test(normalized)) return normalized.replace(/^minimax/i, 'MiniMax');
-  if (/^gemini/i.test(normalized)) return normalized.replace(/^gemini/i, 'Gemini');
-  if (/^kimi/i.test(normalized)) return normalized.replace(/^kimi/i, 'Kimi');
+  const known = KNOWN_MODELS.find((m) => canonicalModelKey(m.id) === canonicalModelKey(normalized));
+  if (known?.name) {
+    return known.name;
+  }
+  if (/^gpt/i.test(normalized)) {
+    return normalized.replace(/^gpt/i, 'GPT');
+  }
+  if (/^claude/i.test(normalized)) {
+    return normalized.replace(/^claude/i, 'Claude');
+  }
+  if (/^deepseek/i.test(normalized)) {
+    return normalized.replace(/^deepseek/i, 'DeepSeek');
+  }
+  if (/^doubao/i.test(normalized)) {
+    return normalized.replace(/^doubao/i, 'Doubao');
+  }
+  if (/^minimax/i.test(normalized)) {
+    return normalized.replace(/^minimax/i, 'MiniMax');
+  }
+  if (/^gemini/i.test(normalized)) {
+    return normalized.replace(/^gemini/i, 'Gemini');
+  }
+  if (/^kimi/i.test(normalized)) {
+    return normalized.replace(/^kimi/i, 'Kimi');
+  }
   return normalized;
 }
 
@@ -259,7 +343,9 @@ function readTraeStorageSnapshots() {
   const snapshots = [];
   for (const p of TRAE_STORAGE_PATHS) {
     try {
-      if (!fs.existsSync(p)) continue;
+      if (!fs.existsSync(p)) {
+        continue;
+      }
       const data = JSON.parse(fs.readFileSync(p, 'utf8'));
       snapshots.push({ path: p, data });
     } catch {
@@ -274,11 +360,23 @@ function readTraeStorageSnapshots() {
  */
 function detectInstallation() {
   const dirsToCheck = new Set();
-  for (const p of TRAE_STORAGE_PATHS) dirsToCheck.add(path.dirname(p));
-  for (const p of resolveTraeOfficialStoragePaths()) dirsToCheck.add(path.dirname(p));
-  for (const p of resolveTraeOfficialDbPaths()) dirsToCheck.add(path.dirname(p));
+  for (const p of TRAE_STORAGE_PATHS) {
+    dirsToCheck.add(path.dirname(p));
+  }
+  for (const p of resolveTraeOfficialStoragePaths()) {
+    dirsToCheck.add(path.dirname(p));
+  }
+  for (const p of resolveTraeOfficialDbPaths()) {
+    dirsToCheck.add(path.dirname(p));
+  }
   for (const dir of dirsToCheck) {
-    try { if (fs.existsSync(dir)) return true; } catch { /* ignore */ }
+    try {
+      if (fs.existsSync(dir)) {
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
   }
   return false;
 }
@@ -293,13 +391,15 @@ function detectInstallation() {
 async function probeEndpoint(url, token = '') {
   const cacheKey = url;
   const cached = _endpointProbeCache.get(cacheKey);
-  if (cached && (Date.now() - cached.at < ENDPOINT_PROBE_CACHE_MS)) {
+  if (cached && Date.now() - cached.at < ENDPOINT_PROBE_CACHE_MS) {
     return cached.result;
   }
 
   const modelsUrl = `${String(url || '').replace(/\/+$/, '')}/models`;
-  const headers = { 'Accept': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const headers = { Accept: 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   try {
     const result = await requestJson(modelsUrl, {
@@ -312,8 +412,8 @@ async function probeEndpoint(url, token = '') {
     // 有效：JSON 含 data/models 数组；失败：HTML / 404 / 非 JSON
     const contentType = String(result?.headers?.['content-type'] || '').toLowerCase();
     const isHtml = contentType.includes('text/html');
-    const isJson = (Array.isArray(body?.data) || Array.isArray(body?.models));
-    const status = (isJson && !isHtml) ? 'ok' : 'fail';
+    const isJson = Array.isArray(body?.data) || Array.isArray(body?.models);
+    const status = isJson && !isHtml ? 'ok' : 'fail';
     _setProbeCache(cacheKey, status);
     return status;
   } catch {
@@ -334,20 +434,36 @@ function readNirvanaCacheAccounts() {
 
   for (const cachePath of NIRVANA_TRAE_CACHE_PATHS) {
     try {
-      if (!fs.existsSync(cachePath)) continue;
+      if (!fs.existsSync(cachePath)) {
+        continue;
+      }
       const raw = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-      if (!raw || typeof raw !== 'object') continue;
+      if (!raw || typeof raw !== 'object') {
+        continue;
+      }
 
       for (const [email, acc] of Object.entries(raw)) {
-        if (!acc || typeof acc !== 'object') continue;
-        if (!acc.session_cookies || !acc.cookies_expire_at) continue;
+        if (!acc || typeof acc !== 'object') {
+          continue;
+        }
+        if (!acc.session_cookies || !acc.cookies_expire_at) {
+          continue;
+        }
 
         const cookiesExpireTs = new Date(acc.cookies_expire_at).getTime();
-        if (!Number.isFinite(cookiesExpireTs) || cookiesExpireTs < now + COOKIE_EXPIRE_BUFFER_MS) continue;
+        if (!Number.isFinite(cookiesExpireTs) || cookiesExpireTs < now + COOKIE_EXPIRE_BUFFER_MS) {
+          continue;
+        }
 
-        const emailKey = String(email || acc.email || '').trim().toLowerCase();
-        if (seenEmails.has(emailKey)) continue;
-        if (emailKey) seenEmails.add(emailKey);
+        const emailKey = String(email || acc.email || '')
+          .trim()
+          .toLowerCase();
+        if (seenEmails.has(emailKey)) {
+          continue;
+        }
+        if (emailKey) {
+          seenEmails.add(emailKey);
+        }
 
         const accessToken = normalizeToken(acc.access_token);
         results.push({
@@ -374,9 +490,13 @@ function readNirvanaCacheAccounts() {
 }
 
 function isCookieExpired(cookiesExpireAt) {
-  if (!cookiesExpireAt) return true;
+  if (!cookiesExpireAt) {
+    return true;
+  }
   const ts = new Date(cookiesExpireAt).getTime();
-  if (!Number.isFinite(ts)) return true;
+  if (!Number.isFinite(ts)) {
+    return true;
+  }
   return ts < Date.now() + COOKIE_EXPIRE_BUFFER_MS;
 }
 
@@ -411,48 +531,53 @@ function readTraeToken() {
   const snapshots = readTraeStorageSnapshots();
   for (const snap of snapshots) {
     const data = snap.data || {};
-    const token = data.traeAuth?.accessToken
-      || data['traeAuth/accessToken']
-      || data['trae.auth']?.accessToken
-      || data['bytedance.auth']?.accessToken
-      || data.nirvanaAuth?.accessToken
-      || data['nirvanaAuth/accessToken']
-      || data.accessToken;
+    const token =
+      data.traeAuth?.accessToken ||
+      data['traeAuth/accessToken'] ||
+      data['trae.auth']?.accessToken ||
+      data['bytedance.auth']?.accessToken ||
+      data.nirvanaAuth?.accessToken ||
+      data['nirvanaAuth/accessToken'] ||
+      data.accessToken;
 
-    if (!isLikelyCredentialToken(token)) continue;
+    if (!isLikelyCredentialToken(token)) {
+      continue;
+    }
 
     const endpoint = normalizeEndpointBase(
-      data.traeAuth?.endpoint
-      || data.traeAuth?.host
-      || data['trae.auth']?.endpoint
-      || data['trae.auth']?.host
-      || data.nirvanaAuth?.host
-      || data['nirvanaAuth/host']
-      || data.endpoint
-      || data.baseUrl
-      || data.baseURL
+      data.traeAuth?.endpoint ||
+        data.traeAuth?.host ||
+        data['trae.auth']?.endpoint ||
+        data['trae.auth']?.host ||
+        data.nirvanaAuth?.host ||
+        data['nirvanaAuth/host'] ||
+        data.endpoint ||
+        data.baseUrl ||
+        data.baseURL
     );
 
     return {
       accessToken: normalizeToken(token),
-      refreshToken: data.traeAuth?.refreshToken
-        || data['traeAuth/refreshToken']
-        || data['trae.auth']?.refreshToken
-        || data['bytedance.auth']?.refreshToken
-        || data.nirvanaAuth?.refreshToken
-        || data['nirvanaAuth/refreshToken']
-        || null,
+      refreshToken:
+        data.traeAuth?.refreshToken ||
+        data['traeAuth/refreshToken'] ||
+        data['trae.auth']?.refreshToken ||
+        data['bytedance.auth']?.refreshToken ||
+        data.nirvanaAuth?.refreshToken ||
+        data['nirvanaAuth/refreshToken'] ||
+        null,
       source: path.basename(path.dirname(path.dirname(path.dirname(snap.path)))),
       path: snap.path,
       endpoint,
       sdkEndpoint: data.traeAuth?.sdkEndpoint || data.nirvanaAuth?.sdkEndpoint || null,
-      expiresAt: data.traeAuth?.expiresAt
-        || data['traeAuth/expiresAt']
-        || data['trae.auth']?.expiresAt
-        || data['bytedance.auth']?.expiresAt
-        || data.nirvanaAuth?.refreshExpireAt
-        || data['nirvanaAuth/refreshExpireAt']
-        || null,
+      expiresAt:
+        data.traeAuth?.expiresAt ||
+        data['traeAuth/expiresAt'] ||
+        data['trae.auth']?.expiresAt ||
+        data['bytedance.auth']?.expiresAt ||
+        data.nirvanaAuth?.refreshExpireAt ||
+        data['nirvanaAuth/refreshExpireAt'] ||
+        null,
       sessionCookies: null,
       cookiesExpireAt: null,
     };
@@ -489,40 +614,47 @@ const _tokenMgr = createTokenManager({
 async function getTokenCandidates() {
   const localToken = readTraeToken();
   const poolToken = await _tokenMgr.getPoolActiveToken();
-  const currentToken = (_token && _token.accessToken) ? _token : null;
+  const currentToken = _token && _token.accessToken ? _token : null;
 
   if (localToken && localToken.accessToken) {
     _tokenMgr.persistObservedToken(localToken);
   }
 
-  const ordered = _tokenMgr.resolveTokenPriority() === 'local-first'
-    ? [localToken, poolToken, currentToken]
-    : [poolToken, localToken, currentToken];
+  const ordered =
+    _tokenMgr.resolveTokenPriority() === 'local-first'
+      ? [localToken, poolToken, currentToken]
+      : [poolToken, localToken, currentToken];
 
   const deduped = dedupeTokens(ordered);
 
   // 追加 Nirvana cache 中其他未去重的账号 (有 sessionCookies 的)
   // 如果已有同 token 但缺 cookies，用 Nirvana 版本增强
   const cacheAccounts = readNirvanaCacheAccounts();
-  const existingTokens = new Set(deduped.map(t => normalizeToken(t.accessToken)));
+  const existingTokens = new Set(deduped.map((t) => normalizeToken(t.accessToken)));
   for (const acc of cacheAccounts) {
-    if (!acc.accessToken) continue;
+    if (!acc.accessToken) {
+      continue;
+    }
     const normalizedAccToken = normalizeToken(acc.accessToken);
 
     // 已有同 token — 补充 sessionCookies
     if (existingTokens.has(normalizedAccToken)) {
       if (acc.sessionCookies) {
-        const existing = deduped.find(t => normalizeToken(t.accessToken) === normalizedAccToken);
+        const existing = deduped.find((t) => normalizeToken(t.accessToken) === normalizedAccToken);
         if (existing && !existing.sessionCookies) {
           existing.sessionCookies = acc.sessionCookies;
           existing.cookiesExpireAt = acc.cookiesExpireAt;
-          if (acc.apiBase) existing.apiBase = acc.apiBase;
+          if (acc.apiBase) {
+            existing.apiBase = acc.apiBase;
+          }
         }
       }
       continue;
     }
 
-    if (!isLikelyCredentialToken(acc.accessToken)) continue;
+    if (!isLikelyCredentialToken(acc.accessToken)) {
+      continue;
+    }
     existingTokens.add(normalizedAccToken);
     deduped.push({
       accessToken: normalizedAccToken,
@@ -544,9 +676,15 @@ async function getTokenCandidates() {
 /** 评分: 有效 Cookie +100, 有效 Token +50 */
 function _scoreToken(t) {
   let score = 0;
-  if (t.sessionCookies && !isCookieExpired(t.cookiesExpireAt)) score += 100;
-  if (!isTokenExpired(t)) score += 50;
-  if (isLikelyCredentialToken(t.accessToken)) score += 10;
+  if (t.sessionCookies && !isCookieExpired(t.cookiesExpireAt)) {
+    score += 100;
+  }
+  if (!isTokenExpired(t)) {
+    score += 50;
+  }
+  if (isLikelyCredentialToken(t.accessToken)) {
+    score += 10;
+  }
   return score;
 }
 
@@ -557,17 +695,19 @@ async function selectToken({ allowExpired = false } = {}) {
   }
 
   // 按评分降序排列, 优先选有 Cookie 的账号
-  const scored = candidates.map(t => ({ t, s: _scoreToken(t) }));
+  const scored = candidates.map((t) => ({ t, s: _scoreToken(t) }));
   scored.sort((a, b) => b.s - a.s);
-  const sorted = scored.map(x => x.t);
+  const sorted = scored.map((x) => x.t);
 
-  const nonExpired = sorted.filter(t => !isTokenExpired(t) || (t.sessionCookies && !isCookieExpired(t.cookiesExpireAt)));
+  const nonExpired = sorted.filter(
+    (t) => !isTokenExpired(t) || (t.sessionCookies && !isCookieExpired(t.cookiesExpireAt))
+  );
   const token = nonExpired[0] || (allowExpired ? sorted[0] : null);
   if (!token) {
     return { token: null, fallback: null, candidates };
   }
 
-  const fallback = nonExpired.find(t => t.accessToken !== token.accessToken) || null;
+  const fallback = nonExpired.find((t) => t.accessToken !== token.accessToken) || null;
   return { token, fallback, candidates };
 }
 
@@ -580,16 +720,26 @@ function resolveTraeApiBases(tokenData = null) {
 
   // Trae 原生/CW 协议端点 — 不支持 /v1/chat/completions，仅限 GenerateAssistantResponse/ListAvailableModels
   const TRAE_NATIVE_HOSTS = [
-    'api-us-east.trae.ai', 'api-eu-west.trae.ai', 'api-ap.trae.ai',
-    'api-cn.trae.ai', 'api.trae.cn', 'api-cn-east.trae.ai',
+    'api-us-east.trae.ai',
+    'api-eu-west.trae.ai',
+    'api-ap.trae.ai',
+    'api-cn.trae.ai',
+    'api.trae.cn',
+    'api-cn-east.trae.ai',
     'adaptive-api.trae.ai',
     // Windows 运行日志 + product.json 确认的原生协议主机 — 非 OpenAI 兼容
-    'grow-normal.trae.ai', 'core-normal.trae.ai',
-    'growsg-normal.trae.ai', 'growva-normal.trae.ai',
+    'grow-normal.trae.ai',
+    'core-normal.trae.ai',
+    'growsg-normal.trae.ai',
+    'growva-normal.trae.ai',
     'grow-normal.traeapi.us',
   ];
   const isNativeHost = (url) => {
-    try { return TRAE_NATIVE_HOSTS.includes(new URL(url).hostname); } catch { return false; }
+    try {
+      return TRAE_NATIVE_HOSTS.includes(new URL(url).hostname);
+    } catch {
+      return false;
+    }
   };
 
   // token 字段中的非 CW/原生端点 (可能是真正的 OpenAI 兼容中继)
@@ -599,16 +749,19 @@ function resolveTraeApiBases(tokenData = null) {
     tokenData?.baseUrl,
     tokenData?.baseURL,
     tokenData?.apiBase,
-  ].filter(url => url && !isNativeHost(url));
+  ].filter((url) => url && !isNativeHost(url));
 
   // 官方凭据中提取的 endpointHints（过滤掉原生端点）
-  const officialHints = (_detectionState._officialCredential?.endpointHints || [])
-    .filter(url => url && !isNativeHost(url));
+  const officialHints = (_detectionState._officialCredential?.endpointHints || []).filter(
+    (url) => url && !isNativeHost(url)
+  );
 
   // Trae 的真实网关是加密原生协议（adaptive-api.trae.ai，CodeWhisperer 风格），不是 OpenAI 兼容接口；
   // api.trae.ai/v1 对 /chat/completions 返回 404。因此即使只拿到 JWT (eyJ 开头) 且无其它候选端点，
   // 也不再回退到 api.trae.ai——无可用端点时让上层优雅降级，而不是发一个必然 404 的请求。
-  const collected = [...envList, ...tokenList, ...officialHints].map(normalizeEndpointBase).filter(Boolean);
+  const collected = [...envList, ...tokenList, ...officialHints]
+    .map(normalizeEndpointBase)
+    .filter(Boolean);
   const all = dedupe(collected);
 
   // 按探活缓存排序：已验证 > 未探 > 已失败
@@ -616,8 +769,8 @@ function resolveTraeApiBases(tokenData = null) {
   all.sort((a, b) => {
     const ca = _endpointProbeCache.get(a);
     const cb = _endpointProbeCache.get(b);
-    const sa = ca && (Date.now() - ca.at < ENDPOINT_PROBE_CACHE_MS) ? ca.result : 'unknown';
-    const sb = cb && (Date.now() - cb.at < ENDPOINT_PROBE_CACHE_MS) ? cb.result : 'unknown';
+    const sa = ca && Date.now() - ca.at < ENDPOINT_PROBE_CACHE_MS ? ca.result : 'unknown';
+    const sb = cb && Date.now() - cb.at < ENDPOINT_PROBE_CACHE_MS ? cb.result : 'unknown';
     return (probeOrder[sa] ?? 1) - (probeOrder[sb] ?? 1);
   });
 
@@ -629,14 +782,28 @@ function resolveTraeApiBases(tokenData = null) {
  * 依据: source 路径含 "Trae CN"、region 含 cn、apiBase 含 cn 域名
  */
 function _isTraeCN(tokenData) {
-  if (!tokenData) return false;
+  if (!tokenData) {
+    return false;
+  }
   const source = String(tokenData.source || tokenData.sourcePath || '').toLowerCase();
-  if (source.includes('trae cn')) return true;
-  if (source.includes('nirvana')) return true;  // Nirvana 是国内换号工具
+  if (source.includes('trae cn')) {
+    return true;
+  }
+  if (source.includes('nirvana')) {
+    return true;
+  } // Nirvana 是国内换号工具
   const region = String(tokenData.region || '').toLowerCase();
-  if (region.includes('cn') || region.includes('china')) return true;
+  if (region.includes('cn') || region.includes('china')) {
+    return true;
+  }
   const apiBase = String(tokenData.apiBase || tokenData.endpoint || '').toLowerCase();
-  if (apiBase.includes('api-cn') || apiBase.includes('trae.cn') || apiBase.includes('adaptive-api')) return true;
+  if (
+    apiBase.includes('api-cn') ||
+    apiBase.includes('trae.cn') ||
+    apiBase.includes('adaptive-api')
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -646,17 +813,19 @@ function _isTraeCN(tokenData) {
 function _resolveTraeCWEndpoint(tokenData) {
   // 优先使用 token 自带的端点
   const raw = normalizeEndpointBase(tokenData?.apiBase || tokenData?.endpoint);
-  if (raw) return raw.replace(/\/v1\/?$/, '');
+  if (raw) {
+    return raw.replace(/\/v1\/?$/, '');
+  }
   // 根据区域选择默认端点
-  return _isTraeCN(tokenData)
-    ? 'https://adaptive-api.trae.ai'
-    : 'https://api-us-east.trae.ai';
+  return _isTraeCN(tokenData) ? 'https://adaptive-api.trae.ai' : 'https://api-us-east.trae.ai';
 }
 
 function parseApiModels(payload = {}) {
   const rows = Array.isArray(payload?.data)
     ? payload.data
-    : (Array.isArray(payload?.models) ? payload.models : []);
+    : Array.isArray(payload?.models)
+      ? payload.models
+      : [];
 
   const out = [];
   const seen = new Set();
@@ -664,12 +833,22 @@ function parseApiModels(payload = {}) {
 
   const push = (id, name, isDefault = false) => {
     const normalized = normalizeModelId(id);
-    if (!isLikelyModelId(normalized)) return;
+    if (!isLikelyModelId(normalized)) {
+      return;
+    }
     const key = canonicalModelKey(normalized);
-    if (seen.has(key)) return;
+    if (seen.has(key)) {
+      return;
+    }
     seen.add(key);
-    out.push({ id: normalized, name: name || modelDisplayName(normalized), isDefault: !!isDefault });
-    if (isDefault && !defaultModelId) defaultModelId = normalized;
+    out.push({
+      id: normalized,
+      name: name || modelDisplayName(normalized),
+      isDefault: !!isDefault,
+    });
+    if (isDefault && !defaultModelId) {
+      defaultModelId = normalized;
+    }
   };
 
   for (const row of rows) {
@@ -681,7 +860,9 @@ function parseApiModels(payload = {}) {
 
   if (!defaultModelId && payload?.default_model) {
     const d = normalizeModelId(payload.default_model);
-    if (isLikelyModelId(d)) defaultModelId = d;
+    if (isLikelyModelId(d)) {
+      defaultModelId = d;
+    }
   }
 
   return { models: out, defaultModelId };
@@ -730,7 +911,9 @@ async function fetchModelsFromApi(tokenData, options = {}) {
   const bases = resolveTraeApiBases(tokenData);
 
   if (bases.length === 0) {
-    throw new Error('没有可用的 OpenAI 兼容端点 — 未配置 TRAE_API_ENDPOINT 且 token 无 endpoint 字段');
+    throw new Error(
+      '没有可用的 OpenAI 兼容端点 — 未配置 TRAE_API_ENDPOINT 且 token 无 endpoint 字段'
+    );
   }
 
   let lastErr = null;
@@ -738,7 +921,7 @@ async function fetchModelsFromApi(tokenData, options = {}) {
   for (const base of bases) {
     // 跳过已知失败的端点（避免重复打到 HTML 页面）
     const cached = _endpointProbeCache.get(base);
-    if (cached && (Date.now() - cached.at < ENDPOINT_PROBE_CACHE_MS) && cached.result === 'fail') {
+    if (cached && Date.now() - cached.at < ENDPOINT_PROBE_CACHE_MS && cached.result === 'fail') {
       lastErr = lastErr || new Error(`端点 ${base} 已知不可用（探活缓存）`);
       continue;
     }
@@ -760,7 +943,11 @@ async function fetchModelsFromApi(tokenData, options = {}) {
       // 检测 HTML / 非 JSON 响应 — 标记端点为 fail
       const contentType = String(res.headers?.['content-type'] || '').toLowerCase();
       const rawBody = String(res.raw || '').trim();
-      if (contentType.includes('text/html') || rawBody.startsWith('<!') || rawBody.startsWith('<html')) {
+      if (
+        contentType.includes('text/html') ||
+        rawBody.startsWith('<!') ||
+        rawBody.startsWith('<html')
+      ) {
         _setProbeCache(base, 'fail');
         lastErr = new Error(`端点 ${url} 返回 HTML 而非 JSON — 不是 OpenAI 兼容端点`);
         continue;
@@ -779,24 +966,32 @@ async function fetchModelsFromApi(tokenData, options = {}) {
       }
       lastErr = new Error(`models endpoint ${url} returned empty model list`);
     } catch (err) {
-      if (err && err.code === 'AUTH') throw err;
+      if (err && err.code === 'AUTH') {
+        throw err;
+      }
       lastErr = err instanceof Error ? err : new Error(String(err || 'models endpoint error'));
     }
   }
 
-  if (lastErr) throw lastErr;
+  if (lastErr) {
+    throw lastErr;
+  }
   throw new Error('models endpoint unavailable');
 }
 
 // buildTraeMessages replaced by shared _messageBuilder (Phase 5B)
 function buildTraeMessages(prompt, options = {}) {
   let _flattenContent;
-  try { _flattenContent = require('../../../services/contentBlockUtils').flattenContent; } catch { _flattenContent = (c) => String(c || ''); }
+  try {
+    _flattenContent = require('../../../services/contentBlockUtils').flattenContent;
+  } catch {
+    _flattenContent = (c) => String(c || '');
+  }
 
   // Flatten content blocks before resolving (Trae doesn't support content arrays)
   const flatOpts = { ...options };
   if (Array.isArray(flatOpts.messages)) {
-    flatOpts.messages = flatOpts.messages.map(m => ({
+    flatOpts.messages = flatOpts.messages.map((m) => ({
       ...m,
       content: typeof m.content === 'string' ? m.content : _flattenContent(m.content),
     }));
@@ -809,21 +1004,31 @@ function buildTraeMessages(prompt, options = {}) {
 }
 
 function resolveTraeSdkMode() {
-  const mode = String(process.env.TRAE_SDK_MODE || 'auto').trim().toLowerCase();
-  if (mode === 'off' || mode === 'disable' || mode === 'disabled') return 'off';
-  if (mode === 'force' || mode === 'only') return 'force';
+  const mode = String(process.env.TRAE_SDK_MODE || 'auto')
+    .trim()
+    .toLowerCase();
+  if (mode === 'off' || mode === 'disable' || mode === 'disabled') {
+    return 'off';
+  }
+  if (mode === 'force' || mode === 'only') {
+    return 'force';
+  }
   return 'auto';
 }
 
 function resolveTraeInstallPaths() {
   const out = [];
   const envInstall = String(process.env.TRAE_INSTALL_PATH || '').trim();
-  if (envInstall) out.push(envInstall);
+  if (envInstall) {
+    out.push(envInstall);
+  }
 
   try {
     const { findInstallation } = require('./ideDetector');
     const detected = findInstallation('trae');
-    if (detected) out.push(detected);
+    if (detected) {
+      out.push(detected);
+    }
   } catch {
     // ignore detector failure
   }
@@ -834,7 +1039,9 @@ function resolveTraeInstallPaths() {
 function resolveTraeSdkModuleCandidates() {
   const out = [];
 
-  for (const item of parseList(process.env.TRAE_SDK_MODULE_PATHS || process.env.TRAE_SDK_MODULE_PATH || '')) {
+  for (const item of parseList(
+    process.env.TRAE_SDK_MODULE_PATHS || process.env.TRAE_SDK_MODULE_PATH || ''
+  )) {
     out.push(item);
   }
 
@@ -842,14 +1049,18 @@ function resolveTraeSdkModuleCandidates() {
 
   const installs = resolveTraeInstallPaths();
   for (const root of installs) {
-    out.push(path.join(root, 'resources', 'app', 'node_modules', '@byted-icube', 'trae-network-client'));
+    out.push(
+      path.join(root, 'resources', 'app', 'node_modules', '@byted-icube', 'trae-network-client')
+    );
   }
 
   return dedupe(out);
 }
 
 function loadTraeSdkModule() {
-  if (_sdkLoadTried) return _sdkModule;
+  if (_sdkLoadTried) {
+    return _sdkModule;
+  }
   _sdkLoadTried = true;
 
   const errors = [];
@@ -885,11 +1096,11 @@ function resolveTraeSdkEndpoints(tokenData = null) {
     endpoints.push('ipc:///tmp/trae.sock');
   }
 
-  const resolved = dedupe(endpoints.map(s => String(s || '').trim()).filter(Boolean));
+  const resolved = dedupe(endpoints.map((s) => String(s || '').trim()).filter(Boolean));
 
   // Windows: 过滤所有 ipc:// 端点，避免 Rust ZMQ panic
   if (process.platform === 'win32') {
-    return resolved.filter(ep => !ep.startsWith('ipc://'));
+    return resolved.filter((ep) => !ep.startsWith('ipc://'));
   }
 
   return resolved;
@@ -897,7 +1108,9 @@ function resolveTraeSdkEndpoints(tokenData = null) {
 
 function getTraeSdkClient(tokenData = null) {
   const sdk = loadTraeSdkModule();
-  if (!sdk) return null;
+  if (!sdk) {
+    return null;
+  }
 
   const endpoints = resolveTraeSdkEndpoints(tokenData);
   if (_sdkClient && _sdkClientEndpoint && endpoints.includes(_sdkClientEndpoint)) {
@@ -930,7 +1143,7 @@ let _refreshPromise = null;
 let _refreshBackoffUntil = 0;
 let _refreshInterval = null;
 const REFRESH_CHECK_INTERVAL_MS = 30 * 60 * 1000; // 30 分钟
-const REFRESH_PRE_EXPIRE_MS = 15 * 60 * 1000;     // 提前 15 分钟刷新
+const REFRESH_PRE_EXPIRE_MS = 15 * 60 * 1000; // 提前 15 分钟刷新
 
 /**
  * 调用 Trae 原生刷新端点换取新 Token
@@ -939,9 +1152,17 @@ const REFRESH_PRE_EXPIRE_MS = 15 * 60 * 1000;     // 提前 15 分钟刷新
  * Body: { refreshToken }
  */
 async function refreshTraeToken(tokenData) {
-  const nativeHost = (tokenData.nativeHost || resolveNativeHostByRegion(tokenData.region) || '').replace(/^https?:\/\//, '');
-  if (!nativeHost) throw new Error('Trae nativeHost unknown — cannot refresh');
-  if (!tokenData.refreshToken) throw new Error('No refreshToken — please re-login in Trae IDE');
+  const nativeHost = (
+    tokenData.nativeHost ||
+    resolveNativeHostByRegion(tokenData.region) ||
+    ''
+  ).replace(/^https?:\/\//, '');
+  if (!nativeHost) {
+    throw new Error('Trae nativeHost unknown — cannot refresh');
+  }
+  if (!tokenData.refreshToken) {
+    throw new Error('No refreshToken — please re-login in Trae IDE');
+  }
 
   const url = `https://${nativeHost}/cloudide/api/v3/trae/RefreshToken`;
   const authToken = tokenData.nativeToken || tokenData.accessToken;
@@ -952,8 +1173,9 @@ async function refreshTraeToken(tokenData) {
     headers: sanitizeOutgoingHeaders({
       'Content-Type': 'application/json',
       'x-cloudide-token': authToken,
-      'Origin': 'vscode-file://vscode-app',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Trae/1.107.1 Chrome/142.0.7444.235 Electron/39.2.7 Safari/537.36',
+      Origin: 'vscode-file://vscode-app',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Trae/1.107.1 Chrome/142.0.7444.235 Electron/39.2.7 Safari/537.36',
     }),
     body: { refreshToken: tokenData.refreshToken },
   });
@@ -982,15 +1204,23 @@ async function refreshTraeToken(tokenData) {
  * @returns {Promise<object|null>} 刷新后的 tokenData 或 null（无法刷新）
  */
 async function getAccessTokenWithRefresh(tokenData) {
-  if (!isTokenExpired(tokenData)) return tokenData;
-  if (!tokenData.refreshToken) return null;
+  if (!isTokenExpired(tokenData)) {
+    return tokenData;
+  }
+  if (!tokenData.refreshToken) {
+    return null;
+  }
 
   // buffer 期内（真实过期时间未到）且在 backoff 中 → 继续用旧的
   const isTrulyExpired = !tokenData.expiresAt || new Date(tokenData.expiresAt) < new Date();
-  if (!isTrulyExpired && Date.now() < _refreshBackoffUntil) return tokenData;
+  if (!isTrulyExpired && Date.now() < _refreshBackoffUntil) {
+    return tokenData;
+  }
 
   // 并发去重
-  if (_refreshPromise) return _refreshPromise;
+  if (_refreshPromise) {
+    return _refreshPromise;
+  }
 
   _refreshPromise = (async () => {
     try {
@@ -1014,23 +1244,75 @@ async function getAccessTokenWithRefresh(tokenData) {
   return _refreshPromise;
 }
 
+/**
+ * Optional gateway hook: force-refresh the Trae credential after a 401/403.
+ * Wraps the existing refreshTraeToken() exchange (single-flight via
+ * _refreshPromise, same persistence as getAccessTokenWithRefresh) but skips
+ * the not-yet-expired early return — a 401 means the token is rejected
+ * regardless of its expiresAt timestamp. Returns the refreshed token or null.
+ */
+async function refreshCredential() {
+  if (!_token) {
+    try {
+      await detectAsync(true);
+    } catch {
+      /* best effort token load */
+    }
+  }
+  const current = _token;
+  if (!current || !current.refreshToken) {
+    return null;
+  }
+  if (_refreshPromise) {
+    return _refreshPromise;
+  }
+  _refreshPromise = (async () => {
+    try {
+      const newToken = await refreshTraeToken(current);
+      writeBridgeAuthToken(newToken);
+      _token = newToken;
+      _tokenMgr.persistObservedToken(newToken);
+      return newToken;
+    } catch {
+      _refreshBackoffUntil = Date.now() + 60_000; // keep existing backoff behavior
+      return null;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
+
 function startTokenRefresher() {
-  if (_refreshInterval) return;
+  if (_refreshInterval) {
+    return;
+  }
   _refreshInterval = setInterval(async () => {
-    if (!_token || !_token.refreshToken || !_token.expiresAt) return;
+    if (!_token || !_token.refreshToken || !_token.expiresAt) {
+      return;
+    }
     const remaining = new Date(_token.expiresAt).getTime() - Date.now();
-    if (remaining > REFRESH_PRE_EXPIRE_MS) return;
+    if (remaining > REFRESH_PRE_EXPIRE_MS) {
+      return;
+    }
     try {
       const refreshed = await getAccessTokenWithRefresh(_token);
-      if (refreshed) _token = refreshed;
-    } catch { /* best effort */ }
+      if (refreshed) {
+        _token = refreshed;
+      }
+    } catch {
+      /* best effort */
+    }
   }, REFRESH_CHECK_INTERVAL_MS);
   // Do not keep the event loop alive solely for token refresh.
   _refreshInterval.unref?.();
 }
 
 function stopTokenRefresher() {
-  if (_refreshInterval) { clearInterval(_refreshInterval); _refreshInterval = null; }
+  if (_refreshInterval) {
+    clearInterval(_refreshInterval);
+    _refreshInterval = null;
+  }
 }
 
 /**
@@ -1043,8 +1325,9 @@ function buildNativeProtocolHeaders(cloudideToken, extra = {}) {
     'Content-Type': 'application/json',
     'x-cloudide-token': cloudideToken,
     // Trae 原生请求必须的 headers (抓包确认 2026-05-25)
-    'Origin': 'vscode-file://vscode-app',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Trae/1.107.1 Chrome/142.0.7444.235 Electron/39.2.7 Safari/537.36',
+    Origin: 'vscode-file://vscode-app',
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Trae/1.107.1 Chrome/142.0.7444.235 Electron/39.2.7 Safari/537.36',
     'x-net-sdk-domain-dispatch': '1',
     ...extra,
   };
@@ -1074,33 +1357,47 @@ async function callTraeByNativeProtocol(tokenData, prompt, model, options = {}) 
   const nativeHost = tokenData?.nativeHost;
 
   if (!nativeToken || !nativeHost) {
-    return buildFailure('Trae 原生协议需要 nativeToken (iCubeAuthInfo.token) 和 nativeHost (iCubeAuthInfo.host)', {
-      adapter: 'trae',
-      provider: 'Trae(Native)',
-      model,
-      errorType: 'config',
-      attempts: [{ provider: 'Trae(Native)', success: false, error: 'missing_native_credential' }],
-    });
+    return buildFailure(
+      'Trae 原生协议需要 nativeToken (iCubeAuthInfo.token) 和 nativeHost (iCubeAuthInfo.host)',
+      {
+        adapter: 'trae',
+        provider: 'Trae(Native)',
+        model,
+        errorType: 'config',
+        attempts: [
+          { provider: 'Trae(Native)', success: false, error: 'missing_native_credential' },
+        ],
+      }
+    );
   }
 
   // JWT token (eyJ 开头) 不兼容 x-cloudide-token 原生协议 — 直接跳过，走 HTTP Bearer 通道
   if (String(nativeToken).startsWith('eyJ')) {
-    return buildFailure('Token 是 JWT 格式，不兼容 x-cloudide-token 原生协议，将使用 HTTP Bearer 通道', {
-      adapter: 'trae',
-      provider: 'Trae(Native)',
-      model,
-      errorType: 'token_format',
-      attempts: [{ provider: 'Trae(Native)', success: false, error: 'jwt_not_compatible_with_native' }],
-    });
+    return buildFailure(
+      'Token 是 JWT 格式，不兼容 x-cloudide-token 原生协议，将使用 HTTP Bearer 通道',
+      {
+        adapter: 'trae',
+        provider: 'Trae(Native)',
+        model,
+        errorType: 'token_format',
+        attempts: [
+          { provider: 'Trae(Native)', success: false, error: 'jwt_not_compatible_with_native' },
+        ],
+      }
+    );
   }
 
   // 多主机级联: 根据区域选择候选顺序
   const hostCandidates = [];
   const seenHosts = new Set();
   const addHost = (h) => {
-    if (!h) return;
+    if (!h) {
+      return;
+    }
     const norm = h.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-    if (seenHosts.has(norm)) return;
+    if (seenHosts.has(norm)) {
+      return;
+    }
     seenHosts.add(norm);
     hostCandidates.push(`https://${norm}`);
   };
@@ -1121,9 +1418,9 @@ async function callTraeByNativeProtocol(tokenData, prompt, model, options = {}) 
 
   // 多路径级联: OpenAI 兼容 → CW 协议 → Trae 内部 agent
   const candidatePaths = [
-    '/v1/chat/completions',             // OpenAI 兼容端点
-    '/generateAssistantResponse',       // CW 协议 (Kiro/Trae 共用)
-    '/api/agent/v3/chat',               // Trae 内部 agent 对话入口
+    '/v1/chat/completions', // OpenAI 兼容端点
+    '/generateAssistantResponse', // CW 协议 (Kiro/Trae 共用)
+    '/api/agent/v3/chat', // Trae 内部 agent 对话入口
   ];
   const onChunk = options.onChunk || (() => {});
 
@@ -1140,76 +1437,109 @@ async function callTraeByNativeProtocol(tokenData, prompt, model, options = {}) 
   let attemptCount = 0;
 
   for (const hostBase of hostCandidates) {
-    if (attemptCount >= MAX_NATIVE_ATTEMPTS) break;
+    if (attemptCount >= MAX_NATIVE_ATTEMPTS) {
+      break;
+    }
     for (const apiPath of candidatePaths) {
-      if (attemptCount >= MAX_NATIVE_ATTEMPTS) break;
+      if (attemptCount >= MAX_NATIVE_ATTEMPTS) {
+        break;
+      }
       attemptCount++;
       const chatUrl = `${hostBase.replace(/\/+$/, '')}${apiPath}`;
-    try {
-      const res = await jsonRequest(chatUrl, {
-        method: 'POST',
-        timeout: 15_000, // 单次尝试 15s (多组合需要快速失败)
-        headers: sanitizeOutgoingHeaders(buildNativeProtocolHeaders(nativeToken, {
-          Accept: 'text/event-stream',
-        })),
-        body: payload,
-      });
+      try {
+        const res = await jsonRequest(chatUrl, {
+          method: 'POST',
+          timeout: 15_000, // 单次尝试 15s (多组合需要快速失败)
+          headers: sanitizeOutgoingHeaders(
+            buildNativeProtocolHeaders(nativeToken, {
+              Accept: 'text/event-stream',
+            })
+          ),
+          body: payload,
+        });
 
-      // HTML / 非 JSON 检测
-      const contentType = String(res.headers?.['content-type'] || '').toLowerCase();
-      const rawText = String(res.raw || '').trim();
-      if (contentType.includes('text/html') || rawText.startsWith('<!') || rawText.startsWith('<html')) {
-        allAttempts.push({ provider: `Trae(Native:${chatUrl})`, success: false, error: 'html_response' });
+        // HTML / 非 JSON 检测
+        const contentType = String(res.headers?.['content-type'] || '').toLowerCase();
+        const rawText = String(res.raw || '').trim();
+        if (
+          contentType.includes('text/html') ||
+          rawText.startsWith('<!') ||
+          rawText.startsWith('<html')
+        ) {
+          allAttempts.push({
+            provider: `Trae(Native:${chatUrl})`,
+            success: false,
+            error: 'html_response',
+          });
+          continue;
+        }
+
+        if (res.status === 401 || res.status === 403) {
+          allAttempts.push({
+            provider: `Trae(Native:${chatUrl})`,
+            success: false,
+            error: `auth_${res.status}`,
+          });
+          continue;
+        }
+
+        // SSE 流解析
+        const content = consumeSseText(rawText, onChunk).trim();
+        if (content) {
+          _setProbeCache(hostBase, 'ok');
+          return buildSuccess(content, {
+            adapter: 'trae',
+            provider: `Trae Native (${model}@${chatUrl})`,
+            model,
+            attempts: mergeAttempts(allAttempts, [
+              { provider: `Trae(Native:${chatUrl})`, success: true },
+            ]),
+          });
+        }
+
+        // 非流式 JSON 兜底
+        const json = res.data || {};
+        const text = extractMessageText(json).trim();
+        if (text) {
+          _setProbeCache(hostBase, 'ok');
+          return buildSuccess(text, {
+            adapter: 'trae',
+            provider: `Trae Native (${model}@${chatUrl})`,
+            model,
+            attempts: mergeAttempts(allAttempts, [
+              { provider: `Trae(Native:${chatUrl})`, success: true },
+            ]),
+          });
+        }
+
+        allAttempts.push({
+          provider: `Trae(Native:${chatUrl})`,
+          success: false,
+          error: 'empty_response',
+        });
+        continue;
+      } catch (err) {
+        allAttempts.push({
+          provider: `Trae(Native:${chatUrl})`,
+          success: false,
+          error: err?.message || String(err),
+        });
         continue;
       }
-
-      if (res.status === 401 || res.status === 403) {
-        allAttempts.push({ provider: `Trae(Native:${chatUrl})`, success: false, error: `auth_${res.status}` });
-        continue;
-      }
-
-      // SSE 流解析
-      const content = consumeSseText(rawText, onChunk).trim();
-      if (content) {
-        _setProbeCache(hostBase, 'ok');
-        return buildSuccess(content, {
-          adapter: 'trae',
-          provider: `Trae Native (${model}@${chatUrl})`,
-          model,
-          attempts: mergeAttempts(allAttempts, [{ provider: `Trae(Native:${chatUrl})`, success: true }]),
-        });
-      }
-
-      // 非流式 JSON 兜底
-      const json = res.data || {};
-      const text = extractMessageText(json).trim();
-      if (text) {
-        _setProbeCache(hostBase, 'ok');
-        return buildSuccess(text, {
-          adapter: 'trae',
-          provider: `Trae Native (${model}@${chatUrl})`,
-          model,
-          attempts: mergeAttempts(allAttempts, [{ provider: `Trae(Native:${chatUrl})`, success: true }]),
-        });
-      }
-
-      allAttempts.push({ provider: `Trae(Native:${chatUrl})`, success: false, error: 'empty_response' });
-      continue;
-    } catch (err) {
-      allAttempts.push({ provider: `Trae(Native:${chatUrl})`, success: false, error: err?.message || String(err) });
-      continue;
-    }
-  } // end for candidatePaths
+    } // end for candidatePaths
   } // end for hostCandidates
 
   // 所有路径都失败
-  return buildFailure(allAttempts[allAttempts.length - 1]?.error || 'All native protocol paths failed', {
-    adapter: 'trae',
-    provider: 'Trae(Native)',
-    model,
-    errorType: 'network',
-    attempts: allAttempts,
-  });
+  return buildFailure(
+    allAttempts[allAttempts.length - 1]?.error || 'All native protocol paths failed',
+    {
+      adapter: 'trae',
+      provider: 'Trae(Native)',
+      model,
+      errorType: 'network',
+      attempts: allAttempts,
+    }
+  );
 }
 
 // ── CodeWhisperer 协议通道 (复用 Kiro 的 SDK 客户端) ──
@@ -1229,7 +1559,9 @@ const TRAE_CW_TIMEOUT_MS = 120_000;
 async function _createTraeCWClient(tokenData, explicitEndpoint = null) {
   const bareEndpoint = explicitEndpoint || _resolveTraeCWEndpoint(tokenData);
   const clientKey = `${tokenData.accessToken}:${bareEndpoint}`;
-  if (_traeCWClient && _traeCWClientKey === clientKey) return _traeCWClient;
+  if (_traeCWClient && _traeCWClientKey === clientKey) {
+    return _traeCWClient;
+  }
 
   const { CodeWhispererStreaming } = await getCWModule();
 
@@ -1238,7 +1570,8 @@ async function _createTraeCWClient(tokenData, explicitEndpoint = null) {
     region: isCN ? 'cn-north-1' : 'us-east-1',
     endpoint: bareEndpoint,
     token: { token: tokenData.accessToken },
-    customUserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Trae/1.107.1 Chrome/142.0.7444.235 Electron/39.2.7 Safari/537.36',
+    customUserAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Trae/1.107.1 Chrome/142.0.7444.235 Electron/39.2.7 Safari/537.36',
   };
 
   // 国际版 CW 端点需要走代理 (与 kiroAdapter 相同模式)
@@ -1269,7 +1602,7 @@ async function _createTraeCWClient(tokenData, explicitEndpoint = null) {
         ...args.request.headers,
         'x-amzn-codewhisperer-optout': 'true',
         'x-amzn-kiro-agent-mode': 'vibe',
-        'Origin': 'vscode-file://vscode-app',
+        Origin: 'vscode-file://vscode-app',
         'x-net-sdk-domain-dispatch': '1',
       });
       return next(args);
@@ -1283,7 +1616,7 @@ async function _createTraeCWClient(tokenData, explicitEndpoint = null) {
       (next) => async (args) => {
         args.request.headers = {
           ...args.request.headers,
-          'Cookie': tokenData.sessionCookies,
+          Cookie: tokenData.sessionCookies,
         };
         return next(args);
       },
@@ -1303,12 +1636,20 @@ async function _createTraeCWClient(tokenData, explicitEndpoint = null) {
 async function callTraeByCodeWhisperer(tokenData, prompt, model, options = {}) {
   // accessToken 是必须的; sessionCookies 可选增强
   if (!tokenData.accessToken) {
-    return buildFailure('Trae CodeWhisperer 通道需要 accessToken', { adapter: 'trae', errorType: 'auth', attempts: [] });
+    return buildFailure('Trae CodeWhisperer 通道需要 accessToken', {
+      adapter: 'trae',
+      errorType: 'auth',
+      attempts: [],
+    });
   }
 
   // JWT token (eyJ 开头) 不兼容 CW 协议 (CW 端点会返回 HTML) — 跳过直接走 HTTP
   if (String(tokenData.accessToken).startsWith('eyJ')) {
-    return buildFailure('JWT token 不兼容 CW 协议', { adapter: 'trae', errorType: 'token_format', attempts: [{ provider: 'Trae(CW)', success: false, error: 'jwt_skip_cw' }] });
+    return buildFailure('JWT token 不兼容 CW 协议', {
+      adapter: 'trae',
+      errorType: 'token_format',
+      attempts: [{ provider: 'Trae(CW)', success: false, error: 'jwt_skip_cw' }],
+    });
   }
 
   // 多端点级联: 优先 token 自带端点, 然后 CN / 国际版候选
@@ -1320,7 +1661,11 @@ async function callTraeByCodeWhisperer(tokenData, prompt, model, options = {}) {
     try {
       client = await _createTraeCWClient(tokenData, endpoint);
     } catch (err) {
-      allAttempts.push({ provider: `Trae(CW:${endpoint})`, success: false, error: `sdk_load: ${err.message}` });
+      allAttempts.push({
+        provider: `Trae(CW:${endpoint})`,
+        success: false,
+        error: `sdk_load: ${err.message}`,
+      });
       continue;
     }
 
@@ -1340,7 +1685,10 @@ async function callTraeByCodeWhisperer(tokenData, prompt, model, options = {}) {
       const response = await Promise.race([
         client.send(command),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`CW timeout (${TRAE_CW_TIMEOUT_MS / 1000}s)`)), TRAE_CW_TIMEOUT_MS)
+          setTimeout(
+            () => reject(new Error(`CW timeout (${TRAE_CW_TIMEOUT_MS / 1000}s)`)),
+            TRAE_CW_TIMEOUT_MS
+          )
         ),
       ]);
 
@@ -1365,10 +1713,17 @@ async function callTraeByCodeWhisperer(tokenData, prompt, model, options = {}) {
             staleOptions: {
               provider: 'claude',
               onStale: (elapsed) => {
-                try { onChunk({ type: 'status', text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s` }); } catch { /* ignore */ }
+                try {
+                  onChunk({
+                    type: 'status',
+                    text: `Stream stale: no data for ${Math.round(elapsed / 1000)}s`,
+                  });
+                } catch {
+                  /* ignore */
+                }
               },
             },
-          },
+          }
         );
       } catch (streamErr) {
         if (streamResult && streamResult.content && streamResult.content.trim()) {
@@ -1377,10 +1732,13 @@ async function callTraeByCodeWhisperer(tokenData, prompt, model, options = {}) {
             adapter: 'trae',
             provider: `Trae CW (${streamResult.modelId || model}@${endpoint})`,
             model: streamResult.modelId || model,
-            toolUseBlocks: streamResult.toolUseBlocks?.length > 0 ? streamResult.toolUseBlocks : undefined,
+            toolUseBlocks:
+              streamResult.toolUseBlocks?.length > 0 ? streamResult.toolUseBlocks : undefined,
             stopReason: streamResult.toolUseBlocks?.length > 0 ? 'tool_use' : 'end_turn',
             tokenUsage: streamResult.tokenUsage || undefined,
-            attempts: mergeAttempts(allAttempts, [{ provider: `Trae(CW:${endpoint})`, success: true, warning: 'stream_interrupted' }]),
+            attempts: mergeAttempts(allAttempts, [
+              { provider: `Trae(CW:${endpoint})`, success: true, warning: 'stream_interrupted' },
+            ]),
             _cwEndpointVerified: endpoint,
           });
         }
@@ -1430,9 +1788,13 @@ function _resolveTraeCWEndpoints(tokenData) {
   const endpoints = [];
   const seen = new Set();
   const add = (url) => {
-    if (!url) return;
+    if (!url) {
+      return;
+    }
     const normalized = url.replace(/\/v1\/?$/, '').replace(/\/+$/, '');
-    if (seen.has(normalized)) return;
+    if (seen.has(normalized)) {
+      return;
+    }
     seen.add(normalized);
     endpoints.push(normalized);
   };
@@ -1468,15 +1830,17 @@ function _resolveTraeCWEndpoints(tokenData) {
   endpoints.sort((a, b) => {
     const ca = _endpointProbeCache.get(a);
     const cb = _endpointProbeCache.get(b);
-    const sa = ca && (Date.now() - ca.at < ENDPOINT_PROBE_CACHE_MS) ? ca.result : 'unknown';
-    const sb = cb && (Date.now() - cb.at < ENDPOINT_PROBE_CACHE_MS) ? cb.result : 'unknown';
+    const sa = ca && Date.now() - ca.at < ENDPOINT_PROBE_CACHE_MS ? ca.result : 'unknown';
+    const sb = cb && Date.now() - cb.at < ENDPOINT_PROBE_CACHE_MS ? cb.result : 'unknown';
     return (probeOrder[sa] ?? 1) - (probeOrder[sb] ?? 1);
   });
 
   // 4) 过滤掉已知失败的端点（只保留 ok/unknown）
-  return endpoints.filter(ep => {
+  return endpoints.filter((ep) => {
     const cached = _endpointProbeCache.get(ep);
-    if (!cached || (Date.now() - cached.at >= ENDPOINT_PROBE_CACHE_MS)) return true; // 未缓存或已过期 → 保留
+    if (!cached || Date.now() - cached.at >= ENDPOINT_PROBE_CACHE_MS) {
+      return true;
+    } // 未缓存或已过期 → 保留
     return cached.result !== 'fail';
   });
 }
@@ -1487,11 +1851,15 @@ function _resolveTraeCWEndpoints(tokenData) {
  * 多端点级联尝试 — 不再只试一个
  */
 async function fetchModelsFromNativeApi(tokenData, options = {}) {
-  if (!tokenData.accessToken) return null;
+  if (!tokenData.accessToken) {
+    return null;
+  }
 
   const timeoutMs = Math.max(3000, parseInt(options.timeoutMs || '12000', 10) || 12000);
   const cwEndpoints = _resolveTraeCWEndpoints(tokenData);
-  if (cwEndpoints.length === 0) return null;
+  if (cwEndpoints.length === 0) {
+    return null;
+  }
 
   for (const bareBase of cwEndpoints.slice(0, 4)) {
     const url = `${bareBase}/ListAvailableModels?origin=AI_EDITOR`;
@@ -1505,24 +1873,34 @@ async function fetchModelsFromNativeApi(tokenData, options = {}) {
         }),
       });
 
-      if (res.status !== 200) continue;
+      if (res.status !== 200) {
+        continue;
+      }
 
       // 检测 HTML / 非 JSON 响应 → 跳过
       const contentType = String(res.headers?.['content-type'] || '').toLowerCase();
       const rawText = String(res.raw || '').trim();
-      if (contentType.includes('text/html') || rawText.startsWith('<!') || rawText.startsWith('<html')) {
+      if (
+        contentType.includes('text/html') ||
+        rawText.startsWith('<!') ||
+        rawText.startsWith('<html')
+      ) {
         _setProbeCache(bareBase, 'fail');
         continue;
       }
 
       const data = res.data || {};
       const rawModels = Array.isArray(data.models) ? data.models : [];
-      if (rawModels.length === 0) continue;
+      if (rawModels.length === 0) {
+        continue;
+      }
 
-      const models = rawModels.map(m => ({
-        id: m.modelId || m.id || '',
-        name: m.modelName || m.name || m.modelId || '',
-      })).filter(m => m.id);
+      const models = rawModels
+        .map((m) => ({
+          id: m.modelId || m.id || '',
+          name: m.modelName || m.name || m.modelId || '',
+        }))
+        .filter((m) => m.id);
 
       const defaultModelId = data.defaultModel?.modelId || null;
       _setProbeCache(bareBase, 'ok');
@@ -1538,20 +1916,26 @@ async function fetchModelsFromNativeApi(tokenData, options = {}) {
 async function callTraeBySdk(tokenData, prompt, model, options = {}) {
   const sdkCtx = getTraeSdkClient(tokenData);
   if (!sdkCtx) {
-    return buildFailure(_sdkLoadError ? `Trae SDK unavailable: ${_sdkLoadError}` : 'Trae SDK unavailable', {
-      adapter: 'trae',
-      provider: 'Trae',
-      model,
-      errorType: 'unavailable',
-      attempts: [{ provider: 'Trae(SDK)', success: false, error: 'sdk_unavailable' }],
-    });
+    return buildFailure(
+      _sdkLoadError ? `Trae SDK unavailable: ${_sdkLoadError}` : 'Trae SDK unavailable',
+      {
+        adapter: 'trae',
+        provider: 'Trae',
+        model,
+        errorType: 'unavailable',
+        attempts: [{ provider: 'Trae(SDK)', success: false, error: 'sdk_unavailable' }],
+      }
+    );
   }
 
   const { sdk, client, endpoint: sdkEndpoint } = sdkCtx;
   const openaiTools = anthropicToOpenAI(options.tools);
-  const useStream = !openaiTools && (options.stream === true || typeof options.onChunk === 'function');
+  const useStream =
+    !openaiTools && (options.stream === true || typeof options.onChunk === 'function');
   let messages = buildTraeMessages(prompt, options);
-  if (openaiTools) messages = convertMessagesAnthropicToOpenAI(messages, true);
+  if (openaiTools) {
+    messages = convertMessagesAnthropicToOpenAI(messages, true);
+  }
   const payload = {
     model,
     messages,
@@ -1559,7 +1943,9 @@ async function callTraeBySdk(tokenData, prompt, model, options = {}) {
     max_tokens: options.maxTokens || 2048,
     temperature: options.temperature || 0.4,
   };
-  if (openaiTools) payload.tools = openaiTools;
+  if (openaiTools) {
+    payload.tools = openaiTools;
+  }
 
   const attempts = [];
   for (const base of resolveTraeApiBases(tokenData)) {
@@ -1567,9 +1953,11 @@ async function callTraeBySdk(tokenData, prompt, model, options = {}) {
     try {
       const res = await sdk.fetch(client, url, {
         method: 'POST',
-        headers: sanitizeOutgoingHeaders(buildTraeHeaders(tokenData, {
-          'Content-Type': 'application/json',
-        })),
+        headers: sanitizeOutgoingHeaders(
+          buildTraeHeaders(tokenData, {
+            'Content-Type': 'application/json',
+          })
+        ),
         body: JSON.stringify(payload),
       });
 
@@ -1581,7 +1969,14 @@ async function callTraeBySdk(tokenData, prompt, model, options = {}) {
           model,
           errorType: 'auth',
           statusCode,
-          attempts: mergeAttempts(attempts, [{ provider: `Trae(SDK:${sdkEndpoint})`, success: false, error: `auth failed (${statusCode})`, statusCode }]),
+          attempts: mergeAttempts(attempts, [
+            {
+              provider: `Trae(SDK:${sdkEndpoint})`,
+              success: false,
+              error: `auth failed (${statusCode})`,
+              statusCode,
+            },
+          ]),
         });
       }
 
@@ -1594,16 +1989,24 @@ async function callTraeBySdk(tokenData, prompt, model, options = {}) {
             adapter: 'trae',
             provider: `Trae SDK (${model})`,
             model,
-            attempts: mergeAttempts(attempts, [{ provider: `Trae(SDK:${sdkEndpoint})`, success: true }]),
+            attempts: mergeAttempts(attempts, [
+              { provider: `Trae(SDK:${sdkEndpoint})`, success: true },
+            ]),
           });
         }
-        attempts.push({ provider: `Trae(SDK:${sdkEndpoint})`, success: false, error: `empty stream from ${url}` });
+        attempts.push({
+          provider: `Trae(SDK:${sdkEndpoint})`,
+          success: false,
+          error: `empty stream from ${url}`,
+        });
         continue;
       }
 
       const bodyText = await res.text();
       let json = null;
-      try { json = JSON.parse(bodyText); } catch {
+      try {
+        json = JSON.parse(bodyText);
+      } catch {
         json = null;
       }
 
@@ -1616,8 +2019,11 @@ async function callTraeBySdk(tokenData, prompt, model, options = {}) {
           provider: `Trae SDK (${model})`,
           model,
           toolUseBlocks: sdkToolUseBlocks.length > 0 ? sdkToolUseBlocks : undefined,
-          stopReason: sdkToolUseBlocks.length > 0 ? 'tool_use' : (sdkChoice?.finish_reason || 'end_turn'),
-          attempts: mergeAttempts(attempts, [{ provider: `Trae(SDK:${sdkEndpoint})`, success: true }]),
+          stopReason:
+            sdkToolUseBlocks.length > 0 ? 'tool_use' : sdkChoice?.finish_reason || 'end_turn',
+          attempts: mergeAttempts(attempts, [
+            { provider: `Trae(SDK:${sdkEndpoint})`, success: true },
+          ]),
         });
       }
 
@@ -1628,7 +2034,11 @@ async function callTraeBySdk(tokenData, prompt, model, options = {}) {
         statusCode,
       });
     } catch (err) {
-      attempts.push({ provider: `Trae(SDK:${sdkEndpoint})`, success: false, error: err?.message || String(err) });
+      attempts.push({
+        provider: `Trae(SDK:${sdkEndpoint})`,
+        success: false,
+        error: err?.message || String(err),
+      });
     }
   }
 
@@ -1647,10 +2057,20 @@ function callTraeByHttp(tokenData, prompt, model, options = {}) {
 
   // Trae-specific: flatten content arrays in simple messages (Trae doesn't support content arrays)
   let _flattenContent;
-  try { _flattenContent = require('../../../services/contentBlockUtils').flattenContent; } catch { _flattenContent = (c) => String(c || ''); }
-  const pipelineOpts = { ...options, model, stream: useStream, max_tokens: options.maxTokens || 2048, temperature: options.temperature ?? 0.4 };
+  try {
+    _flattenContent = require('../../../services/contentBlockUtils').flattenContent;
+  } catch {
+    _flattenContent = (c) => String(c || '');
+  }
+  const pipelineOpts = {
+    ...options,
+    model,
+    stream: useStream,
+    max_tokens: options.maxTokens || 2048,
+    temperature: options.temperature ?? 0.4,
+  };
   if (Array.isArray(pipelineOpts.messages)) {
-    pipelineOpts.messages = pipelineOpts.messages.map(m => ({
+    pipelineOpts.messages = pipelineOpts.messages.map((m) => ({
       ...m,
       content: typeof m.content === 'string' ? m.content : _flattenContent(m.content),
     }));
@@ -1662,13 +2082,15 @@ function callTraeByHttp(tokenData, prompt, model, options = {}) {
 
   const runOne = (baseIndex) => {
     if (baseIndex >= bases.length) {
-      return Promise.resolve(buildFailure(attempts[attempts.length - 1]?.error || 'Trae HTTP request failed', {
-        adapter: 'trae',
-        provider: 'Trae',
-        model,
-        errorType: 'network',
-        attempts,
-      }));
+      return Promise.resolve(
+        buildFailure(attempts[attempts.length - 1]?.error || 'Trae HTTP request failed', {
+          adapter: 'trae',
+          provider: 'Trae',
+          model,
+          errorType: 'network',
+          attempts,
+        })
+      );
     }
 
     const base = bases[baseIndex];
@@ -1678,75 +2100,103 @@ function callTraeByHttp(tokenData, prompt, model, options = {}) {
       timeout: TIMEOUT_MS,
       headers: buildTraeHeaders(tokenData, { 'Content-Type': 'application/json' }),
       body: payload,
-    }).then(async (res) => {
-      const statusCode = Number(res.status || 0);
-      if (statusCode === 401 || statusCode === 403) {
-        return buildFailure(`Trae auth failed (${statusCode})`, {
-          adapter: 'trae',
-          provider: 'Trae',
-          model,
-          errorType: 'auth',
-          statusCode,
-          attempts: mergeAttempts(attempts, [{ provider: 'Trae(HTTP)', success: false, error: `auth failed (${statusCode})`, statusCode }]),
-        });
-      }
-      if (statusCode < 200 || statusCode >= 300) {
-        _setProbeCache(base, 'fail');
-        attempts.push({ provider: 'Trae(HTTP)', success: false, error: `HTTP ${statusCode}`, statusCode });
-        return runOne(baseIndex + 1);
-      }
+    })
+      .then(async (res) => {
+        const statusCode = Number(res.status || 0);
+        if (statusCode === 401 || statusCode === 403) {
+          return buildFailure(`Trae auth failed (${statusCode})`, {
+            adapter: 'trae',
+            provider: 'Trae',
+            model,
+            errorType: 'auth',
+            statusCode,
+            attempts: mergeAttempts(attempts, [
+              {
+                provider: 'Trae(HTTP)',
+                success: false,
+                error: `auth failed (${statusCode})`,
+                statusCode,
+              },
+            ]),
+          });
+        }
+        if (statusCode < 200 || statusCode >= 300) {
+          _setProbeCache(base, 'fail');
+          attempts.push({
+            provider: 'Trae(HTTP)',
+            success: false,
+            error: `HTTP ${statusCode}`,
+            statusCode,
+          });
+          return runOne(baseIndex + 1);
+        }
 
-      // 检测 HTML / 非 JSON 响应 → 标记端点失败，尝试下一个
-      const contentType = String(res.headers?.['content-type'] || '').toLowerCase();
-      const rawText = String(res.raw || '').trim();
-      if (contentType.includes('text/html') || rawText.startsWith('<!') || rawText.startsWith('<html')) {
-        _setProbeCache(base, 'fail');
-        attempts.push({ provider: 'Trae(HTTP)', success: false, error: `${base} 返回 HTML（非 OpenAI 端点）` });
-        return runOne(baseIndex + 1);
-      }
+        // 检测 HTML / 非 JSON 响应 → 标记端点失败，尝试下一个
+        const contentType = String(res.headers?.['content-type'] || '').toLowerCase();
+        const rawText = String(res.raw || '').trim();
+        if (
+          contentType.includes('text/html') ||
+          rawText.startsWith('<!') ||
+          rawText.startsWith('<html')
+        ) {
+          _setProbeCache(base, 'fail');
+          attempts.push({
+            provider: 'Trae(HTTP)',
+            success: false,
+            error: `${base} 返回 HTML（非 OpenAI 端点）`,
+          });
+          return runOne(baseIndex + 1);
+        }
 
-      const streamLike = useStream || contentType.includes('text/event-stream');
-      const dataText = rawText;
+        const streamLike = useStream || contentType.includes('text/event-stream');
+        const dataText = rawText;
 
-      if (streamLike) {
-        const streamedText = consumeSseText(dataText, options.onChunk).trim();
-        if (streamedText) {
-          return buildSuccess(streamedText, {
+        if (streamLike) {
+          const streamedText = consumeSseText(dataText, options.onChunk).trim();
+          if (streamedText) {
+            return buildSuccess(streamedText, {
+              adapter: 'trae',
+              provider: `Trae (${model})`,
+              model,
+              attempts: mergeAttempts(attempts, [{ provider: 'Trae(HTTP)', success: true }]),
+            });
+          }
+        }
+
+        const json = res.data || {};
+        const parsed = _openaiHandler.parseJsonResponse(json);
+        if (parsed.content.trim() || parsed.toolUseBlocks.length > 0) {
+          return buildSuccess(parsed.content.trim(), {
             adapter: 'trae',
             provider: `Trae (${model})`,
             model,
+            toolUseBlocks: parsed.toolUseBlocks.length > 0 ? parsed.toolUseBlocks : undefined,
+            stopReason: parsed.stopReason,
             attempts: mergeAttempts(attempts, [{ provider: 'Trae(HTTP)', success: true }]),
           });
         }
-      }
 
-      const json = res.data || {};
-      const parsed = _openaiHandler.parseJsonResponse(json);
-      if (parsed.content.trim() || parsed.toolUseBlocks.length > 0) {
-        return buildSuccess(parsed.content.trim(), {
-          adapter: 'trae',
-          provider: `Trae (${model})`,
-          model,
-          toolUseBlocks: parsed.toolUseBlocks.length > 0 ? parsed.toolUseBlocks : undefined,
-          stopReason: parsed.stopReason,
-          attempts: mergeAttempts(attempts, [{ provider: 'Trae(HTTP)', success: true }]),
+        const errorText = json.error?.message || `invalid response (${statusCode})`;
+        attempts.push({ provider: 'Trae(HTTP)', success: false, error: errorText, statusCode });
+        return runOne(baseIndex + 1);
+      })
+      .catch(async (err) => {
+        attempts.push({
+          provider: 'Trae(HTTP)',
+          success: false,
+          error: err?.message || String(err),
         });
-      }
-
-      const errorText = json.error?.message || `invalid response (${statusCode})`;
-      attempts.push({ provider: 'Trae(HTTP)', success: false, error: errorText, statusCode });
-      return runOne(baseIndex + 1);
-    }).catch(async (err) => {
-      attempts.push({ provider: 'Trae(HTTP)', success: false, error: err?.message || String(err) });
-      return runOne(baseIndex + 1);
-    });
+        return runOne(baseIndex + 1);
+      });
   };
 
   return runOne(0);
 }
 
 function detect(forceRefresh = false) {
-  if (_detectionState._checked && !forceRefresh) return _detectionState.available;
+  if (_detectionState._checked && !forceRefresh) {
+    return _detectionState.available;
+  }
 
   // 1) 安装检测
   _detectionState.installDetected = detectInstallation();
@@ -1777,7 +2227,9 @@ function detect(forceRefresh = false) {
   //    可用性（除非 KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS 开启且本地已安装 Trae）。
   //    _token 仍保留供 routing/generate 使用。原生明文/官方凭据即证明本地安装+登录。
   _detectionState.available = _traeComputeAvailable(_token);
-  if (!_detectionState.available) _models = [];
+  if (!_detectionState.available) {
+    _models = [];
+  }
   _detectionState._checked = true;
   return _detectionState.available;
 }
@@ -1790,12 +2242,18 @@ function _traeStrictInstalled() {
   try {
     const { findInstallation, findDataPath } = require('./ideDetector');
     return !!(findInstallation('trae') || findDataPath('trae'));
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 function _traeComputeAvailable(token) {
-  if (!token || !isLikelyCredentialToken(token.accessToken)) return false;
-  if (isNativeLoginToken(token)) return true;
+  if (!token || !isLikelyCredentialToken(token.accessToken)) {
+    return false;
+  }
+  if (isNativeLoginToken(token)) {
+    return true;
+  }
   return _traeStrictInstalled() && countsTowardAvailability(token);
 }
 
@@ -1817,8 +2275,7 @@ async function detectAsync(forceRefresh = false) {
     if (cred.token) {
       // 有明文 token → 构建 tokenData 并验证
       // nativeHost: 优先 cred 自带的 host，否则根据 regionHint 推断
-      const nativeHost = cred.nativeHost
-        || resolveNativeHostByRegion(cred.regionHint);
+      const nativeHost = cred.nativeHost || resolveNativeHostByRegion(cred.regionHint);
       _token = {
         accessToken: normalizeToken(cred.token),
         refreshToken: null,
@@ -1853,7 +2310,9 @@ async function detectAsync(forceRefresh = false) {
           _setProbeCache(verification.verifiedEndpoint, 'ok');
         }
       }
-    } catch { /* 验证失败不阻塞 */ }
+    } catch {
+      /* 验证失败不阻塞 */
+    }
   }
 
   // 端点探活：有 token 但 session 尚未验证时，用通用 probeEndpoint 兜底
@@ -1868,11 +2327,15 @@ async function detectAsync(forceRefresh = false) {
           break;
         }
       }
-    } catch { /* 探活失败不影响检测结果 */ }
+    } catch {
+      /* 探活失败不影响检测结果 */
+    }
   }
 
   // 启动定时刷新巡检
-  if (ok) startTokenRefresher();
+  if (ok) {
+    startTokenRefresher();
+  }
 
   return ok;
 }
@@ -1889,7 +2352,7 @@ async function listModels() {
   if (!_token || !_token.accessToken) {
     // No token — still return known + injected models so users can see what's
     // available (generate() will report auth errors at call time).
-    const fallback = KNOWN_MODELS.map(m => ({
+    const fallback = KNOWN_MODELS.map((m) => ({
       id: m.id,
       name: m.name,
       isDefault: !!m.isDefault,
@@ -1898,9 +2361,11 @@ async function listModels() {
       discoverySource: 'builtin',
     }));
     if (TRAE_INJECT_MODELS) {
-      const existingIds = new Set(fallback.map(m => canonicalModelKey(m.id)));
+      const existingIds = new Set(fallback.map((m) => canonicalModelKey(m.id)));
       for (const im of TRAE_INJECTED_MODELS) {
-        if (existingIds.has(canonicalModelKey(im.id))) continue;
+        if (existingIds.has(canonicalModelKey(im.id))) {
+          continue;
+        }
         fallback.push({
           id: im.id,
           name: im.name,
@@ -1916,7 +2381,7 @@ async function listModels() {
     return _models;
   }
 
-  if (_models.length > 0 && (Date.now() - _modelsFetchedAt) < MODEL_DISCOVERY_CACHE_MS) {
+  if (_models.length > 0 && Date.now() - _modelsFetchedAt < MODEL_DISCOVERY_CACHE_MS) {
     return _models;
   }
 
@@ -1935,7 +2400,7 @@ async function listModels() {
     try {
       const nativeApi = await fetchModelsFromNativeApi(_token);
       if (nativeApi && nativeApi.models && nativeApi.models.length > 0) {
-        apiModels = nativeApi.models.map(m => m.id || m.modelId);
+        apiModels = nativeApi.models.map((m) => m.id || m.modelId);
         apiDefault = nativeApi.defaultModelId || null;
         officialEndpoint = nativeApi.endpoint || '';
         officialHit = true;
@@ -1948,18 +2413,24 @@ async function listModels() {
     if (!officialHit) {
       try {
         const api = await fetchModelsFromApi(_token);
-        apiModels = (api.models || []).map(m => m.id);
+        apiModels = (api.models || []).map((m) => m.id);
         apiDefault = api.defaultModelId || null;
         officialEndpoint = api.endpoint || '';
         officialHit = apiModels.length > 0;
       } catch (err) {
         apiError = err?.message || String(err);
-        if (err && err.code === 'AUTH' && selected.fallback && selected.fallback.accessToken && !isTokenExpired(selected.fallback)) {
+        if (
+          err &&
+          err.code === 'AUTH' &&
+          selected.fallback &&
+          selected.fallback.accessToken &&
+          !isTokenExpired(selected.fallback)
+        ) {
           _token = selected.fallback;
           _tokenMgr.persistObservedToken(_token);
           try {
             const retry = await fetchModelsFromApi(_token);
-            apiModels = (retry.models || []).map(m => m.id);
+            apiModels = (retry.models || []).map((m) => m.id);
             apiDefault = retry.defaultModelId || null;
             officialEndpoint = retry.endpoint || '';
             officialHit = apiModels.length > 0;
@@ -2016,13 +2487,15 @@ async function listModels() {
     }
   );
 
-  _models = merged.map(m => ({ ...m, provider: 'trae', description: '' }));
+  _models = merged.map((m) => ({ ...m, provider: 'trae', description: '' }));
 
   // Inject models that Trae IDE shows but API omits (same pattern as Kiro).
   if (TRAE_INJECT_MODELS) {
-    const existingIds = new Set(_models.map(m => canonicalModelKey(m.id)));
+    const existingIds = new Set(_models.map((m) => canonicalModelKey(m.id)));
     for (const im of TRAE_INJECTED_MODELS) {
-      if (existingIds.has(canonicalModelKey(im.id))) continue;
+      if (existingIds.has(canonicalModelKey(im.id))) {
+        continue;
+      }
       _models.push({
         id: im.id,
         name: im.name,
@@ -2068,16 +2541,22 @@ function getStatus() {
     statusLevel = 'pending';
     const cookieSuffix = hasCookie ? ' + Cookie' : '';
     detail = `Token 检测到，待验证${cookieSuffix} (${modelCount} 个模型)`;
-  } else if (_detectionState.officialArtifactsDetected && _detectionState.credentialMode === 'encrypted') {
+  } else if (
+    _detectionState.officialArtifactsDetected &&
+    _detectionState.credentialMode === 'encrypted'
+  ) {
     statusLevel = 'encrypted';
     // 显示加密方案详情
     const blobAnalysis = _detectionState._officialCredential?.authBlobAnalysis;
     const scheme = blobAnalysis?.schemeHint || 'unknown';
-    const schemeDesc = scheme === 'trae-custom-encrypted'
-      ? 'Electron safeStorage 加密'
-      : scheme === 'dpapi' ? 'Windows DPAPI 加密'
-      : scheme.startsWith('chromium-safe-storage') ? `Chromium ${scheme.split('-').pop()} 加密`
-      : '加密格式未知';
+    const schemeDesc =
+      scheme === 'trae-custom-encrypted'
+        ? 'Electron safeStorage 加密'
+        : scheme === 'dpapi'
+          ? 'Windows DPAPI 加密'
+          : scheme.startsWith('chromium-safe-storage')
+            ? `Chromium ${scheme.split('-').pop()} 加密`
+            : '加密格式未知';
     const bridgeHint = _detectionState._officialCredential?.bridgeStale
       ? '（桥接 token 已过期，请在 Trae 中刷新）'
       : '（安装 khy-trae-bridge 扩展可自动提取 token）';
@@ -2092,29 +2571,32 @@ function getStatus() {
 
   // 端点状态统计
   const endpointBases = _token ? resolveTraeApiBases(_token) : [];
-  const endpointStatus = endpointBases.map(ep => {
+  const endpointStatus = endpointBases.map((ep) => {
     const cached = _endpointProbeCache.get(ep);
-    const probeResult = cached && (Date.now() - cached.at < ENDPOINT_PROBE_CACHE_MS) ? cached.result : 'untested';
+    const probeResult =
+      cached && Date.now() - cached.at < ENDPOINT_PROBE_CACHE_MS ? cached.result : 'untested';
     return { endpoint: ep, status: probeResult };
   });
 
   // 官方 artifact 分析摘要
   const officialCred = _detectionState._officialCredential;
-  const officialArtifacts = officialCred ? {
-    detected: officialCred.officialArtifactsDetected,
-    sources: officialCred.sourcePaths || [],
-    authBlobPresent: officialCred.authBlobPresent || false,
-    userTagBlobPresent: officialCred.userTagBlobPresent || false,
-    serverDataPresent: officialCred.serverDataPresent || false,
-    regionHint: officialCred.regionHint || null,
-    userIdHint: officialCred.userIdHint || null,
-    endpointHints: officialCred.endpointHints || [],
-    credentialMode: officialCred.credentialMode || 'none',
-    authBlobAnalysis: officialCred.authBlobAnalysis || null,
-    nativeHost: officialCred.nativeHost || null,
-    bridgePath: officialCred.bridgePath || null,
-    bridgeStale: officialCred.bridgeStale || false,
-  } : null;
+  const officialArtifacts = officialCred
+    ? {
+        detected: officialCred.officialArtifactsDetected,
+        sources: officialCred.sourcePaths || [],
+        authBlobPresent: officialCred.authBlobPresent || false,
+        userTagBlobPresent: officialCred.userTagBlobPresent || false,
+        serverDataPresent: officialCred.serverDataPresent || false,
+        regionHint: officialCred.regionHint || null,
+        userIdHint: officialCred.userIdHint || null,
+        endpointHints: officialCred.endpointHints || [],
+        credentialMode: officialCred.credentialMode || 'none',
+        authBlobAnalysis: officialCred.authBlobAnalysis || null,
+        nativeHost: officialCred.nativeHost || null,
+        bridgePath: officialCred.bridgePath || null,
+        bridgeStale: officialCred.bridgeStale || false,
+      }
+    : null;
 
   return {
     name: 'Trae IDE',
@@ -2141,7 +2623,7 @@ function getStatus() {
     sdk: {
       available: !!sdk,
       endpoint: _sdkClientEndpoint || '',
-      error: sdk ? '' : (_sdkLoadError || ''),
+      error: sdk ? '' : _sdkLoadError || '',
       mode: resolveTraeSdkMode(),
     },
     // 模型发现
@@ -2198,7 +2680,8 @@ async function generate(prompt, options = {}) {
     }
   }
 
-  const defaultModel = (_models.find(m => m.isDefault) || _models[0] || {}).id || 'doubao-1.5-pro';
+  const defaultModel =
+    (_models.find((m) => m.isDefault) || _models[0] || {}).id || 'doubao-1.5-pro';
   const model = options.model || defaultModel;
 
   // ---- 策略: Native → CW → SDK → HTTP → fallback ----
@@ -2208,10 +2691,18 @@ async function generate(prompt, options = {}) {
   if (_token.nativeToken && _token.nativeHost) {
     try {
       const nativeResult = await callTraeByNativeProtocol(_token, prompt, model, options);
-      if (nativeResult.success) return nativeResult;
-      if (nativeResult.attempts) allAttempts.push(...nativeResult.attempts);
+      if (nativeResult.success) {
+        return nativeResult;
+      }
+      if (nativeResult.attempts) {
+        allAttempts.push(...nativeResult.attempts);
+      }
     } catch (nativeErr) {
-      allAttempts.push({ provider: 'Trae-Native', success: false, error: nativeErr?.message || String(nativeErr) });
+      allAttempts.push({
+        provider: 'Trae-Native',
+        success: false,
+        error: nativeErr?.message || String(nativeErr),
+      });
     }
   }
 
@@ -2219,10 +2710,18 @@ async function generate(prompt, options = {}) {
   {
     try {
       const cwResult = await callTraeByCodeWhisperer(_token, prompt, model, options);
-      if (cwResult.success) return cwResult;
-      if (cwResult.attempts) allAttempts.push(...cwResult.attempts);
+      if (cwResult.success) {
+        return cwResult;
+      }
+      if (cwResult.attempts) {
+        allAttempts.push(...cwResult.attempts);
+      }
     } catch (cwErr) {
-      allAttempts.push({ provider: 'Trae-CW', success: false, error: cwErr?.message || String(cwErr) });
+      allAttempts.push({
+        provider: 'Trae-CW',
+        success: false,
+        error: cwErr?.message || String(cwErr),
+      });
     }
   }
 
@@ -2243,7 +2742,7 @@ async function generate(prompt, options = {}) {
   }
 
   // 3) HTTP 通道 (OpenAI 兼容)
-  let result = await callTraeByHttp(_token, prompt, model, options);
+  const result = await callTraeByHttp(_token, prompt, model, options);
   if (result.success) {
     result.attempts = mergeAttempts(allAttempts, sdkResult?.attempts, result.attempts);
     return result;
@@ -2258,7 +2757,13 @@ async function generate(prompt, options = {}) {
         _token = refreshed;
         const retryAfterRefresh = await callTraeByHttp(_token, prompt, model, options);
         if (retryAfterRefresh.success) {
-          retryAfterRefresh.attempts = mergeAttempts(allAttempts, sdkResult?.attempts, result.attempts, [{ provider: 'Trae(refresh)', success: true }], retryAfterRefresh.attempts);
+          retryAfterRefresh.attempts = mergeAttempts(
+            allAttempts,
+            sdkResult?.attempts,
+            result.attempts,
+            [{ provider: 'Trae(refresh)', success: true }],
+            retryAfterRefresh.attempts
+          );
           return retryAfterRefresh;
         }
       }
@@ -2271,7 +2776,12 @@ async function generate(prompt, options = {}) {
 
       const retry = await callTraeByHttp(_token, prompt, model, options);
       if (retry.success) {
-        retry.attempts = mergeAttempts(allAttempts, sdkResult?.attempts, result.attempts, retry.attempts);
+        retry.attempts = mergeAttempts(
+          allAttempts,
+          sdkResult?.attempts,
+          result.attempts,
+          retry.attempts
+        );
         return retry;
       }
 
@@ -2291,10 +2801,14 @@ function destroy() {
   _refreshPromise = null;
   _refreshBackoffUntil = 0;
   _detectionState = {
-    installDetected: false, officialArtifactsDetected: false,
+    installDetected: false,
+    officialArtifactsDetected: false,
     officialArtifactSources: [],
-    credentialMode: 'none', sessionVerified: false, available: false,
-    _checked: false, _officialCredential: null,
+    credentialMode: 'none',
+    sessionVerified: false,
+    available: false,
+    _checked: false,
+    _officialCredential: null,
   };
   _endpointProbeCache.clear();
   _token = null;
@@ -2345,33 +2859,35 @@ async function getRelayProfile(options = {}) {
 
   const models = await listModels();
   const modelIds = (Array.isArray(models) ? models : [])
-    .map(m => normalizeModelId(m?.id || ''))
+    .map((m) => normalizeModelId(m?.id || ''))
     .filter(Boolean);
   if (modelIds.length === 0) {
     throw new Error('No Trae models discovered from current account.');
   }
 
-  const defaultModel = normalizeModelId(
-    options.defaultModel
-    || options.model
-    || (models.find(m => m && m.isDefault) || {}).id
-    || modelIds[0]
-  ) || modelIds[0];
+  const defaultModel =
+    normalizeModelId(
+      options.defaultModel ||
+        options.model ||
+        (models.find((m) => m && m.isDefault) || {}).id ||
+        modelIds[0]
+    ) || modelIds[0];
 
-  const endpointOverride = toRelayEndpointBase(options.endpoint || options.baseUrl || options.base || '');
+  const endpointOverride = toRelayEndpointBase(
+    options.endpoint || options.baseUrl || options.base || ''
+  );
   const endpointFromToken = toRelayEndpointBase(_token.endpoint || '');
   const endpointFromApi = toRelayEndpointBase(resolveTraeApiBases(_token)[0] || '');
-  const endpoint = endpointOverride
-    || endpointFromToken
-    || endpointFromApi
-    || '';  // 不再盲加 api.trae.ai/v1 — 真实 Trae API 是原生协议非 OpenAI 兼容
+  const endpoint = endpointOverride || endpointFromToken || endpointFromApi || ''; // 不再盲加 api.trae.ai/v1 — 真实 Trae API 是原生协议非 OpenAI 兼容
 
   if (!endpoint) {
     throw new Error('没有可用的 OpenAI 兼容端点 — Trae 原生 API 不支持 /v1/chat/completions 格式');
   }
 
   const modelMap = {};
-  for (const id of modelIds) modelMap[id] = id;
+  for (const id of modelIds) {
+    modelMap[id] = id;
+  }
 
   return {
     id: String(options.id || 'trae-auto').trim() || 'trae-auto',
@@ -2387,4 +2903,13 @@ async function getRelayProfile(options = {}) {
   };
 }
 
-module.exports = { detect, detectAsync, getStatus, listModels, generate, destroy, getRelayProfile };
+module.exports = {
+  detect,
+  detectAsync,
+  getStatus,
+  listModels,
+  generate,
+  destroy,
+  getRelayProfile,
+  refreshCredential,
+};

@@ -44,7 +44,9 @@
           <template #default="{ row }">
             <el-button text type="primary" :icon="EditPen" @click="openEditor(row)">编辑</el-button>
             <el-button text :icon="Edit" @click="openRename(row)">重命名</el-button>
-            <el-button text type="danger" :icon="Delete" @click="confirmDelete(row)">删除</el-button>
+            <el-button text type="danger" :icon="Delete" @click="confirmDelete(row)"
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -57,7 +59,13 @@
           <el-input v-model="form.name" maxlength="80" placeholder="工作流名称" />
         </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="2" maxlength="500" placeholder="可选" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="2"
+            maxlength="500"
+            placeholder="可选"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -86,7 +94,12 @@
       </div>
       <template #footer>
         <el-button @click="tplDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="tplCreating" :disabled="!selectedTpl" @click="submitTemplate">
+        <el-button
+          type="primary"
+          :loading="tplCreating"
+          :disabled="!selectedTpl"
+          @click="submitTemplate"
+        >
           创建并编辑
         </el-button>
       </template>
@@ -111,28 +124,39 @@
       <div v-if="genResult" class="gen-preview">
         <div class="gen-preview__head">
           <span class="gen-preview__name">{{ genResult.name }}</span>
-          <el-tag size="small" type="success">{{ genResult.report?.nodeCount ?? genResult.graph?.nodes?.length ?? 0 }} 节点</el-tag>
+          <el-tag size="small" type="success"
+            >{{ genResult.report?.nodeCount ?? genResult.graph?.nodes?.length ?? 0 }} 节点</el-tag
+          >
           <el-tag v-if="genResult.report?.repaired" size="small" type="warning">已自动修复</el-tag>
         </div>
         <div class="gen-preview__desc">{{ genResult.description }}</div>
         <div class="gen-preview__nodes">
           <el-tag
-            v-for="n in (genResult.graph?.nodes || [])"
+            v-for="n in genResult.graph?.nodes || []"
             :key="n.id"
             size="small"
             class="gen-node-tag"
-          >{{ n.name || n.type }}</el-tag>
+            >{{ n.name || n.type }}</el-tag
+          >
         </div>
       </div>
 
       <template #footer>
         <el-button @click="genDialogVisible = false">取消</el-button>
-        <el-button v-if="!genResult" type="primary" :loading="genLoading" :disabled="!genPrompt.trim()" @click="submitGenerate">
+        <el-button
+          v-if="!genResult"
+          type="primary"
+          :loading="genLoading"
+          :disabled="!genPrompt.trim()"
+          @click="submitGenerate"
+        >
           生成
         </el-button>
         <template v-else>
           <el-button :disabled="genCreating" @click="genResult = null">重新生成</el-button>
-          <el-button type="primary" :loading="genCreating" @click="acceptGenerated">创建并编辑</el-button>
+          <el-button type="primary" :loading="genCreating" @click="acceptGenerated"
+            >创建并编辑</el-button
+          >
         </template>
       </template>
     </el-dialog>
@@ -144,166 +168,167 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Edit, EditPen, Delete, Files, Upload, MagicStick } from '@element-plus/icons-vue'
-import { useWorkflow } from '@/composables/useWorkflow'
-import CozeImportDialog from '@/views/CozeImportDialog.vue'
-import KhyPageHeader from '@/components/KhyPageHeader.vue'
+import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { Plus, Edit, EditPen, Delete, Files, Upload, MagicStick } from '@element-plus/icons-vue';
+import { useWorkflow } from '@/composables/useWorkflow';
+import { formatTime } from '../utils/formatTimestamp';
+import CozeImportDialog from '@/views/CozeImportDialog.vue';
+import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
-const router = useRouter()
+const router = useRouter();
 const {
-  workflows, loading, saving, loadError,
-  listWorkflows, createWorkflow, saveWorkflow, deleteWorkflow,
-  listTemplates, createFromTemplate,
+  workflows,
+  loading,
+  saving,
+  loadError,
+  listWorkflows,
+  createWorkflow,
+  saveWorkflow,
+  deleteWorkflow,
+  listTemplates,
+  createFromTemplate,
   generateWorkflow,
-} = useWorkflow()
+} = useWorkflow();
 
-const dialogVisible = ref(false)
-const dialogMode = ref('create') // 'create' | 'rename'
-const dialogTitle = ref('新建工作流')
-const editingId = ref(null)
-const form = reactive({ name: '', description: '' })
+const dialogVisible = ref(false);
+const dialogMode = ref('create'); // 'create' | 'rename'
+const dialogTitle = ref('新建工作流');
+const editingId = ref(null);
+const form = reactive({ name: '', description: '' });
 
 // Template picker state
-const tplDialogVisible = ref(false)
-const tplLoading = ref(false)
-const tplCreating = ref(false)
-const templates = ref([])
-const selectedTpl = ref(null)
+const tplDialogVisible = ref(false);
+const tplLoading = ref(false);
+const tplCreating = ref(false);
+const templates = ref([]);
+const selectedTpl = ref(null);
 
 // Coze import dialog visibility (browse + install).
-const cozeImportVisible = ref(false)
+const cozeImportVisible = ref(false);
 
 // Natural-language generation state. The flow: describe → generate (non-persist,
 // preview) → "创建并编辑" persists via createWorkflow then opens the editor.
-const genDialogVisible = ref(false)
-const genPrompt = ref('')
-const genResult = ref(null)
-const genLoading = ref(false)
-const genCreating = ref(false)
+const genDialogVisible = ref(false);
+const genPrompt = ref('');
+const genResult = ref(null);
+const genLoading = ref(false);
+const genCreating = ref(false);
 
-function formatTime(t) {
-  if (!t) return '-'
-  try {
-    return new Date(t).toLocaleString()
-  } catch {
-    return String(t)
-  }
-}
+// formatTime moved byte-identically to utils/formatTimestamp.js.
 
 function openCreate() {
-  dialogMode.value = 'create'
-  dialogTitle.value = '新建工作流'
-  editingId.value = null
-  form.name = ''
-  form.description = ''
-  dialogVisible.value = true
+  dialogMode.value = 'create';
+  dialogTitle.value = '新建工作流';
+  editingId.value = null;
+  form.name = '';
+  form.description = '';
+  dialogVisible.value = true;
 }
 
 function openRename(row) {
-  dialogMode.value = 'rename'
-  dialogTitle.value = '重命名工作流'
-  editingId.value = row.id
-  form.name = row.name
-  form.description = row.description || ''
-  dialogVisible.value = true
+  dialogMode.value = 'rename';
+  dialogTitle.value = '重命名工作流';
+  editingId.value = row.id;
+  form.name = row.name;
+  form.description = row.description || '';
+  dialogVisible.value = true;
 }
 
 async function submitDialog() {
-  const name = form.name.trim()
+  const name = form.name.trim();
   if (!name) {
-    ElMessage.warning('请输入名称')
-    return
+    ElMessage.warning('请输入名称');
+    return;
   }
   try {
     if (dialogMode.value === 'create') {
-      const wf = await createWorkflow({ name, description: form.description })
-      dialogVisible.value = false
-      ElMessage.success('已创建')
-      openEditor(wf)
+      const wf = await createWorkflow({ name, description: form.description });
+      dialogVisible.value = false;
+      ElMessage.success('已创建');
+      openEditor(wf);
     } else {
-      await saveWorkflow(editingId.value, { name, description: form.description })
-      dialogVisible.value = false
-      ElMessage.success('已保存')
-      await listWorkflows()
+      await saveWorkflow(editingId.value, { name, description: form.description });
+      dialogVisible.value = false;
+      ElMessage.success('已保存');
+      await listWorkflows();
     }
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '操作失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '操作失败');
   }
 }
 
 async function openTemplates() {
-  selectedTpl.value = null
-  tplDialogVisible.value = true
-  tplLoading.value = true
+  selectedTpl.value = null;
+  tplDialogVisible.value = true;
+  tplLoading.value = true;
   try {
-    templates.value = await listTemplates()
+    templates.value = await listTemplates();
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '加载模板失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '加载模板失败');
   } finally {
-    tplLoading.value = false
+    tplLoading.value = false;
   }
 }
 
 async function submitTemplate() {
-  if (!selectedTpl.value) return
-  tplCreating.value = true
+  if (!selectedTpl.value) return;
+  tplCreating.value = true;
   try {
-    const wf = await createFromTemplate(selectedTpl.value)
-    tplDialogVisible.value = false
-    ElMessage.success('已从模板创建')
-    openEditor(wf)
+    const wf = await createFromTemplate(selectedTpl.value);
+    tplDialogVisible.value = false;
+    ElMessage.success('已从模板创建');
+    openEditor(wf);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '创建失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '创建失败');
   } finally {
-    tplCreating.value = false
+    tplCreating.value = false;
   }
 }
 
 function openEditor(row) {
-  router.push({ name: 'WorkflowEditor', params: { id: row.id } })
+  router.push({ name: 'WorkflowEditor', params: { id: row.id } });
 }
 
 function openGenerate() {
-  genPrompt.value = ''
-  genResult.value = null
-  genLoading.value = false
-  genCreating.value = false
-  genDialogVisible.value = true
+  genPrompt.value = '';
+  genResult.value = null;
+  genLoading.value = false;
+  genCreating.value = false;
+  genDialogVisible.value = true;
 }
 
 async function submitGenerate() {
-  const prompt = genPrompt.value.trim()
+  const prompt = genPrompt.value.trim();
   if (!prompt) {
-    ElMessage.warning('请先描述任务')
-    return
+    ElMessage.warning('请先描述任务');
+    return;
   }
-  genLoading.value = true
+  genLoading.value = true;
   try {
     // Non-persist: returns { graph, name, description, report } for preview.
-    genResult.value = await generateWorkflow(prompt)
+    genResult.value = await generateWorkflow(prompt);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '生成失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '生成失败');
   } finally {
-    genLoading.value = false
+    genLoading.value = false;
   }
 }
 
 async function acceptGenerated() {
-  if (!genResult.value) return
-  genCreating.value = true
+  if (!genResult.value) return;
+  genCreating.value = true;
   try {
-    const { name, description, graph } = genResult.value
-    const wf = await createWorkflow({ name, description, graph })
-    genDialogVisible.value = false
-    ElMessage.success('已创建，进入编辑器')
-    openEditor(wf)
+    const { name, description, graph } = genResult.value;
+    const wf = await createWorkflow({ name, description, graph });
+    genDialogVisible.value = false;
+    ElMessage.success('已创建，进入编辑器');
+    openEditor(wf);
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '创建失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '创建失败');
   } finally {
-    genCreating.value = false
+    genCreating.value = false;
   }
 }
 
@@ -313,24 +338,26 @@ async function confirmDelete(row) {
       type: 'warning',
       confirmButtonText: '删除',
       cancelButtonText: '取消',
-    })
+    });
   } catch {
-    return
+    return;
   }
   try {
-    await deleteWorkflow(row.id)
-    ElMessage.success('已删除')
+    await deleteWorkflow(row.id);
+    ElMessage.success('已删除');
   } catch (err) {
-    ElMessage.error(err?.response?.data?.message || err?.message || '删除失败')
+    ElMessage.error(err?.response?.data?.message || err?.message || '删除失败');
   }
 }
 
 // 载入失败时的重试(本页降级 UI 的动作)。请求已 silent,失败仅落 loadError,不弹全局横幅。
 function retryLoad() {
-  listWorkflows().catch(() => { /* loadError 已就地渲染,吞掉 rejection 避免未处理 */ })
+  listWorkflows().catch(() => {
+    /* loadError 已就地渲染,吞掉 rejection 避免未处理 */
+  });
 }
 
-onMounted(retryLoad)
+onMounted(retryLoad);
 </script>
 
 <style scoped>
@@ -352,7 +379,9 @@ onMounted(retryLoad)
   border-radius: 8px;
   padding: 12px 14px;
   cursor: pointer;
-  transition: border-color 0.15s, background-color 0.15s;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
 }
 .tpl-card:hover {
   border-color: var(--el-color-primary-light-5);

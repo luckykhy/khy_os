@@ -26,25 +26,36 @@ const BLOCK_END = '<!-- khy-metadata:pointer END -->';
 //   'inject' — 注入带标记的指针块；文件已存在但无标记则在末尾追加（不动原内容）。
 //   'mdc'    — Cursor 规则文件：带 frontmatter 的整文件机器自有（仅当缺失或为我方文件时写）。
 const POINTER_TARGETS = [
-  { key: 'agents',   file: 'AGENTS.md',                         mode: 'inject' },
-  { key: 'claude',   file: 'CLAUDE.md',                         mode: 'inject' },
-  { key: 'copilot',  file: '.github/copilot-instructions.md',   mode: 'inject' },
-  { key: 'cursor',   file: '.cursor/rules/khy-maintainability.mdc', mode: 'mdc' },
-  { key: 'windsurf', file: '.windsurfrules',                    mode: 'inject' },
-  { key: 'cline',    file: '.clinerules',                       mode: 'inject' },
+  { key: 'agents', file: 'AGENTS.md', mode: 'inject' },
+  { key: 'claude', file: 'CLAUDE.md', mode: 'inject' },
+  { key: 'copilot', file: '.github/copilot-instructions.md', mode: 'inject' },
+  { key: 'cursor', file: '.cursor/rules/khy-maintainability.mdc', mode: 'mdc' },
+  { key: 'windsurf', file: '.windsurfrules', mode: 'inject' },
+  { key: 'cline', file: '.clinerules', mode: 'inject' },
 ];
 
 function _boolEnv(name, def) {
-  const raw = String(process.env[name] ?? '').trim().toLowerCase();
-  if (raw === '') return def;
+  const raw = String(process.env[name] ?? '')
+    .trim()
+    .toLowerCase();
+  if (raw === '') {
+    return def;
+  }
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
 function _enabledKeys() {
   const raw = String(process.env.KHY_META_POINTER_TARGETS || '').trim();
-  if (!raw) return POINTER_TARGETS.map(t => t.key);
-  const want = new Set(raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
-  return POINTER_TARGETS.map(t => t.key).filter(k => want.has(k));
+  if (!raw) {
+    return POINTER_TARGETS.map((t) => t.key);
+  }
+  const want = new Set(
+    raw
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
+  return POINTER_TARGETS.map((t) => t.key).filter((k) => want.has(k));
 }
 
 // 指针块正文（工具与人类都读；用英文以便随生成项目travels到任意语言环境）。
@@ -80,8 +91,10 @@ function _mdcContent() {
 
 /** 注入/更新带标记的指针块；返回新文本（与原文相同表示无需写）。 */
 function _injectBlock(existing, block) {
-  const norm = (block.endsWith('\n') ? block : block + '\n');
-  if (!existing) return norm;
+  const norm = block.endsWith('\n') ? block : block + '\n';
+  if (!existing) {
+    return norm;
+  }
   const si = existing.indexOf(BLOCK_START);
   if (si !== -1) {
     const ei = existing.indexOf(BLOCK_END, si);
@@ -92,7 +105,7 @@ function _injectBlock(existing, block) {
     }
   }
   // 无标记：在末尾追加（保留原文）。
-  const sep = existing.endsWith('\n\n') ? '' : (existing.endsWith('\n') ? '\n' : '\n\n');
+  const sep = existing.endsWith('\n\n') ? '' : existing.endsWith('\n') ? '\n' : '\n\n';
   return existing + sep + block.trim() + '\n';
 }
 
@@ -113,7 +126,9 @@ function linkAgentPointers(root, opts = {}) {
     const enabled = new Set(_enabledKeys());
     const block = _pointerBody();
     for (const t of POINTER_TARGETS) {
-      if (!enabled.has(t.key)) continue;
+      if (!enabled.has(t.key)) {
+        continue;
+      }
       const abs = path.join(root, t.file);
       try {
         const exists = fs.existsSync(abs);
@@ -121,12 +136,18 @@ function linkAgentPointers(root, opts = {}) {
         let next;
         if (t.mode === 'mdc') {
           // 整文件机器自有：仅当缺失或确为我方文件时写，绝不覆盖同名外部文件。
-          if (exists && !existing.includes('khy-metadata:pointer')) { out.skipped.push(t.file); continue; }
+          if (exists && !existing.includes('khy-metadata:pointer')) {
+            out.skipped.push(t.file);
+            continue;
+          }
           next = _mdcContent();
         } else {
           next = _injectBlock(existing, block);
         }
-        if (exists && next === existing) { out.unchanged.push(t.file); continue; }
+        if (exists && next === existing) {
+          out.unchanged.push(t.file);
+          continue;
+        }
         fs.mkdirSync(path.dirname(abs), { recursive: true });
         fs.writeFileSync(abs, next, 'utf8');
         out.written.push(t.file);
@@ -134,7 +155,9 @@ function linkAgentPointers(root, opts = {}) {
         out.skipped.push(t.file);
       }
     }
-    if (out.written.length) log(`metadata: 已让 AI 入口指向 .ai/（${out.written.join(', ')}）`);
+    if (out.written.length) {
+      log(`metadata: 已让 AI 入口指向 .ai/（${out.written.join(', ')}）`);
+    }
     return out;
   } catch (err) {
     return { ...out, ok: false, reason: `error:${err && err.message ? err.message : 'unknown'}` };
@@ -143,7 +166,7 @@ function linkAgentPointers(root, opts = {}) {
 
 /** 供提交钩子静态枚举的、需在刷新后一并入暂存的入口文件路径（不含 .ai/）。 */
 function pointerStagePaths() {
-  return POINTER_TARGETS.map(t => t.file);
+  return POINTER_TARGETS.map((t) => t.file);
 }
 
 module.exports = {

@@ -34,11 +34,17 @@ function isEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_UNKNOWN_COMMAND_HINT', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_UNKNOWN_COMMAND_HINT;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -50,7 +56,9 @@ function isEnabled(env = process.env) {
  * @returns {boolean}
  */
 function isExplicitSlashCommand(rawToken) {
-  if (typeof rawToken !== 'string') return false;
+  if (typeof rawToken !== 'string') {
+    return false;
+  }
   return /^\/[^\s/]/.test(rawToken.trim());
 }
 
@@ -61,14 +69,20 @@ function isExplicitSlashCommand(rawToken) {
  * @returns {string} 例:`"/cost"` 或 `"/cost" 或 "/clear"`;无候选 → ''
  */
 function _formatSuggestions(suggestions) {
-  if (!Array.isArray(suggestions) || suggestions.length === 0) return '';
+  if (!Array.isArray(suggestions) || suggestions.length === 0) {
+    return '';
+  }
   const labels = [];
   for (const s of suggestions) {
     const label = s && typeof s.label === 'string' ? s.label.trim() : '';
-    if (!label) continue;
+    if (!label) {
+      continue;
+    }
     const withSlash = label.startsWith('/') ? label : `/${label}`;
     labels.push(`"${withSlash}"`);
-    if (labels.length >= 2) break;
+    if (labels.length >= 2) {
+      break;
+    }
   }
   return labels.join(' 或 ');
 }
@@ -81,11 +95,15 @@ function _formatSuggestions(suggestions) {
 function buildUnknownCommandHint(input) {
   try {
     const rawToken = input && typeof input.rawToken === 'string' ? input.rawToken.trim() : '';
-    if (!isExplicitSlashCommand(rawToken)) return null;
+    if (!isExplicitSlashCommand(rawToken)) {
+      return null;
+    }
 
     const suggestList = _formatSuggestions(input && input.suggestions);
     let msg = `未知命令 "${rawToken}"。`;
-    if (suggestList) msg += `你是不是想执行 ${suggestList}?`;
+    if (suggestList) {
+      msg += `你是不是想执行 ${suggestList}?`;
+    }
     msg += '输入 `khy help` 查看全部命令;若这是想问我的问题,我会直接作答。';
     return msg;
   } catch {

@@ -30,17 +30,88 @@ const envFile = require('../gatewayEnvFile');
  * customProviderRegistry.
  */
 const BUILTIN_PROVIDERS = [
-  { name: 'DeepSeek', poolKey: 'deepseek', envKey: 'DEEPSEEK_API_KEY', envEndpoint: 'DEEPSEEK_API_ENDPOINT', defaultEndpoint: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'] },
-  { name: '通义千问 (Qwen)', poolKey: 'qwen', envKey: 'QWEN_API_KEY', envEndpoint: 'QWEN_API_ENDPOINT', defaultEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1', models: ['qwen-turbo', 'qwen-plus', 'qwen-max'] },
-  { name: '智谱 GLM', poolKey: 'glm', envKey: 'GLM_API_KEY', envEndpoint: 'GLM_API_ENDPOINT', defaultEndpoint: 'https://open.bigmodel.cn/api/paas/v4', models: ['glm-4', 'glm-4-flash', 'glm-4-air'] },
-  { name: '豆包 (Doubao)', poolKey: 'doubao', envKey: 'DOUBAO_API_KEY', envEndpoint: 'DOUBAO_API_ENDPOINT', defaultEndpoint: 'https://ark.cn-beijing.volces.com/api/v3', models: ['doubao-pro-32k', 'doubao-lite-32k'] },
-  { name: '百度文心', poolKey: 'wenxin', envKey: 'WENXIN_API_KEY', envEndpoint: 'WENXIN_API_ENDPOINT', defaultEndpoint: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop', models: ['ernie-4.0', 'ernie-speed'] },
-  { name: 'OpenAI', poolKey: 'openai', envKey: 'OPENAI_API_KEY', envEndpoint: 'OPENAI_API_ENDPOINT', defaultEndpoint: 'https://api.openai.com/v1', models: ['gpt-4o', 'gpt-4o-mini', 'o1-mini'] },
-  { name: 'Anthropic (Claude)', poolKey: 'anthropic', envKey: 'ANTHROPIC_API_KEY', envEndpoint: 'ANTHROPIC_API_ENDPOINT', defaultEndpoint: 'https://api.anthropic.com/v1', models: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022'] },
+  {
+    name: 'DeepSeek',
+    poolKey: 'deepseek',
+    envKey: 'DEEPSEEK_API_KEY',
+    envEndpoint: 'DEEPSEEK_API_ENDPOINT',
+    defaultEndpoint: 'https://api.deepseek.com/v1',
+    models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+  },
+  {
+    name: '通义千问 (Qwen)',
+    poolKey: 'qwen',
+    envKey: 'QWEN_API_KEY',
+    envEndpoint: 'QWEN_API_ENDPOINT',
+    defaultEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    models: ['qwen-turbo', 'qwen-plus', 'qwen-max'],
+  },
+  {
+    name: '智谱 GLM',
+    poolKey: 'glm',
+    envKey: 'GLM_API_KEY',
+    envEndpoint: 'GLM_API_ENDPOINT',
+    defaultEndpoint: 'https://open.bigmodel.cn/api/paas/v4',
+    models: ['glm-4', 'glm-4-flash', 'glm-4-air'],
+  },
+  {
+    name: '豆包 (Doubao)',
+    poolKey: 'doubao',
+    envKey: 'DOUBAO_API_KEY',
+    envEndpoint: 'DOUBAO_API_ENDPOINT',
+    defaultEndpoint: 'https://ark.cn-beijing.volces.com/api/v3',
+    models: ['doubao-pro-32k', 'doubao-lite-32k'],
+  },
+  {
+    name: '百度文心',
+    poolKey: 'wenxin',
+    envKey: 'WENXIN_API_KEY',
+    envEndpoint: 'WENXIN_API_ENDPOINT',
+    defaultEndpoint: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop',
+    models: ['ernie-4.0', 'ernie-speed'],
+  },
+  {
+    name: 'OpenAI',
+    poolKey: 'openai',
+    envKey: 'OPENAI_API_KEY',
+    envEndpoint: 'OPENAI_API_ENDPOINT',
+    defaultEndpoint: 'https://api.openai.com/v1',
+    models: ['gpt-4o', 'gpt-4o-mini', 'o1-mini'],
+  },
+  {
+    name: 'Anthropic (Claude)',
+    poolKey: 'anthropic',
+    envKey: 'ANTHROPIC_API_KEY',
+    envEndpoint: 'ANTHROPIC_API_ENDPOINT',
+    defaultEndpoint: 'https://api.anthropic.com/v1',
+    models: ['claude-sonnet-4-6', 'claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022'],
+  },
   // Trae 原生协议（adaptive-api.trae.ai）非 OpenAI 兼容；defaultEndpoint 留空，避免误导用户填 api.trae.ai 后 404。
-  { name: 'Trae API', poolKey: 'trae', envKey: 'TRAE_API_KEY', envEndpoint: 'TRAE_API_ENDPOINT', defaultEndpoint: '', models: ['gpt-4o', 'claude-3.5-sonnet', 'deepseek-v3', 'doubao-1.5-pro'] },
-  { name: 'HuggingFace', poolKey: null, envKey: 'HF_TOKEN', envEndpoint: null, defaultEndpoint: null, models: [], isToken: true },
-  { name: 'Relay (中转站)', poolKey: 'relay', envKey: 'RELAY_API_KEY', envEndpoint: 'RELAY_API_ENDPOINT', defaultEndpoint: '', models: [] },
+  {
+    name: 'Trae API',
+    poolKey: 'trae',
+    envKey: 'TRAE_API_KEY',
+    envEndpoint: 'TRAE_API_ENDPOINT',
+    defaultEndpoint: '',
+    models: ['gpt-4o', 'claude-3.5-sonnet', 'deepseek-v3', 'doubao-1.5-pro'],
+  },
+  {
+    name: 'HuggingFace',
+    poolKey: null,
+    envKey: 'HF_TOKEN',
+    envEndpoint: null,
+    defaultEndpoint: null,
+    models: [],
+    isToken: true,
+  },
+  {
+    name: 'Relay (中转站)',
+    poolKey: 'relay',
+    envKey: 'RELAY_API_KEY',
+    envEndpoint: 'RELAY_API_ENDPOINT',
+    defaultEndpoint: '',
+    models: [],
+  },
 ];
 
 /**
@@ -52,11 +123,17 @@ const BUILTIN_PROVIDERS = [
  * @returns {object}
  */
 function _withGlmLatest(p) {
-  if (!p || p.poolKey !== 'glm') return p;
+  if (!p || p.poolKey !== 'glm') {
+    return p;
+  }
   try {
     const { latestGlmModelEnabled, knownZhipuModels } = require('../zhipuGlmModel');
-    if (latestGlmModelEnabled()) p.models = knownZhipuModels();
-  } catch { /* fail-soft: keep static glm models */ }
+    if (latestGlmModelEnabled()) {
+      p.models = knownZhipuModels();
+    }
+  } catch {
+    /* fail-soft: keep static glm models */
+  }
   return p;
 }
 
@@ -75,15 +152,28 @@ function listBuiltinProviders() {
  * @returns {object|null} a fresh copy of the descriptor, or null when no match
  */
 function findBuiltinProvider(nameOrPoolKey) {
-  const needle = String(nameOrPoolKey || '').trim().toLowerCase();
-  if (!needle) return null;
+  const needle = String(nameOrPoolKey || '')
+    .trim()
+    .toLowerCase();
+  if (!needle) {
+    return null;
+  }
   for (const p of BUILTIN_PROVIDERS) {
-    if (p.poolKey && p.poolKey.toLowerCase() === needle) return _withGlmLatest({ ...p });
+    if (p.poolKey && p.poolKey.toLowerCase() === needle) {
+      return _withGlmLatest({ ...p });
+    }
     const name = String(p.name || '').toLowerCase();
-    if (name === needle) return _withGlmLatest({ ...p });
+    if (name === needle) {
+      return _withGlmLatest({ ...p });
+    }
     // Match any alias token inside the name: "anthropic (claude)" → {anthropic, claude}.
-    const tokens = name.split(/[()\s/]+/).map((t) => t.trim()).filter(Boolean);
-    if (tokens.includes(needle)) return _withGlmLatest({ ...p });
+    const tokens = name
+      .split(/[()\s/]+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tokens.includes(needle)) {
+      return _withGlmLatest({ ...p });
+    }
   }
   return null;
 }
@@ -105,20 +195,29 @@ function findBuiltinProvider(nameOrPoolKey) {
  *            endpoint:string, model:string, token?:boolean, models:string[]}}
  */
 function applyBuiltinProviderKey(input = {}, deps = {}) {
-  const provider = typeof input.provider === 'object' && input.provider
-    ? input.provider
-    : findBuiltinProvider(input.provider);
-  if (!provider) throw new Error(`未知的内置厂商: ${input.provider}`);
+  const provider =
+    typeof input.provider === 'object' && input.provider
+      ? input.provider
+      : findBuiltinProvider(input.provider);
+  if (!provider) {
+    throw new Error(`未知的内置厂商: ${input.provider}`);
+  }
 
   const keyInput = input.keyInput;
-  if (!keyInput || !String(keyInput).trim()) throw new Error('未输入 API Key');
+  if (!keyInput || !String(keyInput).trim()) {
+    throw new Error('未输入 API Key');
+  }
 
   const env = deps.env || envFile;
   // Lazy-require the pool so tests can inject a stub without touching disk.
   let pool = deps.pool;
   if (!pool) {
     pool = require('../apiKeyPool');
-    try { pool.init(); } catch { /* already initialised */ }
+    try {
+      pool.init();
+    } catch {
+      /* already initialised */
+    }
   }
 
   const priority = input.priority != null ? parseInt(input.priority, 10) || 0 : 10;
@@ -129,13 +228,26 @@ function applyBuiltinProviderKey(input = {}, deps = {}) {
   // HuggingFace-style token-only providers: save straight to env.
   if (provider.isToken) {
     const hfPrimary = extractPrimaryApiKey(keyInput);
-    if (!hfPrimary) throw new Error('未解析到有效 Token');
+    if (!hfPrimary) {
+      throw new Error('未解析到有效 Token');
+    }
     env.writeEnvMap({ [provider.envKey]: String(hfPrimary) });
-    return { poolKey: provider.poolKey, added: 0, duplicate: 0, primaryKey: String(hfPrimary), endpoint: '', model: '', token: true, models: [] };
+    return {
+      poolKey: provider.poolKey,
+      added: 0,
+      duplicate: 0,
+      primaryKey: String(hfPrimary),
+      endpoint: '',
+      model: '',
+      token: true,
+      models: [],
+    };
   }
 
   const parsedEntries = parseApiKeyEntries(keyInput, { endpoint, priority, label });
-  if (parsedEntries.length === 0) throw new Error('未解析到有效 API Key');
+  if (parsedEntries.length === 0) {
+    throw new Error('未解析到有效 API Key');
+  }
   const primaryKey = parsedEntries[0].key;
 
   // 1. add key(s) to the pool
@@ -143,10 +255,15 @@ function applyBuiltinProviderKey(input = {}, deps = {}) {
   let duplicate = 0;
   if (provider.poolKey) {
     for (const entry of parsedEntries) {
-      try { pool.addKey(provider.poolKey, entry); added += 1; }
-      catch (e) {
-        if (/already exists/i.test(String(e && e.message))) duplicate += 1;
-        else throw e;
+      try {
+        pool.addKey(provider.poolKey, entry);
+        added += 1;
+      } catch (e) {
+        if (/already exists/i.test(String(e && e.message))) {
+          duplicate += 1;
+        } else {
+          throw e;
+        }
       }
     }
   }
@@ -154,11 +271,16 @@ function applyBuiltinProviderKey(input = {}, deps = {}) {
   // 2. env vars for the provider (first key), mirroring the classic flow
   if (provider.envKey) {
     env.writeEnvMap({ [provider.envKey]: String(primaryKey) });
-    if (provider.envEndpoint && endpoint) env.writeEnvMap({ [provider.envEndpoint]: String(endpoint) });
+    if (provider.envEndpoint && endpoint) {
+      env.writeEnvMap({ [provider.envEndpoint]: String(endpoint) });
+    }
     if (/_API_KEY$/i.test(provider.envKey)) {
       const prefix = provider.envKey.replace(/_API_KEY$/i, '');
-      if (parsedEntries.length > 1) env.writeEnvMap({ [`${prefix}_API_KEYS`]: parsedEntries.map((e) => e.key).join(',') });
-      else env.unsetEnvKeys([`${prefix}_API_KEYS`]);
+      if (parsedEntries.length > 1) {
+        env.writeEnvMap({ [`${prefix}_API_KEYS`]: parsedEntries.map((e) => e.key).join(',') });
+      } else {
+        env.unsetEnvKeys([`${prefix}_API_KEYS`]);
+      }
     }
   }
 
@@ -167,7 +289,7 @@ function applyBuiltinProviderKey(input = {}, deps = {}) {
     env.mergeJsonEnvVar('GATEWAY_API_POOL_SERVICE_MAP', { [provider.poolKey]: 'openai' });
     env.mergeJsonEnvVar('GATEWAY_API_POOL_DEFAULT_MODEL_MAP', { [provider.poolKey]: model });
     const routeEntries = {};
-    for (const m of (provider.models || [])) {
+    for (const m of provider.models || []) {
       routeEntries[m] = { target: `api:${provider.poolKey}:${m}`, strict: true };
     }
     env.mergeJsonEnvVar('PROXY_MODEL_ROUTE_MAP', routeEntries);

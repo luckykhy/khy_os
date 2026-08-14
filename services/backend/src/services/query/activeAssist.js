@@ -34,18 +34,31 @@ const SALVAGE_MIN_CHARS = 12;
  * @returns {boolean}
  */
 function flagOn(flag) {
-  const v = String(process.env[flag] == null ? '' : process.env[flag]).trim().toLowerCase();
+  const v = String(process.env[flag] == null ? '' : process.env[flag])
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** 主闸:任一子能力都先过主闸。 */
-function isEnabled() { return flagOn(MASTER_FLAG); }
+function isEnabled() {
+  return flagOn(MASTER_FLAG);
+}
+
 /** A1 缺总结子闸。 */
-function summaryAssistEnabled() { return isEnabled() && flagOn(SUMMARY_FLAG); }
+function summaryAssistEnabled() {
+  return isEnabled() && flagOn(SUMMARY_FLAG);
+}
+
 /** A2 多智能体全失败子闸。 */
-function agentAssistEnabled() { return isEnabled() && flagOn(AGENT_FLAG); }
+function agentAssistEnabled() {
+  return isEnabled() && flagOn(AGENT_FLAG);
+}
+
 /** A3 空闲超时续接子闸。 */
-function idleAssistEnabled() { return isEnabled() && flagOn(IDLE_FLAG); }
+function idleAssistEnabled() {
+  return isEnabled() && flagOn(IDLE_FLAG);
+}
 
 // 「是否已含真正的总结/结论」判据的单一真源。toolUseLoop._looksLikeDeliveryConclusion
 // 改为委派此函数,消除两份判据。
@@ -56,7 +69,8 @@ function idleAssistEnabled() { return isEnabled() && flagOn(IDLE_FLAG); }
 // 被强行追加一轮「补总结」,这恰恰是不顺滑(已答完还在转圈)。故补齐英文收尾措辞与两个
 // 无歧义的中文收尾词(综上 / 小结)。本判据**只用于抑制**主动补总结轮(命中 → 不追问),
 // 放宽永远只会少追问、不会多追问,故零回归风险。
-const CONCLUSION_RE = /(完成|成功|已整理|已创建|已修改|无需|部分完成|最终结论|结果|总结|完成摘要|综上|小结|done|completed?|summary|summari[sz]e|result|created|modified|finished|finalized|final answer|in (summary|conclusion)|to (summari[sz]e|conclude)|overall|wrapped up|all set|no.*needed|partial)/i;
+const CONCLUSION_RE =
+  /(完成|成功|已整理|已创建|已修改|无需|部分完成|最终结论|结果|总结|完成摘要|综上|小结|done|completed?|summary|summari[sz]e|result|created|modified|finished|finalized|final answer|in (summary|conclusion)|to (summari[sz]e|conclude)|overall|wrapped up|all set|no.*needed|partial)/i;
 
 /**
  * 文本是否已经携带一个明确的交付结论/总结。
@@ -64,24 +78,28 @@ const CONCLUSION_RE = /(完成|成功|已整理|已创建|已修改|无需|部�
  * @returns {boolean}
  */
 function hasSynthesizedConclusion(text = '') {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!normalized) return false;
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) {
+    return false;
+  }
   return CONCLUSION_RE.test(normalized);
 }
 
 // ── RULES:何时主动协助 / 何时不(冻结,文档即契约)───────────────────────────
 const RULES = Object.freeze({
   A1_summary:
-    '输出完成但缺总结/结论 → 主动推一轮(禁用工具)让模型补收尾;补不出再由服务端合成一句兜底。'
-    + ' 仅对「无工具、足量(>= SUMMARY_MIN_CHARS)、非纯进度前言、非纯信息检索、尚未协助过」的回答触发。',
+    '输出完成但缺总结/结论 → 主动推一轮(禁用工具)让模型补收尾;补不出再由服务端合成一句兜底。' +
+    ' 仅对「无工具、足量(>= SUMMARY_MIN_CHARS)、非纯进度前言、非纯信息检索、尚未协助过」的回答触发。',
   A2_agent_allfail:
-    '多智能体全失败 → 不返回笼统套话,而是抢救各子代理的失败原因/空产出,给出诚实的'
-    + '「哪个代理失败、为何失败、下一步建议」;确无任何信息可呈现时才回落套话。',
+    '多智能体全失败 → 不返回笼统套话,而是抢救各子代理的失败原因/空产出,给出诚实的' +
+    '「哪个代理失败、为何失败、下一步建议」;确无任何信息可呈现时才回落套话。',
   A3_idle_continue:
     '空闲超时且无实质内容 → 先走一次 inertialContinuation 续接,仍无果再认输(timeWarning)。',
   A4_language:
-    '语言不符已由 gateway 语言纠偏完整覆盖(aiGateway 的 beginLanguageRecoveryRetry / '
-    + 'errorType:language_mismatch / final_response 检测 + 跨通道兜底);本模块不重复实现。',
+    '语言不符已由 gateway 语言纠偏完整覆盖(aiGateway 的 beginLanguageRecoveryRetry / ' +
+    'errorType:language_mismatch / final_response 检测 + 跨通道兜底);本模块不重复实现。',
 });
 
 // ── A1:缺总结 ────────────────────────────────────────────────────────────
@@ -97,9 +115,15 @@ const RULES = Object.freeze({
  */
 function classifySummary(opts = {}) {
   const o = opts || {};
-  if (!summaryAssistEnabled()) return { assist: false, reason: 'disabled', detail: null };
-  if (o.isInfoRequest) return { assist: false, reason: 'info_request', detail: null };
-  if (o.alreadyAssisted) return { assist: false, reason: 'already_assisted', detail: null };
+  if (!summaryAssistEnabled()) {
+    return { assist: false, reason: 'disabled', detail: null };
+  }
+  if (o.isInfoRequest) {
+    return { assist: false, reason: 'info_request', detail: null };
+  }
+  if (o.alreadyAssisted) {
+    return { assist: false, reason: 'already_assisted', detail: null };
+  }
   const clean = String(o.text == null ? '' : o.text).replace(/\s/g, '');
   if (clean.length < SUMMARY_MIN_CHARS) {
     return { assist: false, reason: 'too_short', detail: String(clean.length) };
@@ -112,9 +136,11 @@ function classifySummary(opts = {}) {
 
 /** 主动协助:禁用工具、要模型补一段收尾总结的系统指令。 */
 function buildSummaryDirective() {
-  return '\n\n[SYSTEM: 你已经完成了主要内容，但回答缺少一个明确的收尾总结/结论。'
-    + '请用中文补一段简短的总结或结论（1-3 句即可）：提炼要点或给出明确结果。'
-    + '不要重复正文已经写过的内容，不要重新开头或复述问题，不要调用任何工具，直接给出收尾即可。]';
+  return (
+    '\n\n[SYSTEM: 你已经完成了主要内容，但回答缺少一个明确的收尾总结/结论。' +
+    '请用中文补一段简短的总结或结论（1-3 句即可）：提炼要点或给出明确结果。' +
+    '不要重复正文已经写过的内容，不要重新开头或复述问题，不要调用任何工具，直接给出收尾即可。]'
+  );
 }
 
 /**
@@ -126,10 +152,16 @@ function buildSummaryDirective() {
  * @returns {string}
  */
 function buildSummaryFallback(text) {
-  if (!summaryAssistEnabled()) return '';
+  if (!summaryAssistEnabled()) {
+    return '';
+  }
   const clean = String(text == null ? '' : text).replace(/\s/g, '');
-  if (!clean) return '';
-  if (hasSynthesizedConclusion(text)) return ''; // 已有结论,无需兜底(反双渲染)
+  if (!clean) {
+    return '';
+  }
+  if (hasSynthesizedConclusion(text)) {
+    return '';
+  } // 已有结论,无需兜底(反双渲染)
   return '\n\n---\n**小结**：以上即为本次回答的完整内容，如需就其中任一点展开或继续，请告知。';
 }
 
@@ -141,11 +173,15 @@ function buildSummaryFallback(text) {
  * @returns {string|null}
  */
 function composeAgentAllFailedFallback(results) {
-  if (!agentAssistEnabled()) return null;
+  if (!agentAssistEnabled()) {
+    return null;
+  }
   const arr = Array.isArray(results) ? results : [];
   const lines = [];
   for (const r of arr) {
-    if (!r) continue;
+    if (!r) {
+      continue;
+    }
     const name = String(r.name || '子代理').trim();
     const result = String(r.result == null ? '' : r.result).trim();
     if (result.replace(/\s/g, '').length >= SALVAGE_MIN_CHARS) {
@@ -154,16 +190,23 @@ function composeAgentAllFailedFallback(results) {
       continue;
     }
     if (r.status === 'error') {
-      const why = String(r.detail || '未知错误').trim().slice(0, 200) || '未知错误';
+      const why =
+        String(r.detail || '未知错误')
+          .trim()
+          .slice(0, 200) || '未知错误';
       lines.push(`- **${name}**：执行失败 — ${why}`);
     } else {
       lines.push(`- **${name}**：返回为空`);
     }
   }
-  if (lines.length === 0) return null;
-  return '⚠ 本次多个子代理均未能产出有效结果，已为你抢救到以下信息：\n\n'
-    + `${lines.join('\n')}\n\n`
-    + '建议：1) 用 `/model` 换用更强的模型重试；2) 把任务拆分为更小的步骤；3) 提供更具体的上下文后重发。';
+  if (lines.length === 0) {
+    return null;
+  }
+  return (
+    '⚠ 本次多个子代理均未能产出有效结果，已为你抢救到以下信息：\n\n' +
+    `${lines.join('\n')}\n\n` +
+    '建议：1) 用 `/model` 换用更强的模型重试；2) 把任务拆分为更小的步骤；3) 提供更具体的上下文后重发。'
+  );
 }
 
 // ── A3:空闲超时无内容 ────────────────────────────────────────────────────
@@ -177,9 +220,15 @@ function composeAgentAllFailedFallback(results) {
  */
 function shouldAttemptIdleContinuation(opts = {}) {
   const o = opts || {};
-  if (!idleAssistEnabled()) return false;
-  if (o.used) return false;       // 一次性,绝不死循环
-  if (o.substantive) return false; // 已有内容 → 直接返回即可,无须续接
+  if (!idleAssistEnabled()) {
+    return false;
+  }
+  if (o.used) {
+    return false;
+  } // 一次性,绝不死循环
+  if (o.substantive) {
+    return false;
+  } // 已有内容 → 直接返回即可,无须续接
   return true;
 }
 

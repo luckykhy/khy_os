@@ -7,8 +7,12 @@ class ReadMcpResourceTool extends BaseTool {
   static aliases = ['read_mcp_resource'];
   static searchHint = 'mcp resource read content';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Read content from a specific MCP server resource.
@@ -36,7 +40,9 @@ Use ListMcpResources first to discover available resources.`;
     }
   }
 
-  getActivityDescription(input) { return `读取 MCP 资源：${input.uri}`; }
+  getActivityDescription(input) {
+    return `读取 MCP 资源：${input.uri}`;
+  }
 }
 
 module.exports = ReadMcpResourceTool;

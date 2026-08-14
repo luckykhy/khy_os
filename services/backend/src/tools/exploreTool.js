@@ -5,9 +5,10 @@
  * Spawns parallel search tasks and aggregates results.
  * Claude Code equivalent: Agent tool with subagent_type=Explore.
  */
-const { defineTool } = require('./_baseTool');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+
+const { defineTool } = require('./_baseTool');
 
 module.exports = defineTool({
   name: 'explore',
@@ -28,18 +29,21 @@ module.exports = defineTool({
     query: {
       type: 'string',
       required: true,
-      description: 'What to search for (e.g. "function handleLogin", "*.vue files", "database connection")',
+      description:
+        'What to search for (e.g. "function handleLogin", "*.vue files", "database connection")',
     },
     patterns: {
       type: 'array',
       required: false,
-      description: 'Glob patterns to search (e.g. ["**/*.js", "src/**/*.ts"]). Auto-detected if omitted.',
+      description:
+        'Glob patterns to search (e.g. ["**/*.js", "src/**/*.ts"]). Auto-detected if omitted.',
       items: { type: 'string' },
     },
     grep_pattern: {
       type: 'string',
       required: false,
-      description: 'Regex pattern to grep for in file contents. Auto-detected from query if omitted.',
+      description:
+        'Regex pattern to grep for in file contents. Auto-detected from query if omitted.',
     },
     path: {
       type: 'string',
@@ -96,24 +100,30 @@ module.exports = defineTool({
     const contentMatches = [];
 
     for (const result of taskResults) {
-      if (result.status !== 'fulfilled') continue;
+      if (result.status !== 'fulfilled') {
+        continue;
+      }
       const data = result.value;
 
       if (data.type === 'glob') {
         for (const f of data.files) {
-          if (fileSet.size >= maxResults) break;
+          if (fileSet.size >= maxResults) {
+            break;
+          }
           fileSet.add(f);
         }
       } else if (data.type === 'grep') {
         for (const match of data.matches) {
-          if (contentMatches.length >= maxResults) break;
+          if (contentMatches.length >= maxResults) {
+            break;
+          }
           contentMatches.push(match);
           fileSet.add(match.file);
         }
       }
     }
 
-    results.files_found = [...fileSet].slice(0, maxResults).map(f => {
+    results.files_found = [...fileSet].slice(0, maxResults).map((f) => {
       const rel = path.relative(cwd, f);
       return rel || f;
     });
@@ -133,12 +143,20 @@ module.exports = defineTool({
           const { classifyPreReadHang } = require('./filePreReadHangGuard');
           const hang = classifyPreReadHang({ absPath, stat, env: process.env });
           if (hang && hang.blocked) {
-            fileContents.push({ path: relPath, preview: `[skipped — ${hang.kind} would hang the reader]` });
+            fileContents.push({
+              path: relPath,
+              preview: `[skipped — ${hang.kind} would hang the reader]`,
+            });
             continue;
           }
-        } catch { /* 判定失败 → 回退历史行为 */ }
+        } catch {
+          /* 判定失败 → 回退历史行为 */
+        }
         if (stat.size > 100000) {
-          fileContents.push({ path: relPath, preview: `[${(stat.size / 1024).toFixed(0)}KB — too large for preview]` });
+          fileContents.push({
+            path: relPath,
+            preview: `[${(stat.size / 1024).toFixed(0)}KB — too large for preview]`,
+          });
           continue;
         }
         const content = fs.readFileSync(absPath, 'utf8');
@@ -146,7 +164,9 @@ module.exports = defineTool({
         const preview = lines.slice(0, 100).join('\n');
         const suffix = lines.length > 100 ? `\n... +${lines.length - 100} more lines` : '';
         fileContents.push({ path: relPath, lines: lines.length, preview: preview + suffix });
-      } catch { /* skip unreadable files */ }
+      } catch {
+        /* skip unreadable files */
+      }
     }
 
     // ── Step 5: Build summary ──────────────────────────────────────
@@ -181,7 +201,9 @@ function _inferGlobPatterns(query) {
     }
   }
   // If query mentions specific directory
-  const dirMatch = query.match(/\b(src|lib|components|pages|views|routes|services|utils|models)\b/i);
+  const dirMatch = query.match(
+    /\b(src|lib|components|pages|views|routes|services|utils|models)\b/i
+  );
   if (dirMatch) {
     patterns.push(`${dirMatch[1]}/**/*`);
   }
@@ -195,19 +217,61 @@ function _inferGlobPatterns(query) {
 function _inferGrepPattern(query) {
   // Extract likely code identifiers from the query (including identifiers in Chinese-mixed text)
   const codePatterns = query.match(/\b[a-zA-Z_]\w{2,40}\b/g);
-  if (!codePatterns || codePatterns.length === 0) return null;
+  if (!codePatterns || codePatterns.length === 0) {
+    return null;
+  }
 
   // Filter out common English words and Chinese context words
   const stopWords = new Set([
-    'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her',
-    'was', 'one', 'our', 'out', 'has', 'how', 'what', 'where', 'when', 'which',
-    'find', 'search', 'show', 'file', 'files', 'code', 'function', 'class',
-    'use', 'using', 'with', 'from', 'this', 'that', 'have', 'does', 'will',
-    'implement', 'implemented', 'implementation', 'located', 'defined',
+    'the',
+    'and',
+    'for',
+    'are',
+    'but',
+    'not',
+    'you',
+    'all',
+    'can',
+    'had',
+    'her',
+    'was',
+    'one',
+    'our',
+    'out',
+    'has',
+    'how',
+    'what',
+    'where',
+    'when',
+    'which',
+    'find',
+    'search',
+    'show',
+    'file',
+    'files',
+    'code',
+    'function',
+    'class',
+    'use',
+    'using',
+    'with',
+    'from',
+    'this',
+    'that',
+    'have',
+    'does',
+    'will',
+    'implement',
+    'implemented',
+    'implementation',
+    'located',
+    'defined',
   ]);
 
-  const meaningful = codePatterns.filter(w => !stopWords.has(w.toLowerCase()) && w.length > 2);
-  if (meaningful.length === 0) return null;
+  const meaningful = codePatterns.filter((w) => !stopWords.has(w.toLowerCase()) && w.length > 2);
+  if (meaningful.length === 0) {
+    return null;
+  }
 
   // Detect definition-search intent and generate broader patterns
   const isDefSearch = /where is|find.*function|find.*class|定义|在哪|怎么实现|实现了/i.test(query);
@@ -241,23 +305,44 @@ async function _runGrep(pattern, cwd, maxResults) {
   const { execFile } = require('child_process');
   return new Promise((resolve) => {
     const args = [
-      '-r', '-l', '-i',
+      '-r',
+      '-l',
+      '-i',
       '--max-count=5',
-      '--include=*.js', '--include=*.ts', '--include=*.vue',
-      '--include=*.jsx', '--include=*.tsx', '--include=*.py',
-      '--include=*.go', '--include=*.rs', '--include=*.java',
-      '--include=*.md', '--include=*.json', '--include=*.yaml',
-      '--include=*.yml', '--include=*.css', '--include=*.html',
-      '-E', pattern,
+      '--include=*.js',
+      '--include=*.ts',
+      '--include=*.vue',
+      '--include=*.jsx',
+      '--include=*.tsx',
+      '--include=*.py',
+      '--include=*.go',
+      '--include=*.rs',
+      '--include=*.java',
+      '--include=*.md',
+      '--include=*.json',
+      '--include=*.yaml',
+      '--include=*.yml',
+      '--include=*.css',
+      '--include=*.html',
+      '-E',
+      pattern,
       cwd,
     ];
 
     // Try ripgrep first (faster), fall back to grep
     const tryRg = () => {
       const rgArgs = [
-        '-l', '-i', '--max-count=5',
-        '-g', '!node_modules', '-g', '!.git', '-g', '!dist',
-        '-e', pattern,
+        '-l',
+        '-i',
+        '--max-count=5',
+        '-g',
+        '!node_modules',
+        '-g',
+        '!.git',
+        '-g',
+        '!dist',
+        '-e',
+        pattern,
         cwd,
       ];
       execFile('rg', rgArgs, { timeout: 10000, maxBuffer: 1024 * 256 }, (err, stdout) => {
@@ -265,12 +350,12 @@ async function _runGrep(pattern, cwd, maxResults) {
           // rg not found, try grep
           execFile('grep', args, { timeout: 10000, maxBuffer: 1024 * 256 }, (err2, stdout2) => {
             const files = (stdout2 || '').trim().split('\n').filter(Boolean).slice(0, maxResults);
-            resolve({ type: 'grep', pattern, matches: files.map(f => ({ file: f })) });
+            resolve({ type: 'grep', pattern, matches: files.map((f) => ({ file: f })) });
           });
           return;
         }
         const files = (stdout || '').trim().split('\n').filter(Boolean).slice(0, maxResults);
-        resolve({ type: 'grep', pattern, matches: files.map(f => ({ file: f })) });
+        resolve({ type: 'grep', pattern, matches: files.map((f) => ({ file: f })) });
       });
     };
 

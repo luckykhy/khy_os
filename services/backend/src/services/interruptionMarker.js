@@ -35,7 +35,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
 /** KHY_INTERRUPT_MARKER 门控:默认开(unset → 开),{0,false,off,no} 关。 */
 function interruptionMarkerEnabled(env = process.env) {
   const raw = env && env.KHY_INTERRUPT_MARKER;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -51,9 +53,13 @@ const INTERRUPTION_NOTE = '[用户已中断本次回复]';
  * @returns {string|null}
  */
 function buildInterruptedAssistantContent(partialText, env = process.env) {
-  if (!interruptionMarkerEnabled(env)) return null;
+  if (!interruptionMarkerEnabled(env)) {
+    return null;
+  }
   const partial = partialText == null ? '' : String(partialText).trim();
-  if (partial) return `${partial}\n\n${INTERRUPTION_NOTE}`;
+  if (partial) {
+    return `${partial}\n\n${INTERRUPTION_NOTE}`;
+  }
   return INTERRUPTION_NOTE;
 }
 

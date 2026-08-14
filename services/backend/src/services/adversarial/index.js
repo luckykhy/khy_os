@@ -19,9 +19,9 @@
  */
 
 const attackVectors = require('./attackVectors');
-const survivalCriteria = require('./survivalCriteria');
-const stressHarness = require('./stressHarness');
 const hardeningLoop = require('./hardeningLoop');
+const stressHarness = require('./stressHarness');
+const survivalCriteria = require('./survivalCriteria');
 
 class AdversarialTrainer {
   /**
@@ -31,9 +31,10 @@ class AdversarialTrainer {
    * @param {object}   [opts.forge]    注入 DualTrackForge 实例（启用双轨二次沉淀）
    */
   constructor(opts = {}) {
-    this.vectors = Array.isArray(opts.vectors) && opts.vectors.length
-      ? opts.vectors.slice()
-      : attackVectors.listVectors();
+    this.vectors =
+      Array.isArray(opts.vectors) && opts.vectors.length
+        ? opts.vectors.slice()
+        : attackVectors.listVectors();
     this.bridge = opts.bridge || null;
     this.forge = opts.forge || null;
   }
@@ -62,10 +63,18 @@ class AdversarialTrainer {
 
       if (!evaluation.survived) {
         for (const b of evaluation.breaches) {
-          breaches.push({ vectorId: evaluation.vectorId, target: evaluation.target, invariant: b.invariant, detail: b.detail });
+          breaches.push({
+            vectorId: evaluation.vectorId,
+            target: evaluation.target,
+            invariant: b.invariant,
+            detail: b.detail,
+          });
         }
         if (campaign.harden) {
-          const sank = await hardeningLoop.harden(evaluation, observation, { bridge: this.bridge, forge: this.forge });
+          const sank = await hardeningLoop.harden(evaluation, observation, {
+            bridge: this.bridge,
+            forge: this.forge,
+          });
           hardened.push(sank);
         }
       }
@@ -83,8 +92,12 @@ class AdversarialTrainer {
   /** 选取本场战役要打的向量。 */
   _select(campaign) {
     let v = this.vectors;
-    if (campaign.target) v = v.filter((x) => x.target === campaign.target);
-    if (campaign.family) v = v.filter((x) => x.family === campaign.family);
+    if (campaign.target) {
+      v = v.filter((x) => x.target === campaign.target);
+    }
+    if (campaign.family) {
+      v = v.filter((x) => x.family === campaign.family);
+    }
     if (Array.isArray(campaign.vectorIds) && campaign.vectorIds.length) {
       const set = new Set(campaign.vectorIds);
       v = v.filter((x) => set.has(x.id));

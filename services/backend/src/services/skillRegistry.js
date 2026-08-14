@@ -21,13 +21,30 @@
  * }
  */
 const fs = require('fs');
-const path = require('path');
-const https = require('https');
 const http = require('http');
-const { getAppHome } = require('../utils/dataHome');
+const https = require('https');
+const os = require('os');
+const path = require('path');
 
-const SKILLS_DIR = path.join(getAppHome(), 'skills');
-const SKILLS_CACHE_PATH = path.join(getAppHome(), 'skills_cache.json');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+
+// Lazy path resolvers so the portable root is honored at call time.
+function _skillsDir() {
+  return path.join(_appHome(), 'skills');
+}
+
+function _skillsCachePath() {
+  return path.join(_appHome(), 'skills_cache.json');
+}
+
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Built-in skills shipped with the package
@@ -93,8 +110,9 @@ function getRegistryEndpoint() {
  * Ensure skills directory exists.
  */
 function ensureSkillsDir() {
-  if (!fs.existsSync(SKILLS_DIR)) {
-    fs.mkdirSync(SKILLS_DIR, { recursive: true });
+  const dir = _skillsDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 }
 
@@ -106,15 +124,18 @@ function loadCache() {
     return _cache;
   }
   try {
-    if (fs.existsSync(SKILLS_CACHE_PATH)) {
-      const data = JSON.parse(fs.readFileSync(SKILLS_CACHE_PATH, 'utf-8'));
+    const cachePath = _skillsCachePath();
+    if (fs.existsSync(cachePath)) {
+      const data = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
       if (data.timestamp && Date.now() - data.timestamp < CACHE_TTL_MS) {
         _cache = data.skills || [];
         _cacheTime = data.timestamp;
         return _cache;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
@@ -126,11 +147,17 @@ function saveCache(skills) {
   _cacheTime = Date.now();
   try {
     ensureSkillsDir();
-    fs.writeFileSync(SKILLS_CACHE_PATH, JSON.stringify({
-      timestamp: _cacheTime,
-      skills,
-    }), 'utf-8');
-  } catch { /* ignore */ }
+    fs.writeFileSync(
+      _skillsCachePath(),
+      JSON.stringify({
+        timestamp: _cacheTime,
+        skills,
+      }),
+      'utf-8'
+    );
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -142,26 +169,34 @@ async function fetchRemoteSkills() {
     const url = new URL(`${endpoint}/v1/skills`);
     const transport = url.protocol === 'https:' ? https : http;
 
-    const req = transport.request({
-      hostname: url.hostname,
-      port: url.port,
-      path: url.pathname + url.search,
-      method: 'GET',
-      headers: { 'User-Agent': 'khy-quant-cli' },
-      timeout: 8000,
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          resolve(json.skills || []);
-        } catch { resolve([]); }
-      });
-    });
+    const req = transport.request(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname + url.search,
+        method: 'GET',
+        headers: { 'User-Agent': 'khy-quant-cli' },
+        timeout: 8000,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            resolve(json.skills || []);
+          } catch {
+            resolve([]);
+          }
+        });
+      }
+    );
 
     req.on('error', () => resolve([]));
-    req.on('timeout', () => { req.destroy(); resolve([]); });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve([]);
+    });
     req.end();
   });
 }
@@ -175,30 +210,38 @@ async function downloadSkill(skillId) {
     const url = new URL(`${endpoint}/v1/skills/${skillId}`);
     const transport = url.protocol === 'https:' ? https : http;
 
-    const req = transport.request({
-      hostname: url.hostname,
-      port: url.port,
-      path: url.pathname,
-      method: 'GET',
-      headers: { 'User-Agent': 'khy-quant-cli' },
-      timeout: 15000,
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`HTTP ${res.statusCode}`));
-          return;
-        }
-        try {
-          const json = JSON.parse(data);
-          resolve(json);
-        } catch (e) { reject(e); }
-      });
-    });
+    const req = transport.request(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: 'GET',
+        headers: { 'User-Agent': 'khy-quant-cli' },
+        timeout: 15000,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+            return;
+          }
+          try {
+            const json = JSON.parse(data);
+            resolve(json);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
 
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
     req.end();
   });
 }
@@ -213,21 +256,30 @@ async function installSkill(skillId) {
   }
 
   ensureSkillsDir();
-  const skillPath = path.join(SKILLS_DIR, `${skillId}.js`);
+  const skillsDir = _skillsDir();
+  const skillPath = path.join(skillsDir, `${skillId}.js`);
   fs.writeFileSync(skillPath, skill.code, 'utf-8');
 
   // Save metadata
-  const metaPath = path.join(SKILLS_DIR, `${skillId}.meta.json`);
-  fs.writeFileSync(metaPath, JSON.stringify({
-    id: skill.id,
-    name: skill.name,
-    description: skill.description,
-    version: skill.version,
-    author: skill.author,
-    trigger: skill.trigger,
-    aliases: skill.aliases || [],
-    installedAt: new Date().toISOString(),
-  }, null, 2), 'utf-8');
+  const metaPath = path.join(skillsDir, `${skillId}.meta.json`);
+  fs.writeFileSync(
+    metaPath,
+    JSON.stringify(
+      {
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        version: skill.version,
+        author: skill.author,
+        trigger: skill.trigger,
+        aliases: skill.aliases || [],
+        installedAt: new Date().toISOString(),
+      },
+      null,
+      2
+    ),
+    'utf-8'
+  );
 
   return skill;
 }
@@ -236,10 +288,15 @@ async function installSkill(skillId) {
  * Uninstall a skill.
  */
 function uninstallSkill(skillId) {
-  const skillPath = path.join(SKILLS_DIR, `${skillId}.js`);
-  const metaPath = path.join(SKILLS_DIR, `${skillId}.meta.json`);
-  if (fs.existsSync(skillPath)) fs.unlinkSync(skillPath);
-  if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath);
+  const skillsDir = _skillsDir();
+  const skillPath = path.join(skillsDir, `${skillId}.js`);
+  const metaPath = path.join(skillsDir, `${skillId}.meta.json`);
+  if (fs.existsSync(skillPath)) {
+    fs.unlinkSync(skillPath);
+  }
+  if (fs.existsSync(metaPath)) {
+    fs.unlinkSync(metaPath);
+  }
 }
 
 /**
@@ -248,15 +305,20 @@ function uninstallSkill(skillId) {
 function getInstalledSkills() {
   ensureSkillsDir();
   const skills = [];
+  const skillsDir = _skillsDir();
   try {
-    const files = fs.readdirSync(SKILLS_DIR).filter(f => f.endsWith('.meta.json'));
+    const files = fs.readdirSync(skillsDir).filter((f) => f.endsWith('.meta.json'));
     for (const file of files) {
       try {
-        const meta = JSON.parse(fs.readFileSync(path.join(SKILLS_DIR, file), 'utf-8'));
+        const meta = JSON.parse(fs.readFileSync(path.join(skillsDir, file), 'utf-8'));
         skills.push(meta);
-      } catch { /* skip broken meta */ }
+      } catch {
+        /* skip broken meta */
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return skills;
 }
 
@@ -272,17 +334,21 @@ async function listSkills({ refresh = false } = {}) {
   }
   if (refresh || remote.length === 0) {
     remote = await fetchRemoteSkills();
-    if (remote.length > 0) saveCache(remote);
+    if (remote.length > 0) {
+      saveCache(remote);
+    }
   }
 
   // Merge: builtin first, then installed, then remote (not yet installed)
-  const installedIds = new Set(installed.map(s => s.id));
-  const builtinIds = new Set(BUILTIN_SKILLS.map(s => s.id));
+  const installedIds = new Set(installed.map((s) => s.id));
+  const builtinIds = new Set(BUILTIN_SKILLS.map((s) => s.id));
 
   const all = [
-    ...BUILTIN_SKILLS.map(s => ({ ...s, source: 'builtin' })),
-    ...installed.filter(s => !builtinIds.has(s.id)).map(s => ({ ...s, source: 'installed' })),
-    ...remote.filter(s => !installedIds.has(s.id) && !builtinIds.has(s.id)).map(s => ({ ...s, source: 'remote' })),
+    ...BUILTIN_SKILLS.map((s) => ({ ...s, source: 'builtin' })),
+    ...installed.filter((s) => !builtinIds.has(s.id)).map((s) => ({ ...s, source: 'installed' })),
+    ...remote
+      .filter((s) => !installedIds.has(s.id) && !builtinIds.has(s.id))
+      .map((s) => ({ ...s, source: 'remote' })),
   ];
 
   return all;
@@ -294,15 +360,23 @@ async function listSkills({ refresh = false } = {}) {
 function findSkillByTrigger(trigger) {
   // Check builtin
   for (const skill of BUILTIN_SKILLS) {
-    if (skill.trigger === trigger) return { ...skill, source: 'builtin' };
-    if (skill.aliases && skill.aliases.includes(trigger)) return { ...skill, source: 'builtin' };
+    if (skill.trigger === trigger) {
+      return { ...skill, source: 'builtin' };
+    }
+    if (skill.aliases && skill.aliases.includes(trigger)) {
+      return { ...skill, source: 'builtin' };
+    }
   }
 
   // Check installed
   const installed = getInstalledSkills();
   for (const skill of installed) {
-    if (skill.trigger === trigger) return { ...skill, source: 'installed' };
-    if (skill.aliases && skill.aliases.includes(trigger)) return { ...skill, source: 'installed' };
+    if (skill.trigger === trigger) {
+      return { ...skill, source: 'installed' };
+    }
+    if (skill.aliases && skill.aliases.includes(trigger)) {
+      return { ...skill, source: 'installed' };
+    }
   }
 
   return null;
@@ -315,26 +389,30 @@ function findSkillByTrigger(trigger) {
  */
 async function executeSkill(skillId, args, context = {}) {
   // Builtin skills generate AI prompts
-  const builtin = BUILTIN_SKILLS.find(s => s.id === skillId);
+  const builtin = BUILTIN_SKILLS.find((s) => s.id === skillId);
   if (builtin) {
     return { type: 'ai-prompt', prompt: buildBuiltinPrompt(skillId, args) };
   }
 
   // Installed skill — run code.
-  // Reject ids that could escape SKILLS_DIR. The id is interpolated into a file
+  // Reject ids that could escape the skills dir. The id is interpolated into a file
   // path and then require()'d, so a "../"-laden or absolute id would resolve to
   // an arbitrary module (path traversal → arbitrary code execution). Installed
   // skill ids are plain slugs, so constrain to a safe charset.
   if (!/^[a-zA-Z0-9_-]+$/.test(skillId)) {
     throw new Error(`Invalid skill id: "${skillId}"`);
   }
-  const skillPath = path.join(SKILLS_DIR, `${skillId}.js`);
+  const skillPath = path.join(_skillsDir(), `${skillId}.js`);
   if (!fs.existsSync(skillPath)) {
     throw new Error(`Skill "${skillId}" not installed. Run: skill install ${skillId}`);
   }
 
   // Clear require cache to support hot-reload
-  try { delete require.cache[require.resolve(skillPath)]; } catch { /* ignore */ }
+  try {
+    delete require.cache[require.resolve(skillPath)];
+  } catch {
+    /* ignore */
+  }
 
   const skill = require(skillPath);
   if (typeof skill.handler !== 'function') {
@@ -372,21 +450,21 @@ function buildBuiltinPrompt(skillId, args) {
  * Categories: ai, system-admin, devops, security, monitor-perf, quant, others
  */
 const SKILL_CATEGORIES = {
-  'ai':            { label: 'AI Tools',       description: 'AI coding agents and assistants' },
-  'system-admin':  { label: 'System Admin',   description: 'Package management, storage, networking' },
-  'devops':        { label: 'DevOps',         description: 'Git workflows, CI/CD, build systems' },
-  'security':      { label: 'Security',       description: 'CVE queries, compliance, hardening' },
-  'monitor-perf':  { label: 'Monitor & Perf', description: 'System monitoring, performance tuning' },
-  'quant':         { label: 'Quantitative',   description: 'Trading analysis, strategy, market data' },
-  'others':        { label: 'Others',         description: 'Utilities, format conversion, etc.' },
+  ai: { label: 'AI Tools', description: 'AI coding agents and assistants' },
+  'system-admin': { label: 'System Admin', description: 'Package management, storage, networking' },
+  devops: { label: 'DevOps', description: 'Git workflows, CI/CD, build systems' },
+  security: { label: 'Security', description: 'CVE queries, compliance, hardening' },
+  'monitor-perf': { label: 'Monitor & Perf', description: 'System monitoring, performance tuning' },
+  quant: { label: 'Quantitative', description: 'Trading analysis, strategy, market data' },
+  others: { label: 'Others', description: 'Utilities, format conversion, etc.' },
 };
 
 /**
  * Skill layer classification (ANOLISA-aligned).
  */
 const SKILL_LAYERS = {
-  core:        'Core system skill (kernel, drivers)',
-  system:      'System-level skill (admin, networking)',
+  core: 'Core system skill (kernel, drivers)',
+  system: 'System-level skill (admin, networking)',
   application: 'Application-level skill (tools, formats)',
 };
 
@@ -403,22 +481,23 @@ async function searchSkills(query = {}) {
   let results = all;
 
   if (query.category) {
-    results = results.filter(s =>
-      (s.category || 'others') === query.category ||
-      (s.tags && s.tags.includes(query.category))
+    results = results.filter(
+      (s) =>
+        (s.category || 'others') === query.category || (s.tags && s.tags.includes(query.category))
     );
   }
 
   if (query.tag) {
-    results = results.filter(s => s.tags && s.tags.includes(query.tag));
+    results = results.filter((s) => s.tags && s.tags.includes(query.tag));
   }
 
   if (query.keyword) {
     const kw = query.keyword.toLowerCase();
-    results = results.filter(s =>
-      (s.name && s.name.toLowerCase().includes(kw)) ||
-      (s.description && s.description.toLowerCase().includes(kw)) ||
-      (s.id && s.id.toLowerCase().includes(kw))
+    results = results.filter(
+      (s) =>
+        (s.name && s.name.toLowerCase().includes(kw)) ||
+        (s.description && s.description.toLowerCase().includes(kw)) ||
+        (s.id && s.id.toLowerCase().includes(kw))
     );
   }
 
@@ -436,13 +515,13 @@ async function getSkillsByCategory() {
   for (const [key, info] of Object.entries(SKILL_CATEGORIES)) {
     grouped[key] = {
       ...info,
-      skills: all.filter(s => (s.category || 'others') === key),
+      skills: all.filter((s) => (s.category || 'others') === key),
     };
   }
 
   // Put uncategorized skills into 'others'
   const categorized = new Set(Object.keys(SKILL_CATEGORIES));
-  const uncategorized = all.filter(s => !categorized.has(s.category || 'others'));
+  const uncategorized = all.filter((s) => !categorized.has(s.category || 'others'));
   if (uncategorized.length > 0) {
     grouped.others.skills.push(...uncategorized);
   }

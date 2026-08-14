@@ -17,8 +17,8 @@
 // 每个执行器均 fail-soft（网络不可用返回 { success:false, error }），绝不抛穿。
 // =============================================================================
 
-const https = require('https');
 const http = require('http');
+const https = require('https');
 
 /**
  * Generic HTTP(S) JSON fetch with timeout.
@@ -31,13 +31,22 @@ function _fetchJson(url, timeout = 6000) {
     const mod = url.startsWith('https') ? https : http;
     const req = mod.get(url, { timeout }, (res) => {
       let data = '';
-      res.on('data', chunk => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
-        try { resolve(JSON.parse(data)); } catch { resolve(data); }
+        try {
+          resolve(JSON.parse(data));
+        } catch {
+          resolve(data);
+        }
       });
     });
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
   });
 }
 
@@ -46,50 +55,101 @@ function _fetchText(url, timeout = 6000) {
     const mod = url.startsWith('https') ? https : http;
     const req = mod.get(url, { timeout }, (res) => {
       let data = '';
-      res.on('data', chunk => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => resolve(data));
     });
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
   });
 }
 
 // ── 8. 天气查询 ─────────────────────────────────────────────────────
 
 const _WEATHER_RE = /(天气|气温|温度|weather|forecast|气象|下雨|下雪|几度)/i;
-const _CITY_EXTRACT_RE = /(?:天气|气温|温度|weather|forecast)\s*[:：]?\s*(\S+)|(\S+)\s*(?:的?天气|的?气温|的?温度)/i;
+const _CITY_EXTRACT_RE =
+  /(?:天气|气温|温度|weather|forecast)\s*[:：]?\s*(\S+)|(\S+)\s*(?:的?天气|的?气温|的?温度)/i;
 const _CITY_COORDS = {
-  '北京': [39.9, 116.4], 'beijing': [39.9, 116.4],
-  '上海': [31.2, 121.5], 'shanghai': [31.2, 121.5],
-  '广州': [23.1, 113.3], 'guangzhou': [23.1, 113.3],
-  '深圳': [22.5, 114.1], 'shenzhen': [22.5, 114.1],
-  '杭州': [30.3, 120.2], 'hangzhou': [30.3, 120.2],
-  '成都': [30.6, 104.1], 'chengdu': [30.6, 104.1],
-  '武汉': [30.6, 114.3], 'wuhan': [30.6, 114.3],
-  '南京': [32.1, 118.8], 'nanjing': [32.1, 118.8],
-  '重庆': [29.6, 106.5], 'chongqing': [29.6, 106.5],
-  '西安': [34.3, 108.9], 'xian': [34.3, 108.9],
-  '天津': [39.1, 117.2], 'tianjin': [39.1, 117.2],
-  '长沙': [28.2, 112.9], 'changsha': [28.2, 112.9],
-  '青岛': [36.1, 120.4], 'qingdao': [36.1, 120.4],
-  '大连': [38.9, 121.6], 'dalian': [38.9, 121.6],
-  '厦门': [24.5, 118.1], 'xiamen': [24.5, 118.1],
-  '苏州': [31.3, 120.6], 'suzhou': [31.3, 120.6],
-  '东京': [35.7, 139.7], 'tokyo': [35.7, 139.7],
-  '纽约': [40.7, -74.0], 'new york': [40.7, -74.0],
-  '伦敦': [51.5, -0.1], 'london': [51.5, -0.1],
-  '巴黎': [48.9, 2.3], 'paris': [48.9, 2.3],
-  '首尔': [37.6, 127.0], 'seoul': [37.6, 127.0],
-  '新加坡': [1.3, 103.8], 'singapore': [1.3, 103.8],
-  '洛杉矶': [34.1, -118.2], 'los angeles': [34.1, -118.2],
-  '旧金山': [37.8, -122.4], 'san francisco': [37.8, -122.4],
-  '悉尼': [-33.9, 151.2], 'sydney': [-33.9, 151.2],
+  北京: [39.9, 116.4],
+  beijing: [39.9, 116.4],
+  上海: [31.2, 121.5],
+  shanghai: [31.2, 121.5],
+  广州: [23.1, 113.3],
+  guangzhou: [23.1, 113.3],
+  深圳: [22.5, 114.1],
+  shenzhen: [22.5, 114.1],
+  杭州: [30.3, 120.2],
+  hangzhou: [30.3, 120.2],
+  成都: [30.6, 104.1],
+  chengdu: [30.6, 104.1],
+  武汉: [30.6, 114.3],
+  wuhan: [30.6, 114.3],
+  南京: [32.1, 118.8],
+  nanjing: [32.1, 118.8],
+  重庆: [29.6, 106.5],
+  chongqing: [29.6, 106.5],
+  西安: [34.3, 108.9],
+  xian: [34.3, 108.9],
+  天津: [39.1, 117.2],
+  tianjin: [39.1, 117.2],
+  长沙: [28.2, 112.9],
+  changsha: [28.2, 112.9],
+  青岛: [36.1, 120.4],
+  qingdao: [36.1, 120.4],
+  大连: [38.9, 121.6],
+  dalian: [38.9, 121.6],
+  厦门: [24.5, 118.1],
+  xiamen: [24.5, 118.1],
+  苏州: [31.3, 120.6],
+  suzhou: [31.3, 120.6],
+  东京: [35.7, 139.7],
+  tokyo: [35.7, 139.7],
+  纽约: [40.7, -74.0],
+  'new york': [40.7, -74.0],
+  伦敦: [51.5, -0.1],
+  london: [51.5, -0.1],
+  巴黎: [48.9, 2.3],
+  paris: [48.9, 2.3],
+  首尔: [37.6, 127.0],
+  seoul: [37.6, 127.0],
+  新加坡: [1.3, 103.8],
+  singapore: [1.3, 103.8],
+  洛杉矶: [34.1, -118.2],
+  'los angeles': [34.1, -118.2],
+  旧金山: [37.8, -122.4],
+  'san francisco': [37.8, -122.4],
+  悉尼: [-33.9, 151.2],
+  sydney: [-33.9, 151.2],
 };
 const _WMO_CODES = {
-  0: '晴', 1: '大部晴', 2: '多云', 3: '阴', 45: '雾', 48: '雾凇',
-  51: '细雨', 53: '中雨', 55: '大雨', 61: '小雨', 63: '中雨', 65: '大雨',
-  71: '小雪', 73: '中雪', 75: '大雪', 77: '雪粒', 80: '阵雨', 81: '中阵雨',
-  82: '暴雨', 85: '小阵雪', 86: '大阵雪', 95: '雷暴', 96: '冰雹雷暴', 99: '强冰雹雷暴',
+  0: '晴',
+  1: '大部晴',
+  2: '多云',
+  3: '阴',
+  45: '雾',
+  48: '雾凇',
+  51: '细雨',
+  53: '中雨',
+  55: '大雨',
+  61: '小雨',
+  63: '中雨',
+  65: '大雨',
+  71: '小雪',
+  73: '中雪',
+  75: '大雪',
+  77: '雪粒',
+  80: '阵雨',
+  81: '中阵雨',
+  82: '暴雨',
+  85: '小阵雪',
+  86: '大阵雪',
+  95: '雷暴',
+  96: '冰雹雷暴',
+  99: '强冰雹雷暴',
 };
 
 function _isWeatherIntent(text) {
@@ -99,13 +159,22 @@ function _isWeatherIntent(text) {
 function _detectWeather(text) {
   let city = '北京';
   const m = text.match(_CITY_EXTRACT_RE);
-  if (m) city = (m[1] || m[2] || '').replace(/的$/, '').trim() || '北京';
+  if (m) {
+    city = (m[1] || m[2] || '').replace(/的$/, '').trim() || '北京';
+  }
   const coords = _CITY_COORDS[city.toLowerCase()] || _CITY_COORDS[city];
   if (!coords) {
     // Fallback: try wttr.in which accepts city names
     return { type: 'api_weather', category: '天气', label: city, city, useWttr: true };
   }
-  return { type: 'api_weather', category: '天气', label: city, city, lat: coords[0], lon: coords[1] };
+  return {
+    type: 'api_weather',
+    category: '天气',
+    label: city,
+    city,
+    lat: coords[0],
+    lon: coords[1],
+  };
 }
 
 async function _executeWeather(plan) {
@@ -118,7 +187,9 @@ async function _executeWeather(plan) {
         const cw = data.current_weather;
         const weather = _WMO_CODES[cw.weathercode] || `代码${cw.weathercode}`;
         const result = {
-          type: 'api_weather', success: true, city: plan.city,
+          type: 'api_weather',
+          success: true,
+          city: plan.city,
           current: { temp: cw.temperature, weather, wind: cw.windspeed, unit: '°C' },
         };
         if (data.daily) {
@@ -135,7 +206,9 @@ async function _executeWeather(plan) {
         }
         return result;
       }
-    } catch { /* fallthrough */ }
+    } catch {
+      /* fallthrough */
+    }
   }
   // Fallback: wttr.in
   try {
@@ -144,18 +217,36 @@ async function _executeWeather(plan) {
     if (data && data.current_condition && data.current_condition[0]) {
       const cc = data.current_condition[0];
       return {
-        type: 'api_weather', success: true, city: plan.city,
-        current: { temp: cc.temp_C, weather: cc.lang_zh?.[0]?.value || cc.weatherDesc?.[0]?.value || '', wind: cc.windspeedKmph, unit: '°C', humidity: cc.humidity },
+        type: 'api_weather',
+        success: true,
+        city: plan.city,
+        current: {
+          temp: cc.temp_C,
+          weather: cc.lang_zh?.[0]?.value || cc.weatherDesc?.[0]?.value || '',
+          wind: cc.windspeedKmph,
+          unit: '°C',
+          humidity: cc.humidity,
+        },
       };
     }
-  } catch { /* fallthrough */ }
-  return { type: 'api_weather', success: false, error: `无法获取 ${plan.city} 天气（网络不可用或城市名无法识别）` };
+  } catch {
+    /* fallthrough */
+  }
+  return {
+    type: 'api_weather',
+    success: false,
+    error: `无法获取 ${plan.city} 天气（网络不可用或城市名无法识别）`,
+  };
 }
 
 function _formatWeather(result) {
-  if (!result.success) return `天气查询失败: ${result.error}`;
+  if (!result.success) {
+    return `天气查询失败: ${result.error}`;
+  }
   const c = result.current;
-  const lines = [`${result.city} 当前天气: ${c.weather} ${c.temp}${c.unit}，风速 ${c.wind} km/h${c.humidity ? `，湿度 ${c.humidity}%` : ''}`];
+  const lines = [
+    `${result.city} 当前天气: ${c.weather} ${c.temp}${c.unit}，风速 ${c.wind} km/h${c.humidity ? `，湿度 ${c.humidity}%` : ''}`,
+  ];
   if (result.forecast) {
     lines.push('未来三天:');
     for (const f of result.forecast) {
@@ -168,18 +259,37 @@ function _formatWeather(result) {
 // ── 9. 汇率查询 ─────────────────────────────────────────────────────
 
 const _CURRENCY_RE = /(汇率|兑换|换算|exchange rate|convert|currency)/i;
-const _CURRENCY_PAIR_RE = /(\d+(?:\.\d+)?)\s*(?:个|元|块)?\s*(美元|人民币|欧元|英镑|日元|韩元|港币|加元|澳元|USD|CNY|EUR|GBP|JPY|KRW|HKD|CAD|AUD|RMB|rmb)\s*(?:换|兑|转|=|to|→|->)\s*(美元|人民币|欧元|英镑|日元|韩元|港币|加元|澳元|USD|CNY|EUR|GBP|JPY|KRW|HKD|CAD|AUD|RMB|rmb)/i;
+const _CURRENCY_PAIR_RE =
+  /(\d+(?:\.\d+)?)\s*(?:个|元|块)?\s*(美元|人民币|欧元|英镑|日元|韩元|港币|加元|澳元|USD|CNY|EUR|GBP|JPY|KRW|HKD|CAD|AUD|RMB|rmb)\s*(?:换|兑|转|=|to|→|->)\s*(美元|人民币|欧元|英镑|日元|韩元|港币|加元|澳元|USD|CNY|EUR|GBP|JPY|KRW|HKD|CAD|AUD|RMB|rmb)/i;
 const _CURRENCY_MAP = {
-  '美元': 'USD', 'usd': 'USD', '人民币': 'CNY', 'cny': 'CNY', 'rmb': 'CNY',
-  '欧元': 'EUR', 'eur': 'EUR', '英镑': 'GBP', 'gbp': 'GBP',
-  '日元': 'JPY', 'jpy': 'JPY', '韩元': 'KRW', 'krw': 'KRW',
-  '港币': 'HKD', 'hkd': 'HKD', '加元': 'CAD', 'cad': 'CAD',
-  '澳元': 'AUD', 'aud': 'AUD',
+  美元: 'USD',
+  usd: 'USD',
+  人民币: 'CNY',
+  cny: 'CNY',
+  rmb: 'CNY',
+  欧元: 'EUR',
+  eur: 'EUR',
+  英镑: 'GBP',
+  gbp: 'GBP',
+  日元: 'JPY',
+  jpy: 'JPY',
+  韩元: 'KRW',
+  krw: 'KRW',
+  港币: 'HKD',
+  hkd: 'HKD',
+  加元: 'CAD',
+  cad: 'CAD',
+  澳元: 'AUD',
+  aud: 'AUD',
 };
 
 function _isCurrencyIntent(text) {
-  if (text.length > 100) return false;
-  if (_CURRENCY_RE.test(text)) return true;
+  if (text.length > 100) {
+    return false;
+  }
+  if (_CURRENCY_RE.test(text)) {
+    return true;
+  }
   // Also match direct conversion patterns like "100美元换人民币"
   return _CURRENCY_PAIR_RE.test(text);
 }
@@ -193,7 +303,14 @@ function _detectCurrency(text) {
     return { type: 'api_currency', category: '汇率', label: `${from}→${to}`, amount, from, to };
   }
   // Generic "汇率" query: default USD→CNY
-  return { type: 'api_currency', category: '汇率', label: 'USD→CNY', amount: 1, from: 'USD', to: 'CNY' };
+  return {
+    type: 'api_currency',
+    category: '汇率',
+    label: 'USD→CNY',
+    amount: 1,
+    from: 'USD',
+    to: 'CNY',
+  };
 }
 
 async function _executeCurrency(plan) {
@@ -204,13 +321,19 @@ async function _executeCurrency(plan) {
     if (data && data.rates && data.rates[plan.to] !== undefined) {
       const rate = data.rates[plan.to];
       return {
-        type: 'api_currency', success: true,
-        from: plan.from, to: plan.to, amount: plan.amount,
-        rate, converted: (plan.amount * rate).toFixed(4),
+        type: 'api_currency',
+        success: true,
+        from: plan.from,
+        to: plan.to,
+        amount: plan.amount,
+        rate,
+        converted: (plan.amount * rate).toFixed(4),
         date: data.date,
       };
     }
-  } catch { /* fallthrough */ }
+  } catch {
+    /* fallthrough */
+  }
   // Fallback: ExchangeRate-API
   try {
     const url = `https://open.er-api.com/v6/latest/${plan.from}`;
@@ -218,18 +341,26 @@ async function _executeCurrency(plan) {
     if (data && data.rates && data.rates[plan.to] !== undefined) {
       const rate = data.rates[plan.to];
       return {
-        type: 'api_currency', success: true,
-        from: plan.from, to: plan.to, amount: plan.amount,
-        rate, converted: (plan.amount * rate).toFixed(4),
+        type: 'api_currency',
+        success: true,
+        from: plan.from,
+        to: plan.to,
+        amount: plan.amount,
+        rate,
+        converted: (plan.amount * rate).toFixed(4),
         date: data.time_last_update_utc || '',
       };
     }
-  } catch { /* fallthrough */ }
+  } catch {
+    /* fallthrough */
+  }
   return { type: 'api_currency', success: false, error: `无法获取 ${plan.from}→${plan.to} 汇率` };
 }
 
 function _formatCurrency(result) {
-  if (!result.success) return `汇率查询失败: ${result.error}`;
+  if (!result.success) {
+    return `汇率查询失败: ${result.error}`;
+  }
   return `${result.amount} ${result.from} = ${result.converted} ${result.to}\n汇率: 1 ${result.from} = ${result.rate} ${result.to}${result.date ? `\n数据日期: ${result.date}` : ''}`;
 }
 
@@ -237,12 +368,20 @@ function _formatCurrency(result) {
 
 const _CRYPTO_RE = /(比特币|以太坊|btc|eth|bitcoin|ethereum|加密货币|crypto|coin|币价|币圈)/i;
 const _CRYPTO_MAP = {
-  '比特币': 'bitcoin', 'btc': 'bitcoin', 'bitcoin': 'bitcoin',
-  '以太坊': 'ethereum', 'eth': 'ethereum', 'ethereum': 'ethereum',
-  '狗狗币': 'dogecoin', 'doge': 'dogecoin',
-  '莱特币': 'litecoin', 'ltc': 'litecoin',
-  '瑞波': 'ripple', 'xrp': 'ripple',
-  'sol': 'solana', 'solana': 'solana',
+  比特币: 'bitcoin',
+  btc: 'bitcoin',
+  bitcoin: 'bitcoin',
+  以太坊: 'ethereum',
+  eth: 'ethereum',
+  ethereum: 'ethereum',
+  狗狗币: 'dogecoin',
+  doge: 'dogecoin',
+  莱特币: 'litecoin',
+  ltc: 'litecoin',
+  瑞波: 'ripple',
+  xrp: 'ripple',
+  sol: 'solana',
+  solana: 'solana',
 };
 // Precomputed once at module load (Ch2「不要每轮重建可复用结构」). _detectCrypto
 // runs on every crypto-intent turn and formerly rebuilt Object.entries(_CRYPTO_MAP)
@@ -257,7 +396,10 @@ function _isCryptoIntent(text) {
 function _detectCrypto(text) {
   let coin = 'bitcoin';
   for (const [kw, id] of _CRYPTO_MAP_ENTRIES) {
-    if (text.toLowerCase().includes(kw)) { coin = id; break; }
+    if (text.toLowerCase().includes(kw)) {
+      coin = id;
+      break;
+    }
   }
   return { type: 'api_crypto', category: '加密货币', label: coin, coin };
 }
@@ -269,24 +411,35 @@ async function _executeCrypto(plan) {
     if (data && data[plan.coin]) {
       const info = data[plan.coin];
       return {
-        type: 'api_crypto', success: true, coin: plan.coin,
-        usd: info.usd, cny: info.cny,
+        type: 'api_crypto',
+        success: true,
+        coin: plan.coin,
+        usd: info.usd,
+        cny: info.cny,
         change24h: info.usd_24h_change,
       };
     }
-  } catch { /* fallthrough */ }
+  } catch {
+    /* fallthrough */
+  }
   return { type: 'api_crypto', success: false, error: `无法获取 ${plan.coin} 价格` };
 }
 
 function _formatCrypto(result) {
-  if (!result.success) return `加密货币查询失败: ${result.error}`;
-  const change = result.change24h != null ? ` (24h ${result.change24h > 0 ? '+' : ''}${result.change24h.toFixed(2)}%)` : '';
+  if (!result.success) {
+    return `加密货币查询失败: ${result.error}`;
+  }
+  const change =
+    result.change24h != null
+      ? ` (24h ${result.change24h > 0 ? '+' : ''}${result.change24h.toFixed(2)}%)`
+      : '';
   return `${result.coin.toUpperCase()}\n  USD: $${Number(result.usd).toLocaleString()}${change}\n  CNY: ¥${Number(result.cny).toLocaleString()}`;
 }
 
 // ── 11. 英文词典 ────────────────────────────────────────────────────
 
-const _DICT_RE = /(什么意思|翻译|定义|解释|dictionary|define|meaning of|what is|what does)\s*["'""]?\s*([a-zA-Z]{2,30})/i;
+const _DICT_RE =
+  /(什么意思|翻译|定义|解释|dictionary|define|meaning of|what is|what does)\s*["'""]?\s*([a-zA-Z]{2,30})/i;
 const _DICT_RE2 = /([a-zA-Z]{2,30})\s*(?:什么意思|的意思|的定义|的解释|meaning|definition)/i;
 
 function _isDictIntent(text) {
@@ -297,9 +450,14 @@ function _detectDict(text) {
   let word = '';
   const m1 = text.match(_DICT_RE);
   const m2 = text.match(_DICT_RE2);
-  if (m1) word = m1[2].toLowerCase();
-  else if (m2) word = m2[1].toLowerCase();
-  if (!word) return null;
+  if (m1) {
+    word = m1[2].toLowerCase();
+  } else if (m2) {
+    word = m2[1].toLowerCase();
+  }
+  if (!word) {
+    return null;
+  }
   return { type: 'api_dict', category: '词典', label: word, word };
 }
 
@@ -312,17 +470,21 @@ async function _executeDict(plan) {
       const phonetic = entry.phonetic || (entry.phonetics && entry.phonetics[0]?.text) || '';
       const meanings = [];
       for (const m of (entry.meanings || []).slice(0, 3)) {
-        const defs = (m.definitions || []).slice(0, 2).map(d => d.definition);
+        const defs = (m.definitions || []).slice(0, 2).map((d) => d.definition);
         meanings.push({ partOfSpeech: m.partOfSpeech, definitions: defs });
       }
       return { type: 'api_dict', success: true, word: plan.word, phonetic, meanings };
     }
-  } catch { /* fallthrough */ }
+  } catch {
+    /* fallthrough */
+  }
   return { type: 'api_dict', success: false, error: `未找到 "${plan.word}" 的定义` };
 }
 
 function _formatDict(result) {
-  if (!result.success) return `词典查询: ${result.error}`;
+  if (!result.success) {
+    return `词典查询: ${result.error}`;
+  }
   const lines = [`${result.word}${result.phonetic ? ` ${result.phonetic}` : ''}`];
   for (const m of result.meanings) {
     lines.push(`  [${m.partOfSpeech}]`);
@@ -350,19 +512,25 @@ async function _executeQuote() {
     if (Array.isArray(data) && data[0] && data[0].q) {
       return { type: 'api_quote', success: true, quote: data[0].q, author: data[0].a };
     }
-  } catch { /* fallthrough */ }
+  } catch {
+    /* fallthrough */
+  }
   // Fallback: Quotable
   try {
     const data = await _fetchJson('https://api.quotable.io/random');
     if (data && data.content) {
       return { type: 'api_quote', success: true, quote: data.content, author: data.author };
     }
-  } catch { /* fallthrough */ }
+  } catch {
+    /* fallthrough */
+  }
   return { type: 'api_quote', success: false, error: '无法获取名言（网络不可用）' };
 }
 
 function _formatQuote(result) {
-  if (!result.success) return result.error;
+  if (!result.success) {
+    return result.error;
+  }
   return `"${result.quote}"\n  — ${result.author || 'Unknown'}`;
 }
 
@@ -387,20 +555,39 @@ async function _executeIpSelf() {
       try {
         const geo = await _fetchJson(`http://ip-api.com/json/${data.ip}?lang=zh-CN`);
         if (geo && geo.status === 'success') {
-          return { type: 'api_ip', success: true, ip: data.ip, country: geo.country, region: geo.regionName, city: geo.city, isp: geo.isp, org: geo.org };
+          return {
+            type: 'api_ip',
+            success: true,
+            ip: data.ip,
+            country: geo.country,
+            region: geo.regionName,
+            city: geo.city,
+            isp: geo.isp,
+            org: geo.org,
+          };
         }
-      } catch { /* just return IP */ }
+      } catch {
+        /* just return IP */
+      }
       return { type: 'api_ip', success: true, ip: data.ip };
     }
-  } catch { /* fallthrough */ }
+  } catch {
+    /* fallthrough */
+  }
   return { type: 'api_ip', success: false, error: '无法获取公网 IP（网络不可用）' };
 }
 
 function _formatIp(result) {
-  if (!result.success) return result.error;
+  if (!result.success) {
+    return result.error;
+  }
   const lines = [`公网 IP: ${result.ip}`];
-  if (result.country) lines.push(`  位置: ${result.country} ${result.region || ''} ${result.city || ''}`);
-  if (result.isp) lines.push(`  ISP: ${result.isp}`);
+  if (result.country) {
+    lines.push(`  位置: ${result.country} ${result.region || ''} ${result.city || ''}`);
+  }
+  if (result.isp) {
+    lines.push(`  ISP: ${result.isp}`);
+  }
   return lines.join('\n');
 }
 
@@ -419,19 +606,29 @@ function _detectTrivia() {
 async function _executeTrivia() {
   try {
     const data = await _fetchJson('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en');
-    if (data && data.text) return { type: 'api_trivia', success: true, fact: data.text, source: data.source || '' };
-  } catch { /* fallthrough */ }
+    if (data && data.text) {
+      return { type: 'api_trivia', success: true, fact: data.text, source: data.source || '' };
+    }
+  } catch {
+    /* fallthrough */
+  }
   // Fallback: Numbers API
   try {
     const text = await _fetchText('http://numbersapi.com/random/trivia?json');
     const data = typeof text === 'string' ? JSON.parse(text) : text;
-    if (data && data.text) return { type: 'api_trivia', success: true, fact: data.text, source: 'numbersapi.com' };
-  } catch { /* fallthrough */ }
+    if (data && data.text) {
+      return { type: 'api_trivia', success: true, fact: data.text, source: 'numbersapi.com' };
+    }
+  } catch {
+    /* fallthrough */
+  }
   return { type: 'api_trivia', success: false, error: '无法获取冷知识（网络不可用）' };
 }
 
 function _formatTrivia(result) {
-  if (!result.success) return result.error;
+  if (!result.success) {
+    return result.error;
+  }
   return `${result.fact}${result.source ? `\n  — ${result.source}` : ''}`;
 }
 
@@ -439,10 +636,21 @@ function _formatTrivia(result) {
 
 const _HOLIDAY_RE = /(节假日|假期|放假|holiday|假日|法定假|什么节)/i;
 const _COUNTRY_CODE_MAP = {
-  '中国': 'CN', '美国': 'US', '日本': 'JP', '韩国': 'KR',
-  '英国': 'GB', '法国': 'FR', '德国': 'DE', '澳大利亚': 'AU',
-  'china': 'CN', 'us': 'US', 'usa': 'US', 'japan': 'JP',
-  'uk': 'GB', 'france': 'FR', 'germany': 'DE',
+  中国: 'CN',
+  美国: 'US',
+  日本: 'JP',
+  韩国: 'KR',
+  英国: 'GB',
+  法国: 'FR',
+  德国: 'DE',
+  澳大利亚: 'AU',
+  china: 'CN',
+  us: 'US',
+  usa: 'US',
+  japan: 'JP',
+  uk: 'GB',
+  france: 'FR',
+  germany: 'DE',
 };
 // Precomputed once at module load (Ch2「不要每轮重建可复用结构」). _detectHoliday
 // runs on every holiday-intent turn and formerly rebuilt Object.entries of this
@@ -457,7 +665,10 @@ function _isHolidayIntent(text) {
 function _detectHoliday(text) {
   let country = 'CN';
   for (const [kw, code] of _COUNTRY_CODE_MAP_ENTRIES) {
-    if (text.toLowerCase().includes(kw)) { country = code; break; }
+    if (text.toLowerCase().includes(kw)) {
+      country = code;
+      break;
+    }
   }
   const year = new Date().getFullYear();
   return { type: 'api_holiday', category: '节假日', label: `${country} ${year}`, country, year };
@@ -469,24 +680,39 @@ async function _executeHoliday(plan) {
     const data = await _fetchJson(url);
     if (Array.isArray(data) && data.length > 0) {
       const now = new Date().toISOString().slice(0, 10);
-      const upcoming = data.filter(h => h.date >= now).slice(0, 8);
-      const past = data.filter(h => h.date < now).slice(-3);
-      return { type: 'api_holiday', success: true, country: plan.country, year: plan.year, upcoming, past };
+      const upcoming = data.filter((h) => h.date >= now).slice(0, 8);
+      const past = data.filter((h) => h.date < now).slice(-3);
+      return {
+        type: 'api_holiday',
+        success: true,
+        country: plan.country,
+        year: plan.year,
+        upcoming,
+        past,
+      };
     }
-  } catch { /* fallthrough */ }
-  return { type: 'api_holiday', success: false, error: `无法获取 ${plan.country} ${plan.year} 节假日数据` };
+  } catch {
+    /* fallthrough */
+  }
+  return {
+    type: 'api_holiday',
+    success: false,
+    error: `无法获取 ${plan.country} ${plan.year} 节假日数据`,
+  };
 }
 
 function _formatHoliday(result) {
-  if (!result.success) return result.error;
+  if (!result.success) {
+    return result.error;
+  }
   const lines = [`${result.country} ${result.year} 节假日：`];
   if (result.upcoming.length > 0) {
     lines.push('即将到来:');
-    result.upcoming.forEach(h => lines.push(`  ${h.date}  ${h.localName || h.name}`));
+    result.upcoming.forEach((h) => lines.push(`  ${h.date}  ${h.localName || h.name}`));
   }
   if (result.past.length > 0) {
     lines.push('最近已过:');
-    result.past.forEach(h => lines.push(`  ${h.date}  ${h.localName || h.name}`));
+    result.past.forEach((h) => lines.push(`  ${h.date}  ${h.localName || h.name}`));
   }
   return lines.join('\n');
 }
@@ -496,36 +722,37 @@ function _formatHoliday(result) {
 // 执行器为 async，REPL 已用 Promise.resolve() 包裹，兼容无缝。
 
 const _API_HANDLERS = [
-  { type: 'api_weather',  match: _isWeatherIntent,  detect: _detectWeather,  cooperative: true },
-  { type: 'api_currency', match: _isCurrencyIntent,  detect: _detectCurrency, cooperative: true },
-  { type: 'api_crypto',   match: _isCryptoIntent,    detect: _detectCrypto,   cooperative: true },
-  { type: 'api_dict',     match: _isDictIntent,      detect: _detectDict,     cooperative: true },
-  { type: 'api_quote',    match: _isQuoteIntent,     detect: _detectQuote,    cooperative: true },
-  { type: 'api_ip',       match: _isIpSelfIntent,    detect: _detectIpSelf,   cooperative: true },
-  { type: 'api_trivia',   match: _isTriviaIntent,    detect: _detectTrivia,   cooperative: true },
-  { type: 'api_holiday',  match: _isHolidayIntent,   detect: _detectHoliday,  cooperative: true },
+  // cooperative:false — 与上方注释一致:实时数据/零成本,有模型也拦截(模型做不到更好/更快)。
+  { type: 'api_weather', match: _isWeatherIntent, detect: _detectWeather, cooperative: false },
+  { type: 'api_currency', match: _isCurrencyIntent, detect: _detectCurrency, cooperative: false },
+  { type: 'api_crypto', match: _isCryptoIntent, detect: _detectCrypto, cooperative: false },
+  { type: 'api_dict', match: _isDictIntent, detect: _detectDict, cooperative: false },
+  { type: 'api_quote', match: _isQuoteIntent, detect: _detectQuote, cooperative: false },
+  { type: 'api_ip', match: _isIpSelfIntent, detect: _detectIpSelf, cooperative: false },
+  { type: 'api_trivia', match: _isTriviaIntent, detect: _detectTrivia, cooperative: false },
+  { type: 'api_holiday', match: _isHolidayIntent, detect: _detectHoliday, cooperative: false },
 ];
 
 const _API_EXECUTORS = {
-  api_weather:  _executeWeather,
+  api_weather: _executeWeather,
   api_currency: _executeCurrency,
-  api_crypto:   _executeCrypto,
-  api_dict:     _executeDict,
-  api_quote:    _executeQuote,
-  api_ip:       _executeIpSelf,
-  api_trivia:   _executeTrivia,
-  api_holiday:  _executeHoliday,
+  api_crypto: _executeCrypto,
+  api_dict: _executeDict,
+  api_quote: _executeQuote,
+  api_ip: _executeIpSelf,
+  api_trivia: _executeTrivia,
+  api_holiday: _executeHoliday,
 };
 
 const _API_FORMATTERS = {
-  api_weather:  _formatWeather,
+  api_weather: _formatWeather,
   api_currency: _formatCurrency,
-  api_crypto:   _formatCrypto,
-  api_dict:     _formatDict,
-  api_quote:    _formatQuote,
-  api_ip:       _formatIp,
-  api_trivia:   _formatTrivia,
-  api_holiday:  _formatHoliday,
+  api_crypto: _formatCrypto,
+  api_dict: _formatDict,
+  api_quote: _formatQuote,
+  api_ip: _formatIp,
+  api_trivia: _formatTrivia,
+  api_holiday: _formatHoliday,
 };
 
 module.exports = {
@@ -537,12 +764,36 @@ module.exports = {
   _fetchJson,
   _fetchText,
   // 8 技能三件套（match/detect/execute/format）—— 供叶子级单测与 localBrainService 再导出
-  _isWeatherIntent, _detectWeather, _executeWeather, _formatWeather,
-  _isCurrencyIntent, _detectCurrency, _executeCurrency, _formatCurrency,
-  _isCryptoIntent, _detectCrypto, _executeCrypto, _formatCrypto,
-  _isDictIntent, _detectDict, _executeDict, _formatDict,
-  _isQuoteIntent, _detectQuote, _executeQuote, _formatQuote,
-  _isIpSelfIntent, _detectIpSelf, _executeIpSelf, _formatIp,
-  _isTriviaIntent, _detectTrivia, _executeTrivia, _formatTrivia,
-  _isHolidayIntent, _detectHoliday, _executeHoliday, _formatHoliday,
+  _isWeatherIntent,
+  _detectWeather,
+  _executeWeather,
+  _formatWeather,
+  _isCurrencyIntent,
+  _detectCurrency,
+  _executeCurrency,
+  _formatCurrency,
+  _isCryptoIntent,
+  _detectCrypto,
+  _executeCrypto,
+  _formatCrypto,
+  _isDictIntent,
+  _detectDict,
+  _executeDict,
+  _formatDict,
+  _isQuoteIntent,
+  _detectQuote,
+  _executeQuote,
+  _formatQuote,
+  _isIpSelfIntent,
+  _detectIpSelf,
+  _executeIpSelf,
+  _formatIp,
+  _isTriviaIntent,
+  _detectTrivia,
+  _executeTrivia,
+  _formatTrivia,
+  _isHolidayIntent,
+  _detectHoliday,
+  _executeHoliday,
+  _formatHoliday,
 };

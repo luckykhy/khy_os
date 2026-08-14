@@ -123,4 +123,48 @@ descFn('contextCompressor', () => {
     expect(bridged[1].role).toBe('assistant');
     expect(bridged[2].role).toBe('tool');
   });
+
+  test('compress preserves the original task anchor across compression', async () => {
+    // Long conversation that exceeds the 70% trigger threshold; the FIRST user
+    // message is the task statement that must survive compaction verbatim.
+    const msgs = [
+      { role: 'user', content: '请完整实现用户登录功能,包括注册、登录、token 刷新' },
+      { role: 'assistant', content: '好的,我先分析需求。' + 'x'.repeat(300) },
+      { role: 'user', content: '[Tool Result]\n[Tool:Read] 文件内容 A ' + 'a'.repeat(400) },
+      { role: 'assistant', content: '继续处理。' + 'y'.repeat(500) },
+      { role: 'user', content: '[Tool Result]\n[Tool:Read] 文件内容 B ' + 'b'.repeat(600) },
+      { role: 'assistant', content: '继续。' + 'z'.repeat(700) },
+      { role: 'user', content: '[Tool Result]\n[Tool:Edit] 已修改 ' + 'e'.repeat(800) },
+      { role: 'assistant', content: '处理中。' + 'w'.repeat(900) },
+    ];
+    const est = (t) => Math.ceil((t || '').length / 4);
+    const total = msgs.reduce((s, m) => s + est(m.content), 0);
+    const budget = 900; // usage ratio ~1.2 → triggers compression
+    expect(total / budget).toBeGreaterThan(0.7);
+
+    const result = await compress(msgs, {
+      estimateTokensFn: est,
+      callModelFn: async () => ({ reply: '压缩摘要: 已实现登录功能的主要步骤。' }),
+      contextWindowTokens: budget,
+    });
+    expect(result.summaryGenerated).toBe(true);
+    const anchor = result.compressed.find(m =>
+      typeof m.content === 'string' && m.content.includes('<original_task>')
+    );
+    expect(anchor).toBeTruthy();
+    expect(anchor.content).toContain('请完整实现用户登录功能');
+  });
+
+  test('compress returns no-op for short conversations (no anchor needed)', async () => {
+    const msgs = [
+      { role: 'user', content: 'hi' },
+      { role: 'assistant', content: 'hello' },
+    ];
+    const result = await compress(msgs, {
+      estimateTokensFn: (t) => Math.ceil((t || '').length / 4),
+      callModelFn: async () => ({ reply: 'summary' }),
+      contextWindowTokens: 100,
+    });
+    expect(result.summaryGenerated).toBe(false);
+  });
 });

@@ -22,6 +22,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir } = require('../utils/dataHome');
 
 const STATE_VERSION = 1;
@@ -39,7 +40,9 @@ function _load() {
         return data;
       }
     }
-  } catch { /* corrupt — start fresh */ }
+  } catch {
+    /* corrupt — start fresh */
+  }
   return { version: STATE_VERSION, skills: {} };
 }
 
@@ -54,10 +57,14 @@ function _save(data) {
  * @returns {boolean}
  */
 function isEnabled(name) {
-  if (!name) return true;
+  if (!name) {
+    return true;
+  }
   const data = _load();
   const entry = data.skills[name];
-  if (!entry || typeof entry.enabled !== 'boolean') return true;
+  if (!entry || typeof entry.enabled !== 'boolean') {
+    return true;
+  }
   return entry.enabled;
 }
 
@@ -68,7 +75,9 @@ function isEnabled(name) {
  * @returns {{ name: string, enabled: boolean, updatedAt: string }}
  */
 function setEnabled(name, enabled) {
-  if (!name) throw new Error('skillStateService.setEnabled requires a skill name');
+  if (!name) {
+    throw new Error('skillStateService.setEnabled requires a skill name');
+  }
   const data = _load();
   const entry = {
     enabled: !!enabled,

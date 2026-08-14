@@ -25,7 +25,8 @@
 const _FALSY = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
 
 // 开发语境词:命中即判「不是纯识图指令」——避免劫持「写个图片识别功能」「如何实现图片识别」。
-const _DEV_CONTEXT_RE = /(写|编写|代码|功能|实现|函数|组件|程序|开发|如何|怎么|怎样|教程|文档|集成|接入|模块|框架|api|sdk|build|implement|function|component|feature|develop|integrate|library|framework)/i;
+const _DEV_CONTEXT_RE =
+  /(写|编写|代码|功能|实现|函数|组件|程序|开发|如何|怎么|怎样|教程|文档|集成|接入|模块|框架|api|sdk|build|implement|function|component|feature|develop|integrate|library|framework)/i;
 
 // 「关于识图能力/模型」的元提问词:命中即判非识图指令。这类是自然对话在**问**能力
 // (「你支持图像识别吗」「哪些模型支持图像识别」「你是多模态模型吗」),而非**命令**识别
@@ -33,10 +34,12 @@ const _DEV_CONTEXT_RE = /(写|编写|代码|功能|实现|函数|组件|程序|�
 // 「未检测到图片」引导,污染正常聊天(用户实测:自然聊天被当成图像识别)。判据保守——
 // 这些词绝不会出现在真的「识别这张图」指令里(「识别这张图片里的文字」等均不含),故排除它们
 // 只会让边界情形回退到「不拦截 → 正常送模型」这一**更安全**的方向,不会漏拦真识图指令。
-const _META_QUESTION_RE = /(支持|多模态|哪些|那些|是不是|是否|能不能|能否|可不可以|有没有|模型|support|multimodal|which\s+model|are\s+you|do\s+you|does\s+it|\bmodels\b)/i;
+const _META_QUESTION_RE =
+  /(支持|多模态|哪些|那些|是不是|是否|能不能|能否|可不可以|有没有|模型|support|multimodal|which\s+model|are\s+you|do\s+you|does\s+it|\bmodels\b)/i;
 
 // 识图核心意图:图片识别 / 识别文字 / OCR / 提取文字 等。
-const _RECOGNIZE_INTENT_RE = /(图片识别|识别图片|识别图像|图像识别|图文识别|识别文字|文字识别|文字提取|提取文字|ocr|识别一下(?:这)?(?:张)?图|识别(?:这)?(?:张)?图片?|图片(?:里|中)的文字|recogni[sz]e\s+(?:this\s+)?(?:image|picture|photo|screenshot)|read\s+(?:the\s+)?text\s+from|extract\s+text)/i;
+const _RECOGNIZE_INTENT_RE =
+  /(图片识别|识别图片|识别图像|图像识别|图文识别|识别文字|文字识别|文字提取|提取文字|ocr|识别一下(?:这)?(?:张)?图|识别(?:这)?(?:张)?图片?|图片(?:里|中)的文字|recogni[sz]e\s+(?:this\s+)?(?:image|picture|photo|screenshot)|read\s+(?:the\s+)?text\s+from|extract\s+text)/i;
 
 /**
  * 门控判定。默认开,仅显式关闭词关闭。
@@ -56,10 +59,18 @@ function imageIntentGuardEnabled(env) {
  */
 function looksLikeImageRecognitionRequest(text) {
   const s = String(text == null ? '' : text).trim();
-  if (!s) return false;
-  if (s.length > 60) return false;            // 长句 → 更可能是复杂请求而非纯识图指令
-  if (_DEV_CONTEXT_RE.test(s)) return false;  // 不劫持「写个图片识别功能」等开发请求
-  if (_META_QUESTION_RE.test(s)) return false; // 不劫持「哪些模型支持图像识别」等能力提问
+  if (!s) {
+    return false;
+  }
+  if (s.length > 60) {
+    return false;
+  } // 长句 → 更可能是复杂请求而非纯识图指令
+  if (_DEV_CONTEXT_RE.test(s)) {
+    return false;
+  } // 不劫持「写个图片识别功能」等开发请求
+  if (_META_QUESTION_RE.test(s)) {
+    return false;
+  } // 不劫持「哪些模型支持图像识别」等能力提问
   return _RECOGNIZE_INTENT_RE.test(s);
 }
 
@@ -112,18 +123,35 @@ function buildNoImageGuidanceReply() {
 function resolveImageRecognitionAssist(text, opts = {}) {
   const original = String(text == null ? '' : text);
   try {
-    if (!imageIntentGuardEnabled(opts.env)) return { handled: false };
-    if (opts.hasImages) return { handled: false };
-    if (!looksLikeImageRecognitionRequest(original)) return { handled: false };
+    if (!imageIntentGuardEnabled(opts.env)) {
+      return { handled: false };
+    }
+    if (opts.hasImages) {
+      return { handled: false };
+    }
+    if (!looksLikeImageRecognitionRequest(original)) {
+      return { handled: false };
+    }
 
     let svc = opts.imageService;
     if (!svc) {
-      try { svc = require('../../services/imageService'); } catch { svc = null; }
+      try {
+        svc = require('../../services/imageService');
+      } catch {
+        svc = null;
+      }
     }
-    if (svc && typeof svc.isClipboardImageAvailable === 'function'
-        && typeof svc.readImageFromClipboard === 'function') {
+    if (
+      svc &&
+      typeof svc.isClipboardImageAvailable === 'function' &&
+      typeof svc.readImageFromClipboard === 'function'
+    ) {
       let hasClip = false;
-      try { hasClip = !!svc.isClipboardImageAvailable(); } catch { hasClip = false; }
+      try {
+        hasClip = !!svc.isClipboardImageAvailable();
+      } catch {
+        hasClip = false;
+      }
       if (hasClip) {
         try {
           const image = svc.readImageFromClipboard();
@@ -135,7 +163,9 @@ function resolveImageRecognitionAssist(text, opts = {}) {
               images: [{ base64: image.base64, mimeType: image.mimeType }],
             };
           }
-        } catch { /* fall through to no-image guidance */ }
+        } catch {
+          /* fall through to no-image guidance */
+        }
       }
     }
     return { handled: true, action: 'no-image-reply', reply: buildNoImageGuidanceReply() };

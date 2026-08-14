@@ -35,7 +35,9 @@ const _ADAPTERS = {
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function _actionsEnabled(env = process.env) {
   const raw = env && env.KHY_EXTERNAL_APP_ACTIONS;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -44,12 +46,20 @@ const _normApp = require('../../utils/trimLowerCase');
 
 function _adapterFor(app) {
   const mod = _ADAPTERS[_normApp(app)];
-  if (!mod) return null;
-  try { return require(mod); } catch { return null; }
+  if (!mod) {
+    return null;
+  }
+  try {
+    return require(mod);
+  } catch {
+    return null;
+  }
 }
 
 function _resolveAction(input = {}) {
-  const a = String(input.action || 'add').trim().toLowerCase();
+  const a = String(input.action || 'add')
+    .trim()
+    .toLowerCase();
   return ['add', 'remove', 'list', 'get', 'repair'].includes(a) ? a : 'add';
 }
 
@@ -66,27 +76,68 @@ module.exports = defineTool({
   isDestructive: (input) => _resolveAction(input || {}) === 'remove',
   isConcurrencySafe: false,
   shouldDefer: true,
-  searchHint: '外部软件 配置 模型 opencode openclaw reasonix deepseek-tui coze claude-code 扣子 增删改查 add remove list get repair 修复 修好 配置损坏 Expected object models 形状 启动报错 密钥 api key endpoint provider 模型 configure model external app 给软件配模型 帮我修 opencode 配置',
+  searchHint:
+    '外部软件 配置 模型 opencode openclaw reasonix deepseek-tui coze claude-code 扣子 增删改查 add remove list get repair 修复 修好 配置损坏 Expected object models 形状 启动报错 密钥 api key endpoint provider 模型 configure model external app 给软件配模型 帮我修 opencode 配置',
   maxResultSizeChars: 3000,
 
   inputSchema: {
-    app: { type: 'string', required: true, description: "目标外部软件:'opencode'|'openclaw'|'reasonix'(DeepSeek-Reasonix)|'deepseek-tui'|'coze'(coze-studio)|'claude-code'" },
-    action: { type: 'string', required: false, description: "动作:'add'(默认,配置/更新 provider+模型)、'remove'(删除,须 confirmed)、'list'(只读列出)、'get'(只读查详情)、'repair'(修复损坏配置,如 opencode 的 models 形状被写坏导致启动报 Expected object;无损坏则 no-op)" },
-    provider: { type: 'string', required: false, description: '厂商 id(如 deepseek/openai/anthropic;add 必填,作为该 app 内的 provider)' },
-    model: { type: 'string', required: false, description: '模型 ID(留空则用该厂商 preset 默认模型)' },
-    apiKey: { type: 'string', required: false, description: 'API Key(机密,仅进程内使用,绝不回显完整值;留空则复用 khy 已存的该厂商密钥)' },
-    endpoint: { type: 'string', required: false, description: 'Base URL(留空则用该厂商 preset 默认 baseUrl)' },
+    app: {
+      type: 'string',
+      required: true,
+      description:
+        "目标外部软件:'opencode'|'openclaw'|'reasonix'(DeepSeek-Reasonix)|'deepseek-tui'|'coze'(coze-studio)|'claude-code'",
+    },
+    action: {
+      type: 'string',
+      required: false,
+      description:
+        "动作:'add'(默认,配置/更新 provider+模型)、'remove'(删除,须 confirmed)、'list'(只读列出)、'get'(只读查详情)、'repair'(修复损坏配置,如 opencode 的 models 形状被写坏导致启动报 Expected object;无损坏则 no-op)",
+    },
+    provider: {
+      type: 'string',
+      required: false,
+      description: '厂商 id(如 deepseek/openai/anthropic;add 必填,作为该 app 内的 provider)',
+    },
+    model: {
+      type: 'string',
+      required: false,
+      description: '模型 ID(留空则用该厂商 preset 默认模型)',
+    },
+    apiKey: {
+      type: 'string',
+      required: false,
+      description: 'API Key(机密,仅进程内使用,绝不回显完整值;留空则复用 khy 已存的该厂商密钥)',
+    },
+    endpoint: {
+      type: 'string',
+      required: false,
+      description: 'Base URL(留空则用该厂商 preset 默认 baseUrl)',
+    },
     target: { type: 'string', required: false, description: 'remove/get 的目标 provider id' },
-    confirmed: { type: 'boolean', required: false, description: 'action=remove 时须为 true 才真正删除;false/省略 → 仅回删除预览' },
-    removeKeys: { type: 'boolean', required: false, description: 'action=remove 时是否连同该 app 存储的密钥一并清除(默认 false,保留可复用)' },
+    confirmed: {
+      type: 'boolean',
+      required: false,
+      description: 'action=remove 时须为 true 才真正删除;false/省略 → 仅回删除预览',
+    },
+    removeKeys: {
+      type: 'boolean',
+      required: false,
+      description: 'action=remove 时是否连同该 app 存储的密钥一并清除(默认 false,保留可复用)',
+    },
   },
 
   getActivityDescription(input) {
     const app = _normApp(input && input.app) || '外部软件';
     const action = _resolveAction(input || {});
-    if (action === 'list') return `列出 ${app} 已配置的模型(只读)`;
-    if (action === 'get') return `查询 ${app} 的 ${input && input.target ? input.target : '模型'} 详情(只读)`;
-    if (action === 'repair') return `修复 ${app} 的损坏配置(自动纠正后落盘,无损坏则不动)`;
+    if (action === 'list') {
+      return `列出 ${app} 已配置的模型(只读)`;
+    }
+    if (action === 'get') {
+      return `查询 ${app} 的 ${input && input.target ? input.target : '模型'} 详情(只读)`;
+    }
+    if (action === 'repair') {
+      return `修复 ${app} 的损坏配置(自动纠正后落盘,无损坏则不动)`;
+    }
     if (action === 'remove') {
       const tgt = (input && input.target) || '模型';
       return `从 ${app} 删除 ${tgt}（${input && input.removeKeys ? '连密钥一起删' : '默认保留密钥'}${input && input.confirmed ? '' : '，仅预览'}）`;
@@ -101,23 +152,48 @@ module.exports = defineTool({
     const app = _normApp(params.app);
     const adapter = _adapterFor(app);
     if (!adapter) {
-      return { success: false, error: `不支持的外部软件: ${params.app || '(空)'}（支持 opencode/openclaw/reasonix/deepseek-tui/coze/claude-code）` };
+      return {
+        success: false,
+        error: `不支持的外部软件: ${params.app || '(空)'}（支持 opencode/openclaw/reasonix/deepseek-tui/coze/claude-code）`,
+      };
     }
     const action = _resolveAction(params);
     try {
       let res;
-      if (action === 'list') res = adapter.list(process.env);
-      else if (action === 'get') res = adapter.get(params.target, process.env);
-      else if (action === 'repair') {
+      if (action === 'list') {
+        res = adapter.list(process.env);
+      } else if (action === 'get') {
+        res = adapter.get(params.target, process.env);
+      } else if (action === 'repair') {
         // repair 目前仅 opencode adapter 支持(其配置 schema 易被写坏)。其余 app 无损坏可修 → 明确回报。
         if (typeof adapter.repair !== 'function') {
-          return { success: false, action, app, error: `${app} 暂不支持 repair(该 app 无已知配置损坏形态)` };
+          return {
+            success: false,
+            action,
+            app,
+            error: `${app} 暂不支持 repair(该 app 无已知配置损坏形态)`,
+          };
         }
         res = adapter.repair(process.env);
       } else if (action === 'remove') {
-        res = adapter.remove({ target: params.target, confirmed: params.confirmed === true, removeKeys: params.removeKeys === true }, process.env);
+        res = adapter.remove(
+          {
+            target: params.target,
+            confirmed: params.confirmed === true,
+            removeKeys: params.removeKeys === true,
+          },
+          process.env
+        );
       } else {
-        res = adapter.add({ provider: params.provider, model: params.model, apiKey: params.apiKey, endpoint: params.endpoint }, process.env);
+        res = adapter.add(
+          {
+            provider: params.provider,
+            model: params.model,
+            apiKey: params.apiKey,
+            endpoint: params.endpoint,
+          },
+          process.env
+        );
       }
       return { action, ...res };
     } catch (err) {

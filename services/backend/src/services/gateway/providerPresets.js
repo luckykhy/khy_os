@@ -19,6 +19,17 @@
  */
 'use strict';
 
+// Endpoint SSOT: preset base URLs live in constants/serviceDefaults.js (Zero
+// Hardcoding). Import the defaults here instead of writing URL literals inline;
+// each is env-overridable at that single source.
+const {
+  OPENROUTER_BASE_URL,
+  GROQ_BASE_URL,
+  TOGETHER_BASE_URL,
+  DEEPSEEK_BASE_URL,
+  OLLAMA_OPENAI_BASE_URL,
+} = require('../../constants/serviceDefaults');
+
 // Mirror userGatewayConfigService.API_FORMATS so a preset can never carry a
 // protocol the per-user relay would reject at save time.
 const VALID_API_FORMATS = ['openai', 'anthropic', 'openai_responses', 'gemini'];
@@ -28,8 +39,12 @@ const VALID_API_FORMATS = ['openai', 'anthropic', 'openai_responses', 'gemini'];
  * anthropic → x-api-key, gemini → x-goog-api-key, everything else → Bearer.
  */
 function keyFieldForFormat(apiFormat) {
-  if (apiFormat === 'anthropic') return 'x-api-key';
-  if (apiFormat === 'gemini') return 'x-goog-api-key';
+  if (apiFormat === 'anthropic') {
+    return 'x-api-key';
+  }
+  if (apiFormat === 'gemini') {
+    return 'x-goog-api-key';
+  }
   return 'authorization_bearer';
 }
 
@@ -48,22 +63,263 @@ function keyFieldForFormat(apiFormat) {
 // overridable per-id via env KHY_PROVIDER_PRESETS. A missing link is simply omitted.
 const PROVIDER_PRESETS = [
   // ── Authoritative (already defined in-repo) ──
-  { id: 'openai', label: 'OpenAI 官方', category: 'official', baseUrl: 'https://api.openai.com/v1', apiFormat: 'openai', compatibility: 'openai', keyField: 'authorization_bearer', defaultModel: 'gpt-4o-mini', models: [], tier: '', links: { home: 'https://openai.com', console: 'https://platform.openai.com/api-keys', docs: 'https://platform.openai.com/docs' } },
-  { id: 'anthropic', label: 'Anthropic 官方', category: 'official', baseUrl: 'https://api.anthropic.com', apiFormat: 'anthropic', compatibility: 'anthropic', keyField: 'x-api-key', defaultModel: 'claude-sonnet-4-20250514', models: [], tier: '', links: { home: 'https://www.anthropic.com', console: 'https://console.anthropic.com/settings/keys', docs: 'https://docs.anthropic.com' } },
-  { id: 'gemini', label: 'Google Gemini', category: 'official', baseUrl: 'https://generativelanguage.googleapis.com/v1beta', apiFormat: 'gemini', compatibility: 'unknown', keyField: 'x-goog-api-key', defaultModel: 'gemini-2.0-flash', models: [], tier: '', links: { home: 'https://ai.google.dev', console: 'https://aistudio.google.com/app/apikey', docs: 'https://ai.google.dev/gemini-api/docs' } },
+  {
+    id: 'openai',
+    label: 'OpenAI 官方',
+    category: 'official',
+    baseUrl: 'https://api.openai.com/v1',
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'gpt-4o-mini',
+    models: [],
+    tier: '',
+    links: {
+      home: 'https://openai.com',
+      console: 'https://platform.openai.com/api-keys',
+      docs: 'https://platform.openai.com/docs',
+    },
+  },
+  {
+    id: 'anthropic',
+    label: 'Anthropic 官方',
+    category: 'official',
+    baseUrl: 'https://api.anthropic.com',
+    apiFormat: 'anthropic',
+    compatibility: 'anthropic',
+    keyField: 'x-api-key',
+    defaultModel: 'claude-sonnet-4-6',
+    models: [],
+    tier: '',
+    links: {
+      home: 'https://www.anthropic.com',
+      console: 'https://console.anthropic.com/settings/keys',
+      docs: 'https://docs.anthropic.com',
+    },
+  },
+  {
+    id: 'gemini',
+    label: 'Google Gemini',
+    category: 'official',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    apiFormat: 'gemini',
+    compatibility: 'unknown',
+    keyField: 'x-goog-api-key',
+    defaultModel: 'gemini-2.0-flash',
+    models: [],
+    tier: '',
+    links: {
+      home: 'https://ai.google.dev',
+      console: 'https://aistudio.google.com/app/apikey',
+      docs: 'https://ai.google.dev/gemini-api/docs',
+    },
+  },
   // Vertex 复用 Gemini 线格式,但 URL 走 …-aiplatform.googleapis.com/…/projects/{project}/locations/{location}/publishers/google,
   // 鉴权用 OAuth2 access token 作 Bearer(keyField=authorization_bearer)。baseUrl 是模板:用户填自己的 project/location;
   // 现有 gemini relay 分支会再拼 `/models/${model}:generateContent`,故模板止于 …/publishers/google 即得正确 Vertex URL。
   // key 处粘贴 `gcloud auth print-access-token` 的输出。URL 成形单一真源见纯叶子 gateway/vertexRequestShaping.js。
-  { id: 'vertex', label: 'Google Vertex AI', category: 'official', baseUrl: 'https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT/locations/us-central1/publishers/google', apiFormat: 'gemini', compatibility: 'unknown', keyField: 'authorization_bearer', defaultModel: '', models: [], tier: '', keyExample: 'ya29.<oauth-access-token: gcloud auth print-access-token>', links: { home: 'https://cloud.google.com/vertex-ai', console: 'https://console.cloud.google.com/vertex-ai', docs: 'https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/inference' } },
-  { id: 'deepseek', label: 'DeepSeek', category: 'official', baseUrl: 'https://api.deepseek.com/v1', apiFormat: 'openai', compatibility: 'openai', keyField: 'authorization_bearer', defaultModel: 'deepseek-chat', models: [], tier: '', links: { home: 'https://www.deepseek.com', console: 'https://platform.deepseek.com/api_keys', docs: 'https://api-docs.deepseek.com' } },
-  { id: 'agnes', label: 'Agnes AI', category: 'official', baseUrl: 'https://apihub.agnes-ai.com/v1', apiFormat: 'openai', compatibility: 'openai', keyField: 'authorization_bearer', defaultModel: 'agnes-2.0-flash', models: ['agnes-2.0-flash'], tier: '', keyExample: 'sk-agnes-xxxxxxxxxxxxxxxx', links: { home: 'https://agnes-ai.com', console: 'https://apihub.agnes-ai.com' } },
-  { id: 'shengsuanyun', label: '胜算云', category: 'partner', baseUrl: 'https://router.shengsuanyun.com/api/v1', apiFormat: 'openai', compatibility: 'openai', keyField: 'authorization_bearer', defaultModel: '', models: [], tier: '', links: { home: 'https://www.shengsuanyun.com', console: 'https://router.shengsuanyun.com' } },
-  { id: 'packycode', label: 'PackyCode', category: 'partner', baseUrl: 'https://api.packyapi.com/v1', apiFormat: 'anthropic', compatibility: 'anthropic', keyField: 'x-api-key', defaultModel: '', models: [], tier: '', links: { home: 'https://www.packycode.com', console: 'https://www.packycode.com' } },
+  {
+    id: 'vertex',
+    label: 'Google Vertex AI',
+    category: 'official',
+    baseUrl:
+      'https://us-central1-aiplatform.googleapis.com/v1/projects/YOUR_PROJECT/locations/us-central1/publishers/google',
+    apiFormat: 'gemini',
+    compatibility: 'unknown',
+    keyField: 'authorization_bearer',
+    defaultModel: '',
+    models: [],
+    tier: '',
+    keyExample: 'ya29.<oauth-access-token: gcloud auth print-access-token>',
+    links: {
+      home: 'https://cloud.google.com/vertex-ai',
+      console: 'https://console.cloud.google.com/vertex-ai',
+      docs: 'https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/inference',
+    },
+  },
+  {
+    id: 'deepseek',
+    label: 'DeepSeek',
+    category: 'official',
+    baseUrl: DEEPSEEK_BASE_URL,
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'deepseek-chat',
+    models: [],
+    tier: '',
+    links: {
+      home: 'https://www.deepseek.com',
+      console: 'https://platform.deepseek.com/api_keys',
+      docs: 'https://api-docs.deepseek.com',
+    },
+  },
+  {
+    id: 'agnes',
+    label: 'Agnes AI',
+    category: 'official',
+    baseUrl: 'https://apihub.agnes-ai.com/v1',
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'agnes-2.0-flash',
+    models: ['agnes-2.0-flash'],
+    tier: '',
+    keyExample: 'sk-agnes-xxxxxxxxxxxxxxxx',
+    links: { home: 'https://agnes-ai.com', console: 'https://apihub.agnes-ai.com' },
+  },
+  {
+    id: 'shengsuanyun',
+    label: '胜算云',
+    category: 'partner',
+    baseUrl: 'https://router.shengsuanyun.com/api/v1',
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: '',
+    models: [],
+    tier: '',
+    links: { home: 'https://www.shengsuanyun.com', console: 'https://router.shengsuanyun.com' },
+  },
+  {
+    id: 'packycode',
+    label: 'PackyCode',
+    category: 'partner',
+    baseUrl: 'https://api.packyapi.com/v1',
+    apiFormat: 'anthropic',
+    compatibility: 'anthropic',
+    keyField: 'x-api-key',
+    defaultModel: '',
+    models: [],
+    tier: '',
+    links: { home: 'https://www.packycode.com', console: 'https://www.packycode.com' },
+  },
   // ── Common Chinese providers (public OpenAI-compatible endpoints) ──
-  { id: 'moonshot', label: 'Moonshot / Kimi', category: 'official', baseUrl: 'https://api.moonshot.cn/v1', apiFormat: 'openai', compatibility: 'openai', keyField: 'authorization_bearer', defaultModel: 'moonshot-v1-8k', models: [], tier: '', links: { home: 'https://www.moonshot.cn', console: 'https://platform.moonshot.cn/console/api-keys', docs: 'https://platform.moonshot.cn/docs' } },
-  { id: 'qwen', label: '通义千问 / DashScope', category: 'official', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiFormat: 'openai', compatibility: 'openai', keyField: 'authorization_bearer', defaultModel: 'qwen-plus', models: [], tier: '', links: { home: 'https://dashscope.aliyun.com', console: 'https://bailian.console.aliyun.com', docs: 'https://help.aliyun.com/zh/model-studio' } },
-  { id: 'zhipu', label: '智谱 GLM', category: 'official', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', apiFormat: 'openai', compatibility: 'openai', keyField: 'authorization_bearer', defaultModel: 'glm-4', models: [], tier: '', links: { home: 'https://www.zhipuai.cn', console: 'https://open.bigmodel.cn/usercenter/apikeys', docs: 'https://open.bigmodel.cn/dev/api' } },
+  {
+    id: 'moonshot',
+    label: 'Moonshot / Kimi',
+    category: 'official',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'moonshot-v1-8k',
+    models: [],
+    tier: '',
+    links: {
+      home: 'https://www.moonshot.cn',
+      console: 'https://platform.moonshot.cn/console/api-keys',
+      docs: 'https://platform.moonshot.cn/docs',
+    },
+  },
+  {
+    id: 'qwen',
+    label: '通义千问 / DashScope',
+    category: 'official',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'qwen-plus',
+    models: [],
+    tier: '',
+    links: {
+      home: 'https://dashscope.aliyun.com',
+      console: 'https://bailian.console.aliyun.com',
+      docs: 'https://help.aliyun.com/zh/model-studio',
+    },
+  },
+  {
+    id: 'zhipu',
+    label: '智谱 GLM',
+    category: 'official',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'glm-4',
+    models: [],
+    tier: '',
+    links: {
+      home: 'https://www.zhipuai.cn',
+      console: 'https://open.bigmodel.cn/usercenter/apikeys',
+      docs: 'https://open.bigmodel.cn/dev/api',
+    },
+  },
+  // ── Aggregators / popular providers (one-click presets, OpenAI wire) ──
+  // Endpoints come from serviceDefaults SSOT above (env-overridable). Ollama
+  // reuses its OpenAI-compatible /v1 endpoint; its key is ignored by the server
+  // but the form still needs a placeholder so the relay validation passes.
+  {
+    id: 'openrouter',
+    label: 'OpenRouter（聚合网关）',
+    category: 'aggregator',
+    baseUrl: OPENROUTER_BASE_URL,
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: '',
+    models: [],
+    tier: '',
+    keyExample: 'sk-or-v1-xxxxxxxxxxxxxxxx',
+    links: {
+      home: 'https://openrouter.ai',
+      console: 'https://openrouter.ai/keys',
+      docs: 'https://openrouter.ai/docs',
+    },
+  },
+  {
+    id: 'groq',
+    label: 'Groq',
+    category: 'official',
+    baseUrl: GROQ_BASE_URL,
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'llama-3.3-70b-versatile',
+    models: [],
+    tier: '',
+    keyExample: 'gsk_xxxxxxxxxxxxxxxx',
+    links: {
+      home: 'https://groq.com',
+      console: 'https://console.groq.com/keys',
+      docs: 'https://console.groq.com/docs',
+    },
+  },
+  {
+    id: 'together',
+    label: 'Together AI',
+    category: 'aggregator',
+    baseUrl: TOGETHER_BASE_URL,
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+    models: [],
+    tier: '',
+    links: {
+      home: 'https://www.together.ai',
+      console: 'https://api.together.ai/settings/api-keys',
+      docs: 'https://docs.together.ai',
+    },
+  },
+  {
+    id: 'ollama',
+    label: '本地 Ollama',
+    category: 'local',
+    baseUrl: OLLAMA_OPENAI_BASE_URL,
+    apiFormat: 'openai',
+    compatibility: 'openai',
+    keyField: 'authorization_bearer',
+    defaultModel: 'llama3.2',
+    models: [],
+    tier: '',
+    keyExample: 'ollama',
+    links: {
+      home: 'https://ollama.com',
+      docs: 'https://github.com/ollama/ollama/blob/main/docs/openai.md',
+    },
+  },
 ];
 
 const LINK_KEYS = ['home', 'console', 'docs'];
@@ -74,12 +330,21 @@ const LINK_KEYS = ['home', 'console', 'docs'];
  * render as clickable links in the UI, so we never emit an untrusted scheme.
  */
 function sanitizeLinks(raw) {
-  if (!raw || typeof raw !== 'object') return {};
+  if (!raw || typeof raw !== 'object') {
+    return {};
+  }
   const out = {};
   for (const k of LINK_KEYS) {
     const v = String(raw[k] || '').trim();
-    if (!v || !/^https?:\/\//i.test(v)) continue;
-    try { new URL(v); out[k] = v; } catch { /* drop invalid */ }
+    if (!v || !/^https?:\/\//i.test(v)) {
+      continue;
+    }
+    try {
+      new URL(v);
+      out[k] = v;
+    } catch {
+      /* drop invalid */
+    }
   }
   return out;
 }
@@ -89,12 +354,20 @@ function sanitizeLinks(raw) {
  * Never lets a key/secret survive; rejects an unsupported apiFormat.
  */
 function sanitize(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const id = String(raw.id || '').trim().toLowerCase();
-  if (!id) return null;
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const id = String(raw.id || '')
+    .trim()
+    .toLowerCase();
+  if (!id) {
+    return null;
+  }
 
   const apiFormat = String(raw.apiFormat || 'openai').trim();
-  if (!VALID_API_FORMATS.includes(apiFormat)) return null; // 防呆: unsupported protocol
+  if (!VALID_API_FORMATS.includes(apiFormat)) {
+    return null;
+  } // 防呆: unsupported protocol
 
   return {
     id,
@@ -102,7 +375,9 @@ function sanitize(raw) {
     category: String(raw.category || 'custom'),
     baseUrl: String(raw.baseUrl || '').trim(),
     apiFormat,
-    compatibility: String(raw.compatibility || (apiFormat === 'anthropic' ? 'anthropic' : 'openai')),
+    compatibility: String(
+      raw.compatibility || (apiFormat === 'anthropic' ? 'anthropic' : 'openai')
+    ),
     keyField: String(raw.keyField || keyFieldForFormat(apiFormat)),
     defaultModel: String(raw.defaultModel || '').trim(),
     models: Array.isArray(raw.models) ? raw.models.map((m) => String(m)).filter(Boolean) : [],
@@ -124,7 +399,9 @@ function sanitize(raw) {
  */
 function readEnvOverrides() {
   const raw = process.env.KHY_PROVIDER_PRESETS;
-  if (!raw || !raw.trim()) return [];
+  if (!raw || !raw.trim()) {
+    return [];
+  }
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -142,26 +419,44 @@ function getProviderPresets() {
   const byId = new Map();
   for (const p of PROVIDER_PRESETS) {
     const clean = sanitize(p);
-    if (clean) byId.set(clean.id, clean);
+    if (clean) {
+      byId.set(clean.id, clean);
+    }
   }
   // zhipu 默认/清单经 gated SSoT 叶子收敛到 glm-5.2(KHY_GLM_LATEST_MODEL 默认开);
   // 关门 → 保持静态 preset 的 glm-4 默认与空清单(逐字节回退)。env 覆盖仍在下方后应用而胜出。
   try {
     const zhipu = byId.get('zhipu');
     if (zhipu) {
-      const { latestGlmModelEnabled, defaultZhipuModel, knownZhipuModels } = require('../zhipuGlmModel');
+      const {
+        latestGlmModelEnabled,
+        defaultZhipuModel,
+        knownZhipuModels,
+      } = require('../zhipuGlmModel');
       if (latestGlmModelEnabled()) {
-        byId.set('zhipu', sanitize({ ...zhipu, defaultModel: defaultZhipuModel(), models: knownZhipuModels() }) || zhipu);
+        byId.set(
+          'zhipu',
+          sanitize({ ...zhipu, defaultModel: defaultZhipuModel(), models: knownZhipuModels() }) ||
+            zhipu
+        );
       }
     }
-  } catch { /* fail-soft: keep static zhipu preset */ }
+  } catch {
+    /* fail-soft: keep static zhipu preset */
+  }
   for (const o of readEnvOverrides()) {
-    const id = String(o && o.id ? o.id : '').trim().toLowerCase();
-    if (!id) continue;
+    const id = String(o && o.id ? o.id : '')
+      .trim()
+      .toLowerCase();
+    if (!id) {
+      continue;
+    }
     // Merge over the built-in (if any) so a partial override (e.g. just baseUrl)
     // keeps the rest of the built-in fields, then re-sanitise the result.
     const merged = sanitize({ ...(byId.get(id) || { id }), ...o, id });
-    if (merged) byId.set(id, merged);
+    if (merged) {
+      byId.set(id, merged);
+    }
   }
   return Array.from(byId.values());
 }

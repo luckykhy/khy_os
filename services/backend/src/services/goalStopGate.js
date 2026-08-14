@@ -42,13 +42,13 @@
 // 父→子优先级(KHY_GOAL 关 → KHY_GOAL_STOP_GATE 也关)现由 flagRegistry 单一声明式真源
 // 集中施加;本文件委托给它(leaf→leaf 相对 require,契约允许)。私有 _FALSY/_off 保留为
 // **OFF-fallback 路径**:自门控 KHY_FLAG_REGISTRY 关时逐字节回退到本文件原有的手写判定。
-const flagRegistry = require('./flagRegistry');
-// completion contract 判定/文案(leaf→leaf 相对 require,契约允许)。门控在本文件施加,关闭即字节回退。
 const {
   parseCompletionContract,
   matchEvidenceAgainstContract,
   buildContractRedriveMessage,
 } = require('./completionContract');
+const flagRegistry = require('./flagRegistry');
+// completion contract 判定/文案(leaf→leaf 相对 require,契约允许)。门控在本文件施加,关闭即字节回退。
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function _off(v) {
   return v !== undefined && _FALSY.has(String(v).trim().toLowerCase());
@@ -66,7 +66,9 @@ function isEnabled(env) {
   if (flagRegistry.isRegistryEnabled(e)) {
     return flagRegistry.isFlagEnabled('KHY_GOAL_STOP_GATE', e);
   }
-  if (_off(e.KHY_GOAL)) return false;              // 父门控关 → 整个持久目标关
+  if (_off(e.KHY_GOAL)) {
+    return false;
+  } // 父门控关 → 整个持久目标关
   return !_off(e.KHY_GOAL_STOP_GATE);
 }
 
@@ -104,8 +106,12 @@ function isEvidenceGateEnabled(env) {
   if (flagRegistry.isRegistryEnabled(e)) {
     return flagRegistry.isFlagEnabled('KHY_GOAL_EVIDENCE_GATE', e);
   }
-  if (_off(e.KHY_GOAL_STOP_GATE)) return false;   // 父门控关 → 本门也关
-  if (_off(e.KHY_GOAL)) return false;             // 祖父门控关
+  if (_off(e.KHY_GOAL_STOP_GATE)) {
+    return false;
+  } // 父门控关 → 本门也关
+  if (_off(e.KHY_GOAL)) {
+    return false;
+  } // 祖父门控关
   return !_off(e.KHY_GOAL_EVIDENCE_GATE);
 }
 
@@ -127,8 +133,12 @@ function isCompletionContractEnabled(env) {
   if (flagRegistry.isRegistryEnabled(e)) {
     return flagRegistry.isFlagEnabled('KHY_GOAL_COMPLETION_CONTRACT', e);
   }
-  if (_off(e.KHY_GOAL_STOP_GATE)) return false;   // 父门控关 → 本门也关
-  if (_off(e.KHY_GOAL)) return false;             // 祖父门控关
+  if (_off(e.KHY_GOAL_STOP_GATE)) {
+    return false;
+  } // 父门控关 → 本门也关
+  if (_off(e.KHY_GOAL)) {
+    return false;
+  } // 祖父门控关
   return !_off(e.KHY_GOAL_COMPLETION_CONTRACT);
 }
 
@@ -151,8 +161,12 @@ function isVerifyRanGateEnabled(env) {
   if (flagRegistry.isRegistryEnabled(e)) {
     return flagRegistry.isFlagEnabled('KHY_GOAL_VERIFY_RAN_GATE', e);
   }
-  if (_off(e.KHY_GOAL_STOP_GATE)) return false;   // 父门控关 → 本门也关
-  if (_off(e.KHY_GOAL)) return false;             // 祖父门控关
+  if (_off(e.KHY_GOAL_STOP_GATE)) {
+    return false;
+  } // 父门控关 → 本门也关
+  if (_off(e.KHY_GOAL)) {
+    return false;
+  } // 祖父门控关
   return !_off(e.KHY_GOAL_VERIFY_RAN_GATE);
 }
 
@@ -175,7 +189,9 @@ function resolveMaxRedrives(env) {
   }
   const raw = e.KHY_GOAL_STOP_GATE_MAX;
   const n = Number.parseInt(String(raw == null ? '' : raw).trim(), 10);
-  if (Number.isFinite(n) && n >= 0) return Math.min(n, 10);
+  if (Number.isFinite(n) && n >= 0) {
+    return Math.min(n, 10);
+  }
   return GOAL_STOP_GATE_DEFAULT_MAX;
 }
 
@@ -207,13 +223,21 @@ const _FUTURE_PLAN_RE =
  */
 function looksLikeGoalSatisfied(reply) {
   const s = String(reply == null ? '' : reply).trim();
-  if (!s) return false;
-  if (_NEGATED_DONE_RE.test(s)) return false;          // 明说没完成 → 未达成
-  if (_GOAL_DONE_PHRASE_RE.test(s)) return true;       // 显式目标达成 → 达成
+  if (!s) {
+    return false;
+  }
+  if (_NEGATED_DONE_RE.test(s)) {
+    return false;
+  } // 明说没完成 → 未达成
+  if (_GOAL_DONE_PHRASE_RE.test(s)) {
+    return true;
+  } // 显式目标达成 → 达成
   if (_PERFECTIVE_DONE_RE.test(s)) {
     // 完成态信号存在,但若同时被未来时计划主导(如「已看完文件,接下来我将重构…」),
     // 说明本轮只是阶段性小结、目标整体仍在推进 → 保守判未达成,交给再驱动。
-    if (_FUTURE_PLAN_RE.test(s)) return false;
+    if (_FUTURE_PLAN_RE.test(s)) {
+      return false;
+    }
     return true;
   }
   return false;
@@ -228,7 +252,8 @@ const _VERIFICATION_CLAIM_RE =
 //   对勾叉号 / jest PASS·FAIL / shell 提示符 / 测试框架调用命令 / 断言。
 const _EVIDENCE_RE = new RegExp(
   [
-    '```', '~~~',
+    '```',
+    '~~~',
     '\\d+\\s*(?:passed|passing|failed|failing|通过|失败|个(?:测试|用例)|tests?\\b)',
     '\\d+\\s*\\/\\s*\\d+',
     '(?:exit\\s*code|退出码|return\\s*code|\\brc)\\s*[:=]?\\s*\\d+',
@@ -236,11 +261,17 @@ const _EVIDENCE_RE = new RegExp(
     '\\bok\\s+\\d+\\b',
     '#\\s*(?:pass|fail|tests?)\\b',
     '[✓✔√✅❌✗×]',
-    '\\bPASS\\b', '\\bFAIL\\b',
+    '\\bPASS\\b',
+    '\\bFAIL\\b',
     '(?:^|\\n)\\s*\\$\\s+\\S',
-    'npm\\s+(?:run\\s+)?test', 'node\\s+--test', '\\bpytest\\b', '\\bjest\\b', 'go\\s+test', 'cargo\\s+test',
+    'npm\\s+(?:run\\s+)?test',
+    'node\\s+--test',
+    '\\bpytest\\b',
+    '\\bjest\\b',
+    'go\\s+test',
+    'cargo\\s+test',
   ].join('|'),
-  'i',
+  'i'
 );
 
 /**
@@ -251,8 +282,14 @@ const _EVIDENCE_RE = new RegExp(
  */
 function hasConcreteEvidence(reply) {
   const s = String(reply == null ? '' : reply);
-  if (!s.trim()) return false;
-  try { return _EVIDENCE_RE.test(s); } catch { return true; } // 失败偏向「有证据」(不误拦)
+  if (!s.trim()) {
+    return false;
+  }
+  try {
+    return _EVIDENCE_RE.test(s);
+  } catch {
+    return true;
+  } // 失败偏向「有证据」(不误拦)
 }
 
 /**
@@ -266,44 +303,79 @@ function hasConcreteEvidence(reply) {
  */
 function claimsVerificationWithoutEvidence(reply) {
   const s = String(reply == null ? '' : reply).trim();
-  if (!s) return false;
-  if (!_VERIFICATION_CLAIM_RE.test(s)) return false;  // 未声称验证 → 证据门不适用
-  return !hasConcreteEvidence(s);                      // 声称了但无证据 → 命中
+  if (!s) {
+    return false;
+  }
+  if (!_VERIFICATION_CLAIM_RE.test(s)) {
+    return false;
+  } // 未声称验证 → 证据门不适用
+  return !hasConcreteEvidence(s); // 声称了但无证据 → 命中
 }
 
 // ── 行为证据:本轮是否**真的执行过**验证命令(不只是回复里贴了证据形状的文字)────────────
 // shell 类工具名(与 toolLoopDetector.SHELL_TOOLS 同款,内联保叶子零跨叶依赖·归一同 _normalizeName)。
-const _SHELL_TOOLS = new Set(['shellcommand', 'bash', 'executecommand', 'runcommand', 'terminal', 'exec']);
+const _SHELL_TOOLS = new Set([
+  'shellcommand',
+  'bash',
+  'executecommand',
+  'runcommand',
+  'terminal',
+  'exec',
+]);
 function _normalizeToolName(name) {
-  return String(name == null ? '' : name).toLowerCase().replace(/[^a-z0-9]/g, '');
+  return String(name == null ? '' : name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 // 「验证/测试/检查/构建」命令签名:真正跑一遍验证时会出现的命令形态。保守宁缺勿滥——只认明确的
 // 测试/检查/构建/lint 命令,不认 `cat x-test.log` 之类偶然含关键字的旁路(要求命令与关键字间有空白)。
 const _VERIFY_CMD_RE = new RegExp(
   [
     'npm\\s+(?:run\\s+)?(?:test|check|lint|build|verify|arch|maintainer)',
-    'yarn\\s+(?:run\\s+)?(?:test|check|lint|build)', 'pnpm\\s+(?:run\\s+)?(?:test|check|lint|build)',
-    'node\\s+--test', 'node\\s+--check',
-    '\\bpytest\\b', '\\bjest\\b', '\\bvitest\\b', '\\bmocha\\b', 'go\\s+test', 'cargo\\s+test',
-    '\\beslint\\b', '\\btsc\\b', '\\bruff\\b', '\\bflake8\\b',
+    'yarn\\s+(?:run\\s+)?(?:test|check|lint|build)',
+    'pnpm\\s+(?:run\\s+)?(?:test|check|lint|build)',
+    'node\\s+--test',
+    'node\\s+--check',
+    '\\bpytest\\b',
+    '\\bjest\\b',
+    '\\bvitest\\b',
+    '\\bmocha\\b',
+    'go\\s+test',
+    'cargo\\s+test',
+    '\\beslint\\b',
+    '\\btsc\\b',
+    '\\bruff\\b',
+    '\\bflake8\\b',
     'make\\s+(?:test|check|lint)',
     'khy\\s+(?:doctor|metadata\\s+(?:check|refresh))',
     'python\\s+-m\\s+(?:pytest|unittest)',
   ].join('|'),
-  'i',
+  'i'
 );
 
 // 从一条 toolCallLog 记录里取出命令串(shell 工具的 params.command || params.cmd,兼容顶层 command)。
 function _commandOfEntry(entry) {
-  if (!entry || typeof entry !== 'object') return '';
+  if (!entry || typeof entry !== 'object') {
+    return '';
+  }
   const p = entry.params;
   if (p && typeof p === 'object') {
-    if (typeof p.command === 'string') return p.command;
-    if (typeof p.cmd === 'string') return p.cmd;
-    if (typeof p.script === 'string') return p.script;
-    if (Array.isArray(p.command)) return p.command.join(' ');
+    if (typeof p.command === 'string') {
+      return p.command;
+    }
+    if (typeof p.cmd === 'string') {
+      return p.cmd;
+    }
+    if (typeof p.script === 'string') {
+      return p.script;
+    }
+    if (Array.isArray(p.command)) {
+      return p.command.join(' ');
+    }
   }
-  if (typeof entry.command === 'string') return entry.command;
+  if (typeof entry.command === 'string') {
+    return entry.command;
+  }
   return '';
 }
 
@@ -318,13 +390,21 @@ function _commandOfEntry(entry) {
  * @returns {boolean}
  */
 function verificationCommandRan(toolCallLog) {
-  if (!Array.isArray(toolCallLog) || toolCallLog.length === 0) return false;
+  if (!Array.isArray(toolCallLog) || toolCallLog.length === 0) {
+    return false;
+  }
   for (const entry of toolCallLog) {
     try {
-      if (!_SHELL_TOOLS.has(_normalizeToolName(entry && entry.tool))) continue;
+      if (!_SHELL_TOOLS.has(_normalizeToolName(entry && entry.tool))) {
+        continue;
+      }
       const cmd = _commandOfEntry(entry);
-      if (cmd && _VERIFY_CMD_RE.test(cmd)) return true;
-    } catch { /* 单条解析失败:跳过,绝不抛 */ }
+      if (cmd && _VERIFY_CMD_RE.test(cmd)) {
+        return true;
+      }
+    } catch {
+      /* 单条解析失败:跳过,绝不抛 */
+    }
   }
   return false;
 }
@@ -348,7 +428,9 @@ function buildRedriveMessage(goal, { userMessage } = {}) {
     '② 若目标**尚未达成** —— 立即继续朝它推进(调用工具、执行下一步),不要停在计划或前言上。',
     userMessage ? `用户原始请求: ${String(userMessage).slice(0, 300)}` : '',
     ']',
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /**
@@ -371,7 +453,9 @@ function buildEvidenceRedriveMessage(goal, { userMessage } = {}) {
     '② 证据确凿地表明目标达成后,再给出完成报告并调用 GoalTool(action=clear) 收尾。',
     userMessage ? `用户原始请求: ${String(userMessage).slice(0, 300)}` : '',
     ']',
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /**
@@ -396,7 +480,9 @@ function buildVerifyRanRedriveMessage(goal, { userMessage } = {}) {
     '② 确认全绿后再给完成报告并调用 GoalTool(action=clear) 收尾。',
     userMessage ? `用户原始请求: ${String(userMessage).slice(0, 300)}` : '',
     ']',
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ── 编排:想停时的裁决 ───────────────────────────────────────────────────
@@ -418,25 +504,43 @@ function buildVerifyRanRedriveMessage(goal, { userMessage } = {}) {
  * @returns {{action:'pass'|'clear'|'redrive', reason:string, message?:string}}
  */
 function evaluateGoalStop({ goal, reply, redriveCount, env, userMessage, toolCallLog } = {}) {
-  if (!isEnabled(env)) return { action: 'pass', reason: 'gate-off' };
-  if (!goal || !goal.text) return { action: 'pass', reason: 'no-goal' };
+  if (!isEnabled(env)) {
+    return { action: 'pass', reason: 'gate-off' };
+  }
+  if (!goal || !goal.text) {
+    return { action: 'pass', reason: 'no-goal' };
+  }
 
   let satisfied = false;
-  try { satisfied = looksLikeGoalSatisfied(reply); } catch { satisfied = false; }
+  try {
+    satisfied = looksLikeGoalSatisfied(reply);
+  } catch {
+    satisfied = false;
+  }
   if (satisfied) {
     // 证据门(参考 Hermes evidence-based verification):达成判定若建立在一个「验证声称」之上
     // 却拿不出具体证据 → 不放行/不自动清除,而是要求出具证据(有界:走同一 redrive 预算)。
     let evidenceMissing = false;
     if (isEvidenceGateEnabled(env)) {
-      try { evidenceMissing = claimsVerificationWithoutEvidence(reply); } catch { evidenceMissing = false; }
+      try {
+        evidenceMissing = claimsVerificationWithoutEvidence(reply);
+      } catch {
+        evidenceMissing = false;
+      }
     }
     if (evidenceMissing) {
       const maxE = resolveMaxRedrives(env);
       const countE = Number(redriveCount) || 0;
       // 预算耗尽:降级为 pass(放行本轮停止)而非 clear——不自动清除一个未经证实的目标,
       // 让每轮开头的 goalCore 指令注入 + 跨轮轮次预算继续兜底。
-      if (countE >= maxE) return { action: 'pass', reason: 'evidence-missing-exhausted' };
-      return { action: 'redrive', reason: 'evidence-missing', message: buildEvidenceRedriveMessage(goal, { userMessage }) };
+      if (countE >= maxE) {
+        return { action: 'pass', reason: 'evidence-missing-exhausted' };
+      }
+      return {
+        action: 'redrive',
+        reason: 'evidence-missing',
+        message: buildEvidenceRedriveMessage(goal, { userMessage }),
+      };
     }
 
     // Verify-ran 门(goal「khy 做完任务不会及时验证测试」):回复**声称验证通过**,但整轮工具执行
@@ -444,15 +548,29 @@ function evaluateGoalStop({ goal, reply, redriveCount, env, userMessage, toolCal
     // 要求真正跑一遍验证。仅当调用方接线传入 toolCallLog(数组)时生效;不传 → 跳过 → 逐字节回退。
     if (isVerifyRanGateEnabled(env) && Array.isArray(toolCallLog)) {
       let claimsVerify = false;
-      try { claimsVerify = _VERIFICATION_CLAIM_RE.test(String(reply == null ? '' : reply).trim()); } catch { claimsVerify = false; }
+      try {
+        claimsVerify = _VERIFICATION_CLAIM_RE.test(String(reply == null ? '' : reply).trim());
+      } catch {
+        claimsVerify = false;
+      }
       let ran = true; // 解析失败偏向「跑过」,绝不误拦真实达成
-      try { ran = verificationCommandRan(toolCallLog); } catch { ran = true; }
+      try {
+        ran = verificationCommandRan(toolCallLog);
+      } catch {
+        ran = true;
+      }
       if (claimsVerify && !ran) {
         const maxV = resolveMaxRedrives(env);
         const countV = Number(redriveCount) || 0;
         // 预算耗尽:pass(不自动清除一个未经真实验证的目标),交由跨轮轮次预算 + 每轮指令注入兜底。
-        if (countV >= maxV) return { action: 'pass', reason: 'verify-not-run-exhausted' };
-        return { action: 'redrive', reason: 'verify-not-run', message: buildVerifyRanRedriveMessage(goal, { userMessage }) };
+        if (countV >= maxV) {
+          return { action: 'pass', reason: 'verify-not-run-exhausted' };
+        }
+        return {
+          action: 'redrive',
+          reason: 'verify-not-run',
+          message: buildVerifyRanRedriveMessage(goal, { userMessage }),
+        };
       }
     }
 
@@ -461,16 +579,30 @@ function evaluateGoalStop({ goal, reply, redriveCount, env, userMessage, toolCal
     // 目标未声明任何标准时 parseCompletionContract 返回空 criteria → 跳过,行为逐字节不变。
     if (isCompletionContractEnabled(env)) {
       let contract = null;
-      try { contract = parseCompletionContract(goal.text); } catch { contract = null; }
+      try {
+        contract = parseCompletionContract(goal.text);
+      } catch {
+        contract = null;
+      }
       if (contract && Array.isArray(contract.criteria) && contract.criteria.length > 0) {
         let matched = null;
-        try { matched = matchEvidenceAgainstContract(reply, contract); } catch { matched = null; }
+        try {
+          matched = matchEvidenceAgainstContract(reply, contract);
+        } catch {
+          matched = null;
+        }
         if (matched && !matched.allMet) {
           const maxC = resolveMaxRedrives(env);
           const countC = Number(redriveCount) || 0;
           // 预算耗尽:pass(不自动清除一个证据不全的目标),交由跨轮轮次预算兜底。
-          if (countC >= maxC) return { action: 'pass', reason: 'contract-unmet-exhausted' };
-          return { action: 'redrive', reason: 'contract-unmet', message: buildContractRedriveMessage(goal, matched.missing, { userMessage }) };
+          if (countC >= maxC) {
+            return { action: 'pass', reason: 'contract-unmet-exhausted' };
+          }
+          return {
+            action: 'redrive',
+            reason: 'contract-unmet',
+            message: buildContractRedriveMessage(goal, matched.missing, { userMessage }),
+          };
         }
       }
     }
@@ -479,8 +611,14 @@ function evaluateGoalStop({ goal, reply, redriveCount, env, userMessage, toolCal
 
   const max = resolveMaxRedrives(env);
   const count = Number(redriveCount) || 0;
-  if (count >= max) return { action: 'pass', reason: 'redrive-exhausted' };
-  return { action: 'redrive', reason: 'not-satisfied', message: buildRedriveMessage(goal, { userMessage }) };
+  if (count >= max) {
+    return { action: 'pass', reason: 'redrive-exhausted' };
+  }
+  return {
+    action: 'redrive',
+    reason: 'not-satisfied',
+    message: buildRedriveMessage(goal, { userMessage }),
+  };
 }
 
 module.exports = {

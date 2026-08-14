@@ -58,7 +58,9 @@ const WIN_CLEAR_FIXED = `${ESC}[2J${ESC}[3J${ESC}[0f`; // 注入 3J → 擦回�
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_PRESERVE_SCROLLBACK;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -75,9 +77,15 @@ function isEnabled(env = process.env) {
  */
 function stripScrollbackClear(chunk, env = process.env) {
   try {
-    if (!isEnabled(env)) return chunk;
-    if (typeof chunk !== 'string') return chunk;
-    if (chunk.indexOf(SCROLLBACK_CLEAR) === -1) return chunk;
+    if (!isEnabled(env)) {
+      return chunk;
+    }
+    if (typeof chunk !== 'string') {
+      return chunk;
+    }
+    if (chunk.indexOf(SCROLLBACK_CLEAR) === -1) {
+      return chunk;
+    }
     return chunk.split(SCROLLBACK_CLEAR).join('');
   } catch {
     return chunk;
@@ -100,10 +108,16 @@ function stripScrollbackClear(chunk, env = process.env) {
  */
 function normalizeClearTerminal(chunk, env = process.env, platform = process.platform) {
   try {
-    if (!isEnabled(env)) return chunk;
-    if (typeof chunk !== 'string') return chunk;
+    if (!isEnabled(env)) {
+      return chunk;
+    }
+    if (typeof chunk !== 'string') {
+      return chunk;
+    }
     if (platform === 'win32') {
-      if (chunk.indexOf(WIN_CLEAR) === -1) return chunk;
+      if (chunk.indexOf(WIN_CLEAR) === -1) {
+        return chunk;
+      }
       return chunk.split(WIN_CLEAR).join(WIN_CLEAR_FIXED);
     }
     return stripScrollbackClear(chunk, env);

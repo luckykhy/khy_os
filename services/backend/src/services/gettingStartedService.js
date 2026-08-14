@@ -5,10 +5,19 @@
  * and displays a welcome banner in the REPL.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const KHY_DIR = path.join(os.homedir(), '.khyquant');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const KHY_DIR = _appHome();
 const GUIDE_PATH = path.join(KHY_DIR, 'GETTING_STARTED.md');
 const SHOWN_MARKER = path.join(KHY_DIR, '.getting_started_shown');
 
@@ -16,7 +25,11 @@ const SHOWN_MARKER = path.join(KHY_DIR, '.getting_started_shown');
  * Generate the getting-started guide markdown file.
  */
 function generateGettingStarted() {
-  try { fs.mkdirSync(KHY_DIR, { recursive: true }); } catch { /* exists */ }
+  try {
+    fs.mkdirSync(KHY_DIR, { recursive: true });
+  } catch {
+    /* exists */
+  }
 
   const version = process.env.KHYQUANT_PKG_VERSION || require('../../package.json').version;
 
@@ -113,7 +126,9 @@ function markAsShown() {
   try {
     fs.mkdirSync(KHY_DIR, { recursive: true });
     fs.writeFileSync(SHOWN_MARKER, new Date().toISOString());
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -121,14 +136,18 @@ function markAsShown() {
  * Uses aiRenderer if available, otherwise plain console output.
  */
 function displayGettingStarted() {
-  if (!shouldShow()) return false;
+  if (!shouldShow()) {
+    return false;
+  }
 
   try {
     const chalk = require('chalk').default || require('chalk');
     const version = process.env.KHYQUANT_PKG_VERSION || require('../../package.json').version;
 
     console.log('');
-    console.log(chalk.cyan('  ━━━ khy OS v' + version + ' — AI Platform Operating System Terminal ━━━'));
+    console.log(
+      chalk.cyan('  ━━━ khy OS v' + version + ' — AI Platform Operating System Terminal ━━━')
+    );
     console.log('');
     console.log(chalk.bold('  国内首个 Claude Code 风格 AI 量化分析框架终端'));
     console.log('');

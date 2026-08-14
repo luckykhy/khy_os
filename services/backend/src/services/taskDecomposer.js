@@ -11,8 +11,10 @@
 // ── Role inference ───────────────────────────────────────────────────
 
 const ROLE_PATTERNS = {
-  explore: /搜索|查找|找到|分析|了解|读取|阅读|查看|列出|列举|检索|探索|search|find|read|list|analyze|explore|look|scan|check|inspect/i,
-  implement: /修改|实现|添加|创建|写入|编写|修复|重构|改造|替换|新建|生成|implement|add|create|write|fix|refactor|update|replace|generate|build/i,
+  explore:
+    /搜索|查找|找到|分析|了解|读取|阅读|查看|列出|列举|检索|探索|search|find|read|list|analyze|explore|look|scan|check|inspect/i,
+  implement:
+    /修改|实现|添加|创建|写入|编写|修复|重构|改造|替换|新建|生成|implement|add|create|write|fix|refactor|update|replace|generate|build/i,
   verify: /测试|验证|检查|运行|校验|test|verify|validate|run|check|lint|build/i,
 };
 
@@ -24,9 +26,15 @@ const ROLE_PATTERNS = {
 function _inferRole(text) {
   // Priority: implement > verify > explore > general
   // (implement is more specific than explore when both match)
-  if (ROLE_PATTERNS.implement.test(text)) return 'implement';
-  if (ROLE_PATTERNS.verify.test(text)) return 'verify';
-  if (ROLE_PATTERNS.explore.test(text)) return 'explore';
+  if (ROLE_PATTERNS.implement.test(text)) {
+    return 'implement';
+  }
+  if (ROLE_PATTERNS.verify.test(text)) {
+    return 'verify';
+  }
+  if (ROLE_PATTERNS.explore.test(text)) {
+    return 'explore';
+  }
   return 'general';
 }
 
@@ -39,7 +47,7 @@ function _inferRole(text) {
 function _splitNumberedList(message) {
   const lines = message.split('\n');
   const items = [];
-  let contextPrefix = [];
+  const contextPrefix = [];
 
   for (const line of lines) {
     const match = line.match(/^\s*(\d+)\s*[.、)）]\s+(.+)/);
@@ -55,11 +63,11 @@ function _splitNumberedList(message) {
     }
   }
 
-  if (items.length < 2) return null;
+  if (items.length < 2) {
+    return null;
+  }
 
-  const prefix = contextPrefix.length > 0
-    ? contextPrefix.join('\n') + '\n\n'
-    : '';
+  const prefix = contextPrefix.length > 0 ? contextPrefix.join('\n') + '\n\n' : '';
 
   return {
     reason: 'numbered_list',
@@ -78,11 +86,18 @@ function _splitNumberedList(message) {
 function _splitParenNumbering(message) {
   const parts = message.split(/\(\d+\)\s*/);
   // First element is the prefix before (1)
-  if (parts.length < 3) return null; // need at least 2 numbered parts
+  if (parts.length < 3) {
+    return null;
+  } // need at least 2 numbered parts
 
   const prefix = parts[0].trim();
-  const items = parts.slice(1).map(p => p.trim()).filter(Boolean);
-  if (items.length < 2) return null;
+  const items = parts
+    .slice(1)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (items.length < 2) {
+    return null;
+  }
 
   const prefixStr = prefix ? prefix + '\n\n' : '';
 
@@ -115,15 +130,19 @@ function _splitParallelMarkers(message) {
     parts = afterMarker.split(/[、,]\s*/);
   }
 
-  if (parts.length < 2) return null;
+  if (parts.length < 2) {
+    return null;
+  }
 
   // Extract the intent prefix (everything before the parallel marker)
   const markerMatch = message.match(/^(.*?)(同时|分别|并行|各自|respectively|simultaneously)/i);
   const prefix = markerMatch ? markerMatch[1].trim() : '';
   const prefixStr = prefix ? prefix + ' — ' : '';
 
-  const items = parts.map(p => p.trim()).filter(p => p.length > 2);
-  if (items.length < 2) return null;
+  const items = parts.map((p) => p.trim()).filter((p) => p.length > 2);
+  if (items.length < 2) {
+    return null;
+  }
 
   return {
     reason: 'parallel_markers',
@@ -142,14 +161,17 @@ function _splitParallelMarkers(message) {
  */
 function _splitMultiFileTargets(message) {
   // Extract file references (path-like strings with extensions)
-  const filePattern = /(?:^|\s|[、,，])((?:[\w./\\-]+\.(?:js|ts|jsx|tsx|py|go|java|rs|vue|css|html|json|yaml|yml|md|rb|php|c|cpp|h|hpp|swift|kt|sh|bash|sql))\b)/gi;
+  const filePattern =
+    /(?:^|\s|[、,，])((?:[\w./\\-]+\.(?:js|ts|jsx|tsx|py|go|java|rs|vue|css|html|json|yaml|yml|md|rb|php|c|cpp|h|hpp|swift|kt|sh|bash|sql))\b)/gi;
   const files = [];
   let match;
   while ((match = filePattern.exec(message)) !== null) {
     files.push(match[1].trim());
   }
 
-  if (files.length < 3) return null;
+  if (files.length < 3) {
+    return null;
+  }
 
   // Extract the action part (message without file references)
   let action = message;
@@ -201,26 +223,37 @@ function _splitMultiFileTargets(message) {
 const _SEQ_FALSY = new Set(['0', 'false', 'off', 'no']);
 function _seqChainEnabled() {
   const v = process.env.KHY_SEQ_CHAIN_DECOMPOSE;
-  if (v === undefined || v === null) return true;
+  if (v === undefined || v === null) {
+    return true;
+  }
   return !_SEQ_FALSY.has(String(v).trim().toLowerCase());
 }
 
 // Leading sequential connectives. Each marks the START of a new ordered step.
 // 基于上一步/基于前一步 are treated as boundaries but NOT stripped (they carry meaning).
-const _SEQ_LEADING = /(首先|其次|然后|接着|随后|之后|最后|再次|基于上一步|基于前一步|then|after that|afterwards|next,|finally)/gi;
+const _SEQ_LEADING =
+  /(首先|其次|然后|接着|随后|之后|最后|再次|基于上一步|基于前一步|then|after that|afterwards|next,|finally)/gi;
 // Presence check (includes the standalone 先…再… pair, handled separately below).
-const _SEQ_PRESENCE = /首先|其次|然后|接着|随后|之后|最后|先.*再|基于(上一步|前一步)|then|after that|afterwards|next,|finally/i;
+const _SEQ_PRESENCE =
+  /首先|其次|然后|接着|随后|之后|最后|先.*再|基于(上一步|前一步)|then|after that|afterwards|next,|finally/i;
 // Leading connective stripped from the FRONT of a segment (kept separate from
 // _SEQ_LEADING so 基于上一步/基于前一步 stay in the prompt).
-const _SEQ_STRIP = /^(首先|其次|然后|接着|随后|之后|最后|再次|then|after that|afterwards|next,|finally)[，,、:：\s]*/i;
+const _SEQ_STRIP =
+  /^(首先|其次|然后|接着|随后|之后|最后|再次|then|after that|afterwards|next,|finally)[，,、:：\s]*/i;
 // A rare sentinel that cannot appear in a user message, so splitting on it never
 // fragments English words (which already contain spaces).
 const _SEQ_SEP = ' SEQ ';
 
 function _splitSequentialChain(message) {
-  if (!_seqChainEnabled()) return null;
-  if (typeof message !== 'string' || !message.trim()) return null;
-  if (!_SEQ_PRESENCE.test(message)) return null;
+  if (!_seqChainEnabled()) {
+    return null;
+  }
+  if (typeof message !== 'string' || !message.trim()) {
+    return null;
+  }
+  if (!_SEQ_PRESENCE.test(message)) {
+    return null;
+  }
 
   // Normalize the 先…再… pair into leading-connective form so one splitter handles
   // it: alias the FIRST 先 → 首先 and the FIRST 再 → 然后 (each prefixed with the
@@ -235,10 +268,14 @@ function _splitSequentialChain(message) {
   const steps = [];
   for (let seg of normalized.split(_SEQ_SEP)) {
     seg = seg.replace(_SEQ_STRIP, '').trim();
-    if (seg.length > 2) steps.push(seg);
+    if (seg.length > 2) {
+      steps.push(seg);
+    }
   }
 
-  if (steps.length < 2) return null;
+  if (steps.length < 2) {
+    return null;
+  }
 
   return {
     reason: 'sequential_chain',
@@ -309,7 +346,9 @@ async function decompose(message, complexResult = {}, deps = null) {
           reason: llmResult.reason,
         };
       }
-    } catch { /* LLM decomposition failed, fall through */ }
+    } catch {
+      /* LLM decomposition failed, fall through */
+    }
   }
 
   return { shouldDecompose: false, subtasks: [], reason: 'no_pattern' };
@@ -328,7 +367,9 @@ async function decompose(message, complexResult = {}, deps = null) {
 const _MERGE_FALSY = new Set(['0', 'false', 'off', 'no']);
 function _skipDistinctEnabled() {
   const v = process.env.KHY_MERGE_SKIP_DISTINCT;
-  if (v === undefined || v === null) return true;
+  if (v === undefined || v === null) {
+    return true;
+  }
   return !_MERGE_FALSY.has(String(v).trim().toLowerCase());
 }
 
@@ -347,7 +388,7 @@ function mergeResults(subtasks, aggregated) {
   // Map aggregated results back to subtasks by index
   // aggregated order matches child fork order (subtask-1, subtask-2, ...)
   const paired = subtasks.map((st, i) => {
-    const agResult = aggregated.find(a => a.name === `subtask-${i + 1}`);
+    const agResult = aggregated.find((a) => a.name === `subtask-${i + 1}`);
     return { subtask: st, result: agResult?.result || null };
   });
 
@@ -400,8 +441,9 @@ function mergeResults(subtasks, aggregated) {
     }
 
     const success = result.success !== false;
-    if (success) successCount++;
-    else {
+    if (success) {
+      successCount++;
+    } else {
       failCount++;
       // OPS-MAN-101: record the role of this failed subtask for the footer
       // role-distribution line (未执行 above is also recorded).
@@ -414,16 +456,22 @@ function mergeResults(subtasks, aggregated) {
     // (it truly did not fail) — this only adds a visible marker + footer count.
     const { isEmptySuccess } = require('./orchestrator/mergeEmptySuccess');
     const emptySuccess = success && isEmptySuccess(result);
-    if (emptySuccess) emptyCount++;
+    if (emptySuccess) {
+      emptyCount++;
+    }
 
     const status = success
-      ? (emptySuccess ? '⚠️ 完成（无产出）' : '完成')
+      ? emptySuccess
+        ? '⚠️ 完成（无产出）'
+        : '完成'
       : `失败: ${result.error || '未知错误'}`;
     const body = result.text || result.output || '(无输出)';
 
     // Collect files modified
     if (Array.isArray(result.filesModified)) {
-      for (const f of result.filesModified) allFilesModified.add(f);
+      for (const f of result.filesModified) {
+        allFilesModified.add(f);
+      }
       // OPS-MAN-095: record this real subtask's files for conflict detection.
       // Skipped subtasks (handled above) never reach here → carry no files.
       if (result.filesModified.length > 0) {
@@ -432,24 +480,30 @@ function mergeResults(subtasks, aggregated) {
     }
 
     const meta = [];
-    if (result.toolCalls) meta.push(`工具调用: ${result.toolCalls}`);
-    if (result.elapsed) meta.push(`耗时: ${result.elapsed}`);
-    if (result.iterations) meta.push(`迭代: ${result.iterations}`);
+    if (result.toolCalls) {
+      meta.push(`工具调用: ${result.toolCalls}`);
+    }
+    if (result.elapsed) {
+      meta.push(`耗时: ${result.elapsed}`);
+    }
+    if (result.iterations) {
+      meta.push(`迭代: ${result.iterations}`);
+    }
 
     sections.push(
-      `${header}\n**状态**: ${status}\n${body}` +
-      (meta.length > 0 ? `\n_${meta.join(' | ')}_` : '')
+      `${header}\n**状态**: ${status}\n${body}` + (meta.length > 0 ? `\n_${meta.join(' | ')}_` : '')
     );
   }
 
   // Summary footer
   const total = subtasks.length;
-  const footer = [
-    `\n---\n## 汇总`,
-    `- 完成: ${successCount}/${total} 项`,
-  ];
-  if (failCount > 0) footer.push(`- 失败: ${failCount} 项`);
-  if (skipCount > 0) footer.push(`- 跳过（依赖失败）: ${skipCount} 项`);
+  const footer = [`\n---\n## 汇总`, `- 完成: ${successCount}/${total} 项`];
+  if (failCount > 0) {
+    footer.push(`- 失败: ${failCount} 项`);
+  }
+  if (skipCount > 0) {
+    footer.push(`- 跳过（依赖失败）: ${skipCount} 项`);
+  }
   if (allFilesModified.size > 0) {
     footer.push(`- 修改文件: ${[...allFilesModified].join(', ')}`);
   }
@@ -457,7 +511,10 @@ function mergeResults(subtasks, aggregated) {
   // same file, the de-duping Set above hides the collision — surface it as a
   // visible warning. Gate KHY_MERGE_FILE_CONFLICT off → detectFileConflicts
   // returns [] → no line = byte-revert to today's "de-dup only" behavior.
-  const { detectFileConflicts, formatConflictWarning } = require('./orchestrator/mergeFileConflicts');
+  const {
+    detectFileConflicts,
+    formatConflictWarning,
+  } = require('./orchestrator/mergeFileConflicts');
   const conflictWarning = formatConflictWarning(detectFileConflicts(perSubtaskFiles));
   if (conflictWarning) {
     footer.push(`- ${conflictWarning}`);

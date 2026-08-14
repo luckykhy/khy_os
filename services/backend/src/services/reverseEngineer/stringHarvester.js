@@ -18,7 +18,9 @@ function _harvestAscii(buf, minLen) {
     const c = buf[i];
     const printable = c >= 0x20 && c <= 0x7e;
     if (printable) {
-      if (start < 0) start = i;
+      if (start < 0) {
+        start = i;
+      }
     } else {
       if (start >= 0 && i - start >= minLen) {
         out.push({ offset: start, text: buf.toString('ascii', start, i), enc: 'ascii' });
@@ -42,17 +44,25 @@ function _harvestUtf16le(buf, minLen) {
     const hi = buf[i + 1];
     const printable = hi === 0x00 && lo >= 0x20 && lo <= 0x7e;
     if (printable) {
-      if (start < 0) { start = i; count = 0; }
+      if (start < 0) {
+        start = i;
+        count = 0;
+      }
       count++;
     } else {
       if (start >= 0 && count >= minLen) {
         out.push({ offset: start, text: buf.toString('utf16le', start, i), enc: 'utf16le' });
       }
-      start = -1; count = 0;
+      start = -1;
+      count = 0;
     }
   }
   if (start >= 0 && count >= minLen) {
-    out.push({ offset: start, text: buf.toString('utf16le', start, buf.length - (buf.length % 2)), enc: 'utf16le' });
+    out.push({
+      offset: start,
+      text: buf.toString('utf16le', start, buf.length - (buf.length % 2)),
+      enc: 'utf16le',
+    });
   }
   return out;
 }
@@ -60,10 +70,16 @@ function _harvestUtf16le(buf, minLen) {
 // ── 语义分类（声明式正则单一真源）─────────────────────────────────
 const CLASSIFIERS = [
   { kind: 'url', re: /\bhttps?:\/\/[^\s"'<>]{4,}/i },
-  { kind: 'path', re: /(?:[A-Za-z]:\\[^\s"'<>]+|\/(?:usr|home|opt|var|etc|tmp|Users|Library)\/[^\s"'<>]+)/ },
+  {
+    kind: 'path',
+    re: /(?:[A-Za-z]:\\[^\s"'<>]+|\/(?:usr|home|opt|var|etc|tmp|Users|Library)\/[^\s"'<>]+)/,
+  },
   { kind: 'version', re: /\bv?\d+\.\d+(?:\.\d+){0,2}(?:[-+][0-9A-Za-z.]+)?\b/ },
   { kind: 'email', re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/ },
-  { kind: 'secret', re: /\b(?:sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]+PRIVATE KEY-----)/ },
+  {
+    kind: 'secret',
+    re: /\b(?:sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]+PRIVATE KEY-----)/,
+  },
 ];
 
 // 工具链/编译器/运行时指纹（声明式；命中即作为「inferred toolchain」证据）。
@@ -84,7 +100,9 @@ const TOOLCHAIN_FINGERPRINTS = [
 function classify(text) {
   const tags = [];
   for (const c of CLASSIFIERS) {
-    if (c.re.test(text)) tags.push(c.kind);
+    if (c.re.test(text)) {
+      tags.push(c.kind);
+    }
   }
   return tags;
 }
@@ -107,7 +125,9 @@ function harvest(buf, opts = {}) {
   let strings = [..._harvestAscii(buf, minLen), ..._harvestUtf16le(buf, minLen)];
   const total = strings.length;
   const truncated = total > maxStrings;
-  if (truncated) strings = strings.slice(0, maxStrings);
+  if (truncated) {
+    strings = strings.slice(0, maxStrings);
+  }
 
   const classified = { url: [], path: [], version: [], email: [], secret: [] };
   const toolchainHits = new Set();
@@ -115,10 +135,14 @@ function harvest(buf, opts = {}) {
   for (const s of strings) {
     const tags = classify(s.text);
     for (const t of tags) {
-      if (classified[t] && classified[t].length < 50) classified[t].push({ offset: s.offset, text: s.text.slice(0, 256) });
+      if (classified[t] && classified[t].length < 50) {
+        classified[t].push({ offset: s.offset, text: s.text.slice(0, 256) });
+      }
     }
     for (const fp of TOOLCHAIN_FINGERPRINTS) {
-      if (fp.re.test(s.text)) toolchainHits.add(fp.id);
+      if (fp.re.test(s.text)) {
+        toolchainHits.add(fp.id);
+      }
     }
   }
 

@@ -26,6 +26,7 @@ process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 
 const sp = require('../../src/services/sessionPersistence');
 const ai = require('../../src/cli/ai');
+const chatState = require('../../src/cli/aiChatState');
 
 /* ── jest-or-node:test shim ─────────────────────────────────────────────── */
 let _describe = global.describe;
@@ -76,5 +77,82 @@ _describe('resumeLastPersistedSession', () => {
     // The live transcript id continues the restored session, so follow-up turns
     // append to the same record rather than forking a fresh one.
     _expect(ai.getLiveSessionId()).toBe('sess-new');
+  });
+});
+
+/* ── resume tool-block pairing ───────────────────────────────────────────── */
+
+/** Count tool_result blocks carrying `id` across the whole live history. */
+function _countPlaceholders(messages, id) {
+  let n = 0;
+  for (const m of messages) {
+    if (!Array.isArray(m.content)) continue;
+    for (const b of m.content) {
+      if (b && b.type === 'tool_result' && b.tool_use_id === id) n += 1;
+    }
+  }
+  return n;
+}
+
+_describe('resumePersistedSession — orphan tool_use pairing', () => {
+  _test('pairs a trailing orphan tool_use and stays idempotent across re-resume', () => {
+    const cwd = process.cwd();
+    // Transcript interrupted mid-turn: the assistant asked for a tool, the
+    // tool_result never landed — exactly the state that leaked raw tool blocks.
+    sp.persistSession('sess-orphan', {
+      title: 'orphan',
+      messages: [
+        { role: 'user', content: 'read the file' },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'Reading now.' },
+            { type: 'tool_use', id: 'orphan-1', name: 'Read', input: { path: 'a.js' } },
+          ],
+        },
+      ],
+      metadata: { cwd },
+    });
+
+    const r = ai.resumePersistedSession('sess-orphan');
+    _expect(r.success).toBe(true);
+
+    const msgs = chatState.messages;
+    const last = msgs[msgs.length - 1];
+    _expect(last.role).toBe('user');
+    _expect(Array.isArray(last.content)).toBe(true);
+    _expect(_countPlaceholders(msgs, 'orphan-1')).toBe(1);
+
+    // Persisting the repaired history and resuming again must NOT stack a second
+    // placeholder — the injected block is a real tool_result, so pairing is a
+    // no-op on the next pass.
+    sp.persistSession('sess-orphan', { messages: msgs, metadata: { cwd } });
+    const again = ai.resumePersistedSession('sess-orphan');
+    _expect(again.success).toBe(true);
+    _expect(_countPlaceholders(chatState.messages, 'orphan-1')).toBe(1);
+  });
+
+  _test('leaves an already-paired transcript untouched', () => {
+    const cwd = process.cwd();
+    sp.persistSession('sess-paired', {
+      title: 'paired',
+      messages: [
+        { role: 'user', content: 'read the file' },
+        {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'paired-1', name: 'Read', input: {} }],
+        },
+        {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'paired-1', content: 'ok' }],
+        },
+      ],
+      metadata: { cwd },
+    });
+
+    const r = ai.resumePersistedSession('sess-paired');
+    _expect(r.success).toBe(true);
+    _expect(r.messageCount).toBe(3);
+    _expect(_countPlaceholders(chatState.messages, 'paired-1')).toBe(1);
   });
 });

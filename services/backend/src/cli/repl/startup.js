@@ -14,7 +14,9 @@
  */
 let _chalk, _inquirer, _formatters, _ai;
 const chalk = () => {
-  if (_chalk) return _chalk;
+  if (_chalk) {
+    return _chalk;
+  }
   const chalkModule = require('chalk');
   _chalk = chalkModule.default || chalkModule;
   return _chalk;
@@ -30,9 +32,11 @@ async function offerModelSelection() {
 
     // Quick sync detection of available adapters
     const allStatus = aiGateway.getStatus();
-    const availableAdapters = allStatus.filter(s => s.enabled && s.available);
+    const availableAdapters = allStatus.filter((s) => s.enabled && s.available);
 
-    if (availableAdapters.length === 0) return;
+    if (availableAdapters.length === 0) {
+      return;
+    }
 
     // Gather models from all available adapters via gateway.listModels
     const modelChoices = [];
@@ -62,57 +66,119 @@ async function offerModelSelection() {
       }
     }
 
-    if (modelChoices.length <= 1) return; // No choice needed
+    if (modelChoices.length <= 1) {
+      return;
+    } // No choice needed
 
     // Check if user has a saved preference — skip selection if so
     const currentAdapter = process.env.GATEWAY_PREFERRED_ADAPTER;
     const currentModel = process.env.GATEWAY_PREFERRED_MODEL;
     if (currentAdapter && currentModel) {
-      // Already configured, show current and offer quick switch
-      // Claude Code style: model info is shown in banner, not a separate line
-      return;
+      // 'auto' delegates adapter choice to the gateway, which already skips
+      // unavailable adapters — nothing to validate here.
+      if (currentAdapter === 'auto') {
+        return;
+      }
+      // Validate the preferred adapter is still usable before honoring it.
+      // Force-refresh detection so a stale 60s cache can't keep an unusable
+      // adapter (missing CLI / expired key) as the silent default.
+      let preferredOk = false;
+      try {
+        const adapter = aiGateway.getAdapter(currentAdapter);
+        if (adapter && typeof adapter.detect === 'function') {
+          let fresh = adapter.detect(true);
+          if (fresh && typeof fresh.then === 'function') {
+            fresh = await fresh;
+          }
+          preferredOk = !!fresh;
+        }
+      } catch {
+        preferredOk = false;
+      }
+      if (preferredOk) {
+        // Already configured and verified available.
+        // Claude Code style: model info is shown in banner, not a separate line
+        return;
+      }
+      // Fall through to the normal selection flow below so the user picks a
+      // working adapter instead of silently keeping a dead default.
+      console.log(
+        c.yellow(`校验适配器可用性: ${currentAdapter} 当前不可用，回退到可用适配器的模型选择`)
+      );
     }
 
     // Show interactive selection
     const inq = inquirer();
     console.log('');
-    const { selected } = await inq.prompt([{
-      type: 'list',
-      name: 'selected',
-      message: '选择 AI 模型 (上下箭头选择，回车确认，Esc跳过):',
-      choices: [
-        ...modelChoices,
-        { name: c.dim('────────────'), value: '__skip_sep__', disabled: true },
-        { name: '跳过 (稍后用 khy gateway model 设置)', value: null },
-      ],
-      pageSize: 10,
-    }]);
+    const { selected } = await inq.prompt([
+      {
+        type: 'list',
+        name: 'selected',
+        message: '选择 AI 模型 (上下箭头选择，回车确认，Esc跳过):',
+        choices: [
+          ...modelChoices,
+          { name: c.dim('────────────'), value: '__skip_sep__', disabled: true },
+          { name: '跳过 (稍后用 khy gateway model 设置)', value: null },
+        ],
+        pageSize: 10,
+      },
+    ]);
 
     if (selected) {
       process.env.GATEWAY_PREFERRED_ADAPTER = selected.adapter;
       process.env.GATEWAY_PREFERRED_STRICT = 'true';
-      if (selected.model) process.env.GATEWAY_PREFERRED_MODEL = selected.model;
-      try { await aiGateway.refreshAdapters(); } catch { /* best effort */ }
-      fmt().printSuccess(`已选择: ${selected.adapter}${selected.model ? '/' + selected.model : ''}`);
+      if (selected.model) {
+        process.env.GATEWAY_PREFERRED_MODEL = selected.model;
+      }
+      try {
+        await aiGateway.refreshAdapters();
+      } catch {
+        /* best effort */
+      }
+      fmt().printSuccess(
+        `已选择: ${selected.adapter}${selected.model ? '/' + selected.model : ''}`
+      );
     }
 
     // Ensure stdin is resumed after inquirer closes its readline
     // inquirer may pause stdin which prevents our readline from working
-    try { process.stdin.resume(); } catch { /* ignore */ }
     try {
-      if (process.stdin.isTTY && typeof process.stdin.setRawMode === 'function' && !process.stdin.isRaw) {
+      process.stdin.resume();
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (
+        process.stdin.isTTY &&
+        typeof process.stdin.setRawMode === 'function' &&
+        !process.stdin.isRaw
+      ) {
         process.stdin.setRawMode(true);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   } catch (e) {
     // B4: 模型选择恢复失败日志，便于诊断终端无响应
-    try { console.error('[repl] 模型选择/stdin 恢复失败:', e?.message); } catch {}
-    try { process.stdin.resume(); } catch { /* ignore */ }
     try {
-      if (process.stdin.isTTY && typeof process.stdin.setRawMode === 'function' && !process.stdin.isRaw) {
+      console.error('[repl] 模型选择/stdin 恢复失败:', e?.message);
+    } catch {}
+    try {
+      process.stdin.resume();
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (
+        process.stdin.isTTY &&
+        typeof process.stdin.setRawMode === 'function' &&
+        !process.stdin.isRaw
+      ) {
         process.stdin.setRawMode(true);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -120,7 +186,9 @@ async function offerModelSelection() {
  * Execute a menu result by mapping it back to command handlers.
  */
 async function executeMenuResult(result) {
-  if (!result) return;
+  if (!result) {
+    return;
+  }
 
   switch (result.action) {
     case 'quote': {

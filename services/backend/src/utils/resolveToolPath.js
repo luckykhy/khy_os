@@ -1,7 +1,7 @@
 'use strict';
 
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 /**
  * resolveToolPath.js — 「工具入参路径解析(展开 env 变量 + ~ + 相对 cwd)」共享 helper。

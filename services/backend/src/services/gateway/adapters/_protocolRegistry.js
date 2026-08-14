@@ -34,18 +34,18 @@ const PROTOCOLS = {
  */
 const MODEL_PROTOCOL_HINTS = {
   'claude-': PROTOCOLS.ANTHROPIC,
-  'claude3': PROTOCOLS.ANTHROPIC,
+  claude3: PROTOCOLS.ANTHROPIC,
   'gpt-': PROTOCOLS.OPENAI,
   'o4-': PROTOCOLS.OPENAI,
   'o3-': PROTOCOLS.OPENAI,
   'o1-': PROTOCOLS.OPENAI,
   'gemini-': PROTOCOLS.OPENAI,
   'deepseek-': PROTOCOLS.OPENAI,
-  'deepseek_': PROTOCOLS.OPENAI,
-  'qwen': PROTOCOLS.OPENAI,
-  'glm': PROTOCOLS.OPENAI,
+  deepseek_: PROTOCOLS.OPENAI,
+  qwen: PROTOCOLS.OPENAI,
+  glm: PROTOCOLS.OPENAI,
   'yi-': PROTOCOLS.OPENAI,
-  'mistral': PROTOCOLS.OPENAI,
+  mistral: PROTOCOLS.OPENAI,
   'codex-': PROTOCOLS.CODEX,
 };
 
@@ -60,25 +60,35 @@ const MODEL_PROTOCOL_HINTS = {
  * @type {Record<string, { protocols: string[], default: string, resolveProtocol?: function }>}
  */
 const ADAPTER_PROTOCOL_MAP = {
-  cursor:     { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
-  vscode:     { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
-  windsurf:   { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
+  cursor: { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
+  vscode: { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
+  windsurf: { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
   cursor2api: { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
-  ollama:     { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
-  localLLM:   { protocols: [PROTOCOLS.DIRECT], default: PROTOCOLS.DIRECT },
+  ollama: { protocols: [PROTOCOLS.OPENAI], default: PROTOCOLS.OPENAI },
+  localLLM: { protocols: [PROTOCOLS.DIRECT], default: PROTOCOLS.DIRECT },
 
   claude: {
     protocols: [PROTOCOLS.ANTHROPIC, PROTOCOLS.CLI_STREAM_JSON],
     default: PROTOCOLS.ANTHROPIC,
     resolveProtocol(_model, options) {
       // Bridge mode → CLI stream-json; direct mode → Anthropic Messages API
-      if (options?.directMode === false) return PROTOCOLS.CLI_STREAM_JSON;
+      if (options?.directMode === false) {
+        return PROTOCOLS.CLI_STREAM_JSON;
+      }
       // Auto: env-based resolution deferred to adapter's own logic
       const mode = String(process.env.GATEWAY_CLAUDE_MODE || 'auto').toLowerCase();
-      if (mode === 'bridge' || mode === 'cli') return PROTOCOLS.CLI_STREAM_JSON;
-      if (mode === 'direct') return PROTOCOLS.ANTHROPIC;
+      if (mode === 'bridge' || mode === 'cli') {
+        return PROTOCOLS.CLI_STREAM_JSON;
+      }
+      if (mode === 'direct') {
+        return PROTOCOLS.ANTHROPIC;
+      }
       // auto: if Anthropic key available → direct; check env vars
-      if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN || process.env.CLAUDE_API_KEY) {
+      if (
+        process.env.ANTHROPIC_API_KEY ||
+        process.env.ANTHROPIC_AUTH_TOKEN ||
+        process.env.CLAUDE_API_KEY
+      ) {
         return PROTOCOLS.ANTHROPIC;
       }
       return PROTOCOLS.CLI_STREAM_JSON;
@@ -100,7 +110,9 @@ const ADAPTER_PROTOCOL_MAP = {
       }
       // SDK mode env var
       const sdkMode = String(process.env.TRAE_SDK_MODE || 'auto').toLowerCase();
-      if (sdkMode === 'force' || sdkMode === 'only') return PROTOCOLS.OPENAI;
+      if (sdkMode === 'force' || sdkMode === 'only') {
+        return PROTOCOLS.OPENAI;
+      }
       // Default cascade: CW → SDK → HTTP (all OpenAI-compat at the wire level except CW)
       return PROTOCOLS.OPENAI;
     },
@@ -111,9 +123,13 @@ const ADAPTER_PROTOCOL_MAP = {
     default: PROTOCOLS.CLI_STREAM_JSON,
     resolveProtocol(_model, options) {
       const mode = String(process.env.GATEWAY_CODEX_MODE || 'cli').toLowerCase();
-      if (mode === 'direct') return PROTOCOLS.CODEX;
+      if (mode === 'direct') {
+        return PROTOCOLS.CODEX;
+      }
       // Images force direct mode (CLI stdin is text-only)
-      if (Array.isArray(options?.images) && options.images.length > 0) return PROTOCOLS.CODEX;
+      if (Array.isArray(options?.images) && options.images.length > 0) {
+        return PROTOCOLS.CODEX;
+      }
       return PROTOCOLS.CLI_STREAM_JSON;
     },
   },
@@ -123,9 +139,18 @@ const ADAPTER_PROTOCOL_MAP = {
     default: PROTOCOLS.OPENAI,
     resolveProtocol(_model, options) {
       // Endpoint URL (or explicit serviceType) determines protocol.
-      const endpoint = String(options?.apiEndpoint || process.env.RELAY_API_ENDPOINT || '').replace(/\/+$/, '');
-      const serviceType = String(options?.serviceType || process.env.RELAY_API_SERVICE_TYPE || '').toLowerCase();
-      if (serviceType === 'responses' || endpoint.endsWith('/responses') || endpoint.includes('/responses/')) {
+      const endpoint = String(options?.apiEndpoint || process.env.RELAY_API_ENDPOINT || '').replace(
+        /\/+$/,
+        ''
+      );
+      const serviceType = String(
+        options?.serviceType || process.env.RELAY_API_SERVICE_TYPE || ''
+      ).toLowerCase();
+      if (
+        serviceType === 'responses' ||
+        endpoint.endsWith('/responses') ||
+        endpoint.includes('/responses/')
+      ) {
         return PROTOCOLS.RESPONSES;
       }
       if (endpoint.endsWith('/anthropic') || endpoint.includes('/anthropic/')) {
@@ -140,10 +165,10 @@ const ADAPTER_PROTOCOL_MAP = {
     default: PROTOCOLS.OPENAI,
   },
 
-  cli:       { protocols: [PROTOCOLS.CLI_STREAM_JSON], default: PROTOCOLS.CLI_STREAM_JSON },
-  relay:     { protocols: [PROTOCOLS.MANUAL], default: PROTOCOLS.MANUAL },
+  cli: { protocols: [PROTOCOLS.CLI_STREAM_JSON], default: PROTOCOLS.CLI_STREAM_JSON },
+  relay: { protocols: [PROTOCOLS.MANUAL], default: PROTOCOLS.MANUAL },
   clipboard: { protocols: [PROTOCOLS.MANUAL], default: PROTOCOLS.MANUAL },
-  warp:      { protocols: [PROTOCOLS.MANUAL], default: PROTOCOLS.MANUAL },
+  warp: { protocols: [PROTOCOLS.MANUAL], default: PROTOCOLS.MANUAL },
 };
 
 /**
@@ -156,7 +181,9 @@ const ADAPTER_PROTOCOL_MAP = {
  */
 function getProtocolForAdapter(adapterKey, model, options) {
   const entry = ADAPTER_PROTOCOL_MAP[adapterKey];
-  if (!entry) return PROTOCOLS.OPENAI;
+  if (!entry) {
+    return PROTOCOLS.OPENAI;
+  }
   if (typeof entry.resolveProtocol === 'function') {
     return entry.resolveProtocol(model, options) || entry.default;
   }
@@ -213,10 +240,14 @@ const _MODEL_PROTOCOL_HINT_ENTRIES = Object.entries(MODEL_PROTOCOL_HINTS);
  * @returns {string|null} Protocol hint or null
  */
 function inferProtocolFromModel(model) {
-  if (!model || typeof model !== 'string') return null;
+  if (!model || typeof model !== 'string') {
+    return null;
+  }
   const lower = model.toLowerCase();
   for (const [prefix, protocol] of _MODEL_PROTOCOL_HINT_ENTRIES) {
-    if (lower.startsWith(prefix)) return protocol;
+    if (lower.startsWith(prefix)) {
+      return protocol;
+    }
   }
   return null;
 }

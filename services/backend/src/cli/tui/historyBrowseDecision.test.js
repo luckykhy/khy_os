@@ -10,8 +10,8 @@
  *   - defensive: missing args / undefined env
  */
 
-const test = require('node:test');
 const assert = require('node:assert');
+const test = require('node:test');
 
 const {
   historyBrowseWhileEditingEnabled,
@@ -50,7 +50,10 @@ test('single-line + gate on → forward (browse history)', () => {
 
 test('single-line + gate off → swallow (legacy)', () => {
   assert.equal(
-    shouldBrowseHistoryWhileEditing({ hasNewline: false, env: { KHY_HISTORY_BROWSE_EDITING: '0' } }),
+    shouldBrowseHistoryWhileEditing({
+      hasNewline: false,
+      env: { KHY_HISTORY_BROWSE_EDITING: '0' },
+    }),
     false
   );
 });
@@ -62,7 +65,10 @@ test('multiline + gate on → forward', () => {
 
 test('multiline + gate off → STILL forward (interior cursor move not gated)', () => {
   assert.equal(
-    shouldBrowseHistoryWhileEditing({ hasNewline: true, env: { KHY_HISTORY_BROWSE_EDITING: 'off' } }),
+    shouldBrowseHistoryWhileEditing({
+      hasNewline: true,
+      env: { KHY_HISTORY_BROWSE_EDITING: 'off' },
+    }),
     true
   );
 });

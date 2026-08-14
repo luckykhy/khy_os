@@ -22,29 +22,29 @@ const { CapacityDecision, CapacityRiskLevel } = require('./capacityFlow');
 // ── State Enum ────────────────────────────────────────────────────────
 
 const CoherenceState = Object.freeze({
-  Healthy:           'healthy',
-  GettingCrowded:    'getting_crowded',
-  RefreshingContext:  'refreshing_context',
-  VerifyingWork:     'verifying_work',
-  ResettingPlan:     'resetting_plan',
+  Healthy: 'healthy',
+  GettingCrowded: 'getting_crowded',
+  RefreshingContext: 'refreshing_context',
+  VerifyingWork: 'verifying_work',
+  ResettingPlan: 'resetting_plan',
 });
 
 // ── State Labels (for CLI status bar) ─────────────────────────────────
 
 const STATE_LABELS = Object.freeze({
-  [CoherenceState.Healthy]:          '',
-  [CoherenceState.GettingCrowded]:   'context getting crowded',
+  [CoherenceState.Healthy]: '',
+  [CoherenceState.GettingCrowded]: 'context getting crowded',
   [CoherenceState.RefreshingContext]: 'refreshing context...',
-  [CoherenceState.VerifyingWork]:    'verifying recent work...',
-  [CoherenceState.ResettingPlan]:    'resetting plan...',
+  [CoherenceState.VerifyingWork]: 'verifying recent work...',
+  [CoherenceState.ResettingPlan]: 'resetting plan...',
 });
 
 const STATE_COLORS = Object.freeze({
-  [CoherenceState.Healthy]:          '#4EBA65',  // green
-  [CoherenceState.GettingCrowded]:   '#FFC107',  // amber
-  [CoherenceState.RefreshingContext]: '#FFC107',  // amber
-  [CoherenceState.VerifyingWork]:    '#FF6B80',  // red
-  [CoherenceState.ResettingPlan]:    '#FF6B80',  // red
+  [CoherenceState.Healthy]: '#4EBA65', // green
+  [CoherenceState.GettingCrowded]: '#FFC107', // amber
+  [CoherenceState.RefreshingContext]: '#FFC107', // amber
+  [CoherenceState.VerifyingWork]: '#FF6B80', // red
+  [CoherenceState.ResettingPlan]: '#FF6B80', // red
 });
 
 // ── State Machine ─────────────────────────────────────────────────────
@@ -57,13 +57,19 @@ class CoherenceStateMachine {
   }
 
   /** Get current state. */
-  get state() { return this._state; }
+  get state() {
+    return this._state;
+  }
 
   /** Get human-readable label for current state. */
-  get label() { return STATE_LABELS[this._state] || ''; }
+  get label() {
+    return STATE_LABELS[this._state] || '';
+  }
 
   /** Get color for current state. */
-  get color() { return STATE_COLORS[this._state] || '#FFFFFF'; }
+  get color() {
+    return STATE_COLORS[this._state] || '#FFFFFF';
+  }
 
   /**
    * Process a capacity event and transition state accordingly.
@@ -103,7 +109,9 @@ class CoherenceStateMachine {
     if (changed) {
       this._state = to;
       this._history.push({ from, to, decision, risk, timestamp: Date.now() });
-      if (this._history.length > 10) this._history.shift();
+      if (this._history.length > 10) {
+        this._history.shift();
+      }
       this._notify(from, to);
     }
 
@@ -143,13 +151,18 @@ class CoherenceStateMachine {
   }
 
   /** Get transition history for diagnostics. */
-  getHistory() { return [...this._history]; }
+  getHistory() {
+    return [...this._history];
+  }
 
   /** @private */
   _notify(from, to) {
     for (const fn of this._listeners) {
-      try { fn({ from, to, state: to, label: STATE_LABELS[to], color: STATE_COLORS[to] }); }
-      catch { /* ignore listener errors */ }
+      try {
+        fn({ from, to, state: to, label: STATE_LABELS[to], color: STATE_COLORS[to] });
+      } catch {
+        /* ignore listener errors */
+      }
     }
   }
 }

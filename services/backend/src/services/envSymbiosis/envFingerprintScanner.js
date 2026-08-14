@@ -12,9 +12,7 @@
  * 不缓存可变状态，契合「核心状态机无状态跨平台一致」（防呆④）。
  */
 
-const {
-  PLATFORM, KERNEL_SIGNATURES, topologyFor, isPlatform,
-} = require('./platformIds');
+const { PLATFORM, KERNEL_SIGNATURES, topologyFor, isPlatform } = require('./platformIds');
 
 /** 各环境「高特权接口」候选清单（§3.1 能力清单）——探针逐项验证可用性。 */
 const PRIVILEGED_CAPABILITIES = Object.freeze({
@@ -61,7 +59,13 @@ class EnvFingerprintScanner {
       isAndroid: _safeCall(probe.isAndroid, false),
     };
 
-    const sig = KERNEL_SIGNATURES.find((s) => { try { return s.match(ctx); } catch { return false; } });
+    const sig = KERNEL_SIGNATURES.find((s) => {
+      try {
+        return s.match(ctx);
+      } catch {
+        return false;
+      }
+    });
     const platform = sig ? sig.platform : 'unknown';
     const recognized = !!sig && isPlatform(platform);
 
@@ -86,8 +90,14 @@ class EnvFingerprintScanner {
     const out = [];
     for (const cap of candidates) {
       let ok = false;
-      try { ok = !!this.probe.hasCapability(platform, cap); } catch { ok = false; }
-      if (ok) out.push(cap);
+      try {
+        ok = !!this.probe.hasCapability(platform, cap);
+      } catch {
+        ok = false;
+      }
+      if (ok) {
+        out.push(cap);
+      }
     }
     return out;
   }
@@ -96,10 +106,23 @@ class EnvFingerprintScanner {
   static _defaultProbe() {
     return {
       nodePlatform: () => (typeof process !== 'undefined' && process.platform) || '',
-      osType: () => { try { return require('os').type(); } catch { return ''; } },
-      runtime: () => (typeof process !== 'undefined' && process.versions && process.versions.node ? `node/${process.versions.node}` : ''),
+      osType: () => {
+        try {
+          return require('os').type();
+        } catch {
+          return '';
+        }
+      },
+      runtime: () =>
+        typeof process !== 'undefined' && process.versions && process.versions.node
+          ? `node/${process.versions.node}`
+          : '',
       isAndroid: () => {
-        try { return /android/i.test(require('os').release()) || !!process.env.ANDROID_ROOT; } catch { return false; }
+        try {
+          return /android/i.test(require('os').release()) || !!process.env.ANDROID_ROOT;
+        } catch {
+          return false;
+        }
       },
       // 默认保守：真实高特权探测涉及系统调用，缺省一律 false，由具体环境覆写为真探测。
       hasCapability: () => false,
@@ -107,9 +130,13 @@ class EnvFingerprintScanner {
         try {
           const os = require('os');
           const cpus = os.cpus() ? os.cpus().length : 1;
-          if (process.env.ANDROID_ROOT) return 'mobile';
+          if (process.env.ANDROID_ROOT) {
+            return 'mobile';
+          }
           return cpus >= 16 ? 'server' : 'desktop';
-        } catch { return 'unknown'; }
+        } catch {
+          return 'unknown';
+        }
       },
       battery: () => null,
       network: () => null,
@@ -118,7 +145,11 @@ class EnvFingerprintScanner {
 }
 
 function _safeCall(fn, dflt) {
-  try { return typeof fn === 'function' ? fn() : dflt; } catch { return dflt; }
+  try {
+    return typeof fn === 'function' ? fn() : dflt;
+  } catch {
+    return dflt;
+  }
 }
 
 function _coerceMode(m) {

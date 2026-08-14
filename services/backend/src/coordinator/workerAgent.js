@@ -7,6 +7,7 @@
 'use strict';
 
 const crypto = require('crypto');
+
 const { startWatchdog } = require('../services/resourceGuard');
 
 // ── Structured Output Contract (G4) ──────────────────────────────
@@ -33,9 +34,7 @@ function parseAgentOutput(raw) {
   const sections = {};
   const keys = ['SUMMARY', 'CHANGES', 'EVIDENCE', 'RISKS', 'BLOCKERS'];
   for (const key of keys) {
-    const re = new RegExp(
-      `^${key}:\\s*(.+?)(?=^(?:${keys.join('|')}):|$)`, 'ms'
-    );
+    const re = new RegExp(`^${key}:\\s*(.+?)(?=^(?:${keys.join('|')}):|$)`, 'ms');
     const m = (raw || '').match(re);
     sections[key.toLowerCase()] = m ? m[1].trim() : '';
   }
@@ -127,7 +126,7 @@ async function spawnWorker(taskDescription, opts = {}) {
   const parentId = opts.parentContext?.id || '__root__';
   const siblings = _childrenOf.get(parentId);
   const activeCount = siblings
-    ? [...siblings].filter(cid => {
+    ? [...siblings].filter((cid) => {
         const w = _workers.get(cid);
         return w && (w.status === 'pending' || w.status === 'running');
       }).length
@@ -192,15 +191,19 @@ async function spawnWorker(taskDescription, opts = {}) {
         return worker;
       }
       worker._taskId = opts.taskId;
-    } catch { /* taskBoard not available */ }
+    } catch {
+      /* taskBoard not available */
+    }
   }
 
   // Register parent→child relationship
-  if (!_childrenOf.has(parentId)) _childrenOf.set(parentId, new Set());
+  if (!_childrenOf.has(parentId)) {
+    _childrenOf.set(parentId, new Set());
+  }
   _childrenOf.get(parentId).add(id);
 
   // Execute asynchronously
-  _executeWorker(worker, opts).catch(err => {
+  _executeWorker(worker, opts).catch((err) => {
     worker.status = 'error';
     worker.error = err.message;
     worker.completedAt = Date.now();
@@ -218,8 +221,12 @@ async function spawnWorker(taskDescription, opts = {}) {
  */
 function sendMessage(workerId, message) {
   const worker = _workers.get(workerId);
-  if (!worker) return { delivered: false, reason: 'unknown_worker' };
-  if (worker.status !== 'running') return { delivered: false, reason: 'not_running' };
+  if (!worker) {
+    return { delivered: false, reason: 'unknown_worker' };
+  }
+  if (worker.status !== 'running') {
+    return { delivered: false, reason: 'not_running' };
+  }
 
   const mailbox = worker.mailbox;
   // Backpressure: reject if queue full
@@ -242,9 +249,13 @@ function sendMessage(workerId, message) {
  */
 function acknowledgeMessage(workerId, seq) {
   const worker = _workers.get(workerId);
-  if (!worker) return false;
-  const entry = worker.mailbox.queue.find(m => m.seq === seq);
-  if (!entry) return false;
+  if (!worker) {
+    return false;
+  }
+  const entry = worker.mailbox.queue.find((m) => m.seq === seq);
+  if (!entry) {
+    return false;
+  }
   entry.acked = true;
   worker.mailbox.ackedSeq = Math.max(worker.mailbox.ackedSeq, seq);
   worker._lastActivity = Date.now();
@@ -262,8 +273,10 @@ function acknowledgeMessage(workerId, seq) {
  */
 function getUnackedMessages(workerId) {
   const worker = _workers.get(workerId);
-  if (!worker) return [];
-  return worker.mailbox.queue.filter(m => !m.acked);
+  if (!worker) {
+    return [];
+  }
+  return worker.mailbox.queue.filter((m) => !m.acked);
 }
 
 /**
@@ -273,15 +286,23 @@ function getUnackedMessages(workerId) {
  */
 function shutdownWorker(workerId) {
   const worker = _workers.get(workerId);
-  if (!worker) return false;
+  if (!worker) {
+    return false;
+  }
 
   // ── Hook: Stop ────────────────────────────────────────────────────
   try {
     const hookSystem = require('../cli/hooks/hookSystem');
-    hookSystem.trigger('Stop', {
-      agentId: workerId, task: worker.task, reason: 'shutdown',
-    }).catch(() => {});
-  } catch { /* hooks are best-effort */ }
+    hookSystem
+      .trigger('Stop', {
+        agentId: workerId,
+        task: worker.task,
+        reason: 'shutdown',
+      })
+      .catch(() => {});
+  } catch {
+    /* hooks are best-effort */
+  }
 
   // ── Cascade: recursively shut down children before self ────────────
   const children = _childrenOf.get(workerId);
@@ -324,7 +345,9 @@ function getWorkerStatus(workerId) {
  */
 function listWorkers(statusFilter) {
   const all = [..._workers.values()];
-  if (statusFilter) return all.filter(w => w.status === statusFilter);
+  if (statusFilter) {
+    return all.filter((w) => w.status === statusFilter);
+  }
   return all;
 }
 
@@ -340,7 +363,9 @@ function cleanup(olderThanMs = 300000) {
       // Sync parent→child registry
       for (const [parentId, children] of _childrenOf) {
         children.delete(id);
-        if (children.size === 0) _childrenOf.delete(parentId);
+        if (children.size === 0) {
+          _childrenOf.delete(parentId);
+        }
       }
     }
   }
@@ -356,17 +381,24 @@ async function _executeWorker(worker, opts = {}) {
   try {
     const hookSystem = require('../cli/hooks/hookSystem');
     await hookSystem.trigger('SubAgentStart', {
-      agentId: worker.id, task: worker.task, role: worker.role,
-      depth: worker._depth || 0, mode: 'worker',
+      agentId: worker.id,
+      task: worker.task,
+      role: worker.role,
+      depth: worker._depth || 0,
+      mode: 'worker',
     });
-  } catch { /* hooks are best-effort */ }
+  } catch {
+    /* hooks are best-effort */
+  }
 
   // Activity-based idle watchdog (Rule 3: no fixed wall-clock timeout)
   const guard = startWatchdog(`worker:${worker.id}`, timeoutMs, () => {
     worker.status = 'error';
     worker.error = `Worker idle timeout after ${timeoutMs}ms`;
     worker.completedAt = Date.now();
-    if (worker.abortController) worker.abortController.abort();
+    if (worker.abortController) {
+      worker.abortController.abort();
+    }
   });
 
   try {
@@ -377,16 +409,10 @@ async function _executeWorker(worker, opts = {}) {
     // Get the role configuration
     const role = AGENT_ROLES[worker.role] || AGENT_ROLES.general;
     const preferredAdapter = String(
-      worker.preferredAdapter
-      || opts.preferredAdapter
-      || role.preferredAdapter
-      || ''
+      worker.preferredAdapter || opts.preferredAdapter || role.preferredAdapter || ''
     ).trim();
     const preferredModel = String(
-      worker.preferredModel
-      || opts.preferredModel
-      || role.preferredModel
-      || ''
+      worker.preferredModel || opts.preferredModel || role.preferredModel || ''
     ).trim();
 
     // Build the worker prompt with structured output contract
@@ -401,7 +427,8 @@ async function _executeWorker(worker, opts = {}) {
       const gateway = require('../services/gateway/aiGateway');
       const result = await gateway.generate(prompt);
       guard.touch();
-      worker.result = typeof result === 'string' ? result : (result.text || result.reply || JSON.stringify(result));
+      worker.result =
+        typeof result === 'string' ? result : result.text || result.reply || JSON.stringify(result);
       worker.status = 'completed';
       worker.completedAt = Date.now();
       guard.done();
@@ -413,8 +440,12 @@ async function _executeWorker(worker, opts = {}) {
       _isFollowUp: true,
       effort: 'medium',
     };
-    if (preferredAdapter) chatOpts.preferredAdapter = preferredAdapter;
-    if (preferredModel) chatOpts.preferredModel = preferredModel;
+    if (preferredAdapter) {
+      chatOpts.preferredAdapter = preferredAdapter;
+    }
+    if (preferredModel) {
+      chatOpts.preferredModel = preferredModel;
+    }
 
     // Create per-worker AgentContext for isolated state
     let agentCtx = null;
@@ -424,7 +455,9 @@ async function _executeWorker(worker, opts = {}) {
         ? opts.parentContext.fork({ role: worker.role, toolFilter: role.toolProfile })
         : new AgentContext({ role: worker.role, toolFilter: role.toolProfile });
       worker.agentContext = agentCtx;
-    } catch { /* agentContext not available, fall back to global */ }
+    } catch {
+      /* agentContext not available, fall back to global */
+    }
 
     // Apply tool profile from role
     if (role.toolProfile) {
@@ -437,12 +470,16 @@ async function _executeWorker(worker, opts = {}) {
             for (const name of selectToolsToActivate(prompt)) {
               toolRegistry.ensureToolForContext(name, agentCtx);
             }
-          } catch { /* 预激活最佳努力,失败不影响主流程 */ }
+          } catch {
+            /* 预激活最佳努力,失败不影响主流程 */
+          }
         }
         chatOpts.toolDefinitions = agentCtx
           ? toolRegistry.getDefinitionsForContext(agentCtx)
           : toolRegistry.getDefinitions(role.toolProfile);
-      } catch { /* fallback: no filtering */ }
+      } catch {
+        /* fallback: no filtering */
+      }
     }
 
     // Pass agentContext to chat options for downstream use
@@ -463,8 +500,10 @@ async function _executeWorker(worker, opts = {}) {
 
     // Process pending follow-up messages from mailbox
     while (worker.mailbox.queue.length > 0 && worker.status === 'completed') {
-      const entry = worker.mailbox.queue.find(m => !m.acked);
-      if (!entry) break;
+      const entry = worker.mailbox.queue.find((m) => !m.acked);
+      if (!entry) {
+        break;
+      }
       worker.status = 'running';
       guard.touch();
       const followUp = await aiModule.chat(entry.message, {
@@ -490,7 +529,7 @@ async function _executeWorker(worker, opts = {}) {
       if (hallucinations.length > 0) {
         worker._hallucinations = hallucinations;
         // 注入警告到结果末尾
-        worker.result += '\n\n⚠ 幻觉检测: ' + hallucinations.map(h => h.detail).join('; ');
+        worker.result += '\n\n⚠ 幻觉检测: ' + hallucinations.map((h) => h.detail).join('; ');
       }
     }
 
@@ -499,18 +538,25 @@ async function _executeWorker(worker, opts = {}) {
       try {
         const taskBoard = require('./taskBoard');
         taskBoard.completeTask(worker._taskId, worker.result?.slice(0, 2000) || '');
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     }
 
     // ── Hook: SubAgentEnd (success) ─────────────────────────────────
     try {
       const hookSystem = require('../cli/hooks/hookSystem');
       await hookSystem.trigger('SubAgentEnd', {
-        agentId: worker.id, task: worker.task, status: 'completed',
+        agentId: worker.id,
+        task: worker.task,
+        status: 'completed',
         durationMs: (worker.completedAt || Date.now()) - worker.startedAt,
-        toolCalls: worker.toolCalls, tokens: worker.tokens,
+        toolCalls: worker.toolCalls,
+        tokens: worker.tokens,
       });
-    } catch { /* hooks are best-effort */ }
+    } catch {
+      /* hooks are best-effort */
+    }
 
     guard.done();
   } catch (err) {
@@ -528,18 +574,24 @@ async function _executeWorker(worker, opts = {}) {
       try {
         const taskBoard = require('./taskBoard');
         taskBoard.failTask(worker._taskId, worker.error || 'Unknown error');
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     }
 
     // ── Hook: SubAgentEnd (error/stopped) ───────────────────────────
     try {
       const hookSystem = require('../cli/hooks/hookSystem');
       await hookSystem.trigger('SubAgentEnd', {
-        agentId: worker.id, task: worker.task, status: worker.status,
+        agentId: worker.id,
+        task: worker.task,
+        status: worker.status,
         error: worker.error,
         durationMs: (worker.completedAt || Date.now()) - worker.startedAt,
       });
-    } catch { /* hooks are best-effort */ }
+    } catch {
+      /* hooks are best-effort */
+    }
   }
 }
 
@@ -586,11 +638,14 @@ async function _spawnProcessWorker(taskDescription, opts = {}) {
 
   // Register parent→child relationship
   const parentId = opts.parentContext?.id || '__root__';
-  if (!_childrenOf.has(parentId)) _childrenOf.set(parentId, new Set());
+  if (!_childrenOf.has(parentId)) {
+    _childrenOf.set(parentId, new Set());
+  }
   _childrenOf.get(parentId).add(agent.id);
 
   // Run asynchronously
-  agent.run()
+  agent
+    .run()
     .then((state) => {
       worker.status = state.status === 'completed' ? 'completed' : 'error';
       worker.result = state.result || '';
@@ -621,22 +676,38 @@ async function _spawnProcessWorker(taskDescription, opts = {}) {
 function routeMessage(fromId, toId, message) {
   const from = _workers.get(fromId);
   const to = _workers.get(toId);
-  if (!from || !to) return { routed: false, reason: 'unknown_worker' };
-  if (to.status !== 'running') return { routed: false, reason: 'target_not_running' };
+  if (!from || !to) {
+    return { routed: false, reason: 'unknown_worker' };
+  }
+  if (to.status !== 'running') {
+    return { routed: false, reason: 'target_not_running' };
+  }
 
   // Verify siblings (same parent)
   let areSiblings = false;
   for (const [, children] of _childrenOf) {
-    if (children.has(fromId) && children.has(toId)) { areSiblings = true; break; }
+    if (children.has(fromId) && children.has(toId)) {
+      areSiblings = true;
+      break;
+    }
   }
-  if (!areSiblings) return { routed: false, reason: 'not_siblings' };
+  if (!areSiblings) {
+    return { routed: false, reason: 'not_siblings' };
+  }
 
   const mailbox = to.mailbox;
   if (mailbox.queue.length >= mailbox.maxSize) {
     return { routed: false, reason: 'backpressure', queueSize: mailbox.queue.length };
   }
   const seq = mailbox.nextSeq++;
-  mailbox.queue.push({ seq, message, sentAt: Date.now(), acked: false, sender: fromId, route: 'direct' });
+  mailbox.queue.push({
+    seq,
+    message,
+    sentAt: Date.now(),
+    acked: false,
+    sender: fromId,
+    route: 'direct',
+  });
   to._lastActivity = Date.now();
   return { routed: true, seq, path: 'direct' };
 }
@@ -654,7 +725,9 @@ function detectZombies() {
   const zombies = [];
   const now = Date.now();
   for (const [id, worker] of _workers) {
-    if (worker.status !== 'running') continue;
+    if (worker.status !== 'running') {
+      continue;
+    }
     const lastActivity = worker._lastActivity || worker.startedAt;
     if (now - lastActivity > ZOMBIE_THRESHOLD_MS) {
       worker.status = 'error';
@@ -663,7 +736,11 @@ function detectZombies() {
       zombies.push(id);
       // Auto-fail taskBoard entry
       if (worker._taskId) {
-        try { require('./taskBoard').failTask(worker._taskId, worker.error); } catch { /* best-effort */ }
+        try {
+          require('./taskBoard').failTask(worker._taskId, worker.error);
+        } catch {
+          /* best-effort */
+        }
       }
     }
   }
@@ -676,7 +753,9 @@ let _zombieTimer = null;
  * Start periodic zombie detection loop.
  */
 function startZombieDetector() {
-  if (_zombieTimer) return;
+  if (_zombieTimer) {
+    return;
+  }
   _zombieTimer = setInterval(detectZombies, ZOMBIE_CHECK_INTERVAL);
   _zombieTimer.unref?.();
 }
@@ -685,7 +764,10 @@ function startZombieDetector() {
  * Stop the zombie detection loop.
  */
 function stopZombieDetector() {
-  if (_zombieTimer) { clearInterval(_zombieTimer); _zombieTimer = null; }
+  if (_zombieTimer) {
+    clearInterval(_zombieTimer);
+    _zombieTimer = null;
+  }
 }
 
 // ── 幻觉检测 (借鉴 Hermes Agent _verify_created_cards + _scan_prose_for_phantom_ids) ──
@@ -707,7 +789,7 @@ function _detectHallucinations(output, workerId) {
   const fs = require('fs');
 
   // 1. 扫描 phantom task IDs
-  const taskIds = [...new Set((output.match(TASK_ID_RE) || []))];
+  const taskIds = [...new Set(output.match(TASK_ID_RE) || [])];
   if (taskIds.length > 0) {
     try {
       const taskBoard = require('./taskBoard');
@@ -721,17 +803,21 @@ function _detectHallucinations(output, workerId) {
           });
         }
       }
-    } catch { /* taskBoard 不可用时跳过 */ }
+    } catch {
+      /* taskBoard 不可用时跳过 */
+    }
   }
 
   // 2. 在 CHANGES 段检测 phantom file paths
   const changesMatch = output.match(/CHANGES:\s*([\s\S]*?)(?=(?:EVIDENCE|RISKS|BLOCKERS):|$)/i);
   if (changesMatch) {
     const changesText = changesMatch[1];
-    const paths = [...new Set((changesText.match(FILE_PATH_RE) || []))];
+    const paths = [...new Set(changesText.match(FILE_PATH_RE) || [])];
     for (const p of paths) {
       // 跳过明显不是文件路径的
-      if (p.length < 5 || p.startsWith('http') || p.includes('://')) continue;
+      if (p.length < 5 || p.startsWith('http') || p.includes('://')) {
+        continue;
+      }
       try {
         const resolved = require('path').resolve(p);
         if (!fs.existsSync(resolved)) {
@@ -741,7 +827,9 @@ function _detectHallucinations(output, workerId) {
             detail: `声称修改了不存在的文件 ${p}`,
           });
         }
-      } catch { /* path resolution failed */ }
+      } catch {
+        /* path resolution failed */
+      }
     }
   }
 
@@ -764,7 +852,7 @@ function getAgentDashboard() {
   }
 
   // Per-agent status with computed fields
-  const agents = all.map(w => ({
+  const agents = all.map((w) => ({
     id: w.id,
     parentId: w.parentId || null,
     role: w.role,
@@ -772,16 +860,16 @@ function getAgentDashboard() {
     depth: w.depth || 0,
     startedAt: w.startedAt,
     completedAt: w.completedAt || null,
-    runningMs: w.completedAt ? (w.completedAt - w.startedAt) : (now - w.startedAt),
+    runningMs: w.completedAt ? w.completedAt - w.startedAt : now - w.startedAt,
     mailboxSize: w.mailbox ? w.mailbox.queue.length : 0,
     hasOutput: !!w.result,
     children: tree[w.id] || [],
   }));
 
   // Aggregate stats
-  const running = agents.filter(a => a.status === 'running').length;
-  const completed = agents.filter(a => a.status === 'completed' || a.status === 'done').length;
-  const failed = agents.filter(a => a.status === 'failed' || a.status === 'error').length;
+  const running = agents.filter((a) => a.status === 'running').length;
+  const completed = agents.filter((a) => a.status === 'completed' || a.status === 'done').length;
+  const failed = agents.filter((a) => a.status === 'failed' || a.status === 'error').length;
   const maxDepth = agents.reduce((m, a) => Math.max(m, a.depth), 0);
 
   return {

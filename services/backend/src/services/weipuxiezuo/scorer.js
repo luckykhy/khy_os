@@ -48,12 +48,18 @@ function score(detection) {
   const rhythmMeaningful = stats.sentenceCount >= RHYTHM_MIN_SENTENCES;
   const perSentence = totals.weighted / sentences;
   const hitScore = Math.min(AIGC_HIT_CAP, perSentence * AIGC_HIT_K);
-  const rhythmPenalty = rhythmMeaningful && cv < RHYTHM_CV_FLOOR
-    ? _clamp((RHYTHM_CV_FLOOR - cv) / RHYTHM_CV_FLOOR * RHYTHM_MAX_PENALTY, 0, RHYTHM_MAX_PENALTY)
-    : 0;
-  const boldPenalty = stats.boldCount > thresholds.boldTotal
-    ? Math.min(10, (stats.boldCount - thresholds.boldTotal) * 2)
-    : 0;
+  const rhythmPenalty =
+    rhythmMeaningful && cv < RHYTHM_CV_FLOOR
+      ? _clamp(
+          ((RHYTHM_CV_FLOOR - cv) / RHYTHM_CV_FLOOR) * RHYTHM_MAX_PENALTY,
+          0,
+          RHYTHM_MAX_PENALTY
+        )
+      : 0;
+  const boldPenalty =
+    stats.boldCount > thresholds.boldTotal
+      ? Math.min(10, (stats.boldCount - thresholds.boldTotal) * 2)
+      : 0;
   const aigcScore = Math.round(_clamp(hitScore + rhythmPenalty + boldPenalty, 0, 100));
 
   // ── 学术质量分（越高越好）──
@@ -62,10 +68,13 @@ function score(detection) {
   // 句子太少 → 节奏不可判，给中性分（既不奖也不罚短片段）。
   const rhythmGood = !rhythmMeaningful
     ? 12
-    : (cv >= RHYTHM_CV_FLOOR ? 18 : _clamp(cv / RHYTHM_CV_FLOOR * 18, 0, 18));
+    : cv >= RHYTHM_CV_FLOOR
+      ? 18
+      : _clamp((cv / RHYTHM_CV_FLOOR) * 18, 0, 18);
   const specificity = Math.min(18, (stats.yearCount + stats.numberUnitCount) * 4);
   const avgLen = stats.rhythm.mean || 0;
-  const lengthGood = avgLen >= 18 && avgLen <= 75 ? 14 : _clamp(14 - Math.abs(avgLen - 46) / 6, 0, 14);
+  const lengthGood =
+    avgLen >= 18 && avgLen <= 75 ? 14 : _clamp(14 - Math.abs(avgLen - 46) / 6, 0, 14);
   // 学者语气（「无魂写作」反向信号）：中性语气/主观判断词加分。
   const neutralRe = rules.neutralToneRegex();
   neutralRe.lastIndex = 0;
@@ -73,7 +82,9 @@ function score(detection) {
   // detector 只给 stats；这里用原始度量不可得，改由调用方传文本时计算。回退 0。
   if (detection.text) {
     let m;
-    while ((m = neutralRe.exec(detection.text)) !== null) neutralHits += 1;
+    while ((m = neutralRe.exec(detection.text)) !== null) {
+      neutralHits += 1;
+    }
   }
   const voiceBonus = Math.min(6, neutralHits * 2);
   // 口语红线扣分
@@ -82,11 +93,23 @@ function score(detection) {
     const cre = rules.colloquialRegex();
     cre.lastIndex = 0;
     let m;
-    while ((m = cre.exec(detection.text)) !== null) colloquialHits += 1;
+    while ((m = cre.exec(detection.text)) !== null) {
+      colloquialHits += 1;
+    }
   }
   const colloquialPenalty = colloquialHits * 8;
   const academicScore = Math.round(
-    _clamp(base + citationComponent + rhythmGood + specificity + lengthGood + voiceBonus - colloquialPenalty, 0, 100)
+    _clamp(
+      base +
+        citationComponent +
+        rhythmGood +
+        specificity +
+        lengthGood +
+        voiceBonus -
+        colloquialPenalty,
+      0,
+      100
+    )
   );
 
   // ── 引用与化用 ──
@@ -95,14 +118,23 @@ function score(detection) {
   const aigc = {
     score: aigcScore,
     pass: aigcScore <= thresholds.aigcPass,
-    components: { hitScore: Math.round(hitScore), rhythmPenalty: Math.round(rhythmPenalty), boldPenalty },
+    components: {
+      hitScore: Math.round(hitScore),
+      rhythmPenalty: Math.round(rhythmPenalty),
+      boldPenalty,
+    },
   };
   const academic = {
     score: academicScore,
     pass: academicScore >= thresholds.academicPass,
     components: {
-      base, citationComponent, rhythmGood: Math.round(rhythmGood), specificity,
-      lengthGood: Math.round(lengthGood), voiceBonus, colloquialPenalty,
+      base,
+      citationComponent,
+      rhythmGood: Math.round(rhythmGood),
+      specificity,
+      lengthGood: Math.round(lengthGood),
+      voiceBonus,
+      colloquialPenalty,
     },
   };
   const citation = {
@@ -113,8 +145,12 @@ function score(detection) {
   };
 
   const failed = [];
-  if (!aigc.pass) failed.push('aigc');
-  if (!academic.pass) failed.push('academic');
+  if (!aigc.pass) {
+    failed.push('aigc');
+  }
+  if (!academic.pass) {
+    failed.push('academic');
+  }
 
   return { aigc, academic, citation, verdict: { allPass: failed.length === 0, failed } };
 }

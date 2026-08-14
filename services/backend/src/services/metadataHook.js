@@ -14,9 +14,9 @@
  *   - 纯 Node stdlib + git CLI 探测，无第三方依赖。
  */
 
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const HOOK_MARKER = 'khy-metadata-hook';
 const HOOK_VERSION = 'v3';
@@ -36,7 +36,7 @@ const STAGE_PATHS = [
 // 钩子脚本内容（POSIX sh）。marker 行用于探测/幂等/安全卸载。
 function _hookScript() {
   const stageLines = STAGE_PATHS.map(
-    p => `[ -e "$REPO_ROOT/${p}" ] && git add "$REPO_ROOT/${p}" >/dev/null 2>&1 || true`,
+    (p) => `[ -e "$REPO_ROOT/${p}" ] && git add "$REPO_ROOT/${p}" >/dev/null 2>&1 || true`
   );
   return [
     '#!/bin/sh',
@@ -99,7 +99,9 @@ function _isOurs(text) {
  */
 function installHook(startDir) {
   const repoRoot = resolveGitRoot(startDir);
-  if (!repoRoot) return { ok: false, action: 'not_a_repo', reason: 'not_a_git_repository' };
+  if (!repoRoot) {
+    return { ok: false, action: 'not_a_repo', reason: 'not_a_git_repository' };
+  }
 
   const hooksDir = _resolveHooksDir(repoRoot);
   const preCommit = path.join(hooksDir, 'pre-commit');
@@ -120,12 +122,22 @@ function installHook(startDir) {
       'if command -v khy >/dev/null 2>&1; then khy metadata refresh "$REPO_ROOT" >/dev/null 2>&1 || true; git add "$REPO_ROOT/.ai" >/dev/null 2>&1 || true; khy docs check --fix --staged >/dev/null 2>&1 || true; fi',
       `# <<< ${HOOK_MARKER} ${HOOK_VERSION} <<<`,
     ].join('\n');
-    return { ok: false, action: 'foreign_hook', preCommit, snippet, reason: 'existing_non_khy_pre_commit' };
+    return {
+      ok: false,
+      action: 'foreign_hook',
+      preCommit,
+      snippet,
+      reason: 'existing_non_khy_pre_commit',
+    };
   }
 
   fs.mkdirSync(hooksDir, { recursive: true });
   fs.writeFileSync(preCommit, script, 'utf8');
-  try { fs.chmodSync(preCommit, 0o755); } catch { /* non-fatal on platforms without chmod */ }
+  try {
+    fs.chmodSync(preCommit, 0o755);
+  } catch {
+    /* non-fatal on platforms without chmod */
+  }
   return { ok: true, action: existed ? 'updated' : 'installed', preCommit };
 }
 
@@ -135,10 +147,16 @@ function installHook(startDir) {
  */
 function uninstallHook(startDir) {
   const repoRoot = resolveGitRoot(startDir);
-  if (!repoRoot) return { ok: false, action: 'not_a_repo' };
+  if (!repoRoot) {
+    return { ok: false, action: 'not_a_repo' };
+  }
   const preCommit = path.join(_resolveHooksDir(repoRoot), 'pre-commit');
-  if (!fs.existsSync(preCommit)) return { ok: true, action: 'absent', preCommit };
-  if (!_isOurs(_readSafe(preCommit))) return { ok: false, action: 'not_ours', preCommit };
+  if (!fs.existsSync(preCommit)) {
+    return { ok: true, action: 'absent', preCommit };
+  }
+  if (!_isOurs(_readSafe(preCommit))) {
+    return { ok: false, action: 'not_ours', preCommit };
+  }
   fs.rmSync(preCommit, { force: true });
   return { ok: true, action: 'removed', preCommit };
 }
@@ -146,7 +164,9 @@ function uninstallHook(startDir) {
 /** 钩子状态。 */
 function hookStatus(startDir) {
   const repoRoot = resolveGitRoot(startDir);
-  if (!repoRoot) return { repo: null, installed: false, ours: false, foreign: false, preCommit: null };
+  if (!repoRoot) {
+    return { repo: null, installed: false, ours: false, foreign: false, preCommit: null };
+  }
   const preCommit = path.join(_resolveHooksDir(repoRoot), 'pre-commit');
   const exists = fs.existsSync(preCommit);
   const ours = exists && _isOurs(_readSafe(preCommit));

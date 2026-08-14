@@ -9,16 +9,28 @@
 const { isVimPunctuation, isVimWhitespace, isVimWordChar } = require('./cursor');
 
 const PAIRS = {
-  '(': ['(', ')'], ')': ['(', ')'], b: ['(', ')'],
-  '[': ['[', ']'], ']': ['[', ']'],
-  '{': ['{', '}'], '}': ['{', '}'], B: ['{', '}'],
-  '<': ['<', '>'], '>': ['<', '>'],
-  '"': ['"', '"'], "'": ["'", "'"], '`': ['`', '`'],
+  '(': ['(', ')'],
+  ')': ['(', ')'],
+  b: ['(', ')'],
+  '[': ['[', ']'],
+  ']': ['[', ']'],
+  '{': ['{', '}'],
+  '}': ['{', '}'],
+  B: ['{', '}'],
+  '<': ['<', '>'],
+  '>': ['<', '>'],
+  '"': ['"', '"'],
+  "'": ["'", "'"],
+  '`': ['`', '`'],
 };
 
 function findTextObject(text, offset, objectType, isInner) {
-  if (objectType === 'w') return findWordObject(text, offset, isInner, isVimWordChar);
-  if (objectType === 'W') return findWordObject(text, offset, isInner, (ch) => !isVimWhitespace(ch));
+  if (objectType === 'w') {
+    return findWordObject(text, offset, isInner, isVimWordChar);
+  }
+  if (objectType === 'W') {
+    return findWordObject(text, offset, isInner, (ch) => !isVimWhitespace(ch));
+  }
 
   const pair = PAIRS[objectType];
   if (pair) {
@@ -43,7 +55,10 @@ function findWordObject(text, offset, isInner, isWordChar) {
   for (let i = 0; i < graphemes.length; i++) {
     const g = graphemes[i];
     const nextStart = i + 1 < graphemes.length ? graphemes[i + 1].index : text.length;
-    if (offset >= g.index && offset < nextStart) { graphemeIdx = i; break; }
+    if (offset >= g.index && offset < nextStart) {
+      graphemeIdx = i;
+      break;
+    }
   }
 
   const graphemeAt = (i) => (graphemes[i] ? graphemes[i].segment : '');
@@ -56,22 +71,38 @@ function findWordObject(text, offset, isInner, isWordChar) {
   let endIdx = graphemeIdx;
 
   if (isWord(graphemeIdx)) {
-    while (startIdx > 0 && isWord(startIdx - 1)) startIdx--;
-    while (endIdx < graphemes.length && isWord(endIdx)) endIdx++;
+    while (startIdx > 0 && isWord(startIdx - 1)) {
+      startIdx--;
+    }
+    while (endIdx < graphemes.length && isWord(endIdx)) {
+      endIdx++;
+    }
   } else if (isWs(graphemeIdx)) {
-    while (startIdx > 0 && isWs(startIdx - 1)) startIdx--;
-    while (endIdx < graphemes.length && isWs(endIdx)) endIdx++;
+    while (startIdx > 0 && isWs(startIdx - 1)) {
+      startIdx--;
+    }
+    while (endIdx < graphemes.length && isWs(endIdx)) {
+      endIdx++;
+    }
     return { start: offsetAt(startIdx), end: offsetAt(endIdx) };
   } else if (isPunct(graphemeIdx)) {
-    while (startIdx > 0 && isPunct(startIdx - 1)) startIdx--;
-    while (endIdx < graphemes.length && isPunct(endIdx)) endIdx++;
+    while (startIdx > 0 && isPunct(startIdx - 1)) {
+      startIdx--;
+    }
+    while (endIdx < graphemes.length && isPunct(endIdx)) {
+      endIdx++;
+    }
   }
 
   if (!isInner) {
     if (endIdx < graphemes.length && isWs(endIdx)) {
-      while (endIdx < graphemes.length && isWs(endIdx)) endIdx++;
+      while (endIdx < graphemes.length && isWs(endIdx)) {
+        endIdx++;
+      }
     } else if (startIdx > 0 && isWs(startIdx - 1)) {
-      while (startIdx > 0 && isWs(startIdx - 1)) startIdx--;
+      while (startIdx > 0 && isWs(startIdx - 1)) {
+        startIdx--;
+      }
     }
   }
 
@@ -87,7 +118,9 @@ function findQuoteObject(text, offset, quote, isInner) {
 
   const positions = [];
   for (let i = 0; i < line.length; i++) {
-    if (line[i] === quote) positions.push(i);
+    if (line[i] === quote) {
+      positions.push(i);
+    }
   }
 
   for (let i = 0; i < positions.length - 1; i += 2) {
@@ -106,24 +139,36 @@ function findBracketObject(text, offset, open, close, isInner) {
   let depth = 0;
   let start = -1;
   for (let i = offset; i >= 0; i--) {
-    if (text[i] === close && i !== offset) depth++;
-    else if (text[i] === open) {
-      if (depth === 0) { start = i; break; }
+    if (text[i] === close && i !== offset) {
+      depth++;
+    } else if (text[i] === open) {
+      if (depth === 0) {
+        start = i;
+        break;
+      }
       depth--;
     }
   }
-  if (start === -1) return null;
+  if (start === -1) {
+    return null;
+  }
 
   depth = 0;
   let end = -1;
   for (let i = start + 1; i < text.length; i++) {
-    if (text[i] === open) depth++;
-    else if (text[i] === close) {
-      if (depth === 0) { end = i; break; }
+    if (text[i] === open) {
+      depth++;
+    } else if (text[i] === close) {
+      if (depth === 0) {
+        end = i;
+        break;
+      }
       depth--;
     }
   }
-  if (end === -1) return null;
+  if (end === -1) {
+    return null;
+  }
 
   return isInner ? { start: start + 1, end } : { start, end: end + 1 };
 }

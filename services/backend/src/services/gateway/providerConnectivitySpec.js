@@ -22,6 +22,7 @@
  */
 
 const flagRegistry = require('../flagRegistry');
+
 const { listBuiltinProviders, findBuiltinProvider } = require('./builtinProviderConfig');
 
 /** 关闭词表(对齐仓库既有门控约定)。注册表关时的 OFF-fallback 路径。 */
@@ -37,10 +38,16 @@ function isEnabled(env = process.env) {
     if (flagRegistry.isRegistryEnabled(env)) {
       return flagRegistry.isFlagEnabled('KHY_PROVIDER_CONNECTIVITY_TEST', env);
     }
-    const raw = String((env && env.KHY_PROVIDER_CONNECTIVITY_TEST) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_PROVIDER_CONNECTIVITY_TEST) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 // ── 协议族归类(按 poolKey)──────────────────────────────────────────────────────
@@ -74,10 +81,18 @@ const _TEST_MODEL = Object.freeze({
  * @returns {string}
  */
 function serviceFor(poolKey) {
-  const k = String(poolKey || '').trim().toLowerCase();
-  if (!k) return '';
-  if (_ANTHROPIC.has(k)) return 'anthropic';
-  if (_OPENAI_COMPATIBLE.has(k)) return 'openai';
+  const k = String(poolKey || '')
+    .trim()
+    .toLowerCase();
+  if (!k) {
+    return '';
+  }
+  if (_ANTHROPIC.has(k)) {
+    return 'anthropic';
+  }
+  if (_OPENAI_COMPATIBLE.has(k)) {
+    return 'openai';
+  }
   return '';
 }
 
@@ -96,8 +111,12 @@ function _resolveEndpoint(p, env) {
  */
 function _openaiChatCompletionsUrl(endpoint) {
   const base = String(endpoint || '').replace(/\/+$/, '');
-  if (/\/chat\/completions$/.test(base)) return base;
-  if (/\/v\d+$/.test(base)) return `${base}/chat/completions`;
+  if (/\/chat\/completions$/.test(base)) {
+    return base;
+  }
+  if (/\/v\d+$/.test(base)) {
+    return `${base}/chat/completions`;
+  }
   return `${base}/v1/chat/completions`;
 }
 
@@ -107,7 +126,9 @@ function _openaiChatCompletionsUrl(endpoint) {
  * @returns {Array<{name,poolKey,envKey,envEndpoint,service,endpoint,testModel,testable,skipReason}>}
  */
 function listConnectivityTargets(env = process.env) {
-  if (!isEnabled(env)) return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
   try {
     const out = [];
     for (const p of listBuiltinProviders()) {
@@ -115,25 +136,38 @@ function listConnectivityTargets(env = process.env) {
       if (!poolKey) {
         // HuggingFace(poolKey=null / Token)等:不可用统一探针测。
         out.push({
-          name: p.name, poolKey: '', envKey: p.envKey || '', envEndpoint: '',
-          service: '', endpoint: '', testModel: '',
-          testable: false, skipReason: _SKIP_REASON.huggingface || '暂不支持自动连通测试',
+          name: p.name,
+          poolKey: '',
+          envKey: p.envKey || '',
+          envEndpoint: '',
+          service: '',
+          endpoint: '',
+          testModel: '',
+          testable: false,
+          skipReason: _SKIP_REASON.huggingface || '暂不支持自动连通测试',
         });
         continue;
       }
       const service = serviceFor(poolKey);
       const endpoint = _resolveEndpoint(p, env);
-      const testModel = _TEST_MODEL[poolKey]
-        || (Array.isArray(p.models) && p.models[0]) || '';
+      const testModel = _TEST_MODEL[poolKey] || (Array.isArray(p.models) && p.models[0]) || '';
       const testable = !!service && !_SKIP_REASON[poolKey];
       out.push({
-        name: p.name, poolKey, envKey: p.envKey || '', envEndpoint: p.envEndpoint || '',
-        service, endpoint, testModel,
-        testable, skipReason: testable ? '' : (_SKIP_REASON[poolKey] || '暂不支持自动连通测试'),
+        name: p.name,
+        poolKey,
+        envKey: p.envKey || '',
+        envEndpoint: p.envEndpoint || '',
+        service,
+        endpoint,
+        testModel,
+        testable,
+        skipReason: testable ? '' : _SKIP_REASON[poolKey] || '暂不支持自动连通测试',
       });
     }
     return out;
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -143,21 +177,34 @@ function listConnectivityTargets(env = process.env) {
  * @returns {object|null}
  */
 function resolveConnectivityTarget(nameOrPoolKey, env = process.env) {
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   try {
     const needle = String(nameOrPoolKey || '').trim();
-    if (!needle) return null;
+    if (!needle) {
+      return null;
+    }
     const p = findBuiltinProvider(needle);
     const list = listConnectivityTargets(env);
     if (p && p.poolKey) {
       const byKey = list.find((t) => t.poolKey === p.poolKey);
-      if (byKey) return byKey;
+      if (byKey) {
+        return byKey;
+      }
     }
     // 名称精确(小写)兜底(覆盖 poolKey=null 的 HuggingFace)。
     const low = needle.toLowerCase();
-    return list.find((t) => String(t.name || '').toLowerCase() === low
-      || String(t.poolKey || '').toLowerCase() === low) || null;
-  } catch { return null; }
+    return (
+      list.find(
+        (t) =>
+          String(t.name || '').toLowerCase() === low ||
+          String(t.poolKey || '').toLowerCase() === low
+      ) || null
+    );
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -170,33 +217,50 @@ function resolveConnectivityTarget(nameOrPoolKey, env = process.env) {
 function buildConnectivityRequest(input = {}, env = process.env) {
   const FAIL = (reason) => ({ ok: false, reason: String(reason || '无法构造请求') });
   try {
-    if (!isEnabled(env)) return FAIL('连通性自检已被 KHY_PROVIDER_CONNECTIVITY_TEST 关闭');
+    if (!isEnabled(env)) {
+      return FAIL('连通性自检已被 KHY_PROVIDER_CONNECTIVITY_TEST 关闭');
+    }
     const idOrName = String((input && (input.poolKey || input.name)) || '').trim();
     const target = resolveConnectivityTarget(idOrName, env);
-    if (!target) return FAIL(`未知厂商: ${idOrName || '(空)'}`);
-    if (!target.testable) return FAIL(`${target.name} ${target.skipReason || '不支持自动连通测试'}`);
+    if (!target) {
+      return FAIL(`未知厂商: ${idOrName || '(空)'}`);
+    }
+    if (!target.testable) {
+      return FAIL(`${target.name} ${target.skipReason || '不支持自动连通测试'}`);
+    }
 
     const key = String((input && input.key) || '').trim();
-    if (!key) return FAIL(`缺少 ${target.name} 的 API Key`);
+    if (!key) {
+      return FAIL(`缺少 ${target.name} 的 API Key`);
+    }
     const endpoint = String((input && input.endpoint) || target.endpoint || '').trim();
     const model = String((input && input.model) || target.testModel || '').trim();
-    if (!endpoint) return FAIL(`${target.name} 缺少端点(请用 --endpoint 指定)`);
-    if (!model) return FAIL(`${target.name} 缺少测试模型(请用 --model 指定)`);
+    if (!endpoint) {
+      return FAIL(`${target.name} 缺少端点(请用 --endpoint 指定)`);
+    }
+    if (!model) {
+      return FAIL(`${target.name} 缺少测试模型(请用 --model 指定)`);
+    }
 
     if (target.service === 'anthropic') {
       // callAnthropic 语义:端点应为**裸主机**(不含 /v1),再接 /v1/messages。目录里 anthropic
       // 端点存的是 `https://api.anthropic.com/v1`,故先剥尾部 /v1,避免 /v1/v1/messages。
       const base = endpoint.replace(/\/+$/, '').replace(/\/v1$/, '');
       return {
-        ok: true, service: 'anthropic', poolKey: target.poolKey, name: target.name,
-        method: 'POST', url: `${base}/v1/messages`,
+        ok: true,
+        service: 'anthropic',
+        poolKey: target.poolKey,
+        name: target.name,
+        method: 'POST',
+        url: `${base}/v1/messages`,
         headers: {
           'x-api-key': key,
           'anthropic-version': '2024-10-22',
           'Content-Type': 'application/json',
         },
         body: { model, max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] },
-        model, endpoint: base,
+        model,
+        endpoint: base,
       };
     }
 
@@ -206,20 +270,36 @@ function buildConnectivityRequest(input = {}, env = process.env) {
     //   - 裸主机(无版本段,如 https://api.openai.com、中转根)→ + /v1/chat/completions。
     const base = _openaiChatCompletionsUrl(endpoint);
     return {
-      ok: true, service: 'openai', poolKey: target.poolKey, name: target.name,
-      method: 'POST', url: base,
+      ok: true,
+      service: 'openai',
+      poolKey: target.poolKey,
+      name: target.name,
+      method: 'POST',
+      url: base,
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: { model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1 },
-      model, endpoint: endpoint.replace(/\/+$/, ''),
+      model,
+      endpoint: endpoint.replace(/\/+$/, ''),
     };
-  } catch (e) { return FAIL(e && e.message ? e.message : String(e)); }
+  } catch (e) {
+    return FAIL(e && e.message ? e.message : String(e));
+  }
 }
 
 // 网络层错误码(非 HTTP 状态)→ 判为「不可达」。
 const _NET_CODES = new Set([
-  'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'ECONNRESET',
-  'ECONNABORTED', 'EPROTO', 'EHOSTUNREACH', 'ENETUNREACH',
-  'CERT_HAS_EXPIRED', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ETIMEDOUT',
+  'ECONNRESET',
+  'ECONNABORTED',
+  'EPROTO',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'CERT_HAS_EXPIRED',
+  'DEPTH_ZERO_SELF_SIGNED_CERT',
+  'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
 ]);
 
 /**
@@ -236,16 +316,34 @@ function classifyConnectivityResult(input = {}) {
         return { verdict: 'ok', reachable: true, keyValid: true, label: '连通,key 有效' };
       }
       if (status === 401 || status === 403) {
-        return { verdict: 'bad_key', reachable: true, keyValid: false, label: '连通,但 API Key 无效或未授权' };
+        return {
+          verdict: 'bad_key',
+          reachable: true,
+          keyValid: false,
+          label: '连通,但 API Key 无效或未授权',
+        };
       }
       if (status === 404) {
-        return { verdict: 'model_or_endpoint', reachable: true, label: '连通,但模型名或端点不对(换模型 / 端点)' };
+        return {
+          verdict: 'model_or_endpoint',
+          reachable: true,
+          label: '连通,但模型名或端点不对(换模型 / 端点)',
+        };
       }
       if (status === 429) {
-        return { verdict: 'rate_limited', reachable: true, keyValid: true, label: '连通,key 有效,但被限流(429)' };
+        return {
+          verdict: 'rate_limited',
+          reachable: true,
+          keyValid: true,
+          label: '连通,key 有效,但被限流(429)',
+        };
       }
       if (status === 400 || status === 422) {
-        return { verdict: 'bad_request', reachable: true, label: `连通,但请求被拒(${status},可能模型 / 参数问题)` };
+        return {
+          verdict: 'bad_request',
+          reachable: true,
+          label: `连通,但请求被拒(${status},可能模型 / 参数问题)`,
+        };
       }
       if (status >= 500) {
         return { verdict: 'server_error', reachable: true, label: `连通,但服务端错误(${status})` };
@@ -255,9 +353,13 @@ function classifyConnectivityResult(input = {}) {
     if (code && (_NET_CODES.has(code) || code.includes('TIMEOUT'))) {
       return { verdict: 'unreachable', reachable: false, label: `无法连通(${code})` };
     }
-    if (code) return { verdict: 'unknown', reachable: false, label: `未知错误(${code})` };
+    if (code) {
+      return { verdict: 'unknown', reachable: false, label: `未知错误(${code})` };
+    }
     return { verdict: 'unknown', reachable: false, label: '未知结果' };
-  } catch { return { verdict: 'unknown', reachable: false, label: '未知结果' }; }
+  } catch {
+    return { verdict: 'unknown', reachable: false, label: '未知结果' };
+  }
 }
 
 module.exports = {

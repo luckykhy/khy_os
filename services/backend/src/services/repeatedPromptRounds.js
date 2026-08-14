@@ -37,14 +37,24 @@ function _simThreshold(env) {
 
 /** 归一化:转字符串、去首尾空白、小写、折叠内部连续空白为单空格。 */
 function normalize(text) {
-  return String(text == null ? '' : text).trim().toLowerCase().replace(/\s+/g, ' ');
+  return String(text == null ? '' : text)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
 }
 
 /** 字符二元组集合(模糊判同用)。单字符串本身回退为单元素集。 */
 function _bigrams(s) {
   const set = new Set();
-  if (s.length <= 1) { if (s) set.add(s); return set; }
-  for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
+  if (s.length <= 1) {
+    if (s) {
+      set.add(s);
+    }
+    return set;
+  }
+  for (let i = 0; i < s.length - 1; i++) {
+    set.add(s.slice(i, i + 2));
+  }
   return set;
 }
 
@@ -52,31 +62,51 @@ function _bigrams(s) {
 function similarity(a, b) {
   const na = normalize(a);
   const nb = normalize(b);
-  if (!na && !nb) return 1;
-  if (!na || !nb) return 0;
-  if (na === nb) return 1;
+  if (!na && !nb) {
+    return 1;
+  }
+  if (!na || !nb) {
+    return 0;
+  }
+  if (na === nb) {
+    return 1;
+  }
   const A = _bigrams(na);
   const B = _bigrams(nb);
-  if (!A.size || !B.size) return 0;
+  if (!A.size || !B.size) {
+    return 0;
+  }
   let inter = 0;
-  for (const g of A) if (B.has(g)) inter++;
+  for (const g of A) {
+    if (B.has(g)) {
+      inter++;
+    }
+  }
   const union = A.size + B.size - inter;
   return union > 0 ? inter / union : 0;
 }
 
 /** 是否「同一请求」:归一精确相等,或模糊相似度 ≥ 阈值。 */
 function isSamePrompt(a, b, env = process.env) {
-  if (normalize(a) === normalize(b)) return true;
+  if (normalize(a) === normalize(b)) {
+    return true;
+  }
   return similarity(a, b) >= _simThreshold(env);
 }
 
 /** 从消息数组里抽取历史 user 轮次的文本(role==='user')。 */
 function priorUserTextsFrom(messages) {
-  if (!Array.isArray(messages)) return [];
+  if (!Array.isArray(messages)) {
+    return [];
+  }
   const out = [];
   for (const m of messages) {
     if (m && m.role === 'user') {
-      out.push(typeof m.content === 'string' ? m.content : JSON.stringify(m.content == null ? '' : m.content));
+      out.push(
+        typeof m.content === 'string'
+          ? m.content
+          : JSON.stringify(m.content == null ? '' : m.content)
+      );
     }
   }
   return out;
@@ -89,18 +119,36 @@ function priorUserTextsFrom(messages) {
  * @param {string[]} priorUserTexts  历史 user 轮文本(通常来自 priorUserTextsFrom(initialMessages))
  */
 function countRound(currentText, priorUserTexts, env = process.env) {
-  if (!isEnabled(env)) return 1;
-  if (!normalize(currentText)) return 1;
+  if (!isEnabled(env)) {
+    return 1;
+  }
+  if (!normalize(currentText)) {
+    return 1;
+  }
   const arr = Array.isArray(priorUserTexts) ? priorUserTexts : [];
   let repeats = 0;
   for (const p of arr) {
-    if (isSamePrompt(currentText, p, env)) repeats++;
+    if (isSamePrompt(currentText, p, env)) {
+      repeats++;
+    }
   }
   return repeats + 1;
 }
 
-const _ORDINAL = ['第一轮', '第二轮', '第三轮', '第四轮', '第五轮', '第六轮', '第七轮', '第八轮', '第九轮'];
-function _ordinal(n) { return _ORDINAL[n - 1] || `第 ${n} 轮`; }
+const _ORDINAL = [
+  '第一轮',
+  '第二轮',
+  '第三轮',
+  '第四轮',
+  '第五轮',
+  '第六轮',
+  '第七轮',
+  '第八轮',
+  '第九轮',
+];
+function _ordinal(n) {
+  return _ORDINAL[n - 1] || `第 ${n} 轮`;
+}
 
 /**
  * 产出注入给模型的 `[SYSTEM]` 指令:告诉它这是同一请求的第 N 轮重复,**不要回答「已经做完了」**,
@@ -109,13 +157,19 @@ function _ordinal(n) { return _ORDINAL[n - 1] || `第 ${n} 轮`; }
  * @returns {string|null}
  */
 function buildRoundHint(round, env = process.env) {
-  if (!isEnabled(env)) return null;
-  if (!(round >= 2)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
+  if (!(round >= 2)) {
+    return null;
+  }
   const ord = _ordinal(round);
-  return `[SYSTEM] 重复请求识别:用户已第 ${round} 次发送基本相同的请求(这是${ord})。`
-    + `这通常不是要你回答「已经做完了」,而是希望你在上一轮成果之上继续推进。请在本轮:`
-    + `①明确说明这是${ord};②给出与前几轮不重复的新进展、更深一层的实现,或换一个角度的处理;`
-    + `③只有当你确信确实再无可做时,才明确说「已穷尽,无新增可做」并给出依据,而不是笼统地说「已完成」。`;
+  return (
+    `[SYSTEM] 重复请求识别:用户已第 ${round} 次发送基本相同的请求(这是${ord})。` +
+    `这通常不是要你回答「已经做完了」,而是希望你在上一轮成果之上继续推进。请在本轮:` +
+    `①明确说明这是${ord};②给出与前几轮不重复的新进展、更深一层的实现,或换一个角度的处理;` +
+    `③只有当你确信确实再无可做时,才明确说「已穷尽,无新增可做」并给出依据,而不是笼统地说「已完成」。`
+  );
 }
 
 module.exports = {

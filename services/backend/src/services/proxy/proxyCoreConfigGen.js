@@ -26,8 +26,14 @@ const DIRECT_CONNECT_TYPES = new Set(['http', 'https']);
 // 被误判 unsupported、前端弹「未能启用该节点」。mihomo 对这三种 QUIC 协议同样原生支持,且
 // proxyUriParsers 已产出 clash-native 字段,故一并放行(修复「节点无法选择」)。
 const CORE_REQUIRED_TYPES = new Set([
-  'vmess', 'vless', 'trojan', 'ss', 'ssr',
-  'hysteria2', 'hysteria', 'tuic',
+  'vmess',
+  'vless',
+  'trojan',
+  'ss',
+  'ssr',
+  'hysteria2',
+  'hysteria',
+  'tuic',
 ]);
 
 // 每协议的必填字段(缺失即无法生成合法 mihomo outbound → 结构化报错,绝不臆造)。
@@ -46,7 +52,9 @@ const REQUIRED_FIELDS = {
 
 function _type(node) {
   const raw = node && (node.type || node.protocol);
-  return String(raw || '').trim().toLowerCase();
+  return String(raw || '')
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -56,33 +64,78 @@ function _type(node) {
  */
 function classifyNodeEgress(node) {
   const t = _type(node);
-  if (!t) return 'unsupported';
-  if (DIRECT_CONNECT_TYPES.has(t)) return 'direct-connect';
-  if (CORE_REQUIRED_TYPES.has(t)) return 'core-required';
+  if (!t) {
+    return 'unsupported';
+  }
+  if (DIRECT_CONNECT_TYPES.has(t)) {
+    return 'direct-connect';
+  }
+  if (CORE_REQUIRED_TYPES.has(t)) {
+    return 'core-required';
+  }
   return 'unsupported';
 }
 
 // 人类可读的 unsupported 原因(供上层原样透传给前端,不谎报能用)。
 function describeUnsupported(node) {
   const t = _type(node) || '(未知)';
-  return `暂不支持经内核承载协议 "${t}"。首版内核出站支持 `
-    + `vmess/vless/trojan/ss/ssr/hysteria/hysteria2/tuic;`
-    + `socks5/wireguard/anytls 等请改用本机 Clash 混合端口,或选 http 类型节点。`;
+  return (
+    `暂不支持经内核承载协议 "${t}"。首版内核出站支持 ` +
+    `vmess/vless/trojan/ss/ssr/hysteria/hysteria2/tuic;` +
+    `socks5/wireguard/anytls 等请改用本机 Clash 混合端口,或选 http 类型节点。`
+  );
 }
 
 // 从节点对象里挑出 mihomo outbound 认得的字段(白名单透传,丢弃展示用别名 protocol)。
 // 逐字节保留 clash-native 字段名(uuid/cipher/password/servername/network/ws-opts/...)。
 const _PASSTHROUGH_KEYS = [
-  'uuid', 'cipher', 'password', 'alterId', 'tls', 'servername', 'sni',
-  'network', 'flow', 'udp', 'skip-cert-verify', 'client-fingerprint',
-  'ws-opts', 'grpc-opts', 'h2-opts', 'http-opts', 'reality-opts', 'alpn',
-  'obfs', 'obfs-param', 'protocol-param', 'plugin', 'plugin-opts',
+  'uuid',
+  'cipher',
+  'password',
+  'alterId',
+  'tls',
+  'servername',
+  'sni',
+  'network',
+  'flow',
+  'udp',
+  'skip-cert-verify',
+  'client-fingerprint',
+  'ws-opts',
+  'grpc-opts',
+  'h2-opts',
+  'http-opts',
+  'reality-opts',
+  'alpn',
+  'obfs',
+  'obfs-param',
+  'protocol-param',
+  'plugin',
+  'plugin-opts',
   // QUIC 系(hysteria2 / hysteria / tuic)mihomo-native 字段。均为合法 outbound 字段,
   // 对不含它们的 vmess/ss 节点自然缺省(白名单透传,零副作用)。
-  'up', 'down', 'ports', 'obfs-password', 'fingerprint', 'tfo', 'fast-open',
-  'auth-str', 'recv-window-conn', 'recv-window', 'ca', 'ca-str', 'disable-mtu-discovery',
-  'token', 'ip', 'heartbeat-interval', 'disable-sni', 'reduce-rtt', 'request-timeout',
-  'udp-relay-mode', 'congestion-controller', 'max-udp-relay-packet-size',
+  'up',
+  'down',
+  'ports',
+  'obfs-password',
+  'fingerprint',
+  'tfo',
+  'fast-open',
+  'auth-str',
+  'recv-window-conn',
+  'recv-window',
+  'ca',
+  'ca-str',
+  'disable-mtu-discovery',
+  'token',
+  'ip',
+  'heartbeat-interval',
+  'disable-sni',
+  'reduce-rtt',
+  'request-timeout',
+  'udp-relay-mode',
+  'congestion-controller',
+  'max-udp-relay-packet-size',
 ];
 
 // 仅特定协议才透传的字段。`protocol` 对 hysteria(v1)是真实传输字段(udp/faketcp/wechat-video),
@@ -115,7 +168,9 @@ function _missingFields(node) {
   for (const field of required) {
     const v = node ? node[field] : undefined;
     if (field === 'port') {
-      if (!Number.isFinite(Number.parseInt(v, 10))) missing.push(field);
+      if (!Number.isFinite(Number.parseInt(v, 10))) {
+        missing.push(field);
+      }
     } else if (v === undefined || v === null || String(v).trim() === '') {
       missing.push(field);
     }
@@ -134,9 +189,10 @@ function buildMihomoConfig(node, options = {}) {
   if (kind !== 'core-required') {
     return {
       ok: false,
-      error: kind === 'direct-connect'
-        ? '直连型节点(http/https)无需内核配置,应由调用方直接 applyProxy。'
-        : describeUnsupported(node),
+      error:
+        kind === 'direct-connect'
+          ? '直连型节点(http/https)无需内核配置,应由调用方直接 applyProxy。'
+          : describeUnsupported(node),
     };
   }
 
@@ -161,9 +217,7 @@ function buildMihomoConfig(node, options = {}) {
     mode: 'global',
     'log-level': 'warning',
     proxies: [outbound],
-    'proxy-groups': [
-      { name: 'KHY', type: 'select', proxies: [nodeName] },
-    ],
+    'proxy-groups': [{ name: 'KHY', type: 'select', proxies: [nodeName] }],
     rules: ['MATCH,KHY'],
   };
 

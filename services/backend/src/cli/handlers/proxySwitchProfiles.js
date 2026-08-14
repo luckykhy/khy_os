@@ -22,12 +22,14 @@
  */
 
 const chalkModule = require('chalk');
+
 const chalk = chalkModule.default || chalkModule;
-const path = require('path');
 const http = require('http');
 const https = require('https');
-const { printSuccess, printError, printInfo } = require('../formatters');
+const path = require('path');
+
 const parseBooleanMaybe = require('../../utils/parseBoolean');
+const { printSuccess, printError, printInfo } = require('../formatters');
 
 // ── Switch-center auto-sync cooldown state (used only by this subsystem; moved out of the host verbatim) ──
 const _switchCenterAutoSyncState = new Map();
@@ -52,23 +54,57 @@ let syncTraeSwitchProfileFromAdapter = null;
 let handleProxyTraeSwitch = null;
 
 function setProxySwitchProfilesDeps(deps = {}) {
-  if (typeof deps.parsePositiveInt === 'function') parsePositiveInt = deps.parsePositiveInt;
-  if (typeof deps.dedupeList === 'function') dedupeList = deps.dedupeList;
-  if (typeof deps.normalizeModelId === 'function') normalizeModelId = deps.normalizeModelId;
-  if (typeof deps.normalizeEndpointBase === 'function') normalizeEndpointBase = deps.normalizeEndpointBase;
-  if (typeof deps.normalizeTraeProfileId === 'function') normalizeTraeProfileId = deps.normalizeTraeProfileId;
-  if (typeof deps.createTraeProfileId === 'function') createTraeProfileId = deps.createTraeProfileId;
-  if (typeof deps.parseModelMap === 'function') parseModelMap = deps.parseModelMap;
-  if (typeof deps.loadTraeSwitchStore === 'function') loadTraeSwitchStore = deps.loadTraeSwitchStore;
-  if (typeof deps.loadWindsurfSwitchStore === 'function') loadWindsurfSwitchStore = deps.loadWindsurfSwitchStore;
-  if (typeof deps.saveWindsurfSwitchStore === 'function') saveWindsurfSwitchStore = deps.saveWindsurfSwitchStore;
-  if (typeof deps.resolveWindsurfProfile === 'function') resolveWindsurfProfile = deps.resolveWindsurfProfile;
-  if (typeof deps.buildSwitchProfileSignature === 'function') buildSwitchProfileSignature = deps.buildSwitchProfileSignature;
-  if (typeof deps.applyTraeSwitchProfile === 'function') applyTraeSwitchProfile = deps.applyTraeSwitchProfile;
-  if (typeof deps.testTraeUpstream === 'function') testTraeUpstream = deps.testTraeUpstream;
-  if (typeof deps.testTraeLocalProxy === 'function') testTraeLocalProxy = deps.testTraeLocalProxy;
-  if (typeof deps.syncTraeSwitchProfileFromAdapter === 'function') syncTraeSwitchProfileFromAdapter = deps.syncTraeSwitchProfileFromAdapter;
-  if (typeof deps.handleProxyTraeSwitch === 'function') handleProxyTraeSwitch = deps.handleProxyTraeSwitch;
+  if (typeof deps.parsePositiveInt === 'function') {
+    parsePositiveInt = deps.parsePositiveInt;
+  }
+  if (typeof deps.dedupeList === 'function') {
+    dedupeList = deps.dedupeList;
+  }
+  if (typeof deps.normalizeModelId === 'function') {
+    normalizeModelId = deps.normalizeModelId;
+  }
+  if (typeof deps.normalizeEndpointBase === 'function') {
+    normalizeEndpointBase = deps.normalizeEndpointBase;
+  }
+  if (typeof deps.normalizeTraeProfileId === 'function') {
+    normalizeTraeProfileId = deps.normalizeTraeProfileId;
+  }
+  if (typeof deps.createTraeProfileId === 'function') {
+    createTraeProfileId = deps.createTraeProfileId;
+  }
+  if (typeof deps.parseModelMap === 'function') {
+    parseModelMap = deps.parseModelMap;
+  }
+  if (typeof deps.loadTraeSwitchStore === 'function') {
+    loadTraeSwitchStore = deps.loadTraeSwitchStore;
+  }
+  if (typeof deps.loadWindsurfSwitchStore === 'function') {
+    loadWindsurfSwitchStore = deps.loadWindsurfSwitchStore;
+  }
+  if (typeof deps.saveWindsurfSwitchStore === 'function') {
+    saveWindsurfSwitchStore = deps.saveWindsurfSwitchStore;
+  }
+  if (typeof deps.resolveWindsurfProfile === 'function') {
+    resolveWindsurfProfile = deps.resolveWindsurfProfile;
+  }
+  if (typeof deps.buildSwitchProfileSignature === 'function') {
+    buildSwitchProfileSignature = deps.buildSwitchProfileSignature;
+  }
+  if (typeof deps.applyTraeSwitchProfile === 'function') {
+    applyTraeSwitchProfile = deps.applyTraeSwitchProfile;
+  }
+  if (typeof deps.testTraeUpstream === 'function') {
+    testTraeUpstream = deps.testTraeUpstream;
+  }
+  if (typeof deps.testTraeLocalProxy === 'function') {
+    testTraeLocalProxy = deps.testTraeLocalProxy;
+  }
+  if (typeof deps.syncTraeSwitchProfileFromAdapter === 'function') {
+    syncTraeSwitchProfileFromAdapter = deps.syncTraeSwitchProfileFromAdapter;
+  }
+  if (typeof deps.handleProxyTraeSwitch === 'function') {
+    handleProxyTraeSwitch = deps.handleProxyTraeSwitch;
+  }
 }
 
 function printWindsurfSwitchHelp() {
@@ -77,10 +113,16 @@ function printWindsurfSwitchHelp() {
   console.log('');
   console.log(chalk.dim('  proxy windsurf-switch status'));
   console.log(chalk.dim('  proxy windsurf-switch list'));
-  console.log(chalk.dim('  proxy windsurf-switch sync [--name 名称] [--endpoint https://.../v1] [--id windsurf-auto]'));
+  console.log(
+    chalk.dim(
+      '  proxy windsurf-switch sync [--name 名称] [--endpoint https://.../v1] [--id windsurf-auto]'
+    )
+  );
   console.log(chalk.dim('  proxy windsurf-switch use <id|名称>'));
   console.log(chalk.dim('  proxy windsurf-switch remove <id|名称>'));
-  console.log(chalk.dim('  proxy windsurf-switch test [id|名称] [--model <model>] [--timeout 15000]'));
+  console.log(
+    chalk.dim('  proxy windsurf-switch test [id|名称] [--model <model>] [--timeout 15000]')
+  );
   console.log('');
   console.log(chalk.dim('  说明:'));
   console.log(chalk.dim('    1) sync 会从 Windsurf 登录态自动发现 token + 模型 + endpoint'));
@@ -94,16 +136,21 @@ function printWindsurfSwitchApplySummary(profile, applied) {
   printSuccess(`已激活 Windsurf 供应商: ${profile.name} (${profile.id})`);
   console.log(`  ${chalk.gray('Endpoint:')} ${chalk.cyan(profile.endpoint)}`);
   console.log(`  ${chalk.gray('模型数:')}    ${profile.models.length}`);
-  console.log(`  ${chalk.gray('默认模型:')}  ${chalk.cyan(applied.defaultModel || profile.models[0] || '-')}`);
+  console.log(
+    `  ${chalk.gray('默认模型:')}  ${chalk.cyan(applied.defaultModel || profile.models[0] || '-')}`
+  );
   console.log(`  ${chalk.gray('路由规则:')}  ${applied.routeMapCount}`);
   console.log(`  ${chalk.gray('写入 .env:')} ${chalk.cyan(applied.envPath)}`);
   if (profile.key) {
-    const masked = profile.key.length > 10
-      ? `${profile.key.slice(0, 6)}***${profile.key.slice(-4)}`
-      : `${profile.key.slice(0, 3)}***`;
+    const masked =
+      profile.key.length > 10
+        ? `${profile.key.slice(0, 6)}***${profile.key.slice(-4)}`
+        : `${profile.key.slice(0, 3)}***`;
     console.log(`  ${chalk.gray('上游 Key:')} ${chalk.cyan(masked)}`);
   } else {
-    console.log(`  ${chalk.gray('上游 Key:')} ${chalk.yellow('未保存（请在环境变量或上游客户端中提供）')}`);
+    console.log(
+      `  ${chalk.gray('上游 Key:')} ${chalk.yellow('未保存（请在环境变量或上游客户端中提供）')}`
+    );
   }
   console.log('');
   printInfo('建议下一步:');
@@ -136,20 +183,31 @@ async function syncWindsurfSwitchProfileFromAdapter(options = {}) {
 
   const modelMap = {};
   for (const modelId of models) {
-    const mapped = normalizeModelId(parsedMap[modelId] || autoProfile.modelMap?.[modelId] || modelId);
+    const mapped = normalizeModelId(
+      parsedMap[modelId] || autoProfile.modelMap?.[modelId] || modelId
+    );
     modelMap[modelId] = mapped || modelId;
   }
   models = dedupeList(models);
 
   const activate = parseBooleanMaybe(options.activate, true);
   const idInput = String(options.id || autoProfile.id || 'windsurf-auto').trim();
-  const name = String(options.name || autoProfile.name || 'Windsurf Auto').trim() || 'Windsurf Auto';
+  const name =
+    String(options.name || autoProfile.name || 'Windsurf Auto').trim() || 'Windsurf Auto';
   const endpoint = normalizeEndpointBase(options.endpoint || autoProfile.endpoint || '');
-  const key = String(options.key || options['api-key'] || options.token || autoProfile.key || '').trim();
-  const used = new Set(store.profiles.map(p => p.id));
+  const key = String(
+    options.key || options['api-key'] || options.token || autoProfile.key || ''
+  ).trim();
+  const used = new Set(store.profiles.map((p) => p.id));
   const profileId = normalizeTraeProfileId(idInput) || createTraeProfileId(name, used);
-  const existing = store.profiles.find(p => p.id === profileId)
-    || store.profiles.find(p => String(p.name || '').trim().toLowerCase() === name.toLowerCase());
+  const existing =
+    store.profiles.find((p) => p.id === profileId) ||
+    store.profiles.find(
+      (p) =>
+        String(p.name || '')
+          .trim()
+          .toLowerCase() === name.toLowerCase()
+    );
   const now = new Date().toISOString();
   const nextProfile = {
     id: existing ? existing.id : profileId,
@@ -162,7 +220,7 @@ async function syncWindsurfSwitchProfileFromAdapter(options = {}) {
     updatedAt: now,
   };
   const nextProfiles = existing
-    ? store.profiles.map(p => (p.id === existing.id ? nextProfile : p))
+    ? store.profiles.map((p) => (p.id === existing.id ? nextProfile : p))
     : [...store.profiles, nextProfile];
   const nextStore = saveWindsurfSwitchStore({
     activeId: activate ? nextProfile.id : store.activeId,
@@ -183,7 +241,8 @@ async function syncWindsurfSwitchProfileFromAdapter(options = {}) {
     applied,
     activate,
     existing: !!existing,
-    changed: buildSwitchProfileSignature(existing || {}) !== buildSwitchProfileSignature(nextProfile),
+    changed:
+      buildSwitchProfileSignature(existing || {}) !== buildSwitchProfileSignature(nextProfile),
     activeChanged: !!activate && String(store.activeId || '') !== String(nextProfile.id || ''),
   };
 }
@@ -211,12 +270,14 @@ async function handleProxyWindsurfSwitch(action = 'status', args = [], options =
       const icon = active ? chalk.green('●') : chalk.dim('○');
       const firstModels = profile.models.slice(0, 3).join(', ');
       const suffix = profile.models.length > 3 ? ` +${profile.models.length - 3}` : '';
-      console.log(`  ${icon} ${chalk.white(profile.id)}  ${chalk.cyan(profile.name)} ${active ? chalk.green('(active)') : ''}`);
+      console.log(
+        `  ${icon} ${chalk.white(profile.id)}  ${chalk.cyan(profile.name)} ${active ? chalk.green('(active)') : ''}`
+      );
       console.log(`    ${chalk.dim(profile.endpoint)}`);
       console.log(`    ${chalk.dim(`models: ${firstModels}${suffix}`)}`);
     }
     if (store.activeId) {
-      const activeProfile = store.profiles.find(p => p.id === store.activeId);
+      const activeProfile = store.profiles.find((p) => p.id === store.activeId);
       if (activeProfile) {
         console.log('');
         printInfo(`当前激活: ${activeProfile.name} (${activeProfile.id})`);
@@ -240,15 +301,18 @@ async function handleProxyWindsurfSwitch(action = 'status', args = [], options =
       printError('未找到可测试模型，请先执行: proxy switch-center sync --provider windsurf');
       return;
     }
-    const targetModel = normalizeModelId(
-      options['target-model']
-      || options.targetModel
-      || profile.modelMap?.[customModel]
-      || customModel
-    ) || customModel;
+    const targetModel =
+      normalizeModelId(
+        options['target-model'] ||
+          options.targetModel ||
+          profile.modelMap?.[customModel] ||
+          customModel
+      ) || customModel;
     const timeoutMs = parsePositiveInt(options.timeout || options['timeout-ms'], 15000);
     const applyBeforeTest = parseBooleanMaybe(options.apply, true);
-    const upstreamKey = String(options.key || options['api-key'] || profile.key || process.env.RELAY_API_KEY || '').trim();
+    const upstreamKey = String(
+      options.key || options['api-key'] || profile.key || process.env.RELAY_API_KEY || ''
+    ).trim();
 
     console.log('');
     printInfo(`测试配置: ${profile.name} (${profile.id})`);
@@ -344,7 +408,7 @@ async function handleProxyWindsurfSwitch(action = 'status', args = [], options =
       printError(`未找到配置: ${query}`);
       return;
     }
-    const nextProfiles = store.profiles.filter(p => p.id !== profile.id);
+    const nextProfiles = store.profiles.filter((p) => p.id !== profile.id);
     const nextStore = saveWindsurfSwitchStore({
       activeId: store.activeId === profile.id ? '' : store.activeId,
       profiles: nextProfiles,
@@ -379,20 +443,41 @@ async function handleProxyWindsurfSwitch(action = 'status', args = [], options =
     return;
   }
 
-  if (sub === 'sync' || sub === 'refresh' || sub === 'import' || sub === 'add' || sub === 'create' || sub === 'set' || sub === 'update') {
+  if (
+    sub === 'sync' ||
+    sub === 'refresh' ||
+    sub === 'import' ||
+    sub === 'add' ||
+    sub === 'create' ||
+    sub === 'set' ||
+    sub === 'update'
+  ) {
     try {
       const result = await syncWindsurfSwitchProfileFromAdapter({
         ...options,
         name: options.name || args[0] || '',
       });
       const nextProfile = result.profile;
-      printSuccess(`${result.existing ? '已更新' : '已新增'} Windsurf 供应商: ${nextProfile.name} (${nextProfile.id})`);
-      printInfo(`来源 token: ${result.autoProfile.source || '-'} ${result.autoProfile.path ? `(${result.autoProfile.path})` : ''}`);
+      printSuccess(
+        `${result.existing ? '已更新' : '已新增'} Windsurf 供应商: ${nextProfile.name} (${nextProfile.id})`
+      );
+      printInfo(
+        `来源 token: ${result.autoProfile.source || '-'} ${result.autoProfile.path ? `(${result.autoProfile.path})` : ''}`
+      );
 
       if (result.activate) {
-        printWindsurfSwitchApplySummary(nextProfile, result.applied || { routeMapCount: 0, envPath: '-', defaultModel: nextProfile.models?.[0] || '' });
+        printWindsurfSwitchApplySummary(
+          nextProfile,
+          result.applied || {
+            routeMapCount: 0,
+            envPath: '-',
+            defaultModel: nextProfile.models?.[0] || '',
+          }
+        );
       } else {
-        printInfo('未激活该配置，可执行: proxy switch-center use ' + nextProfile.id + ' --provider windsurf');
+        printInfo(
+          '未激活该配置，可执行: proxy switch-center use ' + nextProfile.id + ' --provider windsurf'
+        );
       }
       return;
     } catch (err) {
@@ -407,24 +492,40 @@ async function handleProxyWindsurfSwitch(action = 'status', args = [], options =
 }
 
 function normalizeSwitchCenterProvider(raw = '') {
-  const value = String(raw || '').trim().toLowerCase();
-  if (!value) return '';
-  if (['auto', 'smart', 'fallback'].includes(value)) return 'auto';
-  if (['trae', 'nirvana', 'nir', 'nrv'].includes(value)) return 'trae';
-  if (['windsurf', 'codeium', 'ws'].includes(value)) return 'windsurf';
-  if (['all', '*', 'both', '全部'].includes(value)) return 'all';
+  const value = String(raw || '')
+    .trim()
+    .toLowerCase();
+  if (!value) {
+    return '';
+  }
+  if (['auto', 'smart', 'fallback'].includes(value)) {
+    return 'auto';
+  }
+  if (['trae', 'nirvana', 'nir', 'nrv'].includes(value)) {
+    return 'trae';
+  }
+  if (['windsurf', 'codeium', 'ws'].includes(value)) {
+    return 'windsurf';
+  }
+  if (['all', '*', 'both', '全部'].includes(value)) {
+    return 'all';
+  }
   return '';
 }
 
 function resolveSwitchCenterCall(action = 'status', args = [], options = {}) {
-  let nextAction = String(action || 'status').trim().toLowerCase();
+  let nextAction = String(action || 'status')
+    .trim()
+    .toLowerCase();
   let nextArgs = Array.isArray(args) ? [...args] : [];
   let provider = normalizeSwitchCenterProvider(options.provider || options.p || '');
 
   const providerByAction = normalizeSwitchCenterProvider(nextAction);
   if (providerByAction && providerByAction !== 'all') {
     provider = providerByAction;
-    nextAction = String(nextArgs[0] || 'status').trim().toLowerCase();
+    nextAction = String(nextArgs[0] || 'status')
+      .trim()
+      .toLowerCase();
     nextArgs = nextArgs.slice(1);
   } else if (!provider) {
     const providerByFirstArg = normalizeSwitchCenterProvider(nextArgs[0] || '');
@@ -446,14 +547,22 @@ function resolveDefaultSwitchCenterProvider(action = 'status') {
   if (['sync', 'refresh', 'import'].includes(String(action || '').toLowerCase())) {
     return 'auto';
   }
-  if (hasTrae && !hasWindsurf) return 'trae';
-  if (hasWindsurf && !hasTrae) return 'windsurf';
+  if (hasTrae && !hasWindsurf) {
+    return 'trae';
+  }
+  if (hasWindsurf && !hasTrae) {
+    return 'windsurf';
+  }
   return hasTrae ? 'trae' : 'windsurf';
 }
 
 function isSwitchCenterAutoSyncEnabled(options = {}) {
-  if (options.enabled !== undefined) return parseBooleanMaybe(options.enabled, true);
-  if (options.autoSync !== undefined) return parseBooleanMaybe(options.autoSync, true);
+  if (options.enabled !== undefined) {
+    return parseBooleanMaybe(options.enabled, true);
+  }
+  if (options.autoSync !== undefined) {
+    return parseBooleanMaybe(options.autoSync, true);
+  }
   if (process.env.SWITCH_CENTER_AUTO_SYNC !== undefined) {
     return parseBooleanMaybe(process.env.SWITCH_CENTER_AUTO_SYNC, true);
   }
@@ -465,11 +574,12 @@ function isSwitchCenterAutoSyncEnabled(options = {}) {
 }
 
 function resolveAutoSyncCooldownMs(options = {}) {
-  const raw = options.cooldownMs
-    ?? options['cooldown-ms']
-    ?? process.env.SWITCH_CENTER_AUTO_SYNC_COOLDOWN_MS
-    ?? process.env.KHY_SWITCH_CENTER_AUTO_SYNC_COOLDOWN_MS
-    ?? '45000';
+  const raw =
+    options.cooldownMs ??
+    options['cooldown-ms'] ??
+    process.env.SWITCH_CENTER_AUTO_SYNC_COOLDOWN_MS ??
+    process.env.KHY_SWITCH_CENTER_AUTO_SYNC_COOLDOWN_MS ??
+    '45000';
   const value = parsePositiveInt(raw, 45000);
   return Math.min(Math.max(value, 5000), 10 * 60 * 1000);
 }
@@ -485,21 +595,24 @@ async function maybeAutoSyncSwitchCenter(options = {}) {
     return { synced: false, skipped: true, reason: 'disabled' };
   }
 
-  const provider = normalizeSwitchCenterProvider(
-    options.provider
-    || process.env.SWITCH_CENTER_AUTO_PROVIDER
-    || process.env.KHY_SWITCH_CENTER_AUTO_PROVIDER
-    || 'auto'
-  ) || 'auto';
+  const provider =
+    normalizeSwitchCenterProvider(
+      options.provider ||
+        process.env.SWITCH_CENTER_AUTO_PROVIDER ||
+        process.env.KHY_SWITCH_CENTER_AUTO_PROVIDER ||
+        'auto'
+    ) || 'auto';
   const fallbackEnabled = parseBooleanMaybe(
-    options.fallback ?? process.env.SWITCH_CENTER_AUTO_FALLBACK ?? process.env.KHY_SWITCH_CENTER_AUTO_FALLBACK,
+    options.fallback ??
+      process.env.SWITCH_CENTER_AUTO_FALLBACK ??
+      process.env.KHY_SWITCH_CENTER_AUTO_FALLBACK,
     true
   );
   const preferredProvider = normalizeSwitchCenterProvider(
-    options.preferredProvider
-    || process.env.SWITCH_CENTER_AUTO_PREFERRED_PROVIDER
-    || process.env.KHY_SWITCH_CENTER_AUTO_PREFERRED_PROVIDER
-    || 'windsurf'
+    options.preferredProvider ||
+      process.env.SWITCH_CENTER_AUTO_PREFERRED_PROVIDER ||
+      process.env.KHY_SWITCH_CENTER_AUTO_PREFERRED_PROVIDER ||
+      'windsurf'
   );
 
   if (provider === 'auto' || provider === 'all') {
@@ -535,7 +648,7 @@ async function maybeAutoSyncSwitchCenter(options = {}) {
       preferredProvider: first,
       reason: 'sync-failed',
       attempts,
-      error: attempts.map(x => `${x.provider}:${x.error || x.reason}`).join(' | '),
+      error: attempts.map((x) => `${x.provider}:${x.error || x.reason}`).join(' | '),
     };
   }
   if (provider !== 'windsurf' && provider !== 'trae') {
@@ -548,29 +661,34 @@ async function maybeAutoSyncSwitchCenter(options = {}) {
   const key = `provider:${provider}`;
   const now = Date.now();
   const state = _switchCenterAutoSyncState.get(key) || { lastAt: 0, inFlight: null };
-  if (!force && state.lastAt > 0 && (now - state.lastAt) < cooldownMs) {
+  if (!force && state.lastAt > 0 && now - state.lastAt < cooldownMs) {
     return { synced: false, skipped: true, reason: 'cooldown' };
   }
-  if (state.inFlight) return state.inFlight;
+  if (state.inFlight) {
+    return state.inFlight;
+  }
 
   const task = (async () => {
     state.lastAt = Date.now();
     try {
-      const syncFn = provider === 'trae'
-        ? syncTraeSwitchProfileFromAdapter
-        : syncWindsurfSwitchProfileFromAdapter;
+      const syncFn =
+        provider === 'trae'
+          ? syncTraeSwitchProfileFromAdapter
+          : syncWindsurfSwitchProfileFromAdapter;
       const defaultProfileId = provider === 'trae' ? 'trae-auto' : 'windsurf-auto';
       const defaultProfileName = provider === 'trae' ? 'Trae Auto' : 'Windsurf Auto';
       const result = await syncFn({
         activate: true,
-        id: options.id
-          || process.env[`SWITCH_CENTER_AUTO_${provider.toUpperCase()}_PROFILE_ID`]
-          || process.env.SWITCH_CENTER_AUTO_PROFILE_ID
-          || defaultProfileId,
-        name: options.name
-          || process.env[`SWITCH_CENTER_AUTO_${provider.toUpperCase()}_PROFILE_NAME`]
-          || process.env.SWITCH_CENTER_AUTO_PROFILE_NAME
-          || defaultProfileName,
+        id:
+          options.id ||
+          process.env[`SWITCH_CENTER_AUTO_${provider.toUpperCase()}_PROFILE_ID`] ||
+          process.env.SWITCH_CENTER_AUTO_PROFILE_ID ||
+          defaultProfileId,
+        name:
+          options.name ||
+          process.env[`SWITCH_CENTER_AUTO_${provider.toUpperCase()}_PROFILE_NAME`] ||
+          process.env.SWITCH_CENTER_AUTO_PROFILE_NAME ||
+          defaultProfileName,
         endpoint: options.endpoint || process.env.SWITCH_CENTER_AUTO_ENDPOINT || '',
         key: options.key || process.env.SWITCH_CENTER_AUTO_KEY || '',
         model: options.model || process.env.SWITCH_CENTER_AUTO_MODEL || '',
@@ -586,7 +704,9 @@ async function maybeAutoSyncSwitchCenter(options = {}) {
         modelsCount: Array.isArray(result.profile?.models) ? result.profile.models.length : 0,
       };
       if (!quiet && (payload.changed || payload.activeChanged)) {
-        printInfo(`switch-center 自动同步完成: ${payload.profileName || payload.profileId} (${payload.modelsCount} models)`);
+        printInfo(
+          `switch-center 自动同步完成: ${payload.profileName || payload.profileId} (${payload.modelsCount} models)`
+        );
       }
       return payload;
     } catch (err) {
@@ -608,7 +728,9 @@ async function maybeAutoSyncSwitchCenter(options = {}) {
           };
         }
       }
-      if (!quiet) printInfo(`switch-center 自动同步跳过: ${message}`);
+      if (!quiet) {
+        printInfo(`switch-center 自动同步跳过: ${message}`);
+      }
       return {
         synced: false,
         skipped: true,
@@ -637,12 +759,22 @@ function printSwitchCenterHelp() {
   console.log(chalk.dim('  proxy switch-center sync [--provider trae|windsurf]'));
   console.log(chalk.dim('  proxy switch-center use <id|名称> [--provider trae|windsurf]'));
   console.log(chalk.dim('  proxy switch-center remove <id|名称> [--provider trae|windsurf]'));
-  console.log(chalk.dim('  proxy switch-center test [id|名称] [--provider trae|windsurf] [--model xxx]'));
+  console.log(
+    chalk.dim('  proxy switch-center test [id|名称] [--provider trae|windsurf] [--model xxx]')
+  );
   console.log('');
   console.log(chalk.dim('  说明:'));
   console.log(chalk.dim('    1) 默认 provider 按本地配置自动推断'));
-  console.log(chalk.dim('    2) sync 支持 Trae/Windsurf 登录态自动发现（不指定 provider 时先首选，再自动降级）'));
-  console.log(chalk.dim('    3) gateway status / gateway model 默认自动触发 switch-center 同步（可用 SWITCH_CENTER_AUTO_SYNC=false 关闭）'));
+  console.log(
+    chalk.dim(
+      '    2) sync 支持 Trae/Windsurf 登录态自动发现（不指定 provider 时先首选，再自动降级）'
+    )
+  );
+  console.log(
+    chalk.dim(
+      '    3) gateway status / gateway model 默认自动触发 switch-center 同步（可用 SWITCH_CENTER_AUTO_SYNC=false 关闭）'
+    )
+  );
   console.log(chalk.dim('    4) 保留 trae-switch / windsurf-switch 兼容旧脚本'));
   console.log('');
 }
@@ -672,12 +804,15 @@ async function handleProxySwitchCenter(action = 'status', args = [], options = {
   }
 
   const provider = parsed.provider || resolveDefaultSwitchCenterProvider(sub);
-  if ((sub === 'sync' || sub === 'refresh' || sub === 'import') && (provider === 'auto' || provider === 'all')) {
+  if (
+    (sub === 'sync' || sub === 'refresh' || sub === 'import') &&
+    (provider === 'auto' || provider === 'all')
+  ) {
     const preferred = normalizeSwitchCenterProvider(
-      options.preferredProvider
-      || process.env.SWITCH_CENTER_AUTO_PREFERRED_PROVIDER
-      || process.env.GATEWAY_PREFERRED_ADAPTER
-      || 'windsurf'
+      options.preferredProvider ||
+        process.env.SWITCH_CENTER_AUTO_PREFERRED_PROVIDER ||
+        process.env.GATEWAY_PREFERRED_ADAPTER ||
+        'windsurf'
     );
     const result = await maybeAutoSyncSwitchCenter({
       ...options,
@@ -688,7 +823,9 @@ async function handleProxySwitchCenter(action = 'status', args = [], options = {
       name: options.name || parsed.args[0] || '',
     });
     if (result && result.synced) {
-      const fallbackNote = result.fallbackUsed ? `（已从 ${result.preferredProvider || '首选通道'} 降级）` : '';
+      const fallbackNote = result.fallbackUsed
+        ? `（已从 ${result.preferredProvider || '首选通道'} 降级）`
+        : '';
       printSuccess(`switch-center 同步成功: ${result.provider || preferred}${fallbackNote}`);
       return;
     }

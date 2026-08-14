@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>外部技能安装（khy skill add） · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>外部技能安装（khy skill add）</div>
+      <header class="hero reveal"><h1>外部技能安装（khy skill add）</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#外部技能安装-khy-skill-add">外部技能安装（`khy skill add`）</a></li><li class="lvl-2"><a href="#一-命令与流程">一、命令与流程</a></li><li class="lvl-2"><a href="#二-支持的源格式">二、支持的源格式</a></li><li class="lvl-2"><a href="#三-skill-与仓库内技能定位">三、`--skill` 与仓库内技能定位</a></li><li class="lvl-2"><a href="#四-落盘位置-自动发现与调用">四、落盘位置、自动发现与调用</a></li><li class="lvl-3"><a href="#落盘位置">落盘位置</a></li><li class="lvl-3"><a href="#自动发现">自动发现</a></li><li class="lvl-3"><a href="#在-repl-调用">在 REPL 调用</a></li><li class="lvl-2"><a href="#五-常见问题-faq">五、常见问题（FAQ）</a></li><li class="lvl-2"><a href="#六-相关文档">六、相关文档</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-170 | 阶段: 运维 | 原路径: docs/07_OPS_运维/[OPS-MAN-170] 外部技能安装-khy-skill-add.md --&gt;</p>
+<h1 id="外部技能安装-khy-skill-add">外部技能安装（<code>khy skill add</code>）<a class="anchor" href="#外部技能安装-khy-skill-add" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy skill add &lt;源&gt;</code> 从 GitHub 等仓库把一个技能（skill）拉取并落盘到 khy 的技能目录，对齐 <code>npx skills add &lt;repo&gt;</code> 的体验。khy 原生就认识 <code>SKILL.md</code> / <code>manifest.json</code> 并在 <code>&lt;dataHome&gt;/skills</code> 下自动发现，本命令补上「从仓库拉取」这一步。</p>
+<p>实现依据（核实来源）：源写法解析见 <code>services/backend/src/skills/skillSourceSpec.js</code>；拉取/落盘 IO 见 <code>services/backend/src/services/skillInstallService.js</code>；落盘复制见 <code>services/backend/src/services/skillPackageService.js</code>；自动发现与加载见 <code>services/backend/src/skills/skillLoader.js</code> 与 <code>services/backend/src/skills/index.js</code>。</p></blockquote>
+<hr>
+<h2 id="一-命令与流程">一、命令与流程<a class="anchor" href="#一-命令与流程" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy skill add &lt;源&gt; [--skill &lt;名称|子路径&gt;]</code></pre>
+<p>安装的内部流程（<code>addFromSource</code>）：</p>
+<ol><li><strong>门控检查</strong>：<code>KHY_SKILL_ADD</code> 关闭时直接拒绝（详见第五节 FAQ）。</li><li><strong>源解析</strong>：<code>skillSourceSpec.parseSource</code> 把各种源写法归一成 <code>{ url, ref, host, owner, repo, subdir, kind }</code>（纯字符串解析，零 IO）。</li><li><strong>浅克隆</strong>：<code>git clone --depth 1 --no-tags</code> 到系统临时目录；带 <code>ref</code> 时先 <code>--branch &lt;ref&gt;</code>，若 ref 是 commit sha 则回退为全量克隆 + <code>checkout</code>。</li><li><strong>定位技能目录</strong>：在克隆树里找到含 <code>SKILL.md</code> 或 <code>manifest.json</code> 的目录（规则见第三节）。</li><li><strong>落盘</strong>：<code>skillPackageService.importSkill</code> 把该目录复制到 <code>&lt;dataHome&gt;/skills/&lt;name&gt;</code>（loader 能发现的位置）。</li><li><strong>清理</strong>：删除临时克隆目录。</li></ol>
+<p>失败会抛出带中文提示的错误（例如 git 克隆失败、找不到技能、多个技能需 <code>--skill</code> 指定等）。</p>
+<hr>
+<h2 id="二-支持的源格式">二、支持的源格式<a class="anchor" href="#二-支持的源格式" aria-label="锚点">#</a></h2>
+<p>以下写法均由 <code>skillSourceSpec.parseSource</code> 实际解析（核实自该文件的分支逻辑）：</p>
+<table><thead><tr><th>写法</th><th>示例</th><th>说明</th></tr></thead><tbody><tr><td><code>owner/repo</code> 短写</td><td><code>khy skill add acme/my-skill</code></td><td>默认 host 为 <code>github.com</code>，归一为 <code>https://github.com/acme/my-skill.git</code></td></tr><tr><td><code>owner/repo#ref</code></td><td><code>khy skill add acme/my-skill#v1.2.0</code></td><td><code>#</code> 后为 ref（分支 / tag / commit sha）</td></tr><tr><td><code>owner/repo/子/目录</code></td><td><code>khy skill add acme/pack/skills/foo</code></td><td>第 3 段起作为仓库内子目录（相当于隐式 <code>--skill</code>）</td></tr><tr><td>完整 HTTPS URL</td><td><code>khy skill add https://github.com/acme/my-skill</code></td><td>自动补 <code>.git</code></td></tr><tr><td>带 <code>.git</code> 的 URL</td><td><code>khy skill add https://github.com/acme/my-skill.git</code></td><td>原样识别</td></tr><tr><td>GitHub <code>tree</code> 深链</td><td><code>khy skill add https://github.com/acme/pack/tree/main/skills/foo</code></td><td>拆出 <code>ref=main</code> 与子目录 <code>skills/foo</code></td></tr><tr><td>SSH 短写</td><td><code>khy skill add git@github.com:acme/my-skill.git</code></td><td><code>kind=ssh</code>，原样透传 URL</td></tr><tr><td>任意 <code>http(s)</code> / <code>git</code> / <code>ssh</code> 协议 URL</td><td><code>khy skill add https://gitlab.com/acme/my-skill.git</code></td><td>尽力解析 <code>host/owner/repo</code>，<code>url</code> 透传</td></tr></tbody></table>
+<p><strong>解析约束（来自源码校验）</strong>：</p>
+<ul><li><code>owner</code> 与 <code>repo</code> 只允许「字母数字开头 + 字母数字 <code>.</code> <code>_</code> <code>-</code>」的单段，含非法字符会被拒绝。</li><li><code>ref</code> 只允许 <code>A-Za-z0-9._/-</code>。</li><li>子目录会经 <code>normalizeSubdir</code> 归一：拒绝绝对路径、盘符（如 <code>C:</code>）、<code>..</code> 遍历；反斜杠会转成 <code>/</code>。</li></ul>
+<hr>
+<h2 id="三-skill-与仓库内技能定位">三、<code>--skill</code> 与仓库内技能定位<a class="anchor" href="#三-skill-与仓库内技能定位" aria-label="锚点">#</a></h2>
+<p>技能目录的定位规则（核实自 <code>skillInstallService._locateSkillDir</code>）：</p>
+<ol><li><strong>显式子目录</strong>（<code>--skill &lt;名称|子路径&gt;</code>，或 URL/短写里带出的子目录）：<ul><li>只认这个子目录；不存在、不是目录、或目录里没有 <code>SKILL.md</code>/<code>manifest.json</code> 都会报错。</li><li>有越界保护：子路径不能逃出克隆根目录。</li></ul></li><li><strong>无子目录时</strong>：<ul><li>克隆根目录本身含 <code>SKILL.md</code>/<code>manifest.json</code> → 直接用根（单技能仓库）。</li><li>否则在常见容器目录 <code>skill/</code> <code>skills/</code> <code>.skills/</code> 下扫描第一个含技能文件的命名子目录。</li><li>若扫描到<strong>多个</strong>技能，会报错并要求用 <code>--skill &lt;名称&gt;</code> 指定其中一个。</li><li>一个都没找到 → 提示「若在子目录，请用 <code>--skill &lt;路径&gt;</code> 指定」。</li></ul></li></ol>
+<pre><code class="language-bash"># 仓库根就是一个技能
+khy skill add acme/single-skill
+
+# 仓库里多个技能，选其中一个
+khy skill add acme/skill-collection --skill translator
+
+# 用 GitHub tree 深链直接定位子目录（等价于 --skill）
+khy skill add https://github.com/acme/skill-collection/tree/main/skills/translator</code></pre>
+<hr>
+<h2 id="四-落盘位置-自动发现与调用">四、落盘位置、自动发现与调用<a class="anchor" href="#四-落盘位置-自动发现与调用" aria-label="锚点">#</a></h2>
+<h3 id="落盘位置">落盘位置<a class="anchor" href="#落盘位置" aria-label="锚点">#</a></h3>
+<p>安装后技能被复制到 <code>&lt;dataHome&gt;/skills/&lt;name&gt;/</code>：</p>
+<ul><li><code>&lt;dataHome&gt;</code> 为便携感知的数据根，非便携安装等价于 <code>~/.khy</code>。</li><li><code>&lt;name&gt;</code> 优先取 <code>manifest.json</code> 的 <code>name</code>，其次取 <code>SKILL.md</code> frontmatter 的 <code>name</code>，最后兜底用目录名（核实自 <code>skillPackageService._folderSkillName</code>）。</li><li>复制走 <code>_copyTreeSafe</code>，对每个条目做路径逃逸校验（防 path-traversal）。</li></ul>
+<h3 id="自动发现">自动发现<a class="anchor" href="#自动发现" aria-label="锚点">#</a></h3>
+<p>khy 启动时按优先级链发现技能（核实自 <code>skillLoader.discoverSkillsDeep</code> 与 <code>index.js discoverAllSkills</code>，「首个匹配胜出」）：</p>
+<ol><li>项目级：<code>&lt;项目&gt;/.khy/skills/</code>，其次遗留 <code>&lt;项目&gt;/.khyquant/skills/</code></li><li>用户级：<code>&lt;dataHome&gt;/skills/</code>、<code>~/.khy/skills/</code>，其次遗留 <code>~/.khyquant/skills/</code></li><li>内置：<code>services/backend/src/skills/</code></li><li>Claude Code 桥接（门控 <code>KHY_CC_SKILL_BRIDGE</code>，默认开）：追加在最后，保证 khy 原生 <code>SKILL.md</code> 始终优先。</li></ol>
+<p><code>index.js</code> 走 <code>manifest.json</code> 为主的加载；<code>skillLoader</code> 兜底加载遗留的 <code>SKILL.md</code> 格式，两者合并（manifest 优先）。</p>
+<h3 id="在-repl-调用">在 REPL 调用<a class="anchor" href="#在-repl-调用" aria-label="锚点">#</a></h3>
+<ul><li>用户可调用的技能（<code>user_invocable: true</code>）会以 <code>trigger</code>（如 <code>/my-skill</code>）出现在 REPL 的技能目录里，可直接用斜杠命令触发；也支持 <code>aliases</code> 里的别名。</li><li>执行逻辑（核实自 <code>index.js executeSkill</code>）：<ul><li>有 <code>handler.js</code> 且导出 <code>execute(args, context)</code> 或本身是函数 → 走自定义处理器，返回其结果。</li><li>否则 → 返回 <code>prompt.md</code> 内容作为提示词注入（AI 驱动执行）。</li><li>二者都没有 → 报错「没有 prompt.md 也没有 handler.js」。</li></ul></li></ul>
+<hr>
+<h2 id="五-常见问题-faq">五、常见问题（FAQ）<a class="anchor" href="#五-常见问题-faq" aria-label="锚点">#</a></h2>
+<p><strong>Q1：提示「<code>khy skill add</code> 未启用」怎么办？</strong><br>该命令由 <code>KHY_SKILL_ADD</code> 门控（核实自 <code>skillSourceSpec.isSkillAddEnabled</code>）。默认为开启（default-on），但 <code>0/false/off/no</code> 会关闭；若接入 flagRegistry 则以注册表判定为准。设置环境变量开启：</p>
+<pre><code class="language-bash"># PowerShell
+$env:KHY_SKILL_ADD = &quot;1&quot;
+# bash
+export KHY_SKILL_ADD=1</code></pre>
+<p><strong>Q2：私有仓库怎么安装？</strong><br>本命令直接调用系统 <code>git clone</code>，不注入任何凭据。安装私有仓库前请先配好 git 凭据：</p>
+<ul><li>SSH：用 <code>git@github.com:owner/repo.git</code> 写法，并确保本机 SSH key 已加入账户。</li><li>HTTPS：先配好 credential helper / token（凭据不由 khy 保存）。</li></ul>
+<p><strong>Q3：仓库里有多个技能，安装报「含多个 skill」错误？</strong><br>用 <code>--skill &lt;名称&gt;</code> 指定其中一个，或用 GitHub <code>tree</code> 深链精确定位子目录（见第三节）。</p>
+<p><strong>Q4：<code>--skill</code> 报「非法子路径」？</strong><br>子路径不允许绝对路径、盘符（<code>C:</code>）或 <code>..</code> 遍历。请用相对的、仓库内的正常路径，例如 <code>skills/translator</code>。</p>
+<p><strong>Q5：拉的是某个 tag 或 commit？</strong><br>用 <code>owner/repo#ref</code> 或 <code>.../tree/&lt;ref&gt;/...</code>。<code>ref</code> 是分支/tag 时走 <code>--branch</code> 浅克隆；是 commit sha 时会自动回退为全量克隆再 <code>checkout</code>。</p>
+<p><strong>Q6：安装后怎么确认可用？</strong><br>到 <code>&lt;dataHome&gt;/skills/&lt;name&gt;/</code> 确认文件已落盘，重启 REPL 后在技能目录里应能看到它的 <code>trigger</code>。</p>
+<hr>
+<h2 id="六-相关文档">六、相关文档<a class="anchor" href="#六-相关文档" aria-label="锚点">#</a></h2>
+<ul><li>[OPS-MAN-171] 技能包规范-manifest与prompt模板 —— <code>SKILL.md</code> / <code>manifest.json</code> 字段规范与可复制模板。</li><li>[OPS-MAN-169] 项目规则总纲-命名·skill·权限·mcp —— skill 命名与治理规则。</li><li>[OPS-MAN-058] 环境开关与文档命名规范 —— <code>KHY_SKILL_ADD</code> 等环境开关的统一说明。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-169] 项目规则总纲-命名·skill·权限·mcp.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-169] 项目规则总纲：命名 · Skill · 权限 · MCP</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-171] 技能包规范-manifest与prompt模板.html"><div class="dir">下一篇 →</div><div class="ttl">技能包规范（manifest.json / SKILL.md）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-170] 外部技能安装-khy-skill-add.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

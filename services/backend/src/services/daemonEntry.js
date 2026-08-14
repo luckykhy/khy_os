@@ -11,10 +11,15 @@
 // spawn (aiManagementServer's tree). Prevents the "black box flicker" on daemon
 // startup. Reuses the central patch (win32-only, gated KHY_WINDOWS_SPAWN_HIDE,
 // idempotent, fail-soft); no-op on non-win32.
-try { require('../bootstrap/windowsSpawnHardening').installWindowsSpawnHardening(); } catch { /* best effort */ }
+try {
+  require('../bootstrap/windowsSpawnHardening').installWindowsSpawnHardening();
+} catch {
+  /* best effort */
+}
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataHome, getLegacyDataHome } = require('../utils/dataHome');
 
 const PORT = parseInt(process.env.KHY_DAEMON_PORT || '9090', 10);
@@ -69,12 +74,16 @@ function writeRuntime() {
       const dir = path.dirname(file);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(file, json, 'utf-8');
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 }
 
 function writePidFile() {
-  if (!PID_FILE) return;
+  if (!PID_FILE) {
+    return;
+  }
   const payload = {
     pid: process.pid,
     port: _actualPort,
@@ -85,12 +94,18 @@ function writePidFile() {
     const dir = path.dirname(PID_FILE);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(PID_FILE, JSON.stringify(payload, null, 2), 'utf-8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 function clearRuntime() {
   for (const file of [RUNTIME_FILE, LEGACY_RUNTIME_FILE]) {
-    try { fs.unlinkSync(file); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(file);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -106,18 +121,24 @@ function clearShutdownWatchdog() {
 }
 
 function startShutdownWatchdog() {
-  if (_shutdownWatchdog) return;
+  if (_shutdownWatchdog) {
+    return;
+  }
   _shutdownWatchdog = setInterval(() => {
     if (_shutdownDone) {
       clearShutdownWatchdog();
       return;
     }
     const idleMs = Date.now() - _shutdownLastActivityAt;
-    if (idleMs <= SHUTDOWN_IDLE_LIMIT_MS) return;
+    if (idleMs <= SHUTDOWN_IDLE_LIMIT_MS) {
+      return;
+    }
     log(`Shutdown idle for ${idleMs}ms, forcing exit`);
     process.exit(0);
   }, SHUTDOWN_WATCHDOG_TICK_MS);
-  if (typeof _shutdownWatchdog.unref === 'function') _shutdownWatchdog.unref();
+  if (typeof _shutdownWatchdog.unref === 'function') {
+    _shutdownWatchdog.unref();
+  }
 }
 
 async function start() {
@@ -127,7 +148,9 @@ async function start() {
     if (typeof mgmtServer.start === 'function') {
       // start(port) 接收数字参数，返回实际绑定端口（可能因端口冲突自增）
       _actualPort = await mgmtServer.start(PORT);
-      if (typeof _actualPort !== 'number') _actualPort = PORT;
+      if (typeof _actualPort !== 'number') {
+        _actualPort = PORT;
+      }
       log(`Management server started on port ${_actualPort}`);
     } else if (typeof mgmtServer.createServer === 'function') {
       server = mgmtServer.createServer({ port: PORT });
@@ -160,7 +183,9 @@ async function start() {
       const sessionPersistence = require('./sessionPersistence');
       const sessions = sessionPersistence.listPersistedSessions();
       log(`Found ${sessions.length} persisted sessions`);
-    } catch { /* sessionPersistence not available */ }
+    } catch {
+      /* sessionPersistence not available */
+    }
 
     // 后台常驻「改动反馈 watcher」：其它 AI 改了 khy 源码时,khyos 不再一声不吭 ——
     // 周期性侦测改动、跑机器校验、判出对/不对,落盘成 verdict 供 AI 下一轮消费。
@@ -171,11 +196,33 @@ async function start() {
         const changeWatch = require('./changeWatchService');
         if (changeWatch.isWatchEnabled(process.env)) {
           const r = await changeWatch.start({});
-          if (r && r.started) log(`Change-watch resident started (interval=${r.intervalMs}ms)`);
+          if (r && r.started) {
+            log(`Change-watch resident started (interval=${r.intervalMs}ms)`);
+          }
         }
-      } catch (e) { log(`Change-watch not started: ${e && e.message ? e.message : e}`); }
+      } catch (e) {
+        log(`Change-watch not started: ${e && e.message ? e.message : e}`);
+      }
     })();
 
+    // IM 渠道(钉钉/飞书/企业微信/微信个人号)接线。messageRouter 是懒单例,此前
+    // 只有 webhook 路由被打到时才会实例化 —— 对 webhook 入站的渠道够用,但**微信是
+    // 主动长轮询**:没人调它就永远不会开始收消息。故这里显式 eager 一次。
+    // 门控在 _bootstrapChannels 内部(KHY_MSG + 各渠道自身配置存在);best-effort。
+    try {
+      const { getMessageRouter } = require('./channels/messageRouter');
+      const router = getMessageRouter();
+      const chans = router.getChannels();
+      // 无论有无渠道都如实说一句。沉默会被误读成「已接通」——微信没反应时,
+      // 这行日志是唯一能区分「没绑定 / 门关了 / 注册失败」的线索。
+      if (chans.length) {
+        log(`Message channels: ${chans.map((c) => c.name).join(', ')}`);
+      } else {
+        log('Message channels: none registered (未绑定 / KHY_MSG=off / 各渠道未配置)');
+      }
+    } catch (e) {
+      log(`Message channels not started: ${e && e.message ? e.message : e}`);
+    }
   } catch (err) {
     // 红线：守护进程启动失败也要给真实原因 + 解决方案，而非裸 exit 1。
     try {
@@ -193,7 +240,9 @@ async function start() {
 // ── Signal handling ─────────────────────────────────────────────────────
 
 function shutdown(signal) {
-  if (_shutdownDone) return;
+  if (_shutdownDone) {
+    return;
+  }
   touchShutdownActivity();
 
   if (_shutdownStarted) {
@@ -222,13 +271,30 @@ function shutdown(signal) {
 }
 
 function cleanup() {
-  if (_shutdownDone) return;
+  if (_shutdownDone) {
+    return;
+  }
   _shutdownDone = true;
   clearShutdownWatchdog();
 
+  // 掐掉 IM 渠道的长轮询。disconnect() 里的 abort() 是同步的,所以即使这里不 await,
+  // 在飞的 fetch 也已被取消 —— 否则微信的 35s 长轮询会让进程迟迟退不掉。
+  try {
+    const { getMessageRouter } = require('./channels/messageRouter');
+    getMessageRouter()
+      .disconnectAll()
+      .catch(() => {});
+  } catch {
+    /* best effort */
+  }
+
   // Remove PID file
   if (PID_FILE) {
-    try { fs.unlinkSync(PID_FILE); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(PID_FILE);
+    } catch {
+      /* ignore */
+    }
   }
   clearRuntime();
   log('Daemon stopped');

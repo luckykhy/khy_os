@@ -18,15 +18,29 @@
 
 /** 与键序无关的稳定 JSON 序列化（忽略 Symbol 键，避免 EXEC_APPROVED 之类污染签名）。 */
 function stableStringify(value) {
-  if (value === null || value === undefined) return 'null';
+  if (value === null || value === undefined) {
+    return 'null';
+  }
   const t = typeof value;
-  if (t === 'number' || t === 'boolean') return JSON.stringify(value);
-  if (t === 'string') return JSON.stringify(value);
-  if (t === 'function') return '"[fn]"';
-  if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
+  if (t === 'number' || t === 'boolean') {
+    return JSON.stringify(value);
+  }
+  if (t === 'string') {
+    return JSON.stringify(value);
+  }
+  if (t === 'function') {
+    return '"[fn]"';
+  }
+  if (Array.isArray(value)) {
+    return '[' + value.map(stableStringify).join(',') + ']';
+  }
   if (t === 'object') {
-    const keys = Object.keys(value).filter((k) => typeof k === 'string').sort();
-    return '{' + keys.map((k) => JSON.stringify(k) + ':' + stableStringify(value[k])).join(',') + '}';
+    const keys = Object.keys(value)
+      .filter((k) => typeof k === 'string')
+      .sort();
+    return (
+      '{' + keys.map((k) => JSON.stringify(k) + ':' + stableStringify(value[k])).join(',') + '}'
+    );
   }
   return '"[unknown]"';
 }
@@ -34,7 +48,9 @@ function stableStringify(value) {
 /** djb2 — 把任意串压成短的 base36 指纹（碰撞概率对本用途足够低）。 */
 function _djb2(str) {
   let h = 5381;
-  for (let i = 0; i < str.length; i++) h = (((h << 5) + h) + str.charCodeAt(i)) | 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  }
   return (h >>> 0).toString(36);
 }
 
@@ -43,33 +59,55 @@ function _djb2(str) {
  * 同 tool 同 params ⇒ 同签名 ⇒ 视为「同一发子弹」。
  */
 function callSignature(tool, params = {}) {
-  const name = String(tool || '').trim().toLowerCase();
+  const name = String(tool || '')
+    .trim()
+    .toLowerCase();
   let body;
-  try { body = stableStringify(params || {}); } catch { body = String(params); }
+  try {
+    body = stableStringify(params || {});
+  } catch {
+    body = String(params);
+  }
   return `${name}#${_djb2(body)}`;
 }
 
 // ── 失败文本/错误码抽取 ─────────────────────────────────────────────
 
 function _failureText(failure) {
-  if (!failure) return '';
-  if (typeof failure === 'string') return failure;
-  if (failure instanceof Error) return failure.message || '';
+  if (!failure) {
+    return '';
+  }
+  if (typeof failure === 'string') {
+    return failure;
+  }
+  if (failure instanceof Error) {
+    return failure.message || '';
+  }
   if (typeof failure === 'object') {
     if (failure.error && typeof failure.error === 'object') {
       return failure.error.message || failure.error.code || '';
     }
-    if (typeof failure.error === 'string') return failure.error;
-    if (typeof failure.message === 'string') return failure.message;
-    if (typeof failure.note === 'string') return failure.note;
+    if (typeof failure.error === 'string') {
+      return failure.error;
+    }
+    if (typeof failure.message === 'string') {
+      return failure.message;
+    }
+    if (typeof failure.note === 'string') {
+      return failure.note;
+    }
   }
   return '';
 }
 
 function _failureCode(failure) {
   if (failure && typeof failure === 'object') {
-    if (failure.error && typeof failure.error === 'object' && failure.error.code) return failure.error.code;
-    if (failure.code) return failure.code;
+    if (failure.error && typeof failure.error === 'object' && failure.error.code) {
+      return failure.error.code;
+    }
+    if (failure.code) {
+      return failure.code;
+    }
   }
   return '';
 }
@@ -94,43 +132,59 @@ function classifyFailure(failure) {
   // HTTP 状态码（4xx/5xx）——优先从结构化字段取，退回正则。
   let http = '';
   if (failure && typeof failure === 'object') {
-    const s = failure.status || failure.statusCode
-      || (failure.error && typeof failure.error === 'object' ? failure.error.status : '');
-    if (s && /^[45]\d\d$/.test(String(s))) http = String(s);
+    const s =
+      failure.status ||
+      failure.statusCode ||
+      (failure.error && typeof failure.error === 'object' ? failure.error.status : '');
+    if (s && /^[45]\d\d$/.test(String(s))) {
+      http = String(s);
+    }
   }
   if (!http) {
     const m = text.match(/\b([45]\d\d)\b/);
-    if (m) http = m[1];
+    if (m) {
+      http = m[1];
+    }
   }
 
   let code = explicit || 'EXECUTION_ERROR';
   let reason = 'execution-error';
   let missingDependency = null;
 
-  const depMatch = lc.match(/\b(?:install|installing)\s+(puppeteer|playwright|ffmpeg|whisper|sox|python3?|torch|chromium|chrome)\b/);
-  const looksMissingDep = explicit === 'MISSING_DEPENDENCY'
-    || /\bnot installed\b/.test(lc)
-    || /\binstall with\b/.test(lc)
-    || /\b(?:npm i+|pip3?|apt-get|brew|winget)\s+install\b/.test(lc)
-    || !!depMatch;
+  const depMatch = lc.match(
+    /\b(?:install|installing)\s+(puppeteer|playwright|ffmpeg|whisper|sox|python3?|torch|chromium|chrome)\b/
+  );
+  const looksMissingDep =
+    explicit === 'MISSING_DEPENDENCY' ||
+    /\bnot installed\b/.test(lc) ||
+    /\binstall with\b/.test(lc) ||
+    /\b(?:npm i+|pip3?|apt-get|brew|winget)\s+install\b/.test(lc) ||
+    !!depMatch;
 
   if (looksMissingDep) {
     code = 'MISSING_DEPENDENCY';
     reason = 'missing-dependency';
-    missingDependency = (depMatch && depMatch[1])
-      || (failure && failure.missingDependency)
-      || (failure && failure._depHealing && failure._depHealing.missingDependency)
-      || null;
+    missingDependency =
+      (depMatch && depMatch[1]) ||
+      (failure && failure.missingDependency) ||
+      (failure && failure._depHealing && failure._depHealing.missingDependency) ||
+      null;
   } else if (http) {
     code = `HTTP_${http}`;
     reason = `http-${http}`;
   } else if (explicit === 'TIMEOUT' || /\btimed?\s*out\b|etimedout|esockettimedout/.test(lc)) {
     code = 'TIMEOUT';
     reason = 'timeout';
-  } else if (explicit === 'NETWORK_ERROR' || /\bnetwork\b|econnrefused|enotfound|eai_again|fetch failed|dns/.test(lc)) {
+  } else if (
+    explicit === 'NETWORK_ERROR' ||
+    /\bnetwork\b|econnrefused|enotfound|eai_again|fetch failed|dns/.test(lc)
+  ) {
     code = 'NETWORK_ERROR';
     reason = 'network';
-  } else if (explicit === 'PERMISSION_DENIED' || /permission denied|eacces|eperm|forbidden|unauthorized/.test(lc)) {
+  } else if (
+    explicit === 'PERMISSION_DENIED' ||
+    /permission denied|eacces|eperm|forbidden|unauthorized/.test(lc)
+  ) {
     code = 'PERMISSION_DENIED';
     reason = 'permission';
   } else if (explicit === 'RESOURCE_NOT_FOUND' || /\bnot found\b|enoent|no such file/.test(lc)) {

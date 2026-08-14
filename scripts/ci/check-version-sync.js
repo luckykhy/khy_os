@@ -31,6 +31,7 @@ function main() {
   // bootstrap) so a manual edit, partial bump, or merge conflict cannot let one
   // channel's manifest drift silently.
   const specs = [
+    // ── Main khy-os package (pip + npm + modules) ─────────────────────────────
     {
       file: 'pyproject.toml',
       regex: /^version\s*=\s*"([^"]+)"/m,
@@ -50,6 +51,19 @@ function main() {
       // Modular packaging manifest — each module inherits this version at build
       // time; must stay aligned with the rest of the monorepo version sources.
       file: 'packaging/modules/modules.json',
+      regex: /"version"\s*:\s*"([^"]+)"/m,
+    },
+    // ── ai-backend ecosystem (independent version track) ──────────────────────
+    // ai-backend and @khy/shared share a version because they ship as a bundled
+    // unit inside the pip wheel and are developed together. They intentionally
+    // differ from the main khy-os version (1.1.x vs 1.6.x), so they are checked
+    // as a SEPARATE group here.
+    {
+      file: 'services/ai-backend/package.json',
+      regex: /"version"\s*:\s*"([^"]+)"/m,
+    },
+    {
+      file: 'platform/packages/shared/package.json',
       regex: /"version"\s*:\s*"([^"]+)"/m,
     },
   ];
@@ -72,18 +86,38 @@ function main() {
     );
   }
 
-  const unique = new Set(Object.values(versions));
-  for (const [file, version] of Object.entries(versions)) {
-    console.log(`${file}: ${version}`);
+  // ── Group 1: main khy-os package ────────────────────────────────────────────
+  const mainGroup = [
+    'pyproject.toml',
+    'packaging/npm/package.json',
+    'services/backend/package.json',
+    'packaging/modules/modules.json',
+  ];
+  const mainVersions = new Set(mainGroup.map(f => versions[f]));
+  for (const f of mainGroup) {
+    console.log(`${f}: ${versions[f]}`);
   }
-  console.log(`${initFile}: <dynamic from pyproject.toml>`);
-
-  if (unique.size !== 1) {
-    throw new Error('Version mismatch detected across required files');
+  if (mainVersions.size !== 1) {
+    throw new Error('Version mismatch detected in main khy-os package group');
   }
+  console.log(`Main package version sync check passed: ${[...mainVersions][0]}`);
 
-  const [version] = [...unique];
-  console.log(`Version sync check passed: ${version}`);
+  // ── Group 2: ai-backend ecosystem ──────────────────────────────────────────
+  const aiGroup = [
+    'services/ai-backend/package.json',
+    'platform/packages/shared/package.json',
+  ];
+  const aiVersions = new Set(aiGroup.map(f => versions[f]));
+  for (const f of aiGroup) {
+    console.log(`${f}: ${versions[f]}`);
+  }
+  if (aiVersions.size !== 1) {
+    throw new Error('Version mismatch detected in ai-backend ecosystem group');
+  }
+  console.log(`AI-backend ecosystem version sync check passed: ${[...aiVersions][0]}`);
+
+  console.log(`\n${initFile}: <dynamic from pyproject.toml>`);
+  console.log('All version sync checks passed.');
 }
 
 try {

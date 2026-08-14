@@ -34,10 +34,10 @@
  *     can never make a write fail for reasons unrelated to genuine contention.
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const crypto = require('crypto');
 
 // ── Tunables (all overridable by env for ops) ──────────────────────
 // Lock root is resolved lazily (per call) so KHY_FILE_LOCK_DIR can be set/changed
@@ -45,11 +45,11 @@ const crypto = require('crypto');
 function _lockRoot() {
   return process.env.KHY_FILE_LOCK_DIR || path.join(os.tmpdir(), 'khy-file-locks');
 }
-const DEFAULT_TIMEOUT_MS = _envInt('KHY_FILE_LOCK_TIMEOUT_MS', 30000);   // 防呆: hard ceiling
-const HEARTBEAT_MS       = _envInt('KHY_FILE_LOCK_HEARTBEAT_MS', 5000);
-const STALE_MS           = _envInt('KHY_FILE_LOCK_STALE_MS', 15000);     // 3× heartbeat
-const POLL_MIN_MS        = 25;
-const POLL_MAX_MS        = 250;
+const DEFAULT_TIMEOUT_MS = _envInt('KHY_FILE_LOCK_TIMEOUT_MS', 30000); // 防呆: hard ceiling
+const HEARTBEAT_MS = _envInt('KHY_FILE_LOCK_HEARTBEAT_MS', 5000);
+const STALE_MS = _envInt('KHY_FILE_LOCK_STALE_MS', 15000); // 3× heartbeat
+const POLL_MIN_MS = 25;
+const POLL_MAX_MS = 250;
 
 const HOST = os.hostname();
 
@@ -60,11 +60,21 @@ const _heldLocks = new Map(); // key -> { count, token, lockDir, heartbeatTimer 
 
 /** Tool names (normalized: lowercased, separators stripped) that mutate files. */
 const WRITE_TOOL_NAMES = new Set([
-  'writefile', 'write', 'filewrite', 'filewritetool', 'createfile',
-  'editfile', 'edit', 'fileedit', 'fileedittool',
-  'multiedit', 'multiedittool',
-  'notebookedit', 'notebookedittool',
-  'fileop', 'fileoperation',
+  'writefile',
+  'write',
+  'filewrite',
+  'filewritetool',
+  'createfile',
+  'editfile',
+  'edit',
+  'fileedit',
+  'fileedittool',
+  'multiedit',
+  'multiedittool',
+  'notebookedit',
+  'notebookedittool',
+  'fileop',
+  'fileoperation',
 ]);
 
 const PATH_KEYS = ['path', 'file_path', 'filePath', 'notebook_path', 'notebookPath'];
@@ -76,8 +86,8 @@ class FileLockTimeoutError extends Error {
       : '';
     super(
       `File is locked by another khyos instance${who}; ` +
-      `could not acquire write lock on "${absPath}" within ${timeoutMs}ms. ` +
-      `Retry, write to a conflict copy, or ask the user which version to keep — do not overwrite.`
+        `could not acquire write lock on "${absPath}" within ${timeoutMs}ms. ` +
+        `Retry, write to a conflict copy, or ask the user which version to keep — do not overwrite.`
     );
     this.name = 'FileLockTimeoutError';
     this.code = 'EFILELOCKTIMEOUT';
@@ -101,7 +111,9 @@ const _normalizeToolName = require('../utils/normalizeToolName');
 
 /** Resolve a tool call's target file path (absolute), or null if none. */
 function resolveTargetPath(params) {
-  if (!params || typeof params !== 'object') return null;
+  if (!params || typeof params !== 'object') {
+    return null;
+  }
   for (const key of PATH_KEYS) {
     const v = params[key];
     if (typeof v === 'string' && v.trim()) {
@@ -148,28 +160,44 @@ function _writeMeta(lockDir, meta) {
  * @returns {boolean|null} true=alive, false=dead, null=unknown (different host)
  */
 function _isPidAlive(pid, host) {
-  if (!pid) return false;
-  if (host && host !== HOST) return null; // can't probe a PID on another machine
+  if (!pid) {
+    return false;
+  }
+  if (host && host !== HOST) {
+    return null;
+  } // can't probe a PID on another machine
   try {
     process.kill(pid, 0); // signal 0 = existence check, no signal delivered
     return true;
   } catch (err) {
-    if (err && err.code === 'ESRCH') return false; // no such process → dead
-    if (err && err.code === 'EPERM') return true;   // exists, not ours → alive
+    if (err && err.code === 'ESRCH') {
+      return false;
+    } // no such process → dead
+    if (err && err.code === 'EPERM') {
+      return true;
+    } // exists, not ours → alive
     return true; // be conservative: unknown error → assume alive (don't steal)
   }
 }
 
 /** A lock is stale (reclaimable) when its holder is provably gone. */
 function _isStale(meta) {
-  if (!meta) return true; // corrupt/empty meta → reclaimable
+  if (!meta) {
+    return true;
+  } // corrupt/empty meta → reclaimable
   const alive = _isPidAlive(meta.pid, meta.host);
-  if (alive === false) return true;  // process gone on this host
-  if (alive === true) return false;  // holder alive — respect it
+  if (alive === false) {
+    return true;
+  } // process gone on this host
+  if (alive === true) {
+    return false;
+  } // holder alive — respect it
   // Different host: rely solely on heartbeat freshness.
   const hb = Number(meta.heartbeatAt) || 0;
   const age = Date.now() - hb;
-  if (age < 0) return false;         // clock skew (future) → treat as fresh
+  if (age < 0) {
+    return false;
+  } // clock skew (future) → treat as fresh
   return age > STALE_MS;
 }
 
@@ -190,7 +218,9 @@ function _reclaimStale(lockDir) {
   }
   try {
     fs.rmSync(steal, { recursive: true, force: true });
-  } catch { /* best-effort: orphan temp dir is harmless, gets GC'd by ops */ }
+  } catch {
+    /* best-effort: orphan temp dir is harmless, gets GC'd by ops */
+  }
   return true;
 }
 
@@ -199,7 +229,9 @@ function _startHeartbeat(lockDir, meta) {
     meta.heartbeatAt = Date.now();
     _writeMeta(lockDir, meta);
   }, HEARTBEAT_MS);
-  if (timer.unref) timer.unref(); // never keep the process alive for a heartbeat
+  if (timer.unref) {
+    timer.unref();
+  } // never keep the process alive for a heartbeat
   return timer;
 }
 
@@ -212,8 +244,8 @@ function _startHeartbeat(lockDir, meta) {
  * @throws {FileLockTimeoutError} when the lock cannot be acquired before timeout.
  */
 async function acquire(absPath, opts = {}) {
-  const timeoutMs = Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0
-    ? opts.timeoutMs : DEFAULT_TIMEOUT_MS;
+  const timeoutMs =
+    Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0 ? opts.timeoutMs : DEFAULT_TIMEOUT_MS;
   const { key, lockDir } = _lockPaths(absPath);
 
   // Re-entrancy: this process already holds it → refcount, no real lock op.
@@ -223,7 +255,11 @@ async function acquire(absPath, opts = {}) {
     return _makeHandle(key, absPath, true);
   }
 
-  try { fs.mkdirSync(_lockRoot(), { recursive: true }); } catch { /* exists */ }
+  try {
+    fs.mkdirSync(_lockRoot(), { recursive: true });
+  } catch {
+    /* exists */
+  }
 
   const token = `${process.pid}-${crypto.randomBytes(6).toString('hex')}`;
   const deadline = Date.now() + timeoutMs;
@@ -232,10 +268,13 @@ async function acquire(absPath, opts = {}) {
     try {
       fs.mkdirSync(lockDir); // atomic: succeeds for exactly one acquirer
       const meta = {
-        pid: process.pid, host: HOST, token,
+        pid: process.pid,
+        host: HOST,
+        token,
         mode: opts.mode || 'exclusive',
         toolName: opts.toolName || null,
-        acquiredAt: Date.now(), heartbeatAt: Date.now(),
+        acquiredAt: Date.now(),
+        heartbeatAt: Date.now(),
       };
       _writeMeta(lockDir, meta);
       const heartbeatTimer = _startHeartbeat(lockDir, meta);
@@ -272,14 +311,24 @@ function _makeHandle(key, filePath, reentrant) {
     key,
     reentrant,
     release() {
-      if (released) return; // idempotent
+      if (released) {
+        return;
+      } // idempotent
       released = true;
       const held = _heldLocks.get(key);
-      if (!held) return;
+      if (!held) {
+        return;
+      }
       held.count -= 1;
-      if (held.count > 0) return; // still held by an outer re-entrant acquire
+      if (held.count > 0) {
+        return;
+      } // still held by an outer re-entrant acquire
       _heldLocks.delete(key);
-      try { clearInterval(held.heartbeatTimer); } catch { /* noop */ }
+      try {
+        clearInterval(held.heartbeatTimer);
+      } catch {
+        /* noop */
+      }
       // Only remove the dir if we still own it (token matches) — never delete a
       // lock that was reclaimed from us as a zombie and handed to someone else.
       try {
@@ -287,7 +336,9 @@ function _makeHandle(key, filePath, reentrant) {
         if (!meta || meta.token === held.token) {
           fs.rmSync(held.lockDir, { recursive: true, force: true });
         }
-      } catch { /* best-effort */ }
+      } catch {
+        /* best-effort */
+      }
     },
   };
 }
@@ -305,10 +356,16 @@ function _makeHandle(key, filePath, reentrant) {
  * @throws {FileLockTimeoutError} on contention timeout (surfaced to the Agent).
  */
 async function acquireForToolCall(toolName, params, opts = {}) {
-  if (process.env.KHY_FILE_LOCK_DISABLED === '1') return null;
-  if (!isWriteTool(toolName)) return null;
+  if (process.env.KHY_FILE_LOCK_DISABLED === '1') {
+    return null;
+  }
+  if (!isWriteTool(toolName)) {
+    return null;
+  }
   const absPath = resolveTargetPath(params);
-  if (!absPath) return null; // unknown / multi-file target → no single-path lock
+  if (!absPath) {
+    return null;
+  } // unknown / multi-file target → no single-path lock
   return acquire(absPath, {
     mode: 'exclusive',
     timeoutMs: opts.timeoutMs,

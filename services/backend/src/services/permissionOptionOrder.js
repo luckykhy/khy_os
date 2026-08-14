@@ -18,13 +18,17 @@
  */
 
 function _enabled() {
-  const v = String(process.env.KHY_PERMISSION_ALLOW_FIRST || '').trim().toLowerCase();
+  const v = String(process.env.KHY_PERMISSION_ALLOW_FIRST || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 // 高危允许优先:默认开(FALSY 语义),仅 0/false/off/no 显式回退到「拒绝优先」。
 function _highRiskOptIn() {
-  const v = String(process.env.KHY_PERMISSION_ALLOW_FIRST_HIGHRISK || '').trim().toLowerCase();
+  const v = String(process.env.KHY_PERMISSION_ALLOW_FIRST_HIGHRISK || '')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -33,12 +37,20 @@ const DENY_KEYS = Object.freeze(new Set(['deny', 'deny-all', 'denyall', 'reject'
 
 /** 判断一个选项是否「拒绝」类(按其 key / value 归一化判定,零启发式)。 */
 function isDenyOption(option) {
-  if (!option || typeof option !== 'object') return false;
-  const key = String(option.key == null ? '' : option.key).trim().toLowerCase();
-  if (DENY_KEYS.has(key)) return true;
+  if (!option || typeof option !== 'object') {
+    return false;
+  }
+  const key = String(option.key == null ? '' : option.key)
+    .trim()
+    .toLowerCase();
+  if (DENY_KEYS.has(key)) {
+    return true;
+  }
   // 经典 CLI 对话框用 value 而非 key(如 {value:'deny'|'deny-all'}),一并识别使本叶子
   // 成为跨两套权限 UI 的单一真源。
-  const value = String(option.value == null ? '' : option.value).trim().toLowerCase();
+  const value = String(option.value == null ? '' : option.value)
+    .trim()
+    .toLowerCase();
   return DENY_KEYS.has(value);
 }
 
@@ -52,11 +64,17 @@ function isDenyOption(option) {
  * @returns {Array<object>}  门控关 / 无需改动 / 高危显式回退 → 原数组(同引用)
  */
 function orderOptions(options, opts = {}) {
-  if (!_enabled()) return options;
+  if (!_enabled()) {
+    return options;
+  }
   try {
-    if (!Array.isArray(options) || options.length < 2) return options;
+    if (!Array.isArray(options) || options.length < 2) {
+      return options;
+    }
     // 高危默认允许优先(知情决定);仅显式 KHY_PERMISSION_ALLOW_FIRST_HIGHRISK=off 时回退拒绝优先。
-    if (opts && opts.highRisk && !_highRiskOptIn()) return options;
+    if (opts && opts.highRisk && !_highRiskOptIn()) {
+      return options;
+    }
 
     const allowGroup = [];
     const denyGroup = [];
@@ -64,11 +82,16 @@ function orderOptions(options, opts = {}) {
       (isDenyOption(o) ? denyGroup : allowGroup).push(o);
     }
     // 已是「允许优先」(无拒绝项,或所有拒绝项本就在末尾)→ 原样返回(同引用,字节回退)。
-    if (denyGroup.length === 0) return options;
+    if (denyGroup.length === 0) {
+      return options;
+    }
     const reordered = allowGroup.concat(denyGroup);
     let identical = true;
     for (let i = 0; i < options.length; i += 1) {
-      if (options[i] !== reordered[i]) { identical = false; break; }
+      if (options[i] !== reordered[i]) {
+        identical = false;
+        break;
+      }
     }
     return identical ? options : reordered;
   } catch {

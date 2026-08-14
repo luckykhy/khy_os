@@ -25,29 +25,39 @@
  * 拿不准这里能不能改 → 调 WeakModelGuidance 工具查该位点的护栏与示范。
  * ─────────────────────────────────────────────────────────────────────────────
  */
-const readline = require('readline');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
+const readline = require('readline');
+
+const { validateParams } = require('../tools/_baseTool');
+const {
+  normalizeToolResult,
+  maybePersistLargeResult,
+  _isMCPCallToolResult,
+} = require('../tools/_toolResultNormalizer');
+const _toolKey = require('../utils/normalizeAlnumKey');
+const { rewriteWindowsDesktopPath } = require('../utils/pathCompat');
+const _toolNameVariants = require('../utils/toolNameVariants');
+
+const { getCapabilityMatrix } = require('./capabilityMatrix');
+const { SEAMS: CAP_SEAMS } = require('./capabilityMatrix/seams');
 const {
   normalizeToolName,
   normalizeToolParams,
   getClaudeCompatToolDefinitions,
   getClaudeCompatToolList,
 } = require('./claudeCompat');
-const { rewriteWindowsDesktopPath } = require('../utils/pathCompat');
 // Capability matrix (cut 1): post-tool governance seams consult the registry
 // instead of inline `process.env.KHY_*` checks. Byte-identical by construction
 // (offDisables kind + PRE.always) — see capabilityMatrix/descriptors.js.
-const { getCapabilityMatrix } = require('./capabilityMatrix');
-const { SEAMS: CAP_SEAMS } = require('./capabilityMatrix/seams');
+
 // Schema validation for builtin-source tools (registry-source tools carry their
 // own .validate()). `_baseTool` is a leaf module (no cycle with toolCalling).
-const { validateParams } = require('../tools/_baseTool');
 // 工具结果结构化归一(leaf,无环):MCP 工具 handler 返回原始协议形
 // `{content:[...], isError}`(无 success、content 是数组)。executeTool 成功路径原样透出会让
 // 直连消费者把成功 MCP 调用误判为失败。用 canonical normalizeToolResult 归一(单一真源,零方言分歧)。
-const { normalizeToolResult, _isMCPCallToolResult } = require('../tools/_toolResultNormalizer');
+
 // flag 中央注册表:门控 KHY_MCP_RESULT_NORMALIZE(默认开)从声明式真源解析,不再 inline `_off`。
 const flagRegistry = require('./flagRegistry');
 // App-launch pure leaves (fail-soft: a missing bundled copy must never crash the
@@ -56,26 +66,62 @@ const flagRegistry = require('./flagRegistry');
 //     (gate KHY_APP_PATHS_REGISTRY) — fixes "installed app not found" spinning.
 //   - launchOutcome: honest "已启动" wording on a clean spawn
 //     (gate KHY_LAUNCH_TRUST_SPAWN) — fixes the alarming "未验证" phrasing.
-let _winAppPaths; try { _winAppPaths = require('./winAppPaths'); } catch { _winAppPaths = null; }
-let _launchOutcome; try { _launchOutcome = require('./launchOutcome'); } catch { _launchOutcome = null; }
+let _winAppPaths;
+try {
+  _winAppPaths = require('./winAppPaths');
+} catch {
+  _winAppPaths = null;
+}
+let _launchOutcome;
+try {
+  _launchOutcome = require('./launchOutcome');
+} catch {
+  _launchOutcome = null;
+}
+
+// ── Internal argument keys (must pass through schema filter) ────────────
+// The execution engine injects these context params into every tool call.
+// They are not part of the tool's public schema but must not be stripped.
+const _INTERNAL_ARG_KEYS = [
+  'cancel_event',
+  'event_callback',
+  'permission_owner',
+  'permission_source',
+  'parent_turn_id',
+];
 
 // ── Per-tool capability policy ────────────────────────────────────
 let _toolPolicyCache = null;
 let _toolPolicyCacheMtime = 0;
 
 function _loadToolPolicy() {
-  const home = String(process.env.HOME || process.env.USERPROFILE || '').trim();
-  const policyPath = process.env.KHY_CAPABILITY_POLICY_FILE
-    || (home ? path.join(home, '.khyquant', 'capability-policy.json') : '');
-  if (!policyPath) return null;
+  // Portable-aware default; env override stays highest-priority.
+  let defaultPolicyPath = '';
+  try {
+    defaultPolicyPath = path.join(
+      require('./../utils/dataHome').getAppHome(),
+      'capability-policy.json'
+    );
+  } catch {
+    const home = String(process.env.HOME || process.env.USERPROFILE || '').trim();
+    defaultPolicyPath = home ? path.join(home, '.khyquant', 'capability-policy.json') : '';
+  }
+  const policyPath = process.env.KHY_CAPABILITY_POLICY_FILE || defaultPolicyPath;
+  if (!policyPath) {
+    return null;
+  }
   try {
     const st = fs.statSync(policyPath);
-    if (_toolPolicyCache && st.mtimeMs === _toolPolicyCacheMtime) return _toolPolicyCache;
+    if (_toolPolicyCache && st.mtimeMs === _toolPolicyCacheMtime) {
+      return _toolPolicyCache;
+    }
     const raw = JSON.parse(fs.readFileSync(policyPath, 'utf-8'));
     _toolPolicyCache = raw;
     _toolPolicyCacheMtime = st.mtimeMs;
     return raw;
-  } catch { return _toolPolicyCache || null; }
+  } catch {
+    return _toolPolicyCache || null;
+  }
 }
 
 /**
@@ -101,34 +147,42 @@ function _latticeLiveness(toolName, blockReason) {
 }
 
 function _checkToolPolicy(normalizedName, originalName) {
-  if (process.env.KHY_TOOL_POLICY === 'false') return null;
+  if (process.env.KHY_TOOL_POLICY === 'false') {
+    return null;
+  }
   const policy = _loadToolPolicy();
-  if (!policy) return null;
-  const names = [normalizedName, originalName].filter(Boolean).map(n => n.toLowerCase());
+  if (!policy) {
+    return null;
+  }
+  const names = [normalizedName, originalName].filter(Boolean).map((n) => n.toLowerCase());
 
   // Blocklist check
   if (Array.isArray(policy.blockedTools) && policy.blockedTools.length > 0) {
-    const blocked = policy.blockedTools.map(t => t.toLowerCase());
+    const blocked = policy.blockedTools.map((t) => t.toLowerCase());
     for (const name of names) {
       if (blocked.includes(name)) {
         // Liveness (§4.D): even an explicit blocklist may not prune an escape
         // action, or A(s) could be emptied. Floor actions are suppressed here.
-        return _latticeLiveness(originalName || normalizedName,
-          `Tool "${originalName || normalizedName}" is blocked by capability policy (blockedTools).`);
+        return _latticeLiveness(
+          originalName || normalizedName,
+          `Tool "${originalName || normalizedName}" is blocked by capability policy (blockedTools).`
+        );
       }
     }
   }
 
   // Allowlist check (if set, only listed tools are permitted)
   if (Array.isArray(policy.allowedTools) && policy.allowedTools.length > 0) {
-    const allowed = policy.allowedTools.map(t => t.toLowerCase());
-    const isAllowed = names.some(name => allowed.includes(name));
+    const allowed = policy.allowedTools.map((t) => t.toLowerCase());
+    const isAllowed = names.some((name) => allowed.includes(name));
     if (!isAllowed) {
       // Liveness (§4.D, Π_C): an allowlist may never prune an escape action
       // (ask_user/abort), or A(s) could be emptied and the agent wedged. Let the
       // constraint lattice suppress the block for a floor action.
-      return _latticeLiveness(originalName || normalizedName,
-        `Tool "${originalName || normalizedName}" is not in the capability policy allowlist (allowedTools).`);
+      return _latticeLiveness(
+        originalName || normalizedName,
+        `Tool "${originalName || normalizedName}" is not in the capability policy allowlist (allowedTools).`
+      );
     }
   }
 
@@ -147,32 +201,40 @@ function _checkToolPolicy(normalizedName, originalName) {
  * @returns {string|null} block reason, or null if allowed
  */
 function _checkActiveSkillPolicy(normalizedName, originalName) {
-  if (process.env.KHY_TOOL_POLICY === 'false') return null;
+  if (process.env.KHY_TOOL_POLICY === 'false') {
+    return null;
+  }
   let active = null;
   try {
     active = require('./activeSkillContext').getActiveSkill();
-  } catch { return null; }
+  } catch {
+    return null;
+  }
   if (!active || !Array.isArray(active.allowedTools) || active.allowedTools.length === 0) {
     return null;
   }
-  const allowed = active.allowedTools.map(t => String(t).toLowerCase());
-  const names = [normalizedName, originalName].filter(Boolean).map(n => n.toLowerCase());
-  const isAllowed = names.some(name => allowed.includes(name));
+  const allowed = active.allowedTools.map((t) => String(t).toLowerCase());
+  const names = [normalizedName, originalName].filter(Boolean).map((n) => n.toLowerCase());
+  const isAllowed = names.some((name) => allowed.includes(name));
   if (!isAllowed) {
     // Liveness (§4.D): the escape floor (ask_user/abort) survives any skill
     // whitelist too, so A(s) is never emptied by a restrictive active skill.
-    return _latticeLiveness(originalName || normalizedName,
-      `Tool "${originalName || normalizedName}" is not in the active skill "${active.name}" allowed-tools whitelist.`);
+    return _latticeLiveness(
+      originalName || normalizedName,
+      `Tool "${originalName || normalizedName}" is not in the active skill "${active.name}" allowed-tools whitelist.`
+    );
   }
   return null;
 }
 
 let _chalk;
-const chalk = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const chalk = () => (_chalk ??= require('chalk').default || require('chalk'));
 
 // Expand ~ and ~user in file paths to absolute paths
 function expandPath(p) {
-  if (!p || typeof p !== 'string') return p;
+  if (!p || typeof p !== 'string') {
+    return p;
+  }
   if (p.startsWith('~/') || p === '~') {
     return path.join(os.homedir(), p.slice(1));
   }
@@ -180,56 +242,76 @@ function expandPath(p) {
 }
 
 function _trimWrappingQuotes(value) {
-  return String(value || '').trim().replace(/^['"`]+|['"`]+$/g, '').trim();
+  return String(value || '')
+    .trim()
+    .replace(/^['"`]+|['"`]+$/g, '')
+    .trim();
 }
 
 function _looksLikeFilesystemTarget(raw = '') {
   const text = String(raw || '').trim();
-  if (!text) return false;
-  return text.startsWith('~/')
-    || text.startsWith('./')
-    || text.startsWith('../')
-    || text.startsWith('.\\')
-    || text.startsWith('..\\')
-    || text.startsWith('/')
-    || text.startsWith('\\')
-    || /^[A-Za-z]:[\\/]/.test(text)
-    || /\.[A-Za-z0-9]{1,10}$/.test(text);
+  if (!text) {
+    return false;
+  }
+  return (
+    text.startsWith('~/') ||
+    text.startsWith('./') ||
+    text.startsWith('../') ||
+    text.startsWith('.\\') ||
+    text.startsWith('..\\') ||
+    text.startsWith('/') ||
+    text.startsWith('\\') ||
+    /^[A-Za-z]:[\\/]/.test(text) ||
+    /\.[A-Za-z0-9]{1,10}$/.test(text)
+  );
 }
 
 function _resolveExistingFilesystemTarget(input = '') {
   const normalizedInput = rewriteWindowsDesktopPath(_trimWrappingQuotes(input));
-  if (!normalizedInput || !_looksLikeFilesystemTarget(normalizedInput)) return '';
+  if (!normalizedInput || !_looksLikeFilesystemTarget(normalizedInput)) {
+    return '';
+  }
 
   const cwd = process.env.KHYQUANT_CWD || process.cwd();
   const candidates = [];
   const pushCandidate = (value) => {
     const candidate = String(value || '').trim();
-    if (!candidate) return;
-    if (!candidates.includes(candidate)) candidates.push(candidate);
+    if (!candidate) {
+      return;
+    }
+    if (!candidates.includes(candidate)) {
+      candidates.push(candidate);
+    }
   };
 
   const expandedRaw = expandPath(normalizedInput);
   pushCandidate(expandedRaw);
 
-  const absoluteLike = path.isAbsolute(expandedRaw)
-    || /^[A-Za-z]:[\\/]/.test(expandedRaw)
-    || /^\\\\/.test(expandedRaw);
+  const absoluteLike =
+    path.isAbsolute(expandedRaw) ||
+    /^[A-Za-z]:[\\/]/.test(expandedRaw) ||
+    /^\\\\/.test(expandedRaw);
   if (!absoluteLike) {
     pushCandidate(path.resolve(cwd, expandedRaw));
   }
 
   for (const candidate of candidates) {
     try {
-      if (fs.existsSync(candidate)) return candidate;
-    } catch { /* ignore invalid filesystem candidates */ }
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    } catch {
+      /* ignore invalid filesystem candidates */
+    }
   }
   return '';
 }
 
 async function _openFilesystemTarget(targetPath = '') {
   const absPath = String(targetPath || '').trim();
-  if (!absPath) return { success: false, error: 'Target path is required' };
+  if (!absPath) {
+    return { success: false, error: 'Target path is required' };
+  }
 
   const launchers = [];
   if (process.platform === 'win32') {
@@ -292,7 +374,9 @@ async function _openFilesystemTarget(targetPath = '') {
 }
 
 function _normalizePathLikeParams(params = {}) {
-  if (!params || typeof params !== 'object') return params;
+  if (!params || typeof params !== 'object') {
+    return params;
+  }
   const out = { ...params };
   const pathLikeKeys = [
     'path',
@@ -316,11 +400,23 @@ function _normalizePathLikeParams(params = {}) {
 // 应用缓存态私有于叶子。宿主 open_app 处理器、_openFilesystemTarget、module.exports 按
 // **同名 re-import** 接回,调用点字节不变。刻意非纯零 IO 叶子(fs/spawn/懒加载)。
 const {
-  APP_ALIAS_MAP, _normalizeAppQuery, _buildAppCandidates, _matchInstalledApp,
-  hasInstalledAppMatch, _primeInstalledAppsForTest, _resolveOpenDefaultTarget,
-  _hasGraphicalSession, _getInstalledApps, _commandExists, _spawnDetached,
-  _inferWindowsImageName, _getWindowsProcessPids, _verifyWindowsLaunch,
-  _formatLaunchOutput, _splitExecLine, _launchLinuxDesktopEntry,
+  APP_ALIAS_MAP,
+  _normalizeAppQuery,
+  _buildAppCandidates,
+  _matchInstalledApp,
+  hasInstalledAppMatch,
+  _primeInstalledAppsForTest,
+  _resolveOpenDefaultTarget,
+  _hasGraphicalSession,
+  _getInstalledApps,
+  _commandExists,
+  _spawnDetached,
+  _inferWindowsImageName,
+  _getWindowsProcessPids,
+  _verifyWindowsLaunch,
+  _formatLaunchOutput,
+  _splitExecLine,
+  _launchLinuxDesktopEntry,
 } = require('./toolCallingAppLaunch');
 
 // ── 内置工具定义与风险表(已抽取为叶子 ./toolCallingBuiltins.js)──────────────
@@ -339,15 +435,33 @@ const { PERMISSIONS_FILE, RISK_LEVELS, BUILTIN_TOOLS } = require('./toolCallingB
 // setReadlineProvider DI)。宿主 executeTool 与 module.exports 按**同名 re-import** 接回,调用点
 // 字节不变。
 const {
-  PERMISSION_MODES, permissionModeToProfile, setPermissionMode, getPermissionMode,
-  enableDangerousMode, acknowledgeDangerousMode, isDangerousMode, disableDangerousMode,
-  isApproved, approveTool, getToolRisk, formatToolCall, _decisionFromControl,
-  _resolveToolBehavior, requestPermission, _ACCEPT_EDITS_TOOLS,
-  setPreflightContext, clearPreflightContext, setReadlineProvider, getReadlineProvider,
+  PERMISSION_MODES,
+  permissionModeToProfile,
+  setPermissionMode,
+  getPermissionMode,
+  enableDangerousMode,
+  acknowledgeDangerousMode,
+  isDangerousMode,
+  disableDangerousMode,
+  isApproved,
+  approveTool,
+  getToolRisk,
+  formatToolCall,
+  _decisionFromControl,
+  _resolveToolBehavior,
+  requestPermission,
+  _ACCEPT_EDITS_TOOLS,
+  setPreflightContext,
+  clearPreflightContext,
+  setReadlineProvider,
+  getReadlineProvider,
   setPermissionResolvers,
 } = require('./toolCallingPermissions');
 // 注入权限链所需的两个宿主解析器(无环 host→leaf;函数声明已提升,加载时可引用)。
-setPermissionResolvers({ resolveToolDescriptor: _resolveToolDescriptor, findBuiltinTool: _findBuiltinTool });
+setPermissionResolvers({
+  resolveToolDescriptor: _resolveToolDescriptor,
+  findBuiltinTool: _findBuiltinTool,
+});
 let _mcpServers = [];
 let _allTools = [...BUILTIN_TOOLS];
 
@@ -356,20 +470,32 @@ try {
   const chainWasm = require('./chainWasm');
   _allTools.push({
     name: 'chain_run',
-    description: 'Execute a LangChain-compatible chain by name. Available chains: echo, template, react-parse.',
+    description:
+      'Execute a LangChain-compatible chain by name. Available chains: echo, template, react-parse.',
     category: 'ai',
     risk: 'low',
     parameters: {
-      chain: { type: 'string', description: 'Chain name (echo, template, react-parse)', required: true },
+      chain: {
+        type: 'string',
+        description: 'Chain name (echo, template, react-parse)',
+        required: true,
+      },
       input: { type: 'string', description: 'Input text for the chain', required: true },
-      template: { type: 'string', description: 'Prompt template with {key} placeholders (for template chain)' },
+      template: {
+        type: 'string',
+        description: 'Prompt template with {key} placeholders (for template chain)',
+      },
       keys: { type: 'array', description: 'Placeholder key names (for template chain)' },
       values: { type: 'array', description: 'Placeholder values (for template chain)' },
     },
     handler: async (params) => {
       const { chain, input, template, keys, values } = params || {};
-      if (!chain) return { error: 'Missing chain name' };
-      if (!input) return { error: 'Missing input' };
+      if (!chain) {
+        return { error: 'Missing chain name' };
+      }
+      if (!input) {
+        return { error: 'Missing input' };
+      }
       if (chain === 'echo') {
         const tmpl = template || 'echo: {input}';
         return { output: chainWasm.renderTemplate(tmpl, ['input'], [input]) };
@@ -386,7 +512,9 @@ try {
       return { error: `Unknown chain: ${chain}` };
     },
   });
-} catch { /* chainWasm not available */ }
+} catch {
+  /* chainWasm not available */
+}
 
 // ── Register local brain capabilities as tools (zero-cost, offline-capable) ──
 try {
@@ -394,41 +522,60 @@ try {
 
   _allTools.push({
     name: 'local_knowledge',
-    description: 'Query the offline knowledge base for unit conversions, HTTP status codes, programming cheat sheets (git/vim/docker/linux/npm/python/regex), common knowledge (provinces, speed of light, ASCII, port numbers, chmod), and regex patterns. Zero cost, no network needed.',
+    description:
+      'Query the offline knowledge base for unit conversions, HTTP status codes, programming cheat sheets (git/vim/docker/linux/npm/python/regex), common knowledge (provinces, speed of light, ASCII, port numbers, chmod), and regex patterns. Zero cost, no network needed.',
     category: 'local',
     risk: 'none',
     parameters: {
-      query: { type: 'string', description: 'The question or lookup query in Chinese or English', required: true },
+      query: {
+        type: 'string',
+        description: 'The question or lookup query in Chinese or English',
+        required: true,
+      },
     },
     handler: async (params) => {
       const query = String(params?.query || '').trim();
-      if (!query) return { error: 'Missing query' };
+      if (!query) {
+        return { error: 'Missing query' };
+      }
       const plan = _offlineKnowledge.detect(query);
       if (plan) {
         const result = _offlineKnowledge.execute(plan);
-        if (result) return { output: result, type: plan.type };
+        if (result) {
+          return { output: result, type: plan.type };
+        }
       }
-      return { error: `No offline knowledge found for: ${query}. Try rephrasing or use web_search instead.` };
+      return {
+        error: `No offline knowledge found for: ${query}. Try rephrasing or use web_search instead.`,
+      };
     },
   });
 
   _allTools.push({
     name: 'unit_convert',
-    description: 'Convert between units: length (mile/km/ft/m/inch/cm), weight (lb/kg/oz/g), temperature (Fahrenheit/Celsius), area (acre/hectare), volume (gallon/liter), data storage (TB/GB/MB/KB). Zero cost, no network needed.',
+    description:
+      'Convert between units: length (mile/km/ft/m/inch/cm), weight (lb/kg/oz/g), temperature (Fahrenheit/Celsius), area (acre/hectare), volume (gallon/liter), data storage (TB/GB/MB/KB). Zero cost, no network needed.',
     category: 'local',
     risk: 'none',
     parameters: {
-      query: { type: 'string', description: 'Conversion query, e.g. "1英里等于多少公里" or "100华氏度转摄氏"', required: true },
+      query: {
+        type: 'string',
+        description: 'Conversion query, e.g. "1英里等于多少公里" or "100华氏度转摄氏"',
+        required: true,
+      },
     },
     handler: async (params) => {
       const result = _offlineKnowledge.unitConvert(String(params?.query || ''));
-      return result ? { output: result } : { error: 'Could not parse conversion. Format: "<number> <unit> 等于多少 <target>"' };
+      return result
+        ? { output: result }
+        : { error: 'Could not parse conversion. Format: "<number> <unit> 等于多少 <target>"' };
     },
   });
 
   _allTools.push({
     name: 'translate_snippet',
-    description: 'Translate English text snippets to Chinese using a local 200-word dictionary. Suitable for rough translation of search results and error messages. No network needed.',
+    description:
+      'Translate English text snippets to Chinese using a local 200-word dictionary. Suitable for rough translation of search results and error messages. No network needed.',
     category: 'local',
     risk: 'none',
     parameters: {
@@ -439,7 +586,9 @@ try {
       return { output: result };
     },
   });
-} catch { /* offlineKnowledge not available */ }
+} catch {
+  /* offlineKnowledge not available */
+}
 
 // ── create_document tool — wraps docHelper.py text2docx ──────────
 try {
@@ -448,12 +597,21 @@ try {
   if (_createDocMod && typeof _createDocMod.execute === 'function') {
     _allTools.push({
       name: 'create_document',
-      description: 'Create a Word (.docx) document from text. Use for reports, articles, travel guides, etc. Accepts content (text with newlines for paragraphs), outputPath (e.g. ~/Desktop/report.docx), and optional title. Supports Chinese and English.',
+      description:
+        'Create a Word (.docx) document from text. Use for reports, articles, travel guides, etc. Accepts content (text with newlines for paragraphs), outputPath (e.g. ~/Desktop/report.docx), and optional title. Supports Chinese and English.',
       category: 'filesystem',
       risk: 'medium',
       parameters: {
-        content: { type: 'string', description: 'Document text content, newlines separate paragraphs', required: true },
-        outputPath: { type: 'string', description: 'Save path, e.g. ~/Desktop/南阳旅游.docx', required: true },
+        content: {
+          type: 'string',
+          description: 'Document text content, newlines separate paragraphs',
+          required: true,
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Save path, e.g. ~/Desktop/南阳旅游.docx',
+          required: true,
+        },
         title: { type: 'string', description: 'Optional document title', required: false },
       },
       handler: async (params) => {
@@ -461,14 +619,13 @@ try {
       },
     });
   }
-} catch { /* createDocument tool not available */ }
+} catch {
+  /* createDocument tool not available */
+}
 
 const _claudeCompatTools = getClaudeCompatToolList();
 
 // 收敛到 utils/normalizeAlnumKey 单一真源(逐字节委托,调用点不变)
-const _toolKey = require('../utils/normalizeAlnumKey');
-
-const _toolNameVariants = require('../utils/toolNameVariants');
 
 function _getToolRegistry() {
   try {
@@ -481,21 +638,27 @@ function _getToolRegistry() {
 function _findBuiltinTool(name) {
   const variants = _toolNameVariants(name);
   for (const variant of variants) {
-    const direct = _allTools.find(t => t.name === variant);
-    if (direct) return direct;
+    const direct = _allTools.find((t) => t.name === variant);
+    if (direct) {
+      return direct;
+    }
   }
   const keys = new Set(variants.map(_toolKey));
-  return _allTools.find(t => keys.has(_toolKey(t.name))) || null;
+  return _allTools.find((t) => keys.has(_toolKey(t.name))) || null;
 }
 
 function _findRegistryTool(name) {
   const registry = _getToolRegistry();
-  if (!registry) return null;
+  if (!registry) {
+    return null;
+  }
 
   const variants = _toolNameVariants(name);
   for (const variant of variants) {
     const direct = registry.get(variant);
-    if (direct) return direct;
+    if (direct) {
+      return direct;
+    }
   }
 
   let allTools;
@@ -504,12 +667,18 @@ function _findRegistryTool(name) {
   } catch {
     allTools = null;
   }
-  if (!allTools || typeof allTools.values !== 'function') return null;
+  if (!allTools || typeof allTools.values !== 'function') {
+    return null;
+  }
 
   const keys = new Set(variants.map(_toolKey));
   for (const tool of allTools.values()) {
-    if (!tool) continue;
-    if (keys.has(_toolKey(tool.name))) return tool;
+    if (!tool) {
+      continue;
+    }
+    if (keys.has(_toolKey(tool.name))) {
+      return tool;
+    }
     if (Array.isArray(tool.aliases) && tool.aliases.some((alias) => keys.has(_toolKey(alias)))) {
       return tool;
     }
@@ -519,10 +688,14 @@ function _findRegistryTool(name) {
 
 function _findCompatTool(name) {
   const key = _toolKey(name);
-  if (!key) return null;
-  return _claudeCompatTools.find((tool) => (
-    _toolKey(tool.name) === key || _toolKey(tool.canonical) === key
-  )) || null;
+  if (!key) {
+    return null;
+  }
+  return (
+    _claudeCompatTools.find(
+      (tool) => _toolKey(tool.name) === key || _toolKey(tool.canonical) === key
+    ) || null
+  );
 }
 
 function _resolveToolDescriptor(requestedName) {
@@ -594,7 +767,9 @@ function _buildDirectoryListing(baseDir, relPath = '.', recursive = false, maxEn
 
     entries.sort((a, b) => a.name.localeCompare(b.name));
     for (const entry of entries) {
-      if (out.length >= maxEntries) break;
+      if (out.length >= maxEntries) {
+        break;
+      }
       const rel = path.join(current.rel, entry.name);
       const abs = path.join(current.abs, entry.name);
       out.push({
@@ -674,23 +849,29 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
 
   if (compatCanonicalName === 'todoWrite') {
     const items = Array.isArray(normalizedParams.todos) ? normalizedParams.todos : [];
-    const normalized = items.map((item, index) => {
-      if (typeof item === 'string') {
-        return { id: `todo-${index + 1}`, content: item, status: 'pending' };
-      }
-      return {
-        id: item.id || `todo-${index + 1}`,
-        content: item.content || item.text || '',
-        status: item.status || (item.done ? 'completed' : 'pending'),
-        priority: item.priority || 'normal',
-      };
-    }).filter(t => t.content);
+    const normalized = items
+      .map((item, index) => {
+        if (typeof item === 'string') {
+          return { id: `todo-${index + 1}`, content: item, status: 'pending' };
+        }
+        return {
+          id: item.id || `todo-${index + 1}`,
+          content: item.content || item.text || '',
+          status: item.status || (item.done ? 'completed' : 'pending'),
+          priority: item.priority || 'normal',
+        };
+      })
+      .filter((t) => t.content);
 
     let todoPath = '';
-    const payload = JSON.stringify({
-      updatedAt: new Date().toISOString(),
-      todos: normalized,
-    }, null, 2);
+    const payload = JSON.stringify(
+      {
+        updatedAt: new Date().toISOString(),
+        todos: normalized,
+      },
+      null,
+      2
+    );
     // 候选目录经 SSOT(todoStateStorePaths)与看板读侧收敛,消除写/读 tmp 解析漂移
     // (写侧 getTmpDir vs 读侧 os.tmpdir)。门控关 → 内联今日清单(与 SSOT 输出一致,
     // 写侧本就用 getTmpDir),逐字节回退。
@@ -700,24 +881,63 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
       const store = require('./todoStateStorePaths');
       if (store.todoStateUnifyEnabled()) {
         candidateFiles = store.todoStateCandidateFiles({
-          homedir: os.homedir(), cwd, tmpdir: _getTmpDir(),
+          homedir: os.homedir(),
+          cwd,
+          tmpdir: _getTmpDir(),
         });
+        // Portable-aware app home candidate first (dedup: equals ~/.khyquant
+        // on legacy installs, so non-portable behavior is unchanged).
+        try {
+          const { getAppHome } = require('../utils/dataHome');
+          const appHome = getAppHome();
+          if (
+            Array.isArray(candidateFiles) &&
+            !candidateFiles.some((c) => c && c.dir === appHome)
+          ) {
+            candidateFiles = [
+              {
+                source: 'app_home',
+                dir: appHome,
+                file_path: path.join(appHome, 'todo_state.json'),
+              },
+              ...candidateFiles,
+            ];
+          }
+        } catch {
+          /* dataHome unavailable */
+        }
       } else {
         candidateFiles = null;
       }
-    } catch { candidateFiles = null; }
+    } catch {
+      candidateFiles = null;
+    }
     if (!candidateFiles) {
-      candidateFiles = [
+      const dirs = [
         path.join(os.homedir(), '.khyquant'),
         path.join(cwd, '.khyquant'),
         path.join(_getTmpDir(), 'khyquant'),
-      ].map((dir) => ({ dir, file_path: path.join(dir, 'todo_state.json') }));
+      ];
+      // Portable-aware app home first (dedup: equals ~/.khyquant on legacy
+      // installs, so non-portable behavior is unchanged).
+      try {
+        const { getAppHome } = require('../utils/dataHome');
+        const appHome = getAppHome();
+        if (!dirs.includes(appHome)) {
+          dirs.unshift(appHome);
+        }
+      } catch {
+        /* dataHome unavailable */
+      }
+      candidateFiles = dirs.map((dir) => ({ dir, file_path: path.join(dir, 'todo_state.json') }));
     }
 
     let lastWriteErr = null;
     for (const cand of candidateFiles) {
       try {
-        if (!fs.existsSync(cand.dir)) fs.mkdirSync(cand.dir, { recursive: true });
+        if (!fs.existsSync(cand.dir)) {
+          fs.mkdirSync(cand.dir, { recursive: true });
+        }
         fs.writeFileSync(cand.file_path, payload, 'utf-8');
         todoPath = cand.file_path;
         lastWriteErr = null;
@@ -734,8 +954,11 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
       // Push todos to the HUD via the neutral UI port, no reverse require to
       // cli/hudRenderer (DESIGN-ARCH-021, Batch 3). Silent no-op headless.
       require('./compactionUiPort').emitTodoUpdate(
-        normalized.map(t => ({ text: t.content, done: t.status === 'completed' })));
-    } catch { /* best effort */ }
+        normalized.map((t) => ({ text: t.content, done: t.status === 'completed' }))
+      );
+    } catch {
+      /* best effort */
+    }
 
     return {
       success: true,
@@ -764,11 +987,15 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
       }
     }
 
-    const response = await fetchWithSsrfGuard((signal) => fetchFn(url, {
-      method: 'GET',
-      signal,
-      headers: { 'user-agent': 'khy-compat-webfetch/1.0' },
-    }), { url, timeoutMs, operation: 'webFetch' });
+    const response = await fetchWithSsrfGuard(
+      (signal) =>
+        fetchFn(url, {
+          method: 'GET',
+          signal,
+          headers: { 'user-agent': 'khy-compat-webfetch/1.0' },
+        }),
+      { url, timeoutMs, operation: 'webFetch' }
+    );
 
     const contentType = response.headers?.get ? response.headers.get('content-type') : '';
     // Decode by the server's declared charset (GB2312/GBK/big5/… — Chinese news
@@ -791,23 +1018,35 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
 
   if (compatCanonicalName === 'spawnAgent') {
     const prompt = String(normalizedParams.prompt || '').trim();
-    if (!prompt) return { success: false, error: 'spawn_agent requires message/prompt' };
+    if (!prompt) {
+      return { success: false, error: 'spawn_agent requires message/prompt' };
+    }
     const { spawnWorker } = require('../coordinator/workerAgent');
     const role = normalizedParams.role || 'general';
     let preferredAdapter = String(
-      normalizedParams.preferred_adapter
-      || normalizedParams.adapter
-      || normalizedParams.provider
-      || ''
-    ).trim().toLowerCase();
-    if (!preferredAdapter && String(role).toLowerCase() === 'codex') preferredAdapter = 'codex';
-    if (!preferredAdapter && String(role).toLowerCase() === 'claude') preferredAdapter = 'claude';
+      normalizedParams.preferred_adapter ||
+        normalizedParams.adapter ||
+        normalizedParams.provider ||
+        ''
+    )
+      .trim()
+      .toLowerCase();
+    if (!preferredAdapter && String(role).toLowerCase() === 'codex') {
+      preferredAdapter = 'codex';
+    }
+    if (!preferredAdapter && String(role).toLowerCase() === 'claude') {
+      preferredAdapter = 'claude';
+    }
     const preferredModel = String(
-      normalizedParams.preferred_model
-      || normalizedParams.model
-      || ''
+      normalizedParams.preferred_model || normalizedParams.model || ''
     ).trim();
-    const timeoutMs = Math.max(1000, Math.min(Number(normalizedParams.timeout_ms || normalizedParams.timeout * 1000) || 120000, 3600000));
+    const timeoutMs = Math.max(
+      1000,
+      Math.min(
+        Number(normalizedParams.timeout_ms || normalizedParams.timeout * 1000) || 120000,
+        3600000
+      )
+    );
     const worker = await spawnWorker(prompt, {
       role,
       timeout: timeoutMs,
@@ -828,27 +1067,40 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
   if (compatCanonicalName === 'sendInput') {
     const agentId = String(normalizedParams.agent_id || '').trim();
     const message = String(normalizedParams.message || '').trim();
-    if (!agentId) return { success: false, error: 'send_input requires target/agent id' };
-    if (!message) return { success: false, error: 'send_input requires message' };
+    if (!agentId) {
+      return { success: false, error: 'send_input requires target/agent id' };
+    }
+    if (!message) {
+      return { success: false, error: 'send_input requires message' };
+    }
     const { sendMessage, getWorkerStatus } = require('../coordinator/workerAgent');
     const worker = getWorkerStatus(agentId);
-    if (!worker) return { success: false, error: `Agent ${agentId} not found` };
+    if (!worker) {
+      return { success: false, error: `Agent ${agentId} not found` };
+    }
     const ok = sendMessage(agentId, message);
     return {
       success: ok,
       agent_id: agentId,
       status: worker.status,
-      message: ok ? `Message queued for ${agentId}` : `Agent ${agentId} is ${worker.status}, cannot receive message`,
+      message: ok
+        ? `Message queued for ${agentId}`
+        : `Agent ${agentId} is ${worker.status}, cannot receive message`,
     };
   }
 
   if (compatCanonicalName === 'waitAgent') {
     const targets = Array.isArray(normalizedParams.targets)
-      ? normalizedParams.targets.map(v => String(v).trim()).filter(Boolean)
+      ? normalizedParams.targets.map((v) => String(v).trim()).filter(Boolean)
       : [];
-    if (targets.length === 0) return { success: false, error: 'wait_agent requires targets[]' };
+    if (targets.length === 0) {
+      return { success: false, error: 'wait_agent requires targets[]' };
+    }
 
-    const idleTimeoutMs = Math.max(1000, Math.min(Number(normalizedParams.timeout_ms) || 30000, 3600000));
+    const idleTimeoutMs = Math.max(
+      1000,
+      Math.min(Number(normalizedParams.timeout_ms) || 30000, 3600000)
+    );
     const pollMs = Math.max(100, Math.min(Number(normalizedParams.poll_ms) || 250, 2000));
     const terminal = new Set(['completed', 'error', 'stopped']);
     const { getWorkerStatus } = require('../coordinator/workerAgent');
@@ -856,12 +1108,14 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
 
     // Activity-based idle timeout: reset when any worker status changes (Rule 3)
     let lastActivityAt = Date.now();
-    const lastStatuses = new Map(targets.map(id => [id, null]));
+    const lastStatuses = new Map(targets.map((id) => [id, null]));
 
-    while ((Date.now() - lastActivityAt) < idleTimeoutMs) {
+    while (Date.now() - lastActivityAt < idleTimeoutMs) {
       for (const id of targets) {
         const worker = getWorkerStatus(id);
-        if (!worker) continue;
+        if (!worker) {
+          continue;
+        }
         if (terminal.has(worker.status)) {
           return {
             success: true,
@@ -878,7 +1132,7 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
           lastActivityAt = Date.now();
         }
       }
-      await new Promise(resolve => setTimeout(resolve, pollMs));
+      await new Promise((resolve) => setTimeout(resolve, pollMs));
     }
 
     return {
@@ -892,10 +1146,14 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
 
   if (compatCanonicalName === 'closeAgent') {
     const agentId = String(normalizedParams.agent_id || '').trim();
-    if (!agentId) return { success: false, error: 'close_agent requires target/agent id' };
+    if (!agentId) {
+      return { success: false, error: 'close_agent requires target/agent id' };
+    }
     const { shutdownWorker, getWorkerStatus } = require('../coordinator/workerAgent');
     const worker = getWorkerStatus(agentId);
-    if (!worker) return { success: false, error: `Agent ${agentId} not found` };
+    if (!worker) {
+      return { success: false, error: `Agent ${agentId} not found` };
+    }
     const previousStatus = worker.status;
     const closed = shutdownWorker(agentId);
     const latest = getWorkerStatus(agentId);
@@ -910,18 +1168,23 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
 
   if (compatCanonicalName === 'resumeAgent') {
     const agentId = String(normalizedParams.agent_id || '').trim();
-    if (!agentId) return { success: false, error: 'resume_agent requires id' };
+    if (!agentId) {
+      return { success: false, error: 'resume_agent requires id' };
+    }
     const { getWorkerStatus } = require('../coordinator/workerAgent');
     const worker = getWorkerStatus(agentId);
-    if (!worker) return { success: false, error: `Agent ${agentId} not found` };
+    if (!worker) {
+      return { success: false, error: `Agent ${agentId} not found` };
+    }
     return {
       success: true,
       agent_id: agentId,
       status: worker.status,
       resumed: worker.status === 'running' || worker.status === 'pending',
-      message: worker.status === 'running' || worker.status === 'pending'
-        ? `Agent ${agentId} is active`
-        : `Agent ${agentId} is ${worker.status}; resume is best-effort only`,
+      message:
+        worker.status === 'running' || worker.status === 'pending'
+          ? `Agent ${agentId} is active`
+          : `Agent ${agentId} is ${worker.status}; resume is best-effort only`,
     };
   }
 
@@ -931,7 +1194,7 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
       return { success: false, error: 'SlashCommand requires command' };
     }
     const args = Array.isArray(normalizedParams.args)
-      ? normalizedParams.args.map(v => String(v)).filter(Boolean)
+      ? normalizedParams.args.map((v) => String(v)).filter(Boolean)
       : [];
     const slash = raw.startsWith('/') ? raw : `/${raw}`;
     const commandLine = [slash, ...args].join(' ').trim();
@@ -962,19 +1225,25 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
         // cli/ai (DESIGN-ARCH-021, Batch 3). Unregistered → structured no_ai_session.
         if (lower === '/status') {
           const session = require('./aiSessionPort').getAiSession();
-          if (!session) return { success: false, command: commandLine, reason: 'no_ai_session' };
+          if (!session) {
+            return { success: false, command: commandLine, reason: 'no_ai_session' };
+          }
           await session.handleAiStatus();
           return { success: true, command: commandLine, routeResult: 'ai-status' };
         }
         if (lower === '/config') {
           const session = require('./aiSessionPort').getAiSession();
-          if (!session) return { success: false, command: commandLine, reason: 'no_ai_session' };
+          if (!session) {
+            return { success: false, command: commandLine, reason: 'no_ai_session' };
+          }
           await session.handleAiConfig();
           return { success: true, command: commandLine, routeResult: 'ai-config' };
         }
         if (lower === '/new' || lower === '/clear') {
           const session = require('./aiSessionPort').getAiSession();
-          if (session && typeof session.clearHistory === 'function') session.clearHistory();
+          if (session && typeof session.clearHistory === 'function') {
+            session.clearHistory();
+          }
           return { success: true, command: commandLine, routeResult: 'history-cleared' };
         }
         if (lower === '/tools') {
@@ -1009,39 +1278,57 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
 
   if (compatCanonicalName === 'notebookRead') {
     const pathArg = normalizedParams.path || normalizedParams.file_path;
-    if (!pathArg) return { success: false, error: 'NotebookRead requires path' };
+    if (!pathArg) {
+      return { success: false, error: 'NotebookRead requires path' };
+    }
     const readTool = _findRegistryTool('readFile') || _findBuiltinTool('read_file');
-    if (!readTool) return { success: false, error: 'readFile tool is unavailable' };
-    return readTool.execute({ path: pathArg, offset: normalizedParams.offset, limit: normalizedParams.limit }, {});
+    if (!readTool) {
+      return { success: false, error: 'readFile tool is unavailable' };
+    }
+    return readTool.execute(
+      { path: pathArg, offset: normalizedParams.offset, limit: normalizedParams.limit },
+      {}
+    );
   }
 
   if (compatCanonicalName === 'notebookEdit') {
     const pathArg = normalizedParams.file_path || normalizedParams.path;
-    if (!pathArg) return { success: false, error: 'NotebookEdit requires path/file_path' };
+    if (!pathArg) {
+      return { success: false, error: 'NotebookEdit requires path/file_path' };
+    }
 
     if (typeof normalizedParams.old_string === 'string') {
       const editTool = _findRegistryTool('editFile') || _findBuiltinTool('editFile');
-      if (!editTool) return { success: false, error: 'editFile tool is unavailable' };
-      return editTool.execute({
-        file_path: pathArg,
-        old_string: normalizedParams.old_string,
-        new_string: normalizedParams.new_string || '',
-        replace_all: Boolean(normalizedParams.replace_all),
-      }, {});
+      if (!editTool) {
+        return { success: false, error: 'editFile tool is unavailable' };
+      }
+      return editTool.execute(
+        {
+          file_path: pathArg,
+          old_string: normalizedParams.old_string,
+          new_string: normalizedParams.new_string || '',
+          replace_all: Boolean(normalizedParams.replace_all),
+        },
+        {}
+      );
     }
 
     if (typeof normalizedParams.content === 'string') {
       const writeTool = _findRegistryTool('writeFile') || _findBuiltinTool('write_file');
-      if (!writeTool) return { success: false, error: 'writeFile tool is unavailable' };
+      if (!writeTool) {
+        return { success: false, error: 'writeFile tool is unavailable' };
+      }
       return writeTool.execute({ path: pathArg, content: normalizedParams.content }, {});
     }
 
-    return { success: false, error: 'NotebookEdit requires either old_string/new_string or content' };
+    return {
+      success: false,
+      error: 'NotebookEdit requires either old_string/new_string or content',
+    };
   }
 
   return { success: false, error: `Unsupported compatibility tool: ${compatCanonicalName}` };
 }
-
 
 /**
  * [DESIGN-ARCH-029] Tool → resilience intent-tree head map.
@@ -1070,11 +1357,17 @@ const _SELF_HEAL_INTENT_BY_TOOL = Object.freeze({
  */
 async function _maybeRouteSelfHeal(toolName, params, traceContext) {
   // byte-identical to `KHY_SELF_HEAL === 'off'` (offDisables: enabled ⇔ raw!=='off').
-  if (!getCapabilityMatrix().isEnabledAt(CAP_SEAMS.POST_TOOL_GOVERNANCE, 'selfHeal', {})) return { handled: false };
+  if (!getCapabilityMatrix().isEnabledAt(CAP_SEAMS.POST_TOOL_GOVERNANCE, 'selfHeal', {})) {
+    return { handled: false };
+  }
   // Re-entry guard: makeToolRunner stamps resiliencePlan on the trace.
-  if (traceContext && traceContext.resiliencePlan) return { handled: false };
+  if (traceContext && traceContext.resiliencePlan) {
+    return { handled: false };
+  }
   const intent = _SELF_HEAL_INTENT_BY_TOOL[toolName];
-  if (!intent) return { handled: false };
+  if (!intent) {
+    return { handled: false };
+  }
   try {
     const { makeToolRunner } = require('./resilience');
     const { FallbackTreeWithHeal } = require('./selfHeal');
@@ -1084,7 +1377,9 @@ async function _maybeRouteSelfHeal(toolName, params, traceContext) {
         if (typeof traceContext?.onActivity === 'function') {
           traceContext.onActivity({ type: 'self-heal-degrade', text });
         }
-      } catch { /* degrade notification is best-effort */ }
+      } catch {
+        /* degrade notification is best-effort */
+      }
     };
     const heal = new FallbackTreeWithHeal({ runner, onDegrade });
     const outcome = await heal.run(intent, {
@@ -1101,8 +1396,8 @@ async function _maybeRouteSelfHeal(toolName, params, traceContext) {
       handled: true,
       result: {
         success: false,
-        error: (outcome && outcome.next_action_suggestion)
-          || '自愈与降级路径已穷尽，未取得成功结果。',
+        error:
+          (outcome && outcome.next_action_suggestion) || '自愈与降级路径已穷尽，未取得成功结果。',
         denied: false,
         _selfHealReport: outcome || null,
       },
@@ -1120,6 +1415,153 @@ async function _maybeRouteSelfHeal(toolName, params, traceContext) {
  * [AI-弱模型·别绕过] 唯一工具执行漏斗。以下是有序 fail-closed 权限链;勿早 return、勿加旁路。
  * 要加能力→加在链末尾且默认 fail-closed。判定写成纯叶子(照 goalStopGate.js)。
  */
+// [C2] Lightweight per-tool execution metrics recorded at the single funnel.
+// Gated by KHY_TOOL_METRICS (default on; 0/false/off/no disables → the gate
+// check is the ONLY cost, no size computation). Strictly non-critical: any
+// failure is swallowed and can never affect the tool result path.
+function _recordToolMetrics(toolName, success, elapsedMs, result, errorClass) {
+  try {
+    const aggregator = require('./toolMetricsAggregator');
+    if (!aggregator.isMetricsEnabled(process.env)) {
+      return;
+    }
+    let resultSizeChars = 0;
+    if (result && typeof result.content === 'string') {
+      resultSizeChars = result.content.length;
+    } else if (result && typeof result === 'object') {
+      try {
+        resultSizeChars = JSON.stringify(result).length;
+      } catch {
+        resultSizeChars = 0;
+      }
+    }
+    aggregator.record({
+      toolName,
+      success,
+      elapsedMs,
+      resultSizeChars,
+      errorClass: success
+        ? undefined
+        : errorClass || (result && (result.errorType || result.code)) || 'tool_error',
+    });
+  } catch {
+    /* metrics are non-critical */
+  }
+}
+
+// ── Small-model effect metrics (task #7, stage 5) ──────────────────────────────
+// Records {model, toolName} effect aggregates via toolExecutionMetrics and
+// emits a 'small_model_param_coerce' diagnostic when a correction trail is
+// attached to the result (success `_paramCorrections` or validation-failure
+// `_paramCorrection`). Lazy require + independent try/catch: strictly
+// fail-soft, never touches the tool result path. Enable gate lives inside
+// the metrics module (KHY_TOOL_METRICS, default on). Token counts are not
+// observable at the tool funnel, so they are passed as undefined — never
+// fabricated.
+function _recordExecutionEffect({ toolName, traceContext, success, elapsedMs, result, errorType }) {
+  try {
+    const metrics = require('./toolExecutionMetrics');
+    const trail = (result && (result._paramCorrections || result._paramCorrection)) || null;
+    const corrected = !!(trail && Array.isArray(trail.corrections) && trail.corrections.length);
+    const pinned = String(traceContext?.modelTier || '')
+      .trim()
+      .toUpperCase();
+    metrics.record({
+      model: traceContext?.model || '',
+      tier: ['T0', 'T1', 'T2', 'T3'].includes(pinned) ? pinned : undefined,
+      toolName,
+      success,
+      errorType: success
+        ? undefined
+        : errorType || (result && (result.errorType || result.code)) || 'tool_error',
+      latencyMs: elapsedMs,
+      inputTokens: undefined,
+      outputTokens: undefined,
+      corrected,
+      escalated: false,
+    });
+    if (corrected) {
+      require('./diagnosticEvents').diagnostics.emitSmallModelParamCoerce({
+        // 动作+目标+进度: 参数纠错完成 <tool> (n处修正, 第m次尝试)
+        message: `参数纠错完成: ${toolName} (${trail.corrections.length}处修正, 第${trail.attempts || 1}次尝试)`,
+        toolName,
+        attempts: trail.attempts || null,
+        correctionCount: trail.corrections.length,
+        tier: trail.tier || null,
+        success,
+      });
+    }
+  } catch {
+    /* effect metrics are non-critical — never affect tool execution */
+  }
+}
+
+// ── Small-model parameter ladder correction (stage 3.4, KHY_SMALL_MODEL_PARAM_COERCE) ──
+// Called ONLY from the two validation-failure branches inside executeTool, i.e.
+// strictly AFTER the full fail-closed permission chain has passed — this helper
+// never touches permissions, it only repairs near-miss params for weak models.
+// Eligibility: flag on (default-on) AND model tier T2/T3. Tier comes from
+// traceContext.modelTier when the caller pins it explicitly, else it is resolved
+// from traceContext.model (the main loop already threads the executing model id).
+// T0/T1 or flag off → returns null → the caller keeps today's path byte-identical.
+// Ladder depth = smallModelDefaults.getRetryBudget(tier) (T3:3, T2:2); the engine
+// unlocks enum fuzzy repair from attempt 2. Returns:
+//   null                                              — not eligible, keep legacy path
+//   { ok:true,  params, corrections, attempts, tier } — corrected & re-validated
+//   { ok:false, corrections, attempts, tier, hint }   — ladder exhausted, hint for the model
+// Fail-soft: any internal fault → null (legacy path). Never throws.
+function _trySmallModelParamCoercion({ schema, params, traceContext, toolLabel, emitProgress }) {
+  try {
+    if (!flagRegistry.isFlagEnabled('KHY_SMALL_MODEL_PARAM_COERCE', process.env)) {
+      return null;
+    }
+    const modelTier = require('./modelTier');
+    const pinned = String(traceContext?.modelTier || '')
+      .trim()
+      .toUpperCase();
+    const tier = ['T0', 'T1', 'T2', 'T3'].includes(pinned)
+      ? pinned
+      : modelTier.resolveTier(traceContext?.model || '');
+    if (tier !== 'T2' && tier !== 'T3') {
+      return null;
+    }
+    const engine = require('./parameterNormalizationEngine');
+    const { getRetryBudget } = require('../constants/smallModelDefaults');
+    const budget = Math.max(1, getRetryBudget(tier));
+    let current = params;
+    const corrections = [];
+    let lastHint = null;
+    let attempts = 0;
+    for (let attempt = 1; attempt <= budget; attempt++) {
+      attempts = attempt;
+      const r = engine.normalizeAndValidate({ inputSchema: schema }, current, {
+        modelTier: tier,
+        attemptCount: attempt,
+      });
+      for (const c of r.corrections || []) {
+        corrections.push(c);
+        // Progress line: action + target + progress (模型/用户可见的中文状态).
+        emitProgress(
+          `参数纠错: ${toolLabel}.${c.field} ${JSON.stringify(c.from)}→${JSON.stringify(c.to)} (第${attempt}次尝试, 规则:${c.rule})`
+        );
+      }
+      current = r.params;
+      lastHint = r.hint;
+      if (r.valid) {
+        return { ok: true, params: current, corrections, attempts: attempt, tier };
+      }
+      // No new correction on a rung where the full ladder (incl. enum fuzzy)
+      // was already unlocked → further attempts cannot make progress.
+      if ((r.corrections || []).length === 0 && attempt >= engine.getEnumMinAttempt()) {
+        break;
+      }
+    }
+    return { ok: false, corrections, attempts, tier, hint: lastHint };
+  } catch {
+    return null; /* fail-soft — legacy rejection path */
+  }
+}
+
 async function executeTool(toolName, params = {}, traceContext = {}) {
   const normalizedName = normalizeToolName(toolName) || toolName;
 
@@ -1129,16 +1571,16 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   {
     const gw = _toolAccessGateway();
     const denied = gw.gatewayDecision(normalizedName) || gw.gatewayDecision(toolName);
-    if (denied) return { success: false, error: denied };
+    if (denied) {
+      return { success: false, error: denied };
+    }
   }
 
   // [P1#3] 参数命名统一:逐工具跨词映射(normalizeToolParams)+ 路径键归一之后,
   // 再补「同词不同大小写」的 snake/camel 两种拼写,使定义侧统一成 snake_case 后,
   // 读取 camelCase 的旧工具仍能取到值。门控 KHY_TOOL_PARAM_NAMING(默认开)。
   const normalizedParams = require('./toolParamNaming').expandParamAliases(
-    _normalizePathLikeParams(
-      normalizeToolParams(normalizedName, params)
-    )
+    _normalizePathLikeParams(normalizeToolParams(normalizedName, params))
   );
 
   // [Plugin marketplace] Coze-compatible plugin tools (`plugin__<slug>__<op>`)
@@ -1147,7 +1589,11 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   // in the slug (claudeCompat replaces [\s-] with '_'). The cheap prefix check
   // keeps the normal funnel untouched for every non-plugin tool. Gated by
   // KHY_PLUGINS.
-  if (process.env.KHY_PLUGINS !== 'off' && typeof toolName === 'string' && toolName.startsWith('plugin__')) {
+  if (
+    process.env.KHY_PLUGINS !== 'off' &&
+    typeof toolName === 'string' &&
+    toolName.startsWith('plugin__')
+  ) {
     try {
       const pluginBridge = require('./plugins/pluginToolBridge');
       if (pluginBridge.isPluginTool(toolName)) {
@@ -1163,28 +1609,45 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   try {
     traceAudit = require('./traceAuditService');
     traceAudit.ensureDiagnosticsBridge();
-  } catch { /* trace audit optional */ }
+  } catch {
+    /* trace audit optional */
+  }
   const traceCtx = {
     sessionId: traceContext?.sessionId || traceAudit?.getContext?.()?.sessionId || null,
     traceId: traceContext?.traceId || traceAudit?.getContext?.()?.traceId || null,
-    requestId: traceContext?.requestId || traceAudit?.getContext?.()?.requestId || traceContext?.traceId || traceAudit?.getContext?.()?.traceId || null,
+    requestId:
+      traceContext?.requestId ||
+      traceAudit?.getContext?.()?.requestId ||
+      traceContext?.traceId ||
+      traceAudit?.getContext?.()?.traceId ||
+      null,
     role: traceContext?.role || traceAudit?.getContext?.()?.role || null,
     source: 'tool-calling',
     visibility: 'summary',
   };
-  const onActivity = typeof traceContext?.onActivity === 'function'
-    ? traceContext.onActivity
-    : null;
-  const onProgress = typeof traceContext?.onProgress === 'function'
-    ? traceContext.onProgress
-    : null;
+  const onActivity =
+    typeof traceContext?.onActivity === 'function' ? traceContext.onActivity : null;
+  const onProgress =
+    typeof traceContext?.onProgress === 'function' ? traceContext.onProgress : null;
   const emitActivity = (payload) => {
-    if (!onActivity) return;
-    try { onActivity(payload); } catch { /* non-critical */ }
+    if (!onActivity) {
+      return;
+    }
+    try {
+      onActivity(payload);
+    } catch {
+      /* non-critical */
+    }
   };
   const emitProgress = (payload) => {
-    if (!onProgress) return;
-    try { onProgress(payload); } catch { /* non-critical */ }
+    if (!onProgress) {
+      return;
+    }
+    try {
+      onProgress(payload);
+    } catch {
+      /* non-critical */
+    }
   };
   const wrapperStart = Date.now();
   // ESC / 用户中断 → 执行中的工具取消:loop 把 parentAbort.signal(仅真·中断时触发)放进
@@ -1200,15 +1663,21 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // Additive and optional — undefined when the caller did not provide it.
     parentConversation: traceContext?.parentConversation,
   };
-  if (_toolAbortSignal) toolExecutionContext.signal = _toolAbortSignal;
+  if (_toolAbortSignal) {
+    toolExecutionContext.signal = _toolAbortSignal;
+  }
   const emitWrapper = (phase, payload = {}, visibility = 'summary') => {
     try {
-      if (!traceAudit || typeof traceAudit.logEvent !== 'function') return;
+      if (!traceAudit || typeof traceAudit.logEvent !== 'function') {
+        return;
+      }
       traceAudit.logEvent(`tool.wrapper.${phase}`, payload, {
         ...traceCtx,
         visibility,
       });
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   };
 
   // [DESIGN-ARCH-029] Opt-in self-heal / bounded-degradation routing (default off;
@@ -1216,7 +1685,9 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   // tree; recursion-guarded and fail-open. See _maybeRouteSelfHeal.
   {
     const _healed = await _maybeRouteSelfHeal(normalizedName, normalizedParams, traceContext);
-    if (_healed && _healed.handled) return _healed.result;
+    if (_healed && _healed.handled) {
+      return _healed.result;
+    }
   }
 
   if (!descriptor) {
@@ -1224,18 +1695,28 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // [AI-弱模型·别绕过] 此处只对**已注册工具**做拼写纠错(距离阈值内),纠错后仍走完整权限链。
     //   绝不把未知/被拒的名字自动映射成一个真描述符来绕过 allowedTools/权限判定;
     //   绝不放宽 autoFixThreshold 让任意名字命中。拿不准就让它落到下面的 "did you mean?" 建议。
-    const allToolNames = listTools().map(t => t.name);
+    const allToolNames = listTools().map((t) => t.name);
     const _lev = (a, b) => {
-      if (a === b) return 0;
-      const la = a.length, lb = b.length;
-      if (la === 0) return lb;
-      if (lb === 0) return la;
-      if (la > 80 || lb > 80) return Math.abs(la - lb);
+      if (a === b) {
+        return 0;
+      }
+      const la = a.length,
+        lb = b.length;
+      if (la === 0) {
+        return lb;
+      }
+      if (lb === 0) {
+        return la;
+      }
+      if (la > 80 || lb > 80) {
+        return Math.abs(la - lb);
+      }
       let prev = Array.from({ length: lb + 1 }, (_, i) => i);
       for (let i = 1; i <= la; i++) {
         const curr = [i];
         for (let j = 1; j <= lb; j++) {
-          curr[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+          curr[j] =
+            a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
         }
         prev = curr;
       }
@@ -1244,7 +1725,10 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     const lowerName = (normalizedName || toolName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     // 计算所有工具的距离排行
     const ranked = allToolNames
-      .map(name => ({ name, dist: _lev(lowerName, name.toLowerCase().replace(/[^a-z0-9]/g, '')) }))
+      .map((name) => ({
+        name,
+        dist: _lev(lowerName, name.toLowerCase().replace(/[^a-z0-9]/g, '')),
+      }))
       .sort((a, b) => a.dist - b.dist);
     const best = ranked[0];
     // 自动修复阈值: 距离 <= max(2, 名字长度*20%)
@@ -1259,13 +1743,14 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // 仍然未解析 → 构建 "did you mean?" 建议
     if (!descriptor) {
       const suggestions = ranked
-        .filter(s => s.dist <= 5)
+        .filter((s) => s.dist <= 5)
         .slice(0, 3)
-        .map(s => s.name);
+        .map((s) => s.name);
 
-      const hint = suggestions.length > 0
-        ? `Did you mean: ${suggestions.join(', ')}?`
-        : `Available tools: ${allToolNames.slice(0, 14).join(', ')}...`;
+      const hint =
+        suggestions.length > 0
+          ? `Did you mean: ${suggestions.join(', ')}?`
+          : `Available tools: ${allToolNames.slice(0, 14).join(', ')}...`;
 
       emitWrapper('end', {
         tool: normalizedName || toolName,
@@ -1291,10 +1776,23 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   // permission gate, wrapper events, audit log, and receipt recorder all share
   // one judgement. Read-only/low → hardened, model work → flexible,
   // high/destructive → human-gate. Pure read-only call; never throws.
-  let stepAssessment = { stepType: 'flexible', riskLevel: 'medium', isReadOnly: false, isDestructive: false, reason: '', source: 'tool' };
+  let stepAssessment = {
+    stepType: 'flexible',
+    riskLevel: 'medium',
+    isReadOnly: false,
+    isDestructive: false,
+    reason: '',
+    source: 'tool',
+  };
   try {
-    stepAssessment = require('./riskGate').assess(normalizedName || toolName, normalizedParams, descriptor);
-  } catch { /* riskGate optional — keep conservative default */ }
+    stepAssessment = require('./riskGate').assess(
+      normalizedName || toolName,
+      normalizedParams,
+      descriptor
+    );
+  } catch {
+    /* riskGate optional — keep conservative default */
+  }
 
   // ── §4.A reversibility layering: speculation guard ───────────────
   // Under a speculative lookahead context (traceContext.speculative === true)
@@ -1310,14 +1808,17 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
       const { speculationGuard, resolveReversibility } = require('./reversibility');
       const specKey = descriptor.resolvedName || normalizedName || toolName;
       const blocked = speculationGuard(
-        resolveReversibility(specKey, normalizedParams, stepAssessment), true,
+        resolveReversibility(specKey, normalizedParams, stepAssessment),
+        true
       );
       if (!blocked) {
         speculativeRefusal = null; // A_safe — allowed to proceed speculatively
       } else {
         speculativeRefusal = blocked.error;
       }
-    } catch { /* keep fail-closed refusal */ }
+    } catch {
+      /* keep fail-closed refusal */
+    }
     if (speculativeRefusal) {
       emitWrapper('end', {
         tool: normalizedName || toolName,
@@ -1353,11 +1854,19 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     });
     try {
       require('./receiptService').appendToolCall({
-        sessionId: traceCtx.sessionId, tool: normalizedName || toolName, params: normalizedParams,
-        result: { success: false }, permission: 'blocked', elapsedMs: 0,
-        stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel, error: skillBlocked,
+        sessionId: traceCtx.sessionId,
+        tool: normalizedName || toolName,
+        params: normalizedParams,
+        result: { success: false },
+        permission: 'blocked',
+        elapsedMs: 0,
+        stepType: stepAssessment.stepType,
+        risk: stepAssessment.riskLevel,
+        error: skillBlocked,
       });
-    } catch { /* receipt is non-critical */ }
+    } catch {
+      /* receipt is non-critical */
+    }
     return { success: false, error: skillBlocked, _policyBlocked: true };
   }
 
@@ -1393,28 +1902,44 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
           if (regTool && typeof regTool.isReadOnly === 'function') {
             isReadOnly = regTool.isReadOnly(normalizedParams);
           }
-        } catch { /* registry not available — treat as non-read-only (safer) */ }
+        } catch {
+          /* registry not available — treat as non-read-only (safer) */
+        }
         if (!isReadOnly) {
-          const reason = `计划模式（仅探索）：当前正在生成/审阅计划，只能使用只读工具（读取、检索、分析）。`
-            + `工具「${permissionKey}」会进行写入或执行，已被拦截。请先用只读工具把计划补充完整，`
-            + `待用户批准后再执行写操作。`;
+          const reason =
+            `计划模式（仅探索）：当前正在生成/审阅计划，只能使用只读工具（读取、检索、分析）。` +
+            `工具「${permissionKey}」会进行写入或执行，已被拦截。请先用只读工具把计划补充完整，` +
+            `待用户批准后再执行写操作。`;
           emitWrapper('end', {
-            tool: permissionKey, success: false, denied: true, permission: 'deny',
-            planReadOnly: true, elapsedMs: Date.now() - wrapperStart,
+            tool: permissionKey,
+            success: false,
+            denied: true,
+            permission: 'deny',
+            planReadOnly: true,
+            elapsedMs: Date.now() - wrapperStart,
           });
           try {
             require('./receiptService').appendToolCall({
-              sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-              result: { success: false }, permission: 'deny', elapsedMs: 0,
-              stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel, error: reason,
+              sessionId: traceCtx.sessionId,
+              tool: permissionKey,
+              params: normalizedParams,
+              result: { success: false },
+              permission: 'deny',
+              elapsedMs: 0,
+              stepType: stepAssessment.stepType,
+              risk: stepAssessment.riskLevel,
+              error: reason,
             });
-          } catch { /* receipt non-critical */ }
+          } catch {
+            /* receipt non-critical */
+          }
           return { success: false, error: reason, denied: true, _planReadOnlyBlocked: true };
         }
       }
-    } catch { /* planModeService optional — fall through to normal gating */ }
+    } catch {
+      /* planModeService optional — fall through to normal gating */
+    }
   }
-
 
   // ── PreToolUse 钩子（绕不过的硬底）────────────────────────────────────
   // [AI-弱模型·别绕过] 这是绕不过的硬底:钩子在所有权限闸之前、无条件运行(即便 bypass/危险模式)。
@@ -1435,47 +1960,77 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
       try {
         const { HOOKS_EVALUATED } = require('./execApproval');
         alreadyHooked = !!(HOOKS_EVALUATED && normalizedParams[HOOKS_EVALUATED] === true);
-      } catch { /* execApproval optional */ }
+      } catch {
+        /* execApproval optional */
+      }
       if (!alreadyHooked) {
         const hookSystem = require('./hooks/hookSystem');
         if (typeof hookSystem.isInitialized === 'function' && hookSystem.isInitialized()) {
           const hr = await hookSystem.trigger('PreToolUse', {
-            toolName: permissionKey, params: normalizedParams, _executeToolFunnel: true,
+            toolName: permissionKey,
+            params: normalizedParams,
+            _executeToolFunnel: true,
           });
           if (hr && hr.blocked) {
             let released = false;
-            const onCtrlHook = typeof traceContext?.onControlRequest === 'function' ? traceContext.onControlRequest : null;
+            const onCtrlHook =
+              typeof traceContext?.onControlRequest === 'function'
+                ? traceContext.onControlRequest
+                : null;
             if (hr.approvable && onCtrlHook) {
               try {
                 const { requestGuardApproval } = require('./guardApproval');
                 const verdict = await requestGuardApproval({
-                  toolName: permissionKey, params: normalizedParams,
-                  reason: hr.reason, source: hr.source, onControlRequest: onCtrlHook,
+                  toolName: permissionKey,
+                  params: normalizedParams,
+                  reason: hr.reason,
+                  source: hr.source,
+                  onControlRequest: onCtrlHook,
                 });
-                if (verdict && verdict.allowed) { normalizedParams = verdict.params || normalizedParams; released = true; }
-              } catch { /* fall through to block */ }
+                if (verdict && verdict.allowed) {
+                  normalizedParams = verdict.params || normalizedParams;
+                  released = true;
+                }
+              } catch {
+                /* fall through to block */
+              }
             }
             if (!released) {
               const reason = `[Hook] ${hr.reason || 'Blocked by PreToolUse hook'}`;
               emitWrapper('end', {
-                tool: permissionKey, success: false, denied: true, permission: 'deny',
+                tool: permissionKey,
+                success: false,
+                denied: true,
+                permission: 'deny',
                 elapsedMs: Date.now() - wrapperStart,
               });
               try {
                 require('./receiptService').appendToolCall({
-                  sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-                  result: { success: false }, permission: 'deny', elapsedMs: 0,
-                  stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel, error: reason,
+                  sessionId: traceCtx.sessionId,
+                  tool: permissionKey,
+                  params: normalizedParams,
+                  result: { success: false },
+                  permission: 'deny',
+                  elapsedMs: 0,
+                  stepType: stepAssessment.stepType,
+                  risk: stepAssessment.riskLevel,
+                  error: reason,
                 });
-              } catch { /* receipt non-critical */ }
+              } catch {
+                /* receipt non-critical */
+              }
               return { success: false, error: reason, denied: true, _hookBlocked: true };
             }
           }
           // 钩子改写了 params（脱敏 / 重写路径等）→ 采纳（与主循环 hr.context.params 一致）。
-          if (hr && hr.context && hr.context.params) normalizedParams = hr.context.params;
+          if (hr && hr.context && hr.context.params) {
+            normalizedParams = hr.context.params;
+          }
         }
       }
-    } catch { /* 防呆: 钩子子系统加载异常不得卡死工具（block 决策由 trigger 内部保证） */ }
+    } catch {
+      /* 防呆: 钩子子系统加载异常不得卡死工具（block 决策由 trigger 内部保证） */
+    }
   }
 
   // ── 权限模式：plan（只读演练）前置拦截 ───────────────────────────────
@@ -1487,15 +2042,22 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     if (getPermissionMode() === 'plan') {
       const beh = _resolveToolBehavior(permissionKey, normalizedParams);
       if (beh.isReadOnly === false) {
-        const reason = 'Plan 模式为只读演练，已拒绝有副作用的工具调用（切到 default/acceptEdits 模式后再执行）。';
+        const reason =
+          'Plan 模式为只读演练，已拒绝有副作用的工具调用（切到 default/acceptEdits 模式后再执行）。';
         emitWrapper('end', {
-          tool: permissionKey, success: false, denied: true, permission: 'deny',
-          permissionMode: 'plan', elapsedMs: Date.now() - wrapperStart,
+          tool: permissionKey,
+          success: false,
+          denied: true,
+          permission: 'deny',
+          permissionMode: 'plan',
+          elapsedMs: Date.now() - wrapperStart,
         });
         return { success: false, error: reason, denied: true, _planModeBlocked: true };
       }
     }
-  } catch { /* fail-open: 模式解析异常 → 落回既有管线（网关/审批仍把关） */ }
+  } catch {
+    /* fail-open: 模式解析异常 → 落回既有管线（网关/审批仍把关） */
+  }
 
   // ── 意图精准裁决前置路由（[DESIGN-ARCH-041] 接管点）─────────────────────
   // 在一切能力/网关裁决之前，对「触发本次执行的原始自然语言意图」做防误触路由。仅当上游
@@ -1509,13 +2071,17 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   // 异常一律 fail-open 落回既有管线（意图层异常不得卡死工具）。
   if (process.env.KHY_INTENT_ARBITER === 'on') {
     try {
-      const intentText = traceContext && typeof traceContext.intentText === 'string'
-        ? traceContext.intentText.trim() : '';
+      const intentText =
+        traceContext && typeof traceContext.intentText === 'string'
+          ? traceContext.intentText.trim()
+          : '';
       let alreadyApproved = false;
       try {
         const { EXEC_APPROVED } = require('./execApproval');
         alreadyApproved = !!(EXEC_APPROVED && normalizedParams[EXEC_APPROVED] === true);
-      } catch { /* execApproval optional */ }
+      } catch {
+        /* execApproval optional */
+      }
 
       if (intentText && !alreadyApproved) {
         const { IntentArbiter } = require('./intentArbiter');
@@ -1526,7 +2092,10 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
           intentBlocked = `意图裁决拦截：原始意图判定为安全对话带（置信度 ${verdict.analysis.confidence}），非可执行指令，不触发工具（防误触）。`;
         } else if (verdict.status === 'confirm') {
           // 歧义带：把决定权交回用户（confirmPrompt 来自零副作用沙箱），有通道才问。
-          const onCtrl = typeof traceContext?.onControlRequest === 'function' ? traceContext.onControlRequest : null;
+          const onCtrl =
+            typeof traceContext?.onControlRequest === 'function'
+              ? traceContext.onControlRequest
+              : null;
           let confirmed = false;
           if (onCtrl) {
             try {
@@ -1544,7 +2113,9 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
               });
               const d = _decisionFromControl(ctrlResp);
               confirmed = d === 'allow' || d === 'allow-always';
-            } catch { confirmed = false; }
+            } catch {
+              confirmed = false;
+            }
           }
           if (!confirmed) {
             intentBlocked = `意图裁决拦截：原始意图落歧义模糊带（置信度 ${verdict.analysis.confidence}），未获显式确认，不自主猜测执行（防呆②）。`;
@@ -1554,21 +2125,39 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
 
         if (intentBlocked) {
           emitWrapper('end', {
-            tool: permissionKey, success: false, denied: true, permission: 'deny',
+            tool: permissionKey,
+            success: false,
+            denied: true,
+            permission: 'deny',
             intentArbiter: { band: verdict.route.band, confidence: verdict.analysis.confidence },
             elapsedMs: Date.now() - wrapperStart,
           });
           try {
             require('./receiptService').appendToolCall({
-              sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-              result: { success: false }, permission: 'deny', elapsedMs: 0,
-              stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel, error: intentBlocked,
+              sessionId: traceCtx.sessionId,
+              tool: permissionKey,
+              params: normalizedParams,
+              result: { success: false },
+              permission: 'deny',
+              elapsedMs: 0,
+              stepType: stepAssessment.stepType,
+              risk: stepAssessment.riskLevel,
+              error: intentBlocked,
             });
-          } catch { /* receipt non-critical */ }
-          return { success: false, error: intentBlocked, denied: true, _intentArbiterBlocked: true };
+          } catch {
+            /* receipt non-critical */
+          }
+          return {
+            success: false,
+            error: intentBlocked,
+            denied: true,
+            _intentArbiterBlocked: true,
+          };
         }
       }
-    } catch { /* 防呆 fail-open: 意图层加载/裁决异常 → 落回既有管线（权限/网关/锁仍把关） */ }
+    } catch {
+      /* 防呆 fail-open: 意图层加载/裁决异常 → 落回既有管线（权限/网关/锁仍把关） */
+    }
   }
 
   // ── 系统调用审批网关（单一裁决权威，只增不减保护）─────────────────
@@ -1580,7 +2169,9 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     try {
       const gateway = require('./syscallGateway');
       // 解析工具的行为声明（只读/破坏性/风险），喂给网关分级。
-      let gwReadOnly = false, gwDestructive = false, gwRisk = descriptor?.tool?.risk || 'medium';
+      let gwReadOnly = false,
+        gwDestructive = false,
+        gwRisk = descriptor?.tool?.risk || 'medium';
       // 「跳出沙箱执行」是工具级声明（静态 sandboxEscape 或动态 requiresSandboxEscape(params)），
       // 绝不取自模型参数。一旦置位，网关恒按 L2（键入 YES）裁决。现有工具均不声明，故零行为变化。
       let gwSandboxEscape = false;
@@ -1597,8 +2188,10 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         const reg = require('../tools');
         const regTool = reg.get(permissionKey);
         if (regTool) {
-          gwSandboxEscape = regTool.sandboxEscape === true
-            || (typeof regTool.requiresSandboxEscape === 'function' && regTool.requiresSandboxEscape(normalizedParams) === true);
+          gwSandboxEscape =
+            regTool.sandboxEscape === true ||
+            (typeof regTool.requiresSandboxEscape === 'function' &&
+              regTool.requiresSandboxEscape(normalizedParams) === true);
         }
         if (process.env.KHY_GATEWAY_DYNAMIC_RISK !== 'off') {
           const riskGate = require('./riskGate');
@@ -1607,12 +2200,19 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
           gwDestructive = gwAssessment.isDestructive;
           gwRisk = gwAssessment.riskLevel || gwRisk;
         } else if (regTool) {
-          gwReadOnly = typeof regTool.isReadOnly === 'function' ? regTool.isReadOnly(normalizedParams) : false;
-          gwDestructive = typeof regTool.isDestructive === 'function' ? regTool.isDestructive(normalizedParams) : false;
+          gwReadOnly =
+            typeof regTool.isReadOnly === 'function' ? regTool.isReadOnly(normalizedParams) : false;
+          gwDestructive =
+            typeof regTool.isDestructive === 'function'
+              ? regTool.isDestructive(normalizedParams)
+              : false;
           gwRisk = regTool.risk || gwRisk;
         }
-      } catch { /* registry/riskGate optional */ }
-      const onCtrl = typeof traceContext?.onControlRequest === 'function' ? traceContext.onControlRequest : null;
+      } catch {
+        /* registry/riskGate optional */
+      }
+      const onCtrl =
+        typeof traceContext?.onControlRequest === 'function' ? traceContext.onControlRequest : null;
       // 权限模式 → 网关 L1 预授权（CC 对齐）。bypass = 用户已对 L1 类操作给出「标准答案」；
       // acceptEdits = 仅对文件编辑类工具预授权。autoApproveL1 只放行 L1（黄灯），**绝不触及
       // L2 红线**（删除/安装/系统路径/破坏性仍须键入 YES），且对临界红线（criticalGate）一律
@@ -1632,19 +2232,29 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
               // Reuse the assessment already computed for the gateway signals
               // (single source of truth); only re-assess if it was unavailable
               // (e.g. KHY_GATEWAY_DYNAMIC_RISK=off path skipped it).
-              const a = gwAssessment || riskGate.assess(permissionKey, normalizedParams, descriptor);
+              const a =
+                gwAssessment || riskGate.assess(permissionKey, normalizedParams, descriptor);
               _unbypassable = riskGate.isUnbypassableGate(a);
-            } catch { /* riskGate optional */ }
+            } catch {
+              /* riskGate optional */
+            }
           }
           if (!_unbypassable) {
-            if (_mode === 'bypass') gwAutoApproveL1 = true;
-            else {
-              const _norm = String(permissionKey).toLowerCase().replace(/[\s_-]/g, '');
-              if (_ACCEPT_EDITS_TOOLS.has(_norm) && !gwDestructive) gwAutoApproveL1 = true;
+            if (_mode === 'bypass') {
+              gwAutoApproveL1 = true;
+            } else {
+              const _norm = String(permissionKey)
+                .toLowerCase()
+                .replace(/[\s_-]/g, '');
+              if (_ACCEPT_EDITS_TOOLS.has(_norm) && !gwDestructive) {
+                gwAutoApproveL1 = true;
+              }
             }
           }
         }
-      } catch { /* mode resolution optional — default to no pre-approval */ }
+      } catch {
+        /* mode resolution optional — default to no pre-approval */
+      }
       // ── 自主/非交互 L1 自动放行(headless `khy -p`/管道/后台 → onCtrl 缺失)──────────────
       // [AI-弱模型·别绕过红线] dogfood 实测:非交互环境(无交互器)下 approvalRouter 对 L1(黄灯)
       // 一律 fail-closed 拒绝(「L1 需用户确认但无交互器」),于是 headless khy 连 node/sleep/timeout/
@@ -1655,17 +2265,26 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
       // autoApproveL1 在 router 里**只作用于 L1 分支**——L2 红灯分支不读此标志,红线零弱化。
       // 门控 KHY_AUTONOMOUS_L1_AUTO_APPROVE(default-on·CANON);关 → 逐字节回退今日 L1 fail-closed。
       try {
-        if (!onCtrl && !gwAutoApproveL1
-            && flagRegistry.isFlagEnabled('KHY_AUTONOMOUS_L1_AUTO_APPROVE', process.env)) {
+        if (
+          !onCtrl &&
+          !gwAutoApproveL1 &&
+          flagRegistry.isFlagEnabled('KHY_AUTONOMOUS_L1_AUTO_APPROVE', process.env)
+        ) {
           let _autoUnbypassable = false;
           try {
             const riskGate = require('./riskGate');
             const a = gwAssessment || riskGate.assess(permissionKey, normalizedParams, descriptor);
             _autoUnbypassable = riskGate.isUnbypassableGate(a);
-          } catch { /* riskGate optional — 保守不放行 */ _autoUnbypassable = true; }
-          if (!_autoUnbypassable) gwAutoApproveL1 = true;
+          } catch {
+            /* riskGate optional — 保守不放行 */ _autoUnbypassable = true;
+          }
+          if (!_autoUnbypassable) {
+            gwAutoApproveL1 = true;
+          }
         }
-      } catch { /* autonomous L1 auto-approve optional — default to no pre-approval */ }
+      } catch {
+        /* autonomous L1 auto-approve optional — default to no pre-approval */
+      }
       const verdict = await gateway.evaluate(
         {
           sessionId: traceCtx.sessionId,
@@ -1676,7 +2295,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
           risk: gwRisk,
           sandboxEscape: gwSandboxEscape,
         },
-        { prompter: gateway.makeControlPrompter(onCtrl), autoApproveL1: gwAutoApproveL1 },
+        { prompter: gateway.makeControlPrompter(onCtrl), autoApproveL1: gwAutoApproveL1 }
       );
       if (!verdict.allow) {
         let reason = `系统调用网关拦截 [${verdict.level}${verdict.tripped ? '/已熔断' : ''}]: ${verdict.reasons.join('; ')}`;
@@ -1685,37 +2304,67 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         // 根因是拒绝原文对模型不够「响亮」。仅对非只读(写/建)工具追加,读类不加(避免噪声)。
         try {
           const _hintOff = ['0', 'false', 'off', 'no', 'disable', 'disabled'];
-          const _hintOn = !_hintOff.includes(String(process.env.KHY_GATEWAY_DENY_HINT || '').trim().toLowerCase());
-          const _isWriteClass = gwReadOnly !== true
-            && /(write|edit|create|patch|scaffold|notebook|append|mkdir|move|rename|multiedit|save)/i.test(String(permissionKey || ''));
+          const _hintOn = !_hintOff.includes(
+            String(process.env.KHY_GATEWAY_DENY_HINT || '')
+              .trim()
+              .toLowerCase()
+          );
+          const _isWriteClass =
+            gwReadOnly !== true &&
+            /(write|edit|create|patch|scaffold|notebook|append|mkdir|move|rename|multiedit|save)/i.test(
+              String(permissionKey || '')
+            );
           if (_hintOn && _isWriteClass) {
-            reason += '（该工具调用被拒绝，文件未写入/未修改；请勿声称已完成，如实向用户说明被网关拦截）';
+            reason +=
+              '（该工具调用被拒绝，文件未写入/未修改；请勿声称已完成，如实向用户说明被网关拦截）';
           }
-        } catch { /* 提示拼接失败不影响拒绝主流程 */ }
+        } catch {
+          /* 提示拼接失败不影响拒绝主流程 */
+        }
         emitWrapper('end', {
-          tool: permissionKey, success: false, denied: true, permission: 'deny',
+          tool: permissionKey,
+          success: false,
+          denied: true,
+          permission: 'deny',
           gateway: { level: verdict.level, decision: verdict.decision, tripped: verdict.tripped },
           elapsedMs: Date.now() - wrapperStart,
         });
         try {
           require('./receiptService').appendToolCall({
-            sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-            result: { success: false }, permission: 'deny', elapsedMs: 0,
-            stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel, error: reason,
+            sessionId: traceCtx.sessionId,
+            tool: permissionKey,
+            params: normalizedParams,
+            result: { success: false },
+            permission: 'deny',
+            elapsedMs: 0,
+            stepType: stepAssessment.stepType,
+            risk: stepAssessment.riskLevel,
+            error: reason,
           });
-        } catch { /* receipt non-critical */ }
+        } catch {
+          /* receipt non-critical */
+        }
         return { success: false, error: reason, denied: true, _gatewayBlocked: true };
       }
       // 网关放行 → 盖不可伪造 EXEC_APPROVED 戳，既有 requestPermission 据此免二次打断。
       // [AI-弱模型·别绕过] 此戳是「已通过中央审批」的不可伪造凭据,只应由本审批网关在放行时盖。
       //   绝不在别处预置/伪造 EXEC_APPROVED 来让某调用跳过 requestPermission。
-      if (verdict.decision === gateway.DECISIONS.USER_ALLOW || verdict.decision === gateway.DECISIONS.AUTO_ALLOW) {
+      if (
+        verdict.decision === gateway.DECISIONS.USER_ALLOW ||
+        verdict.decision === gateway.DECISIONS.AUTO_ALLOW
+      ) {
         try {
           const { EXEC_APPROVED } = require('./execApproval');
-          if (EXEC_APPROVED) normalizedParams[EXEC_APPROVED] = true;
-        } catch { /* execApproval optional — fall through to classic prompt */ }
+          if (EXEC_APPROVED) {
+            normalizedParams[EXEC_APPROVED] = true;
+          }
+        } catch {
+          /* execApproval optional — fall through to classic prompt */
+        }
       }
-    } catch { /* 防呆④: 网关加载/裁决异常不得放行也不得卡死 → 落回既有管线（其自身 fail-safe） */ }
+    } catch {
+      /* 防呆④: 网关加载/裁决异常不得放行也不得卡死 → 落回既有管线（其自身 fail-safe） */
+    }
   }
 
   // ── 元约束能力地板守卫（[DESIGN-ARCH-034] 接管点）─────────────────────
@@ -1735,26 +2384,48 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
       });
       if (verdict && verdict.allow === false) {
         emitWrapper('end', {
-          tool: permissionKey, success: false, denied: true, permission: 'deny',
-          capabilityFloor: { floor: verdict.floor, band: verdict.band, riskClass: verdict.riskClass },
+          tool: permissionKey,
+          success: false,
+          denied: true,
+          permission: 'deny',
+          capabilityFloor: {
+            floor: verdict.floor,
+            band: verdict.band,
+            riskClass: verdict.riskClass,
+          },
           elapsedMs: Date.now() - wrapperStart,
         });
         try {
           require('./receiptService').appendToolCall({
-            sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-            result: { success: false }, permission: 'deny', elapsedMs: 0,
-            stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel, error: verdict.error,
+            sessionId: traceCtx.sessionId,
+            tool: permissionKey,
+            params: normalizedParams,
+            result: { success: false },
+            permission: 'deny',
+            elapsedMs: 0,
+            stepType: stepAssessment.stepType,
+            risk: stepAssessment.riskLevel,
+            error: verdict.error,
           });
-        } catch { /* receipt non-critical */ }
-        return { success: false, error: verdict.error, denied: true, _capabilityFloorBlocked: true };
+        } catch {
+          /* receipt non-critical */
+        }
+        return {
+          success: false,
+          error: verdict.error,
+          denied: true,
+          _capabilityFloorBlocked: true,
+        };
       }
-    } catch { /* 防呆 fail-open: 能力层加载/裁决异常 → 落回既有管线（权限/网关/锁仍把关） */ }
+    } catch {
+      /* 防呆 fail-open: 能力层加载/裁决异常 → 落回既有管线（权限/网关/锁仍把关） */
+    }
   }
 
   const permission = await requestPermission(
     permissionKey,
     normalizedParams,
-    typeof traceContext?.onControlRequest === 'function' ? traceContext.onControlRequest : null,
+    typeof traceContext?.onControlRequest === 'function' ? traceContext.onControlRequest : null
   );
   if (permission === 'deny') {
     emitWrapper('end', {
@@ -1767,15 +2438,30 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // Audit denied call
     try {
       const { logToolExecution } = require('./auditLog');
-      logToolExecution({ tool: permissionKey, params: normalizedParams, result: { success: false }, permission: 'deny', elapsed: 0 });
-    } catch { /* audit is non-critical */ }
+      logToolExecution({
+        tool: permissionKey,
+        params: normalizedParams,
+        result: { success: false },
+        permission: 'deny',
+        elapsed: 0,
+      });
+    } catch {
+      /* audit is non-critical */
+    }
     try {
       require('./receiptService').appendToolCall({
-        sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-        result: { success: false }, permission: 'deny', elapsedMs: 0,
-        stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel,
+        sessionId: traceCtx.sessionId,
+        tool: permissionKey,
+        params: normalizedParams,
+        result: { success: false },
+        permission: 'deny',
+        elapsedMs: 0,
+        stepType: stepAssessment.stepType,
+        risk: stepAssessment.riskLevel,
       });
-    } catch { /* receipt is non-critical */ }
+    } catch {
+      /* receipt is non-critical */
+    }
     return { success: false, error: 'User denied tool execution', denied: true };
   }
 
@@ -1796,13 +2482,18 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   // AI gateway is NEVER aborted (a tool timeout is caught here, between gateway
   // LLM calls, and returned to the loop as a structured tool_result).
   let _toolTimeoutLeaf = null;
-  try { _toolTimeoutLeaf = require('../tools/_toolTimeout'); } catch { _toolTimeoutLeaf = null; }
-  const TOOL_EXEC_TIMEOUT_MS = _toolTimeoutLeaf && typeof _toolTimeoutLeaf.resolveToolExecBudgetMs === 'function'
-    ? _toolTimeoutLeaf.resolveToolExecBudgetMs({
-      paramMs: normalizedParams && normalizedParams.timeoutMs,
-      env: process.env,
-    })
-    : parseInt(process.env.KHY_TOOL_EXEC_TIMEOUT_MS || '120000', 10);
+  try {
+    _toolTimeoutLeaf = require('../tools/_toolTimeout');
+  } catch {
+    _toolTimeoutLeaf = null;
+  }
+  const TOOL_EXEC_TIMEOUT_MS =
+    _toolTimeoutLeaf && typeof _toolTimeoutLeaf.resolveToolExecBudgetMs === 'function'
+      ? _toolTimeoutLeaf.resolveToolExecBudgetMs({
+          paramMs: normalizedParams && normalizedParams.timeoutMs,
+          env: process.env,
+        })
+      : parseInt(process.env.KHY_TOOL_EXEC_TIMEOUT_MS || '120000', 10);
   const _withToolTimeout = (promise, toolLabel) => {
     // ESC / 用户中断竞赛(门控 KHY_TOOL_ABORT_SIGNAL,默认开):当 loop 供了 abort 信号,
     // 在途工具与 abort 竞赛——信号触发 → 以带取消标记的错误落败,外层 catch 塑成诚实、可重试
@@ -1810,12 +2501,19 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // 无信号 / 门控关 → attachAbortRace 未介入,`raced === promise`,下面逐字节回退今日竞赛。
     let raced = promise;
     let _abortCleanup = null;
-    if (_toolAbortSignal && _toolTimeoutLeaf && typeof _toolTimeoutLeaf.attachAbortRace === 'function') {
+    if (
+      _toolAbortSignal &&
+      _toolTimeoutLeaf &&
+      typeof _toolTimeoutLeaf.attachAbortRace === 'function'
+    ) {
       try {
         const a = _toolTimeoutLeaf.attachAbortRace(raced, _toolAbortSignal, toolLabel, process.env);
         raced = a.promise;
         _abortCleanup = a.cleanup;
-      } catch { raced = promise; _abortCleanup = null; }
+      } catch {
+        raced = promise;
+        _abortCleanup = null;
+      }
     }
     if (TOOL_EXEC_TIMEOUT_MS <= 0) {
       return _abortCleanup ? Promise.resolve(raced).finally(_abortCleanup) : raced; // 超时禁用:仅 abort 竞赛
@@ -1824,14 +2522,21 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
       raced,
       new Promise((_, reject) => {
         const timer = setTimeout(() => {
-          const timeoutErr = new Error(`Tool execution timeout: ${toolLabel} exceeded ${TOOL_EXEC_TIMEOUT_MS}ms`);
+          const timeoutErr = new Error(
+            `Tool execution timeout: ${toolLabel} exceeded ${TOOL_EXEC_TIMEOUT_MS}ms`
+          );
           if (_toolTimeoutLeaf && typeof _toolTimeoutLeaf.markToolExecTimeoutError === 'function') {
-            _toolTimeoutLeaf.markToolExecTimeoutError(timeoutErr, { toolLabel, timeoutMs: TOOL_EXEC_TIMEOUT_MS });
+            _toolTimeoutLeaf.markToolExecTimeoutError(timeoutErr, {
+              toolLabel,
+              timeoutMs: TOOL_EXEC_TIMEOUT_MS,
+            });
           }
           reject(timeoutErr);
         }, TOOL_EXEC_TIMEOUT_MS);
         // Prevent timer from keeping the process alive
-        if (timer.unref) timer.unref();
+        if (timer.unref) {
+          timer.unref();
+        }
       }),
     ]);
     return _abortCleanup ? out.finally(_abortCleanup) : out;
@@ -1855,7 +2560,9 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   // 使软失败出口与硬抛 catch 出口都能调用。
   const _observeEvoFriction = (failure) => {
     // byte-identical to `KHY_EVO_ENGINE === 'off'` (offDisables).
-    if (!getCapabilityMatrix().isEnabledAt(CAP_SEAMS.POST_TOOL_GOVERNANCE, 'evoEngine', {})) return;
+    if (!getCapabilityMatrix().isEnabledAt(CAP_SEAMS.POST_TOOL_GOVERNANCE, 'evoEngine', {})) {
+      return;
+    }
     try {
       require('./evoEngine/frictionBridge').observeFailure({
         signal: 'tool-failure',
@@ -1863,15 +2570,21 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         error: failure instanceof Error ? failure : (failure && failure.error) || failure,
         context: { tool: permissionKey, sessionId: traceCtx.sessionId },
       });
-    } catch { /* 防呆: 观测异常绝不影响工具结果 */ }
+    } catch {
+      /* 防呆: 观测异常绝不影响工具结果 */
+    }
   };
 
   try {
     try {
-      _fileLockHandle = await require('../tools/_fileLock')
-        .acquireForToolCall(permissionKey, normalizedParams);
+      _fileLockHandle = await require('../tools/_fileLock').acquireForToolCall(
+        permissionKey,
+        normalizedParams
+      );
     } catch (lockErr) {
-      if (lockErr && lockErr.code === 'EFILELOCKTIMEOUT') throw lockErr; // → ToolError → Agent
+      if (lockErr && lockErr.code === 'EFILELOCKTIMEOUT') {
+        throw lockErr;
+      } // → ToolError → Agent
       _fileLockHandle = null; // any other lock fault: 防呆 — never block the write
     }
     let result;
@@ -1889,14 +2602,21 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // execParams;诊断 / 回执 / 钩子等其余路径仍读原 normalizedParams,爆炸半径最小。
     let execParams = normalizedParams;
     try {
-      const _numSchema = descriptor.source === 'registry'
-        ? descriptor.tool.inputSchema
-        : (descriptor.source === 'builtin' ? descriptor.tool.parameters : null);
+      const _numSchema =
+        descriptor.source === 'registry'
+          ? descriptor.tool.inputSchema
+          : descriptor.source === 'builtin'
+            ? descriptor.tool.parameters
+            : null;
       if (_numSchema) {
-        execParams = require('../tools/semanticNumberCoerce')
-          .coerceSchemaNumbers(_numSchema, normalizedParams);
+        execParams = require('../tools/semanticNumberCoerce').coerceSchemaNumbers(
+          _numSchema,
+          normalizedParams
+        );
       }
-    } catch { execParams = normalizedParams; /* 防呆: 归一异常 → 退原 params */ }
+    } catch {
+      execParams = normalizedParams; /* 防呆: 归一异常 → 退原 params */
+    }
     // Optional param-normalization hook (source-agnostic): a tool may clamp /
     // canonicalize params BEFORE schema validation. Used by shellCommand to clamp
     // an over-max timeout to the cap instead of hard-rejecting → opaque "Invalid
@@ -1904,21 +2624,103 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // validateInput(3638+), builtin validateParams(3654+), and execute — one edit
     // covers every consumer. Fail-soft: any error → keep execParams unchanged.
     if (descriptor && descriptor.tool && typeof descriptor.tool.normalizeParams === 'function') {
-      try { execParams = descriptor.tool.normalizeParams(execParams, process.env); }
-      catch { /* fail-soft: 保留 execParams */ }
+      try {
+        execParams = descriptor.tool.normalizeParams(execParams, process.env);
+      } catch {
+        /* fail-soft: 保留 execParams */
+      }
     }
+    // ── Schema-based argument filtering (Y-code pattern) ──────────────────────
+    // LLM 经常编造 schema 之外的参数（如 regex=true, max_results=50），
+    // 直接传入执行器会导致 TypeError → 整次调用失败。
+    // 此处按 schema 过滤掉未知参数，只保留声明字段 + 内部透传字段。
+    // 仅在 descriptor 已解析且 schema 非空时执行，否则跳过（保持兼容）。
+    if (descriptor && _INTERNAL_ARG_KEYS.length > 0) {
+      try {
+        const schemaProps =
+          (descriptor.tool.parameters && descriptor.tool.parameters.properties) ||
+          (descriptor.tool.inputSchema && descriptor.tool.inputSchema.properties) ||
+          {};
+        if (typeof schemaProps === 'object' && Object.keys(schemaProps).length > 0) {
+          const knownKeys = new Set([...Object.keys(schemaProps), ..._INTERNAL_ARG_KEYS]);
+          const filtered = {};
+          let dropped = 0;
+          for (const [k, v] of Object.entries(execParams)) {
+            if (knownKeys.has(k)) {
+              filtered[k] = v;
+            } else {
+              dropped++;
+            }
+          }
+          if (dropped > 0) {
+            execParams = filtered;
+          }
+        }
+      } catch {
+        /* fail-soft: 过滤异常 → 保持 execParams 不变 */
+      }
+    }
+    // Small-model param corrections applied this call (audit trail attached to
+    // the successful result below). null → no correction happened (legacy path).
+    let _paramCorrections = null;
     // Registry-source semantic/shape validation runs once, up front, with its
     // early-return contract preserved byte-for-byte (no behavior change).
     if (descriptor.source === 'registry') {
       if (typeof descriptor.tool.validate === 'function') {
         const validation = descriptor.tool.validate(execParams);
         if (!validation.valid) {
-          return {
-            success: false,
-            error: require('../tools/ccValidationError').formatValidationError(
-              descriptor.resolvedName || normalizedName || toolName, validation, process.env
-            ),
-          };
+          // Stage 3.4 ladder correction (flag KHY_SMALL_MODEL_PARAM_COERCE, T2/T3
+          // only). Runs strictly AFTER the permission chain; flag off / T0/T1 /
+          // engine fault → coerced === null → the legacy rejection below is
+          // byte-identical to today.
+          const coerced = _trySmallModelParamCoercion({
+            schema: descriptor.tool.inputSchema,
+            params: execParams,
+            traceContext,
+            toolLabel: descriptor.resolvedName || normalizedName || toolName,
+            emitProgress,
+          });
+          if (coerced && coerced.ok) {
+            execParams = coerced.params;
+            _paramCorrections = {
+              corrections: coerced.corrections,
+              attempts: coerced.attempts,
+              tier: coerced.tier,
+            };
+          } else {
+            const errText = require('../tools/ccValidationError').formatValidationError(
+              descriptor.resolvedName || normalizedName || toolName,
+              validation,
+              process.env
+            );
+            if (coerced) {
+              // Ladder exhausted → retryable structured error; `hint` carries the
+              // Chinese fix guidance the loop feeds back to the model, and
+              // `_paramCorrection.attempts` exposes the correction-retry count
+              // for the escalation counters (stage 3.5/task #6).
+              const _vfail = {
+                success: false,
+                error: errText,
+                canRetry: true,
+                hint: coerced.hint,
+                _paramCorrection: {
+                  attempts: coerced.attempts,
+                  corrections: coerced.corrections,
+                  tier: coerced.tier,
+                },
+              };
+              _recordExecutionEffect({
+                toolName: permissionKey,
+                traceContext,
+                success: false,
+                elapsedMs: Date.now() - start,
+                result: _vfail,
+                errorType: 'validation_error',
+              });
+              return _vfail;
+            }
+            return { success: false, error: errText };
+          }
         }
       }
       if (typeof descriptor.tool.validateInput === 'function') {
@@ -1940,12 +2742,52 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     if (descriptor.source === 'builtin' && descriptor.tool.parameters) {
       const validation = validateParams(descriptor.tool.parameters, execParams);
       if (!validation.valid) {
-        return {
-          success: false,
-          error: require('../tools/ccValidationError').formatValidationError(
-            descriptor.resolvedName || normalizedName || toolName, validation, process.env
-          ),
-        };
+        // Same stage 3.4 ladder as the registry branch above (flag + T2/T3 gated;
+        // null → legacy rejection byte-identical to today).
+        const coerced = _trySmallModelParamCoercion({
+          schema: descriptor.tool.parameters,
+          params: execParams,
+          traceContext,
+          toolLabel: descriptor.resolvedName || normalizedName || toolName,
+          emitProgress,
+        });
+        if (coerced && coerced.ok) {
+          execParams = coerced.params;
+          _paramCorrections = {
+            corrections: coerced.corrections,
+            attempts: coerced.attempts,
+            tier: coerced.tier,
+          };
+        } else {
+          const errText = require('../tools/ccValidationError').formatValidationError(
+            descriptor.resolvedName || normalizedName || toolName,
+            validation,
+            process.env
+          );
+          if (coerced) {
+            const _vfail = {
+              success: false,
+              error: errText,
+              canRetry: true,
+              hint: coerced.hint,
+              _paramCorrection: {
+                attempts: coerced.attempts,
+                corrections: coerced.corrections,
+                tier: coerced.tier,
+              },
+            };
+            _recordExecutionEffect({
+              toolName: permissionKey,
+              traceContext,
+              success: false,
+              elapsedMs: Date.now() - start,
+              result: _vfail,
+              errorType: 'validation_error',
+            });
+            return _vfail;
+          }
+          return { success: false, error: errText };
+        }
       }
     }
     // The raw tool dispatch, factored into a closure so the dependency
@@ -1976,21 +2818,30 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // fail-safe 返回 null（原错误照常透出）。总开关 KHY_DEP_HEALING（=off 关闭）。
     const _runDepHealing = async (failureSignal) => {
       // byte-identical to `KHY_DEP_HEALING === 'off'` (offDisables).
-      if (!getCapabilityMatrix().isEnabledAt(CAP_SEAMS.POST_TOOL_GOVERNANCE, 'depHealing', {})) return null;
+      if (!getCapabilityMatrix().isEnabledAt(CAP_SEAMS.POST_TOOL_GOVERNANCE, 'depHealing', {})) {
+        return null;
+      }
       // DESIGN-ARCH-048: dependency self-healing mutates the environment and is
       // non-deterministic; it must never run during a deterministic trajectory
       // replay. Bypass it when the caller marks the context as a replay run.
-      if (traceContext?.replay) return null;
+      if (traceContext?.replay) {
+        return null;
+      }
       try {
         const healing = require('./dependency/healingLoop');
         return await healing.heal({
           toolName: permissionKey,
           failure: failureSignal,
           retry: _runDescriptor,
-          control: typeof traceContext?.onControlRequest === 'function' ? traceContext.onControlRequest : null,
+          control:
+            typeof traceContext?.onControlRequest === 'function'
+              ? traceContext.onControlRequest
+              : null,
           sessionId: traceCtx.sessionId,
         });
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     };
 
     result = await (async () => {
@@ -2002,11 +2853,15 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         // result, otherwise we attach guidance and rethrow into the existing
         // structured-error catch below (no behavior loss).
         const outcome = await _runDepHealing(runErr);
-        if (outcome && outcome.healed) return outcome.result;
+        if (outcome && outcome.healed) {
+          return outcome.result;
+        }
         if (outcome) {
           try {
             runErr._depHealing = require('./dependency/healingLoop').summarizeForAgent(outcome);
-          } catch { /* guidance best-effort */ }
+          } catch {
+            /* guidance best-effort */
+          }
         }
         throw runErr;
       }
@@ -2024,12 +2879,49 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     // **逐字节零变化**。门控 KHY_MCP_RESULT_NORMALIZE(默认开)= off → 逐字节回退原样透出。
     // best-effort:归一自身绝不打断工具结果链(异常则维持原 result)。
     try {
-      if (result && typeof result === 'object'
-          && flagRegistry.isFlagEnabled('KHY_MCP_RESULT_NORMALIZE', process.env)
-          && _isMCPCallToolResult(result)) {
+      if (
+        result &&
+        typeof result === 'object' &&
+        flagRegistry.isFlagEnabled('KHY_MCP_RESULT_NORMALIZE', process.env) &&
+        _isMCPCallToolResult(result)
+      ) {
         result = normalizeToolResult(result);
       }
-    } catch { /* 归一 best-effort;失败则原样透出,绝不破坏工具结果路径 */ }
+    } catch {
+      /* 归一 best-effort;失败则原样透出,绝不破坏工具结果路径 */
+    }
+
+    // [B2] Tool-level result size cap → large-result persistence. A tool
+    // definition may declare `maxResultSizeChars` (_baseTool EXTENDED_DEFAULTS);
+    // when it is a positive integer, pass it as { maxChars } so oversized
+    // content is persisted to a temp file with a preview. Tools WITHOUT the
+    // declaration are untouched here (the global 50K default already applies
+    // inside the defineTool execute wrapper) → byte-identical legacy behavior.
+    try {
+      const _toolMaxChars =
+        descriptor && descriptor.tool ? descriptor.tool.maxResultSizeChars : undefined;
+      if (
+        Number.isInteger(_toolMaxChars) &&
+        _toolMaxChars > 0 &&
+        result &&
+        typeof result === 'object'
+      ) {
+        result = maybePersistLargeResult(result, permissionKey, { maxChars: _toolMaxChars });
+      }
+    } catch {
+      /* persistence is best-effort — never break the tool result path */
+    }
+
+    // Stage 3.4 audit: attach the applied param-correction trail to the result
+    // metadata (additive `_paramCorrections` field — consumers that don't know
+    // it are unaffected). Best-effort: never breaks the tool result path.
+    try {
+      if (_paramCorrections && result && typeof result === 'object' && !Object.isFrozen(result)) {
+        result._paramCorrections = _paramCorrections;
+      }
+    } catch {
+      /* audit metadata is non-critical */
+    }
 
     // If the tool failed (soft error), try to self-heal a missing dependency
     // before reporting it.
@@ -2041,13 +2933,19 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         try {
           const healing = require('./dependency/healingLoop');
           const summary = healing.summarizeForAgent(outcome);
-          if (summary && result && typeof result === 'object') result._depHealing = summary;
-        } catch { /* guidance is best-effort */ }
+          if (summary && result && typeof result === 'object') {
+            result._depHealing = summary;
+          }
+        } catch {
+          /* guidance is best-effort */
+        }
       }
     }
 
     // Genuine, unhealed soft failure → side-channel observe for self-evolution.
-    if (result && result.success === false) _observeEvoFriction(result);
+    if (result && result.success === false) {
+      _observeEvoFriction(result);
+    }
 
     // Wrap handler-returned error results as structured ToolError format
     if (result && result.success === false && result.error && typeof result.error === 'string') {
@@ -2056,20 +2954,39 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         const wrapped = ToolError.fromGenericError(new Error(result.error));
         const structured = wrapped.toStructuredResult();
         // Preserve extra fields from original result (output, exitCode, etc.)
-        Object.assign(structured, { output: result.output, exitCode: result.exitCode, denied: result.denied });
+        Object.assign(structured, {
+          output: result.output,
+          exitCode: result.exitCode,
+          denied: result.denied,
+        });
         // Audit
         try {
           const { logToolExecution } = require('./auditLog');
-          logToolExecution({ tool: permissionKey, params: normalizedParams, result: structured, permission, elapsed: Date.now() - start });
-        } catch { /* non-critical */ }
+          logToolExecution({
+            tool: permissionKey,
+            params: normalizedParams,
+            result: structured,
+            permission,
+            elapsed: Date.now() - start,
+          });
+        } catch {
+          /* non-critical */
+        }
         try {
           require('./receiptService').appendToolCall({
-            sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-            result: structured, permission, elapsedMs: Date.now() - start,
-            stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel,
+            sessionId: traceCtx.sessionId,
+            tool: permissionKey,
+            params: normalizedParams,
+            result: structured,
+            permission,
+            elapsedMs: Date.now() - start,
+            stepType: stepAssessment.stepType,
+            risk: stepAssessment.riskLevel,
             error: structured.error || result.error,
           });
-        } catch { /* receipt is non-critical */ }
+        } catch {
+          /* receipt is non-critical */
+        }
         emitWrapper('end', {
           tool: permissionKey,
           success: false,
@@ -2077,27 +2994,73 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
           elapsedMs: Date.now() - wrapperStart,
           error: structured.error || result.error,
         });
+        _recordToolMetrics(
+          permissionKey,
+          false,
+          Date.now() - start,
+          structured,
+          structured.errorType
+        );
+        _recordExecutionEffect({
+          toolName: permissionKey,
+          traceContext,
+          success: false,
+          elapsedMs: Date.now() - start,
+          result,
+          errorType: structured.errorType,
+        });
         return structured;
-      } catch { /* toolError not available — return as-is */ }
+      } catch {
+        /* toolError not available — return as-is */
+      }
     }
     // Audit successful call
     try {
       const { logToolExecution } = require('./auditLog');
-      logToolExecution({ tool: permissionKey, params: normalizedParams, result, permission, elapsed: Date.now() - start });
-    } catch { /* audit is non-critical */ }
+      logToolExecution({
+        tool: permissionKey,
+        params: normalizedParams,
+        result,
+        permission,
+        elapsed: Date.now() - start,
+      });
+    } catch {
+      /* audit is non-critical */
+    }
     try {
       require('./receiptService').appendToolCall({
-        sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-        result, permission, elapsedMs: Date.now() - start,
-        stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel,
+        sessionId: traceCtx.sessionId,
+        tool: permissionKey,
+        params: normalizedParams,
+        result,
+        permission,
+        elapsedMs: Date.now() - start,
+        stepType: stepAssessment.stepType,
+        risk: stepAssessment.riskLevel,
         error: result?.success ? null : result?.error || null,
       });
-    } catch { /* receipt is non-critical */ }
+    } catch {
+      /* receipt is non-critical */
+    }
     // Telemetry tracking
     try {
       const telemetry = require('./telemetryService');
-      telemetry.trackToolCall({ tool: permissionKey, success: !!result.success, elapsed: Date.now() - start });
-    } catch { /* telemetry is non-critical */ }
+      telemetry.trackToolCall({
+        tool: permissionKey,
+        success: !!result.success,
+        elapsed: Date.now() - start,
+      });
+    } catch {
+      /* telemetry is non-critical */
+    }
+    _recordToolMetrics(permissionKey, !!result?.success, Date.now() - start, result);
+    _recordExecutionEffect({
+      toolName: permissionKey,
+      traceContext,
+      success: !!result?.success,
+      elapsedMs: Date.now() - start,
+      result,
+    });
     emitWrapper('end', {
       tool: permissionKey,
       success: !!result?.success,
@@ -2126,16 +3089,25 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     let _isToolExecTimeout = false;
     try {
       const _tt = require('../tools/_toolTimeout');
-      if (_tt && typeof _tt.isToolExecTimeoutError === 'function' && _tt.isToolExecTimeoutError(err)) {
+      if (
+        _tt &&
+        typeof _tt.isToolExecTimeoutError === 'function' &&
+        _tt.isToolExecTimeoutError(err)
+      ) {
         const shaped = _tt.buildToolExecTimeoutResult({
           toolLabel: permissionKey,
           timeoutMs: err.__timeoutMs,
           elapsedMs: elapsed,
           env: process.env,
         });
-        if (shaped) { structuredResult = shaped; _isToolExecTimeout = true; }
+        if (shaped) {
+          structuredResult = shaped;
+          _isToolExecTimeout = true;
+        }
       }
-    } catch { /* fail-soft → generic shaping below */ }
+    } catch {
+      /* fail-soft → generic shaping below */
+    }
     // Honest shaping for a user-initiated cancellation (ESC / interrupt reached
     // the in-flight tool via the abort signal). Distinct from a timeout: the user
     // asked to stop. Retryable, and NOT a code defect (skip evo-friction, like a
@@ -2144,15 +3116,24 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     if (!structuredResult) {
       try {
         const _tt = require('../tools/_toolTimeout');
-        if (_tt && typeof _tt.isToolCancelledError === 'function' && _tt.isToolCancelledError(err)) {
+        if (
+          _tt &&
+          typeof _tt.isToolCancelledError === 'function' &&
+          _tt.isToolCancelledError(err)
+        ) {
           const shaped = _tt.buildToolCancelledResult({
             toolLabel: permissionKey,
             elapsedMs: elapsed,
             env: process.env,
           });
-          if (shaped) { structuredResult = shaped; _isToolExecTimeout = true; }
+          if (shaped) {
+            structuredResult = shaped;
+            _isToolExecTimeout = true;
+          }
         }
-      } catch { /* fail-soft → generic shaping below */ }
+      } catch {
+        /* fail-soft → generic shaping below */
+      }
     }
     if (!structuredResult) {
       // Wrap as ToolError for structured error reporting
@@ -2160,36 +3141,72 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
       try {
         const { ToolError } = require('./toolError');
         toolError = ToolError.isToolError(err) ? err : ToolError.fromGenericError(err);
-      } catch { toolError = null; }
-      structuredResult = toolError ? toolError.toStructuredResult() : { success: false, error: err.message };
+      } catch {
+        toolError = null;
+      }
+      structuredResult = toolError
+        ? toolError.toStructuredResult()
+        : { success: false, error: err.message };
     }
     // Surface dependency self-healing guidance attached upstream (declined /
     // install-failed / manual-required), so the Agent gets an actionable hint
     // instead of an opaque hard error.
     if (err && err._depHealing) {
-      try { structuredResult._depHealing = err._depHealing; } catch { /* non-critical */ }
+      try {
+        structuredResult._depHealing = err._depHealing;
+      } catch {
+        /* non-critical */
+      }
     }
     // Hard-thrown tool failure → side-channel observe for self-evolution.
     // A timeout is a time/resource condition, not a code defect — do not
     // pollute the evo backlog (or trigger dep-healing signals) with it.
-    if (!_isToolExecTimeout) _observeEvoFriction(err);
+    if (!_isToolExecTimeout) {
+      _observeEvoFriction(err);
+    }
     // Audit failed call
     try {
       const { logToolExecution } = require('./auditLog');
-      logToolExecution({ tool: permissionKey, params: normalizedParams, result: structuredResult, permission, elapsed });
-    } catch { /* audit is non-critical */ }
+      logToolExecution({
+        tool: permissionKey,
+        params: normalizedParams,
+        result: structuredResult,
+        permission,
+        elapsed,
+      });
+    } catch {
+      /* audit is non-critical */
+    }
     try {
       require('./receiptService').appendToolCall({
-        sessionId: traceCtx.sessionId, tool: permissionKey, params: normalizedParams,
-        result: structuredResult, permission, elapsedMs: elapsed,
-        stepType: stepAssessment.stepType, risk: stepAssessment.riskLevel,
+        sessionId: traceCtx.sessionId,
+        tool: permissionKey,
+        params: normalizedParams,
+        result: structuredResult,
+        permission,
+        elapsedMs: elapsed,
+        stepType: stepAssessment.stepType,
+        risk: stepAssessment.riskLevel,
         error: err?.message || 'unknown error',
       });
-    } catch { /* receipt is non-critical */ }
+    } catch {
+      /* receipt is non-critical */
+    }
     try {
       const telemetry = require('./telemetryService');
       telemetry.trackToolCall({ tool: permissionKey, success: false, elapsed, error: err.message });
-    } catch { /* telemetry is non-critical */ }
+    } catch {
+      /* telemetry is non-critical */
+    }
+    _recordToolMetrics(permissionKey, false, elapsed, structuredResult, err && err.name);
+    _recordExecutionEffect({
+      toolName: permissionKey,
+      traceContext,
+      success: false,
+      elapsedMs: elapsed,
+      result: structuredResult,
+      errorType: err && err.name,
+    });
     emitWrapper('end', {
       tool: permissionKey,
       success: false,
@@ -2208,7 +3225,11 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     return structuredResult;
   } finally {
     if (_fileLockHandle) {
-      try { _fileLockHandle.release(); } catch { /* best-effort lock release */ }
+      try {
+        _fileLockHandle.release();
+      } catch {
+        /* best-effort lock release */
+      }
     }
   }
 }
@@ -2218,7 +3239,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
  * Used when sending messages to AI models that support tool use.
  */
 function getToolDefinitions() {
-  const defs = _allTools.map(tool => ({
+  const defs = _allTools.map((tool) => ({
     name: tool.name,
     description: tool.description,
     parameters: {
@@ -2239,24 +3260,44 @@ function getToolDefinitions() {
   if (registry && typeof registry.getEnabledDefinitions === 'function') {
     try {
       defs.push(...registry.getEnabledDefinitions());
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   } else if (registry && typeof registry.getDefinitions === 'function') {
     try {
       defs.push(...registry.getDefinitions());
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
+  }
+
+  if (process.env.KHY_DEBUG_TOOLS === '1') {
+    const names = defs.map((d) => d.name || d.function?.name).filter(Boolean);
+    console.error(
+      `[DEBUG-TOOLS] getToolDefinitions: ${defs.length} defs, names=[${names.join(', ')}]`
+    );
+    console.error(
+      `[DEBUG-TOOLS] ComputerUse present: ${names.includes('ComputerUse')}, DesktopControl: ${names.includes('DesktopControl')}`
+    );
   }
 
   defs.push(...getClaudeCompatToolDefinitions());
 
   // Deduplicate: normalize snake_case/camelCase to catch duplicates like
   // shell_command vs shellCommand, data_fetch vs dataFetch, etc.
-  const _normalize = (name) => String(name || '').trim().toLowerCase().replace(/_/g, '');
+  const _normalize = (name) =>
+    String(name || '')
+      .trim()
+      .toLowerCase()
+      .replace(/_/g, '');
   const seen = new Set();
   const deduped = [];
   for (const def of defs) {
     const key = String(def?.name || '').trim();
     const norm = _normalize(key);
-    if (!key || seen.has(norm)) continue;
+    if (!key || seen.has(norm)) {
+      continue;
+    }
     seen.add(norm);
     deduped.push(def);
   }
@@ -2270,14 +3311,18 @@ function getToolDefinitions() {
   let collapsed = deduped;
   try {
     collapsed = require('./toolRegistryDedup').collapseRedundant(deduped);
-  } catch { collapsed = deduped; /* fail-soft */ }
+  } catch {
+    collapsed = deduped; /* fail-soft */
+  }
 
   // [P1#3] 参数命名统一(KHY_TOOL_PARAM_NAMING,默认开):把暴露给模型的参数键统一
   // 成 snake_case(纯大小写折叠,绝不合并语义不同的词),让模型只看到一种风格。
   // 执行侧 expandParamAliases 会把入参补回工具期望的拼写 → 往返无损、能力零损失。
   try {
     collapsed = require('./toolParamNaming').canonicalizeDefs(collapsed);
-  } catch { /* fail-soft:命名归一失败绝不阻断工具定义 */ }
+  } catch {
+    /* fail-soft:命名归一失败绝不阻断工具定义 */
+  }
 
   // Stable-prefix mode (DESIGN-ARCH-047): sort tool definitions by name so the
   // tool block is byte-stable across requests — async MCP registration / lazy
@@ -2313,14 +3358,20 @@ function _toolAccessGateway() {
  */
 async function getToolDefinitionsForUser(userId) {
   const base = getToolDefinitions();
-  if (userId == null || process.env.KHY_PLUGINS === 'off') return base;
+  if (userId == null || process.env.KHY_PLUGINS === 'off') {
+    return base;
+  }
   try {
     const pluginBridge = require('./plugins/pluginToolBridge');
     const pluginTools = await pluginBridge.listUserPluginTools(userId);
-    if (!pluginTools || !pluginTools.length) return base;
-    const have = new Set(base.map((d) => String(d && d.name || '')));
+    if (!pluginTools || !pluginTools.length) {
+      return base;
+    }
+    const have = new Set(base.map((d) => String((d && d.name) || '')));
     for (const t of pluginTools) {
-      if (have.has(t.name)) continue;
+      if (have.has(t.name)) {
+        continue;
+      }
       have.add(t.name);
       base.push({
         name: t.name,
@@ -2330,20 +3381,40 @@ async function getToolDefinitionsForUser(userId) {
         parameters: t.input_schema || { type: 'object', properties: {} },
       });
     }
-  } catch { /* plugins are additive; never break the base tool list */ }
+  } catch {
+    /* plugins are additive; never break the base tool list */
+  }
   return base;
 }
 
 /**
  * Register an MCP server connection.
+ *
+ * Idempotent per server name: several MCP servers can be enabled together and a
+ * given server may reconnect / be re-registered. Re-registering first drops the
+ * prior server entry and its previously exposed `mcp_<server>_*` tools, so
+ * function-calling never receives duplicate tool names across multiple servers.
+ * Cross-server naming stays collision-free because each tool is namespaced by
+ * the unique server name (`mcp_<server>_<tool>`).
  */
 function registerMCPServer(server) {
+  if (!server || !server.name) {
+    throw new Error('MCP server must have a name');
+  }
+  const serverName = String(server.name);
+  const toolPrefix = `mcp_${serverName}_`;
+  // Drop any prior registration for this server (idempotent re-register).
+  _mcpServers = _mcpServers.filter((s) => s && s.name !== serverName);
+  _allTools = _allTools.filter(
+    (t) =>
+      !(t && t.category === 'mcp' && typeof t.name === 'string' && t.name.startsWith(toolPrefix))
+  );
   _mcpServers.push(server);
   // Register MCP tools into the tool registry
   if (server.tools) {
     for (const tool of server.tools) {
       _allTools.push({
-        name: `mcp_${server.name}_${tool.name}`,
+        name: `mcp_${serverName}_${tool.name}`,
         description: `[MCP:${server.name}] ${tool.description}`,
         category: 'mcp',
         risk: 'medium',
@@ -2365,7 +3436,9 @@ function registerMCPServer(server) {
  * Register a custom tool (from plugin or skill).
  */
 function registerTool(tool) {
-  if (!tool.name || !tool.handler) throw new Error('Tool must have name and handler');
+  if (!tool.name || !tool.handler) {
+    throw new Error('Tool must have name and handler');
+  }
   tool.risk = tool.risk || 'medium';
   tool.category = tool.category || 'custom';
   _allTools.push(tool);
@@ -2375,7 +3448,7 @@ function registerTool(tool) {
  * List all registered tools.
  */
 function listTools() {
-  const list = _allTools.map(t => ({
+  const list = _allTools.map((t) => ({
     name: t.name,
     description: t.description,
     category: t.category,
@@ -2396,7 +3469,9 @@ function listTools() {
           });
         }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   list.push(..._claudeCompatTools);
@@ -2405,7 +3480,9 @@ function listTools() {
   const deduped = [];
   for (const item of list) {
     const key = String(item?.name || '').trim();
-    if (!key || seen.has(key)) continue;
+    if (!key || seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     deduped.push(item);
   }
@@ -2418,7 +3495,6 @@ function listTools() {
 function getMCPServers() {
   return _mcpServers;
 }
-
 
 module.exports = {
   // Core
@@ -2457,7 +3533,13 @@ module.exports = {
   getMCPServers,
 
   // Bridge to new tool registry
-  getToolRegistry: () => { try { return require('../tools'); } catch { return null; } },
+  getToolRegistry: () => {
+    try {
+      return require('../tools');
+    } catch {
+      return null;
+    }
+  },
 
   // Constants
   RISK_LEVELS,

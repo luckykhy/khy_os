@@ -23,55 +23,57 @@ function _getSchema() {
   if (!_acpSchema) {
     try {
       _acpSchema = require('../contracts/acp/acp-message.schema.json');
-    } catch { _acpSchema = null; }
+    } catch {
+      _acpSchema = null;
+    }
   }
   return _acpSchema;
 }
 
 // Map method → $defs key for param validation
 const METHOD_PARAM_DEF = Object.freeze({
-  'agent.spawn':       'AgentSpawnParams',
-  'agent.kill':        'AgentKillParams',
-  'agent.status':      'AgentStatusParams',
-  'task.submit':       'TaskSubmitParams',
-  'task.result':       'TaskResultParams',
-  'task.progress':     'TaskProgressParams',
-  'context.share':     'ContextShareParams',
-  'tool.invoke':       'ToolInvokeParams',
-  'tool.result':       'ToolResultParams',
-  'message.send':      'MessageSendParams',
+  'agent.spawn': 'AgentSpawnParams',
+  'agent.kill': 'AgentKillParams',
+  'agent.status': 'AgentStatusParams',
+  'task.submit': 'TaskSubmitParams',
+  'task.result': 'TaskResultParams',
+  'task.progress': 'TaskProgressParams',
+  'context.share': 'ContextShareParams',
+  'tool.invoke': 'ToolInvokeParams',
+  'tool.result': 'ToolResultParams',
+  'message.send': 'MessageSendParams',
   'message.broadcast': 'MessageBroadcastParams',
 });
 
 // ── ACP Methods (mirrors schema enum) ──────────────────────────────────
 
 const ACP_METHODS = Object.freeze({
-  AGENT_SPAWN:        'agent.spawn',
-  AGENT_KILL:         'agent.kill',
-  AGENT_STATUS:       'agent.status',
-  TASK_SUBMIT:        'task.submit',
-  TASK_RESULT:        'task.result',
-  TASK_PROGRESS:      'task.progress',
-  CONTEXT_SHARE:      'context.share',
-  TOOL_INVOKE:        'tool.invoke',
-  TOOL_RESULT:        'tool.result',
-  MESSAGE_SEND:       'message.send',
-  MESSAGE_BROADCAST:  'message.broadcast',
-  HEARTBEAT:          'heartbeat',
+  AGENT_SPAWN: 'agent.spawn',
+  AGENT_KILL: 'agent.kill',
+  AGENT_STATUS: 'agent.status',
+  TASK_SUBMIT: 'task.submit',
+  TASK_RESULT: 'task.result',
+  TASK_PROGRESS: 'task.progress',
+  CONTEXT_SHARE: 'context.share',
+  TOOL_INVOKE: 'tool.invoke',
+  TOOL_RESULT: 'tool.result',
+  MESSAGE_SEND: 'message.send',
+  MESSAGE_BROADCAST: 'message.broadcast',
+  HEARTBEAT: 'heartbeat',
 });
 
 // ── Error codes (JSON-RPC 2.0 standard + ACP-specific) ────────────────
 
 const ACP_ERRORS = Object.freeze({
-  PARSE_ERROR:      -32700,
-  INVALID_REQUEST:  -32600,
+  PARSE_ERROR: -32700,
+  INVALID_REQUEST: -32600,
   METHOD_NOT_FOUND: -32601,
-  INVALID_PARAMS:   -32602,
-  INTERNAL_ERROR:   -32603,
-  AGENT_NOT_FOUND:  -40001,
-  AGENT_BUSY:       -40002,
-  TIMEOUT:          -40003,
-  CHANNEL_CLOSED:   -40004,
+  INVALID_PARAMS: -32602,
+  INTERNAL_ERROR: -32603,
+  AGENT_NOT_FOUND: -40001,
+  AGENT_BUSY: -40002,
+  TIMEOUT: -40003,
+  CHANNEL_CLOSED: -40004,
 });
 
 // ── Message Builders ───────────────────────────────────────────────────
@@ -99,7 +101,9 @@ function createResponse(id, result) {
 
 function createErrorResponse(id, code, message, data) {
   const resp = { jsonrpc: '2.0', id, error: { code, message } };
-  if (data !== undefined) resp.error.data = data;
+  if (data !== undefined) {
+    resp.error.data = data;
+  }
   return resp;
 }
 
@@ -109,8 +113,12 @@ function createErrorResponse(id, code, message, data) {
  * @returns {{ valid: boolean, reason?: string }}
  */
 function validateMessage(msg) {
-  if (!msg || typeof msg !== 'object') return { valid: false, reason: 'Not an object' };
-  if (msg.jsonrpc !== '2.0') return { valid: false, reason: 'Missing jsonrpc 2.0' };
+  if (!msg || typeof msg !== 'object') {
+    return { valid: false, reason: 'Not an object' };
+  }
+  if (msg.jsonrpc !== '2.0') {
+    return { valid: false, reason: 'Missing jsonrpc 2.0' };
+  }
   if (msg.method && !Object.values(ACP_METHODS).includes(msg.method)) {
     return { valid: false, reason: `Unknown method: ${msg.method}` };
   }
@@ -169,7 +177,9 @@ class ACPTransport extends EventEmitter {
    * @returns {Promise<*>} Result payload
    */
   request(method, params, timeout) {
-    if (this._destroyed) return Promise.reject(new Error('Transport destroyed'));
+    if (this._destroyed) {
+      return Promise.reject(new Error('Transport destroyed'));
+    }
 
     const msg = createRequest(method, params);
     return new Promise((resolve, reject) => {
@@ -190,7 +200,9 @@ class ACPTransport extends EventEmitter {
    * @param {object} [params]
    */
   notify(method, params) {
-    if (this._destroyed) return;
+    if (this._destroyed) {
+      return;
+    }
     this._send(createNotification(method, params));
   }
 
@@ -210,7 +222,9 @@ class ACPTransport extends EventEmitter {
     this._destroyed = true;
     for (const [, entry] of this._pending) {
       clearTimeout(entry.timer);
-      entry.reject(Object.assign(new Error('Transport destroyed'), { code: ACP_ERRORS.CHANNEL_CLOSED }));
+      entry.reject(
+        Object.assign(new Error('Transport destroyed'), { code: ACP_ERRORS.CHANNEL_CLOSED })
+      );
     }
     this._pending.clear();
     this._handlers.clear();
@@ -231,7 +245,9 @@ class ACPTransport extends EventEmitter {
       try {
         const msg = JSON.parse(typeof data === 'string' ? data : data.toString());
         this._onRawMessage(msg);
-      } catch { /* bad frame */ }
+      } catch {
+        /* bad frame */
+      }
     };
     this.channel.on('message', this._wsHandler);
   }
@@ -245,7 +261,9 @@ class ACPTransport extends EventEmitter {
     }
 
     const check = validateMessage(raw);
-    if (!check.valid) return;
+    if (!check.valid) {
+      return;
+    }
 
     // Response to a pending request
     if (raw.id !== undefined && !raw.method) {
@@ -254,7 +272,12 @@ class ACPTransport extends EventEmitter {
         clearTimeout(entry.timer);
         this._pending.delete(raw.id);
         if (raw.error) {
-          entry.reject(Object.assign(new Error(raw.error.message), { code: raw.error.code, data: raw.error.data }));
+          entry.reject(
+            Object.assign(new Error(raw.error.message), {
+              code: raw.error.code,
+              data: raw.error.data,
+            })
+          );
         } else {
           entry.resolve(raw.result);
         }
@@ -272,7 +295,11 @@ class ACPTransport extends EventEmitter {
         Promise.resolve()
           .then(() => handler(raw.params))
           .then((result) => this._send(createResponse(raw.id, result)))
-          .catch((err) => this._send(createErrorResponse(raw.id, err.code || ACP_ERRORS.INTERNAL_ERROR, err.message)));
+          .catch((err) =>
+            this._send(
+              createErrorResponse(raw.id, err.code || ACP_ERRORS.INTERNAL_ERROR, err.message)
+            )
+          );
       }
     }
   }
@@ -288,24 +315,26 @@ class ACPTransport extends EventEmitter {
         // caller uses request() which handles the HTTP round-trip separately.
         this.emit('_httpSend', msg);
       }
-    } catch { /* channel closed */ }
+    } catch {
+      /* channel closed */
+    }
   }
 }
 
 // ── Bridge: ipcProtocol → ACP ──────────────────────────────────────────
 
 const _IPC_TO_ACP_METHOD = {
-  init:       ACP_METHODS.AGENT_SPAWN,
-  task:       ACP_METHODS.TASK_SUBMIT,
-  follow_up:  ACP_METHODS.TASK_SUBMIT,
-  kill:       ACP_METHODS.AGENT_KILL,
-  ready:      ACP_METHODS.AGENT_STATUS,
-  progress:   ACP_METHODS.TASK_PROGRESS,
-  tool_call:  ACP_METHODS.TOOL_INVOKE,
-  result:     ACP_METHODS.TASK_RESULT,
-  error:      ACP_METHODS.TASK_RESULT,
-  metrics:    ACP_METHODS.TASK_RESULT,
-  heartbeat:  ACP_METHODS.HEARTBEAT,
+  init: ACP_METHODS.AGENT_SPAWN,
+  task: ACP_METHODS.TASK_SUBMIT,
+  follow_up: ACP_METHODS.TASK_SUBMIT,
+  kill: ACP_METHODS.AGENT_KILL,
+  ready: ACP_METHODS.AGENT_STATUS,
+  progress: ACP_METHODS.TASK_PROGRESS,
+  tool_call: ACP_METHODS.TOOL_INVOKE,
+  result: ACP_METHODS.TASK_RESULT,
+  error: ACP_METHODS.TASK_RESULT,
+  metrics: ACP_METHODS.TASK_RESULT,
+  heartbeat: ACP_METHODS.HEARTBEAT,
 };
 
 function _ipcToAcp(ipcMsg) {
@@ -318,10 +347,16 @@ function _ipcToAcp(ipcMsg) {
       ...(ipcMsg.payload || {}),
     },
   };
-  if (ipcMsg.requestId) msg.id = ipcMsg.requestId;
+  if (ipcMsg.requestId) {
+    msg.id = ipcMsg.requestId;
+  }
   if (ipcMsg.type === 'error') {
     // Convert to error response
-    return createErrorResponse(ipcMsg.requestId, ACP_ERRORS.INTERNAL_ERROR, ipcMsg.payload?.message || 'Agent error');
+    return createErrorResponse(
+      ipcMsg.requestId,
+      ACP_ERRORS.INTERNAL_ERROR,
+      ipcMsg.payload?.message || 'Agent error'
+    );
   }
   return msg;
 }

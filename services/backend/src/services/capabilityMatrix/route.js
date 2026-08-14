@@ -24,7 +24,14 @@
  */
 function serializeRoute(route) {
   if (!route || typeof route !== 'object') {
-    return { active: [], preset: null, signals: { modes: [] }, gatedOff: [], suppressed: [], budgetDropped: [] };
+    return {
+      active: [],
+      preset: null,
+      signals: { modes: [] },
+      gatedOff: [],
+      suppressed: [],
+      budgetDropped: [],
+    };
   }
   return {
     preset: route.preset ? route.preset.id : null,
@@ -54,7 +61,9 @@ function serializeRoute(route) {
  * @returns {string}
  */
 function formatRouteHuman(route) {
-  if (!route || typeof route !== 'object') return 'route: (empty)';
+  if (!route || typeof route !== 'object') {
+    return 'route: (empty)';
+  }
   const presetTag = route.preset && route.preset.id ? `[${route.preset.id}]` : '';
   const active = Array.isArray(route.active) ? route.active : [];
   const pipeline = active.length ? active.join('→') : '(none active)';
@@ -62,13 +71,19 @@ function formatRouteHuman(route) {
   let line = `route${presetTag}: ${pipeline}`;
 
   const gated = _ids(route.gatedOff);
-  if (gated.length) line += `\n  · gated-off: ${gated.join(', ')}`;
+  if (gated.length) {
+    line += `\n  · gated-off: ${gated.join(', ')}`;
+  }
 
   const suppressed = _withReasons(route.suppressed);
-  if (suppressed.length) line += `\n  · suppressed: ${suppressed.join(', ')}`;
+  if (suppressed.length) {
+    line += `\n  · suppressed: ${suppressed.join(', ')}`;
+  }
 
   const dropped = _withReasons(route.budgetDropped);
-  if (dropped.length) line += `\n  · budget-dropped: ${dropped.join(', ')}`;
+  if (dropped.length) {
+    line += `\n  · budget-dropped: ${dropped.join(', ')}`;
+  }
 
   return line;
 }
@@ -76,22 +91,30 @@ function formatRouteHuman(route) {
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function _modes(signals) {
-  if (signals && Array.isArray(signals.modes)) return signals.modes.slice();
+  if (signals && Array.isArray(signals.modes)) {
+    return signals.modes.slice();
+  }
   return [];
 }
 
 function _reasons(list) {
-  if (!Array.isArray(list)) return [];
+  if (!Array.isArray(list)) {
+    return [];
+  }
   return list.map((x) => ({ id: x.id, reason: x.reason || null }));
 }
 
 function _ids(list) {
-  if (!Array.isArray(list)) return [];
+  if (!Array.isArray(list)) {
+    return [];
+  }
   return list.map((x) => x.id);
 }
 
 function _withReasons(list) {
-  if (!Array.isArray(list)) return [];
+  if (!Array.isArray(list)) {
+    return [];
+  }
   return list.map((x) => (x.reason ? `${x.id}(${x.reason})` : x.id));
 }
 

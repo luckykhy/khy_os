@@ -31,21 +31,31 @@ function _int(name, def) {
   return Number.isInteger(n) && n > 0 ? n : def;
 }
 const LIMITS = {
-  get maxCodeChars() { return _int('KHY_META_TOOL_MAX_CODE', 4000); },
-  get maxParams() { return _int('KHY_META_TOOL_MAX_PARAMS', 8); },
-  get maxPerSession() { return _int('KHY_META_TOOL_MAX_PER_SESSION', 5); },
+  get maxCodeChars() {
+    return _int('KHY_META_TOOL_MAX_CODE', 4000);
+  },
+  get maxParams() {
+    return _int('KHY_META_TOOL_MAX_PARAMS', 8);
+  },
+  get maxPerSession() {
+    return _int('KHY_META_TOOL_MAX_PER_SESSION', 5);
+  },
   get maxRetries() {
     const n = parseInt(String(process.env.KHY_META_TOOL_MAX_RETRIES || ''), 10);
     return Number.isInteger(n) && n >= 0 ? n : 1;
   },
-  get timeoutMs() { return Math.min(_int('KHY_META_TOOL_TIMEOUT_MS', 2000), 5000); },
+  get timeoutMs() {
+    return Math.min(_int('KHY_META_TOOL_TIMEOUT_MS', 2000), 5000);
+  },
 };
 
 const NAME_RE = /^[a-zA-Z][a-zA-Z0-9_]{2,39}$/;
 
 /** 是否启用元工具系统（设计 §0，默认关闭）。布尔解析走 parseBoolean 单一真源。 */
 function isEnabled() {
-  return require('../utils/parseBoolean')(process.env.KHY_ENABLE_META_TOOL, false, { extended: false });
+  return require('../utils/parseBoolean')(process.env.KHY_ENABLE_META_TOOL, false, {
+    extended: false,
+  });
 }
 
 // ── 静态安全扫描黑名单（设计 §4 G2）────────────────────────────────────────
@@ -93,7 +103,9 @@ function staticSafetyScan(code) {
     return { ok: false, reason: 'empty code' };
   }
   for (const { re, why } of DANGER_PATTERNS) {
-    if (re.test(code)) return { ok: false, reason: `forbidden token: ${why}` };
+    if (re.test(code)) {
+      return { ok: false, reason: `forbidden token: ${why}` };
+    }
   }
   return { ok: true };
 }
@@ -105,7 +117,9 @@ function staticSafetyScan(code) {
  * @returns {{ ok: boolean, reason?: string }}
  */
 function validateDefinition(def, existingNames = new Set()) {
-  if (!def || typeof def !== 'object') return { ok: false, reason: 'not an object' };
+  if (!def || typeof def !== 'object') {
+    return { ok: false, reason: 'not an object' };
+  }
   const { name, description, code, inputSchema } = def;
   if (!NAME_RE.test(String(name || ''))) {
     return { ok: false, reason: 'invalid name (need ^[a-zA-Z][a-zA-Z0-9_]{2,39}$)' };
@@ -142,7 +156,11 @@ function validateDefinition(def, existingNames = new Set()) {
  */
 function buildSandboxProgram(code, params) {
   let json = '{}';
-  try { json = JSON.stringify(params || {}); } catch { json = '{}'; }
+  try {
+    json = JSON.stringify(params || {});
+  } catch {
+    json = '{}';
+  }
   // IIFE 的返回值即 vm.Script 的求值结果，被 sandboxedExec 序列化为 result。
   return `(function(params){\n${code}\n})(${json});`;
 }
@@ -155,7 +173,9 @@ function buildSandboxProgram(code, params) {
  */
 function sandboxSmokeTest(code, sampleParams) {
   let sandboxedExec;
-  try { ({ sandboxedExec } = require('./toolSandbox')); } catch (e) {
+  try {
+    ({ sandboxedExec } = require('./toolSandbox'));
+  } catch (e) {
     return { ok: false, reason: `sandbox unavailable: ${e.message}` };
   }
   const program = buildSandboxProgram(code, sampleParams);
@@ -178,16 +198,30 @@ function sandboxSmokeTest(code, sampleParams) {
  */
 function deriveSampleParams(inputSchema) {
   const out = {};
-  if (!inputSchema || typeof inputSchema !== 'object') return out;
+  if (!inputSchema || typeof inputSchema !== 'object') {
+    return out;
+  }
   for (const [key, rule] of Object.entries(inputSchema)) {
     const r = rule && typeof rule === 'object' ? rule : {};
-    if (Array.isArray(r.enum) && r.enum.length) { out[key] = r.enum[0]; continue; }
+    if (Array.isArray(r.enum) && r.enum.length) {
+      out[key] = r.enum[0];
+      continue;
+    }
     switch (String(r.type || 'string')) {
-      case 'number': out[key] = typeof r.min === 'number' ? r.min : 1; break;
-      case 'boolean': out[key] = false; break;
-      case 'array': out[key] = []; break;
-      case 'object': out[key] = {}; break;
-      default: out[key] = 'test';
+      case 'number':
+        out[key] = typeof r.min === 'number' ? r.min : 1;
+        break;
+      case 'boolean':
+        out[key] = false;
+        break;
+      case 'array':
+        out[key] = [];
+        break;
+      case 'object':
+        out[key] = {};
+        break;
+      default:
+        out[key] = 'test';
     }
   }
   return out;
@@ -202,8 +236,14 @@ function deriveSampleParams(inputSchema) {
 function makeSandboxedExecute(code, inputSchema) {
   return async function execute(params = {}) {
     let sandboxedExec;
-    try { ({ sandboxedExec } = require('./toolSandbox')); } catch (e) {
-      return { success: false, error: `sandbox unavailable: ${e.message}`, content: '工具运行环境不可用。' };
+    try {
+      ({ sandboxedExec } = require('./toolSandbox'));
+    } catch (e) {
+      return {
+        success: false,
+        error: `sandbox unavailable: ${e.message}`,
+        content: '工具运行环境不可用。',
+      };
     }
     const program = buildSandboxProgram(code, params);
     const res = sandboxedExec(program, { timeoutMs: LIMITS.timeoutMs });
@@ -218,7 +258,9 @@ function makeSandboxedExecute(code, inputSchema) {
     } catch {
       content = String(data);
     }
-    if (res.output && res.output.trim()) content = `${content}\n${res.output}`.trim();
+    if (res.output && res.output.trim()) {
+      content = `${content}\n${res.output}`.trim();
+    }
     return { success: true, data, content: content || '(空结果)' };
   };
 }
@@ -247,7 +289,9 @@ function _buildGenPrompt({ purpose, name, inputHint }) {
     '',
     '示例输出：',
     '{"name":"celsiusToFahrenheit","description":"摄氏转华氏","category":"custom","risk":"safe","inputSchema":{"celsius":{"type":"number","required":true,"description":"摄氏温度"}},"code":"return { fahrenheit: params.celsius * 9/5 + 32 };"}',
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /**
@@ -258,7 +302,9 @@ function _buildGenPrompt({ purpose, name, inputHint }) {
  */
 async function generateToolDefinition(spec, deps) {
   const llm = deps && deps.llm;
-  if (typeof llm !== 'function') return { ok: false, reason: 'no llm injected' };
+  if (typeof llm !== 'function') {
+    return { ok: false, reason: 'no llm injected' };
+  }
   const { extractFirstJson } = require('./gateway/safeJsonParse');
   const prompt = _buildGenPrompt(spec);
 
@@ -282,7 +328,15 @@ async function generateToolDefinition(spec, deps) {
 
 // ── 持久化（设计 §5）──────────────────────────────────────────────────────
 function _generatedDir() {
-  return process.env.KHY_META_TOOL_DIR || path.join(os.homedir(), '.khy', 'generated_tools');
+  if (process.env.KHY_META_TOOL_DIR) {
+    return process.env.KHY_META_TOOL_DIR;
+  }
+  // Portable-aware data home; fallback to the legacy location.
+  try {
+    return path.join(require('../utils/dataHome').getDataHome(), 'generated_tools');
+  } catch {
+    return path.join(os.homedir(), '.khy', 'generated_tools');
+  }
 }
 
 function persistGeneratedTool(def) {
@@ -326,16 +380,24 @@ function loadPersistedGeneratedTools(deps = {}) {
     let record;
     try {
       record = JSON.parse(fs.readFileSync(path.join(_generatedDir(), f), 'utf8'));
-    } catch { out.skipped.push(f); continue; }
+    } catch {
+      out.skipped.push(f);
+      continue;
+    }
     // 复跑全部安全闸：磁盘文件可能被篡改，绝不无条件信任。
     const v = validateDefinition(record, existing);
     const s = staticSafetyScan(record.code);
-    if (!v.ok || !s.ok || existing.has(record.name)) { out.skipped.push(f); continue; }
+    if (!v.ok || !s.ok || existing.has(record.name)) {
+      out.skipped.push(f);
+      continue;
+    }
     try {
       register(_toRegisterable(record));
       existing.add(record.name);
       out.loaded.push(record.name);
-    } catch { out.skipped.push(f); }
+    } catch {
+      out.skipped.push(f);
+    }
   }
   return out;
 }
@@ -349,9 +411,15 @@ function _registryNames() {
   try {
     const reg = _registry();
     const all = typeof reg.getAll === 'function' ? reg.getAll() : null;
-    if (all && typeof all.keys === 'function') return new Set([...all.keys()]);
-    if (Array.isArray(all)) return new Set(all.map((t) => t && t.name).filter(Boolean));
-  } catch { /* fall through */ }
+    if (all && typeof all.keys === 'function') {
+      return new Set([...all.keys()]);
+    }
+    if (Array.isArray(all)) {
+      return new Set(all.map((t) => t && t.name).filter(Boolean));
+    }
+  } catch {
+    /* fall through */
+  }
   return new Set();
 }
 
@@ -366,8 +434,8 @@ function _toRegisterable(def) {
     category: 'custom',
     risk: 'safe',
     inputSchema: def.inputSchema || {},
-    isReadOnly: true,          // 纯计算，无副作用
-    isConcurrencySafe: true,   // 沙箱内无共享状态
+    isReadOnly: true, // 纯计算，无副作用
+    isConcurrencySafe: true, // 沙箱内无共享状态
     isDestructive: false,
     execute: makeSandboxedExecute(def.code, def.inputSchema || {}),
   };
@@ -401,7 +469,10 @@ function _peek(session) {
  */
 async function forgeTool(spec, deps = {}) {
   if (!isEnabled()) {
-    return { status: 'disabled', message: '元工具系统未启用（设置 KHY_ENABLE_META_TOOL=1 以开启）。' };
+    return {
+      status: 'disabled',
+      message: '元工具系统未启用（设置 KHY_ENABLE_META_TOOL=1 以开启）。',
+    };
   }
   const purpose = String((spec && spec.purpose) || '').trim();
   if (!purpose) {
@@ -412,7 +483,11 @@ async function forgeTool(spec, deps = {}) {
 
   // 去重：建议名已存在 → 直接复用（设计 §7）
   if (spec.name && existing.has(spec.name)) {
-    return { status: 'reused', toolName: spec.name, message: `已存在工具「${spec.name}」，直接复用。` };
+    return {
+      status: 'reused',
+      toolName: spec.name,
+      message: `已存在工具「${spec.name}」，直接复用。`,
+    };
   }
 
   // 会话铸造数上限（设计 §7 防无限生成）
@@ -427,7 +502,11 @@ async function forgeTool(spec, deps = {}) {
   // ① LLM 生成
   const gen = await generateToolDefinition(spec, deps);
   if (!gen.ok) {
-    return { status: 'rejected', reason: gen.reason, message: '未能生成可用的工具定义，已改用现有能力继续。' };
+    return {
+      status: 'rejected',
+      reason: gen.reason,
+      message: '未能生成可用的工具定义，已改用现有能力继续。',
+    };
   }
   const def = gen.def;
   def.purpose = purpose;
@@ -441,13 +520,21 @@ async function forgeTool(spec, deps = {}) {
   // ③ 静态安全扫描（G2，白盒拒绝）
   const s = staticSafetyScan(def.code);
   if (!s.ok) {
-    return { status: 'rejected', reason: s.reason, message: '生成的工具涉及受限操作，未通过安全扫描，已跳过。' };
+    return {
+      status: 'rejected',
+      reason: s.reason,
+      message: '生成的工具涉及受限操作，未通过安全扫描，已跳过。',
+    };
   }
 
   // ④ 沙箱冒烟测试（G3）
   const smoke = sandboxSmokeTest(def.code, deriveSampleParams(def.inputSchema));
   if (!smoke.ok) {
-    return { status: 'rejected', reason: smoke.reason, message: '生成的工具未通过沙箱测试，已跳过。' };
+    return {
+      status: 'rejected',
+      reason: smoke.reason,
+      message: '生成的工具未通过沙箱测试，已跳过。',
+    };
   }
 
   // ⑤ 注册（公开 API；运行期 execute 始终沙箱化 = G4）
@@ -455,7 +542,11 @@ async function forgeTool(spec, deps = {}) {
   try {
     register(_toRegisterable(def));
   } catch (e) {
-    return { status: 'rejected', reason: `register failed: ${e.message}`, message: '工具注册失败，已跳过。' };
+    return {
+      status: 'rejected',
+      reason: `register failed: ${e.message}`,
+      message: '工具注册失败，已跳过。',
+    };
   }
   existing.add(def.name);
   _bump(deps.session);

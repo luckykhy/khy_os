@@ -32,7 +32,12 @@ let userA;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'pre-a', email: 'pre-a@test.local', password: 'pw-a-123456', status: 'active' });
+  userA = await User.create({
+    username: 'pre-a',
+    email: 'pre-a@test.local',
+    password: 'pw-a-123456',
+    status: 'active',
+  });
   app = express();
   app.use(express.json());
   app.use('/api/user-gateway', router);
@@ -40,16 +45,24 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
-afterEach(() => { delete process.env.KHY_PROVIDER_PRESETS; });
+afterEach(() => {
+  delete process.env.KHY_PROVIDER_PRESETS;
+});
 
 const auth = (u) => ['Authorization', `Bearer ${tokenFor(u.id)}`];
 
 describe('GET /api/user-gateway/provider-presets', () => {
   test('authenticated user gets a non-empty, key-less preset list', async () => {
-    const res = await request(app).get('/api/user-gateway/provider-presets').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/user-gateway/provider-presets')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data)).toBe(true);
@@ -72,7 +85,9 @@ describe('GET /api/user-gateway/provider-presets', () => {
     process.env.KHY_PROVIDER_PRESETS = JSON.stringify([
       { id: 'acme', label: 'Acme', baseUrl: 'https://acme.example/v1', apiFormat: 'openai' },
     ]);
-    const res = await request(app).get('/api/user-gateway/provider-presets').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/user-gateway/provider-presets')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.data.find((p) => p.id === 'acme')).toBeDefined();
   });

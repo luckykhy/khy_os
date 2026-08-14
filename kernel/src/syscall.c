@@ -409,11 +409,23 @@ static uint64_t sys_open(int from_user, uint64_t path_ptr, uint64_t flags) {
     if (read_user_path(from_user, path_ptr, path) != 0)
         return (uint64_t)-1;
 
+    /* Reserve an fd slot FIRST so we never write a file on disk (O_CREAT)
+     * only to find the fd table full — which would leave an orphaned file. */
+    struct fd_entry *fds = cur_fds();
+    if (!fds)
+        return (uint64_t)-3;
+    int free_slot = -1;
+    for (int i = 0; i < SYSCALL_MAX_FDS; i++) {
+        if (!fds[i].used) {
+            free_slot = i;
+            break;
+        }
+    }
+    if (free_slot < 0)
+        return (uint64_t)-3;
+
     int kind = FD_FILE;
     if (vfs_is_dir(path)) {
-        /* A directory opens read-only as a streaming handle for fgetdents
-         * (Phase 25). It cannot be created/truncated, and read/write reject it;
-         * enumeration needs read permission, exactly like path-based getdents. */
         if (flags & O_CREAT)
             return (uint64_t)-2;
         if (!perm_ok(from_user, path, 1, 0))
@@ -421,43 +433,31 @@ static uint64_t sys_open(int from_user, uint64_t path_ptr, uint64_t flags) {
         kind = FD_DIR;
     } else if (flags & O_CREAT) {
         if (vfs_exists(path)) {
-            /* Truncating an existing file requires write permission on it. */
             if (!perm_ok(from_user, path, 0, 1))
                 return (uint64_t)-5;
             if (vfs_write_file(path, "", 0, 0) < 0)
                 return (uint64_t)-4;
         } else {
-            /* Creating a new file requires write permission on its directory. */
             char dir[SYSCALL_MAX_PATH];
             path_dirname(path, dir);
             if (!perm_ok(from_user, dir, 0, 1))
                 return (uint64_t)-5;
             if (vfs_write_file(path, "", 0, 0) < 0)
                 return (uint64_t)-4;
-            /* A user-created file is owned by its creator's effective ids. */
             if (from_user)
                 vfs_chown(path, process_current_euid(), process_current_egid());
         }
     } else if (!vfs_exists(path)) {
         return (uint64_t)-2;
     } else if (!perm_ok(from_user, path, 1, 0)) {
-        /* Opening an existing file requires at least read permission. */
         return (uint64_t)-5;
     }
 
-    struct fd_entry *fds = cur_fds();
-    if (!fds)
-        return (uint64_t)-3;
-    for (int i = 0; i < SYSCALL_MAX_FDS; i++) {
-        if (!fds[i].used) {
-            fds[i].used = 1;
-            fds[i].kind = kind;
-            fds[i].offset = 0;
-            copy_cstr_limited(fds[i].path, path, sizeof(fds[i].path));
-            return (uint64_t)i;
-        }
-    }
-    return (uint64_t)-3;
+    fds[free_slot].used = 1;
+    fds[free_slot].kind = kind;
+    fds[free_slot].offset = 0;
+    copy_cstr_limited(fds[free_slot].path, path, sizeof(fds[free_slot].path));
+    return (uint64_t)free_slot;
 }
 
 /* Blocking canonical-mode read from the console (stdin, fd 0). Pulls decoded
@@ -1366,8 +1366,10 @@ static uint64_t sys_mmap(int from_user, uint64_t virt_addr, uint64_t size,
         return (uint64_t)rc;
 
     if (file_backed &&
-        mmap_populate_file(space, virt_addr, size, (int)fd, offset) != 0)
+        mmap_populate_file(space, virt_addr, size, (int)fd, offset) != 0) {
+        vmm_unmap_range(space, virt_addr, (size_t)size);
         return (uint64_t)-1;
+    }
 
     return 0;
 }

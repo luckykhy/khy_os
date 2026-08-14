@@ -2,10 +2,15 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# ── 使用阿里云镜像加速 apt ──
-RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null; \
-    sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list 2>/dev/null; \
-    true
+# ── Optional apt mirror (configurable via build arg; China users can set APT_MIRROR) ──
+ARG APT_MIRROR=""
+RUN if [ -n "$APT_MIRROR" ]; then \
+      if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources; \
+      elif [ -f /etc/apt/sources.list ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list; \
+      fi; \
+    fi
 
 # ── 安装系统依赖 ──
 # python3/pip: akshare + ML推理
@@ -28,7 +33,8 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
 
 # ── 安装ML推理依赖（先复制requirements，利用Docker层缓存）──
 # 版本固定：joblib序列化与sklearn版本强绑定，必须与训练环境一致
-COPY services/backend/ml/requirements.txt /tmp/ml-requirements.txt
+# ML requirements exist at software/khyquant/ml/requirements.txt
+COPY software/khyquant/ml/requirements.txt /tmp/ml-requirements.txt
 RUN python3 -m pip install --no-cache-dir -r /tmp/ml-requirements.txt \
     -i https://mirrors.aliyun.com/pypi/simple/ \
     --trusted-host mirrors.aliyun.com \
@@ -44,8 +50,9 @@ RUN python3 -m pip install --no-cache-dir -r /tmp/akshare-requirements.txt \
     --break-system-packages \
     --timeout 300
 
-# ── 配置npm使用阿里云镜像 ──
-RUN npm config set registry https://registry.npmmirror.com
+# ── npm registry (configurable via build arg; default to official registry) ──
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN npm config set registry $NPM_REGISTRY
 
 # 告知Node.js使用系统Python
 ENV PYTHON=/usr/bin/python3

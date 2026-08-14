@@ -27,7 +27,9 @@
 
 /** 归一空白，便于稳定比对。 */
 function _normalize(text) {
-  return String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+  return String(text == null ? '' : text)
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -37,7 +39,9 @@ function _normalize(text) {
 function _splitLeadingSentence(text) {
   const s = String(text == null ? '' : text);
   const m = s.match(/^[\s\S]*?[。！？!?\n]+/);
-  if (!m) return { head: s, rest: '' };
+  if (!m) {
+    return { head: s, rest: '' };
+  }
   return { head: m[0], rest: s.slice(m[0].length) };
 }
 
@@ -48,7 +52,9 @@ function _splitLeadingSentence(text) {
  */
 function _isPureGreeting(text) {
   const t = _normalize(text);
-  if (!t || t.length > 12) return false;
+  if (!t || t.length > 12) {
+    return false;
+  }
   return /^(你好|您好|哈喽|嗨|hi|hello|hey)[\s,，.。!！~]*$/i.test(t);
 }
 
@@ -70,36 +76,50 @@ function stripLeadingRefusal(text, deps = {}) {
   const maxStrips = Number.isFinite(deps.maxStrips) ? deps.maxStrips : 3;
 
   const original = String(text == null ? '' : text);
-  if (!original.trim()) return { text: original, stripped: false, removed: '' };
+  if (!original.trim()) {
+    return { text: original, stripped: false, removed: '' };
+  }
 
   let working = original.replace(/^\s+/, '');
   let removed = '';
-  let refusalStrips = 0;     // 真正剥掉的「无理由套话拒绝」句数
-  let peels = 0;             // 含问候在内的总剥离次数（防失控）
+  let refusalStrips = 0; // 真正剥掉的「无理由套话拒绝」句数
+  let peels = 0; // 含问候在内的总剥离次数（防失控）
   const maxPeels = maxStrips + 2;
 
   while (peels < maxPeels) {
     const { head, rest } = _splitLeadingSentence(working);
     // 末句即唯一内容：绝不剥光。整段是拒绝→留给归因层。
-    if (!rest.trim()) break;
+    if (!rest.trim()) {
+      break;
+    }
 
     const headIsBareRefusal = isCanned(head) && !statesReason(head);
     const headIsGreeting = _isPureGreeting(head);
-    if (!headIsBareRefusal && !headIsGreeting) break;
+    if (!headIsBareRefusal && !headIsGreeting) {
+      break;
+    }
 
     // 后文必须有足够实质内容，才允许剥。
     const restClean = rest.replace(/\s/g, '');
-    if (restClean.length < minRemainder) break;
+    if (restClean.length < minRemainder) {
+      break;
+    }
 
     removed += head;
     working = rest.replace(/^\s+/, '');
     peels += 1;
-    if (headIsBareRefusal) refusalStrips += 1;
-    if (refusalStrips >= maxStrips) break;
+    if (headIsBareRefusal) {
+      refusalStrips += 1;
+    }
+    if (refusalStrips >= maxStrips) {
+      break;
+    }
   }
 
   // 一句拒绝都没真正剥到（例如只有问候、或开头本就是真实内容）→ 原样返回。
-  if (refusalStrips === 0) return { text: original, stripped: false, removed: '' };
+  if (refusalStrips === 0) {
+    return { text: original, stripped: false, removed: '' };
+  }
 
   // 终防呆：剩余为空、或剩余本身又是一句无理由套话拒绝（即整段都是拒绝）→ 放弃剥离，
   // 原样交给上层零静默失败归因，绝不把用户的回复抹空。
@@ -137,11 +157,13 @@ function isResetChunk(chunk) {
 
 // 明显有害 / 需要真正 safety 介入的信号。命中即**否决**良性判定——这层只为
 // "明显无害"的请求松绑，绝不为任何可疑请求开绿灯（判断权交还真正的 safety 逻辑）。
-const HARMFUL_MARKERS = /(违法|犯罪|攻击|入侵|黑客|木马|病毒|爆炸|炸弹|武器|枪支|毒品|制毒|自杀|自残|色情|裸|未成年|儿童|血腥|暴力|仇恨|歧视|诈骗|洗钱|窃取|盗取|隐私|身份证|银行卡|密码|信用卡|exploit|malware|ransomware|weapon|bomb|explosive|drug|suicide|self.?harm|porn|nsfw|csam|minor|hack|phishing|terror|illegal)/i;
+const HARMFUL_MARKERS =
+  /(违法|犯罪|攻击|入侵|黑客|木马|病毒|爆炸|炸弹|武器|枪支|毒品|制毒|自杀|自残|色情|裸|未成年|儿童|血腥|暴力|仇恨|歧视|诈骗|洗钱|窃取|盗取|隐私|身份证|银行卡|密码|信用卡|exploit|malware|ransomware|weapon|bomb|explosive|drug|suicide|self.?harm|porn|nsfw|csam|minor|hack|phishing|terror|illegal)/i;
 
 // 无害的闲聊 / 常识 / 创作类信号——讲笑话、打招呼、闲谈、推荐、简单问答、写句子等。
 // 这些请求既不需要工具，也无任何拒绝理由。
-const BENIGN_MARKERS = /(讲(?:个|一个)?(?:笑话|故事|段子)|笑话|段子|猜谜|脑筋急转弯|聊聊|聊天|闲聊|陪我|打招呼|你好|早上好|晚上好|介绍(?:一下|下)?你自己|你是谁|推荐(?:个|一?些|一下)?|有什么.*推荐|说句|写(?:个|一?句|首)?(?:祝福|诗|打油诗|对联|句子)|鼓励|安慰|夸夸|彩虹屁|tell\s+(?:me\s+)?a\s+joke|joke|riddle|chat\s+with\s+me|say\s+hi|who\s+are\s+you|introduce\s+yourself|recommend|cheer\s+me\s+up|write\s+a\s+(?:poem|haiku|greeting|sentence))/i;
+const BENIGN_MARKERS =
+  /(讲(?:个|一个)?(?:笑话|故事|段子)|笑话|段子|猜谜|脑筋急转弯|聊聊|聊天|闲聊|陪我|打招呼|你好|早上好|晚上好|介绍(?:一下|下)?你自己|你是谁|推荐(?:个|一?些|一下)?|有什么.*推荐|说句|写(?:个|一?句|首)?(?:祝福|诗|打油诗|对联|句子)|鼓励|安慰|夸夸|彩虹屁|tell\s+(?:me\s+)?a\s+joke|joke|riddle|chat\s+with\s+me|say\s+hi|who\s+are\s+you|introduce\s+yourself|recommend|cheer\s+me\s+up|write\s+a\s+(?:poem|haiku|greeting|sentence))/i;
 
 /**
  * 用户请求是否为「明显无害的闲聊/常识/创作」类——可直接作答、无需工具、绝无拒绝理由。
@@ -158,8 +180,12 @@ const BENIGN_MARKERS = /(讲(?:个|一个)?(?:笑话|故事|段子)|笑话|段�
  */
 function looksLikeBenignConversational(text) {
   const t = _normalize(text);
-  if (!t || t.length > 200) return false;
-  if (HARMFUL_MARKERS.test(t)) return false; // 任何可疑信号 → 立即判否，绝不松绑
+  if (!t || t.length > 200) {
+    return false;
+  }
+  if (HARMFUL_MARKERS.test(t)) {
+    return false;
+  } // 任何可疑信号 → 立即判否，绝不松绑
   return BENIGN_MARKERS.test(t);
 }
 
@@ -173,7 +199,9 @@ function looksLikeBenignConversational(text) {
  */
 function refusalSignature(text) {
   const t = _normalize(text).toLowerCase();
-  if (!t) return '';
+  if (!t) {
+    return '';
+  }
   // 去掉所有标点与符号（Unicode 属性类），只留可比对的实义字符。
   return t.replace(/[\p{P}\p{S}\s]+/gu, '').slice(0, 80);
 }

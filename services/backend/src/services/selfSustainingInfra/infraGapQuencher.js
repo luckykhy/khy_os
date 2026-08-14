@@ -16,8 +16,8 @@
  * （含「拓扑空洞 / 新增…工具」，规避 网关/压缩/调度 等 L2 触发词）。纯逻辑，落账本由门面负责。
  */
 
-const evoRequirement = require('../evoEngine/evoRequirement');
 const evoLevels = require('../evoEngine/evoLevels');
+const evoRequirement = require('../evoEngine/evoRequirement');
 
 const GAP_KIND = Object.freeze({
   MISSING_CONTRACT: 'missing-contract',
@@ -48,23 +48,37 @@ class InfraGapQuencher {
 
     // missing-contract：公共且是函数，却无 @param/@returns 契约。
     for (const name of publics) {
-      if (!fnDecls.has(name)) continue;
+      if (!fnDecls.has(name)) {
+        continue;
+      }
       if (!documented.has(name)) {
-        gaps.push({ kind: GAP_KIND.MISSING_CONTRACT, symbol: name, file,
-          detail: `公共函数「${name}」缺 JSDoc 契约（@param/@returns），文档无法自动坍缩` });
+        gaps.push({
+          kind: GAP_KIND.MISSING_CONTRACT,
+          symbol: name,
+          file,
+          detail: `公共函数「${name}」缺 JSDoc 契约（@param/@returns），文档无法自动坍缩`,
+        });
       }
     }
 
     // untyped-any：契约里出现无形状类型。
     for (const t of this._weakTypeHits(src)) {
-      gaps.push({ kind: GAP_KIND.UNTYPED_ANY, symbol: t.where, file,
-        detail: `弱类型契约 {${t.type}}，违反强类型铁律——禁 any/无类型字典传递` });
+      gaps.push({
+        kind: GAP_KIND.UNTYPED_ANY,
+        symbol: t.where,
+        file,
+        detail: `弱类型契约 {${t.type}}，违反强类型铁律——禁 any/无类型字典传递`,
+      });
     }
 
     // implicit-dependency：直读全局态。
     for (const d of this._implicitDeps(src)) {
-      gaps.push({ kind: GAP_KIND.IMPLICIT_DEPENDENCY, symbol: d, file,
-        detail: `直读全局态「${d}」破坏正交隔离，应经依赖注入传入` });
+      gaps.push({
+        kind: GAP_KIND.IMPLICIT_DEPENDENCY,
+        symbol: d,
+        file,
+        detail: `直读全局态「${d}」破坏正交隔离，应经依赖注入传入`,
+      });
     }
 
     return gaps;
@@ -77,12 +91,19 @@ class InfraGapQuencher {
     let m;
     while ((m = objRe.exec(src)) !== null) {
       for (const piece of m[1].split(',')) {
-        const nm = piece.split(':')[0].trim().replace(/\.\.\./, '');
-        if (/^[A-Za-z_$][\w$]*$/.test(nm)) names.add(nm);
+        const nm = piece
+          .split(':')[0]
+          .trim()
+          .replace(/\.\.\./, '');
+        if (/^[A-Za-z_$][\w$]*$/.test(nm)) {
+          names.add(nm);
+        }
       }
     }
     const dotRe = /(?:module\.)?exports\.([A-Za-z_$][\w$]*)\s*=/g;
-    while ((m = dotRe.exec(src)) !== null) names.add(m[1]);
+    while ((m = dotRe.exec(src)) !== null) {
+      names.add(m[1]);
+    }
     return names;
   }
 
@@ -92,10 +113,14 @@ class InfraGapQuencher {
     let m;
     DOC_BLOCK.lastIndex = 0;
     while ((m = DOC_BLOCK.exec(src)) !== null) {
-      if (!/@param|@returns?/.test(m[1])) continue;
+      if (!/@param|@returns?/.test(m[1])) {
+        continue;
+      }
       const after = src.slice(m.index + m[0].length);
       const sig = this._firstFnName(after);
-      if (sig) documented.add(sig);
+      if (sig) {
+        documented.add(sig);
+      }
     }
     return documented;
   }
@@ -105,18 +130,26 @@ class InfraGapQuencher {
     const names = new Set();
     let m;
     const a = /(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/g;
-    while ((m = a.exec(src)) !== null) names.add(m[1]);
-    const b = /(?:^|\n)\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)\s*=>|function)/g;
-    while ((m = b.exec(src)) !== null) names.add(m[1]);
+    while ((m = a.exec(src)) !== null) {
+      names.add(m[1]);
+    }
+    const b =
+      /(?:^|\n)\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)\s*=>|function)/g;
+    while ((m = b.exec(src)) !== null) {
+      names.add(m[1]);
+    }
     return names;
   }
 
   _firstFnName(text) {
     for (const raw of text.split('\n')) {
       const line = raw.trim();
-      if (!line || line.startsWith('*') || line.startsWith('//')) continue;
-      const mm = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/.exec(line)
-        || /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/.exec(line);
+      if (!line || line.startsWith('*') || line.startsWith('//')) {
+        continue;
+      }
+      const mm =
+        /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/.exec(line) ||
+        /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/.exec(line);
       return mm ? mm[1] : null;
     }
     return null;
@@ -129,7 +162,9 @@ class InfraGapQuencher {
     let m;
     while ((m = re.exec(src)) !== null) {
       const type = m[2].trim().toLowerCase();
-      if (WEAK_TYPES.has(type)) hits.push({ type: m[2].trim() || '∅', where: m[3] || m[1] });
+      if (WEAK_TYPES.has(type)) {
+        hits.push({ type: m[2].trim() || '∅', where: m[3] || m[1] });
+      }
     }
     return hits;
   }
@@ -137,9 +172,12 @@ class InfraGapQuencher {
   /** 扫描直读全局态。 */
   _implicitDeps(src) {
     const found = new Set();
-    const re = /\b(process\.env\.[A-Za-z_][\w]*|global\.[A-Za-z_$][\w$]*|globalThis\.[A-Za-z_$][\w$]*)/g;
+    const re =
+      /\b(process\.env\.[A-Za-z_][\w]*|global\.[A-Za-z_$][\w$]*|globalThis\.[A-Za-z_$][\w$]*)/g;
     let m;
-    while ((m = re.exec(src)) !== null) found.add(m[1]);
+    while ((m = re.exec(src)) !== null) {
+      found.add(m[1]);
+    }
     return [...found];
   }
 
@@ -177,7 +215,9 @@ class InfraGapQuencher {
     const reqs = [];
     for (const g of gaps || []) {
       const key = `${g.kind}::${g.symbol}::${g.file}`;
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        continue;
+      }
       seen.add(key);
       reqs.push(this.quench(g));
     }

@@ -40,7 +40,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** KHY_CC_COMMAND_BRIDGE gate: default ON, {0,false,off,no} (case/space-insensitive) → OFF. */
 function isCcCommandBridgeEnabled(env = process.env) {
   const raw = env && env.KHY_CC_COMMAND_BRIDGE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -66,12 +68,20 @@ const _join = require('../utils/pathJoinSafe');
 function ccCommandSearchDirs({ homedir, projectDir } = {}) {
   try {
     const out = [];
-    const push = (dir, source) => { if (dir) out.push({ dir, source }); };
+    const push = (dir, source) => {
+      if (dir) {
+        out.push({ dir, source });
+      }
+    };
 
     // Project-scoped CC commands win first.
-    if (projectDir) push(_join(projectDir, '.claude', 'commands'), 'cc-project');
+    if (projectDir) {
+      push(_join(projectDir, '.claude', 'commands'), 'cc-project');
+    }
     // User-personal CC commands.
-    if (homedir) push(_join(homedir, '.claude', 'commands'), 'cc-user');
+    if (homedir) {
+      push(_join(homedir, '.claude', 'commands'), 'cc-user');
+    }
 
     return out;
   } catch {

@@ -35,7 +35,9 @@ function tokenizeForSearch(text) {
     if (/^[一-鿿]+$/.test(part)) {
       for (let i = 0; i < part.length; i++) {
         tokens.push(part[i]);
-        if (i < part.length - 1) tokens.push(part.slice(i, i + 2));
+        if (i < part.length - 1) {
+          tokens.push(part.slice(i, i + 2));
+        }
       }
     } else {
       tokens.push(part);

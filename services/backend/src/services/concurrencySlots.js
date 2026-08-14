@@ -56,13 +56,16 @@ const _userSlots = new Map();
  * @param {string} provider
  */
 function register(keyId, provider) {
-  if (_slots.has(keyId)) return;
+  if (_slots.has(keyId)) {
+    return;
+  }
 
   // Check environment override first
   const envKey = `POOL_MAX_CONCURRENCY_${provider.toUpperCase()}`;
   const envVal = process.env[envKey];
-  const max = envVal ? parseInt(envVal, 10) || DEFAULT_MAX
-    : PROVIDER_DEFAULTS[provider] ?? DEFAULT_MAX;
+  const max = envVal
+    ? parseInt(envVal, 10) || DEFAULT_MAX
+    : (PROVIDER_DEFAULTS[provider] ?? DEFAULT_MAX);
 
   _slots.set(keyId, { current: 0, max });
 }
@@ -75,13 +78,17 @@ function register(keyId, provider) {
  */
 function acquire(keyId) {
   const slot = _slots.get(keyId);
-  if (!slot) return null;
+  if (!slot) {
+    return null;
+  }
 
   slot.current++;
 
   let released = false;
   return () => {
-    if (released) return;
+    if (released) {
+      return;
+    }
     released = true;
     slot.current = Math.max(0, slot.current - 1);
   };
@@ -93,7 +100,9 @@ function acquire(keyId) {
  */
 function release(keyId) {
   const slot = _slots.get(keyId);
-  if (slot) slot.current = Math.max(0, slot.current - 1);
+  if (slot) {
+    slot.current = Math.max(0, slot.current - 1);
+  }
 }
 
 /**
@@ -103,7 +112,9 @@ function release(keyId) {
  */
 function hasAvailableSlot(keyId) {
   const slot = _slots.get(keyId);
-  if (!slot) return true; // unregistered keys are unlimited
+  if (!slot) {
+    return true;
+  } // unregistered keys are unlimited
   return slot.current < slot.max;
 }
 
@@ -114,7 +125,9 @@ function hasAvailableSlot(keyId) {
  */
 function getSlotStatus(keyId) {
   const slot = _slots.get(keyId);
-  if (!slot) return null;
+  if (!slot) {
+    return null;
+  }
   return { current: slot.current, max: slot.max, available: slot.max - slot.current };
 }
 
@@ -125,7 +138,9 @@ function getSlotStatus(keyId) {
  */
 function setMaxSlots(keyId, max) {
   const slot = _slots.get(keyId);
-  if (slot) slot.max = Math.max(1, max);
+  if (slot) {
+    slot.max = Math.max(1, max);
+  }
 }
 
 /**
@@ -166,7 +181,9 @@ function resetAll() {
  * @returns {(() => void)|null} Release function, or null if limit reached
  */
 function acquireUser(userId) {
-  if (!userId) return () => {}; // No user tracking for anonymous
+  if (!userId) {
+    return () => {};
+  } // No user tracking for anonymous
 
   let slot = _userSlots.get(userId);
   if (!slot) {
@@ -177,7 +194,7 @@ function acquireUser(userId) {
 
   // Prune stale entries
   const now = Date.now();
-  slot.entries = slot.entries.filter(e => (now - e.ts) < USER_SLOT_TTL_MS);
+  slot.entries = slot.entries.filter((e) => now - e.ts < USER_SLOT_TTL_MS);
   slot.current = slot.entries.length;
 
   if (slot.current >= slot.max) {
@@ -190,10 +207,14 @@ function acquireUser(userId) {
 
   let released = false;
   return () => {
-    if (released) return;
+    if (released) {
+      return;
+    }
     released = true;
     const idx = slot.entries.indexOf(entry);
-    if (idx >= 0) slot.entries.splice(idx, 1);
+    if (idx >= 0) {
+      slot.entries.splice(idx, 1);
+    }
     slot.current = Math.max(0, slot.current - 1);
   };
 }
@@ -204,12 +225,16 @@ function acquireUser(userId) {
  * @returns {boolean}
  */
 function hasUserSlot(userId) {
-  if (!userId) return true;
+  if (!userId) {
+    return true;
+  }
   const slot = _userSlots.get(userId);
-  if (!slot) return true;
+  if (!slot) {
+    return true;
+  }
   // Prune stale
   const now = Date.now();
-  slot.entries = slot.entries.filter(e => (now - e.ts) < USER_SLOT_TTL_MS);
+  slot.entries = slot.entries.filter((e) => now - e.ts < USER_SLOT_TTL_MS);
   slot.current = slot.entries.length;
   return slot.current < slot.max;
 }
@@ -220,11 +245,15 @@ function hasUserSlot(userId) {
  * @returns {{ current: number, max: number, available: number }|null}
  */
 function getUserSlotStatus(userId) {
-  if (!userId) return null;
+  if (!userId) {
+    return null;
+  }
   const slot = _userSlots.get(userId);
-  if (!slot) return { current: 0, max: DEFAULT_USER_MAX_CONCURRENT, available: DEFAULT_USER_MAX_CONCURRENT };
+  if (!slot) {
+    return { current: 0, max: DEFAULT_USER_MAX_CONCURRENT, available: DEFAULT_USER_MAX_CONCURRENT };
+  }
   const now = Date.now();
-  slot.entries = slot.entries.filter(e => (now - e.ts) < USER_SLOT_TTL_MS);
+  slot.entries = slot.entries.filter((e) => now - e.ts < USER_SLOT_TTL_MS);
   slot.current = slot.entries.length;
   return { current: slot.current, max: slot.max, available: slot.max - slot.current };
 }

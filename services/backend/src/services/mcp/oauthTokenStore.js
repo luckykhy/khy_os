@@ -17,18 +17,34 @@
  * @module mcpOAuthTokenStore
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const crypto = require('crypto');
 const { execSync } = require('child_process');
-const https = require('https');
+const crypto = require('crypto');
+const fs = require('fs');
 const http = require('http');
+const https = require('https');
+const os = require('os');
+const path = require('path');
+
 const log = require('../../utils/logger');
 
 // ── Constants ──
 
-const TOKEN_FILE = path.join(os.homedir(), '.khyquant', 'mcp_oauth_tokens.json');
+// Legacy fallback used only when the dataHome resolver is unavailable.
+function _legacyTokenFile() {
+  return path.join(os.homedir(), '.khyquant', 'mcp_oauth_tokens.json');
+}
+
+// Lazily resolve the token file under the app home (portable-aware).
+// No local caching: preserves getAppHome() live-resolve semantics.
+function _tokenFile() {
+  try {
+    const { getAppHome } = require('../../utils/dataHome');
+    return path.join(getAppHome(), 'mcp_oauth_tokens.json');
+  } catch {
+    return _legacyTokenFile();
+  }
+}
+
 const KEYCHAIN_SERVICE = 'khy-mcp-oauth';
 const REFRESH_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 min before expiry
 const DEFAULT_BACKEND = 'file';
@@ -44,7 +60,7 @@ class McpOAuthTokenStore {
   constructor(options) {
     const opts = options || {};
     this._backend = opts.backend || DEFAULT_BACKEND;
-    this._filePath = opts.filePath || TOKEN_FILE;
+    this._filePath = opts.filePath || _tokenFile();
     this._memoryStore = new Map();
     this._refreshTimers = new Map();
   }
@@ -98,7 +114,9 @@ class McpOAuthTokenStore {
    */
   async getToken(serverId) {
     const entry = await this._load(serverId);
-    if (!entry) return null;
+    if (!entry) {
+      return null;
+    }
 
     // Check if expired
     if (entry.expiresAt && Date.now() >= entry.expiresAt - REFRESH_BUFFER_MS) {
@@ -132,7 +150,9 @@ class McpOAuthTokenStore {
    */
   async refresh(serverId) {
     const entry = await this._load(serverId);
-    if (!entry || !entry.refreshToken || !entry.oauthConfig) return null;
+    if (!entry || !entry.refreshToken || !entry.oauthConfig) {
+      return null;
+    }
 
     const config = entry.oauthConfig;
     const body = new URLSearchParams({
@@ -140,7 +160,9 @@ class McpOAuthTokenStore {
       refresh_token: entry.refreshToken,
       client_id: config.clientId,
     });
-    if (config.clientSecret) body.set('client_secret', config.clientSecret);
+    if (config.clientSecret) {
+      body.set('client_secret', config.clientSecret);
+    }
 
     const tokenData = await _httpPost(config.tokenEndpoint, body.toString(), {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -174,10 +196,14 @@ class McpOAuthTokenStore {
     // Best-effort revoke at provider
     if (entry && entry.oauthConfig && entry.oauthConfig.revokeEndpoint) {
       try {
-        await _httpPost(entry.oauthConfig.revokeEndpoint,
+        await _httpPost(
+          entry.oauthConfig.revokeEndpoint,
           new URLSearchParams({ token: entry.accessToken }).toString(),
-          { 'Content-Type': 'application/x-www-form-urlencoded' });
-      } catch { /* best effort */ }
+          { 'Content-Type': 'application/x-www-form-urlencoded' }
+        );
+      } catch {
+        /* best effort */
+      }
     }
 
     // Clear local
@@ -223,7 +249,9 @@ class McpOAuthTokenStore {
 
     for (const id of servers) {
       const entry = await this._load(id);
-      if (!entry) continue;
+      if (!entry) {
+        continue;
+      }
 
       result.push({
         serverId: id,
@@ -277,7 +305,9 @@ class McpOAuthTokenStore {
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
     });
-    if (config.scope) params.set('scope', config.scope);
+    if (config.scope) {
+      params.set('scope', config.scope);
+    }
 
     const authUrl = `${config.authorizationEndpoint}?${params}`;
 
@@ -300,7 +330,9 @@ class McpOAuthTokenStore {
       client_id: config.clientId,
       code_verifier: codeVerifier,
     });
-    if (config.clientSecret) body.set('client_secret', config.clientSecret);
+    if (config.clientSecret) {
+      body.set('client_secret', config.clientSecret);
+    }
 
     const tokenData = await _httpPost(config.tokenEndpoint, body.toString(), {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -336,7 +368,9 @@ class McpOAuthTokenStore {
    */
   async startDeviceCodeFlow(serverId, config) {
     const body = new URLSearchParams({ client_id: config.clientId });
-    if (config.scope) body.set('scope', config.scope);
+    if (config.scope) {
+      body.set('scope', config.scope);
+    }
 
     const data = await _httpPost(config.deviceAuthorizationEndpoint, body.toString(), {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -398,7 +432,9 @@ class McpOAuthTokenStore {
         }
       } catch (err) {
         // authorization_pending is expected, keep polling
-        if (err.message && err.message.includes('authorization_pending')) continue;
+        if (err.message && err.message.includes('authorization_pending')) {
+          continue;
+        }
         if (err.message && err.message.includes('slow_down')) {
           await _sleep(pollInterval); // Extra wait
           continue;
@@ -429,13 +465,17 @@ class McpOAuthTokenStore {
       if (fs.existsSync(this._filePath)) {
         return JSON.parse(fs.readFileSync(this._filePath, 'utf8'));
       }
-    } catch { /* corrupt file */ }
+    } catch {
+      /* corrupt file */
+    }
     return {};
   }
 
   _fileSaveAll(data) {
     const dir = path.dirname(this._filePath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     // Note: mode 0o600 is silently ignored on Windows; tokens rely on user-profile ACLs there
     fs.writeFileSync(this._filePath, JSON.stringify(data, null, 2), { mode: 0o600 });
   }
@@ -448,9 +488,15 @@ class McpOAuthTokenStore {
 
     try {
       if (platform === 'darwin') {
-        execSync(`security add-generic-password -a "${serverId}" -s "${KEYCHAIN_SERVICE}" -w "${json.replace(/"/g, '\\"')}" -U`, { stdio: 'pipe' });
+        execSync(
+          `security add-generic-password -a "${serverId}" -s "${KEYCHAIN_SERVICE}" -w "${json.replace(/"/g, '\\"')}" -U`,
+          { stdio: 'pipe' }
+        );
       } else if (platform === 'linux') {
-        execSync(`echo "${json.replace(/"/g, '\\"')}" | secret-tool store --label="${KEYCHAIN_SERVICE}: ${serverId}" service "${KEYCHAIN_SERVICE}" account "${serverId}"`, { stdio: 'pipe' });
+        execSync(
+          `echo "${json.replace(/"/g, '\\"')}" | secret-tool store --label="${KEYCHAIN_SERVICE}: ${serverId}" service "${KEYCHAIN_SERVICE}" account "${serverId}"`,
+          { stdio: 'pipe' }
+        );
       } else {
         // Fallback to file on unsupported platforms
         this._fileStore(serverId, entry);
@@ -466,11 +512,17 @@ class McpOAuthTokenStore {
     const platform = os.platform();
     try {
       if (platform === 'darwin') {
-        execSync(`security delete-generic-password -a "${serverId}" -s "${KEYCHAIN_SERVICE}"`, { stdio: 'pipe' });
+        execSync(`security delete-generic-password -a "${serverId}" -s "${KEYCHAIN_SERVICE}"`, {
+          stdio: 'pipe',
+        });
       } else if (platform === 'linux') {
-        execSync(`secret-tool clear service "${KEYCHAIN_SERVICE}" account "${serverId}"`, { stdio: 'pipe' });
+        execSync(`secret-tool clear service "${KEYCHAIN_SERVICE}" account "${serverId}"`, {
+          stdio: 'pipe',
+        });
       }
-    } catch { /* not found, ignore */ }
+    } catch {
+      /* not found, ignore */
+    }
   }
 
   _keychainList() {
@@ -489,9 +541,19 @@ class McpOAuthTokenStore {
         try {
           let json;
           if (platform === 'darwin') {
-            json = execSync(`security find-generic-password -a "${serverId}" -s "${KEYCHAIN_SERVICE}" -w`, { stdio: 'pipe' }).toString().trim();
+            json = execSync(
+              `security find-generic-password -a "${serverId}" -s "${KEYCHAIN_SERVICE}" -w`,
+              { stdio: 'pipe' }
+            )
+              .toString()
+              .trim();
           } else if (platform === 'linux') {
-            json = execSync(`secret-tool lookup service "${KEYCHAIN_SERVICE}" account "${serverId}"`, { stdio: 'pipe' }).toString().trim();
+            json = execSync(
+              `secret-tool lookup service "${KEYCHAIN_SERVICE}" account "${serverId}"`,
+              { stdio: 'pipe' }
+            )
+              .toString()
+              .trim();
           }
           return json ? JSON.parse(json) : null;
         } catch {
@@ -513,7 +575,9 @@ class McpOAuthTokenStore {
   _scheduleRefresh(serverId, entry) {
     this._clearRefreshTimer(serverId);
 
-    if (!entry.expiresAt || !entry.refreshToken) return;
+    if (!entry.expiresAt || !entry.refreshToken) {
+      return;
+    }
 
     const delay = Math.max(0, entry.expiresAt - Date.now() - REFRESH_BUFFER_MS);
     const maxDelay = 24 * 60 * 60 * 1000; // Cap at 24h
@@ -547,33 +611,41 @@ function _httpPost(url, body, headers) {
     const client = url.startsWith('https') ? https : http;
     const parsed = new URL(url);
 
-    const req = client.request({
-      hostname: parsed.hostname,
-      port: parsed.port,
-      path: parsed.pathname + parsed.search,
-      method: 'POST',
-      headers: { ...headers, 'Content-Length': Buffer.byteLength(body) },
-      timeout: 15_000,
-    }, (res) => {
-      let data = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => { data += c; });
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.error) {
-            reject(new Error(json.error_description || json.error));
-          } else {
-            resolve(json);
+    const req = client.request(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port,
+        path: parsed.pathname + parsed.search,
+        method: 'POST',
+        headers: { ...headers, 'Content-Length': Buffer.byteLength(body) },
+        timeout: 15_000,
+      },
+      (res) => {
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', (c) => {
+          data += c;
+        });
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (json.error) {
+              reject(new Error(json.error_description || json.error));
+            } else {
+              resolve(json);
+            }
+          } catch {
+            reject(new Error(`Invalid response from ${url}: ${data.substring(0, 200)}`));
           }
-        } catch {
-          reject(new Error(`Invalid response from ${url}: ${data.substring(0, 200)}`));
-        }
-      });
-    });
+        });
+      }
+    );
 
     req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('OAuth request timed out')); });
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('OAuth request timed out'));
+    });
     req.write(body);
     req.end();
   });

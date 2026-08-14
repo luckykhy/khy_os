@@ -15,16 +15,25 @@
  * @module fileHistoryService
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 // ── Constants ──────────────────────────────────────────────────────
 
 const MAX_SNAPSHOTS_PER_FILE = 100;
 const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1 MB — skip large files
-const HISTORY_BASE_DIR = path.join(os.homedir(), '.khyquant', 'file_history');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const HISTORY_BASE_DIR = path.join(_appHome(), 'file_history');
 
 // ── Session state ──────────────────────────────────────────────────
 
@@ -156,7 +165,9 @@ function getHistory(filePath) {
   try {
     const resolved = path.resolve(filePath);
     const historyPath = _getHistoryPath(resolved);
-    if (!fs.existsSync(historyPath)) return null;
+    if (!fs.existsSync(historyPath)) {
+      return null;
+    }
     return JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
   } catch {
     return null;
@@ -179,7 +190,10 @@ function rewindTo(filePath, snapshotIndex) {
     }
 
     if (snapshotIndex < 0 || snapshotIndex >= history.snapshots.length) {
-      return { success: false, error: `Invalid index. Available: 0-${history.snapshots.length - 1}` };
+      return {
+        success: false,
+        error: `Invalid index. Available: 0-${history.snapshots.length - 1}`,
+      };
     }
 
     const snapshot = history.snapshots[snapshotIndex];
@@ -189,7 +203,9 @@ function rewindTo(filePath, snapshotIndex) {
 
     // Write the restored content
     const dir = path.dirname(resolved);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(resolved, snapshot.content, 'utf-8');
 
     return { success: true, restoredTimestamp: snapshot.timestamp };
@@ -220,10 +236,12 @@ function undoLast(filePath) {
  */
 function listTrackedFiles() {
   const sessionDir = path.join(HISTORY_BASE_DIR, getSessionId());
-  if (!fs.existsSync(sessionDir)) return [];
+  if (!fs.existsSync(sessionDir)) {
+    return [];
+  }
 
   const results = [];
-  const files = fs.readdirSync(sessionDir).filter(f => f.endsWith('.json'));
+  const files = fs.readdirSync(sessionDir).filter((f) => f.endsWith('.json'));
 
   for (const file of files) {
     try {
@@ -234,7 +252,9 @@ function listTrackedFiles() {
         snapshotCount: history.snapshots.length,
         lastModified: last ? last.timestamp : 0,
       });
-    } catch { /* skip corrupt */ }
+    } catch {
+      /* skip corrupt */
+    }
   }
 
   return results.sort((a, b) => b.lastModified - a.lastModified);
@@ -250,11 +270,15 @@ function listTrackedFiles() {
  */
 function diffSnapshots(filePath, fromIndex, toIndex) {
   const history = getHistory(path.resolve(filePath));
-  if (!history) return null;
+  if (!history) {
+    return null;
+  }
 
   const from = history.snapshots[fromIndex];
   const to = history.snapshots[toIndex];
-  if (!from || !to) return null;
+  if (!from || !to) {
+    return null;
+  }
 
   const fromLines = from.content.split('\n');
   const toLines = to.content.split('\n');
@@ -266,10 +290,14 @@ function diffSnapshots(filePath, fromIndex, toIndex) {
   let added = 0;
   let removed = 0;
   for (const line of toLines) {
-    if (!fromSet.has(line)) added++;
+    if (!fromSet.has(line)) {
+      added++;
+    }
   }
   for (const line of fromLines) {
-    if (!toSet.has(line)) removed++;
+    if (!toSet.has(line)) {
+      removed++;
+    }
   }
 
   // Build preview (first 10 changed lines)
@@ -277,13 +305,17 @@ function diffSnapshots(filePath, fromIndex, toIndex) {
   for (const line of toLines) {
     if (!fromSet.has(line) && line.trim()) {
       changedLines.push(`+ ${line}`);
-      if (changedLines.length >= 5) break;
+      if (changedLines.length >= 5) {
+        break;
+      }
     }
   }
   for (const line of fromLines) {
     if (!toSet.has(line) && line.trim()) {
       changedLines.push(`- ${line}`);
-      if (changedLines.length >= 10) break;
+      if (changedLines.length >= 10) {
+        break;
+      }
     }
   }
 
@@ -301,9 +333,12 @@ function diffSnapshots(filePath, fromIndex, toIndex) {
  */
 function cleanupOldSessions(keepSessions = 5) {
   try {
-    if (!fs.existsSync(HISTORY_BASE_DIR)) return;
-    const dirs = fs.readdirSync(HISTORY_BASE_DIR)
-      .filter(d => d.startsWith('s_'))
+    if (!fs.existsSync(HISTORY_BASE_DIR)) {
+      return;
+    }
+    const dirs = fs
+      .readdirSync(HISTORY_BASE_DIR)
+      .filter((d) => d.startsWith('s_'))
       .sort()
       .reverse();
 
@@ -311,7 +346,9 @@ function cleanupOldSessions(keepSessions = 5) {
       const dirPath = path.join(HISTORY_BASE_DIR, dirs[i]);
       fs.rmSync(dirPath, { recursive: true, force: true });
     }
-  } catch { /* ignore cleanup errors */ }
+  } catch {
+    /* ignore cleanup errors */
+  }
 }
 
 module.exports = {

@@ -9,7 +9,9 @@ class TeamCreateTool extends BaseTool {
   static searchHint = 'team create teammate parallel agent';
   static shouldDefer = true;
 
-  isConcurrencySafe() { return false; }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Create a teammate — a long-running in-process agent that works in parallel on a subtask.
@@ -51,12 +53,15 @@ for fire-and-forget subtasks that need no further interaction.`;
       name: result.name,
       task: result.task,
       status: result.status,
-      note: '队友已创建并开始执行；其回复会作为 <teammate-message> 自动注入你的下一轮上下文。'
-        + '可用 SendMessage 向其追加指令，用 TeamDelete 结束它。',
+      note:
+        '队友已创建并开始执行；其回复会作为 <teammate-message> 自动注入你的下一轮上下文。' +
+        '可用 SendMessage 向其追加指令，用 TeamDelete 结束它。',
     };
   }
 
-  getActivityDescription(input) { return `创建协作代理：${input.name}`; }
+  getActivityDescription(input) {
+    return `创建协作代理：${input.name}`;
+  }
 }
 
 module.exports = TeamCreateTool;

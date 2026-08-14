@@ -22,7 +22,13 @@
  */
 
 const crypto = require('crypto');
+
+const _simpleTokenEstimate = require('../../utils/simpleTokenEstimate');
+
 const { resolveProxyCorsOrigin } = require('./corsUtils');
+// Canonical chars/4 estimate atom (zero-dep utils leaf). With { bias: 3 } it
+// reproduces the original Math.ceil((len + 3) / 4) byte-for-byte (pure delegation,
+// no decision logic touched).
 
 // Claude Code 在 WebSearch 子请求中给用户消息加的固定前缀。
 const SEARCH_QUERY_PREFIX = 'Perform a web search for the query: ';
@@ -48,7 +54,9 @@ function _getWebSearchService() {
  */
 function isPureWebSearchRequest(body) {
   const tools = body && body.tools;
-  if (!Array.isArray(tools) || tools.length !== 1) return false;
+  if (!Array.isArray(tools) || tools.length !== 1) {
+    return false;
+  }
   const t = tools[0];
   return !!t && t.name === 'web_search';
 }
@@ -64,10 +72,14 @@ function isPureWebSearchRequest(body) {
  */
 function extractSearchQuery(body) {
   const messages = body && body.messages;
-  if (!Array.isArray(messages) || messages.length === 0) return null;
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return null;
+  }
 
   const first = messages[0];
-  if (!first) return null;
+  if (!first) {
+    return null;
+  }
 
   let text = '';
   if (typeof first.content === 'string') {
@@ -106,7 +118,9 @@ function _messageId() {
  * snippet 放入 encrypted_content（对齐 Anthropic/ kiro2cc 的字段语义）。
  */
 function _toWebSearchResultBlocks(results) {
-  if (!Array.isArray(results)) return [];
+  if (!Array.isArray(results)) {
+    return [];
+  }
   return results.map((r) => ({
     type: 'web_search_result',
     title: r.title || 'Untitled',
@@ -129,13 +143,16 @@ function _buildSummary(query, results) {
         const truncated = s.length > 200 ? `${s.slice(0, 200)}...` : s;
         summary += `   ${truncated}\n`;
       }
-      if (r.url) summary += `   Source: ${r.url}\n`;
+      if (r.url) {
+        summary += `   Source: ${r.url}\n`;
+      }
       summary += '\n';
     });
   } else {
     summary += 'No results found.\n';
   }
-  summary += '\nPlease note that these are web search results and may not be fully accurate or up-to-date.';
+  summary +=
+    '\nPlease note that these are web search results and may not be fully accurate or up-to-date.';
   return summary;
 }
 
@@ -151,79 +168,104 @@ function buildWebSearchEvents({ model, query, toolUseId, results, inputTokens })
   const summary = _buildSummary(query, results);
 
   // 1. message_start
-  events.push({ event: 'message_start', data: {
-    type: 'message_start',
-    message: {
-      id: messageId,
-      type: 'message',
-      role: 'assistant',
-      model: model || 'default',
-      content: [],
-      stop_reason: null,
-      stop_sequence: null,
-      usage: {
-        input_tokens: inputTokens || 0,
-        output_tokens: 0,
-        cache_creation_input_tokens: 0,
-        cache_read_input_tokens: 0,
+  events.push({
+    event: 'message_start',
+    data: {
+      type: 'message_start',
+      message: {
+        id: messageId,
+        type: 'message',
+        role: 'assistant',
+        model: model || 'default',
+        content: [],
+        stop_reason: null,
+        stop_sequence: null,
+        usage: {
+          input_tokens: inputTokens || 0,
+          output_tokens: 0,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 0,
+        },
       },
     },
-  } });
+  });
 
   // 2. content_block_start — server_tool_use（index 0）
-  events.push({ event: 'content_block_start', data: {
-    type: 'content_block_start',
-    index: 0,
-    content_block: { type: 'server_tool_use', id: toolUseId, name: 'web_search', input: {} },
-  } });
+  events.push({
+    event: 'content_block_start',
+    data: {
+      type: 'content_block_start',
+      index: 0,
+      content_block: { type: 'server_tool_use', id: toolUseId, name: 'web_search', input: {} },
+    },
+  });
 
   // 3. content_block_delta — input_json_delta（回填 query）
-  events.push({ event: 'content_block_delta', data: {
-    type: 'content_block_delta',
-    index: 0,
-    delta: { type: 'input_json_delta', partial_json: JSON.stringify({ query }) },
-  } });
+  events.push({
+    event: 'content_block_delta',
+    data: {
+      type: 'content_block_delta',
+      index: 0,
+      delta: { type: 'input_json_delta', partial_json: JSON.stringify({ query }) },
+    },
+  });
 
   // 4. content_block_stop（server_tool_use）
   events.push({ event: 'content_block_stop', data: { type: 'content_block_stop', index: 0 } });
 
   // 5. content_block_start — web_search_tool_result（index 1）
-  events.push({ event: 'content_block_start', data: {
-    type: 'content_block_start',
-    index: 1,
-    content_block: { type: 'web_search_tool_result', tool_use_id: toolUseId, content: resultBlocks },
-  } });
+  events.push({
+    event: 'content_block_start',
+    data: {
+      type: 'content_block_start',
+      index: 1,
+      content_block: {
+        type: 'web_search_tool_result',
+        tool_use_id: toolUseId,
+        content: resultBlocks,
+      },
+    },
+  });
 
   // 6. content_block_stop（web_search_tool_result）
   events.push({ event: 'content_block_stop', data: { type: 'content_block_stop', index: 1 } });
 
   // 7. content_block_start — text（index 2）
-  events.push({ event: 'content_block_start', data: {
-    type: 'content_block_start',
-    index: 2,
-    content_block: { type: 'text', text: '' },
-  } });
+  events.push({
+    event: 'content_block_start',
+    data: {
+      type: 'content_block_start',
+      index: 2,
+      content_block: { type: 'text', text: '' },
+    },
+  });
 
   // 8. content_block_delta — text_delta（分块发送摘要）
   const CHUNK = 100;
   for (let i = 0; i < summary.length; i += CHUNK) {
-    events.push({ event: 'content_block_delta', data: {
-      type: 'content_block_delta',
-      index: 2,
-      delta: { type: 'text_delta', text: summary.slice(i, i + CHUNK) },
-    } });
+    events.push({
+      event: 'content_block_delta',
+      data: {
+        type: 'content_block_delta',
+        index: 2,
+        delta: { type: 'text_delta', text: summary.slice(i, i + CHUNK) },
+      },
+    });
   }
 
   // 9. content_block_stop（text）
   events.push({ event: 'content_block_stop', data: { type: 'content_block_stop', index: 2 } });
 
   // 10. message_delta（end_turn + output 估算）
-  const outputTokens = Math.ceil((summary.length + 3) / 4);
-  events.push({ event: 'message_delta', data: {
-    type: 'message_delta',
-    delta: { stop_reason: 'end_turn', stop_sequence: null },
-    usage: { output_tokens: outputTokens },
-  } });
+  const outputTokens = _simpleTokenEstimate(summary, { bias: 3 });
+  events.push({
+    event: 'message_delta',
+    data: {
+      type: 'message_delta',
+      delta: { stop_reason: 'end_turn', stop_sequence: null },
+      usage: { output_tokens: outputTokens },
+    },
+  });
 
   // 11. message_stop
   events.push({ event: 'message_stop', data: { type: 'message_stop' } });
@@ -243,14 +285,18 @@ function buildWebSearchMessage({ model, query, toolUseId, results, inputTokens }
     model: model || 'default',
     content: [
       { type: 'server_tool_use', id: toolUseId, name: 'web_search', input: { query } },
-      { type: 'web_search_tool_result', tool_use_id: toolUseId, content: _toWebSearchResultBlocks(results) },
+      {
+        type: 'web_search_tool_result',
+        tool_use_id: toolUseId,
+        content: _toWebSearchResultBlocks(results),
+      },
       { type: 'text', text: summary },
     ],
     stop_reason: 'end_turn',
     stop_sequence: null,
     usage: {
       input_tokens: inputTokens || 0,
-      output_tokens: Math.ceil((summary.length + 3) / 4),
+      output_tokens: _simpleTokenEstimate(summary, { bias: 3 }),
     },
   };
 }
@@ -266,12 +312,14 @@ function buildWebSearchMessage({ model, query, toolUseId, results, inputTokens }
 async function handleWebSearchRequest(req, res, body) {
   const resolvedCorsOrigin = resolveProxyCorsOrigin(req.headers.origin);
   const query = extractSearchQuery(body);
-  if (!query) return false; // 提不出查询词则交还给正常路由
+  if (!query) {
+    return false;
+  } // 提不出查询词则交还给正常路由
 
   const model = body.model || 'default';
   const stream = body.stream !== false; // Claude Code 默认 stream
   const toolUseId = _serverToolUseId();
-  const inputTokens = Math.ceil((query.length + 3) / 4);
+  const inputTokens = _simpleTokenEstimate(query, { bias: 3 });
 
   if (String(process.env.PROXY_TOOL_DEBUG || '').toLowerCase() === 'true') {
     console.log(`[proxy:websearch] intercept query="${query}" stream=${stream}`);
@@ -282,7 +330,9 @@ async function handleWebSearchRequest(req, res, body) {
   try {
     const svc = _getWebSearchService();
     const r = await svc.search(query);
-    if (r && r.success && Array.isArray(r.results)) results = r.results;
+    if (r && r.success && Array.isArray(r.results)) {
+      results = r.results;
+    }
   } catch (err) {
     if (String(process.env.PROXY_TOOL_DEBUG || '').toLowerCase() === 'true') {
       console.log(`[proxy:websearch] search error: ${err && err.message}`);
@@ -302,12 +352,16 @@ async function handleWebSearchRequest(req, res, body) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'Access-Control-Allow-Origin': resolvedCorsOrigin,
   });
   const events = buildWebSearchEvents({ model, query, toolUseId, results, inputTokens });
   for (const e of events) {
-    try { res.write(`event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`); } catch { /* client gone */ }
+    try {
+      res.write(`event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`);
+    } catch {
+      /* client gone */
+    }
   }
   res.end();
   return true;

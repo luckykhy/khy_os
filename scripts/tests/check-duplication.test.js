@@ -17,7 +17,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const scriptPath = path.join(ROOT, 'scripts', 'check-duplication.js');
+const scriptPath = path.join(ROOT, 'scripts', 'ci', 'check-duplication.js');
 
 let tmpDir;
 let scopeDir;

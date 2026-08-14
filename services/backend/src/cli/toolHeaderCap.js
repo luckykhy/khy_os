@@ -41,7 +41,9 @@ const LEGACY_ARG_CAP = 60;
 const COMMAND_KEYS = new Set(['command', 'cmd']);
 
 function toolHeaderCapEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TOOL_HEADER_CAP) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TOOL_HEADER_CAP) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -52,7 +54,9 @@ function toolHeaderCapEnabled(env = process.env) {
  * Gate off → every key gets the legacy 60 (byte-identical fallback).
  */
 function argDisplayCap(key, env = process.env) {
-  if (!toolHeaderCapEnabled(env)) return LEGACY_ARG_CAP;
+  if (!toolHeaderCapEnabled(env)) {
+    return LEGACY_ARG_CAP;
+  }
   return COMMAND_KEYS.has(String(key)) ? MAX_COMMAND_DISPLAY_CHARS : LEGACY_ARG_CAP;
 }
 

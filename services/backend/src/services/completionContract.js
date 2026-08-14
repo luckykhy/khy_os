@@ -17,9 +17,9 @@
  * 纯叶子契约:零 IO(无 fs/net/process/无参 Date)、确定性(同输入→同输出)、绝不抛。
  */
 
-const _MAX_CRITERIA = 12;        // 上限,防目标里堆一长串把 redrive 文案撑爆
+const _MAX_CRITERIA = 12; // 上限,防目标里堆一长串把 redrive 文案撑爆
 const _MAX_CRITERION_CHARS = 200;
-const _MAX_SCAN_LINES = 40;      // 标准段最多向后扫描的行数
+const _MAX_SCAN_LINES = 40; // 标准段最多向后扫描的行数
 
 // 「完成标准」段的标题信号(中英)。命中后收集其后的条目。
 const _CRITERIA_HEADING_RE =
@@ -59,8 +59,14 @@ function _escapeRe(s) {
 /** 一段文本是否「像一条可执行命令」(用于抓反引号内容 / 判命令类标准)。 */
 function _looksLikeCommand(s) {
   const t = _str(s).trim();
-  if (!t || t.length > _MAX_CRITERION_CHARS) return false;
-  if (/(^|\s)(npm|npx|node|yarn|pnpm|pytest|jest|cargo|go|make|bash|sh|python3?|deno|bun)\b/i.test(t)) return true;
+  if (!t || t.length > _MAX_CRITERION_CHARS) {
+    return false;
+  }
+  if (
+    /(^|\s)(npm|npx|node|yarn|pnpm|pytest|jest|cargo|go|make|bash|sh|python3?|deno|bun)\b/i.test(t)
+  ) {
+    return true;
+  }
   return /\barch:god\b|\bmaintainer\b|:check\b|(^|\s)--\w/.test(t);
 }
 
@@ -80,10 +86,16 @@ function _freeformPattern(text) {
   const toks = _str(text).match(/[A-Za-z_][A-Za-z0-9_.:\-]{3,}|[一-龥]{2,}/g) || [];
   const uniq = [];
   for (const t of toks) {
-    if (!uniq.includes(t)) uniq.push(t);
-    if (uniq.length >= 5) break;
+    if (!uniq.includes(t)) {
+      uniq.push(t);
+    }
+    if (uniq.length >= 5) {
+      break;
+    }
   }
-  if (uniq.length === 0) return new RegExp(''); // 无显著词 → 永远匹配 → 视为满足
+  if (uniq.length === 0) {
+    return new RegExp('');
+  } // 无显著词 → 永远匹配 → 视为满足
   try {
     return new RegExp(uniq.map(_escapeRe).join('|'), 'i');
   } catch {
@@ -104,7 +116,9 @@ function _deriveEvidencePattern(text) {
     return { kind: 'test', pattern: _TEST_EVIDENCE_RE };
   }
   for (const tok of _CHECK_TOKENS) {
-    if (tok.re.test(t)) return { kind: 'check', pattern: tok.ev };
+    if (tok.re.test(t)) {
+      return { kind: 'check', pattern: tok.ev };
+    }
   }
   if (_looksLikeCommand(t)) {
     return { kind: 'command', pattern: _commandPattern(t) };
@@ -119,9 +133,13 @@ function _stripBullet(line) {
 function _pushCriterion(criteria, seen, rawText) {
   // 去掉反引号:让「`npm run maintainer:check` 通过」这类条目文本干净,便于分类与去重。
   const text = _clip(_str(rawText).replace(/`/g, '').trim());
-  if (!text) return;
+  if (!text) {
+    return;
+  }
   const key = text.toLowerCase().replace(/\s+/g, ' ');
-  if (seen.has(key)) return;
+  if (seen.has(key)) {
+    return;
+  }
   seen.add(key);
   const { kind, pattern } = _deriveEvidencePattern(text);
   criteria.push({ kind, text, pattern });
@@ -144,22 +162,33 @@ function parseCompletionContract(goalText) {
   const lines = s.split(/\r?\n/);
   let headingIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (_CRITERIA_HEADING_RE.test(lines[i])) { headingIdx = i; break; }
+    if (_CRITERIA_HEADING_RE.test(lines[i])) {
+      headingIdx = i;
+      break;
+    }
   }
   if (headingIdx !== -1) {
     let collected = 0;
     const end = Math.min(lines.length, headingIdx + 1 + _MAX_SCAN_LINES);
     for (let i = headingIdx + 1; i < end; i++) {
-      if (criteria.length >= _MAX_CRITERIA) break;
+      if (criteria.length >= _MAX_CRITERIA) {
+        break;
+      }
       const line = lines[i];
       const trimmed = _str(line).trim();
       if (!trimmed) {
-        if (collected > 0) break; // 已收集到条目后遇空行 → 段结束
-        continue;                 // 段与标题间的前导空行 → 跳过
+        if (collected > 0) {
+          break;
+        } // 已收集到条目后遇空行 → 段结束
+        continue; // 段与标题间的前导空行 → 跳过
       }
       // 遇到下一个 markdown 标题 或 另一个「标准」标题 → 段结束。
-      if (_MD_HEADING_RE.test(line)) break;
-      if (collected > 0 && _CRITERIA_HEADING_RE.test(line)) break;
+      if (_MD_HEADING_RE.test(line)) {
+        break;
+      }
+      if (collected > 0 && _CRITERIA_HEADING_RE.test(line)) {
+        break;
+      }
       if (_BULLET_RE.test(line)) {
         _pushCriterion(criteria, seen, _stripBullet(line));
         collected++;
@@ -167,7 +196,10 @@ function parseCompletionContract(goalText) {
         // 段首非条目行:仅当它自身含可验证信号(命令/测试/检查)才当作一条标准,
         // 否则视为散文,忽略(不把普通说明误当标准)。
         const { kind } = _deriveEvidencePattern(trimmed.replace(/`/g, ''));
-        if (kind !== 'freeform') { _pushCriterion(criteria, seen, trimmed); collected++; }
+        if (kind !== 'freeform') {
+          _pushCriterion(criteria, seen, trimmed);
+          collected++;
+        }
       } else {
         break; // 条目之间的非条目行 → 段结束
       }
@@ -179,18 +211,26 @@ function parseCompletionContract(goalText) {
     const re = /`([^`\n]{1,200})`/g;
     let m;
     while ((m = re.exec(s)) !== null) {
-      if (criteria.length >= _MAX_CRITERIA) break;
+      if (criteria.length >= _MAX_CRITERIA) {
+        break;
+      }
       const inner = _str(m[1]).trim();
-      if (!_looksLikeCommand(inner)) continue;
+      if (!_looksLikeCommand(inner)) {
+        continue;
+      }
       const low = inner.toLowerCase();
       const dup = criteria.some((c) => {
         const t = c.text.toLowerCase();
         return t.includes(low) || low.includes(t);
       });
-      if (dup) continue;
+      if (dup) {
+        continue;
+      }
       _pushCriterion(criteria, seen, inner);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return { criteria, hasContract: criteria.length > 0 };
 }
@@ -209,7 +249,10 @@ function matchEvidenceAgainstContract(reply, contract) {
   for (const c of criteria) {
     // 自由文本(散文)标准无可靠证据信号 → 视为信息性、永不阻塞收尾(只在 redrive 文案里列出参考);
     // 仅可验证类(command/test/check)参与门控,避免因模糊措辞过度拦截。
-    if (c && c.kind === 'freeform') { satisfied.push(c); continue; }
+    if (c && c.kind === 'freeform') {
+      satisfied.push(c);
+      continue;
+    }
     let ok = false;
     try {
       const p = c && c.pattern;
@@ -253,7 +296,9 @@ function buildContractRedriveMessage(goal, missing, { userMessage } = {}) {
     '所有标准都有证据后,再给出完成报告并调用 GoalTool(action=clear) 收尾。',
     userMessage ? `用户原始请求: ${String(userMessage).slice(0, 300)}` : '',
     ']',
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 module.exports = {

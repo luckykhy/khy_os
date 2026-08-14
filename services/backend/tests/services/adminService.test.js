@@ -21,6 +21,10 @@ describe('adminService — lazy data-home resolution (timely admin↔user sync)'
 
   beforeEach(() => {
     tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-admin-'));
+    // Pin the install root to a dir WITHOUT a `.portable` marker (this repo root
+    // carries one), so isPortableDeployment() is false and getAppHome() exercises
+    // the legacy ~/.khyquant established-wins branch these tests rely on.
+    process.env.KHY_OS_ROOT = path.join(tmpHome, 'install-root');
   });
 
   afterEach(() => {

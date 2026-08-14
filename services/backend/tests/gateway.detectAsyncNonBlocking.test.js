@@ -21,9 +21,15 @@ const AVAIL_PATH = '../src/services/gateway/adapters/_commandAvailability';
 
 describe('CLI adapter detectAsync is non-blocking (no spawnSync storm)', () => {
   let avail;
+  let prevCodexStrict;
 
   beforeEach(() => {
     jest.resetModules();
+    // Mocked CLI presence carries no real codex credentials — disable the
+    // strict credential gate so detectAsync reflects CLI existence, which is
+    // the async-probe contract under test here.
+    prevCodexStrict = process.env.KHY_CODEX_STRICT_DETECT;
+    process.env.KHY_CODEX_STRICT_DETECT = '0';
     avail = require(AVAIL_PATH);
     avail._clearCache();
     // Pretend every CLI is present so detection takes the "available" path.
@@ -39,6 +45,8 @@ describe('CLI adapter detectAsync is non-blocking (no spawnSync storm)', () => {
   });
 
   afterEach(() => {
+    if (prevCodexStrict === undefined) delete process.env.KHY_CODEX_STRICT_DETECT;
+    else process.env.KHY_CODEX_STRICT_DETECT = prevCodexStrict;
     jest.restoreAllMocks();
   });
 

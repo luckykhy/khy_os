@@ -48,7 +48,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function _roleAttributionEnabled() {
   const raw = process.env.KHY_MERGE_ROLE_ATTRIBUTION;
-  if (raw === undefined || raw === null) return true; // default-on
+  if (raw === undefined || raw === null) {
+    return true;
+  } // default-on
   return !_FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -67,11 +69,11 @@ const _DEFAULT_BUCKET = '通用';
  * Used for the (suppressible) decorative header tag.
  */
 function roleLabel(role) {
-  if (typeof role !== 'string') return '';
+  if (typeof role !== 'string') {
+    return '';
+  }
   const key = role.trim().toLowerCase();
-  return Object.prototype.hasOwnProperty.call(_ROLE_LABELS, key)
-    ? _ROLE_LABELS[key]
-    : '';
+  return Object.prototype.hasOwnProperty.call(_ROLE_LABELS, key) ? _ROLE_LABELS[key] : '';
 }
 
 /**
@@ -87,7 +89,9 @@ function _summaryBucket(role) {
  * or unknown role → '' (byte-revert: header stays `### 子任务 N: preview`).
  */
 function formatRoleTag(role) {
-  if (!_roleAttributionEnabled()) return '';
+  if (!_roleAttributionEnabled()) {
+    return '';
+  }
   const label = roleLabel(role);
   return label ? `（${label}）` : '';
 }
@@ -101,8 +105,12 @@ function formatRoleTag(role) {
  *   critical hint (results unvalidated).
  */
 function formatRoleFailureSummary(failedRoles) {
-  if (!_roleAttributionEnabled()) return '';
-  if (!Array.isArray(failedRoles) || failedRoles.length === 0) return '';
+  if (!_roleAttributionEnabled()) {
+    return '';
+  }
+  if (!Array.isArray(failedRoles) || failedRoles.length === 0) {
+    return '';
+  }
 
   const counts = new Map(); // bucket label → count
   let verifyFailed = false;
@@ -113,7 +121,9 @@ function formatRoleFailureSummary(failedRoles) {
       verifyFailed = true;
     }
   }
-  if (counts.size === 0) return '';
+  if (counts.size === 0) {
+    return '';
+  }
 
   // Stable order: follow the known-role declaration order, then any extras.
   const knownOrder = Object.values(_ROLE_LABELS);
@@ -126,7 +136,9 @@ function formatRoleFailureSummary(failedRoles) {
     }
   }
   for (const [label, n] of counts) {
-    if (!seen.has(label)) parts.push(`${label} ${n} 项`);
+    if (!seen.has(label)) {
+      parts.push(`${label} ${n} 项`);
+    }
   }
 
   const hint = verifyFailed ? '（验证失败=结果未经校验，请复查）' : '';

@@ -17,20 +17,27 @@
  */
 
 const { tokenizeForSearch } = require('../searchTokenizer');
+
 const merge = require('./crossSourceMerge');
 
 function _int(envName, fallback, min, max) {
   const raw = parseInt(String(process.env[envName] || ''), 10);
-  if (!Number.isFinite(raw)) return fallback;
+  if (!Number.isFinite(raw)) {
+    return fallback;
+  }
   return Math.min(max, Math.max(min, raw));
 }
 
 // CJK single chars and ultra-short ASCII make for noisy grep alternation; keep
 // only discriminating terms. Bigrams (length-2 CJK) and words ≥2 chars survive.
 function _isUsefulToken(t) {
-  if (!t) return false;
-  if (/^[a-z0-9_]+$/.test(t)) return t.length >= 2;   // ascii word/number
-  return t.length >= 2;                                // CJK bigram (single chars dropped)
+  if (!t) {
+    return false;
+  }
+  if (/^[a-z0-9_]+$/.test(t)) {
+    return t.length >= 2;
+  } // ascii word/number
+  return t.length >= 2; // CJK bigram (single chars dropped)
 }
 
 /**
@@ -39,16 +46,21 @@ function _isUsefulToken(t) {
  * Returns '' when nothing useful remains (caller skips the grep source).
  */
 function buildGrepPattern(query, opts = {}) {
-  const maxTerms = Number.isFinite(opts.maxTerms) && opts.maxTerms > 0
-    ? opts.maxTerms
-    : _int('KHY_UNIFIED_GREP_TERMS', 6, 1, 20);
+  const maxTerms =
+    Number.isFinite(opts.maxTerms) && opts.maxTerms > 0
+      ? opts.maxTerms
+      : _int('KHY_UNIFIED_GREP_TERMS', 6, 1, 20);
   const terms = [];
   const seen = new Set();
   for (const t of tokenizeForSearch(query)) {
-    if (!_isUsefulToken(t) || seen.has(t)) continue;
+    if (!_isUsefulToken(t) || seen.has(t)) {
+      continue;
+    }
     seen.add(t);
     terms.push(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    if (terms.length >= maxTerms) break;
+    if (terms.length >= maxTerms) {
+      break;
+    }
   }
   return terms.join('|');
 }
@@ -60,7 +72,7 @@ async function _safe(thunk) {
   try {
     return await thunk();
   } catch {
-    return null;   // one source down never sinks the others
+    return null; // one source down never sinks the others
   }
 }
 
@@ -80,11 +92,14 @@ async function unifiedSearch(query, deps = {}, opts = {}) {
     sources: { web: 0, localFile: 0, localHistory: 0 },
     deduped: { total: 0, droppedWithinSource: 0, droppedCrossSource: 0 },
   };
-  if (q.length < 2) return empty;
+  if (q.length < 2) {
+    return empty;
+  }
 
-  const localCap = Number.isFinite(opts.localCap) && opts.localCap > 0
-    ? opts.localCap
-    : _int('KHY_UNIFIED_LOCAL_CAP', 10, 1, 100);
+  const localCap =
+    Number.isFinite(opts.localCap) && opts.localCap > 0
+      ? opts.localCap
+      : _int('KHY_UNIFIED_LOCAL_CAP', 10, 1, 100);
 
   const webSearch = typeof deps.webSearch === 'function' ? deps.webSearch : null;
   const grepSearch = typeof deps.grepSearch === 'function' ? deps.grepSearch : null;
@@ -95,14 +110,16 @@ async function unifiedSearch(query, deps = {}, opts = {}) {
   // Parallel fan-out — all sources race concurrently; each is fail-soft.
   const [webRaw, grepRaw, histRaw] = await Promise.all([
     webSearch ? _safe(() => webSearch(q)) : Promise.resolve(null),
-    (grepSearch && grepPattern) ? _safe(() => grepSearch(grepPattern)) : Promise.resolve(null),
+    grepSearch && grepPattern ? _safe(() => grepSearch(grepPattern)) : Promise.resolve(null),
     historySearch ? _safe(() => historySearch(q)) : Promise.resolve(null),
   ]);
 
   // Web search may hand back either a bare results[] or { results: [...] }.
   const webResults = Array.isArray(webRaw)
     ? webRaw
-    : (webRaw && Array.isArray(webRaw.results) ? webRaw.results : []);
+    : webRaw && Array.isArray(webRaw.results)
+      ? webRaw.results
+      : [];
 
   const web = merge.normalizeWeb(webResults);
   // grep result is { matches: [...] } (or already an array of matches); cap matches.

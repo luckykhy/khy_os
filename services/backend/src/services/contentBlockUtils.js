@@ -9,7 +9,6 @@ try {
   _describeImagePlaceholder = () => '[image]';
 }
 
-
 /**
  * contentBlockUtils.js — Anthropic content block 格式辅助工具。
  *
@@ -27,13 +26,21 @@ try {
  * @returns {string}
  */
 function contentToText(content) {
-  if (content == null) return '';
-  if (typeof content === 'string') return content;
-  if (!Array.isArray(content)) return String(content);
+  if (content == null) {
+    return '';
+  }
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return String(content);
+  }
 
   const texts = [];
   for (const block of content) {
-    if (!block || typeof block !== 'object') continue;
+    if (!block || typeof block !== 'object') {
+      continue;
+    }
     if (block.type === 'text' && block.text) {
       texts.push(block.text);
     } else if (block.type === 'image' || block.type === 'image_url') {
@@ -62,8 +69,13 @@ function contentToText(content) {
  * @returns {boolean}
  */
 function isStructuredContent(content) {
-  return Array.isArray(content) && content.length > 0
-    && content[0] != null && typeof content[0] === 'object' && 'type' in content[0];
+  return (
+    Array.isArray(content) &&
+    content.length > 0 &&
+    content[0] != null &&
+    typeof content[0] === 'object' &&
+    'type' in content[0]
+  );
 }
 
 /**
@@ -91,7 +103,9 @@ function buildAssistantContent(text, toolUseBlocks, thinkingBlocks) {
   // Thinking blocks must precede text/tool_use per Anthropic extended-thinking rules.
   if (hasThinking) {
     for (const tb of thinkingBlocks) {
-      if (!tb || typeof tb !== 'object') continue;
+      if (!tb || typeof tb !== 'object') {
+        continue;
+      }
       if (tb.type === 'thinking' && tb.signature) {
         blocks.push({ type: 'thinking', thinking: tb.thinking || '', signature: tb.signature });
       } else if (tb.type === 'redacted_thinking' && tb.data) {
@@ -104,7 +118,9 @@ function buildAssistantContent(text, toolUseBlocks, thinkingBlocks) {
   }
   if (hasToolUse) {
     for (const b of toolUseBlocks) {
-      if (!b || !b.id || !b.name) continue;
+      if (!b || !b.id || !b.name) {
+        continue;
+      }
       blocks.push({
         type: 'tool_use',
         id: b.id,
@@ -113,7 +129,7 @@ function buildAssistantContent(text, toolUseBlocks, thinkingBlocks) {
       });
     }
   }
-  return blocks.length > 0 ? blocks : (text || '');
+  return blocks.length > 0 ? blocks : text || '';
 }
 
 /**
@@ -126,12 +142,19 @@ function buildAssistantContent(text, toolUseBlocks, thinkingBlocks) {
  */
 function _resolveToolResultContent(contentBlocks, contentFallback) {
   // Prefer structured content blocks (e.g. image blocks) when available
-  if (Array.isArray(contentBlocks) && contentBlocks.length > 0
-      && contentBlocks[0] && typeof contentBlocks[0] === 'object' && 'type' in contentBlocks[0]) {
+  if (
+    Array.isArray(contentBlocks) &&
+    contentBlocks.length > 0 &&
+    contentBlocks[0] &&
+    typeof contentBlocks[0] === 'object' &&
+    'type' in contentBlocks[0]
+  ) {
     return contentBlocks;
   }
   // String content passes through (Anthropic accepts string in tool_result.content)
-  if (typeof contentFallback === 'string') return contentFallback;
+  if (typeof contentFallback === 'string') {
+    return contentFallback;
+  }
   // Fallback: stringify
   return JSON.stringify(contentFallback || '');
 }
@@ -146,11 +169,15 @@ function _resolveToolResultContent(contentBlocks, contentFallback) {
  * @returns {Array|null} content blocks 数组，无有效结果时返回 null
  */
 function buildToolResultContent(results) {
-  if (!Array.isArray(results) || results.length === 0) return null;
+  if (!Array.isArray(results) || results.length === 0) {
+    return null;
+  }
 
   const blocks = [];
   for (const r of results) {
-    if (!r || !r.tool_use_id) continue;
+    if (!r || !r.tool_use_id) {
+      continue;
+    }
     blocks.push({
       type: 'tool_result',
       tool_use_id: r.tool_use_id,
@@ -185,7 +212,9 @@ function flattenContent(content) {
 function ensureToolResultPairing(messages) {
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
-    if (msg.role !== 'assistant' || !Array.isArray(msg.content)) continue;
+    if (msg.role !== 'assistant' || !Array.isArray(msg.content)) {
+      continue;
+    }
 
     // Collect tool_use IDs from this assistant message
     const toolUseIds = [];
@@ -194,7 +223,9 @@ function ensureToolResultPairing(messages) {
         toolUseIds.push(block.id);
       }
     }
-    if (toolUseIds.length === 0) continue;
+    if (toolUseIds.length === 0) {
+      continue;
+    }
 
     // Find matched tool_result IDs in the next user message
     const next = messages[i + 1];
@@ -208,8 +239,10 @@ function ensureToolResultPairing(messages) {
     }
 
     // Find missing IDs
-    const missingIds = toolUseIds.filter(id => !resultIds.has(id));
-    if (missingIds.length === 0) continue;
+    const missingIds = toolUseIds.filter((id) => !resultIds.has(id));
+    if (missingIds.length === 0) {
+      continue;
+    }
 
     // Inject synthetic tool_result placeholders for missing IDs.
     // is_error MUST stay false: an earlier tool_result was dropped to reclaim
@@ -217,10 +250,11 @@ function ensureToolResultPairing(messages) {
     // models treat the call as failed and re-run the exact same tool (the
     // observed "反复重搜同一查询" symptom). The text explicitly says the result
     // existed and can be re-fetched only if still needed.
-    const placeholders = missingIds.map(id => ({
+    const placeholders = missingIds.map((id) => ({
       type: 'tool_result',
       tool_use_id: id,
-      content: '[Earlier tool result omitted to save context. It completed successfully; re-run the tool only if you still need its output.]',
+      content:
+        '[Earlier tool result omitted to save context. It completed successfully; re-run the tool only if you still need its output.]',
       is_error: false,
     }));
 
@@ -230,7 +264,10 @@ function ensureToolResultPairing(messages) {
     } else if (next && next.role === 'user') {
       // Convert plain text user message to structured with text + placeholders
       next.content = [
-        { type: 'text', text: typeof next.content === 'string' ? next.content : String(next.content || '') },
+        {
+          type: 'text',
+          text: typeof next.content === 'string' ? next.content : String(next.content || ''),
+        },
         ...placeholders,
       ];
     } else {

@@ -13,11 +13,14 @@
  * 纯函数:不改入参、无副作用、绝不抛(可选链 + ?? 兜底)。
  */
 export function unwrap(res) {
-  const payload = res?.data
-  if (payload && typeof payload === 'object'
-    && Object.prototype.hasOwnProperty.call(payload, 'success')
-    && Object.prototype.hasOwnProperty.call(payload, 'data')) {
-    return payload.data
+  const payload = res?.data;
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    Object.prototype.hasOwnProperty.call(payload, 'success') &&
+    Object.prototype.hasOwnProperty.call(payload, 'data')
+  ) {
+    return payload.data;
   }
-  return payload ?? res
+  return payload ?? res;
 }

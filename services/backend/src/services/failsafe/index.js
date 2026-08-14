@@ -17,8 +17,8 @@
  *      DESIGN-ARCH-026（审批网关，E07 来源）。
  */
 
-const errorCodes = require('./errorCodes');
 const classifier = require('./classifier');
+const errorCodes = require('./errorCodes');
 const { SafeResponseWrapper } = require('./safeResponse');
 const { StreamFailSafeInjector, sweepActive } = require('./streamInjector');
 

@@ -37,8 +37,8 @@
  * env_optimize performs detection-only (byte-identical to the pre-repair report).
  */
 
-const os = require('os');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 function _repairOn() {
@@ -58,13 +58,29 @@ function _repairOn() {
  */
 function _repairConfigHome() {
   let home;
-  try { home = path.join(os.homedir(), '.khy'); } catch { return null; }
-  if (!home) return null;
+  try {
+    home = require('../utils/dataHome').getDataHome();
+  } catch {
+    try {
+      home = path.join(os.homedir(), '.khy');
+    } catch {
+      return null;
+    }
+  }
+  if (!home) {
+    return null;
+  }
 
   let stat = null;
-  try { stat = fs.statSync(home); } catch { stat = null; }
+  try {
+    stat = fs.statSync(home);
+  } catch {
+    stat = null;
+  }
 
-  if (stat && stat.isDirectory()) return null; // already healthy → idempotent no-op
+  if (stat && stat.isDirectory()) {
+    return null;
+  } // already healthy → idempotent no-op
 
   if (stat && !stat.isDirectory()) {
     // Exists but wrong type — removing it could destroy user data. Defer.
@@ -76,7 +92,11 @@ function _repairConfigHome() {
     fs.mkdirSync(home, { recursive: true });
     return { ok: true, changed: true, detail: `已创建缺失的配置目录: ${home}` };
   } catch (err) {
-    return { ok: false, changed: false, detail: `无法创建配置目录 ${home}（${(err && err.code) || 'IO error'}）` };
+    return {
+      ok: false,
+      changed: false,
+      detail: `无法创建配置目录 ${home}（${(err && err.code) || 'IO error'}）`,
+    };
   }
 }
 
@@ -103,7 +123,12 @@ function _repairConfigHome() {
 //   human gate (the `磁盘清理` command). Full recipe:
 //   docs/07_OPS_运维/[OPS-MAN-064] 打造最佳环境-如何扩展.md
 const _REPAIRS = [
-  { key: 'config-home', label: '配置目录', run: _repairConfigHome, platforms: ['linux', 'windows', 'macos', 'android'] },
+  {
+    key: 'config-home',
+    label: '配置目录',
+    run: _repairConfigHome,
+    platforms: ['linux', 'windows', 'macos', 'android'],
+  },
 ];
 
 /**
@@ -125,13 +150,21 @@ const _platformCtx = require('../utils/platformCtx');
  * @returns {Array<{key:string, label:string, ok:boolean, changed:boolean, detail:string}>}
  */
 function runRepairs() {
-  if (!_repairOn()) return [];
+  if (!_repairOn()) {
+    return [];
+  }
   const ctx = _platformCtx();
   const results = [];
   for (const r of _REPAIRS) {
-    if (!ctx.appliesTo(r, ctx.id)) continue; // platform-scoped out
+    if (!ctx.appliesTo(r, ctx.id)) {
+      continue;
+    } // platform-scoped out
     let res = null;
-    try { res = r.run(); } catch { res = null; }
+    try {
+      res = r.run();
+    } catch {
+      res = null;
+    }
     if (res && res.detail) {
       results.push({
         key: r.key,

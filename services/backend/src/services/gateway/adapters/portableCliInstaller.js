@@ -14,8 +14,9 @@
  * @module services/gateway/adapters/portableCliInstaller
  */
 
-const path = require('path');
 const { spawn } = require('child_process');
+const path = require('path');
+
 const registry = require('./portableCliRegistry');
 const resolver = require('./portableCliResolver');
 
@@ -30,15 +31,19 @@ function isInstallEnabled(env = process.env) {
 /** 解析便携工具根目录(与解析器同约定):KHY_TOOLS_DIR > 注入 toolsRoot > getDataDir('tools')。 */
 function _toolsRoot(env, toolsRoot) {
   const fromEnv = env && env.KHY_TOOLS_DIR;
-  if (typeof fromEnv === 'string' && fromEnv.trim()) return path.resolve(fromEnv.trim());
-  if (typeof toolsRoot === 'string' && toolsRoot.trim()) return path.resolve(toolsRoot.trim());
+  if (typeof fromEnv === 'string' && fromEnv.trim()) {
+    return path.resolve(fromEnv.trim());
+  }
+  if (typeof toolsRoot === 'string' && toolsRoot.trim()) {
+    return path.resolve(toolsRoot.trim());
+  }
   return require('../../../utils/dataHome').getDataDir('tools');
 }
 
 /** win32 上 npm 是 npm.cmd,须经 cmd.exe 执行(避免裸 spawn ENOENT / DEP0190)。 */
 function _npmSpawn(installArgs, cwdDir, onProgress) {
   const isWin = process.platform === 'win32';
-  const command = isWin ? (process.env.COMSPEC || 'cmd.exe') : 'npm';
+  const command = isWin ? process.env.COMSPEC || 'cmd.exe' : 'npm';
   const args = isWin ? ['/d', '/s', '/c', 'npm', ...installArgs] : installArgs;
   return new Promise((resolve) => {
     let child;
@@ -54,13 +59,35 @@ function _npmSpawn(installArgs, cwdDir, onProgress) {
       return;
     }
     let stderr = '';
-    const emit = (text) => { try { if (onProgress) onProgress(text); } catch { /* best effort */ } };
-    if (child.stdout) child.stdout.on('data', (d) => emit(d.toString()));
-    if (child.stderr) child.stderr.on('data', (d) => { const s = d.toString(); stderr += s; emit(s); });
+    const emit = (text) => {
+      try {
+        if (onProgress) {
+          onProgress(text);
+        }
+      } catch {
+        /* best effort */
+      }
+    };
+    if (child.stdout) {
+      child.stdout.on('data', (d) => emit(d.toString()));
+    }
+    if (child.stderr) {
+      child.stderr.on('data', (d) => {
+        const s = d.toString();
+        stderr += s;
+        emit(s);
+      });
+    }
     child.on('error', (err) => resolve({ ok: false, error: (err && err.message) || String(err) }));
     child.on('close', (code) => {
-      if (code === 0) resolve({ ok: true });
-      else resolve({ ok: false, error: `npm install 退出码 ${code}${stderr ? `: ${stderr.trim().slice(-400)}` : ''}` });
+      if (code === 0) {
+        resolve({ ok: true });
+      } else {
+        resolve({
+          ok: false,
+          error: `npm install 退出码 ${code}${stderr ? `: ${stderr.trim().slice(-400)}` : ''}`,
+        });
+      }
     });
   });
 }
@@ -73,16 +100,29 @@ function _npmSpawn(installArgs, cwdDir, onProgress) {
  */
 async function install(toolKey, opts = {}) {
   const env = opts.env || process.env;
-  if (!isInstallEnabled(env)) return { ok: false, gated: true, error: '便携安装已被 KHY_PORTABLE_CLI_INSTALL 关闭' };
+  if (!isInstallEnabled(env)) {
+    return { ok: false, gated: true, error: '便携安装已被 KHY_PORTABLE_CLI_INSTALL 关闭' };
+  }
   const tool = registry.getTool(toolKey);
-  if (!tool) return { ok: false, error: `未知便携工具: ${toolKey}` };
+  if (!tool) {
+    return { ok: false, error: `未知便携工具: ${toolKey}` };
+  }
 
   const root = _toolsRoot(env, opts.toolsRoot);
   const prefix = path.join(root, tool.portableDir);
   // `npm install <pkg>@latest --prefix <prefix>` — prefix 下自成 node_modules 隔离安装。
-  const installArgs = ['install', `${tool.pkg}@latest`, '--prefix', prefix, '--no-audit', '--no-fund'];
+  const installArgs = [
+    'install',
+    `${tool.pkg}@latest`,
+    '--prefix',
+    prefix,
+    '--no-audit',
+    '--no-fund',
+  ];
   const result = await _npmSpawn(installArgs, root, opts.onProgress);
-  if (!result.ok) return result;
+  if (!result.ok) {
+    return result;
+  }
   return { ok: true, packageDir: resolver.packageDir(tool.key, { env, toolsRoot: root }) };
 }
 

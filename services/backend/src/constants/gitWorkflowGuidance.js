@@ -25,7 +25,8 @@ const _FALSY = ['0', 'false', 'off', 'no'];
 /** 门控:仅当显式置为 0/false/off/no 时关闭,其余(含未设)均开启。 */
 function isEnabled(env) {
   const raw = String((env || process.env).KHY_GIT_WORKFLOW_GUIDANCE || 'on')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !_FALSY.includes(raw);
 }
 
@@ -42,9 +43,11 @@ const HEADER = '## Git workflow (this repo)';
  */
 function buildWorkflowAwareness(ctx) {
   try {
-    if (!isEnabled(ctx && ctx.env)) return '';
-    const branch = (ctx && ctx.branch) ? String(ctx.branch) : '';
-    const mainBranch = (ctx && ctx.mainBranch) ? String(ctx.mainBranch) : '';
+    if (!isEnabled(ctx && ctx.env)) {
+      return '';
+    }
+    const branch = ctx && ctx.branch ? String(ctx.branch) : '';
+    const mainBranch = ctx && ctx.mainBranch ? String(ctx.mainBranch) : '';
     const dirty = !!(ctx && ctx.dirty);
     const onDefault = !!(branch && mainBranch && branch === mainBranch);
 
@@ -55,18 +58,28 @@ function buildWorkflowAwareness(ctx) {
       lines.push(`- You are on \`${branch}\`; the default branch is \`${mainBranch}\`.`);
     }
     if (onDefault) {
-      lines.push('- You are currently ON the default branch. Before committing non-trivial work, create a feature branch first (branch-first) rather than committing straight to the default branch.');
+      lines.push(
+        '- You are currently ON the default branch. Before committing non-trivial work, create a feature branch first (branch-first) rather than committing straight to the default branch.'
+      );
     } else if (mainBranch) {
-      lines.push(`- Keep committable work on feature branches; the default branch \`${mainBranch}\` is what you would open PRs against.`);
+      lines.push(
+        `- Keep committable work on feature branches; the default branch \`${mainBranch}\` is what you would open PRs against.`
+      );
     }
 
     // Worktree —— 概念可见,直接点名既有工具。
-    lines.push('- For parallel, risky, or long-running work you can isolate it in a git worktree via EnterWorktree / ExitWorktree instead of switching branches in place.');
+    lines.push(
+      '- For parallel, risky, or long-running work you can isolate it in a git worktree via EnterWorktree / ExitWorktree instead of switching branches in place.'
+    );
 
     // 主动提交提醒 —— offer(询问),绝非自动提交。
-    lines.push('- When you finish a coherent unit of work and the working tree has uncommitted changes, proactively offer once — in a single short line — to commit it (e.g. “要我把这些改动提交吗?”). Never commit until the user confirms, and never commit automatically.');
+    lines.push(
+      '- When you finish a coherent unit of work and the working tree has uncommitted changes, proactively offer once — in a single short line — to commit it (e.g. “要我把这些改动提交吗?”). Never commit until the user confirms, and never commit automatically.'
+    );
     if (dirty) {
-      lines.push('- The working tree currently has uncommitted changes: once the current unit of work is complete, remember to offer to commit.');
+      lines.push(
+        '- The working tree currently has uncommitted changes: once the current unit of work is complete, remember to offer to commit.'
+      );
     }
 
     return lines.join('\n');

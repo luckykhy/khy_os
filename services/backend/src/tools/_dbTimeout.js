@@ -25,7 +25,6 @@
  *   KHY_DB_STATEMENT_TIMEOUT_MS   默认 30000 —— 语句超时毫秒(numeric,clamp[1000, 600000])。
  */
 
-
 const _isEnabled = require('../utils/isEnabledDefaultOn');
 
 function _resolveMs(name, env, def, min, max) {
@@ -33,10 +32,16 @@ function _resolveMs(name, env, def, min, max) {
   try {
     const flagRegistry = require('../services/flagRegistry');
     const v = flagRegistry.resolveNumeric(name, e);
-    if (Number.isFinite(v) && v > 0) return v;
-  } catch { /* fall through */ }
+    if (Number.isFinite(v) && v > 0) {
+      return v;
+    }
+  } catch {
+    /* fall through */
+  }
   const raw = Number.parseInt((e && e[name]) || '', 10);
-  if (Number.isFinite(raw) && raw > 0) return Math.min(max, Math.max(min, raw));
+  if (Number.isFinite(raw) && raw > 0) {
+    return Math.min(max, Math.max(min, raw));
+  }
   return def;
 }
 
@@ -53,7 +58,9 @@ function resolveConnectTimeoutMs(env) {
 /** 语句超时(毫秒)。默认 30000,clamp[1000, 600000]。可传 overrideMs(模型/调用方入参)优先于 env。 */
 function resolveStatementTimeoutMs(env, overrideMs) {
   const o = Number(overrideMs);
-  if (Number.isFinite(o) && o > 0) return Math.min(600000, Math.max(1000, o));
+  if (Number.isFinite(o) && o > 0) {
+    return Math.min(600000, Math.max(1000, o));
+  }
   return _resolveMs('KHY_DB_STATEMENT_TIMEOUT_MS', env, 30000, 1000, 600000);
 }
 
@@ -65,7 +72,9 @@ function resolveStatementTimeoutMs(env, overrideMs) {
  * @returns {{connectionTimeoutMillis?:number, query_timeout?:number, statement_timeout?:number}}
  */
 function buildPostgresTimeoutOptions(env, overrideStatementMs) {
-  if (!isDbTimeoutEnabled(env)) return {};
+  if (!isDbTimeoutEnabled(env)) {
+    return {};
+  }
   const connectMs = resolveConnectTimeoutMs(env);
   const stmtMs = resolveStatementTimeoutMs(env, overrideStatementMs);
   return {
@@ -81,7 +90,9 @@ function buildPostgresTimeoutOptions(env, overrideStatementMs) {
  * @returns {{connectTimeout?:number}}
  */
 function buildMysqlConnectOptions(env) {
-  if (!isDbTimeoutEnabled(env)) return {};
+  if (!isDbTimeoutEnabled(env)) {
+    return {};
+  }
   return { connectTimeout: resolveConnectTimeoutMs(env) };
 }
 

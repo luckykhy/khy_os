@@ -25,11 +25,19 @@
 const OFF = new Set(['0', 'false', 'off', 'no']);
 
 function _off(v) {
-  return OFF.has(String(v == null ? '' : v).trim().toLowerCase());
+  return OFF.has(
+    String(v == null ? '' : v)
+      .trim()
+      .toLowerCase()
+  );
 }
 
 let _progress;
-try { _progress = require('./progressLog'); } catch { _progress = null; }
+try {
+  _progress = require('./progressLog');
+} catch {
+  _progress = null;
+}
 
 /**
  * 总门控:父门控 KHY_PROGRESS_LOG(含 KHY_DISABLE_MEMORY)必须开,且本子门控未关。
@@ -40,37 +48,87 @@ function isEnabled(env) {
   const e = env || process.env || {};
   // 父门控优先:进度日志整体关(或记忆总关)⇒ 自动层必关。
   if (_progress && typeof _progress.isEnabled === 'function') {
-    if (!_progress.isEnabled(e)) return false;
+    if (!_progress.isEnabled(e)) {
+      return false;
+    }
   } else {
     // 叶子缺失时的保守回退:仍尊重记忆总开关与父门控 KHY_PROGRESS_LOG。
-    const dis = String(e.KHY_DISABLE_MEMORY || '').trim().toLowerCase();
-    if (dis === '1' || dis === 'true') return false;
-    if (_off(e.KHY_PROGRESS_LOG)) return false;
+    const dis = String(e.KHY_DISABLE_MEMORY || '')
+      .trim()
+      .toLowerCase();
+    if (dis === '1' || dis === 'true') {
+      return false;
+    }
+    if (_off(e.KHY_PROGRESS_LOG)) {
+      return false;
+    }
   }
   return !_off(e.KHY_PROGRESS_AUTO_CHECKPOINT);
 }
 
 // 触发门槛常量。
-const MIN_ASSISTANT_TURNS = 3;   // 至少这么多条实质 assistant 回复才算「一段」学习/工作
-const MIN_LEARNING_SIGNALS = 2;  // 非 studyMode 时,至少命中这么多个不同学习信号词
+const MIN_ASSISTANT_TURNS = 3; // 至少这么多条实质 assistant 回复才算「一段」学习/工作
+const MIN_LEARNING_SIGNALS = 2; // 非 studyMode 时,至少命中这么多个不同学习信号词
 const SUBSTANTIVE_MIN_CHARS = 24; // 一条 assistant 回复算「实质」的最短清洗后字符数(CJK 友好)
 
 // 学习/教学信号词表(zh 按子串、en 按小写整串包含)。小而聚焦,用于门槛判定(非蒸馏)。
-const _LEARN_ZH = ['学', '教', '章', '节', '课', '练', '题', '复习', '背', '考', '知识点', '讲', '例题', '公式', '单词', '语法', '刷题'];
-const _LEARN_EN = ['learn', 'study', 'teach', 'chapter', 'lesson', 'exercise', 'review', 'quiz', 'practice', 'tutorial', 'homework', 'grammar', 'vocabulary'];
+const _LEARN_ZH = [
+  '学',
+  '教',
+  '章',
+  '节',
+  '课',
+  '练',
+  '题',
+  '复习',
+  '背',
+  '考',
+  '知识点',
+  '讲',
+  '例题',
+  '公式',
+  '单词',
+  '语法',
+  '刷题',
+];
+const _LEARN_EN = [
+  'learn',
+  'study',
+  'teach',
+  'chapter',
+  'lesson',
+  'exercise',
+  'review',
+  'quiz',
+  'practice',
+  'tutorial',
+  'homework',
+  'grammar',
+  'vocabulary',
+];
 
 /** 把一条消息的 content 归一为纯文本(容忍字符串 / content-block 数组)。绝不抛。 */
 function _msgText(msg) {
   try {
-    if (!msg) return '';
+    if (!msg) {
+      return '';
+    }
     const c = msg.content;
-    if (typeof c === 'string') return c;
+    if (typeof c === 'string') {
+      return c;
+    }
     if (Array.isArray(c)) {
-      return c.map((b) => {
-        if (typeof b === 'string') return b;
-        if (b && typeof b.text === 'string') return b.text;
-        return '';
-      }).join(' ');
+      return c
+        .map((b) => {
+          if (typeof b === 'string') {
+            return b;
+          }
+          if (b && typeof b.text === 'string') {
+            return b.text;
+          }
+          return '';
+        })
+        .join(' ');
     }
     return typeof c === 'string' ? c : '';
   } catch {
@@ -82,7 +140,9 @@ function _msgText(msg) {
 function _hasToolUse(msg, toolName) {
   try {
     const c = msg && msg.content;
-    if (!Array.isArray(c)) return false;
+    if (!Array.isArray(c)) {
+      return false;
+    }
     return c.some((b) => b && b.type === 'tool_use' && String(b.name || '') === toolName);
   } catch {
     return false;
@@ -96,14 +156,22 @@ function _hasToolUse(msg, toolName) {
  * @returns {boolean}
  */
 function alreadyCheckpointed(messages) {
-  if (!Array.isArray(messages)) return false;
+  if (!Array.isArray(messages)) {
+    return false;
+  }
   try {
     for (const m of messages) {
-      if (_hasToolUse(m, 'RecordProgress')) return true;
+      if (_hasToolUse(m, 'RecordProgress')) {
+        return true;
+      }
       const t = _msgText(m);
-      if (t && t.indexOf('[Tool:RecordProgress]') !== -1) return true;
+      if (t && t.indexOf('[Tool:RecordProgress]') !== -1) {
+        return true;
+      }
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return false;
 }
 
@@ -120,8 +188,16 @@ function _clean(text) {
 /** 统计不同学习信号命中数(zh 子串 + en 小写整串)。 */
 function _learningSignalCount(joinedLower) {
   let n = 0;
-  for (const w of _LEARN_ZH) { if (joinedLower.indexOf(w) !== -1) n += 1; }
-  for (const w of _LEARN_EN) { if (joinedLower.indexOf(w) !== -1) n += 1; }
+  for (const w of _LEARN_ZH) {
+    if (joinedLower.indexOf(w) !== -1) {
+      n += 1;
+    }
+  }
+  for (const w of _LEARN_EN) {
+    if (joinedLower.indexOf(w) !== -1) {
+      n += 1;
+    }
+  }
   return n;
 }
 
@@ -142,11 +218,19 @@ function qualifies(args = {}) {
     for (const m of messages) {
       const role = String((m && m.role) || '').toLowerCase();
       const txt = _clean(_msgText(m));
-      if (role === 'assistant' && txt.length >= SUBSTANTIVE_MIN_CHARS) substantive += 1;
-      if (role === 'assistant' || role === 'user') parts.push(txt);
+      if (role === 'assistant' && txt.length >= SUBSTANTIVE_MIN_CHARS) {
+        substantive += 1;
+      }
+      if (role === 'assistant' || role === 'user') {
+        parts.push(txt);
+      }
     }
-    if (substantive < MIN_ASSISTANT_TURNS) return false;
-    if (a.studyMode === true) return true;
+    if (substantive < MIN_ASSISTANT_TURNS) {
+      return false;
+    }
+    if (a.studyMode === true) {
+      return true;
+    }
     return _learningSignalCount(parts.join(' ').toLowerCase()) >= MIN_LEARNING_SIGNALS;
   } catch {
     return false;
@@ -154,15 +238,20 @@ function qualifies(args = {}) {
 }
 
 // 显式「下一步」措辞(抽到才填,抽不到留空——绝不臆造)。
-const _NEXT_RE = /(?:下一步|接下来|下次|下节课?|后续|然后|next(?:\s+step)?)[：:，,\s]+([^。;；\n]{2,120})/i;
+const _NEXT_RE =
+  /(?:下一步|接下来|下次|下节课?|后续|然后|next(?:\s+step)?)[：:，,\s]+([^。;；\n]{2,120})/i;
 
 /** 最后一条实质 assistant 回复(清洗后)。无 ⇒ ''。 */
 function _lastAssistantText(messages) {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (String((m && m.role) || '').toLowerCase() !== 'assistant') continue;
+    if (String((m && m.role) || '').toLowerCase() !== 'assistant') {
+      continue;
+    }
     const t = _clean(_msgText(m));
-    if (t.length >= 20) return t;
+    if (t.length >= 20) {
+      return t;
+    }
   }
   return '';
 }
@@ -179,11 +268,13 @@ function distill(args = {}) {
     const a = args && typeof args === 'object' ? args : {};
     const messages = Array.isArray(a.messages) ? a.messages : [];
     const last = _lastAssistantText(messages);
-    if (!last) return null;
+    if (!last) {
+      return null;
+    }
 
     const topicRaw = String(a.folderName || '').trim();
-    const topic = topicRaw && topicRaw !== '.' && topicRaw !== '/' && topicRaw !== '~'
-      ? topicRaw : '(本项目)';
+    const topic =
+      topicRaw && topicRaw !== '.' && topicRaw !== '/' && topicRaw !== '~' ? topicRaw : '(本项目)';
 
     // 已覆盖:诚实前缀 + 最后一条实质回复(交给 progressLog._clip 截断)。
     const covered = '[自动] ' + last;
@@ -196,9 +287,13 @@ function distill(args = {}) {
     } else {
       for (let i = messages.length - 1; i >= 0 && !next; i--) {
         const m = messages[i];
-        if (String((m && m.role) || '').toLowerCase() !== 'assistant') continue;
+        if (String((m && m.role) || '').toLowerCase() !== 'assistant') {
+          continue;
+        }
         const mm = _clean(_msgText(m)).match(_NEXT_RE);
-        if (mm) next = _clean(mm[1]);
+        if (mm) {
+          next = _clean(mm[1]);
+        }
       }
     }
     return { topic, covered, next };
@@ -220,10 +315,16 @@ function distill(args = {}) {
 function buildAutoCheckpoint(args = {}) {
   try {
     const a = args && typeof args === 'object' ? args : {};
-    if (!isEnabled(a.env)) return null;
+    if (!isEnabled(a.env)) {
+      return null;
+    }
     const messages = Array.isArray(a.messages) ? a.messages : [];
-    if (alreadyCheckpointed(messages)) return null;         // 安全网:不盖模型手写
-    if (!qualifies({ messages, studyMode: a.studyMode })) return null;
+    if (alreadyCheckpointed(messages)) {
+      return null;
+    } // 安全网:不盖模型手写
+    if (!qualifies({ messages, studyMode: a.studyMode })) {
+      return null;
+    }
     return distill({ messages, folderName: a.folderName });
   } catch {
     return null;

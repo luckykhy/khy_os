@@ -22,7 +22,9 @@ function _gateOn(name, env) {
     const flagRegistry = require('../services/flagRegistry');
     return flagRegistry.isFlagEnabled(name, e);
   } catch {
-    const raw = String(e[name] == null ? '' : e[name]).trim().toLowerCase();
+    const raw = String(e[name] == null ? '' : e[name])
+      .trim()
+      .toLowerCase();
     return !['0', 'false', 'off', 'no'].includes(raw);
   }
 }

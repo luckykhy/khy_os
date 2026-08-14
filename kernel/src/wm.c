@@ -471,17 +471,30 @@ void wm_service_task(void) {
         reply.type        = IPC_MSG_REPLY;
         reply.seq         = req.seq;
 
+        if (req.payload_len < 1) {
+            reply.type = IPC_MSG_ERROR;
+            reply.payload[0] = (uint8_t)-1;
+            reply.payload_len = 1;
+            goto done_reply;
+        }
         uint8_t op = req.payload[0];
         switch (op) {
         case WM_OP_CREATE: {
-            /* payload[1..2]=x, [3..4]=y, [5..6]=w, [7..8]=h, [9..]=title */
+            if (req.payload_len < 10) {
+                reply.type = IPC_MSG_ERROR;
+                reply.payload[0] = (uint8_t)-1;
+                reply.payload_len = 1;
+                break;
+            }
             int x = (int16_t)(req.payload[1] | (req.payload[2] << 8));
             int y = (int16_t)(req.payload[3] | (req.payload[4] << 8));
             int w = (int16_t)(req.payload[5] | (req.payload[6] << 8));
             int h = (int16_t)(req.payload[7] | (req.payload[8] << 8));
             char title[16];
-            memcpy(title, &req.payload[9], 15);
-            title[15] = '\0';
+            uint16_t copy_n = req.payload_len - 9;
+            if (copy_n > 15) copy_n = 15;
+            memcpy(title, &req.payload[9], copy_n);
+            title[copy_n] = '\0';
             wm_handle_t wh = wm_create_window(title, x, y, w, h,
                 WM_FLAG_DECORATED | WM_FLAG_MOVABLE);
             reply.payload[0] = (wh >= 0) ? 0 : (uint8_t)-1;
@@ -489,16 +502,30 @@ void wm_service_task(void) {
             reply.payload_len = 2;
             break;
         }
-        case WM_OP_DESTROY:
+        case WM_OP_DESTROY: {
+            if (req.payload_len < 2) {
+                reply.type = IPC_MSG_ERROR;
+                reply.payload[0] = (uint8_t)-1;
+                reply.payload_len = 1;
+                break;
+            }
             wm_destroy_window(req.payload[1]);
             reply.payload[0] = 0;
             reply.payload_len = 1;
             break;
-        case WM_OP_FOCUS:
+        }
+        case WM_OP_FOCUS: {
+            if (req.payload_len < 2) {
+                reply.type = IPC_MSG_ERROR;
+                reply.payload[0] = (uint8_t)-1;
+                reply.payload_len = 1;
+                break;
+            }
             wm_focus_window(req.payload[1]);
             reply.payload[0] = 0;
             reply.payload_len = 1;
             break;
+        }
         case WM_OP_COMPOSE:
             wm_compose();
             reply.payload[0] = 0;
@@ -511,6 +538,7 @@ void wm_service_task(void) {
             break;
         }
 
+    done_reply:
         if (req.sender_port > 0) {
             ipc_send(req.sender_port, &reply);
         }

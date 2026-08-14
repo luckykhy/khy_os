@@ -25,6 +25,7 @@ const {
   listOperations,
   operationToTool,
 } = require('@khy/shared/plugins/openapiTools');
+
 const pluginInvoker = require('./pluginInvoker');
 
 function _models() {
@@ -39,11 +40,15 @@ function _models() {
 async function _loadUserPluginBySlug(userId, slug) {
   const { MarketplacePlugin, UserInstalledPlugin } = _models();
   const plugin = await MarketplacePlugin.findOne({ where: { slug } });
-  if (!plugin) return null;
+  if (!plugin) {
+    return null;
+  }
   const installation = await UserInstalledPlugin.findOne({
     where: { userId, pluginId: plugin.id },
   });
-  if (!installation || !installation.enabled) return null;
+  if (!installation || !installation.enabled) {
+    return null;
+  }
   return { plugin, installation, authConfig: installation.authConfigJson || { type: 'none' } };
 }
 
@@ -53,23 +58,31 @@ async function _loadUserPluginBySlug(userId, slug) {
  * @returns {Promise<Array<{name,description,input_schema,slug,operationId}>>}
  */
 async function listUserPluginTools(userId) {
-  if (userId == null) return [];
+  if (userId == null) {
+    return [];
+  }
   const { MarketplacePlugin, UserInstalledPlugin } = _models();
   const installs = await UserInstalledPlugin.findAll({
     where: { userId, enabled: true },
   });
-  if (!installs.length) return [];
+  if (!installs.length) {
+    return [];
+  }
 
   const byId = new Map();
   const plugins = await MarketplacePlugin.findAll({
     where: { id: installs.map((i) => i.pluginId) },
   });
-  for (const p of plugins) byId.set(p.id, p);
+  for (const p of plugins) {
+    byId.set(p.id, p);
+  }
 
   const tools = [];
   for (const inst of installs) {
     const plugin = byId.get(inst.pluginId);
-    if (!plugin) continue;
+    if (!plugin) {
+      continue;
+    }
     const openapi = plugin.openapiJson;
     for (const op of listOperations(openapi)) {
       const tool = operationToTool(openapi, plugin.slug, op.operationId);
@@ -91,9 +104,13 @@ async function executePluginTool(toolName, args = {}, traceContext = {}) {
   if (!parsed) {
     return { success: false, error: `Not a plugin tool: ${toolName}` };
   }
-  const userId = traceContext && (traceContext.userId != null ? traceContext.userId : traceContext.user_id);
+  const userId =
+    traceContext && (traceContext.userId != null ? traceContext.userId : traceContext.user_id);
   if (userId == null) {
-    return { success: false, error: 'Plugin tools require a user context (no userId in traceContext)' };
+    return {
+      success: false,
+      error: 'Plugin tools require a user context (no userId in traceContext)',
+    };
   }
 
   let loaded;
@@ -103,7 +120,10 @@ async function executePluginTool(toolName, args = {}, traceContext = {}) {
     return { success: false, error: `Failed to load plugin "${parsed.slug}": ${err.message}` };
   }
   if (!loaded) {
-    return { success: false, error: `Plugin "${parsed.slug}" is not installed or not enabled for this user` };
+    return {
+      success: false,
+      error: `Plugin "${parsed.slug}" is not installed or not enabled for this user`,
+    };
   }
 
   try {

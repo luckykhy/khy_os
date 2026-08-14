@@ -29,7 +29,9 @@ const _OFF = ['0', 'false', 'off', 'no'];
  */
 function feedbackEnabled(env = process.env) {
   const raw = env && env.KHY_FEEDBACK;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -44,7 +46,9 @@ const _CATEGORY_LABELS = {
 
 /** 归一类别键(小写去空白;未知归 'other')。 */
 function _normalizeCategory(cat) {
-  const key = String(cat == null ? '' : cat).trim().toLowerCase();
+  const key = String(cat == null ? '' : cat)
+    .trim()
+    .toLowerCase();
   return Object.prototype.hasOwnProperty.call(_CATEGORY_LABELS, key) ? key : 'other';
 }
 
@@ -76,7 +80,9 @@ function parseFeedbackArgs(args) {
       category = _normalizeCategory(m[1]);
       continue;
     }
-    if (tok.length > 0) rest.push(tok);
+    if (tok.length > 0) {
+      rest.push(tok);
+    }
   }
   const text = rest.join(' ').trim();
   return { valid: text.length > 0, category, text };
@@ -84,8 +90,13 @@ function parseFeedbackArgs(args) {
 
 /** 从反馈文本取一行简短标题(单行、压空白、限长 72)。 */
 function _deriveTitle(text) {
-  const firstLine = String(text == null ? '' : text).split('\n')[0].replace(/\s+/g, ' ').trim();
-  if (firstLine.length <= 72) return firstLine;
+  const firstLine = String(text == null ? '' : text)
+    .split('\n')[0]
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (firstLine.length <= 72) {
+    return firstLine;
+  }
   return `${firstLine.slice(0, 71)}…`;
 }
 
@@ -110,9 +121,15 @@ function buildFeedbackDoc(p) {
   const version = String(o.version == null ? '' : o.version).trim();
   const platform = String(o.platform == null ? '' : o.platform).trim();
   const stamp = String(o.stamp == null ? '' : o.stamp).trim();
-  if (version) meta.push(`- khy 版本: ${version}`);
-  if (platform) meta.push(`- 平台: ${platform}`);
-  if (stamp) meta.push(`- 时间: ${stamp}`);
+  if (version) {
+    meta.push(`- khy 版本: ${version}`);
+  }
+  if (platform) {
+    meta.push(`- 平台: ${platform}`);
+  }
+  if (stamp) {
+    meta.push(`- 时间: ${stamp}`);
+  }
 
   const bodyLines = [`# 反馈（${label}）`, ''];
   bodyLines.push(text || '（未填写反馈内容）', '');
@@ -124,7 +141,9 @@ function buildFeedbackDoc(p) {
 
 /** 反馈草稿文件名(纯:stamp 由调用方注入)。stamp 里不安全的字符替换为 '-'。 */
 function buildFeedbackFilename(stamp) {
-  const safe = String(stamp == null ? '' : stamp).replace(/[:.]/g, '-').replace(/[^\w\-]/g, '-');
+  const safe = String(stamp == null ? '' : stamp)
+    .replace(/[:.]/g, '-')
+    .replace(/[^\w\-]/g, '-');
   return `feedback-${safe || 'draft'}.md`;
 }
 

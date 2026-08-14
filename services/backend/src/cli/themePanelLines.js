@@ -23,7 +23,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 门控:KHY_THEME_PANEL 默认开;{0,false,off,no} 关。 */
 function themePanelEnabled(env = process.env) {
   const raw = env && env.KHY_THEME_PANEL;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -36,21 +38,25 @@ function themePanelEnabled(env = process.env) {
  */
 function buildThemePanelLines(themes, env = process.env) {
   try {
-    if (!themePanelEnabled(env)) return [];
-    if (!Array.isArray(themes) || themes.length === 0) return [];
+    if (!themePanelEnabled(env)) {
+      return [];
+    }
+    if (!Array.isArray(themes) || themes.length === 0) {
+      return [];
+    }
 
     const active = themes.find((t) => t && t.active) || null;
     const lines = [];
 
     const activeName = active && active.name ? String(active.name) : '';
-    const activeLabel = active && active.label ? String(active.label) : (activeName || '未知');
-    lines.push(activeName
-      ? `    当前: ${activeLabel}（${activeName}）`
-      : '    当前: 未知');
+    const activeLabel = active && active.label ? String(active.label) : activeName || '未知';
+    lines.push(activeName ? `    当前: ${activeLabel}（${activeName}）` : '    当前: 未知');
 
     lines.push('    可用主题:');
     for (const t of themes) {
-      if (!t || !t.name) continue;
+      if (!t || !t.name) {
+        continue;
+      }
       const name = String(t.name);
       const label = t.label ? String(t.label) : name;
       const marker = t.active ? '  [当前]' : '';

@@ -20,19 +20,19 @@ const { execSync, exec } = require('child_process');
 const os = require('os');
 
 const EXEC_OPTS = { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] };
-const MAX_WAIT_MS = 5 * 60 * 1000;  // 5 minutes max wait for response
-const POLL_INTERVAL_MS = 1500;       // poll clipboard every 1.5s
-const RESPONSE_SETTLE_MS = 3000;     // wait 3s after first change for streaming to finish
+const MAX_WAIT_MS = 5 * 60 * 1000; // 5 minutes max wait for response
+const POLL_INTERVAL_MS = 1500; // poll clipboard every 1.5s
+const RESPONSE_SETTLE_MS = 3000; // wait 3s after first change for streaming to finish
 
 // Known web AI service URLs
 const WEB_AI_SERVICES = {
-  zhipu:    { name: '智谱清言 (GLM-5)', url: 'https://chatglm.cn' },
-  chatgpt:  { name: 'ChatGPT',          url: 'https://chatgpt.com' },
-  kimi:     { name: 'Kimi (月之暗面)',   url: 'https://kimi.moonshot.cn' },
-  tongyi:   { name: '通义千问',          url: 'https://tongyi.aliyun.com/qianwen' },
-  wenxin:   { name: '文心一言',          url: 'https://yiyan.baidu.com' },
-  doubao:   { name: '豆包 (字节)',       url: 'https://www.doubao.com/chat' },
-  deepseek: { name: 'DeepSeek',          url: 'https://chat.deepseek.com' },
+  zhipu: { name: '智谱清言 (GLM-5)', url: 'https://chatglm.cn' },
+  chatgpt: { name: 'ChatGPT', url: 'https://chatgpt.com' },
+  kimi: { name: 'Kimi (月之暗面)', url: 'https://kimi.moonshot.cn' },
+  tongyi: { name: '通义千问', url: 'https://tongyi.aliyun.com/qianwen' },
+  wenxin: { name: '文心一言', url: 'https://yiyan.baidu.com' },
+  doubao: { name: '豆包 (字节)', url: 'https://www.doubao.com/chat' },
+  deepseek: { name: 'DeepSeek', url: 'https://chat.deepseek.com' },
 };
 
 let _preferredService = process.env.CLIPBOARD_RELAY_SERVICE || 'zhipu';
@@ -58,16 +58,14 @@ function writeClipboard(text) {
   }
 
   // Linux: try xclip → xsel → wl-copy
-  const linuxCmds = [
-    'xclip -selection clipboard',
-    'xsel --clipboard --input',
-    'wl-copy',
-  ];
+  const linuxCmds = ['xclip -selection clipboard', 'xsel --clipboard --input', 'wl-copy'];
   for (const cmd of linuxCmds) {
     try {
       execSync(cmd, { input: text, timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
       return;
-    } catch { /* try next */ }
+    } catch {
+      /* try next */
+    }
   }
   throw new Error('No clipboard tool found. Install xclip, xsel, or wl-clipboard.');
 }
@@ -84,22 +82,17 @@ function readClipboard() {
   }
 
   if (platform === 'win32') {
-    return execSync(
-      'powershell -command "Get-Clipboard"',
-      EXEC_OPTS
-    ).toString();
+    return execSync('powershell -command "Get-Clipboard"', EXEC_OPTS).toString();
   }
 
   // Linux: try xclip → xsel → wl-paste
-  const linuxCmds = [
-    'xclip -selection clipboard -o',
-    'xsel --clipboard --output',
-    'wl-paste',
-  ];
+  const linuxCmds = ['xclip -selection clipboard -o', 'xsel --clipboard --output', 'wl-paste'];
   for (const cmd of linuxCmds) {
     try {
       return execSync(cmd, EXEC_OPTS).toString();
-    } catch { /* try next */ }
+    } catch {
+      /* try next */
+    }
   }
   throw new Error('No clipboard tool found.');
 }
@@ -119,7 +112,9 @@ function openBrowser(url) {
       // Linux: try xdg-open, then fallback
       exec(`xdg-open "${url}" 2>/dev/null || sensible-browser "${url}" 2>/dev/null`);
     }
-  } catch { /* browser open is best-effort */ }
+  } catch {
+    /* browser open is best-effort */
+  }
 }
 
 // ── Core adapter interface ──────────────────────────────────────────
@@ -170,7 +165,10 @@ async function generate(prompt, options = {}) {
     };
   }
 
-  onStatus({ phase: 'clipboard_ready', message: `提示已复制到剪贴板 → 请粘贴到 ${serviceInfo.name}` });
+  onStatus({
+    phase: 'clipboard_ready',
+    message: `提示已复制到剪贴板 → 请粘贴到 ${serviceInfo.name}`,
+  });
 
   // Step 2: Optionally open browser
   if (options.openBrowser) {
@@ -182,13 +180,37 @@ async function generate(prompt, options = {}) {
   const chalk = require('chalk').default || require('chalk');
   console.log('');
   console.log(chalk.cyan('  ┌─────────────────────────────────────────────────┐'));
-  console.log(chalk.cyan('  │') + chalk.bold.white(` 📋 剪贴板 AI 中继 — ${serviceInfo.name}`) + chalk.cyan((' ').repeat(Math.max(0, 48 - 22 - serviceInfo.name.length)) + '│'));
+  console.log(
+    chalk.cyan('  │') +
+      chalk.bold.white(` 📋 剪贴板 AI 中继 — ${serviceInfo.name}`) +
+      chalk.cyan(' '.repeat(Math.max(0, 48 - 22 - serviceInfo.name.length)) + '│')
+  );
   console.log(chalk.cyan('  ├─────────────────────────────────────────────────┤'));
-  console.log(chalk.cyan('  │') + chalk.white(' 1. 提示已复制到剪贴板                           ') + chalk.cyan('│'));
-  console.log(chalk.cyan('  │') + chalk.white(` 2. 切换到浏览器 → 粘贴到 ${serviceInfo.name}`) + chalk.cyan((' ').repeat(Math.max(0, 48 - 26 - serviceInfo.name.length)) + '│'));
-  console.log(chalk.cyan('  │') + chalk.white(' 3. 等待 AI 回复完成                             ') + chalk.cyan('│'));
-  console.log(chalk.cyan('  │') + chalk.white(' 4. 全选 AI 回复 → 复制                          ') + chalk.cyan('│'));
-  console.log(chalk.cyan('  │') + chalk.white(' 5. 切换回终端 — 自动检测剪贴板变化              ') + chalk.cyan('│'));
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(' 1. 提示已复制到剪贴板                           ') +
+      chalk.cyan('│')
+  );
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(` 2. 切换到浏览器 → 粘贴到 ${serviceInfo.name}`) +
+      chalk.cyan(' '.repeat(Math.max(0, 48 - 26 - serviceInfo.name.length)) + '│')
+  );
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(' 3. 等待 AI 回复完成                             ') +
+      chalk.cyan('│')
+  );
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(' 4. 全选 AI 回复 → 复制                          ') +
+      chalk.cyan('│')
+  );
+  console.log(
+    chalk.cyan('  │') +
+      chalk.white(' 5. 切换回终端 — 自动检测剪贴板变化              ') +
+      chalk.cyan('│')
+  );
   console.log(chalk.cyan('  └─────────────────────────────────────────────────┘'));
   console.log(chalk.dim(`  等待中... (最长 ${MAX_WAIT_MS / 60000} 分钟)`));
   console.log('');
@@ -223,7 +245,7 @@ async function generate(prompt, options = {}) {
         if (!current) return;
         if (current === prompt.trim()) return;
         if (current.startsWith(promptFingerprint)) return;
-        if (current.length < 10) return;  // too short to be a real response
+        if (current.length < 10) return; // too short to be a real response
 
         // Clipboard has changed — potential response
         if (current !== lastContent) {
@@ -250,7 +272,9 @@ async function generate(prompt, options = {}) {
             });
           }, RESPONSE_SETTLE_MS);
         }
-      } catch { /* clipboard read error — skip this poll */ }
+      } catch {
+        /* clipboard read error — skip this poll */
+      }
     }, POLL_INTERVAL_MS);
   });
 }

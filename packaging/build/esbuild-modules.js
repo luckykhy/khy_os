@@ -21,12 +21,10 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 const BACKEND_ROOT = path.join(ROOT, 'services/backend');
 const MODULES_JSON = path.join(ROOT, 'packaging/modules/modules.json');
-const DEP_MAP_JSON = path.join(ROOT, 'packaging/build/dependency-map.json');
 const DIST_ROOT = path.join(ROOT, 'dist/modules');
 
 // ── Load configurations ──
 const catalog = JSON.parse(fs.readFileSync(MODULES_JSON, 'utf8'));
-const depMap = JSON.parse(fs.readFileSync(DEP_MAP_JSON, 'utf8'));
 const backendPkg = JSON.parse(fs.readFileSync(path.join(BACKEND_ROOT, 'package.json'), 'utf8'));
 
 // ── CLI args ──

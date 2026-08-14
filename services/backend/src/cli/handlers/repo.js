@@ -18,10 +18,8 @@ const path = require('path');
 
 const chalk = require('chalk').default || require('chalk');
 
-const {
-  printSuccess, printError, printWarn, printInfo,
-} = require('../formatters');
 const repoDiscipline = require('../../services/repoDisciplineRisk');
+const { printSuccess, printError, printWarn, printInfo } = require('../formatters');
 
 // ── Constants ──
 
@@ -66,7 +64,9 @@ function _isGitRepo() {
 }
 
 function _requireRepo() {
-  if (_isGitRepo()) return true;
+  if (_isGitRepo()) {
+    return true;
+  }
   printError('当前目录还不是一个版本库（没有用 Git 管理）。');
   printInfo('如果想开始管理版本，可以先在项目目录运行: git init');
   printInfo('然后用 `khy repo save "第一个版本"` 保存第一个快照。');
@@ -75,7 +75,9 @@ function _requireRepo() {
 
 function _currentBranch() {
   const res = _gitSoft(['rev-parse', '--abbrev-ref', 'HEAD']);
-  if (!res.ok) return null;
+  if (!res.ok) {
+    return null;
+  }
   return res.out === 'HEAD' ? null : res.out; // detached HEAD
 }
 
@@ -97,10 +99,16 @@ function _statusSummary() {
       created += 1;
       continue;
     }
-    if (index !== ' ' && index !== '?') staged += 1;
-    if (index === 'A' || work === 'A') created += 1;
-    else if (index === 'D' || work === 'D') deleted += 1;
-    else if (index === 'M' || work === 'M' || index === 'R' || work === 'R') modified += 1;
+    if (index !== ' ' && index !== '?') {
+      staged += 1;
+    }
+    if (index === 'A' || work === 'A') {
+      created += 1;
+    } else if (index === 'D' || work === 'D') {
+      deleted += 1;
+    } else if (index === 'M' || work === 'M' || index === 'R' || work === 'R') {
+      modified += 1;
+    }
   }
   return {
     total: lines.length,
@@ -115,24 +123,36 @@ function _statusSummary() {
 // ─── status ──────────────────────────────────────────────────────────────────
 
 function handleStatus() {
-  if (!_requireRepo()) return true;
+  if (!_requireRepo()) {
+    return true;
+  }
 
   const branch = _currentBranch();
   const s = _statusSummary();
   const last = _gitSoft(['log', '-1', '--pretty=%h｜%s']);
 
   console.log(chalk.bold('\n  📂 当前项目状态\n'));
-  console.log(`  当前分支:   ${branch ? chalk.cyan(branch) : chalk.yellow('（游离状态，未在分支上）')}`);
+  console.log(
+    `  当前分支:   ${branch ? chalk.cyan(branch) : chalk.yellow('（游离状态，未在分支上）')}`
+  );
 
   if (s.clean) {
     console.log(`  改动情况:   ${chalk.green('干净 — 没有未保存的改动')}`);
   } else {
     const parts = [];
-    if (s.modified) parts.push(`改了 ${chalk.yellow(s.modified)} 个文件`);
-    if (s.created) parts.push(`新建 ${chalk.yellow(s.created)} 个文件`);
-    if (s.deleted) parts.push(`删除 ${chalk.yellow(s.deleted)} 个文件`);
+    if (s.modified) {
+      parts.push(`改了 ${chalk.yellow(s.modified)} 个文件`);
+    }
+    if (s.created) {
+      parts.push(`新建 ${chalk.yellow(s.created)} 个文件`);
+    }
+    if (s.deleted) {
+      parts.push(`删除 ${chalk.yellow(s.deleted)} 个文件`);
+    }
     console.log(`  改动情况:   ${parts.join('，') || `${s.total} 处改动`}`);
-    console.log(`  是否已保存: ${chalk.yellow('有未保存的改动')} — 用 \`khy repo save "说明"\` 保存一个版本`);
+    console.log(
+      `  是否已保存: ${chalk.yellow('有未保存的改动')} — 用 \`khy repo save "说明"\` 保存一个版本`
+    );
   }
 
   if (last.ok && last.out) {
@@ -148,7 +168,9 @@ function handleStatus() {
 // ─── save ────────────────────────────────────────────────────────────────────
 
 function handleSave(args = [], options = {}) {
-  if (!_requireRepo()) return true;
+  if (!_requireRepo()) {
+    return true;
+  }
 
   const message = (options.m || options.message || args.join(' ') || '').trim();
   if (!message) {
@@ -186,10 +208,14 @@ function handleSave(args = [], options = {}) {
       },
     });
     if (chk && chk.shouldBlock) {
-      printError('保存被自检阻断（KHY_COMMIT_PRECHECK_BLOCK=on）：存在严重风险。解决后重试，或用 `--no-verify` 跳过自检。');
+      printError(
+        '保存被自检阻断（KHY_COMMIT_PRECHECK_BLOCK=on）：存在严重风险。解决后重试，或用 `--no-verify` 跳过自检。'
+      );
       return true;
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
 
   const commit = _gitSoft(['commit', '-m', message]);
   if (!commit.ok) {
@@ -207,10 +233,14 @@ function handleSave(args = [], options = {}) {
 // ─── history ─────────────────────────────────────────────────────────────────
 
 function handleHistory(args = [], options = {}) {
-  if (!_requireRepo()) return true;
+  if (!_requireRepo()) {
+    return true;
+  }
 
   let limit = parseInt(options.limit || options.n || args[0], 10);
-  if (!Number.isFinite(limit) || limit <= 0) limit = DEFAULT_HISTORY_LIMIT;
+  if (!Number.isFinite(limit) || limit <= 0) {
+    limit = DEFAULT_HISTORY_LIMIT;
+  }
 
   const res = _gitSoft(['log', `-n`, String(limit), '--pretty=%h｜%cr｜%s']);
   if (!res.ok || !res.out) {
@@ -221,7 +251,9 @@ function handleHistory(args = [], options = {}) {
   console.log(chalk.bold('\n  🕑 最近保存的版本\n'));
   for (const line of res.out.split(/\r?\n/).filter(Boolean)) {
     const [hash, when, ...rest] = line.split('｜');
-    console.log(`  ${chalk.yellow(hash)}  ${chalk.dim((when || '').padEnd(12))}  ${rest.join('｜') || ''}`);
+    console.log(
+      `  ${chalk.yellow(hash)}  ${chalk.dim((when || '').padEnd(12))}  ${rest.join('｜') || ''}`
+    );
   }
   console.log('');
   return true;
@@ -230,7 +262,9 @@ function handleHistory(args = [], options = {}) {
 // ─── branch ──────────────────────────────────────────────────────────────────
 
 function _branchList() {
-  if (!_requireRepo()) return true;
+  if (!_requireRepo()) {
+    return true;
+  }
   const res = _gitSoft(['branch']);
   const current = _currentBranch();
   console.log(chalk.bold('\n  🌿 分支列表\n'));
@@ -245,13 +279,17 @@ function _branchList() {
     const mark = isCurrent ? chalk.green('● ') : '  ';
     console.log(`  ${mark}${isCurrent ? chalk.green(name) : name}`);
   }
-  if (current) console.log(chalk.dim(`\n  ● = 当前所在分支 (${current})`));
+  if (current) {
+    console.log(chalk.dim(`\n  ● = 当前所在分支 (${current})`));
+  }
   console.log('');
   return true;
 }
 
 function _branchSwitch(args = []) {
-  if (!_requireRepo()) return true;
+  if (!_requireRepo()) {
+    return true;
+  }
   const name = (args[0] || '').trim();
   if (!name) {
     printError('请告诉我要切换到哪个分支。');
@@ -269,7 +307,9 @@ function _branchSwitch(args = []) {
   let res = _gitSoft(['switch', name]);
   if (!res.ok) {
     const fallback = _gitSoft(['checkout', name]);
-    if (fallback.ok) res = fallback;
+    if (fallback.ok) {
+      res = fallback;
+    }
   }
 
   if (!res.ok) {
@@ -336,15 +376,26 @@ function handleWorkspaceOverview() {
     return true;
   }
 
-  console.log(`  当前分支:   ${ctx.branch ? chalk.cyan(ctx.branch) : chalk.yellow('（游离状态）')}`
-    + (ctx.mainBranch && ctx.mainBranch !== ctx.branch ? chalk.dim(`  (主分支 ${ctx.mainBranch})`) : ''));
+  console.log(
+    `  当前分支:   ${ctx.branch ? chalk.cyan(ctx.branch) : chalk.yellow('（游离状态）')}` +
+      (ctx.mainBranch && ctx.mainBranch !== ctx.branch
+        ? chalk.dim(`  (主分支 ${ctx.mainBranch})`)
+        : '')
+  );
 
   if (ctx.hasRemote) {
     const sync = [];
-    if (ctx.ahead) sync.push(chalk.yellow(`领先 ${ctx.ahead} 个提交`));
-    if (ctx.behind) sync.push(chalk.yellow(`落后 ${ctx.behind} 个提交`));
-    const syncTxt = !ctx.hasUpstream ? chalk.dim('尚未设置上游分支')
-      : sync.length ? sync.join('、') : chalk.green('与远端同步');
+    if (ctx.ahead) {
+      sync.push(chalk.yellow(`领先 ${ctx.ahead} 个提交`));
+    }
+    if (ctx.behind) {
+      sync.push(chalk.yellow(`落后 ${ctx.behind} 个提交`));
+    }
+    const syncTxt = !ctx.hasUpstream
+      ? chalk.dim('尚未设置上游分支')
+      : sync.length
+        ? sync.join('、')
+        : chalk.green('与远端同步');
     console.log(`  远端:       ${chalk.dim(ctx.remoteUrlSafe || ctx.remoteUrl)}`);
     console.log(`  同步状态:   ${syncTxt}`);
   } else {
@@ -353,8 +404,10 @@ function handleWorkspaceOverview() {
 
   if (ctx.isDirty) {
     const c = ctx.dirtyCounts;
-    console.log(`  改动情况:   ${chalk.yellow(`${c.total} 项待保存`)} `
-      + chalk.dim(`(已暂存 ${c.staged}、未暂存 ${c.unstaged}、未跟踪 ${c.untracked})`));
+    console.log(
+      `  改动情况:   ${chalk.yellow(`${c.total} 项待保存`)} ` +
+        chalk.dim(`(已暂存 ${c.staged}、未暂存 ${c.unstaged}、未跟踪 ${c.untracked})`)
+    );
     console.log(chalk.dim('              用 `khy repo save "说明"` 保存一个版本快照。'));
   } else {
     console.log(`  改动情况:   ${chalk.green('干净 — 没有未保存的改动')}`);
@@ -370,7 +423,9 @@ function handleWorkspaceOverview() {
 // ─── publish ─────────────────────────────────────────────────────────────────
 
 async function handlePublishToRemote(args = [], options = {}) {
-  if (!_requireRepo()) return true;
+  if (!_requireRepo()) {
+    return true;
+  }
   printInfo('准备把你保存的版本发布到远程仓库…');
   const s = _statusSummary();
   if (!s.clean) {
@@ -391,7 +446,9 @@ async function handlePublishToRemote(args = [], options = {}) {
 
 function _detectMainBranch() {
   const ref = _gitSoft(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']);
-  if (ref.ok && ref.out.includes('/')) return ref.out.split('/').pop();
+  if (ref.ok && ref.out.includes('/')) {
+    return ref.out.split('/').pop();
+  }
   return undefined;
 }
 
@@ -411,7 +468,9 @@ const _VERDICT_STYLE = {
 const _SEV_ICON = { critical: '⛔', high: '⚠️', medium: '•', low: '·' };
 
 function handleAudit(args = [], options = {}) {
-  if (!_requireRepo()) return true;
+  if (!_requireRepo()) {
+    return true;
+  }
 
   const branch = _currentBranch() || undefined;
   const mainBranch = _detectMainBranch();
@@ -440,7 +499,9 @@ function handleAudit(args = [], options = {}) {
     printInfo(report.summary);
     return true;
   }
-  console.log(`  范围:   ${useStaged ? '已暂存改动(即将提交)' : '工作区改动(未暂存)'} · ${files.length} 个文件`);
+  console.log(
+    `  范围:   ${useStaged ? '已暂存改动(即将提交)' : '工作区改动(未暂存)'} · ${files.length} 个文件`
+  );
   console.log(`  分支:   ${branch ? chalk.cyan(branch) : chalk.yellow('(游离)')}`);
   const vstyle = _VERDICT_STYLE[report.verdict] || ((t) => t);
   console.log(`  裁决:   ${vstyle(report.verdict.toUpperCase())} — ${report.summary}\n`);

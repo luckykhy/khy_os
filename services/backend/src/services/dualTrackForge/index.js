@@ -20,12 +20,13 @@
  * 模型 brain 为注入式：引擎无模型亦能跑（退化为纯确定性保底轨），可确定性单测。
  */
 
-const { PhysicalAssertionGate, PhysicalException } = require('./physicalAssertionGate');
-const { DeterministicElevator } = require('./deterministicElevator');
-const { LogicalSelfAssessor, LogicalException } = require('./logicalSelfAssessor');
-const { DualTrackRequirementMerger, SOURCE_TRACK } = require('./dualTrackMerger');
-const { PHYSICAL_CODES } = require('./physicalCodes');
 const evoLedger = require('../evoEngine/evoLedger');
+
+const { DeterministicElevator } = require('./deterministicElevator');
+const { DualTrackRequirementMerger, SOURCE_TRACK } = require('./dualTrackMerger');
+const { LogicalSelfAssessor, LogicalException } = require('./logicalSelfAssessor');
+const { PhysicalAssertionGate, PhysicalException } = require('./physicalAssertionGate');
+const { PHYSICAL_CODES } = require('./physicalCodes');
 
 const DEFAULT_THRESHOLD = 0.6;
 const DEFAULT_BRANCH = 'dualtrack_pool';
@@ -46,9 +47,14 @@ class DualTrackForge {
     this.elevator = opts.elevator || new DeterministicElevator();
     this.merger = opts.merger || new DualTrackRequirementMerger({ threshold: this.threshold });
     this.ledger = opts.ledger || evoLedger;
-    this.assessor = opts.assessor
-      || (typeof opts.brain === 'function'
-        ? new LogicalSelfAssessor({ brain: opts.brain, threshold: this.threshold, timeoutMs: opts.timeoutMs })
+    this.assessor =
+      opts.assessor ||
+      (typeof opts.brain === 'function'
+        ? new LogicalSelfAssessor({
+            brain: opts.brain,
+            threshold: this.threshold,
+            timeoutMs: opts.timeoutMs,
+          })
         : null);
   }
 
@@ -86,16 +92,28 @@ class DualTrackForge {
     // —— 熔铸合并 ——
     if (backstop) {
       const merged = this.merger.merge(backstop, assisted);
-      this._log({ source: 'merged', track: merged.source_track, requirementId: merged.requirementId,
-        confidence: merged.confidence, escalatedToL2: merged.escalatedToL2, priority: merged.priority });
+      this._log({
+        source: 'merged',
+        track: merged.source_track,
+        requirementId: merged.requirementId,
+        confidence: merged.confidence,
+        escalatedToL2: merged.escalatedToL2,
+        priority: merged.priority,
+      });
       return { status: 'forged', ...merged };
     }
 
     // 无物理硬伤，但模型捕获到软逻辑异常 → 纯 Assisted 轨。
     if (assisted) {
       const a = this.merger.fromAssisted(assisted, observation);
-      this._log({ source: 'assisted', track: a.source_track, requirementId: a.requirementId,
-        confidence: a.confidence, escalatedToL2: a.escalatedToL2, priority: a.priority });
+      this._log({
+        source: 'assisted',
+        track: a.source_track,
+        requirementId: a.requirementId,
+        confidence: a.confidence,
+        escalatedToL2: a.escalatedToL2,
+        priority: a.priority,
+      });
       return { status: 'forged', ...a };
     }
 
@@ -105,13 +123,20 @@ class DualTrackForge {
 
   /** 读取需求池（不可变哈希链拷贝）。 */
   pool() {
-    try { return this.ledger.read({ branch: this.branch }); } catch { return []; }
+    try {
+      return this.ledger.read({ branch: this.branch });
+    } catch {
+      return [];
+    }
   }
 
   /** 校验需求池链完整性（防呆⑤：进化历史不可篡改）。 */
   verifyPool() {
-    try { return this.ledger.verify({ branch: this.branch }); }
-    catch { return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' }; }
+    try {
+      return this.ledger.verify({ branch: this.branch });
+    } catch {
+      return { ok: false, length: 0, brokenAt: null, reason: 'verify-error' };
+    }
   }
 
   _snapshot(observation, physical) {
@@ -125,8 +150,11 @@ class DualTrackForge {
   }
 
   _log(payload) {
-    try { return this.ledger.append(evoLedger.KIND.REQUIREMENT, payload, { branch: this.branch }); }
-    catch { return { ok: false }; }
+    try {
+      return this.ledger.append(evoLedger.KIND.REQUIREMENT, payload, { branch: this.branch });
+    } catch {
+      return { ok: false };
+    }
   }
 }
 

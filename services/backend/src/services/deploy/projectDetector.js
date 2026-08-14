@@ -42,7 +42,9 @@ function defaultFs() {
 function resolveExe(name, platform) {
   if (platform === 'win32') {
     // npm/npx/pnpm/yarn ship as .cmd shims on Windows; bare names fail spawn.
-    if (['npm', 'npx', 'pnpm', 'yarn'].includes(name)) return `${name}.cmd`;
+    if (['npm', 'npx', 'pnpm', 'yarn'].includes(name)) {
+      return `${name}.cmd`;
+    }
   }
   return name;
 }
@@ -81,13 +83,23 @@ function cmd(exe, args, platform) {
  * to a declared `packageManager` field, then npm.
  */
 function detectNodePackageManager(fs, dir, pkg) {
-  if (exists(fs, path.join(dir, 'pnpm-lock.yaml'))) return 'pnpm';
-  if (exists(fs, path.join(dir, 'yarn.lock'))) return 'yarn';
-  if (exists(fs, path.join(dir, 'bun.lockb'))) return 'bun';
-  if (exists(fs, path.join(dir, 'package-lock.json'))) return 'npm';
+  if (exists(fs, path.join(dir, 'pnpm-lock.yaml'))) {
+    return 'pnpm';
+  }
+  if (exists(fs, path.join(dir, 'yarn.lock'))) {
+    return 'yarn';
+  }
+  if (exists(fs, path.join(dir, 'bun.lockb'))) {
+    return 'bun';
+  }
+  if (exists(fs, path.join(dir, 'package-lock.json'))) {
+    return 'npm';
+  }
   if (pkg && typeof pkg.packageManager === 'string') {
     const name = pkg.packageManager.split('@')[0];
-    if (['pnpm', 'yarn', 'bun', 'npm'].includes(name)) return name;
+    if (['pnpm', 'yarn', 'bun', 'npm'].includes(name)) {
+      return name;
+    }
   }
   return 'npm';
 }
@@ -122,9 +134,16 @@ function nodeRunScript(pm, script, platform) {
 }
 
 const NODE_ENTRY_CANDIDATES = [
-  'server.js', 'app.js', 'index.js', 'main.js',
-  'src/server.js', 'src/index.js', 'src/main.js',
-  'dist/index.js', 'dist/main.js', 'build/index.js',
+  'server.js',
+  'app.js',
+  'index.js',
+  'main.js',
+  'src/server.js',
+  'src/index.js',
+  'src/main.js',
+  'dist/index.js',
+  'dist/main.js',
+  'build/index.js',
 ];
 
 function detectNode(fs, dir, platform, plan) {
@@ -133,13 +152,18 @@ function detectNode(fs, dir, platform, plan) {
   plan.signals.push('package.json');
   const pm = detectNodePackageManager(fs, dir, pkg);
   plan.packageManager = pm;
-  const hasLock = ['pnpm-lock.yaml', 'yarn.lock', 'bun.lockb', 'package-lock.json']
-    .some((f) => exists(fs, path.join(dir, f)));
-  if (hasLock) plan.signals.push('lockfile');
+  const hasLock = ['pnpm-lock.yaml', 'yarn.lock', 'bun.lockb', 'package-lock.json'].some((f) =>
+    exists(fs, path.join(dir, f))
+  );
+  if (hasLock) {
+    plan.signals.push('lockfile');
+  }
   plan.install = nodeInstallCommand(pm, hasLock, platform);
 
   const scripts = (pkg && pkg.scripts) || {};
-  if (scripts.build) plan.build = nodeRunScript(pm, 'build', platform);
+  if (scripts.build) {
+    plan.build = nodeRunScript(pm, 'build', platform);
+  }
 
   if (scripts.start) {
     plan.start = nodeRunScript(pm, 'start', platform);
@@ -178,12 +202,20 @@ function detectPython(fs, dir, platform, plan) {
 
   // Start detection: Procfile web line > Django manage.py > common entrypoints.
   const proc = readText(fs, path.join(dir, 'Procfile'));
-  const webLine = proc && proc.split(/\r?\n/).map((l) => l.trim())
-    .find((l) => /^web\s*:/i.test(l));
+  const webLine =
+    proc &&
+    proc
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .find((l) => /^web\s*:/i.test(l));
   if (webLine) {
     plan.signals.push('Procfile');
     const command = webLine.replace(/^web\s*:/i, '').trim();
-    plan.start = { exe: command.split(/\s+/)[0], args: command.split(/\s+/).slice(1), display: command };
+    plan.start = {
+      exe: command.split(/\s+/)[0],
+      args: command.split(/\s+/).slice(1),
+      display: command,
+    };
     plan.notes.push('启动命令取自 Procfile 的 web 行');
     return plan;
   }
@@ -196,8 +228,9 @@ function detectPython(fs, dir, platform, plan) {
     return plan;
   }
 
-  const entry = ['app.py', 'main.py', 'wsgi.py', 'asgi.py', 'run.py', 'server.py']
-    .find((f) => exists(fs, path.join(dir, f)));
+  const entry = ['app.py', 'main.py', 'wsgi.py', 'asgi.py', 'run.py', 'server.py'].find((f) =>
+    exists(fs, path.join(dir, f))
+  );
   if (entry) {
     plan.start = cmd(py, [entry], platform);
     plan.notes.push(`探测到 Python 入口文件: ${entry}`);
@@ -228,7 +261,9 @@ function detectRust(fs, dir, platform, plan) {
 function detectDocker(fs, dir, platform, plan) {
   plan.type = 'docker';
   plan.signals.push('Dockerfile');
-  plan.notes.push('Dockerfile 项目：build = `docker build`，启动需镜像标签与端口映射，建议用 --cmd 指定 docker run');
+  plan.notes.push(
+    'Dockerfile 项目：build = `docker build`，启动需镜像标签与端口映射，建议用 --cmd 指定 docker run'
+  );
   return plan;
 }
 
@@ -247,12 +282,15 @@ function detectMake(fs, dir, platform, plan) {
   plan.signals.push('Makefile');
   const mk = readText(fs, path.join(dir, 'Makefile')) || '';
   const targets = new Set(
-    mk.split(/\r?\n/)
+    mk
+      .split(/\r?\n/)
       .map((l) => l.match(/^([A-Za-z0-9_.-]+):/))
       .filter(Boolean)
-      .map((m) => m[1]),
+      .map((m) => m[1])
   );
-  if (targets.has('build')) plan.build = cmd('make', ['build'], platform);
+  if (targets.has('build')) {
+    plan.build = cmd('make', ['build'], platform);
+  }
   const runTarget = ['run', 'start', 'serve'].find((t) => targets.has(t));
   if (runTarget) {
     plan.start = cmd('make', [runTarget], platform);
@@ -299,11 +337,21 @@ function detectProject(dir, opts = {}) {
   ) {
     return detectPython(fs, dir, platform, plan);
   }
-  if (exists(fs, path.join(dir, 'go.mod'))) return detectGo(fs, dir, platform, plan);
-  if (exists(fs, path.join(dir, 'Cargo.toml'))) return detectRust(fs, dir, platform, plan);
-  if (exists(fs, path.join(dir, 'Dockerfile'))) return detectDocker(fs, dir, platform, plan);
-  if (exists(fs, path.join(dir, 'index.html'))) return detectStatic(fs, dir, platform, plan);
-  if (exists(fs, path.join(dir, 'Makefile'))) return detectMake(fs, dir, platform, plan);
+  if (exists(fs, path.join(dir, 'go.mod'))) {
+    return detectGo(fs, dir, platform, plan);
+  }
+  if (exists(fs, path.join(dir, 'Cargo.toml'))) {
+    return detectRust(fs, dir, platform, plan);
+  }
+  if (exists(fs, path.join(dir, 'Dockerfile'))) {
+    return detectDocker(fs, dir, platform, plan);
+  }
+  if (exists(fs, path.join(dir, 'index.html'))) {
+    return detectStatic(fs, dir, platform, plan);
+  }
+  if (exists(fs, path.join(dir, 'Makefile'))) {
+    return detectMake(fs, dir, platform, plan);
+  }
 
   plan.notes.push('无法识别项目类型（未找到已知清单文件），请用 --cmd 指定启动命令');
   return plan;

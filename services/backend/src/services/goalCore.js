@@ -61,21 +61,23 @@ function isBounded(env) {
 function isReconcileEnabled(env) {
   const e = env || process.env || {};
   const off = (v) => v !== undefined && _FALSY.has(String(v).trim().toLowerCase());
-  if (off(e.KHY_GOAL)) return false;               // 父门控关 → 整个持久目标关
+  if (off(e.KHY_GOAL)) {
+    return false;
+  } // 父门控关 → 整个持久目标关
   return !off(e.KHY_GOAL_RECONCILE);
 }
 
 // ── 常量 SSOT ────────────────────────────────────────────────────────
-const GOAL_MAX_LEN = 2000;      // 单条目标文本上限(防把整篇需求灌进系统提示词)
-const STORE_VERSION = 1;        // 磁盘格式版本(goalStore 复用)
+const GOAL_MAX_LEN = 2000; // 单条目标文本上限(防把整篇需求灌进系统提示词)
+const STORE_VERSION = 1; // 磁盘格式版本(goalStore 复用)
 
 // 一个"项目"目标默认最多驱动 25 个用户轮(经 KHY_GOAL_MAX_TURNS 覆盖,clamp [1,1000])。
 const GOAL_DEFAULT_MAX_TURNS = 25;
 // 「闲置超时退役」默认窗口:12 小时无推进(lastAdvancedAt)即自动退役(exhausted)。
 // 经 KHY_GOAL_IDLE_MS 覆盖(毫秒);显式 0 → 关闭闲置退役(仅保留轮次预算兜底)。
-const GOAL_DEFAULT_IDLE_MS = 12 * 60 * 60 * 1000;   // 43200000
-const GOAL_IDLE_MS_MIN = 60 * 1000;                 // 最短 1 分钟(防误配秒级窗口把在跑目标秒退)
-const GOAL_IDLE_MS_MAX = 30 * 24 * 60 * 60 * 1000;  // 最长 30 天(防离谱值)
+const GOAL_DEFAULT_IDLE_MS = 12 * 60 * 60 * 1000; // 43200000
+const GOAL_IDLE_MS_MIN = 60 * 1000; // 最短 1 分钟(防误配秒级窗口把在跑目标秒退)
+const GOAL_IDLE_MS_MAX = 30 * 24 * 60 * 60 * 1000; // 最长 30 天(防离谱值)
 // 持久目标的终止态词汇(与 largeTaskRuntimeStore 的 TERMINAL_STATUSES 同族语义):
 //   done      —— 模型确信达成后自行清除(GoalTool action=clear)
 //   exhausted —— 轮次预算耗尽,自动退役
@@ -92,9 +94,13 @@ const GOAL_TERMINAL_STATUSES = Object.freeze(['done', 'exhausted', 'abandoned'])
 function resolveMaxTurns(env, fallback) {
   const raw = (env || process.env || {}).KHY_GOAL_MAX_TURNS;
   const n = Number.parseInt(String(raw == null ? '' : raw).trim(), 10);
-  if (Number.isFinite(n) && n >= 1) return Math.min(n, 1000);
+  if (Number.isFinite(n) && n >= 1) {
+    return Math.min(n, 1000);
+  }
   const f = Number.parseInt(String(fallback == null ? '' : fallback).trim(), 10);
-  if (Number.isFinite(f) && f >= 1) return Math.min(f, 1000);
+  if (Number.isFinite(f) && f >= 1) {
+    return Math.min(f, 1000);
+  }
   return GOAL_DEFAULT_MAX_TURNS;
 }
 
@@ -108,9 +114,13 @@ function resolveMaxTurns(env, fallback) {
  */
 function resolveIdleMs(env) {
   const s = String((env || process.env || {}).KHY_GOAL_IDLE_MS ?? '').trim();
-  if (s === '0') return Infinity;                    // 显式关闭闲置退役
+  if (s === '0') {
+    return Infinity;
+  } // 显式关闭闲置退役
   const n = Number.parseInt(s, 10);
-  if (Number.isFinite(n) && n >= 1) return Math.min(Math.max(n, GOAL_IDLE_MS_MIN), GOAL_IDLE_MS_MAX);
+  if (Number.isFinite(n) && n >= 1) {
+    return Math.min(Math.max(n, GOAL_IDLE_MS_MIN), GOAL_IDLE_MS_MAX);
+  }
   return GOAL_DEFAULT_IDLE_MS;
 }
 
@@ -120,11 +130,17 @@ function resolveIdleMs(env) {
  * @returns {string} 规范化后的目标文本(可能为空字符串)
  */
 function normalizeGoal(text) {
-  let t = String(text == null ? '' : text).replace(/\r\n/g, '\n').trim();
-  if (!t) return '';
+  let t = String(text == null ? '' : text)
+    .replace(/\r\n/g, '\n')
+    .trim();
+  if (!t) {
+    return '';
+  }
   // 折叠 3+ 连续换行为 2(保留段落但不灌空白)
   t = t.replace(/\n{3,}/g, '\n\n');
-  if (t.length > GOAL_MAX_LEN) t = t.slice(0, GOAL_MAX_LEN).trim();
+  if (t.length > GOAL_MAX_LEN) {
+    t = t.slice(0, GOAL_MAX_LEN).trim();
+  }
   return t;
 }
 
@@ -135,7 +151,9 @@ const GLOBAL_SCOPE = 'global';
 
 function _normPath(p) {
   let s = String(p == null ? '' : p).trim();
-  if (!s) return '';
+  if (!s) {
+    return '';
+  }
   s = s.replace(/\\/g, '/').replace(/\/+$/, ''); // 统一分隔符、去尾随斜杠
   return s;
 }
@@ -157,7 +175,9 @@ function _fnv1a(str) {
  */
 function scopeKeyFor(cwd) {
   const norm = _normPath(cwd);
-  if (!norm) return GLOBAL_SCOPE;
+  if (!norm) {
+    return GLOBAL_SCOPE;
+  }
   return _fnv1a(norm);
 }
 
@@ -173,7 +193,9 @@ function scopeKeyFor(cwd) {
  */
 function buildGoalRecord({ text, cwd, createdAt, id, maxTurns } = {}) {
   const norm = normalizeGoal(text);
-  if (!norm) return { ok: false, error: '目标文本为空' };
+  if (!norm) {
+    return { ok: false, error: '目标文本为空' };
+  }
   const scope = scopeKeyFor(cwd);
   return {
     ok: true,
@@ -198,12 +220,18 @@ function buildGoalRecord({ text, cwd, createdAt, id, maxTurns } = {}) {
 /** 在一组目标里挑出某作用域的活动目标(优先项目作用域,回退全局)。纯函数。 */
 function pickActiveGoal(goals, cwd) {
   const list = Array.isArray(goals) ? goals.filter((g) => g && g.active && g.text) : [];
-  if (!list.length) return null;
+  if (!list.length) {
+    return null;
+  }
   const scope = scopeKeyFor(cwd);
   const scoped = list.filter((g) => g.scope === scope);
-  if (scoped.length) return scoped[scoped.length - 1];   // 最新设定的同项目目标
+  if (scoped.length) {
+    return scoped[scoped.length - 1];
+  } // 最新设定的同项目目标
   const global = list.filter((g) => g.scope === GLOBAL_SCOPE);
-  if (global.length) return global[global.length - 1];
+  if (global.length) {
+    return global[global.length - 1];
+  }
   return null;
 }
 
@@ -214,7 +242,9 @@ function pickActiveGoal(goals, cwd) {
  * @returns {string}
  */
 function buildGoalDirective(goal) {
-  if (!goal || !goal.text) return '';
+  if (!goal || !goal.text) {
+    return '';
+  }
   return [
     '[SYSTEM: 持久目标(用户已设定,优先级高于闲聊与发散)。当前目标:',
     `「${goal.text}」`,
@@ -237,9 +267,14 @@ function buildGoalDirective(goal) {
  * @returns {string} directive(可能为空)
  */
 function routeGoal({ goal = null, env } = {}) {
-  if (!isEnabled(env)) return '';
-  try { return buildGoalDirective(goal); }
-  catch { return ''; }
+  if (!isEnabled(env)) {
+    return '';
+  }
+  try {
+    return buildGoalDirective(goal);
+  } catch {
+    return '';
+  }
 }
 
 // ── 有界终止态:轮次预算推进 + 终止指令 ────────────────────────────────
@@ -281,15 +316,23 @@ function advanceGoalTurn(goal, env) {
  * @returns {'exhausted'|null}
  */
 function goalIdleReason(goal, env, nowMs) {
-  if (!goal || !goal.active || !goal.text) return null;
+  if (!goal || !goal.active || !goal.text) {
+    return null;
+  }
   const windowMs = resolveIdleMs(env);
-  if (!Number.isFinite(windowMs)) return null;          // 关闭 → 永不退役
+  if (!Number.isFinite(windowMs)) {
+    return null;
+  } // 关闭 → 永不退役
   const now = Number(nowMs);
-  if (!Number.isFinite(now)) return null;               // 无有效时钟 → 不退役
+  if (!Number.isFinite(now)) {
+    return null;
+  } // 无有效时钟 → 不退役
   const stamp = goal.lastAdvancedAt || goal.createdAt || '';
   const ms = Date.parse(String(stamp));
-  if (!Number.isFinite(ms)) return null;                // 无法解析时间戳 → 保守不退役
-  return (now - ms) > windowMs ? 'exhausted' : null;
+  if (!Number.isFinite(ms)) {
+    return null;
+  } // 无法解析时间戳 → 保守不退役
+  return now - ms > windowMs ? 'exhausted' : null;
 }
 
 /**
@@ -302,12 +345,16 @@ function goalIdleReason(goal, env, nowMs) {
  * @returns {{retire: Array<{id:string, reason:string}>}}
  */
 function reconcileGoals(goals, env, nowMs) {
-  if (!isReconcileEnabled(env)) return { retire: [] };
+  if (!isReconcileEnabled(env)) {
+    return { retire: [] };
+  }
   const list = Array.isArray(goals) ? goals : [];
   const retire = [];
   for (const g of list) {
     const reason = goalIdleReason(g, env, nowMs);
-    if (reason) retire.push({ id: String((g && g.id) || ''), reason });
+    if (reason) {
+      retire.push({ id: String((g && g.id) || ''), reason });
+    }
   }
   return { retire };
 }
@@ -320,7 +367,9 @@ function reconcileGoals(goals, env, nowMs) {
  * @returns {string}
  */
 function buildBoundedDirective(goal, tick) {
-  if (!goal || !goal.text) return '';
+  if (!goal || !goal.text) {
+    return '';
+  }
   const t = tick || {};
   if (t.justExhausted) {
     // 预算耗尽:一次性终止指令。停止推进 + 产出完成/现状报告。

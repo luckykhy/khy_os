@@ -12,11 +12,16 @@
  */
 
 const nodePath = require('path');
+
 const { CorePollutionError } = require('./actionRegistry');
 const { assertWithinUserTrack } = require('./extensionLoader');
 
 class AuthorizationRequiredError extends Error {
-  constructor(message) { super(message); this.name = 'AuthorizationRequiredError'; this.code = 'AUTHORIZATION_REQUIRED'; }
+  constructor(message) {
+    super(message);
+    this.name = 'AuthorizationRequiredError';
+    this.code = 'AUTHORIZATION_REQUIRED';
+  }
 }
 
 /**
@@ -38,9 +43,15 @@ function writeUserExtension(opts = {}) {
   if (authorized !== true) {
     throw new AuthorizationRequiredError('模型 DIY 写入必须经用户显式授权（authorized=true）');
   }
-  if (!userTrackRoot) throw new Error('writeUserExtension: 缺少 userTrackRoot');
-  if (typeof relPath !== 'string' || !relPath) throw new Error('writeUserExtension: relPath 必须为非空字符串');
-  if (typeof content !== 'string') throw new Error('writeUserExtension: content 必须为字符串');
+  if (!userTrackRoot) {
+    throw new Error('writeUserExtension: 缺少 userTrackRoot');
+  }
+  if (typeof relPath !== 'string' || !relPath) {
+    throw new Error('writeUserExtension: relPath 必须为非空字符串');
+  }
+  if (typeof content !== 'string') {
+    throw new Error('writeUserExtension: content 必须为字符串');
+  }
 
   // 沙箱边界：解析后必须仍在用户轨内（红线5）。
   const abs = assertWithinUserTrack(relPath, userTrackRoot, pathImpl);

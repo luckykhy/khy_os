@@ -1,8 +1,15 @@
 {
   "name": "dream",
-  "command": "/dream",
   "description": "Background autonomous agent that works on tasks while you're away",
-  "version": "1.0.0",
-  "userInvocable": true,
-  "tags": ["autonomous", "background"]
+  "trigger": "/dream",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "autonomous",
+    "background"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
 }

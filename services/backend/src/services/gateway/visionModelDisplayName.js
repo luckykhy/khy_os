@@ -35,11 +35,17 @@ function isVisionModelDisplayNameEnabled(env) {
 function toDisplayModelName(model, env) {
   try {
     const raw = model == null ? '' : String(model);
-    if (!isVisionModelDisplayNameEnabled(env)) return raw;
+    if (!isVisionModelDisplayNameEnabled(env)) {
+      return raw;
+    }
     const trimmed = raw.trim();
-    if (!trimmed) return raw;
+    if (!trimmed) {
+      return raw;
+    }
     const idx = trimmed.lastIndexOf('/');
-    if (idx < 0) return raw;
+    if (idx < 0) {
+      return raw;
+    }
     const bare = trimmed.slice(idx + 1);
     // 前缀存在但去后为空(如 'glm/' 末尾即斜杠)→ 保守回退原样,绝不产出空名。
     return bare || raw;

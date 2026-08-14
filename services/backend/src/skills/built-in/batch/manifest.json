@@ -1,8 +1,15 @@
 {
   "name": "batch",
-  "command": "/batch",
   "description": "Run a batch of commands or tasks sequentially",
-  "version": "1.0.0",
-  "userInvocable": true,
-  "tags": ["automation", "batch"]
+  "trigger": "/batch",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "automation",
+    "batch"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
 }

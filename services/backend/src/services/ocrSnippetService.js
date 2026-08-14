@@ -8,18 +8,22 @@
  * - Scanned-PDF OCR via pdftoppm + image OCR
  */
 
+const { spawn, spawnSync } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const crypto = require('crypto');
-const { spawn, spawnSync } = require('child_process');
+
 const { safeKill } = require('../tools/platformUtils');
 const { searchExecutable } = require('../tools/platformUtils');
 
 const DOC_HELPER = path.join(__dirname, 'docHelper.py');
 const IMAGE_OCR_MAX_BYTES = Math.max(
   512 * 1024,
-  parseInt(String(process.env.KHY_MULTIMODAL_IMAGE_OCR_MAX_BYTES || String(20 * 1024 * 1024)), 10) || (20 * 1024 * 1024)
+  parseInt(
+    String(process.env.KHY_MULTIMODAL_IMAGE_OCR_MAX_BYTES || String(20 * 1024 * 1024)),
+    10
+  ) || 20 * 1024 * 1024
 );
 const IMAGE_OCR_MAX_CHARS = Math.max(
   200,
@@ -37,13 +41,17 @@ const PDF_OCR_TOTAL_BUDGET_MS = Math.max(
   1200,
   parseInt(String(process.env.KHY_MULTIMODAL_PDF_OCR_TOTAL_BUDGET_MS || '7000'), 10) || 7000
 );
-const OCR_LANG = String(process.env.KHY_MULTIMODAL_OCR_LANG || 'chi_sim+eng').trim() || 'chi_sim+eng';
+const OCR_LANG =
+  String(process.env.KHY_MULTIMODAL_OCR_LANG || 'chi_sim+eng').trim() || 'chi_sim+eng';
 const OCR_CACHE_ENABLED = !['0', 'false', 'off'].includes(
-  String(process.env.KHY_MULTIMODAL_OCR_CACHE_ENABLED || 'true').trim().toLowerCase()
+  String(process.env.KHY_MULTIMODAL_OCR_CACHE_ENABLED || 'true')
+    .trim()
+    .toLowerCase()
 );
 const OCR_CACHE_TTL_MS = Math.max(
   1000,
-  parseInt(String(process.env.KHY_MULTIMODAL_OCR_CACHE_TTL_MS || String(10 * 60 * 1000)), 10) || (10 * 60 * 1000)
+  parseInt(String(process.env.KHY_MULTIMODAL_OCR_CACHE_TTL_MS || String(10 * 60 * 1000)), 10) ||
+    10 * 60 * 1000
 );
 const OCR_CACHE_MAX_ENTRIES = Math.max(
   16,
@@ -51,7 +59,10 @@ const OCR_CACHE_MAX_ENTRIES = Math.max(
 );
 const OCR_CACHE_HASH_MAX_BYTES = Math.max(
   128 * 1024,
-  parseInt(String(process.env.KHY_MULTIMODAL_OCR_CACHE_HASH_MAX_BYTES || String(64 * 1024 * 1024)), 10) || (64 * 1024 * 1024)
+  parseInt(
+    String(process.env.KHY_MULTIMODAL_OCR_CACHE_HASH_MAX_BYTES || String(64 * 1024 * 1024)),
+    10
+  ) || 64 * 1024 * 1024
 );
 
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.tif', '.webp', '.gif']);
@@ -71,8 +82,12 @@ function _normalize(text = '') {
 
 function _truncate(text = '', maxChars = IMAGE_OCR_MAX_CHARS) {
   const normalized = _normalize(text);
-  if (!normalized) return '';
-  if (normalized.length <= maxChars) return normalized;
+  if (!normalized) {
+    return '';
+  }
+  if (normalized.length <= maxChars) {
+    return normalized;
+  }
   return `${normalized.slice(0, maxChars)}\n...[truncated]`;
 }
 
@@ -83,8 +98,12 @@ function _truncate(text = '', maxChars = IMAGE_OCR_MAX_CHARS) {
 // 供上层追加诚实告诫。text 分支与 _truncate 完全一致,保证既有 text 值逐字节不变。
 function _truncateInfo(text = '', maxChars = IMAGE_OCR_MAX_CHARS) {
   const normalized = _normalize(text);
-  if (!normalized) return { text: '', truncated: false };
-  if (normalized.length <= maxChars) return { text: normalized, truncated: false };
+  if (!normalized) {
+    return { text: '', truncated: false };
+  }
+  if (normalized.length <= maxChars) {
+    return { text: normalized, truncated: false };
+  }
   return { text: `${normalized.slice(0, maxChars)}\n...[truncated]`, truncated: true };
 }
 
@@ -97,19 +116,24 @@ function _cloneValue(value) {
 }
 
 function _isCacheEnabled(options = {}) {
-  if (options.cache !== undefined) return !!options.cache;
+  if (options.cache !== undefined) {
+    return !!options.cache;
+  }
   return OCR_CACHE_ENABLED;
 }
 
 function _pruneCache(now = Date.now()) {
   for (const [key, item] of _ocrCache.entries()) {
-    if (!item || (now - Number(item.at || 0)) > OCR_CACHE_TTL_MS) {
+    if (!item || now - Number(item.at || 0) > OCR_CACHE_TTL_MS) {
       _ocrCache.delete(key);
     }
   }
-  if (_ocrCache.size <= OCR_CACHE_MAX_ENTRIES) return;
-  const sorted = [..._ocrCache.entries()]
-    .sort((a, b) => Number(a[1]?.at || 0) - Number(b[1]?.at || 0));
+  if (_ocrCache.size <= OCR_CACHE_MAX_ENTRIES) {
+    return;
+  }
+  const sorted = [..._ocrCache.entries()].sort(
+    (a, b) => Number(a[1]?.at || 0) - Number(b[1]?.at || 0)
+  );
   const overflow = _ocrCache.size - OCR_CACHE_MAX_ENTRIES;
   for (let i = 0; i < overflow; i += 1) {
     _ocrCache.delete(sorted[i][0]);
@@ -117,14 +141,20 @@ function _pruneCache(now = Date.now()) {
 }
 
 function _readCache(key = '', options = {}) {
-  if (!_isCacheEnabled(options)) return null;
+  if (!_isCacheEnabled(options)) {
+    return null;
+  }
   const cacheKey = String(key || '').trim();
-  if (!cacheKey) return null;
+  if (!cacheKey) {
+    return null;
+  }
   const now = Date.now();
   _pruneCache(now);
   const hit = _ocrCache.get(cacheKey);
-  if (!hit) return null;
-  if ((now - Number(hit.at || 0)) > OCR_CACHE_TTL_MS) {
+  if (!hit) {
+    return null;
+  }
+  if (now - Number(hit.at || 0) > OCR_CACHE_TTL_MS) {
     _ocrCache.delete(cacheKey);
     return null;
   }
@@ -132,9 +162,13 @@ function _readCache(key = '', options = {}) {
 }
 
 function _writeCache(key = '', value = null, options = {}) {
-  if (!_isCacheEnabled(options)) return;
+  if (!_isCacheEnabled(options)) {
+    return;
+  }
   const cacheKey = String(key || '').trim();
-  if (!cacheKey || !value || typeof value !== 'object' || value.success !== true) return;
+  if (!cacheKey || !value || typeof value !== 'object' || value.success !== true) {
+    return;
+  }
   const now = Date.now();
   _ocrCache.set(cacheKey, {
     at: now,
@@ -145,15 +179,22 @@ function _writeCache(key = '', value = null, options = {}) {
 
 function _normalizePathForKey(filePath = '') {
   const resolved = path.resolve(String(filePath || '').trim());
-  if (process.platform === 'win32') return resolved.toLowerCase();
+  if (process.platform === 'win32') {
+    return resolved.toLowerCase();
+  }
   return resolved;
 }
 
 function _computeFileHashSync(filePath = '', maxBytes = OCR_CACHE_HASH_MAX_BYTES) {
   const resolved = path.resolve(String(filePath || '').trim());
   const stat = _safeStat(resolved);
-  if (!stat || !stat.isFile()) return '';
-  const limit = Math.max(64 * 1024, parseInt(String(maxBytes || OCR_CACHE_HASH_MAX_BYTES), 10) || OCR_CACHE_HASH_MAX_BYTES);
+  if (!stat || !stat.isFile()) {
+    return '';
+  }
+  const limit = Math.max(
+    64 * 1024,
+    parseInt(String(maxBytes || OCR_CACHE_HASH_MAX_BYTES), 10) || OCR_CACHE_HASH_MAX_BYTES
+  );
   const hash = crypto.createHash('sha1');
   const fd = fs.openSync(resolved, 'r');
   const chunkSize = Math.min(1024 * 1024, limit);
@@ -165,14 +206,20 @@ function _computeFileHashSync(filePath = '', maxBytes = OCR_CACHE_HASH_MAX_BYTES
     while (remaining > 0) {
       const toRead = Math.min(chunkSize, remaining);
       const bytesRead = fs.readSync(fd, buffer, 0, toRead, offset);
-      if (!bytesRead || bytesRead <= 0) break;
+      if (!bytesRead || bytesRead <= 0) {
+        break;
+      }
       hash.update(buffer.subarray(0, bytesRead));
       remaining -= bytesRead;
       offset += bytesRead;
       readTotal += bytesRead;
     }
   } finally {
-    try { fs.closeSync(fd); } catch { /* ignore */ }
+    try {
+      fs.closeSync(fd);
+    } catch {
+      /* ignore */
+    }
   }
   if (stat.size > readTotal) {
     hash.update(`:truncated:${stat.size - readTotal}`);
@@ -183,14 +230,21 @@ function _computeFileHashSync(filePath = '', maxBytes = OCR_CACHE_HASH_MAX_BYTES
 async function _computeFileHashAsync(filePath = '', maxBytes = OCR_CACHE_HASH_MAX_BYTES) {
   const resolved = path.resolve(String(filePath || '').trim());
   const stat = _safeStat(resolved);
-  if (!stat || !stat.isFile()) return '';
-  const limit = Math.max(64 * 1024, parseInt(String(maxBytes || OCR_CACHE_HASH_MAX_BYTES), 10) || OCR_CACHE_HASH_MAX_BYTES);
+  if (!stat || !stat.isFile()) {
+    return '';
+  }
+  const limit = Math.max(
+    64 * 1024,
+    parseInt(String(maxBytes || OCR_CACHE_HASH_MAX_BYTES), 10) || OCR_CACHE_HASH_MAX_BYTES
+  );
   const hash = crypto.createHash('sha1');
   return new Promise((resolve) => {
     let bytes = 0;
     let settled = false;
     const finish = () => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       if (stat.size > bytes) {
         hash.update(`:truncated:${stat.size - bytes}`);
@@ -201,7 +255,9 @@ async function _computeFileHashAsync(filePath = '', maxBytes = OCR_CACHE_HASH_MA
       highWaterMark: 1024 * 1024,
     });
     stream.on('data', (chunk) => {
-      if (bytes >= limit) return;
+      if (bytes >= limit) {
+        return;
+      }
       const remain = limit - bytes;
       const slice = chunk.length > remain ? chunk.subarray(0, remain) : chunk;
       if (slice.length > 0) {
@@ -213,7 +269,9 @@ async function _computeFileHashAsync(filePath = '', maxBytes = OCR_CACHE_HASH_MA
       }
     });
     stream.on('error', () => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       resolve('');
     });
@@ -223,7 +281,9 @@ async function _computeFileHashAsync(filePath = '', maxBytes = OCR_CACHE_HASH_MA
 }
 
 function _buildImageCacheKey(filePath = '', stat = null, hash = '', options = {}) {
-  if (!stat || !hash) return '';
+  if (!stat || !hash) {
+    return '';
+  }
   const lang = String(options.lang || OCR_LANG).trim() || OCR_LANG;
   const maxChars = Math.max(
     120,
@@ -246,7 +306,9 @@ function _buildImageCacheKey(filePath = '', stat = null, hash = '', options = {}
 }
 
 function _buildPdfCacheKey(filePath = '', stat = null, hash = '', options = {}) {
-  if (!stat || !hash) return '';
+  if (!stat || !hash) {
+    return '';
+  }
   const maxPages = Math.max(
     1,
     parseInt(String(options.maxPages || PDF_OCR_MAX_PAGES), 10) || PDF_OCR_MAX_PAGES
@@ -262,7 +324,8 @@ function _buildPdfCacheKey(filePath = '', stat = null, hash = '', options = {}) 
   );
   const totalBudgetMs = Math.max(
     timeoutMs,
-    parseInt(String(options.totalBudgetMs || PDF_OCR_TOTAL_BUDGET_MS), 10) || PDF_OCR_TOTAL_BUDGET_MS
+    parseInt(String(options.totalBudgetMs || PDF_OCR_TOTAL_BUDGET_MS), 10) ||
+      PDF_OCR_TOTAL_BUDGET_MS
   );
   return [
     'ocr:pdf_scan',
@@ -281,13 +344,19 @@ function _buildPdfCacheKey(filePath = '', stat = null, hash = '', options = {}) 
 function _run(cmd, args = [], timeoutMs = IMAGE_OCR_TIMEOUT_MS) {
   return spawnSync(cmd, args, {
     encoding: 'utf-8',
-    timeout: Math.max(800, parseInt(String(timeoutMs || IMAGE_OCR_TIMEOUT_MS), 10) || IMAGE_OCR_TIMEOUT_MS),
+    timeout: Math.max(
+      800,
+      parseInt(String(timeoutMs || IMAGE_OCR_TIMEOUT_MS), 10) || IMAGE_OCR_TIMEOUT_MS
+    ),
     maxBuffer: 8 * 1024 * 1024,
   });
 }
 
 function _runAsync(cmd, args = [], timeoutMs = IMAGE_OCR_TIMEOUT_MS) {
-  const ms = Math.max(800, parseInt(String(timeoutMs || IMAGE_OCR_TIMEOUT_MS), 10) || IMAGE_OCR_TIMEOUT_MS);
+  const ms = Math.max(
+    800,
+    parseInt(String(timeoutMs || IMAGE_OCR_TIMEOUT_MS), 10) || IMAGE_OCR_TIMEOUT_MS
+  );
   return new Promise((resolve) => {
     let done = false;
     let stdout = '';
@@ -296,9 +365,13 @@ function _runAsync(cmd, args = [], timeoutMs = IMAGE_OCR_TIMEOUT_MS) {
     let child = null;
 
     const finish = (payload) => {
-      if (done) return;
+      if (done) {
+        return;
+      }
       done = true;
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       resolve(payload || { status: 1, stdout, stderr });
     };
 
@@ -316,11 +389,13 @@ function _runAsync(cmd, args = [], timeoutMs = IMAGE_OCR_TIMEOUT_MS) {
     }
 
     const appendChunk = (prev, chunk) => {
-      if (!chunk) return prev;
+      if (!chunk) {
+        return prev;
+      }
       const text = Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : String(chunk);
       let out = `${prev}${text}`;
       if (out.length > 8 * 1024 * 1024) {
-        out = out.slice(out.length - (8 * 1024 * 1024));
+        out = out.slice(out.length - 8 * 1024 * 1024);
       }
       return out;
     };
@@ -347,7 +422,11 @@ function _runAsync(cmd, args = [], timeoutMs = IMAGE_OCR_TIMEOUT_MS) {
     });
 
     timer = setTimeout(() => {
-      try { safeKill(child, 'SIGKILL', 0); } catch { /* ignore */ }
+      try {
+        safeKill(child, 'SIGKILL', 0);
+      } catch {
+        /* ignore */
+      }
       finish({
         status: 124,
         stdout,
@@ -378,19 +457,35 @@ function _parseDocHelperJson(raw = '') {
 function _validateImageInput(filePath = '', mimeType = '') {
   const resolved = path.resolve(String(filePath || '').trim());
   if (!resolved || !fs.existsSync(resolved)) {
-    return { ok: false, failure: { success: false, error: `file not found: ${resolved || filePath}` } };
+    return {
+      ok: false,
+      failure: { success: false, error: `file not found: ${resolved || filePath}` },
+    };
   }
   const stat = _safeStat(resolved);
-  if (!stat || !stat.isFile()) return { ok: false, failure: { success: false, error: 'input is not a file' } };
-  if (stat.size <= 0) return { ok: false, failure: { success: false, error: 'empty file' } };
+  if (!stat || !stat.isFile()) {
+    return { ok: false, failure: { success: false, error: 'input is not a file' } };
+  }
+  if (stat.size <= 0) {
+    return { ok: false, failure: { success: false, error: 'empty file' } };
+  }
   if (stat.size > IMAGE_OCR_MAX_BYTES) {
-    return { ok: false, failure: { success: false, error: `image too large (${Math.round(stat.size / 1024 / 1024)}MB)` } };
+    return {
+      ok: false,
+      failure: {
+        success: false,
+        error: `image too large (${Math.round(stat.size / 1024 / 1024)}MB)`,
+      },
+    };
   }
   const mime = String(mimeType || '').toLowerCase();
   const ext = path.extname(resolved).toLowerCase();
   const isImage = mime.startsWith('image/') || IMAGE_EXTS.has(ext);
   if (!isImage) {
-    return { ok: false, failure: { success: false, error: `unsupported image type: ${mime || ext || 'unknown'}` } };
+    return {
+      ok: false,
+      failure: { success: false, error: `unsupported image type: ${mime || ext || 'unknown'}` },
+    };
   }
   return { ok: true, value: { resolved, stat } };
 }
@@ -418,7 +513,9 @@ function _ocrImageWithDocHelper(filePath = '', options = {}) {
     return { success: false, error: String(parsed.error || 'ocr failed'), engine: 'docHelper' };
   }
   const text = _normalize(parsed.text || '');
-  if (!text) return { success: false, error: 'ocr returned empty text', engine: 'docHelper' };
+  if (!text) {
+    return { success: false, error: 'ocr returned empty text', engine: 'docHelper' };
+  }
   return {
     success: true,
     engine: 'tesseract',
@@ -455,7 +552,9 @@ async function _ocrImageWithDocHelperAsync(filePath = '', options = {}) {
     return { success: false, error: String(parsed.error || 'ocr failed'), engine: 'docHelper' };
   }
   const text = _normalize(parsed.text || '');
-  if (!text) return { success: false, error: 'ocr returned empty text', engine: 'docHelper' };
+  if (!text) {
+    return { success: false, error: 'ocr returned empty text', engine: 'docHelper' };
+  }
   return {
     success: true,
     engine: 'tesseract',
@@ -471,7 +570,9 @@ async function _ocrImageWithDocHelperAsync(filePath = '', options = {}) {
 
 function extractImageOcrSnippet(filePath = '', mimeType = '', options = {}) {
   const checked = _validateImageInput(filePath, mimeType);
-  if (!checked.ok) return checked.failure;
+  if (!checked.ok) {
+    return checked.failure;
+  }
   const maxChars = Math.max(
     120,
     parseInt(String(options.maxChars || IMAGE_OCR_MAX_CHARS), 10) || IMAGE_OCR_MAX_CHARS
@@ -482,9 +583,13 @@ function extractImageOcrSnippet(filePath = '', mimeType = '', options = {}) {
     maxChars,
   });
   const cached = _readCache(cacheKey, options);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const result = _ocrImageWithDocHelper(checked.value.resolved, options);
-  if (!result.success) return result;
+  if (!result.success) {
+    return result;
+  }
   const { text: _text, truncated: _truncated } = _truncateInfo(result.text, maxChars);
   const output = {
     success: true,
@@ -504,7 +609,9 @@ function extractImageOcrSnippet(filePath = '', mimeType = '', options = {}) {
 
 async function extractImageOcrSnippetAsync(filePath = '', mimeType = '', options = {}) {
   const checked = _validateImageInput(filePath, mimeType);
-  if (!checked.ok) return checked.failure;
+  if (!checked.ok) {
+    return checked.failure;
+  }
   const maxChars = Math.max(
     120,
     parseInt(String(options.maxChars || IMAGE_OCR_MAX_CHARS), 10) || IMAGE_OCR_MAX_CHARS
@@ -515,9 +622,13 @@ async function extractImageOcrSnippetAsync(filePath = '', mimeType = '', options
     maxChars,
   });
   const cached = _readCache(cacheKey, options);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const result = await _ocrImageWithDocHelperAsync(checked.value.resolved, options);
-  if (!result.success) return result;
+  if (!result.success) {
+    return result;
+  }
   const { text: _text, truncated: _truncated } = _truncateInfo(result.text, maxChars);
   const output = {
     success: true,
@@ -539,11 +650,17 @@ function _collectPngPages(tempDir = '', prefix = '') {
   const out = [];
   const base = path.basename(prefix);
   let names = [];
-  try { names = fs.readdirSync(tempDir); } catch { return out; }
+  try {
+    names = fs.readdirSync(tempDir);
+  } catch {
+    return out;
+  }
   const pattern = new RegExp(`^${base}-(\\d+)\\.png$`, 'i');
   for (const name of names) {
     const m = name.match(pattern);
-    if (!m) continue;
+    if (!m) {
+      continue;
+    }
     out.push({
       page: Math.max(1, parseInt(String(m[1]), 10) || 1),
       path: path.join(tempDir, name),
@@ -553,23 +670,39 @@ function _collectPngPages(tempDir = '', prefix = '') {
 }
 
 function _cleanupDir(tempDir = '') {
-  if (!tempDir) return;
-  try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch { /* ignore */ }
+  if (!tempDir) {
+    return;
+  }
+  try {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
 }
 
 function _validatePdfInput(filePath = '', mimeType = '') {
   const resolved = path.resolve(String(filePath || '').trim());
   if (!resolved || !fs.existsSync(resolved)) {
-    return { ok: false, failure: { success: false, error: `file not found: ${resolved || filePath}` } };
+    return {
+      ok: false,
+      failure: { success: false, error: `file not found: ${resolved || filePath}` },
+    };
   }
   const stat = _safeStat(resolved);
-  if (!stat || !stat.isFile()) return { ok: false, failure: { success: false, error: 'input is not a file' } };
-  if (stat.size <= 0) return { ok: false, failure: { success: false, error: 'empty file' } };
+  if (!stat || !stat.isFile()) {
+    return { ok: false, failure: { success: false, error: 'input is not a file' } };
+  }
+  if (stat.size <= 0) {
+    return { ok: false, failure: { success: false, error: 'empty file' } };
+  }
   const mime = String(mimeType || '').toLowerCase();
   const ext = path.extname(resolved).toLowerCase();
   const isPdf = mime === 'application/pdf' || ext === '.pdf';
   if (!isPdf) {
-    return { ok: false, failure: { success: false, error: `unsupported document type: ${mime || ext || 'unknown'}` } };
+    return {
+      ok: false,
+      failure: { success: false, error: `unsupported document type: ${mime || ext || 'unknown'}` },
+    };
   }
   if (!searchExecutable('pdftoppm')) {
     return { ok: false, failure: { success: false, error: 'pdftoppm not installed' } };
@@ -579,7 +712,9 @@ function _validatePdfInput(filePath = '', mimeType = '') {
 
 function extractScannedPdfOcrSnippet(filePath = '', mimeType = '', options = {}) {
   const checked = _validatePdfInput(filePath, mimeType);
-  if (!checked.ok) return checked.failure;
+  if (!checked.ok) {
+    return checked.failure;
+  }
   const maxPages = Math.max(
     1,
     parseInt(String(options.maxPages || PDF_OCR_MAX_PAGES), 10) || PDF_OCR_MAX_PAGES
@@ -600,7 +735,9 @@ function extractScannedPdfOcrSnippet(filePath = '', mimeType = '', options = {})
     timeoutMs,
   });
   const cached = _readCache(cacheKey, options);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-pdf-ocr-'));
   const outPrefix = path.join(tempDir, 'page');
 
@@ -613,7 +750,9 @@ function extractScannedPdfOcrSnippet(filePath = '', mimeType = '', options = {})
     if (convert.status !== 0) {
       return {
         success: false,
-        error: String(convert.stderr || convert.stdout || `pdftoppm exited ${convert.status}`).trim(),
+        error: String(
+          convert.stderr || convert.stdout || `pdftoppm exited ${convert.status}`
+        ).trim(),
         engine: 'pdftoppm',
       };
     }
@@ -629,11 +768,17 @@ function extractScannedPdfOcrSnippet(filePath = '', mimeType = '', options = {})
         timeoutMs,
         cache: false,
       });
-      if (!ocr.success || !ocr.text) continue;
+      if (!ocr.success || !ocr.text) {
+        continue;
+      }
       lines.push(`[Page ${item.page}] ${ocr.text}`);
     }
     if (lines.length === 0) {
-      return { success: false, error: 'ocr produced no text from scanned pdf', engine: 'tesseract' };
+      return {
+        success: false,
+        error: 'ocr produced no text from scanned pdf',
+        engine: 'tesseract',
+      };
     }
     const output = {
       success: true,
@@ -650,7 +795,9 @@ function extractScannedPdfOcrSnippet(filePath = '', mimeType = '', options = {})
 
 async function extractScannedPdfOcrSnippetAsync(filePath = '', mimeType = '', options = {}) {
   const checked = _validatePdfInput(filePath, mimeType);
-  if (!checked.ok) return checked.failure;
+  if (!checked.ok) {
+    return checked.failure;
+  }
   const maxPages = Math.max(
     1,
     parseInt(String(options.maxPages || PDF_OCR_MAX_PAGES), 10) || PDF_OCR_MAX_PAGES
@@ -665,7 +812,8 @@ async function extractScannedPdfOcrSnippetAsync(filePath = '', mimeType = '', op
   );
   const totalBudgetMs = Math.max(
     timeoutMs,
-    parseInt(String(options.totalBudgetMs || PDF_OCR_TOTAL_BUDGET_MS), 10) || PDF_OCR_TOTAL_BUDGET_MS
+    parseInt(String(options.totalBudgetMs || PDF_OCR_TOTAL_BUDGET_MS), 10) ||
+      PDF_OCR_TOTAL_BUDGET_MS
   );
   const fileHash = await _computeFileHashAsync(checked.value.resolved, options.cacheHashMaxBytes);
   const cacheKey = _buildPdfCacheKey(checked.value.resolved, checked.value.stat, fileHash, {
@@ -676,7 +824,9 @@ async function extractScannedPdfOcrSnippetAsync(filePath = '', mimeType = '', op
     totalBudgetMs,
   });
   const cached = _readCache(cacheKey, options);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-pdf-ocr-'));
   const outPrefix = path.join(tempDir, 'page');
@@ -690,7 +840,9 @@ async function extractScannedPdfOcrSnippetAsync(filePath = '', mimeType = '', op
     if (convert.status !== 0) {
       return {
         success: false,
-        error: String(convert.stderr || convert.stdout || `pdftoppm exited ${convert.status}`).trim(),
+        error: String(
+          convert.stderr || convert.stdout || `pdftoppm exited ${convert.status}`
+        ).trim(),
         engine: 'pdftoppm',
       };
     }
@@ -702,7 +854,9 @@ async function extractScannedPdfOcrSnippetAsync(filePath = '', mimeType = '', op
     for (let index = 0; index < images.length; index += 1) {
       const item = images[index];
       const remaining = totalBudgetMs - (Date.now() - startedAt);
-      if (remaining < 300) break;
+      if (remaining < 300) {
+        break;
+      }
       const perPageTimeout = Math.max(700, Math.min(timeoutMs, remaining));
       const ocr = await extractImageOcrSnippetAsync(item.path, 'image/png', {
         ...options,
@@ -710,11 +864,17 @@ async function extractScannedPdfOcrSnippetAsync(filePath = '', mimeType = '', op
         timeoutMs: perPageTimeout,
         cache: false,
       });
-      if (!ocr.success || !ocr.text) continue;
+      if (!ocr.success || !ocr.text) {
+        continue;
+      }
       lines.push(`[Page ${item.page}] ${ocr.text}`);
     }
     if (lines.length === 0) {
-      return { success: false, error: 'ocr produced no text from scanned pdf', engine: 'tesseract' };
+      return {
+        success: false,
+        error: 'ocr produced no text from scanned pdf',
+        engine: 'tesseract',
+      };
     }
     const output = {
       success: true,

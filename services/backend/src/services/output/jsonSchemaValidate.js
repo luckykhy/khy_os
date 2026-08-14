@@ -25,59 +25,107 @@
 const _MAX_DEPTH = 64; // 防御性递归深度上限(病态/自引用 schema 不致爆栈)。
 
 function _typeOf(value) {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'array';
+  if (value === null) {
+    return 'null';
+  }
+  if (Array.isArray(value)) {
+    return 'array';
+  }
   return typeof value; // string|number|boolean|object|undefined
 }
 
 /** JSON Schema 的 type 判定(integer 与 number 区分)。 */
 function _matchesType(value, type) {
   switch (type) {
-    case 'null': return value === null;
-    case 'array': return Array.isArray(value);
-    case 'object': return value !== null && typeof value === 'object' && !Array.isArray(value);
-    case 'string': return typeof value === 'string';
-    case 'boolean': return typeof value === 'boolean';
-    case 'number': return typeof value === 'number' && Number.isFinite(value);
-    case 'integer': return typeof value === 'number' && Number.isInteger(value);
-    default: return true; // 未知 type 不约束(宽松,绝不假阳性拒)。
+    case 'null':
+      return value === null;
+    case 'array':
+      return Array.isArray(value);
+    case 'object':
+      return value !== null && typeof value === 'object' && !Array.isArray(value);
+    case 'string':
+      return typeof value === 'string';
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'number':
+      return typeof value === 'number' && Number.isFinite(value);
+    case 'integer':
+      return typeof value === 'number' && Number.isInteger(value);
+    default:
+      return true; // 未知 type 不约束(宽松,绝不假阳性拒)。
   }
 }
 
 function _deepEqual(a, b) {
-  if (a === b) return true;
-  if (_typeOf(a) !== _typeOf(b)) return false;
+  if (a === b) {
+    return true;
+  }
+  if (_typeOf(a) !== _typeOf(b)) {
+    return false;
+  }
   if (Array.isArray(a)) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (!_deepEqual(a[i], b[i])) return false;
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+      if (!_deepEqual(a[i], b[i])) {
+        return false;
+      }
+    }
     return true;
   }
   if (a && typeof a === 'object') {
-    const ka = Object.keys(a); const kb = Object.keys(b);
-    if (ka.length !== kb.length) return false;
-    for (const k of ka) { if (!Object.prototype.hasOwnProperty.call(b, k)) return false; if (!_deepEqual(a[k], b[k])) return false; }
+    const ka = Object.keys(a);
+    const kb = Object.keys(b);
+    if (ka.length !== kb.length) {
+      return false;
+    }
+    for (const k of ka) {
+      if (!Object.prototype.hasOwnProperty.call(b, k)) {
+        return false;
+      }
+      if (!_deepEqual(a[k], b[k])) {
+        return false;
+      }
+    }
     return true;
   }
   return false;
 }
 
-function _join(path, seg) { return `${path}/${String(seg)}`; }
+function _join(path, seg) {
+  return `${path}/${String(seg)}`;
+}
 
 /**
  * 递归校验 value 是否满足 schema,把错误推入 errors。
  * @returns {boolean} 本节点(及子树)是否全部通过
  */
 function _validate(value, schema, path, errors, depth) {
-  if (depth > _MAX_DEPTH) return true; // 过深则停止(诚实放行,避免栈溢出)。
-  if (schema === true || schema === undefined || schema === null) return true;
-  if (schema === false) { errors.push({ path, message: 'value is not allowed (schema=false)' }); return false; }
-  if (typeof schema !== 'object') return true;
+  if (depth > _MAX_DEPTH) {
+    return true;
+  } // 过深则停止(诚实放行,避免栈溢出)。
+  if (schema === true || schema === undefined || schema === null) {
+    return true;
+  }
+  if (schema === false) {
+    errors.push({ path, message: 'value is not allowed (schema=false)' });
+    return false;
+  }
+  if (typeof schema !== 'object') {
+    return true;
+  }
 
   let ok = true;
-  const push = (message) => { ok = false; errors.push({ path, message }); };
+  const push = (message) => {
+    ok = false;
+    errors.push({ path, message });
+  };
 
   // nullable(OpenAPI):显式允许 null。
-  if (value === null && schema.nullable === true) return true;
+  if (value === null && schema.nullable === true) {
+    return true;
+  }
 
   // type(可为数组联合)。
   if (schema.type !== undefined) {
@@ -90,79 +138,139 @@ function _validate(value, schema, path, errors, depth) {
 
   // const / enum。
   if (Object.prototype.hasOwnProperty.call(schema, 'const')) {
-    if (!_deepEqual(value, schema.const)) push(`value must equal const ${JSON.stringify(schema.const)}`);
+    if (!_deepEqual(value, schema.const)) {
+      push(`value must equal const ${JSON.stringify(schema.const)}`);
+    }
   }
   if (Array.isArray(schema.enum)) {
-    if (!schema.enum.some((e) => _deepEqual(value, e))) push(`value must be one of enum ${JSON.stringify(schema.enum)}`);
+    if (!schema.enum.some((e) => _deepEqual(value, e))) {
+      push(`value must be one of enum ${JSON.stringify(schema.enum)}`);
+    }
   }
 
   // 组合关键字。
   if (Array.isArray(schema.allOf)) {
-    for (const sub of schema.allOf) if (!_validate(value, sub, path, errors, depth + 1)) ok = false;
+    for (const sub of schema.allOf) {
+      if (!_validate(value, sub, path, errors, depth + 1)) {
+        ok = false;
+      }
+    }
   }
   if (Array.isArray(schema.anyOf)) {
     const any = schema.anyOf.some((sub) => _validate(value, sub, path, [], depth + 1));
-    if (!any) push('value does not match any of the anyOf schemas');
+    if (!any) {
+      push('value does not match any of the anyOf schemas');
+    }
   }
   if (Array.isArray(schema.oneOf)) {
     let matched = 0;
-    for (const sub of schema.oneOf) if (_validate(value, sub, path, [], depth + 1)) matched++;
-    if (matched !== 1) push(`value must match exactly one of oneOf (matched ${matched})`);
+    for (const sub of schema.oneOf) {
+      if (_validate(value, sub, path, [], depth + 1)) {
+        matched++;
+      }
+    }
+    if (matched !== 1) {
+      push(`value must match exactly one of oneOf (matched ${matched})`);
+    }
   }
 
   // 字符串约束。
   if (typeof value === 'string') {
-    if (Number.isFinite(schema.minLength) && value.length < schema.minLength) push(`string shorter than minLength ${schema.minLength}`);
-    if (Number.isFinite(schema.maxLength) && value.length > schema.maxLength) push(`string longer than maxLength ${schema.maxLength}`);
+    if (Number.isFinite(schema.minLength) && value.length < schema.minLength) {
+      push(`string shorter than minLength ${schema.minLength}`);
+    }
+    if (Number.isFinite(schema.maxLength) && value.length > schema.maxLength) {
+      push(`string longer than maxLength ${schema.maxLength}`);
+    }
     if (typeof schema.pattern === 'string') {
-      let re = null; try { re = new RegExp(schema.pattern); } catch { re = null; }
-      if (re && !re.test(value)) push(`string does not match pattern ${schema.pattern}`);
+      let re = null;
+      try {
+        re = new RegExp(schema.pattern);
+      } catch {
+        re = null;
+      }
+      if (re && !re.test(value)) {
+        push(`string does not match pattern ${schema.pattern}`);
+      }
     }
   }
 
   // 数值约束。
   if (typeof value === 'number' && Number.isFinite(value)) {
-    if (Number.isFinite(schema.minimum) && value < schema.minimum) push(`number below minimum ${schema.minimum}`);
-    if (Number.isFinite(schema.maximum) && value > schema.maximum) push(`number above maximum ${schema.maximum}`);
-    if (Number.isFinite(schema.exclusiveMinimum) && value <= schema.exclusiveMinimum) push(`number must be > exclusiveMinimum ${schema.exclusiveMinimum}`);
-    if (Number.isFinite(schema.exclusiveMaximum) && value >= schema.exclusiveMaximum) push(`number must be < exclusiveMaximum ${schema.exclusiveMaximum}`);
+    if (Number.isFinite(schema.minimum) && value < schema.minimum) {
+      push(`number below minimum ${schema.minimum}`);
+    }
+    if (Number.isFinite(schema.maximum) && value > schema.maximum) {
+      push(`number above maximum ${schema.maximum}`);
+    }
+    if (Number.isFinite(schema.exclusiveMinimum) && value <= schema.exclusiveMinimum) {
+      push(`number must be > exclusiveMinimum ${schema.exclusiveMinimum}`);
+    }
+    if (Number.isFinite(schema.exclusiveMaximum) && value >= schema.exclusiveMaximum) {
+      push(`number must be < exclusiveMaximum ${schema.exclusiveMaximum}`);
+    }
   }
 
   // 数组约束。
   if (Array.isArray(value)) {
-    if (Number.isFinite(schema.minItems) && value.length < schema.minItems) push(`array shorter than minItems ${schema.minItems}`);
-    if (Number.isFinite(schema.maxItems) && value.length > schema.maxItems) push(`array longer than maxItems ${schema.maxItems}`);
+    if (Number.isFinite(schema.minItems) && value.length < schema.minItems) {
+      push(`array shorter than minItems ${schema.minItems}`);
+    }
+    if (Number.isFinite(schema.maxItems) && value.length > schema.maxItems) {
+      push(`array longer than maxItems ${schema.maxItems}`);
+    }
     if (schema.uniqueItems === true) {
-      for (let i = 0; i < value.length; i++) for (let j = i + 1; j < value.length; j++) {
-        if (_deepEqual(value[i], value[j])) { push(`array items must be unique (indices ${i},${j})`); i = value.length; break; }
+      for (let i = 0; i < value.length; i++) {
+        for (let j = i + 1; j < value.length; j++) {
+          if (_deepEqual(value[i], value[j])) {
+            push(`array items must be unique (indices ${i},${j})`);
+            i = value.length;
+            break;
+          }
+        }
       }
     }
     if (schema.items && typeof schema.items === 'object' && !Array.isArray(schema.items)) {
-      for (let i = 0; i < value.length; i++) if (!_validate(value[i], schema.items, _join(path, i), errors, depth + 1)) ok = false;
+      for (let i = 0; i < value.length; i++) {
+        if (!_validate(value[i], schema.items, _join(path, i), errors, depth + 1)) {
+          ok = false;
+        }
+      }
     }
   }
 
   // 对象约束。
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-    const props = (schema.properties && typeof schema.properties === 'object') ? schema.properties : {};
+    const props =
+      schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
     if (Array.isArray(schema.required)) {
       for (const key of schema.required) {
-        if (!Object.prototype.hasOwnProperty.call(value, key)) push(`missing required property "${key}"`);
+        if (!Object.prototype.hasOwnProperty.call(value, key)) {
+          push(`missing required property "${key}"`);
+        }
       }
     }
     for (const key of Object.keys(props)) {
       if (Object.prototype.hasOwnProperty.call(value, key)) {
-        if (!_validate(value[key], props[key], _join(path, key), errors, depth + 1)) ok = false;
+        if (!_validate(value[key], props[key], _join(path, key), errors, depth + 1)) {
+          ok = false;
+        }
       }
     }
     if (schema.additionalProperties === false) {
       for (const key of Object.keys(value)) {
-        if (!Object.prototype.hasOwnProperty.call(props, key)) push(`additional property "${key}" is not allowed`);
+        if (!Object.prototype.hasOwnProperty.call(props, key)) {
+          push(`additional property "${key}" is not allowed`);
+        }
       }
     } else if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
       for (const key of Object.keys(value)) {
         if (!Object.prototype.hasOwnProperty.call(props, key)) {
-          if (!_validate(value[key], schema.additionalProperties, _join(path, key), errors, depth + 1)) ok = false;
+          if (
+            !_validate(value[key], schema.additionalProperties, _join(path, key), errors, depth + 1)
+          ) {
+            ok = false;
+          }
         }
       }
     }
@@ -189,15 +297,22 @@ function validateAgainstSchema(data, schema) {
     valid = _validate(data, schema, '', errors, 0);
   } catch {
     // 防御:病态 schema 不应让校验器自身抛 —— 退化为「未校验通过」并记一条诚实错误。
-    return { valid: false, errors: [{ path: '', message: 'schema validation aborted (malformed schema)' }] };
+    return {
+      valid: false,
+      errors: [{ path: '', message: 'schema validation aborted (malformed schema)' }],
+    };
   }
   return { valid: valid && errors.length === 0, errors };
 }
 
 /** 把错误数组拼成模型可读的一行(供自纠提示)。 */
 function formatSchemaErrors(errors) {
-  if (!Array.isArray(errors) || errors.length === 0) return '';
-  return errors.map((e) => `${e && e.path ? e.path : 'root'}: ${e && e.message ? e.message : 'invalid'}`).join('; ');
+  if (!Array.isArray(errors) || errors.length === 0) {
+    return '';
+  }
+  return errors
+    .map((e) => `${e && e.path ? e.path : 'root'}: ${e && e.message ? e.message : 'invalid'}`)
+    .join('; ');
 }
 
 module.exports = { validateAgainstSchema, formatSchemaErrors };

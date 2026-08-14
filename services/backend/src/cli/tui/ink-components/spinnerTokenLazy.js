@@ -25,8 +25,11 @@
 const { isFlagEnabled } = require('../../../services/flagRegistry');
 
 function isSpinnerTokenLazyEnabled(env = process.env) {
-  try { return isFlagEnabled('KHY_SPINNER_TOKEN_LAZY', env); }
-  catch { return true; }
+  try {
+    return isFlagEnabled('KHY_SPINNER_TOKEN_LAZY', env);
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -43,7 +46,9 @@ function shouldEstimateSpinnerTokens(opts = {}) {
   const o = opts || {};
   const env = o.env || process.env;
   // 门控关 → 逐字节回退:恒估算。
-  if (!isSpinnerTokenLazyEnabled(env)) return true;
+  if (!isSpinnerTokenLazyEnabled(env)) {
+    return true;
+  }
   try {
     const sm = require('../../spinnerMeta');
     const elapsedMs = (Number(o.elapsedSec) || 0) * 1000;

@@ -17,9 +17,15 @@ const os = require('os');
 
 const STOCK_PATTERNS = [
   // Match 6-digit codes with or without prefix
-  { pattern: /(?:^|\s)(\d{6})(?:\s|$|[,，。.!！?？])/g, normalize: (code) => _addExchangePrefix(code) },
+  {
+    pattern: /(?:^|\s)(\d{6})(?:\s|$|[,，。.!！?？])/g,
+    normalize: (code) => _addExchangePrefix(code),
+  },
   // Match codes with prefix like sh600519, sz000001
-  { pattern: /(?:^|\s)((?:sh|sz|SH|SZ)\d{6})(?:\s|$|[,，。.!！?？])/g, normalize: (code) => code.toLowerCase() },
+  {
+    pattern: /(?:^|\s)((?:sh|sz|SH|SZ)\d{6})(?:\s|$|[,，。.!！?？])/g,
+    normalize: (code) => code.toLowerCase(),
+  },
 ];
 
 function _addExchangePrefix(code) {
@@ -33,19 +39,19 @@ function _addExchangePrefix(code) {
 
 const ABBREVIATIONS = {
   // Chinese abbreviations
-  '茅台': '贵州茅台(sh600519)',
-  '平安': '中国平安(sh601318)',
-  '宁德': '宁德时代(sz300750)',
-  '比亚迪': '比亚迪(sz002594)',
-  '中芯': '中芯国际(sh688981)',
-  '腾讯': '腾讯控股(港股)',
-  '阿里': '阿里巴巴(港股/美股)',
+  茅台: '贵州茅台(sh600519)',
+  平安: '中国平安(sh601318)',
+  宁德: '宁德时代(sz300750)',
+  比亚迪: '比亚迪(sz002594)',
+  中芯: '中芯国际(sh688981)',
+  腾讯: '腾讯控股(港股)',
+  阿里: '阿里巴巴(港股/美股)',
 
   // Technical term abbreviations
-  'MA': '移动平均线(MA)',
-  'KDJ': 'KDJ随机指标',
-  'BOLL': '布林带(Bollinger Bands)',
-  'VOL': '成交量(Volume)',
+  MA: '移动平均线(MA)',
+  KDJ: 'KDJ随机指标',
+  BOLL: '布林带(Bollinger Bands)',
+  VOL: '成交量(Volume)',
 };
 
 // ─── Complexity Detection (for task planning) ───────────────────────────────
@@ -187,8 +193,11 @@ function formatPlanDisplay(planText) {
  * Check if a task response contains a plan structure.
  */
 function isPlanResponse(text) {
-  return text.includes('## 任务分解') || text.includes('## 执行计划') ||
-         (text.includes('1.') && text.includes('2.') && text.includes('3.'));
+  return (
+    text.includes('## 任务分解') ||
+    text.includes('## 执行计划') ||
+    (text.includes('1.') && text.includes('2.') && text.includes('3.'))
+  );
 }
 
 // ─── Internal Helpers ───────────────────────────────────────────────────────
@@ -274,16 +283,39 @@ function _inferIntent(text, metadata) {
   // Intent: likely wants current quote or quick analysis
   if (/^(sh|sz)\d{6}$/i.test(text.trim())) {
     inferred = `查询 ${text} 的当前行情和简要分析`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'bare_stock_code' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'bare_stock_code',
+    });
     return inferred;
   }
 
   // Pattern: single Chinese stock name (short, no verb)
-  const KNOWN_STOCKS = ['茅台', '平安', '宁德', '比亚迪', '中芯', '腾讯', '阿里', '招商', '格力', '万科', '恒瑞', '五粮液'];
-  const matchedStock = KNOWN_STOCKS.find(s => text.trim() === s);
+  const KNOWN_STOCKS = [
+    '茅台',
+    '平安',
+    '宁德',
+    '比亚迪',
+    '中芯',
+    '腾讯',
+    '阿里',
+    '招商',
+    '格力',
+    '万科',
+    '恒瑞',
+    '五粮液',
+  ];
+  const matchedStock = KNOWN_STOCKS.find((s) => text.trim() === s);
   if (matchedStock) {
     inferred = `分析${matchedStock}的当前行情走势`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'stock_name_only' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'stock_name_only',
+    });
     return inferred;
   }
 
@@ -297,14 +329,26 @@ function _inferIntent(text, metadata) {
       if (topics.length > 0) {
         const recentTopic = topics[0];
         inferred = `${text}（结合最近分析的内容回答，如果不确定请询问具体标的）`;
-        metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'ambiguous_question_with_context' });
+        metadata.enhancements.push({
+          type: 'intent_infer',
+          from: text,
+          to: inferred,
+          reason: 'ambiguous_question_with_context',
+        });
         return inferred;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Fallback: ask AI to clarify but also attempt to answer
     inferred = `${text}（请结合上下文理解，若无法确定则礼貌询问指的是哪只股票或哪个策略）`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'ambiguous_no_context' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'ambiguous_no_context',
+    });
     return inferred;
   }
 
@@ -319,13 +363,25 @@ function _inferIntent(text, metadata) {
       if (prefs.frequentSymbols && prefs.frequentSymbols.length > 0) {
         const recent = prefs.frequentSymbols[0];
         inferred = `${action} ${recent}（用户最近关注的标的）`;
-        metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'verb_only_with_recent_symbol' });
+        metadata.enhancements.push({
+          type: 'intent_infer',
+          from: text,
+          to: inferred,
+          reason: 'verb_only_with_recent_symbol',
+        });
         return inferred;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     inferred = `${text}（请询问用户想${action}哪个标的）`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'verb_only_no_symbol' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'verb_only_no_symbol',
+    });
     return inferred;
   }
 
@@ -334,14 +390,24 @@ function _inferIntent(text, metadata) {
     // Already handled by stock code normalization, but add intent
     const normalized = text.trim();
     inferred = `查询 ${normalized} 的行情`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'bare_digits' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'bare_digits',
+    });
     return inferred;
   }
 
   // Pattern: "那个"/"这个" referencing something from context
   if (/^(那个|这个|上次那个|之前的)/.test(text.trim())) {
     inferred = `${text}（请根据对话上下文理解用户指代的对象，如果不确定请询问）`;
-    metadata.enhancements.push({ type: 'intent_infer', from: text, to: inferred, reason: 'pronoun_reference' });
+    metadata.enhancements.push({
+      type: 'intent_infer',
+      from: text,
+      to: inferred,
+      reason: 'pronoun_reference',
+    });
     return inferred;
   }
 
@@ -360,12 +426,16 @@ function _enrichContext(text, context, metadata) {
 
     // Add frequent symbols context
     if (prefs.frequentSymbols && prefs.frequentSymbols.length > 0) {
-      const mentioned = prefs.frequentSymbols.filter(s => text.includes(s.replace(/^(sh|sz)/, '')));
+      const mentioned = prefs.frequentSymbols.filter((s) =>
+        text.includes(s.replace(/^(sh|sz)/, ''))
+      );
       if (mentioned.length > 0) {
         enrichments.push(`[用户常关注: ${mentioned.join(', ')}]`);
       }
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   // Add knowledge level context
   try {
@@ -374,7 +444,9 @@ function _enrichContext(text, context, metadata) {
     if (level.level !== 'beginner') {
       enrichments.push(`[用户量化水平: ${level.levelName}]`);
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   if (enrichments.length > 0) {
     metadata.enhancements.push({ type: 'context', items: enrichments });
@@ -391,7 +463,7 @@ function _assessComplexity(text) {
   // Check multi-step indicators (these are inherently complex)
   for (const pattern of COMPLEXITY_INDICATORS.multiStep) {
     if (pattern.test(text)) {
-      score += 2;  // Multi-step tasks always need planning
+      score += 2; // Multi-step tasks always need planning
       reasons.push('multi_step');
       break;
     }
@@ -417,15 +489,24 @@ function _assessComplexity(text) {
 
   // Length-based complexity (long prompts often need planning)
   if (text.length > 40) score += 1;
-  if (text.length > 80) { score += 1; reasons.push('long_input'); }
+  if (text.length > 80) {
+    score += 1;
+    reasons.push('long_input');
+  }
 
   // Multiple stock codes = comparison task
   const codeCount = (text.match(/(sh|sz)\d{6}/gi) || []).length;
-  if (codeCount >= 2) { score += 1; reasons.push('multi_symbol'); }
+  if (codeCount >= 2) {
+    score += 1;
+    reasons.push('multi_symbol');
+  }
 
   // Multiple question marks = multiple questions
   const questionCount = (text.match(/[？?]/g) || []).length;
-  if (questionCount >= 2) { score += 1; reasons.push('multi_question'); }
+  if (questionCount >= 2) {
+    score += 1;
+    reasons.push('multi_question');
+  }
 
   return { score, reasons, needsPlan: score >= 2 && reasons.length >= 1 };
 }
@@ -451,13 +532,17 @@ function getContextEnrichment(userMessage) {
         enrichments.push(`用户历史最佳策略: ${best.map(([k, v]) => `${k}→${v}`).join(', ')}`);
       }
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   try {
     const { getLevelProgress } = require('./knowledgeTeachingService');
     const level = getLevelProgress();
     enrichments.push(`用户量化水平: ${level.levelName} (XP: ${level.xp})`);
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   return enrichments.length > 0 ? `\n\n[用户画像]\n${enrichments.join('\n')}` : '';
 }

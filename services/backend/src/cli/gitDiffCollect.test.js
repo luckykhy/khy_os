@@ -13,8 +13,8 @@
  *   - 防呆:runGit 非函数 / stdout 缺失 → 不抛、返回空或仅 tracked
  */
 
-const test = require('node:test');
 const assert = require('node:assert');
+const test = require('node:test');
 
 const { includeUntrackedEnabled, collectWorkingTreeDiff } = require('./gitDiffCollect');
 
@@ -26,8 +26,12 @@ function makeRunGit({ tracked = '', untracked = [], synth = {} } = {}) {
       const f = args[args.length - 1];
       return { stdout: synth[f] || '' };
     }
-    if (args[0] === 'diff') return { stdout: tracked };
-    if (args[0] === 'ls-files') return { stdout: untracked.map((f) => f + '\0').join('') };
+    if (args[0] === 'diff') {
+      return { stdout: tracked };
+    }
+    if (args[0] === 'ls-files') {
+      return { stdout: untracked.map((f) => f + '\0').join('') };
+    }
     return { stdout: '' };
   };
 }
@@ -70,13 +74,21 @@ test('includeUntrackedEnabled:默认开(未设)', () => {
 
 test('includeUntrackedEnabled:0/false/off/no(含大小写)关', () => {
   for (const v of ['0', 'false', 'off', 'no', 'FALSE', 'Off', 'NO', ' no ']) {
-    assert.equal(includeUntrackedEnabled({ KHY_DIFF_INCLUDE_UNTRACKED: v }), false, `值 ${JSON.stringify(v)} 应关`);
+    assert.equal(
+      includeUntrackedEnabled({ KHY_DIFF_INCLUDE_UNTRACKED: v }),
+      false,
+      `值 ${JSON.stringify(v)} 应关`
+    );
   }
 });
 
 test('includeUntrackedEnabled:其它值开', () => {
   for (const v of ['1', 'true', 'on', 'yes', 'anything']) {
-    assert.equal(includeUntrackedEnabled({ KHY_DIFF_INCLUDE_UNTRACKED: v }), true, `值 ${JSON.stringify(v)} 应开`);
+    assert.equal(
+      includeUntrackedEnabled({ KHY_DIFF_INCLUDE_UNTRACKED: v }),
+      true,
+      `值 ${JSON.stringify(v)} 应开`
+    );
   }
 });
 
@@ -127,7 +139,9 @@ test('无任何改动 → 空串', () => {
 test('maxUntracked 封顶 → 追加诚实「+N 未显示」标记(非静默)', () => {
   const untracked = ['f1', 'f2', 'f3', 'f4', 'f5'];
   const synth = {};
-  for (const f of untracked) synth[f] = `--- /dev/null\n+++ b/${f}\n@@ -0,0 +1 @@\n+x`;
+  for (const f of untracked) {
+    synth[f] = `--- /dev/null\n+++ b/${f}\n@@ -0,0 +1 @@\n+x`;
+  }
   const runGit = makeRunGit({ tracked: '', untracked, synth });
   const out = collectWorkingTreeDiff(runGit, {}, { maxUntracked: 2 });
   assert.ok(out.includes('+++ b/f1'), '前 2 个应显示');
@@ -152,17 +166,32 @@ test('防呆:runGit 非函数 → 返回空串不抛', () => {
 });
 
 test('防呆:runGit 返回非对象 / stdout 缺失 → 当作空 stdout 不抛', () => {
-  assert.equal(collectWorkingTreeDiff(() => null, {}), '');
-  assert.equal(collectWorkingTreeDiff(() => ({}), {}), '');
-  assert.equal(collectWorkingTreeDiff(() => 'not-an-object', {}), '');
+  assert.equal(
+    collectWorkingTreeDiff(() => null, {}),
+    ''
+  );
+  assert.equal(
+    collectWorkingTreeDiff(() => ({}), {}),
+    ''
+  );
+  assert.equal(
+    collectWorkingTreeDiff(() => 'not-an-object', {}),
+    ''
+  );
 });
 
 test('防呆:runGit 抛 → 被吞,该段当作空(不冒泡)', () => {
   // tracked 调用抛 → tracked 空;ls-files 正常 → 但 --no-index 抛 → 该新文件段空
   const runGit = (args) => {
-    if (args[0] === 'diff' && args[1] === '--no-index') throw new Error('exit 1 no stdout captured');
-    if (args[0] === 'ls-files') return { stdout: 'f1\0' };
-    if (args[0] === 'diff') throw new Error('boom');
+    if (args[0] === 'diff' && args[1] === '--no-index') {
+      throw new Error('exit 1 no stdout captured');
+    }
+    if (args[0] === 'ls-files') {
+      return { stdout: 'f1\0' };
+    }
+    if (args[0] === 'diff') {
+      throw new Error('boom');
+    }
     return { stdout: '' };
   };
   assert.doesNotThrow(() => collectWorkingTreeDiff(runGit, {}));

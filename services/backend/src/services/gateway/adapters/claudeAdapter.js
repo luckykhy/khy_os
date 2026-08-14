@@ -8,20 +8,30 @@
  */
 const { spawn, spawnSync } = require('child_process');
 const path = require('path');
-const { detectErrorKindDeep, formatErrorMessage } = require('../../errorClassifier');
+
 // Model-name SSOT: default Claude model flows from constants/models.js so
 // switching the tier model edits one place (env ANTHROPIC_MODEL overrides first).
 const { PRIMARY: MODELS } = require('../../../constants/models');
+const {
+  isWin,
+  platformShell,
+  safeKill,
+  getShellConfiguration,
+} = require('../../../tools/platformUtils');
 const { extractPrimaryApiKey } = require('../../apiKeyFormat');
-const { isWin, platformShell, safeKill, getShellConfiguration } = require('../../../tools/platformUtils');
+const { detectErrorKindDeep, formatErrorMessage } = require('../../errorClassifier');
 const { createAdapterRuntimeDiagnosticsStore } = require('../runtimeDiagnosticsStore');
-const { toAnthropicImageBlocks, toAnthropicDocumentBlocks } = require('./_imageCompat');
-const { processStreamEvent: _sharedProcessStreamEvent, createStreamState } = require('./_streamProcessor');
+
 const { normalizeAbortReason, isAbortLikeError } = require('./_abortHelpers');
+const { normalizeCacheUsage } = require('./_cacheUsage');
 const { classifyAdapterError } = require('./_errorClassifiers');
+const { toAnthropicImageBlocks, toAnthropicDocumentBlocks } = require('./_imageCompat');
 const { createProtocolHandler } = require('./_protocolPipeline');
 const { buildSuccess, buildFailure } = require('./_responseBuilder');
-const { normalizeCacheUsage } = require('./_cacheUsage');
+const {
+  processStreamEvent: _sharedProcessStreamEvent,
+  createStreamState,
+} = require('./_streamProcessor');
 // Portable claude (便携版 ~/.khy/tools) spawn/detect helpers — shared leaf keeps
 // this 2500-line-capped file's call sites tiny; never throws (falls back to bare).
 const { portableSpawn: _portableClaudeSpawn, portableInstalled: _portableClaudeInstalled } =
@@ -34,15 +44,24 @@ const _anthropicHandler = createProtocolHandler({ protocol: 'anthropic', adapter
 let _genaiEvents = null;
 function genai() {
   if (_genaiEvents === null) {
-    try { _genaiEvents = require('../../agentsight/genaiEvents'); }
-    catch { _genaiEvents = false; }
+    try {
+      _genaiEvents = require('../../agentsight/genaiEvents');
+    } catch {
+      _genaiEvents = false;
+    }
   }
   return _genaiEvents || null;
 }
 
 const TIMEOUT_MS = parseInt(process.env.GATEWAY_CLAUDE_TIMEOUT_MS || '240000', 10);
-const IDLE_TIMEOUT_MS = Math.max(0, parseInt(process.env.GATEWAY_CLAUDE_IDLE_TIMEOUT_MS || '180000', 10) || 0);
-const HANDSHAKE_TIMEOUT_MS = Math.max(0, parseInt(process.env.GATEWAY_CLAUDE_HANDSHAKE_TIMEOUT_MS || '10000', 10) || 10000);
+const IDLE_TIMEOUT_MS = Math.max(
+  0,
+  parseInt(process.env.GATEWAY_CLAUDE_IDLE_TIMEOUT_MS || '180000', 10) || 0
+);
+const HANDSHAKE_TIMEOUT_MS = Math.max(
+  0,
+  parseInt(process.env.GATEWAY_CLAUDE_HANDSHAKE_TIMEOUT_MS || '10000', 10) || 10000
+);
 const MAX_BUFFER = 10 * 1024 * 1024;
 
 // Direct mode constants — bypass CLI, call Anthropic Messages API directly
@@ -52,9 +71,10 @@ const MAX_BUFFER = 10 * 1024 * 1024;
 //   GATEWAY_CLAUDE_MODE=auto    → direct if API key present, else bridge (DEFAULT)
 const _CLAUDE_MODE_RAW = String(process.env.GATEWAY_CLAUDE_MODE || 'auto').toLowerCase();
 function _hasAnthropicKey() {
-  const envKey = extractPrimaryApiKey(process.env.ANTHROPIC_API_KEY)
-    || extractPrimaryApiKey(process.env.ANTHROPIC_AUTH_TOKEN)
-    || extractPrimaryApiKey(process.env.CLAUDE_API_KEY);
+  const envKey =
+    extractPrimaryApiKey(process.env.ANTHROPIC_API_KEY) ||
+    extractPrimaryApiKey(process.env.ANTHROPIC_AUTH_TOKEN) ||
+    extractPrimaryApiKey(process.env.CLAUDE_API_KEY);
   if (envKey) {
     return true;
   }
@@ -63,7 +83,9 @@ function _hasAnthropicKey() {
     const pool = require('../../apiKeyPool');
     pool.init();
     return pool.hasAvailableKeys('anthropic');
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -83,11 +105,17 @@ function _hasAnthropicKey() {
 function _resolveAnthropicCredentialFromEnv(env = process.env) {
   const src = env || {};
   const fromApiKey = extractPrimaryApiKey(src.ANTHROPIC_API_KEY);
-  if (fromApiKey) return { apiKey: fromApiKey, source: 'ANTHROPIC_API_KEY' };
+  if (fromApiKey) {
+    return { apiKey: fromApiKey, source: 'ANTHROPIC_API_KEY' };
+  }
   const fromAuthToken = extractPrimaryApiKey(src.ANTHROPIC_AUTH_TOKEN);
-  if (fromAuthToken) return { apiKey: fromAuthToken, source: 'ANTHROPIC_AUTH_TOKEN' };
+  if (fromAuthToken) {
+    return { apiKey: fromAuthToken, source: 'ANTHROPIC_AUTH_TOKEN' };
+  }
   const fromClaude = extractPrimaryApiKey(src.CLAUDE_API_KEY);
-  if (fromClaude) return { apiKey: fromClaude, source: 'CLAUDE_API_KEY' };
+  if (fromClaude) {
+    return { apiKey: fromClaude, source: 'CLAUDE_API_KEY' };
+  }
   return { apiKey: null, source: null };
 }
 
@@ -107,8 +135,12 @@ function _resolveAnthropicCredentialFromEnv(env = process.env) {
  * @returns {'bearer'|'x-api-key'|'both'}
  */
 function _resolveAnthropicAuthScheme(source, env = process.env) {
-  const override = String(((env || {}).ANTHROPIC_AUTH_SCHEME) || '').trim().toLowerCase();
-  if (override === 'bearer' || override === 'x-api-key' || override === 'both') return override;
+  const override = String((env || {}).ANTHROPIC_AUTH_SCHEME || '')
+    .trim()
+    .toLowerCase();
+  if (override === 'bearer' || override === 'x-api-key' || override === 'both') {
+    return override;
+  }
   // auto (default): source-aware — AUTH_TOKEN relays expect Bearer.
   return source === 'ANTHROPIC_AUTH_TOKEN' ? 'bearer' : 'x-api-key';
 }
@@ -126,19 +158,30 @@ function _resolveAnthropicAuthScheme(source, env = process.env) {
  */
 function _buildAnthropicAuthHeaders(apiKey, scheme) {
   const key = String(apiKey || '');
-  if (scheme === 'bearer') return { Authorization: `Bearer ${key}` };
-  if (scheme === 'both') return { 'x-api-key': key, Authorization: `Bearer ${key}` };
+  if (scheme === 'bearer') {
+    return { Authorization: `Bearer ${key}` };
+  }
+  if (scheme === 'both') {
+    return { 'x-api-key': key, Authorization: `Bearer ${key}` };
+  }
   return { 'x-api-key': key };
 }
 
 function resolveConnectionMode() {
-  if (_CLAUDE_MODE_RAW === 'direct') return 'direct';
-  if (_CLAUDE_MODE_RAW === 'bridge' || _CLAUDE_MODE_RAW === 'cli') return 'bridge';
+  if (_CLAUDE_MODE_RAW === 'direct') {
+    return 'direct';
+  }
+  if (_CLAUDE_MODE_RAW === 'bridge' || _CLAUDE_MODE_RAW === 'cli') {
+    return 'bridge';
+  }
   // auto (default)
   return _hasAnthropicKey() ? 'direct' : 'bridge';
 }
 const DIRECT_MODE = _CLAUDE_MODE_RAW === 'direct';
-const DIRECT_MAX_ITERATIONS = parseInt(process.env.GATEWAY_CLAUDE_DIRECT_MAX_ITERATIONS || '15', 10);
+const DIRECT_MAX_ITERATIONS = parseInt(
+  process.env.GATEWAY_CLAUDE_DIRECT_MAX_ITERATIONS || '15',
+  10
+);
 const DIRECT_TIMEOUT_MS = parseInt(process.env.GATEWAY_CLAUDE_DIRECT_TIMEOUT_MS || '120000', 10);
 const DIRECT_MAX_OUTPUT = 16000; // truncate large tool outputs
 
@@ -150,15 +193,39 @@ function _deferralActive() {
 let _modelTierMod;
 function _resolveTier(model) {
   try {
-    if (!_modelTierMod) _modelTierMod = require('../../modelTier');
+    if (!_modelTierMod) {
+      _modelTierMod = require('../../modelTier');
+    }
     return _modelTierMod.resolveTier(model);
-  } catch { return 'T2'; }
+  } catch {
+    return 'T2';
+  }
 }
 
-// Sticky opt-out: once the live API rejects (400) a request because of an
-// added beta token, drop the optional T0 betas for the rest of this session
-// instead of failing every subsequent request the same way.
+// Sticky-with-TTL opt-out: once the live API rejects (400) a request because of
+// an added beta token, drop the optional T0 betas instead of failing every
+// subsequent request the same way. The opt-out is NOT permanent — a transient
+// upstream/account condition would otherwise degrade interleaved-thinking and
+// the 1M context window for the whole process lifetime. After BETA_OPT_OUT_TTL_MS
+// the flag self-resets so the next request probes the betas again (and re-arms
+// the opt-out immediately if the 400 is still there).
+const BETA_OPT_OUT_TTL_MS = 5 * 60 * 1000;
 let _betaOptOut = false;
+let _betaOptOutAt = 0;
+
+// Single read path for the opt-out flag: expires the flag lazily so every caller
+// (header builder, 1M gate, retry guard) sees the same TTL semantics.
+function _isBetaOptOut() {
+  if (!_betaOptOut) {
+    return false;
+  }
+  if (Date.now() - _betaOptOutAt >= BETA_OPT_OUT_TTL_MS) {
+    _betaOptOut = false;
+    _betaOptOutAt = 0;
+    return false;
+  }
+  return true;
+}
 
 // The Anthropic 1M-context beta (context-1m-2025-08-07) is offered for BOTH
 // Opus 4.x (T0) and Sonnet 4.x (T1 default). It is NOT a frontier-only header
@@ -175,8 +242,12 @@ function _is1MCapableModel(model) {
 // effectiveContextWindow) so the compaction budget never over-claims 1M when the
 // header isn't live.
 function is1MContextActive(model) {
-  if (_betaOptOut) return false;
-  if (process.env.KHY_BETA_1M_CONTEXT === '0') return false;
+  if (_isBetaOptOut()) {
+    return false;
+  }
+  if (process.env.KHY_BETA_1M_CONTEXT === '0') {
+    return false;
+  }
   return _is1MCapableModel(model);
 }
 
@@ -186,12 +257,20 @@ function is1MContextActive(model) {
 // has shown the account/model can't accept them.
 function _buildBetaHeader(model) {
   const parts = ['tool-search-tool-2025-10-19'];
-  if (is1MContextActive(model)) parts.push('context-1m-2025-08-07');
-  if (!_betaOptOut && _resolveTier(model) === 'T0'
-      && process.env.KHY_BETA_INTERLEAVED !== '0') {
+  if (is1MContextActive(model)) {
+    parts.push('context-1m-2025-08-07');
+  }
+  if (
+    !_isBetaOptOut() &&
+    _resolveTier(model) === 'T0' &&
+    process.env.KHY_BETA_INTERLEAVED !== '0'
+  ) {
     parts.push('interleaved-thinking-2025-05-14');
   }
-  const extra = (process.env.KHY_ANTHROPIC_BETA || '').split(',').map(s => s.trim()).filter(Boolean);
+  const extra = (process.env.KHY_ANTHROPIC_BETA || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   parts.push(...extra);
   return parts.join(',');
 }
@@ -204,8 +283,12 @@ function _buildBetaHeader(model) {
 // models and sub-200k declarations pass through unchanged.
 function effectiveContextWindow(model, declared) {
   const d = Number(declared) || 0;
-  if (!/claude|opus|sonnet|haiku/i.test(String(model || ''))) return d;
-  if (d > 200000 && !is1MContextActive(model)) return 200000;
+  if (!/claude|opus|sonnet|haiku/i.test(String(model || ''))) {
+    return d;
+  }
+  if (d > 200000 && !is1MContextActive(model)) {
+    return 200000;
+  }
   return d;
 }
 
@@ -221,13 +304,26 @@ function _defaultThinkingBudget(model) {
 function _readErrorBody(data) {
   return new Promise((resolve) => {
     if (!data || typeof data.on !== 'function') {
-      try { resolve(String(data || '')); } catch { resolve(''); }
+      try {
+        resolve(String(data || ''));
+      } catch {
+        resolve('');
+      }
       return;
     }
     let buf = '';
     let done = false;
-    const finish = () => { if (!done) { done = true; resolve(buf); } };
-    data.on('data', (c) => { if (buf.length < 8192) buf += c.toString('utf8'); });
+    const finish = () => {
+      if (!done) {
+        done = true;
+        resolve(buf);
+      }
+    };
+    data.on('data', (c) => {
+      if (buf.length < 8192) {
+        buf += c.toString('utf8');
+      }
+    });
     data.on('end', finish);
     data.on('error', finish);
     setTimeout(finish, 2000); // never hang on a malformed error stream
@@ -241,34 +337,57 @@ function _readErrorBody(data) {
 // caller rethrow. The retry itself is a functional self-heal and is NOT gated —
 // only the caller's user-facing notice is gated (KHY_BETA_FALLBACK_NOTICE).
 async function _maybeRetryWithoutBetas(err, http, baseUrl, body, ac, buildHeaders) {
-  if (_betaOptOut) return null;                       // already stripped — don't loop
-  if (!err || !err.response || err.response.status !== 400) return null;
+  if (_isBetaOptOut()) {
+    return null;
+  } // already stripped — don't loop
+  if (!err || !err.response || err.response.status !== 400) {
+    return null;
+  }
   let text = '';
-  try { text = await _readErrorBody(err.response.data); } catch { return null; }
-  if (!/context-1m|interleaved-thinking/i.test(text)) return null;
-  const strippedBetas = [];
-  if (/context-1m/i.test(text)) strippedBetas.push('context-1m');
-  if (/interleaved-thinking/i.test(text)) strippedBetas.push('interleaved-thinking');
-  _betaOptOut = true;
   try {
-    console.warn('[claudeAdapter] 400 on optional beta header — disabling 1M/interleaved betas for this session and retrying. '
-      + 'Note: context budget may still assume 1M; watch for >200k overflows.');
-  } catch { /* logging is best-effort */ }
+    text = await _readErrorBody(err.response.data);
+  } catch {
+    return null;
+  }
+  if (!/context-1m|interleaved-thinking/i.test(text)) {
+    return null;
+  }
+  const strippedBetas = [];
+  if (/context-1m/i.test(text)) {
+    strippedBetas.push('context-1m');
+  }
+  if (/interleaved-thinking/i.test(text)) {
+    strippedBetas.push('interleaved-thinking');
+  }
+  _betaOptOut = true;
+  _betaOptOutAt = Date.now();
+  try {
+    console.warn(
+      `[claudeAdapter] 400 on optional beta header — disabling 1M/interleaved betas for ${Math.round(BETA_OPT_OUT_TTL_MS / 1000)}s and retrying. ` +
+        'Note: context budget may still assume 1M; watch for >200k overflows.'
+    );
+  } catch {
+    /* logging is best-effort */
+  }
   try {
     const resp = await http.post(`${baseUrl}/v1/messages`, body, {
-      headers: buildHeaders(),                          // betas now suppressed
+      headers: buildHeaders(), // betas now suppressed
       responseType: 'stream',
       signal: ac.signal,
     });
     return { resp, strippedBetas };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // Simple hash for guardrail result comparison (Direct mode)
 function _simpleResultHash(str) {
   let h = 0;
   const s = String(str || '').slice(0, 500);
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
   return h.toString(36);
 }
 const DIRECT_SIMPLE_MAX_TOKENS = Math.max(
@@ -282,11 +401,46 @@ const DIRECT_SIMPLE_MAX_ROUNDS = Math.max(
 
 // Known Claude Code models (detected dynamically where possible)
 const KNOWN_MODELS = [
-  { id: 'claude-opus-4-8', name: 'Claude Opus 4.8', isDefault: false, tier: 'ultra', category: 'reasoning', contextWindow: 1000000 },
-  { id: 'claude-opus-4-7', name: 'Claude Opus 4.7', isDefault: false, tier: 'ultra', category: 'reasoning', contextWindow: 1000000 },
-  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', isDefault: false, tier: 'ultra', category: 'reasoning', contextWindow: 1000000 },
-  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', isDefault: true, tier: 'high', category: 'general', contextWindow: 1000000 },
-  { id: 'claude-haiku-4-5-latest', name: 'Claude Haiku 4.5', isDefault: false, tier: 'medium', category: 'fast', contextWindow: 200000 },
+  {
+    id: 'claude-opus-4-8',
+    name: 'Claude Opus 4.8',
+    isDefault: false,
+    tier: 'ultra',
+    category: 'reasoning',
+    contextWindow: 1000000,
+  },
+  {
+    id: 'claude-opus-4-7',
+    name: 'Claude Opus 4.7',
+    isDefault: false,
+    tier: 'ultra',
+    category: 'reasoning',
+    contextWindow: 1000000,
+  },
+  {
+    id: 'claude-opus-4-6',
+    name: 'Claude Opus 4.6',
+    isDefault: false,
+    tier: 'ultra',
+    category: 'reasoning',
+    contextWindow: 1000000,
+  },
+  {
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
+    isDefault: true,
+    tier: 'high',
+    category: 'general',
+    contextWindow: 1000000,
+  },
+  {
+    id: 'claude-haiku-4-5-latest',
+    name: 'Claude Haiku 4.5',
+    isDefault: false,
+    tier: 'medium',
+    category: 'fast',
+    contextWindow: 200000,
+  },
 ];
 
 let _available = null;
@@ -351,17 +505,20 @@ function classifyClaudeBridgeFailure(snapshot = {}) {
 
 function buildClaudeBridgeDiagnostics(snapshot = {}, message = '') {
   const classified = classifyClaudeBridgeFailure(snapshot);
-  const progressSummary = _runtimeDiagnosticsStore.compactText([
-    `trigger=${classified.trigger}`,
-    `launch=${snapshot.launchMode || 'direct'}`,
-    `events=${Number(snapshot.parsedEventCount || 0)}`,
-    `first_event_ms=${snapshot.firstEventSinceStartMs === null ? 'none' : snapshot.firstEventSinceStartMs}`,
-    `last_event_age_ms=${Number(snapshot.lastEventAgeMs || 0)}`,
-    `last_event=${snapshot.lastEventType || 'none'}`,
-    `control_requests=${Number(snapshot.controlRequestCount || 0)}`,
-    `content_chars=${Number(snapshot.contentChars || 0)}`,
-    `stderr=${snapshot.stderrPreview || 'none'}`,
-  ].join(' | '), 640);
+  const progressSummary = _runtimeDiagnosticsStore.compactText(
+    [
+      `trigger=${classified.trigger}`,
+      `launch=${snapshot.launchMode || 'direct'}`,
+      `events=${Number(snapshot.parsedEventCount || 0)}`,
+      `first_event_ms=${snapshot.firstEventSinceStartMs === null ? 'none' : snapshot.firstEventSinceStartMs}`,
+      `last_event_age_ms=${Number(snapshot.lastEventAgeMs || 0)}`,
+      `last_event=${snapshot.lastEventType || 'none'}`,
+      `control_requests=${Number(snapshot.controlRequestCount || 0)}`,
+      `content_chars=${Number(snapshot.contentChars || 0)}`,
+      `stderr=${snapshot.stderrPreview || 'none'}`,
+    ].join(' | '),
+    640
+  );
   return {
     trigger: classified.trigger,
     summary: classified.summary,
@@ -379,8 +536,12 @@ function attachClaudeBridgeDiagnostics(err, progress = {}, overrides = {}) {
     handshakeTimedOut: overrides.handshakeTimedOut ?? progress.handshakeTimedOut,
   });
   const diagnostics = buildClaudeBridgeDiagnostics(snapshot, error.message || String(err || ''));
-  if (overrides.trigger) diagnostics.trigger = String(overrides.trigger).trim();
-  if (overrides.summary) diagnostics.summary = _runtimeDiagnosticsStore.compactText(overrides.summary, 240);
+  if (overrides.trigger) {
+    diagnostics.trigger = String(overrides.trigger).trim();
+  }
+  if (overrides.summary) {
+    diagnostics.summary = _runtimeDiagnosticsStore.compactText(overrides.summary, 240);
+  }
   error.diagnostics = diagnostics;
   return error;
 }
@@ -421,9 +582,10 @@ function buildClaudeRuntimeDiagnosticsPayload(err, options = {}) {
     requestId: options.requestId || '',
     healed: !!options.healed,
     trigger,
-    category: trigger.includes('timeout') || trigger.includes('no_stream') || trigger.includes('canceled')
-      ? 'stall'
-      : inferBridgeCategory(trigger, options.healed),
+    category:
+      trigger.includes('timeout') || trigger.includes('no_stream') || trigger.includes('canceled')
+        ? 'stall'
+        : inferBridgeCategory(trigger, options.healed),
     phase: options.phase || 'bridge',
     summary,
     diagnosis: _runtimeDiagnosticsStore.compactText(rawMessage, 640),
@@ -432,22 +594,31 @@ function buildClaudeRuntimeDiagnosticsPayload(err, options = {}) {
 }
 
 function inferBridgeCategory(trigger = '', healed = false) {
-  if (healed) return 'recovery';
-  return /timeout|no_stream|canceled|stall/.test(String(trigger || '').toLowerCase()) ? 'stall' : 'transport';
+  if (healed) {
+    return 'recovery';
+  }
+  return /timeout|no_stream|canceled|stall/.test(String(trigger || '').toLowerCase())
+    ? 'stall'
+    : 'transport';
 }
 
 function buildClaudeArgs(options = {}) {
   // Determine permission mode early — it affects arg construction
-  const permissionMode = options.permissionMode || process.env.GATEWAY_CLAUDE_PERMISSION_MODE || 'bypassPermissions';
+  const permissionMode =
+    options.permissionMode || process.env.GATEWAY_CLAUDE_PERMISSION_MODE || 'bypassPermissions';
 
   const args = [
     '-p',
-    '--input-format', 'stream-json',
-    '--output-format', 'stream-json',
+    '--input-format',
+    'stream-json',
+    '--output-format',
+    'stream-json',
     '--verbose',
     '--include-partial-messages',
   ];
-  if (options.model) args.push('--model', options.model);
+  if (options.model) {
+    args.push('--model', options.model);
+  }
 
   // Permission mode
   args.push('--permission-mode', permissionMode);
@@ -458,31 +629,40 @@ function buildClaudeArgs(options = {}) {
   // Route permission prompts through stream-json control_request/control_response.
   // Even in bypassPermissions mode, Claude CLI may still emit control_request events
   // for certain operations — KHY auto-approves them via buildDefaultControlResponse.
-  const permissionPromptTool = options.permissionPromptTool
-    || process.env.GATEWAY_CLAUDE_PERMISSION_PROMPT_TOOL
-    || 'stdio';
-  if (permissionPromptTool) args.push('--permission-prompt-tool', permissionPromptTool);
+  const permissionPromptTool =
+    options.permissionPromptTool || process.env.GATEWAY_CLAUDE_PERMISSION_PROMPT_TOOL || 'stdio';
+  if (permissionPromptTool) {
+    args.push('--permission-prompt-tool', permissionPromptTool);
+  }
 
   // Keep full Claude tool surface by default; only constrain when explicitly requested.
   const allowedTools = options.allowedTools || process.env.GATEWAY_CLAUDE_ALLOWED_TOOLS || '';
-  if (allowedTools) args.push('--allowedTools', allowedTools);
+  if (allowedTools) {
+    args.push('--allowedTools', allowedTools);
+  }
 
   // Allow tool access to /tmp and current workspace by default so bridge tasks
   // can create files under the user's project path without interactive prompts.
   // Additional paths can be injected via env (comma-separated).
   const addDirs = [];
-  if (process.env.GATEWAY_CLAUDE_ADD_TMP !== 'false') addDirs.push('/tmp');
+  if (process.env.GATEWAY_CLAUDE_ADD_TMP !== 'false') {
+    addDirs.push('/tmp');
+  }
   if (process.env.GATEWAY_CLAUDE_ADD_CWD !== 'false') {
     const cwd = process.env.KHYQUANT_CWD || process.env.PWD || process.cwd();
-    if (cwd) addDirs.push(path.resolve(cwd));
+    if (cwd) {
+      addDirs.push(path.resolve(cwd));
+    }
   }
   const extraDirs = (process.env.GATEWAY_CLAUDE_ADD_DIRS || '')
     .split(',')
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
   addDirs.push(...extraDirs);
   for (const dir of Array.from(new Set(addDirs))) {
-    if (!dir) continue;
+    if (!dir) {
+      continue;
+    }
     const normalized = path.isAbsolute(dir) ? path.resolve(dir) : path.resolve(process.cwd(), dir);
     args.push('--add-dir', normalized);
   }
@@ -509,7 +689,9 @@ function diagnoseClaudeLaunchIssue() {
     if (code === 'EPERM' || code === 'EACCES') {
       return `claude launch blocked (${code})`;
     }
-    if (err && err.message) return err.message;
+    if (err && err.message) {
+      return err.message;
+    }
   }
   return '';
 }
@@ -533,9 +715,13 @@ function commandExistsAsync(cmd, forceRefresh = false) {
  * Detect if Claude Code CLI is available.
  */
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
   _available = commandExists('claude');
-  if (!_available && _portableClaudeInstalled()) _available = true;
+  if (!_available && _portableClaudeInstalled()) {
+    _available = true;
+  }
   return _available;
 }
 
@@ -547,10 +733,13 @@ function detect(forceRefresh = false) {
 async function detectAsync(forceRefresh = false) {
   // Non-blocking CLI existence probe (execFile, not spawnSync) so gateway init
   // never freezes the event loop. Mirrors detect()'s caching of `_available`.
-  const cliOk = (_available !== null && !forceRefresh)
-    ? _available
-    : (_available = await commandExistsAsync('claude', forceRefresh));
-  if (!_hasAnthropicKey()) return cliOk;
+  const cliOk =
+    _available !== null && !forceRefresh
+      ? _available
+      : (_available = await commandExistsAsync('claude', forceRefresh));
+  if (!_hasAnthropicKey()) {
+    return cliOk;
+  }
 
   // Lightweight check: HEAD-like GET to the API root.
   // Even a 401 (bad key) or 405 (method not allowed) proves the host is reachable;
@@ -565,23 +754,36 @@ async function detectAsync(forceRefresh = false) {
         const pool = require('../../apiKeyPool');
         pool.init();
         const picked = pool.pick('anthropic');
-        if (picked) { apiKey = picked.key; endpoint = picked.endpoint || ''; credSource = 'pool'; }
-      } catch { /* pool unavailable */ }
+        if (picked) {
+          apiKey = picked.key;
+          endpoint = picked.endpoint || '';
+          credSource = 'pool';
+        }
+      } catch {
+        /* pool unavailable */
+      }
     }
-    if (!apiKey) return cliOk;
+    if (!apiKey) {
+      return cliOk;
+    }
 
     const baseUrl = (endpoint || 'https://api.anthropic.com')
       .replace(/\/+$/, '')
       .replace(/\/v\d+$/, '');
 
     let http;
-    try { http = require('axios'); } catch {
+    try {
+      http = require('axios');
+    } catch {
       http = require(path.resolve(process.cwd(), 'node_modules/axios'));
     }
     // A GET /v1/messages returns 405 (method not allowed) when the host is reachable.
     // Any non-timeout/non-ECONNREFUSED response means the endpoint is alive.
     await http.get(`${baseUrl}/v1/messages`, {
-      headers: { ..._buildAnthropicAuthHeaders(apiKey, _resolveAnthropicAuthScheme(credSource, process.env)), 'anthropic-version': '2024-10-22' },
+      headers: {
+        ..._buildAnthropicAuthHeaders(apiKey, _resolveAnthropicAuthScheme(credSource, process.env)),
+        'anthropic-version': '2024-10-22',
+      },
       timeout: 6000,
       validateStatus: () => true, // accept any HTTP status
     });
@@ -647,7 +849,9 @@ async function listModels() {
 function parseModelId(rawId) {
   const s = String(rawId || '');
   const idx = s.indexOf('::');
-  if (idx === -1) return { modelId: s, mode: null };
+  if (idx === -1) {
+    return { modelId: s, mode: null };
+  }
   return { modelId: s.slice(0, idx), mode: s.slice(idx + 2).toLowerCase() || null };
 }
 
@@ -676,13 +880,17 @@ function _extractLastUserText(flatPrompt) {
       // Collect subsequent lines that aren't a new role marker (multiline user messages)
       let text = m[1];
       for (let j = i + 1; j < lines.length; j++) {
-        if (/^(USER|ASSISTANT|SYSTEM|\[ToolResult\]):/i.test(lines[j])) break;
+        if (/^(USER|ASSISTANT|SYSTEM|\[ToolResult\]):/i.test(lines[j])) {
+          break;
+        }
         text += '\n' + lines[j];
       }
       text = text.trim();
       // Skip system-injected USER messages (planning prompts, skill hints, etc.)
       // These start with [System or contain skill manifest data — not real user input.
-      if (/^\[System/i.test(text)) continue;
+      if (/^\[System/i.test(text)) {
+        continue;
+      }
       return text;
     }
   }
@@ -696,13 +904,17 @@ function _extractLastUserText(flatPrompt) {
  */
 function applyAgenticGuidancePrefix(prompt, rawUserMessage, options) {
   const raw = String(prompt || '');
-  if (process.env.GATEWAY_CLAUDE_NO_GUIDANCE === '1') return raw;
+  if (process.env.GATEWAY_CLAUDE_NO_GUIDANCE === '1') {
+    return raw;
+  }
 
   // Greeting detection: prefer the raw user message (before any system
   // injection by toolUseLoop/planning/skill hints).  Fall back to extracting
   // from the flat prompt only when rawUserMessage is not available.
   const userText = rawUserMessage
-    ? String(rawUserMessage).replace(/\n\n\[System\b[\s\S]*/i, '').trim()
+    ? String(rawUserMessage)
+        .replace(/\n\n\[System\b[\s\S]*/i, '')
+        .trim()
     : _extractLastUserText(raw);
 
   if (looksLikeSimpleGreeting(userText)) {
@@ -727,27 +939,47 @@ function looksLikeSimpleGreeting(input = '') {
     return isGreeting(input);
   } catch {
     // Fallback: minimal inline check if runtime not loadable
-    const compact = String(input || '').trim().toLowerCase().replace(/[！!。.,，?？\s]/g, '');
+    const compact = String(input || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[！!。.,，?？\s]/g, '');
     return new Set(['hi', 'hello', 'hey', '你好', '您好', '嗨']).has(compact);
   }
 }
 
 function looksLikeToolOrCodeTask(input = '') {
   const text = String(input || '');
-  if (!text) return false;
-  if (/[\\/]([\w.-]+[\\/])?[\w.-]+\.\w+/.test(text)) return true;
-  return /(文件|代码|修复|报错|命令|shell|终端|路径|目录|脚本|整理|清理|安装|启动|停止|部署|创建|生成|下载|上传|搜索|查找|运行|打开|关闭|删除|移动|复制|压缩|解压|桌面|重命名|read|edit|write|grep|glob|bash|fix|bug|compile|build|test|error|stack|trace|implement|refactor|api|endpoint|database|sql|organize|setup|deploy|create|generate|download|upload|search|find|run|open|close|delete|move|copy|compress|cleanup|rename)/i.test(text);
+  if (!text) {
+    return false;
+  }
+  if (/[\\/]([\w.-]+[\\/])?[\w.-]+\.\w+/.test(text)) {
+    return true;
+  }
+  return /(文件|代码|修复|报错|命令|shell|终端|路径|目录|脚本|整理|清理|安装|启动|停止|部署|创建|生成|下载|上传|搜索|查找|运行|打开|关闭|删除|移动|复制|压缩|解压|桌面|重命名|read|edit|write|grep|glob|bash|fix|bug|compile|build|test|error|stack|trace|implement|refactor|api|endpoint|database|sql|organize|setup|deploy|create|generate|download|upload|search|find|run|open|close|delete|move|copy|compress|cleanup|rename)/i.test(
+    text
+  );
 }
 
 function shouldUseDirectFastPath(prompt, options = {}) {
-  const override = String(process.env.GATEWAY_CLAUDE_DIRECT_FAST_PATH || '').trim().toLowerCase();
-  if (['0', 'false', 'off', 'no'].includes(override)) return false;
-  if (['1', 'true', 'on', 'yes'].includes(override)) return true;
+  const override = String(process.env.GATEWAY_CLAUDE_DIRECT_FAST_PATH || '')
+    .trim()
+    .toLowerCase();
+  if (['0', 'false', 'off', 'no'].includes(override)) {
+    return false;
+  }
+  if (['1', 'true', 'on', 'yes'].includes(override)) {
+    return true;
+  }
   // Strip [System ...] blocks appended by agenticHarnessService._buildLoopInput
   const raw = String(options.userMessage || prompt || '')
-    .replace(/\n\n\[System\b[\s\S]*/i, '').trim();
-  if (!raw) return false;
-  if (looksLikeToolOrCodeTask(raw)) return false;
+    .replace(/\n\n\[System\b[\s\S]*/i, '')
+    .trim();
+  if (!raw) {
+    return false;
+  }
+  if (looksLikeToolOrCodeTask(raw)) {
+    return false;
+  }
   return looksLikeSimpleGreeting(raw);
 }
 
@@ -771,9 +1003,7 @@ function buildDefaultControlResponse(requestId, request = {}) {
     // IMPORTANT: Claude CLI validates the response with a Zod schema that
     // requires `updatedInput` (Record<string, unknown>) when behavior is
     // "allow". Omitting it causes a ZodError → "权限组件有问题".
-    const toolInput = (request && typeof request === 'object' && request.input)
-      ? request.input
-      : {};
+    const toolInput = request && typeof request === 'object' && request.input ? request.input : {};
     return {
       type: 'control_response',
       response: {
@@ -799,20 +1029,32 @@ function buildDefaultControlResponse(requestId, request = {}) {
 
 function normalizeControlResponse(requestId, request, rawResponse) {
   const fallback = buildDefaultControlResponse(requestId, request);
-  if (!rawResponse || typeof rawResponse !== 'object') return fallback;
+  if (!rawResponse || typeof rawResponse !== 'object') {
+    return fallback;
+  }
 
   // Full envelope already provided by caller.
-  if (rawResponse.type === 'control_response' && rawResponse.response && typeof rawResponse.response === 'object') {
+  if (
+    rawResponse.type === 'control_response' &&
+    rawResponse.response &&
+    typeof rawResponse.response === 'object'
+  ) {
     const resp = { ...rawResponse.response };
-    if (!resp.request_id) resp.request_id = requestId;
+    if (!resp.request_id) {
+      resp.request_id = requestId;
+    }
     return { type: 'control_response', response: resp };
   }
 
   // Caller returned inner response object: { subtype, response?/error? }
   if (rawResponse.subtype || rawResponse.response || rawResponse.error) {
     const resp = { ...rawResponse };
-    if (!resp.request_id) resp.request_id = requestId;
-    if (!resp.subtype) resp.subtype = resp.error ? 'error' : 'success';
+    if (!resp.request_id) {
+      resp.request_id = requestId;
+    }
+    if (!resp.subtype) {
+      resp.subtype = resp.error ? 'error' : 'success';
+    }
     return { type: 'control_response', response: resp };
   }
 
@@ -821,7 +1063,8 @@ function normalizeControlResponse(requestId, request, rawResponse) {
     const sdkPayload = { ...rawResponse };
     // Ensure updatedInput is present for "allow" — Claude CLI Zod schema requires it
     if (sdkPayload.behavior === 'allow' && !sdkPayload.updatedInput) {
-      sdkPayload.updatedInput = (request && typeof request === 'object' && request.input) ? request.input : {};
+      sdkPayload.updatedInput =
+        request && typeof request === 'object' && request.input ? request.input : {};
     }
     return {
       type: 'control_response',
@@ -837,19 +1080,31 @@ function normalizeControlResponse(requestId, request, rawResponse) {
 }
 
 function shouldRetryClaudeTransient(err) {
-  if (!err || isAbortLikeError(err)) return false;
+  if (!err || isAbortLikeError(err)) {
+    return false;
+  }
   const lower = String(err && err.message ? err.message : err || '').toLowerCase();
-  return /reconnecting|channel closed|failed to record rollout items|socket hang up|econnreset|network error|fetch failed|temporarily unavailable|broken pipe|handshake timeout|bridge canceled/.test(lower);
+  return /reconnecting|channel closed|failed to record rollout items|socket hang up|econnreset|network error|fetch failed|temporarily unavailable|broken pipe|handshake timeout|bridge canceled/.test(
+    lower
+  );
 }
 
 function shouldFallbackBridgeToDirect(err, errorType = 'unknown') {
-  if (!err || isAbortLikeError(err)) return false;
-  if (errorType === 'process') return true;
-  if (!['timeout', 'network', 'unknown'].includes(errorType)) return false;
+  if (!err || isAbortLikeError(err)) {
+    return false;
+  }
+  if (errorType === 'process') {
+    return true;
+  }
+  if (!['timeout', 'network', 'unknown'].includes(errorType)) {
+    return false;
+  }
 
   const lower = String(err && err.message ? err.message : err || '').toLowerCase();
   // Bridge-mode transient signatures where direct API mode may still succeed.
-  return /stream-json|handshake timeout|bridge canceled|without emitting stream-json output|channel closed|reconnecting|spawn|exited with code|launch blocked|failed to record rollout items|socket hang up|econnreset|econnrefused|enotfound|eai_again|network error|fetch failed|getaddrinfo|proxy|timeout|timed out/.test(lower);
+  return /stream-json|handshake timeout|bridge canceled|without emitting stream-json output|channel closed|reconnecting|spawn|exited with code|launch blocked|failed to record rollout items|socket hang up|econnreset|econnrefused|enotfound|eai_again|network error|fetch failed|getaddrinfo|proxy|timeout|timed out/.test(
+    lower
+  );
 }
 
 /**
@@ -859,7 +1114,9 @@ function shouldFallbackBridgeToDirect(err, errorType = 'unknown') {
  *   - trackGenai=true (record tool use & LLM call events)
  */
 function processStreamEvent(event, onChunk, appendContent, state) {
-  if (!state) state = createStreamState();
+  if (!state) {
+    state = createStreamState();
+  }
   return _sharedProcessStreamEvent(event, onChunk, appendContent, state, {
     repairJson: true,
     trackGenai: true,
@@ -906,7 +1163,9 @@ async function runClaudeAttempt({
     };
 
     const killChildTree = (signal = 'SIGTERM') => {
-      if (!child) return;
+      if (!child) {
+        return;
+      }
       safeKill(child, signal, 0);
     };
 
@@ -930,7 +1189,9 @@ async function runClaudeAttempt({
     };
 
     const scheduleTerminationEscalation = (graceMs, phaseLabel) => {
-      if (!Number.isFinite(graceMs) || graceMs <= 0) return;
+      if (!Number.isFinite(graceMs) || graceMs <= 0) {
+        return;
+      }
       clearTerminationEscalation();
 
       const waitForIdleThenForceKill = () => {
@@ -952,7 +1213,9 @@ async function runClaudeAttempt({
             type: 'status',
             text: `Claude subprocess still active after ${phaseLabel}; no shutdown progress for ${Math.round(idleMs / 1000)}s, forcing SIGKILL`,
           });
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
         killChildTree('SIGKILL');
         clearTerminationEscalation();
       };
@@ -963,7 +1226,11 @@ async function runClaudeAttempt({
 
     const cleanupAbortWatcher = () => {
       if (abortWatcher && abortSignal && typeof abortSignal.removeEventListener === 'function') {
-        try { abortSignal.removeEventListener('abort', abortWatcher); } catch { /* ignore */ }
+        try {
+          abortSignal.removeEventListener('abort', abortWatcher);
+        } catch {
+          /* ignore */
+        }
       }
       abortWatcher = null;
       clearIdleTimer();
@@ -974,24 +1241,34 @@ async function runClaudeAttempt({
     };
 
     const finishWithError = (err) => {
-      if (finished) return;
+      if (finished) {
+        return;
+      }
       finished = true;
       cleanupAbortWatcher();
       reject(err instanceof Error ? err : new Error(String(err || 'unknown error')));
     };
 
     const finishWithSuccess = (value) => {
-      if (finished) return;
+      if (finished) {
+        return;
+      }
       finished = true;
       cleanupAbortWatcher();
       resolve(value);
     };
 
     const abortChild = (reason) => {
-      if (aborted) return;
+      if (aborted) {
+        return;
+      }
       aborted = true;
       abortReason = normalizeAbortReason(reason);
-      try { onChunk({ type: 'status', text: `Claude request aborted: ${abortReason}` }); } catch { /* best effort */ }
+      try {
+        onChunk({ type: 'status', text: `Claude request aborted: ${abortReason}` });
+      } catch {
+        /* best effort */
+      }
       if (child && !child.killed) {
         killChildTree('SIGTERM');
         scheduleTerminationEscalation(1200, 'abort cleanup');
@@ -1000,7 +1277,9 @@ async function runClaudeAttempt({
     };
 
     if (abortSignal && abortSignal.aborted) {
-      finishWithError(new Error(`Claude request aborted: ${normalizeAbortReason(abortSignal.reason)}`));
+      finishWithError(
+        new Error(`Claude request aborted: ${normalizeAbortReason(abortSignal.reason)}`)
+      );
       return;
     }
 
@@ -1028,7 +1307,7 @@ async function runClaudeAttempt({
       });
       shouldWriteInitialUserLine = false;
     } else {
-      const launchCmd = isWin ? (process.env.COMSPEC || 'cmd.exe') : 'claude';
+      const launchCmd = isWin ? process.env.COMSPEC || 'cmd.exe' : 'claude';
       const launchArgs = isWin ? ['/d', '/s', '/c', 'claude.cmd', ...args] : args;
       const _sp = _portableClaudeSpawn(args, launchCmd, launchArgs);
       child = spawn(_sp.command, _sp.args, {
@@ -1049,7 +1328,9 @@ async function runClaudeAttempt({
     // Generate a trace ID for this attempt
     try {
       parserState._traceId = `claude_${Date.now()}_${require('crypto').randomBytes(4).toString('hex')}`;
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
     let fullContent = '';
     let buffer = '';
     // 跨 chunk 边界安全的 UTF-8 解码器:防 stream-json 里的中文/emoji 被劈成 U+FFFD(◆)。见 _sseTextDecoder.js。
@@ -1068,22 +1349,41 @@ async function runClaudeAttempt({
     // Use a shorter timeout for simple greetings to speed up adapter cascade.
     const isSimple = looksLikeSimpleGreeting(rawUserMessage || prompt);
     const effectiveHandshakeMs = isSimple
-      ? Math.min(HANDSHAKE_TIMEOUT_MS, Math.max(2000, parseInt(process.env.GATEWAY_CLAUDE_HANDSHAKE_SIMPLE_MS || '4000', 10) || 4000))
+      ? Math.min(
+          HANDSHAKE_TIMEOUT_MS,
+          Math.max(
+            2000,
+            parseInt(process.env.GATEWAY_CLAUDE_HANDSHAKE_SIMPLE_MS || '4000', 10) || 4000
+          )
+        )
       : HANDSHAKE_TIMEOUT_MS;
     const effectiveIdleTimeoutMs = (() => {
       const parsedAttemptTimeoutMs = Number.parseInt(timeoutMs, 10);
       if (Number.isFinite(parsedAttemptTimeoutMs) && parsedAttemptTimeoutMs > 0) {
         return Math.max(1000, parsedAttemptTimeoutMs);
       }
-      if (IDLE_TIMEOUT_MS > 0) return IDLE_TIMEOUT_MS;
-      if (TIMEOUT_MS > 0) return Math.max(1000, TIMEOUT_MS);
+      if (IDLE_TIMEOUT_MS > 0) {
+        return IDLE_TIMEOUT_MS;
+      }
+      if (TIMEOUT_MS > 0) {
+        return Math.max(1000, TIMEOUT_MS);
+      }
       return 0;
     })();
     if (effectiveHandshakeMs > 0) {
       handshakeTimer = setTimeout(() => {
-        if (finished || aborted || parsedEventCount > 0) return;
+        if (finished || aborted || parsedEventCount > 0) {
+          return;
+        }
         handshakeTimedOut = true;
-        try { onChunk({ type: 'status', text: `Claude stream-json handshake timeout after ${effectiveHandshakeMs}ms — no events received, killing subprocess` }); } catch { /* best effort */ }
+        try {
+          onChunk({
+            type: 'status',
+            text: `Claude stream-json handshake timeout after ${effectiveHandshakeMs}ms — no events received, killing subprocess`,
+          });
+        } catch {
+          /* best effort */
+        }
         killChildTree('SIGTERM');
         scheduleTerminationEscalation(2000, 'stream-json handshake timeout');
       }, effectiveHandshakeMs);
@@ -1091,17 +1391,23 @@ async function runClaudeAttempt({
     }
 
     const resetIdleTimer = () => {
-      if (!effectiveIdleTimeoutMs || effectiveIdleTimeoutMs <= 0 || finished || aborted) return;
+      if (!effectiveIdleTimeoutMs || effectiveIdleTimeoutMs <= 0 || finished || aborted) {
+        return;
+      }
       clearIdleTimer();
       idleTimer = setTimeout(() => {
-        if (finished || aborted || !child || child.killed) return;
+        if (finished || aborted || !child || child.killed) {
+          return;
+        }
         idleTimedOut = true;
         try {
           onChunk({
             type: 'status',
             text: `Claude bridge idle timeout (${Math.round(effectiveIdleTimeoutMs / 1000)}s no stream activity), terminating subprocess`,
           });
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
         killChildTree('SIGTERM');
         scheduleTerminationEscalation(3000, 'idle timeout recovery');
       }, effectiveIdleTimeoutMs);
@@ -1110,8 +1416,12 @@ async function runClaudeAttempt({
     resetIdleTimer();
 
     const writeInputLine = (obj) => {
-      if (!obj || finished || aborted) return false;
-      if (!child.stdin || child.stdin.destroyed || child.killed) return false;
+      if (!obj || finished || aborted) {
+        return false;
+      }
+      if (!child.stdin || child.stdin.destroyed || child.killed) {
+        return false;
+      }
       try {
         child.stdin.write(`${JSON.stringify(obj)}\n`);
         return true;
@@ -1123,7 +1433,9 @@ async function runClaudeAttempt({
     const queueControlResponse = (event) => {
       const requestId = String(event.request_id || '');
       const request = event.request || {};
-      if (!requestId || !request || typeof request !== 'object') return;
+      if (!requestId || !request || typeof request !== 'object') {
+        return;
+      }
       bridgeProgress.controlRequestCount += 1;
       bridgeProgress.lastEventType = 'control_request';
       bridgeProgress.lastEventAt = Date.now();
@@ -1140,12 +1452,16 @@ async function runClaudeAttempt({
         seenControlRequestIds.add(requestId);
         try {
           onChunk({ type: 'control_request', requestId, request });
-        } catch { /* best effort */ }
+        } catch {
+          /* best effort */
+        }
       }
 
       controlQueue = controlQueue
         .then(async () => {
-          if (aborted || finished) return;
+          if (aborted || finished) {
+            return;
+          }
           let callbackResponse = null;
           if (onControlRequest) {
             try {
@@ -1161,46 +1477,73 @@ async function runClaudeAttempt({
           const responseMessage = normalizeControlResponse(requestId, request, callbackResponse);
           controlResponseCache.set(requestId, responseMessage);
           // Debug: emit what we're sending back so traces can diagnose issues
-          try { onChunk({ type: 'status', text: `[ctrl] ${requestId.slice(0,8)}→${JSON.stringify(responseMessage.response?.response || {}).slice(0,80)}` }); } catch { /* best effort */ }
+          try {
+            onChunk({
+              type: 'status',
+              text: `[ctrl] ${requestId.slice(0, 8)}→${JSON.stringify(responseMessage.response?.response || {}).slice(0, 80)}`,
+            });
+          } catch {
+            /* best effort */
+          }
           if (!writeInputLine(responseMessage)) {
             throw new Error('Failed to send control_response to Claude');
           }
         })
         .catch((err) => {
-          if (aborted || finished || isAbortLikeError(err)) return;
-          try { onChunk({ type: 'status', text: `Control request failed: ${err.message || err}` }); } catch {}
+          if (aborted || finished || isAbortLikeError(err)) {
+            return;
+          }
+          try {
+            onChunk({ type: 'status', text: `Control request failed: ${err.message || err}` });
+          } catch {}
           finishWithError(err);
         });
     };
 
     // Stream error handlers — prevent silent data loss on pipe errors
     child.stdout.on('error', (err) => {
-      if (finished || aborted) return;
+      if (finished || aborted) {
+        return;
+      }
       markSubprocessActivity();
-      try { onChunk({ type: 'status', text: `stdout error: ${err.message}` }); } catch { /* best effort */ }
+      try {
+        onChunk({ type: 'status', text: `stdout error: ${err.message}` });
+      } catch {
+        /* best effort */
+      }
     });
     child.stderr.on('error', () => {
-      if (finished || aborted) return;
+      if (finished || aborted) {
+        return;
+      }
       markSubprocessActivity();
     });
 
     child.stdout.on('data', (chunk) => {
-      if (finished || aborted) return;
+      if (finished || aborted) {
+        return;
+      }
       markSubprocessActivity();
       resetIdleTimer();
       buffer += _textDecoder.write(chunk);
       const lines = buffer.split('\n');
       buffer = lines.pop();
       for (const line of lines) {
-        if (finished || aborted) return;
-        if (!line.trim()) continue;
+        if (finished || aborted) {
+          return;
+        }
+        if (!line.trim()) {
+          continue;
+        }
         try {
           const event = JSON.parse(line);
           parsedEventCount += 1;
           bridgeProgress.parsedEventCount = parsedEventCount;
           bridgeProgress.lastEventType = String(event.type || 'event');
           bridgeProgress.lastEventAt = Date.now();
-          if (!bridgeProgress.firstEventAt) bridgeProgress.firstEventAt = bridgeProgress.lastEventAt;
+          if (!bridgeProgress.firstEventAt) {
+            bridgeProgress.firstEventAt = bridgeProgress.lastEventAt;
+          }
           // First valid event — clear handshake timer
           if (parsedEventCount === 1 && handshakeTimer) {
             clearTimeout(handshakeTimer);
@@ -1210,13 +1553,26 @@ async function runClaudeAttempt({
             queueControlResponse(event);
             continue;
           }
-          processStreamEvent(event, onChunk, (text) => { fullContent += text; }, parserState);
+          processStreamEvent(
+            event,
+            onChunk,
+            (text) => {
+              fullContent += text;
+            },
+            parserState
+          );
           if (event.type === 'result') {
             sawResult = true;
             bridgeProgress.sawResult = true;
-            try { child.stdin.end(); } catch { /* ignore */ }
+            try {
+              child.stdin.end();
+            } catch {
+              /* ignore */
+            }
           }
-        } catch { /* not valid JSON */ }
+        } catch {
+          /* not valid JSON */
+        }
       }
     });
 
@@ -1224,7 +1580,9 @@ async function runClaudeAttempt({
     // Parse stderr the same way as stdout so events are captured regardless of which fd they arrive on.
     let stderrJsonBuffer = '';
     child.stderr.on('data', (chunk) => {
-      if (finished) return;
+      if (finished) {
+        return;
+      }
       markSubprocessActivity();
       resetIdleTimer();
       const raw = chunk.toString();
@@ -1233,9 +1591,13 @@ async function runClaudeAttempt({
       stderrJsonBuffer = stderrLines.pop();
       let anyJson = false;
       for (const line of stderrLines) {
-        if (finished || aborted) break;
+        if (finished || aborted) {
+          break;
+        }
         const trimmed = line.trim();
-        if (!trimmed) continue;
+        if (!trimmed) {
+          continue;
+        }
         // Attempt to parse as stream-json event
         if (trimmed.startsWith('{')) {
           try {
@@ -1246,7 +1608,9 @@ async function runClaudeAttempt({
               bridgeProgress.parsedEventCount = parsedEventCount;
               bridgeProgress.lastEventType = String(event.type || 'event');
               bridgeProgress.lastEventAt = Date.now();
-              if (!bridgeProgress.firstEventAt) bridgeProgress.firstEventAt = bridgeProgress.lastEventAt;
+              if (!bridgeProgress.firstEventAt) {
+                bridgeProgress.firstEventAt = bridgeProgress.lastEventAt;
+              }
               if (parsedEventCount === 1 && handshakeTimer) {
                 clearTimeout(handshakeTimer);
                 handshakeTimer = null;
@@ -1255,19 +1619,36 @@ async function runClaudeAttempt({
                 queueControlResponse(event);
                 continue;
               }
-              processStreamEvent(event, onChunk, (text) => { fullContent += text; }, parserState);
+              processStreamEvent(
+                event,
+                onChunk,
+                (text) => {
+                  fullContent += text;
+                },
+                parserState
+              );
               if (event.type === 'result') {
                 sawResult = true;
                 bridgeProgress.sawResult = true;
-                try { child.stdin.end(); } catch { /* ignore */ }
+                try {
+                  child.stdin.end();
+                } catch {
+                  /* ignore */
+                }
               }
               continue;
             }
-          } catch { /* not valid JSON, fall through to accumulate as plain stderr */ }
+          } catch {
+            /* not valid JSON, fall through to accumulate as plain stderr */
+          }
         }
         // Non-JSON stderr line — accumulate for error diagnostics
-        if (stderr.length < MAX_BUFFER) stderr += trimmed + '\n';
-        if (trimmed) bridgeProgress.stderrPreview = trimmed;
+        if (stderr.length < MAX_BUFFER) {
+          stderr += trimmed + '\n';
+        }
+        if (trimmed) {
+          bridgeProgress.stderrPreview = trimmed;
+        }
       }
       // If we didn't parse any JSON from this chunk, accumulate the entire raw chunk
       if (!anyJson && stderr.length < MAX_BUFFER) {
@@ -1280,8 +1661,13 @@ async function runClaudeAttempt({
       childCloseObserved = true;
       clearTerminationEscalation();
       clearIdleTimer();
-      if (handshakeTimer) { clearTimeout(handshakeTimer); handshakeTimer = null; }
-      if (finished) return;
+      if (handshakeTimer) {
+        clearTimeout(handshakeTimer);
+        handshakeTimer = null;
+      }
+      if (finished) {
+        return;
+      }
       // Drain trailing stdout buffer
       const trailingBuf = buffer.trim();
       if (trailingBuf && trailingBuf.startsWith('{')) {
@@ -1291,11 +1677,20 @@ async function runClaudeAttempt({
           bridgeProgress.parsedEventCount = parsedEventCount;
           bridgeProgress.lastEventType = String(event.type || 'event');
           bridgeProgress.lastEventAt = Date.now();
-          if (!bridgeProgress.firstEventAt) bridgeProgress.firstEventAt = bridgeProgress.lastEventAt;
+          if (!bridgeProgress.firstEventAt) {
+            bridgeProgress.firstEventAt = bridgeProgress.lastEventAt;
+          }
           if (event.type === 'control_request') {
             queueControlResponse(event);
           } else {
-            processStreamEvent(event, onChunk, (text) => { fullContent += text; }, parserState);
+            processStreamEvent(
+              event,
+              onChunk,
+              (text) => {
+                fullContent += text;
+              },
+              parserState
+            );
             if (event.type === 'result') {
               sawResult = true;
               bridgeProgress.sawResult = true;
@@ -1303,7 +1698,14 @@ async function runClaudeAttempt({
           }
         } catch {
           if (trailingBuf.length > 5) {
-            try { onChunk({ type: 'status', text: `Discarded incomplete trailing data (${trailingBuf.length} chars)` }); } catch { /* best effort */ }
+            try {
+              onChunk({
+                type: 'status',
+                text: `Discarded incomplete trailing data (${trailingBuf.length} chars)`,
+              });
+            } catch {
+              /* best effort */
+            }
           }
         }
       }
@@ -1317,63 +1719,103 @@ async function runClaudeAttempt({
             bridgeProgress.parsedEventCount = parsedEventCount;
             bridgeProgress.lastEventType = String(event.type || 'event');
             bridgeProgress.lastEventAt = Date.now();
-            if (!bridgeProgress.firstEventAt) bridgeProgress.firstEventAt = bridgeProgress.lastEventAt;
+            if (!bridgeProgress.firstEventAt) {
+              bridgeProgress.firstEventAt = bridgeProgress.lastEventAt;
+            }
             if (event.type === 'control_request') {
               queueControlResponse(event);
             } else {
-              processStreamEvent(event, onChunk, (text) => { fullContent += text; }, parserState);
+              processStreamEvent(
+                event,
+                onChunk,
+                (text) => {
+                  fullContent += text;
+                },
+                parserState
+              );
               if (event.type === 'result') {
                 sawResult = true;
                 bridgeProgress.sawResult = true;
               }
             }
           }
-        } catch { /* incomplete */ }
+        } catch {
+          /* incomplete */
+        }
       }
       Promise.resolve(controlQueue).finally(() => {
-        if (finished || aborted) return;
+        if (finished || aborted) {
+          return;
+        }
         bridgeProgress.contentChars = fullContent.length;
         bridgeProgress.sawResult = sawResult;
         bridgeProgress.idleTimedOut = idleTimedOut;
         bridgeProgress.handshakeTimedOut = handshakeTimedOut;
-        bridgeProgress.stderrPreview = bridgeProgress.stderrPreview || stderr.trim().split('\n').filter(Boolean).slice(-1)[0] || '';
+        bridgeProgress.stderrPreview =
+          bridgeProgress.stderrPreview ||
+          stderr.trim().split('\n').filter(Boolean).slice(-1)[0] ||
+          '';
         if (idleTimedOut) {
-          finishWithError(attachClaudeBridgeDiagnostics(
-            new Error(`Claude stream idle timeout after ${effectiveIdleTimeoutMs}ms`),
-            bridgeProgress,
-            { idleTimedOut: true }
-          ));
+          finishWithError(
+            attachClaudeBridgeDiagnostics(
+              new Error(`Claude stream idle timeout after ${effectiveIdleTimeoutMs}ms`),
+              bridgeProgress,
+              { idleTimedOut: true }
+            )
+          );
           return;
         }
 
         if (handshakeTimedOut) {
-          finishWithError(attachClaudeBridgeDiagnostics(
-            new Error('Claude stream-json handshake timeout — subprocess produced no events'),
-            bridgeProgress,
-            { handshakeTimedOut: true }
-          ));
+          finishWithError(
+            attachClaudeBridgeDiagnostics(
+              new Error('Claude stream-json handshake timeout — subprocess produced no events'),
+              bridgeProgress,
+              { handshakeTimedOut: true }
+            )
+          );
           return;
         }
 
         // Detect "canceled" in stderr — Claude CLI returns this when stream-json
         // bridge protocol fails internally (not a user abort).
         const stderrLower = stderr.trim().toLowerCase();
-        if (!sawResult && !fullContent.trim() && /\bcancele?d\b/.test(stderrLower) && !isAbortLikeError({ message: stderr })) {
-          finishWithError(attachClaudeBridgeDiagnostics(
-            new Error(`Claude CLI bridge canceled (stderr: ${stderr.trim().slice(0, 200)})`),
-            bridgeProgress,
-            { trigger: 'bridge_canceled', summary: 'Claude bridge canceled before usable completion' }
-          ));
+        if (
+          !sawResult &&
+          !fullContent.trim() &&
+          /\bcancele?d\b/.test(stderrLower) &&
+          !isAbortLikeError({ message: stderr })
+        ) {
+          finishWithError(
+            attachClaudeBridgeDiagnostics(
+              new Error(`Claude CLI bridge canceled (stderr: ${stderr.trim().slice(0, 200)})`),
+              bridgeProgress,
+              {
+                trigger: 'bridge_canceled',
+                summary: 'Claude bridge canceled before usable completion',
+              }
+            )
+          );
           return;
         }
 
-        const emptySilentExit = code === 0 && !sawResult && !fullContent.trim() && !stderr.trim() && parsedEventCount === 0;
+        const emptySilentExit =
+          code === 0 &&
+          !sawResult &&
+          !fullContent.trim() &&
+          !stderr.trim() &&
+          parsedEventCount === 0;
         if (emptySilentExit) {
-          finishWithError(attachClaudeBridgeDiagnostics(
-            new Error('Claude exited without emitting stream-json output'),
-            bridgeProgress,
-            { trigger: 'bridge_no_stream_events', summary: 'Claude bridge exited without emitting stream-json output' }
-          ));
+          finishWithError(
+            attachClaudeBridgeDiagnostics(
+              new Error('Claude exited without emitting stream-json output'),
+              bridgeProgress,
+              {
+                trigger: 'bridge_no_stream_events',
+                summary: 'Claude bridge exited without emitting stream-json output',
+              }
+            )
+          );
           return;
         }
 
@@ -1382,20 +1824,26 @@ async function runClaudeAttempt({
         } else {
           const diag = diagnoseClaudeLaunchIssue();
           const reason = stderr.trim() || diag || `claude exited with code ${code}`;
-          try { onChunk({ type: 'status', text: `Claude process failed: ${reason}` }); } catch {}
-          finishWithError(attachClaudeBridgeDiagnostics(
-            new Error(reason),
-            bridgeProgress,
-            { summary: 'Claude bridge process exited before successful completion' }
-          ));
+          try {
+            onChunk({ type: 'status', text: `Claude process failed: ${reason}` });
+          } catch {}
+          finishWithError(
+            attachClaudeBridgeDiagnostics(new Error(reason), bridgeProgress, {
+              summary: 'Claude bridge process exited before successful completion',
+            })
+          );
         }
       });
     });
 
     child.on('error', (err) => {
-      if (finished || aborted) return;
+      if (finished || aborted) {
+        return;
+      }
       markSubprocessActivity();
-      try { onChunk({ type: 'status', text: `Claude process error: ${err.message}` }); } catch {}
+      try {
+        onChunk({ type: 'status', text: `Claude process error: ${err.message}` });
+      } catch {}
       if (isAbortLikeError(err)) {
         abortChild(err);
       } else {
@@ -1404,12 +1852,20 @@ async function runClaudeAttempt({
     });
 
     child.stdin.on('error', () => {});
-    if (shouldWriteInitialUserLine && !writeInputLine(buildStreamUserMessage(prompt, rawUserMessage))) {
-      finishWithError(attachClaudeBridgeDiagnostics(
-        new Error('Failed to send initial prompt to Claude'),
-        bridgeProgress,
-        { trigger: 'bridge_prompt_write_failed', summary: 'Claude bridge failed while writing the initial prompt to stdin' }
-      ));
+    if (
+      shouldWriteInitialUserLine &&
+      !writeInputLine(buildStreamUserMessage(prompt, rawUserMessage))
+    ) {
+      finishWithError(
+        attachClaudeBridgeDiagnostics(
+          new Error('Failed to send initial prompt to Claude'),
+          bridgeProgress,
+          {
+            trigger: 'bridge_prompt_write_failed',
+            summary: 'Claude bridge failed while writing the initial prompt to stdin',
+          }
+        )
+      );
     }
   });
 }
@@ -1426,12 +1882,15 @@ function buildDirectToolDefs() {
     const registry = require('../../../tools/index');
     const pool = registry.assembleToolPool(undefined, 'coding');
     const defs = [];
+    const revealed = registry.getRevealedDeferred ? registry.getRevealedDeferred() : new Set();
 
     for (const [name, tool] of pool) {
-      if (deferEnabled && tool.shouldDefer && !tool.alwaysLoad) {
-        // Deferred: name-only stub — Anthropic server loads full schema on demand
+      const isRevealed = revealed.has(name);
+      if (deferEnabled && tool.shouldDefer && !tool.alwaysLoad && !isRevealed) {
+        // Deferred and NOT revealed: name-only stub — Anthropic server loads full schema on demand
         defs.push({ name, defer_loading: true });
       } else {
+        // Revealed deferred tool OR non-deferred tool: send full definition
         const fd = tool.toFunctionDef();
         defs.push({
           name: fd.name,
@@ -1449,16 +1908,94 @@ function buildDirectToolDefs() {
       });
     }
 
+    if (process.env.KHY_DEBUG_TOOLS === '1') {
+      const cu = defs.find((d) => d.name === 'ComputerUse' || d.name === 'computer_use');
+      const dc = defs.find((d) => d.name === 'DesktopControl' || d.name === 'desktop_control');
+      console.error(
+        `[DEBUG-DIRECT] pool=${pool.size} defs=${defs.length} ComputerUse=${!!cu}(${cu ? (cu.defer_loading ? 'stub' : 'full') : 'missing'}) DesktopControl=${!!dc}(${dc ? (dc.defer_loading ? 'stub' : 'full') : 'missing'})`
+      );
+    }
+
     return defs;
   } catch {
     // Fallback: hardcoded core tools (no deferral) when registry unavailable
     return [
-      { name: 'Bash', description: 'Execute a shell command. Prefer Glob over find, Grep over grep, Read over cat, Edit over sed, Write over echo.', input_schema: { type: 'object', properties: { command: { type: 'string', description: 'Shell command to execute' }, timeout: { type: 'number', description: 'Timeout in ms (max 60000)' } }, required: ['command'] } },
-      { name: 'Read', description: 'Read a file from the filesystem. Returns content with line numbers (cat -n format).', input_schema: { type: 'object', properties: { file_path: { type: 'string', description: 'Absolute path to the file' }, offset: { type: 'number', description: 'Line number to start from (1-based)' }, limit: { type: 'number', description: 'Number of lines to read' } }, required: ['file_path'] } },
-      { name: 'Glob', description: 'Find files by glob pattern. Use instead of find command.', input_schema: { type: 'object', properties: { pattern: { type: 'string', description: 'Glob pattern (e.g. **/*.js)' }, path: { type: 'string', description: 'Directory to search in' } }, required: ['pattern'] } },
-      { name: 'Grep', description: 'Search file contents with regex. Use instead of grep/rg command.', input_schema: { type: 'object', properties: { pattern: { type: 'string', description: 'Regex pattern to search' }, path: { type: 'string', description: 'File or directory to search' }, output_mode: { type: 'string', description: 'content, files_with_matches, or count' } }, required: ['pattern'] } },
-      { name: 'Edit', description: 'Exact string replacement in files. Must Read the file first. Fails if old_string is not unique.', input_schema: { type: 'object', properties: { file_path: { type: 'string' }, old_string: { type: 'string' }, new_string: { type: 'string' }, replace_all: { type: 'boolean' } }, required: ['file_path', 'old_string', 'new_string'] } },
-      { name: 'Write', description: 'Write/create a file. Must Read existing files first before overwriting.', input_schema: { type: 'object', properties: { file_path: { type: 'string' }, content: { type: 'string' } }, required: ['file_path', 'content'] } },
+      {
+        name: 'Bash',
+        description:
+          'Execute a shell command. Prefer Glob over find, Grep over grep, Read over cat, Edit over sed, Write over echo.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            command: { type: 'string', description: 'Shell command to execute' },
+            timeout: { type: 'number', description: 'Timeout in ms (max 60000)' },
+          },
+          required: ['command'],
+        },
+      },
+      {
+        name: 'Read',
+        description:
+          'Read a file from the filesystem. Returns content with line numbers (cat -n format).',
+        input_schema: {
+          type: 'object',
+          properties: {
+            file_path: { type: 'string', description: 'Absolute path to the file' },
+            offset: { type: 'number', description: 'Line number to start from (1-based)' },
+            limit: { type: 'number', description: 'Number of lines to read' },
+          },
+          required: ['file_path'],
+        },
+      },
+      {
+        name: 'Glob',
+        description: 'Find files by glob pattern. Use instead of find command.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            pattern: { type: 'string', description: 'Glob pattern (e.g. **/*.js)' },
+            path: { type: 'string', description: 'Directory to search in' },
+          },
+          required: ['pattern'],
+        },
+      },
+      {
+        name: 'Grep',
+        description: 'Search file contents with regex. Use instead of grep/rg command.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            pattern: { type: 'string', description: 'Regex pattern to search' },
+            path: { type: 'string', description: 'File or directory to search' },
+            output_mode: { type: 'string', description: 'content, files_with_matches, or count' },
+          },
+          required: ['pattern'],
+        },
+      },
+      {
+        name: 'Edit',
+        description:
+          'Exact string replacement in files. Must Read the file first. Fails if old_string is not unique.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            file_path: { type: 'string' },
+            old_string: { type: 'string' },
+            new_string: { type: 'string' },
+            replace_all: { type: 'boolean' },
+          },
+          required: ['file_path', 'old_string', 'new_string'],
+        },
+      },
+      {
+        name: 'Write',
+        description: 'Write/create a file. Must Read existing files first before overwriting.',
+        input_schema: {
+          type: 'object',
+          properties: { file_path: { type: 'string' }, content: { type: 'string' } },
+          required: ['file_path', 'content'],
+        },
+      },
     ];
   }
 }
@@ -1478,12 +2015,18 @@ function buildDirectToolDefs() {
 async function dispatchDirectTool(name, input) {
   const dir = (() => {
     switch (name) {
-      case 'Read': return 'FileReadTool';
-      case 'Edit': return 'FileEditTool';
-      case 'Write': return 'FileWriteTool';
-      case 'Grep': return 'GrepTool';
-      case 'Glob': return 'GlobTool';
-      default: return null;
+      case 'Read':
+        return 'FileReadTool';
+      case 'Edit':
+        return 'FileEditTool';
+      case 'Write':
+        return 'FileWriteTool';
+      case 'Grep':
+        return 'GrepTool';
+      case 'Glob':
+        return 'GlobTool';
+      default:
+        return null;
     }
   })();
 
@@ -1491,11 +2034,12 @@ async function dispatchDirectTool(name, input) {
     try {
       const toolModule = require(`../../../tools/${dir}`);
       // toolModule is either an instance (module.exports = new FooTool()) or has .default
-      const instance = (toolModule && typeof toolModule.execute === 'function')
-        ? toolModule
-        : (toolModule && toolModule.default && typeof toolModule.default.execute === 'function')
-          ? toolModule.default
-          : null;
+      const instance =
+        toolModule && typeof toolModule.execute === 'function'
+          ? toolModule
+          : toolModule && toolModule.default && typeof toolModule.default.execute === 'function'
+            ? toolModule.default
+            : null;
       if (instance) {
         return await instance.execute(input || {}, {});
       }
@@ -1536,9 +2080,19 @@ function buildDirectSystemPrompt() {
  * Returns { content: string, toolUseBlocks: [], model, finishReason, usage, thinking }
  * (pipeline return shape). Passthrough mode returns a legacy shape with passthrough: true.
  */
-async function callAnthropicStream(apiKey, baseUrl, body, emit, signal, passthroughOptions, authScheme) {
+async function callAnthropicStream(
+  apiKey,
+  baseUrl,
+  body,
+  emit,
+  signal,
+  passthroughOptions,
+  authScheme
+) {
   let http;
-  try { http = require('axios'); } catch {
+  try {
+    http = require('axios');
+  } catch {
     // Fallback: use the project-local axios
     http = require(path.resolve(process.cwd(), 'node_modules/axios'));
   }
@@ -1551,7 +2105,23 @@ async function callAnthropicStream(apiKey, baseUrl, body, emit, signal, passthro
   const connectTimeoutMs = Math.min(DIRECT_TIMEOUT_MS, 60_000);
   const streamIdleTimeoutMs = DIRECT_TIMEOUT_MS; // kill if no data for this long
   const ac = new AbortController();
-  if (signal) signal.addEventListener('abort', () => ac.abort(), { once: true });
+  // Keep a named reference so the listener can be detached when the stream ends
+  // normally. A long-lived caller signal (e.g. one shared across a session)
+  // would otherwise accumulate one dangling listener per request, each pinning
+  // its AbortController alive.
+  const onAbort = () => ac.abort();
+  if (signal) {
+    signal.addEventListener('abort', onAbort, { once: true });
+  }
+  const _detachAbort = () => {
+    if (signal) {
+      try {
+        signal.removeEventListener('abort', onAbort);
+      } catch {
+        /* best-effort */
+      }
+    }
+  };
   const connectTimer = setTimeout(() => ac.abort(), connectTimeoutMs);
 
   const _postHeaders = () => ({
@@ -1583,40 +2153,81 @@ async function callAnthropicStream(apiKey, baseUrl, body, emit, signal, passthro
       try {
         const { buildBetaFallbackNotice } = require('../../../cli/betaFallbackNotice');
         const notice = buildBetaFallbackNotice(retried.strippedBetas);
-        if (notice) emit?.({ type: 'notice', text: notice });
-      } catch { /* notice is best-effort — never block the stream */ }
-    } else throw err;
+        if (notice) {
+          emit?.({ type: 'notice', text: notice });
+        }
+      } catch {
+        /* notice is best-effort — never block the stream */
+      }
+    } else {
+      _detachAbort();
+      throw err;
+    }
   }
 
   // Stale stream detection: use shared StreamStaleDetector instead of manual setTimeout
   let _staleDetectorMod;
-  try { _staleDetectorMod = require('./_streamStaleDetector'); } catch { _staleDetectorMod = null; }
+  try {
+    _staleDetectorMod = require('./_streamStaleDetector');
+  } catch {
+    _staleDetectorMod = null;
+  }
 
   // ── Passthrough 模式：原始 SSE 直接转发，跳过 parse/reconstruct ──
   if (passthroughOptions && typeof passthroughOptions.onRawChunk === 'function') {
     return new Promise((resolve, reject) => {
       let staleDetector = null;
+      // Declared before the branch so the data/end/error handlers below always
+      // close over an initialized binding (no `var` hoisting into TDZ-less
+      // undefined when the stale detector IS available).
+      let _idleTimer = null;
+      let _resetIdle = () => {};
       if (_staleDetectorMod) {
         staleDetector = _staleDetectorMod.attachStaleDetector(resp.data, {
           provider: 'claude',
           abortController: ac,
-          onWarn: (elapsed) => emit?.({ type: 'progress', message: `[stale-warn] No data for ${Math.round(elapsed / 1000)}s` }),
+          onWarn: (elapsed) =>
+            emit?.({
+              type: 'progress',
+              message: `[stale-warn] No data for ${Math.round(elapsed / 1000)}s`,
+            }),
         });
       } else {
         // Fallback: manual idle timer
-        var _idleTimer = setTimeout(() => ac.abort(), streamIdleTimeoutMs);
-        var _resetIdle = () => { clearTimeout(_idleTimer); _idleTimer = setTimeout(() => ac.abort(), streamIdleTimeoutMs); };
+        _idleTimer = setTimeout(() => ac.abort(), streamIdleTimeoutMs);
+        _resetIdle = () => {
+          clearTimeout(_idleTimer);
+          _idleTimer = setTimeout(() => ac.abort(), streamIdleTimeoutMs);
+        };
       }
       resp.data.on('data', (chunk) => {
-        if (!staleDetector) _resetIdle();
+        if (!staleDetector) {
+          _resetIdle();
+        }
         passthroughOptions.onRawChunk(chunk);
       });
       resp.data.on('end', () => {
-        if (staleDetector) staleDetector.stop(); else clearTimeout(_idleTimer);
-        resolve({ content: [], model: '', stop_reason: 'end_turn', usage: { input_tokens: 0, output_tokens: 0 }, passthrough: true });
+        if (staleDetector) {
+          staleDetector.stop();
+        } else {
+          clearTimeout(_idleTimer);
+        }
+        _detachAbort();
+        resolve({
+          content: [],
+          model: '',
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 0, output_tokens: 0 },
+          passthrough: true,
+        });
       });
       resp.data.on('error', (err) => {
-        if (staleDetector) staleDetector.stop(); else clearTimeout(_idleTimer);
+        if (staleDetector) {
+          staleDetector.stop();
+        } else {
+          clearTimeout(_idleTimer);
+        }
+        _detachAbort();
         reject(err);
       });
     });
@@ -1626,20 +2237,30 @@ async function callAnthropicStream(apiKey, baseUrl, body, emit, signal, passthro
   // _anthropicHandler.parseStreamResponse handles SSE framing, content block
   // accumulation, tool_use JSON repair, and stale detection internally.
   // Stale detection options mirror the old attachStaleDetector behavior.
-  const staleOpts = _staleDetectorMod ? {
-    enableStaleDetection: true,
-    staleOptions: {
-      provider: 'claude',
-      onStale: (elapsed) => {
-        emit?.({ type: 'progress', message: `[stale-warn] No data for ${Math.round(elapsed / 1000)}s` });
-        ac.abort();
-      },
-    },
-  } : {};
+  const staleOpts = _staleDetectorMod
+    ? {
+        enableStaleDetection: true,
+        staleOptions: {
+          provider: 'claude',
+          onStale: (elapsed) => {
+            emit?.({
+              type: 'progress',
+              message: `[stale-warn] No data for ${Math.round(elapsed / 1000)}s`,
+            });
+            ac.abort();
+          },
+        },
+      }
+    : {};
 
   // Manual idle timer fallback when _staleDetectorMod is unavailable
   let _fallbackIdleTimer = null;
-  const _clearFallbackIdle = () => { if (_fallbackIdleTimer) { clearTimeout(_fallbackIdleTimer); _fallbackIdleTimer = null; } };
+  const _clearFallbackIdle = () => {
+    if (_fallbackIdleTimer) {
+      clearTimeout(_fallbackIdleTimer);
+      _fallbackIdleTimer = null;
+    }
+  };
   if (!_staleDetectorMod) {
     _fallbackIdleTimer = setTimeout(() => ac.abort(), streamIdleTimeoutMs);
     resp.data.on('data', () => {
@@ -1653,11 +2274,10 @@ async function callAnthropicStream(apiKey, baseUrl, body, emit, signal, passthro
       signal: ac.signal,
       ...staleOpts,
     });
-    _clearFallbackIdle();
     return result;
-  } catch (err) {
+  } finally {
     _clearFallbackIdle();
-    throw err;
+    _detachAbort();
   }
 }
 
@@ -1683,10 +2303,14 @@ async function runClaudeDirect(prompt, options = {}) {
         poolEndpoint = picked.endpoint || null;
         credSource = 'pool';
       }
-    } catch { /* pool unavailable */ }
+    } catch {
+      /* pool unavailable */
+    }
   }
 
-  if (!apiKey) throw new Error('No Anthropic API key — set ANTHROPIC_API_KEY or add keys via API Key Pool');
+  if (!apiKey) {
+    throw new Error('No Anthropic API key — set ANTHROPIC_API_KEY or add keys via API Key Pool');
+  }
 
   // Auth header scheme: AUTH_TOKEN relays expect `Authorization: Bearer`, official
   // api.anthropic.com expects `x-api-key`. Source-aware (see _resolveAnthropicAuthScheme).
@@ -1698,27 +2322,35 @@ async function runClaudeDirect(prompt, options = {}) {
     .replace(/\/v\d+$/, '');
   const model = options.model || process.env.ANTHROPIC_MODEL || MODELS.sonnet;
   const onChunk = typeof options.onChunk === 'function' ? options.onChunk : () => {};
-  const emit = (chunk) => { try { onChunk(chunk); } catch { /* best effort */ } };
+  const emit = (chunk) => {
+    try {
+      onChunk(chunk);
+    } catch {
+      /* best effort */
+    }
+  };
 
   // Strip [System ...] blocks appended by agenticHarnessService._buildLoopInput
   // so greeting/fast-path detection sees only the actual user input.
   const rawUserMessage = String(options.userMessage || prompt || '')
-    .replace(/\n\n\[System\b[\s\S]*/i, '').trim();
+    .replace(/\n\n\[System\b[\s\S]*/i, '')
+    .trim();
   const useDirectFastPath = shouldUseDirectFastPath(prompt, options);
   const promptForModel = useDirectFastPath
-    ? (rawUserMessage || String(prompt || ''))
+    ? rawUserMessage || String(prompt || '')
     : applyAgenticGuidancePrefix(prompt, rawUserMessage);
   const tools = useDirectFastPath ? [] : buildDirectToolDefs();
   const inheritedSystem = String(options.system || '').trim();
   let system = useDirectFastPath
-    ? (inheritedSystem || [
-      'You are a concise, helpful assistant.',
-      'Respond directly and briefly.',
-      'Do not use tools unless absolutely necessary.',
-      `Working directory: ${process.cwd()}`,
-      `Platform: ${process.platform}`,
-    ].join('\n'))
-    : (inheritedSystem || buildDirectSystemPrompt());
+    ? inheritedSystem ||
+      [
+        'You are a concise, helpful assistant.',
+        'Respond directly and briefly.',
+        'Do not use tools unless absolutely necessary.',
+        `Working directory: ${process.cwd()}`,
+        `Platform: ${process.platform}`,
+      ].join('\n')
+    : inheritedSystem || buildDirectSystemPrompt();
   // Append intentGate directive (e.g. CODING_DIRECTIVE, ULTRAWORK_DIRECTIVE)
   // so the model receives behavioural instructions in the system prompt.
   const intentDirective = String(options._intentDirective || '').trim();
@@ -1730,16 +2362,24 @@ async function runClaudeDirect(prompt, options = {}) {
 
   // Build conversation messages (with optional vision / document support)
   let userContent;
-  const _imageBlocks = Array.isArray(options.images) && options.images.length > 0
-    ? toAnthropicImageBlocks(options.images || []) : [];
-  const _documentBlocks = Array.isArray(options.documents) && options.documents.length > 0
-    ? toAnthropicDocumentBlocks(options.documents || []) : [];
+  const _imageBlocks =
+    Array.isArray(options.images) && options.images.length > 0
+      ? toAnthropicImageBlocks(options.images || [])
+      : [];
+  const _documentBlocks =
+    Array.isArray(options.documents) && options.documents.length > 0
+      ? toAnthropicDocumentBlocks(options.documents || [])
+      : [];
   if (_imageBlocks.length > 0 || _documentBlocks.length > 0) {
     // Multi-modal: text + image(s)/document(s) in content array. Documents
     // (e.g. native PDF) give Opus full-fidelity reading beyond text extraction.
     userContent = [{ type: 'text', text: promptForModel }];
-    for (const block of _documentBlocks) userContent.push(block);
-    for (const block of _imageBlocks) userContent.push(block);
+    for (const block of _documentBlocks) {
+      userContent.push(block);
+    }
+    for (const block of _imageBlocks) {
+      userContent.push(block);
+    }
   } else {
     userContent = promptForModel;
   }
@@ -1750,14 +2390,16 @@ async function runClaudeDirect(prompt, options = {}) {
     // structuredMessages contains system + user/assistant turns.
     // Filter out system messages (handled via separate `system` param) and
     // ensure the current user message (with possible images) is the final entry.
-    const historyMsgs = options.structuredMessages.filter(m => m.role !== 'system');
+    const historyMsgs = options.structuredMessages.filter((m) => m.role !== 'system');
     // Replace or append the last user message with potentially image-augmented content.
     // 但如果最后一条 user 消息是结构化 tool_result content blocks，不覆盖 —
     // 它已经是正确的 Anthropic 格式，覆盖会丢失 tool_use_id 关联。
     const lastMsg = historyMsgs.length > 0 ? historyMsgs[historyMsgs.length - 1] : null;
-    const lastIsToolResult = lastMsg && lastMsg.role === 'user'
-      && Array.isArray(lastMsg.content)
-      && lastMsg.content.some(b => b && b.type === 'tool_result');
+    const lastIsToolResult =
+      lastMsg &&
+      lastMsg.role === 'user' &&
+      Array.isArray(lastMsg.content) &&
+      lastMsg.content.some((b) => b && b.type === 'tool_result');
     if (lastIsToolResult) {
       // tool_result 消息保持原样，不覆盖
       messages = historyMsgs;
@@ -1772,7 +2414,19 @@ async function runClaudeDirect(prompt, options = {}) {
     messages = [{ role: 'user', content: userContent }];
   }
 
-  const state = { toolCalls: 0, toolDurationMs: 0, finalText: [], toolCallLog: [], lastStopReason: null, toolUseBlocks: [], thinkingBlocks: [], totalInputTokens: 0, totalOutputTokens: 0, totalCacheReadTokens: 0, totalCacheWriteTokens: 0 };
+  const state = {
+    toolCalls: 0,
+    toolDurationMs: 0,
+    finalText: [],
+    toolCallLog: [],
+    lastStopReason: null,
+    toolUseBlocks: [],
+    thinkingBlocks: [],
+    totalInputTokens: 0,
+    totalOutputTokens: 0,
+    totalCacheReadTokens: 0,
+    totalCacheWriteTokens: 0,
+  };
 
   emit({
     type: 'status',
@@ -1800,17 +2454,26 @@ async function runClaudeDirect(prompt, options = {}) {
     const thinkingAllowed = options.thinkingEnabled !== false;
     const wantThinking = thinkingAllowed && !useDirectFastPath && /opus|claude-4/i.test(model);
     if (wantThinking) {
-      const budget = (options.thinking && (options.thinking.budgetTokens || options.thinking.budget_tokens))
-        || _defaultThinkingBudget(model);
+      const budget =
+        (options.thinking && (options.thinking.budgetTokens || options.thinking.budget_tokens)) ||
+        _defaultThinkingBudget(model);
       body.thinking = { type: 'enabled', budget_tokens: budget };
       body.max_tokens = Math.max(body.max_tokens, budget + 4096);
     } else {
       body.thinking = { type: 'disabled' };
     }
     emit({ type: 'status', text: `⚡ Claude Direct Passthrough → ${baseUrl}` });
-    const result = await callAnthropicStream(apiKey, baseUrl, body, emit, options.abortSignal, {
-      onRawChunk: options.onRawChunk,
-    }, authScheme);
+    const result = await callAnthropicStream(
+      apiKey,
+      baseUrl,
+      body,
+      emit,
+      options.abortSignal,
+      {
+        onRawChunk: options.onRawChunk,
+      },
+      authScheme
+    );
     return {
       content: '',
       toolSummary: null,
@@ -1835,7 +2498,9 @@ async function runClaudeDirect(prompt, options = {}) {
         if (messages[i].role === 'user') {
           const content = messages[i].content;
           if (typeof content === 'string') {
-            messages[i].content = [{ type: 'text', text: content, cache_control: { type: 'ephemeral' } }];
+            messages[i].content = [
+              { type: 'text', text: content, cache_control: { type: 'ephemeral' } },
+            ];
           } else if (Array.isArray(content) && content.length > 0) {
             const last = content[content.length - 1];
             content[content.length - 1] = { ...last, cache_control: { type: 'ephemeral' } };
@@ -1852,8 +2517,12 @@ async function runClaudeDirect(prompt, options = {}) {
     // mutates `system`). The once-marker is consumed (deleted) here exactly once.
     try {
       const _bcNonce = require('../breakCacheState').consumeCacheBreakNonce(process.env);
-      if (_bcNonce) system = _bcNonce + system;
-    } catch { /* break-cache is best-effort; never block a request */ }
+      if (_bcNonce) {
+        system = _bcNonce + system;
+      }
+    } catch {
+      /* break-cache is best-effort; never block a request */
+    }
 
     // Stable-prefix mode (DESIGN-ARCH-047): when the system prompt carries the
     // dynamic boundary marker (only emitted under KHY_STABLE_PREFIX=1), split it
@@ -1870,13 +2539,19 @@ async function runClaudeDirect(prompt, options = {}) {
     const _systemPart = (() => {
       let split;
       try {
-        split = require('../../../constants/systemPromptBoundary').splitSystemPromptAtBoundary(system);
+        split = require('../../../constants/systemPromptBoundary').splitSystemPromptAtBoundary(
+          system
+        );
       } catch {
         split = { staticPrefix: '', dynamicSuffix: system };
       }
       if (split.staticPrefix) {
-        const blocks = [{ type: 'text', text: split.staticPrefix, cache_control: { type: 'ephemeral' } }];
-        if (split.dynamicSuffix) blocks.push({ type: 'text', text: split.dynamicSuffix });
+        const blocks = [
+          { type: 'text', text: split.staticPrefix, cache_control: { type: 'ephemeral' } },
+        ];
+        if (split.dynamicSuffix) {
+          blocks.push({ type: 'text', text: split.dynamicSuffix });
+        }
         return blocks;
       }
       const plain = split.dynamicSuffix;
@@ -1889,7 +2564,7 @@ async function runClaudeDirect(prompt, options = {}) {
       model,
       max_tokens: useDirectFastPath
         ? Math.min(options.maxTokens || DIRECT_SIMPLE_MAX_TOKENS, DIRECT_SIMPLE_MAX_TOKENS)
-        : (options.maxTokens || 8192),
+        : options.maxTokens || 16384,
       system: _systemPart,
       messages,
     };
@@ -1903,11 +2578,10 @@ async function runClaudeDirect(prompt, options = {}) {
 
     // Extended thinking
     const thinkingAllowed = options.thinkingEnabled !== false;
-    const _explicitBudget = options.thinking && (options.thinking.budgetTokens || options.thinking.budget_tokens);
-    const wantThinking = thinkingAllowed && !useDirectFastPath && (
-      _explicitBudget
-      || isComplexInput
-    );
+    const _explicitBudget =
+      options.thinking && (options.thinking.budgetTokens || options.thinking.budget_tokens);
+    const wantThinking =
+      thinkingAllowed && !useDirectFastPath && (_explicitBudget || isComplexInput);
     if (wantThinking) {
       const budget = _explicitBudget || _defaultThinkingBudget(model);
       body.thinking = { type: 'enabled', budget_tokens: budget };
@@ -1926,7 +2600,15 @@ async function runClaudeDirect(prompt, options = {}) {
       }
     }
 
-    let result = await callAnthropicStream(apiKey, baseUrl, body, emit, options.abortSignal, undefined, authScheme);
+    let result = await callAnthropicStream(
+      apiKey,
+      baseUrl,
+      body,
+      emit,
+      options.abortSignal,
+      undefined,
+      authScheme
+    );
 
     // Record genai events
     const g = genai();
@@ -1939,7 +2621,9 @@ async function runClaudeDirect(prompt, options = {}) {
           outputTokens: result.usage?.output_tokens || 0,
           durationMs: Date.now() - startMs,
         });
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
 
     state.lastStopReason = result.finishReason || null;
@@ -1965,27 +2649,55 @@ async function runClaudeDirect(prompt, options = {}) {
       state.finalText.push(result.content);
     }
 
-    // Truncation recovery: if text response was cut off by max_tokens, continue
-    if (toolUseBlocks.length === 0 && result.finishReason === 'length') {
+    // Truncation recovery: if text response was cut off by max_tokens, continue.
+    // Guard: skip auto-continue when the stream was interrupted (network error /
+    // stall) rather than hitting a genuine max_tokens cutoff.
+    if (toolUseBlocks.length === 0 && result.finishReason === 'length' && !result.interrupted) {
       let continuationAttempts = 0;
       // Rebuild content blocks from pipeline result for the assistant continuation message
       let lastFinishReason = result.finishReason;
       while (lastFinishReason === 'length' && continuationAttempts < 3) {
         continuationAttempts++;
-        emit({ type: 'status', text: `Claude Direct: 回复被截断，续传中 (${continuationAttempts}/3)` });
+        emit({
+          type: 'status',
+          text: `Claude Direct: 回复被截断，续传中 (${continuationAttempts}/3)`,
+        });
         // Reconstruct Anthropic-format content blocks for the assistant message.
         // Prefer signed thinking blocks (echo-back keeps extended-thinking valid);
         // fall back to the flat thinking string when no signed blocks are present.
         const assistantBlocks = [];
         if (Array.isArray(result.thinkingBlocks) && result.thinkingBlocks.length > 0) {
-          for (const tb of result.thinkingBlocks) assistantBlocks.push(tb);
+          for (const tb of result.thinkingBlocks) {
+            assistantBlocks.push(tb);
+          }
         } else if (result.thinking) {
           assistantBlocks.push({ type: 'thinking', thinking: result.thinking });
         }
-        if (result.content) assistantBlocks.push({ type: 'text', text: result.content });
-        messages.push({ role: 'assistant', content: assistantBlocks.length > 0 ? assistantBlocks : [{ type: 'text', text: '' }] });
-        messages.push({ role: 'user', content: [{ type: 'text', text: 'Continue from where you left off. Do not repeat what you already said.' }] });
-        const contResult = await callAnthropicStream(apiKey, baseUrl, { ...body, messages: messages.slice() }, emit, options.abortSignal, undefined, authScheme);
+        if (result.content) {
+          assistantBlocks.push({ type: 'text', text: result.content });
+        }
+        messages.push({
+          role: 'assistant',
+          content: assistantBlocks.length > 0 ? assistantBlocks : [{ type: 'text', text: '' }],
+        });
+        messages.push({
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Continue from where you left off. Do not repeat what you already said.',
+            },
+          ],
+        });
+        const contResult = await callAnthropicStream(
+          apiKey,
+          baseUrl,
+          { ...body, messages: messages.slice() },
+          emit,
+          options.abortSignal,
+          undefined,
+          authScheme
+        );
         // contResult now uses pipeline shape — text already emitted via emit
         if (contResult.content) {
           state.finalText.push(contResult.content);
@@ -2004,7 +2716,10 @@ async function runClaudeDirect(prompt, options = {}) {
       state.lastStopReason = 'tool_use';
     }
 
-    emit({ type: 'status', text: `Claude Direct: API call complete, ${toolUseBlocks.length} tool calls pending` });
+    emit({
+      type: 'status',
+      text: `Claude Direct: API call complete, ${toolUseBlocks.length} tool calls pending`,
+    });
 
     // Store toolUseBlocks for return
     state.toolUseBlocks = toolUseBlocks;
@@ -2015,14 +2730,20 @@ async function runClaudeDirect(prompt, options = {}) {
         const pool = require('../../apiKeyPool');
         const statusCode = loopErr.response?.status || loopErr.status || 0;
         pool.markFailure(poolKeyId, statusCode, loopErr.message || 'direct mode error');
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
     throw loopErr;
   }
 
   // Track pool key success
   if (poolKeyId) {
-    try { require('../../apiKeyPool').markSuccess(poolKeyId); } catch { /* best effort */ }
+    try {
+      require('../../apiKeyPool').markSuccess(poolKeyId);
+    } catch {
+      /* best effort */
+    }
   }
 
   const content = state.finalText.join('\n').trim();
@@ -2034,17 +2755,23 @@ async function runClaudeDirect(prompt, options = {}) {
     thinkingBlocks: state.thinkingBlocks || [],
     stopReason: state.lastStopReason,
     elapsedMs: Date.now() - startMs,
-    tokenUsage: (state.totalInputTokens || state.totalOutputTokens
-      || state.totalCacheReadTokens || state.totalCacheWriteTokens)
-      ? {
-        inputTokens: state.totalInputTokens,
-        outputTokens: state.totalOutputTokens,
-        totalTokens: state.totalInputTokens + state.totalOutputTokens,
-        ...(state.totalCacheReadTokens || state.totalCacheWriteTokens
-          ? { cacheReadInputTokens: state.totalCacheReadTokens, cacheWriteInputTokens: state.totalCacheWriteTokens }
-          : {}),
-      }
-      : null,
+    tokenUsage:
+      state.totalInputTokens ||
+      state.totalOutputTokens ||
+      state.totalCacheReadTokens ||
+      state.totalCacheWriteTokens
+        ? {
+            inputTokens: state.totalInputTokens,
+            outputTokens: state.totalOutputTokens,
+            totalTokens: state.totalInputTokens + state.totalOutputTokens,
+            ...(state.totalCacheReadTokens || state.totalCacheWriteTokens
+              ? {
+                  cacheReadInputTokens: state.totalCacheReadTokens,
+                  cacheWriteInputTokens: state.totalCacheWriteTokens,
+                }
+              : {}),
+          }
+        : null,
   };
 }
 
@@ -2069,7 +2796,9 @@ async function runClaudeDirect(prompt, options = {}) {
  */
 const _BRIDGE_RAWINPUT_OFF = ['0', 'false', 'off', 'no'];
 function _bridgeToolUseRawInputEnabled(env = process.env) {
-  const v = String((env && env.KHY_BRIDGE_TOOLUSE_RAW_INPUT) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_BRIDGE_TOOLUSE_RAW_INPUT) || '')
+    .trim()
+    .toLowerCase();
   return !_BRIDGE_RAWINPUT_OFF.includes(v);
 }
 
@@ -2077,6 +2806,11 @@ function _bridgeToolUseRawInputEnabled(env = process.env) {
  * Generate a response using Claude Code CLI.
  */
 async function generate(prompt, options = {}) {
+  if (process.env.KHY_DEBUG_TOOLS === '1') {
+    console.error(
+      `[DEBUG-ADAPTER] claudeAdapter.generate called model=${options.model} useDirect=${resolveConnectionMode() === 'direct'}`
+    );
+  }
   const requestId = String(options.requestId || options._diagTraceId || '').trim();
   // ── Resolve connection mode ──
   // Priority: ::mode suffix in model id > options.directMode > env > auto
@@ -2085,17 +2819,27 @@ async function generate(prompt, options = {}) {
   if (typeof options.model === 'string' && options.model.includes('::')) {
     const parsed = parseModelId(options.model);
     resolvedModel = parsed.modelId;
-    if (parsed.mode === 'direct') useDirect = true;
-    else if (parsed.mode === 'bridge' || parsed.mode === 'cli') useDirect = false;
-    else if (parsed.mode === 'auto') useDirect = _hasAnthropicKey();
+    if (parsed.mode === 'direct') {
+      useDirect = true;
+    } else if (parsed.mode === 'bridge' || parsed.mode === 'cli') {
+      useDirect = false;
+    } else if (parsed.mode === 'auto') {
+      useDirect = _hasAnthropicKey();
+    }
   }
   if (useDirect === undefined) {
-    if (options.directMode === true) useDirect = true;
-    else if (options.directMode === false) useDirect = false;
-    else useDirect = resolveConnectionMode() === 'direct';
+    if (options.directMode === true) {
+      useDirect = true;
+    } else if (options.directMode === false) {
+      useDirect = false;
+    } else {
+      useDirect = resolveConnectionMode() === 'direct';
+    }
   }
   // Replace options.model with the base model id (strip ::mode suffix)
-  if (resolvedModel !== options.model) options = { ...options, model: resolvedModel };
+  if (resolvedModel !== options.model) {
+    options = { ...options, model: resolvedModel };
+  }
   if (useDirect) {
     try {
       const result = await runClaudeDirect(prompt, options);
@@ -2145,7 +2889,14 @@ async function generate(prompt, options = {}) {
       adapter: 'claude',
       provider: 'Claude Code',
       errorType: 'unavailable',
-      attempts: [{ provider: 'Claude Code', success: false, error: 'Claude Code CLI not installed (command "claude" not found)', errorType: 'unavailable' }],
+      attempts: [
+        {
+          provider: 'Claude Code',
+          success: false,
+          error: 'Claude Code CLI not installed (command "claude" not found)',
+          errorType: 'unavailable',
+        },
+      ],
     });
   }
 
@@ -2159,15 +2910,24 @@ async function generate(prompt, options = {}) {
   // (chunk.rawInput) over the truncated display summary (chunk.input). See
   // _bridgeToolUseRawInputEnabled() for why the summary path dropped commands.
   const _coerceBridgeInput = (chunk) => {
-    if (_bridgeRawInputEnabled
-        && chunk.rawInput && typeof chunk.rawInput === 'object'
-        && !Array.isArray(chunk.rawInput)
-        && Object.keys(chunk.rawInput).length > 0) {
+    if (
+      _bridgeRawInputEnabled &&
+      chunk.rawInput &&
+      typeof chunk.rawInput === 'object' &&
+      !Array.isArray(chunk.rawInput) &&
+      Object.keys(chunk.rawInput).length > 0
+    ) {
       return chunk.rawInput;
     }
     return typeof chunk.input === 'string'
-      ? (() => { try { return JSON.parse(chunk.input); } catch { return { raw: chunk.input }; } })()
-      : (chunk.input || {});
+      ? (() => {
+          try {
+            return JSON.parse(chunk.input);
+          } catch {
+            return { raw: chunk.input };
+          }
+        })()
+      : chunk.input || {};
   };
   const onChunk = (chunk) => {
     if (chunk && chunk.type === 'tool_use' && chunk.tool) {
@@ -2199,9 +2959,8 @@ async function generate(prompt, options = {}) {
     }
     _rawOnChunk(chunk);
   };
-  const onControlRequest = typeof options.onControlRequest === 'function'
-    ? options.onControlRequest
-    : null;
+  const onControlRequest =
+    typeof options.onControlRequest === 'function' ? options.onControlRequest : null;
   const args = buildClaudeArgs(options);
 
   // Inject critical directives into the prompt for Bridge mode.
@@ -2214,10 +2973,7 @@ async function generate(prompt, options = {}) {
   // In bridge mode, Claude CLI has its own system prompt — the directive text in a
   // user message triggers Claude's prompt injection detection. The important parts
   // (language preference) are already extracted below from the system prompt.
-  bridgePrompt = bridgePrompt.replace(
-    /^\[KHY PRIORITY DIRECTIVE\]\n(?:- [^\n]*\n)*\n?/,
-    ''
-  );
+  bridgePrompt = bridgePrompt.replace(/^\[KHY PRIORITY DIRECTIVE\]\n(?:- [^\n]*\n)*\n?/, '');
 
   const bridgeIntentDirective = String(options._intentDirective || '').trim();
   if (bridgeIntentDirective) {
@@ -2229,7 +2985,9 @@ async function generate(prompt, options = {}) {
   if (_bridgeSystem) {
     const _lwMatch = _bridgeSystem.match(/# 轻量对话[^\n]*\n[\s\S]*?(?=\n#\s|\n\n#|$)/);
     const _langMatch = _bridgeSystem.match(/# Language\n[^\n]+(?:\n[^\n#]+)*/);
-    const _extraDirectives = [_lwMatch && _lwMatch[0], _langMatch && _langMatch[0]].filter(Boolean).join('\n\n');
+    const _extraDirectives = [_lwMatch && _lwMatch[0], _langMatch && _langMatch[0]]
+      .filter(Boolean)
+      .join('\n\n');
     if (_extraDirectives) {
       bridgePrompt = _extraDirectives + '\n\n' + bridgePrompt;
     }
@@ -2254,8 +3012,7 @@ async function generate(prompt, options = {}) {
         firstErrMsg.includes('without emitting stream-json output') ||
         firstErrMsg.includes('handshake timeout') ||
         firstErrMsg.includes('bridge canceled');
-      const shouldRetryWithSeededShell =
-        process.platform !== 'win32' && isBridgeProtocolFailure;
+      const shouldRetryWithSeededShell = process.platform !== 'win32' && isBridgeProtocolFailure;
       const shouldRetryTransient =
         !shouldRetryWithSeededShell &&
         process.env.GATEWAY_CLAUDE_RETRY_TRANSIENT !== 'false' &&
@@ -2263,10 +3020,17 @@ async function generate(prompt, options = {}) {
 
       // Strip verbose/partial flags on retry — they can trigger edge-case bugs
       // in certain Claude CLI versions.
-      const retryArgs = args.filter(a => a !== '--verbose' && a !== '--include-partial-messages');
+      const retryArgs = args.filter((a) => a !== '--verbose' && a !== '--include-partial-messages');
 
       if (shouldRetryWithSeededShell) {
-        try { onChunk({ type: 'status', text: 'Bridge protocol failure — retrying with seeded-shell mode (simplified args)' }); } catch { /* best effort */ }
+        try {
+          onChunk({
+            type: 'status',
+            text: 'Bridge protocol failure — retrying with seeded-shell mode (simplified args)',
+          });
+        } catch {
+          /* best effort */
+        }
         content = await runClaudeAttempt({
           launchMode: 'seeded_shell',
           prompt,
@@ -2284,11 +3048,18 @@ async function generate(prompt, options = {}) {
           category: 'recovery',
           phase: 'bridge',
           summary: 'Claude bridge recovered after retrying with seeded-shell mode',
-          diagnosis: _runtimeDiagnosticsStore.compactText(firstErr?.diagnostics?.progressSummary || firstErrMsg || 'seeded shell retry recovered', 640),
+          diagnosis: _runtimeDiagnosticsStore.compactText(
+            firstErr?.diagnostics?.progressSummary || firstErrMsg || 'seeded shell retry recovered',
+            640
+          ),
           lastError: firstErrMsg,
         });
       } else if (shouldRetryTransient) {
-        try { onChunk({ type: 'status', text: 'Claude transient failure detected, retrying once...' }); } catch { /* best effort */ }
+        try {
+          onChunk({ type: 'status', text: 'Claude transient failure detected, retrying once...' });
+        } catch {
+          /* best effort */
+        }
         content = await runClaudeAttempt({
           launchMode: 'direct',
           prompt,
@@ -2306,7 +3077,10 @@ async function generate(prompt, options = {}) {
           category: 'recovery',
           phase: 'bridge',
           summary: 'Claude bridge recovered after a transient retry',
-          diagnosis: _runtimeDiagnosticsStore.compactText(firstErr?.diagnostics?.progressSummary || firstErrMsg || 'transient retry recovered', 640),
+          diagnosis: _runtimeDiagnosticsStore.compactText(
+            firstErr?.diagnostics?.progressSummary || firstErrMsg || 'transient retry recovered',
+            640
+          ),
           lastError: firstErrMsg,
         });
       } else {
@@ -2318,9 +3092,8 @@ async function generate(prompt, options = {}) {
     // tool_use blocks is authoritative, not the API's stop_reason. The direct
     // path already does this (runClaudeDirect); mirror it here so the bridge
     // path never reports a non-tool_use stop_reason while tool_use blocks exist.
-    const _bridgeStopReasonFinal = _bridgeToolUseBlocks.length > 0
-      ? 'tool_use'
-      : (_bridgeStopReason || null);
+    const _bridgeStopReasonFinal =
+      _bridgeToolUseBlocks.length > 0 ? 'tool_use' : _bridgeStopReason || null;
 
     return buildSuccess(content, {
       adapter: 'claude',
@@ -2342,7 +3115,14 @@ async function generate(prompt, options = {}) {
     // and with Anthropic API key available, try direct mode as last resort.
     if (shouldFallbackBridgeToDirect(err, errorType) && _hasAnthropicKey()) {
       try {
-        try { onChunk({ type: 'status', text: 'Bridge mode failed — auto-falling back to Anthropic Direct API' }); } catch { /* best effort */ }
+        try {
+          onChunk({
+            type: 'status',
+            text: 'Bridge mode failed — auto-falling back to Anthropic Direct API',
+          });
+        } catch {
+          /* best effort */
+        }
         const directResult = await runClaudeDirect(prompt, options);
         recordRuntimeDiagnostics({
           requestId,
@@ -2363,27 +3143,44 @@ async function generate(prompt, options = {}) {
           stopReason: directResult.stopReason || null,
           elapsedMs: directResult.elapsedMs,
           attempts: [
-            { provider: 'Claude Code (bridge)', success: false, error: safeError || err.message, errorType },
+            {
+              provider: 'Claude Code (bridge)',
+              success: false,
+              error: safeError || err.message,
+              errorType,
+            },
             { provider: 'Claude Direct (fallback)', success: true },
           ],
         });
       } catch (directErr) {
         const directSafe = formatErrorMessage(directErr);
         recordRuntimeDiagnostics(runtimePayload);
-        return buildFailure(`Bridge failed: ${safeError || err.message}; Direct fallback also failed: ${directSafe || directErr.message}`, {
-          adapter: 'claude',
-          provider: 'Claude Code',
-          errorType,
-          diagnostics: err?.diagnostics || {
-            trigger: runtimePayload.trigger,
-            summary: runtimePayload.summary,
-            progressSummary: runtimePayload.diagnosis,
-          },
-          attempts: [
-            { provider: 'Claude Code (bridge)', success: false, error: safeError || err.message, errorType },
-            { provider: 'Claude Direct (fallback)', success: false, error: directSafe || directErr.message },
-          ],
-        });
+        return buildFailure(
+          `Bridge failed: ${safeError || err.message}; Direct fallback also failed: ${directSafe || directErr.message}`,
+          {
+            adapter: 'claude',
+            provider: 'Claude Code',
+            errorType,
+            diagnostics: err?.diagnostics || {
+              trigger: runtimePayload.trigger,
+              summary: runtimePayload.summary,
+              progressSummary: runtimePayload.diagnosis,
+            },
+            attempts: [
+              {
+                provider: 'Claude Code (bridge)',
+                success: false,
+                error: safeError || err.message,
+                errorType,
+              },
+              {
+                provider: 'Claude Direct (fallback)',
+                success: false,
+                error: directSafe || directErr.message,
+              },
+            ],
+          }
+        );
       }
     }
 
@@ -2398,7 +3195,9 @@ async function generate(prompt, options = {}) {
         summary: runtimePayload.summary,
         progressSummary: runtimePayload.diagnosis,
       },
-      attempts: [{ provider: 'Claude Code', success: false, error: safeError || err.message, errorType }],
+      attempts: [
+        { provider: 'Claude Code', success: false, error: safeError || err.message, errorType },
+      ],
     });
   }
 }
@@ -2409,7 +3208,9 @@ function getStatus() {
     name: 'Claude Code',
     type: 'claude',
     available: _available,
-    detail: _available ? 'claude CLI 可用' : '未检测到 claude 命令 · 可运行 khy tools install claude 安装便携版',
+    detail: _available
+      ? 'claude CLI 可用'
+      : '未检测到 claude 命令 · 可运行 khy tools install claude 安装便携版',
   };
 }
 
@@ -2432,14 +3233,23 @@ module.exports = {
   effectiveContextWindow,
   __test__: {
     getRuntimeDiagnosticsFile: () => _runtimeDiagnosticsStore.getFile(),
-    readPersistedRuntimeDiagnostics: (options = {}) => _runtimeDiagnosticsStore.readDiagnostic(options),
+    readPersistedRuntimeDiagnostics: (options = {}) =>
+      _runtimeDiagnosticsStore.readDiagnostic(options),
     readPersistedRuntimeDiagnosticsState: () => _runtimeDiagnosticsStore.readState(),
     clearPersistedRuntimeDiagnostics: () => _runtimeDiagnosticsStore.clear(),
     buildBetaHeader: (model) => _buildBetaHeader(model),
     defaultThinkingBudget: (model) => _defaultThinkingBudget(model),
     is1MCapableModel: (model) => _is1MCapableModel(model),
-    setBetaOptOut: (v) => { _betaOptOut = !!v; },
-    getBetaOptOut: () => _betaOptOut,
+    setBetaOptOut: (v) => {
+      _betaOptOut = !!v;
+      _betaOptOutAt = _betaOptOut ? Date.now() : 0;
+    },
+    getBetaOptOut: () => _isBetaOptOut(),
+    betaOptOutTtlMs: () => BETA_OPT_OUT_TTL_MS,
+    // Test hook: back-date the opt-out timestamp to force TTL expiry.
+    expireBetaOptOut: () => {
+      _betaOptOutAt = Date.now() - BETA_OPT_OUT_TTL_MS - 1;
+    },
     bridgeToolUseRawInputEnabled: (env) => _bridgeToolUseRawInputEnabled(env),
     resolveAnthropicCredentialFromEnv: (env) => _resolveAnthropicCredentialFromEnv(env),
     resolveAnthropicAuthScheme: (source, env) => _resolveAnthropicAuthScheme(source, env),

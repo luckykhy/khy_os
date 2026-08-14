@@ -67,17 +67,17 @@ const TIERS = Object.freeze([
  * readFile/…)。createTool 是「铸造任意纯计算工具」的顶点原语(需启用元工具系统方可实际铸造)。
  */
 const META_TOOLS = Object.freeze([
-  'Read',        // 文件读取原语
-  'Write',       // 文件写入原语
-  'Edit',        // 文件就地编辑原语
-  'Glob',        // 文件名/路径检索原语
-  'Grep',        // 内容检索原语
-  'WebFetch',    // 网络取用原语
-  'shellCommand',// 任意命令执行原语
+  'Read', // 文件读取原语
+  'Write', // 文件写入原语
+  'Edit', // 文件就地编辑原语
+  'Glob', // 文件名/路径检索原语
+  'Grep', // 内容检索原语
+  'WebFetch', // 网络取用原语
+  'shellCommand', // 任意命令执行原语
   'executeCode', // 任意代码执行原语
-  'Agent',       // 子代理委派原语(以委派组合能力)
-  'Workflow',    // 多代理编排原语(以编排组合能力)
-  'createTool',  // 元工具铸造原语——组装/铸造出任何新工具(DESIGN-ARCH-017)
+  'Agent', // 子代理委派原语(以委派组合能力)
+  'Workflow', // 多代理编排原语(以编排组合能力)
+  'createTool', // 元工具铸造原语——组装/铸造出任何新工具(DESIGN-ARCH-017)
 ]);
 
 /** 归一化工具键——lowercase + 去非字母数字(复刻 toolContract._toolKey / toolCalling._toolKey)。 */
@@ -98,10 +98,16 @@ function isEnabled(env = process.env) {
     if (flagRegistry.isRegistryEnabled(env)) {
       return flagRegistry.isFlagEnabled('KHY_TOOL_TIER_CATALOG', env);
     }
-    const raw = String((env && env.KHY_TOOL_TIER_CATALOG) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_TOOL_TIER_CATALOG) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -111,9 +117,13 @@ function isEnabled(env = process.env) {
  * @returns {boolean}
  */
 function isMetaTool(name, env = process.env) {
-  if (!isEnabled(env)) return false;
+  if (!isEnabled(env)) {
+    return false;
+  }
   const norm = _normalize(name);
-  if (!norm) return false;
+  if (!norm) {
+    return false;
+  }
   return _META_NORM.has(norm);
 }
 
@@ -130,7 +140,9 @@ function isMetaTool(name, env = process.env) {
  * @returns {number|null}
  */
 function classifyTier(toolOrName, env = process.env) {
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   let name = '';
   let category = '';
   if (typeof toolOrName === 'string') {
@@ -139,9 +151,15 @@ function classifyTier(toolOrName, env = process.env) {
     name = typeof toolOrName.name === 'string' ? toolOrName.name : '';
     category = typeof toolOrName.category === 'string' ? toolOrName.category : '';
   }
-  if (isMetaTool(name, env)) return 1;
-  const cat = String(category || '').trim().toLowerCase();
-  if (['execution', 'filesystem', 'git', 'system'].includes(cat)) return 2;
+  if (isMetaTool(name, env)) {
+    return 1;
+  }
+  const cat = String(category || '')
+    .trim()
+    .toLowerCase();
+  if (['execution', 'filesystem', 'git', 'system'].includes(cat)) {
+    return 2;
+  }
   return 3; // data/analysis/optimization/coordinator/mcp/custom/未知/缺失 → 领域/组合
 }
 
@@ -156,7 +174,9 @@ function getTier(toolOrName, env = process.env) {
  * @returns {string[]}
  */
 function listMetaTools(env = process.env) {
-  if (!isEnabled(env)) return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
   return META_TOOLS.slice();
 }
 
@@ -166,7 +186,9 @@ function listMetaTools(env = process.env) {
  * @returns {Array<{tier:number,key:string,title:string,desc:string}>}
  */
 function listTiers(env = process.env) {
-  if (!isEnabled(env)) return [];
+  if (!isEnabled(env)) {
+    return [];
+  }
   return TIERS.map((t) => ({ tier: t.tier, key: t.key, title: t.title, desc: t.desc }));
 }
 
@@ -177,28 +199,38 @@ function listTiers(env = process.env) {
  * @returns {string}
  */
 function buildTierDirective(env = process.env) {
-  if (!isEnabled(env)) return '';
+  if (!isEnabled(env)) {
+    return '';
+  }
   try {
     const lines = [];
     lines.push('## 工具分级与元工具(单一规范名)');
     lines.push('');
-    lines.push('khyos 的工具按能力分为三级。任何能力都能由**第一级元工具**组装 / 铸造出来——'
-      + '需要现有工具没有的能力时,优先用元工具拼装,而不是新增重名 / 近重名的工具。');
+    lines.push(
+      'khyos 的工具按能力分为三级。任何能力都能由**第一级元工具**组装 / 铸造出来——' +
+        '需要现有工具没有的能力时,优先用元工具拼装,而不是新增重名 / 近重名的工具。'
+    );
     lines.push('');
     for (const t of TIERS) {
       if (t.tier === 1) {
-        lines.push(`- **第 ${t.tier} 级 · ${t.title}(可组装任意工具)**:`
-          + `${META_TOOLS.join(' / ')}——${t.desc}。`);
+        lines.push(
+          `- **第 ${t.tier} 级 · ${t.title}(可组装任意工具)**:` +
+            `${META_TOOLS.join(' / ')}——${t.desc}。`
+        );
       } else {
         lines.push(`- **第 ${t.tier} 级 · ${t.title}**:${t.desc}。`);
       }
     }
     lines.push('');
     lines.push('规则:');
-    lines.push('1. 每个能力只用它的**单一规范名**(如 `Read`,不要用 `readFile` / `read_file` '
-      + '等重复别名);工具名保持单一、简洁、一致。');
-    lines.push('2. 找不到合适工具时,优先用第一级元工具组装;可纯计算完成的新能力用 '
-      + '`createTool` 铸造(需启用元工具系统),切勿新增重名 / 近重名工具。');
+    lines.push(
+      '1. 每个能力只用它的**单一规范名**(如 `Read`,不要用 `readFile` / `read_file` ' +
+        '等重复别名);工具名保持单一、简洁、一致。'
+    );
+    lines.push(
+      '2. 找不到合适工具时,优先用第一级元工具组装;可纯计算完成的新能力用 ' +
+        '`createTool` 铸造(需启用元工具系统),切勿新增重名 / 近重名工具。'
+    );
     return lines.join('\n');
   } catch {
     return ''; // fail-soft:任何异常都回退空串(不注入)

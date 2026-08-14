@@ -40,14 +40,21 @@ function globDoublestarAnchorEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_GLOB_DOUBLESTAR_ANCHOR', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_GLOB_DOUBLESTAR_ANCHOR;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -64,7 +71,9 @@ function globDoublestarAnchorEnabled(env = process.env) {
  */
 function doublestarSlashFragment(env = process.env) {
   try {
-    if (!globDoublestarAnchorEnabled(env)) return null;
+    if (!globDoublestarAnchorEnabled(env)) {
+      return null;
+    }
     return DOUBLESTAR_SLASH_FRAGMENT;
   } catch {
     return null;

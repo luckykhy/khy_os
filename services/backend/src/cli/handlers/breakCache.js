@@ -12,9 +12,9 @@
  * 且网关侧 consumeCacheBreakNonce 恒返回 ''(绝不注入 nonce)。
  */
 
-const { printInfo, printSuccess } = require('../formatters');
-const leaf = require('../breakCache');
 const state = require('../../services/gateway/breakCacheState');
+const leaf = require('../breakCache');
+const { printInfo, printSuccess } = require('../formatters');
 
 async function handleBreakCache(subCommand, args = [], _options = {}) {
   if (!leaf.isEnabled(process.env)) {
@@ -22,7 +22,9 @@ async function handleBreakCache(subCommand, args = [], _options = {}) {
     return false;
   }
 
-  const tokens = [subCommand].concat(Array.isArray(args) ? args : []).filter((t) => t != null && t !== '');
+  const tokens = [subCommand]
+    .concat(Array.isArray(args) ? args : [])
+    .filter((t) => t != null && t !== '');
   const scope = leaf.parseScope(tokens);
 
   switch (scope) {

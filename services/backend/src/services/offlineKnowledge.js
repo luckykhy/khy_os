@@ -18,58 +18,212 @@
 
 const EN_ZH_DICT = {
   // Weather & Nature
-  weather: '天气', temperature: '温度', forecast: '预报', rain: '降雨', snow: '下雪',
-  sunny: '晴天', cloudy: '多云', wind: '风', humidity: '湿度', storm: '暴风雨',
-  clear: '晴朗', fog: '雾', thunder: '雷', celsius: '摄氏度', fahrenheit: '华氏度',
-  sunrise: '日出', sunset: '日落', degree: '度', degrees: '度',
+  weather: '天气',
+  temperature: '温度',
+  forecast: '预报',
+  rain: '降雨',
+  snow: '下雪',
+  sunny: '晴天',
+  cloudy: '多云',
+  wind: '风',
+  humidity: '湿度',
+  storm: '暴风雨',
+  clear: '晴朗',
+  fog: '雾',
+  thunder: '雷',
+  celsius: '摄氏度',
+  fahrenheit: '华氏度',
+  sunrise: '日出',
+  sunset: '日落',
+  degree: '度',
+  degrees: '度',
 
   // Finance & Economy
-  price: '价格', rate: '汇率', exchange: '兑换', currency: '货币', market: '市场',
-  stock: '股票', bitcoin: '比特币', ethereum: '以太坊', crypto: '加密货币',
-  dollar: '美元', yuan: '人民币', euro: '欧元', yen: '日元', pound: '英镑',
-  increase: '上涨', decrease: '下跌', change: '变化', trading: '交易',
-  investment: '投资', profit: '利润', loss: '亏损', volume: '交易量',
+  price: '价格',
+  rate: '汇率',
+  exchange: '兑换',
+  currency: '货币',
+  market: '市场',
+  stock: '股票',
+  bitcoin: '比特币',
+  ethereum: '以太坊',
+  crypto: '加密货币',
+  dollar: '美元',
+  yuan: '人民币',
+  euro: '欧元',
+  yen: '日元',
+  pound: '英镑',
+  increase: '上涨',
+  decrease: '下跌',
+  change: '变化',
+  trading: '交易',
+  investment: '投资',
+  profit: '利润',
+  loss: '亏损',
+  volume: '交易量',
 
   // Technology & Programming
-  server: '服务器', database: '数据库', network: '网络', cloud: '云', api: '接口',
-  error: '错误', warning: '警告', debug: '调试', code: '代码', file: '文件',
-  function: '函数', variable: '变量', string: '字符串', array: '数组', object: '对象',
-  class: '类', method: '方法', interface: '接口', type: '类型', module: '模块',
-  import: '导入', export: '导出', install: '安装', update: '更新', delete: '删除',
-  create: '创建', read: '读取', write: '写入', search: '搜索', download: '下载',
-  upload: '上传', request: '请求', response: '响应', timeout: '超时', connection: '连接',
-  performance: '性能', memory: '内存', cache: '缓存', process: '进程', thread: '线程',
-  compile: '编译', build: '构建', deploy: '部署', test: '测试', version: '版本',
-  repository: '仓库', branch: '分支', commit: '提交', merge: '合并', conflict: '冲突',
-  dependency: '依赖', package: '包', library: '库', framework: '框架', plugin: '插件',
-  authentication: '认证', authorization: '授权', token: '令牌', encrypt: '加密',
-  decrypt: '解密', secure: '安全', vulnerability: '漏洞', permission: '权限',
-  container: '容器', image: '镜像', port: '端口', proxy: '代理', load: '负载',
-  config: '配置', configuration: '配置', setting: '设置', option: '选项',
-  command: '命令', argument: '参数', parameter: '参数', flag: '标志',
-  input: '输入', output: '输出', log: '日志', monitor: '监控', status: '状态',
-  available: '可用', unavailable: '不可用', enabled: '已启用', disabled: '已禁用',
-  success: '成功', failed: '失败', failure: '失败', pending: '等待中',
-  running: '运行中', stopped: '已停止', restart: '重启',
+  server: '服务器',
+  database: '数据库',
+  network: '网络',
+  cloud: '云',
+  api: '接口',
+  error: '错误',
+  warning: '警告',
+  debug: '调试',
+  code: '代码',
+  file: '文件',
+  function: '函数',
+  variable: '变量',
+  string: '字符串',
+  array: '数组',
+  object: '对象',
+  class: '类',
+  method: '方法',
+  interface: '接口',
+  type: '类型',
+  module: '模块',
+  import: '导入',
+  export: '导出',
+  install: '安装',
+  update: '更新',
+  delete: '删除',
+  create: '创建',
+  read: '读取',
+  write: '写入',
+  search: '搜索',
+  download: '下载',
+  upload: '上传',
+  request: '请求',
+  response: '响应',
+  timeout: '超时',
+  connection: '连接',
+  performance: '性能',
+  memory: '内存',
+  cache: '缓存',
+  process: '进程',
+  thread: '线程',
+  compile: '编译',
+  build: '构建',
+  deploy: '部署',
+  test: '测试',
+  version: '版本',
+  repository: '仓库',
+  branch: '分支',
+  commit: '提交',
+  merge: '合并',
+  conflict: '冲突',
+  dependency: '依赖',
+  package: '包',
+  library: '库',
+  framework: '框架',
+  plugin: '插件',
+  authentication: '认证',
+  authorization: '授权',
+  token: '令牌',
+  encrypt: '加密',
+  decrypt: '解密',
+  secure: '安全',
+  vulnerability: '漏洞',
+  permission: '权限',
+  container: '容器',
+  image: '镜像',
+  port: '端口',
+  proxy: '代理',
+  load: '负载',
+  config: '配置',
+  configuration: '配置',
+  setting: '设置',
+  option: '选项',
+  command: '命令',
+  argument: '参数',
+  parameter: '参数',
+  flag: '标志',
+  input: '输入',
+  output: '输出',
+  log: '日志',
+  monitor: '监控',
+  status: '状态',
+  available: '可用',
+  unavailable: '不可用',
+  enabled: '已启用',
+  disabled: '已禁用',
+  success: '成功',
+  failed: '失败',
+  failure: '失败',
+  pending: '等待中',
+  running: '运行中',
+  stopped: '已停止',
+  restart: '重启',
 
   // Common
-  result: '结果', results: '结果', information: '信息', data: '数据',
-  today: '今天', tomorrow: '明天', yesterday: '昨天', current: '当前',
-  about: '关于', example: '示例', description: '描述', name: '名称',
-  list: '列表', total: '总计', count: '数量', number: '数字',
-  source: '来源', latest: '最新', popular: '热门', official: '官方',
-  free: '免费', open: '开源', public: '公共', private: '私有',
-  country: '国家', city: '城市', region: '地区', language: '语言',
-  time: '时间', date: '日期', year: '年', month: '月', day: '天',
-  hour: '小时', minute: '分钟', second: '秒', week: '周',
-  holiday: '假日', festival: '节日', event: '事件',
-  user: '用户', admin: '管理员', system: '系统', application: '应用',
-  feature: '功能', support: '支持', help: '帮助', guide: '指南',
-  issue: '问题', solution: '解决方案', answer: '答案', question: '问题',
-  recommend: '推荐', suggestion: '建议', tip: '提示', note: '注意',
-  maximum: '最大', minimum: '最小', average: '平均', default: '默认',
-  height: '高度', width: '宽度', size: '大小', weight: '重量',
-  distance: '距离', speed: '速度', area: '面积',
+  result: '结果',
+  results: '结果',
+  information: '信息',
+  data: '数据',
+  today: '今天',
+  tomorrow: '明天',
+  yesterday: '昨天',
+  current: '当前',
+  about: '关于',
+  example: '示例',
+  description: '描述',
+  name: '名称',
+  list: '列表',
+  total: '总计',
+  count: '数量',
+  number: '数字',
+  source: '来源',
+  latest: '最新',
+  popular: '热门',
+  official: '官方',
+  free: '免费',
+  open: '开源',
+  public: '公共',
+  private: '私有',
+  country: '国家',
+  city: '城市',
+  region: '地区',
+  language: '语言',
+  time: '时间',
+  date: '日期',
+  year: '年',
+  month: '月',
+  day: '天',
+  hour: '小时',
+  minute: '分钟',
+  second: '秒',
+  week: '周',
+  holiday: '假日',
+  festival: '节日',
+  event: '事件',
+  user: '用户',
+  admin: '管理员',
+  system: '系统',
+  application: '应用',
+  feature: '功能',
+  support: '支持',
+  help: '帮助',
+  guide: '指南',
+  issue: '问题',
+  solution: '解决方案',
+  answer: '答案',
+  question: '问题',
+  recommend: '推荐',
+  suggestion: '建议',
+  tip: '提示',
+  note: '注意',
+  maximum: '最大',
+  minimum: '最小',
+  average: '平均',
+  default: '默认',
+  height: '高度',
+  width: '宽度',
+  size: '大小',
+  weight: '重量',
+  distance: '距离',
+  speed: '速度',
+  area: '面积',
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -93,8 +247,8 @@ const _UNIT_CONVERSIONS = {
   '盎司|ounce|oz': { to: '克/g', factor: 28.3495, category: '重量' },
   '克|g|公克': { to: '盎司/oz', factor: 1 / 28.3495, category: '重量' },
   '吨|ton|t': { to: '千克/kg', factor: 1000, category: '重量' },
-  '斤': { to: '千克/kg', factor: 0.5, category: '重量' },
-  '两': { to: '克/g', factor: 50, category: '重量' },
+  斤: { to: '千克/kg', factor: 0.5, category: '重量' },
+  两: { to: '克/g', factor: 50, category: '重量' },
 
   // Area
   '平方英里|sq mile': { to: '平方公里/km²', factor: 2.58999, category: '面积' },
@@ -116,8 +270,8 @@ const _UNIT_CONVERSIONS = {
 
 // Temperature handled separately (non-linear)
 const _TEMP_CONVERSIONS = {
-  '华氏|fahrenheit|°f': (v) => ({ result: ((v - 32) * 5 / 9).toFixed(1), to: '摄氏度/°C' }),
-  '摄氏|celsius|°c': (v) => ({ result: (v * 9 / 5 + 32).toFixed(1), to: '华氏度/°F' }),
+  '华氏|fahrenheit|°f': (v) => ({ result: (((v - 32) * 5) / 9).toFixed(1), to: '摄氏度/°C' }),
+  '摄氏|celsius|°c': (v) => ({ result: ((v * 9) / 5 + 32).toFixed(1), to: '华氏度/°F' }),
 };
 
 // Unit-conversion patterns. The leading numeric quantifier is bounded to
@@ -128,17 +282,22 @@ const _TEMP_CONVERSIONS = {
 // with model-generated tool params (`toolCalling.js` unit_convert), so a huge
 // digit run froze the turn (>25 s at 60k digits). The bound is byte-identical on
 // every realistic input (verified) — this is a pure-leaf so no env gate is read.
-const _UNIT_CONVERT_RE = /(\d{1,15}(?:\.\d{1,15})?)\s*(?:个)?\s*(.{1,12})\s*(?:等于|是|换算|=|转|转换|换成?|兑)\s*(?:多少)?\s*(.{0,8})/i;
+const _UNIT_CONVERT_RE =
+  /(\d{1,15}(?:\.\d{1,15})?)\s*(?:个)?\s*(.{1,12})\s*(?:等于|是|换算|=|转|转换|换成?|兑)\s*(?:多少)?\s*(.{0,8})/i;
 const _UNIT_CONVERT_RE2 = /(\d{1,15}(?:\.\d{1,15})?)\s*(.{1,12})\s*(?:等于多少|是多少|换算)/i;
 
 function unitConvert(query) {
   const text = String(query || '').trim();
-  let match = text.match(_UNIT_CONVERT_RE) || text.match(_UNIT_CONVERT_RE2);
-  if (!match) return null;
+  const match = text.match(_UNIT_CONVERT_RE) || text.match(_UNIT_CONVERT_RE2);
+  if (!match) {
+    return null;
+  }
 
   const value = parseFloat(match[1]);
   const fromUnit = match[2].trim().toLowerCase();
-  if (isNaN(value)) return null;
+  if (isNaN(value)) {
+    return null;
+  }
 
   // Temperature
   for (const [pattern, fn] of Object.entries(_TEMP_CONVERSIONS)) {
@@ -204,9 +363,20 @@ function httpStatus(query) {
   }
   const code = parseInt(codeMatch[1], 10);
   const entry = _HTTP_STATUS[code];
-  if (entry) return `HTTP ${code} ${entry[0]}\n${entry[1]}`;
+  if (entry) {
+    return `HTTP ${code} ${entry[0]}\n${entry[1]}`;
+  }
   // Unknown code, give category hint
-  const cat = code >= 500 ? '服务器错误' : code >= 400 ? '客户端错误' : code >= 300 ? '重定向' : code >= 200 ? '成功' : '信息';
+  const cat =
+    code >= 500
+      ? '服务器错误'
+      : code >= 400
+        ? '客户端错误'
+        : code >= 300
+          ? '重定向'
+          : code >= 200
+            ? '成功'
+            : '信息';
   return `HTTP ${code} — 非标准状态码 (${cat}类)`;
 }
 
@@ -215,18 +385,48 @@ function httpStatus(query) {
 // ═══════════════════════════════════════════════════════════════════
 
 const _REGEX_PATTERNS = {
-  '邮箱|email': { pattern: '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/', desc: '匹配电子邮箱地址', example: 'user@example.com' },
-  '手机|phone|电话': { pattern: '/^1[3-9]\\d{9}$/', desc: '匹配中国大陆手机号 (11位)', example: '13812345678' },
-  'url|网址|链接': { pattern: '/^https?:\\/\\/[\\w.-]+(?:\\.[\\w.-]+)+[\\w.,@?^=%&:/~+#-]*$/', desc: '匹配 HTTP/HTTPS URL', example: 'https://example.com/path' },
-  'ip|IP地址': { pattern: '/^(?:(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.){3}(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)$/', desc: '匹配 IPv4 地址', example: '192.168.1.1' },
-  '身份证|id card': { pattern: '/^[1-9]\\d{5}(?:19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]$/', desc: '匹配中国大陆18位身份证号', example: '110101199001011234' },
-  '日期|date': { pattern: '/^\\d{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12]\\d|3[01])$/', desc: '匹配 YYYY-MM-DD 日期格式', example: '2026-05-30' },
-  '十六进制|hex|颜色': { pattern: '/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', desc: '匹配十六进制颜色值', example: '#FF5733' },
+  '邮箱|email': {
+    pattern: '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/',
+    desc: '匹配电子邮箱地址',
+    example: 'user@example.com',
+  },
+  '手机|phone|电话': {
+    pattern: '/^1[3-9]\\d{9}$/',
+    desc: '匹配中国大陆手机号 (11位)',
+    example: '13812345678',
+  },
+  'url|网址|链接': {
+    pattern: '/^https?:\\/\\/[\\w.-]+(?:\\.[\\w.-]+)+[\\w.,@?^=%&:/~+#-]*$/',
+    desc: '匹配 HTTP/HTTPS URL',
+    example: 'https://example.com/path',
+  },
+  'ip|IP地址': {
+    pattern: '/^(?:(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.){3}(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)$/',
+    desc: '匹配 IPv4 地址',
+    example: '192.168.1.1',
+  },
+  '身份证|id card': {
+    pattern: '/^[1-9]\\d{5}(?:19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]$/',
+    desc: '匹配中国大陆18位身份证号',
+    example: '110101199001011234',
+  },
+  '日期|date': {
+    pattern: '/^\\d{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12]\\d|3[01])$/',
+    desc: '匹配 YYYY-MM-DD 日期格式',
+    example: '2026-05-30',
+  },
+  '十六进制|hex|颜色': {
+    pattern: '/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/',
+    desc: '匹配十六进制颜色值',
+    example: '#FF5733',
+  },
   '中文|chinese': { pattern: '/[\\u4e00-\\u9fff]+/', desc: '匹配中文字符', example: '你好世界' },
 };
 
 function regexHelper(query) {
-  const text = String(query || '').trim().toLowerCase();
+  const text = String(query || '')
+    .trim()
+    .toLowerCase();
 
   for (const [keywords, info] of Object.entries(_REGEX_PATTERNS)) {
     if (new RegExp(keywords, 'i').test(text)) {
@@ -478,7 +678,9 @@ const _CHEAT_RE = /(?:速查|cheat\s*sheet|常用命令|快捷键|命令大全|�
 const _CHEAT_RE2 = /^(.+?)(?:速查|常用命令|快捷键|命令大全|命令列表|cheat|常用)$/i;
 
 function cheatSheet(query) {
-  const text = String(query || '').trim().toLowerCase();
+  const text = String(query || '')
+    .trim()
+    .toLowerCase();
   const match = text.match(_CHEAT_RE) || text.match(_CHEAT_RE2);
   const topic = match ? match[1].trim().toLowerCase() : text;
 
@@ -497,30 +699,74 @@ function cheatSheet(query) {
 // 6. Common Knowledge
 // ═══════════════════════════════════════════════════════════════════
 
-const _PROVINCES = '中国有 23 个省、5 个自治区、4 个直辖市、2 个特别行政区，共 34 个省级行政区。\n\n' +
+const _PROVINCES =
+  '中国有 23 个省、5 个自治区、4 个直辖市、2 个特别行政区，共 34 个省级行政区。\n\n' +
   '  直辖市: 北京、天津、上海、重庆\n' +
   '  特别行政区: 香港、澳门\n' +
   '  自治区: 内蒙古、广西、西藏、宁夏、新疆';
 
 const _COMMON_KNOWLEDGE = [
   { match: /多少个?省|省级行政区|省份/i, answer: _PROVINCES },
-  { match: /圆周率|pi|π/i, answer: '圆周率 π ≈ 3.14159265358979323846...\n\n记忆口诀: 山巅一寺一壶酒(3.14159) 尔乐苦煞吾(26535)' },
-  { match: /光速/i, answer: '光速 c = 299,792,458 m/s ≈ 30万公里/秒\n\n光从地球到月球约需 1.3 秒\n光从太阳到地球约需 8 分 20 秒' },
-  { match: /声速|音速/i, answer: '标准大气压下 15°C 声速 = 340.3 m/s ≈ 1,225 km/h\n\n马赫数 1 = 1 倍音速' },
-  { match: /地球.*周长|赤道.*长/i, answer: '地球赤道周长 ≈ 40,075 km\n子午线周长 ≈ 40,008 km\n平均半径 ≈ 6,371 km' },
-  { match: /水.*沸点|沸点.*水/i, answer: '纯水在标准大气压 (101.325 kPa) 下沸点为 100°C (212°F)\n海拔每升高 300m，沸点约降低 1°C' },
-  { match: /绝对零度/i, answer: '绝对零度 = 0 K = -273.15°C = -459.67°F\n这是热力学温度的最低极限，理论上不可达到' },
-  { match: /ascii/i, answer: 'ASCII 码表 (常用):\n\n  0-9: 48-57\n  A-Z: 65-90\n  a-z: 97-122\n  空格: 32  换行: 10  Tab: 9\n  !: 33  ": 34  #: 35  $: 36  %: 37\n  &: 38  (: 40  ): 41  *: 42  +: 43' },
-  { match: /进制.*转换|转换.*进制|二进制|八进制|十六进制.*对照/i, answer: '进制对照表:\n\n  十进制  二进制    八进制  十六进制\n  0       0000      0       0\n  1       0001      1       1\n  8       1000      10      8\n  10      1010      12      A\n  15      1111      17      F\n  16      10000     20      10\n  255     11111111  377     FF\n\n转换方法:\n  二→十: 1010 = 1×8+0×4+1×2+0×1 = 10\n  十→二: 10 ÷ 2 逐次取余反序 = 1010' },
-  { match: /时区|utc|gmt/i, answer: '常用时区:\n\n  UTC+8   中国标准时间 (CST/BJT)\n  UTC+9   日本/韩国标准时间 (JST/KST)\n  UTC+0   格林威治标准时间 (GMT/UTC)\n  UTC-5   美国东部时间 (EST)\n  UTC-8   美国太平洋时间 (PST)\n  UTC+1   中欧时间 (CET)\n  UTC+5:30 印度标准时间 (IST)' },
-  { match: /端口|port.*常用|常用.*端口/i, answer: '常用端口号:\n\n  20/21   FTP (数据/控制)\n  22      SSH\n  23      Telnet\n  25      SMTP (邮件发送)\n  53      DNS\n  80      HTTP\n  110     POP3 (邮件接收)\n  143     IMAP (邮件接收)\n  443     HTTPS\n  3306    MySQL\n  3389    RDP (远程桌面)\n  5432    PostgreSQL\n  6379    Redis\n  8080    HTTP (备用)\n  27017   MongoDB' },
-  { match: /chmod|权限.*数字|文件权限/i, answer: 'Linux 文件权限 chmod:\n\n  数字表示: r=4, w=2, x=1\n\n  755 = rwxr-xr-x  (所有者全权限,其他可读执行)\n  644 = rw-r--r--  (所有者读写,其他只读)\n  700 = rwx------  (仅所有者全权限)\n  777 = rwxrwxrwx  (所有人全权限,不推荐)\n  600 = rw-------  (仅所有者读写,私钥文件用)' },
+  {
+    match: /圆周率|pi|π/i,
+    answer:
+      '圆周率 π ≈ 3.14159265358979323846...\n\n记忆口诀: 山巅一寺一壶酒(3.14159) 尔乐苦煞吾(26535)',
+  },
+  {
+    match: /光速/i,
+    answer:
+      '光速 c = 299,792,458 m/s ≈ 30万公里/秒\n\n光从地球到月球约需 1.3 秒\n光从太阳到地球约需 8 分 20 秒',
+  },
+  {
+    match: /声速|音速/i,
+    answer: '标准大气压下 15°C 声速 = 340.3 m/s ≈ 1,225 km/h\n\n马赫数 1 = 1 倍音速',
+  },
+  {
+    match: /地球.*周长|赤道.*长/i,
+    answer: '地球赤道周长 ≈ 40,075 km\n子午线周长 ≈ 40,008 km\n平均半径 ≈ 6,371 km',
+  },
+  {
+    match: /水.*沸点|沸点.*水/i,
+    answer:
+      '纯水在标准大气压 (101.325 kPa) 下沸点为 100°C (212°F)\n海拔每升高 300m，沸点约降低 1°C',
+  },
+  {
+    match: /绝对零度/i,
+    answer: '绝对零度 = 0 K = -273.15°C = -459.67°F\n这是热力学温度的最低极限，理论上不可达到',
+  },
+  {
+    match: /ascii/i,
+    answer:
+      'ASCII 码表 (常用):\n\n  0-9: 48-57\n  A-Z: 65-90\n  a-z: 97-122\n  空格: 32  换行: 10  Tab: 9\n  !: 33  ": 34  #: 35  $: 36  %: 37\n  &: 38  (: 40  ): 41  *: 42  +: 43',
+  },
+  {
+    match: /进制.*转换|转换.*进制|二进制|八进制|十六进制.*对照/i,
+    answer:
+      '进制对照表:\n\n  十进制  二进制    八进制  十六进制\n  0       0000      0       0\n  1       0001      1       1\n  8       1000      10      8\n  10      1010      12      A\n  15      1111      17      F\n  16      10000     20      10\n  255     11111111  377     FF\n\n转换方法:\n  二→十: 1010 = 1×8+0×4+1×2+0×1 = 10\n  十→二: 10 ÷ 2 逐次取余反序 = 1010',
+  },
+  {
+    match: /时区|utc|gmt/i,
+    answer:
+      '常用时区:\n\n  UTC+8   中国标准时间 (CST/BJT)\n  UTC+9   日本/韩国标准时间 (JST/KST)\n  UTC+0   格林威治标准时间 (GMT/UTC)\n  UTC-5   美国东部时间 (EST)\n  UTC-8   美国太平洋时间 (PST)\n  UTC+1   中欧时间 (CET)\n  UTC+5:30 印度标准时间 (IST)',
+  },
+  {
+    match: /端口|port.*常用|常用.*端口/i,
+    answer:
+      '常用端口号:\n\n  20/21   FTP (数据/控制)\n  22      SSH\n  23      Telnet\n  25      SMTP (邮件发送)\n  53      DNS\n  80      HTTP\n  110     POP3 (邮件接收)\n  143     IMAP (邮件接收)\n  443     HTTPS\n  3306    MySQL\n  3389    RDP (远程桌面)\n  5432    PostgreSQL\n  6379    Redis\n  8080    HTTP (备用)\n  27017   MongoDB',
+  },
+  {
+    match: /chmod|权限.*数字|文件权限/i,
+    answer:
+      'Linux 文件权限 chmod:\n\n  数字表示: r=4, w=2, x=1\n\n  755 = rwxr-xr-x  (所有者全权限,其他可读执行)\n  644 = rw-r--r--  (所有者读写,其他只读)\n  700 = rwx------  (仅所有者全权限)\n  777 = rwxrwxrwx  (所有人全权限,不推荐)\n  600 = rw-------  (仅所有者读写,私钥文件用)',
+  },
 ];
 
 function commonKnowledge(query) {
   const text = String(query || '').trim();
   for (const item of _COMMON_KNOWLEDGE) {
-    if (item.match.test(text)) return item.answer;
+    if (item.match.test(text)) {
+      return item.answer;
+    }
   }
   return null;
 }
@@ -530,15 +776,19 @@ function commonKnowledge(query) {
 // ═══════════════════════════════════════════════════════════════════
 
 function translateSnippets(text) {
-  if (!text || typeof text !== 'string') return text;
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
 
   // Skip if already mostly Chinese
   const chineseRatio = (text.match(/[\u4e00-\u9fff]/g) || []).length / text.length;
-  if (chineseRatio > 0.3) return text;
+  if (chineseRatio > 0.3) {
+    return text;
+  }
 
   const words = text.split(/(\s+|[.,;:!?()\[\]{}'"<>\/\\|@#$%^&*+=~`—–-]+)/);
   let translated = false;
-  const result = words.map(w => {
+  const result = words.map((w) => {
     const lower = w.toLowerCase().trim();
     if (EN_ZH_DICT[lower]) {
       translated = true;
@@ -547,7 +797,9 @@ function translateSnippets(text) {
     return w;
   });
 
-  if (!translated) return text;
+  if (!translated) {
+    return text;
+  }
   return result.join('') + ' (机翻)';
 }
 
@@ -555,17 +807,23 @@ function translateSnippets(text) {
 // 8. Unified Query Router
 // ═══════════════════════════════════════════════════════════════════
 
-const _OFFLINE_INTENT_RE = /换算|等于多少|convert|多少.*[里尺磅斤两吨]|英尺|英寸|英里|磅|华氏|摄氏|加仑|盎司|海里|公顷|亩/i;
-const _CHEAT_INTENT_RE = /速查|cheat|常用命令|快捷键|命令大全|git\s*命令|vim\s*命令|docker\s*命令|linux\s*命令|npm\s*命令|python\s*命令|正则.*速查/i;
-const _HTTP_STATUS_RE = /(?:http|状态码|status\s*code).*\d{3}|\d{3}\s*(?:状态码|status|错误码|error\s*code)|^(?:http\s*)?\d{3}$/i;
+const _OFFLINE_INTENT_RE =
+  /换算|等于多少|convert|多少.*[里尺磅斤两吨]|英尺|英寸|英里|磅|华氏|摄氏|加仑|盎司|海里|公顷|亩/i;
+const _CHEAT_INTENT_RE =
+  /速查|cheat|常用命令|快捷键|命令大全|git\s*命令|vim\s*命令|docker\s*命令|linux\s*命令|npm\s*命令|python\s*命令|正则.*速查/i;
+const _HTTP_STATUS_RE =
+  /(?:http|状态码|status\s*code).*\d{3}|\d{3}\s*(?:状态码|status|错误码|error\s*code)|^(?:http\s*)?\d{3}$/i;
 // 自然语言追问形:「404 是什么」「500是什么错误」「403什么意思」——一个**独立的** 3 位数
 // (前后非数字,排除 1404/4040 之类长数误命中)直接跟通用追问后缀。此形被 _HTTP_STATUS_RE
 // 的三种写法全部漏掉(无 http/状态码 前缀、无 状态码/错误码 后缀、非纯裸 3 位锚定)。
 // 仅当该 3 位码确实落在 _HTTP_STATUS 表内才路由(detect 内二次校验),从而绝不把
 // 「365 是什么」这类非状态码的 3 位数误判为 http_status。门控 KHY_HTTP_STATUS_NL。
-const _HTTP_STATUS_NL_RE = /(?:^|[^\d])(\d{3})(?!\d)\s*(?:是什么意思|是什么错误|是什么状态|是什么情况|是什么|是啥|什么意思|啥意思|什么错误|什么状态|代表什么|表示什么|怎么回事|的含义|含义)/i;
-const _REGEX_INTENT_RE = /正则|regex|邮箱正则|手机正则|身份证正则|url正则|ip正则|匹配.*正则|正则.*匹配/i;
-const _KNOWLEDGE_INTENT_RE = /多少个?省|省份|圆周率|光速|声速|音速|赤道|沸点|绝对零度|ascii|进制.*转换|转换.*进制|时区|utc|gmt|常用端口|端口号|chmod|文件权限/i;
+const _HTTP_STATUS_NL_RE =
+  /(?:^|[^\d])(\d{3})(?!\d)\s*(?:是什么意思|是什么错误|是什么状态|是什么情况|是什么|是啥|什么意思|啥意思|什么错误|什么状态|代表什么|表示什么|怎么回事|的含义|含义)/i;
+const _REGEX_INTENT_RE =
+  /正则|regex|邮箱正则|手机正则|身份证正则|url正则|ip正则|匹配.*正则|正则.*匹配/i;
+const _KNOWLEDGE_INTENT_RE =
+  /多少个?省|省份|圆周率|光速|声速|音速|赤道|沸点|绝对零度|ascii|进制.*转换|转换.*进制|时区|utc|gmt|常用端口|端口号|chmod|文件权限/i;
 
 /**
  * 门控:KHY_HTTP_STATUS_NL 默认开;显式 0/false/off/no/空串 → 关。
@@ -573,37 +831,61 @@ const _KNOWLEDGE_INTENT_RE = /多少个?省|省份|圆周率|光速|声速|音�
  * process.env;不注入 env(undefined/null)→ 默认开(测试 / 旧调用方零摩擦)。
  */
 function _httpStatusNlEnabled(env) {
-  if (!env || env.KHY_HTTP_STATUS_NL == null) return true;
+  if (!env || env.KHY_HTTP_STATUS_NL == null) {
+    return true;
+  }
   const v = String(env.KHY_HTTP_STATUS_NL).trim().toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no' || v === '');
 }
 
 function detect(input, env) {
   const text = String(input || '').trim();
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
 
-  if (_OFFLINE_INTENT_RE.test(text)) return { type: 'unit_convert', input: text };
-  if (_HTTP_STATUS_RE.test(text)) return { type: 'http_status', input: text };
+  if (_OFFLINE_INTENT_RE.test(text)) {
+    return { type: 'unit_convert', input: text };
+  }
+  if (_HTTP_STATUS_RE.test(text)) {
+    return { type: 'http_status', input: text };
+  }
   // 自然语言追问形(门控关 → 跳过 → 字节回退到下方既有分支,与历史完全一致)。
   if (_httpStatusNlEnabled(env)) {
     const nlm = text.match(_HTTP_STATUS_NL_RE);
-    if (nlm && _HTTP_STATUS[parseInt(nlm[1], 10)]) return { type: 'http_status', input: text };
+    if (nlm && _HTTP_STATUS[parseInt(nlm[1], 10)]) {
+      return { type: 'http_status', input: text };
+    }
   }
-  if (_CHEAT_INTENT_RE.test(text)) return { type: 'cheat_sheet', input: text };
-  if (_REGEX_INTENT_RE.test(text)) return { type: 'regex_helper', input: text };
-  if (_KNOWLEDGE_INTENT_RE.test(text)) return { type: 'common_knowledge', input: text };
+  if (_CHEAT_INTENT_RE.test(text)) {
+    return { type: 'cheat_sheet', input: text };
+  }
+  if (_REGEX_INTENT_RE.test(text)) {
+    return { type: 'regex_helper', input: text };
+  }
+  if (_KNOWLEDGE_INTENT_RE.test(text)) {
+    return { type: 'common_knowledge', input: text };
+  }
   return null;
 }
 
 function execute(plan) {
-  if (!plan) return null;
+  if (!plan) {
+    return null;
+  }
   switch (plan.type) {
-    case 'unit_convert': return unitConvert(plan.input);
-    case 'http_status': return httpStatus(plan.input);
-    case 'cheat_sheet': return cheatSheet(plan.input);
-    case 'regex_helper': return regexHelper(plan.input);
-    case 'common_knowledge': return commonKnowledge(plan.input);
-    default: return null;
+    case 'unit_convert':
+      return unitConvert(plan.input);
+    case 'http_status':
+      return httpStatus(plan.input);
+    case 'cheat_sheet':
+      return cheatSheet(plan.input);
+    case 'regex_helper':
+      return regexHelper(plan.input);
+    case 'common_knowledge':
+      return commonKnowledge(plan.input);
+    default:
+      return null;
   }
 }
 

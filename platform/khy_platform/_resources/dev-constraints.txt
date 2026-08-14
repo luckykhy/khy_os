@@ -1,0 +1,24 @@
+# khy OS — bundled Python development-toolchain lock file.
+#
+# This is the in-package version-constraint file referenced by the compile-phase
+# self-heal (`khy_platform.devenv.ensure_dev_environment`). When a development
+# component declared in `pyproject.toml [project.optional-dependencies] dev`
+# is missing, the self-heal runs:
+#
+#     python -m pip install -q -c <this file> build twine pytest
+#
+# Pinning here (== exact) guarantees that auto-repaired dev environments are
+# reproducible and consistent across machines, independent of whatever the
+# ambient interpreter happens to resolve.
+#
+# Keep this file in sync with the `dev` extra in pyproject.toml. The release
+# flow refreshes it via `scripts/release/refresh-dev-constraints.py`.
+
+build==1.2.2
+twine==5.1.1
+pytest==8.3.4
+
+# Build-backend prerequisites — pinned so an isolated rebuild from the bundled
+# source uses the same toolchain that produced the distribution.
+setuptools==75.6.0
+wheel==0.45.1

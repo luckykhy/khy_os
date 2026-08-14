@@ -33,9 +33,10 @@
  *  - KHY_NEWS_FETCH_MIN_SNIPPET = enrich snippets shorter than this (default 80)
  */
 
-const https = require('https');
 const http = require('http');
+const https = require('https');
 const { URL } = require('url');
+
 const { assertPublicHttpUrlResolved } = require('./urlSafety');
 
 const MAX_RESPONSE_BYTES = 1.5 * 1024 * 1024; // 1.5 MB cap per article
@@ -44,14 +45,18 @@ const EXTRACT_MAX_CHARS = 1200; // body we keep per article (summarizer slices f
 
 // ── Env-driven config (read per call so tests/runtime can flip it) ──────
 function _truthyDisabled(v) {
-  const s = String(v == null ? '' : v).trim().toLowerCase();
+  const s = String(v == null ? '' : v)
+    .trim()
+    .toLowerCase();
   return s === '0' || s === 'false' || s === 'off' || s === 'no';
 }
 
 function getConfig() {
   const num = (envName, def, lo, hi) => {
     const n = Number(process.env[envName]);
-    if (!Number.isFinite(n)) return def;
+    if (!Number.isFinite(n)) {
+      return def;
+    }
     return Math.min(hi, Math.max(lo, Math.floor(n)));
   };
   return {
@@ -68,10 +73,19 @@ function _getProxyUrl() {
   try {
     const pcs = require('./proxyConfigService');
     const active = pcs.getActiveProxy ? pcs.getActiveProxy() : null;
-    if (active) return typeof active === 'string' ? active : active.url || null;
-  } catch { /* ignore */ }
-  return process.env.HTTPS_PROXY || process.env.https_proxy
-    || process.env.HTTP_PROXY || process.env.http_proxy || null;
+    if (active) {
+      return typeof active === 'string' ? active : active.url || null;
+    }
+  } catch {
+    /* ignore */
+  }
+  return (
+    process.env.HTTPS_PROXY ||
+    process.env.https_proxy ||
+    process.env.HTTP_PROXY ||
+    process.env.http_proxy ||
+    null
+  );
 }
 
 // ── HTML → plain text extraction ────────────────────────────────────────
@@ -80,16 +94,25 @@ function _getProxyUrl() {
 // this module never hard-depends on a private method.
 let _webFetch = null;
 function _extractText(html) {
-  if (!html) return '';
+  if (!html) {
+    return '';
+  }
   if (_webFetch === null) {
-    try { _webFetch = require('../tools/WebFetchTool'); }
-    catch { _webFetch = false; }
+    try {
+      _webFetch = require('../tools/WebFetchTool');
+    } catch {
+      _webFetch = false;
+    }
   }
   if (_webFetch && typeof _webFetch._htmlToMarkdown === 'function') {
     try {
       const { content } = _webFetch._htmlToMarkdown(html);
-      if (content) return content;
-    } catch { /* fall through to minimal stripper */ }
+      if (content) {
+        return content;
+      }
+    } catch {
+      /* fall through to minimal stripper */
+    }
   }
   // Minimal fallback: drop noise blocks, strip tags, collapse whitespace.
   return String(html)
@@ -113,11 +136,14 @@ function _extractText(html) {
  * @returns {string}
  */
 function _condense(text) {
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
   let t = String(text);
   // Strip the "## Page Structure ... ---" TOC block WebFetchTool may prepend.
   t = t.replace(/^##\s*Page Structure[\s\S]*?\n---\n/i, '');
-  const lines = t.split('\n')
+  const lines = t
+    .split('\n')
     .map((l) => l.replace(/\s+/g, ' ').trim())
     .filter((l) => l && l.length >= 8 && !/^#{1,6}\s*$/.test(l));
   const body = lines.join(' ').replace(/\s+/g, ' ').trim();
@@ -129,12 +155,18 @@ function _condense(text) {
 function _fetchHop(targetUrl, proxyUrl, timeoutMs) {
   return new Promise((resolve) => {
     let settled = false;
-    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+    const done = (v) => {
+      if (!settled) {
+        settled = true;
+        resolve(v);
+      }
+    };
 
     const target = new URL(targetUrl);
     const reqHeaders = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
     };
 
@@ -159,7 +191,10 @@ function _fetchHop(targetUrl, proxyUrl, timeoutMs) {
       let bytes = 0;
       res.on('data', (chunk) => {
         bytes += chunk.length;
-        if (bytes > MAX_RESPONSE_BYTES) { res.destroy(); return; }
+        if (bytes > MAX_RESPONSE_BYTES) {
+          res.destroy();
+          return;
+        }
         chunks.push(chunk);
       });
       res.on('end', () => done({ html: Buffer.concat(chunks).toString('utf-8') }));
@@ -183,19 +218,32 @@ function _fetchHop(targetUrl, proxyUrl, timeoutMs) {
             done({ error: `proxy CONNECT ${connectRes.statusCode}` });
             return;
           }
-          const req = https.get(targetUrl, { socket, agent: false, headers: reqHeaders, timeout: timeoutMs }, onResponse);
+          const req = https.get(
+            targetUrl,
+            { socket, agent: false, headers: reqHeaders, timeout: timeoutMs },
+            onResponse
+          );
           req.on('error', (err) => done({ error: err.message }));
-          req.on('timeout', () => { req.destroy(); done({ error: 'timeout' }); });
+          req.on('timeout', () => {
+            req.destroy();
+            done({ error: 'timeout' });
+          });
         });
         connectReq.on('error', (err) => done({ error: `proxy: ${err.message}` }));
-        connectReq.on('timeout', () => { connectReq.destroy(); done({ error: 'proxy timeout' }); });
+        connectReq.on('timeout', () => {
+          connectReq.destroy();
+          done({ error: 'proxy timeout' });
+        });
         connectReq.end();
         return;
       }
       const client = target.protocol === 'https:' ? https : http;
       const req = client.get(targetUrl, { headers: reqHeaders, timeout: timeoutMs }, onResponse);
       req.on('error', (err) => done({ error: err.message }));
-      req.on('timeout', () => { req.destroy(); done({ error: 'timeout' }); });
+      req.on('timeout', () => {
+        req.destroy();
+        done({ error: 'timeout' });
+      });
     } catch (err) {
       done({ error: err.message });
     }
@@ -223,8 +271,13 @@ async function fetchArticleText(url, opts = {}) {
       return '';
     }
     const res = await _fetchHop(current, proxyUrl, timeoutMs);
-    if (res.html) return _condense(_extractText(res.html));
-    if (res.redirect) { current = res.redirect; continue; }
+    if (res.html) {
+      return _condense(_extractText(res.html));
+    }
+    if (res.redirect) {
+      current = res.redirect;
+      continue;
+    }
     return ''; // error
   }
   return ''; // too many redirects
@@ -237,13 +290,20 @@ async function _runPool(items, worker, concurrency) {
   async function lane() {
     for (;;) {
       const i = next++;
-      if (i >= items.length) return;
-      try { results[i] = await worker(items[i], i); }
-      catch { results[i] = undefined; }
+      if (i >= items.length) {
+        return;
+      }
+      try {
+        results[i] = await worker(items[i], i);
+      } catch {
+        results[i] = undefined;
+      }
     }
   }
   const lanes = [];
-  for (let i = 0; i < Math.min(concurrency, items.length); i++) lanes.push(lane());
+  for (let i = 0; i < Math.min(concurrency, items.length); i++) {
+    lanes.push(lane());
+  }
   await Promise.all(lanes);
   return results;
 }
@@ -261,7 +321,9 @@ async function enrichArticles(articles, opts = {}) {
   const cfg = { ...getConfig(), ...opts };
   const list = Array.isArray(articles) ? articles.slice() : [];
   const meta = { enabled: cfg.enabled, attempted: 0, enriched: 0 };
-  if (!cfg.enabled || cfg.max === 0 || list.length === 0) return { articles: list, meta };
+  if (!cfg.enabled || cfg.max === 0 || list.length === 0) {
+    return { articles: list, meta };
+  }
 
   // Candidates: top results with a fetchable http(s) URL and a too-short snippet.
   const candidates = [];
@@ -269,17 +331,24 @@ async function enrichArticles(articles, opts = {}) {
     const a = list[i];
     const url = a && typeof a.url === 'string' ? a.url.trim() : '';
     const snippet = String((a && a.content) || '').trim();
-    if (!/^https?:\/\//i.test(url)) continue;
-    if (snippet.length >= cfg.minSnippet) continue;
+    if (!/^https?:\/\//i.test(url)) {
+      continue;
+    }
+    if (snippet.length >= cfg.minSnippet) {
+      continue;
+    }
     candidates.push({ idx: i, url });
   }
-  if (candidates.length === 0) return { articles: list, meta };
+  if (candidates.length === 0) {
+    return { articles: list, meta };
+  }
   meta.attempted = candidates.length;
 
   // opts.fetchText lets tests inject a hermetic fetcher (default = real network).
-  const fetchText = typeof opts.fetchText === 'function'
-    ? opts.fetchText
-    : (url) => fetchArticleText(url, { proxyUrl: _getProxyUrl(), timeoutMs: cfg.timeoutMs });
+  const fetchText =
+    typeof opts.fetchText === 'function'
+      ? opts.fetchText
+      : (url) => fetchArticleText(url, { proxyUrl: _getProxyUrl(), timeoutMs: cfg.timeoutMs });
   const fetched = await _runPool(candidates, (c) => fetchText(c.url), cfg.concurrency);
 
   candidates.forEach((c, k) => {

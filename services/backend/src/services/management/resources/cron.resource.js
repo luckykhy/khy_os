@@ -11,12 +11,15 @@
  * cronScheduler uses, so the contract can be built without importing it.
  */
 const path = require('path');
+
 const { getDataHome } = require('../../../utils/dataHome');
 
 const cron = () => require('../../cronScheduler');
 
 function _jobsFile() {
-  if (process.env.KHY_CRON_JOBS_FILE) return process.env.KHY_CRON_JOBS_FILE;
+  if (process.env.KHY_CRON_JOBS_FILE) {
+    return process.env.KHY_CRON_JOBS_FILE;
+  }
   const growthDir = process.env.KHY_CRON_GROWTH_DIR || path.join(getDataHome(), 'growth');
   return path.join(growthDir, 'cron_jobs.json');
 }
@@ -59,15 +62,21 @@ const contract = {
       });
     },
     async remove(args) {
-      if (!args || !args.id) throw new Error('id is required');
+      if (!args || !args.id) {
+        throw new Error('id is required');
+      }
       return { removed: cron().removeJob(args.id), id: args.id };
     },
     async enable(args) {
-      if (!args || !args.id) throw new Error('id is required');
+      if (!args || !args.id) {
+        throw new Error('id is required');
+      }
       return { enabled: cron().enableJob(args.id), id: args.id };
     },
     async disable(args) {
-      if (!args || !args.id) throw new Error('id is required');
+      if (!args || !args.id) {
+        throw new Error('id is required');
+      }
       return { disabled: cron().disableJob(args.id), id: args.id };
     },
   },

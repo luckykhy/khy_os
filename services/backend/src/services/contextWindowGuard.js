@@ -88,7 +88,7 @@ function pruneMessages(messages, opts) {
 
   // Calculate current total
   let totalTokens = 0;
-  const tokenCounts = messages.map(m => {
+  const tokenCounts = messages.map((m) => {
     const count = estimateTokens(m.content || '');
     totalTokens += count;
     return count;
@@ -110,13 +110,17 @@ function pruneMessages(messages, opts) {
   const removable = [];
   for (let i = 0; i < protectedEnd; i++) {
     const msg = messages[i];
-    if (msg.role === 'system') continue; // never prune system
+    if (msg.role === 'system') {
+      continue;
+    } // never prune system
     removable.push(i);
   }
 
   // Pass 2: remove oldest until we've freed enough tokens
   for (const idx of removable) {
-    if (removedTokens >= overflow) break;
+    if (removedTokens >= overflow) {
+      break;
+    }
 
     // Check tool pair integrity
     const msg = messages[idx];
@@ -147,11 +151,13 @@ function pruneMessages(messages, opts) {
  */
 function formatWarning(guard) {
   const pct = Math.round(guard.usageRatio * 100);
-  return `Context window ${pct}% used (${guard.usedTokens}/${guard.contextWindowTokens} tokens). `
-    + `${guard.remainingTokens} tokens remaining. `
-    + (guard.shouldBlock
+  return (
+    `Context window ${pct}% used (${guard.usedTokens}/${guard.contextWindowTokens} tokens). ` +
+    `${guard.remainingTokens} tokens remaining. ` +
+    (guard.shouldBlock
       ? `Below hard minimum (${guard.hardMinTokens}). Consider reducing context.`
-      : `Approaching limit (warn below ${guard.warnBelowTokens}).`);
+      : `Approaching limit (warn below ${guard.warnBelowTokens}).`)
+  );
 }
 
 module.exports = {

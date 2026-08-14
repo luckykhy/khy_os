@@ -46,7 +46,7 @@ $command      = "`"$exe`" `"%1`""
 $progId       = 'KhyosMarkdown.exe'
 $friendlyName = 'KhyOS Markdown'
 $verbLabel    = '使用 khyosMarkdown 打开'
-$exts         = @('.md', '.markdown')
+$exts         = @('.md', '.markdown', '.mdown', '.mkd')
 $icoFile      = Join-Path $scriptDir 'khyosMarkdown.ico'
 $iconValue    = if (Test-Path $icoFile) { "`"$icoFile`"" } else { "`"$exe`",0" }
 

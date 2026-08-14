@@ -24,23 +24,26 @@
 
 /** 默认值(均可经 opts/env 覆盖,再经夹取)。 */
 const DEFAULTS = Object.freeze({
-  maxFiles: 50,      // 单次事务最多校验的改动文件数(硬上界,防超大改动集拖垮校验)
-  runSyntax: true,   // node --check / JSON.parse 语法闸(快、确定性)
-  runGuards: true,   // leafContractGuard + modelHardcodingGuard 机器守卫
-  runTests: false,   // 受影响测试(慢且易 flaky,默认关,KHY_SELF_REPAIR_RUN_TESTS 可开)
+  maxFiles: 50, // 单次事务最多校验的改动文件数(硬上界,防超大改动集拖垮校验)
+  runSyntax: true, // node --check / JSON.parse 语法闸(快、确定性)
+  runGuards: true, // leafContractGuard + modelHardcodingGuard 机器守卫
+  runTests: false, // 受影响测试(慢且易 flaky,默认关,KHY_SELF_REPAIR_RUN_TESTS 可开)
 });
 
 /** 可被语法/守卫校验的源码扩展名(其余文件不进校验集,仍随事务快照/回滚)。 */
-const VALIDATABLE_EXTS = Object.freeze(new Set([
-  '.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.json',
-]));
+const VALIDATABLE_EXTS = Object.freeze(
+  new Set(['.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.json'])
+);
 
 const OFF = ['0', 'false', 'off', 'no'];
 
 /** 是否启用自修复事务(门控关 → 字节回退到 fix agent 直接改)。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
-  const v = String((env && env.KHY_SELF_REPAIR_TRANSACTION) != null ? env.KHY_SELF_REPAIR_TRANSACTION : '')
-    .trim().toLowerCase();
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
+  const v = String(
+    (env && env.KHY_SELF_REPAIR_TRANSACTION) != null ? env.KHY_SELF_REPAIR_TRANSACTION : ''
+  )
+    .trim()
+    .toLowerCase();
   return !OFF.includes(v);
 }
 
@@ -53,7 +56,9 @@ const _envNum = require('../utils/envNum');
 /** env 布尔(默认值由 fallback 决定;仅 {0,false,off,no} 视为关)。 */
 function _envBool(env, key, fallback) {
   const raw = env && env[key];
-  if (raw == null || String(raw).trim() === '') return fallback;
+  if (raw == null || String(raw).trim() === '') {
+    return fallback;
+  }
   return !OFF.includes(String(raw).trim().toLowerCase());
 }
 
@@ -63,19 +68,35 @@ function _envBool(env, key, fallback) {
  * @param {Object} [env]
  * @returns {{enabled:boolean, snapshot:boolean, runSyntax:boolean, runGuards:boolean, runTests:boolean, maxFiles:number}}
  */
-function planTransaction(opts = {}, env = (typeof process !== 'undefined' ? process.env : {})) {
+function planTransaction(opts = {}, env = typeof process !== 'undefined' ? process.env : {}) {
   const e = env && typeof env === 'object' ? env : {};
   const o = opts && typeof opts === 'object' ? opts : {};
   if (!isEnabled(e)) {
-    return { enabled: false, snapshot: false, runSyntax: false, runGuards: false, runTests: false, maxFiles: 0 };
+    return {
+      enabled: false,
+      snapshot: false,
+      runSyntax: false,
+      runGuards: false,
+      runTests: false,
+      maxFiles: 0,
+    };
   }
   const maxFiles = _clampInt(
     o.maxFiles != null ? o.maxFiles : _envNum(e, 'KHY_SELF_REPAIR_MAX_FILES'),
-    1, 1000, DEFAULTS.maxFiles,
+    1,
+    1000,
+    DEFAULTS.maxFiles
   );
-  const runSyntax = o.runSyntax != null ? !!o.runSyntax : _envBool(e, 'KHY_SELF_REPAIR_RUN_SYNTAX', DEFAULTS.runSyntax);
-  const runGuards = o.runGuards != null ? !!o.runGuards : _envBool(e, 'KHY_SELF_REPAIR_RUN_GUARDS', DEFAULTS.runGuards);
-  const runTests = o.runTests != null ? !!o.runTests : _envBool(e, 'KHY_SELF_REPAIR_RUN_TESTS', DEFAULTS.runTests);
+  const runSyntax =
+    o.runSyntax != null
+      ? !!o.runSyntax
+      : _envBool(e, 'KHY_SELF_REPAIR_RUN_SYNTAX', DEFAULTS.runSyntax);
+  const runGuards =
+    o.runGuards != null
+      ? !!o.runGuards
+      : _envBool(e, 'KHY_SELF_REPAIR_RUN_GUARDS', DEFAULTS.runGuards);
+  const runTests =
+    o.runTests != null ? !!o.runTests : _envBool(e, 'KHY_SELF_REPAIR_RUN_TESTS', DEFAULTS.runTests);
   return { enabled: true, snapshot: true, runSyntax, runGuards, runTests, maxFiles };
 }
 
@@ -85,7 +106,9 @@ function _ext(file) {
   const slash = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'));
   const base = slash >= 0 ? s.slice(slash + 1) : s;
   const dot = base.lastIndexOf('.');
-  if (dot <= 0) return ''; // 无扩展名,或以点开头的 dotfile
+  if (dot <= 0) {
+    return '';
+  } // 无扩展名,或以点开头的 dotfile
   return base.slice(dot).toLowerCase();
 }
 
@@ -102,17 +125,24 @@ function classifyChangeSet(filesModified, opts = {}) {
   const skipped = [];
   for (const raw of Array.isArray(filesModified) ? filesModified : []) {
     const f = String(raw || '').trim();
-    if (!f || seen.has(f)) continue;
+    if (!f || seen.has(f)) {
+      continue;
+    }
     seen.add(f);
-    if (VALIDATABLE_EXTS.has(_ext(f))) sourceFiles.push(f);
-    else skipped.push(f);
+    if (VALIDATABLE_EXTS.has(_ext(f))) {
+      sourceFiles.push(f);
+    } else {
+      skipped.push(f);
+    }
   }
   let tooMany = false;
   let validatable = sourceFiles;
   if (sourceFiles.length > maxFiles) {
     tooMany = true;
     validatable = sourceFiles.slice(0, maxFiles);
-    for (const f of sourceFiles.slice(maxFiles)) skipped.push(f);
+    for (const f of sourceFiles.slice(maxFiles)) {
+      skipped.push(f);
+    }
   }
   return { validatable, skipped, tooMany };
 }
@@ -140,23 +170,32 @@ function decideOutcome(validation, _env) {
 
   // 语法错误(node --check / JSON.parse):任一条 → 阻断。
   for (const s of Array.isArray(v.syntax) ? v.syntax : []) {
-    if (!s) continue;
+    if (!s) {
+      continue;
+    }
     const where = s.file ? `${s.file}${s.line ? ':' + s.line : ''}` : '(unknown)';
     failures.push(`语法错误 ${where}: ${String(s.message || '').slice(0, 200)}`);
   }
 
   // 守卫 finding:error 级阻断,warning 仅告警。
   for (const g of Array.isArray(v.guards) ? v.guards : []) {
-    if (!g) continue;
+    if (!g) {
+      continue;
+    }
     const loc = g.relPath || g.file || '';
     const desc = `[${g.rule || 'guard'}] ${loc}${g.line ? ':' + g.line : ''} ${String(g.message || '').slice(0, 160)}`;
-    if (g.severity === 'error') failures.push(desc);
-    else warnings.push(desc);
+    if (g.severity === 'error') {
+      failures.push(desc);
+    } else {
+      warnings.push(desc);
+    }
   }
 
   // 受影响测试:跑了且失败 → 阻断;没跑或通过不阻断。
   if (v.tests && v.tests.ran && v.tests.ok === false) {
-    failures.push(`受影响测试失败${v.tests.summary ? ': ' + String(v.tests.summary).slice(0, 200) : ''}`);
+    failures.push(
+      `受影响测试失败${v.tests.summary ? ': ' + String(v.tests.summary).slice(0, 200) : ''}`
+    );
   }
 
   // 进化策略(加性,仅当 validation.evolution.enabled):触碰不可变区域 → 阻断(回滚);
@@ -164,15 +203,22 @@ function decideOutcome(validation, _env) {
   const evo = v.evolution;
   if (evo && evo.enabled) {
     for (const im of Array.isArray(evo.immutable) ? evo.immutable : []) {
-      if (!im) continue;
+      if (!im) {
+        continue;
+      }
       const where = `${im.file || '(unknown)'}: ${String(im.reason || '').slice(0, 160)}`;
       // 已获显式人工授权越权(KHY_EVOLUTION_OVERRIDE)→ 降级为审计告警(保留改动但留痕);
       // 非可越权规则 evolutionPolicy 永不置 overridden=true,故仍走 failures。门控关时 overridden 恒假 → 字节回退。
-      if (im.overridden) warnings.push(`已授权越权改动不可变区域(审计) ${where}`);
-      else failures.push(`不可变区域被改动 ${where}`);
+      if (im.overridden) {
+        warnings.push(`已授权越权改动不可变区域(审计) ${where}`);
+      } else {
+        failures.push(`不可变区域被改动 ${where}`);
+      }
     }
     for (const c of Array.isArray(evo.cascades) ? evo.cascades : []) {
-      if (!c || c.kind !== 'co-change' || c.satisfied !== false) continue;
+      if (!c || c.kind !== 'co-change' || c.satisfied !== false) {
+        continue;
+      }
       const sev = c.severity === 'error' ? failures : warnings;
       sev.push(`联动缺口 ${String(c.message || '').slice(0, 200)}`);
     }
@@ -185,10 +231,15 @@ function decideOutcome(validation, _env) {
   const safety = v.safety;
   if (safety && safety.enabled) {
     for (const u of Array.isArray(safety.unverified) ? safety.unverified : []) {
-      if (!u) continue;
+      if (!u) {
+        continue;
+      }
       const msg = `行为未经验证(无可运行测试覆盖) ${String(u).slice(0, 160)}`;
-      if (safety.enforce) failures.push(msg);
-      else warnings.push(msg);
+      if (safety.enforce) {
+        failures.push(msg);
+      } else {
+        warnings.push(msg);
+      }
     }
   }
 
@@ -209,26 +260,36 @@ function decideOutcome(validation, _env) {
 function summarizeTransaction(state = {}) {
   const s = state && typeof state === 'object' ? state : {};
   const decision = s.decision;
-  if (!decision) return '';
+  if (!decision) {
+    return '';
+  }
   const cs = s.changeSet || {};
   const n = Array.isArray(cs.validatable) ? cs.validatable.length : 0;
 
   if (decision.keep) {
     // 全绿且无改动可校验时不加噪声。
-    if (n === 0 && (!decision.warnings || decision.warnings.length === 0)) return '';
+    if (n === 0 && (!decision.warnings || decision.warnings.length === 0)) {
+      return '';
+    }
     let line = `\n\n---\n🛡️ **自修复事务** — 修复改动已通过校验(${n} 个文件:语法/守卫)并保留`;
     if (decision.warnings && decision.warnings.length) {
       line += `,另有 ${decision.warnings.length} 条非阻断告警`;
     }
-    if (s.snapshotMissing) line += `(注:未能创建快照,本次无回滚保护)`;
+    if (s.snapshotMissing) {
+      line += `(注:未能创建快照,本次无回滚保护)`;
+    }
     return line + '。';
   }
 
   // 回滚。
   const lines = [];
   lines.push(`\n\n---\n↩️ **自修复事务** — 修复改动未通过校验,已自动回滚到改前状态,原因:`);
-  for (const f of (decision.failures || []).slice(0, 6)) lines.push(`  - ${f}`);
-  if ((decision.failures || []).length > 6) lines.push(`  …以及另外 ${decision.failures.length - 6} 项`);
+  for (const f of (decision.failures || []).slice(0, 6)) {
+    lines.push(`  - ${f}`);
+  }
+  if ((decision.failures || []).length > 6) {
+    lines.push(`  …以及另外 ${decision.failures.length - 6} 项`);
+  }
   if (s.rolledBack === false) {
     lines.push('  (注:回滚未能完整执行,请人工核对工作树状态)');
   }

@@ -58,7 +58,9 @@ function isEnabled(env) {
     const e = env && typeof env === 'object' ? env : {};
     // 未注册时 isFlagEnabled 保守返 true,但本 flag 已在 flagRegistry 登记;门关值统一识别。
     const raw = e[FLAG];
-    if (raw === undefined || raw === null || raw === '') return true; // default-on
+    if (raw === undefined || raw === null || raw === '') {
+      return true;
+    } // default-on
     const v = String(raw).trim().toLowerCase();
     return !(v === '0' || v === 'off' || v === 'false' || v === 'no');
   } catch {
@@ -67,17 +69,25 @@ function isEnabled(env) {
 }
 
 function _toBase64Standard(raw) {
-  let text = String(raw || '').trim().replace(/\s+/g, '');
-  if (!text) return '';
+  let text = String(raw || '')
+    .trim()
+    .replace(/\s+/g, '');
+  if (!text) {
+    return '';
+  }
   text = text.replace(/-/g, '+').replace(/_/g, '/');
   const mod = text.length % 4;
-  if (mod !== 0) text += '='.repeat(4 - mod);
+  if (mod !== 0) {
+    text += '='.repeat(4 - mod);
+  }
   return text;
 }
 
 function _decodeBase64(raw) {
   const text = _toBase64Standard(raw);
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
   try {
     const decoded = Buffer.from(text, 'base64').toString('utf8');
     return decoded && decoded.trim() ? decoded : '';
@@ -88,7 +98,11 @@ function _decodeBase64(raw) {
 
 function _safeDecodeURIComponent(raw) {
   const text = String(raw || '');
-  try { return decodeURIComponent(text); } catch { return text; }
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
 }
 
 function _cleanName(raw, fallback) {
@@ -128,7 +142,9 @@ function _parseUserinfoUri(uri, protocol, index) {
     body = body.slice(0, hashAt);
   }
   const queryAt = body.indexOf('?');
-  if (queryAt >= 0) body = body.slice(0, queryAt);
+  if (queryAt >= 0) {
+    body = body.slice(0, queryAt);
+  }
   // 去掉 userinfo(uuid/password@)
   const atAt = body.lastIndexOf('@');
   const hostPort = atAt >= 0 ? body.slice(atAt + 1) : body;
@@ -146,7 +162,9 @@ function _parseShadowsocks(uri, index) {
     body = body.slice(0, hashAt);
   }
   const queryAt = body.indexOf('?');
-  if (queryAt >= 0) body = body.slice(0, queryAt);
+  if (queryAt >= 0) {
+    body = body.slice(0, queryAt);
+  }
 
   // 形态 A:整段 base64(含 @host:port)
   const atAt = body.lastIndexOf('@');
@@ -167,7 +185,9 @@ function _parseShadowsocks(uri, index) {
 
 function _splitHostPort(raw) {
   const text = String(raw || '').trim();
-  if (!text) return { server: '', port: null };
+  if (!text) {
+    return { server: '', port: null };
+  }
   // IPv6 字面量 [::1]:443
   if (text.startsWith('[')) {
     const close = text.indexOf(']');
@@ -179,7 +199,9 @@ function _splitHostPort(raw) {
     }
   }
   const colonAt = text.lastIndexOf(':');
-  if (colonAt < 0) return { server: text, port: null };
+  if (colonAt < 0) {
+    return { server: text, port: null };
+  }
   const host = text.slice(0, colonAt);
   const portStr = text.slice(colonAt + 1).replace(/\/.*$/, '');
   const port = Number.parseInt(portStr, 10);
@@ -192,10 +214,18 @@ function _parseNodeUri(uri, index) {
     const full = fullParsers.parseNodeUri(uri);
     if (full && (full.server || full.name)) {
       // 归一:server/port/name/protocol 恒在(兼容既有前端/测试),其余全字段原样带上。
-      if (!full.name) full.name = `${full.type || 'node'}-${index}`;
-      if (full.server === undefined) full.server = '';
-      if (full.port === undefined) full.port = null;
-      if (!full.protocol && full.type) full.protocol = full.type;
+      if (!full.name) {
+        full.name = `${full.type || 'node'}-${index}`;
+      }
+      if (full.server === undefined) {
+        full.server = '';
+      }
+      if (full.port === undefined) {
+        full.port = null;
+      }
+      if (!full.protocol && full.type) {
+        full.protocol = full.type;
+      }
       return full;
     }
   } catch {
@@ -203,10 +233,18 @@ function _parseNodeUri(uri, index) {
   }
 
   const lower = uri.toLowerCase();
-  if (lower.startsWith('vmess://')) return _parseVmess(uri, index);
-  if (lower.startsWith('vless://')) return _parseUserinfoUri(uri, 'vless', index);
-  if (lower.startsWith('trojan://')) return _parseUserinfoUri(uri, 'trojan', index);
-  if (lower.startsWith('ss://')) return _parseShadowsocks(uri, index);
+  if (lower.startsWith('vmess://')) {
+    return _parseVmess(uri, index);
+  }
+  if (lower.startsWith('vless://')) {
+    return _parseUserinfoUri(uri, 'vless', index);
+  }
+  if (lower.startsWith('trojan://')) {
+    return _parseUserinfoUri(uri, 'trojan', index);
+  }
+  if (lower.startsWith('ss://')) {
+    return _parseShadowsocks(uri, index);
+  }
   // 其余协议(ssr/hysteria/tuic/wireguard/socks):尽力取 host:port,协议名照记。
   const prefix = NODE_URI_PREFIXES.find((p) => lower.startsWith(p));
   if (prefix) {
@@ -225,7 +263,9 @@ function _extractField(line, keys) {
     const m = line.match(re);
     if (m) {
       const v = (m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3]) || '').trim();
-      if (v) return v;
+      if (v) {
+        return v;
+      }
     }
   }
   return '';
@@ -255,7 +295,9 @@ function _parseClashProxies(text) {
   for (const rawLine of lines) {
     const line = rawLine.replace(/\t/g, '  ');
     const trimmed = line.trim();
-    if (!trimmed) continue;
+    if (!trimmed) {
+      continue;
+    }
 
     const indent = line.length - line.trimStart().length;
 
@@ -314,15 +356,23 @@ function _parseClashProxies(text) {
 
 function _absorbBlockField(current, fragment) {
   const nameV = _extractField(fragment, ['name']);
-  if (nameV) current.name = nameV;
+  if (nameV) {
+    current.name = nameV;
+  }
   const typeV = _extractField(fragment, ['type']);
-  if (typeV) current.type = typeV;
+  if (typeV) {
+    current.type = typeV;
+  }
   const serverV = _extractField(fragment, ['server']);
-  if (serverV) current.server = serverV;
+  if (serverV) {
+    current.server = serverV;
+  }
   const portV = _extractField(fragment, ['port']);
   if (portV) {
     const port = Number.parseInt(portV, 10);
-    if (Number.isFinite(port)) current.port = port;
+    if (Number.isFinite(port)) {
+      current.port = port;
+    }
   }
 }
 
@@ -336,11 +386,20 @@ function _absorbBlockField(current, fragment) {
 function parseProxyNodes(text, env) {
   const empty = { nodes: [], protocolCount: {}, format: 'unknown' };
   try {
-    if (!isEnabled(env || (typeof process !== 'undefined' ? process.env : {}))) return empty;
-    const raw = String(text || '').replace(/^﻿/, '').trim();
-    if (!raw) return empty;
+    if (!isEnabled(env || (typeof process !== 'undefined' ? process.env : {}))) {
+      return empty;
+    }
+    const raw = String(text || '')
+      .replace(/^﻿/, '')
+      .trim();
+    if (!raw) {
+      return empty;
+    }
 
-    const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const lines = raw
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
     const uriLines = lines.filter((l) => {
       const lower = l.toLowerCase();
       return NODE_URI_PREFIXES.some((p) => lower.startsWith(p));
@@ -353,7 +412,9 @@ function parseProxyNodes(text, env) {
       format = 'node-links';
       uriLines.forEach((uri, i) => {
         const node = _parseNodeUri(uri, i + 1);
-        if (node) nodes.push(node);
+        if (node) {
+          nodes.push(node);
+        }
       });
     } else if (/^proxies\s*:/im.test(raw) || /^\s*-\s*\{?\s*name\s*:/im.test(raw)) {
       format = 'clash-config';

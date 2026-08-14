@@ -26,7 +26,9 @@
 // ── env 门控 ─────────────────────────────────────────────────────────
 // 收敛到 utils/envOnByName 单一真源(逐字节委托,调用点不变)
 const _envOn = require('../../utils/envOnByName');
-function isEnabled(env) { return _envOn(env, 'KHY_SEARCH_SOURCE_DISCOVERY'); }
+function isEnabled(env) {
+  return _envOn(env, 'KHY_SEARCH_SOURCE_DISCOVERY');
+}
 
 // 动态引擎允许复用的解析器家族(与 webSearchService 内置解析器一一对应;generic 兜底)。
 const KNOWN_PARSERS = new Set(['baidu', 'bing', 'duckduckgo', 'sogou', 'so360', 'generic']);
@@ -35,13 +37,26 @@ const KNOWN_PARSERS = new Set(['baidu', 'bing', 'duckduckgo', 'sogou', 'so360', 
 // 避免把维基 / 知乎这类常驻内容源当成新冒头的站点而刷屏。保守起见只列最常见的,
 // 其余域名一律当作潜在新源候选(再由共识 / 频次 / 排名过滤)。
 const KNOWN_HOSTS = new Set([
-  'baidu.com', 'baike.baidu.com', 'zhidao.baidu.com',
-  'bing.com', 'cn.bing.com',
-  'duckduckgo.com', 'sogou.com', 'so.com', '360.cn',
-  'google.com', 'google.com.hk',
-  'zhihu.com', 'zhuanlan.zhihu.com',
-  'wikipedia.org', 'zh.wikipedia.org', 'en.wikipedia.org',
-  'csdn.net', 'blog.csdn.net', 'jianshu.com', 'cnblogs.com',
+  'baidu.com',
+  'baike.baidu.com',
+  'zhidao.baidu.com',
+  'bing.com',
+  'cn.bing.com',
+  'duckduckgo.com',
+  'sogou.com',
+  'so.com',
+  '360.cn',
+  'google.com',
+  'google.com.hk',
+  'zhihu.com',
+  'zhuanlan.zhihu.com',
+  'wikipedia.org',
+  'zh.wikipedia.org',
+  'en.wikipedia.org',
+  'csdn.net',
+  'blog.csdn.net',
+  'jianshu.com',
+  'cnblogs.com',
 ]);
 
 // ── 1. 动态引擎注册 ─────────────────────────────────────────────────
@@ -52,22 +67,40 @@ const KNOWN_HOSTS = new Set([
  * @returns {{name:string, urlTemplate:string, parser:string, weight:number}|null}
  */
 function _normalizeEngine(d) {
-  if (!d || typeof d !== 'object') return null;
-  const name = String(d.name || '').trim().toLowerCase();
+  if (!d || typeof d !== 'object') {
+    return null;
+  }
+  const name = String(d.name || '')
+    .trim()
+    .toLowerCase();
   // 引擎名:字母数字起头,允许 - _,长度 ≤ 31,避免污染日志 / 注册表键。
-  if (!/^[a-z0-9][a-z0-9_-]{0,30}$/.test(name)) return null;
+  if (!/^[a-z0-9][a-z0-9_-]{0,30}$/.test(name)) {
+    return null;
+  }
 
   const urlTemplate = String(d.urlTemplate || d.url || '').trim();
-  if (!/^https?:\/\//i.test(urlTemplate)) return null;       // 必须是 http(s) 端点
-  if (!/\{q\}/.test(urlTemplate)) return null;               // 必须含查询占位 {q}
+  if (!/^https?:\/\//i.test(urlTemplate)) {
+    return null;
+  } // 必须是 http(s) 端点
+  if (!/\{q\}/.test(urlTemplate)) {
+    return null;
+  } // 必须含查询占位 {q}
 
-  let parser = String(d.parser || 'generic').trim().toLowerCase();
-  if (parser === 'bing-cn') parser = 'bing';
-  if (!KNOWN_PARSERS.has(parser)) parser = 'generic';        // 未知解析器 → generic 兜底
+  let parser = String(d.parser || 'generic')
+    .trim()
+    .toLowerCase();
+  if (parser === 'bing-cn') {
+    parser = 'bing';
+  }
+  if (!KNOWN_PARSERS.has(parser)) {
+    parser = 'generic';
+  } // 未知解析器 → generic 兜底
 
   let weight = Number(d.weight);
-  if (!Number.isFinite(weight)) weight = 0.5;
-  weight = Math.max(0.1, Math.min(1, weight));               // 夹取到 [0.1, 1]
+  if (!Number.isFinite(weight)) {
+    weight = 0.5;
+  }
+  weight = Math.max(0.1, Math.min(1, weight)); // 夹取到 [0.1, 1]
 
   return { name, urlTemplate, parser, weight };
 }
@@ -82,7 +115,9 @@ function _normalizeEngine(d) {
  * @returns {Array<{name:string, urlTemplate:string, parser:string, weight:number, origin:string}>}
  */
 function loadDynamicEngines(opts = {}) {
-  if (!isEnabled(opts.env)) return [];
+  if (!isEnabled(opts.env)) {
+    return [];
+  }
   const out = [];
   const seen = new Set();
 
@@ -90,20 +125,37 @@ function loadDynamicEngines(opts = {}) {
     let parsed = raw;
     if (typeof raw === 'string') {
       const t = raw.trim();
-      if (!t) return;
-      try { parsed = JSON.parse(t); } catch { return; }
+      if (!t) {
+        return;
+      }
+      try {
+        parsed = JSON.parse(t);
+      } catch {
+        return;
+      }
     }
-    if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.engines)) parsed = parsed.engines;
-    if (!Array.isArray(parsed)) return;
+    if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.engines)) {
+      parsed = parsed.engines;
+    }
+    if (!Array.isArray(parsed)) {
+      return;
+    }
     for (const d of parsed) {
       const norm = _normalizeEngine(d);
-      if (norm && !seen.has(norm.name)) { seen.add(norm.name); out.push({ ...norm, origin }); }
+      if (norm && !seen.has(norm.name)) {
+        seen.add(norm.name);
+        out.push({ ...norm, origin });
+      }
     }
   };
 
   const env = opts.env || process.env || {};
-  if (env.KHY_SEARCH_EXTRA_ENGINES) _ingest(env.KHY_SEARCH_EXTRA_ENGINES, 'env');
-  if (opts.configText) _ingest(opts.configText, 'config');
+  if (env.KHY_SEARCH_EXTRA_ENGINES) {
+    _ingest(env.KHY_SEARCH_EXTRA_ENGINES, 'env');
+  }
+  if (opts.configText) {
+    _ingest(opts.configText, 'config');
+  }
   return out;
 }
 
@@ -118,7 +170,9 @@ function loadDynamicEngines(opts = {}) {
  * @returns {string}
  */
 function buildEngineUrl(descriptor, query, freshParam) {
-  if (!descriptor || !descriptor.urlTemplate) return '';
+  if (!descriptor || !descriptor.urlTemplate) {
+    return '';
+  }
   const q = encodeURIComponent(String(query || '').slice(0, 200));
   let url = String(descriptor.urlTemplate).replace(/\{q\}/g, q);
   const fresh = String(freshParam || '').replace(/^[?&]/, '');
@@ -136,25 +190,33 @@ function buildEngineUrl(descriptor, query, freshParam) {
 function _host(url) {
   try {
     return new URL(String(url)).hostname.replace(/^www\./, '').toLowerCase();
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 /** host 是否已知(精确或作为已知域的子域)。无法解析的 host 视为已知(不当新源)。 */
 function _isKnownHost(host, known) {
-  if (!host) return true;
+  if (!host) {
+    return true;
+  }
   const set = known instanceof Set ? known : KNOWN_HOSTS;
-  if (set.has(host)) return true;
+  if (set.has(host)) {
+    return true;
+  }
   for (const k of set) {
-    if (host === k || host.endsWith('.' + k)) return true;
+    if (host === k || host.endsWith('.' + k)) {
+      return true;
+    }
   }
   return false;
 }
 
 /** 给一个候选源打分:跨引擎共识 > 出现频次 > 排名靠前。确定性,无随机。 */
 function _scoreSource(rec, total) {
-  const consensus = rec.maxEngineCount >= 2 ? 2 : 0;           // 被≥2引擎收录是最强信号
-  const freq = Math.min(rec.hits, 5) * 0.5;                    // 出现次数(封顶,避免单站刷屏)
-  const rankBoost = total > 0 ? (1 - rec.bestRank / total) : 0; // 越靠前越高
+  const consensus = rec.maxEngineCount >= 2 ? 2 : 0; // 被≥2引擎收录是最强信号
+  const freq = Math.min(rec.hits, 5) * 0.5; // 出现次数(封顶,避免单站刷屏)
+  const rankBoost = total > 0 ? 1 - rec.bestRank / total : 0; // 越靠前越高
   return consensus + freq + rankBoost;
 }
 
@@ -169,22 +231,35 @@ function _scoreSource(rec, total) {
  * @returns {Array<{host:string, hits:number, maxEngineCount:number, bestRank:number, score:number, sample:string}>}
  */
 function discoverEmergingSources(results, opts = {}) {
-  if (!isEnabled(opts.env)) return [];
-  if (!Array.isArray(results) || results.length === 0) return [];
+  if (!isEnabled(opts.env)) {
+    return [];
+  }
+  if (!Array.isArray(results) || results.length === 0) {
+    return [];
+  }
   const known = opts.knownHosts instanceof Set ? opts.knownHosts : KNOWN_HOSTS;
   const cap = Number.isFinite(opts.max) && opts.max > 0 ? Math.floor(opts.max) : 5;
 
   const byHost = new Map();
   results.forEach((r, idx) => {
     const host = _host(r && (r.url || r.link));
-    if (!host || _isKnownHost(host, known)) return;
+    if (!host || _isKnownHost(host, known)) {
+      return;
+    }
     let rec = byHost.get(host);
-    if (!rec) { rec = { host, hits: 0, maxEngineCount: 0, bestRank: idx, sample: '' }; byHost.set(host, rec); }
+    if (!rec) {
+      rec = { host, hits: 0, maxEngineCount: 0, bestRank: idx, sample: '' };
+      byHost.set(host, rec);
+    }
     rec.hits += 1;
     rec.bestRank = Math.min(rec.bestRank, idx);
     const ec = Number.isFinite(r.engineCount) ? r.engineCount : 1;
-    if (ec > rec.maxEngineCount) rec.maxEngineCount = ec;
-    if (!rec.sample && r && r.title) rec.sample = String(r.title).replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (ec > rec.maxEngineCount) {
+      rec.maxEngineCount = ec;
+    }
+    if (!rec.sample && r && r.title) {
+      rec.sample = String(r.title).replace(/\s+/g, ' ').trim().slice(0, 80);
+    }
   });
 
   const emerging = [...byHost.values()]
@@ -192,7 +267,9 @@ function discoverEmergingSources(results, opts = {}) {
     // 只留「真的冒头」的:被≥2引擎收录,或出现≥2次,或排进前 3 名。
     .filter((s) => s.maxEngineCount >= 2 || s.hits >= 2 || s.bestRank < 3);
 
-  emerging.sort((a, b) => (b.score - a.score) || (a.bestRank - b.bestRank) || a.host.localeCompare(b.host));
+  emerging.sort(
+    (a, b) => b.score - a.score || a.bestRank - b.bestRank || a.host.localeCompare(b.host)
+  );
   return emerging.slice(0, cap);
 }
 
@@ -205,7 +282,9 @@ function discoverEmergingSources(results, opts = {}) {
  */
 function suggestSiteQueries(emerging, query, max = 3) {
   const q = String(query || '').trim();
-  if (!q || !Array.isArray(emerging)) return [];
+  if (!q || !Array.isArray(emerging)) {
+    return [];
+  }
   const cap = Number.isFinite(max) && max > 0 ? Math.floor(max) : 3;
   return emerging.slice(0, cap).map((s) => `site:${s.host} ${q}`);
 }
@@ -216,13 +295,17 @@ function suggestSiteQueries(emerging, query, max = 3) {
  * @returns {string}
  */
 function formatDiscoveryFooter(emerging) {
-  if (!Array.isArray(emerging) || emerging.length === 0) return '';
+  if (!Array.isArray(emerging) || emerging.length === 0) {
+    return '';
+  }
   const lines = emerging.map((s) => {
     const note = s.maxEngineCount >= 2 ? `${s.maxEngineCount} 个引擎收录` : `出现 ${s.hits} 次`;
     return `  • ${s.host}（${note}）`;
   });
-  return '\n\n---\n🆕 新发现来源（非内置搜索源，但在结果里反复出现，可用 WebSearch 加 `site:` 深入）：\n'
-    + lines.join('\n');
+  return (
+    '\n\n---\n🆕 新发现来源（非内置搜索源，但在结果里反复出现，可用 WebSearch 加 `site:` 深入）：\n' +
+    lines.join('\n')
+  );
 }
 
 module.exports = {
@@ -235,5 +318,10 @@ module.exports = {
   suggestSiteQueries,
   formatDiscoveryFooter,
   // 内部函数暴露给单测(无网络)。
-  __internal: { normalizeEngine: _normalizeEngine, host: _host, isKnownHost: _isKnownHost, scoreSource: _scoreSource },
+  __internal: {
+    normalizeEngine: _normalizeEngine,
+    host: _host,
+    isKnownHost: _isKnownHost,
+    scoreSource: _scoreSource,
+  },
 };

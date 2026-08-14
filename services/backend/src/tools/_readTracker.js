@@ -10,8 +10,8 @@
  * 对标 CC: readFileState 时间戳守护 — 如果文件自上次 Read 后被修改则拒绝编辑。
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 /** Map<resolvedPath, mtimeMs> — 记录 Read 时文件的修改时间 */
 const _readState = new Map();
@@ -39,10 +39,16 @@ function _normalizePath(filePath) {
  * @param {number} [mtimeMs] 读取时的 mtime；省略则自动 stat
  */
 function markRead(filePath, mtimeMs) {
-  if (!filePath) return;
+  if (!filePath) {
+    return;
+  }
   const resolved = _normalizePath(filePath);
   if (typeof mtimeMs !== 'number') {
-    try { mtimeMs = fs.statSync(resolved).mtimeMs; } catch { /* best-effort */ }
+    try {
+      mtimeMs = fs.statSync(resolved).mtimeMs;
+    } catch {
+      /* best-effort */
+    }
   }
   _readState.set(resolved, mtimeMs || Date.now());
 }
@@ -51,7 +57,9 @@ function markRead(filePath, mtimeMs) {
  * 检查文件是否曾被 Read 过。
  */
 function hasRead(filePath) {
-  if (!filePath) return false;
+  if (!filePath) {
+    return false;
+  }
   return _readState.has(_normalizePath(filePath));
 }
 
@@ -60,7 +68,9 @@ function hasRead(filePath) {
  * @returns {{ stale: boolean, reason?: string }}
  */
 function isStale(filePath) {
-  if (!filePath) return { stale: false };
+  if (!filePath) {
+    return { stale: false };
+  }
   const resolved = _normalizePath(filePath);
   const savedMtime = _readState.get(resolved);
   if (savedMtime === undefined) {

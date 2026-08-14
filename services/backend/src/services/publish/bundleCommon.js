@@ -13,17 +13,27 @@
  * original names so every existing call site is unchanged.
  */
 
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+
 const { _readFileSafe } = require('./projectState');
 const { _toInt } = require('./publishUtils');
 
 const DOCKER_BUNDLE_DEFAULT_OUT_DIR = path.join('dist', 'docker-bundles');
 const DOCKER_BUNDLE_SKIP_NAMES = new Set([
-  'node_modules', '.git', '.khy-runtime', '.cache',
-  'coverage', 'dist', 'tests', '_build', '.github', '.githooks',
-  'NUL', '.DS_Store',
+  'node_modules',
+  '.git',
+  '.khy-runtime',
+  '.cache',
+  'coverage',
+  'dist',
+  'tests',
+  '_build',
+  '.github',
+  '.githooks',
+  'NUL',
+  '.DS_Store',
 ]);
 
 function _readJsonSafe(filePath, fallback = {}) {
@@ -40,35 +50,53 @@ function _copyDirForBundle(srcDir, dstDir, skipNames = new Set()) {
     force: true,
     filter: (src) => {
       const base = path.basename(src);
-      if (skipNames.has(base)) return false;
-      if (/^npm-debug\.log/i.test(base)) return false;
-      if (/^yarn-error\.log/i.test(base)) return false;
-      if (/\.py[co]$/i.test(base)) return false;
+      if (skipNames.has(base)) {
+        return false;
+      }
+      if (/^npm-debug\.log/i.test(base)) {
+        return false;
+      }
+      if (/^yarn-error\.log/i.test(base)) {
+        return false;
+      }
+      if (/\.py[co]$/i.test(base)) {
+        return false;
+      }
       return true;
     },
   });
 }
 
 function _isBackendRoot(dirPath) {
-  if (!dirPath) return false;
-  return fs.existsSync(path.join(dirPath, 'package.json'))
-    && fs.existsSync(path.join(dirPath, 'server.js'))
-    && fs.existsSync(path.join(dirPath, 'src'));
+  if (!dirPath) {
+    return false;
+  }
+  return (
+    fs.existsSync(path.join(dirPath, 'package.json')) &&
+    fs.existsSync(path.join(dirPath, 'server.js')) &&
+    fs.existsSync(path.join(dirPath, 'src'))
+  );
 }
 
 function _isSelfContainedBackend(dirPath) {
-  if (!_isBackendRoot(dirPath)) return false;
+  if (!_isBackendRoot(dirPath)) {
+    return false;
+  }
   const pkg = _readJsonSafe(path.join(dirPath, 'package.json'));
   const dep = String(pkg?.dependencies?.['@khy/shared'] || '').trim();
-  return dep === 'file:./vendor/shared'
-    && fs.existsSync(path.join(dirPath, 'vendor', 'shared', 'package.json'));
+  return (
+    dep === 'file:./vendor/shared' &&
+    fs.existsSync(path.join(dirPath, 'vendor', 'shared', 'package.json'))
+  );
 }
 
 function _sortDirEntries(entries = []) {
   return [...entries].sort((a, b) => {
     const ad = !!a?.isDirectory?.();
     const bd = !!b?.isDirectory?.();
-    if (ad !== bd) return ad ? -1 : 1;
+    if (ad !== bd) {
+      return ad ? -1 : 1;
+    }
     return String(a?.name || '').localeCompare(String(b?.name || ''));
   });
 }
@@ -81,14 +109,18 @@ function _buildAsciiTree(rootDir, options = {}) {
   const lines = [`${rootLabel}/`];
 
   function walk(dir, prefix, depth) {
-    if (depth >= maxDepth) return;
+    if (depth >= maxDepth) {
+      return;
+    }
     let entries = [];
     try {
       entries = _sortDirEntries(fs.readdirSync(dir, { withFileTypes: true }));
     } catch {
       return;
     }
-    if (entries.length === 0) return;
+    if (entries.length === 0) {
+      return;
+    }
 
     const shown = entries.slice(0, maxEntriesPerDir);
     for (let i = 0; i < shown.length; i++) {
@@ -162,15 +194,17 @@ function _writeInstallLayoutArtifacts(bundleRoot, meta = {}) {
     'utf-8'
   );
 
-  const mappingLines = sourceMappings.length > 0
-    ? sourceMappings.map((item) => (
-      `- \`${String(item?.target || '').replace(/\\/g, '/')}\` <= \`${String(item?.source || '')}\`${item?.note ? ` (${item.note})` : ''}`
-    )).join('\n')
-    : '- (no source mapping)';
+  const mappingLines =
+    sourceMappings.length > 0
+      ? sourceMappings
+          .map(
+            (item) =>
+              `- \`${String(item?.target || '').replace(/\\/g, '/')}\` <= \`${String(item?.source || '')}\`${item?.note ? ` (${item.note})` : ''}`
+          )
+          .join('\n')
+      : '- (no source mapping)';
 
-  const focusBlock = focusTree
-    ? `\n## Focus Tree\n\n\`\`\`text\n${focusTree}\n\`\`\`\n`
-    : '';
+  const focusBlock = focusTree ? `\n## Focus Tree\n\n\`\`\`text\n${focusTree}\n\`\`\`\n` : '';
 
   const md = `# Install Layout Map
 

@@ -33,7 +33,9 @@ const _rootCache = new Map();
 function _pyprojectIsKhy(root) {
   try {
     const p = path.join(root, 'pyproject.toml');
-    if (!fs.existsSync(p)) return false;
+    if (!fs.existsSync(p)) {
+      return false;
+    }
     const txt = fs.readFileSync(p, 'utf8');
     return /name\s*=\s*["']khy-os["']/.test(txt);
   } catch {
@@ -44,9 +46,13 @@ function _pyprojectIsKhy(root) {
 /** 严格标记集:pyproject name="khy-os" + 两 bundle 根同时存在。 */
 function _isKhyMonorepoRoot(root) {
   try {
-    if (!_pyprojectIsKhy(root)) return false;
+    if (!_pyprojectIsKhy(root)) {
+      return false;
+    }
     for (const rel of leaf.MIRROR_ROOTS) {
-      if (!fs.existsSync(path.join(root, rel))) return false;
+      if (!fs.existsSync(path.join(root, rel))) {
+        return false;
+      }
     }
     return true;
   } catch {
@@ -66,14 +72,21 @@ function detectKhyRepoRoot(startDir) {
   } catch {
     dir = BACKEND_ROOT;
   }
-  if (_rootCache.has(dir)) return _rootCache.get(dir);
+  if (_rootCache.has(dir)) {
+    return _rootCache.get(dir);
+  }
   let found = null;
   try {
     let cur = dir;
     for (let i = 0; i < 12; i++) {
-      if (_isKhyMonorepoRoot(cur)) { found = cur; break; }
+      if (_isKhyMonorepoRoot(cur)) {
+        found = cur;
+        break;
+      }
       const parent = path.dirname(cur);
-      if (parent === cur) break;
+      if (parent === cur) {
+        break;
+      }
       cur = parent;
     }
     // 刻意不做 BACKEND_ROOT 兜底:自维护顾问只在「会话 cwd 位于某 khy monorepo 内」时
@@ -89,9 +102,13 @@ function detectKhyRepoRoot(startDir) {
 /** 绝对路径 → 仓库相对(正斜杠)。越出根 / 失败 → null。 */
 function toRepoRel(absPath, root) {
   try {
-    if (!absPath || !root) return null;
+    if (!absPath || !root) {
+      return null;
+    }
     const rel = path.relative(root, path.resolve(absPath));
-    if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+      return null;
+    }
     return rel.split(path.sep).join('/');
   } catch {
     return null;
@@ -119,13 +136,20 @@ function checkMirrorDrift(repoRel, root) {
   const drift = [];
   try {
     const targets = leaf.computeMirrorPaths(repoRel);
-    if (targets.length === 0) return { missing, drift };
+    if (targets.length === 0) {
+      return { missing, drift };
+    }
     const srcBuf = _readBuf(path.join(root, repoRel));
     for (const rel of targets) {
       const buf = _readBuf(path.join(root, rel));
-      if (buf == null) { missing.push(rel); continue; }
+      if (buf == null) {
+        missing.push(rel);
+        continue;
+      }
       // 源读不到 → 无法判定漂移,不误报(留给守卫/提交期)。
-      if (srcBuf != null && !srcBuf.equals(buf)) drift.push(rel);
+      if (srcBuf != null && !srcBuf.equals(buf)) {
+        drift.push(rel);
+      }
     }
   } catch {
     /* fail-soft:比对失败当无漂移 */
@@ -139,8 +163,11 @@ let _guardsAvailable = null;
 function _scriptsLibDir(root) {
   return path.join(root, 'scripts', 'lib');
 }
+
 function guardsAvailable(root) {
-  if (_guardsAvailable != null) return _guardsAvailable;
+  if (_guardsAvailable != null) {
+    return _guardsAvailable;
+  }
   try {
     _guardsAvailable = fs.existsSync(path.join(_scriptsLibDir(root), 'leafContractGuard.js'));
   } catch {
@@ -156,11 +183,21 @@ function _foldFindings(name, findings) {
   let warnCount = 0;
   let sample = '';
   for (const f of list) {
-    if (f && f.severity === 'error') { errorCount += 1; if (!sample) sample = _findingSample(f); }
-    else { warnCount += 1; if (!sample) sample = _findingSample(f); }
+    if (f && f.severity === 'error') {
+      errorCount += 1;
+      if (!sample) {
+        sample = _findingSample(f);
+      }
+    } else {
+      warnCount += 1;
+      if (!sample) {
+        sample = _findingSample(f);
+      }
+    }
   }
   return { name, ok: errorCount === 0, errorCount, warnCount, sample };
 }
+
 function _findingSample(f) {
   try {
     const where = f.line ? `@${f.line}` : '';
@@ -177,7 +214,9 @@ function _findingSample(f) {
  */
 function runGuards(repoRel, root, source) {
   const results = [];
-  if (!guardsAvailable(root)) return results;
+  if (!guardsAvailable(root)) {
+    return results;
+  }
   const libDir = _scriptsLibDir(root);
   // leaf-contract:对所有源文件跑(自身对非叶子文件 pass)。
   try {
@@ -195,7 +234,9 @@ function runGuards(repoRel, root, source) {
       try {
         const models = require(path.join(root, 'services/backend/src/constants/models.js'));
         watchedNames = mhGuard.deriveWatchedNames(models);
-      } catch { /* 无 models → 空名单,守卫自身 fail-soft */ }
+      } catch {
+        /* 无 models → 空名单,守卫自身 fail-soft */
+      }
       const r = mhGuard.assessFile({ relPath: repoRel, source, watchedNames, env: process.env });
       results.push(_foldFindings('model-hardcoding', r && r.findings));
     }
@@ -212,6 +253,7 @@ const _recentToolEdits = new Map(); // absPath(resolved) → expiresAt
 function _now() {
   return Date.now();
 }
+
 function _resolveAbs(absPath) {
   try {
     return path.resolve(absPath);
@@ -224,7 +266,9 @@ function _resolveAbs(absPath) {
 function recordToolEdit(absPath) {
   try {
     const key = _resolveAbs(absPath);
-    if (!key) return;
+    if (!key) {
+      return;
+    }
     _recentToolEdits.set(key, _now() + RECENT_TOOL_EDIT_TTL_MS);
   } catch {
     /* fail-soft */
@@ -236,7 +280,9 @@ function wasRecentlyToolEdited(absPath) {
   try {
     const key = _resolveAbs(absPath);
     const exp = _recentToolEdits.get(key);
-    if (exp == null) return false;
+    if (exp == null) {
+      return false;
+    }
     _recentToolEdits.delete(key);
     return exp > _now();
   } catch {
@@ -255,12 +301,20 @@ function wasRecentlyToolEdited(absPath) {
  */
 function emitForPath(absPath, opts = {}) {
   try {
-    if (!leaf.selfEditAdvisoryEnabled(process.env)) return null;
+    if (!leaf.selfEditAdvisoryEnabled(process.env)) {
+      return null;
+    }
     const root = detectKhyRepoRoot(opts.cwd || process.cwd());
-    if (!root) return null; // 非 khy monorepo → 绝不误触发
+    if (!root) {
+      return null;
+    } // 非 khy monorepo → 绝不误触发
     const repoRel = toRepoRel(absPath, root);
-    if (!repoRel) return null;
-    if (!leaf.isMirroredSourcePath(repoRel).mirrored) return null;
+    if (!repoRel) {
+      return null;
+    }
+    if (!leaf.isMirroredSourcePath(repoRel).mirrored) {
+      return null;
+    }
 
     const source = (() => {
       const b = _readBuf(path.join(root, repoRel));
@@ -272,13 +326,16 @@ function emitForPath(absPath, opts = {}) {
     const avail = guardsAvailable(root);
     const guardResults = avail ? runGuards(repoRel, root, source) : [];
 
-    return leaf.buildSelfEditAdvisory({
-      repoRel,
-      isLeaf,
-      mirrorState,
-      guardResults,
-      guardsAvailable: avail,
-    }, process.env);
+    return leaf.buildSelfEditAdvisory(
+      {
+        repoRel,
+        isLeaf,
+        mirrorState,
+        guardResults,
+        guardsAvailable: avail,
+      },
+      process.env
+    );
   } catch {
     return null;
   }

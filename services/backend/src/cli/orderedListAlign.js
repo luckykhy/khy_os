@@ -29,7 +29,9 @@ const OL_ITEM = /^(\s*)(\d+)\.(\s+)(.*)$/;
  * @returns {boolean}
  */
 function orderedListAlignEnabled(env = process.env) {
-  const flag = String((env && env.KHY_OL_MARKER_ALIGN) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_OL_MARKER_ALIGN) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -45,20 +47,27 @@ function orderedListAlignEnabled(env = process.env) {
 function alignOrderedListMarkers(text) {
   try {
     const src = String(text == null ? '' : text);
-    if (src.indexOf('.') === -1) return src; // fast path: no possible "N." marker
+    if (src.indexOf('.') === -1) {
+      return src;
+    } // fast path: no possible "N." marker
     const lines = src.split('\n');
     const n = lines.length;
     let i = 0;
     while (i < n) {
       const m = lines[i].match(OL_ITEM);
-      if (!m) { i++; continue; }
+      if (!m) {
+        i++;
+        continue;
+      }
       const indent = m[1];
       // Gather the maximal run of consecutive items at this exact indent.
       const run = [];
       let j = i;
       while (j < n) {
         const mj = lines[j].match(OL_ITEM);
-        if (!mj || mj[1] !== indent) break;
+        if (!mj || mj[1] !== indent) {
+          break;
+        }
         run.push({ idx: j, num: mj[2], gap: mj[3], rest: mj[4] });
         j++;
       }

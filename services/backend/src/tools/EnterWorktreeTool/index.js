@@ -11,8 +11,12 @@ class EnterWorktreeTool extends BaseTool {
   static aliases = ['enter_worktree', 'worktree_create'];
   static searchHint = 'git worktree isolate branch agent';
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Create an isolated git worktree and switch the session into it.
@@ -27,7 +31,8 @@ Creates a new branch based on HEAD inside .khy/worktrees/.`;
       properties: {
         name: {
           type: 'string',
-          description: 'Optional name for the worktree. Auto-generated if omitted. Max 64 chars, letters/digits/dots/underscores/dashes only.',
+          description:
+            'Optional name for the worktree. Auto-generated if omitted. Max 64 chars, letters/digits/dots/underscores/dashes only.',
         },
       },
     };

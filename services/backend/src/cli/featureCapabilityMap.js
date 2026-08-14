@@ -11,7 +11,8 @@ const COMMAND_IMPLEMENTATION = {
   backtest: 'backend/src/cli/handlers/backtest.js::handleBacktestRun|handleBacktestList',
   strategy: 'backend/src/cli/handlers/backtest.js::handleStrategyList',
   app: 'backend/src/cli/handlers/app.js::handleApp',
-  gateway: 'backend/src/cli/handlers/gateway.js::handleGatewayStatus|handleGatewayConfig|handleGatewayManage',
+  gateway:
+    'backend/src/cli/handlers/gateway.js::handleGatewayStatus|handleGatewayConfig|handleGatewayManage',
   model: 'backend/src/cli/handlers/gateway.js::handleGatewaySelectModel',
   pool: 'backend/src/cli/handlers/pool.js::handlePool*',
   proxy: 'backend/src/cli/handlers/proxy.js::handleProxy*',
@@ -67,13 +68,19 @@ const COMMAND_FEATURE = {
 };
 
 function _clean(text = '', maxLen = 120) {
-  const oneLine = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!oneLine) return '';
+  const oneLine = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!oneLine) {
+    return '';
+  }
   return oneLine.length > maxLen ? `${oneLine.slice(0, maxLen - 3)}...` : oneLine;
 }
 
 function _resolveImplementation(command = '') {
-  if (COMMAND_IMPLEMENTATION[command]) return COMMAND_IMPLEMENTATION[command];
+  if (COMMAND_IMPLEMENTATION[command]) {
+    return COMMAND_IMPLEMENTATION[command];
+  }
   return `backend/src/cli/router.js::route(case '${command || 'unknown'}')`;
 }
 
@@ -106,7 +113,9 @@ class FeatureCapabilityMap {
     this.implementation = _resolveImplementation(command);
     this.executable = KNOWN_COMMANDS.has(command) ? 'ready' : 'ai-fallback';
     this.reason = KNOWN_COMMANDS.has(command)
-      ? (subCommand ? `parsed: ${command} ${subCommand}` : `parsed: ${command}`)
+      ? subCommand
+        ? `parsed: ${command} ${subCommand}`
+        : `parsed: ${command}`
       : `unknown command: ${command}`;
     this.updatedAt = Date.now();
   }
@@ -118,14 +127,20 @@ class FeatureCapabilityMap {
     } else if (result === false) {
       this.executable = 'delegated';
       this.currentFeature = 'AI task execution';
-      this.implementation = 'backend/src/cli/repl.js::chatFn -> backend/src/services/toolUseLoop.js::runToolUseLoop';
+      this.implementation =
+        'backend/src/cli/repl.js::chatFn -> backend/src/services/toolUseLoop.js::runToolUseLoop';
       this.reason = 'forwarded to AI chat loop';
     } else if (result && typeof result === 'object' && result.aiForward) {
       this.executable = 'delegated';
       this.currentFeature = 'Command with AI forwarding';
       this.implementation = 'backend/src/cli/repl.js::route -> ai().chat';
       this.reason = 'command generated aiForward prompt';
-    } else if (result === 'exit' || result === 'menu' || result === 'ai-status' || result === 'ai-config') {
+    } else if (
+      result === 'exit' ||
+      result === 'menu' ||
+      result === 'ai-status' ||
+      result === 'ai-config'
+    ) {
       this.executable = 'ready';
       this.reason = `special route: ${result}`;
     }
@@ -133,7 +148,10 @@ class FeatureCapabilityMap {
   }
 
   markError(error) {
-    const msg = _clean(error && error.message ? error.message : String(error || 'unknown error'), 96);
+    const msg = _clean(
+      error && error.message ? error.message : String(error || 'unknown error'),
+      96
+    );
     this.executable = 'blocked';
     this.reason = `runtime error: ${msg}`;
     this.updatedAt = Date.now();
@@ -155,16 +173,21 @@ class FeatureCapabilityMap {
   markToolCall(toolName = '', params = {}) {
     const name = String(toolName || '').trim();
     const target = _clean(
-      params.path || params.file_path || params.filePath || params.pattern || params.query || params.q || params.command || '',
+      params.path ||
+        params.file_path ||
+        params.filePath ||
+        params.pattern ||
+        params.query ||
+        params.q ||
+        params.command ||
+        '',
       64
     );
     this.currentFeature = 'AI tool execution';
     this.implementation = 'backend/src/services/toolUseLoop.js::executeToolCall';
     this.executable = 'running';
     this.lastTool = name || this.lastTool;
-    this.reason = name
-      ? `tool call: ${name}${target ? ` (${target})` : ''}`
-      : 'tool call';
+    this.reason = name ? `tool call: ${name}${target ? ` (${target})` : ''}` : 'tool call';
     this.updatedAt = Date.now();
   }
 
@@ -177,7 +200,9 @@ class FeatureCapabilityMap {
     this.lastTool = name || this.lastTool;
     this.reason = name
       ? `${ok ? 'tool success' : 'tool failed'}: ${name}${short ? ` · ${short}` : ''}`
-      : (ok ? 'tool success' : 'tool failed');
+      : ok
+        ? 'tool success'
+        : 'tool failed';
     this.updatedAt = Date.now();
   }
 
@@ -185,9 +210,14 @@ class FeatureCapabilityMap {
     this.currentFeature = 'AI task execution';
     this.command = 'ai';
     this.subCommand = 'tool-loop';
-    this.implementation = 'backend/src/cli/repl.js::chatFn -> backend/src/services/toolUseLoop.js::runToolUseLoop';
+    this.implementation =
+      'backend/src/cli/repl.js::chatFn -> backend/src/services/toolUseLoop.js::runToolUseLoop';
     this.executable = success ? 'completed' : 'blocked';
-    this.reason = reason ? _clean(reason, 96) : (success ? 'ai task completed' : 'ai task incomplete');
+    this.reason = reason
+      ? _clean(reason, 96)
+      : success
+        ? 'ai task completed'
+        : 'ai task incomplete';
     this.updatedAt = Date.now();
   }
 
@@ -204,7 +234,9 @@ class FeatureCapabilityMap {
   }
 
   getCompactStatus() {
-    const cmd = this.command ? `${this.command}${this.subCommand ? `/${this.subCommand}` : ''}` : 'n/a';
+    const cmd = this.command
+      ? `${this.command}${this.subCommand ? `/${this.subCommand}` : ''}`
+      : 'n/a';
     return `${cmd} | ${this.executable} | ${this.currentFeature}`;
   }
 

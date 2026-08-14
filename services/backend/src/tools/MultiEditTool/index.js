@@ -21,12 +21,12 @@
  */
 // [AI-弱模型·照抄] 高危写工具:edits 顺序作用于上一步结果、全成或全不改;先 Read 再改,old_string
 // 逐字照抄。prompt() 末尾的 this.weakModelToolNote() 注入别删;改本工具照 'tool-description' 位点。
-const { BaseTool } = require('../_baseTool');
 const fs = require('fs');
 const path = require('path');
 
 // ── LSP diagnostics auto-inject (mirrors FileEditTool) ─────────────
 const _collectLspDiagnostics = require('../../utils/collectLspDiagnostics');
+const { BaseTool } = require('../_baseTool');
 
 class MultiEditTool extends BaseTool {
   static toolName = 'MultiEdit';
@@ -36,11 +36,16 @@ class MultiEditTool extends BaseTool {
   static searchHint = 'edit multiple blocks atomically in one file';
   static alwaysLoad = true;
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
-    return `This is a tool for making multiple edits to a single file in one operation. It is built on top of the Edit tool and allows you to perform multiple find-and-replace operations efficiently. Prefer this tool over the Edit tool when you need to make multiple edits to the same file.
+    return (
+      `This is a tool for making multiple edits to a single file in one operation. It is built on top of the Edit tool and allows you to perform multiple find-and-replace operations efficiently. Prefer this tool over the Edit tool when you need to make multiple edits to the same file.
 
 Before using this tool:
 1. Use the Read tool to understand the file's contents and context. This tool will error if you attempt an edit without reading the file first.
@@ -72,7 +77,8 @@ WARNING:
 When making edits:
 - Ensure all edits result in idiomatic, correct code.
 - Do not leave the code in a broken state.
-- Use replace_all for renaming a variable across the file.` + this.weakModelToolNote();
+- Use replace_all for renaming a variable across the file.` + this.weakModelToolNote()
+    );
   }
 
   get inputSchema() {
@@ -85,13 +91,15 @@ When making edits:
         },
         edits: {
           type: 'array',
-          description: 'Array of edit operations to perform sequentially on the file. Each edit is applied to the result of the previous edit.',
+          description:
+            'Array of edit operations to perform sequentially on the file. Each edit is applied to the result of the previous edit.',
           items: {
             type: 'object',
             properties: {
               old_string: {
                 type: 'string',
-                description: 'The text to replace (must be unique within the current file contents unless replace_all is true)',
+                description:
+                  'The text to replace (must be unique within the current file contents unless replace_all is true)',
               },
               new_string: {
                 type: 'string',
@@ -117,7 +125,9 @@ When making edits:
   }
 
   getToolUseSummary(input) {
-    if (!input.file_path) return null;
+    if (!input.file_path) {
+      return null;
+    }
     const n = Array.isArray(input.edits) ? input.edits.length : 0;
     return `批量编辑 ${path.basename(input.file_path)}：${n} 处改动`;
   }
@@ -126,7 +136,10 @@ When making edits:
     const { file_path, edits } = params;
 
     if (!Array.isArray(edits) || edits.length === 0) {
-      return { success: false, error: 'edits must be a non-empty array of { old_string, new_string, replace_all? }.' };
+      return {
+        success: false,
+        error: 'edits must be a non-empty array of { old_string, new_string, replace_all? }.',
+      };
     }
 
     try {
@@ -149,7 +162,8 @@ When making edits:
       if (!tracker.hasRead(absPath)) {
         return {
           success: false,
-          error: 'You must Read this file before editing it. Use the Read tool first to see the current content.',
+          error:
+            'You must Read this file before editing it. Use the Read tool first to see the current content.',
         };
       }
       const staleCheck = tracker.isStale(absPath);
@@ -162,7 +176,9 @@ When making edits:
       // Pre-edit diagnostics baseline (CC beforeFileEdited 口径,门控 KHY_POST_EDIT_DIAGNOSTICS)。
       try {
         require('../../services/postEditDiagnostics').captureBaseline(absPath, cwd);
-      } catch { /* diagnostics baseline is best-effort; never blocks the edit */ }
+      } catch {
+        /* diagnostics baseline is best-effort; never blocks the edit */
+      }
 
       // ── Apply every edit in-memory, all-or-nothing ──────────────────
       let working = original;
@@ -172,10 +188,16 @@ When making edits:
         const { old_string, new_string, replace_all } = edit;
 
         if (typeof old_string !== 'string' || typeof new_string !== 'string') {
-          return { success: false, error: `Edit #${i + 1}: old_string and new_string must both be strings.` };
+          return {
+            success: false,
+            error: `Edit #${i + 1}: old_string and new_string must both be strings.`,
+          };
         }
         if (old_string === new_string) {
-          return { success: false, error: `Edit #${i + 1}: old_string and new_string are identical — nothing to change.` };
+          return {
+            success: false,
+            error: `Edit #${i + 1}: old_string and new_string are identical — nothing to change.`,
+          };
         }
 
         // Count NON-OVERLAPPING occurrences in the CURRENT working buffer — this
@@ -187,7 +209,9 @@ When making edits:
         let idx = working.indexOf(old_string);
         while (idx !== -1) {
           count++;
-          if (old_string.length === 0) break; // guard against empty-string infinite loop
+          if (old_string.length === 0) {
+            break;
+          } // guard against empty-string infinite loop
           idx = working.indexOf(old_string, idx + old_string.length);
         }
 
@@ -218,14 +242,19 @@ When making edits:
       }
 
       if (working === original) {
-        return { success: false, error: 'No effective change — the resulting content is identical to the original.' };
+        return {
+          success: false,
+          error: 'No effective change — the resulting content is identical to the original.',
+        };
       }
 
       // ── Snapshot the ORIGINAL once, then atomic single write ────────
       try {
         const fh = require('../../services/fileHistoryService');
         fh.takeSnapshot(absPath, { reason: 'MultiEditTool', content: original });
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
 
       fs.writeFileSync(absPath, working, 'utf-8');
       tracker.markRead(absPath);
@@ -238,7 +267,9 @@ When making edits:
         message: `Applied ${edits.length} edit${edits.length > 1 ? 's' : ''} (${totalReplacements} replacement${totalReplacements > 1 ? 's' : ''}) to ${path.basename(absPath)}`,
       };
       const diags = _collectLspDiagnostics(absPath);
-      if (diags) result._lspDiagnostics = diags;
+      if (diags) {
+        result._lspDiagnostics = diags;
+      }
       return result;
     } catch (err) {
       return { success: false, error: err.message };

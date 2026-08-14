@@ -36,8 +36,18 @@ let userB;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'det-a', email: 'det-a@test.local', password: 'pw-a-123456', status: 'active' });
-  userB = await User.create({ username: 'det-b', email: 'det-b@test.local', password: 'pw-b-123456', status: 'active' });
+  userA = await User.create({
+    username: 'det-a',
+    email: 'det-a@test.local',
+    password: 'pw-a-123456',
+    status: 'active',
+  });
+  userB = await User.create({
+    username: 'det-b',
+    email: 'det-b@test.local',
+    password: 'pw-b-123456',
+    status: 'active',
+  });
 
   // A: a relay upstream (with key) + two provider keys (deepseek has a base url,
   // moonshot has neither base nor endpoint → unprobeable).
@@ -47,13 +57,21 @@ beforeAll(async () => {
     compatibility: 'openai',
     apiKey: 'sk-relay-secret',
   });
-  await svc.addProviderEntry(userA.id, { provider: 'deepseek', key: 'sk-ds-1', baseUrl: 'https://api.deepseek.com/v1' });
+  await svc.addProviderEntry(userA.id, {
+    provider: 'deepseek',
+    key: 'sk-ds-1',
+    baseUrl: 'https://api.deepseek.com/v1',
+  });
   await svc.addProviderEntry(userA.id, { provider: 'moonshot', key: 'sk-ms-1' }); // no base/endpoint
 });
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 afterEach(() => jest.clearAllMocks());
@@ -73,7 +91,7 @@ describe('detectForProvider', () => {
     expect(res.added).toBe(2);
 
     const stored = await svc.listModels(userA.id, { provider: 'relay' });
-    expect(stored.map(m => m.model).sort()).toEqual(['extra-model', 'relay-default']);
+    expect(stored.map((m) => m.model).sort()).toEqual(['extra-model', 'relay-default']);
   });
 
   test('named provider with a base url is probed + persisted', async () => {
@@ -81,7 +99,7 @@ describe('detectForProvider', () => {
     const res = await detection.detectForProvider(userA.id, 'deepseek');
     expect(res).toMatchObject({ provider: 'deepseek', probed: true, added: 1 });
     const stored = await svc.listModels(userA.id, { provider: 'deepseek' });
-    expect(stored.map(m => m.model)).toEqual(['deepseek-chat']);
+    expect(stored.map((m) => m.model)).toEqual(['deepseek-chat']);
   });
 
   test('provider with no usable upstream is skipped (probed:false, not an error)', async () => {
@@ -124,23 +142,23 @@ describe('detectUpstreams', () => {
     });
 
     const summary = await detection.detectUpstreams(userA.id);
-    const names = summary.providers.map(p => p.provider).sort();
+    const names = summary.providers.map((p) => p.provider).sort();
     expect(names).toEqual(['deepseek', 'moonshot', 'relay']);
 
     expect(summary.probed).toBe(2); // relay + deepseek attempted; moonshot skipped
     // deepseek failed → recorded in errors with its provider tag, flagged benign
     // (null probe = no /models endpoint) so the UI suppresses the red error.
-    const dsErr = summary.errors.find(e => e.provider === 'deepseek');
+    const dsErr = summary.errors.find((e) => e.provider === 'deepseek');
     expect(dsErr).toBeTruthy();
     expect(dsErr.benign).toBe(true);
-    expect(summary.errors.every(e => e.source === 'upstream')).toBe(true);
+    expect(summary.errors.every((e) => e.source === 'upstream')).toBe(true);
   });
 
   test('tenant isolation: detecting for B does not touch A and B owns nothing', async () => {
     fetchUpstreamModels.mockResolvedValue([]);
     const summary = await detection.detectUpstreams(userB.id);
     // B has only the relay slot candidate but no relay config → nothing probed.
-    expect(summary.providers.map(p => p.provider)).toEqual(['relay']);
+    expect(summary.providers.map((p) => p.provider)).toEqual(['relay']);
     const bModels = await svc.listModels(userB.id);
     expect(bModels).toHaveLength(0);
   });

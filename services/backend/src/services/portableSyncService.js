@@ -47,7 +47,9 @@ const IDLE_TIMEOUT_MS = 120000;
 function matchesPattern(name, pattern) {
   const n = String(name).toLowerCase();
   const p = String(pattern).toLowerCase();
-  if (p.startsWith('*')) return n.endsWith(p.slice(1));
+  if (p.startsWith('*')) {
+    return n.endsWith(p.slice(1));
+  }
   return n === p;
 }
 
@@ -57,7 +59,9 @@ function matchesAny(name, patterns) {
 
 /** True when any path segment of relPath hits the protection list. */
 function isProtectedRelPath(relPath) {
-  const segments = String(relPath).split(/[\\/]+/).filter(Boolean);
+  const segments = String(relPath)
+    .split(/[\\/]+/)
+    .filter(Boolean);
   return segments.some((seg) => matchesAny(seg, PROTECTED_TARGET_DIRS));
 }
 
@@ -90,18 +94,30 @@ function validateTarget(targetRoot, sourceRoot) {
     return { ok: false, reason: `目标目录与源目录相同（${target}），拒绝同步` };
   }
   if (_isSubPath(source, target)) {
-    return { ok: false, reason: `目标目录 ${target} 位于源目录 ${source} 内部，同步会造成自我嵌套复制，拒绝同步` };
+    return {
+      ok: false,
+      reason: `目标目录 ${target} 位于源目录 ${source} 内部，同步会造成自我嵌套复制，拒绝同步`,
+    };
   }
   if (_isSubPath(target, source)) {
-    return { ok: false, reason: `源目录 ${source} 位于目标目录 ${target} 内部，镜像模式会破坏源目录结构，拒绝同步` };
+    return {
+      ok: false,
+      reason: `源目录 ${source} 位于目标目录 ${target} 内部，镜像模式会破坏源目录结构，拒绝同步`,
+    };
   }
   if (!fs.existsSync(target) || !fs.statSync(target).isDirectory()) {
-    return { ok: false, reason: `目标目录不存在或不是目录: ${target}（请先用 run-portable 构建便携版）` };
+    return {
+      ok: false,
+      reason: `目标目录不存在或不是目录: ${target}（请先用 run-portable 构建便携版）`,
+    };
   }
   const markers = ['khy.bat', path.join('services', 'backend', 'package.json')];
   for (const marker of markers) {
     if (!fs.existsSync(path.join(target, marker))) {
-      return { ok: false, reason: `目标缺少便携版特征文件 ${marker}，看起来不是便携版根目录: ${target}` };
+      return {
+        ok: false,
+        reason: `目标缺少便携版特征文件 ${marker}，看起来不是便携版根目录: ${target}`,
+      };
     }
   }
   return { ok: true };
@@ -120,8 +136,12 @@ function nodeCheckFile(absFile) {
       resolve({ ok: false, output: String((err && err.message) || err) });
       return;
     }
-    child.stdout.on('data', (d) => { out += String(d); });
-    child.stderr.on('data', (d) => { out += String(d); });
+    child.stdout.on('data', (d) => {
+      out += String(d);
+    });
+    child.stderr.on('data', (d) => {
+      out += String(d);
+    });
     child.on('error', (err) => resolve({ ok: false, output: String((err && err.message) || err) }));
     child.on('close', (code) => resolve({ ok: code === 0, output: out.trim() }));
   });
@@ -140,7 +160,9 @@ async function checkSourceHealth(sourceRoot) {
       continue;
     }
     const res = await nodeCheckFile(abs);
-    if (!res.ok) failures.push({ file: rel, output: res.output });
+    if (!res.ok) {
+      failures.push({ file: rel, output: res.output });
+    }
   }
   return { ok: failures.length === 0, failures };
 }
@@ -165,14 +187,20 @@ async function collectTree(root, { extraDirPatterns = [] } = {}) {
     for (const entry of entries) {
       const rel = relBase ? `${relBase}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
-        if (matchesAny(entry.name, dirPatterns)) continue;
+        if (matchesAny(entry.name, dirPatterns)) {
+          continue;
+        }
         await walk(path.join(dirAbs, entry.name), rel);
       } else if (entry.isFile()) {
-        if (matchesAny(entry.name, EXCLUDE_FILES)) continue;
+        if (matchesAny(entry.name, EXCLUDE_FILES)) {
+          continue;
+        }
         try {
           const st = await fsp.stat(path.join(dirAbs, entry.name));
           files.set(rel, { size: st.size, mtimeMs: st.mtimeMs });
-        } catch { /* vanished mid-walk — ignore */ }
+        } catch {
+          /* vanished mid-walk — ignore */
+        }
       }
       // symlinks/sockets are intentionally not synced
     }
@@ -200,14 +228,22 @@ async function planSync(sourceRoot, targetRoot, opts = {}) {
 
   for (const [rel, meta] of sourceFiles) {
     // Never write into protected target paths, in any mode.
-    if (isProtectedRelPath(rel)) { protectedSkips++; continue; }
+    if (isProtectedRelPath(rel)) {
+      protectedSkips++;
+      continue;
+    }
     let tst = null;
     try {
       tst = await fsp.stat(path.join(targetRoot, rel));
-    } catch { /* missing on target → copy */ }
-    if (tst && tst.isFile()
-      && tst.size === meta.size
-      && Math.abs(tst.mtimeMs - meta.mtimeMs) <= MTIME_TOLERANCE_MS) {
+    } catch {
+      /* missing on target → copy */
+    }
+    if (
+      tst &&
+      tst.isFile() &&
+      tst.size === meta.size &&
+      Math.abs(tst.mtimeMs - meta.mtimeMs) <= MTIME_TOLERANCE_MS
+    ) {
       skipCount++;
       continue;
     }
@@ -220,8 +256,12 @@ async function planSync(sourceRoot, targetRoot, opts = {}) {
     // never even descend into protected dirs — they can never be deleted.
     const targetFiles = await collectTree(targetRoot, { extraDirPatterns: PROTECTED_TARGET_DIRS });
     for (const rel of targetFiles.keys()) {
-      if (sourceFiles.has(rel)) continue;
-      if (isProtectedRelPath(rel)) continue; // double safety net
+      if (sourceFiles.has(rel)) {
+        continue;
+      }
+      if (isProtectedRelPath(rel)) {
+        continue;
+      } // double safety net
       del.push(rel);
     }
   }
@@ -268,10 +308,16 @@ function createIdleWatchdog(label, onIdle) {
       onIdle(idleMs, label);
     }
   }, 5000);
-  if (typeof timer.unref === 'function') timer.unref();
+  if (typeof timer.unref === 'function') {
+    timer.unref();
+  }
   return {
-    touch() { lastActivity = Date.now(); },
-    stop() { clearInterval(timer); },
+    touch() {
+      lastActivity = Date.now();
+    },
+    stop() {
+      clearInterval(timer);
+    },
   };
 }
 
@@ -293,14 +339,26 @@ async function copyOneFile(srcAbs, dstAbs) {
  */
 function mirrorNodeModules(srcDir, dstDir, onProgress) {
   if (process.platform !== 'win32') {
-    return fsp.rm(dstDir, { recursive: true, force: true })
+    return fsp
+      .rm(dstDir, { recursive: true, force: true })
       .then(() => fsp.cp(srcDir, dstDir, { recursive: true }))
       .then(() => ({ ok: true, method: 'fs.cp', lines: 0 }));
   }
   return new Promise((resolve, reject) => {
     // /NJH /NJS /NDL /NP: silence headers/summary/dir-lines/percent, keep the
     // per-file lines as the liveness signal for the idle watchdog.
-    const rcArgs = [srcDir, dstDir, '/MIR', '/COPY:DAT', '/R:1', '/W:1', '/NJH', '/NJS', '/NDL', '/NP'];
+    const rcArgs = [
+      srcDir,
+      dstDir,
+      '/MIR',
+      '/COPY:DAT',
+      '/R:1',
+      '/W:1',
+      '/NJH',
+      '/NJS',
+      '/NDL',
+      '/NP',
+    ];
     let child;
     try {
       child = spawn('robocopy', rcArgs, { windowsHide: true });
@@ -311,11 +369,21 @@ function mirrorNodeModules(srcDir, dstDir, onProgress) {
     let lines = 0;
     let settled = false;
     const watchdog = createIdleWatchdog('robocopy node_modules', (idleMs) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       watchdog.stop();
-      try { child.kill(); } catch { /* already gone */ }
-      reject(new Error(`robocopy 已 ${Math.round(idleMs / 1000)} 秒无任何输出（已输出 ${lines} 行），判定卡死并中止`));
+      try {
+        child.kill();
+      } catch {
+        /* already gone */
+      }
+      reject(
+        new Error(
+          `robocopy 已 ${Math.round(idleMs / 1000)} 秒无任何输出（已输出 ${lines} 行），判定卡死并中止`
+        )
+      );
     });
     const onData = (buf) => {
       const chunk = String(buf);
@@ -331,18 +399,25 @@ function mirrorNodeModules(srcDir, dstDir, onProgress) {
     child.stdout.on('data', onData);
     child.stderr.on('data', onData);
     child.on('error', (err) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       watchdog.stop();
       reject(new Error(`robocopy 执行出错: ${(err && err.message) || err}`));
     });
     child.on('close', (code) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       watchdog.stop();
       // robocopy exit codes 0-7 mean success (files copied / extras removed).
-      if (code >= 0 && code <= 7) resolve({ ok: true, method: 'robocopy', lines, exitCode: code });
-      else reject(new Error(`robocopy 失败（退出码 ${code}，已输出 ${lines} 行）`));
+      if (code >= 0 && code <= 7) {
+        resolve({ ok: true, method: 'robocopy', lines, exitCode: code });
+      } else {
+        reject(new Error(`robocopy 失败（退出码 ${code}，已输出 ${lines} 行）`));
+      }
     });
   });
 }
@@ -368,17 +443,21 @@ async function executeSync(sourceRoot, targetRoot, plan, opts = {}, onProgress) 
   // interrupts an in-flight single-file copy. No wall-clock hard kill.
   const watchdog = createIdleWatchdog('文件同步', (idleMs) => {
     idleAbort = new Error(
-      `同步已 ${Math.round(idleMs / 1000)} 秒无进展（已完成 ${done}/${total}，剩余 ${total - done}），判定卡死并中止`,
+      `同步已 ${Math.round(idleMs / 1000)} 秒无进展（已完成 ${done}/${total}，剩余 ${total - done}），判定卡死并中止`
     );
   });
   const report = (action, file) => {
-    if (typeof onProgress === 'function') onProgress({ done, total, action, file });
+    if (typeof onProgress === 'function') {
+      onProgress({ done, total, action, file });
+    }
   };
 
   const errors = [];
   try {
     for (const rel of plan.copy) {
-      if (idleAbort) throw idleAbort;
+      if (idleAbort) {
+        throw idleAbort;
+      }
       try {
         await copyOneFile(path.join(sourceRoot, rel), path.join(targetRoot, rel));
       } catch (err) {
@@ -389,10 +468,15 @@ async function executeSync(sourceRoot, targetRoot, plan, opts = {}, onProgress) 
       report('copy', rel);
     }
     for (const rel of plan.delete) {
-      if (idleAbort) throw idleAbort;
+      if (idleAbort) {
+        throw idleAbort;
+      }
       // Final safety net: protected paths are unreachable here by plan
       // construction, but never delete one even if a caller mangles the plan.
-      if (isProtectedRelPath(rel)) { done++; continue; }
+      if (isProtectedRelPath(rel)) {
+        done++;
+        continue;
+      }
       try {
         await fsp.rm(path.join(targetRoot, rel), { recursive: true, force: true });
       } catch (err) {
@@ -411,7 +495,11 @@ async function executeSync(sourceRoot, targetRoot, plan, opts = {}, onProgress) 
     const srcNm = path.join(sourceRoot, 'services', 'backend', 'node_modules');
     const dstNm = path.join(targetRoot, 'services', 'backend', 'node_modules');
     if (!fs.existsSync(srcNm)) {
-      errors.push({ file: 'services/backend/node_modules', action: 'mirror', message: '源侧 node_modules 不存在，跳过依赖镜像' });
+      errors.push({
+        file: 'services/backend/node_modules',
+        action: 'mirror',
+        message: '源侧 node_modules 不存在，跳过依赖镜像',
+      });
     } else {
       const res = await mirrorNodeModules(srcNm, dstNm, onProgress);
       nodeModules = { synced: true, method: res.method, lines: res.lines || 0 };
@@ -476,8 +564,12 @@ function detectTargetActivity(targetRoot, windowMs = 120000) {
   for (const probe of probes) {
     try {
       const st = fs.statSync(probe);
-      if (now - st.mtimeMs <= windowMs) return true;
-    } catch { /* probe missing — keep going */ }
+      if (now - st.mtimeMs <= windowMs) {
+        return true;
+      }
+    } catch {
+      /* probe missing — keep going */
+    }
   }
   return false;
 }

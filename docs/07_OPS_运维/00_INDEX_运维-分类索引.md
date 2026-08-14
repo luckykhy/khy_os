@@ -96,6 +96,10 @@
 | [OPS-MAN-166] cc(Claude Code)个性化使用说明书·重逢版.md | cc 个性化使用说明书·重逢版 | 定稿 |
 | [OPS-MAN-168] 弱模型护栏与维护子系统登记.md | 弱模型护栏与维护子系统登记（单人可维护补登记） | 定稿 |
 | [OPS-MAN-169] 项目规则总纲-命名·skill·权限·mcp.md | 命名/skill/权限/mcp 规则总纲一站式索引 | 定稿 |
+| [OPS-MAN-170] 外部技能安装-khy-skill-add.md | khy skill add 用法/源格式/FAQ | 定稿 |
+| [OPS-MAN-171] 技能包规范-manifest与prompt模板.md | 技能包字段规范与可复制模板 | 定稿 |
+| [OPS-MAN-172] 自定义供应商接入指南.md | 一键预设/手动接入供应商·serviceType·gateway add | 定稿 |
+| [OPS-MAN-173] MCP工具接入快速上手.md | khy mcp add/presets/test·18 预设·三传输示例 | 定稿 |
 
 ## 三、跨分类关联指引
 

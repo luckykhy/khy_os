@@ -20,7 +20,7 @@
  *   opts.token     bearer token              (env PROXY_AUTH_TOKEN, else the
  *                  authToken in ~/.khy/proxy_server_auth.json)
  *   opts.model     fallback model id         (env KHY_BRAIN_MODEL, else
- *                  'claude/claude-sonnet-4-20250514'); the live config's `model`
+ *                  'claude/claude-sonnet-4-6'); the live config's `model`
  *                  key wins over this so the in-system choice routes the brain.
  *   opts.timeoutMs per-call HTTP timeout     (env KHY_BRAIN_TIMEOUT_MS, else
  *                  2500 — under the kernel's 3s ask deadline so a slow gateway
@@ -39,7 +39,7 @@ const os = require('os');
 const path = require('path');
 const { defaultBrain, INTENT_GENERIC, INTENT_NL } = require('./khy-agent');
 
-const DEFAULT_MODEL = 'claude/claude-sonnet-4-20250514';
+const DEFAULT_MODEL = 'claude/claude-sonnet-4-6';
 const DEFAULT_TIMEOUT_MS = 2500;
 
 /* Read the gateway's auth token from the persisted file, if present. The gateway

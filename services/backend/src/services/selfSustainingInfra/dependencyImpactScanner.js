@@ -22,13 +22,17 @@ const IMPORT_RE = /\bimport\b[^'"]*['"](\.[^'"]+)['"]/g;
 /** 把相对 spec 规范化为相对 fromFile 的 posix key（补 .js / index.js）。 */
 function _resolveSpec(fromFile, spec, keys) {
   const dir = path.posix.dirname(fromFile);
-  let base = path.posix.normalize(path.posix.join(dir, spec)).replace(/\\/g, '/');
+  const base = path.posix.normalize(path.posix.join(dir, spec)).replace(/\\/g, '/');
   const candidates = [base];
   if (!/\.[A-Za-z]+$/.test(base)) {
     candidates.push(base + '.js', base + '.json', path.posix.join(base, 'index.js'));
   }
-  for (const c of candidates) if (keys.has(c)) return c;
-  return candidates.find((c) => c.endsWith('.js')) || base;   // 未命中也返回规范名（孤儿边）
+  for (const c of candidates) {
+    if (keys.has(c)) {
+      return c;
+    }
+  }
+  return candidates.find((c) => c.endsWith('.js')) || base; // 未命中也返回规范名（孤儿边）
 }
 
 class DependencyImpactScanner {
@@ -42,7 +46,12 @@ class DependencyImpactScanner {
     const keys = new Set(files);
     const forward = {};
     const reverse = {};
-    for (const f of files) { forward[f] = []; if (!(f in reverse)) reverse[f] = []; }
+    for (const f of files) {
+      forward[f] = [];
+      if (!(f in reverse)) {
+        reverse[f] = [];
+      }
+    }
 
     for (const f of files) {
       const src = String(fileMap[f] || '');
@@ -50,13 +59,21 @@ class DependencyImpactScanner {
       for (const re of [REQUIRE_RE, IMPORT_RE]) {
         re.lastIndex = 0;
         let m;
-        while ((m = re.exec(src)) !== null) deps.add(_resolveSpec(f, m[1], keys));
+        while ((m = re.exec(src)) !== null) {
+          deps.add(_resolveSpec(f, m[1], keys));
+        }
       }
       for (const d of deps) {
-        if (d === f) continue;
+        if (d === f) {
+          continue;
+        }
         forward[f].push(d);
-        if (!(d in reverse)) reverse[d] = [];
-        if (!reverse[d].includes(f)) reverse[d].push(f);
+        if (!(d in reverse)) {
+          reverse[d] = [];
+        }
+        if (!reverse[d].includes(f)) {
+          reverse[d].push(f);
+        }
       }
     }
     return { forward, reverse, files };
@@ -77,7 +94,9 @@ class DependencyImpactScanner {
       const next = [];
       for (const { file, depth } of frontier) {
         for (const up of reverse[file] || []) {
-          if (seen.has(up)) continue;
+          if (seen.has(up)) {
+            continue;
+          }
           seen.add(up);
           impacted.push({ file: up, depth: depth + 1 });
           next.push({ file: up, depth: depth + 1 });
@@ -86,7 +105,12 @@ class DependencyImpactScanner {
       frontier = next;
     }
     impacted.sort((a, b) => a.depth - b.depth || a.file.localeCompare(b.file));
-    return { changed: changedFile, impacted, count: impacted.length, hasDownstream: impacted.length > 0 };
+    return {
+      changed: changedFile,
+      impacted,
+      count: impacted.length,
+      hasDownstream: impacted.length > 0,
+    };
   }
 
   /**
@@ -101,14 +125,29 @@ class DependencyImpactScanner {
     const fileMap = {};
     const walk = (dir) => {
       let entries = [];
-      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
       for (const e of entries) {
         const full = path.join(dir, e.name);
-        if (exclude.some((re) => re.test(full))) continue;
-        if (e.isDirectory()) { walk(full); continue; }
-        if (!exts.some((x) => e.name.endsWith(x))) continue;
+        if (exclude.some((re) => re.test(full))) {
+          continue;
+        }
+        if (e.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (!exts.some((x) => e.name.endsWith(x))) {
+          continue;
+        }
         const key = path.relative(baseDir, full).split(path.sep).join('/');
-        try { fileMap[key] = fs.readFileSync(full, 'utf-8'); } catch { /* skip */ }
+        try {
+          fileMap[key] = fs.readFileSync(full, 'utf-8');
+        } catch {
+          /* skip */
+        }
       }
     };
     walk(baseDir);

@@ -20,7 +20,9 @@ function initPromptDir(customDir) {
   const dir = customDir || DEFAULT_PROMPT_DIR;
   try {
     fs.mkdirSync(dir, { recursive: true });
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
   return dir;
 }
 
@@ -36,7 +38,9 @@ function getPromptDir() {
         return config.promptDir;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return DEFAULT_PROMPT_DIR;
 }
 
@@ -119,10 +123,14 @@ function _scanDir(dirPath, baseDir, results) {
             path: fullPath,
             folder: path.relative(baseDir, dirPath) || '/',
           });
-        } catch { /* skip invalid files */ }
+        } catch {
+          /* skip invalid files */
+        }
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -130,7 +138,7 @@ function _scanDir(dirPath, baseDir, results) {
  */
 function getPrompt(id) {
   const prompts = listPrompts();
-  return prompts.find(p => p.id === id) || null;
+  return prompts.find((p) => p.id === id) || null;
 }
 
 /**
@@ -138,7 +146,7 @@ function getPrompt(id) {
  */
 function usePrompt(id) {
   const prompts = listPrompts();
-  const prompt = prompts.find(p => p.id === id);
+  const prompt = prompts.find((p) => p.id === id);
   if (!prompt) return null;
 
   // Update usage stats
@@ -147,7 +155,9 @@ function usePrompt(id) {
     data.usedCount = (data.usedCount || 0) + 1;
     data.lastUsedAt = new Date().toISOString();
     fs.writeFileSync(prompt.path, JSON.stringify(data, null, 2));
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   return prompt.content;
 }
@@ -157,7 +167,7 @@ function usePrompt(id) {
  */
 function deletePrompt(id) {
   const prompts = listPrompts();
-  const prompt = prompts.find(p => p.id === id);
+  const prompt = prompts.find((p) => p.id === id);
   if (!prompt) return false;
 
   try {
@@ -183,7 +193,9 @@ function listFolders() {
         folders.push(entry.name);
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return folders;
 }
 
@@ -207,19 +219,22 @@ function createFolder(name) {
 function searchPrompts(keyword) {
   const prompts = listPrompts();
   const lower = keyword.toLowerCase();
-  return prompts.filter(p =>
-    (p.title && p.title.toLowerCase().includes(lower)) ||
-    (p.content && p.content.toLowerCase().includes(lower)) ||
-    (p.tags && p.tags.some(t => t.toLowerCase().includes(lower)))
+  return prompts.filter(
+    (p) =>
+      (p.title && p.title.toLowerCase().includes(lower)) ||
+      (p.content && p.content.toLowerCase().includes(lower)) ||
+      (p.tags && p.tags.some((t) => t.toLowerCase().includes(lower)))
   );
 }
 
 function _slugify(text) {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\u4e00-\u9fff]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 30) || 'prompt';
+  return (
+    text
+      .toLowerCase()
+      .replace(/[^\w\u4e00-\u9fff]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 30) || 'prompt'
+  );
 }
 
 module.exports = {

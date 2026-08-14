@@ -33,7 +33,9 @@ const INTERRUPT_EXCL_FLAG = 'KHY_REPLY_GUARD_INTERRUPT_EXCL';
 function _interruptExclusionEnabled(env = process.env) {
   try {
     const raw = env ? env[INTERRUPT_EXCL_FLAG] : undefined;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !['0', 'false', 'off', 'no'].includes(v);
   } catch {
     return true; // fail-soft:默认开
@@ -57,7 +59,9 @@ const EMPTY_ERROR_TYPES = new Set(['empty_reply', 'empty_response', 'empty']);
 function isReplyGuardEnabled(env = process.env) {
   try {
     const raw = env ? env[ENV_FLAG] : undefined;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !['0', 'false', 'off', 'no'].includes(v);
   } catch {
     return true; // fail-soft:默认开
@@ -75,14 +79,18 @@ function isReplyGuardEnabled(env = process.env) {
  */
 function isEmptyReply(aiResult) {
   try {
-    if (!aiResult) return true; // 无结果 = 裸空
-    const errorType = aiResult.errorType
-      ? String(aiResult.errorType).trim().toLowerCase()
-      : '';
+    if (!aiResult) {
+      return true;
+    } // 无结果 = 裸空
+    const errorType = aiResult.errorType ? String(aiResult.errorType).trim().toLowerCase() : '';
     // NON_RESUMABLE(内容安全/拒答/权限)绝不视作可丢弃重发的空回复。
-    if (errorType && !continuation.isResumableError(errorType)) return false;
+    if (errorType && !continuation.isResumableError(errorType)) {
+      return false;
+    }
     // 已有真实兜底数据 = 真回答,绝不当空丢弃。
-    if (aiResult.salvaged) return false;
+    if (aiResult.salvaged) {
+      return false;
+    }
     // 中断 ≠ 空回复(单一真源修正,门控 KHY_REPLY_GUARD_INTERRUPT_EXCL 默认开)。
     // 'cancelled'/'timeout'/'network'/'process' 等**可恢复但非空回复类型**的中断,本身携带
     // errorType 且已由 toolUseLoop 的 transient 恢复块专门处理(有界重试后落终态)。它们通常
@@ -90,15 +98,17 @@ function isEmptyReply(aiResult) {
     // 明确 cancel 后仍被静默重发数次(浪费 token、延迟兑现取消)。故:有 errorType 且**不在**
     // EMPTY_ERROR_TYPES 时,空 reply 是「中断」而非「空回复」,交回 transient 路径,本守卫放行。
     // 真正的空回复路径不受影响:裸空(无 errorType)与 EMPTY_ERROR_TYPES 仍照旧丢弃重发。
-    if (errorType
-        && !EMPTY_ERROR_TYPES.has(errorType)
-        && _interruptExclusionEnabled()) {
+    if (errorType && !EMPTY_ERROR_TYPES.has(errorType) && _interruptExclusionEnabled()) {
       return false;
     }
     const replyBlank = !String(aiResult.reply == null ? '' : aiResult.reply).trim();
-    if (replyBlank) return true; // 裸空(含 whitespace-only)
+    if (replyBlank) {
+      return true;
+    } // 裸空(含 whitespace-only)
     // 非空 reply 但携带空回复 errorType(cli/ai.js 的诊断占位串)= 漏路本体。
-    if (EMPTY_ERROR_TYPES.has(errorType)) return true;
+    if (EMPTY_ERROR_TYPES.has(errorType)) {
+      return true;
+    }
     return false;
   } catch {
     return false; // fail-soft:不确定就不丢弃,绝不误杀正常回复
@@ -114,11 +124,19 @@ function isEmptyReply(aiResult) {
 function shouldDiscardAndRerequest(p) {
   try {
     const { aiResult, attemptsUsed, maxAttempts, aborted, env } = p || {};
-    if (!isReplyGuardEnabled(env)) return false; // 门控关 → no-op,字节回退
-    if (aborted) return false;                    // 用户中止 → 不重发
-    if (!isEmptyReply(aiResult)) return false;
+    if (!isReplyGuardEnabled(env)) {
+      return false;
+    } // 门控关 → no-op,字节回退
+    if (aborted) {
+      return false;
+    } // 用户中止 → 不重发
+    if (!isEmptyReply(aiResult)) {
+      return false;
+    }
     const errorType = aiResult && aiResult.errorType ? aiResult.errorType : '';
-    if (!continuation.isResumableError(errorType)) return false; // NON_RESUMABLE 红线
+    if (!continuation.isResumableError(errorType)) {
+      return false;
+    } // NON_RESUMABLE 红线
     const used = Number.isFinite(attemptsUsed) ? attemptsUsed : 0;
     const max = Number.isFinite(maxAttempts) ? maxAttempts : 0;
     return used < max; // 预算内才重发;耗尽 → 调用方落回终端报真因
@@ -136,8 +154,10 @@ function shouldDiscardAndRerequest(p) {
  */
 function buildResendDirective(p) {
   try {
-    return '\n\n[SYSTEM: 你上一条回复为空,已被系统主动丢弃。'
-      + '请重新生成一条**完整的新回复**,直接给出最终答案,绝不能返回空白或仅有空格。]';
+    return (
+      '\n\n[SYSTEM: 你上一条回复为空,已被系统主动丢弃。' +
+      '请重新生成一条**完整的新回复**,直接给出最终答案,绝不能返回空白或仅有空格。]'
+    );
   } catch {
     return '';
   }

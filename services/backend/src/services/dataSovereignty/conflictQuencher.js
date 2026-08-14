@@ -21,13 +21,14 @@
  * 纯逻辑，不做 I/O（落账本由门面负责）。
  */
 
-const evoRequirement = require('../evoEngine/evoRequirement');
 const evoLevels = require('../evoEngine/evoLevels');
+const evoRequirement = require('../evoEngine/evoRequirement');
+
 const { labelOf } = require('./sovereigntyTiers');
 
 const QUENCH_KIND = Object.freeze({
-  SAME_TIER_FIGHT: 'same-tier-fight',   // 同阶层异值打架（防呆③）
-  OSCILLATION: 'oscillation',           // 高频来回覆盖震荡（§3.3）
+  SAME_TIER_FIGHT: 'same-tier-fight', // 同阶层异值打架（防呆③）
+  OSCILLATION: 'oscillation', // 高频来回覆盖震荡（§3.3）
 });
 
 class ConflictQuencher {
@@ -50,7 +51,7 @@ class ConflictQuencher {
         kind: 'sovereignty-conflict',
         // L1 校准：含「拓扑空洞 / 新增…工具」，规避 L2 触发词（网关/调度/压缩/核心流转）。
         why: '同阶层数据源相互打架产生二义性，主权裁决出现状态拓扑空洞——须新增结果交叉验证工具与意图裁决工具消歧，不可在原地随机或先后覆盖',
-        surface: `param:${param}`,   // 中性现场标签，绝不带 L2 触发词
+        surface: `param:${param}`, // 中性现场标签，绝不带 L2 触发词
       },
       impact: `参数「${param}」在 ${tier} 阶层悬而未决，极权注入被熔断，业务函数不予放行`,
       proposedModules: [
@@ -86,16 +87,15 @@ class ConflictQuencher {
         surface: `param:${param}`,
       },
       impact: `参数「${param}」状态在 ${conflict_sources.join('↔') || '多源'} 间反复翻转，下游消费者得到不稳定值`,
-      proposedModules: [
-        '状态锁(StateLock)',
-        '意图裁决器(IntentArbiter)',
-      ],
-      acceptanceCriteria: [
-        `参数「${param}」一旦被高权威阶层锁定，同会话内不再被同/低阶层来源翻转`,
-      ],
+      proposedModules: ['状态锁(StateLock)', '意图裁决器(IntentArbiter)'],
+      acceptanceCriteria: [`参数「${param}」一旦被高权威阶层锁定，同会话内不再被同/低阶层来源翻转`],
     });
 
-    return this._decorate(QUENCH_KIND.OSCILLATION, req, { param, tier: undefined, conflict_sources });
+    return this._decorate(QUENCH_KIND.OSCILLATION, req, {
+      param,
+      tier: undefined,
+      conflict_sources,
+    });
   }
 
   /**
@@ -106,12 +106,16 @@ class ConflictQuencher {
     requirement.sovereigntyConflict = true;
     requirement.conflictKind = kind;
     requirement.param = param;
-    if (tier !== undefined) requirement.tier = tier;
-    requirement.conflict_sources = conflict_sources;   // 防呆④：审计可追溯是谁打架触发了进化
+    if (tier !== undefined) {
+      requirement.tier = tier;
+    }
+    requirement.conflict_sources = conflict_sources; // 防呆④：审计可追溯是谁打架触发了进化
 
     // L1 不变式自检：器官新生需求绝不应擅升 L2（措辞校准失手即在此暴露）。
-    if (!evoLevels.atLeast(requirement.level, evoLevels.LEVELS.L1) ||
-        requirement.level === evoLevels.LEVELS.L2) {
+    if (
+      !evoLevels.atLeast(requirement.level, evoLevels.LEVELS.L1) ||
+      requirement.level === evoLevels.LEVELS.L2
+    ) {
       // 兜底归一到 L1：宁可降级也绝不放裸 L2 入主权需求池。
       requirement.level = evoLevels.LEVELS.L1;
       requirement.executionLevel = evoLevels.LEVELS.L1;

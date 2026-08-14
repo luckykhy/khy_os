@@ -26,8 +26,11 @@
 const os = require('os');
 
 let _PLATFORM = null;
-try { _PLATFORM = require('./envSymbiosis/platformIds').PLATFORM; }
-catch { _PLATFORM = null; }
+try {
+  _PLATFORM = require('./envSymbiosis/platformIds').PLATFORM;
+} catch {
+  _PLATFORM = null;
+}
 
 // env_optimize platform ids (lowercase, stable) + per-OS traits used by probes
 // and repairs to decide applicability. `sandboxed` = OS strongly constrains
@@ -38,20 +41,33 @@ const _PLATFORM_META = Object.freeze({
   windows: Object.freeze({ id: 'windows', label: 'Windows', sandboxed: false, hasLoadAvg: false }),
   macos: Object.freeze({ id: 'macos', label: 'macOS', sandboxed: false, hasLoadAvg: true }),
   android: Object.freeze({ id: 'android', label: 'Android', sandboxed: false, hasLoadAvg: true }),
-  harmonyos: Object.freeze({ id: 'harmonyos', label: 'HarmonyOS', sandboxed: true, hasLoadAvg: true }),
+  harmonyos: Object.freeze({
+    id: 'harmonyos',
+    label: 'HarmonyOS',
+    sandboxed: true,
+    hasLoadAvg: true,
+  }),
   ios: Object.freeze({ id: 'ios', label: 'iOS', sandboxed: true, hasLoadAvg: true }),
 });
 
 // Canonical PLATFORM value (from platformIds) → env_optimize id.
 function _canonicalToId(osName) {
-  if (!_PLATFORM) return 'linux';
+  if (!_PLATFORM) {
+    return 'linux';
+  }
   switch (osName) {
-    case _PLATFORM.LINUX: return 'linux';
-    case _PLATFORM.WINDOWS: return 'windows';
-    case _PLATFORM.MACOS: return 'macos';
-    case _PLATFORM.ANDROID: return 'android';
-    case _PLATFORM.HARMONY: return 'harmonyos';
-    default: return 'linux';
+    case _PLATFORM.LINUX:
+      return 'linux';
+    case _PLATFORM.WINDOWS:
+      return 'windows';
+    case _PLATFORM.MACOS:
+      return 'macos';
+    case _PLATFORM.ANDROID:
+      return 'android';
+    case _PLATFORM.HARMONY:
+      return 'harmonyos';
+    default:
+      return 'linux';
   }
 }
 
@@ -59,13 +75,23 @@ function _canonicalToId(osName) {
 // so a normal macOS host (also nodePlatform 'darwin') is never misread as iOS.
 function _detectIos() {
   try {
-    const pin = String(process.env.KHY_OS_PROFILE || '').trim().toLowerCase();
-    if (pin === 'ios' || pin === 'iphoneos' || pin === 'ipados' || pin === 'ipad') return true;
-  } catch { /* ignore */ }
+    const pin = String(process.env.KHY_OS_PROFILE || '')
+      .trim()
+      .toLowerCase();
+    if (pin === 'ios' || pin === 'iphoneos' || pin === 'ipados' || pin === 'ipad') {
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
   try {
     // Some mobile Node runtimes (nodejs-mobile) report 'ios' directly.
-    if (os.platform() === 'ios') return true;
-  } catch { /* ignore */ }
+    if (os.platform() === 'ios') {
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
   return false;
 }
 
@@ -77,13 +103,20 @@ function _detectIos() {
  * @returns {{id:string, label:string, sandboxed:boolean, hasLoadAvg:boolean, source:string}}
  */
 function detectPlatform() {
-  if (_detectIos()) return { ..._PLATFORM_META.ios, source: 'ios-refine' };
+  if (_detectIos()) {
+    return { ..._PLATFORM_META.ios, source: 'ios-refine' };
+  }
   let osName = _PLATFORM ? _PLATFORM.LINUX : null;
   let source = 'default';
   try {
     const prof = require('./osProfileService').detectOsProfile();
-    if (prof && prof.os) { osName = prof.os; source = prof.source || 'auto'; }
-  } catch { /* degrade to linux */ }
+    if (prof && prof.os) {
+      osName = prof.os;
+      source = prof.source || 'auto';
+    }
+  } catch {
+    /* degrade to linux */
+  }
   const id = _canonicalToId(osName);
   return { ...(_PLATFORM_META[id] || _PLATFORM_META.linux), source };
 }
@@ -99,9 +132,13 @@ function detectPlatform() {
  * @returns {boolean}
  */
 function appliesTo(entry, platformId) {
-  if (!entry) return false;
+  if (!entry) {
+    return false;
+  }
   const list = entry.platforms;
-  if (!Array.isArray(list) || list.length === 0) return true; // all platforms
+  if (!Array.isArray(list) || list.length === 0) {
+    return true;
+  } // all platforms
   return list.includes(platformId);
 }
 

@@ -20,11 +20,11 @@
 const S = require('../metaplan/constraintStrategy');
 
 const ANOMALY_KINDS = Object.freeze([
-  'MISSING_ELEMENTS',   // 必填要素缺失（forgeSchema 校验失败）
-  'DEADLOCK_CYCLE',     // TaskGraph 成环
-  'CONTRADICTION',      // StateMachine 标记了矛盾
-  'LOW_CONFIDENCE',     // 置信度低于阈值
-  'UNKNOWN_ACTION',     // 动作未能映射到标准原语
+  'MISSING_ELEMENTS', // 必填要素缺失（forgeSchema 校验失败）
+  'DEADLOCK_CYCLE', // TaskGraph 成环
+  'CONTRADICTION', // StateMachine 标记了矛盾
+  'LOW_CONFIDENCE', // 置信度低于阈值
+  'UNKNOWN_ACTION', // 动作未能映射到标准原语
 ]);
 
 // 低于此置信度且无硬错误 → 降级沙箱，而非直接放行。
@@ -73,9 +73,12 @@ class FurnaceRejection extends Error {
  */
 function adjudicate(input = {}) {
   const { payload = {}, validation, cycle, contradictions = [], confidence } = input;
-  const conf = typeof confidence === 'number'
-    ? confidence
-    : (typeof payload.confidence === 'number' ? payload.confidence : 1);
+  const conf =
+    typeof confidence === 'number'
+      ? confidence
+      : typeof payload.confidence === 'number'
+        ? payload.confidence
+        : 1;
 
   // —— 拒损路径（硬错误，不可自动恢复）——
   if (validation && validation.valid === false) {
@@ -112,17 +115,24 @@ function adjudicate(input = {}) {
 
 /** 给 payload 打上沙箱降级与写锁标记，并把锁级单调提升至 CODE_HARD 起步。 */
 function _degrade(payload, meta) {
-  const escalated = S.escalate(payload.strategy || S.STRATEGIES.PROMPT_SOFT, S.STRATEGIES.CODE_HARD);
+  const escalated = S.escalate(
+    payload.strategy || S.STRATEGIES.PROMPT_SOFT,
+    S.STRATEGIES.CODE_HARD
+  );
   return {
     ...payload,
     strategy: escalated,
     degraded: true,
     sandbox: true,
     writeLocked: true,
-    degradeReason: meta.contradictions && meta.contradictions.length
-      ? 'isolable-contradiction'
-      : 'low-confidence',
-    uncertainty: { confidence: meta.confidence, contradictions: (meta.contradictions || []).length },
+    degradeReason:
+      meta.contradictions && meta.contradictions.length
+        ? 'isolable-contradiction'
+        : 'low-confidence',
+    uncertainty: {
+      confidence: meta.confidence,
+      contradictions: (meta.contradictions || []).length,
+    },
   };
 }
 

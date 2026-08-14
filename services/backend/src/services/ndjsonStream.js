@@ -46,12 +46,19 @@ async function* parseNdjsonStream(reader, opts = {}) {
   let itemCount = 0;
   let idleTimer = null;
 
-  const clearIdle = () => { if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; } };
+  const clearIdle = () => {
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
+  };
 
   try {
     while (true) {
       if (signal?.aborted) {
-        if (onStatus) onStatus('aborted', 'Signal aborted');
+        if (onStatus) {
+          onStatus('aborted', 'Signal aborted');
+        }
         break;
       }
 
@@ -73,7 +80,9 @@ async function* parseNdjsonStream(reader, opts = {}) {
       }
 
       const { done, value } = readResult;
-      if (done) break;
+      if (done) {
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
 
@@ -90,7 +99,9 @@ async function* parseNdjsonStream(reader, opts = {}) {
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed) continue;
+        if (!trimmed) {
+          continue;
+        }
 
         try {
           const obj = parse(trimmed);
@@ -98,7 +109,9 @@ async function* parseNdjsonStream(reader, opts = {}) {
           yield obj;
         } catch {
           if (logger?.warn) {
-            logger.warn(`Skipping malformed NDJSON line: ${trimmed.slice(0, MALFORMED_LOG_MAX_CHARS)}`);
+            logger.warn(
+              `Skipping malformed NDJSON line: ${trimmed.slice(0, MALFORMED_LOG_MAX_CHARS)}`
+            );
           }
         }
       }
@@ -108,7 +121,9 @@ async function* parseNdjsonStream(reader, opts = {}) {
     if (logger?.warn) {
       logger.warn(`NDJSON stream error after ${itemCount} items: ${err.message}`);
     }
-    if (onStatus) onStatus('error', err.message);
+    if (onStatus) {
+      onStatus('error', err.message);
+    }
   } finally {
     clearIdle();
     // Flush remaining buffer even on error
@@ -119,11 +134,15 @@ async function* parseNdjsonStream(reader, opts = {}) {
         itemCount++;
       } catch {
         if (logger?.warn) {
-          logger.warn(`Skipping malformed trailing NDJSON: ${remaining.slice(0, MALFORMED_LOG_MAX_CHARS)}`);
+          logger.warn(
+            `Skipping malformed trailing NDJSON: ${remaining.slice(0, MALFORMED_LOG_MAX_CHARS)}`
+          );
         }
       }
     }
-    if (onStatus) onStatus('done', `${itemCount} items parsed`);
+    if (onStatus) {
+      onStatus('done', `${itemCount} items parsed`);
+    }
   }
 }
 
@@ -153,17 +172,23 @@ async function* parseNdjsonNodeStream(nodeStream, opts = {}) {
     if (logger?.warn) {
       logger.warn(`Node stream error after ${itemCount} items: ${err.message}`);
     }
-    if (onStatus) onStatus('error', err.message);
+    if (onStatus) {
+      onStatus('error', err.message);
+    }
   });
 
   try {
     for await (const chunk of nodeStream) {
-      if (streamError) break;
+      if (streamError) {
+        break;
+      }
       const data = typeof chunk === 'string' ? chunk : decoder.decode(chunk, { stream: true });
       buffer += data;
 
       if (buffer.length > MAX_BUFFER_BYTES) {
-        if (logger?.warn) logger.warn(`NDJSON node buffer exceeded ${MAX_BUFFER_BYTES} bytes, truncating`);
+        if (logger?.warn) {
+          logger.warn(`NDJSON node buffer exceeded ${MAX_BUFFER_BYTES} bytes, truncating`);
+        }
         buffer = buffer.slice(-MAX_BUFFER_BYTES);
       }
 
@@ -172,14 +197,18 @@ async function* parseNdjsonNodeStream(nodeStream, opts = {}) {
 
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed) continue;
+        if (!trimmed) {
+          continue;
+        }
         try {
           const obj = parse(trimmed);
           itemCount++;
           yield obj;
         } catch {
           if (logger?.warn) {
-            logger.warn(`Skipping malformed NDJSON line: ${trimmed.slice(0, MALFORMED_LOG_MAX_CHARS)}`);
+            logger.warn(
+              `Skipping malformed NDJSON line: ${trimmed.slice(0, MALFORMED_LOG_MAX_CHARS)}`
+            );
           }
         }
       }
@@ -188,11 +217,15 @@ async function* parseNdjsonNodeStream(nodeStream, opts = {}) {
     if (logger?.warn) {
       logger.warn(`NDJSON node stream error after ${itemCount} items: ${err.message}`);
     }
-    if (onStatus) onStatus('error', err.message);
+    if (onStatus) {
+      onStatus('error', err.message);
+    }
   } finally {
     // 刷新解码器残留的半个多字节序列（仅当至少喂过一个二进制 chunk 时非空）。
     const tail = decoder.decode();
-    if (tail) buffer += tail;
+    if (tail) {
+      buffer += tail;
+    }
     const remaining = buffer.trim();
     if (remaining) {
       try {
@@ -201,11 +234,15 @@ async function* parseNdjsonNodeStream(nodeStream, opts = {}) {
         yield obj;
       } catch {
         if (logger?.warn) {
-          logger.warn(`Skipping malformed trailing NDJSON: ${remaining.slice(0, MALFORMED_LOG_MAX_CHARS)}`);
+          logger.warn(
+            `Skipping malformed trailing NDJSON: ${remaining.slice(0, MALFORMED_LOG_MAX_CHARS)}`
+          );
         }
       }
     }
-    if (onStatus) onStatus('done', `${itemCount} items parsed`);
+    if (onStatus) {
+      onStatus('done', `${itemCount} items parsed`);
+    }
   }
 }
 

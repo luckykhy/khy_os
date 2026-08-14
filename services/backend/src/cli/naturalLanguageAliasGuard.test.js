@@ -1,8 +1,8 @@
 'use strict';
 
-const { test } = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
+const { test } = require('node:test');
 
 const guard = require(path.join(__dirname, 'naturalLanguageAliasGuard.js'));
 
@@ -17,7 +17,11 @@ test('trim + case-insensitive normalization on reserved match', () => {
 test('non-reserved command alias passes through (returns false)', () => {
   // Command-intent aliases must NOT be treated as reserved NL phrases.
   for (const s of ['登录', 'woshishui', '退出登录', '改密码', 'whoami', '我是谁系统']) {
-    assert.strictEqual(guard.isReservedNaturalLanguagePhrase(s, {}), false, `expected false for ${s}`);
+    assert.strictEqual(
+      guard.isReservedNaturalLanguagePhrase(s, {}),
+      false,
+      `expected false for ${s}`
+    );
   }
 });
 
@@ -26,7 +30,7 @@ test('gate off (KHY_NL_ALIAS_GUARD=0) → always false (byte fallback)', () => {
     assert.strictEqual(
       guard.isReservedNaturalLanguagePhrase('我是谁', { KHY_NL_ALIAS_GUARD: off }),
       false,
-      `expected false when gate=${off}`,
+      `expected false when gate=${off}`
     );
   }
 });

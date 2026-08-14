@@ -32,9 +32,13 @@ const _MAX_NOTE_LEN = 4000;
  * @returns {string}
  */
 function normalizeNote(raw) {
-  if (raw == null) return '';
+  if (raw == null) {
+    return '';
+  }
   const s = String(raw).trim();
-  if (!s) return '';
+  if (!s) {
+    return '';
+  }
   return s.length > _MAX_NOTE_LEN ? s.slice(0, _MAX_NOTE_LEN) : s;
 }
 
@@ -48,13 +52,19 @@ function normalizeNote(raw) {
  */
 function mergeHints(input, hints) {
   const base = input == null ? '' : String(input);
-  if (!Array.isArray(hints) || hints.length === 0) return base;
+  if (!Array.isArray(hints) || hints.length === 0) {
+    return base;
+  }
   const lines = [];
   for (const h of hints) {
     const n = normalizeNote(h);
-    if (n) lines.push(n);
+    if (n) {
+      lines.push(n);
+    }
   }
-  if (lines.length === 0) return base;
+  if (lines.length === 0) {
+    return base;
+  }
   return `${base}\n\n${_HINT_HEADER}\n${lines.join('\n')}`;
 }
 
@@ -68,7 +78,9 @@ function mergeHints(input, hints) {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_BTW === undefined ? 'true' : e.KHY_BTW;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 

@@ -30,7 +30,9 @@ function _isEnabled(name, env) {
     return flagRegistry.isFlagEnabled(name, e);
   } catch {
     const raw = e && e[name];
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !OFF_VALUES.includes(String(raw).trim().toLowerCase());
   }
 }
@@ -50,9 +52,13 @@ function isToolAbortEnabled(env) {
 }
 
 function _toFiniteMs(v) {
-  if (v === undefined || v === null || v === '') return null;
+  if (v === undefined || v === null || v === '') {
+    return null;
+  }
   const n = typeof v === 'number' ? v : Number.parseInt(String(v).trim(), 10);
-  if (!Number.isFinite(n) || n <= 0) return null;
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
   return n;
 }
 
@@ -77,22 +83,34 @@ function resolveToolTimeoutMs(opts) {
   const def = Number.isFinite(o.defaultMs) ? o.defaultMs : 30000;
 
   const clamp = (n) => {
-    if (!Number.isFinite(n) || n <= 0) return null;
-    if (n < min) return min;
-    if (n > max) return max;
+    if (!Number.isFinite(n) || n <= 0) {
+      return null;
+    }
+    if (n < min) {
+      return min;
+    }
+    if (n > max) {
+      return max;
+    }
     return n;
   };
   const safeDefault = clamp(def) != null ? clamp(def) : Math.min(max, Math.max(min, def));
 
   try {
-    if (!isToolTimeoutEnabled(e)) return safeDefault;
+    if (!isToolTimeoutEnabled(e)) {
+      return safeDefault;
+    }
 
     const fromParam = clamp(_toFiniteMs(o.paramMs));
-    if (fromParam != null) return fromParam;
+    if (fromParam != null) {
+      return fromParam;
+    }
 
     if (o.envKey) {
       const fromEnv = clamp(_toFiniteMs(e && e[o.envKey]));
-      if (fromEnv != null) return fromEnv;
+      if (fromEnv != null) {
+        return fromEnv;
+      }
     }
     return safeDefault;
   } catch {
@@ -119,9 +137,17 @@ function withDeadline(promiseFactory, ms, onTimeout) {
     let settled = false;
     let timer = null;
     const finish = (val) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      if (timer) { try { clearTimeout(timer); } catch { /* noop */ } }
+      if (timer) {
+        try {
+          clearTimeout(timer);
+        } catch {
+          /* noop */
+        }
+      }
       resolve(val);
     };
 
@@ -129,7 +155,11 @@ function withDeadline(promiseFactory, ms, onTimeout) {
     try {
       timer = setTimeout(() => {
         if (typeof onTimeout === 'function') {
-          try { onTimeout({ timeoutMs }); } catch { /* 清理失败不影响返回 */ }
+          try {
+            onTimeout({ timeoutMs });
+          } catch {
+            /* 清理失败不影响返回 */
+          }
         }
         finish({
           __timedOut: true,
@@ -137,8 +167,12 @@ function withDeadline(promiseFactory, ms, onTimeout) {
           message: `操作超时:已达 ${timeoutMs}ms 硬上限`,
         });
       }, timeoutMs);
-      if (timer && typeof timer.unref === 'function') timer.unref();
-    } catch { /* 定时器创建失败 → 无墙钟,退化为纯 await */ }
+      if (timer && typeof timer.unref === 'function') {
+        timer.unref();
+      }
+    } catch {
+      /* 定时器创建失败 → 无墙钟,退化为纯 await */
+    }
 
     let p;
     try {
@@ -162,14 +196,18 @@ function withDeadline(promiseFactory, ms, onTimeout) {
  * @returns {string|null}
  */
 function buildToolTimeoutGuidanceItem(env) {
-  if (!isToolTimeoutEnabled(env)) return null;
-  return 'For operations that can hang or run long with no visible progress — web search, external page '
-    + 'fetches, database queries, desktop/UI automation, and language-server (LSP) requests — you may set a '
-    + 'sensible hard `timeoutMs` on the tool call when a bounded wait is appropriate, instead of waiting '
-    + 'indefinitely. These tools accept an optional `timeoutMs` (milliseconds); on timeout they return a '
-    + 'structured timeout result rather than blocking. Prefer a value matched to the work (a quick lookup '
-    + 'needs far less than a large crawl); omit it to use the tool default. Do not set it so low that healthy '
-    + 'long-running work is cut off — the goal is to avoid getting stuck, not to abandon slow-but-progressing tasks.';
+  if (!isToolTimeoutEnabled(env)) {
+    return null;
+  }
+  return (
+    'For operations that can hang or run long with no visible progress — web search, external page ' +
+    'fetches, database queries, desktop/UI automation, and language-server (LSP) requests — you may set a ' +
+    'sensible hard `timeoutMs` on the tool call when a bounded wait is appropriate, instead of waiting ' +
+    'indefinitely. These tools accept an optional `timeoutMs` (milliseconds); on timeout they return a ' +
+    'structured timeout result rather than blocking. Prefer a value matched to the work (a quick lookup ' +
+    'needs far less than a large crawl); omit it to use the tool default. Do not set it so low that healthy ' +
+    'long-running work is cut off — the goal is to avoid getting stuck, not to abandon slow-but-progressing tasks.'
+  );
 }
 
 // ── 通用工具执行漏斗(_withToolTimeout)的模型可设墙钟预算 + 诚实超时塑形 ──────
@@ -214,15 +252,23 @@ function resolveToolExecBudgetMs(opts) {
   }
   try {
     // 门控关 → 今日行为:baseline 原样(含 <=0 禁用语义),忽略 paramMs。
-    if (!isToolTimeoutEnabled(e)) return baseline;
+    if (!isToolTimeoutEnabled(e)) {
+      return baseline;
+    }
     // 无显式模型入参 → 仍是今日行为:baseline 原样。
     const paramMs = _toFiniteMs(o.paramMs);
-    if (paramMs == null) return baseline;
+    if (paramMs == null) {
+      return baseline;
+    }
     // 模型显式设了本次调用预算 → 启用并 clamp 到合理带宽。
     const MIN = 1000;
     const MAX = 1800000;
-    if (paramMs < MIN) return MIN;
-    if (paramMs > MAX) return MAX;
+    if (paramMs < MIN) {
+      return MIN;
+    }
+    if (paramMs > MAX) {
+      return MAX;
+    }
     return paramMs;
   } catch {
     return baseline;
@@ -237,7 +283,9 @@ function resolveToolExecBudgetMs(opts) {
  * @returns {Error}
  */
 function markToolExecTimeoutError(err, info) {
-  if (!err || typeof err !== 'object') return err;
+  if (!err || typeof err !== 'object') {
+    return err;
+  }
   try {
     Object.defineProperty(err, TOOL_EXEC_TIMEOUT_FLAG, {
       value: true,
@@ -246,11 +294,19 @@ function markToolExecTimeoutError(err, info) {
       writable: true,
     });
     if (info && typeof info === 'object') {
-      if (info.toolLabel) err.__toolLabel = info.toolLabel;
-      if (Number.isFinite(info.timeoutMs)) err.__timeoutMs = info.timeoutMs;
+      if (info.toolLabel) {
+        err.__toolLabel = info.toolLabel;
+      }
+      if (Number.isFinite(info.timeoutMs)) {
+        err.__timeoutMs = info.timeoutMs;
+      }
     }
-    if (!err.code) err.code = 'ETIMEDOUT';
-  } catch { /* 打标失败不影响错误本身照常透出 */ }
+    if (!err.code) {
+      err.code = 'ETIMEDOUT';
+    }
+  } catch {
+    /* 打标失败不影响错误本身照常透出 */
+  }
   return err;
 }
 
@@ -277,18 +333,25 @@ function isToolExecTimeoutError(err) {
  */
 function buildToolExecTimeoutResult(opts) {
   const o = opts || {};
-  if (!isToolTimeoutEnabled(o.env)) return null;
+  if (!isToolTimeoutEnabled(o.env)) {
+    return null;
+  }
   const label = o.toolLabel || 'tool';
   const ms = Number.isFinite(o.timeoutMs) ? o.timeoutMs : null;
   const elapsed = Number.isFinite(o.elapsedMs) ? o.elapsedMs : null;
   const msPart = ms != null ? `已达 ${ms}ms 的执行时间上限` : '已达执行时间上限';
   const message = `工具 ${label} ${msPart},本次调用已超时中止。`;
-  const hint = '这不是最终失败,AI 网关未中断——你可以换个方法重试:缩小处理范围、'
-    + '改用更快或更合适的工具、分批处理,或在该工具入参上显式设更大的 timeoutMs 后重试。'
-    + '若该操作本就需要较久且在稳定推进,可给一个更宽的 timeoutMs;否则优先换更省时的做法。';
+  const hint =
+    '这不是最终失败,AI 网关未中断——你可以换个方法重试:缩小处理范围、' +
+    '改用更快或更合适的工具、分批处理,或在该工具入参上显式设更大的 timeoutMs 后重试。' +
+    '若该操作本就需要较久且在稳定推进,可给一个更宽的 timeoutMs;否则优先换更省时的做法。';
   const details = { tool: label, reason: 'tool-exec-timeout' };
-  if (ms != null) details.timeoutMs = ms;
-  if (elapsed != null) details.elapsedMs = elapsed;
+  if (ms != null) {
+    details.timeoutMs = ms;
+  }
+  if (elapsed != null) {
+    details.elapsedMs = elapsed;
+  }
   return {
     success: false,
     error: {
@@ -323,7 +386,9 @@ const TOOL_CANCELLED_FLAG = '__toolCancelled';
  * @returns {Error}
  */
 function markToolCancelledError(err, info) {
-  if (!err || typeof err !== 'object') return err;
+  if (!err || typeof err !== 'object') {
+    return err;
+  }
   try {
     Object.defineProperty(err, TOOL_CANCELLED_FLAG, {
       value: true,
@@ -331,9 +396,15 @@ function markToolCancelledError(err, info) {
       configurable: true,
       writable: true,
     });
-    if (info && typeof info === 'object' && info.toolLabel) err.__toolLabel = info.toolLabel;
-    if (!err.code) err.code = 'ECANCELLED';
-  } catch { /* 打标失败不影响错误本身照常透出 */ }
+    if (info && typeof info === 'object' && info.toolLabel) {
+      err.__toolLabel = info.toolLabel;
+    }
+    if (!err.code) {
+      err.code = 'ECANCELLED';
+    }
+  } catch {
+    /* 打标失败不影响错误本身照常透出 */
+  }
   return err;
 }
 
@@ -359,26 +430,43 @@ function isToolCancelledError(err) {
 function attachAbortRace(promise, signal, toolLabel, env) {
   const NOOP = () => {};
   try {
-    if (!isToolAbortEnabled(env)) return { promise, cleanup: NOOP };
-    if (!signal || typeof signal.addEventListener !== 'function') return { promise, cleanup: NOOP };
+    if (!isToolAbortEnabled(env)) {
+      return { promise, cleanup: NOOP };
+    }
+    if (!signal || typeof signal.addEventListener !== 'function') {
+      return { promise, cleanup: NOOP };
+    }
     const label = toolLabel || 'tool';
     if (signal.aborted) {
       const err = markToolCancelledError(
-        new Error(`Tool ${label} cancelled by user before execution (abort)`), { toolLabel: label }
+        new Error(`Tool ${label} cancelled by user before execution (abort)`),
+        { toolLabel: label }
       );
       return { promise: Promise.reject(err), cleanup: NOOP };
     }
     let onAbort = null;
     const abortP = new Promise((_, reject) => {
       onAbort = () => {
-        reject(markToolCancelledError(
-          new Error(`Tool ${label} cancelled by user (abort)`), { toolLabel: label }
-        ));
+        reject(
+          markToolCancelledError(new Error(`Tool ${label} cancelled by user (abort)`), {
+            toolLabel: label,
+          })
+        );
       };
-      try { signal.addEventListener('abort', onAbort, { once: true }); } catch { /* ignore */ }
+      try {
+        signal.addEventListener('abort', onAbort, { once: true });
+      } catch {
+        /* ignore */
+      }
     });
     const cleanup = () => {
-      try { if (onAbort) signal.removeEventListener('abort', onAbort); } catch { /* ignore */ }
+      try {
+        if (onAbort) {
+          signal.removeEventListener('abort', onAbort);
+        }
+      } catch {
+        /* ignore */
+      }
     };
     // 若 abortP 落败而调用方未消费其 rejection(工具先完成时),Promise.race 已 settle,
     // abortP 的 rejection 会成为「未处理拒绝」——用一个吞噬 catch 兜住(cleanup 也会移除监听,
@@ -403,14 +491,19 @@ function attachAbortRace(promise, signal, toolLabel, env) {
  */
 function buildToolCancelledResult(opts) {
   const o = opts || {};
-  if (!isToolAbortEnabled(o.env)) return null;
+  if (!isToolAbortEnabled(o.env)) {
+    return null;
+  }
   const label = o.toolLabel || 'tool';
   const elapsed = Number.isFinite(o.elapsedMs) ? o.elapsedMs : null;
   const message = `工具 ${label} 已被用户中断(ESC),本次调用取消。`;
-  const hint = '这是用户主动中断,不是失败——若确需继续,可重新发起该操作(必要时缩小范围或换更快的做法);'
-    + '若用户是想改变方向,请按其新指示行事,不要机械重试同一调用。';
+  const hint =
+    '这是用户主动中断,不是失败——若确需继续,可重新发起该操作(必要时缩小范围或换更快的做法);' +
+    '若用户是想改变方向,请按其新指示行事,不要机械重试同一调用。';
   const details = { tool: label, reason: 'tool-cancelled' };
-  if (elapsed != null) details.elapsedMs = elapsed;
+  if (elapsed != null) {
+    details.elapsedMs = elapsed;
+  }
   return {
     success: false,
     error: {

@@ -35,20 +35,25 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_NL_ACTION;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
 // ── 识别判据(中/英,大小写不敏感)──────────────────────────────────────────────
 // self-bug-fix:必须同时命中 ①self 引用 ②bug 名词 ③查找或修复动词。
-const _SELF_RE = /(你自己|它自己|自己的|自身|自我|khy\s*(?:os)?\s*(?:自身|本体|自己)|yourself|your\s+own|itself|self[-\s]?)/i;
+const _SELF_RE =
+  /(你自己|它自己|自己的|自身|自我|khy\s*(?:os)?\s*(?:自身|本体|自己)|yourself|your\s+own|itself|self[-\s]?)/i;
 const _BUG_RE = /(bug|缺陷|漏洞|错误|毛病|问题代码|defects?|issues?\b)/i;
-const _FIND_RE = /(找|查找|查一?下|排查|检查|审查|审计|扫描|揪出|发现|找出|find|scan|audit|hunt|detect|review)/i;
+const _FIND_RE =
+  /(找|查找|查一?下|排查|检查|审查|审计|扫描|揪出|发现|找出|find|scan|audit|hunt|detect|review)/i;
 const _FIX_RE = /(修复|修一?下|修掉|改掉|解决|fix|repair|patch|resolve)/i;
 
 // forge-learn:必须命中 ①平台或「开源项目」②学习/参考动词。最火/最新为可选增强。
 const _PLATFORM_RE = /(github|gitlab|gitee|开源(?:平台|社区|项目|仓库)?|开源界|码云|forge)/i;
-const _LEARN_RE = /(学习|学一?下|参考|借鉴|取经|研读|研究|看看(?:别人|开源)|study|learn|reference|借鉴一?下)/i;
+const _LEARN_RE =
+  /(学习|学一?下|参考|借鉴|取经|研读|研究|看看(?:别人|开源)|study|learn|reference|借鉴一?下)/i;
 const _PROJECT_RE = /(项目|仓库|repo(?:sitor(?:y|ies))?|工程|代码库|library|框架|framework)/i;
 const _HOT_RE = /(最火|最热|热门|流行|最受欢迎|最新|trending|popular|hottest|newest|latest)/i;
 
@@ -122,9 +127,13 @@ const _stripCode = require('../../utils/stripCodeSpans');
  */
 function resolveActionIntent(text, env = process.env) {
   try {
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const cleaned = _stripCode(text);
-    if (!cleaned.trim()) return null;
+    if (!cleaned.trim()) {
+      return null;
+    }
     for (const action of ACTIONS) {
       if (action.match(cleaned)) {
         return { id: action.id, summary: action.summary, directive: action.directive };
@@ -143,7 +152,9 @@ function describeActions() {
 
 /** 按 id 取动作(测试/CLI 用)。 */
 function findAction(id) {
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
   return _BY_ID.get(String(id).trim()) || null;
 }
 
@@ -154,9 +165,13 @@ function findAction(id) {
 function routeActionIntent(opts = {}) {
   try {
     const env = opts.env || process.env;
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const intent = resolveActionIntent(opts.text || '', env);
-    if (!intent) return null;
+    if (!intent) {
+      return null;
+    }
     return { directive: intent.directive, intent };
   } catch {
     return null;

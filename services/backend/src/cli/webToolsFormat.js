@@ -34,8 +34,10 @@ const ORIGIN_LABELS = {
 };
 
 /** 是否启用 `/web-tools`（门控 KHY_WEB_TOOLS 默认开）。 */
-function webToolsEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
-  const v = String((env && env.KHY_WEB_TOOLS) || '').trim().toLowerCase();
+function webToolsEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
+  const v = String((env && env.KHY_WEB_TOOLS) || '')
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -46,7 +48,9 @@ function _avail(ok) {
 
 /** 单条动态引擎渲染：名称 · 解析器 · 权重 · 来源。 */
 function _engineLine(e) {
-  if (!e || typeof e !== 'object') return '  · (无效引擎项)';
+  if (!e || typeof e !== 'object') {
+    return '  · (无效引擎项)';
+  }
   const name = String(e.name || '(未命名)');
   const parser = String(e.parser || 'generic');
   const w = Number(e.weight);
@@ -69,10 +73,14 @@ function _engineLine(e) {
  * @param {Object} [env]
  * @returns {string|null}  渲染文本，或 null（门控关 / 坏输入）
  */
-function formatWebTools(data, env = (typeof process !== 'undefined' ? process.env : {})) {
+function formatWebTools(data, env = typeof process !== 'undefined' ? process.env : {}) {
   try {
-    if (!webToolsEnabled(env)) return null;
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+    if (!webToolsEnabled(env)) {
+      return null;
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return null;
+    }
 
     const backend = data.backend && typeof data.backend === 'object' ? data.backend : {};
     const fetch = data.fetch && typeof data.fetch === 'object' ? data.fetch : {};
@@ -104,7 +112,9 @@ function formatWebTools(data, env = (typeof process !== 'undefined' ? process.en
       lines.push('  当前未加载任何动态引擎。');
     } else {
       lines.push(`  已加载 ${engines.length} 个动态引擎：`);
-      for (const e of engines) lines.push(_engineLine(e));
+      for (const e of engines) {
+        lines.push(_engineLine(e));
+      }
     }
 
     // 4) 可用解析器家族
@@ -119,9 +129,13 @@ function formatWebTools(data, env = (typeof process !== 'undefined' ? process.en
     if (data.configPath) {
       lines.push(`  · 配置文件：${String(data.configPath)}`);
     }
-    lines.push('  · 环境变量：KHY_SEARCH_EXTRA_ENGINES=（JSON 数组）'
-      + `${data.envEngineDeclared ? ' [已声明]' : ''}`);
-    lines.push('  · 引擎项格式：{ "name": "myengine", "url": "https://x/search?q={q}", "parser": "generic", "weight": 0.5 }');
+    lines.push(
+      '  · 环境变量：KHY_SEARCH_EXTRA_ENGINES=（JSON 数组）' +
+        `${data.envEngineDeclared ? ' [已声明]' : ''}`
+    );
+    lines.push(
+      '  · 引擎项格式：{ "name": "myengine", "url": "https://x/search?q={q}", "parser": "generic", "weight": 0.5 }'
+    );
 
     return lines.join('\n');
   } catch {

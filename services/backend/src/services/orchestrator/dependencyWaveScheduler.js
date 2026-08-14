@@ -42,13 +42,17 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 // not registered in flagRegistry, which would return default-on and ignore 'off').
 function _gateEnabled(env) {
   const v = (env || {}).KHY_DEP_WAVE_SCHEDULE;
-  if (v === undefined || v === null) return true;
+  if (v === undefined || v === null) {
+    return true;
+  }
   return !_FALSY.has(String(v).trim().toLowerCase());
 }
 
 /** Safe string coercion (null/undefined → ''), never throws. */
 function _asText(v) {
-  if (v == null) return '';
+  if (v == null) {
+    return '';
+  }
   try {
     return String(v);
   } catch {
@@ -95,17 +99,22 @@ function _flatResult(subtasks, reason) {
 function _normalizeDeps(rawDeps, selfIdx, normalized) {
   const ids = new Set();
   let dangling = false;
-  if (!Array.isArray(rawDeps) || rawDeps.length === 0) return { ids, dangling };
+  if (!Array.isArray(rawDeps) || rawDeps.length === 0) {
+    return { ids, dangling };
+  }
 
   for (const ref of rawDeps) {
     let matchIdx = -1;
 
     if (typeof ref === 'number' && Number.isFinite(ref)) {
       // Prefer 1-based (t<n>); also accept a 0-based/originIndex hit.
-      if (ref >= 1 && ref <= normalized.length) matchIdx = ref - 1;
-      else {
+      if (ref >= 1 && ref <= normalized.length) {
+        matchIdx = ref - 1;
+      } else {
         const byOrigin = normalized.findIndex((n) => n.idx === ref);
-        if (byOrigin >= 0) matchIdx = byOrigin;
+        if (byOrigin >= 0) {
+          matchIdx = byOrigin;
+        }
       }
     } else {
       const key = _asText(ref).trim().toLowerCase();
@@ -114,7 +123,9 @@ function _normalizeDeps(rawDeps, selfIdx, normalized) {
         const idm = /^t(\d+)$/.exec(key);
         if (idm) {
           const n = Number(idm[1]);
-          if (n >= 1 && n <= normalized.length) matchIdx = n - 1;
+          if (n >= 1 && n <= normalized.length) {
+            matchIdx = n - 1;
+          }
         }
         if (matchIdx < 0) {
           // Fall back to a title/name/role/prompt-prefix match against other nodes.
@@ -127,7 +138,9 @@ function _normalizeDeps(rawDeps, selfIdx, normalized) {
       dangling = true;
       continue;
     }
-    if (matchIdx === selfIdx) continue; // drop self-reference
+    if (matchIdx === selfIdx) {
+      continue;
+    } // drop self-reference
     ids.add(normalized[matchIdx].id);
   }
 
@@ -153,9 +166,15 @@ function _normalizeDeps(rawDeps, selfIdx, normalized) {
 function planWaves(subtasks, opts = {}) {
   try {
     const env = opts && typeof opts === 'object' ? opts.env : undefined;
-    if (!_gateEnabled(env)) return _flatResult(Array.isArray(subtasks) ? subtasks : [], 'gate-off');
-    if (!Array.isArray(subtasks) || subtasks.length === 0) return _flatResult([], 'empty');
-    if (subtasks.length === 1) return _flatResult(subtasks, 'flat');
+    if (!_gateEnabled(env)) {
+      return _flatResult(Array.isArray(subtasks) ? subtasks : [], 'gate-off');
+    }
+    if (!Array.isArray(subtasks) || subtasks.length === 0) {
+      return _flatResult([], 'empty');
+    }
+    if (subtasks.length === 1) {
+      return _flatResult(subtasks, 'flat');
+    }
 
     // Build normalized index: stable id + the set of strings that may reference it.
     const normalized = subtasks.map((st, i) => {
@@ -164,11 +183,15 @@ function planWaves(subtasks, opts = {}) {
       const keys = new Set();
       for (const k of [s.title, s.name, s.role]) {
         const kv = _asText(k).trim().toLowerCase();
-        if (kv) keys.add(kv);
+        if (kv) {
+          keys.add(kv);
+        }
       }
       // First line of the prompt is a useful human-authored handle too.
       const p0 = _asText(s.prompt).split('\n')[0].trim().toLowerCase();
-      if (p0) keys.add(p0);
+      if (p0) {
+        keys.add(p0);
+      }
       return { id: `t${i + 1}`, idx: idxRaw, keys, st };
     });
 
@@ -180,8 +203,12 @@ function planWaves(subtasks, opts = {}) {
       const s = subtasks[i] && typeof subtasks[i] === 'object' ? subtasks[i] : {};
       const { ids, dangling } = _normalizeDeps(s.dependencies, i, normalized);
       deps[i] = ids;
-      if (ids.size > 0) anyEdge = true;
-      if (dangling) hadDanglingDeps = true;
+      if (ids.size > 0) {
+        anyEdge = true;
+      }
+      if (dangling) {
+        hadDanglingDeps = true;
+      }
     }
 
     // No real edges → today's flat behavior (but surface that we saw dangling refs).
@@ -209,9 +236,14 @@ function planWaves(subtasks, opts = {}) {
         const need = deps[i];
         let satisfied = true;
         for (const depId of need) {
-          if (!doneIds.has(depId)) { satisfied = false; break; }
+          if (!doneIds.has(depId)) {
+            satisfied = false;
+            break;
+          }
         }
-        if (satisfied) ready.push(i);
+        if (satisfied) {
+          ready.push(i);
+        }
       }
       if (ready.length === 0) {
         // No progress with nodes still remaining → a cycle. Collapse conservatively.
@@ -243,7 +275,9 @@ function planWaves(subtasks, opts = {}) {
       const out = new Set();
       for (const id of idSet) {
         const m = /^t(\d+)$/.exec(id);
-        if (m) out.add(Number(m[1]) - 1);
+        if (m) {
+          out.add(Number(m[1]) - 1);
+        }
       }
       return out;
     });
@@ -252,7 +286,7 @@ function planWaves(subtasks, opts = {}) {
       ok: true,
       waves,
       waveCount: waves.length,
-      reason: waves.length > 1 ? 'layered' : (hadDanglingDeps ? 'flat-dangling' : 'flat'),
+      reason: waves.length > 1 ? 'layered' : hadDanglingDeps ? 'flat-dangling' : 'flat',
       hadDanglingDeps,
       edges,
       waveGlobalIndex,
@@ -295,7 +329,9 @@ function planWaves(subtasks, opts = {}) {
 function partitionWaveBySurvivors(waveGlobalIdx, edges, failedGlobalIdxSet) {
   const toRun = [];
   const toSkip = [];
-  if (!Array.isArray(waveGlobalIdx)) return { toRun, toSkip };
+  if (!Array.isArray(waveGlobalIdx)) {
+    return { toRun, toSkip };
+  }
   const failed = failedGlobalIdxSet instanceof Set ? failedGlobalIdxSet : new Set();
   const edgeList = Array.isArray(edges) ? edges : [];
 
@@ -304,11 +340,17 @@ function partitionWaveBySurvivors(waveGlobalIdx, edges, failedGlobalIdxSet) {
     let broken = false;
     if (need && typeof need.forEach === 'function') {
       for (const depIdx of need) {
-        if (failed.has(depIdx)) { broken = true; break; }
+        if (failed.has(depIdx)) {
+          broken = true;
+          break;
+        }
       }
     }
-    if (broken) toSkip.push(g);
-    else toRun.push(g);
+    if (broken) {
+      toSkip.push(g);
+    } else {
+      toRun.push(g);
+    }
   }
   return { toRun, toSkip };
 }
@@ -340,11 +382,17 @@ const _MAX_DEP_TEXT = 4000;
  * prompt. Pure, never throws.
  */
 function _extractResultText(resultObj) {
-  if (!resultObj || typeof resultObj !== 'object') return '';
+  if (!resultObj || typeof resultObj !== 'object') {
+    return '';
+  }
   const t = resultObj.text;
-  if (typeof t === 'string' && t.length > 0) return t;
+  if (typeof t === 'string' && t.length > 0) {
+    return t;
+  }
   const o = resultObj.output;
-  if (typeof o === 'string' && o.length > 0) return o;
+  if (typeof o === 'string' && o.length > 0) {
+    return o;
+  }
   return '';
 }
 
@@ -356,8 +404,12 @@ function _extractResultText(resultObj) {
  * (the raw overflow, NOT `length - cut`). Pure, never throws.
  */
 function _truncateDepText(depText) {
-  if (typeof depText !== 'string') return depText == null ? '' : _asText(depText);
-  if (depText.length <= _MAX_DEP_TEXT) return depText;
+  if (typeof depText !== 'string') {
+    return depText == null ? '' : _asText(depText);
+  }
+  if (depText.length <= _MAX_DEP_TEXT) {
+    return depText;
+  }
   const cut = depText.lastIndexOf('\n', _MAX_DEP_TEXT);
   const head = depText.slice(0, cut > 0 ? cut : _MAX_DEP_TEXT);
   return `${head}\n... [truncated ${depText.length - _MAX_DEP_TEXT} chars]`;
@@ -382,15 +434,23 @@ function _truncateDepText(depText) {
  */
 function buildPredecessorContext(subtask, edges, globalIdx, priorResultsByGlobalIdx) {
   try {
-    if (!Array.isArray(edges)) return '';
+    if (!Array.isArray(edges)) {
+      return '';
+    }
     const need = edges[globalIdx];
-    if (!need || typeof need.forEach !== 'function' || need.size === 0) return '';
+    if (!need || typeof need.forEach !== 'function' || need.size === 0) {
+      return '';
+    }
     const map = priorResultsByGlobalIdx instanceof Map ? priorResultsByGlobalIdx : new Map();
-    const deps = Array.from(need).filter(Number.isInteger).sort((a, b) => a - b);
+    const deps = Array.from(need)
+      .filter(Number.isInteger)
+      .sort((a, b) => a - b);
     const lines = [];
     for (const d of deps) {
       const text = _truncateDepText(_extractResultText(map.get(d)));
-      if (text) lines.push(`[前驱结果 t${d + 1}]: ${text}`);
+      if (text) {
+        lines.push(`[前驱结果 t${d + 1}]: ${text}`);
+      }
     }
     return lines.join('\n');
   } catch {
@@ -406,7 +466,9 @@ function buildPredecessorContext(subtask, edges, globalIdx, priorResultsByGlobal
  */
 function injectPredecessorContext(promptText, contextBlock) {
   const p = typeof promptText === 'string' ? promptText : '';
-  if (typeof contextBlock !== 'string' || contextBlock.length === 0) return p;
+  if (typeof contextBlock !== 'string' || contextBlock.length === 0) {
+    return p;
+  }
   return `${contextBlock}\n\n---\n\n${p}`;
 }
 

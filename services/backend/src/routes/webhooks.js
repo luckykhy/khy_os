@@ -19,6 +19,7 @@
  */
 
 const express = require('express');
+
 const router = express.Router();
 const log = require('../utils/logger');
 
@@ -71,12 +72,14 @@ function _getSlackChannel() {
     const { getMessageRouter } = require('../services/channels/messageRouter');
     const router = getMessageRouter();
     const channels = router.getChannels();
-    const slack = channels.find(ch => ch.name === 'slack');
+    const slack = channels.find((ch) => ch.name === 'slack');
     if (slack) {
       // Access internal channel map via router
       return router._channels?.get('slack') || null;
     }
-  } catch { /* not registered */ }
+  } catch {
+    /* not registered */
+  }
   return null;
 }
 
@@ -107,7 +110,7 @@ router.post('/dingtalk', express.raw({ type: '*/*' }), (req, res) => {
   }
   const result = ch.handleInbound(
     { timestamp: req.headers.timestamp, sign: req.headers.sign },
-    payload,
+    payload
   );
   if (!result.ok) {
     log.warn(`dingtalk webhook rejected: ${result.error}`);

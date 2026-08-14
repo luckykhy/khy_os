@@ -28,9 +28,25 @@ const path = require('path');
 
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
-const SENSITIVE_NAMES = new Set(['.env', '.pem', '.key', '.crt', '.pfx', '.p12',
-  'id_rsa', 'id_ed25519', 'id_ecdsa', 'id_dsa', 'credentials', 'secret',
-  '.admin_initial_password', '.htpasswd', 'shadow', '.netrc', '.pgpass']);
+const SENSITIVE_NAMES = new Set([
+  '.env',
+  '.pem',
+  '.key',
+  '.crt',
+  '.pfx',
+  '.p12',
+  'id_rsa',
+  'id_ed25519',
+  'id_ecdsa',
+  'id_dsa',
+  'credentials',
+  'secret',
+  '.admin_initial_password',
+  '.htpasswd',
+  'shadow',
+  '.netrc',
+  '.pgpass',
+]);
 const SENSITIVE_EXTS = new Set(['.pem', '.key', '.crt', '.pfx', '.p12', '.jks', '.keystore']);
 const MAX_FILE_SIZE = 100 * 1024;
 
@@ -43,9 +59,13 @@ function _formatMentionSize(bytes, env, legacyFracDigits) {
     const { ccFormatEnabled, ccFormatFileSize } = require('./ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatFileSize(bytes);
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
+  } catch {
+    /* fall through to legacy */
+  }
   // byte-identical legacy: ≤MAX 分支历史用 toFixed(1)、>MAX 的「of NKB」用 toFixed(0)。
   return `${(bytes / 1024).toFixed(legacyFracDigits)}KB`;
 }
@@ -78,8 +98,12 @@ function resolveAtMentions(text, opts = {}) {
   const input = String(text == null ? '' : text);
   const empty = { text: input, reads: [], blocked: [], changed: false };
   try {
-    if (!isEnabled(opts.env)) return empty;
-    if (!input.includes('@')) return empty;
+    if (!isEnabled(opts.env)) {
+      return empty;
+    }
+    if (!input.includes('@')) {
+      return empty;
+    }
 
     const cwd = opts.cwd || process.env.KHYQUANT_CWD || process.cwd();
     const atMentionRe = /@([\w./-]+[\w.])/g;
@@ -88,20 +112,53 @@ function resolveAtMentions(text, opts = {}) {
     while ((m = atMentionRe.exec(input)) !== null) {
       mentions.push({ fullMatch: m[0], relPath: m[1] });
     }
-    if (mentions.length === 0) return empty;
+    if (mentions.length === 0) {
+      return empty;
+    }
 
     let _buildDirTree;
-    try { ({ _buildDirTree } = require('./repl/toolOutputRender')); }
-    catch { _buildDirTree = null; }
+    try {
+      ({ _buildDirTree } = require('./repl/toolOutputRender'));
+    } catch {
+      _buildDirTree = null;
+    }
 
     const reads = [];
     const blocked = [];
     const injections = [];
 
     for (const mention of mentions) {
-      const resolvedPath = path.isAbsolute(mention.relPath)
-        ? mention.relPath
-        : path.resolve(cwd, mention.relPath);
+      // References alias resolution: a `@alias[/子路径]` mention whose first
+      // segment matches a configured reference (opencode-aligned cross-directory
+      // resource) resolves INSIDE that reference root — not against cwd. This is
+      // the content-injection half of References; the @-picker completion half
+      // lives in replSession.js / useCompletions.js. Never throws.
+      let resolvedPath = null;
+      try {
+        const { resolveMentionAbs, isWithinBoundary } = require('../services/referencesService');
+        const refAbs = resolveMentionAbs(mention.relPath, cwd, opts);
+        if (refAbs) {
+          // Reference hit — boundary already enforced inside resolveMentionAbs
+          // (target must stay inside the declared root).
+          resolvedPath = refAbs;
+        } else if (path.isAbsolute(mention.relPath)) {
+          // Absolute path WITHOUT a reference hit goes through the
+          // external_directory boundary: outside cwd / declared roots / trusted
+          // user roots the read is refused instead of silently inlined
+          // (previously this bypassed the permission layer entirely).
+          if (isWithinBoundary(mention.relPath, cwd, opts)) {
+            resolvedPath = mention.relPath;
+          }
+        }
+      } catch {
+        /* referencesService unavailable → fall through to legacy */
+      }
+
+      if (!resolvedPath) {
+        resolvedPath = path.isAbsolute(mention.relPath)
+          ? mention.relPath
+          : path.resolve(cwd, mention.relPath);
+      }
       const basename = path.basename(resolvedPath).toLowerCase();
       const ext = path.extname(resolvedPath).toLowerCase();
       if (SENSITIVE_NAMES.has(basename) || SENSITIVE_EXTS.has(ext)) {
@@ -112,9 +169,10 @@ function resolveAtMentions(text, opts = {}) {
         const stat = fs.statSync(resolvedPath);
         if (stat.isFile()) {
           const content = fs.readFileSync(resolvedPath, 'utf-8').slice(0, MAX_FILE_SIZE);
-          const sizeInfo = stat.size > MAX_FILE_SIZE
-            ? `first 100KB of ${_formatMentionSize(stat.size, opts.env, 0)}`
-            : _formatMentionSize(stat.size, opts.env, 1);
+          const sizeInfo =
+            stat.size > MAX_FILE_SIZE
+              ? `first 100KB of ${_formatMentionSize(stat.size, opts.env, 0)}`
+              : _formatMentionSize(stat.size, opts.env, 1);
           reads.push({ relPath: mention.relPath, kind: 'file', sizeInfo });
           injections.push({
             match: mention.fullMatch,
@@ -122,22 +180,30 @@ function resolveAtMentions(text, opts = {}) {
           });
         } else if (stat.isDirectory() && _buildDirTree) {
           const tree = _buildDirTree(resolvedPath, { maxDepth: 3, maxFiles: 80 });
-          reads.push({ relPath: mention.relPath, kind: 'dir', sizeInfo: `${tree.fileCount} ${require('./ccPlural').pluralOr(tree.fileCount, 'file')}` });
+          reads.push({
+            relPath: mention.relPath,
+            kind: 'dir',
+            sizeInfo: `${tree.fileCount} ${require('./ccPlural').pluralOr(tree.fileCount, 'file')}`,
+          });
           injections.push({
             match: mention.fullMatch,
             block: `[Directory: ${mention.relPath}]\n${tree.text}`,
           });
         }
-      } catch { /* mention doesn't resolve — could be email/social handle, skip */ }
+      } catch {
+        /* mention doesn't resolve — could be email/social handle, skip */
+      }
     }
 
-    if (injections.length === 0) return { text: input, reads, blocked, changed: false };
+    if (injections.length === 0) {
+      return { text: input, reads, blocked, changed: false };
+    }
 
     let cleanedInput = input;
     for (const inj of injections) {
       cleanedInput = cleanedInput.replace(inj.match, inj.match.slice(1));
     }
-    const contentBlocks = injections.map(inj => inj.block).join('\n\n');
+    const contentBlocks = injections.map((inj) => inj.block).join('\n\n');
     return {
       text: `${cleanedInput}\n\n${contentBlocks}`,
       reads,

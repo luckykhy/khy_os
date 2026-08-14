@@ -1,19 +1,19 @@
 'use strict';
 
-const sshConfigService = require('./sshConfigService');
-const sshCredentialGuard = require('./sshCredentialGuard');
-const { createSshConnectionManager } = require('./sshConnectionManager');
-const remoteWorkspaceResolver = require('./remoteWorkspaceResolver');
+const { createDeployOrchestrator } = require('./deployOrchestrator');
 const { createRemoteApprovalBridge } = require('./remoteApprovalBridge');
 const { RemoteExecService } = require('./remoteExecService');
-const { createRemoteFileTransferService } = require('./remoteFileTransferService');
-const { createDeployOrchestrator } = require('./deployOrchestrator');
-const { RemoteStateSyncService } = require('./remoteStateSyncService');
 const {
   createRemoteExecStreamStore,
   buildRemoteExecStreamRequestFingerprint,
 } = require('./remoteExecStreamStore');
+const { createRemoteFileTransferService } = require('./remoteFileTransferService');
 const { createRemoteStatePersistence } = require('./remoteStatePersistence');
+const { RemoteStateSyncService } = require('./remoteStateSyncService');
+const remoteWorkspaceResolver = require('./remoteWorkspaceResolver');
+const sshConfigService = require('./sshConfigService');
+const { createSshConnectionManager } = require('./sshConnectionManager');
+const sshCredentialGuard = require('./sshCredentialGuard');
 
 const DEFAULT_PERSIST_DEBOUNCE_MS = 200;
 const DEFAULT_PERSIST_ALERT_MAX = 120;
@@ -21,7 +21,9 @@ const DEFAULT_PERSIST_ALERT_RETENTION_MS = 24 * 60 * 60 * 1000;
 
 function _readPositiveInt(value, fallback) {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
   return parsed;
 }
 
@@ -77,7 +79,9 @@ const persistRuntime = {
 };
 
 function _clearPersistTimer() {
-  if (!persistRuntime.timer) return;
+  if (!persistRuntime.timer) {
+    return;
+  }
   clearTimeout(persistRuntime.timer);
   persistRuntime.timer = null;
 }
@@ -87,7 +91,9 @@ function _cleanupPersistAlerts() {
   while (persistAlerts.length > 0) {
     const oldest = persistAlerts[0];
     const tsMs = Date.parse(oldest.ts || '');
-    if (!Number.isFinite(tsMs) || (nowMs - tsMs) <= persistAlertRetentionMs) break;
+    if (!Number.isFinite(tsMs) || nowMs - tsMs <= persistAlertRetentionMs) {
+      break;
+    }
     persistAlerts.shift();
   }
   if (persistAlerts.length > persistAlertMax) {
@@ -96,17 +102,19 @@ function _cleanupPersistAlerts() {
 }
 
 function _clonePersistAlert(alert) {
-  if (!alert || typeof alert !== 'object') return null;
+  if (!alert || typeof alert !== 'object') {
+    return null;
+  }
   return {
     ...alert,
-    details: alert.details && typeof alert.details === 'object'
-      ? { ...alert.details }
-      : null,
+    details: alert.details && typeof alert.details === 'object' ? { ...alert.details } : null,
   };
 }
 
 function _notifyPersistAlertSubscribers(alert) {
-  if (!alert) return;
+  if (!alert) {
+    return;
+  }
   const subscribers = Array.from(persistAlertSubscribers);
   for (const listener of subscribers) {
     try {
@@ -124,7 +132,9 @@ function _appendPersistAlert({
   mutation = null,
   details = null,
 }) {
-  if (!code || !message) return null;
+  if (!code || !message) {
+    return null;
+  }
   const alert = {
     alert_id: ++persistAlertSeq,
     ts: new Date().toISOString(),
@@ -152,20 +162,24 @@ function listPersistenceAlerts({ afterId = 0, limit = 20, onlyUnacked = false } 
     : 0;
   const safeLimit = Math.max(1, Math.min(200, Number.parseInt(limit, 10) || 20));
   const filtered = persistAlerts.filter((item) => {
-    if (item.alert_id <= safeAfterId) return false;
-    if (onlyUnacked && item.acked) return false;
+    if (item.alert_id <= safeAfterId) {
+      return false;
+    }
+    if (onlyUnacked && item.acked) {
+      return false;
+    }
     return true;
   });
   if (filtered.length <= safeLimit) {
     return filtered.map((item) => _clonePersistAlert(item));
   }
-  return filtered
-    .slice(filtered.length - safeLimit)
-    .map((item) => _clonePersistAlert(item));
+  return filtered.slice(filtered.length - safeLimit).map((item) => _clonePersistAlert(item));
 }
 
 function subscribePersistenceAlerts(listener) {
-  if (typeof listener !== 'function') return () => {};
+  if (typeof listener !== 'function') {
+    return () => {};
+  }
   persistAlertSubscribers.add(listener);
   return () => {
     persistAlertSubscribers.delete(listener);
@@ -197,8 +211,12 @@ function markPersistenceAlertsAcknowledged({
     const shouldAck = hasAlertId
       ? alert.alert_id === parsedAlertId
       : alert.alert_id <= parsedUpToId;
-    if (!shouldAck) continue;
-    if (alert.acked) continue;
+    if (!shouldAck) {
+      continue;
+    }
+    if (alert.acked) {
+      continue;
+    }
     alert.acked = true;
     alert.acked_at = new Date().toISOString();
     alert.acked_by = reviewer ? String(reviewer).trim() || null : null;
@@ -214,13 +232,17 @@ function markPersistenceAlertsAcknowledged({
 }
 
 function _isForcePersistMutation(mutation) {
-  if (!mutation || typeof mutation !== 'object') return false;
-  if (mutation.reason === 'clear_all' || mutation.reason === 'import_state') return true;
+  if (!mutation || typeof mutation !== 'object') {
+    return false;
+  }
+  if (mutation.reason === 'clear_all' || mutation.reason === 'import_state') {
+    return true;
+  }
   if (
-    mutation.source === 'remote_exec_stream_store'
-    && mutation.reason === 'append_event'
-    && mutation.payload
-    && mutation.payload.done
+    mutation.source === 'remote_exec_stream_store' &&
+    mutation.reason === 'append_event' &&
+    mutation.payload &&
+    mutation.payload.done
   ) {
     return true;
   }
@@ -293,9 +315,15 @@ function _saveRemoteStateNow(mutation = null) {
 }
 
 function _schedulePersistSave(mutation = null, force = false) {
-  if (!remoteStatePersistence.isEnabled()) return;
-  if (hydrationInProgress) return;
-  if (!remoteExecStreamStore) return;
+  if (!remoteStatePersistence.isEnabled()) {
+    return;
+  }
+  if (hydrationInProgress) {
+    return;
+  }
+  if (!remoteExecStreamStore) {
+    return;
+  }
 
   const shouldForce = force || _isForcePersistMutation(mutation);
   if (shouldForce || persistDebounceMs <= 0) {
@@ -307,8 +335,8 @@ function _schedulePersistSave(mutation = null, force = false) {
 
   const nowMs = Date.now();
   if (
-    persistRuntime.lastSavedAtMs === 0
-    || (nowMs - persistRuntime.lastSavedAtMs) >= persistDebounceMs
+    persistRuntime.lastSavedAtMs === 0 ||
+    nowMs - persistRuntime.lastSavedAtMs >= persistDebounceMs
   ) {
     persistRuntime.dirty = false;
     _saveRemoteStateNow(mutation);
@@ -316,12 +344,16 @@ function _schedulePersistSave(mutation = null, force = false) {
   }
 
   persistRuntime.dirty = true;
-  if (persistRuntime.timer) return;
+  if (persistRuntime.timer) {
+    return;
+  }
 
   const waitMs = Math.max(1, persistDebounceMs - (nowMs - persistRuntime.lastSavedAtMs));
   persistRuntime.timer = setTimeout(() => {
     persistRuntime.timer = null;
-    if (!persistRuntime.dirty) return;
+    if (!persistRuntime.dirty) {
+      return;
+    }
     persistRuntime.dirty = false;
     _saveRemoteStateNow({
       source: 'remote_state_persistence',
@@ -358,13 +390,10 @@ function persistRemoteState(mutation = null) {
 
 function _buildPersistenceStatus() {
   _cleanupPersistAlerts();
-  const latestAlert = persistAlerts.length > 0
-    ? _clonePersistAlert(persistAlerts[persistAlerts.length - 1])
-    : null;
+  const latestAlert =
+    persistAlerts.length > 0 ? _clonePersistAlert(persistAlerts[persistAlerts.length - 1]) : null;
   const unacked = persistAlerts.filter((item) => !item.acked);
-  const latestUnacked = unacked.length > 0
-    ? _clonePersistAlert(unacked[unacked.length - 1])
-    : null;
+  const latestUnacked = unacked.length > 0 ? _clonePersistAlert(unacked[unacked.length - 1]) : null;
   return {
     ...persistRuntime.stats,
     pending_flush: Boolean(persistRuntime.dirty),

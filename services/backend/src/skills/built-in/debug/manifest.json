@@ -1,8 +1,15 @@
 {
   "name": "debug",
-  "command": "/debug",
   "description": "Debug an issue by analyzing logs, errors, and code paths",
-  "version": "1.0.0",
-  "userInvocable": true,
-  "tags": ["debugging", "troubleshooting"]
+  "trigger": "/debug",
+  "aliases": [],
+  "category": "others",
+  "tags": [
+    "debugging",
+    "troubleshooting"
+  ],
+  "platforms": [
+    "khy-os"
+  ],
+  "user_invocable": true
 }

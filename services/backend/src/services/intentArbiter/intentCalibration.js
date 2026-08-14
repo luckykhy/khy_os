@@ -34,7 +34,9 @@ const DEFAULT_MIN_SIMILARITY = 0.6;
 function isEnabled(env) {
   const e = env && typeof env === 'object' ? env : {};
   const raw = e.KHY_INTENT_CALIBRATION;
-  if (raw === undefined || raw === null || raw === '') return true;
+  if (raw === undefined || raw === null || raw === '') {
+    return true;
+  }
   return !FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -42,19 +44,29 @@ function isEnabled(env) {
 function _minSimilarity(env) {
   const e = env && typeof env === 'object' ? env : {};
   const raw = e.KHY_INTENT_CALIBRATION_MIN;
-  if (raw === undefined || raw === null || raw === '') return DEFAULT_MIN_SIMILARITY;
+  if (raw === undefined || raw === null || raw === '') {
+    return DEFAULT_MIN_SIMILARITY;
+  }
   const n = Number(String(raw).trim());
-  if (!Number.isFinite(n) || n <= 0 || n > 1) return DEFAULT_MIN_SIMILARITY;
+  if (!Number.isFinite(n) || n <= 0 || n > 1) {
+    return DEFAULT_MIN_SIMILARITY;
+  }
   return n;
 }
 
 /** 切字符 bigram 集合(剥空白)。单字降级到字符集合,空串 → 空集。纯字符串运算。 */
 function _bigrams(s) {
   const chars = Array.from(String(s == null ? '' : s)).filter((c) => !/\s/.test(c));
-  if (chars.length === 0) return new Set();
-  if (chars.length === 1) return new Set([chars[0]]);
+  if (chars.length === 0) {
+    return new Set();
+  }
+  if (chars.length === 1) {
+    return new Set([chars[0]]);
+  }
   const out = new Set();
-  for (let i = 0; i < chars.length - 1; i++) out.add(chars[i] + chars[i + 1]);
+  for (let i = 0; i < chars.length - 1; i++) {
+    out.add(chars[i] + chars[i + 1]);
+  }
   return out;
 }
 
@@ -68,9 +80,15 @@ function _bigrams(s) {
 function lexicalSimilarity(a, b) {
   const A = _bigrams(a);
   const B = _bigrams(b);
-  if (A.size === 0 || B.size === 0) return 0;
+  if (A.size === 0 || B.size === 0) {
+    return 0;
+  }
   let inter = 0;
-  for (const g of A) if (B.has(g)) inter += 1;
+  for (const g of A) {
+    if (B.has(g)) {
+      inter += 1;
+    }
+  }
   const union = A.size + B.size - inter;
   return union === 0 ? 0 : inter / union;
 }
@@ -87,25 +105,38 @@ function lexicalSimilarity(a, b) {
  * @returns {{adjusted:boolean, band?:string, confidence?:number, similarity?:number, matched?:string, reason?:string}}
  */
 function selectCalibration(analysis, exemplars, env) {
-  if (!isEnabled(env)) return { adjusted: false };
-  if (!analysis || typeof analysis !== 'object') return { adjusted: false };
+  if (!isEnabled(env)) {
+    return { adjusted: false };
+  }
+  if (!analysis || typeof analysis !== 'object') {
+    return { adjusted: false };
+  }
   // 只对歧义带生效:CHAT 已是最安全带无需降;EXECUTION 是强意图,校准绝不插手(防呆①/②)。
-  if (analysis.band !== L.BANDS.CONFIRM) return { adjusted: false };
-  if (!Array.isArray(exemplars) || exemplars.length === 0) return { adjusted: false };
+  if (analysis.band !== L.BANDS.CONFIRM) {
+    return { adjusted: false };
+  }
+  if (!Array.isArray(exemplars) || exemplars.length === 0) {
+    return { adjusted: false };
+  }
 
   const text = typeof analysis.text === 'string' ? analysis.text : '';
-  if (!text) return { adjusted: false };
+  if (!text) {
+    return { adjusted: false };
+  }
 
   const min = _minSimilarity(env);
   let best = 0;
   let matched = null;
   for (const ex of exemplars) {
-    const orig = ex && typeof ex === 'object'
-      ? ex.originalText
-      : (typeof ex === 'string' ? ex : '');
-    if (typeof orig !== 'string' || !orig) continue;
+    const orig = ex && typeof ex === 'object' ? ex.originalText : typeof ex === 'string' ? ex : '';
+    if (typeof orig !== 'string' || !orig) {
+      continue;
+    }
     const sim = lexicalSimilarity(text, orig);
-    if (sim > best) { best = sim; matched = orig; }
+    if (sim > best) {
+      best = sim;
+      matched = orig;
+    }
   }
 
   if (matched && best >= min) {

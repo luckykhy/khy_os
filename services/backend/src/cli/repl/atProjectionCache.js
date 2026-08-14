@@ -27,7 +27,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_AT_PROJECTION_CACHE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -50,8 +52,12 @@ function getProjection(dir, buildFn, opts = {}) {
   const env = o.env || process.env;
 
   const _fresh = () => {
-    try { const r = buildFn(); return Array.isArray(r) ? r : []; }
-    catch { return []; }
+    try {
+      const r = buildFn();
+      return Array.isArray(r) ? r : [];
+    } catch {
+      return [];
+    }
   };
 
   try {
@@ -62,7 +68,7 @@ function getProjection(dir, buildFn, opts = {}) {
     const ttl = Number.isFinite(o.ttlMs) && o.ttlMs > 0 ? o.ttlMs : DEFAULT_TTL_MS;
 
     const hit = _cache.get(dir);
-    if (hit && (now - hit.at) < ttl && Array.isArray(hit.projection)) {
+    if (hit && now - hit.at < ttl && Array.isArray(hit.projection)) {
       return hit.projection; // 同一引用 → 复用一次 readdir + 排序 + 映射
     }
     const projection = _fresh();
@@ -78,6 +84,8 @@ function getProjection(dir, buildFn, opts = {}) {
 }
 
 // 测试/生命周期钩子:清空缓存(进程内)。
-function _clearCache() { _cache.clear(); }
+function _clearCache() {
+  _cache.clear();
+}
 
 module.exports = { isEnabled, getProjection, _clearCache, OFF_VALUES, DEFAULT_TTL_MS };

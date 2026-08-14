@@ -30,9 +30,15 @@
  * @returns {boolean}
  */
 function isErrorTurn(finalResult) {
-  if (!finalResult || typeof finalResult !== 'object') return false;
-  if (finalResult.errorType) return true;
-  if (finalResult.error_code) return true;
+  if (!finalResult || typeof finalResult !== 'object') {
+    return false;
+  }
+  if (finalResult.errorType) {
+    return true;
+  }
+  if (finalResult.error_code) {
+    return true;
+  }
   return false;
 }
 
@@ -48,7 +54,9 @@ function isErrorTurn(finalResult) {
  * @returns {{ persisted: boolean, rolledBack: boolean }}
  */
 function commitTurn(messages, opts = {}) {
-  if (!Array.isArray(messages)) return { persisted: false, rolledBack: false };
+  if (!Array.isArray(messages)) {
+    return { persisted: false, rolledBack: false };
+  }
   const { reply, finalResult, maxHistory, historyMark } = opts;
 
   if (isErrorTurn(finalResult)) {
@@ -62,13 +70,17 @@ function commitTurn(messages, opts = {}) {
   }
 
   const text = String(reply || '');
-  if (!text) return { persisted: false, rolledBack: false };
+  if (!text) {
+    return { persisted: false, rolledBack: false };
+  }
 
   messages.push({ role: 'assistant', content: text });
   if (Number.isInteger(maxHistory) && maxHistory > 0 && messages.length > maxHistory) {
     const trimmed = messages.slice(-maxHistory);
     messages.length = 0;
-    for (const m of trimmed) messages.push(m);
+    for (const m of trimmed) {
+      messages.push(m);
+    }
   }
   return { persisted: true, rolledBack: false };
 }

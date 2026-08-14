@@ -64,9 +64,13 @@ function composeRoute(args) {
     const capOk = requirementsMatcher(d.requires || {}, vector);
 
     let reason = null;
-    if (!enabled) reason = 'gated-off';
-    else if (!preOk) reason = _suppressionReason(d, ctx);
-    else if (!capOk) reason = `capability-gap:${_firstGap(d.requires, vector)}`;
+    if (!enabled) {
+      reason = 'gated-off';
+    } else if (!preOk) {
+      reason = _suppressionReason(d, ctx);
+    } else if (!capOk) {
+      reason = `capability-gap:${_firstGap(d.requires, vector)}`;
+    }
 
     const eligible = enabled && preOk && capOk;
 
@@ -87,8 +91,11 @@ function composeRoute(args) {
     };
     steps.push(step);
 
-    if (!enabled) gatedOff.push({ id: d.id, reason: 'gated-off' });
-    else if (!preOk) suppressed.push({ id: d.id, reason: step.reason });
+    if (!enabled) {
+      gatedOff.push({ id: d.id, reason: 'gated-off' });
+    } else if (!preOk) {
+      suppressed.push({ id: d.id, reason: step.reason });
+    }
   }
 
   // ⑤ preset/signal overlay: if a preset is selected, eligible capabilities not
@@ -98,7 +105,7 @@ function composeRoute(args) {
   //    preset order as a fine tiebreak so a preset reads in its declared order.
   const ranked = steps
     .map((s, i) => ({ s, i, rank: _rank(s, presetOrder) }))
-    .sort((a, b) => (a.rank - b.rank) || (a.i - b.i))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
     .map((x) => x.s);
 
   // ⑥ budget knapsack: drop highest-cost reversible eligible steps until the
@@ -114,14 +121,19 @@ function composeRoute(args) {
       .sort((a, b) => (b.cost || 0) - (a.cost || 0)); // highest cost first
     const dropIds = new Set();
     for (const s of droppable) {
-      if (budgetUsed <= budget) break;
+      if (budgetUsed <= budget) {
+        break;
+      }
       dropIds.add(s.id);
-      budgetUsed -= (s.cost || 0);
+      budgetUsed -= s.cost || 0;
       budgetDropped.push({ id: s.id, reason: `budget:${s.cost}` });
     }
     active = active.filter((id) => !dropIds.has(id));
     for (const step of ranked) {
-      if (dropIds.has(step.id)) { step.eligible = false; step.reason = 'budget'; }
+      if (dropIds.has(step.id)) {
+        step.eligible = false;
+        step.reason = 'budget';
+      }
     }
   }
 
@@ -146,7 +158,9 @@ function _allMaxVector() {
 
 function defaultRequirementsMatcher(requires, vector) {
   for (const [dim, min] of Object.entries(requires || {})) {
-    if ((vector[dim] || 0) < min) return false;
+    if ((vector[dim] || 0) < min) {
+      return false;
+    }
   }
   return true;
 }
@@ -154,26 +168,42 @@ function defaultRequirementsMatcher(requires, vector) {
 function _firstGap(requires, vector) {
   for (const [dim, min] of Object.entries(requires || {})) {
     const have = vector[dim] || 0;
-    if (have < min) return `${dim} ${have}/${min}`;
+    if (have < min) {
+      return `${dim} ${have}/${min}`;
+    }
   }
   return 'none';
 }
 
 function _safePrecondition(d, ctx) {
-  if (typeof d.preconditions !== 'function') return true;
-  try { return !!d.preconditions(ctx); } catch { return false; }
+  if (typeof d.preconditions !== 'function') {
+    return true;
+  }
+  try {
+    return !!d.preconditions(ctx);
+  } catch {
+    return false;
+  }
 }
 
 function _suppressionReason(d, ctx) {
-  if (d.subagentSuppressed && ctx.isSubagent) return 'subagent';
-  if (ctx.iteration !== undefined && ctx.iteration !== 1) return 'not-iter-1';
-  if (ctx.toolCallsLen !== undefined && ctx.toolCallsLen !== 0) return 'has-toolcalls';
+  if (d.subagentSuppressed && ctx.isSubagent) {
+    return 'subagent';
+  }
+  if (ctx.iteration !== undefined && ctx.iteration !== 1) {
+    return 'not-iter-1';
+  }
+  if (ctx.toolCallsLen !== undefined && ctx.toolCallsLen !== 0) {
+    return 'has-toolcalls';
+  }
   return 'precondition';
 }
 
 function _rank(step, presetOrder) {
   const base = (SEAM_ORDER[step.seam] || 0) + (step.phase || 0);
-  if (!presetOrder) return base;
+  if (!presetOrder) {
+    return base;
+  }
   const idx = presetOrder.indexOf(step.id);
   // In-preset steps keep their seam/phase ordering but are nudged ahead of
   // out-of-preset steps within the same seam band (fine tiebreak only).

@@ -44,11 +44,17 @@ function isEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_VISION_ROUTING_TRUTH', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_VISION_ROUTING_TRUTH;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -84,7 +90,9 @@ const _VISION_QUESTION_RES = [
  */
 function isVisionQuestion(text) {
   const s = String(text == null ? '' : text);
-  if (!s.trim()) return false;
+  if (!s.trim()) {
+    return false;
+  }
   try {
     return _VISION_QUESTION_RES.some((re) => re.test(s));
   } catch {
@@ -108,9 +116,15 @@ const pickUserText = require('../utils/pickUserTextSafe');
 
 /** 取候选项的 model id(串,或 {id/model/name} 对象)。 */
 function _candidateId(item) {
-  if (!item) return '';
-  if (typeof item === 'string') return item.trim();
-  if (typeof item === 'object') return String(item.id || item.model || item.name || '').trim();
+  if (!item) {
+    return '';
+  }
+  if (typeof item === 'string') {
+    return item.trim();
+  }
+  if (typeof item === 'object') {
+    return String(item.id || item.model || item.name || '').trim();
+  }
   return '';
 }
 
@@ -133,21 +147,37 @@ function _candidateChannel(item) {
 function classifyModels(candidates, opts = {}) {
   const o = opts || {};
   const out = { vision: [], textOnly: [] };
-  if (!Array.isArray(candidates)) return out;
+  if (!Array.isArray(candidates)) {
+    return out;
+  }
   let vc = null;
-  try { vc = require('./gateway/visionCapability'); } catch { vc = null; }
-  if (!vc || typeof vc.isVisionCapableModel !== 'function') return out;
+  try {
+    vc = require('./gateway/visionCapability');
+  } catch {
+    vc = null;
+  }
+  if (!vc || typeof vc.isVisionCapableModel !== 'function') {
+    return out;
+  }
 
   const seen = new Set();
   for (const item of candidates) {
     const id = _candidateId(item);
-    if (!id) continue;
+    if (!id) {
+      continue;
+    }
     const key = id.toLowerCase();
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     const entry = { id, channel: _candidateChannel(item) };
     let capable = false;
-    try { capable = !!vc.isVisionCapableModel(id, { env: o.env || process.env }); } catch { capable = false; }
+    try {
+      capable = !!vc.isVisionCapableModel(id, { env: o.env || process.env });
+    } catch {
+      capable = false;
+    }
     (capable ? out.vision : out.textOnly).push(entry);
   }
   return out;
@@ -176,7 +206,9 @@ function _renderModelList(entries, cap) {
  */
 function buildVisionFooter(facts = {}, opts = {}) {
   const o = opts || {};
-  if (!isEnabled(o.env)) return null;
+  if (!isEnabled(o.env)) {
+    return null;
+  }
   const f = facts || {};
   const cls = classifyModels(Array.isArray(f.candidates) ? f.candidates : [], { env: o.env });
   const active = String(f.activeModel == null ? '' : f.activeModel).trim();
@@ -184,7 +216,9 @@ function buildVisionFooter(facts = {}, opts = {}) {
   const hasVisionList = cls.vision.length > 0;
 
   // 无任何可陈述真值(既无视觉模型清单,又不知实际模型)→ 降级不追加。
-  if (!hasVisionList && !activeKnown) return null;
+  if (!hasVisionList && !activeKnown) {
+    return null;
+  }
 
   const locale = o.locale === 'en' ? 'en' : 'zh';
   const activeVision = f.activeSupportsVision === true;
@@ -192,23 +226,31 @@ function buildVisionFooter(facts = {}, opts = {}) {
   if (locale === 'en') {
     const lines = [`\n\n${VISION_MARKER} · verified】khy gateway vision routing (authoritative):`];
     if (activeKnown) {
-      lines.push(`- This turn's actual model: "${active}" — ${activeVision ? 'CAN accept image input' : 'text-only (cannot accept images directly)'}.`);
+      lines.push(
+        `- This turn's actual model: "${active}" — ${activeVision ? 'CAN accept image input' : 'text-only (cannot accept images directly)'}.`
+      );
     }
     if (hasVisionList) {
       const { text, extra } = _renderModelList(cls.vision, 12);
-      lines.push(`- Vision-capable models available for routing: ${text}${extra ? ` (+${extra} more)` : ''}.`);
+      lines.push(
+        `- Vision-capable models available for routing: ${text}${extra ? ` (+${extra} more)` : ''}.`
+      );
     } else {
       lines.push('- No vision-capable model is currently registered for routing.');
     }
     if (!activeVision) {
-      lines.push('- For images, the gateway auto-selects a vision-capable model above; if none is reachable it falls back to local OCR (Tesseract) for text in the image.');
+      lines.push(
+        '- For images, the gateway auto-selects a vision-capable model above; if none is reachable it falls back to local OCR (Tesseract) for text in the image.'
+      );
     }
     return lines.join('\n');
   }
 
   const lines = [`\n\n${VISION_MARKER} · 确定性核对】khy 网关视觉路由(以此为准):`];
   if (activeKnown) {
-    lines.push(`- 本轮实际模型:「${active}」——${activeVision ? '可直接接受图像输入' : '纯文本模型,不能直接收图'}。`);
+    lines.push(
+      `- 本轮实际模型:「${active}」——${activeVision ? '可直接接受图像输入' : '纯文本模型,不能直接收图'}。`
+    );
   }
   if (hasVisionList) {
     const { text, extra } = _renderModelList(cls.vision, 12);
@@ -217,7 +259,9 @@ function buildVisionFooter(facts = {}, opts = {}) {
     lines.push('- 当前注册表中没有可路由的视觉模型。');
   }
   if (!activeVision) {
-    lines.push('- 识图时网关会自动改选上述视觉模型;若都不可达,则回退本地 OCR(Tesseract)识别图中文字。');
+    lines.push(
+      '- 识图时网关会自动改选上述视觉模型;若都不可达,则回退本地 OCR(Tesseract)识别图中文字。'
+    );
   }
   return lines.join('\n');
 }
@@ -229,7 +273,9 @@ function buildVisionFooter(facts = {}, opts = {}) {
  */
 function formatVisionDirective(opts = {}) {
   const o = opts || {};
-  if (!isEnabled(o.env)) return '';
+  if (!isEnabled(o.env)) {
+    return '';
+  }
   const locale = o.locale === 'en' ? 'en' : 'zh';
 
   if (locale === 'en') {

@@ -17,7 +17,9 @@ const DEFAULT_FETCH_TIMEOUT_MS = 120000; // 2 minutes — prevents indefinite ha
 // Lazy-load circuit breaker
 let _circuitBreaker;
 function _getCircuitBreaker() {
-  if (_circuitBreaker !== undefined) return _circuitBreaker;
+  if (_circuitBreaker !== undefined) {
+    return _circuitBreaker;
+  }
   try {
     _circuitBreaker = require('./circuitBreaker');
   } catch {
@@ -29,7 +31,9 @@ function _getCircuitBreaker() {
 // Lazy-load timeout multiplier
 let _adaptiveOutput;
 function _getMultiplier() {
-  if (_adaptiveOutput !== undefined) return _adaptiveOutput;
+  if (_adaptiveOutput !== undefined) {
+    return _adaptiveOutput;
+  }
   try {
     _adaptiveOutput = require('./adaptiveOutput');
   } catch {
@@ -77,11 +81,22 @@ function bindAbortRelay(controller) {
  * @returns {{ signal: AbortSignal|undefined, cleanup: function, refresh: function }}
  */
 function buildTimeoutAbortSignal(params) {
-  const { timeoutMs: rawTimeoutMs, signal, operation, url, logger, onStale, staleWarningMs: customStaleWarningMs } = params;
+  const {
+    timeoutMs: rawTimeoutMs,
+    signal,
+    operation,
+    url,
+    logger,
+    onStale,
+    staleWarningMs: customStaleWarningMs,
+  } = params;
 
   // Apply default timeout to prevent indefinite hangs when caller forgets to specify
-  const timeoutMs = rawTimeoutMs ? _applyMultiplier(rawTimeoutMs)
-    : (signal ? undefined : _applyMultiplier(DEFAULT_FETCH_TIMEOUT_MS));
+  const timeoutMs = rawTimeoutMs
+    ? _applyMultiplier(rawTimeoutMs)
+    : signal
+      ? undefined
+      : _applyMultiplier(DEFAULT_FETCH_TIMEOUT_MS);
 
   if (!timeoutMs && !signal) {
     return { signal: undefined, cleanup() {}, refresh() {} };
@@ -97,32 +112,46 @@ function buildTimeoutAbortSignal(params) {
   let staleWarningTimerId;
 
   // Stale warning 定时器（借鉴 Hermes Agent _interruptible_api_call）
-  const staleWarningMs = customStaleWarningMs || Math.max(10000, Math.floor(normalizedTimeout * 0.5));
+  const staleWarningMs =
+    customStaleWarningMs || Math.max(10000, Math.floor(normalizedTimeout * 0.5));
   let staleWarningFired = false;
 
   function scheduleStaleWarning() {
-    if (!onStale || staleWarningFired) return;
-    if (staleWarningTimerId) clearTimeout(staleWarningTimerId);
+    if (!onStale || staleWarningFired) {
+      return;
+    }
+    if (staleWarningTimerId) {
+      clearTimeout(staleWarningTimerId);
+    }
     staleWarningTimerId = setTimeout(() => {
-      if (!active || controller.signal.aborted) return;
+      if (!active || controller.signal.aborted) {
+        return;
+      }
       staleWarningFired = true;
-      try { onStale('warning', { operation, elapsedMs: staleWarningMs }); } catch { /* ignore */ }
+      try {
+        onStale('warning', { operation, elapsedMs: staleWarningMs });
+      } catch {
+        /* ignore */
+      }
     }, staleWarningMs);
-    if (staleWarningTimerId.unref) staleWarningTimerId.unref();
+    if (staleWarningTimerId.unref) {
+      staleWarningTimerId.unref();
+    }
   }
 
   function scheduleTimeout() {
     const startedAt = Date.now();
     timeoutId = setTimeout(() => {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted) {
+        return;
+      }
 
       // Event-loop stall detection
       const elapsed = Date.now() - startedAt;
       const delay = Math.max(0, elapsed - normalizedTimeout);
       const stallThreshold = Math.max(1000, normalizedTimeout * 0.5);
-      const stallHint = delay >= stallThreshold
-        ? `timer delayed ${delay}ms, likely event-loop starvation`
-        : null;
+      const stallHint =
+        delay >= stallThreshold ? `timer delayed ${delay}ms, likely event-loop starvation` : null;
 
       const sanitizedUrl = _sanitizeLogUrl(url);
       const logCtx = {
@@ -139,7 +168,11 @@ function buildTimeoutAbortSignal(params) {
 
       // Stale critical 回调
       if (onStale) {
-        try { onStale('critical', { operation, elapsedMs: elapsed }); } catch { /* ignore */ }
+        try {
+          onStale('critical', { operation, elapsedMs: elapsed });
+        } catch {
+          /* ignore */
+        }
       }
 
       const error = new Error('request timed out');
@@ -147,7 +180,9 @@ function buildTimeoutAbortSignal(params) {
       controller.abort(error);
     }, normalizedTimeout);
 
-    if (timeoutId.unref) timeoutId.unref();
+    if (timeoutId.unref) {
+      timeoutId.unref();
+    }
   }
 
   scheduleTimeout();
@@ -168,8 +203,12 @@ function buildTimeoutAbortSignal(params) {
 
     /** Refresh the timeout (for streaming operations that need more time). */
     refresh() {
-      if (!active || controller.signal.aborted) return;
-      if (timeoutId) clearTimeout(timeoutId);
+      if (!active || controller.signal.aborted) {
+        return;
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       staleWarningFired = false; // 重置 stale warning 状态
       scheduleTimeout();
       scheduleStaleWarning();
@@ -178,9 +217,15 @@ function buildTimeoutAbortSignal(params) {
     /** Clean up timers and listeners. MUST call when done. */
     cleanup() {
       active = false;
-      if (timeoutId) clearTimeout(timeoutId);
-      if (staleWarningTimerId) clearTimeout(staleWarningTimerId);
-      if (signal) signal.removeEventListener('abort', onAbort);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (staleWarningTimerId) {
+        clearTimeout(staleWarningTimerId);
+      }
+      if (signal) {
+        signal.removeEventListener('abort', onAbort);
+      }
     },
   };
 }
@@ -211,7 +256,9 @@ async function fetchWithTimeout(fn, opts) {
  */
 function _sanitizeLogUrl(rawUrl) {
   const trimmed = rawUrl?.trim();
-  if (!trimmed) return undefined;
+  if (!trimmed) {
+    return undefined;
+  }
 
   try {
     const parsed = new URL(trimmed);
@@ -228,7 +275,9 @@ function _sanitizeLogUrl(rawUrl) {
       .replace(/[\x00-\x1f\x7f]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    if (!clean) return undefined;
+    if (!clean) {
+      return undefined;
+    }
     return clean.length > LOG_URL_MAX_CHARS ? clean.slice(0, LOG_URL_MAX_CHARS) + '...' : clean;
   }
 }
@@ -250,7 +299,9 @@ async function fetchWithSsrfGuard(fn, opts) {
       const { validateUrl } = require('./ssrfGuard');
       await validateUrl(opts.url, opts.ssrfPolicy || {});
     } catch (err) {
-      if (err.name === 'SsrfBlockedError') throw err;
+      if (err.name === 'SsrfBlockedError') {
+        throw err;
+      }
       // DNS resolution failures are not SSRF — let the fetch itself handle them
     }
   }

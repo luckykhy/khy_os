@@ -31,22 +31,38 @@
  * @returns {string}
  */
 function _bareId(model) {
-  const m = String(model == null ? '' : model).trim().toLowerCase();
-  if (!m) return '';
+  const m = String(model == null ? '' : model)
+    .trim()
+    .toLowerCase();
+  if (!m) {
+    return '';
+  }
   const idx = m.lastIndexOf('/');
   return idx >= 0 ? m.slice(idx + 1) : m;
 }
 
 function _defaultListProviders() {
-  try { return require('../customProviderRegistry').listProviders(); } catch { return []; }
+  try {
+    return require('../customProviderRegistry').listProviders();
+  } catch {
+    return [];
+  }
 }
 
 function _defaultHasAvailableKeys(pool) {
-  try { return require('../apiKeyPool').hasAvailableKeys(pool); } catch { return false; }
+  try {
+    return require('../apiKeyPool').hasAvailableKeys(pool);
+  } catch {
+    return false;
+  }
 }
 
 function _defaultIsVisionCapable(model, opts) {
-  try { return require('./visionCapability').isVisionCapableModel(model, opts); } catch { return false; }
+  try {
+    return require('./visionCapability').isVisionCapableModel(model, opts);
+  } catch {
+    return false;
+  }
 }
 
 // GLM 视觉降级候选:门开 → 有序 [{ model:'glm-4.6v-flash', poolHint:'glm' },
@@ -56,10 +72,14 @@ function _defaultIsVisionCapable(model, opts) {
 function _defaultGlmPin(env) {
   try {
     const glm = require('./glmVisionModel');
-    if (!glm.glmVisionEnabled(env)) return [];
+    if (!glm.glmVisionEnabled(env)) {
+      return [];
+    }
     if (typeof glm.glmVisionCandidatePins === 'function') {
       const pins = glm.glmVisionCandidatePins(env);
-      if (Array.isArray(pins)) return pins;
+      if (Array.isArray(pins)) {
+        return pins;
+      }
     }
     const id = glm.GLM_VISION_MODEL_ID;
     return id ? [{ model: id, poolHint: 'glm' }] : [];
@@ -81,9 +101,12 @@ function collectVisionFallbackCandidates({ failedModel, env, deps } = {}) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
     const d = deps || {};
-    const listProviders = typeof d.listProviders === 'function' ? d.listProviders : _defaultListProviders;
-    const hasAvailableKeys = typeof d.hasAvailableKeys === 'function' ? d.hasAvailableKeys : _defaultHasAvailableKeys;
-    const isVisionCapable = typeof d.isVisionCapable === 'function' ? d.isVisionCapable : _defaultIsVisionCapable;
+    const listProviders =
+      typeof d.listProviders === 'function' ? d.listProviders : _defaultListProviders;
+    const hasAvailableKeys =
+      typeof d.hasAvailableKeys === 'function' ? d.hasAvailableKeys : _defaultHasAvailableKeys;
+    const isVisionCapable =
+      typeof d.isVisionCapable === 'function' ? d.isVisionCapable : _defaultIsVisionCapable;
     const glmPin = typeof d.glmPin === 'function' ? d.glmPin : _defaultGlmPin;
 
     const failedBare = _bareId(failedModel);
@@ -92,9 +115,13 @@ function collectVisionFallbackCandidates({ failedModel, env, deps } = {}) {
 
     const push = (model, poolHint) => {
       const m = String(model == null ? '' : model).trim();
-      if (!m) return;
+      if (!m) {
+        return;
+      }
       const bare = _bareId(m);
-      if (!bare || bare === failedBare || seen.has(bare)) return;
+      if (!bare || bare === failedBare || seen.has(bare)) {
+        return;
+      }
       seen.add(bare);
       out.push({ model: m, poolHint: poolHint ? String(poolHint).trim() : '' });
     };
@@ -103,35 +130,65 @@ function collectVisionFallbackCandidates({ failedModel, env, deps } = {}) {
     //    (降级链 glm-4.6v-flash → glm-4v-flash);两种形态统一归一为数组,共用一次 glm 有 key 判定。
     try {
       const pinResult = glmPin(e);
-      const pins = Array.isArray(pinResult) ? pinResult : (pinResult ? [pinResult] : []);
+      const pins = Array.isArray(pinResult) ? pinResult : pinResult ? [pinResult] : [];
       if (pins.length) {
         let glmHasKey = false;
-        try { glmHasKey = !!hasAvailableKeys('glm'); } catch { glmHasKey = false; }
+        try {
+          glmHasKey = !!hasAvailableKeys('glm');
+        } catch {
+          glmHasKey = false;
+        }
         if (glmHasKey) {
           for (const pin of pins) {
-            if (pin && pin.model) push(pin.model, pin.poolHint || 'glm');
+            if (pin && pin.model) {
+              push(pin.model, pin.poolHint || 'glm');
+            }
           }
         }
       }
-    } catch { /* fail-soft */ }
+    } catch {
+      /* fail-soft */
+    }
 
     // 2. 各 provider 的视觉可用 models(仅 pool 有可用 key 者)。
     let providers = [];
-    try { providers = listProviders() || []; } catch { providers = []; }
+    try {
+      providers = listProviders() || [];
+    } catch {
+      providers = [];
+    }
     if (Array.isArray(providers)) {
       for (const p of providers) {
-        if (!p || !Array.isArray(p.models)) continue;
+        if (!p || !Array.isArray(p.models)) {
+          continue;
+        }
         const poolKey = String(p.poolKey || '').trim();
-        if (!poolKey) continue;
+        if (!poolKey) {
+          continue;
+        }
         let poolHasKey = false;
-        try { poolHasKey = !!hasAvailableKeys(poolKey); } catch { poolHasKey = false; }
-        if (!poolHasKey) continue;
+        try {
+          poolHasKey = !!hasAvailableKeys(poolKey);
+        } catch {
+          poolHasKey = false;
+        }
+        if (!poolHasKey) {
+          continue;
+        }
         for (const m of p.models) {
           const id = String(m == null ? '' : m).trim();
-          if (!id) continue;
+          if (!id) {
+            continue;
+          }
           let vis = false;
-          try { vis = !!isVisionCapable(id, { env: e }); } catch { vis = false; }
-          if (vis) push(id, poolKey);
+          try {
+            vis = !!isVisionCapable(id, { env: e });
+          } catch {
+            vis = false;
+          }
+          if (vis) {
+            push(id, poolKey);
+          }
         }
       }
     }

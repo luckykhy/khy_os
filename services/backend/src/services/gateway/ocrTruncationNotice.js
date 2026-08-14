@@ -40,10 +40,14 @@ function isEnabled(env) {
  * @returns {number}
  */
 function countTruncated(details) {
-  if (!Array.isArray(details)) return 0;
+  if (!Array.isArray(details)) {
+    return 0;
+  }
   let n = 0;
   for (const d of details) {
-    if (d && typeof d === 'object' && d.truncated === true) n += 1;
+    if (d && typeof d === 'object' && d.truncated === true) {
+      n += 1;
+    }
   }
   return n;
 }
@@ -55,15 +59,22 @@ function countTruncated(details) {
  * @returns {string|null}
  */
 function buildTruncationNotice({ count, total, env } = {}) {
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
   const n = Number(count);
-  if (!Number.isFinite(n) || n < 1) return null;
-  const scope = Number.isFinite(Number(total)) && Number(total) > 0
-    ? `其中 ${n}/${Number(total)} 张`
-    : `其中 ${n} 张`;
-  return `[提示：${scope}图片的 OCR 文本因长度上限被截断，仅保留了前一部分，尾部内容未包含在上述`
-    + `文本中；请勿因某些信息「未出现」就断定它不存在，必要时请用户提供更清晰/更小范围的图片，`
-    + `或改用支持看图的多模态模型复核。]`;
+  if (!Number.isFinite(n) || n < 1) {
+    return null;
+  }
+  const scope =
+    Number.isFinite(Number(total)) && Number(total) > 0
+      ? `其中 ${n}/${Number(total)} 张`
+      : `其中 ${n} 张`;
+  return (
+    `[提示：${scope}图片的 OCR 文本因长度上限被截断，仅保留了前一部分，尾部内容未包含在上述` +
+    `文本中；请勿因某些信息「未出现」就断定它不存在，必要时请用户提供更清晰/更小范围的图片，` +
+    `或改用支持看图的多模态模型复核。]`
+  );
 }
 
 module.exports = {

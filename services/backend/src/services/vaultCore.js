@@ -27,7 +27,9 @@ const REDACTION = '[REDACTED]';
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_VAULT;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -47,8 +49,12 @@ function normalizeName(name) {
 function maskSecret(value) {
   const s = String(value == null ? '' : value);
   const n = s.length;
-  if (n === 0) return '(empty)';
-  if (n < 12) return `**** (${n} chars)`;
+  if (n === 0) {
+    return '(empty)';
+  }
+  if (n < 12) {
+    return `**** (${n} chars)`;
+  }
   return `${s.slice(0, 3)}…${s.slice(-2)} (${n} chars)`;
 }
 
@@ -58,7 +64,9 @@ function maskSecret(value) {
  * @returns {Array<{name,preview,length,createdAt,updatedAt}>} 按名称升序
  */
 function shapeListing(record) {
-  if (!record || typeof record !== 'object') return [];
+  if (!record || typeof record !== 'object') {
+    return [];
+  }
   const out = [];
   for (const name of Object.keys(record)) {
     const entry = record[name] || {};
@@ -85,7 +93,10 @@ function extractSecretRefs(text) {
   PLACEHOLDER_RE.lastIndex = 0;
   while ((m = PLACEHOLDER_RE.exec(s)) !== null) {
     const name = m[1];
-    if (!seen.has(name)) { seen.add(name); out.push(name); }
+    if (!seen.has(name)) {
+      seen.add(name);
+      out.push(name);
+    }
   }
   return out;
 }
@@ -100,13 +111,18 @@ function collectSecretRefs(parts = {}) {
   const out = [];
   const add = (text) => {
     for (const name of extractSecretRefs(text)) {
-      if (!seen.has(name)) { seen.add(name); out.push(name); }
+      if (!seen.has(name)) {
+        seen.add(name);
+        out.push(name);
+      }
     }
   };
   add(parts.url);
   add(parts.body);
   const headers = parts.headers && typeof parts.headers === 'object' ? parts.headers : {};
-  for (const k of Object.keys(headers)) add(headers[k]);
+  for (const k of Object.keys(headers)) {
+    add(headers[k]);
+  }
   return out;
 }
 
@@ -117,14 +133,19 @@ function collectSecretRefs(parts = {}) {
 function substituteSecrets(text, secretMap = {}) {
   const s = String(text == null ? '' : text);
   return s.replace(PLACEHOLDER_RE, (full, name) =>
-    (secretMap && Object.prototype.hasOwnProperty.call(secretMap, name) ? String(secretMap[name]) : full));
+    secretMap && Object.prototype.hasOwnProperty.call(secretMap, name)
+      ? String(secretMap[name])
+      : full
+  );
 }
 
 /** 对 headers 对象逐值替换占位符,返回新对象(不改原对象)。 */
 function substituteHeaders(headers, secretMap = {}) {
   const out = {};
   const h = headers && typeof headers === 'object' ? headers : {};
-  for (const k of Object.keys(h)) out[k] = substituteSecrets(h[k], secretMap);
+  for (const k of Object.keys(h)) {
+    out[k] = substituteSecrets(h[k], secretMap);
+  }
   return out;
 }
 
@@ -132,7 +153,9 @@ function substituteHeaders(headers, secretMap = {}) {
 /** 把文本里出现的任何一个密钥值替换为 [REDACTED]。secretValues = 真值数组。 */
 function redactSecrets(text, secretValues) {
   let s = String(text == null ? '' : text);
-  if (!Array.isArray(secretValues) || secretValues.length === 0) return s;
+  if (!Array.isArray(secretValues) || secretValues.length === 0) {
+    return s;
+  }
   // 长值优先替换,避免一个值是另一个的子串时漏替。空串跳过。
   const vals = secretValues
     .filter((v) => typeof v === 'string' && v.length > 0)
@@ -146,7 +169,9 @@ function redactSecrets(text, secretValues) {
 /** 缺失密钥的报错文案(指引去 `khy vault set` 添加,不泄露任何值)。 */
 function buildMissingSecretError(names) {
   const list = Array.isArray(names) ? names.filter(Boolean) : [];
-  if (list.length === 0) return '';
+  if (list.length === 0) {
+    return '';
+  }
   return `保险库中缺少以下密钥:${list.join(', ')}。请先用 \`khy vault set <名称>\` 添加,再用 {{vault:名称}} 引用。`;
 }
 

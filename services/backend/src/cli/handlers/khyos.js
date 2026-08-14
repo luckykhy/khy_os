@@ -45,10 +45,13 @@ function doctor() {
   const qemuExe = process.env.KHY_QEMU || 'qemu-system-x86_64';
   let qemuAutoDownloadArmed = false;
   try {
-    qemuAutoDownloadArmed = !process.env.KHY_QEMU
-      && typeof khyos.isPortableQemuPinned === 'function'
-      && khyos.isPortableQemuPinned();
-  } catch { qemuAutoDownloadArmed = false; }
+    qemuAutoDownloadArmed =
+      !process.env.KHY_QEMU &&
+      typeof khyos.isPortableQemuPinned === 'function' &&
+      khyos.isPortableQemuPinned();
+  } catch {
+    qemuAutoDownloadArmed = false;
+  }
   let qemuOk = false;
   {
     let probeExe = qemuExe;
@@ -56,34 +59,53 @@ function doctor() {
     // Not on PATH? A system QEMU may be installed off-PATH (Windows installer /
     // winget → C:\Program Files\qemu). Auto-locate it and re-probe before warning,
     // so an already-installed QEMU is reported present without manual PATH editing.
-    if ((r.error || r.status !== 0) && !process.env.KHY_QEMU
-        && typeof khyos.locateSystemQemu === 'function') {
+    if (
+      (r.error || r.status !== 0) &&
+      !process.env.KHY_QEMU &&
+      typeof khyos.locateSystemQemu === 'function'
+    ) {
       try {
         const fs = require('fs');
         const found = khyos.locateSystemQemu({
           platform: process.platform,
           env: process.env,
-          exists: (p) => { try { return fs.existsSync(p); } catch { return false; } },
+          exists: (p) => {
+            try {
+              return fs.existsSync(p);
+            } catch {
+              return false;
+            }
+          },
           readdir: (d) => fs.readdirSync(d),
         });
         if (found) {
           const r2 = spawnSync(found, ['--version'], { encoding: 'utf-8' });
-          if (!r2.error && r2.status === 0) { probeExe = found; r = r2; }
+          if (!r2.error && r2.status === 0) {
+            probeExe = found;
+            r = r2;
+          }
         }
-      } catch { /* fail-soft: keep original probe result */ }
+      } catch {
+        /* fail-soft: keep original probe result */
+      }
     }
     if (r.error || r.status !== 0) {
       printWarn('  ✗ qemu-system-x86_64 未找到');
       if (qemuAutoDownloadArmed) {
-        printInfo('    · 将在首次运行内核时自动下载便携 QEMU（或设 KHY_QEMU 指向已装的可执行文件）');
+        printInfo(
+          '    · 将在首次运行内核时自动下载便携 QEMU（或设 KHY_QEMU 指向已装的可执行文件）'
+        );
       } else {
         printInfo('    · 请安装 QEMU 并加入 PATH，或设 KHY_QEMU 指向已装的可执行文件');
       }
     } else {
       qemuOk = true;
       const ver = (r.stdout || '').split('\n')[0].trim();
-      if (probeExe !== qemuExe) printSuccess(`  ✓ qemu-system-x86_64  ${ver}  (自动定位: ${probeExe})`);
-      else printSuccess(`  ✓ qemu-system-x86_64  ${ver}`);
+      if (probeExe !== qemuExe) {
+        printSuccess(`  ✓ qemu-system-x86_64  ${ver}  (自动定位: ${probeExe})`);
+      } else {
+        printSuccess(`  ✓ qemu-system-x86_64  ${ver}`);
+      }
     }
   }
 
@@ -92,12 +114,29 @@ function doctor() {
     const fs = require('fs');
     const cacheIso = path.join(khyos.khyosCacheDir(), khyos.ISO_FILENAME);
     const envIso = process.env.KHY_KERNEL_ISO;
-    const localIso = path.resolve(__dirname, '..', '..', '..', '..', '..', 'kernel', 'build', khyos.ISO_FILENAME);
-    if (envIso && fs.existsSync(envIso)) printSuccess(`  ✓ ISO (KHY_KERNEL_ISO): ${envIso}`);
-    else if (fs.existsSync(localIso)) printSuccess(`  ✓ ISO (本地构建): ${localIso}`);
-    else if (fs.existsSync(cacheIso)) printSuccess(`  ✓ ISO (缓存): ${cacheIso}`);
-    else printWarn('  · ISO 未就绪 — 运行 `khy os build` 从源码构建，或设置 KHY_KERNEL_ISO');
-  } catch { /* ignore */ }
+    const localIso = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      '..',
+      'kernel',
+      'build',
+      khyos.ISO_FILENAME
+    );
+    if (envIso && fs.existsSync(envIso)) {
+      printSuccess(`  ✓ ISO (KHY_KERNEL_ISO): ${envIso}`);
+    } else if (fs.existsSync(localIso)) {
+      printSuccess(`  ✓ ISO (本地构建): ${localIso}`);
+    } else if (fs.existsSync(cacheIso)) {
+      printSuccess(`  ✓ ISO (缓存): ${cacheIso}`);
+    } else {
+      printWarn('  · ISO 未就绪 — 运行 `khy os build` 从源码构建，或设置 KHY_KERNEL_ISO');
+    }
+  } catch {
+    /* ignore */
+  }
 
   if (!qemuOk) {
     if (qemuAutoDownloadArmed) {
@@ -110,8 +149,10 @@ function doctor() {
     if (qemuAutoDownloadArmed) {
       printInfo('  Windows: 首次运行自动下载，或自备 qemu-system-x86_64.exe 并设 KHY_QEMU');
     } else {
-      printInfo('  Windows: 安装 QEMU（https://qemu.weilnetz.de/w64/）并加入 PATH，'
-        + '或自备 qemu-system-x86_64.exe 并设 KHY_QEMU');
+      printInfo(
+        '  Windows: 安装 QEMU（https://qemu.weilnetz.de/w64/）并加入 PATH，' +
+          '或自备 qemu-system-x86_64.exe 并设 KHY_QEMU'
+      );
     }
     return false;
   }
@@ -149,7 +190,9 @@ async function provision(options = {}) {
     try {
       const build = options.kernelBuild || kernelBuild;
       const ok = await build({ preferObtain: true, downloader: options.downloader });
-      if (ok) return true;
+      if (ok) {
+        return true;
+      }
       // false here means the cascade already printed an actionable guide.
       return false;
     } catch (e2) {
@@ -208,12 +251,20 @@ async function kernelBuild(options = {}) {
   const makefile = path.join(kernelDir, 'Makefile');
   if (!fs.existsSync(makefile)) {
     printError(`未找到内核源码 Makefile: ${makefile}`);
-    printInfo('pip 包应在 khy_os/bundled/kernel/ 携带内核源码；用 `khy where` 查看 bundle 根目录。');
-    _writeBuildBreadcrumb({
-      khyos, fs, platform, expectedIso: null,
-      _buildErrorType: 'no-source',
-      _buildHint: 'pip 包未携带内核源码（slim 安装）；用 `khy where` 查看 bundle 根目录。',
-    }, false);
+    printInfo(
+      'pip 包应在 khy_os/bundled/kernel/ 携带内核源码；用 `khy where` 查看 bundle 根目录。'
+    );
+    _writeBuildBreadcrumb(
+      {
+        khyos,
+        fs,
+        platform,
+        expectedIso: null,
+        _buildErrorType: 'no-source',
+        _buildHint: 'pip 包未携带内核源码（slim 安装）；用 `khy where` 查看 bundle 根目录。',
+      },
+      false
+    );
     return false;
   }
 
@@ -222,7 +273,9 @@ async function kernelBuild(options = {}) {
   const moonBin = path.join(os.homedir(), '.moon', 'bin');
   if (
     fs.existsSync(moonBin) &&
-    !String(childEnv.PATH || '').split(path.delimiter).includes(moonBin)
+    !String(childEnv.PATH || '')
+      .split(path.delimiter)
+      .includes(moonBin)
   ) {
     childEnv.PATH = moonBin + path.delimiter + (childEnv.PATH || '');
   }
@@ -237,13 +290,16 @@ async function kernelBuild(options = {}) {
   //     and fall back to the prebuilt C when it is not — this is the bare pip case
   //     that previously failed on darwin/linux demanding a `moon` it never needed.
   const prebuiltMoonC = path.join(kernelDir, 'vendor', 'moonbit', 'moonbit_gen.c');
-  const moonChoice = String(process.env.KHY_MOONBIT_PREBUILT || '').trim().toLowerCase();
+  const moonChoice = String(process.env.KHY_MOONBIT_PREBUILT || '')
+    .trim()
+    .toLowerCase();
   let moonbitPrebuilt;
   if (moonChoice) {
     moonbitPrebuilt = !['0', 'false', 'no', 'off'].includes(moonChoice);
   } else if (fs.existsSync(prebuiltMoonC)) {
     const moonProbe = spawnSync(childEnv.KHY_MOON || 'moon', ['version'], {
-      encoding: 'utf-8', env: childEnv,
+      encoding: 'utf-8',
+      env: childEnv,
     });
     const moonPresent = !(moonProbe && moonProbe.error && moonProbe.error.code === 'ENOENT');
     moonbitPrebuilt = !moonPresent;
@@ -253,14 +309,27 @@ async function kernelBuild(options = {}) {
   // Normalize the env knob to the canonical form `_toolchainMakeVars` forwards to
   // `make`. The Makefile treats ANY non-empty MOONBIT_PREBUILT (even "0") as ON, so
   // a from-source choice MUST clear it rather than pass a falsy string through.
-  if (moonbitPrebuilt) childEnv.KHY_MOONBIT_PREBUILT = '1';
-  else delete childEnv.KHY_MOONBIT_PREBUILT;
+  if (moonbitPrebuilt) {
+    childEnv.KHY_MOONBIT_PREBUILT = '1';
+  } else {
+    delete childEnv.KHY_MOONBIT_PREBUILT;
+  }
 
   const expectedIso = path.join(kernelDir, 'build', khyos.ISO_FILENAME);
   const ctx = {
-    kernelDir, expectedIso, fs, os, spawnSync, childEnv, khyos,
-    moonbitPrebuilt, platform,
-    printInfo, printSuccess, printError, printWarn,
+    kernelDir,
+    expectedIso,
+    fs,
+    os,
+    spawnSync,
+    childEnv,
+    khyos,
+    moonbitPrebuilt,
+    platform,
+    printInfo,
+    printSuccess,
+    printError,
+    printWarn,
     // Obtain-vs-build priority + network seam for the bare-Windows cascade.
     // preferObtain=true (first-run/consumer): try the small pinned ISO download
     // BEFORE any heavy compile. downloader is injected only in tests.
@@ -281,9 +350,7 @@ async function kernelBuild(options = {}) {
   // platform) leaves one structured breadcrumb the pip launcher reads to surface
   // a background-build result on the user's next command — the detached builder
   // is the only actor that knows the real outcome.
-  const ok = platform === 'win32'
-    ? await _windowsKernelBuild(ctx)
-    : _unixToolchainBuild(ctx);
+  const ok = platform === 'win32' ? await _windowsKernelBuild(ctx) : _unixToolchainBuild(ctx);
   _writeBuildBreadcrumb(ctx, ok);
   return ok;
 }
@@ -307,23 +374,28 @@ function _writeBuildBreadcrumb(ctx, ok) {
     let version = '';
     try {
       version = require('../../services/versionService').getCurrentVersion();
-    } catch { /* fall back to empty; non-critical */ }
+    } catch {
+      /* fall back to empty; non-critical */
+    }
     const data = {
       result: ok ? 'success' : 'failure',
-      errorType: ok ? null : (ctx._buildErrorType || 'unknown'),
+      errorType: ok ? null : ctx._buildErrorType || 'unknown',
       hint: ok ? '' : String(ctx._buildHint || ctx._rungReason || '').trim(),
       logPath: path.join(cacheDir, 'kernel-build.log'),
-      isoPath: ok ? (ctx.expectedIso || null) : undefined,
+      isoPath: ok ? ctx.expectedIso || null : undefined,
       version,
       platform: ctx.platform || process.platform,
       ts: Math.floor(Date.now() / 1000),
     };
-    try { fs.mkdirSync(cacheDir, { recursive: true }); } catch { /* ignore */ }
-    fs.writeFileSync(
-      path.join(cacheDir, 'kernel-build-result.json'),
-      JSON.stringify(data),
-    );
-  } catch { /* breadcrumb is best-effort and must never affect the build result */ }
+    try {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    } catch {
+      /* ignore */
+    }
+    fs.writeFileSync(path.join(cacheDir, 'kernel-build-result.json'), JSON.stringify(data));
+  } catch {
+    /* breadcrumb is best-effort and must never affect the build result */
+  }
 }
 
 /** Default interactive confirm via the shared prompt layer (TUI/inquirer aware). */
@@ -346,11 +418,21 @@ async function _defaultConfirm(message) {
  */
 function _toolchainMakeVars(env = process.env) {
   const vars = [];
-  if (env.KHY_CC) vars.push(`CC=${env.KHY_CC}`);
-  if (env.KHY_NASM) vars.push(`ASM=${env.KHY_NASM}`);
-  if (env.KHY_LD) vars.push(`LD=${env.KHY_LD}`);
-  if (env.KHY_GRUB_MKRESCUE) vars.push(`GRUB_MKRESCUE=${env.KHY_GRUB_MKRESCUE}`);
-  if (env.KHY_GCC_INCLUDE) vars.push(`GCC_INCLUDE=${env.KHY_GCC_INCLUDE}`);
+  if (env.KHY_CC) {
+    vars.push(`CC=${env.KHY_CC}`);
+  }
+  if (env.KHY_NASM) {
+    vars.push(`ASM=${env.KHY_NASM}`);
+  }
+  if (env.KHY_LD) {
+    vars.push(`LD=${env.KHY_LD}`);
+  }
+  if (env.KHY_GRUB_MKRESCUE) {
+    vars.push(`GRUB_MKRESCUE=${env.KHY_GRUB_MKRESCUE}`);
+  }
+  if (env.KHY_GCC_INCLUDE) {
+    vars.push(`GCC_INCLUDE=${env.KHY_GCC_INCLUDE}`);
+  }
   // Native-Windows (Limine + prebuilt-MoonBit) overrides — only present when the
   // native toolchain path set them; they swap grub-mkrescue for xorriso+limine,
   // skip the `moon` toolchain via the committed vendor/moonbit artifacts, and give
@@ -358,18 +440,30 @@ function _toolchainMakeVars(env = process.env) {
   // `mkdir -p build`, which Windows make CreateProcess-execs past the shell, are
   // carried by the BusyBox applet .exe copies that _buildViaNativeToolchain puts on
   // the build subprocess PATH (see toolchainProvisioner BUSYBOX_APPLETS).
-  if (env.KHY_XORRISO) vars.push(`XORRISO=${env.KHY_XORRISO}`);
-  if (env.KHY_LIMINE) vars.push(`LIMINE=${env.KHY_LIMINE}`);
-  if (env.KHY_LIMINE_DIR) vars.push(`LIMINE_DIR=${env.KHY_LIMINE_DIR}`);
-  if (env.KHY_MOONBIT_PREBUILT) vars.push(`MOONBIT_PREBUILT=${env.KHY_MOONBIT_PREBUILT}`);
-  if (env.KHY_MAKE_SHELL) vars.push(`SHELL=${env.KHY_MAKE_SHELL}`);
+  if (env.KHY_XORRISO) {
+    vars.push(`XORRISO=${env.KHY_XORRISO}`);
+  }
+  if (env.KHY_LIMINE) {
+    vars.push(`LIMINE=${env.KHY_LIMINE}`);
+  }
+  if (env.KHY_LIMINE_DIR) {
+    vars.push(`LIMINE_DIR=${env.KHY_LIMINE_DIR}`);
+  }
+  if (env.KHY_MOONBIT_PREBUILT) {
+    vars.push(`MOONBIT_PREBUILT=${env.KHY_MOONBIT_PREBUILT}`);
+  }
+  if (env.KHY_MAKE_SHELL) {
+    vars.push(`SHELL=${env.KHY_MAKE_SHELL}`);
+  }
   // Extra compiler flags appended to CFLAGS (and thus MOONBIT_CFLAGS). The native-LLVM
   // backend sets KHY_EXTRA_CFLAGS=--target=x86_64-elf so llvm-mingw's clang emits
   // bare-metal x86_64 ELF objects (linkable with the nasm/ELF objects under ld.lld)
   // instead of its default Windows COFF, and leaves _WIN32 undefined — matching the
   // known-good Linux gcc build. Empty/absent for GNU/Linux and WSL/Docker (gcc inside
   // those guests would reject --target), which call _toolchainMakeVars with process.env.
-  if (env.KHY_EXTRA_CFLAGS) vars.push(`EXTRA_CFLAGS=${env.KHY_EXTRA_CFLAGS}`);
+  if (env.KHY_EXTRA_CFLAGS) {
+    vars.push(`EXTRA_CFLAGS=${env.KHY_EXTRA_CFLAGS}`);
+  }
   // Stamp the boot banner from the single source of truth (package.json version),
   // so the kernel reports the real release instead of its hardcoded fallback. An
   // explicit KHY_VERSION env wins; resolution is fail-soft and never blocks build.
@@ -377,9 +471,13 @@ function _toolchainMakeVars(env = process.env) {
   if (!version) {
     try {
       version = require('../../services/versionService').getCurrentVersion();
-    } catch { /* fall back to the kernel's own #define default */ }
+    } catch {
+      /* fall back to the kernel's own #define default */
+    }
   }
-  if (version && version !== '0.0.0') vars.push(`KHY_VERSION=${version}`);
+  if (version && version !== '0.0.0') {
+    vars.push(`KHY_VERSION=${version}`);
+  }
   return vars;
 }
 
@@ -406,19 +504,34 @@ function _looksLikeIso(fs, isoPath) {
   let fd;
   try {
     const size = fs.statSync(isoPath).size;
-    if (size < MIN_BYTES) return { ok: false, reason: `文件过小（${size} 字节），疑似截断或未写完` };
-    if (size < MAGIC_OFFSET + MAGIC.length) return { ok: false, reason: 'ISO 头部不完整' };
+    if (size < MIN_BYTES) {
+      return { ok: false, reason: `文件过小（${size} 字节），疑似截断或未写完` };
+    }
+    if (size < MAGIC_OFFSET + MAGIC.length) {
+      return { ok: false, reason: 'ISO 头部不完整' };
+    }
     fd = fs.openSync(isoPath, 'r');
     const buf = Buffer.alloc(MAGIC.length);
     fs.readSync(fd, buf, 0, MAGIC.length, MAGIC_OFFSET);
-    if (!buf.equals(MAGIC)) return { ok: false, reason: "缺少 ISO9660 'CD001' 标识，可能不是可引导镜像" };
+    if (!buf.equals(MAGIC)) {
+      return { ok: false, reason: "缺少 ISO9660 'CD001' 标识，可能不是可引导镜像" };
+    }
     return { ok: true };
   } catch (err) {
     // Can't read it for a structural reason we didn't anticipate — accept softly
     // rather than reject a build over an unexpected fs error, but say so.
-    return { ok: true, reason: '无法校验镜像结构（' + (err && err.message ? err.message : err) + '），按存在处理' };
+    return {
+      ok: true,
+      reason: '无法校验镜像结构（' + (err && err.message ? err.message : err) + '），按存在处理',
+    };
   } finally {
-    if (fd !== undefined) { try { fs.closeSync(fd); } catch { /* ignore */ } }
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
 
@@ -436,15 +549,21 @@ function _verifyIso(ctx) {
     ctx._buildErrorType = 'bad-iso';
     ctx._buildHint = '构建产物不是有效的可引导 ISO（' + shape.reason + '）；重跑 `khy os build`。';
     printWarn('构建产物不是有效的可引导 ISO（' + shape.reason + '）: ' + expectedIso);
-    printInfo('可能是构建中断或磁盘写入未完成；重跑 `khy os build`，或进入源码目录手动 `make iso` 查看日志。');
+    printInfo(
+      '可能是构建中断或磁盘写入未完成；重跑 `khy os build`，或进入源码目录手动 `make iso` 查看日志。'
+    );
     return false;
   }
-  if (shape.reason) printInfo('注: ' + shape.reason);
+  if (shape.reason) {
+    printInfo('注: ' + shape.reason);
+  }
   printSuccess('内核 ISO 构建完成: ' + expectedIso);
   printInfo('该位置会被自动发现，无需设置环境变量，直接运行:');
   printInfo('  khy os');
   printInfo('跨机使用可拷入缓存或显式指定:');
-  printInfo(`  cp "${expectedIso}" ~/.khyquant/khyos/   # 或  export KHY_KERNEL_ISO="${expectedIso}"`);
+  printInfo(
+    `  cp "${expectedIso}" ~/.khyquant/khyos/   # 或  export KHY_KERNEL_ISO="${expectedIso}"`
+  );
   return true;
 }
 
@@ -492,15 +611,17 @@ function _unixToolchainBuild(ctx) {
   const missing = tools.filter((t) => !_exists(ctx, t.exe, ['--version']));
   if (missing.length) {
     ctx._buildErrorType = 'missing-toolchain';
-    ctx._buildHint = '缺少构建工具链: ' + missing.map((m) => m.name).join(', ')
-      + '（装好后重试 `khy os build`）';
+    ctx._buildHint =
+      '缺少构建工具链: ' + missing.map((m) => m.name).join(', ') + '（装好后重试 `khy os build`）';
     printError('缺少构建内核所需工具链: ' + missing.map((m) => m.name).join(', '));
     const aptPkgs = [
       ...new Set(missing.flatMap((m) => (m.apt ? m.apt.split(' ') : [])).filter(Boolean)),
     ];
     if (aptPkgs.length) {
       printInfo('Debian / Ubuntu / WSL2:');
-      printInfo('  sudo apt update && sudo apt install -y ' + aptPkgs.join(' ') + ' qemu-system-x86');
+      printInfo(
+        '  sudo apt update && sudo apt install -y ' + aptPkgs.join(' ') + ' qemu-system-x86'
+      );
     }
     if (missing.some((m) => m.name.startsWith('moon'))) {
       printInfo('MoonBit 工具链:');
@@ -541,7 +662,9 @@ function _unixToolchainBuild(ctx) {
  */
 function _makeDownloadProgressRenderer(stream = process.stderr) {
   const isTTY = !!(stream && stream.isTTY);
-  if (!isTTY) return () => {};
+  if (!isTTY) {
+    return () => {};
+  }
   const THROTTLE_MS = 200;
   let lastAt = 0;
   let lastTool = '';
@@ -552,7 +675,9 @@ function _makeDownloadProgressRenderer(stream = process.stderr) {
       const now = Date.now();
       const toolChanged = tool !== lastTool;
       // Always render on tool-change and on done; otherwise throttle.
-      if (!p.done && !toolChanged && now - lastAt < THROTTLE_MS) return;
+      if (!p.done && !toolChanged && now - lastAt < THROTTLE_MS) {
+        return;
+      }
       lastAt = now;
       lastTool = tool;
       let line;
@@ -566,8 +691,12 @@ function _makeDownloadProgressRenderer(stream = process.stderr) {
         line = `  下载 ${tool}  ${mb(p.downloaded)} MB`;
       }
       stream.write('\r\x1b[K' + line);
-      if (p.done) stream.write('\n');
-    } catch { /* progress must never break a download */ }
+      if (p.done) {
+        stream.write('\n');
+      }
+    } catch {
+      /* progress must never break a download */
+    }
   };
 }
 
@@ -588,11 +717,17 @@ async function _buildViaNativeToolchain(ctx) {
   // failure learns WHY (and how to fix it) instead of an unexplained jump to WSL.
   printInfo('尝试原生 LLVM+Limine 工具链构建（无需 Docker / WSL / 虚拟机）…');
   printInfo('  首次需联网下载约数十 MB 工具链；国内网络可设 HTTPS_PROXY 走代理（如 Clash），');
-  printInfo('  或 set KHY_KHYOS_PREFER_CN=1 让 github 工具(LLVM/limine/xorriso)优先走国内 ghproxy 镜像兜底。');
+  printInfo(
+    '  或 set KHY_KHYOS_PREFER_CN=1 让 github 工具(LLVM/limine/xorriso)优先走国内 ghproxy 镜像兜底。'
+  );
 
   let tc = null;
   let reason = '';
-  const log = (m) => { if (m) reason = String(m); };
+  const log = (m) => {
+    if (m) {
+      reason = String(m);
+    }
+  };
   try {
     if (khyos && typeof khyos.ensureWindowsBuildToolchain === 'function') {
       tc = await khyos.ensureWindowsBuildToolchain({
@@ -611,11 +746,15 @@ async function _buildViaNativeToolchain(ctx) {
     // Record a precise reason for the consolidated cascade report, then explain
     // the fall-through here and point at the two quickest fixes.
     ctx._rungReason = reason || '工具链清单未固定或离线，无法自动下载';
-    printWarn('原生工具链不可用' + (reason ? `（${reason}）` : '') + '，回退 WSL / Docker / QEMU …');
+    printWarn(
+      '原生工具链不可用' + (reason ? `（${reason}）` : '') + '，回退 WSL / Docker / QEMU …'
+    );
     if (process.env.KHY_KHYOS_OFFLINE !== '1') {
       printInfo('  · 国内网络被拦截时设代理后重试: set HTTPS_PROXY=http://127.0.0.1:7890');
       printInfo('  · 或让 github 工具优先走国内 ghproxy 镜像兜底: set KHY_KHYOS_PREFER_CN=1');
-      printInfo('  · 或直接复用现成 ISO 免构建:   set KHY_KERNEL_ISO=C:\\path\\to\\khy-os-kernel.iso');
+      printInfo(
+        '  · 或直接复用现成 ISO 免构建:   set KHY_KERNEL_ISO=C:\\path\\to\\khy-os-kernel.iso'
+      );
     }
     return false; // inert/offline/partial → let the cascade continue
   }
@@ -668,18 +807,31 @@ async function _windowsKernelBuild(ctx) {
   const forced = process.env.KHY_FORCE_KERNEL_BUILD === '1';
 
   // Explicit `--setup-wsl` / `khy os setup-wsl`: install WSL2, never build now.
-  if (ctx.setupWsl) return await _offerWslAutoSetup(ctx);
+  if (ctx.setupWsl) {
+    return await _offerWslAutoSetup(ctx);
+  }
 
-  if (backend === 'wsl') return _buildViaWsl(ctx);
-  if (backend === 'docker') return _buildViaDocker(ctx);
+  if (backend === 'wsl') {
+    return _buildViaWsl(ctx);
+  }
+  if (backend === 'docker') {
+    return _buildViaDocker(ctx);
+  }
   // Explicit `backend=qemu`: the user asked for the QEMU builder-VM specifically,
   // so a missing QEMU / appliance IS the thing to report loudly. In the auto
   // cascade below the QEMU rung is just one optional path, so it degrades quietly
   // (QEMU is a *run-time* requirement for booting the kernel, never a build
   // prerequisite — nagging "QEMU 未安装" mid-build would be misleading there).
-  if (backend === 'qemu') { ctx._qemuBackendExplicit = true; return await _buildViaQemu(ctx); }
-  if (backend === 'native-llvm') return await _buildViaNativeToolchain(ctx);
-  if (backend === 'native' || forced) return _unixToolchainBuild(ctx);
+  if (backend === 'qemu') {
+    ctx._qemuBackendExplicit = true;
+    return await _buildViaQemu(ctx);
+  }
+  if (backend === 'native-llvm') {
+    return await _buildViaNativeToolchain(ctx);
+  }
+  if (backend === 'native' || forced) {
+    return _unixToolchainBuild(ctx);
+  }
 
   // auto: layered cascade, never hard-fails.
   //   consumer (preferObtain): download a small pinned ISO FIRST — far cheaper
@@ -702,29 +854,51 @@ async function _windowsKernelBuild(ctx) {
   const attempt = async (label, defaultReason, fn) => {
     ctx._rungReason = null;
     const ok = await fn();
-    if (!ok) ledger.push({ label, reason: ctx._rungReason || defaultReason });
+    if (!ok) {
+      ledger.push({ label, reason: ctx._rungReason || defaultReason });
+    }
     return ok;
   };
 
-  if (ctx.preferObtain &&
-      await attempt('预构建 ISO 下载', '未固定下载地址 / 离线', () => _obtainPrebuiltIso(ctx))) return true;
-  if (await attempt('原生工具链构建 (LLVM+Limine，无 Docker/WSL)', '工具链清单未固定或离线', () => _buildViaNativeToolchain(ctx))) return true;
+  if (
+    ctx.preferObtain &&
+    (await attempt('预构建 ISO 下载', '未固定下载地址 / 离线', () => _obtainPrebuiltIso(ctx)))
+  ) {
+    return true;
+  }
+  if (
+    await attempt('原生工具链构建 (LLVM+Limine，无 Docker/WSL)', '工具链清单未固定或离线', () =>
+      _buildViaNativeToolchain(ctx)
+    )
+  ) {
+    return true;
+  }
 
   // WSL / Docker are precondition-gated: only attempt when actually usable, and
   // record the skip reason for the report when they are not.
   if (_wslHasDistro(ctx)) {
-    if (await attempt('WSL2 构建', 'WSL 内构建失败', () => _buildViaWsl(ctx))) return true;
+    if (await attempt('WSL2 构建', 'WSL 内构建失败', () => _buildViaWsl(ctx))) {
+      return true;
+    }
   } else {
     ledger.push({ label: 'WSL2 构建', reason: '未安装 WSL2 发行版（仅有 wsl.exe 不足以构建）' });
   }
   if (_exists(ctx, 'docker', ['--version'])) {
-    if (await attempt('Docker 构建', 'Docker 内构建失败', () => _buildViaDocker(ctx))) return true;
+    if (await attempt('Docker 构建', 'Docker 内构建失败', () => _buildViaDocker(ctx))) {
+      return true;
+    }
   } else {
     ledger.push({ label: 'Docker 构建', reason: '未检测到 docker' });
   }
-  if (await attempt('QEMU 构建虚拟机', '无 QEMU / 构建虚拟机镜像', () => _buildViaQemu(ctx))) return true;
-  if (!ctx.preferObtain &&
-      await attempt('预构建 ISO 下载', '未固定下载地址 / 离线', () => _obtainPrebuiltIso(ctx))) return true;
+  if (await attempt('QEMU 构建虚拟机', '无 QEMU / 构建虚拟机镜像', () => _buildViaQemu(ctx))) {
+    return true;
+  }
+  if (
+    !ctx.preferObtain &&
+    (await attempt('预构建 ISO 下载', '未固定下载地址 / 离线', () => _obtainPrebuiltIso(ctx)))
+  ) {
+    return true;
+  }
 
   // No usable backend: print the consolidated diagnostic, then offer auto-install
   // of WSL2 (consent + elevation) or fall back to the manual guide.
@@ -739,12 +913,15 @@ async function _windowsKernelBuild(ctx) {
  */
 function _printBuildFailureReport(ctx, ledger) {
   const { printWarn, printInfo } = ctx;
-  if (!ledger || !ledger.length) return;
+  if (!ledger || !ledger.length) {
+    return;
+  }
   // Summarize the cascade ledger into the breadcrumb so the pip launcher can
   // surface why every Windows backend rung failed on the next command.
   ctx._buildErrorType = ctx._buildErrorType || 'no-backend';
-  ctx._buildHint = ctx._buildHint
-    || ('所有构建后端均不可用：' + ledger.map((l) => `${l.label}（${l.reason}）`).join('；'));
+  ctx._buildHint =
+    ctx._buildHint ||
+    '所有构建后端均不可用：' + ledger.map((l) => `${l.label}（${l.reason}）`).join('；');
   printWarn('内核 ISO 自动构建未成功 — 各方式失败原因汇总：');
   for (const { label, reason } of ledger) {
     printInfo(`  • ${label}：${reason}`);
@@ -758,7 +935,9 @@ function _printBuildFailureReport(ctx, ledger) {
   printInfo('  · 受限网络设代理后重试：set HTTPS_PROXY=http://127.0.0.1:7890');
   printInfo('  · 国内网络优先走 ghproxy 镜像兜底（github 工具自动）：set KHY_KHYOS_PREFER_CN=1');
   printInfo('  · 安装 WSL2 后再构建：  khy os setup-wsl');
-  printInfo('      （WSL 内若下载被墙：%UserProfile%\\.wslconfig 设 networkingMode=mirrored 才能用宿主代理）');
+  printInfo(
+    '      （WSL 内若下载被墙：%UserProfile%\\.wslconfig 设 networkingMode=mirrored 才能用宿主代理）'
+  );
 }
 
 /**
@@ -784,7 +963,9 @@ async function _obtainPrebuiltIso(ctx) {
   } catch (err) {
     // Not pinned / offline / checksum / network — degrade to the next rung.
     ctx._rungReason = err && err.message ? err.message : String(err);
-    printWarn('预构建 ISO 暂不可用（' + (err && err.message ? err.message : err) + '），尝试本地构建…');
+    printWarn(
+      '预构建 ISO 暂不可用（' + (err && err.message ? err.message : err) + '），尝试本地构建…'
+    );
     return false;
   }
 }
@@ -797,9 +978,15 @@ async function _obtainPrebuiltIso(ctx) {
  */
 function _wslHasDistro(ctx) {
   const r = ctx.spawnSync('wsl', ['-l', '-q'], { encoding: 'utf-8', env: ctx.childEnv });
-  if (!r || r.error || r.status !== 0) return false;
-  const cleaned = String(r.stdout || '').replace(/\x00/g, '').trim();
-  if (!cleaned) return false;
+  if (!r || r.error || r.status !== 0) {
+    return false;
+  }
+  const cleaned = String(r.stdout || '')
+    .replace(/\x00/g, '')
+    .trim();
+  if (!cleaned) {
+    return false;
+  }
   return cleaned.split(/\r?\n/).some((line) => line.trim().length > 0);
 }
 
@@ -809,14 +996,20 @@ function _printWslManualGuide(ctx) {
   printError('原生 Windows 无法直接构建自研内核：它是 freestanding x86_64 ELF/multiboot2 镜像，');
   printError('需要 GNU/ELF 工具链 + grub-mkrescue，MSVC 不提供。请选其一（均可全自动）:');
   printInfo('  ① WSL2（推荐，跑未改动的 Makefile）:');
-  printInfo('     khy os setup-wsl          自动安装 WSL2 + Ubuntu（需管理员授权，装完需重启一次）');
+  printInfo(
+    '     khy os setup-wsl          自动安装 WSL2 + Ubuntu（需管理员授权，装完需重启一次）'
+  );
   printInfo('     或手动: wsl --install -d Ubuntu   重启后  khy os build   会自动经 WSL 构建');
-  printInfo('     首次在 WSL 内装工具链: sudo apt install -y build-essential nasm grub-pc-bin grub-common xorriso');
+  printInfo(
+    '     首次在 WSL 内装工具链: sudo apt install -y build-essential nasm grub-pc-bin grub-common xorriso'
+  );
   printInfo('  ② Docker Desktop（容器内 Linux 工具链）:');
   printInfo('     装好 Docker 后  set KHY_KERNEL_BUILD_BACKEND=docker && khy os build');
   printInfo('  ③ QEMU 构建虚拟机（无需 WSL，复用 khy-os 已要求的 QEMU）:');
   printInfo('     置备 appliance 后  set KHY_KERNEL_BUILD_BACKEND=qemu && khy os build');
-  printInfo('     appliance 路径: ' + path.join(ctx.khyos.khyosCacheDir(), 'builder', 'khyos-builder.qcow2'));
+  printInfo(
+    '     appliance 路径: ' + path.join(ctx.khyos.khyosCacheDir(), 'builder', 'khyos-builder.qcow2')
+  );
   printInfo('     或  set KHY_KERNEL_BUILD_VM=D:\\path\\khyos-builder.qcow2');
   printInfo('  ④ MSYS2/LLVM 原生（进阶）:');
   printInfo('     安装 nasm/gcc/binutils/grub 后  set KHY_FORCE_KERNEL_BUILD=1 && khy os build');
@@ -846,7 +1039,7 @@ async function _offerWslAutoSetup(ctx) {
   if (!ctx.setupWsl) {
     const ok = await ctx.confirm(
       '未检测到可用的 WSL2 构建后端。是否现在自动安装 WSL2 + Ubuntu？' +
-      '（需要管理员授权，安装完成后需重启一次）'
+        '（需要管理员授权，安装完成后需重启一次）'
     );
     if (!ok) {
       printInfo('已取消自动安装。');
@@ -858,13 +1051,11 @@ async function _offerWslAutoSetup(ctx) {
   printInfo('正在请求管理员权限安装 WSL2（会弹出 UAC 授权框）…');
   // Elevate via PowerShell Start-Process -Verb RunAs; -Wait so we know when it
   // finishes. `wsl --install` enables the feature + installs the default distro.
-  const psCmd =
-    "Start-Process -FilePath 'wsl.exe' -ArgumentList '--install' -Verb RunAs -Wait";
-  const r = ctx.spawnSync(
-    'powershell',
-    ['-NoProfile', '-Command', psCmd],
-    { stdio: 'inherit', env: ctx.childEnv }
-  );
+  const psCmd = "Start-Process -FilePath 'wsl.exe' -ArgumentList '--install' -Verb RunAs -Wait";
+  const r = ctx.spawnSync('powershell', ['-NoProfile', '-Command', psCmd], {
+    stdio: 'inherit',
+    env: ctx.childEnv,
+  });
   if (!r || r.error || r.status !== 0) {
     const why = r && r.error ? ': ' + r.error.message : ` (退出码 ${r ? r.status : '?'})`;
     printError('WSL2 自动安装失败或 UAC 授权被拒' + why);
@@ -875,7 +1066,9 @@ async function _offerWslAutoSetup(ctx) {
   printSuccess('WSL2 组件已安装。');
   printWarn('请重启电脑以完成初始化，然后重新运行: khy os build');
   printInfo('重启后首次启动 Ubuntu 时会要求设置用户名与密码（这是 WSL 的正常步骤）。');
-  printInfo('随后在 WSL 内安装构建工具链: sudo apt update && sudo apt install -y build-essential nasm grub-pc-bin grub-common xorriso');
+  printInfo(
+    '随后在 WSL 内安装构建工具链: sudo apt update && sudo apt install -y build-essential nasm grub-pc-bin grub-common xorriso'
+  );
   // Not an error: install succeeded; we simply cannot build until after reboot.
   return false;
 }
@@ -889,7 +1082,9 @@ async function _offerWslAutoSetup(ctx) {
  */
 function _winToWslPath(winPath) {
   const m = /^([A-Za-z]):[\\/](.*)$/.exec(String(winPath || ''));
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
   return `/mnt/${m[1].toLowerCase()}/${m[2].replace(/\\/g, '/')}`;
 }
 
@@ -906,9 +1101,13 @@ function _buildViaWsl(ctx) {
   // so a flaky `wslpath` no longer aborts the whole build.
   const wp = spawnSync('wsl', ['wslpath', '-u', kernelDir], { encoding: 'utf-8', env: childEnv });
   let unixDir = wp && wp.stdout ? String(wp.stdout).trim() : '';
-  if (!unixDir) unixDir = _winToWslPath(kernelDir) || '';
   if (!unixDir) {
-    printError('WSL 路径转换失败（wslpath），且无法回退推导 /mnt 路径。请在 WSL2 内手动: make -C <kernel 源码目录> iso');
+    unixDir = _winToWslPath(kernelDir) || '';
+  }
+  if (!unixDir) {
+    printError(
+      'WSL 路径转换失败（wslpath），且无法回退推导 /mnt 路径。请在 WSL2 内手动: make -C <kernel 源码目录> iso'
+    );
     return false;
   }
   const makeArgs = ['make', '-C', unixDir, ..._toolchainMakeVars(), 'iso'];
@@ -917,14 +1116,20 @@ function _buildViaWsl(ctx) {
     const why = r && r.error ? ': ' + r.error.message : ` (退出码 ${r ? r.status : '?'})`;
     printError('WSL 内构建失败' + why);
     printInfo('首次构建需在 WSL2 内安装工具链:');
-    printInfo('  sudo apt update && sudo apt install -y build-essential nasm grub-pc-bin grub-common xorriso');
+    printInfo(
+      '  sudo apt update && sudo apt install -y build-essential nasm grub-pc-bin grub-common xorriso'
+    );
     printInfo('MoonBit: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash');
     // Default-NAT WSL cannot reach the host's 127.0.0.1 proxy (the "localhost proxy
     // not mirrored" warning Windows prints). Mirrored networking is the fix; or skip
     // WSL entirely and use the native toolchain (which carries CN mirror fallbacks).
     printInfo('若 WSL 内下载被墙: NAT 模式用不了宿主 127.0.0.1 代理，需改镜像网络——');
-    printInfo('  在 %UserProfile%\\.wslconfig 的 [wsl2] 段加 networkingMode=mirrored，再 wsl --shutdown 重启 WSL;');
-    printInfo('  或免 WSL 走原生工具链(自带国内镜像兜底): set KHY_KERNEL_BUILD_BACKEND=native-llvm ^&^& set KHY_KHYOS_PREFER_CN=1 ^&^& khy os build');
+    printInfo(
+      '  在 %UserProfile%\\.wslconfig 的 [wsl2] 段加 networkingMode=mirrored，再 wsl --shutdown 重启 WSL;'
+    );
+    printInfo(
+      '  或免 WSL 走原生工具链(自带国内镜像兜底): set KHY_KERNEL_BUILD_BACKEND=native-llvm ^&^& set KHY_KHYOS_PREFER_CN=1 ^&^& khy os build'
+    );
     return false;
   }
   return _verifyIso(ctx);
@@ -948,8 +1153,20 @@ function _buildViaDocker(ctx) {
       return false;
     }
     printInfo('构建工具链镜像（首次较慢，之后走缓存）…');
-    const b = spawnSync('docker', ['build', '-f', dockerfile, '-t', image, kernelDir],
-      { stdio: 'inherit', env: childEnv });
+    // apt mirror seam: deb.debian.org's Fastly edges intermittently 502/500 on
+    // some networks (notably CN). KHY_APT_MIRROR names an explicit mirror host;
+    // KHY_KHYOS_PREFER_CN=1 falls back to the TUNA mirror, matching the CN
+    // fallback convention the github-tool downloads already follow.
+    const aptMirror =
+      process.env.KHY_APT_MIRROR ||
+      (process.env.KHY_KHYOS_PREFER_CN === '1' ? 'mirrors.tuna.tsinghua.edu.cn' : '');
+    const buildArgs = ['build', '-f', dockerfile, '-t', image];
+    if (aptMirror) {
+      printInfo('使用 apt 镜像源构建工具链镜像: ' + aptMirror);
+      buildArgs.push('--build-arg', `APT_MIRROR=${aptMirror}`);
+    }
+    buildArgs.push(kernelDir);
+    const b = spawnSync('docker', buildArgs, { stdio: 'inherit', env: childEnv });
     if (!b || b.error || b.status !== 0) {
       printError('Docker 工具链镜像构建失败。确认 Docker Desktop 已启动。');
       return false;
@@ -957,8 +1174,18 @@ function _buildViaDocker(ctx) {
   }
 
   const runArgs = [
-    'run', '--rm', '-v', `${kernelDir}:/kernel`, '-w', '/kernel',
-    image, 'make', '-C', '/kernel', ..._toolchainMakeVars(), 'iso',
+    'run',
+    '--rm',
+    '-v',
+    `${kernelDir}:/kernel`,
+    '-w',
+    '/kernel',
+    image,
+    'make',
+    '-C',
+    '/kernel',
+    ..._toolchainMakeVars(),
+    'iso',
   ];
   const run = spawnSync('docker', runArgs, { stdio: 'inherit', env: childEnv });
   if (!run || run.error || run.status !== 0) {
@@ -985,7 +1212,9 @@ function _buildViaDocker(ctx) {
 function _qemuBuilderImage(ctx) {
   const { fs, khyos } = ctx;
   const override = process.env.KHY_KERNEL_BUILD_VM;
-  if (override) return fs.existsSync(override) ? override : null;
+  if (override) {
+    return fs.existsSync(override) ? override : null;
+  }
   try {
     const cached = path.join(khyos.khyosCacheDir(), 'builder', 'khyos-builder.qcow2');
     return fs.existsSync(cached) ? cached : null;
@@ -1032,21 +1261,31 @@ async function _buildViaQemu(ctx) {
         const found = khyos.locateSystemQemu({
           platform: process.platform,
           env: process.env,
-          exists: (p) => { try { return fs.existsSync(p); } catch { return false; } },
+          exists: (p) => {
+            try {
+              return fs.existsSync(p);
+            } catch {
+              return false;
+            }
+          },
           readdir: (d) => fs.readdirSync(d),
         });
         if (found && _exists(ctx, found, ['--version'])) {
           qemu = found;
           printInfo('使用已定位的系统 QEMU: ' + qemu);
         }
-      } catch { /* fail-soft: fall through to portable */ }
+      } catch {
+        /* fail-soft: fall through to portable */
+      }
     }
   }
   if (!_exists(ctx, qemu, ['--version'])) {
     let portable = null;
     try {
       portable = await khyos.ensurePortableQemu({ downloader: ctx.downloader });
-    } catch { /* fail-soft */ }
+    } catch {
+      /* fail-soft */
+    }
     if (portable && portable.systemBin) {
       qemu = portable.systemBin;
       printInfo('使用便携版 QEMU: ' + qemu);
@@ -1070,25 +1309,39 @@ async function _buildViaQemu(ctx) {
   if (!image) {
     try {
       image = await khyos.ensureBuilderAppliance({ downloader: ctx.downloader });
-      if (image) printInfo('已获取构建虚拟机镜像（appliance）: ' + image);
-    } catch { /* fail-soft */ }
+      if (image) {
+        printInfo('已获取构建虚拟机镜像（appliance）: ' + image);
+      }
+    } catch {
+      /* fail-soft */
+    }
   }
   if (!image) {
     ctx._rungReason = '未置备构建虚拟机镜像（appliance），且无法自动获取';
     if (explicit) {
       printError('未找到 Linux 构建虚拟机镜像（appliance），且无法自动获取（未发布/离线）。');
       printInfo('置备后无需 WSL 即可在 Windows 上经 QEMU 构建：');
-      printInfo('  ① 将构建 appliance 放到: ' +
-        path.join(ctx.khyos.khyosCacheDir(), 'builder', 'khyos-builder.qcow2'));
+      printInfo(
+        '  ① 将构建 appliance 放到: ' +
+          path.join(ctx.khyos.khyosCacheDir(), 'builder', 'khyos-builder.qcow2')
+      );
       printInfo('  ② 或设环境变量指向镜像: set KHY_KERNEL_BUILD_VM=D:\\path\\khyos-builder.qcow2');
-      printInfo('  appliance 内置工具链 (gcc/nasm/binutils/grub/xorriso/moon)，开机自动 make iso 后关机。');
+      printInfo(
+        '  appliance 内置工具链 (gcc/nasm/binutils/grub/xorriso/moon)，开机自动 make iso 后关机。'
+      );
       printInfo('  构建脚本契约见 docs/07_OPS_运维/[OPS-MAN-036]。');
     }
     return false;
   }
 
   // Pre-clean a stale ISO so _verifyIso reflects THIS run, not a previous build.
-  try { if (fs.existsSync(expectedIso)) fs.rmSync(expectedIso); } catch { /* best-effort */ }
+  try {
+    if (fs.existsSync(expectedIso)) {
+      fs.rmSync(expectedIso);
+    }
+  } catch {
+    /* best-effort */
+  }
 
   printInfo('经 QEMU 构建虚拟机构建自研内核 ISO（无需 WSL，运行未改动的 Makefile）…');
 
@@ -1096,7 +1349,9 @@ async function _buildViaQemu(ctx) {
   // cmdline (the appliance's /khy-build.sh reads KHY_MAKE_VARS).
   const makeVars = _toolchainMakeVars();
   const appendParts = ['console=ttyS0'];
-  if (makeVars.length) appendParts.push(`KHY_MAKE_VARS="${makeVars.join(' ')}"`);
+  if (makeVars.length) {
+    appendParts.push(`KHY_MAKE_VARS="${makeVars.join(' ')}"`);
+  }
 
   const cpus = process.env.KHY_KERNEL_BUILD_VM_CPUS || '2';
   const mem = process.env.KHY_KERNEL_BUILD_VM_MEM || '2048';
@@ -1104,22 +1359,37 @@ async function _buildViaQemu(ctx) {
   // Share the host kernel dir read-write over virtio-9p (tag: khykernel). The
   // guest mounts it at /kernel and writes build/<ISO> back to the host.
   const args = [
-    '-M', 'pc', '-m', mem, '-smp', cpus,
-    '-nographic', '-no-reboot',
-    '-drive', `file=${image},format=qcow2,if=virtio`,
-    '-fsdev', `local,id=khykernel,path=${kernelDir},security_model=mapped-xattr`,
-    '-device', 'virtio-9p-pci,fsdev=khykernel,mount_tag=khykernel',
-    '-append', appendParts.join(' '),
+    '-M',
+    'pc',
+    '-m',
+    mem,
+    '-smp',
+    cpus,
+    '-nographic',
+    '-no-reboot',
+    '-drive',
+    `file=${image},format=qcow2,if=virtio`,
+    '-fsdev',
+    `local,id=khykernel,path=${kernelDir},security_model=mapped-xattr`,
+    '-device',
+    'virtio-9p-pci,fsdev=khykernel,mount_tag=khykernel',
+    '-append',
+    appendParts.join(' '),
   ];
 
   const timeoutMs = parseInt(process.env.KHY_KERNEL_BUILD_VM_TIMEOUT_MS || '600000', 10);
   const r = spawnSync(qemu, args, { stdio: 'inherit', env: childEnv, timeout: timeoutMs });
   if (!r || r.error || (r.status !== 0 && r.status !== null)) {
-    const why = r && r.error
-      ? (r.error.code === 'ETIMEDOUT' ? '：构建超时' : ': ' + r.error.message)
-      : ` (QEMU 退出码 ${r ? r.status : '?'})`;
+    const why =
+      r && r.error
+        ? r.error.code === 'ETIMEDOUT'
+          ? '：构建超时'
+          : ': ' + r.error.message
+        : ` (QEMU 退出码 ${r ? r.status : '?'})`;
     printError('构建虚拟机内构建失败' + why);
-    printInfo('排查: 确认 appliance 镜像可启动，且内置 /khy-build.sh 会挂载 9p 分享 khykernel 到 /kernel。');
+    printInfo(
+      '排查: 确认 appliance 镜像可启动，且内置 /khy-build.sh 会挂载 9p 分享 khykernel 到 /kernel。'
+    );
     return false;
   }
   return _verifyIso(ctx);
@@ -1128,7 +1398,10 @@ async function _buildViaQemu(ctx) {
 /** `khy os run "<cmd>"` — boot, execute one shell command, print output, exit. */
 async function runOnce(command, options = {}) {
   const { printError, printInfo } = fmt();
-  if (!command) { printError('用法: khy os run "<shell 命令>"  (如: khy os run "ps")'); return true; }
+  if (!command) {
+    printError('用法: khy os run "<shell 命令>"  (如: khy os run "ps")');
+    return true;
+  }
 
   const khyos = loadKhyos();
   let iso;
@@ -1144,7 +1417,9 @@ async function runOnce(command, options = {}) {
   runner.on('error', (e) => printError('内核错误: ' + (e.message || e)));
 
   try {
-    if (!options.quiet) printInfo('启动内核…');
+    if (!options.quiet) {
+      printInfo('启动内核…');
+    }
     await runner.start();
     await runner.waitForPrompt(20000);
     const out = await runner.runCommand(command, { timeoutMs: options.timeoutMs || 15000 });
@@ -1152,7 +1427,11 @@ async function runOnce(command, options = {}) {
   } catch (err) {
     printError('执行失败: ' + (err.message || err));
   } finally {
-    try { await runner.stop(); } catch { /* ignore */ }
+    try {
+      await runner.stop();
+    } catch {
+      /* ignore */
+    }
   }
   return true;
 }
@@ -1174,12 +1453,18 @@ async function handleKhyos(parsed = {}) {
   // Mark a non-zero exit when a sub-operation reports failure, but always return
   // `true` so the command is recognized as handled.
   const settle = (ok) => {
-    if (ok === false) process.exitCode = 1;
+    if (ok === false) {
+      process.exitCode = 1;
+    }
     return true;
   };
 
-  if (sub === 'doctor') return settle(await doctor());
-  if (sub === 'provision') return settle(await provision());
+  if (sub === 'doctor') {
+    return settle(await doctor());
+  }
+  if (sub === 'provision') {
+    return settle(await provision());
+  }
   if (sub === 'setup-wsl' || sub === 'setupwsl') {
     return settle(await kernelBuild({ ...(parsed.options || {}), setupWsl: true }));
   }
@@ -1208,9 +1493,19 @@ async function handleKhyos(parsed = {}) {
 }
 
 module.exports = {
-  handleKhyos, doctor, provision, runOnce, kernelBuild,
-  _winToWslPath, _wslHasDistro, _qemuBuilderImage,
-  _unixToolchainBuild, _buildViaNativeToolchain, _toolchainMakeVars,
-  _looksLikeIso, _printBuildFailureReport, _windowsKernelBuild,
+  handleKhyos,
+  doctor,
+  provision,
+  runOnce,
+  kernelBuild,
+  _winToWslPath,
+  _wslHasDistro,
+  _qemuBuilderImage,
+  _unixToolchainBuild,
+  _buildViaNativeToolchain,
+  _toolchainMakeVars,
+  _looksLikeIso,
+  _printBuildFailureReport,
+  _windowsKernelBuild,
   _writeBuildBreadcrumb,
 };

@@ -8,7 +8,9 @@ let _initialized = false;
 let _sequelize = null;
 
 async function bootstrap({ syncSchema = false, silent = false } = {}) {
-  if (_initialized) return { sequelize: _sequelize };
+  if (_initialized) {
+    return { sequelize: _sequelize };
+  }
 
   // Delegate to bootstrap pipeline if available (env, defaults, shutdown handlers)
   try {
@@ -25,8 +27,19 @@ async function bootstrap({ syncSchema = false, silent = false } = {}) {
     // pip upgrades. override:false so real shell env wins.
     try {
       const os = require('os');
-      require('dotenv').config({ path: path.join(os.homedir(), '.khy', '.env'), override: false });
-    } catch { /* overlay optional */ }
+      require('dotenv').config({
+        path: (() => {
+          try {
+            return path.join(require('../utils/dataHome').getDataHome(), '.env');
+          } catch {
+            return path.join(os.homedir(), '.khy', '.env');
+          }
+        })(),
+        override: false,
+      });
+    } catch {
+      /* overlay optional */
+    }
     const { applyEnvDefaults } = require('../config/env');
     applyEnvDefaults();
   }
@@ -57,43 +70,47 @@ async function bootstrap({ syncSchema = false, silent = false } = {}) {
 
   // 3.6 Auto-repair config and reset gateway if needed (post-upgrade maintenance).
   // Fire-and-forget: config repair doesn't block command execution.
-  Promise.resolve().then(async () => {
-    try {
-      const { repairConfigIfNeeded } = require('../services/configRepairService');
-      const { maybeResetGateway } = require('../services/gatewayResetService');
+  Promise.resolve()
+    .then(async () => {
+      try {
+        const { repairConfigIfNeeded } = require('../services/configRepairService');
+        const { maybeResetGateway } = require('../services/gatewayResetService');
 
-      const repairResult = await repairConfigIfNeeded();
-      if (repairResult.repaired && !silent) {
-        console.log(`  配置文件已修复 (移除 ${repairResult.removed} 行)`);
-      }
+        const repairResult = await repairConfigIfNeeded();
+        if (repairResult.repaired && !silent) {
+          console.log(`  配置文件已修复 (移除 ${repairResult.removed} 行)`);
+        }
 
-      const resetResult = await maybeResetGateway({
-        interactive: false,
-        configCorrupted: repairResult.repaired || false,
-      });
-      if (resetResult.reset && !silent) {
-        console.log(`  网关配置已重置: ${resetResult.reason}`);
-      } else if (resetResult.reason && !silent) {
-        console.warn(`  建议运行 'khy config reset' 重置网关配置`);
+        const resetResult = await maybeResetGateway({
+          interactive: false,
+          configCorrupted: repairResult.repaired || false,
+        });
+        if (resetResult.reset && !silent) {
+          console.log(`  网关配置已重置: ${resetResult.reason}`);
+        } else if (resetResult.reason && !silent) {
+          console.warn(`  建议运行 'khy config reset' 重置网关配置`);
+        }
+      } catch {
+        // Non-critical: config repair/reset failures don't block bootstrap.
       }
-    } catch {
-      // Non-critical: config repair/reset failures don't block bootstrap.
-    }
-  }).catch(() => {});
+    })
+    .catch(() => {});
 
   // 3.7 Auto-heal corrupted/missing runtime source files (self-heal).
   // Fire-and-forget: self-heal is throttled (24h) and doesn't block command execution.
-  Promise.resolve().then(() => {
-    try {
-      const { runStartupHeal } = require('../services/sourceHealService');
-      const r = runStartupHeal({ reason: 'cli-bootstrap', silent });
-      if (r && r.healed > 0 && !silent) {
-        console.log(`  源码自愈: 修复 ${r.healed} 个文件`);
+  Promise.resolve()
+    .then(() => {
+      try {
+        const { runStartupHeal } = require('../services/sourceHealService');
+        const r = runStartupHeal({ reason: 'cli-bootstrap', silent });
+        if (r && r.healed > 0 && !silent) {
+          console.log(`  源码自愈: 修复 ${r.healed} 个文件`);
+        }
+      } catch {
+        // Non-critical: self-heal never blocks bootstrap.
       }
-    } catch {
-      // Non-critical: self-heal never blocks bootstrap.
-    }
-  }).catch(() => {});
+    })
+    .catch(() => {});
 
   // 4. Register all model associations
   require('../models');
@@ -115,9 +132,13 @@ async function bootstrap({ syncSchema = false, silent = false } = {}) {
   if (syncSchema) {
     try {
       await _sequelize.sync({ force: false });
-      if (!silent) console.log('  Schema synchronized');
+      if (!silent) {
+        console.log('  Schema synchronized');
+      }
     } catch (err) {
-      if (!silent) console.error('  Schema sync failed:', err.message);
+      if (!silent) {
+        console.error('  Schema sync failed:', err.message);
+      }
     }
   }
 
@@ -138,7 +159,9 @@ let _muted = false;
 let _origLog, _origWarn;
 
 function muteDbLogs() {
-  if (_muted) return;
+  if (_muted) {
+    return;
+  }
   _muted = true;
   _origLog = console.log;
   _origWarn = console.warn;
@@ -147,7 +170,9 @@ function muteDbLogs() {
 }
 
 function restoreDbLogs() {
-  if (!_muted) return;
+  if (!_muted) {
+    return;
+  }
   _muted = false;
   console.log = _origLog;
   console.warn = _origWarn;

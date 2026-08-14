@@ -15,14 +15,18 @@
  */
 const fs = require('fs');
 const path = require('path');
+
 const { splitShellArgs } = require('../../shellSafetyValidator');
+
 const { extractMessageText, extractThinkingTags } = require('./_responsesFormat');
 
 // Transport-level reconnect/channel-closed detector. Consumed by emitCodexEvent
 // (reconnectWarning flag) and re-imported by the host for stderr classification
 // + reconnect self-heal. Moved here so the leaf's emitCodexEvent is self-contained.
 function isReconnectChannelClosed(message = '') {
-  return /reconnecting|channel closed|failed to record rollout items|transport issue during rollout recording/i.test(String(message || ''));
+  return /reconnecting|channel closed|failed to record rollout items|transport issue during rollout recording/i.test(
+    String(message || '')
+  );
 }
 
 // Shell control tokens that delimit commands in a pipeline/list. Hoisted to a
@@ -32,16 +36,24 @@ function isReconnectChannelClosed(message = '') {
 const _SHELL_CONTROL_TOKENS = new Set(['|', '||', '&&', ';']);
 
 function compactText(value, maxLen = 200) {
-  const t = String(value === undefined || value === null ? '' : value).replace(/\s+/g, ' ').trim();
-  if (!t) return '';
+  const t = String(value === undefined || value === null ? '' : value)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!t) {
+    return '';
+  }
   return t.length > maxLen ? `${t.slice(0, maxLen - 1)}…` : t;
 }
 
 function appendCodexExecDebugLog(stage = '', payload = {}) {
   const targetFile = String(process.env.KHY_GATEWAY_DEBUG_PROMPT_FILE || '').trim();
-  if (!targetFile) return;
+  if (!targetFile) {
+    return;
+  }
   const normalizedStage = String(stage || '').trim();
-  if (!normalizedStage) return;
+  if (!normalizedStage) {
+    return;
+  }
   const fields = Object.entries(payload || {})
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
     .map(([key, value]) => `${key}=${compactText(value, 240)}`);
@@ -49,13 +61,17 @@ function appendCodexExecDebugLog(stage = '', payload = {}) {
   try {
     fs.mkdirSync(path.dirname(targetFile), { recursive: true });
     fs.appendFileSync(targetFile, line, 'utf8');
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 function summarizeValue(v, maxLen = 180) {
   try {
     const str = typeof v === 'string' ? v : JSON.stringify(v);
-    if (!str) return '';
+    if (!str) {
+      return '';
+    }
     const oneLine = str.replace(/\s+/g, ' ').trim();
     return oneLine.length > maxLen ? `${oneLine.slice(0, maxLen - 1)}…` : oneLine;
   } catch {
@@ -68,18 +84,31 @@ function getItemType(event) {
 }
 
 function inferToolName(itemType, item) {
-  if ((itemType.includes('command') || itemType.includes('shell')) && item?.command) return 'bash';
+  if ((itemType.includes('command') || itemType.includes('shell')) && item?.command) {
+    return 'bash';
+  }
   // Detect file write/edit operations
-  if (itemType.includes('file') || itemType.includes('write') || itemType.includes('edit') || itemType.includes('patch')) {
-    if (itemType.includes('write') || itemType.includes('create')) return 'file_write';
-    if (itemType.includes('edit') || itemType.includes('patch')) return 'file_edit';
+  if (
+    itemType.includes('file') ||
+    itemType.includes('write') ||
+    itemType.includes('edit') ||
+    itemType.includes('patch')
+  ) {
+    if (itemType.includes('write') || itemType.includes('create')) {
+      return 'file_write';
+    }
+    if (itemType.includes('edit') || itemType.includes('patch')) {
+      return 'file_edit';
+    }
     return 'file_op';
   }
   return item?.tool_name || item?.name || item?.tool || item?.command_name || 'tool';
 }
 
 function inferToolInput(itemType, item) {
-  if ((itemType.includes('command') || itemType.includes('shell')) && item?.command) return summarizeValue(item.command, 120);
+  if ((itemType.includes('command') || itemType.includes('shell')) && item?.command) {
+    return summarizeValue(item.command, 120);
+  }
   // Surface file path for file operations
   if (item?.file_path || item?.path) {
     const fp = item.file_path || item.path;
@@ -90,7 +119,12 @@ function inferToolInput(itemType, item) {
 }
 
 function inferToolOutput(itemType, item) {
-  if ((itemType.includes('command') || itemType.includes('shell')) && item?.output) return summarizeValue(item.output, 180);
+  // Shell/command outputs (ls, bash, etc.) can be legitimately long — use a much
+  // higher cap than generic tool outputs so directory listings and command results
+  // aren't silently chopped at 180 chars before the model ever sees them.
+  if ((itemType.includes('command') || itemType.includes('shell')) && item?.output) {
+    return summarizeValue(item.output, 8192);
+  }
   // File operation output
   if (item?.file_path || item?.path) {
     const fp = item.file_path || item.path;
@@ -100,18 +134,34 @@ function inferToolOutput(itemType, item) {
 }
 
 function normalizeTrackedFileOperation(rawOperation = '') {
-  const value = String(rawOperation || '').trim().toLowerCase();
-  if (!value) return '';
-  if (['create', 'write', 'copy', 'copied', 'scaffold'].includes(value)) return 'create';
-  if (['modify', 'edit', 'update', 'updated'].includes(value)) return 'modify';
-  if (['delete', 'remove', 'rm', 'unlink'].includes(value)) return 'delete';
-  if (['rename', 'renamed'].includes(value)) return 'rename';
-  if (['move', 'moved', 'mv'].includes(value)) return 'move';
+  const value = String(rawOperation || '')
+    .trim()
+    .toLowerCase();
+  if (!value) {
+    return '';
+  }
+  if (['create', 'write', 'copy', 'copied', 'scaffold'].includes(value)) {
+    return 'create';
+  }
+  if (['modify', 'edit', 'update', 'updated'].includes(value)) {
+    return 'modify';
+  }
+  if (['delete', 'remove', 'rm', 'unlink'].includes(value)) {
+    return 'delete';
+  }
+  if (['rename', 'renamed'].includes(value)) {
+    return 'rename';
+  }
+  if (['move', 'moved', 'mv'].includes(value)) {
+    return 'move';
+  }
   return '';
 }
 
 function classifyTrackedRelocation(fromPath = '', toPath = '') {
-  if (!fromPath || !toPath) return 'move';
+  if (!fromPath || !toPath) {
+    return 'move';
+  }
   return path.dirname(fromPath) === path.dirname(toPath) ? 'rename' : 'move';
 }
 
@@ -120,14 +170,20 @@ function dedupeTrackedFileOps(fileOps = []) {
   const seen = new Set();
 
   for (const fileOp of fileOps) {
-    if (!fileOp || typeof fileOp !== 'object') continue;
+    if (!fileOp || typeof fileOp !== 'object') {
+      continue;
+    }
     const operation = normalizeTrackedFileOperation(fileOp.operation || fileOp.op || fileOp.action);
     const fromPath = String(fileOp.fromPath || '').trim();
     const toPath = String(fileOp.toPath || '').trim();
     const pathValue = String(fileOp.path || toPath || fromPath).trim();
-    if (!operation || !pathValue) continue;
+    if (!operation || !pathValue) {
+      continue;
+    }
     const dedupeKey = `${operation}::${fromPath}::${toPath}::${pathValue}`;
-    if (seen.has(dedupeKey)) continue;
+    if (seen.has(dedupeKey)) {
+      continue;
+    }
     seen.add(dedupeKey);
     out.push({
       path: pathValue,
@@ -142,7 +198,9 @@ function dedupeTrackedFileOps(fileOps = []) {
 
 function extractTrackedFileOpsFromShellCommand(command = '') {
   const text = String(command || '').trim();
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
 
   const fileOps = [];
   const redirectMatch = text.match(/>\s*([^\s|;&]+)\s*$/);
@@ -156,28 +214,41 @@ function extractTrackedFileOpsFromShellCommand(command = '') {
   const controlTokens = _SHELL_CONTROL_TOKENS;
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
-    if (!token || controlTokens.has(token)) continue;
+    if (!token || controlTokens.has(token)) {
+      continue;
+    }
 
-    const exe = path.basename(String(token || '')).replace(/\.exe$/i, '').toLowerCase();
-    if (exe !== 'mv' && exe !== 'rm' && exe !== 'unlink') continue;
+    const exe = path
+      .basename(String(token || ''))
+      .replace(/\.exe$/i, '')
+      .toLowerCase();
+    if (exe !== 'mv' && exe !== 'rm' && exe !== 'unlink') {
+      continue;
+    }
 
     const args = [];
     let j = i + 1;
     for (; j < argv.length; j++) {
       const arg = argv[j];
-      if (!arg || controlTokens.has(arg)) break;
+      if (!arg || controlTokens.has(arg)) {
+        break;
+      }
       args.push(arg);
     }
 
     const positional = [];
     let endOfOptions = false;
     for (const arg of args) {
-      if (!arg) continue;
+      if (!arg) {
+        continue;
+      }
       if (!endOfOptions && arg === '--') {
         endOfOptions = true;
         continue;
       }
-      if (!endOfOptions && arg.startsWith('-')) continue;
+      if (!endOfOptions && arg.startsWith('-')) {
+        continue;
+      }
       positional.push(arg);
     }
 
@@ -224,15 +295,35 @@ function extractTrackedFileOpsFromShellCommand(command = '') {
 function inferTrackedFileOps(itemType, item, toolName = '') {
   const fileOps = [];
   const fp = item?.file_path || item?.path || '';
-  const fromPath = item?.from_path || item?.fromPath || item?.old_path || item?.oldPath || item?.source || item?.src || fp || '';
-  const toPath = item?.to_path || item?.toPath || item?.new_path || item?.newPath || item?.destination || item?.dest || item?.target || '';
+  const fromPath =
+    item?.from_path ||
+    item?.fromPath ||
+    item?.old_path ||
+    item?.oldPath ||
+    item?.source ||
+    item?.src ||
+    fp ||
+    '';
+  const toPath =
+    item?.to_path ||
+    item?.toPath ||
+    item?.new_path ||
+    item?.newPath ||
+    item?.destination ||
+    item?.dest ||
+    item?.target ||
+    '';
   const declaredOperation = normalizeTrackedFileOperation(
     item?.operation || item?.op || item?.action || item?.mode || item?.kind || ''
   );
 
   if (declaredOperation === 'delete' && fromPath) {
     fileOps.push({ path: fromPath, operation: 'delete', fromPath });
-  } else if ((declaredOperation === 'rename' || declaredOperation === 'move') && fromPath && toPath) {
+  } else if (
+    (declaredOperation === 'rename' || declaredOperation === 'move') &&
+    fromPath &&
+    toPath
+  ) {
     fileOps.push({
       path: toPath,
       operation: classifyTrackedRelocation(fromPath, toPath),
@@ -245,19 +336,34 @@ function inferTrackedFileOps(itemType, item, toolName = '') {
       operation: toolName === 'file_write' ? 'create' : 'modify',
     });
   } else if (toolName === 'bash') {
-    fileOps.push(...extractTrackedFileOpsFromShellCommand(String(item?.command || item?.input || '').trim()));
+    fileOps.push(
+      ...extractTrackedFileOpsFromShellCommand(String(item?.command || item?.input || '').trim())
+    );
   }
 
   return dedupeTrackedFileOps(fileOps);
 }
 
 function isToolLike(itemType, item) {
-  if (!itemType) return false;
-  if (itemType.includes('tool') || itemType.includes('command') || itemType.includes('shell')) return true;
+  if (!itemType) {
+    return false;
+  }
+  if (itemType.includes('tool') || itemType.includes('command') || itemType.includes('shell')) {
+    return true;
+  }
   // Capture file operations (write, edit, patch, create, delete) emitted by Codex
-  if (itemType.includes('file') || itemType.includes('write') || itemType.includes('edit') || itemType.includes('patch')) return true;
+  if (
+    itemType.includes('file') ||
+    itemType.includes('write') ||
+    itemType.includes('edit') ||
+    itemType.includes('patch')
+  ) {
+    return true;
+  }
   // Capture code interpreter / execution events
-  if (itemType.includes('exec') || itemType.includes('action')) return true;
+  if (itemType.includes('exec') || itemType.includes('action')) {
+    return true;
+  }
   return !!(item && (item.tool_name || item.command || item.file_path || item.path));
 }
 
@@ -308,7 +414,9 @@ function createCodexProgressEvidence() {
 }
 
 function recordCodexProgressEvent(progress, payload = {}) {
-  if (!progress) return;
+  if (!progress) {
+    return;
+  }
   const now = Date.now();
   const channel = String(payload.channel || 'unknown').trim() || 'unknown';
   const kind = String(payload.kind || 'event').trim() || 'event';
@@ -322,41 +430,61 @@ function recordCodexProgressEvent(progress, payload = {}) {
   progress.lastEventSummary = summary;
   if (meaningful) {
     progress.lastMeaningfulAt = now;
-    if (!progress.firstMeaningfulAt) progress.firstMeaningfulAt = now;
+    if (!progress.firstMeaningfulAt) {
+      progress.firstMeaningfulAt = now;
+    }
     progress.meaningfulEvents += 1;
   }
 
   if (channel === 'stdout_json') {
     progress.stdoutJsonEvents += 1;
-    if (!progress.firstStdoutAt) progress.firstStdoutAt = now;
+    if (!progress.firstStdoutAt) {
+      progress.firstStdoutAt = now;
+    }
   } else if (channel === 'stderr_json') {
     progress.stderrJsonEvents += 1;
-    if (!progress.firstStderrAt) progress.firstStderrAt = now;
+    if (!progress.firstStderrAt) {
+      progress.firstStderrAt = now;
+    }
   } else if (channel === 'stdout') {
     progress.stdoutPlainLines += 1;
-    if (!progress.firstStdoutAt) progress.firstStdoutAt = now;
+    if (!progress.firstStdoutAt) {
+      progress.firstStdoutAt = now;
+    }
   } else if (channel === 'stderr') {
     progress.stderrPlainLines += 1;
-    if (!progress.firstStderrAt) progress.firstStderrAt = now;
+    if (!progress.firstStderrAt) {
+      progress.firstStderrAt = now;
+    }
   }
   if (payload.reconnectWarning) {
     progress.reconnectWarnings += 1;
-    if (!progress.firstTransportWarningAt) progress.firstTransportWarningAt = now;
+    if (!progress.firstTransportWarningAt) {
+      progress.firstTransportWarningAt = now;
+    }
     progress.lastTransportWarningAt = now;
     progress.lastTransportWarningSummary = summary;
   }
 
   if (kind === 'thread.started') {
     progress.threadStartedCount += 1;
-    if (!progress.firstThreadStartedAt) progress.firstThreadStartedAt = now;
+    if (!progress.firstThreadStartedAt) {
+      progress.firstThreadStartedAt = now;
+    }
   } else if (kind === 'turn.started') {
     progress.turnStartedCount += 1;
-    if (!progress.firstTurnStartedAt) progress.firstTurnStartedAt = now;
+    if (!progress.firstTurnStartedAt) {
+      progress.firstTurnStartedAt = now;
+    }
   }
 
-  if (stage === 'reasoning') progress.reasoningEvents += 1;
-  else if (stage === 'tool_call') progress.toolCallEvents += 1;
-  else if (stage === 'assistant_message' || stage === 'plain_output') progress.assistantMessageEvents += 1;
+  if (stage === 'reasoning') {
+    progress.reasoningEvents += 1;
+  } else if (stage === 'tool_call') {
+    progress.toolCallEvents += 1;
+  } else if (stage === 'assistant_message' || stage === 'plain_output') {
+    progress.assistantMessageEvents += 1;
+  }
 
   if (stage) {
     const nextRank = CODEX_PROGRESS_STAGE_RANK[stage] ?? -1;
@@ -369,7 +497,9 @@ function recordCodexProgressEvent(progress, payload = {}) {
 
   const entry = `${channel}:${kind}(${summary})`;
   progress.recentEvents.push(entry);
-  if (progress.recentEvents.length > 6) progress.recentEvents.shift();
+  if (progress.recentEvents.length > 6) {
+    progress.recentEvents.shift();
+  }
 }
 
 function classifyCodexPreResponseStall(snapshot = null) {
@@ -398,13 +528,15 @@ function classifyCodexPreResponseStall(snapshot = null) {
   if (reconnectWarnings > 0 && turnStarted) {
     return {
       code: 'turn_started_reconnect_loop',
-      summary: 'turn.started reached, then repeated reconnect transport warnings arrived before any reasoning/tool/assistant output',
+      summary:
+        'turn.started reached, then repeated reconnect transport warnings arrived before any reasoning/tool/assistant output',
     };
   }
   if (reconnectWarnings > 0 && threadStarted) {
     return {
       code: 'thread_started_reconnect_loop',
-      summary: 'thread.started reached, then transport kept reconnecting before any turn/model output arrived',
+      summary:
+        'thread.started reached, then transport kept reconnecting before any turn/model output arrived',
     };
   }
   if (reconnectWarnings > 0) {
@@ -416,7 +548,8 @@ function classifyCodexPreResponseStall(snapshot = null) {
   if (turnStarted) {
     return {
       code: 'turn_started_no_followup',
-      summary: 'turn.started reached, then no reasoning/tool/assistant output arrived before timeout',
+      summary:
+        'turn.started reached, then no reasoning/tool/assistant output arrived before timeout',
     };
   }
   if (threadStarted) {
@@ -425,19 +558,19 @@ function classifyCodexPreResponseStall(snapshot = null) {
       summary: 'thread.started reached, then no turn/model output arrived before timeout',
     };
   }
-  if ((stderrJsonEvents + stderrPlainLines) > 0 && (stdoutJsonEvents + stdoutPlainLines) === 0) {
+  if (stderrJsonEvents + stderrPlainLines > 0 && stdoutJsonEvents + stdoutPlainLines === 0) {
     return {
       code: 'stderr_only_startup_noise',
       summary: 'only stderr startup noise arrived before timeout',
     };
   }
-  if ((stdoutJsonEvents + stderrJsonEvents) > 0) {
+  if (stdoutJsonEvents + stderrJsonEvents > 0) {
     return {
       code: 'non_meaningful_json_only',
       summary: 'only non-meaningful JSON events arrived before timeout',
     };
   }
-  if ((stdoutPlainLines + stderrPlainLines) > 0) {
+  if (stdoutPlainLines + stderrPlainLines > 0) {
     return {
       code: 'plain_output_without_model_progress',
       summary: 'only plain subprocess output arrived before timeout',
@@ -450,16 +583,22 @@ function classifyCodexPreResponseStall(snapshot = null) {
 }
 
 function snapshotCodexProgressEvidence(progress) {
-  if (!progress) return null;
+  if (!progress) {
+    return null;
+  }
   const now = Date.now();
   const toSinceStartedMs = (value) => {
     const at = Number(value || 0);
-    if (at <= 0) return null;
+    if (at <= 0) {
+      return null;
+    }
     return Math.max(0, at - Number(progress.startedAt || now));
   };
   const toAgeMs = (value) => {
     const at = Number(value || 0);
-    if (at <= 0) return null;
+    if (at <= 0) {
+      return null;
+    }
     return Math.max(0, now - at);
   };
   const snapshot = {
@@ -492,7 +631,10 @@ function snapshotCodexProgressEvidence(progress) {
     assistantMessageEvents: Number(progress.assistantMessageEvents || 0),
     meaningfulEvents: Number(progress.meaningfulEvents || 0),
     recentEvents: Array.isArray(progress.recentEvents)
-      ? progress.recentEvents.slice(-6).map((item) => compactText(item, 120)).filter(Boolean)
+      ? progress.recentEvents
+          .slice(-6)
+          .map((item) => compactText(item, 120))
+          .filter(Boolean)
       : [],
   };
   const stall = classifyCodexPreResponseStall(snapshot);
@@ -503,22 +645,35 @@ function snapshotCodexProgressEvidence(progress) {
 
 function formatCodexProgressEvidence(progress) {
   const snapshot = snapshotCodexProgressEvidence(progress);
-  if (!snapshot) return '';
+  if (!snapshot) {
+    return '';
+  }
   const recent = snapshot.recentEvents.length > 0 ? snapshot.recentEvents.join(' -> ') : 'none';
   const milestones = [];
-  if (snapshot.firstThreadStartedSinceStartMs !== null) milestones.push(`thread:${snapshot.firstThreadStartedSinceStartMs}`);
-  if (snapshot.firstTurnStartedSinceStartMs !== null) milestones.push(`turn:${snapshot.firstTurnStartedSinceStartMs}`);
-  if (snapshot.firstTransportWarningSinceStartMs !== null) milestones.push(`first_transport:${snapshot.firstTransportWarningSinceStartMs}`);
-  if (snapshot.firstMeaningfulSinceStartMs !== null) milestones.push(`first_meaningful:${snapshot.firstMeaningfulSinceStartMs}`);
-  return compactText([
-    `stall=${snapshot.stallFingerprint}`,
-    `stage=${snapshot.furthestStage}`,
-    `last_event=${snapshot.lastEventChannel}:${snapshot.lastEventKind}:${snapshot.lastEventSummary || 'n/a'}`,
-    `last_event_age_ms=${snapshot.lastEventAgeMs}`,
-    `milestones=${milestones.length > 0 ? milestones.join(',') : 'none'}`,
-    `counts=stdout_json:${snapshot.stdoutJsonEvents},stderr_json:${snapshot.stderrJsonEvents},stdout_plain:${snapshot.stdoutPlainLines},stderr_plain:${snapshot.stderrPlainLines},reconnect:${snapshot.reconnectWarnings},thread:${snapshot.threadStartedCount},turn:${snapshot.turnStartedCount},reasoning:${snapshot.reasoningEvents},tool:${snapshot.toolCallEvents},assistant:${snapshot.assistantMessageEvents}`,
-    `recent=${recent}`,
-  ].join(' | '), 640);
+  if (snapshot.firstThreadStartedSinceStartMs !== null) {
+    milestones.push(`thread:${snapshot.firstThreadStartedSinceStartMs}`);
+  }
+  if (snapshot.firstTurnStartedSinceStartMs !== null) {
+    milestones.push(`turn:${snapshot.firstTurnStartedSinceStartMs}`);
+  }
+  if (snapshot.firstTransportWarningSinceStartMs !== null) {
+    milestones.push(`first_transport:${snapshot.firstTransportWarningSinceStartMs}`);
+  }
+  if (snapshot.firstMeaningfulSinceStartMs !== null) {
+    milestones.push(`first_meaningful:${snapshot.firstMeaningfulSinceStartMs}`);
+  }
+  return compactText(
+    [
+      `stall=${snapshot.stallFingerprint}`,
+      `stage=${snapshot.furthestStage}`,
+      `last_event=${snapshot.lastEventChannel}:${snapshot.lastEventKind}:${snapshot.lastEventSummary || 'n/a'}`,
+      `last_event_age_ms=${snapshot.lastEventAgeMs}`,
+      `milestones=${milestones.length > 0 ? milestones.join(',') : 'none'}`,
+      `counts=stdout_json:${snapshot.stdoutJsonEvents},stderr_json:${snapshot.stderrJsonEvents},stdout_plain:${snapshot.stdoutPlainLines},stderr_plain:${snapshot.stderrPlainLines},reconnect:${snapshot.reconnectWarnings},thread:${snapshot.threadStartedCount},turn:${snapshot.turnStartedCount},reasoning:${snapshot.reasoningEvents},tool:${snapshot.toolCallEvents},assistant:${snapshot.assistantMessageEvents}`,
+      `recent=${recent}`,
+    ].join(' | '),
+    640
+  );
 }
 
 function createCodexProgressTimeoutError(message, progress) {
@@ -562,7 +717,9 @@ function appendCodexExecProgressLog(stage = '', progress = null, payload = {}) {
 }
 
 function buildCodexProgressDiagnostics(snapshot = null, summary = '') {
-  if (!snapshot && !summary) return null;
+  if (!snapshot && !summary) {
+    return null;
+  }
   return {
     stallFingerprint: String(snapshot?.stallFingerprint || '').trim() || '',
     stallSummary: compactText(snapshot?.stallSummary || '', 240),
@@ -571,9 +728,19 @@ function buildCodexProgressDiagnostics(snapshot = null, summary = '') {
   };
 }
 
-function emitCodexEvent(event, state, options = {}, progress = null, sourceChannel = 'stdout_json') {
+function emitCodexEvent(
+  event,
+  state,
+  options = {},
+  progress = null,
+  sourceChannel = 'stdout_json'
+) {
   const onChunk = typeof options.onChunk === 'function' ? options.onChunk : null;
-  const emit = (chunk) => { if (onChunk) onChunk(chunk); };
+  const emit = (chunk) => {
+    if (onChunk) {
+      onChunk(chunk);
+    }
+  };
   const eventType = String(event?.type || '').toLowerCase();
   const item = event?.item || {};
   const itemType = getItemType(event);
@@ -615,7 +782,9 @@ function emitCodexEvent(event, state, options = {}, progress = null, sourceChann
     recordCodexProgressEvent(progress, {
       channel: sourceChannel,
       kind: 'thread.started',
-      summary: summarizeValue(event.thread_id || event.threadId || 'thread.started', 80) || 'thread.started',
+      summary:
+        summarizeValue(event.thread_id || event.threadId || 'thread.started', 80) ||
+        'thread.started',
       stage: 'thread_started',
     });
     return false;
@@ -719,7 +888,9 @@ function emitCodexEvent(event, state, options = {}, progress = null, sourceChann
         const text = extractMessageText(item);
         if (text) {
           const { thinking: thinkText, rest } = extractThinkingTags(text);
-          if (thinkText) emit({ type: 'thinking', text: thinkText });
+          if (thinkText) {
+            emit({ type: 'thinking', text: thinkText });
+          }
           if (rest) {
             state.finalParts.push(rest);
             recordCodexProgressEvent(progress, {
@@ -743,7 +914,9 @@ function emitCodexEvent(event, state, options = {}, progress = null, sourceChann
     const text = extractMessageText(event.item || event.message || event);
     if (text) {
       const { thinking: thinkText, rest } = extractThinkingTags(text);
-      if (thinkText) emit({ type: 'thinking', text: thinkText });
+      if (thinkText) {
+        emit({ type: 'thinking', text: thinkText });
+      }
       if (rest) {
         state.finalParts.push(rest);
         recordCodexProgressEvent(progress, {

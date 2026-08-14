@@ -44,7 +44,9 @@ async function handleHeapdump(_subCommand, _args = [], _options = {}) {
   let sessionId = '';
   try {
     sessionId = require('../../services/session/sessionForestService').getCurrentSessionId() || '';
-  } catch { /* best-effort; manual dump tolerates no session */ }
+  } catch {
+    /* best-effort; manual dump tolerates no session */
+  }
 
   const now = Date.now();
   const dumpId = leaf.buildDumpId(now, sessionId);
@@ -70,7 +72,8 @@ async function handleHeapdump(_subCommand, _args = [], _options = {}) {
       uptimeSeconds: typeof process.uptime === 'function' ? process.uptime() : 0,
       memoryUsage: process.memoryUsage ? process.memoryUsage() : {},
       heapStats: typeof v8.getHeapStatistics === 'function' ? v8.getHeapStatistics() : {},
-      heapSpaces: typeof v8.getHeapSpaceStatistics === 'function' ? v8.getHeapSpaceStatistics() : [],
+      heapSpaces:
+        typeof v8.getHeapSpaceStatistics === 'function' ? v8.getHeapSpaceStatistics() : [],
     });
     fs.writeFileSync(diagPath, JSON.stringify(diagnostics, null, 2));
   } catch (e) {

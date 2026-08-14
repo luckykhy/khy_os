@@ -57,7 +57,17 @@ let _started = false;
 let _timer = null;
 let _ticking = false;
 let _tableReady = false;
-let _stats = { ticks: 0, claimed: 0, succeeded: 0, failed: 0, paused: 0, preempted: 0, recovered: 0, errors: 0, lastTickAt: null };
+const _stats = {
+  ticks: 0,
+  claimed: 0,
+  succeeded: 0,
+  failed: 0,
+  paused: 0,
+  preempted: 0,
+  recovered: 0,
+  errors: 0,
+  lastTickAt: null,
+};
 
 // Lazily resolve the model so this module can be required before models load.
 function getModel() {
@@ -68,12 +78,15 @@ function getModel() {
 
 // Probe table existence once; ai-backend creates it lazily on first enqueue.
 async function ensureTable(WorkflowRun) {
-  if (_tableReady) return true;
+  if (_tableReady) {
+    return true;
+  }
   try {
     const qi = WorkflowRun.sequelize.getQueryInterface();
     const tables = await qi.showAllTables();
-    const names = (Array.isArray(tables) ? tables : []).map((t) =>
-      (typeof t === 'string' ? t : t && (t.tableName || t.name)) || '');
+    const names = (Array.isArray(tables) ? tables : []).map(
+      (t) => (typeof t === 'string' ? t : t && (t.tableName || t.name)) || ''
+    );
     if (names.includes('workflow_runs')) {
       _tableReady = true;
     }
@@ -100,7 +113,9 @@ async function recoverStale(WorkflowRun) {
   for (const row of rows) {
     const updatedAtMs = row.updatedAt ? new Date(row.updatedAt).getTime() : 0;
     // Skip rows whose heartbeat is recent — they belong to a live worker.
-    if (updatedAtMs && updatedAtMs > cutoff) continue;
+    if (updatedAtMs && updatedAtMs > cutoff) {
+      continue;
+    }
     const log = Array.isArray(row.logJson) ? row.logJson.slice() : [];
     const staleSec = updatedAtMs ? Math.round((Date.now() - updatedAtMs) / 1000) : null;
     log.push({
@@ -111,9 +126,11 @@ async function recoverStale(WorkflowRun) {
     // eslint-disable-next-line no-await-in-loop
     const [affected] = await WorkflowRun.update(
       { status: 'queued', startedAt: null, logJson: log },
-      { where: { id: row.id, status: 'running' } }, // atomic: only if still running
+      { where: { id: row.id, status: 'running' } } // atomic: only if still running
     );
-    if (affected) recovered += 1;
+    if (affected) {
+      recovered += 1;
+    }
   }
   return recovered;
 }
@@ -128,20 +145,28 @@ async function claimNext(WorkflowRun) {
   // ready runs take their turn (round-robin fairness). With quantum off, keep
   // strict FIFO-by-id (a fresh enqueue's updatedAt≈createdAt, so this is a
   // no-op-equivalent default — zero behavior change).
-  const order = quantumSteps() > 0
-    ? [['updatedAt', 'ASC'], ['id', 'ASC']]
-    : [['id', 'ASC']];
+  const order =
+    quantumSteps() > 0
+      ? [
+          ['updatedAt', 'ASC'],
+          ['id', 'ASC'],
+        ]
+      : [['id', 'ASC']];
   const candidate = await WorkflowRun.findOne({
     where: { status: 'queued' },
     order,
   });
-  if (!candidate) return null;
+  if (!candidate) {
+    return null;
+  }
 
   const [affected] = await WorkflowRun.update(
     { status: 'running', startedAt: new Date() },
-    { where: { id: candidate.id, status: 'queued' } },
+    { where: { id: candidate.id, status: 'queued' } }
   );
-  if (!affected) return null; // lost the race to another tick/worker
+  if (!affected) {
+    return null;
+  } // lost the race to another tick/worker
 
   // Re-read so callers see the claimed state (and decoded JSON getters).
   return WorkflowRun.findByPk(candidate.id);
@@ -164,14 +189,16 @@ async function executeRun(run) {
   // placeholder (the next node had not run yet), so keep the prior log intact.
   const baseLog = isAnswerResume
     ? priorLog.filter((el, i) => !(i === priorLog.length - 1 && el.status === 'awaiting_input'))
-    : (isQuantumResume ? priorLog.slice() : []);
+    : isQuantumResume
+      ? priorLog.slice()
+      : [];
   const liveLog = baseLog.slice();
 
   const resume = isAnswerResume
     ? { nodeId: pending.nodeId, answer: answerPayload.answer, loopState: pending.loopState || {} }
-    : (isQuantumResume
+    : isQuantumResume
       ? { nodeId: pending.nodeId, kind: 'quantum', loopState: pending.loopState || {} }
-      : null);
+      : null;
 
   try {
     const result = await executor.runGraph(graph, {
@@ -248,16 +275,22 @@ async function executeRun(run) {
 }
 
 async function tick() {
-  if (_ticking) return; // never overlap ticks
+  if (_ticking) {
+    return;
+  } // never overlap ticks
   _ticking = true;
   _stats.ticks += 1;
   _stats.lastTickAt = new Date().toISOString();
   try {
     const { WorkflowRun } = getModel();
-    if (!(await ensureTable(WorkflowRun))) return;
+    if (!(await ensureTable(WorkflowRun))) {
+      return;
+    }
 
     const run = await claimNext(WorkflowRun);
-    if (!run) return;
+    if (!run) {
+      return;
+    }
     _stats.claimed += 1;
     await executeRun(run);
   } catch (err) {
@@ -269,7 +302,9 @@ async function tick() {
 }
 
 function start() {
-  if (_started) return;
+  if (_started) {
+    return;
+  }
   if (!isEnabled()) {
     console.log('[workflow-worker] disabled via KHY_WORKFLOW_WORKER');
     return;
@@ -280,7 +315,9 @@ function start() {
   (async () => {
     try {
       const { WorkflowRun } = getModel();
-      if (!(await ensureTable(WorkflowRun))) return;
+      if (!(await ensureTable(WorkflowRun))) {
+        return;
+      }
       const recovered = await recoverStale(WorkflowRun);
       if (recovered) {
         _stats.recovered += recovered;
@@ -290,13 +327,19 @@ function start() {
       // swallow — recovery is best-effort
     }
   })();
-  _timer = setInterval(() => { tick().catch(() => {}); }, POLL_INTERVAL_MS);
-  if (_timer.unref) _timer.unref(); // do not keep the process alive for polling
+  _timer = setInterval(() => {
+    tick().catch(() => {});
+  }, POLL_INTERVAL_MS);
+  if (_timer.unref) {
+    _timer.unref();
+  } // do not keep the process alive for polling
   console.log(`[workflow-worker] started (poll ${POLL_INTERVAL_MS}ms)`);
 }
 
 function stop() {
-  if (!_started) return;
+  if (!_started) {
+    return;
+  }
   _started = false;
   if (_timer) {
     clearInterval(_timer);

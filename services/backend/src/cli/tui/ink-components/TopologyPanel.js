@@ -16,17 +16,24 @@
  *   - archived→ dim(更陈旧,同 dim 但前缀已隐含)
  */
 const React = require('react');
-const inkRuntime = require('../inkRuntime');
+
 const topo = require('../../sessionTopology');
+const inkRuntime = require('../inkRuntime');
 
 // 节点 status → ink 颜色 props(亮度映射)。当前节点优先 bold cyan。
 function nodeProps(row) {
-  if (row.isCurrent) return { bold: true, color: 'cyan' };
+  if (row.isCurrent) {
+    return { bold: true, color: 'cyan' };
+  }
   switch (row.node && row.node.status) {
-    case 'active': return {};            // 亮(常规)
-    case 'idle': return { dimColor: true };
-    case 'archived': return { dimColor: true };
-    default: return {};
+    case 'active':
+      return {}; // 亮(常规)
+    case 'idle':
+      return { dimColor: true };
+    case 'archived':
+      return { dimColor: true };
+    default:
+      return {};
   }
 }
 
@@ -42,23 +49,37 @@ function TopologyPanel({ forest, currentId = null, degraded = false }) {
   const f = forest && Array.isArray(forest.roots) ? forest : { roots: [], nodes: [] };
   const nodeCount = (f.nodes && f.nodes.length) || 0;
   if (nodeCount === 0) {
-    return h(Box, null, h(Text, { dimColor: true },
-      '暂无持久化会话——先聊几句,或用 /fork 分出一条岔路,这里就会长出一张网。'));
+    return h(
+      Box,
+      null,
+      h(
+        Text,
+        { dimColor: true },
+        '暂无持久化会话——先聊几句,或用 /fork 分出一条岔路,这里就会长出一张网。'
+      )
+    );
   }
 
   const rows = topo.buildForestRows(f, { currentId });
   const children = [
-    h(Box, { key: 'head' },
+    h(
+      Box,
+      { key: 'head' },
       h(Text, { bold: true }, `会话拓扑(${nodeCount} 个节点 · ${f.roots.length} 条主干)`),
-      degraded ? h(Text, { color: 'yellow' }, '  ⚠ 已退化为平铺列表') : null),
+      degraded ? h(Text, { color: 'yellow' }, '  ⚠ 已退化为平铺列表') : null
+    ),
   ];
 
   rows.forEach((row, idx) => {
     const text = topo.nodeDisplayText(row.node, { markCurrent: row.isCurrent });
     children.push(
-      h(Box, { key: `row-${idx}` },
+      h(
+        Box,
+        { key: `row-${idx}` },
         h(Text, { dimColor: true }, row.prefix + row.branch),
-        h(Text, nodeProps(row), text)));
+        h(Text, nodeProps(row), text)
+      )
+    );
   });
 
   return h(Box, { flexDirection: 'column' }, ...children.filter(Boolean));

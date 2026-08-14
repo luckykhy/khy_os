@@ -9,6 +9,7 @@
  */
 
 const EventEmitter = require('events');
+
 const log = require('../../utils/logger');
 
 class MessageRouter extends EventEmitter {
@@ -18,17 +19,35 @@ class MessageRouter extends EventEmitter {
     this._channels = new Map();
     /** @type {((msg: object) => Promise<string>)|null} */
     this._aiHandler = null;
+    /**
+     * Per-channel inbound handlers. A channel with its own handler opts out of
+     * the generic `_aiHandler` + auto-send path entirely: it receives the FULL
+     * inbound message (threadId / images / messageId / raw — none of which the
+     * generic path forwards) and owns its own sending.
+     *
+     * ilink(微信)需要这个:它要发「正在输入」、按 2048 分片、并在查询中途反向问用户
+     * 权限——这些都无法用「返回一个字符串让 router 代发」表达。
+     * @type {Map<string, (msg: object, channel: object) => Promise<void>>}
+     */
+    this._channelHandlers = new Map();
   }
 
   /**
    * Register a channel for routing.
    * @param {import('./_baseChannel').BaseChannel} channel
+   * @param {object} [opts]
+   * @param {(msg: object, channel: object) => Promise<void>} [opts.handler]
+   *   Channel-specific inbound handler; receives the full message and sends its
+   *   own replies. Falls back to the global `_aiHandler` when omitted.
    */
-  registerChannel(channel) {
+  registerChannel(channel, opts = {}) {
     if (this._channels.has(channel.name)) {
       log.warn(`Channel "${channel.name}" already registered, replacing`);
     }
     this._channels.set(channel.name, channel);
+    if (opts && typeof opts.handler === 'function') {
+      this._channelHandlers.set(channel.name, opts.handler);
+    }
 
     channel.on('message', (msg) => this._handleMessage(channel.name, msg));
     channel.on('command', (cmd) => this._handleCommand(channel.name, cmd));
@@ -47,6 +66,7 @@ class MessageRouter extends EventEmitter {
       ch.removeAllListeners();
       this._channels.delete(channelName);
     }
+    this._channelHandlers.delete(channelName);
   }
 
   /**
@@ -63,7 +83,7 @@ class MessageRouter extends EventEmitter {
    * @returns {Array<{name: string, connected: boolean}>}
    */
   getChannels() {
-    return [...this._channels.values()].map(ch => ch.toJSON());
+    return [...this._channels.values()].map((ch) => ch.toJSON());
   }
 
   /**
@@ -73,6 +93,17 @@ class MessageRouter extends EventEmitter {
    */
   async _handleMessage(channelName, msg) {
     this.emit('message', { channelName, ...msg });
+
+    // 该渠道自带 handler → 交给它全权处理(拿到完整报文,自己发回复),不走通用代发路径。
+    const own = this._channelHandlers.get(channelName);
+    if (own) {
+      try {
+        await own({ channelName, ...msg }, this._channels.get(channelName));
+      } catch (err) {
+        log.error(`Channel handler for ${channelName} failed:`, err.message);
+      }
+      return;
+    }
 
     if (!this._aiHandler) {
       log.warn(`No AI handler registered; dropping message from ${channelName}`);
@@ -123,7 +154,11 @@ class MessageRouter extends EventEmitter {
    */
   async disconnectAll() {
     for (const ch of this._channels.values()) {
-      try { await ch.disconnect(); } catch { /* ignore */ }
+      try {
+        await ch.disconnect();
+      } catch {
+        /* ignore */
+      }
     }
     this._channels.clear();
   }
@@ -173,6 +208,20 @@ function getMessageRouter() {
  * Each channel only activates when its required env vars are present.
  */
 function _bootstrapChannels(router) {
+  // 记录是否注册了任意「能收 AI 应答」的渠道 —— 任一渠道在册即闭合 AI 应答回路。
+  let aiReplyWired = false;
+  const wireAiReply = () => {
+    if (aiReplyWired) {
+      return;
+    }
+    aiReplyWired = true;
+    try {
+      require('../messaging/msgReplyBridge').wireReplyBridge(router);
+    } catch (err) {
+      // 桥不可用/门关 → 保持现状(未接线,消息记录后丢弃)。fail-soft,绝不拖垮启动。
+    }
+  };
+
   // Slack: register if SLACK_BOT_TOKEN is configured
   if (process.env.SLACK_BOT_TOKEN) {
     try {
@@ -182,9 +231,12 @@ function _bootstrapChannels(router) {
       });
       router.registerChannel(slack);
       // Connect async — don't block startup
-      slack.connect().catch(err => {
+      slack.connect().catch((err) => {
         log.warn(`Slack auto-connect failed: ${err.message}`);
       });
+      // Slack 入站事件经 handleWebhookEvent → emit('message') → _handleMessage。
+      // 与钉钉/飞书/企微一致,注册即闭合 AI 应答回路(否则消息被解析后丢弃)。
+      wireAiReply();
     } catch (err) {
       log.warn(`Slack channel bootstrap failed: ${err.message}`);
     }
@@ -204,7 +256,9 @@ function _bootstrapChannels(router) {
       let registered = 0;
       for (const platform of Object.keys(factories)) {
         const cfg = store.getPlatform(platform);
-        if (!cfg) continue;
+        if (!cfg) {
+          continue;
+        }
         try {
           const ch = factories[platform](cfg);
           router.registerChannel(ch);
@@ -215,18 +269,58 @@ function _bootstrapChannels(router) {
         }
       }
       // 闭合双向环:有 IM 渠道时,把入站消息经 khy AI 回答回发给用户(门 KHY_MSG_AUTOREPLY)。
-      // 仅在有渠道且未设 handler 时接线;纯 Slack 部署(无 msg 渠道)不受影响。fail-soft。
+      // 仅在有渠道且未设 handler 时接线;纯 Slack 部署(无 msg 渠道)已由上方 Slack 分支接线。
+      // fail-soft。
       if (registered > 0) {
-        try {
-          require('../messaging/msgReplyBridge').wireReplyBridge(router);
-        } catch (err) {
-          log.warn(`msg auto-reply bridge wiring failed: ${err.message}`);
-        }
+        wireAiReply();
       }
     }
   } catch (err) {
     log.warn(`messaging channels bootstrap failed: ${err.message}`);
   }
+
+  // 微信个人号(ilink):门 KHY_MSG + 已扫码绑定。长轮询通道,自带 dispatcher
+  // (不走通用 wireReplyBridge——它只会把回复当成一个字符串代发,发不出 typing、
+  // 分不了 2048 片、也没法在查询中途反向问权限)。多账号并行:每个已绑定账号各起
+  // 一路 IlinkChannel + IlinkDispatcher,注册名 `ilink:<accountId>` 互不覆盖。
+  // fail-soft:单账号异常只 warn,不影响其余账号与启动;账号列表为空时跳过。
+  try {
+    const ilinkCore = require('../messaging/ilinkCore');
+    if (ilinkCore.isEnabled(process.env)) {
+      const ilinkStore = require('../messaging/ilinkAccountStore');
+      const { IlinkChannel } = require('./ilinkChannel');
+      const { IlinkDispatcher } = require('./ilinkDispatcher');
+      const list = ilinkStore.listAccounts();
+      const total = list.length;
+      list.forEach((entry, idx) => {
+        try {
+          const account = ilinkStore.getAccount(entry.accountId); // 明文凭据,仅供发请求用
+          if (!account) {
+            log.warn(`ilink account ${entry.accountId} skipped: credentials unavailable`);
+            return;
+          }
+          const ch = new IlinkChannel({
+            botToken: account.botToken,
+            accountId: account.accountId,
+            userId: account.userId,
+            baseUrl: account.baseUrl,
+            channelName: `ilink:${account.accountId}`,
+          });
+          const dispatcher = new IlinkDispatcher({ channel: ch, accountId: account.accountId });
+          ch.dispatcher = dispatcher; // 供 status 诊断
+          router.registerChannel(ch, { handler: (msg) => dispatcher.handle(msg) });
+          ch.connect().catch((err) =>
+            log.warn(`ilink account ${account.accountId} auto-connect failed: ${err.message}`)
+          );
+          log.info(`ilink(微信)通道已启动:账号 ${account.accountId}(第 ${idx + 1}/${total} 个)`);
+        } catch (err) {
+          log.warn(`ilink account ${entry && entry.accountId} bootstrap failed: ${err.message}`);
+        }
+      });
+    }
+  } catch (err) {
+    log.warn(`ilink channel bootstrap failed: ${err.message}`);
+  }
 }
 
-module.exports = { MessageRouter, getMessageRouter };
+module.exports = { MessageRouter, getMessageRouter, _bootstrapChannels };

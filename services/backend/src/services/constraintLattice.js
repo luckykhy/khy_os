@@ -55,8 +55,8 @@
 
 // ── Lattice elements ─────────────────────────────────────────────────────────
 const BOTTOM = 'bottom'; // ⊥ red line, infeasible, irreducible
-const SOFT = 'soft';     // approvable, feasible only after human authorization
-const TOP = 'top';       // ⊤ feasible
+const SOFT = 'soft'; // approvable, feasible only after human authorization
+const TOP = 'top'; // ⊤ feasible
 
 // Height in the chain ⊥(0) ⊏ SOFT(1) ⊏ ⊤(2). The order IS this numeric rank.
 const RANK = { [BOTTOM]: 0, [SOFT]: 1, [TOP]: 2 };
@@ -69,14 +69,17 @@ function isElement(x) {
 function leq(a, b) {
   return RANK[a] <= RANK[b];
 }
+
 /** Strict order a ⊏ b. */
 function lt(a, b) {
   return RANK[a] < RANK[b];
 }
+
 /** Least upper bound (the more-feasible of the two). */
 function join(a, b) {
   return RANK[a] >= RANK[b] ? a : b;
 }
+
 /** Greatest lower bound (the more-constrained of the two). */
 function meet(a, b) {
   return RANK[a] <= RANK[b] ? a : b;
@@ -110,8 +113,14 @@ const DECLARED_POSITIONS = Object.freeze({
 });
 
 function _normSource(source) {
-  if (!source) return '';
-  return String(source).trim().replace(/^builtin:/i, '').trim().toLowerCase();
+  if (!source) {
+    return '';
+  }
+  return String(source)
+    .trim()
+    .replace(/^builtin:/i, '')
+    .trim()
+    .toLowerCase();
 }
 
 // Operator-tightenable red-line set: KHY_LATTICE_REDLINE_SOURCES may only ADD
@@ -119,8 +128,13 @@ function _normSource(source) {
 // downgrade a declared red line to soft.
 function _envRedlineSources() {
   const raw = String(process.env.KHY_LATTICE_REDLINE_SOURCES || '').trim();
-  if (!raw) return [];
-  return raw.split(',').map((s) => _normSource(s)).filter(Boolean);
+  if (!raw) {
+    return [];
+  }
+  return raw
+    .split(',')
+    .map((s) => _normSource(s))
+    .filter(Boolean);
 }
 
 /**
@@ -130,8 +144,12 @@ function _envRedlineSources() {
  */
 function positionOfSource(source) {
   const key = _normSource(source);
-  if (!key) return null;
-  if (_envRedlineSources().includes(key)) return BOTTOM;
+  if (!key) {
+    return null;
+  }
+  if (_envRedlineSources().includes(key)) {
+    return BOTTOM;
+  }
   return Object.prototype.hasOwnProperty.call(DECLARED_POSITIONS, key)
     ? DECLARED_POSITIONS[key]
     : null;
@@ -155,15 +173,20 @@ function isRedLineSource(source) {
  */
 function position(guardResult) {
   const gr = guardResult && typeof guardResult === 'object' ? guardResult : {};
-  if (gr.action !== 'block') return TOP; // allow / undefined action = feasible
+  if (gr.action !== 'block') {
+    return TOP;
+  } // allow / undefined action = feasible
   // A declared red-line source is BOTTOM regardless of the approvable flag.
-  if (positionOfSource(gr.source) === BOTTOM) return BOTTOM;
+  if (positionOfSource(gr.source) === BOTTOM) {
+    return BOTTOM;
+  }
   return gr.approvable === true ? SOFT : BOTTOM;
 }
 
 function isRedLine(guardResult) {
   return position(guardResult) === BOTTOM;
 }
+
 function isApprovable(guardResult) {
   return position(guardResult) === SOFT;
 }
@@ -181,8 +204,12 @@ function isApprovable(guardResult) {
  * @returns {string} the resulting lattice element.
  */
 function relax(element, { approved = false } = {}) {
-  if (!isElement(element)) return BOTTOM; // unknown ⇒ most-constrained (fail-closed)
-  if (element === SOFT && approved === true) return TOP;
+  if (!isElement(element)) {
+    return BOTTOM;
+  } // unknown ⇒ most-constrained (fail-closed)
+  if (element === SOFT && approved === true) {
+    return TOP;
+  }
   return element; // ⊥ and ⊤ are fixed points; SOFT without approval stays SOFT
 }
 
@@ -204,7 +231,9 @@ function canRelax(element) {
 //   ⊥  BOTTOM ⟷ System_Block  (red line / infeasible ⟷ most locked)
 let _strategyMaps = null;
 function _maps() {
-  if (_strategyMaps) return _strategyMaps;
+  if (_strategyMaps) {
+    return _strategyMaps;
+  }
   const S = require('./metaplan/constraintStrategy').STRATEGIES;
   const elementToStrategy = { [TOP]: S.PROMPT_SOFT, [SOFT]: S.CODE_HARD, [BOTTOM]: S.SYSTEM_BLOCK };
   const strategyToElement = { [S.PROMPT_SOFT]: TOP, [S.CODE_HARD]: SOFT, [S.SYSTEM_BLOCK]: BOTTOM };
@@ -218,8 +247,11 @@ function _maps() {
  * @returns {string|null} the dual constraintStrategy value, or null if unknown.
  */
 function toStrategy(element) {
-  try { return _maps().elementToStrategy[element] || null; }
-  catch { return null; }
+  try {
+    return _maps().elementToStrategy[element] || null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -232,7 +264,9 @@ function fromStrategy(strategy) {
   try {
     const el = _maps().strategyToElement[strategy];
     return el || BOTTOM;
-  } catch { return BOTTOM; }
+  } catch {
+    return BOTTOM;
+  }
 }
 
 // ── Liveness floor — the ⊤ escape actions Π_C must never prune ────────────────
@@ -252,7 +286,9 @@ function _livenessFloor() {
 
 /** True iff `toolName` is a guaranteed-feasible escape action (the ⊤ floor). */
 function isLivenessFloor(toolName) {
-  if (!toolName) return false;
+  if (!toolName) {
+    return false;
+  }
   return _livenessFloor().includes(String(toolName).trim().toLowerCase());
 }
 
@@ -266,7 +302,9 @@ function isLivenessFloor(toolName) {
  */
 function ensureLiveness(actions) {
   const list = Array.isArray(actions) ? actions.filter(Boolean) : [];
-  if (list.length > 0) return list.slice();
+  if (list.length > 0) {
+    return list.slice();
+  }
   return _livenessFloor();
 }
 
@@ -280,7 +318,9 @@ function ensureLiveness(actions) {
  * @returns {string|null}
  */
 function feasibleUnderPolicy(toolName, blockReason) {
-  if (blockReason && isLivenessFloor(toolName)) return null;
+  if (blockReason && isLivenessFloor(toolName)) {
+    return null;
+  }
   return blockReason || null;
 }
 

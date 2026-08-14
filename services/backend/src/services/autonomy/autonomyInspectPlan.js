@@ -35,7 +35,9 @@ const _MAX_LIMIT = 200;
 
 function _intArg(raw, dflt) {
   const n = parseInt(String(raw == null ? '' : raw).trim(), 10);
-  if (!Number.isFinite(n) || n <= 0) return dflt;
+  if (!Number.isFinite(n) || n <= 0) {
+    return dflt;
+  }
   return n > _MAX_LIMIT ? _MAX_LIMIT : n;
 }
 
@@ -47,9 +49,20 @@ function _intArg(raw, dflt) {
  * @returns {{action:string, deep:boolean, limit:number, flowId:string|null, valid:boolean, parseError:string|null}}
  */
 function parseAutonomyArgs(args) {
-  const list = Array.isArray(args) ? args.map((a) => String(a == null ? '' : a).trim()).filter((s) => s !== '') : [];
-  const base = { action: 'status', deep: false, limit: _DEFAULT_LIMIT, flowId: null, valid: true, parseError: null };
-  if (list.length === 0) return base;
+  const list = Array.isArray(args)
+    ? args.map((a) => String(a == null ? '' : a).trim()).filter((s) => s !== '')
+    : [];
+  const base = {
+    action: 'status',
+    deep: false,
+    limit: _DEFAULT_LIMIT,
+    flowId: null,
+    valid: true,
+    parseError: null,
+  };
+  if (list.length === 0) {
+    return base;
+  }
 
   const head = list[0].toLowerCase();
 
@@ -74,18 +87,24 @@ function parseAutonomyArgs(args) {
     const second = (list[1] || '').toLowerCase();
     if (second === 'cancel' || second === 'resume') {
       const id = list[2];
-      if (!id) return Object.assign({}, base, { valid: false, parseError: 'missing_flow_id' });
+      if (!id) {
+        return Object.assign({}, base, { valid: false, parseError: 'missing_flow_id' });
+      }
       return Object.assign({}, base, { action: `flow-${second}`, flowId: id });
     }
     const id = list[1];
-    if (!id) return Object.assign({}, base, { valid: false, parseError: 'missing_flow_id' });
+    if (!id) {
+      return Object.assign({}, base, { valid: false, parseError: 'missing_flow_id' });
+    }
     return Object.assign({}, base, { action: 'flow-view', flowId: id });
   }
 
   return Object.assign({}, base, { valid: false, parseError: 'unknown_action' });
 }
 
-function _n(v) { return Number.isFinite(v) ? v : 0; }
+function _n(v) {
+  return Number.isFinite(v) ? v : 0;
+}
 
 /**
  * 把 runs 数组按 control 分桶计数。runs 元素形如 { runId, mode, label, control, progress }。
@@ -94,17 +113,28 @@ function _n(v) { return Number.isFinite(v) ? v : 0; }
  */
 function tallyRuns(runs) {
   const t = { total: 0, running: 0, paused: 0, done: 0, failed: 0, cancelled: 0, idle: 0 };
-  if (!Array.isArray(runs)) return t;
+  if (!Array.isArray(runs)) {
+    return t;
+  }
   for (const r of runs) {
-    if (!r || typeof r !== 'object') continue;
+    if (!r || typeof r !== 'object') {
+      continue;
+    }
     t.total += 1;
     const c = String(r.control || '').toLowerCase();
-    if (c === 'running') t.running += 1;
-    else if (c === 'paused') t.paused += 1;
-    else if (c === 'done') t.done += 1;
-    else if (c === 'failed') t.failed += 1;
-    else if (c === 'cancelled') t.cancelled += 1;
-    else t.idle += 1;
+    if (c === 'running') {
+      t.running += 1;
+    } else if (c === 'paused') {
+      t.paused += 1;
+    } else if (c === 'done') {
+      t.done += 1;
+    } else if (c === 'failed') {
+      t.failed += 1;
+    } else if (c === 'cancelled') {
+      t.cancelled += 1;
+    } else {
+      t.idle += 1;
+    }
   }
   return t;
 }
@@ -116,9 +146,13 @@ function tallyRuns(runs) {
  */
 function tallyTasks(tasks) {
   const t = { total: 0 };
-  if (!Array.isArray(tasks)) return t;
+  if (!Array.isArray(tasks)) {
+    return t;
+  }
   for (const task of tasks) {
-    if (!task || typeof task !== 'object') continue;
+    if (!task || typeof task !== 'object') {
+      continue;
+    }
     t.total += 1;
     const s = String(task.status || 'unknown').toLowerCase();
     t[s] = (t[s] || 0) + 1;
@@ -131,7 +165,10 @@ function _runLine(r) {
   const done = _n(p.done);
   const total = _n(p.total);
   const failed = _n(p.failed) ? ` · ${_n(p.failed)} failed` : '';
-  return `  ${r.runId}  [${r.control || '?'}]  ${done}/${total}${failed}  ${r.mode || ''}  ${r.label || ''}`.replace(/\s+$/, '');
+  return `  ${r.runId}  [${r.control || '?'}]  ${done}/${total}${failed}  ${r.mode || ''}  ${r.label || ''}`.replace(
+    /\s+$/,
+    ''
+  );
 }
 
 /**
@@ -151,10 +188,16 @@ function buildOverview(snapshot) {
   // 编排运行 / 受管 flow。
   if (Array.isArray(s.runs)) {
     const rt = tallyRuns(s.runs);
-    lines.push(`编排运行: 共 ${rt.total}（running ${rt.running} · paused ${rt.paused} · done ${rt.done} · failed ${rt.failed} · cancelled ${rt.cancelled}）`);
-    if (s.enabled === false) lines.push('  （编排已禁用 KHY_ORCHESTRATE=0）');
+    lines.push(
+      `编排运行: 共 ${rt.total}（running ${rt.running} · paused ${rt.paused} · done ${rt.done} · failed ${rt.failed} · cancelled ${rt.cancelled}）`
+    );
+    if (s.enabled === false) {
+      lines.push('  （编排已禁用 KHY_ORCHESTRATE=0）');
+    }
     const latest = s.runs[s.runs.length - 1];
-    if (latest) lines.push(`  最新:${_runLine(latest).trim()}`);
+    if (latest) {
+      lines.push(`  最新:${_runLine(latest).trim()}`);
+    }
   } else {
     lines.push('编排运行: 不可用');
   }
@@ -162,7 +205,9 @@ function buildOverview(snapshot) {
   // taskBoard 任务。
   if (Array.isArray(s.tasks)) {
     const tt = tallyTasks(s.tasks);
-    const parts = Object.keys(tt).filter((k) => k !== 'total').map((k) => `${k} ${tt[k]}`);
+    const parts = Object.keys(tt)
+      .filter((k) => k !== 'total')
+      .map((k) => `${k} ${tt[k]}`);
     lines.push(`任务板: 共 ${tt.total}${parts.length ? `（${parts.join(' · ')}）` : ''}`);
   } else {
     lines.push('任务板: 不可用');
@@ -191,7 +236,9 @@ function buildOverview(snapshot) {
   }
 
   lines.push('');
-  lines.push('更多: /autonomy status --deep · /autonomy runs [N] · /autonomy flows [N] · /autonomy flow <id>');
+  lines.push(
+    '更多: /autonomy status --deep · /autonomy runs [N] · /autonomy flows [N] · /autonomy flow <id>'
+  );
   return lines.join('\n');
 }
 
@@ -206,7 +253,9 @@ function buildDeep(snapshot) {
 
   out.push('── 编排运行明细 ──');
   if (Array.isArray(s.runs) && s.runs.length) {
-    for (const r of s.runs.slice(-_DEFAULT_LIMIT)) out.push(_runLine(r));
+    for (const r of s.runs.slice(-_DEFAULT_LIMIT)) {
+      out.push(_runLine(r));
+    }
   } else {
     out.push('  （无）');
   }
@@ -238,7 +287,9 @@ function buildDeep(snapshot) {
  */
 function buildRunsList(runs, limit) {
   const n = _intArg(limit, _DEFAULT_LIMIT);
-  if (!Array.isArray(runs) || runs.length === 0) return '编排运行: （无）';
+  if (!Array.isArray(runs) || runs.length === 0) {
+    return '编排运行: （无）';
+  }
   const slice = runs.slice(-n);
   return ['近期编排运行（最多 ' + n + ' 条）:'].concat(slice.map(_runLine)).join('\n');
 }
@@ -251,7 +302,9 @@ function buildRunsList(runs, limit) {
  */
 function buildFlowsList(flows, limit) {
   const n = _intArg(limit, _DEFAULT_LIMIT);
-  if (!Array.isArray(flows) || flows.length === 0) return '受管 flow: （无）';
+  if (!Array.isArray(flows) || flows.length === 0) {
+    return '受管 flow: （无）';
+  }
   const slice = flows.slice(-n);
   return ['近期受管 flow（最多 ' + n + ' 条）:'].concat(slice.map(_runLine)).join('\n');
 }
@@ -262,17 +315,23 @@ function buildFlowsList(flows, limit) {
  * @returns {string}
  */
 function buildFlowView(status) {
-  if (!status || typeof status !== 'object') return 'flow 未找到。';
+  if (!status || typeof status !== 'object') {
+    return 'flow 未找到。';
+  }
   const p = status.progress || {};
   const lines = [];
   lines.push(`Flow ${status.runId}`);
-  lines.push(`  mode=${status.mode || ''} · control=${status.control || '?'} · ${_n(p.done)}/${_n(p.total)} done${_n(p.failed) ? ` · ${_n(p.failed)} failed` : ''}`);
-  if (status.label) lines.push(`  目标: ${status.label}`);
+  lines.push(
+    `  mode=${status.mode || ''} · control=${status.control || '?'} · ${_n(p.done)}/${_n(p.total)} done${_n(p.failed) ? ` · ${_n(p.failed)} failed` : ''}`
+  );
+  if (status.label) {
+    lines.push(`  目标: ${status.label}`);
+  }
   const steps = Array.isArray(status.steps) ? status.steps : [];
   if (steps.length) {
     lines.push('  步骤:');
     for (const st of steps) {
-      const mark = st.error ? `✗ ${st.error}` : (st.result != null ? st.result : '');
+      const mark = st.error ? `✗ ${st.error}` : st.result != null ? st.result : '';
       lines.push(`    - ${st.stepId} [${st.status}] ${st.role || ''} ${mark}`.replace(/\s+$/, ''));
     }
   }
@@ -287,7 +346,9 @@ function buildFlowView(status) {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_AUTONOMY === undefined ? 'true' : e.KHY_AUTONOMY;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 

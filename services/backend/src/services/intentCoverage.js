@@ -27,8 +27,24 @@
 
 // 太泛、单独出现不足以判定"被遗漏"的 token —— 命中即跳过,绝不据此追问。
 const GENERIC_TOKENS = new Set([
-  'readme', 'index', 'main', 'test', 'tests', 'data', 'config', 'file',
-  'code', 'src', 'app', 'util', 'utils', 'lib', 'tmp', 'temp', 'log', 'logs',
+  'readme',
+  'index',
+  'main',
+  'test',
+  'tests',
+  'data',
+  'config',
+  'file',
+  'code',
+  'src',
+  'app',
+  'util',
+  'utils',
+  'lib',
+  'tmp',
+  'temp',
+  'log',
+  'logs',
 ]);
 
 // 文件路径抽取正则的两种形态:
@@ -37,8 +53,10 @@ const GENERIC_TOKENS = new Set([
 //     发生灾难性回溯(O(n²) → 事件循环挂死 = DoS)。对一切真实路径逐字节等价。
 //   - 传统(门控关闭时的字节回退):无界 `+`,保留历史行为。
 // 见 assessIntentCoverage 的 pathRedosGuard 选项(接缝在 toolUseLoop)。
-const PATH_RE_BOUNDED = /(?:[A-Za-z0-9_.\-]{1,255}[\/\\])+[A-Za-z0-9_.\-]{1,255}|\b[A-Za-z0-9_\-]+\.[A-Za-z0-9]{1,8}\b/g;
-const PATH_RE_LEGACY = /(?:[A-Za-z0-9_.\-]+[\/\\])+[A-Za-z0-9_.\-]+|\b[A-Za-z0-9_\-]+\.[A-Za-z0-9]{1,8}\b/g;
+const PATH_RE_BOUNDED =
+  /(?:[A-Za-z0-9_.\-]{1,255}[\/\\])+[A-Za-z0-9_.\-]{1,255}|\b[A-Za-z0-9_\-]+\.[A-Za-z0-9]{1,8}\b/g;
+const PATH_RE_LEGACY =
+  /(?:[A-Za-z0-9_.\-]+[\/\\])+[A-Za-z0-9_.\-]+|\b[A-Za-z0-9_\-]+\.[A-Za-z0-9]{1,8}\b/g;
 
 // 收敛到 utils/toLowerCaseSafe 单一真源(逐字节委托,调用点不变)
 const _norm = require('../utils/toLowerCaseSafe');
@@ -58,10 +76,17 @@ function _checkableFromText(text, pathRedosGuard = true) {
   const reqs = [];
   const seen = new Set();
   const add = (label, keys) => {
-    const norm = keys.map(_norm).filter(Boolean).filter((k) => !GENERIC_TOKENS.has(k));
-    if (!norm.length) return;
+    const norm = keys
+      .map(_norm)
+      .filter(Boolean)
+      .filter((k) => !GENERIC_TOKENS.has(k));
+    if (!norm.length) {
+      return;
+    }
     const sig = norm.join('|');
-    if (seen.has(sig)) return;
+    if (seen.has(sig)) {
+      return;
+    }
     seen.add(sig);
     reqs.push({ label: String(label || '').trim() || norm[0], keys: norm });
   };
@@ -72,7 +97,9 @@ function _checkableFromText(text, pathRedosGuard = true) {
   const quoteRe = /[「『“"'`]([^「『”"'`\n]{2,60})[」』”"'`]/g;
   while ((m = quoteRe.exec(raw)) !== null) {
     const lit = m[1].trim();
-    if (lit.length >= 2) add(lit, [lit]);
+    if (lit.length >= 2) {
+      add(lit, [lit]);
+    }
   }
 
   // 2) 文件路径 / 带扩展名的文件。按全名 + 基名两形式命中。先记录命中跨度,
@@ -94,7 +121,9 @@ function _checkableFromText(text, pathRedosGuard = true) {
   while ((m = identRe.exec(rawNoPaths)) !== null) {
     const id = m[0];
     const codey = /[_0-9]/.test(id) || (/[a-z]/.test(id) && /[A-Z]/.test(id));
-    if (codey) add(id, [id]);
+    if (codey) {
+      add(id, [id]);
+    }
   }
 
   return reqs;
@@ -104,9 +133,15 @@ function _checkableFromText(text, pathRedosGuard = true) {
 // 此时模型是有意暂停而非漏接 —— 绝不追问。
 function _looksLikeClarification(reply) {
   const r = String(reply || '').trim();
-  if (!r) return false;
-  if (/[?？]\s*$/.test(r)) return true;
-  return /(请问|请先确认|需要我先|你是想|是否需要|哪一个|澄清一下|which (one|of)|could you clarify|do you want me to|should i)\b/i.test(r);
+  if (!r) {
+    return false;
+  }
+  if (/[?？]\s*$/.test(r)) {
+    return true;
+  }
+  return /(请问|请先确认|需要我先|你是想|是否需要|哪一个|澄清一下|which (one|of)|could you clarify|do you want me to|should i)\b/i.test(
+    r
+  );
 }
 
 /**
@@ -126,13 +161,19 @@ function assessIntentCoverage(input = {}) {
   const rawMessage = String(input && input.rawMessage != null ? input.rawMessage : '');
   const anchors = Array.isArray(input && input.anchors) ? input.anchors : [];
   const tailDetails = Array.isArray(input && input.tailDetails) ? input.tailDetails : [];
-  const extraCoveredText = String(input && input.extraCoveredText != null ? input.extraCoveredText : '');
+  const extraCoveredText = String(
+    input && input.extraCoveredText != null ? input.extraCoveredText : ''
+  );
   // 有界路径正则默认开;调用方(toolUseLoop 接缝)可显式传 false 走字节回退。
   const pathRedosGuard = input && input.pathRedosGuard === false ? false : true;
 
   const empty = { shouldNudge: false, missing: [], checked: 0 };
-  if (!reply.trim()) return empty;
-  if (_looksLikeClarification(reply)) return empty;
+  if (!reply.trim()) {
+    return empty;
+  }
+  if (_looksLikeClarification(reply)) {
+    return empty;
+  }
 
   // 汇总可检诉求:原文里的引用字面 + 各 anchor 内的高精度 token + 尾随子句内的高精度 token。
   const reqs = [];
@@ -140,22 +181,32 @@ function assessIntentCoverage(input = {}) {
   const collect = (list) => {
     for (const r of list) {
       const sig = r.keys.join('|');
-      if (seenSig.has(sig)) continue;
+      if (seenSig.has(sig)) {
+        continue;
+      }
       seenSig.add(sig);
       reqs.push(r);
     }
   };
   collect(_checkableFromText(rawMessage, pathRedosGuard));
-  for (const a of anchors) collect(_checkableFromText(a, pathRedosGuard));
-  for (const t of tailDetails) collect(_checkableFromText(t, pathRedosGuard));
+  for (const a of anchors) {
+    collect(_checkableFromText(a, pathRedosGuard));
+  }
+  for (const t of tailDetails) {
+    collect(_checkableFromText(t, pathRedosGuard));
+  }
 
-  if (reqs.length === 0) return empty;
+  if (reqs.length === 0) {
+    return empty;
+  }
 
   // 干草堆:回复 + 额外已接住上下文(已改文件名 / 工具名)。
   const haystack = _norm(`${reply}\n${extraCoveredText}`);
   const missing = reqs.filter((r) => !r.keys.some((k) => haystack.includes(k)));
 
-  if (missing.length === 0) return { shouldNudge: false, missing: [], checked: reqs.length };
+  if (missing.length === 0) {
+    return { shouldNudge: false, missing: [], checked: reqs.length };
+  }
 
   return {
     shouldNudge: true,
@@ -170,9 +221,14 @@ function assessIntentCoverage(input = {}) {
  */
 function buildIntentCoverageNudge(missing) {
   const items = (Array.isArray(missing) ? missing : []).filter(Boolean);
-  if (!items.length) return '';
+  if (!items.length) {
+    return '';
+  }
   const bullet = items
-    .map((m, i) => `${i + 1}. ${String((m && m.label) || (m && m.keys && m.keys[0]) || '').slice(0, 80)}`)
+    .map(
+      (m, i) =>
+        `${i + 1}. ${String((m && m.label) || (m && m.keys && m.keys[0]) || '').slice(0, 80)}`
+    )
     .join('\n');
   return [
     '[SYSTEM: 用户在请求里明确点到了下面这些,但你的回复似乎没接住(完全没提到):',

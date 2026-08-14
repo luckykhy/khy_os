@@ -21,8 +21,8 @@
  * 全程记录 attempted_fixes（{action, result, auto}）与 lastDiagnosis，供强制兜底报告引用。
  */
 
-const { ErrorDiagnostician } = require('./errorDiagnostician');
 const { PrescriptionDeadLoopDetector } = require('./deadLoopDetector');
+const { ErrorDiagnostician } = require('./errorDiagnostician');
 const { FixActions } = require('./fixActions');
 
 /** 微循环硬编码上限——诊断→修复→重试，仅一轮。**不可配置**（防呆①）。 */
@@ -58,7 +58,9 @@ class MicroLoopExecutor {
 
     // ① 精准归因（含 L2 判定、字典处方）。
     const diagnosis = this.diagnostician.diagnose(failure, { ...context, params, tool: toolName });
-    if (!this.lastDiagnosis) this.lastDiagnosis = diagnosis;
+    if (!this.lastDiagnosis) {
+      this.lastDiagnosis = diagnosis;
+    }
 
     // ③ L2 / 不可本地修复 → 禁止进入修复微循环，直接降级。
     if (!diagnosis.fixable) {
@@ -68,7 +70,11 @@ class MicroLoopExecutor {
     // ④ 处方级死循环熔断：同处方已开过 → 判无效，转降级。
     const probe = this.deadLoop.check(diagnosis);
     if (probe.dead) {
-      const rec = { action: diagnosis.action || diagnosis.fixKind, result: 'skipped:dead-loop(same-prescription)', auto: diagnosis.risk === 'L0' };
+      const rec = {
+        action: diagnosis.action || diagnosis.fixKind,
+        result: 'skipped:dead-loop(same-prescription)',
+        auto: diagnosis.risk === 'L0',
+      };
       this.attempted_fixes.push(rec);
       return { fixed: false, diagnosis, degrade: true, record: rec };
     }
@@ -77,11 +83,22 @@ class MicroLoopExecutor {
     if (diagnosis.needsConfirm) {
       let approved = false;
       if (this.confirm) {
-        try { approved = !!(await this.confirm({ diagnosis, dependency: diagnosis.capture && diagnosis.capture.dep, action: diagnosis.action })); }
-        catch { approved = false; }
+        try {
+          approved = !!(await this.confirm({
+            diagnosis,
+            dependency: diagnosis.capture && diagnosis.capture.dep,
+            action: diagnosis.action,
+          }));
+        } catch {
+          approved = false;
+        }
       }
       if (!approved) {
-        const rec = { action: diagnosis.action || diagnosis.fixKind, result: 'declined:user-not-approved', auto: false };
+        const rec = {
+          action: diagnosis.action || diagnosis.fixKind,
+          result: 'declined:user-not-approved',
+          auto: false,
+        };
         this.attempted_fixes.push(rec);
         return { fixed: false, diagnosis, degrade: true, record: rec };
       }
@@ -94,9 +111,20 @@ class MicroLoopExecutor {
     if (fix && fix.ok && fix.params) {
       const rec = { action: diagnosis.action || diagnosis.fixKind, result: 'fixed', auto };
       this.attempted_fixes.push(rec);
-      return { fixed: true, params: fix.params, diagnosis, degrade: false, record: rec, info: fix.info };
+      return {
+        fixed: true,
+        params: fix.params,
+        diagnosis,
+        degrade: false,
+        record: rec,
+        info: fix.info,
+      };
     }
-    const rec = { action: diagnosis.action || diagnosis.fixKind, result: `failed:${(fix && fix.reason) || 'unknown'}`, auto };
+    const rec = {
+      action: diagnosis.action || diagnosis.fixKind,
+      result: `failed:${(fix && fix.reason) || 'unknown'}`,
+      auto,
+    };
     this.attempted_fixes.push(rec);
     return { fixed: false, diagnosis, degrade: true, record: rec };
   }
@@ -137,14 +165,25 @@ class MicroLoopExecutor {
     // 恰一次重试（MAX_LOOP=1）。
     let result = null;
     if (typeof runTool === 'function') {
-      try { result = await runTool(toolName, r.params); } catch (err) { result = { success: false, error: (err && err.message) || String(err) }; }
+      try {
+        result = await runTool(toolName, r.params);
+      } catch (err) {
+        result = { success: false, error: (err && err.message) || String(err) };
+      }
     }
     const ok = _isSuccess(result);
     // 重试结果回写到对应修复记录（fixed→但重试仍失败时降级）。
     if (!ok && fixesThisRound.length) {
       fixesThisRound[fixesThisRound.length - 1].result = 'fixed-but-retry-failed';
     }
-    return { ok, result, params: r.params, diagnosis: r.diagnosis, attempted_fixes: fixesThisRound, degrade: !ok };
+    return {
+      ok,
+      result,
+      params: r.params,
+      diagnosis: r.diagnosis,
+      attempted_fixes: fixesThisRound,
+      degrade: !ok,
+    };
   }
 
   /** 清空本次运行的流水（复用同一实例时调用）。 */
@@ -156,11 +195,19 @@ class MicroLoopExecutor {
 }
 
 function _isSuccess(result) {
-  if (!result || typeof result !== 'object') return false;
-  if (result.success === true) return true;
-  if (result.success === false) return false;
+  if (!result || typeof result !== 'object') {
+    return false;
+  }
+  if (result.success === true) {
+    return true;
+  }
+  if (result.success === false) {
+    return false;
+  }
   // 无显式 success：有 error/error_code 视为失败，否则视为成功。
-  if (result.error || result.error_code) return false;
+  if (result.error || result.error_code) {
+    return false;
+  }
   return true;
 }
 

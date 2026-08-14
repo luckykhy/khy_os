@@ -36,14 +36,21 @@ function contextWarningThresholdGuardEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_CONTEXT_WARNING_THRESHOLD_GUARD', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_CONTEXT_WARNING_THRESHOLD_GUARD;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -61,10 +68,14 @@ function contextWarningThresholdGuardEnabled(env = process.env) {
  */
 function guardBandThreshold(threshold, buffer, env = process.env) {
   try {
-    if (!contextWarningThresholdGuardEnabled(env)) return null;
+    if (!contextWarningThresholdGuardEnabled(env)) {
+      return null;
+    }
     const t = Number(threshold);
     const b = Number(buffer);
-    if (!Number.isFinite(t) || !Number.isFinite(b)) return null;
+    if (!Number.isFinite(t) || !Number.isFinite(b)) {
+      return null;
+    }
     return t > b ? t - b : t;
   } catch {
     return null;

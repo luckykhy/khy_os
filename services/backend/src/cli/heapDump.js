@@ -21,7 +21,9 @@ const path = require('path');
 
 function isEnabled(env) {
   const raw = env && env.KHY_HEAPDUMP;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
@@ -114,13 +116,19 @@ function formatResult(r = {}) {
   ];
   if (mem.heapUsed != null) {
     lines.push(
-      '  摘要:heapUsed ' + _mb(mem.heapUsed) + ' MB · rss ' + _mb(mem.rss) +
-      ' MB · external ' + _mb(mem.external) + ' MB'
+      '  摘要:heapUsed ' +
+        _mb(mem.heapUsed) +
+        ' MB · rss ' +
+        _mb(mem.rss) +
+        ' MB · external ' +
+        _mb(mem.external) +
+        ' MB'
     );
   }
   lines.push(
     '提示:在 Chrome DevTools → Memory → Load profile 里打开 ' +
-    path.basename(heapPath) + ' 分析对象保留树;诊断 JSON 含原生内存指标(快照不含)。'
+      path.basename(heapPath) +
+      ' 分析对象保留树;诊断 JSON 含原生内存指标(快照不含)。'
   );
   return lines.join('\n');
 }

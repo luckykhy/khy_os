@@ -16,7 +16,11 @@
  */
 
 function tryOr(fn, dflt) {
-  try { return fn(); } catch { return dflt; }
+  try {
+    return fn();
+  } catch {
+    return dflt;
+  }
 }
 
 module.exports = tryOr;

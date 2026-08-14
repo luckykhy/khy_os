@@ -20,19 +20,27 @@ function _collectLspDiagnostics(filePath) {
   try {
     const { serviceRegistry } = require('../services/serviceRegistry');
     const lsp = serviceRegistry?.get?.('lspClient');
-    if (!lsp || !lsp.initialized) return null;
+    if (!lsp || !lsp.initialized) {
+      return null;
+    }
     const diags = lsp.getDiagnostics(filePath);
-    if (!Array.isArray(diags) || diags.length === 0) return null;
-    const errors = diags.filter(d => d.severity === 1 || d.severity === 2);
-    if (errors.length === 0) return null;
-    return errors.slice(0, 15).map(d => ({
+    if (!Array.isArray(diags) || diags.length === 0) {
+      return null;
+    }
+    const errors = diags.filter((d) => d.severity === 1 || d.severity === 2);
+    if (errors.length === 0) {
+      return null;
+    }
+    return errors.slice(0, 15).map((d) => ({
       line: (d.range?.start?.line ?? 0) + 1,
       character: (d.range?.start?.character ?? 0) + 1,
       severity: d.severity === 1 ? 'error' : 'warning',
       message: d.message || '',
       source: d.source || '',
     }));
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 module.exports = _collectLspDiagnostics;

@@ -76,12 +76,16 @@ module.exports = defineTool({
     return `扮演角色：${r}`;
   },
   getToolUseSummary(input) {
-    if (!input?.role) return null;
+    if (!input?.role) {
+      return null;
+    }
     return `扮演：${String(input.role).slice(0, 24)}${input.save ? '（保存）' : ''}`;
   },
 
   async execute(params) {
-    if (!params?.role) return { success: false, error: '需要提供要扮演的角色描述。' };
+    if (!params?.role) {
+      return { success: false, error: '需要提供要扮演的角色描述。' };
+    }
     try {
       const { runRole } = require('../cli/handlers/role');
       return runRole({

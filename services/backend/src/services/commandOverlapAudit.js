@@ -42,24 +42,34 @@ function isPanelEnabled(env) {
   const e = env || process.env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_COMMAND_PRIMARY_PANEL', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_COMMAND_PRIMARY_PANEL;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
 
 /** 取 schema 条目的 slash route(缺则空串)。 */
 function _slashRoute(entry) {
-  if (!entry || typeof entry !== 'object' || !entry.slash || typeof entry.slash !== 'object') return '';
+  if (!entry || typeof entry !== 'object' || !entry.slash || typeof entry.slash !== 'object') {
+    return '';
+  }
   return String(entry.slash.route == null ? '' : entry.slash.route).trim();
 }
 
 /** 取 schema 条目的 slash cmd(含前导 /,缺则空串)。 */
 function _slashCmd(entry) {
-  if (!entry || typeof entry !== 'object' || !entry.slash || typeof entry.slash !== 'object') return '';
+  if (!entry || typeof entry !== 'object' || !entry.slash || typeof entry.slash !== 'object') {
+    return '';
+  }
   return String(entry.slash.cmd == null ? '' : entry.slash.cmd).trim();
 }
 
@@ -77,21 +87,27 @@ function _slashCmd(entry) {
  */
 function auditCommandOverlap(schema, aliases) {
   const list = Array.isArray(schema) ? schema : [];
-  const alias = (aliases && typeof aliases === 'object') ? aliases : {};
+  const alias = aliases && typeof aliases === 'object' ? aliases : {};
 
   // route → 出现的 slash cmd 列表(仅统计有 route 的命令;route:null 是纯 flag,不参与碰撞)。
   const byRoute = new Map();
   for (const entry of list) {
     const route = _slashRoute(entry);
     const cmd = _slashCmd(entry);
-    if (!route || !cmd) continue;
-    if (!byRoute.has(route)) byRoute.set(route, []);
+    if (!route || !cmd) {
+      continue;
+    }
+    if (!byRoute.has(route)) {
+      byRoute.set(route, []);
+    }
     byRoute.get(route).push(cmd);
   }
 
   const routeCollisions = [];
   for (const [route, cmds] of byRoute) {
-    if (cmds.length > 1) routeCollisions.push({ route, cmds: cmds.slice().sort() });
+    if (cmds.length > 1) {
+      routeCollisions.push({ route, cmds: cmds.slice().sort() });
+    }
   }
   routeCollisions.sort((a, b) => (a.route < b.route ? -1 : a.route > b.route ? 1 : 0));
 
@@ -101,7 +117,9 @@ function auditCommandOverlap(schema, aliases) {
   for (const { route, cmds } of routeCollisions) {
     // 该 route 下,别名表声明为「别名」的 cmd 集合(其登记 route 须等于本 route)。
     const declaredHere = new Set(
-      cmds.filter((c) => Object.prototype.hasOwnProperty.call(alias, c) && String(alias[c]).trim() === route),
+      cmds.filter(
+        (c) => Object.prototype.hasOwnProperty.call(alias, c) && String(alias[c]).trim() === route
+      )
     );
     // canonical = 碰撞里未被声明为别名的命令。有意别名应恰好剩 1 条 canonical。
     const unexplained = cmds.filter((c) => !declaredHere.has(c));
@@ -114,7 +132,9 @@ function auditCommandOverlap(schema, aliases) {
   const realRoutes = new Set(byRoute.keys());
   const danglingAliases = [];
   for (const [aliasCmd, route] of Object.entries(alias)) {
-    if (!realRoutes.has(String(route).trim())) danglingAliases.push(aliasCmd);
+    if (!realRoutes.has(String(route).trim())) {
+      danglingAliases.push(aliasCmd);
+    }
   }
   danglingAliases.sort();
 
@@ -138,16 +158,20 @@ function auditCommandOverlap(schema, aliases) {
  */
 function buildPrimaryCommandPanel(schema, aliases, opts = {}) {
   const o = opts || {};
-  if (!isPanelEnabled(o.env)) return null;
+  if (!isPanelEnabled(o.env)) {
+    return null;
+  }
   const list = Array.isArray(schema) ? schema : [];
-  const alias = (aliases && typeof aliases === 'object') ? aliases : {};
+  const alias = aliases && typeof aliases === 'object' ? aliases : {};
   const aliasCmds = new Set(Object.keys(alias));
 
   // route → 折叠到该 route 的别名 cmd 列表(供 canonical 展示「别名」)。
   const aliasByRoute = new Map();
   for (const [aliasCmd, route] of Object.entries(alias)) {
     const r = String(route).trim();
-    if (!aliasByRoute.has(r)) aliasByRoute.set(r, []);
+    if (!aliasByRoute.has(r)) {
+      aliasByRoute.set(r, []);
+    }
     aliasByRoute.get(r).push(aliasCmd);
   }
 
@@ -156,21 +180,31 @@ function buildPrimaryCommandPanel(schema, aliases, opts = {}) {
   let primaryCount = 0;
   for (const entry of list) {
     const cmd = _slashCmd(entry);
-    if (!cmd || aliasCmds.has(cmd)) continue;              // 跳过别名本身,只留 canonical
-    const category = String((entry.slash && entry.slash.category) || entry.category || 'system').trim() || 'system';
+    if (!cmd || aliasCmds.has(cmd)) {
+      continue;
+    } // 跳过别名本身,只留 canonical
+    const category =
+      String((entry.slash && entry.slash.category) || entry.category || 'system').trim() ||
+      'system';
     const label = String((entry.slash && entry.slash.label) || '').trim();
     const route = _slashRoute(entry);
-    const foldedAliases = route && aliasByRoute.has(route)
-      ? aliasByRoute.get(route).slice().sort() : [];
-    if (!byCategory.has(category)) byCategory.set(category, []);
+    const foldedAliases =
+      route && aliasByRoute.has(route) ? aliasByRoute.get(route).slice().sort() : [];
+    if (!byCategory.has(category)) {
+      byCategory.set(category, []);
+    }
     byCategory.get(category).push({ cmd, label, aliases: foldedAliases });
     primaryCount++;
   }
 
   const categories = [...byCategory.keys()].sort().map((category) => {
-    let commands = byCategory.get(category).slice()
+    let commands = byCategory
+      .get(category)
+      .slice()
       .sort((a, b) => (a.cmd < b.cmd ? -1 : a.cmd > b.cmd ? 1 : 0));
-    if (cap > 0) commands = commands.slice(0, cap);
+    if (cap > 0) {
+      commands = commands.slice(0, cap);
+    }
     return { category, commands };
   });
 

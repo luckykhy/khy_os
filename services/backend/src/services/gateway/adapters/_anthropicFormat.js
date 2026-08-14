@@ -15,9 +15,16 @@ const { anthropicToCW: _sharedAnthropicToCW } = require('./_toolSchemaConverter'
  * @returns {string}
  */
 function extractAnthropicText(content) {
-  if (typeof content === 'string') return content;
-  if (!Array.isArray(content)) return '';
-  return content.filter(b => b.type === 'text').map(b => b.text).join('');
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return '';
+  }
+  return content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('');
 }
 
 /**
@@ -26,10 +33,12 @@ function extractAnthropicText(content) {
  * @returns {Array<{toolUseId: string, name: string, input: object}>}
  */
 function extractAnthropicToolUses(content) {
-  if (!Array.isArray(content)) return [];
+  if (!Array.isArray(content)) {
+    return [];
+  }
   return content
-    .filter(b => b.type === 'tool_use')
-    .map(b => ({ toolUseId: b.id, name: b.name, input: b.input || {} }));
+    .filter((b) => b.type === 'tool_use')
+    .map((b) => ({ toolUseId: b.id, name: b.name, input: b.input || {} }));
 }
 
 /**
@@ -38,17 +47,23 @@ function extractAnthropicToolUses(content) {
  * @returns {Array<{toolUseId: string, content: Array, status: string}>}
  */
 function extractAnthropicToolResults(content) {
-  if (!Array.isArray(content)) return [];
+  if (!Array.isArray(content)) {
+    return [];
+  }
   return content
-    .filter(b => b.type === 'tool_result')
-    .map(b => {
+    .filter((b) => b.type === 'tool_result')
+    .map((b) => {
       let resultContent;
       if (typeof b.content === 'string') {
         resultContent = [{ text: b.content }];
       } else if (Array.isArray(b.content)) {
-        resultContent = b.content.map(c => {
-          if (typeof c === 'string') return { text: c };
-          if (c.type === 'text') return { text: c.text };
+        resultContent = b.content.map((c) => {
+          if (typeof c === 'string') {
+            return { text: c };
+          }
+          if (c.type === 'text') {
+            return { text: c.text };
+          }
           return { text: JSON.stringify(c) };
         });
       } else {
@@ -69,8 +84,15 @@ function extractAnthropicToolResults(content) {
  * @returns {Array<{format: string, source: {bytes: Buffer}}>}
  */
 function extractAnthropicImages(content) {
-  if (!Array.isArray(content)) return [];
-  const formatMap = { 'image/png': 'png', 'image/jpeg': 'jpeg', 'image/gif': 'gif', 'image/webp': 'webp' };
+  if (!Array.isArray(content)) {
+    return [];
+  }
+  const formatMap = {
+    'image/png': 'png',
+    'image/jpeg': 'jpeg',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+  };
   const images = [];
   for (const block of content) {
     if (block.type === 'image' && block.source) {
@@ -81,7 +103,7 @@ function extractAnthropicImages(content) {
         const parts = block.source.url.split(',');
         if (parts.length >= 2) {
           const mimeMatch = parts[0].match(/data:(image\/\w+)/);
-          const format = mimeMatch ? (formatMap[mimeMatch[1]] || 'jpeg') : 'jpeg';
+          const format = mimeMatch ? formatMap[mimeMatch[1]] || 'jpeg' : 'jpeg';
           images.push({ format, source: { bytes: Buffer.from(parts[1], 'base64') } });
         }
       }
@@ -93,7 +115,7 @@ function extractAnthropicImages(content) {
         const parts = url.split(',');
         if (parts.length >= 2) {
           const mimeMatch = parts[0].match(/data:(image\/\w+)/);
-          const format = mimeMatch ? (formatMap[mimeMatch[1]] || 'jpeg') : 'jpeg';
+          const format = mimeMatch ? formatMap[mimeMatch[1]] || 'jpeg' : 'jpeg';
           images.push({ format, source: { bytes: Buffer.from(parts[1], 'base64') } });
         }
       }

@@ -27,7 +27,9 @@
  */
 
 function cjkNormalizeEnabled(env = process.env) {
-  const flag = String((env && env.KHY_CJK_INPUT_NORMALIZE) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_CJK_INPUT_NORMALIZE) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -39,7 +41,7 @@ function cjkNormalizeEnabled(env = process.env) {
  */
 function normalizeFullWidthDigits(input) {
   const s = String(input == null ? '' : input);
-  return s.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  return s.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
 }
 
 /**
@@ -64,7 +66,9 @@ function normalizeFullWidthSpace(input) {
  * @returns {string}
  */
 function normalizeNumericInput(raw, env) {
-  if (!cjkNormalizeEnabled(env)) return raw;
+  if (!cjkNormalizeEnabled(env)) {
+    return raw;
+  }
   return normalizeFullWidthSpace(normalizeFullWidthDigits(raw));
 }
 

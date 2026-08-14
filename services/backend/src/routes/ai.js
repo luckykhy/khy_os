@@ -1,15 +1,206 @@
 const express = require('express');
+
 const router = express.Router();
+const { PRIMARY: MODELS } = require('../constants/models');
 const { authMiddleware } = require('../middleware/auth');
+const imageGenService = require('../services/imageGenService');
 const stockAnalysisEngine = require('../services/stockAnalysisEngine');
 const trainingData = require('../services/trainingDataService');
 // Model-name SSOT: direct provider-call model choices flow from constants/models.js.
-const { PRIMARY: MODELS } = require('../constants/models');
+
+// Format the optional browser-provided geolocation into a system prompt line.
+// Validates latitude ∈ [-90, 90] and longitude ∈ [-180, 180] as finite numbers;
+// accuracy is only adopted when it is a positive finite number. Returns null
+// silently for missing/invalid input — never throws and never logs, so
+// coordinates can never leak into logs or error messages.
+function formatClientLocation(clientLocation) {
+  if (!clientLocation || typeof clientLocation !== 'object') {
+    return null;
+  }
+  const { latitude, longitude, accuracy } = clientLocation;
+  if (
+    typeof latitude !== 'number' ||
+    !Number.isFinite(latitude) ||
+    latitude < -90 ||
+    latitude > 90
+  ) {
+    return null;
+  }
+  if (
+    typeof longitude !== 'number' ||
+    !Number.isFinite(longitude) ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null;
+  }
+  let line = `用户当前位置（经用户浏览器授权提供）：纬度 ${latitude}, 经度 ${longitude}`;
+  if (typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy > 0) {
+    line += `（精度约 ${accuracy} 米）`;
+  }
+  return line;
+}
+
+// ── 图像生成意图检测 ────────────────────────────────────────────────────
+
+/**
+ * Detect whether the user message expresses an image-generation intent.
+ * Checks both Chinese and English keywords. Returns the first matching
+ * keyword found, or null if no intent is detected.
+ */
+function detectImageGenIntent(message) {
+  const lower = message.toLowerCase();
+
+  // ── Phase 1: check exact-substring keywords (high precision) ────────────
+  const exactKeywords = [
+    // Single-char / short
+    '画',
+    '绘',
+    '海报',
+    '壁纸',
+    '头像',
+    // Compound
+    '生成图',
+    '生成图片',
+    '生成图像',
+    '生成画',
+    '做个图',
+    '做一张图',
+    '画一张',
+    '画一个',
+    '画一幅',
+    '文生图',
+    '配图',
+    '插画',
+    '设计图',
+    '效果图',
+    '示意图',
+    '流程图',
+    '图标',
+    'logo',
+    'comic',
+    'cartoon',
+  ];
+  for (const kw of exactKeywords) {
+    if (lower.includes(kw)) {
+      return kw;
+    }
+  }
+
+  // ── Phase 2: check loose combinations (生成 + 图/图片/图像 etc.) ────────
+  // Handles cases like "生成一张科技风格的图片" where the words are separated.
+  const genPrefixes = ['生成', '生成出', '帮我生成', '帮我画', '帮我绘'];
+  const genSuffixes = ['图', '图片', '图像', '画', '插画', '海报', '壁纸'];
+  for (const pre of genPrefixes) {
+    if (lower.includes(pre)) {
+      for (const suf of genSuffixes) {
+        if (lower.includes(suf)) {
+          return pre + suf;
+        }
+      }
+    }
+  }
+
+  // ── Phase 3: English keywords ───────────────────────────────────────────
+  const enKeywords = [
+    'draw',
+    'paint',
+    'sketch',
+    'generate image',
+    'generate a picture',
+    'create image',
+    'create a picture',
+    'make picture',
+    'text to image',
+    'text-to-image',
+    'illustration',
+    'infographic',
+    'wallpaper',
+    'logo',
+    'design image',
+    'render image',
+  ];
+  for (const kw of enKeywords) {
+    if (lower.includes(kw)) {
+      return kw;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Handle an image-generation request detected from a chat message.
+ * Calls imageGenService.generate() and returns a response payload
+ * in the chat format with an `images` field the frontend can render.
+ */
+async function handleImageGeneration(message) {
+  // Check that at least one backend is configured
+  if (!imageGenService.isAnyBackendConfigured()) {
+    return {
+      success: true,
+      answer: `🎨 图像生成暂不可用：未检测到任何图像生成后端。\n\n${imageGenService.backendHelpText()}`,
+      model: '小K图像生成',
+      timestamp: Date.now(),
+    };
+  }
+
+  try {
+    const resolvedBackend = imageGenService.resolveBackend();
+    const autoSize = imageGenService.resolveSize(message, resolvedBackend);
+    const result = await imageGenService.generate({
+      prompt: message,
+      size: autoSize,
+      n: 1,
+    });
+
+    const imageEntries = result.images.map((img) => ({
+      base64: img.base64,
+      dataUrl: `data:image/png;base64,${img.base64}`,
+    }));
+
+    return {
+      success: true,
+      answer: `🎨 已为您生成 ${imageEntries.length} 张图像（${result.backend} / ${result.model || '默认'}，${result.size}）`,
+      model: `图像生成:${result.backend}`,
+      timestamp: Date.now(),
+      images: imageEntries,
+      imageBackend: result.backend,
+      imageModel: result.model,
+    };
+  } catch (err) {
+    const code = err.code || 'GENERATION_FAILED';
+    let userMsg = `🎨 图像生成失败：${err.message || '未知错误'}`;
+    if (code === 'NO_BACKEND') {
+      userMsg = `🎨 图像生成暂不可用：\n${imageGenService.backendHelpText()}`;
+    } else if (code === 'EDIT_UNSUPPORTED') {
+      userMsg = `🎨 当前后端不支持图改图。请使用 Agnes 或 StepFun 后端。`;
+    } else if (code === 'NO_USABLE_KEY') {
+      userMsg = `🎨 图像生成 API 密钥已耗尽，请稍后再试。`;
+    }
+    return {
+      success: true, // chat endpoint stays 200 — the "failure" is in the answer text
+      answer: userMsg,
+      model: '图像生成',
+      timestamp: Date.now(),
+      imageError: code,
+    };
+  }
+}
 
 // AI chat endpoint - requires authentication to prevent resource abuse
 router.post('/chat', authMiddleware, async (req, res) => {
   try {
-    const { stockCode, analysisContext, question, tokens, useLocalModel, conversationHistory, agentResults } = req.body;
+    const {
+      stockCode,
+      analysisContext,
+      question,
+      tokens,
+      useLocalModel,
+      conversationHistory,
+      agentResults,
+      clientLocation,
+    } = req.body;
     const safeQuestion = typeof question === 'string' ? question.trim() : '';
     const mergedContext = { ...(analysisContext || {}) };
     const bareStockCode = /^(sh|sz)?\d{6}$/i.test(safeQuestion) ? safeQuestion : null;
@@ -22,12 +213,16 @@ router.post('/chat', authMiddleware, async (req, res) => {
     if (!safeQuestion) {
       return res.status(400).json({
         success: false,
-        message: '问题不能为空'
+        message: '问题不能为空',
       });
     }
-    
-    console.log('收到AI对话请求:', { stockCode: resolvedStockCode, question: safeQuestion, useLocalModel });
-    
+
+    console.log('收到AI对话请求:', {
+      stockCode: resolvedStockCode,
+      question: safeQuestion,
+      useLocalModel,
+    });
+
     // 快速响应问候语(不检查金融相关性)
     const q = safeQuestion.toLowerCase();
     if (q.includes('你好') || q.includes('您好') || q.includes('hello') || q.includes('hi')) {
@@ -35,7 +230,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
         '你好!欢迎使用小K 👋\n\n我是您的智能AI助手,擅长量化交易分析,也能帮您:\n• 解答各类知识问题\n• 编程与技术咨询\n• 数据分析与计算\n• 股票行情与策略分析\n\n有什么可以帮您的?',
         '您好!很高兴为您服务 😊\n\n我是小K,一个全能AI助手。量化分析是我的特长,同时也能帮您解答编程、知识、生活等各类问题。\n\n请告诉我您需要什么帮助!',
         '嗨!我是小K智能助手 🤖\n\n擅长:\n✓ 量化交易与技术分析\n✓ 编程开发与问题排查\n✓ 知识解答与信息搜索\n✓ 数据计算与分析\n\n有什么想问的?',
-        '你好呀!小K在线为您服务 ✨\n\n作为您的AI助手,我可以:\n• 分析股票行情与策略\n• 回答技术与编程问题\n• 提供知识咨询\n• 执行计算与数据处理\n\n有什么需要帮忙的吗?'
+        '你好呀!小K在线为您服务 ✨\n\n作为您的AI助手,我可以:\n• 分析股票行情与策略\n• 回答技术与编程问题\n• 提供知识咨询\n• 执行计算与数据处理\n\n有什么需要帮忙的吗?',
       ];
       const greeting = greetings[Math.floor(Math.random() * greetings.length)];
       // Record greeting interactions for training data
@@ -56,21 +251,46 @@ router.post('/chat', authMiddleware, async (req, res) => {
         success: true,
         answer: greeting,
         model: '小K智能助手',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
-    
+
+    // 自动检测图像生成意图（画图/绘图/生成图片等）
+    const imageIntent = detectImageGenIntent(safeQuestion);
+    if (imageIntent) {
+      console.log('[Chat] 检测到图像生成意图:', imageIntent, '| prompt:', safeQuestion);
+      const imageResult = await handleImageGeneration(safeQuestion);
+      try {
+        trainingData.recordInteraction({
+          userId: req.user?.id,
+          sessionId: req.body.sessionId,
+          messages: [{ role: 'user', content: safeQuestion }],
+          response: imageResult.answer,
+          model: imageResult.model,
+          intent: 'image_generate',
+          metadata: { source: 'web', adapter: 'imageGen', intentKeyword: imageIntent },
+        });
+      } catch (recordErr) {
+        console.error('[TrainingData] Record failed:', recordErr.message);
+      }
+      return res.json(imageResult);
+    }
+
     // Auto-detect bare stock code input and convert to a full analysis request
     if (bareStockCode) {
       try {
-        const result = await stockAnalysisEngine.chat(resolvedStockCode, mergedContext, safeQuestion);
+        const result = await stockAnalysisEngine.chat(
+          resolvedStockCode,
+          mergedContext,
+          safeQuestion
+        );
         return res.json({
           success: true,
           answer: result.answer,
           model: '小K智能助手',
           confidence: result.confidence,
           source: result.source,
-          timestamp: result.timestamp
+          timestamp: result.timestamp,
         });
       } catch (autoErr) {
         console.error('Auto stock code analysis failed:', autoErr);
@@ -80,7 +300,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
 
     // Non-finance questions are still answered (no longer restricted to finance-only)
     // Note: isFinanceRelated() function below is kept for potential future use but not enforced
-    
+
     // 使用小K金融量化助手(本地引擎)
     try {
       const result = await stockAnalysisEngine.chat(resolvedStockCode, mergedContext, safeQuestion);
@@ -104,16 +324,22 @@ router.post('/chat', authMiddleware, async (req, res) => {
         model: '小K智能助手',
         confidence: result.confidence,
         source: result.source,
-        timestamp: result.timestamp
+        timestamp: result.timestamp,
       });
     } catch (engineError) {
       console.error('小K引擎调用失败:', engineError);
     }
-    
+
     // 如果有Token,尝试使用云端AI
-    if (tokens && Object.values(tokens).some(t => t && t.trim())) {
+    if (tokens && Object.values(tokens).some((t) => t && t.trim())) {
       try {
-        const answer = await callCloudAI(resolvedStockCode, mergedContext, safeQuestion, tokens);
+        const answer = await callCloudAI(
+          resolvedStockCode,
+          mergedContext,
+          safeQuestion,
+          tokens,
+          clientLocation
+        );
         try {
           trainingData.recordInteraction({
             userId: req.user?.id,
@@ -131,28 +357,27 @@ router.post('/chat', authMiddleware, async (req, res) => {
           success: true,
           answer: answer,
           model: 'Cloud AI',
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       } catch (error) {
         console.error('云端AI调用失败:', error);
       }
     }
-    
+
     // 最后降级到预定义模式
     const answer = generatePredefinedAnswer(safeQuestion, mergedContext);
     res.json({
       success: true,
       answer: answer,
       model: '小K金融量化助手(简化模式)',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
-    
   } catch (error) {
     console.error('AI对话错误:', error);
     res.status(500).json({
       success: false,
       message: '对话服务暂时不可用',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -172,7 +397,7 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
 
@@ -181,11 +406,15 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
   // simulated-chunk loop keep pushing into a dead connection.
   let clientGone = false;
   const sendEvent = (data) => {
-    if (clientGone) return;
-    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {}
+    if (clientGone) {
+      return;
+    }
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {}
   };
 
-  const { question, stockCode, conversationHistory, tokens } = req.body;
+  const { question, stockCode, conversationHistory, tokens, clientLocation } = req.body;
   const safeQuestion = typeof question === 'string' ? question.trim() : '';
 
   if (!safeQuestion) {
@@ -200,7 +429,9 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
   const heartbeatTimer = setInterval(() => {
     try {
       sendEvent({ type: 'heartbeat', timestamp: Date.now() });
-    } catch { /* connection may be closed */ }
+    } catch {
+      /* connection may be closed */
+    }
   }, 15000);
 
   req.on('close', () => {
@@ -212,7 +443,13 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
     const gateway = require('../services/gateway/aiGateway');
 
     // Build system prompt for the conversation
-    const system = `You are XiaoK, an intelligent AI assistant specializing in quantitative trading analysis. Answer in the user's language. Be concise, professional, and provide actionable insights. When discussing investments, always include risk warnings.`;
+    let system = `You are XiaoK, an intelligent AI assistant specializing in quantitative trading analysis. Answer in the user's language. Be concise, professional, and provide actionable insights. When discussing investments, always include risk warnings.`;
+
+    // Append browser-authorized location (if valid) to the system prompt
+    const locationLine = formatClientLocation(clientLocation);
+    if (locationLine) {
+      system += `\n${locationLine}`;
+    }
 
     const messages = [];
     if (Array.isArray(conversationHistory)) {
@@ -234,7 +471,9 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
       preferredAdapter: req.body?.preferredAdapter || undefined,
       preferredModel: req.body?.preferredModel || undefined,
       onChunk: (chunk) => {
-        if (!chunk) return;
+        if (!chunk) {
+          return;
+        }
         // Forward gateway status/heartbeat/channel events to SSE
         if (chunk.type === 'status') {
           sendEvent({ type: 'status', text: chunk.text || '', timestamp: Date.now() });
@@ -247,6 +486,9 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
             request: chunk.request && typeof chunk.request === 'object' ? chunk.request : {},
             timestamp: Date.now(),
           });
+        } else if (chunk.type === 'thinking') {
+          // Forward AI reasoning deltas so the frontend can display the chain-of-thought.
+          sendEvent({ type: 'thinking_content', text: chunk.text || '', timestamp: Date.now() });
         }
       },
     });
@@ -262,10 +504,18 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
         deduplicated: true,
       });
     } else if (result.success && result.content) {
-      // Simulate streaming by chunking the completed response
+      // Simulate streaming by chunking the completed response.
+      // CHUNK_SIZE raised from 12 → 64: fewer SSE events means less frontend
+      // re-render pressure and lower backpressure overhead.
       const content = result.content;
-      const CHUNK_SIZE = 12; // characters per chunk
+      const CHUNK_SIZE = 64;
+      let chunkIndex = 0;
       for (let i = 0; i < content.length; i += CHUNK_SIZE) {
+        // Yield to the event loop every 8 chunks so a long synchronous loop
+        // never starves other I/O (heartbeat timer, client disconnect detection).
+        if (chunkIndex++ % 8 === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
         sendEvent({ type: 'chunk', content: content.slice(i, i + CHUNK_SIZE) });
       }
 
@@ -281,8 +531,12 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
       const engineResult = await stockAnalysisEngine.chat(stockCode, {}, safeQuestion);
       const fallbackContent = engineResult.answer || 'No response available';
 
-      const CHUNK_SIZE = 12;
+      const CHUNK_SIZE = 64;
+      let chunkIndex = 0;
       for (let i = 0; i < fallbackContent.length; i += CHUNK_SIZE) {
+        if (chunkIndex++ % 8 === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
         sendEvent({ type: 'chunk', content: fallbackContent.slice(i, i + CHUNK_SIZE) });
       }
 
@@ -304,11 +558,11 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
 });
 
 // 调用云端AI
-async function callCloudAI(stockCode, analysisContext, question, tokens) {
+async function callCloudAI(stockCode, analysisContext, question, tokens, clientLocation) {
   const axios = require('axios');
-  
+
   // 构建系统Prompt
-  const systemPrompt = `你是小K，一个智能AI助手，擅长量化交易分析，也能回答各类问题。
+  let systemPrompt = `你是小K，一个智能AI助手，擅长量化交易分析，也能回答各类问题。
 
 你的职责：
 1. 回答用户的各类问题，包括但不限于金融、编程、知识、生活等
@@ -328,20 +582,26 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
 - 不保证收益，不承诺回报
 - 投资建议仅供参考，不构成投资建议`;
 
+  // Append browser-authorized location (if valid) to the system prompt
+  const locationLine = formatClientLocation(clientLocation);
+  if (locationLine) {
+    systemPrompt += `\n${locationLine}`;
+  }
+
   // 构建用户Prompt
   let userPrompt = `股票代码：${stockCode}\n`;
   userPrompt += `投资建议：${analysisContext.recommendation}\n`;
   userPrompt += `置信度：${analysisContext.confidence}%\n\n`;
-  
+
   if (analysisContext.stockData) {
     userPrompt += `实时数据：\n`;
     userPrompt += `• 最新价：${analysisContext.stockData.latestPrice || '未知'}\n`;
     userPrompt += `• 涨跌幅：${analysisContext.stockData.changePercent || '未知'}%\n\n`;
   }
-  
+
   userPrompt += `智能体分析结果：\n`;
   if (analysisContext.agentResults) {
-    analysisContext.agentResults.forEach(agent => {
+    analysisContext.agentResults.forEach((agent) => {
       userPrompt += `\n【${agent.agentName}】（评分 ${agent.score}/10）\n`;
       userPrompt += `${agent.analysis}\n`;
       if (agent.keyFindings && agent.keyFindings.length > 0) {
@@ -349,7 +609,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
       }
     });
   }
-  
+
   userPrompt += `\n用户问题：${question}\n\n`;
   userPrompt += `请基于以上分析结果，用专业但易懂的语言回答用户的问题。回答要简洁明了，重点突出，并提供具体的操作建议。`;
 
@@ -365,21 +625,21 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
             model: MODELS.openaiDirect,
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
+              { role: 'user', content: userPrompt },
             ],
             temperature: 0.7,
-            max_tokens: 800
+            max_tokens: 800,
           },
           {
             headers: {
-              'Authorization': `Bearer ${tokens.openai}`,
-              'Content-Type': 'application/json'
+              Authorization: `Bearer ${tokens.openai}`,
+              'Content-Type': 'application/json',
             },
-            timeout: 15000
+            timeout: 15000,
           }
         );
         return response.data.choices[0].message.content;
-      }
+      },
     },
     {
       name: 'Claude',
@@ -390,21 +650,19 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
           {
             model: MODELS.anthropicDirect,
             max_tokens: 800,
-            messages: [
-              { role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }
-            ]
+            messages: [{ role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }],
           },
           {
             headers: {
               'x-api-key': tokens.anthropic,
               'anthropic-version': '2023-06-01',
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
             },
-            timeout: 15000
+            timeout: 15000,
           }
         );
         return response.data.content[0].text;
-      }
+      },
     },
     {
       name: 'Gemini',
@@ -413,19 +671,23 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
         const response = await axios.post(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${tokens.google}`,
           {
-            contents: [{
-              parts: [{
-                text: `${systemPrompt}\n\n${userPrompt}`
-              }]
-            }]
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `${systemPrompt}\n\n${userPrompt}`,
+                  },
+                ],
+              },
+            ],
           },
           {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 15000
+            timeout: 15000,
           }
         );
         return response.data.candidates[0].content.parts[0].text;
-      }
+      },
     },
     {
       name: '文心一言',
@@ -436,21 +698,19 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
           `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${tokens.baidu}&client_secret=${tokens.baiduSecret || tokens.baidu}`
         );
         const accessToken = tokenResponse.data.access_token;
-        
+
         const response = await axios.post(
           `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions?access_token=${accessToken}`,
           {
-            messages: [
-              { role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }
-            ]
+            messages: [{ role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }],
           },
           {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 15000
+            timeout: 15000,
           }
         );
         return response.data.result;
-      }
+      },
     },
     {
       name: '通义千问',
@@ -463,23 +723,23 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
             input: {
               messages: [
                 { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-              ]
+                { role: 'user', content: userPrompt },
+              ],
             },
             parameters: {
-              result_format: 'message'
-            }
+              result_format: 'message',
+            },
           },
           {
             headers: {
-              'Authorization': `Bearer ${tokens.alibaba}`,
-              'Content-Type': 'application/json'
+              Authorization: `Bearer ${tokens.alibaba}`,
+              'Content-Type': 'application/json',
             },
-            timeout: 15000
+            timeout: 15000,
           }
         );
         return response.data.output.choices[0].message.content;
-      }
+      },
     },
     {
       name: '智谱AI',
@@ -489,27 +749,31 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
         // KHY_GLM_LATEST_MODEL gate is on; byte-reverts to the legacy glm-4
         // MODELS.zhipuDirect when off / unavailable).
         let _zhipuModel = MODELS.zhipuDirect;
-        try { _zhipuModel = require('../services/zhipuGlmModel').defaultZhipuModel() || _zhipuModel; } catch { /* fail-soft: keep legacy default */ }
+        try {
+          _zhipuModel = require('../services/zhipuGlmModel').defaultZhipuModel() || _zhipuModel;
+        } catch {
+          /* fail-soft: keep legacy default */
+        }
         const response = await axios.post(
           'https://open.bigmodel.cn/api/paas/v4/chat/completions',
           {
             model: _zhipuModel,
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ]
+              { role: 'user', content: userPrompt },
+            ],
           },
           {
             headers: {
-              'Authorization': `Bearer ${tokens.zhipu}`,
-              'Content-Type': 'application/json'
+              Authorization: `Bearer ${tokens.zhipu}`,
+              'Content-Type': 'application/json',
             },
-            timeout: 15000
+            timeout: 15000,
           }
         );
         return response.data.choices[0].message.content;
-      }
-    }
+      },
+    },
   ];
 
   // 依次尝试可用的提供商
@@ -530,44 +794,42 @@ async function callCloudAI(stockCode, analysisContext, question, tokens) {
   throw new Error('所有AI提供商均不可用，请检查Token配置');
 }
 
-
-
 // 生成预定义答案(简化模式)
 function generatePredefinedAnswer(question, analysis) {
   const q = question.toLowerCase();
-  
+
   // 关于推荐的问题
   if (q.includes('推荐') || q.includes('建议') || q.includes('买') || q.includes('卖')) {
     return `📊 根据分析结果:\n\n建议: ${analysis.recommendation}\n置信度: ${analysis.confidence}%\n\n${analysis.summary}\n\n⚠️ 投资有风险,建议结合自身情况谨慎决策。`;
   }
-  
+
   // 关于风险的问题
   if (q.includes('风险') || q.includes('危险') || q.includes('安全')) {
-    const riskAgent = analysis.agentResults?.find(a => a.agentId === 'risk');
+    const riskAgent = analysis.agentResults?.find((a) => a.agentId === 'risk');
     if (riskAgent) {
       return `⚠️ 风险评估:\n\n${riskAgent.analysis}\n\n建议:\n• 设置止损位\n• 控制仓位\n• 分散投资`;
     }
     return `⚠️ 风险提示:\n\n当前置信度: ${analysis.confidence}%\n\n建议:\n• 谨慎操作,注意风险控制\n• 不要满仓操作\n• 设置合理的止损位`;
   }
-  
+
   // 关于技术面的问题
   if (q.includes('技术') || q.includes('指标') || q.includes('趋势')) {
-    const marketAgent = analysis.agentResults?.find(a => a.agentId === 'market');
+    const marketAgent = analysis.agentResults?.find((a) => a.agentId === 'market');
     if (marketAgent) {
       return `📈 技术分析:\n\n${marketAgent.analysis}\n\n建议查看完整的技术指标报告了解更多详情。`;
     }
     return `📈 技术分析:\n\n请查看市场分析师提供的详细技术分析报告,包含MACD、KDJ、RSI等多项指标。`;
   }
-  
+
   // 关于基本面的问题
   if (q.includes('基本面') || q.includes('财务') || q.includes('估值')) {
-    const fundAgent = analysis.agentResults?.find(a => a.agentId === 'fundamentals');
+    const fundAgent = analysis.agentResults?.find((a) => a.agentId === 'fundamentals');
     if (fundAgent) {
       return `💼 基本面分析:\n\n${fundAgent.analysis}\n\n建议关注公司财报和行业动态。`;
     }
     return `💼 基本面分析:\n\n请查看基本面分析师提供的详细财务分析报告,包含PE、PB、ROE等估值指标。`;
   }
-  
+
   // 默认回答
   return `关于 ${analysis.stockCode} 的分析:\n\n${analysis.summary}\n\n当前建议: ${analysis.recommendation}\n置信度: ${analysis.confidence}%\n\n💡 提示: 查看完整分析报告可了解更多详情。`;
 }

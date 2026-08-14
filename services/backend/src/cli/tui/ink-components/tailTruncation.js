@@ -24,15 +24,21 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_TAIL_TRUNCATION_FAST;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
 // 与两处调用点**完全一致**的可见谓词:tool 恒可见;text 仅当(归一化后)非空。
 // norm 可选(惰性归一化 normalizer);缺省则读 e.text 原文。
 function _isVisible(e, norm) {
-  if (!e) return false;
-  if (e.type === 'tool') return true;
+  if (!e) {
+    return false;
+  }
+  if (e.type === 'tool') {
+    return true;
+  }
   if (e.type === 'text') {
     const t = norm ? norm(e.text) : e.text;
     return !!t;
@@ -50,13 +56,19 @@ function _isVisible(e, norm) {
  */
 function hasVisibleAbove(arr, stopIndex, norm) {
   try {
-    if (!Array.isArray(arr)) return false;
+    if (!Array.isArray(arr)) {
+      return false;
+    }
     let j = Math.min(Number(stopIndex), arr.length - 1);
     for (; j >= 0; j--) {
-      if (_isVisible(arr[j], norm)) return true;
+      if (_isVisible(arr[j], norm)) {
+        return true;
+      }
     }
     return false;
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -69,7 +81,9 @@ function hasVisibleAbove(arr, stopIndex, norm) {
  * @returns {boolean}
  */
 function resolveTailTruncated(innerCutTruncated, stopIndex, arr, norm) {
-  if (innerCutTruncated) return true;
+  if (innerCutTruncated) {
+    return true;
+  }
   return hasVisibleAbove(arr, stopIndex, norm);
 }
 

@@ -19,7 +19,9 @@
  */
 
 const os = require('os');
+
 const chalk = require('chalk');
+
 const { printError, printInfo, printSuccess, printWarn } = require('../formatters');
 
 const DEFAULT_ENTRY_PATH = '/admin/ai-gateway';
@@ -37,18 +39,19 @@ function getLanIPv4() {
     for (const item of list || []) {
       // Node <18 reports family 'IPv4'; Node >=18 may report numeric 4.
       const isV4 = item.family === 'IPv4' || item.family === 4;
-      if (!isV4 || item.internal) continue;
+      if (!isV4 || item.internal) {
+        continue;
+      }
       candidates.push({ name, address: item.address });
     }
   }
   const isPrivate = (ip) =>
-    /^10\./.test(ip) ||
-    /^192\.168\./.test(ip) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip);
+    /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip);
   const isVirtual = (name) =>
-    /^(docker|br-|veth|virbr|vmnet|vboxnet|tailscale|zt|utun|tun|tap|vEthernet|Loopback)/i.test(name);
-  const score = (c) =>
-    (isPrivate(c.address) ? 2 : 0) + (isVirtual(c.name) ? 0 : 1);
+    /^(docker|br-|veth|virbr|vmnet|vboxnet|tailscale|zt|utun|tun|tap|vEthernet|Loopback)/i.test(
+      name
+    );
+  const score = (c) => (isPrivate(c.address) ? 2 : 0) + (isVirtual(c.name) ? 0 : 1);
   candidates.sort((a, b) => score(b) - score(a));
   return { best: candidates.length ? candidates[0].address : null, candidates };
 }
@@ -65,23 +68,32 @@ function resolveTargetUrl(tokens, options, lanIp) {
   const arg = (tokens.find(Boolean) || '').trim();
 
   // 1) Full URL passed through verbatim.
-  if (/^https?:\/\//i.test(arg)) return arg;
+  if (/^https?:\/\//i.test(arg)) {
+    return arg;
+  }
 
   // 2) host:port (e.g. 192.168.1.9:8080)
-  if (/^[\w.-]+:\d{2,5}$/.test(arg)) return `http://${arg}`;
+  if (/^[\w.-]+:\d{2,5}$/.test(arg)) {
+    return `http://${arg}`;
+  }
 
-  if (!lanIp) return null;
+  if (!lanIp) {
+    return null;
+  }
 
   // 3) bare port → LAN ip + that port (no entry path; user targets a raw server)
-  if (/^\d{2,5}$/.test(arg)) return `http://${lanIp}:${arg}`;
+  if (/^\d{2,5}$/.test(arg)) {
+    return `http://${lanIp}:${arg}`;
+  }
 
   // 4) default → management server port + entry path
   let port;
   try {
     const mgmt = require('../../services/aiManagementServer');
-    port = (mgmt.isRunning && mgmt.isRunning() && mgmt.getPort)
-      ? mgmt.getPort()
-      : (parseInt(process.env.AI_MGMT_PORT, 10) || 9090);
+    port =
+      mgmt.isRunning && mgmt.isRunning() && mgmt.getPort
+        ? mgmt.getPort()
+        : parseInt(process.env.AI_MGMT_PORT, 10) || 9090;
   } catch {
     port = parseInt(process.env.AI_MGMT_PORT, 10) || 9090;
   }
@@ -114,7 +126,9 @@ async function renderQr(url) {
  */
 function printAuthHint(url) {
   // Only the default management entry path carries the admin UI we gate.
-  if (!url.includes(DEFAULT_ENTRY_PATH)) return;
+  if (!url.includes(DEFAULT_ENTRY_PATH)) {
+    return;
+  }
 
   const hasToken = !!String(process.env.AI_MGMT_AUTH_TOKEN || '').trim();
   const hasJwt = !!String(process.env.JWT_SECRET || '').trim();
@@ -170,8 +184,13 @@ async function handleMobile(subCommand, args = [], options = {}) {
   printInfo('目标服务需监听 0.0.0.0（AI 管理服务默认如此）；若未启动，先运行 khy app / 启动后端。');
   printAuthHint(url);
   if (candidates.length > 1) {
-    const others = candidates.slice(1).map((c) => `${c.address} (${c.name})`).join(', ');
-    printWarn(`检测到多个网卡，已选用 ${candidates[0].address} (${candidates[0].name})。其他候选：${others}`);
+    const others = candidates
+      .slice(1)
+      .map((c) => `${c.address} (${c.name})`)
+      .join(', ');
+    printWarn(
+      `检测到多个网卡，已选用 ${candidates[0].address} (${candidates[0].name})。其他候选：${others}`
+    );
     printInfo('如选错网卡，可指定：khy mobile <主机:端口> 或 khy mobile <完整URL>');
   }
   return true;

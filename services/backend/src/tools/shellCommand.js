@@ -1,63 +1,95 @@
-const { defineTool } = require('./_baseTool');
 const { execSync } = require('child_process');
+
+const { spawnWithIdleTimeout, smartDecodeWinOutput } = require('../utils/spawnWithIdleTimeout');
+
+const { defineTool } = require('./_baseTool');
 // 非阻塞执行垫片:idle-timeout 关闭时的 execSync 回退路径会同步阻塞事件循环(spinner停/ESC死)。
 // 门控开时改用异步 exec(未指定 encoding 时返 Buffer,与 execSync 同形);门控关逐字节回退 execSync。
 const _execCompat = require('./_execCompat');
+const { backgroundShells: _backgroundShells } = require('./backgroundShellRegistry');
+const {
+  isGuiApp,
+  spawnGuiApp,
+  getShellConfiguration,
+  normalizePathEnvForWindows,
+} = require('./platformUtils');
 const { isSearchOrReadCommand, getBaseCommand } = require('./shellClassifier');
-const { isGuiApp, spawnGuiApp, getShellConfiguration, normalizePathEnvForWindows } = require('./platformUtils');
-const { spawnWithIdleTimeout, smartDecodeWinOutput } = require('../utils/spawnWithIdleTimeout');
+
 // Windows 命令翻译（cmd / Git Bash 兜底）抽到兄弟纯模块，便于单测与单一真源。
 // forceWindowsUtf8 / patchPowerShellRecurse 同样迁入该模块（纯函数，便于单测）。
+const { composeShellError: _composeShellError } = require('./shellDiagnostics');
 const {
   patchWinCommand: _patchWinCommand,
   patchGitBashCommand: _patchGitBashCommand,
   forceWindowsUtf8: _forceWindowsUtf8,
   patchPowerShellRecurse: _patchPowerShellRecurse,
 } = require('./winCommandTranslate');
+
 // 失败的错误映射（永不塌缩成裸退出码）抽到平台无关的兄弟纯模块。
-const { composeShellError: _composeShellError } = require('./shellDiagnostics');
 // 退出码语义重判(对齐 CC commandSemantics.interpretCommandResult):grep/rg 无匹配
 // (exit 1)、diff 有差异、test/[ 条件假、find 部分目录不可访问等非错误信息性退出码,
 // 不再误判为命令失败。门控 KHY_SHELL_EXIT_SEMANTICS 默认开,关/异常字节回退旧语义。
 let _interpretShellExit;
-try { ({ interpretShellExit: _interpretShellExit } = require('./shellExitSemantics')); }
-catch { _interpretShellExit = null; }
+try {
+  ({ interpretShellExit: _interpretShellExit } = require('./shellExitSemantics'));
+} catch {
+  _interpretShellExit = null;
+}
 // 成功但零输出时的确定性说明(与 diagnoseEmptyFailure 对称:那治失败+空,这治成功+空)。
 // `... | grep x | head` 这类过滤器收尾的管道 exit 0 但 stdout 空 → 裸「(无输出)」令用户困惑
 // (goal 截图)。门控 KHY_SHELL_EMPTY_OUTPUT_NOTE 默认开,关/异常返 null → 保持空串逐字节回退。
 let _buildEmptyOutputNote;
-try { ({ buildEmptyOutputNote: _buildEmptyOutputNote } = require('./shellEmptyOutputNote')); }
-catch { _buildEmptyOutputNote = null; }
+try {
+  ({ buildEmptyOutputNote: _buildEmptyOutputNote } = require('./shellEmptyOutputNote'));
+} catch {
+  _buildEmptyOutputNote = null;
+}
 // 「禁误用 dedicated tool / 许可 echo·head·tail 透明性命令」文案的单一真源（纯叶子，门控 KHY_SHELL_TRANSPARENCY）。
-const { buildToolAvoidanceBlock: _buildToolAvoidanceBlock } = require('../constants/shellTransparency');
+const {
+  buildToolAvoidanceBlock: _buildToolAvoidanceBlock,
+} = require('../constants/shellTransparency');
 let _gitTracker;
-try { _gitTracker = require('../services/gitOperationTracker'); } catch { _gitTracker = null; }
+try {
+  _gitTracker = require('../services/gitOperationTracker');
+} catch {
+  _gitTracker = null;
+}
 let _adaptiveOutput;
-try { _adaptiveOutput = require('../services/adaptiveOutput'); } catch { _adaptiveOutput = null; }
+try {
+  _adaptiveOutput = require('../services/adaptiveOutput');
+} catch {
+  _adaptiveOutput = null;
+}
 
 const MAX_OUTPUT = 200 * 1024; // 200 KB
 
 // Shared registry for run_in_background dispatch. Kept in a separate module
 // because defineTool() freezes the returned tool object (see
 // backgroundShellRegistry.js for the rationale).
-const { backgroundShells: _backgroundShells } = require('./backgroundShellRegistry');
+
 // RTK 省 token 模式:执行前把命令改写成 rtk 等价命令(单一真源 services/rtkMode)。
 // 缺二进制/关闭/失败全部静默回落原生命令——零破坏。见 rtkMode / rtkInstaller。
 const _rtkMode = require('../services/rtkMode');
 const _rtkInstaller = require('../services/rtkInstaller');
 
 function _smartTruncate(text, maxLen) {
-  if (!text || text.length <= maxLen) return text;
+  if (!text || text.length <= maxLen) {
+    return text;
+  }
   const HEAD = Math.min(2048, Math.floor(maxLen * 0.15));
   const TAIL = maxLen - HEAD - 100;
   const omitted = text.length - HEAD - TAIL;
-  return text.slice(0, HEAD)
-    + `\n\n... [${omitted} chars omitted — head+tail preserved] ...\n\n`
-    + text.slice(-TAIL);
+  return (
+    text.slice(0, HEAD) +
+    `\n\n... [${omitted} chars omitted — head+tail preserved] ...\n\n` +
+    text.slice(-TAIL)
+  );
 }
 
-const BUILD_CMD_RE = /\b(mvn|gradle|gradlew|npm\s+run\s+build|npx\s+tsc|cargo\s+build|go\s+build|make|cmake|dotnet\s+build|msbuild)\b/i;
-const BUILD_ERROR_LINE_RE = /\b(ERROR|FAILURE|FAILED|error\[|error:|cannot find|cannot resolve|compilation failed|BUILD FAILED|exception|NoClassDefFoundError|ClassNotFoundException|NullPointerException|SyntaxError|TypeError|ReferenceError)\b/i;
+const BUILD_CMD_RE =
+  /\b(mvn|gradle|gradlew|npm\s+run\s+build|npx\s+tsc|cargo\s+build|go\s+build|make|cmake|dotnet\s+build|msbuild)\b/i;
+const BUILD_ERROR_LINE_RE =
+  /\b(ERROR|FAILURE|FAILED|error\[|error:|cannot find|cannot resolve|compilation failed|BUILD FAILED|exception|NoClassDefFoundError|ClassNotFoundException|NullPointerException|SyntaxError|TypeError|ReferenceError)\b/i;
 
 // ── Git 破坏性命令警告（对标 CC destructiveCommandWarning）─────────
 const _GIT_DESTRUCTIVE_PATTERNS = [
@@ -68,7 +100,10 @@ const _GIT_DESTRUCTIVE_PATTERNS = [
   { re: /\bgit\s+restore\s+\.\s*$/, warn: '⚠ git restore . — 可能丢弃工作区所有更改' },
   { re: /\bgit\s+stash\s+(drop|clear)\b/, warn: '⚠ git stash drop/clear — 可能永久删除暂存的更改' },
   { re: /\bgit\s+branch\s+-D\b/, warn: '⚠ git branch -D — 可能强制删除分支' },
-  { re: /\bgit\s+(commit|push|merge)\s+.*--no-verify\b/, warn: '⚠ --no-verify — 可能跳过安全钩子检查' },
+  {
+    re: /\bgit\s+(commit|push|merge)\s+.*--no-verify\b/,
+    warn: '⚠ --no-verify — 可能跳过安全钩子检查',
+  },
   { re: /\bgit\s+commit\s+.*--amend\b/, warn: '⚠ git commit --amend — 可能重写最近一次提交' },
 ];
 
@@ -77,10 +112,14 @@ const _GIT_DESTRUCTIVE_PATTERNS = [
  * 不阻止执行，仅在结果中附加提示。
  */
 function _detectGitDestructive(command) {
-  if (!command) return [];
+  if (!command) {
+    return [];
+  }
   const warnings = [];
   for (const { re, warn } of _GIT_DESTRUCTIVE_PATTERNS) {
-    if (re.test(command)) warnings.push(warn);
+    if (re.test(command)) {
+      warnings.push(warn);
+    }
   }
   return warnings;
 }
@@ -103,7 +142,9 @@ function _detectGitDestructive(command) {
 function _parseCommitMessage(command) {
   // 找到 -m 后面的引号和消息体
   const mFlag = command.match(/-m\s+(["'])/);
-  if (!mFlag) return null;
+  if (!mFlag) {
+    return null;
+  }
   const quote = mFlag[1];
   const startIdx = mFlag.index + mFlag[0].length; // 引号后第一个字符
   // 找到匹配的关闭引号（不是转义的）
@@ -114,7 +155,9 @@ function _parseCommitMessage(command) {
       break;
     }
   }
-  if (endIdx === -1) return null; // 未闭合引号，放行
+  if (endIdx === -1) {
+    return null;
+  } // 未闭合引号，放行
   return {
     message: command.slice(startIdx, endIdx),
     trailing: command.slice(endIdx + 1),
@@ -122,13 +165,21 @@ function _parseCommitMessage(command) {
 }
 
 function _detectCommitInjection(command) {
-  if (!command) return null;
+  if (!command) {
+    return null;
+  }
   // 只检查包含 git commit -m 的命令
-  if (!/\bgit\s+.*\bcommit\b/.test(command) && !/\bgit\s+commit\b/.test(command)) return null;
-  if (!/-m\s/.test(command)) return null;
+  if (!/\bgit\s+.*\bcommit\b/.test(command) && !/\bgit\s+commit\b/.test(command)) {
+    return null;
+  }
+  if (!/-m\s/.test(command)) {
+    return null;
+  }
 
   const parsed = _parseCommitMessage(command);
-  if (!parsed) return null; // 无法解析 — 保守放行
+  if (!parsed) {
+    return null;
+  } // 无法解析 — 保守放行
 
   const { message, trailing } = parsed;
 
@@ -143,9 +194,13 @@ function _detectCommitInjection(command) {
     // 但禁止直接裸 shell 注入
     const afterQuote = trailing.trim();
     // 如果是 && git ... 或 ; git ... 这类链式 git 命令，放行
-    if (/^(&&|\|\||;)\s*git\s/.test(afterQuote)) return null;
+    if (/^(&&|\|\||;)\s*git\s/.test(afterQuote)) {
+      return null;
+    }
     // 如果是 && echo / && printf 等无害命令，放行
-    if (/^(&&|\|\||;)\s*(echo|printf|true|:)\b/.test(afterQuote)) return null;
+    if (/^(&&|\|\||;)\s*(echo|printf|true|:)\b/.test(afterQuote)) {
+      return null;
+    }
     return '🛑 Git commit -m 引号关闭后包含 shell 元字符，已阻止执行以防止命令注入。请确保 commit message 正确闭合且后续命令安全。';
   }
 
@@ -153,8 +208,12 @@ function _detectCommitInjection(command) {
 }
 
 function _extractBuildErrorSummary(command, fullOutput) {
-  if (!command || !fullOutput) return null;
-  if (!BUILD_CMD_RE.test(command)) return null;
+  if (!command || !fullOutput) {
+    return null;
+  }
+  if (!BUILD_CMD_RE.test(command)) {
+    return null;
+  }
   const lines = fullOutput.split('\n');
   const errorLines = [];
   for (const line of lines) {
@@ -163,11 +222,21 @@ function _extractBuildErrorSummary(command, fullOutput) {
       if (trimmed.length > 0 && trimmed.length < 500) {
         errorLines.push(trimmed);
       }
-      if (errorLines.length >= 30) break;
+      if (errorLines.length >= 30) {
+        break;
+      }
     }
   }
-  if (errorLines.length === 0) return null;
-  return '\n\n--- Build Errors Summary (' + errorLines.length + ' lines) ---\n' + errorLines.join('\n') + '\n---';
+  if (errorLines.length === 0) {
+    return null;
+  }
+  return (
+    '\n\n--- Build Errors Summary (' +
+    errorLines.length +
+    ' lines) ---\n' +
+    errorLines.join('\n') +
+    '\n---'
+  );
 }
 
 /**
@@ -234,30 +303,41 @@ ${_multiCommandBlock()}
  - Confirm with user before running destructive commands on shared systems.`,
   category: 'execution',
   risk: 'critical',
+  searchHint: 'shell command bash terminal cmd run execute 执行命令 终端 命令行',
 
   // Dynamic: read-only if the command is a search/read/list pipeline
   isReadOnly: (input) => {
-    if (!input?.command) return false;
+    if (!input?.command) {
+      return false;
+    }
     const { isSearch, isRead, isList } = isSearchOrReadCommand(input.command);
     return isSearch || isRead || isList;
   },
 
   isDestructive: (input) => {
-    if (!input?.command) return false;
+    if (!input?.command) {
+      return false;
+    }
     // Filesystem destructive patterns
-    if (/\b(rm\s+-rf|rm\s+-r|mkfs|dd\s+if=|format\s|fdisk|wipefs|shred)\b/i.test(input.command)) return true;
+    if (/\b(rm\s+-rf|rm\s+-r|mkfs|dd\s+if=|format\s|fdisk|wipefs|shred)\b/i.test(input.command)) {
+      return true;
+    }
     // Git destructive patterns
     return _detectGitDestructive(input.command).length > 0;
   },
   // Dynamic: read-only shell commands (ls, git status, grep, etc.) are safe for parallel execution
   isConcurrencySafe: (input) => {
-    if (!input?.command) return false;
+    if (!input?.command) {
+      return false;
+    }
     const { isSearch, isRead, isList } = isSearchOrReadCommand(input.command);
     return isSearch || isRead || isList;
   },
 
   // Chapter 5 additions
-  maxResultSizeChars: 50000,
+  // Command output beyond this is persisted to disk with an inline preview
+  // (30K chars keeps large build/test logs from flooding the context window).
+  maxResultSizeChars: 30000,
 
   // Clamp an over-max timeout/idleTimeout to the cap BEFORE schema validation
   // instead of hard-rejecting it. A weak model that sets timeout=600000 (e.g.
@@ -276,27 +356,52 @@ ${_multiCommandBlock()}
   },
 
   inputSchema: {
-    command: { type: 'string', required: true, description: 'Shell command to execute' },
-    cwd: { type: 'string', required: false, description: 'Working directory' },
-    timeout: { type: 'number', required: false, max: 60000, description: 'Timeout in ms (max 60000)' },
+    command: {
+      type: 'string',
+      required: true,
+      description:
+        'Shell command line to execute, e.g. "npm test". Quote paths containing spaces with double quotes.',
+      example: 'npm test',
+    },
+    cwd: {
+      type: 'string',
+      required: false,
+      description:
+        'Working directory for the command, relative to CWD or absolute (default: current working directory).',
+      example: 'services/backend',
+    },
+    timeout: {
+      type: 'number',
+      required: false,
+      max: 60000,
+      description:
+        'TOTAL wall-clock limit in ms: the command is killed when this elapses regardless of output (default: 60000, max 60000; higher values are clamped).',
+      example: 30000,
+    },
     idleTimeout: {
       type: 'number',
       required: false,
-      description: 'Optional idle (no-output) timeout in ms. The command is killed if it produces no output for this long, '
-        + 'even if the total timeout has not elapsed. Use for commands that may hang silently (network calls, prompts). '
-        + 'Defaults to the total timeout when omitted.',
+      description:
+        'IDLE (no-output) limit in ms, distinct from timeout: the command is killed if it produces no output for this long even if the total timeout has not elapsed (default: same as timeout). Use for commands that may hang silently (network calls, prompts).',
+      example: 15000,
     },
     run_in_background: {
       type: 'boolean',
       required: false,
-      description: 'Run the command detached and return immediately. Use for slow operations '
-        + '(installs, builds, long test suites, dev servers). Completion is reported later via a '
-        + '<task_notification> block — do NOT poll.',
+      description:
+        'Run the command detached and return immediately (default: false). Use for slow operations ' +
+        '(installs, builds, long test suites, dev servers). Completion is reported later via a ' +
+        '<task_notification> block — do NOT poll.',
+      example: true,
     },
   },
 
   async validateInput(input) {
-    const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+    const {
+      validateNotDevicePath,
+      validateNotUNCPath,
+      composeValidations,
+    } = require('./inputValidators');
 
     // ── Git commit 注入防护 ─────────────────────────────────────────
     if (input.command) {
@@ -312,32 +417,34 @@ ${_multiCommandBlock()}
       for (const token of tokens) {
         if (token.startsWith('/dev/')) {
           const devCheck = validateNotDevicePath(token);
-          if (!devCheck.valid) return devCheck;
+          if (!devCheck.valid) {
+            return devCheck;
+          }
         }
       }
     }
 
     // Check working directory
     if (input.cwd) {
-      return composeValidations(
-        validateNotUNCPath(input.cwd),
-      );
+      return composeValidations(validateNotUNCPath(input.cwd));
     }
 
     return { valid: true };
   },
 
   getActivityDescription(input) {
-    if (!input?.command) return '执行 Shell 命令';
+    if (!input?.command) {
+      return '执行 Shell 命令';
+    }
     const base = getBaseCommand(input.command);
-    const short = input.command.length > 60
-      ? input.command.slice(0, 57) + '...'
-      : input.command;
+    const short = input.command.length > 60 ? input.command.slice(0, 57) + '...' : input.command;
     return `运行命令：${short}`;
   },
 
   getToolUseSummary(input) {
-    if (!input?.command) return null;
+    if (!input?.command) {
+      return null;
+    }
     return `Shell：${input.command.slice(0, 80)}`;
   },
 
@@ -352,7 +459,9 @@ ${_multiCommandBlock()}
             warnings: gitWarnings,
             message: gitWarnings.join('\n'),
           });
-        } catch { /* non-critical */ }
+        } catch {
+          /* non-critical */
+        }
       }
 
       const cwd = params.cwd || process.env.KHYQUANT_CWD || process.cwd();
@@ -375,7 +484,9 @@ ${_multiCommandBlock()}
           } else if (_rtkMode.autoInstallEnabled()) {
             _rtkInstaller.kickoff(); // 后台安装,绝不阻塞本回合
           }
-        } catch { /* 非关键:任何异常都回落原生命令 */ }
+        } catch {
+          /* 非关键:任何异常都回落原生命令 */
+        }
       }
 
       // Per-call timeout > hardware-derived default (KHY_SHELL_TIMEOUT_MS, set by
@@ -403,8 +514,8 @@ ${_multiCommandBlock()}
         if (rec.patched) {
           params = { ...params, command: rec.command };
           _shellAdvisories.push(
-            '已自动加 -Force -ErrorAction SilentlyContinue 以跳过无权限子目录'
-            + '（计数已成功；逐条 access-denied 被 SilentlyContinue 抑制，如需逐条错误请显式指定 -ErrorAction）。'
+            '已自动加 -Force -ErrorAction SilentlyContinue 以跳过无权限子目录' +
+              '（计数已成功；逐条 access-denied 被 SilentlyContinue 抑制，如需逐条错误请显式指定 -ErrorAction）。'
           );
         }
       }
@@ -427,7 +538,10 @@ ${_multiCommandBlock()}
       // child shell parses and emits text as UTF-8 instead of the legacy OEM code page.
       // `execCommand` is what we actually spawn; `forcedEnc` tells the decoder how to
       // read the child output. ASCII-only commands are returned unchanged (zero regression).
-      const { command: execCommand, outputEncoding: forcedEnc } = _forceWindowsUtf8(shellCfg, params.command);
+      const { command: execCommand, outputEncoding: forcedEnc } = _forceWindowsUtf8(
+        shellCfg,
+        params.command
+      );
 
       // GUI apps: launch in background (detached), cross-platform
       if (isGuiApp(baseCmd)) {
@@ -441,18 +555,28 @@ ${_multiCommandBlock()}
       // by the tool-use loop — no polling, no blocking. Same spawn machinery as
       // the foreground path, just fire-and-forget with output capped.
       if (params.run_in_background === true) {
-        const traceCtx = (context && context.traceContext) ? context.traceContext : {};
+        const traceCtx = context && context.traceContext ? context.traceContext : {};
         let bgEnv = {
           ...process.env,
           ...(traceCtx && typeof traceCtx === 'object' ? traceCtx.env || {} : {}),
         };
-        if (shellCfg.shell !== 'cmd') bgEnv = normalizePathEnvForWindows(bgEnv);
+        if (shellCfg.shell !== 'cmd') {
+          bgEnv = normalizePathEnvForWindows(bgEnv);
+        }
         const bgIdleMs = Math.max(
           1000,
-          parseInt(String(params.idleTimeout || process.env.KHY_SHELL_IDLE_TIMEOUT_MS || timeout), 10) || timeout
+          parseInt(
+            String(params.idleTimeout || process.env.KHY_SHELL_IDLE_TIMEOUT_MS || timeout),
+            10
+          ) || timeout
         );
         const bgId = `bgsh-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const entry = { status: 'running', command: params.command, startedAt: Date.now(), kind: 'shell' };
+        const entry = {
+          status: 'running',
+          command: params.command,
+          startedAt: Date.now(),
+          kind: 'shell',
+        };
         _backgroundShells.set(bgId, entry);
 
         spawnWithIdleTimeout(shellCfg.executable, [...shellCfg.argsPrefix, execCommand], {
@@ -463,21 +587,38 @@ ${_multiCommandBlock()}
           outputEncoding: forcedEnc,
           // Retain the child so KillShell can terminate a still-running bg command.
           // Additive: default path unaffected when onChild is absent.
-          onChild: (child) => { entry.child = child; entry.pid = child && child.pid; },
-        }).then((result) => {
-          let merged = `${result.stdout || ''}${result.stderr ? `\n${result.stderr}` : ''}`;
-          if (_rtkRouted) merged = _rtkMode.stripRtkMeta(merged);
-          if (merged && merged.length > MAX_OUTPUT) merged = _smartTruncate(merged, MAX_OUTPUT);
-          entry.status = result.code === 0 ? 'completed' : 'failed';
-          entry.result = { output: merged, exitCode: result.code };
-          if (result.code !== 0) entry.error = _composeShellError(result.code, merged, params.command);
-          if (_gitTracker) {
-            try { _gitTracker.trackFromShellOutput(params.command, merged); } catch { /* non-critical */ }
-          }
-        }).catch((err) => {
-          entry.status = 'failed';
-          entry.error = String(err && err.message ? err.message : err || 'background shell failed');
-        });
+          onChild: (child) => {
+            entry.child = child;
+            entry.pid = child && child.pid;
+          },
+        })
+          .then((result) => {
+            let merged = `${result.stdout || ''}${result.stderr ? `\n${result.stderr}` : ''}`;
+            if (_rtkRouted) {
+              merged = _rtkMode.stripRtkMeta(merged);
+            }
+            if (merged && merged.length > MAX_OUTPUT) {
+              merged = _smartTruncate(merged, MAX_OUTPUT);
+            }
+            entry.status = result.code === 0 ? 'completed' : 'failed';
+            entry.result = { output: merged, exitCode: result.code };
+            if (result.code !== 0) {
+              entry.error = _composeShellError(result.code, merged, params.command);
+            }
+            if (_gitTracker) {
+              try {
+                _gitTracker.trackFromShellOutput(params.command, merged);
+              } catch {
+                /* non-critical */
+              }
+            }
+          })
+          .catch((err) => {
+            entry.status = 'failed';
+            entry.error = String(
+              err && err.message ? err.message : err || 'background shell failed'
+            );
+          });
 
         return {
           success: true,
@@ -490,7 +631,8 @@ ${_multiCommandBlock()}
 
       // Activity-based idle timeout for potentially long-running shell commands.
       // If the command keeps producing output, it stays alive (no fixed wall-clock kill).
-      const idleTimeoutEnabled = String(process.env.KHY_SHELL_IDLE_TIMEOUT_ENABLED || 'true').toLowerCase() !== 'false';
+      const idleTimeoutEnabled =
+        String(process.env.KHY_SHELL_IDLE_TIMEOUT_ENABLED || 'true').toLowerCase() !== 'false';
       if (idleTimeoutEnabled) {
         const idleTimeoutMs = Math.max(
           1000,
@@ -499,14 +641,16 @@ ${_multiCommandBlock()}
             10
           ) || timeout
         );
-        const traceCtx = (context && context.traceContext) ? context.traceContext : {};
+        const traceCtx = context && context.traceContext ? context.traceContext : {};
         let spawnEnv = {
           ...process.env,
           ...(traceCtx && typeof traceCtx === 'object' ? traceCtx.env || {} : {}),
         };
         // PowerShell / Git Bash are sensitive to case-variant PATH/Path/path keys
         // that cmd.exe tolerates; canonicalize before spawning a non-cmd shell.
-        if (shellCfg.shell !== 'cmd') spawnEnv = normalizePathEnvForWindows(spawnEnv);
+        if (shellCfg.shell !== 'cmd') {
+          spawnEnv = normalizePathEnvForWindows(spawnEnv);
+        }
         const shellBin = shellCfg.executable;
         const shellArgs = [...shellCfg.argsPrefix, execCommand];
         const label = `shellCommand:${baseCmd || 'command'}`;
@@ -518,7 +662,11 @@ ${_multiCommandBlock()}
             timeoutMs: idleTimeoutMs,
             command: params.command,
             onAdvisory: (msg) => {
-              try { context.onActivity({ phase: 'long_run_advisory', message: msg }); } catch { /* ignore */ }
+              try {
+                context.onActivity({ phase: 'long_run_advisory', message: msg });
+              } catch {
+                /* ignore */
+              }
             },
           });
         }
@@ -535,25 +683,39 @@ ${_multiCommandBlock()}
             outputEncoding: forcedEnc,
           });
           let merged = `${result.stdout || ''}${result.stderr ? `\n${result.stderr}` : ''}`;
-          if (_rtkRouted) merged = _rtkMode.stripRtkMeta(merged);
+          if (_rtkRouted) {
+            merged = _rtkMode.stripRtkMeta(merged);
+          }
           // 接缝1:列目录清单摘要从**截断前完整输出**计算,前置到顶部(摘要必存,截断只砍原始清单)。
           // 门控/解析不足/非列举命令 → null,merged 逐字节不变。
           const _listSummary = _extractListingSummary(params.command, merged, process.env);
           if (merged && merged.length > MAX_OUTPUT) {
             const errSummary = _extractBuildErrorSummary(params.command, merged);
             merged = _smartTruncate(merged, MAX_OUTPUT);
-            if (errSummary) merged += errSummary;
+            if (errSummary) {
+              merged += errSummary;
+            }
           }
-          if (_listSummary) merged = _listSummary + merged;
-          if (advisory) advisory.clear();
+          if (_listSummary) {
+            merged = _listSummary + merged;
+          }
+          if (advisory) {
+            advisory.clear();
+          }
           if (context && typeof context.onActivity === 'function') {
             try {
               context.onActivity({ phase: 'shell_completed', command: baseCmd, code: result.code });
-            } catch { /* non-critical */ }
+            } catch {
+              /* non-critical */
+            }
           }
           // Track git operations from shell output
           if (_gitTracker) {
-            try { _gitTracker.trackFromShellOutput(params.command, merged); } catch { /* non-critical */ }
+            try {
+              _gitTracker.trackFromShellOutput(params.command, merged);
+            } catch {
+              /* non-critical */
+            }
           }
           // 退出码语义重判:门控关/无专属语义 → verdict 与旧 `result.code === 0`
           // 逐字节等价(isError === code !== 0、无 message);命中 grep/rg/find/diff/
@@ -565,10 +727,12 @@ ${_multiCommandBlock()}
           // 成功但零输出:落一行确定性说明消除「(无输出)」困惑(门控关/异常 → null,
           // 保持 `merged || (_verdict.message || '')` 逐字节回退)。仅在成功且无 stdout、
           // 也无语义 note 时生效——有匹配到的 stdout 或 grep「No matches found」note 时不覆盖。
-          let _successOutput = merged || (_verdict.message || '');
+          let _successOutput = merged || _verdict.message || '';
           if (_ok && !_successOutput && _buildEmptyOutputNote) {
             const _emptyNote = _buildEmptyOutputNote(params.command, process.env);
-            if (_emptyNote) _successOutput = _emptyNote;
+            if (_emptyNote) {
+              _successOutput = _emptyNote;
+            }
           }
           return {
             success: _ok,
@@ -583,7 +747,9 @@ ${_multiCommandBlock()}
             ...(_shellAdvisories.length > 0 ? { _advisories: _shellAdvisories } : {}),
           };
         } catch (err) {
-          if (advisory) advisory.clear();
+          if (advisory) {
+            advisory.clear();
+          }
           const message = String(err && err.message ? err.message : err || 'shell command failed');
           return { success: false, error: message };
         }
@@ -610,30 +776,45 @@ ${_multiCommandBlock()}
       const _rawOut = _execCompat.isNonBlockingExecEnabled(process.env)
         ? await _execCompat.execAsync(execCommand, _execOpts)
         : execSync(execCommand, _execOpts);
-      let output = process.platform === 'win32'
-        ? smartDecodeWinOutput(Buffer.isBuffer(_rawOut) ? _rawOut : Buffer.from(String(_rawOut)))
-        : (Buffer.isBuffer(_rawOut) ? _rawOut.toString('utf-8') : String(_rawOut));
+      let output =
+        process.platform === 'win32'
+          ? smartDecodeWinOutput(Buffer.isBuffer(_rawOut) ? _rawOut : Buffer.from(String(_rawOut)))
+          : Buffer.isBuffer(_rawOut)
+            ? _rawOut.toString('utf-8')
+            : String(_rawOut);
 
-      if (_rtkRouted) output = _rtkMode.stripRtkMeta(output);
+      if (_rtkRouted) {
+        output = _rtkMode.stripRtkMeta(output);
+      }
       // 接缝1(孪生回退路径):列目录清单摘要从截断前完整输出计算,前置到顶部。null → output 逐字节不变。
       const _listSummary = _extractListingSummary(params.command, output, process.env);
       if (output && output.length > MAX_OUTPUT) {
         const errSummary = _extractBuildErrorSummary(params.command, output);
         output = _smartTruncate(output, MAX_OUTPUT);
-        if (errSummary) output += errSummary;
+        if (errSummary) {
+          output += errSummary;
+        }
       }
-      if (_listSummary) output = _listSummary + output;
+      if (_listSummary) {
+        output = _listSummary + output;
+      }
 
       // Track git operations from shell output
       if (_gitTracker) {
-        try { _gitTracker.trackFromShellOutput(params.command, output); } catch { /* non-critical */ }
+        try {
+          _gitTracker.trackFromShellOutput(params.command, output);
+        } catch {
+          /* non-critical */
+        }
       }
 
       // 成功但零输出:同主路径落确定性说明(门控关/异常 → null,保持 `output || ''` 逐字节回退)。
       let _fbOutput = output || '';
       if (!_fbOutput && _buildEmptyOutputNote) {
         const _emptyNote = _buildEmptyOutputNote(params.command, process.env);
-        if (_emptyNote) _fbOutput = _emptyNote;
+        if (_emptyNote) {
+          _fbOutput = _emptyNote;
+        }
       }
 
       return {

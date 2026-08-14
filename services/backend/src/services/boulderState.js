@@ -14,6 +14,8 @@ const fs = require('fs');
 const path = require('path');
 
 const SCHEMA_VERSION = 4;
+// Schema versions the loader accepts; anything else is treated as absent.
+const VALID_SCHEMA_VERSIONS = [1, 2, 3, 4];
 // Checkpoint retention. Configurable via KHY_BOULDER_TTL_HOURS (default 24h);
 // values <= 0 are ignored and fall back to the default.
 const TTL_MS = (() => {
@@ -35,7 +37,9 @@ let _stmts = {};
 let _sqliteAvailable = false;
 
 function _initSqlite() {
-  if (_db) return _sqliteAvailable;
+  if (_db) {
+    return _sqliteAvailable;
+  }
   try {
     const Database = require('../config/sqlite-adapter');
     const { getDataDir } = require('../utils/dataHome');
@@ -58,7 +62,7 @@ function _initSqlite() {
     // Migration: add task_id column so checkpoints are addressable by task id
     // (legacy tables are keyed only by cwd_hash). ALTER is idempotent-guarded.
     const cols = _db.prepare('PRAGMA table_info(checkpoints)').all();
-    if (!cols.some(c => c.name === 'task_id')) {
+    if (!cols.some((c) => c.name === 'task_id')) {
       _db.exec('ALTER TABLE checkpoints ADD COLUMN task_id TEXT');
     }
     _db.exec('CREATE INDEX IF NOT EXISTS idx_cp_status ON checkpoints(status)');
@@ -72,10 +76,16 @@ function _initSqlite() {
           updated_at=excluded.updated_at, status=excluded.status, task_id=excluded.task_id
       `),
       load: _db.prepare('SELECT data, updated_at FROM checkpoints WHERE cwd_hash = @cwdHash'),
-      loadByTask: _db.prepare('SELECT data, updated_at, cwd FROM checkpoints WHERE task_id = @taskId ORDER BY updated_at DESC LIMIT 1'),
-      listResumable: _db.prepare("SELECT data, updated_at, cwd FROM checkpoints WHERE status IN ('in_progress','interrupted') ORDER BY updated_at DESC"),
+      loadByTask: _db.prepare(
+        'SELECT data, updated_at, cwd FROM checkpoints WHERE task_id = @taskId ORDER BY updated_at DESC LIMIT 1'
+      ),
+      listResumable: _db.prepare(
+        "SELECT data, updated_at, cwd FROM checkpoints WHERE status IN ('in_progress','interrupted') ORDER BY updated_at DESC"
+      ),
       remove: _db.prepare('DELETE FROM checkpoints WHERE cwd_hash = @cwdHash'),
-      hasPending: _db.prepare("SELECT 1 FROM checkpoints WHERE cwd_hash = @cwdHash AND status = 'in_progress'"),
+      hasPending: _db.prepare(
+        "SELECT 1 FROM checkpoints WHERE cwd_hash = @cwdHash AND status = 'in_progress'"
+      ),
       purgeExpired: _db.prepare('DELETE FROM checkpoints WHERE updated_at < @cutoff'),
     };
     _sqliteAvailable = true;
@@ -86,7 +96,10 @@ function _initSqlite() {
 }
 
 function _cwdHash(cwd) {
-  return crypto.createHash('md5').update(String(cwd || '')).digest('hex');
+  return crypto
+    .createHash('md5')
+    .update(String(cwd || ''))
+    .digest('hex');
 }
 
 function _boulderDir() {
@@ -104,14 +117,18 @@ function _boulderPath(cwd) {
  * @private
  */
 function _truncateMessage(msg) {
-  if (!msg) return null;
+  if (!msg) {
+    return null;
+  }
   const truncated = { role: msg.role || 'unknown' };
   if (typeof msg.content === 'string') {
     truncated.content = msg.content.slice(0, MAX_MESSAGE_CONTENT_LEN);
   } else if (Array.isArray(msg.content)) {
     // Multi-block content (tool_use, text, etc.) — keep structure, trim text
-    truncated.content = msg.content.slice(0, 5).map(block => {
-      if (!block) return block;
+    truncated.content = msg.content.slice(0, 5).map((block) => {
+      if (!block) {
+        return block;
+      }
       if (block.type === 'text' && typeof block.text === 'string') {
         return { type: 'text', text: block.text.slice(0, MAX_MESSAGE_CONTENT_LEN) };
       }
@@ -124,7 +141,9 @@ function _truncateMessage(msg) {
       return { type: block.type };
     });
   }
-  if (msg.uuid) truncated.uuid = msg.uuid;
+  if (msg.uuid) {
+    truncated.uuid = msg.uuid;
+  }
   return truncated;
 }
 
@@ -140,9 +159,9 @@ function _truncateMessage(msg) {
  */
 function captureFilesystemSnapshot(cwd, fileReadHashes) {
   const snapshot = {
-    files: {},       // path → { hash, mtime, size }
-    gitHead: null,   // commit SHA
-    gitDirty: [],    // [{ path, status }]
+    files: {}, // path → { hash, mtime, size }
+    gitHead: null, // commit SHA
+    gitDirty: [], // [{ path, status }]
     snapshotAt: Date.now(),
   };
 
@@ -150,7 +169,9 @@ function captureFilesystemSnapshot(cwd, fileReadHashes) {
   if (fileReadHashes instanceof Map) {
     let count = 0;
     for (const [absPath, info] of fileReadHashes) {
-      if (count >= MAX_SNAPSHOT_FILES) break;
+      if (count >= MAX_SNAPSHOT_FILES) {
+        break;
+      }
       snapshot.files[absPath] = {
         hash: info.hash || null,
         mtime: info.mtime || info.mtimeMs || null,
@@ -169,12 +190,17 @@ function captureFilesystemSnapshot(cwd, fileReadHashes) {
 
     const porcelain = execSync('git status --porcelain -uno', execOpts).trim();
     if (porcelain) {
-      snapshot.gitDirty = porcelain.split('\n').slice(0, 100).map(line => ({
-        status: line.slice(0, 2).trim(),
-        path: line.slice(3),
-      }));
+      snapshot.gitDirty = porcelain
+        .split('\n')
+        .slice(0, 100)
+        .map((line) => ({
+          status: line.slice(0, 2).trim(),
+          path: line.slice(3),
+        }));
     }
-  } catch { /* not a git repo or git unavailable */ }
+  } catch {
+    /* not a git repo or git unavailable */
+  }
 
   return snapshot;
 }
@@ -215,19 +241,28 @@ function diffFilesystemSnapshot(cwd, savedSnapshot) {
     try {
       const { execSync } = require('child_process');
       const currentHead = execSync('git rev-parse HEAD', {
-        cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 3000,
+        cwd,
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 3000,
       }).trim();
       newCommits = currentHead !== savedSnapshot.gitHead;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   const parts = [];
-  if (changed.length > 0) parts.push(`${changed.length} file(s) modified externally`);
-  if (deleted.length > 0) parts.push(`${deleted.length} file(s) deleted`);
-  if (newCommits) parts.push('new commits since checkpoint');
-  const summary = parts.length > 0
-    ? `⚠ Workspace drift detected: ${parts.join(', ')}.`
-    : '';
+  if (changed.length > 0) {
+    parts.push(`${changed.length} file(s) modified externally`);
+  }
+  if (deleted.length > 0) {
+    parts.push(`${deleted.length} file(s) deleted`);
+  }
+  if (newCommits) {
+    parts.push('new commits since checkpoint');
+  }
+  const summary = parts.length > 0 ? `⚠ Workspace drift detected: ${parts.join(', ')}.` : '';
 
   return { changed, deleted, newCommits, summary };
 }
@@ -248,7 +283,9 @@ function diffFilesystemSnapshot(cwd, savedSnapshot) {
  * @param {object}  [state.sessionMeta] - Session metadata (model, adapter, sessionId)
  */
 function saveBoulderState(cwd, state) {
-  if (!cwd || !state) return;
+  if (!cwd || !state) {
+    return;
+  }
   const filePath = _boulderPath(cwd);
   const record = {
     schemaVersion: SCHEMA_VERSION,
@@ -264,30 +301,37 @@ function saveBoulderState(cwd, state) {
     lastCheckpointAt: Date.now(),
     // ── Full context fields (v2) ──
     conversationMessages: Array.isArray(state.conversationMessages)
-      ? state.conversationMessages.slice(-MAX_CONVERSATION_MESSAGES).map(_truncateMessage).filter(Boolean)
+      ? state.conversationMessages
+          .slice(-MAX_CONVERSATION_MESSAGES)
+          .map(_truncateMessage)
+          .filter(Boolean)
       : [],
-    contextSummary: typeof state.contextSummary === 'string'
-      ? state.contextSummary.slice(0, MAX_CONTEXT_SUMMARY_LEN)
-      : '',
-    sessionMeta: state.sessionMeta && typeof state.sessionMeta === 'object'
-      ? {
-          model: String(state.sessionMeta.model || '').slice(0, 100),
-          adapter: String(state.sessionMeta.adapter || '').slice(0, 100),
-          sessionId: String(state.sessionMeta.sessionId || '').slice(0, 64),
-        }
-      : null,
+    contextSummary:
+      typeof state.contextSummary === 'string'
+        ? state.contextSummary.slice(0, MAX_CONTEXT_SUMMARY_LEN)
+        : '',
+    sessionMeta:
+      state.sessionMeta && typeof state.sessionMeta === 'object'
+        ? {
+            model: String(state.sessionMeta.model || '').slice(0, 100),
+            adapter: String(state.sessionMeta.adapter || '').slice(0, 100),
+            sessionId: String(state.sessionMeta.sessionId || '').slice(0, 64),
+          }
+        : null,
     // ── Phase 2 fields (v3) ──
     workflowStatus: state.workflowStatus || null,
     interruptReason: state.interruptReason || null,
-    interruptedAtIteration: Number.isFinite(state.interruptedAtIteration) ? state.interruptedAtIteration : null,
-    currentMessage: typeof state.currentMessage === 'string'
-      ? state.currentMessage.slice(0, MAX_CURRENT_MESSAGE_LEN)
+    interruptedAtIteration: Number.isFinite(state.interruptedAtIteration)
+      ? state.interruptedAtIteration
       : null,
-    resumeData: state.resumeData && typeof state.resumeData === 'object'
-      ? state.resumeData
-      : null,
+    currentMessage:
+      typeof state.currentMessage === 'string'
+        ? state.currentMessage.slice(0, MAX_CURRENT_MESSAGE_LEN)
+        : null,
+    resumeData: state.resumeData && typeof state.resumeData === 'object' ? state.resumeData : null,
     // ── Phase 5 fields (v4): filesystem snapshot ──
-    filesystemSnapshot: state.filesystemSnapshot || captureFilesystemSnapshot(cwd, state.fileReadHashes),
+    filesystemSnapshot:
+      state.filesystemSnapshot || captureFilesystemSnapshot(cwd, state.fileReadHashes),
   };
   try {
     let json = JSON.stringify(record);
@@ -311,12 +355,16 @@ function saveBoulderState(cwd, state) {
           taskId: record.taskId || null,
         });
         return; // success — skip JSON fallback
-      } catch { /* fall through to JSON */ }
+      } catch {
+        /* fall through to JSON */
+      }
     }
 
     // Fallback: JSON file (legacy path)
     fs.writeFileSync(filePath, json, 'utf-8');
-  } catch { /* best-effort — never throw */ }
+  } catch {
+    /* best-effort — never throw */
+  }
 }
 
 /**
@@ -327,7 +375,9 @@ function saveBoulderState(cwd, state) {
  * @returns {object|null}
  */
 function loadBoulderState(cwd) {
-  if (!cwd) return null;
+  if (!cwd) {
+    return null;
+  }
 
   // Primary: SQLite WAL
   if (_initSqlite()) {
@@ -339,22 +389,42 @@ function loadBoulderState(cwd) {
           return null;
         }
         const record = JSON.parse(row.data);
+        if (!record) {
+          return null;
+        }
+        // Same schema-version contract as the JSON fallback: an unknown version
+        // is treated as absent (never served).
+        if (!VALID_SCHEMA_VERSIONS.includes(record.schemaVersion)) {
+          _stmts.remove.run({ cwdHash: _cwdHash(cwd) });
+          return null;
+        }
         return _normalizeRecord(record);
       }
-    } catch { /* fall through to JSON */ }
+    } catch {
+      /* fall through to JSON */
+    }
   }
 
   // Fallback: JSON file (legacy migration path)
   const filePath = _boulderPath(cwd);
   try {
-    if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
     const raw = fs.readFileSync(filePath, 'utf-8');
     const record = JSON.parse(raw);
-    if (!record) return null;
-    const validVersions = [1, 2, 3, 4];
-    if (!validVersions.includes(record.schemaVersion)) return null;
+    if (!record) {
+      return null;
+    }
+    if (!VALID_SCHEMA_VERSIONS.includes(record.schemaVersion)) {
+      return null;
+    }
     if (Date.now() - (record.lastCheckpointAt || 0) > TTL_MS) {
-      try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(filePath);
+      } catch {
+        /* ignore */
+      }
       return null;
     }
     const normalized = _normalizeRecord(record);
@@ -362,14 +432,18 @@ function loadBoulderState(cwd) {
     if (_sqliteAvailable && normalized) {
       try {
         _stmts.upsert.run({
-          cwdHash: _cwdHash(cwd), cwd: String(cwd),
-          data: JSON.stringify(normalized), schemaVer: SCHEMA_VERSION,
+          cwdHash: _cwdHash(cwd),
+          cwd: String(cwd),
+          data: JSON.stringify(normalized),
+          schemaVer: SCHEMA_VERSION,
           updatedAt: normalized.lastCheckpointAt || Date.now(),
           status: normalized.status || 'in_progress',
           taskId: normalized.taskId || null,
         });
         fs.unlinkSync(filePath); // Remove old JSON after successful migration
-      } catch { /* migration is best-effort */ }
+      } catch {
+        /* migration is best-effort */
+      }
     }
     return normalized;
   } catch {
@@ -379,7 +453,9 @@ function loadBoulderState(cwd) {
 
 /** Normalize v1/v2/v3 records to v4 shape */
 function _normalizeRecord(record) {
-  if (!record) return null;
+  if (!record) {
+    return null;
+  }
   if (record.schemaVersion <= 1) {
     record.conversationMessages = record.conversationMessages || [];
     record.contextSummary = record.contextSummary || '';
@@ -406,13 +482,21 @@ function _normalizeRecord(record) {
  * @returns {object|null}
  */
 function loadBoulderStateByTaskId(taskId) {
-  if (!taskId || !_initSqlite()) return null;
+  if (!taskId || !_initSqlite()) {
+    return null;
+  }
   try {
     const row = _stmts.loadByTask.get({ taskId: String(taskId) });
-    if (!row) return null;
-    if (Date.now() - row.updated_at > TTL_MS) return null;
+    if (!row) {
+      return null;
+    }
+    if (Date.now() - row.updated_at > TTL_MS) {
+      return null;
+    }
     const record = _normalizeRecord(JSON.parse(row.data));
-    if (record) record.cwd = row.cwd;
+    if (record) {
+      record.cwd = row.cwd;
+    }
     return record;
   } catch {
     return null;
@@ -425,14 +509,22 @@ function loadBoulderStateByTaskId(taskId) {
  * @returns {Array<{taskId,cwd,status,userMessage,iterations,updatedAt}>}
  */
 function listResumableTasks() {
-  if (!_initSqlite()) return [];
+  if (!_initSqlite()) {
+    return [];
+  }
   const cutoff = Date.now() - TTL_MS;
   const out = [];
   try {
     for (const row of _stmts.listResumable.all()) {
-      if (row.updated_at < cutoff) continue;
+      if (row.updated_at < cutoff) {
+        continue;
+      }
       let rec;
-      try { rec = JSON.parse(row.data); } catch { continue; }
+      try {
+        rec = JSON.parse(row.data);
+      } catch {
+        continue;
+      }
       out.push({
         taskId: rec.taskId || null,
         cwd: rec.cwd || row.cwd || null,
@@ -442,7 +534,9 @@ function listResumableTasks() {
         updatedAt: row.updated_at,
       });
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return out;
 }
 
@@ -456,12 +550,20 @@ function listResumableTasks() {
  * @returns {string|null} taskId of the interrupted checkpoint
  */
 function markBoulderInterrupted(cwd, opts = {}) {
-  if (!cwd) return null;
+  if (!cwd) {
+    return null;
+  }
   const state = loadBoulderState(cwd);
-  if (!state) return null;
-  if (state.status !== 'in_progress' && state.status !== 'interrupted') return null;
+  if (!state) {
+    return null;
+  }
+  if (state.status !== 'in_progress' && state.status !== 'interrupted') {
+    return null;
+  }
   state.status = 'interrupted';
-  if (opts.interruptReason) state.interruptReason = String(opts.interruptReason).slice(0, 500);
+  if (opts.interruptReason) {
+    state.interruptReason = String(opts.interruptReason).slice(0, 500);
+  }
   // Preserve the existing snapshot — saveBoulderState would otherwise recompute it.
   saveBoulderState(cwd, state);
   return state.taskId || null;
@@ -476,8 +578,12 @@ function markBoulderInterrupted(cwd, opts = {}) {
  */
 function rearmForResume(taskId) {
   const record = loadBoulderStateByTaskId(taskId);
-  if (!record || !record.cwd) return null;
-  if (record.status === 'completed') return null;
+  if (!record || !record.cwd) {
+    return null;
+  }
+  if (record.status === 'completed') {
+    return null;
+  }
   record.status = 'in_progress';
   saveBoulderState(record.cwd, record);
   return {
@@ -494,16 +600,26 @@ function rearmForResume(taskId) {
  * @param {string} cwd
  */
 function clearBoulderState(cwd) {
-  if (!cwd) return;
+  if (!cwd) {
+    return;
+  }
   // SQLite
   if (_initSqlite()) {
-    try { _stmts.remove.run({ cwdHash: _cwdHash(cwd) }); } catch { /* ignore */ }
+    try {
+      _stmts.remove.run({ cwdHash: _cwdHash(cwd) });
+    } catch {
+      /* ignore */
+    }
   }
   // Also clean up any legacy JSON file
   try {
     const filePath = _boulderPath(cwd);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  } catch { /* ignore */ }
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -512,13 +628,19 @@ function clearBoulderState(cwd) {
  * @returns {boolean}
  */
 function hasPendingBoulder(cwd) {
-  if (!cwd) return false;
+  if (!cwd) {
+    return false;
+  }
   // Fast path: SQLite query without parsing full JSON
   if (_initSqlite()) {
     try {
       const row = _stmts.hasPending.get({ cwdHash: _cwdHash(cwd) });
-      if (row) return true;
-    } catch { /* fall through */ }
+      if (row) {
+        return true;
+      }
+    } catch {
+      /* fall through */
+    }
   }
   // Fallback
   const state = loadBoulderState(cwd);
@@ -531,11 +653,15 @@ function hasPendingBoulder(cwd) {
  * @returns {number} Number of rows deleted
  */
 function purgeExpired() {
-  if (!_initSqlite()) return 0;
+  if (!_initSqlite()) {
+    return 0;
+  }
   try {
     const result = _stmts.purgeExpired.run({ cutoff: Date.now() - TTL_MS });
     return result.changes || 0;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -546,23 +672,39 @@ function purgeExpired() {
  * @returns {boolean}
  */
 function isSimilarMessage(current, saved) {
-  if (!current || !saved) return false;
+  if (!current || !saved) {
+    return false;
+  }
   const a = String(current).trim().slice(0, 200).toLowerCase();
   const b = String(saved).trim().slice(0, 200).toLowerCase();
-  if (a === b) return true;
+  if (a === b) {
+    return true;
+  }
   // Jaccard-like word overlap (>50% overlap = similar)
   const wordsA = new Set(a.split(/\s+/).filter(Boolean));
   const wordsB = new Set(b.split(/\s+/).filter(Boolean));
-  if (wordsA.size === 0 || wordsB.size === 0) return false;
+  if (wordsA.size === 0 || wordsB.size === 0) {
+    return false;
+  }
   let overlap = 0;
-  for (const w of wordsA) { if (wordsB.has(w)) overlap++; }
+  for (const w of wordsA) {
+    if (wordsB.has(w)) {
+      overlap++;
+    }
+  }
   const unionSize = new Set([...wordsA, ...wordsB]).size;
-  return (overlap / unionSize) > 0.5;
+  return overlap / unionSize > 0.5;
 }
 
 // For tests: reset module-level state
 function _resetForTest() {
-  if (_db) { try { _db.close(); } catch { /* ok */ } }
+  if (_db) {
+    try {
+      _db.close();
+    } catch {
+      /* ok */
+    }
+  }
   _db = null;
   _stmts = {};
   _sqliteAvailable = false;

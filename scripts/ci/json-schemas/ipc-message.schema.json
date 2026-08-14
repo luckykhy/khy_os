@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IPC Message Envelope",
+  "description": "khy-os IPC 子进程通信消息标准信封。",
+  "type": "object",
+  "required": ["_ipc", "type", "requestId", "agentId", "timestamp", "payload"],
+  "properties": {
+    "_ipc": {
+      "type": "boolean",
+      "const": true,
+      "description": "IPC 协议标记"
+    },
+    "type": {
+      "type": "string",
+      "description": "消息类型（MSG.* 常量）",
+      "enum": [
+        "init", "task", "follow_up", "kill",
+        "ready", "progress", "tool_call", "result", "error", "metrics",
+        "heartbeat",
+        "ack", "queue_status"
+      ]
+    },
+    "requestId": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{12}$",
+      "description": "12 字符 hex 请求关联 ID"
+    },
+    "agentId": {
+      "type": "string",
+      "description": "目标 agent 标识"
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Unix 毫秒时间戳"
+    },
+    "payload": {
+      "type": "object",
+      "description": "类型相关载荷"
+    }
+  },
+  "additionalProperties": true
+}

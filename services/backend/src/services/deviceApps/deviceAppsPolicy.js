@@ -35,7 +35,16 @@ const PACKAGE_MANAGERS = Object.freeze({
     parse: 'winget',
     list: ['winget', 'list'],
     uninstall: (id) => ['winget', 'uninstall', '--id', id, '--exact', '--silent'],
-    install: (id) => ['winget', 'install', '--id', id, '--exact', '--silent', '--accept-package-agreements', '--accept-source-agreements'],
+    install: (id) => [
+      'winget',
+      'install',
+      '--id',
+      id,
+      '--exact',
+      '--silent',
+      '--accept-package-agreements',
+      '--accept-source-agreements',
+    ],
   },
   choco: {
     id: 'choco',
@@ -122,10 +131,16 @@ const PLATFORM_PRIORITY = Object.freeze({
  * @returns {boolean}
  */
 function isSafeAppId(id) {
-  if (typeof id !== 'string') return false;
+  if (typeof id !== 'string') {
+    return false;
+  }
   const s = id.trim();
-  if (s.length === 0 || s.length > 200) return false;
-  if (s.startsWith('-')) return false; // 绝不让 appId 被当作选项标志
+  if (s.length === 0 || s.length > 200) {
+    return false;
+  }
+  if (s.startsWith('-')) {
+    return false;
+  } // 绝不让 appId 被当作选项标志
   return /^[A-Za-z0-9][A-Za-z0-9._+@:/-]*$/.test(s);
 }
 
@@ -137,42 +152,66 @@ function isSafeAppId(id) {
  */
 function detectPackageManager(platform, hasExecutable) {
   const order = PLATFORM_PRIORITY[platform];
-  if (!Array.isArray(order)) return null;
+  if (!Array.isArray(order)) {
+    return null;
+  }
   const probe = typeof hasExecutable === 'function' ? hasExecutable : () => false;
   for (const pmId of order) {
     const pm = PACKAGE_MANAGERS[pmId];
-    if (!pm) continue;
+    if (!pm) {
+      continue;
+    }
     let ok = false;
-    try { ok = !!probe(pm.bin); } catch (_) { ok = false; }
-    if (ok) return pm;
+    try {
+      ok = !!probe(pm.bin);
+    } catch (_) {
+      ok = false;
+    }
+    if (ok) {
+      return pm;
+    }
   }
   return null;
 }
 
 /** 取列举命令 argv(浅拷贝,调用方不改原表)。pm 无效 → null。 */
 function buildListCommand(pm) {
-  if (!pm || !Array.isArray(pm.list)) return null;
+  if (!pm || !Array.isArray(pm.list)) {
+    return null;
+  }
   return pm.list.slice();
 }
 
 /** 取卸载命令 argv;appId 不安全 → null(拒绝,绝不 throw)。 */
 function buildUninstallCommand(pm, appId) {
-  if (!pm || typeof pm.uninstall !== 'function') return null;
-  if (!isSafeAppId(appId)) return null;
+  if (!pm || typeof pm.uninstall !== 'function') {
+    return null;
+  }
+  if (!isSafeAppId(appId)) {
+    return null;
+  }
   try {
     const argv = pm.uninstall(String(appId).trim());
     return Array.isArray(argv) ? argv.slice() : null;
-  } catch (_) { return null; }
+  } catch (_) {
+    return null;
+  }
 }
 
 /** 取安装命令 argv;appId 不安全 → null。 */
 function buildInstallCommand(pm, appId) {
-  if (!pm || typeof pm.install !== 'function') return null;
-  if (!isSafeAppId(appId)) return null;
+  if (!pm || typeof pm.install !== 'function') {
+    return null;
+  }
+  if (!isSafeAppId(appId)) {
+    return null;
+  }
   try {
     const argv = pm.install(String(appId).trim());
     return Array.isArray(argv) ? argv.slice() : null;
-  } catch (_) { return null; }
+  } catch (_) {
+    return null;
+  }
 }
 
 // ── list 输出解析器(纯字符串 → 记录)────────────────────────────────────────────
@@ -184,7 +223,9 @@ function _parseDpkg(text) {
   const out = [];
   for (const line of String(text || '').split(/\r?\n/)) {
     const m = /^ii\s+(\S+)\s+(\S+)/.exec(line);
-    if (!m) continue;
+    if (!m) {
+      continue;
+    }
     const name = m[1].replace(/:.*/, ''); // 去架构后缀 name:amd64
     out.push({ name, id: name, version: m[2] });
   }
@@ -196,10 +237,14 @@ function _parseBrew(text) {
   const out = [];
   for (const line of String(text || '').split(/\r?\n/)) {
     const t = line.trim();
-    if (!t) continue;
+    if (!t) {
+      continue;
+    }
     const parts = t.split(/\s+/);
     const name = parts[0];
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     out.push({ name, id: name, version: parts.slice(1).join(' ') || '' });
   }
   return out;
@@ -210,9 +255,13 @@ function _parsePacman(text) {
   const out = [];
   for (const line of String(text || '').split(/\r?\n/)) {
     const t = line.trim();
-    if (!t) continue;
+    if (!t) {
+      continue;
+    }
     const parts = t.split(/\s+/);
-    if (parts.length < 1) continue;
+    if (parts.length < 1) {
+      continue;
+    }
     out.push({ name: parts[0], id: parts[0], version: parts[1] || '' });
   }
   return out;
@@ -223,17 +272,24 @@ function _parseChoco(text) {
   const out = [];
   for (const line of String(text || '').split(/\r?\n/)) {
     const t = line.trim();
-    if (!t) continue;
-    if (/packages installed/i.test(t)) continue; // 汇总行
+    if (!t) {
+      continue;
+    }
+    if (/packages installed/i.test(t)) {
+      continue;
+    } // 汇总行
     let name, version;
     if (t.includes('|')) {
       [name, version] = t.split('|');
     } else {
       const parts = t.split(/\s+/);
-      name = parts[0]; version = parts[1] || '';
+      name = parts[0];
+      version = parts[1] || '';
     }
     name = (name || '').trim();
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     out.push({ name, id: name, version: (version || '').trim() });
   }
   return out;
@@ -244,11 +300,17 @@ function _parseDnf(text) {
   const out = [];
   for (const line of String(text || '').split(/\r?\n/)) {
     const t = line.trim();
-    if (!t || /^installed packages/i.test(t)) continue;
+    if (!t || /^installed packages/i.test(t)) {
+      continue;
+    }
     const parts = t.split(/\s+/);
-    if (parts.length < 2) continue;
+    if (parts.length < 2) {
+      continue;
+    }
     const name = parts[0].replace(/\.[^.]+$/, ''); // 去 .x86_64 架构
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     out.push({ name, id: parts[0], version: parts[1] });
   }
   return out;
@@ -261,8 +323,13 @@ function _parseWinget(text) {
   const out = [];
   let headerIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (/(^|\s)Name(\s)/.test(lines[i]) && /\bId\b/.test(lines[i]) && /\bVersion\b/.test(lines[i])) {
-      headerIdx = i; break;
+    if (
+      /(^|\s)Name(\s)/.test(lines[i]) &&
+      /\bId\b/.test(lines[i]) &&
+      /\bVersion\b/.test(lines[i])
+    ) {
+      headerIdx = i;
+      break;
     }
   }
   if (headerIdx >= 0) {
@@ -272,12 +339,18 @@ function _parseWinget(text) {
     if (idCol > 0 && verCol > idCol) {
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i];
-        if (!line.trim()) continue;
-        if (/^[-─\s]+$/.test(line)) continue; // 分隔线
+        if (!line.trim()) {
+          continue;
+        }
+        if (/^[-─\s]+$/.test(line)) {
+          continue;
+        } // 分隔线
         const name = line.slice(0, idCol).trim();
         const id = line.slice(idCol, verCol).trim();
         const version = line.slice(verCol).trim().split(/\s+/)[0] || '';
-        if (!name && !id) continue;
+        if (!name && !id) {
+          continue;
+        }
         out.push({ name: name || id, id: id || name, version });
       }
       return out;
@@ -286,10 +359,16 @@ function _parseWinget(text) {
   // 回退:无法定位列 → 尽力按 2+ 空格切分(honest best-effort)。
   for (const line of lines) {
     const t = line.trim();
-    if (!t || /^[-─\s]+$/.test(t)) continue;
-    if (/(^|\s)Name(\s)/.test(t) && /\bId\b/.test(t)) continue; // 跳标题
+    if (!t || /^[-─\s]+$/.test(t)) {
+      continue;
+    }
+    if (/(^|\s)Name(\s)/.test(t) && /\bId\b/.test(t)) {
+      continue;
+    } // 跳标题
     const parts = t.split(/\s{2,}/);
-    if (parts.length < 2) continue;
+    if (parts.length < 2) {
+      continue;
+    }
     out.push({ name: parts[0], id: parts[1], version: parts[2] || '' });
   }
   return out;
@@ -312,8 +391,14 @@ const _PARSERS = Object.freeze({
  */
 function parseListOutput(parserId, text) {
   const fn = _PARSERS[parserId];
-  if (typeof fn !== 'function') return [];
-  try { return fn(text) || []; } catch (_) { return []; }
+  if (typeof fn !== 'function') {
+    return [];
+  }
+  try {
+    return fn(text) || [];
+  } catch (_) {
+    return [];
+  }
 }
 
 /**
@@ -323,12 +408,22 @@ function parseListOutput(parserId, text) {
  * @returns {'url'|'appId'|'invalid'}
  */
 function classifyInstallSource(source) {
-  if (typeof source !== 'string') return 'invalid';
+  if (typeof source !== 'string') {
+    return 'invalid';
+  }
   const s = source.trim();
-  if (!s) return 'invalid';
-  if (/^https?:\/\//i.test(s)) return 'url';
-  if (/:\/\//.test(s)) return 'invalid'; // 其它协议(ftp/file/…)不受支持,绝不当作 appId 处理
-  if (isSafeAppId(s)) return 'appId';
+  if (!s) {
+    return 'invalid';
+  }
+  if (/^https?:\/\//i.test(s)) {
+    return 'url';
+  }
+  if (/:\/\//.test(s)) {
+    return 'invalid';
+  } // 其它协议(ftp/file/…)不受支持,绝不当作 appId 处理
+  if (isSafeAppId(s)) {
+    return 'appId';
+  }
   return 'invalid';
 }
 

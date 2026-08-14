@@ -27,9 +27,10 @@ function summarizeQueuedInputForDisplay(raw, maxLen = 48) {
     const _refLines = require('../pastedRefLines');
     const legacyCount = pastedBody ? pastedBody.split('\n').length : 0;
     const lineCount = _refLines.pastedRefLineCountOr(pastedBody, legacyCount, process.env);
-    const body = (_refLines.isEnabled(process.env) && lineCount === 0)
-      ? '[Pasted text]'
-      : `[Pasted text +${lineCount} lines]`;
+    const body =
+      _refLines.isEnabled(process.env) && lineCount === 0
+        ? '[Pasted text]'
+        : `[Pasted text +${lineCount} lines]`;
     const supplement = text.replace(PASTED_CONTENT_BLOCK_RE, '').trim().replace(/\s+/g, ' ');
     const suffix = supplement
       ? ` · ${supplement.slice(0, maxLen)}${supplement.length > maxLen ? '...' : ''}`
@@ -37,7 +38,9 @@ function summarizeQueuedInputForDisplay(raw, maxLen = 48) {
     return `${body}${suffix}`;
   }
   const compact = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-  if (compact.length <= maxLen) return compact;
+  if (compact.length <= maxLen) {
+    return compact;
+  }
   return `${compact.slice(0, maxLen)}...`;
 }
 
@@ -49,11 +52,15 @@ function summarizeQueuedInputForDisplay(raw, maxLen = 48) {
  */
 function classifyBusyInput(text) {
   const trimmed = String(text || '').trim();
-  if (!trimmed) return { mode: 'queue', text: trimmed };
+  if (!trimmed) {
+    return { mode: 'queue', text: trimmed };
+  }
 
   // 显式 /steer 或 /s 前缀
   const steerPrefixMatch = /^\/(?:steer|s)\s+([\s\S]+)$/i.exec(trimmed);
-  if (steerPrefixMatch) return { mode: 'steer', text: steerPrefixMatch[1].trim() };
+  if (steerPrefixMatch) {
+    return { mode: 'steer', text: steerPrefixMatch[1].trim() };
+  }
 
   // 显式中断关键词（完整匹配）
   if (/^(?:停[下止]?|取消|中断|abort|stop|cancel)\s*[!！.。]?\s*$/i.test(trimmed)) {
@@ -61,14 +68,29 @@ function classifyBusyInput(text) {
   }
 
   // 长输入 > 300 字 → 新话题，排队
-  if (trimmed.length > 300) return { mode: 'queue', text: trimmed };
+  if (trimmed.length > 300) {
+    return { mode: 'queue', text: trimmed };
+  }
 
   // Steer 语义检测
   const steerPatterns = [
-    /别[用做写]/, /不要[用做那这写]/, /改[成用为]/, /换[个成一]个?(?:思路|方[法案式]|方向)?/,
-    /加上/, /还[要需]/, /而且/, /但[是要]/, /另外/, /同时也/, /不如/,
-    /顺便/, /(?:也|还)(?:把|将|得)/, /改改/, /调整[一下]*(?:方向|思路|方案)?/,
-    /不是.*(?:而是|是)/, /(?:等等|等一下).*(?:先|别)/,
+    /别[用做写]/,
+    /不要[用做那这写]/,
+    /改[成用为]/,
+    /换[个成一]个?(?:思路|方[法案式]|方向)?/,
+    /加上/,
+    /还[要需]/,
+    /而且/,
+    /但[是要]/,
+    /另外/,
+    /同时也/,
+    /不如/,
+    /顺便/,
+    /(?:也|还)(?:把|将|得)/,
+    /改改/,
+    /调整[一下]*(?:方向|思路|方案)?/,
+    /不是.*(?:而是|是)/,
+    /(?:等等|等一下).*(?:先|别)/,
     /\b(?:don'?t|do not) (?:use|do|write|try)/i,
     /\b(?:instead|actually|wait|hold on|oh wait)/i,
     /\b(?:switch to|change to|try .* instead)/i,
@@ -76,7 +98,9 @@ function classifyBusyInput(text) {
     /\bnot that\b/i,
   ];
   for (const pat of steerPatterns) {
-    if (pat.test(trimmed)) return { mode: 'steer', text: trimmed };
+    if (pat.test(trimmed)) {
+      return { mode: 'steer', text: trimmed };
+    }
   }
 
   return { mode: 'queue', text: trimmed };
@@ -98,10 +122,16 @@ function classifyBusyInput(text) {
 function routeBusyInput(text) {
   const raw = String(text || '');
   const urgent = /^\/(?:steer|s)!\s+([\s\S]+)$/i.exec(raw.trim());
-  if (urgent) return { action: 'urgent', text: urgent[1].trim() };
+  if (urgent) {
+    return { action: 'urgent', text: urgent[1].trim() };
+  }
   const { mode, text: classified } = classifyBusyInput(raw);
-  if (mode === 'steer') return { action: 'steer', text: classified };
-  if (mode === 'interrupt') return { action: 'interrupt', text: classified };
+  if (mode === 'steer') {
+    return { action: 'steer', text: classified };
+  }
+  if (mode === 'interrupt') {
+    return { action: 'interrupt', text: classified };
+  }
   return { action: 'queue', text: classified };
 }
 
@@ -113,8 +143,12 @@ function findFirstMarker(text, markers) {
   let best = null;
   for (const marker of markers) {
     const idx = text.indexOf(marker);
-    if (idx === -1) continue;
-    if (!best || idx < best.idx) best = { idx, marker };
+    if (idx === -1) {
+      continue;
+    }
+    if (!best || idx < best.idx) {
+      best = { idx, marker };
+    }
   }
   return best;
 }

@@ -43,7 +43,9 @@ function ollamaRequest(path, method = 'GET', body = null) {
 
     const req = http.request(options, (res) => {
       let data = '';
-      res.on('data', chunk => { data += chunk; });
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
       res.on('end', () => {
         clearTimeout(hardTimer);
         try {
@@ -54,8 +56,15 @@ function ollamaRequest(path, method = 'GET', body = null) {
       });
     });
 
-    req.on('error', (err) => { clearTimeout(hardTimer); reject(err); });
-    req.on('timeout', () => { clearTimeout(hardTimer); req.destroy(); reject(new Error('Ollama request timeout')); });
+    req.on('error', (err) => {
+      clearTimeout(hardTimer);
+      reject(err);
+    });
+    req.on('timeout', () => {
+      clearTimeout(hardTimer);
+      req.destroy();
+      reject(new Error('Ollama request timeout'));
+    });
 
     if (body) {
       req.write(JSON.stringify(body));
@@ -83,7 +92,7 @@ async function detectAsync() {
   try {
     const result = await ollamaRequest('/api/tags', 'GET');
     if (result.status === 200 && result.data?.models?.length > 0) {
-      _models = result.data.models.map(m => m.name || m.model);
+      _models = result.data.models.map((m) => m.name || m.model);
       _available = true;
       return true;
     }

@@ -5,18 +5,19 @@
  * on separate branches without affecting the main working tree.
  * Aligned with Claude Code's EnterWorktree/ExitWorktree architecture.
  */
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 // Windows 优先 Git Bash 的 git 执行辅助（回退系统 PATH）。所有 git 调用走此辅助,
 // 让没有 Git Bash 的环境也能降级到系统 git。
+const { validateName } = require('../utils/worktreeName');
+
 const { spawnGit, spawnGitOutput } = require('./gitSpawnHelper');
 
 // Pure name validation lives in a zero-dep leaf (src/utils/worktreeName.js) so
 // both this manager and tools/_taskStore.js can share it without a require
 // cycle (DESIGN-ARCH-020, R3). Re-exported below for backward compatibility.
-const { validateName } = require('../utils/worktreeName');
 
 const WORKTREE_DIR_NAME = '.khy/worktrees';
 const EVENTS_FILE_NAME = 'events.jsonl';
@@ -60,7 +61,9 @@ function _eventsPath(gitRoot) {
  */
 function logEvent(eventType, worktreeName, options = {}) {
   const gitRoot = options.gitRoot || getGitRoot(options.cwd || process.cwd());
-  if (!gitRoot) return false;
+  if (!gitRoot) {
+    return false;
+  }
   try {
     fs.mkdirSync(path.join(gitRoot, WORKTREE_DIR_NAME), { recursive: true });
     const event = {
@@ -83,13 +86,21 @@ function logEvent(eventType, worktreeName, options = {}) {
  */
 function readEvents(cwd) {
   const gitRoot = getGitRoot(cwd);
-  if (!gitRoot) return [];
+  if (!gitRoot) {
+    return [];
+  }
   try {
     const raw = fs.readFileSync(_eventsPath(gitRoot), 'utf-8');
     return raw
       .split('\n')
       .filter(Boolean)
-      .map((line) => { try { return JSON.parse(line); } catch { return null; } })
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
       .filter(Boolean);
   } catch {
     return [];
@@ -105,9 +116,13 @@ function readEvents(cwd) {
  * @returns {string|null} absolute path, or null if not in a git repo / bad name.
  */
 function worktreePathFor(name, cwd) {
-  if (!validateName(name)) return null;
+  if (!validateName(name)) {
+    return null;
+  }
   const gitRoot = getGitRoot(cwd);
-  if (!gitRoot) return null;
+  if (!gitRoot) {
+    return null;
+  }
   return path.join(gitRoot, WORKTREE_DIR_NAME, name);
 }
 
@@ -156,7 +171,9 @@ function createWorktree(options = {}) {
 
   const name = options.name || generateWorktreeName();
   if (!validateName(name)) {
-    throw new Error(`Invalid worktree name: "${name}". Use letters, digits, dots, underscores, dashes; max 64 chars.`);
+    throw new Error(
+      `Invalid worktree name: "${name}". Use letters, digits, dots, underscores, dashes; max 64 chars.`
+    );
   }
 
   const worktreeBase = path.join(gitRoot, WORKTREE_DIR_NAME);
@@ -187,7 +204,9 @@ function createWorktree(options = {}) {
   if (options.taskId) {
     try {
       require('../tools/_taskStore').bindWorktree(options.taskId, name);
-    } catch { /* binding is best-effort; the worktree already exists */ }
+    } catch {
+      /* binding is best-effort; the worktree already exists */
+    }
   }
   logEvent('create', name, { gitRoot, taskId: options.taskId || null });
 
@@ -233,7 +252,9 @@ function removeWorktree(worktreePath, options = {}) {
       cwd: worktreePath,
       encoding: 'utf-8',
     });
-    if (out !== null) branchName = out;
+    if (out !== null) {
+      branchName = out;
+    }
   }
 
   // Find git root from worktree
@@ -281,7 +302,9 @@ function removeWorktree(worktreePath, options = {}) {
         encoding: 'utf-8',
         timeout: 10000,
       });
-    } catch { /* branch cleanup is best-effort */ }
+    } catch {
+      /* branch cleanup is best-effort */
+    }
   }
 
   logEvent('remove', path.basename(worktreePath), {
@@ -326,35 +349,45 @@ function keepWorktree(name, options = {}) {
  */
 function listWorktrees(cwd) {
   const gitRoot = getGitRoot(cwd);
-  if (!gitRoot) return [];
+  if (!gitRoot) {
+    return [];
+  }
 
   try {
     const result = spawnGitOutput(['worktree', 'list', '--porcelain'], {
       cwd: gitRoot,
       encoding: 'utf-8',
     });
-    if (result === null) return [];
+    if (result === null) {
+      return [];
+    }
 
     const worktrees = [];
     let current = {};
 
     for (const line of result.split('\n')) {
       if (line.startsWith('worktree ')) {
-        if (current.path) worktrees.push(current);
+        if (current.path) {
+          worktrees.push(current);
+        }
         current = { path: line.slice(9) };
       } else if (line.startsWith('HEAD ')) {
         current.head = line.slice(5);
       } else if (line.startsWith('branch ')) {
         current.branch = line.slice(7);
       } else if (line === '') {
-        if (current.path) worktrees.push(current);
+        if (current.path) {
+          worktrees.push(current);
+        }
         current = {};
       }
     }
-    if (current.path) worktrees.push(current);
+    if (current.path) {
+      worktrees.push(current);
+    }
 
     // Filter to only .khy/worktrees/ entries
-    return worktrees.filter(w => w.path.includes(WORKTREE_DIR_NAME));
+    return worktrees.filter((w) => w.path.includes(WORKTREE_DIR_NAME));
   } catch {
     return [];
   }

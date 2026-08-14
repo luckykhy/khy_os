@@ -12,18 +12,33 @@
  * - Session-only jobs (in-memory, die with the process)
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { randomBytes } = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-const DURABLE_FILE = process.env.KHY_CRON_DURABLE_FILE
-  || path.join(os.homedir(), '.khy', 'scheduled_tasks.json');
+// Portable-aware data home resolved at load (legacy const semantics preserved).
+function _dataHome() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return getDataHome();
+  } catch {
+    return path.join(os.homedir(), '.khy');
+  }
+}
+const DURABLE_FILE =
+  process.env.KHY_CRON_DURABLE_FILE || path.join(_dataHome(), 'scheduled_tasks.json');
 const MAX_RECURRING_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_JOBS = 50; // Aligned with CC CronCreateTool; bounds session lifetime
 
 // Per-field inclusive bounds: minute, hour, day-of-month, month, day-of-week.
-const CRON_FIELD_BOUNDS = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 7]];
+const CRON_FIELD_BOUNDS = [
+  [0, 59],
+  [0, 23],
+  [1, 31],
+  [1, 12],
+  [0, 7],
+];
 const CRON_FIELD_NAMES = ['minute', 'hour', 'day-of-month', 'month', 'day-of-week'];
 
 /**
@@ -74,8 +89,10 @@ const _lastFired = new Map();
  */
 function _minuteMarker(date) {
   const p = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())} `
-    + `${p(date.getHours())}:${p(date.getMinutes())}`;
+  return (
+    `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())} ` +
+    `${p(date.getHours())}:${p(date.getMinutes())}`
+  );
 }
 
 /**
@@ -95,7 +112,9 @@ function generateJobId() {
  */
 function cronMatches(expr, date) {
   const parts = expr.trim().split(/\s+/);
-  if (parts.length !== 5) return false;
+  if (parts.length !== 5) {
+    return false;
+  }
 
   const minute = date.getMinutes();
   const hour = date.getHours();
@@ -103,9 +122,15 @@ function cronMatches(expr, date) {
   const month = date.getMonth() + 1;
   const dow = date.getDay(); // 0=Sun
 
-  if (!fieldMatches(parts[0], minute, 0, 59)) return false;
-  if (!fieldMatches(parts[1], hour, 0, 23)) return false;
-  if (!fieldMatches(parts[3], month, 1, 12)) return false;
+  if (!fieldMatches(parts[0], minute, 0, 59)) {
+    return false;
+  }
+  if (!fieldMatches(parts[1], hour, 0, 23)) {
+    return false;
+  }
+  if (!fieldMatches(parts[3], month, 1, 12)) {
+    return false;
+  }
 
   // Standard cron DOM/DOW semantics: when BOTH the day-of-month and
   // day-of-week fields are constrained (neither is "*"), a match on EITHER is
@@ -117,9 +142,15 @@ function cronMatches(expr, date) {
   const domOk = fieldMatches(domField, dom, 1, 31);
   const dowOk = fieldMatches(dowField, dow, 0, 7);
 
-  if (domUnconstrained && dowUnconstrained) return true;
-  if (domUnconstrained) return dowOk;
-  if (dowUnconstrained) return domOk;
+  if (domUnconstrained && dowUnconstrained) {
+    return true;
+  }
+  if (domUnconstrained) {
+    return dowOk;
+  }
+  if (dowUnconstrained) {
+    return domOk;
+  }
   return domOk || dowOk;
 }
 
@@ -136,14 +167,16 @@ function cronMatches(expr, date) {
 function fieldMatches(field, value, min, max) {
   // Handle comma-separated values
   if (field.includes(',')) {
-    return field.split(',').some(part => fieldMatches(part.trim(), value, min, max));
+    return field.split(',').some((part) => fieldMatches(part.trim(), value, min, max));
   }
 
   // Handle step values
   if (field.includes('/')) {
     const [rangeStr, stepStr] = field.split('/');
     const step = parseInt(stepStr, 10);
-    if (isNaN(step) || step <= 0) return false;
+    if (isNaN(step) || step <= 0) {
+      return false;
+    }
 
     let rangeMin = min;
     let rangeMax = max;
@@ -158,7 +191,9 @@ function fieldMatches(field, value, min, max) {
       }
     }
 
-    if (value < rangeMin || value > rangeMax) return false;
+    if (value < rangeMin || value > rangeMax) {
+      return false;
+    }
     return (value - rangeMin) % step === 0;
   }
 
@@ -169,12 +204,16 @@ function fieldMatches(field, value, min, max) {
   }
 
   // Wildcard
-  if (field === '*') return true;
+  if (field === '*') {
+    return true;
+  }
 
   // Exact match
   const num = parseInt(field, 10);
   // Day-of-week: 7 = 0 (both mean Sunday)
-  if (max === 7 && num === 7 && value === 0) return true;
+  if (max === 7 && num === 7 && value === 0) {
+    return true;
+  }
   return value === num;
 }
 
@@ -184,30 +223,46 @@ function fieldMatches(field, value, min, max) {
  * @returns {boolean}
  */
 function _validateAtom(atom, min, max) {
-  if (atom === '') return false;
-  if (atom === '*') return true;
+  if (atom === '') {
+    return false;
+  }
+  if (atom === '*') {
+    return true;
+  }
 
   let body = atom;
   if (atom.includes('/')) {
     const slashParts = atom.split('/');
-    if (slashParts.length !== 2) return false;
+    if (slashParts.length !== 2) {
+      return false;
+    }
     const step = Number(slashParts[1]);
-    if (!Number.isInteger(step) || step <= 0) return false;
+    if (!Number.isInteger(step) || step <= 0) {
+      return false;
+    }
     body = slashParts[0];
-    if (body === '*') return true;
+    if (body === '*') {
+      return true;
+    }
   }
 
   if (body.includes('-')) {
     const rangeParts = body.split('-');
-    if (rangeParts.length !== 2) return false;
+    if (rangeParts.length !== 2) {
+      return false;
+    }
     const lo = Number(rangeParts[0]);
     const hi = Number(rangeParts[1]);
-    if (!Number.isInteger(lo) || !Number.isInteger(hi)) return false;
+    if (!Number.isInteger(lo) || !Number.isInteger(hi)) {
+      return false;
+    }
     return lo >= min && hi <= max && lo <= hi;
   }
 
   const n = Number(body);
-  if (!Number.isInteger(n)) return false;
+  if (!Number.isInteger(n)) {
+    return false;
+  }
   return n >= min && n <= max;
 }
 
@@ -216,8 +271,12 @@ function _validateAtom(atom, min, max) {
  * @returns {boolean}
  */
 function _validateField(field, min, max) {
-  if (field == null || field === '') return false;
-  return String(field).split(',').every((atom) => _validateAtom(atom.trim(), min, max));
+  if (field == null || field === '') {
+    return false;
+  }
+  return String(field)
+    .split(',')
+    .every((atom) => _validateAtom(atom.trim(), min, max));
 }
 
 /**
@@ -232,14 +291,18 @@ function validateCron(expr) {
   }
   const parts = expr.trim().split(/\s+/);
   if (parts.length !== 5) {
-    return `Invalid cron expression: expected 5 fields (minute hour dom month dow), `
-      + `got ${parts.length}. Example: "0 9 * * 1-5"`;
+    return (
+      `Invalid cron expression: expected 5 fields (minute hour dom month dow), ` +
+      `got ${parts.length}. Example: "0 9 * * 1-5"`
+    );
   }
   for (let i = 0; i < 5; i++) {
     const [min, max] = CRON_FIELD_BOUNDS[i];
     if (!_validateField(parts[i], min, max)) {
-      return `Invalid cron expression: bad ${CRON_FIELD_NAMES[i]} field "${parts[i]}" `
-        + `(allowed range ${min}-${max})`;
+      return (
+        `Invalid cron expression: bad ${CRON_FIELD_NAMES[i]} field "${parts[i]}" ` +
+        `(allowed range ${min}-${max})`
+      );
     }
   }
   return null;
@@ -253,14 +316,18 @@ function loadDurableJobs() {
   // not an error: existsSync short-circuits and the in-memory set stays empty.
   try {
     _durableLoaded = true;
-    if (!fs.existsSync(DURABLE_FILE)) return;
+    if (!fs.existsSync(DURABLE_FILE)) {
+      return;
+    }
     const raw = fs.readFileSync(DURABLE_FILE, 'utf-8');
     const jobs = JSON.parse(raw);
     _durableJobs.clear();
     for (const job of jobs) {
       // Skip jobs with malformed cron expressions so one bad entry can't break
       // startup or wedge the scheduler thread later.
-      if (!job || validateCron(job.cron)) continue;
+      if (!job || validateCron(job.cron)) {
+        continue;
+      }
       _durableJobs.set(job.id, job);
     }
   } catch {
@@ -275,7 +342,9 @@ function loadDurableJobs() {
  * lister can call it safely. Missing file → no-op (empty set).
  */
 function ensureDurableLoaded() {
-  if (_durableLoaded) return;
+  if (_durableLoaded) {
+    return;
+  }
   loadDurableJobs();
 }
 
@@ -307,7 +376,9 @@ function saveDurableJobs() {
  */
 function createJob({ cron, prompt, recurring = true, durable = false }) {
   const cronError = validateCron(cron);
-  if (cronError) return { error: cronError };
+  if (cronError) {
+    return { error: cronError };
+  }
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return { error: 'Invalid job: prompt is required' };
@@ -369,10 +440,7 @@ function deleteJob(id) {
  * @returns {CronJob[]}
  */
 function listJobs() {
-  return [
-    ...Array.from(_sessionJobs.values()),
-    ...Array.from(_durableJobs.values()),
-  ];
+  return [...Array.from(_sessionJobs.values()), ...Array.from(_durableJobs.values())];
 }
 
 /**
@@ -382,10 +450,7 @@ function listJobs() {
 function tick() {
   const now = new Date();
   const marker = _minuteMarker(now);
-  const allJobs = [
-    ...Array.from(_sessionJobs.entries()),
-    ...Array.from(_durableJobs.entries()),
-  ];
+  const allJobs = [...Array.from(_sessionJobs.entries()), ...Array.from(_durableJobs.entries())];
 
   for (const [id, job] of allJobs) {
     try {
@@ -398,10 +463,14 @@ function tick() {
       }
 
       // Check if cron matches
-      if (!cronMatches(job.cron, now)) continue;
+      if (!cronMatches(job.cron, now)) {
+        continue;
+      }
 
       // Same-minute dedup: never fire a job twice within one wall-clock minute.
-      if (_lastFired.get(id) === marker) continue;
+      if (_lastFired.get(id) === marker) {
+        continue;
+      }
       _lastFired.set(id, marker);
 
       // Fire the job
@@ -442,8 +511,9 @@ function _defaultEnqueue(prompt) {
   try {
     const ai = require('../cli/ai');
     if (ai && typeof ai.chat === 'function') {
-      Promise.resolve(ai.chat(`[Scheduled] ${prompt}`, { _isFollowUp: true }))
-        .catch(() => { /* delivery is best-effort */ });
+      Promise.resolve(ai.chat(`[Scheduled] ${prompt}`, { _isFollowUp: true })).catch(() => {
+        /* delivery is best-effort */
+      });
     }
   } catch {
     // cli/ai unavailable in this context (e.g. tests) — nothing to deliver to.
@@ -454,10 +524,14 @@ function _defaultEnqueue(prompt) {
  * Ensure the 1-minute tick loop is running. Idempotent.
  */
 function _ensureSchedulerRunning() {
-  if (_tickInterval) return;
+  if (_tickInterval) {
+    return;
+  }
   _tickInterval = setInterval(tick, 60 * 1000);
   // Don't prevent process exit.
-  if (_tickInterval.unref) _tickInterval.unref();
+  if (_tickInterval.unref) {
+    _tickInterval.unref();
+  }
 }
 
 /**

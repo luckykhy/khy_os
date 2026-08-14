@@ -6,8 +6,9 @@ const chalk = require('chalk').default || require('chalk');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { printInfo, printSuccess } = require('../formatters');
+
 const { getDataHome, getLegacyDataHome } = require('../../utils/dataHome');
+const { printInfo, printSuccess } = require('../formatters');
 
 const DOCS_DIR = path.resolve(__dirname, '../../../docs');
 const BUNDLED_DOCS_DIR = path.resolve(__dirname, '../../bundled/docs');
@@ -20,20 +21,28 @@ function getRepoRoot() {
 }
 
 function getDocsDir() {
-  if (fs.existsSync(DOCS_DIR)) return DOCS_DIR;
-  if (fs.existsSync(BUNDLED_DOCS_DIR)) return BUNDLED_DOCS_DIR;
+  if (fs.existsSync(DOCS_DIR)) {
+    return DOCS_DIR;
+  }
+  if (fs.existsSync(BUNDLED_DOCS_DIR)) {
+    return BUNDLED_DOCS_DIR;
+  }
   return null;
 }
 
 function getFastlaneDocPath() {
   const candidates = [];
   const docsDir = getDocsDir();
-  if (docsDir) candidates.push(path.join(docsDir, FASTLANE_DOC_REL_PATH));
+  if (docsDir) {
+    candidates.push(path.join(docsDir, FASTLANE_DOC_REL_PATH));
+  }
   candidates.push(path.join(getRepoRoot(), 'docs', FASTLANE_DOC_REL_PATH));
 
   for (const filePath of candidates) {
     try {
-      if (fs.existsSync(filePath)) return filePath;
+      if (fs.existsSync(filePath)) {
+        return filePath;
+      }
     } catch {
       // try next
     }
@@ -44,12 +53,16 @@ function getFastlaneDocPath() {
 function getMaintainerMapPath() {
   const candidates = [];
   const docsDir = getDocsDir();
-  if (docsDir) candidates.push(path.join(docsDir, MAINTAINER_MAP_REL_PATH));
+  if (docsDir) {
+    candidates.push(path.join(docsDir, MAINTAINER_MAP_REL_PATH));
+  }
   candidates.push(path.join(getRepoRoot(), 'docs', MAINTAINER_MAP_REL_PATH));
 
   for (const filePath of candidates) {
     try {
-      if (fs.existsSync(filePath)) return filePath;
+      if (fs.existsSync(filePath)) {
+        return filePath;
+      }
     } catch {
       // try next
     }
@@ -68,7 +81,9 @@ function getContributingPath() {
 
 function readMaintainerMap() {
   const filePath = getMaintainerMapPath();
-  if (!filePath) return null;
+  if (!filePath) {
+    return null;
+  }
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   } catch {
@@ -147,12 +162,14 @@ function writeAiFastlaneContextPack() {
   const fileName = 'ai_fastlane_context.md';
   const payload = buildAiFastlaneContextPack();
   const repoRoot = getRepoRoot();
-  const targets = Array.from(new Set([
-    path.join(getDataHome(), fileName),
-    path.join(getLegacyDataHome(), fileName),
-    path.join(repoRoot, '.khy-runtime', fileName),
-    path.join(os.tmpdir(), fileName),
-  ]));
+  const targets = Array.from(
+    new Set([
+      path.join(getDataHome(), fileName),
+      path.join(getLegacyDataHome(), fileName),
+      path.join(repoRoot, '.khy-runtime', fileName),
+      path.join(os.tmpdir(), fileName),
+    ])
+  );
   const written = [];
 
   for (const filePath of targets) {
@@ -196,7 +213,6 @@ function renderMarkdown(content) {
     if (line.startsWith('# ')) {
       output.push('');
       output.push(chalk.cyan.bold('  ' + line.slice(2)));
-      output.push(chalk.dim('  ' + '─'.repeat(50)));
     } else if (line.startsWith('## ')) {
       output.push('');
       output.push(chalk.yellow.bold('  ' + line.slice(3)));
@@ -256,11 +272,11 @@ async function handleDocsQuickstart() {
 }
 
 async function handleDocsAiFastlane(args = [], options = {}) {
-  const action = String(args[0] || '').trim().toLowerCase();
-  const shouldCopy = action === 'copy'
-    || action === 'clipboard'
-    || action === 'cp'
-    || isTruthy(options.copy);
+  const action = String(args[0] || '')
+    .trim()
+    .toLowerCase();
+  const shouldCopy =
+    action === 'copy' || action === 'clipboard' || action === 'cp' || isTruthy(options.copy);
   const packContent = buildAiFastlaneContextPack();
   const written = writeAiFastlaneContextPack();
 
@@ -325,25 +341,30 @@ async function handleDocsClaude() {
     return;
   }
 
-  const files = fs.readdirSync(claudeDir)
-    .filter(f => f.endsWith('.md'))
+  const files = fs
+    .readdirSync(claudeDir)
+    .filter((f) => f.endsWith('.md'))
     .sort();
 
   const { promptCompat } = require('../uiPrompt');
-  const { doc } = await promptCompat([{
-    type: 'list',
-    name: 'doc',
-    message: '选择教程:',
-    choices: [
-      ...files.map(f => ({
-        name: f.replace('.md', '').replace(/^\d+-/, ''),
-        value: f,
-      })),
-      { name: '↩️  返回', value: 'back' },
-    ],
-  }]);
+  const { doc } = await promptCompat([
+    {
+      type: 'list',
+      name: 'doc',
+      message: '选择教程:',
+      choices: [
+        ...files.map((f) => ({
+          name: f.replace('.md', '').replace(/^\d+-/, ''),
+          value: f,
+        })),
+        { name: '↩️  返回', value: 'back' },
+      ],
+    },
+  ]);
 
-  if (!doc || doc === 'back') return;
+  if (!doc || doc === 'back') {
+    return;
+  }
 
   const content = fs.readFileSync(path.join(claudeDir, doc), 'utf-8');
   // Show first 80 lines as preview. Route through ccTruncateLines so the cut is
@@ -373,7 +394,11 @@ async function handleDocsGateway() {
   console.log('  ' + chalk.green('7.') + ' Web 中转 — 手动复制粘贴到网页AI');
   console.log('');
   console.log('  ' + chalk.bold('通用扩展:'));
-  console.log(chalk.dim('    CLIPBOARD_RELAY_EXTRA_SERVICES="myrelay|My Relay|https://example.com/chat,foo=https://foo.ai"'));
+  console.log(
+    chalk.dim(
+      '    CLIPBOARD_RELAY_EXTRA_SERVICES="myrelay|My Relay|https://example.com/chat,foo=https://foo.ai"'
+    )
+  );
   console.log(chalk.dim('    RELAY_API_MODELS="gpt-4.1,claude-sonnet-4-6,deepseek-chat"'));
   console.log(chalk.dim('    GATEWAY_EXTRA_IDES="myide" + MYIDE_INSTALL_PATH/MYIDE_DATA_PATH'));
   console.log('');
@@ -387,17 +412,37 @@ async function handleDocsGateway() {
   console.log('');
   console.log('  ' + chalk.bold('高级策略配置 (支持国内外多供应商/多渠道):'));
   console.log(chalk.dim('    gateway config → 高级: 模型路由规则'));
-  console.log(chalk.dim('      GATEWAY_MODEL_ROUTE_MAP={\"gpt-4o-mini\":\"api/openai:gpt-4o-mini\",\"claude-*\":{\"target\":\"kiro/claude-sonnet-4\",\"strict\":true}}'));
+  console.log(
+    chalk.dim(
+      '      GATEWAY_MODEL_ROUTE_MAP={\"gpt-4o-mini\":\"api/openai:gpt-4o-mini\",\"claude-*\":{\"target\":\"kiro/claude-sonnet-4\",\"strict\":true}}'
+    )
+  );
   console.log(chalk.dim('      GATEWAY_MODEL_ROUTE_STRICT=false'));
   console.log(chalk.dim('    gateway config → 高级: Key 选择策略'));
   console.log(chalk.dim('      GATEWAY_KEY_SELECTION_STRATEGY=hybrid'));
-  console.log(chalk.dim('      GATEWAY_KEY_SELECTION_STRATEGY_MAP={\"relay\":\"least-used\",\"openai\":\"least-fail\"}'));
+  console.log(
+    chalk.dim(
+      '      GATEWAY_KEY_SELECTION_STRATEGY_MAP={\"relay\":\"least-used\",\"openai\":\"least-fail\"}'
+    )
+  );
   console.log(chalk.dim('    gateway config → 高级: API 池默认 provider'));
   console.log(chalk.dim('      GATEWAY_API_POOL_PROVIDER=deepseek'));
   console.log(chalk.dim('    gateway config → 高级: 供应商映射'));
-  console.log(chalk.dim('      GATEWAY_API_POOL_PROVIDER_ALIAS_MAP={\"openai-sb\":\"openai\",\"myqwen\":\"qwen\"}'));
-  console.log(chalk.dim('      GATEWAY_API_POOL_SERVICE_MAP={\"deepseek\":\"openai\",\"qwen\":\"alibaba\",\"glm\":\"zhipu\",\"relay\":\"openai\"}'));
-  console.log(chalk.dim('      GATEWAY_API_POOL_DEFAULT_MODEL_MAP={\"deepseek\":\"deepseek-chat\",\"qwen\":\"qwen-plus\"}'));
+  console.log(
+    chalk.dim(
+      '      GATEWAY_API_POOL_PROVIDER_ALIAS_MAP={\"openai-sb\":\"openai\",\"myqwen\":\"qwen\"}'
+    )
+  );
+  console.log(
+    chalk.dim(
+      '      GATEWAY_API_POOL_SERVICE_MAP={\"deepseek\":\"openai\",\"qwen\":\"alibaba\",\"glm\":\"zhipu\",\"relay\":\"openai\"}'
+    )
+  );
+  console.log(
+    chalk.dim(
+      '      GATEWAY_API_POOL_DEFAULT_MODEL_MAP={\"deepseek\":\"deepseek-chat\",\"qwen\":\"qwen-plus\"}'
+    )
+  );
   console.log('');
   console.log('  ' + chalk.bold('Ollama 本地部署 (推荐):'));
   console.log(chalk.dim('    1. 安装 Ollama: https://ollama.com'));
@@ -477,7 +522,9 @@ async function handleDocsSubscription() {
   console.log(chalk.dim('     安装后登录 Amazon 账号即可使用'));
   console.log(chalk.dim('     运行: khy gateway model → 选择 Kiro'));
   console.log('');
-  console.log('  ' + chalk.green('2.') + chalk.bold(' Trae IDE') + ' — 免费 Claude/GPT 额度 (字节跳动)');
+  console.log(
+    '  ' + chalk.green('2.') + chalk.bold(' Trae IDE') + ' — 免费 Claude/GPT 额度 (字节跳动)'
+  );
   console.log(chalk.dim('     下载: https://trae.ai'));
   console.log(chalk.dim('     国内直连，支持 doubao-1.5-pro / Claude / GPT'));
   console.log('');
@@ -540,7 +587,7 @@ async function handleDocsSubscription() {
   console.log(chalk.dim('     或设置环境变量:'));
   console.log(chalk.dim('       RELAY_API_ENDPOINT=https://your-relay.com/v1'));
   console.log(chalk.dim('       RELAY_API_KEY=sk-xxx'));
-  console.log(chalk.dim('       RELAY_API_MODEL=claude-sonnet-4-20250514'));
+  console.log(chalk.dim('       RELAY_API_MODEL=claude-sonnet-4-6'));
   console.log('');
 }
 
@@ -565,7 +612,11 @@ async function handleDocsMaintainer() {
   }
   console.log('');
   console.log('  ' + chalk.bold('一键健康自检（单人维护者首选）:'));
-  console.log(chalk.dim('    khy maintain          # 驾驶舱：元数据/架构债/基建裸奔/版本 一条命令看全 + 唯一下一步（红则退码1）'));
+  console.log(
+    chalk.dim(
+      '    khy maintain          # 驾驶舱：元数据/架构债/基建裸奔/版本 一条命令看全 + 唯一下一步（红则退码1）'
+    )
+  );
   console.log(chalk.dim('    khy maintain audit    # 展开本次改动文件的公共面缺口明细'));
   console.log('');
   console.log('  ' + chalk.bold('直接可执行命令:'));
@@ -594,10 +645,13 @@ async function handleDocsMaintainer() {
   if (map && Array.isArray(map.areas) && map.areas.length > 0) {
     console.log('  ' + chalk.bold('维护领域:'));
     map.areas.forEach((area) => {
-      const summary = Array.isArray(area.whenToUse) && area.whenToUse.length > 0
-        ? area.whenToUse[0]
-        : '查看该领域入口文件';
-      console.log(`    ${chalk.white(area.id.padEnd(26))} ${chalk.dim(area.label)} ${chalk.dim(`— ${summary}`)}`);
+      const summary =
+        Array.isArray(area.whenToUse) && area.whenToUse.length > 0
+          ? area.whenToUse[0]
+          : '查看该领域入口文件';
+      console.log(
+        `    ${chalk.white(area.id.padEnd(26))} ${chalk.dim(area.label)} ${chalk.dim(`— ${summary}`)}`
+      );
     });
     console.log('');
     printInfo('查看单个领域: npm run maintainer:map -- --area cli-routing');
@@ -605,7 +659,9 @@ async function handleDocsMaintainer() {
     printInfo('未找到维护地图 JSON，已回退到静态维护入口。');
   }
 
-  printInfo('推荐顺序: 先看 CONTRIBUTING.md，再按 docs/维护者/维护映射表.json 选领域，再跑对应最小验证命令。');
+  printInfo(
+    '推荐顺序: 先看 CONTRIBUTING.md，再按 docs/维护者/维护映射表.json 选领域，再跑对应最小验证命令。'
+  );
   console.log('');
 }
 
@@ -666,13 +722,17 @@ async function handleDocsFreshness(args, options = {}) {
     printSuccess(`检测到 ${changedN} 处源码改动,未发现引用它们的文档(无过时嫌疑)。`);
   } else {
     console.log('');
-    console.log(`  检测到 ${changedN} 处源码改动,以下 ${chalk.bold(suspects.length)} 篇文档可能过时,请复核:`);
+    console.log(
+      `  检测到 ${changedN} 处源码改动,以下 ${chalk.bold(suspects.length)} 篇文档可能过时,请复核:`
+    );
     console.log('');
     for (const s of suspects) {
       const badge = s.confidence === 'exact' ? chalk.yellow('● 高') : chalk.dim('○ 低');
       console.log(`   ${badge}  ${chalk.white(s.doc)}`);
       const srcs = (s.matchedSources || []).slice(0, 4).join(', ');
-      if (srcs) console.log(chalk.dim(`         触发: ${srcs}${s.matchedSources.length > 4 ? ' …' : ''}`));
+      if (srcs) {
+        console.log(chalk.dim(`         触发: ${srcs}${s.matchedSources.length > 4 ? ' …' : ''}`));
+      }
     }
   }
 
@@ -682,9 +742,15 @@ async function handleDocsFreshness(args, options = {}) {
   if (has('fix')) {
     const okProd = prod.filter((a) => a.ok);
     const okMark = mark.filter((a) => a.ok);
-    if (okProd.length) console.log(chalk.dim(`   ↻ 重生成产物: ${okProd.map((a) => a.rel).join(', ')}`));
-    if (okMark.length) console.log(chalk.dim(`   ↻ 同步标记值: ${okMark.map((a) => a.rel).join(', ')}`));
-    if ((result.restaged || []).length) console.log(chalk.dim(`   ✚ 已 re-stage ${result.restaged.length} 个文件`));
+    if (okProd.length) {
+      console.log(chalk.dim(`   ↻ 重生成产物: ${okProd.map((a) => a.rel).join(', ')}`));
+    }
+    if (okMark.length) {
+      console.log(chalk.dim(`   ↻ 同步标记值: ${okMark.map((a) => a.rel).join(', ')}`));
+    }
+    if ((result.restaged || []).length) {
+      console.log(chalk.dim(`   ✚ 已 re-stage ${result.restaged.length} 个文件`));
+    }
   } else if (suspects.length) {
     console.log('');
     printInfo('这是提醒,不阻断。要同时重生成产物/同步标记值: khy docs check --fix');
@@ -694,7 +760,9 @@ async function handleDocsFreshness(args, options = {}) {
   if (has('verbose') && (result.unmatchedChanges || []).length) {
     console.log('');
     console.log(chalk.dim(`  未匹配到文档的源码变更(${result.unmatchedChanges.length}):`));
-    for (const u of result.unmatchedChanges.slice(0, 20)) console.log(chalk.dim(`     · ${u}`));
+    for (const u of result.unmatchedChanges.slice(0, 20)) {
+      console.log(chalk.dim(`     · ${u}`));
+    }
   }
 
   // --ai:AI 改稿建议(门控默认关,绝不自动落地)。
@@ -712,11 +780,17 @@ async function handleDocsFreshness(args, options = {}) {
   }
 
   // CI 门禁:有嫌疑 → 非零退出。
-  const blockEnv = ['1', 'true', 'on', 'yes'].includes(String(process.env.KHY_DOCS_FRESHNESS_BLOCK || '').trim().toLowerCase());
+  const blockEnv = ['1', 'true', 'on', 'yes'].includes(
+    String(process.env.KHY_DOCS_FRESHNESS_BLOCK || '')
+      .trim()
+      .toLowerCase()
+  );
   if ((has('ci') || blockEnv) && suspects.length > 0) {
     process.exitCode = 1;
     console.log('');
-    console.log(chalk.yellow('  ⚠ CI 门禁:存在过时嫌疑,以非零退出(--ci / KHY_DOCS_FRESHNESS_BLOCK)。'));
+    console.log(
+      chalk.yellow('  ⚠ CI 门禁:存在过时嫌疑,以非零退出(--ci / KHY_DOCS_FRESHNESS_BLOCK)。')
+    );
   }
   console.log('');
 }
@@ -783,7 +857,11 @@ async function handleDocsSearch(query, options) {
 
   function searchDir(dir) {
     let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
@@ -801,7 +879,9 @@ async function handleDocsSearch(query, options) {
               });
             }
           });
-        } catch (_) { /* skip unreadable */ }
+        } catch (_) {
+          /* skip unreadable */
+        }
       }
     }
   }

@@ -44,7 +44,10 @@ const httpError = require('../../../backend/src/utils/httpError');
 function normalizeName(raw) {
   const name = String(raw == null ? '' : raw).trim();
   if (!NAME_RE.test(name)) {
-    throw httpError(400, 'Invalid workflow name (1-80 chars: letters, digits, CJK, space, dot, dash, underscore)');
+    throw httpError(
+      400,
+      'Invalid workflow name (1-80 chars: letters, digits, CJK, space, dot, dash, underscore)'
+    );
   }
   return name;
 }
@@ -81,14 +84,24 @@ function validateGraph(graph, { strict = false } = {}) {
   const errors = [];
 
   if (nodes.length > MAX_NODES) errors.push(`too many nodes (${nodes.length} > ${MAX_NODES})`);
-  if (conns.length > MAX_EDGES) errors.push(`too many connections (${conns.length} > ${MAX_EDGES})`);
+  if (conns.length > MAX_EDGES)
+    errors.push(`too many connections (${conns.length} > ${MAX_EDGES})`);
 
   // Nodes: unique id + known type.
   const nodeById = new Map();
   for (const n of nodes) {
-    if (!n || typeof n !== 'object') { errors.push('invalid node entry'); continue; }
-    if (!n.id) { errors.push('node missing id'); continue; }
-    if (nodeById.has(n.id)) { errors.push(`duplicate node id: ${n.id}`); continue; }
+    if (!n || typeof n !== 'object') {
+      errors.push('invalid node entry');
+      continue;
+    }
+    if (!n.id) {
+      errors.push('node missing id');
+      continue;
+    }
+    if (nodeById.has(n.id)) {
+      errors.push(`duplicate node id: ${n.id}`);
+      continue;
+    }
     nodeById.set(n.id, n);
     if (!getNodeType(n.type)) errors.push(`unknown node type '${n.type}' (node ${n.id})`);
   }
@@ -98,15 +111,24 @@ function validateGraph(graph, { strict = false } = {}) {
   const inbound = new Map();
   const outbound = new Map();
   for (const c of conns) {
-    if (!c || typeof c !== 'object') { errors.push('invalid connection entry'); continue; }
+    if (!c || typeof c !== 'object') {
+      errors.push('invalid connection entry');
+      continue;
+    }
     if (c.id) {
       if (connIds.has(c.id)) errors.push(`duplicate connection id: ${c.id}`);
       else connIds.add(c.id);
     }
     const src = nodeById.get(c.from);
     const dst = nodeById.get(c.to);
-    if (!src) { errors.push(`connection ${c.id || ''} references unknown source node '${c.from}'`); continue; }
-    if (!dst) { errors.push(`connection ${c.id || ''} references unknown target node '${c.to}'`); continue; }
+    if (!src) {
+      errors.push(`connection ${c.id || ''} references unknown source node '${c.from}'`);
+      continue;
+    }
+    if (!dst) {
+      errors.push(`connection ${c.id || ''} references unknown target node '${c.to}'`);
+      continue;
+    }
     const fromPort = c.fromPort || 'default';
     const toPort = c.toPort || 'input';
     if (!portsFor(src.type).outputs.includes(fromPort)) {
@@ -122,7 +144,8 @@ function validateGraph(graph, { strict = false } = {}) {
   if (strict) {
     const starts = nodes.filter((n) => n && n.type === 'start');
     const ends = nodes.filter((n) => n && n.type === 'end');
-    if (starts.length !== 1) errors.push(`graph must have exactly one start node (found ${starts.length})`);
+    if (starts.length !== 1)
+      errors.push(`graph must have exactly one start node (found ${starts.length})`);
     for (const s of starts) {
       if (inbound.get(s.id)) errors.push(`start node ${s.id} must have no inbound connections`);
     }
@@ -164,7 +187,10 @@ async function list(userId) {
   await ensureTable();
   const rows = await UserWorkflow.findAll({
     where: { userId },
-    order: [['updatedAt', 'DESC'], ['id', 'DESC']],
+    order: [
+      ['updatedAt', 'DESC'],
+      ['id', 'DESC'],
+    ],
   });
   return rows.map(toSummary);
 }
@@ -263,9 +289,8 @@ async function createFromCoze(userId, body = {}) {
   const { graph, report } = await cozeImport.importToGraph(body, { name: body.name });
   const created = await create(userId, {
     name: body.name || report.name,
-    description: body.description != null
-      ? body.description
-      : `从 Coze 导入（${report.nodeCount} 节点）`,
+    description:
+      body.description != null ? body.description : `从 Coze 导入（${report.nodeCount} 节点）`,
     graph,
   });
   return { ...created, report };
@@ -308,9 +333,8 @@ async function installCozeEntry(userId, body = {}) {
   const { graph, report } = cozeImport.getSessionGraph(sessionId, userId, index);
   const created = await create(userId, {
     name: sanitizeImportName(body.name || report.name),
-    description: body.description != null
-      ? body.description
-      : `从 Coze 安装（${report.nodeCount} 节点）`,
+    description:
+      body.description != null ? body.description : `从 Coze 安装（${report.nodeCount} 节点）`,
     graph,
   });
   return { ...created, report };

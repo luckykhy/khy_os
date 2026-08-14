@@ -4,7 +4,9 @@ const path = require('path');
 
 function createRouterHandlers({ fmt, chk, symResolver }) {
   async function resolveArg0(args) {
-    if (!args[0]) return args[0];
+    if (!args[0]) {
+      return args[0];
+    }
     const result = await symResolver().resolveSymbol(args[0]);
     if (result.matched && result.symbol !== args[0]) {
       fmt().printInfo(`${args[0]} → ${result.symbol} (${result.name})`);
@@ -19,16 +21,25 @@ function createRouterHandlers({ fmt, chk, symResolver }) {
     const { printError, printSuccess, printInfo } = fmt();
     const chalk = chk();
     const fs = require('fs');
-    const logsDir = path.join(process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..'), 'logs');
+    const logsDir = path.join(
+      process.env.KHYQUANT_ROOT || path.resolve(__dirname, '../..'),
+      'logs'
+    );
     const errorLogPath = path.join(logsDir, 'error.log');
     const combinedLogPath = path.join(logsDir, 'combined.log');
 
     if (subCommand === 'clear') {
       try {
-        if (fs.existsSync(errorLogPath)) fs.writeFileSync(errorLogPath, '');
-        if (fs.existsSync(combinedLogPath)) fs.writeFileSync(combinedLogPath, '');
+        if (fs.existsSync(errorLogPath)) {
+          fs.writeFileSync(errorLogPath, '');
+        }
+        if (fs.existsSync(combinedLogPath)) {
+          fs.writeFileSync(combinedLogPath, '');
+        }
         printSuccess('日志已清理');
-      } catch (e) { printError(`清理失败: ${e.message}`); }
+      } catch (e) {
+        printError(`清理失败: ${e.message}`);
+      }
       return;
     }
 
@@ -56,7 +67,9 @@ function createRouterHandlers({ fmt, chk, symResolver }) {
     }
 
     console.log('');
-    console.log(chalk.bold(`  📋 最近 ${recentLines.length} 条${subCommand === 'tail' ? '' : '错误'}日志:`));
+    console.log(
+      chalk.bold(`  📋 最近 ${recentLines.length} 条${subCommand === 'tail' ? '' : '错误'}日志:`)
+    );
     console.log(chalk.dim('  ─'.repeat(25)));
 
     const knownFixes = {
@@ -90,7 +103,9 @@ function createRouterHandlers({ fmt, chk, symResolver }) {
       console.log(chalk.yellow.bold('  💡 建议修复措施:'));
       let fixIdx = 1;
       for (const fix of suggestedFixes) {
-        console.log(`  ${fixIdx}. ${chalk.yellow(fix.desc)} → ${fix.fix}${fix.cmd ? chalk.cyan(` (运行: ${fix.cmd})`) : ''}`);
+        console.log(
+          `  ${fixIdx}. ${chalk.yellow(fix.desc)} → ${fix.fix}${fix.cmd ? chalk.cyan(` (运行: ${fix.cmd})`) : ''}`
+        );
         fixIdx += 1;
       }
 
@@ -112,17 +127,29 @@ function createRouterHandlers({ fmt, chk, symResolver }) {
 
     const cliAuth = require('../services/cliAuthService');
     const currentUser = cliAuth.getCurrentUser();
-    if (!currentUser) { printError('请先登录 (login)'); return; }
+    if (!currentUser) {
+      printError('请先登录 (login)');
+      return;
+    }
     const dbUser = await User.findOne({ where: { username: currentUser.username }, raw: true });
-    if (!dbUser) { printError('用户不存在'); return; }
+    if (!dbUser) {
+      printError('用户不存在');
+      return;
+    }
 
-    const trades = await Trade.findAll({ where: { user_id: dbUser.id, status: 'filled' }, raw: true });
+    const trades = await Trade.findAll({
+      where: { user_id: dbUser.id, status: 'filled' },
+      raw: true,
+    });
 
     let totalProfit = 0;
     let positionCost = 0;
     trades.forEach((t) => {
-      if (t.isClosed && t.profit) totalProfit += Number.parseFloat(t.profit);
-      else if (!t.isClosed && t.side === 'buy') positionCost += Number.parseFloat(t.amount || 0);
+      if (t.isClosed && t.profit) {
+        totalProfit += Number.parseFloat(t.profit);
+      } else if (!t.isClosed && t.side === 'buy') {
+        positionCost += Number.parseFloat(t.amount || 0);
+      }
     });
 
     const initial = 1000000;
@@ -132,7 +159,10 @@ function createRouterHandlers({ fmt, chk, symResolver }) {
       ['项目', '金额'],
       [
         ['初始资金', `¥${initial.toLocaleString()}`],
-        ['累计盈亏', (totalProfit >= 0 ? chalk.red('+') : chalk.green('')) + `¥${totalProfit.toFixed(2)}`],
+        [
+          '累计盈亏',
+          (totalProfit >= 0 ? chalk.red('+') : chalk.green('')) + `¥${totalProfit.toFixed(2)}`,
+        ],
         ['持仓占用', `¥${positionCost.toFixed(2)}`],
         ['可用资金', chalk.bold(`¥${available.toFixed(2)}`)],
         ['总成交笔数', String(trades.length)],
@@ -150,9 +180,15 @@ function createRouterHandlers({ fmt, chk, symResolver }) {
 
     const cliAuth = require('../services/cliAuthService');
     const currentUser = cliAuth.getCurrentUser();
-    if (!currentUser) { printError('请先登录 (login)'); return; }
+    if (!currentUser) {
+      printError('请先登录 (login)');
+      return;
+    }
     const dbUser = await User.findOne({ where: { username: currentUser.username }, raw: true });
-    if (!dbUser) { printError('用户不存在'); return; }
+    if (!dbUser) {
+      printError('用户不存在');
+      return;
+    }
 
     const openTrades = await Trade.findAll({
       where: { user_id: dbUser.id, status: 'filled', isClosed: false, side: 'buy' },

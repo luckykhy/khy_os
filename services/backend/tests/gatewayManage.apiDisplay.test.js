@@ -15,6 +15,14 @@ describe('gateway manage API display discovery', () => {
   beforeEach(() => {
     jest.resetModules();
     tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-gateway-manage-'));
+    // Pin the legacy home too: _discoverAiBackendUrl reads BOTH
+    // <dataHome>/ai_manage_runtime.json AND ~/.khyquant/ai_manage_runtime.json,
+    // so without mocking os.homedir() a live daemon's runtime file on the host
+    // leaks a real port into the "runtime absent" assertions.
+    jest.doMock('os', () => {
+      const actual = jest.requireActual('os');
+      return { ...actual, homedir: () => tempHome };
+    });
     process.env = {
       ...ORIGINAL_ENV,
       KHY_DATA_HOME: path.join(tempHome, '.khy'),
@@ -26,6 +34,7 @@ describe('gateway manage API display discovery', () => {
 
   afterEach(() => {
     process.env = ORIGINAL_ENV;
+    jest.dontMock('os');
     if (tempHome && fs.existsSync(tempHome)) {
       fs.rmSync(tempHome, { recursive: true, force: true });
     }

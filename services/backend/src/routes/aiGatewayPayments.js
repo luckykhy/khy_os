@@ -12,22 +12,28 @@ function _messageOf(error, fallback = '') {
 
 function _statusForError(error, fallback = 500) {
   const message = _messageOf(error).toLowerCase();
-  if (!message) return fallback;
+  if (!message) {
+    return fallback;
+  }
+  if (message.includes('admin access is required') || message.includes('forbidden')) {
+    return 403;
+  }
   if (
-    message.includes('admin access is required')
-    || message.includes('forbidden')
-  ) return 403;
-  if (
-    message.includes('required')
-    || message.includes('greater than 0')
-    || message.includes('unsupported payment provider')
-  ) return 400;
-  if (
-    message.includes('amount mismatch')
-    || message.includes('unsupported webhook status')
-  ) return 400;
-  if (message.includes('cannot be cancelled')) return 409;
-  if (message.includes('not found')) return 404;
+    message.includes('required') ||
+    message.includes('greater than 0') ||
+    message.includes('unsupported payment provider')
+  ) {
+    return 400;
+  }
+  if (message.includes('amount mismatch') || message.includes('unsupported webhook status')) {
+    return 400;
+  }
+  if (message.includes('cannot be cancelled')) {
+    return 409;
+  }
+  if (message.includes('not found')) {
+    return 404;
+  }
   return fallback;
 }
 
@@ -41,13 +47,16 @@ function _baseOptions(req, extras = {}) {
 
 router.get('/', async (req, res) => {
   try {
-    const data = await paymentGatewayService.listPayments({
-      page: req.query.page,
-      pageSize: req.query.pageSize,
-      status: req.query.status,
-      customerId: req.query.customerId,
-      provider: req.query.provider,
-    }, _baseOptions(req));
+    const data = await paymentGatewayService.listPayments(
+      {
+        page: req.query.page,
+        pageSize: req.query.pageSize,
+        status: req.query.status,
+        customerId: req.query.customerId,
+        provider: req.query.provider,
+      },
+      _baseOptions(req)
+    );
     res.json({ success: true, data });
   } catch (error) {
     res.status(_statusForError(error)).json({
@@ -73,10 +82,13 @@ router.post('/', async (req, res) => {
 
 router.get('/:paymentId', async (req, res) => {
   try {
-    const data = await paymentGatewayService.getPayment(req.params.paymentId, _baseOptions(req, {
-      includeEvents: true,
-      includeCheckout: true,
-    }));
+    const data = await paymentGatewayService.getPayment(
+      req.params.paymentId,
+      _baseOptions(req, {
+        includeEvents: true,
+        includeCheckout: true,
+      })
+    );
     res.json({ success: true, data });
   } catch (error) {
     res.status(_statusForError(error)).json({
@@ -89,7 +101,11 @@ router.get('/:paymentId', async (req, res) => {
 
 router.post('/:paymentId/cancel', async (req, res) => {
   try {
-    const data = await paymentGatewayService.cancelPayment(req.params.paymentId, req.body || {}, _baseOptions(req));
+    const data = await paymentGatewayService.cancelPayment(
+      req.params.paymentId,
+      req.body || {},
+      _baseOptions(req)
+    );
     res.json({ success: true, data });
   } catch (error) {
     res.status(_statusForError(error)).json({
@@ -102,7 +118,11 @@ router.post('/:paymentId/cancel', async (req, res) => {
 
 router.post('/:paymentId/mock/confirm', async (req, res) => {
   try {
-    const data = await paymentGatewayService.confirmMockPayment(req.params.paymentId, req.body || {}, _baseOptions(req));
+    const data = await paymentGatewayService.confirmMockPayment(
+      req.params.paymentId,
+      req.body || {},
+      _baseOptions(req)
+    );
     res.json({ success: true, data });
   } catch (error) {
     res.status(_statusForError(error)).json({

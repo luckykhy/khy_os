@@ -25,7 +25,9 @@ const RETRY_POLICY_APPROVAL_RETENTION_MAX_COUNT = 200_000;
 const RETRY_POLICY_APPROVAL_RETENTION_MAX_AGE_MS = 365 * 24 * 60 * 60_000;
 
 function normalizeRetryPolicyToken(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 function validateRetryPolicyStringList(fieldName, value, errors) {
@@ -41,7 +43,9 @@ function validateRetryPolicyStringList(fieldName, value, errors) {
   const seen = new Set();
   for (const raw of value) {
     const token = normalizeRetryPolicyToken(raw);
-    if (!token) continue;
+    if (!token) {
+      continue;
+    }
     if (token.length > RETRY_POLICY_MAX_TOKEN_LENGTH) {
       errors.push(`${fieldName} token exceeds max length ${RETRY_POLICY_MAX_TOKEN_LENGTH}.`);
       continue;
@@ -50,7 +54,9 @@ function validateRetryPolicyStringList(fieldName, value, errors) {
       errors.push(`${fieldName} contains invalid token "${token}".`);
       continue;
     }
-    if (seen.has(token)) continue;
+    if (seen.has(token)) {
+      continue;
+    }
     seen.add(token);
     out.push(token);
   }
@@ -78,7 +84,9 @@ function validateRetryPolicyStatusCodeList(fieldName, value, errors) {
       errors.push(`${fieldName} contains out-of-range status code ${code}.`);
       continue;
     }
-    if (seen.has(code)) continue;
+    if (seen.has(code)) {
+      continue;
+    }
     seen.add(code);
     out.push(code);
   }
@@ -151,20 +159,28 @@ function validateRetryPolicyPatch(value) {
 
 function policyListAsSet(list = []) {
   const out = new Set();
-  if (!Array.isArray(list)) return out;
+  if (!Array.isArray(list)) {
+    return out;
+  }
   for (const item of list) {
     const token = normalizeRetryPolicyToken(item);
-    if (token) out.add(token);
+    if (token) {
+      out.add(token);
+    }
   }
   return out;
 }
 
 function policyCodeSet(list = []) {
   const out = new Set();
-  if (!Array.isArray(list)) return out;
+  if (!Array.isArray(list)) {
+    return out;
+  }
   for (const item of list) {
     const code = Number.parseInt(item, 10);
-    if (Number.isFinite(code)) out.add(code);
+    if (Number.isFinite(code)) {
+      out.add(code);
+    }
   }
   return out;
 }
@@ -185,9 +201,9 @@ function evaluateRetryPolicyRisk(currentPolicy = {}, patch = {}) {
     : [];
   const addedHighRiskKinds = patchNonRetryKinds.filter((kind) => {
     const token = normalizeRetryPolicyToken(kind);
-    return token
-      && RETRY_POLICY_HIGH_RISK_ERROR_KINDS.has(token)
-      && !currentNonRetryKinds.has(token);
+    return (
+      token && RETRY_POLICY_HIGH_RISK_ERROR_KINDS.has(token) && !currentNonRetryKinds.has(token)
+    );
   });
   if (addedHighRiskKinds.length > 0) {
     triggers.push(`non_retryable_error_kinds_add:${addedHighRiskKinds.join(',')}`);
@@ -198,9 +214,14 @@ function evaluateRetryPolicyRisk(currentPolicy = {}, patch = {}) {
   const patchNonRetryTypes = Array.isArray(patch.non_retryable_error_types)
     ? patch.non_retryable_error_types
     : [];
-  if (patchNonRetryTypes.some((item) => normalizeRetryPolicyToken(item) === 'error') && !currentNonRetryTypes.has('error')) {
+  if (
+    patchNonRetryTypes.some((item) => normalizeRetryPolicyToken(item) === 'error') &&
+    !currentNonRetryTypes.has('error')
+  ) {
     triggers.push('non_retryable_error_types_add:error');
-    if (riskLevel !== 'critical') riskLevel = 'high';
+    if (riskLevel !== 'critical') {
+      riskLevel = 'high';
+    }
   }
 
   const currentNonRetryCodes = policyCodeSet(currentPolicy?.non_retryable_status_codes || []);
@@ -212,15 +233,18 @@ function evaluateRetryPolicyRisk(currentPolicy = {}, patch = {}) {
     .filter((code) => Number.isFinite(code) && code >= 500 && !currentNonRetryCodes.has(code));
   if (addedServerCodes.length > 0) {
     triggers.push(`non_retryable_status_codes_add_5xx:${addedServerCodes.join(',')}`);
-    if (riskLevel !== 'critical') riskLevel = 'high';
+    if (riskLevel !== 'critical') {
+      riskLevel = 'high';
+    }
   }
 
   return {
     requires_approval: triggers.length > 0,
     risk_level: triggers.length > 0 ? riskLevel : 'low',
-    reason: triggers.length > 0
-      ? `High-risk retry policy change detected: ${triggers.join('; ')}`
-      : 'No high-risk retry policy change detected.',
+    reason:
+      triggers.length > 0
+        ? `High-risk retry policy change detected: ${triggers.join('; ')}`
+        : 'No high-risk retry policy change detected.',
     triggers,
   };
 }
@@ -230,19 +254,28 @@ function mergedRetryPolicy(currentPolicy = {}, patch = {}) {
   return {
     non_retryable_error_types: Array.isArray(patch.non_retryable_error_types)
       ? patch.non_retryable_error_types
-      : (Array.isArray(currentPolicy?.non_retryable_error_types) ? currentPolicy.non_retryable_error_types : []),
+      : Array.isArray(currentPolicy?.non_retryable_error_types)
+        ? currentPolicy.non_retryable_error_types
+        : [],
     non_retryable_status_codes: Array.isArray(patch.non_retryable_status_codes)
       ? patch.non_retryable_status_codes
-      : (Array.isArray(currentPolicy?.non_retryable_status_codes) ? currentPolicy.non_retryable_status_codes : []),
+      : Array.isArray(currentPolicy?.non_retryable_status_codes)
+        ? currentPolicy.non_retryable_status_codes
+        : [],
     non_retryable_error_kinds: Array.isArray(patch.non_retryable_error_kinds)
       ? patch.non_retryable_error_kinds
-      : (Array.isArray(currentPolicy?.non_retryable_error_kinds) ? currentPolicy.non_retryable_error_kinds : []),
+      : Array.isArray(currentPolicy?.non_retryable_error_kinds)
+        ? currentPolicy.non_retryable_error_kinds
+        : [],
     retryable_error_kinds: Array.isArray(patch.retryable_error_kinds)
       ? patch.retryable_error_kinds
-      : (Array.isArray(currentPolicy?.retryable_error_kinds) ? currentPolicy.retryable_error_kinds : []),
-    default_retryable: typeof patch.default_retryable === 'boolean'
-      ? patch.default_retryable
-      : currentDefaultRetryable,
+      : Array.isArray(currentPolicy?.retryable_error_kinds)
+        ? currentPolicy.retryable_error_kinds
+        : [],
+    default_retryable:
+      typeof patch.default_retryable === 'boolean'
+        ? patch.default_retryable
+        : currentDefaultRetryable,
   };
 }
 
@@ -252,21 +285,25 @@ function evaluateRetryPolicyGuardrails(currentPolicy = {}, patch = {}) {
   const nonRetryableKinds = policyListAsSet(effectivePolicy.non_retryable_error_kinds);
   const violations = [];
 
-  const hasTransientRetrySignal = RETRY_POLICY_GUARDRAIL_TRANSIENT_KINDS
-    .some((kind) => retryableKinds.has(kind));
+  const hasTransientRetrySignal = RETRY_POLICY_GUARDRAIL_TRANSIENT_KINDS.some((kind) =>
+    retryableKinds.has(kind)
+  );
   if (effectivePolicy.default_retryable === false && !hasTransientRetrySignal) {
     violations.push({
       code: 'transient_retry_signal_missing',
-      message: 'default_retryable=false requires at least one transient retry kind in retryable_error_kinds.',
+      message:
+        'default_retryable=false requires at least one transient retry kind in retryable_error_kinds.',
     });
   }
 
-  const allTransientKindsDisabled = RETRY_POLICY_GUARDRAIL_TRANSIENT_KINDS
-    .every((kind) => nonRetryableKinds.has(kind));
+  const allTransientKindsDisabled = RETRY_POLICY_GUARDRAIL_TRANSIENT_KINDS.every((kind) =>
+    nonRetryableKinds.has(kind)
+  );
   if (effectivePolicy.default_retryable === false && allTransientKindsDisabled) {
     violations.push({
       code: 'all_transient_kinds_non_retryable',
-      message: 'Cannot mark timeout/network/rate_limit all non-retryable when default_retryable=false.',
+      message:
+        'Cannot mark timeout/network/rate_limit all non-retryable when default_retryable=false.',
     });
   }
 

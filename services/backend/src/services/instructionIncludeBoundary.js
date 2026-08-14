@@ -35,14 +35,21 @@ function includeBoundaryAnchorEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_INCLUDE_BOUNDARY_ANCHOR', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_INCLUDE_BOUNDARY_ANCHOR;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -51,8 +58,12 @@ function includeBoundaryAnchorEnabled(env = process.env) {
 
 // child 与 parent 同路径,或以分隔符边界嵌套其下。parent 空 → false。
 function _isInside(child, parent, sep) {
-  if (!parent || typeof parent !== 'string') return false;
-  if (child === parent) return true;
+  if (!parent || typeof parent !== 'string') {
+    return false;
+  }
+  if (child === parent) {
+    return true;
+  }
   const withSep = parent.endsWith(sep) ? parent : parent + sep;
   return child.startsWith(withSep);
 }
@@ -70,9 +81,13 @@ function _isInside(child, parent, sep) {
  */
 function isIncludeAllowed(resolved, baseDir, home, sep, env = process.env) {
   try {
-    if (!includeBoundaryAnchorEnabled(env)) return null;
-    if (typeof resolved !== 'string') return null;
-    const s = (typeof sep === 'string' && sep) ? sep : '/';
+    if (!includeBoundaryAnchorEnabled(env)) {
+      return null;
+    }
+    if (typeof resolved !== 'string') {
+      return null;
+    }
+    const s = typeof sep === 'string' && sep ? sep : '/';
     return _isInside(resolved, baseDir, s) || _isInside(resolved, home, s);
   } catch {
     return null;

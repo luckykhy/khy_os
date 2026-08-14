@@ -74,53 +74,79 @@ const _num = require('../utils/finiteNumber').toPositiveOr0;
  */
 function assessRoundAdvance(signals, env) {
   try {
-    if (!isRoundAdvanceEnabled(env)) return null;
-    if (!signals || typeof signals !== 'object') return null;
+    if (!isRoundAdvanceEnabled(env)) {
+      return null;
+    }
+    if (!signals || typeof signals !== 'object') {
+      return null;
+    }
 
     const total = _num(signals.total);
-    if (total <= 0) return null; // 无工具执行的轮次不在本叶子评估范围(收尾类由 intentCoverage 管)
+    if (total <= 0) {
+      return null;
+    } // 无工具执行的轮次不在本叶子评估范围(收尾类由 intentCoverage 管)
 
     const succeeded = _num(signals.succeeded);
     const failed = _num(signals.failed);
     const deduped = _num(signals.deduped);
-    const b = (signals.breakdown && typeof signals.breakdown === 'object') ? signals.breakdown : {};
+    const b = signals.breakdown && typeof signals.breakdown === 'object' ? signals.breakdown : {};
     const reads = _num(b.reads);
     const searches = _num(b.searches);
     const writes = _num(b.writes);
     const commands = _num(b.commands);
     const agents = _num(b.agents);
-    const modified = Array.isArray(signals.modifiedFiles) ? signals.modifiedFiles.filter(Boolean).length : 0;
+    const modified = Array.isArray(signals.modifiedFiles)
+      ? signals.modifiedFiles.filter(Boolean).length
+      : 0;
 
     const newSuccess = Math.max(0, succeeded - deduped); // 去重的成功是重放旧结果,不计新推进
-    const mutated = (writes + commands + agents) > 0 || modified > 0;
-    const gathered = (reads + searches) > 0;
+    const mutated = writes + commands + agents > 0 || modified > 0;
+    const gathered = reads + searches > 0;
     const allDeduped = deduped > 0 && deduped >= total;
 
     // 1) 全去重 → 停滞
     if (allDeduped) {
-      return _finish(VERDICTS.stalled, 'low',
-        `本轮 ${total} 次工具调用全部命中去重缓存,重复了已完成的操作,任务未向前推进——该轮价值低。`);
+      return _finish(
+        VERDICTS.stalled,
+        'low',
+        `本轮 ${total} 次工具调用全部命中去重缓存,重复了已完成的操作,任务未向前推进——该轮价值低。`
+      );
     }
     // 2) 无新成功
     if (newSuccess <= 0) {
       if (failed > 0) {
-        return _finish(VERDICTS.unproductive, 'low',
-          `本轮工具调用未产出新的成功结果(${failed} 次失败),消耗了预算却未推进任务——该轮价值低。`);
+        return _finish(
+          VERDICTS.unproductive,
+          'low',
+          `本轮工具调用未产出新的成功结果(${failed} 次失败),消耗了预算却未推进任务——该轮价值低。`
+        );
       }
-      return _finish(VERDICTS.stalled, 'low',
-        '本轮没有产生新的实质动作(仅重复/无有效产出),任务未向前推进——该轮价值低。');
+      return _finish(
+        VERDICTS.stalled,
+        'low',
+        '本轮没有产生新的实质动作(仅重复/无有效产出),任务未向前推进——该轮价值低。'
+      );
     }
     // 3) 有新成功 → 推进(状态变更价值最高,其次是新信息)
     if (mutated) {
-      return _finish(VERDICTS.advanced, 'high',
-        `本轮产生了状态变更(改动/执行/委派,${newSuccess} 项新成功),任务向前推进了一步——该轮必要且高价值。`);
+      return _finish(
+        VERDICTS.advanced,
+        'high',
+        `本轮产生了状态变更(改动/执行/委派,${newSuccess} 项新成功),任务向前推进了一步——该轮必要且高价值。`
+      );
     }
     if (gathered) {
-      return _finish(VERDICTS.advanced, 'medium',
-        `本轮获取了新信息(读取/搜索,${newSuccess} 项新成功),对任务的理解向前推进了一步——该轮有价值。`);
+      return _finish(
+        VERDICTS.advanced,
+        'medium',
+        `本轮获取了新信息(读取/搜索,${newSuccess} 项新成功),对任务的理解向前推进了一步——该轮有价值。`
+      );
     }
-    return _finish(VERDICTS.advanced, 'medium',
-      `本轮有 ${newSuccess} 项新的成功工具调用,任务向前推进——该轮有价值。`);
+    return _finish(
+      VERDICTS.advanced,
+      'medium',
+      `本轮有 ${newSuccess} 项新的成功工具调用,任务向前推进——该轮有价值。`
+    );
   } catch {
     return null; // fail-soft:判决绝不反噬主循环,失败即等价于「无判决」
   }

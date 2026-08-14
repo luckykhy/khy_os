@@ -29,10 +29,10 @@ const CORE_ACTIONS = Object.freeze({
 
 /** 官方核心接入点契约：用户扩展轨可依赖的稳定 Hook/Slot/Override 入口（供兼容性检查）。 */
 const CORE_ENTRY_POINTS = Object.freeze([
-  'registerOverride',     // 覆写官方默认动作
-  'registerAction',       // 新增动作执行器
-  'action.params',        // 动作参数槽（向后兼容数据结构）
-  'action.type',          // 动作类型槽
+  'registerOverride', // 覆写官方默认动作
+  'registerAction', // 新增动作执行器
+  'action.params', // 动作参数槽（向后兼容数据结构）
+  'action.type', // 动作类型槽
 ]);
 
 module.exports = { CORE_ACTIONS, CORE_ENTRY_POINTS };

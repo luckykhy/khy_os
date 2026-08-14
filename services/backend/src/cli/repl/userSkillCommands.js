@@ -22,8 +22,8 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const _FALSY = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
 
@@ -56,9 +56,15 @@ function _skillRoots(opts = {}) {
 /** 归一斜杠命令:确保单个前导 `/`、去空白、小写化前缀不做(保留大小写以对齐 manifest)。 */
 function _normCmd(raw, fallbackName) {
   let s = String(raw || '').trim();
-  if (!s) s = String(fallbackName || '').trim();
-  if (!s) return '';
-  if (!s.startsWith('/')) s = `/${s}`;
+  if (!s) {
+    s = String(fallbackName || '').trim();
+  }
+  if (!s) {
+    return '';
+  }
+  if (!s.startsWith('/')) {
+    s = `/${s}`;
+  }
   // 命令 token 不含空白;取首段。
   return s.split(/\s+/)[0];
 }
@@ -70,27 +76,41 @@ function _normCmd(raw, fallbackName) {
  * @returns {Array<{cmd,label,desc,source,_skillDir,_skillName,_aliases}>}
  */
 function listUserSkillCommands(opts = {}) {
-  if (!userSkillMenuEnabled(opts.env)) return [];
+  if (!userSkillMenuEnabled(opts.env)) {
+    return [];
+  }
   const out = [];
   const seen = new Set();
   try {
     for (const { dir, source } of _skillRoots(opts)) {
       let entries;
       try {
-        if (!fs.existsSync(dir)) continue;
+        if (!fs.existsSync(dir)) {
+          continue;
+        }
         entries = fs.readdirSync(dir, { withFileTypes: true });
-      } catch { continue; }
+      } catch {
+        continue;
+      }
       for (const entry of entries) {
         try {
-          if (!entry.isDirectory()) continue;
+          if (!entry.isDirectory()) {
+            continue;
+          }
           const skillDir = path.join(dir, entry.name);
           const manifestPath = path.join(skillDir, 'manifest.json');
-          if (!fs.existsSync(manifestPath)) continue;
+          if (!fs.existsSync(manifestPath)) {
+            continue;
+          }
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-          if (!manifest || typeof manifest !== 'object') continue;
+          if (!manifest || typeof manifest !== 'object') {
+            continue;
+          }
           // command / trigger 二选一(scaffolder 有的写 command:"/x",有的写 trigger:"x")。
           const cmd = _normCmd(manifest.command || manifest.trigger, entry.name);
-          if (!cmd || seen.has(cmd)) continue;
+          if (!cmd || seen.has(cmd)) {
+            continue;
+          }
           seen.add(cmd);
           const aliases = Array.isArray(manifest.aliases)
             ? manifest.aliases.map((a) => _normCmd(a)).filter(Boolean)
@@ -104,10 +124,14 @@ function listUserSkillCommands(opts = {}) {
             _skillName: String(manifest.name || entry.name),
             _aliases: aliases,
           });
-        } catch { /* 单个技能损坏 → 跳过,不影响其余 */ }
+        } catch {
+          /* 单个技能损坏 → 跳过,不影响其余 */
+        }
       }
     }
-  } catch { /* 兜底:任何意外 → 已收集的照常返回 */ }
+  } catch {
+    /* 兜底:任何意外 → 已收集的照常返回 */
+  }
   return out;
 }
 
@@ -117,15 +141,21 @@ function listUserSkillCommands(opts = {}) {
  * @returns {string|null}
  */
 function loadUserSkillPrompt(skillDir) {
-  if (!skillDir || typeof skillDir !== 'string') return null;
+  if (!skillDir || typeof skillDir !== 'string') {
+    return null;
+  }
   for (const name of ['prompt.md', 'SKILL.md']) {
     try {
       const p = path.join(skillDir, name);
       if (fs.existsSync(p)) {
         const body = fs.readFileSync(p, 'utf-8');
-        if (typeof body === 'string' && body.trim() !== '') return body;
+        if (typeof body === 'string' && body.trim() !== '') {
+          return body;
+        }
       }
-    } catch { /* 尝试下一个候选 */ }
+    } catch {
+      /* 尝试下一个候选 */
+    }
   }
   return null;
 }

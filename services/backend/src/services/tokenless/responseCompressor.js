@@ -37,11 +37,7 @@ function compressResponse(text, options = {}) {
     return { text: text || '', stats: { original: 0, compressed: 0, savedPercent: 0 } };
   }
 
-  const {
-    stripFillers = true,
-    collapseWhitespace = true,
-    maxLength = 0,
-  } = options;
+  const { stripFillers = true, collapseWhitespace = true, maxLength = 0 } = options;
 
   const originalLength = text.length;
   let result = text;
@@ -76,9 +72,8 @@ function compressResponse(text, options = {}) {
     stats: {
       original: originalLength,
       compressed: compressedLength,
-      savedPercent: originalLength > 0
-        ? Math.round((1 - compressedLength / originalLength) * 100)
-        : 0,
+      savedPercent:
+        originalLength > 0 ? Math.round((1 - compressedLength / originalLength) * 100) : 0,
     },
   };
 }
@@ -87,8 +82,12 @@ function compressResponse(text, options = {}) {
  * Compress a tool output for inclusion in conversation context.
  */
 function compressToolOutput(output, maxChars = 4000) {
-  if (!output || typeof output !== 'string') return output || '';
-  if (output.length <= maxChars) return output;
+  if (!output || typeof output !== 'string') {
+    return output || '';
+  }
+  if (output.length <= maxChars) {
+    return output;
+  }
 
   // Keep head and tail for context
   const headSize = Math.floor(maxChars * 0.7);

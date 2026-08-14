@@ -25,6 +25,7 @@
  * Event types yielded by submitMessage():
  *   { type: 'thinking',    data: string }  — AI thinking/status update
  *   { type: 'text',        data: string }  — Streamed text chunk
+ *   { type: 'reset',       data: { reason, retract } } — Retract already-streamed draft (responseDebounce protocol)
  *   { type: 'control_request', data: { requestId, request } } — Adapter control request
  *   { type: 'tool_call',   data: { name, params } }
  *   { type: 'tool_result', data: { name, result, elapsed } }
@@ -47,31 +48,44 @@ const MAX_OUTPUT_RECOVERY_ATTEMPTS = 3;
 // ── Model fallback on overloaded (529) ──────────────────────────
 const MAX_CONSECUTIVE_529 = 3;
 
+// NOTE: logic matches utils/envFlagEnabled, but its default fallback is `false`
+// (leaf default is `true`); kept local to preserve the exact default semantics —
+// not converged to avoid flipping the fallback default.
 function _envFlag(value, fallback = false) {
-  if (value === undefined || value === null || String(value).trim() === '') return fallback;
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return fallback;
+  }
   const normalized = String(value).trim().toLowerCase();
-  if (['1', 'true', 'on', 'yes', 'y'].includes(normalized)) return true;
-  if (['0', 'false', 'off', 'no', 'n'].includes(normalized)) return false;
+  if (['1', 'true', 'on', 'yes', 'y'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'off', 'no', 'n'].includes(normalized)) {
+    return false;
+  }
   return fallback;
 }
 
 // ── Structured tool result builder (shared by V2 & Legacy) ─────
-const CONTINUATION_SIGNAL = '\n[SYSTEM: 以上是工具执行结果。请根据结果继续完成任务。如果还有未完成的步骤，立即调用下一个工具；如果已全部完成，给出最终总结。]';
+const CONTINUATION_SIGNAL =
+  '\n[SYSTEM: 以上是工具执行结果。请根据结果继续完成任务。如果还有未完成的步骤，立即调用下一个工具；如果已全部完成，给出最终总结。]';
 const RESULT_TRUNCATE_CHARS = 3000;
 
 let _contentBlockUtils;
 function _getCBU() {
   if (!_contentBlockUtils) {
-    try { _contentBlockUtils = require('./contentBlockUtils'); } catch { _contentBlockUtils = null; }
+    try {
+      _contentBlockUtils = require('./contentBlockUtils');
+    } catch {
+      _contentBlockUtils = null;
+    }
   }
   return _contentBlockUtils;
 }
 
 function _normalizeControlRequestData(payload = {}) {
   const requestId = String(payload.requestId || payload.id || '').trim();
-  const request = payload && typeof payload.request === 'object' && payload.request
-    ? payload.request
-    : {};
+  const request =
+    payload && typeof payload.request === 'object' && payload.request ? payload.request : {};
   return { requestId, request };
 }
 
@@ -97,9 +111,15 @@ function _buildIntentAssuranceContext(userMessage, processedMessage) {
           requestClass: assurance.requestClass || '',
           primaryObjective: assurance.primaryObjective || assurance.summary || '',
           summary: assurance.summary || '',
-          constraints: Array.isArray(assurance.constraints) ? assurance.constraints.slice(0, 5) : [],
-          detailAnchors: Array.isArray(assurance.detailAnchors) ? assurance.detailAnchors.slice(0, 8) : [],
-          tailDetails: Array.isArray(assurance.tailDetails) ? assurance.tailDetails.slice(0, 4) : [],
+          constraints: Array.isArray(assurance.constraints)
+            ? assurance.constraints.slice(0, 5)
+            : [],
+          detailAnchors: Array.isArray(assurance.detailAnchors)
+            ? assurance.detailAnchors.slice(0, 8)
+            : [],
+          tailDetails: Array.isArray(assurance.tailDetails)
+            ? assurance.tailDetails.slice(0, 4)
+            : [],
           detailCount: assurance.detailCount || 0,
           constraintCount: assurance.constraintCount || 0,
           tailDetailCount: assurance.tailDetailCount || 0,
@@ -134,16 +154,23 @@ function _buildStructuredFollowUp(chatResult, toolCalls, toolResults) {
       const err = tr.output;
       if (err && typeof err === 'object' && err.code) {
         let t = `[ERROR:${err.code}] ${err.message}`;
-        if (err.hint) t += `\nHint: ${err.hint}`;
+        if (err.hint) {
+          t += `\nHint: ${err.hint}`;
+        }
         return t;
       }
-      return `Error: ${typeof err === 'string' ? err : (err?.message || err?.error || 'Unknown error')}`;
+      return `Error: ${typeof err === 'string' ? err : err?.message || err?.error || 'Unknown error'}`;
     }
     const output = tr.output;
-    if (output == null) return 'Success';
-    const raw = typeof output === 'string' ? output
-      : (typeof output === 'object' && output.output) ? String(output.output)
-      : JSON.stringify(output);
+    if (output == null) {
+      return 'Success';
+    }
+    const raw =
+      typeof output === 'string'
+        ? output
+        : typeof output === 'object' && output.output
+          ? String(output.output)
+          : JSON.stringify(output);
     return raw.length > RESULT_TRUNCATE_CHARS ? raw.slice(0, RESULT_TRUNCATE_CHARS) + '...' : raw;
   }
 
@@ -158,7 +185,9 @@ function _buildStructuredFollowUp(chatResult, toolCalls, toolResults) {
     // Resolve tool_use_id: prefer tr.id, then match from parsed toolCalls, then synthesize
     let toolUseId = tr.id || null;
     if (!toolUseId) {
-      const match = toolCalls.find(c => c.name === tr.name && c._toolUseId && !usedIds.has(c._toolUseId));
+      const match = toolCalls.find(
+        (c) => c.name === tr.name && c._toolUseId && !usedIds.has(c._toolUseId)
+      );
       toolUseId = match?._toolUseId || null;
     }
     if (!toolUseId) {
@@ -178,8 +207,8 @@ function _buildStructuredFollowUp(chatResult, toolCalls, toolResults) {
 
   // Build assistant content with tool_use blocks for proper pairing
   const assistantToolUseBlocks = toolCalls
-    .filter(c => c._structured && c._toolUseId)
-    .map(c => ({ id: c._toolUseId, name: c.name, input: c.params || {} }));
+    .filter((c) => c._structured && c._toolUseId)
+    .map((c) => ({ id: c._toolUseId, name: c.name, input: c.params || {} }));
 
   let assistantContent = chatResult.reply;
   if (cbu && assistantToolUseBlocks.length > 0) {
@@ -246,7 +275,7 @@ class QueryEngine {
    * @param {Array}  [options.images] - Image attachments
    * @yields {{ type: string, data: any }}
    */
-  async * submitMessage(userMessage, options = {}) {
+  async *submitMessage(userMessage, options = {}) {
     this._aborted = false;
     // Single execution path: the generator adapter over the authoritative
     // toolUseLoop (Phase 3). The former V2 state machine and inline legacy loop
@@ -266,14 +295,16 @@ class QueryEngine {
    * @yields {{ type: string, data: any }}
    * @private
    */
-  async * _submitMessageLegacy(userMessage, options = {}) {
+  async *_submitMessageLegacy(userMessage, options = {}) {
     // ── 1. Input preprocessing ────────────────────────────────────
     let processedMessage = userMessage;
     try {
       const { preprocess } = require('./inputPreprocessor');
       const result = preprocess(userMessage);
       processedMessage = result.processed;
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
 
     yield { type: 'thinking', data: 'Input preprocessing: normalizing user request (step 1/3)...' };
 
@@ -282,10 +313,15 @@ class QueryEngine {
       const { analyzeInput } = require('./securityGuardService');
       const check = analyzeInput(processedMessage);
       if (!check.safe) {
-        yield { type: 'done', data: { reply: check.refusal, commands: [], provider: 'security', blocked: true } };
+        yield {
+          type: 'done',
+          data: { reply: check.refusal, commands: [], provider: 'security', blocked: true },
+        };
         return;
       }
-    } catch { /* security failure should not block */ }
+    } catch {
+      /* security failure should not block */
+    }
 
     // ── 3. Build system prompt ────────────────────────────────────
     const intentCtx = _buildIntentAssuranceContext(userMessage, processedMessage);
@@ -352,7 +388,9 @@ class QueryEngine {
    * @private
    */
   _isHarnessEnabled(options = {}) {
-    if (typeof options.useHarness === 'boolean') return options.useHarness;
+    if (typeof options.useHarness === 'boolean') {
+      return options.useHarness;
+    }
     return _envFlag(process.env.KHY_QUERY_ENGINE_HARNESS, true);
   }
 
@@ -369,8 +407,14 @@ class QueryEngine {
    * @yields {{ type: string, data: any }}
    * @private
    */
-  async * _submitMessageLegacyWithHarness(params) {
-    const { userMessage, processedMessage, systemPrompt, chatOptsPatch = {}, options = {} } = params;
+  async *_submitMessageLegacyWithHarness(params) {
+    const {
+      userMessage,
+      processedMessage,
+      systemPrompt,
+      chatOptsPatch = {},
+      options = {},
+    } = params;
     const ai = this._aiChatFacade();
     const { createAgenticHarness } = require('./agenticHarnessService');
     const harness = createAgenticHarness();
@@ -380,7 +424,9 @@ class QueryEngine {
     let queueClosed = false;
 
     const pushEvent = (event) => {
-      if (!event || queueClosed) return;
+      if (!event || queueClosed) {
+        return;
+      }
       queue.push(event);
       if (queueWaiter) {
         const wake = queueWaiter;
@@ -400,7 +446,9 @@ class QueryEngine {
 
     const nextEvent = async () => {
       while (queue.length === 0) {
-        if (queueClosed) return null;
+        if (queueClosed) {
+          return null;
+        }
         // eslint-disable-next-line no-await-in-loop
         await new Promise((resolve) => {
           queueWaiter = resolve;
@@ -410,17 +458,34 @@ class QueryEngine {
     };
 
     const emitChunk = (chunk) => {
-      if (!chunk || typeof chunk !== 'object') return;
+      if (!chunk || typeof chunk !== 'object') {
+        return;
+      }
       if (chunk.type === 'thinking') {
         const text = chunk.text || chunk.content;
-        if (text) pushEvent({ type: 'thinking', data: text });
+        if (text) {
+          pushEvent({ type: 'thinking', data: text });
+        }
       } else if (chunk.type === 'text') {
         const text = chunk.text || chunk.content;
-        if (text) pushEvent({ type: 'text', data: text });
+        if (text) {
+          pushEvent({ type: 'text', data: text });
+        }
       } else if (chunk.type === 'assistant_message') {
         // 用户可见的中间消息(如视觉路由说明)——透传到事件流,消费端据 type 渲染。
         const content = chunk.content || chunk.text;
-        if (content) pushEvent({ type: 'assistant_message', data: content });
+        if (content) {
+          pushEvent({ type: 'assistant_message', data: content });
+        }
+      } else if (chunk.type === 'reset') {
+        // Stream-reset frame (responseDebounce protocol): upstream retracted the
+        // already-streamed draft (e.g. gateway language-recovery retry). Forward
+        // as a dedicated event so consumers drop the stale draft instead of
+        // appending the regenerated answer after it (duplicate-output fix).
+        pushEvent({
+          type: 'reset',
+          data: { reason: String(chunk.reason || ''), retract: chunk.retract !== false },
+        });
       }
     };
 
@@ -433,13 +498,21 @@ class QueryEngine {
         onChunk: (chunk) => {
           emitChunk(chunk);
           if (typeof chatOptions.onChunk === 'function') {
-            try { chatOptions.onChunk(chunk); } catch { /* non-critical */ }
+            try {
+              chatOptions.onChunk(chunk);
+            } catch {
+              /* non-critical */
+            }
           }
         },
         onControlRequest: (payload) => {
           pushEvent({ type: 'control_request', data: _normalizeControlRequestData(payload) });
           if (typeof chatOptions.onControlRequest === 'function') {
-            try { return chatOptions.onControlRequest(payload); } catch { return undefined; }
+            try {
+              return chatOptions.onControlRequest(payload);
+            } catch {
+              return undefined;
+            }
           }
           return undefined;
         },
@@ -453,104 +526,139 @@ class QueryEngine {
       return result;
     };
 
-    pushEvent({ type: 'thinking', data: 'Harness prepare: context routing and memory hint retrieval in progress...' });
+    pushEvent({
+      type: 'thinking',
+      data: 'Harness prepare: context routing and memory hint retrieval in progress...',
+    });
 
     const priorMessages = this._messages.slice(0, -1);
     let harnessOutcome = null;
 
-    const runPromise = harness.run({
-      userMessage: processedMessage,
-      messages: priorMessages,
-      systemPrompt,
-      chat,
-      chatOpts: {},
-      loopOptions: {
-        maxIterations: this._maxTurns,
-        onIteration: (iteration) => {
-          pushEvent({ type: 'thinking', data: `Agent loop progressing: round ${iteration}/${this._maxTurns}` });
+    const runPromise = harness
+      .run({
+        userMessage: processedMessage,
+        messages: priorMessages,
+        systemPrompt,
+        chat,
+        chatOpts: {},
+        loopOptions: {
+          maxIterations: this._maxTurns,
+          onIteration: (iteration) => {
+            pushEvent({
+              type: 'thinking',
+              data: `Agent loop progressing: round ${iteration}/${this._maxTurns}`,
+            });
+          },
+          onToolCall: (toolName, toolParams) => {
+            pushEvent({
+              type: 'tool_call',
+              data: {
+                name: toolName,
+                params: toolParams || {},
+              },
+            });
+          },
+          onToolResult: (toolName, toolParams, result, iteration, elapsed) => {
+            pushEvent({
+              type: 'tool_result',
+              data: {
+                name: toolName,
+                params: toolParams || {},
+                result,
+                elapsed,
+                iteration,
+              },
+            });
+          },
         },
-        onToolCall: (toolName, toolParams) => {
-          pushEvent({
-            type: 'tool_call',
-            data: {
-              name: toolName,
-              params: toolParams || {},
-            },
-          });
+        recentFiles: Array.isArray(options.recentFiles) ? options.recentFiles : [],
+        onEvent: (event) => {
+          if (!event || !event.type) {
+            return;
+          }
+          if (event.type === 'retry') {
+            const attempt = Number(event.attempt || 0);
+            const maxAttempts = Number(event.maxAttempts || 0);
+            pushEvent({
+              type: 'thinking',
+              data: `Recovery action: retrying transient loop failure (${attempt}/${maxAttempts})...`,
+            });
+            return;
+          }
+          if (event.type === 'failed') {
+            pushEvent({
+              type: 'thinking',
+              data: `Harness execution status: failed with error "${event.error || 'unknown'}".`,
+            });
+            return;
+          }
+          if (event.type === 'completed') {
+            const route = String(event.report?.contextRoute || 'fits');
+            pushEvent({
+              type: 'thinking',
+              data: `Harness execution status: completed with context route "${route}".`,
+            });
+            return;
+          }
+          if (
+            (event.type === 'bugfix_regression_gate' || event.type === 'change_regression_gate') &&
+            event.phase === 'baseline_completed'
+          ) {
+            const steps =
+              Array.isArray(event.requiredSteps) && event.requiredSteps.length > 0
+                ? event.requiredSteps.join('+')
+                : 'auto';
+            pushEvent({
+              type: 'thinking',
+              data: `Regression gate baseline completed for verification steps (${steps}).`,
+            });
+            return;
+          }
+          if (
+            (event.type === 'bugfix_regression_gate' || event.type === 'change_regression_gate') &&
+            event.phase === 'final_evaluation'
+          ) {
+            const status = event.passed ? 'passed' : 'blocked';
+            pushEvent({
+              type: 'thinking',
+              data: `Regression gate final evaluation ${status}: ${String(event.summary || '').trim() || 'no summary'}.`,
+            });
+            return;
+          }
+          if (
+            event.type === 'bugfix_regression_gate_error' ||
+            event.type === 'change_regression_gate_error'
+          ) {
+            const phase = String(event.phase || 'unknown');
+            pushEvent({
+              type: 'thinking',
+              data: `Regression gate error during "${phase}": ${String(event.error || 'unknown error')}.`,
+            });
+            return;
+          }
+          if (event.type === 'delivery_verdict') {
+            // 交付判定如实透传:fail → 明确告知目标未达成并给出来因,不再默认成功。
+            const verdict = String(event.verdict || '');
+            if (verdict === 'fail' || verdict === 'warn') {
+              const blocked =
+                Array.isArray(event.blockedBy) && event.blockedBy.length > 0
+                  ? event.blockedBy.join('、')
+                  : String(event.summary || '');
+              pushEvent({
+                type: 'delivery_verdict',
+                data: { verdict, blockedBy: event.blockedBy || [], summary: event.summary || '' },
+              });
+              pushEvent({
+                type: 'thinking',
+                data:
+                  verdict === 'fail'
+                    ? `Delivery verdict: FAIL — ${blocked || '目标达成的证据不充分'}。`
+                    : `Delivery verdict: WARN — ${blocked || '存在待人工确认项'}。`,
+              });
+            }
+          }
         },
-        onToolResult: (toolName, toolParams, result, iteration, elapsed) => {
-          pushEvent({
-            type: 'tool_result',
-            data: {
-              name: toolName,
-              params: toolParams || {},
-              result,
-              elapsed,
-              iteration,
-            },
-          });
-        },
-      },
-      recentFiles: Array.isArray(options.recentFiles) ? options.recentFiles : [],
-      onEvent: (event) => {
-        if (!event || !event.type) return;
-        if (event.type === 'retry') {
-          const attempt = Number(event.attempt || 0);
-          const maxAttempts = Number(event.maxAttempts || 0);
-          pushEvent({
-            type: 'thinking',
-            data: `Recovery action: retrying transient loop failure (${attempt}/${maxAttempts})...`,
-          });
-          return;
-        }
-        if (event.type === 'failed') {
-          pushEvent({
-            type: 'thinking',
-            data: `Harness execution status: failed with error "${event.error || 'unknown'}".`,
-          });
-          return;
-        }
-        if (event.type === 'completed') {
-          const route = String(event.report?.contextRoute || 'fits');
-          pushEvent({
-            type: 'thinking',
-            data: `Harness execution status: completed with context route "${route}".`,
-          });
-          return;
-        }
-        if (
-          (event.type === 'bugfix_regression_gate' || event.type === 'change_regression_gate')
-          && event.phase === 'baseline_completed'
-        ) {
-          const steps = Array.isArray(event.requiredSteps) && event.requiredSteps.length > 0
-            ? event.requiredSteps.join('+')
-            : 'auto';
-          pushEvent({
-            type: 'thinking',
-            data: `Regression gate baseline completed for verification steps (${steps}).`,
-          });
-          return;
-        }
-        if (
-          (event.type === 'bugfix_regression_gate' || event.type === 'change_regression_gate')
-          && event.phase === 'final_evaluation'
-        ) {
-          const status = event.passed ? 'passed' : 'blocked';
-          pushEvent({
-            type: 'thinking',
-            data: `Regression gate final evaluation ${status}: ${String(event.summary || '').trim() || 'no summary'}.`,
-          });
-          return;
-        }
-        if (event.type === 'bugfix_regression_gate_error' || event.type === 'change_regression_gate_error') {
-          const phase = String(event.phase || 'unknown');
-          pushEvent({
-            type: 'thinking',
-            data: `Regression gate error during "${phase}": ${String(event.error || 'unknown error')}.`,
-          });
-        }
-      },
-    })
+      })
       .then((result) => {
         harnessOutcome = { ok: true, result };
       })
@@ -564,7 +672,9 @@ class QueryEngine {
     while (true) {
       // eslint-disable-next-line no-await-in-loop
       const ev = await nextEvent();
-      if (!ev) break;
+      if (!ev) {
+        break;
+      }
       yield ev;
     }
 
@@ -583,7 +693,9 @@ class QueryEngine {
     const commands = toolCallLog
       .map((entry) => {
         const tool = String(entry?.tool || '').trim();
-        if (!tool) return '';
+        if (!tool) {
+          return '';
+        }
         let serialized = '{}';
         try {
           serialized = JSON.stringify(entry.params || {});
@@ -607,11 +719,18 @@ class QueryEngine {
     this._postProcess(userMessage, reply);
 
     let structuredHarness = null;
-    if (process.env.KHY_STRUCTURED_OUTPUT !== '0' && process.env.KHY_STRUCTURED_OUTPUT !== 'false') {
+    if (
+      process.env.KHY_STRUCTURED_OUTPUT !== '0' &&
+      process.env.KHY_STRUCTURED_OUTPUT !== 'false'
+    ) {
       try {
-        structuredHarness = require('./structuredResults/turnEnvelope')
-          .buildTurnEnvelope(finalResult, { summary: reply });
-      } catch { /* best-effort */ }
+        structuredHarness = require('./structuredResults/turnEnvelope').buildTurnEnvelope(
+          finalResult,
+          { summary: reply }
+        );
+      } catch {
+        /* best-effort */
+      }
     }
 
     yield {
@@ -656,7 +775,7 @@ class QueryEngine {
    * @yields {{ type: string, data: any }}
    * @private
    */
-  async * _submitMessageViaToolLoop(params) {
+  async *_submitMessageViaToolLoop(params) {
     const { userMessage, processedMessage, chatOptsPatch = {}, options = {} } = params;
     const ai = this._aiChatFacade();
     const toolUseLoop = require('./toolUseLoop');
@@ -666,7 +785,9 @@ class QueryEngine {
     let queueClosed = false;
 
     const pushEvent = (event) => {
-      if (!event || queueClosed) return;
+      if (!event || queueClosed) {
+        return;
+      }
       queue.push(event);
       if (queueWaiter) {
         const wake = queueWaiter;
@@ -686,7 +807,9 @@ class QueryEngine {
 
     const nextEvent = async () => {
       while (queue.length === 0) {
-        if (queueClosed) return null;
+        if (queueClosed) {
+          return null;
+        }
         // eslint-disable-next-line no-await-in-loop
         await new Promise((resolve) => {
           queueWaiter = resolve;
@@ -697,17 +820,34 @@ class QueryEngine {
 
     // Stream the model's own thinking/text chunks straight through.
     const emitChunk = (chunk) => {
-      if (!chunk || typeof chunk !== 'object') return;
+      if (!chunk || typeof chunk !== 'object') {
+        return;
+      }
       if (chunk.type === 'thinking') {
         const text = chunk.text || chunk.content;
-        if (text) pushEvent({ type: 'thinking', data: text });
+        if (text) {
+          pushEvent({ type: 'thinking', data: text });
+        }
       } else if (chunk.type === 'text') {
         const text = chunk.text || chunk.content;
-        if (text) pushEvent({ type: 'text', data: text });
+        if (text) {
+          pushEvent({ type: 'text', data: text });
+        }
       } else if (chunk.type === 'assistant_message') {
         // 用户可见的中间消息(如视觉路由说明)——透传到事件流,消费端据 type 渲染。
         const content = chunk.content || chunk.text;
-        if (content) pushEvent({ type: 'assistant_message', data: content });
+        if (content) {
+          pushEvent({ type: 'assistant_message', data: content });
+        }
+      } else if (chunk.type === 'reset') {
+        // Stream-reset frame (responseDebounce protocol): upstream retracted the
+        // already-streamed draft (e.g. gateway language-recovery retry). Forward
+        // as a dedicated event so consumers drop the stale draft instead of
+        // appending the regenerated answer after it (duplicate-output fix).
+        pushEvent({
+          type: 'reset',
+          data: { reason: String(chunk.reason || ''), retract: chunk.retract !== false },
+        });
       }
     };
 
@@ -721,13 +861,21 @@ class QueryEngine {
         onChunk: (chunk) => {
           emitChunk(chunk);
           if (typeof chatOptions.onChunk === 'function') {
-            try { chatOptions.onChunk(chunk); } catch { /* non-critical */ }
+            try {
+              chatOptions.onChunk(chunk);
+            } catch {
+              /* non-critical */
+            }
           }
         },
         onControlRequest: (payload) => {
           pushEvent({ type: 'control_request', data: _normalizeControlRequestData(payload) });
           if (typeof options.onControlRequest === 'function') {
-            try { return options.onControlRequest(payload); } catch { return undefined; }
+            try {
+              return options.onControlRequest(payload);
+            } catch {
+              return undefined;
+            }
           }
           return undefined;
         },
@@ -743,72 +891,93 @@ class QueryEngine {
     // 这里镜像 harness 的 onCheckpoint，使无论走哪条路径，被打断的构建都留下
     // 可被 resumeAdvisor 发现 / 一键续作的检查点。全 best-effort，尊重同一开关。
     const boulderResumeEnabled = !['0', 'false', 'off', 'no'].includes(
-      String(process.env.KHY_BOULDER_RESUME || 'true').trim().toLowerCase(),
+      String(process.env.KHY_BOULDER_RESUME || 'true')
+        .trim()
+        .toLowerCase()
     );
     const boulderCwd = process.env.KHYQUANT_CWD || process.cwd();
     const boulderTaskId = `qe-${Date.now().toString(36)}`;
     // 仅当本回合确实落过检查点（真多轮任务）才在收口时清除，避免一条无关的轻量
     // 提问把先前被打断构建的检查点误清。
     let boulderCheckpointed = false;
-    const _boulderCheckpoint = boulderResumeEnabled ? (info) => {
-      try {
-        const { saveBoulderState } = require('./boulderState');
-        let modes = [];
-        try { modes = require('./intentGate').detectModes(userMessage).modes; } catch { /* optional */ }
-        boulderCheckpointed = true;
-        saveBoulderState(boulderCwd, {
-          taskId: boulderTaskId,
-          userMessage,
-          toolCallLog: info.toolCallLog,
-          iterations: (info.iteration || 0) + (info._totalPreviousIterations || 0),
-          continuationRound: info._continuationRound || 0,
-          activatedModes: modes,
-          status: 'in_progress',
-          conversationMessages: info.messages || info.conversationMessages || [],
-          contextSummary: info.contextSummary || '',
-          fileReadHashes: info.fileReadHashes || null,
-        });
-      } catch { /* best-effort — 绝不打断主循环 */ }
-    } : undefined;
+    const _boulderCheckpoint = boulderResumeEnabled
+      ? (info) => {
+          try {
+            const { saveBoulderState } = require('./boulderState');
+            let modes = [];
+            try {
+              modes = require('./intentGate').detectModes(userMessage).modes;
+            } catch {
+              /* optional */
+            }
+            boulderCheckpointed = true;
+            saveBoulderState(boulderCwd, {
+              taskId: boulderTaskId,
+              userMessage,
+              toolCallLog: info.toolCallLog,
+              iterations: (info.iteration || 0) + (info._totalPreviousIterations || 0),
+              continuationRound: info._continuationRound || 0,
+              activatedModes: modes,
+              status: 'in_progress',
+              conversationMessages: info.messages || info.conversationMessages || [],
+              contextSummary: info.contextSummary || '',
+              fileReadHashes: info.fileReadHashes || null,
+            });
+          } catch {
+            /* best-effort — 绝不打断主循环 */
+          }
+        }
+      : undefined;
 
-    const runPromise = toolUseLoop.runToolUseLoop(processedMessage, {
-      chat,
-      chatOpts: {},
-      maxIterations: this._maxTurns,
-      initialMessages: priorMessages,
-      onCheckpoint: _boulderCheckpoint,
-      // Authenticated user (when the caller carries identity) so preference-aware
-      // tools (e.g. image_generate per-user model) resolve correctly; undefined
-      // on the CLI/anonymous path → global env/auto fallback, zero behavior change.
-      userId: options.userId,
-      // Loop-level interactive channel (preflight tool approval); distinct from
-      // the chat-streamed control_request above and fired at a different moment.
-      onControlRequest: options.onControlRequest,
-      onToolCall: (toolName, toolParams) => {
-        pushEvent({ type: 'tool_call', data: { name: toolName, params: toolParams || {} } });
-      },
-      onToolResult: (toolName, toolParams, result, iteration, elapsed) => {
-        pushEvent({
-          type: 'tool_result',
-          data: { name: toolName, params: toolParams || {}, result, elapsed, iteration },
-        });
-      },
-      onCost: (tokenUsage) => {
-        this._totalTokens += tokenUsage.totalTokens || 0;
-        pushEvent({ type: 'cost', data: tokenUsage });
-      },
-      onThinking: (text) => {
-        if (text) pushEvent({ type: 'thinking', data: text });
-      },
-    })
-      .then((result) => { outcome = { ok: true, result }; })
-      .catch((err) => { outcome = { ok: false, error: err }; })
-      .finally(() => { closeQueue(); });
+    const runPromise = toolUseLoop
+      .runToolUseLoop(processedMessage, {
+        chat,
+        chatOpts: {},
+        maxIterations: this._maxTurns,
+        initialMessages: priorMessages,
+        onCheckpoint: _boulderCheckpoint,
+        // Authenticated user (when the caller carries identity) so preference-aware
+        // tools (e.g. image_generate per-user model) resolve correctly; undefined
+        // on the CLI/anonymous path → global env/auto fallback, zero behavior change.
+        userId: options.userId,
+        // Loop-level interactive channel (preflight tool approval); distinct from
+        // the chat-streamed control_request above and fired at a different moment.
+        onControlRequest: options.onControlRequest,
+        onToolCall: (toolName, toolParams) => {
+          pushEvent({ type: 'tool_call', data: { name: toolName, params: toolParams || {} } });
+        },
+        onToolResult: (toolName, toolParams, result, iteration, elapsed) => {
+          pushEvent({
+            type: 'tool_result',
+            data: { name: toolName, params: toolParams || {}, result, elapsed, iteration },
+          });
+        },
+        onCost: (tokenUsage) => {
+          this._totalTokens += tokenUsage.totalTokens || 0;
+          pushEvent({ type: 'cost', data: tokenUsage });
+        },
+        onThinking: (text) => {
+          if (text) {
+            pushEvent({ type: 'thinking', data: text });
+          }
+        },
+      })
+      .then((result) => {
+        outcome = { ok: true, result };
+      })
+      .catch((err) => {
+        outcome = { ok: false, error: err };
+      })
+      .finally(() => {
+        closeQueue();
+      });
 
     while (true) {
       // eslint-disable-next-line no-await-in-loop
       const ev = await nextEvent();
-      if (!ev) break;
+      if (!ev) {
+        break;
+      }
       yield ev;
     }
 
@@ -828,12 +997,18 @@ class QueryEngine {
     // 构建正常收口：清除检查点，避免已完成的任务被启动横幅误报为「未完成」。
     // 仅当本回合确实落过检查点（真多轮任务）时清；轻量提问不触碰先前检查点。fail-soft。
     if (boulderResumeEnabled && boulderCheckpointed) {
-      try { require('./boulderState').clearBoulderState(boulderCwd); } catch { /* best-effort */ }
+      try {
+        require('./boulderState').clearBoulderState(boulderCwd);
+      } catch {
+        /* best-effort */
+      }
     }
     const commands = toolCallLog
       .map((entry) => {
         const tool = String(entry?.tool || '').trim();
-        if (!tool) return '';
+        if (!tool) {
+          return '';
+        }
         let serialized = '{}';
         try {
           serialized = JSON.stringify(entry.params || {});
@@ -863,7 +1038,11 @@ class QueryEngine {
     try {
       const projectMetadataService = require('./projectMetadataService');
       const metaCwd = process.env.KHYQUANT_CWD || process.cwd();
-      const metaResult = await projectMetadataService.maybeGenerateAfterRun(metaCwd, toolCallLog, {});
+      const metaResult = await projectMetadataService.maybeGenerateAfterRun(
+        metaCwd,
+        toolCallLog,
+        {}
+      );
       if (metaResult && metaResult.generated) {
         metadataInfo = { root: metaResult.root, files: metaResult.files };
       }
@@ -876,11 +1055,17 @@ class QueryEngine {
     // error_code), never from scraping `reply`. Additive — sits beside the prose.
     // Disable with KHY_STRUCTURED_OUTPUT=0 if a consumer ever needs the lean shape.
     let structured = null;
-    if (process.env.KHY_STRUCTURED_OUTPUT !== '0' && process.env.KHY_STRUCTURED_OUTPUT !== 'false') {
+    if (
+      process.env.KHY_STRUCTURED_OUTPUT !== '0' &&
+      process.env.KHY_STRUCTURED_OUTPUT !== 'false'
+    ) {
       try {
-        structured = require('./structuredResults/turnEnvelope')
-          .buildTurnEnvelope(finalResult, { summary: reply });
-      } catch { /* envelope is best-effort; never block the response */ }
+        structured = require('./structuredResults/turnEnvelope').buildTurnEnvelope(finalResult, {
+          summary: reply,
+        });
+      } catch {
+        /* envelope is best-effort; never block the response */
+      }
     }
 
     yield {
@@ -898,7 +1083,6 @@ class QueryEngine {
       },
     };
   }
-
 
   /**
    * Run non-critical post-processing hooks.
@@ -933,7 +1117,9 @@ class QueryEngine {
     // QueryEngine delegates to ai.chat() which handles prompt construction.
     // This method exists as a hook for future decoupling.
     const directive = String(intentContext?.systemPrompt || '').trim();
-    if (directive) return directive;
+    if (directive) {
+      return directive;
+    }
     try {
       const fallback = _buildIntentAssuranceContext(userMessage, processedMessage);
       return String(fallback.systemPrompt || '').trim();
@@ -963,7 +1149,8 @@ class QueryEngine {
     const conv = getAiConversation();
     return {
       chat,
-      getEffort: () => (conv && typeof conv.getEffort === 'function' ? conv.getEffort() : undefined),
+      getEffort: () =>
+        conv && typeof conv.getEffort === 'function' ? conv.getEffort() : undefined,
     };
   }
 
@@ -975,7 +1162,9 @@ class QueryEngine {
     try {
       const conv = require('./aiConversationPort').getAiConversation();
       return conv && typeof conv.saveConversation === 'function' ? conv.saveConversation() : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -992,7 +1181,9 @@ class QueryEngine {
   loadConversation(file) {
     try {
       const conv = require('./aiConversationPort').getAiConversation();
-      if (conv && typeof conv.loadLastConversation === 'function') conv.loadLastConversation();
+      if (conv && typeof conv.loadLastConversation === 'function') {
+        conv.loadLastConversation();
+      }
     } catch (err) {
       logger.debug(`queryEngine.loadConversation failed: ${err.message}`);
     }
@@ -1006,7 +1197,9 @@ class QueryEngine {
     this._totalTokens = 0;
     try {
       const conv = require('./aiConversationPort').getAiConversation();
-      if (conv && typeof conv.clearHistory === 'function') conv.clearHistory();
+      if (conv && typeof conv.clearHistory === 'function') {
+        conv.clearHistory();
+      }
     } catch (err) {
       logger.debug(`queryEngine.clearHistory: conversation clearHistory failed: ${err.message}`);
     }

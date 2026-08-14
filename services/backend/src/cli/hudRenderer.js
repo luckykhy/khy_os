@@ -17,7 +17,7 @@ const path = require('path');
 
 // Lazy chalk
 let _chalk;
-const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const c = () => (_chalk ??= require('chalk').default || require('chalk'));
 
 // No hardcoded model context limits — all values come from adapter-reported
 // real data via aiGateway._contextWindowCache (populated by listModels / generate).
@@ -26,11 +26,11 @@ const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
 const hudState = {
   // Context / token tracking
   sessionTokens: { input: 0, output: 0, total: 0 },
-  contextWindow: { used: 0, limit: 0, lastCompactionUsed: 0 },
+  contextWindow: { used: 0, limit: 0, budget: 0, lastCompactionUsed: 0 },
 
   // Active tool tracking
   activeTool: null, // { name, target, startTime }
-  toolHistory: [],  // last 10: [{ name, target, status, elapsed }]
+  toolHistory: [], // last 10: [{ name, target, status, elapsed }]
 
   // Agent monitoring
   activeAgents: [], // [{ name, status, elapsed, detail }]
@@ -47,8 +47,8 @@ const hudState = {
   requestCount: 0,
 
   // Model/adapter transparency
-  lastModel: '',     // last model used (e.g. "claude-3.5-sonnet")
-  lastAdapter: '',   // last adapter used (e.g. "relay")
+  lastModel: '', // last model used (e.g. "claude-3.5-sonnet")
+  lastAdapter: '', // last adapter used (e.g. "relay")
   sessionCostUSD: 0, // running session cost
 
   // Account email (from kiroAdapter or account pool)
@@ -70,10 +70,13 @@ const MAX_TOOL_HISTORY = 10;
  * @param {{ inputTokens?: number, outputTokens?: number, totalTokens?: number }} usage
  */
 function updateTokens(usage) {
-  if (!usage) return;
+  if (!usage) {
+    return;
+  }
   hudState.sessionTokens.input += usage.inputTokens || 0;
   hudState.sessionTokens.output += usage.outputTokens || 0;
-  hudState.sessionTokens.total += usage.totalTokens || (usage.inputTokens || 0) + (usage.outputTokens || 0);
+  hudState.sessionTokens.total +=
+    usage.totalTokens || (usage.inputTokens || 0) + (usage.outputTokens || 0);
   hudState.requestCount++;
 }
 
@@ -84,9 +87,15 @@ function updateTokens(usage) {
  * @param {number} [turnCostUSD]
  */
 function updateModelInfo(model, adapter, turnCostUSD) {
-  if (model) hudState.lastModel = model;
-  if (adapter) hudState.lastAdapter = adapter;
-  if (turnCostUSD > 0) hudState.sessionCostUSD += turnCostUSD;
+  if (model) {
+    hudState.lastModel = model;
+  }
+  if (adapter) {
+    hudState.lastAdapter = adapter;
+  }
+  if (turnCostUSD > 0) {
+    hudState.sessionCostUSD += turnCostUSD;
+  }
 }
 
 /**
@@ -94,7 +103,7 @@ function updateModelInfo(model, adapter, turnCostUSD) {
  * @param {string} email
  */
 function updateAccountEmail(email) {
-  hudState.accountEmail = (email && typeof email === 'string') ? email.trim() : '';
+  hudState.accountEmail = email && typeof email === 'string' ? email.trim() : '';
 }
 
 /**
@@ -131,10 +140,30 @@ function clearCompacting() {
  */
 function setContextUsage(inputTokens, limit) {
   hudState.contextWindow.used = inputTokens;
-  if (limit && limit > 0) hudState.contextWindow.limit = limit;
+  if (limit && limit > 0) {
+    hudState.contextWindow.limit = limit;
+  }
   // A fresh API-reported count has landed → the post-compaction staleness gate
   // is one-shot and clears here (see clearCompacting / contextWarning leaf).
   hudState.contextWindow.lastCompactionUsed = 0;
+}
+
+/**
+ * 发布本轮的上下文预算与真实窗口(由 _resolveContextBudget 算出)。
+ *
+ * 底栏的自动压缩倒计时需要 **预算** 而非窗口才能算出真实触发点
+ * (services/contextRouter.autoCompactTriggerTokens)。这里在每轮请求前一次性写入,
+ * 使倒计时在首个 token 到达之前就已经是诚实的(此前要等 tokenUsage 回填)。
+ * @param {number} budget — contextPlan.contextBudget
+ * @param {number} [window] — contextPlan.contextWindow(模型真实窗口)
+ */
+function setContextBudget(budget, window) {
+  if (Number.isFinite(budget) && budget > 0) {
+    hudState.contextWindow.budget = Math.floor(budget);
+  }
+  if (Number.isFinite(window) && window > 0) {
+    hudState.contextWindow.limit = Math.floor(window);
+  }
 }
 
 /**
@@ -143,7 +172,9 @@ function setContextUsage(inputTokens, limit) {
  * @returns {number}
  */
 function getContextLimit(model) {
-  if (!model) return 0;
+  if (!model) {
+    return 0;
+  }
   // Single source of truth: gateway adapter-reported real data
   try {
     const gw = require('../services/gateway/aiGateway');
@@ -151,7 +182,9 @@ function getContextLimit(model) {
     if (instance && typeof instance.getModelContextWindow === 'function') {
       return instance.getModelContextWindow(model); // 0 if unknown, triggers async resolve
     }
-  } catch { /* gateway not ready */ }
+  } catch {
+    /* gateway not ready */
+  }
   return 0;
 }
 
@@ -183,7 +216,7 @@ function toolEnd(name, status = 'done', elapsed = 0) {
  * @param {Array<{name: string, status: string, elapsed?: number, detail?: string, tokens?: number}>} agents
  */
 function agentUpdate(agents) {
-  hudState.activeAgents = agents.map(a => ({
+  hudState.activeAgents = agents.map((a) => ({
     name: a.name,
     status: a.status,
     elapsed: a.elapsed || 0,
@@ -205,27 +238,41 @@ function updateTodos(todos) {
  */
 function refreshGit() {
   const now = Date.now();
-  if (now - hudState._gitLastRefresh < GIT_CACHE_TTL) return;
+  if (now - hudState._gitLastRefresh < GIT_CACHE_TTL) {
+    return;
+  }
   hudState._gitLastRefresh = now;
 
   const cwd = process.env.KHYQUANT_CWD || process.cwd();
   try {
     const branch = execSync('git rev-parse --abbrev-ref HEAD', {
-      cwd, timeout: 2000, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
+      cwd,
+      timeout: 2000,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
     const status = execSync('git status --porcelain', {
-      cwd, timeout: 2000, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
+      cwd,
+      timeout: 2000,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
     const dirty = status.length > 0;
     const dirtyCount = dirty ? status.split('\n').length : 0;
 
-    let ahead = 0, behind = 0;
+    let ahead = 0,
+      behind = 0;
     try {
       const ab = execSync('git rev-list --left-right --count HEAD...@{u}', {
-        cwd, timeout: 2000, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'],
+        cwd,
+        timeout: 2000,
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
       [ahead, behind] = ab.split('\t').map(Number);
-    } catch { /* no upstream tracking */ }
+    } catch {
+      /* no upstream tracking */
+    }
 
     hudState.git = { branch, dirty, dirtyCount, ahead, behind };
   } catch {
@@ -264,10 +311,16 @@ function fmtTokens(n) {
   const ccf = require('./ccFormat');
   if (ccf.ccFormatEnabled(process.env)) {
     const out = ccf.ccFormatTokens(n);
-    if (out) return out; // non-finite → '' → fall through to legacy
+    if (out) {
+      return out;
+    } // non-finite → '' → fall through to legacy
   }
-  if (n >= 10000) return `${(n / 1000).toFixed(0)}k`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  if (n >= 10000) {
+    return `${(n / 1000).toFixed(0)}k`;
+  }
+  if (n >= 1000) {
+    return `${(n / 1000).toFixed(1)}k`;
+  }
   return String(n);
 }
 
@@ -290,11 +343,17 @@ function fmtDuration(ms) {
   const ccf = require('./ccFormat');
   if (ccf.ccFormatEnabled(process.env)) {
     const out = ccf.ccFormatDuration(ms, { hideTrailingZeros: true });
-    if (out) return out; // non-finite → '' → fall through to legacy
+    if (out) {
+      return out;
+    } // non-finite → '' → fall through to legacy
   }
   const sec = Math.floor(ms / 1000);
-  if (sec >= 3600) return `${Math.floor(sec / 3600)}h${Math.floor((sec % 3600) / 60)}m`;
-  if (sec >= 60) return `${Math.floor(sec / 60)}m`;
+  if (sec >= 3600) {
+    return `${Math.floor(sec / 3600)}h${Math.floor((sec % 3600) / 60)}m`;
+  }
+  if (sec >= 60) {
+    return `${Math.floor(sec / 60)}m`;
+  }
   return `${sec}s`;
 }
 
@@ -330,9 +389,10 @@ function fmtElapsedItem(ms) {
 function renderContextBar(used, limit, barLen = 8) {
   const chalk = c();
   const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-  const filled = Math.round(barLen * pct / 100);
+  const filled = Math.round((barLen * pct) / 100);
   const colorName = pct > 80 ? 'red' : pct > 50 ? 'yellow' : 'green';
-  const bar = chalk[colorName]('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barLen - filled));
+  const bar =
+    chalk[colorName]('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barLen - filled));
   return `${bar} ${chalk[colorName](pct + '%')} ctx`;
 }
 
@@ -359,7 +419,9 @@ function renderStatusBar(cols, opts = {}) {
     if (cols > 100 && hudState.activeTool.target) {
       toolStr += chalk.dim(` ${hudState.activeTool.target}`);
     }
-    if (elapsed > 2000) toolStr += chalk.dim(` ${fmtDuration(elapsed)}`);
+    if (elapsed > 2000) {
+      toolStr += chalk.dim(` ${fmtDuration(elapsed)}`);
+    }
     leftParts.push(toolStr);
   } else if (hudState.compacting || opts.compacting) {
     // Claude Code: ✻ Coalescing... with amber color
@@ -368,8 +430,12 @@ function renderStatusBar(cols, opts = {}) {
       ? fmtDuration(Date.now() - hudState.compactingStartTime)
       : opts.compactingElapsed;
     const compactTokens = hudState.compactingTokensBefore || opts.compactingTokens;
-    if (compactElapsed) leftParts.push(chalk.dim(compactElapsed));
-    if (compactTokens) leftParts.push(chalk.dim(`↑ ${fmtTokens(compactTokens)} tokens`));
+    if (compactElapsed) {
+      leftParts.push(chalk.dim(compactElapsed));
+    }
+    if (compactTokens) {
+      leftParts.push(chalk.dim(`↑ ${fmtTokens(compactTokens)} tokens`));
+    }
   } else if (opts.localMode) {
     leftParts.push(chalk.hex('#4CAF50')('local'));
   } else if (opts.planMode) {
@@ -379,12 +445,12 @@ function renderStatusBar(cols, opts = {}) {
   // Context bar (only if we have data)
   if (hudState.contextWindow.used > 0) {
     const barLen = cols > 120 ? 8 : 5;
-    leftParts.push(renderContextBar(hudState.contextWindow.used, hudState.contextWindow.limit, barLen));
+    leftParts.push(
+      renderContextBar(hudState.contextWindow.used, hudState.contextWindow.limit, barLen)
+    );
   }
 
-  const leftText = leftParts.length > 0
-    ? leftParts.join(chalk.dim(' · '))
-    : chalk.dim('> ready');
+  const leftText = leftParts.length > 0 ? leftParts.join(chalk.dim(' · ')) : chalk.dim('> ready');
 
   // ── Right side: account, model, tokens, cost, git branch ──
   const rightParts = [];
@@ -418,10 +484,12 @@ function renderStatusBar(cols, opts = {}) {
     if (ceiling > 0) {
       const v = _tb.assessBudget({ spent: hudState.sessionTokens.total, ceiling, warnRatio });
       const label = `预算 ${fmtTokens(v.remaining)}/${fmtTokens(ceiling)}`;
-      const color = v.state === 'stop' ? '#E53935' : (v.state === 'warn' ? '#FFC107' : '#9E9E9E');
+      const color = v.state === 'stop' ? '#E53935' : v.state === 'warn' ? '#FFC107' : '#9E9E9E';
       rightParts.push(chalk.hex(color)(label));
     }
-  } catch { /* budget HUD is best-effort; never breaks the status line */ }
+  } catch {
+    /* budget HUD is best-effort; never breaks the status line */
+  }
 
   // Session cost (CNY) — precision via CC formatCost magnitude rule (SSOT).
   if (hudState.sessionCostUSD > 0) {
@@ -434,7 +502,9 @@ function renderStatusBar(cols, opts = {}) {
   // Git branch — Claude Code shows this on the right
   if (hudState.git.branch) {
     let gitStr = chalk.hex('#6495ED')(hudState.git.branch);
-    if (hudState.git.dirty) gitStr += chalk.hex('#FFC107')('*');
+    if (hudState.git.dirty) {
+      gitStr += chalk.hex('#FFC107')('*');
+    }
     rightParts.push(gitStr);
   }
 
@@ -445,9 +515,7 @@ function renderStatusBar(cols, opts = {}) {
   const rightLen = stripAnsi(rightText).length;
   const pad = Math.max(1, cols - leftLen - rightLen - 3);
 
-  return chalk.bgBlack(
-    ' ' + leftText + ' '.repeat(pad) + rightText + ' '
-  );
+  return chalk.bgBlack(' ' + leftText + ' '.repeat(pad) + rightText + ' ');
 }
 
 // ── HUD expanded panel (/hud command) ────────────────────────────────
@@ -470,33 +538,49 @@ function renderHudPanel(cols) {
   const ctx = hudState.contextWindow;
   const ctxPct = ctx.limit > 0 ? Math.min(100, Math.round((ctx.used / ctx.limit) * 100)) : 0;
   const ctxBarLen = 20;
-  const ctxFilled = Math.round(ctxBarLen * ctxPct / 100);
+  const ctxFilled = Math.round((ctxBarLen * ctxPct) / 100);
   const ctxColor = ctxPct > 80 ? 'red' : ctxPct > 50 ? 'yellow' : 'green';
-  const ctxBar = chalk[ctxColor]('\u2588'.repeat(ctxFilled)) + chalk.dim('\u2591'.repeat(ctxBarLen - ctxFilled));
+  const ctxBar =
+    chalk[ctxColor]('\u2588'.repeat(ctxFilled)) + chalk.dim('\u2591'.repeat(ctxBarLen - ctxFilled));
   lines.push(chalk.dim('  \u2502'));
-  lines.push(chalk.dim('  \u2502  ') + chalk.white('Context   ') + ctxBar + ` ${chalk[ctxColor](ctxPct + '%')}  ${fmtTokens(ctx.used)} / ${fmtTokens(ctx.limit)}`);
+  lines.push(
+    chalk.dim('  \u2502  ') +
+      chalk.white('Context   ') +
+      ctxBar +
+      ` ${chalk[ctxColor](ctxPct + '%')}  ${fmtTokens(ctx.used)} / ${fmtTokens(ctx.limit)}`
+  );
 
   // ── Tokens ──
   const tok = hudState.sessionTokens;
-  lines.push(chalk.dim('  \u2502  ') + chalk.white('Tokens    ') +
-    chalk.dim('\u2191 ') + chalk.white(tok.input.toLocaleString()) +
-    chalk.dim('  \u2193 ') + chalk.white(tok.output.toLocaleString()) +
-    chalk.dim('  \u5408\u8ba1 ') + chalk.bold(tok.total.toLocaleString()));
+  lines.push(
+    chalk.dim('  \u2502  ') +
+      chalk.white('Tokens    ') +
+      chalk.dim('\u2191 ') +
+      chalk.white(tok.input.toLocaleString()) +
+      chalk.dim('  \u2193 ') +
+      chalk.white(tok.output.toLocaleString()) +
+      chalk.dim('  \u5408\u8ba1 ') +
+      chalk.bold(tok.total.toLocaleString())
+  );
 
   // ── Cost ──
   try {
     const tokenSvc = require('../services/tokenUsageService');
     const sessionCost = tokenSvc.getSessionCost();
     const monthUsage = tokenSvc.getMonthUsage();
-    const monthCostUSD = (monthUsage.costUSD || 0);
+    const monthCostUSD = monthUsage.costUSD || 0;
     const ccf = require('./ccFormat');
-    const sessCNY = (sessionCost.costCNY || 0);
+    const sessCNY = sessionCost.costCNY || 0;
     const monthCNY = monthCostUSD * 7.25;
     const sessNum = ccf.ccFormatCostOr(sessCNY, sessCNY.toFixed(4), process.env);
     const monthNum = ccf.ccFormatCostOr(monthCNY, monthCNY.toFixed(2), process.env);
-    lines.push(chalk.dim('  \u2502  ') + chalk.white('Cost      ') +
-      chalk.yellow(`\uffe5${sessNum}`) +
-      chalk.dim(`  \u672c\u6708 `) + chalk.yellow(`\uffe5${monthNum}`));
+    lines.push(
+      chalk.dim('  \u2502  ') +
+        chalk.white('Cost      ') +
+        chalk.yellow(`\uffe5${sessNum}`) +
+        chalk.dim(`  \u672c\u6708 `) +
+        chalk.yellow(`\uffe5${monthNum}`)
+    );
   } catch {
     lines.push(chalk.dim('  \u2502  ') + chalk.white('Cost      ') + chalk.dim('N/A'));
   }
@@ -505,24 +589,40 @@ function renderHudPanel(cols) {
 
   // ── Account ──
   if (hudState.accountEmail) {
-    lines.push(chalk.dim('  \u2502  ') + chalk.white('Account   ') + chalk.hex('#98FB98')(hudState.accountEmail));
+    lines.push(
+      chalk.dim('  \u2502  ') +
+        chalk.white('Account   ') +
+        chalk.hex('#98FB98')(hudState.accountEmail)
+    );
   }
 
   // ── Git ──
   const git = hudState.git;
   if (git.branch) {
     let gitLine = chalk.cyan(git.branch);
-    if (git.dirty) gitLine += chalk.yellow(`*`);
-    if (git.ahead > 0) gitLine += chalk.green(` +${git.ahead} ahead`);
-    if (git.behind > 0) gitLine += chalk.red(` -${git.behind} behind`);
-    if (git.dirtyCount > 0) gitLine += chalk.dim(`  ${git.dirtyCount} files dirty`);
+    if (git.dirty) {
+      gitLine += chalk.yellow(`*`);
+    }
+    if (git.ahead > 0) {
+      gitLine += chalk.green(` +${git.ahead} ahead`);
+    }
+    if (git.behind > 0) {
+      gitLine += chalk.red(` -${git.behind} behind`);
+    }
+    if (git.dirtyCount > 0) {
+      gitLine += chalk.dim(`  ${git.dirtyCount} files dirty`);
+    }
     lines.push(chalk.dim('  \u2502  ') + chalk.white('Git       ') + gitLine);
   }
 
   // ── Session ──
   const dur = fmtDuration(Date.now() - hudState.sessionStart);
-  lines.push(chalk.dim('  \u2502  ') + chalk.white('Session   ') +
-    chalk.white(dur) + chalk.dim(` \u00b7 ${hudState.requestCount} requests`));
+  lines.push(
+    chalk.dim('  \u2502  ') +
+      chalk.white('Session   ') +
+      chalk.white(dur) +
+      chalk.dim(` \u00b7 ${hudState.requestCount} requests`)
+  );
 
   lines.push(chalk.dim('  \u2502'));
 
@@ -530,16 +630,22 @@ function renderHudPanel(cols) {
   if (hudState.toolHistory.length > 0) {
     lines.push(chalk.dim('  \u2502  ') + chalk.white('Tools'));
     for (const t of hudState.toolHistory.slice(-5)) {
-      const icon = t.status === 'success' ? chalk.green('\u2713')
-        : t.status === 'error' ? chalk.red('\u2717')
-        : chalk.dim('\u2713');
+      const icon =
+        t.status === 'success'
+          ? chalk.green('\u2713')
+          : t.status === 'error'
+            ? chalk.red('\u2717')
+            : chalk.dim('\u2713');
       const elStr = t.elapsed > 0 ? chalk.dim(` ${fmtElapsedItem(t.elapsed)}`) : '';
       const target = t.target ? chalk.dim(` ${t.target}`) : '';
       lines.push(chalk.dim('  \u2502  ') + `  ${icon} ${chalk.white(t.name)}${target}${elStr}`);
     }
     if (hudState.activeTool) {
       const elapsed = Date.now() - hudState.activeTool.startTime;
-      lines.push(chalk.dim('  \u2502  ') + `  ${chalk.redBright('\u2733')} ${chalk.white(hudState.activeTool.name)} ${chalk.dim(hudState.activeTool.target || '')} ${chalk.dim(fmtDuration(elapsed) + '...')}`);
+      lines.push(
+        chalk.dim('  \u2502  ') +
+          `  ${chalk.redBright('\u2733')} ${chalk.white(hudState.activeTool.name)} ${chalk.dim(hudState.activeTool.target || '')} ${chalk.dim(fmtDuration(elapsed) + '...')}`
+      );
     }
     lines.push(chalk.dim('  \u2502'));
   }
@@ -548,28 +654,40 @@ function renderHudPanel(cols) {
   if (hudState.activeAgents.length > 0) {
     lines.push(chalk.dim('  \u2502  ') + chalk.white('Agents'));
     for (const a of hudState.activeAgents) {
-      const icon = a.status === 'completed' ? chalk.green('\u25cf')
-        : a.status === 'error' ? chalk.red('\u25cf')
-        : a.status === 'running' ? chalk.redBright('\u2733')
-        : chalk.dim('\u25cb');
+      const icon =
+        a.status === 'completed'
+          ? chalk.green('\u25cf')
+          : a.status === 'error'
+            ? chalk.red('\u25cf')
+            : a.status === 'running'
+              ? chalk.redBright('\u2733')
+              : chalk.dim('\u25cb');
       const detail = a.detail ? chalk.dim(`  ${a.detail}`) : '';
       const elapsed = a.elapsed > 0 ? chalk.dim(`  ${fmtElapsedItem(a.elapsed)}`) : '';
       const tokens = a.tokens > 0 ? chalk.dim(`  ${fmtTokens(a.tokens)}`) : '';
-      lines.push(chalk.dim('  \u2502  ') + `  ${icon} ${chalk.white(a.name)}${detail}${elapsed}${tokens}`);
+      lines.push(
+        chalk.dim('  \u2502  ') + `  ${icon} ${chalk.white(a.name)}${detail}${elapsed}${tokens}`
+      );
     }
     lines.push(chalk.dim('  \u2502'));
   }
 
   // ── Todos ──
   if (hudState.todos.length > 0) {
-    const done = hudState.todos.filter(t => t.done).length;
+    const done = hudState.todos.filter((t) => t.done).length;
     const total = hudState.todos.length;
     const todoBar = '\u25a0'.repeat(done) + '\u25a1'.repeat(total - done);
-    lines.push(chalk.dim('  \u2502  ') + chalk.white('Todo      ') +
-      chalk.green(todoBar) + chalk.dim(` ${done}/${total}`));
+    lines.push(
+      chalk.dim('  \u2502  ') +
+        chalk.white('Todo      ') +
+        chalk.green(todoBar) +
+        chalk.dim(` ${done}/${total}`)
+    );
     for (const t of hudState.todos) {
       const icon = t.done ? chalk.green('\u2714') : chalk.dim('\u2610');
-      lines.push(chalk.dim('  \u2502  ') + `  ${icon} ${t.done ? chalk.dim(t.text) : chalk.white(t.text)}`);
+      lines.push(
+        chalk.dim('  \u2502  ') + `  ${icon} ${t.done ? chalk.dim(t.text) : chalk.white(t.text)}`
+      );
     }
     lines.push(chalk.dim('  \u2502'));
   }
@@ -582,14 +700,21 @@ function renderHudPanel(cols) {
       const qPct = Math.round((quota.used / quota.limit) * 100);
       const qColor = qPct > 90 ? 'red' : qPct > 70 ? 'yellow' : 'green';
       const qBarLen = 15;
-      const qFilled = Math.round(qBarLen * Math.min(qPct, 100) / 100);
-      const qBar = chalk[qColor]('\u2588'.repeat(qFilled)) + chalk.dim('\u2591'.repeat(qBarLen - qFilled));
-      lines.push(chalk.dim('  \u2502  ') + chalk.white('Quota     ') +
-        qBar + ` ${chalk[qColor](qPct + '%')} ` +
-        chalk.dim(`(${quota.used.toLocaleString()}/${quota.limit.toLocaleString()})`));
+      const qFilled = Math.round((qBarLen * Math.min(qPct, 100)) / 100);
+      const qBar =
+        chalk[qColor]('\u2588'.repeat(qFilled)) + chalk.dim('\u2591'.repeat(qBarLen - qFilled));
+      lines.push(
+        chalk.dim('  \u2502  ') +
+          chalk.white('Quota     ') +
+          qBar +
+          ` ${chalk[qColor](qPct + '%')} ` +
+          chalk.dim(`(${quota.used.toLocaleString()}/${quota.limit.toLocaleString()})`)
+      );
       lines.push(chalk.dim('  \u2502'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   lines.push(chalk.cyan(`  \u2514${'\u2500'.repeat(w - 4)}\u2518`));
   lines.push('');
@@ -607,9 +732,16 @@ let _statusBarActive = false;
  * Uses ANSI escape sequences to render without disrupting the scroll region.
  */
 function startLiveStatusBar() {
-  if (_statusBarActive || !process.stdout.isTTY) return;
-  // When TUI (InlineRenderer) is active, the footer bar is rendered by TUI.
-  if (process.stdout.isTTY) return;
+  if (_statusBarActive || !process.stdout.isTTY) {
+    return;
+  }
+  // When the Ink TUI owns the terminal it renders the footer bar itself, so the
+  // HUD must not paint a second one. Gate on the Ink-active flag (set in tui/app.jsx)
+  // rather than isTTY — otherwise this branch would reject every TTY and the bar
+  // would never render.
+  if (process.env.KHY_INK_TUI_ACTIVE === '1') {
+    return;
+  }
   _statusBarActive = true;
   // Render the status bar at the absolute bottom row using save/restore cursor.
   // No scroll region — that breaks terminal scrollback.
@@ -624,28 +756,40 @@ function startLiveStatusBar() {
  */
 function stopLiveStatusBar() {
   _statusBarActive = false;
-  if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
+  if (_refreshTimer) {
+    clearInterval(_refreshTimer);
+    _refreshTimer = null;
+  }
   process.stdout.removeListener('resize', _onResize);
-  if (process.stdout.isTTY && !process.stdout.isTTY) {
+  if (process.stdout.isTTY) {
     // Clear the bottom-row status line.
     process.stdout.write(`\x1B7\x1B[${process.stdout.rows};1H\x1B[K\x1B8`);
   }
 }
 
 function _onResize() {
-  if (!_statusBarActive) return;
+  if (!_statusBarActive) {
+    return;
+  }
   _renderBottomBar();
 }
 
 function _renderBottomBar() {
-  if (!process.stdout.isTTY || !_statusBarActive) return;
-  if (process.stdout.isTTY) return;
+  if (!process.stdout.isTTY || !_statusBarActive) {
+    return;
+  }
+  // Ink TUI active → the footer is drawn by the TUI; skip the HUD's own paint.
+  if (process.env.KHY_INK_TUI_ACTIVE === '1') {
+    return;
+  }
   try {
     const cols = process.stdout.columns || 80;
     const line = renderStatusBar(cols);
     // Save cursor → move to last row → render → clear rest of line → restore cursor
     process.stdout.write(`\x1B7\x1B[${process.stdout.rows};1H${line}\x1B[K\x1B8`);
-  } catch { /* ignore rendering errors during resize/exit */ }
+  } catch {
+    /* ignore rendering errors during resize/exit */
+  }
 }
 
 /**
@@ -662,6 +806,7 @@ module.exports = {
   updateModelInfo,
   updateAccountEmail,
   setContextUsage,
+  setContextBudget,
   getContextLimit,
   setCompacting,
   clearCompacting,
@@ -692,11 +837,15 @@ try {
     setCompacting: module.exports.setCompacting,
     clearCompacting: module.exports.clearCompacting,
   });
-} catch { /* port unavailable — services degrade to no-op */ }
+} catch {
+  /* port unavailable — services degrade to no-op */
+}
 
 // Self-register the HUD todo renderer on the same port so the services layer
 // (toolCalling todoWrite) pushes todos without a reverse require
 // (DESIGN-ARCH-021, Batch 3). Legit cli → services direction; exports unchanged.
 try {
   require('../services/compactionUiPort').registerHudTodoRenderer(module.exports.updateTodos);
-} catch { /* port unavailable — todo HUD update degrades to no-op */ }
+} catch {
+  /* port unavailable — todo HUD update degrades to no-op */
+}

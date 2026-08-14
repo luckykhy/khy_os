@@ -61,26 +61,33 @@ class FallbackTreeBuilder {
   plan(name, spec = {}) {
     if (this._plans.length >= MAX_FALLBACK_DEPTH) {
       throw new FallbackTreeError(
-        `降级树深度超限：意图「${this.intent}」最多 ${MAX_FALLBACK_DEPTH} 个 Plan（防呆硬上限，拒绝定义第 ${this._plans.length + 1} 个）。`,
+        `降级树深度超限：意图「${this.intent}」最多 ${MAX_FALLBACK_DEPTH} 个 Plan（防呆硬上限，拒绝定义第 ${this._plans.length + 1} 个）。`
       );
     }
     const tool = String(spec.tool || name || '').trim();
     const planName = String(name || tool || '').trim();
-    if (!tool) throw new FallbackTreeError(`Plan「${planName || '(匿名)'}」缺少 tool（工具注册名）。`);
-    if (!planName) throw new FallbackTreeError('Plan 缺少展示名。');
+    if (!tool) {
+      throw new FallbackTreeError(`Plan「${planName || '(匿名)'}」缺少 tool（工具注册名）。`);
+    }
+    if (!planName) {
+      throw new FallbackTreeError('Plan 缺少展示名。');
+    }
 
     const params = spec.params && typeof spec.params === 'object' ? spec.params : null;
-    this._plans.push(Object.freeze({
-      plan: planName,
-      tool,
-      buildParams: typeof spec.buildParams === 'function'
-        ? spec.buildParams
-        : () => (params ? { ...params } : {}),
-      maxRetry: MAX_RETRY_PER_PLAN, // 恒 1，不读取 spec.maxRetry
-      isSuccess: typeof spec.isSuccess === 'function' ? spec.isSuccess : null,
-      extractSalvage: typeof spec.extractSalvage === 'function' ? spec.extractSalvage : null,
-      suggestion: String(spec.suggestion || ''),
-    }));
+    this._plans.push(
+      Object.freeze({
+        plan: planName,
+        tool,
+        buildParams:
+          typeof spec.buildParams === 'function'
+            ? spec.buildParams
+            : () => (params ? { ...params } : {}),
+        maxRetry: MAX_RETRY_PER_PLAN, // 恒 1，不读取 spec.maxRetry
+        isSuccess: typeof spec.isSuccess === 'function' ? spec.isSuccess : null,
+        extractSalvage: typeof spec.extractSalvage === 'function' ? spec.extractSalvage : null,
+        suggestion: String(spec.suggestion || ''),
+      })
+    );
     return this;
   }
 
@@ -105,7 +112,7 @@ class FallbackTreeBuilder {
    */
   static from(intent, plans = [], opts = {}) {
     const builder = new FallbackTreeBuilder(intent, opts);
-    for (const p of (Array.isArray(plans) ? plans : [])) {
+    for (const p of Array.isArray(plans) ? plans : []) {
       builder.plan(p.plan || p.name, p);
     }
     return builder.build();

@@ -16,18 +16,18 @@ const USD_TO_CNY = 7.25;
 
 // Per-token pricing by provider (USD per 1M tokens)
 const TOKEN_PRICING = {
-  'OpenAI': { input: 0.15, output: 0.60 },       // gpt-4o-mini
-  'Anthropic': { input: 3.00, output: 15.00 },    // claude-3-5-sonnet
-  'Google Gemini': { input: 0.075, output: 0.30 },// gemini-2.5-flash
-  'Groq': { input: 0.05, output: 0.08 },          // llama-3.3
-  'OpenRouter': { input: 0.10, output: 0.30 },    // varies
-  '智谱AI': { input: 0.10, output: 0.10 },        // glm-4
-  '讯飞星火': { input: 0.00, output: 0.00 },       // free tier
-  '百度文心': { input: 0.12, output: 0.12 },       // ERNIE
-  '通义千问': { input: 0.008, output: 0.02 },      // qwen-turbo
-  'HuggingFace': { input: 0.00, output: 0.00 },   // free inference
-  'Ollama': { input: 0.00, output: 0.00 },        // local
-  'default': { input: 0.10, output: 0.30 },
+  OpenAI: { input: 0.15, output: 0.6 }, // gpt-4o-mini
+  Anthropic: { input: 3.0, output: 15.0 }, // claude-3-5-sonnet
+  'Google Gemini': { input: 0.075, output: 0.3 }, // gemini-2.5-flash
+  Groq: { input: 0.05, output: 0.08 }, // llama-3.3
+  OpenRouter: { input: 0.1, output: 0.3 }, // varies
+  智谱AI: { input: 0.1, output: 0.1 }, // glm-4
+  讯飞星火: { input: 0.0, output: 0.0 }, // free tier
+  百度文心: { input: 0.12, output: 0.12 }, // ERNIE
+  通义千问: { input: 0.008, output: 0.02 }, // qwen-turbo
+  HuggingFace: { input: 0.0, output: 0.0 }, // free inference
+  Ollama: { input: 0.0, output: 0.0 }, // local
+  default: { input: 0.1, output: 0.3 },
 };
 
 // In-memory session accumulator (resets each REPL start)
@@ -48,7 +48,9 @@ function loadUsageData() {
     if (fs.existsSync(USAGE_FILE)) {
       return JSON.parse(fs.readFileSync(USAGE_FILE, 'utf-8'));
     }
-  } catch { /* ignore corrupt file */ }
+  } catch {
+    /* ignore corrupt file */
+  }
   return { daily: {}, monthlyTotals: {} };
 }
 
@@ -60,7 +62,9 @@ function saveUsageData(data) {
     const dir = path.dirname(USAGE_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch { /* ignore write failure */ }
+  } catch {
+    /* ignore write failure */
+  }
 }
 
 /**
@@ -119,7 +123,13 @@ function recordUsage(provider, model, inputTokens = 0, outputTokens = 0, costUSD
   data.daily[day].costUSD += costUSD;
 
   if (!data.monthlyTotals[month]) {
-    data.monthlyTotals[month] = { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0 };
+    data.monthlyTotals[month] = {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      requests: 0,
+      costUSD: 0,
+    };
   }
   data.monthlyTotals[month].inputTokens += inputTokens;
   data.monthlyTotals[month].outputTokens += outputTokens;
@@ -154,7 +164,15 @@ function getSessionUsage() {
  */
 function getTodayUsage() {
   const data = loadUsageData();
-  return data.daily[todayKey()] || { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0 };
+  return (
+    data.daily[todayKey()] || {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      requests: 0,
+      costUSD: 0,
+    }
+  );
 }
 
 /**
@@ -162,7 +180,15 @@ function getTodayUsage() {
  */
 function getMonthUsage() {
   const data = loadUsageData();
-  return data.monthlyTotals[monthKey()] || { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0 };
+  return (
+    data.monthlyTotals[monthKey()] || {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      requests: 0,
+      costUSD: 0,
+    }
+  );
 }
 
 /**
@@ -373,7 +399,12 @@ function formatCostReport() {
   out += d('  \u2502 ') + d('输入: ') + w(fmtNum(session.inputTokens)) + d(' tokens') + '\n';
   out += d('  \u2502 ') + d('输出: ') + w(fmtNum(session.outputTokens)) + d(' tokens') + '\n';
   out += d('  \u2502 ') + d('合计: ') + b(fmtNum(session.totalTokens)) + d(' tokens') + '\n';
-  out += d('  \u2502 ') + d('费用: ') + y(fmtCNY(sessionCost.costCNY)) + d(` (${fmtUSD(sessionCost.costUSD)})`) + '\n';
+  out +=
+    d('  \u2502 ') +
+    d('费用: ') +
+    y(fmtCNY(sessionCost.costCNY)) +
+    d(` (${fmtUSD(sessionCost.costUSD)})`) +
+    '\n';
   out += d('  \u2514\n\n');
 
   // Today
@@ -393,9 +424,14 @@ function formatCostReport() {
     const pct = Math.round((quota.used / quota.limit) * 100);
     const color = pct > 90 ? r : pct > 70 ? y : g;
     const barLen = 20;
-    const filled = Math.round(barLen * Math.min(pct, 100) / 100);
+    const filled = Math.round((barLen * Math.min(pct, 100)) / 100);
     const bar = color('\u2588'.repeat(filled)) + d('\u2591'.repeat(barLen - filled));
-    out += w('  额度: ') + bar + ` ${color(pct + '%')} ` + d(`(${fmtNum(quota.used)}/${fmtNum(quota.limit)})`) + '\n';
+    out +=
+      w('  额度: ') +
+      bar +
+      ` ${color(pct + '%')} ` +
+      d(`(${fmtNum(quota.used)}/${fmtNum(quota.limit)})`) +
+      '\n';
   } else {
     out += w('  额度: ') + g('无限制 (企业版)') + '\n';
   }
@@ -408,7 +444,14 @@ function formatCostReport() {
  * Reset all usage data.
  */
 function resetUsage() {
-  _sessionUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0, records: [] };
+  _sessionUsage = {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    requests: 0,
+    costUSD: 0,
+    records: [],
+  };
   saveUsageData({ daily: {}, monthlyTotals: {} });
 }
 

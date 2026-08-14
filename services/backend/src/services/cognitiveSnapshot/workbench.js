@@ -16,17 +16,26 @@
 
 const ZONES = Object.freeze({ EXEC: 'exec', MEMORY: 'memory', BUFFER: 'buffer' });
 
+// Canonical chars/4 estimate atom (utils leaf; estimator fallback only).
+const _simpleTokenEstimate = require('../../utils/simpleTokenEstimate');
+
 // 比例写死（§3.1「绝不可越界」）。三者之和必须恒为 1。
-const ZONE_RATIO = Object.freeze({ exec: 0.40, memory: 0.20, buffer: 0.40 });
+const ZONE_RATIO = Object.freeze({ exec: 0.4, memory: 0.2, buffer: 0.4 });
 
 // 记忆区铁律：单条记忆原始文本上限（字符）。超过即视为「把长文本塞进寄存器」，
 // 必须先折叠/卸载（防呆①的记忆区侧防线）。
 const MEMORY_RAW_CHAR_CAP = 600;
 
 function _estimator(fn) {
-  if (typeof fn === 'function') return fn;
-  try { return require('../contextWasm').estimateTokens; }
-  catch { return (t) => Math.ceil(String(t || '').length / 4); }
+  if (typeof fn === 'function') {
+    return fn;
+  }
+  try {
+    return require('../contextWasm').estimateTokens;
+  } catch {
+    // Thin delegate; byte-identical to (t) => Math.ceil(String(t || '').length / 4).
+    return (t) => _simpleTokenEstimate(String(t || ''));
+  }
 }
 
 /**
@@ -69,7 +78,9 @@ function measure(zonesText = {}, contextWindowTokens, opts = {}) {
 
   const violations = [];
   const check = (zone, used, b) => {
-    if (b > 0 && used > b) violations.push({ zone, used, budget: b, overBy: used - b });
+    if (b > 0 && used > b) {
+      violations.push({ zone, used, budget: b, overBy: used - b });
+    }
   };
   check(ZONES.EXEC, usedExec, budget.exec);
   check(ZONES.MEMORY, usedMem, budget.memory);
@@ -101,7 +112,9 @@ function assertNoRawLongText(memoryItems = [], cap = MEMORY_RAW_CHAR_CAP) {
   const out = [];
   memoryItems.forEach((item, i) => {
     const chars = String(item || '').length;
-    if (chars > cap) out.push({ index: i, chars, cap });
+    if (chars > cap) {
+      out.push({ index: i, chars, cap });
+    }
   });
   return out;
 }

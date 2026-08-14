@@ -23,7 +23,9 @@ const path = require('path');
 function isPathWithin(parent = '', target = '') {
   const base = String(parent || '').trim();
   const value = String(target || '').trim();
-  if (!base || !value) return false;
+  if (!base || !value) {
+    return false;
+  }
   try {
     const rel = path.relative(path.resolve(base), path.resolve(value));
     return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));

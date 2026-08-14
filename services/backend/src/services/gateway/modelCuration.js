@@ -15,25 +15,32 @@
  */
 const fs = require('fs');
 const path = require('path');
+
 const { getDataHome, getLegacyDataHome } = require('../../utils/dataHome');
 
 function _overridesFile() {
   const override = process.env.KHY_MODEL_OVERRIDES_FILE;
-  if (override && String(override).trim()) return String(override).trim();
+  if (override && String(override).trim()) {
+    return String(override).trim();
+  }
   return path.join(getDataHome(), 'model_overrides.json');
 }
 
 // 一次性 legacy 迁移：读旧写新，绝不删旧。仅在未设显式 env 覆盖时生效。
 function _migrateLegacy() {
   try {
-    if (process.env.KHY_MODEL_OVERRIDES_FILE) return;
+    if (process.env.KHY_MODEL_OVERRIDES_FILE) {
+      return;
+    }
     const target = path.join(getDataHome(), 'model_overrides.json');
     const legacy = path.join(getLegacyDataHome(), 'model_overrides.json');
     if (target !== legacy && !fs.existsSync(target) && fs.existsSync(legacy)) {
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, fs.readFileSync(legacy, 'utf-8'), 'utf-8');
     }
-  } catch { /* migration is best-effort */ }
+  } catch {
+    /* migration is best-effort */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -43,7 +50,9 @@ function _migrateLegacy() {
 let _cache = null;
 
 function _load() {
-  if (_cache) return _cache;
+  if (_cache) {
+    return _cache;
+  }
   _migrateLegacy();
   try {
     const raw = fs.readFileSync(_overridesFile(), 'utf-8');
@@ -64,19 +73,21 @@ function _save(overrides) {
     const tmp = `${file}.${process.pid}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(overrides, null, 2), 'utf-8');
     fs.renameSync(tmp, file);
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /** 规范化单个适配器覆盖记录，丢弃非法字段。 */
 function _normalizeOverride(raw) {
   const out = {};
   if (Array.isArray(raw && raw.hidden)) {
-    out.hidden = raw.hidden.map(x => String(x)).filter(Boolean);
+    out.hidden = raw.hidden.map((x) => String(x)).filter(Boolean);
   }
   if (Array.isArray(raw && raw.added)) {
     out.added = raw.added
-      .filter(m => m && (m.id !== undefined && m.id !== null && String(m.id).trim()))
-      .map(m => ({
+      .filter((m) => m && m.id !== undefined && m.id !== null && String(m.id).trim())
+      .map((m) => ({
         id: String(m.id).trim(),
         name: m.name ? String(m.name) : String(m.id).trim(),
         isDefault: !!m.isDefault,
@@ -85,12 +96,16 @@ function _normalizeOverride(raw) {
   if (raw && raw.renamed && typeof raw.renamed === 'object' && !Array.isArray(raw.renamed)) {
     out.renamed = {};
     for (const [k, v] of Object.entries(raw.renamed)) {
-      if (k && v !== undefined && v !== null && String(v).trim()) out.renamed[String(k)] = String(v);
+      if (k && v !== undefined && v !== null && String(v).trim()) {
+        out.renamed[String(k)] = String(v);
+      }
     }
   }
   if (raw && raw.defaultModel !== undefined && raw.defaultModel !== null) {
     const dm = String(raw.defaultModel).trim();
-    if (dm) out.defaultModel = dm;
+    if (dm) {
+      out.defaultModel = dm;
+    }
   }
   return out;
 }
@@ -114,7 +129,9 @@ function getAdapterOverride(adapterKey) {
  */
 function setAdapterOverride(adapterKey, patch) {
   const key = String(adapterKey || '').trim();
-  if (!key) throw new Error('adapterKey is required');
+  if (!key) {
+    throw new Error('adapterKey is required');
+  }
   const all = _load();
   const current = all[key] || {};
   const merged = { ...current };
@@ -154,16 +171,20 @@ function applyOverrides(adapterKey, rawModels) {
   const hidden = new Set(ov.hidden || []);
   const renamed = ov.renamed || {};
   let list = (Array.isArray(rawModels) ? rawModels : [])
-    .filter(m => m && !hidden.has(String(m.id)))
-    .map(m => ({
+    .filter((m) => m && !hidden.has(String(m.id)))
+    .map((m) => ({
       ...m,
       name: renamed[String(m.id)] || m.name || m.id,
       custom: m.custom || false,
     }));
 
-  for (const add of (ov.added || [])) {
-    if (hidden.has(add.id)) continue;
-    if (list.some(m => String(m.id) === add.id)) continue; // 已存在则不重复追加
+  for (const add of ov.added || []) {
+    if (hidden.has(add.id)) {
+      continue;
+    }
+    if (list.some((m) => String(m.id) === add.id)) {
+      continue;
+    } // 已存在则不重复追加
     list.push({
       id: add.id,
       name: renamed[add.id] || add.name || add.id,
@@ -178,9 +199,9 @@ function applyOverrides(adapterKey, rawModels) {
   if (ov.defaultModel) {
     // defaultModel 指向已隐藏/不存在的模型时，不强行制造默认，保留各模型原有标记
     // （仅在确有匹配项时才整体重标，避免无意中清掉适配器自带的默认标记）。
-    const matched = list.some(m => String(m.id) === ov.defaultModel);
+    const matched = list.some((m) => String(m.id) === ov.defaultModel);
     if (matched) {
-      list = list.map(m => ({ ...m, isDefault: String(m.id) === ov.defaultModel }));
+      list = list.map((m) => ({ ...m, isDefault: String(m.id) === ov.defaultModel }));
     }
   }
 
@@ -193,7 +214,9 @@ function applyOverrides(adapterKey, rawModels) {
 
 function _verifyTtlMs() {
   const raw = parseInt(process.env.KHY_MODEL_VERIFY_TTL_MS || '', 10);
-  if (Number.isFinite(raw) && raw > 0) return raw;
+  if (Number.isFinite(raw) && raw > 0) {
+    return raw;
+  }
   return 10 * 60 * 1000; // 默认 10 分钟
 }
 
@@ -202,16 +225,22 @@ const _verifyCache = new Map();
 let _sweepTimer = null;
 
 function _ensureSweep() {
-  if (_sweepTimer) return;
+  if (_sweepTimer) {
+    return;
+  }
   const interval = Math.max(60 * 1000, Math.floor(_verifyTtlMs() / 2));
   _sweepTimer = setInterval(() => {
     const ttl = _verifyTtlMs();
     const now = Date.now();
     for (const [k, v] of _verifyCache) {
-      if (!v || (now - v.ts) > ttl) _verifyCache.delete(k);
+      if (!v || now - v.ts > ttl) {
+        _verifyCache.delete(k);
+      }
     }
   }, interval);
-  if (_sweepTimer && typeof _sweepTimer.unref === 'function') _sweepTimer.unref();
+  if (_sweepTimer && typeof _sweepTimer.unref === 'function') {
+    _sweepTimer.unref();
+  }
 }
 
 function _verifyKey(adapterKey, modelId) {
@@ -221,8 +250,10 @@ function _verifyKey(adapterKey, modelId) {
 /** 读取探活状态；过期或未探则返回 'unknown'。 */
 function getVerifyStatus(adapterKey, modelId) {
   const entry = _verifyCache.get(_verifyKey(adapterKey, modelId));
-  if (!entry) return 'unknown';
-  if ((Date.now() - entry.ts) > _verifyTtlMs()) {
+  if (!entry) {
+    return 'unknown';
+  }
+  if (Date.now() - entry.ts > _verifyTtlMs()) {
     _verifyCache.delete(_verifyKey(adapterKey, modelId));
     return 'unknown';
   }
@@ -232,8 +263,10 @@ function getVerifyStatus(adapterKey, modelId) {
 /** 读取完整探活记录（含 latency/error/ts），无则 null。 */
 function getVerifyRecord(adapterKey, modelId) {
   const entry = _verifyCache.get(_verifyKey(adapterKey, modelId));
-  if (!entry) return null;
-  if ((Date.now() - entry.ts) > _verifyTtlMs()) {
+  if (!entry) {
+    return null;
+  }
+  if (Date.now() - entry.ts > _verifyTtlMs()) {
     _verifyCache.delete(_verifyKey(adapterKey, modelId));
     return null;
   }

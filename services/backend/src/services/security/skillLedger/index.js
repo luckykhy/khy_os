@@ -19,13 +19,30 @@
 
 const crypto = require('crypto');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const LEDGER_DIR = path.join(os.homedir(), '.khyquant', 'skill-ledger');
-const KEYPAIR_FILE = path.join(LEDGER_DIR, 'keypair.json');
-const MANIFEST_FILE = path.join(LEDGER_DIR, 'manifest.json');
-const AUDIT_FILE = path.join(LEDGER_DIR, 'audit.jsonl');
+// Lazily resolve the ledger dir (portable-aware); fallback to legacy path.
+function _ledgerDir() {
+  try {
+    const { getAppDataDir } = require('../../../utils/dataHome');
+    return getAppDataDir('skill-ledger');
+  } catch {
+    return path.join(os.homedir(), '.khyquant', 'skill-ledger');
+  }
+}
+
+function _keypairFile() {
+  return path.join(_ledgerDir(), 'keypair.json');
+}
+
+function _manifestFile() {
+  return path.join(_ledgerDir(), 'manifest.json');
+}
+
+function _auditFile() {
+  return path.join(_ledgerDir(), 'audit.jsonl');
+}
 
 // ─── Key Management ─────────────────────────────────────────────────────────
 
@@ -35,10 +52,10 @@ const AUDIT_FILE = path.join(LEDGER_DIR, 'audit.jsonl');
  * @returns {{ publicKey: string, created: boolean }}
  */
 function initKeys() {
-  fs.mkdirSync(LEDGER_DIR, { recursive: true });
+  fs.mkdirSync(_ledgerDir(), { recursive: true });
 
-  if (fs.existsSync(KEYPAIR_FILE)) {
-    const kp = JSON.parse(fs.readFileSync(KEYPAIR_FILE, 'utf-8'));
+  if (fs.existsSync(_keypairFile())) {
+    const kp = JSON.parse(fs.readFileSync(_keypairFile(), 'utf-8'));
     return { publicKey: kp.publicKey, created: false };
   }
 
@@ -55,8 +72,8 @@ function initKeys() {
   };
 
   const { safeChmod } = require('../../../tools/platformUtils');
-  fs.writeFileSync(KEYPAIR_FILE, JSON.stringify(keypair, null, 2));
-  safeChmod(KEYPAIR_FILE, 0o600);
+  fs.writeFileSync(_keypairFile(), JSON.stringify(keypair, null, 2));
+  safeChmod(_keypairFile(), 0o600);
 
   _appendAudit({ action: 'init_keys', publicKeyHash: _hashString(publicKey) });
 
@@ -68,8 +85,10 @@ function initKeys() {
  * @returns {string|null}
  */
 function getPublicKey() {
-  if (!fs.existsSync(KEYPAIR_FILE)) return null;
-  const kp = JSON.parse(fs.readFileSync(KEYPAIR_FILE, 'utf-8'));
+  if (!fs.existsSync(_keypairFile())) {
+    return null;
+  }
+  const kp = JSON.parse(fs.readFileSync(_keypairFile(), 'utf-8'));
   return kp.publicKey;
 }
 
@@ -114,11 +133,11 @@ function hashSkillDirectory(skillDir) {
  * @returns {{ signature: string, certifiedAt: string }}
  */
 function certifySkill(skillId, contentHash, metadata = {}) {
-  if (!fs.existsSync(KEYPAIR_FILE)) {
+  if (!fs.existsSync(_keypairFile())) {
     throw new Error('Skill ledger not initialized. Run initKeys() first.');
   }
 
-  const kp = JSON.parse(fs.readFileSync(KEYPAIR_FILE, 'utf-8'));
+  const kp = JSON.parse(fs.readFileSync(_keypairFile(), 'utf-8'));
   const payload = JSON.stringify({ skillId, contentHash, timestamp: Date.now() });
   const signature = crypto.sign(null, Buffer.from(payload), kp.privateKey).toString('base64');
 
@@ -150,7 +169,7 @@ function certifySkill(skillId, contentHash, metadata = {}) {
  * @returns {{ valid: boolean, reason: string, certifiedAt: string|null }}
  */
 function verifySkill(skillId, currentHash) {
-  if (!fs.existsSync(KEYPAIR_FILE)) {
+  if (!fs.existsSync(_keypairFile())) {
     return { valid: false, reason: 'ledger_not_initialized', certifiedAt: null };
   }
 
@@ -174,7 +193,7 @@ function verifySkill(skillId, currentHash) {
   }
 
   // Verify signature
-  const kp = JSON.parse(fs.readFileSync(KEYPAIR_FILE, 'utf-8'));
+  const kp = JSON.parse(fs.readFileSync(_keypairFile(), 'utf-8'));
   try {
     const isValid = crypto.verify(
       null,
@@ -188,7 +207,11 @@ function verifySkill(skillId, currentHash) {
       return { valid: false, reason: 'invalid_signature', certifiedAt: entry.certifiedAt };
     }
   } catch (err) {
-    return { valid: false, reason: 'signature_error: ' + err.message, certifiedAt: entry.certifiedAt };
+    return {
+      valid: false,
+      reason: 'signature_error: ' + err.message,
+      certifiedAt: entry.certifiedAt,
+    };
   }
 
   _appendAudit({ action: 'verify_ok', skillId });
@@ -228,12 +251,18 @@ function revokeSkill(skillId) {
  * @returns {Array<object>}
  */
 function getAuditTrail(limit = 50) {
-  if (!fs.existsSync(AUDIT_FILE)) return [];
+  if (!fs.existsSync(_auditFile())) {
+    return [];
+  }
 
-  const lines = fs.readFileSync(AUDIT_FILE, 'utf-8').split(/\r?\n/).filter(Boolean);
+  const lines = fs.readFileSync(_auditFile(), 'utf-8').split(/\r?\n/).filter(Boolean);
   const entries = [];
   for (const line of lines.slice(-limit)) {
-    try { entries.push(JSON.parse(line)); } catch { /* skip */ }
+    try {
+      entries.push(JSON.parse(line));
+    } catch {
+      /* skip */
+    }
   }
   return entries;
 }
@@ -241,25 +270,29 @@ function getAuditTrail(limit = 50) {
 // ─── Internal Helpers ───────────────────────────────────────────────────────
 
 function _loadManifest() {
-  if (!fs.existsSync(MANIFEST_FILE)) return {};
+  if (!fs.existsSync(_manifestFile())) {
+    return {};
+  }
   try {
-    return JSON.parse(fs.readFileSync(MANIFEST_FILE, 'utf-8'));
+    return JSON.parse(fs.readFileSync(_manifestFile(), 'utf-8'));
   } catch {
     return {};
   }
 }
 
 function _saveManifest(manifest) {
-  fs.mkdirSync(LEDGER_DIR, { recursive: true });
-  fs.writeFileSync(MANIFEST_FILE, JSON.stringify(manifest, null, 2));
+  fs.mkdirSync(_ledgerDir(), { recursive: true });
+  fs.writeFileSync(_manifestFile(), JSON.stringify(manifest, null, 2));
 }
 
 function _appendAudit(event) {
   try {
-    fs.mkdirSync(LEDGER_DIR, { recursive: true });
+    fs.mkdirSync(_ledgerDir(), { recursive: true });
     const entry = { ...event, timestamp: new Date().toISOString() };
-    fs.appendFileSync(AUDIT_FILE, JSON.stringify(entry) + '\n');
-  } catch { /* best effort */ }
+    fs.appendFileSync(_auditFile(), JSON.stringify(entry) + '\n');
+  } catch {
+    /* best effort */
+  }
 }
 
 function _hashString(str) {

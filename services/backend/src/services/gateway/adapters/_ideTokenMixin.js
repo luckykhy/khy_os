@@ -3,6 +3,7 @@
  */
 'use strict';
 const { resolveMessages } = require('./_messageBuilder');
+
 // Model-name SSOT: the IDE default-fallback model flows from constants/models.js.
 const { PRIMARY: MODELS } = require('../../../constants/models');
 
@@ -24,8 +25,6 @@ const { PRIMARY: MODELS } = require('../../../constants/models');
  *   // mixin.normalizeToken, mixin.selectToken, mixin.buildModelList, ...
  */
 
-const { attachImagesToOpenAIMessages } = require('./_imageCompat');
-
 // ─── Token 工具函数（完全相同） ──────────────────────
 
 function normalizeToken(raw) {
@@ -34,30 +33,52 @@ function normalizeToken(raw) {
 
 function isLikelyCredentialToken(raw) {
   const token = normalizeToken(raw);
-  if (!token) return false;
-  if (token.length < 20 || token.length > 4096) return false;
-  if (/\s/.test(token)) return false;
-  if (!/^[A-Za-z0-9._\-+/=~:]+$/.test(token)) return false;
-  if (/^(null|undefined|token|access[_-]?token|bearer)$/i.test(token)) return false;
-  if (/^(eyJ|sk-|rk-|rt_|atk-|khy-)/i.test(token)) return true;
-  if (/^[A-Za-z0-9]{20,}$/i.test(token)) return true;
+  if (!token) {
+    return false;
+  }
+  if (token.length < 20 || token.length > 4096) {
+    return false;
+  }
+  if (/\s/.test(token)) {
+    return false;
+  }
+  if (!/^[A-Za-z0-9._\-+/=~:]+$/.test(token)) {
+    return false;
+  }
+  if (/^(null|undefined|token|access[_-]?token|bearer)$/i.test(token)) {
+    return false;
+  }
+  if (/^(eyJ|sk-|rk-|rt_|atk-|khy-)/i.test(token)) {
+    return true;
+  }
+  if (/^[A-Za-z0-9]{20,}$/i.test(token)) {
+    return true;
+  }
   return /[A-Za-z]/.test(token) || /\d/.test(token);
 }
 
 function isTokenExpired(tokenData) {
-  if (!tokenData || !tokenData.expiresAt) return false;
+  if (!tokenData || !tokenData.expiresAt) {
+    return false;
+  }
   const ts = new Date(tokenData.expiresAt).getTime();
-  if (!Number.isFinite(ts)) return false;
-  return ts < (Date.now() + 60 * 1000);
+  if (!Number.isFinite(ts)) {
+    return false;
+  }
+  return ts < Date.now() + 60 * 1000;
 }
 
 function dedupeTokens(tokens = []) {
   const out = [];
   const seen = new Set();
   for (const token of tokens) {
-    if (!token || !isLikelyCredentialToken(token.accessToken)) continue;
+    if (!token || !isLikelyCredentialToken(token.accessToken)) {
+      continue;
+    }
     const key = normalizeToken(token.accessToken);
-    if (!key || seen.has(key)) continue;
+    if (!key || seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(token);
   }
@@ -80,7 +101,9 @@ function dedupeTokens(tokens = []) {
  * @returns {boolean}
  */
 function allowImportedCredentials() {
-  return /^(1|true|on|yes)$/i.test(String(process.env.KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS || '').trim());
+  return /^(1|true|on|yes)$/i.test(
+    String(process.env.KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS || '').trim()
+  );
 }
 
 const _NIRVANA_SOURCE_HINTS = ['nirvana-cache', 'nirvana'];
@@ -96,13 +119,21 @@ const _NIRVANA_PATH_REGEX = /nirvana/i;
  * @returns {'local'|'pool'|'nirvana'}
  */
 function classifyTokenSource(token) {
-  if (!token || typeof token !== 'object') return 'local';
+  if (!token || typeof token !== 'object') {
+    return 'local';
+  }
   const source = String(token.source || '').trim();
   const lowerSource = source.toLowerCase();
-  if (lowerSource.startsWith('pool:')) return 'pool';
-  if (_NIRVANA_SOURCE_HINTS.includes(lowerSource)) return 'nirvana';
+  if (lowerSource.startsWith('pool:')) {
+    return 'pool';
+  }
+  if (_NIRVANA_SOURCE_HINTS.includes(lowerSource)) {
+    return 'nirvana';
+  }
   const tokenPath = String(token.path || '');
-  if (tokenPath && _NIRVANA_PATH_REGEX.test(tokenPath)) return 'nirvana';
+  if (tokenPath && _NIRVANA_PATH_REGEX.test(tokenPath)) {
+    return 'nirvana';
+  }
   return 'local';
 }
 
@@ -112,8 +143,12 @@ function classifyTokenSource(token) {
  * @returns {boolean}
  */
 function isNativeLoginToken(token) {
-  if (!token || typeof token !== 'object') return false;
-  if (!isLikelyCredentialToken(token.accessToken)) return false;
+  if (!token || typeof token !== 'object') {
+    return false;
+  }
+  if (!isLikelyCredentialToken(token.accessToken)) {
+    return false;
+  }
   return classifyTokenSource(token) === 'local';
 }
 
@@ -125,7 +160,9 @@ function isNativeLoginToken(token) {
  * @returns {boolean}
  */
 function countsTowardAvailability(token) {
-  if (isNativeLoginToken(token)) return true;
+  if (isNativeLoginToken(token)) {
+    return true;
+  }
   return allowImportedCredentials() && !!(token && isLikelyCredentialToken(token.accessToken));
 }
 
@@ -133,12 +170,11 @@ function countsTowardAvailability(token) {
 
 const MODEL_TOKEN_REGEX = /\b[a-zA-Z0-9][a-zA-Z0-9._:-]{2,80}\b/g;
 
-function normalizeModelId(id) {
-  return String(id || '')
-    .trim()
-    .replace(/^["']|["']$/g, '')
-    .replace(/\s+/g, '');
-}
+// normalizeModelId 已收敛至 gateway/_modelIdParse.js(Batch 2 纯函数原子层);
+// 保留本地常量名(仍经 module.exports 导出),调用点逐字节不变。
+const normalizeModelId = require('../_modelIdParse').normalizeModelIdCompact;
+
+const { attachImagesToOpenAIMessages } = require('./_imageCompat');
 
 function canonicalModelKey(id) {
   return normalizeModelId(id).toLowerCase();
@@ -147,16 +183,22 @@ function canonicalModelKey(id) {
 function extractModelIdsFromString(text, isLikelyModelIdFn) {
   const out = new Set();
   const src = String(text || '');
-  if (!src) return out;
+  if (!src) {
+    return out;
+  }
 
-  if (isLikelyModelIdFn(src)) out.add(normalizeModelId(src));
+  if (isLikelyModelIdFn(src)) {
+    out.add(normalizeModelId(src));
+  }
 
   const cleaned = src.replace(/[,"'()[\]{}]/g, ' ');
   const regex = new RegExp(MODEL_TOKEN_REGEX.source, 'g');
   let m;
   while ((m = regex.exec(cleaned)) !== null) {
     const token = normalizeModelId(m[0]);
-    if (isLikelyModelIdFn(token)) out.add(token);
+    if (isLikelyModelIdFn(token)) {
+      out.add(token);
+    }
   }
   return out;
 }
@@ -167,37 +209,60 @@ function discoverModelsFromSnapshots(snapshots = [], { isLikelyModelIdFn }) {
 
   const addModel = (raw, options = {}) => {
     const normalized = normalizeModelId(raw);
-    if (!isLikelyModelIdFn(normalized)) return;
+    if (!isLikelyModelIdFn(normalized)) {
+      return;
+    }
     const key = canonicalModelKey(normalized);
-    if (!discoveredByKey.has(key)) discoveredByKey.set(key, normalized);
-    if (options.defaultHint) defaultHints.push(normalized);
+    if (!discoveredByKey.has(key)) {
+      discoveredByKey.set(key, normalized);
+    }
+    if (options.defaultHint) {
+      defaultHints.push(normalized);
+    }
   };
 
   const walk = (value, keyHint = '') => {
-    if (value == null) return;
+    if (value == null) {
+      return;
+    }
     const key = String(keyHint || '').toLowerCase();
 
     if (typeof value === 'string') {
       for (const id of extractModelIdsFromString(value, isLikelyModelIdFn)) {
         addModel(id, {
-          defaultHint: key.includes('default') || key.includes('selected') || key.includes('current') || key.includes('active'),
+          defaultHint:
+            key.includes('default') ||
+            key.includes('selected') ||
+            key.includes('current') ||
+            key.includes('active'),
         });
       }
       return;
     }
 
     if (Array.isArray(value)) {
-      for (const item of value) walk(item, keyHint);
+      for (const item of value) {
+        walk(item, keyHint);
+      }
       return;
     }
 
     if (typeof value === 'object') {
       for (const [k, v] of Object.entries(value)) {
         const lk = String(k || '').toLowerCase();
-        if (isLikelyModelIdFn(k)) addModel(k, { defaultHint: lk.includes('default') || lk.includes('selected') });
-        if (typeof v === 'string' && (lk.includes('model') || lk.includes('assistant') || lk.includes('engine'))) {
+        if (isLikelyModelIdFn(k)) {
+          addModel(k, { defaultHint: lk.includes('default') || lk.includes('selected') });
+        }
+        if (
+          typeof v === 'string' &&
+          (lk.includes('model') || lk.includes('assistant') || lk.includes('engine'))
+        ) {
           addModel(v, {
-            defaultHint: lk.includes('default') || lk.includes('selected') || lk.includes('current') || lk.includes('active'),
+            defaultHint:
+              lk.includes('default') ||
+              lk.includes('selected') ||
+              lk.includes('current') ||
+              lk.includes('active'),
           });
         }
         walk(v, lk);
@@ -205,7 +270,9 @@ function discoverModelsFromSnapshots(snapshots = [], { isLikelyModelIdFn }) {
     }
   };
 
-  for (const snapshot of snapshots) walk(snapshot.data);
+  for (const snapshot of snapshots) {
+    walk(snapshot.data);
+  }
   return {
     discoveredModelIds: [...discoveredByKey.values()],
     defaultModelId: defaultHints[0] || null,
@@ -213,7 +280,12 @@ function discoverModelsFromSnapshots(snapshots = [], { isLikelyModelIdFn }) {
 }
 
 function buildModelList(discoveredModelIds = [], defaultModelId = null, options = {}) {
-  const { knownModels = [], modelDisplayNameFn, isLikelyModelIdFn, defaultFallbackModelKey = MODELS.ide } = options;
+  const {
+    knownModels = [],
+    modelDisplayNameFn,
+    isLikelyModelIdFn,
+    defaultFallbackModelKey = MODELS.ide,
+  } = options;
   const seen = new Set();
   const catalog = [];
   const defaultKey = canonicalModelKey(defaultModelId);
@@ -225,17 +297,27 @@ function buildModelList(discoveredModelIds = [], defaultModelId = null, options 
     const key = canonicalModelKey(id);
     const inApi = apiModelKeys.has(key);
     const inLocal = localModelKeys.has(key);
-    if (inApi && inLocal) return 'remote+local';
-    if (inApi) return 'remote';
-    if (inLocal) return 'local';
+    if (inApi && inLocal) {
+      return 'remote+local';
+    }
+    if (inApi) {
+      return 'remote';
+    }
+    if (inLocal) {
+      return 'local';
+    }
     return fallback;
   };
 
   const addModel = (id, name, isDefault = false, fallbackSource = 'builtin') => {
     const normalized = normalizeModelId(id);
-    if (!isLikelyModelIdFn(normalized)) return;
+    if (!isLikelyModelIdFn(normalized)) {
+      return;
+    }
     const key = canonicalModelKey(normalized);
-    if (seen.has(key)) return;
+    if (seen.has(key)) {
+      return;
+    }
     seen.add(key);
     catalog.push({
       id: normalized,
@@ -243,21 +325,34 @@ function buildModelList(discoveredModelIds = [], defaultModelId = null, options 
       isDefault: !!isDefault,
       discoverySource: resolveSource(normalized, fallbackSource),
     });
-    if (isDefault) hasDefault = true;
+    if (isDefault) {
+      hasDefault = true;
+    }
   };
 
   for (const model of knownModels) {
     const modelKey = canonicalModelKey(model.id);
-    addModel(model.id, model.name, defaultKey ? modelKey === defaultKey : !!model.isDefault, 'builtin');
+    addModel(
+      model.id,
+      model.name,
+      defaultKey ? modelKey === defaultKey : !!model.isDefault,
+      'builtin'
+    );
   }
 
   for (const discoveredId of discoveredModelIds) {
     const discoveredKey = canonicalModelKey(discoveredId);
-    addModel(discoveredId, modelDisplayNameFn(discoveredId), defaultKey ? discoveredKey === defaultKey : false, 'local');
+    addModel(
+      discoveredId,
+      modelDisplayNameFn(discoveredId),
+      defaultKey ? discoveredKey === defaultKey : false,
+      'local'
+    );
   }
 
   if (!hasDefault && catalog.length > 0) {
-    const fallback = catalog.find(m => canonicalModelKey(m.id) === defaultFallbackModelKey) || catalog[0];
+    const fallback =
+      catalog.find((m) => canonicalModelKey(m.id) === defaultFallbackModelKey) || catalog[0];
     fallback.isDefault = true;
   }
 
@@ -271,18 +366,28 @@ const { consumeSseText, consumeSseIncremental, flushSseIncremental } = require('
 // ─── 消息与响应提取（完全相同） ──────────────────────
 
 function extractMessageText(payload = {}) {
-  if (typeof payload?.choices?.[0]?.message?.content === 'string') return payload.choices[0].message.content;
-  if (typeof payload?.choices?.[0]?.delta?.content === 'string') return payload.choices[0].delta.content;
-  if (typeof payload?.output_text === 'string') return payload.output_text;
-  if (typeof payload?.content === 'string') return payload.content;
+  if (typeof payload?.choices?.[0]?.message?.content === 'string') {
+    return payload.choices[0].message.content;
+  }
+  if (typeof payload?.choices?.[0]?.delta?.content === 'string') {
+    return payload.choices[0].delta.content;
+  }
+  if (typeof payload?.output_text === 'string') {
+    return payload.output_text;
+  }
+  if (typeof payload?.content === 'string') {
+    return payload.content;
+  }
   return '';
 }
 
 function mergeAttempts(...groups) {
   const out = [];
   for (const group of groups) {
-    for (const item of (group || [])) {
-      if (!item || typeof item !== 'object') continue;
+    for (const item of group || []) {
+      if (!item || typeof item !== 'object') {
+        continue;
+      }
       out.push(item);
     }
   }
@@ -296,20 +401,24 @@ function buildMessages(prompt, options = {}) {
     attachImages: attachImagesToOpenAIMessages,
   });
   // Filter out system message — callers handle system separately
-  return messages.filter(m => m.role !== 'system');
+  return messages.filter((m) => m.role !== 'system');
 }
 
 // ─── Stream 读取辅助（完全相同） ──────────────────────
 
 async function readWebReadableAsText(stream) {
-  if (!stream) return '';
+  if (!stream) {
+    return '';
+  }
   if (typeof stream.getReader === 'function') {
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let out = '';
     while (true) {
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
       out += decoder.decode(value, { stream: true });
     }
     out += decoder.decode();
@@ -318,7 +427,9 @@ async function readWebReadableAsText(stream) {
   if (typeof stream.on === 'function') {
     return await new Promise((resolve, reject) => {
       let out = '';
-      stream.on('data', (chunk) => { out += String(chunk); });
+      stream.on('data', (chunk) => {
+        out += String(chunk);
+      });
       stream.on('end', () => resolve(out));
       stream.on('error', reject);
     });
@@ -327,7 +438,9 @@ async function readWebReadableAsText(stream) {
 }
 
 async function readWebReadableAsSse(stream, onChunk = null) {
-  if (!stream) return '';
+  if (!stream) {
+    return '';
+  }
 
   const sseState = { buffer: '' };
   let out = '';
@@ -336,7 +449,9 @@ async function readWebReadableAsSse(stream, onChunk = null) {
     const decoder = new TextDecoder();
     while (true) {
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        break;
+      }
       out += consumeSseIncremental(sseState, decoder.decode(value, { stream: true }), onChunk);
     }
     out += consumeSseIncremental(sseState, decoder.decode(), onChunk);
@@ -346,7 +461,9 @@ async function readWebReadableAsSse(stream, onChunk = null) {
 
   if (typeof stream.on === 'function') {
     return await new Promise((resolve, reject) => {
-      stream.on('data', (chunk) => { out += consumeSseIncremental(sseState, String(chunk), onChunk); });
+      stream.on('data', (chunk) => {
+        out += consumeSseIncremental(sseState, String(chunk), onChunk);
+      });
       stream.on('end', () => {
         out += flushSseIncremental(sseState, onChunk);
         resolve(out);
@@ -376,17 +493,18 @@ function createTokenManager(config) {
   // 闭包状态由外部适配器管理，通过 getToken/setToken 访问
   let _tokenRef = { current: null };
 
-  function setTokenRef(ref) { _tokenRef = ref; }
+  function setTokenRef(ref) {
+    _tokenRef = ref;
+  }
 
   function toPoolTokenShape(poolToken = null) {
-    if (!poolToken || !isLikelyCredentialToken(poolToken.accessToken)) return null;
-    const auth = poolToken.authData && typeof poolToken.authData === 'object' ? poolToken.authData : {};
+    if (!poolToken || !isLikelyCredentialToken(poolToken.accessToken)) {
+      return null;
+    }
+    const auth =
+      poolToken.authData && typeof poolToken.authData === 'object' ? poolToken.authData : {};
     const endpoint = normalizeEndpointBaseFn(
-      auth.endpoint
-      || auth.host
-      || auth.baseUrl
-      || auth.baseURL
-      || auth.callback?.host
+      auth.endpoint || auth.host || auth.baseUrl || auth.baseURL || auth.callback?.host
     );
     return {
       accessToken: normalizeToken(poolToken.accessToken),
@@ -411,46 +529,60 @@ function createTokenManager(config) {
   }
 
   function persistObservedToken(token = null) {
-    if (!token || !isLikelyCredentialToken(token.accessToken)) return;
+    if (!token || !isLikelyCredentialToken(token.accessToken)) {
+      return;
+    }
     Promise.resolve().then(async () => {
       try {
         const pool = require('../../accountPool');
         await pool.init();
-        await pool.saveObservedToken(poolType, {
-          accessToken: token.accessToken,
-          refreshToken: token.refreshToken || null,
-          sourcePath: token.path || '',
-          label: token.source ? `${poolType}:${token.source}` : poolType,
-          authData: {
-            source: token.source || poolType,
-            path: token.path || '',
-            endpoint: token.endpoint || null,
-            sdkEndpoint: token.sdkEndpoint || null,
-            expiresAt: token.expiresAt || null,
+        await pool.saveObservedToken(
+          poolType,
+          {
+            accessToken: token.accessToken,
+            refreshToken: token.refreshToken || null,
+            sourcePath: token.path || '',
+            label: token.source ? `${poolType}:${token.source}` : poolType,
+            authData: {
+              source: token.source || poolType,
+              path: token.path || '',
+              endpoint: token.endpoint || null,
+              sdkEndpoint: token.sdkEndpoint || null,
+              expiresAt: token.expiresAt || null,
+            },
           },
-        }, { activateIfNone: true });
-      } catch { /* best effort */ }
+          { activateIfNone: true }
+        );
+      } catch {
+        /* best effort */
+      }
     });
   }
 
   function resolveTokenPriority() {
-    const raw = String(process.env[`${envPrefix}_TOKEN_PRIORITY`] || 'pool-first').trim().toLowerCase();
-    if (raw === 'local-first' || raw === 'local_first' || raw === 'local') return 'local-first';
+    const raw = String(process.env[`${envPrefix}_TOKEN_PRIORITY`] || 'pool-first')
+      .trim()
+      .toLowerCase();
+    if (raw === 'local-first' || raw === 'local_first' || raw === 'local') {
+      return 'local-first';
+    }
     return 'pool-first';
   }
 
   async function getTokenCandidates() {
     const localToken = readTokenFn();
     const poolToken = await getPoolActiveToken();
-    const currentToken = (_tokenRef.current && _tokenRef.current.accessToken) ? _tokenRef.current : null;
+    const currentToken =
+      _tokenRef.current && _tokenRef.current.accessToken ? _tokenRef.current : null;
 
     if (localToken && localToken.accessToken) {
       persistObservedToken(localToken);
     }
 
-    const ordered = resolveTokenPriority() === 'local-first'
-      ? [localToken, poolToken, currentToken]
-      : [poolToken, localToken, currentToken];
+    const ordered =
+      resolveTokenPriority() === 'local-first'
+        ? [localToken, poolToken, currentToken]
+        : [poolToken, localToken, currentToken];
     return dedupeTokens(ordered);
   }
 
@@ -460,13 +592,13 @@ function createTokenManager(config) {
       return { token: null, fallback: null, candidates: [] };
     }
 
-    const nonExpired = candidates.filter(t => !isTokenExpired(t));
+    const nonExpired = candidates.filter((t) => !isTokenExpired(t));
     const token = nonExpired[0] || (allowExpired ? candidates[0] : null);
     if (!token) {
       return { token: null, fallback: null, candidates };
     }
 
-    const fallback = nonExpired.find(t => t.accessToken !== token.accessToken) || null;
+    const fallback = nonExpired.find((t) => t.accessToken !== token.accessToken) || null;
     return { token, fallback, candidates };
   }
 

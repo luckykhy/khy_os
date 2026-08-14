@@ -5,11 +5,16 @@ class LSPTool extends BaseTool {
   static category = 'analysis';
   static risk = 'safe';
   static aliases = ['lsp', 'language_server'];
-  static searchHint = 'language server protocol symbols definitions references completion rename format';
+  static searchHint =
+    'language server protocol symbols definitions references completion rename format';
   static shouldDefer = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Query language server for code intelligence.
@@ -26,18 +31,37 @@ Requires a compatible language server to be available.`;
           type: 'string',
           description: 'LSP action to perform',
           enum: [
-            'definition', 'references', 'hover', 'symbols', 'diagnostics',
-            'completion', 'rename', 'formatting', 'codeActions', 'signatureHelp', 'workspaceSymbols',
+            'definition',
+            'references',
+            'hover',
+            'symbols',
+            'diagnostics',
+            'completion',
+            'rename',
+            'formatting',
+            'codeActions',
+            'signatureHelp',
+            'workspaceSymbols',
           ],
         },
         file_path: { type: 'string', description: 'Path to the source file' },
         line: { type: 'number', description: 'Line number (0-based)' },
         character: { type: 'number', description: 'Character offset (0-based)' },
-        query: { type: 'string', description: 'Symbol name to search for (symbols/workspaceSymbols)' },
+        query: {
+          type: 'string',
+          description: 'Symbol name to search for (symbols/workspaceSymbols)',
+        },
         new_name: { type: 'string', description: 'New name for rename action' },
-        range: { type: 'object', description: 'Range for codeActions: {start:{line,character}, end:{line,character}}' },
+        range: {
+          type: 'object',
+          description: 'Range for codeActions: {start:{line,character}, end:{line,character}}',
+        },
         options: { type: 'object', description: 'Formatting options: {tabSize, insertSpaces}' },
-        timeoutMs: { type: 'number', description: 'Optional hard timeout in milliseconds for the LSP request (default 20000, range 1000–120000). Backstops an unresponsive language server so the call does not hang.' },
+        timeoutMs: {
+          type: 'number',
+          description:
+            'Optional hard timeout in milliseconds for the LSP request (default 20000, range 1000–120000). Backstops an unresponsive language server so the call does not hang.',
+        },
       },
       required: ['action'],
     };
@@ -57,25 +81,51 @@ Requires a compatible language server to be available.`;
     const dispatch = async () => {
       switch (params.action) {
         case 'definition':
-          return { success: true, locations: await lsp.gotoDefinition(params.file_path, params.line, params.character) };
+          return {
+            success: true,
+            locations: await lsp.gotoDefinition(params.file_path, params.line, params.character),
+          };
         case 'references':
-          return { success: true, locations: await lsp.findReferences(params.file_path, params.line, params.character) };
+          return {
+            success: true,
+            locations: await lsp.findReferences(params.file_path, params.line, params.character),
+          };
         case 'hover':
-          return { success: true, hover: await lsp.hover(params.file_path, params.line, params.character) };
+          return {
+            success: true,
+            hover: await lsp.hover(params.file_path, params.line, params.character),
+          };
         case 'symbols':
           return { success: true, symbols: await lsp.documentSymbols(params.file_path) };
         case 'diagnostics':
           return { success: true, diagnostics: lsp.getDiagnostics(params.file_path) };
         case 'completion':
-          return { success: true, items: await lsp.completion(params.file_path, params.line, params.character) };
+          return {
+            success: true,
+            items: await lsp.completion(params.file_path, params.line, params.character),
+          };
         case 'rename':
-          return { success: true, edits: await lsp.rename(params.file_path, params.line, params.character, params.new_name) };
+          return {
+            success: true,
+            edits: await lsp.rename(
+              params.file_path,
+              params.line,
+              params.character,
+              params.new_name
+            ),
+          };
         case 'formatting':
           return { success: true, edits: await lsp.formatting(params.file_path, params.options) };
         case 'codeActions':
-          return { success: true, actions: await lsp.codeActions(params.file_path, params.range, null) };
+          return {
+            success: true,
+            actions: await lsp.codeActions(params.file_path, params.range, null),
+          };
         case 'signatureHelp':
-          return { success: true, signatures: await lsp.signatureHelp(params.file_path, params.line, params.character) };
+          return {
+            success: true,
+            signatures: await lsp.signatureHelp(params.file_path, params.line, params.character),
+          };
         case 'workspaceSymbols':
           return { success: true, symbols: await lsp.workspaceSymbols(params.query) };
         default:
@@ -96,10 +146,18 @@ Requires a compatible language server to be available.`;
       });
       const raced = await withDeadline(() => dispatch(), timeoutMs);
       if (raced && raced.__timedOut) {
-        return { success: false, error: `LSP "${params.action}" 超时:已达 ${raced.timeoutMs}ms 硬上限`, action: params.action };
+        return {
+          success: false,
+          error: `LSP "${params.action}" 超时:已达 ${raced.timeoutMs}ms 硬上限`,
+          action: params.action,
+        };
       }
       if (raced && raced.__error) {
-        return { success: false, error: (raced.__error && raced.__error.message) || String(raced.__error), action: params.action };
+        return {
+          success: false,
+          error: (raced.__error && raced.__error.message) || String(raced.__error),
+          action: params.action,
+        };
       }
       return raced;
     } catch (err) {
@@ -116,7 +174,9 @@ Requires a compatible language server to be available.`;
     }
   }
 
-  getActivityDescription(input) { return `执行 LSP ${input.action}：${input.file_path || input.query || ''}`; }
+  getActivityDescription(input) {
+    return `执行 LSP ${input.action}：${input.file_path || input.query || ''}`;
+  }
 }
 
 module.exports = LSPTool;

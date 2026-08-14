@@ -98,7 +98,7 @@
           <input
             v-model="backendUrl"
             class="setting-input"
-            placeholder="服务器地址，如 https://khyquant.top"
+            placeholder="服务器地址，例如 https://khyquant.top"
             @blur="applyConnectionSettings"
           />
         </div>

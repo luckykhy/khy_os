@@ -31,11 +31,19 @@ const _EN = new Set(['en', 'enus', 'engb', 'english', '英文', '英语']);
  */
 function normalizeLanguage(raw = '') {
   const value = String(raw == null ? '' : raw).trim();
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const normalized = value.toLowerCase().replace(/[\s_-]+/g, '');
-  if (_AUTO.has(normalized)) return 'auto';
-  if (_ZH.has(normalized)) return 'Chinese';
-  if (_EN.has(normalized)) return 'English';
+  if (_AUTO.has(normalized)) {
+    return 'auto';
+  }
+  if (_ZH.has(normalized)) {
+    return 'Chinese';
+  }
+  if (_EN.has(normalized)) {
+    return 'English';
+  }
   return '';
 }
 
@@ -46,10 +54,14 @@ function normalizeLanguage(raw = '') {
  */
 function describeLanguage(pref) {
   switch (pref) {
-    case 'Chinese': return '中文';
-    case 'English': return 'English';
-    case 'auto': return '自动(跟随用户输入·中文优先)';
-    default: return String(pref || '未设置');
+    case 'Chinese':
+      return '中文';
+    case 'English':
+      return 'English';
+    case 'auto':
+      return '自动(跟随用户输入·中文优先)';
+    default:
+      return String(pref || '未设置');
   }
 }
 
@@ -60,7 +72,9 @@ function describeLanguage(pref) {
  */
 function resolveActive(env = {}) {
   const raw = env && env.KHY_LANGUAGE ? String(env.KHY_LANGUAGE).trim() : '';
-  if (!raw) return { preference: 'auto', source: 'default' };
+  if (!raw) {
+    return { preference: 'auto', source: 'default' };
+  }
   const pref = normalizeLanguage(raw);
   // KHY_LANGUAGE 已是 prompts.js 写入的规范值('Chinese'/'English');无法归一时回退 auto。
   return { preference: pref || 'auto', source: 'env' };

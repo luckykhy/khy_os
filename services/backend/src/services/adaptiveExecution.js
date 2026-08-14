@@ -45,8 +45,8 @@
  */
 
 const DEFAULT_STREAK = 5;
-const DEFAULT_THINK_MAX = 2;   // 连续「只想不做」轮数上限,超过则反过来提示去执行(「不能一直想」)
-const DEFAULT_COOLDOWN = 2;    // 软提示之间最小间隔轮数:提示本身也是「想」的诱因,需节流以保证「交替」
+const DEFAULT_THINK_MAX = 2; // 连续「只想不做」轮数上限,超过则反过来提示去执行(「不能一直想」)
+const DEFAULT_COOLDOWN = 2; // 软提示之间最小间隔轮数:提示本身也是「想」的诱因,需节流以保证「交替」
 
 // ── env 门控(默认开,仅 0/false/off/no 关)─────────────────────────────
 function isEnabled(env = process.env) {
@@ -63,32 +63,48 @@ function _intEnv(env, key, def, min) {
 const _norm = require('../utils/normalizeToolName');
 
 function _clip(s, n) {
-  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  const t = String(s || '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return t.length > n ? t.slice(0, n - 1) + '…' : t;
 }
 
 // ── 检测器 ────────────────────────────────────────────────────────────
 
 // 最初计划 / 设想的结构化信号(保守:需明确的计划措辞或「首先…然后」枚举,casual 提及不算)。
-const _PLAN_RE = /(我的)?(计划|方案|思路|步骤|打算)\s*(如下|是|有|:|：)|打算\s*(先|这样|按|分)|我(会|将|要|准备)先[^。;；\n]{0,24}(然后|接着|再|之后|最后)|首先[^。;；\n]{0,30}(然后|接着|再|其次|最后)|分\s*(成|为)?\s*(两|三|四|五|几|[2-9])\s*步|预计(会|将|需要|要)|接下来(我)?(会|要|将|准备|计划)/;
+const _PLAN_RE =
+  /(我的)?(计划|方案|思路|步骤|打算)\s*(如下|是|有|:|：)|打算\s*(先|这样|按|分)|我(会|将|要|准备)先[^。;；\n]{0,24}(然后|接着|再|之后|最后)|首先[^。;；\n]{0,30}(然后|接着|再|其次|最后)|分\s*(成|为)?\s*(两|三|四|五|几|[2-9])\s*步|预计(会|将|需要|要)|接下来(我)?(会|要|将|准备|计划)/;
 
 // 反思 / 改计划标记(宽松:多判安全)。命中即认为模型本轮已自发回看 / 调整。
-const _REFLECT_RE = /重新(考虑|规划|审视|评估|来过?|想)|调整(一下|方案|计划|思路|策略|方向|做法)?|改(为|成)(?!功)|换(个|一种|种|条)?\s*(思路|方案|方法|做法|角度|路子)|原(计划|方案|设想|本以为|来打算)|本以为|与(预期|设想|预想)\s*(不符|不一致|不同)|和(预期|设想)\s*不(符|一致|同)|看来(需要|得|要|不|是)|其实(应该|需要|不是|是|可以)|不符合(预期|设想)|出乎意料|没想到|偏离(了)?\s*(预期|计划|方向|目标)|这(和|与)\s*(我|预期|设想)|意识到|发现(原|之前|刚才)|不对[，,]|行不通|此路不通/;
+const _REFLECT_RE =
+  /重新(考虑|规划|审视|评估|来过?|想)|调整(一下|方案|计划|思路|策略|方向|做法)?|改(为|成)(?!功)|换(个|一种|种|条)?\s*(思路|方案|方法|做法|角度|路子)|原(计划|方案|设想|本以为|来打算)|本以为|与(预期|设想|预想)\s*(不符|不一致|不同)|和(预期|设想)\s*不(符|一致|同)|看来(需要|得|要|不|是)|其实(应该|需要|不是|是|可以)|不符合(预期|设想)|出乎意料|没想到|偏离(了)?\s*(预期|计划|方向|目标)|这(和|与)\s*(我|预期|设想)|意识到|发现(原|之前|刚才)|不对[，,]|行不通|此路不通/;
 
 /** 本轮工具结果是否出现「意外」(与设想可能不符)。保守:以显式失败 / 显式空结果为准。 */
 function _detectSurprise(toolResults) {
   for (const tr of toolResults) {
-    if (!tr || !tr.result || typeof tr.result !== 'object') continue;
+    if (!tr || !tr.result || typeof tr.result !== 'object') {
+      continue;
+    }
     const r = tr.result;
     if (r.success === false) {
-      const why = (typeof r.error === 'string' && r.error) ? r.error
-        : (typeof r.message === 'string' && r.message) ? r.message : '工具未成功';
+      const why =
+        typeof r.error === 'string' && r.error
+          ? r.error
+          : typeof r.message === 'string' && r.message
+            ? r.message
+            : '工具未成功';
       return `${_norm(tr.tool)} 未成功(${_clip(why, 60)})`;
     }
     // 显式空结果(仅认显式字段,零误报):count===0 且字段存在 / 显式空数组。
-    if ('count' in r && Number(r.count) === 0) return `${_norm(tr.tool)} 无匹配(count=0)`;
-    if (Array.isArray(r.matches) && r.matches.length === 0) return `${_norm(tr.tool)} 无匹配(matches 空)`;
-    if (Array.isArray(r.results) && r.results.length === 0) return `${_norm(tr.tool)} 无结果(results 空)`;
+    if ('count' in r && Number(r.count) === 0) {
+      return `${_norm(tr.tool)} 无匹配(count=0)`;
+    }
+    if (Array.isArray(r.matches) && r.matches.length === 0) {
+      return `${_norm(tr.tool)} 无匹配(matches 空)`;
+    }
+    if (Array.isArray(r.results) && r.results.length === 0) {
+      return `${_norm(tr.tool)} 无结果(results 空)`;
+    }
   }
   return null;
 }
@@ -107,7 +123,9 @@ function _looksReflective(text) {
 function _firstPlanLine(text) {
   const lines = String(text || '').split(/\n|。|;|；/);
   for (const ln of lines) {
-    if (_PLAN_RE.test(ln)) return _clip(ln, 40);
+    if (_PLAN_RE.test(ln)) {
+      return _clip(ln, 40);
+    }
   }
   return _clip(String(text || ''), 40);
 }
@@ -119,17 +137,17 @@ function createState() {
     planCaptured: false,
     planSnippet: '',
     planAtIter: 0,
-    rigidStreak: 0,        // 连续「有计划、本轮推进了、且未反思」的轮数
-    thinkStreak: 0,        // 连续「只想不做」(有反思措辞但无工具动作)的轮数 → 过度反思
-    actStreak: 0,          // 连续「有工具动作」的轮数(反向参考)
-    lastNudgeAt: 0,        // 上次浮出提示的 iteration(软提示冷却用,保证做/想交替)
+    rigidStreak: 0, // 连续「有计划、本轮推进了、且未反思」的轮数
+    thinkStreak: 0, // 连续「只想不做」(有反思措辞但无工具动作)的轮数 → 过度反思
+    actStreak: 0, // 连续「有工具动作」的轮数(反向参考)
+    lastNudgeAt: 0, // 上次浮出提示的 iteration(软提示冷却用,保证做/想交替)
     reflectedEver: false,
-    surprises: [],         // 历史偏差(供 summarize)
-    announced: new Set(),  // episode 去重;条件解除后重新武装
-    nudges: [],            // 已浮出的提示(供 summarize)
-    _lastSurprise: null,   // 本轮偏差(供 assess)
+    surprises: [], // 历史偏差(供 summarize)
+    announced: new Set(), // episode 去重;条件解除后重新武装
+    nudges: [], // 已浮出的提示(供 summarize)
+    _lastSurprise: null, // 本轮偏差(供 assess)
     _lastReflected: false, // 本轮是否反思(供 assess)
-    _lastActed: false,     // 本轮是否有工具动作(供 assess)
+    _lastActed: false, // 本轮是否有工具动作(供 assess)
   };
 }
 
@@ -141,7 +159,9 @@ function createState() {
  * @param {Array}  input.toolResults    本轮工具结果 [{ tool, params, result }]
  */
 function recordStep(state, input = {}, env = process.env) {
-  if (!state) return;
+  if (!state) {
+    return;
+  }
   try {
     state.iteration += 1;
     const assistantText = String(input.assistantText || '');
@@ -156,27 +176,41 @@ function recordStep(state, input = {}, env = process.env) {
 
     // 2) 本轮是否自发反思 / 改计划?反思即把僵化连推清零。
     const reflected = _looksReflective(assistantText);
-    if (reflected) { state.reflectedEver = true; state.rigidStreak = 0; }
+    if (reflected) {
+      state.reflectedEver = true;
+      state.rigidStreak = 0;
+    }
 
     // 3) 本轮是否出现计划-现实偏差(意外结果)?
     const surprise = _detectSurprise(toolResults);
-    if (surprise) state.surprises.push({ at: state.iteration, detail: surprise });
+    if (surprise) {
+      state.surprises.push({ at: state.iteration, detail: surprise });
+    }
 
     // 4) 僵化连推:有计划、本轮推进了(有工具动作)、且未反思 → streak+1。
     const acted = toolResults.length > 0;
-    if (state.planCaptured && acted && !reflected) state.rigidStreak += 1;
+    if (state.planCaptured && acted && !reflected) {
+      state.rigidStreak += 1;
+    }
 
     // 5) 做/想交替节奏:本轮「有工具动作」= 在做 → actStreak+1、thinkStreak 归零;
     //    本轮「只想不做」(无工具动作但有反思措辞)= 在想 → thinkStreak+1、actStreak 归零。
     //    既无动作也无反思的轮(纯过渡)不计入任一侧,避免误判。
-    if (acted) { state.actStreak += 1; state.thinkStreak = 0; }
-    else if (reflected) { state.thinkStreak += 1; state.actStreak = 0; }
+    if (acted) {
+      state.actStreak += 1;
+      state.thinkStreak = 0;
+    } else if (reflected) {
+      state.thinkStreak += 1;
+      state.actStreak = 0;
+    }
 
     // 供 assess 读取本轮瞬时信号。
     state._lastSurprise = surprise;
     state._lastReflected = reflected;
     state._lastActed = acted;
-  } catch { /* 监听器纯累积,绝不反噬 loop */ }
+  } catch {
+    /* 监听器纯累积,绝不反噬 loop */
+  }
 }
 
 /**
@@ -185,7 +219,9 @@ function recordStep(state, input = {}, env = process.env) {
  * @returns {{ adjust:boolean, signals:Array, directive:string|null }}
  */
 function assess(state, env = process.env) {
-  if (!state || !isEnabled(env)) return { adjust: false, signals: [], directive: null };
+  if (!state || !isEnabled(env)) {
+    return { adjust: false, signals: [], directive: null };
+  }
   let candidates = [];
   try {
     const streakThreshold = _intEnv(env, 'KHY_ADAPTIVE_STREAK', DEFAULT_STREAK, 3);
@@ -223,7 +259,9 @@ function assess(state, env = process.env) {
         detail: `你已连续 ${state.rigidStreak} 步按最初设想推进、期间未回看${snip}。停一下:此刻的进展与最初设想是否仍吻合?吻合就继续,不吻合就调整。`,
       });
     }
-  } catch { return { adjust: false, signals: [], directive: null }; }
+  } catch {
+    return { adjust: false, signals: [], directive: null };
+  }
 
   // 做/想交替的节流:软提示(B/C)之间需有最小冷却间隔——提示本身也是「想」的诱因,
   // 频繁提示会把模型推向「一直想」。冷却期内压住软提示、只放行硬信号(A),留出「做」的空间。
@@ -233,31 +271,45 @@ function assess(state, env = process.env) {
     if (cooldown > 0 && state.lastNudgeAt > 0 && sinceLast < cooldown) {
       candidates = candidates.filter((c) => !c.soft);
     }
-  } catch { /* 节流 fail-soft:出错则不额外压制 */ }
+  } catch {
+    /* 节流 fail-soft:出错则不额外压制 */
+  }
 
   // episode 去重 + 重新武装(沿用 devCourseMonitor 同一手法)。
   const activeKeys = new Set(candidates.map((c) => c.key));
   for (const k of [...state.announced]) {
-    if (!activeKeys.has(k)) state.announced.delete(k);
+    if (!activeKeys.has(k)) {
+      state.announced.delete(k);
+    }
   }
   const fresh = candidates.filter((c) => !state.announced.has(c.key));
-  for (const c of fresh) state.announced.add(c.key);
+  for (const c of fresh) {
+    state.announced.add(c.key);
+  }
 
-  if (!fresh.length) return { adjust: false, signals: [], directive: null };
+  if (!fresh.length) {
+    return { adjust: false, signals: [], directive: null };
+  }
 
   state.lastNudgeAt = state.iteration; // 记录本次提示轮,供软提示冷却计算「交替」间隔
   const directive = buildAdaptiveHint(fresh);
-  for (const c of fresh) state.nudges.push({ type: c.type, detail: c.detail, at: state.iteration });
+  for (const c of fresh) {
+    state.nudges.push({ type: c.type, detail: c.detail, at: state.iteration });
+  }
   return { adjust: true, signals: fresh, directive };
 }
 
 /** 把信号合成一段「边做边想」上下文参考(可采用 / 改写 / 忽略)。 */
 function buildAdaptiveHint(signals) {
-  if (!Array.isArray(signals) || !signals.length) return null;
+  if (!Array.isArray(signals) || !signals.length) {
+    return null;
+  }
   const lines = signals.map((s, i) => `${i + 1}. ${s.detail}`);
-  return `[SYSTEM: 边做边想(执行中反思 · 仅供参考,可采用/改写/忽略):\n${lines.join('\n')}\n`
-    + '—— 计划是活的:请拿此刻的过程与结果对照你最初的设想——仍吻合就继续;若已偏离,就地修订计划再走,'
-    + '而不是「想好了就一路硬执行到底」。]';
+  return (
+    `[SYSTEM: 边做边想(执行中反思 · 仅供参考,可采用/改写/忽略):\n${lines.join('\n')}\n` +
+    '—— 计划是活的:请拿此刻的过程与结果对照你最初的设想——仍吻合就继续;若已偏离,就地修订计划再走,' +
+    '而不是「想好了就一路硬执行到底」。]'
+  );
 }
 
 /** 是否已浮出过任何提示(供 loop 返回契约判定)。 */
@@ -267,9 +319,13 @@ function hasNudges(state) {
 
 /** 收尾摘要:挂到 loop 返回契约,供 UI / 程序消费。 */
 function summarize(state) {
-  if (!state) return null;
+  if (!state) {
+    return null;
+  }
   const byType = {};
-  for (const n of state.nudges) byType[n.type] = (byType[n.type] || 0) + 1;
+  for (const n of state.nudges) {
+    byType[n.type] = (byType[n.type] || 0) + 1;
+  }
   return {
     iterations: state.iteration,
     planCaptured: state.planCaptured,

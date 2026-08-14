@@ -174,7 +174,7 @@ test('_normalizeFacts 把非法值规整为 null，真布尔保留', () => {
 
 test('还原清单 OPS-MAN-068 已落盘且与生成器输出一致(防手改漂移)', () => {
   const fs = require('node:fs');
-  const { buildDoc, DOC_PATH } = require('../restore-check');
+  const { buildDoc, DOC_PATH } = require('../restore/restore-check');
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   const generated = buildDoc();
   assert.strictEqual(

@@ -30,32 +30,53 @@ function extractListingSummary(command, fullOutput, env) {
   try {
     const e = env || process.env;
     let flagRegistry;
-    try { flagRegistry = require('./flagRegistry'); } catch { flagRegistry = null; }
+    try {
+      flagRegistry = require('./flagRegistry');
+    } catch {
+      flagRegistry = null;
+    }
     const gateOn = flagRegistry
       ? flagRegistry.isFlagEnabled('KHY_BASH_LISTING_SALIENCE', e)
-      : !['0', 'false', 'off', 'no'].includes(String(e.KHY_BASH_LISTING_SALIENCE || '').trim().toLowerCase());
-    if (!gateOn) return null;
+      : !['0', 'false', 'off', 'no'].includes(
+          String(e.KHY_BASH_LISTING_SALIENCE || '')
+            .trim()
+            .toLowerCase()
+        );
+    if (!gateOn) {
+      return null;
+    }
 
     // 仅对「列举/搜索类」命令介入(ls/dir/tree/du = isList;find = isSearch,同为目录树枚举)。
     // RTK 代理会把命令改写为 `rtk find …` / `rtk ls …`——剥掉前缀再分类,否则 base=rtk 分类失败。
     const forClass = String(command || '').replace(/^\s*rtk\s+/i, '');
     const cls = isSearchOrReadCommand(forClass);
-    if (!cls || (!cls.isList && !cls.isSearch)) return null;
+    if (!cls || (!cls.isList && !cls.isSearch)) {
+      return null;
+    }
 
     const { parseListing } = require('./listingParse');
     const parsed = parseListing(fullOutput, { command });
-    if (!parsed.parsed || parsed.entries.length === 0) return null;
+    if (!parsed.parsed || parsed.entries.length === 0) {
+      return null;
+    }
 
-    const minN = flagRegistry
-      ? flagRegistry.resolveNumeric('KHY_BASH_LISTING_MIN', e)
-      : 30;
-    if (parsed.entries.length < (Number.isFinite(minN) ? minN : 30)) return null;
+    const minN = flagRegistry ? flagRegistry.resolveNumeric('KHY_BASH_LISTING_MIN', e) : 30;
+    if (parsed.entries.length < (Number.isFinite(minN) ? minN : 30)) {
+      return null;
+    }
 
     const fileSalience = require('./fileSalience');
-    if (!fileSalience.isEnabled(e)) return null;
-    const summary = fileSalience.summarizeListing(parsed.entries, { env: e, total: parsed.entries.length });
+    if (!fileSalience.isEnabled(e)) {
+      return null;
+    }
+    const summary = fileSalience.summarizeListing(parsed.entries, {
+      env: e,
+      total: parsed.entries.length,
+    });
     const block = fileSalience.renderSalienceBlock(summary, { env: e });
-    if (!block) return null;
+    if (!block) {
+      return null;
+    }
 
     return `[Directory Summary] 共解析出 ${parsed.entries.length} 个条目(格式:${parsed.format});下方是完整原始输出。\n${block}\n\n--- 原始输出 ---\n`;
   } catch {

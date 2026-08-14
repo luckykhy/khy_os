@@ -20,6 +20,7 @@
  */
 
 const path = require('path');
+
 const S = require('./_shared');
 
 const APP = 'openclaw';
@@ -27,7 +28,9 @@ const TOMBSTONE = '# openclaw-cleared';
 
 /** ~/.openclaw/ 目录(OPENCLAW_HOME 覆盖)。 */
 function _home(env = process.env) {
-  if (env && env.OPENCLAW_HOME) return S.expandHome(env.OPENCLAW_HOME, env);
+  if (env && env.OPENCLAW_HOME) {
+    return S.expandHome(env.OPENCLAW_HOME, env);
+  }
   return S.expandHome('~/.openclaw', env);
 }
 
@@ -43,8 +46,12 @@ function _load(env) {
   const file = configPath(env);
   const text = S.readIfExists(file);
   const doc = text ? JSON.parse(text) : {};
-  if (!doc.models || typeof doc.models !== 'object') doc.models = {};
-  if (!doc.models.providers || typeof doc.models.providers !== 'object') doc.models.providers = {};
+  if (!doc.models || typeof doc.models !== 'object') {
+    doc.models = {};
+  }
+  if (!doc.models.providers || typeof doc.models.providers !== 'object') {
+    doc.models.providers = {};
+  }
   return { file, doc };
 }
 
@@ -62,8 +69,9 @@ function list(env = process.env) {
   try {
     const { doc } = _load(env);
     const envMap = S.parseDotenv(S.readIfExists(_envPath(env)));
-    const providers = Object.keys(doc.models.providers)
-      .map((id) => _providerView(id, doc.models.providers[id], envMap));
+    const providers = Object.keys(doc.models.providers).map((id) =>
+      _providerView(id, doc.models.providers[id], envMap)
+    );
     const primary = (((doc.agents || {}).defaults || {}).model || {}).primary || '';
     return { success: true, app: APP, providers, model: primary };
   } catch (e) {
@@ -77,7 +85,9 @@ function get(target, env = process.env) {
     const envMap = S.parseDotenv(S.readIfExists(_envPath(env)));
     const id = String(target || '').toLowerCase();
     const p = doc.models.providers[id];
-    if (!p) return { success: false, app: APP, error: `provider not found: ${id}` };
+    if (!p) {
+      return { success: false, app: APP, error: `provider not found: ${id}` };
+    }
     return { success: true, app: APP, provider: _providerView(id, p, envMap) };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
@@ -87,26 +97,39 @@ function get(target, env = process.env) {
 function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
   try {
     const id = String(provider || '').toLowerCase();
-    if (!id) return { success: false, app: APP, error: 'provider is required' };
+    if (!id) {
+      return { success: false, app: APP, error: 'provider is required' };
+    }
     const { file, doc } = _load(env);
 
     const resolvedKey = S.resolveApiKey(id, apiKey);
     const resolvedEndpoint = S.resolveEndpoint(id, endpoint);
     const resolvedModel = S.resolveModel(id, model);
 
-    const p = doc.models.providers[id] && typeof doc.models.providers[id] === 'object'
-      ? doc.models.providers[id] : {};
-    if (resolvedEndpoint) p.baseUrl = resolvedEndpoint;
+    const p =
+      doc.models.providers[id] && typeof doc.models.providers[id] === 'object'
+        ? doc.models.providers[id]
+        : {};
+    if (resolvedEndpoint) {
+      p.baseUrl = resolvedEndpoint;
+    }
     p.models = Array.isArray(p.models) ? p.models : [];
-    if (resolvedModel && !p.models.includes(resolvedModel)) p.models.push(resolvedModel);
-    if (!Array.isArray(p.input)) p.input = ['text'];
+    if (resolvedModel && !p.models.includes(resolvedModel)) {
+      p.models.push(resolvedModel);
+    }
+    if (!Array.isArray(p.input)) {
+      p.input = ['text'];
+    }
     doc.models.providers[id] = p;
 
     if (resolvedModel) {
       doc.agents = doc.agents && typeof doc.agents === 'object' ? doc.agents : {};
-      doc.agents.defaults = doc.agents.defaults && typeof doc.agents.defaults === 'object' ? doc.agents.defaults : {};
-      doc.agents.defaults.model = doc.agents.defaults.model && typeof doc.agents.defaults.model === 'object'
-        ? doc.agents.defaults.model : {};
+      doc.agents.defaults =
+        doc.agents.defaults && typeof doc.agents.defaults === 'object' ? doc.agents.defaults : {};
+      doc.agents.defaults.model =
+        doc.agents.defaults.model && typeof doc.agents.defaults.model === 'object'
+          ? doc.agents.defaults.model
+          : {};
       doc.agents.defaults.model.primary = `${id}/${resolvedModel}`;
     }
 
@@ -122,9 +145,16 @@ function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
     }
 
     return {
-      success: true, app: APP, action: 'add', provider: id,
-      model: resolvedModel, endpoint: resolvedEndpoint,
-      keySource: resolvedKey.source, keyMasked: S.maskKey(resolvedKey.key), keyWritten, file,
+      success: true,
+      app: APP,
+      action: 'add',
+      provider: id,
+      model: resolvedModel,
+      endpoint: resolvedEndpoint,
+      keySource: resolvedKey.source,
+      keyMasked: S.maskKey(resolvedKey.key),
+      keyWritten,
+      file,
     };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
@@ -134,14 +164,23 @@ function add({ provider, model, apiKey, endpoint } = {}, env = process.env) {
 function remove({ target, confirmed, removeKeys } = {}, env = process.env) {
   try {
     const id = String(target || '').toLowerCase();
-    if (!id) return { success: false, app: APP, error: 'target is required' };
+    if (!id) {
+      return { success: false, app: APP, error: 'target is required' };
+    }
     const { file, doc } = _load(env);
-    if (!doc.models.providers[id]) return { success: false, app: APP, error: `provider not found: ${id}` };
+    if (!doc.models.providers[id]) {
+      return { success: false, app: APP, error: `provider not found: ${id}` };
+    }
 
     if (!confirmed) {
       return {
-        success: true, app: APP, action: 'remove', preview: true, confirmed: false,
-        target: id, willRemoveKeys: Boolean(removeKeys),
+        success: true,
+        app: APP,
+        action: 'remove',
+        preview: true,
+        confirmed: false,
+        target: id,
+        willRemoveKeys: Boolean(removeKeys),
         message: `将从 ${APP} 删除 provider「${id}」${removeKeys ? '(连同 .env 密钥)' : ''}。回复「确认删除」以执行。`,
       };
     }
@@ -159,11 +198,22 @@ function remove({ target, confirmed, removeKeys } = {}, env = process.env) {
       const existing = S.readIfExists(envFile);
       if (existing != null) {
         const res = S.removeDotenvKey(existing, S.envKeyName(id), TOMBSTONE);
-        if (res.removed) { S.atomicWrite(envFile, res.text); keyRemoved = true; }
+        if (res.removed) {
+          S.atomicWrite(envFile, res.text);
+          keyRemoved = true;
+        }
       }
     }
 
-    return { success: true, app: APP, action: 'remove', confirmed: true, target: id, keyRemoved, file };
+    return {
+      success: true,
+      app: APP,
+      action: 'remove',
+      confirmed: true,
+      target: id,
+      keyRemoved,
+      file,
+    };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };
   }
@@ -188,8 +238,9 @@ function usable(env = process.env) {
   try {
     const { doc } = _load(env);
     const envMap = S.parseDotenv(S.readIfExists(_envPath(env)));
-    const providers = Object.keys(doc.models.providers)
-      .map((id) => _usableView(id, doc.models.providers[id], envMap));
+    const providers = Object.keys(doc.models.providers).map((id) =>
+      _usableView(id, doc.models.providers[id], envMap)
+    );
     return { success: true, app: APP, providers };
   } catch (e) {
     return { success: false, app: APP, error: String((e && e.message) || e) };

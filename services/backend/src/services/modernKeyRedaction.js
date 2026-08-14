@@ -38,14 +38,21 @@ function modernKeyRedactionEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_MODERN_KEY_REDACTION', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_MODERN_KEY_REDACTION;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -60,8 +67,12 @@ function modernKeyRedactionEnabled(env = process.env) {
  */
 function redactModernKeys(s, env = process.env) {
   try {
-    if (!modernKeyRedactionEnabled(env)) return null;
-    if (typeof s !== 'string' || !s) return null;
+    if (!modernKeyRedactionEnabled(env)) {
+      return null;
+    }
+    if (typeof s !== 'string' || !s) {
+      return null;
+    }
     return s.replace(MODERN_KEY_RE, '***');
   } catch {
     return null;

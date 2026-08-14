@@ -49,15 +49,20 @@ function parseArgs(argv) {
   const out = {};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--require') { out.require = true; continue; }
+    if (a === '--require') {
+      out.require = true;
+      continue;
+    }
     const m = /^--([^=]+)(?:=(.*))?$/.exec(a);
     if (!m) continue;
     const key = m[1];
     let val = m[2];
     if (val === undefined) {
       const next = argv[i + 1];
-      if (next !== undefined && !next.startsWith('--')) { val = next; i++; }
-      else val = true;
+      if (next !== undefined && !next.startsWith('--')) {
+        val = next;
+        i++;
+      } else val = true;
     }
     out[key] = val;
   }
@@ -71,8 +76,12 @@ function git(root, args, opts = {}) {
   });
 }
 
-function warn(msg) { process.stderr.write(`[source-snapshot] ${msg}\n`); }
-function info(msg) { process.stdout.write(`[source-snapshot] ${msg}\n`); }
+function warn(msg) {
+  process.stderr.write(`[source-snapshot] ${msg}\n`);
+}
+function info(msg) {
+  process.stdout.write(`[source-snapshot] ${msg}\n`);
+}
 
 /**
  * Locate the RESTORE_WINDOWS.md rebuild guide under <root>/docs. Prefers the flat
@@ -93,12 +102,19 @@ function findRestoreDoc(root) {
   while (stack.length && budget-- > 0) {
     const dir = stack.pop();
     let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
     for (const ent of entries) {
       const full = path.join(dir, ent.name);
-      if (ent.isDirectory()) { stack.push(full); continue; }
+      if (ent.isDirectory()) {
+        stack.push(full);
+        continue;
+      }
       if (!ent.isFile()) continue;
-      if (ent.name === RESTORE_DOC_NAME) return full;            // exact wins immediately
+      if (ent.name === RESTORE_DOC_NAME) return full; // exact wins immediately
       if (!suffixMatch && ent.name.endsWith(RESTORE_DOC_NAME)) suffixMatch = full;
     }
   }
@@ -108,8 +124,10 @@ function findRestoreDoc(root) {
 /** True when the working tree has any uncommitted change (modified/staged/untracked). */
 function isWorkingTreeDirty(root) {
   try {
-    return git(root, ['status', '--porcelain', '--untracked-files=all'])
-      .toString('utf8').trim().length > 0;
+    return (
+      git(root, ['status', '--porcelain', '--untracked-files=all']).toString('utf8').trim().length >
+      0
+    );
   } catch {
     return false;
   }
@@ -119,7 +137,9 @@ function isWorkingTreeDirty(root) {
 function countTreeFiles(root, treeish) {
   try {
     return git(root, ['ls-tree', '-r', '--name-only', treeish])
-      .toString('utf8').split('\n').filter(Boolean).length;
+      .toString('utf8')
+      .split('\n')
+      .filter(Boolean).length;
   } catch {
     return 0;
   }
@@ -141,9 +161,12 @@ function countTreeFiles(root, treeish) {
  * @returns {{ plaintext: Buffer, mode: string, treeish: string }}
  */
 function captureSource(root) {
-  const mode = String(process.env.KHY_SNAPSHOT_FROM || '').trim().toLowerCase() === 'head'
-    ? 'head'
-    : 'working-tree';
+  const mode =
+    String(process.env.KHY_SNAPSHOT_FROM || '')
+      .trim()
+      .toLowerCase() === 'head'
+      ? 'head'
+      : 'working-tree';
 
   if (mode === 'head') {
     info(`archiving HEAD of ${root} (committed only) ...`);
@@ -156,7 +179,11 @@ function captureSource(root) {
   try {
     // Seed the throwaway index from HEAD so deletions are represented faithfully;
     // ignore failure on an unborn branch (a fresh repo with no commits yet).
-    try { git(root, ['read-tree', 'HEAD'], { env }); } catch { /* unborn HEAD */ }
+    try {
+      git(root, ['read-tree', 'HEAD'], { env });
+    } catch {
+      /* unborn HEAD */
+    }
     // `git add -A` honors .gitignore (no .git/node_modules/.env/dist/bundled),
     // and records modifications, new untracked files, and deletions.
     git(root, ['add', '-A'], { env });
@@ -165,7 +192,11 @@ function captureSource(root) {
     const plaintext = git(root, ['archive', '--format=tar.gz', tree]);
     return { plaintext, mode, treeish: tree };
   } finally {
-    try { fs.unlinkSync(tmpIndex); } catch { /* best-effort cleanup */ }
+    try {
+      fs.unlinkSync(tmpIndex);
+    } catch {
+      /* best-effort cleanup */
+    }
   }
 }
 
@@ -183,7 +214,8 @@ function main() {
   try {
     if (!root) {
       root = git(path.join(__dirname, '..'), ['rev-parse', '--show-toplevel'])
-        .toString('utf8').trim();
+        .toString('utf8')
+        .trim();
     } else {
       // Validate the explicitly given root is a git repo.
       git(root, ['rev-parse', '--is-inside-work-tree']);
@@ -197,9 +229,10 @@ function main() {
   // supplied we fall back to the fixed DEFAULT_SOURCE_SECRET so the real source
   // is ALWAYS embedded (encrypted) and `khy restore` can decrypt it without any
   // user input. An explicit KHY_SOURCE_PUBLISH_SECRET / --secret still overrides.
-  const explicit = args.secret && args.secret !== true
-    ? String(args.secret)
-    : (process.env.KHY_SOURCE_PUBLISH_SECRET || process.env.KHY_OWNER_SECRET || '');
+  const explicit =
+    args.secret && args.secret !== true
+      ? String(args.secret)
+      : process.env.KHY_SOURCE_PUBLISH_SECRET || process.env.KHY_OWNER_SECRET || '';
   const secret = resolveSourceSecret(explicit);
   if (!explicit) {
     info('no explicit secret — embedding source under the password-free default key.');
@@ -213,17 +246,20 @@ function main() {
   const dirty = isWorkingTreeDirty(root);
   const fileCount = countTreeFiles(root, treeish);
   let gitCommit = '';
-  try { gitCommit = git(root, ['rev-parse', 'HEAD']).toString('utf8').trim(); } catch {}
+  try {
+    gitCommit = git(root, ['rev-parse', 'HEAD']).toString('utf8').trim();
+  } catch {}
   let version = '';
   try {
     const pkg = JSON.parse(
       fs.readFileSync(path.join(root, 'services', 'backend', 'package.json'), 'utf8')
     );
     version = pkg.version || '';
-  } catch { /* optional */ }
-  const createdAt = args.timestamp && args.timestamp !== true
-    ? String(args.timestamp)
-    : new Date().toISOString();
+  } catch {
+    /* optional */
+  }
+  const createdAt =
+    args.timestamp && args.timestamp !== true ? String(args.timestamp) : new Date().toISOString();
 
   // 3. encrypt
   const { ciphertext, crypto: cryptoMeta } = encrypt(plaintext, secret);
@@ -237,9 +273,9 @@ function main() {
     format: 'khy-source-snapshot',
     formatVersion: 1,
     layout: 'git-archive',
-    captureMode: mode,                 // 'working-tree' (default) | 'head'
+    captureMode: mode, // 'working-tree' (default) | 'head'
     includesUncommitted: mode === 'working-tree',
-    dirty,                             // whether the working tree had uncommitted changes
+    dirty, // whether the working tree had uncommitted changes
     archive: SNAPSHOT_ENC_NAME,
     plaintextFormat: 'tar.gz',
     sha256,
@@ -248,14 +284,12 @@ function main() {
     gitCommit,
     createdAt,
     crypto: cryptoMeta,
-    notes: mode === 'working-tree'
-      ? 'Encrypted archive of the WORKING TREE (tracked + uncommitted + untracked-not-ignored). Restore with `khy restore`.'
-      : 'Encrypted git archive of all tracked source at HEAD. Restore with `khy restore`.',
+    notes:
+      mode === 'working-tree'
+        ? 'Encrypted archive of the WORKING TREE (tracked + uncommitted + untracked-not-ignored). Restore with `khy restore`.'
+        : 'Encrypted git archive of all tracked source at HEAD. Restore with `khy restore`.',
   };
-  fs.writeFileSync(
-    path.join(outDir, SNAPSHOT_META_NAME),
-    JSON.stringify(header, null, 2) + '\n'
-  );
+  fs.writeFileSync(path.join(outDir, SNAPSHOT_META_NAME), JSON.stringify(header, null, 2) + '\n');
 
   // 5. copy the rebuild guide alongside (best-effort), so a Windows user can read
   //    it WITHOUT extracting first. The doc was filed under a categorized subpath
@@ -264,7 +298,9 @@ function main() {
     const doc = findRestoreDoc(root);
     if (doc) fs.copyFileSync(doc, path.join(outDir, RESTORE_DOC_NAME));
     else warn(`rebuild guide ${RESTORE_DOC_NAME} not found under docs/ — skipping sidecar copy.`);
-  } catch { /* non-fatal */ }
+  } catch {
+    /* non-fatal */
+  }
 
   // 6. sanity: never leave a plaintext archive in the output dir.
   const stray = path.join(outDir, 'khy-os-source.tar.gz');
@@ -274,9 +310,12 @@ function main() {
   }
 
   const mb = (ciphertext.length / 1024 / 1024).toFixed(1);
-  const modeLabel = mode === 'working-tree'
-    ? (dirty ? 'working-tree (uncommitted changes included)' : 'working-tree (clean, == HEAD)')
-    : 'HEAD (committed only)';
+  const modeLabel =
+    mode === 'working-tree'
+      ? dirty
+        ? 'working-tree (uncommitted changes included)'
+        : 'working-tree (clean, == HEAD)'
+      : 'HEAD (committed only)';
   info(`embedded encrypted snapshot [${modeLabel}]: ${fileCount} files, ${mb}MB → ${outDir}`);
   info(`  base commit ${gitCommit.slice(0, 12)} · sha256 ${sha256.slice(0, 12)}…`);
 }

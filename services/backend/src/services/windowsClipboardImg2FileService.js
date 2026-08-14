@@ -1,8 +1,9 @@
 'use strict';
 
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+
 const { getDataDir } = require('../utils/dataHome');
 
 const SCRIPT_PATH = path.resolve(__dirname, '../../scripts/windows-clipboard-img2file.ps1');
@@ -20,7 +21,9 @@ let _startMeta = null;
 let _hooksInstalled = false;
 
 function _isTruthy(raw, fallback = false) {
-  if (raw === undefined || raw === null || raw === '') return fallback;
+  if (raw === undefined || raw === null || raw === '') {
+    return fallback;
+  }
   return ['1', 'true', 'yes', 'on'].includes(String(raw).trim().toLowerCase());
 }
 
@@ -48,7 +51,7 @@ function getFreshWindowMs() {
     process.env.KHY_CLIPBOARD_IMG2FILE_FRESH_MS,
     DEFAULT_FRESH_WINDOW_MS,
     MIN_FRESH_WINDOW_MS,
-    MAX_FRESH_WINDOW_MS,
+    MAX_FRESH_WINDOW_MS
   );
 }
 
@@ -64,10 +67,16 @@ function isClipboardImageFresh(capturedAtMs, nowMs = Date.now()) {
   try {
     const captured = Number(capturedAtMs);
     const now = Number(nowMs);
-    if (!Number.isFinite(captured) || captured <= 0) return false;
-    if (!Number.isFinite(now)) return false;
+    if (!Number.isFinite(captured) || captured <= 0) {
+      return false;
+    }
+    if (!Number.isFinite(now)) {
+      return false;
+    }
     const age = now - captured;
-    if (age < 0) return false; // 未来时间戳 → 视为不可信
+    if (age < 0) {
+      return false;
+    } // 未来时间戳 → 视为不可信
     return age <= getFreshWindowMs();
   } catch {
     return false;
@@ -76,7 +85,9 @@ function isClipboardImageFresh(capturedAtMs, nowMs = Date.now()) {
 
 function _clampInt(raw, fallback, min, max) {
   const parsed = parseInt(String(raw ?? ''), 10);
-  if (!Number.isFinite(parsed)) return fallback;
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
   return Math.max(min, Math.min(max, parsed));
 }
 
@@ -89,22 +100,37 @@ function _resolveOutputDir() {
 
 function _resolveShell() {
   const fromEnv = String(process.env.KHY_CLIPBOARD_IMG2FILE_SHELL || '').trim();
-  if (fromEnv) return fromEnv;
+  if (fromEnv) {
+    return fromEnv;
+  }
   return 'powershell.exe';
 }
 
 function _buildConfigFromEnv() {
   return {
-    pollMs: _clampInt(process.env.KHY_CLIPBOARD_IMG2FILE_POLL_MS, DEFAULT_POLL_MS, MIN_POLL_MS, MAX_POLL_MS),
-    keepFiles: _clampInt(process.env.KHY_CLIPBOARD_IMG2FILE_KEEP_FILES, DEFAULT_KEEP_FILES, MIN_KEEP_FILES, MAX_KEEP_FILES),
-    marker: String(process.env.KHY_CLIPBOARD_IMG2FILE_MARKER || DEFAULT_MARKER).trim() || DEFAULT_MARKER,
+    pollMs: _clampInt(
+      process.env.KHY_CLIPBOARD_IMG2FILE_POLL_MS,
+      DEFAULT_POLL_MS,
+      MIN_POLL_MS,
+      MAX_POLL_MS
+    ),
+    keepFiles: _clampInt(
+      process.env.KHY_CLIPBOARD_IMG2FILE_KEEP_FILES,
+      DEFAULT_KEEP_FILES,
+      MIN_KEEP_FILES,
+      MAX_KEEP_FILES
+    ),
+    marker:
+      String(process.env.KHY_CLIPBOARD_IMG2FILE_MARKER || DEFAULT_MARKER).trim() || DEFAULT_MARKER,
     outputDir: _resolveOutputDir(),
     shell: _resolveShell(),
   };
 }
 
 function _installLifecycleHooks() {
-  if (_hooksInstalled) return;
+  if (_hooksInstalled) {
+    return;
+  }
   _hooksInstalled = true;
   process.once('exit', () => {
     stopClipboardImg2FileBridge({ force: true });
@@ -118,14 +144,21 @@ function _toSpawnArgs(config) {
   return [
     '-NoProfile',
     '-NonInteractive',
-    '-ExecutionPolicy', 'Bypass',
+    '-ExecutionPolicy',
+    'Bypass',
     '-Sta',
-    '-WindowStyle', 'Hidden',
-    '-File', SCRIPT_PATH,
-    '-OutputDir', config.outputDir,
-    '-PollMs', String(config.pollMs),
-    '-KeepFiles', String(config.keepFiles),
-    '-Marker', config.marker,
+    '-WindowStyle',
+    'Hidden',
+    '-File',
+    SCRIPT_PATH,
+    '-OutputDir',
+    config.outputDir,
+    '-PollMs',
+    String(config.pollMs),
+    '-KeepFiles',
+    String(config.keepFiles),
+    '-Marker',
+    config.marker,
   ];
 }
 
@@ -202,7 +235,9 @@ function startClipboardImg2FileBridge() {
 }
 
 function stopClipboardImg2FileBridge(options = {}) {
-  if (!_child) return false;
+  if (!_child) {
+    return false;
+  }
   const target = _child;
   _child = null;
   _startedAt = 0;

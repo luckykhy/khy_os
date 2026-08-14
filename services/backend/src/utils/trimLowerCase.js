@@ -24,7 +24,9 @@
  */
 
 function trimLowerCase(v) {
-  return String(v || '').trim().toLowerCase();
+  return String(v || '')
+    .trim()
+    .toLowerCase();
 }
 
 module.exports = trimLowerCase;

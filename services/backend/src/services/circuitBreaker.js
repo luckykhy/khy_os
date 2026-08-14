@@ -27,13 +27,13 @@ const STATE = Object.freeze({
 // ── Defaults ──────────────────────────────────────────────────────
 
 const DEFAULTS = Object.freeze({
-  failureThreshold: 5,        // failures before opening
-  resetTimeoutMs: 30000,      // 30s before first probe
-  maxResetTimeoutMs: 300000,  // 5min max backoff
-  backoffMultiplier: 2,       // exponential factor
-  slidingWindowMs: 120000,    // 2min sliding window for failure counting
-  halfOpenMaxProbes: 1,       // simultaneous probe requests
-  successThreshold: 2,        // successes in half-open before closing
+  failureThreshold: 5, // failures before opening
+  resetTimeoutMs: 30000, // 30s before first probe
+  maxResetTimeoutMs: 300000, // 5min max backoff
+  backoffMultiplier: 2, // exponential factor
+  slidingWindowMs: 120000, // 2min sliding window for failure counting
+  halfOpenMaxProbes: 1, // simultaneous probe requests
+  successThreshold: 2, // successes in half-open before closing
 });
 
 // ── Canonical exponential backoff ─────────────────────────────────
@@ -81,7 +81,7 @@ class CircuitBreaker {
     this.name = name;
     this.opts = { ...DEFAULTS, ...options };
     this.state = STATE.CLOSED;
-    this._failures = [];           // timestamps of recent failures
+    this._failures = []; // timestamps of recent failures
     this._openedAt = 0;
     this._currentResetTimeout = this.opts.resetTimeoutMs;
     this._halfOpenSuccesses = 0;
@@ -98,7 +98,9 @@ class CircuitBreaker {
    */
   async execute(fn) {
     if (!this._canExecute()) {
-      const err = new Error(`Circuit breaker "${this.name}" is OPEN. Retry after ${this._remainingOpenMs()}ms.`);
+      const err = new Error(
+        `Circuit breaker "${this.name}" is OPEN. Retry after ${this._remainingOpenMs()}ms.`
+      );
       err.name = 'CircuitBreakerOpenError';
       err.circuitBreaker = this.name;
       err.retryAfterMs = this._remainingOpenMs();
@@ -198,7 +200,7 @@ class CircuitBreaker {
    */
   _pruneFailures() {
     const cutoff = Date.now() - this.opts.slidingWindowMs;
-    this._failures = this._failures.filter(t => t > cutoff);
+    this._failures = this._failures.filter((t) => t > cutoff);
   }
 
   /**
@@ -206,7 +208,9 @@ class CircuitBreaker {
    * @returns {number}
    */
   _remainingOpenMs() {
-    if (this.state !== STATE.OPEN) return 0;
+    if (this.state !== STATE.OPEN) {
+      return 0;
+    }
     return Math.max(0, this._currentResetTimeout - (Date.now() - this._openedAt));
   }
 
@@ -221,7 +225,11 @@ class CircuitBreaker {
       this._openedAt = Date.now();
     }
     if (this._onStateChange && oldState !== newState) {
-      try { this._onStateChange(this.name, oldState, newState); } catch { /* ignore */ }
+      try {
+        this._onStateChange(this.name, oldState, newState);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -274,14 +282,16 @@ function getBreaker(name, options) {
  * @returns {Array<object>}
  */
 function getAllStatus() {
-  return [..._breakers.values()].map(b => b.getStatus());
+  return [..._breakers.values()].map((b) => b.getStatus());
 }
 
 /**
  * Reset all circuit breakers.
  */
 function resetAll() {
-  for (const b of _breakers.values()) b.reset();
+  for (const b of _breakers.values()) {
+    b.reset();
+  }
 }
 
 module.exports = {

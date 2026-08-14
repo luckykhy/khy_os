@@ -16,6 +16,7 @@ const {
   routeContextStrategy,
   truncateToolResults,
   sumToolResultTokens,
+  autoCompactTriggerTokens,
   SAFETY_MARGIN,
   PREEMPTIVE_RATIO,
   SINGLE_RESULT_SHARE,
@@ -128,5 +129,59 @@ describe('constants', () => {
 
   test('SINGLE_RESULT_SHARE is 0.5', () => {
     expect(SINGLE_RESULT_SHARE).toBe(0.5);
+  });
+});
+
+// ── autoCompactTriggerTokens:自动压缩阈值的单一真源 ──────────────────────
+//
+// 这个函数存在的唯一理由是「显示与行为不可能漂移」:底栏倒计时曾用
+// compactPipeline 的 0.8 当作「占 contextWindow 的比例」,而真实触发是
+// routeContextStrategy 里 0.9-of-budget / 1.2-safety-margin 的复合条件。
+// 512k 窗口下前者承诺 80%、后者实际约 63% 就压缩 —— 底栏在"还剩 21%"时
+// 压缩已经发生。故此处不仅测数值,更测**代数一致性**:阈值必须恰好是
+// routeContextStrategy 从 fits 翻转为非 fits 的那个边界。
+describe('autoCompactTriggerTokens', () => {
+  const BUDGET = 431104; // 512k 窗口 / medium 档 / 默认 env 下的真实预算
+
+  test('推导值 = floor(budget * PREEMPTIVE_RATIO / SAFETY_MARGIN)', () => {
+    expect(autoCompactTriggerTokens(BUDGET)).toBe(
+      Math.floor((BUDGET * PREEMPTIVE_RATIO) / SAFETY_MARGIN),
+    );
+    expect(autoCompactTriggerTokens(BUDGET)).toBe(323328);
+  });
+
+  test('非法入参 → 0(调用方据此降级到比例路径)', () => {
+    for (const bad of [0, -1, NaN, Infinity, null, undefined, 'abc', {}]) {
+      expect(autoCompactTriggerTokens(bad)).toBe(0);
+    }
+  });
+
+  test('单调递增:预算越大,触发点越晚', () => {
+    expect(autoCompactTriggerTokens(200000)).toBeLessThan(autoCompactTriggerTokens(400000));
+  });
+
+  // ★ 防漂移核心:阈值即 routeContextStrategy 的翻转边界(精确到 ±1 token)。
+  // 为何不断言 `at(trigger)` 本身:当 budget*0.9/1.2 恰为整数时(如 50000),
+  // raw==trigger 时 ceil(raw*1.2) 正好等于 floor(budget*0.9),overflow==0 → 仍 fits;
+  // 非整数时则已翻转。这 1 token 的差别对倒计时无意义,但测试必须诚实,故把边界
+  // 钉在 [trigger-1 → fits, trigger+1 → 压缩] 这个区间上 —— 任何比例式漂移都会
+  // 让阈值偏离成千上万 token,一定会被这条捕获。
+  test('代数一致性:阈值 -1 → fits;阈值 +1 → 触发压缩', () => {
+    const trigger = autoCompactTriggerTokens(BUDGET);
+    // mock 下 1 char = 1 token,故 content 长度即 raw token 数(sys/user 留空)
+    const at = (raw) => routeContextStrategy([{ role: 'user', content: 'x'.repeat(raw) }], '', '', BUDGET);
+
+    expect(at(trigger - 1).route).toBe('fits');
+    expect(at(trigger + 1).route).not.toBe('fits');
+  });
+
+  test('代数一致性对多种预算成立(非只在某个幸运数字上)', () => {
+    // 覆盖:小预算、131072 窗口档、200k 窗口档、512k 窗口档的真实预算
+    for (const budget of [50000, 107316, 165904, 431104]) {
+      const trigger = autoCompactTriggerTokens(budget);
+      const at = (raw) => routeContextStrategy([{ role: 'user', content: 'x'.repeat(raw) }], '', '', budget);
+      expect(at(trigger - 1).route).toBe('fits');
+      expect(at(trigger + 1).route).not.toBe('fits');
+    }
   });
 });

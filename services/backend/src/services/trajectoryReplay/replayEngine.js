@@ -28,10 +28,10 @@
 
 const fs = require('fs');
 
-const tierRegistry = require('./tierRegistry');
 const artifactHash = require('./artifactHash');
 const envFingerprint = require('./envFingerprint');
 const replayBundle = require('./replayBundle');
+const tierRegistry = require('./tierRegistry');
 
 const DEFAULT_STEP_TIMEOUT_MS = 120000;
 
@@ -56,11 +56,14 @@ function _shellAllowList(opts) {
 
 /** Decide whether a SHELL step is pre-approved by a command pattern. */
 function _shellPreApproved(step, allowList) {
-  if (!allowList.length) return false;
-  const command = step && step.params && typeof step.params.command === 'string'
-    ? step.params.command
-    : '';
-  if (!command) return false;
+  if (!allowList.length) {
+    return false;
+  }
+  const command =
+    step && step.params && typeof step.params.command === 'string' ? step.params.command : '';
+  if (!command) {
+    return false;
+  }
   try {
     const { matchCommandPattern } = require('../execApproval');
     return allowList.some((p) => matchCommandPattern(command, p));
@@ -74,8 +77,12 @@ function _approveParams(params) {
   const clone = params && typeof params === 'object' ? { ...params } : {};
   try {
     const { EXEC_APPROVED } = require('../execApproval');
-    if (EXEC_APPROVED) clone[EXEC_APPROVED] = true;
-  } catch { /* without the symbol the funnel may prompt; replay opts handle that */ }
+    if (EXEC_APPROVED) {
+      clone[EXEC_APPROVED] = true;
+    }
+  } catch {
+    /* without the symbol the funnel may prompt; replay opts handle that */
+  }
   return clone;
 }
 
@@ -100,7 +107,9 @@ async function _executeWithTimeout(step, params, timeoutMs) {
   let timer = null;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error(`step timeout after ${timeoutMs}ms`)), timeoutMs);
-    if (timer && typeof timer.unref === 'function') timer.unref();
+    if (timer && typeof timer.unref === 'function') {
+      timer.unref();
+    }
   });
   try {
     return await Promise.race([
@@ -113,7 +122,9 @@ async function _executeWithTimeout(step, params, timeoutMs) {
       timeout,
     ]);
   } finally {
-    if (timer) clearTimeout(timer);
+    if (timer) {
+      clearTimeout(timer);
+    }
   }
 }
 
@@ -124,13 +135,18 @@ async function _executeWithTimeout(step, params, timeoutMs) {
 function _preconditionCheck(step) {
   const arts = Array.isArray(step.artifacts) ? step.artifacts : [];
   for (const a of arts) {
-    if (!a || !a.path) continue;
-    const before = step.writeDiff && step.writeDiff.beforeHash != null ? step.writeDiff.beforeHash : null;
+    if (!a || !a.path) {
+      continue;
+    }
+    const before =
+      step.writeDiff && step.writeDiff.beforeHash != null ? step.writeDiff.beforeHash : null;
     const current = artifactHash.hashFile(a.path); // null if file absent
 
     // Already at the recorded terminal state → nothing to do.
     if (a.op === 'delete') {
-      if (current === null) return { decision: 'satisfied', reason: '目标已不存在' };
+      if (current === null) {
+        return { decision: 'satisfied', reason: '目标已不存在' };
+      }
     } else if (a.sha256 && current === a.sha256) {
       return { decision: 'satisfied', reason: '产物已是目标状态' };
     }
@@ -146,7 +162,13 @@ function _preconditionCheck(step) {
         detail: { path: a.path, expected: before, actual: current },
       };
     }
-    if (a.op === 'create' && current !== null && before === null && a.sha256 && current !== a.sha256) {
+    if (
+      a.op === 'create' &&
+      current !== null &&
+      before === null &&
+      a.sha256 &&
+      current !== a.sha256
+    ) {
       return {
         decision: 'halt',
         reason: '前置状态分歧：将创建的目标已存在且内容不同',
@@ -164,14 +186,18 @@ function _preconditionCheck(step) {
 function _verifyArtifacts(step) {
   const arts = Array.isArray(step.artifacts) ? step.artifacts : [];
   for (const a of arts) {
-    if (!a || !a.path) continue;
+    if (!a || !a.path) {
+      continue;
+    }
     if (a.op === 'delete') {
       if (fs.existsSync(a.path)) {
         return { ok: false, detail: { path: a.path, expected: '(deleted)', actual: '(exists)' } };
       }
       continue;
     }
-    if (!a.sha256) continue;
+    if (!a.sha256) {
+      continue;
+    }
     const actual = artifactHash.hashFile(a.path);
     if (actual !== a.sha256) {
       return { ok: false, detail: { path: a.path, expected: a.sha256, actual } };
@@ -197,17 +223,27 @@ function _verifyArtifacts(step) {
  *   'repaired' when the post-repair hash matches; 'halt' otherwise.
  */
 async function _maybeRepair(step, opts, kind) {
-  if (typeof opts.repair !== 'function') return null; // zero-regression gate: no hook ⇒ 048 engine
+  if (typeof opts.repair !== 'function') {
+    return null;
+  } // zero-regression gate: no hook ⇒ 048 engine
   let r;
   try {
     r = await opts.repair(step, { kind });
   } catch (e) {
     return { decision: 'halt', reason: `repair error: ${e && e.message ? e.message : String(e)}` };
   }
-  if (!r || r.attempted === false) return null; // bridge declined ⇒ fall through to original path
+  if (!r || r.attempted === false) {
+    return null;
+  } // bridge declined ⇒ fall through to original path
   const v = _verifyArtifacts(step); // sha256 is still the sole oracle
-  if (v.ok) return { decision: 'repaired' };
-  return { decision: 'halt', reason: r.reason || '产物哈希分歧（修复后仍不一致）', detail: v.detail };
+  if (v.ok) {
+    return { decision: 'repaired' };
+  }
+  return {
+    decision: 'halt',
+    reason: r.reason || '产物哈希分歧（修复后仍不一致）',
+    detail: v.detail,
+  };
 }
 
 /** Record a step the AI bridge successfully reproduced (counts as replayed). */
@@ -226,7 +262,9 @@ function _applyRepaired(rec, step, report) {
 function _applyRepairHalt(rec, step, report, fix) {
   rec.action = 'halted';
   rec.reason = fix.reason || 'AI 桥接修复失败';
-  if (fix.detail) rec.verify = { ok: false, ...fix.detail };
+  if (fix.detail) {
+    rec.verify = { ok: false, ...fix.detail };
+  }
   report.summary.halted += 1;
   report.status = 'diverged';
   report.divergedAt = step.seq;
@@ -236,11 +274,17 @@ function _applyRepairHalt(rec, step, report, fix) {
 function _resolveBundle(bundle) {
   if (typeof bundle === 'string') {
     const r = replayBundle.readBundle(bundle);
-    if (!r.ok) return { error: r.error };
+    if (!r.ok) {
+      return { error: r.error };
+    }
     return { manifest: r.manifest, bundleDir: bundle };
   }
-  if (bundle && bundle.manifest) return { manifest: bundle.manifest, bundleDir: bundle.bundleDir || null };
-  if (bundle && Array.isArray(bundle.steps)) return { manifest: bundle, bundleDir: bundle._bundleDir || null };
+  if (bundle && bundle.manifest) {
+    return { manifest: bundle.manifest, bundleDir: bundle.bundleDir || null };
+  }
+  if (bundle && Array.isArray(bundle.steps)) {
+    return { manifest: bundle, bundleDir: bundle._bundleDir || null };
+  }
   return { error: 'unrecognized bundle input' };
 }
 
@@ -263,11 +307,19 @@ function _resolveBundle(bundle) {
 async function replay(bundle, opts = {}) {
   const resolved = _resolveBundle(bundle);
   if (resolved.error) {
-    return { status: 'error', error: resolved.error, envDiffs: [], steps: [], divergedAt: null,
-      summary: { replayed: 0, skipped: 0, halted: 0, restored: 0, repaired: 0 } };
+    return {
+      status: 'error',
+      error: resolved.error,
+      envDiffs: [],
+      steps: [],
+      divergedAt: null,
+      summary: { replayed: 0, skipped: 0, halted: 0, restored: 0, repaired: 0 },
+    };
   }
   const { manifest } = resolved;
-  const steps = (Array.isArray(manifest.steps) ? manifest.steps : []).slice().sort((a, b) => a.seq - b.seq);
+  const steps = (Array.isArray(manifest.steps) ? manifest.steps : [])
+    .slice()
+    .sort((a, b) => a.seq - b.seq);
   const sessionId = manifest.sessionId || null;
 
   const report = {
@@ -278,7 +330,15 @@ async function replay(bundle, opts = {}) {
     summary: { replayed: 0, skipped: 0, halted: 0, restored: 0, repaired: 0 },
   };
 
-  const emit = (ev) => { try { if (typeof opts.onStep === 'function') opts.onStep(ev); } catch { /* ignore */ } };
+  const emit = (ev) => {
+    try {
+      if (typeof opts.onStep === 'function') {
+        opts.onStep(ev);
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
   // ── 防呆⑤ Environment gate ──────────────────────────────────────────
   const cmp = envFingerprint.compare(manifest.env, envFingerprint.capture());
@@ -293,7 +353,9 @@ async function replay(bundle, opts = {}) {
   const resumeFromSeq = Number.isFinite(opts.resumeFromSeq) ? opts.resumeFromSeq : -Infinity;
 
   for (const step of steps) {
-    if (step.seq < resumeFromSeq) continue;
+    if (step.seq < resumeFromSeq) {
+      continue;
+    }
     const tier = step.tier || tierRegistry.effectiveTier(step.name);
     const rec = { seq: step.seq, name: step.name, tier, action: null, verify: null, reason: null };
 
@@ -302,38 +364,54 @@ async function replay(bundle, opts = {}) {
       const fix = await _maybeRepair(step, opts, 'network_ai');
       if (fix && fix.decision === 'repaired') {
         _applyRepaired(rec, step, report);
-        report.steps.push(rec); emit(rec); continue;
+        report.steps.push(rec);
+        emit(rec);
+        continue;
       }
       if (fix && fix.decision === 'halt') {
         _applyRepairHalt(rec, step, report, fix);
-        report.steps.push(rec); emit(rec); return report;
+        report.steps.push(rec);
+        emit(rec);
+        return report;
       }
       rec.action = 'skipped';
       rec.reason = '不可确定性复现（网络/AI）';
       report.summary.skipped += 1;
-      report.steps.push(rec); emit(rec); continue;
+      report.steps.push(rec);
+      emit(rec);
+      continue;
     }
 
     // ④ SHELL requires pre-approval or explicit confirmation.
     if (tier === 'SHELL') {
       let allowed = _shellPreApproved(step, allowList);
       if (!allowed && typeof opts.confirm === 'function') {
-        try { allowed = !!(await opts.confirm(step)); } catch { allowed = false; }
+        try {
+          allowed = !!(await opts.confirm(step));
+        } catch {
+          allowed = false;
+        }
       }
       if (!allowed) {
         const fix = await _maybeRepair(step, opts, 'shell');
         if (fix && fix.decision === 'repaired') {
           _applyRepaired(rec, step, report);
-          report.steps.push(rec); emit(rec); continue;
+          report.steps.push(rec);
+          emit(rec);
+          continue;
         }
         if (fix && fix.decision === 'halt') {
           _applyRepairHalt(rec, step, report, fix);
-          report.steps.push(rec); emit(rec); return report;
+          report.steps.push(rec);
+          emit(rec);
+          return report;
         }
         rec.action = 'skipped';
         rec.reason = 'SHELL 未预批准/未确认';
         report.summary.skipped += 1;
-        report.steps.push(rec); emit(rec); continue;
+        report.steps.push(rec);
+        emit(rec);
+        continue;
       }
     }
 
@@ -343,19 +421,24 @@ async function replay(bundle, opts = {}) {
       rec.action = 'skipped';
       rec.reason = pre.reason;
       report.summary.skipped += 1;
-      report.steps.push(rec); emit(rec); continue;
+      report.steps.push(rec);
+      emit(rec);
+      continue;
     }
     if (pre.decision === 'halt') {
       const fix = await _maybeRepair(step, opts, 'precondition');
       if (fix && fix.decision === 'repaired') {
         _applyRepaired(rec, step, report);
-        report.steps.push(rec); emit(rec); continue;
+        report.steps.push(rec);
+        emit(rec);
+        continue;
       }
       rec.action = 'halted';
       rec.reason = (fix && fix.reason) || pre.reason;
       rec.verify = { ok: false, ...((fix && fix.detail) || pre.detail) };
       report.summary.halted += 1;
-      report.steps.push(rec); emit(rec);
+      report.steps.push(rec);
+      emit(rec);
       report.status = 'diverged';
       report.divergedAt = step.seq;
       return report;
@@ -370,13 +453,18 @@ async function replay(bundle, opts = {}) {
       const fix = await _maybeRepair(step, opts, 'exec');
       if (fix && fix.decision === 'repaired') {
         _applyRepaired(rec, step, report);
-        report.steps.push(rec); emit(rec); continue;
+        report.steps.push(rec);
+        emit(rec);
+        continue;
       }
       rec.action = 'halted';
       rec.reason = (fix && fix.reason) || `执行失败：${e && e.message ? e.message : String(e)}`;
-      if (fix && fix.detail) rec.verify = { ok: false, ...fix.detail };
+      if (fix && fix.detail) {
+        rec.verify = { ok: false, ...fix.detail };
+      }
       report.summary.halted += 1;
-      report.steps.push(rec); emit(rec);
+      report.steps.push(rec);
+      emit(rec);
       report.status = 'diverged';
       report.divergedAt = step.seq;
       return report;
@@ -389,13 +477,18 @@ async function replay(bundle, opts = {}) {
       const fix = await _maybeRepair(step, opts, 'post-verify');
       if (fix && fix.decision === 'repaired') {
         _applyRepaired(rec, step, report);
-        report.steps.push(rec); emit(rec); continue;
+        report.steps.push(rec);
+        emit(rec);
+        continue;
       }
       rec.action = 'halted';
       rec.reason = (fix && fix.reason) || '产物哈希分歧';
-      if (fix && fix.detail) rec.verify = { ok: false, ...fix.detail };
+      if (fix && fix.detail) {
+        rec.verify = { ok: false, ...fix.detail };
+      }
       report.summary.halted += 1;
-      report.steps.push(rec); emit(rec);
+      report.steps.push(rec);
+      emit(rec);
       report.status = 'diverged';
       report.divergedAt = step.seq;
       return report;
@@ -406,7 +499,8 @@ async function replay(bundle, opts = {}) {
     if (Array.isArray(step.artifacts) && step.artifacts.some((a) => a && a.op !== 'delete')) {
       report.summary.restored += 1;
     }
-    report.steps.push(rec); emit(rec);
+    report.steps.push(rec);
+    emit(rec);
   }
 
   return report;

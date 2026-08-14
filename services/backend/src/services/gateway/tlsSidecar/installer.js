@@ -11,13 +11,30 @@
  */
 const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const DATA_DIR = path.join(os.homedir(), '.khyquant');
-const BIN_DIR = path.join(DATA_DIR, 'bin');
+// Lazily resolve the app home (portable-aware); fallback to legacy path.
+// No local caching: preserves getAppHome() live-resolve semantics.
+function _dataDir() {
+  try {
+    const { getAppHome } = require('../../../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+
+function _binDir() {
+  return path.join(_dataDir(), 'bin');
+}
+
 const BINARY_NAME = process.platform === 'win32' ? 'tls-sidecar.exe' : 'tls-sidecar';
-const BINARY_PATH = path.join(BIN_DIR, BINARY_NAME);
+
+function _binaryPath() {
+  return path.join(_binDir(), BINARY_NAME);
+}
+
 const SOURCE_PATH = path.join(__dirname, 'sidecar.go');
 
 /**
@@ -25,7 +42,7 @@ const SOURCE_PATH = path.join(__dirname, 'sidecar.go');
  */
 function isInstalled() {
   try {
-    fs.accessSync(BINARY_PATH, fs.constants.X_OK);
+    fs.accessSync(_binaryPath(), fs.constants.X_OK);
     return true;
   } catch {
     return false;
@@ -36,7 +53,7 @@ function isInstalled() {
  * Get the binary path.
  */
 function getBinaryPath() {
-  return BINARY_PATH;
+  return _binaryPath();
 }
 
 /**
@@ -55,13 +72,15 @@ function hasGo() {
  * Build from source using Go.
  */
 function buildFromSource() {
-  if (!hasGo()) return false;
+  if (!hasGo()) {
+    return false;
+  }
 
   try {
-    fs.mkdirSync(BIN_DIR, { recursive: true });
+    fs.mkdirSync(_binDir(), { recursive: true });
 
     // Initialize go module in a temp dir for building
-    const buildDir = path.join(DATA_DIR, 'tls-sidecar-build');
+    const buildDir = path.join(_dataDir(), 'tls-sidecar-build');
     fs.mkdirSync(buildDir, { recursive: true });
 
     // Copy source
@@ -69,8 +88,16 @@ function buildFromSource() {
 
     // Init module and get dependency
     execSync('go mod init tls-sidecar', { cwd: buildDir, stdio: 'pipe', timeout: 30000 });
-    execSync('go get github.com/refraction-networking/utls', { cwd: buildDir, stdio: 'pipe', timeout: 120000 });
-    execSync(`go build -o "${BINARY_PATH}" sidecar.go`, { cwd: buildDir, stdio: 'pipe', timeout: 120000 });
+    execSync('go get github.com/refraction-networking/utls', {
+      cwd: buildDir,
+      stdio: 'pipe',
+      timeout: 120000,
+    });
+    execSync(`go build -o "${_binaryPath()}" sidecar.go`, {
+      cwd: buildDir,
+      stdio: 'pipe',
+      timeout: 120000,
+    });
 
     // Cleanup build dir
     fs.rmSync(buildDir, { recursive: true, force: true });
@@ -87,11 +114,21 @@ function buildFromSource() {
  * Priority: existing binary → build from source → fail.
  */
 function install() {
-  if (isInstalled()) return { success: true, path: BINARY_PATH, method: 'existing' };
+  if (isInstalled()) {
+    return { success: true, path: _binaryPath(), method: 'existing' };
+  }
 
-  if (buildFromSource()) return { success: true, path: BINARY_PATH, method: 'built' };
+  if (buildFromSource()) {
+    return { success: true, path: _binaryPath(), method: 'built' };
+  }
 
-  return { success: false, path: null, method: null, error: 'Go toolchain not found. Install Go 1.21+ (https://go.dev/dl/) to build the TLS sidecar, or place a prebuilt tls-sidecar binary in ~/.khyquant/bin/.' };
+  return {
+    success: false,
+    path: null,
+    method: null,
+    error:
+      'Go toolchain not found. Install Go 1.21+ (https://go.dev/dl/) to build the TLS sidecar, or place a prebuilt tls-sidecar binary in ~/.khyquant/bin/.',
+  };
 }
 
 /**
@@ -111,8 +148,8 @@ function install() {
 function describeSidecarDownload() {
   return {
     binaryName: BINARY_NAME,
-    binDir: BIN_DIR,
-    dest: BINARY_PATH,
+    binDir: _binDir(),
+    dest: _binaryPath(),
     sourcePath: SOURCE_PATH,
     // First-party program: the "download" is really "install Go, auto-build",
     // so we point at the Go toolchain rather than a binary release asset.
@@ -123,4 +160,11 @@ function describeSidecarDownload() {
   };
 }
 
-module.exports = { isInstalled, getBinaryPath, hasGo, buildFromSource, install, describeSidecarDownload };
+module.exports = {
+  isInstalled,
+  getBinaryPath,
+  hasGo,
+  buildFromSource,
+  install,
+  describeSidecarDownload,
+};

@@ -40,16 +40,24 @@ class StreamFailSafeInjector {
     this.finalized = false;
     this.sawContent = false;
     this._tracked = false;
-    if (track) this._track();
+    if (track) {
+      this._track();
+    }
   }
 
   /** 透传一条事件，并跟踪是否已输出过内容（chunk）。 */
   emit(event) {
     if (event && (event.type === 'chunk' || event.type === 'content')) {
       const t = event.text || event.content || event.delta;
-      if (typeof t === 'string' && t.length) this.sawContent = true;
+      if (typeof t === 'string' && t.length) {
+        this.sawContent = true;
+      }
     }
-    try { this.send(event); } catch { /* 发送器异常不得反噬业务 */ }
+    try {
+      this.send(event);
+    } catch {
+      /* 发送器异常不得反噬业务 */
+    }
     return this;
   }
 
@@ -67,7 +75,9 @@ class StreamFailSafeInjector {
    * @returns {object|null} 注入的 E0x 结构；若已终结则返回 null（未重复注入）
    */
   fail(input, ctx = {}) {
-    if (this.finalized) return null;
+    if (this.finalized) {
+      return null;
+    }
     const failure = _safeClassify(input, { ...this.context, ...ctx });
     this._inject(failure);
     return failure;
@@ -81,10 +91,16 @@ class StreamFailSafeInjector {
    * @returns {object|null}
    */
   finalize(input, ctx = {}) {
-    if (this.finalized) return null;
-    const signal = input !== undefined
-      ? input
-      : { error_code: FALLBACK_CODE, message: 'stream ended unexpectedly without a terminal event' };
+    if (this.finalized) {
+      return null;
+    }
+    const signal =
+      input !== undefined
+        ? input
+        : {
+            error_code: FALLBACK_CODE,
+            message: 'stream ended unexpectedly without a terminal event',
+          };
     const failure = _safeClassify(signal, { ...this.context, ...ctx });
     this._inject(failure);
     return failure;
@@ -122,20 +138,34 @@ class StreamFailSafeInjector {
       // 向后兼容旧前端：保留 message，但内容是精准 reason 而非"未返回有效回复"。
       message: `[${failure.error_code}] ${failure.reason}`,
     };
-    try { this.send(event); } catch { /* 发送失败也要尝试关闭响应 */ }
-    try { if (this.res && typeof this.res.end === 'function') this.res.end(); } catch { /* ignore */ }
+    try {
+      this.send(event);
+    } catch {
+      /* 发送失败也要尝试关闭响应 */
+    }
+    try {
+      if (this.res && typeof this.res.end === 'function') {
+        this.res.end();
+      }
+    } catch {
+      /* ignore */
+    }
     this._untrack();
   }
 
   _track() {
-    if (this._tracked) return;
+    if (this._tracked) {
+      return;
+    }
     _active.add(this);
     this._tracked = true;
     StreamFailSafeInjector.installProcessGuards();
   }
 
   _untrack() {
-    if (!this._tracked) return;
+    if (!this._tracked) {
+      return;
+    }
     _active.delete(this);
     this._tracked = false;
   }
@@ -147,8 +177,12 @@ class StreamFailSafeInjector {
    * 强制补写最后一条错误事件。可通过 KHY_FAILSAFE_PROCESS_GUARD=off 关闭。
    */
   static installProcessGuards() {
-    if (_processGuardsInstalled) return;
-    if (String(process.env.KHY_FAILSAFE_PROCESS_GUARD || '').toLowerCase() === 'off') return;
+    if (_processGuardsInstalled) {
+      return;
+    }
+    if (String(process.env.KHY_FAILSAFE_PROCESS_GUARD || '').toLowerCase() === 'off') {
+      return;
+    }
     _processGuardsInstalled = true;
 
     process.on('uncaughtException', (err) => {
@@ -167,7 +201,9 @@ class StreamFailSafeInjector {
 
   /** 测试 / 复位用：移除全部在册注入器（不注入）。 */
   static _clearActive() {
-    for (const inj of [..._active]) inj._untrack();
+    for (const inj of [..._active]) {
+      inj._untrack();
+    }
   }
 
   /** 当前在册（未终结）注入器数量。 */
@@ -183,8 +219,12 @@ class StreamFailSafeInjector {
 function sweepActive(signal) {
   for (const inj of [..._active]) {
     try {
-      if (!inj.finalized) inj.finalize(signal);
-    } catch { /* 单个注入器失败不得阻断其余清扫 */ }
+      if (!inj.finalized) {
+        inj.finalize(signal);
+      }
+    } catch {
+      /* 单个注入器失败不得阻断其余清扫 */
+    }
   }
 }
 
@@ -194,16 +234,27 @@ function _safeClassify(input, ctx) {
   } catch {
     // classify 兜底之上再兜底：绝不让兜底协议自身失败而无输出。
     return {
-      status: 'failed', error_code: FALLBACK_CODE, reason: '工具内部抛出未捕获异常',
-      detail: '执行过程中发生未归类的内部错误。', suggestion: '请重试或改用替代方案。',
-      retryable: false, sensitive: false, category: '工具执行崩溃', fields: {}, attribution_complete: false,
+      status: 'failed',
+      error_code: FALLBACK_CODE,
+      reason: '工具内部抛出未捕获异常',
+      detail: '执行过程中发生未归类的内部错误。',
+      suggestion: '请重试或改用替代方案。',
+      retryable: false,
+      sensitive: false,
+      category: '工具执行崩溃',
+      fields: {},
+      attribution_complete: false,
     };
   }
 }
 
 function _errMsg(e) {
-  if (!e) return 'unknown error';
-  if (typeof e === 'string') return e;
+  if (!e) {
+    return 'unknown error';
+  }
+  if (typeof e === 'string') {
+    return e;
+  }
   return e.message || String(e);
 }
 

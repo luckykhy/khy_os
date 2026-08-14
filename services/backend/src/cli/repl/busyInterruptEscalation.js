@@ -20,10 +20,10 @@
 
 const _FALSY = ['0', 'false', 'off', 'no'];
 
-const DEFAULT_PRESSES = 3;      // 「3 次 Ctrl+C 结束会话」= 用户原话;前 2 次先尝试优雅打断
+const DEFAULT_PRESSES = 3; // 「3 次 Ctrl+C 结束会话」= 用户原话;前 2 次先尝试优雅打断
 const DEFAULT_WINDOW_MS = 3000; // 连按须落在同一窗口内,避免误伤(慢速偶发单按)
-const MIN_PRESSES = 2;          // 至少 2 次:第 1 次永远先尝试优雅取消
-const MAX_PRESSES = 10;         // 上限防呆(配置写离谱值时收敛)
+const MIN_PRESSES = 2; // 至少 2 次:第 1 次永远先尝试优雅取消
+const MAX_PRESSES = 10; // 上限防呆(配置写离谱值时收敛)
 const MIN_WINDOW_MS = 500;
 const MAX_WINDOW_MS = 30000;
 
@@ -35,9 +35,13 @@ const MAX_WINDOW_MS = 30000;
 function busyForceExitEnabled(env = process.env) {
   try {
     const v = env && env.KHY_BUSY_FORCE_EXIT;
-    if (v === undefined || v === null) return true;
+    if (v === undefined || v === null) {
+      return true;
+    }
     return !_FALSY.includes(String(v).trim().toLowerCase());
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -48,11 +52,17 @@ function busyForceExitEnabled(env = process.env) {
 function resolveThreshold(env = process.env) {
   try {
     const raw = env && env.KHY_BUSY_FORCE_EXIT_PRESSES;
-    if (raw === undefined || raw === null || String(raw).trim() === '') return DEFAULT_PRESSES;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return DEFAULT_PRESSES;
+    }
     const n = Math.floor(Number(raw));
-    if (!Number.isFinite(n)) return DEFAULT_PRESSES;
+    if (!Number.isFinite(n)) {
+      return DEFAULT_PRESSES;
+    }
     return Math.min(MAX_PRESSES, Math.max(MIN_PRESSES, n));
-  } catch { return DEFAULT_PRESSES; }
+  } catch {
+    return DEFAULT_PRESSES;
+  }
 }
 
 /**
@@ -63,11 +73,17 @@ function resolveThreshold(env = process.env) {
 function resolveWindowMs(env = process.env) {
   try {
     const raw = env && env.KHY_BUSY_FORCE_EXIT_WINDOW_MS;
-    if (raw === undefined || raw === null || String(raw).trim() === '') return DEFAULT_WINDOW_MS;
+    if (raw === undefined || raw === null || String(raw).trim() === '') {
+      return DEFAULT_WINDOW_MS;
+    }
     const n = Math.floor(Number(raw));
-    if (!Number.isFinite(n)) return DEFAULT_WINDOW_MS;
+    if (!Number.isFinite(n)) {
+      return DEFAULT_WINDOW_MS;
+    }
     return Math.min(MAX_WINDOW_MS, Math.max(MIN_WINDOW_MS, n));
-  } catch { return DEFAULT_WINDOW_MS; }
+  } catch {
+    return DEFAULT_WINDOW_MS;
+  }
 }
 
 /**
@@ -91,11 +107,11 @@ function nextBusyInterruptState(prev, now, opts = {}) {
     const t = Number.isFinite(now) ? now : 0;
     const threshold = Number.isFinite(opts.threshold) ? opts.threshold : DEFAULT_PRESSES;
     const windowMs = Number.isFinite(opts.windowMs) ? opts.windowMs : DEFAULT_WINDOW_MS;
-    const prevCount = (prev && Number.isFinite(prev.count)) ? prev.count : 0;
-    const prevTs = (prev && Number.isFinite(prev.lastTs)) ? prev.lastTs : 0;
+    const prevCount = prev && Number.isFinite(prev.count) ? prev.count : 0;
+    const prevTs = prev && Number.isFinite(prev.lastTs) ? prev.lastTs : 0;
 
     let count;
-    if (prevCount <= 0 || prevTs <= 0 || (t - prevTs) > windowMs) {
+    if (prevCount <= 0 || prevTs <= 0 || t - prevTs > windowMs) {
       count = 1; // 新序列:本次是第 1 次
     } else {
       count = prevCount + 1; // 同窗口连按(累计)

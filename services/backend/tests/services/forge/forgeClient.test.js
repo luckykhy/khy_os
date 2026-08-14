@@ -243,10 +243,12 @@ test('searchCode: github 归一结果;非 github → 清晰不支持提示', asy
   assert.ok(/仅支持 github/.test(ge.error));
 });
 
-test('searchCode: 401/403 给出配置 GITHUB_TOKEN 的可操作提示', async () => {
+test('searchCode: 401/403 给出 FORGE_RATE_LIMIT 提示(recovery 含 GITHUB_TOKEN)', async () => {
   const res = await client.searchCode({ query: 'x', platform: 'github' }, { axios: async () => ({ status: 403, data: { message: 'rate limited' } }) });
   assert.equal(res.ok, false);
-  assert.ok(/GITHUB_TOKEN/.test(res.error));
+  assert.equal(res.code, 'FORGE_RATE_LIMIT');
+  assert.equal(res.retryable, true);
+  assert.ok(res.recovery && /GITHUB_TOKEN/.test(res.recovery.envKey || ''), `expected recovery to contain GITHUB_TOKEN, got: ${JSON.stringify(res.recovery)}`);
 });
 
 test('checkRateLimit: github 归一配额;非 github → 不支持', async () => {

@@ -19,8 +19,12 @@ function normalizeArgs(params, callback) {
 }
 
 function adaptParams(params) {
-  if (Array.isArray(params)) return params.map(normalizeSqliteValue);
-  if (!params || typeof params !== 'object') return params;
+  if (Array.isArray(params)) {
+    return params.map(normalizeSqliteValue);
+  }
+  if (!params || typeof params !== 'object') {
+    return params;
+  }
 
   const out = {};
   for (const [key, value] of Object.entries(params)) {
@@ -34,20 +38,32 @@ function adaptParams(params) {
 }
 
 function normalizeSqliteValue(value) {
-  if (value === null || value === undefined) return null;
-  if (Buffer.isBuffer(value)) return value;
-  if (typeof value === 'number' || typeof value === 'string' || typeof value === 'bigint') return value;
-  if (typeof value === 'boolean') return value ? 1 : 0;
-  if (value instanceof Date) return value.toISOString();
-  if (Array.isArray(value) || typeof value === 'object') return JSON.stringify(value);
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'string' || typeof value === 'bigint') {
+    return value;
+  }
+  if (typeof value === 'boolean') {
+    return value ? 1 : 0;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (Array.isArray(value) || typeof value === 'object') {
+    return JSON.stringify(value);
+  }
   return String(value);
 }
 
 function isNoResultSetError(error) {
   return !!(
-    error
-    && typeof error.message === 'string'
-    && error.message.includes('does not return data')
+    error &&
+    typeof error.message === 'string' &&
+    error.message.includes('does not return data')
   );
 }
 
@@ -59,14 +75,27 @@ class Database {
     try {
       this._db = new BetterSqlite3(filename, {
         fileMustExist: false,
-        timeout: 5000
+        timeout: 5000,
       });
+      // Align with the other sqlite stores in this codebase (WAL + NORMAL):
+      // the default rollback journal fsyncs the whole db on every commit,
+      // which showed up as ~400ms synchronous INSERT stalls on the submit
+      // path. In-memory databases ignore journal_mode; failures are benign.
+      try {
+        if (filename && filename !== ':memory:') {
+          this._db.pragma('journal_mode = WAL');
+          this._db.pragma('synchronous = NORMAL');
+          this._db.pragma('wal_autocheckpoint = 256');
+        }
+      } catch {
+        /* pragma is best-effort */
+      }
       if (typeof callback === 'function') {
-        process.nextTick(() => callback(null));
+        setImmediate(() => callback(null));
       }
     } catch (error) {
       if (typeof callback === 'function') {
-        process.nextTick(() => callback(error));
+        setImmediate(() => callback(error));
       } else {
         throw error;
       }
@@ -74,12 +103,16 @@ class Database {
   }
 
   serialize(fn) {
-    if (typeof fn === 'function') fn();
+    if (typeof fn === 'function') {
+      fn();
+    }
     return this;
   }
 
   parallelize(fn) {
-    if (typeof fn === 'function') fn();
+    if (typeof fn === 'function') {
+      fn();
+    }
     return this;
   }
 
@@ -88,19 +121,20 @@ class Database {
     try {
       const stmt = this._db.prepare(sql);
       const adaptedParams = adaptParams(normalized.params);
-      const info = Array.isArray(adaptedParams) || typeof adaptedParams === 'object'
-        ? stmt.run(adaptedParams)
-        : stmt.run();
+      const info =
+        Array.isArray(adaptedParams) || typeof adaptedParams === 'object'
+          ? stmt.run(adaptedParams)
+          : stmt.run();
       const meta = {
         lastID: Number(info.lastInsertRowid || 0),
-        changes: Number(info.changes || 0)
+        changes: Number(info.changes || 0),
       };
       if (typeof normalized.callback === 'function') {
-        process.nextTick(() => normalized.callback.call(meta, null));
+        setImmediate(() => normalized.callback.call(meta, null));
       }
     } catch (error) {
       if (typeof normalized.callback === 'function') {
-        process.nextTick(() => normalized.callback(error));
+        setImmediate(() => normalized.callback(error));
       } else {
         throw error;
       }
@@ -120,7 +154,7 @@ class Database {
         rows = stmt.all();
       }
       if (typeof normalized.callback === 'function') {
-        process.nextTick(() => normalized.callback(null, rows));
+        setImmediate(() => normalized.callback(null, rows));
       }
     } catch (error) {
       // sqlite3 的 all() 在无结果语句上通常不报错；
@@ -135,19 +169,19 @@ class Database {
             stmt.run();
           }
           if (typeof normalized.callback === 'function') {
-            process.nextTick(() => normalized.callback(null, []));
+            setImmediate(() => normalized.callback(null, []));
           }
           return this;
         } catch (runError) {
           if (typeof normalized.callback === 'function') {
-            process.nextTick(() => normalized.callback(runError));
+            setImmediate(() => normalized.callback(runError));
             return this;
           }
           throw runError;
         }
       }
       if (typeof normalized.callback === 'function') {
-        process.nextTick(() => normalized.callback(error));
+        setImmediate(() => normalized.callback(error));
       } else {
         throw error;
       }
@@ -167,7 +201,7 @@ class Database {
         row = stmt.get();
       }
       if (typeof normalized.callback === 'function') {
-        process.nextTick(() => normalized.callback(null, row));
+        setImmediate(() => normalized.callback(null, row));
       }
     } catch (error) {
       if (isNoResultSetError(error)) {
@@ -180,19 +214,19 @@ class Database {
             stmt.run();
           }
           if (typeof normalized.callback === 'function') {
-            process.nextTick(() => normalized.callback(null, undefined));
+            setImmediate(() => normalized.callback(null, undefined));
           }
           return this;
         } catch (runError) {
           if (typeof normalized.callback === 'function') {
-            process.nextTick(() => normalized.callback(runError));
+            setImmediate(() => normalized.callback(runError));
             return this;
           }
           throw runError;
         }
       }
       if (typeof normalized.callback === 'function') {
-        process.nextTick(() => normalized.callback(error));
+        setImmediate(() => normalized.callback(error));
       } else {
         throw error;
       }
@@ -204,11 +238,11 @@ class Database {
     try {
       this._db.exec(sql);
       if (typeof callback === 'function') {
-        process.nextTick(() => callback(null));
+        setImmediate(() => callback(null));
       }
     } catch (error) {
       if (typeof callback === 'function') {
-        process.nextTick(() => callback(error));
+        setImmediate(() => callback(error));
       } else {
         throw error;
       }
@@ -220,11 +254,11 @@ class Database {
     try {
       this._db.close();
       if (typeof callback === 'function') {
-        process.nextTick(() => callback(null));
+        setImmediate(() => callback(null));
       }
     } catch (error) {
       if (typeof callback === 'function') {
-        process.nextTick(() => callback(error));
+        setImmediate(() => callback(error));
       } else {
         throw error;
       }
@@ -238,5 +272,5 @@ module.exports = {
   OPEN_CREATE,
   verbose() {
     return module.exports;
-  }
+  },
 };

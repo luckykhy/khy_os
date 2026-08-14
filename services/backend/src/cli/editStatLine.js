@@ -38,7 +38,9 @@
  */
 
 function editStatLineEnabled(env = process.env) {
-  const flag = String((env && env.KHY_EDIT_STAT_LINE) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_EDIT_STAT_LINE) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -61,7 +63,9 @@ function buildEditStatLine(added, removed, env = process.env) {
   const r = _nonNegInt(removed);
   const cc = editStatLineEnabled(env);
   const parts = [];
-  if (a > 0) parts.push(`Added ${a} line${a !== 1 ? 's' : ''}`);
+  if (a > 0) {
+    parts.push(`Added ${a} line${a !== 1 ? 's' : ''}`);
+  }
   if (r > 0) {
     // CC 句首/句中大小写规则:additions === 0(句首)→ 'R',否则(跟在 "Added …" 后)→ 'r'。
     // 门控关 → 恒 'r'(逐字节回退 legacy)。

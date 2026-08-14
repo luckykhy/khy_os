@@ -89,7 +89,9 @@ function isLifecycleStage(stage) {
  * @returns {boolean}
  */
 function canTransition(from, to) {
-  if (from === to) return true;
+  if (from === to) {
+    return true;
+  }
   const allowed = TRANSITIONS[from];
   return Array.isArray(allowed) && allowed.includes(to);
 }
@@ -116,9 +118,15 @@ function typeWeight(type) {
  * @returns {string} one of active|recent|archived
  */
 function stageFromAge(ageDays) {
-  if (!(ageDays >= 0)) return LIFECYCLE.ACTIVE;
-  if (ageDays < 2) return LIFECYCLE.ACTIVE;
-  if (ageDays < 14) return LIFECYCLE.RECENT;
+  if (!(ageDays >= 0)) {
+    return LIFECYCLE.ACTIVE;
+  }
+  if (ageDays < 2) {
+    return LIFECYCLE.ACTIVE;
+  }
+  if (ageDays < 14) {
+    return LIFECYCLE.RECENT;
+  }
   return LIFECYCLE.ARCHIVED;
 }
 

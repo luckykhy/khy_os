@@ -20,52 +20,123 @@ const path = require('path');
 
 // ── Capability dimensions ─────────────────────────────────────────────
 const CAPABILITIES = {
-  text:         'text',         // Basic text generation
-  code:         'code',         // Code generation & editing
-  tool_use:     'tool_use',     // Function calling / tool use
-  vision:       'vision',       // Image understanding
-  image_gen:    'image_gen',    // Image generation (DALL-E, SD, etc.)
-  video_gen:    'video_gen',    // Video generation (text/image-to-video)
-  reasoning:    'reasoning',    // Deep reasoning (o-series, R1, etc.)
+  text: 'text', // Basic text generation
+  code: 'code', // Code generation & editing
+  tool_use: 'tool_use', // Function calling / tool use
+  vision: 'vision', // Image understanding
+  image_gen: 'image_gen', // Image generation (DALL-E, SD, etc.)
+  video_gen: 'video_gen', // Video generation (text/image-to-video)
+  reasoning: 'reasoning', // Deep reasoning (o-series, R1, etc.)
   long_context: 'long_context', // 100k+ token context
-  streaming:    'streaming',    // Streaming output
-  embedding:    'embedding',    // Vector embeddings
-  audio:        'audio',        // Audio/speech
+  streaming: 'streaming', // Streaming output
+  embedding: 'embedding', // Vector embeddings
+  audio: 'audio', // Audio/speech
   multilingual: 'multilingual', // Multi-language support
   synthetic_tool: 'synthetic_tool', // Synthetic tool layer activation (higher = more likely)
 };
 
 // ── Default capability declarations per adapter ───────────────────────
 const DEFAULT_ADAPTER_CAPABILITIES = {
-  claude:     { text: 5, code: 5, tool_use: 5, vision: 4, reasoning: 5, long_context: 5, streaming: 5, multilingual: 4 },
-  codex:      { text: 4, code: 5, tool_use: 5, vision: 3, reasoning: 4, long_context: 4, streaming: 5, multilingual: 3 },
-  kiro:       { text: 4, code: 4, tool_use: 5, vision: 3, long_context: 4, streaming: 4, multilingual: 3 },
-  cursor:     { text: 4, code: 5, tool_use: 4, vision: 3, streaming: 4, long_context: 4, multilingual: 3 },
-  trae:       { text: 4, code: 4, tool_use: 4, vision: 3, streaming: 4, multilingual: 3 },
-  api:        { text: 5, code: 4, tool_use: 3, vision: 3, reasoning: 4, long_context: 5, streaming: 4, image_gen: 3, embedding: 4, multilingual: 5 },
-  windsurf:   { text: 3, code: 4, tool_use: 3, vision: 2, streaming: 3, multilingual: 2 },
-  vscode:     { text: 3, code: 4, tool_use: 3, streaming: 3, multilingual: 2 },
-  warp:       { text: 2, code: 2, tool_use: 1, streaming: 2 },
-  cursor2api: { text: 4, code: 4, tool_use: 4, vision: 3, streaming: 4, long_context: 4, multilingual: 3 },
-  relay_api:  { text: 4, code: 3, tool_use: 3, vision: 2, streaming: 4, long_context: 4, multilingual: 4 },
-  ollama:     { text: 3, code: 3, tool_use: 1, vision: 2, long_context: 3, streaming: 3, multilingual: 3, synthetic_tool: 4 },
-  localLLM:   { text: 2, code: 2, tool_use: 0, streaming: 2, synthetic_tool: 5 },
-  cli:        { text: 4, code: 4, tool_use: 4, streaming: 3 },
-  opencode:   { text: 4, code: 5, tool_use: 4, reasoning: 4, streaming: 3, multilingual: 3 },
-  relay:      { text: 3, code: 2, tool_use: 0, streaming: 0, multilingual: 3 },
-  clipboard:  { text: 3, code: 2, tool_use: 0, streaming: 0, multilingual: 3 },
+  claude: {
+    text: 5,
+    code: 5,
+    tool_use: 5,
+    vision: 4,
+    reasoning: 5,
+    long_context: 5,
+    streaming: 5,
+    multilingual: 4,
+  },
+  codex: {
+    text: 4,
+    code: 5,
+    tool_use: 5,
+    vision: 3,
+    reasoning: 4,
+    long_context: 4,
+    streaming: 5,
+    multilingual: 3,
+  },
+  kiro: {
+    text: 4,
+    code: 4,
+    tool_use: 5,
+    vision: 3,
+    long_context: 4,
+    streaming: 4,
+    multilingual: 3,
+  },
+  cursor: {
+    text: 4,
+    code: 5,
+    tool_use: 4,
+    vision: 3,
+    streaming: 4,
+    long_context: 4,
+    multilingual: 3,
+  },
+  trae: { text: 4, code: 4, tool_use: 4, vision: 3, streaming: 4, multilingual: 3 },
+  api: {
+    text: 5,
+    code: 4,
+    tool_use: 3,
+    vision: 3,
+    reasoning: 4,
+    long_context: 5,
+    streaming: 4,
+    image_gen: 3,
+    embedding: 4,
+    multilingual: 5,
+  },
+  windsurf: { text: 3, code: 4, tool_use: 3, vision: 2, streaming: 3, multilingual: 2 },
+  vscode: { text: 3, code: 4, tool_use: 3, streaming: 3, multilingual: 2 },
+  warp: { text: 2, code: 2, tool_use: 1, streaming: 2 },
+  cursor2api: {
+    text: 4,
+    code: 4,
+    tool_use: 4,
+    vision: 3,
+    streaming: 4,
+    long_context: 4,
+    multilingual: 3,
+  },
+  relay_api: {
+    text: 4,
+    code: 3,
+    tool_use: 3,
+    vision: 2,
+    streaming: 4,
+    long_context: 4,
+    multilingual: 4,
+  },
+  ollama: {
+    text: 3,
+    code: 3,
+    tool_use: 1,
+    vision: 2,
+    long_context: 3,
+    streaming: 3,
+    multilingual: 3,
+    synthetic_tool: 4,
+  },
+  localLLM: { text: 2, code: 2, tool_use: 0, streaming: 2, synthetic_tool: 5 },
+  cli: { text: 4, code: 4, tool_use: 4, streaming: 3 },
+  opencode: { text: 4, code: 5, tool_use: 4, reasoning: 4, streaming: 3, multilingual: 3 },
+  openclaw: { text: 4, code: 4, tool_use: 4, reasoning: 4, streaming: 3, multilingual: 3 },
+  relay: { text: 3, code: 2, tool_use: 0, streaming: 0, multilingual: 3 },
+  clipboard: { text: 3, code: 2, tool_use: 0, streaming: 0, multilingual: 3 },
 };
 
 // ── Task type → minimum capability requirements ──────────────────────
 const TASK_REQUIREMENTS = {
-  reasoning:    { reasoning: 4, text: 3 },
-  code:         { code: 4, tool_use: 3 },
-  analysis:     { text: 4, long_context: 3 },
-  vision:       { vision: 3, text: 2 },
-  image_gen:    { image_gen: 3 },
-  video_gen:    { video_gen: 3 },
-  embedding:    { embedding: 3 },
-  audio:        { audio: 3 },
+  reasoning: { reasoning: 4, text: 3 },
+  code: { code: 4, tool_use: 3 },
+  analysis: { text: 4, long_context: 3 },
+  vision: { vision: 3, text: 2 },
+  image_gen: { image_gen: 3 },
+  video_gen: { video_gen: 3 },
+  embedding: { embedding: 3 },
+  audio: { audio: 3 },
   conversation: { text: 2 },
 };
 
@@ -100,9 +171,13 @@ class CapabilityRegistry {
    */
   meetsRequirements(adapterKey, requirements) {
     const caps = this._capabilities[adapterKey];
-    if (!caps) return false;
+    if (!caps) {
+      return false;
+    }
     for (const [cap, minScore] of Object.entries(requirements)) {
-      if ((caps[cap] || 0) < minScore) return false;
+      if ((caps[cap] || 0) < minScore) {
+        return false;
+      }
     }
     return true;
   }
@@ -137,9 +212,13 @@ class CapabilityRegistry {
       // Check availability via gateway if requested
       if (onlyAvailable && this._gateway) {
         try {
-          const adapterEntry = this._gateway._adapters?.find(a => a.key === key);
-          if (adapterEntry && (!adapterEntry.enabled || !adapterEntry.adapter?.detect?.())) continue;
-        } catch { /* ignore detection failures, include adapter */ }
+          const adapterEntry = this._gateway.getAdapters()?.find((a) => a.key === key);
+          if (adapterEntry && (!adapterEntry.enabled || !adapterEntry.adapter?.detect?.())) {
+            continue;
+          }
+        } catch {
+          /* ignore detection failures, include adapter */
+        }
       }
 
       let totalScore = 0;
@@ -167,7 +246,9 @@ class CapabilityRegistry {
 
     // Sort by capability+weight descending, break ties by default priority
     results.sort((a, b) => {
-      if (b.effective !== a.effective) return b.effective - a.effective;
+      if (b.effective !== a.effective) {
+        return b.effective - a.effective;
+      }
       return (this._adapterPriority(a.key) || 99) - (this._adapterPriority(b.key) || 99);
     });
 
@@ -181,7 +262,9 @@ class CapabilityRegistry {
    * @private
    */
   _selectionWeight(key, weighting) {
-    if (!weighting) return 0;
+    if (!weighting) {
+      return 0;
+    }
     let weight = 0;
 
     // Skill-tag match: +0.5 per required tag the adapter's profile advertises.
@@ -189,10 +272,12 @@ class CapabilityRegistry {
     const profile = weighting.profiles && weighting.profiles[key];
     const advertised = profile && Array.isArray(profile.skills) ? profile.skills : [];
     if (required.length && advertised.length) {
-      const adSet = new Set(advertised.map(s => String(s).toLowerCase()));
+      const adSet = new Set(advertised.map((s) => String(s).toLowerCase()));
       let matched = 0;
       for (const tag of required) {
-        if (adSet.has(String(tag).toLowerCase())) matched++;
+        if (adSet.has(String(tag).toLowerCase())) {
+          matched++;
+        }
       }
       weight += Math.min(1.5, matched * 0.5);
     }
@@ -200,8 +285,11 @@ class CapabilityRegistry {
     // Reliability + idleness from the runtime stats ledger.
     const stats = weighting.stats && weighting.stats[key];
     if (stats) {
-      const reworkRate = Number.isFinite(stats.reworkRate) ? Math.max(0, Math.min(1, stats.reworkRate)) : 0;
-      const activeCount = Number.isFinite(stats.activeCount) && stats.activeCount > 0 ? stats.activeCount : 0;
+      const reworkRate = Number.isFinite(stats.reworkRate)
+        ? Math.max(0, Math.min(1, stats.reworkRate))
+        : 0;
+      const activeCount =
+        Number.isFinite(stats.activeCount) && stats.activeCount > 0 ? stats.activeCount : 0;
       weight += 1.0 * (1 - reworkRate);
       weight += 1.0 / (1 + activeCount);
     }
@@ -254,21 +342,32 @@ class CapabilityRegistry {
 
     // Role-based
     if (['coder', 'implement', 'codex', 'claude', 'opencode'].includes(role)) {
-      reqs.code = 4; reqs.tool_use = 3;
+      reqs.code = 4;
+      reqs.tool_use = 3;
     } else if (['explore', 'reviewer', 'verify'].includes(role)) {
-      reqs.code = 3; reqs.tool_use = 2;
+      reqs.code = 3;
+      reqs.tool_use = 2;
     } else if (['planner', 'Plan'].includes(role)) {
-      reqs.reasoning = 3; reqs.text = 3;
+      reqs.reasoning = 3;
+      reqs.text = 3;
     }
 
     // Keyword-based
-    if (/图片|image|screenshot|视觉|photo|看[看这个]|identify.*visual|analyze.*image/i.test(lower)) {
+    if (
+      /图片|image|screenshot|视觉|photo|看[看这个]|identify.*visual|analyze.*image/i.test(lower)
+    ) {
       reqs.vision = 3;
     }
-    if (/画|绘|生成图|draw|generate.*image|create.*picture|create.*diagram|render.*image/i.test(lower)) {
+    if (
+      /画|绘|生成图|draw|generate.*image|create.*picture|create.*diagram|render.*image/i.test(lower)
+    ) {
       reqs.image_gen = 3;
     }
-    if (/视频|动画|generate.*video|text.to.video|image.to.video|文生视频|图生视频|关键帧|keyframe/i.test(lower)) {
+    if (
+      /视频|动画|generate.*video|text.to.video|image.to.video|文生视频|图生视频|关键帧|keyframe/i.test(
+        lower
+      )
+    ) {
       reqs.video_gen = 3;
     }
     if (/推理|reason|think.*step|chain.of.thought|analyze.*deeply|数学|math|proof/i.test(lower)) {
@@ -292,8 +391,10 @@ class CapabilityRegistry {
    * @private
    */
   _adapterPriority(key) {
-    if (!this._gateway?._adapters) return 99;
-    const entry = this._gateway._adapters.find(a => a.key === key);
+    if (!this._gateway?.getAdapters()) {
+      return 99;
+    }
+    const entry = this._gateway.getAdapters().find((a) => a.key === key);
     return entry ? entry.priority : 99;
   }
 
@@ -305,42 +406,64 @@ class CapabilityRegistry {
     // 1. Environment variables: GATEWAY_CAPABILITIES_<adapter>='{"code":4,...}'
     for (const [envKey, envVal] of Object.entries(process.env)) {
       const match = envKey.match(/^GATEWAY_CAPABILITIES_(\w+)$/i);
-      if (!match) continue;
+      if (!match) {
+        continue;
+      }
       const adapterKey = match[1].toLowerCase();
       try {
         const overrides = JSON.parse(envVal);
         if (overrides && typeof overrides === 'object') {
-          if (!this._capabilities[adapterKey]) this._capabilities[adapterKey] = {};
+          if (!this._capabilities[adapterKey]) {
+            this._capabilities[adapterKey] = {};
+          }
           Object.assign(this._capabilities[adapterKey], overrides);
         }
-      } catch { /* invalid JSON, skip */ }
+      } catch {
+        /* invalid JSON, skip */
+      }
     }
 
     // 2. Config file: ~/.khyquant/adapter_capabilities.json
     try {
-      const homedir = require('os').homedir();
-      const configPath = path.join(homedir, '.khyquant', 'adapter_capabilities.json');
+      // Portable-aware app home; fallback to the legacy location.
+      let configPath;
+      try {
+        configPath = path.join(
+          require('../../utils/dataHome').getAppHome(),
+          'adapter_capabilities.json'
+        );
+      } catch {
+        configPath = path.join(require('os').homedir(), '.khyquant', 'adapter_capabilities.json');
+      }
       if (fs.existsSync(configPath)) {
         const raw = fs.readFileSync(configPath, 'utf-8');
         const config = JSON.parse(raw);
         if (config && typeof config === 'object') {
           for (const [key, overrides] of Object.entries(config)) {
             if (overrides && typeof overrides === 'object') {
-              if (!this._capabilities[key]) this._capabilities[key] = {};
+              if (!this._capabilities[key]) {
+                this._capabilities[key] = {};
+              }
               Object.assign(this._capabilities[key], overrides);
             }
           }
         }
       }
-    } catch { /* config not available */ }
+    } catch {
+      /* config not available */
+    }
   }
 }
 
 // Singleton for non-gateway contexts
 let _singleton = null;
 function getCapabilityRegistry(gateway) {
-  if (gateway) return new CapabilityRegistry(gateway);
-  if (!_singleton) _singleton = new CapabilityRegistry();
+  if (gateway) {
+    return new CapabilityRegistry(gateway);
+  }
+  if (!_singleton) {
+    _singleton = new CapabilityRegistry();
+  }
   return _singleton;
 }
 

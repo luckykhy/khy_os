@@ -10,9 +10,16 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const {
-  SPECIES, RARITY_WEIGHTS, RARITY_FLOOR, EYES, HATS,
-  STAT_NAMES, SHINY_CHANCE, SALT,
+  SPECIES,
+  RARITY_WEIGHTS,
+  RARITY_FLOOR,
+  EYES,
+  HATS,
+  STAT_NAMES,
+  SHINY_CHANCE,
+  SALT,
 } = require('./types');
 
 // ── Hash + PRNG ────────────────────────────────────────────────────
@@ -42,7 +49,7 @@ function fnv1a(str) {
 function mulberry32(seed) {
   let t = seed | 0;
   return function () {
-    t = (t + 0x6D2B79F5) | 0;
+    t = (t + 0x6d2b79f5) | 0;
     let x = Math.imul(t ^ (t >>> 15), t | 1);
     x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
     return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
@@ -56,7 +63,9 @@ function pickWeighted(rng, weights) {
   let roll = rng() * total;
   for (const [key, weight] of Object.entries(weights)) {
     roll -= weight;
-    if (roll <= 0) return key;
+    if (roll <= 0) {
+      return key;
+    }
   }
   return Object.keys(weights).pop();
 }
@@ -71,7 +80,9 @@ function rollStats(rng, rarity) {
   const floor = RARITY_FLOOR[rarity] || 5;
   const peakStat = pick(rng, STAT_NAMES);
   let dumpStat = pick(rng, STAT_NAMES);
-  while (dumpStat === peakStat) dumpStat = pick(rng, STAT_NAMES);
+  while (dumpStat === peakStat) {
+    dumpStat = pick(rng, STAT_NAMES);
+  }
 
   const stats = {};
   for (const name of STAT_NAMES) {
@@ -97,7 +108,9 @@ let _rollCache = null; // { key, value }
  */
 function rollBones(userId) {
   const key = userId + SALT;
-  if (_rollCache && _rollCache.key === key) return _rollCache.value;
+  if (_rollCache && _rollCache.key === key) {
+    return _rollCache.value;
+  }
 
   const hash = fnv1a(key);
   const rng = mulberry32(hash);
@@ -130,7 +143,9 @@ function _soulPath() {
 function loadSoul() {
   try {
     const p = _soulPath();
-    if (!fs.existsSync(p)) return null;
+    if (!fs.existsSync(p)) {
+      return null;
+    }
     return JSON.parse(fs.readFileSync(p, 'utf-8'));
   } catch {
     return null;
@@ -153,7 +168,9 @@ function saveSoul(soul) {
  */
 function getCompanion(userId) {
   const soul = loadSoul();
-  if (!soul) return null;
+  if (!soul) {
+    return null;
+  }
   const bones = rollBones(userId);
   return { ...soul, ...bones };
 }
@@ -167,8 +184,12 @@ function getUserId() {
   try {
     const auth = require('../services/cliAuthService');
     const session = auth.checkSession ? auth.checkSession() : null;
-    if (session && session.userId) return session.userId;
-  } catch { /* not available */ }
+    if (session && session.userId) {
+      return session.userId;
+    }
+  } catch {
+    /* not available */
+  }
 
   // Fallback: stable machine-derived ID
   const os = require('os');
@@ -176,6 +197,12 @@ function getUserId() {
 }
 
 module.exports = {
-  fnv1a, mulberry32, rollBones, rollStats,
-  loadSoul, saveSoul, getCompanion, getUserId,
+  fnv1a,
+  mulberry32,
+  rollBones,
+  rollStats,
+  loadSoul,
+  saveSoul,
+  getCompanion,
+  getUserId,
 };

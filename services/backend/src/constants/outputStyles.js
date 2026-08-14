@@ -24,7 +24,8 @@ const BUILT_IN_STYLES = {
   },
   concise: {
     name: 'concise',
-    prompt: 'Be extremely concise. Respond in as few words as possible while being complete. No filler, no pleasantries.',
+    prompt:
+      'Be extremely concise. Respond in as few words as possible while being complete. No filler, no pleasantries.',
     keepCodingInstructions: true,
   },
   verbose: {
@@ -34,7 +35,8 @@ const BUILT_IN_STYLES = {
   },
   'code-only': {
     name: 'code-only',
-    prompt: 'Respond with code only. No explanations unless explicitly asked. Use comments in code for context.',
+    prompt:
+      'Respond with code only. No explanations unless explicitly asked. Use comments in code for context.',
     keepCodingInstructions: true,
   },
 };
@@ -48,17 +50,31 @@ async function getOutputStyleConfig(styleName) {
   if (!styleName) {
     styleName = process.env.KHY_OUTPUT_STYLE || null;
   }
-  if (!styleName) return null;
+  if (!styleName) {
+    return null;
+  }
 
   const builtin = BUILT_IN_STYLES[styleName];
-  if (builtin) return builtin;
+  if (builtin) {
+    return builtin;
+  }
 
   // Custom styles can be defined in .khy/output-styles/
   try {
     const fs = require('fs');
     const path = require('path');
     const os = require('os');
-    const stylePath = path.join(os.homedir(), '.khy', 'output-styles', `${styleName}.md`);
+    // Portable-aware data home; fallback to the legacy location.
+    let stylePath;
+    try {
+      stylePath = path.join(
+        require('../utils/dataHome').getDataHome(),
+        'output-styles',
+        `${styleName}.md`
+      );
+    } catch {
+      stylePath = path.join(os.homedir(), '.khy', 'output-styles', `${styleName}.md`);
+    }
     if (fs.existsSync(stylePath)) {
       const content = fs.readFileSync(stylePath, 'utf-8');
       return {
@@ -67,7 +83,9 @@ async function getOutputStyleConfig(styleName) {
         keepCodingInstructions: true,
       };
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return null;
 }
@@ -96,15 +114,32 @@ function getActiveOutputStyleName() {
  */
 function isValidStyleName(name) {
   const raw = String(name || '').trim();
-  if (!raw) return false;
+  if (!raw) {
+    return false;
+  }
   const key = raw.toLowerCase();
-  if (STYLE_OFF_VALUES.includes(key)) return true;
-  if (BUILT_IN_STYLES[raw] || BUILT_IN_STYLES[key]) return true;
+  if (STYLE_OFF_VALUES.includes(key)) {
+    return true;
+  }
+  if (BUILT_IN_STYLES[raw] || BUILT_IN_STYLES[key]) {
+    return true;
+  }
   try {
     const fs = require('fs');
     const path = require('path');
     const os = require('os');
-    return fs.existsSync(path.join(os.homedir(), '.khy', 'output-styles', `${raw}.md`));
+    // Portable-aware data home; fallback to the legacy location.
+    let stylePath;
+    try {
+      stylePath = path.join(
+        require('../utils/dataHome').getDataHome(),
+        'output-styles',
+        `${raw}.md`
+      );
+    } catch {
+      stylePath = path.join(os.homedir(), '.khy', 'output-styles', `${raw}.md`);
+    }
+    return fs.existsSync(stylePath);
   } catch {
     return false;
   }

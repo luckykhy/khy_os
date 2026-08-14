@@ -22,8 +22,10 @@ export const viewLoaders = {
   '/dashboard': () => import('@/views/AIDashboard.vue'),
   '/gateway': () => import('@/views/AIGateway.vue'),
   '/bridge-channels': () => import('@/views/BridgeChannels.vue'),
+  '/wx-binding': () => import('@/views/WxBinding.vue'),
   '/accounts': () => import('@/views/AccountPool.vue'),
   '/assets-customers': () => import('@/views/AIAssetsCustomers.vue'),
+  '/payments': () => import('@/views/AIPayments.vue'),
   '/usage': () => import('@/views/UsageLogs.vue'),
   '/pricing': () => import('@/views/Pricing.vue'),
   '/monitor': () => import('@/views/AIMonitor.vue'),
@@ -40,43 +42,57 @@ export const viewLoaders = {
   '/projects': () => import('@/views/Projects.vue'),
   '/marketplace': () => import('@/views/Marketplace.vue'),
   '/proxies': () => import('@/views/ProxyManagement.vue'),
+  '/gui-eval': () => import('@/views/GuiEvalDashboard.vue'),
+  '/gui-eval/tasks': () => import('@/views/GuiEvalTasks.vue'),
+  '/gui-eval/tasks/:id': () => import('@/views/GuiEvalTaskEditor.vue'),
+  '/gui-eval/runs': () => import('@/views/GuiEvalRuns.vue'),
+  '/gui-eval/runs/:id': () => import('@/views/GuiEvalRunDetail.vue'),
+  '/web-frontend-eval': () => import('@/views/WebFrontendEvalDashboard.vue'),
+  '/web-frontend-eval/tasks': () => import('@/views/WebFrontendEvalTasks.vue'),
+  '/web-frontend-eval/tasks/:id': () => import('@/views/WebFrontendEvalTaskEditor.vue'),
+  '/web-frontend-eval/runs': () => import('@/views/WebFrontendEvalRuns.vue'),
+  '/web-frontend-eval/runs/:id': () => import('@/views/WebFrontendEvalRunDetail.vue'),
   '/markdown': () => import('@/views/Markdown.vue'),
   '/not-found': () => import('@/views/NotFound.vue'),
-}
+};
 
 // Chunks already requested — guards against re-importing on every hover.
-const warmed = new Set()
+const warmed = new Set();
 
 // Warm one view's chunk now. Safe to call repeatedly; no-op once warmed.
 export function prefetchView(path) {
-  if (!path || warmed.has(path)) return
-  const loader = viewLoaders[path]
-  if (typeof loader !== 'function') return
-  warmed.add(path)
+  if (!path || warmed.has(path)) return;
+  const loader = viewLoaders[path];
+  if (typeof loader !== 'function') return;
+  warmed.add(path);
   // Fire-and-forget. On failure (offline, chunk error) drop it from the set so a
   // later real navigation can retry; the router owns user-visible error handling.
   Promise.resolve()
     .then(loader)
-    .catch(() => { warmed.delete(path) })
+    .catch(() => {
+      warmed.delete(path);
+    });
 }
 
 // Warm a batch of views during idle time, after first paint. Used to pre-warm
 // every sidebar destination so switching never stalls on a first-visit download.
 export function prefetchViewsIdle(paths) {
-  if (typeof window === 'undefined' || !Array.isArray(paths)) return
+  if (typeof window === 'undefined' || !Array.isArray(paths)) return;
   // Warm the heaviest / most visited views first ('/chat', '/gateway'), then
   // the rest in their original order — idle time may be short, so priority
   // targets must be requested before the budget runs out.
-  const priority = ['/chat', '/gateway']
+  const priority = ['/chat', '/gateway'];
   const ordered = [
     ...priority.filter((p) => paths.includes(p)),
     ...paths.filter((p) => !priority.includes(p)),
-  ]
-  const run = () => { for (const p of ordered) prefetchView(p) }
+  ];
+  const run = () => {
+    for (const p of ordered) prefetchView(p);
+  };
   if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(run, { timeout: 2000 })
+    window.requestIdleCallback(run, { timeout: 2000 });
   } else {
     // Fallback: defer past first paint without blocking it.
-    setTimeout(run, 200)
+    setTimeout(run, 200);
   }
 }

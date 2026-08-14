@@ -26,27 +26,30 @@ const memdir = require('../../../src/memdir/memdir');
 const engine = require('../../../src/services/memoryEngine');
 const leaf = require('../../../src/services/memoryEngine/memoryRecallTokens');
 
-function withEnv(overrides, fn) {
+async function withEnv(overrides, fn) {
   const keys = Object.keys(overrides);
   const saved = keys.map((k) => [k, process.env[k]]);
   for (const k of keys) {
     if (overrides[k] === undefined) delete process.env[k];
     else process.env[k] = overrides[k];
   }
-  try { return fn(); } finally {
+  try { return await fn(); } finally {
     for (const [k, v] of saved) {
       if (v === undefined) delete process.env[k]; else process.env[k] = v;
     }
   }
 }
 
-function withScratch(fn) {
+async function withScratch(fn) {
   const prev = process.env.KHY_MEMORY_DIR;
+  const prevMerge = process.env.KHY_MEMORY_MERGE_LEGACY;
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-enrich-'));
   process.env.KHY_MEMORY_DIR = tmp;
+  process.env.KHY_MEMORY_MERGE_LEGACY = 'off';
   paths._resetCache();
-  try { return fn(tmp); } finally {
+  try { return await fn(tmp); } finally {
     if (prev === undefined) delete process.env.KHY_MEMORY_DIR; else process.env.KHY_MEMORY_DIR = prev;
+    if (prevMerge === undefined) delete process.env.KHY_MEMORY_MERGE_LEGACY; else process.env.KHY_MEMORY_MERGE_LEGACY = prevMerge;
     paths._resetCache();
     try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ }
   }
@@ -82,8 +85,8 @@ test('规范别名哨兵:中英触发词映射到同一哨兵(跨语言召回的
   assert.ok(leaf.enrichTokens(base('forgetful'), 'forgetful').has(leaf.ALIAS_PREFIX + 'forget'));
 });
 
-test('总门控关 → 返回 base 的副本(逐字节回退,且是独立副本)', () => {
-  withEnv({ KHY_MEMORY_RECALL_ENRICH: 'off' }, () => {
+test('总门控关 → 返回 base 的副本(逐字节回退,且是独立副本)', async () => {
+  await withEnv({ KHY_MEMORY_RECALL_ENRICH: 'off' }, async () => {
     const b = base('记忆时机 memory');
     const e = leaf.enrichTokens(b, '记忆时机 memory');
     assert.deepStrictEqual([...e].sort(), [...b].sort(), 'equal set when gate off');
@@ -92,13 +95,13 @@ test('总门控关 → 返回 base 的副本(逐字节回退,且是独立副本)
   });
 });
 
-test('子门控独立:BIGRAM 关只去二元组、ALIAS 关只去哨兵', () => {
-  withEnv({ KHY_MEMORY_RECALL_BIGRAM: 'off' }, () => {
+test('子门控独立:BIGRAM 关只去二元组、ALIAS 关只去哨兵', async () => {
+  await withEnv({ KHY_MEMORY_RECALL_BIGRAM: 'off' }, async () => {
     const e = leaf.enrichTokens(base('偏好'), '偏好');
     assert.ok(!e.has('偏好'), 'no bigram when BIGRAM off');
     assert.ok(e.has(leaf.ALIAS_PREFIX + 'pref'), 'alias still fires');
   });
-  withEnv({ KHY_MEMORY_RECALL_ALIAS: 'off' }, () => {
+  await withEnv({ KHY_MEMORY_RECALL_ALIAS: 'off' }, async () => {
     const e = leaf.enrichTokens(base('偏好'), '偏好');
     assert.ok(e.has('偏好'), 'bigram still fires');
     assert.ok(!e.has(leaf.ALIAS_PREFIX + 'pref'), 'no alias when ALIAS off');
@@ -113,34 +116,34 @@ test('绝不抛:坏入参 fail-soft', () => {
 
 // ── 端到端:真正的召回收益 ───────────────────────────────────────────
 
-test('跨语言召回:英文提问召回原本硬零重叠的纯中文记忆(ON 召回 / OFF 不召回)', () => {
-  withScratch(() => {
+test('跨语言召回:英文提问召回原本硬零重叠的纯中文记忆(ON 召回 / OFF 不召回)', async () => {
+  await withScratch(async () => {
     // 纯中文记忆:无任何拉丁 token,英文查询在字面上与它零重叠。显式 filename 避免
     // CJK 名被 ASCII slug 折叠成同名。查询刻意不含 "user"(否则与 type='user' 字段重叠)。
     memdir.saveMemory('user', '用户偏好', '用户的偏好与记忆习惯说明。', { description: '用户的记忆与偏好', filename: 'pref_zh.md' });
     const query = 'what memory preferences are configured here';
 
     // 富化关:字面零重叠 → 召不回(这正是「健忘」的机械根因)。
-    const off = withEnv({ KHY_MEMORY_RECALL_ENRICH: 'off' },
-      () => engine.buildRelevantMemorySection(query, { nowMs: Date.now() }));
+    const off = await withEnv({ KHY_MEMORY_RECALL_ENRICH: 'off' },
+      async () => engine.buildRelevantMemorySection(query, { nowMs: Date.now() }));
     assert.strictEqual(off, null, 'gate OFF: cross-language query recalls nothing (the bug)');
 
     // 富化开:memory→a:mem、preferences→a:pref 与中文侧的 记忆/偏好 哨兵重叠 → 召回。
-    const on = withEnv({ KHY_MEMORY_RECALL_ENRICH: undefined, KHY_MEMORY_RECALL_ALIAS: undefined },
-      () => engine.buildRelevantMemorySection(query, { nowMs: Date.now() }));
+    const on = await withEnv({ KHY_MEMORY_RECALL_ENRICH: undefined, KHY_MEMORY_RECALL_ALIAS: undefined },
+      async () => engine.buildRelevantMemorySection(query, { nowMs: Date.now() }));
     assert.ok(on, 'gate ON: cross-language query now recalls the Chinese memory');
     assert.ok(on.includes('用户偏好'), 'the Chinese memory surfaces by name');
   });
 });
 
-test('CJK 二元组提精度:共享真实词组的记忆排在单字噪声之前(隔离 alias 单证 bigram)', () => {
-  withScratch(() => {
-    withEnv({ KHY_MEMORY_RECALL_ALIAS: 'off', KHY_MEMORY_RECALL_BIGRAM: undefined, KHY_MEMORY_RECALL_ENRICH: undefined }, () => {
+test('CJK 二元组提精度:共享真实词组的记忆排在单字噪声之前(隔离 alias 单证 bigram)', async () => {
+  await withScratch(async () => {
+    await withEnv({ KHY_MEMORY_RECALL_ALIAS: 'off', KHY_MEMORY_RECALL_BIGRAM: undefined, KHY_MEMORY_RECALL_ENRICH: undefined }, async () => {
       // A 共享词组「记忆」;B 只单字命中 记/忆(标记/回忆)但无相邻「记忆」。
       // 显式 filename 避免 CJK 名被 ASCII slug 折叠成同名互相覆盖。
       memdir.saveMemory('user', '甲', '记忆机制。', { description: '记忆机制', filename: 'cand_a.md' });
       memdir.saveMemory('user', '乙', '标记回忆录。', { description: '标记回忆录', filename: 'cand_b.md' });
-      const ranked = engine.scoring.rankMemories('记忆', { nowMs: Date.now() });
+      const ranked = await engine.scoring.rankMemories('记忆', { nowMs: Date.now() });
       assert.ok(ranked.length >= 2, 'both candidates recalled');
       assert.strictEqual(ranked[0].frontmatter.name, '甲', 'term-sharing memory ranks first');
       const a = ranked.find((m) => m.frontmatter.name === '甲');
@@ -150,12 +153,12 @@ test('CJK 二元组提精度:共享真实词组的记忆排在单字噪声之前
   });
 });
 
-test('单调:富化开的召回集是富化关的超集(既有中文召回不回归)', () => {
-  withScratch(() => {
+test('单调:富化开的召回集是富化关的超集(既有中文召回不回归)', async () => {
+  await withScratch(async () => {
     memdir.saveMemory('user', '中文记忆', '这条记忆用于验证中文分词召回。', { description: '中文相关性测试' });
     const q = '中文召回';
-    const off = withEnv({ KHY_MEMORY_RECALL_ENRICH: 'off' }, () => memdir.selectRelevantMemories(q).map((h) => h.filename));
-    const on = withEnv({ KHY_MEMORY_RECALL_ENRICH: undefined }, () => memdir.selectRelevantMemories(q).map((h) => h.filename));
+    const off = await withEnv({ KHY_MEMORY_RECALL_ENRICH: 'off' }, async () => memdir.selectRelevantMemories(q).map((h) => h.filename));
+    const on = await withEnv({ KHY_MEMORY_RECALL_ENRICH: undefined }, async () => memdir.selectRelevantMemories(q).map((h) => h.filename));
     for (const fn of off) assert.ok(on.includes(fn), `ON recall must keep OFF hit: ${fn}`);
   });
 });

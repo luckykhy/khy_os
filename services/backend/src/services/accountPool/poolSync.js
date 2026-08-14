@@ -14,18 +14,13 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  normalizePoolType,
-  safeJsonParse,
-  formatIso,
-} = require('./credentialHelpers');
-
-const {
   CURSOR_STORAGE_PATHS,
   CURSOR_DB_PATHS,
   WARP_STORAGE_PATHS,
   NIRVANA_STORAGE_PATHS,
   _getKiroTokenCandidatePaths,
 } = require('./candidateDetect');
+const { normalizePoolType, safeJsonParse, formatIso } = require('./credentialHelpers');
 
 // ── Exports (factory) ──
 
@@ -38,28 +33,35 @@ const {
  * @param {Array} deps.TRAE_STORAGE_PATHS
  */
 module.exports = function createSync(deps) {
-  const {
-    ensureReady,
-    getActiveAccount,
-    WINDSURF_STORAGE_PATHS,
-    TRAE_STORAGE_PATHS,
-  } = deps;
+  const { ensureReady, getActiveAccount, WINDSURF_STORAGE_PATHS, TRAE_STORAGE_PATHS } = deps;
 
   // ── Internal Helpers ──
 
   function _providerStoragePaths(poolType) {
     const norm = normalizePoolType(poolType);
-    if (norm === 'trae') return [...NIRVANA_STORAGE_PATHS, ...TRAE_STORAGE_PATHS];
-    if (norm === 'windsurf') return WINDSURF_STORAGE_PATHS.slice();
-    if (norm === 'cursor') return CURSOR_STORAGE_PATHS.slice();
-    if (norm === 'kiro') return _getKiroTokenCandidatePaths();
-    if (norm === 'warp') return WARP_STORAGE_PATHS.slice();
+    if (norm === 'trae') {
+      return [...NIRVANA_STORAGE_PATHS, ...TRAE_STORAGE_PATHS];
+    }
+    if (norm === 'windsurf') {
+      return WINDSURF_STORAGE_PATHS.slice();
+    }
+    if (norm === 'cursor') {
+      return CURSOR_STORAGE_PATHS.slice();
+    }
+    if (norm === 'kiro') {
+      return _getKiroTokenCandidatePaths();
+    }
+    if (norm === 'warp') {
+      return WARP_STORAGE_PATHS.slice();
+    }
     return [];
   }
 
   function _loadJsonIfExists(filePath) {
     try {
-      if (!fs.existsSync(filePath)) return {};
+      if (!fs.existsSync(filePath)) {
+        return {};
+      }
       const raw = fs.readFileSync(filePath, 'utf8');
       const parsed = safeJsonParse(raw, {});
       return parsed && typeof parsed === 'object' ? parsed : {};
@@ -77,12 +79,20 @@ module.exports = function createSync(deps) {
   function _resolveSyncPaths(poolType, options = {}) {
     const candidates = _providerStoragePaths(poolType);
     const requestedPath = String(options.targetPath || '').trim();
-    if (requestedPath) return [requestedPath];
+    if (requestedPath) {
+      return [requestedPath];
+    }
 
-    const existing = candidates.filter(p => {
-      try { return fs.existsSync(p); } catch { return false; }
+    const existing = candidates.filter((p) => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
     });
-    if (existing.length > 0) return existing;
+    if (existing.length > 0) {
+      return existing;
+    }
     return candidates.length > 0 ? [candidates[0]] : [];
   }
 
@@ -97,9 +107,10 @@ module.exports = function createSync(deps) {
     const host = account.authData?.host || null;
     const userJwt = account.authData?.userJwt || null;
     const userInfo = account.authData?.userInfo || null;
-    const callback = account.authData?.callback && typeof account.authData.callback === 'object'
-      ? account.authData.callback
-      : null;
+    const callback =
+      account.authData?.callback && typeof account.authData.callback === 'object'
+        ? account.authData.callback
+        : null;
 
     next.traeAuth = {
       ...(next.traeAuth && typeof next.traeAuth === 'object' ? next.traeAuth : {}),
@@ -113,10 +124,18 @@ module.exports = function createSync(deps) {
       source: 'khy-pool',
       updatedAt: now,
     };
-    if (token) next['traeAuth/accessToken'] = token;
-    if (refreshToken) next['traeAuth/refreshToken'] = refreshToken;
-    if (email) next['traeAuth/email'] = email;
-    if (expiresAt) next['traeAuth/expiresAt'] = expiresAt;
+    if (token) {
+      next['traeAuth/accessToken'] = token;
+    }
+    if (refreshToken) {
+      next['traeAuth/refreshToken'] = refreshToken;
+    }
+    if (email) {
+      next['traeAuth/email'] = email;
+    }
+    if (expiresAt) {
+      next['traeAuth/expiresAt'] = expiresAt;
+    }
 
     next.nirvanaAuth = {
       ...(next.nirvanaAuth && typeof next.nirvanaAuth === 'object' ? next.nirvanaAuth : {}),
@@ -131,12 +150,24 @@ module.exports = function createSync(deps) {
       source: 'khy-pool',
       updatedAt: now,
     };
-    if (token) next['nirvanaAuth/accessToken'] = token;
-    if (refreshToken) next['nirvanaAuth/refreshToken'] = refreshToken;
-    if (email) next['nirvanaAuth/email'] = email;
-    if (refreshExpireAt) next['nirvanaAuth/refreshExpireAt'] = refreshExpireAt;
-    if (host) next['nirvanaAuth/host'] = host;
-    if (userJwt) next['nirvanaAuth/userJwt'] = userJwt;
+    if (token) {
+      next['nirvanaAuth/accessToken'] = token;
+    }
+    if (refreshToken) {
+      next['nirvanaAuth/refreshToken'] = refreshToken;
+    }
+    if (email) {
+      next['nirvanaAuth/email'] = email;
+    }
+    if (refreshExpireAt) {
+      next['nirvanaAuth/refreshExpireAt'] = refreshExpireAt;
+    }
+    if (host) {
+      next['nirvanaAuth/host'] = host;
+    }
+    if (userJwt) {
+      next['nirvanaAuth/userJwt'] = userJwt;
+    }
 
     return next;
   }
@@ -158,10 +189,18 @@ module.exports = function createSync(deps) {
       source: 'khy-pool',
       updatedAt: now,
     };
-    if (token) next['windsurfAuth/accessToken'] = token;
-    if (refreshToken) next['windsurfAuth/refreshToken'] = refreshToken;
-    if (email) next['windsurfAuth/email'] = email;
-    if (expiresAt) next['windsurfAuth/expiresAt'] = expiresAt;
+    if (token) {
+      next['windsurfAuth/accessToken'] = token;
+    }
+    if (refreshToken) {
+      next['windsurfAuth/refreshToken'] = refreshToken;
+    }
+    if (email) {
+      next['windsurfAuth/email'] = email;
+    }
+    if (expiresAt) {
+      next['windsurfAuth/expiresAt'] = expiresAt;
+    }
     return next;
   }
 
@@ -180,9 +219,15 @@ module.exports = function createSync(deps) {
       source: 'khy-pool',
       updatedAt: now,
     };
-    if (token) next['cursorAuth/accessToken'] = token;
-    if (email) next['cursorAuth/email'] = email;
-    if (expiresAt) next['cursorAuth/expiresAt'] = expiresAt;
+    if (token) {
+      next['cursorAuth/accessToken'] = token;
+    }
+    if (email) {
+      next['cursorAuth/email'] = email;
+    }
+    if (expiresAt) {
+      next['cursorAuth/expiresAt'] = expiresAt;
+    }
     return next;
   }
 
@@ -203,10 +248,18 @@ module.exports = function createSync(deps) {
       source: 'khy-pool',
       updatedAt: now,
     };
-    if (token) next['warpAuth/accessToken'] = token;
-    if (email) next['warpAuth/email'] = email;
-    if (endpoint) next.endpoint = endpoint;
-    if (expiresAt) next['warpAuth/expiresAt'] = expiresAt;
+    if (token) {
+      next['warpAuth/accessToken'] = token;
+    }
+    if (email) {
+      next['warpAuth/email'] = email;
+    }
+    if (endpoint) {
+      next.endpoint = endpoint;
+    }
+    if (expiresAt) {
+      next['warpAuth/expiresAt'] = expiresAt;
+    }
     return next;
   }
 
@@ -215,7 +268,9 @@ module.exports = function createSync(deps) {
   async function syncActiveAccountToLocal(provider, options = {}) {
     await ensureReady();
     const norm = normalizePoolType(provider);
-    if (!norm) throw new Error('provider is required');
+    if (!norm) {
+      throw new Error('provider is required');
+    }
 
     const active = await getActiveAccount(norm);
     if (!active) {
@@ -250,11 +305,17 @@ module.exports = function createSync(deps) {
         }
 
         let data = _loadJsonIfExists(p);
-        if (norm === 'trae') data = _applyTraeLikeStorageShape(data, active);
-        else if (norm === 'windsurf') data = _applyWindsurfStorageShape(data, active);
-        else if (norm === 'cursor') data = _applyCursorStorageShape(data, active);
-        else if (norm === 'warp') data = _applyWarpStorageShape(data, active);
-        else continue;
+        if (norm === 'trae') {
+          data = _applyTraeLikeStorageShape(data, active);
+        } else if (norm === 'windsurf') {
+          data = _applyWindsurfStorageShape(data, active);
+        } else if (norm === 'cursor') {
+          data = _applyCursorStorageShape(data, active);
+        } else if (norm === 'warp') {
+          data = _applyWarpStorageShape(data, active);
+        } else {
+          continue;
+        }
 
         _writeJson(p, data);
         updated += 1;
@@ -287,14 +348,24 @@ module.exports = function createSync(deps) {
 
     for (const p of providers) {
       if (p === 'cursor') {
-        for (const fp of CURSOR_STORAGE_PATHS) result.push({ provider: p, path: fp, type: 'json' });
-        for (const fp of CURSOR_DB_PATHS) result.push({ provider: p, path: fp, type: 'vscdb' });
+        for (const fp of CURSOR_STORAGE_PATHS) {
+          result.push({ provider: p, path: fp, type: 'json' });
+        }
+        for (const fp of CURSOR_DB_PATHS) {
+          result.push({ provider: p, path: fp, type: 'vscdb' });
+        }
       } else if (p === 'windsurf') {
-        for (const fp of WINDSURF_STORAGE_PATHS) result.push({ provider: p, path: fp, type: 'json' });
+        for (const fp of WINDSURF_STORAGE_PATHS) {
+          result.push({ provider: p, path: fp, type: 'json' });
+        }
       } else if (p === 'trae') {
-        for (const fp of TRAE_STORAGE_PATHS) result.push({ provider: p, path: fp, type: 'json' });
+        for (const fp of TRAE_STORAGE_PATHS) {
+          result.push({ provider: p, path: fp, type: 'json' });
+        }
       } else if (p === 'kiro') {
-        for (const fp of _getKiroTokenCandidatePaths()) result.push({ provider: p, path: fp, type: 'json' });
+        for (const fp of _getKiroTokenCandidatePaths()) {
+          result.push({ provider: p, path: fp, type: 'json' });
+        }
       }
     }
     return result;

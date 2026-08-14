@@ -14,8 +14,8 @@ const path = require('path');
 const HOLDER_STALE_MS = 60 * 60 * 1000; // 1 hour
 
 function _lockPath() {
-  const { getDataDir } = require('../utils/dataHome');
-  return path.join(getDataDir('memory'), '.consolidate-lock');
+  const { getMemoryDataDir } = require('../utils/dataHome');
+  return path.join(getMemoryDataDir(), '.consolidate-lock');
 }
 
 /**
@@ -39,7 +39,9 @@ function _isProcessRunning(pid) {
 function readLastConsolidatedAt() {
   try {
     const lockFile = _lockPath();
-    if (!fs.existsSync(lockFile)) return 0;
+    if (!fs.existsSync(lockFile)) {
+      return 0;
+    }
     return fs.statSync(lockFile).mtimeMs;
   } catch {
     return 0;
@@ -70,7 +72,9 @@ function tryAcquireLock() {
       }
       // Dead holder or stale lock — safe to take over
     }
-  } catch { /* lock file corrupt, take over */ }
+  } catch {
+    /* lock file corrupt, take over */
+  }
 
   // Record prior mtime for rollback
   let priorMtime = 0;
@@ -78,7 +82,9 @@ function tryAcquireLock() {
     if (fs.existsSync(lockFile)) {
       priorMtime = fs.statSync(lockFile).mtimeMs;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Write our PID
   fs.writeFileSync(lockFile, String(process.pid), 'utf-8');
@@ -105,7 +111,9 @@ function releaseLock() {
     // Touch the file to update mtime (marks consolidation time)
     const now = new Date();
     fs.utimesSync(lockFile, now, now);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -123,7 +131,9 @@ function rollbackLock(priorMtime) {
       fs.writeFileSync(lockFile, '', 'utf-8');
       fs.utimesSync(lockFile, t, t);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 module.exports = {

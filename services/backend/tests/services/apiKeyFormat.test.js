@@ -41,9 +41,19 @@ describe('apiKeyFormat', () => {
     );
 
     expect(entries).toEqual([
-      { key: 'sk-1', endpoint: 'https://e1', priority: 20, label: 'main' },
-      { key: 'sk-2', endpoint: 'https://default', priority: 10, label: 'default' },
-      { key: 'sk-3', endpoint: 'https://default', priority: 10, label: 'default' },
+      { key: 'sk-1', endpoint: 'https://e1', priority: 20, label: 'main', proxy: '' },
+      { key: 'sk-2', endpoint: 'https://default', priority: 10, label: 'default', proxy: '' },
+      { key: 'sk-3', endpoint: 'https://default', priority: 10, label: 'default', proxy: '' },
+    ]);
+  });
+
+  test('parseApiKeyEntries excludes group-level proxy from keys and inherits it', () => {
+    // group 级形态：proxy 是元字段，不能被当成 key 入池；应随条目透传继承。
+    const entries = parseApiKeyEntries({
+      agnes: { endpoint: 'https://agnes', proxy: 'http://p:1', dev: 'sk-dev' },
+    });
+    expect(entries).toEqual([
+      { key: 'sk-dev', endpoint: 'https://agnes', priority: 0, label: 'agnes', proxy: 'http://p:1' },
     ]);
   });
 });

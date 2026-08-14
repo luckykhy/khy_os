@@ -46,14 +46,18 @@ const _TYPE_LABEL = Object.freeze({
  */
 function isNoticeEnabled() {
   const raw = process.env.KHY_MEMORY_NOTICE;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !_OFF.has(String(raw).trim().toLowerCase());
 }
 
 /** 从 .md 文件名派生一个精简可读的记忆名(去扩展名;绝不抛)。 */
 function _prettyName(filename) {
   const s = String(filename == null ? '' : filename).trim();
-  if (!s) return '';
+  if (!s) {
+    return '';
+  }
   return s.replace(/\.md$/i, '');
 }
 
@@ -65,12 +69,22 @@ function _prettyName(filename) {
  */
 function formatWriteNotice(result) {
   try {
-    if (!isNoticeEnabled()) return '';
-    if (!result || typeof result !== 'object') return '';
-    if (result.kind !== 'memory') return '';        // 指令提案走别的评审队列,不在此告知
-    if (result.success !== true) return '';
+    if (!isNoticeEnabled()) {
+      return '';
+    }
+    if (!result || typeof result !== 'object') {
+      return '';
+    }
+    if (result.kind !== 'memory') {
+      return '';
+    } // 指令提案走别的评审队列,不在此告知
+    if (result.success !== true) {
+      return '';
+    }
     const name = String(result.name == null ? '' : result.name).trim();
-    if (!name) return '';
+    if (!name) {
+      return '';
+    }
 
     const typeLabel = _TYPE_LABEL[result.type] || '记忆';
     const action = String(result.action == null ? '' : result.action);
@@ -94,19 +108,30 @@ function formatWriteNotice(result) {
  */
 function formatRecallNotice(filenames) {
   try {
-    if (!isNoticeEnabled()) return '';
+    if (!isNoticeEnabled()) {
+      return '';
+    }
     let list = [];
-    if (Array.isArray(filenames)) list = filenames;
-    else if (filenames instanceof Set) list = Array.from(filenames);
-    else if (filenames && typeof filenames[Symbol.iterator] === 'function') list = Array.from(filenames);
-    else return '';
+    if (Array.isArray(filenames)) {
+      list = filenames;
+    } else if (filenames instanceof Set) {
+      list = Array.from(filenames);
+    } else if (filenames && typeof filenames[Symbol.iterator] === 'function') {
+      list = Array.from(filenames);
+    } else {
+      return '';
+    }
 
     const names = [];
     for (const fn of list) {
       const p = _prettyName(fn);
-      if (p) names.push(p);
+      if (p) {
+        names.push(p);
+      }
     }
-    if (names.length === 0) return '';
+    if (names.length === 0) {
+      return '';
+    }
 
     const shown = names.slice(0, _RECALL_NAME_CAP);
     const rest = names.length - shown.length;

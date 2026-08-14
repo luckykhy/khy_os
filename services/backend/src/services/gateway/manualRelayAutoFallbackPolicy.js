@@ -61,14 +61,28 @@ function manualRelayNoAutoFallbackEnabled(env = process.env) {
  */
 function shouldSkipManualRelayInAutoCascade(args = {}, env = process.env) {
   try {
-    if (!manualRelayNoAutoFallbackEnabled(env)) return false;
-    if (!args || !args.isManualFallbackOnly) return false;
-    const key = String(args.adapterKey == null ? '' : args.adapterKey).trim().toLowerCase();
-    if (!key) return false;
-    const preferred = String(args.preferredAdapter == null ? '' : args.preferredAdapter).trim().toLowerCase();
-    const forced = String(args.forceAdapter == null ? '' : args.forceAdapter).trim().toLowerCase();
+    if (!manualRelayNoAutoFallbackEnabled(env)) {
+      return false;
+    }
+    if (!args || !args.isManualFallbackOnly) {
+      return false;
+    }
+    const key = String(args.adapterKey == null ? '' : args.adapterKey)
+      .trim()
+      .toLowerCase();
+    if (!key) {
+      return false;
+    }
+    const preferred = String(args.preferredAdapter == null ? '' : args.preferredAdapter)
+      .trim()
+      .toLowerCase();
+    const forced = String(args.forceAdapter == null ? '' : args.forceAdapter)
+      .trim()
+      .toLowerCase();
     // 用户显式指定该人肉通道 → 放行(定向路由 / 手动中转随时可用)。
-    if (key === preferred || key === forced) return false;
+    if (key === preferred || key === forced) {
+      return false;
+    }
     return true;
   } catch {
     return false;

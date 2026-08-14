@@ -51,15 +51,23 @@ const { RISK_ORDER } = require('../constants/riskOrder');
 // (riskGate → {commandRiskClassifier, tools registry}); gate off → byte-revert to the
 // snake_case-only匹配.
 const SHELL_TOOL_NAMES = new Set([
-  'bash', 'shell', 'shell_command', 'execute_code', 'powershell', 'cmd', 'run_command',
+  'bash',
+  'shell',
+  'shell_command',
+  'execute_code',
+  'powershell',
+  'cmd',
+  'run_command',
 ]);
 // Separator-free variants for camelCase/kebab tool names (KHY_SHELL_TOOL_RISK_MATCH).
 const SHELL_TOOL_NAMES_NORMALIZED = new Set(
-  Array.from(SHELL_TOOL_NAMES, (n) => n.replace(/[\s_-]/g, '')),
+  Array.from(SHELL_TOOL_NAMES, (n) => n.replace(/[\s_-]/g, ''))
 );
 const _SHELL_MATCH_OFF = ['0', 'false', 'off', 'no'];
 function _shellToolRiskMatchEnabled(env = process.env) {
-  const v = String((env && env.KHY_SHELL_TOOL_RISK_MATCH) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_SHELL_TOOL_RISK_MATCH) || '')
+    .trim()
+    .toLowerCase();
   return !_SHELL_MATCH_OFF.includes(v);
 }
 
@@ -71,9 +79,13 @@ function rank(risk) {
 }
 
 function isShellTool(name) {
-  if (!name) return false;
+  if (!name) {
+    return false;
+  }
   const raw = String(name).toLowerCase();
-  if (SHELL_TOOL_NAMES.has(raw)) return true;
+  if (SHELL_TOOL_NAMES.has(raw)) {
+    return true;
+  }
   // Gate on: separator-insensitive match so the camelCase `shellCommand` (and
   // `shell-command`) route to the dynamic shell classifier instead of inheriting the
   // tool's static critical risk. Gate off → byte-revert (snake_case-only, today's bug).
@@ -84,10 +96,14 @@ function isShellTool(name) {
 }
 
 function extractCommand(params) {
-  if (!params || typeof params !== 'object') return '';
+  if (!params || typeof params !== 'object') {
+    return '';
+  }
   for (const key of COMMAND_PARAM_KEYS) {
     const v = params[key];
-    if (typeof v === 'string' && v.trim()) return v;
+    if (typeof v === 'string' && v.trim()) {
+      return v;
+    }
   }
   return '';
 }
@@ -100,9 +116,13 @@ function extractCommand(params) {
  */
 function deriveStepType({ risk, isReadOnly, isDestructive }) {
   // Highest priority: anything irreversible or high-stakes is a human gate.
-  if (isDestructive || rank(risk) >= RISK_ORDER.high) return STEP_TYPES.HUMAN_GATE;
+  if (isDestructive || rank(risk) >= RISK_ORDER.high) {
+    return STEP_TYPES.HUMAN_GATE;
+  }
   // Read-only or trivially-low-risk operations are deterministic enough to run.
-  if (isReadOnly || rank(risk) <= RISK_ORDER.low) return STEP_TYPES.HARDENED;
+  if (isReadOnly || rank(risk) <= RISK_ORDER.low) {
+    return STEP_TYPES.HARDENED;
+  }
   // Everything else needs model judgement within the configured bounds.
   return STEP_TYPES.FLEXIBLE;
 }
@@ -126,10 +146,16 @@ function classifyToolRisk(toolName, params, descriptor) {
     const key = (descriptor && descriptor.resolvedName) || toolName;
     const regTool = registry.get(key);
     if (regTool) {
-      if (typeof regTool.isReadOnly === 'function') isReadOnly = !!regTool.isReadOnly(params);
-      if (typeof regTool.isDestructive === 'function') isDestructive = !!regTool.isDestructive(params);
+      if (typeof regTool.isReadOnly === 'function') {
+        isReadOnly = !!regTool.isReadOnly(params);
+      }
+      if (typeof regTool.isDestructive === 'function') {
+        isDestructive = !!regTool.isDestructive(params);
+      }
     }
-  } catch { /* registry unavailable — rely on static risk only */ }
+  } catch {
+    /* registry unavailable — rely on static risk only */
+  }
 
   return {
     risk: staticRisk,
@@ -164,10 +190,20 @@ function assess(toolName, params = {}, descriptor = null) {
     try {
       const { classifyCommandRisk } = require('./commandRiskClassifier');
       const c = classifyCommandRisk(command);
-      signals = { risk: c.risk, isReadOnly: c.isReadOnly, isDestructive: c.isDestructive, reason: c.reason };
+      signals = {
+        risk: c.risk,
+        isReadOnly: c.isReadOnly,
+        isDestructive: c.isDestructive,
+        reason: c.reason,
+      };
     } catch {
       // Classifier unavailable — fail safe to a human gate for shell.
-      signals = { risk: 'high', isReadOnly: false, isDestructive: false, reason: 'shell classifier unavailable' };
+      signals = {
+        risk: 'high',
+        isReadOnly: false,
+        isDestructive: false,
+        reason: 'shell classifier unavailable',
+      };
     }
   } else {
     source = 'tool';
@@ -216,7 +252,9 @@ function requiresHumanGate(stepType) {
  * @returns {boolean}
  */
 function isUnbypassableGate(assessment) {
-  if (!assessment || assessment.stepType !== STEP_TYPES.HUMAN_GATE) return false;
+  if (!assessment || assessment.stepType !== STEP_TYPES.HUMAN_GATE) {
+    return false;
+  }
   return assessment.riskLevel === 'critical' || assessment.isDestructive === true;
 }
 

@@ -36,10 +36,14 @@ function getTask(taskId) {
 
 function getTaskDetail(taskId, options = {}) {
   const base = getTask(taskId);
-  if (!base.ok) return base;
+  if (!base.ok) {
+    return base;
+  }
 
   const includeAudit = options.include_audit === true || options.includeAudit === true;
-  if (!includeAudit) return _ok({ task: base.task });
+  if (!includeAudit) {
+    return _ok({ task: base.task });
+  }
 
   const audit = runtime.getTaskAudit(base.task.id);
   return _ok({
@@ -54,7 +58,8 @@ function listTasks(filter = {}) {
 
 function _cancelTask(task, options = {}) {
   const taskId = task.id;
-  const reason = String(options.reason || 'cancelled by operator').trim() || 'cancelled by operator';
+  const reason =
+    String(options.reason || 'cancelled by operator').trim() || 'cancelled by operator';
   if (TERMINAL_TASK_STATUSES.has(task.status)) {
     return _ok({
       task,
@@ -113,12 +118,9 @@ function _cancelTask(task, options = {}) {
 function _pauseTask(task) {
   const taskId = task.id;
   if (TERMINAL_TASK_STATUSES.has(task.status)) {
-    return _err(
-      409,
-      'terminal_task',
-      `终态任务 ${taskId} 无法暂停（当前状态 ${task.status}）。`,
-      { task }
-    );
+    return _err(409, 'terminal_task', `终态任务 ${taskId} 无法暂停（当前状态 ${task.status}）。`, {
+      task,
+    });
   }
   if (task.status === 'paused') {
     return _ok({
@@ -150,12 +152,9 @@ function _pauseTask(task) {
 function _resumeTask(task) {
   const taskId = task.id;
   if (TERMINAL_TASK_STATUSES.has(task.status)) {
-    return _err(
-      409,
-      'terminal_task',
-      `终态任务 ${taskId} 无法恢复（当前状态 ${task.status}）。`,
-      { task }
-    );
+    return _err(409, 'terminal_task', `终态任务 ${taskId} 无法恢复（当前状态 ${task.status}）。`, {
+      task,
+    });
   }
   if (task.status === 'running') {
     return _ok({
@@ -190,7 +189,9 @@ function _resumeTask(task) {
 }
 
 function controlTask(taskId, action, options = {}) {
-  const normalizedAction = String(action || '').trim().toLowerCase();
+  const normalizedAction = String(action || '')
+    .trim()
+    .toLowerCase();
   const normalizedId = _normalizedTaskId(taskId);
   if (!normalizedId) {
     return _err(400, 'missing_task_id', 'taskId 为必填项。');
@@ -200,7 +201,9 @@ function controlTask(taskId, action, options = {}) {
   }
 
   const found = getTask(normalizedId);
-  if (!found.ok) return found;
+  if (!found.ok) {
+    return found;
+  }
   const task = found.task;
 
   if (normalizedAction === TASK_CONTROL_ACTIONS.cancel) {

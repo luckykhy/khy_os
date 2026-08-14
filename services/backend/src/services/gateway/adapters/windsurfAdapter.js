@@ -5,38 +5,77 @@
  * access to its built-in AI capabilities.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
-const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
+const path = require('path');
+
 // Model-name SSOT: default IDE model flows from constants/models.js.
 const { PRIMARY: MODELS } = require('../../../constants/models');
-const { attachImagesToOpenAIMessages } = require('./_imageCompat');
-const { resolveMessages } = require('./_messageBuilder');
-const { requestJson } = require('./_proxyTunnel');
+
 const { parseList, dedupe } = require('./_adapterUtils');
-const { consumeSseText } = require('./_sseParser');
-const { anthropicToOpenAI, openAIToolCallsToAnthropic, convertMessagesAnthropicToOpenAI } = require('./_toolSchemaConverter');
-const { createProtocolHandler } = require('./_protocolPipeline');
 const {
-  normalizeToken, isLikelyCredentialToken, isTokenExpired, dedupeTokens,
-  isNativeLoginToken, countsTowardAvailability,
-  extractMessageText, mergeAttempts,
-  readWebReadableAsText, readWebReadableAsSse,
-  normalizeModelId, canonicalModelKey, extractModelIdsFromString,
-  discoverModelsFromSnapshots, buildModelList,
+  normalizeToken,
+  isLikelyCredentialToken,
+  isTokenExpired,
+  dedupeTokens,
+  isNativeLoginToken,
+  countsTowardAvailability,
+  extractMessageText,
+  mergeAttempts,
+  readWebReadableAsText,
+  readWebReadableAsSse,
+  normalizeModelId,
+  canonicalModelKey,
+  extractModelIdsFromString,
+  discoverModelsFromSnapshots,
+  buildModelList,
   createTokenManager,
 } = require('./_ideTokenMixin');
+const { attachImagesToOpenAIMessages } = require('./_imageCompat');
+const { resolveMessages } = require('./_messageBuilder');
+const { createProtocolHandler } = require('./_protocolPipeline');
+const { DEFAULT_TIMEOUT_MS } = require('./_protocolPipeline');
+const { requestJson } = require('./_proxyTunnel');
 const { buildSuccess, buildFailure } = require('./_responseBuilder');
+const { consumeSseText } = require('./_sseParser');
+const {
+  anthropicToOpenAI,
+  openAIToolCallsToAnthropic,
+  convertMessagesAnthropicToOpenAI,
+} = require('./_toolSchemaConverter');
 
 const _openaiHandler = createProtocolHandler({ protocol: 'openai', adapterName: 'windsurf' });
 
 const WINDSURF_STORAGE_PATHS = [
   path.join(os.homedir(), '.config', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'AppData', 'Roaming', 'Windsurf', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Windsurf',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
+  path.join(
+    os.homedir(),
+    'AppData',
+    'Roaming',
+    'Windsurf',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   // Legacy Codeium paths
   path.join(os.homedir(), '.config', 'Codeium', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Codeium', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Codeium',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Codeium', 'User', 'globalStorage', 'storage.json'),
 ];
 
@@ -52,10 +91,13 @@ const KNOWN_MODELS = [
   { id: 'kimi-k2.6', name: 'Kimi K2.6', isDefault: false },
 ];
 
-const { DEFAULT_TIMEOUT_MS } = require('./_protocolPipeline');
+const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
 const TIMEOUT_MS = parseInt(process.env.WINDSURF_TIMEOUT_MS || '', 10) || DEFAULT_TIMEOUT_MS;
 const MODEL_TOKEN_REGEX = /\b[a-zA-Z0-9][a-zA-Z0-9._:-]{2,80}\b/g;
-const MODEL_DISCOVERY_CACHE_MS = Math.max(5000, parseInt(process.env.WINDSURF_MODEL_CACHE_MS || '120000', 10) || 120000);
+const MODEL_DISCOVERY_CACHE_MS = Math.max(
+  5000,
+  parseInt(process.env.WINDSURF_MODEL_CACHE_MS || '120000', 10) || 120000
+);
 const WINDSURF_DEFAULT_MODELS_ENDPOINTS = [
   'https://api.codeium.com/windsurf/v1/models',
   'https://api.codeium.com/v1/models',
@@ -87,10 +129,11 @@ let _sdkLoadError = null;
 let _sdkClient = null;
 let _sdkClientEndpoint = '';
 
-
 function normalizeEndpointBase(raw) {
   const text = String(raw || '').trim();
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
 
   let value = text;
   if (!/^https?:\/\//i.test(value)) {
@@ -108,12 +151,16 @@ function normalizeEndpointBase(raw) {
 
 function normalizeApiEndpoint(raw, type = 'chat') {
   const base = normalizeEndpointBase(raw);
-  if (!base) return '';
+  if (!base) {
+    return '';
+  }
 
   const isChat = type === 'chat';
   const hasChat = /\/chat\/completions$/i.test(base);
   const hasModels = /\/models$/i.test(base);
-  if ((isChat && hasChat) || (!isChat && hasModels)) return base;
+  if ((isChat && hasChat) || (!isChat && hasModels)) {
+    return base;
+  }
 
   const suffix = isChat ? '/chat/completions' : '/models';
   return `${base.replace(/\/+$/, '')}${suffix}`;
@@ -132,11 +179,11 @@ function resolveWindsurfModelsEndpoints(tokenData = null) {
     tokenData?.baseUrl,
     tokenData?.baseURL,
   ];
-  return dedupe([
-    ...envEndpoints,
-    ...tokenEndpoints,
-    ...WINDSURF_DEFAULT_MODELS_ENDPOINTS,
-  ].map(v => normalizeApiEndpoint(v, 'models')).filter(Boolean));
+  return dedupe(
+    [...envEndpoints, ...tokenEndpoints, ...WINDSURF_DEFAULT_MODELS_ENDPOINTS]
+      .map((v) => normalizeApiEndpoint(v, 'models'))
+      .filter(Boolean)
+  );
 }
 
 function resolveWindsurfChatEndpoints(tokenData = null) {
@@ -153,18 +200,22 @@ function resolveWindsurfChatEndpoints(tokenData = null) {
     tokenData?.baseUrl,
     tokenData?.baseURL,
   ];
-  return dedupe([
-    ...envEndpoints,
-    ...tokenEndpoints,
-    ...WINDSURF_DEFAULT_CHAT_ENDPOINTS,
-  ].map(v => normalizeApiEndpoint(v, 'chat')).filter(Boolean));
+  return dedupe(
+    [...envEndpoints, ...tokenEndpoints, ...WINDSURF_DEFAULT_CHAT_ENDPOINTS]
+      .map((v) => normalizeApiEndpoint(v, 'chat'))
+      .filter(Boolean)
+  );
 }
 
 function toRelayEndpointBase(raw) {
   const text = String(raw || '').trim();
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
   const normalized = normalizeEndpointBase(text);
-  if (!normalized) return '';
+  if (!normalized) {
+    return '';
+  }
   return normalized.replace(/\/chat\/completions$/i, '').replace(/\/+$/, '');
 }
 
@@ -179,7 +230,12 @@ function jsonRequest(url, { method = 'GET', headers = {}, body = null, timeout =
     },
     {
       namespace: 'windsurf',
-      envKeys: ['WINDSURF_HTTP_PROXY', 'WINDSURF_HTTPS_PROXY', 'WINDSURF_PROXY', 'WINDSURF_ALL_PROXY'],
+      envKeys: [
+        'WINDSURF_HTTP_PROXY',
+        'WINDSURF_HTTPS_PROXY',
+        'WINDSURF_PROXY',
+        'WINDSURF_ALL_PROXY',
+      ],
       autoEnvKey: 'WINDSURF_AUTO_PROXY',
       portsEnvKey: 'WINDSURF_AUTO_PROXY_PORTS',
     }
@@ -189,24 +245,48 @@ function jsonRequest(url, { method = 'GET', headers = {}, body = null, timeout =
 function isLikelyModelId(id) {
   const normalized = normalizeModelId(id);
   const model = normalized.toLowerCase();
-  if (!model) return false;
-  if (model.length < 3 || model.length > 96) return false;
-  if (model.startsWith('http') || model.includes('@') || model.includes('\\')) return false;
-  if (/[^a-z0-9._:-]/i.test(model)) return false;
-  if (model === 'windsurf-cascade' || model === 'cursor-small') return true;
-  if (!/\d/.test(model)) return false;
-  return /(gpt|claude|o[1-9]|gemini|deepseek|qwen|glm|doubao|llama|mistral|moonshot|yi|ernie|copilot|cursor|codeium|kimi|swe|sonnet|haiku|opus|cascade)/i.test(model);
+  if (!model) {
+    return false;
+  }
+  if (model.length < 3 || model.length > 96) {
+    return false;
+  }
+  if (model.startsWith('http') || model.includes('@') || model.includes('\\')) {
+    return false;
+  }
+  if (/[^a-z0-9._:-]/i.test(model)) {
+    return false;
+  }
+  if (model === 'windsurf-cascade' || model === 'cursor-small') {
+    return true;
+  }
+  if (!/\d/.test(model)) {
+    return false;
+  }
+  return /(gpt|claude|o[1-9]|gemini|deepseek|qwen|glm|doubao|llama|mistral|moonshot|yi|ernie|copilot|cursor|codeium|kimi|swe|sonnet|haiku|opus|cascade)/i.test(
+    model
+  );
 }
 
 function modelDisplayName(id) {
   const normalized = normalizeModelId(id);
   const key = canonicalModelKey(normalized);
-  const known = KNOWN_MODELS.find(m => canonicalModelKey(m.id) === key);
-  if (known?.name) return known.name;
-  if (/^swe[._-]?\d/i.test(normalized)) return normalized.toUpperCase().replace(/^SWE([._-]?)/, 'SWE$1');
-  if (/^kimi/i.test(normalized)) return normalized.replace(/^kimi/i, 'Kimi');
-  if (/^gpt/i.test(normalized)) return normalized.replace(/^gpt/i, 'GPT');
-  if (/^claude/i.test(normalized)) return normalized.replace(/^claude/i, 'Claude');
+  const known = KNOWN_MODELS.find((m) => canonicalModelKey(m.id) === key);
+  if (known?.name) {
+    return known.name;
+  }
+  if (/^swe[._-]?\d/i.test(normalized)) {
+    return normalized.toUpperCase().replace(/^SWE([._-]?)/, 'SWE$1');
+  }
+  if (/^kimi/i.test(normalized)) {
+    return normalized.replace(/^kimi/i, 'Kimi');
+  }
+  if (/^gpt/i.test(normalized)) {
+    return normalized.replace(/^gpt/i, 'GPT');
+  }
+  if (/^claude/i.test(normalized)) {
+    return normalized.replace(/^claude/i, 'Claude');
+  }
   return normalized;
 }
 
@@ -214,10 +294,14 @@ function readWindsurfStorageSnapshots() {
   const snapshots = [];
   for (const p of WINDSURF_STORAGE_PATHS) {
     try {
-      if (!fs.existsSync(p)) continue;
+      if (!fs.existsSync(p)) {
+        continue;
+      }
       const data = JSON.parse(fs.readFileSync(p, 'utf8'));
       snapshots.push({ path: p, data });
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return snapshots;
 }
@@ -235,45 +319,49 @@ function readWindsurfToken() {
   const snapshots = readWindsurfStorageSnapshots();
   for (const snapshot of snapshots) {
     const data = snapshot.data || {};
-    const token = data.windsurfAuth?.accessToken
-      || data['windsurfAuth/accessToken']
-      || data['windsurf.auth']?.accessToken
-      || data['windsurf.auth.accessToken']
-      || data['codeium/accessToken']
-      || data['codeium.auth']?.accessToken
-      || data['codeium.auth.accessToken']
-      || data.accessToken;
+    const token =
+      data.windsurfAuth?.accessToken ||
+      data['windsurfAuth/accessToken'] ||
+      data['windsurf.auth']?.accessToken ||
+      data['windsurf.auth.accessToken'] ||
+      data['codeium/accessToken'] ||
+      data['codeium.auth']?.accessToken ||
+      data['codeium.auth.accessToken'] ||
+      data.accessToken;
     if (isLikelyCredentialToken(token)) {
       const endpoint = normalizeEndpointBase(
-        data.windsurfAuth?.endpoint
-        || data.windsurfAuth?.host
-        || data['windsurf.auth']?.endpoint
-        || data['windsurf.auth']?.host
-        || data['codeium.auth']?.endpoint
-        || data['codeium.auth']?.host
-        || data.endpoint
-        || data.baseUrl
-        || data.baseURL
+        data.windsurfAuth?.endpoint ||
+          data.windsurfAuth?.host ||
+          data['windsurf.auth']?.endpoint ||
+          data['windsurf.auth']?.host ||
+          data['codeium.auth']?.endpoint ||
+          data['codeium.auth']?.host ||
+          data.endpoint ||
+          data.baseUrl ||
+          data.baseURL
       );
       return {
         accessToken: normalizeToken(token),
-        refreshToken: data.windsurfAuth?.refreshToken
-          || data['windsurfAuth/refreshToken']
-          || data['windsurf.auth']?.refreshToken
-          || data['codeium.auth']?.refreshToken
-          || null,
+        refreshToken:
+          data.windsurfAuth?.refreshToken ||
+          data['windsurfAuth/refreshToken'] ||
+          data['windsurf.auth']?.refreshToken ||
+          data['codeium.auth']?.refreshToken ||
+          null,
         source: path.basename(path.dirname(path.dirname(path.dirname(snapshot.path)))),
         path: snapshot.path,
-        expiresAt: data.windsurfAuth?.expiresAt
-          || data['windsurfAuth/expiresAt']
-          || data['windsurf.auth']?.expiresAt
-          || data['codeium.auth']?.expiresAt
-          || null,
+        expiresAt:
+          data.windsurfAuth?.expiresAt ||
+          data['windsurfAuth/expiresAt'] ||
+          data['windsurf.auth']?.expiresAt ||
+          data['codeium.auth']?.expiresAt ||
+          null,
         endpoint,
-        sdkEndpoint: data.windsurfAuth?.sdkEndpoint
-          || data['windsurf.auth']?.sdkEndpoint
-          || data['codeium.auth']?.sdkEndpoint
-          || null,
+        sdkEndpoint:
+          data.windsurfAuth?.sdkEndpoint ||
+          data['windsurf.auth']?.sdkEndpoint ||
+          data['codeium.auth']?.sdkEndpoint ||
+          null,
       };
     }
   }
@@ -290,15 +378,16 @@ const _tokenMgr = createTokenManager({
 async function getTokenCandidates() {
   const localToken = readWindsurfToken();
   const poolToken = await _tokenMgr.getPoolActiveToken();
-  const currentToken = (_token && _token.accessToken) ? _token : null;
+  const currentToken = _token && _token.accessToken ? _token : null;
 
   if (localToken && localToken.accessToken) {
     _tokenMgr.persistObservedToken(localToken);
   }
 
-  const ordered = _tokenMgr.resolveTokenPriority() === 'local-first'
-    ? [localToken, poolToken, currentToken]
-    : [poolToken, localToken, currentToken];
+  const ordered =
+    _tokenMgr.resolveTokenPriority() === 'local-first'
+      ? [localToken, poolToken, currentToken]
+      : [poolToken, localToken, currentToken];
   return dedupeTokens(ordered);
 }
 
@@ -308,14 +397,38 @@ async function selectToken({ allowExpired = false } = {}) {
     return { token: null, fallback: null, candidates: [] };
   }
 
-  const nonExpired = candidates.filter(t => !isTokenExpired(t));
+  const nonExpired = candidates.filter((t) => !isTokenExpired(t));
   const token = nonExpired[0] || (allowExpired ? candidates[0] : null);
   if (!token) {
     return { token: null, fallback: null, candidates };
   }
 
-  const fallback = nonExpired.find(t => t.accessToken !== token.accessToken) || null;
+  const fallback = nonExpired.find((t) => t.accessToken !== token.accessToken) || null;
   return { token, fallback, candidates };
+}
+
+/**
+ * Optional gateway hook: force re-read the Windsurf credential after a 401/403.
+ * Windsurf has no token-exchange endpoint here; the existing recovery path is
+ * a forced re-read of local storage (detect(true)) plus token re-selection
+ * across local/pool candidates (selectToken). Returns the re-acquired token
+ * only when it differs from the one that just failed — otherwise null so the
+ * gateway falls back to pool rotation instead of retrying a known-bad token.
+ */
+async function refreshCredential() {
+  try {
+    const prev = _token ? String(_token.accessToken || '') : '';
+    detect(true);
+    const selected = await selectToken({ allowExpired: false });
+    if (selected.token && selected.token.accessToken) {
+      _token = selected.token;
+      _tokenMgr.persistObservedToken(_token);
+    }
+    const next = _token ? String(_token.accessToken || '') : '';
+    return next && next !== prev ? _token : null;
+  } catch {
+    return null; // fail-soft: gateway falls back to existing rotation
+  }
 }
 
 function parseApiModels(payload) {
@@ -325,26 +438,34 @@ function parseApiModels(payload) {
     .concat(Array.isArray(data.data) ? data.data : [])
     .concat(Array.isArray(data.availableModels) ? data.availableModels : [])
     .concat(Array.isArray(data.result?.models) ? data.result.models : []);
-  const defaultHint = data.defaultModel
-    || data.default
-    || data.defaultModelId
-    || data.result?.defaultModel
-    || data.result?.defaultModelId
-    || null;
+  const defaultHint =
+    data.defaultModel ||
+    data.default ||
+    data.defaultModelId ||
+    data.result?.defaultModel ||
+    data.result?.defaultModelId ||
+    null;
 
   const found = [];
   for (const item of candidates) {
-    if (!item) continue;
+    if (!item) {
+      continue;
+    }
     if (typeof item === 'string') {
       const id = normalizeModelId(item);
-      if (isLikelyModelId(id)) found.push({ id, name: modelDisplayName(id) });
+      if (isLikelyModelId(id)) {
+        found.push({ id, name: modelDisplayName(id) });
+      }
       continue;
     }
     if (typeof item === 'object') {
       const rawId = item.id || item.model || item.modelId || item.name || '';
       const id = normalizeModelId(rawId);
-      if (!isLikelyModelId(id)) continue;
-      const name = normalizeModelId(item.displayName || item.modelName || item.name) || modelDisplayName(id);
+      if (!isLikelyModelId(id)) {
+        continue;
+      }
+      const name =
+        normalizeModelId(item.displayName || item.modelName || item.name) || modelDisplayName(id);
       found.push({ id, name });
     }
   }
@@ -365,8 +486,8 @@ async function fetchModelsFromApi(tokenData, options = {}) {
         method: 'GET',
         timeout: timeoutMs,
         headers: {
-          'Accept': 'application/json',
-          'Authorization': authHeader,
+          Accept: 'application/json',
+          Authorization: authHeader,
           'x-api-key': tokenData.accessToken,
         },
       });
@@ -380,15 +501,21 @@ async function fetchModelsFromApi(tokenData, options = {}) {
         continue;
       }
       const parsed = parseApiModels(res.data || {});
-      if (parsed.models.length > 0) return { ...parsed, endpoint };
+      if (parsed.models.length > 0) {
+        return { ...parsed, endpoint };
+      }
       lastErr = new Error(`models endpoint ${endpoint} returned empty model list`);
     } catch (err) {
-      if (err && err.code === 'AUTH') throw err;
+      if (err && err.code === 'AUTH') {
+        throw err;
+      }
       lastErr = err instanceof Error ? err : new Error(String(err || 'unknown models error'));
     }
   }
 
-  if (lastErr) throw lastErr;
+  if (lastErr) {
+    throw lastErr;
+  }
   throw new Error('models endpoint unavailable');
 }
 
@@ -397,12 +524,16 @@ async function fetchModelsFromApi(tokenData, options = {}) {
 // installed AND KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS is set. `_token` is still
 // kept for routing/generate regardless.
 function _computeAvailable(token) {
-  if (isNativeLoginToken(token)) return true;
+  if (isNativeLoginToken(token)) {
+    return true;
+  }
   return !!_installPath && countsTowardAvailability(token);
 }
 
 function detect(forceRefresh = false) {
-  if (_available !== null && !forceRefresh) return _available;
+  if (_available !== null && !forceRefresh) {
+    return _available;
+  }
 
   const localToken = readWindsurfToken();
   if (localToken) {
@@ -413,7 +544,9 @@ function detect(forceRefresh = false) {
   }
   _installPath = detectWindsurfInstallation();
   _available = _computeAvailable(_token);
-  if (!_available) _models = [];
+  if (!_available) {
+    _models = [];
+  }
   return _available;
 }
 
@@ -432,7 +565,7 @@ async function listModels() {
   }
 
   // Return cached list to reduce repeated endpoint pressure in menu refresh loops.
-  if (_models.length > 0 && (Date.now() - _modelsFetchedAt) < MODEL_DISCOVERY_CACHE_MS) {
+  if (_models.length > 0 && Date.now() - _modelsFetchedAt < MODEL_DISCOVERY_CACHE_MS) {
     _lastDiscoveryMeta = {
       ..._lastDiscoveryMeta,
       at: _lastDiscoveryMeta.at || Date.now(),
@@ -452,7 +585,7 @@ async function listModels() {
   if (_token && _token.accessToken && !isTokenExpired(_token)) {
     try {
       const api = await fetchModelsFromApi(_token);
-      apiModels = (api.models || []).map(m => m.id);
+      apiModels = (api.models || []).map((m) => m.id);
       apiDefault = api.defaultModelId || null;
       officialHit = apiModels.length > 0;
       officialEndpoint = api.endpoint || resolveWindsurfModelsEndpoints(_token)[0] || '';
@@ -466,7 +599,7 @@ async function listModels() {
             _token = fallback;
             _tokenMgr.persistObservedToken(_token);
             const api = await fetchModelsFromApi(_token);
-            apiModels = (api.models || []).map(m => m.id);
+            apiModels = (api.models || []).map((m) => m.id);
             apiDefault = api.defaultModelId || null;
             officialHit = apiModels.length > 0;
             officialEndpoint = api.endpoint || resolveWindsurfModelsEndpoints(_token)[0] || '';
@@ -520,7 +653,7 @@ async function listModels() {
       localModelIds,
     }
   );
-  _models = merged.map(m => ({
+  _models = merged.map((m) => ({
     ...m,
     provider: 'windsurf',
     description: '',
@@ -548,10 +681,14 @@ async function detectAsync(forceRefresh = false) {
     ok = true;
     _tokenMgr.persistObservedToken(_token);
   }
-  if (!ok) return false;
+  if (!ok) {
+    return false;
+  }
   // Optional async validation to avoid false "available" when token expired/revoked.
   const validate = String(process.env.WINDSURF_VALIDATE_TOKEN || 'true').toLowerCase() !== 'false';
-  if (!validate || !_token || !_token.accessToken) return ok;
+  if (!validate || !_token || !_token.accessToken) {
+    return ok;
+  }
   if (isTokenExpired(_token)) {
     _available = false;
     return false;
@@ -562,7 +699,11 @@ async function detectAsync(forceRefresh = false) {
     return true;
   } catch (err) {
     if (err && err.code === 'AUTH') {
-      if (selected.fallback && selected.fallback.accessToken && !isTokenExpired(selected.fallback)) {
+      if (
+        selected.fallback &&
+        selected.fallback.accessToken &&
+        !isTokenExpired(selected.fallback)
+      ) {
         try {
           _token = selected.fallback;
           _tokenMgr.persistObservedToken(_token);
@@ -589,12 +730,16 @@ async function detectAsync(forceRefresh = false) {
 // buildWindsurfMessages replaced by shared _messageBuilder (Phase 5B)
 function buildWindsurfMessages(prompt, options = {}) {
   let _flattenWS;
-  try { _flattenWS = require('../../../services/contentBlockUtils').flattenContent; } catch { _flattenWS = (c) => String(c || ''); }
+  try {
+    _flattenWS = require('../../../services/contentBlockUtils').flattenContent;
+  } catch {
+    _flattenWS = (c) => String(c || '');
+  }
 
   // Flatten content blocks before resolving (Windsurf doesn't support content arrays)
   const flatOpts = { ...options };
   if (Array.isArray(flatOpts.messages)) {
-    flatOpts.messages = flatOpts.messages.map(m => ({
+    flatOpts.messages = flatOpts.messages.map((m) => ({
       ...m,
       content: typeof m.content === 'string' ? m.content : _flattenWS(m.content),
     }));
@@ -607,25 +752,39 @@ function buildWindsurfMessages(prompt, options = {}) {
 }
 
 function resolveWindsurfSdkMode() {
-  const mode = String(process.env.WINDSURF_SDK_MODE || 'auto').trim().toLowerCase();
-  if (mode === 'off' || mode === 'disable' || mode === 'disabled') return 'off';
-  if (mode === 'force' || mode === 'only') return 'force';
+  const mode = String(process.env.WINDSURF_SDK_MODE || 'auto')
+    .trim()
+    .toLowerCase();
+  if (mode === 'off' || mode === 'disable' || mode === 'disabled') {
+    return 'off';
+  }
+  if (mode === 'force' || mode === 'only') {
+    return 'force';
+  }
   return 'auto';
 }
 
 function resolveWindsurfInstallPaths() {
   const out = [];
   const envInstall = String(process.env.WINDSURF_INSTALL_PATH || '').trim();
-  if (envInstall) out.push(envInstall);
-  if (_installPath) out.push(_installPath);
+  if (envInstall) {
+    out.push(envInstall);
+  }
+  if (_installPath) {
+    out.push(_installPath);
+  }
   const detected = detectWindsurfInstallation();
-  if (detected) out.push(detected);
+  if (detected) {
+    out.push(detected);
+  }
   return dedupe(out);
 }
 
 function resolveWindsurfSdkModuleCandidates() {
   const out = [];
-  for (const item of parseList(process.env.WINDSURF_SDK_MODULE_PATHS || process.env.WINDSURF_SDK_MODULE_PATH || '')) {
+  for (const item of parseList(
+    process.env.WINDSURF_SDK_MODULE_PATHS || process.env.WINDSURF_SDK_MODULE_PATH || ''
+  )) {
     out.push(item);
   }
   out.push('@codeium/windsurf-network-client');
@@ -652,7 +811,9 @@ function resolveWindsurfSdkModuleCandidates() {
 }
 
 function normalizeSdkModule(rawModule) {
-  if (!rawModule) return null;
+  if (!rawModule) {
+    return null;
+  }
   if (rawModule.default && typeof rawModule.default === 'object') {
     return { ...rawModule.default, ...rawModule };
   }
@@ -660,7 +821,9 @@ function normalizeSdkModule(rawModule) {
 }
 
 function loadWindsurfSdkModule() {
-  if (_sdkLoadTried) return _sdkModule;
+  if (_sdkLoadTried) {
+    return _sdkModule;
+  }
   _sdkLoadTried = true;
 
   const errors = [];
@@ -672,11 +835,12 @@ function loadWindsurfSdkModule() {
         continue;
       }
 
-      const hasFetchLike = typeof loaded.fetch === 'function'
-        || typeof loaded.request === 'function'
-        || typeof loaded.createClient === 'function'
-        || typeof loaded.ZmqClient === 'function'
-        || typeof loaded.WindsurfClient === 'function';
+      const hasFetchLike =
+        typeof loaded.fetch === 'function' ||
+        typeof loaded.request === 'function' ||
+        typeof loaded.createClient === 'function' ||
+        typeof loaded.ZmqClient === 'function' ||
+        typeof loaded.WindsurfClient === 'function';
       if (!hasFetchLike) {
         errors.push(`unsupported exports: ${candidate}`);
         continue;
@@ -707,10 +871,10 @@ function resolveWindsurfSdkEndpoints(tokenData = null) {
     endpoints.push('ipc:///tmp/windsurf.sock');
   }
 
-  const resolved = dedupe(endpoints.map(v => String(v || '').trim()).filter(Boolean));
+  const resolved = dedupe(endpoints.map((v) => String(v || '').trim()).filter(Boolean));
 
   if (process.platform === 'win32') {
-    return resolved.filter(ep => !ep.startsWith('ipc://'));
+    return resolved.filter((ep) => !ep.startsWith('ipc://'));
   }
 
   return resolved;
@@ -727,7 +891,9 @@ function createWindsurfSdkClientForEndpoint(sdk, endpoint) {
   for (const create of creators) {
     try {
       const client = create();
-      if (client) return client;
+      if (client) {
+        return client;
+      }
     } catch {
       // try next creator
     }
@@ -737,7 +903,9 @@ function createWindsurfSdkClientForEndpoint(sdk, endpoint) {
 
 function getWindsurfSdkClient(tokenData = null) {
   const sdk = loadWindsurfSdkModule();
-  if (!sdk) return null;
+  if (!sdk) {
+    return null;
+  }
 
   const endpoints = resolveWindsurfSdkEndpoints(tokenData);
   if (_sdkClient && _sdkClientEndpoint && endpoints.includes(_sdkClientEndpoint)) {
@@ -746,7 +914,9 @@ function getWindsurfSdkClient(tokenData = null) {
 
   for (const endpoint of endpoints) {
     const client = createWindsurfSdkClientForEndpoint(sdk, endpoint);
-    if (!client) continue;
+    if (!client) {
+      continue;
+    }
     _sdkClient = client;
     _sdkClientEndpoint = endpoint;
     return { sdk, client, endpoint };
@@ -759,10 +929,16 @@ function getWindsurfSdkClient(tokenData = null) {
 }
 
 function getHeaderValue(headers, key) {
-  if (!headers) return '';
-  if (typeof headers.get === 'function') return String(headers.get(key) || headers.get(String(key || '').toLowerCase()) || '');
+  if (!headers) {
+    return '';
+  }
+  if (typeof headers.get === 'function') {
+    return String(headers.get(key) || headers.get(String(key || '').toLowerCase()) || '');
+  }
   const direct = headers[key] ?? headers[String(key || '').toLowerCase()];
-  if (Array.isArray(direct)) return direct.join(', ');
+  if (Array.isArray(direct)) {
+    return direct.join(', ');
+  }
   return String(direct || '');
 }
 
@@ -771,15 +947,29 @@ function getResponseStatusCode(res) {
 }
 
 async function readSdkResponseText(res) {
-  if (!res) return '';
+  if (!res) {
+    return '';
+  }
   if (typeof res.text === 'function') {
-    try { return await res.text(); } catch { /* ignore */ }
+    try {
+      return await res.text();
+    } catch {
+      /* ignore */
+    }
   }
   if (res.body) {
-    try { return await readWebReadableAsText(res.body); } catch { /* ignore */ }
+    try {
+      return await readWebReadableAsText(res.body);
+    } catch {
+      /* ignore */
+    }
   }
-  if (typeof res.data === 'string') return res.data;
-  if (Buffer.isBuffer(res.data)) return res.data.toString('utf8');
+  if (typeof res.data === 'string') {
+    return res.data;
+  }
+  if (Buffer.isBuffer(res.data)) {
+    return res.data.toString('utf8');
+  }
   return '';
 }
 
@@ -806,12 +996,16 @@ async function trySdkFetch(sdk, client, url, requestOptions) {
   for (const run of attempts) {
     try {
       const res = await run();
-      if (res) return res;
+      if (res) {
+        return res;
+      }
     } catch (err) {
       lastErr = err;
     }
   }
-  if (lastErr) throw lastErr;
+  if (lastErr) {
+    throw lastErr;
+  }
   throw new Error('windsurf sdk does not expose a usable fetch interface');
 }
 
@@ -820,17 +1014,28 @@ async function callWindsurfBySdk(tokenData, prompt, model, options = {}) {
   if (!sdkCtx) {
     return buildFailure(
       _sdkLoadError ? `Windsurf SDK unavailable: ${_sdkLoadError}` : 'Windsurf SDK unavailable',
-      { adapter: 'windsurf', provider: 'Windsurf', model, errorType: 'unavailable', attempts: [{ provider: 'Windsurf(SDK)', success: false, error: 'sdk_unavailable' }] }
+      {
+        adapter: 'windsurf',
+        provider: 'Windsurf',
+        model,
+        errorType: 'unavailable',
+        attempts: [{ provider: 'Windsurf(SDK)', success: false, error: 'sdk_unavailable' }],
+      }
     );
   }
 
   const { sdk, client, endpoint: sdkEndpoint } = sdkCtx;
   const openaiTools = anthropicToOpenAI(options.tools);
-  const useStream = !openaiTools && (options.stream === true || typeof options.onChunk === 'function');
+  const useStream =
+    !openaiTools && (options.stream === true || typeof options.onChunk === 'function');
   let messages = buildWindsurfMessages(prompt, options);
-  if (openaiTools) messages = convertMessagesAnthropicToOpenAI(messages, true);
+  if (openaiTools) {
+    messages = convertMessagesAnthropicToOpenAI(messages, true);
+  }
   const payload = { model, messages, stream: useStream };
-  if (openaiTools) payload.tools = openaiTools;
+  if (openaiTools) {
+    payload.tools = openaiTools;
+  }
 
   const attempts = [];
   for (const endpoint of resolveWindsurfChatEndpoints(tokenData)) {
@@ -839,7 +1044,7 @@ async function callWindsurfBySdk(tokenData, prompt, model, options = {}) {
         method: 'POST',
         headers: sanitizeOutgoingHeaders({
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tokenData.accessToken}`,
+          Authorization: `Bearer ${tokenData.accessToken}`,
           'x-api-key': tokenData.accessToken,
         }),
         body: JSON.stringify(payload),
@@ -847,10 +1052,20 @@ async function callWindsurfBySdk(tokenData, prompt, model, options = {}) {
 
       const statusCode = getResponseStatusCode(res);
       if (statusCode === 401 || statusCode === 403) {
-        return buildFailure(
-          `Windsurf SDK auth failed (${statusCode})`,
-          { adapter: 'windsurf', provider: 'Windsurf', errorType: 'auth', statusCode, attempts: mergeAttempts(attempts, [{ provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`, success: false, error: `auth failed (${statusCode})`, statusCode }]) }
-        );
+        return buildFailure(`Windsurf SDK auth failed (${statusCode})`, {
+          adapter: 'windsurf',
+          provider: 'Windsurf',
+          errorType: 'auth',
+          statusCode,
+          attempts: mergeAttempts(attempts, [
+            {
+              provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`,
+              success: false,
+              error: `auth failed (${statusCode})`,
+              statusCode,
+            },
+          ]),
+        });
       }
 
       const contentType = String(getHeaderValue(res.headers, 'content-type') || '').toLowerCase();
@@ -864,26 +1079,43 @@ async function callWindsurfBySdk(tokenData, prompt, model, options = {}) {
         }
         if (content) {
           return buildSuccess(content, {
-            adapter: 'windsurf', provider: `Windsurf SDK (${model})`, model,
-            attempts: mergeAttempts(attempts, [{ provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`, success: true }]),
+            adapter: 'windsurf',
+            provider: `Windsurf SDK (${model})`,
+            model,
+            attempts: mergeAttempts(attempts, [
+              { provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`, success: true },
+            ]),
           });
         }
-        attempts.push({ provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`, success: false, error: `empty stream from ${endpoint}` });
+        attempts.push({
+          provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`,
+          success: false,
+          error: `empty stream from ${endpoint}`,
+        });
         continue;
       }
 
       const bodyText = await readSdkResponseText(res);
       let json = null;
-      try { json = JSON.parse(bodyText); } catch { json = null; }
+      try {
+        json = JSON.parse(bodyText);
+      } catch {
+        json = null;
+      }
       const text = extractMessageText(json || {}).trim();
       const sdkChoice = json?.choices?.[0];
       const sdkToolUseBlocks = sdkChoice ? openAIToolCallsToAnthropic(sdkChoice) : [];
       if (text || sdkToolUseBlocks.length > 0) {
         return buildSuccess(text, {
-          adapter: 'windsurf', provider: `Windsurf SDK (${model})`, model,
+          adapter: 'windsurf',
+          provider: `Windsurf SDK (${model})`,
+          model,
           toolUseBlocks: sdkToolUseBlocks,
-          stopReason: sdkToolUseBlocks.length > 0 ? undefined : (sdkChoice?.finish_reason || undefined),
-          attempts: mergeAttempts(attempts, [{ provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`, success: true }]),
+          stopReason:
+            sdkToolUseBlocks.length > 0 ? undefined : sdkChoice?.finish_reason || undefined,
+          attempts: mergeAttempts(attempts, [
+            { provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`, success: true },
+          ]),
         });
       }
 
@@ -894,14 +1126,20 @@ async function callWindsurfBySdk(tokenData, prompt, model, options = {}) {
         statusCode,
       });
     } catch (err) {
-      attempts.push({ provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`, success: false, error: err?.message || String(err) });
+      attempts.push({
+        provider: `Windsurf(SDK:${sdkEndpoint || 'default'})`,
+        success: false,
+        error: err?.message || String(err),
+      });
     }
   }
 
-  return buildFailure(
-    attempts[attempts.length - 1]?.error || 'Windsurf SDK request failed',
-    { adapter: 'windsurf', provider: 'Windsurf', errorType: 'network', attempts }
-  );
+  return buildFailure(attempts[attempts.length - 1]?.error || 'Windsurf SDK request failed', {
+    adapter: 'windsurf',
+    provider: 'Windsurf',
+    errorType: 'network',
+    attempts,
+  });
 }
 
 function callWindsurfByHttp(tokenData, prompt, model, options = {}) {
@@ -911,10 +1149,14 @@ function callWindsurfByHttp(tokenData, prompt, model, options = {}) {
 
   // Pre-flatten content blocks (Windsurf doesn't support content arrays)
   let _flattenWS;
-  try { _flattenWS = require('../../../services/contentBlockUtils').flattenContent; } catch { _flattenWS = (c) => String(c || ''); }
+  try {
+    _flattenWS = require('../../../services/contentBlockUtils').flattenContent;
+  } catch {
+    _flattenWS = (c) => String(c || '');
+  }
   const flatOpts = { ...options, model, stream: useStream };
   if (Array.isArray(flatOpts.messages)) {
-    flatOpts.messages = flatOpts.messages.map(m => ({
+    flatOpts.messages = flatOpts.messages.map((m) => ({
       ...m,
       content: typeof m.content === 'string' ? m.content : _flattenWS(m.content),
     }));
@@ -926,10 +1168,14 @@ function callWindsurfByHttp(tokenData, prompt, model, options = {}) {
 
   const runOne = (index) => {
     if (index >= endpoints.length) {
-      return Promise.resolve(buildFailure(
-        attempts[attempts.length - 1]?.error || 'Windsurf HTTP request failed',
-        { adapter: 'windsurf', provider: 'Windsurf', errorType: 'network', attempts }
-      ));
+      return Promise.resolve(
+        buildFailure(attempts[attempts.length - 1]?.error || 'Windsurf HTTP request failed', {
+          adapter: 'windsurf',
+          provider: 'Windsurf',
+          errorType: 'network',
+          attempts,
+        })
+      );
     }
 
     const endpoint = endpoints[index];
@@ -938,55 +1184,81 @@ function callWindsurfByHttp(tokenData, prompt, model, options = {}) {
       timeout: TIMEOUT_MS,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokenData.accessToken}`,
+        Authorization: `Bearer ${tokenData.accessToken}`,
         'x-api-key': tokenData.accessToken,
       },
       body: payload,
-    }).then(async (res) => {
-      const statusCode = Number(res.status || 0);
-      if (statusCode === 401 || statusCode === 403) {
-        return buildFailure(
-          `Windsurf auth failed (${statusCode})`,
-          { adapter: 'windsurf', provider: 'Windsurf', errorType: 'auth', statusCode, attempts: mergeAttempts(attempts, [{ provider: 'Windsurf(HTTP)', success: false, error: `auth failed (${statusCode})`, statusCode }]) }
-        );
-      }
-      if (statusCode < 200 || statusCode >= 300) {
-        attempts.push({ provider: 'Windsurf(HTTP)', success: false, error: `HTTP ${statusCode}`, statusCode });
-        return runOne(index + 1);
-      }
+    })
+      .then(async (res) => {
+        const statusCode = Number(res.status || 0);
+        if (statusCode === 401 || statusCode === 403) {
+          return buildFailure(`Windsurf auth failed (${statusCode})`, {
+            adapter: 'windsurf',
+            provider: 'Windsurf',
+            errorType: 'auth',
+            statusCode,
+            attempts: mergeAttempts(attempts, [
+              {
+                provider: 'Windsurf(HTTP)',
+                success: false,
+                error: `auth failed (${statusCode})`,
+                statusCode,
+              },
+            ]),
+          });
+        }
+        if (statusCode < 200 || statusCode >= 300) {
+          attempts.push({
+            provider: 'Windsurf(HTTP)',
+            success: false,
+            error: `HTTP ${statusCode}`,
+            statusCode,
+          });
+          return runOne(index + 1);
+        }
 
-      const contentType = String(res.headers?.['content-type'] || '').toLowerCase();
-      const streamLike = useStream || contentType.includes('text/event-stream');
-      const dataText = String(res.raw || '');
+        const contentType = String(res.headers?.['content-type'] || '').toLowerCase();
+        const streamLike = useStream || contentType.includes('text/event-stream');
+        const dataText = String(res.raw || '');
 
-      if (streamLike) {
-        const streamedText = consumeSseText(dataText, options.onChunk).trim();
-        if (streamedText) {
-          return buildSuccess(streamedText, {
-            adapter: 'windsurf', provider: `Windsurf (${model})`, model,
+        if (streamLike) {
+          const streamedText = consumeSseText(dataText, options.onChunk).trim();
+          if (streamedText) {
+            return buildSuccess(streamedText, {
+              adapter: 'windsurf',
+              provider: `Windsurf (${model})`,
+              model,
+              attempts: mergeAttempts(attempts, [{ provider: 'Windsurf(HTTP)', success: true }]),
+            });
+          }
+        }
+
+        const json = res.data || {};
+        const parsed = _openaiHandler.parseJsonResponse(json);
+        if (parsed.content || parsed.toolUseBlocks.length > 0) {
+          return buildSuccess(parsed.content, {
+            adapter: 'windsurf',
+            provider: `Windsurf (${model})`,
+            model: parsed.model || model,
+            toolUseBlocks: parsed.toolUseBlocks,
+            stopReason:
+              parsed.toolUseBlocks.length > 0 ? undefined : parsed.stopReason || undefined,
             attempts: mergeAttempts(attempts, [{ provider: 'Windsurf(HTTP)', success: true }]),
           });
         }
-      }
 
-      const json = res.data || {};
-      const parsed = _openaiHandler.parseJsonResponse(json);
-      if (parsed.content || parsed.toolUseBlocks.length > 0) {
-        return buildSuccess(parsed.content, {
-          adapter: 'windsurf', provider: `Windsurf (${model})`, model: parsed.model || model,
-          toolUseBlocks: parsed.toolUseBlocks,
-          stopReason: parsed.toolUseBlocks.length > 0 ? undefined : (parsed.stopReason || undefined),
-          attempts: mergeAttempts(attempts, [{ provider: 'Windsurf(HTTP)', success: true }]),
+        const errorText = json.error?.message || `invalid response (${statusCode})`;
+        attempts.push({ provider: 'Windsurf(HTTP)', success: false, error: errorText, statusCode });
+        return runOne(index + 1);
+      })
+      .catch(async (err) => {
+        attempts.push({
+          provider: 'Windsurf(HTTP)',
+          success: false,
+          error: err?.message || String(err),
         });
-      }
-
-      const errorText = json.error?.message || `invalid response (${statusCode})`;
-      attempts.push({ provider: 'Windsurf(HTTP)', success: false, error: errorText, statusCode });
-      return runOne(index + 1);
-    }).catch(async (err) => {
-      attempts.push({ provider: 'Windsurf(HTTP)', success: false, error: err?.message || String(err) });
-      return runOne(index + 1);
-    });
+        return runOne(index + 1);
+      });
   };
 
   return runOne(0);
@@ -1001,14 +1273,17 @@ async function generate(prompt, options = {}) {
   }
   if (!_token || !_token.accessToken) {
     return buildFailure('Windsurf token not found', {
-      adapter: 'windsurf', provider: 'Windsurf',
+      adapter: 'windsurf',
+      provider: 'Windsurf',
       attempts: [{ provider: 'Windsurf', success: false, error: 'No token' }],
     });
   }
 
   if (isTokenExpired(_token)) {
     return buildFailure('Windsurf token expired — please re-login in Windsurf IDE', {
-      adapter: 'windsurf', provider: 'Windsurf', errorType: 'auth',
+      adapter: 'windsurf',
+      provider: 'Windsurf',
+      errorType: 'auth',
       attempts: [{ provider: 'Windsurf', success: false, error: 'token expired' }],
     });
   }
@@ -1023,21 +1298,32 @@ async function generate(prompt, options = {}) {
     };
   }
 
-  const defaultModel = (_models.find(m => m.isDefault) || _models[0] || {}).id || MODELS.ide;
+  const defaultModel = (_models.find((m) => m.isDefault) || _models[0] || {}).id || MODELS.ide;
   const model = options.model || defaultModel;
 
   const sdkMode = resolveWindsurfSdkMode();
   let sdkResult = null;
   if (sdkMode !== 'off') {
     sdkResult = await callWindsurfBySdk(_token, prompt, model, options);
-    if (sdkResult.success) return sdkResult;
-    if (sdkMode === 'force') return sdkResult;
+    if (sdkResult.success) {
+      return sdkResult;
+    }
+    if (sdkMode === 'force') {
+      return sdkResult;
+    }
   }
 
-  let result = await callWindsurfByHttp(_token, prompt, model, options);
-  if (result.success) return result;
+  const result = await callWindsurfByHttp(_token, prompt, model, options);
+  if (result.success) {
+    return result;
+  }
 
-  if (result.errorType === 'auth' && selected.fallback && selected.fallback.accessToken && !isTokenExpired(selected.fallback)) {
+  if (
+    result.errorType === 'auth' &&
+    selected.fallback &&
+    selected.fallback.accessToken &&
+    !isTokenExpired(selected.fallback)
+  ) {
     _token = selected.fallback;
     _tokenMgr.persistObservedToken(_token);
     const retry = await callWindsurfByHttp(_token, prompt, model, options);
@@ -1079,7 +1365,7 @@ function getStatus() {
     sdk: {
       available: !!sdk,
       endpoint: _sdkClientEndpoint || '',
-      error: sdk ? '' : (_sdkLoadError || ''),
+      error: sdk ? '' : _sdkLoadError || '',
       mode: resolveWindsurfSdkMode(),
     },
     officialModels: {
@@ -1144,29 +1430,35 @@ async function getRelayProfile(options = {}) {
 
   const models = await listModels();
   const modelIds = (Array.isArray(models) ? models : [])
-    .map(m => normalizeModelId(m?.id || ''))
+    .map((m) => normalizeModelId(m?.id || ''))
     .filter(Boolean);
   if (modelIds.length === 0) {
     throw new Error('No Windsurf models discovered from current account.');
   }
 
-  const defaultModel = normalizeModelId(
-    options.defaultModel
-    || options.model
-    || (models.find(m => m && m.isDefault) || {}).id
-    || modelIds[0]
-  ) || modelIds[0];
+  const defaultModel =
+    normalizeModelId(
+      options.defaultModel ||
+        options.model ||
+        (models.find((m) => m && m.isDefault) || {}).id ||
+        modelIds[0]
+    ) || modelIds[0];
 
-  const endpointOverride = toRelayEndpointBase(options.endpoint || options.baseUrl || options.base || '');
+  const endpointOverride = toRelayEndpointBase(
+    options.endpoint || options.baseUrl || options.base || ''
+  );
   const endpointFromToken = toRelayEndpointBase(_token.endpoint || '');
   const endpointFromChat = toRelayEndpointBase(resolveWindsurfChatEndpoints(_token)[0] || '');
-  const endpoint = endpointOverride
-    || endpointFromToken
-    || endpointFromChat
-    || 'https://api.codeium.com/windsurf/v1';
+  const endpoint =
+    endpointOverride ||
+    endpointFromToken ||
+    endpointFromChat ||
+    'https://api.codeium.com/windsurf/v1';
 
   const modelMap = {};
-  for (const id of modelIds) modelMap[id] = id;
+  for (const id of modelIds) {
+    modelMap[id] = id;
+  }
 
   return {
     id: String(options.id || 'windsurf-auto').trim() || 'windsurf-auto',
@@ -1182,4 +1474,13 @@ async function getRelayProfile(options = {}) {
   };
 }
 
-module.exports = { detect, detectAsync, listModels, generate, getStatus, destroy, getRelayProfile };
+module.exports = {
+  detect,
+  detectAsync,
+  listModels,
+  generate,
+  getStatus,
+  destroy,
+  getRelayProfile,
+  refreshCredential,
+};

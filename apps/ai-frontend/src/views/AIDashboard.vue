@@ -18,11 +18,13 @@
         <el-card class="metric-card metric-card--blue" shadow="hover">
           <div class="metric-row">
             <div class="metric-icon metric-icon--blue">
-              <el-icon><Connection /></el-icon>
+              <KhyIcon kind="connection" size="md" />
             </div>
             <div class="metric-body">
               <div class="metric-title">适配器状态</div>
-              <div class="metric-value">{{ adapterAvailableCount }}<span class="metric-unit">/{{ adapterTotal }}</span></div>
+              <div class="metric-value">
+                {{ adapterAvailableCount }}<span class="metric-unit">/{{ adapterTotal }}</span>
+              </div>
               <div class="metric-sub">可用 / 总数</div>
             </div>
           </div>
@@ -32,7 +34,7 @@
         <el-card class="metric-card metric-card--amber" shadow="hover">
           <div class="metric-row">
             <div class="metric-icon metric-icon--amber">
-              <el-icon><Key /></el-icon>
+              <KhyIcon kind="key" size="md" />
             </div>
             <div class="metric-body">
               <div class="metric-title">密钥池</div>
@@ -46,11 +48,13 @@
         <el-card class="metric-card metric-card--green" shadow="hover">
           <div class="metric-row">
             <div class="metric-icon metric-icon--green">
-              <el-icon><User /></el-icon>
+              <KhyIcon kind="user" size="md" />
             </div>
             <div class="metric-body">
               <div class="metric-title">账号池</div>
-              <div class="metric-value">{{ activeAccountCount }}<span class="metric-unit">/{{ totalAccountCount }}</span></div>
+              <div class="metric-value">
+                {{ activeAccountCount }}<span class="metric-unit">/{{ totalAccountCount }}</span>
+              </div>
               <div class="metric-sub">可用 / 总账号</div>
             </div>
           </div>
@@ -60,7 +64,7 @@
         <el-card class="metric-card metric-card--purple" shadow="hover">
           <div class="metric-row">
             <div class="metric-icon metric-icon--purple">
-              <el-icon><Ticket /></el-icon>
+              <KhyIcon kind="coins" size="md" />
             </div>
             <div class="metric-body">
               <div class="metric-title">客户与令牌</div>
@@ -74,7 +78,7 @@
         <el-card class="metric-card metric-card--cyan" shadow="hover">
           <div class="metric-row">
             <div class="metric-icon metric-icon--cyan">
-              <el-icon><DataAnalysis /></el-icon>
+              <KhyIcon kind="data" size="md" />
             </div>
             <div class="metric-body">
               <div class="metric-title">请求总数</div>
@@ -88,7 +92,7 @@
         <el-card class="metric-card metric-card--rose" shadow="hover">
           <div class="metric-row">
             <div class="metric-icon metric-icon--rose">
-              <el-icon><Timer /></el-icon>
+              <KhyIcon kind="refresh" size="md" />
             </div>
             <div class="metric-body">
               <div class="metric-title">平均时延</div>
@@ -109,12 +113,20 @@
             </div>
           </template>
           <div class="quick-actions">
-            <el-button @click="go('/gateway')"><el-icon><Setting /></el-icon> 网关管理</el-button>
-            <el-button @click="go('/bridge-channels')"><el-icon><Link /></el-icon> 桥接渠道</el-button>
-            <el-button @click="go('/accounts')"><el-icon><User /></el-icon> 账号池</el-button>
-            <el-button @click="go('/assets-customers')"><el-icon><Wallet /></el-icon> 资产与客户</el-button>
-            <el-button @click="go('/monitor')"><el-icon><Monitor /></el-icon> 监控中心</el-button>
-            <el-button @click="go('/chat')"><el-icon><ChatDotSquare /></el-icon> AI 对话</el-button>
+            <el-button @click="go('/gateway')"
+              ><KhyIcon kind="settings" size="sm" /> 网关管理</el-button
+            >
+            <el-button @click="go('/bridge-channels')"
+              ><KhyIcon kind="link" size="sm" /> 桥接渠道</el-button
+            >
+            <el-button @click="go('/accounts')"><KhyIcon kind="user" size="md" /> 账号池</el-button>
+            <el-button @click="go('/assets-customers')"
+              ><KhyIcon kind="wallet" size="sm" /> 资产与客户</el-button
+            >
+            <el-button @click="go('/monitor')"
+              ><KhyIcon kind="monitor" size="sm" /> 监控中心</el-button
+            >
+            <el-button @click="go('/chat')"><KhyIcon kind="chat" size="sm" /> AI 对话</el-button>
           </div>
         </el-card>
       </el-col>
@@ -127,21 +139,27 @@
               <el-button size="small" @click="fetchRecentTraces">刷新</el-button>
             </div>
           </template>
-          <el-table :data="monitor.traces.value" size="small" stripe class="recent-table">
+          <el-table :data="monitor.traces" size="small" stripe class="recent-table">
             <el-table-column prop="id" label="追踪 ID" width="150" />
             <el-table-column label="适配器" width="120">
               <template #default="{ row }">{{ row.request?.adapter || '-' }}</template>
             </el-table-column>
             <el-table-column label="状态" width="80">
               <template #default="{ row }">
-                <el-tag :type="row.success ? 'success' : 'danger'" size="small">{{ row.success ? '成功' : '失败' }}</el-tag>
+                <el-tag :type="row.success ? 'success' : 'danger'" size="small">{{
+                  row.success ? '成功' : '失败'
+                }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="时延" width="90">
-              <template #default="{ row }">{{ row.latencyMs ? `${row.latencyMs}ms` : '-' }}</template>
+              <template #default="{ row }">{{
+                row.latencyMs ? `${row.latencyMs}ms` : '-'
+              }}</template>
             </el-table-column>
             <el-table-column label="时间" width="160">
-              <template #default="{ row }">{{ row.startTime ? new Date(row.startTime).toLocaleString() : '-' }}</template>
+              <template #default="{ row }">{{
+                row.startTime ? new Date(row.startTime).toLocaleString() : '-'
+              }}</template>
             </el-table-column>
             <el-table-column label="提示词" show-overflow-tooltip>
               <template #default="{ row }">{{ row.request?.prompt || '-' }}</template>
@@ -154,67 +172,73 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Connection, Key, User, Ticket, DataAnalysis, Timer, ChatDotSquare, Setting, Wallet, Monitor, Link } from '@element-plus/icons-vue'
-import { useGateway } from '@/composables/useGateway'
-import { useAIMonitor } from '@/composables/useAIMonitor'
-import KhyPageHeader from '@/components/KhyPageHeader.vue'
-import { useAccountPool } from '@/composables/useAccountPool'
-import { useAssetCustomer } from '@/composables/useAssetCustomer'
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { useGateway } from '@/composables/useGateway';
+import { useAIMonitor } from '@/composables/useAIMonitor';
+import KhyPageHeader from '@/components/KhyPageHeader.vue';
+import { useAccountPool } from '@/composables/useAccountPool';
+import { useAssetCustomer } from '@/composables/useAssetCustomer';
 
-const router = useRouter()
-const gw = useGateway()
-const monitor = useAIMonitor()
-const accountPool = useAccountPool()
-const asset = useAssetCustomer()
+const router = useRouter();
+const gw = useGateway();
+const monitor = useAIMonitor();
+const accountPool = useAccountPool();
+const asset = useAssetCustomer();
 
-const loading = ref(false)
-const autoRefresh = ref(true)
-let refreshTimer = null
+const loading = ref(false);
+const autoRefresh = ref(true);
+let refreshTimer = null;
 
-const adapters = computed(() => gw.status.value?.adapters || [])
-const adapterTotal = computed(() => adapters.value.length)
-const adapterAvailableCount = computed(() => adapters.value.filter(item => item.available).length)
+const adapters = computed(() => gw.status.value?.adapters || []);
+const adapterTotal = computed(() => adapters.value.length);
+const adapterAvailableCount = computed(
+  () => adapters.value.filter((item) => item.available).length
+);
 
 const keyPoolProviderCount = computed(() => {
-  const pool = gw.pool.value || {}
-  return Object.keys(pool).length
-})
+  const pool = gw.pool.value || {};
+  return Object.keys(pool).length;
+});
 
 const keyPoolCount = computed(() => {
-  const pool = gw.pool.value || {}
-  return Object.values(pool).reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0)
-})
+  const pool = gw.pool.value || {};
+  return Object.values(pool).reduce(
+    (sum, list) => sum + (Array.isArray(list) ? list.length : 0),
+    0
+  );
+});
 
-const accounts = computed(() => accountPool.accounts.value || [])
-const totalAccountCount = computed(() => accounts.value.length)
-const activeAccountCount = computed(() => accounts.value.filter(item => item.status === 'active' && !item.disabled).length)
+const accounts = computed(() => accountPool.accounts.value || []);
+const totalAccountCount = computed(() => accounts.value.length);
+const activeAccountCount = computed(
+  () => accounts.value.filter((item) => item.status === 'active' && !item.disabled).length
+);
 
-const assetsSummary = computed(() => asset.overview.value?.assets || {})
-const customerTotal = computed(() => assetsSummary.value?.customers?.total || 0)
-const customerTokenTotal = computed(() => assetsSummary.value?.customers?.tokens || 0)
+const assetsSummary = computed(() => asset.overview.value?.assets || {});
+const customerTotal = computed(() => assetsSummary.value?.customers?.total || 0);
+const customerTokenTotal = computed(() => assetsSummary.value?.customers?.tokens || 0);
 
-const requestTotal = computed(() => monitor.stats.value?.total || 0)
-const successRate = computed(() => monitor.stats.value?.successRate || '0.0%')
-const avgLatency = computed(() => `${monitor.stats.value?.avgLatencyMs || 0}ms`)
+const requestTotal = computed(() => monitor.stats.value?.total || 0);
+const successRate = computed(() => monitor.stats.value?.successRate || '0.0%');
+const avgLatency = computed(() => `${monitor.stats.value?.avgLatencyMs || 0}ms`);
 const bufferSize = computed(() => {
-  const current = monitor.stats.value?.bufferSize || 0
-  const max = monitor.stats.value?.maxBufferSize || 0
-  return `${current}/${max}`
-})
+  const current = monitor.stats.value?.bufferSize || 0;
+  const max = monitor.stats.value?.maxBufferSize || 0;
+  return `${current}/${max}`;
+});
 
 function go(path) {
-  router.push(path)
+  router.push(path);
 }
 
 async function fetchRecentTraces() {
-  await monitor.fetchTraces({ limit: 8 })
+  await monitor.fetchTraces({ limit: 8 });
 }
 
 async function refreshAll() {
-  loading.value = true
+  loading.value = true;
   try {
     await Promise.all([
       gw.fetchStatus(),
@@ -223,41 +247,41 @@ async function refreshAll() {
       asset.fetchOverview(),
       monitor.fetchStats(),
       fetchRecentTraces(),
-    ])
+    ]);
   } catch (err) {
-    ElMessage.error(err?.message || '刷新失败')
+    ElMessage.error(err?.message || '刷新失败');
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function stopAutoRefresh() {
   if (refreshTimer) {
-    clearInterval(refreshTimer)
-    refreshTimer = null
+    clearInterval(refreshTimer);
+    refreshTimer = null;
   }
 }
 
 function startAutoRefresh() {
-  stopAutoRefresh()
-  if (!autoRefresh.value) return
+  stopAutoRefresh();
+  if (!autoRefresh.value) return;
   refreshTimer = setInterval(() => {
-    refreshAll()
-  }, 30000)
+    refreshAll();
+  }, 30000);
 }
 
 function handleAutoRefreshChange() {
-  startAutoRefresh()
+  startAutoRefresh();
 }
 
 onMounted(async () => {
-  await refreshAll()
-  startAutoRefresh()
-})
+  await refreshAll();
+  startAutoRefresh();
+});
 
 onUnmounted(() => {
-  stopAutoRefresh()
-})
+  stopAutoRefresh();
+});
 </script>
 
 <style scoped>

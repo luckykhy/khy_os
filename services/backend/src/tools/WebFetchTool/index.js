@@ -5,12 +5,14 @@
  * (preserving headings, links, code blocks, lists, tables),
  * and returns navigable content the model can reason about.
  */
-const { BaseTool } = require('../_baseTool');
-const https = require('https');
 const http = require('http');
+const https = require('https');
 const { URL } = require('url');
+
 const { assertPublicHttpUrlResolved } = require('../../services/urlSafety');
+const { BaseTool } = require('../_baseTool');
 const { resolveToolTimeoutMs } = require('../_toolTimeout');
+
 const webFetchDeadline = require('./webFetchDeadline');
 
 const FETCH_TIMEOUT_MS = 30000;
@@ -23,7 +25,9 @@ const _cache = new Map();
 
 function _cacheGet(url) {
   const entry = _cache.get(url);
-  if (!entry) return null;
+  if (!entry) {
+    return null;
+  }
   if (Date.now() - entry.ts > CACHE_TTL_MS) {
     _cache.delete(url);
     return null;
@@ -42,13 +46,26 @@ function _cacheSet(url, data) {
 
 // ── Domain type classification ──────────────────────────────────────
 const _DOMAIN_TYPE_MAP = {
-  'stackoverflow.com': 'forum', 'stackexchange.com': 'forum', 'reddit.com': 'forum',
-  'github.com': 'code', 'gitlab.com': 'code', 'gitee.com': 'code',
-  'developer.mozilla.org': 'docs', 'docs.python.org': 'docs', 'nodejs.org': 'docs',
-  'wikipedia.org': 'reference', 'baike.baidu.com': 'reference',
-  'medium.com': 'blog', 'dev.to': 'blog', 'csdn.net': 'blog', 'juejin.cn': 'blog',
-  'zhihu.com': 'forum', 'segmentfault.com': 'forum',
-  'news.ycombinator.com': 'news', 'bbc.com': 'news', 'reuters.com': 'news',
+  'stackoverflow.com': 'forum',
+  'stackexchange.com': 'forum',
+  'reddit.com': 'forum',
+  'github.com': 'code',
+  'gitlab.com': 'code',
+  'gitee.com': 'code',
+  'developer.mozilla.org': 'docs',
+  'docs.python.org': 'docs',
+  'nodejs.org': 'docs',
+  'wikipedia.org': 'reference',
+  'baike.baidu.com': 'reference',
+  'medium.com': 'blog',
+  'dev.to': 'blog',
+  'csdn.net': 'blog',
+  'juejin.cn': 'blog',
+  'zhihu.com': 'forum',
+  'segmentfault.com': 'forum',
+  'news.ycombinator.com': 'news',
+  'bbc.com': 'news',
+  'reuters.com': 'news',
 };
 
 class WebFetchTool extends BaseTool {
@@ -65,8 +82,12 @@ class WebFetchTool extends BaseTool {
   static shouldDefer = false;
   static maxResultSizeChars = 40000;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `Fetches content from a URL and returns it as structured markdown text.
@@ -99,7 +120,8 @@ Usage notes:
         },
         timeoutMs: {
           type: 'number',
-          description: 'Optional hard timeout in milliseconds for the fetch (default 30000, range 1000–120000). Set a lower value when you expect a slow/unresponsive site and do not want to wait.',
+          description:
+            'Optional hard timeout in milliseconds for the fetch (default 30000, range 1000–120000). Set a lower value when you expect a slow/unresponsive site and do not want to wait.',
         },
       },
       required: ['url'],
@@ -139,7 +161,9 @@ Usage notes:
 
     // Check cache (a cached entry was already SSRF-validated when first fetched)
     const cached = _cacheGet(url);
-    if (cached) return { ...cached, _cached: true };
+    if (cached) {
+      return { ...cached, _cached: true };
+    }
 
     // ── 总墙钟 + abort 接线(webFetchDeadline;门控 KHY_WEBFETCH_HARD_DEADLINE 默认开)──
     // Node 的 `timeout` 只是 socket 空闲超时,慢站点滴数据/同源重定向每跳都会重置它,导致抓取
@@ -158,22 +182,54 @@ Usage notes:
       const totalMs = webFetchDeadline.resolveTotalDeadlineMs(timeoutMs, FETCH_TIMEOUT_MS);
       _deadlineTimer = setTimeout(() => {
         _deadlineFired = true;
-        try { _ac.abort(); } catch { /* ignore */ }
+        try {
+          _ac.abort();
+        } catch {
+          /* ignore */
+        }
       }, totalMs);
-      if (_deadlineTimer && typeof _deadlineTimer.unref === 'function') _deadlineTimer.unref();
+      if (_deadlineTimer && typeof _deadlineTimer.unref === 'function') {
+        _deadlineTimer.unref();
+      }
       if (parentSignal) {
-        if (parentSignal.aborted) { try { _ac.abort(); } catch { /* ignore */ } }
-        else {
-          _onParentAbort = () => { try { _ac.abort(); } catch { /* ignore */ } };
-          try { parentSignal.addEventListener('abort', _onParentAbort, { once: true }); } catch { /* ignore */ }
+        if (parentSignal.aborted) {
+          try {
+            _ac.abort();
+          } catch {
+            /* ignore */
+          }
+        } else {
+          _onParentAbort = () => {
+            try {
+              _ac.abort();
+            } catch {
+              /* ignore */
+            }
+          };
+          try {
+            parentSignal.addEventListener('abort', _onParentAbort, { once: true });
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
     const _fetchSignal = _ac ? _ac.signal : null;
     const _cleanupDeadline = () => {
-      if (_deadlineTimer) { try { clearTimeout(_deadlineTimer); } catch { /* ignore */ } _deadlineTimer = null; }
+      if (_deadlineTimer) {
+        try {
+          clearTimeout(_deadlineTimer);
+        } catch {
+          /* ignore */
+        }
+        _deadlineTimer = null;
+      }
       if (parentSignal && _onParentAbort) {
-        try { parentSignal.removeEventListener('abort', _onParentAbort); } catch { /* ignore */ }
+        try {
+          parentSignal.removeEventListener('abort', _onParentAbort);
+        } catch {
+          /* ignore */
+        }
         _onParentAbort = null;
       }
     };
@@ -207,7 +263,10 @@ Usage notes:
       try {
         const hostname = new URL(url).hostname;
         for (const [domain, type] of Object.entries(_DOMAIN_TYPE_MAP)) {
-          if (hostname.includes(domain)) { domainType = type; break; }
+          if (hostname.includes(domain)) {
+            domainType = type;
+            break;
+          }
         }
       } catch {}
 
@@ -233,8 +292,9 @@ Usage notes:
         if (_deadlineFired && !(parentSignal && parentSignal.aborted)) {
           return {
             success: false,
-            error: `Fetch timed out: ${url} 在 ${Math.round(totalMs / 1000)}s 内未完成(网络/网关缓慢),已放弃。`
-              + `可稍后重试、换更快的源,或改用 web_search。`,
+            error:
+              `Fetch timed out: ${url} 在 ${Math.round(totalMs / 1000)}s 内未完成(网络/网关缓慢),已放弃。` +
+              `可稍后重试、换更快的源,或改用 web_search。`,
             timedOut: true,
             url,
           };
@@ -256,7 +316,9 @@ Usage notes:
   _fetch(url, timeoutMs = FETCH_TIMEOUT_MS, signal = null) {
     // Try proxy first
     const proxyUrl = this._getProxyUrl();
-    if (proxyUrl) return this._fetchViaProxy(url, proxyUrl, timeoutMs, signal);
+    if (proxyUrl) {
+      return this._fetchViaProxy(url, proxyUrl, timeoutMs, signal);
+    }
     return this._fetchDirect(url, timeoutMs, signal);
   }
 
@@ -264,10 +326,22 @@ Usage notes:
     try {
       const pcs = require('../../services/proxyConfigService');
       const active = pcs.getActiveProxy ? pcs.getActiveProxy() : null;
-      if (active) return active;
+      if (active && !active.unsupported) {
+        if (typeof active === 'string') {
+          return active;
+        }
+        if (active.url && /^https?:\/\//i.test(active.url)) {
+          return active.url;
+        }
+      }
     } catch {}
-    return process.env.HTTPS_PROXY || process.env.https_proxy
-      || process.env.HTTP_PROXY || process.env.http_proxy || null;
+    return (
+      process.env.HTTPS_PROXY ||
+      process.env.https_proxy ||
+      process.env.HTTP_PROXY ||
+      process.env.http_proxy ||
+      null
+    );
   }
 
   _fetchViaProxy(targetUrl, proxyUrl, timeoutMs = FETCH_TIMEOUT_MS, signal = null) {
@@ -275,34 +349,46 @@ Usage notes:
       const target = new URL(targetUrl);
       const proxy = new URL(proxyUrl);
 
-      const connectReq = http.request(webFetchDeadline.mergeSignalOption({
-        host: proxy.hostname,
-        port: proxy.port || 7890,
-        method: 'CONNECT',
-        path: `${target.hostname}:${target.port || 443}`,
-        headers: { Host: `${target.hostname}:${target.port || 443}` },
-        timeout: timeoutMs,
-      }, signal));
+      const connectReq = http.request(
+        webFetchDeadline.mergeSignalOption(
+          {
+            host: proxy.hostname,
+            port: proxy.port || 7890,
+            method: 'CONNECT',
+            path: `${target.hostname}:${target.port || 443}`,
+            headers: { Host: `${target.hostname}:${target.port || 443}` },
+            timeout: timeoutMs,
+          },
+          signal
+        )
+      );
 
       connectReq.on('connect', (_res, socket) => {
-        const options = webFetchDeadline.mergeSignalOption({
-          hostname: target.hostname,
-          path: target.pathname + target.search,
-          method: 'GET',
-          socket,
-          headers: {
-            'User-Agent': 'khy-OS/1.0 (WebFetchTool)',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7',
-            Host: target.hostname,
+        const options = webFetchDeadline.mergeSignalOption(
+          {
+            hostname: target.hostname,
+            path: target.pathname + target.search,
+            method: 'GET',
+            socket,
+            headers: {
+              'User-Agent': 'khy-OS/1.0 (WebFetchTool)',
+              Accept:
+                'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7',
+              Host: target.hostname,
+            },
+            timeout: timeoutMs,
           },
-          timeout: timeoutMs,
-        }, signal);
+          signal
+        );
 
         const req = https.request(options, (res) => {
           this._handleResponse(res, targetUrl, resolve, reject, timeoutMs, signal);
         });
         req.on('error', reject);
-        req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error('Request timed out'));
+        });
         req.end();
       });
 
@@ -323,18 +409,29 @@ Usage notes:
       const parsed = new URL(url);
       const client = parsed.protocol === 'https:' ? https : http;
 
-      const req = client.get(url, webFetchDeadline.mergeSignalOption({
-        timeout: timeoutMs,
-        headers: {
-          'User-Agent': 'khy-OS/1.0 (WebFetchTool)',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7',
-        },
-      }, signal), (res) => {
-        this._handleResponse(res, url, resolve, reject, timeoutMs, signal);
-      });
+      const req = client.get(
+        url,
+        webFetchDeadline.mergeSignalOption(
+          {
+            timeout: timeoutMs,
+            headers: {
+              'User-Agent': 'khy-OS/1.0 (WebFetchTool)',
+              Accept:
+                'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7',
+            },
+          },
+          signal
+        ),
+        (res) => {
+          this._handleResponse(res, url, resolve, reject, timeoutMs, signal);
+        }
+      );
 
       req.on('error', reject);
-      req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Request timed out'));
+      });
     });
   }
 
@@ -346,14 +443,20 @@ Usage notes:
         const redirectParsed = new URL(redirectUrl, url);
         const originalParsed = new URL(url);
         if (redirectParsed.hostname !== originalParsed.hostname) {
-          resolve(`[Redirect to different host: ${redirectParsed.toString()}]\nPlease make a new WebFetch request with this URL.`);
+          resolve(
+            `[Redirect to different host: ${redirectParsed.toString()}]\nPlease make a new WebFetch request with this URL.`
+          );
           return;
         }
         // Re-validate the redirect target before following (guards a public
         // host that 3xx-redirects into the internal network, and DNS rebinding).
         // signal 沿重定向链传递:整条链共享同一个总墙钟 controller,重定向不再重置预算。
         assertPublicHttpUrlResolved(redirectParsed.toString(), 'WebFetch redirect')
-          .then(() => this._fetchDirect(redirectParsed.toString(), timeoutMs, signal).then(resolve).catch(reject))
+          .then(() =>
+            this._fetchDirect(redirectParsed.toString(), timeoutMs, signal)
+              .then(resolve)
+              .catch(reject)
+          )
           .catch(reject);
       } catch {
         reject(new Error(`Invalid redirect URL: ${redirectUrl}`));
@@ -370,10 +473,15 @@ Usage notes:
     let totalSize = 0;
     res.on('data', (chunk) => {
       totalSize += chunk.length;
-      if (totalSize > MAX_CONTENT_SIZE * 2) { res.destroy(); return; }
+      if (totalSize > MAX_CONTENT_SIZE * 2) {
+        res.destroy();
+        return;
+      }
       chunks.push(chunk);
     });
-    res.on('end', () => resolve(this._decodeBody(Buffer.concat(chunks), res.headers && res.headers['content-type'])));
+    res.on('end', () =>
+      resolve(this._decodeBody(Buffer.concat(chunks), res.headers && res.headers['content-type']))
+    );
     res.on('error', reject);
   }
 
@@ -389,8 +497,12 @@ Usage notes:
       if (reg && typeof reg.isFlagEnabled === 'function') {
         on = reg.isFlagEnabled('KHY_WEBFETCH_CHARSET', process.env);
       }
-    } catch { on = true; }
-    if (!on) return buf.toString('utf-8');
+    } catch {
+      on = true;
+    }
+    if (!on) {
+      return buf.toString('utf-8');
+    }
     try {
       const dec = require('../../services/webFetchDecode');
       const charset = dec.detectCharset(buf, contentTypeHeader || '');
@@ -403,13 +515,17 @@ Usage notes:
   // ── Title extraction ─────────────────────────────────────────────
   _extractTitle(html) {
     const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    if (!m) return '';
+    if (!m) {
+      return '';
+    }
     return this._decodeEntities(m[1]).replace(/\s+/g, ' ').trim();
   }
 
   // ── Structured HTML → Markdown conversion ────────────────────────
   _htmlToMarkdown(html) {
-    if (!html) return { content: '', sections: [] };
+    if (!html) {
+      return { content: '', sections: [] };
+    }
 
     let text = html;
 
@@ -422,7 +538,9 @@ Usage notes:
       /<iframe[\s\S]*?<\/iframe>/gi,
       /<!--[\s\S]*?-->/g,
     ];
-    for (const pat of noisePatterns) text = text.replace(pat, '');
+    for (const pat of noisePatterns) {
+      text = text.replace(pat, '');
+    }
 
     // Phase 2: Extract main content area if available
     const mainMatch = text.match(/<(?:main|article)[^>]*>([\s\S]*?)<\/(?:main|article)>/i);
@@ -438,45 +556,87 @@ Usage notes:
 
     // Remove everything before <body> if present
     const bodyMatch = text.match(/<body[^>]*>([\s\S]*)/i);
-    if (bodyMatch) text = bodyMatch[1].replace(/<\/body>[\s\S]*$/i, '');
+    if (bodyMatch) {
+      text = bodyMatch[1].replace(/<\/body>[\s\S]*$/i, '');
+    }
 
     // Phase 3: Structural conversions (order matters)
 
     // Code blocks: <pre><code> → fenced blocks
-    text = text.replace(/<pre[^>]*>\s*<code[^>]*(?:\s+class="[^"]*?(?:language-)?(\w+)[^"]*")?[^>]*>([\s\S]*?)<\/code>\s*<\/pre>/gi,
-      (_, lang, code) => `\n\`\`\`${lang || ''}\n${this._decodeEntities(code.replace(/<[^>]+>/g, ''))}\n\`\`\`\n`);
-    text = text.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi,
-      (_, code) => `\n\`\`\`\n${this._decodeEntities(code.replace(/<[^>]+>/g, ''))}\n\`\`\`\n`);
+    text = text.replace(
+      /<pre[^>]*>\s*<code[^>]*(?:\s+class="[^"]*?(?:language-)?(\w+)[^"]*")?[^>]*>([\s\S]*?)<\/code>\s*<\/pre>/gi,
+      (_, lang, code) =>
+        `\n\`\`\`${lang || ''}\n${this._decodeEntities(code.replace(/<[^>]+>/g, ''))}\n\`\`\`\n`
+    );
+    text = text.replace(
+      /<pre[^>]*>([\s\S]*?)<\/pre>/gi,
+      (_, code) => `\n\`\`\`\n${this._decodeEntities(code.replace(/<[^>]+>/g, ''))}\n\`\`\`\n`
+    );
 
     // Inline code
-    text = text.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, (_, code) => `\`${this._decodeEntities(code.replace(/<[^>]+>/g, ''))}\``);
+    text = text.replace(
+      /<code[^>]*>([\s\S]*?)<\/code>/gi,
+      (_, code) => `\`${this._decodeEntities(code.replace(/<[^>]+>/g, ''))}\``
+    );
 
     // Headings
-    text = text.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, t) => `\n\n# ${this._stripInnerTags(t)}\n\n`);
-    text = text.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, t) => `\n\n## ${this._stripInnerTags(t)}\n\n`);
-    text = text.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, t) => `\n\n### ${this._stripInnerTags(t)}\n\n`);
-    text = text.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, t) => `\n\n#### ${this._stripInnerTags(t)}\n\n`);
-    text = text.replace(/<h5[^>]*>([\s\S]*?)<\/h5>/gi, (_, t) => `\n\n##### ${this._stripInnerTags(t)}\n\n`);
-    text = text.replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, (_, t) => `\n\n###### ${this._stripInnerTags(t)}\n\n`);
+    text = text.replace(
+      /<h1[^>]*>([\s\S]*?)<\/h1>/gi,
+      (_, t) => `\n\n# ${this._stripInnerTags(t)}\n\n`
+    );
+    text = text.replace(
+      /<h2[^>]*>([\s\S]*?)<\/h2>/gi,
+      (_, t) => `\n\n## ${this._stripInnerTags(t)}\n\n`
+    );
+    text = text.replace(
+      /<h3[^>]*>([\s\S]*?)<\/h3>/gi,
+      (_, t) => `\n\n### ${this._stripInnerTags(t)}\n\n`
+    );
+    text = text.replace(
+      /<h4[^>]*>([\s\S]*?)<\/h4>/gi,
+      (_, t) => `\n\n#### ${this._stripInnerTags(t)}\n\n`
+    );
+    text = text.replace(
+      /<h5[^>]*>([\s\S]*?)<\/h5>/gi,
+      (_, t) => `\n\n##### ${this._stripInnerTags(t)}\n\n`
+    );
+    text = text.replace(
+      /<h6[^>]*>([\s\S]*?)<\/h6>/gi,
+      (_, t) => `\n\n###### ${this._stripInnerTags(t)}\n\n`
+    );
 
     // Links: preserve href
-    text = text.replace(/<a[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi,
-      (_, href, linkText) => {
-        const clean = this._stripInnerTags(linkText).trim();
-        if (!clean || !href || href.startsWith('#') || href.startsWith('javascript:')) return clean;
-        return `[${clean}](${href})`;
-      });
+    text = text.replace(/<a[^>]+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, linkText) => {
+      const clean = this._stripInnerTags(linkText).trim();
+      if (!clean || !href || href.startsWith('#') || href.startsWith('javascript:')) {
+        return clean;
+      }
+      return `[${clean}](${href})`;
+    });
 
     // Images
-    text = text.replace(/<img[^>]+alt="([^"]*)"[^>]*>/gi, (_, alt) => alt ? `[Image: ${alt}]` : '');
+    text = text.replace(/<img[^>]+alt="([^"]*)"[^>]*>/gi, (_, alt) =>
+      alt ? `[Image: ${alt}]` : ''
+    );
     text = text.replace(/<img[^>]*>/gi, '');
 
     // Blockquotes
-    text = text.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi,
-      (_, content) => '\n' + this._stripInnerTags(content).split('\n').map(l => `> ${l.trim()}`).join('\n') + '\n');
+    text = text.replace(
+      /<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi,
+      (_, content) =>
+        '\n' +
+        this._stripInnerTags(content)
+          .split('\n')
+          .map((l) => `> ${l.trim()}`)
+          .join('\n') +
+        '\n'
+    );
 
     // Lists
-    text = text.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, item) => `\n- ${this._stripInnerTags(item).trim()}`);
+    text = text.replace(
+      /<li[^>]*>([\s\S]*?)<\/li>/gi,
+      (_, item) => `\n- ${this._stripInnerTags(item).trim()}`
+    );
     text = text.replace(/<\/?(?:ul|ol)[^>]*>/gi, '\n');
 
     // Tables: simple conversion
@@ -485,8 +645,14 @@ Usage notes:
     });
 
     // Bold/italic
-    text = text.replace(/<(?:strong|b)[^>]*>([\s\S]*?)<\/(?:strong|b)>/gi, (_, t) => `**${this._stripInnerTags(t)}**`);
-    text = text.replace(/<(?:em|i)[^>]*>([\s\S]*?)<\/(?:em|i)>/gi, (_, t) => `*${this._stripInnerTags(t)}*`);
+    text = text.replace(
+      /<(?:strong|b)[^>]*>([\s\S]*?)<\/(?:strong|b)>/gi,
+      (_, t) => `**${this._stripInnerTags(t)}**`
+    );
+    text = text.replace(
+      /<(?:em|i)[^>]*>([\s\S]*?)<\/(?:em|i)>/gi,
+      (_, t) => `*${this._stripInnerTags(t)}*`
+    );
 
     // Block elements → newlines
     text = text.replace(/<br\s*\/?>/gi, '\n');
@@ -502,7 +668,7 @@ Usage notes:
 
     // Phase 6: Clean whitespace
     text = text.replace(/[ \t]+/g, ' ');
-    text = text.replace(/\n{4,}/g, '\n\n\n');
+    text = text.replace(/\x0a{4,}/g, '\x0a\x0a\x0a');
     text = text.replace(/^\s+/gm, (match) => {
       // Preserve indentation for code-like content, collapse others
       return match.length > 4 ? '    ' : '';
@@ -519,10 +685,13 @@ Usage notes:
 
     // Phase 8: Prepend table of contents if 3+ sections
     if (sections.length >= 3) {
-      const toc = sections.slice(0, 15).map(s => {
-        const indent = '  '.repeat(Math.max(0, s.level - 1));
-        return `${indent}- ${s.heading}`;
-      }).join('\n');
+      const toc = sections
+        .slice(0, 15)
+        .map((s) => {
+          const indent = '  '.repeat(Math.max(0, s.level - 1));
+          return `${indent}- ${s.heading}`;
+        })
+        .join('\n');
       text = `## Page Structure\n${toc}\n\n---\n\n${text}`;
     }
 
@@ -535,7 +704,9 @@ Usage notes:
   }
 
   _decodeEntities(text) {
-    if (!text) return '';
+    if (!text) {
+      return '';
+    }
     return text
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
@@ -551,7 +722,9 @@ Usage notes:
   _tableToMarkdown(tableHtml) {
     const rows = [];
     const rowMatches = tableHtml.match(/<tr[\s\S]*?<\/tr>/gi);
-    if (!rowMatches || rowMatches.length === 0) return '';
+    if (!rowMatches || rowMatches.length === 0) {
+      return '';
+    }
 
     for (const rowHtml of rowMatches) {
       const cells = [];
@@ -562,13 +735,17 @@ Usage notes:
           cells.push(this._stripInnerTags(content).replace(/\|/g, '\\|'));
         }
       }
-      if (cells.length > 0) rows.push(cells);
+      if (cells.length > 0) {
+        rows.push(cells);
+      }
     }
 
-    if (rows.length === 0) return '';
+    if (rows.length === 0) {
+      return '';
+    }
 
     // Build markdown table
-    const maxCols = Math.max(...rows.map(r => r.length));
+    const maxCols = Math.max(...rows.map((r) => r.length));
     const lines = [];
     for (let i = 0; i < rows.length; i++) {
       const padded = rows[i].concat(Array(maxCols - rows[i].length).fill(''));

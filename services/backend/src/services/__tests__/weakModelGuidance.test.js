@@ -9,8 +9,8 @@
  * 零 IO、确定性——每个断言显式传 env,不依赖进程环境。
  */
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const wmg = require('../weakModelGuidance');
 
@@ -104,8 +104,10 @@ test('toolCallHint:非空单句,含关键要点', () => {
 test('listGuardSites:返回全部 7 位点,每项带 key 且携带原字段', () => {
   const list = wmg.listGuardSites();
   assert.equal(list.length, EXPECTED_SITES.length);
-  const keys = list.map(s => s.key);
-  for (const k of EXPECTED_SITES) assert.ok(keys.includes(k), k);
+  const keys = list.map((s) => s.key);
+  for (const k of EXPECTED_SITES) {
+    assert.ok(keys.includes(k), k);
+  }
   for (const item of list) {
     assert.equal(typeof item.title, 'string');
     assert.equal(typeof item.directive, 'string');
@@ -130,7 +132,7 @@ test('WEAK_MODEL_EXEMPLARS:非空、冻结(纯叶子不可变),每条 id/topic/b
 });
 
 test('WEAK_MODEL_EXEMPLARS:覆盖关键死循环反例(超时重试/无输出重跑/手写全盘扫描)', () => {
-  const ids = wmg.WEAK_MODEL_EXEMPLARS.map(e => e.id);
+  const ids = wmg.WEAK_MODEL_EXEMPLARS.map((e) => e.id);
   for (const k of ['retry-timeout', 'repeat-after-no-output', 'handwrite-disk-scan']) {
     assert.ok(ids.includes(k), `missing exemplar ${k}`);
   }
@@ -139,14 +141,14 @@ test('WEAK_MODEL_EXEMPLARS:覆盖关键死循环反例(超时重试/无输出重
 test('buildWeakModelExemplars:门开非空、确定性、含 BAD/GOOD/WHY 与关键反例文案', () => {
   const a = wmg.buildWeakModelExemplars({});
   const b = wmg.buildWeakModelExemplars({});
-  assert.equal(a, b);                                  // 确定性
+  assert.equal(a, b); // 确定性
   assert.ok(a.length > 0);
   assert.ok(a.includes('BAD:'));
   assert.ok(a.includes('GOOD:'));
   assert.ok(a.includes('WHY:'));
   assert.ok(a.includes('Common weak-model mistakes'));
-  assert.ok(a.includes('DiskAnalyze'));                // 手写全盘扫描反例的正解
-  assert.ok(a.includes('clamped to 60000'));           // 超时重试反例
+  assert.ok(a.includes('DiskAnalyze')); // 手写全盘扫描反例的正解
+  assert.ok(a.includes('clamped to 60000')); // 超时重试反例
 });
 
 test('buildWeakModelExemplars:门关(含大小写/空白 falsy)→ 空串(逐字节回退)', () => {
@@ -180,7 +182,7 @@ test('INTENTIONAL_DESIGNS:非空、冻结(纯叶子不可变),每条 id/looksLik
 });
 
 test('INTENTIONAL_DESIGNS:覆盖被反复误判的关键刻意设计(默认口令/动态版本/sha256 留空)', () => {
-  const ids = wmg.INTENTIONAL_DESIGNS.map(d => d.id);
+  const ids = wmg.INTENTIONAL_DESIGNS.map((d) => d.id);
   for (const k of ['default-source-secret', 'dynamic-version', 'snapshot-sha256-blank']) {
     assert.ok(ids.includes(k), `missing intentional design ${k}`);
   }
@@ -189,13 +191,13 @@ test('INTENTIONAL_DESIGNS:覆盖被反复误判的关键刻意设计(默认口�
 test('buildIntentionalDesigns:门开非空、确定性、含 LOOKS-LIKE-BUG/BY-DESIGN/WHY 与关键条目文案', () => {
   const a = wmg.buildIntentionalDesigns({});
   const b = wmg.buildIntentionalDesigns({});
-  assert.equal(a, b);                                  // 确定性
+  assert.equal(a, b); // 确定性
   assert.ok(a.length > 0);
   assert.ok(a.includes('LOOKS-LIKE-BUG:'));
   assert.ok(a.includes('BY-DESIGN:'));
   assert.ok(a.includes('WHY:'));
   assert.ok(a.includes('INTENTIONAL'));
-  assert.ok(a.includes('check-version-sync'));         // dynamic-version 条目
+  assert.ok(a.includes('check-version-sync')); // dynamic-version 条目
 });
 
 test('buildIntentionalDesigns:门关(含大小写/空白 falsy)→ 空串(逐字节回退)', () => {

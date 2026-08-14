@@ -76,10 +76,7 @@ const FIX_AGENT = {
     'Use this agent to repair specific, already-identified defects — typically the CRITICAL/HIGH findings from an audit. It edits code to close exactly those findings (root-cause fixes, verified), then stops; it does NOT re-review, refactor, or expand scope. Pass the original task, the audit findings (with file:line), and the files in scope. It CAN edit, run tests, and verify; it canNOT spawn further agents.',
   color: 'green',
   background: true,
-  disallowedTools: [
-    AGENT_TOOL_NAME,
-    EXIT_PLAN_MODE_TOOL_NAME,
-  ],
+  disallowedTools: [AGENT_TOOL_NAME, EXIT_PLAN_MODE_TOOL_NAME],
   source: 'built-in',
   baseDir: 'built-in',
   model: 'inherit',

@@ -14,18 +14,28 @@
  * 承 [[project_claude_adapter_bearer_auth_scheme_relay_reuse]].
  */
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
+
 const chalk = require('chalk');
-const { planCcEnvAdoption, renderEnvFilePatch, resolveExportTarget } = require('../../services/gateway/adapters/ccEnvAdoptPolicy');
+
 const {
   getRelayPreset,
   listRelayPresets,
 } = require('../../services/gateway/adapters/anthropicRelayPresets');
+const {
+  planCcEnvAdoption,
+  renderEnvFilePatch,
+  resolveExportTarget,
+} = require('../../services/gateway/adapters/ccEnvAdoptPolicy');
 
 function _userEnvFile() {
-  return path.join(os.homedir(), '.khy', '.env');
+  try {
+    return path.join(require('../../utils/dataHome').getDataHome(), '.env');
+  } catch {
+    return path.join(os.homedir(), '.khy', '.env');
+  }
 }
 
 // Shared writer: render the patch and persist to ~/.khy/.env (chmod 600). Returns
@@ -47,7 +57,11 @@ function _writeEnvFile(entries) {
     fs.mkdirSync(khyDir, { recursive: true });
     fs.writeFileSync(envFile, next, { mode: 0o600 });
     // Enforce perms even if the file pre-existed with looser mode.
-    try { fs.chmodSync(envFile, 0o600); } catch { /* best effort (e.g. Windows) */ }
+    try {
+      fs.chmodSync(envFile, 0o600);
+    } catch {
+      /* best effort (e.g. Windows) */
+    }
   } catch (err) {
     console.log(chalk.red('写入失败:'), err && err.message ? err.message : String(err));
     return null;
@@ -62,7 +76,11 @@ async function handleClaudeAdoptEnv(options = {}) {
   const plan = planCcEnvAdoption(process.env);
 
   if (!plan.ok) {
-    console.log(chalk.yellow('未检测到 Claude Code 的凭据环境变量(ANTHROPIC_AUTH_TOKEN / ANTHROPIC_API_KEY)。'));
+    console.log(
+      chalk.yellow(
+        '未检测到 Claude Code 的凭据环境变量(ANTHROPIC_AUTH_TOKEN / ANTHROPIC_API_KEY)。'
+      )
+    );
     console.log('请先在当前 shell 设置与 CC 相同的一套,例如:');
     console.log(chalk.dim('  export ANTHROPIC_BASE_URL="<你的中转端点>"'));
     console.log(chalk.dim('  export ANTHROPIC_AUTH_TOKEN="<你的 sk- token>"    # 中转/网关'));
@@ -72,13 +90,21 @@ async function handleClaudeAdoptEnv(options = {}) {
   }
 
   const envFile = _writeEnvFile(plan.entries);
-  if (!envFile) return;
+  if (!envFile) {
+    return;
+  }
 
   console.log(chalk.green('✓ 已把当前 Claude Code 凭据固化到本地:'), chalk.dim(envFile));
-  console.log(`  凭据类型: ${chalk.white(plan.credKind)}  → auth scheme: ${chalk.white(plan.authScheme)}`);
+  console.log(
+    `  凭据类型: ${chalk.white(plan.credKind)}  → auth scheme: ${chalk.white(plan.authScheme)}`
+  );
   console.log(`  端点:     ${chalk.white(plan.endpoint)}`);
-  if (plan.model) console.log(`  默认模型: ${chalk.white(plan.model)}`);
-  console.log(`  token:    ${chalk.white(plan.maskedToken)}  ${chalk.dim('(仅存本机 · 永不进包)')}`);
+  if (plan.model) {
+    console.log(`  默认模型: ${chalk.white(plan.model)}`);
+  }
+  console.log(
+    `  token:    ${chalk.white(plan.maskedToken)}  ${chalk.dim('(仅存本机 · 永不进包)')}`
+  );
   console.log(chalk.dim('  该文件不在 site-packages,pip 升级不会覆盖它 → 写一次,以后无需再配。'));
   console.log(chalk.dim('  下次运行 khy 时会自动加载(真实 shell 环境变量优先级更高)。'));
 }
@@ -100,15 +126,22 @@ async function handleClaudeUseRelay(name, options = {}) {
   const preset = getRelayPreset(name);
 
   if (!preset) {
-    if (name) console.log(chalk.yellow(`未知的中转预设: ${name}`));
+    if (name) {
+      console.log(chalk.yellow(`未知的中转预设: ${name}`));
+    }
     console.log('可用的中转预设(URL 已随包内置,只需你自带 token):');
     for (const p of listRelayPresets()) {
-      console.log(`  ${chalk.cyan(p.name)}  ${chalk.dim('→')} ${chalk.white(p.baseUrl)}` +
-        (p.model ? chalk.dim(`  (默认模型 ${p.model})`) : '') +
-        (p.label ? chalk.dim(`  — ${p.label}`) : ''));
+      console.log(
+        `  ${chalk.cyan(p.name)}  ${chalk.dim('→')} ${chalk.white(p.baseUrl)}` +
+          (p.model ? chalk.dim(`  (默认模型 ${p.model})`) : '') +
+          (p.label ? chalk.dim(`  — ${p.label}`) : '')
+      );
     }
-    console.log('用法:  ' + chalk.cyan('khy claude use-relay <name>') +
-      chalk.dim('   (先在 shell 里 export ANTHROPIC_AUTH_TOKEN)'));
+    console.log(
+      '用法:  ' +
+        chalk.cyan('khy claude use-relay <name>') +
+        chalk.dim('   (先在 shell 里 export ANTHROPIC_AUTH_TOKEN)')
+    );
     return;
   }
 
@@ -116,23 +149,37 @@ async function handleClaudeUseRelay(name, options = {}) {
   const plan = planCcEnvAdoption(process.env, { baseUrl: preset.baseUrl, model: preset.model });
 
   if (!plan.ok) {
-    console.log(chalk.yellow(`已选中转预设 ${chalk.white(preset.label)}(${preset.baseUrl}),但当前 shell 没有 token。`));
+    console.log(
+      chalk.yellow(
+        `已选中转预设 ${chalk.white(preset.label)}(${preset.baseUrl}),但当前 shell 没有 token。`
+      )
+    );
     console.log('请先设置 token(预设只提供端点,token 绝不随包发布,必须你自带):');
-    console.log(chalk.dim('  export ANTHROPIC_AUTH_TOKEN="<你的 sk- token>"    # 中转/网关(Bearer)'));
+    console.log(
+      chalk.dim('  export ANTHROPIC_AUTH_TOKEN="<你的 sk- token>"    # 中转/网关(Bearer)')
+    );
     console.log(chalk.dim('  # 或官方直连:export ANTHROPIC_API_KEY="<sk-...>"'));
     console.log('再运行:  ' + chalk.cyan(`khy claude use-relay ${name}`));
     return;
   }
 
   const envFile = _writeEnvFile(plan.entries);
-  if (!envFile) return;
+  if (!envFile) {
+    return;
+  }
 
   console.log(chalk.green('✓ 已启用中转预设并固化到本地:'), chalk.dim(envFile));
   console.log(`  预设:     ${chalk.white(preset.label)}  ${chalk.dim('(端点随包内置 · 非机密)')}`);
-  console.log(`  凭据类型: ${chalk.white(plan.credKind)}  → auth scheme: ${chalk.white(plan.authScheme)}`);
+  console.log(
+    `  凭据类型: ${chalk.white(plan.credKind)}  → auth scheme: ${chalk.white(plan.authScheme)}`
+  );
   console.log(`  端点:     ${chalk.white(plan.endpoint)}`);
-  if (plan.model) console.log(`  默认模型: ${chalk.white(plan.model)}`);
-  console.log(`  token:    ${chalk.white(plan.maskedToken)}  ${chalk.dim('(仅存本机 · 永不进包)')}`);
+  if (plan.model) {
+    console.log(`  默认模型: ${chalk.white(plan.model)}`);
+  }
+  console.log(
+    `  token:    ${chalk.white(plan.maskedToken)}  ${chalk.dim('(仅存本机 · 永不进包)')}`
+  );
   console.log(chalk.dim('  下次运行 khy 时会自动加载(真实 shell 环境变量优先级更高)。'));
 }
 
@@ -168,7 +215,9 @@ async function handleClaudeExportEnv(targetArg, options = {}) {
       const savedEnv = {};
       for (const line of saved.split(/\r?\n/)) {
         const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-        if (m) savedEnv[m[1]] = m[2];
+        if (m) {
+          savedEnv[m[1]] = m[2];
+        }
       }
       const p2 = planCcEnvAdoption(savedEnv);
       if (p2.ok) {
@@ -177,13 +226,17 @@ async function handleClaudeExportEnv(targetArg, options = {}) {
         endpoint = p2.endpoint;
         credKind = p2.credKind;
       }
-    } catch { /* nothing saved yet */ }
+    } catch {
+      /* nothing saved yet */
+    }
   }
 
   if (!entries) {
     console.log(chalk.yellow('没有可导出的凭据。'));
     console.log('请先在当前 shell 设置 CC 那套 env(再运行本命令),或先执行:');
-    console.log('  ' + chalk.cyan('khy claude adopt-env') + chalk.dim('   # 把当前凭据固化到 ~/.khy/.env'));
+    console.log(
+      '  ' + chalk.cyan('khy claude adopt-env') + chalk.dim('   # 把当前凭据固化到 ~/.khy/.env')
+    );
     return;
   }
 
@@ -201,10 +254,16 @@ async function handleClaudeExportEnv(targetArg, options = {}) {
     const dir = path.dirname(target);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(target, content, { mode: 0o600 });
-    try { fs.chmodSync(target, 0o600); } catch { /* best effort (e.g. Windows) */ }
+    try {
+      fs.chmodSync(target, 0o600);
+    } catch {
+      /* best effort (e.g. Windows) */
+    }
   } catch (err) {
     console.log(chalk.red('写入失败:'), err && err.message ? err.message : String(err));
-    console.log(chalk.dim('  可指定其它路径:khy claude export-env "/some/writable/path/khy-cc-env.env"'));
+    console.log(
+      chalk.dim('  可指定其它路径:khy claude export-env "/some/writable/path/khy-cc-env.env"')
+    );
     return;
   }
 
@@ -212,8 +271,17 @@ async function handleClaudeExportEnv(targetArg, options = {}) {
   console.log(`  凭据类型: ${chalk.white(credKind)}`);
   console.log(`  端点:     ${chalk.white(endpoint)}`);
   console.log(`  token:    ${chalk.white(masked)}  ${chalk.dim('(文件里是明文 · 屏幕只显打码)')}`);
-  console.log(chalk.yellow('  ⚠ 这是含 live token 的机密文件。只走私密渠道拷到新电脑,用完请删除。'));
-  console.log(chalk.dim('  新电脑还原:把它放到  ~/.khy/.env  即可(Windows: %USERPROFILE%\\.khy\\.env)。'));
+  console.log(
+    chalk.yellow('  ⚠ 这是含 live token 的机密文件。只走私密渠道拷到新电脑,用完请删除。')
+  );
+  console.log(
+    chalk.dim('  新电脑还原:把它放到  ~/.khy/.env  即可(Windows: %USERPROFILE%\\.khy\\.env)。')
+  );
 }
 
-module.exports = { handleClaudeAdoptEnv, handleClaudeUseRelay, handleClaudeExportEnv, _userEnvFile };
+module.exports = {
+  handleClaudeAdoptEnv,
+  handleClaudeUseRelay,
+  handleClaudeExportEnv,
+  _userEnvFile,
+};

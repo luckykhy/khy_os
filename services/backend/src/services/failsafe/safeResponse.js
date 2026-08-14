@@ -51,7 +51,9 @@ class SafeResponseWrapper {
       return { ok: false, value: failure, failure, raw: err };
     }
     const failure = this._validate(raw, ctx);
-    if (failure) return { ok: false, value: failure, failure, raw };
+    if (failure) {
+      return { ok: false, value: failure, failure, raw };
+    }
     return { ok: true, value: raw, failure: null, raw };
   }
 
@@ -62,7 +64,9 @@ class SafeResponseWrapper {
    */
   async _safeCall(producer, localCtx = {}) {
     const r = await this.guard(producer, localCtx);
-    if (r.ok) return r.raw;
+    if (r.ok) {
+      return r.raw;
+    }
     const e = new Error(r.failure.reason);
     e.failure = r.failure;
     e.error_code = r.failure.error_code;
@@ -95,9 +99,12 @@ class SafeResponseWrapper {
 
   _validate(value, ctx) {
     switch (ctx.kind) {
-      case 'llm': return _validateLLM(value, ctx);
-      case 'tool': return _validateTool(value, ctx);
-      default: return _validateValue(value, ctx);
+      case 'llm':
+        return _validateLLM(value, ctx);
+      case 'tool':
+        return _validateTool(value, ctx);
+      default:
+        return _validateValue(value, ctx);
     }
   }
 }
@@ -120,11 +127,14 @@ function _validateLLM(value, ctx) {
     return classify(value, ctx);
   }
   if (_isEmptyLLM(value)) {
-    return classify({
-      errorType: 'empty_reply',
-      model: value.model || ctx.model,
-      prompt_tokens: _readPromptTokens(value) ?? ctx.promptTokens,
-    }, ctx);
+    return classify(
+      {
+        errorType: 'empty_reply',
+        model: value.model || ctx.model,
+        prompt_tokens: _readPromptTokens(value) ?? ctx.promptTokens,
+      },
+      ctx
+    );
   }
   return null;
 }
@@ -132,7 +142,10 @@ function _validateLLM(value, ctx) {
 function _validateTool(value, ctx) {
   if (value === null || value === undefined) {
     // 工具返回空 = 视为未捕获崩溃（E04），绝不当作"成功的空结果"放行。
-    return classify({ errorType: undefined, tool_name: ctx.toolName, message: 'tool returned empty result' }, { ...ctx, kind: 'tool' });
+    return classify(
+      { errorType: undefined, tool_name: ctx.toolName, message: 'tool returned empty result' },
+      { ...ctx, kind: 'tool' }
+    );
   }
   if (_isStructuredFailure(value)) {
     return classify(value, ctx);
@@ -153,43 +166,83 @@ function _validateValue(value, ctx) {
 // ── 判定助手 ─────────────────────────────────────────────────────────
 
 function _isEmptyLLM(v) {
-  if (v === null || v === undefined) return true;
-  if (typeof v === 'string') return v.trim() === '';
-  if (typeof v !== 'object') return false;
+  if (v === null || v === undefined) {
+    return true;
+  }
+  if (typeof v === 'string') {
+    return v.trim() === '';
+  }
+  if (typeof v !== 'object') {
+    return false;
+  }
   const text = v.content ?? v.finalResponse ?? v.text ?? v.message ?? '';
   const hasText = typeof text === 'string' ? text.trim() !== '' : !!text;
-  if (hasText) return false;
+  if (hasText) {
+    return false;
+  }
   const tools = v.toolCalls || v.tool_calls || v.tool_use || v.toolCallLog;
-  if (Array.isArray(tools) && tools.length > 0) return false;
+  if (Array.isArray(tools) && tools.length > 0) {
+    return false;
+  }
   return true;
 }
 
 function _isEmptyValue(v) {
-  if (v === null || v === undefined) return true;
-  if (typeof v === 'string') return v.trim() === '';
-  if (Array.isArray(v)) return v.length === 0;
+  if (v === null || v === undefined) {
+    return true;
+  }
+  if (typeof v === 'string') {
+    return v.trim() === '';
+  }
+  if (Array.isArray(v)) {
+    return v.length === 0;
+  }
   return false;
 }
 
 function _isStructuredFailure(v) {
-  if (!v || typeof v !== 'object') return false;
-  if (v.success === false) return true;
-  if (typeof v.error_code === 'string') return true;
-  if (v.error && typeof v.error === 'object' && typeof v.error.code === 'string') return true;
-  if (v.allow === false && ('decision' in v || 'level' in v || 'tripped' in v)) return true;
+  if (!v || typeof v !== 'object') {
+    return false;
+  }
+  if (v.success === false) {
+    return true;
+  }
+  if (typeof v.error_code === 'string') {
+    return true;
+  }
+  if (v.error && typeof v.error === 'object' && typeof v.error.code === 'string') {
+    return true;
+  }
+  if (v.allow === false && ('decision' in v || 'level' in v || 'tripped' in v)) {
+    return true;
+  }
   return false;
 }
 
 function _isSafetyFinish(finish) {
-  return finish === 'content_filter' || finish === 'refusal' || finish === 'safety'
-    || finish === 'stop_violation' || finish.includes('filter') || finish.includes('refus');
+  return (
+    finish === 'content_filter' ||
+    finish === 'refusal' ||
+    finish === 'safety' ||
+    finish === 'stop_violation' ||
+    finish.includes('filter') ||
+    finish.includes('refus')
+  );
 }
 
 function _readPromptTokens(v) {
-  if (!v || typeof v !== 'object') return undefined;
-  if (v.prompt_tokens != null) return v.prompt_tokens;
-  if (v.tokenUsage && v.tokenUsage.prompt_tokens != null) return v.tokenUsage.prompt_tokens;
-  if (v.usage && v.usage.prompt_tokens != null) return v.usage.prompt_tokens;
+  if (!v || typeof v !== 'object') {
+    return undefined;
+  }
+  if (v.prompt_tokens != null) {
+    return v.prompt_tokens;
+  }
+  if (v.tokenUsage && v.tokenUsage.prompt_tokens != null) {
+    return v.tokenUsage.prompt_tokens;
+  }
+  if (v.usage && v.usage.prompt_tokens != null) {
+    return v.usage.prompt_tokens;
+  }
   return undefined;
 }
 

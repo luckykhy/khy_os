@@ -28,7 +28,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no', '']);
  */
 function isEnabled(env) {
   const e = env || process.env || {};
-  if (e.KHY_LOCAL_IMAGE_VIEW == null) return true;
+  if (e.KHY_LOCAL_IMAGE_VIEW == null) {
+    return true;
+  }
   return !_FALSY.has(String(e.KHY_LOCAL_IMAGE_VIEW).trim().toLowerCase());
 }
 
@@ -36,46 +38,69 @@ function isEnabled(env) {
 
 function _probePng(buf) {
   // 签名(8) + IHDR: 宽@16, 高@20, 位深@24, 色彩类型@25(BE)。
-  if (buf.length < 26) return null;
+  if (buf.length < 26) {
+    return null;
+  }
   const out = { format: 'png', width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
   const bitDepth = buf[24];
   const colorType = buf[25];
-  if (Number.isFinite(bitDepth)) out.bitDepth = bitDepth;
+  if (Number.isFinite(bitDepth)) {
+    out.bitDepth = bitDepth;
+  }
   // PNG 色彩类型:0 灰度 / 2 真彩(RGB) / 3 索引 / 4 灰度+α / 6 真彩+α(RGBA)
   const COLOR = { 0: '灰度', 2: 'RGB 真彩', 3: '索引调色板', 4: '灰度+透明', 6: 'RGBA 真彩+透明' };
-  if (colorType in COLOR) out.colorLabel = COLOR[colorType];
-  if (colorType === 4 || colorType === 6) out.hasAlpha = true;
+  if (colorType in COLOR) {
+    out.colorLabel = COLOR[colorType];
+  }
+  if (colorType === 4 || colorType === 6) {
+    out.hasAlpha = true;
+  }
   return out;
 }
 
 function _probeGif(buf) {
   // "GIFxxa" + 宽@6(LE u16) + 高@8(LE u16)。
-  if (buf.length < 10) return null;
+  if (buf.length < 10) {
+    return null;
+  }
   const out = { format: 'gif', width: buf.readUInt16LE(6), height: buf.readUInt16LE(8) };
   // 简易判定是否可能为动图:数一数图像描述符块(0x2C)是否 >1(有界扫描,绝不无界)。
   let frames = 0;
   const limit = Math.min(buf.length, 262144);
   for (let i = 13; i < limit; i++) {
-    if (buf[i] === 0x2c) { frames++; if (frames > 1) break; }
+    if (buf[i] === 0x2c) {
+      frames++;
+      if (frames > 1) {
+        break;
+      }
+    }
   }
-  if (frames > 1) out.animated = true;
+  if (frames > 1) {
+    out.animated = true;
+  }
   return out;
 }
 
 function _probeBmp(buf) {
   // "BM" + BITMAPINFOHEADER: 宽@18(LE i32), 高@22(LE i32), 位深@28(LE u16)。
-  if (buf.length < 30) return null;
+  if (buf.length < 30) {
+    return null;
+  }
   const width = buf.readInt32LE(18);
   const height = buf.readInt32LE(22);
   const out = { format: 'bmp', width: Math.abs(width), height: Math.abs(height) };
   const bpp = buf.readUInt16LE(28);
-  if (Number.isFinite(bpp) && bpp > 0) out.bitDepth = bpp;
+  if (Number.isFinite(bpp) && bpp > 0) {
+    out.bitDepth = bpp;
+  }
   return out;
 }
 
 function _probeWebp(buf) {
   // RIFF(0-3) size(4-7) WEBP(8-11) fourCC(12-15) ...
-  if (buf.length < 30) return null;
+  if (buf.length < 30) {
+    return null;
+  }
   const cc = buf.toString('ascii', 12, 16);
   try {
     if (cc === 'VP8 ') {
@@ -86,7 +111,9 @@ function _probeWebp(buf) {
     }
     if (cc === 'VP8L') {
       // 无损:数据@20,签名 0x2f @20;随后 4 字节(LE)含 14 位宽-1、14 位高-1。
-      if (buf[20] !== 0x2f) return { format: 'webp' };
+      if (buf[20] !== 0x2f) {
+        return { format: 'webp' };
+      }
       const bits = buf.readUInt32LE(21);
       const w = (bits & 0x3fff) + 1;
       const h = ((bits >> 14) & 0x3fff) + 1;
@@ -97,42 +124,69 @@ function _probeWebp(buf) {
       const w = buf.readUIntLE(24, 3) + 1;
       const h = buf.readUIntLE(27, 3) + 1;
       const out = { format: 'webp', width: w, height: h, webpKind: '扩展(VP8X)' };
-      if (buf[20] & 0x10) out.hasAlpha = true;
-      if (buf[20] & 0x02) out.animated = true;
+      if (buf[20] & 0x10) {
+        out.hasAlpha = true;
+      }
+      if (buf[20] & 0x02) {
+        out.animated = true;
+      }
       return out;
     }
-  } catch { /* 畸形 webp 头 → 只报格式 */ }
+  } catch {
+    /* 畸形 webp 头 → 只报格式 */
+  }
   return { format: 'webp' };
 }
 
 function _probeJpeg(buf) {
   // 从 offset 2 起扫描 marker,遇 SOFn 读精度/高/宽(BE)。有界迭代防畸形死循环。
-  const SOF = new Set([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
+  const SOF = new Set([
+    0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
+  ]);
   const len = buf.length;
   let off = 2;
   let guard = 0;
   while (off + 9 < len && guard++ < 8192) {
-    if (buf[off] !== 0xff) { off++; continue; }
+    if (buf[off] !== 0xff) {
+      off++;
+      continue;
+    }
     let marker = buf[off + 1];
     // 跳过填充 0xFF。
-    while (marker === 0xff && off + 2 < len) { off++; marker = buf[off + 1]; }
+    while (marker === 0xff && off + 2 < len) {
+      off++;
+      marker = buf[off + 1];
+    }
     // 无载荷的独立 marker(SOI/EOI/RSTn/TEM)。
-    if (marker === 0xd8 || marker === 0xd9 || (marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) {
+    if (
+      marker === 0xd8 ||
+      marker === 0xd9 ||
+      (marker >= 0xd0 && marker <= 0xd7) ||
+      marker === 0x01
+    ) {
       off += 2;
       continue;
     }
-    if (off + 4 > len) break;
+    if (off + 4 > len) {
+      break;
+    }
     const segLen = buf.readUInt16BE(off + 2);
     if (SOF.has(marker)) {
-      if (off + 8 >= len) break;
+      if (off + 8 >= len) {
+        break;
+      }
       const height = buf.readUInt16BE(off + 5);
       const width = buf.readUInt16BE(off + 7);
       const out = { format: 'jpeg', width, height };
       const prec = buf[off + 4];
-      if (Number.isFinite(prec)) out.bitDepth = prec;
+      if (Number.isFinite(prec)) {
+        out.bitDepth = prec;
+      }
       return out;
     }
-    if (segLen < 2) break; // 畸形段长,停止。
+    if (segLen < 2) {
+      break;
+    } // 畸形段长,停止。
     off += 2 + segLen;
   }
   return { format: 'jpeg' };
@@ -146,7 +200,9 @@ function _probeJpeg(buf) {
  */
 function probeImageMetadata(buf) {
   try {
-    if (!Buffer.isBuffer(buf) || buf.length < 4) return { format: 'unknown' };
+    if (!Buffer.isBuffer(buf) || buf.length < 4) {
+      return { format: 'unknown' };
+    }
     // PNG: 89 50 4E 47
     if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
       return _probePng(buf) || { format: 'png' };
@@ -164,14 +220,21 @@ function probeImageMetadata(buf) {
       return _probeBmp(buf) || { format: 'bmp' };
     }
     // WebP: "RIFF"...."WEBP"
-    if (buf.length >= 12
-      && buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46
-      && buf.toString('ascii', 8, 12) === 'WEBP') {
+    if (
+      buf.length >= 12 &&
+      buf[0] === 0x52 &&
+      buf[1] === 0x49 &&
+      buf[2] === 0x46 &&
+      buf[3] === 0x46 &&
+      buf.toString('ascii', 8, 12) === 'WEBP'
+    ) {
       return _probeWebp(buf) || { format: 'webp' };
     }
     // TIFF: II*\0 或 MM\0*
-    if ((buf[0] === 0x49 && buf[1] === 0x49 && buf[2] === 0x2a)
-      || (buf[0] === 0x4d && buf[1] === 0x4d && buf[2] === 0x00)) {
+    if (
+      (buf[0] === 0x49 && buf[1] === 0x49 && buf[2] === 0x2a) ||
+      (buf[0] === 0x4d && buf[1] === 0x4d && buf[2] === 0x00)
+    ) {
       return { format: 'tiff' };
     }
     return { format: 'unknown' };
@@ -183,35 +246,59 @@ function probeImageMetadata(buf) {
 // ── 描述合成(确定性中文) ──────────────────────────────────────────────
 
 const _FORMAT_LABEL = {
-  png: 'PNG', jpeg: 'JPEG', gif: 'GIF', webp: 'WebP', bmp: 'BMP', tiff: 'TIFF', unknown: '未知格式',
+  png: 'PNG',
+  jpeg: 'JPEG',
+  gif: 'GIF',
+  webp: 'WebP',
+  bmp: 'BMP',
+  tiff: 'TIFF',
+  unknown: '未知格式',
 };
 
 function _gcd(a, b) {
-  a = Math.abs(a); b = Math.abs(b);
-  while (b) { const t = b; b = a % b; a = t; }
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b) {
+    const t = b;
+    b = a % b;
+    a = t;
+  }
   return a || 1;
 }
 
 /** 人类可读的文件大小。 */
 function _humanSize(bytes) {
   const n = Number(bytes);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  if (n < 1024) {
+    return `${n} B`;
+  }
+  if (n < 1024 * 1024) {
+    return `${(n / 1024).toFixed(1)} KB`;
+  }
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
 /** 比例 + 朝向标签,如 "16:9(横向)" 或 "1.50(纵向)"。 */
 function _aspectLabel(w, h) {
-  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
+    return null;
+  }
   let orient = '方形';
-  if (w > h) orient = '横向';
-  else if (h > w) orient = '纵向';
+  if (w > h) {
+    orient = '横向';
+  } else if (h > w) {
+    orient = '纵向';
+  }
   const g = _gcd(w, h);
   const rw = w / g;
   const rh = h / g;
   // 约分后仍过大 → 用小数比,避免 "1000:667" 这类噪音。
-  if (rw <= 40 && rh <= 40) return `${rw}:${rh}(${orient})`;
+  if (rw <= 40 && rh <= 40) {
+    return `${rw}:${rh}(${orient})`;
+  }
   return `${(w / h).toFixed(2)}:1(${orient})`;
 }
 
@@ -226,7 +313,9 @@ function _aspectLabel(w, h) {
  */
 function describeImageMetadata(meta, input = {}) {
   try {
-    if (!isEnabled(input.env)) return null;
+    if (!isEnabled(input.env)) {
+      return null;
+    }
     const m = meta || {};
     const parts = [];
     parts.push(`格式 ${_FORMAT_LABEL[m.format] || m.format || '未知格式'}`);
@@ -234,21 +323,35 @@ function describeImageMetadata(meta, input = {}) {
     if (Number.isFinite(m.width) && Number.isFinite(m.height) && m.width > 0 && m.height > 0) {
       parts.push(`尺寸 ${m.width}×${m.height} 像素`);
       const mp = (m.width * m.height) / 1e6;
-      if (mp >= 0.1) parts.push(`约 ${mp.toFixed(1)} 百万像素`);
+      if (mp >= 0.1) {
+        parts.push(`约 ${mp.toFixed(1)} 百万像素`);
+      }
       const aspect = _aspectLabel(m.width, m.height);
-      if (aspect) parts.push(`比例 ${aspect}`);
+      if (aspect) {
+        parts.push(`比例 ${aspect}`);
+      }
     } else {
       parts.push('尺寸未知(头部信息不足)');
     }
 
     const size = _humanSize(input.sizeBytes);
-    if (size) parts.push(`文件大小 ${size}`);
+    if (size) {
+      parts.push(`文件大小 ${size}`);
+    }
 
-    if (m.colorLabel) parts.push(`色彩 ${m.colorLabel}`);
-    else if (Number.isFinite(m.bitDepth)) parts.push(`位深 ${m.bitDepth}`);
-    if (m.webpKind) parts.push(m.webpKind);
-    if (m.animated) parts.push('可能为动图/含多帧');
-    else if (m.hasAlpha) parts.push('含透明通道');
+    if (m.colorLabel) {
+      parts.push(`色彩 ${m.colorLabel}`);
+    } else if (Number.isFinite(m.bitDepth)) {
+      parts.push(`位深 ${m.bitDepth}`);
+    }
+    if (m.webpKind) {
+      parts.push(m.webpKind);
+    }
+    if (m.animated) {
+      parts.push('可能为动图/含多帧');
+    } else if (m.hasAlpha) {
+      parts.push('含透明通道');
+    }
 
     return parts.join(' · ');
   } catch {

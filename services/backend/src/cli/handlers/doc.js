@@ -17,9 +17,10 @@
  * @module handlers/doc
  */
 const { spawn } = require('child_process');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
+
 const { safeKill } = require('../../tools/platformUtils');
 
 const DOC_HELPER = path.join(__dirname, '../../services/docHelper.py');
@@ -39,7 +40,9 @@ function _spawnTitleStyle(pythonPath, argv, deps = {}) {
     let stderr = '';
     let timer = null;
     const arm = () => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       timer = setTimeout(() => {
         safeKill(child);
         reject(new Error('Title restyle idle-timed out (60s with no output)'));
@@ -49,18 +52,31 @@ function _spawnTitleStyle(pythonPath, argv, deps = {}) {
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (d) => { stdout += d; arm(); });
-    child.stderr.on('data', (d) => { stderr += d; arm(); });
+    child.stdout.on('data', (d) => {
+      stdout += d;
+      arm();
+    });
+    child.stderr.on('data', (d) => {
+      stderr += d;
+      arm();
+    });
     child.on('error', (err) => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       reject(new Error(`Python process error: ${err.message}`));
     });
     child.on('close', (code) => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
       try {
         resolve(JSON.parse(stdout.trim()));
       } catch (e) {
-        if (code !== 0) { reject(new Error(`Python exit code ${code}: ${stderr || stdout}`)); return; }
+        if (code !== 0) {
+          reject(new Error(`Python exit code ${code}: ${stderr || stdout}`));
+          return;
+        }
         reject(new Error(`Failed to parse output: ${e.message}`));
       }
     });
@@ -84,7 +100,9 @@ function _spawnTitleStyle(pythonPath, argv, deps = {}) {
  */
 async function runTitleStyle(opts = {}, deps = {}) {
   const inputRaw = opts.path || opts.input;
-  if (!inputRaw) return { success: false, error: 'Input .docx path is required' };
+  if (!inputRaw) {
+    return { success: false, error: 'Input .docx path is required' };
+  }
   if (opts.size === undefined && !opts.color) {
     return { success: false, error: 'Nothing to change: provide size and/or color.' };
   }
@@ -107,9 +125,13 @@ async function runTitleStyle(opts = {}, deps = {}) {
     const { validateNoPathTraversal, validateNotUNCPath } = require('../../tools/inputValidators');
     for (const p of [inputPath, outputPath]) {
       const unc = validateNotUNCPath(p);
-      if (!unc.valid) return { success: false, error: unc.message };
+      if (!unc.valid) {
+        return { success: false, error: unc.message };
+      }
       const confine = validateNoPathTraversal(p);
-      if (!confine.valid) return { success: false, error: confine.message };
+      if (!confine.valid) {
+        return { success: false, error: confine.message };
+      }
     }
   }
 
@@ -124,18 +146,25 @@ async function runTitleStyle(opts = {}, deps = {}) {
     return {
       success: false,
       needsDep: true,
-      error: '修改 Word 标题需要 Python 解释器。请安装 Python 3 后重试，并 pip install khy-os[doc]。',
+      error:
+        '修改 Word 标题需要 Python 解释器。请安装 Python 3 后重试，并 pip install khy-os[doc]。',
       hint: 'pip install khy-os[doc]',
     };
   }
 
   const argv = [inputPath, outputPath];
-  if (opts.match) argv.push('--match', String(opts.match));
-  if (opts.style) argv.push('--style', String(opts.style));
+  if (opts.match) {
+    argv.push('--match', String(opts.match));
+  }
+  if (opts.style) {
+    argv.push('--style', String(opts.style));
+  }
   if (opts.size !== undefined && opts.size !== null && String(opts.size) !== '') {
     argv.push('--size', String(opts.size));
   }
-  if (opts.color) argv.push('--color', String(opts.color));
+  if (opts.color) {
+    argv.push('--color', String(opts.color));
+  }
 
   try {
     return await _spawnTitleStyle(pythonPath, argv, deps);
@@ -157,7 +186,9 @@ async function handleDoc(parsed = {}) {
   const options = parsed.options || {};
 
   if (sub !== 'title') {
-    printError('用法: doc title <文件.docx> [--match 标题文字] [--style 样式] [--size 字号pt] [--color 颜色hex]');
+    printError(
+      '用法: doc title <文件.docx> [--match 标题文字] [--style 样式] [--size 字号pt] [--color 颜色hex]'
+    );
     return true;
   }
 
@@ -185,7 +216,9 @@ async function handleDoc(parsed = {}) {
     printWarn(result.error);
   } else {
     printError(result.error || '标题重排失败');
-    if (result.hint) printInfo(result.hint);
+    if (result.hint) {
+      printInfo(result.hint);
+    }
   }
   return true;
 }

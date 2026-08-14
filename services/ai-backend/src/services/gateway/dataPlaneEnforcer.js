@@ -46,7 +46,9 @@ function deriveUsage(ctx, gatewayResult, outputText = '') {
 
   if (tu && typeof tu === 'object') {
     inputTokens = num(tu.promptTokens ?? tu.prompt_tokens ?? tu.inputTokens ?? tu.input_tokens);
-    outputTokens = num(tu.completionTokens ?? tu.completion_tokens ?? tu.outputTokens ?? tu.output_tokens);
+    outputTokens = num(
+      tu.completionTokens ?? tu.completion_tokens ?? tu.outputTokens ?? tu.output_tokens
+    );
     estimated = false;
   }
 
@@ -178,12 +180,22 @@ async function enforceInbound({ bearer = '', model = '', messages = [], traceId 
   if (resolved) {
     const { customer, token, enabled, group, limits } = resolved;
     if (!enabled) {
-      return { ok: false, httpStatus: 403, code: 'token_disabled', message: 'Token or customer is disabled' };
+      return {
+        ok: false,
+        httpStatus: 403,
+        code: 'token_disabled',
+        message: 'Token or customer is disabled',
+      };
     }
 
     // Model permission.
     if (model && !customers.hasModelAccess(customer, model)) {
-      return { ok: false, httpStatus: 403, code: 'model_forbidden', message: `Model not permitted: ${model}` };
+      return {
+        ok: false,
+        httpStatus: 403,
+        code: 'model_forbidden',
+        message: `Model not permitted: ${model}`,
+      };
     }
 
     const ctx = {
@@ -285,7 +297,10 @@ function settleOutbound(ctx, result = {}) {
 
     // Reconcile rate limiter token bucket against the real output count.
     if (ctx._rateKey) {
-      rateLimiter.reconcile(ctx._rateKey, { estTokens: ctx.estInput || 0, actualTokens: totalTokens });
+      rateLimiter.reconcile(ctx._rateKey, {
+        estTokens: ctx.estInput || 0,
+        actualTokens: totalTokens,
+      });
     }
 
     // Meter the customer (authoritative quota counter) when this was a customer request.

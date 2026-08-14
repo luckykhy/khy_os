@@ -73,8 +73,16 @@ function buildFromSource() {
 
     // Init module and get dependency
     execSync('go mod init tls-sidecar', { cwd: buildDir, stdio: 'pipe', timeout: 30000 });
-    execSync('go get github.com/refraction-networking/utls', { cwd: buildDir, stdio: 'pipe', timeout: 120000 });
-    execSync(`go build -o "${BINARY_PATH}" sidecar.go`, { cwd: buildDir, stdio: 'pipe', timeout: 120000 });
+    execSync('go get github.com/refraction-networking/utls', {
+      cwd: buildDir,
+      stdio: 'pipe',
+      timeout: 120000,
+    });
+    execSync(`go build -o "${BINARY_PATH}" sidecar.go`, {
+      cwd: buildDir,
+      stdio: 'pipe',
+      timeout: 120000,
+    });
 
     // Cleanup build dir
     fs.rmSync(buildDir, { recursive: true, force: true });
@@ -95,7 +103,13 @@ function install() {
 
   if (buildFromSource()) return { success: true, path: BINARY_PATH, method: 'built' };
 
-  return { success: false, path: null, method: null, error: 'Go toolchain not found. Install Go 1.21+ (https://go.dev/dl/) to build the TLS sidecar, or place a prebuilt tls-sidecar binary in the app data home bin/ directory.' };
+  return {
+    success: false,
+    path: null,
+    method: null,
+    error:
+      'Go toolchain not found. Install Go 1.21+ (https://go.dev/dl/) to build the TLS sidecar, or place a prebuilt tls-sidecar binary in the app data home bin/ directory.',
+  };
 }
 
 /**
@@ -127,4 +141,11 @@ function describeSidecarDownload() {
   };
 }
 
-module.exports = { isInstalled, getBinaryPath, hasGo, buildFromSource, install, describeSidecarDownload };
+module.exports = {
+  isInstalled,
+  getBinaryPath,
+  hasGo,
+  buildFromSource,
+  install,
+  describeSidecarDownload,
+};

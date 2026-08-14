@@ -16,11 +16,16 @@
  */
 
 const path = require('path');
+
 const expandEnvPath = require('./expandEnvPath');
 
 function resolveUserPath(rawPath, cwd) {
   let p = expandEnvPath(rawPath);
-  try { p = require('../tools/_userDirs').normalizeDesktopPath(path.resolve(cwd, p)); } catch { /* ignore */ }
+  try {
+    p = require('../tools/_userDirs').normalizeDesktopPath(path.resolve(cwd, p));
+  } catch {
+    /* ignore */
+  }
   return path.resolve(cwd, p);
 }
 

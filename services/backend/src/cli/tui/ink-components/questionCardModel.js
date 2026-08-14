@@ -26,7 +26,9 @@ const OTHER_LABEL = 'Other (free input)';
 // 门控:沿用 liveRegionBudget/caretGeometry 同 OFF_VALUES 语义(显式 falsy 关,其余含 unset 开)。
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function _flagOn(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -51,14 +53,18 @@ function effectiveMulti({ multiSelect = false, promoted = false, env = process.e
 }
 
 function optLabel(o) {
-  if (typeof o === 'string') return o;
+  if (typeof o === 'string') {
+    return o;
+  }
   return (o && (o.label || o.value)) || String(o);
 }
+
 function optDesc(o) {
-  return (o && typeof o === 'object' && o.description) ? String(o.description) : '';
+  return o && typeof o === 'object' && o.description ? String(o.description) : '';
 }
+
 function optPreview(o) {
-  return (o && typeof o === 'object' && o.preview) ? String(o.preview) : '';
+  return o && typeof o === 'object' && o.preview ? String(o.preview) : '';
 }
 
 /**
@@ -74,21 +80,37 @@ function rowLayout(optionsLen) {
 /** 环绕步进(用于卡片左右切换 / 卡内上下光标)。count<=0 时恒定返回 0。 */
 function wrapIndex(idx, count) {
   const c = Math.max(0, Number(count) || 0);
-  if (c <= 0) return 0;
+  if (c <= 0) {
+    return 0;
+  }
   const i = Number(idx) || 0;
   return ((i % c) + c) % c;
 }
 
-function nextCard(idx, count) { return wrapIndex((Number(idx) || 0) + 1, count); }
-function prevCard(idx, count) { return wrapIndex((Number(idx) || 0) - 1, count); }
-function moveCursor(cursor, delta, rowCount) { return wrapIndex((Number(cursor) || 0) + (Number(delta) || 0), rowCount); }
+function nextCard(idx, count) {
+  return wrapIndex((Number(idx) || 0) + 1, count);
+}
+
+function prevCard(idx, count) {
+  return wrapIndex((Number(idx) || 0) - 1, count);
+}
+
+function moveCursor(cursor, delta, rowCount) {
+  return wrapIndex((Number(cursor) || 0) + (Number(delta) || 0), rowCount);
+}
 
 /** 给定光标位置,它落在哪类行上。 */
 function rowKind(cursor, optionsLen) {
   const { discussRow, otherRow } = rowLayout(optionsLen);
-  if (cursor === discussRow) return 'discuss';
-  if (cursor === otherRow) return 'other';
-  if (cursor >= 0 && cursor < optionsLen) return 'option';
+  if (cursor === discussRow) {
+    return 'discuss';
+  }
+  if (cursor === otherRow) {
+    return 'other';
+  }
+  if (cursor >= 0 && cursor < optionsLen) {
+    return 'option';
+  }
   return 'option';
 }
 
@@ -98,15 +120,28 @@ function rowKind(cursor, optionsLen) {
  * 明确、可继续对话的出口,而不是空答案。
  * @returns {string[]} 选中的标签数组(至少含一项)
  */
-function multiSelection({ options = [], checked = new Set(), discussChecked = false, otherValue = '' }) {
+function multiSelection({
+  options = [],
+  checked = new Set(),
+  discussChecked = false,
+  otherValue = '',
+}) {
   const labels = [];
   for (let i = 0; i < options.length; i++) {
-    if (checked.has(i)) labels.push(optLabel(options[i]));
+    if (checked.has(i)) {
+      labels.push(optLabel(options[i]));
+    }
   }
-  if (discussChecked) labels.push(DISCUSS_LABEL);
+  if (discussChecked) {
+    labels.push(DISCUSS_LABEL);
+  }
   const other = String(otherValue || '').trim();
-  if (other) labels.push(other);
-  if (labels.length === 0) labels.push(DISCUSS_LABEL); // 惰性回退
+  if (other) {
+    labels.push(other);
+  }
+  if (labels.length === 0) {
+    labels.push(DISCUSS_LABEL);
+  } // 惰性回退
   return labels;
 }
 
@@ -116,7 +151,9 @@ function multiSelection({ options = [], checked = new Set(), discussChecked = fa
  */
 function singleSelection({ options = [], cursor = 0, otherValue = '' }) {
   const kind = rowKind(cursor, options.length);
-  if (kind === 'discuss') return DISCUSS_LABEL;
+  if (kind === 'discuss') {
+    return DISCUSS_LABEL;
+  }
   if (kind === 'other') {
     const other = String(otherValue || '').trim();
     return other || DISCUSS_LABEL; // 空自由输入 → 惰性回退可讨论
@@ -131,7 +168,16 @@ function singleSelection({ options = [], cursor = 0, otherValue = '' }) {
  * 有效多选由 effectiveMulti 判定(门控关时 promoted 被忽略=向后兼容)。
  * @returns {string}
  */
-function cardAnswer({ multi = false, promoted = false, env = process.env, options = [], checked = new Set(), discussChecked = false, otherValue = '', cursor = 0 }) {
+function cardAnswer({
+  multi = false,
+  promoted = false,
+  env = process.env,
+  options = [],
+  checked = new Set(),
+  discussChecked = false,
+  otherValue = '',
+  cursor = 0,
+}) {
   if (effectiveMulti({ multiSelect: multi, promoted, env })) {
     return multiSelection({ options, checked, discussChecked, otherValue }).join(', ');
   }
@@ -154,7 +200,9 @@ function collectAllAnswers(questions, state = {}, env = process.env) {
   const promotedMulti = state.promotedMulti || [];
   const answers = {};
   (Array.isArray(questions) ? questions : []).forEach((q, i) => {
-    if (!q) return;
+    if (!q) {
+      return;
+    }
     const qText = String(q.question || '').trim() || `Question ${i + 1}`;
     const options = Array.isArray(q.options) ? q.options : [];
     answers[qText] = cardAnswer({

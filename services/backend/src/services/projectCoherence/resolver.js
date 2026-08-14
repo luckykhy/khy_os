@@ -23,18 +23,28 @@ const PY_INIT = '__init__.py';
 // 收敛到 utils/existsSyncSafe 单一真源(逐字节委托,调用点不变)
 const _defaultExists = require('../../utils/existsSyncSafe');
 function _defaultIsDir(p) {
-  try { return fs.statSync(p).isDirectory(); } catch { return false; }
+  try {
+    return fs.statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function _isBareJsSpec(spec) {
   // 相对 / 绝对 / 同级 才是本地
-  if (spec.startsWith('./') || spec.startsWith('../') || spec.startsWith('/')) return false;
-  if (spec === '.' || spec === '..') return false;
+  if (spec.startsWith('./') || spec.startsWith('../') || spec.startsWith('/')) {
+    return false;
+  }
+  if (spec === '.' || spec === '..') {
+    return false;
+  }
   return true; // react, @scope/pkg, node:fs, lodash/x …
 }
 
 function _resolveJs(spec, fromFile, io) {
-  if (_isBareJsSpec(spec)) return { local: false, resolved: null, candidates: [] };
+  if (_isBareJsSpec(spec)) {
+    return { local: false, resolved: null, candidates: [] };
+  }
   const baseDir = path.dirname(fromFile);
   const target = path.resolve(baseDir, spec);
   const candidates = [];
@@ -42,12 +52,18 @@ function _resolveJs(spec, fromFile, io) {
   // 1) 原样（带扩展名时）
   candidates.push(target);
   // 2) target + 各扩展名
-  for (const ext of JS_RESOLVE_EXT) candidates.push(target + ext);
+  for (const ext of JS_RESOLVE_EXT) {
+    candidates.push(target + ext);
+  }
   // 3) target/index.*
-  for (const ext of JS_RESOLVE_EXT) candidates.push(path.join(target, 'index' + ext));
+  for (const ext of JS_RESOLVE_EXT) {
+    candidates.push(path.join(target, 'index' + ext));
+  }
 
   for (const c of candidates) {
-    if (io.exists(c) && !io.isDir(c)) return { local: true, resolved: c, candidates };
+    if (io.exists(c) && !io.isDir(c)) {
+      return { local: true, resolved: c, candidates };
+    }
   }
   // 4) target 本身是带 package.json 的目录 → 视为已解析（不深究 main）
   if (io.isDir(target) && io.exists(path.join(target, 'package.json'))) {
@@ -58,13 +74,17 @@ function _resolveJs(spec, fromFile, io) {
 
 function _resolvePy(spec, fromFile, io) {
   // 仅处理相对说明符（以 . 开头）。绝对包名无法可靠定位项目根 → non-local。
-  if (!spec.startsWith('.')) return { local: false, resolved: null, candidates: [] };
+  if (!spec.startsWith('.')) {
+    return { local: false, resolved: null, candidates: [] };
+  }
 
   const leadingDots = (spec.match(/^\.+/) || [''])[0].length;
   const rest = spec.slice(leadingDots); // 可能为 '' （形如 '.' / '..'）或 'pkg.mod'
   let dir = path.dirname(fromFile);
   // 1 个点 = 当前包目录；每多一个点再上一层
-  for (let i = 1; i < leadingDots; i += 1) dir = path.dirname(dir);
+  for (let i = 1; i < leadingDots; i += 1) {
+    dir = path.dirname(dir);
+  }
 
   const candidates = [];
   if (!rest) {
@@ -78,7 +98,9 @@ function _resolvePy(spec, fromFile, io) {
   for (const c of candidates) {
     if (io.exists(c)) {
       if (io.isDir(c)) {
-        if (io.exists(path.join(c, PY_INIT))) return { local: true, resolved: path.join(c, PY_INIT), candidates };
+        if (io.exists(path.join(c, PY_INIT))) {
+          return { local: true, resolved: path.join(c, PY_INIT), candidates };
+        }
         // 命名空间包（无 __init__）也算存在
         return { local: true, resolved: c, candidates };
       }
@@ -102,7 +124,9 @@ function resolveImport(spec, fromFile, lang, io) {
     isDir: (io && io.isDir) || _defaultIsDir,
   };
   try {
-    if (!spec || typeof spec !== 'string') return { local: false, resolved: null, candidates: [] };
+    if (!spec || typeof spec !== 'string') {
+      return { local: false, resolved: null, candidates: [] };
+    }
     return lang === 'py'
       ? _resolvePy(spec, fromFile, resolvedIo)
       : _resolveJs(spec, fromFile, resolvedIo);
@@ -125,18 +149,27 @@ function makeIoFromSet(knownFiles, alsoDisk = true) {
     set.add(abs);
     let d = path.dirname(abs);
     // 记录所有祖先目录，使「目录存在」判定可命中
-    while (d && d !== path.dirname(d)) { dirs.add(d); d = path.dirname(d); }
+    while (d && d !== path.dirname(d)) {
+      dirs.add(d);
+      d = path.dirname(d);
+    }
   }
   return {
     exists: (p) => {
       const abs = path.resolve(p);
-      if (set.has(abs) || dirs.has(abs)) return true;
+      if (set.has(abs) || dirs.has(abs)) {
+        return true;
+      }
       return alsoDisk ? _defaultExists(abs) : false;
     },
     isDir: (p) => {
       const abs = path.resolve(p);
-      if (dirs.has(abs)) return true;
-      if (set.has(abs)) return false;
+      if (dirs.has(abs)) {
+        return true;
+      }
+      if (set.has(abs)) {
+        return false;
+      }
       return alsoDisk ? _defaultIsDir(abs) : false;
     },
   };

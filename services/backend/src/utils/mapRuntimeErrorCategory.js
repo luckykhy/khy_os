@@ -18,14 +18,20 @@
  */
 
 function mapRuntimeErrorCategory(errorType = '', errorText = '') {
-  const normalizedType = String(errorType || '').trim().toLowerCase();
-  const normalizedText = String(errorText || '').trim().toLowerCase();
-  if (normalizedType === 'timeout' || normalizedText.includes('timeout')) return 'stall';
+  const normalizedType = String(errorType || '')
+    .trim()
+    .toLowerCase();
+  const normalizedText = String(errorText || '')
+    .trim()
+    .toLowerCase();
+  if (normalizedType === 'timeout' || normalizedText.includes('timeout')) {
+    return 'stall';
+  }
   if (
-    normalizedType === 'network'
-    || normalizedType === 'process'
-    || normalizedType === 'cancelled'
-    || /econn|socket|network|aborted|cancelled|canceled/.test(normalizedText)
+    normalizedType === 'network' ||
+    normalizedType === 'process' ||
+    normalizedType === 'cancelled' ||
+    /econn|socket|network|aborted|cancelled|canceled/.test(normalizedText)
   ) {
     return 'transport';
   }

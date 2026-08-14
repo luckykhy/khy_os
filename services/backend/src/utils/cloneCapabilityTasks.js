@@ -17,10 +17,12 @@
  */
 
 function _cloneCapabilityTasks(tasks = []) {
-  if (!Array.isArray(tasks)) return [];
+  if (!Array.isArray(tasks)) {
+    return [];
+  }
   return tasks
-    .filter(task => task && typeof task === 'object')
-    .map(task => ({
+    .filter((task) => task && typeof task === 'object')
+    .map((task) => ({
       ...task,
       patterns: Array.isArray(task.patterns) ? [...task.patterns] : [],
       requiredTools: Array.isArray(task.requiredTools) ? [...task.requiredTools] : [],

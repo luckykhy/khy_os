@@ -16,7 +16,7 @@
 #   6. every port/auth/path knob is surfaced with its env var (no hardcoding).
 #
 # Usage:  bash services/backend/scripts/verify-remotedev.sh
-set -uo pipefail
+set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # services/backend
 cd "$HERE"

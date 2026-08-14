@@ -14,13 +14,15 @@
 let _menu = null;
 
 function registerMenuPrompter(impl) {
-  _menu = (typeof impl === 'function') ? impl : null;
+  _menu = typeof impl === 'function' ? impl : null;
 }
 
 function getMenuPrompter() {
   return _menu;
 }
 
-function _resetForTest() { _menu = null; }
+function _resetForTest() {
+  _menu = null;
+}
 
 module.exports = { registerMenuPrompter, getMenuPrompter, _resetForTest };

@@ -4,12 +4,11 @@
 'use strict';
 
 const { EventEmitter } = require('events');
-const {
-  generateTaskId,
-  isValidTaskType,
-} = require('./index');
+
 const { initTaskOutput, cleanupTaskOutput } = require('./diskOutput');
 const runtime = require('./largeTaskRuntimeStore');
+
+const { generateTaskId, isValidTaskType } = require('./index');
 
 const TERMINAL_TASK_TTL = 5 * 60 * 1000;
 const MAX_TASKS = 500;
@@ -51,7 +50,9 @@ function _legacyStatus(task) {
 }
 
 function _toLegacyTask(task) {
-  if (!_isManaged(task)) return null;
+  if (!_isManaged(task)) {
+    return null;
+  }
   const payload = task.payload_json || {};
   return {
     id: task.id,
@@ -81,21 +82,31 @@ function _getManagedTask(taskId) {
 
 function _setPayload(taskId, mutator) {
   const task = _getManagedTask(taskId);
-  if (!task) return null;
+  if (!task) {
+    return null;
+  }
   const payload = { ...(task.payload_json || {}) };
   mutator(payload, task);
   runtime.updateTaskFields(taskId, {
     payload_json: payload,
-    last_error: payload.error ? { type: 'legacy_task_error', message: String(payload.error) } : task.last_error,
+    last_error: payload.error
+      ? { type: 'legacy_task_error', message: String(payload.error) }
+      : task.last_error,
   });
   return _getManagedTask(taskId);
 }
 
 function _moveToRunning(taskId) {
   const task = _getManagedTask(taskId);
-  if (!task) return null;
-  if (task.status === 'running') return task;
-  if (task.status === 'claimed') return runtime.startTask(taskId, WORKER_ID);
+  if (!task) {
+    return null;
+  }
+  if (task.status === 'running') {
+    return task;
+  }
+  if (task.status === 'claimed') {
+    return runtime.startTask(taskId, WORKER_ID);
+  }
   if (task.status === 'retry_wait') {
     runtime.updateTaskFields(taskId, { next_run_at: new Date().toISOString() });
   }
@@ -103,13 +114,22 @@ function _moveToRunning(taskId) {
     runtime.claimTask(taskId, WORKER_ID, { leaseMs: 60_000 });
     return runtime.startTask(taskId, WORKER_ID);
   }
-  if (task.status === 'paused') return runtime.transitionTask(taskId, 'running');
+  if (task.status === 'paused') {
+    return runtime.transitionTask(taskId, 'running');
+  }
   if (task.status === 'pausing') {
     runtime.transitionTask(taskId, 'paused');
     return runtime.transitionTask(taskId, 'running');
   }
-  if (task.status === 'cancelling') throw new Error(`Cannot run cancelling task: ${taskId}`);
-  if (task.status === 'succeeded' || task.status === 'failed' || task.status === 'cancelled' || task.status === 'dead_letter') {
+  if (task.status === 'cancelling') {
+    throw new Error(`Cannot run cancelling task: ${taskId}`);
+  }
+  if (
+    task.status === 'succeeded' ||
+    task.status === 'failed' ||
+    task.status === 'cancelled' ||
+    task.status === 'dead_letter'
+  ) {
     throw new Error(`Cannot run terminal task: ${taskId}`);
   }
   return task;
@@ -128,7 +148,9 @@ function _evictOldestTerminal() {
   let oldestTime = Number.POSITIVE_INFINITY;
   for (const task of _allTasks()) {
     const legacy = _toLegacyTask(task);
-    if (!legacy || !_isTerminalLegacy(legacy.status) || !legacy.endTime) continue;
+    if (!legacy || !_isTerminalLegacy(legacy.status) || !legacy.endTime) {
+      continue;
+    }
     if (legacy.endTime < oldestTime) {
       oldest = legacy.id;
       oldestTime = legacy.endTime;
@@ -140,14 +162,18 @@ function _evictOldestTerminal() {
 }
 
 function _scheduleEviction() {
-  if (_evictionTimer) return;
+  if (_evictionTimer) {
+    return;
+  }
   _evictionTimer = setInterval(() => {
     const now = Date.now();
     const all = _allTasks();
     for (const task of all) {
       const legacy = _toLegacyTask(task);
-      if (!legacy || !_isTerminalLegacy(legacy.status) || !legacy.endTime) continue;
-      if ((now - legacy.endTime) > TERMINAL_TASK_TTL) {
+      if (!legacy || !_isTerminalLegacy(legacy.status) || !legacy.endTime) {
+        continue;
+      }
+      if (now - legacy.endTime > TERMINAL_TASK_TTL) {
         deleteTask(legacy.id);
       }
     }
@@ -162,7 +188,9 @@ function _scheduleEviction() {
     }
   }, 60_000);
 
-  if (_evictionTimer.unref) _evictionTimer.unref();
+  if (_evictionTimer.unref) {
+    _evictionTimer.unref();
+  }
 }
 
 function createTask(description, type, options = {}) {
@@ -219,9 +247,15 @@ function getTask(id) {
 
 function listTasks(filter = {}) {
   let tasks = _allTasks().map(_toLegacyTask).filter(Boolean);
-  if (filter.status) tasks = tasks.filter((task) => task.status === filter.status);
-  if (filter.type) tasks = tasks.filter((task) => task.type === filter.type);
-  if (filter.owner) tasks = tasks.filter((task) => task.owner === filter.owner);
+  if (filter.status) {
+    tasks = tasks.filter((task) => task.status === filter.status);
+  }
+  if (filter.type) {
+    tasks = tasks.filter((task) => task.type === filter.type);
+  }
+  if (filter.owner) {
+    tasks = tasks.filter((task) => task.owner === filter.owner);
+  }
   return tasks;
 }
 
@@ -256,18 +290,26 @@ function getTaskSummary() {
 
 function _mutateDependencyMirror(taskId, patch = {}) {
   const currentTask = _getManagedTask(taskId);
-  if (!currentTask) return null;
-  let payload = { ...(currentTask.payload_json || {}) };
+  if (!currentTask) {
+    return null;
+  }
+  const payload = { ...(currentTask.payload_json || {}) };
   payload.blocks = Array.isArray(payload.blocks) ? payload.blocks.slice() : [];
   payload.blockedBy = Array.isArray(payload.blockedBy) ? payload.blockedBy.slice() : [];
 
   if (patch.addBlocks) {
     const ids = Array.isArray(patch.addBlocks) ? patch.addBlocks : [patch.addBlocks];
     for (const id of ids) {
-      if (!payload.blocks.includes(id)) payload.blocks.push(id);
+      if (!payload.blocks.includes(id)) {
+        payload.blocks.push(id);
+      }
       _setPayload(id, (blockedPayload) => {
-        blockedPayload.blockedBy = Array.isArray(blockedPayload.blockedBy) ? blockedPayload.blockedBy : [];
-        if (!blockedPayload.blockedBy.includes(taskId)) blockedPayload.blockedBy.push(taskId);
+        blockedPayload.blockedBy = Array.isArray(blockedPayload.blockedBy)
+          ? blockedPayload.blockedBy
+          : [];
+        if (!blockedPayload.blockedBy.includes(taskId)) {
+          blockedPayload.blockedBy.push(taskId);
+        }
       });
     }
   }
@@ -275,10 +317,14 @@ function _mutateDependencyMirror(taskId, patch = {}) {
   if (patch.addBlockedBy) {
     const ids = Array.isArray(patch.addBlockedBy) ? patch.addBlockedBy : [patch.addBlockedBy];
     for (const id of ids) {
-      if (!payload.blockedBy.includes(id)) payload.blockedBy.push(id);
+      if (!payload.blockedBy.includes(id)) {
+        payload.blockedBy.push(id);
+      }
       _setPayload(id, (blockerPayload) => {
         blockerPayload.blocks = Array.isArray(blockerPayload.blocks) ? blockerPayload.blocks : [];
-        if (!blockerPayload.blocks.includes(taskId)) blockerPayload.blocks.push(taskId);
+        if (!blockerPayload.blocks.includes(taskId)) {
+          blockerPayload.blocks.push(taskId);
+        }
       });
     }
   }
@@ -288,14 +334,18 @@ function _mutateDependencyMirror(taskId, patch = {}) {
     payload.blocks = payload.blocks.filter((id) => !ids.includes(id));
     for (const id of ids) {
       _setPayload(id, (blockedPayload) => {
-        blockedPayload.blockedBy = Array.isArray(blockedPayload.blockedBy) ? blockedPayload.blockedBy : [];
+        blockedPayload.blockedBy = Array.isArray(blockedPayload.blockedBy)
+          ? blockedPayload.blockedBy
+          : [];
         blockedPayload.blockedBy = blockedPayload.blockedBy.filter((v) => v !== taskId);
       });
     }
   }
 
   if (patch.removeBlockedBy) {
-    const ids = Array.isArray(patch.removeBlockedBy) ? patch.removeBlockedBy : [patch.removeBlockedBy];
+    const ids = Array.isArray(patch.removeBlockedBy)
+      ? patch.removeBlockedBy
+      : [patch.removeBlockedBy];
     payload.blockedBy = payload.blockedBy.filter((id) => !ids.includes(id));
     for (const id of ids) {
       _setPayload(id, (blockerPayload) => {
@@ -311,23 +361,43 @@ function _mutateDependencyMirror(taskId, patch = {}) {
 
 function updateTask(id, updates = {}) {
   const current = _getManagedTask(id);
-  if (!current) return null;
+  if (!current) {
+    return null;
+  }
 
   const prev = _toLegacyTask(current);
   const prevStatus = prev.status;
 
-  if (_isTerminalLegacy(prevStatus) && updates.status === undefined && !Object.prototype.hasOwnProperty.call(updates, 'notified')) {
+  if (
+    _isTerminalLegacy(prevStatus) &&
+    updates.status === undefined &&
+    !Object.prototype.hasOwnProperty.call(updates, 'notified')
+  ) {
     return prev;
   }
 
   _setPayload(id, (payload) => {
-    if (updates.subject !== undefined) payload.subject = updates.subject;
-    if (updates.description !== undefined) payload.description = updates.description;
-    if (updates.activeForm !== undefined) payload.activeForm = updates.activeForm;
-    if (updates.owner !== undefined) payload.owner = updates.owner;
-    if (updates.error !== undefined) payload.error = updates.error;
-    if (updates.notified !== undefined) payload.notified = Boolean(updates.notified);
-    if (updates.outputOffset !== undefined) payload.outputOffset = updates.outputOffset;
+    if (updates.subject !== undefined) {
+      payload.subject = updates.subject;
+    }
+    if (updates.description !== undefined) {
+      payload.description = updates.description;
+    }
+    if (updates.activeForm !== undefined) {
+      payload.activeForm = updates.activeForm;
+    }
+    if (updates.owner !== undefined) {
+      payload.owner = updates.owner;
+    }
+    if (updates.error !== undefined) {
+      payload.error = updates.error;
+    }
+    if (updates.notified !== undefined) {
+      payload.notified = Boolean(updates.notified);
+    }
+    if (updates.outputOffset !== undefined) {
+      payload.outputOffset = updates.outputOffset;
+    }
   });
 
   _mutateDependencyMirror(id, {
@@ -344,7 +414,9 @@ function updateTask(id, updates = {}) {
     }
     if (target === 'queued') {
       const latest = _getManagedTask(id);
-      if (!latest) return null;
+      if (!latest) {
+        return null;
+      }
       if (latest.status === 'retry_wait') {
         runtime.updateTaskFields(id, { next_run_at: new Date().toISOString() });
       } else if (latest.status !== 'queued') {
@@ -373,11 +445,15 @@ function updateTask(id, updates = {}) {
 
 function deleteTask(id) {
   const task = getTask(id);
-  if (!task) return false;
+  if (!task) {
+    return false;
+  }
 
   for (const blockId of task.blocks) {
     _setPayload(blockId, (blockedPayload) => {
-      blockedPayload.blockedBy = Array.isArray(blockedPayload.blockedBy) ? blockedPayload.blockedBy : [];
+      blockedPayload.blockedBy = Array.isArray(blockedPayload.blockedBy)
+        ? blockedPayload.blockedBy
+        : [];
       blockedPayload.blockedBy = blockedPayload.blockedBy.filter((v) => v !== id);
     });
   }

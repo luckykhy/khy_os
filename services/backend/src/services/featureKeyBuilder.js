@@ -12,8 +12,15 @@ const FEATURE_LABELS = Object.freeze({
 // launcher command so `<cmd>.launch` resolves login-free (see authGuard
 // FEATURE_ACCESS_RULES). Locked in sync by agentLauncherRegistry.test.js.
 const IDE_FAMILY_KEYS = Object.freeze([
-  'claude', 'codex', 'cursor', 'kiro', 'trae',
-  'opencode', 'warp', 'vscode', 'windsurf',
+  'claude',
+  'codex',
+  'cursor',
+  'kiro',
+  'trae',
+  'opencode',
+  'warp',
+  'vscode',
+  'windsurf',
 ]);
 const FEATURE_PREFIX_REGISTRY = Object.freeze({
   gateway: Object.freeze({
@@ -46,12 +53,17 @@ function normalizeFeatureKeySegment(value = '', fallback = '') {
     .replace(/[^a-z0-9]+/g, '.')
     .replace(/\.+/g, '.')
     .replace(/^\.+|\.+$/g, '');
-  return text || String(fallback || '').trim().toLowerCase();
+  return (
+    text ||
+    String(fallback || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 function joinFeatureKey(...parts) {
   return parts
-    .map(part => normalizeFeatureKeySegment(part))
+    .map((part) => normalizeFeatureKeySegment(part))
     .filter(Boolean)
     .join('.');
 }
@@ -64,10 +76,12 @@ function buildFeaturePrefixRegex(prefix = '') {
 
 function buildAlternationPrefixRegex(values = []) {
   const normalizedValues = (Array.isArray(values) ? values : [])
-    .map(value => normalizeFeatureKeySegment(value))
+    .map((value) => normalizeFeatureKeySegment(value))
     .filter(Boolean)
-    .map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  if (normalizedValues.length === 0) return /^$/;
+    .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (normalizedValues.length === 0) {
+    return /^$/;
+  }
   return new RegExp(`^(?:${normalizedValues.join('|')})(?:\\.|$)`);
 }
 
@@ -78,14 +92,18 @@ function getFeatureFamilyConfig(familyName = '') {
 
 function getFeatureFamilyPrefix(familyName = '', scope = 'root') {
   const config = getFeatureFamilyConfig(familyName);
-  if (!config) return '';
+  if (!config) {
+    return '';
+  }
   const value = config[scope];
   return Array.isArray(value) ? '' : String(value || '').trim();
 }
 
 function buildFeatureFamilyPrefixRegex(familyName = '', scope = 'root') {
   const config = getFeatureFamilyConfig(familyName);
-  if (!config) return /^$/;
+  if (!config) {
+    return /^$/;
+  }
   const value = config[scope];
   if (Array.isArray(value)) {
     return buildAlternationPrefixRegex(value);
@@ -151,8 +169,12 @@ function buildProxyFeatureLabel() {
 
 function buildProxyRelayFeatureLabel(channel = '') {
   const normalized = normalizeFeatureKeySegment(channel);
-  if (normalized === 'web') return FEATURE_LABELS.webRelay;
-  if (normalized === 'clipboard') return FEATURE_LABELS.clipboardRelay;
+  if (normalized === 'web') {
+    return FEATURE_LABELS.webRelay;
+  }
+  if (normalized === 'clipboard') {
+    return FEATURE_LABELS.clipboardRelay;
+  }
   return normalized ? `${normalized.replace(/\./g, ' ')} relay` : FEATURE_LABELS.proxy;
 }
 

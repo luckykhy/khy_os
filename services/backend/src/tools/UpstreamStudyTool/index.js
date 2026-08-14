@@ -14,8 +14,8 @@
  * 门控 KHY_UPSTREAM_STUDY_TOOL(flagRegistry 声明式注册,默认开)。关 → 导出 benign 非工具对象,
  * 自动发现循环(tools/index.js Phase 1)全部跳过 → 工具不注册(= 今日无此工具的行为)。
  */
-const { BaseTool } = require('../_baseTool');
 const upstreamStudy = require('../../services/upstreamStudy');
+const { BaseTool } = require('../_baseTool');
 
 function _gateEnabled(env = process.env) {
   try {
@@ -23,7 +23,9 @@ function _gateEnabled(env = process.env) {
     return flagRegistry.isFlagEnabled('KHY_UPSTREAM_STUDY_TOOL', env);
   } catch {
     const raw = env && env.KHY_UPSTREAM_STUDY_TOOL;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
   }
 }
@@ -32,13 +34,26 @@ class UpstreamStudyTool extends BaseTool {
   static toolName = 'UpstreamStudy';
   static category = 'analysis';
   static risk = 'low';
-  static aliases = ['study_upstream', 'learn_archive', 'study_archive', 'upstream_learn', 'learn_from_zip'];
-  static searchHint = '开源项目 更新 压缩包 学习 取其精华弃其糟粕 更新包 upstream study learn archive zip tar 参考项目 借鉴 对比 baseline 更新学习';
+  static aliases = [
+    'study_upstream',
+    'learn_archive',
+    'study_archive',
+    'upstream_learn',
+    'learn_from_zip',
+  ];
+  static searchHint =
+    '开源项目 更新 压缩包 学习 取其精华弃其糟粕 更新包 upstream study learn archive zip tar 参考项目 借鉴 对比 baseline 更新学习';
 
   // 恒只读:只列目录 / stat 基线,永不解压落盘、永不改源码。
-  isReadOnly() { return true; }
-  isDestructive() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return true;
+  }
+  isDestructive() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return [
@@ -98,7 +113,12 @@ class UpstreamStudyTool extends BaseTool {
     });
 
     if (result.success === false) {
-      return { success: false, archive: result.archive, error: result.error, skipped: result.skipped };
+      return {
+        success: false,
+        archive: result.archive,
+        error: result.error,
+        skipped: result.skipped,
+      };
     }
 
     return {
@@ -112,11 +132,12 @@ class UpstreamStudyTool extends BaseTool {
       dross: result.dross,
       drossTotal: result.drossTotal,
       diff: result.diff,
-      plan: result.plan,             // 移植计划:能改/不能改(forbidden+portability)+ 先改/后改(waves)。门关时为 undefined。
+      plan: result.plan, // 移植计划:能改/不能改(forbidden+portability)+ 先改/后改(waves)。门关时为 undefined。
       truncated: result.truncated,
       report: result.report,
-      hint: '这是只读分析:已列出精华/糟粕, 未改动任何文件。用 Read 逐个读精华清单里的文件, '
-        + '只挑真正的改进选择性移植到 Khy —— 按 plan.waves 的先后顺序改、避开 plan.forbidden, 不要整包合并。',
+      hint:
+        '这是只读分析:已列出精华/糟粕, 未改动任何文件。用 Read 逐个读精华清单里的文件, ' +
+        '只挑真正的改进选择性移植到 Khy —— 按 plan.waves 的先后顺序改、避开 plan.forbidden, 不要整包合并。',
     };
   }
 

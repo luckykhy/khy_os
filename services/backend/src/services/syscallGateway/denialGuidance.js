@@ -21,7 +21,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** 指引是否启用(纯函数,门控默认开;仅 0/false/off/no 关闭)。 */
 function isDenialGuidanceEnabled(env = process.env) {
   const raw = env && env.KHY_GATEWAY_DENIAL_GUIDANCE;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -35,15 +37,21 @@ function isDenialGuidanceEnabled(env = process.env) {
  */
 function buildDenialGuidance(cause, intent, env = process.env) {
   try {
-    if (!isDenialGuidanceEnabled(env)) return null;
-    if (cause !== DENY_CAUSES.NO_INTERACTIVE_CHANNEL) return null;
+    if (!isDenialGuidanceEnabled(env)) {
+      return null;
+    }
+    if (cause !== DENY_CAUSES.NO_INTERACTIVE_CHANNEL) {
+      return null;
+    }
     const tool = intent && typeof intent === 'object' && intent.tool ? String(intent.tool) : '';
     const subject = tool ? `高危操作「${tool}」` : '此高危(红灯 L2)操作';
-    return `${subject}需要当场键入确认,但当前为非交互环境(自主/管道/后台),无法弹出确认框——`
-      + `故按安全默认拒绝(红线未放松)。若确需执行,请择一合规途径:`
-      + `① 在交互式 TUI/REPL 中运行 khy,届时会弹出确认框请你键入 YES;`
-      + `② 或在 ~/.khy/permissions.json 为该工具/命令配置放行策略(见 DESIGN-ARCH-058);`
-      + `③ 破坏性/系统级红线操作请人工复核后再执行。`;
+    return (
+      `${subject}需要当场键入确认,但当前为非交互环境(自主/管道/后台),无法弹出确认框——` +
+      `故按安全默认拒绝(红线未放松)。若确需执行,请择一合规途径:` +
+      `① 在交互式 TUI/REPL 中运行 khy,届时会弹出确认框请你键入 YES;` +
+      `② 或在 ~/.khy/permissions.json 为该工具/命令配置放行策略(见 DESIGN-ARCH-058);` +
+      `③ 破坏性/系统级红线操作请人工复核后再执行。`
+    );
   } catch {
     return null; // fail-soft:指引生成失败绝不影响审批本身
   }

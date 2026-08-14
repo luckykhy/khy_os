@@ -24,9 +24,15 @@ const VALID_TYPES = ['user', 'feedback', 'project', 'reference'];
 
 function _saveMemoryEnabled(env) {
   const e = env || process.env;
-  const disabled = String(e.KHY_DISABLE_MEMORY || '').trim().toLowerCase();
-  if (disabled === '1' || disabled === 'true') return false;
-  const raw = String(e.KHY_SAVE_MEMORY_TOOL == null ? '' : e.KHY_SAVE_MEMORY_TOOL).trim().toLowerCase();
+  const disabled = String(e.KHY_DISABLE_MEMORY || '')
+    .trim()
+    .toLowerCase();
+  if (disabled === '1' || disabled === 'true') {
+    return false;
+  }
+  const raw = String(e.KHY_SAVE_MEMORY_TOOL == null ? '' : e.KHY_SAVE_MEMORY_TOOL)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(raw);
 }
 
@@ -38,25 +44,31 @@ function _saveMemoryEnabled(env) {
 // 注意:这只丰富**模型自选** SaveMemory 的引导,**不动**确定性自动保存分类器
 // (memoryTrigger.classify 刻意保守以防假阳)——判断式与确定式两条路各自其分。
 const _BASE_DESC =
-  'Persist a durable memory the user wants you to remember across sessions '
-  + '(their identity/preferences, your agreed working style, ongoing project facts, or reference pointers). '
-  + 'Use this whenever the user tells you something to remember — do not just claim you remembered it. '
-  + 'type: user|feedback|project|reference. Writes to the local memory store and updates the index.';
+  'Persist a durable memory the user wants you to remember across sessions ' +
+  '(their identity/preferences, your agreed working style, ongoing project facts, or reference pointers). ' +
+  'Use this whenever the user tells you something to remember — do not just claim you remembered it. ' +
+  'type: user|feedback|project|reference. Writes to the local memory store and updates the index.';
 
 const _PROACTIVE_HINT =
-  ' PROACTIVE TIMING — also save WITHOUT being told when a durable, cross-session fact emerges: '
-  + 'the user states who they are or a stable preference/workflow, gives feedback on how you should work, '
-  + 'or a lasting project constraint/decision surfaces. Do NOT save ephemeral or conversational details, '
-  + 'anything already recorded in the repo or git history, or one-off task minutiae; check for an existing '
-  + 'memory on the same fact and update it instead of duplicating. When unsure a fact is durable, prefer saving a concise version.';
+  ' PROACTIVE TIMING — also save WITHOUT being told when a durable, cross-session fact emerges: ' +
+  'the user states who they are or a stable preference/workflow, gives feedback on how you should work, ' +
+  'or a lasting project constraint/decision surfaces. Do NOT save ephemeral or conversational details, ' +
+  'anything already recorded in the repo or git history, or one-off task minutiae; check for an existing ' +
+  'memory on the same fact and update it instead of duplicating. When unsure a fact is durable, prefer saving a concise version.';
 
 function _saveMemoryProactive(env) {
-  const raw = String((env || process.env).KHY_SAVE_MEMORY_PROACTIVE == null ? '' : (env || process.env).KHY_SAVE_MEMORY_PROACTIVE).trim().toLowerCase();
+  const raw = String(
+    (env || process.env).KHY_SAVE_MEMORY_PROACTIVE == null
+      ? ''
+      : (env || process.env).KHY_SAVE_MEMORY_PROACTIVE
+  )
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(raw);
 }
 
 function buildSaveMemoryDescription(env) {
-  return _saveMemoryProactive(env) ? (_BASE_DESC + _PROACTIVE_HINT) : _BASE_DESC;
+  return _saveMemoryProactive(env) ? _BASE_DESC + _PROACTIVE_HINT : _BASE_DESC;
 }
 
 module.exports = defineTool({
@@ -65,6 +77,7 @@ module.exports = defineTool({
   category: 'system',
   risk: 'medium',
   aliases: ['saveMemory', 'remember', 'rememberFact'],
+  searchHint: 'remember fact note persist knowledge 保存记忆 记住 笔记',
   isReadOnly: () => false,
   isConcurrencySafe: false,
   isEnabled: () => _saveMemoryEnabled(process.env),
@@ -73,7 +86,8 @@ module.exports = defineTool({
       type: 'string',
       required: true,
       enum: VALID_TYPES,
-      description: 'user = who they are/preferences; feedback = how you should work; project = ongoing work facts; reference = external pointers.',
+      description:
+        'user = who they are/preferences; feedback = how you should work; project = ongoing work facts; reference = external pointers.',
     },
     name: {
       type: 'string',
@@ -93,18 +107,30 @@ module.exports = defineTool({
   },
   async execute(params, _context) {
     if (!_saveMemoryEnabled(process.env)) {
-      return { success: false, error: 'SaveMemory is disabled (KHY_SAVE_MEMORY_TOOL=off or memory disabled).' };
+      return {
+        success: false,
+        error: 'SaveMemory is disabled (KHY_SAVE_MEMORY_TOOL=off or memory disabled).',
+      };
     }
-    const type = String((params && params.type) || '').trim().toLowerCase();
+    const type = String((params && params.type) || '')
+      .trim()
+      .toLowerCase();
     const name = String((params && params.name) || '').trim();
     const content = String((params && params.content) || '').trim();
     const description = params && params.description ? String(params.description).trim() : '';
 
     if (!VALID_TYPES.includes(type)) {
-      return { success: false, error: `Invalid type: "${type}". Valid: ${VALID_TYPES.join(', ')}.` };
+      return {
+        success: false,
+        error: `Invalid type: "${type}". Valid: ${VALID_TYPES.join(', ')}.`,
+      };
     }
-    if (!name) return { success: false, error: 'name is required (short kebab-case slug).' };
-    if (!content) return { success: false, error: 'content is required (the fact to remember).' };
+    if (!name) {
+      return { success: false, error: 'name is required (short kebab-case slug).' };
+    }
+    if (!content) {
+      return { success: false, error: 'content is required (the fact to remember).' };
+    }
 
     let memdir;
     try {
@@ -114,10 +140,14 @@ module.exports = defineTool({
     }
 
     try {
-      const { filename } = memdir.saveMemory(type, name, content, { description: description || undefined });
+      const { filename } = memdir.saveMemory(type, name, content, {
+        description: description || undefined,
+      });
       try {
         memdir.updateMemoryIndex([{ title: name, filename, description: description || name }]);
-      } catch { /* index update best-effort — the memory file is already written */ }
+      } catch {
+        /* index update best-effort — the memory file is already written */
+      }
       return { success: true, data: { filename, type, name } };
     } catch (err) {
       return { success: false, error: (err && err.message) || String(err) };

@@ -22,14 +22,23 @@ function _textSalvage(result) {
   if (!result || typeof result !== 'object') {
     return typeof result === 'string' ? result.slice(0, 4000) : null;
   }
-  const cand = result.content || result.text || result.body || result.html
-    || result.summary || result.snippet || result.markdown
-    || (result.data && (result.data.content || result.data.text));
-  if (typeof cand === 'string' && cand.trim()) return cand.trim().slice(0, 4000);
+  const cand =
+    result.content ||
+    result.text ||
+    result.body ||
+    result.html ||
+    result.summary ||
+    result.snippet ||
+    result.markdown ||
+    (result.data && (result.data.content || result.data.text));
+  if (typeof cand === 'string' && cand.trim()) {
+    return cand.trim().slice(0, 4000);
+  }
   // 搜索类：结果常是 results[] —— 拼标题 + 链接当线索残料。
   const list = result.results || (result.data && result.data.results);
   if (Array.isArray(list) && list.length > 0) {
-    return list.slice(0, 5)
+    return list
+      .slice(0, 5)
       .map((r, i) => `${i + 1}. ${r.title || r.name || ''} ${r.url || r.link || ''}`.trim())
       .join('\n')
       .slice(0, 4000);

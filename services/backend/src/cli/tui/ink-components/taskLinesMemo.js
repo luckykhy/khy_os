@@ -20,7 +20,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_TASK_LINES_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -38,17 +40,27 @@ let _last = null; // { snap, planTasks, lines }
  */
 function memoMergeTaskLines(snap, planTasks, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env)) return computeFn();
-    if (_last && _last.snap === snap && _last.planTasks === planTasks) return _last.lines;
+    if (!isEnabled(env)) {
+      return computeFn();
+    }
+    if (_last && _last.snap === snap && _last.planTasks === planTasks) {
+      return _last.lines;
+    }
     const lines = computeFn();
     _last = { snap, planTasks, lines };
     return lines;
   } catch {
-    try { return computeFn(); } catch { return []; }
+    try {
+      return computeFn();
+    } catch {
+      return [];
+    }
   }
 }
 
 // 测试辅助:清空单槽(避免跨用例串味)。生产不调用。
-function _reset() { _last = null; }
+function _reset() {
+  _last = null;
+}
 
 module.exports = { isEnabled, memoMergeTaskLines, _reset, OFF_VALUES };

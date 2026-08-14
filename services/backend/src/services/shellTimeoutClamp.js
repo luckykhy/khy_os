@@ -30,16 +30,24 @@ function _isEnabled(env) {
     return flagRegistry.isFlagEnabled('KHY_SHELL_TIMEOUT_CLAMP', e);
   } catch {
     const raw = e && e.KHY_SHELL_TIMEOUT_CLAMP;
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !OFF_VALUES.includes(String(raw).trim().toLowerCase());
   }
 }
 
 function _clampField(value) {
   // 只 clamp 有限数值;字符串/undefined/NaN/Infinity 一律返回原值(不改字段形态)。
-  if (typeof value !== 'number' || !Number.isFinite(value)) return value;
-  if (value > CEIL_MS) return CEIL_MS;
-  if (value < FLOOR_MS) return FLOOR_MS;
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return value;
+  }
+  if (value > CEIL_MS) {
+    return CEIL_MS;
+  }
+  if (value < FLOOR_MS) {
+    return FLOOR_MS;
+  }
   return value;
 }
 
@@ -51,8 +59,12 @@ function _clampField(value) {
  */
 function clampTimeoutParams(params, env) {
   try {
-    if (!params || typeof params !== 'object') return params;
-    if (!_isEnabled(env)) return params;
+    if (!params || typeof params !== 'object') {
+      return params;
+    }
+    if (!_isEnabled(env)) {
+      return params;
+    }
 
     const hasTimeout = typeof params.timeout === 'number' && Number.isFinite(params.timeout);
     const hasIdle = typeof params.idleTimeout === 'number' && Number.isFinite(params.idleTimeout);
@@ -60,11 +72,17 @@ function clampTimeoutParams(params, env) {
     const nextIdle = hasIdle ? _clampField(params.idleTimeout) : params.idleTimeout;
 
     // 无需改动(两字段都非数值或都已在区间内)→ 返回原对象,零分配、逐字节等价。
-    if (nextTimeout === params.timeout && nextIdle === params.idleTimeout) return params;
+    if (nextTimeout === params.timeout && nextIdle === params.idleTimeout) {
+      return params;
+    }
 
     const out = { ...params };
-    if (hasTimeout) out.timeout = nextTimeout;
-    if (hasIdle) out.idleTimeout = nextIdle;
+    if (hasTimeout) {
+      out.timeout = nextTimeout;
+    }
+    if (hasIdle) {
+      out.idleTimeout = nextIdle;
+    }
     return out;
   } catch {
     return params; // fail-soft:归一异常 → 原样返回(今日行为)

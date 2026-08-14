@@ -8,8 +8,9 @@
  * installed copy is actually running (dev / portable / npm / pip).
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+
 const chalk = require('chalk');
 
 /**
@@ -36,7 +37,9 @@ function _detectInstallType(entryPath, projectRoot) {
     if (hasPyproject && inScripts) {
       return 'pip 安装';
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Portable edition
   if (/Portable/i.test(normalized)) {
@@ -46,7 +49,9 @@ function _detectInstallType(entryPath, projectRoot) {
     if (fs.existsSync(path.join(projectRoot, '.portable'))) {
       return '便携版';
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // Default: dev source
   return '开发版（源码运行）';
@@ -99,8 +104,13 @@ function handleWhere() {
   for (const pkgPath of pkgCandidates) {
     try {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-      if (pkg.version) { version = pkg.version; break; }
-    } catch { /* try next */ }
+      if (pkg.version) {
+        version = pkg.version;
+        break;
+      }
+    } catch {
+      /* try next */
+    }
   }
 
   const installType = _detectInstallType(entryPath, projectRoot);

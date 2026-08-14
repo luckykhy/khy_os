@@ -35,9 +35,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   const isoPath = args.iso || (await ensureKhyosIso());
-  const diskPath = args.disk
-    ? path.join(khyosCacheDir(), 'disks', 'console.img')
-    : null;
+  const diskPath = args.disk ? path.join(khyosCacheDir(), 'disks', 'console.img') : null;
 
   console.error(`[khyos-console] ISO:  ${isoPath}`);
   if (diskPath) console.error(`[khyos-console] disk: ${diskPath}`);
@@ -72,7 +70,11 @@ async function main() {
   });
 
   const shutdown = async () => {
-    try { await runner.stop(); } catch { /* ignore */ }
+    try {
+      await runner.stop();
+    } catch {
+      /* ignore */
+    }
     process.exit(0);
   };
   process.on('SIGINT', shutdown);

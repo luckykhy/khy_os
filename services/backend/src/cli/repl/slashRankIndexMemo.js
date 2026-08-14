@@ -29,7 +29,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_SLASH_RANK_INDEX_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -45,14 +47,22 @@ const _cache = new WeakMap();
  */
 function getRankIndex(cmds, computeFn, env = process.env) {
   try {
-    if (!isEnabled(env) || !cmds || typeof cmds !== 'object') return computeFn();
+    if (!isEnabled(env) || !cmds || typeof cmds !== 'object') {
+      return computeFn();
+    }
     const hit = _cache.get(cmds);
-    if (hit && hit.len === cmds.length) return hit.index;
+    if (hit && hit.len === cmds.length) {
+      return hit.index;
+    }
     const index = computeFn();
     _cache.set(cmds, { len: cmds.length, index });
     return index;
   } catch {
-    try { return computeFn(); } catch { return []; }
+    try {
+      return computeFn();
+    } catch {
+      return [];
+    }
   }
 }
 

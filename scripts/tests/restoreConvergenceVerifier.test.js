@@ -230,7 +230,7 @@ test('停止条件三值互不相同', () => {
 // ── CLI 契约：文档确定性生成 + 与常量同源 ─────────────────────────────────────────
 
 test('CLI buildDoc 与判定常量同源（含 STALL_LIMIT 与四判定）', () => {
-  const { buildDoc } = require('../restore-converge');
+  const { buildDoc } = require('../restore/restore-converge');
   const doc = buildDoc();
   assert.match(doc, /OPS-MAN-082/);
   assert.ok(doc.includes(VERDICT_CONVERGED));
@@ -241,7 +241,7 @@ test('CLI buildDoc 与判定常量同源（含 STALL_LIMIT 与四判定）', () 
 });
 
 test('生成的 OPS-MAN-082 文档已落盘且与 buildDoc 一致（防漂移）', () => {
-  const { buildDoc, DOC_PATH } = require('../restore-converge');
+  const { buildDoc, DOC_PATH } = require('../restore/restore-converge');
   assert.ok(fs.existsSync(DOC_PATH), 'OPS-MAN-082 文档应已生成');
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   assert.strictEqual(onDisk, buildDoc(), '落盘文档须与生成器逐字节一致');

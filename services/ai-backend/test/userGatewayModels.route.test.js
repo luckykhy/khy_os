@@ -34,8 +34,18 @@ let userB;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'mona', email: 'mona@test.local', password: 'pw-mona-123', status: 'active' });
-  userB = await User.create({ username: 'nico', email: 'nico@test.local', password: 'pw-nico-123', status: 'active' });
+  userA = await User.create({
+    username: 'mona',
+    email: 'mona@test.local',
+    password: 'pw-mona-123',
+    status: 'active',
+  });
+  userB = await User.create({
+    username: 'nico',
+    email: 'nico@test.local',
+    password: 'pw-nico-123',
+    status: 'active',
+  });
   app = express();
   app.use(express.json());
   app.use('/api/user-gateway', router);
@@ -43,7 +53,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 const auth = (u) => ['Authorization', `Bearer ${tokenFor(u.id)}`];
@@ -57,7 +71,9 @@ describe('user-gateway /models — CRUD', () => {
   });
 
   test('list is empty initially', async () => {
-    const res = await request(app).get('/api/user-gateway/models').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/user-gateway/models')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([]);
   });
@@ -152,7 +168,9 @@ describe('user-gateway /models — CRUD', () => {
 
 describe('user-gateway /models — tenant isolation', () => {
   test("B never sees A's models", async () => {
-    const res = await request(app).get('/api/user-gateway/models').set(...auth(userB));
+    const res = await request(app)
+      .get('/api/user-gateway/models')
+      .set(...auth(userB));
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([]); // A's rows are invisible to B
   });

@@ -52,21 +52,24 @@ const SCAN_RULES = [
   // Secret / credential exfiltration
   {
     id: 'ENV_SECRET_ACCESS',
-    pattern: /process\.env\[?\s*['"](?:API_KEY|SECRET|TOKEN|PASSWORD|CREDENTIALS|AWS_|OPENAI_|ANTHROPIC_)[^'"]*['"]/gi,
+    pattern:
+      /process\.env\[?\s*['"](?:API_KEY|SECRET|TOKEN|PASSWORD|CREDENTIALS|AWS_|OPENAI_|ANTHROPIC_)[^'"]*['"]/gi,
     severity: 'high',
     category: 'secret_exfil',
     description: 'Access to sensitive environment variables',
   },
   {
     id: 'FILE_SECRET_READ',
-    pattern: /(?:readFile|readFileSync|open)\s*\(\s*['"](?:\/etc\/shadow|\/etc\/passwd|~?\/?\.ssh\/|~?\/?\.env|~?\/?\.aws\/|~?\/?\.gnupg\/)/gi,
+    pattern:
+      /(?:readFile|readFileSync|open)\s*\(\s*['"](?:\/etc\/shadow|\/etc\/passwd|~?\/?\.ssh\/|~?\/?\.env|~?\/?\.aws\/|~?\/?\.gnupg\/)/gi,
     severity: 'critical',
     category: 'secret_exfil',
     description: 'Reading sensitive system files',
   },
   {
     id: 'HARDCODED_SECRET',
-    pattern: /(?:api[_-]?key|secret|token|password|credentials)\s*[:=]\s*['"][A-Za-z0-9+/=_-]{16,}['"]/gi,
+    pattern:
+      /(?:api[_-]?key|secret|token|password|credentials)\s*[:=]\s*['"][A-Za-z0-9+/=_-]{16,}['"]/gi,
     severity: 'medium',
     category: 'secret_exfil',
     description: 'Hardcoded secret or API key in code',
@@ -75,7 +78,8 @@ const SCAN_RULES = [
   // Network exfiltration
   {
     id: 'NETWORK_EXFIL',
-    pattern: /(?:fetch|axios|http\.request|XMLHttpRequest|net\.connect)\s*\(\s*['"]https?:\/\/(?!localhost|127\.0\.0\.1)/gi,
+    pattern:
+      /(?:fetch|axios|http\.request|XMLHttpRequest|net\.connect)\s*\(\s*['"]https?:\/\/(?!localhost|127\.0\.0\.1)/gi,
     severity: 'medium',
     category: 'network_exfil',
     description: 'Outbound HTTP request to external host',
@@ -132,7 +136,8 @@ const SCAN_RULES = [
   // SQL injection
   {
     id: 'SQL_INJECTION_CONCAT',
-    pattern: /(?:query|execute|raw)\s*\(\s*['"`](?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE)\b[^'"`]*['"]\s*\+/gi,
+    pattern:
+      /(?:query|execute|raw)\s*\(\s*['"`](?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE)\b[^'"`]*['"]\s*\+/gi,
     severity: 'high',
     category: 'sql_injection',
     description: 'SQL query with string concatenation (injection risk)',
@@ -159,7 +164,9 @@ const INLINE_CODE_RE = /`([^`]{10,})`/g;
  * @returns {Array<{ code: string, language: string|null, offset: number }>}
  */
 function extractCodeBlocks(text) {
-  if (!text || typeof text !== 'string') return [];
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
 
   const blocks = [];
   let match;
@@ -192,7 +199,9 @@ function extractCodeBlocks(text) {
  * @returns {Array<{ ruleId: string, severity: string, category: string, description: string, match: string }>}
  */
 function scanCode(code) {
-  if (!code || typeof code !== 'string') return [];
+  if (!code || typeof code !== 'string') {
+    return [];
+  }
 
   const findings = [];
   for (const rule of SCAN_RULES) {
@@ -232,7 +241,7 @@ function scanResponse(text) {
   const inlineFindings = scanCode(text);
   for (const f of inlineFindings) {
     // Deduplicate: skip if already found in a code block
-    if (!allFindings.some(af => af.ruleId === f.ruleId && af.match === f.match)) {
+    if (!allFindings.some((af) => af.ruleId === f.ruleId && af.match === f.match)) {
       allFindings.push(f);
     }
   }
@@ -240,7 +249,10 @@ function scanResponse(text) {
   const severityOrder = SEVERITY_ORDER;
   let highestSeverity = null;
   for (const f of allFindings) {
-    if (!highestSeverity || severityOrder.indexOf(f.severity) > severityOrder.indexOf(highestSeverity)) {
+    if (
+      !highestSeverity ||
+      severityOrder.indexOf(f.severity) > severityOrder.indexOf(highestSeverity)
+    ) {
       highestSeverity = f.severity;
     }
   }

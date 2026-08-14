@@ -6,10 +6,19 @@
  */
 const crypto = require('crypto');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const MANIFEST_PATH = path.join(os.homedir(), '.khyquant', 'integrity_manifest.json');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const MANIFEST_PATH = path.join(_appHome(), 'integrity_manifest.json');
 const BACKEND_SRC = path.resolve(__dirname, '..');
 const IGNORED_DIRS = ['node_modules', '.git', 'temp', 'logs', 'data'];
 
@@ -20,7 +29,9 @@ function collectFiles(dir, baseDir = dir) {
   const results = [];
   try {
     for (const entry of fs.readdirSync(dir)) {
-      if (IGNORED_DIRS.includes(entry)) continue;
+      if (IGNORED_DIRS.includes(entry)) {
+        continue;
+      }
       const fullPath = path.join(dir, entry);
       try {
         const stat = fs.statSync(fullPath);
@@ -29,9 +40,13 @@ function collectFiles(dir, baseDir = dir) {
         } else if (entry.endsWith('.js')) {
           results.push(path.relative(baseDir, fullPath));
         }
-      } catch { /* skip inaccessible */ }
+      } catch {
+        /* skip inaccessible */
+      }
     }
-  } catch { /* skip inaccessible */ }
+  } catch {
+    /* skip inaccessible */
+  }
   return results.sort();
 }
 
@@ -55,7 +70,9 @@ function generateManifest() {
     const fullPath = path.join(BACKEND_SRC, relPath);
     try {
       hashes[relPath] = hashFile(fullPath);
-    } catch { /* skip unreadable */ }
+    } catch {
+      /* skip unreadable */
+    }
   }
 
   const manifest = {
@@ -72,10 +89,14 @@ function generateManifest() {
  * Save manifest to disk.
  */
 function saveManifest(manifest = null) {
-  if (!manifest) manifest = generateManifest();
+  if (!manifest) {
+    manifest = generateManifest();
+  }
 
   const dir = path.dirname(MANIFEST_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf-8');
   return manifest;
@@ -90,7 +111,9 @@ function loadManifest() {
     if (fs.existsSync(MANIFEST_PATH)) {
       return JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
     }
-  } catch { /* corrupted manifest */ }
+  } catch {
+    /* corrupted manifest */
+  }
   return null;
 }
 
@@ -127,7 +150,9 @@ function verify() {
       } else {
         unchanged++;
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   // Check for removed files
@@ -161,17 +186,22 @@ function verifyOnStartup() {
     if (!result.verified) {
       // Log to security log
       try {
-        const logPath = path.join(os.homedir(), '.khyquant', 'security.log');
+        const logPath = path.join(_appHome(), 'security.log');
         const dir = path.dirname(logPath);
         fs.mkdirSync(dir, { recursive: true });
-        fs.appendFileSync(logPath, JSON.stringify({
-          timestamp: new Date().toISOString(),
-          type: 'integrity_violation',
-          modified: result.modified,
-          removed: result.removed,
-          added: result.added,
-        }) + '\n');
-      } catch { /* best effort */ }
+        fs.appendFileSync(
+          logPath,
+          JSON.stringify({
+            timestamp: new Date().toISOString(),
+            type: 'integrity_violation',
+            modified: result.modified,
+            removed: result.removed,
+            added: result.added,
+          }) + '\n'
+        );
+      } catch {
+        /* best effort */
+      }
 
       return false;
     }

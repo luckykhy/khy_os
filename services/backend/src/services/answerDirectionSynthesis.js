@@ -50,7 +50,9 @@ function isEnabled(env) {
  * @returns {string}
  */
 function buildBaseLines(answers) {
-  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) return '';
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+    return '';
+  }
   return Object.entries(answers)
     .map(([qText, ans]) => `Q: ${qText}\nA: ${ans}`)
     .join('\n\n');
@@ -63,17 +65,26 @@ function buildBaseLines(answers) {
  */
 function _analyzeAnswers(answers) {
   const out = { count: 0, hasMulti: false, hasDeferred: false };
-  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) return out;
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+    return out;
+  }
   const entries = Object.entries(answers);
   out.count = entries.length;
   for (const [, rawAns] of entries) {
     const ans = String(rawAns == null ? '' : rawAns);
     // 多选:", " 连接出 ≥2 个非空 token。
-    if (ans.split(_MULTI_SEP).map(s => s.trim()).filter(Boolean).length >= 2) {
+    if (
+      ans
+        .split(_MULTI_SEP)
+        .map((s) => s.trim())
+        .filter(Boolean).length >= 2
+    ) {
       out.hasMulti = true;
     }
     // 留白:命中固定「可讨论」标签(单选留白 or 多选里含它)。
-    if (ans.includes(DISCUSS_LABEL)) out.hasDeferred = true;
+    if (ans.includes(DISCUSS_LABEL)) {
+      out.hasDeferred = true;
+    }
   }
   return out;
 }
@@ -91,22 +102,34 @@ function buildSynthesisBlock(analysis) {
 
   if (multiCard) {
     lines.push('## 用户已作答 —— 把这些回答当作「一个组合决策」,据此调整方向后再推进');
-    lines.push('上面是用户对你所提各问题的选择。请把它们作为**一组相互关联的决策整体**来理解,不要逐条孤立处理:');
+    lines.push(
+      '上面是用户对你所提各问题的选择。请把它们作为**一组相互关联的决策整体**来理解,不要逐条孤立处理:'
+    );
   } else {
     lines.push('## 用户已作答 —— 据此回答调整方向后再推进');
     lines.push('上面是用户的选择。请据此校准你的方向,不要照提问前的默认假设一路推进:');
   }
 
   let n = 0;
-  lines.push(`${++n}. **先综合**:把${multiCard ? '各维度的选择合在一起' : '这一选择'},还原用户此刻真正想要的方向——它可能与你提问前的默认假设不同。`);
+  lines.push(
+    `${++n}. **先综合**:把${multiCard ? '各维度的选择合在一起' : '这一选择'},还原用户此刻真正想要的方向——它可能与你提问前的默认假设不同。`
+  );
   if (a.hasMulti) {
-    lines.push(`${++n}. **多选项的组合语义**:某些维度用户做了多选,注意它们之间是「需同时满足」还是「按优先级取舍」,别只挑其中一个。`);
+    lines.push(
+      `${++n}. **多选项的组合语义**:某些维度用户做了多选,注意它们之间是「需同时满足」还是「按优先级取舍」,别只挑其中一个。`
+    );
   }
-  lines.push(`${++n}. **再校准**:据此**显式调整**你的下一步计划/方向;若某项选择与你原计划冲突,以用户选择为准并用一句话说明取舍。`);
+  lines.push(
+    `${++n}. **再校准**:据此**显式调整**你的下一步计划/方向;若某项选择与你原计划冲突,以用户选择为准并用一句话说明取舍。`
+  );
   if (a.hasDeferred) {
-    lines.push(`${++n}. **留白项照顾**:某维度用户选了「${DISCUSS_LABEL}」,视为该方向仍开放——给出你的建议默认并说明理由,而不是略过。`);
+    lines.push(
+      `${++n}. **留白项照顾**:某维度用户选了「${DISCUSS_LABEL}」,视为该方向仍开放——给出你的建议默认并说明理由,而不是略过。`
+    );
   }
-  lines.push(`${++n}. 用一两句话向用户**复述你综合后的方向**,再继续执行;不要无视这些选择照旧推进。`);
+  lines.push(
+    `${++n}. 用一两句话向用户**复述你综合后的方向**,再继续执行;不要无视这些选择照旧推进。`
+  );
 
   return lines.join('\n');
 }
@@ -129,9 +152,13 @@ function buildAnswerFeedback(input = {}) {
   let base = '';
   try {
     base = buildBaseLines(answers);
-    if (!isEnabled(env)) return base;
+    if (!isEnabled(env)) {
+      return base;
+    }
     const analysis = _analyzeAnswers(answers);
-    if (analysis.count === 0) return base;
+    if (analysis.count === 0) {
+      return base;
+    }
     const block = buildSynthesisBlock(analysis);
     return base ? `${base}\n\n${block}` : block;
   } catch {

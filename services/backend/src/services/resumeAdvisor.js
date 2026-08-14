@@ -29,7 +29,9 @@
  * @returns {boolean}
  */
 function _resumeEnabled() {
-  const raw = String(process.env.KHY_BOULDER_RESUME || 'true').trim().toLowerCase();
+  const raw = String(process.env.KHY_BOULDER_RESUME || 'true')
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(raw);
 }
 
@@ -42,13 +44,19 @@ function _resumeEnabled() {
  * @returns {{taskId:string|null,userMessage:string,iterations:number,status:string,updatedAt:number,ageMinutes:number|null,cwd:string}|null}
  */
 function pendingForCwd(cwd) {
-  if (!cwd || !_resumeEnabled()) return null;
+  if (!cwd || !_resumeEnabled()) {
+    return null;
+  }
   try {
     const boulder = require('./boulderState');
     const state = boulder.loadBoulderState(cwd); // 缺失 / 过期 → null
-    if (!state) return null;
+    if (!state) {
+      return null;
+    }
     const status = state.status || 'in_progress';
-    if (status !== 'in_progress' && status !== 'interrupted') return null;
+    if (status !== 'in_progress' && status !== 'interrupted') {
+      return null;
+    }
 
     const updatedAt = Number(state.lastCheckpointAt) || 0;
     const ageMs = updatedAt > 0 ? Math.max(0, Date.now() - updatedAt) : null;
@@ -81,7 +89,9 @@ function _cleanInstruction(raw) {
   // 这里只在确实是该前缀时剥离，绝不误伤正常含方括号的指令。
   if (s.startsWith('[SYSTEM:')) {
     const idx = s.indexOf(']');
-    if (idx !== -1) s = s.slice(idx + 1).trim();
+    if (idx !== -1) {
+      s = s.slice(idx + 1).trim();
+    }
   }
   return s.replace(/\s+/g, ' ').trim();
 }
@@ -117,18 +127,32 @@ function _ageLabel(ageMinutes, env, ageMs) {
     if (ccFormatEnabled(env) && ageMs != null && Number.isFinite(ageMs)) {
       const parts = ccRelativeAgeParts(ageMs);
       if (parts) {
-        if (parts.unit === 'second') return _AGE_UNIT_ZH.second; // 刚刚
+        if (parts.unit === 'second') {
+          return _AGE_UNIT_ZH.second;
+        } // 刚刚
         const suffix = _AGE_UNIT_ZH[parts.unit];
-        if (suffix) return `${parts.value} ${suffix}`;
+        if (suffix) {
+          return `${parts.value} ${suffix}`;
+        }
       }
     }
-  } catch { /* fall through to legacy */ }
+  } catch {
+    /* fall through to legacy */
+  }
   // byte-identical legacy(基于已 round 的 ageMinutes)。
-  if (ageMinutes == null) return '';
-  if (ageMinutes < 1) return '刚刚';
-  if (ageMinutes < 60) return `${ageMinutes} 分钟前`;
+  if (ageMinutes == null) {
+    return '';
+  }
+  if (ageMinutes < 1) {
+    return '刚刚';
+  }
+  if (ageMinutes < 60) {
+    return `${ageMinutes} 分钟前`;
+  }
   const hours = Math.floor(ageMinutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
+  if (hours < 24) {
+    return `${hours} 小时前`;
+  }
   return `${Math.floor(hours / 24)} 天前`;
 }
 
@@ -142,28 +166,41 @@ function _ageLabel(ageMinutes, env, ageMs) {
  * @returns {string} 多行横幅文本；pending 为空时返回空串
  */
 function formatStartupHint(pending, opts = {}) {
-  if (!pending) return '';
+  if (!pending) {
+    return '';
+  }
   const color = opts.color && typeof opts.color === 'object' ? opts.color : null;
   const paint = (method, text) => {
     if (color && typeof color[method] === 'function') {
-      try { return color[method](text); } catch { return text; }
+      try {
+        return color[method](text);
+      } catch {
+        return text;
+      }
     }
     return text;
   };
 
   const age = _ageLabel(pending.ageMinutes, opts.env, pending.ageMs);
   const ageNote = age ? `，${age}更新` : '';
-  const rounds = pending.iterations > 0 ? `已执行 ${pending.iterations} 轮${ageNote}` : `进行中${ageNote}`;
+  const rounds =
+    pending.iterations > 0 ? `已执行 ${pending.iterations} 轮${ageNote}` : `进行中${ageNote}`;
 
   const instr = pending.userMessage
-    ? (pending.userMessage.length > 80 ? `${pending.userMessage.slice(0, 80)}…` : pending.userMessage)
+    ? pending.userMessage.length > 80
+      ? `${pending.userMessage.slice(0, 80)}…`
+      : pending.userMessage
     : '(无原始指令记录)';
 
   const lines = [
     paint('yellow', `⏸  检测到未完成的构建任务（${rounds}）`),
     paint('dim', `   原始目标：${instr}`),
-    paint('cyan', '   输入 ') + paint('bold', 'resume') + paint('cyan', ' 从断点继续') +
-      paint('cyan', '，或 ') + paint('bold', 'resume tasks') + paint('cyan', ' 查看全部'),
+    paint('cyan', '   输入 ') +
+      paint('bold', 'resume') +
+      paint('cyan', ' 从断点继续') +
+      paint('cyan', '，或 ') +
+      paint('bold', 'resume tasks') +
+      paint('cyan', ' 查看全部'),
   ];
   return lines.join('\n');
 }
@@ -179,17 +216,23 @@ function formatStartupHint(pending, opts = {}) {
  * @returns {{taskId:string|null,userMessage:string,cwd:string}|null}
  */
 function armBareResume(cwd) {
-  if (!cwd || !_resumeEnabled()) return null;
+  if (!cwd || !_resumeEnabled()) {
+    return null;
+  }
   try {
     const boulder = require('./boulderState');
     const pending = pendingForCwd(cwd);
-    if (!pending || !pending.userMessage) return null;
+    if (!pending || !pending.userMessage) {
+      return null;
+    }
 
     if (pending.status === 'interrupted') {
       let flipped = false;
       if (pending.taskId) {
         const rearmed = boulder.rearmForResume(pending.taskId);
-        if (rearmed) flipped = true;
+        if (rearmed) {
+          flipped = true;
+        }
       }
       if (!flipped) {
         // taskId 寻址不可用兜底：直接翻状态再存（保留既有 filesystemSnapshot）。
@@ -199,7 +242,9 @@ function armBareResume(cwd) {
             state.status = 'in_progress';
             boulder.saveBoulderState(cwd, state);
           }
-        } catch { /* 兜底失败也不抛——闸门仍可由用户手动重发触发 */ }
+        } catch {
+          /* 兜底失败也不抛——闸门仍可由用户手动重发触发 */
+        }
       }
     }
 

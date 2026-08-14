@@ -28,24 +28,36 @@ function isEnabled(env) {
 // 从每图明细里收集「被自动放大的倍数」：upscaledFactor > 1 才算发生了放大恢复。
 // 去重 + 升序；非数组 / 畸形项一律安全跳过，绝不抛。
 function computeUpscaledFactors(details) {
-  if (!Array.isArray(details)) return [];
+  if (!Array.isArray(details)) {
+    return [];
+  }
   const factors = new Set();
   for (const d of details) {
-    if (!d || typeof d !== 'object') continue;
+    if (!d || typeof d !== 'object') {
+      continue;
+    }
     const f = Number(d.upscaledFactor);
-    if (Number.isFinite(f) && f > 1) factors.add(f);
+    if (Number.isFinite(f) && f > 1) {
+      factors.add(f);
+    }
   }
   return Array.from(factors).sort((a, b) => a - b);
 }
 
 // 渲染诚实告诫。门关 / 无放大 / 畸形 → null（不注入，逐字节回退）。
 function buildResolutionNotice({ upscaled, env } = {}) {
-  if (!isEnabled(env)) return null;
-  if (!Array.isArray(upscaled) || upscaled.length === 0) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
+  if (!Array.isArray(upscaled) || upscaled.length === 0) {
+    return null;
+  }
   const list = upscaled.map((f) => `${f}×`).join('、');
-  return `[提示：以下图片分辨率较低，OCR 在原始尺寸下无法可靠识别；系统已将其自动放大（${list}）后`
-    + `才成功提取出文字——上述文本取自放大后的图像。低分辨率图像放大恢复的结果可能仍不完整或有误，`
-    + `请谨慎采信；若条件允许，建议改用更高清的原图或支持看图的多模态模型复核。]`;
+  return (
+    `[提示：以下图片分辨率较低，OCR 在原始尺寸下无法可靠识别；系统已将其自动放大（${list}）后` +
+    `才成功提取出文字——上述文本取自放大后的图像。低分辨率图像放大恢复的结果可能仍不完整或有误，` +
+    `请谨慎采信；若条件允许，建议改用更高清的原图或支持看图的多模态模型复核。]`
+  );
 }
 
 module.exports = { isEnabled, computeUpscaledFactors, buildResolutionNotice, FLAG };

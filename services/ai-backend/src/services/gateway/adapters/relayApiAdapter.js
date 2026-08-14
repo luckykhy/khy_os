@@ -10,7 +10,7 @@
  * Config via environment variables:
  *   RELAY_API_ENDPOINT=https://your-relay.com/v1
  *   RELAY_API_KEY=sk-xxx
- *   RELAY_API_MODEL=claude-sonnet-4-20250514
+ *   RELAY_API_MODEL=claude-sonnet-4-6
  */
 const https = require('https');
 const http = require('http');
@@ -32,9 +32,13 @@ const KEY_FIELDS = new Set(['authorization_bearer', 'x-api-key', 'x-goog-api-key
 // set explicitly we derive it from the legacy `compatibility` flag so existing
 // .env files keep working: openai→openai, anthropic→anthropic, else openai.
 function deriveApiFormat() {
-  const explicit = String(process.env.RELAY_API_FORMAT || '').trim().toLowerCase();
+  const explicit = String(process.env.RELAY_API_FORMAT || '')
+    .trim()
+    .toLowerCase();
   if (API_FORMATS.has(explicit)) return explicit;
-  const compat = String(process.env.RELAY_API_COMPATIBILITY || '').trim().toLowerCase();
+  const compat = String(process.env.RELAY_API_COMPATIBILITY || '')
+    .trim()
+    .toLowerCase();
   if (compat === 'anthropic') return 'anthropic';
   return 'openai';
 }
@@ -42,7 +46,9 @@ function deriveApiFormat() {
 // apiKeyField decides the auth header. Default Bearer keeps the OpenAI path
 // byte-for-byte identical to the previous behaviour.
 function deriveKeyField(apiFormat) {
-  const explicit = String(process.env.RELAY_API_KEY_FIELD || '').trim().toLowerCase();
+  const explicit = String(process.env.RELAY_API_KEY_FIELD || '')
+    .trim()
+    .toLowerCase();
   if (KEY_FIELDS.has(explicit)) return explicit;
   if (apiFormat === 'anthropic') return 'x-api-key';
   if (apiFormat === 'gemini') return 'x-goog-api-key';
@@ -79,11 +85,15 @@ function getConfig() {
 // Map apiFormat → upstream sub-path appended to the normalized base endpoint.
 function upstreamPath(apiFormat, model) {
   switch (apiFormat) {
-    case 'anthropic': return '/messages';
-    case 'openai_responses': return '/responses';
-    case 'gemini': return `/models/${encodeURIComponent(model)}:generateContent`;
+    case 'anthropic':
+      return '/messages';
+    case 'openai_responses':
+      return '/responses';
+    case 'gemini':
+      return `/models/${encodeURIComponent(model)}:generateContent`;
     case 'openai':
-    default: return '/chat/completions';
+    default:
+      return '/chat/completions';
   }
 }
 
@@ -92,10 +102,14 @@ function upstreamPath(apiFormat, model) {
 function buildUpstreamBody(apiFormat, openaiBody) {
   if (apiFormat === 'openai') return openaiBody;
   const converter = require('../protocolConverter');
-  const target = apiFormat === 'openai_responses' ? converter.PROTOCOLS.CODEX
-    : apiFormat === 'anthropic' ? converter.PROTOCOLS.ANTHROPIC
-    : apiFormat === 'gemini' ? converter.PROTOCOLS.GEMINI
-    : converter.PROTOCOLS.OPENAI;
+  const target =
+    apiFormat === 'openai_responses'
+      ? converter.PROTOCOLS.CODEX
+      : apiFormat === 'anthropic'
+        ? converter.PROTOCOLS.ANTHROPIC
+        : apiFormat === 'gemini'
+          ? converter.PROTOCOLS.GEMINI
+          : converter.PROTOCOLS.OPENAI;
   return converter.convertRequestBetween(openaiBody, converter.PROTOCOLS.OPENAI, target);
 }
 
@@ -117,9 +131,9 @@ function extractResponseContent(data) {
   if (typeof data === 'string') return '';
   return (
     data?.choices?.[0]?.message?.content || // OpenAI chat
-    data?.content?.[0]?.text ||             // Anthropic
+    data?.content?.[0]?.text || // Anthropic
     data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || // Gemini
-    data?.output?.find?.((o) => o.type === 'message')?.content?.[0]?.text ||    // Codex responses
+    data?.output?.find?.((o) => o.type === 'message')?.content?.[0]?.text || // Codex responses
     data?.output?.text || // some relays
     ''
   );
@@ -133,8 +147,11 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
     const mod = parsed.protocol === 'https:' ? https : http;
 
     // Check for proxy environment variables
-    const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY ||
-                     process.env.http_proxy || process.env.HTTP_PROXY;
+    const proxyUrl =
+      process.env.https_proxy ||
+      process.env.HTTPS_PROXY ||
+      process.env.http_proxy ||
+      process.env.HTTP_PROXY;
 
     // TLS Sidecar: route through sidecar for configured target domains
     let effectiveProxy = proxyUrl;
@@ -143,7 +160,9 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
       if (sidecar.shouldProxy(parsed.hostname)) {
         effectiveProxy = sidecar.getProxyUrl();
       }
-    } catch { /* sidecar not available */ }
+    } catch {
+      /* sidecar not available */
+    }
 
     let options = {
       hostname: parsed.hostname,
@@ -154,12 +173,40 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
       timeout,
     };
 
-    // If proxy is configured, route through it
+    const sendDirect = () => {
+      const req = mod.request(options, handleResponse(resolve, reject));
+      req.on('error', reject);
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('request timeout'));
+      });
+      if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
+      req.end();
+    };
+
+    // If proxy is configured, route through it. 代理失败（CONNECT 拒绝 / 超时 /
+    // 无法连接）一律回退直连 —— 绝不让代理故障导致整个请求失败。
     if (effectiveProxy && parsed.protocol === 'https:') {
+      let directFired = false;
+      let connectReq = null;
+      const proxyFallback = (err) => {
+        if (directFired) return;
+        directFired = true;
+        process.stderr.write(
+          '[RELAY-PROXY-FALLBACK] proxy=' +
+            effectiveProxy +
+            ' target=' +
+            parsed.hostname +
+            ' err=' +
+            (err && err.message ? err.message : String(err)) +
+            ' → falling back to direct\n'
+        );
+        sendDirect();
+      };
       try {
         const proxy = new URL(effectiveProxy);
         // CONNECT tunnel via proxy
-        const connectReq = http.request({
+        connectReq = http.request({
           hostname: proxy.hostname,
           port: proxy.port || 80,
           method: 'CONNECT',
@@ -168,7 +215,12 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
         });
         connectReq.on('connect', (res, socket) => {
           if (res.statusCode !== 200) {
-            reject(new Error(`Proxy CONNECT failed: ${res.statusCode}`));
+            try {
+              socket.destroy();
+            } catch {
+              /* ignore */
+            }
+            proxyFallback(new Error(`Proxy CONNECT failed: ${res.statusCode}`));
             return;
           }
           const tunnelOptions = {
@@ -178,22 +230,30 @@ function makeRequest(url, { method = 'POST', headers = {}, body, timeout = TIMEO
           };
           const req = https.request(tunnelOptions, handleResponse(resolve, reject));
           req.on('error', reject);
-          req.on('timeout', () => { req.destroy(); reject(new Error('request timeout')); });
+          req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('request timeout'));
+          });
           if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
           req.end();
         });
-        connectReq.on('error', reject);
-        connectReq.on('timeout', () => { connectReq.destroy(); reject(new Error('proxy timeout')); });
+        connectReq.on('error', proxyFallback);
+        connectReq.on('timeout', () => {
+          try {
+            connectReq.destroy();
+          } catch {
+            /* ignore */
+          }
+          proxyFallback(new Error('proxy timeout'));
+        });
         connectReq.end();
         return;
-      } catch { /* fall through to direct request */ }
+      } catch (err) {
+        proxyFallback(err);
+      }
     }
 
-    const req = mod.request(options, handleResponse(resolve, reject));
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('request timeout')); });
-    if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
-    req.end();
+    sendDirect();
   });
 }
 
@@ -205,10 +265,15 @@ function handleResponse(resolve, reject) {
       return;
     }
     let data = '';
-    res.on('data', chunk => { data += chunk; });
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
     res.on('end', () => {
-      try { resolve({ status: res.statusCode, data: JSON.parse(data), headers: res.headers }); }
-      catch { resolve({ status: res.statusCode, data, headers: res.headers }); }
+      try {
+        resolve({ status: res.statusCode, data: JSON.parse(data), headers: res.headers });
+      } catch {
+        resolve({ status: res.statusCode, data, headers: res.headers });
+      }
     });
     res.on('error', reject);
   };
@@ -260,7 +325,9 @@ function parseSSEStream(stream, onChunk) {
               if (onChunk) onChunk({ type: 'thinking', text });
             }
             if (obj.model) model = obj.model;
-          } catch { /* skip malformed SSE */ }
+          } catch {
+            /* skip malformed SSE */
+          }
         }
       }
     });
@@ -290,7 +357,10 @@ async function generate(prompt, options = {}) {
 
   if (!activeEndpoint || !activeKey) {
     return {
-      success: false, content: '', provider: 'Relay API', adapter: 'relay_api',
+      success: false,
+      content: '',
+      provider: 'Relay API',
+      adapter: 'relay_api',
       error: 'RELAY_API_ENDPOINT and RELAY_API_KEY not configured',
       attempts: [{ provider: 'Relay API', success: false, error: 'not_configured' }],
     };
@@ -301,12 +371,12 @@ async function generate(prompt, options = {}) {
   // absent those overrides, fall back to the global cfg (byte-identical).
   const apiFormat = options.apiFormat || cfg.apiFormat;
   const keyField = options.apiKeyField || cfg.keyField;
-  const useStream = !!(options.onChunk);
+  const useStream = !!options.onChunk;
 
   // Build messages: use structured messages if provided, else wrap prompt
   let messages;
   if (options.messages && options.messages.length > 0) {
-    messages = options.messages.map(m => ({ role: m.role, content: m.content }));
+    messages = options.messages.map((m) => ({ role: m.role, content: m.content }));
     // Prepend system message if provided
     if (options.system) {
       messages = [{ role: 'system', content: options.system }, ...messages];
@@ -335,7 +405,13 @@ async function generate(prompt, options = {}) {
   for (let i = 0; i < endpointList.length; i++) {
     const endpoint = String(endpointList[i]).replace(/\/+$/, '');
     const url = `${endpoint}${subPath}`;
-    const host = (() => { try { return new URL(endpoint).hostname; } catch { return endpoint; } })();
+    const host = (() => {
+      try {
+        return new URL(endpoint).hostname;
+      } catch {
+        return endpoint;
+      }
+    })();
     const isLast = i === endpointList.length - 1;
 
     try {
@@ -344,19 +420,30 @@ async function generate(prompt, options = {}) {
         headers: {
           'Content-Type': 'application/json',
           ...authHeaders,
-          'Accept': useStream ? 'text/event-stream' : 'application/json',
+          Accept: useStream ? 'text/event-stream' : 'application/json',
         },
         body,
       });
 
       if (res.status !== 200 && !res.stream) {
         const errMsg = res.data?.error?.message || res.data?.message || `HTTP ${res.status}`;
-        attempts.push({ provider: `Relay API (${host}/${model})`, success: false, error: errMsg, statusCode: res.status });
+        attempts.push({
+          provider: `Relay API (${host}/${model})`,
+          success: false,
+          error: errMsg,
+          statusCode: res.status,
+        });
         // 5xx → try the next candidate endpoint; 4xx is a config/auth error, stop.
         if (res.status >= 500 && !isLast) continue;
         return {
-          success: false, content: '', provider: 'Relay API', adapter: 'relay_api',
-          error: errMsg, statusCode: res.status, headers: res.headers || null, attempts,
+          success: false,
+          content: '',
+          provider: 'Relay API',
+          adapter: 'relay_api',
+          error: errMsg,
+          statusCode: res.status,
+          headers: res.headers || null,
+          attempts,
         };
       }
 
@@ -381,12 +468,21 @@ async function generate(prompt, options = {}) {
       const usedModel = data?.model || model;
 
       if (!content) {
-        const rawSnippet = typeof data === 'string' ? data.slice(0, 200) : JSON.stringify(data).slice(0, 200);
-        attempts.push({ provider: `Relay API (${host}/${usedModel})`, success: false, error: 'empty_response' });
+        const rawSnippet =
+          typeof data === 'string' ? data.slice(0, 200) : JSON.stringify(data).slice(0, 200);
+        attempts.push({
+          provider: `Relay API (${host}/${usedModel})`,
+          success: false,
+          error: 'empty_response',
+        });
         if (!isLast) continue;
         return {
-          success: false, content: '', provider: 'Relay API', adapter: 'relay_api',
-          error: `Empty response (HTTP ${res.status}, body: ${rawSnippet})`, attempts,
+          success: false,
+          content: '',
+          provider: 'Relay API',
+          adapter: 'relay_api',
+          error: `Empty response (HTTP ${res.status}, body: ${rawSnippet})`,
+          attempts,
         };
       }
 
@@ -397,28 +493,42 @@ async function generate(prompt, options = {}) {
         provider: `Relay (${usedModel})`,
         adapter: 'relay_api',
         model: usedModel,
-        tokenUsage: data.usage ? {
-          inputTokens: data.usage.prompt_tokens ?? data.usage.input_tokens,
-          outputTokens: data.usage.completion_tokens ?? data.usage.output_tokens,
-          totalTokens: data.usage.total_tokens,
-        } : null,
+        tokenUsage: data.usage
+          ? {
+              inputTokens: data.usage.prompt_tokens ?? data.usage.input_tokens,
+              outputTokens: data.usage.completion_tokens ?? data.usage.output_tokens,
+              totalTokens: data.usage.total_tokens,
+            }
+          : null,
         attempts,
       };
     } catch (err) {
-      attempts.push({ provider: `Relay API (${host}/${model})`, success: false, error: err.message });
+      attempts.push({
+        provider: `Relay API (${host}/${model})`,
+        success: false,
+        error: err.message,
+      });
       // Network/timeout error → fall over to next endpoint if any remain.
       if (!isLast) continue;
       return {
-        success: false, content: '', provider: 'Relay API', adapter: 'relay_api',
-        error: err.message, attempts,
+        success: false,
+        content: '',
+        provider: 'Relay API',
+        adapter: 'relay_api',
+        error: err.message,
+        attempts,
       };
     }
   }
 
   // Should be unreachable, but keep a definite return.
   return {
-    success: false, content: '', provider: 'Relay API', adapter: 'relay_api',
-    error: 'All relay endpoints failed', attempts,
+    success: false,
+    content: '',
+    provider: 'Relay API',
+    adapter: 'relay_api',
+    error: 'All relay endpoints failed',
+    attempts,
   };
 }
 
@@ -428,7 +538,13 @@ function getStatus() {
   let detail;
   if (_available) {
     const endpoint = cfg.endpoint.replace(/\/+$/, '');
-    const host = (() => { try { return new URL(endpoint).hostname; } catch { return endpoint; } })();
+    const host = (() => {
+      try {
+        return new URL(endpoint).hostname;
+      } catch {
+        return endpoint;
+      }
+    })();
     const extra = cfg.endpoints.length > 1 ? ` +${cfg.endpoints.length - 1} 备用` : '';
     detail = `已配置 → ${host} (${cfg.model}) [${cfg.apiFormat}]${extra}`;
   } else {

@@ -8,7 +8,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const scriptPath = path.join(ROOT, 'scripts', 'check-change-safety.js');
+const scriptPath = path.join(ROOT, 'scripts', 'ci', 'check-change-safety.js');
 
 function shellQuote(value) {
   return `'${String(value).replace(/'/g, `'\\''`)}'`;

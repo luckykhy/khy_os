@@ -1,7 +1,8 @@
-const { BaseTool } = require('../_baseTool');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
+
+const { BaseTool } = require('../_baseTool');
 
 // 历史全局路径(会话作用域门控关 / 无 sessionId 时的字节回退目标)。
 const TODO_FILE = path.join(os.tmpdir(), 'khy-todos.json');
@@ -20,13 +21,20 @@ const TODO_FILE = path.join(os.tmpdir(), 'khy-todos.json');
  */
 function _resolveTodoFile() {
   try {
-    const { resolveTodoFilePath, todoSessionScopeEnabled } = require('../../services/todoStorePath');
-    if (!todoSessionScopeEnabled()) return TODO_FILE;
+    const {
+      resolveTodoFilePath,
+      todoSessionScopeEnabled,
+    } = require('../../services/todoStorePath');
+    if (!todoSessionScopeEnabled()) {
+      return TODO_FILE;
+    }
     let sessionId = null;
     try {
       const { getCurrentSessionId } = require('../../services/session/sessionForestService');
       sessionId = getCurrentSessionId();
-    } catch { sessionId = null; }
+    } catch {
+      sessionId = null;
+    }
     return resolveTodoFilePath({ tmpdir: os.tmpdir(), sessionId });
   } catch {
     return TODO_FILE;
@@ -45,12 +53,18 @@ class TodoWriteTool extends BaseTool {
   // always-present behavior) for setups that prefer eager availability.
   static get shouldDefer() {
     const v = process.env.KHY_TODOWRITE_ALWAYS_LOAD;
-    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return false;
+    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') {
+      return false;
+    }
     return true;
   }
 
-  isReadOnly() { return false; }
-  isConcurrencySafe() { return false; }
+  isReadOnly() {
+    return false;
+  }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Write and manage the session todo list. Use this to track progress on multi-step tasks.
@@ -80,8 +94,15 @@ class TodoWriteTool extends BaseTool {
             type: 'object',
             properties: {
               id: { type: 'string', description: 'Unique identifier' },
-              content: { type: 'string', description: 'Task description (imperative form, e.g. "Run tests")' },
-              activeForm: { type: 'string', description: 'Present-continuous form shown in the spinner while this item is in_progress (e.g. "Running tests")' },
+              content: {
+                type: 'string',
+                description: 'Task description (imperative form, e.g. "Run tests")',
+              },
+              activeForm: {
+                type: 'string',
+                description:
+                  'Present-continuous form shown in the spinner while this item is in_progress (e.g. "Running tests")',
+              },
               status: { type: 'string', enum: ['pending', 'in_progress', 'completed'] },
               priority: { type: 'string', enum: ['high', 'medium', 'low'] },
             },
@@ -101,10 +122,12 @@ class TodoWriteTool extends BaseTool {
       if (fs.existsSync(todoFile)) {
         oldTodos = JSON.parse(fs.readFileSync(todoFile, 'utf-8'));
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // If all done, clear
-    const allDone = todos.every(t => t.status === 'completed');
+    const allDone = todos.every((t) => t.status === 'completed');
     const newTodos = allDone ? [] : todos;
 
     fs.writeFileSync(todoFile, JSON.stringify(newTodos, null, 2), 'utf-8');
@@ -113,11 +136,13 @@ class TodoWriteTool extends BaseTool {
       success: true,
       oldTodos,
       newTodos,
-      summary: `${newTodos.filter(t => t.status === 'completed').length}/${newTodos.length} completed`,
+      summary: `${newTodos.filter((t) => t.status === 'completed').length}/${newTodos.length} completed`,
     };
   }
 
-  getActivityDescription() { return '更新待办列表'; }
+  getActivityDescription() {
+    return '更新待办列表';
+  }
 
   /**
    * Render the persisted V1 todo list as a compact snapshot string.
@@ -136,18 +161,23 @@ class TodoWriteTool extends BaseTool {
       if (fs.existsSync(todoFile)) {
         todos = JSON.parse(fs.readFileSync(todoFile, 'utf-8'));
       }
-    } catch { return ''; }
-    if (!Array.isArray(todos) || todos.length === 0) return '';
-    return todos.map((t) => {
-      const icon = t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '→' : '○';
-      const prio = t.priority && t.priority !== 'medium' ? ` (${t.priority})` : '';
-      // An in_progress item shows its present-continuous activeForm when set
-      // (matching the spinner label); other states show the imperative content.
-      const label = (t.status === 'in_progress' && t.activeForm)
-        ? t.activeForm
-        : (t.content || '(untitled)');
-      return `${icon} ${label}${prio}`;
-    }).join('\n');
+    } catch {
+      return '';
+    }
+    if (!Array.isArray(todos) || todos.length === 0) {
+      return '';
+    }
+    return todos
+      .map((t) => {
+        const icon = t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '→' : '○';
+        const prio = t.priority && t.priority !== 'medium' ? ` (${t.priority})` : '';
+        // An in_progress item shows its present-continuous activeForm when set
+        // (matching the spinner label); other states show the imperative content.
+        const label =
+          t.status === 'in_progress' && t.activeForm ? t.activeForm : t.content || '(untitled)';
+        return `${icon} ${label}${prio}`;
+      })
+      .join('\n');
   }
 }
 

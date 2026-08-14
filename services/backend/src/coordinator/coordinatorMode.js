@@ -36,9 +36,7 @@ function deactivateCoordinatorMode() {
 
 // ── Allowed Tools ──────────────────────────────────────────────────
 
-const COORDINATOR_ALLOWED_TOOLS = new Set([
-  'agent', 'sendMessage', 'shutdown',
-]);
+const COORDINATOR_ALLOWED_TOOLS = new Set(['agent', 'sendMessage', 'shutdown']);
 
 /**
  * Check if a tool is allowed for the coordinator.

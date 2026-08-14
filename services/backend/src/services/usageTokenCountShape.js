@@ -35,14 +35,21 @@ function usageTokenPromotionEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_USAGE_TOKEN_PROMOTION', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_USAGE_TOKEN_PROMOTION;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -63,23 +70,33 @@ function usageTokenPromotionEnabled(env = process.env) {
  */
 function shapeTokenCount(value, env = process.env) {
   try {
-    if (!usageTokenPromotionEnabled(env)) return null;
-    if (value == null || !Number.isFinite(value)) return '0';
+    if (!usageTokenPromotionEnabled(env)) {
+      return null;
+    }
+    if (value == null || !Number.isFinite(value)) {
+      return '0';
+    }
     const v = Math.abs(value);
 
-    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}m`;
+    if (v >= 1_000_000) {
+      return `${(v / 1_000_000).toFixed(1)}m`;
+    }
 
     if (v >= 1_000) {
       const k = v / 1_000;
       if (k >= 10) {
         const rk = Math.round(k);
         // 舍入后达到 1000k → 升到 m 档(修 "1000k")。
-        if (rk >= 1_000) return `${(v / 1_000_000).toFixed(1)}m`;
+        if (rk >= 1_000) {
+          return `${(v / 1_000_000).toFixed(1)}m`;
+        }
         return `${rk}k`;
       }
       // k∈[1,10):toFixed(1) 若舍入到 "10.0" 则跨档,归一到整数 "10k"(修 "10.0k")。
       const fixed = k.toFixed(1);
-      if (parseFloat(fixed) >= 10) return `${Math.round(parseFloat(fixed))}k`;
+      if (parseFloat(fixed) >= 10) {
+        return `${Math.round(parseFloat(fixed))}k`;
+      }
       return `${fixed}k`;
     }
 

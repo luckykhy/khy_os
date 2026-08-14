@@ -25,11 +25,14 @@
  *   If Claude works through a relay, khy-xxx models also work through it.
  *   Supports model version rollback if newer version degrades.
  */
-const fs = require('fs');
-const path = require('path');
-const { findPython } = require('../utils/pythonPath');
-const os = require('os');
 const { execSync, spawn } = require('child_process');
+const fs = require('fs');
+
+const { findPython } = require('../utils/pythonPath');
+
+const os = require('os');
+const path = require('path');
+
 const { getDataHome } = require('../utils/dataHome');
 
 function isWritableDir(dir) {
@@ -65,10 +68,14 @@ function validateModelName(name) {
 }
 
 function logWaterQualityDebug(message, details = {}) {
-  if (String(process.env.TRAIN_WATER_QUALITY_DEBUG || '').toLowerCase() !== 'true') return;
+  if (String(process.env.TRAIN_WATER_QUALITY_DEBUG || '').toLowerCase() !== 'true') {
+    return;
+  }
   const safeDetails = {};
   for (const [k, v] of Object.entries(details)) {
-    if (k.toLowerCase().includes('sample') || k.toLowerCase().includes('content')) continue;
+    if (k.toLowerCase().includes('sample') || k.toLowerCase().includes('content')) {
+      continue;
+    }
     safeDetails[k] = v;
   }
   console.warn(`[modelTrainingService] ${message}`, safeDetails);
@@ -76,7 +83,9 @@ function logWaterQualityDebug(message, details = {}) {
 
 function resolveTrainingDir() {
   const candidates = [];
-  if (process.env.KHY_TRAINING_DIR) candidates.push(process.env.KHY_TRAINING_DIR);
+  if (process.env.KHY_TRAINING_DIR) {
+    candidates.push(process.env.KHY_TRAINING_DIR);
+  }
   try {
     candidates.push(path.join(getDataHome(), 'training'));
   } catch {
@@ -86,7 +95,9 @@ function resolveTrainingDir() {
   candidates.push(path.join(os.tmpdir(), 'khyquant', 'training'));
 
   for (const candidate of candidates) {
-    if (candidate && isWritableDir(candidate)) return candidate;
+    if (candidate && isWritableDir(candidate)) {
+      return candidate;
+    }
   }
   // Keep legacy default path; subsequent writes may fail and be reported explicitly.
   return path.join(os.homedir(), '.khyquant', 'training');
@@ -144,11 +155,19 @@ function hasBinaryNoise(text) {
 }
 
 function singleCharDominance(text) {
-  if (!text) return 0;
+  if (!text) {
+    return 0;
+  }
   const counts = new Map();
-  for (const ch of text) counts.set(ch, (counts.get(ch) || 0) + 1);
+  for (const ch of text) {
+    counts.set(ch, (counts.get(ch) || 0) + 1);
+  }
   let max = 0;
-  for (const c of counts.values()) if (c > max) max = c;
+  for (const c of counts.values()) {
+    if (c > max) {
+      max = c;
+    }
+  }
   return max / Math.max(1, text.length);
 }
 
@@ -171,7 +190,9 @@ function inspectConversationWaterQuality(data) {
   }
 
   const fullText = `${instruction}\n${output}`;
-  if (hasBinaryNoise(fullText)) reasons.push('binary_noise');
+  if (hasBinaryNoise(fullText)) {
+    reasons.push('binary_noise');
+  }
   if (singleCharDominance(fullText) > WATER_QUALITY_RULES.maxSingleCharRatio) {
     reasons.push('repetitive_content');
   }
@@ -202,11 +223,13 @@ function inspectConversationWaterQuality(data) {
 
 function assessRecordWaterQuality(type, data) {
   const reasons = [];
-  let normalized = { ...data };
+  const normalized = { ...data };
 
   try {
     const bytes = Buffer.byteLength(JSON.stringify(data || {}), 'utf8');
-    if (bytes > WATER_QUALITY_RULES.maxRecordBytes) reasons.push('record_too_large');
+    if (bytes > WATER_QUALITY_RULES.maxRecordBytes) {
+      reasons.push('record_too_large');
+    }
   } catch {
     reasons.push('record_not_serializable');
   }
@@ -341,7 +364,12 @@ function getDatasetStats() {
         total: 0,
         byType: {},
         quarantined,
-        storage: { trainingDir: TRAINING_DIR, recordsFile: RECORDS_FILE, quarantineFile: QUARANTINE_FILE, writable },
+        storage: {
+          trainingDir: TRAINING_DIR,
+          recordsFile: RECORDS_FILE,
+          quarantineFile: QUARANTINE_FILE,
+          writable,
+        },
       };
     }
     const lines = fs.readFileSync(RECORDS_FILE, 'utf-8').split(/\r?\n/).filter(Boolean);
@@ -350,7 +378,9 @@ function getDatasetStats() {
       try {
         const record = JSON.parse(line);
         byType[record.type] = (byType[record.type] || 0) + 1;
-      } catch { /* skip malformed */ }
+      } catch {
+        /* skip malformed */
+      }
     }
     const quarantined = fs.existsSync(QUARANTINE_FILE)
       ? fs.readFileSync(QUARANTINE_FILE, 'utf-8').split(/\r?\n/).filter(Boolean).length
@@ -359,14 +389,24 @@ function getDatasetStats() {
       total: lines.length,
       byType,
       quarantined,
-      storage: { trainingDir: TRAINING_DIR, recordsFile: RECORDS_FILE, quarantineFile: QUARANTINE_FILE, writable },
+      storage: {
+        trainingDir: TRAINING_DIR,
+        recordsFile: RECORDS_FILE,
+        quarantineFile: QUARANTINE_FILE,
+        writable,
+      },
     };
   } catch {
     return {
       total: 0,
       byType: {},
       quarantined: 0,
-      storage: { trainingDir: TRAINING_DIR, recordsFile: RECORDS_FILE, quarantineFile: QUARANTINE_FILE, writable: false },
+      storage: {
+        trainingDir: TRAINING_DIR,
+        recordsFile: RECORDS_FILE,
+        quarantineFile: QUARANTINE_FILE,
+        writable: false,
+      },
     };
   }
 }
@@ -388,13 +428,27 @@ function exportDataset(format = 'alpaca', filter = {}) {
   }
 
   const lines = fs.readFileSync(RECORDS_FILE, 'utf-8').split(/\r?\n/).filter(Boolean);
-  const records = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  const records = lines
+    .map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 
   // Apply filters
   let filtered = records;
-  if (filter.type) filtered = filtered.filter(r => r.type === filter.type);
-  if (filter.quality) filtered = filtered.filter(r => r.quality === filter.quality);
-  if (filter.minDate) filtered = filtered.filter(r => r.timestamp >= filter.minDate);
+  if (filter.type) {
+    filtered = filtered.filter((r) => r.type === filter.type);
+  }
+  if (filter.quality) {
+    filtered = filtered.filter((r) => r.quality === filter.quality);
+  }
+  if (filter.minDate) {
+    filtered = filtered.filter((r) => r.timestamp >= filter.minDate);
+  }
 
   const clean = [];
   let dropped = 0;
@@ -414,8 +468,8 @@ function exportDataset(format = 'alpaca', filter = {}) {
 
   if (format === 'alpaca') {
     dataset = clean
-      .filter(r => r.instruction && r.output)
-      .map(r => ({
+      .filter((r) => r.instruction && r.output)
+      .map((r) => ({
         instruction: r.instruction,
         input: '',
         output: r.output,
@@ -423,10 +477,13 @@ function exportDataset(format = 'alpaca', filter = {}) {
       }));
   } else if (format === 'sharegpt') {
     dataset = clean
-      .filter(r => r.instruction && r.output)
-      .map(r => ({
+      .filter((r) => r.instruction && r.output)
+      .map((r) => ({
         conversations: [
-          { from: 'system', value: 'You are khy OS, a professional quantitative trading AI assistant.' },
+          {
+            from: 'system',
+            value: 'You are khy OS, a professional quantitative trading AI assistant.',
+          },
           { from: 'human', value: r.instruction },
           { from: 'gpt', value: r.output },
         ],
@@ -434,10 +491,13 @@ function exportDataset(format = 'alpaca', filter = {}) {
   } else {
     // OpenAI fine-tune format
     dataset = clean
-      .filter(r => r.instruction && r.output)
-      .map(r => ({
+      .filter((r) => r.instruction && r.output)
+      .map((r) => ({
         messages: [
-          { role: 'system', content: 'You are khy OS, a professional quantitative trading AI assistant.' },
+          {
+            role: 'system',
+            content: 'You are khy OS, a professional quantitative trading AI assistant.',
+          },
           { role: 'user', content: r.instruction },
           { role: 'assistant', content: r.output },
         ],
@@ -499,31 +559,46 @@ function getComputeStatus() {
   try {
     execSync(`"${_pyBin}" --version`, { encoding: 'utf-8', stdio: 'pipe' });
     status.pythonAvailable = true;
-  } catch { /* no python */ }
+  } catch {
+    /* no python */
+  }
 
   // Check PyTorch
   try {
-    const torchCheck = execSync(`"${_pyBin}" -c "import torch; print(torch.cuda.is_available(), torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False, torch.cuda.device_count() if torch.cuda.is_available() else 0)"`, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+    const torchCheck = execSync(
+      `"${_pyBin}" -c "import torch; print(torch.cuda.is_available(), torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False, torch.cuda.device_count() if torch.cuda.is_available() else 0)"`,
+      { encoding: 'utf-8', stdio: 'pipe' }
+    ).trim();
     const [cuda, mps, gpuCount] = torchCheck.split(' ');
     status.cuda = cuda === 'True';
     status.mps = mps === 'True';
     status.torchAvailable = true;
-    if (status.cuda) status.gpu = { count: parseInt(gpuCount), type: 'CUDA' };
-    else if (status.mps) status.gpu = { count: 1, type: 'Apple Metal' };
-  } catch { /* no torch */ }
+    if (status.cuda) {
+      status.gpu = { count: parseInt(gpuCount), type: 'CUDA' };
+    } else if (status.mps) {
+      status.gpu = { count: 1, type: 'Apple Metal' };
+    }
+  } catch {
+    /* no torch */
+  }
 
   // Check NVIDIA GPU via nvidia-smi
   if (!status.gpu) {
     try {
-      const smi = execSync('nvidia-smi --query-gpu=name,memory.total --format=csv,noheader', { encoding: 'utf-8', stdio: 'pipe' }).trim();
+      const smi = execSync('nvidia-smi --query-gpu=name,memory.total --format=csv,noheader', {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+      }).trim();
       if (smi) {
-        const gpus = smi.split('\n').map(line => {
-          const [name, mem] = line.split(',').map(s => s.trim());
+        const gpus = smi.split('\n').map((line) => {
+          const [name, mem] = line.split(',').map((s) => s.trim());
           return { name, memory: mem };
         });
         status.gpu = { count: gpus.length, type: 'NVIDIA', devices: gpus };
       }
-    } catch { /* no nvidia-smi */ }
+    } catch {
+      /* no nvidia-smi */
+    }
   }
 
   return status;
@@ -553,12 +628,22 @@ async function trainLocal(opts) {
   } = opts;
 
   const base = BASE_MODELS[baseModel];
-  if (!base) throw new Error(`Unknown base model: ${baseModel}. Available: ${Object.keys(BASE_MODELS).join(', ')}`);
-  if (!datasetPath || !fs.existsSync(datasetPath)) throw new Error(`Dataset not found: ${datasetPath}`);
+  if (!base) {
+    throw new Error(
+      `Unknown base model: ${baseModel}. Available: ${Object.keys(BASE_MODELS).join(', ')}`
+    );
+  }
+  if (!datasetPath || !fs.existsSync(datasetPath)) {
+    throw new Error(`Dataset not found: ${datasetPath}`);
+  }
 
   const compute = getComputeStatus();
-  if (!compute.pythonAvailable) throw new Error('Python3 not found. Install Python 3.10+');
-  if (!compute.torchAvailable) throw new Error('PyTorch not found. Run: pip install torch');
+  if (!compute.pythonAvailable) {
+    throw new Error('Python3 not found. Install Python 3.10+');
+  }
+  if (!compute.torchAvailable) {
+    throw new Error('PyTorch not found. Run: pip install torch');
+  }
 
   const config = TRAINING_PRESETS[preset] || TRAINING_PRESETS.standard;
   const outputDir = path.join(MODELS_DIR, outputName);
@@ -589,6 +674,7 @@ async function trainLocal(opts) {
 
     let output = '';
     let lastProgress = 0;
+    let settled = false;
 
     proc.stdout.on('data', (data) => {
       const text = data.toString();
@@ -608,9 +694,31 @@ async function trainLocal(opts) {
       output += data.toString();
     });
 
-    proc.on('close', (code) => {
+    proc.on('error', (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
       // Clean up script
-      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
+      resolve({ success: false, error: err.message });
+    });
+
+    proc.on('close', (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      // Clean up script
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
 
       if (code === 0) {
         // Register model in local registry
@@ -643,7 +751,9 @@ async function trainCloud(opts) {
   }
 
   const base = BASE_MODELS[baseModel];
-  if (!base) throw new Error(`Unknown base model: ${baseModel}`);
+  if (!base) {
+    throw new Error(`Unknown base model: ${baseModel}`);
+  }
 
   // Submit job to cloud API
   const jobData = {
@@ -675,14 +785,18 @@ async function distill(opts) {
   const { teacherModel = 'best-available', studentBase = 'qwen-1.5b', prompts, outputName } = opts;
 
   if (!prompts || prompts.length === 0) {
-    throw new Error('Distillation requires a set of prompts. Provide prompts or use recorded interactions.');
+    throw new Error(
+      'Distillation requires a set of prompts. Provide prompts or use recorded interactions.'
+    );
   }
 
   // Step 1: Generate teacher responses
   const teacherData = [];
-  const gateway = require('./gateway/aiGateway');
-  const gw = new gateway();
-  if (!gw._initialized) await gw.init();
+  // aiGateway exports an already-constructed singleton instance; use it directly.
+  const gw = require('./gateway/aiGateway');
+  if (!gw.isInitialized()) {
+    await gw.init();
+  }
 
   for (const prompt of prompts) {
     try {
@@ -695,7 +809,9 @@ async function distill(opts) {
           system: 'You are khy OS, a professional quantitative trading AI assistant.',
         });
       }
-    } catch { /* skip failed */ }
+    } catch {
+      /* skip failed */
+    }
   }
 
   // Step 2: Save as dataset
@@ -732,7 +848,9 @@ const MODEL_REGISTRY_FILE = path.join(TRAINING_DIR, 'model_registry.json');
  * @returns {boolean} always true
  */
 function verifyExportPassword(_password) {
-  console.warn('[modelTrainingService] export password check bypassed (by design — deployment-layer access control)');
+  console.warn(
+    '[modelTrainingService] export password check bypassed (by design — deployment-layer access control)'
+  );
   return true;
 }
 
@@ -755,7 +873,9 @@ function loadModelRegistry() {
     if (fs.existsSync(MODEL_REGISTRY_FILE)) {
       return JSON.parse(fs.readFileSync(MODEL_REGISTRY_FILE, 'utf-8'));
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return {};
 }
 
@@ -780,10 +900,14 @@ async function exportGGUF(modelName, quantization = 'q4_k_m', password = '') {
 
   const registry = loadModelRegistry();
   const model = registry[modelName];
-  if (!model) throw new Error(`Model not found: ${modelName}. Run: train list`);
+  if (!model) {
+    throw new Error(`Model not found: ${modelName}. Run: train list`);
+  }
 
   const modelPath = model.path;
-  if (!fs.existsSync(modelPath)) throw new Error(`Model files not found at: ${modelPath}`);
+  if (!fs.existsSync(modelPath)) {
+    throw new Error(`Model files not found at: ${modelPath}`);
+  }
 
   const outputFile = path.join(modelPath, `${modelName}-${quantization}.gguf`);
 
@@ -827,10 +951,35 @@ except Exception as e:
   return new Promise((resolve) => {
     const proc = spawn(findPython(), [scriptPath], { stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
-    proc.stdout.on('data', d => { output += d.toString(); });
-    proc.stderr.on('data', d => { output += d.toString(); });
+    let settled = false;
+    proc.stdout.on('data', (d) => {
+      output += d.toString();
+    });
+    proc.stderr.on('data', (d) => {
+      output += d.toString();
+    });
+    proc.on('error', (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
+      resolve({ success: false, error: err.message });
+    });
     proc.on('close', (code) => {
-      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+      if (settled) {
+        return;
+      }
+      settled = true;
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
       if (code === 0 && output.includes('SUCCESS:')) {
         resolve({ success: true, ggufPath: outputFile });
       } else {
@@ -852,7 +1001,9 @@ async function exportSafetensors(modelName, password = '') {
 
   const registry = loadModelRegistry();
   const model = registry[modelName];
-  if (!model) throw new Error(`Model not found: ${modelName}`);
+  if (!model) {
+    throw new Error(`Model not found: ${modelName}`);
+  }
 
   const mergedDir = path.join(model.path, 'merged');
   ensureDir(mergedDir);
@@ -889,10 +1040,35 @@ print(f"SUCCESS:{output_path}")
   return new Promise((resolve) => {
     const proc = spawn(findPython(), [scriptPath], { stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
-    proc.stdout.on('data', d => { output += d.toString(); });
-    proc.stderr.on('data', d => { output += d.toString(); });
+    let settled = false;
+    proc.stdout.on('data', (d) => {
+      output += d.toString();
+    });
+    proc.stderr.on('data', (d) => {
+      output += d.toString();
+    });
+    proc.on('error', (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
+      resolve({ success: false, error: err.message });
+    });
     proc.on('close', (code) => {
-      try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+      if (settled) {
+        return;
+      }
+      settled = true;
+      try {
+        fs.unlinkSync(scriptPath);
+      } catch {
+        /* ignore */
+      }
       if (code === 0 && output.includes('SUCCESS:')) {
         resolve({ success: true, safetensorsPath: mergedDir });
       } else {
@@ -910,7 +1086,9 @@ print(f"SUCCESS:{output_path}")
  */
 async function registerWithOllama(modelName, ggufPath) {
   validateModelName(modelName);
-  if (!fs.existsSync(ggufPath)) throw new Error(`GGUF file not found: ${ggufPath}`);
+  if (!fs.existsSync(ggufPath)) {
+    throw new Error(`GGUF file not found: ${ggufPath}`);
+  }
 
   const modelfile = `FROM ${ggufPath}
 SYSTEM "You are khy OS (${modelName}), a professional quantitative trading AI assistant specialized in Chinese A-shares, futures, and crypto markets. You provide data-driven analysis, strategy suggestions, and risk assessments."
@@ -923,12 +1101,22 @@ PARAMETER num_ctx 4096
   fs.writeFileSync(modelfilePath, modelfile, 'utf-8');
 
   try {
-    execSync(`ollama create ${modelName} -f "${modelfilePath}"`, { encoding: 'utf-8', timeout: 120000 });
-    return { success: true, message: `Model ${modelName} registered with Ollama. Use: ollama run ${modelName}` };
+    execSync(`ollama create ${modelName} -f "${modelfilePath}"`, {
+      encoding: 'utf-8',
+      timeout: 120000,
+    });
+    return {
+      success: true,
+      message: `Model ${modelName} registered with Ollama. Use: ollama run ${modelName}`,
+    };
   } catch (err) {
     return { success: false, error: err.message };
   } finally {
-    try { fs.unlinkSync(modelfilePath); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(modelfilePath);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -961,13 +1149,21 @@ async function uploadToHuggingFace(modelName, opts = {}) {
 
   const registry = loadModelRegistry();
   const model = registry[modelName];
-  if (!model) throw new Error(`Model not found: ${modelName}`);
-  if (!model.path || !fs.existsSync(model.path)) throw new Error(`Model files not found at: ${model.path}`);
-  if (!repoId || !repoId.includes('/')) throw new Error('Invalid repo ID. Format: username/model-name');
+  if (!model) {
+    throw new Error(`Model not found: ${modelName}`);
+  }
+  if (!model.path || !fs.existsSync(model.path)) {
+    throw new Error(`Model files not found at: ${model.path}`);
+  }
+  if (!repoId || !repoId.includes('/')) {
+    throw new Error('Invalid repo ID. Format: username/model-name');
+  }
 
   const hfToken = process.env.HF_TOKEN || process.env.HUGGING_FACE_HUB_TOKEN || '';
   if (!hfToken) {
-    throw new Error('HuggingFace token not set. Configure via: gateway config → provider-keys → HuggingFace, or set HF_TOKEN env var.');
+    throw new Error(
+      'HuggingFace token not set. Configure via: gateway config → provider-keys → HuggingFace, or set HF_TOKEN env var.'
+    );
   }
 
   const modelPath = model.path;
@@ -1022,7 +1218,9 @@ and quantitative trading scenarios.
     // Check if huggingface-cli is available
     execSync('huggingface-cli --version', { encoding: 'utf-8', stdio: 'pipe' });
 
-    if (onProgress) onProgress(10, 'Creating repository...');
+    if (onProgress) {
+      onProgress(10, 'Creating repository...');
+    }
 
     // Create repo (ignore error if exists)
     try {
@@ -1030,22 +1228,25 @@ and quantitative trading scenarios.
         `huggingface-cli repo create ${repoId.split('/')[1]} --type model ${isPrivate ? '--private' : ''} -y`,
         { encoding: 'utf-8', stdio: 'pipe', env: { ...process.env, HF_TOKEN: hfToken } }
       );
-    } catch { /* repo may already exist */ }
+    } catch {
+      /* repo may already exist */
+    }
 
-    if (onProgress) onProgress(30, 'Uploading model files...');
+    if (onProgress) {
+      onProgress(30, 'Uploading model files...');
+    }
 
     // Upload entire folder
-    execSync(
-      `huggingface-cli upload ${repoId} "${modelPath}" . --repo-type model`,
-      {
-        encoding: 'utf-8',
-        stdio: 'pipe',
-        env: { ...process.env, HF_TOKEN: hfToken },
-        timeout: 600000, // 10 min
-      }
-    );
+    execSync(`huggingface-cli upload ${repoId} "${modelPath}" . --repo-type model`, {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      env: { ...process.env, HF_TOKEN: hfToken },
+      timeout: 600000, // 10 min
+    });
 
-    if (onProgress) onProgress(100, 'Upload complete');
+    if (onProgress) {
+      onProgress(100, 'Upload complete');
+    }
 
     const url = `https://huggingface.co/${repoId}`;
     return { success: true, url, message: `Model ${modelName} uploaded to ${url}` };
@@ -1098,6 +1299,7 @@ except Exception as e:
       });
 
       let output = '';
+      let settled = false;
       proc.stdout.on('data', (data) => {
         const text = data.toString();
         output += text;
@@ -1107,16 +1309,47 @@ except Exception as e:
           onProgress(parseInt(progressMatch[1]), progressMatch[2]);
         }
       });
-      proc.stderr.on('data', (data) => { output += data.toString(); });
+      proc.stderr.on('data', (data) => {
+        output += data.toString();
+      });
+
+      proc.on('error', (err) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        try {
+          fs.unlinkSync(scriptPath);
+        } catch {
+          /* ignore */
+        }
+        resolve({ success: false, url: '', message: err.message });
+      });
 
       proc.on('close', (code) => {
-        try { fs.unlinkSync(scriptPath); } catch { /* ignore */ }
+        if (settled) {
+          return;
+        }
+        settled = true;
+        try {
+          fs.unlinkSync(scriptPath);
+        } catch {
+          /* ignore */
+        }
         const successMatch = output.match(/SUCCESS:(.+)/);
         if (code === 0 && successMatch) {
-          resolve({ success: true, url: successMatch[1].trim(), message: `Model ${modelName} uploaded to ${successMatch[1].trim()}` });
+          resolve({
+            success: true,
+            url: successMatch[1].trim(),
+            message: `Model ${modelName} uploaded to ${successMatch[1].trim()}`,
+          });
         } else {
           const errorMatch = output.match(/ERROR:(.+)/);
-          resolve({ success: false, url: '', message: errorMatch ? errorMatch[1].trim() : output.slice(-300) });
+          resolve({
+            success: false,
+            url: '',
+            message: errorMatch ? errorMatch[1].trim() : output.slice(-300),
+          });
         }
       });
     });
@@ -1137,17 +1370,33 @@ const ensureDir = require('../utils/ensureDirSync');
  */
 function getNextVersion() {
   const registry = loadModelRegistry();
-  const versions = Object.keys(registry)
-    .filter(name => /^khy-\d+\.\d+$/.test(name))
-    .map(name => {
-      const [major, minor] = name.replace('khy-', '').split('.').map(Number);
-      return { major, minor, raw: major * 100 + minor };
-    })
-    .sort((a, b) => b.raw - a.raw);
+  // Parse a khy-<major>[.<minor>...] name into numeric segments.
+  const parseSegments = (name) => name.replace('khy-', '').split('.').map(Number);
+  // Compare two version segment arrays numerically, segment by segment.
+  const compareVersions = (a, b) => {
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      const diff = (a[i] || 0) - (b[i] || 0);
+      if (diff !== 0) {
+        return diff;
+      }
+    }
+    return 0;
+  };
 
-  if (versions.length === 0) return '1.0';
-  const latest = versions[0];
-  return `${latest.major}.${latest.minor + 1}`;
+  // Match multi-segment versions (e.g. khy-1.0, khy-2.1.3) to align with validateModelName.
+  const versions = Object.keys(registry)
+    .filter((name) => /^khy-\d+(\.\d+)*$/.test(name))
+    .map(parseSegments)
+    .sort(compareVersions);
+
+  if (versions.length === 0) {
+    return '1.0';
+  }
+  const latest = versions[versions.length - 1];
+  const major = latest[0] || 1;
+  const minor = latest[1] || 0;
+  return `${major}.${minor + 1}`;
 }
 
 /**
@@ -1182,7 +1431,10 @@ function setActiveModel(version) {
   const registry = loadModelRegistry();
   if (!version) {
     // Find latest
-    const versions = Object.keys(registry).filter(n => /^khy-\d+\.\d+$/.test(n)).sort().reverse();
+    const versions = Object.keys(registry)
+      .filter((n) => /^khy-\d+\.\d+$/.test(n))
+      .sort()
+      .reverse();
     version = versions[0] || null;
   }
   if (version && registry[version]) {
@@ -1236,10 +1488,16 @@ async function uploadToGitRepo(modelName, opts = {}) {
 
   const registry = loadModelRegistry();
   const model = registry[modelName];
-  if (!model) throw new Error(`Model not found: ${modelName}`);
-  if (!model.path || !fs.existsSync(model.path)) throw new Error(`Model files not found at: ${model.path}`);
+  if (!model) {
+    throw new Error(`Model not found: ${modelName}`);
+  }
+  if (!model.path || !fs.existsSync(model.path)) {
+    throw new Error(`Model files not found at: ${model.path}`);
+  }
 
-  if (!repo) throw new Error('Repository name required. Use --repo <name>');
+  if (!repo) {
+    throw new Error('Repository name required. Use --repo <name>');
+  }
 
   // Determine remote URL
   const gitOwner = owner || getGitUser();
@@ -1266,7 +1524,11 @@ async function uploadToGitRepo(modelName, opts = {}) {
     // Setup LFS tracking for large files
     const lfsPatterns = ['*.bin', '*.safetensors', '*.gguf', '*.pt', '*.pth', '*.onnx'];
     for (const pattern of lfsPatterns) {
-      try { execSync(`git lfs track "${pattern}"`, { cwd: modelPath, stdio: 'pipe' }); } catch { /* ignore */ }
+      try {
+        execSync(`git lfs track "${pattern}"`, { cwd: modelPath, stdio: 'pipe' });
+      } catch {
+        /* ignore */
+      }
     }
 
     // Create model card
@@ -1295,12 +1557,16 @@ khy train import ${modelName} --from ${remoteUrl}
     execSync('git add -A', { cwd: modelPath, stdio: 'pipe' });
     try {
       execSync(`git commit -m "Upload ${modelName}"`, { cwd: modelPath, stdio: 'pipe' });
-    } catch { /* already committed */ }
+    } catch {
+      /* already committed */
+    }
 
     // Set remote
     try {
       execSync(`git remote remove origin`, { cwd: modelPath, stdio: 'pipe' });
-    } catch { /* no remote */ }
+    } catch {
+      /* no remote */
+    }
     execSync(`git remote add origin ${remoteUrl}`, { cwd: modelPath, stdio: 'pipe' });
 
     // Try to create repo via API (if token provided)
@@ -1311,11 +1577,16 @@ khy train import ${modelName} --from ${remoteUrl}
     // Push
     execSync('git push -u origin main --force', { cwd: modelPath, stdio: 'pipe', timeout: 300000 });
 
-    const publicUrl = platform === 'gitee'
-      ? `https://gitee.com/${gitOwner}/${repo}`
-      : `https://github.com/${gitOwner}/${repo}`;
+    const publicUrl =
+      platform === 'gitee'
+        ? `https://gitee.com/${gitOwner}/${repo}`
+        : `https://github.com/${gitOwner}/${repo}`;
 
-    return { success: true, url: publicUrl, message: `Model ${modelName} uploaded to ${publicUrl}` };
+    return {
+      success: true,
+      url: publicUrl,
+      message: `Model ${modelName} uploaded to ${publicUrl}`,
+    };
   } catch (err) {
     return { success: false, url: '', message: err.message };
   }
@@ -1328,26 +1599,36 @@ async function createRemoteRepo(platform, repoName, token, owner) {
   const axios = require('axios');
   try {
     if (platform === 'github') {
-      await axios.post('https://api.github.com/user/repos', {
-        name: repoName,
-        private: true,
-        description: 'khy OS trained model',
-      }, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        timeout: 15000,
-      });
+      await axios.post(
+        'https://api.github.com/user/repos',
+        {
+          name: repoName,
+          private: true,
+          description: 'khy OS trained model',
+        },
+        {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          timeout: 15000,
+        }
+      );
     } else if (platform === 'gitee') {
-      await axios.post('https://gitee.com/api/v5/user/repos', {
-        access_token: token,
-        name: repoName,
-        private: true,
-        description: 'khy OS trained model',
-      }, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 15000,
-      });
+      await axios.post(
+        'https://gitee.com/api/v5/user/repos',
+        {
+          access_token: token,
+          name: repoName,
+          private: true,
+          description: 'khy OS trained model',
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 15000,
+        }
+      );
     }
-  } catch { /* repo may already exist, ignore */ }
+  } catch {
+    /* repo may already exist, ignore */
+  }
 }
 
 /**
@@ -1356,13 +1637,24 @@ async function createRemoteRepo(platform, repoName, token, owner) {
 function getGitUser() {
   try {
     return execSync('git config user.name', { encoding: 'utf-8', stdio: 'pipe' }).trim() || 'user';
-  } catch { return 'user'; }
+  } catch {
+    return 'user';
+  }
 }
 
 /**
  * Generate the Python training script.
  */
-function generateTrainScript({ baseModelId, datasetPath, outputDir, outputName, method, config, useCuda, useMps }) {
+function generateTrainScript({
+  baseModelId,
+  datasetPath,
+  outputDir,
+  outputName,
+  method,
+  config,
+  useCuda,
+  useMps,
+}) {
   const device = useCuda ? 'cuda' : useMps ? 'mps' : 'cpu';
 
   if (method === 'lora') {
@@ -1538,12 +1830,18 @@ async function abliterateModel(baseModelId, options = {}) {
   return new Promise((resolve) => {
     const args = [
       scriptPath,
-      '--model', baseModelId,
-      '--output', outputDir,
-      '--method', 'full',
-      '--top-k', String(topK),
-      '--quant', quant,
-      '--device', device,
+      '--model',
+      baseModelId,
+      '--output',
+      outputDir,
+      '--method',
+      'full',
+      '--top-k',
+      String(topK),
+      '--quant',
+      quant,
+      '--device',
+      device,
     ];
 
     const proc = spawn(findPython(), args, {
@@ -1552,23 +1850,49 @@ async function abliterateModel(baseModelId, options = {}) {
     });
 
     let output = '';
-    proc.stdout.on('data', d => { output += d.toString(); });
-    proc.stderr.on('data', d => { output += d.toString(); });
+    let settled = false;
+    proc.stdout.on('data', (d) => {
+      output += d.toString();
+    });
+    proc.stderr.on('data', (d) => {
+      output += d.toString();
+    });
+
+    proc.on('error', (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve({
+        success: false,
+        modelName: outputName,
+        safetensorsPath: outputDir,
+        ggufPath: null,
+        output: err.message,
+      });
+    });
 
     proc.on('close', (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
       const ggufPath = path.join(outputDir, `${outputName}.gguf`);
       const success = code === 0;
 
       if (success) {
         // Register the abliterated model
         try {
-          registerModel(outputName, outputDir, {
+          registerModel(outputName, {
             baseModel: baseModelId,
             method: 'abliteration',
             topK,
             quant,
+            path: outputDir,
           });
-        } catch { /* ignore registration errors */ }
+        } catch {
+          /* ignore registration errors */
+        }
       }
 
       resolve({

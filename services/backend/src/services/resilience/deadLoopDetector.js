@@ -20,8 +20,8 @@ const { callSignature } = require('./errorSignature');
 
 class DeadLoopDetector {
   constructor() {
-    this._last = null;          // 上一次"已执行"调用的签名
-    this._counts = new Map();   // 签名 → 出现次数
+    this._last = null; // 上一次"已执行"调用的签名
+    this._counts = new Map(); // 签名 → 出现次数
   }
 
   /**

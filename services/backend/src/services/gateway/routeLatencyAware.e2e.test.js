@@ -11,8 +11,8 @@
  *   - store 空(冷启动 samples<3)→ 无延迟罚分。
  */
 
-const { describe, test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
+const { describe, test, beforeEach, afterEach } = require('node:test');
 const path = require('path');
 
 const STORE_PATH = require.resolve('./routeLatencyStore');
@@ -30,11 +30,14 @@ function _installFakeStore() {
         const k = String(adapterKey || '').toLowerCase();
         return _fakeStats[k] || { ewmaMs: null, samples: 0, ageMs: Infinity };
       },
-      getReport() { return { adapters: {} }; },
+      getReport() {
+        return { adapters: {} };
+      },
       _reset() {},
     },
   };
 }
+
 function _restoreStore() {
   delete require.cache[STORE_PATH];
 }
@@ -46,7 +49,9 @@ function _entry(key) {
     enabled: true,
     available: true,
     adapter: {
-      getStatus() { return { name: key, available: true }; },
+      getStatus() {
+        return { name: key, available: true };
+      },
     },
   };
 }
@@ -62,8 +67,11 @@ describe('延迟感知路由 E2E', () => {
   });
   afterEach(() => {
     _restoreStore();
-    if (savedFlag === undefined) delete process.env.KHY_ROUTE_LATENCY_AWARE;
-    else process.env.KHY_ROUTE_LATENCY_AWARE = savedFlag;
+    if (savedFlag === undefined) {
+      delete process.env.KHY_ROUTE_LATENCY_AWARE;
+    } else {
+      process.env.KHY_ROUTE_LATENCY_AWARE = savedFlag;
+    }
   });
 
   test('A 快 B 慢 → B 多 slow_latency 罚分,B.score > A.score', () => {

@@ -29,7 +29,9 @@ const _VALID_MODES = new Set([EXPOSE_MODES.ALL, EXPOSE_MODES.SAFE, EXPOSE_MODES.
  */
 function resolveExposeMode(env = process.env) {
   const e = env || {};
-  const raw = String(e.KHY_MCP_SERVE_EXPOSE == null ? '' : e.KHY_MCP_SERVE_EXPOSE).trim().toLowerCase();
+  const raw = String(e.KHY_MCP_SERVE_EXPOSE == null ? '' : e.KHY_MCP_SERVE_EXPOSE)
+    .trim()
+    .toLowerCase();
   return _VALID_MODES.has(raw) ? raw : EXPOSE_MODES.ALL;
 }
 
@@ -41,7 +43,9 @@ function resolveExposeMode(env = process.env) {
 function _isReadOnly(tool) {
   try {
     return typeof tool.isReadOnly === 'function' ? !!tool.isReadOnly() : false;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -64,8 +68,12 @@ function _riskOrdinal(tool) {
 function selectExposedTools(enabledTools, mode) {
   const list = Array.isArray(enabledTools) ? enabledTools.filter(Boolean) : [];
   const m = _VALID_MODES.has(mode) ? mode : EXPOSE_MODES.ALL;
-  if (m === EXPOSE_MODES.ALL) return list;
-  if (m === EXPOSE_MODES.READONLY) return list.filter((t) => _isReadOnly(t));
+  if (m === EXPOSE_MODES.ALL) {
+    return list;
+  }
+  if (m === EXPOSE_MODES.READONLY) {
+    return list.filter((t) => _isReadOnly(t));
+  }
   // safe:只读工具,或写工具但风险 ∈ {safe, low}。
   return list.filter((t) => _isReadOnly(t) || _riskOrdinal(t) <= RISK_ORDER.low);
 }
@@ -80,13 +88,20 @@ function summarizeExposure(selected) {
   const byRisk = { safe: 0, low: 0, medium: 0, high: 0, critical: 0 };
   let hasDestructive = false;
   for (const t of list) {
-    const risk = t && typeof t.risk === 'string' && byRisk[t.risk] !== undefined ? t.risk : 'medium';
+    const risk =
+      t && typeof t.risk === 'string' && byRisk[t.risk] !== undefined ? t.risk : 'medium';
     byRisk[risk] += 1;
     // 破坏性 = 风险 ≥ high,或工具自报 isDestructive()。
-    if (_riskOrdinal(t) >= RISK_ORDER.high) hasDestructive = true;
+    if (_riskOrdinal(t) >= RISK_ORDER.high) {
+      hasDestructive = true;
+    }
     try {
-      if (typeof t.isDestructive === 'function' && t.isDestructive()) hasDestructive = true;
-    } catch { /* isDestructive 抛 → 保守不升级判断 */ }
+      if (typeof t.isDestructive === 'function' && t.isDestructive()) {
+        hasDestructive = true;
+      }
+    } catch {
+      /* isDestructive 抛 → 保守不升级判断 */
+    }
   }
   return { total: list.length, byRisk, hasDestructive };
 }

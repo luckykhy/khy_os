@@ -12,9 +12,9 @@
 
 // ── Imports ──
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 const { getProjectDataDir } = require('../utils/dataHome');
 
@@ -41,7 +41,9 @@ function _safeId(sessionId) {
  */
 function _encodeProject(cwd) {
   const raw = String(cwd || '').trim();
-  if (!raw) return UNKNOWN_BUCKET;
+  if (!raw) {
+    return UNKNOWN_BUCKET;
+  }
   const encoded = raw.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
   return encoded || UNKNOWN_BUCKET;
 }
@@ -54,7 +56,11 @@ function _encodeProject(cwd) {
 function _bucketDirFromCwd(cwd) {
   const bucket = _encodeProject(cwd);
   const dir = path.join(_sessionsDir(), bucket);
-  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* exists */ }
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* exists */
+  }
   return dir;
 }
 
@@ -66,15 +72,23 @@ function _bucketDirFromCwd(cwd) {
  * @param {string} [cwd]
  */
 function _writeProjectMeta(bucketDir, cwd) {
-  if (!cwd) return;
+  if (!cwd) {
+    return;
+  }
   try {
     const metaPath = path.join(bucketDir, '.project.json');
     let meta = {};
-    try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8')); } catch { /* new */ }
+    try {
+      meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+    } catch {
+      /* new */
+    }
     meta.cwd = cwd;
     meta.updatedAt = Date.now();
     fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 }
 
 /**
@@ -99,14 +113,20 @@ function _locateSessionFile(sessionId, ext) {
     return null;
   }
   for (const ent of entries) {
-    if (!ent.isDirectory()) continue;
+    if (!ent.isDirectory()) {
+      continue;
+    }
     const candidate = path.join(root, ent.name, fileName);
-    if (fs.existsSync(candidate)) return candidate;
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
   }
 
   // 2. Flat legacy layout
   const flat = path.join(root, fileName);
-  if (fs.existsSync(flat)) return flat;
+  if (fs.existsSync(flat)) {
+    return flat;
+  }
 
   return null;
 }
@@ -130,13 +150,21 @@ function _collectSnapshotFiles() {
     const full = path.join(root, ent.name);
     if (ent.isDirectory()) {
       let sub;
-      try { sub = fs.readdirSync(full); } catch { continue; }
+      try {
+        sub = fs.readdirSync(full);
+      } catch {
+        continue;
+      }
       for (const f of sub) {
         if (f.endsWith('.json') && !f.endsWith('.checkpoint.json') && f !== '.project.json') {
           out.push(path.join(full, f));
         }
       }
-    } else if (ent.name.endsWith('.json') && !ent.name.endsWith('.checkpoint.json') && ent.name !== '.project.json') {
+    } else if (
+      ent.name.endsWith('.json') &&
+      !ent.name.endsWith('.checkpoint.json') &&
+      ent.name !== '.project.json'
+    ) {
       out.push(full);
     }
   }
@@ -155,9 +183,13 @@ function _collectSnapshotFiles() {
  */
 function _resolvePath(sessionId, ext, projectDir) {
   const safe = _safeId(sessionId);
-  if (projectDir) return path.join(projectDir, `${safe}${ext}`);
+  if (projectDir) {
+    return path.join(projectDir, `${safe}${ext}`);
+  }
   const existing = _locateSessionFile(sessionId, ext);
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
   return path.join(_sessionsDir(), `${safe}${ext}`);
 }
 
@@ -220,7 +252,9 @@ function _writeAtomic(filePath, data) {
 const _DURABLE_FALSY = new Set(['0', 'false', 'off', 'no']);
 function _durableTranscriptEnabled(env = process.env) {
   const raw = env && env.KHY_DURABLE_TRANSCRIPT;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_DURABLE_FALSY.has(v);
 }
 
@@ -231,7 +265,9 @@ function _durableTranscriptEnabled(env = process.env) {
 const _PERSIST_FAST_FALSY = new Set(['0', 'false', 'off', 'no']);
 function _sessionPersistFastEnabled(env = process.env) {
   const raw = env && env.KHY_SESSION_PERSIST_FAST;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_PERSIST_FAST_FALSY.has(v);
 }
 
@@ -258,7 +294,11 @@ function _appendDurable(filePath, data) {
     fs.writeSync(fd, data);
     // fsync 失败不应丢掉已写入的数据:append 已落到缓存(≥ 回退路径的保证),
     // 仅刷盘保证降级。fail-soft 吞掉异常,绝不让热路径消息写入抛错。
-    try { fs.fsyncSync(fd); } catch { /* fsync 不可用 → 降级为已 append(不弱于回退) */ }
+    try {
+      fs.fsyncSync(fd);
+    } catch {
+      /* fsync 不可用 → 降级为已 append(不弱于回退) */
+    }
   } finally {
     fs.closeSync(fd);
   }
@@ -277,7 +317,9 @@ function _appendDurable(filePath, data) {
  * @returns {{ uuid: string, parentUuid: string|null }}
  */
 function appendMessage(sessionId, msg, parentUuid = null, projectDir = null) {
-  if (!sessionId) return null;
+  if (!sessionId) {
+    return null;
+  }
 
   const uuid = msg.uuid || _uuid();
   const entry = {
@@ -292,7 +334,34 @@ function appendMessage(sessionId, msg, parentUuid = null, projectDir = null) {
 
   // 让逐回合回溯(rewind)的 checkpointId 随 JSONL 往返存活(单一真源 rewindResume)。
   // 门控 KHY_REWIND_PERSIST 关 → 不搬任何字段 = 写出的行字节不变(向后兼容)。
-  try { require('./rewindResume').carryRewindFields(msg, entry); } catch { /* fail-soft */ }
+  try {
+    require('./rewindResume').carryRewindFields(msg, entry);
+  } catch {
+    /* fail-soft */
+  }
+
+  // Optional structured turn artifacts: ordered turn timeline (_timeline),
+  // tool-call summaries (_toolCalls) and turn stats (_turnStats). Present-only
+  // pass-through — when the caller did not attach them, the emitted JSONL line
+  // stays byte-identical to the legacy format (backward-compat red line). Old
+  // readers ignore unknown fields, same additive contract as `_khyTrace`.
+  try {
+    if (Array.isArray(msg._timeline) && msg._timeline.length > 0) {
+      entry._timeline = msg._timeline;
+    }
+    if (Array.isArray(msg._toolCalls) && msg._toolCalls.length > 0) {
+      entry._toolCalls = msg._toolCalls;
+    }
+    if (
+      msg._turnStats &&
+      typeof msg._turnStats === 'object' &&
+      Object.keys(msg._turnStats).length > 0
+    ) {
+      entry._turnStats = msg._turnStats;
+    }
+  } catch {
+    /* fail-soft: artifacts are additive evidence, never block the write */
+  }
 
   // DESIGN-ARCH-047: 附加溯源信封 `_khyTrace`（增量、向后兼容；旧 reader 忽略未知字段）。
   // 显式传入则原样保留；否则据 role + 可选 provenance 提示盖戳。缺省 fail-safe 到
@@ -302,9 +371,8 @@ function appendMessage(sessionId, msg, parentUuid = null, projectDir = null) {
     if (msg._khyTrace && typeof msg._khyTrace === 'object') {
       entry._khyTrace = msg._khyTrace;
     } else {
-      const hint = msg._khyProvenance && typeof msg._khyProvenance === 'object'
-        ? msg._khyProvenance
-        : {};
+      const hint =
+        msg._khyProvenance && typeof msg._khyProvenance === 'object' ? msg._khyProvenance : {};
       entry._khyTrace = khyTrace.makeTrace({
         producer: hint.producer,
         producerId: hint.producerId,
@@ -314,11 +382,17 @@ function appendMessage(sessionId, msg, parentUuid = null, projectDir = null) {
         contradictions: hint.contradictions,
       });
     }
-  } catch { /* trace 是增量证据，失败绝不阻断消息写入 */ }
+  } catch {
+    /* trace 是增量证据，失败绝不阻断消息写入 */
+  }
 
   const jsonlFile = _jsonlPath(sessionId, projectDir);
   const dir = path.dirname(jsonlFile);
-  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* exists */ }
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* exists */
+  }
 
   // append-only: 追加一行 JSON。
   // 耐久写:每轮收尾写的 transcript 是 resume/rewind 主恢复产物,append 后 fsync 刷盘
@@ -339,7 +413,9 @@ function appendMessage(sessionId, msg, parentUuid = null, projectDir = null) {
       content: entry.content,
       at: entry.timestamp,
     });
-  } catch { /* 链是事后审计 evidence，写入失败不阻断热路径 */ }
+  } catch {
+    /* 链是事后审计 evidence，写入失败不阻断热路径 */
+  }
 
   return { uuid, parentUuid: entry.parentUuid };
 }
@@ -354,11 +430,15 @@ function appendMessage(sessionId, msg, parentUuid = null, projectDir = null) {
  */
 function buildConversationChain(sessionId, leafUuid = null) {
   const jsonlFile = _jsonlPath(sessionId);
-  if (!fs.existsSync(jsonlFile)) return [];
+  if (!fs.existsSync(jsonlFile)) {
+    return [];
+  }
 
   const raw = fs.readFileSync(jsonlFile, 'utf-8');
   const lines = raw.split('\n').filter(Boolean);
-  if (lines.length === 0) return [];
+  if (lines.length === 0) {
+    return [];
+  }
 
   // 构建 uuid -> entry 映射
   const byUuid = new Map();
@@ -370,12 +450,16 @@ function buildConversationChain(sessionId, leafUuid = null) {
         byUuid.set(entry.uuid, entry);
         lastUuid = entry.uuid;
       }
-    } catch { /* skip corrupt line */ }
+    } catch {
+      /* skip corrupt line */
+    }
   }
 
   // 从 leaf 反向遍历
   const leaf = leafUuid || lastUuid;
-  if (!leaf) return [];
+  if (!leaf) {
+    return [];
+  }
 
   const chain = [];
   let current = leaf;
@@ -402,14 +486,26 @@ function verifyTraceChain(sessionId) {
   try {
     const jsonlFile = _jsonlPath(sessionId);
     if (!fs.existsSync(jsonlFile)) {
-      return { ok: false, available: false, length: 0, brokenAt: null, reason: 'transcript 不存在' };
+      return {
+        ok: false,
+        available: false,
+        length: 0,
+        brokenAt: null,
+        reason: 'transcript 不存在',
+      };
     }
     const traceChain = require('./trajectoryProvenance/traceChain');
     const chainFile = traceChain.chainPathFor(jsonlFile);
     const entries = buildConversationChain(sessionId);
     return traceChain.verifyAgainstEntries(chainFile, entries);
   } catch (e) {
-    return { ok: false, available: false, length: 0, brokenAt: null, reason: e && e.message ? e.message : String(e) };
+    return {
+      ok: false,
+      available: false,
+      length: 0,
+      brokenAt: null,
+      reason: e && e.message ? e.message : String(e),
+    };
   }
 }
 
@@ -420,7 +516,9 @@ function verifyTraceChain(sessionId) {
  */
 function getLeafUuids(sessionId) {
   const jsonlFile = _jsonlPath(sessionId);
-  if (!fs.existsSync(jsonlFile)) return [];
+  if (!fs.existsSync(jsonlFile)) {
+    return [];
+  }
 
   const raw = fs.readFileSync(jsonlFile, 'utf-8');
   const lines = raw.split('\n').filter(Boolean);
@@ -430,12 +528,18 @@ function getLeafUuids(sessionId) {
   for (const line of lines) {
     try {
       const entry = JSON.parse(line);
-      if (entry.uuid) allUuids.add(entry.uuid);
-      if (entry.parentUuid) parentUuids.add(entry.parentUuid);
-    } catch { /* skip */ }
+      if (entry.uuid) {
+        allUuids.add(entry.uuid);
+      }
+      if (entry.parentUuid) {
+        parentUuids.add(entry.parentUuid);
+      }
+    } catch {
+      /* skip */
+    }
   }
 
-  return [...allUuids].filter(u => !parentUuids.has(u));
+  return [...allUuids].filter((u) => !parentUuids.has(u));
 }
 
 /**
@@ -480,20 +584,32 @@ function persistSession(sessionId, state) {
         let count = 0;
         let lastLine = '';
         for (let i = 0; i < lines.length; i++) {
-          if (lines[i]) { count++; lastLine = lines[i]; }
+          if (lines[i]) {
+            count++;
+            lastLine = lines[i];
+          }
         }
         existingCount = count;
         if (count > 0) {
-          try { seededLastUuid = (JSON.parse(lastLine) || {}).uuid || null; } catch { seededLastUuid = null; }
+          try {
+            seededLastUuid = (JSON.parse(lastLine) || {}).uuid || null;
+          } catch {
+            seededLastUuid = null;
+          }
         }
-      } catch { /* 新文件 */ existingCount = 0; seededLastUuid = null; }
+      } catch {
+        /* 新文件 */ existingCount = 0;
+        seededLastUuid = null;
+      }
     }
   } else {
     // 逐字节回退:原路径第一次全量读(仅数行)。
     try {
       const raw = fs.readFileSync(jsonlFile, 'utf-8');
       existingCount = raw.split('\n').filter(Boolean).length;
-    } catch { /* 新文件 */ }
+    } catch {
+      /* 新文件 */
+    }
   }
 
   if (messages.length > existingCount) {
@@ -506,15 +622,21 @@ function persistSession(sessionId, state) {
         const lines = raw.split('\n').filter(Boolean);
         const last = JSON.parse(lines[lines.length - 1]);
         parentUuid = last.uuid || null;
-      } catch { /* ok */ }
+      } catch {
+        /* ok */
+      }
     }
 
     for (let i = existingCount; i < messages.length; i++) {
       const result = appendMessage(sessionId, messages[i], parentUuid, bucketDir);
-      if (result) parentUuid = result.uuid;
+      if (result) {
+        parentUuid = result.uuid;
+      }
     }
     // 更新记忆:count 恒等于现文件行数(= messages.length),lastUuid 为链尾。
-    if (_fast) _appendIndexCache.set(jsonlFile, { count: messages.length, lastUuid: parentUuid });
+    if (_fast) {
+      _appendIndexCache.set(jsonlFile, { count: messages.length, lastUuid: parentUuid });
+    }
   } else if (_fast) {
     // 未追加(含压缩/orphan-pop 使 messages.length ≤ existingCount)也把播种值写回缓存,
     // 免下轮再次全量读盘;count 保持等于文件行数,不变量成立。
@@ -542,7 +664,9 @@ function persistSession(sessionId, state) {
       const searchIndex = require('./sessionSearchIndex');
       searchIndex.init();
       searchIndex.indexSession(sessionId, data);
-    } catch { /* search index is optional */ }
+    } catch {
+      /* search index is optional */
+    }
   };
 
   // 快照是兼容/元数据产物:权威恢复源是已同步 fsync 落盘的 JSONL,且 restoreSession 的消息
@@ -553,7 +677,13 @@ function persistSession(sessionId, state) {
   // /fork → resumePersistedSession 取 title/model/metadata)拿得到。门控关 → 一律同步(逐字节
   // 回退今日行为,含 _writeAtomic 抛错向上传播)。
   if (_fast && _cacheHit) {
-    setImmediate(() => { try { _writeSnapshot(); } catch { /* best-effort: JSONL 才是权威源 */ } });
+    setImmediate(() => {
+      try {
+        _writeSnapshot();
+      } catch {
+        /* best-effort: JSONL 才是权威源 */
+      }
+    });
   } else {
     _writeSnapshot();
   }
@@ -565,7 +695,9 @@ function persistSession(sessionId, state) {
  * G6: 保存检查点 — 中间状态快照，不覆盖主文件
  */
 function saveCheckpoint(sessionId, state) {
-  if (!sessionId) return;
+  if (!sessionId) {
+    return;
+  }
   const cwd = (state.metadata && state.metadata.cwd) || process.cwd();
   const bucketDir = _bucketDirFromCwd(cwd);
   const data = {
@@ -577,7 +709,9 @@ function saveCheckpoint(sessionId, state) {
   };
   try {
     _writeAtomic(_checkpointPath(sessionId, bucketDir), JSON.stringify(data));
-  } catch { /* 检查点失败不中断主流程 */ }
+  } catch {
+    /* 检查点失败不中断主流程 */
+  }
 }
 
 /**
@@ -609,21 +743,36 @@ function restoreSession(sessionId, opts = {}) {
     try {
       const raw = fs.readFileSync(_filePath(sessionId), 'utf-8');
       meta = JSON.parse(raw);
-    } catch { /* ok */ }
+    } catch {
+      /* ok */
+    }
     return {
       sessionId,
       title: meta.title || '',
       model: meta.model || '',
       messages: chain.map((e) => {
-        const m = { role: e.role, content: e.content, uuid: e.uuid, parentUuid: e.parentUuid, timestamp: e.timestamp };
+        const m = {
+          role: e.role,
+          content: e.content,
+          uuid: e.uuid,
+          parentUuid: e.parentUuid,
+          timestamp: e.timestamp,
+        };
         // 把回溯字段(checkpointId)从 JSONL 条目搬回消息(门控关 → 恒等,m 不变)。
-        try { require('./rewindResume').carryRewindFields(e, m); } catch { /* fail-soft */ }
+        try {
+          require('./rewindResume').carryRewindFields(e, m);
+        } catch {
+          /* fail-soft */
+        }
         return m;
       }),
       messageCount: chain.length,
       metadata: meta.metadata || {},
       createdAt: meta.createdAt || (chain[0] && chain[0].timestamp) || Date.now(),
-      updatedAt: meta.updatedAt || (chain[chain.length - 1] && chain[chain.length - 1].timestamp) || Date.now(),
+      updatedAt:
+        meta.updatedAt ||
+        (chain[chain.length - 1] && chain[chain.length - 1].timestamp) ||
+        Date.now(),
       _source: 'jsonl',
     };
   }
@@ -638,7 +787,9 @@ function restoreSession(sessionId, opts = {}) {
     // 从「整段丢失」变「salvage 后还原」。门控 KHY_SESSION_FILE_REPAIR 关 → 跳过修复,逐字节
     // 回退到旧的 checkpoint/null。fail-soft:修复任何异常都落回既有兜底,绝不打断还原。
     const _repairEnabled = !['0', 'false', 'off', 'no'].includes(
-      String(process.env.KHY_SESSION_FILE_REPAIR || 'true').trim().toLowerCase()
+      String(process.env.KHY_SESSION_FILE_REPAIR || 'true')
+        .trim()
+        .toLowerCase()
     );
     if (_repairEnabled) {
       try {
@@ -661,11 +812,15 @@ function restoreSession(sessionId, opts = {}) {
             return { ...salvaged, messageCount: msgs.length, _source: 'json-repaired' };
           }
         }
-      } catch { /* fail-soft:修复失败 → 落回既有兜底 */ }
+      } catch {
+        /* fail-soft:修复失败 → 落回既有兜底 */
+      }
     }
     // 最后尝试检查点
     const checkpoint = loadCheckpoint(sessionId);
-    if (checkpoint) return { ...checkpoint, _source: 'checkpoint' };
+    if (checkpoint) {
+      return { ...checkpoint, _source: 'checkpoint' };
+    }
     return null;
   }
 }
@@ -681,7 +836,9 @@ function listPersistedSessions(opts = {}) {
   const limit = opts.limit || 50;
 
   const files = _collectSnapshotFiles();
-  if (files.length === 0) return [];
+  if (files.length === 0) {
+    return [];
+  }
 
   const sessions = [];
   for (const file of files) {
@@ -695,11 +852,16 @@ function listPersistedSessions(opts = {}) {
         if (fu) {
           let c = fu.content;
           if (Array.isArray(c)) {
-            c = c.map((p) => (p && typeof p === 'object' ? (p.text || '') : String(p || ''))).join(' ');
+            c = c
+              .map((p) => (p && typeof p === 'object' ? p.text || '' : String(p || '')))
+              .join(' ');
           } else if (c && typeof c === 'object') {
             c = c.text || '';
           }
-          firstUserMessage = String(c || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+          firstUserMessage = String(c || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 200);
         }
       }
       sessions.push({
@@ -713,7 +875,9 @@ function listPersistedSessions(opts = {}) {
         cwd: (data.metadata && data.metadata.cwd) || '',
         firstUserMessage,
       });
-    } catch { /* skip corrupt */ }
+    } catch {
+      /* skip corrupt */
+    }
   }
 
   sessions.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -730,14 +894,21 @@ function deleteSession(sessionId) {
   for (const ext of ['.json', '.jsonl', '.checkpoint.json']) {
     const target = _locateSessionFile(sessionId, ext);
     if (target) {
-      try { fs.unlinkSync(target); removed = true; } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(target);
+        removed = true;
+      } catch {
+        /* ignore */
+      }
     }
   }
   // Remove from search index
   try {
     const searchIndex = require('./sessionSearchIndex');
     searchIndex.removeSessionIndex(sessionId);
-  } catch { /* optional */ }
+  } catch {
+    /* optional */
+  }
   return removed;
 }
 
@@ -755,7 +926,9 @@ function deleteSession(sessionId) {
  */
 function renameSession(sessionId, newTitle) {
   const file = _locateSessionFile(sessionId, '.json');
-  if (!file) return false;
+  if (!file) {
+    return false;
+  }
 
   let data;
   try {
@@ -764,7 +937,9 @@ function renameSession(sessionId, newTitle) {
     return false;
   }
 
-  data.title = String(newTitle == null ? '' : newTitle).trim().slice(0, 200);
+  data.title = String(newTitle == null ? '' : newTitle)
+    .trim()
+    .slice(0, 200);
   data.updatedAt = Date.now();
 
   try {
@@ -778,7 +953,9 @@ function renameSession(sessionId, newTitle) {
     const searchIndex = require('./sessionSearchIndex');
     searchIndex.init();
     searchIndex.indexSession(data.sessionId || sessionId, data);
-  } catch { /* search index is optional */ }
+  } catch {
+    /* search index is optional */
+  }
 
   return true;
 }
@@ -797,7 +974,9 @@ function renameSession(sessionId, newTitle) {
  */
 function loadSessionMeta(sessionId) {
   const file = _locateSessionFile(sessionId, '.json');
-  if (!file) return null;
+  if (!file) {
+    return null;
+  }
   try {
     const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
     return {
@@ -807,7 +986,7 @@ function loadSessionMeta(sessionId) {
       messageCount: data.messageCount || 0,
       updatedAt: data.updatedAt || 0,
       createdAt: data.createdAt || 0,
-      metadata: (data.metadata && typeof data.metadata === 'object') ? data.metadata : {},
+      metadata: data.metadata && typeof data.metadata === 'object' ? data.metadata : {},
     };
   } catch {
     return null;
@@ -828,9 +1007,13 @@ function loadSessionMeta(sessionId) {
  * @returns {boolean} true if a snapshot was found and updated
  */
 function updateSessionMetadata(sessionId, patch) {
-  if (!patch || typeof patch !== 'object') return false;
+  if (!patch || typeof patch !== 'object') {
+    return false;
+  }
   const file = _locateSessionFile(sessionId, '.json');
-  if (!file) return false;
+  if (!file) {
+    return false;
+  }
 
   let data;
   try {
@@ -853,7 +1036,9 @@ function updateSessionMetadata(sessionId, patch) {
     const searchIndex = require('./sessionSearchIndex');
     searchIndex.init();
     searchIndex.indexSession(data.sessionId || sessionId, data);
-  } catch { /* search index is optional */ }
+  } catch {
+    /* search index is optional */
+  }
 
   return true;
 }
@@ -875,11 +1060,17 @@ function cleanupStaleSessions(olderThanMs = 7 * 24 * 60 * 60 * 1000) {
       if ((data.updatedAt || 0) < cutoff) {
         const base = file.replace(/\.json$/, '');
         for (const ext of ['.json', '.jsonl', '.checkpoint.json']) {
-          try { fs.unlinkSync(base + ext); } catch { /* may not exist */ }
+          try {
+            fs.unlinkSync(base + ext);
+          } catch {
+            /* may not exist */
+          }
         }
         cleaned++;
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   return cleaned;
@@ -909,4 +1100,6 @@ module.exports = {
 // port is a zero-dep leaf). DESIGN-ARCH-020.
 try {
   require('./sessionSourcePort').registerSessionSource(module.exports);
-} catch { /* port optional — reindex simply degrades to a no-op without a source */ }
+} catch {
+  /* port optional — reindex simply degrades to a no-op without a source */
+}

@@ -28,6 +28,9 @@ describe('config handler', () => {
     process.env = {
       ...ORIGINAL_ENV,
       HOME: tmpDir,
+      // khySettings._homeDir() honors USERPROFILE on Windows (HOME on POSIX) —
+      // set both so the user-layer reads tmpDir/.khy/settings.json on any host.
+      USERPROFILE: tmpDir,
       KHY_ENV_FILE: envPath,
       KHY_ENV_SYNC_ROOT: 'false',
     };

@@ -22,29 +22,47 @@ const FINDINGS_VERSION = 1;
 
 // 收敛到 utils/envIntNonNeg 单一真源(逐字节委托,调用点不变)
 const _envInt = require('../utils/envIntNonNeg');
+// NOTE: NOT convertible to utils/envFlagEnabled — this is `!== '0'`-family
+// semantics (any value except {0,false,off,no} is true; no {1,on,yes,y} accept
+// set and unknown -> true), which diverges from the leaf's three-state parsing.
 function _envBool(name, def) {
-  const v = String(process.env[name] == null ? '' : process.env[name]).trim().toLowerCase();
-  if (v === '') return def;
+  const v = String(process.env[name] == null ? '' : process.env[name])
+    .trim()
+    .toLowerCase();
+  if (v === '') {
+    return def;
+  }
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
-const MAX_FINDINGS = () => _envInt('KHY_LEARN_IMPROVE_MAX', 200);     // backlog 上限（FIFO 丢最旧）
+const MAX_FINDINGS = () => _envInt('KHY_LEARN_IMPROVE_MAX', 200); // backlog 上限（FIFO 丢最旧）
 const AI_TIMEOUT_MS = () => _envInt('KHY_LEARN_FETCH_TIMEOUT_MS', 4000); // 复用既有取数超时
 
 // 收敛到 utils/growthDataDir 单一真源(逐字节委托,调用点不变) // ~/.khyos/growth
 const _findingsDir = require('../utils/growthDataDir');
-function _findingsFile() { return path.join(_findingsDir(), 'learn_findings.json'); }
-function _findingsBak() { return path.join(_findingsDir(), 'learn_findings.bak'); }
+function _findingsFile() {
+  return path.join(_findingsDir(), 'learn_findings.json');
+}
 
-function _emptyStore() { return { version: FINDINGS_VERSION, findings: [] }; }
+function _findingsBak() {
+  return path.join(_findingsDir(), 'learn_findings.bak');
+}
+
+function _emptyStore() {
+  return { version: FINDINGS_VERSION, findings: [] };
+}
 
 /** 读清单；缺失/损坏 → 空清单。绝不抛。 */
 function loadFindings() {
   try {
     const file = _findingsFile();
-    if (!fs.existsSync(file)) return _emptyStore();
+    if (!fs.existsSync(file)) {
+      return _emptyStore();
+    }
     const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.findings)) return _emptyStore();
+    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.findings)) {
+      return _emptyStore();
+    }
     return { version: Number(raw.version) || FINDINGS_VERSION, findings: raw.findings };
   } catch {
     return _emptyStore();
@@ -54,9 +72,15 @@ function loadFindings() {
 /** 原子写清单（.tmp → rename）+ 写前 .bak 轮转。fail-soft 返回布尔。 */
 function _atomicWrite(store) {
   try {
-    const dir = _findingsDir();           // getBaseDataDir 已确保目录存在
+    const dir = _findingsDir(); // getBaseDataDir 已确保目录存在
     const file = _findingsFile();
-    try { if (fs.existsSync(file)) fs.copyFileSync(file, _findingsBak()); } catch { /* best-effort */ }
+    try {
+      if (fs.existsSync(file)) {
+        fs.copyFileSync(file, _findingsBak());
+      }
+    } catch {
+      /* best-effort */
+    }
     const tmp = path.join(dir, `.learn_findings.${process.pid}.tmp`);
     fs.writeFileSync(tmp, JSON.stringify(store, null, 2) + '\n', 'utf-8');
     fs.renameSync(tmp, file);
@@ -78,14 +102,19 @@ const _KIND_RULES = [
 /** 把一句自由描述确定性地归类，便于复盘聚合。无命中 → 'unknown'。 */
 function classify(note) {
   const s = String(note == null ? '' : note);
-  for (const r of _KIND_RULES) { if (r.re.test(s)) return r.kind; }
+  for (const r of _KIND_RULES) {
+    if (r.re.test(s)) {
+      return r.kind;
+    }
+  }
   return 'unknown';
 }
 
 /** 构造给模型的「修复提议」prompt（只产建议、不应用）。中文。 */
 function buildImprovePrompt(finding) {
   const f = finding || {};
-  const fileList = (Array.isArray(f.files) ? f.files : []).map(x => `  - ${x}`).join('\n') || '  （无关联源码）';
+  const fileList =
+    (Array.isArray(f.files) ? f.files : []).map((x) => `  - ${x}`).join('\n') || '  （无关联源码）';
   return `[KHY 改进提议 — 学习者发现的不足]
 [语言: 默认中文]
 你是 KHY OS 的资深维护者。一位学习者在学习时发现了下面这个潜在不足，请给出一份**具体、可落地的修复/改进提议**。
@@ -148,10 +177,19 @@ async function appendFinding(input = {}, opts = {}) {
   if (typeof opts.callModel === 'function') {
     const callModel = opts.callModel;
     try {
-      const reply = await _withTimeout(callModel(buildImprovePrompt(finding)), AI_TIMEOUT_MS(), 'improve');
+      const reply = await _withTimeout(
+        callModel(buildImprovePrompt(finding)),
+        AI_TIMEOUT_MS(),
+        'improve'
+      );
       const text = String(reply == null ? '' : reply).trim();
-      if (text) { finding.proposal = text.slice(0, 4000); finding.proposalSource = 'model'; }
-    } catch { /* 超时/抛错 → 保持 proposal 空，清单照样落库 */ }
+      if (text) {
+        finding.proposal = text.slice(0, 4000);
+        finding.proposalSource = 'model';
+      }
+    } catch {
+      /* 超时/抛错 → 保持 proposal 空，清单照样落库 */
+    }
   }
 
   // ② 可选路由到 evo 改进管线（默认开，=off 关；仍需调用方显式 route 双重把关）
@@ -165,7 +203,9 @@ async function appendFinding(input = {}, opts = {}) {
         context: { source: 'learn-improve', files: finding.files, kind: finding.kind },
       });
       finding.evoRouted = true;
-    } catch { /* fail-soft：路由失败不影响清单 */ }
+    } catch {
+      /* fail-soft：路由失败不影响清单 */
+    }
   }
 
   // ③ 落库（FIFO 上限）
@@ -173,7 +213,7 @@ async function appendFinding(input = {}, opts = {}) {
   store.findings.push(finding);
   const cap = MAX_FINDINGS();
   if (cap > 0 && store.findings.length > cap) {
-    store.findings.splice(0, store.findings.length - cap);   // 丢最旧
+    store.findings.splice(0, store.findings.length - cap); // 丢最旧
   }
   const wrote = _atomicWrite(store);
   return { ok: wrote, finding };
@@ -181,7 +221,7 @@ async function appendFinding(input = {}, opts = {}) {
 
 /** 列出清单，最新在前。opts.limit 截断。 */
 function listFindings(opts = {}) {
-  const all = loadFindings().findings.slice().reverse();   // newest-first
+  const all = loadFindings().findings.slice().reverse(); // newest-first
   const limit = opts && Number.isFinite(opts.limit) ? opts.limit : null;
   return limit && limit > 0 ? all.slice(0, limit) : all;
 }

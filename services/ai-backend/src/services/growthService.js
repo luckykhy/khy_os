@@ -4,8 +4,14 @@
  */
 
 function recordInteraction() {}
-function getGrowthLevel() { return { level: 0, label: '未启用' }; }
-function getGrowthStats() { return { interactions: 0, level: 0 }; }
-async function suggestLearning() { return []; }
+function getGrowthLevel() {
+  return { level: 0, label: '未启用' };
+}
+function getGrowthStats() {
+  return { interactions: 0, level: 0 };
+}
+async function suggestLearning() {
+  return [];
+}
 
 module.exports = { recordInteraction, getGrowthLevel, getGrowthStats, suggestLearning };

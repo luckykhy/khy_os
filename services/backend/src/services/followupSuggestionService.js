@@ -98,11 +98,7 @@ const CONTEXT_TEMPLATES = {
     'How would this change in a production environment?',
   ],
   // After file editing
-  fileEdit: [
-    'Run the related tests',
-    'Show the diff of all changes so far',
-    'Commit the changes',
-  ],
+  fileEdit: ['Run the related tests', 'Show the diff of all changes so far', 'Commit the changes'],
   // After error/debugging
   debugging: [
     'Show me the full stack trace',
@@ -126,7 +122,9 @@ const CONTEXT_TEMPLATES = {
  * @returns {string}
  */
 function _detectCategory(text, context) {
-  if (!text) return 'general';
+  if (!text) {
+    return 'general';
+  }
 
   const lower = text.toLowerCase();
   const ctx = context || {};
@@ -134,16 +132,30 @@ function _detectCategory(text, context) {
   // Check tool calls first
   if (ctx.toolCalls && ctx.toolCalls.length > 0) {
     const toolNames = ctx.toolCalls.map((t) => t.name || '');
-    if (toolNames.some((n) => /write|edit|create/i.test(n))) return 'fileEdit';
-    if (toolNames.some((n) => /bash|shell|exec/i.test(n))) return 'codeGenerated';
-    if (toolNames.some((n) => /read|glob|grep/i.test(n))) return 'explanation';
+    if (toolNames.some((n) => /write|edit|create/i.test(n))) {
+      return 'fileEdit';
+    }
+    if (toolNames.some((n) => /bash|shell|exec/i.test(n))) {
+      return 'codeGenerated';
+    }
+    if (toolNames.some((n) => /read|glob|grep/i.test(n))) {
+      return 'explanation';
+    }
   }
 
   // Content heuristics
-  if (/```[\s\S]{30,}```/.test(text)) return 'codeGenerated';
-  if (/error|exception|failed|traceback|stack trace/i.test(lower)) return 'debugging';
-  if (/created|written|saved|updated.*file/i.test(lower)) return 'fileEdit';
-  if (/because|therefore|this means|in other words|essentially/i.test(lower)) return 'explanation';
+  if (/```[\s\S]{30,}```/.test(text)) {
+    return 'codeGenerated';
+  }
+  if (/error|exception|failed|traceback|stack trace/i.test(lower)) {
+    return 'debugging';
+  }
+  if (/created|written|saved|updated.*file/i.test(lower)) {
+    return 'fileEdit';
+  }
+  if (/because|therefore|this means|in other words|essentially/i.test(lower)) {
+    return 'explanation';
+  }
 
   return 'general';
 }
@@ -154,13 +166,17 @@ function _detectCategory(text, context) {
  * @returns {string[]}
  */
 function _extractPatternSuggestions(text) {
-  if (!text || text.length < 20) return [];
+  if (!text || text.length < 20) {
+    return [];
+  }
 
   const suggestions = [];
   const seenCategories = new Set();
 
   for (const pattern of PATTERNS) {
-    if (seenCategories.has(pattern.category)) continue;
+    if (seenCategories.has(pattern.category)) {
+      continue;
+    }
 
     const matches = [...text.matchAll(pattern.regex)];
     if (matches.length > 0) {
@@ -170,7 +186,9 @@ function _extractPatternSuggestions(text) {
         seenCategories.add(pattern.category);
       }
     }
-    if (suggestions.length >= 2) break;
+    if (suggestions.length >= 2) {
+      break;
+    }
   }
 
   return suggestions;
@@ -188,7 +206,9 @@ function _extractPatternSuggestions(text) {
  */
 async function generateFollowUpSuggestions(responseText, context) {
   try {
-    if (!responseText || responseText.length < 30) return [];
+    if (!responseText || responseText.length < 30) {
+      return [];
+    }
 
     const suggestions = [];
 
@@ -202,7 +222,9 @@ async function generateFollowUpSuggestions(responseText, context) {
 
     // Fill up to 3 suggestions from templates
     for (const tmpl of templates) {
-      if (suggestions.length >= 3) break;
+      if (suggestions.length >= 3) {
+        break;
+      }
       // Avoid duplicates by checking string similarity
       const isDuplicate = suggestions.some((s) => {
         const a = s.toLowerCase();
@@ -229,14 +251,14 @@ async function generateFollowUpSuggestions(responseText, context) {
  * @returns {string}
  */
 function formatSuggestions(suggestions, options) {
-  if (!suggestions || suggestions.length === 0) return '';
+  if (!suggestions || suggestions.length === 0) {
+    return '';
+  }
 
   const c = (options && options.chalk) || ((t) => t);
   const lines = [];
   lines.push('');
-  lines.push(typeof c.hex === 'function'
-    ? c.hex('#D77757')('  Suggestions:')
-    : '  Suggestions:');
+  lines.push(typeof c.hex === 'function' ? c.hex('#D77757')('  Suggestions:') : '  Suggestions:');
 
   suggestions.forEach((s, i) => {
     const label = typeof c.dim === 'function' ? c.dim(`    ${i + 1}. `) : `    ${i + 1}. `;

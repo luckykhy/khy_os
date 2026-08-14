@@ -5,54 +5,41 @@
  */
 'use strict';
 
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawn, spawnSync } = require('child_process');
-const { promptCompat } = require('../uiPrompt');
-const { findPython } = require('../../utils/pythonPath');
-const {
-  printError, printInfo, printSuccess, printWarn,
-} = require('../formatters');
-const {
-  SNAPSHOT_ENC_NAME,
-  SNAPSHOT_META_NAME,
-  RESTORE_DOC_NAME,
-  DEFAULT_SOURCE_SECRET,
-  decrypt: _decryptSnapshot,
-  sha256Hex: _sha256Hex,
-  ALGO: _SNAPSHOT_ALGO,
-} = require('../../services/sourceSnapshotCrypto');
+
 // 还原完整性对账（bundled 运行时纯叶）+ 磁盘落地文件枚举原语（既有 bundled 服务）。
 // 把「快照头 fileCount 只被打印、从不与磁盘对账」这条死字段接上线，让 restore 横幅诚实。
-const { verifyRestoreCompleteness } = require('../../services/restoreCompletenessCheck');
-const { _collectRelFiles } = require('../../services/sourceHealService');
 // 解密前兼容性预检（bundled 运行时纯叶）：把 OPS-105 格式兼容 + OPS-110 加密套件可解密性
 // 的诊断能力接进运行时 restore，让「套件不兼容」不再被误报成「用 --secret 口令错误」。
-const { assessRestorePreflight } = require('../../services/restorePreflightCheck');
 // 解密后、解包前的内层归档形制把关（bundled 运行时纯叶）：把 archiveExtractCompat 的诊断
 // 能力接进运行时 restore。快照头的 plaintextFormat / layout 一直是死字段——解包器把
 // `tar -xzf` 写死、从不读它们。本叶在盲目解包前确认本机认不认识这团解密归档，让未来
 // tar.zst/zip 快照在旧机器上得到「请升级 khy」的精确成因，而非解出天书 / 半个目录。
-const { assessArchiveExtractCompat } = require('../../services/restoreArchiveExtractCheck');
 // 还原成功、打横幅时的「来源可溯性」把关（bundled 运行时纯叶）：把快照头的 captureMode /
 // includesUncommitted / dirty 这条死三字段接进横幅。dev 侧 scripts/lib/restoreProvenance.js
 // 早已能裁决「这份还原源码等于哪个 git 状态」，但运行时横幅只印 gitCommit——默认的脏工作树
 // 快照被印成「commit X · 目录布局原样」，让维护者误判「等于干净提交 X」。本叶把静默误导变成诚实标注。
-const { assessRestoreProvenance, buildProvenanceBannerLine } = require('../../services/restoreProvenanceCheck');
 // 解密后、解包前的「路径可移植性」把关（bundled 运行时纯叶）：快照条目名是在 Linux 上打的，
 // 但 pip/npm 会把它发到 Windows / macOS 还原。运行时 `tar -xzf` 盲解包对「哪些条目名在目标
 // 文件系统建不出来」一无所知——保留设备名(CON/NUL/COM1…)、非法字符(< > : " | ? *)、结尾点/空格、
 // 超 MAX_PATH、大小写碰撞都会**静默少文件 / 改名**，唯一信号是 completeness 事后发现「少了」。
 // 本叶在解包前枚举条目名、逐条分类，给出主动、指名道姓、按宿主系统分级的诚实横幅。
-const { assessPathPortability, buildPortabilityBannerLine } = require('../../services/restorePathPortabilityCheck');
+const {
+  assessPathPortability,
+  buildPortabilityBannerLine,
+} = require('../../services/restorePathPortabilityCheck');
 
 // 门控 KHY_RESTORE_VERIFY_COMPLETENESS（默认开；仅 env ∈ {0,false,off,no} 归一后关闭）。
 // 关 → 不做对账、横幅字节等价旧行为。
 const _RESTORE_VERIFY_OFF = new Set(['0', 'false', 'off', 'no']);
 function _restoreVerifyEnabled() {
   const raw = process.env.KHY_RESTORE_VERIFY_COMPLETENESS;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !_RESTORE_VERIFY_OFF.has(String(raw).trim().toLowerCase());
 }
 
@@ -60,7 +47,9 @@ function _restoreVerifyEnabled() {
 // 关 → 跳过解密前预检，直入 decrypt（字节等价旧行为）。
 function _restorePreflightEnabled() {
   const raw = process.env.KHY_RESTORE_PREFLIGHT;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !_RESTORE_VERIFY_OFF.has(String(raw).trim().toLowerCase());
 }
 
@@ -68,7 +57,9 @@ function _restorePreflightEnabled() {
 // 关 → 跳过解包前归档形制把关，直入 tar -xzf（字节等价旧行为：盲目解包）。
 function _restoreArchiveCheckEnabled() {
   const raw = process.env.KHY_RESTORE_ARCHIVE_CHECK;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !_RESTORE_VERIFY_OFF.has(String(raw).trim().toLowerCase());
 }
 
@@ -76,7 +67,9 @@ function _restoreArchiveCheckEnabled() {
 // 关 → 横幅不附「来源可溯性」诚实行，字节等价旧行为（只印 commit）。
 function _restoreProvenanceEnabled() {
   const raw = process.env.KHY_RESTORE_PROVENANCE;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !_RESTORE_VERIFY_OFF.has(String(raw).trim().toLowerCase());
 }
 
@@ -84,7 +77,9 @@ function _restoreProvenanceEnabled() {
 // 关 → 跳过解包前路径可移植性枚举与横幅，字节等价旧行为（直入 tar -xzf、无枚举开销）。
 function _restorePathPortabilityEnabled() {
   const raw = process.env.KHY_RESTORE_PATH_PORTABILITY;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !_RESTORE_VERIFY_OFF.has(String(raw).trim().toLowerCase());
 }
 
@@ -92,7 +87,9 @@ function _restorePathPortabilityEnabled() {
 // win32 / darwin 分支（横幅严重度是 host-aware 的，测试需要能模拟目标系统）。
 function _restoreHostPlatform() {
   const ov = process.env.KHY_RESTORE_PLATFORM_OVERRIDE;
-  if (ov != null && String(ov).trim()) return String(ov).trim();
+  if (ov != null && String(ov).trim()) {
+    return String(ov).trim();
+  }
   return process.platform;
 }
 
@@ -155,13 +152,43 @@ const {
   _copyBackendForDockerBundle,
   _ensureSharedDependencyForBundle,
 } = require('../../services/publish/dockerBundleBuilder');
+const { assessArchiveExtractCompat } = require('../../services/restoreArchiveExtractCheck');
+const { verifyRestoreCompleteness } = require('../../services/restoreCompletenessCheck');
+const { assessRestorePreflight } = require('../../services/restorePreflightCheck');
+const {
+  assessRestoreProvenance,
+  buildProvenanceBannerLine,
+} = require('../../services/restoreProvenanceCheck');
+const { _collectRelFiles } = require('../../services/sourceHealService');
+const {
+  SNAPSHOT_ENC_NAME,
+  SNAPSHOT_META_NAME,
+  RESTORE_DOC_NAME,
+  DEFAULT_SOURCE_SECRET,
+  decrypt: _decryptSnapshot,
+  sha256Hex: _sha256Hex,
+  ALGO: _SNAPSHOT_ALGO,
+} = require('../../services/sourceSnapshotCrypto');
+const { findPython } = require('../../utils/pythonPath');
+const { printError, printInfo, printSuccess, printWarn } = require('../formatters');
+const { promptCompat } = require('../uiPrompt');
 
 const HEARTBEAT_MS_DEFAULT = 10000;
 const DIST_NAME_PATTERN = /\.whl$|\.tar\.gz$/i;
 const ORIGIN_CODE_DEFAULT_OUT_DIR = path.join('dist', 'origin-code');
 const DOCKER_BUNDLE_ACTIONS = new Set(['docker-bundle', 'bundle-docker', 'docker']);
-const PIP_INSTALL_BUNDLE_ACTIONS = new Set(['pip-dir-bundle', 'bundle-pip', 'pip-bundle', 'pipdir']);
-const NPM_INSTALL_BUNDLE_ACTIONS = new Set(['npm-dir-bundle', 'bundle-npm', 'npm-bundle', 'npmdir']);
+const PIP_INSTALL_BUNDLE_ACTIONS = new Set([
+  'pip-dir-bundle',
+  'bundle-pip',
+  'pip-bundle',
+  'pipdir',
+]);
+const NPM_INSTALL_BUNDLE_ACTIONS = new Set([
+  'npm-dir-bundle',
+  'bundle-npm',
+  'npm-bundle',
+  'npmdir',
+]);
 const ORIGIN_CODE_ACTIONS = new Set(['origin-code', 'restore-origin', 'origin']);
 const RESTORE_ACTIONS = new Set(['restore', 'restore-source']);
 const GIT_PUSH_ACTIONS = new Set(['git-push', 'push-git', 'push']);
@@ -169,7 +196,9 @@ const SELF_FIX_ACTIONS = new Set(['self-fix', 'self-bugfix', 'autofix']);
 const SELF_PUBLISH_ACTIONS = new Set(['self-pypi', 'self-testpypi', 'self-release']);
 const PIP_INSTALL_BUNDLE_SKIP_NAMES = new Set([
   ...DOCKER_BUNDLE_SKIP_NAMES,
-  '__pycache__', '.pytest_cache', '.mypy_cache',
+  '__pycache__',
+  '.pytest_cache',
+  '.mypy_cache',
 ]);
 const SUPPORTED_GIT_PLATFORMS = new Set(['github', 'gitee', 'gitlab']);
 const SOURCE_RELEASE_SECRET_ENV_KEYS = ['KHY_SOURCE_PUBLISH_SECRET', 'KHY_OWNER_SECRET'];
@@ -184,11 +213,15 @@ function _readSourceReleaseSecret(options = {}) {
     options.pwd,
     options.password,
   ]);
-  if (direct) return direct;
+  if (direct) {
+    return direct;
+  }
 
   for (const key of SOURCE_RELEASE_SECRET_ENV_KEYS) {
     const fromEnv = String(process.env[key] || '').trim();
-    if (fromEnv) return fromEnv;
+    if (fromEnv) {
+      return fromEnv;
+    }
   }
   return '';
 }
@@ -268,7 +301,9 @@ function _detectPython() {
 }
 
 function _moduleReady(pythonCmd, moduleName) {
-  if (!pythonCmd) return false;
+  if (!pythonCmd) {
+    return false;
+  }
   try {
     const result = spawnSync(pythonCmd, ['-m', moduleName, '--version'], {
       encoding: 'utf-8',
@@ -282,30 +317,39 @@ function _moduleReady(pythonCmd, moduleName) {
 
 function _collectDistArtifacts(projectRoot) {
   const distDir = path.join(projectRoot, 'dist');
-  if (!fs.existsSync(distDir)) return [];
-  const names = fs.readdirSync(distDir).filter(n => DIST_NAME_PATTERN.test(n));
-  return names.sort().map(n => path.join('dist', n));
+  if (!fs.existsSync(distDir)) {
+    return [];
+  }
+  const names = fs.readdirSync(distDir).filter((n) => DIST_NAME_PATTERN.test(n));
+  return names.sort().map((n) => path.join('dist', n));
 }
 
 function _isPipSiteRoot(dirPath) {
-  if (!dirPath) return false;
+  if (!dirPath) {
+    return false;
+  }
   const siteRoot = path.resolve(dirPath);
-  return fs.existsSync(path.join(siteRoot, 'khy_platform'))
-    && fs.existsSync(path.join(siteRoot, 'khy_os', 'bundled', 'backend', 'package.json'));
+  return (
+    fs.existsSync(path.join(siteRoot, 'khy_platform')) &&
+    fs.existsSync(path.join(siteRoot, 'khy_os', 'bundled', 'backend', 'package.json'))
+  );
 }
 
 function _collectKhyDistInfoDirs(siteRoot) {
   try {
-    return fs.readdirSync(siteRoot)
-      .filter(name => /^(khy[-_](?:os|quant).*)\.dist-info$/i.test(name))
-      .map(name => path.join(siteRoot, name));
+    return fs
+      .readdirSync(siteRoot)
+      .filter((name) => /^(khy[-_](?:os|quant).*)\.dist-info$/i.test(name))
+      .map((name) => path.join(siteRoot, name));
   } catch {
     return [];
   }
 }
 
 function _probePipInstallLayoutViaPython(pythonCmd) {
-  if (!pythonCmd) return null;
+  if (!pythonCmd) {
+    return null;
+  }
   const probe = [
     'import importlib.util',
     'import json',
@@ -330,16 +374,25 @@ function _probePipInstallLayoutViaPython(pythonCmd) {
       encoding: 'utf-8',
       timeout: 10000,
     });
-    if (result.status !== 0) return null;
+    if (result.status !== 0) {
+      return null;
+    }
 
-    const lines = String(result.stdout || '').trim().split(/\r?\n/).filter(Boolean);
-    if (lines.length === 0) return null;
+    const lines = String(result.stdout || '')
+      .trim()
+      .split(/\r?\n/)
+      .filter(Boolean);
+    if (lines.length === 0) {
+      return null;
+    }
     const parsed = JSON.parse(lines[lines.length - 1] || '{}');
     const siteRoot = String(parsed.site_root || '').trim();
     const khyQuantDir = String(parsed.khy_platform || '').trim();
     const khyOsDir = String(parsed.khy_os || '').trim();
     const bundledBackendDir = String(parsed.backend || '').trim();
-    if (!siteRoot || !khyQuantDir || !khyOsDir || !bundledBackendDir) return null;
+    if (!siteRoot || !khyQuantDir || !khyOsDir || !bundledBackendDir) {
+      return null;
+    }
     return {
       source: 'python',
       siteRoot: path.resolve(siteRoot),
@@ -357,15 +410,25 @@ function _probePipInstallLayoutViaRuntime() {
   const bundledDir = path.resolve(runtimeBackendRoot, '..');
   const khyOsDir = path.resolve(bundledDir, '..');
 
-  if (path.basename(runtimeBackendRoot) !== 'backend') return null;
-  if (path.basename(bundledDir) !== 'bundled') return null;
-  if (path.basename(khyOsDir) !== 'khy_os') return null;
+  if (path.basename(runtimeBackendRoot) !== 'backend') {
+    return null;
+  }
+  if (path.basename(bundledDir) !== 'bundled') {
+    return null;
+  }
+  if (path.basename(khyOsDir) !== 'khy_os') {
+    return null;
+  }
 
   const siteRoot = path.resolve(khyOsDir, '..');
   const khyQuantDir = path.join(siteRoot, 'khy_platform');
   const bundledBackendDir = path.join(khyOsDir, 'bundled', 'backend');
-  if (!fs.existsSync(path.join(khyQuantDir, 'cli.py'))) return null;
-  if (!fs.existsSync(path.join(bundledBackendDir, 'package.json'))) return null;
+  if (!fs.existsSync(path.join(khyQuantDir, 'cli.py'))) {
+    return null;
+  }
+  if (!fs.existsSync(path.join(bundledBackendDir, 'package.json'))) {
+    return null;
+  }
 
   return {
     source: 'runtime',
@@ -378,11 +441,7 @@ function _probePipInstallLayoutViaRuntime() {
 
 function _resolvePipInstallLayout(options = {}) {
   const explicitRoot = String(
-    options['pip-root']
-    || options.pipRoot
-    || options['site-packages']
-    || options.sitePackages
-    || ''
+    options['pip-root'] || options.pipRoot || options['site-packages'] || options.sitePackages || ''
   ).trim();
   if (explicitRoot) {
     const siteRoot = path.resolve(explicitRoot);
@@ -400,28 +459,32 @@ function _resolvePipInstallLayout(options = {}) {
 
   const pythonCmd = _detectPython();
   const fromPython = _probePipInstallLayoutViaPython(pythonCmd);
-  if (fromPython && _isPipSiteRoot(fromPython.siteRoot)) return fromPython;
+  if (fromPython && _isPipSiteRoot(fromPython.siteRoot)) {
+    return fromPython;
+  }
 
   const fromRuntime = _probePipInstallLayoutViaRuntime();
-  if (fromRuntime && _isPipSiteRoot(fromRuntime.siteRoot)) return fromRuntime;
+  if (fromRuntime && _isPipSiteRoot(fromRuntime.siteRoot)) {
+    return fromRuntime;
+  }
 
   throw new Error('未找到 pip 安装目录（可用 --pip-root <site-packages路径> 手动指定）');
 }
 
 function _resolveNpmInstallLayout(options = {}) {
   const explicitRoot = String(
-    options['npm-root']
-    || options.npmRoot
-    || options['node-root']
-    || options.nodeRoot
-    || ''
+    options['npm-root'] || options.npmRoot || options['node-root'] || options.nodeRoot || ''
   ).trim();
 
   const resolveBackendDirFromRoot = (rootPath) => {
     const abs = path.resolve(rootPath);
-    if (_isBackendRoot(abs)) return abs;
+    if (_isBackendRoot(abs)) {
+      return abs;
+    }
     const backendSub = path.join(abs, 'backend');
-    if (_isBackendRoot(backendSub)) return backendSub;
+    if (_isBackendRoot(backendSub)) {
+      return backendSub;
+    }
     return '';
   };
 
@@ -429,7 +492,9 @@ function _resolveNpmInstallLayout(options = {}) {
   if (explicitRoot) {
     backendDir = resolveBackendDirFromRoot(explicitRoot);
     if (!backendDir) {
-      throw new Error(`指定目录不是有效的 npm 安装根目录: ${path.resolve(explicitRoot)}（未找到 backend）`);
+      throw new Error(
+        `指定目录不是有效的 npm 安装根目录: ${path.resolve(explicitRoot)}（未找到 backend）`
+      );
     }
   } else {
     const runtimeBackendRoot = path.resolve(__dirname, '../../..');
@@ -456,7 +521,9 @@ function _resolveNpmInstallLayout(options = {}) {
 function _parseLooseVersion(raw = '') {
   const text = String(raw || '').trim();
   const m = text.match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?([A-Za-z].*)?$/);
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
   return {
     major: parseInt(m[1] || '0', 10) || 0,
     minor: parseInt(m[2] || '0', 10) || 0,
@@ -468,15 +535,33 @@ function _parseLooseVersion(raw = '') {
 function _compareLooseVersions(a = '', b = '') {
   const av = _parseLooseVersion(a);
   const bv = _parseLooseVersion(b);
-  if (!av && !bv) return 0;
-  if (av && !bv) return 1;
-  if (!av && bv) return -1;
-  if (av.major !== bv.major) return av.major > bv.major ? 1 : -1;
-  if (av.minor !== bv.minor) return av.minor > bv.minor ? 1 : -1;
-  if (av.patch !== bv.patch) return av.patch > bv.patch ? 1 : -1;
-  if (!av.suffix && bv.suffix) return 1;
-  if (av.suffix && !bv.suffix) return -1;
-  if (av.suffix === bv.suffix) return 0;
+  if (!av && !bv) {
+    return 0;
+  }
+  if (av && !bv) {
+    return 1;
+  }
+  if (!av && bv) {
+    return -1;
+  }
+  if (av.major !== bv.major) {
+    return av.major > bv.major ? 1 : -1;
+  }
+  if (av.minor !== bv.minor) {
+    return av.minor > bv.minor ? 1 : -1;
+  }
+  if (av.patch !== bv.patch) {
+    return av.patch > bv.patch ? 1 : -1;
+  }
+  if (!av.suffix && bv.suffix) {
+    return 1;
+  }
+  if (av.suffix && !bv.suffix) {
+    return -1;
+  }
+  if (av.suffix === bv.suffix) {
+    return 0;
+  }
   return av.suffix > bv.suffix ? 1 : -1;
 }
 
@@ -491,9 +576,10 @@ function _getFileMtimeMs(filePath) {
 
 function _collectInstallLayoutMeta(layout, kind) {
   const installKind = kind === 'npm' ? 'npm' : 'pip';
-  const pkgPath = installKind === 'npm'
-    ? path.join(layout.npmBackendDir, 'package.json')
-    : path.join(layout.bundledBackendDir, 'package.json');
+  const pkgPath =
+    installKind === 'npm'
+      ? path.join(layout.npmBackendDir, 'package.json')
+      : path.join(layout.bundledBackendDir, 'package.json');
   const pkg = _readJsonSafe(pkgPath);
   const version = String(pkg.version || '').trim();
   const mtimeMs = _getFileMtimeMs(pkgPath);
@@ -508,7 +594,9 @@ function _collectInstallLayoutMeta(layout, kind) {
 
 function _resolveInstallLayoutCandidate(options = {}, kind = 'pip') {
   try {
-    if (kind === 'npm') return _resolveNpmInstallLayout(options);
+    if (kind === 'npm') {
+      return _resolveNpmInstallLayout(options);
+    }
     return _resolvePipInstallLayout(options);
   } catch {
     return null;
@@ -521,11 +609,15 @@ function _choosePreferredInstallLayout(pipLayout, npmLayout) {
 
   const versionCmp = _compareLooseVersions(pipMeta.version, npmMeta.version);
   if (versionCmp > 0) {
-    printInfo(`安装布局仲裁: 选择 pip（版本 ${pipMeta.version || '-'} > npm ${npmMeta.version || '-'}）`);
+    printInfo(
+      `安装布局仲裁: 选择 pip（版本 ${pipMeta.version || '-'} > npm ${npmMeta.version || '-'}）`
+    );
     return { ...pipLayout, installKind: 'pip' };
   }
   if (versionCmp < 0) {
-    printInfo(`安装布局仲裁: 选择 npm（版本 ${npmMeta.version || '-'} > pip ${pipMeta.version || '-'}）`);
+    printInfo(
+      `安装布局仲裁: 选择 npm（版本 ${npmMeta.version || '-'} > pip ${pipMeta.version || '-'}）`
+    );
     return npmLayout;
   }
 
@@ -543,7 +635,9 @@ function _choosePreferredInstallLayout(pipLayout, npmLayout) {
 }
 
 function _resolveInstallLayout(options = {}) {
-  const forced = String(options.install || options['install-type'] || options.target || '').trim().toLowerCase();
+  const forced = String(options.install || options['install-type'] || options.target || '')
+    .trim()
+    .toLowerCase();
 
   if (forced === 'pip') {
     const pip = _resolvePipInstallLayout(options);
@@ -556,16 +650,26 @@ function _resolveInstallLayout(options = {}) {
   const pip = _resolveInstallLayoutCandidate(options, 'pip');
   const npm = _resolveInstallLayoutCandidate(options, 'npm');
 
-  if (pip && npm) return _choosePreferredInstallLayout(pip, npm);
-  if (pip) return { ...pip, installKind: 'pip' };
-  if (npm) return npm;
+  if (pip && npm) {
+    return _choosePreferredInstallLayout(pip, npm);
+  }
+  if (pip) {
+    return { ...pip, installKind: 'pip' };
+  }
+  if (npm) {
+    return npm;
+  }
 
   throw new Error('未找到可用安装布局（可用 --install pip|npm + --pip-root/--npm-root 手动指定）');
 }
 
 function _copyIfExists(srcDir, dstDir, skipNames) {
-  if (!srcDir || !dstDir) return false;
-  if (!fs.existsSync(srcDir)) return false;
+  if (!srcDir || !dstDir) {
+    return false;
+  }
+  if (!fs.existsSync(srcDir)) {
+    return false;
+  }
   fs.mkdirSync(path.dirname(dstDir), { recursive: true });
   _copyDirForBundle(srcDir, dstDir, skipNames);
   return true;
@@ -574,9 +678,10 @@ function _copyIfExists(srcDir, dstDir, skipNames) {
 function _writeOriginCodeReadme(bundleRoot, meta = {}) {
   const installKind = String(meta.installKind || 'pip').toLowerCase();
   const sourceLabel = installKind === 'npm' ? 'Source npm root' : 'Source pip root';
-  const reconstructionNote = installKind === 'npm'
-    ? 'This bundle is reconstructed from npm-installed payload/runtime paths.'
-    : 'This bundle is reconstructed from pip payload (`khy_os/bundled`), not a Git clone.';
+  const reconstructionNote =
+    installKind === 'npm'
+      ? 'This bundle is reconstructed from npm-installed payload/runtime paths.'
+      : 'This bundle is reconstructed from pip payload (`khy_os/bundled`), not a Git clone.';
   const readme = `# KHY OS Origin Code Restore Bundle
 
 Generated at: ${new Date().toISOString()}
@@ -609,80 +714,135 @@ Restore a source-like project tree from installed payload.
 function _buildOriginCodeBundle(projectRoot, state, options = {}) {
   const layout = _resolveInstallLayout(options);
   const installKind = String(layout.installKind || 'pip').toLowerCase() === 'npm' ? 'npm' : 'pip';
-  const runtimePkgPath = installKind === 'npm'
-    ? path.join(layout.npmBackendDir, 'package.json')
-    : path.join(layout.bundledBackendDir, 'package.json');
+  const runtimePkgPath =
+    installKind === 'npm'
+      ? path.join(layout.npmBackendDir, 'package.json')
+      : path.join(layout.bundledBackendDir, 'package.json');
   const runtimePkg = _readJsonSafe(runtimePkgPath);
-  const version = String(runtimePkg.version || state?.versions?.backend || state?.versions?.pyproject || '0.0.0').trim();
+  const version = String(
+    runtimePkg.version || state?.versions?.backend || state?.versions?.pyproject || '0.0.0'
+  ).trim();
   const safeVersion = String(version || '0.0.0').replace(/[^0-9A-Za-z._-]/g, '-');
-  const bundleName = String(options.name || `khy-os-origin-code-${safeVersion}-${_timestampForFileName()}`).replace(/[^0-9A-Za-z._-]/g, '-');
+  const bundleName = String(
+    options.name || `khy-os-origin-code-${safeVersion}-${_timestampForFileName()}`
+  ).replace(/[^0-9A-Za-z._-]/g, '-');
 
   const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-origin-code-bundle-'));
   const bundleRoot = path.join(stagingRoot, bundleName);
   fs.mkdirSync(bundleRoot, { recursive: true });
   printInfo(`还原 origin code(${installKind}): ${layout.siteRoot}`);
 
-  const sourceLocations = installKind === 'npm'
-    ? {
-      khyQuantDir: '',
-      bundledRoot: layout.projectLikeRoot,
-      backendDir: layout.npmBackendDir,
-      frontendDir: path.join(layout.projectLikeRoot, 'frontend'),
-      docsDir: path.join(layout.projectLikeRoot, 'docs'),
-      alpineDir: path.join(layout.projectLikeRoot, 'kernel', 'alpine'),
-      scriptsAlpineDir: path.join(layout.projectLikeRoot, 'scripts', 'alpine'),
-      packagesSharedDir: path.join(layout.projectLikeRoot, 'packages', 'shared'),
-      backendSharedDir: path.join(layout.npmBackendDir, 'vendor', 'shared'),
-    }
-    : {
-      khyQuantDir: layout.khyQuantDir,
-      bundledRoot: path.join(layout.khyOsDir, 'bundled'),
-      backendDir: path.join(layout.khyOsDir, 'bundled', 'backend'),
-      frontendDir: path.join(layout.khyOsDir, 'bundled', 'frontend'),
-      docsDir: path.join(layout.khyOsDir, 'bundled', 'docs'),
-      alpineDir: path.join(layout.khyOsDir, 'bundled', 'alpine'),
-      scriptsAlpineDir: path.join(layout.khyOsDir, 'bundled', 'scripts', 'alpine'),
-      packagesSharedDir: path.join(layout.khyOsDir, 'bundled', 'packages', 'shared'),
-      backendSharedDir: path.join(layout.khyOsDir, 'bundled', 'backend', 'vendor', 'shared'),
-    };
+  const sourceLocations =
+    installKind === 'npm'
+      ? {
+          khyQuantDir: '',
+          bundledRoot: layout.projectLikeRoot,
+          backendDir: layout.npmBackendDir,
+          frontendDir: path.join(layout.projectLikeRoot, 'frontend'),
+          docsDir: path.join(layout.projectLikeRoot, 'docs'),
+          alpineDir: path.join(layout.projectLikeRoot, 'kernel', 'alpine'),
+          scriptsAlpineDir: path.join(layout.projectLikeRoot, 'scripts', 'alpine'),
+          packagesSharedDir: path.join(layout.projectLikeRoot, 'packages', 'shared'),
+          backendSharedDir: path.join(layout.npmBackendDir, 'vendor', 'shared'),
+        }
+      : {
+          khyQuantDir: layout.khyQuantDir,
+          bundledRoot: path.join(layout.khyOsDir, 'bundled'),
+          backendDir: path.join(layout.khyOsDir, 'bundled', 'backend'),
+          frontendDir: path.join(layout.khyOsDir, 'bundled', 'frontend'),
+          docsDir: path.join(layout.khyOsDir, 'bundled', 'docs'),
+          alpineDir: path.join(layout.khyOsDir, 'bundled', 'alpine'),
+          scriptsAlpineDir: path.join(layout.khyOsDir, 'bundled', 'scripts', 'alpine'),
+          packagesSharedDir: path.join(layout.khyOsDir, 'bundled', 'packages', 'shared'),
+          backendSharedDir: path.join(layout.khyOsDir, 'bundled', 'backend', 'vendor', 'shared'),
+        };
 
   const sourceMappings = [];
-  if (sourceLocations.khyQuantDir && _copyIfExists(sourceLocations.khyQuantDir, path.join(bundleRoot, 'khy_platform'), PIP_INSTALL_BUNDLE_SKIP_NAMES)) {
+  if (
+    sourceLocations.khyQuantDir &&
+    _copyIfExists(
+      sourceLocations.khyQuantDir,
+      path.join(bundleRoot, 'khy_platform'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    )
+  ) {
     sourceMappings.push({
       target: 'khy_platform/',
       source: sourceLocations.khyQuantDir,
       note: 'python launcher package',
     });
   }
-  if (_copyIfExists(sourceLocations.backendDir, path.join(bundleRoot, 'backend'), PIP_INSTALL_BUNDLE_SKIP_NAMES)) {
+  if (
+    _copyIfExists(
+      sourceLocations.backendDir,
+      path.join(bundleRoot, 'backend'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    )
+  ) {
     sourceMappings.push({
       target: 'backend/',
       source: sourceLocations.backendDir,
-      note: installKind === 'npm' ? 'restored from npm backend package' : 'restored from pip bundled backend',
+      note:
+        installKind === 'npm'
+          ? 'restored from npm backend package'
+          : 'restored from pip bundled backend',
     });
   }
-  if (_copyIfExists(sourceLocations.frontendDir, path.join(bundleRoot, 'frontend'), PIP_INSTALL_BUNDLE_SKIP_NAMES)) {
+  if (
+    _copyIfExists(
+      sourceLocations.frontendDir,
+      path.join(bundleRoot, 'frontend'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    )
+  ) {
     sourceMappings.push({
       target: 'frontend/',
       source: sourceLocations.frontendDir,
-      note: installKind === 'npm' ? 'restored from npm installation root' : 'restored from pip bundled frontend',
+      note:
+        installKind === 'npm'
+          ? 'restored from npm installation root'
+          : 'restored from pip bundled frontend',
     });
   }
-  if (_copyIfExists(sourceLocations.docsDir, path.join(bundleRoot, 'docs'), PIP_INSTALL_BUNDLE_SKIP_NAMES)) {
+  if (
+    _copyIfExists(
+      sourceLocations.docsDir,
+      path.join(bundleRoot, 'docs'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    )
+  ) {
     sourceMappings.push({
       target: 'docs/',
       source: sourceLocations.docsDir,
-      note: installKind === 'npm' ? 'restored from npm installation root' : 'restored from pip bundled docs',
+      note:
+        installKind === 'npm'
+          ? 'restored from npm installation root'
+          : 'restored from pip bundled docs',
     });
   }
-  if (_copyIfExists(sourceLocations.alpineDir, path.join(bundleRoot, 'alpine'), PIP_INSTALL_BUNDLE_SKIP_NAMES)) {
+  if (
+    _copyIfExists(
+      sourceLocations.alpineDir,
+      path.join(bundleRoot, 'alpine'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    )
+  ) {
     sourceMappings.push({
       target: 'alpine/',
       source: sourceLocations.alpineDir,
-      note: installKind === 'npm' ? 'restored from npm installation root' : 'restored from pip bundled alpine resources',
+      note:
+        installKind === 'npm'
+          ? 'restored from npm installation root'
+          : 'restored from pip bundled alpine resources',
     });
   }
-  if (_copyIfExists(sourceLocations.scriptsAlpineDir, path.join(bundleRoot, 'scripts', 'alpine'), PIP_INSTALL_BUNDLE_SKIP_NAMES)) {
+  if (
+    _copyIfExists(
+      sourceLocations.scriptsAlpineDir,
+      path.join(bundleRoot, 'scripts', 'alpine'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    )
+  ) {
     sourceMappings.push({
       target: 'scripts/alpine/',
       source: sourceLocations.scriptsAlpineDir,
@@ -690,13 +850,18 @@ function _buildOriginCodeBundle(projectRoot, state, options = {}) {
     });
   }
 
-  const sharedSrcCandidates = [
-    sourceLocations.packagesSharedDir,
-    sourceLocations.backendSharedDir,
-  ];
+  const sharedSrcCandidates = [sourceLocations.packagesSharedDir, sourceLocations.backendSharedDir];
   for (const sharedSrc of sharedSrcCandidates) {
-    if (!sharedSrc) continue;
-    if (_copyIfExists(sharedSrc, path.join(bundleRoot, 'packages', 'shared'), PIP_INSTALL_BUNDLE_SKIP_NAMES)) {
+    if (!sharedSrc) {
+      continue;
+    }
+    if (
+      _copyIfExists(
+        sharedSrc,
+        path.join(bundleRoot, 'packages', 'shared'),
+        PIP_INSTALL_BUNDLE_SKIP_NAMES
+      )
+    ) {
       sourceMappings.push({
         target: 'packages/shared/',
         source: sharedSrc,
@@ -720,7 +885,11 @@ function _buildOriginCodeBundle(projectRoot, state, options = {}) {
 
   const archivePath = _buildDockerBundleArchive(
     bundleRoot,
-    options.out || options.output || options['out-dir'] || options['output-dir'] || ORIGIN_CODE_DEFAULT_OUT_DIR,
+    options.out ||
+      options.output ||
+      options['out-dir'] ||
+      options['output-dir'] ||
+      ORIGIN_CODE_DEFAULT_OUT_DIR,
     bundleName
   );
   printSuccess(`origin code 还原包已生成: ${archivePath}`);
@@ -742,9 +911,11 @@ function _buildOriginCodeBundle(projectRoot, state, options = {}) {
 // reconstructed on any machine via pip/npm, with no USB / direct download.
 
 function _snapshotDirHasFiles(dir) {
-  return !!dir
-    && fs.existsSync(path.join(dir, SNAPSHOT_META_NAME))
-    && fs.existsSync(path.join(dir, SNAPSHOT_ENC_NAME));
+  return (
+    !!dir &&
+    fs.existsSync(path.join(dir, SNAPSHOT_META_NAME)) &&
+    fs.existsSync(path.join(dir, SNAPSHOT_ENC_NAME))
+  );
 }
 
 /**
@@ -754,32 +925,44 @@ function _snapshotDirHasFiles(dir) {
  * /_source). The resolved install layout is consulted best-effort as a fallback.
  */
 function _findSnapshotSourceDir(options = {}) {
-  const explicit = _pickFirstNonEmpty([
-    options['source-dir'], options.sourceDir, options.from,
-  ]);
+  const explicit = _pickFirstNonEmpty([options['source-dir'], options.sourceDir, options.from]);
   const candidates = [];
-  if (explicit) candidates.push(path.resolve(explicit));
+  if (explicit) {
+    candidates.push(path.resolve(explicit));
+  }
 
   const backendRoot = path.resolve(__dirname, '../../..'); // services/backend
   candidates.push(
-    path.join(backendRoot, '_source'),                 // npm package + standalone backend
-    path.join(backendRoot, '..', '..', '_source'),     // pip: bundled/services/backend → bundled/_source
-    path.join(backendRoot, '..', '_source'),           // defensive
+    path.join(backendRoot, '_source'), // npm package + standalone backend
+    path.join(backendRoot, '..', '..', '_source'), // pip: bundled/services/backend → bundled/_source
+    path.join(backendRoot, '..', '_source') // defensive
   );
 
   try {
     const layout = _resolveInstallLayout(options);
     if (String(layout.installKind).toLowerCase() === 'npm') {
-      if (layout.projectLikeRoot) candidates.push(path.join(layout.projectLikeRoot, '_source'));
-      if (layout.npmBackendDir) candidates.push(path.join(layout.npmBackendDir, '_source'));
+      if (layout.projectLikeRoot) {
+        candidates.push(path.join(layout.projectLikeRoot, '_source'));
+      }
+      if (layout.npmBackendDir) {
+        candidates.push(path.join(layout.npmBackendDir, '_source'));
+      }
     } else {
-      if (layout.khyOsDir) candidates.push(path.join(layout.khyOsDir, 'bundled', '_source'));
-      if (layout.bundledBackendDir) candidates.push(path.join(layout.bundledBackendDir, '..', '..', '_source'));
+      if (layout.khyOsDir) {
+        candidates.push(path.join(layout.khyOsDir, 'bundled', '_source'));
+      }
+      if (layout.bundledBackendDir) {
+        candidates.push(path.join(layout.bundledBackendDir, '..', '..', '_source'));
+      }
     }
-  } catch { /* install layout optional — backendRoot anchors usually suffice */ }
+  } catch {
+    /* install layout optional — backendRoot anchors usually suffice */
+  }
 
   for (const c of candidates) {
-    if (_snapshotDirHasFiles(c)) return c;
+    if (_snapshotDirHasFiles(c)) {
+      return c;
+    }
   }
   return null;
 }
@@ -792,13 +975,21 @@ function _extractTarGz(tarGzBuffer, destDir) {
     // `tar` is present on Linux/macOS and on Windows 10 1803+ (bsdtar as tar.exe).
     const result = spawnSync('tar', ['-xzf', tmp, '-C', destDir], { encoding: 'utf-8' });
     if (result.error && result.error.code === 'ENOENT') {
-      throw new Error('未找到 tar 命令。Windows 10/11 自带 tar；旧系统请先安装 tar 或 7-Zip 再重试。');
+      throw new Error(
+        '未找到 tar 命令。Windows 10/11 自带 tar；旧系统请先安装 tar 或 7-Zip 再重试。'
+      );
     }
     if (result.status !== 0) {
-      throw new Error(`解包失败(tar): ${String(result.stderr || result.stdout || '').trim() || `exit ${result.status}`}`);
+      throw new Error(
+        `解包失败(tar): ${String(result.stderr || result.stdout || '').trim() || `exit ${result.status}`}`
+      );
     }
   } finally {
-    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -820,20 +1011,34 @@ function _listTarGzEntries(tarGzBuffer) {
   const tmp = path.join(os.tmpdir(), `khy-restore-list-${process.pid}-${Date.now()}.tar.gz`);
   try {
     fs.writeFileSync(tmp, tarGzBuffer);
-    const result = spawnSync('tar', ['-tzf', tmp], { encoding: 'utf-8', timeout: 20000, maxBuffer: 64 * 1024 * 1024 });
-    if (result.error || result.status !== 0 || typeof result.stdout !== 'string') return null;
+    const result = spawnSync('tar', ['-tzf', tmp], {
+      encoding: 'utf-8',
+      timeout: 20000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (result.error || result.status !== 0 || typeof result.stdout !== 'string') {
+      return null;
+    }
     const names = [];
     for (const raw of result.stdout.split('\n')) {
       let n = raw.replace(/\r$/, '');
-      if (!n) continue;
+      if (!n) {
+        continue;
+      }
       n = n.replace(/^\.\//, '').replace(/\/+$/, '');
-      if (n) names.push(n);
+      if (n) {
+        names.push(n);
+      }
     }
     return names;
   } catch {
     return null;
   } finally {
-    try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -855,7 +1060,9 @@ async function _resolveRestoreSecret(options = {}) {
  */
 async function _restoreFromSnapshot(targetDir, options = {}) {
   const srcDir = _findSnapshotSourceDir(options);
-  if (!srcDir) return { ok: false, reason: 'no-snapshot' };
+  if (!srcDir) {
+    return { ok: false, reason: 'no-snapshot' };
+  }
 
   const header = _readJsonSafe(path.join(srcDir, SNAPSHOT_META_NAME), null);
   if (!header || !header.crypto) {
@@ -870,8 +1077,12 @@ async function _restoreFromSnapshot(targetDir, options = {}) {
   //   字符串与 salt/iv/authTag 的存在性布尔，绝不触碰其值。
   if (_restorePreflightEnabled()) {
     const pf = assessRestorePreflight(header, { supportedAlgos: [_SNAPSHOT_ALGO] });
-    if (pf.block) throw new Error(pf.message);
-    if (pf.warn) printWarn(pf.message);
+    if (pf.block) {
+      throw new Error(pf.message);
+    }
+    if (pf.warn) {
+      printWarn(pf.message);
+    }
   }
 
   const secret = await _resolveRestoreSecret(options);
@@ -884,7 +1095,9 @@ async function _restoreFromSnapshot(targetDir, options = {}) {
     // Snapshots built after the password-free change decrypt with the default
     // key automatically; a failure here means a legacy snapshot encrypted with a
     // custom key, so the explicit --secret / KHY_SOURCE_PUBLISH_SECRET is needed.
-    throw new Error('解密失败：该快照由自定义密钥加密，请用 --secret <密钥> 指定；或快照已损坏/篡改。');
+    throw new Error(
+      '解密失败：该快照由自定义密钥加密，请用 --secret <密钥> 指定；或快照已损坏/篡改。'
+    );
   }
   if (header.sha256 && _sha256Hex(plaintext) !== header.sha256) {
     throw new Error('完整性校验失败：解密后的 sha256 与快照头不一致。');
@@ -898,13 +1111,15 @@ async function _restoreFromSnapshot(targetDir, options = {}) {
   // 门关或异常 → 退化为旧行为（字节等价直入 tar -xzf）。红线：只读归档形制串，绝不碰密钥。
   if (_restoreArchiveCheckEnabled()) {
     const ac = assessArchiveExtractCompat(header);
-    if (ac.block) throw new Error(ac.message);
-    if (ac.warn) printWarn(ac.message);
+    if (ac.block) {
+      throw new Error(ac.message);
+    }
+    if (ac.warn) {
+      printWarn(ac.message);
+    }
   }
 
-  const dest = path.resolve(
-    _pickFirstNonEmpty([targetDir]) || path.join(process.cwd(), 'Khy-OS')
-  );
+  const dest = path.resolve(_pickFirstNonEmpty([targetDir]) || path.join(process.cwd(), 'Khy-OS'));
   const force = _isTruthyFlag(options.force) || _isTruthyFlag(options.f);
   if (fs.existsSync(dest) && fs.readdirSync(dest).length > 0 && !force) {
     throw new Error(`目标目录非空: ${dest}（加 --force 覆盖写入）`);
@@ -920,8 +1135,12 @@ async function _restoreFromSnapshot(targetDir, options = {}) {
   if (_restorePathPortabilityEnabled()) {
     try {
       const _entries = _listTarGzEntries(plaintext);
-      if (Array.isArray(_entries)) pathPortability = assessPathPortability(_entries);
-    } catch { pathPortability = null; }
+      if (Array.isArray(_entries)) {
+        pathPortability = assessPathPortability(_entries);
+      }
+    } catch {
+      pathPortability = null;
+    }
   }
 
   _extractTarGz(plaintext, dest);
@@ -936,7 +1155,9 @@ async function _restoreFromSnapshot(targetDir, options = {}) {
         expectedFileCount: header.fileCount,
         actualFileCount,
       });
-    } catch { completeness = null; }
+    } catch {
+      completeness = null;
+    }
   }
 
   return { ok: true, dest, header, srcDir, completeness, pathPortability };
@@ -944,10 +1165,13 @@ async function _restoreFromSnapshot(targetDir, options = {}) {
 
 /** Top-level `khy restore [dir] [--into <dir>] [--secret <s>] [--force]`. */
 async function handleRestore(args = [], options = {}) {
-  const positional = (Array.isArray(args) ? args : [])
-    .find(a => a && !String(a).startsWith('-'));
+  const positional = (Array.isArray(args) ? args : []).find((a) => a && !String(a).startsWith('-'));
   const targetDir = _pickFirstNonEmpty([
-    options.into, options.to, options.dir, options.target, positional,
+    options.into,
+    options.to,
+    options.dir,
+    options.target,
+    positional,
   ]);
 
   try {
@@ -967,24 +1191,25 @@ async function handleRestore(args = [], options = {}) {
       // 落地数 < 清单数：把假绿降级为诚实告警（仍算还原成功，不 _markFailure）。
       printWarn(`源码已还原到: ${result.dest}（⚠️ 文件数对账不完整）`);
       printWarn(
-        `落地 ${_cq.actual} 个文件 · 快照清单 ${_cq.expected} 个 · 缺 ${_cq.missing} 个`
-        + ` · commit ${_commit}`
+        `落地 ${_cq.actual} 个文件 · 快照清单 ${_cq.expected} 个 · 缺 ${_cq.missing} 个` +
+          ` · commit ${_commit}`
       );
-      printInfo('可能磁盘空间不足 / 路径过长(Windows MAX_PATH) / tar 跳过条目；'
-        + '建议清空目标目录后加 --force 重试。');
+      printInfo(
+        '可能磁盘空间不足 / 路径过长(Windows MAX_PATH) / tar 跳过条目；' +
+          '建议清空目标目录后加 --force 重试。'
+      );
     } else if (_cq && _cq.status === 'over-extracted') {
       // 落地数 > 清单数：目标目录疑有残留文件，据实提示。
       printSuccess(`源码已还原到: ${result.dest}`);
       printWarn(
-        `落地 ${_cq.actual} 个文件 · 多于快照清单 ${_cq.expected} 个（目标目录可能有残留）`
-        + ` · commit ${_commit}`
+        `落地 ${_cq.actual} 个文件 · 多于快照清单 ${_cq.expected} 个（目标目录可能有残留）` +
+          ` · commit ${_commit}`
       );
     } else {
       // complete（已对账一致）/ unverifiable（证据不足）/ 门关 → 保持原横幅（字节等价旧行为）。
       printSuccess(`源码已完整还原到: ${result.dest}`);
       printInfo(
-        `共 ${result.header.fileCount || '?'} 个文件 · `
-        + `commit ${_commit} · 目录布局原样`
+        `共 ${result.header.fileCount || '?'} 个文件 · ` + `commit ${_commit} · 目录布局原样`
       );
     }
     // 来源可溯性诚实行（门 default-on）：把「commit X · 目录布局原样」这句会误导的横幅补上
@@ -995,29 +1220,46 @@ async function handleRestore(args = [], options = {}) {
         const _pv = assessRestoreProvenance(result.header);
         const _pl = buildProvenanceBannerLine(_pv);
         if (_pl && _pl.line) {
-          if (_pl.severity === 'warn') printWarn(_pl.line);
-          else printInfo(_pl.line);
+          if (_pl.severity === 'warn') {
+            printWarn(_pl.line);
+          } else {
+            printInfo(_pl.line);
+          }
         }
-      } catch { /* 来源把关异常 → 不打行，横幅字节等价旧行为 */ }
+      } catch {
+        /* 来源把关异常 → 不打行，横幅字节等价旧行为 */
+      }
     }
     // 路径可移植性诚实行（门 default-on）：把「哪些条目名在本机文件系统建不出来」从 completeness
     // 事后猜测（"可能路径过长…"）升级为解包前的主动、指名道姓、按宿主系统分级的提示。
     // 纯诊断叠加：绝不改变还原成败、绝不 _markFailure；无危害 / 证据不足 / 门关 → 不打行（字节等价）。
     if (_restorePathPortabilityEnabled() && result.pathPortability) {
       try {
-        const _pb = buildPortabilityBannerLine(result.pathPortability, { hostPlatform: _restoreHostPlatform() });
+        const _pb = buildPortabilityBannerLine(result.pathPortability, {
+          hostPlatform: _restoreHostPlatform(),
+        });
         if (_pb && _pb.line) {
-          if (_pb.severity === 'warn') printWarn(_pb.line);
-          else printInfo(_pb.line);
+          if (_pb.severity === 'warn') {
+            printWarn(_pb.line);
+          } else {
+            printInfo(_pb.line);
+          }
         }
-      } catch { /* 可移植性把关异常 → 不打行，横幅字节等价旧行为 */ }
+      } catch {
+        /* 可移植性把关异常 → 不打行，横幅字节等价旧行为 */
+      }
     }
     const docInDest = path.join(result.dest, 'docs', RESTORE_DOC_NAME);
     const docInSrc = path.join(result.srcDir, RESTORE_DOC_NAME);
-    const docHint = fs.existsSync(docInDest) ? docInDest
-      : (fs.existsSync(docInSrc) ? docInSrc : null);
+    const docHint = fs.existsSync(docInDest)
+      ? docInDest
+      : fs.existsSync(docInSrc)
+        ? docInSrc
+        : null;
     printInfo('下一步: 进入该目录 → `git init` → 在仓库根 `npm install`。');
-    if (docHint) printInfo(`Windows/Linux 重建说明: ${docHint}`);
+    if (docHint) {
+      printInfo(`Windows/Linux 重建说明: ${docHint}`);
+    }
     return true;
   } catch (err) {
     printError(`源码还原失败: ${err.message || err}`);
@@ -1045,14 +1287,19 @@ function _buildDockerBundle(projectRoot, state, options = {}) {
 function _buildPipInstallBundle(projectRoot, state, options = {}) {
   const layout = _resolveInstallLayout(options);
   const installKind = String(layout.installKind || 'pip').toLowerCase() === 'npm' ? 'npm' : 'pip';
-  const runtimePkgPath = installKind === 'npm'
-    ? path.join(layout.npmBackendDir, 'package.json')
-    : path.join(layout.bundledBackendDir, 'package.json');
+  const runtimePkgPath =
+    installKind === 'npm'
+      ? path.join(layout.npmBackendDir, 'package.json')
+      : path.join(layout.bundledBackendDir, 'package.json');
   const runtimePkg = _readJsonSafe(runtimePkgPath);
-  const version = String(runtimePkg.version || state?.versions?.backend || state?.versions?.pyproject || '0.0.0').trim();
+  const version = String(
+    runtimePkg.version || state?.versions?.backend || state?.versions?.pyproject || '0.0.0'
+  ).trim();
   const safeVersion = String(version || '0.0.0').replace(/[^0-9A-Za-z._-]/g, '-');
   const bundlePrefix = installKind === 'npm' ? 'khy-os-npm-install' : 'khy-os-pip-install';
-  const bundleName = String(options.name || `${bundlePrefix}-${safeVersion}-${_timestampForFileName()}`).replace(/[^0-9A-Za-z._-]/g, '-');
+  const bundleName = String(
+    options.name || `${bundlePrefix}-${safeVersion}-${_timestampForFileName()}`
+  ).replace(/[^0-9A-Za-z._-]/g, '-');
 
   const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), `khy-${installKind}-install-bundle-`));
   const bundleRoot = path.join(stagingRoot, bundleName);
@@ -1066,12 +1313,28 @@ function _buildPipInstallBundle(projectRoot, state, options = {}) {
 
   if (installKind === 'pip') {
     printInfo(`打包 pip 安装目录: ${layout.siteRoot}`);
-    _copyDirForBundle(layout.khyQuantDir, path.join(installRoot, 'khy_platform'), PIP_INSTALL_BUNDLE_SKIP_NAMES);
-    _copyDirForBundle(layout.khyOsDir, path.join(installRoot, 'khy_os'), PIP_INSTALL_BUNDLE_SKIP_NAMES);
+    _copyDirForBundle(
+      layout.khyQuantDir,
+      path.join(installRoot, 'khy_platform'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    );
+    _copyDirForBundle(
+      layout.khyOsDir,
+      path.join(installRoot, 'khy_os'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    );
 
     sourceMappings.push(
-      { target: 'pip-install/khy_platform/', source: layout.khyQuantDir, note: 'Python launcher package from pip install' },
-      { target: 'pip-install/khy_os/', source: layout.khyOsDir, note: 'bundled runtime payload from pip install' },
+      {
+        target: 'pip-install/khy_platform/',
+        source: layout.khyQuantDir,
+        note: 'Python launcher package from pip install',
+      },
+      {
+        target: 'pip-install/khy_os/',
+        source: layout.khyOsDir,
+        note: 'bundled runtime payload from pip install',
+      }
     );
 
     const distInfoDirs = _collectKhyDistInfoDirs(layout.siteRoot);
@@ -1089,7 +1352,11 @@ function _buildPipInstallBundle(projectRoot, state, options = {}) {
     backendSource = layout.bundledBackendDir;
   } else {
     printInfo(`打包 npm 安装目录: ${layout.siteRoot}`);
-    _copyDirForBundle(layout.npmBackendDir, path.join(installRoot, 'backend'), PIP_INSTALL_BUNDLE_SKIP_NAMES);
+    _copyDirForBundle(
+      layout.npmBackendDir,
+      path.join(installRoot, 'backend'),
+      PIP_INSTALL_BUNDLE_SKIP_NAMES
+    );
     sourceMappings.push({
       target: 'npm-install/backend/',
       source: layout.npmBackendDir,
@@ -1104,9 +1371,8 @@ function _buildPipInstallBundle(projectRoot, state, options = {}) {
   }
   _ensureSharedDependencyForBundle(backendInBundle, backendSource);
   _writeDockerBundleDockerfile(backendInBundle);
-  const backendContext = installKind === 'npm'
-    ? './npm-install/backend'
-    : './pip-install/khy_os/bundled/backend';
+  const backendContext =
+    installKind === 'npm' ? './npm-install/backend' : './pip-install/khy_os/bundled/backend';
   _writeDockerBundleCompose(bundleRoot, {
     backendContext,
     serviceName: 'khy-backend',
@@ -1151,7 +1417,9 @@ function _buildPipInstallBundle(projectRoot, state, options = {}) {
 function _hasPypircSection(repoName) {
   const pypirc = path.join(os.homedir(), '.pypirc');
   const content = _readFileSafe(pypirc);
-  if (!content) return false;
+  if (!content) {
+    return false;
+  }
   const section = String(repoName || 'pypi').toLowerCase();
   const re = new RegExp(`^\\s*\\[\\s*${section}\\s*\\]\\s*$`, 'mi');
   return re.test(content);
@@ -1159,20 +1427,21 @@ function _hasPypircSection(repoName) {
 
 function _resolveToken(targetRepo, options = {}) {
   const byOption = String(
-    options.token
-    || options['pypi-token']
-    || options.pypiToken
-    || options.password
-    || ''
+    options.token || options['pypi-token'] || options.pypiToken || options.password || ''
   ).trim();
-  if (byOption) return byOption;
+  if (byOption) {
+    return byOption;
+  }
 
-  const envVars = targetRepo === 'testpypi'
-    ? ['TEST_PYPI_TOKEN', 'PYPI_TEST_TOKEN', 'PYPI_TOKEN', 'TWINE_PASSWORD']
-    : ['PYPI_TOKEN', 'TWINE_PASSWORD'];
+  const envVars =
+    targetRepo === 'testpypi'
+      ? ['TEST_PYPI_TOKEN', 'PYPI_TEST_TOKEN', 'PYPI_TOKEN', 'TWINE_PASSWORD']
+      : ['PYPI_TOKEN', 'TWINE_PASSWORD'];
   for (const key of envVars) {
     const val = String(process.env[key] || '').trim();
-    if (val) return val;
+    if (val) {
+      return val;
+    }
   }
   return '';
 }
@@ -1239,15 +1508,25 @@ function _maskRemoteUrl(url = '') {
 
 function _inferGitPlatformFromRepo(repoInput = '') {
   const text = String(repoInput || '').toLowerCase();
-  if (!text) return '';
-  if (text.includes('gitee.com')) return 'gitee';
-  if (text.includes('gitlab.com') || text.includes('gitlab')) return 'gitlab';
-  if (text.includes('github.com')) return 'github';
+  if (!text) {
+    return '';
+  }
+  if (text.includes('gitee.com')) {
+    return 'gitee';
+  }
+  if (text.includes('gitlab.com') || text.includes('gitlab')) {
+    return 'gitlab';
+  }
+  if (text.includes('github.com')) {
+    return 'github';
+  }
   return '';
 }
 
 function _normalizeGitPlatform(rawPlatform = '', repoInput = '') {
-  const direct = String(rawPlatform || '').trim().toLowerCase();
+  const direct = String(rawPlatform || '')
+    .trim()
+    .toLowerCase();
   if (direct) {
     if (!SUPPORTED_GIT_PLATFORMS.has(direct)) {
       throw new Error(`不支持的平台: ${rawPlatform}（支持: github | gitee | gitlab）`);
@@ -1259,7 +1538,9 @@ function _normalizeGitPlatform(rawPlatform = '', repoInput = '') {
 
 function _normalizeRepoSlug(repoInput = '') {
   const raw = String(repoInput || '').trim();
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
 
   let slug = raw;
   slug = slug.replace(/^git@[^:]+:/i, '');
@@ -1272,7 +1553,9 @@ function _normalizeRepoSlug(repoInput = '') {
 
 function _buildGitRemoteUrl(repoInput, platform, options = {}) {
   const raw = String(repoInput || '').trim();
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
   if (/^[a-z]+:\/\//i.test(raw) || raw.startsWith('git@') || raw.startsWith('ssh://')) {
     return raw;
   }
@@ -1288,10 +1571,12 @@ function _buildGitRemoteUrl(repoInput, platform, options = {}) {
     gitlab: 'gitlab.com',
   };
   const host = hostByPlatform[platform] || hostByPlatform.github;
-  const preferSsh = _isTruthyFlag(options.ssh) || String(options.protocol || '').trim().toLowerCase() === 'ssh';
-  return preferSsh
-    ? `git@${host}:${slug}.git`
-    : `https://${host}/${slug}.git`;
+  const preferSsh =
+    _isTruthyFlag(options.ssh) ||
+    String(options.protocol || '')
+      .trim()
+      .toLowerCase() === 'ssh';
+  return preferSsh ? `git@${host}:${slug}.git` : `https://${host}/${slug}.git`;
 }
 
 async function _runPublishGitPush(projectRoot, args = [], options = {}) {
@@ -1304,18 +1589,23 @@ async function _runPublishGitPush(projectRoot, args = [], options = {}) {
   }
 
   const repoInput = String(options.repo || options.url || rawPositional[0] || '').trim();
-  const explicitPlatform = String(options.platform || options.provider || '').trim().toLowerCase();
+  const explicitPlatform = String(options.platform || options.provider || '')
+    .trim()
+    .toLowerCase();
   const platform = _normalizeGitPlatform(explicitPlatform, repoInput);
-  const remoteName = String(
-    options.remote
-    || options['remote-name']
-    || (explicitPlatform ? platform : 'origin')
-  ).trim() || 'origin';
+  const remoteName =
+    String(
+      options.remote || options['remote-name'] || (explicitPlatform ? platform : 'origin')
+    ).trim() || 'origin';
 
   const autoCommit = _isTruthyFlag(options['auto-commit']) || _isTruthyFlag(options.autocommit);
-  const setUpstream = _isTruthyFlag(options['set-upstream']) || _isTruthyFlag(options.upstream) || _isTruthyFlag(options.u);
+  const setUpstream =
+    _isTruthyFlag(options['set-upstream']) ||
+    _isTruthyFlag(options.upstream) ||
+    _isTruthyFlag(options.u);
   const dryRun = _isTruthyFlag(options['dry-run']);
-  const forceWithLease = _isTruthyFlag(options['force-with-lease']) || _isTruthyFlag(options['with-lease']);
+  const forceWithLease =
+    _isTruthyFlag(options['force-with-lease']) || _isTruthyFlag(options['with-lease']);
 
   const currentBranch = _runGitCommandSync(cwd, ['rev-parse', '--abbrev-ref', 'HEAD']);
   const branch = String(options.branch || options.b || currentBranch || 'main').trim() || 'main';
@@ -1326,9 +1616,9 @@ async function _runPublishGitPush(projectRoot, args = [], options = {}) {
       throw new Error('检测到未提交改动。请先提交，或加 --auto-commit 自动提交后推送');
     }
     const commitMessage = String(
-      options['commit-message']
-      || options.m
-      || `chore: sync before publish push (${new Date().toISOString().slice(0, 10)})`
+      options['commit-message'] ||
+        options.m ||
+        `chore: sync before publish push (${new Date().toISOString().slice(0, 10)})`
     ).trim();
     printInfo('检测到未提交改动，正在自动提交...');
     _runGitCommandSync(cwd, ['add', '-A']);
@@ -1354,9 +1644,12 @@ async function _runPublishGitPush(projectRoot, args = [], options = {}) {
   } else if (repoInput) {
     const targetUrl = _buildGitRemoteUrl(repoInput, platform, options);
     if (_canonicalGitRemoteUrl(remoteUrl) !== _canonicalGitRemoteUrl(targetUrl)) {
-      const allowUpdateRemote = _isTruthyFlag(options['force-remote']) || _isTruthyFlag(options['update-remote']);
+      const allowUpdateRemote =
+        _isTruthyFlag(options['force-remote']) || _isTruthyFlag(options['update-remote']);
       if (!allowUpdateRemote) {
-        throw new Error(`远程 ${remoteName} 已存在且地址不同。加 --force-remote 可自动更新远程地址`);
+        throw new Error(
+          `远程 ${remoteName} 已存在且地址不同。加 --force-remote 可自动更新远程地址`
+        );
       }
       _runGitCommandSync(cwd, ['remote', 'set-url', remoteName, targetUrl]);
       remoteUrl = targetUrl;
@@ -1365,8 +1658,12 @@ async function _runPublishGitPush(projectRoot, args = [], options = {}) {
   }
 
   const pushArgs = ['push'];
-  if (setUpstream) pushArgs.push('-u');
-  if (forceWithLease) pushArgs.push('--force-with-lease');
+  if (setUpstream) {
+    pushArgs.push('-u');
+  }
+  if (forceWithLease) {
+    pushArgs.push('--force-with-lease');
+  }
   pushArgs.push(remoteName, branch);
 
   printInfo(`准备推送: ${remoteName}/${branch} (${platform})`);
@@ -1425,10 +1722,18 @@ async function _runCommandLive(command, args, opts = {}) {
     const cleanup = () => clearInterval(timer);
 
     child.stdout.on('data', (buf) => {
-      try { process.stdout.write(String(buf)); } catch { /* ignore */ }
+      try {
+        process.stdout.write(String(buf));
+      } catch {
+        /* ignore */
+      }
     });
     child.stderr.on('data', (buf) => {
-      try { process.stderr.write(String(buf)); } catch { /* ignore */ }
+      try {
+        process.stderr.write(String(buf));
+      } catch {
+        /* ignore */
+      }
     });
     child.on('error', (err) => {
       cleanup();
@@ -1448,8 +1753,12 @@ async function _runCommandLive(command, args, opts = {}) {
 
 async function _runSelfBugFix(options = {}) {
   const maxRounds = _toInt(options['max-rounds'] || options.maxRounds, 5, 1);
-  const autoFix = options['auto-fix'] !== false && String(options['auto-fix'] || '').toLowerCase() !== 'false';
-  const autoApprove = _isTruthyFlag(options.yes) || _isTruthyFlag(options['auto-approve']) || _isTruthyFlag(options.autoApprove);
+  const autoFix =
+    options['auto-fix'] !== false && String(options['auto-fix'] || '').toLowerCase() !== 'false';
+  const autoApprove =
+    _isTruthyFlag(options.yes) ||
+    _isTruthyFlag(options['auto-approve']) ||
+    _isTruthyFlag(options.autoApprove);
 
   printInfo(`自修复流程启动: review -> fix -> verify (maxRounds=${maxRounds})`);
   const { handleReview } = require('./review');
@@ -1469,7 +1778,8 @@ async function _runSelfPipPublish(selfAction, options = {}) {
     printWarn('已跳过自修复阶段（--skip-fix）');
   }
 
-  const targetRepo = String(selfAction || '').toLowerCase() === 'self-testpypi' ? 'testpypi' : 'pypi';
+  const targetRepo =
+    String(selfAction || '').toLowerCase() === 'self-testpypi' ? 'testpypi' : 'pypi';
   const nextOptions = {
     ...options,
     yes: options.yes !== undefined ? options.yes : true,
@@ -1501,13 +1811,21 @@ function _printHelp() {
   console.log('    khy publish pypi [--version <x.y.z>] [--yes] [--skip-build]');
   console.log('    khy publish testpypi [--version <x.y.z>] [--yes] [--skip-build]');
   console.log('    khy publish docker-bundle [--out <dir>] [--name <bundle-name>]');
-  console.log('    khy publish pip-dir-bundle [--out <dir>] [--name <bundle-name>] [--pip-root <site-packages>]');
-  console.log('    khy publish npm-dir-bundle [--out <dir>] [--name <bundle-name>] [--npm-root <path>]');
-  console.log('    khy publish origin-code [--out <dir>] [--name <bundle-name>] [--pip-root <site-packages>] [--npm-root <path>]');
+  console.log(
+    '    khy publish pip-dir-bundle [--out <dir>] [--name <bundle-name>] [--pip-root <site-packages>]'
+  );
+  console.log(
+    '    khy publish npm-dir-bundle [--out <dir>] [--name <bundle-name>] [--npm-root <path>]'
+  );
+  console.log(
+    '    khy publish origin-code [--out <dir>] [--name <bundle-name>] [--pip-root <site-packages>] [--npm-root <path>]'
+  );
   console.log('    khy publish self-fix [--max-rounds <n>] [--yes]');
   console.log('    khy publish self-pypi [--version <x.y.z>] [--skip-fix] [--yes]');
   console.log('    khy publish self-testpypi [--version <x.y.z>] [--skip-fix] [--yes]');
-  console.log('    khy publish git-push [<owner/repo|remote-url>] [--platform github|gitee|gitlab]');
+  console.log(
+    '    khy publish git-push [<owner/repo|remote-url>] [--platform github|gitee|gitlab]'
+  );
   console.log('');
   console.log('  常用参数:');
   console.log('    --version <x.y.z>     同步 3 处版本号后再构建');
@@ -1517,7 +1835,9 @@ function _printHelp() {
   console.log('    --skip-db-preflight   跳过自动迁移预检');
   console.log('    --strict-db-preflight 自动迁移预检失败时中止');
   console.log('    --root <path>         指定项目根目录');
-  console.log('    --out <dir>           导出包输出目录（docker 默认 dist/docker-bundles，origin 默认 dist/origin-code）');
+  console.log(
+    '    --out <dir>           导出包输出目录（docker 默认 dist/docker-bundles，origin 默认 dist/origin-code）'
+  );
   console.log('    --name <bundle-name>  导出包名称（不含扩展名）');
   console.log('    --install <auto|pip|npm> 安装布局探测模式（默认 auto）');
   console.log('    --pip-root <path>     指定 pip 安装根目录(site-packages)');
@@ -1529,11 +1849,15 @@ function _printHelp() {
   console.log('    --auto-commit         推送前自动 add+commit 所有改动');
   console.log('    --set-upstream        push 时附加 -u');
   console.log('    --force-remote        远程同名但 URL 不同，自动 set-url');
-  console.log('    --dry-run             演练模式：git 仅打印推送命令；PyPI/TestPyPI 仅检查并打印上传命令，不实际上传');
+  console.log(
+    '    --dry-run             演练模式：git 仅打印推送命令；PyPI/TestPyPI 仅检查并打印上传命令，不实际上传'
+  );
   console.log('    --max-rounds <n>      自修复轮数上限（self-fix/self-pypi）');
   console.log('    --skip-fix            自发布时跳过自修复阶段');
   console.log('    --auto-approve        自修复自动确认（与 --yes 等价）');
-  console.log('    --secret <value>      源码还原密钥（仅用于还原由自定义密钥加密的旧快照；发布不再需要密钥）');
+  console.log(
+    '    --secret <value>      源码还原密钥（仅用于还原由自定义密钥加密的旧快照；发布不再需要密钥）'
+  );
   console.log('    --owner-secret <value> 同 --secret');
   console.log('');
   console.log('  环境变量:');
@@ -1544,13 +1868,17 @@ function _printHelp() {
 }
 
 async function _runDbMigrationPreflight(options = {}) {
-  const skip = _isTruthyFlag(options['skip-db-preflight']) || _isTruthyFlag(process.env.KHY_PUBLISH_SKIP_DB_PREFLIGHT);
+  const skip =
+    _isTruthyFlag(options['skip-db-preflight']) ||
+    _isTruthyFlag(process.env.KHY_PUBLISH_SKIP_DB_PREFLIGHT);
   if (skip) {
     printWarn('已跳过自动迁移预检');
     return { skipped: true };
   }
 
-  const strict = _isTruthyFlag(options['strict-db-preflight']) || _isTruthyFlag(process.env.KHY_PUBLISH_STRICT_DB_PREFLIGHT);
+  const strict =
+    _isTruthyFlag(options['strict-db-preflight']) ||
+    _isTruthyFlag(process.env.KHY_PUBLISH_STRICT_DB_PREFLIGHT);
   try {
     const { runAutoDbMigration } = require('../../bootstrap/dbAutoMigration');
     const result = await runAutoDbMigration({
@@ -1560,7 +1888,9 @@ async function _runDbMigrationPreflight(options = {}) {
     });
     if (result && result.error) {
       const message = `自动迁移预检失败: ${result.error}`;
-      if (strict) throw new Error(message);
+      if (strict) {
+        throw new Error(message);
+      }
       printWarn(`${message}（继续发布，可加 --strict-db-preflight 阻止发布）`);
       return { ok: false, error: result.error };
     }
@@ -1568,24 +1898,30 @@ async function _runDbMigrationPreflight(options = {}) {
     return { ok: true };
   } catch (err) {
     const message = err && err.message ? err.message : String(err || 'unknown');
-    if (strict) throw new Error(`自动迁移预检失败: ${message}`);
+    if (strict) {
+      throw new Error(`自动迁移预检失败: ${message}`);
+    }
     printWarn(`自动迁移预检异常: ${message}（继续发布）`);
     return { ok: false, error: message };
   }
 }
 
 async function _confirmUpload(targetRepo, packageName, version, options) {
-  if (options.yes || options.confirm) return true;
+  if (options.yes || options.confirm) {
+    return true;
+  }
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     printError('非交互环境请加 --yes 确认上传');
     return false;
   }
-  const answer = await promptCompat([{
-    type: 'confirm',
-    name: 'ok',
-    default: false,
-    message: `确认上传 ${packageName || 'package'} ${version || ''} 到 ${targetRepo} ?`,
-  }]);
+  const answer = await promptCompat([
+    {
+      type: 'confirm',
+      name: 'ok',
+      default: false,
+      message: `确认上传 ${packageName || 'package'} ${version || ''} 到 ${targetRepo} ?`,
+    },
+  ]);
   return !!answer.ok;
 }
 
@@ -1627,17 +1963,23 @@ async function _runBuildAndCheck(projectRoot, pythonCmd, cleanDist) {
 async function handlePublish(subCommand, args = [], options = {}) {
   const fallbackAction = String(args[0] || '').toLowerCase();
   const action = String(subCommand || fallbackAction || '').toLowerCase() || 'pypi';
-  if (![
-    'check', 'build', 'pypi', 'testpypi', 'help',
-    ...DOCKER_BUNDLE_ACTIONS,
-    ...PIP_INSTALL_BUNDLE_ACTIONS,
-    ...NPM_INSTALL_BUNDLE_ACTIONS,
-    ...ORIGIN_CODE_ACTIONS,
-    ...RESTORE_ACTIONS,
-    ...GIT_PUSH_ACTIONS,
-    ...SELF_FIX_ACTIONS,
-    ...SELF_PUBLISH_ACTIONS,
-  ].includes(action)) {
+  if (
+    ![
+      'check',
+      'build',
+      'pypi',
+      'testpypi',
+      'help',
+      ...DOCKER_BUNDLE_ACTIONS,
+      ...PIP_INSTALL_BUNDLE_ACTIONS,
+      ...NPM_INSTALL_BUNDLE_ACTIONS,
+      ...ORIGIN_CODE_ACTIONS,
+      ...RESTORE_ACTIONS,
+      ...GIT_PUSH_ACTIONS,
+      ...SELF_FIX_ACTIONS,
+      ...SELF_PUBLISH_ACTIONS,
+    ].includes(action)
+  ) {
     printError(`未知 publish 子命令: ${action}`);
     _printHelp();
     _markFailure();
@@ -1800,7 +2142,8 @@ async function handlePublish(subCommand, args = [], options = {}) {
   }
 
   try {
-    const cleanDist = options.clean !== false && String(options.clean || '').toLowerCase() !== 'false';
+    const cleanDist =
+      options.clean !== false && String(options.clean || '').toLowerCase() !== 'false';
     if (action === 'build') {
       await _runBuildAndCheck(projectRoot, pythonCmd, cleanDist);
       printSuccess('构建流程完成');
@@ -1832,7 +2175,9 @@ async function handlePublish(subCommand, args = [], options = {}) {
     }
 
     let artifacts = _collectDistArtifacts(projectRoot);
-    const skipBuild = options['skip-build'] === true || String(options['skip-build'] || '').toLowerCase() === 'true';
+    const skipBuild =
+      options['skip-build'] === true ||
+      String(options['skip-build'] || '').toLowerCase() === 'true';
     if (!skipBuild) {
       artifacts = await _runBuildAndCheck(projectRoot, pythonCmd, cleanDist);
     } else if (artifacts.length === 0) {
@@ -1847,9 +2192,15 @@ async function handlePublish(subCommand, args = [], options = {}) {
     } else {
       uploadArgs.push('--repository', 'pypi');
     }
-    const skipExisting = options['skip-existing'] !== false && String(options['skip-existing'] || '').toLowerCase() !== 'false';
-    if (skipExisting) uploadArgs.push('--skip-existing');
-    if (options['non-interactive'] || options.nonInteractive) uploadArgs.push('--non-interactive');
+    const skipExisting =
+      options['skip-existing'] !== false &&
+      String(options['skip-existing'] || '').toLowerCase() !== 'false';
+    if (skipExisting) {
+      uploadArgs.push('--skip-existing');
+    }
+    if (options['non-interactive'] || options.nonInteractive) {
+      uploadArgs.push('--non-interactive');
+    }
     uploadArgs.push(...artifacts);
 
     const uploadDryRun = _isTruthyFlag(options['dry-run']) || _isTruthyFlag(options.dryRun);
@@ -1872,7 +2223,9 @@ async function handlePublish(subCommand, args = [], options = {}) {
     // so the rollback target is recorded without the maintainer remembering it.
     // We point at it rather than auto-running heavy verification inside upload.
     printInfo('下一步（闭环「发布即登记稳定版」）：node maintenance/lib/ops.js post-verify');
-    printInfo('  验证全绿会自动 bless，把本次版本登记为回滚目标（关闭自动登记设 KHY_AUTO_BLESS=0）。');
+    printInfo(
+      '  验证全绿会自动 bless，把本次版本登记为回滚目标（关闭自动登记设 KHY_AUTO_BLESS=0）。'
+    );
     return true;
   } catch (err) {
     printError(`发布失败: ${err.message || err}`);

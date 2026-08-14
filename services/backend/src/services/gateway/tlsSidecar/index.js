@@ -11,14 +11,25 @@
  *   await sidecar.stop();
  */
 const { spawn } = require('child_process');
-const http = require('http');
 const fs = require('fs');
-const { safeKill, safeSignal } = require('../../../tools/platformUtils');
-const path = require('path');
+const http = require('http');
 const os = require('os');
+const path = require('path');
+
+const { safeKill, safeSignal } = require('../../../tools/platformUtils');
+
 const installer = require('./installer');
 
-const CONFIG_PATH = path.join(os.homedir(), '.khyquant', 'tls_sidecar.json');
+// Lazily resolve the config path under the app home (portable-aware).
+// No local caching: preserves getAppHome() live-resolve semantics.
+function _configPath() {
+  try {
+    const { getAppHome } = require('../../../utils/dataHome');
+    return path.join(getAppHome(), 'tls_sidecar.json');
+  } catch {
+    return path.join(os.homedir(), '.khyquant', 'tls_sidecar.json');
+  }
+}
 
 const DEFAULT_CONFIG = {
   enabled: false,
@@ -34,11 +45,13 @@ let _config = null;
  * Load configuration from disk or env.
  */
 function loadConfig() {
-  if (_config) return _config;
+  if (_config) {
+    return _config;
+  }
 
   try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      _config = { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8')) };
+    if (fs.existsSync(_configPath())) {
+      _config = { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(_configPath(), 'utf-8')) };
     } else {
       _config = { ...DEFAULT_CONFIG };
     }
@@ -47,10 +60,18 @@ function loadConfig() {
   }
 
   // Environment overrides
-  if (process.env.TLS_SIDECAR_ENABLED !== undefined) _config.enabled = process.env.TLS_SIDECAR_ENABLED === 'true';
-  if (process.env.TLS_SIDECAR_PORT) _config.port = parseInt(process.env.TLS_SIDECAR_PORT, 10);
-  if (process.env.TLS_SIDECAR_FINGERPRINT) _config.fingerprint = process.env.TLS_SIDECAR_FINGERPRINT;
-  if (process.env.TLS_SIDECAR_TARGETS) _config.targets = process.env.TLS_SIDECAR_TARGETS.split(',').map(s => s.trim());
+  if (process.env.TLS_SIDECAR_ENABLED !== undefined) {
+    _config.enabled = process.env.TLS_SIDECAR_ENABLED === 'true';
+  }
+  if (process.env.TLS_SIDECAR_PORT) {
+    _config.port = parseInt(process.env.TLS_SIDECAR_PORT, 10);
+  }
+  if (process.env.TLS_SIDECAR_FINGERPRINT) {
+    _config.fingerprint = process.env.TLS_SIDECAR_FINGERPRINT;
+  }
+  if (process.env.TLS_SIDECAR_TARGETS) {
+    _config.targets = process.env.TLS_SIDECAR_TARGETS.split(',').map((s) => s.trim());
+  }
 
   return _config;
 }
@@ -60,16 +81,18 @@ function loadConfig() {
  */
 function saveConfig(config) {
   _config = { ...DEFAULT_CONFIG, ...config };
-  const dir = path.dirname(CONFIG_PATH);
+  const dir = path.dirname(_configPath());
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(_config, null, 2));
+  fs.writeFileSync(_configPath(), JSON.stringify(_config, null, 2));
 }
 
 /**
  * Start the TLS sidecar process.
  */
 async function start(options = {}) {
-  if (_process) throw new Error('TLS Sidecar already running');
+  if (_process) {
+    throw new Error('TLS Sidecar already running');
+  }
 
   const config = loadConfig();
   const port = options.port || config.port;
@@ -84,10 +107,7 @@ async function start(options = {}) {
   const binaryPath = installer.getBinaryPath();
 
   return new Promise((resolve, reject) => {
-    const args = [
-      `-port`, String(port),
-      `-fingerprint`, fingerprint,
-    ];
+    const args = [`-port`, String(port), `-fingerprint`, fingerprint];
 
     _process = spawn(binaryPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -142,12 +162,28 @@ async function start(options = {}) {
  * Stop the sidecar process.
  */
 async function stop() {
-  if (!_process) return;
+  if (!_process) {
+    return;
+  }
   safeSignal(_process, 'SIGTERM');
-  await new Promise(resolve => {
-    const t = setTimeout(() => { safeKill(_process, 'SIGKILL'); resolve(); }, 3000);
-    if (_process) _process.on('exit', () => { clearTimeout(t); resolve(); });
-    else { clearTimeout(t); resolve(); }
+  await new Promise((resolve) => {
+    // SIGKILL only if still alive after the grace period; exit cancels it
+    const t = setTimeout(() => {
+      if (_process && !_process.killed) {
+        safeKill(_process, 'SIGKILL');
+      }
+      resolve();
+    }, 3000);
+    t.unref();
+    if (_process) {
+      _process.once('exit', () => {
+        clearTimeout(t);
+        resolve();
+      });
+    } else {
+      clearTimeout(t);
+      resolve();
+    }
   });
   _process = null;
 }
@@ -162,7 +198,10 @@ function health() {
       resolve({ alive: true, port: config.port });
     });
     req.on('error', () => resolve({ alive: false, port: config.port }));
-    req.on('timeout', () => { req.destroy(); resolve({ alive: false, port: config.port }); });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ alive: false, port: config.port });
+    });
   });
 }
 
@@ -186,8 +225,10 @@ function getProxyUrl() {
  */
 function shouldProxy(hostname) {
   const config = loadConfig();
-  if (!config.enabled || !isRunning()) return false;
-  return config.targets.some(t => hostname === t || hostname.endsWith('.' + t));
+  if (!config.enabled || !isRunning()) {
+    return false;
+  }
+  return config.targets.some((t) => hostname === t || hostname.endsWith('.' + t));
 }
 
 /**
@@ -198,7 +239,9 @@ function shouldProxy(hostname) {
 function _sidecarDownload() {
   try {
     const { isFlagEnabled } = require('../../flagRegistry');
-    if (!isFlagEnabled('KHY_PROXY_CORE_DOWNLOAD_HINT', process.env)) return null;
+    if (!isFlagEnabled('KHY_PROXY_CORE_DOWNLOAD_HINT', process.env)) {
+      return null;
+    }
     return installer.describeSidecarDownload();
   } catch {
     return null;

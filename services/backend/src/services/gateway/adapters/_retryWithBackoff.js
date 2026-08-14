@@ -17,9 +17,17 @@ const { TRANSIENT_STATUS_CODES } = require('./_errorClassifiers');
 
 // Default transient error message patterns
 const TRANSIENT_ERROR_PATTERNS = [
-  /econnreset/i, /econnrefused/i, /socket hang up/i, /timed?\s*out/i,
-  /bad gateway/i, /service unavailable/i, /network/i, /epipe/i,
-  /enotfound/i, /fetch failed/i, /abort/i,
+  /econnreset/i,
+  /econnrefused/i,
+  /socket hang up/i,
+  /timed?\s*out/i,
+  /bad gateway/i,
+  /service unavailable/i,
+  /network/i,
+  /epipe/i,
+  /enotfound/i,
+  /fetch failed/i,
+  /abort/i,
 ];
 
 /**
@@ -28,15 +36,19 @@ const TRANSIENT_ERROR_PATTERNS = [
  * @returns {boolean}
  */
 function isTransientError(error) {
-  if (!error) return false;
+  if (!error) {
+    return false;
+  }
 
   // HTTP status code check
   const status = error.status || error.statusCode || error.code;
-  if (typeof status === 'number' && TRANSIENT_STATUS_CODES.has(status)) return true;
+  if (typeof status === 'number' && TRANSIENT_STATUS_CODES.has(status)) {
+    return true;
+  }
 
   // Error message pattern matching
   const message = String(error.message || error || '');
-  return TRANSIENT_ERROR_PATTERNS.some(pattern => pattern.test(message));
+  return TRANSIENT_ERROR_PATTERNS.some((pattern) => pattern.test(message));
 }
 
 /**
@@ -51,20 +63,26 @@ function sleepAbortable(ms, signal) {
       return reject(new DOMException('Aborted', 'AbortError'));
     }
 
-    const timer = setTimeout(resolve, ms);
+    // Leak fix: the previous version did `setTimeout(resolve, ms)` first and
+    // reassigned `resolve` afterwards — the timer captured the original resolve
+    // before reassignment, so the cleanup wrapper never ran and the abort
+    // listener was never removed on the normal completion path. On long-lived
+    // signals with frequent retries, listeners accumulated. Declare the abort
+    // handler up-front so the timer callback detaches it before resolving.
+    let onAbort = null;
+    const timer = setTimeout(() => {
+      if (signal && onAbort) {
+        signal.removeEventListener('abort', onAbort);
+      }
+      resolve();
+    }, ms);
 
     if (signal) {
-      const onAbort = () => {
+      onAbort = () => {
         clearTimeout(timer);
         reject(new DOMException('Aborted', 'AbortError'));
       };
       signal.addEventListener('abort', onAbort, { once: true });
-      // Clean up listener when timer fires normally
-      const originalResolve = resolve;
-      resolve = () => {
-        signal.removeEventListener('abort', onAbort);
-        originalResolve();
-      };
     }
   });
 }
@@ -108,13 +126,19 @@ async function retryWithBackoff(fn, options = {}) {
       lastError = error;
 
       // Don't retry AbortError
-      if (error.name === 'AbortError') throw error;
+      if (error.name === 'AbortError') {
+        throw error;
+      }
 
       // Last attempt — don't retry
-      if (attempt >= maxAttempts) break;
+      if (attempt >= maxAttempts) {
+        break;
+      }
 
       // Check if error is retryable
-      if (!isRetryable(error)) break;
+      if (!isRetryable(error)) {
+        break;
+      }
 
       // Calculate delay with jitter
       const rawDelay = baseDelayMs * Math.pow(backoffFactor, attempt - 1);
@@ -122,7 +146,11 @@ async function retryWithBackoff(fn, options = {}) {
       const delayMs = Math.min(maxDelayMs, Math.round(rawDelay + jitter));
 
       if (onRetry) {
-        try { onRetry(error, attempt, delayMs); } catch { /* non-critical */ }
+        try {
+          onRetry(error, attempt, delayMs);
+        } catch {
+          /* non-critical */
+        }
       }
 
       await sleepAbortable(delayMs, signal);

@@ -30,7 +30,7 @@ extensions/khy-trae-bridge/
 ├── extension.js          — 核心逻辑 (~120 行)
 ├── .vscodeignore         — 打包过滤
 ├── README.md             — 本文档
-└── khy-trae-bridge-0.1.0.vsix  — 预构建安装包
+└── khy-trae-bridge-0.2.1.vsix  — 预构建安装包
 ```
 
 ---
@@ -39,22 +39,22 @@ extensions/khy-trae-bridge/
 
 ### 方式一：从预构建 VSIX 安装（推荐）
 
-仓库已包含 `khy-trae-bridge-0.1.0.vsix`，直接安装即可：
+仓库已包含 `khy-trae-bridge-0.2.1.vsix`，直接安装即可：
 
 1. 打开 **Trae**
 2. 按 `Ctrl+Shift+X` 打开扩展面板
 3. 点击面板右上角 **`···`** → **从 VSIX 安装...**（Install from VSIX）
-4. 选择文件：`extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix`
+4. 选择文件：`extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix`
 5. 等待安装完成 → 重启 Trae
 
 或使用命令行：
 
 ```powershell
 # Trae CLI（如果已配置 PATH）
-trae --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix
+trae --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix
 
 # 也可能是
-code --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix
+code --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix
 ```
 
 ### 方式二：从源码打包后安装
@@ -69,7 +69,7 @@ npm install --save-dev @vscode/vsce
 npx @vscode/vsce package --allow-missing-repository
 
 # 安装
-trae --install-extension khy-trae-bridge-0.1.0.vsix
+trae --install-extension khy-trae-bridge-0.2.1.vsix
 ```
 
 ---

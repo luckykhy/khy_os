@@ -1,7 +1,7 @@
 'use strict';
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 /**
  * nearestExistingDir.js — 「沿路径向上找最近的已存在目录」共享 helper。
@@ -23,10 +23,16 @@ function nearestExistingDir(filePath) {
   let dir = path.dirname(filePath);
   for (let i = 0; i < 10; i++) {
     try {
-      if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir;
-    } catch { /* skip */ }
+      if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+        return dir;
+      }
+    } catch {
+      /* skip */
+    }
     const parent = path.dirname(dir);
-    if (parent === dir) break;
+    if (parent === dir) {
+      break;
+    }
     dir = parent;
   }
   return null;

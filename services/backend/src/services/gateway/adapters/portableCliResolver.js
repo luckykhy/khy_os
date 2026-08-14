@@ -32,6 +32,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const registry = require('./portableCliRegistry');
 
 const _OFF = new Set(['0', 'false', 'off', 'no']);
@@ -48,7 +49,11 @@ function _overrideEnvName(key) {
 }
 
 function _existsFile(p) {
-  try { return fs.statSync(p).isFile(); } catch { return false; }
+  try {
+    return fs.statSync(p).isFile();
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -59,8 +64,12 @@ function _existsFile(p) {
  */
 function _resolveToolsRoot(env, toolsRoot) {
   const fromEnv = env && env.KHY_TOOLS_DIR;
-  if (typeof fromEnv === 'string' && fromEnv.trim()) return path.resolve(fromEnv.trim());
-  if (typeof toolsRoot === 'string' && toolsRoot.trim()) return path.resolve(toolsRoot.trim());
+  if (typeof fromEnv === 'string' && fromEnv.trim()) {
+    return path.resolve(fromEnv.trim());
+  }
+  if (typeof toolsRoot === 'string' && toolsRoot.trim()) {
+    return path.resolve(toolsRoot.trim());
+  }
   return null;
 }
 
@@ -78,13 +87,20 @@ function _packageDir(root, tool) {
 function _entryFromPackage(pkgDir, tool) {
   try {
     const manifest = path.join(pkgDir, 'package.json');
-    if (!_existsFile(manifest)) return null;
+    if (!_existsFile(manifest)) {
+      return null;
+    }
     const json = JSON.parse(fs.readFileSync(manifest, 'utf8'));
     const bin = json && json.bin;
     let rel = null;
-    if (typeof bin === 'string') rel = bin;
-    else if (bin && typeof bin === 'object') rel = bin[tool.bin] || Object.values(bin)[0] || null;
-    if (typeof rel !== 'string' || !rel.trim()) return null;
+    if (typeof bin === 'string') {
+      rel = bin;
+    } else if (bin && typeof bin === 'object') {
+      rel = bin[tool.bin] || Object.values(bin)[0] || null;
+    }
+    if (typeof rel !== 'string' || !rel.trim()) {
+      return null;
+    }
     const abs = path.resolve(pkgDir, rel.trim());
     return _existsFile(abs) ? abs : null;
   } catch {
@@ -99,18 +115,24 @@ function _entryFromPackage(pkgDir, tool) {
  */
 function _isNodeEntry(entryAbs) {
   const ext = path.extname(entryAbs).toLowerCase();
-  if (ext === '.js' || ext === '.cjs' || ext === '.mjs') return true;
+  if (ext === '.js' || ext === '.cjs' || ext === '.mjs') {
+    return true;
+  }
   try {
     const fd = fs.openSync(entryAbs, 'r');
     try {
       const buf = Buffer.alloc(128);
       const n = fs.readSync(fd, buf, 0, 128, 0);
       const head = buf.slice(0, n).toString('utf8');
-      if (head.startsWith('#!') && /\bnode\b/.test(head.split('\n')[0])) return true;
+      if (head.startsWith('#!') && /\bnode\b/.test(head.split('\n')[0])) {
+        return true;
+      }
     } finally {
       fs.closeSync(fd);
     }
-  } catch { /* fall through to false */ }
+  } catch {
+    /* fall through to false */
+  }
   return false;
 }
 
@@ -132,16 +154,24 @@ function _specForEntry(entryAbs, resolvedFrom) {
 function resolveLaunchSpec(toolKey, opts = {}) {
   try {
     const env = opts.env || process.env;
-    if (!isPortableEnabled(env)) return null;
+    if (!isPortableEnabled(env)) {
+      return null;
+    }
     const tool = registry.getTool(toolKey);
-    if (!tool) return null;
-    if (registry.hasNativeResolver(tool.key)) return null; // opencode → 专用解析器
+    if (!tool) {
+      return null;
+    }
+    if (registry.hasNativeResolver(tool.key)) {
+      return null;
+    } // opencode → 专用解析器
 
     // 3) 显式覆盖:KHY_<TOOL>_BIN 绝对路径存在即用。
     const explicit = env[_overrideEnvName(tool.key)];
     if (typeof explicit === 'string' && explicit.trim()) {
       const abs = path.resolve(explicit.trim());
-      if (_existsFile(abs)) return _specForEntry(abs, 'override');
+      if (_existsFile(abs)) {
+        return _specForEntry(abs, 'override');
+      }
       // 指定但不存在:尊重用户意图,原样直接执行(让上游报清晰错误)。
       return { command: explicit.trim(), argsPrefix: [], resolvedFrom: 'override-missing' };
     }
@@ -150,7 +180,9 @@ function resolveLaunchSpec(toolKey, opts = {}) {
     const root = _resolveToolsRoot(env, opts.toolsRoot);
     if (root) {
       const entry = _entryFromPackage(_packageDir(root, tool), tool);
-      if (entry) return _specForEntry(entry, 'portable');
+      if (entry) {
+        return _specForEntry(entry, 'portable');
+      }
     }
     return null;
   } catch {
@@ -166,7 +198,9 @@ function isInstalled(toolKey, opts = {}) {
 /** 该工具便携安装的包目录绝对路径(不判存在);无法定位根 → null。供安装器/诊断使用。 */
 function packageDir(toolKey, opts = {}) {
   const tool = registry.getTool(toolKey);
-  if (!tool) return null;
+  if (!tool) {
+    return null;
+  }
   const root = _resolveToolsRoot(opts.env || process.env, opts.toolsRoot);
   return root ? _packageDir(root, tool) : null;
 }
@@ -187,7 +221,7 @@ function packageDir(toolKey, opts = {}) {
  */
 function resolveSpawn(toolKey, args = [], opts = {}) {
   const fb = (opts && opts.fallback) || {};
-  const fbArgs = fb.args !== undefined ? fb.args : (Array.isArray(args) ? args : []);
+  const fbArgs = fb.args !== undefined ? fb.args : Array.isArray(args) ? args : [];
   try {
     const spec = resolveLaunchSpec(toolKey, opts);
     if (spec) {
@@ -197,7 +231,9 @@ function resolveSpawn(toolKey, args = [], opts = {}) {
         resolvedFrom: spec.resolvedFrom,
       };
     }
-  } catch { /* fall through to fallback */ }
+  } catch {
+    /* fall through to fallback */
+  }
   return { command: fb.command, args: fbArgs, resolvedFrom: 'fallback' };
 }
 

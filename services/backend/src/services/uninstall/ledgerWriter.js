@@ -24,11 +24,23 @@ function _resolveLedgerFile(env) {
     const src = env || process.env;
     // 数据家优先级与读取侧一致:KHY_DATA_HOME > getDataHome()(安装期会确保目录存在)> ~/.khy。
     let home = null;
-    if (src && src.KHY_DATA_HOME) home = src.KHY_DATA_HOME;
-    if (!home) { try { home = require('../../utils/dataHome').getDataHome(); } catch { /* fall through */ } }
-    if (!home) home = path.join(require('os').homedir(), '.khy');
+    if (src && src.KHY_DATA_HOME) {
+      home = src.KHY_DATA_HOME;
+    }
+    if (!home) {
+      try {
+        home = require('../../utils/dataHome').getDataHome();
+      } catch {
+        /* fall through */
+      }
+    }
+    if (!home) {
+      home = path.join(require('os').homedir(), '.khy');
+    }
     return ledgerPath(home);
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -50,13 +62,21 @@ function appendSideEffect(entry, opts = {}) {
       withTs.ts = ts;
     }
     const rec = recordSideEffect(withTs, { env });
-    if (!rec) return false; // 门关或非法 → 不写
+    if (!rec) {
+      return false;
+    } // 门关或非法 → 不写
     const file = _resolveLedgerFile(env);
-    if (!file) return false;
+    if (!file) {
+      return false;
+    }
     try {
       const dir = path.dirname(file);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    } catch { /* best-effort */ }
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    } catch {
+      /* best-effort */
+    }
     fs.appendFileSync(file, JSON.stringify(rec) + '\n', 'utf8');
     return true;
   } catch {

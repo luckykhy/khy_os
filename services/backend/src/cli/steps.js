@@ -5,18 +5,36 @@
  *           ProcessTracker, printCompactingNotice,
  *           printProcessStep, printToolCall, printActionHint, printThinkingStep
  */
-const {
-  c, THEME, isInteractiveInputActive,
-  SPINNER_FRAMES, SPINNER_ACTIVE_CHAR, REDUCED_MOTION_DOT,
-  PHASE_LABELS, _formatElapsed,
-  DOT_INDICATOR, DOT_SUCCESS, DOT_ERROR, DOT_DONE, DOT_PENDING,
-  TREE_LAST, TREE_MID,
-  getToolDisplayName, getToolFamilyIcon,
-} = require('./renderTheme');
-const { displayWidth, truncateToWidth } = require('./formatters');
 const { ccFormatDurationOr } = require('./ccFormat');
+const { displayWidth, truncateToWidth } = require('./formatters');
+const {
+  c,
+  THEME,
+  isInteractiveInputActive,
+  SPINNER_FRAMES,
+  SPINNER_ACTIVE_CHAR,
+  REDUCED_MOTION_DOT,
+  PHASE_LABELS,
+  _formatElapsed,
+  DOT_INDICATOR,
+  DOT_SUCCESS,
+  DOT_ERROR,
+  DOT_DONE,
+  DOT_PENDING,
+  TREE_LAST,
+  TREE_MID,
+  getToolDisplayName,
+  getToolFamilyIcon,
+} = require('./renderTheme');
 
-let _sparkleTimers = new Set();
+const _sparkleTimers = new Set();
+
+// Ink TUI takeover switch: set to '1' in tui/app.jsx while Ink owns the
+// terminal, deleted on exit. isTTY answers "are we rendering to a terminal";
+// this answers "must the classic renderer yield to the TUI".
+function _isInkTuiActive() {
+  return process.env.KHY_INK_TUI_ACTIVE === '1';
+}
 
 /**
  * Start an animated spinner for tool call in-progress display.
@@ -28,10 +46,15 @@ let _sparkleTimers = new Set();
  * @returns {{ stop: Function }}
  */
 function startSparkle(label, target = '', detail = '') {
-  if (!process.stdout.isTTY) return { stop() {} };
-  // When TUI (InlineRenderer) is active, skip direct stdout writes —
-  // the TUI handles all rendering through its own render loop.
-  if (process.stdout.isTTY) return { stop() {} };
+  if (!process.stdout.isTTY) {
+    return { stop() {} };
+  }
+  // When the Ink TUI owns the terminal it renders through its own loop, so the
+  // classic sparkle must yield. isTTY above is the render precondition; the env
+  // flag is the TUI-takeover switch (previously a self-contradicting isTTY).
+  if (_isInkTuiActive()) {
+    return { stop() {} };
+  }
 
   let frame = 0;
   const startTime = Date.now();
@@ -39,8 +62,12 @@ function startSparkle(label, target = '', detail = '') {
   const ELAPSED_WARN_THRESHOLD = 8; // shift to red after 8s
 
   const timer = setInterval(() => {
-    if (isInteractiveInputActive()) return;
-    if (process.stdin.isRaw) return;
+    if (isInteractiveInputActive()) {
+      return;
+    }
+    if (process.stdin.isRaw) {
+      return;
+    }
     frame++;
     const blinkDim = frame % 2 === 0;
     const elapsed = (Date.now() - startTime) / 1000;
@@ -52,7 +79,7 @@ function startSparkle(label, target = '', detail = '') {
       const r = Math.round(169 + (255 - 169) * t);
       const g = Math.round(169 + (107 - 169) * t);
       const b = Math.round(169 + (128 - 169) * t);
-      charColor = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+      charColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     } else {
       charColor = THEME.text;
     }
@@ -76,8 +103,14 @@ function startSparkle(label, target = '', detail = '') {
 
     const line = `  ${icon} ${c().bold(label)} ${targetStr}${detailStr}${elapsedStr}`;
     let _sw;
-    try { _sw = require('./syncOutput').syncWrite; } catch { /* ignore */ }
-    if (typeof _sw !== 'function') _sw = (fn) => fn();
+    try {
+      _sw = require('./syncOutput').syncWrite;
+    } catch {
+      /* ignore */
+    }
+    if (typeof _sw !== 'function') {
+      _sw = (fn) => fn();
+    }
     _sw(() => process.stdout.write(`\r\x1b[K${line}`));
   }, 120); // 120ms = ~8fps matching Claude Code
 
@@ -102,22 +135,41 @@ function startSparkle(label, target = '', detail = '') {
  * @param {string} [detail] - e.g. "(ctrl+o to expand)", "-> OK"
  */
 function printStepLine(status, label, target = '', detail = '') {
-  if (process.stdout.isTTY) return;
+  if (!process.stdout.isTTY) {
+    return;
+  }
+  if (_isInkTuiActive()) {
+    return;
+  }
   let dot;
   switch (status) {
-    case 'active':  dot = c().hex(THEME.text)(DOT_INDICATOR); break;
-    case 'success': dot = c().hex(THEME.success)(DOT_SUCCESS); break;
-    case 'error':   dot = c().hex(THEME.error)(DOT_ERROR); break;
-    case 'done':    dot = c().dim(DOT_DONE); break;
-    default:        dot = c().dim(DOT_PENDING); break;
+    case 'active':
+      dot = c().hex(THEME.text)(DOT_INDICATOR);
+      break;
+    case 'success':
+      dot = c().hex(THEME.success)(DOT_SUCCESS);
+      break;
+    case 'error':
+      dot = c().hex(THEME.error)(DOT_ERROR);
+      break;
+    case 'done':
+      dot = c().dim(DOT_DONE);
+      break;
+    default:
+      dot = c().dim(DOT_PENDING);
+      break;
   }
 
   const targetStr = target ? c().dim(`(${target})`) : '';
   const detailStr = detail ? ` ${detail}` : '';
-  const labelColor = status === 'success' ? c().hex(THEME.success)(label)
-                   : status === 'error'   ? c().hex(THEME.error)(label)
-                   : status === 'active'  ? c().hex(THEME.text).bold(label)
-                   : c().dim(label);
+  const labelColor =
+    status === 'success'
+      ? c().hex(THEME.success)(label)
+      : status === 'error'
+        ? c().hex(THEME.error)(label)
+        : status === 'active'
+          ? c().hex(THEME.text).bold(label)
+          : c().dim(label);
 
   console.log(`  ${dot} ${labelColor} ${targetStr}${detailStr}`);
 }
@@ -128,7 +180,12 @@ function printStepLine(status, label, target = '', detail = '') {
  * @param {boolean} [isLast=true] - whether this is the last detail line
  */
 function printStepDetail(text, isLast = true) {
-  if (process.stdout.isTTY) return;
+  if (!process.stdout.isTTY) {
+    return;
+  }
+  if (_isInkTuiActive()) {
+    return;
+  }
   // Claude Code style: ⎿ prefix for result detail lines
   const branch = isLast ? TREE_LAST : TREE_MID;
   console.log(`  ${c().dim(branch)}  ${text}`);
@@ -172,7 +229,9 @@ class ProcessTracker {
     this._sparkle = startSparkle(label, target, hint);
 
     // Sync to HUD
-    try { require('./hudRenderer').toolStart(label, target); } catch {}
+    try {
+      require('./hudRenderer').toolStart(label, target);
+    } catch {}
   }
 
   /**
@@ -195,11 +254,18 @@ class ProcessTracker {
    * Internal: overwrite current active line with final status + detail.
    */
   _finishCurrent(status, detail = '') {
-    if (!this._current) return;
-    // In TUI mode, stop sparkle but skip all stdout writes
-    if (process.stdout.isTTY) {
-      if (this._sparkle) { this._sparkle.stop(); this._sparkle = null; }
-      try { require('./hudRenderer').toolEnd(this._current.label, status, Date.now() - this._startTime); } catch {}
+    if (!this._current) {
+      return;
+    }
+    // Ink TUI active → it renders the line itself; stop sparkle, skip stdout.
+    if (_isInkTuiActive()) {
+      if (this._sparkle) {
+        this._sparkle.stop();
+        this._sparkle = null;
+      }
+      try {
+        require('./hudRenderer').toolEnd(this._current.label, status, Date.now() - this._startTime);
+      } catch {}
       this._current = null;
       this._startTime = null;
       return;
@@ -212,15 +278,26 @@ class ProcessTracker {
     }
 
     const elapsed = Date.now() - this._startTime;
-    const elapsedStr = elapsed > 1000 ? ` (${ccFormatDurationOr(elapsed, `${(elapsed / 1000).toFixed(1)}s`, process.env)})` : '';
+    const elapsedStr =
+      elapsed > 1000
+        ? ` (${ccFormatDurationOr(elapsed, `${(elapsed / 1000).toFixed(1)}s`, process.env)})`
+        : '';
 
     // Sync to HUD
-    try { require('./hudRenderer').toolEnd(this._current.label, status, elapsed); } catch {}
+    try {
+      require('./hudRenderer').toolEnd(this._current.label, status, elapsed);
+    } catch {}
 
     if (process.stdout.isTTY && !isInteractiveInputActive()) {
       let _sw;
-      try { _sw = require('./syncOutput').syncWrite; } catch { /* ignore */ }
-    if (typeof _sw !== 'function') _sw = (fn) => fn();
+      try {
+        _sw = require('./syncOutput').syncWrite;
+      } catch {
+        /* ignore */
+      }
+      if (typeof _sw !== 'function') {
+        _sw = (fn) => fn();
+      }
       _sw(() => {
         process.stdout.write('\x1b[1A\r\x1b[K');
         const { label, target } = this._current;
@@ -256,15 +333,28 @@ class ProcessTracker {
  * @param {object} opts - { elapsed, tokens, thought }
  */
 function printCompactingNotice(opts = {}) {
-  if (process.stdout.isTTY) return;
+  if (!process.stdout.isTTY) {
+    return;
+  }
+  if (_isInkTuiActive()) {
+    return;
+  }
   const parts = [];
-  if (opts.elapsed) parts.push(opts.elapsed);
-  if (opts.tokens)  parts.push(`\u2191 ${opts.tokens} tokens`);
-  if (opts.thought) parts.push(`thought for ${opts.thought}`);
+  if (opts.elapsed) {
+    parts.push(opts.elapsed);
+  }
+  if (opts.tokens) {
+    parts.push(`\u2191 ${opts.tokens} tokens`);
+  }
+  if (opts.thought) {
+    parts.push(`thought for ${opts.thought}`);
+  }
 
   const meta = parts.length > 0 ? c().dim(` (${parts.join(' \u00B7 ')})`) : '';
   // Claude Code style: ✻ Conversation compacted
-  console.log(`  ${c().hex(THEME.warning)('\u273B')} ${c().hex(THEME.warning).bold('Conversation compacted')}${meta}`);
+  console.log(
+    `  ${c().hex(THEME.warning)('\u273B')} ${c().hex(THEME.warning).bold('Conversation compacted')}${meta}`
+  );
 
   if (opts.tip) {
     printStepDetail(`Tip: ${opts.tip}`);
@@ -274,17 +364,29 @@ function printCompactingNotice(opts = {}) {
 // ── Legacy helpers (preserved for backward compatibility) ──────────────
 
 function printProcessStep(icon, message, detail = '') {
-  if (process.stdout.isTTY) return;
+  if (!process.stdout.isTTY) {
+    return;
+  }
+  if (_isInkTuiActive()) {
+    return;
+  }
   const detailStr = detail ? c().dim(` (${detail})`) : '';
   console.log(`  ${icon} ${c().white(message)}${detailStr}`);
 }
 
 function printToolCall(toolName, args = '') {
-  if (process.stdout.isTTY) return;
+  if (!process.stdout.isTTY) {
+    return;
+  }
+  if (_isInkTuiActive()) {
+    return;
+  }
   const displayName = getToolDisplayName(toolName);
   const icon = getToolFamilyIcon(toolName);
   const targetStr = args ? c().dim(`(${args})`) : '';
-  console.log(`  ${c().hex(THEME.text)(icon)} ${c().hex(THEME.text).bold(displayName)} ${targetStr}`);
+  console.log(
+    `  ${c().hex(THEME.text)(icon)} ${c().hex(THEME.text).bold(displayName)} ${targetStr}`
+  );
 }
 
 /**
@@ -293,13 +395,23 @@ function printToolCall(toolName, args = '') {
  * @param {string} description - e.g. "Updating the spinner icon to use ..."
  */
 function printActionHint(description) {
-  if (process.stdout.isTTY) return;
+  if (!process.stdout.isTTY) {
+    return;
+  }
+  if (_isInkTuiActive()) {
+    return;
+  }
   console.log(c().dim(`  ${description}`));
 }
 
 function printThinkingStep(thought) {
-  if (process.stdout.isTTY) return;
-  const truncated = thought.length > 80 ? thought.slice(0, 80) + '...' : thought;
+  if (!process.stdout.isTTY) {
+    return;
+  }
+  if (_isInkTuiActive()) {
+    return;
+  }
+  const truncated = truncateToWidth(thought, 80);
   console.log(`  ${c().dim(DOT_DONE)} ${c().dim(truncated)}`);
 }
 

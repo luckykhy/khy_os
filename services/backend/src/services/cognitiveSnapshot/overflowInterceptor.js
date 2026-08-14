@@ -15,13 +15,13 @@
  */
 
 // 阈值上限的占用红线（§3.4「超过阈值上限的 80%」）。
-const BUDGET_CEIL_RATIO = 0.80;
+const BUDGET_CEIL_RATIO = 0.8;
 
 const ACTIONS = Object.freeze({
-  PROCEED: 'proceed',     // 预算充足，放行
-  COMPRESS: 'compress',   // 越线但仍可压：转压缩流
-  OFFLOAD: 'offload',     // 压缩已不够：转卸载流（L3）
-  BLOCK: 'block',         // 缺预算规划：阻断（防呆⑤）
+  PROCEED: 'proceed', // 预算充足，放行
+  COMPRESS: 'compress', // 越线但仍可压：转压缩流
+  OFFLOAD: 'offload', // 压缩已不够：转卸载流（L3）
+  BLOCK: 'block', // 缺预算规划：阻断（防呆⑤）
 });
 
 /**
@@ -34,9 +34,15 @@ function requireBudgetPlan(plan) {
   if (!plan || typeof plan !== 'object') {
     return { valid: false, missing: ['remaining', 'estimatedStepCost', 'strategy'] };
   }
-  if (!Number.isFinite(plan.remaining)) missing.push('remaining');
-  if (!Number.isFinite(plan.estimatedStepCost)) missing.push('estimatedStepCost');
-  if (!plan.strategy) missing.push('strategy');
+  if (!Number.isFinite(plan.remaining)) {
+    missing.push('remaining');
+  }
+  if (!Number.isFinite(plan.estimatedStepCost)) {
+    missing.push('estimatedStepCost');
+  }
+  if (!plan.strategy) {
+    missing.push('strategy');
+  }
   return { valid: missing.length === 0, missing };
 }
 
@@ -82,8 +88,9 @@ function preflight(args = {}) {
     action: canCompress ? ACTIONS.COMPRESS : ACTIONS.OFFLOAD,
     ratio,
     ceil,
-    reason: `投影占用 ${(ratio * 100).toFixed(1)}% 越过 ${(BUDGET_CEIL_RATIO * 100)}% 上限，`
-      + `强制转${canCompress ? '压缩' : '卸载'}流（§3.4 下溢出拦截）。`,
+    reason:
+      `投影占用 ${(ratio * 100).toFixed(1)}% 越过 ${BUDGET_CEIL_RATIO * 100}% 上限，` +
+      `强制转${canCompress ? '压缩' : '卸载'}流（§3.4 下溢出拦截）。`,
   };
 }
 
@@ -102,10 +109,14 @@ const TRUNCATION_PATTERNS = [
 
 /** 判定一个错误是否属于「上下文截断 / 超限」。 */
 function isTruncationError(err) {
-  if (!err) return false;
-  const msg = typeof err === 'string' ? err : (err.message || err.error || err.code || '');
+  if (!err) {
+    return false;
+  }
+  const msg = typeof err === 'string' ? err : err.message || err.error || err.code || '';
   const text = String(msg);
-  if (/context_length_exceeded|max_tokens|ECONTEXT/i.test(text)) return true;
+  if (/context_length_exceeded|max_tokens|ECONTEXT/i.test(text)) {
+    return true;
+  }
   return TRUNCATION_PATTERNS.some((re) => re.test(text));
 }
 

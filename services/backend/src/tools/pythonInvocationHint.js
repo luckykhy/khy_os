@@ -32,11 +32,17 @@ function pythonHintEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
   try {
     const reg = require('../services/flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_PYTHON_INVOCATION_HINT', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_PYTHON_INVOCATION_HINT;
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -49,7 +55,8 @@ const _DASH_C_RE = /\s-c\b/;
 const _PYTHON3_RE = /\bpython3(?:\.[0-9]+)?\b/;
 
 // 报错签名。
-const _NOT_FOUND_RE = /不是内部或外部命令|is not recognized|command not found|not found|No such file/i;
+const _NOT_FOUND_RE =
+  /不是内部或外部命令|is not recognized|command not found|not found|No such file/i;
 const _SYNTAX_ERR_RE = /SyntaxError|invalid syntax/i;
 // Python 3.11+ 对「用了未导入的模块」会确定式追加 "Did you forget to import 'X'?"——
 // 捕获 X。仅认这条**解释器自己给出**的建议(非臆测);裸 NameError 不匹配。
@@ -65,26 +72,34 @@ const _MISSING_IMPORT_RE = /Did you forget to import ['"]([^'"]+)['"]/i;
  */
 function buildPythonInvocationHint(command, output, env) {
   try {
-    if (!pythonHintEnabled(env)) return null;
+    if (!pythonHintEnabled(env)) {
+      return null;
+    }
     const cmd = String(command == null ? '' : command);
     const out = String(output == null ? '' : output);
-    if (!cmd || !_PYTHON_CMD_RE.test(cmd)) return null;
+    if (!cmd || !_PYTHON_CMD_RE.test(cmd)) {
+      return null;
+    }
 
     const hints = [];
 
     // 坑①:python3 在 Windows 找不到。
     if (_PYTHON3_RE.test(cmd) && _NOT_FOUND_RE.test(out)) {
       const onWin = typeof process !== 'undefined' && process.platform === 'win32';
-      hints.push(onWin
-        ? 'Windows 上没有 `python3` 可执行文件——用 `python`(或 `py -3`)。'
-        : '未找到 `python3`:确认已安装并在 PATH 中,或改用 `python` / `py -3`。');
+      hints.push(
+        onWin
+          ? 'Windows 上没有 `python3` 可执行文件——用 `python`(或 `py -3`)。'
+          : '未找到 `python3`:确认已安装并在 PATH 中,或改用 `python` / `py -3`。'
+      );
     }
 
     // 坑②:`python -c "..."` 单行里写了 def/多语句块 → SyntaxError。
     if (_DASH_C_RE.test(cmd) && _SYNTAX_ERR_RE.test(out)) {
-      hints.push('`python -c` 的单行代码不能包含 `def`/`class`/多行缩进块。'
-        + '改为:把脚本写进临时 `.py` 文件再 `python 文件.py`;'
-        + '或用 heredoc(`python - <<\'PY\' … PY`);或仅用分号连接的简单语句。');
+      hints.push(
+        '`python -c` 的单行代码不能包含 `def`/`class`/多行缩进块。' +
+          '改为:把脚本写进临时 `.py` 文件再 `python 文件.py`;' +
+          "或用 heredoc(`python - <<'PY' … PY`);或仅用分号连接的简单语句。"
+      );
     }
 
     // 坑③:inline 代码用了某模块却漏 import → NameError。仅当 Python(3.11+)确定式给出
@@ -93,10 +108,12 @@ function buildPythonInvocationHint(command, output, env) {
     const importMiss = out.match(_MISSING_IMPORT_RE);
     if (importMiss) {
       const modName = importMiss[1];
-      hints.push(_DASH_C_RE.test(cmd)
-        ? `NameError:代码用了 \`${modName}\` 却没导入——先加 \`import ${modName}\`。`
-          + '`python -c` 单行拼接极易漏掉 import;多语句脚本建议写进临时 `.py` 文件再 `python 文件.py`,更不易重犯。'
-        : `NameError:代码用了 \`${modName}\` 却没导入——在脚本顶部加 \`import ${modName}\`。`);
+      hints.push(
+        _DASH_C_RE.test(cmd)
+          ? `NameError:代码用了 \`${modName}\` 却没导入——先加 \`import ${modName}\`。` +
+              '`python -c` 单行拼接极易漏掉 import;多语句脚本建议写进临时 `.py` 文件再 `python 文件.py`,更不易重犯。'
+          : `NameError:代码用了 \`${modName}\` 却没导入——在脚本顶部加 \`import ${modName}\`。`
+      );
     }
 
     return hints.length ? hints.join(' ') : null;

@@ -16,7 +16,9 @@
  */
 
 function collapseWhitespace(s) {
-  return String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  return String(s == null ? '' : s)
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 module.exports = collapseWhitespace;

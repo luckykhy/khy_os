@@ -26,24 +26,36 @@ let _ledger = null;
 const _seen = new Set(); // 已留痕的 EvoRequirement.id，跨调用去重。
 
 function _getScanner() {
-  if (_scanner) return _scanner;
+  if (_scanner) {
+    return _scanner;
+  }
   try {
     const { PainPointScanner } = require('./painPointScanner');
     _scanner = new PainPointScanner();
-  } catch { _scanner = null; }
+  } catch {
+    _scanner = null;
+  }
   return _scanner;
 }
 
 function _getLedger() {
-  if (_ledger) return _ledger;
-  try { _ledger = require('./evoLedger'); } catch { _ledger = null; }
+  if (_ledger) {
+    return _ledger;
+  }
+  try {
+    _ledger = require('./evoLedger');
+  } catch {
+    _ledger = null;
+  }
   return _ledger;
 }
 
 function _remember(id) {
   if (_seen.size >= SEEN_CAP) {
     const oldest = _seen.values().next().value;
-    if (oldest !== undefined) _seen.delete(oldest);
+    if (oldest !== undefined) {
+      _seen.delete(oldest);
+    }
   }
   _seen.add(id);
 }
@@ -64,13 +76,19 @@ function observeFailure(friction = {}) {
   try {
     const scanner = _getScanner();
     const ledger = _getLedger();
-    if (!scanner || !ledger) return { observed: false, reason: 'bridge-unavailable' };
+    if (!scanner || !ledger) {
+      return { observed: false, reason: 'bridge-unavailable' };
+    }
 
     const req = scanner.scan(friction);
-    if (!req || !req.id) return { observed: false, reason: 'no-requirement' };
+    if (!req || !req.id) {
+      return { observed: false, reason: 'no-requirement' };
+    }
 
     // 有界去重：同一痛点签名每进程只留痕一次，避免反复失败刷爆日志。
-    if (_seen.has(req.id)) return { observed: false, deduped: true, requirementId: req.id, level: req.level };
+    if (_seen.has(req.id)) {
+      return { observed: false, deduped: true, requirementId: req.id, level: req.level };
+    }
     _remember(req.id);
 
     ledger.append(
@@ -86,7 +104,7 @@ function observeFailure(friction = {}) {
         impact: req.impact,
         surface: req.attribution && req.attribution.surface,
       },
-      { branch: OBSERVATION_BRANCH },
+      { branch: OBSERVATION_BRANCH }
     );
     return { observed: true, requirementId: req.id, level: req.level };
   } catch {
@@ -98,13 +116,22 @@ function observeFailure(friction = {}) {
 /** 读取运行态痛点待办积压（供离线 evolve 消费 / 测试）。 */
 function pendingObservations() {
   const ledger = _getLedger();
-  if (!ledger) return [];
-  try { return ledger.read({ branch: OBSERVATION_BRANCH }); }
-  catch { return []; }
+  if (!ledger) {
+    return [];
+  }
+  try {
+    return ledger.read({ branch: OBSERVATION_BRANCH });
+  } catch {
+    return [];
+  }
 }
 
 /** 仅供测试：清空进程内去重集合（不动盘上日志）。 */
-function _resetForTest() { _seen.clear(); _scanner = null; _ledger = null; }
+function _resetForTest() {
+  _seen.clear();
+  _scanner = null;
+  _ledger = null;
+}
 
 module.exports = {
   OBSERVATION_BRANCH,

@@ -32,7 +32,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env) {
   const raw = env && env.KHY_USER_MSG_COLLAPSE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -56,15 +58,21 @@ function countCharInString(str, char, start) {
 // tail cut) + tail. Fail-soft: any error → original text.
 function collapseLongUserMessage(text, env) {
   try {
-    if (typeof text !== 'string' || text.length === 0) return text;
-    if (!isEnabled(env || (typeof process !== 'undefined' ? process.env : {}))) return text;
-    if (text.length <= MAX_DISPLAY_CHARS) return text;
+    if (typeof text !== 'string' || text.length === 0) {
+      return text;
+    }
+    if (!isEnabled(env || (typeof process !== 'undefined' ? process.env : {}))) {
+      return text;
+    }
+    if (text.length <= MAX_DISPLAY_CHARS) {
+      return text;
+    }
     const head = text.slice(0, TRUNCATE_HEAD_CHARS);
     const tail = text.slice(-TRUNCATE_TAIL_CHARS);
     // Newlines in [HEAD, end) minus newlines in the tail = newlines hidden in
     // the omitted middle region [HEAD, len-TAIL). Mirrors CC exactly.
-    const hiddenLines = countCharInString(text, '\n', TRUNCATE_HEAD_CHARS)
-      - countCharInString(tail, '\n');
+    const hiddenLines =
+      countCharInString(text, '\n', TRUNCATE_HEAD_CHARS) - countCharInString(tail, '\n');
     return `${head}\n… +${hiddenLines} lines …\n${tail}`;
   } catch {
     return text;

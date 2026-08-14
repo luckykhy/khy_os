@@ -17,7 +17,7 @@
 const contextProfile = require('../contextProfile');
 
 function _milestones(archetype) {
-  return (archetype && Array.isArray(archetype.milestones)) ? archetype.milestones : [];
+  return archetype && Array.isArray(archetype.milestones) ? archetype.milestones : [];
 }
 
 /**
@@ -51,10 +51,14 @@ function buildPlan(archetype) {
 function _renderSliceText(slice) {
   const lines = [];
   lines.push(`# 里程碑 ${slice.index + 1}/${slice.total}: ${slice.title}`);
-  if (slice.goal) lines.push(`目标: ${slice.goal}`);
+  if (slice.goal) {
+    lines.push(`目标: ${slice.goal}`);
+  }
   if (slice.conventions && slice.conventions.length) {
     lines.push('约定:');
-    for (const c of slice.conventions) lines.push(`  - ${c}`);
+    for (const c of slice.conventions) {
+      lines.push(`  - ${c}`);
+    }
   }
   if (slice.steps && slice.steps.length) {
     lines.push('步骤:');
@@ -62,13 +66,19 @@ function _renderSliceText(slice) {
   }
   if (slice.files && slice.files.length) {
     lines.push('产物文件:');
-    for (const f of slice.files) lines.push(`  - ${f}`);
+    for (const f of slice.files) {
+      lines.push(`  - ${f}`);
+    }
   }
   if (slice.acceptance && slice.acceptance.length) {
     lines.push('验收:');
-    for (const a of slice.acceptance) lines.push(`  - ${a}`);
+    for (const a of slice.acceptance) {
+      lines.push(`  - ${a}`);
+    }
   }
-  if (slice.nextHint) lines.push(`下一步: ${slice.nextHint}`);
+  if (slice.nextHint) {
+    lines.push(`下一步: ${slice.nextHint}`);
+  }
   return lines.join('\n');
 }
 
@@ -96,7 +106,7 @@ function milestoneSlice(archetype, index, opts = {}) {
   const charBudget = contextProfile.deriveToolResultCap(contextWindow, defaultChars);
 
   // 完整切片
-  let slice = {
+  const slice = {
     ok: true,
     index,
     total,
@@ -107,9 +117,10 @@ function milestoneSlice(archetype, index, opts = {}) {
     steps: (m.steps || []).slice(),
     files: (m.files || []).slice(),
     acceptance: (m.acceptance || []).slice(),
-    nextHint: index + 1 < total
-      ? `完成本阶段后取里程碑 ${index + 2}/${total}`
-      : '这是最后一个里程碑，完成后跑 verify 收尾',
+    nextHint:
+      index + 1 < total
+        ? `完成本阶段后取里程碑 ${index + 2}/${total}`
+        : '这是最后一个里程碑，完成后跑 verify 收尾',
   };
 
   let text = _renderSliceText(slice);

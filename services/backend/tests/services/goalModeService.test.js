@@ -56,7 +56,7 @@ describe('goalModeService', () => {
   describe('preflightCheck', () => {
     test('passes with good model and tools', () => {
       const result = preflightCheck('build a project', {
-        modelName: 'claude-sonnet-4-20250514',
+        modelName: 'claude-sonnet-4-6',
         enabledTools: ['read', 'write', 'edit', 'bash', 'glob', 'grep'],
       });
       expect(result.canProceed).toBe(true);

@@ -20,12 +20,16 @@
  *   - 门控 KHY_STATUS_LINE         → 运行时硬开关
  */
 
+const khySettings = require('../repl/khySettings');
 const cfg = require('../statusLine/statusLineConfig');
 const runner = require('../statusLine/statusLineRunner');
-const khySettings = require('../repl/khySettings');
 
 function _chalk() {
-  try { return require('chalk'); } catch { /* fallthrough */ }
+  try {
+    return require('chalk');
+  } catch {
+    /* fallthrough */
+  }
   const id = (s) => s;
   return new Proxy({}, { get: () => id });
 }
@@ -36,18 +40,25 @@ async function handleStatusLine(subCommand, args = [], options = {}) {
   const sub = String(subCommand || 'show').toLowerCase();
   switch (sub) {
     case 'show':
-    case 'status': return _show(c);
+    case 'status':
+      return _show(c);
     case 'render':
-    case 'preview': return _render(c);
-    case 'set': return _set(c, args, options);
+    case 'preview':
+      return _render(c);
+    case 'set':
+      return _set(c, args, options);
     case 'off':
     case 'disable':
-    case 'clear': return _off(c);
+    case 'clear':
+      return _off(c);
     case 'on':
-    case 'enable': return _on(c);
-    case 'setup': return _setup(c);
+    case 'enable':
+      return _on(c);
+    case 'setup':
+      return _setup(c);
     case 'help':
-    default: return _help(c);
+    default:
+      return _help(c);
   }
 }
 
@@ -56,7 +67,9 @@ function _buildSnapshot() {
   const snap = { cwd: process.cwd(), addedDirs: [] };
   try {
     snap.version = require('../../../package.json').version || '';
-  } catch { snap.version = ''; }
+  } catch {
+    snap.version = '';
+  }
   // 刀99:session_id —— 注入当前会话 id(getCurrentSessionId 已 live·被 /rename、/color、/recap、
   // /topology、TUI 消费),叶子据此填顶层 session_id(对齐 CC StatusLine.tsx:302 session_id:getSessionId())。
   // 缺失/无 live 会话 → 叶子回退空串(不臆造)。
@@ -64,22 +77,31 @@ function _buildSnapshot() {
   try {
     _sessionId = require('../../services/session/sessionForestService').getCurrentSessionId() || '';
     snap.sessionId = _sessionId;
-  } catch { /* 缺失/无会话 → 叶子回退 session_id:'' */ }
+  } catch {
+    /* 缺失/无会话 → 叶子回退 session_id:'' */
+  }
   // 刀100:transcript_path —— 据当前 sessionId 解析 JSONL transcript 路径(jsonlPathFor 是公开只读
   // SSOT·已被 trajectoryReplay live 消费),叶子据此填顶层 transcript_path(对齐 CC types/statusLine.ts:7)。
   // 无 sessionId/解析失败 → 不注入,叶子发 ''(门控开)或省略键(门控关)。
   try {
     if (_sessionId) {
-      snap.transcriptPath = require('../../services/sessionPersistence').jsonlPathFor(_sessionId) || '';
+      snap.transcriptPath =
+        require('../../services/sessionPersistence').jsonlPathFor(_sessionId) || '';
     }
-  } catch { /* 解析失败 → 叶子回退 transcript_path:'' */ }
+  } catch {
+    /* 解析失败 → 叶子回退 transcript_path:'' */
+  }
   try {
     const hud = require('../hudRenderer');
     const st = typeof hud.getState === 'function' ? hud.getState() : {};
     // 刀96:display_name 走 formatModelLabel 友好名 SSOT(注入,叶子零依赖),不再回显 raw id。
     // 对齐 CC StatusLine.tsx:260 `display_name: renderModelName(runtimeModel)`。id 段保留原始 slug。
     let _formatModelLabel = null;
-    try { _formatModelLabel = require('../ccModelName').formatModelLabel; } catch { /* 缺失 → 叶子回退 raw */ }
+    try {
+      _formatModelLabel = require('../ccModelName').formatModelLabel;
+    } catch {
+      /* 缺失 → 叶子回退 raw */
+    }
     snap.model = {
       id: st.lastModel || '',
       displayName: cfg.resolveModelDisplayName(st.lastModel || '', _formatModelLabel, process.env),
@@ -97,28 +119,40 @@ function _buildSnapshot() {
     // hudRenderer.updateModelInfo 每轮累计;total_duration_ms 由 sessionStart 派生墙钟。
     snap.cost = {
       totalCostUSD: Number.isFinite(st.sessionCostUSD) ? st.sessionCostUSD : 0,
-      totalDurationMs: Number.isFinite(st.sessionStart) ? Math.max(0, Date.now() - st.sessionStart) : 0,
+      totalDurationMs: Number.isFinite(st.sessionStart)
+        ? Math.max(0, Date.now() - st.sessionStart)
+        : 0,
     };
     // 刀97:output_style 段 —— 注入当前输出样式名(getActiveOutputStyleName 已 live·读 KHY_OUTPUT_STYLE
     // 并应用默认 senior-engineer),叶子据此填 output_style.name(对齐 CC StatusLine.tsx:268)。
     try {
       snap.outputStyle = require('../../constants/outputStyles').getActiveOutputStyleName();
-    } catch { /* 缺失 → 叶子省略 output_style 段(不臆造) */ }
+    } catch {
+      /* 缺失 → 叶子省略 output_style 段(不臆造) */
+    }
     // 刀98:permission_mode 字段 —— 注入当前权限模式(getPermissionMode 已 live·default/plan/acceptEdits/
     // bypass),叶子做 CC 词汇映射填 permission_mode(对齐 CC StatusLine.tsx:228/331)。
     try {
       snap.permissionMode = require('../../services/toolCalling').getPermissionMode();
-    } catch { /* 缺失 → 叶子省略 permission_mode 字段(不臆造) */ }
-  } catch { /* leave model/context unset → buildStdinPayload fills safe defaults */ }
+    } catch {
+      /* 缺失 → 叶子省略 permission_mode 字段(不臆造) */
+    }
+  } catch {
+    /* leave model/context unset → buildStdinPayload fills safe defaults */
+  }
   return snap;
 }
 
 function _resolve() {
-  let value = {}; let sources = {};
+  let value = {};
+  let sources = {};
   try {
     const prov = khySettings.resolveKhySettingsWithProvenance({ cwd: process.cwd() });
-    value = prov.value || {}; sources = prov.sources || {};
-  } catch { /* fall back to empty */ }
+    value = prov.value || {};
+    sources = prov.sources || {};
+  } catch {
+    /* fall back to empty */
+  }
   return { resolved: cfg.resolveStatusLineSetting(value), source: sources.statusLine || null };
 }
 
@@ -148,7 +182,10 @@ function _render(c) {
     return true;
   }
   const { resolved } = _resolve();
-  const res = runner.renderOnce({ settings: { statusLine: _settingObj(resolved) }, snapshot: _buildSnapshot() });
+  const res = runner.renderOnce({
+    settings: { statusLine: _settingObj(resolved) },
+    snapshot: _buildSnapshot(),
+  });
   if (res.ok) {
     console.log('');
     console.log('  ' + res.line);
@@ -167,21 +204,39 @@ function _render(c) {
 
 /** Rebuild a settings.statusLine object from a resolved config (for runner injection). */
 function _settingObj(resolved) {
-  if (!resolved || !resolved.configured) return undefined;
-  return { type: resolved.type || 'command', command: resolved.command, padding: resolved.padding || 0 };
+  if (!resolved || !resolved.configured) {
+    return undefined;
+  }
+  return {
+    type: resolved.type || 'command',
+    command: resolved.command,
+    padding: resolved.padding || 0,
+  };
 }
 
 function _set(c, args, options) {
-  const command = (Array.isArray(args) ? args.join(' ') : String(args || '')).trim()
-    || (options && (options.command || options.cmd) ? String(options.command || options.cmd) : '');
+  const command =
+    (Array.isArray(args) ? args.join(' ') : String(args || '')).trim() ||
+    (options && (options.command || options.cmd) ? String(options.command || options.cmd) : '');
   if (!command) {
     console.log(c.yellow('用法: /statusline set <command>'));
     console.log(c.dim('  命令会通过 stdin 收到 JSON（model / cwd / context_window …）。'));
-    console.log(c.dim('  例: statusline set \'echo "$(cat | jq -r .model.display_name) · $(cat|jq -r .workspace.current_dir)"\''));
+    console.log(
+      c.dim(
+        '  例: statusline set \'echo "$(cat | jq -r .model.display_name) · $(cat|jq -r .workspace.current_dir)"\''
+      )
+    );
     return true;
   }
-  const padding = options && Number.isFinite(Number(options.padding)) ? Math.max(0, Math.floor(Number(options.padding))) : 0;
-  const ok = khySettings._persistObjectKhySetting('statusLine', { type: 'command', command, padding });
+  const padding =
+    options && Number.isFinite(Number(options.padding))
+      ? Math.max(0, Math.floor(Number(options.padding)))
+      : 0;
+  const ok = khySettings._persistObjectKhySetting('statusLine', {
+    type: 'command',
+    command,
+    padding,
+  });
   if (ok) {
     console.log(c.green('✓ 已写入状态行配置（用户层 ~/.khy/settings.json）'));
     console.log(c.dim('  注意：managed/project 层可能在读取时覆盖此值（企业策略契约）。'));

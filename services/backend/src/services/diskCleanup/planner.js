@@ -11,11 +11,12 @@
  * 总是只「选择」，从不删除。executor 拿 selected 执行，且执行前每项再过一次否决。
  */
 
+const { humanBytes: _humanBytes } = require('../byteFormat');
+
 const catalog = require('./junkCatalog');
 
 // 字节 → 人类可读(带空格、到 TB)收敛到单一真源 byteFormat.humanBytes
 // (与 diskAnalyzeReport / upstreamStudyReport 同口径,逐字节等价)。
-const { humanBytes: _humanBytes } = require('../byteFormat');
 
 /**
  * @param {object} scanResult - scanner.scan() 返回
@@ -24,16 +25,17 @@ const { humanBytes: _humanBytes } = require('../byteFormat');
  */
 function buildPlan(scanResult, opts = {}) {
   const includeReview = !!opts.includeReview;
-  const categoryFilter = Array.isArray(opts.categories) && opts.categories.length
-    ? new Set(opts.categories)
-    : null;
+  const categoryFilter =
+    Array.isArray(opts.categories) && opts.categories.length ? new Set(opts.categories) : null;
 
   const selected = [];
   const review = [];
   const skipped = [];
 
   for (const c of scanResult.candidates) {
-    if (categoryFilter && !categoryFilter.has(c.category)) continue;
+    if (categoryFilter && !categoryFilter.has(c.category)) {
+      continue;
+    }
 
     if (!c.eligible) {
       // 不存在/已空 不值得展示为 skipped 噪音，但保留含数据/受保护/在用的，便于透明。

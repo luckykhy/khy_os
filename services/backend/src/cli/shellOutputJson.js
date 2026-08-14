@@ -26,7 +26,9 @@
 const MAX_JSON_FORMAT_LENGTH = 10000; // CC MAX_JSON_FORMAT_LENGTH
 
 function _gateOff(env) {
-  const v = String((env && env.KHY_SHELL_OUTPUT_JSON) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_SHELL_OUTPUT_JSON) || '')
+    .trim()
+    .toLowerCase();
   return v === '0' || v === 'false' || v === 'off' || v === 'no';
 }
 
@@ -64,10 +66,16 @@ function tryFormatJsonLine(line) {
  */
 function formatShellOutputJson(content, env) {
   try {
-    if (typeof content !== 'string' || content === '') return content;
+    if (typeof content !== 'string' || content === '') {
+      return content;
+    }
     const e = env || (typeof process !== 'undefined' ? process.env : undefined);
-    if (_gateOff(e)) return content;
-    if (content.length > MAX_JSON_FORMAT_LENGTH) return content;
+    if (_gateOff(e)) {
+      return content;
+    }
+    if (content.length > MAX_JSON_FORMAT_LENGTH) {
+      return content;
+    }
     return content.split('\n').map(tryFormatJsonLine).join('\n');
   } catch {
     return content;

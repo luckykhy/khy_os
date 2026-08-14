@@ -24,7 +24,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** 每类记忆的过期视界默认天数(与 distiller.staleThresholdDays 一致)。 */
 const DEFAULT_HORIZON_DAYS = Object.freeze({
-  user: 3650,      // 身份类:近乎不过期
+  user: 3650, // 身份类:近乎不过期
   feedback: 540,
   reference: 365,
   project: 180,
@@ -32,16 +32,19 @@ const DEFAULT_HORIZON_DAYS = Object.freeze({
 });
 
 /** 是否启用过期判定(门控关 → 永不判过期,召回不追加标注)。 */
-function isEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
+function isEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
   const v = String((env && env.KHY_MEMORY_STALENESS) != null ? env.KHY_MEMORY_STALENESS : '')
-    .trim().toLowerCase();
+    .trim()
+    .toLowerCase();
   return !['0', 'false', 'off', 'no'].includes(v);
 }
 
 /** 读 env 正浮点(缺失 / 非法 / 非正 → undefined,交后续用默认)。 */
 function _envPosFloat(env, key) {
   const raw = env && env[key];
-  if (raw == null || String(raw).trim() === '') return undefined;
+  if (raw == null || String(raw).trim() === '') {
+    return undefined;
+  }
   const n = parseFloat(raw);
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
@@ -52,7 +55,7 @@ function _envPosFloat(env, key) {
  * @param {Object} [env]
  * @returns {number}
  */
-function horizonDays(type, env = (typeof process !== 'undefined' ? process.env : {})) {
+function horizonDays(type, env = typeof process !== 'undefined' ? process.env : {}) {
   const t = String(type || '').toLowerCase();
   const e = env && typeof env === 'object' ? env : {};
   const perTypeKey = {
@@ -62,9 +65,7 @@ function horizonDays(type, env = (typeof process !== 'undefined' ? process.env :
     project: 'KHY_MEMORY_STALE_DAYS_PROJECT',
   }[t];
   if (perTypeKey) {
-    return _envPosFloat(e, perTypeKey)
-      || DEFAULT_HORIZON_DAYS[t]
-      || DEFAULT_HORIZON_DAYS._default;
+    return _envPosFloat(e, perTypeKey) || DEFAULT_HORIZON_DAYS[t] || DEFAULT_HORIZON_DAYS._default;
   }
   return _envPosFloat(e, 'KHY_MEMORY_STALE_DAYS') || DEFAULT_HORIZON_DAYS._default;
 }
@@ -79,26 +80,30 @@ function horizonDays(type, env = (typeof process !== 'undefined' ? process.env :
  * @param {Object} [env]
  * @returns {{stale:boolean, ageDays:number|null, horizonDays:number}}
  */
-function assessStaleness(params = {}, env = (typeof process !== 'undefined' ? process.env : {})) {
+function assessStaleness(params = {}, env = typeof process !== 'undefined' ? process.env : {}) {
   const type = params && params.type;
   const horizon = horizonDays(type, env);
 
   // 门控关:永不判过期(字节回退)。
-  if (!isEnabled(env)) return { stale: false, ageDays: null, horizonDays: horizon };
+  if (!isEnabled(env)) {
+    return { stale: false, ageDays: null, horizonDays: horizon };
+  }
 
   const rawUpdated = params && params.updatedMs;
   const rawNow = params && params.nowMs;
   // 注意:Number(null) === 0(有限),会把缺失时间戳误当 epoch 0 → 永远过期。
   // 必须先排除 null / '' / undefined,再做数值化。
-  const updatedMs = (rawUpdated == null || rawUpdated === '') ? NaN : Number(rawUpdated);
-  const nowMs = (rawNow == null || rawNow === '') ? NaN : Number(rawNow);
+  const updatedMs = rawUpdated == null || rawUpdated === '' ? NaN : Number(rawUpdated);
+  const nowMs = rawNow == null || rawNow === '' ? NaN : Number(rawNow);
   // 缺时间戳 / 非法 → fail-soft 判为不过期(绝不误标好记忆)。
   if (!Number.isFinite(updatedMs) || !Number.isFinite(nowMs)) {
     return { stale: false, ageDays: null, horizonDays: horizon };
   }
 
   const ageMs = nowMs - updatedMs;
-  if (!(ageMs > 0)) return { stale: false, ageDays: 0, horizonDays: horizon }; // 未来 / 同刻 → 不过期
+  if (!(ageMs > 0)) {
+    return { stale: false, ageDays: 0, horizonDays: horizon };
+  } // 未来 / 同刻 → 不过期
   const ageDays = ageMs / MS_PER_DAY;
   return { stale: ageDays > horizon, ageDays, horizonDays: horizon };
 }
@@ -110,7 +115,9 @@ function assessStaleness(params = {}, env = (typeof process !== 'undefined' ? pr
  * @returns {number|null}
  */
 function parseUpdatedMs(updatedValue) {
-  if (updatedValue == null || updatedValue === '') return null;
+  if (updatedValue == null || updatedValue === '') {
+    return null;
+  }
   const ms = Date.parse(String(updatedValue));
   return Number.isFinite(ms) ? ms : null;
 }
@@ -121,7 +128,9 @@ function parseUpdatedMs(updatedValue) {
  * @returns {string}
  */
 function formatStaleNote(assessment) {
-  if (!assessment || !assessment.stale) return '';
+  if (!assessment || !assessment.stale) {
+    return '';
+  }
   const age = Number.isFinite(assessment.ageDays) ? Math.round(assessment.ageDays) : null;
   const horizon = Math.round(assessment.horizonDays);
   const agePart = age != null ? `约 ${age} 天前更新` : '更新时间不明';

@@ -21,11 +21,20 @@
  *   getSkillPrompt(name)       — Get the prompt.md content for a skill
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const BUILT_IN_DIR = path.join(__dirname, 'built-in');
-const USER_SKILLS_DIR = path.join(os.homedir(), '.khy', 'skills');
+// Lazily resolve the user skills dir (portable-aware); fallback to legacy.
+// Non-portable installs resolve to the same ~/.khy/skills via dataHome.
+function _userSkillsDir() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return path.join(getDataHome(), 'skills');
+  } catch {
+    return path.join(os.homedir(), '.khy', 'skills');
+  }
+}
 const LEGACY_USER_DIR = path.join(os.homedir(), '.khyquant', 'skills');
 
 /** @type {Map<string, Skill>} */
@@ -59,7 +68,9 @@ let _cacheReady = false;
  */
 function loadSkillsFromDir(dir, source = 'user') {
   const skills = new Map();
-  if (!fs.existsSync(dir)) return skills;
+  if (!fs.existsSync(dir)) {
+    return skills;
+  }
 
   let entries;
   try {
@@ -69,12 +80,16 @@ function loadSkillsFromDir(dir, source = 'user') {
   }
 
   for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+    if (!entry.isDirectory()) {
+      continue;
+    }
 
     const skillDir = path.join(dir, entry.name);
     const manifestPath = path.join(skillDir, 'manifest.json');
 
-    if (!fs.existsSync(manifestPath)) continue;
+    if (!fs.existsSync(manifestPath)) {
+      continue;
+    }
 
     try {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
@@ -112,7 +127,7 @@ function discoverAllSkills(projectDir) {
   for (const [name, skill] of legacyUser) {
     skills.set(name, skill);
   }
-  const userSkills = loadSkillsFromDir(USER_SKILLS_DIR, 'user');
+  const userSkills = loadSkillsFromDir(_userSkillsDir(), 'user');
   for (const [name, skill] of userSkills) {
     skills.set(name, skill);
   }
@@ -124,7 +139,10 @@ function discoverAllSkills(projectDir) {
       skills.set(name, skill);
     }
     // Legacy project path
-    const projectLegacy = loadSkillsFromDir(path.join(projectDir, '.khyquant', 'skills'), 'project');
+    const projectLegacy = loadSkillsFromDir(
+      path.join(projectDir, '.khyquant', 'skills'),
+      'project'
+    );
     for (const [name, skill] of projectLegacy) {
       skills.set(name, skill);
     }
@@ -140,7 +158,9 @@ function discoverAllSkills(projectDir) {
         skills.set(id, _convertLegacySkill(id, legacySkill));
       }
     }
-  } catch { /* legacy loader is optional */ }
+  } catch {
+    /* legacy loader is optional */
+  }
 
   _skillCache = skills;
   _cacheReady = true;
@@ -178,7 +198,9 @@ function invalidateCache() {
  * @returns {boolean}
  */
 function _isCatalogVisible(skill) {
-  if (!skill.userInvocable) return false;
+  if (!skill.userInvocable) {
+    return false;
+  }
   try {
     return require('../services/skillStateService').isEnabled(skill.name);
   } catch {
@@ -196,7 +218,9 @@ function getSkillCommands() {
   const commands = [];
 
   for (const skill of skills.values()) {
-    if (!_isCatalogVisible(skill)) continue;
+    if (!_isCatalogVisible(skill)) {
+      continue;
+    }
     commands.push({
       name: skill.name,
       description: skill.description,
@@ -221,7 +245,7 @@ function formatSkillListing(charBudget = 8000, context) {
   let commands;
   if (context) {
     const activeSkills = getActiveSkills(context);
-    commands = activeSkills.map(skill => ({
+    commands = activeSkills.map((skill) => ({
       name: skill.name,
       description: skill.description,
       trigger: skill.trigger,
@@ -233,32 +257,37 @@ function formatSkillListing(charBudget = 8000, context) {
     commands = getSkillCommands();
   }
 
-  if (commands.length === 0) return '';
+  if (commands.length === 0) {
+    return '';
+  }
 
   // Catalog line: "- /trigger: description (use when: <whenToUse>)". The
   // when-to-use hint is appended only when present, so skills without it keep
   // the minimal name+description shape.
   const formatLine = (cmd, descLen) => {
-    const desc = cmd.description.length > descLen
-      ? cmd.description.slice(0, descLen - 1) + '\u2026'
-      : cmd.description;
+    const desc =
+      cmd.description.length > descLen
+        ? cmd.description.slice(0, descLen - 1) + '\u2026'
+        : cmd.description;
     const hint = cmd.whenToUse
       ? ` (use when: ${cmd.whenToUse.length > 120 ? cmd.whenToUse.slice(0, 119) + '\u2026' : cmd.whenToUse})`
       : '';
     return `- ${cmd.trigger}: ${desc}${hint}`;
   };
 
-  const lines = commands.map(cmd => formatLine(cmd, 250));
+  const lines = commands.map((cmd) => formatLine(cmd, 250));
 
   const full = lines.join('\n');
-  if (full.length <= charBudget) return full;
+  if (full.length <= charBudget) {
+    return full;
+  }
 
   // Truncate descriptions to fit within budget
   const overhead = commands.reduce((sum, cmd) => sum + cmd.trigger.length + 4, 0);
   const availableForDescs = charBudget - overhead;
   const maxDescLen = Math.max(20, Math.floor(availableForDescs / commands.length));
 
-  return commands.map(cmd => formatLine(cmd, maxDescLen)).join('\n');
+  return commands.map((cmd) => formatLine(cmd, maxDescLen)).join('\n');
 }
 
 // ── Glob matching (zero-dependency) ───────────────────────────────────────
@@ -280,7 +309,9 @@ function _globToRegex(pattern) {
       re += '.*';
       i += 2;
       // Skip trailing /
-      if (pattern[i] === '/') i++;
+      if (pattern[i] === '/') {
+        i++;
+      }
     } else if (ch === '*') {
       // * matches anything except /
       re += '[^/]*';
@@ -306,10 +337,14 @@ function _globToRegex(pattern) {
  * @returns {boolean}
  */
 function _matchesGlob(filePath, patterns) {
-  if (!filePath || !patterns || patterns.length === 0) return false;
+  if (!filePath || !patterns || patterns.length === 0) {
+    return false;
+  }
   const normalized = filePath.replace(/\\/g, '/');
   for (const pat of patterns) {
-    if (_globToRegex(pat).test(normalized)) return true;
+    if (_globToRegex(pat).test(normalized)) {
+      return true;
+    }
   }
   return false;
 }
@@ -334,7 +369,9 @@ function getActiveSkills(context) {
   let cwdFiles = null;
 
   for (const skill of skills.values()) {
-    if (!_isCatalogVisible(skill)) continue;
+    if (!_isCatalogVisible(skill)) {
+      continue;
+    }
 
     // No paths constraint → always active
     if (!skill.paths || skill.paths.length === 0) {
@@ -391,7 +428,9 @@ function matchAndActivateByPath(filePath) {
   const matched = new Set();
 
   for (const [name, skill] of skills) {
-    if (!skill.paths || skill.paths.length === 0) continue;
+    if (!skill.paths || skill.paths.length === 0) {
+      continue;
+    }
     if (_matchesGlob(filePath, skill.paths)) {
       matched.add(name);
     }
@@ -410,20 +449,28 @@ function _scanCwdFiles(dir, maxDepth) {
   const files = [];
   try {
     _scanDir(dir, '', maxDepth, files);
-  } catch { /* access error */ }
+  } catch {
+    /* access error */
+  }
   return files;
 }
 
 function _scanDir(base, rel, depth, out) {
-  if (depth < 0) return;
+  if (depth < 0) {
+    return;
+  }
   let entries;
   try {
     entries = fs.readdirSync(path.join(base, rel), { withFileTypes: true });
-  } catch { return; }
+  } catch {
+    return;
+  }
 
   for (const entry of entries) {
     // Skip hidden dirs and node_modules
-    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') {
+      continue;
+    }
     const relPath = rel ? rel + '/' + entry.name : entry.name;
     if (entry.isFile()) {
       out.push(relPath);
@@ -443,14 +490,24 @@ function findSkill(identifier) {
   const normalized = identifier.startsWith('/') ? identifier : `/${identifier}`;
 
   // Direct name match
-  if (skills.has(identifier)) return skills.get(identifier);
+  if (skills.has(identifier)) {
+    return skills.get(identifier);
+  }
 
   // Trigger or alias match
   for (const skill of skills.values()) {
-    if (skill.trigger === normalized) return skill;
-    if (skill.trigger === identifier) return skill;
-    if (skill.aliases && skill.aliases.includes(normalized)) return skill;
-    if (skill.aliases && skill.aliases.includes(identifier)) return skill;
+    if (skill.trigger === normalized) {
+      return skill;
+    }
+    if (skill.trigger === identifier) {
+      return skill;
+    }
+    if (skill.aliases && skill.aliases.includes(normalized)) {
+      return skill;
+    }
+    if (skill.aliases && skill.aliases.includes(identifier)) {
+      return skill;
+    }
   }
 
   return null;
@@ -477,10 +534,14 @@ async function executeSkill(name, args, context = {}) {
   try {
     const skillState = require('../services/skillStateService');
     if (!skillState.isEnabled(skill.name)) {
-      throw new Error(`Skill "${skill.name}" is disabled. Run \`khy skill enable ${skill.name}\` to re-enable it.`);
+      throw new Error(
+        `Skill "${skill.name}" is disabled. Run \`khy skill enable ${skill.name}\` to re-enable it.`
+      );
     }
   } catch (err) {
-    if (err && /is disabled\./.test(err.message)) throw err;
+    if (err && /is disabled\./.test(err.message)) {
+      throw err;
+    }
     /* ledger unavailable — treat as enabled */
   }
 
@@ -488,7 +549,9 @@ async function executeSkill(name, args, context = {}) {
   try {
     const { recordUsage } = require('../services/skillCuratorService');
     recordUsage(skill.name, skill.source);
-  } catch { /* curator is optional */ }
+  } catch {
+    /* curator is optional */
+  }
 
   // If the skill has a custom handler, execute it
   if (skill.handlerPath && fs.existsSync(skill.handlerPath)) {
@@ -498,10 +561,16 @@ async function executeSkill(name, args, context = {}) {
     try {
       const activeSkillContext = require('../services/activeSkillContext');
       activeRestore = activeSkillContext.setActiveSkill(skill);
-    } catch { /* marker optional */ }
+    } catch {
+      /* marker optional */
+    }
     try {
       // Clear require cache for hot-reload during development
-      try { delete require.cache[require.resolve(skill.handlerPath)]; } catch { /* ignore */ }
+      try {
+        delete require.cache[require.resolve(skill.handlerPath)];
+      } catch {
+        /* ignore */
+      }
 
       const handler = require(skill.handlerPath);
       if (typeof handler.execute === 'function') {
@@ -526,7 +595,9 @@ async function executeSkill(name, args, context = {}) {
       try {
         const activeSkillContext = require('../services/activeSkillContext');
         activeSkillContext.clearActiveSkill(activeRestore);
-      } catch { /* marker optional */ }
+      } catch {
+        /* marker optional */
+      }
     }
   }
 
@@ -551,9 +622,13 @@ async function executeSkill(name, args, context = {}) {
  */
 function getSkillPrompt(name) {
   const skill = findSkill(name);
-  if (!skill) return null;
+  if (!skill) {
+    return null;
+  }
 
-  if (!skill.promptPath || !fs.existsSync(skill.promptPath)) return null;
+  if (!skill.promptPath || !fs.existsSync(skill.promptPath)) {
+    return null;
+  }
 
   try {
     return fs.readFileSync(skill.promptPath, 'utf-8');
@@ -569,15 +644,22 @@ function getSkillPrompt(name) {
  * @private
  */
 function _buildSkill(manifest, skillDir, source) {
-  if (!manifest.name) return null;
+  if (!manifest.name) {
+    return null;
+  }
 
   const promptPath = path.join(skillDir, 'prompt.md');
   const handlerPath = path.join(skillDir, 'handler.js');
   const rawTrigger = manifest.trigger || manifest.command || `/${manifest.name}`;
-  const trigger = String(rawTrigger).startsWith('/') ? String(rawTrigger) : `/${String(rawTrigger)}`;
-  const userInvocable = typeof manifest.user_invocable === 'boolean'
-    ? manifest.user_invocable
-    : (typeof manifest.userInvocable === 'boolean' ? manifest.userInvocable : true);
+  const trigger = String(rawTrigger).startsWith('/')
+    ? String(rawTrigger)
+    : `/${String(rawTrigger)}`;
+  const userInvocable =
+    typeof manifest.user_invocable === 'boolean'
+      ? manifest.user_invocable
+      : typeof manifest.userInvocable === 'boolean'
+        ? manifest.userInvocable
+        : true;
 
   return {
     name: manifest.name,
@@ -593,11 +675,15 @@ function _buildSkill(manifest, skillDir, source) {
     // execution context and model. Normalized here so every consumer reads one
     // shape regardless of which key style the manifest used.
     whenToUse: manifest.when_to_use || manifest.whenToUse || '',
-    allowedTools: _normalizeToolList(manifest['allowed-tools'] || manifest.allowed_tools || manifest.allowedTools),
+    allowedTools: _normalizeToolList(
+      manifest['allowed-tools'] || manifest.allowed_tools || manifest.allowedTools
+    ),
     // DesireCore-style control: when true the model may NOT invoke this skill
     // via SkillTool (human CLI `skill run` still works). Default false.
     disableModelInvocation: _truthyFlag(
-      manifest['disable-model-invocation'] ?? manifest.disable_model_invocation ?? manifest.disableModelInvocation,
+      manifest['disable-model-invocation'] ??
+        manifest.disable_model_invocation ??
+        manifest.disableModelInvocation
     ),
     context: manifest.context === 'fork' ? 'fork' : 'inline',
     model: manifest.model || null,
@@ -626,9 +712,13 @@ function _convertLegacySkill(id, legacySkill) {
     paths: Array.isArray(meta.paths) ? meta.paths : null,
     // CC-parity frontmatter (s07): same normalized shape as manifest skills.
     whenToUse: meta.when_to_use || meta.whenToUse || '',
-    allowedTools: _normalizeToolList(meta['allowed-tools'] || meta.allowed_tools || meta.allowedTools),
+    allowedTools: _normalizeToolList(
+      meta['allowed-tools'] || meta.allowed_tools || meta.allowedTools
+    ),
     disableModelInvocation: _truthyFlag(
-      meta['disable-model-invocation'] ?? meta.disable_model_invocation ?? meta.disableModelInvocation,
+      meta['disable-model-invocation'] ??
+        meta.disable_model_invocation ??
+        meta.disableModelInvocation
     ),
     context: meta.context === 'fork' ? 'fork' : 'inline',
     model: meta.model || null,
@@ -650,11 +740,14 @@ function _convertLegacySkill(id, legacySkill) {
  */
 function _normalizeToolList(value) {
   if (Array.isArray(value)) {
-    const list = value.map(v => String(v).trim()).filter(Boolean);
+    const list = value.map((v) => String(v).trim()).filter(Boolean);
     return list.length ? list : null;
   }
   if (typeof value === 'string') {
-    const list = value.split(/[,\s]+/).map(v => v.trim()).filter(Boolean);
+    const list = value
+      .split(/[,\s]+/)
+      .map((v) => v.trim())
+      .filter(Boolean);
     return list.length ? list : null;
   }
   return null;
@@ -669,7 +762,9 @@ function _normalizeToolList(value) {
  * @returns {boolean}
  */
 function _truthyFlag(value) {
-  if (typeof value === 'boolean') return value;
+  if (typeof value === 'boolean') {
+    return value;
+  }
   if (typeof value === 'string') {
     return /^(true|yes|on|1)$/i.test(value.trim());
   }

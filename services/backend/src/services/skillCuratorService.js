@@ -13,12 +13,30 @@
  * Data file: ~/.khyquant/growth/skill_usage.json
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const GROWTH_DIR = path.join(os.homedir(), '.khyquant', 'growth');
+// Portable-aware homes resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+
+function _dataHome() {
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    return getDataHome();
+  } catch {
+    return path.join(os.homedir(), '.khy');
+  }
+}
+const GROWTH_DIR = path.join(_appHome(), 'growth');
 const USAGE_FILE = path.join(GROWTH_DIR, 'skill_usage.json');
-const USER_SKILLS_DIR = path.join(os.homedir(), '.khy', 'skills');
+const USER_SKILLS_DIR = path.join(_dataHome(), 'skills');
 const ARCHIVE_DIR = path.join(USER_SKILLS_DIR, '.archive');
 
 const DEFAULT_CONFIG = {
@@ -39,7 +57,9 @@ function _loadData() {
     if (fs.existsSync(USAGE_FILE)) {
       return JSON.parse(fs.readFileSync(USAGE_FILE, 'utf8'));
     }
-  } catch { /* corrupt file — start fresh */ }
+  } catch {
+    /* corrupt file — start fresh */
+  }
   return { version: 1, skills: {}, config: { ...DEFAULT_CONFIG } };
 }
 
@@ -59,7 +79,9 @@ function _saveData(data) {
  * @param {string} source - 'built-in' | 'user' | 'project'
  */
 function recordUsage(name, source) {
-  if (!name) return;
+  if (!name) {
+    return;
+  }
 
   const data = _loadData();
   const now = new Date().toISOString();
@@ -79,7 +101,9 @@ function recordUsage(name, source) {
   const entry = data.skills[name];
   entry.use_count += 1;
   entry.last_activity_at = now;
-  if (source) entry.source = source;
+  if (source) {
+    entry.source = source;
+  }
 
   // Auto-restore stale→active on use
   if (entry.state === 'stale') {
@@ -110,10 +134,14 @@ function runCurator(allSkills = []) {
 
   for (const skill of allSkills) {
     const entry = data.skills[skill.name];
-    if (!entry) continue;
+    if (!entry) {
+      continue;
+    }
 
     // Built-in and pinned are exempt
-    if (entry.source === 'built-in' || entry.pinned) continue;
+    if (entry.source === 'built-in' || entry.pinned) {
+      continue;
+    }
 
     const lastActivity = new Date(entry.last_activity_at).getTime();
 
@@ -132,9 +160,10 @@ function runCurator(allSkills = []) {
 
   _saveData(data);
 
-  const summary = transitioned.length === 0
-    ? 'No lifecycle transitions needed.'
-    : `${transitioned.length} skill(s) transitioned: ${transitioned.map(t => `${t.name} (${t.from}→${t.to})`).join(', ')}`;
+  const summary =
+    transitioned.length === 0
+      ? 'No lifecycle transitions needed.'
+      : `${transitioned.length} skill(s) transitioned: ${transitioned.map((t) => `${t.name} (${t.from}→${t.to})`).join(', ')}`;
 
   return { transitioned, summary };
 }
@@ -146,7 +175,9 @@ function runCurator(allSkills = []) {
  */
 function pinSkill(name) {
   const data = _loadData();
-  if (!data.skills[name]) return false;
+  if (!data.skills[name]) {
+    return false;
+  }
   data.skills[name].pinned = true;
   _saveData(data);
   return true;
@@ -159,7 +190,9 @@ function pinSkill(name) {
  */
 function unpinSkill(name) {
   const data = _loadData();
-  if (!data.skills[name]) return false;
+  if (!data.skills[name]) {
+    return false;
+  }
   data.skills[name].pinned = false;
   _saveData(data);
   return true;
@@ -171,7 +204,9 @@ function unpinSkill(name) {
  * @returns {boolean}
  */
 function archiveSkill(skill) {
-  if (!skill || !skill.dir) return false;
+  if (!skill || !skill.dir) {
+    return false;
+  }
 
   const data = _loadData();
   if (data.skills[skill.name]) {
@@ -192,7 +227,9 @@ function restoreSkill(name) {
   const archivePath = path.join(ARCHIVE_DIR, name);
   const restorePath = path.join(USER_SKILLS_DIR, name);
 
-  if (!fs.existsSync(archivePath)) return false;
+  if (!fs.existsSync(archivePath)) {
+    return false;
+  }
 
   _moveDir(archivePath, restorePath);
 
@@ -214,7 +251,9 @@ function restoreSkill(name) {
  */
 function getCuratorStatus(allSkills = []) {
   const data = _loadData();
-  let active = 0, stale = 0, archived = 0;
+  let active = 0,
+    stale = 0,
+    archived = 0;
   const pinned = [];
   const staleList = [];
 
@@ -225,12 +264,22 @@ function getCuratorStatus(allSkills = []) {
       continue;
     }
     switch (entry.state) {
-      case 'active': active++; break;
-      case 'stale': stale++; staleList.push(skill.name); break;
-      case 'archived': archived++; break;
-      default: active++;
+      case 'active':
+        active++;
+        break;
+      case 'stale':
+        stale++;
+        staleList.push(skill.name);
+        break;
+      case 'archived':
+        archived++;
+        break;
+      default:
+        active++;
     }
-    if (entry.pinned) pinned.push(skill.name);
+    if (entry.pinned) {
+      pinned.push(skill.name);
+    }
   }
 
   return { active, stale, archived, pinned, staleList };
@@ -249,11 +298,17 @@ function getSkillUsage(name) {
 // ── Internal helpers ───────────────────────────────────────────────────────
 
 function _archiveSkillDir(skill) {
-  if (!skill.dir || !fs.existsSync(skill.dir)) return false;
+  if (!skill.dir || !fs.existsSync(skill.dir)) {
+    return false;
+  }
 
   // Only archive from user skills directory
-  if (!skill.dir.startsWith(USER_SKILLS_DIR)) return false;
-  if (skill.dir.includes('.archive')) return false;
+  if (!skill.dir.startsWith(USER_SKILLS_DIR)) {
+    return false;
+  }
+  if (skill.dir.includes('.archive')) {
+    return false;
+  }
 
   _ensureDir(ARCHIVE_DIR);
   const dest = path.join(ARCHIVE_DIR, skill.name || path.basename(skill.dir));

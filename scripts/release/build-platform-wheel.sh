@@ -17,5 +17,6 @@ else
   python3 -m build --sdist --wheel
 fi
 
-echo "\nBuilt artifacts:"
+echo ""
+echo "Built artifacts:"
 ls -lh dist

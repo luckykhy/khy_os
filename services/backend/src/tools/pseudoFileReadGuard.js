@@ -45,7 +45,9 @@ const DEFAULT_TIMEOUT_MS = 4000;
 const DEFAULT_MAX_BYTES = 512 * 1024;
 
 function _isOff(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return OFF_VALUES.includes(v);
 }
 
@@ -72,11 +74,17 @@ function pseudoReadGuardEnabled(env = process.env) {
  */
 function isPseudoFsPath(absPath, platform = process.platform) {
   try {
-    if (platform !== 'linux') return null;
-    if (typeof absPath !== 'string' || !absPath) return null;
+    if (platform !== 'linux') {
+      return null;
+    }
+    if (typeof absPath !== 'string' || !absPath) {
+      return null;
+    }
     for (const root of ['proc', 'sys']) {
       const base = `/${root}`;
-      if (absPath === base || absPath.startsWith(`${base}/`)) return root;
+      if (absPath === base || absPath.startsWith(`${base}/`)) {
+        return root;
+      }
     }
     return null;
   } catch {
@@ -96,13 +104,21 @@ function shouldBoundedRead(args) {
     const a = args && typeof args === 'object' ? args : {};
     const env = a.env || process.env;
     const platform = a.platform || process.platform;
-    if (!pseudoReadGuardEnabled(env)) return null;
+    if (!pseudoReadGuardEnabled(env)) {
+      return null;
+    }
     const stat = a.stat;
-    if (!stat || typeof stat !== 'object') return null;
+    if (!stat || typeof stat !== 'object') {
+      return null;
+    }
     // 仅接管常规文件；FIFO/套接字/设备由 OPS-125 处理，目录由 readFile 特判。
-    if (typeof stat.isFile !== 'function' || stat.isFile() !== true) return null;
+    if (typeof stat.isFile !== 'function' || stat.isFile() !== true) {
+      return null;
+    }
     // 伪文件签名：size===0（内容读时现生成，size 无意义）。非 0 → 放行历史路径。
-    if (Number(stat.size) !== 0) return null;
+    if (Number(stat.size) !== 0) {
+      return null;
+    }
     return isPseudoFsPath(a.absPath, platform);
   } catch {
     return null;
@@ -133,7 +149,9 @@ const _KIND_LABEL = Object.freeze({ proc: '/proc 伪文件', sys: '/sys 伪文�
 function buildPseudoTimeoutMessage(info) {
   let i = info;
   try {
-    if (!i || typeof i !== 'object') i = {};
+    if (!i || typeof i !== 'object') {
+      i = {};
+    }
     const label = _KIND_LABEL[i.kind] || '伪文件';
     const shown = i.path == null ? '' : String(i.path);
     const tail = shown ? `：${shown}` : '';
@@ -165,14 +183,20 @@ function readPseudoFileBounded(params) {
     const p = params && typeof params === 'object' ? params : {};
     const filePath = p.filePath;
     const kind = p.kind === 'sys' ? 'sys' : 'proc';
-    const maxBytes = Number.isFinite(Number(p.maxBytes)) && Number(p.maxBytes) > 0
-      ? Math.floor(Number(p.maxBytes)) : DEFAULT_MAX_BYTES;
-    const timeoutMs = Number.isFinite(Number(p.timeoutMs)) && Number(p.timeoutMs) > 0
-      ? Math.floor(Number(p.timeoutMs)) : DEFAULT_TIMEOUT_MS;
-    if (typeof filePath !== 'string' || !filePath) return { handled: false };
+    const maxBytes =
+      Number.isFinite(Number(p.maxBytes)) && Number(p.maxBytes) > 0
+        ? Math.floor(Number(p.maxBytes))
+        : DEFAULT_MAX_BYTES;
+    const timeoutMs =
+      Number.isFinite(Number(p.timeoutMs)) && Number(p.timeoutMs) > 0
+        ? Math.floor(Number(p.timeoutMs))
+        : DEFAULT_TIMEOUT_MS;
+    if (typeof filePath !== 'string' || !filePath) {
+      return { handled: false };
+    }
 
-    const spawnSync = (p.deps && typeof p.deps.spawnSync === 'function')
-      ? p.deps.spawnSync : _realSpawnSync;
+    const spawnSync =
+      p.deps && typeof p.deps.spawnSync === 'function' ? p.deps.spawnSync : _realSpawnSync;
     const { cmd, args } = buildBoundedReadArgs(filePath, maxBytes);
 
     let res;
@@ -185,11 +209,15 @@ function readPseudoFileBounded(params) {
     } catch {
       return { handled: false };
     }
-    if (!res || typeof res !== 'object') return { handled: false };
+    if (!res || typeof res !== 'object') {
+      return { handled: false };
+    }
 
     // 超时被杀：spawnSync 置 error.code==='ETIMEDOUT' 或 signal==='SIGTERM'。
-    const timedOut = (res.error && res.error.code === 'ETIMEDOUT')
-      || res.signal === 'SIGTERM' || res.signal === 'SIGKILL';
+    const timedOut =
+      (res.error && res.error.code === 'ETIMEDOUT') ||
+      res.signal === 'SIGTERM' ||
+      res.signal === 'SIGKILL';
     if (timedOut) {
       return {
         handled: true,
@@ -202,8 +230,12 @@ function readPseudoFileBounded(params) {
       };
     }
     // 其它 spawn 错误（如 head 不存在 ENOENT）→ 回退历史路径，别误报。
-    if (res.error) return { handled: false };
-    if (res.status !== 0) return { handled: false };
+    if (res.error) {
+      return { handled: false };
+    }
+    if (res.status !== 0) {
+      return { handled: false };
+    }
 
     const buf = res.stdout;
     const bytes = buf ? buf.length : 0;

@@ -39,11 +39,17 @@ function isImageGenFailureSummaryEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_IMAGE_GEN_FAILURE_SUMMARY', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_IMAGE_GEN_FAILURE_SUMMARY;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -64,26 +70,41 @@ const _SECRET_PATTERNS = [
  */
 function sanitizeCause(raw, maxLen = 200) {
   let s = raw == null ? '' : String(raw);
-  if (!s) return '';
-  for (const re of _SECRET_PATTERNS) s = s.replace(re, (m) => (m.includes('@') ? '//***@' : '***'));
+  if (!s) {
+    return '';
+  }
+  for (const re of _SECRET_PATTERNS) {
+    s = s.replace(re, (m) => (m.includes('@') ? '//***@' : '***'));
+  }
   // 追加一趟「现代密钥」脱敏(sk-proj-/sk-svcacct-/sk-admin-…),复用 modernKeyRedaction 叶子,
   // 门控 KHY_MODERN_KEY_REDACTION;严格超集,只多抹密钥。同目录 → require 同层。
   try {
     const r = require('./modernKeyRedaction').redactModernKeys(
-      s, (typeof process !== 'undefined' ? process.env : {}));
-    if (r != null) s = r;
-  } catch { /* fail-soft → legacy s(仅 legacy 脱敏) */ }
+      s,
+      typeof process !== 'undefined' ? process.env : {}
+    );
+    if (r != null) {
+      s = r;
+    }
+  } catch {
+    /* fail-soft → legacy s(仅 legacy 脱敏) */
+  }
   s = s.replace(/\s+/g, ' ').trim();
-  if (s.length > maxLen) s = `${s.slice(0, maxLen)}…`;
+  if (s.length > maxLen) {
+    s = `${s.slice(0, maxLen)}…`;
+  }
   return s;
 }
 
 // 归类信号(顺序敏感:auth/no_key 先于更泛的 network,401/403 命中即认证)。
-const _NO_KEY_RE = /(no\s+api\s*key|api\s*key\s+(not\s+)?(configured|missing|found|set)|缺少\s*(api\s*)?key|缺少\s*AGNES_API_KEY|未配置.*key|no\s+available\s+key|无可用(密钥|api\s*key)|key\s+pool\s+empty|没有可用的?\s*(密钥|key)|都不可用|NO_USABLE_KEY|NO_BACKEND|未检测到任何图像生成后端)/i;
-const _AUTH_RE = /(\b401\b|\b403\b|unauthorized|forbidden|invalid\s+api\s*key|invalid\s+token|authentication\s+failed|auth(entication)?\s+error|认证失败|鉴权失败|api\s*key.*(invalid|expired|错误|无效|过期)|\[auth\])/i;
+const _NO_KEY_RE =
+  /(no\s+api\s*key|api\s*key\s+(not\s+)?(configured|missing|found|set)|缺少\s*(api\s*)?key|缺少\s*AGNES_API_KEY|未配置.*key|no\s+available\s+key|无可用(密钥|api\s*key)|key\s+pool\s+empty|没有可用的?\s*(密钥|key)|都不可用|NO_USABLE_KEY|NO_BACKEND|未检测到任何图像生成后端)/i;
+const _AUTH_RE =
+  /(\b401\b|\b403\b|unauthorized|forbidden|invalid\s+api\s*key|invalid\s+token|authentication\s+failed|auth(entication)?\s+error|认证失败|鉴权失败|api\s*key.*(invalid|expired|错误|无效|过期)|\[auth\])/i;
 const _RATE_RE = /(\b429\b|rate\s*limit|too\s+many\s+requests|quota|限流|配额|频率)/i;
 const _TIMEOUT_RE = /(timeout|timed\s*out|ETIMEDOUT|ESOCKETTIMEDOUT|超时)/i;
-const _NETWORK_RE = /(ECONNREFUSED|ENOTFOUND|ECONNRESET|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|socket\s+hang\s*up|network\s+error|dns|proxy|代理|连接被拒|无法连接|\b50[234]\b|bad\s+gateway|service\s+unavailable)/i;
+const _NETWORK_RE =
+  /(ECONNREFUSED|ENOTFOUND|ECONNRESET|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|socket\s+hang\s*up|network\s+error|dns|proxy|代理|连接被拒|无法连接|\b50[234]\b|bad\s+gateway|service\s+unavailable)/i;
 
 /**
  * 归类一次图像生成失败。仅读文本特征,绝不抛。
@@ -93,12 +114,24 @@ const _NETWORK_RE = /(ECONNREFUSED|ENOTFOUND|ECONNRESET|EAI_AGAIN|EHOSTUNREACH|E
 function classifyImageGenFailure(rawError) {
   try {
     const s = rawError == null ? '' : String(rawError);
-    if (!s) return 'unknown';
-    if (_NO_KEY_RE.test(s)) return 'no_key';
-    if (_AUTH_RE.test(s)) return 'auth';
-    if (_RATE_RE.test(s)) return 'rate_limit';
-    if (_TIMEOUT_RE.test(s)) return 'timeout';
-    if (_NETWORK_RE.test(s)) return 'network';
+    if (!s) {
+      return 'unknown';
+    }
+    if (_NO_KEY_RE.test(s)) {
+      return 'no_key';
+    }
+    if (_AUTH_RE.test(s)) {
+      return 'auth';
+    }
+    if (_RATE_RE.test(s)) {
+      return 'rate_limit';
+    }
+    if (_TIMEOUT_RE.test(s)) {
+      return 'timeout';
+    }
+    if (_NETWORK_RE.test(s)) {
+      return 'network';
+    }
     return 'unknown';
   } catch {
     return 'unknown';
@@ -131,7 +164,9 @@ const _NEEDS_KEY_OFFER = new Set(['auth', 'no_key']);
 function buildImageGenFailureMessage({ rawError, backend, model, env } = {}) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!isImageGenFailureSummaryEnabled(e)) return null;
+    if (!isImageGenFailureSummaryEnabled(e)) {
+      return null;
+    }
 
     const category = classifyImageGenFailure(rawError);
     const headline = _CATEGORY_HEADLINE[category] || _CATEGORY_HEADLINE.unknown;
@@ -144,8 +179,12 @@ function buildImageGenFailureMessage({ rawError, backend, model, env } = {}) {
     lines.push(`图像生成失败:${headline}。`);
     if (backendId || modelId) {
       const parts = [];
-      if (backendId) parts.push(`后端 ${backendId}`);
-      if (modelId) parts.push(`模型 ${modelId}`);
+      if (backendId) {
+        parts.push(`后端 ${backendId}`);
+      }
+      if (modelId) {
+        parts.push(`模型 ${modelId}`);
+      }
       lines.push(`本次尝试:${parts.join('·')}。`);
     }
     if (cause) {
@@ -154,11 +193,17 @@ function buildImageGenFailureMessage({ rawError, backend, model, env } = {}) {
 
     // ② 针对类别的下一步询问 / 配置邀约。
     if (_NEEDS_KEY_OFFER.has(category)) {
-      lines.push('需要我帮你配置图像生成模型(Agnes 或 OpenAI 兼容)的 API Key 吗?配好后即可重新生成。');
+      lines.push(
+        '需要我帮你配置图像生成模型(Agnes 或 OpenAI 兼容)的 API Key 吗?配好后即可重新生成。'
+      );
     } else if (category === 'rate_limit') {
-      lines.push('可以稍后重试;若经常触发,需要我帮你配置另一个图像生成模型的 API Key 以分担额度吗?');
+      lines.push(
+        '可以稍后重试;若经常触发,需要我帮你配置另一个图像生成模型的 API Key 以分担额度吗?'
+      );
     } else if (category === 'timeout' || category === 'network') {
-      lines.push('请确认网络/代理可达该模型端点;需要我帮你换用或配置另一个图像生成模型的 API Key 吗?');
+      lines.push(
+        '请确认网络/代理可达该模型端点;需要我帮你换用或配置另一个图像生成模型的 API Key 吗?'
+      );
     } else {
       lines.push('需要我帮你配置图像生成模型(Agnes 或 OpenAI 兼容)的 API Key,再重试生成吗?');
     }

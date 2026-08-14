@@ -37,16 +37,28 @@ const _OFF = new Set(['0', 'false', 'off', 'no', 'disable', 'disabled']);
  */
 function uninstallEnabled(env = process.env) {
   try {
-    const raw = String((env && env.KHY_UNINSTALL) || '').trim().toLowerCase();
-    if (!raw) return true;
+    const raw = String((env && env.KHY_UNINSTALL) || '')
+      .trim()
+      .toLowerCase();
+    if (!raw) {
+      return true;
+    }
     return !_OFF.has(raw);
-  } catch { return true; }
+  } catch {
+    return true;
+  }
 }
 
 /** 稳定化路径：非法输入 → null；否则 path.resolve（不触盘）。 */
 function _norm(p) {
-  if (!p || typeof p !== 'string') return null;
-  try { return path.resolve(p); } catch { return null; }
+  if (!p || typeof p !== 'string') {
+    return null;
+  }
+  try {
+    return path.resolve(p);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -80,10 +92,14 @@ const KIND = {
  * @returns {Array<{id,label,path,kind,reversible,note}>} 去重后的目标（存在性由调用方核对）
  */
 function buildUninstallTargets(facts, env = process.env) {
-  if (!uninstallEnabled(env)) return [];
+  if (!uninstallEnabled(env)) {
+    return [];
+  }
   const f = facts && typeof facts === 'object' ? facts : {};
   const home = _norm(f.homedir);
-  if (!home) return [];
+  if (!home) {
+    return [];
+  }
 
   const homes = f.homes && typeof f.homes === 'object' ? f.homes : {};
   const pointer = f.pointer && typeof f.pointer === 'object' ? f.pointer : null;
@@ -93,8 +109,12 @@ function buildUninstallTargets(facts, env = process.env) {
   const seen = new Set();
   const add = (id, label, p, kind, reversible, note) => {
     const abs = _norm(p);
-    if (!abs) return;
-    if (seen.has(abs)) return;
+    if (!abs) {
+      return;
+    }
+    if (seen.has(abs)) {
+      return;
+    }
     seen.add(abs);
     out.push({ id, label, path: abs, kind, reversible: !!reversible, note: note || '' });
   };
@@ -104,56 +124,123 @@ function buildUninstallTargets(facts, env = process.env) {
   const defaultLegacy = path.join(home, '.khyquant');
   const defaultBase = path.join(home, '.khyos');
 
-  add('data-home', 'khy 数据家 (~/.khy)',
-    homes.dataHome || defaultData, KIND.DATA, false,
-    '会话/记忆/数据库/缓存主目录，删除不可逆');
+  add(
+    'data-home',
+    'khy 数据家 (~/.khy)',
+    homes.dataHome || defaultData,
+    KIND.DATA,
+    false,
+    '会话/记忆/数据库/缓存主目录，删除不可逆'
+  );
   // 解析器可能被 KHY_DATA_HOME 指到别处；两者都列（去重保证不重复）。
-  add('data-home-default', 'khy 数据家默认位置 (~/.khy)',
-    defaultData, KIND.DATA, false, '默认数据家位置');
+  add(
+    'data-home-default',
+    'khy 数据家默认位置 (~/.khy)',
+    defaultData,
+    KIND.DATA,
+    false,
+    '默认数据家位置'
+  );
 
-  add('legacy-app-home', 'khyquant 遗留数据家 (~/.khyquant)',
-    homes.legacyAppHome || homes.appHome || defaultLegacy, KIND.DATA, false,
-    '历史对话/版本缓存/技能等遗留数据');
-  add('legacy-app-home-default', 'khyquant 遗留数据家默认位置 (~/.khyquant)',
-    defaultLegacy, KIND.DATA, false, '默认遗留数据家位置');
+  add(
+    'legacy-app-home',
+    'khyquant 遗留数据家 (~/.khyquant)',
+    homes.legacyAppHome || homes.appHome || defaultLegacy,
+    KIND.DATA,
+    false,
+    '历史对话/版本缓存/技能等遗留数据'
+  );
+  add(
+    'legacy-app-home-default',
+    'khyquant 遗留数据家默认位置 (~/.khyquant)',
+    defaultLegacy,
+    KIND.DATA,
+    false,
+    '默认遗留数据家位置'
+  );
 
-  add('base-home', 'khyos 生态底座数据家 (~/.khyos)',
-    homes.baseHome || defaultBase, KIND.DATA, false,
-    '底座 data/cache/models/logs');
-  add('base-home-default', 'khyos 底座数据家默认位置 (~/.khyos)',
-    defaultBase, KIND.DATA, false, '默认底座数据家位置');
+  add(
+    'base-home',
+    'khyos 生态底座数据家 (~/.khyos)',
+    homes.baseHome || defaultBase,
+    KIND.DATA,
+    false,
+    '底座 data/cache/models/logs'
+  );
+  add(
+    'base-home-default',
+    'khyos 底座数据家默认位置 (~/.khyos)',
+    defaultBase,
+    KIND.DATA,
+    false,
+    '默认底座数据家位置'
+  );
 
   // ── 2. 运行时 / 大任务临时（可重建） ──
-  add('runtime-home', 'khy 大任务运行时 (~/.khy-runtime)',
-    path.join(home, '.khy-runtime'), KIND.RUNTIME, true,
-    '大任务运行时缓存，可安全重建');
+  add(
+    'runtime-home',
+    'khy 大任务运行时 (~/.khy-runtime)',
+    path.join(home, '.khy-runtime'),
+    KIND.RUNTIME,
+    true,
+    '大任务运行时缓存，可安全重建'
+  );
 
   // ── 3. 异盘迁移后的数据家（记录在 pointer；只有落在家目录之外才单列，否则已被上面覆盖） ──
   if (pointer) {
     if (pointer.dataHome) {
-      add('relocated-data-home', 'khy 迁移后数据家 (指针记录)',
-        pointer.dataHome, KIND.DATA, false, '曾用 storage migrate 迁到非系统盘');
+      add(
+        'relocated-data-home',
+        'khy 迁移后数据家 (指针记录)',
+        pointer.dataHome,
+        KIND.DATA,
+        false,
+        '曾用 storage migrate 迁到非系统盘'
+      );
     }
     if (pointer.projectDataHome) {
-      add('relocated-project-home', 'khy 迁移后项目数据家 (指针记录)',
-        pointer.projectDataHome, KIND.DATA, false, '迁移后的项目级会话/记忆家');
+      add(
+        'relocated-project-home',
+        'khy 迁移后项目数据家 (指针记录)',
+        pointer.projectDataHome,
+        KIND.DATA,
+        false,
+        '迁移后的项目级会话/记忆家'
+      );
     }
   }
   // 项目数据家（解析器所在，若非默认位置）。
   if (homes.projectDataHome) {
-    add('project-data-home', 'khy 项目数据家 (指针/解析)',
-      homes.projectDataHome, KIND.DATA, false, '项目级会话/轨迹/记忆');
+    add(
+      'project-data-home',
+      'khy 项目数据家 (指针/解析)',
+      homes.projectDataHome,
+      KIND.DATA,
+      false,
+      '项目级会话/轨迹/记忆'
+    );
   }
 
   // ── 4. 可见别名 symlink（khy-Trajectory，落在各数据家父目录旁；家目录侧最常见） ──
-  add('visible-alias-home', 'khy 可见别名 (~/khy-Trajectory)',
-    path.join(home, 'khy-Trajectory'), KIND.ALIAS, true,
-    '指向数据家的可见 symlink（本身无数据）');
+  add(
+    'visible-alias-home',
+    'khy 可见别名 (~/khy-Trajectory)',
+    path.join(home, 'khy-Trajectory'),
+    KIND.ALIAS,
+    true,
+    '指向数据家的可见 symlink（本身无数据）'
+  );
 
   // ── 5. 指针文件：随 ~/.khy 一起删；但若用户选择保留数据家，仍应能单独清指针 ──
   const pf = _norm(f.pointerFile) || path.join(home, '.khy', '.location.json');
-  add('location-pointer', 'khy 位置指针 (.location.json)',
-    pf, KIND.POINTER, true, '数据家位置 breadcrumb（元数据）');
+  add(
+    'location-pointer',
+    'khy 位置指针 (.location.json)',
+    pf,
+    KIND.POINTER,
+    true,
+    '数据家位置 breadcrumb（元数据）'
+  );
 
   return out;
 }

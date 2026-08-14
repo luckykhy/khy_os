@@ -29,7 +29,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 function isErrorSolutionAdvisorEnabled(env = process.env) {
   try {
     const raw = env && env.KHY_ERROR_SOLUTION_ADVISOR;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -48,7 +50,8 @@ const SOLUTION_RULES = Object.freeze([
   {
     name: 'permission',
     re: /\beacces\b|permission denied|operation not permitted|\beperm\b|拒绝访问|权限不足|没有权限/,
-    solution: '权限不足:若是工具被权限模式拦下,按 Shift+Tab 切换权限模式后重试;若是文件系统权限,检查目标文件/目录的属主与读写位(必要时 chmod / chown 或换可写目录)。',
+    solution:
+      '权限不足:若是工具被权限模式拦下,按 Shift+Tab 切换权限模式后重试;若是文件系统权限,检查目标文件/目录的属主与读写位(必要时 chmod / chown 或换可写目录)。',
   },
   // ── 下载 / HTTP 404 ───────────────────────────────────────────────────────
   // 远端资源没找到(非本地路径/命令缺失)。必须排在 path-not-found / command-not-found
@@ -57,31 +60,36 @@ const SOLUTION_RULES = Object.freeze([
   {
     name: 'download-failed',
     re: /invoke-webrequest|webcmdletwebresponseexception|webexception|http\/\d(?:\.\d)?\s+404\b|\bhttp\s+404\b|\b404\s+not\s+found\b|response status code does not indicate success|curl:\s*\(22\)/,
-    solution: '下载/网络请求失败(远端 404 或错误响应):是远端资源没找到,不是本地命令或路径缺失。核对下载 URL 的仓库/标签(tag)/资产名(发布资产名常随版本变化,别猜固定 URL),先用发布 API 列出真实资产再选对应系统架构的那个(`gh release list -R <owner>/<repo>` 或 GitHub releases API)后重新下载。',
+    solution:
+      '下载/网络请求失败(远端 404 或错误响应):是远端资源没找到,不是本地命令或路径缺失。核对下载 URL 的仓库/标签(tag)/资产名(发布资产名常随版本变化,别猜固定 URL),先用发布 API 列出真实资产再选对应系统架构的那个(`gh release list -R <owner>/<repo>` 或 GitHub releases API)后重新下载。',
   },
   // ── 路径不存在 ────────────────────────────────────────────────────────────
   {
     name: 'path-not-found',
     re: /\benoent\b|no such file or directory|not found|不存在|找不到(文件|路径|目录)/,
-    solution: '目标路径不存在:确认文件/目录路径是否正确(区分相对/绝对路径与大小写),或先创建它再重试。',
+    solution:
+      '目标路径不存在:确认文件/目录路径是否正确(区分相对/绝对路径与大小写),或先创建它再重试。',
   },
   // ── 命令未找到(与「路径不存在」区分:127 / not recognized) ────────────────
   {
     name: 'command-not-found',
     re: /command not found|: not found\b|not recognized as an internal|无法将“.+”识别为|exit(ed)? (with )?(code )?127\b/,
-    solution: '命令未安装或不在 PATH:确认该命令已安装并可在 PATH 中找到(用 `which`/`where` 检查),或改用其等价命令。',
+    solution:
+      '命令未安装或不在 PATH:确认该命令已安装并可在 PATH 中找到(用 `which`/`where` 检查),或改用其等价命令。',
   },
   // ── 工具调用缺必填参数(dogfood 发现:grep 未传 pattern → 只报错无建议) ──────
   {
     name: 'missing-parameter',
     re: /required parameter .* is missing|missing required (parameter|argument)|缺少必填参数|参数.*(缺失|缺少|未(提供|传入?))/,
-    solution: '工具调用缺少必填参数:补全报错中点名的必填字段(如 grep 的 pattern)后重新调用;若不确定参数,先查该工具的参数说明再重试。',
+    solution:
+      '工具调用缺少必填参数:补全报错中点名的必填字段(如 grep 的 pattern)后重新调用;若不确定参数,先查该工具的参数说明再重试。',
   },
   // ── 连接被拒 ──────────────────────────────────────────────────────────────
   {
     name: 'connection-refused',
     re: /\beconnrefused\b|connection refused|连接被拒绝|拒绝连接/,
-    solution: '连接被拒绝:确认目标服务/端口已启动并在监听,主机与端口填写正确;若经代理,检查代理是否可用。',
+    solution:
+      '连接被拒绝:确认目标服务/端口已启动并在监听,主机与端口填写正确;若经代理,检查代理是否可用。',
   },
   // ── DNS / 主机解析失败 ────────────────────────────────────────────────────
   {
@@ -93,31 +101,36 @@ const SOLUTION_RULES = Object.freeze([
   {
     name: 'port-in-use',
     re: /\beaddrinuse\b|address already in use|port .* in use|端口.*(被占用|已被使用)/,
-    solution: '端口已被占用:换一个空闲端口,或先结束占用该端口的进程(`lsof -i :<port>` / `netstat` 定位后再重启)。',
+    solution:
+      '端口已被占用:换一个空闲端口,或先结束占用该端口的进程(`lsof -i :<port>` / `netstat` 定位后再重启)。',
   },
   // ── 超时 ──────────────────────────────────────────────────────────────────
   {
     name: 'timeout',
     re: /\betimedout\b|timed? ?out|timeout|超时/,
-    solution: '请求/操作超时:网络或目标服务可能较慢,稍后重试;必要时增大超时时长或拆小任务分批执行。',
+    solution:
+      '请求/操作超时:网络或目标服务可能较慢,稍后重试;必要时增大超时时长或拆小任务分批执行。',
   },
   // ── 磁盘空间不足 ──────────────────────────────────────────────────────────
   {
     name: 'disk-full',
     re: /\benospc\b|no space left on device|磁盘空间(不足|已满)|disk (is )?full/,
-    solution: '磁盘空间不足:清理无用文件/缓存或扩容后重试(`df -h` 查看占用,khy 亦提供磁盘清理能力)。',
+    solution:
+      '磁盘空间不足:清理无用文件/缓存或扩容后重试(`df -h` 查看占用,khy 亦提供磁盘清理能力)。',
   },
   // ── 内存溢出 ──────────────────────────────────────────────────────────────
   {
     name: 'out-of-memory',
     re: /\benomem\b|out of memory|heap out of memory|javascript heap|内存(不足|溢出)/,
-    solution: '内存不足:减小处理批量/并发,或提高进程内存上限(如 Node `--max-old-space-size`)后重试。',
+    solution:
+      '内存不足:减小处理批量/并发,或提高进程内存上限(如 Node `--max-old-space-size`)后重试。',
   },
   // ── 模块/依赖缺失 ────────────────────────────────────────────────────────
   {
     name: 'module-not-found',
     re: /cannot find module|module_not_found|modulenotfounderror|no module named|依赖(缺失|未安装)/,
-    solution: '缺少依赖模块:安装缺失依赖后重试(Node `npm install`,Python `pip install <pkg>`),并确认在正确的项目/虚拟环境中运行。',
+    solution:
+      '缺少依赖模块:安装缺失依赖后重试(Node `npm install`,Python `pip install <pkg>`),并确认在正确的项目/虚拟环境中运行。',
   },
   // ── 文件已存在 ────────────────────────────────────────────────────────────
   {
@@ -131,7 +144,8 @@ const SOLUTION_RULES = Object.freeze([
   {
     name: 'auth',
     re: /\b401\b|\b403\b|unauthorized|forbidden|invalid api key|authentication failed|认证失败|鉴权失败/,
-    solution: '认证/鉴权失败:检查对应服务的凭据(API Key / Token)是否已配置且有效、未过期,以及是否有访问该资源的权限。',
+    solution:
+      '认证/鉴权失败:检查对应服务的凭据(API Key / Token)是否已配置且有效、未过期,以及是否有访问该资源的权限。',
   },
   // ── 限流 ──────────────────────────────────────────────────────────────────
   {
@@ -143,7 +157,8 @@ const SOLUTION_RULES = Object.freeze([
   {
     name: 'git-conflict',
     re: /merge conflict|conflict.*prevented|冲突,请先|合并冲突/,
-    solution: 'Git 冲突:先解决冲突文件(编辑冲突标记后 `git add`),或 `git merge --abort` / `git rebase --abort` 回退再处理。',
+    solution:
+      'Git 冲突:先解决冲突文件(编辑冲突标记后 `git add`),或 `git merge --abort` / `git rebase --abort` 回退再处理。',
   },
 ]);
 
@@ -157,27 +172,40 @@ const SOLUTION_RULES = Object.freeze([
  */
 function suggestSolutions(errorTexts, opts = {}) {
   try {
-    if (!isErrorSolutionAdvisorEnabled(opts.env)) return [];
+    if (!isErrorSolutionAdvisorEnabled(opts.env)) {
+      return [];
+    }
     const list = Array.isArray(errorTexts) ? errorTexts : [errorTexts];
     const haystack = list
       .map((t) => (t == null ? '' : String(t)))
       .join('\n')
       .toLowerCase();
-    if (!haystack.trim()) return [];
+    if (!haystack.trim()) {
+      return [];
+    }
     const max = Number.isFinite(opts.max) && opts.max > 0 ? Math.floor(opts.max) : 4;
     const out = [];
     const seen = new Set();
     let downloadFailed = false;
     for (const rule of SOLUTION_RULES) {
-      if (out.length >= max) break;
+      if (out.length >= max) {
+        break;
+      }
       if (rule.re.test(haystack) && !seen.has(rule.name)) {
         // web 404 已被 download-failed 精准命中时,抑制两个会被裸 "not found" / ": not found"
         // 误触的泛化家族(path-not-found / command-not-found),避免把「远端资源没找到」再
         // 混淆成「本地路径/命令缺失」。download-failed 声明在它们之前,故此处必已判定。
-        if (downloadFailed && (rule.name === 'path-not-found' || rule.name === 'command-not-found')) continue;
+        if (
+          downloadFailed &&
+          (rule.name === 'path-not-found' || rule.name === 'command-not-found')
+        ) {
+          continue;
+        }
         seen.add(rule.name);
         out.push(rule.solution);
-        if (rule.name === 'download-failed') downloadFailed = true;
+        if (rule.name === 'download-failed') {
+          downloadFailed = true;
+        }
       }
     }
     return out;
@@ -194,10 +222,17 @@ function suggestSolutions(errorTexts, opts = {}) {
  */
 function matchedSolutionNames(errorTexts, opts = {}) {
   try {
-    if (!isErrorSolutionAdvisorEnabled(opts.env)) return [];
+    if (!isErrorSolutionAdvisorEnabled(opts.env)) {
+      return [];
+    }
     const list = Array.isArray(errorTexts) ? errorTexts : [errorTexts];
-    const haystack = list.map((t) => (t == null ? '' : String(t))).join('\n').toLowerCase();
-    if (!haystack.trim()) return [];
+    const haystack = list
+      .map((t) => (t == null ? '' : String(t)))
+      .join('\n')
+      .toLowerCase();
+    if (!haystack.trim()) {
+      return [];
+    }
     return SOLUTION_RULES.filter((r) => r.re.test(haystack)).map((r) => r.name);
   } catch {
     return [];

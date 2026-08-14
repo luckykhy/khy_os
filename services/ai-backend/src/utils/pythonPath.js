@@ -45,7 +45,7 @@ function getContainerPythonCandidates() {
     posixAbs('usr', 'local', 'bin', 'python3'),
     posixAbs('usr', 'bin', 'python3'),
     posixAbs('usr', 'local', 'bin', 'python'),
-    posixAbs('usr', 'bin', 'python')
+    posixAbs('usr', 'bin', 'python'),
   ];
 }
 
@@ -65,7 +65,7 @@ function resolveFromPath(command) {
     const lookup = isWindows() ? `where ${command}` : `which ${command}`;
     const output = execSync(lookup, {
       encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
     if (!output) return null;
     return output.split(/\r?\n/)[0].trim() || null;
@@ -100,7 +100,7 @@ function collectCandidates() {
         path.join(backendRoot, '.venv', 'Scripts', 'python.exe'),
         path.join(backendRoot, 'venv', 'Scripts', 'python.exe'),
         path.join(backendRoot, 'ml', '.venv', 'Scripts', 'python.exe'),
-        path.join(backendRoot, 'ml', 'venv', 'Scripts', 'python.exe')
+        path.join(backendRoot, 'ml', 'venv', 'Scripts', 'python.exe'),
       ]
     : [
         path.join(backendRoot, '.venv', 'bin', 'python3'),
@@ -110,7 +110,7 @@ function collectCandidates() {
         path.join(backendRoot, 'ml', '.venv', 'bin', 'python3'),
         path.join(backendRoot, 'ml', '.venv', 'bin', 'python'),
         path.join(backendRoot, 'ml', 'venv', 'bin', 'python3'),
-        path.join(backendRoot, 'ml', 'venv', 'bin', 'python')
+        path.join(backendRoot, 'ml', 'venv', 'bin', 'python'),
       ];
 
   candidates.push(...localVenvCandidates);

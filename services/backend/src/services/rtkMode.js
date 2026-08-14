@@ -20,36 +20,54 @@
  *     缺失且 autoInstallEnabled() 时 fire-and-forget 触发,绝不阻塞回合。
  */
 
-const path = require('path');
-const fs = require('fs');
 const { spawnSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const { getAppDataDir } = require('../utils/dataHome');
 
 const cmdAvail = require('./gateway/adapters/_commandAvailability');
 // 数据家单一真源:本地二进制落 ~/.khy/bin/rtk,与 backend 同根(见 ../utils/dataHome)。
-const { getAppDataDir } = require('../utils/dataHome');
 
 // ── 门控(遵循 khy _enabled() 惯例,默认 on,关 ∈ {0,false,off,no})────────────
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function _truthyEnv(name, dflt = 'true') {
   const raw = process.env[name];
-  const v = String(raw === undefined || raw === null ? dflt : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? dflt : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
 /** 主开关。关 = 完全回到现状(smartTruncation 仍在)。 */
-function modeEnabled() { return _truthyEnv('KHY_RTK_MODE'); }
+function modeEnabled() {
+  return _truthyEnv('KHY_RTK_MODE');
+}
+
 /** 子开关:dedicated 文件工具(grep content)路由。受主开关约束。 */
-function fileToolsEnabled() { return modeEnabled() && _truthyEnv('KHY_RTK_FILE_TOOLS'); }
+function fileToolsEnabled() {
+  return modeEnabled() && _truthyEnv('KHY_RTK_FILE_TOOLS');
+}
+
 /** 首次缺失时是否允许自动安装(联网/编译)。关 = 只在 rtk 已存在时启用。 */
-function autoInstallEnabled() { return _truthyEnv('KHY_RTK_AUTO_INSTALL'); }
+function autoInstallEnabled() {
+  return _truthyEnv('KHY_RTK_AUTO_INSTALL');
+}
 
 // ── 可注入 spawn(测试入口)────────────────────────────────────────────────
 let _spawnImpl = null; // (file, args, opts) => { status, stdout, stderr, error? }
-function __setSpawn(fn) { _spawnImpl = fn; }
-function __clearSpawn() { _spawnImpl = null; }
+function __setSpawn(fn) {
+  _spawnImpl = fn;
+}
+
+function __clearSpawn() {
+  _spawnImpl = null;
+}
 
 function _runSync(file, args, opts = {}) {
-  if (typeof _spawnImpl === 'function') return _spawnImpl(file, args, opts);
+  if (typeof _spawnImpl === 'function') {
+    return _spawnImpl(file, args, opts);
+  }
   const r = spawnSync(file, args, {
     encoding: 'utf8',
     timeout: opts.timeout || 8000,
@@ -69,10 +87,17 @@ function _runSync(file, args, opts = {}) {
 let _binCache = { value: undefined, at: 0 };
 const _BIN_TTL_MS = 30000;
 
-function _binName() { return process.platform === 'win32' ? 'rtk.exe' : 'rtk'; }
+function _binName() {
+  return process.platform === 'win32' ? 'rtk.exe' : 'rtk';
+}
+
 /** 本地二进制路径 ~/.khy/bin/rtk(经 dataHome 单一真源)。 */
 function localBinPath() {
-  try { return path.join(getAppDataDir('bin'), _binName()); } catch { return null; }
+  try {
+    return path.join(getAppDataDir('bin'), _binName());
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -82,7 +107,7 @@ function localBinPath() {
  */
 async function resolveBinary({ force = false } = {}) {
   const now = Date.now();
-  if (!force && _binCache.value !== undefined && (now - _binCache.at) < _BIN_TTL_MS) {
+  if (!force && _binCache.value !== undefined && now - _binCache.at < _BIN_TTL_MS) {
     return _binCache.value;
   }
 
@@ -94,15 +119,21 @@ async function resolveBinary({ force = false } = {}) {
     try {
       fs.accessSync(local, fs.constants.X_OK);
       resolved = local;
-    } catch { /* 本地不存在,继续 */ }
+    } catch {
+      /* 本地不存在,继续 */
+    }
   }
 
   // 2) PATH 上的 rtk(非阻塞探测,共享 _commandAvailability 缓存)
   if (!resolved) {
     try {
       const probe = await cmdAvail.checkAsync('rtk');
-      if (probe && probe.ok) resolved = 'rtk';
-    } catch { /* 探测失败 = 不可用 */ }
+      if (probe && probe.ok) {
+        resolved = 'rtk';
+      }
+    } catch {
+      /* 探测失败 = 不可用 */
+    }
   }
 
   _binCache = { value: resolved, at: Date.now() };
@@ -115,7 +146,9 @@ async function resolveBinary({ force = false } = {}) {
  * 避免污染模型上下文。仅删整行以 `[rtk]` 开头者,其余文本逐字保留。
  */
 function stripRtkMeta(text) {
-  if (typeof text !== 'string' || text.length === 0) return text || '';
+  if (typeof text !== 'string' || text.length === 0) {
+    return text || '';
+  }
   return text
     .split('\n')
     .filter((line) => !/^\s*\[rtk\]/i.test(line))
@@ -136,20 +169,30 @@ function stripRtkMeta(text) {
  * @returns {{run:string, code:number}|null} 改写结果或 null(无改写/失败)
  */
 function rewriteShellCommand(cmd, opts = {}) {
-  if (!cmd || typeof cmd !== 'string') return null;
+  if (!cmd || typeof cmd !== 'string') {
+    return null;
+  }
   const bin = opts.bin || 'rtk';
 
   let r;
   try {
     r = _runSync(bin, ['rewrite', cmd], { timeout: 5000 });
-  } catch { return null; }
-  if (!r || r.error) return null;
+  } catch {
+    return null;
+  }
+  if (!r || r.error) {
+    return null;
+  }
 
   const code = r.status;
-  if (code !== 0 && code !== 3) return null; // 1 passthrough / 2 deny / 其他
+  if (code !== 0 && code !== 3) {
+    return null;
+  } // 1 passthrough / 2 deny / 其他
 
   let run = stripRtkMeta(String(r.stdout || '')).trim();
-  if (!run || run === cmd) return null; // 空 / 无变化 → 视作无改写
+  if (!run || run === cmd) {
+    return null;
+  } // 空 / 无变化 → 视作无改写
 
   // rtk rewrite 的 stdout 以裸 `rtk` 开头;当二进制是本地绝对路径(不在 PATH)时,
   // 把首个 `rtk` 令牌替换为实际路径,否则改写后的命令在 PATH 无 rtk 时会执行失败。
@@ -170,8 +213,12 @@ function rewriteShellCommand(cmd, opts = {}) {
 function buildGrepArgs(params = {}) {
   const args = ['grep', String(params.pattern == null ? '' : params.pattern)];
   args.push(params.path ? String(params.path) : '.');
-  if (params.case_insensitive) args.push('-i');
-  if (params.glob) args.push('--glob', String(params.glob));
+  if (params.case_insensitive) {
+    args.push('-i');
+  }
+  if (params.glob) {
+    args.push('--glob', String(params.glob));
+  }
   return args;
 }
 
@@ -190,9 +237,13 @@ function parseGrepOutput(raw, opts = {}) {
 
   for (const line of text.split('\n')) {
     const trimmed = line.trim();
-    if (!trimmed) continue;
+    if (!trimmed) {
+      continue;
+    }
     // 头行 `8 matches in 1 files:` 跳过
-    if (/^\d+\s+matches?\s+in\s+\d+\s+files?:?$/i.test(trimmed)) continue;
+    if (/^\d+\s+matches?\s+in\s+\d+\s+files?:?$/i.test(trimmed)) {
+      continue;
+    }
 
     const firstColon = line.indexOf(':');
     const secondColon = firstColon >= 0 ? line.indexOf(':', firstColon + 1) : -1;
@@ -206,7 +257,9 @@ function parseGrepOutput(raw, opts = {}) {
           line: lineNo,
           content: line.slice(secondColon + 1),
         });
-        if (matches.length >= maxResults) break;
+        if (matches.length >= maxResults) {
+          break;
+        }
       }
     }
   }
@@ -234,17 +287,25 @@ function parseGain(raw) {
   const mCmd = text.match(/Total commands:\s*([\d.,]+)/i);
   if (mCmd) {
     const n = Number(mCmd[1].replace(/,/g, ''));
-    if (Number.isFinite(n)) out.totalCommands = n;
+    if (Number.isFinite(n)) {
+      out.totalCommands = n;
+    }
   }
   const mIn = text.match(/Input tokens:\s*([\d.]+[KMB]?)/i);
-  if (mIn) out.inputTokens = mIn[1];
+  if (mIn) {
+    out.inputTokens = mIn[1];
+  }
   const mOut = text.match(/Output tokens:\s*([\d.]+[KMB]?)/i);
-  if (mOut) out.outputTokens = mOut[1];
+  if (mOut) {
+    out.outputTokens = mOut[1];
+  }
   const mSaved = text.match(/Tokens saved:\s*([\d.]+[KMB]?)\s*\(([\d.]+)%\)/i);
   if (mSaved) {
     out.tokensSaved = mSaved[1];
     const pct = Number(mSaved[2]);
-    if (Number.isFinite(pct)) out.savedPercent = pct;
+    if (Number.isFinite(pct)) {
+      out.savedPercent = pct;
+    }
   }
 
   // 表格行:" 1.  rtk read                   2094    7.6M   26.0%   ..."
@@ -270,7 +331,9 @@ function parseGain(raw) {
 function runGain(opts = {}) {
   const bin = opts.bin || 'rtk';
   const args = ['gain'];
-  if (opts.project) args.push('--project');
+  if (opts.project) {
+    args.push('--project');
+  }
   let r;
   try {
     r = _runSync(bin, args, { timeout: 8000, cwd: opts.cwd });
@@ -278,7 +341,10 @@ function runGain(opts = {}) {
     return { error: String((err && err.message) || err || 'rtk gain failed') };
   }
   if (!r || r.error || (r.status !== 0 && r.status !== null)) {
-    return { error: stripRtkMeta(String((r && r.stderr) || '')).trim() || 'rtk gain failed', status: r ? r.status : null };
+    return {
+      error: stripRtkMeta(String((r && r.stderr) || '')).trim() || 'rtk gain failed',
+      status: r ? r.status : null,
+    };
   }
   const raw = stripRtkMeta(String(r.stdout || ''));
   return { raw, stats: parseGain(raw) };
@@ -292,8 +358,12 @@ function probeVersion(opts = {}) {
   let r;
   try {
     r = _runSync(bin, ['--version'], { timeout: 5000 });
-  } catch { return null; }
-  if (!r || r.error) return null;
+  } catch {
+    return null;
+  }
+  if (!r || r.error) {
+    return null;
+  }
   const out = stripRtkMeta(String(r.stdout || r.stderr || '')).trim();
   return out || null;
 }

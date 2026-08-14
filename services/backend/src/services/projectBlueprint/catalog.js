@@ -31,7 +31,9 @@ const CONCEPTS_DIR = path.join(BLUEPRINTS_DIR, 'concepts');
 
 function _envInt(name, fallback) {
   const raw = process.env[name];
-  if (raw === undefined || raw === null || String(raw).trim() === '') return fallback;
+  if (raw === undefined || raw === null || String(raw).trim() === '') {
+    return fallback;
+  }
   const n = Number.parseInt(String(raw).trim(), 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
@@ -58,9 +60,15 @@ function _loadDir(dir, expectedKind) {
     try {
       const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
       const obj = JSON.parse(raw);
-      if (!obj || typeof obj !== 'object') continue;
-      if (!obj.id) continue;
-      if (expectedKind && obj.kind && obj.kind !== expectedKind) continue;
+      if (!obj || typeof obj !== 'object') {
+        continue;
+      }
+      if (!obj.id) {
+        continue;
+      }
+      if (expectedKind && obj.kind && obj.kind !== expectedKind) {
+        continue;
+      }
       obj.kind = obj.kind || expectedKind;
       obj._filename = file;
       out.push(obj);
@@ -72,7 +80,9 @@ function _loadDir(dir, expectedKind) {
 }
 
 function _load() {
-  if (_cache) return _cache;
+  if (_cache) {
+    return _cache;
+  }
   _cache = {
     archetypes: _loadDir(ARCHETYPES_DIR, 'archetype'),
     concepts: _loadDir(CONCEPTS_DIR, 'concept'),
@@ -94,22 +104,30 @@ function listConcepts() {
 }
 
 function getArchetype(id) {
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
   const lower = String(id).toLowerCase();
   return _load().archetypes.find((a) => String(a.id).toLowerCase() === lower) || null;
 }
 
 function getConcept(id) {
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
   const lower = String(id).toLowerCase();
   return _load().concepts.find((c) => String(c.id).toLowerCase() === lower) || null;
 }
 
 /** 取 archetype 关联的脚手架模板（原始对象，含 raw files）。缺失返回 null。 */
 function templateFor(archetype) {
-  if (!archetype || !archetype.templateName) return null;
+  if (!archetype || !archetype.templateName) {
+    return null;
+  }
   try {
-    return projectTemplateService.loadTemplates().find((t) => t.name === archetype.templateName) || null;
+    return (
+      projectTemplateService.loadTemplates().find((t) => t.name === archetype.templateName) || null
+    );
   } catch {
     return null;
   }
@@ -122,16 +140,22 @@ function templateFor(archetype) {
  */
 function templateFiles(archetype) {
   const tmpl = templateFor(archetype);
-  if (!tmpl || !Array.isArray(tmpl.files)) return [];
+  if (!tmpl || !Array.isArray(tmpl.files)) {
+    return [];
+  }
   return tmpl.files.map((f) => f.path);
 }
 
 /** archetype 的有效触发词 = 自身 triggers ∪ 关联模板 triggers。 */
 function _archetypeTriggers(archetype) {
   const set = new Set();
-  for (const t of archetype.triggers || []) set.add(String(t).toLowerCase());
+  for (const t of archetype.triggers || []) {
+    set.add(String(t).toLowerCase());
+  }
   const tmpl = templateFor(archetype);
-  for (const t of (tmpl && tmpl.triggers) || []) set.add(String(t).toLowerCase());
+  for (const t of (tmpl && tmpl.triggers) || []) {
+    set.add(String(t).toLowerCase());
+  }
   set.add(String(archetype.id).toLowerCase());
   return [...set].filter(Boolean);
 }
@@ -142,11 +166,15 @@ function _archetypeTriggers(archetype) {
  * @returns {object|null}
  */
 function matchArchetype(userText) {
-  if (!userText) return null;
+  if (!userText) {
+    return null;
+  }
   const lower = String(userText).toLowerCase();
   for (const a of _load().archetypes) {
     for (const trig of _archetypeTriggers(a)) {
-      if (trig && lower.includes(trig)) return a;
+      if (trig && lower.includes(trig)) {
+        return a;
+      }
     }
   }
   return null;
@@ -158,16 +186,18 @@ function matchArchetype(userText) {
  * @returns {object|null}
  */
 function matchConcept(userText) {
-  if (!userText) return null;
+  if (!userText) {
+    return null;
+  }
   const lower = String(userText).toLowerCase();
   for (const c of _load().concepts) {
-    const triggers = [
-      ...(c.triggers || []),
-      c.id,
-      c.name,
-    ].filter(Boolean).map((t) => String(t).toLowerCase());
+    const triggers = [...(c.triggers || []), c.id, c.name]
+      .filter(Boolean)
+      .map((t) => String(t).toLowerCase());
     for (const trig of triggers) {
-      if (trig && lower.includes(trig)) return c;
+      if (trig && lower.includes(trig)) {
+        return c;
+      }
     }
   }
   return null;

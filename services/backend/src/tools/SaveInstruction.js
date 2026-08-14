@@ -32,26 +32,33 @@ const VALID_SCOPES = ['project', 'global'];
 
 function _saveInstructionEnabled(env) {
   const e = env || process.env;
-  const disabled = String(e.KHY_DISABLE_MEMORY || '').trim().toLowerCase();
-  if (disabled === '1' || disabled === 'true') return false;
-  const raw = String(e.KHY_SAVE_INSTRUCTION_TOOL == null ? '' : e.KHY_SAVE_INSTRUCTION_TOOL).trim().toLowerCase();
+  const disabled = String(e.KHY_DISABLE_MEMORY || '')
+    .trim()
+    .toLowerCase();
+  if (disabled === '1' || disabled === 'true') {
+    return false;
+  }
+  const raw = String(e.KHY_SAVE_INSTRUCTION_TOOL == null ? '' : e.KHY_SAVE_INSTRUCTION_TOOL)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(raw);
 }
 
 module.exports = defineTool({
   name: 'SaveInstruction',
   description:
-    'Propose a durable PROJECT-LEVEL instruction/convention to be written into an '
-    + 'instruction file (khy.md or agent.md) that is injected into every future turn. '
-    + 'Use this when the user establishes a lasting rule for this project — build/test '
-    + 'commands, code style, contribution conventions, or agreed working style — as '
-    + 'opposed to a personal fact/preference (use SaveMemory for those). '
-    + 'The proposal is NOT written immediately; it enters a review queue and is only '
-    + 'written after the user approves it via /instructions. '
-    + 'target: khy|agent (default khy). scope: project|global (default project).',
+    'Propose a durable PROJECT-LEVEL instruction/convention to be written into an ' +
+    'instruction file (khy.md or agent.md) that is injected into every future turn. ' +
+    'Use this when the user establishes a lasting rule for this project — build/test ' +
+    'commands, code style, contribution conventions, or agreed working style — as ' +
+    'opposed to a personal fact/preference (use SaveMemory for those). ' +
+    'The proposal is NOT written immediately; it enters a review queue and is only ' +
+    'written after the user approves it via /instructions. ' +
+    'target: khy|agent (default khy). scope: project|global (default project).',
   category: 'system',
   risk: 'medium',
   aliases: ['saveInstruction', 'rememberRule', 'writeInstruction'],
+  searchHint: 'rule preference remember directive 保存规则 指令 偏好 记住规则',
   isReadOnly: () => false,
   isConcurrencySafe: false,
   isEnabled: () => _saveInstructionEnabled(process.env),
@@ -76,10 +83,15 @@ module.exports = defineTool({
   },
   async execute(params, _context) {
     if (!_saveInstructionEnabled(process.env)) {
-      return { success: false, error: 'SaveInstruction is disabled (KHY_SAVE_INSTRUCTION_TOOL=off or memory disabled).' };
+      return {
+        success: false,
+        error: 'SaveInstruction is disabled (KHY_SAVE_INSTRUCTION_TOOL=off or memory disabled).',
+      };
     }
     const note = String((params && params.note) || '').trim();
-    if (!note) return { success: false, error: 'note is required (the project-level rule to record).' };
+    if (!note) {
+      return { success: false, error: 'note is required (the project-level rule to record).' };
+    }
 
     const target = VALID_TARGETS.includes(params && params.target) ? params.target : 'khy';
     const scope = VALID_SCOPES.includes(params && params.scope) ? params.scope : 'project';
@@ -88,15 +100,26 @@ module.exports = defineTool({
     try {
       store = require('../services/instructionReviewStore');
     } catch (e) {
-      return { success: false, error: 'instruction review store unavailable: ' + ((e && e.message) || e) };
+      return {
+        success: false,
+        error: 'instruction review store unavailable: ' + ((e && e.message) || e),
+      };
     }
 
     const res = store.enqueue({ note, target, scope, source: 'tool' });
     if (!res || !res.success) {
-      return { success: false, error: (res && res.error) || 'failed to queue instruction', threats: res && res.threats };
+      return {
+        success: false,
+        error: (res && res.error) || 'failed to queue instruction',
+        threats: res && res.threats,
+      };
     }
     if (res.skipped) {
-      return { success: true, data: { queued: false, duplicate: true, target, scope }, message: '该约定已在待审核队列中（未重复入队）。' };
+      return {
+        success: true,
+        data: { queued: false, duplicate: true, target, scope },
+        message: '该约定已在待审核队列中（未重复入队）。',
+      };
     }
 
     const file = target === 'agent' ? 'agent.md' : 'khy.md';

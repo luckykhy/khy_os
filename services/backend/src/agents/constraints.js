@@ -107,4 +107,9 @@ const SUBAGENT_EXECUTION_SCOPE = `=== SUB-AGENT EXECUTION SCOPE (you are an exec
 - You MAY split only YOUR assigned chunk into concrete steps. If one step is genuinely independent and worth parallelizing, you may delegate it to a further sub-agent — but stay within the nesting limit; if spawning is refused because the depth ceiling is reached, complete that step directly instead.
 - Keep your reasoning local and minimal: enough to carry out the assigned work, not a fresh strategic analysis of the overall goal.`;
 
-module.exports = { EXECUTION_DISCIPLINE, HARD_PROHIBITIONS, readOnlyProhibitions, SUBAGENT_EXECUTION_SCOPE };
+module.exports = {
+  EXECUTION_DISCIPLINE,
+  HARD_PROHIBITIONS,
+  readOnlyProhibitions,
+  SUBAGENT_EXECUTION_SCOPE,
+};

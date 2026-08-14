@@ -67,7 +67,7 @@ client = OpenAI(
 )
 
 resp = client.chat.completions.create(
-    model="claude/claude-sonnet-4-20250514",   # 或 ollama/qwen2.5:7b, trae/deepseek-v3
+    model="claude/claude-sonnet-4-6",   # 或 ollama/qwen2.5:7b, trae/deepseek-v3
     messages=[{"role": "user", "content": "你好"}],
     stream=True
 )
@@ -86,7 +86,7 @@ const client = new Anthropic({
 });
 
 const msg = await client.messages.create({
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-sonnet-4-6',
   max_tokens: 1024,
   messages: [{ role: 'user', content: '你好' }]
 });
@@ -98,7 +98,7 @@ const msg = await client.messages.create({
 curl http://127.0.0.1:9100/v1/chat/completions \
   -H "Authorization: Bearer khy-your-token" \
   -H "Content-Type: application/json" \
-  -d '{"model":"claude/claude-sonnet-4-20250514","messages":[{"role":"user","content":"你好"}]}'
+  -d '{"model":"claude/claude-sonnet-4-6","messages":[{"role":"user","content":"你好"}]}'
 ```
 
 ### 3.2 获取 Auth Token
@@ -119,10 +119,10 @@ curl -X POST http://127.0.0.1:9090/api/ai-gateway/customers \
 
 | model 格式 | 路由到 |
 |-----------|--------|
-| `claude/claude-sonnet-4-20250514` | Claude 适配器 |
+| `claude/claude-sonnet-4-6` | Claude 适配器 |
 | `ollama/qwen2.5:7b` | 本地 Ollama |
 | `trae/deepseek-v3` | Trae IDE 适配器 |
-| `kiro/claude-sonnet-4-20250514` | Kiro 适配器 |
+| `kiro/claude-sonnet-4-6` | Kiro 适配器 |
 | `relay/gpt-4o` | 中转站 |
 | `deepseek-chat` | 无前缀时走默认适配器 |
 
@@ -169,7 +169,7 @@ await khy.connect();
 
 // 发送查询
 const stream = khy.query('帮我分析这段代码的性能问题', {
-  model: 'claude-sonnet-4-20250514',
+  model: 'claude-sonnet-4-6',
   tools: true             // 允许使用工具
 });
 

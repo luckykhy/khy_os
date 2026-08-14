@@ -31,8 +31,10 @@ const BETA_LABELS = {
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 /** 是否启用用户面降级提示(门控 KHY_BETA_FALLBACK_NOTICE 默认开)。 */
-function betaFallbackNoticeEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
-  const v = String((env && env.KHY_BETA_FALLBACK_NOTICE) || '').trim().toLowerCase();
+function betaFallbackNoticeEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
+  const v = String((env && env.KHY_BETA_FALLBACK_NOTICE) || '')
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -44,14 +46,22 @@ function betaFallbackNoticeEnabled(env = (typeof process !== 'undefined' ? proce
  */
 function buildBetaFallbackNotice(strippedBetas, env) {
   try {
-    if (!betaFallbackNoticeEnabled(env)) return null;
-    if (!Array.isArray(strippedBetas)) return null;
-    const known = [...new Set(
-      strippedBetas
-        .filter((b) => typeof b === 'string' && b.trim())
-        .map((b) => b.trim().toLowerCase()),
-    )];
-    if (!known.length) return null;
+    if (!betaFallbackNoticeEnabled(env)) {
+      return null;
+    }
+    if (!Array.isArray(strippedBetas)) {
+      return null;
+    }
+    const known = [
+      ...new Set(
+        strippedBetas
+          .filter((b) => typeof b === 'string' && b.trim())
+          .map((b) => b.trim().toLowerCase())
+      ),
+    ];
+    if (!known.length) {
+      return null;
+    }
     const friendly = known.map((b) => BETA_LABELS[b] || b).join('、');
     let text = `⚠ 服务端拒绝了可选能力（${friendly}），已自动禁用并重试（本会话）。`;
     // context-1m 降级有真实预算后果:上下文窗口回落到 200k,附一句告警。

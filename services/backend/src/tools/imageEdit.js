@@ -16,16 +16,25 @@
  */
 
 const { defineTool } = require('./_baseTool');
+
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
-const { guardedReadFileSync } = require('./guardedReadFileSync');
+const path = require('path');
 
 const imageGenService = require('../services/imageGenService');
 const imageService = require('../services/imageService');
 const toolErrorCodes = require('../services/toolErrorCodes');
 
-const SUPPORTED_SIZES = ['256x256', '512x512', '768x768', '1024x1024', '1024x768', '768x1024', '1024x1792', '1792x1024'];
+const SUPPORTED_SIZES = [
+  '256x256',
+  '512x512',
+  '768x768',
+  '1024x1024',
+  '1024x768',
+  '768x1024',
+  '1024x1792',
+  '1792x1024',
+];
 const MAX_INPUT_IMAGES = 4;
 const MAX_INPUT_BYTES = 12 * 1024 * 1024; // 12 MiB per input image (data-URI payloads get large)
 
@@ -40,17 +49,25 @@ const MIME_BY_EXT = {
 /** Resolve a user path with Windows %VAR% / ~ expansion (mirrors imageGenerate). */
 const _resolvePath = require('../utils/resolveToolPath');
 
+const { guardedReadFileSync } = require('./guardedReadFileSync');
+
 /** Turn one input ref (URL or local path) into something the backend accepts. */
 function _toImageRef(ref, cwd) {
   const s = String(ref || '').trim();
-  if (!s) throw new Error('输入图片引用为空');
+  if (!s) {
+    throw new Error('输入图片引用为空');
+  }
   // Public URL or already a data: URI → pass through untouched.
-  if (/^https?:\/\//i.test(s) || /^data:image\//i.test(s)) return s;
+  if (/^https?:\/\//i.test(s) || /^data:image\//i.test(s)) {
+    return s;
+  }
   // Otherwise treat as a local file path → read + encode as a data: URI.
   const abs = _resolvePath(s, cwd);
   const { validateNoPathTraversal } = require('./inputValidators');
   const confine = validateNoPathTraversal(abs);
-  if (!confine.valid) throw new Error(confine.message);
+  if (!confine.valid) {
+    throw new Error(confine.message);
+  }
   if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
     throw new Error(`输入图片不存在或不是文件: ${s}`);
   }
@@ -60,7 +77,9 @@ function _toImageRef(ref, cwd) {
   }
   const ext = path.extname(abs).toLowerCase();
   const mime = MIME_BY_EXT[ext];
-  if (!mime) throw new Error(`不支持的图片格式 ${ext || '(无扩展名)'}（支持 png/jpg/jpeg/webp/gif）: ${s}`);
+  if (!mime) {
+    throw new Error(`不支持的图片格式 ${ext || '(无扩展名)'}（支持 png/jpg/jpeg/webp/gif）: ${s}`);
+  }
   // 读前防卡死前检:用户传入的图片路径若是 FIFO/设备/阻塞伪文件,同步 readFileSync 会永久冻结事件循环。
   const b64 = guardedReadFileSync(abs).toString('base64');
   return `data:${mime};base64,${b64}`;
@@ -69,19 +88,28 @@ function _toImageRef(ref, cwd) {
 module.exports = defineTool({
   name: 'image_edit',
   description:
-    'Edit or transform existing image(s) from a text prompt (image-to-image / 图改图 / 图生图 / '
-    + '换背景 / 局部编辑 / 多图合成 / inpaint / restyle). Takes one or more input images '
-    + '(local file paths or public URLs) plus an editing instruction, and produces a new image. '
-    + 'Use this when the user provides a source image to modify; use image_generate for text-only generation. '
-    + 'Requires an edit-capable backend (Agnes); returns clear setup instructions if none is configured.',
+    'Edit or transform existing image(s) from a text prompt (image-to-image / 图改图 / 图生图 / ' +
+    '换背景 / 局部编辑 / 多图合成 / inpaint / restyle). Takes one or more input images ' +
+    '(local file paths or public URLs) plus an editing instruction, and produces a new image. ' +
+    'Use this when the user provides a source image to modify; use image_generate for text-only generation. ' +
+    'Requires an edit-capable backend (Agnes); returns clear setup instructions if none is configured.',
   category: 'analysis',
   risk: 'low',
   isReadOnly: false,
   isConcurrencySafe: true,
-  searchHint: 'image edit img2img image-to-image 图改图 图生图 换背景 局部编辑 多图合成 restyle inpaint',
+  searchHint:
+    'image edit img2img image-to-image 图改图 图生图 换背景 局部编辑 多图合成 restyle inpaint',
   aliases: [
-    'imageEdit', 'edit_image', 'image_to_image', 'img2img',
-    '图改图', '图生图', '改图', '换背景', '局部编辑', '多图合成',
+    'imageEdit',
+    'edit_image',
+    'image_to_image',
+    'img2img',
+    '图改图',
+    '图生图',
+    '改图',
+    '换背景',
+    '局部编辑',
+    '多图合成',
   ],
 
   inputSchema: {
@@ -95,8 +123,9 @@ module.exports = defineTool({
       type: 'array',
       required: true,
       items: { type: 'string' },
-      description: 'Input image(s): local file path(s) or public HTTP(S) URL(s). 1-4 items. '
-        + 'Multiple images enable compositing (e.g. combine characters into one scene).',
+      description:
+        'Input image(s): local file path(s) or public HTTP(S) URL(s). 1-4 items. ' +
+        'Multiple images enable compositing (e.g. combine characters into one scene).',
     },
     size: {
       type: 'string',
@@ -117,16 +146,26 @@ module.exports = defineTool({
     }
     const imgs = Array.isArray(input.images) ? input.images.filter(Boolean) : [];
     if (!imgs.length) {
-      return { valid: false, message: 'images is required: provide at least one input image path or URL.' };
+      return {
+        valid: false,
+        message: 'images is required: provide at least one input image path or URL.',
+      };
     }
     if (imgs.length > MAX_INPUT_IMAGES) {
-      return { valid: false, message: `too many input images (${imgs.length} > ${MAX_INPUT_IMAGES}).` };
+      return {
+        valid: false,
+        message: `too many input images (${imgs.length} > ${MAX_INPUT_IMAGES}).`,
+      };
     }
     if (input.outputPath) {
-      const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
+      const {
+        validateNotDevicePath,
+        validateNotUNCPath,
+        composeValidations,
+      } = require('./inputValidators');
       return composeValidations(
         validateNotDevicePath(input.outputPath),
-        validateNotUNCPath(input.outputPath),
+        validateNotUNCPath(input.outputPath)
       );
     }
     return { valid: true };
@@ -151,7 +190,12 @@ module.exports = defineTool({
       images = refs.map((r) => _toImageRef(r, cwd));
     } catch (err) {
       const error = `输入图片处理失败：${err.message}`;
-      return toolErrorCodes.enrich({ success: false, code: 'BAD_INPUT_IMAGE', error, content: error });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: 'BAD_INPUT_IMAGE',
+        error,
+        content: error,
+      });
     }
 
     // ── Edit ───────────────────────────────────────────────────────────────────
@@ -160,11 +204,23 @@ module.exports = defineTool({
       result = await imageGenService.generate({ prompt, size, images });
     } catch (err) {
       if (err && (err.code === 'NO_BACKEND' || err.code === 'EDIT_UNSUPPORTED')) {
-        return toolErrorCodes.enrich({ success: false, code: err.code, error: err.message, content: err.message, meta: { backend: imageGenService.resolveBackend() } });
+        return toolErrorCodes.enrich({
+          success: false,
+          code: err.code,
+          error: err.message,
+          content: err.message,
+          meta: { backend: imageGenService.resolveBackend() },
+        });
       }
       const backend = imageGenService.resolveBackend();
       const error = `图改图失败（后端 ${backend || 'unknown'}）：${err.message}`;
-      return toolErrorCodes.enrich({ success: false, code: err && err.code ? err.code : 'BACKEND_ERROR', error, content: error, meta: { backend } });
+      return toolErrorCodes.enrich({
+        success: false,
+        code: err && err.code ? err.code : 'BACKEND_ERROR',
+        error,
+        content: error,
+        meta: { backend },
+      });
     }
 
     // ── Save result ──────────────────────────────────────────────────────────────
@@ -204,17 +260,29 @@ module.exports = defineTool({
               sizeBytes: Buffer.byteLength(b64, 'base64'),
               mimeType: 'image/png',
             });
-          } catch { /* preview is non-essential */ }
+          } catch {
+            /* preview is non-essential */
+          }
         }
       }
     } catch (err) {
       const error = `图改图成功但写入磁盘失败：${err.message}`;
-      return { success: false, error, content: error, meta: { backend: result.backend, model: result.model } };
+      return {
+        success: false,
+        error,
+        content: error,
+        meta: { backend: result.backend, model: result.model },
+      };
     }
 
     if (!paths.length) {
       const error = '图改图成功但未能保存任何文件。';
-      return { success: false, error, content: error, meta: { backend: result.backend, model: result.model } };
+      return {
+        success: false,
+        error,
+        content: error,
+        meta: { backend: result.backend, model: result.model },
+      };
     }
 
     const content = `已编辑生成 ${paths.length} 张图像：\n${paths.map((p) => `- ${p}`).join('\n')}`;

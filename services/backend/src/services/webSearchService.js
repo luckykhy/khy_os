@@ -7,6 +7,7 @@
  * Reference: https://github.com/Colin3191/kiro-web-search
  */
 const crypto = require('crypto');
+
 // Safe to require eagerly: playwrightSearch lazy-loads the (optional) browser
 // only when a fetch is actually attempted, so this never throws if playwright
 // is absent.
@@ -17,20 +18,34 @@ const playwrightSearch = require('./playwrightSearch');
 // 搜索路径照常工作。把窗口拼进各引擎结果页 URL(按时间过滤),并对结果按日期重排
 // (兜底「按日期排序」,与引擎是否真认 URL 参数无关)。
 let _freshness = null;
-try { _freshness = require('./search/searchFreshness'); } catch { /* optional */ }
+try {
+  _freshness = require('./search/searchFreshness');
+} catch {
+  /* optional */
+}
 
 /** 决定本次搜索的时间窗口:显式 opts.freshness 优先,否则按 query 自动识别。 */
 function _resolveFreshWindow(query, opts) {
-  if (!_freshness) return null;
-  try { return _freshness.resolveWindow((opts || {}).freshness, query, process.env); }
-  catch { return null; }
+  if (!_freshness) {
+    return null;
+  }
+  try {
+    return _freshness.resolveWindow((opts || {}).freshness, query, process.env);
+  } catch {
+    return null;
+  }
 }
 
 /** 返回拼到引擎 URL 的 query 片段(不含前导 &),无则 ''。 */
 function _freshParam(window, engine) {
-  if (!_freshness || !window) return '';
-  try { return _freshness.freshnessToEngineParam(window, engine, Date.now()) || ''; }
-  catch { return ''; }
+  if (!_freshness || !window) {
+    return '';
+  }
+  try {
+    return _freshness.freshnessToEngineParam(window, engine, Date.now()) || '';
+  } catch {
+    return '';
+  }
 }
 
 /** 把时间过滤片段安全拼到一个已带 query 串的 URL 上。 */
@@ -41,9 +56,14 @@ function _withFreshParam(url, window, engine) {
 
 /** 结果按日期富化 + 窗口内重排(绝不丢结果)。窗口空时仅回填 publishedDate。 */
 function _applyRecency(results, window) {
-  if (!_freshness || !Array.isArray(results)) return results;
-  try { return _freshness.applyRecencyRanking(results, window, Date.now(), process.env); }
-  catch { return results; }
+  if (!_freshness || !Array.isArray(results)) {
+    return results;
+  }
+  try {
+    return _freshness.applyRecencyRanking(results, window, Date.now(), process.env);
+  } catch {
+    return results;
+  }
 }
 
 // ── 源发现(goal 2026-06-26「固定站点之外,新站点 khy 怎么发现」)─────────────
@@ -51,7 +71,11 @@ function _applyRecency(results, window) {
 // 不挖新源」,搜索路径照常工作。两件事:(1) loadDynamicEngines 让运行期声明的额外引擎并入
 // 扇出(无需改源码);(2) discoverEmergingSources 从结果里挖出反复出现的新冒头权威源。
 let _discovery = null;
-try { _discovery = require('./search/searchSourceDiscovery'); } catch { /* optional */ }
+try {
+  _discovery = require('./search/searchSourceDiscovery');
+} catch {
+  /* optional */
+}
 
 /** 读取数据家下的 search_engines.json(声明额外引擎)。fail-soft,缺失/出错 → ''。 */
 function _readEngineConfigText() {
@@ -60,15 +84,21 @@ function _readEngineConfigText() {
     // eslint-disable-next-line global-require
     const { getAppDataDir } = require('../utils/dataHome');
     const p = getAppDataDir('search_engines.json');
-    if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8');
-  } catch { /* ignore — 数据家不可用 / 文件缺失,降级为仅 env 声明 */ }
+    if (fs.existsSync(p)) {
+      return fs.readFileSync(p, 'utf8');
+    }
+  } catch {
+    /* ignore — 数据家不可用 / 文件缺失,降级为仅 env 声明 */
+  }
   return '';
 }
 
 // 内置引擎自身的域名,并入「已知源」集合,避免把内置引擎结果误判成「新发现来源」。
 function _knownHostSet() {
-  const base = (_discovery && _discovery.KNOWN_HOSTS instanceof Set) ? _discovery.KNOWN_HOSTS : null;
-  if (!base) return undefined;
+  const base = _discovery && _discovery.KNOWN_HOSTS instanceof Set ? _discovery.KNOWN_HOSTS : null;
+  if (!base) {
+    return undefined;
+  }
   return base; // searchSourceDiscovery.KNOWN_HOSTS 已含内置引擎域名 + 大众门户
 }
 
@@ -90,17 +120,22 @@ function _makeDynamicEngine(descriptor) {
   const label = `dyn:${descriptor.engine || descriptor.name}`;
   return async function dynamicEngine(query, freshWindow = null) {
     const trimmed = String(query || '').trim();
-    if (!trimmed) return { success: false, error: 'Search query is empty' };
+    if (!trimmed) {
+      return { success: false, error: 'Search query is empty' };
+    }
     // 时间过滤:声明若指定了已知 parser 家族就借用其引擎参数,否则用 duckduckgo 的 df= 作通用近似。
     const freshEngine = descriptor.parser === 'generic' ? 'duckduckgo' : descriptor.parser;
     const freshParam = _freshParam(freshWindow, freshEngine === 'bing' ? 'bing-cn' : freshEngine);
     const url = _discovery ? _discovery.buildEngineUrl(descriptor, trimmed, freshParam) : '';
-    if (!url) return { success: false, error: `${label}: empty URL` };
+    if (!url) {
+      return { success: false, error: `${label}: empty URL` };
+    }
     return new Promise((resolve) => {
       const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
       const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
         'Accept-Language': 'zh-CN,zh;q=0.9',
       };
       let req;
@@ -110,28 +145,53 @@ function _makeDynamicEngine(descriptor) {
             const rUrl = /^https?:\/\//.test(res.headers.location)
               ? res.headers.location
               : new URL(res.headers.location, url).toString();
-            const rReq = _httpClientFor(rUrl).get(rUrl, { headers, timeout: 10000 },
-              (rRes) => _collectAndParse(rRes, MAX_RESPONSE_BYTES, parse, label, resolve));
-            rReq.on('error', (e) => resolve({ success: false, error: `${label} redirect failed: ${e.message}` }));
-            rReq.on('timeout', () => { rReq.destroy(); resolve({ success: false, error: `${label} timed out` }); });
+            const rReq = _httpClientFor(rUrl).get(rUrl, { headers, timeout: 10000 }, (rRes) =>
+              _collectAndParse(rRes, MAX_RESPONSE_BYTES, parse, label, resolve)
+            );
+            rReq.on('error', (e) =>
+              resolve({ success: false, error: `${label} redirect failed: ${e.message}` })
+            );
+            rReq.on('timeout', () => {
+              rReq.destroy();
+              resolve({ success: false, error: `${label} timed out` });
+            });
             return;
           }
           _collectAndParse(res, MAX_RESPONSE_BYTES, parse, label, resolve);
         });
-      } catch (err) { resolve({ success: false, error: `${label} request error: ${err.message}` }); return; }
-      req.on('error', (err) => resolve({ success: false, error: `${label} search failed: ${err.message}` }));
-      req.on('timeout', () => { req.destroy(); resolve({ success: false, error: `${label} search timed out` }); });
+      } catch (err) {
+        resolve({ success: false, error: `${label} request error: ${err.message}` });
+        return;
+      }
+      req.on('error', (err) =>
+        resolve({ success: false, error: `${label} search failed: ${err.message}` })
+      );
+      req.on('timeout', () => {
+        req.destroy();
+        resolve({ success: false, error: `${label} search timed out` });
+      });
     });
   };
 }
 
 /** 装载运行期声明的额外引擎(env + 数据家配置),编织成扇出项。缺失/出错 → []。 */
 function _loadDynamicFanout() {
-  if (!_discovery) return [];
+  if (!_discovery) {
+    return [];
+  }
   try {
-    const descriptors = _discovery.loadDynamicEngines({ env: process.env, configText: _readEngineConfigText() });
-    return descriptors.map((d) => ({ engine: d.name, fn: _makeDynamicEngine(d), weight: d.weight }));
-  } catch { return []; }
+    const descriptors = _discovery.loadDynamicEngines({
+      env: process.env,
+      configText: _readEngineConfigText(),
+    });
+    return descriptors.map((d) => ({
+      engine: d.name,
+      fn: _makeDynamicEngine(d),
+      weight: d.weight,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -141,16 +201,25 @@ function _loadDynamicFanout() {
  */
 function _withDiscovery(payload, query) {
   try {
-    if (!_discovery || !payload || !payload.success || !Array.isArray(payload.results)) return payload;
-    const emerging = _discovery.discoverEmergingSources(payload.results, { knownHosts: _knownHostSet(), env: process.env });
-    if (!emerging || emerging.length === 0) return payload;
+    if (!_discovery || !payload || !payload.success || !Array.isArray(payload.results)) {
+      return payload;
+    }
+    const emerging = _discovery.discoverEmergingSources(payload.results, {
+      knownHosts: _knownHostSet(),
+      env: process.env,
+    });
+    if (!emerging || emerging.length === 0) {
+      return payload;
+    }
     return {
       ...payload,
       discoveredSources: emerging,
       suggestedSiteQueries: _discovery.suggestSiteQueries(emerging, query),
       formatted: (payload.formatted || '') + _discovery.formatDiscoveryFooter(emerging),
     };
-  } catch { return payload; }
+  } catch {
+    return payload;
+  }
 }
 
 // ── cheerio lazy loader ─────────────────────────────────────────────
@@ -162,13 +231,20 @@ function _withDiscovery(payload, query) {
 // throwing. Tri-state: null = not tried, false = absent, module = loaded.
 let _cheerio = null;
 function _loadCheerio() {
-  if (_cheerio && _cheerio.load) return _cheerio; // 已加载
+  if (_cheerio && _cheerio.load) {
+    return _cheerio;
+  } // 已加载
   try {
     // eslint-disable-next-line global-require
     const m = require('cheerio');
-    const mod = (m && m.load) ? m : (m && m.default && m.default.load ? m.default : null);
-    if (mod && mod.load) { _cheerio = mod; return mod; }
-  } catch { /* not installed — degrade gracefully */ }
+    const mod = m && m.load ? m : m && m.default && m.default.load ? m.default : null;
+    if (mod && mod.load) {
+      _cheerio = mod;
+      return mod;
+    }
+  } catch {
+    /* not installed — degrade gracefully */
+  }
   // 缺失态不永久锁定：下次再尝试 require，使「会话中途自愈安装 cheerio」后的
   // 重试能立即拿到模块（否则 _cheerio 一旦为 false，装了也读不到 → 自愈白做功）。
   _cheerio = false;
@@ -181,30 +257,174 @@ function isHtmlParsingAvailable() {
 }
 
 const SEARCH_TIMEOUT_MS = 30_000;
-// 结果数不再写死 8 条，而是按需索取（goal 2026-06-25）。
-//  - DEFAULT_RESULTS：调用方未指定 count 时的默认条数（可经 KHY_SEARCH_RESULTS 调）。
-//  - RESULTS_CEILING：单次请求的硬上限，挡住失控的超大抓取；同时也是各引擎解析器
-//    的候选召回上限——召回放宽到 ceiling（而非默认 8）能让权威/最新结果不被过早截断，
-//    最终再按调用方请求的 limit 切片。这样「按需多取」与「召回充分」两件事解耦。
-const DEFAULT_RESULTS = 8;
+// 结果数不再写死 N 条，而是按查询复杂度自适应（goal 2026-07-27）。
+//  - 显式 count/limit > 环境变量 KHY_SEARCH_RESULTS > 自适应推断 > DEFAULT_RESULTS
+//  - RESULTS_CEILING：单次请求的硬上限；同时也是各引擎解析器的候选召回上限。
+const DEFAULT_RESULTS = 5;
 const RESULTS_CEILING = 30;
 // 兼容旧引用：MAX_RESULTS 现等于召回上限（解析器/合并阶段的候选上界）。
 const MAX_RESULTS = RESULTS_CEILING;
 
 /**
+ * 根据查询文本的复杂度信号，推断一个合理的默认结果数。
+ * 简单事实查询 → 少条；多问题/对比/综述 → 多条。
+ * @param {string} query
+ * @returns {number} 推断的结果数，夹到 [3, RESULTS_CEILING]
+ */
+function _inferAdaptiveLimit(query) {
+  const q = (query || '').trim();
+  if (!q) {
+    return DEFAULT_RESULTS;
+  }
+
+  // 归一化：将非字母数字字符统一替换为空格，使中英文关键词都能可靠匹配。
+  const normalized = q.replace(/[^\p{L}\p{N}]/gu, ' ').toLowerCase();
+
+  let score = 0;
+
+  // ── 长度信号：长查询通常需要更多结果 ──
+  const words = normalized.split(/\s+/).filter(Boolean).length;
+  if (words > 20) {
+    score += 2;
+  } else if (words > 10) {
+    score += 1;
+  }
+
+  // ── 多问号：每个额外问题增加需求 ──
+  const questionMarks = (q.match(/\?/g) || []).length + (q.match(/[？]/g) || []).length;
+  if (questionMarks >= 3) {
+    score += 3;
+  } else if (questionMarks === 2) {
+    score += 2;
+  } else if (questionMarks === 1) {
+    score += 1;
+  }
+
+  // ── 分隔符暗示多个子问题 ──
+  if (/[；;]\s*/.test(q) || /\b(and|or|以及|还有|另外|此外)\b/i.test(q)) {
+    score += 1;
+  }
+
+  // ── 关键词检测：英文短语用 \b 词边界，纯中文直接用 includes ──
+  function hasKw(...tokens) {
+    return tokens.some((t) => {
+      if (/^[a-z]+( [a-z]+)+$/i.test(t)) {
+        return new RegExp('\\b' + t.replace(/ /g, '\\s+') + '\\b', 'i').test(normalized);
+      }
+      if (/[a-zA-Z]/.test(t)) {
+        return new RegExp('\\b' + t + '\\b', 'i').test(normalized);
+      }
+      return normalized.includes(t);
+    });
+  }
+
+  // ── 对比/差异类查询需要更多来源 ──
+  if (hasKw('vs', 'versus', '对比', '区别', '差异', '比较', 'pros', 'cons', '优缺点')) {
+    score += 2;
+  }
+
+  // ── 综述/列表/多实体类查询 ──
+  if (
+    hasKw(
+      '概述',
+      '总结',
+      '综述',
+      'overview',
+      'introduction',
+      '有哪些',
+      '列表',
+      'example',
+      'types of',
+      'types',
+      'kinds of',
+      'methods',
+      'ways to',
+      'steps',
+      '最佳',
+      'top',
+      '全部',
+      '所有',
+      '框架'
+    )
+  ) {
+    score += 2;
+  }
+
+  // ── 时间敏感/新闻类：需要足够多的近期来源 ──
+  if (
+    hasKw(
+      '最新',
+      '最近',
+      '今天',
+      '本周',
+      '新闻',
+      'news',
+      'latest',
+      'recent',
+      'today',
+      'this week',
+      'breaking',
+      '动态',
+      '消息'
+    )
+  ) {
+    score += 1;
+  }
+
+  // ── 技术/学术类：通常需要更多参考来源 ──
+  if (
+    hasKw(
+      '教程',
+      '指南',
+      '文档',
+      'api',
+      'reference',
+      '实现',
+      '原理',
+      '架构',
+      'tutorial',
+      'documentation',
+      'implementation'
+    )
+  ) {
+    score += 1;
+  }
+
+  // ── 映射 score → 结果数 ──
+  let limit;
+  if (score >= 6) {
+    limit = 20;
+  } else if (score >= 4) {
+    limit = 15;
+  } else if (score >= 2) {
+    limit = 10;
+  } else if (score >= 1) {
+    limit = 7;
+  } else {
+    limit = DEFAULT_RESULTS;
+  }
+
+  return Math.min(limit, RESULTS_CEILING);
+}
+
+/**
  * 解析单次搜索请求要返回多少条结果。优先级：显式 count/limit > 环境默认
- * (KHY_SEARCH_RESULTS) > DEFAULT_RESULTS；统一夹到 [1, RESULTS_CEILING]。
- * @param {{limit?:number, count?:number, num?:number, topN?:number}} [opts]
+ * (KHY_SEARCH_RESULTS) > 自适应推断(_inferAdaptiveLimit) > DEFAULT_RESULTS；
+ * 统一夹到 [1, RESULTS_CEILING]。
+ * @param {{limit?:number, count?:number, num?:number, topN?:number, query?:string}} [opts]
  * @returns {number}
  */
 function _resolveLimit(opts = {}) {
   const envDefault = parseInt(process.env.KHY_SEARCH_RESULTS, 10);
-  const baseDefault = Number.isFinite(envDefault) && envDefault > 0
-    ? Math.min(envDefault, RESULTS_CEILING)
-    : DEFAULT_RESULTS;
+  const baseDefault =
+    Number.isFinite(envDefault) && envDefault > 0
+      ? Math.min(envDefault, RESULTS_CEILING)
+      : _inferAdaptiveLimit(opts.query || '');
   const raw = opts.limit ?? opts.count ?? opts.num ?? opts.topN;
   const n = parseInt(raw, 10);
-  if (!Number.isFinite(n) || n <= 0) return baseDefault;
+  if (!Number.isFinite(n) || n <= 0) {
+    return baseDefault;
+  }
   return Math.max(1, Math.min(n, RESULTS_CEILING));
 }
 
@@ -221,7 +441,9 @@ function _httpClientFor(url) {
   try {
     scheme = new URL(String(url)).protocol;
   } catch {
-    if (/^http:\/\//i.test(String(url))) scheme = 'http:';
+    if (/^http:\/\//i.test(String(url))) {
+      scheme = 'http:';
+    }
   }
   // eslint-disable-next-line global-require
   return scheme === 'http:' ? require('http') : require('https');
@@ -238,27 +460,46 @@ function _rrfK() {
 
 // ── Domain type classification ──────────────────────────────────────
 const _DOMAIN_TYPE_MAP = {
-  'stackoverflow.com': 'forum', 'stackexchange.com': 'forum', 'reddit.com': 'forum',
-  'github.com': 'code', 'gitlab.com': 'code', 'gitee.com': 'code',
-  'developer.mozilla.org': 'docs', 'docs.python.org': 'docs', 'nodejs.org': 'docs',
-  'wikipedia.org': 'reference', 'baike.baidu.com': 'reference',
-  'medium.com': 'blog', 'dev.to': 'blog', 'csdn.net': 'blog', 'juejin.cn': 'blog',
-  'zhihu.com': 'forum', 'segmentfault.com': 'forum',
-  'news.ycombinator.com': 'news', 'bbc.com': 'news', 'reuters.com': 'news',
+  'stackoverflow.com': 'forum',
+  'stackexchange.com': 'forum',
+  'reddit.com': 'forum',
+  'github.com': 'code',
+  'gitlab.com': 'code',
+  'gitee.com': 'code',
+  'developer.mozilla.org': 'docs',
+  'docs.python.org': 'docs',
+  'nodejs.org': 'docs',
+  'wikipedia.org': 'reference',
+  'baike.baidu.com': 'reference',
+  'medium.com': 'blog',
+  'dev.to': 'blog',
+  'csdn.net': 'blog',
+  'juejin.cn': 'blog',
+  'zhihu.com': 'forum',
+  'segmentfault.com': 'forum',
+  'news.ycombinator.com': 'news',
+  'bbc.com': 'news',
+  'reuters.com': 'news',
 };
 
 function _classifyDomain(url) {
   try {
     const hostname = new URL(url).hostname;
     for (const [domain, type] of Object.entries(_DOMAIN_TYPE_MAP)) {
-      if (hostname.includes(domain)) return type;
+      if (hostname.includes(domain)) {
+        return type;
+      }
     }
   } catch {}
   return 'other';
 }
 
 function _extractDomain(url) {
-  try { return new URL(url).hostname; } catch { return ''; }
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
 }
 
 // ── cheerio-based result parsers ────────────────────────────────────
@@ -268,13 +509,19 @@ function _extractDomain(url) {
 // MAX_RESULTS. Multiple selector fallbacks tolerate layout variants.
 
 function _mkResult(title, url, snippet) {
-  const t = String(title || '').replace(/\s+/g, ' ').trim();
+  const t = String(title || '')
+    .replace(/\s+/g, ' ')
+    .trim();
   const u = String(url || '').trim();
-  if (!t || !u) return null;
+  if (!t || !u) {
+    return null;
+  }
   return {
     title: t,
     url: u,
-    snippet: String(snippet || '').replace(/\s+/g, ' ').trim(),
+    snippet: String(snippet || '')
+      .replace(/\s+/g, ' ')
+      .trim(),
     publishedDate: '',
     domain: _extractDomain(u),
     type: _classifyDomain(u),
@@ -283,11 +530,15 @@ function _mkResult(title, url, snippet) {
 
 // DuckDuckGo wraps outbound links as //duckduckgo.com/l/?uddg=<encoded>&...
 function _decodeDdgHref(href) {
-  if (!href) return '';
+  if (!href) {
+    return '';
+  }
   try {
     const u = new URL(href, 'https://duckduckgo.com');
     const uddg = u.searchParams.get('uddg');
-    if (uddg) return uddg;
+    if (uddg) {
+      return uddg;
+    }
     return u.protocol === 'http:' || u.protocol === 'https:' ? u.toString() : '';
   } catch {
     return '';
@@ -296,18 +547,24 @@ function _decodeDdgHref(href) {
 
 function _parseDuckDuckGoHtml(html) {
   const cheerio = _loadCheerio();
-  if (!cheerio) return [];
+  if (!cheerio) {
+    return [];
+  }
   const $ = cheerio.load(html);
   const out = [];
   $('div.result, div.web-result, .results_links').each((_, el) => {
-    if (out.length >= MAX_RESULTS) return false;
+    if (out.length >= MAX_RESULTS) {
+      return false;
+    }
     const node = $(el);
     const a = node.find('a.result__a').first();
     const title = a.text();
     const url = _decodeDdgHref(a.attr('href'));
     const snippet = node.find('.result__snippet').first().text();
     const r = _mkResult(title, url, snippet);
-    if (r) out.push(r);
+    if (r) {
+      out.push(r);
+    }
   });
   return out;
 }
@@ -327,70 +584,103 @@ const _MIN_SNIPPET_LEN = 10;
 //   ③ 都拿不到才回落原始 /link? 包装 href(WebFetch 仍可跟随重定向，保今天行为)。
 function _baiduRealUrl(node, a, wrappedHref) {
   const attrUrl = String(
-    (a && (a.attr('data-url') || a.attr('mu') || a.attr('data-mu')))
-    || (node && (node.attr('mu') || node.attr('data-mu') || node.attr('data-url')))
-    || ''
+    (a && (a.attr('data-url') || a.attr('mu') || a.attr('data-mu'))) ||
+      (node && (node.attr('mu') || node.attr('data-mu') || node.attr('data-url'))) ||
+      ''
   ).trim();
-  if (/^https?:\/\//i.test(attrUrl)) return attrUrl;
+  if (/^https?:\/\//i.test(attrUrl)) {
+    return attrUrl;
+  }
   const cite = node
-    ? String(node.find('.c-showurl, .cosc-source-text, [class*="source"], .c-color-gray').first().text() || '')
-        .replace(/\s+/g, '').trim()
+    ? String(
+        node
+          .find('.c-showurl, .cosc-source-text, [class*="source"], .c-color-gray')
+          .first()
+          .text() || ''
+      )
+        .replace(/\s+/g, '')
+        .trim()
     : '';
   if (cite) {
-    if (/^https?:\/\//i.test(cite)) return cite;
-    if (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(cite)) return `https://${cite}`;
+    if (/^https?:\/\//i.test(cite)) {
+      return cite;
+    }
+    if (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(cite)) {
+      return `https://${cite}`;
+    }
   }
   return String(wrappedHref || '').trim();
 }
 
 function _parseBaiduHtml(html) {
   const cheerio = _loadCheerio();
-  if (!cheerio) return [];
+  if (!cheerio) {
+    return [];
+  }
   const $ = cheerio.load(html);
   const out = [];
   // `div[tpl]` catches Baidu's newer template-driven result cards whose only
   // stable marker is the `tpl="..."` attribute (the .result/.c-container class
   // pair is increasingly dropped on A/B layouts).
-  const containers = $('#content_left .result, #content_left .c-container, .result.c-container, #content_left div[tpl]');
+  const containers = $(
+    '#content_left .result, #content_left .c-container, .result.c-container, #content_left div[tpl]'
+  );
   containers.each((_, el) => {
-    if (out.length >= MAX_RESULTS) return false;
+    if (out.length >= MAX_RESULTS) {
+      return false;
+    }
     const node = $(el);
     const a = node.find('h3 a, .t a, h3.c-title a').first();
     const title = a.text();
     const url = _baiduRealUrl(node, a, a.attr('href'));
     // Broadened selector set covers Baidu's rotating abstract class names
     // (content-right_*, content_right_*, c-line-clamp{2,3}, c-gap-* spans).
-    let snippet = node.find(
-      '.c-abstract, [class*="content-right"], [class*="content_right"], '
-      + '.c-span-last .c-color-text, .c-line-clamp2, .c-line-clamp3, '
-      + '.c-color-text, .c-font-normal'
-    ).first().text();
-    snippet = String(snippet || '').replace(/\s+/g, ' ').trim();
+    let snippet = node
+      .find(
+        '.c-abstract, [class*="content-right"], [class*="content_right"], ' +
+          '.c-span-last .c-color-text, .c-line-clamp2, .c-line-clamp3, ' +
+          '.c-color-text, .c-font-normal'
+      )
+      .first()
+      .text();
+    snippet = String(snippet || '')
+      .replace(/\s+/g, ' ')
+      .trim();
     // Shape-based fallback: when every class selector misses (Baidu renames them
     // often), derive the snippet from the container's own text minus the title.
     // This depends on DOM structure, not class names, so it survives reskins —
     // the root cause behind "title only, no body" results.
     if (snippet.length < _MIN_SNIPPET_LEN) {
       const full = node.text().replace(/\s+/g, ' ').trim();
-      const t = String(title || '').replace(/\s+/g, ' ').trim();
-      const rest = (t && full.startsWith(t)) ? full.slice(t.length) : full;
+      const t = String(title || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const rest = t && full.startsWith(t) ? full.slice(t.length) : full;
       snippet = rest.trim().slice(0, 300);
     }
     const r = _mkResult(title, url, snippet);
-    if (r) out.push(r);
+    if (r) {
+      out.push(r);
+    }
   });
   // Fallback: bare h3 > a if container selectors miss (Baidu A/B layouts).
   if (out.length === 0) {
     $('h3 a, h3.t a').each((_, el) => {
-      if (out.length >= MAX_RESULTS) return false;
+      if (out.length >= MAX_RESULTS) {
+        return false;
+      }
       const a = $(el);
       const href = String(a.attr('href') || '');
       // Drop home-page chrome served on a bot-challenge: real Baidu result
       // links are absolute http(s) (typically www.baidu.com/link?url=...).
       // Relative/anchor/javascript hrefs are navigation, not results.
-      if (!/^https?:\/\//i.test(href)) return;
+      if (!/^https?:\/\//i.test(href)) {
+        return;
+      }
       const r = _mkResult(a.text(), href, '');
-      if (r) out.push(r);
+      if (r) {
+        out.push(r);
+      }
     });
   }
   return out;
@@ -398,18 +688,24 @@ function _parseBaiduHtml(html) {
 
 function _parseBingHtml(html) {
   const cheerio = _loadCheerio();
-  if (!cheerio) return [];
+  if (!cheerio) {
+    return [];
+  }
   const $ = cheerio.load(html);
   const out = [];
   $('#b_results li.b_algo, li.b_algo').each((_, el) => {
-    if (out.length >= MAX_RESULTS) return false;
+    if (out.length >= MAX_RESULTS) {
+      return false;
+    }
     const node = $(el);
     const a = node.find('h2 a').first();
     const title = a.text();
     const url = a.attr('href') || '';
     const snippet = node.find('.b_caption p, .b_algoSlug, p').first().text();
     const r = _mkResult(title, url, snippet);
-    if (r) out.push(r);
+    if (r) {
+      out.push(r);
+    }
   });
   return out;
 }
@@ -419,57 +715,88 @@ function _parseBingHtml(html) {
 // 故优先采用结果卡片里可见的「绿色 cite 站点文本」(.fz-mid / .citeurl / cite) 推断
 // 真实 host：若是裸 host 则补成 https://host/。拿不到才回退到 sogou 包装链接。
 function _sogouRealUrl(citeText, wrappedHref) {
-  const cite = String(citeText || '').replace(/\s+/g, '').trim();
+  const cite = String(citeText || '')
+    .replace(/\s+/g, '')
+    .trim();
   if (cite) {
-    if (/^https?:\/\//i.test(cite)) return cite;
+    if (/^https?:\/\//i.test(cite)) {
+      return cite;
+    }
     // 形如 "www.example.com/path" 的可见站点文本 → 补协议
-    if (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(cite)) return `https://${cite}`;
+    if (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(cite)) {
+      return `https://${cite}`;
+    }
   }
   const href = String(wrappedHref || '').trim();
-  if (!href) return '';
-  if (/^https?:\/\//i.test(href)) return href;
-  if (href.startsWith('/')) return `https://www.sogou.com${href}`;
+  if (!href) {
+    return '';
+  }
+  if (/^https?:\/\//i.test(href)) {
+    return href;
+  }
+  if (href.startsWith('/')) {
+    return `https://www.sogou.com${href}`;
+  }
   return '';
 }
 
 function _parseSogouHtml(html) {
   const cheerio = _loadCheerio();
-  if (!cheerio) return [];
+  if (!cheerio) {
+    return [];
+  }
   const $ = cheerio.load(html);
   const out = [];
   // .vrwrap/.rb 是搜狗结果卡片的稳定标记；.results .result 容错旧/新版式。
   $('.results .vrwrap, .results .rb, .vrwrap, .rb').each((_, el) => {
-    if (out.length >= MAX_RESULTS) return false;
+    if (out.length >= MAX_RESULTS) {
+      return false;
+    }
     const node = $(el);
     const a = node.find('h3 a, .vr-title a, .vrTitle a').first();
     const title = a.text();
-    if (!title) return;
+    if (!title) {
+      return;
+    }
     const cite = node.find('.fz-mid, .citeurl, cite, .str-pd-box cite').first().text();
     const url = _sogouRealUrl(cite, a.attr('href'));
-    const snippet = node.find('.fz-mid ~ .str_info, .str-text-info, .text-layout, .str_info, .ft').first().text();
+    const snippet = node
+      .find('.fz-mid ~ .str_info, .str-text-info, .text-layout, .str_info, .ft')
+      .first()
+      .text();
     const r = _mkResult(title, url, snippet);
-    if (r) out.push(r);
+    if (r) {
+      out.push(r);
+    }
   });
   return out;
 }
 
 function _parseSo360Html(html) {
   const cheerio = _loadCheerio();
-  if (!cheerio) return [];
+  if (!cheerio) {
+    return [];
+  }
   const $ = cheerio.load(html);
   const out = [];
   // 360 把结果包在 li.res-list；真实目标 URL 暴露在 data-mdurl / data-url 属性，
   // 包装 href 仅作兜底（其 /link? 跳转 WebFetch 同样可跟随）。
   $('#main .res-list, li.res-list, .res-list').each((_, el) => {
-    if (out.length >= MAX_RESULTS) return false;
+    if (out.length >= MAX_RESULTS) {
+      return false;
+    }
     const node = $(el);
     const a = node.find('h3 a, .res-title a').first();
     const title = a.text();
-    if (!title) return;
+    if (!title) {
+      return;
+    }
     const url = a.attr('data-mdurl') || a.attr('data-url') || a.attr('href') || '';
     const snippet = node.find('.res-desc, .res-rich, p').first().text();
     const r = _mkResult(title, url, snippet);
-    if (r) out.push(r);
+    if (r) {
+      out.push(r);
+    }
   });
   return out;
 }
@@ -478,16 +805,27 @@ function _parseSo360Html(html) {
 // 出站链接是直接绝对 URL(无跳转桩),故无需 URL 还原。fail-soft:叶子/cheerio 缺失 → []。
 function _parseMojeekHtml(html) {
   const cheerio = _loadCheerio();
-  if (!cheerio) return [];
+  if (!cheerio) {
+    return [];
+  }
   let sel;
-  try { sel = require('./search/mojeekEngine').MOJEEK_SELECTORS; }
-  catch { return []; }
+  try {
+    sel = require('./search/mojeekEngine').MOJEEK_SELECTORS;
+  } catch {
+    return [];
+  }
   let norm = null;
-  try { norm = require('./search/mojeekEngine').normalizeMojeekRow; } catch { norm = null; }
+  try {
+    norm = require('./search/mojeekEngine').normalizeMojeekRow;
+  } catch {
+    norm = null;
+  }
   const $ = cheerio.load(html);
   const out = [];
   $(sel.container).each((_, el) => {
-    if (out.length >= MAX_RESULTS) return false;
+    if (out.length >= MAX_RESULTS) {
+      return false;
+    }
     const node = $(el);
     const a = node.find(sel.title).first();
     const title = a.text();
@@ -495,7 +833,9 @@ function _parseMojeekHtml(html) {
     const snippet = node.find(sel.snippet).first().text();
     const row = norm ? norm({ title, url, snippet }) : null;
     const r = row ? _mkResult(row.title, row.url, row.snippet) : _mkResult(title, url, snippet);
-    if (r) out.push(r);
+    if (r) {
+      out.push(r);
+    }
   });
   return out;
 }
@@ -510,29 +850,45 @@ function _parseMojeekHtml(html) {
  */
 function _parseGenericHtml(html) {
   const cheerio = _loadCheerio();
-  if (!cheerio) return [];
+  if (!cheerio) {
+    return [];
+  }
   const $ = cheerio.load(html);
   const out = [];
   const seen = new Set();
   // Reduce noise: skip links inside header/nav/footer/aside chrome.
   $('header a, nav a, footer a, aside a').addClass('__khy_chrome');
   $('a[href]').each((_, el) => {
-    if (out.length >= MAX_RESULTS) return false;
+    if (out.length >= MAX_RESULTS) {
+      return false;
+    }
     const a = $(el);
-    if (a.hasClass('__khy_chrome')) return;
+    if (a.hasClass('__khy_chrome')) {
+      return;
+    }
     const href = String(a.attr('href') || '').trim();
-    if (!/^https?:\/\//i.test(href)) return;        // 只要绝对 http(s) 外链
+    if (!/^https?:\/\//i.test(href)) {
+      return;
+    } // 只要绝对 http(s) 外链
     const title = a.text().replace(/\s+/g, ' ').trim();
-    if (title.length < 8) return;                   // 太短多半是图标/导航
+    if (title.length < 8) {
+      return;
+    } // 太短多半是图标/导航
     const key = _dedupKey(href);
-    if (seen.has(key)) return;
+    if (seen.has(key)) {
+      return;
+    }
     seen.add(key);
     // 摘要:取链接所在卡片(就近祖先)的文本,扣掉标题本身。
     const card = a.closest('li, article, .result, .item, div');
     let snippet = card && card.length ? card.text().replace(/\s+/g, ' ').trim() : '';
-    if (snippet.startsWith(title)) snippet = snippet.slice(title.length).trim();
+    if (snippet.startsWith(title)) {
+      snippet = snippet.slice(title.length).trim();
+    }
     const r = _mkResult(title, href, snippet.slice(0, 200));
-    if (r) out.push(r);
+    if (r) {
+      out.push(r);
+    }
   });
   return out;
 }
@@ -549,10 +905,12 @@ function getKiroAdapter() {
 
 function isQueueEmptyLikeError(message = '') {
   const text = String(message || '').toLowerCase();
-  return /queue[\s_-]*is[\s_-]*empty/.test(text)
-    || /empty[\s_-]*queue/.test(text)
-    || /队列.*为空/.test(text)
-    || /队列为空/.test(text);
+  return (
+    /queue[\s_-]*is[\s_-]*empty/.test(text) ||
+    /empty[\s_-]*queue/.test(text) ||
+    /队列.*为空/.test(text) ||
+    /队列为空/.test(text)
+  );
 }
 
 /**
@@ -585,7 +943,7 @@ async function search(query, opts = {}) {
   }
 
   const retryOnQueueEmpty = opts.retryOnQueueEmpty !== false;
-  const limit = _resolveLimit(opts);
+  const limit = _resolveLimit({ ...opts, query });
 
   // 新鲜度:Kiro/MCP 用博查式枚举(oneDay/oneWeek/oneMonth/oneYear)。归一化 opts.freshness
   // (可能是已解析的内部窗口名,也可能是原始外部值),映射成 MCP arguments.freshness。
@@ -593,8 +951,12 @@ async function search(query, opts = {}) {
   if (_freshness && opts.freshness) {
     try {
       const w = _freshness.normalizeWindow(opts.freshness);
-      if (w && w !== 'auto') _bochaFreshness = _freshness.windowToBochaFreshness(w);
-    } catch { /* optional */ }
+      if (w && w !== 'auto') {
+        _bochaFreshness = _freshness.windowToBochaFreshness(w);
+      }
+    } catch {
+      /* optional */
+    }
   }
 
   try {
@@ -627,7 +989,11 @@ async function search(query, opts = {}) {
     if (response.error) {
       const queueLike = isQueueEmptyLikeError(response.error.message);
       if (queueLike && retryOnQueueEmpty) {
-        try { getKiroAdapter().destroy(); } catch { /* ignore */ }
+        try {
+          getKiroAdapter().destroy();
+        } catch {
+          /* ignore */
+        }
         return search(trimmedQuery, { ...opts, retryOnQueueEmpty: false });
       }
       return {
@@ -642,12 +1008,24 @@ async function search(query, opts = {}) {
   } catch (err) {
     const queueLike = isQueueEmptyLikeError(err?.message);
     if (queueLike && retryOnQueueEmpty) {
-      try { getKiroAdapter().destroy(); } catch { /* ignore */ }
+      try {
+        getKiroAdapter().destroy();
+      } catch {
+        /* ignore */
+      }
       return search(trimmedQuery, { ...opts, retryOnQueueEmpty: false });
     }
     // Clear cached client on auth errors
-    if (err.message?.includes('401') || err.message?.includes('403') || err.message?.includes('expired')) {
-      try { getKiroAdapter().destroy(); } catch { /* ignore */ }
+    if (
+      err.message?.includes('401') ||
+      err.message?.includes('403') ||
+      err.message?.includes('expired')
+    ) {
+      try {
+        getKiroAdapter().destroy();
+      } catch {
+        /* ignore */
+      }
     }
     return { success: false, error: err.message || 'Web search failed' };
   }
@@ -658,7 +1036,9 @@ async function search(query, opts = {}) {
  * These tags confuse downstream LLMs into thinking it's a prompt injection.
  */
 function _sanitizeProviderText(text) {
-  if (!text || typeof text !== 'string') return text || '';
+  if (!text || typeof text !== 'string') {
+    return text || '';
+  }
   return text
     .replace(/<system_context>[\s\S]*?<\/system_context>/gi, '')
     .replace(/<system_instruction>[\s\S]*?<\/system_instruction>/gi, '')
@@ -672,14 +1052,20 @@ function _sanitizeProviderText(text) {
  */
 function formatResults(result, limit = DEFAULT_RESULTS) {
   const empty = { results: [], formatted: 'No results found.' };
-  if (!result?.content) return empty;
+  if (!result?.content) {
+    return empty;
+  }
 
-  const textContent = result.content.find(c => c.type === 'text');
-  if (!textContent?.text) return empty;
+  const textContent = result.content.find((c) => c.type === 'text');
+  if (!textContent?.text) {
+    return empty;
+  }
 
   // Sanitize provider leakage before parsing
   const cleanText = _sanitizeProviderText(textContent.text);
-  if (!cleanText) return empty;
+  if (!cleanText) {
+    return empty;
+  }
 
   try {
     const parsed = JSON.parse(cleanText);
@@ -687,7 +1073,7 @@ function formatResults(result, limit = DEFAULT_RESULTS) {
       return { results: [], formatted: _sanitizeProviderText(cleanText) };
     }
 
-    const results = parsed.results.slice(0, limit).map(r => ({
+    const results = parsed.results.slice(0, limit).map((r) => ({
       title: r.title || 'Untitled',
       url: r.url || '',
       snippet: r.snippet || '',
@@ -707,28 +1093,45 @@ function formatResults(result, limit = DEFAULT_RESULTS) {
  * Format results array into enhanced markdown with domain tags and chaining footer.
  */
 function _formatResultsMarkdown(results) {
-  if (!results || results.length === 0) return 'No results found.';
+  if (!results || results.length === 0) {
+    return 'No results found.';
+  }
 
   const TYPE_LABELS = {
-    forum: 'Forum', code: 'Code', docs: 'Docs', reference: 'Reference',
-    blog: 'Blog', news: 'News', other: '',
+    forum: 'Forum',
+    code: 'Code',
+    docs: 'Docs',
+    reference: 'Reference',
+    blog: 'Blog',
+    news: 'News',
+    other: '',
   };
 
-  const lines = results.map((r, i) => {
-    const tag = TYPE_LABELS[r.type] || '';
-    // Consensus annotation: a result surfaced by ≥2 independent engines is a
-    // stronger signal — make that visible so accuracy is explainable.
-    const consensus = r.engineCount >= 2 ? ` [${r.engineCount} 来源]` : '';
-    const tagPart = tag ? ` [${tag}]` : '';
-    const header = `### ${i + 1}. ${r.title}${tagPart}${consensus}`;
-    const parts = [header];
-    if (r.url) parts.push(`URL: ${r.url}`);
-    if (r.snippet) parts.push(r.snippet);
-    if (r.publishedDate) parts.push(`Published: ${r.publishedDate}`);
-    return parts.join('\n');
-  }).join('\n\n---\n\n');
+  const lines = results
+    .map((r, i) => {
+      const tag = TYPE_LABELS[r.type] || '';
+      // Consensus annotation: a result surfaced by ≥2 independent engines is a
+      // stronger signal — make that visible so accuracy is explainable.
+      const consensus = r.engineCount >= 2 ? ` [${r.engineCount} 来源]` : '';
+      const tagPart = tag ? ` [${tag}]` : '';
+      const header = `### ${i + 1}. ${r.title}${tagPart}${consensus}`;
+      const parts = [header];
+      if (r.url) {
+        parts.push(`URL: ${r.url}`);
+      }
+      if (r.snippet) {
+        parts.push(r.snippet);
+      }
+      if (r.publishedDate) {
+        parts.push(`Published: ${r.publishedDate}`);
+      }
+      return parts.join('\n');
+    })
+    .join('\n\n---\n\n');
 
-  return lines + '\n\n---\nTo read the full content of any result, use WebFetch with the URL above.';
+  return (
+    lines + '\n\n---\nTo read the full content of any result, use WebFetch with the URL above.'
+  );
 }
 
 /**
@@ -736,57 +1139,47 @@ function _formatResultsMarkdown(results) {
  * Used when Kiro token is unavailable.
  */
 async function searchFallback(query, freshWindow = null) {
-  const https = require('https');
-  const trimmedQuery = String(query || '').trim().slice(0, 200);
-  if (!trimmedQuery) return { success: false, error: 'Search query is empty' };
+  const trimmedQuery = String(query || '')
+    .trim()
+    .slice(0, 200);
+  if (!trimmedQuery) {
+    return { success: false, error: 'Search query is empty' };
+  }
 
   // 获取代理配置（国外站点需要走代理）
   let proxyUrl = null;
   try {
     const proxyConfig = require('./proxyConfigService');
     const proxy = proxyConfig.getActiveProxy();
-    if (proxy && proxy.url) proxyUrl = proxy.url;
-  } catch { /* ignore */ }
+    if (proxy && proxy.url) {
+      proxyUrl = proxy.url;
+    }
+  } catch {
+    /* ignore */
+  }
   // 环境变量兜底
-  if (!proxyUrl) proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy || null;
+  if (!proxyUrl) {
+    proxyUrl =
+      process.env.HTTPS_PROXY ||
+      process.env.https_proxy ||
+      process.env.HTTP_PROXY ||
+      process.env.http_proxy ||
+      null;
+  }
 
   return new Promise((resolve) => {
     const MAX_RESPONSE_BYTES = 2 * 1024 * 1024; // 2 MB cap
-    const url = _withFreshParam(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(trimmedQuery)}&kl=cn-zh`, freshWindow, 'duckduckgo');
+    const url = _withFreshParam(
+      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(trimmedQuery)}&kl=cn-zh`,
+      freshWindow,
+      'duckduckgo'
+    );
 
     if (proxyUrl) {
-      // 通过 HTTP CONNECT 隧道代理
+      // 通过 HTTP CONNECT 隧道代理；代理不可用时内部自动回退直连
       return _searchViaProxy(url, proxyUrl, MAX_RESPONSE_BYTES, resolve);
     }
-    const req = https.get(url, {
-      headers: { 'User-Agent': 'KHY-OS/1.0 (search fallback)' },
-      timeout: 15000,
-    }, (res) => {
-      let data = '';
-      let bytes = 0;
-      res.on('data', chunk => {
-        bytes += chunk.length;
-        if (bytes > MAX_RESPONSE_BYTES) {
-          res.destroy();
-          return;
-        }
-        data += chunk;
-      });
-      res.on('end', () => {
-        try {
-          const results = _parseDuckDuckGoHtml(data);
-          if (results.length === 0) {
-            resolve({ success: true, results: [], formatted: 'No results found.' });
-            return;
-          }
-          resolve({ success: true, results, formatted: _formatResultsMarkdown(results) });
-        } catch (err) {
-          resolve({ success: false, error: `Search parse error: ${err.message}` });
-        }
-      });
-    });
-    req.on('error', (err) => resolve({ success: false, error: `Search failed: ${err.message}` }));
-    req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'Search timed out' }); });
+    _searchDuckDuckGoDirect(url, MAX_RESPONSE_BYTES, resolve);
   });
 }
 
@@ -795,36 +1188,67 @@ async function searchFallback(query, freshWindow = null) {
  */
 async function searchBaidu(query, freshWindow = null) {
   const https = require('https');
-  const trimmedQuery = String(query || '').trim().slice(0, 200);
-  if (!trimmedQuery) return { success: false, error: 'Search query is empty' };
+  const trimmedQuery = String(query || '')
+    .trim()
+    .slice(0, 200);
+  if (!trimmedQuery) {
+    return { success: false, error: 'Search query is empty' };
+  }
 
   return new Promise((resolve) => {
     const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
-    const url = _withFreshParam(`https://www.baidu.com/s?wd=${encodeURIComponent(trimmedQuery)}&rn=20&ie=utf-8`, freshWindow, 'baidu');
-    const req = https.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Cookie': 'BAIDUID=0:FG=1',
+    const url = _withFreshParam(
+      `https://www.baidu.com/s?wd=${encodeURIComponent(trimmedQuery)}&rn=20&ie=utf-8`,
+      freshWindow,
+      'baidu'
+    );
+    const req = https.get(
+      url,
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml',
+          'Accept-Language': 'zh-CN,zh;q=0.9',
+          Cookie: 'BAIDUID=0:FG=1',
+        },
+        timeout: 10000,
       },
-      timeout: 10000,
-    }, (res) => {
-      // Follow redirects
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        const rUrl = res.headers.location.startsWith('http') ? res.headers.location : `https://www.baidu.com${res.headers.location}`;
-        const rReq = _httpClientFor(rUrl).get(rUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-          timeout: 10000,
-        }, (rRes) => _parseBaiduResponse(rRes, MAX_RESPONSE_BYTES, resolve));
-        rReq.on('error', (e) => resolve({ success: false, error: `Baidu redirect failed: ${e.message}` }));
-        rReq.on('timeout', () => { rReq.destroy(); resolve({ success: false, error: 'Baidu timed out' }); });
-        return;
+      (res) => {
+        // Follow redirects
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const rUrl = res.headers.location.startsWith('http')
+            ? res.headers.location
+            : `https://www.baidu.com${res.headers.location}`;
+          const rReq = _httpClientFor(rUrl).get(
+            rUrl,
+            {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              },
+              timeout: 10000,
+            },
+            (rRes) => _parseBaiduResponse(rRes, MAX_RESPONSE_BYTES, resolve)
+          );
+          rReq.on('error', (e) =>
+            resolve({ success: false, error: `Baidu redirect failed: ${e.message}` })
+          );
+          rReq.on('timeout', () => {
+            rReq.destroy();
+            resolve({ success: false, error: 'Baidu timed out' });
+          });
+          return;
+        }
+        _parseBaiduResponse(res, MAX_RESPONSE_BYTES, resolve);
       }
-      _parseBaiduResponse(res, MAX_RESPONSE_BYTES, resolve);
+    );
+    req.on('error', (err) =>
+      resolve({ success: false, error: `Baidu search failed: ${err.message}` })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ success: false, error: 'Baidu search timed out' });
     });
-    req.on('error', (err) => resolve({ success: false, error: `Baidu search failed: ${err.message}` }));
-    req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'Baidu search timed out' }); });
   });
 }
 
@@ -832,9 +1256,12 @@ function _parseBaiduResponse(res, maxBytes, resolve) {
   let data = '';
   let bytes = 0;
   res.setEncoding('utf8');
-  res.on('data', chunk => {
+  res.on('data', (chunk) => {
     bytes += Buffer.byteLength(chunk);
-    if (bytes > maxBytes) { res.destroy(); return; }
+    if (bytes > maxBytes) {
+      res.destroy();
+      return;
+    }
     data += chunk;
   });
   res.on('end', () => {
@@ -856,43 +1283,73 @@ function _parseBaiduResponse(res, maxBytes, resolve) {
  */
 async function searchDomestic(query, freshWindow = null) {
   const https = require('https');
-  const trimmedQuery = String(query || '').trim().slice(0, 200);
-  if (!trimmedQuery) return { success: false, error: 'Search query is empty' };
+  const trimmedQuery = String(query || '')
+    .trim()
+    .slice(0, 200);
+  if (!trimmedQuery) {
+    return { success: false, error: 'Search query is empty' };
+  }
 
   return new Promise((resolve) => {
     const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
-    const url = _withFreshParam(`https://cn.bing.com/search?q=${encodeURIComponent(trimmedQuery)}&setlang=zh-Hans&mkt=zh-CN`, freshWindow, 'bing-cn');
-    const req = https.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
+    const url = _withFreshParam(
+      `https://cn.bing.com/search?q=${encodeURIComponent(trimmedQuery)}&setlang=zh-Hans&mkt=zh-CN`,
+      freshWindow,
+      'bing-cn'
+    );
+    const req = https.get(
+      url,
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'zh-CN,zh;q=0.9',
+        },
+        timeout: 10000,
       },
-      timeout: 10000,
-    }, (res) => {
-      // 跟随重定向
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        const redirectUrl = res.headers.location;
-        const redirectReq = _httpClientFor(redirectUrl).get(redirectUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-          timeout: 10000,
-        }, (redirectRes) => _parseBingResponse(redirectRes, MAX_RESPONSE_BYTES, resolve));
-        redirectReq.on('error', () => resolve({ success: false, error: 'Bing redirect failed' }));
-        redirectReq.on('timeout', () => { redirectReq.destroy(); resolve({ success: false, error: 'Bing timed out' }); });
-        return;
+      (res) => {
+        // 跟随重定向
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const redirectUrl = res.headers.location;
+          const redirectReq = _httpClientFor(redirectUrl).get(
+            redirectUrl,
+            {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              },
+              timeout: 10000,
+            },
+            (redirectRes) => _parseBingResponse(redirectRes, MAX_RESPONSE_BYTES, resolve)
+          );
+          redirectReq.on('error', () => resolve({ success: false, error: 'Bing redirect failed' }));
+          redirectReq.on('timeout', () => {
+            redirectReq.destroy();
+            resolve({ success: false, error: 'Bing timed out' });
+          });
+          return;
+        }
+        _parseBingResponse(res, MAX_RESPONSE_BYTES, resolve);
       }
-      _parseBingResponse(res, MAX_RESPONSE_BYTES, resolve);
+    );
+    req.on('error', (err) =>
+      resolve({ success: false, error: `Bing search failed: ${err.message}` })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ success: false, error: 'Bing search timed out' });
     });
-    req.on('error', (err) => resolve({ success: false, error: `Bing search failed: ${err.message}` }));
-    req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'Bing search timed out' }); });
   });
 }
 
 function _parseBingResponse(res, maxBytes, resolve) {
   let data = '';
   let bytes = 0;
-  res.on('data', chunk => {
+  res.on('data', (chunk) => {
     bytes += chunk.length;
-    if (bytes > maxBytes) { res.destroy(); return; }
+    if (bytes > maxBytes) {
+      res.destroy();
+      return;
+    }
     data += chunk;
   });
   res.on('end', () => {
@@ -918,9 +1375,12 @@ function _collectAndParse(res, maxBytes, parseHtml, label, resolve) {
   let data = '';
   let bytes = 0;
   res.setEncoding('utf8');
-  res.on('data', chunk => {
+  res.on('data', (chunk) => {
     bytes += Buffer.byteLength(chunk);
-    if (bytes > maxBytes) { res.destroy(); return; }
+    if (bytes > maxBytes) {
+      res.destroy();
+      return;
+    }
     data += chunk;
   });
   res.on('end', () => {
@@ -942,29 +1402,52 @@ function _collectAndParse(res, maxBytes, parseHtml, label, resolve) {
  */
 async function searchSogou(query, freshWindow = null) {
   const https = require('https');
-  const trimmedQuery = String(query || '').trim().slice(0, 200);
-  if (!trimmedQuery) return { success: false, error: 'Search query is empty' };
+  const trimmedQuery = String(query || '')
+    .trim()
+    .slice(0, 200);
+  if (!trimmedQuery) {
+    return { success: false, error: 'Search query is empty' };
+  }
 
   return new Promise((resolve) => {
     const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
-    const url = _withFreshParam(`https://www.sogou.com/web?query=${encodeURIComponent(trimmedQuery)}&num=20`, freshWindow, 'sogou');
+    const url = _withFreshParam(
+      `https://www.sogou.com/web?query=${encodeURIComponent(trimmedQuery)}&num=20`,
+      freshWindow,
+      'sogou'
+    );
     const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml',
       'Accept-Language': 'zh-CN,zh;q=0.9',
     };
     const req = https.get(url, { headers, timeout: 10000 }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        const rUrl = res.headers.location.startsWith('http') ? res.headers.location : `https://www.sogou.com${res.headers.location}`;
-        const rReq = _httpClientFor(rUrl).get(rUrl, { headers, timeout: 10000 }, (rRes) => _collectAndParse(rRes, MAX_RESPONSE_BYTES, _parseSogouHtml, 'Sogou', resolve));
-        rReq.on('error', (e) => resolve({ success: false, error: `Sogou redirect failed: ${e.message}` }));
-        rReq.on('timeout', () => { rReq.destroy(); resolve({ success: false, error: 'Sogou timed out' }); });
+        const rUrl = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : `https://www.sogou.com${res.headers.location}`;
+        const rReq = _httpClientFor(rUrl).get(rUrl, { headers, timeout: 10000 }, (rRes) =>
+          _collectAndParse(rRes, MAX_RESPONSE_BYTES, _parseSogouHtml, 'Sogou', resolve)
+        );
+        rReq.on('error', (e) =>
+          resolve({ success: false, error: `Sogou redirect failed: ${e.message}` })
+        );
+        rReq.on('timeout', () => {
+          rReq.destroy();
+          resolve({ success: false, error: 'Sogou timed out' });
+        });
         return;
       }
       _collectAndParse(res, MAX_RESPONSE_BYTES, _parseSogouHtml, 'Sogou', resolve);
     });
-    req.on('error', (err) => resolve({ success: false, error: `Sogou search failed: ${err.message}` }));
-    req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'Sogou search timed out' }); });
+    req.on('error', (err) =>
+      resolve({ success: false, error: `Sogou search failed: ${err.message}` })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ success: false, error: 'Sogou search timed out' });
+    });
   });
 }
 
@@ -973,29 +1456,48 @@ async function searchSogou(query, freshWindow = null) {
  */
 async function searchSo360(query, freshWindow = null) {
   const https = require('https');
-  const trimmedQuery = String(query || '').trim().slice(0, 200);
-  if (!trimmedQuery) return { success: false, error: 'Search query is empty' };
+  const trimmedQuery = String(query || '')
+    .trim()
+    .slice(0, 200);
+  if (!trimmedQuery) {
+    return { success: false, error: 'Search query is empty' };
+  }
 
   return new Promise((resolve) => {
     const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
     const url = `https://www.so.com/s?q=${encodeURIComponent(trimmedQuery)}`;
     const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml',
       'Accept-Language': 'zh-CN,zh;q=0.9',
     };
     const req = https.get(url, { headers, timeout: 10000 }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        const rUrl = res.headers.location.startsWith('http') ? res.headers.location : `https://www.so.com${res.headers.location}`;
-        const rReq = _httpClientFor(rUrl).get(rUrl, { headers, timeout: 10000 }, (rRes) => _collectAndParse(rRes, MAX_RESPONSE_BYTES, _parseSo360Html, 'So360', resolve));
-        rReq.on('error', (e) => resolve({ success: false, error: `So360 redirect failed: ${e.message}` }));
-        rReq.on('timeout', () => { rReq.destroy(); resolve({ success: false, error: 'So360 timed out' }); });
+        const rUrl = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : `https://www.so.com${res.headers.location}`;
+        const rReq = _httpClientFor(rUrl).get(rUrl, { headers, timeout: 10000 }, (rRes) =>
+          _collectAndParse(rRes, MAX_RESPONSE_BYTES, _parseSo360Html, 'So360', resolve)
+        );
+        rReq.on('error', (e) =>
+          resolve({ success: false, error: `So360 redirect failed: ${e.message}` })
+        );
+        rReq.on('timeout', () => {
+          rReq.destroy();
+          resolve({ success: false, error: 'So360 timed out' });
+        });
         return;
       }
       _collectAndParse(res, MAX_RESPONSE_BYTES, _parseSo360Html, 'So360', resolve);
     });
-    req.on('error', (err) => resolve({ success: false, error: `So360 search failed: ${err.message}` }));
-    req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'So360 search timed out' }); });
+    req.on('error', (err) =>
+      resolve({ success: false, error: `So360 search failed: ${err.message}` })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ success: false, error: 'So360 search timed out' });
+    });
   });
 }
 
@@ -1004,13 +1506,22 @@ async function searchSo360(query, freshWindow = null) {
  */
 async function searchMojeek(query, freshWindow = null) {
   const https = require('https');
-  const trimmedQuery = String(query || '').trim().slice(0, 200);
-  if (!trimmedQuery) return { success: false, error: 'Search query is empty' };
+  const trimmedQuery = String(query || '')
+    .trim()
+    .slice(0, 200);
+  if (!trimmedQuery) {
+    return { success: false, error: 'Search query is empty' };
+  }
 
   let url;
-  try { url = require('./search/mojeekEngine').buildMojeekUrl(trimmedQuery); }
-  catch { url = ''; }
-  if (!url) return { success: false, error: 'Mojeek: empty URL' };
+  try {
+    url = require('./search/mojeekEngine').buildMojeekUrl(trimmedQuery);
+  } catch {
+    url = '';
+  }
+  if (!url) {
+    return { success: false, error: 'Mojeek: empty URL' };
+  }
   // 时间过滤:Mojeek 无标准 URL 日期参数,借 duckduckgo 家族的 df= 作通用近似(引擎不认则忽略),
   // 最终仍由 applyRecencyRanking 兜底按日期重排。
   url = _withFreshParam(url, freshWindow, 'duckduckgo');
@@ -1018,8 +1529,9 @@ async function searchMojeek(query, freshWindow = null) {
   return new Promise((resolve) => {
     const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
     const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml',
       'Accept-Language': 'en-US,en;q=0.9',
     };
     let req;
@@ -1029,55 +1541,54 @@ async function searchMojeek(query, freshWindow = null) {
           const rUrl = /^https?:\/\//.test(res.headers.location)
             ? res.headers.location
             : new URL(res.headers.location, url).toString();
-          const rReq = _httpClientFor(rUrl).get(rUrl, { headers, timeout: 10000 },
-            (rRes) => _collectAndParse(rRes, MAX_RESPONSE_BYTES, _parseMojeekHtml, 'Mojeek', resolve));
-          rReq.on('error', (e) => resolve({ success: false, error: `Mojeek redirect failed: ${e.message}` }));
-          rReq.on('timeout', () => { rReq.destroy(); resolve({ success: false, error: 'Mojeek timed out' }); });
+          const rReq = _httpClientFor(rUrl).get(rUrl, { headers, timeout: 10000 }, (rRes) =>
+            _collectAndParse(rRes, MAX_RESPONSE_BYTES, _parseMojeekHtml, 'Mojeek', resolve)
+          );
+          rReq.on('error', (e) =>
+            resolve({ success: false, error: `Mojeek redirect failed: ${e.message}` })
+          );
+          rReq.on('timeout', () => {
+            rReq.destroy();
+            resolve({ success: false, error: 'Mojeek timed out' });
+          });
           return;
         }
         _collectAndParse(res, MAX_RESPONSE_BYTES, _parseMojeekHtml, 'Mojeek', resolve);
       });
-    } catch (err) { resolve({ success: false, error: `Mojeek request error: ${err.message}` }); return; }
-    req.on('error', (err) => resolve({ success: false, error: `Mojeek search failed: ${err.message}` }));
-    req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'Mojeek search timed out' }); });
+    } catch (err) {
+      resolve({ success: false, error: `Mojeek request error: ${err.message}` });
+      return;
+    }
+    req.on('error', (err) =>
+      resolve({ success: false, error: `Mojeek search failed: ${err.message}` })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ success: false, error: 'Mojeek search timed out' });
+    });
   });
 }
 
 /**
- * HTTP CONNECT 隧道代理请求 DuckDuckGo
+ * DuckDuckGo 直连搜索（不经代理）。代理不可用时回退到这条路径。
  */
-function _searchViaProxy(targetUrl, proxyUrl, maxBytes, resolve) {
-  const http = require('http');
+function _searchDuckDuckGoDirect(targetUrl, maxBytes, resolve) {
   const https = require('https');
-  const { URL } = require('url');
-  const parsed = new URL(targetUrl);
-  const proxy = new URL(proxyUrl);
-
-  const connectReq = http.request({
-    host: proxy.hostname,
-    port: proxy.port || 7890,
-    method: 'CONNECT',
-    path: `${parsed.hostname}:443`,
-    timeout: 10000,
-  });
-
-  connectReq.on('connect', (connectRes, socket) => {
-    if (connectRes.statusCode !== 200) {
-      socket.destroy();
-      resolve({ success: false, error: `Proxy CONNECT failed: ${connectRes.statusCode}` });
-      return;
-    }
-    const req = https.get(targetUrl, {
-      socket,
-      agent: false,
+  const req = https.get(
+    targetUrl,
+    {
       headers: { 'User-Agent': 'KHY-OS/1.0 (search fallback)' },
       timeout: 15000,
-    }, (res) => {
+    },
+    (res) => {
       let data = '';
       let bytes = 0;
-      res.on('data', chunk => {
+      res.on('data', (chunk) => {
         bytes += chunk.length;
-        if (bytes > maxBytes) { res.destroy(); return; }
+        if (bytes > maxBytes) {
+          res.destroy();
+          return;
+        }
         data += chunk;
       });
       res.on('end', () => {
@@ -1092,13 +1603,104 @@ function _searchViaProxy(targetUrl, proxyUrl, maxBytes, resolve) {
           resolve({ success: false, error: `Search parse error: ${err.message}` });
         }
       });
-    });
-    req.on('error', (err) => resolve({ success: false, error: `Proxy search failed: ${err.message}` }));
-    req.on('timeout', () => { req.destroy(); resolve({ success: false, error: 'Proxy search timed out' }); });
+    }
+  );
+  req.on('error', (err) => resolve({ success: false, error: `Search failed: ${err.message}` }));
+  req.on('timeout', () => {
+    req.destroy();
+    resolve({ success: false, error: 'Search timed out' });
+  });
+}
+
+/**
+ * HTTP CONNECT 隧道代理请求 DuckDuckGo。代理失败（拒连 / 超时 / 无法连接）
+ * 一律回退直连 —— 绝不让代理故障导致搜索整体失败。
+ */
+function _searchViaProxy(targetUrl, proxyUrl, maxBytes, resolve) {
+  const http = require('http');
+  const https = require('https');
+  const { URL } = require('url');
+  const parsed = new URL(targetUrl);
+  const proxy = new URL(proxyUrl);
+
+  let directFired = false;
+  const fallbackDirect = () => {
+    if (directFired) {
+      return;
+    }
+    directFired = true;
+    _searchDuckDuckGoDirect(targetUrl, maxBytes, resolve);
+  };
+
+  const connectReq = http.request({
+    host: proxy.hostname,
+    port: proxy.port || 7890,
+    method: 'CONNECT',
+    path: `${parsed.hostname}:443`,
+    timeout: 10000,
   });
 
-  connectReq.on('error', (err) => resolve({ success: false, error: `Proxy connect error: ${err.message}` }));
-  connectReq.on('timeout', () => { connectReq.destroy(); resolve({ success: false, error: 'Proxy connect timed out' }); });
+  connectReq.on('connect', (connectRes, socket) => {
+    if (connectRes.statusCode !== 200) {
+      try {
+        socket.destroy();
+      } catch {
+        /* ignore */
+      }
+      fallbackDirect();
+      return;
+    }
+    const req = https.get(
+      targetUrl,
+      {
+        socket,
+        agent: false,
+        headers: { 'User-Agent': 'KHY-OS/1.0 (search fallback)' },
+        timeout: 15000,
+      },
+      (res) => {
+        let data = '';
+        let bytes = 0;
+        res.on('data', (chunk) => {
+          bytes += chunk.length;
+          if (bytes > maxBytes) {
+            res.destroy();
+            return;
+          }
+          data += chunk;
+        });
+        res.on('end', () => {
+          try {
+            const results = _parseDuckDuckGoHtml(data);
+            if (results.length === 0) {
+              resolve({ success: true, results: [], formatted: 'No results found.' });
+              return;
+            }
+            resolve({ success: true, results, formatted: _formatResultsMarkdown(results) });
+          } catch (err) {
+            resolve({ success: false, error: `Search parse error: ${err.message}` });
+          }
+        });
+      }
+    );
+    req.on('error', (err) =>
+      resolve({ success: false, error: `Proxy search failed: ${err.message}` })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ success: false, error: 'Proxy search timed out' });
+    });
+  });
+
+  connectReq.on('error', () => fallbackDirect());
+  connectReq.on('timeout', () => {
+    try {
+      connectReq.destroy();
+    } catch {
+      /* ignore */
+    }
+    fallbackDirect();
+  });
   connectReq.end();
 }
 
@@ -1115,7 +1717,10 @@ function _dedupKey(url) {
     return `${host}${path}${u.search}`;
   } catch {
     // Non-URL (e.g. Baidu-wrapped relative) — fall back to the raw string.
-    return String(url || '').trim().toLowerCase().replace(/\/+$/, '');
+    return String(url || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\/+$/, '');
   }
 }
 
@@ -1148,25 +1753,45 @@ function _fuseRankedLists(perEngine, opts = {}) {
   // key → aggregate record
   const agg = new Map();
   for (const src of Array.isArray(perEngine) ? perEngine : []) {
-    if (!src || !Array.isArray(src.results)) continue;
+    if (!src || !Array.isArray(src.results)) {
+      continue;
+    }
     const engine = src.engine || 'engine';
     const weight = Number.isFinite(src.weight) ? src.weight : 1;
     src.results.forEach((item, rank) => {
-      if (!item || !item.url) return;
+      if (!item || !item.url) {
+        return;
+      }
       const key = _dedupKey(item.url);
-      if (!key) return;
+      if (!key) {
+        return;
+      }
       let rec = agg.get(key);
       if (!rec) {
-        rec = { score: 0, engines: [], best: null, bestWeight: -Infinity, longestSnippet: '', order: agg.size };
+        rec = {
+          score: 0,
+          engines: [],
+          best: null,
+          bestWeight: -Infinity,
+          longestSnippet: '',
+          order: agg.size,
+        };
         agg.set(key, rec);
       }
       rec.score += weight / (K + rank);
-      if (!rec.engines.includes(engine)) rec.engines.push(engine);
+      if (!rec.engines.includes(engine)) {
+        rec.engines.push(engine);
+      }
       // title/url from the highest-weight engine that surfaced this item
-      if (weight > rec.bestWeight) { rec.best = item; rec.bestWeight = weight; }
+      if (weight > rec.bestWeight) {
+        rec.best = item;
+        rec.bestWeight = weight;
+      }
       // snippet: keep the longest variant across engines
       const snip = String(item.snippet || '');
-      if (snip.length > rec.longestSnippet.length) rec.longestSnippet = snip;
+      if (snip.length > rec.longestSnippet.length) {
+        rec.longestSnippet = snip;
+      }
     });
   }
 
@@ -1180,7 +1805,7 @@ function _fuseRankedLists(perEngine, opts = {}) {
   }));
   // Descending score; stable tie-break on first-seen order so equal-score items
   // keep engine-priority order (matches the legacy priority-preserving behavior).
-  fused.sort((a, b) => (b._score - a._score) || (a._order - b._order));
+  fused.sort((a, b) => b._score - a._score || a._order - b._order);
   // Strip internal sort keys from the public shape.
   return fused.map(({ _score, _order, ...rest }) => rest);
 }
@@ -1203,14 +1828,19 @@ function _mergeEngineOutcomes(settled, fanout) {
   const perEngine = [];
   settled.forEach((outcome, i) => {
     const engine = (fanout[i] && fanout[i].engine) || `engine${i}`;
-    const weight = Number.isFinite(fanout[i] && fanout[i].weight) ? fanout[i].weight : (1 - i * 0.05);
+    const weight = Number.isFinite(fanout[i] && fanout[i].weight) ? fanout[i].weight : 1 - i * 0.05;
     if (outcome.status === 'rejected') {
-      partialFailures.push({ engine, message: String((outcome.reason && outcome.reason.message) || outcome.reason) });
+      partialFailures.push({
+        engine,
+        message: String((outcome.reason && outcome.reason.message) || outcome.reason),
+      });
       return;
     }
     const r = outcome.value;
     if (!r || !r.success) {
-      if (r && r.error) partialFailures.push({ engine, message: r.error });
+      if (r && r.error) {
+        partialFailures.push({ engine, message: r.error });
+      }
       return;
     }
     perEngine.push({ engine, weight, results: r.results || [] });
@@ -1224,8 +1854,13 @@ function _mergeEngineOutcomes(settled, fanout) {
 // news/other) plus 'code' used by the markdown formatter.
 const _DIGEST_TYPE_ORDER = ['reference', 'docs', 'code', 'forum', 'blog', 'news', 'other'];
 const _DIGEST_TYPE_LABELS = {
-  reference: '参考资料', docs: '官方文档', code: '代码',
-  forum: '社区问答', blog: '博客文章', news: '新闻', other: '其他',
+  reference: '参考资料',
+  docs: '官方文档',
+  code: '代码',
+  forum: '社区问答',
+  blog: '博客文章',
+  news: '新闻',
+  other: '其他',
 };
 
 /**
@@ -1234,11 +1869,17 @@ const _DIGEST_TYPE_LABELS = {
  * Pure — safe to unit-test.
  */
 function _cleanSnippet(snippet, maxLen = 160) {
-  let s = String(snippet || '').replace(/\s+/g, ' ').trim();
-  if (!s) return '';
+  let s = String(snippet || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) {
+    return '';
+  }
   // Drop a leading "百度快照"/"来源：xxx"/bare date prefix.
   s = s.replace(/^(百度快照|来源[:：][^\s]+|\d{4}[-/]\d{1,2}[-/]\d{1,2})\s*[-—|]?\s*/u, '').trim();
-  if (s.length > maxLen) s = s.slice(0, maxLen - 1).trimEnd() + '…';
+  if (s.length > maxLen) {
+    s = s.slice(0, maxLen - 1).trimEnd() + '…';
+  }
   return s;
 }
 
@@ -1252,24 +1893,31 @@ function _cleanSnippet(snippet, maxLen = 160) {
  *
  * @param {object[]} results - items shaped { title, url, snippet, domain, type }
  * @param {object} [opts]
- * @param {number} [opts.limit=8]        max items overall after dedup
+ * @param {number} [opts.limit=DEFAULT_RESULTS] max items overall after dedup
  * @param {number} [opts.perGroup=4]     max items shown per source group
  * @param {number} [opts.snippetLen=160] snippet truncation budget
  * @returns {{ total:number, groups:Array<{type:string,label:string,items:object[]}>, items:object[] }}
  */
 function digestResults(results, opts = {}) {
-  const limit = Number.isFinite(opts.limit) && opts.limit > 0 ? opts.limit : 8;
+  const limit = Number.isFinite(opts.limit) && opts.limit > 0 ? opts.limit : DEFAULT_RESULTS;
   const perGroup = Number.isFinite(opts.perGroup) && opts.perGroup > 0 ? opts.perGroup : 4;
-  const snippetLen = Number.isFinite(opts.snippetLen) && opts.snippetLen > 0 ? opts.snippetLen : 160;
+  const snippetLen =
+    Number.isFinite(opts.snippetLen) && opts.snippetLen > 0 ? opts.snippetLen : 160;
 
   const seen = new Set();
   const cleaned = [];
   for (const r of Array.isArray(results) ? results : []) {
-    const url = String(r && r.url || '').trim();
-    const title = String(r && r.title || '').replace(/\s+/g, ' ').trim();
-    if (!url || !title) continue;
+    const url = String((r && r.url) || '').trim();
+    const title = String((r && r.title) || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!url || !title) {
+      continue;
+    }
     const key = _dedupKey(url);
-    if (!key || seen.has(key)) continue;
+    if (!key || seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     cleaned.push({
       title,
@@ -1281,22 +1929,28 @@ function digestResults(results, opts = {}) {
       engines: Array.isArray(r.engines) ? r.engines : undefined,
       engineCount: Number.isFinite(r.engineCount) ? r.engineCount : undefined,
     });
-    if (cleaned.length >= limit) break;
+    if (cleaned.length >= limit) {
+      break;
+    }
   }
 
   const byType = new Map();
   for (const item of cleaned) {
-    if (!byType.has(item.type)) byType.set(item.type, []);
+    if (!byType.has(item.type)) {
+      byType.set(item.type, []);
+    }
     const bucket = byType.get(item.type);
-    if (bucket.length < perGroup) bucket.push(item);
+    if (bucket.length < perGroup) {
+      bucket.push(item);
+    }
   }
 
   const groups = _DIGEST_TYPE_ORDER
-    .filter(t => byType.has(t))
-    .map(t => ({ type: t, label: _DIGEST_TYPE_LABELS[t] || t, items: byType.get(t) }));
+    .filter((t) => byType.has(t))
+    .map((t) => ({ type: t, label: _DIGEST_TYPE_LABELS[t] || t, items: byType.get(t) }));
 
   const total = groups.reduce((n, g) => n + g.items.length, 0);
-  const items = groups.flatMap(g => g.items);
+  const items = groups.flatMap((g) => g.items);
   return { total, groups, items };
 }
 
@@ -1307,7 +1961,9 @@ function digestResults(results, opts = {}) {
  * @returns {string}
  */
 function formatDigestPlain(digest) {
-  if (!digest || !digest.total) return '未找到相关结果。';
+  if (!digest || !digest.total) {
+    return '未找到相关结果。';
+  }
   const lines = [];
   let n = 0;
   for (const g of digest.groups) {
@@ -1316,7 +1972,9 @@ function formatDigestPlain(digest) {
       n += 1;
       const consensus = it.engineCount >= 2 ? `（${it.engineCount} 个引擎收录）` : '';
       lines.push(`  ${n}. ${it.title}${consensus}`);
-      if (it.snippet) lines.push(`     ${it.snippet}`);
+      if (it.snippet) {
+        lines.push(`     ${it.snippet}`);
+      }
       lines.push(`     ${it.url}`);
     }
     lines.push('');
@@ -1324,18 +1982,17 @@ function formatDigestPlain(digest) {
   return lines.join('\n').trimEnd();
 }
 
-
 // ── Engine registry + env-configurable fan-out ─────────────────────
 // Single source for the keyless scrapers. weight feeds RRF fusion (higher =
 // surfaces earlier on score ties), ordered by直连可靠性/权威度. 新增引擎在此登记
 // 即自动并入扇出，无需改 searchUnified（零硬编码）。
 const ENGINE_REGISTRY = {
-  'baidu': { fn: searchBaidu, weight: 1.00 },        // 国内最稳定，优先
-  'bing-cn': { fn: searchDomestic, weight: 0.95 },   // cn.bing.com，无需代理
-  'duckduckgo': { fn: searchFallback, weight: 0.90 },// 走代理兜底
-  'mojeek': { fn: searchMojeek, weight: 0.88 },      // 独立全球引擎，免 key 直连、无需代理（门控 KHY_SEARCH_MOJEEK）
-  'sogou': { fn: searchSogou, weight: 0.85 },        // 搜狗，直连拓宽召回
-  'so360': { fn: searchSo360, weight: 0.80 },        // 360 搜索，直连拓宽召回
+  baidu: { fn: searchBaidu, weight: 1.0 }, // 国内最稳定，优先
+  'bing-cn': { fn: searchDomestic, weight: 0.95 }, // cn.bing.com，无需代理
+  duckduckgo: { fn: searchFallback, weight: 0.9 }, // 走代理兜底
+  mojeek: { fn: searchMojeek, weight: 0.88 }, // 独立全球引擎，免 key 直连、无需代理（门控 KHY_SEARCH_MOJEEK）
+  sogou: { fn: searchSogou, weight: 0.85 }, // 搜狗，直连拓宽召回
+  so360: { fn: searchSo360, weight: 0.8 }, // 360 搜索，直连拓宽召回
 };
 const DEFAULT_ENGINE_ORDER = ['baidu', 'bing-cn', 'duckduckgo', 'mojeek', 'sogou', 'so360'];
 
@@ -1362,17 +2019,28 @@ function _resolveFanout() {
   const raw = String(process.env.KHY_SEARCH_ENGINES || '').trim();
   let names = DEFAULT_ENGINE_ORDER;
   if (raw) {
-    const picked = raw.split(',').map(s => s.trim().toLowerCase()).filter(n => ENGINE_REGISTRY[n]);
-    if (picked.length) names = picked;
+    const picked = raw
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter((n) => ENGINE_REGISTRY[n]);
+    if (picked.length) {
+      names = picked;
+    }
   }
   // Mojeek 门控(KHY_SEARCH_MOJEEK,默认开):关 → 从扇出剔除,逐字节回退今日「仅国内 5 引擎」。
   // 显式 KHY_SEARCH_ENGINES 命名 mojeek 时同样受此门控约束(关则不跑)。
   const mojeekOn = _mojeekEnabled();
-  if (!mojeekOn) names = names.filter(n => n !== 'mojeek');
-  const builtins = names.map(name => ({ engine: name, fn: ENGINE_REGISTRY[name].fn, weight: ENGINE_REGISTRY[name].weight }));
+  if (!mojeekOn) {
+    names = names.filter((n) => n !== 'mojeek');
+  }
+  const builtins = names.map((name) => ({
+    engine: name,
+    fn: ENGINE_REGISTRY[name].fn,
+    weight: ENGINE_REGISTRY[name].weight,
+  }));
   // 运行期声明的额外引擎(env KHY_SEARCH_EXTRA_ENGINES / 数据家 search_engines.json)并入扇出,
   // 无需改源码即可发现 / 接入新站点。与 KHY_SEARCH_ENGINES 的内置裁剪正交;同名以内置为准(去重)。
-  const dynamics = _loadDynamicFanout().filter(d => !builtins.some(b => b.engine === d.engine));
+  const dynamics = _loadDynamicFanout().filter((d) => !builtins.some((b) => b.engine === d.engine));
   return builtins.concat(dynamics);
 }
 
@@ -1383,14 +2051,36 @@ function _resolveFanout() {
  * { unavailable: true } when playwright isn't installed so the caller skips it.
  */
 async function _playwrightFanout(query, limit = DEFAULT_RESULTS, freshWindow = null) {
-  const q = String(query || '').trim().slice(0, 200);
-  if (!q) return { success: false, error: 'Search query is empty', partialFailures: [] };
+  const q = String(query || '')
+    .trim()
+    .slice(0, 200);
+  if (!q) {
+    return { success: false, error: 'Search query is empty', partialFailures: [] };
+  }
 
   const ENGINES = [
-    { engine: 'bing-cn(pw)', weight: 0.95, sel: '#b_results', parse: _parseBingHtml,
-      url: _withFreshParam(`https://cn.bing.com/search?q=${encodeURIComponent(q)}&setlang=zh-Hans&mkt=zh-CN`, freshWindow, 'bing-cn') },
-    { engine: 'baidu(pw)', weight: 1.00, sel: '#content_left', parse: _parseBaiduHtml,
-      url: _withFreshParam(`https://www.baidu.com/s?wd=${encodeURIComponent(q)}&rn=20&ie=utf-8`, freshWindow, 'baidu') },
+    {
+      engine: 'bing-cn(pw)',
+      weight: 0.95,
+      sel: '#b_results',
+      parse: _parseBingHtml,
+      url: _withFreshParam(
+        `https://cn.bing.com/search?q=${encodeURIComponent(q)}&setlang=zh-Hans&mkt=zh-CN`,
+        freshWindow,
+        'bing-cn'
+      ),
+    },
+    {
+      engine: 'baidu(pw)',
+      weight: 1.0,
+      sel: '#content_left',
+      parse: _parseBaiduHtml,
+      url: _withFreshParam(
+        `https://www.baidu.com/s?wd=${encodeURIComponent(q)}&rn=20&ie=utf-8`,
+        freshWindow,
+        'baidu'
+      ),
+    },
   ];
 
   const perEngine = [];
@@ -1398,13 +2088,26 @@ async function _playwrightFanout(query, limit = DEFAULT_RESULTS, freshWindow = n
   let collected = 0;
   for (const e of ENGINES) {
     const res = await playwrightSearch.fetchRenderedHtml(e.url, { waitForSelector: e.sel });
-    if (res.unavailable) return { unavailable: true, partialFailures };
-    if (!res.success) { partialFailures.push({ engine: e.engine, message: res.error }); continue; }
+    if (res.unavailable) {
+      return { unavailable: true, partialFailures };
+    }
+    if (!res.success) {
+      partialFailures.push({ engine: e.engine, message: res.error });
+      continue;
+    }
     let items = [];
-    try { items = e.parse(res.html) || []; }
-    catch (err) { partialFailures.push({ engine: e.engine, message: `parse: ${err.message}` }); }
-    if (items.length) { perEngine.push({ engine: e.engine, weight: e.weight, results: items }); collected += items.length; }
-    if (collected >= RESULTS_CEILING) break; // enough candidates across engines — stop fetching
+    try {
+      items = e.parse(res.html) || [];
+    } catch (err) {
+      partialFailures.push({ engine: e.engine, message: `parse: ${err.message}` });
+    }
+    if (items.length) {
+      perEngine.push({ engine: e.engine, weight: e.weight, results: items });
+      collected += items.length;
+    }
+    if (collected >= RESULTS_CEILING) {
+      break;
+    } // enough candidates across engines — stop fetching
   }
 
   // Fuse with the same RRF logic as the request path so consensus annotation and
@@ -1417,7 +2120,7 @@ async function _playwrightFanout(query, limit = DEFAULT_RESULTS, freshWindow = n
   }
   return {
     success: false,
-    error: partialFailures.map(f => f.message).join(' | ') || 'Playwright: no results',
+    error: partialFailures.map((f) => f.message).join(' | ') || 'Playwright: no results',
     partialFailures,
   };
 }
@@ -1431,7 +2134,7 @@ async function _playwrightFanout(query, limit = DEFAULT_RESULTS, freshWindow = n
  */
 async function searchUnified(query, opts = {}) {
   const partialFailures = [];
-  const limit = _resolveLimit(opts); // 按需条数；引擎层仍按 ceiling 召回，末端再切片
+  const limit = _resolveLimit({ ...opts, query }); // 按需条数；引擎层仍按 ceiling 召回，末端再切片
   const mode = playwrightSearch.getSearchMode(); // request | auto | playwright
   let playwrightUnavailable = false; // 追踪：浏览器路径因 playwright 缺失而不可用
 
@@ -1441,11 +2144,24 @@ async function searchUnified(query, opts = {}) {
   // Forced browser mode: try Playwright first, fall through if unavailable/empty.
   if (mode === 'playwright') {
     const pw = await _playwrightFanout(query, limit, freshWindow);
-    if (pw.partialFailures) partialFailures.push(...pw.partialFailures);
-    if (pw.unavailable) playwrightUnavailable = true;
+    if (pw.partialFailures) {
+      partialFailures.push(...pw.partialFailures);
+    }
+    if (pw.unavailable) {
+      playwrightUnavailable = true;
+    }
     if (pw.success && pw.results.length) {
       const ranked = _applyRecency(pw.results, freshWindow);
-      return _withDiscovery({ success: true, results: ranked, formatted: _formatResultsMarkdown(ranked), partialFailures, freshness: freshWindow || undefined }, query);
+      return _withDiscovery(
+        {
+          success: true,
+          results: ranked,
+          formatted: _formatResultsMarkdown(ranked),
+          partialFailures,
+          freshness: freshWindow || undefined,
+        },
+        query
+      );
     }
   }
 
@@ -1459,18 +2175,40 @@ async function searchUnified(query, opts = {}) {
   if (merged.length > 0) {
     const ranked = _applyRecency(merged, freshWindow);
     const top = ranked.slice(0, limit);
-    return _withDiscovery({ success: true, results: top, formatted: _formatResultsMarkdown(top), partialFailures, freshness: freshWindow || undefined }, query);
+    return _withDiscovery(
+      {
+        success: true,
+        results: top,
+        formatted: _formatResultsMarkdown(top),
+        partialFailures,
+        freshness: freshWindow || undefined,
+      },
+      query
+    );
   }
 
   // Request scrapers came up empty (often a bot wall) → browser fallback in
   // auto mode. 'request' mode opts out; 'playwright' mode already tried above.
   if (mode === 'auto') {
     const pw = await _playwrightFanout(query, limit, freshWindow);
-    if (pw.partialFailures) partialFailures.push(...pw.partialFailures);
-    if (pw.unavailable) playwrightUnavailable = true;
+    if (pw.partialFailures) {
+      partialFailures.push(...pw.partialFailures);
+    }
+    if (pw.unavailable) {
+      playwrightUnavailable = true;
+    }
     if (pw.success && pw.results.length) {
       const ranked = _applyRecency(pw.results, freshWindow);
-      return _withDiscovery({ success: true, results: ranked, formatted: _formatResultsMarkdown(ranked), partialFailures, freshness: freshWindow || undefined }, query);
+      return _withDiscovery(
+        {
+          success: true,
+          results: ranked,
+          formatted: _formatResultsMarkdown(ranked),
+          partialFailures,
+          freshness: freshWindow || undefined,
+        },
+        query
+      );
     }
   }
 
@@ -1479,14 +2217,27 @@ async function searchUnified(query, opts = {}) {
     const result = await search(query, { ...opts, freshness: freshWindow });
     if (result.success) {
       const ranked = _applyRecency(result.results, freshWindow);
-      return _withDiscovery({ ...result, results: ranked, formatted: _formatResultsMarkdown(ranked), partialFailures, freshness: freshWindow || undefined }, query);
+      return _withDiscovery(
+        {
+          ...result,
+          results: ranked,
+          formatted: _formatResultsMarkdown(ranked),
+          partialFailures,
+          freshness: freshWindow || undefined,
+        },
+        query
+      );
     }
-    if (result.error) partialFailures.push({ engine: 'kiro', message: result.error });
+    if (result.error) {
+      partialFailures.push({ engine: 'kiro', message: result.error });
+    }
   }
 
   // Detect network-level failures (TLS disconnect, ECONNREFUSED, timeout)
-  const allErrors = partialFailures.map(f => f.message).join(' | ');
-  const isNetworkIssue = /TLS|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|socket.*disconnect|network/i.test(allErrors);
+  const allErrors = partialFailures.map((f) => f.message).join(' | ');
+  const isNetworkIssue = /TLS|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|socket.*disconnect|network/i.test(
+    allErrors
+  );
   let hint = isNetworkIssue
     ? '当前环境无法访问外网搜索引擎。请配置代理: export HTTPS_PROXY=http://127.0.0.1:7890 或通过 khy gateway config 设置代理。'
     : '';
@@ -1494,8 +2245,9 @@ async function searchUnified(query, opts = {}) {
   // cheerio missing → the keyless scrapers (百度/Bing/DuckDuckGo) can't parse
   // results at all. Surface this first so the user fixes the real cause.
   if (!hint && !isHtmlParsingAvailable()) {
-    hint = 'HTML 解析依赖 cheerio 未安装，无 key 搜索引擎（百度/Bing/DuckDuckGo）已降级。'
-      + '请在 services/backend 目录执行 npm install，或配置 Kiro 令牌使用 MCP 搜索。';
+    hint =
+      'HTML 解析依赖 cheerio 未安装，无 key 搜索引擎（百度/Bing/DuckDuckGo）已降级。' +
+      '请在 services/backend 目录执行 npm install，或配置 Kiro 令牌使用 MCP 搜索。';
   }
 
   // Plan A — 如实上抛缺失依赖：只有当**所有**搜索路径都已失败后，才给失败结果打上
@@ -1509,12 +2261,29 @@ async function searchUnified(query, opts = {}) {
     error: hint || allErrors || 'All search methods failed',
     partialFailures,
   };
-  if (!isHtmlParsingAvailable()) failure.depId = 'cheerio';
-  else if (mode === 'playwright' && playwrightUnavailable) failure.depId = 'playwright';
+  if (!isHtmlParsingAvailable()) {
+    failure.depId = 'cheerio';
+  } else if (mode === 'playwright' && playwrightUnavailable) {
+    failure.depId = 'playwright';
+  }
   return failure;
 }
 
-module.exports = { search: searchUnified, searchDirect: search, searchFallback, searchDomestic, searchBaidu, searchSogou, searchSo360, searchMojeek, isAvailable, formatResults, isHtmlParsingAvailable, digestResults, formatDigestPlain };
+module.exports = {
+  search: searchUnified,
+  searchDirect: search,
+  searchFallback,
+  searchDomestic,
+  searchBaidu,
+  searchSogou,
+  searchSo360,
+  searchMojeek,
+  isAvailable,
+  formatResults,
+  isHtmlParsingAvailable,
+  digestResults,
+  formatDigestPlain,
+};
 
 // Internal parsers exposed for unit testing only (no network involved).
 module.exports.__parsersForTests = {
@@ -1537,4 +2306,5 @@ module.exports.__parsersForTests = {
   cleanSnippet: _cleanSnippet,
   httpClientFor: _httpClientFor,
   resolveLimit: _resolveLimit,
+  inferAdaptiveLimit: _inferAdaptiveLimit,
 };

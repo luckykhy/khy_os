@@ -13,15 +13,20 @@
  * Concurrency: max 3 parallel, 200ms stagger to avoid rate limits.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
-const { normalizeAgentRole } = require('./claudeCompat');
-// Model-name SSOT: codex agent model ids flow from constants/models.js.
+const path = require('path');
+
 const { CODEX_AGENT_MODELS } = require('../constants/models');
+
+const { normalizeAgentRole } = require('./claudeCompat');
+
+// Model-name SSOT: codex agent model ids flow from constants/models.js.
 
 let _toolRegistry; // lazy-load to avoid circular deps
 function getToolRegistry() {
-  if (!_toolRegistry) _toolRegistry = require('../tools');
+  if (!_toolRegistry) {
+    _toolRegistry = require('../tools');
+  }
   return _toolRegistry;
 }
 
@@ -38,8 +43,8 @@ const DEFAULT_AGENT_ROLES = {
   general: {
     name: 'General Assistant',
     systemPrompt:
-      'You are a general-purpose assistant. Analyze the request from a holistic '
-      + 'perspective and give a concise, professional answer.',
+      'You are a general-purpose assistant. Analyze the request from a holistic ' +
+      'perspective and give a concise, professional answer.',
     keywords: [],
   },
 
@@ -73,7 +78,18 @@ const DEFAULT_AGENT_ROLES = {
       'You are a fast codebase exploration agent. Search files with glob, search content with grep, read files with readFile. ' +
       'When the repository is unfamiliar, start with README or project manifests, then identify entry points and narrow the search. ' +
       'Stay strictly read-only. Avoid shell grep/find/cat loops when dedicated tools can answer directly. Be thorough but concise. Report file paths, key findings, search scope, result counts, and how you narrowed the search.',
-    keywords: ['explore', 'find', 'search', 'where', 'how does', 'codebase', '查找', '搜索', '代码在哪', '哪里'],
+    keywords: [
+      'explore',
+      'find',
+      'search',
+      'where',
+      'how does',
+      'codebase',
+      '查找',
+      '搜索',
+      '代码在哪',
+      '哪里',
+    ],
     toolProfile: 'minimal',
   },
   planner: {
@@ -81,7 +97,16 @@ const DEFAULT_AGENT_ROLES = {
     systemPrompt:
       'You are a software architect agent. Read existing code to design implementation plans. ' +
       'Identify critical files, consider trade-offs, return step-by-step plans, and include a validation strategy. Do NOT write code.',
-    keywords: ['plan', 'design', 'architect', 'how to implement', '计划', '设计', '架构', '怎么实现'],
+    keywords: [
+      'plan',
+      'design',
+      'architect',
+      'how to implement',
+      '计划',
+      '设计',
+      '架构',
+      '怎么实现',
+    ],
     toolProfile: 'minimal',
   },
   coder: {
@@ -90,7 +115,18 @@ const DEFAULT_AGENT_ROLES = {
       'You are a coding agent. Write clean, correct code following existing patterns. ' +
       'Read before modifying. Use absolute paths, use editFile for targeted changes, and use writeFile only for new files or intentional full rewrites. ' +
       'When editing, copy the exact old_string from the read result, prefer one focused edit at a time, and run tests after changes.',
-    keywords: ['write', 'implement', 'fix', 'bug', 'code', 'refactor', '写代码', '实现', '修复', '重构'],
+    keywords: [
+      'write',
+      'implement',
+      'fix',
+      'bug',
+      'code',
+      'refactor',
+      '写代码',
+      '实现',
+      '修复',
+      '重构',
+    ],
     toolProfile: 'coding',
   },
   reviewer: {
@@ -178,14 +214,22 @@ const DEFAULT_AGENT_ROLES = {
 
 // Load custom agent roles from config file if available
 function loadAgentRoles() {
-  const customPath = path.join(os.homedir(), '.khyquant', 'agent_roles.json');
+  // Portable-aware app home; fallback to the legacy location.
+  let customPath;
+  try {
+    customPath = path.join(require('../utils/dataHome').getAppHome(), 'agent_roles.json');
+  } catch {
+    customPath = path.join(os.homedir(), '.khyquant', 'agent_roles.json');
+  }
   try {
     if (fs.existsSync(customPath)) {
       const custom = JSON.parse(fs.readFileSync(customPath, 'utf-8'));
       // Merge: custom roles override defaults by key
       return { ...DEFAULT_AGENT_ROLES, ...custom };
     }
-  } catch { /* fallback to defaults */ }
+  } catch {
+    /* fallback to defaults */
+  }
   return DEFAULT_AGENT_ROLES;
 }
 
@@ -193,15 +237,27 @@ const AGENT_ROLES = loadAgentRoles();
 
 function resolveRoleKey(roleKey) {
   const raw = String(roleKey || '').trim();
-  if (!raw) return 'general';
-  if (AGENT_ROLES[raw]) return raw;
+  if (!raw) {
+    return 'general';
+  }
+  if (AGENT_ROLES[raw]) {
+    return raw;
+  }
 
   const normalized = normalizeAgentRole(raw);
-  if (AGENT_ROLES[normalized]) return normalized;
+  if (AGENT_ROLES[normalized]) {
+    return normalized;
+  }
 
-  if (/^general[-_\s]?purpose$/i.test(raw) && AGENT_ROLES['general-purpose']) return 'general-purpose';
-  if (/^explore$/i.test(raw) && AGENT_ROLES.Explore) return 'Explore';
-  if (/^plan$/i.test(raw) && AGENT_ROLES.Plan) return 'Plan';
+  if (/^general[-_\s]?purpose$/i.test(raw) && AGENT_ROLES['general-purpose']) {
+    return 'general-purpose';
+  }
+  if (/^explore$/i.test(raw) && AGENT_ROLES.Explore) {
+    return 'Explore';
+  }
+  if (/^plan$/i.test(raw) && AGENT_ROLES.Plan) {
+    return 'Plan';
+  }
 
   return AGENT_ROLES.general ? 'general' : Object.keys(AGENT_ROLES)[0];
 }
@@ -218,10 +274,14 @@ function decomposeTask(description) {
 
   // Match agents by their keywords
   for (const [roleKey, role] of Object.entries(AGENT_ROLES)) {
-    if (roleKey === 'general') continue; // general is fallback only
-    if (!role.keywords || role.keywords.length === 0) continue;
+    if (roleKey === 'general') {
+      continue;
+    } // general is fallback only
+    if (!role.keywords || role.keywords.length === 0) {
+      continue;
+    }
 
-    const matched = role.keywords.some(kw => lower.includes(kw.toLowerCase()));
+    const matched = role.keywords.some((kw) => lower.includes(kw.toLowerCase()));
     if (matched) {
       const resolvedRole = resolveRoleKey(roleKey);
       const resolved = AGENT_ROLES[resolvedRole] || role;
@@ -231,13 +291,17 @@ function decomposeTask(description) {
 
   // Auto-compose generic dev workflows when multiple dev roles match
   const devRoles = ['explore', 'planner', 'coder', 'reviewer'];
-  const matchedDev = subtasks.filter(st => devRoles.includes(st.role));
+  const matchedDev = subtasks.filter((st) => devRoles.includes(st.role));
   if (matchedDev.length >= 2) {
     // Complex dev task: ensure explore runs first (then coder/planner)
-    const hasExplore = matchedDev.some(st => st.role === 'explore');
+    const hasExplore = matchedDev.some((st) => st.role === 'explore');
     if (!hasExplore) {
       const exploreRole = resolveRoleKey('explore');
-      subtasks.unshift({ role: exploreRole, name: (AGENT_ROLES[exploreRole] || AGENT_ROLES.explore).name, task: description });
+      subtasks.unshift({
+        role: exploreRole,
+        name: (AGENT_ROLES[exploreRole] || AGENT_ROLES.explore).name,
+        task: description,
+      });
     }
     return _dedupeSubtasks(subtasks);
   }
@@ -247,11 +311,11 @@ function decomposeTask(description) {
     // Default to the generic software-development workflow (explore → plan →
     // code → review). Skip any role missing from the registry so a trimmed
     // role set never produces undefined entries.
-    const defaultRoles = devRoles
-      .map((key) => [key, AGENT_ROLES[key]])
-      .filter(([, role]) => role);
+    const defaultRoles = devRoles.map((key) => [key, AGENT_ROLES[key]]).filter(([, role]) => role);
     return defaultRoles.map(([key, role]) => ({
-      role: key, name: role.name, task: description,
+      role: key,
+      name: role.name,
+      task: description,
     }));
   }
 
@@ -263,7 +327,9 @@ function _dedupeSubtasks(subtasks) {
   const seen = new Set();
   for (const st of subtasks) {
     const roleKey = resolveRoleKey(st.role);
-    if (seen.has(roleKey)) continue;
+    if (seen.has(roleKey)) {
+      continue;
+    }
     seen.add(roleKey);
     const role = AGENT_ROLES[roleKey] || AGENT_ROLES.general;
     out.push({ ...st, role: roleKey, name: role?.name || st.name });
@@ -295,8 +361,37 @@ async function runAgents(subtasks, opts = {}) {
     result: '',
   }));
 
+  // Lifecycle FSMs in a parallel array (observation-first) so instances never
+  // leak into JSON-serialized agentStates. A broken FSM module is tolerated.
+  const agentFsms = subtasks.map((st, i) => {
+    try {
+      return require('./stateMachine/agentLifecycle').createAgentLifecycleFsm({
+        name: `cliAgent-${i}-${st.role}`,
+      });
+    } catch {
+      return null;
+    }
+  });
+  // Fire lifecycle events; illegal transitions are observation signals only
+  // and never affect the status strings assigned below (external contract).
+  function fireAgentEvents(idx, events) {
+    const fsm = agentFsms[idx];
+    if (!fsm) {
+      return;
+    }
+    for (const ev of events) {
+      try {
+        fsm.fire(ev);
+      } catch {
+        /* observation only */
+      }
+    }
+  }
+
   // Report initial state
-  if (onProgress) onProgress(agentStates);
+  if (onProgress) {
+    onProgress(agentStates);
+  }
 
   // Concurrency-limited parallel execution
   let running = 0;
@@ -320,9 +415,13 @@ async function runAgents(subtasks, opts = {}) {
       const role = AGENT_ROLES[resolvedRole] || AGENT_ROLES.general;
       agentStates[idx].role = resolvedRole;
 
+      // Coarse-grained runner: advance created→initializing→ready→running in one go.
+      fireAgentEvents(idx, ['spawn_start', 'init_ok', 'task_start']);
       agentStates[idx].status = 'running';
       agentStates[idx].detail = '分析中...';
-      if (onProgress) onProgress(agentStates);
+      if (onProgress) {
+        onProgress(agentStates);
+      }
 
       const startTime = Date.now();
       try {
@@ -342,24 +441,29 @@ async function runAgents(subtasks, opts = {}) {
             const registry = getCapabilityRegistry();
             const reqs = registry.inferRequirements(subtask.task, resolvedRole);
             const ranked = registry.bestAdaptersFor(reqs, { onlyAvailable: false, limit: 1 });
-            if (ranked.length > 0) capabilityAdapter = ranked[0].key;
-          } catch { /* registry not available */ }
+            if (ranked.length > 0) {
+              capabilityAdapter = ranked[0].key;
+            }
+          } catch {
+            /* registry not available */
+          }
         }
         const subtaskPreferredAdapter = String(
-          preferredAdapterOverride
-          || subtask.preferredAdapter
-          || role.preferredAdapter
-          || capabilityAdapter
-          || ''
+          preferredAdapterOverride ||
+            subtask.preferredAdapter ||
+            role.preferredAdapter ||
+            capabilityAdapter ||
+            ''
         ).trim();
         const subtaskPreferredModel = String(
-          preferredModelOverride
-          || subtask.preferredModel
-          || role.preferredModel
-          || ''
+          preferredModelOverride || subtask.preferredModel || role.preferredModel || ''
         ).trim();
-        if (subtaskPreferredAdapter) chatOpts.preferredAdapter = subtaskPreferredAdapter;
-        if (subtaskPreferredModel) chatOpts.preferredModel = subtaskPreferredModel;
+        if (subtaskPreferredAdapter) {
+          chatOpts.preferredAdapter = subtaskPreferredAdapter;
+        }
+        if (subtaskPreferredModel) {
+          chatOpts.preferredModel = subtaskPreferredModel;
+        }
         // #4 工具发现:按子任务文本预激活延迟工具簇(与 worker/agentWorkerEntry 子代理路径
         // 同款),让该被用的能力(浏览器/编译/密钥配置…)在 profile 过滤 + defer 隐藏前提前揭示。
         // 并行分解路径此前是唯一「按 profile 过滤延迟工具却不预激活」的本地缺口:模型拿到精简
@@ -369,18 +473,27 @@ async function runAgents(subtasks, opts = {}) {
           const { selectToolsToActivate } = require('./toolClusterActivation');
           const names = selectToolsToActivate(subtask.task);
           for (const name of names) {
-            try { await getToolRegistry().ensureTool(name); } catch { /* 单个揭示失败不影响其余 */ }
+            try {
+              await getToolRegistry().ensureTool(name);
+            } catch {
+              /* 单个揭示失败不影响其余 */
+            }
           }
-        } catch { /* 叶子不可用 → 不预激活,回退今日 */ }
+        } catch {
+          /* 叶子不可用 → 不预激活,回退今日 */
+        }
         if (role.toolProfile) {
           try {
             chatOpts.toolDefinitions = getToolRegistry().getDefinitions(role.toolProfile);
-          } catch { /* fallback: no filtering */ }
+          } catch {
+            /* fallback: no filtering */
+          }
         }
 
         const result = await aiModule.chat(agentPrompt, chatOpts);
 
         const elapsed = Date.now() - startTime;
+        fireAgentEvents(idx, ['task_done']);
         agentStates[idx].status = 'completed';
         agentStates[idx].detail = 'Done';
         agentStates[idx].result = result.reply || '';
@@ -388,18 +501,21 @@ async function runAgents(subtasks, opts = {}) {
         agentStates[idx].elapsed = elapsed;
         agentStates[idx].toolCalls = (result.commands || []).length;
       } catch (err) {
+        fireAgentEvents(idx, ['fail']);
         agentStates[idx].status = 'error';
         agentStates[idx].detail = err.message || 'Failed';
         agentStates[idx].elapsed = Date.now() - startTime;
       }
 
-      if (onProgress) onProgress(agentStates);
+      if (onProgress) {
+        onProgress(agentStates);
+      }
 
       running--;
       tryStartNext();
 
       // Check if all done
-      if (agentStates.every(a => a.status === 'completed' || a.status === 'error')) {
+      if (agentStates.every((a) => a.status === 'completed' || a.status === 'error')) {
         resolve(agentStates);
       }
     }
@@ -416,7 +532,7 @@ async function runAgents(subtasks, opts = {}) {
  * @returns {string} synthesized response
  */
 async function synthesizeResults(agentResults, originalRequest, aiModule) {
-  const validResults = agentResults.filter(r => r.status === 'completed' && r.result);
+  const validResults = agentResults.filter((r) => r.status === 'completed' && r.result);
 
   if (validResults.length === 0) {
     // 主动协助 + 被动兜底（goal 2026-06-25）：不直接抛笼统套话，先抢救各子代理的
@@ -424,8 +540,12 @@ async function synthesizeResults(agentResults, originalRequest, aiModule) {
     // 确无任何信息可呈现时才回落套话。
     try {
       const _salvaged = require('./query/activeAssist').composeAgentAllFailedFallback(agentResults);
-      if (_salvaged) return _salvaged;
-    } catch { /* fail-soft：抢救出错绝不阻断兜底 */ }
+      if (_salvaged) {
+        return _salvaged;
+      }
+    } catch {
+      /* fail-soft：抢救出错绝不阻断兜底 */
+    }
     return '所有智能体均未能返回有效结果，请稍后重试。';
   }
 
@@ -434,15 +554,15 @@ async function synthesizeResults(agentResults, originalRequest, aiModule) {
   }
 
   // Build synthesis prompt
-  const agentOutputs = validResults.map(r =>
-    `### ${r.name}\n${r.result}`
-  ).join('\n\n');
+  const agentOutputs = validResults.map((r) => `### ${r.name}\n${r.result}`).join('\n\n');
 
   // 截断原始请求防止上下文爆炸（各子代理已独立处理完整内容）
   const MAX_ORIGINAL_LEN = 800;
-  const truncatedRequest = originalRequest.length > MAX_ORIGINAL_LEN
-    ? originalRequest.slice(0, MAX_ORIGINAL_LEN) + '\n...(内容已截断，完整内容已由各分析师独立处理)'
-    : originalRequest;
+  const truncatedRequest =
+    originalRequest.length > MAX_ORIGINAL_LEN
+      ? originalRequest.slice(0, MAX_ORIGINAL_LEN) +
+        '\n...(内容已截断，完整内容已由各分析师独立处理)'
+      : originalRequest;
 
   const synthesisPrompt = `以下是多个专业子代理对同一任务的独立处理结果。请综合各方输出，给出一个全面、平衡的最终结论。
 

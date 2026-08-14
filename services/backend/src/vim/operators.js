@@ -19,58 +19,83 @@ const { Operator } = require('./types');
 const _GRAPHEME_OFF = ['0', 'false', 'off', 'no'];
 function _graphemeStepEnabled() {
   return !_GRAPHEME_OFF.includes(
-    String((process.env && process.env.KHY_VIM_GRAPHEME) || '').trim().toLowerCase());
+    String((process.env && process.env.KHY_VIM_GRAPHEME) || '')
+      .trim()
+      .toLowerCase()
+  );
 }
+
 // If `off` sits on the low half of a pair, round DOWN to the high half
 // (include the whole char in a deletion that starts / ends there).
 function _snapStart(line, off) {
-  if (!_graphemeStepEnabled()) return off;
+  if (!_graphemeStepEnabled()) {
+    return off;
+  }
   if (off > 0 && off < line.length) {
     const c = line.charCodeAt(off);
     if (c >= 0xdc00 && c <= 0xdfff) {
       const p = line.charCodeAt(off - 1);
-      if (p >= 0xd800 && p <= 0xdbff) return off - 1;
+      if (p >= 0xd800 && p <= 0xdbff) {
+        return off - 1;
+      }
     }
   }
   return off;
 }
+
 // Advance `count` whole code points from `off`, capped at line end.
 function _advance(line, off, count) {
-  if (!_graphemeStepEnabled()) return Math.min(off + count, line.length);
+  if (!_graphemeStepEnabled()) {
+    return Math.min(off + count, line.length);
+  }
   let p = off;
   for (let i = 0; i < count && p < line.length; i++) {
     const c = line.charCodeAt(p);
     if (c >= 0xd800 && c <= 0xdbff && p + 1 < line.length) {
       const n = line.charCodeAt(p + 1);
-      if (n >= 0xdc00 && n <= 0xdfff) { p += 2; continue; }
+      if (n >= 0xdc00 && n <= 0xdfff) {
+        p += 2;
+        continue;
+      }
     }
     p += 1;
   }
   return p;
 }
+
 // Retreat `count` whole code points from `off`, floored at 0.
 function _retreat(line, off, count) {
-  if (!_graphemeStepEnabled()) return Math.max(0, off - count);
+  if (!_graphemeStepEnabled()) {
+    return Math.max(0, off - count);
+  }
   let p = off;
   for (let i = 0; i < count && p > 0; i++) {
     const c = line.charCodeAt(p - 1);
     if (c >= 0xdc00 && c <= 0xdfff && p >= 2) {
       const h = line.charCodeAt(p - 2);
-      if (h >= 0xd800 && h <= 0xdbff) { p -= 2; continue; }
+      if (h >= 0xd800 && h <= 0xdbff) {
+        p -= 2;
+        continue;
+      }
     }
     p -= 1;
   }
   return p;
 }
+
 // Round an exclusive slice-END boundary UP off a low surrogate so the whole
 // trailing code point stays included (used for inclusive d/c/y ranges).
 function _snapEnd(line, off) {
-  if (!_graphemeStepEnabled()) return off;
+  if (!_graphemeStepEnabled()) {
+    return off;
+  }
   if (off > 0 && off < line.length) {
     const c = line.charCodeAt(off);
     if (c >= 0xdc00 && c <= 0xdfff) {
       const p = line.charCodeAt(off - 1);
-      if (p >= 0xd800 && p <= 0xdbff) return off + 1;
+      if (p >= 0xd800 && p <= 0xdbff) {
+        return off + 1;
+      }
     }
   }
   return off;
@@ -93,7 +118,9 @@ function executeOperator(op, range, line, cursor, persistent) {
   const inclusive = range.inclusive !== false;
 
   // Normalize range
-  if (start > end) [start, end] = [end, start];
+  if (start > end) {
+    [start, end] = [end, start];
+  }
 
   // For inclusive motions, include the end character
   let deleteEnd = inclusive ? end + 1 : end;
@@ -172,7 +199,9 @@ function executeStandalone(cmd, line, cursor, count, persistent, replaceChar = n
   switch (cmd) {
     // ── x — delete char at cursor ──
     case 'x': {
-      if (line.length === 0) return { line, cursor, switchToInsert: false };
+      if (line.length === 0) {
+        return { line, cursor, switchToInsert: false };
+      }
       const from = _snapStart(line, cursor);
       const end = _advance(line, from, count);
       persistent.register = line.slice(from, end);
@@ -186,7 +215,9 @@ function executeStandalone(cmd, line, cursor, count, persistent, replaceChar = n
 
     // ── X — delete char before cursor ──
     case 'X': {
-      if (cursor === 0) return { line, cursor, switchToInsert: false };
+      if (cursor === 0) {
+        return { line, cursor, switchToInsert: false };
+      }
       const start = _retreat(line, cursor, count);
       persistent.register = line.slice(start, cursor);
       const newLine = line.slice(0, start) + line.slice(cursor);
@@ -195,7 +226,9 @@ function executeStandalone(cmd, line, cursor, count, persistent, replaceChar = n
 
     // ── r — replace char at cursor ──
     case 'r': {
-      if (!replaceChar || line.length === 0) return null;
+      if (!replaceChar || line.length === 0) {
+        return null;
+      }
       const from = _snapStart(line, cursor);
       const end = _advance(line, from, 1);
       const newLine = line.slice(0, from) + replaceChar + line.slice(end);
@@ -204,7 +237,9 @@ function executeStandalone(cmd, line, cursor, count, persistent, replaceChar = n
 
     // ── ~ — toggle case ──
     case '~': {
-      if (line.length === 0) return { line, cursor, switchToInsert: false };
+      if (line.length === 0) {
+        return { line, cursor, switchToInsert: false };
+      }
       const from = _snapStart(line, cursor);
       const end = _advance(line, from, count);
       let toggled = '';
@@ -222,25 +257,33 @@ function executeStandalone(cmd, line, cursor, count, persistent, replaceChar = n
 
     // ── p — paste after cursor ──
     case 'p': {
-      if (!persistent.register) return { line, cursor, switchToInsert: false };
+      if (!persistent.register) {
+        return { line, cursor, switchToInsert: false };
+      }
       const reg = persistent.register;
       const insertAt = Math.min(cursor + 1, line.length);
       let newLine = line;
       for (let i = 0; i < count; i++) {
-        newLine = newLine.slice(0, insertAt + i * reg.length) + reg + newLine.slice(insertAt + i * reg.length);
+        newLine =
+          newLine.slice(0, insertAt + i * reg.length) +
+          reg +
+          newLine.slice(insertAt + i * reg.length);
       }
-      return { line: newLine, cursor: insertAt + (count * reg.length) - 1, switchToInsert: false };
+      return { line: newLine, cursor: insertAt + count * reg.length - 1, switchToInsert: false };
     }
 
     // ── P — paste before cursor ──
     case 'P': {
-      if (!persistent.register) return { line, cursor, switchToInsert: false };
+      if (!persistent.register) {
+        return { line, cursor, switchToInsert: false };
+      }
       const reg = persistent.register;
       let newLine = line;
       for (let i = 0; i < count; i++) {
-        newLine = newLine.slice(0, cursor + i * reg.length) + reg + newLine.slice(cursor + i * reg.length);
+        newLine =
+          newLine.slice(0, cursor + i * reg.length) + reg + newLine.slice(cursor + i * reg.length);
       }
-      return { line: newLine, cursor: cursor + (count * reg.length) - 1, switchToInsert: false };
+      return { line: newLine, cursor: cursor + count * reg.length - 1, switchToInsert: false };
     }
 
     // ── D — delete to end of line ──
@@ -311,11 +354,14 @@ function executeStandalone(cmd, line, cursor, count, persistent, replaceChar = n
       let newLine = line;
       let shift = 0;
       if (line.startsWith('  ')) {
-        newLine = line.slice(2); shift = 2;
+        newLine = line.slice(2);
+        shift = 2;
       } else if (line.startsWith('\t')) {
-        newLine = line.slice(1); shift = 1;
+        newLine = line.slice(1);
+        shift = 1;
       } else if (line.startsWith(' ')) {
-        newLine = line.slice(1); shift = 1;
+        newLine = line.slice(1);
+        shift = 1;
       }
       return { line: newLine, cursor: Math.max(0, cursor - shift), switchToInsert: false };
     }

@@ -23,15 +23,21 @@ const H = require('./proxyUriHelpers');
 // ── VMess ────────────────────────────────────────────────────────────────────
 function parseVmessShadowrocketParams(raw) {
   const match = /(^[^?]+?)\/?\?(.*)$/.exec(raw);
-  if (!match) return {};
+  if (!match) {
+    return {};
+  }
   const [, base64Line, qs] = match;
   const content = H.decodeBase64OrOriginal(base64Line);
   const params = {};
   for (const addon of qs.split('&')) {
-    if (!addon) continue;
+    if (!addon) {
+      continue;
+    }
     const [keyRaw, valueRaw] = H.splitOnce(addon, '=');
     const key = keyRaw.trim();
-    if (!key) continue;
+    if (!key) {
+      continue;
+    }
     if (valueRaw === undefined) {
       params[key] = true;
       continue;
@@ -40,7 +46,9 @@ function parseVmessShadowrocketParams(raw) {
     params[key] = value.includes(',') ? value.split(',') : value;
   }
   const contentMatch = /(^[^:]+?):([^:]+?)@(.*):(\d+)$/.exec(content);
-  if (!contentMatch) return params;
+  if (!contentMatch) {
+    return params;
+  }
   const [, cipher, uuid, server, port] = contentMatch;
   params.scy = cipher;
   params.id = uuid;
@@ -79,7 +87,9 @@ function parseVmessQuantumult(content) {
     udp: H.parseBool(params['udp-relay']),
     tfo: H.parseBool(params['fast-open']),
     'skip-cert-verify':
-      params['tls-verification'] === undefined ? undefined : !H.parseBool(params['tls-verification']),
+      params['tls-verification'] === undefined
+        ? undefined
+        : !H.parseBool(params['tls-verification']),
   };
   if (H.isPresent(params.obfs)) {
     if (params.obfs === 'ws' || params.obfs === 'wss') {
@@ -87,7 +97,9 @@ function parseVmessQuantumult(content) {
       proxy['ws-opts'] = {
         path: ((H.getIfNotBlank(params['obfs-path']) || '"/"').match(/^"(.*)"$/) || [])[1] || '/',
         headers: {
-          Host: (params['obfs-header'] && params['obfs-header'].match(/Host:\s*([a-zA-Z0-9-.]*)/) || [])[1] || '',
+          Host:
+            ((params['obfs-header'] && params['obfs-header'].match(/Host:\s*([a-zA-Z0-9-.]*)/)) ||
+              [])[1] || '',
         },
       };
     } else {
@@ -99,7 +111,9 @@ function parseVmessQuantumult(content) {
 
 function URI_VMESS(line) {
   const afterScheme = H.stripUriScheme(line, 'vmess', 'Invalid vmess uri');
-  if (!afterScheme) throw new Error('Invalid vmess uri');
+  if (!afterScheme) {
+    throw new Error('Invalid vmess uri');
+  }
   const raw = afterScheme;
   const content = H.decodeBase64OrOriginal(raw);
   if (/=\s*vmess/.test(content)) {
@@ -162,7 +176,9 @@ function URI_VMESS(line) {
       try {
         const parsedObfs = JSON.parse(transportHost);
         const parsedHost = parsedObfs && parsedObfs.Host;
-        if (parsedHost) transportHost = parsedHost;
+        if (parsedHost) {
+          transportHost = parsedHost;
+        }
       } catch {
         // 非 JSON transportHost — 原样用。
       }
@@ -179,7 +195,9 @@ function URI_VMESS(line) {
           break;
         }
         const serviceName = H.getIfNotBlank(pathFirst);
-        if (serviceName) proxy['grpc-opts'] = { 'grpc-service-name': serviceName };
+        if (serviceName) {
+          proxy['grpc-opts'] = { 'grpc-service-name': serviceName };
+        }
         break;
       }
       case 'h2': {
@@ -188,9 +206,15 @@ function URI_VMESS(line) {
           break;
         }
         const h2Opts = {};
-        if (hostFirst) h2Opts.host = hostFirst;
-        if (pathFirst) h2Opts.path = pathFirst;
-        if (Object.keys(h2Opts).length > 0) proxy['h2-opts'] = h2Opts;
+        if (hostFirst) {
+          h2Opts.host = hostFirst;
+        }
+        if (pathFirst) {
+          h2Opts.path = pathFirst;
+        }
+        if (Object.keys(h2Opts).length > 0) {
+          proxy['h2-opts'] = h2Opts;
+        }
         break;
       }
       case 'http': {
@@ -204,9 +228,13 @@ function URI_VMESS(line) {
           : pathFirst
             ? [pathFirst]
             : [];
-        if (paths.length === 0) paths = ['/'];
+        if (paths.length === 0) {
+          paths = ['/'];
+        }
         const httpOpts = { path: paths };
-        if (hosts && hosts.length > 0) httpOpts.headers = { Host: hosts };
+        if (hosts && hosts.length > 0) {
+          httpOpts.headers = { Host: hosts };
+        }
         proxy['http-opts'] = httpOpts;
         break;
       }
@@ -241,14 +269,18 @@ function URI_VMESS(line) {
 // ── VLESS ────────────────────────────────────────────────────────────────────
 function URI_VLESS(line) {
   const afterScheme = H.stripUriScheme(line, 'vless', 'Invalid vless uri');
-  if (!afterScheme) throw new Error('Invalid vless uri');
+  if (!afterScheme) {
+    throw new Error('Invalid vless uri');
+  }
 
   let rest = afterScheme;
   let isShadowrocket = false;
 
   const parseVlessRest = (input) => {
     const parsed = H.parseUrlLike(input, { requireAuth: true, errorMessage: 'Invalid vless uri' });
-    if (!parsed.port) throw new Error('Invalid vless uri: missing port');
+    if (!parsed.port) {
+      throw new Error('Invalid vless uri: missing port');
+    }
     const port = H.parseRequiredPort(parsed.port, 'Invalid vless uri: invalid port');
     return {
       uuidRaw: parsed.auth,
@@ -264,7 +296,9 @@ function URI_VLESS(line) {
     parsed = parseVlessRest(rest);
   } catch {
     const shadowMatch = /^(.*?)(\?.*?$)/.exec(rest);
-    if (!shadowMatch) throw new Error('Invalid vless uri');
+    if (!shadowMatch) {
+      throw new Error('Invalid vless uri');
+    }
     const [, base64Part, other] = shadowMatch;
     rest = `${H.decodeBase64OrOriginal(base64Part)}${other}`;
     parsed = parseVlessRest(rest);
@@ -274,7 +308,9 @@ function URI_VLESS(line) {
   const { uuidRaw, server, port, addons = '', nameRaw } = parsed;
 
   let uuid = uuidRaw;
-  if (isShadowrocket) uuid = uuid.replace(/^.*?:/g, '');
+  if (isShadowrocket) {
+    uuid = uuid.replace(/^.*?:/g, '');
+  }
   uuid = H.safeDecodeURIComponent(uuid) ?? uuid;
 
   const params = H.parseQueryStringNormalized(addons);
@@ -303,9 +339,15 @@ function URI_VLESS(line) {
 
   if (params.security === 'reality') {
     const opts = {};
-    if (params.pbk) opts['public-key'] = params.pbk;
-    if (params.sid) opts['short-id'] = params.sid;
-    if (Object.keys(opts).length > 0) proxy['reality-opts'] = opts;
+    if (params.pbk) {
+      opts['public-key'] = params.pbk;
+    }
+    if (params.sid) {
+      opts['short-id'] = params.sid;
+    }
+    if (Object.keys(opts).length > 0) {
+      proxy['reality-opts'] = opts;
+    }
   }
 
   let httpupgrade = false;
@@ -315,8 +357,12 @@ function URI_VLESS(line) {
     network = 'http';
   } else {
     let type = params.type;
-    if (type === 'websocket') type = 'ws';
-    if (isShadowrocket && type === 'sw') type = 'ws';
+    if (type === 'websocket') {
+      type = 'ws';
+    }
+    if (isShadowrocket && type === 'sw') {
+      type = 'ws';
+    }
     if (type === 'httpupgrade') {
       network = 'ws';
       httpupgrade = true;
@@ -342,25 +388,39 @@ function URI_VLESS(line) {
     switch (proxy.network) {
       case 'grpc': {
         const serviceName = H.getIfNotBlank(path);
-        if (serviceName) proxy['grpc-opts'] = { 'grpc-service-name': serviceName };
+        if (serviceName) {
+          proxy['grpc-opts'] = { 'grpc-service-name': serviceName };
+        }
         break;
       }
       case 'h2': {
         const h2Opts = {};
         const hostVal = H.getIfNotBlank(host);
         const pathVal = H.getIfNotBlank(path);
-        if (hostVal) h2Opts.host = hostVal;
-        if (pathVal) h2Opts.path = pathVal;
-        if (Object.keys(h2Opts).length > 0) proxy['h2-opts'] = h2Opts;
+        if (hostVal) {
+          h2Opts.host = hostVal;
+        }
+        if (pathVal) {
+          h2Opts.path = pathVal;
+        }
+        if (Object.keys(h2Opts).length > 0) {
+          proxy['h2-opts'] = h2Opts;
+        }
         break;
       }
       case 'http': {
         const httpOpts = {};
         const hostVal = H.getIfNotBlank(host);
         const pathVal = H.getIfNotBlank(path);
-        if (pathVal) httpOpts.path = [pathVal];
-        if (hostVal) httpOpts.headers = { Host: [hostVal] };
-        if (Object.keys(httpOpts).length > 0) proxy['http-opts'] = httpOpts;
+        if (pathVal) {
+          httpOpts.path = [pathVal];
+        }
+        if (hostVal) {
+          httpOpts.headers = { Host: [hostVal] };
+        }
+        if (Object.keys(httpOpts).length > 0) {
+          proxy['http-opts'] = httpOpts;
+        }
         break;
       }
       case 'ws': {
@@ -376,12 +436,16 @@ function URI_VLESS(line) {
             wsOpts.headers = { Host: host };
           }
         }
-        if (path) wsOpts.path = path;
+        if (path) {
+          wsOpts.path = path;
+        }
         if (httpupgrade) {
           wsOpts['v2ray-http-upgrade'] = true;
           wsOpts['v2ray-http-upgrade-fast-open'] = true;
         }
-        if (Object.keys(wsOpts).length > 0) proxy['ws-opts'] = wsOpts;
+        if (Object.keys(wsOpts).length > 0) {
+          proxy['ws-opts'] = wsOpts;
+        }
         break;
       }
       default:
@@ -391,10 +455,14 @@ function URI_VLESS(line) {
 
   if (proxy.tls && !proxy.servername) {
     if (proxy.network === 'ws') {
-      proxy.servername = proxy['ws-opts'] && proxy['ws-opts'].headers && proxy['ws-opts'].headers.Host;
+      proxy.servername =
+        proxy['ws-opts'] && proxy['ws-opts'].headers && proxy['ws-opts'].headers.Host;
     } else if (proxy.network === 'http') {
       proxy.servername =
-        proxy['http-opts'] && proxy['http-opts'].headers && proxy['http-opts'].headers.Host && proxy['http-opts'].headers.Host[0];
+        proxy['http-opts'] &&
+        proxy['http-opts'].headers &&
+        proxy['http-opts'].headers.Host &&
+        proxy['http-opts'].headers.Host[0];
     } else if (proxy.network === 'h2') {
       proxy.servername = proxy['h2-opts'] && proxy['h2-opts'].host;
     }
@@ -406,7 +474,9 @@ function URI_VLESS(line) {
 // ── Trojan ───────────────────────────────────────────────────────────────────
 function URI_Trojan(line) {
   const afterScheme = H.stripUriScheme(line, 'trojan', 'Invalid trojan uri');
-  if (!afterScheme) throw new Error('Invalid trojan uri');
+  if (!afterScheme) {
+    throw new Error('Invalid trojan uri');
+  }
   const {
     auth: passwordRaw,
     host: server,
@@ -429,8 +499,12 @@ function URI_Trojan(line) {
   const host = H.getIfNotBlank(params.host);
   const path = H.getIfNotBlank(params.path);
 
-  if (params.alpn) proxy.alpn = params.alpn.split(',');
-  if (params.sni) proxy.sni = params.sni;
+  if (params.alpn) {
+    proxy.alpn = params.alpn.split(',');
+  }
+  if (params.sni) {
+    proxy.sni = params.sni;
+  }
   if (Object.prototype.hasOwnProperty.call(params, 'skip-cert-verify')) {
     proxy['skip-cert-verify'] = H.parseBoolOrPresence(params['skip-cert-verify']);
   }
@@ -450,12 +524,20 @@ function URI_Trojan(line) {
 
   if (proxy.network === 'ws') {
     const wsOpts = {};
-    if (host) wsOpts.headers = { Host: host };
-    if (path) wsOpts.path = path;
-    if (Object.keys(wsOpts).length > 0) proxy['ws-opts'] = wsOpts;
+    if (host) {
+      wsOpts.headers = { Host: host };
+    }
+    if (path) {
+      wsOpts.path = path;
+    }
+    if (Object.keys(wsOpts).length > 0) {
+      proxy['ws-opts'] = wsOpts;
+    }
   } else if (proxy.network === 'grpc') {
     const serviceName = H.getIfNotBlank(path);
-    if (serviceName) proxy['grpc-opts'] = { 'grpc-service-name': serviceName };
+    if (serviceName) {
+      proxy['grpc-opts'] = { 'grpc-service-name': serviceName };
+    }
   }
 
   return proxy;
@@ -464,7 +546,9 @@ function URI_Trojan(line) {
 // ── Shadowsocks ──────────────────────────────────────────────────────────────
 function URI_SS(line) {
   const afterScheme = H.stripUriScheme(line, 'ss', 'Invalid ss uri');
-  if (!afterScheme) throw new Error('Invalid ss uri');
+  if (!afterScheme) {
+    throw new Error('Invalid ss uri');
+  }
 
   const [withoutHash, hashRaw] = H.splitOnce(afterScheme, '#');
   const nameFromHash = H.decodeAndTrim(hashRaw);
@@ -474,14 +558,18 @@ function URI_SS(line) {
 
   const main = mainRaw.includes('@') ? mainRaw : H.decodeBase64OrOriginal(mainRaw);
   const atIdx = main.lastIndexOf('@');
-  if (atIdx === -1) throw new Error("Invalid ss uri: missing '@'");
+  if (atIdx === -1) {
+    throw new Error("Invalid ss uri: missing '@'");
+  }
 
   const userInfoStr = H.decodeBase64OrOriginal(main.slice(0, atIdx));
   const serverAndPortWithPath = main.slice(atIdx + 1);
   const serverAndPort = serverAndPortWithPath.split('/')[0];
 
   const portIdx = serverAndPort.lastIndexOf(':');
-  if (portIdx === -1) throw new Error('Invalid ss uri: missing port');
+  if (portIdx === -1) {
+    throw new Error('Invalid ss uri: missing port');
+  }
   const server = serverAndPort.slice(0, portIdx);
   const portRaw = serverAndPort.slice(portIdx + 1);
   const port = H.parseRequiredPort(portRaw, 'Invalid ss uri: invalid port');
@@ -503,16 +591,23 @@ function URI_SS(line) {
     const pluginName = pluginParts[0];
     const pluginOptions = { plugin: pluginName };
     for (const raw of pluginParts.slice(1)) {
-      if (!raw) continue;
+      if (!raw) {
+        continue;
+      }
       const [key, val] = H.splitOnce(raw, '=');
-      if (!key) continue;
+      if (!key) {
+        continue;
+      }
       pluginOptions[key] = val === undefined || val === '' ? true : val;
     }
     switch (pluginOptions.plugin) {
       case 'obfs-local':
       case 'simple-obfs':
         proxy.plugin = 'obfs';
-        proxy['plugin-opts'] = { mode: pluginOptions.obfs, host: H.getIfNotBlank(pluginOptions['obfs-host']) };
+        proxy['plugin-opts'] = {
+          mode: pluginOptions.obfs,
+          host: H.getIfNotBlank(pluginOptions['obfs-host']),
+        };
         break;
       case 'v2ray-plugin':
         proxy.plugin = 'v2ray-plugin';
@@ -538,10 +633,16 @@ function URI_SS(line) {
     }
   }
 
-  if (Object.prototype.hasOwnProperty.call(queryParams, 'uot') && H.parseBoolOrPresence(queryParams.uot)) {
+  if (
+    Object.prototype.hasOwnProperty.call(queryParams, 'uot') &&
+    H.parseBoolOrPresence(queryParams.uot)
+  ) {
     proxy['udp-over-tcp'] = true;
   }
-  if (Object.prototype.hasOwnProperty.call(queryParams, 'tfo') && H.parseBoolOrPresence(queryParams.tfo)) {
+  if (
+    Object.prototype.hasOwnProperty.call(queryParams, 'tfo') &&
+    H.parseBoolOrPresence(queryParams.tfo)
+  ) {
     proxy.tfo = true;
   }
 
@@ -551,19 +652,33 @@ function URI_SS(line) {
 // ── ShadowsocksR ─────────────────────────────────────────────────────────────
 function URI_SSR(uri) {
   const afterScheme = H.stripUriScheme(uri, 'ssr', 'Invalid ssr uri');
-  if (!afterScheme) throw new Error('Invalid ssr uri');
+  if (!afterScheme) {
+    throw new Error('Invalid ssr uri');
+  }
   const line = H.decodeBase64OrOriginal(afterScheme);
 
   let splitIdx = line.indexOf(':origin');
-  if (splitIdx === -1) splitIdx = line.indexOf(':auth_');
-  if (splitIdx === -1) throw new Error('Invalid ssr uri');
+  if (splitIdx === -1) {
+    splitIdx = line.indexOf(':auth_');
+  }
+  if (splitIdx === -1) {
+    throw new Error('Invalid ssr uri');
+  }
   const serverAndPort = line.substring(0, splitIdx);
   const portIdx = serverAndPort.lastIndexOf(':');
-  if (portIdx === -1) throw new Error('Invalid ssr uri: missing port');
+  if (portIdx === -1) {
+    throw new Error('Invalid ssr uri: missing port');
+  }
   const server = serverAndPort.substring(0, portIdx);
-  const port = H.parseRequiredPort(serverAndPort.substring(portIdx + 1), 'Invalid ssr uri: invalid port');
+  const port = H.parseRequiredPort(
+    serverAndPort.substring(portIdx + 1),
+    'Invalid ssr uri: invalid port'
+  );
 
-  const params = line.substring(splitIdx + 1).split('/?')[0].split(':');
+  const params = line
+    .substring(splitIdx + 1)
+    .split('/?')[0]
+    .split(':');
   let proxy = {
     name: 'SSR',
     type: 'ssr',
@@ -579,7 +694,9 @@ function URI_SSR(uri) {
   const rawOtherParams = H.parseQueryString(line.split('/?')[1]);
   for (const [key, value] of Object.entries(rawOtherParams)) {
     const trimmed = value && value.trim();
-    if (trimmed) otherParams[key] = trimmed;
+    if (trimmed) {
+      otherParams[key] = trimmed;
+    }
   }
 
   proxy = {
@@ -587,8 +704,12 @@ function URI_SSR(uri) {
     name: otherParams.remarks
       ? H.decodeBase64OrOriginal(otherParams.remarks).trim()
       : (proxy.server ?? ''),
-    'protocol-param': H.getIfNotBlank(H.decodeBase64OrOriginal(otherParams.protoparam || '').replace(/\s/g, '')),
-    'obfs-param': H.getIfNotBlank(H.decodeBase64OrOriginal(otherParams.obfsparam || '').replace(/\s/g, '')),
+    'protocol-param': H.getIfNotBlank(
+      H.decodeBase64OrOriginal(otherParams.protoparam || '').replace(/\s/g, '')
+    ),
+    'obfs-param': H.getIfNotBlank(
+      H.decodeBase64OrOriginal(otherParams.obfsparam || '').replace(/\s/g, '')
+    ),
   };
   return proxy;
 }
@@ -596,7 +717,9 @@ function URI_SSR(uri) {
 // ── Hysteria2 ────────────────────────────────────────────────────────────────
 function URI_Hysteria2(line) {
   const afterScheme = H.stripUriScheme(line, ['hysteria2', 'hy2'], 'Invalid hysteria2 uri');
-  if (!afterScheme) throw new Error('Invalid hysteria2 uri');
+  if (!afterScheme) {
+    throw new Error('Invalid hysteria2 uri');
+  }
   const {
     auth: passwordRaw,
     host: server,
@@ -613,8 +736,12 @@ function URI_Hysteria2(line) {
 
   const params = H.parseQueryStringNormalized(addons);
   proxy.sni = params.sni;
-  if (!proxy.sni && params.peer) proxy.sni = params.peer;
-  if (params.obfs && params.obfs !== 'none') proxy.obfs = params.obfs;
+  if (!proxy.sni && params.peer) {
+    proxy.sni = params.peer;
+  }
+  if (params.obfs && params.obfs !== 'none') {
+    proxy.obfs = params.obfs;
+  }
 
   proxy.ports = params.mport;
   proxy['obfs-password'] = params['obfs-password'];
@@ -632,7 +759,9 @@ function URI_Hysteria2(line) {
 // ── Hysteria (v1) ────────────────────────────────────────────────────────────
 function URI_Hysteria(line) {
   const afterScheme = H.stripUriScheme(line, ['hysteria', 'hy'], 'Invalid hysteria uri');
-  if (!afterScheme) throw new Error('Invalid hysteria uri');
+  if (!afterScheme) {
+    throw new Error('Invalid hysteria uri');
+  }
   const {
     host: server,
     port,
@@ -654,28 +783,42 @@ function URI_Hysteria(line) {
         proxy['skip-cert-verify'] = H.parseBoolOrPresence(value);
         break;
       case 'auth':
-        if (value) proxy['auth-str'] = value;
+        if (value) {
+          proxy['auth-str'] = value;
+        }
         break;
       case 'mport':
-        if (value) proxy.ports = value;
+        if (value) {
+          proxy.ports = value;
+        }
         break;
       case 'obfsParam':
-        if (value) proxy.obfs = value;
+        if (value) {
+          proxy.obfs = value;
+        }
         break;
       case 'upmbps':
-        if (value) proxy.up = value;
+        if (value) {
+          proxy.up = value;
+        }
         break;
       case 'downmbps':
-        if (value) proxy.down = value;
+        if (value) {
+          proxy.down = value;
+        }
         break;
       case 'obfs':
-        if (value !== undefined) proxy.obfs = value || '';
+        if (value !== undefined) {
+          proxy.obfs = value || '';
+        }
         break;
       case 'fast-open':
         proxy['fast-open'] = H.parseBoolOrPresence(value);
         break;
       case 'peer':
-        if (!proxy.sni && value) proxy.sni = value;
+        if (!proxy.sni && value) {
+          proxy.sni = value;
+        }
         break;
       case 'recv-window-conn':
         proxy['recv-window-conn'] = H.parseInteger(value);
@@ -684,29 +827,41 @@ function URI_Hysteria(line) {
         proxy['recv-window'] = H.parseInteger(value);
         break;
       case 'ca':
-        if (value) proxy.ca = value;
+        if (value) {
+          proxy.ca = value;
+        }
         break;
       case 'ca-str':
-        if (value) proxy['ca-str'] = value;
+        if (value) {
+          proxy['ca-str'] = value;
+        }
         break;
       case 'disable-mtu-discovery':
         proxy['disable-mtu-discovery'] = H.parseBoolOrPresence(value);
         break;
       case 'fingerprint':
-        if (value) proxy.fingerprint = value;
+        if (value) {
+          proxy.fingerprint = value;
+        }
         break;
       case 'protocol':
-        if (value) proxy.protocol = value;
+        if (value) {
+          proxy.protocol = value;
+        }
         break;
       case 'sni':
-        if (value) proxy.sni = value;
+        if (value) {
+          proxy.sni = value;
+        }
         break;
       default:
         break;
     }
   }
 
-  if (!proxy.protocol) proxy.protocol = 'udp';
+  if (!proxy.protocol) {
+    proxy.protocol = 'udp';
+  }
 
   return proxy;
 }
@@ -714,7 +869,9 @@ function URI_Hysteria(line) {
 // ── TUIC ─────────────────────────────────────────────────────────────────────
 function URI_TUIC(line) {
   const afterScheme = H.stripUriScheme(line, 'tuic', 'Invalid tuic uri');
-  if (!afterScheme) throw new Error('Invalid tuic uri');
+  if (!afterScheme) {
+    throw new Error('Invalid tuic uri');
+  }
   const {
     auth,
     host: server,
@@ -723,7 +880,9 @@ function URI_TUIC(line) {
     fragment: nameRaw,
   } = H.parseUrlLike(afterScheme, { requireAuth: true, errorMessage: 'Invalid tuic uri' });
   const [uuid, passwordRaw] = H.splitOnce(auth, ':');
-  if (passwordRaw === undefined) throw new Error('Invalid tuic uri');
+  if (passwordRaw === undefined) {
+    throw new Error('Invalid tuic uri');
+  }
 
   const portNum = H.parsePortOrDefault(port, 443);
   const password = H.safeDecodeURIComponent(passwordRaw) ?? passwordRaw;
@@ -789,7 +948,9 @@ function URI_TUIC(line) {
 // ── WireGuard ────────────────────────────────────────────────────────────────
 function URI_Wireguard(line) {
   const afterScheme = H.stripUriScheme(line, ['wireguard', 'wg'], 'Invalid wireguard uri');
-  if (!afterScheme) throw new Error('Invalid wireguard uri');
+  if (!afterScheme) {
+    throw new Error('Invalid wireguard uri');
+  }
   const {
     auth: privateKeyRaw,
     host: server,
@@ -801,40 +962,66 @@ function URI_Wireguard(line) {
   const privateKey = H.safeDecodeURIComponent(privateKeyRaw) ?? privateKeyRaw;
   const decodedName = H.decodeAndTrim(nameRaw);
   const name = decodedName ?? `WireGuard ${server}:${portNum}`;
-  const proxy = { type: 'wireguard', name, server, port: portNum, 'private-key': privateKey, udp: true };
+  const proxy = {
+    type: 'wireguard',
+    name,
+    server,
+    port: portNum,
+    'private-key': privateKey,
+    udp: true,
+  };
 
   const params = H.parseQueryStringNormalized(addons);
   for (const [key, value] of Object.entries(params)) {
     switch (key) {
       case 'address':
       case 'ip':
-        if (!value) break;
+        if (!value) {
+          break;
+        }
         value.split(',').forEach((i) => {
-          const ip = i.trim().replace(/\/\d+$/, '').replace(/^\[/, '').replace(/\]$/, '');
-          if (H.isIPv4(ip)) proxy.ip = ip;
-          else if (H.isIPv6(ip)) proxy.ipv6 = ip;
+          const ip = i
+            .trim()
+            .replace(/\/\d+$/, '')
+            .replace(/^\[/, '')
+            .replace(/\]$/, '');
+          if (H.isIPv4(ip)) {
+            proxy.ip = ip;
+          } else if (H.isIPv6(ip)) {
+            proxy.ipv6 = ip;
+          }
         });
         break;
       case 'publickey':
       case 'public-key':
-        if (!value) break;
+        if (!value) {
+          break;
+        }
         proxy['public-key'] = value;
         break;
       case 'allowed-ips':
-        if (!value) break;
+        if (!value) {
+          break;
+        }
         proxy['allowed-ips'] = value.split(',');
         break;
       case 'pre-shared-key':
-        if (!value) break;
+        if (!value) {
+          break;
+        }
         proxy['pre-shared-key'] = value;
         break;
       case 'reserved': {
-        if (!value) break;
+        if (!value) {
+          break;
+        }
         const parsed = value
           .split(',')
           .map((i) => H.parseInteger(i.trim()))
           .filter((i) => Number.isInteger(i));
-        if (parsed.length === 3) proxy['reserved'] = parsed;
+        if (parsed.length === 3) {
+          proxy['reserved'] = parsed;
+        }
         break;
       }
       case 'udp':
@@ -850,7 +1037,9 @@ function URI_Wireguard(line) {
         proxy['remote-dns-resolve'] = H.parseBoolOrPresence(value);
         break;
       case 'dns':
-        if (!value) break;
+        if (!value) {
+          break;
+        }
         proxy.dns = value.split(',');
         break;
       default:
@@ -864,7 +1053,9 @@ function URI_Wireguard(line) {
 // ── AnyTLS ───────────────────────────────────────────────────────────────────
 function URI_AnyTLS(line) {
   const afterScheme = H.stripUriScheme(line, 'anytls', 'Invalid anytls uri');
-  if (!afterScheme) throw new Error('Invalid anytls uri');
+  if (!afterScheme) {
+    throw new Error('Invalid anytls uri');
+  }
   const {
     auth: authRaw,
     host: server,
@@ -872,7 +1063,9 @@ function URI_AnyTLS(line) {
     query: addons,
     fragment: nameRaw,
   } = H.parseUrlLike(afterScheme, { errorMessage: 'Invalid anytls uri' });
-  if (!server) throw new Error('Invalid anytls uri');
+  if (!server) {
+    throw new Error('Invalid anytls uri');
+  }
   const portNum = H.parsePortOrDefault(port, 443);
   const auth = H.safeDecodeURIComponent(authRaw) ?? authRaw;
   const decodedName = H.decodeAndTrim(nameRaw);
@@ -885,16 +1078,27 @@ function URI_AnyTLS(line) {
   }
 
   const params = H.parseQueryStringNormalized(addons);
-  if (params.sni) proxy.sni = params.sni;
+  if (params.sni) {
+    proxy.sni = params.sni;
+  }
   if (params.alpn) {
-    const alpn = params.alpn.split(',').map((item) => item.trim()).filter(Boolean);
-    if (alpn.length > 0) proxy.alpn = alpn;
+    const alpn = params.alpn
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (alpn.length > 0) {
+      proxy.alpn = alpn;
+    }
   }
 
   const fingerprint = params.fingerprint ?? params.hpkp;
-  if (fingerprint) proxy.fingerprint = fingerprint;
+  if (fingerprint) {
+    proxy.fingerprint = fingerprint;
+  }
   const clientFingerprint = params['client-fingerprint'] ?? params.fp;
-  if (clientFingerprint) proxy['client-fingerprint'] = clientFingerprint;
+  if (clientFingerprint) {
+    proxy['client-fingerprint'] = clientFingerprint;
+  }
 
   if (Object.prototype.hasOwnProperty.call(params, 'skip-cert-verify')) {
     proxy['skip-cert-verify'] = H.parseBoolOrPresence(params['skip-cert-verify']);
@@ -907,11 +1111,17 @@ function URI_AnyTLS(line) {
   }
 
   const idleCheck = H.parseInteger(params['idle-session-check-interval']);
-  if (idleCheck !== undefined) proxy['idle-session-check-interval'] = idleCheck;
+  if (idleCheck !== undefined) {
+    proxy['idle-session-check-interval'] = idleCheck;
+  }
   const idleTimeout = H.parseInteger(params['idle-session-timeout']);
-  if (idleTimeout !== undefined) proxy['idle-session-timeout'] = idleTimeout;
+  if (idleTimeout !== undefined) {
+    proxy['idle-session-timeout'] = idleTimeout;
+  }
   const minIdle = H.parseInteger(params['min-idle-session']);
-  if (minIdle !== undefined) proxy['min-idle-session'] = minIdle;
+  if (minIdle !== undefined) {
+    proxy['min-idle-session'] = minIdle;
+  }
 
   return proxy;
 }
@@ -919,7 +1129,9 @@ function URI_AnyTLS(line) {
 // ── SOCKS5 ───────────────────────────────────────────────────────────────────
 function URI_SOCKS(line) {
   const afterScheme = H.stripUriScheme(line, ['socks5', 'socks'], 'Invalid socks uri');
-  if (!afterScheme) throw new Error('Invalid socks uri');
+  if (!afterScheme) {
+    throw new Error('Invalid socks uri');
+  }
   const {
     auth: authRaw,
     host: server,
@@ -967,7 +1179,9 @@ function URI_SOCKS(line) {
 // ── HTTP(S) ──────────────────────────────────────────────────────────────────
 function URI_HTTP(line) {
   const afterScheme = H.stripUriScheme(line, ['http', 'https'], 'Invalid http uri');
-  if (!afterScheme) throw new Error('Invalid http uri');
+  if (!afterScheme) {
+    throw new Error('Invalid http uri');
+  }
   const {
     auth: authRaw,
     host: server,
@@ -1040,11 +1254,17 @@ function parseNodeUri(uri) {
   try {
     const { uri: normalized, scheme } = H.normalizeUriAndGetScheme(uri);
     const parser = URI_PARSERS[scheme];
-    if (!parser) return null;
+    if (!parser) {
+      return null;
+    }
     const node = parser(normalized);
     // 归一:server/port/name 必在,附 protocol 兼容既有前端/测试(与 type 同值)。
-    if (!node || typeof node !== 'object') return null;
-    if (!node.protocol && node.type) node.protocol = node.type;
+    if (!node || typeof node !== 'object') {
+      return null;
+    }
+    if (!node.protocol && node.type) {
+      node.protocol = node.type;
+    }
     return node;
   } catch {
     return null;

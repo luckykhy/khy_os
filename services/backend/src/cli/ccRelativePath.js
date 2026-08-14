@@ -34,7 +34,9 @@ const FALSY = new Set(['0', 'false', 'off', 'no']);
 
 // 门控 KHY_TOOL_RELATIVE_PATH 默认开;标准 falsy 串(0/false/off/no,大小写/空白不敏感)关。
 function relativeToolPathEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TOOL_RELATIVE_PATH) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TOOL_RELATIVE_PATH) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(flag);
 }
 
@@ -47,10 +49,18 @@ function relativeToolPathEnabled(env = process.env) {
 function toRelativePath(absolutePath, cwd) {
   const abs = String(absolutePath == null ? '' : absolutePath);
   const base = String(cwd == null ? '' : cwd);
-  if (!abs || !base) return abs;
-  if (!path.isAbsolute(abs)) return abs;
+  if (!abs || !base) {
+    return abs;
+  }
+  if (!path.isAbsolute(abs)) {
+    return abs;
+  }
   let rel;
-  try { rel = path.relative(base, abs); } catch { return abs; }
+  try {
+    rel = path.relative(base, abs);
+  } catch {
+    return abs;
+  }
   return rel.startsWith('..') ? abs : rel;
 }
 
@@ -62,9 +72,13 @@ function toRelativePath(absolutePath, cwd) {
  *     仅影响 path===cwd 这一对「文件路径」无意义的边角)。
  */
 function relativizeToolPath(absolutePath, cwd = process.cwd(), env = process.env) {
-  if (!relativeToolPathEnabled(env)) return absolutePath;
+  if (!relativeToolPathEnabled(env)) {
+    return absolutePath;
+  }
   const rel = toRelativePath(absolutePath, cwd);
-  if (rel === '') return String(absolutePath == null ? '' : absolutePath);
+  if (rel === '') {
+    return String(absolutePath == null ? '' : absolutePath);
+  }
   return rel;
 }
 

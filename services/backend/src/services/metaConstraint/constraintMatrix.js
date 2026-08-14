@@ -37,6 +37,7 @@
  */
 
 const strategy = require('../metaplan/constraintStrategy');
+
 const { BANDS } = require('./capabilityProbe');
 const { RISK } = require('./riskClassifier');
 
@@ -46,8 +47,8 @@ const S = strategy.STRATEGIES;
 const MATRIX = Object.freeze({
   [BANDS.GUEST]: Object.freeze({
     [RISK.CREATIVE]: S.PROMPT_SOFT,
-    [RISK.LOGIC]: S.PROMPT_SOFT,       // 宾客原则：信任强模型自行处理逻辑变更
-    [RISK.IRREVERSIBLE]: S.CODE_HARD,  // 即便宾客，不可逆操作仍挂代码校验（轻于电笼）
+    [RISK.LOGIC]: S.PROMPT_SOFT, // 宾客原则：信任强模型自行处理逻辑变更
+    [RISK.IRREVERSIBLE]: S.CODE_HARD, // 即便宾客，不可逆操作仍挂代码校验（轻于电笼）
   }),
   [BANDS.STANDARD]: Object.freeze({
     [RISK.CREATIVE]: S.PROMPT_SOFT,
@@ -55,7 +56,7 @@ const MATRIX = Object.freeze({
     [RISK.IRREVERSIBLE]: S.SYSTEM_BLOCK,
   }),
   [BANDS.CAGE]: Object.freeze({
-    [RISK.CREATIVE]: S.CODE_HARD,      // 高压电笼：弱模型连改注释也过代码级拦截器
+    [RISK.CREATIVE]: S.CODE_HARD, // 高压电笼：弱模型连改注释也过代码级拦截器
     [RISK.LOGIC]: S.CODE_HARD,
     [RISK.IRREVERSIBLE]: S.SYSTEM_BLOCK,
   }),
@@ -87,7 +88,8 @@ function solveFloor(band, riskClass) {
   // OVER-constrain, never under-constrain.
   const b = MATRIX[band] ? band : BANDS.CAGE;
   const r = Object.prototype.hasOwnProperty.call(MATRIX[b], riskClass)
-    ? riskClass : RISK.IRREVERSIBLE;
+    ? riskClass
+    : RISK.IRREVERSIBLE;
 
   const floor = MATRIX[b][r];
   return {

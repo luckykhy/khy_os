@@ -43,7 +43,10 @@ const USAGE = [
 ].join('\n');
 
 function _parseArgs(argStr) {
-  const parts = String(argStr || '').trim().split(/\s+/).filter(Boolean);
+  const parts = String(argStr || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   return { sub: (parts[0] || '').toLowerCase(), rest: parts.slice(1) };
 }
 
@@ -64,7 +67,10 @@ function _defaultOut() {
 function _mainRootFallback(here) {
   try {
     const { execSync } = require('child_process');
-    const commonDir = execSync('git rev-parse --git-common-dir', { cwd: here, encoding: 'utf-8' }).trim();
+    const commonDir = execSync('git rev-parse --git-common-dir', {
+      cwd: here,
+      encoding: 'utf-8',
+    }).trim();
     return path.resolve(here, commonDir, '..');
   } catch {
     return null;
@@ -96,7 +102,11 @@ async function runWorktreeCommand(argStr, deps = {}) {
   // Switch BOTH cwd sources so file tools, lock, diff, checkpoint and the prompt agree.
   const switchCwd = (target) => {
     env.KHYQUANT_CWD = target;
-    try { chdir(target); } catch { /* KHYQUANT_CWD is authoritative for tools; chdir best-effort */ }
+    try {
+      chdir(target);
+    } catch {
+      /* KHYQUANT_CWD is authoritative for tools; chdir best-effort */
+    }
     onCwdChange(target);
   };
 
@@ -150,7 +160,9 @@ async function runWorktreeCommand(argStr, deps = {}) {
         out.info('  先提交，或用 /worktree exit remove --force 强制丢弃。');
         return { status: 'blocked', uncommittedChanges: res.uncommittedChanges };
       }
-      if (back) switchCwd(back);
+      if (back) {
+        switchCwd(back);
+      }
       _returnCwd = null;
       out.success('已退出并删除隔离工作区。');
       return { status: 'removed', returnedTo: back };
@@ -158,8 +170,14 @@ async function runWorktreeCommand(argStr, deps = {}) {
 
     // keep — leave the worktree + branch on disk for manual review/merge.
     const name = path.basename(here);
-    try { wm.keepWorktree(name, { cwd: back || undefined }); } catch { /* audit only */ }
-    if (back) switchCwd(back);
+    try {
+      wm.keepWorktree(name, { cwd: back || undefined });
+    } catch {
+      /* audit only */
+    }
+    if (back) {
+      switchCwd(back);
+    }
     _returnCwd = null;
     out.success(`已退出隔离工作区（保留待合并）: ${name}`);
     return { status: 'kept', name, returnedTo: back };
@@ -171,7 +189,9 @@ async function runWorktreeCommand(argStr, deps = {}) {
       out.info('没有 worktree。');
     } else {
       out.info('Worktree 列表:');
-      for (const w of items) out.info(`  ${w.path}${w.branch ? '  [' + w.branch + ']' : ''}`);
+      for (const w of items) {
+        out.info(`  ${w.path}${w.branch ? '  [' + w.branch + ']' : ''}`);
+      }
     }
     return { status: 'list', items };
   }
@@ -181,7 +201,9 @@ async function runWorktreeCommand(argStr, deps = {}) {
     const inside = wm.isInsideWorktree(here);
     out.info(`隔离工作区: ${inside ? '是' : '否'}`);
     out.info(`  当前路径: ${here}`);
-    if (inside && _returnCwd) out.info(`  退出将返回: ${_returnCwd}`);
+    if (inside && _returnCwd) {
+      out.info(`  退出将返回: ${_returnCwd}`);
+    }
     return { status: 'status', inside, path: here };
   }
 
@@ -191,7 +213,12 @@ async function runWorktreeCommand(argStr, deps = {}) {
 }
 
 // Test hooks — reset/inspect the session-scoped return-cwd between cases.
-function __resetForTest() { _returnCwd = null; }
-function __stateForTest() { return { returnCwd: _returnCwd }; }
+function __resetForTest() {
+  _returnCwd = null;
+}
+
+function __stateForTest() {
+  return { returnCwd: _returnCwd };
+}
 
 module.exports = { runWorktreeCommand, USAGE, __resetForTest, __stateForTest };

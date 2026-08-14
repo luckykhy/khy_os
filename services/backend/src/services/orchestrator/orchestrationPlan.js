@@ -41,16 +41,23 @@ function _normalizeStep(raw, where) {
   }
   const role = _isNonEmptyString(raw.role) ? raw.role.trim() : 'general';
   const out = { prompt: prompt.trim(), role };
-  if (_isNonEmptyString(raw.subagent_type)) out.subagentType = raw.subagent_type.trim();
-  else if (_isNonEmptyString(raw.subagentType)) out.subagentType = raw.subagentType.trim();
-  if (_isNonEmptyString(raw.model)) out.model = raw.model.trim();
+  if (_isNonEmptyString(raw.subagent_type)) {
+    out.subagentType = raw.subagent_type.trim();
+  } else if (_isNonEmptyString(raw.subagentType)) {
+    out.subagentType = raw.subagentType.trim();
+  }
+  if (_isNonEmptyString(raw.model)) {
+    out.model = raw.model.trim();
+  }
   // Optional estimated duration (any positive unit — minutes, points, …) for the
   // 统筹/critical-path schedule analysis (criticalPathSchedule.js). Absent → the
   // schedule leaf defaults it to 1; non-numeric/negative values are ignored here
   // so an unannotated spec keeps its exact legacy shape.
   if (raw.duration !== undefined && raw.duration !== null && raw.duration !== '') {
     const d = Number(raw.duration);
-    if (Number.isFinite(d) && d >= 0) out.duration = d;
+    if (Number.isFinite(d) && d >= 0) {
+      out.duration = d;
+    }
   }
   return out;
 }
@@ -70,7 +77,9 @@ function buildOrchestrationPlan(spec) {
   }
   const mode = _isNonEmptyString(spec.mode) ? spec.mode.trim().toLowerCase() : '';
   if (!VALID_MODES.includes(mode)) {
-    throw new Error(`orchestration plan: mode must be one of ${VALID_MODES.join('/')} (got "${spec.mode}")`);
+    throw new Error(
+      `orchestration plan: mode must be one of ${VALID_MODES.join('/')} (got "${spec.mode}")`
+    );
   }
 
   const label = _isNonEmptyString(spec.label) ? spec.label.trim() : `orchestration-${mode}`;
@@ -129,14 +138,22 @@ function buildOrchestrationPlan(spec) {
  */
 function summarizePlanProgress(plan, statusById = {}) {
   const total = plan && Array.isArray(plan.steps) ? plan.steps.length : 0;
-  let done = 0, failed = 0, running = 0, pending = 0;
+  let done = 0,
+    failed = 0,
+    running = 0,
+    pending = 0;
   if (plan && Array.isArray(plan.steps)) {
     for (const step of plan.steps) {
       const s = statusById[step.id];
-      if (s === 'done') done += 1;
-      else if (s === 'blocked' || s === 'failed') failed += 1;
-      else if (s === 'running') running += 1;
-      else pending += 1;
+      if (s === 'done') {
+        done += 1;
+      } else if (s === 'blocked' || s === 'failed') {
+        failed += 1;
+      } else if (s === 'running') {
+        running += 1;
+      } else {
+        pending += 1;
+      }
     }
   }
   return { total, done, failed, running, pending };

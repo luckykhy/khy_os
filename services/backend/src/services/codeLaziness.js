@@ -44,6 +44,7 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function _envVal(env, key) {
   return (env || process.env || {})[key];
 }
+
 function isEnabled(env) {
   const v = _envVal(env, 'KHY_CODE_LAZINESS');
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
@@ -53,9 +54,17 @@ function isEnabled(env) {
 // 改阶梯/铁律只改这里;指令、CLI ladder、文档都从这两张表派生。
 const LADDER = [
   { n: 1, key: 'yagni', text: '这功能根本需要存在吗?投机性需求 → 跳过,并用一行说明。(YAGNI)' },
-  { n: 2, key: 'reuse', text: '本仓已经有了吗?既有 helper/util/type/pattern → 复用;写之前先找,重复造已有逻辑是最常见的赘肉。' },
+  {
+    n: 2,
+    key: 'reuse',
+    text: '本仓已经有了吗?既有 helper/util/type/pattern → 复用;写之前先找,重复造已有逻辑是最常见的赘肉。',
+  },
   { n: 3, key: 'stdlib', text: '标准库已经做了吗?用它。' },
-  { n: 4, key: 'native', text: '平台原生特性覆盖了吗?<input type="date"> 胜过选择器库,CSS 胜过 JS,DB 约束胜过应用层代码。' },
+  {
+    n: 4,
+    key: 'native',
+    text: '平台原生特性覆盖了吗?<input type="date"> 胜过选择器库,CSS 胜过 JS,DB 约束胜过应用层代码。',
+  },
   { n: 5, key: 'installed', text: '已安装的依赖能解决吗?用它;绝不为几行能写的东西新加依赖。' },
   { n: 6, key: 'oneline', text: '能写成一行吗?写成一行。' },
   { n: 7, key: 'minimum', text: '才轮到:写能工作的最小代码。' },
@@ -82,17 +91,22 @@ const NEVER_LAZY = [
 const LEVELS = ['lite', 'full', 'ultra'];
 const DEFAULT_LEVEL = 'full';
 function resolveLevel(env) {
-  const v = String(_envVal(env, 'KHY_CODE_LAZINESS_LEVEL') || '').trim().toLowerCase();
+  const v = String(_envVal(env, 'KHY_CODE_LAZINESS_LEVEL') || '')
+    .trim()
+    .toLowerCase();
   return LEVELS.includes(v) ? v : DEFAULT_LEVEL;
 }
 
 // ── 编码意图判定:零假阳性(动作词 + 代码对象,缺一不触发)──────────────
 // 必须是「让 Khyos 写/改/造代码」的生产请求。写诗(写+诗,诗非代码对象)不触发;
 // 解释代码(代码对象命中但动作是「解释」不在动作集)不触发 —— 那不需要写代码指令。
-const _BUILD_VERB_RE = /(写|实现|编写|开发|构建|搭建|做一?个|做一?套|加|新增|增加|添加|改一?下|修改|重构|重写|优化|修复|修一?下|封装|生成|create|build|implement|write|add|refactor|rewrite|optimi[sz]e|fix|generate|scaffold|wire|hook\s+up|set\s+up)/i;
-const _CODE_NOUN_RE = /(代码|函数|方法|脚本|程序|组件|模块|功能|特性|接口|端点|路由|类|服务|页面|按钮|表单|中间件|插件|工具|命令|算法|正则|bug|报错|错误|feature|function|method|script|program|component|module|endpoint|route|class|service|handler|middleware|plugin|api|cli\b|command|algorithm|regex|patch|wrapper|util)/i;
+const _BUILD_VERB_RE =
+  /(写|实现|编写|开发|构建|搭建|做一?个|做一?套|加|新增|增加|添加|改一?下|修改|重构|重写|优化|修复|修一?下|封装|生成|create|build|implement|write|add|refactor|rewrite|optimi[sz]e|fix|generate|scaffold|wire|hook\s+up|set\s+up)/i;
+const _CODE_NOUN_RE =
+  /(代码|函数|方法|脚本|程序|组件|模块|功能|特性|接口|端点|路由|类|服务|页面|按钮|表单|中间件|插件|工具|命令|算法|正则|bug|报错|错误|feature|function|method|script|program|component|module|endpoint|route|class|service|handler|middleware|plugin|api|cli\b|command|algorithm|regex|patch|wrapper|util)/i;
 // 显式叫出 ponytail / 懒人模式 → 直接触发(尊重显式意图)。
-const _EXPLICIT_LAZY_RE = /(懒人模式|偷懒模式|最小代码|最简实现|别过度设计|不要过度工程|ponytail|lazy\s+mode|be\s+lazy|yagni|minimal\s+(code|solution)|do\s+less|over[\s-]?engineer)/i;
+const _EXPLICIT_LAZY_RE =
+  /(懒人模式|偷懒模式|最小代码|最简实现|别过度设计|不要过度工程|ponytail|lazy\s+mode|be\s+lazy|yagni|minimal\s+(code|solution)|do\s+less|over[\s-]?engineer)/i;
 
 /**
  * 判定用户消息是否是「让 Khyos 写/改代码」的请求。
@@ -101,8 +115,12 @@ const _EXPLICIT_LAZY_RE = /(懒人模式|偷懒模式|最小代码|最简实现|
  */
 function detectCodingIntent(text) {
   const t = String(text || '');
-  if (!t.trim()) return { coding: false, reason: 'empty', explicit: false };
-  if (_EXPLICIT_LAZY_RE.test(t)) return { coding: true, reason: 'explicit-lazy', explicit: true };
+  if (!t.trim()) {
+    return { coding: false, reason: 'empty', explicit: false };
+  }
+  if (_EXPLICIT_LAZY_RE.test(t)) {
+    return { coding: true, reason: 'explicit-lazy', explicit: true };
+  }
   if (_BUILD_VERB_RE.test(t) && _CODE_NOUN_RE.test(t)) {
     return { coding: true, reason: 'build-verb+code-noun', explicit: false };
   }
@@ -113,9 +131,14 @@ function detectCodingIntent(text) {
 function _ladderLines() {
   return LADDER.map((r) => `  ${r.n}. ${r.text}`);
 }
+
 function _levelLine(level) {
-  if (level === 'lite') return '强度 lite:按要求构建,但用一行点出更懒的替代方案让用户选。';
-  if (level === 'ultra') return '强度 ultra:YAGNI 极端主义。删除先于新增。先交一行版,并在同一回复里质疑需求的其余部分。';
+  if (level === 'lite') {
+    return '强度 lite:按要求构建,但用一行点出更懒的替代方案让用户选。';
+  }
+  if (level === 'ultra') {
+    return '强度 ultra:YAGNI 极端主义。删除先于新增。先交一行版,并在同一回复里质疑需求的其余部分。';
+  }
   return '强度 full(默认):阶梯强制执行。标准库与原生优先。最短 diff、最短解释。';
 }
 
@@ -126,7 +149,9 @@ function _levelLine(level) {
  * @returns {string}
  */
 function buildLazinessDirective(intent, level) {
-  if (!intent || !intent.coding) return '';
+  if (!intent || !intent.coding) {
+    return '';
+  }
   const lv = LEVELS.includes(level) ? level : DEFAULT_LEVEL;
   return [
     '[SYSTEM: 写代码时你是一位「懒人资深工程师」—— 懒 = 高效,不是马虎;最好的代码是从不写的代码。',
@@ -152,10 +177,19 @@ function buildLazinessDirective(intent, level) {
  * @returns {{intent:object, level:string, directive:string}}
  */
 function routeCodeLaziness({ text = '', env } = {}) {
-  if (!isEnabled(env)) return { intent: { coding: false, reason: 'disabled' }, level: resolveLevel(env), directive: '' };
+  if (!isEnabled(env)) {
+    return {
+      intent: { coding: false, reason: 'disabled' },
+      level: resolveLevel(env),
+      directive: '',
+    };
+  }
   let intent;
-  try { intent = detectCodingIntent(text); }
-  catch { intent = { coding: false, reason: 'error', explicit: false }; }
+  try {
+    intent = detectCodingIntent(text);
+  } catch {
+    intent = { coding: false, reason: 'error', explicit: false };
+  }
   const level = resolveLevel(env);
   return { intent, level, directive: buildLazinessDirective(intent, level) };
 }
@@ -166,7 +200,8 @@ function routeCodeLaziness({ text = '', env } = {}) {
 // 支持的注释前缀:// # -- /* * <!--(覆盖 js/py/sh/c/css/html 等常见栈)。
 const MARKER_RE = /(?:\/\/|#|--|\/\*|\*|<!--)\s*(?:lazy|ponytail)\s*:\s*(.+?)\s*(?:\*\/|-->)?\s*$/i;
 // 升级触发词:逗号分段之外的兜底,识别「无逗号但其实点了升级路径」的写法。
-const _TRIGGER_RE = /(若|当|超过|一旦|需要|再换|再加|升级|upgrade|when|if|once|switch\s+to|replace\s+with|per[\s-])/i;
+const _TRIGGER_RE =
+  /(若|当|超过|一旦|需要|再换|再加|升级|upgrade|when|if|once|switch\s+to|replace\s+with|per[\s-])/i;
 
 function _parseMarker(body) {
   const text = String(body || '').trim();
@@ -188,19 +223,27 @@ function _parseMarker(body) {
  */
 function harvestDebtMarkers(files) {
   const out = [];
-  if (!Array.isArray(files)) return out;
+  if (!Array.isArray(files)) {
+    return out;
+  }
   for (const f of files) {
-    if (!f || typeof f.content !== 'string') continue;
+    if (!f || typeof f.content !== 'string') {
+      continue;
+    }
     const lines = f.content.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const m = MARKER_RE.exec(line);
-      if (!m) continue;
+      if (!m) {
+        continue;
+      }
       // 排除「仅在散文/文档里提到本约定」的假阳性:若标记落在反引号代码段内
       // (如文档里写 `// lazy: ...` 当例子),前缀前的反引号数为奇数 → 跳过。
       // 这正是 ponytail debt 技能点名的坑:提及约定的散文不该进台账。
       const before = line.slice(0, m.index);
-      if ((before.match(/`/g) || []).length % 2 === 1) continue;
+      if ((before.match(/`/g) || []).length % 2 === 1) {
+        continue;
+      }
       const parsed = _parseMarker(m[1]);
       out.push({ file: String(f.path || ''), line: i + 1, ...parsed });
     }
@@ -219,7 +262,9 @@ function summarizeDebt(rows) {
   let noTrigger = 0;
   for (const r of list) {
     byFile[r.file] = (byFile[r.file] || 0) + 1;
-    if (!r.hasTrigger) noTrigger++;
+    if (!r.hasTrigger) {
+      noTrigger++;
+    }
   }
   return { total: list.length, noTrigger, byFile };
 }

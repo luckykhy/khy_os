@@ -30,14 +30,22 @@ const FROZEN_BASE_TRUTHY = Object.freeze([...BASE_TRUTHY]);
 const FROZEN_BASE_FALSY = Object.freeze([...BASE_FALSY]);
 
 function parseBoolean(raw, fallback = false, opts = {}) {
-  if (raw === undefined || raw === null || raw === '') return fallback;
-  if (typeof raw === 'boolean') return raw;
+  if (raw === undefined || raw === null || raw === '') {
+    return fallback;
+  }
+  if (typeof raw === 'boolean') {
+    return raw;
+  }
   const normalized = String(raw).trim().toLowerCase();
   const extended = opts.extended !== false;
   const truthy = extended ? TRUTHY : BASE_TRUTHY;
   const falsy = extended ? FALSY : BASE_FALSY;
-  if (truthy.includes(normalized)) return true;
-  if (falsy.includes(normalized)) return false;
+  if (truthy.includes(normalized)) {
+    return true;
+  }
+  if (falsy.includes(normalized)) {
+    return false;
+  }
   return fallback;
 }
 

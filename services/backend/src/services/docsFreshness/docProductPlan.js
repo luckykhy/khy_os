@@ -24,12 +24,18 @@ const _OFF = ['0', 'false', 'off', 'no'];
 /** KHY_DOCS_REGEN 门控:默认开(unset → 开),{0,false,off,no} 关。 */
 function docRegenEnabled(env = process.env) {
   const raw = env && env.KHY_DOCS_REGEN;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
 function _norm(rel) {
-  return String(rel == null ? '' : rel).trim().replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '');
+  return String(rel == null ? '' : rel)
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '')
+    .replace(/^\/+/, '');
 }
 
 // 去掉一个路径的扩展名(最后一个 .),保留其余(含中文/空格/方括号)。
@@ -57,7 +63,7 @@ function planDocProducts(changedMdRel, committedProductRels) {
     }
     const base = _stripExt(md); // 去 .md,得同名基
     const committed = new Set(
-      (Array.isArray(committedProductRels) ? committedProductRels : []).map(_norm).filter(Boolean),
+      (Array.isArray(committedProductRels) ? committedProductRels : []).map(_norm).filter(Boolean)
     );
 
     const html = `${base}.html`;
@@ -72,8 +78,12 @@ function planDocProducts(changedMdRel, committedProductRels) {
     }
 
     const products = [];
-    if (hasHtml) products.push(html);
-    if (hasPdf) products.push(pdf);
+    if (hasHtml) {
+      products.push(html);
+    }
+    if (hasPdf) {
+      products.push(pdf);
+    }
     // 只 committed .html(无 pdf)→ --html-only,避免无谓依赖 Chrome。
     const mode = hasPdf ? null : '--html-only';
     regen.push({ md, products: products.sort(), mode });

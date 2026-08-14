@@ -62,11 +62,11 @@
  */
 
 // 单一裁决的状态枚举（新增判定档时在此登记）。
-const STATUS_CLEAN = 'clean';                 // 可证等于某个干净提交：最强档，可当「就是那个提交」。
-const STATUS_DIRTY = 'dirty';                 // == 提交 X + 未提交增量：合法完整还原，但不等于干净提交。
+const STATUS_CLEAN = 'clean'; // 可证等于某个干净提交：最强档，可当「就是那个提交」。
+const STATUS_DIRTY = 'dirty'; // == 提交 X + 未提交增量：合法完整还原，但不等于干净提交。
 const STATUS_INDETERMINATE = 'indeterminate'; // 有提交、非脏，但无正面 clean 证据：保守不臆断。
 const STATUS_NO_PROVENANCE = 'no-provenance'; // 没记录任何提交：无从溯源。
-const STATUS_UNVERIFIABLE = 'unverifiable';   // 头缺失 / 非对象：无从判断来源。
+const STATUS_UNVERIFIABLE = 'unverifiable'; // 头缺失 / 非对象：无从判断来源。
 
 // 横幅严重度：dirty 值得诚实告警，其余可披露的档是附注，证据不足则不打行（字节等价）。
 const _BANNER_SEVERITY = {
@@ -86,7 +86,7 @@ function _isNonEmptyStr(x) {
  * 唯一构造裁决的出口：ok 只在 status==='clean' 时为真。红线只需在此一处把守。
  */
 function _verdict(status, header, reason) {
-  const h = (header && typeof header === 'object' && !Array.isArray(header)) ? header : {};
+  const h = header && typeof header === 'object' && !Array.isArray(header) ? header : {};
   const commit = _isNonEmptyStr(h.gitCommit) ? h.gitCommit : null;
   return {
     status,
@@ -113,14 +113,20 @@ function assessRestoreProvenance(header) {
   try {
     // 1) 证据不足：头非对象（含 null / 数组 / 标量）。无从判断来源，绝不臆断 clean。
     if (!header || typeof header !== 'object' || Array.isArray(header)) {
-      return _verdict(STATUS_UNVERIFIABLE, header,
-        '缺快照头（snapshot.json 缺失 / 非对象）：无从判断这份还原源码的 git 来源');
+      return _verdict(
+        STATUS_UNVERIFIABLE,
+        header,
+        '缺快照头（snapshot.json 缺失 / 非对象）：无从判断这份还原源码的 git 来源'
+      );
     }
 
     // 2) 没记录任何提交：无从溯源。
     if (!_isNonEmptyStr(header.gitCommit)) {
-      return _verdict(STATUS_NO_PROVENANCE, header,
-        '快照头未记录 gitCommit：无从把这份还原源码溯源到任何提交');
+      return _verdict(
+        STATUS_NO_PROVENANCE,
+        header,
+        '快照头未记录 gitCommit：无从把这份还原源码溯源到任何提交'
+      );
     }
 
     const short = header.gitCommit.slice(0, 12);
@@ -128,9 +134,12 @@ function assessRestoreProvenance(header) {
     // 3) 脏捕获（最需要诚实披露的档）：含未提交改动 → 不等于干净提交。
     const isDirty = header.includesUncommitted === true || header.dirty === true;
     if (isDirty) {
-      return _verdict(STATUS_DIRTY, header,
-        `这份还原源码 = 提交 ${short} 加上未提交增量（脏捕获），不等于 ${short} 这个干净提交：`
-        + `别当作「发布的那份代码」，git diff ${short} 会显示这些未提交改动`);
+      return _verdict(
+        STATUS_DIRTY,
+        header,
+        `这份还原源码 = 提交 ${short} 加上未提交增量（脏捕获），不等于 ${short} 这个干净提交：` +
+          `别当作「发布的那份代码」，git diff ${short} 会显示这些未提交改动`
+      );
     }
 
     // 4) 有正面 clean 证据：HEAD 归档天然干净，或 working-tree 且明确 includesUncommitted===false。
@@ -140,17 +149,25 @@ function assessRestoreProvenance(header) {
       header.captureMode === 'head' ||
       header.includesUncommitted === false;
     if (cleanEvidence) {
-      return _verdict(STATUS_CLEAN, header,
-        `这份还原源码可证等于干净提交 ${short}（`
-        + ((header.captureMode === 'HEAD' || header.captureMode === 'head') ? '从提交归档' : 'working-tree 捕获且无未提交改动')
-        + '）：可放心当作「就是那个提交」');
+      return _verdict(
+        STATUS_CLEAN,
+        header,
+        `这份还原源码可证等于干净提交 ${short}（` +
+          (header.captureMode === 'HEAD' || header.captureMode === 'head'
+            ? '从提交归档'
+            : 'working-tree 捕获且无未提交改动') +
+          '）：可放心当作「就是那个提交」'
+      );
     }
 
     // 5) 有提交、非脏，但拿不到正面 clean 证据（如 working-tree 模式而 includesUncommitted 未记录）：
     //    保守，不臆断 clean。
-    return _verdict(STATUS_INDETERMINATE, header,
-      `记录了提交 ${short} 且未标记为脏，但缺少正面「无未提交改动」证据（`
-      + `captureMode=${header.captureMode || '?'} · includesUncommitted 未记录）：保守起见不断言等于干净提交`);
+    return _verdict(
+      STATUS_INDETERMINATE,
+      header,
+      `记录了提交 ${short} 且未标记为脏，但缺少正面「无未提交改动」证据（` +
+        `captureMode=${header.captureMode || '?'} · includesUncommitted 未记录）：保守起见不断言等于干净提交`
+    );
   } catch {
     return _verdict(STATUS_UNVERIFIABLE, null, '把关异常：无从判断来源，保守不臆断 clean');
   }
@@ -169,18 +186,23 @@ function assessRestoreProvenance(header) {
  */
 function buildProvenanceBannerLine(verdict) {
   try {
-    if (!verdict || typeof verdict !== 'object') return null;
+    if (!verdict || typeof verdict !== 'object') {
+      return null;
+    }
     const status = verdict.status;
     const severity = _BANNER_SEVERITY[status] || 'none';
-    if (severity === 'none') return null;
+    if (severity === 'none') {
+      return null;
+    }
 
     const short = _isNonEmptyStr(verdict.shortCommit) ? verdict.shortCommit : null;
 
     let line;
     if (status === STATUS_DIRTY) {
       const s = short || '(未知提交)';
-      line = `来源：这份源码 = 提交 ${s} + 未提交增量（脏捕获），不等于干净提交 ${s}；`
-        + `勿当作「发布的那份代码」（git diff ${s} 会显示这些改动）`;
+      line =
+        `来源：这份源码 = 提交 ${s} + 未提交增量（脏捕获），不等于干净提交 ${s}；` +
+        `勿当作「发布的那份代码」（git diff ${s} 会显示这些改动）`;
     } else if (status === STATUS_CLEAN) {
       line = `来源：可证等于干净提交 ${short || '(未知提交)'}（可放心当作「就是那个提交」）`;
     } else if (status === STATUS_INDETERMINATE) {

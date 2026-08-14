@@ -46,9 +46,23 @@ let userB;
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
-  userA = await User.create({ username: 'rc-a', email: 'rc-a@test.local', password: 'pw-a-123456', status: 'active' });
-  userB = await User.create({ username: 'rc-b', email: 'rc-b@test.local', password: 'pw-b-123456', status: 'active' });
-  await svc.addProviderEntry(userA.id, { provider: 'deepseek', displayName: 'DeepSeek', key: 'sk-ds-route' });
+  userA = await User.create({
+    username: 'rc-a',
+    email: 'rc-a@test.local',
+    password: 'pw-a-123456',
+    status: 'active',
+  });
+  userB = await User.create({
+    username: 'rc-b',
+    email: 'rc-b@test.local',
+    password: 'pw-b-123456',
+    status: 'active',
+  });
+  await svc.addProviderEntry(userA.id, {
+    provider: 'deepseek',
+    displayName: 'DeepSeek',
+    key: 'sk-ds-route',
+  });
 
   app = express();
   app.use(express.json());
@@ -57,18 +71,24 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 const auth = (u) => ['Authorization', `Bearer ${tokenFor(u.id)}`];
 
 describe('GET /api/user-gateway/catalog', () => {
   test('authenticated user gets their own edges', async () => {
-    const res = await request(app).get('/api/user-gateway/catalog').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/user-gateway/catalog')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data.edges)).toBe(true);
-    const providers = res.body.data.edges.map(e => e.provider);
+    const providers = res.body.data.edges.map((e) => e.provider);
     expect(providers).toContain('deepseek');
     expect(res.body.data.sources).toBeDefined();
   });
@@ -79,7 +99,9 @@ describe('GET /api/user-gateway/catalog', () => {
   });
 
   test("B does not see A's edges (tenant isolation)", async () => {
-    const res = await request(app).get('/api/user-gateway/catalog').set(...auth(userB));
+    const res = await request(app)
+      .get('/api/user-gateway/catalog')
+      .set(...auth(userB));
     expect(res.status).toBe(200);
     expect(res.body.data.edges).toHaveLength(0);
   });
@@ -87,7 +109,10 @@ describe('GET /api/user-gateway/catalog', () => {
 
 describe('POST /api/user-gateway/detect', () => {
   test('runs a detection sweep and returns the enriched catalog + sources', async () => {
-    const res = await request(app).post('/api/user-gateway/detect').set(...auth(userA)).send({});
+    const res = await request(app)
+      .post('/api/user-gateway/detect')
+      .set(...auth(userA))
+      .send({});
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data.edges)).toBe(true);

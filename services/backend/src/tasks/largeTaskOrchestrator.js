@@ -1,7 +1,8 @@
 'use strict';
 
-const runtimeStore = require('./largeTaskRuntimeStore');
 const { getBreaker } = require('../services/circuitBreaker');
+
+const runtimeStore = require('./largeTaskRuntimeStore');
 
 const DEFAULT_HEARTBEAT_MS = 15_000;
 const DEFAULT_LEASE_MS = 60_000;
@@ -21,20 +22,25 @@ const DEFAULT_COMMIT_BREAKER_OPTIONS = Object.freeze({
 function createLargeTaskOrchestrator(options = {}) {
   const runtime = options.runtime || runtimeStore;
   const workerId = String(options.workerId || 'large-task-orchestrator');
-  const commitBreakerNamespace = String(options.commitCircuitBreakerNamespace || `large_task_commit:${workerId}`);
+  const commitBreakerNamespace = String(
+    options.commitCircuitBreakerNamespace || `large_task_commit:${workerId}`
+  );
   const commitBreakerOptions = {
     ...DEFAULT_COMMIT_BREAKER_OPTIONS,
-    ...(options.commitCircuitBreakerOptions && typeof options.commitCircuitBreakerOptions === 'object'
+    ...(options.commitCircuitBreakerOptions &&
+    typeof options.commitCircuitBreakerOptions === 'object'
       ? options.commitCircuitBreakerOptions
       : {}),
   };
 
   function _normalizeScope(scope) {
-    return String(scope || 'default')
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9:_-]+/g, '_')
-      .replace(/^_+|_+$/g, '') || 'default';
+    return (
+      String(scope || 'default')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9:_-]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'default'
+    );
   }
 
   function _getCommitBreaker(scope) {
@@ -60,11 +66,19 @@ function createLargeTaskOrchestrator(options = {}) {
       throw new Error('runTask requires a handler function');
     }
 
-    const leaseMs = Math.max(1_000, Number(runOptions.lease_ms || DEFAULT_LEASE_MS) || DEFAULT_LEASE_MS);
-    const heartbeatMs = Math.max(500, Number(runOptions.heartbeat_ms || DEFAULT_HEARTBEAT_MS) || DEFAULT_HEARTBEAT_MS);
+    const leaseMs = Math.max(
+      1_000,
+      Number(runOptions.lease_ms || DEFAULT_LEASE_MS) || DEFAULT_LEASE_MS
+    );
+    const heartbeatMs = Math.max(
+      500,
+      Number(runOptions.heartbeat_ms || DEFAULT_HEARTBEAT_MS) || DEFAULT_HEARTBEAT_MS
+    );
     const idleTimeoutInput = Number(runOptions.idle_timeout_ms);
     const idleTimeoutMs = Number.isFinite(idleTimeoutInput)
-      ? (idleTimeoutInput <= 0 ? 0 : Math.max(1, Math.round(idleTimeoutInput)))
+      ? idleTimeoutInput <= 0
+        ? 0
+        : Math.max(1, Math.round(idleTimeoutInput))
       : DEFAULT_IDLE_TIMEOUT_MS;
     const allowedCheckpointSchemas = Array.isArray(runOptions.allowed_checkpoint_schema_versions)
       ? runOptions.allowed_checkpoint_schema_versions
@@ -72,9 +86,21 @@ function createLargeTaskOrchestrator(options = {}) {
     const dryRun = runOptions.dry_run !== false;
     const commitEnabled = runOptions.commit === true;
     const signal = runOptions.signal || null;
+    // Internal abort controller: lets the idle watchdog actively interrupt a hung
+    // handler; external runOptions.signal (if any) propagates into it.
+    const internalAbort = new AbortController();
+    if (signal) {
+      if (signal.aborted) {
+        internalAbort.abort(signal.reason);
+      } else {
+        signal.addEventListener('abort', () => internalAbort.abort(signal.reason), { once: true });
+      }
+    }
 
     let task = runtime.getTask(taskId);
-    if (!task) throw new Error(`Task not found: ${taskId}`);
+    if (!task) {
+      throw new Error(`Task not found: ${taskId}`);
+    }
 
     if (task.status === 'queued' || task.status === 'retry_wait') {
       if (task.status === 'retry_wait') {
@@ -93,6 +119,31 @@ function createLargeTaskOrchestrator(options = {}) {
 
     if (task.status === 'claimed') {
       task = runtime.startTask(taskId, workerId);
+    } else if (task.status === 'running') {
+      // 任务已处于 running:校验租约,防止 stale(崩溃残留/他 worker 持有)任务被
+      // 重复执行。lease_owner 非本 worker 且租约未过期 → 拒绝(already_running);
+      // 租约过期/无人持有 → 本 worker 接管后继续(requeueExpiredLeases 兜底)。
+      const nowMs = Date.now();
+      const leaseUntilMs = task.lease_until ? new Date(task.lease_until).getTime() : 0;
+      const leaseOwner = task.lease_owner || null;
+      if (
+        leaseOwner &&
+        leaseOwner !== workerId &&
+        Number.isFinite(leaseUntilMs) &&
+        leaseUntilMs > nowMs
+      ) {
+        return {
+          ok: false,
+          code: 'already_running',
+          message: `Task ${taskId} is currently running under lease of worker "${leaseOwner}"`,
+        };
+      }
+      if (!leaseOwner || !Number.isFinite(leaseUntilMs) || leaseUntilMs <= nowMs) {
+        const reclaimed = runtime.claimTask(taskId, workerId, { leaseMs });
+        if (reclaimed) {
+          task = runtime.startTask(taskId, workerId);
+        }
+      }
     } else if (task.status !== 'running') {
       throw new Error(`Task ${taskId} is not runnable from status "${task.status}"`);
     }
@@ -105,16 +156,20 @@ function createLargeTaskOrchestrator(options = {}) {
     let idleWatchdogTimer = null;
     let idleTimeoutError = null;
     let lastActivityMs = Date.now();
-    let startedAt = Date.now();
+    const startedAt = Date.now();
 
     const stopHeartbeat = () => {
-      if (!heartbeatTimer) return;
+      if (!heartbeatTimer) {
+        return;
+      }
       clearInterval(heartbeatTimer);
       heartbeatTimer = null;
     };
 
     const stopIdleWatchdog = () => {
-      if (!idleWatchdogTimer) return;
+      if (!idleWatchdogTimer) {
+        return;
+      }
       clearInterval(idleWatchdogTimer);
       idleWatchdogTimer = null;
     };
@@ -135,9 +190,13 @@ function createLargeTaskOrchestrator(options = {}) {
     };
 
     const ensureWithinIdleWindow = (throwOnViolation = true) => {
-      if (idleTimeoutMs <= 0) return;
+      if (idleTimeoutMs <= 0) {
+        return;
+      }
       const idleForMs = Date.now() - lastActivityMs;
-      if (idleForMs <= idleTimeoutMs) return;
+      if (idleForMs <= idleTimeoutMs) {
+        return;
+      }
       if (!idleTimeoutError) {
         idleTimeoutError = buildIdleTimeoutError(idleForMs);
       }
@@ -147,20 +206,36 @@ function createLargeTaskOrchestrator(options = {}) {
     };
 
     heartbeatTimer = setInterval(() => {
+      // Guard: once the idle watchdog tripped, stop renewing the lease so
+      // requeueExpiredLeases can reclaim the task (double insurance).
+      if (idleTimeoutError) {
+        return;
+      }
       try {
         runtime.heartbeatTask(taskId, workerId, { leaseMs });
       } catch {
         // Best-effort heartbeat.
       }
     }, heartbeatMs);
-    if (heartbeatTimer.unref) heartbeatTimer.unref();
+    if (heartbeatTimer.unref) {
+      heartbeatTimer.unref();
+    }
 
     if (idleTimeoutMs > 0) {
       const idleCheckIntervalMs = Math.max(200, Math.min(2_000, Math.round(idleTimeoutMs / 4)));
       idleWatchdogTimer = setInterval(() => {
         ensureWithinIdleWindow(false);
+        if (idleTimeoutError) {
+          // Active enforcement: stop lease renewal so requeueExpiredLeases can
+          // reclaim the task, and abort the handler via the propagated signal.
+          stopHeartbeat();
+          internalAbort.abort(idleTimeoutError.message);
+          stopIdleWatchdog();
+        }
       }, idleCheckIntervalMs);
-      if (idleWatchdogTimer.unref) idleWatchdogTimer.unref();
+      if (idleWatchdogTimer.unref) {
+        idleWatchdogTimer.unref();
+      }
     }
 
     const ensureNotCancelled = () => {
@@ -168,8 +243,10 @@ function createLargeTaskOrchestrator(options = {}) {
       if (idleTimeoutError) {
         throw idleTimeoutError;
       }
-      if (signal?.aborted) {
-        const reason = signal.reason ? String(signal.reason) : 'aborted';
+      if (internalAbort.signal.aborted) {
+        const reason = internalAbort.signal.reason
+          ? String(internalAbort.signal.reason)
+          : 'aborted';
         throw new Error(`task aborted: ${reason}`);
       }
       const latest = runtime.getTask(taskId);
@@ -199,7 +276,7 @@ function createLargeTaskOrchestrator(options = {}) {
       commitEnabled,
       checkpoint,
       payload: task.payload_json || {},
-      signal,
+      signal: internalAbort.signal,
       ensureNotCancelled,
       markActivity,
       heartbeat: () => {
@@ -232,7 +309,9 @@ function createLargeTaskOrchestrator(options = {}) {
         return loaded;
       },
       plan: async (fn) => {
-        if (typeof fn !== 'function') return null;
+        if (typeof fn !== 'function') {
+          return null;
+        }
         ensureNotCancelled();
         const planned = await fn({
           taskId,
@@ -241,7 +320,7 @@ function createLargeTaskOrchestrator(options = {}) {
           dryRun: true,
           checkpoint,
           payload: task.payload_json || {},
-          signal,
+          signal: internalAbort.signal,
           ensureNotCancelled,
         });
         markActivity();
@@ -283,12 +362,14 @@ function createLargeTaskOrchestrator(options = {}) {
         ensureNotCancelled();
         const breaker = _getCommitBreaker(scope);
         try {
-          const committed = await breaker.execute(async () => runtime.executeIdempotentSideEffect({
-            scope,
-            idempotency_key: resolvedKey,
-            intent_hash: intentHash || null,
-            executor,
-          }));
+          const committed = await breaker.execute(async () =>
+            runtime.executeIdempotentSideEffect({
+              scope,
+              idempotency_key: resolvedKey,
+              intent_hash: intentHash || null,
+              executor,
+            })
+          );
           markActivity();
           return committed;
         } catch (error) {
@@ -320,7 +401,9 @@ function createLargeTaskOrchestrator(options = {}) {
       }
       const result = await handler(ctx);
       ensureNotCancelled();
-      const succeeded = runtime.markSucceeded(taskId, workerId, result ?? null, { progress_pct: 100 });
+      const succeeded = runtime.markSucceeded(taskId, workerId, result ?? null, {
+        progress_pct: 100,
+      });
       stopHeartbeat();
       stopIdleWatchdog();
       return {
@@ -329,11 +412,18 @@ function createLargeTaskOrchestrator(options = {}) {
         result: result ?? null,
         latency_ms: Date.now() - startedAt,
       };
-    } catch (error) {
+    } catch (caughtError) {
       stopHeartbeat();
       stopIdleWatchdog();
+      // After an idle-timeout abort, any late handler rejection is a consequence
+      // of the interrupt; classify by the root cause (task_idle_timeout,
+      // retryable=true) for honest retry semantics.
+      const error = idleTimeoutError || caughtError;
       if (String(error?.type || '').trim() === 'task_cancelled') {
-        const cancelledTask = runtime.cancelTask(taskId, error?.message || 'cancelled by control plane');
+        const cancelledTask = runtime.cancelTask(
+          taskId,
+          error?.message || 'cancelled by control plane'
+        );
         return {
           ok: false,
           cancelled: true,
@@ -364,12 +454,41 @@ function createLargeTaskOrchestrator(options = {}) {
           latency_ms: Date.now() - startedAt,
         };
       }
-      const failed = runtime.markFailed(taskId, workerId, error, {
-        retry_base_delay_ms: runOptions.retry_base_delay_ms,
-        retry_cap_delay_ms: runOptions.retry_cap_delay_ms,
-        jitter_pct: runOptions.retry_jitter_pct,
-        retry_policy: runOptions.retry_policy || runOptions.retryPolicy || null,
-      });
+      let failed = null;
+      try {
+        failed = runtime.markFailed(taskId, workerId, error, {
+          retry_base_delay_ms: runOptions.retry_base_delay_ms,
+          retry_cap_delay_ms: runOptions.retry_cap_delay_ms,
+          jitter_pct: runOptions.retry_jitter_pct,
+          retry_policy: runOptions.retry_policy || runOptions.retryPolicy || null,
+        });
+      } catch (markError) {
+        // 任务已被别的 worker 接管 / 已删除时,markFailed 会抛 lease mismatch /
+        // task_missing。该失败属于别的 worker 的处理范围,不应升级为整个 tick
+        // 停摆(原行为会让 _executeTick 中止,本 tick 内剩余任务全部饿死)。
+        try {
+          runtime.updateTaskFields(taskId, {
+            last_error: {
+              type: 'stale_run',
+              message: String(error?.message || error || 'Task failed'),
+            },
+          });
+        } catch {
+          /* task missing → 忽略 */
+        }
+        return {
+          ok: false,
+          stale: true,
+          retry_scheduled: false,
+          dead_letter: false,
+          retry_delay_ms: 0,
+          error: {
+            type: 'stale_run',
+            message: String(error?.message || error || 'Task failed'),
+          },
+          latency_ms: Date.now() - startedAt,
+        };
+      }
       return {
         ok: false,
         task: failed.task,
@@ -390,9 +509,14 @@ function createLargeTaskOrchestrator(options = {}) {
       throw new Error('runNext requires a handler function');
     }
     runtime.requeueExpiredLeases();
-    const leaseMs = Math.max(1_000, Number(runOptions.lease_ms || DEFAULT_LEASE_MS) || DEFAULT_LEASE_MS);
+    const leaseMs = Math.max(
+      1_000,
+      Number(runOptions.lease_ms || DEFAULT_LEASE_MS) || DEFAULT_LEASE_MS
+    );
     const claimed = runtime.claimNextTask(workerId, { leaseMs });
-    if (!claimed) return null;
+    if (!claimed) {
+      return null;
+    }
     return runTask(claimed.id, handler, runOptions);
   }
 

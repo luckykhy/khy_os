@@ -23,7 +23,9 @@ const _PRODUCER_HINTS = Object.freeze([
 
 function _firstString(...vals) {
   for (const v of vals) {
-    if (typeof v === 'string' && v.trim()) return v.trim();
+    if (typeof v === 'string' && v.trim()) {
+      return v.trim();
+    }
   }
   return '';
 }
@@ -34,17 +36,16 @@ function _firstString(...vals) {
  * @returns {{producer:string, producerId:(string|null)}}
  */
 function classifyProducer(signals = {}) {
-  const hay = _firstString(
-    signals.adapter, signals.provider, signals.serviceType,
-  ).toLowerCase();
+  const hay = _firstString(signals.adapter, signals.provider, signals.serviceType).toLowerCase();
   const serviceType = String(signals.serviceType || '').toLowerCase();
 
   for (const hint of _PRODUCER_HINTS) {
     if (hay.includes(hint.match) || serviceType.includes(hint.match)) {
       // relay 携带 producerId 以区分具体上游（endpoint/model/provider）。
-      const producerId = hint.producer === PRODUCER.RELAY
-        ? (_firstString(signals.endpoint, signals.model, signals.provider) || null)
-        : null;
+      const producerId =
+        hint.producer === PRODUCER.RELAY
+          ? _firstString(signals.endpoint, signals.model, signals.provider) || null
+          : null;
       return { producer: hint.producer, producerId };
     }
   }

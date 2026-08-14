@@ -13,7 +13,7 @@
  * then in another shell:
  *   node kernel/bridge/khy-agent-run.js                 # uses /tmp/khy-agent.sock
  *   node kernel/bridge/khy-agent-run.js --socket /path  # explicit socket
- * Pick the model in-system from the OS shell:  ai use model claude/claude-sonnet-4-20250514
+ * Pick the model in-system from the OS shell:  ai use model claude/claude-sonnet-4-6
  * (it persists to /disk/etc/agent.conf, which this agent re-reads on SIGHUP).
  *
  * Diagnostics go to stderr only.

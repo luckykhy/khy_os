@@ -14,9 +14,15 @@
  * empty/whitespace input.
  */
 function trimIntentDebugItem(text = '', maxLen = 100) {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!normalized) return '';
-  if (normalized.length <= maxLen) return normalized;
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) {
+    return '';
+  }
+  if (normalized.length <= maxLen) {
+    return normalized;
+  }
   return `${normalized.slice(0, Math.max(16, maxLen - 1))}…`;
 }
 
@@ -25,7 +31,9 @@ function trimIntentDebugItem(text = '', maxLen = 100) {
  * cap to `limit` entries. Returns [] for non-array input.
  */
 function normalizeIntentDebugList(items = [], limit = 6) {
-  if (!Array.isArray(items)) return [];
+  if (!Array.isArray(items)) {
+    return [];
+  }
   return items
     .map((item) => trimIntentDebugItem(item, 100))
     .filter(Boolean)
@@ -39,10 +47,12 @@ function normalizeIntentDebugList(items = [], limit = 6) {
  * explicit count carried on the payload).
  */
 function buildIntentAssuranceDebugSnapshot(payload = {}) {
-  if (!payload || typeof payload !== 'object') return null;
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
   const primaryObjective = trimIntentDebugItem(
     payload.primaryObjective || payload.summary || payload.message || '',
-    180,
+    180
   );
   const constraints = normalizeIntentDebugList(payload.constraints, 5);
   const detailAnchors = normalizeIntentDebugList(payload.detailAnchors, 8);

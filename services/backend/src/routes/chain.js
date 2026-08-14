@@ -9,9 +9,10 @@
  */
 
 const express = require('express');
+
 const router = express.Router();
-const chainWasm = require('../services/chainWasm');
 const { flexibleAuth } = require('../middleware/auth');
+const chainWasm = require('../services/chainWasm');
 
 // Local chain registry (in-process, no Python dependency)
 const _chains = new Map();
@@ -80,10 +81,10 @@ router.post('/run', flexibleAuth, async (req, res) => {
     }
   }
 
-  // Try Python service if available
+  // Try Python service if available (khy-chain is optional, may not be installed)
   let chainService;
   try {
-    chainService = require('../../../packages/khy-chain/bridge/chainService');
+    chainService = require('@khy-os/khy-chain');
   } catch {
     return res.status(404).json({
       error: `Chain '${chainName}' not found (local chains: ${[..._chains.keys()].join(', ')})`,
@@ -106,20 +107,22 @@ router.post('/run', flexibleAuth, async (req, res) => {
  * GET /list — list registered chains
  */
 router.get('/list', flexibleAuth, async (_req, res) => {
-  const local = [..._chains.values()].map(c => ({
+  const local = [..._chains.values()].map((c) => ({
     name: c.name,
     type: c.type,
     source: 'local',
   }));
 
-  // Try to include Python chains
+  // Try to include Python chains (optional khy-chain package)
   try {
-    const chainService = require('../../../packages/khy-chain/bridge/chainService');
+    const chainService = require('@khy-os/khy-chain');
     if (await chainService.isHealthy()) {
       const remote = await chainService.listChains();
-      return res.json([...local, ...remote.map(c => ({ ...c, source: 'python' }))]);
+      return res.json([...local, ...remote.map((c) => ({ ...c, source: 'python' }))]);
     }
-  } catch { /* Python service not available */ }
+  } catch {
+    /* Python service not available */
+  }
 
   res.json(local);
 });
@@ -131,9 +134,11 @@ router.get('/health', async (_req, res) => {
   const wasmOk = chainWasm.isWasmAvailable();
   let pythonOk = false;
   try {
-    const chainService = require('../../../packages/khy-chain/bridge/chainService');
+    const chainService = require('@khy-os/khy-chain');
     pythonOk = await chainService.isHealthy();
-  } catch { /* not available */ }
+  } catch {
+    /* not available */
+  }
 
   res.json({
     status: 'ok',

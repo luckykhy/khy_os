@@ -44,8 +44,18 @@ let userB;
 beforeAll(async () => {
   await sequelize.sync({ force: true });
 
-  userA = await User.create({ username: 'alice', email: 'alice@test.local', password: 'pw-alice-123', status: 'active' });
-  userB = await User.create({ username: 'bob', email: 'bob@test.local', password: 'pw-bob-123', status: 'active' });
+  userA = await User.create({
+    username: 'alice',
+    email: 'alice@test.local',
+    password: 'pw-alice-123',
+    status: 'active',
+  });
+  userB = await User.create({
+    username: 'bob',
+    email: 'bob@test.local',
+    password: 'pw-bob-123',
+    status: 'active',
+  });
 
   app = express();
   app.use(express.json());
@@ -54,14 +64,20 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
-  try { fs.unlinkSync(TMP_DB); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(TMP_DB);
+  } catch {
+    /* ignore */
+  }
 });
 
 const auth = (u) => ['Authorization', `Bearer ${tokenFor(u.id)}`];
 
 describe('user-gateway routes — reachability (no admin gate)', () => {
   test('a normal user reaches GET /model-config and sees source:none initially', async () => {
-    const res = await request(app).get('/api/user-gateway/model-config').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/user-gateway/model-config')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.source).toBe('none');
@@ -78,18 +94,27 @@ describe('user-gateway routes — relay isolation', () => {
     const save = await request(app)
       .put('/api/user-gateway/model-config')
       .set(...auth(userA))
-      .send({ baseUrl: 'https://a.example.com', modelId: 'a-model', compatibility: 'openai', apiKey: 'sk-aaa-secret' });
+      .send({
+        baseUrl: 'https://a.example.com',
+        modelId: 'a-model',
+        compatibility: 'openai',
+        apiKey: 'sk-aaa-secret',
+      });
     expect(save.status).toBe(200);
     expect(save.body.data.source).toBe('user');
     expect(save.body.data.baseUrl).toBe('https://a.example.com');
     expect(save.body.data.hasApiKey).toBe(true);
 
-    const read = await request(app).get('/api/user-gateway/model-config').set(...auth(userA));
+    const read = await request(app)
+      .get('/api/user-gateway/model-config')
+      .set(...auth(userA));
     expect(read.body.data.baseUrl).toBe('https://a.example.com');
   });
 
   test("B never sees A's relay config (read isolation)", async () => {
-    const read = await request(app).get('/api/user-gateway/model-config').set(...auth(userB));
+    const read = await request(app)
+      .get('/api/user-gateway/model-config')
+      .set(...auth(userB));
     expect(read.status).toBe(200);
     expect(read.body.data.source).toBe('none');
     expect(read.body.data.baseUrl).toBe('');
@@ -101,7 +126,9 @@ describe('user-gateway routes — relay isolation', () => {
       .set(...auth(userB))
       .send({ baseUrl: 'https://b.example.com', modelId: 'b-model' });
 
-    const aRead = await request(app).get('/api/user-gateway/model-config').set(...auth(userA));
+    const aRead = await request(app)
+      .get('/api/user-gateway/model-config')
+      .set(...auth(userA));
     expect(aRead.body.data.baseUrl).toBe('https://a.example.com'); // unchanged
   });
 });
@@ -120,10 +147,14 @@ describe('user-gateway routes — provider + CC token isolation', () => {
       .send({ provider: 'acme', key: 'pk-acme-1' });
     expect(dup.status).toBe(409);
 
-    const bList = await request(app).get('/api/user-gateway/custom-providers').set(...auth(userB));
+    const bList = await request(app)
+      .get('/api/user-gateway/custom-providers')
+      .set(...auth(userB));
     expect(bList.body.data).toHaveLength(0);
 
-    const aList = await request(app).get('/api/user-gateway/custom-providers').set(...auth(userA));
+    const aList = await request(app)
+      .get('/api/user-gateway/custom-providers')
+      .set(...auth(userA));
     expect(aList.body.data).toHaveLength(1);
     expect(aList.body.data[0].keyMasked).not.toContain('pk-acme-1'); // masked, never plaintext
   });
@@ -146,7 +177,9 @@ describe('user-gateway routes — provider + CC token isolation', () => {
     expect(put.body.data.keyMasked).not.toContain('pk-beta-new'); // still masked
 
     // Still a single entry for this provider (replaced, not appended).
-    const list = await request(app).get('/api/user-gateway/custom-providers').set(...auth(userA));
+    const list = await request(app)
+      .get('/api/user-gateway/custom-providers')
+      .set(...auth(userA));
     const betaEntries = list.body.data.filter((e) => e.provider === 'beta');
     expect(betaEntries).toHaveLength(1);
 
@@ -158,21 +191,30 @@ describe('user-gateway routes — provider + CC token isolation', () => {
   });
 
   test('A issues a CC token (plaintext once); B cannot list it', async () => {
-    const issue = await request(app).post('/api/user-gateway/cc/tokens').set(...auth(userA)).send({ label: 'cc-a' });
+    const issue = await request(app)
+      .post('/api/user-gateway/cc/tokens')
+      .set(...auth(userA))
+      .send({ label: 'cc-a' });
     expect(issue.status).toBe(201);
     expect(issue.body.data.key).toMatch(/^khy_/);
     expect(issue.body.data.keyPrefix).toBe(issue.body.data.key.slice(0, 12));
 
-    const aTokens = await request(app).get('/api/user-gateway/cc/tokens').set(...auth(userA));
+    const aTokens = await request(app)
+      .get('/api/user-gateway/cc/tokens')
+      .set(...auth(userA));
     expect(aTokens.body.data.length).toBe(1);
     expect(aTokens.body.data[0]).not.toHaveProperty('key'); // list never returns plaintext
 
-    const bTokens = await request(app).get('/api/user-gateway/cc/tokens').set(...auth(userB));
+    const bTokens = await request(app)
+      .get('/api/user-gateway/cc/tokens')
+      .set(...auth(userB));
     expect(bTokens.body.data.length).toBe(0);
   });
 
   test('GET /cc/endpoint returns the unified proxy endpoint', async () => {
-    const res = await request(app).get('/api/user-gateway/cc/endpoint').set(...auth(userA));
+    const res = await request(app)
+      .get('/api/user-gateway/cc/endpoint')
+      .set(...auth(userA));
     expect(res.status).toBe(200);
     expect(res.body.data.endpoint).toMatch(/^https?:\/\//);
     expect(res.body.data.port).toBeGreaterThan(0);
@@ -181,7 +223,9 @@ describe('user-gateway routes — provider + CC token isolation', () => {
 
 describe('user-gateway routes — image-config isolation', () => {
   test('GET /image-config defaults to auto when unset', async () => {
-    const res = await request(app).get('/api/user-gateway/image-config').set(...auth(userB));
+    const res = await request(app)
+      .get('/api/user-gateway/image-config')
+      .set(...auth(userB));
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     // auto = empty backend (no pin).
@@ -198,13 +242,17 @@ describe('user-gateway routes — image-config isolation', () => {
     expect(save.body.data.backend).toBe('agnes');
     expect(save.body.data.model).toBe('agnes-image-2.0');
 
-    const read = await request(app).get('/api/user-gateway/image-config').set(...auth(userA));
+    const read = await request(app)
+      .get('/api/user-gateway/image-config')
+      .set(...auth(userA));
     expect(read.body.data.backend).toBe('agnes');
     expect(read.body.data.model).toBe('agnes-image-2.0');
   });
 
   test("B never sees A's image pin (read isolation)", async () => {
-    const read = await request(app).get('/api/user-gateway/image-config').set(...auth(userB));
+    const read = await request(app)
+      .get('/api/user-gateway/image-config')
+      .set(...auth(userB));
     expect(read.status).toBe(200);
     expect(read.body.data.backend === '' || read.body.data.backend === 'auto').toBe(true);
   });

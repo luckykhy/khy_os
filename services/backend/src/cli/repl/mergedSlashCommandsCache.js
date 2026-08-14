@@ -26,7 +26,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_MERGED_SLASH_COMMANDS_CACHE;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -47,7 +49,9 @@ function mergeCommands(baseCmds, userSkills, ccCommands) {
   const base = Array.isArray(baseCmds) ? baseCmds : [];
   const skills = Array.isArray(userSkills) ? userSkills : [];
   const cc = Array.isArray(ccCommands) ? ccCommands : [];
-  if (!skills.length && !cc.length) return base;
+  if (!skills.length && !cc.length) {
+    return base;
+  }
   const existing = new Set(base.map((sc) => sc && sc.cmd));
   const merged = base.slice();
   for (const us of skills) {
@@ -85,7 +89,11 @@ function getMergedCommands(baseCmds, discoverFn, opts = {}) {
   // 现扫合并(门控关 / 未命中 / 异常 的共同回退)。
   const _computeFresh = () => {
     let d;
-    try { d = discoverFn(); } catch { d = null; }
+    try {
+      d = discoverFn();
+    } catch {
+      d = null;
+    }
     const userSkills = d && Array.isArray(d.userSkills) ? d.userSkills : [];
     const ccCommands = d && Array.isArray(d.ccCommands) ? d.ccCommands : [];
     return mergeCommands(baseCmds, userSkills, ccCommands);
@@ -97,7 +105,7 @@ function getMergedCommands(baseCmds, discoverFn, opts = {}) {
     }
     const at = now();
     const hit = _cache.get(baseCmds);
-    if (hit && (at - hit.at) < ttl && Array.isArray(hit.merged)) {
+    if (hit && at - hit.at < ttl && Array.isArray(hit.merged)) {
       return hit.merged; // 同一引用 → 恢复下游 WeakMap 投影记忆命中
     }
     const merged = _computeFresh();
@@ -105,7 +113,11 @@ function getMergedCommands(baseCmds, discoverFn, opts = {}) {
     return merged;
   } catch {
     // 任何意外 → 现算,绝不把渲染热路径拖垮。
-    try { return _computeFresh(); } catch { return Array.isArray(baseCmds) ? baseCmds : []; }
+    try {
+      return _computeFresh();
+    } catch {
+      return Array.isArray(baseCmds) ? baseCmds : [];
+    }
   }
 }
 

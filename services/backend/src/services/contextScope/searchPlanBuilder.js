@@ -15,7 +15,8 @@
  * Pure; no I/O.
  */
 
-const EXTERNAL_MARKERS = /\b(latest|newest|best practice|how to|changelog|release notes|cve|vulnerability|documentation|docs for|version of)\b|最新|最佳实践|官方文档|版本号|发行说明/iu;
+const EXTERNAL_MARKERS =
+  /\b(latest|newest|best practice|how to|changelog|release notes|cve|vulnerability|documentation|docs for|version of)\b|最新|最佳实践|官方文档|版本号|发行说明/iu;
 
 // 收敛到 utils/escapeRegExp 单一真源(逐字节委托,调用点不变)
 const _escapeRe = require('../../utils/escapeRegExp');
@@ -24,9 +25,13 @@ function _dedupe(arr) {
   const seen = new Set();
   const out = [];
   for (const v of arr) {
-    if (!v) continue;
+    if (!v) {
+      continue;
+    }
     const s = String(v);
-    if (seen.has(s)) continue;
+    if (seen.has(s)) {
+      continue;
+    }
     seen.add(s);
     out.push(s);
   }
@@ -54,30 +59,38 @@ function buildSearchPlan(signals, opts = {}) {
     globs.push(norm.includes('/') ? norm : `**/${norm}`);
   }
   for (const d of dirs) {
-    if (exts.length) for (const e of exts) globs.push(`${d}/**/*${e}`);
-    else globs.push(`${d}/**/*`);
+    if (exts.length) {
+      for (const e of exts) {
+        globs.push(`${d}/**/*${e}`);
+      }
+    } else {
+      globs.push(`${d}/**/*`);
+    }
   }
-  if (!dirs.length) for (const e of exts) globs.push(`**/*${e}`);
+  if (!dirs.length) {
+    for (const e of exts) {
+      globs.push(`**/*${e}`);
+    }
+  }
 
   // ---- grep patterns (identifiers + quoted literals) ------------------
-  const grepTokens = _dedupe([
-    ...(sig.identifiers || []),
-    ...(sig.quoted || []),
-  ]).slice(0, maxGrep);
+  const grepTokens = _dedupe([...(sig.identifiers || []), ...(sig.quoted || [])]).slice(0, maxGrep);
   const grepPatterns = grepTokens.map(_escapeRe);
 
   // ---- web search queries (conservative) ------------------------------
   const searchQueries = [];
-  const taskText = [
-    ...(sig.keywords || []),
-    ...(sig.quoted || []),
-  ].join(' ');
+  const taskText = [...(sig.keywords || []), ...(sig.quoted || [])].join(' ');
   const wantsExternal = EXTERNAL_MARKERS.test(taskText) || opts.needWeb === true;
-  const noRepoTarget = opts.hasRepoCandidates === false
-    && grepPatterns.length === 0 && files.length === 0;
+  const noRepoTarget =
+    opts.hasRepoCandidates === false && grepPatterns.length === 0 && files.length === 0;
   if (wantsExternal || noRepoTarget) {
-    const q = _dedupe([...(sig.quoted || []), ...(sig.keywords || [])]).slice(0, 4).join(' ').trim();
-    if (q) searchQueries.push(q);
+    const q = _dedupe([...(sig.quoted || []), ...(sig.keywords || [])])
+      .slice(0, 4)
+      .join(' ')
+      .trim();
+    if (q) {
+      searchQueries.push(q);
+    }
   }
 
   return {

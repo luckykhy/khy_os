@@ -19,9 +19,13 @@ function _clip(s, n) {
 
 function _fileList(files) {
   const arr = Array.isArray(files) ? files.filter(Boolean) : [];
-  if (arr.length === 0) return '(no specific files recorded — inspect the working tree, e.g. `git diff`)';
-  const shown = arr.slice(0, MAX_FILES_LISTED).map(f => `  - ${f}`);
-  if (arr.length > MAX_FILES_LISTED) shown.push(`  …and ${arr.length - MAX_FILES_LISTED} more`);
+  if (arr.length === 0) {
+    return '(no specific files recorded — inspect the working tree, e.g. `git diff`)';
+  }
+  const shown = arr.slice(0, MAX_FILES_LISTED).map((f) => `  - ${f}`);
+  if (arr.length > MAX_FILES_LISTED) {
+    shown.push(`  …and ${arr.length - MAX_FILES_LISTED} more`);
+  }
   return shown.join('\n');
 }
 
@@ -41,10 +45,10 @@ function buildAuditPrompt(opts = {}) {
 
   if (round > 1 && priorFix) {
     lines.push(
-      `This is RE-AUDIT round ${round}. A fix agent just attempted to close the previous findings `
-      + `(reported ${priorFix.fixed} fixed, ${priorFix.deferred} deferred, ${priorFix.notDefect} not-a-defect). `
-      + `Re-inspect the files from scratch — do not assume the fixes are correct or complete. `
-      + `Verify the previously-reported CRITICAL/HIGH defects are genuinely gone, and check the fixer did not introduce new ones.`,
+      `This is RE-AUDIT round ${round}. A fix agent just attempted to close the previous findings ` +
+        `(reported ${priorFix.fixed} fixed, ${priorFix.deferred} deferred, ${priorFix.notDefect} not-a-defect). ` +
+        `Re-inspect the files from scratch — do not assume the fixes are correct or complete. ` +
+        `Verify the previously-reported CRITICAL/HIGH defects are genuinely gone, and check the fixer did not introduce new ones.`
     );
     lines.push('');
   }
@@ -58,9 +62,9 @@ function buildAuditPrompt(opts = {}) {
   lines.push(_fileList(files));
   lines.push('');
   lines.push(
-    'Read the ACTUAL code at these paths and trace it against the task. Report problems only, '
-    + 'ranked highest-severity first, each with file:line evidence. End with the required '
-    + '`AUDIT: <n> findings (...)` summary line. If genuinely clean after a real trace, end with `AUDIT: 0 findings`.',
+    'Read the ACTUAL code at these paths and trace it against the task. Report problems only, ' +
+      'ranked highest-severity first, each with file:line evidence. End with the required ' +
+      '`AUDIT: <n> findings (...)` summary line. If genuinely clean after a real trace, end with `AUDIT: 0 findings`.'
   );
   return lines.join('\n');
 }
@@ -79,7 +83,9 @@ function buildFixPrompt(opts = {}) {
   const { taskDescription, files, actionable = [] } = opts;
   const lines = [];
 
-  lines.push('An audit found defects in the work below. Fix EXACTLY the CRITICAL/HIGH findings listed — root cause, minimal diff, verified — then stop.');
+  lines.push(
+    'An audit found defects in the work below. Fix EXACTLY the CRITICAL/HIGH findings listed — root cause, minimal diff, verified — then stop.'
+  );
   lines.push('');
   lines.push('=== ORIGINAL TASK (the contract) ===');
   lines.push(_clip(taskDescription, MAX_TASK_CHARS) || '(no task description provided)');
@@ -94,16 +100,22 @@ function buildFixPrompt(opts = {}) {
     actionable.forEach((f, i) => {
       const _tag = f.code || (f.severity ? f.severity.toUpperCase() : '?');
       lines.push(`${i + 1}. [${_tag}] ${f.title || '(untitled)'}`);
-      if (f.location) lines.push(`   Location: ${f.location}`);
-      if (f.problem) lines.push(`   Problem: ${_clip(f.problem, 400)}`);
-      if (f.suggested) lines.push(`   Suggested direction: ${_clip(f.suggested, 400)}`);
+      if (f.location) {
+        lines.push(`   Location: ${f.location}`);
+      }
+      if (f.problem) {
+        lines.push(`   Problem: ${_clip(f.problem, 400)}`);
+      }
+      if (f.suggested) {
+        lines.push(`   Suggested direction: ${_clip(f.suggested, 400)}`);
+      }
     });
   }
   lines.push('');
   lines.push(
-    'Fix every CRITICAL/HIGH finding above and nothing else (no scope creep, no unrelated refactors). '
-    + 'Verify each fix. If one is a false positive or needs a design decision, mark it NOT-A-DEFECT / DEFERRED with evidence — do not fake a fix. '
-    + 'End with the required `FIX: <f> fixed, <d> deferred, <n> not-a-defect (of <total> actionable findings)` summary line.',
+    'Fix every CRITICAL/HIGH finding above and nothing else (no scope creep, no unrelated refactors). ' +
+      'Verify each fix. If one is a false positive or needs a design decision, mark it NOT-A-DEFECT / DEFERRED with evidence — do not fake a fix. ' +
+      'End with the required `FIX: <f> fixed, <d> deferred, <n> not-a-defect (of <total> actionable findings)` summary line.'
   );
   return lines.join('\n');
 }

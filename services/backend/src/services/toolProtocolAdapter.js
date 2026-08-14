@@ -41,11 +41,18 @@ const NATIVE_PROTOCOL = 'native';
 // schemas would blow a 4B context and invite hallucinated calls. Read / search /
 // web only. Override via KHY_LOCAL_TOOLS (comma-separated tool names).
 const DEFAULT_LOCAL_TOOLS = [
-  'Read', 'readFile',
-  'Glob', 'Grep', 'LS',
-  'search', 'WebSearch', 'WebFetch',
-  'gitStatus', 'gitDiff',
-  'local_knowledge', 'list_models',
+  'Read',
+  'readFile',
+  'Glob',
+  'Grep',
+  'LS',
+  'search',
+  'WebSearch',
+  'WebFetch',
+  'gitStatus',
+  'gitDiff',
+  'local_knowledge',
+  'list_models',
 ];
 
 // OPT-IN DELIVERY TIER — file authoring + shell so a weak model can actually
@@ -54,22 +61,36 @@ const DEFAULT_LOCAL_TOOLS = [
 // still routes through executeTool's approval gate. Override via
 // KHY_LOCAL_WRITE_TOOLS.
 const DEFAULT_LOCAL_WRITE_TOOLS = [
-  'Write', 'writeFile',
-  'Edit', 'editFile', 'MultiEdit',
-  'Bash', 'shellCommand',
+  'Write',
+  'writeFile',
+  'Edit',
+  'editFile',
+  'MultiEdit',
+  'Bash',
+  'shellCommand',
 ];
 
 function _resolveAllowedToolNames() {
   const raw = String(process.env.KHY_LOCAL_TOOLS || '').trim();
-  if (!raw) return DEFAULT_LOCAL_TOOLS.slice();
-  const names = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!raw) {
+    return DEFAULT_LOCAL_TOOLS.slice();
+  }
+  const names = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   return names.length ? names : DEFAULT_LOCAL_TOOLS.slice();
 }
 
 function _resolveWriteToolNames() {
   const raw = String(process.env.KHY_LOCAL_WRITE_TOOLS || '').trim();
-  if (!raw) return DEFAULT_LOCAL_WRITE_TOOLS.slice();
-  const names = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!raw) {
+    return DEFAULT_LOCAL_WRITE_TOOLS.slice();
+  }
+  const names = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   return names.length ? names : DEFAULT_LOCAL_WRITE_TOOLS.slice();
 }
 
@@ -102,11 +123,15 @@ function _resolveWriteMode(opts = {}) {
 function selectLocalTools(allDefs, allowed) {
   const byName = new Map();
   for (const d of Array.isArray(allDefs) ? allDefs : []) {
-    if (d && d.name) byName.set(d.name, d);
+    if (d && d.name) {
+      byName.set(d.name, d);
+    }
   }
   const out = [];
   for (const name of allowed) {
-    if (byName.has(name)) out.push(byName.get(name));
+    if (byName.has(name)) {
+      out.push(byName.get(name));
+    }
   }
   return out;
 }
@@ -116,16 +141,21 @@ function selectLocalTools(allDefs, allowed) {
  * params. Avoids dumping full JSON Schema (too heavy for small models).
  */
 function _renderToolCatalog(defs) {
-  return defs.map(d => {
-    const props = (d.parameters && d.parameters.properties) || {};
-    const required = (d.parameters && d.parameters.required) || [];
-    const keys = Object.keys(props);
-    const paramHint = keys.length
-      ? keys.map(k => (required.includes(k) ? `${k}*` : k)).join(', ')
-      : '无参数';
-    const desc = String(d.description || '').replace(/\s+/g, ' ').trim().slice(0, 100);
-    return `- ${d.name}(${paramHint})：${desc}`;
-  }).join('\n');
+  return defs
+    .map((d) => {
+      const props = (d.parameters && d.parameters.properties) || {};
+      const required = (d.parameters && d.parameters.required) || [];
+      const keys = Object.keys(props);
+      const paramHint = keys.length
+        ? keys.map((k) => (required.includes(k) ? `${k}*` : k)).join(', ')
+        : '无参数';
+      const desc = String(d.description || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 100);
+      return `- ${d.name}(${paramHint})：${desc}`;
+    })
+    .join('\n');
 }
 
 /**
@@ -153,6 +183,7 @@ function buildSystemPrompt(defs, opts = {}) {
     '',
     '调用工具时，只输出一行如下格式（可在一条回复中输出多行以调用多个工具）：',
     '<tool_call>{"name": "工具名", "params": {"参数名": "值"}}</tool_call>',
+    '每个 <tool_call> 必须单独成行，行内不得混排任何叙述文字；需要调用工具的那条回复不要附加多余叙述。',
     '',
     '规则：',
     '1. 需要读取文件、搜索代码或联网时，先调用工具，不要凭空编造结果。',
@@ -169,7 +200,7 @@ function buildSystemPrompt(defs, opts = {}) {
       '权限分级（系统会按下列规则自动放行或拦截，你无需自己判断，但应据此安排步骤）：',
       '- 自动放行：读取/搜索/列目录/联网读取（如 Read、Glob、Grep、LS、WebFetch）——随时调用，不会打断。',
       '- 需批准一次：在项目目录内写/改文件、执行普通命令（Write、Edit、Bash 等）——会弹窗，批准后即放行。请把改动限制在当前项目目录内的相对路径。',
-      '- 会被硬拦截（不要尝试）：删除文件、结束进程、改环境变量、安装依赖、执行任意代码、写系统级路径（如 /tmp、/etc、/usr）。这些需用户手动键入确认，自动批准无效；遇到此类需求请改用项目内的方式，或直接说明该步骤需要用户手工执行。',
+      '- 会被硬拦截（不要尝试）：删除文件、结束进程、改环境变量、安装依赖、执行任意代码、写系统级路径（如 /tmp、/etc、/usr）。这些需用户手动键入确认，自动批准无效；遇到此类需求请改用项目内的方式，或直接说明该步骤需要用户手工执行。'
     );
   }
   return lines.join('\n');
@@ -193,7 +224,9 @@ function formatToolResult(name, result, maxLen) {
     body = typeof out === 'string' ? out : JSON.stringify(out);
   }
   body = String(body);
-  if (body.length > cap) body = body.slice(0, cap - 1) + '…';
+  if (body.length > cap) {
+    body = body.slice(0, cap - 1) + '…';
+  }
   return `工具结果 [${name}]：\n${body}`;
 }
 
@@ -204,13 +237,19 @@ function formatToolResult(name, result, maxLen) {
  * @returns {Array<{name:string, params:object}>}
  */
 function extractToolCalls(text) {
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
   let calls = [];
   try {
     const { parseToolCalls } = require('./toolCallParser');
     calls = parseToolCalls(text) || [];
-  } catch { /* fall through to JSON recovery */ }
-  if (calls.length) return calls;
+  } catch {
+    /* fall through to JSON recovery */
+  }
+  if (calls.length) {
+    return calls;
+  }
 
   // Fallback: a bare {"name": "...", "params": {...}} the model emitted without
   // the <tool_call> wrapper. Canonicalize to match the parser path's behavior.
@@ -221,11 +260,17 @@ function extractToolCalls(text) {
       const rawParams = obj.params || obj.arguments || obj.input || {};
       try {
         const norm = require('./claudeCompat').normalizeToolCall(obj.name, rawParams);
-        if (norm && norm.name) return [{ name: norm.name, params: norm.params || rawParams }];
-      } catch { /* fall back to raw */ }
+        if (norm && norm.name) {
+          return [{ name: norm.name, params: norm.params || rawParams }];
+        }
+      } catch {
+        /* fall back to raw */
+      }
       return [{ name: obj.name, params: rawParams }];
     }
-  } catch { /* none */ }
+  } catch {
+    /* none */
+  }
   return [];
 }
 
@@ -239,15 +284,25 @@ function extractToolCalls(text) {
 function _buildAllowedNameSet(defs) {
   const set = new Set();
   let canonicalize = null;
-  try { canonicalize = require('./claudeCompat').normalizeToolCall; } catch { /* none */ }
+  try {
+    canonicalize = require('./claudeCompat').normalizeToolCall;
+  } catch {
+    /* none */
+  }
   for (const d of Array.isArray(defs) ? defs : []) {
-    if (!d || !d.name) continue;
+    if (!d || !d.name) {
+      continue;
+    }
     set.add(d.name);
     if (typeof canonicalize === 'function') {
       try {
         const norm = canonicalize(d.name, {});
-        if (norm && norm.name) set.add(norm.name);
-      } catch { /* keep raw */ }
+        if (norm && norm.name) {
+          set.add(norm.name);
+        }
+      } catch {
+        /* keep raw */
+      }
     }
   }
   return set;
@@ -267,28 +322,52 @@ const nativeAdapter = Object.freeze({
 
   parseToolCalls(aiResult) {
     const blocks = aiResult && Array.isArray(aiResult.toolUseBlocks) ? aiResult.toolUseBlocks : [];
-    if (!blocks.length) return [];
+    if (!blocks.length) {
+      return [];
+    }
     let normalizeToolCall = null;
-    try { normalizeToolCall = require('./claudeCompat').normalizeToolCall; } catch { /* none */ }
+    try {
+      normalizeToolCall = require('./claudeCompat').normalizeToolCall;
+    } catch {
+      /* none */
+    }
     const out = [];
     for (const block of blocks) {
-      if (!block) continue;
-      const rawName = block.name || (block.function && block.function.name);
-      if (!rawName) continue;
-      let rawParams = block.input != null ? block.input
-        : (block.params != null ? block.params
-          : (block.function && block.function.arguments));
-      if (typeof rawParams === 'string') {
-        try { rawParams = JSON.parse(rawParams); } catch { rawParams = {}; }
+      if (!block) {
+        continue;
       }
-      if (!rawParams || typeof rawParams !== 'object') rawParams = {};
+      const rawName = block.name || (block.function && block.function.name);
+      if (!rawName) {
+        continue;
+      }
+      let rawParams =
+        block.input != null
+          ? block.input
+          : block.params != null
+            ? block.params
+            : block.function && block.function.arguments;
+      if (typeof rawParams === 'string') {
+        try {
+          rawParams = JSON.parse(rawParams);
+        } catch {
+          rawParams = {};
+        }
+      }
+      if (!rawParams || typeof rawParams !== 'object') {
+        rawParams = {};
+      }
       let name = rawName;
       let params = rawParams;
       if (typeof normalizeToolCall === 'function') {
         try {
           const norm = normalizeToolCall(rawName, rawParams);
-          if (norm && norm.name) { name = norm.name; params = norm.params || rawParams; }
-        } catch { /* keep raw */ }
+          if (norm && norm.name) {
+            name = norm.name;
+            params = norm.params || rawParams;
+          }
+        } catch {
+          /* keep raw */
+        }
       }
       out.push({
         name,
@@ -304,12 +383,18 @@ const nativeAdapter = Object.freeze({
   // (structured Anthropic blocks). Returning null signals "use the loop's native
   // path" — kept here so the adapter shape is uniform without duplicating that
   // 140-line builder.
-  formatToolResults() { return null; },
+  formatToolResults() {
+    return null;
+  },
 
   // Native uses the loop's existing tool pool + low-tier trimming; no extra
   // system addendum and no curated whitelist.
-  buildSystemAddendum() { return null; },
-  selectTools() { return null; },
+  buildSystemAddendum() {
+    return null;
+  },
+  selectTools() {
+    return null;
+  },
 });
 
 /**
@@ -322,8 +407,12 @@ const textAdapter = Object.freeze({
   capabilities: Object.freeze({ toolCallProtocol: TEXT_PROTOCOL }),
 
   parseToolCalls(aiResult) {
-    const text = aiResult && aiResult.reply != null ? String(aiResult.reply)
-      : (typeof aiResult === 'string' ? aiResult : '');
+    const text =
+      aiResult && aiResult.reply != null
+        ? String(aiResult.reply)
+        : typeof aiResult === 'string'
+          ? aiResult
+          : '';
     return extractToolCalls(text);
   },
 
@@ -338,14 +427,16 @@ const textAdapter = Object.freeze({
     const list = Array.isArray(toolResults) ? toolResults : [];
     const cap = Number.isFinite(opts.maxLen) && opts.maxLen > 0 ? opts.maxLen : 2000;
     const text = list
-      .filter(tr => tr && tr.tool !== '_legacy_cmd')
-      .map(tr => formatToolResult(tr.tool, tr.result, cap))
+      .filter((tr) => tr && tr.tool !== '_legacy_cmd')
+      .map((tr) => formatToolResult(tr.tool, tr.result, cap))
       .join('\n\n');
     return { text, structuredBlocks: null, structuredToolResults: null };
   },
 
   buildSystemAddendum(defs, opts = {}) {
-    return buildSystemPrompt(Array.isArray(defs) ? defs : [], { writeEnabled: opts.writeEnabled === true });
+    return buildSystemPrompt(Array.isArray(defs) ? defs : [], {
+      writeEnabled: opts.writeEnabled === true,
+    });
   },
 
   /**
@@ -358,7 +449,9 @@ const textAdapter = Object.freeze({
     const allowed = _resolveAllowedToolNames();
     if (opts.writeEnabled === true) {
       for (const n of _resolveWriteToolNames()) {
-        if (!allowed.includes(n)) allowed.push(n);
+        if (!allowed.includes(n)) {
+          allowed.push(n);
+        }
       }
     }
     return selectLocalTools(allDefs, allowed);

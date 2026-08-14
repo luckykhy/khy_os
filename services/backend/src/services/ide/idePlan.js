@@ -31,11 +31,24 @@ const _HELP_WORDS = new Set(['help', '-h', '--help', '帮助', '用法']);
  */
 function parseIdeArgs(args) {
   const list = Array.isArray(args) ? args : [];
-  const first = list.length > 0 ? String(list[0] == null ? '' : list[0]).trim().toLowerCase() : '';
-  if (first === '') return { action: 'status', valid: true, parseError: null };
-  if (_HELP_WORDS.has(first)) return { action: 'help', valid: true, parseError: null };
-  if (_LIST_WORDS.has(first)) return { action: 'list', valid: true, parseError: null };
-  if (_STATUS_WORDS.has(first)) return { action: 'status', valid: true, parseError: null };
+  const first =
+    list.length > 0
+      ? String(list[0] == null ? '' : list[0])
+          .trim()
+          .toLowerCase()
+      : '';
+  if (first === '') {
+    return { action: 'status', valid: true, parseError: null };
+  }
+  if (_HELP_WORDS.has(first)) {
+    return { action: 'help', valid: true, parseError: null };
+  }
+  if (_LIST_WORDS.has(first)) {
+    return { action: 'list', valid: true, parseError: null };
+  }
+  if (_STATUS_WORDS.has(first)) {
+    return { action: 'status', valid: true, parseError: null };
+  }
   return { action: 'status', valid: false, parseError: 'unknown_action' };
 }
 
@@ -45,7 +58,9 @@ function parseIdeArgs(args) {
  * @returns {{ all:Array<object>, available:Array<object>, availableCount:number }}
  */
 function summarizeDetections(detections) {
-  const list = Array.isArray(detections) ? detections.filter((d) => d && typeof d === 'object') : [];
+  const list = Array.isArray(detections)
+    ? detections.filter((d) => d && typeof d === 'object')
+    : [];
   const available = list.filter((d) => d.available === true);
   return { all: list, available, availableCount: available.length };
 }
@@ -56,7 +71,9 @@ function buildListText(detections) {
   const lines = [];
   lines.push('🖥  ide · 本机已探测 IDE');
   if (all.length === 0) {
-    lines.push('  未探测到任何已知 IDE(可经 GATEWAY_EXTRA_IDES + <NAME>_INSTALL_PATH 提示额外 IDE)。');
+    lines.push(
+      '  未探测到任何已知 IDE(可经 GATEWAY_EXTRA_IDES + <NAME>_INSTALL_PATH 提示额外 IDE)。'
+    );
     return lines.join('\n');
   }
   for (const d of all) {
@@ -80,13 +97,19 @@ function buildStatusText(input) {
   if (availableCount === 0) {
     lines.push('  IDE: 未探测到可用 IDE。');
   } else {
-    lines.push(`  IDE: 探测到 ${availableCount} 个可用 — ${available.map((d) => d.name).join(', ')}`);
+    lines.push(
+      `  IDE: 探测到 ${availableCount} 个可用 — ${available.map((d) => d.name).join(', ')}`
+    );
   }
 
   // ② bridge 通道(IDE/移动端真正连进来的通道)
   if (bridge.running === true) {
-    lines.push(`  通道: bridge 运行中${bridge.url ? ` · ${bridge.url}` : ''} · 已连客户端 ${Number(bridge.clientCount) || 0} 个`);
-    lines.push('    (bridge 是 IDE/移动端连入 khy 的通道;khy 只知客户端数,不区分对端是否为 IDE 扩展。)');
+    lines.push(
+      `  通道: bridge 运行中${bridge.url ? ` · ${bridge.url}` : ''} · 已连客户端 ${Number(bridge.clientCount) || 0} 个`
+    );
+    lines.push(
+      '    (bridge 是 IDE/移动端连入 khy 的通道;khy 只知客户端数,不区分对端是否为 IDE 扩展。)'
+    );
   } else {
     lines.push('  通道: bridge 未运行 —— 它是 IDE/移动端连入 khy 的通道,需要时请启动它。');
   }
@@ -121,7 +144,9 @@ function buildUnknownText() {
 function isEnabled(env) {
   const e = env || {};
   const raw = e.KHY_IDE_COMMAND === undefined ? 'true' : e.KHY_IDE_COMMAND;
-  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  const s = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'off' || s === 'no');
 }
 

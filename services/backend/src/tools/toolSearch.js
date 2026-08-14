@@ -26,7 +26,7 @@ module.exports = defineTool({
   risk: 'safe',
   isReadOnly: true,
   isConcurrencySafe: true,
-  alwaysLoad: true,  // ToolSearch itself is never deferred
+  alwaysLoad: true, // ToolSearch itself is never deferred
 
   isEnabled() {
     return true; // Always enabled — deferral gating is in the registry
@@ -47,13 +47,19 @@ module.exports = defineTool({
     }
 
     let toolRegistry;
-    try { toolRegistry = require('./index'); } catch {
+    try {
+      toolRegistry = require('./index');
+    } catch {
       return { success: false, error: 'Tool registry not available' };
     }
 
     // Mode 1: Direct selection — "select:readFile,writeFile"
     if (query.startsWith('select:')) {
-      const names = query.slice(7).split(',').map(n => n.trim()).filter(Boolean);
+      const names = query
+        .slice(7)
+        .split(',')
+        .map((n) => n.trim())
+        .filter(Boolean);
       return await handleSelect(names, toolRegistry);
     }
 
@@ -105,7 +111,7 @@ async function handleSelect(names, registry) {
     success: true,
     mode: 'select',
     tools: results,
-    count: results.filter(r => !r.error).length,
+    count: results.filter((r) => !r.error).length,
   };
 }
 
@@ -115,7 +121,9 @@ async function handleSearch(query, registry) {
   const scored = [];
 
   for (const [name, tool] of allTools) {
-    if (name === 'toolSearch') continue; // Don't return self
+    if (name === 'toolSearch') {
+      continue;
+    } // Don't return self
     const score = scoreTool(tool, queryTerms);
     if (score > 0) {
       scored.push({ tool, score });

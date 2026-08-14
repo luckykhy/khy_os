@@ -63,3 +63,49 @@ test('localBrainService 复用同一单例（别名接线不变）', () => {
     assert.strictEqual(typeof lb[n], 'function', `missing export ${n}`);
   }
 });
+
+// ── 只读派生:getRecentEntities / getContextSummary(供指代消歧叶子) ──────────
+
+test('导出契约:新增只读 getRecentEntities / getContextSummary', () => {
+  assert.strictEqual(typeof sc.getRecentEntities, 'function');
+  assert.strictEqual(typeof sc.getContextSummary, 'function');
+});
+
+test('getRecentEntities: 去重且最新优先', () => {
+  sc.clearContext();
+  sc.pushContext('user', '看看 比特币 价格');
+  sc.pushContext('assistant', '比特币 现价...', { category: '加密货币' });
+  sc.pushContext('user', '以太坊 呢');
+  const ents = sc.getRecentEntities();
+  const values = ents.map(e => e.value);
+  // 最新一轮的 以太坊 应在更前
+  assert.ok(values.includes('以太坊'));
+  assert.ok(values.includes('比特币'));
+  // 去重:比特币 只出现一次
+  assert.strictEqual(values.filter(v => v === '比特币').length, 1);
+});
+
+test('getRecentEntities: 无上下文返回空数组(不抛)', () => {
+  sc.clearContext();
+  const ents = sc.getRecentEntities();
+  assert.ok(Array.isArray(ents));
+  assert.strictEqual(ents.length, 0);
+});
+
+test('getContextSummary: 返回 { entities, lastTopic, lastCategory }', () => {
+  sc.clearContext();
+  sc.pushContext('user', '北京天气怎么样');
+  sc.pushContext('assistant', '北京今天晴', { category: '天气' });
+  const s = sc.getContextSummary();
+  assert.ok(Array.isArray(s.entities));
+  assert.strictEqual(s.lastCategory, '天气');
+  assert.strictEqual(typeof s.lastTopic, 'string');
+});
+
+test('getContextSummary: 空上下文亦安全(entities 空·字段为空串)', () => {
+  sc.clearContext();
+  const s = sc.getContextSummary();
+  assert.deepStrictEqual(s.entities, []);
+  assert.strictEqual(s.lastTopic, '');
+  assert.strictEqual(s.lastCategory, '');
+});

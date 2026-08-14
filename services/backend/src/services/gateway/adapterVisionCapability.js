@@ -37,9 +37,7 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 //     gpt-5.3-codex-review 实测可真视觉读图);CLI 模式是纯文本 stdin,但带图请求会被
 //     codexAdapter 强制切到 direct 模式(见 codexAdapter 强制 direct 逻辑),故 codex
 //     通道对带图请求一律走原生视觉。
-const NATIVE_VISION_ADAPTERS = Object.freeze([
-  'codex',
-]);
+const NATIVE_VISION_ADAPTERS = Object.freeze(['codex']);
 
 /**
  * 门控是否开启(默认开;仅 KHY_ADAPTER_NATIVE_VISION ∈ {0,false,off,no} 时关)。
@@ -49,11 +47,14 @@ const NATIVE_VISION_ADAPTERS = Object.freeze([
 function isEnabled(env) {
   const e = env || process.env;
   const raw = e && e.KHY_ADAPTER_NATIVE_VISION;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !_FALSY.has(String(raw).trim().toLowerCase());
 }
 
 // 收敛到 utils/trimLowerNullish 单一真源(逐字节委托,调用点不变)
+const parseAdapterListEnv = require('../../utils/parseListToSet');
 const _normKey = require('../../utils/trimLowerNullish');
 
 /**
@@ -61,7 +62,6 @@ const _normKey = require('../../utils/trimLowerNullish');
  * @param {string} raw
  * @returns {Set<string>}
  */
-const parseAdapterListEnv = require('../../utils/parseListToSet');
 
 /**
  * 判定某条适配器是否原生收图、能自行做视觉识别(从而无需把图剥成 OCR)。
@@ -72,13 +72,19 @@ const parseAdapterListEnv = require('../../utils/parseListToSet');
  */
 function adapterHandlesImagesNatively(adapterKey, env) {
   const e = env || process.env;
-  if (!isEnabled(e)) return false; // 门控关 → 逐字节回退到「无此判定」语义
+  if (!isEnabled(e)) {
+    return false;
+  } // 门控关 → 逐字节回退到「无此判定」语义
 
   const key = _normKey(adapterKey);
-  if (!key) return false;
+  if (!key) {
+    return false;
+  }
 
   const override = parseAdapterListEnv(e && e.KHY_NATIVE_VISION_ADAPTERS);
-  if (override.has(key)) return true;
+  if (override.has(key)) {
+    return true;
+  }
 
   return NATIVE_VISION_ADAPTERS.includes(key);
 }

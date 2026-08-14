@@ -24,7 +24,9 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_BOTTOM_DECORATION_REPAINT_MEMO;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -39,7 +41,9 @@ function isEnabled(env = process.env) {
  */
 function buildPrefix(rowsBelowCursor, gapRows, rule, footer) {
   let out = '';
-  if (rowsBelowCursor > 0) out += `\x1b[${rowsBelowCursor}B`;
+  if (rowsBelowCursor > 0) {
+    out += `\x1b[${rowsBelowCursor}B`;
+  }
   for (let i = 0; i < gapRows; i++) {
     out += '\x1b[1B\x1b[2K\x1b[1G';
   }
@@ -47,7 +51,9 @@ function buildPrefix(rowsBelowCursor, gapRows, rule, footer) {
   out += '\x1b[1B\x1b[2K\x1b[1G' + footer;
 
   const rowsReturn = rowsBelowCursor + gapRows + 2;
-  if (rowsReturn > 0) out += `\x1b[${rowsReturn}A`;
+  if (rowsReturn > 0) {
+    out += `\x1b[${rowsReturn}A`;
+  }
   return out;
 }
 
@@ -83,7 +89,9 @@ function getPrefix(key, env = process.env) {
     try {
       const k = key || {};
       return buildPrefix(k.rowsBelowCursor, k.gapRows, k.rule, k.footer);
-    } catch { return ''; }
+    } catch {
+      return '';
+    }
   }
 }
 
@@ -98,12 +106,19 @@ function getRepaint(key, env = process.env) {
     const prefix = getPrefix(k, env);
     const col = Number.isFinite(k.cursorCol) ? k.cursorCol : 0;
     return prefix + `\x1b[${col + 1}G`;
-  } catch { return ''; }
+  } catch {
+    return '';
+  }
 }
 
 // 测试/生命周期钩子。
-function _clear() { _slot = null; }
-function _hasSlot() { return _slot != null; }
+function _clear() {
+  _slot = null;
+}
+
+function _hasSlot() {
+  return _slot != null;
+}
 
 module.exports = {
   isEnabled,

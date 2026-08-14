@@ -49,10 +49,13 @@ function loadConfig() {
   }
 
   // Environment overrides
-  if (process.env.TLS_SIDECAR_ENABLED !== undefined) _config.enabled = process.env.TLS_SIDECAR_ENABLED === 'true';
+  if (process.env.TLS_SIDECAR_ENABLED !== undefined)
+    _config.enabled = process.env.TLS_SIDECAR_ENABLED === 'true';
   if (process.env.TLS_SIDECAR_PORT) _config.port = parseInt(process.env.TLS_SIDECAR_PORT, 10);
-  if (process.env.TLS_SIDECAR_FINGERPRINT) _config.fingerprint = process.env.TLS_SIDECAR_FINGERPRINT;
-  if (process.env.TLS_SIDECAR_TARGETS) _config.targets = process.env.TLS_SIDECAR_TARGETS.split(',').map(s => s.trim());
+  if (process.env.TLS_SIDECAR_FINGERPRINT)
+    _config.fingerprint = process.env.TLS_SIDECAR_FINGERPRINT;
+  if (process.env.TLS_SIDECAR_TARGETS)
+    _config.targets = process.env.TLS_SIDECAR_TARGETS.split(',').map((s) => s.trim());
 
   return _config;
 }
@@ -86,10 +89,7 @@ async function start(options = {}) {
   const binaryPath = installer.getBinaryPath();
 
   return new Promise((resolve, reject) => {
-    const args = [
-      `-port`, String(port),
-      `-fingerprint`, fingerprint,
-    ];
+    const args = [`-port`, String(port), `-fingerprint`, fingerprint];
 
     _process = spawn(binaryPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -146,10 +146,20 @@ async function start(options = {}) {
 async function stop() {
   if (!_process) return;
   _process.kill('SIGTERM');
-  await new Promise(resolve => {
-    const t = setTimeout(() => { if (_process) _process.kill('SIGKILL'); resolve(); }, 3000);
-    if (_process) _process.on('exit', () => { clearTimeout(t); resolve(); });
-    else { clearTimeout(t); resolve(); }
+  await new Promise((resolve) => {
+    const t = setTimeout(() => {
+      if (_process) _process.kill('SIGKILL');
+      resolve();
+    }, 3000);
+    if (_process)
+      _process.on('exit', () => {
+        clearTimeout(t);
+        resolve();
+      });
+    else {
+      clearTimeout(t);
+      resolve();
+    }
   });
   _process = null;
 }
@@ -164,7 +174,10 @@ function health() {
       resolve({ alive: true, port: config.port });
     });
     req.on('error', () => resolve({ alive: false, port: config.port }));
-    req.on('timeout', () => { req.destroy(); resolve({ alive: false, port: config.port }); });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ alive: false, port: config.port });
+    });
   });
 }
 
@@ -189,7 +202,7 @@ function getProxyUrl() {
 function shouldProxy(hostname) {
   const config = loadConfig();
   if (!config.enabled || !isRunning()) return false;
-  return config.targets.some(t => hostname === t || hostname.endsWith('.' + t));
+  return config.targets.some((t) => hostname === t || hostname.endsWith('.' + t));
 }
 
 /**

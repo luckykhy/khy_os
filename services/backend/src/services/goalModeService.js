@@ -17,7 +17,9 @@ const GOAL_TRIGGER_RE = /^(?:goal|目标)[：:\s]+(.+)/is;
  * @returns {string|null} 目标文本，未匹配返回 null
  */
 function extractGoal(text) {
-  if (!text || typeof text !== 'string') return null;
+  if (!text || typeof text !== 'string') {
+    return null;
+  }
   const m = text.trim().match(GOAL_TRIGGER_RE);
   return m ? m[1].trim() : null;
 }
@@ -39,7 +41,9 @@ function preflightCheck(goalText, opts = {}) {
   assessment.model = modelName || 'unknown';
 
   if (modelName && LOW_TIER_RE.test(modelName)) {
-    reasons.push(`模型 "${modelName}" 等级过低，goal 模式需要中高端模型 (claude-sonnet/opus/gpt-4o/qwen-max 等)`);
+    reasons.push(
+      `模型 "${modelName}" 等级过低，goal 模式需要中高端模型 (claude-sonnet/opus/gpt-4o/qwen-max 等)`
+    );
   }
 
   // ── 2. 上下文窗口检查 ───────────────────────────────────────────
@@ -49,7 +53,9 @@ function preflightCheck(goalText, opts = {}) {
     const ratio = contextRemaining / contextTotal;
     assessment.contextRatio = Math.round(ratio * 100) / 100;
     if (ratio < 0.3) {
-      reasons.push(`上下文剩余空间不足 (${Math.round(ratio * 100)}%)，goal 模式需要 >=30% 剩余空间`);
+      reasons.push(
+        `上下文剩余空间不足 (${Math.round(ratio * 100)}%)，goal 模式需要 >=30% 剩余空间`
+      );
     } else if (ratio < 0.5) {
       warnings.push(`上下文剩余空间偏低 (${Math.round(ratio * 100)}%)，复杂目标可能中途截断`);
     }
@@ -61,14 +67,20 @@ function preflightCheck(goalText, opts = {}) {
   assessment.toolCount = enabledTools.length;
 
   if (enabledTools.length > 0) {
-    const lowerTools = enabledTools.map(t => String(t).toLowerCase());
-    const hasFileOps = lowerTools.some(t => /read|write|edit/i.test(t));
-    const hasShell = lowerTools.some(t => /bash|shell|command/i.test(t));
-    const hasSearch = lowerTools.some(t => /glob|grep|search/i.test(t));
+    const lowerTools = enabledTools.map((t) => String(t).toLowerCase());
+    const hasFileOps = lowerTools.some((t) => /read|write|edit/i.test(t));
+    const hasShell = lowerTools.some((t) => /bash|shell|command/i.test(t));
+    const hasSearch = lowerTools.some((t) => /glob|grep|search/i.test(t));
 
-    if (!hasFileOps) reasons.push('缺少文件操作工具 (read/write/edit)');
-    if (!hasShell) warnings.push('缺少 shell 执行工具 (bash/shell)，部分操作可能受限');
-    if (!hasSearch) warnings.push('缺少搜索工具 (glob/grep)，代码探索能力受限');
+    if (!hasFileOps) {
+      reasons.push('缺少文件操作工具 (read/write/edit)');
+    }
+    if (!hasShell) {
+      warnings.push('缺少 shell 执行工具 (bash/shell)，部分操作可能受限');
+    }
+    if (!hasSearch) {
+      warnings.push('缺少搜索工具 (glob/grep)，代码探索能力受限');
+    }
   }
 
   return {
@@ -125,7 +137,9 @@ function activate() {
     const permissionStore = require('./permissionStore');
     savedState.permissionProfile = permissionStore.getProfile();
     permissionStore.setProfile('yolo');
-  } catch { /* permissionStore 不可用时跳过 */ }
+  } catch {
+    /* permissionStore 不可用时跳过 */
+  }
 
   // 2. toolCalling → dangerousMode (跳过危险操作二次确认)
   try {
@@ -133,7 +147,9 @@ function activate() {
     savedState.dangerousMode = toolCalling.isDangerousMode();
     toolCalling.enableDangerousMode();
     toolCalling.acknowledgeDangerousMode();
-  } catch { /* toolCalling 不可用时跳过 */ }
+  } catch {
+    /* toolCalling 不可用时跳过 */
+  }
 
   // 3. 环境变量标记
   process.env.KHY_GOAL_MODE_ACTIVE = 'true';
@@ -147,13 +163,17 @@ function activate() {
  * @param {object} savedState — 由 activate() 返回
  */
 function deactivate(savedState) {
-  if (!savedState) savedState = {};
+  if (!savedState) {
+    savedState = {};
+  }
 
   // 1. 恢复 permissionStore profile
   try {
     const permissionStore = require('./permissionStore');
     permissionStore.setProfile(savedState.permissionProfile || 'normal');
-  } catch { /* permissionStore 不可用时跳过 */ }
+  } catch {
+    /* permissionStore 不可用时跳过 */
+  }
 
   // 2. 恢复 dangerous mode
   try {
@@ -161,7 +181,9 @@ function deactivate(savedState) {
     if (!savedState.dangerousMode) {
       toolCalling.disableDangerousMode();
     }
-  } catch { /* toolCalling 不可用时跳过 */ }
+  } catch {
+    /* toolCalling 不可用时跳过 */
+  }
 
   // 恢复环境变量
   if (savedState.goalModeActive) {
@@ -179,7 +201,9 @@ function deactivate(savedState) {
 
 /** 是否启用富完成报告(逃生阀 KHY_REPORT_RICH=0/false/off/no 关闭)。 */
 function _isRichReportEnabled(env = process.env) {
-  const flag = String((env && env.KHY_REPORT_RICH) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_REPORT_RICH) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -197,8 +221,16 @@ function _isRichReportEnabled(env = process.env) {
  */
 function buildCompletionReport(opts = {}) {
   const {
-    goalText, success, steps, elapsed, deliverables, error,
-    why, verification, residualRisks, nextSteps,
+    goalText,
+    success,
+    steps,
+    elapsed,
+    deliverables,
+    error,
+    why,
+    verification,
+    residualRisks,
+    nextSteps,
   } = opts;
   const lines = [];
 
@@ -221,7 +253,9 @@ function buildCompletionReport(opts = {}) {
     lines.push('**状态：** 成功\n');
   } else {
     lines.push(`**状态：** ${error ? '失败' : '部分完成'}\n`);
-    if (error) lines.push(`**错误：** ${error}\n`);
+    if (error) {
+      lines.push(`**错误：** ${error}\n`);
+    }
   }
 
   if (typeof elapsed === 'number' && elapsed > 0) {
@@ -291,7 +325,9 @@ function isActive() {
  * @returns {object|null} savedState 或 null
  */
 function activateIfNeeded() {
-  if (isActive()) return null;
+  if (isActive()) {
+    return null;
+  }
   return activate();
 }
 
@@ -300,7 +336,9 @@ function activateIfNeeded() {
  * @param {object|null} savedState
  */
 function deactivateIfNeeded(savedState) {
-  if (savedState) deactivate(savedState);
+  if (savedState) {
+    deactivate(savedState);
+  }
 }
 
 module.exports = {

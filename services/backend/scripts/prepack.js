@@ -26,18 +26,32 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const BACKEND_DIR = path.resolve(__dirname, '..');          // services/backend
-const REPO_ROOT = path.resolve(BACKEND_DIR, '..', '..');    // monorepo root
+const BACKEND_DIR = path.resolve(__dirname, '..'); // services/backend
+const REPO_ROOT = path.resolve(BACKEND_DIR, '..', '..'); // monorepo root
 const SHARED_SRC = path.join(REPO_ROOT, 'platform', 'packages', 'shared');
 const VENDOR_SHARED = path.join(BACKEND_DIR, 'vendor', 'shared');
 
-function log(msg) { process.stdout.write(`[prepack] ${msg}\n`); }
-function warn(msg) { process.stderr.write(`[prepack] ${msg}\n`); }
+function log(msg) {
+  process.stdout.write(`[prepack] ${msg}\n`);
+}
+function warn(msg) {
+  process.stderr.write(`[prepack] ${msg}\n`);
+}
 
 /** Copy platform/packages/shared → vendor/shared (source/config only). */
 const VENDOR_SKIP = new Set([
-  'node_modules', '.git', 'logs', '.tmp', 'temp', 'tmp',
-  'coverage', '.cache', '.nyc_output', 'dist', 'build', '__pycache__',
+  'node_modules',
+  '.git',
+  'logs',
+  '.tmp',
+  'temp',
+  'tmp',
+  'coverage',
+  '.cache',
+  '.nyc_output',
+  'dist',
+  'build',
+  '__pycache__',
 ]);
 
 function vendorShared() {
@@ -73,7 +87,7 @@ function embedSourceSnapshot() {
 }
 
 function main() {
-  vendorShared();        // hard requirement — throws to abort the pack on failure
+  vendorShared(); // hard requirement — throws to abort the pack on failure
   embedSourceSnapshot(); // soft — warns and continues without a secret/git
 }
 

@@ -30,7 +30,9 @@ module.exports = defineTool({
     try {
       const { isCoordinatorMode } = require('../coordinator/coordinatorMode');
       return isCoordinatorMode();
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   },
 
   getActivityDescription(input) {

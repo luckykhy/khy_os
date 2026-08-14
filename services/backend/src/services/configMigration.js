@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const log = require('../utils/logger');
 
 // ── Migration Registry ──
@@ -69,7 +70,9 @@ const MIGRATIONS = [
     description: 'Add i18n locale, session management, extension config',
     migrate(config) {
       // Add locale if missing
-      if (!config.locale) config.locale = 'auto';
+      if (!config.locale) {
+        config.locale = 'auto';
+      }
       // Add session config
       if (!config.session) {
         config.session = {
@@ -101,13 +104,23 @@ const CURRENT_VERSION = 4;
  * @returns {number}
  */
 function detectVersion(config) {
-  if (!config || typeof config !== 'object') return 1;
-  if (typeof config._configVersion === 'number') return config._configVersion;
+  if (!config || typeof config !== 'object') {
+    return 1;
+  }
+  if (typeof config._configVersion === 'number') {
+    return config._configVersion;
+  }
 
   // Heuristic detection
-  if (config.extensions && config.session && config.locale) return 4;
-  if (config.permissions && config.permissionMode) return 3;
-  if (config.proxy && !config.gateway?.proxy) return 2;
+  if (config.extensions && config.session && config.locale) {
+    return 4;
+  }
+  if (config.permissions && config.permissionMode) {
+    return 3;
+  }
+  if (config.proxy && !config.gateway?.proxy) {
+    return 2;
+  }
   return 1;
 }
 
@@ -136,9 +149,15 @@ function migrateConfig(config, options) {
   let currentVersion = fromVersion;
 
   for (const migration of MIGRATIONS) {
-    if (migration.from < currentVersion) continue;
-    if (migration.from !== currentVersion) continue;
-    if (migration.to > targetVersion) break;
+    if (migration.from < currentVersion) {
+      continue;
+    }
+    if (migration.from !== currentVersion) {
+      continue;
+    }
+    if (migration.to > targetVersion) {
+      break;
+    }
 
     appliedMigrations.push(`v${migration.from}→v${migration.to}: ${migration.description}`);
 
@@ -213,11 +232,17 @@ function migrateConfigFile(configPath, options) {
     fs.writeFileSync(absPath, JSON.stringify(result.config, null, 2) + '\n', 'utf8');
   } catch (err) {
     // Restore backup
-    try { fs.copyFileSync(backupPath, absPath); } catch { /* best effort */ }
+    try {
+      fs.copyFileSync(backupPath, absPath);
+    } catch {
+      /* best effort */
+    }
     return { success: false, migrations: [], error: `Failed to write config: ${err.message}` };
   }
 
-  log.info(`Config migrated v${result.fromVersion}→v${result.toVersion}: ${result.migrations.length} migration(s)`);
+  log.info(
+    `Config migrated v${result.fromVersion}→v${result.toVersion}: ${result.migrations.length} migration(s)`
+  );
 
   return {
     success: true,

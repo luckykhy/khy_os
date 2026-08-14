@@ -23,15 +23,25 @@ const importSvc = require('./pluginImportService');
 // Runtime invoker + tool bridge live in the trading backend (shared with the
 // workflow node + chat Agent). ai-backend already reaches backend services this
 // way; reusing the bridge keeps the tool projection a single source of truth.
-const pluginInvoker = require(path.resolve(__dirname, '../../../backend/src/services/plugins/pluginInvoker'));
-const pluginToolBridge = require(path.resolve(__dirname, '../../../backend/src/services/plugins/pluginToolBridge'));
+const pluginInvoker = require(
+  path.resolve(__dirname, '../../../backend/src/services/plugins/pluginInvoker')
+);
+const pluginToolBridge = require(
+  path.resolve(__dirname, '../../../backend/src/services/plugins/pluginToolBridge')
+);
 
 /** Mask an auth config down to a non-secret descriptor for the client. */
 function _maskAuth(authConfig) {
   const a = authConfig && typeof authConfig === 'object' ? authConfig : { type: 'none' };
   const type = String(a.type || 'none').toLowerCase();
   if (type === 'none') return { type: 'none' };
-  if (type === 'apikey') return { type: 'apiKey', in: a.in || 'header', name: a.name || 'Authorization', configured: !!a.value };
+  if (type === 'apikey')
+    return {
+      type: 'apiKey',
+      in: a.in || 'header',
+      name: a.name || 'Authorization',
+      configured: !!a.value,
+    };
   if (type === 'bearer') return { type: 'bearer', configured: !!a.token };
   if (type === 'oauth') {
     return {
@@ -85,7 +95,9 @@ async function listInstalled(userId) {
   const installs = await UserInstalledPlugin.findAll({ where: { userId }, order: [['id', 'ASC']] });
   if (!installs.length) return [];
   const byId = new Map();
-  const plugins = await MarketplacePlugin.findAll({ where: { id: installs.map((i) => i.pluginId) } });
+  const plugins = await MarketplacePlugin.findAll({
+    where: { id: installs.map((i) => i.pluginId) },
+  });
   for (const p of plugins) byId.set(p.id, p);
   return installs.map((i) => _installView(i, byId.get(i.pluginId)));
 }
@@ -109,7 +121,10 @@ async function importAndInstall(userId, body = {}) {
     userId,
     pluginId: plugin.id,
     enabled: true,
-    authConfigJson: body.authConfig !== undefined ? body.authConfig : (plugin.manifestJson && plugin.manifestJson.auth) || { type: 'none' },
+    authConfigJson:
+      body.authConfig !== undefined
+        ? body.authConfig
+        : (plugin.manifestJson && plugin.manifestJson.auth) || { type: 'none' },
   });
   return _installView(install, plugin);
 }

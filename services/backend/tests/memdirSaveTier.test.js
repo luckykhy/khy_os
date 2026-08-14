@@ -30,12 +30,14 @@ beforeEach(() => {
   prevEnvDir = process.env.KHY_MEMORY_DIR;
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-savetier-'));
   process.env.KHY_MEMORY_DIR = tmpDir;
+  process.env.KHY_MEMORY_MERGE_LEGACY = 'off';
   paths._resetCache();
 });
 
 afterEach(() => {
   if (prevEnvDir === undefined) delete process.env.KHY_MEMORY_DIR;
   else process.env.KHY_MEMORY_DIR = prevEnvDir;
+  delete process.env.KHY_MEMORY_MERGE_LEGACY;
   paths._resetCache();
   try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
 });

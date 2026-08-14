@@ -28,8 +28,12 @@ const GLYPH = Object.freeze({
 function inlineLabel(entry) {
   const t = traceOf(entry);
   const glyph = GLYPH[t.trust] || '·';
-  if (t.trust === TRUST.VERIFIED) return `${glyph} KHY executed`;
-  if (t.trust === TRUST.QUARANTINED) return `${glyph} quarantined`;
+  if (t.trust === TRUST.VERIFIED) {
+    return `${glyph} KHY executed`;
+  }
+  if (t.trust === TRUST.QUARANTINED) {
+    return `${glyph} quarantined`;
+  }
   // CLAIMED
   const who = t.producerId ? `${t.producer}:${t.producerId}` : t.producer;
   return `${glyph} ${who} claims`;
@@ -67,8 +71,12 @@ function replayRow(entry, index = null) {
 
 /** 链状态页脚文本。 */
 function chainStatusLine(status) {
-  if (!status || status.available === false) return 'chain: unavailable';
-  if (status.ok) return `✓ chain intact (${status.length} entries)`;
+  if (!status || status.available === false) {
+    return 'chain: unavailable';
+  }
+  if (status.ok) {
+    return `✓ chain intact (${status.length} entries)`;
+  }
   return `⚠ chain broken @ #${status.brokenAt}${status.reason ? ` — ${status.reason}` : ''}`;
 }
 

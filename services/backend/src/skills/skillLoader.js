@@ -28,8 +28,8 @@
  *      surface it in Claude Code's slash menu).
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const SKILL_FILENAME = 'SKILL.md';
 
@@ -44,7 +44,11 @@ function parseSkillFile(filePath) {
 function parseSkillContent(content, sourcePath = '') {
   const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
   if (!fmMatch) {
-    return { meta: { name: path.basename(path.dirname(sourcePath)) }, body: content, source: sourcePath };
+    return {
+      meta: { name: path.basename(path.dirname(sourcePath)) },
+      body: content,
+      source: sourcePath,
+    };
   }
 
   const meta = _parseYamlSimple(fmMatch[1]);
@@ -65,21 +69,31 @@ function _parseYamlSimple(yaml) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
 
     // Block-list item lines are consumed by their parent key below; a stray
     // item with no parent is ignored.
-    if (trimmed.startsWith('- ')) continue;
+    if (trimmed.startsWith('- ')) {
+      continue;
+    }
 
     const colonIdx = trimmed.indexOf(':');
-    if (colonIdx === -1) continue;
+    if (colonIdx === -1) {
+      continue;
+    }
 
     const key = trimmed.slice(0, colonIdx).trim();
-    let value = trimmed.slice(colonIdx + 1).trim();
+    const value = trimmed.slice(colonIdx + 1).trim();
 
     // Inline array: [a, b, c]
     if (value.startsWith('[') && value.endsWith(']')) {
-      result[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      result[key] = value
+        .slice(1, -1)
+        .split(',')
+        .map((v) => v.trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean);
       continue;
     }
 
@@ -90,9 +104,18 @@ function _parseYamlSimple(yaml) {
       let j = i + 1;
       for (; j < lines.length; j++) {
         const t = lines[j].trim();
-        if (!t || t.startsWith('#')) continue;       // skip blanks/comments inside the list
-        if (!t.startsWith('- ')) break;               // next key — stop
-        items.push(t.slice(2).trim().replace(/^["']|["']$/g, ''));
+        if (!t || t.startsWith('#')) {
+          continue;
+        } // skip blanks/comments inside the list
+        if (!t.startsWith('- ')) {
+          break;
+        } // next key — stop
+        items.push(
+          t
+            .slice(2)
+            .trim()
+            .replace(/^["']|["']$/g, '')
+        );
       }
       if (items.length > 0) {
         result[key] = items;
@@ -105,11 +128,20 @@ function _parseYamlSimple(yaml) {
     }
 
     // Boolean
-    if (value === 'true') { result[key] = true; continue; }
-    if (value === 'false') { result[key] = false; continue; }
+    if (value === 'true') {
+      result[key] = true;
+      continue;
+    }
+    if (value === 'false') {
+      result[key] = false;
+      continue;
+    }
 
     // Number
-    if (/^\d+(\.\d+)?$/.test(value)) { result[key] = Number(value); continue; }
+    if (/^\d+(\.\d+)?$/.test(value)) {
+      result[key] = Number(value);
+      continue;
+    }
 
     // String (strip quotes)
     result[key] = value.replace(/^["']|["']$/g, '');
@@ -133,7 +165,18 @@ function discoverSkills(projectDir, opts = {}) {
     searchPaths.push({ dir: path.join(projectDir, '.khyquant', 'skills'), source: 'project' });
   }
 
-  // Priority 2: User-level — canonical `~/.khy/skills` first, then legacy.
+  // Priority 2: User-level — portable-aware canonical dir first (equals
+  // `~/.khy/skills` on non-portable installs; dedup keeps behavior identical),
+  // then `~/.khy/skills`, then legacy `~/.khyquant/skills`.
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    const canonicalDir = path.join(getDataHome(), 'skills');
+    if (canonicalDir !== path.join(homedir, '.khy', 'skills')) {
+      searchPaths.push({ dir: canonicalDir, source: 'user' });
+    }
+  } catch {
+    /* dataHome unavailable */
+  }
   searchPaths.push({ dir: path.join(homedir, '.khy', 'skills'), source: 'user' });
   searchPaths.push({ dir: path.join(homedir, '.khyquant', 'skills'), source: 'user' });
 
@@ -141,18 +184,26 @@ function discoverSkills(projectDir, opts = {}) {
   searchPaths.push({ dir: path.join(__dirname, '../../skills'), source: 'builtin' });
 
   for (const { dir, source } of searchPaths) {
-    if (!fs.existsSync(dir)) continue;
+    if (!fs.existsSync(dir)) {
+      continue;
+    }
 
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {
+          continue;
+        }
 
         const skillFile = path.join(dir, entry.name, SKILL_FILENAME);
-        if (!fs.existsSync(skillFile)) continue;
+        if (!fs.existsSync(skillFile)) {
+          continue;
+        }
 
         // First match wins (project > user > builtin)
-        if (skills.has(entry.name)) continue;
+        if (skills.has(entry.name)) {
+          continue;
+        }
 
         try {
           const skill = parseSkillFile(skillFile);
@@ -163,7 +214,9 @@ function discoverSkills(projectDir, opts = {}) {
           console.error(`[SkillLoader] Failed to parse ${skillFile}: ${err.message}`);
         }
       }
-    } catch { /* directory read error, skip */ }
+    } catch {
+      /* directory read error, skip */
+    }
   }
 
   return skills;
@@ -179,7 +232,9 @@ function matchSkills(skills, query) {
   for (const [, skill] of skills) {
     const { name = '', description = '', tags = [] } = skill.meta;
     const text = `${name} ${description} ${tags.join(' ')}`.toLowerCase();
-    if (text.includes(q)) results.push(skill);
+    if (text.includes(q)) {
+      results.push(skill);
+    }
   }
 
   return results;
@@ -200,10 +255,21 @@ function discoverSkillsDeep(projectDir, opts = {}) {
     searchPaths.push({ dir: path.join(projectDir, '.khy', 'skills'), source: 'project' });
     searchPaths.push({ dir: path.join(projectDir, '.khyquant', 'skills'), source: 'project' });
   }
-  // Priority 2: User-level — canonical `~/.khy/skills` first, then legacy
+  // Priority 2: User-level — portable-aware canonical dir first (equals
+  // `~/.khy/skills` on non-portable installs; dedup keeps behavior identical),
+  // then canonical `~/.khy/skills`, then legacy
   // `~/.khyquant/skills`. This is what lets khy natively discover a SKILL.md
   // dropped under its OWN home dir (no need to place it in Claude Code's
   // ~/.claude/skills, which would also surface it in CC's slash menu).
+  try {
+    const { getDataHome } = require('../utils/dataHome');
+    const canonicalDir = path.join(getDataHome(), 'skills');
+    if (canonicalDir !== path.join(homedir, '.khy', 'skills')) {
+      searchPaths.push({ dir: canonicalDir, source: 'user' });
+    }
+  } catch {
+    /* dataHome unavailable */
+  }
   searchPaths.push({ dir: path.join(homedir, '.khy', 'skills'), source: 'user' });
   searchPaths.push({ dir: path.join(homedir, '.khyquant', 'skills'), source: 'user' });
   // Priority 3: Built-in
@@ -222,10 +288,33 @@ function discoverSkillsDeep(projectDir, opts = {}) {
         searchPaths.push(p);
       }
     }
-  } catch { /* bridge unavailable → khy-only discovery */ }
+  } catch {
+    /* bridge unavailable → khy-only discovery */
+  }
+
+  // OpenClaw skill bridge (gated KHY_OPENCLAW_SKILL_BRIDGE, default ON): also
+  // discover skills OpenClaw has on disk (<~/.openclaw>/skills/<name>/SKILL.md,
+  // with KHY_OPENCLAW_DATA_HOME/OPENCLAW_STATE_DIR overrides). OpenClaw's
+  // SKILL.md (AgentSkills.io YAML frontmatter + markdown) is byte-compatible
+  // with khy's parser, so we feed its skills root into the same recursive scan.
+  // Appended AFTER the CC bridge → khy-native and CC skills keep priority (first
+  // match wins in _scanDirectory). Missing dir → silently skipped. OFF →
+  // byte-identical to the prior (khy + CC) chain.
+  try {
+    const ocBridge = require('./ocSkillBridge');
+    if (ocBridge.isOcSkillBridgeEnabled()) {
+      for (const p of ocBridge.ocSkillSearchPaths({ homedir })) {
+        searchPaths.push(p);
+      }
+    }
+  } catch {
+    /* bridge unavailable → prior discovery unaffected */
+  }
 
   for (const { dir, source } of searchPaths) {
-    if (!fs.existsSync(dir)) continue;
+    if (!fs.existsSync(dir)) {
+      continue;
+    }
     _scanDirectory(dir, skills, source);
   }
 
@@ -239,27 +328,35 @@ function _scanDirectory(dir, skills, source) {
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
+      if (!entry.isDirectory()) {
+        continue;
+      }
       const subDir = path.join(dir, entry.name);
 
       // Check if this directory has a SKILL.md
       const skillFile = path.join(subDir, SKILL_FILENAME);
       if (fs.existsSync(skillFile)) {
         const skillId = entry.name;
-        if (skills.has(skillId)) continue; // first match wins
+        if (skills.has(skillId)) {
+          continue;
+        } // first match wins
 
         try {
           const skill = parseSkillFile(skillFile);
           skill.id = skillId;
           skill.priority = source;
           skills.set(skillId, skill);
-        } catch { /* skip broken skill */ }
+        } catch {
+          /* skip broken skill */
+        }
       }
 
       // Recurse into subdirectories (for category/skill-name structure)
       _scanDirectory(subDir, skills, source);
     }
-  } catch { /* directory read error */ }
+  } catch {
+    /* directory read error */
+  }
 }
 
 /**
@@ -289,7 +386,9 @@ function groupByCategory(skills) {
   const grouped = {};
   for (const [, skill] of skills) {
     const category = skill.meta.category || skill.meta.layer || 'others';
-    if (!grouped[category]) grouped[category] = [];
+    if (!grouped[category]) {
+      grouped[category] = [];
+    }
     grouped[category].push(skill);
   }
   return grouped;
@@ -304,7 +403,9 @@ function groupByLayer(skills) {
   const grouped = {};
   for (const [, skill] of skills) {
     const layer = skill.meta.layer || 'application';
-    if (!grouped[layer]) grouped[layer] = [];
+    if (!grouped[layer]) {
+      grouped[layer] = [];
+    }
     grouped[layer].push(skill);
   }
   return grouped;
@@ -319,12 +420,24 @@ function validateSkill(skill) {
   const warnings = [];
   const meta = skill.meta || {};
 
-  if (!meta.name) warnings.push('missing name');
-  if (!meta.version) warnings.push('missing version');
-  if (!meta.description) warnings.push('missing description');
-  if (!meta.layer) warnings.push('missing layer (system|application|domain)');
-  if (!meta.tags || meta.tags.length === 0) warnings.push('missing tags');
-  if (!meta.platforms || meta.platforms.length === 0) warnings.push('missing platforms — skill assumed universal');
+  if (!meta.name) {
+    warnings.push('missing name');
+  }
+  if (!meta.version) {
+    warnings.push('missing version');
+  }
+  if (!meta.description) {
+    warnings.push('missing description');
+  }
+  if (!meta.layer) {
+    warnings.push('missing layer (system|application|domain)');
+  }
+  if (!meta.tags || meta.tags.length === 0) {
+    warnings.push('missing tags');
+  }
+  if (!meta.platforms || meta.platforms.length === 0) {
+    warnings.push('missing platforms — skill assumed universal');
+  }
 
   return { valid: warnings.length === 0, warnings };
 }

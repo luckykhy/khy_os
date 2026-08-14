@@ -24,14 +24,23 @@ const WINDOW_TTL_MS = (() => {
 })();
 const WINDOW_TTL_SEC = Math.max(1, Math.ceil(WINDOW_TTL_MS / 1000));
 
+// Default TTL (ms) for the persisted HALF_OPEN circuit state (hostate: keys).
+// Callers normally pass an explicit TTL derived from the effective cooldown;
+// this default only backstops calls without one. Override via env; floor 30s.
+const HALF_OPEN_STATE_TTL_MS = (() => {
+  const raw = parseInt(process.env.GATEWAY_HALF_OPEN_STATE_TTL_MS, 10);
+  return Number.isFinite(raw) && raw >= 30000 ? raw : 600000;
+})();
+
 // ── In-Memory Fallback Store ────────────────────────────────────────────────
 class MemoryHealthStore {
   constructor() {
-    this._failures = {};   // key → count
-    this._errors = {};     // key → { record, expiresAt }
-    this._cooldowns = {};  // key → expiresAt
-    this._halfOk = {};     // key → { count, expiresAt }
-    this._window = {};     // key → { total, failed, expiresAt } (error-rate window)
+    this._failures = {}; // key → count
+    this._errors = {}; // key → { record, expiresAt }
+    this._cooldowns = {}; // key → expiresAt
+    this._halfOk = {}; // key → { count, expiresAt }
+    this._window = {}; // key → { total, failed, expiresAt } (error-rate window)
+    this._hostate = {}; // key → { record, expiresAt } (persisted HALF_OPEN state)
   }
 
   async incrFailure(key) {
@@ -45,6 +54,7 @@ class MemoryHealthStore {
     delete this._cooldowns[key];
     delete this._halfOk[key];
     delete this._window[key];
+    delete this._hostate[key];
   }
 
   async getFailureCount(key) {
@@ -57,7 +67,9 @@ class MemoryHealthStore {
 
   async getLastError(key) {
     const item = this._errors[key];
-    if (!item) return null;
+    if (!item) {
+      return null;
+    }
     if (Date.now() > item.expiresAt) {
       delete this._errors[key];
       return null;
@@ -71,7 +83,9 @@ class MemoryHealthStore {
 
   async isInCooldown(key) {
     const exp = this._cooldowns[key];
-    if (!exp) return false;
+    if (!exp) {
+      return false;
+    }
     if (Date.now() > exp) {
       delete this._cooldowns[key];
       return false;
@@ -81,7 +95,9 @@ class MemoryHealthStore {
 
   async getCooldownRemainingMs(key) {
     const exp = this._cooldowns[key];
-    if (!exp) return 0;
+    if (!exp) {
+      return 0;
+    }
     const remaining = exp - Date.now();
     if (remaining <= 0) {
       delete this._cooldowns[key];
@@ -100,7 +116,9 @@ class MemoryHealthStore {
 
   async getConsecutiveSuccesses(key) {
     const item = this._halfOk[key];
-    if (!item) return 0;
+    if (!item) {
+      return 0;
+    }
     if (Date.now() > item.expiresAt) {
       delete this._halfOk[key];
       return 0;
@@ -110,6 +128,53 @@ class MemoryHealthStore {
 
   async resetHalfOpen(key) {
     delete this._halfOk[key];
+  }
+
+  // ── Persisted HALF_OPEN State ─────────────────────────────────────────────
+
+  // Persist HALF_OPEN circuit progress so it survives process restarts.
+  // Expiry is simulated with an expiresAt timestamp (checked on read).
+  async setHalfOpenState(key, successCount, ttlMs) {
+    const ttl = Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : HALF_OPEN_STATE_TTL_MS;
+    this._hostate[key] = {
+      record: {
+        state: 'half_open',
+        successes: Math.max(0, Number(successCount) || 0),
+        updatedAt: Date.now(),
+      },
+      expiresAt: Date.now() + ttl,
+    };
+  }
+
+  async getHalfOpenState(key) {
+    const item = this._hostate[key];
+    if (!item) {
+      return null;
+    }
+    if (Date.now() > item.expiresAt) {
+      delete this._hostate[key];
+      return null;
+    }
+    return item.record;
+  }
+
+  async clearHalfOpenState(key) {
+    delete this._hostate[key];
+  }
+
+  // List every non-expired persisted HALF_OPEN state as { key → record }.
+  async listHalfOpenStates() {
+    const now = Date.now();
+    const out = {};
+    for (const key of Object.keys(this._hostate)) {
+      const item = this._hostate[key];
+      if (!item || now > item.expiresAt) {
+        delete this._hostate[key];
+        continue;
+      }
+      out[key] = item.record;
+    }
+    return out;
   }
 
   // ── Error-Rate Window ─────────────────────────────────────────────────────
@@ -124,7 +189,9 @@ class MemoryHealthStore {
       this._window[key] = w;
     }
     w.total += 1;
-    if (!success) w.failed += 1;
+    if (!success) {
+      w.failed += 1;
+    }
     return { total: w.total, failed: w.failed };
   }
 
@@ -144,8 +211,10 @@ class MemoryHealthStore {
       const win = await this.getWindowStats(key);
       states[key] = {
         failureCount: this._failures[key] || 0,
-        lastError: (this._errors[key] && Date.now() <= this._errors[key].expiresAt)
-          ? this._errors[key].record : null,
+        lastError:
+          this._errors[key] && Date.now() <= this._errors[key].expiresAt
+            ? this._errors[key].record
+            : null,
         inCooldown: await this.isInCooldown(key),
         cooldownRemainingMs: await this.getCooldownRemainingMs(key),
         consecutiveSuccesses: await this.getConsecutiveSuccesses(key),
@@ -159,11 +228,36 @@ class MemoryHealthStore {
 
   cleanup(validKeys) {
     const valid = new Set(validKeys);
-    for (const k of Object.keys(this._failures)) if (!valid.has(k)) delete this._failures[k];
-    for (const k of Object.keys(this._errors)) if (!valid.has(k)) delete this._errors[k];
-    for (const k of Object.keys(this._cooldowns)) if (!valid.has(k)) delete this._cooldowns[k];
-    for (const k of Object.keys(this._halfOk)) if (!valid.has(k)) delete this._halfOk[k];
-    for (const k of Object.keys(this._window)) if (!valid.has(k)) delete this._window[k];
+    for (const k of Object.keys(this._failures)) {
+      if (!valid.has(k)) {
+        delete this._failures[k];
+      }
+    }
+    for (const k of Object.keys(this._errors)) {
+      if (!valid.has(k)) {
+        delete this._errors[k];
+      }
+    }
+    for (const k of Object.keys(this._cooldowns)) {
+      if (!valid.has(k)) {
+        delete this._cooldowns[k];
+      }
+    }
+    for (const k of Object.keys(this._halfOk)) {
+      if (!valid.has(k)) {
+        delete this._halfOk[k];
+      }
+    }
+    for (const k of Object.keys(this._window)) {
+      if (!valid.has(k)) {
+        delete this._window[k];
+      }
+    }
+    for (const k of Object.keys(this._hostate)) {
+      if (!valid.has(k)) {
+        delete this._hostate[k];
+      }
+    }
   }
 }
 
@@ -190,7 +284,9 @@ class RedisHealthStore {
         this._useRedis = true;
         return;
       }
-    } catch { /* fallback to memory */ }
+    } catch {
+      /* fallback to memory */
+    }
     this._useRedis = false;
   }
 
@@ -200,7 +296,9 @@ class RedisHealthStore {
   }
 
   isRedisAvailable() {
-    if (!this._useRedis) return false;
+    if (!this._useRedis) {
+      return false;
+    }
     try {
       const client = this._getClient();
       return !!(client && client.isReady);
@@ -216,10 +314,12 @@ class RedisHealthStore {
   }
 
   _client() {
-    if (!this._useRedis) return null;
+    if (!this._useRedis) {
+      return null;
+    }
     try {
       const c = this._getClient();
-      return (c && c.isReady) ? c : null;
+      return c && c.isReady ? c : null;
     } catch {
       return null;
     }
@@ -228,9 +328,13 @@ class RedisHealthStore {
   _logRedisError(method, err) {
     if (!this._redisErrorLogged) {
       this._redisErrorLogged = true;
-      console.warn(`[RedisHealthStore] Redis ${method} failed, falling back to memory: ${err.message}`);
+      console.warn(
+        `[RedisHealthStore] Redis ${method} failed, falling back to memory: ${err.message}`
+      );
       // Reset flag after 30s to allow logging again
-      setTimeout(() => { this._redisErrorLogged = false; }, 30000);
+      setTimeout(() => {
+        this._redisErrorLogged = false;
+      }, 30000);
     }
   }
 
@@ -264,6 +368,7 @@ class RedisHealthStore {
           this._key(`halfok:${adapterKey}`),
           this._key(`wtot:${adapterKey}`),
           this._key(`wfail:${adapterKey}`),
+          this._key(`hostate:${adapterKey}`),
         ]);
       } catch (err) {
         this._logRedisError('clearFailure', err);
@@ -405,6 +510,95 @@ class RedisHealthStore {
     return this._memory.resetHalfOpen(adapterKey);
   }
 
+  // ── Persisted HALF_OPEN State ─────────────────────────────────────────────
+
+  async setHalfOpenState(adapterKey, successCount, ttlMs) {
+    const ttl = Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : HALF_OPEN_STATE_TTL_MS;
+    const client = this._client();
+    if (client) {
+      try {
+        const key = this._key(`hostate:${adapterKey}`);
+        const ttlSec = Math.max(1, Math.ceil(ttl / 1000));
+        const record = {
+          state: 'half_open',
+          successes: Math.max(0, Number(successCount) || 0),
+          updatedAt: Date.now(),
+        };
+        await client.setEx(key, ttlSec, JSON.stringify(record));
+      } catch (err) {
+        this._logRedisError('setHalfOpenState', err);
+      }
+    }
+    // Always mirror to memory so single-process reads survive a Redis blip.
+    return this._memory.setHalfOpenState(adapterKey, successCount, ttl);
+  }
+
+  async getHalfOpenState(adapterKey) {
+    const client = this._client();
+    if (client) {
+      try {
+        const val = await client.get(this._key(`hostate:${adapterKey}`));
+        if (val) {
+          try {
+            return JSON.parse(val);
+          } catch {
+            return null; /* corrupted */
+          }
+        }
+        return null;
+      } catch (err) {
+        this._logRedisError('getHalfOpenState', err);
+      }
+    }
+    return this._memory.getHalfOpenState(adapterKey);
+  }
+
+  async clearHalfOpenState(adapterKey) {
+    const client = this._client();
+    if (client) {
+      try {
+        await client.del(this._key(`hostate:${adapterKey}`));
+      } catch (err) {
+        this._logRedisError('clearHalfOpenState', err);
+      }
+    }
+    return this._memory.clearHalfOpenState(adapterKey);
+  }
+
+  // List every persisted HALF_OPEN state as { adapterKey → record }. Uses
+  // SCAN (never KEYS) with the shared prefix convention; TTL expiry is handled
+  // by Redis itself. Fail-soft: any scan/read error degrades to the memory
+  // mirror (which returns an empty object when it holds nothing).
+  async listHalfOpenStates() {
+    const client = this._client();
+    if (client) {
+      try {
+        const prefix = this._key('hostate:');
+        const out = {};
+        for await (const scanKey of client.scanIterator({ MATCH: `${prefix}*`, COUNT: 100 })) {
+          const val = await client.get(scanKey);
+          if (!val) {
+            continue;
+          }
+          let record = null;
+          try {
+            record = JSON.parse(val);
+          } catch {
+            continue; /* corrupted entry */
+          }
+          const adapterKey = String(scanKey).slice(prefix.length);
+          if (adapterKey) {
+            out[adapterKey] = record;
+          }
+        }
+        return out;
+      } catch (err) {
+        this._logRedisError('listHalfOpenStates', err);
+      }
+    }
+    return this._memory.listHalfOpenStates();
+  }
+
   // ── Error-Rate Window ─────────────────────────────────────────────────────
 
   // Tally one request outcome into the current window. Implemented as two
@@ -418,12 +612,16 @@ class RedisHealthStore {
       try {
         const totKey = this._key(`wtot:${adapterKey}`);
         const total = await client.incr(totKey);
-        if (total === 1) await client.expire(totKey, WINDOW_TTL_SEC);
+        if (total === 1) {
+          await client.expire(totKey, WINDOW_TTL_SEC);
+        }
         let failed = 0;
         if (!success) {
           const failKey = this._key(`wfail:${adapterKey}`);
           failed = await client.incr(failKey);
-          if (failed === 1) await client.expire(failKey, WINDOW_TTL_SEC);
+          if (failed === 1) {
+            await client.expire(failKey, WINDOW_TTL_SEC);
+          }
         } else {
           const failRaw = await client.get(this._key(`wfail:${adapterKey}`));
           failed = failRaw ? parseInt(failRaw, 10) : 0;
@@ -457,7 +655,9 @@ class RedisHealthStore {
 
   async getAllAdapterStates(adapterKeys) {
     const client = this._client();
-    if (!client) return this._memory.getAllAdapterStates(adapterKeys);
+    if (!client) {
+      return this._memory.getAllAdapterStates(adapterKeys);
+    }
 
     const states = {};
     try {
@@ -486,7 +686,11 @@ class RedisHealthStore {
 
         let lastError = null;
         if (errRaw) {
-          try { lastError = JSON.parse(errRaw); } catch { /* corrupted */ }
+          try {
+            lastError = JSON.parse(errRaw);
+          } catch {
+            /* corrupted */
+          }
         }
 
         states[key] = {

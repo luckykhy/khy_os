@@ -29,17 +29,27 @@ let _cache = null;
 
 /** Lazily load and cache the built-in templates keyed by name. */
 function _loadBuiltins() {
-  if (_cache) return _cache;
+  if (_cache) {
+    return _cache;
+  }
   const out = {};
   let files = [];
-  try { files = fs.readdirSync(TEMPLATE_DIR); } catch { files = []; }
+  try {
+    files = fs.readdirSync(TEMPLATE_DIR);
+  } catch {
+    files = [];
+  }
   for (const f of files) {
-    if (!f.endsWith('.json')) continue;
+    if (!f.endsWith('.json')) {
+      continue;
+    }
     try {
       const json = JSON.parse(fs.readFileSync(path.join(TEMPLATE_DIR, f), 'utf-8'));
       const name = json.name || path.basename(f, '.json');
       out[name] = json;
-    } catch { /* skip malformed template file */ }
+    } catch {
+      /* skip malformed template file */
+    }
   }
   _cache = out;
   return out;
@@ -48,13 +58,24 @@ function _loadBuiltins() {
 /** List built-in template names + labels for help / discovery. */
 function listTemplates() {
   const b = _loadBuiltins();
-  return Object.keys(b).map((name) => ({ name, label: b[name].label || name, description: b[name].description || '' }));
+  return Object.keys(b).map((name) => ({
+    name,
+    label: b[name].label || name,
+    description: b[name].description || '',
+  }));
 }
 
 /** Deep-merge plain objects (arrays and scalars replace; objects merge). */
 function _deepMerge(base, over) {
-  if (over == null) return base;
-  if (Array.isArray(base) || Array.isArray(over) || typeof base !== 'object' || typeof over !== 'object') {
+  if (over == null) {
+    return base;
+  }
+  if (
+    Array.isArray(base) ||
+    Array.isArray(over) ||
+    typeof base !== 'object' ||
+    typeof over !== 'object'
+  ) {
     return over;
   }
   const out = { ...base };
@@ -95,8 +116,9 @@ function resolveTemplate(spec, overrides) {
     } else {
       return {
         template: null,
-        error: `Unknown style template "${spec}". Built-ins: ${Object.keys(builtins).join(', ')}. ` +
-               `Or pass an absolute path to a JSON template.`,
+        error:
+          `Unknown style template "${spec}". Built-ins: ${Object.keys(builtins).join(', ')}. ` +
+          `Or pass an absolute path to a JSON template.`,
       };
     }
   } else {
@@ -105,9 +127,10 @@ function resolveTemplate(spec, overrides) {
 
   // Always layer the requested template over the default so partial user/file
   // templates still inherit a complete baseline (every font key present, etc.).
-  const merged = source === `builtin:${DEFAULT_TEMPLATE}`
-    ? base
-    : _deepMerge(builtins[DEFAULT_TEMPLATE] || {}, base);
+  const merged =
+    source === `builtin:${DEFAULT_TEMPLATE}`
+      ? base
+      : _deepMerge(builtins[DEFAULT_TEMPLATE] || {}, base);
   const finalTemplate = overrides ? _deepMerge(merged, overrides) : merged;
   return { template: finalTemplate, source };
 }

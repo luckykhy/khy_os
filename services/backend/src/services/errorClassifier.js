@@ -23,23 +23,73 @@ const ERROR_KIND_PATTERNS = {
   },
   timeout: {
     messages: ['timeout', 'timed out', 'deadline exceeded'],
-    codes: ['ETIMEDOUT', 'ESOCKETTIMEDOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_CONNECT_TIMEOUT'],
+    codes: [
+      'ETIMEDOUT',
+      'ESOCKETTIMEDOUT',
+      'UND_ERR_HEADERS_TIMEOUT',
+      'UND_ERR_BODY_TIMEOUT',
+      'UND_ERR_CONNECT_TIMEOUT',
+    ],
   },
   rate_limit: {
     messages: ['rate limit', 'too many requests', '429', 'rate_limit_exceeded'],
     codes: ['429'],
   },
   context_length: {
-    messages: ['context length', 'too many tokens', 'token limit', 'context_window', 'maximum context', 'max_tokens', 'prompt is too long', 'prompt_too_long', 'prompt too long', 'input is too long', 'input too long', 'request too large', 'too large for', 'reduce the length'],
+    messages: [
+      'context length',
+      'too many tokens',
+      'token limit',
+      'context_window',
+      'maximum context',
+      'max_tokens',
+      'prompt is too long',
+      'prompt_too_long',
+      'prompt too long',
+      'input is too long',
+      'input too long',
+      'request too large',
+      'too large for',
+      'reduce the length',
+    ],
     codes: [],
   },
   auth: {
-    messages: ['unauthorized', 'not authorized', 'not_authorized', 'invalid api key', 'authentication', '401', 'forbidden', '403', 'accessdeniedexception', 'forbiddenexception', 'expiredtokenexception', 'token expired', 'invalid_token', 'invalid token'],
+    messages: [
+      'unauthorized',
+      'not authorized',
+      'not_authorized',
+      'invalid api key',
+      'authentication',
+      '401',
+      'forbidden',
+      '403',
+      'accessdeniedexception',
+      'forbiddenexception',
+      'expiredtokenexception',
+      'token expired',
+      'invalid_token',
+      'invalid token',
+    ],
     codes: ['401', '403'],
   },
   network: {
-    messages: ['network error', 'fetch failed', 'socket hang up', 'getaddrinfo', 'secure tls connection was established'],
-    codes: ['ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EPIPE', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN'],
+    messages: [
+      'network error',
+      'fetch failed',
+      'socket hang up',
+      'getaddrinfo',
+      'secure tls connection was established',
+    ],
+    codes: [
+      'ECONNRESET',
+      'ECONNREFUSED',
+      'ENOTFOUND',
+      'EPIPE',
+      'EHOSTUNREACH',
+      'ENETUNREACH',
+      'EAI_AGAIN',
+    ],
   },
   // ── Extended kinds (unified from aiGateway.classifyError) ────────
   overloaded: {
@@ -67,7 +117,14 @@ const ERROR_KIND_PATTERNS = {
     codes: [],
   },
   permission: {
-    messages: ['permission denied', 'eacces', 'eperm', 'sandbox', 'operation not permitted', 'access denied'],
+    messages: [
+      'permission denied',
+      'eacces',
+      'eperm',
+      'sandbox',
+      'operation not permitted',
+      'access denied',
+    ],
     codes: ['EACCES', 'EPERM'],
   },
 };
@@ -86,16 +143,22 @@ function detectErrorKind(err) {
   for (const [kind, patterns] of Object.entries(ERROR_KIND_PATTERNS)) {
     // Check message patterns
     for (const pattern of patterns.messages) {
-      if (message.includes(pattern)) return kind;
+      if (message.includes(pattern)) {
+        return kind;
+      }
     }
     // Check code patterns
     for (const codePattern of patterns.codes) {
-      if (code === codePattern.toLowerCase() || name === codePattern.toLowerCase()) return kind;
+      if (code === codePattern.toLowerCase() || name === codePattern.toLowerCase()) {
+        return kind;
+      }
     }
   }
 
   // Special case: TimeoutError name
-  if (name === 'timeouterror' || name === 'aborterror') return 'timeout';
+  if (name === 'timeouterror' || name === 'aborterror') {
+    return 'timeout';
+  }
 
   return undefined;
 }
@@ -110,14 +173,22 @@ function detectErrorKind(err) {
  * @returns {string|undefined}
  */
 function extractErrorCode(err) {
-  if (!err || typeof err !== 'object') return undefined;
+  if (!err || typeof err !== 'object') {
+    return undefined;
+  }
 
   const code = err.code;
-  if (typeof code === 'string' && code) return code;
-  if (typeof code === 'number') return String(code);
+  if (typeof code === 'string' && code) {
+    return code;
+  }
+  if (typeof code === 'number') {
+    return String(code);
+  }
 
   const status = err.status || err.statusCode;
-  if (typeof status === 'number') return String(status);
+  if (typeof status === 'number') {
+    return String(status);
+  }
 
   return undefined;
 }
@@ -145,17 +216,29 @@ function collectErrorCandidates(err) {
 
   while (queue.length > 0) {
     const current = queue.shift();
-    if (!current || typeof current !== 'object' || seen.has(current)) continue;
+    if (!current || typeof current !== 'object' || seen.has(current)) {
+      continue;
+    }
     seen.add(current);
     candidates.push(current);
 
     // Traverse known nesting properties
-    if (current.cause) queue.push(current.cause);
-    if (current.reason) queue.push(current.reason);
-    if (current.original) queue.push(current.original);
-    if (current.error) queue.push(current.error);
+    if (current.cause) {
+      queue.push(current.cause);
+    }
+    if (current.reason) {
+      queue.push(current.reason);
+    }
+    if (current.original) {
+      queue.push(current.original);
+    }
+    if (current.error) {
+      queue.push(current.error);
+    }
     if (Array.isArray(current.errors)) {
-      for (const e of current.errors) queue.push(e);
+      for (const e of current.errors) {
+        queue.push(e);
+      }
     }
   }
 
@@ -173,7 +256,9 @@ function detectErrorKindDeep(err) {
   const candidates = collectErrorCandidates(err);
   for (const candidate of candidates) {
     const kind = detectErrorKind(candidate);
-    if (kind) return kind;
+    if (kind) {
+      return kind;
+    }
   }
   return undefined;
 }
@@ -182,11 +267,11 @@ function detectErrorKindDeep(err) {
 
 // Patterns for sensitive data redaction
 const REDACT_PATTERNS = [
-  /\b(sk-[A-Za-z0-9_-]{8,})\b/g,                                          // OpenAI keys
-  /\b(ghp_[A-Za-z0-9]{20,})\b/g,                                          // GitHub PATs
-  /\b(gho_[A-Za-z0-9]{20,})\b/g,                                          // GitHub OAuth
-  /Authorization\s*[:=]\s*Bearer\s+([A-Za-z0-9._\-+=\/]{8,})/gi,          // Bearer tokens
-  /"(?:apiKey|token|secret|password|accessToken)"\s*:\s*"([^"]{8,})"/g,    // JSON credentials
+  /\b(sk-[A-Za-z0-9_-]{8,})\b/g, // OpenAI keys
+  /\b(ghp_[A-Za-z0-9]{20,})\b/g, // GitHub PATs
+  /\b(gho_[A-Za-z0-9]{20,})\b/g, // GitHub OAuth
+  /Authorization\s*[:=]\s*Bearer\s+([A-Za-z0-9._\-+=\/]{8,})/gi, // Bearer tokens
+  /"(?:apiKey|token|secret|password|accessToken)"\s*:\s*"([^"]{8,})"/g, // JSON credentials
   /\b[A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)\b\s*[=:]\s*["']?([^\s"']{8,})/gi, // ENV-style
 ];
 
@@ -195,12 +280,16 @@ const REDACT_PATTERNS = [
  * Shows first 6 + last 4 chars of detected secrets.
  */
 function redactSensitiveText(text) {
-  if (!text || typeof text !== 'string') return text || '';
+  if (!text || typeof text !== 'string') {
+    return text || '';
+  }
   let result = text;
   for (const pattern of REDACT_PATTERNS) {
     pattern.lastIndex = 0;
     result = result.replace(pattern, (match, token) => {
-      if (!token || token.length < 12) return match.replace(token, '***');
+      if (!token || token.length < 12) {
+        return match.replace(token, '***');
+      }
       return match.replace(token, `${token.slice(0, 6)}...${token.slice(-4)}`);
     });
   }
@@ -265,13 +354,19 @@ function formatUncaughtError(err) {
 // ── Internal Helpers ───────────────────────────────────────────────
 
 function _extractMessage(err) {
-  if (typeof err === 'string') return err;
-  if (err && typeof err === 'object') return String(err.message || err.msg || '');
+  if (typeof err === 'string') {
+    return err;
+  }
+  if (err && typeof err === 'object') {
+    return String(err.message || err.msg || '');
+  }
   return String(err || '');
 }
 
 function _readErrorName(err) {
-  if (err && typeof err === 'object' && typeof err.name === 'string') return err.name;
+  if (err && typeof err === 'object' && typeof err.name === 'string') {
+    return err.name;
+  }
   return '';
 }
 
@@ -327,11 +422,9 @@ class ErrorEnvelope {
     const category = _kindToCategory(kind);
     const recoverable = isRetryable(kind);
     const severity = recoverable ? SEVERITY.WARNING : SEVERITY.ERROR;
-    return new ErrorEnvelope(
-      category, severity, recoverable,
-      kind, formatErrorMessage(err),
-      { originalCode: extractErrorCode(err) }
-    );
+    return new ErrorEnvelope(category, severity, recoverable, kind, formatErrorMessage(err), {
+      originalCode: extractErrorCode(err),
+    });
   }
 
   /** 工厂：瞬态网络错误 */
@@ -379,20 +472,37 @@ class ErrorEnvelope {
 
 function _kindToCategory(kind) {
   switch (kind) {
-    case 'network': case 'timeout': return CATEGORY.NETWORK;
-    case 'auth': return CATEGORY.AUTH;
-    case 'rate_limit': case 'overloaded': return CATEGORY.RATE_LIMIT;
-    case 'context_length': return CATEGORY.CONTEXT;
-    case 'model_not_found': return CATEGORY.MODEL;
-    case 'billing': return CATEGORY.BILLING;
-    case 'permission': return CATEGORY.PERMISSION;
-    default: return CATEGORY.INTERNAL;
+    case 'network':
+    case 'timeout':
+      return CATEGORY.NETWORK;
+    case 'auth':
+      return CATEGORY.AUTH;
+    case 'rate_limit':
+    case 'overloaded':
+      return CATEGORY.RATE_LIMIT;
+    case 'context_length':
+      return CATEGORY.CONTEXT;
+    case 'model_not_found':
+      return CATEGORY.MODEL;
+    case 'billing':
+      return CATEGORY.BILLING;
+    case 'permission':
+      return CATEGORY.PERMISSION;
+    default:
+      return CATEGORY.INTERNAL;
   }
 }
 
 // ── High-Level Classification API ────────────────────────────────
 
-const RETRYABLE_KINDS = new Set(['timeout', 'network', 'rate_limit', 'overloaded', 'server_error', 'process']);
+const RETRYABLE_KINDS = new Set([
+  'timeout',
+  'network',
+  'rate_limit',
+  'overloaded',
+  'server_error',
+  'process',
+]);
 
 /**
  * Check if an error kind is retryable.
@@ -410,11 +520,15 @@ function isRetryable(kind) {
  */
 function suggestRecoveryAction(kind) {
   switch (kind) {
-    case 'context_length': return 'compress';
+    case 'context_length':
+      return 'compress';
     case 'rate_limit':
-    case 'billing':      return 'credential_rotate';
-    case 'model_not_found': return 'fallback_model';
-    case 'auth':          return 'reauth';
+    case 'billing':
+      return 'credential_rotate';
+    case 'model_not_found':
+      return 'fallback_model';
+    case 'auth':
+      return 'reauth';
     default:
       return isRetryable(kind) ? 'retry' : 'abort';
   }
@@ -466,10 +580,13 @@ const CONTENT_FILTERED_KINDS = new Set(['refusal']);
  * @property {string} action - Primary suggested recovery action
  */
 function classifyError(status, errorOrMessage = '') {
-  const errObj = (errorOrMessage && typeof errorOrMessage === 'object')
-    ? errorOrMessage
-    : { code: status, message: String(errorOrMessage || '') };
-  if (status && typeof errObj.code === 'undefined') errObj.code = status;
+  const errObj =
+    errorOrMessage && typeof errorOrMessage === 'object'
+      ? errorOrMessage
+      : { code: status, message: String(errorOrMessage || '') };
+  if (status && typeof errObj.code === 'undefined') {
+    errObj.code = status;
+  }
 
   const kind = detectErrorKindDeep(errObj) || 'unknown';
   return {
@@ -486,8 +603,13 @@ function classifyError(status, errorOrMessage = '') {
 // ── Auth Permanent Detection ──────────────────────────────────────
 
 const AUTH_PERMANENT_PATTERNS = [
-  /suspended/i, /banned/i, /locked/i, /deactivated/i,
-  /revoked/i, /invalid.?key/i, /terminated/i,
+  /suspended/i,
+  /banned/i,
+  /locked/i,
+  /deactivated/i,
+  /revoked/i,
+  /invalid.?key/i,
+  /terminated/i,
 ];
 
 /**
@@ -499,7 +621,72 @@ const AUTH_PERMANENT_PATTERNS = [
  * @returns {boolean}
  */
 function isAuthPermanent(message) {
-  return AUTH_PERMANENT_PATTERNS.some(p => p.test(String(message || '')));
+  return AUTH_PERMANENT_PATTERNS.some((p) => p.test(String(message || '')));
+}
+
+// ── Context Overflow Token Parsing ────────────────────────────────
+
+// Ordered provider-specific patterns first, generic variant last.
+// Each entry maps regex capture groups to { promptTokens, limitTokens }.
+const CONTEXT_OVERFLOW_PATTERNS = [
+  // Anthropic: "prompt is too long: 210000 tokens > 200000 maximum"
+  { re: /prompt is too long:\s*(\d+)\s*tokens?\s*>\s*(\d+)\s*maximum/i, prompt: 1, limit: 2 },
+  // OpenAI: "maximum context length is 128000 tokens ... resulted in 130000 tokens"
+  {
+    re: /maximum context length is\s*(\d+)\s*tokens[\s\S]*?resulted in\s*(\d+)\s*tokens/i,
+    prompt: 2,
+    limit: 1,
+  },
+  // Generic variant: "210000 tokens > 200000" — marked generic so the parser
+  // can apply an extra promptTokens > limitTokens sanity check on it.
+  { re: /(\d+)\s*tokens?\s*>\s*(\d+)/i, prompt: 1, limit: 2, generic: true },
+];
+
+/**
+ * Parse prompt/limit token counts out of a context-overflow error message.
+ * Fail-soft: returns null when the message does not match any known shape
+ * or the parsed numbers are not sane (non-finite, zero, or — for the generic
+ * "X tokens > Y" form only — prompt <= limit, which indicates a coincidental
+ * match rather than a real overflow).
+ *
+ * @param {string|Error} message - Error message or Error object
+ * @returns {{promptTokens: number, limitTokens: number}|null}
+ */
+function parseContextOverflowTokens(message) {
+  try {
+    const text =
+      message && typeof message === 'object'
+        ? String(message.message || '')
+        : String(message || '');
+    if (!text) {
+      return null;
+    }
+    for (const { re, prompt, limit, generic } of CONTEXT_OVERFLOW_PATTERNS) {
+      const m = text.match(re);
+      if (!m) {
+        continue;
+      }
+      const promptTokens = Number.parseInt(m[prompt], 10);
+      const limitTokens = Number.parseInt(m[limit], 10);
+      if (!Number.isFinite(promptTokens) || !Number.isFinite(limitTokens)) {
+        continue;
+      }
+      if (promptTokens <= 0 || limitTokens <= 0) {
+        continue;
+      }
+      // Sanity check for the generic pattern only: a real overflow implies
+      // promptTokens > limitTokens; anything else is a coincidental "X tokens
+      // > Y" match and must be treated as a parse failure. Provider-specific
+      // patterns are trusted as-is (their surrounding text disambiguates).
+      if (generic && promptTokens <= limitTokens) {
+        continue;
+      }
+      return { promptTokens, limitTokens };
+    }
+    return null;
+  } catch {
+    return null; // fail-soft: parsing must never throw
+  }
 }
 
 module.exports = {
@@ -516,6 +703,7 @@ module.exports = {
   isRetryable,
   suggestRecoveryAction,
   isAuthPermanent,
+  parseContextOverflowTokens,
   AUTH_PERMANENT_PATTERNS,
   ERROR_KIND_PATTERNS,
   RETRYABLE_KINDS,

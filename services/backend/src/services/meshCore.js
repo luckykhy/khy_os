@@ -23,7 +23,9 @@ const MAX_MESSAGE_CHARS = 8000;
 const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_MESH;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -35,11 +37,17 @@ function peerLabelsEnabled(env = process.env) {
   const e = env || {};
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_MESH_PEER_LABELS', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e.KHY_MESH_PEER_LABELS;
   return !(v !== undefined && v !== null && _FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -48,13 +56,18 @@ function peerLabelsEnabled(env = process.env) {
 function isValidId(id) {
   return typeof id === 'string' && ID_RE.test(id);
 }
+
 function normalizeId(id) {
   const s = String(id == null ? '' : id).trim();
   return ID_RE.test(s) ? s : null;
 }
+
 function normalizeName(name) {
-  return String(name == null ? '' : name).trim().slice(0, 64);
+  return String(name == null ? '' : name)
+    .trim()
+    .slice(0, 64);
 }
+
 function truncateMessage(text) {
   const s = String(text == null ? '' : text);
   return s.length > MAX_MESSAGE_CHARS ? `${s.slice(0, MAX_MESSAGE_CHARS)}…[truncated]` : s;
@@ -68,7 +81,10 @@ function truncateMessage(text) {
 function buildInstanceId(parts = {}) {
   const t = Number(parts.time) || 0;
   const pid = Number(parts.pid) || 0;
-  const rand = String(parts.rand || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 8) || '0';
+  const rand =
+    String(parts.rand || '')
+      .replace(/[^A-Za-z0-9]/g, '')
+      .slice(0, 8) || '0';
   const prefix = normalizeId(parts.prefix) ? `${parts.prefix}-` : 'khy-';
   return `${prefix}${t.toString(36)}-${pid.toString(36)}-${rand}`;
 }
@@ -82,10 +98,16 @@ function buildInstanceId(parts = {}) {
 function buildEnvelope(m = {}) {
   const from = normalizeId(m.from);
   const to = normalizeId(m.to);
-  if (!from) return { ok: false, error: `非法发送方 id「${m.from}」。` };
-  if (!to) return { ok: false, error: `非法接收方 id「${m.to}」。` };
+  if (!from) {
+    return { ok: false, error: `非法发送方 id「${m.from}」。` };
+  }
+  if (!to) {
+    return { ok: false, error: `非法接收方 id「${m.to}」。` };
+  }
   const text = String(m.text == null ? '' : m.text);
-  if (!text.trim()) return { ok: false, error: '消息内容不能为空。' };
+  if (!text.trim()) {
+    return { ok: false, error: '消息内容不能为空。' };
+  }
   return {
     ok: true,
     envelope: {
@@ -103,11 +125,17 @@ function buildEnvelope(m = {}) {
 /** 解析信箱里的一行 JSON 信封;损坏行 → null(fail-soft,绝不抛)。 */
 function parseEnvelopeLine(line) {
   const s = String(line == null ? '' : line).trim();
-  if (!s) return null;
+  if (!s) {
+    return null;
+  }
   try {
     const obj = JSON.parse(s);
-    if (!obj || typeof obj !== 'object') return null;
-    if (!isValidId(obj.from) || !isValidId(obj.to)) return null;
+    if (!obj || typeof obj !== 'object') {
+      return null;
+    }
+    if (!isValidId(obj.from) || !isValidId(obj.to)) {
+      return null;
+    }
     return {
       type: obj.type === 'message' ? 'message' : 'message',
       id: typeof obj.id === 'string' ? obj.id : '',
@@ -125,7 +153,9 @@ function parseEnvelopeLine(line) {
 /** cwd 的末段目录名(兼容 / 与 \\ 分隔)。空/无 → ''。 */
 function _cwdBasename(cwd) {
   const s = String(cwd == null ? '' : cwd).trim();
-  if (!s) return '';
+  if (!s) {
+    return '';
+  }
   const parts = s.split(/[\\/]+/).filter(Boolean);
   return parts.length ? parts[parts.length - 1] : s;
 }
@@ -147,15 +177,23 @@ function _shortId(id) {
 function _applyPeerLabels(out) {
   const base = out.map((p) => p.name || _cwdBasename(p.cwd));
   const freq = Object.create(null);
-  for (const b of base) { if (b) freq[b] = (freq[b] || 0) + 1; }
+  for (const b of base) {
+    if (b) {
+      freq[b] = (freq[b] || 0) + 1;
+    }
+  }
   const seen = Object.create(null);
   for (let i = 0; i < out.length; i += 1) {
     const p = out[i];
     const b = base[i];
     let label;
     if (b) {
-      if (freq[b] > 1) { seen[b] = (seen[b] || 0) + 1; label = `${b}#${seen[b]}`; }
-      else label = b;
+      if (freq[b] > 1) {
+        seen[b] = (seen[b] || 0) + 1;
+        label = `${b}#${seen[b]}`;
+      } else {
+        label = b;
+      }
     } else {
       label = _shortId(p.id);
     }
@@ -173,12 +211,17 @@ function _applyPeerLabels(out) {
  * @returns {Array<object>} 按 startedAt 升序、再按 id 升序
  */
 function shapePeers(records, opts = {}) {
-  if (!Array.isArray(records)) return [];
-  const inboxCounts = (opts.inboxCounts && typeof opts.inboxCounts === 'object') ? opts.inboxCounts : {};
+  if (!Array.isArray(records)) {
+    return [];
+  }
+  const inboxCounts =
+    opts.inboxCounts && typeof opts.inboxCounts === 'object' ? opts.inboxCounts : {};
   const selfId = normalizeId(opts.selfId);
   const out = [];
   for (const r of records) {
-    if (!r || typeof r !== 'object' || !isValidId(r.id)) continue;
+    if (!r || typeof r !== 'object' || !isValidId(r.id)) {
+      continue;
+    }
     out.push({
       id: r.id,
       name: r.name || '',
@@ -191,22 +234,30 @@ function shapePeers(records, opts = {}) {
     });
   }
   out.sort((a, b) => {
-    if (a.startedAt !== b.startedAt) return a.startedAt < b.startedAt ? -1 : 1;
+    if (a.startedAt !== b.startedAt) {
+      return a.startedAt < b.startedAt ? -1 : 1;
+    }
     return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   });
-  if (peerLabelsEnabled(opts.env)) _applyPeerLabels(out);
+  if (peerLabelsEnabled(opts.env)) {
+    _applyPeerLabels(out);
+  }
   return out;
 }
 
 function buildSendSummary(envelope) {
-  if (!envelope || !envelope.ok) return envelope && envelope.error ? envelope.error : '发送失败。';
+  if (!envelope || !envelope.ok) {
+    return envelope && envelope.error ? envelope.error : '发送失败。';
+  }
   const e = envelope.envelope;
   return `已发送给实例「${e.to}」(${e.text.length} 字)。对方下次 drain 信箱即可读到。`;
 }
 
 function buildPeersSummary(peers) {
   const n = Array.isArray(peers) ? peers.length : 0;
-  if (n === 0) return '当前没有其它在线的 khy 实例。';
+  if (n === 0) {
+    return '当前没有其它在线的 khy 实例。';
+  }
   return `当前在线 ${n} 个 khy 实例。`;
 }
 

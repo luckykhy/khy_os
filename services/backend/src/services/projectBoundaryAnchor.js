@@ -33,14 +33,21 @@ function projectBoundaryAnchorEnabled(env = process.env) {
     const e = env || {};
     try {
       const reg = require('./flagRegistry');
-      if (reg && typeof reg.isRegistryEnabled === 'function'
-        && typeof reg.isFlagEnabled === 'function'
-        && reg.isRegistryEnabled(e)) {
+      if (
+        reg &&
+        typeof reg.isRegistryEnabled === 'function' &&
+        typeof reg.isFlagEnabled === 'function' &&
+        reg.isRegistryEnabled(e)
+      ) {
         return reg.isFlagEnabled('KHY_PROJECT_BOUNDARY_ANCHOR', e);
       }
-    } catch { /* fall through to local parse */ }
+    } catch {
+      /* fall through to local parse */
+    }
     const raw = e.KHY_PROJECT_BOUNDARY_ANCHOR;
-    const v = String(raw == null ? '' : raw).trim().toLowerCase();
+    const v = String(raw == null ? '' : raw)
+      .trim()
+      .toLowerCase();
     return !OFF_VALUES.includes(v);
   } catch {
     return false;
@@ -59,9 +66,13 @@ function projectBoundaryAnchorEnabled(env = process.env) {
  */
 function anchorWithinBase(resolved, base, sep, env = process.env) {
   try {
-    if (!projectBoundaryAnchorEnabled(env)) return null;
-    if (typeof resolved !== 'string' || typeof base !== 'string') return null;
-    const s = (typeof sep === 'string' && sep) ? sep : '/';
+    if (!projectBoundaryAnchorEnabled(env)) {
+      return null;
+    }
+    if (typeof resolved !== 'string' || typeof base !== 'string') {
+      return null;
+    }
+    const s = typeof sep === 'string' && sep ? sep : '/';
     return resolved === base || resolved.startsWith(base + s);
   } catch {
     return null;

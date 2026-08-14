@@ -18,6 +18,8 @@ const guard = require('../src/services/answerEchoGuard');
 const {
   isEnabled, isSuppressEnabled, normalize, isSubstantive, isEcho,
   shouldSuppressSoftRedrive, DEFAULT_MIN_CHARS, DEFAULT_ECHO_RATIO,
+  DEFAULT_JACCARD_THRESHOLD, JACCARD_LEN_RATIO_MIN, JACCARD_LEN_RATIO_MAX,
+  JACCARD_MIN_TOKENS,
 } = guard;
 
 function run(name, fn) {
@@ -127,6 +129,56 @@ results.push(run('isEcho: empty fp / empty history → false', () => {
   assert.strictEqual(isEcho('x', null), false);
 }));
 
+// ── isEcho · word-level Jaccard paraphrase detection ─────────────────────────
+results.push(run('isEcho: Jaccard constants exported with the shipped values', () => {
+  assert.strictEqual(DEFAULT_JACCARD_THRESHOLD, 0.7);
+  assert.strictEqual(JACCARD_LEN_RATIO_MIN, 0.6);
+  assert.strictEqual(JACCARD_LEN_RATIO_MAX, 1.7);
+  assert.strictEqual(JACCARD_MIN_TOKENS, 12);
+}));
+
+results.push(run('isEcho: Chinese paraphrase (same meaning, different wording) hits via Jaccard', () => {
+  // Two 50+ char rewrites of the same conclusion: heavy shared vocabulary,
+  // different sentence order, neither contains the other verbatim, similar
+  // length — exact/containment miss, the Jaccard branch must catch it.
+  const a = normalize('这次修复的核心在于网关在重试之前会先发送一帧重置信号，让消费端丢弃已经流式输出的草稿内容，从而避免同一个答案重复输出两遍');
+  const b = normalize('修复的核心是：网关重试前先发送重置信号一帧，消费端据此丢弃已流式输出的草稿内容，同一个答案因而避免了被重复输出两遍的问题');
+  assert.ok(a.length >= 50 && b.length >= 50, 'both rewrites are 50+ chars');
+  assert.ok(!a.includes(b) && !b.includes(a), 'neither contains the other (containment path must miss)');
+  assert.strictEqual(isEcho(b, [a]), true, 'paraphrase echo caught by Jaccard branch');
+}));
+
+results.push(run('isEcho: Jaccard length-ratio guardrail — ratio outside 0.6-1.7 → false', () => {
+  // Identical token SET (Jaccard = 1.0) but fp is ~2x prev → a genuine
+  // "expand/continue" shape; the length-ratio window must veto the hit.
+  const prev = normalize('一二三四五六七八九十百千万东南西北中春夏秋');
+  const fp = prev + Array.from(prev).reverse().join('');
+  assert.ok(fp.length / prev.length > JACCARD_LEN_RATIO_MAX, 'ratio above upper bound');
+  assert.strictEqual(isEcho(fp, [prev]), false, 'longer rewrite is genuinely more content');
+  // Mirror direction: fp much shorter than prev → below lower bound → false.
+  assert.ok(prev.length / fp.length < JACCARD_LEN_RATIO_MIN, 'ratio below lower bound');
+  assert.strictEqual(isEcho(prev, [fp]), false, 'shorter reply never flagged against a long answer');
+}));
+
+results.push(run('isEcho: Jaccard min-token guardrail — both sides < 12 tokens → false', () => {
+  // 10 CJK tokens each, identical token set (Jaccard = 1.0), reversed order so
+  // exact/containment both miss — the token floor alone must reject the pair.
+  const a = '甲乙丙丁戊己庚辛壬癸';
+  const b = Array.from(a).reverse().join('');
+  assert.ok(a.length < JACCARD_MIN_TOKENS, 'sample below token floor');
+  assert.strictEqual(isEcho(b, [a]), false, 'short char-set overlap never flags');
+}));
+
+results.push(run('isEcho: jaccard threshold adjustable via opts — 0.75 pair hits at default 0.7, misses at 0.8', () => {
+  // Deterministic Jaccard = 18/24 = 0.75: 21 unique CJK tokens each side,
+  // 18 shared + 3 exclusive; equal length keeps the ratio guardrail neutral.
+  const shared = '一二三四五六七八九十百千万东南西北中';
+  const a = shared + '春夏秋';
+  const b = shared + '金木水';
+  assert.strictEqual(isEcho(b, [a]), true, 'default threshold 0.7 catches the 0.75 pair');
+  assert.strictEqual(isEcho(b, [a], { jaccard: 0.8 }), false, 'opts.jaccard=0.8 raises the bar past 0.75');
+}));
+
 // ── shouldSuppressSoftRedrive truth table ───────────────────────────────────
 const substantive = '这是一段足够长的实质性回答内容用于测试软门抑制的判定逻辑是否正确无误';
 results.push(run('shouldSuppressSoftRedrive: streamed + 0 tools + substantive + not placeholder → true', () => {
@@ -158,6 +210,42 @@ results.push(run('process.env default-on through flagRegistry', () => {
     assert.strictEqual(isEnabled(process.env), true);
     assert.strictEqual(isSuppressEnabled(process.env), true);
   });
+}));
+
+results.push(run('isEcho: progressive redriveCount relaxation catches a re-worded lead-in on the 2nd+ re-drive', () => {
+  // Deterministic Jaccard = 10/30 = 0.333: 20 CJK tokens each side, 10 shared +
+  // 10 exclusive, equal length keeps the ratio guardrail neutral. This models a
+  // re-driven answer whose different lead-in dragged similarity below the base
+  // threshold. Base 0.7 and the 1st re-drive (0.5) both miss; the 2nd+ (0.3) hits.
+  const shared = '一二三四五六七八九十';
+  const a = shared + '甲乙丙丁戊己庚辛壬癸';
+  const b = shared + '子丑寅卯辰巳午未申酉';
+  assert.strictEqual(isEcho(b, [a]), false, 'default 0.7 misses the 0.333 pair');
+  assert.strictEqual(isEcho(b, [a], { redriveCount: 1 }), false, '1st re-drive (0.5) still misses');
+  assert.strictEqual(isEcho(b, [a], { redriveCount: 2 }), true, '2nd+ re-drive (0.3) catches the near-duplicate');
+}));
+
+results.push(run('shouldSuppressSoftRedrive: non-streaming delivered + 0 tools + substantive → true', () => {
+  // Weak/non-streaming path: streamed stays false forever, but delivered=true
+  // (turn issued zero tool calls → final answer printed once) must still suppress.
+  assert.strictEqual(shouldSuppressSoftRedrive(
+    { streamed: false, delivered: true, iterationToolCalls: 0, reply: substantive, placeholder: false }, {}), true);
+  // delivered but with tool calls → not a final answer → not suppressed.
+  assert.strictEqual(shouldSuppressSoftRedrive(
+    { streamed: false, delivered: true, iterationToolCalls: 1, reply: substantive }, {}), false, 'delivered + tools');
+}));
+
+results.push(run('isEcho: Japanese kana rewrite participates in Jaccard (kana range in tokenizer)', () => {
+  // task #7 regression: _tokenize now covers Hiragana+Katakana (\u3040-\u30ff),
+  // matching toolLoopDetector._isCjkChar. Two 14-kana strings share 12 tokens
+  // (Jaccard 12/16 = 0.75 ≥ 0.7), equal length, neither contains the other, so
+  // exact/containment miss and only the Jaccard branch can catch it. Before the
+  // fix pure kana produced zero tokens → the min-token floor vetoed the pair.
+  const shared = 'あいうえおかきくけこさし';
+  const a = shared + 'すせ';
+  const b = shared + 'そた';
+  assert.ok(!a.includes(b) && !b.includes(a), 'neither contains the other');
+  assert.strictEqual(isEcho(b, [a]), true, 'kana tokens (0.75 Jaccard) caught');
 }));
 
 const failed = results.filter((r) => !r).length;

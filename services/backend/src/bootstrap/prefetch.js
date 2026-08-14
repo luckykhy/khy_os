@@ -33,7 +33,9 @@ async function parallelPrefetch(options = {}) {
       try {
         const hw = require('../services/hardwareProfileService');
         hw.detectProfile();
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     })()
   );
 
@@ -44,7 +46,9 @@ async function parallelPrefetch(options = {}) {
         try {
           const networkDetector = require('../services/networkDetector');
           await networkDetector.init();
-        } catch { /* non-critical */ }
+        } catch {
+          /* non-critical */
+        }
       })()
     );
 
@@ -54,7 +58,9 @@ async function parallelPrefetch(options = {}) {
         try {
           const cache = require('../services/cacheService');
           await cache.getStats();
-        } catch { /* non-critical */ }
+        } catch {
+          /* non-critical */
+        }
       })()
     );
   }
@@ -68,7 +74,9 @@ async function parallelPrefetch(options = {}) {
     ensureSessionTmpDir();
     const { addShutdownHook } = require('./shutdown');
     addShutdownHook('session-tmpdir', cleanupSessionTmpDir);
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 /**
@@ -86,7 +94,9 @@ function deferredPrefetch(options = {}) {
   const timers = [];
   const busy = () => (typeof isBusy === 'function' ? isBusy() : false);
   const emit = (msg) => {
-    if (typeof onOutput === 'function' && !busy()) onOutput(msg);
+    if (typeof onOutput === 'function' && !busy()) {
+      onOutput(msg);
+    }
   };
 
   // Apply hardware-derived runtime limits SYNCHRONOUSLY up front (idempotent;
@@ -96,7 +106,9 @@ function deferredPrefetch(options = {}) {
   // deferred call that emits the lightweight notice is effectively free.
   try {
     require('../services/hardwareProfileService').applyLimits();
-  } catch { /* non-critical — falls back to fixed defaults */ }
+  } catch {
+    /* non-critical — falls back to fixed defaults */
+  }
 
   // 生命周期策略驱动(操作化):策略决定「跑什么 / 何时 / 是否启用」,本模块只持有「怎么跑」。
   // RUNNERS 每个 body 与改造前的 setTimeout/setImmediate 回调逐字节一致;id 必须与
@@ -107,13 +119,16 @@ function deferredPrefetch(options = {}) {
     // ── Lightweight mode (khy):+300ms 预热 gateway(门判定保留在 body 内)──────
     gatewayWarmup: () => {
       try {
-        const shouldWarmGateway = String(
-          process.env.KHY_GATEWAY_WARMUP_ON_BOOT || 'true'
-        ).toLowerCase() !== 'false';
-        if (!shouldWarmGateway) return;
+        const shouldWarmGateway =
+          String(process.env.KHY_GATEWAY_WARMUP_ON_BOOT || 'true').toLowerCase() !== 'false';
+        if (!shouldWarmGateway) {
+          return;
+        }
         const gw = require('../services/gateway/aiGateway');
         gw.init().catch(() => {});
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // ── Full mode (khyquant): all deferred tasks ────────────────────────────
@@ -125,10 +140,18 @@ function deferredPrefetch(options = {}) {
         if (profile.isLightweight) {
           try {
             const chalk = require('chalk').default || require('chalk');
-            emit(chalk.dim(`  ℹ 轻量模式: ${profile.profile} (${profile.memory.totalGB}GB RAM, ${profile.cpu.cores} cores)`));
-          } catch { /* chalk not available */ }
+            emit(
+              chalk.dim(
+                `  ℹ 轻量模式: ${profile.profile} (${profile.memory.totalGB}GB RAM, ${profile.cpu.cores} cores)`
+              )
+            );
+          } catch {
+            /* chalk not available */
+          }
         }
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // 3s: Data cleanup + periodic cleanup
@@ -140,10 +163,18 @@ function deferredPrefetch(options = {}) {
         if (result.summary && result.summary.actions && result.summary.actions.length > 0) {
           try {
             const chalk = require('chalk').default || require('chalk');
-            emit(chalk.dim(`  ℹ 自动清理: ${result.summary.actions.join(', ')} (释放 ${result.summary.freedHuman})`));
-          } catch { /* chalk not available */ }
+            emit(
+              chalk.dim(
+                `  ℹ 自动清理: ${result.summary.actions.join(', ')} (释放 ${result.summary.freedHuman})`
+              )
+            );
+          } catch {
+            /* chalk not available */
+          }
         }
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // 4s: Resource guard memory monitor
@@ -151,7 +182,9 @@ function deferredPrefetch(options = {}) {
       try {
         const { startMemoryMonitor } = require('../services/resourceGuard');
         startMemoryMonitor();
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // 4s: Project memory prune
@@ -159,7 +192,9 @@ function deferredPrefetch(options = {}) {
       try {
         const { pruneProjects } = require('../services/projectMemoryService');
         pruneProjects();
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // 5s: File integrity check
@@ -172,9 +207,13 @@ function deferredPrefetch(options = {}) {
             const chalk = require('chalk').default || require('chalk');
             emit(chalk.red('  ⚠ 文件完整性校验异常 — 部分核心文件已被修改'));
             emit(chalk.dim('    运行 security 命令查看详情'));
-          } catch { /* chalk not available */ }
+          } catch {
+            /* chalk not available */
+          }
         }
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // 5s: Version update notice
@@ -186,9 +225,13 @@ function deferredPrefetch(options = {}) {
           try {
             const chalk = require('chalk').default || require('chalk');
             emit(chalk.yellow(`  🔄 ${notice}`));
-          } catch { /* chalk not available */ }
+          } catch {
+            /* chalk not available */
+          }
         }
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // 6s: IDE adapter recovery
@@ -201,9 +244,13 @@ function deferredPrefetch(options = {}) {
           try {
             const chalk = require('chalk').default || require('chalk');
             emit(chalk.dim(`  ℹ IDE 适配器: ${msg}`));
-          } catch { /* chalk not available */ }
+          } catch {
+            /* chalk not available */
+          }
         }
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // 8s: Skill learning suggestions
@@ -220,9 +267,13 @@ function deferredPrefetch(options = {}) {
             emit(chalk.dim(`     ${s.reason}`));
             emit(chalk.dim(`     → ${s.action}`));
             emit('');
-          } catch { /* chalk not available */ }
+          } catch {
+            /* chalk not available */
+          }
         }
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
 
     // Immediate: cloud sync + admin telemetry + security monitor
@@ -233,24 +284,32 @@ function deferredPrefetch(options = {}) {
           cloudSync.fetchRemoteConfig().catch(() => {});
           cloudSync.flushTelemetry().catch(() => {});
         }
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
 
       try {
         const adminSvc = require('../services/adminService');
         adminSvc.syncTelemetry().catch(() => {});
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
 
       try {
         const { startSecurityMonitor } = require('../services/securityGuardService');
         startSecurityMonitor();
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     },
   };
 
   // 由策略调度:immediate 条目走 setImmediate(不进 timers,与原语义一致);其余 setTimeout。
   for (const entry of policy.listStartupSchedule(process.env, mode)) {
     const run = RUNNERS[entry.id];
-    if (typeof run !== 'function') continue;
+    if (typeof run !== 'function') {
+      continue;
+    }
     if (entry.immediate) {
       setImmediate(run);
     } else {
@@ -259,7 +318,9 @@ function deferredPrefetch(options = {}) {
   }
 
   // 轻量模式历史上在发出 deferred:scheduled checkpoint 之前就 return;逐字节保留(仅完整模式标记)。
-  if (mode !== 'khy') checkpoint('prefetch:deferred:scheduled');
+  if (mode !== 'khy') {
+    checkpoint('prefetch:deferred:scheduled');
+  }
   return timers;
 }
 

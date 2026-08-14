@@ -36,7 +36,16 @@ describe('toolUseLoop guardrails', () => {
     process.env.KHY_TOOL_LOOP_MAX_MS = '5000';
     const toolUseLoop = require('../src/services/toolUseLoop');
 
-    let now = 0;
+    // Base the fake clock on the real one. Only the 6000 ms *delta* per call
+    // matters to this test, but starting from 0 put the whole process in 1970
+    // for as long as the spy was installed -- and runToolUseLoop lazily loads
+    // the shared winston logger inside that window (tools/index.js ->
+    // shellCommand.js -> gitOperationTracker.js -> utils/logger.js), so
+    // winston-daily-rotate-file named its files from epoch 0 and left
+    // app-1970-01-01.log / error-1970-01-01.log behind. The audit ledger proved
+    // it: those entries' timestamps were 30000 / 42000 / 48000, exact multiples
+    // of the 6000 step below.
+    let now = Date.now();
     jest.spyOn(Date, 'now').mockImplementation(() => {
       now += 6000;
       return now;

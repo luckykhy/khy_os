@@ -5,7 +5,6 @@
  * Can optionally filter by status.
  */
 const { BaseTool } = require('../_baseTool');
-
 const _taskStore = require('../_taskStore');
 
 class TaskListTool extends BaseTool {
@@ -16,8 +15,12 @@ class TaskListTool extends BaseTool {
   static searchHint = 'list tasks todo progress status';
   static alwaysLoad = true;
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return `List all tasks in the current session's task list.
@@ -66,7 +69,9 @@ Tips:
 
     const allTasks = _taskStore.list();
     for (const t of allTasks) {
-      if (stats[t.status] !== undefined) stats[t.status]++;
+      if (stats[t.status] !== undefined) {
+        stats[t.status]++;
+      }
     }
 
     return {

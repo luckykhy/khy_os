@@ -20,7 +20,9 @@
  * @returns {string} a safe, non-empty path segment
  */
 function slugifyToken(s) {
-  return String(s || 'default').replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 120);
+  return String(s || 'default')
+    .replace(/[^A-Za-z0-9_.-]/g, '_')
+    .slice(0, 120);
 }
 
 module.exports = slugifyToken;

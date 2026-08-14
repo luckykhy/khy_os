@@ -7,7 +7,9 @@ class McpAuthTool extends BaseTool {
   static aliases = ['mcp_auth', 'mcp_login'];
   static searchHint = 'mcp authenticate login oauth';
 
-  isConcurrencySafe() { return false; }
+  isConcurrencySafe() {
+    return false;
+  }
 
   prompt() {
     return `Authenticate with an MCP server that requires credentials.
@@ -19,7 +21,11 @@ Handles OAuth flows, API key setup, and token management for MCP servers.`;
       type: 'object',
       properties: {
         server_name: { type: 'string', description: 'Name of the MCP server to authenticate with' },
-        method: { type: 'string', description: 'Authentication method', enum: ['oauth', 'api_key', 'token'] },
+        method: {
+          type: 'string',
+          description: 'Authentication method',
+          enum: ['oauth', 'api_key', 'token'],
+        },
         credentials: { type: 'object', description: 'Credentials object (varies by method)' },
       },
       required: ['server_name'],

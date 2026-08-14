@@ -25,8 +25,24 @@
 
 // 太泛、单独出现不足以作为「覆盖匹配键」的 token(沿用 intentCoverage 的口径)。
 const GENERIC_KEYS = new Set([
-  'readme', 'index', 'main', 'test', 'tests', 'data', 'config', 'file',
-  'code', 'src', 'app', 'util', 'utils', 'lib', 'tmp', 'temp', 'log', 'logs',
+  'readme',
+  'index',
+  'main',
+  'test',
+  'tests',
+  'data',
+  'config',
+  'file',
+  'code',
+  'src',
+  'app',
+  'util',
+  'utils',
+  'lib',
+  'tmp',
+  'temp',
+  'log',
+  'logs',
 ]);
 
 const MAX_SIGNALS = 40;
@@ -34,50 +50,83 @@ const MAX_SIGNALS = 40;
 // 强错误关键词(ascii,词边界,大小写不敏感)。仅收高置信度报错措辞,不收 undefined/null
 // 等过泛词,避免在普通散文里误判。
 const ASCII_INDICATORS = [
-  'error', 'errors', 'failed', 'failing', 'failure', 'exception',
-  'panic', 'fatal', 'traceback', 'unhandled', 'rejected', 'refused',
-  'timeout', 'timed out', 'cannot find', 'cannot read', 'cannot resolve',
-  'not found', 'no such file', 'is not defined', 'is not a function',
-  'unknown error', 'segmentation fault', 'stack overflow', 'crash', 'crashed',
-  'denied', 'forbidden', 'unauthorized',
+  'error',
+  'errors',
+  'failed',
+  'failing',
+  'failure',
+  'exception',
+  'panic',
+  'fatal',
+  'traceback',
+  'unhandled',
+  'rejected',
+  'refused',
+  'timeout',
+  'timed out',
+  'cannot find',
+  'cannot read',
+  'cannot resolve',
+  'not found',
+  'no such file',
+  'is not defined',
+  'is not a function',
+  'unknown error',
+  'segmentation fault',
+  'stack overflow',
+  'crash',
+  'crashed',
+  'denied',
+  'forbidden',
+  'unauthorized',
 ];
 const ASCII_INDICATOR_RE = new RegExp(
-  '\\b(?:' + ASCII_INDICATORS.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b',
-  'i',
+  '\\b(?:' +
+    ASCII_INDICATORS.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') +
+    ')\\b',
+  'i'
 );
 // 命名异常 / 错误类型(TypeError / ReferenceError / FooException…)。
 const ERR_TYPE_RE = /\b[A-Z][A-Za-z]*(?:Error|Exception)\b/g;
 // node/posix 错误码。
-const ERR_CODE_RE = /\b(?:MODULE_NOT_FOUND|ENOENT|EACCES|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EADDRINUSE|EPERM|ENOTFOUND|EISDIR|ENOTDIR)\b/g;
+const ERR_CODE_RE =
+  /\b(?:MODULE_NOT_FOUND|ENOENT|EACCES|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EADDRINUSE|EPERM|ENOTFOUND|EISDIR|ENOTDIR)\b/g;
 // 中文报错关键词。
 const ZH_INDICATOR_RE = /(错误|报错|失败|异常|崩溃|超时|拒绝|无法|找不到|未找到|不存在)/;
 // HTTP 4xx/5xx —— 仅在明确「状态码/code/http」语境下,避免把端口/行号当错误码。
-const HTTP_STATUS_RE = /(?:status(?:\s*code)?|http|code|状态码?)\D{0,6}([45]\d\d)\b/ig;
+const HTTP_STATUS_RE = /(?:status(?:\s*code)?|http|code|状态码?)\D{0,6}([45]\d\d)\b/gi;
 // 文件引用(路径或带扩展名,允许 :行号)。
 // 路径分量有界 {1,255}(文件系统单分量硬上限)防灾难性回溯 ReDoS:嵌套
 // `(?:[…]+[/\\])+[…]+` 里贪婪 `+` 段在超长无分隔串(粘贴乱码)上 O(n²) 挂死
 // 事件循环(_keysFromErrorLine 对单行跑·可达自 originalUserMessage)。
 // 对一切真实路径逐字节等价。门控关时回退无界形态(见 _pathRe / KHY_ERROR_PATH_REDOS_GUARD)。
-const PATH_RE_BOUNDED = /(?:[A-Za-z0-9_.\-]{1,255}[\/\\])+[A-Za-z0-9_.\-]{1,255}(?::\d+)?|\b[A-Za-z0-9_\-]{1,255}\.[A-Za-z0-9]{1,8}(?::\d+)?\b/g;
-const PATH_RE = /(?:[A-Za-z0-9_.\-]+[\/\\])+[A-Za-z0-9_.\-]+(?::\d+)?|\b[A-Za-z0-9_\-]+\.[A-Za-z0-9]{1,8}(?::\d+)?\b/g;
+const PATH_RE_BOUNDED =
+  /(?:[A-Za-z0-9_.\-]{1,255}[\/\\])+[A-Za-z0-9_.\-]{1,255}(?::\d+)?|\b[A-Za-z0-9_\-]{1,255}\.[A-Za-z0-9]{1,8}(?::\d+)?\b/g;
+const PATH_RE =
+  /(?:[A-Za-z0-9_.\-]+[\/\\])+[A-Za-z0-9_.\-]+(?::\d+)?|\b[A-Za-z0-9_\-]+\.[A-Za-z0-9]{1,8}(?::\d+)?\b/g;
 // 引号内字面(模块名 / 符号)。
 const QUOTE_RE = /['"`「『]([^'"`」』\n]{2,60})['"`」』]/g;
 // 诊断/修复任务的意图措辞。
-const FIX_INTENT_RE = /(诊断|修复|排查|解决|报错|错误清单|日志|stack ?trace|traceback|fix|debug|diagnose|troubleshoot|error log)/i;
+const FIX_INTENT_RE =
+  /(诊断|修复|排查|解决|报错|错误清单|日志|stack ?trace|traceback|fix|debug|diagnose|troubleshoot|error log)/i;
 
 // 收敛到 utils/toLowerCaseSafe 单一真源(逐字节委托,调用点不变)
 const _norm = require('../utils/toLowerCaseSafe');
 
 function _enabled() {
   return !['0', 'false', 'off', 'no'].includes(
-    String(process.env.KHY_ERROR_ENUMERATION || '').trim().toLowerCase(),
+    String(process.env.KHY_ERROR_ENUMERATION || '')
+      .trim()
+      .toLowerCase()
   );
 }
 
 // 路径正则 ReDoS 有界守卫默认开;仅 {0,false,off,no} 关闭走无界字节回退。
 function _pathRedosGuardEnabled() {
   return !['0', 'false', 'off', 'no'].includes(
-    String(process.env.KHY_ERROR_PATH_REDOS_GUARD || '').trim().toLowerCase(),
+    String(process.env.KHY_ERROR_PATH_REDOS_GUARD || '')
+      .trim()
+      .toLowerCase()
   );
 }
 
@@ -88,18 +137,30 @@ function _pathRe() {
 }
 
 function _lineHasErrorIndicator(line) {
-  if (ASCII_INDICATOR_RE.test(line)) return true;
-  if (ZH_INDICATOR_RE.test(line)) return true;
+  if (ASCII_INDICATOR_RE.test(line)) {
+    return true;
+  }
+  if (ZH_INDICATOR_RE.test(line)) {
+    return true;
+  }
   ERR_TYPE_RE.lastIndex = 0;
-  if (ERR_TYPE_RE.test(line)) return true;
+  if (ERR_TYPE_RE.test(line)) {
+    return true;
+  }
   ERR_CODE_RE.lastIndex = 0;
-  if (ERR_CODE_RE.test(line)) return true;
+  if (ERR_CODE_RE.test(line)) {
+    return true;
+  }
   return false;
 }
 
 function _severityOf(line) {
-  if (/(panic|fatal|crash|segmentation|critical|崩溃|严重|致命)/i.test(line)) return 'high';
-  if (/(warn|warning|deprecat|notice|警告)/i.test(line)) return 'low';
+  if (/(panic|fatal|crash|segmentation|critical|崩溃|严重|致命)/i.test(line)) {
+    return 'high';
+  }
+  if (/(warn|warning|deprecat|notice|警告)/i.test(line)) {
+    return 'low';
+  }
   return 'medium';
 }
 
@@ -110,29 +171,41 @@ function _keysFromErrorLine(line) {
   const keys = [];
   const push = (k) => {
     const n = _norm(k).trim();
-    if (n && n.length >= 2 && !keys.includes(n) && !GENERIC_KEYS.has(n)) keys.push(n);
+    if (n && n.length >= 2 && !keys.includes(n) && !GENERIC_KEYS.has(n)) {
+      keys.push(n);
+    }
   };
   let m;
 
   ERR_TYPE_RE.lastIndex = 0;
-  while ((m = ERR_TYPE_RE.exec(line)) !== null) push(m[0]);
+  while ((m = ERR_TYPE_RE.exec(line)) !== null) {
+    push(m[0]);
+  }
 
   ERR_CODE_RE.lastIndex = 0;
-  while ((m = ERR_CODE_RE.exec(line)) !== null) push(m[0]);
+  while ((m = ERR_CODE_RE.exec(line)) !== null) {
+    push(m[0]);
+  }
 
   HTTP_STATUS_RE.lastIndex = 0;
-  while ((m = HTTP_STATUS_RE.exec(line)) !== null) push(m[1]);
+  while ((m = HTTP_STATUS_RE.exec(line)) !== null) {
+    push(m[1]);
+  }
 
   const pathRe = _pathRe();
   while ((m = pathRe.exec(line)) !== null) {
     const tok = m[0];
     push(tok);
     const base = tok.split(/[\/\\]/).pop();
-    if (base && base !== tok) push(base);
+    if (base && base !== tok) {
+      push(base);
+    }
   }
 
   QUOTE_RE.lastIndex = 0;
-  while ((m = QUOTE_RE.exec(line)) !== null) push(m[1].trim());
+  while ((m = QUOTE_RE.exec(line)) !== null) {
+    push(m[1].trim());
+  }
 
   return keys;
 }
@@ -144,18 +217,26 @@ function _keysFromErrorLine(line) {
  */
 function extractErrorSignals(text) {
   const raw = String(text == null ? '' : text);
-  if (!raw.trim()) return [];
+  if (!raw.trim()) {
+    return [];
+  }
   const lines = raw.split(/\r\n|\r|\n/);
   const signals = [];
   const seen = new Set();
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (!_lineHasErrorIndicator(trimmed)) continue;
+    if (!trimmed) {
+      continue;
+    }
+    if (!_lineHasErrorIndicator(trimmed)) {
+      continue;
+    }
     const keys = _keysFromErrorLine(trimmed);
     // 去重签名:有锚点按锚点,无锚点按行 gist。
     const sig = keys.length ? keys.slice().sort().join('|') : _norm(trimmed).slice(0, 80);
-    if (seen.has(sig)) continue;
+    if (seen.has(sig)) {
+      continue;
+    }
     seen.add(sig);
     signals.push({
       id: 'E' + (signals.length + 1),
@@ -163,7 +244,9 @@ function extractErrorSignals(text) {
       keys,
       severity: _severityOf(trimmed),
     });
-    if (signals.length >= MAX_SIGNALS) break;
+    if (signals.length >= MAX_SIGNALS) {
+      break;
+    }
   }
   return signals;
 }
@@ -186,7 +269,9 @@ function assessDiagnoseFixTask(input = {}) {
  */
 function buildEnumerationDirective(assessment) {
   const a = assessment || {};
-  if (!a.isDiagnoseFix) return '';
+  if (!a.isDiagnoseFix) {
+    return '';
+  }
   const n = a.count || (Array.isArray(a.signals) ? a.signals.length : 0);
   return [
     '[SYSTEM: 这是一个多错误诊断/修复任务(已确定性识别到至少 ' + n + ' 条错误信号)。',
@@ -209,10 +294,16 @@ function buildEnumerationDirective(assessment) {
 function routeErrorEnumeration(input = {}) {
   const empty = { directive: '', signals: [], count: 0 };
   try {
-    if (!_enabled()) return empty;
-    if (input && input.hasMedia) return empty; // 多模态另有路由,不介入
+    if (!_enabled()) {
+      return empty;
+    }
+    if (input && input.hasMedia) {
+      return empty;
+    } // 多模态另有路由,不介入
     const a = assessDiagnoseFixTask({ text: input && input.text });
-    if (!a.isDiagnoseFix) return { directive: '', signals: a.signals, count: a.count };
+    if (!a.isDiagnoseFix) {
+      return { directive: '', signals: a.signals, count: a.count };
+    }
     return { directive: buildEnumerationDirective(a), signals: a.signals, count: a.count };
   } catch {
     return empty; // fail-soft
@@ -222,9 +313,15 @@ function routeErrorEnumeration(input = {}) {
 // 回复像在向用户反问/澄清 —— 有意暂停而非漏修,绝不追问(沿用 intentCoverage)。
 function _looksLikeClarification(reply) {
   const r = String(reply || '').trim();
-  if (!r) return false;
-  if (/[?？]\s*$/.test(r)) return true;
-  return /(请问|请先确认|需要我先|你是想|是否需要|哪一个|澄清一下|which (one|of)|could you clarify|do you want me to|should i)\b/i.test(r);
+  if (!r) {
+    return false;
+  }
+  if (/[?？]\s*$/.test(r)) {
+    return true;
+  }
+  return /(请问|请先确认|需要我先|你是想|是否需要|哪一个|澄清一下|which (one|of)|could you clarify|do you want me to|should i)\b/i.test(
+    r
+  );
 }
 
 /**
@@ -237,17 +334,30 @@ function _looksLikeClarification(reply) {
 function assessErrorCoverage(input = {}) {
   const reply = String(input && input.reply != null ? input.reply : '');
   const extra = String(input && input.extraCoveredText != null ? input.extraCoveredText : '');
-  const signals = (Array.isArray(input && input.signals) && input.signals.length)
-    ? input.signals
-    : extractErrorSignals(input && input.logText);
+  const signals =
+    Array.isArray(input && input.signals) && input.signals.length
+      ? input.signals
+      : extractErrorSignals(input && input.logText);
 
   const errorsInLog = signals.map((s) => (s && s.label) || '');
-  const empty = { shouldNudge: false, missing: [], checked: 0, errorsInLog, coverageComplete: true };
-  if (!reply.trim()) return empty;
-  if (_looksLikeClarification(reply)) return empty;
+  const empty = {
+    shouldNudge: false,
+    missing: [],
+    checked: 0,
+    errorsInLog,
+    coverageComplete: true,
+  };
+  if (!reply.trim()) {
+    return empty;
+  }
+  if (_looksLikeClarification(reply)) {
+    return empty;
+  }
 
   const checkable = signals.filter((s) => s && Array.isArray(s.keys) && s.keys.length);
-  if (checkable.length === 0) return empty;
+  if (checkable.length === 0) {
+    return empty;
+  }
 
   const haystack = _norm(reply + '\n' + extra);
   const missing = checkable.filter((s) => !s.keys.some((k) => haystack.includes(k)));
@@ -267,9 +377,14 @@ function assessErrorCoverage(input = {}) {
  */
 function buildErrorCoverageNudge(missing) {
   const items = (Array.isArray(missing) ? missing : []).filter(Boolean);
-  if (!items.length) return '';
+  if (!items.length) {
+    return '';
+  }
   const bullet = items
-    .map((m, i) => `${i + 1}. ${String((m && m.label) || (m && m.keys && m.keys[0]) || '').slice(0, 120)}`)
+    .map(
+      (m, i) =>
+        `${i + 1}. ${String((m && m.label) || (m && m.keys && m.keys[0]) || '').slice(0, 120)}`
+    )
     .join('\n');
   return [
     '[SYSTEM: 覆盖回核(确定性):日志里下面这些错误在你的回复中完全没被提及,疑似漏修:',

@@ -24,10 +24,18 @@ let sendError = null;
 let parseBody = null;
 let authenticateRequest = null;
 function setProjectsDeps(deps = {}) {
-  if (typeof deps.sendJson === 'function') sendJson = deps.sendJson;
-  if (typeof deps.sendError === 'function') sendError = deps.sendError;
-  if (typeof deps.parseBody === 'function') parseBody = deps.parseBody;
-  if (typeof deps.authenticateRequest === 'function') authenticateRequest = deps.authenticateRequest;
+  if (typeof deps.sendJson === 'function') {
+    sendJson = deps.sendJson;
+  }
+  if (typeof deps.sendError === 'function') {
+    sendError = deps.sendError;
+  }
+  if (typeof deps.parseBody === 'function') {
+    parseBody = deps.parseBody;
+  }
+  if (typeof deps.authenticateRequest === 'function') {
+    authenticateRequest = deps.authenticateRequest;
+  }
 }
 
 // Per-user coding projects (named multi-folder workspaces). Lazy-required so
@@ -35,7 +43,9 @@ function setProjectsDeps(deps = {}) {
 // idiom; mirrors getConversationStore in the sibling leaf).
 let _projectStore = null;
 function getProjectStore() {
-  if (!_projectStore) _projectStore = require('./projectStore');
+  if (!_projectStore) {
+    _projectStore = require('./projectStore');
+  }
   return _projectStore;
 }
 
@@ -43,9 +53,12 @@ function getProjectStore() {
 // Sends a 401 envelope and returns null when auth fails; legitimate id 0 passes.
 // Same contract as the conversations leaf's resolveAuthUserId.
 async function resolveAuthUserId(req, res) {
-  const auth = req.authContext || await authenticateRequest(req);
+  const auth = req.authContext || (await authenticateRequest(req));
   if (!auth || !auth.ok) {
-    sendJson(res, 401, { success: false, message: (auth && auth.error) || 'Authentication required' });
+    sendJson(res, 401, {
+      success: false,
+      message: (auth && auth.error) || 'Authentication required',
+    });
     return null;
   }
   return auth.user?.id ?? 0;
@@ -53,9 +66,14 @@ async function resolveAuthUserId(req, res) {
 
 async function handleListProjects(req, res, query) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
-    const includeArchived = !!(query && (query.includeArchived === '1' || query.includeArchived === 'true'));
+    const includeArchived = !!(
+      query &&
+      (query.includeArchived === '1' || query.includeArchived === 'true')
+    );
     const data = await getProjectStore().list(userId, { includeArchived });
     sendJson(res, 200, { success: true, data });
   } catch (err) {
@@ -65,7 +83,9 @@ async function handleListProjects(req, res, query) {
 
 async function handleCreateProject(req, res) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req);
     const data = await getProjectStore().create(userId, body || {});
@@ -77,7 +97,9 @@ async function handleCreateProject(req, res) {
 
 async function handleGetProject(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = await getProjectStore().get(userId, id);
     sendJson(res, 200, { success: true, data });
@@ -88,7 +110,9 @@ async function handleGetProject(req, res, id) {
 
 async function handleUpdateProject(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req);
     const data = await getProjectStore().update(userId, id, body || {});
@@ -100,7 +124,9 @@ async function handleUpdateProject(req, res, id) {
 
 async function handleDeleteProject(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const data = await getProjectStore().remove(userId, id);
     sendJson(res, 200, { success: true, data });
@@ -113,13 +139,16 @@ async function handleDeleteProject(req, res, id) {
 // absent) archives. Thin wrapper over the store's archive/restore guards.
 async function handleArchiveProject(req, res, id) {
   const userId = await resolveAuthUserId(req, res);
-  if (userId === null) return;
+  if (userId === null) {
+    return;
+  }
   try {
     const body = await parseBody(req).catch(() => ({}));
     const store = getProjectStore();
-    const data = body && body.archived === false
-      ? await store.restore(userId, id)
-      : await store.archive(userId, id);
+    const data =
+      body && body.archived === false
+        ? await store.restore(userId, id)
+        : await store.archive(userId, id);
     sendJson(res, 200, { success: true, data });
   } catch (err) {
     sendError(res, err.statusCode || 500, err.message || 'Failed to archive project');

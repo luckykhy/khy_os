@@ -18,6 +18,11 @@ function clearImgEnv() {
   for (const k of Object.keys(process.env)) {
     if (k.startsWith('KHY_IMAGE_GEN_') || k.startsWith('GATEWAY_IMAGE_GEN_')) delete process.env[k];
   }
+  // imageGenService falls back to the shared chat-provider keys for SenseNova /
+  // StepFun — a live khy session leaks them into every "nothing configured"
+  // assertion, so clear them here too.
+  delete process.env.SENSENOVA_API_KEY;
+  delete process.env.STEPFUN_API_KEY;
 }
 
 beforeEach(() => {
@@ -60,8 +65,16 @@ describe('Agnes image backend resolution', () => {
     expect(svc.backendSupportsEdit('openai')).toBe(false);
   });
 
-  test('auto-detect precedence openai > agnes', () => {
+  test('auto-detect precedence agnes > openai (cost-effective order)', () => {
     process.env.KHY_IMAGE_GEN_AGNES_API_KEY = 'sk-agnes';
+    process.env.KHY_IMAGE_GEN_OPENAI_BASE_URL = 'https://o.example/v1';
+    process.env.KHY_IMAGE_GEN_OPENAI_API_KEY = 'k';
+    const svc = require(SERVICE);
+    // AUTO_ORDER = [sensenova, agnes, stepfun, openai, ...] — agnes (free) wins.
+    expect(svc.resolveBackend()).toBe('agnes');
+  });
+
+  test('auto-detect uses openai when it is the only configured backend', () => {
     process.env.KHY_IMAGE_GEN_OPENAI_BASE_URL = 'https://o.example/v1';
     process.env.KHY_IMAGE_GEN_OPENAI_API_KEY = 'k';
     const svc = require(SERVICE);
@@ -89,6 +102,9 @@ describe('Agnes image backend (mocked fetch)', () => {
   test('text-to-image puts response_format in extra_body, unified default gen model (2.0-flash)', async () => {
     process.env.KHY_IMAGE_GEN_BACKEND = 'agnes';
     process.env.KHY_IMAGE_GEN_AGNES_API_KEY = 'sk-agnes';
+    // Prompt enhancement (default-on) rewrites short prompts; this test pins the
+    // byte-exact request shape, so disable it for this case.
+    process.env.KHY_IMAGE_GEN_ENHANCE_PROMPT = 'off';
     const fetchMock = mockFetch((url, init) => {
       expect(url).toBe('https://apihub.agnes-ai.com/v1/images/generations');
       const body = JSON.parse(init.body);

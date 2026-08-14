@@ -139,7 +139,9 @@ describe('externalAgentDirective — buildExternalAgentNudge', () => {
 describe('externalAgentDirective — 注册表契约', () => {
   test('EXTERNAL_AGENTS 冻结,delegatable 项 id 与 AgentTool subagent_type 枚举一致', () => {
     expect(Object.isFrozen(ead.EXTERNAL_AGENTS)).toBe(true);
-    const delegatableIds = ead.EXTERNAL_AGENTS.filter((a) => a.delegatable).map((a) => a.id).sort();
+    const delegatableIds = ead.EXTERNAL_AGENTS.filter((a) => a.delegatable)
+      .map((a) => a.id)
+      .sort();
     expect(delegatableIds).toEqual(['claude', 'codex', 'opencode']);
   });
 });

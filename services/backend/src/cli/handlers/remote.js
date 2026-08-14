@@ -21,7 +21,9 @@
 
 async function handleRemote(input, deps) {
   const { chalk: c } = deps;
-  const args = String(input || '').trim().split(/\s+/);
+  const args = String(input || '')
+    .trim()
+    .split(/\s+/);
   const sub = (args[0] || 'hosts').toLowerCase();
 
   switch (sub) {
@@ -76,7 +78,11 @@ async function _connect(c, hostArg, deps) {
     return;
   }
   const s = res.session || {};
-  console.log(c.green(`✓ 已连接到 ${s.hostAlias || hostArg} (会话 ${(s.connectionId || '').slice(0, 8)} · 工作目录 ${s.remoteWorkspace || '~'})`));
+  console.log(
+    c.green(
+      `✓ 已连接到 ${s.hostAlias || hostArg} (会话 ${(s.connectionId || '').slice(0, 8)} · 工作目录 ${s.remoteWorkspace || '~'})`
+    )
+  );
   console.log(c.dim('  统一状态: khy remotedev status'));
 }
 
@@ -90,26 +96,37 @@ async function _exec(c, command) {
     // Need an active connection: use the current durable session pointer.
     const pointer = require('../../services/remotedev/remoteDevSessionStore').readPointer();
     if (!pointer || !pointer.connectionId) {
-      console.log(c.yellow('无活动会话。先运行 /remote connect <host> 或 /remotedev connect <host>。'));
+      console.log(
+        c.yellow('无活动会话。先运行 /remote connect <host> 或 /remotedev connect <host>。')
+      );
       return;
     }
-    const execEnabled = process.env.KHY_REMOTE_SSH_ENABLE_EXEC === '1'
-      || process.env.KHY_REMOTE_SSH_ENABLE_EXEC === 'true';
+    const execEnabled =
+      process.env.KHY_REMOTE_SSH_ENABLE_EXEC === '1' ||
+      process.env.KHY_REMOTE_SSH_ENABLE_EXEC === 'true';
     if (!execEnabled) {
       // Honest default: side-effecting remote exec is disabled → show the plan.
       const plan = remote.remoteExecService.planDryRun({
         connectionId: pointer.connectionId,
         commands: [command],
       });
-      console.log(c.yellow('远程执行已禁用（KHY_REMOTE_SSH_ENABLE_EXEC 未开）— 仅显示计划 (dry-run):'));
-      console.log(c.dim(`  主机 ${plan.host_alias} · 工作目录 ${plan.remote_workspace} · 风险 ${plan.risk_summary && plan.risk_summary.highest_risk}`));
+      console.log(
+        c.yellow('远程执行已禁用（KHY_REMOTE_SSH_ENABLE_EXEC 未开）— 仅显示计划 (dry-run):')
+      );
+      console.log(
+        c.dim(
+          `  主机 ${plan.host_alias} · 工作目录 ${plan.remote_workspace} · 风险 ${plan.risk_summary && plan.risk_summary.highest_risk}`
+        )
+      );
       return;
     }
     const result = await remote.remoteExecService.requestExecution({
       connectionId: pointer.connectionId,
       commands: [command],
     });
-    console.log(JSON.stringify(result && result.status ? { status: result.status } : result, null, 2));
+    console.log(
+      JSON.stringify(result && result.status ? { status: result.status } : result, null, 2)
+    );
   } catch (err) {
     try {
       require('../cliErrorReporter').reportCliError(err, { context: `远程命令: ${command}` });
@@ -129,7 +146,9 @@ async function _sessions(c) {
     console.log(c.bold(`活跃连接 (${sessions.length}):`));
     for (const s of sessions) {
       const addr = `${s.remoteUser ? s.remoteUser + '@' : ''}${s.host || ''}${s.port ? ':' + s.port : ''}`;
-      console.log(`  ${c.green('●')} ${s.hostAlias || s.host || s.connectionId} ${c.dim(addr)} — ${s.status || 'connected'}`);
+      console.log(
+        `  ${c.green('●')} ${s.hostAlias || s.host || s.connectionId} ${c.dim(addr)} — ${s.status || 'connected'}`
+      );
     }
   } catch (err) {
     console.log(c.red(`获取会话失败: ${err.message}`));
@@ -140,7 +159,11 @@ async function _disconnect(c) {
   try {
     _remote().sshConnectionManager.clearAll();
     // Also drop the durable dev-session pointer so status reflects reality.
-    try { require('../../services/remotedev/remoteDevSessionStore').clearPointer(); } catch { /* best-effort */ }
+    try {
+      require('../../services/remotedev/remoteDevSessionStore').clearPointer();
+    } catch {
+      /* best-effort */
+    }
     console.log(c.green('✓ 已断开所有远程连接'));
   } catch (err) {
     console.log(c.red(`断开连接失败: ${err.message}`));

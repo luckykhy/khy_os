@@ -25,6 +25,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { getDataDir, getProjectDataDir } = require('../utils/dataHome');
 
 // Mirror instructionFileService caps; persona is short by design.
@@ -74,21 +75,31 @@ function _personaPaths(cwd) {
     // getDataDir('persona.md') would create a *directory* named persona.md, so
     // join against the parent data home instead.
     candidates.push(path.join(getDataDir(), 'persona.md'));
-  } catch { /* dataHome unavailable */ }
+  } catch {
+    /* dataHome unavailable */
+  }
   try {
     // getProjectDataDir() treats args as path *segments*, not a cwd; call it
     // bare (→ <projectRoot>/.khy) and join the filename ourselves.
     candidates.push(path.join(getProjectDataDir(), 'persona.md'));
-  } catch { /* project data dir unavailable */ }
-  if (cwd) candidates.push(path.join(cwd, 'persona.md'));
+  } catch {
+    /* project data dir unavailable */
+  }
+  if (cwd) {
+    candidates.push(path.join(cwd, 'persona.md'));
+  }
 
   const seen = new Set();
   const out = [];
   for (const c of candidates) {
     const resolved = path.resolve(c);
-    if (seen.has(resolved)) continue;
+    if (seen.has(resolved)) {
+      continue;
+    }
     seen.add(resolved);
-    if (fs.existsSync(resolved)) out.push(resolved);
+    if (fs.existsSync(resolved)) {
+      out.push(resolved);
+    }
   }
   return out;
 }
@@ -113,22 +124,30 @@ function loadPersona(cwd = process.cwd()) {
   const blocks = [BUILTIN_PERSONA];
 
   const paths = _personaPaths(cwd);
-  if (paths.length === 0) return blocks.join('\n\n');
+  if (paths.length === 0) {
+    return blocks.join('\n\n');
+  }
 
   let scanForPromptInjection = null;
   try {
     ({ scanForPromptInjection } = require('./instructionFileService'));
-  } catch { /* scanner unavailable — user blocks fail closed below */ }
+  } catch {
+    /* scanner unavailable — user blocks fail closed below */
+  }
 
   for (const p of paths) {
     const content = _readSafe(p).trim();
-    if (!content) continue;
+    if (!content) {
+      continue;
+    }
 
     if (scanForPromptInjection) {
       const hits = scanForPromptInjection(content);
       if (hits && hits.length > 0) {
         // eslint-disable-next-line no-console
-        console.warn(`[personaService] Dropping persona "${p}" — prompt-injection patterns: ${hits.map(h => h.pattern).join(', ')}`);
+        console.warn(
+          `[personaService] Dropping persona "${p}" — prompt-injection patterns: ${hits.map((h) => h.pattern).join(', ')}`
+        );
         continue;
       }
     } else {
@@ -151,13 +170,17 @@ function loadPersona(cwd = process.cwd()) {
  */
 function personaStamp(cwd = process.cwd()) {
   const paths = _personaPaths(cwd);
-  if (paths.length === 0) return 'none';
+  if (paths.length === 0) {
+    return 'none';
+  }
   const parts = [];
   for (const p of paths) {
     try {
       const st = fs.statSync(p);
       parts.push(`${st.mtimeMs}:${st.size}`);
-    } catch { parts.push('?'); }
+    } catch {
+      parts.push('?');
+    }
   }
   return parts.join('|');
 }
@@ -170,7 +193,9 @@ function personaStamp(cwd = process.cwd()) {
  */
 function summarizePersona(cwd = process.cwd()) {
   const text = loadPersona(cwd);
-  if (!text) return { present: false, sections: [] };
+  if (!text) {
+    return { present: false, sections: [] };
+  }
 
   const sections = [];
   let current = null;
@@ -178,15 +203,25 @@ function summarizePersona(cwd = process.cwd()) {
     const line = rawLine.trim();
     const h = line.match(/^#{1,3}\s+(.*)$/);
     if (h) {
-      if (current) sections.push(current);
+      if (current) {
+        sections.push(current);
+      }
       current = { title: h[1].trim(), lines: [] };
       continue;
     }
-    if (!current) continue;
-    if (!line || line.startsWith('#')) continue;
-    if (current.lines.length < 2) current.lines.push(line.replace(/^[-*]\s*/, ''));
+    if (!current) {
+      continue;
+    }
+    if (!line || line.startsWith('#')) {
+      continue;
+    }
+    if (current.lines.length < 2) {
+      current.lines.push(line.replace(/^[-*]\s*/, ''));
+    }
   }
-  if (current) sections.push(current);
+  if (current) {
+    sections.push(current);
+  }
   return { present: true, sections };
 }
 
@@ -231,9 +266,7 @@ function defaultTemplate() {
  * @returns {{ dest: string, written: boolean }}
  */
 function scaffold(opts = {}) {
-  const dest = opts.dest
-    ? path.resolve(opts.dest)
-    : path.join(getDataDir(), 'persona.md');
+  const dest = opts.dest ? path.resolve(opts.dest) : path.join(getDataDir(), 'persona.md');
   if (fs.existsSync(dest) && !opts.force) {
     return { dest, written: false };
   }

@@ -48,18 +48,18 @@
 ├── extension.js          — 核心逻辑 (~120 行)
 ├── .vscodeignore         — 打包过滤
 ├── README.md             — 本文档
-└── khy-trae-bridge-0.1.0.vsix  — 预构建安装包</code></pre>
+└── khy-trae-bridge-0.2.1.vsix  — 预构建安装包</code></pre>
 <hr>
 <h2 id="安装-windows">安装（Windows）<a class="anchor" href="#安装-windows" aria-label="锚点">#</a></h2>
 <h3 id="方式一-从预构建-vsix-安装-推荐">方式一：从预构建 VSIX 安装（推荐）<a class="anchor" href="#方式一-从预构建-vsix-安装-推荐" aria-label="锚点">#</a></h3>
-<p>仓库已包含 <code>khy-trae-bridge-0.1.0.vsix</code>，直接安装即可：</p>
-<ol><li>打开 <strong>Trae</strong></li><li>按 <code>Ctrl+Shift+X</code> 打开扩展面板</li><li>点击面板右上角 <strong><code>···</code></strong> → <strong>从 VSIX 安装...</strong>（Install from VSIX）</li><li>选择文件：<code>extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix</code></li><li>等待安装完成 → 重启 Trae</li></ol>
+<p>仓库已包含 <code>khy-trae-bridge-0.2.1.vsix</code>，直接安装即可：</p>
+<ol><li>打开 <strong>Trae</strong></li><li>按 <code>Ctrl+Shift+X</code> 打开扩展面板</li><li>点击面板右上角 <strong><code>···</code></strong> → <strong>从 VSIX 安装...</strong>（Install from VSIX）</li><li>选择文件：<code>extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix</code></li><li>等待安装完成 → 重启 Trae</li></ol>
 <p>或使用命令行：</p>
 <pre><code class="language-powershell"># Trae CLI（如果已配置 PATH）
-trae --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix
+trae --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix
 
 # 也可能是
-code --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.1.0.vsix</code></pre>
+code --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix</code></pre>
 <h3 id="方式二-从源码打包后安装">方式二：从源码打包后安装<a class="anchor" href="#方式二-从源码打包后安装" aria-label="锚点">#</a></h3>
 <pre><code class="language-powershell">cd extensions\khy-trae-bridge
 
@@ -70,7 +70,7 @@ npm install --save-dev @vscode/vsce
 npx @vscode/vsce package --allow-missing-repository
 
 # 安装
-trae --install-extension khy-trae-bridge-0.1.0.vsix</code></pre>
+trae --install-extension khy-trae-bridge-0.2.1.vsix</code></pre>
 <hr>
 <h2 id="使用方法">使用方法<a class="anchor" href="#使用方法" aria-label="锚点">#</a></h2>
 <h3 id="自动模式-零配置">自动模式（零配置）<a class="anchor" href="#自动模式-零配置" aria-label="锚点">#</a></h3>

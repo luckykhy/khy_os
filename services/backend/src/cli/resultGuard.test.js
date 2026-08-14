@@ -1,7 +1,7 @@
 'use strict';
 
-const test = require('node:test');
 const assert = require('node:assert');
+const test = require('node:test');
 
 const {
   resultGuardEnabled,
@@ -19,10 +19,12 @@ const ON = {}; // 默认开(无 KHY_RESULT_GUARD)
 const OFF = { KHY_RESULT_GUARD: '0' };
 
 // 截图复现的承诺式长前言(字数远超 40/80,正是历史粗代理会误判为「已写结论」的样本)。
-const PROMISE = '让我先收集你电脑的硬件和软件现状,再给具体建议。根据你电脑的现状,'
-  + '建议从三方面入手:桌面文件较多且杂乱,系统盘存在多个开发项目,正在做量化交易相关研究。';
+const PROMISE =
+  '让我先收集你电脑的硬件和软件现状,再给具体建议。根据你电脑的现状,' +
+  '建议从三方面入手:桌面文件较多且杂乱,系统盘存在多个开发项目,正在做量化交易相关研究。';
 const PROMISE2 = '先看看你电脑的现状,再给针对性建议。';
-const REAL_CONCLUSION = '已完成桌面整理:把 12 个文件按项目归档到三个文件夹,系统盘释放 4GB。总结:无需进一步操作。';
+const REAL_CONCLUSION =
+  '已完成桌面整理:把 12 个文件按项目归档到三个文件夹,系统盘释放 4GB。总结:无需进一步操作。';
 
 // ── 门控梯 ────────────────────────────────────────────────────────────────────
 test('门控:默认开', () => {
@@ -52,8 +54,10 @@ test('forwardPromise:命中「先看看…再给针对性建议」短前言', ()
 
 test('forwardPromise:命中英文 let me first then give recommendations', () => {
   assert.equal(
-    looksLikeForwardPromise("Let me first gather your system info, then I'll give you recommendations."),
-    true,
+    looksLikeForwardPromise(
+      "Let me first gather your system info, then I'll give you recommendations."
+    ),
+    true
   );
 });
 
@@ -78,61 +82,102 @@ test('forwardPromise:防呆 null/undefined/非串/空白', () => {
 
 // ── assessClosure ──────────────────────────────────────────────────────────────
 test('assessClosure:执行了工具+承诺无交付 → unfinished', () => {
-  const r = assessClosure({ totalToolCalls: 6, hasDeliveredConclusion: false, finalText: PROMISE }, ON);
+  const r = assessClosure(
+    { totalToolCalls: 6, hasDeliveredConclusion: false, finalText: PROMISE },
+    ON
+  );
   assert.equal(r.unfinished, true);
   assert.equal(r.reason, 'promise-without-delivery');
 });
 
 test('assessClosure:已交付结论 → 不 unfinished', () => {
-  const r = assessClosure({ totalToolCalls: 6, hasDeliveredConclusion: true, finalText: PROMISE }, ON);
+  const r = assessClosure(
+    { totalToolCalls: 6, hasDeliveredConclusion: true, finalText: PROMISE },
+    ON
+  );
   assert.equal(r.unfinished, false);
 });
 
 test('assessClosure:没调工具(纯聊天)→ 不 unfinished', () => {
-  const r = assessClosure({ totalToolCalls: 0, hasDeliveredConclusion: false, finalText: PROMISE }, ON);
+  const r = assessClosure(
+    { totalToolCalls: 0, hasDeliveredConclusion: false, finalText: PROMISE },
+    ON
+  );
   assert.equal(r.unfinished, false);
 });
 
 test('assessClosure:执行了工具但文本是有实质的非承诺结论(>12 字)→ 不 unfinished', () => {
-  const r = assessClosure({ totalToolCalls: 3, hasDeliveredConclusion: false, finalText: '我看了一下这几个文件,内容都正常没有问题。' }, ON);
+  const r = assessClosure(
+    {
+      totalToolCalls: 3,
+      hasDeliveredConclusion: false,
+      finalText: '我看了一下这几个文件,内容都正常没有问题。',
+    },
+    ON
+  );
   assert.equal(r.unfinished, false);
 });
 
 test('assessClosure:门控关 → 恒 unfinished:false(逐字节回退)', () => {
-  const r = assessClosure({ totalToolCalls: 6, hasDeliveredConclusion: false, finalText: PROMISE }, OFF);
+  const r = assessClosure(
+    { totalToolCalls: 6, hasDeliveredConclusion: false, finalText: PROMISE },
+    OFF
+  );
   assert.equal(r.unfinished, false);
   assert.equal(r.reason, null);
 });
 
 test('assessClosure:防呆缺参/非数 totalToolCalls', () => {
   assert.equal(assessClosure({}, ON).unfinished, false);
-  assert.equal(assessClosure({ totalToolCalls: NaN, hasDeliveredConclusion: false, finalText: PROMISE }, ON).unfinished, false);
+  assert.equal(
+    assessClosure({ totalToolCalls: NaN, hasDeliveredConclusion: false, finalText: PROMISE }, ON)
+      .unfinished,
+    false
+  );
 });
 
 // ── shouldAppendDeliverySummary(替换 >= 40 粗代理)────────────────────────────
 test('shouldAppendDeliverySummary:门控关 → 逐字节等价 `< 40`', () => {
   // 去空白后 < 40 → true(应追加摘要);>= 40 → false。
-  const short = '已完成。';                         // 去空白 4 字
-  const long = '已'.repeat(40);                     // 去空白 40 字
-  assert.equal(shouldAppendDeliverySummary({ finalText: short, hasDeliveredConclusion: true }, OFF), true);
-  assert.equal(shouldAppendDeliverySummary({ finalText: long, hasDeliveredConclusion: false }, OFF), false);
+  const short = '已完成。'; // 去空白 4 字
+  const long = '已'.repeat(40); // 去空白 40 字
+  assert.equal(
+    shouldAppendDeliverySummary({ finalText: short, hasDeliveredConclusion: true }, OFF),
+    true
+  );
+  assert.equal(
+    shouldAppendDeliverySummary({ finalText: long, hasDeliveredConclusion: false }, OFF),
+    false
+  );
 });
 
 test('shouldAppendDeliverySummary:门控关只看长度,忽略 hasDeliveredConclusion(字节回退)', () => {
   // PROMISE 很长(>=40)→ 门控关恒 false,与历史「长前言被当结论」行为一致。
-  assert.equal(shouldAppendDeliverySummary({ finalText: PROMISE, hasDeliveredConclusion: false }, OFF), false);
+  assert.equal(
+    shouldAppendDeliverySummary({ finalText: PROMISE, hasDeliveredConclusion: false }, OFF),
+    false
+  );
 });
 
 test('shouldAppendDeliverySummary:门控开 → 用真结论判据', () => {
   // 长承诺但未交付结论 → 门控开应追加摘要(true),修正历史漏洞。
-  assert.equal(shouldAppendDeliverySummary({ finalText: PROMISE, hasDeliveredConclusion: false }, ON), true);
+  assert.equal(
+    shouldAppendDeliverySummary({ finalText: PROMISE, hasDeliveredConclusion: false }, ON),
+    true
+  );
   // 真交付结论 → 不追加。
-  assert.equal(shouldAppendDeliverySummary({ finalText: REAL_CONCLUSION, hasDeliveredConclusion: true }, ON), false);
+  assert.equal(
+    shouldAppendDeliverySummary({ finalText: REAL_CONCLUSION, hasDeliveredConclusion: true }, ON),
+    false
+  );
 });
 
 // ── buildClosureNotice ──────────────────────────────────────────────────────────
 test('buildClosureNotice:门控关 → 空串(逐字节回退)', () => {
-  assert.equal(buildClosureNotice({ totalToolCalls: 6, reason: 'promise-without-delivery' }, OFF), '');
+  assert.equal(
+    buildClosureNotice({ totalToolCalls: 6, reason: 'promise-without-delivery' }, OFF),
+    ''
+  );
 });
 
 test('buildClosureNotice:门控开 → 诚实收尾含次数与继续提示', () => {
@@ -173,13 +218,19 @@ test('assessClosure:执行了工具+空文本+未交付 → unfinished(empty-aft
 });
 
 test('assessClosure:执行了工具+极短文本(<=12 去空白)+未交付 → unfinished', () => {
-  const r = assessClosure({ totalToolCalls: 2, hasDeliveredConclusion: false, finalText: '  {"x":1}  ' }, ON);
+  const r = assessClosure(
+    { totalToolCalls: 2, hasDeliveredConclusion: false, finalText: '  {"x":1}  ' },
+    ON
+  );
   assert.equal(r.unfinished, true);
   assert.equal(r.reason, 'empty-after-tools');
 });
 
 test('assessClosure:执行了工具+稍长文本(>12)+未交付且非承诺 → 不 unfinished', () => {
-  const r = assessClosure({ totalToolCalls: 2, hasDeliveredConclusion: false, finalText: '我已经看完了这些文件的内容。' }, ON);
+  const r = assessClosure(
+    { totalToolCalls: 2, hasDeliveredConclusion: false, finalText: '我已经看完了这些文件的内容。' },
+    ON
+  );
   assert.equal(r.unfinished, false);
 });
 
@@ -195,15 +246,26 @@ test('assessClosure:空文本但没调工具 → 不 unfinished', () => {
 
 test('assessClosure:子门控关(KHY_RESULT_GUARD_EMPTY=0)→ 空文本不再 unfinished,承诺式仍判定', () => {
   const subOff = { KHY_RESULT_GUARD_EMPTY: '0' };
-  assert.equal(assessClosure({ totalToolCalls: 4, hasDeliveredConclusion: false, finalText: '' }, subOff).unfinished, false);
+  assert.equal(
+    assessClosure({ totalToolCalls: 4, hasDeliveredConclusion: false, finalText: '' }, subOff)
+      .unfinished,
+    false
+  );
   // 父门控仍开,承诺式前言照常 unfinished(字节回退仅作用于空文本分支)。
-  const r = assessClosure({ totalToolCalls: 4, hasDeliveredConclusion: false, finalText: PROMISE }, subOff);
+  const r = assessClosure(
+    { totalToolCalls: 4, hasDeliveredConclusion: false, finalText: PROMISE },
+    subOff
+  );
   assert.equal(r.unfinished, true);
   assert.equal(r.reason, 'promise-without-delivery');
 });
 
 test('assessClosure:父门控关 → 空文本也恒 unfinished:false(逐字节回退)', () => {
-  assert.equal(assessClosure({ totalToolCalls: 4, hasDeliveredConclusion: false, finalText: '' }, OFF).unfinished, false);
+  assert.equal(
+    assessClosure({ totalToolCalls: 4, hasDeliveredConclusion: false, finalText: '' }, OFF)
+      .unfinished,
+    false
+  );
 });
 
 test('buildClosureNotice:empty-after-tools → 专属文案(几乎没有文字结论 + 继续提示)', () => {
@@ -224,7 +286,11 @@ test('progressOnlyGuardEnabled:默认开;off → 关', () => {
   assert.equal(progressOnlyGuardEnabled({}), true);
   assert.equal(progressOnlyGuardEnabled(undefined), true);
   for (const v of ['0', 'false', 'off', 'no', 'OFF']) {
-    assert.equal(progressOnlyGuardEnabled({ KHY_RESULT_GUARD_PROGRESS_ONLY: v }), false, `value ${v}`);
+    assert.equal(
+      progressOnlyGuardEnabled({ KHY_RESULT_GUARD_PROGRESS_ONLY: v }),
+      false,
+      `value ${v}`
+    );
   }
 });
 
@@ -242,7 +308,10 @@ test('looksLikeProgressNarration:不误伤真结论(有动作动词但无推进�
 test('looksLikeProgressNarration:含代码块 / tool_call / 超长 → false(有实质产物 / 保守)', () => {
   assert.equal(looksLikeProgressNarration('找到问题,先从这里入手\n```js\nconst x=1;\n```'), false);
   assert.equal(looksLikeProgressNarration('找到匹配,逐个核对 <tool_call>{}</tool_call>'), false);
-  assert.equal(looksLikeProgressNarration('找到匹配,逐个核对,先从第一处入手。' + '补'.repeat(500)), false);
+  assert.equal(
+    looksLikeProgressNarration('找到匹配,逐个核对,先从第一处入手。' + '补'.repeat(500)),
+    false
+  );
 });
 
 test('looksLikeProgressNarration:防呆 null/undefined/非串/空白', () => {
@@ -253,31 +322,58 @@ test('looksLikeProgressNarration:防呆 null/undefined/非串/空白', () => {
 });
 
 test('assessClosure:执行了工具+纯进度旁白+未交付 → unfinished(progress-only-after-tools)', () => {
-  const r = assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: false, finalText: PROGRESS1 }, ON);
+  const r = assessClosure(
+    { totalToolCalls: 8, hasDeliveredConclusion: false, finalText: PROGRESS1 },
+    ON
+  );
   assert.equal(r.unfinished, true);
   assert.equal(r.reason, 'progress-only-after-tools');
 });
 
 test('assessClosure:进度旁白但已交付结论 → 不 unfinished', () => {
-  const r = assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: true, finalText: PROGRESS1 }, ON);
+  const r = assessClosure(
+    { totalToolCalls: 8, hasDeliveredConclusion: true, finalText: PROGRESS1 },
+    ON
+  );
   assert.equal(r.unfinished, false);
 });
 
 test('assessClosure:进度旁白但没调工具 → 不 unfinished', () => {
-  const r = assessClosure({ totalToolCalls: 0, hasDeliveredConclusion: false, finalText: PROGRESS1 }, ON);
+  const r = assessClosure(
+    { totalToolCalls: 0, hasDeliveredConclusion: false, finalText: PROGRESS1 },
+    ON
+  );
   assert.equal(r.unfinished, false);
 });
 
 test('assessClosure:子门控关(KHY_RESULT_GUARD_PROGRESS_ONLY=0)→ 进度旁白不再 unfinished,承诺/空仍判定', () => {
   const subOff = { KHY_RESULT_GUARD_PROGRESS_ONLY: '0' };
-  assert.equal(assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: false, finalText: PROGRESS1 }, subOff).unfinished, false);
+  assert.equal(
+    assessClosure(
+      { totalToolCalls: 8, hasDeliveredConclusion: false, finalText: PROGRESS1 },
+      subOff
+    ).unfinished,
+    false
+  );
   // 父门控仍开:承诺式前言、空文本两条旧分支照常 unfinished(字节回退仅作用于进度旁白分支)。
-  assert.equal(assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: false, finalText: PROMISE }, subOff).reason, 'promise-without-delivery');
-  assert.equal(assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: false, finalText: '' }, subOff).reason, 'empty-after-tools');
+  assert.equal(
+    assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: false, finalText: PROMISE }, subOff)
+      .reason,
+    'promise-without-delivery'
+  );
+  assert.equal(
+    assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: false, finalText: '' }, subOff)
+      .reason,
+    'empty-after-tools'
+  );
 });
 
 test('assessClosure:父门控关 → 进度旁白也恒 unfinished:false(逐字节回退)', () => {
-  assert.equal(assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: false, finalText: PROGRESS1 }, OFF).unfinished, false);
+  assert.equal(
+    assessClosure({ totalToolCalls: 8, hasDeliveredConclusion: false, finalText: PROGRESS1 }, OFF)
+      .unfinished,
+    false
+  );
 });
 
 test('buildClosureNotice:progress-only-after-tools → 专属文案(只报告进度 + 继续给结论提示)', () => {

@@ -16,9 +16,10 @@
  * @module services/proxySubscriptionStore
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+
 const { getDataHome } = require('../utils/dataHome');
 
 const STORE_FILE = path.join(getDataHome(), 'proxy_subscriptions.json');
@@ -31,15 +32,21 @@ const _groups = new Map();
 let _loaded = false;
 
 function _load() {
-  if (_loaded) return;
+  if (_loaded) {
+    return;
+  }
   _loaded = true;
   try {
-    if (!fs.existsSync(STORE_FILE)) return;
+    if (!fs.existsSync(STORE_FILE)) {
+      return;
+    }
     const raw = fs.readFileSync(STORE_FILE, 'utf8');
     const parsed = JSON.parse(raw);
     const list = Array.isArray(parsed?.subscriptions) ? parsed.subscriptions : [];
     for (const g of list) {
-      if (g && typeof g === 'object' && g.id) _groups.set(String(g.id), g);
+      if (g && typeof g === 'object' && g.id) {
+        _groups.set(String(g.id), g);
+      }
     }
   } catch {
     // 损坏文件 → 从空集合开始,绝不崩。
@@ -49,7 +56,9 @@ function _load() {
 function _persist() {
   try {
     const dir = path.dirname(STORE_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     const payload = { version: 1, subscriptions: Array.from(_groups.values()) };
     fs.writeFileSync(STORE_FILE, JSON.stringify(payload, null, 2), 'utf8');
   } catch {
@@ -66,7 +75,9 @@ function _now() {
 }
 
 function _clampNodes(nodes) {
-  if (!Array.isArray(nodes)) return [];
+  if (!Array.isArray(nodes)) {
+    return [];
+  }
   return nodes.slice(0, MAX_NODES_PER_GROUP);
 }
 
@@ -79,7 +90,9 @@ function listGroups(ownerId, { withNodes = false } = {}) {
   const owner = String(ownerId || '');
   const out = [];
   for (const g of _groups.values()) {
-    if (String(g.ownerId || '') !== owner) continue;
+    if (String(g.ownerId || '') !== owner) {
+      continue;
+    }
     out.push(withNodes ? g : _summary(g));
   }
   out.sort((a, b) => String(b.addedAt || '').localeCompare(String(a.addedAt || '')));
@@ -94,7 +107,9 @@ function _summary(g) {
 function getGroup(ownerId, id) {
   _load();
   const g = _groups.get(String(id || ''));
-  if (!g || String(g.ownerId || '') !== String(ownerId || '')) return null;
+  if (!g || String(g.ownerId || '') !== String(ownerId || '')) {
+    return null;
+  }
   return g;
 }
 
@@ -113,7 +128,8 @@ function addGroup(input = {}) {
     url: String(input.url || '').trim(),
     format: String(input.format || 'unknown'),
     nodeCount: nodes.length,
-    protocolCount: input.protocolCount && typeof input.protocolCount === 'object' ? input.protocolCount : {},
+    protocolCount:
+      input.protocolCount && typeof input.protocolCount === 'object' ? input.protocolCount : {},
     nodes,
     userinfo: input.userinfo && typeof input.userinfo === 'object' ? input.userinfo : null,
     addedAt: now,
@@ -131,14 +147,22 @@ function addGroup(input = {}) {
  */
 function updateGroup(ownerId, id, patch = {}) {
   const g = getGroup(ownerId, id);
-  if (!g) return null;
+  if (!g) {
+    return null;
+  }
   if (Array.isArray(patch.nodes)) {
     g.nodes = _clampNodes(patch.nodes);
     g.nodeCount = g.nodes.length;
   }
-  if (patch.protocolCount && typeof patch.protocolCount === 'object') g.protocolCount = patch.protocolCount;
-  if (patch.format) g.format = String(patch.format);
-  if (patch.name) g.name = String(patch.name).trim() || g.name;
+  if (patch.protocolCount && typeof patch.protocolCount === 'object') {
+    g.protocolCount = patch.protocolCount;
+  }
+  if (patch.format) {
+    g.format = String(patch.format);
+  }
+  if (patch.name) {
+    g.name = String(patch.name).trim() || g.name;
+  }
   // userinfo:显式传入(含 null)才覆盖;未传则保留原值(避免刷新失败清空进度条)。
   if (Object.prototype.hasOwnProperty.call(patch, 'userinfo')) {
     g.userinfo = patch.userinfo && typeof patch.userinfo === 'object' ? patch.userinfo : null;
@@ -152,7 +176,9 @@ function updateGroup(ownerId, id, patch = {}) {
 
 function removeGroup(ownerId, id) {
   const g = getGroup(ownerId, id);
-  if (!g) return false;
+  if (!g) {
+    return false;
+  }
   _groups.delete(g.id);
   _persist();
   return true;

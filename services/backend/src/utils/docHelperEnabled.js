@@ -19,13 +19,29 @@
  */
 
 const { execFileSync } = require('child_process');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 const DOC_HELPER = path.join(__dirname, '../services/docHelper.py');
 
+// Python probing spawns a subprocess (~100-300ms). Cache the result so
+// repeated isEnabled checks never re-block the event loop within the TTL.
+const _CHECK_TTL_MS = 60000;
+let _checkCache = { value: false, at: 0 };
+
 function _checkEnabled() {
-  if (!fs.existsSync(DOC_HELPER)) return false;
+  const now = Date.now();
+  if (_checkCache.at && now - _checkCache.at < _CHECK_TTL_MS) {
+    return _checkCache.value;
+  }
+  _checkCache = { value: _probe(), at: now };
+  return _checkCache.value;
+}
+
+function _probe() {
+  if (!fs.existsSync(DOC_HELPER)) {
+    return false;
+  }
   try {
     execFileSync('python3', ['--version'], { stdio: 'ignore', timeout: 3000 });
     return true;
@@ -33,7 +49,9 @@ function _checkEnabled() {
     try {
       execFileSync('python', ['--version'], { stdio: 'ignore', timeout: 3000 });
       return true;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 }
 

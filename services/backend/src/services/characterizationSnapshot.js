@@ -45,7 +45,11 @@ function _fp(str) {
 }
 
 function _isTestStep(name) {
-  return _TEST_STEP.has(String(name || '').trim().toLowerCase());
+  return _TEST_STEP.has(
+    String(name || '')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /**
@@ -58,17 +62,25 @@ function _isTestStep(name) {
 function captureBaseline(input = {}) {
   const out = { files: [], steps: {} };
   try {
-    out.files = Array.isArray(input.changedFiles) ? input.changedFiles.filter(f => typeof f === 'string' && f) : [];
+    out.files = Array.isArray(input.changedFiles)
+      ? input.changedFiles.filter((f) => typeof f === 'string' && f)
+      : [];
     const snap = input.verificationSnapshot || {};
     const steps = Array.isArray(snap.steps) ? snap.steps : [];
     for (const st of steps) {
-      const name = String(st && st.name || '').trim().toLowerCase();
-      if (!name) continue;
+      const name = String((st && st.name) || '')
+        .trim()
+        .toLowerCase();
+      if (!name) {
+        continue;
+      }
       // summary / output 任一可观测文本作指纹源(确定性;不含时间戳)。
-      const obs = st.summary != null ? st.summary : (st.output != null ? st.output : '');
+      const obs = st.summary != null ? st.summary : st.output != null ? st.output : '';
       out.steps[name] = { pass: st.pass !== false, fp: _fp(obs) };
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return out;
 }
 
@@ -83,28 +95,39 @@ function captureBaseline(input = {}) {
 function diffBehavior(baseline, current, opts = {}, env = process.env) {
   const result = { silentChanges: [], coveredChanges: [] };
   try {
-    if (!isEnabled(env) || !baseline || !current) return result;
+    if (!isEnabled(env) || !baseline || !current) {
+      return result;
+    }
 
     const changed = Array.isArray(baseline.files) ? baseline.files : [];
     const covered = new Set(Array.isArray(opts.coveredFiles) ? opts.coveredFiles : []);
     // 全部改动文件都被测试覆盖 → 有回归保护,任何步骤变化都不算"静默"。
-    const allCovered = changed.length > 0 && changed.every(f => covered.has(f));
+    const allCovered = changed.length > 0 && changed.every((f) => covered.has(f));
 
-    const names = new Set([...Object.keys(baseline.steps || {}), ...Object.keys(current.steps || {})]);
+    const names = new Set([
+      ...Object.keys(baseline.steps || {}),
+      ...Object.keys(current.steps || {}),
+    ]);
     for (const name of names) {
       const b = baseline.steps[name];
       const c = current.steps[name];
-      if (!b || !c) continue; // 步骤集变化(可用性差异)不在此判定
+      if (!b || !c) {
+        continue;
+      } // 步骤集变化(可用性差异)不在此判定
       const changedStep = b.pass !== c.pass || b.fp !== c.fp;
-      if (!changedStep) continue;
+      if (!changedStep) {
+        continue;
+      }
       const entry = { step: name, from: b.pass ? 'pass' : 'fail', to: c.pass ? 'pass' : 'fail' };
       if (_isTestStep(name) || allCovered) {
         result.coveredChanges.push(entry); // 测试步骤 / 全覆盖:有保护
       } else {
-        result.silentChanges.push(entry);  // 非测试步骤 + 存在未覆盖改动:静默漂移
+        result.silentChanges.push(entry); // 非测试步骤 + 存在未覆盖改动:静默漂移
       }
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   return result;
 }
 

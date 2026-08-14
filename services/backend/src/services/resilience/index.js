@@ -19,14 +19,15 @@
  * 不去外科手术式改写 4000 行的 toolUseLoop；接入点只是把 executeTool 包成 runner。
  */
 
-const fallbackTree = require('./fallbackTree');
-const errorSignature = require('./errorSignature');
-const { DeadLoopDetector } = require('./deadLoopDetector');
-const { SalvageProtector } = require('./salvage');
 const budgetExecutor = require('./budgetExecutor');
+const { DeadLoopDetector } = require('./deadLoopDetector');
+const errorSignature = require('./errorSignature');
+const fallbackTree = require('./fallbackTree');
 const intentTrees = require('./intentTrees');
+const { SalvageProtector } = require('./salvage');
 
-const { FallbackTreeBuilder, FallbackTreeError, MAX_FALLBACK_DEPTH, MAX_RETRY_PER_PLAN } = fallbackTree;
+const { FallbackTreeBuilder, FallbackTreeError, MAX_FALLBACK_DEPTH, MAX_RETRY_PER_PLAN } =
+  fallbackTree;
 const { BudgetAwareExecutor, makeStepBudget, makeTokenBudget, DEFAULT_FLOOR_PCT } = budgetExecutor;
 const { getIntentTree } = intentTrees;
 
@@ -37,9 +38,15 @@ const { getIntentTree } = intentTrees;
  * @param {object} [baseTrace]  透传的基础 traceContext
  */
 function makeToolRunner(executeTool, baseTrace = {}) {
-  if (typeof executeTool !== 'function') throw new Error('makeToolRunner 需要 executeTool 函数');
+  if (typeof executeTool !== 'function') {
+    throw new Error('makeToolRunner 需要 executeTool 函数');
+  }
   return async function runner(tool, params, planMeta) {
-    const trace = { ...baseTrace, resiliencePlan: planMeta && planMeta.plan, resilienceRetry: planMeta && planMeta.retry };
+    const trace = {
+      ...baseTrace,
+      resiliencePlan: planMeta && planMeta.plan,
+      resilienceRetry: planMeta && planMeta.retry,
+    };
     return executeTool(tool, params, trace);
   };
 }

@@ -24,14 +24,16 @@ const { defineTool } = require('./_baseTool');
 // Lightweight financial-intent heuristic. Used ONLY to decide whether to attempt
 // the optional Finlight enrichment — it never affects the web-search backbone,
 // so a miss simply means "web-only", never a wrong answer.
-const FINANCIAL_HINT = /\b(stock|stocks|share[s]?|equit|nasdaq|nyse|dow|s&p|index|etf|forex|crypto|bitcoin|earnings|ipo|dividend|bond|yield|ticker|market cap)\b|股票|股市|大盘|涨停|跌停|财报|证券|基金|期货|外汇|加密货币|比特币|纳斯达克|道琼斯|上证|深证|创业板|港股|美股|A股/i;
+const FINANCIAL_HINT =
+  /\b(stock|stocks|share[s]?|equit|nasdaq|nyse|dow|s&p|index|etf|forex|crypto|bitcoin|earnings|ipo|dividend|bond|yield|ticker|market cap)\b|股票|股市|大盘|涨停|跌停|财报|证券|基金|期货|外汇|加密货币|比特币|纳斯达克|道琼斯|上证|深证|创业板|港股|美股|A股/i;
 
 /**
  * Hostnames that are strong news sources but are NOT in webSearchService's tiny
  * _DOMAIN_TYPE_MAP. Used purely to BOOST ranking — results are never dropped,
  * so this list affects ordering only, not correctness or completeness.
  */
-const NEWS_HOST_HINT = /(^|\.)(news|cnn|bbc|reuters|nytimes|wsj|bloomberg|theverge|techcrunch|engadget|arstechnica|wired|guardian|apnews|aljazeera|xinhua|chinadaily|sina|163|sohu|ifeng|thepaper|36kr|cnbeta|ithome|gizmodo|zdnet|venturebeat)\b/i;
+const NEWS_HOST_HINT =
+  /(^|\.)(news|cnn|bbc|reuters|nytimes|wsj|bloomberg|theverge|techcrunch|engadget|arstechnica|wired|guardian|apnews|aljazeera|xinhua|chinadaily|sina|163|sohu|ifeng|thepaper|36kr|cnbeta|ithome|gizmodo|zdnet|venturebeat)\b/i;
 
 /**
  * Determine whether a web result looks like news (for soft ranking, not filtering).
@@ -39,7 +41,9 @@ const NEWS_HOST_HINT = /(^|\.)(news|cnn|bbc|reuters|nytimes|wsj|bloomberg|thever
  * @returns {boolean}
  */
 function _looksLikeNews(r) {
-  if (r && r.type === 'news') return true;
+  if (r && r.type === 'news') {
+    return true;
+  }
   const host = String((r && (r.domain || r.url)) || '');
   return NEWS_HOST_HINT.test(host);
 }
@@ -63,18 +67,24 @@ function _webResultToArticle(r) {
 
 /** Stable de-dup key for merging Finlight + web articles. */
 function _articleKey(a) {
-  const url = String((a && a.url) || '').trim().toLowerCase();
-  if (url) return `u:${url}`;
-  return `t:${String((a && a.title) || '').trim().toLowerCase()}`;
+  const url = String((a && a.url) || '')
+    .trim()
+    .toLowerCase();
+  if (url) {
+    return `u:${url}`;
+  }
+  return `t:${String((a && a.title) || '')
+    .trim()
+    .toLowerCase()}`;
 }
 
 module.exports = defineTool({
   name: 'news',
   description:
-    'Query recent news for a topic. Searches news-oriented web sources and, when a financial '
-    + 'query is detected and FINLIGHT_API_KEY is configured, enriches results with real '
-    + 'financial news and sentiment from Finlight.me. Returns normalized articles plus a '
-    + 'compact summary suitable for grounding an answer.',
+    'Query recent news for a topic. Searches news-oriented web sources and, when a financial ' +
+    'query is detected and FINLIGHT_API_KEY is configured, enriches results with real ' +
+    'financial news and sentiment from Finlight.me. Returns normalized articles plus a ' +
+    'compact summary suitable for grounding an answer.',
   category: 'data',
   risk: 'safe',
   isReadOnly: true,
@@ -98,7 +108,8 @@ module.exports = defineTool({
     financial: {
       type: 'boolean',
       default: false,
-      description: 'Set true to force financial-news enrichment via Finlight (requires FINLIGHT_API_KEY).',
+      description:
+        'Set true to force financial-news enrichment via Finlight (requires FINLIGHT_API_KEY).',
     },
   },
 
@@ -137,7 +148,7 @@ module.exports = defineTool({
         // sort keeps relevance order within each group; nothing is discarded.
         const ranked = web.results
           .map((r, i) => ({ r, i, news: _looksLikeNews(r) }))
-          .sort((a, b) => (Number(b.news) - Number(a.news)) || (a.i - b.i))
+          .sort((a, b) => Number(b.news) - Number(a.news) || a.i - b.i)
           .map((x) => x.r);
         webArticles = ranked.map(_webResultToArticle);
       } else if (web && web.error) {
@@ -168,10 +179,14 @@ module.exports = defineTool({
     const seen = new Set();
     for (const a of [...finlightArticles, ...webArticles]) {
       const key = _articleKey(a);
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        continue;
+      }
       seen.add(key);
       merged.push(a);
-      if (merged.length >= limit) break;
+      if (merged.length >= limit) {
+        break;
+      }
     }
 
     // ── 4. Failure path: nothing from any provider ────────────────────

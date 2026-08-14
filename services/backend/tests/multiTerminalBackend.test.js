@@ -1,7 +1,7 @@
-'use strict';
+﻿'use strict';
 
 /**
- * Tests for multiTerminalBackend.js — multi-terminal agent management.
+ * Tests for multiTerminalBackend.js 鈥?multi-terminal agent management.
  */
 
 // Mock the logger
@@ -25,7 +25,7 @@ describe('multiTerminalBackend', () => {
     jest.restoreAllMocks();
   });
 
-  // ── detectBackends() ──
+  // 鈹€鈹€ detectBackends() 鈹€鈹€
 
   describe('detectBackends()', () => {
     test('returns object with tmux, iterm2, and inProcess keys', () => {
@@ -48,7 +48,7 @@ describe('multiTerminalBackend', () => {
     });
   });
 
-  // ── selectBackend() ──
+  // 鈹€鈹€ selectBackend() 鈹€鈹€
 
   describe('selectBackend()', () => {
     test('returns a string', () => {
@@ -67,7 +67,7 @@ describe('multiTerminalBackend', () => {
     });
   });
 
-  // ── InProcessBackend ──
+  // 鈹€鈹€ InProcessBackend 鈹€鈹€
 
   describe('InProcessBackend', () => {
     let backend;
@@ -81,15 +81,15 @@ describe('multiTerminalBackend', () => {
     });
 
     test('spawnAgent() creates a child process and returns agentId + pid', async () => {
-      const result = await backend.spawnAgent('test-agent-1', 'echo', ['hello']);
+      const result = await backend.spawnAgent('test-agent-1', process.execPath, ['-e', 'process.exit(0)']);
       expect(result).toHaveProperty('agentId', 'test-agent-1');
       expect(result).toHaveProperty('pid');
       expect(typeof result.pid).toBe('number');
     });
 
     test('listAgents() returns spawned agents', async () => {
-      await backend.spawnAgent('agent-a', 'echo', ['a']);
-      await backend.spawnAgent('agent-b', 'echo', ['b']);
+      await backend.spawnAgent('agent-a', process.execPath, ['-e', 'process.exit(0)']);
+      await backend.spawnAgent('agent-b', process.execPath, ['-e', 'process.exit(0)']);
 
       const agents = backend.listAgents();
       expect(agents.length).toBe(2);
@@ -100,7 +100,7 @@ describe('multiTerminalBackend', () => {
     });
 
     test('listAgents() returns objects with agentId, pid, and alive fields', async () => {
-      await backend.spawnAgent('agent-fields', 'echo', ['x']);
+      await backend.spawnAgent('agent-fields', process.execPath, ['-e', 'process.exit(0)']);
       const agents = backend.listAgents();
 
       expect(agents[0]).toHaveProperty('agentId');
@@ -109,7 +109,7 @@ describe('multiTerminalBackend', () => {
     });
 
     test('killAgent() removes agent from the list', async () => {
-      await backend.spawnAgent('agent-kill', 'sleep', ['60']);
+      await backend.spawnAgent('agent-kill', process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
 
       const beforeKill = backend.listAgents();
       expect(beforeKill.some((a) => a.agentId === 'agent-kill')).toBe(true);
@@ -125,8 +125,8 @@ describe('multiTerminalBackend', () => {
     });
 
     test('destroy() cleans up all agents', async () => {
-      await backend.spawnAgent('d1', 'sleep', ['60']);
-      await backend.spawnAgent('d2', 'sleep', ['60']);
+      await backend.spawnAgent('d1', process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
+      await backend.spawnAgent('d2', process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
 
       expect(backend.listAgents().length).toBe(2);
 
@@ -136,7 +136,7 @@ describe('multiTerminalBackend', () => {
     });
 
     test('getProcess() returns child process for spawned agent', async () => {
-      await backend.spawnAgent('proc-get', 'echo', ['test']);
+      await backend.spawnAgent('proc-get', process.execPath, ['-e', 'process.exit(0)']);
       const child = backend.getProcess('proc-get');
       expect(child).toBeDefined();
       expect(child).toHaveProperty('pid');
@@ -148,7 +148,7 @@ describe('multiTerminalBackend', () => {
     });
   });
 
-  // ── createBackend() ──
+  // 鈹€鈹€ createBackend() 鈹€鈹€
 
   describe('createBackend()', () => {
     test('createBackend("inProcess") returns an InProcessBackend instance', () => {
@@ -167,7 +167,7 @@ describe('multiTerminalBackend', () => {
     });
   });
 
-  // ── TmuxBackend constructor ──
+  // 鈹€鈹€ TmuxBackend constructor 鈹€鈹€
 
   describe('TmuxBackend', () => {
     test('constructor sets session name from options', () => {

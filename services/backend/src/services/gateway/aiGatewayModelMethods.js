@@ -22,11 +22,17 @@
  * zero-IO leaf.
  */
 
-const path = require('path');
 const { spawn } = require('child_process');
+const path = require('path');
+
 const { PRIMARY: MODELS } = require('../../constants/models');
-const { retryWithBackoff, isRetryableError, parseRetryAfter } = require('../retryWithBackoff');
 const { diagnostics } = require('../diagnosticEvents');
+const {
+  isFlagEnabled: _isFlagEnabled,
+  resolveNumeric: _resolveNumeric,
+} = require('../flagRegistry');
+const { retryWithBackoff, isRetryableError, parseRetryAfter } = require('../retryWithBackoff');
+
 const webRelayAdapter = require('./adapters/webRelayAdapter');
 const modelCuration = require('./modelCuration');
 
@@ -43,14 +49,30 @@ let _ADAPTER_SOURCE_LABELS = null;
 let CODEX_GENERATION_PROBE_PROMPT = null;
 
 function setAiGatewayModelMethodsDeps(deps = {}) {
-  if (typeof deps.safeKillChildProc === 'function') safeKillChildProc = deps.safeKillChildProc;
-  if (typeof deps._shouldUseFastFail === 'function') _shouldUseFastFail = deps._shouldUseFastFail;
-  if (typeof deps._parseMs === 'function') _parseMs = deps._parseMs;
-  if (typeof deps._getKhyProtocolPriorityRisk === 'function') _getKhyProtocolPriorityRisk = deps._getKhyProtocolPriorityRisk;
-  if (typeof deps._extractResultErrorMessage === 'function') _extractResultErrorMessage = deps._extractResultErrorMessage;
-  if (typeof deps.resolvePreferredModelForAdapter === 'function') resolvePreferredModelForAdapter = deps.resolvePreferredModelForAdapter;
-  if (deps._ADAPTER_SOURCE_LABELS !== undefined) _ADAPTER_SOURCE_LABELS = deps._ADAPTER_SOURCE_LABELS;
-  if (deps.CODEX_GENERATION_PROBE_PROMPT !== undefined) CODEX_GENERATION_PROBE_PROMPT = deps.CODEX_GENERATION_PROBE_PROMPT;
+  if (typeof deps.safeKillChildProc === 'function') {
+    safeKillChildProc = deps.safeKillChildProc;
+  }
+  if (typeof deps._shouldUseFastFail === 'function') {
+    _shouldUseFastFail = deps._shouldUseFastFail;
+  }
+  if (typeof deps._parseMs === 'function') {
+    _parseMs = deps._parseMs;
+  }
+  if (typeof deps._getKhyProtocolPriorityRisk === 'function') {
+    _getKhyProtocolPriorityRisk = deps._getKhyProtocolPriorityRisk;
+  }
+  if (typeof deps._extractResultErrorMessage === 'function') {
+    _extractResultErrorMessage = deps._extractResultErrorMessage;
+  }
+  if (typeof deps.resolvePreferredModelForAdapter === 'function') {
+    resolvePreferredModelForAdapter = deps.resolvePreferredModelForAdapter;
+  }
+  if (deps._ADAPTER_SOURCE_LABELS !== undefined) {
+    _ADAPTER_SOURCE_LABELS = deps._ADAPTER_SOURCE_LABELS;
+  }
+  if (deps.CODEX_GENERATION_PROBE_PROMPT !== undefined) {
+    CODEX_GENERATION_PROBE_PROMPT = deps.CODEX_GENERATION_PROBE_PROMPT;
+  }
 }
 
 const AIGatewayModelMethods = {
@@ -78,37 +100,47 @@ const AIGatewayModelMethods = {
     const healthRankMap = new Map(
       healthRankedAdapters.map((entry, index) => [String(entry?.key || ''), index])
     );
-    const sortByHealthRoute = (entries = []) => [...entries].sort((a, b) => {
-      const aPos = healthRankMap.has(String(a?.key || ''))
-        ? healthRankMap.get(String(a?.key || ''))
-        : Number.MAX_SAFE_INTEGER;
-      const bPos = healthRankMap.has(String(b?.key || ''))
-        ? healthRankMap.get(String(b?.key || ''))
-        : Number.MAX_SAFE_INTEGER;
-      if (aPos !== bPos) return aPos - bPos;
-      return Number(a?.priority || 0) - Number(b?.priority || 0);
-    });
+    const sortByHealthRoute = (entries = []) =>
+      [...entries].sort((a, b) => {
+        const aPos = healthRankMap.has(String(a?.key || ''))
+          ? healthRankMap.get(String(a?.key || ''))
+          : Number.MAX_SAFE_INTEGER;
+        const bPos = healthRankMap.has(String(b?.key || ''))
+          ? healthRankMap.get(String(b?.key || ''))
+          : Number.MAX_SAFE_INTEGER;
+        if (aPos !== bPos) {
+          return aPos - bPos;
+        }
+        return Number(a?.priority || 0) - Number(b?.priority || 0);
+      });
 
     // 0. Protocol-aware pre-filter: if model name hints at a protocol,
     //    prefer adapters that support it
     let protocolFilteredAdapters = null;
     if (options.model) {
       try {
-        const { inferProtocolFromModel, isProtocolSupported } = require('./adapters/_protocolRegistry');
+        const {
+          inferProtocolFromModel,
+          isProtocolSupported,
+        } = require('./adapters/_protocolRegistry');
         const hintedProtocol = inferProtocolFromModel(options.model);
         if (hintedProtocol) {
           const filtered = healthRankedAdapters.filter(
-            a => a.enabled && a.available && isProtocolSupported(a.key, hintedProtocol)
+            (a) => a.enabled && a.available && isProtocolSupported(a.key, hintedProtocol)
           );
-          if (filtered.length > 0) protocolFilteredAdapters = filtered;
+          if (filtered.length > 0) {
+            protocolFilteredAdapters = filtered;
+          }
         }
-      } catch { /* protocol registry unavailable */ }
+      } catch {
+        /* protocol registry unavailable */
+      }
     }
 
     // 1. Check user preference
     const preferred = process.env.GATEWAY_PREFERRED_ADAPTER;
     if (preferred && preferred !== 'auto') {
-      const entry = this._adapters.find(a => a.key === preferred && a.enabled);
+      const entry = this._adapters.find((a) => a.key === preferred && a.enabled);
       if (entry && (entry.available || entry.adapter.detect())) {
         return {
           adapter: preferred,
@@ -123,7 +155,7 @@ const AIGatewayModelMethods = {
       const { getPreferredModel } = require('../usageHabitService');
       const habit = getPreferredModel(taskType);
       if (habit && habit.adapter) {
-        const entry = this._adapters.find(a => a.key === habit.adapter && a.enabled);
+        const entry = this._adapters.find((a) => a.key === habit.adapter && a.enabled);
         const assessment = this._assessDefaultRouteCandidate(entry, {
           ...options,
           taskType,
@@ -133,22 +165,31 @@ const AIGatewayModelMethods = {
           return { adapter: habit.adapter, model: habit.model || null, reason: 'learned_habit' };
         }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
 
     // 3. Capability-based matching via registry
     try {
       const { TASK_REQUIREMENTS } = require('./capabilityRegistry');
       const reqs = TASK_REQUIREMENTS[taskType];
       if (reqs && this._capabilityRegistry) {
-        const ranked = this._capabilityRegistry.bestAdaptersFor(reqs, { onlyAvailable: false, limit: 10 });
+        const ranked = this._capabilityRegistry.bestAdaptersFor(reqs, {
+          onlyAvailable: false,
+          limit: 10,
+        });
         for (const candidate of ranked) {
-          const entry = this._adapters.find(a => a.key === candidate.key && a.enabled && a.available);
+          const entry = this._adapters.find(
+            (a) => a.key === candidate.key && a.enabled && a.available
+          );
           if (entry) {
             return { adapter: candidate.key, model: null, reason: `capability_match_${taskType}` };
           }
         }
       }
-    } catch { /* capability registry not available, use legacy fallback */ }
+    } catch {
+      /* capability registry not available, use legacy fallback */
+    }
 
     // 3b. Legacy fallback: static task preferences
     const TASK_PREFERENCES = {
@@ -161,7 +202,7 @@ const AIGatewayModelMethods = {
     if (taskOrder) {
       const searchSet = protocolFilteredAdapters || healthRankedAdapters;
       for (const key of taskOrder) {
-        const entry = searchSet.find(a => a.key === key && a.enabled && a.available);
+        const entry = searchSet.find((a) => a.key === key && a.enabled && a.available);
         if (entry) {
           return { adapter: key, model: null, reason: `best_for_${taskType}` };
         }
@@ -171,16 +212,24 @@ const AIGatewayModelMethods = {
     // 4. Fallback: first available by priority (protocol-filtered if applicable)
     const fallbackSet = protocolFilteredAdapters || healthRankedAdapters;
     for (const entry of fallbackSet) {
-      if (!entry.enabled || !entry.available) continue;
-      if (entry.key === 'relay') continue; // relay is last resort
+      if (!entry.enabled || !entry.available) {
+        continue;
+      }
+      if (entry.key === 'relay') {
+        continue;
+      } // relay is last resort
       return { adapter: entry.key, model: null, reason: 'priority_order' };
     }
 
     // 4b. If protocol filter was too strict, fall back to all adapters
     if (protocolFilteredAdapters) {
       for (const entry of sortByHealthRoute(this._adapters)) {
-        if (!entry.enabled || !entry.available) continue;
-        if (entry.key === 'relay') continue;
+        if (!entry.enabled || !entry.available) {
+          continue;
+        }
+        if (entry.key === 'relay') {
+          continue;
+        }
         return { adapter: entry.key, model: null, reason: 'priority_order_no_protocol_match' };
       }
     }
@@ -197,9 +246,11 @@ const AIGatewayModelMethods = {
    * @returns {Promise<object>}
    */
   async generateWithSubModel(prompt, adapterKey, options = {}) {
-    if (!this._initialized) await this.init();
+    if (!this._initialized) {
+      await this.init();
+    }
 
-    const entry = this._adapters.find(a => a.key === adapterKey && a.enabled);
+    const entry = this._adapters.find((a) => a.key === adapterKey && a.enabled);
     if (!entry || (!entry.available && !options.forceAdapter)) {
       return {
         success: false,
@@ -253,9 +304,11 @@ const AIGatewayModelMethods = {
    * @returns {string|null}
    */
   getAvailableLocalAdapter() {
-    if (!Array.isArray(this._adapters)) return null;
+    if (!Array.isArray(this._adapters)) {
+      return null;
+    }
     const locals = this._adapters
-      .filter(e => e.enabled && e.available && this.isLocalAdapter(e.key))
+      .filter((e) => e.enabled && e.available && this.isLocalAdapter(e.key))
       .sort((a, b) => (a.priority || 0) - (b.priority || 0));
     return locals.length ? locals[0].key : null;
   },
@@ -275,15 +328,22 @@ const AIGatewayModelMethods = {
   },
 
   getStatus() {
-    return this._adapters.map(entry => {
+    return this._adapters.map((entry) => {
       const status = entry.adapter.getStatus();
       const cached = this._adapterLastError[entry.key] || null;
       let recent = null;
       if (cached) {
-        const fallbackCooldownMs = _parseMs(process.env.GATEWAY_FAST_FAIL_COOLDOWN_MS || '30000', 30000, 5000);
+        const fallbackCooldownMs = _parseMs(
+          process.env.GATEWAY_FAST_FAIL_COOLDOWN_MS || '30000',
+          30000,
+          5000
+        );
         const cooldownMs = _parseMs(cached.cooldownMs, fallbackCooldownMs, 5000);
         const elapsedMs = Date.now() - Number(cached.at || 0);
-        if (elapsedMs <= cooldownMs && (cached.circuitOpen || _shouldUseFastFail(cached.errorType))) {
+        if (
+          elapsedMs <= cooldownMs &&
+          (cached.circuitOpen || _shouldUseFastFail(cached.errorType))
+        ) {
           recent = {
             ...cached,
             cooldownMs,
@@ -291,14 +351,16 @@ const AIGatewayModelMethods = {
           };
         }
       }
-      const lastError = cached ? {
-        at: cached.at,
-        errorType: cached.errorType,
-        error: cached.error,
-        coolingDown: !!recent,
-        cooldownMs: cached.cooldownMs || null,
-        remainingMs: recent?.remainingMs || 0,
-      } : null;
+      const lastError = cached
+        ? {
+            at: cached.at,
+            errorType: cached.errorType,
+            error: cached.error,
+            coolingDown: !!recent,
+            cooldownMs: cached.cooldownMs || null,
+            remainingMs: recent?.remainingMs || 0,
+          }
+        : null;
       const cooldownHint = recent
         ? ` · cooldown ${Math.max(1, Math.ceil((recent.remainingMs || 0) / 1000))}s`
         : '';
@@ -324,16 +386,32 @@ const AIGatewayModelMethods = {
    * Used by ai.js to determine timeout strategy before generation starts.
    */
   getFirstAvailableAdapter() {
-    const preferred = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim().toLowerCase();
+    const preferred = String(process.env.GATEWAY_PREFERRED_ADAPTER || '')
+      .trim()
+      .toLowerCase();
     if (preferred && preferred !== 'auto') {
-      const entry = this._adapters.find(a => a.key === preferred && a.enabled);
-      if (entry && entry.adapter.detect()) return entry.key;
+      const entry = this._adapters.find((a) => a.key === preferred && a.enabled);
+      if (entry && entry.adapter.detect()) {
+        return entry.key;
+      }
     }
     const recommended = this.getDefaultRouteRecommendation({ detectIfNeeded: true });
-    if (recommended?.adapter) return recommended.adapter;
-    for (const entry of this._orderAdaptersByDefaultRoutePreference(this._adapters, { detectIfNeeded: true })) {
-      if (!entry.enabled) continue;
-      try { if (entry.adapter.detect()) return entry.key; } catch { /* skip */ }
+    if (recommended?.adapter) {
+      return recommended.adapter;
+    }
+    for (const entry of this._orderAdaptersByDefaultRoutePreference(this._adapters, {
+      detectIfNeeded: true,
+    })) {
+      if (!entry.enabled) {
+        continue;
+      }
+      try {
+        if (entry.adapter.detect()) {
+          return entry.key;
+        }
+      } catch {
+        /* skip */
+      }
     }
     return null;
   },
@@ -341,41 +419,64 @@ const AIGatewayModelMethods = {
   /**
    * Get the first available adapter (for banner display).
    * Returns status object with activeModel if a preferred model is set.
+   * Startup selection priority: GATEWAY_PREFERRED_ADAPTER / GATEWAY_PREFERRED_MODEL
+   * env (explicit user intent, highest) > last verified model (persisted, adapter
+   * must still re-detect as available) > adapter-priority first-available default
+   * (lowest). The chosen tier is exposed via statusObj.modelSource
+   * ('env' | 'lastVerified' | 'adapterDefault') so the REPL startup header can
+   * tell the user WHERE the model came from (no source line shown for 'env').
    */
   getActiveAdapter() {
     const preferredAdapter = process.env.GATEWAY_PREFERRED_ADAPTER;
     const preferredModel = process.env.GATEWAY_PREFERRED_MODEL;
     const attachModelForEntry = (entryKey, statusObj) => {
       statusObj.key = entryKey;
-      const shouldAttachPreferred = !!preferredAdapter && preferredAdapter !== 'auto' && entryKey === preferredAdapter;
-      const resolved = shouldAttachPreferred ? resolvePreferredModelForAdapter(entryKey, preferredModel) : null;
+      const shouldAttachPreferred =
+        !!preferredAdapter && preferredAdapter !== 'auto' && entryKey === preferredAdapter;
+      const resolved = shouldAttachPreferred
+        ? resolvePreferredModelForAdapter(entryKey, preferredModel)
+        : null;
+      // lastVerified store may have already set activeModel; env model overrides only when explicitly pinned.
       statusObj.activeModel = resolved || statusObj.activeModel || null;
+      statusObj.modelSource = resolved ? 'env' : statusObj.modelSource || 'adapterDefault';
       return statusObj;
     };
 
     if (!this._initialized) {
       // Quick sync detection (no async needed for status display).
-      // Respect preferred adapter first to avoid mismatched adapter/model display.
+      // Tier 1: env preferred adapter (explicit user intent) > Tier 2: last
+      // verified memory > Tier 3: first available by adapter priority.
       try {
         if (preferredAdapter && preferredAdapter !== 'auto') {
-          const preferredEntry = this._adapters.find(a => a.key === preferredAdapter && a.enabled);
+          const preferredEntry = this._adapters.find(
+            (a) => a.key === preferredAdapter && a.enabled
+          );
           if (preferredEntry && preferredEntry.adapter.detect()) {
             return attachModelForEntry(preferredEntry.key, preferredEntry.adapter.getStatus());
           }
         }
+        const lastVerified = this._getLastVerifiedActiveAdapter();
+        if (lastVerified) {
+          return lastVerified;
+        }
         for (const entry of this._adapters) {
-          if (!entry.enabled) continue;
+          if (!entry.enabled) {
+            continue;
+          }
           if (entry.adapter.detect()) {
             return attachModelForEntry(entry.key, entry.adapter.getStatus());
           }
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       return null;
     }
 
-    // If preferred adapter is set, try it first
-    if (preferredAdapter) {
-      const entry = this._adapters.find(a => a.key === preferredAdapter && a.enabled);
+    // Tier 1: env preferred adapter (explicit user intent, highest priority).
+    // Falls through to lastVerified memory when unset or currently unavailable.
+    if (preferredAdapter && preferredAdapter !== 'auto') {
+      const entry = this._adapters.find((a) => a.key === preferredAdapter && a.enabled);
       if (entry) {
         const status = entry.adapter.getStatus();
         if (status.available) {
@@ -384,9 +485,16 @@ const AIGatewayModelMethods = {
       }
     }
 
+    // Tier 2: persisted last-verified model. Only honored when that adapter is
+    // enabled AND synchronously re-detects as available right now.
+    const lastVerified = this._getLastVerifiedActiveAdapter();
+    if (lastVerified) {
+      return lastVerified;
+    }
+
     const recommended = this.getDefaultRouteRecommendation();
     if (recommended?.adapter) {
-      const entry = this._adapters.find(a => a.key === recommended.adapter && a.enabled);
+      const entry = this._adapters.find((a) => a.key === recommended.adapter && a.enabled);
       if (entry) {
         const status = entry.adapter.getStatus();
         if (status.available) {
@@ -396,13 +504,49 @@ const AIGatewayModelMethods = {
     }
 
     for (const entry of this._orderAdaptersByDefaultRoutePreference(this._adapters)) {
-      if (!entry.enabled) continue;
+      if (!entry.enabled) {
+        continue;
+      }
       const status = entry.adapter.getStatus();
       if (status.available) {
         return attachModelForEntry(entry.key, status);
       }
     }
     return null;
+  },
+
+  /**
+   * Startup fallback tier 2 resolver: the last (model, adapter) pair that
+   * completed a successful generation (lastVerifiedModelStore). Only honored
+   * when that adapter is enabled AND synchronously re-detects as available
+   * right now; async/unconfirmable detection falls through (conservative).
+   * Fail-soft: any error → null → caller uses the adapter-priority default.
+   */
+  _getLastVerifiedActiveAdapter() {
+    try {
+      const rec = require('./lastVerifiedModelStore').readLastVerifiedModel();
+      if (!rec || !rec.adapter) {
+        return null;
+      }
+      const entry = this._adapters.find((a) => a.key === rec.adapter && a.enabled);
+      if (!entry) {
+        return null;
+      }
+      const detected = entry.adapter.detect();
+      if (!detected || typeof detected.then === 'function') {
+        return null;
+      }
+      const status = entry.adapter.getStatus();
+      if (!status || status.available === false) {
+        return null;
+      }
+      status.key = entry.key;
+      status.activeModel = rec.model || status.activeModel || null;
+      status.modelSource = 'lastVerified';
+      return status;
+    } catch {
+      return null;
+    }
   },
 
   /**
@@ -416,7 +560,7 @@ const AIGatewayModelMethods = {
    * Get a specific adapter by key (for IDE commands).
    */
   getAdapter(key) {
-    const entry = this._adapters.find(a => a.key === key);
+    const entry = this._adapters.find((a) => a.key === key);
     return entry ? entry.adapter : null;
   },
 
@@ -433,14 +577,18 @@ const AIGatewayModelMethods = {
     let states = {};
     try {
       states = await this._healthStore.getAllAdapterStates(adapterKeys);
-    } catch { states = {}; }
+    } catch {
+      states = {};
+    }
 
     const userOrder = (() => {
       try {
         const store = require('./failoverOrderStore');
         const { enabled, order, source } = store.getFailoverOrder();
         return { enabled, order: Array.isArray(order) ? order : [], source };
-      } catch { return { enabled: false, order: [], source: 'default' }; }
+      } catch {
+        return { enabled: false, order: [], source: 'default' };
+      }
     })();
     const orderPos = new Map(userOrder.order.map((k, i) => [String(k), i + 1]));
 
@@ -450,9 +598,13 @@ const AIGatewayModelMethods = {
       const mirror = this._adapterLastError[key] || null;
       // 电路态：open（熔断中）/ half_open（恢复观察）/ closed（正常）。
       let circuitState = 'closed';
-      if (mirror && mirror.circuitOpen) circuitState = 'open';
-      else if (mirror && mirror.halfOpen) circuitState = 'half_open';
-      else if (st.inCooldown) circuitState = 'open';
+      if (mirror && mirror.circuitOpen) {
+        circuitState = 'open';
+      } else if (mirror && mirror.halfOpen) {
+        circuitState = 'half_open';
+      } else if (st.inCooldown) {
+        circuitState = 'open';
+      }
       return {
         key,
         enabled: !!entry.enabled,
@@ -466,7 +618,8 @@ const AIGatewayModelMethods = {
         windowTotal: Number(st.windowTotal || 0),
         windowFailed: Number(st.windowFailed || 0),
         errorRate: Number(st.errorRate || 0),
-        lastError: st.lastError || (mirror ? { errorType: mirror.errorType, error: mirror.error } : null),
+        lastError:
+          st.lastError || (mirror ? { errorType: mirror.errorType, error: mirror.error } : null),
         failoverPosition: orderPos.has(String(key)) ? orderPos.get(String(key)) : null,
       };
     });
@@ -478,9 +631,13 @@ const AIGatewayModelMethods = {
    * @returns {Promise<boolean>} 通道存在并已重置时返回 true
    */
   async resetChannel(key) {
-    const target = String(key || '').trim().toLowerCase();
+    const target = String(key || '')
+      .trim()
+      .toLowerCase();
     const entry = this._adapters.find((a) => a.key === target);
-    if (!entry) return false;
+    if (!entry) {
+      return false;
+    }
     await this._clearAdapterFailure(target);
     return true;
   },
@@ -519,8 +676,58 @@ const AIGatewayModelMethods = {
    * Generate using a specific adapter + model (for IDE commands).
    */
   async generateWithAdapter(adapterKey, prompt, options = {}) {
-    const entry = this._adapters.find(a => a.key === adapterKey && a.enabled);
-    if (!entry) throw new Error(`Adapter "${adapterKey}" not found`);
+    const entry = this._adapters.find((a) => a.key === adapterKey && a.enabled);
+    if (!entry) {
+      throw new Error(`Adapter "${adapterKey}" not found`);
+    }
+    // ── Preflight dynamic max_tokens resolution — symmetric with the main
+    // generate() loop preflight (aiGatewayGenerateMethod.js). This direct
+    // adapter path (IDE conversation mode etc.) bypasses generate(), so
+    // without this block requests with no caller maxTokens fall through to
+    // small adapter hardcoded fallbacks. No shrink-priority here: the
+    // _maxTokensShrunkTo overflow-shrink state only exists inside the
+    // generate() main loop, never on this single-shot path.
+    if (!options.maxTokens && _isFlagEnabled('KHY_MAX_TOKENS_AUTO_RESOLVE', process.env)) {
+      try {
+        const _policy = require('./maxTokensPolicy');
+        const { estimateTokens: _estTokens } = require('../tokenPricing');
+        const _pfModel = String(options.model || '').trim();
+        let _pfPromptTokens =
+          _estTokens(String(prompt || '')) + _estTokens(String(options.system || ''));
+        if (Array.isArray(options.messages)) {
+          for (const _m of options.messages) {
+            const _c = _m && _m.content;
+            _pfPromptTokens += _estTokens(typeof _c === 'string' ? _c : JSON.stringify(_c || ''));
+          }
+        }
+        const _pfDecision = _policy.resolveMaxTokens({
+          explicitMaxTokens: options.maxTokens,
+          promptTokenEstimate: _pfPromptTokens,
+          contextWindow: _pfModel ? this.getModelContextWindow(_pfModel) : 0,
+          maxOutputTokens:
+            _pfModel && typeof this.getModelMaxOutputTokens === 'function'
+              ? this.getModelMaxOutputTokens(_pfModel)
+              : 0,
+          safetyBuffer: _resolveNumeric('KHY_CONTEXT_SAFETY_BUFFER_TOKENS', process.env),
+          minCompletion: _resolveNumeric('KHY_CONTEXT_MIN_COMPLETION_TOKENS', process.env),
+          defaultFallback: _resolveNumeric('KHY_DEFAULT_MAX_TOKENS', process.env),
+          reason: 'preflight',
+        });
+        if (_pfDecision && _pfDecision.maxTokens != null) {
+          options = {
+            ...options,
+            maxTokens: _pfDecision.maxTokens,
+            _maxTokensPolicy: {
+              source: _pfDecision.source,
+              preflightMax: _pfDecision.maxTokens,
+              shrunk: false,
+            },
+          };
+        }
+      } catch {
+        /* fail-soft: keep caller options / adapter fallback maxTokens */
+      }
+    }
     return this._generateWithAdapterIsolation(entry, prompt, options);
   },
 
@@ -556,14 +763,18 @@ const AIGatewayModelMethods = {
   async verifyModel(adapterKey, modelId) {
     const key = String(adapterKey || '');
     const model = String(modelId || '');
-    const entry = this._adapters.find(a => a.key === key);
+    const entry = this._adapters.find((a) => a.key === key);
     if (!entry || !entry.adapter) {
       const out = { status: 'failed', latencyMs: null, error: 'adapter not found' };
       modelCuration.recordVerify(key, model, out.status, out.latencyMs, out.error);
       return out;
     }
     if (typeof entry.adapter.generate !== 'function') {
-      const out = { status: 'unknown', latencyMs: null, error: 'adapter cannot probe a specific model' };
+      const out = {
+        status: 'unknown',
+        latencyMs: null,
+        error: 'adapter cannot probe a specific model',
+      };
       modelCuration.recordVerify(key, model, out.status, out.latencyMs, out.error);
       return out;
     }
@@ -604,7 +815,11 @@ const AIGatewayModelMethods = {
       modelCuration.recordVerify(key, model, out.status, out.latencyMs, out.error);
       return out;
     } catch (err) {
-      const out = { status: 'failed', latencyMs: Date.now() - t0, error: err.message || String(err) };
+      const out = {
+        status: 'failed',
+        latencyMs: Date.now() - t0,
+        error: err.message || String(err),
+      };
       modelCuration.recordVerify(key, model, out.status, out.latencyMs, out.error);
       return out;
     }
@@ -623,16 +838,24 @@ const AIGatewayModelMethods = {
    *
    * @param {string} adapterKey
    * @param {string} modelId
+   * @param {{force?: boolean}} [opts] force:允许把已确证的 'native' 降级为 'text'。
+   *   仅**用户主动**发起的重测(CLI gateway probe-tools)该传 true —— 后台自动探测不传,
+   *   否则一次假阴性就能推翻「见过真实 tool_calls」这条正面证据(见
+   *   toolCapabilityStore.recordVerdict 的不降级不变量)。
    * @returns {Promise<{verdict:'native'|'text'|'unknown', latencyMs:number|null, error?:string}>}
    */
-  async verifyToolCalling(adapterKey, modelId) {
+  async verifyToolCalling(adapterKey, modelId, opts = {}) {
     const probe = require('./toolCallingProbe');
     const store = require('./toolCapabilityStore');
     const key = String(adapterKey || '');
     const model = String(modelId || '');
-    const entry = this._adapters.find(a => a.key === key);
+    const entry = this._adapters.find((a) => a.key === key);
     if (!entry || !entry.adapter || typeof entry.adapter.generate !== 'function') {
-      return { verdict: 'unknown', latencyMs: null, error: 'adapter cannot probe a specific model' };
+      return {
+        verdict: 'unknown',
+        latencyMs: null,
+        error: 'adapter cannot probe a specific model',
+      };
     }
     const timeoutMs = Math.max(
       4000,
@@ -661,7 +884,11 @@ const AIGatewayModelMethods = {
       const { verdict } = probe.interpretProbeResult(result);
       const latencyMs = Date.now() - t0;
       if (verdict === 'native' || verdict === 'text') {
-        store.recordVerdict(model, verdict, { source: 'probe', latencyMs });
+        store.recordVerdict(model, verdict, {
+          source: 'probe',
+          latencyMs,
+          force: !!(opts && opts.force),
+        });
       }
       return { verdict, latencyMs };
     } catch (err) {
@@ -677,20 +904,38 @@ const AIGatewayModelMethods = {
   _maybeBackgroundProbeToolCalling(adapterKey, model) {
     try {
       const probe = require('./toolCallingProbe');
-      if (!probe.isEnabled()) return;
+      if (!probe.isEnabled()) {
+        return;
+      }
       const m = probe.normalizeModel(model);
-      if (!m || !adapterKey) return;
+      if (!m || !adapterKey) {
+        return;
+      }
       const store = require('./toolCapabilityStore');
-      if (store.getVerdict(m) !== null) return; // 已有新鲜实测,无需重测
+      if (store.getVerdict(m) !== null) {
+        return;
+      } // 已有新鲜实测,无需重测
       this._toolCapProbeInFlight = this._toolCapProbeInFlight || new Set();
       const key = `${adapterKey}::${m}`;
-      if (this._toolCapProbeInFlight.has(key)) return;
+      if (this._toolCapProbeInFlight.has(key)) {
+        return;
+      }
       this._toolCapProbeInFlight.add(key);
       Promise.resolve()
         .then(() => this.verifyToolCalling(adapterKey, model))
-        .catch(() => { /* best effort */ })
-        .finally(() => { try { this._toolCapProbeInFlight.delete(key); } catch { /* ignore */ } });
-    } catch { /* best effort */ }
+        .catch(() => {
+          /* best effort */
+        })
+        .finally(() => {
+          try {
+            this._toolCapProbeInFlight.delete(key);
+          } catch {
+            /* ignore */
+          }
+        });
+    } catch {
+      /* best effort */
+    }
   },
 
   /**
@@ -709,21 +954,29 @@ const AIGatewayModelMethods = {
     if (this._healthBroadcaster && typeof this._healthBroadcaster.stop === 'function') {
       try {
         this._healthBroadcaster.stop();
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
     if (this._dedup && typeof this._dedup.destroy === 'function') {
       try {
         this._dedup.destroy();
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
     if (this._healthStore && typeof this._healthStore.destroy === 'function') {
       try {
         await this._healthStore.destroy();
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
     const errors = [];
     for (const entry of this._adapters) {
-      if (!entry?.adapter?.destroy) continue;
+      if (!entry?.adapter?.destroy) {
+        continue;
+      }
       try {
         await entry.adapter.destroy();
       } catch (err) {
@@ -740,7 +993,9 @@ const AIGatewayModelMethods = {
     this._requestLog = {};
     this._lastRefreshTime = 0;
     if (errors.length > 0) {
-      const summary = errors.map(e => `${e.key}: ${e.error?.message || String(e.error)}`).join('; ');
+      const summary = errors
+        .map((e) => `${e.key}: ${e.error?.message || String(e.error)}`)
+        .join('; ');
       const err = new Error(`Gateway destroy completed with adapter cleanup errors: ${summary}`);
       err.cleanupErrors = errors;
       throw err;
@@ -757,7 +1012,7 @@ const AIGatewayModelMethods = {
    * @returns {Promise<{connectivity: {success,latencyMs,error?}, models?: {success,latencyMs,error?,count?}, generation?: {success,latencyMs,error?}}>}
    */
   async testAdapter(adapterKey, options = {}) {
-    const entry = this._adapters.find(a => a.key === adapterKey);
+    const entry = this._adapters.find((a) => a.key === adapterKey);
     if (!entry || !entry.adapter) {
       return { connectivity: { success: false, latencyMs: 0, error: 'Adapter not found' } };
     }
@@ -765,29 +1020,22 @@ const AIGatewayModelMethods = {
     const quickMode = !!options.quick;
     const timeoutMs = Math.max(
       2000,
-      parseInt(
-        String(
-          options.timeoutMs
-          || process.env.GATEWAY_TEST_TIMEOUT_MS
-          || 6000
-        ),
-        10
-      ) || 6000
+      parseInt(String(options.timeoutMs || process.env.GATEWAY_TEST_TIMEOUT_MS || 6000), 10) || 6000
     );
     const generationProbeTimeoutMs = Math.max(
       0,
       parseInt(
         String(
-          options.probeGenerationTimeoutMs
-          || process.env.GATEWAY_GENERATION_PROBE_TIMEOUT_MS
-          || 0
+          options.probeGenerationTimeoutMs || process.env.GATEWAY_GENERATION_PROBE_TIMEOUT_MS || 0
         ),
         10
       ) || 0
     );
     const result = { connectivity: null, models: null };
     const collectRuntimeDiagnostics = (diagOptions = {}) => {
-      if (!entry?.adapter || typeof entry.adapter.getRuntimeDiagnostics !== 'function') return null;
+      if (!entry?.adapter || typeof entry.adapter.getRuntimeDiagnostics !== 'function') {
+        return null;
+      }
       try {
         const runtimeDiag = entry.adapter.getRuntimeDiagnostics({
           includePersisted: true,
@@ -809,28 +1057,40 @@ const AIGatewayModelMethods = {
         ok = await Promise.race([
           entry.adapter.start().then(() => true),
           new Promise((_, rej) => {
-            step1Timer = setTimeout(() => rej(new Error(`timeout (${Math.round(timeoutMs / 1000)}s)`)), timeoutMs);
+            step1Timer = setTimeout(
+              () => rej(new Error(`timeout (${Math.round(timeoutMs / 1000)}s)`)),
+              timeoutMs
+            );
           }),
         ]);
       } else if (entry.adapter.detectAsync) {
         ok = await Promise.race([
           entry.adapter.detectAsync(true),
           new Promise((_, rej) => {
-            step1Timer = setTimeout(() => rej(new Error(`timeout (${Math.round(timeoutMs / 1000)}s)`)), timeoutMs);
+            step1Timer = setTimeout(
+              () => rej(new Error(`timeout (${Math.round(timeoutMs / 1000)}s)`)),
+              timeoutMs
+            );
           }),
         ]);
       } else {
         ok = entry.adapter.detect(true);
       }
       result.connectivity = { success: !!ok, latencyMs: Date.now() - t1 };
-      if (!ok) result.connectivity.error = 'not detected';
+      if (!ok) {
+        result.connectivity.error = 'not detected';
+      }
     } catch (err) {
       result.connectivity = { success: false, latencyMs: Date.now() - t1, error: err.message };
     } finally {
-      if (step1Timer) clearTimeout(step1Timer);
+      if (step1Timer) {
+        clearTimeout(step1Timer);
+      }
     }
 
-    if (!result.connectivity.success) return result;
+    if (!result.connectivity.success) {
+      return result;
+    }
 
     // Step 2: Model listing (if supported) — verifies API actually works
     if (entry.adapter.listModels) {
@@ -840,7 +1100,10 @@ const AIGatewayModelMethods = {
         const models = await Promise.race([
           entry.adapter.listModels(),
           new Promise((_, rej) => {
-            step2Timer = setTimeout(() => rej(new Error(`timeout (${Math.round(timeoutMs / 1000)}s)`)), timeoutMs);
+            step2Timer = setTimeout(
+              () => rej(new Error(`timeout (${Math.round(timeoutMs / 1000)}s)`)),
+              timeoutMs
+            );
           }),
         ]);
         result.models = {
@@ -852,7 +1115,9 @@ const AIGatewayModelMethods = {
       } catch (err) {
         result.models = { success: false, latencyMs: Date.now() - t2, error: err.message };
       } finally {
-        if (step2Timer) clearTimeout(step2Timer);
+        if (step2Timer) {
+          clearTimeout(step2Timer);
+        }
       }
     }
 
@@ -864,26 +1129,27 @@ const AIGatewayModelMethods = {
         // Probe through the real gateway strict path so status reflects the same
         // language injection, strict routing and meaningful-progress watchdog
         // used by interactive/sample requests.
-        const timeoutMs = generationProbeTimeoutMs > 0
-          ? Math.max(12000, generationProbeTimeoutMs)
-          : Math.max(
-            12000,
-            parseInt(
-              process.env.GATEWAY_CODEX_STATUS_PROBE_TIMEOUT_MS
-              || process.env.GATEWAY_CODEX_FIRST_RESPONSE_TIMEOUT_MS
-              || process.env.KHY_GATEWAY_SAMPLE_FIRST_RESPONSE_TIMEOUT_MS
-              || '20000',
-              10
-            ) || 20000
-          );
+        const timeoutMs =
+          generationProbeTimeoutMs > 0
+            ? Math.max(12000, generationProbeTimeoutMs)
+            : Math.max(
+                12000,
+                parseInt(
+                  process.env.GATEWAY_CODEX_STATUS_PROBE_TIMEOUT_MS ||
+                    process.env.GATEWAY_CODEX_FIRST_RESPONSE_TIMEOUT_MS ||
+                    process.env.KHY_GATEWAY_SAMPLE_FIRST_RESPONSE_TIMEOUT_MS ||
+                    '20000',
+                  10
+                ) || 20000
+              );
         const preferredProbeModel = process.env.GATEWAY_PREFERRED_MODEL || '';
         const isCodexModel = /^(gpt[-_]|o\d)/i.test(preferredProbeModel);
         const probeModel = isCodexModel
           ? preferredProbeModel
-          : (
-            (Array.isArray(result.models?.list) && result.models.list[0] && (result.models.list[0].id || result.models.list[0].name))
-              || MODELS.codexProbe
-          );
+          : (Array.isArray(result.models?.list) &&
+              result.models.list[0] &&
+              (result.models.list[0].id || result.models.list[0].name)) ||
+            MODELS.codexProbe;
         const probe = await this.generate(CODEX_GENERATION_PROBE_PROMPT, {
           preferredAdapter: 'codex',
           preferredStrict: true,
@@ -926,9 +1192,13 @@ const AIGatewayModelMethods = {
     if (!quickMode && adapterKey === 'localLLM' && typeof entry.adapter.generate === 'function') {
       const t3 = Date.now();
       try {
-        const probeTimeout = generationProbeTimeoutMs > 0
-          ? Math.max(4000, generationProbeTimeoutMs)
-          : Math.max(4000, parseInt(process.env.GATEWAY_LOCAL_LLM_PROBE_TIMEOUT_MS || '30000', 10));
+        const probeTimeout =
+          generationProbeTimeoutMs > 0
+            ? Math.max(4000, generationProbeTimeoutMs)
+            : Math.max(
+                4000,
+                parseInt(process.env.GATEWAY_LOCAL_LLM_PROBE_TIMEOUT_MS || '30000', 10)
+              );
         const probePromise = entry.adapter.generate('Reply with exactly: OK', {
           maxTokens: 32,
           temperature: 0,
@@ -937,11 +1207,18 @@ const AIGatewayModelMethods = {
         });
         let probeTimer = null;
         const timeoutPromise = new Promise((_, reject) => {
-          probeTimer = setTimeout(() => reject(new Error(`localLLM timeout (${probeTimeout}ms)`)), probeTimeout);
-          if (probeTimer.unref) probeTimer.unref();
+          probeTimer = setTimeout(
+            () => reject(new Error(`localLLM timeout (${probeTimeout}ms)`)),
+            probeTimeout
+          );
+          if (probeTimer.unref) {
+            probeTimer.unref();
+          }
         });
         const probe = await Promise.race([probePromise, timeoutPromise]);
-        if (probeTimer) clearTimeout(probeTimer);
+        if (probeTimer) {
+          clearTimeout(probeTimer);
+        }
         const text = String(probe?.content || '').trim();
         if (probe?.success && text) {
           result.generation = { success: true, latencyMs: Date.now() - t3 };
@@ -966,44 +1243,70 @@ const AIGatewayModelMethods = {
     if (!quickMode && adapterKey === 'claude') {
       const t3 = Date.now();
       try {
-        const timeoutMs = generationProbeTimeoutMs > 0
-          ? Math.max(6000, generationProbeTimeoutMs)
-          : Math.max(6000, parseInt(process.env.GATEWAY_CLAUDE_PROBE_TIMEOUT_MS || '10000', 10));
+        const timeoutMs =
+          generationProbeTimeoutMs > 0
+            ? Math.max(6000, generationProbeTimeoutMs)
+            : Math.max(6000, parseInt(process.env.GATEWAY_CLAUDE_PROBE_TIMEOUT_MS || '10000', 10));
         const rawProbeModel = (process.env.GATEWAY_PREFERRED_MODEL || '').trim();
         const probeModel = rawProbeModel.includes('::')
           ? rawProbeModel.split('::')[0].trim()
           : rawProbeModel;
         const args = [
           '-p',
-          '--output-format', 'stream-json',
+          '--output-format',
+          'stream-json',
           '--verbose',
           '--include-partial-messages',
-          '--permission-mode', 'bypassPermissions',
+          '--permission-mode',
+          'bypassPermissions',
         ];
         if (probeModel && /^claude[-_]/i.test(probeModel)) {
           args.push('--model', probeModel);
         }
-        const runClaudeProbe = (argv) => new Promise((resolve) => {
-          let stdout = '', stderr = '';
-          const child = spawn('claude', argv, { env: process.env, stdio: ['pipe', 'pipe', 'pipe'] });
-          const timer = setTimeout(() => { safeKillChildProc(child); resolve({ stdout, stderr, status: null, timedOut: true }); }, timeoutMs);
-          child.stdout.on('data', d => { stdout += d; if (stdout.length > 2 * 1024 * 1024) safeKillChildProc(child); });
-          child.stderr.on('data', d => { stderr += d; });
-          child.stdin.write('Reply with exactly: OK');
-          child.stdin.end();
-          child.on('close', (code) => { clearTimeout(timer); resolve({ stdout, stderr, status: code, timedOut: false }); });
-          child.on('error', (err) => { clearTimeout(timer); resolve({ stdout, stderr: err.message, status: 1, timedOut: false }); });
-        });
+        const runClaudeProbe = (argv) =>
+          new Promise((resolve) => {
+            let stdout = '',
+              stderr = '';
+            const child = spawn('claude', argv, {
+              env: process.env,
+              stdio: ['pipe', 'pipe', 'pipe'],
+            });
+            const timer = setTimeout(() => {
+              safeKillChildProc(child);
+              resolve({ stdout, stderr, status: null, timedOut: true });
+            }, timeoutMs);
+            child.stdout.on('data', (d) => {
+              stdout += d;
+              if (stdout.length > 2 * 1024 * 1024) {
+                safeKillChildProc(child);
+              }
+            });
+            child.stderr.on('data', (d) => {
+              stderr += d;
+            });
+            child.stdin.write('Reply with exactly: OK');
+            child.stdin.end();
+            child.on('close', (code) => {
+              clearTimeout(timer);
+              resolve({ stdout, stderr, status: code, timedOut: false });
+            });
+            child.on('error', (err) => {
+              clearTimeout(timer);
+              resolve({ stdout, stderr: err.message, status: 1, timedOut: false });
+            });
+          });
         const evaluateProbe = (probe) => {
           const combined = `${probe.stdout}\n${probe.stderr}`.toLowerCase();
           // `apiKeySource:"none"` can still be valid when Claude Code uses local login/session.
           // Only treat explicit auth failures as "login unavailable".
-          const authMissing = combined.includes('api_retry')
-            || combined.includes('unauthorized')
-            || combined.includes('not authenticated');
-          const hasUsableContent = combined.includes('"type":"assistant"')
-            || combined.includes('"type":"text"')
-            || combined.includes('"type":"result"');
+          const authMissing =
+            combined.includes('api_retry') ||
+            combined.includes('unauthorized') ||
+            combined.includes('not authenticated');
+          const hasUsableContent =
+            combined.includes('"type":"assistant"') ||
+            combined.includes('"type":"text"') ||
+            combined.includes('"type":"result"');
           const success = !probe.timedOut && probe.status === 0 && hasUsableContent && !authMissing;
           return { combined, authMissing, hasUsableContent, success };
         };
@@ -1011,10 +1314,17 @@ const AIGatewayModelMethods = {
         let evaluated = evaluateProbe(probe);
 
         // If model-qualified probe fails (common with adapter suffix model ids), retry once without --model.
-        if (!evaluated.success && args.includes('--model') && !evaluated.authMissing && !probe.timedOut) {
+        if (
+          !evaluated.success &&
+          args.includes('--model') &&
+          !evaluated.authMissing &&
+          !probe.timedOut
+        ) {
           const retryArgs = args.slice();
           const modelIdx = retryArgs.indexOf('--model');
-          if (modelIdx >= 0) retryArgs.splice(modelIdx, 2);
+          if (modelIdx >= 0) {
+            retryArgs.splice(modelIdx, 2);
+          }
           const retry = await runClaudeProbe(retryArgs);
           const retryEval = evaluateProbe(retry);
           if (retryEval.success) {
@@ -1028,12 +1338,15 @@ const AIGatewayModelMethods = {
         } else {
           const reason = probe.timedOut
             ? `claude probe timeout after ${timeoutMs}ms`
-            : (evaluated.authMissing ? 'claude auth/login unavailable' : (String(probe.stderr).trim() || `claude exited with code ${probe.status}`));
+            : evaluated.authMissing
+              ? 'claude auth/login unavailable'
+              : String(probe.stderr).trim() || `claude exited with code ${probe.status}`;
           result.generation = {
             success: false,
             latencyMs: Date.now() - t3,
             error: reason,
-            diagnostics: collectRuntimeDiagnostics({ preferCategory: 'stall' }) || collectRuntimeDiagnostics(),
+            diagnostics:
+              collectRuntimeDiagnostics({ preferCategory: 'stall' }) || collectRuntimeDiagnostics(),
           };
         }
       } catch (err) {
@@ -1041,7 +1354,8 @@ const AIGatewayModelMethods = {
           success: false,
           latencyMs: Date.now() - t3,
           error: err.message || String(err),
-          diagnostics: collectRuntimeDiagnostics({ preferCategory: 'stall' }) || collectRuntimeDiagnostics(),
+          diagnostics:
+            collectRuntimeDiagnostics({ preferCategory: 'stall' }) || collectRuntimeDiagnostics(),
         };
       }
     }
@@ -1049,26 +1363,32 @@ const AIGatewayModelMethods = {
     // Cursor/Windsurf/Trae can appear available from local token/cache only.
     // Run a tiny generation probe to ensure the remote channel actually works.
     if (
-      !quickMode
-      && (adapterKey === 'cursor' || adapterKey === 'windsurf' || adapterKey === 'trae')
-      && typeof entry.adapter.generate === 'function'
+      !quickMode &&
+      (adapterKey === 'cursor' || adapterKey === 'windsurf' || adapterKey === 'trae') &&
+      typeof entry.adapter.generate === 'function'
     ) {
       const t3 = Date.now();
       try {
-        const probeTimeout = generationProbeTimeoutMs > 0
-          ? Math.max(6000, generationProbeTimeoutMs)
-          : Math.max(
-            6000,
-            parseInt(
-              (adapterKey === 'trae'
-                ? (process.env.GATEWAY_TRAE_PROBE_TIMEOUT_MS || process.env.GATEWAY_IDE_PROBE_TIMEOUT_MS || '10000')
-                : (process.env.GATEWAY_IDE_PROBE_TIMEOUT_MS || '10000')),
-              10
-            )
-          );
+        const probeTimeout =
+          generationProbeTimeoutMs > 0
+            ? Math.max(6000, generationProbeTimeoutMs)
+            : Math.max(
+                6000,
+                parseInt(
+                  adapterKey === 'trae'
+                    ? process.env.GATEWAY_TRAE_PROBE_TIMEOUT_MS ||
+                        process.env.GATEWAY_IDE_PROBE_TIMEOUT_MS ||
+                        '10000'
+                    : process.env.GATEWAY_IDE_PROBE_TIMEOUT_MS || '10000',
+                  10
+                )
+              );
         const probeModels = Array.isArray(result.models?.list) ? result.models.list : [];
-        const preferredProbeModel = probeModels.find((model) => model && model.isDefault) || probeModels[0] || null;
-        const probeModel = preferredProbeModel ? (preferredProbeModel.id || preferredProbeModel.name || '') : '';
+        const preferredProbeModel =
+          probeModels.find((model) => model && model.isDefault) || probeModels[0] || null;
+        const probeModel = preferredProbeModel
+          ? preferredProbeModel.id || preferredProbeModel.name || ''
+          : '';
         const probePromise = entry.adapter.generate('Reply with exactly: OK', {
           model: probeModel || undefined,
           maxTokens: 32,
@@ -1078,11 +1398,18 @@ const AIGatewayModelMethods = {
         });
         let probeTimer2 = null;
         const timeoutPromise = new Promise((_, reject) => {
-          probeTimer2 = setTimeout(() => reject(new Error(`${adapterKey} probe timeout (${probeTimeout}ms)`)), probeTimeout);
-          if (probeTimer2.unref) probeTimer2.unref();
+          probeTimer2 = setTimeout(
+            () => reject(new Error(`${adapterKey} probe timeout (${probeTimeout}ms)`)),
+            probeTimeout
+          );
+          if (probeTimer2.unref) {
+            probeTimer2.unref();
+          }
         });
         const probe = await Promise.race([probePromise, timeoutPromise]);
-        if (probeTimer2) clearTimeout(probeTimer2);
+        if (probeTimer2) {
+          clearTimeout(probeTimer2);
+        }
         const text = String(probe?.content || '').trim();
         if (probe?.success && text) {
           result.generation = { success: true, latencyMs: Date.now() - t3 };
@@ -1107,16 +1434,23 @@ const AIGatewayModelMethods = {
     if (!quickMode && adapterKey === 'relay_api' && typeof entry.adapter.generate === 'function') {
       const t3 = Date.now();
       try {
-        const probeTimeout = generationProbeTimeoutMs > 0
-          ? Math.max(6000, generationProbeTimeoutMs)
-          : Math.max(6000, parseInt(process.env.GATEWAY_RELAY_API_PROBE_TIMEOUT_MS || '10000', 10));
+        const probeTimeout =
+          generationProbeTimeoutMs > 0
+            ? Math.max(6000, generationProbeTimeoutMs)
+            : Math.max(
+                6000,
+                parseInt(process.env.GATEWAY_RELAY_API_PROBE_TIMEOUT_MS || '10000', 10)
+              );
         const modelList = Array.isArray(result.models?.list) ? result.models.list : [];
-        const remotePreferred = modelList.find((m) => String(m?.discoverySource || '').toLowerCase() === 'remote' && m?.isDefault)
-          || modelList.find((m) => String(m?.discoverySource || '').toLowerCase() === 'remote')
-          || modelList.find((m) => m && m.isDefault)
-          || modelList[0]
-          || null;
-        const probeModel = remotePreferred ? (remotePreferred.id || remotePreferred.name || '') : '';
+        const remotePreferred =
+          modelList.find(
+            (m) => String(m?.discoverySource || '').toLowerCase() === 'remote' && m?.isDefault
+          ) ||
+          modelList.find((m) => String(m?.discoverySource || '').toLowerCase() === 'remote') ||
+          modelList.find((m) => m && m.isDefault) ||
+          modelList[0] ||
+          null;
+        const probeModel = remotePreferred ? remotePreferred.id || remotePreferred.name || '' : '';
         const probePromise = entry.adapter.generate('Reply with exactly: OK', {
           model: probeModel || undefined,
           maxTokens: 24,
@@ -1130,11 +1464,18 @@ const AIGatewayModelMethods = {
         });
         let probeTimer3 = null;
         const timeoutPromise = new Promise((_, reject) => {
-          probeTimer3 = setTimeout(() => reject(new Error(`relay_api probe timeout (${probeTimeout}ms)`)), probeTimeout);
-          if (probeTimer3.unref) probeTimer3.unref();
+          probeTimer3 = setTimeout(
+            () => reject(new Error(`relay_api probe timeout (${probeTimeout}ms)`)),
+            probeTimeout
+          );
+          if (probeTimer3.unref) {
+            probeTimer3.unref();
+          }
         });
         const probe = await Promise.race([probePromise, timeoutPromise]);
-        if (probeTimer3) clearTimeout(probeTimer3);
+        if (probeTimer3) {
+          clearTimeout(probeTimer3);
+        }
         const text = String(probe?.content || '').trim();
         if (probe?.success && text) {
           result.generation = { success: true, latencyMs: Date.now() - t3 };
@@ -1154,8 +1495,13 @@ const AIGatewayModelMethods = {
       }
     }
 
-    if (result.generation && result.generation.success === false && !result.generation.diagnostics) {
-      result.generation.diagnostics = collectRuntimeDiagnostics({ preferCategory: 'stall' }) || collectRuntimeDiagnostics();
+    if (
+      result.generation &&
+      result.generation.success === false &&
+      !result.generation.diagnostics
+    ) {
+      result.generation.diagnostics =
+        collectRuntimeDiagnostics({ preferCategory: 'stall' }) || collectRuntimeDiagnostics();
     }
     return result;
   },

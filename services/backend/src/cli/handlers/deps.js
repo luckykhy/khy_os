@@ -21,26 +21,43 @@
  */
 
 const chalk = require('chalk').default || require('chalk');
-const {
-  printSuccess, printError, printWarn, printInfo, printTable,
-} = require('../formatters');
+const { printSuccess, printError, printWarn, printInfo, printTable } = require('../formatters');
 
 /** 友好的别名 → depId 提示(用于「未知依赖」时给候选)。 */
 function _knownIds(dep) {
-  try { return dep.listDependencyIds(); } catch { return []; }
+  try {
+    return dep.listDependencyIds();
+  } catch {
+    return [];
+  }
 }
 
 /** 探测单个依赖,返回 { id, present, detail }。绝不抛。 */
 function _probe(dep, depId) {
-  try { return dep.probe(depId); } catch { return { id: depId, present: false, detail: 'probe error' }; }
+  try {
+    return dep.probe(depId);
+  } catch {
+    return { id: depId, present: false, detail: 'probe error' };
+  }
 }
 
 /** `khy deps list` — 概览所有依赖 + 就绪状态 + 版本可选标记。 */
 function _list(dep, options) {
   let ids;
-  try { ids = dep.listDependencyIds(); } catch (e) { printError(`无法读取依赖表: ${e && e.message}`); return; }
+  try {
+    ids = dep.listDependencyIds();
+  } catch (e) {
+    printError(`无法读取依赖表: ${e && e.message}`);
+    return;
+  }
   const versionable = new Set();
-  try { for (const v of dep.listVersionable()) versionable.add(v.depId); } catch { /* ignore */ }
+  try {
+    for (const v of dep.listVersionable()) {
+      versionable.add(v.depId);
+    }
+  } catch {
+    /* ignore */
+  }
 
   const rows = ids.map((id) => {
     const def = dep.getDependency(id) || {};
@@ -59,8 +76,10 @@ function _list(dep, options) {
     return;
   }
 
-  printInfo(chalk.bold('khyos 可按需安装的依赖 / 工具链') +
-    chalk.dim('  (缺失时开发过程中会自动询问安装;此处可主动查看 / 安装)'));
+  printInfo(
+    chalk.bold('khyos 可按需安装的依赖 / 工具链') +
+      chalk.dim('  (缺失时开发过程中会自动询问安装;此处可主动查看 / 安装)')
+  );
   const table = rows.map((r) => [
     r.id,
     r.present ? chalk.green('已就绪') : chalk.dim('缺失'),
@@ -75,20 +94,39 @@ function _list(dep, options) {
 
 /** `khy deps versions <dep>` — 列出某工具链支持的版本。 */
 function _versions(dep, spec, options) {
-  if (!spec) { printWarn('用法:khy deps versions <依赖>  (如 openjdk / python3 / dotnet)'); return; }
+  if (!spec) {
+    printWarn('用法:khy deps versions <依赖>  (如 openjdk / python3 / dotnet)');
+    return;
+  }
   const { depId } = dep.parseDepSpec(spec);
   if (!dep.isVersionable(depId)) {
-    if (options.json) { process.stdout.write(JSON.stringify({ depId, versionable: false, versions: [] }) + '\n'); return; }
-    printWarn(`${depId} 未登记按需版本(仅默认版本)。版本可选工具链:` +
-      dep.listVersionable().map((v) => v.depId).join(', '));
+    if (options.json) {
+      process.stdout.write(JSON.stringify({ depId, versionable: false, versions: [] }) + '\n');
+      return;
+    }
+    printWarn(
+      `${depId} 未登记按需版本(仅默认版本)。版本可选工具链:` +
+        dep
+          .listVersionable()
+          .map((v) => v.depId)
+          .join(', ')
+    );
     return;
   }
-  const list = dep.listVersionable().find((v) => v.depId === depId) || { versions: [], default: null };
+  const list = dep.listVersionable().find((v) => v.depId === depId) || {
+    versions: [],
+    default: null,
+  };
   if (options.json) {
-    process.stdout.write(JSON.stringify({ depId, versionable: true, versions: list.versions, default: list.default }) + '\n');
+    process.stdout.write(
+      JSON.stringify({ depId, versionable: true, versions: list.versions, default: list.default }) +
+        '\n'
+    );
     return;
   }
-  printInfo(chalk.bold(`${depId} 支持的版本`) + (list.default ? chalk.dim(`  默认 ${list.default}`) : ''));
+  printInfo(
+    chalk.bold(`${depId} 支持的版本`) + (list.default ? chalk.dim(`  默认 ${list.default}`) : '')
+  );
   for (const v of list.versions) {
     printInfo(`  • ${chalk.cyan(v)}${v === list.default ? chalk.dim(' (默认)') : ''}`);
   }
@@ -97,21 +135,33 @@ function _versions(dep, spec, options) {
 
 /** `khy deps check <dep>` — 仅探测,不安装。 */
 function _check(dep, spec, options) {
-  if (!spec) { printWarn('用法:khy deps check <依赖>'); return; }
+  if (!spec) {
+    printWarn('用法:khy deps check <依赖>');
+    return;
+  }
   const { depId } = dep.parseDepSpec(spec);
   if (!dep.getDependency(depId)) {
     printError(`未知依赖:${depId}(可选:${_knownIds(dep).join(', ')})`);
     return;
   }
   const p = _probe(dep, depId);
-  if (options.json) { process.stdout.write(JSON.stringify(p) + '\n'); return; }
-  if (p.present) printSuccess(`${depId} 已就绪:${p.detail || ''}`);
-  else printWarn(`${depId} 缺失:${p.detail || '未安装'}。可运行 \`khy deps install ${depId}\` 安装。`);
+  if (options.json) {
+    process.stdout.write(JSON.stringify(p) + '\n');
+    return;
+  }
+  if (p.present) {
+    printSuccess(`${depId} 已就绪:${p.detail || ''}`);
+  } else {
+    printWarn(`${depId} 缺失:${p.detail || '未安装'}。可运行 \`khy deps install ${depId}\` 安装。`);
+  }
 }
 
 /** `khy deps install <dep>[@ver]` — 按需(可选版本)安装,装后复验。 */
 async function _install(dep, spec, options) {
-  if (!spec) { printWarn('用法:khy deps install <依赖>[@版本]  (如 jdk@17)'); return; }
+  if (!spec) {
+    printWarn('用法:khy deps install <依赖>[@版本]  (如 jdk@17)');
+    return;
+  }
   const { depId, version } = dep.parseDepSpec(spec);
   const def = dep.getDependency(depId);
   if (!def) {
@@ -124,7 +174,10 @@ async function _install(dep, spec, options) {
   // 已就绪则免装(幂等;诚实告知)。
   const before = _probe(dep, depId);
   if (before.present && !options.force) {
-    if (options.json) { process.stdout.write(JSON.stringify({ depId, alreadyPresent: true, probe: before }) + '\n'); return; }
+    if (options.json) {
+      process.stdout.write(JSON.stringify({ depId, alreadyPresent: true, probe: before }) + '\n');
+      return;
+    }
     printSuccess(`${depId} 已就绪(${before.detail || ''}),无需安装。加 --force 可强制重装。`);
     return;
   }
@@ -136,13 +189,19 @@ async function _install(dep, spec, options) {
   }
 
   if (!options.json) {
-    printInfo(chalk.bold(`准备安装 ${plan.label}`) +
-      (plan.version ? chalk.cyan(`  版本 ${plan.version}`) : '') +
-      (plan.versionUnavailable ? chalk.yellow(`  (请求版本 ${plan.requestedVersion} 本平台无预置映射,改用默认版本)`) : ''));
+    printInfo(
+      chalk.bold(`准备安装 ${plan.label}`) +
+        (plan.version ? chalk.cyan(`  版本 ${plan.version}`) : '') +
+        (plan.versionUnavailable
+          ? chalk.yellow(`  (请求版本 ${plan.requestedVersion} 本平台无预置映射,改用默认版本)`)
+          : '')
+    );
     printInfo(`  命令:${chalk.cyan(plan.displayCommand)}`);
     if (plan.requiresElevation) {
-      printWarn('  此为系统级安装,可能需要管理员权限(sudo)。khyos 不会替你提权;' +
-        '若因权限失败,请手动以管理员身份重跑上述命令。');
+      printWarn(
+        '  此为系统级安装,可能需要管理员权限(sudo)。khyos 不会替你提权;' +
+          '若因权限失败,请手动以管理员身份重跑上述命令。'
+      );
     }
   }
 
@@ -154,11 +213,18 @@ async function _install(dep, spec, options) {
   const ok = !!(result && result.ok) && after.present;
 
   if (options.json) {
-    process.stdout.write(JSON.stringify({
-      depId, version: plan.version, requestedVersion: plan.requestedVersion,
-      versionUnavailable: plan.versionUnavailable,
-      command: plan.displayCommand, install: result, verified: after.present, ok,
-    }) + '\n');
+    process.stdout.write(
+      JSON.stringify({
+        depId,
+        version: plan.version,
+        requestedVersion: plan.requestedVersion,
+        versionUnavailable: plan.versionUnavailable,
+        command: plan.displayCommand,
+        install: result,
+        verified: after.present,
+        ok,
+      }) + '\n'
+    );
     return;
   }
 
@@ -167,18 +233,24 @@ async function _install(dep, spec, options) {
     return;
   }
   if (result && result.ok && !after.present) {
-    printWarn(`安装命令已执行,但 ${depId} 仍未探测到就绪(${after.detail || ''})。` +
-      '可能需重开终端刷新 PATH,或手动确认安装位置。');
+    printWarn(
+      `安装命令已执行,但 ${depId} 仍未探测到就绪(${after.detail || ''})。` +
+        '可能需重开终端刷新 PATH,或手动确认安装位置。'
+    );
     return;
   }
   // 安装失败:给出精准归因(包管理器缺失链接 / 提权提示),绝不静默。
   if (result && result.hint) {
     printError(`安装失败:${result.hint}`);
   } else if (plan.requiresElevation) {
-    printError(`安装失败(${result && result.error || 'exit-nonzero'})。系统级安装通常需提权,` +
-      `请手动运行:${chalk.cyan((process.platform === 'win32' ? '' : 'sudo ') + plan.displayCommand)}`);
+    printError(
+      `安装失败(${(result && result.error) || 'exit-nonzero'})。系统级安装通常需提权,` +
+        `请手动运行:${chalk.cyan((process.platform === 'win32' ? '' : 'sudo ') + plan.displayCommand)}`
+    );
   } else {
-    printError(`安装失败(${result && result.error || 'unknown'})。请检查网络/权限,或参考 ${plan.docsUrl || '官方文档'}。`);
+    printError(
+      `安装失败(${(result && result.error) || 'unknown'})。请检查网络/权限,或参考 ${plan.docsUrl || '官方文档'}。`
+    );
   }
 }
 
@@ -187,9 +259,13 @@ function _help() {
   printInfo('  khy deps list                 列出已知依赖 + 就绪状态 + 是否可选版本');
   printInfo('  khy deps versions <dep>       列出工具链支持的版本(如 openjdk → 8/11/17/21)');
   printInfo('  khy deps check <dep>          仅探测是否已就绪(不安装)');
-  printInfo('  khy deps install <dep>[@ver]  按需(可选版本)下载安装并复验,例 `khy deps install jdk@17`');
+  printInfo(
+    '  khy deps install <dep>[@ver]  按需(可选版本)下载安装并复验,例 `khy deps install jdk@17`'
+  );
   printInfo('  khy deps --json               机器可读输出');
-  printInfo(chalk.dim('  注:开发中缺依赖时,khyos 会在工具调用失败处自动询问安装;此命令是主动入口。'));
+  printInfo(
+    chalk.dim('  注:开发中缺依赖时,khyos 会在工具调用失败处自动询问安装;此命令是主动入口。')
+  );
 }
 
 /**
@@ -204,11 +280,26 @@ async function handleDeps(subCommand, args = [], options = {}, deps = null) {
   const dep = deps || require('../../services/dependency');
   const sub = String(subCommand || 'list').toLowerCase();
 
-  if (sub === 'help' || options.help) { _help(); return true; }
-  if (sub === 'list' || sub === 'ls') { _list(dep, options); return true; }
-  if (sub === 'versions' || sub === 'version') { _versions(dep, args[0], options); return true; }
-  if (sub === 'check' || sub === 'probe') { _check(dep, args[0], options); return true; }
-  if (sub === 'install' || sub === 'add') { await _install(dep, args[0], options); return true; }
+  if (sub === 'help' || options.help) {
+    _help();
+    return true;
+  }
+  if (sub === 'list' || sub === 'ls') {
+    _list(dep, options);
+    return true;
+  }
+  if (sub === 'versions' || sub === 'version') {
+    _versions(dep, args[0], options);
+    return true;
+  }
+  if (sub === 'check' || sub === 'probe') {
+    _check(dep, args[0], options);
+    return true;
+  }
+  if (sub === 'install' || sub === 'add') {
+    await _install(dep, args[0], options);
+    return true;
+  }
 
   // 未知子命令:保守走 help,避免把任意字符串误当依赖名直接安装。
   printWarn(`未知子命令:deps ${subCommand}`);

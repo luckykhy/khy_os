@@ -67,11 +67,13 @@ const PROVIDER_ALIAS_MAP = Object.freeze({
   aliyun: 'alibaba',
   hf: 'huggingface',
   'hugging-face': 'huggingface',
-  'hugging_face': 'huggingface',
+  hugging_face: 'huggingface',
 });
 
 function normalizeProviderName(raw = '') {
-  const provider = String(raw || '').trim().toLowerCase();
+  const provider = String(raw || '')
+    .trim()
+    .toLowerCase();
   if (!provider) return '';
   return PROVIDER_ALIAS_MAP[provider] || provider;
 }
@@ -149,7 +151,9 @@ function init() {
     if (fs.existsSync(POOL_FILE)) {
       saved = JSON.parse(fs.readFileSync(POOL_FILE, 'utf-8'));
     }
-  } catch { /* ignore corrupt file */ }
+  } catch {
+    /* ignore corrupt file */
+  }
 
   // Register keys from JSON
   for (const [rawProvider, keys] of Object.entries(saved)) {
@@ -159,7 +163,7 @@ function init() {
     for (const cfg of keys) {
       if (!cfg.key) continue;
       const existing = _pool.get(provider) || [];
-      if (existing.some(e => e.key === cfg.key)) continue;
+      if (existing.some((e) => e.key === cfg.key)) continue;
       _registerKey(provider, cfg);
     }
   }
@@ -171,7 +175,7 @@ function init() {
 
     // Check if this key already exists in pool
     const existing = _pool.get(provider) || [];
-    if (existing.some(e => e.key === envKey)) continue;
+    if (existing.some((e) => e.key === envKey)) continue;
 
     _registerKey(provider, {
       key: envKey,
@@ -190,8 +194,8 @@ function save() {
   const data = {};
   for (const [provider, entries] of _pool) {
     data[provider] = entries
-      .filter(e => e.label !== 'env') // Don't persist env-sourced keys
-      .map(e => ({
+      .filter((e) => e.label !== 'env') // Don't persist env-sourced keys
+      .map((e) => ({
         key: e.key,
         endpoint: e.endpoint,
         priority: e.priority,
@@ -203,7 +207,13 @@ function save() {
   try {
     if (!fs.existsSync(KHY_DIR)) fs.mkdirSync(KHY_DIR, { recursive: true });
     fs.writeFileSync(POOL_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch { /* best-effort */ }
+  } catch (err) {
+    // 持久化失败静默丢弃 → 服务重启后所有 key 丢失！必须记录。
+    try {
+      process.stderr.write(`[apiKeyPool] 持久化失败: ${err.message}\n`);
+    } catch (_) {}
+  }
+  // 注意：API key 以明文存储在 POOL_FILE 中。生产环境应确保该文件权限为 600。
 }
 
 // ── Key Management ───────────────────────────────────────────────────────
@@ -222,7 +232,7 @@ function addKey(provider, config) {
 
   // Check for duplicate
   const existing = _pool.get(provider) || [];
-  if (existing.some(e => e.key === config.key)) {
+  if (existing.some((e) => e.key === config.key)) {
     throw new Error('This key already exists in the pool');
   }
 
@@ -243,7 +253,7 @@ function removeKey(provider, keyId) {
   const entries = _pool.get(provider);
   if (!entries) return;
 
-  const idx = entries.findIndex(e => e.id === keyId);
+  const idx = entries.findIndex((e) => e.id === keyId);
   if (idx === -1) return;
 
   entries.splice(idx, 1);
@@ -302,7 +312,7 @@ function pick(provider) {
 
   // Filter available (active only + has concurrency slots)
   const slots = require('./concurrencySlots');
-  const available = entries.filter(e => e.status === 'active' && slots.hasAvailableSlot(e.id));
+  const available = entries.filter((e) => e.status === 'active' && slots.hasAvailableSlot(e.id));
   if (available.length === 0) return null;
 
   // Sort by priority descending
@@ -310,7 +320,7 @@ function pick(provider) {
 
   // Group by top priority level
   const topPriority = available[0].priority;
-  const topGroup = available.filter(e => e.priority === topPriority);
+  const topGroup = available.filter((e) => e.priority === topPriority);
 
   // Round-robin within top group
   const cursor = (_cursors[provider] || 0) % topGroup.length;
@@ -347,7 +357,12 @@ function markSuccess(keyId) {
  * @param {string} value - Retry-After header value
  * @returns {number} cooldown in ms, clamped to [BASE_COOLDOWN_MS, MAX_RETRY_AFTER_MS]
  */
-const parseRetryAfter = (value) => require('../../../backend/src/utils/parseRetryAfterCooldown')(value, BASE_COOLDOWN_MS, MAX_RETRY_AFTER_MS);
+const parseRetryAfter = (value) =>
+  require('../../../backend/src/utils/parseRetryAfterCooldown')(
+    value,
+    BASE_COOLDOWN_MS,
+    MAX_RETRY_AFTER_MS
+  );
 
 /**
  * Mark a key as failed. Applies cooldown for rate limit / auth errors.
@@ -401,7 +416,7 @@ function getPoolStatus(provider) {
   if (!entries) return [];
 
   const now = Date.now();
-  return entries.map(e => {
+  return entries.map((e) => {
     // Expire cooldown if needed
     if (e.status === 'cooldown' && e.cooldownUntil <= now) {
       e.status = 'active';
@@ -456,8 +471,8 @@ function hasAvailableKeys(provider) {
   const entries = _pool.get(provider);
   if (!entries || entries.length === 0) return false;
   const now = Date.now();
-  return entries.some(e =>
-    e.status === 'active' || (e.status === 'cooldown' && e.cooldownUntil <= now)
+  return entries.some(
+    (e) => e.status === 'active' || (e.status === 'cooldown' && e.cooldownUntil <= now)
   );
 }
 
@@ -474,7 +489,7 @@ function updateKey(provider, keyId, updates = {}) {
   init();
   const entries = _pool.get(provider);
   if (!entries) throw new Error(`Provider not found: ${provider}`);
-  const entry = entries.find(item => item.id === keyId);
+  const entry = entries.find((item) => item.id === keyId);
   if (!entry) throw new Error(`Key not found: ${keyId}`);
 
   if (updates.endpoint !== undefined) entry.endpoint = String(updates.endpoint || '').trim();
@@ -505,7 +520,11 @@ function updateKey(provider, keyId, updates = {}) {
 // ── Internal ─────────────────────────────────────────────────────────────
 
 function _registerKey(provider, config) {
-  const id = crypto.createHash('md5').update(`${provider}:${config.key}`).digest('hex').slice(0, 12);
+  const id = crypto
+    .createHash('md5')
+    .update(`${provider}:${config.key}`)
+    .digest('hex')
+    .slice(0, 12);
 
   const entry = {
     id,

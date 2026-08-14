@@ -132,7 +132,7 @@ function classify(f) {
   if (/pluginChain/i.test(base)) patterns.add('Chain of Responsibility');
   if (/hookRunner|hookSystem/i.test(base)) patterns.add('Chain of Responsibility');
   if (/permissions\/index|permissions\/rules/i.test(f)) patterns.add('Chain of Responsibility');
-  if (/toolPipeline|autoReplyPipeline/i.test(base)) patterns.add('Chain of Responsibility');
+  if (/toolPipeline/i.test(base)) patterns.add('Chain of Responsibility');
   if (/errorHandler/i.test(base)) patterns.add('Chain of Responsibility');
   if (/bashSecurity/i.test(base)) patterns.add('Chain of Responsibility');
   if (/credentialWatcher|keyHealthProbe/i.test(base)) patterns.add('Chain of Responsibility');

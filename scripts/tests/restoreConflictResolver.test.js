@@ -251,7 +251,7 @@ test('反向：_RESOLUTIONS 不含检测器未定义的僵尸 id', () => {
 
 // ── 文档漂移守卫（OPS-MAN-079）──
 test('说明 OPS-MAN-079 已落盘且与生成器输出一致(防手改漂移)', () => {
-  const { buildDoc, DOC_PATH } = require('../restore-resolve');
+  const { buildDoc, DOC_PATH } = require('../restore/restore-resolve');
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   assert.strictEqual(
     onDisk,

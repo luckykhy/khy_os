@@ -14,11 +14,27 @@ const { sanitizeOutgoingHeaders } = require('./ipAnonymizer');
 const TRAE_STORAGE_PATHS = [
   // Trae CN (Chinese version)
   path.join(os.homedir(), '.config', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Trae CN',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
   // Trae International
   path.join(os.homedir(), '.config', 'Trae', 'User', 'globalStorage', 'storage.json'),
-  path.join(os.homedir(), 'Library', 'Application Support', 'Trae', 'User', 'globalStorage', 'storage.json'),
+  path.join(
+    os.homedir(),
+    'Library',
+    'Application Support',
+    'Trae',
+    'User',
+    'globalStorage',
+    'storage.json'
+  ),
   path.join(os.homedir(), 'AppData', 'Roaming', 'Trae', 'User', 'globalStorage', 'storage.json'),
 ];
 
@@ -44,13 +60,20 @@ function readTraeToken() {
       if (fs.existsSync(p)) {
         const data = JSON.parse(fs.readFileSync(p, 'utf8'));
         // Trae stores token under various keys
-        const token = data.traeAuth?.accessToken
-          || data['traeAuth/accessToken']
-          || data['bytedance.auth']?.accessToken
-          || data.accessToken;
-        if (token) return { accessToken: token, source: path.basename(path.dirname(path.dirname(path.dirname(p)))) };
+        const token =
+          data.traeAuth?.accessToken ||
+          data['traeAuth/accessToken'] ||
+          data['bytedance.auth']?.accessToken ||
+          data.accessToken;
+        if (token)
+          return {
+            accessToken: token,
+            source: path.basename(path.dirname(path.dirname(path.dirname(p)))),
+          };
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return null;
 }
@@ -59,7 +82,10 @@ function detect(forceRefresh = false) {
   if (_available !== null && !forceRefresh) return _available;
 
   _token = readTraeToken();
-  if (_token) { _available = true; return true; }
+  if (_token) {
+    _available = true;
+    return true;
+  }
 
   // Fallback: check if Trae is installed
   try {
@@ -73,7 +99,7 @@ function detect(forceRefresh = false) {
 }
 
 async function listModels() {
-  _models = KNOWN_MODELS.map(m => ({
+  _models = KNOWN_MODELS.map((m) => ({
     ...m,
     provider: 'trae',
     description: '',
@@ -119,10 +145,13 @@ async function generate(prompt, options = {}) {
   if (!endpoint) {
     return {
       success: false,
-      content: 'Trae native protocol is not supported by this adapter; set TRAE_API_ENDPOINT to an OpenAI-compatible proxy.',
+      content:
+        'Trae native protocol is not supported by this adapter; set TRAE_API_ENDPOINT to an OpenAI-compatible proxy.',
       provider: 'Trae',
       adapter: 'trae',
-      attempts: [{ provider: 'Trae', success: false, error: 'no OpenAI-compatible endpoint configured' }],
+      attempts: [
+        { provider: 'Trae', success: false, error: 'no OpenAI-compatible endpoint configured' },
+      ],
     };
   }
 
@@ -149,51 +178,54 @@ async function generate(prompt, options = {}) {
       temperature: options.temperature || 0.4,
     });
 
-    const req = https.request({
-      hostname: endpointUrl.hostname,
-      port: endpointUrl.port || 443,
-      path: `${endpointUrl.pathname}${endpointUrl.search}`,
-      method: 'POST',
-      headers: sanitizeOutgoingHeaders({
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${_token.accessToken}`,
-        'Content-Length': Buffer.byteLength(body),
-      }),
-      timeout: TIMEOUT_MS,
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.choices && json.choices[0]) {
-            resolve({
-              success: true,
-              content: json.choices[0].message.content,
-              provider: `Trae (${model})`,
-              adapter: 'trae',
-              attempts: [{ provider: 'Trae', success: true }],
-            });
-          } else {
+    const req = https.request(
+      {
+        hostname: endpointUrl.hostname,
+        port: endpointUrl.port || 443,
+        path: `${endpointUrl.pathname}${endpointUrl.search}`,
+        method: 'POST',
+        headers: sanitizeOutgoingHeaders({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${_token.accessToken}`,
+          'Content-Length': Buffer.byteLength(body),
+        }),
+        timeout: TIMEOUT_MS,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (json.choices && json.choices[0]) {
+              resolve({
+                success: true,
+                content: json.choices[0].message.content,
+                provider: `Trae (${model})`,
+                adapter: 'trae',
+                attempts: [{ provider: 'Trae', success: true }],
+              });
+            } else {
+              resolve({
+                success: false,
+                content: json.error?.message || 'Unknown error',
+                provider: 'Trae',
+                adapter: 'trae',
+                attempts: [{ provider: 'Trae', success: false, error: json.error?.message }],
+              });
+            }
+          } catch (e) {
             resolve({
               success: false,
-              content: json.error?.message || 'Unknown error',
+              content: e.message,
               provider: 'Trae',
               adapter: 'trae',
-              attempts: [{ provider: 'Trae', success: false, error: json.error?.message }],
+              attempts: [{ provider: 'Trae', success: false, error: e.message }],
             });
           }
-        } catch (e) {
-          resolve({
-            success: false,
-            content: e.message,
-            provider: 'Trae',
-            adapter: 'trae',
-            attempts: [{ provider: 'Trae', success: false, error: e.message }],
-          });
-        }
-      });
-    });
+        });
+      }
+    );
 
     req.on('error', (err) => {
       resolve({

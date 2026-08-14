@@ -8,6 +8,7 @@
  * 对应论文：第5.1节（认证与中间件实现）
  */
 const express = require('express');
+
 const router = express.Router();
 const SystemSettingService = require('../services/systemSettingService');
 const { isAllowedSettingKey } = require('../config/settingsWhitelist');
@@ -17,22 +18,22 @@ const { isAllowedSettingKey } = require('../config/settingsWhitelist');
 router.get('/public', async (req, res) => {
   try {
     const { category } = req.query;
-    const settings = await SystemSettingService.getAllSettings({ 
-      category, 
-      isPublic: true 
+    const settings = await SystemSettingService.getAllSettings({
+      category,
+      isPublic: true,
     });
 
     res.json({
       success: true,
       data: settings,
-      message: '获取公开设置成功'
+      message: '获取公开设置成功',
     });
   } catch (error) {
     console.error('获取公开设置失败:', error);
     res.status(500).json({
       success: false,
       message: '获取公开设置失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -53,26 +54,26 @@ router.get('/public/:key', async (req, res) => {
         return res.json({
           success: true,
           data: { key, value: ['daily'] },
-          message: '获取设置成功(默认值)'
+          message: '获取设置成功(默认值)',
         });
       }
       return res.status(404).json({
         success: false,
-        message: '设置项不存在或非公开设置'
+        message: '设置项不存在或非公开设置',
       });
     }
 
     res.json({
       success: true,
       data: { key, value: setting.getParsedValue() },
-      message: '获取设置成功'
+      message: '获取设置成功',
     });
   } catch (error) {
     console.error('获取设置失败:', error);
     res.status(500).json({
       success: false,
       message: '获取设置失败',
-      error: error.message
+      error: error.message,
     });
   }
 });
@@ -100,13 +101,15 @@ router.put('/:key', authenticateToken, requireAdmin, async (req, res) => {
       type: type || 'string',
       category: category || 'general',
       description: description || '',
-      isPublic: isPublic !== undefined ? !!isPublic : false
+      isPublic: isPublic !== undefined ? !!isPublic : false,
     });
 
     res.json({ success: true, data: { key, value: result }, message: 'Setting updated' });
   } catch (error) {
     console.error('Update setting failed:', error);
-    res.status(500).json({ success: false, message: 'Update setting failed', error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: 'Update setting failed', error: error.message });
   }
 });
 

@@ -24,13 +24,13 @@
  * `flag.default` or disable a capability; they cannot rename seams.
  */
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
 
+const { composeRoute, defaultRequirementsMatcher } = require('./composer');
 const { DESCRIPTORS } = require('./descriptors');
 const predicates = require('./predicates');
-const { composeRoute, defaultRequirementsMatcher } = require('./composer');
 const { selectPreset, getPreset } = require('./routePresets');
 
 class CapabilityMatrix {
@@ -51,16 +51,24 @@ class CapabilityMatrix {
     }
   }
 
-  getDescriptor(id) { return this._byId.get(id) || null; }
-  getAll() { return [...this._byId.values()]; }
-  bySeam(seam) { return this.getAll().filter((d) => d.seam === seam); }
+  getDescriptor(id) {
+    return this._byId.get(id) || null;
+  }
+  getAll() {
+    return [...this._byId.values()];
+  }
+  bySeam(seam) {
+    return this.getAll().filter((d) => d.seam === seam);
+  }
 
   /**
    * Resolve a descriptor's enabled flag to the byte-identical boolean of its
    * original inline seam check. Does NOT evaluate preconditions.
    */
   resolveFlag(descriptor) {
-    if (!descriptor) return false;
+    if (!descriptor) {
+      return false;
+    }
     return predicates.resolveFlag(descriptor.flag, {
       env: this.env,
       isEnabledFn: descriptor.isEnabledFn,
@@ -76,31 +84,54 @@ class CapabilityMatrix {
    */
   isEnabledAt(seam, capId, ctx = {}) {
     const d = this._byId.get(capId);
-    if (!d) return false;
+    if (!d) {
+      return false;
+    }
     // Guard against a descriptor/seam typo at the call site: the capability must
     // actually live at the seam it is being queried for.
-    if (d.seam !== seam) return false;
-    if (!this.resolveFlag(d)) return false;
+    if (d.seam !== seam) {
+      return false;
+    }
+    if (!this.resolveFlag(d)) {
+      return false;
+    }
     if (typeof d.preconditions === 'function') {
-      try { if (!d.preconditions(ctx)) return false; } catch { return false; }
+      try {
+        if (!d.preconditions(ctx)) {
+          return false;
+        }
+      } catch {
+        return false;
+      }
     }
     return true;
   }
 
   /** Capability-dimension match (inert in cut 1). */
   meetsModelRequirements(descriptor, vector) {
-    if (!descriptor) return false;
+    if (!descriptor) {
+      return false;
+    }
     return defaultRequirementsMatcher(descriptor.requires || {}, vector || {});
   }
 
-  selectPreset(modes) { return selectPreset(modes); }
-  getPreset(id) { return getPreset(id); }
+  selectPreset(modes) {
+    return selectPreset(modes);
+  }
+  getPreset(id) {
+    return getPreset(id);
+  }
 
   /**
    * Build an inspectable route for a request. The flagResolver closes over this
    * matrix's env so the composer stays pure.
    */
-  composeRoute({ signals = { modes: [] }, capabilityVector = null, budget = Infinity, ctx = {} } = {}) {
+  composeRoute({
+    signals = { modes: [] },
+    capabilityVector = null,
+    budget = Infinity,
+    ctx = {},
+  } = {}) {
     const preset = this.selectPreset(signals.modes);
     return composeRoute({
       signals,
@@ -119,18 +150,33 @@ class CapabilityMatrix {
     // inline env JSON wins over the home file; either may be absent.
     const out = {};
     const fileJson = this._readHomeOverrideFile();
-    if (fileJson && typeof fileJson === 'object') Object.assign(out, fileJson);
+    if (fileJson && typeof fileJson === 'object') {
+      Object.assign(out, fileJson);
+    }
     const inline = this.env.KHY_CAPABILITY_MATRIX_JSON;
     if (inline && String(inline).trim()) {
-      try { Object.assign(out, JSON.parse(inline)); } catch { /* malformed inline override ignored */ }
+      try {
+        Object.assign(out, JSON.parse(inline));
+      } catch {
+        /* malformed inline override ignored */
+      }
     }
     return out;
   }
 
   _readHomeOverrideFile() {
     try {
-      const p = path.join(os.homedir(), '.khyquant', 'capability_matrix.json');
-      if (!fs.existsSync(p)) return null;
+      // Portable-aware app home; fallback to legacy path when unavailable.
+      let p;
+      try {
+        const { getAppHome } = require('../../utils/dataHome');
+        p = path.join(getAppHome(), 'capability_matrix.json');
+      } catch {
+        p = path.join(os.homedir(), '.khyquant', 'capability_matrix.json');
+      }
+      if (!fs.existsSync(p)) {
+        return null;
+      }
       return JSON.parse(fs.readFileSync(p, 'utf8'));
     } catch {
       return null; // unreadable/malformed override file is ignored, never fatal
@@ -142,7 +188,9 @@ class CapabilityMatrix {
 let _singleton = null;
 
 function getCapabilityMatrix() {
-  if (!_singleton) _singleton = new CapabilityMatrix();
+  if (!_singleton) {
+    _singleton = new CapabilityMatrix();
+  }
   return _singleton;
 }
 
@@ -152,7 +200,9 @@ function makeCapabilityMatrix(deps) {
 }
 
 // Test/runtime hook to reset the memoized singleton (e.g. after env override).
-function _resetCapabilityMatrix() { _singleton = null; }
+function _resetCapabilityMatrix() {
+  _singleton = null;
+}
 
 module.exports = {
   CapabilityMatrix,

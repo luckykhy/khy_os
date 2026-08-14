@@ -19,10 +19,10 @@
 const path = require('path');
 const readline = require('readline');
 
-const { printError, printInfo, printSuccess, printWarn } = require('../formatters');
 const { PORTABLE_ROOT_DEFAULT } = require('../../constants/serviceDefaults');
 const { CRITICAL_ENTRY_FILES } = require('../../services/portableSyncRules');
 const engine = require('../../services/portableSyncService');
+const { printError, printInfo, printSuccess, printWarn } = require('../formatters');
 
 // This file lives at services/backend/src/cli/handlers → repo root is 5 up.
 const SOURCE_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
@@ -68,7 +68,8 @@ function askConfirm(question) {
 }
 
 function resolveTarget(args, options) {
-  const raw = (options && options.target) || (Array.isArray(args) && args[0]) || PORTABLE_ROOT_DEFAULT;
+  const raw =
+    (options && options.target) || (Array.isArray(args) && args[0]) || PORTABLE_ROOT_DEFAULT;
   return raw ? path.resolve(String(raw)) : '';
 }
 
@@ -103,14 +104,20 @@ async function runSync(args, options) {
     if (engine.detectTargetActivity(target)) {
       printWarn(`检测到目标 ${target} 近期有运行时活动，建议先关闭便携版进程再同步`);
     }
-  } catch { /* best-effort probe — never block the sync on it */ }
+  } catch {
+    /* best-effort probe — never block the sync on it */
+  }
 
   // 3. Source health gate: never push broken entrypoints to the portable copy.
   if (!options['skip-check']) {
-    printInfo(`正在检查源码健康 → ${SOURCE_ROOT} (node --check ${CRITICAL_ENTRY_FILES.length} 个入口文件)`);
+    printInfo(
+      `正在检查源码健康 → ${SOURCE_ROOT} (node --check ${CRITICAL_ENTRY_FILES.length} 个入口文件)`
+    );
     const health = await engine.checkSourceHealth(SOURCE_ROOT);
     if (!health.ok) {
-      printError(`源码健康检查未通过 (${health.failures.length}/${CRITICAL_ENTRY_FILES.length} 个文件失败)，拒绝同步:`);
+      printError(
+        `源码健康检查未通过 (${health.failures.length}/${CRITICAL_ENTRY_FILES.length} 个文件失败)，拒绝同步:`
+      );
       for (const f of health.failures) {
         console.log(`    ${f.file}: ${f.output.split('\n')[0] || '语法检查失败'}`);
       }
@@ -139,7 +146,9 @@ async function runSync(args, options) {
     } else if (nmDecision.needs) {
       printInfo(`检测到 ${nmDecision.lockFile} 哈希不一致，将镜像 node_modules`);
     } else {
-      printInfo(`依赖 lock 哈希一致 (${String(nmDecision.sourceHash).slice(0, 12)}…)，跳过 node_modules 镜像`);
+      printInfo(
+        `依赖 lock 哈希一致 (${String(nmDecision.sourceHash).slice(0, 12)}…)，跳过 node_modules 镜像`
+      );
     }
   }
 
@@ -150,8 +159,12 @@ async function runSync(args, options) {
     console.log(`    删除:      ${plan.delete.length} 个 (仅 --mirror 计算，保护目录已剔除)`);
     console.log(`    跳过:      ${plan.skipCount} 个 (目标已是最新)`);
     console.log(`    node_modules: ${syncNodeModules ? '将镜像更新' : '不更新'}`);
-    if (plan.copy.length > 0) previewList('  将复制/更新', plan.copy);
-    if (plan.delete.length > 0) previewList('  将删除', plan.delete);
+    if (plan.copy.length > 0) {
+      previewList('  将复制/更新', plan.copy);
+    }
+    if (plan.delete.length > 0) {
+      previewList('  将删除', plan.delete);
+    }
     printSuccess(`dry-run 结束 → ${target}: 未做任何修改`);
     return true;
   }
@@ -162,7 +175,9 @@ async function runSync(args, options) {
     // any hit here means the protection rules were bypassed or misconfigured.
     const protectedHits = plan.delete.filter((rel) => engine.isProtectedRelPath(rel));
     if (protectedHits.length > 0) {
-      printWarn(`删除计划中发现 ${protectedHits.length} 个命中保护规则的路径（例如 ${protectedHits[0]}），请检查 portableSyncRules 配置`);
+      printWarn(
+        `删除计划中发现 ${protectedHits.length} 个命中保护规则的路径（例如 ${protectedHits[0]}），请检查 portableSyncRules 配置`
+      );
     }
   }
   if (mirror && plan.delete.length > 0 && !options.yes) {
@@ -178,7 +193,9 @@ async function runSync(args, options) {
   //    The idle timeout takes effect before the NEXT file operation starts —
   //    it never interrupts an in-flight single-file copy (rule 3).
   const total = plan.copy.length + plan.delete.length;
-  printInfo(`正在同步源码 → ${target} (待处理 ${total}，更新 ${plan.copy.length}，删除 ${plan.delete.length}，跳过 ${plan.skipCount})`);
+  printInfo(
+    `正在同步源码 → ${target} (待处理 ${total}，更新 ${plan.copy.length}，删除 ${plan.delete.length}，跳过 ${plan.skipCount})`
+  );
   let lastFileTick = 0;
   let lastRoboTick = 0;
   let result;
@@ -187,13 +204,17 @@ async function runSync(args, options) {
       if (p.action === 'robocopy') {
         if (p.lines - lastRoboTick >= ROBOCOPY_LINES_EVERY) {
           lastRoboTick = p.lines;
-          printInfo(`正在镜像 services\\backend\\node_modules → ${target} (robocopy 运行中，已输出 ${p.lines} 行)`);
+          printInfo(
+            `正在镜像 services\\backend\\node_modules → ${target} (robocopy 运行中，已输出 ${p.lines} 行)`
+          );
         }
         return;
       }
       if (p.done - lastFileTick >= PROGRESS_EVERY || p.done === p.total) {
         lastFileTick = p.done;
-        printInfo(`正在同步源码 → ${target} (已处理 ${p.done}/${p.total}，更新 ${plan.copy.length})`);
+        printInfo(
+          `正在同步源码 → ${target} (已处理 ${p.done}/${p.total}，更新 ${plan.copy.length})`
+        );
       }
     });
   } catch (err) {
@@ -219,7 +240,9 @@ async function runSync(args, options) {
   const nmNote = result.nodeModules.synced
     ? `，node_modules 已镜像 (${result.nodeModules.method})`
     : '';
-  printSuccess(`同步完成 → ${target}: 复制 ${result.copied}，删除 ${result.deleted}，跳过 ${result.skipped}${nmNote}`);
+  printSuccess(
+    `同步完成 → ${target}: 复制 ${result.copied}，删除 ${result.deleted}，跳过 ${result.skipped}${nmNote}`
+  );
   if (result.errors.length > 0) {
     printWarn(`其中 ${result.errors.length} 个文件操作失败:`);
     for (const e of result.errors.slice(0, 10)) {
@@ -242,13 +265,17 @@ async function runStatus(args, options) {
   }
   const manifest = engine.readManifest(target);
   if (!manifest) {
-    printInfo(`目标 ${target} 尚无同步记录 (.sync-manifest.json 不存在)，先运行: khy portable sync`);
+    printInfo(
+      `目标 ${target} 尚无同步记录 (.sync-manifest.json 不存在)，先运行: khy portable sync`
+    );
     return true;
   }
   printInfo(`便携版同步状态 → ${target}:`);
   console.log(`    上次同步: ${manifest.syncedAt || '-'}`);
   console.log(`    来源:     ${manifest.sourceRoot || '-'}`);
-  console.log(`    复制 ${manifest.copied ?? '-'} / 删除 ${manifest.deleted ?? '-'} / 跳过 ${manifest.skipped ?? '-'}`);
+  console.log(
+    `    复制 ${manifest.copied ?? '-'} / 删除 ${manifest.deleted ?? '-'} / 跳过 ${manifest.skipped ?? '-'}`
+  );
   console.log(`    node_modules 上次${manifest.nodeModulesSynced ? '已镜像' : '未更新'}`);
 
   // Live dependency freshness: compare today's lock hash against both sides.
@@ -257,7 +284,9 @@ async function runStatus(args, options) {
     if (nm.needs) {
       printWarn(`依赖已过期: ${nm.lockFile} 两侧哈希不一致，下次同步将自动镜像 node_modules`);
     } else {
-      printSuccess(`依赖为最新: ${nm.lockFile} 两侧哈希一致 (${String(nm.sourceHash).slice(0, 12)}…)`);
+      printSuccess(
+        `依赖为最新: ${nm.lockFile} 两侧哈希一致 (${String(nm.sourceHash).slice(0, 12)}…)`
+      );
     }
   } catch (err) {
     printWarn(`依赖对比失败: ${(err && err.message) || err}`);
@@ -276,8 +305,12 @@ async function runStatus(args, options) {
 async function handlePortable(subCommand, args = [], options = {}) {
   const sub = String(subCommand || '').toLowerCase();
   try {
-    if (sub === 'sync') return await runSync(args, options);
-    if (sub === 'status') return await runStatus(args, options);
+    if (sub === 'sync') {
+      return await runSync(args, options);
+    }
+    if (sub === 'status') {
+      return await runStatus(args, options);
+    }
     if (sub && sub !== 'help') {
       printError(`未知子命令: ${sub}。可用: sync | status | help`);
     }
@@ -290,4 +323,3 @@ async function handlePortable(subCommand, args = [], options = {}) {
 }
 
 module.exports = { handlePortable };
-

@@ -36,25 +36,41 @@ const REVIEW_STATE_LABELS = {
 const BODY_CLIP = 600;
 
 /** 是否启用 `/pr-comments`（门控 KHY_PR_COMMENTS 默认开）。 */
-function prCommentsEnabled(env = (typeof process !== 'undefined' ? process.env : {})) {
-  const v = String((env && env.KHY_PR_COMMENTS) || '').trim().toLowerCase();
+function prCommentsEnabled(env = typeof process !== 'undefined' ? process.env : {}) {
+  const v = String((env && env.KHY_PR_COMMENTS) || '')
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
 /** 取评论作者（gh pr view 用 author.login；REST 行内评论用 user.login）。 */
 function _who(x) {
-  if (!x || typeof x !== 'object') return '未知';
-  if (x.author && typeof x.author === 'object' && x.author.login) return String(x.author.login);
-  if (x.user && typeof x.user === 'object' && x.user.login) return String(x.user.login);
-  if (typeof x.author === 'string' && x.author) return x.author;
+  if (!x || typeof x !== 'object') {
+    return '未知';
+  }
+  if (x.author && typeof x.author === 'object' && x.author.login) {
+    return String(x.author.login);
+  }
+  if (x.user && typeof x.user === 'object' && x.user.login) {
+    return String(x.user.login);
+  }
+  if (typeof x.author === 'string' && x.author) {
+    return x.author;
+  }
   return '未知';
 }
 
 /** 截断长评论体，压平首尾空白；只影响显示。 */
 function _clip(body, n = BODY_CLIP) {
-  const s = String(body == null ? '' : body).replace(/\r\n/g, '\n').trim();
-  if (!s) return '(空)';
-  if (s.length <= n) return s;
+  const s = String(body == null ? '' : body)
+    .replace(/\r\n/g, '\n')
+    .trim();
+  if (!s) {
+    return '(空)';
+  }
+  if (s.length <= n) {
+    return s;
+  }
   return `${s.slice(0, n)}…`;
 }
 
@@ -72,13 +88,19 @@ function _clip(body, n = BODY_CLIP) {
  */
 function formatPrComments(data, env) {
   try {
-    if (!prCommentsEnabled(env)) return null;
-    if (!data || typeof data !== 'object') return null;
+    if (!prCommentsEnabled(env)) {
+      return null;
+    }
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
 
     const comments = Array.isArray(data.comments) ? data.comments : [];
     // 评审里状态为 COMMENTED 且 body 为空的是「行内评论的载体」，无独立内容，过滤掉。
     const reviews = (Array.isArray(data.reviews) ? data.reviews : []).filter((r) => {
-      if (!r || typeof r !== 'object') return false;
+      if (!r || typeof r !== 'object') {
+        return false;
+      }
       const hasBody = String(r.body || '').trim().length > 0;
       const meaningfulState = r.state && r.state !== 'COMMENTED';
       return hasBody || meaningfulState;
@@ -89,11 +111,13 @@ function formatPrComments(data, env) {
     const num = data.prNumber != null ? `#${data.prNumber}` : '';
     const header = `PR ${num} ${String(data.title || '').trim()}`.replace(/\s+/g, ' ').trim();
     lines.push(header || 'PR 评论');
-    if (data.url) lines.push(String(data.url));
+    if (data.url) {
+      lines.push(String(data.url));
+    }
 
     const total = comments.length + reviews.length + reviewComments.length;
     lines.push(
-      `共 ${total} 条（讨论 ${comments.length}·评审 ${reviews.length}·行内 ${reviewComments.length}）`,
+      `共 ${total} 条（讨论 ${comments.length}·评审 ${reviews.length}·行内 ${reviewComments.length}）`
     );
 
     if (total === 0) {

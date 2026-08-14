@@ -26,7 +26,16 @@ const path = require('path');
 const chalk = require('chalk').default || require('chalk');
 
 const os = require('os');
-const PLUGINS_DIR = path.join(os.homedir(), '.khyquant', 'commands');
+// Portable-aware app home resolved at load (legacy const semantics preserved).
+function _appHome() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return getAppHome();
+  } catch {
+    return path.join(os.homedir(), '.khyquant');
+  }
+}
+const PLUGINS_DIR = path.join(_appHome(), 'commands');
 
 let _plugins = null;
 
@@ -35,7 +44,9 @@ let _plugins = null;
  * Returns a Map<commandName, plugin>.
  */
 function loadPlugins() {
-  if (_plugins) return _plugins;
+  if (_plugins) {
+    return _plugins;
+  }
   _plugins = new Map();
 
   if (!fs.existsSync(PLUGINS_DIR)) {
@@ -69,12 +80,14 @@ module.exports = {
 \`\`\`
 `
       );
-    } catch { /* permission issues */ }
+    } catch {
+      /* permission issues */
+    }
     return _plugins;
   }
 
   try {
-    const files = fs.readdirSync(PLUGINS_DIR).filter(f => f.endsWith('.js'));
+    const files = fs.readdirSync(PLUGINS_DIR).filter((f) => f.endsWith('.js'));
 
     for (const file of files) {
       try {
@@ -98,7 +111,9 @@ module.exports = {
         console.warn(chalk.yellow(`  ⚠ Plugin ${file} load error: ${err.message}`));
       }
     }
-  } catch { /* directory read error */ }
+  } catch {
+    /* directory read error */
+  }
 
   return _plugins;
 }
@@ -110,7 +125,9 @@ module.exports = {
 async function tryPlugin(commandName, args, options) {
   const plugins = loadPlugins();
   const plugin = plugins.get(commandName.toLowerCase());
-  if (!plugin) return false;
+  if (!plugin) {
+    return false;
+  }
 
   const { resolveSymbol } = require('./symbolResolver');
   const formatters = require('./formatters');
@@ -123,18 +140,27 @@ async function tryPlugin(commandName, args, options) {
   };
 
   // Lazy-load services only when plugin actually needs them
-  const serviceProxy = new Proxy({}, {
-    get(_, prop) {
-      try {
-        switch (prop) {
-          case 'klineDataService': return new (require('../services/klineDataService'))();
-          case 'backtestEngine': return require('../services/backtestEngine');
-          case 'marketDataService': return require('../services/marketDataService');
-          default: return undefined;
+  const serviceProxy = new Proxy(
+    {},
+    {
+      get(_, prop) {
+        try {
+          switch (prop) {
+            case 'klineDataService':
+              return new (require('../services/klineDataService'))();
+            case 'backtestEngine':
+              return require('../services/backtestEngine');
+            case 'marketDataService':
+              return require('../services/marketDataService');
+            default:
+              return undefined;
+          }
+        } catch {
+          return undefined;
         }
-      } catch { return undefined; }
+      },
     }
-  });
+  );
   context.services = serviceProxy;
 
   try {
@@ -170,12 +196,16 @@ function reloadPlugins() {
   if (_plugins) {
     const seen = new Set();
     for (const [, plugin] of _plugins) {
-      if (seen.has(plugin.name)) continue;
+      if (seen.has(plugin.name)) {
+        continue;
+      }
       seen.add(plugin.name);
       const pluginPath = path.join(PLUGINS_DIR, plugin.name + '.js');
       try {
         delete require.cache[require.resolve(pluginPath)];
-      } catch { /* file may have been removed */ }
+      } catch {
+        /* file may have been removed */
+      }
     }
   }
   _plugins = null;

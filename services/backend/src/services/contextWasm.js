@@ -9,14 +9,20 @@
  * Falls back to JS implementations if WASM is unavailable.
  */
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+
+// Canonical chars/4 estimate atom (utils leaf; used by the JS fallback path only).
+const _simpleTokenEstimate = require('../utils/simpleTokenEstimate');
 
 // WASM binary built by `moon build --target wasm-gc`
 const WASM_PATH = path.join(
-  __dirname, '../../wasm-context/_build/wasm-gc/debug/build/cmd/main/main.wasm'
+  __dirname,
+  '../../wasm-context/_build/wasm-gc/debug/build/cmd/main/main.wasm'
 );
-const MOONBIT_ENGINE = String(process.env.KHY_MOONBIT_ENGINE || 'auto').trim().toLowerCase();
+const MOONBIT_ENGINE = String(process.env.KHY_MOONBIT_ENGINE || 'auto')
+  .trim()
+  .toLowerCase();
 const EXTERNAL_PROVIDER_MODULE = String(process.env.KHY_MOONBIT_PROVIDER_MODULE || '').trim();
 
 let _instance = null;
@@ -31,9 +37,13 @@ function _shouldTryWasm() {
 }
 
 function _loadExternalProvider() {
-  if (_externalProviderLoadTried) return _externalProvider;
+  if (_externalProviderLoadTried) {
+    return _externalProvider;
+  }
   _externalProviderLoadTried = true;
-  if (!EXTERNAL_PROVIDER_MODULE) return null;
+  if (!EXTERNAL_PROVIDER_MODULE) {
+    return null;
+  }
   try {
     const resolved = path.isAbsolute(EXTERNAL_PROVIDER_MODULE)
       ? EXTERNAL_PROVIDER_MODULE
@@ -78,24 +88,34 @@ async function _loadWasm() {
   // Verify that exported functions are accessible
   // (MoonBit wasm-gc binary emitter may not emit exports; see WAT for reference)
   if (!instance.exports.estimate_tokens) {
-    throw new Error('WASM module loaded but exports not available (moonc binary emitter limitation)');
+    throw new Error(
+      'WASM module loaded but exports not available (moonc binary emitter limitation)'
+    );
   }
   return instance;
 }
 
 async function getInstance() {
-  if (!_shouldTryWasm()) return null;
-  if (_instance) return _instance;
-  if (_loadError) return null;
-  if (_loading) return _loading;
+  if (!_shouldTryWasm()) {
+    return null;
+  }
+  if (_instance) {
+    return _instance;
+  }
+  if (_loadError) {
+    return null;
+  }
+  if (_loading) {
+    return _loading;
+  }
 
   _loading = _loadWasm()
-    .then(inst => {
+    .then((inst) => {
       _instance = inst;
       _loading = null;
       return inst;
     })
-    .catch(err => {
+    .catch((err) => {
       _loadError = err;
       _loading = null;
       return null;
@@ -107,9 +127,12 @@ async function getInstance() {
 // ── JS fallbacks ──
 
 function _jsEstimateTokens(text) {
-  if (!text) return 0;
-  const len = String(text).length;
-  const raw = Math.ceil(len / 4);
+  if (!text) {
+    return 0;
+  }
+  // Thin delegate to the canonical atom (byte-identical to ceil(String(text).length / 4));
+  // the 1.2x safety margin stays local to this module.
+  const raw = _simpleTokenEstimate(String(text));
   return Math.ceil(raw * 1.2);
 }
 
@@ -126,7 +149,9 @@ function _jsFnv1aHash(str) {
 
 function _jsTruncateText(text, maxChars) {
   const s = String(text || '');
-  if (s.length <= maxChars) return { text: s, omitted: 0 };
+  if (s.length <= maxChars) {
+    return { text: s, omitted: 0 };
+  }
 
   // Find last newline before maxChars for clean cut
   let cutPos = maxChars;
@@ -150,13 +175,17 @@ function _jsTruncateText(text, maxChars) {
 function estimateTokens(text) {
   if (_preferExternal()) {
     const external = _tryExternal('estimateTokens', [text]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   // WASM instance may export the function directly
   if (_instance?.exports?.estimate_tokens) {
     try {
       return _instance.exports.estimate_tokens(String(text || '').length);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsEstimateTokens(text);
 }
@@ -169,7 +198,9 @@ function estimateTokens(text) {
 function fnv1aHash(str) {
   if (_preferExternal()) {
     const external = _tryExternal('fnv1aHash', [str]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.fnv1a_hash) {
     try {
@@ -177,7 +208,9 @@ function fnv1aHash(str) {
       // WASM expects Bytes — pass length and data pointer
       // For simplicity, use JS 32-bit FNV-1a which is fast enough
       // The WASM 64-bit version is used when GC-managed strings are supported
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return _jsFnv1aHash(str);
 }
@@ -191,7 +224,9 @@ function fnv1aHash(str) {
 function truncateText(text, maxChars) {
   if (_preferExternal()) {
     const external = _tryExternal('truncateText', [text, maxChars]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   return _jsTruncateText(text, maxChars);
 }
@@ -205,12 +240,16 @@ function truncateText(text, maxChars) {
 function checkOverflow(totalTokens, budget) {
   if (_preferExternal()) {
     const external = _tryExternal('checkOverflow', [totalTokens, budget]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   if (_instance?.exports?.check_overflow) {
     try {
       return _instance.exports.check_overflow(totalTokens, budget, 12);
-    } catch { /* fallback */ }
+    } catch {
+      /* fallback */
+    }
   }
   return Math.ceil(totalTokens * 1.2) - budget;
 }
@@ -223,7 +262,9 @@ function checkOverflow(totalTokens, budget) {
 function singleToolResultCap(contextBudget) {
   if (_preferExternal()) {
     const external = _tryExternal('singleToolResultCap', [contextBudget]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   return Math.floor(contextBudget / 2);
 }
@@ -236,7 +277,9 @@ function singleToolResultCap(contextBudget) {
 function preemptiveThreshold(contextBudget) {
   if (_preferExternal()) {
     const external = _tryExternal('preemptiveThreshold', [contextBudget]);
-    if (external.hit) return external.value;
+    if (external.hit) {
+      return external.value;
+    }
   }
   return Math.floor(contextBudget * 0.9);
 }
@@ -249,7 +292,9 @@ function getRuntimeInfo() {
     wasmLoadError: _loadError ? String(_loadError.message || _loadError) : '',
     externalProviderModule: EXTERNAL_PROVIDER_MODULE || '',
     externalProviderLoaded: !!_externalProvider,
-    externalProviderLoadError: _externalProviderLoadError ? String(_externalProviderLoadError.message || _externalProviderLoadError) : '',
+    externalProviderLoadError: _externalProviderLoadError
+      ? String(_externalProviderLoadError.message || _externalProviderLoadError)
+      : '',
   };
 }
 

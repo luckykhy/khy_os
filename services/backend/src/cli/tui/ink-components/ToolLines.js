@@ -8,10 +8,24 @@
  * When `expanded` is true, the tool result preview is shown indented beneath.
  */
 const React = require('react');
+
+const { diffClipWidth } = require('../../diffContentWidth');
+const { diffLineNumbersEnabled, parseUnifiedHunkHeader } = require('../../diffLineNumbers');
+const { stripInternalControlText } = require('../../repl/displayFormatters');
+const { resultLineLead } = require('../../resultLineGlyph');
+const { formatShellOutputJson } = require('../../shellOutputJson');
+const { foldOutput, collapseConsecutiveDuplicates } = require('../../toolDisplayPolicy');
+const { argDisplayCap } = require('../../toolHeaderCap');
+const { pathMiddleTruncateEnabled, truncatePathMiddle } = require('../../toolParamPath');
+const { shouldRenderTransparentBody } = require('../../toolResultTransparency');
+const { effectiveCols } = require('../effectiveCols');
 const inkRuntime = require('../inkRuntime');
+// 有效列宽单一真源:右栏(railLayout)激活时工具输出只能按 cols - 栏宽 折行,否则宽出来的
+// 行会软换行成额外视觉行(高度账本没算过)并溢进槽位。门控关 → 真实列宽 → 逐字节 legacy。
+// 传 undefined 作 fallback:diffClipWidth 对「宽度未知」有专门语义,不能替成 80。
 // Single source of truth for fold rules — shared with the classic REPL renderer
 // (toolDisplay.js). Reused here so command output folds identically in both UIs.
-const { foldOutput, collapseConsecutiveDuplicates } = require('../../toolDisplayPolicy');
+
 // Live parallel sub-agent tree (├│└). Attached to an agent tool row as
 // `_agentTree` by the bridge (useQueryBridge.reduceAgentTree); rendered here in
 // place of the single agent(...) line once at least one child has spawned.
@@ -22,30 +36,25 @@ const _toolDiffRowsMemo = require('./toolDiffRowsMemo');
 // 已完成工具的 LITERAL(非 diff)输出体按 result 身份记忆:preview(formatShellOutputJson)+
 // 折叠行 shownLines(split+collapse+fold),消每帧对整份 stdout 的 JSON 美化尝试与全量折叠。
 // 门控 KHY_TOOL_LITERAL_OUTPUT_MEMO 关 → 直接构造(逐字节回退)。见 toolLiteralOutputMemo.js 头注释。
+const _toolHeaderSummaryMemo = require('./toolHeaderSummaryMemo');
 const _toolLiteralOutputMemo = require('./toolLiteralOutputMemo');
+
 // 已完成/运行中工具的头行(显示名 resolveToolHeaderName + 入参摘要 summarizeArgs)按 (tool, cwd)
 // 身份记忆:消每帧对每工具的 2×require+主题查表、JSON.parse 大入参、以及 summarizeArgs 内的
 // process.cwd() 系统调用。门控 KHY_TOOL_HEADER_SUMMARY_MEMO 关 → 直接构造(逐字节回退)。
-const _toolHeaderSummaryMemo = require('./toolHeaderSummaryMemo');
 // Single source for stripping internal [SYSTEM:…]/[STOP]/[Loop…] control text from
 // the visible ✗ line — shared with the classic REPL renderer (displayFormatters).
-const { stripInternalControlText } = require('../../repl/displayFormatters');
 // 工具结果透明化(纯叶子 SSOT):非命令类工具若携带真实输出体,也像 CC 一样在 ⎿ 下
 // 透明显示其真实结果。门控 KHY_TOOL_RESULT_TRANSPARENT 默认开;关 → 回退「✓ 摘要」。
-const { shouldRenderTransparentBody } = require('../../toolResultTransparency');
 // 命令输出 JSON 行美化(纯叶子 SSOT):对齐 CC OutputLine,把输出里压扁成一坨的 JSON
 // 行逐行缩进展开(带精度守卫)。门控 KHY_SHELL_OUTPUT_JSON 默认开;关 → 原样字节回退。
-const { formatShellOutputJson } = require('../../shellOutputJson');
 // ±diff 行号化(纯叶子 SSOT):给命令/`git diff` 的 unified-diff 行补 CC 那样的行号
 // gutter(参考 Image#2)。门控 KHY_DIFF_LINE_NUMBERS 默认开;关 → 不赋 num 字节回退。
-const { diffLineNumbersEnabled, parseUnifiedHunkHeader } = require('../../diffLineNumbers');
 // 结果/摘要行起首字形(纯叶子 SSOT):把结果行从绿色 `✓ 摘要` 统一成 CC 的暗色 `⎿ 摘要`
 // elbow,与命令正文同一视觉语言。门控 KHY_RESULT_ELBOW 默认开;关 → 回退 `✓` 绿色。
-const { resultLineLead } = require('../../resultLineGlyph');
 // 工具头行路径中间截断(纯叶子 SSOT):read/write/edit 的 file_path 放不下时,像 CC 的
 // truncate.ts `truncatePathMiddle` 那样从**中间**塞 `…` 保住文件名(末尾截断会把文件名
 // 截没)。门控 KHY_TOOL_PATH_MIDDLE_TRUNCATE 默认开;关 → 末尾截断字节回退。
-const { pathMiddleTruncateEnabled, truncatePathMiddle } = require('../../toolParamPath');
 // 工具头行 arg-summary「长度上限」单一真源(纯叶子):对齐 CC 的**按工具**头展示——
 // Bash 命令头按 `MAX_COMMAND_DISPLAY_CHARS=160`(BashTool/UI.tsx)、grep pattern 按
 // 50(toolLimits.ts)。Khy 历史对**每个** key 一律 `truncate(...,60)`:多数 key 的 60 ≥ CC
@@ -53,36 +62,55 @@ const { pathMiddleTruncateEnabled, truncatePathMiddle } = require('../../toolPar
 // 远低于 CC 的 160,而 Ink TUI 里命令**只**出现在这条头行(不像经典 REPL 另有整命令 box)→
 // 61–160 字命令被截断且无处可寻=明显比 CC 差。门控 KHY_TOOL_HEADER_CAP 默认开;关 → 每个 key
 // 恒 60 字节回退。只对齐**字符**上限,不引入 CC 的 2 行多行头(Khy 刻意单行折叠见刀17)。
-const { argDisplayCap } = require('../../toolHeaderCap');
 // diff 内容列「裁切宽度」单一真源(纯叶子):对齐 CC StructuredDiff Fallback.tsx 的
 // `availableContentWidth = max(1, width - maxWidth - 1 - diffPrefixWidth)` + wrapText('wrap')。
 // 此前 diff 行恒按固定 100 字 `clip(text,100)` 硬截——无视终端宽度、且**展开(Ctrl+O)后仍截**,
 // 把列 100 之后的代码静默吞掉,违背本文件自述的「Ctrl+O 真正显示全貌」诚实原则。改:折叠态按
 // 终端列宽算单行预算裁切;展开态返回 Infinity(=不裁,交 ink 像 CC 一样自动换行,绝不丢内容)。
 // 门控 KHY_DIFF_CONTENT_WIDTH 默认开;关 → 恒 100 字裁切,逐字节回退。
-const { diffClipWidth } = require('../../diffContentWidth');
 
 // Tools whose result IS literal command / third-party-app stdout. Only these
 // get the "few lines + fold + Ctrl+O expand" treatment; the agent's own prose
 // and structured results are rendered in full elsewhere and never folded here.
 const SHELL_FAMILY = new Set(['bash', 'shell', 'shellcommand', 'command', 'terminal', 'pty']);
 function isShellResult(name) {
-  return SHELL_FAMILY.has(String(name).toLowerCase().replace(/[\s_-]/g, ''));
+  return SHELL_FAMILY.has(
+    String(name)
+      .toLowerCase()
+      .replace(/[\s_-]/g, '')
+  );
 }
 
 // Most-descriptive common arg keys, in preference order. Hoisted to a module
 // constant so summarizeArgs() iterates one shared array instead of rebuilding
 // the literal each header render. Read-only iterand; never mutated.
-const _ARG_SUMMARY_KEYS = ['command', 'file_path', 'path', 'pattern', 'query', 'url', 'prompt', 'description'];
+const _ARG_SUMMARY_KEYS = [
+  'command',
+  'file_path',
+  'path',
+  'pattern',
+  'query',
+  'url',
+  'prompt',
+  'description',
+];
 
 function summarizeArgs(tool) {
   const raw = tool.input ?? tool.args ?? tool.parameters ?? tool.arguments;
-  if (raw == null) return '';
+  if (raw == null) {
+    return '';
+  }
   let obj = raw;
   if (typeof raw === 'string') {
-    try { obj = JSON.parse(raw); } catch { return truncate(raw, 60); }
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      return truncate(raw, 60);
+    }
   }
-  if (typeof obj !== 'object') return truncate(String(obj), 60);
+  if (typeof obj !== 'object') {
+    return truncate(String(obj), 60);
+  }
   // Prefer the most descriptive common keys.
   for (const key of _ARG_SUMMARY_KEYS) {
     if (obj[key]) {
@@ -93,8 +121,11 @@ function summarizeArgs(tool) {
       // KHY_TOOL_RELATIVE_PATH off → relativizeToolPath returns the value
       // unchanged → byte-identical to the legacy absolute-path behavior.
       if (key === 'file_path' || key === 'path') {
-        const relPath = require('../../ccRelativePath')
-          .relativizeToolPath(String(obj[key]), process.cwd(), process.env);
+        const relPath = require('../../ccRelativePath').relativizeToolPath(
+          String(obj[key]),
+          process.cwd(),
+          process.env
+        );
         // CC FileReadTool/UI.tsx: Read headers append the line-range
         // (offset/limit → `第 X-Y 行` / `从第 X 行起`) AFTER the path. Only
         // for read tools (write/edit/grep don't carry offset/limit); gate
@@ -120,18 +151,135 @@ function summarizeArgs(tool) {
     }
   }
   const keys = Object.keys(obj);
-  if (keys.length === 0) return '';
+  if (keys.length === 0) {
+    return '';
+  }
   return truncate(keys.map((k) => `${k}=${shorten(obj[k])}`).join(', '), 60);
 }
 
 function shorten(v) {
-  if (v == null) return '';
+  if (v == null) {
+    return '';
+  }
   const s = typeof v === 'string' ? v : JSON.stringify(v);
   return s.length > 24 ? s.slice(0, 23) + '…' : s;
 }
 
+// ── 工具头行内联耗时标记 ──
+// Gate KHY_TOOL_HEADER_DURATION (default on): append a dim ` (45ms)` / ` (1.2s)`
+// after the header arg-summary, from REAL measured data only — the durationMs a
+// tool chunk / the loop's toolCallLog stamped on the tool (or its result).
+// Missing → no tag; never estimated, never zero-filled (honesty rule shared
+// with turnStats/buildTurnArtifacts). Deliberately NOT folded into the
+// toolHeaderSummaryMemo cache: that memo's inputs (name/input) freeze at tool
+// creation while durationMs lands later with the result — caching it there
+// would serve a stale (missing) tag; the tag itself is a few number ops/frame.
+function toolHeaderDurationEnabled(env = process.env) {
+  const flag = String((env && env.KHY_TOOL_HEADER_DURATION) || '')
+    .trim()
+    .toLowerCase();
+  return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
+}
+
+// ms → compact human label: <1s → "45ms"; <1m → "1.2s" (trailing .0 trimmed);
+// ≥1m → delegate to the ccFormat duration SSOT ("1m 30s"). Non-finite/≤0 → ''
+// (caller renders nothing). ccFormat's own formatDuration floors sub-minute
+// values to whole seconds (CC turn-level convention), too coarse for per-tool
+// spans — hence the ms/one-decimal tiers here; the ≥1m tier stays on the SSOT.
+function formatToolDuration(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) {
+    return '';
+  }
+  if (n < 1000) {
+    return `${Math.round(n)}ms`;
+  }
+  if (n < 60000) {
+    return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}s`;
+  }
+  try {
+    const out = require('../../ccFormat').ccFormatDuration(n);
+    if (out) {
+      return out;
+    }
+  } catch {
+    /* fall through to the plain-seconds fallback */
+  }
+  return `${Math.round(n / 1000)}s`;
+}
+
+// Real per-tool elapsed: the tool object first (chunk/persisted-timeline
+// stamp), then its result (loop stamp). 0 → unknown → no tag.
+function toolDurationMs(t) {
+  if (!t) {
+    return 0;
+  }
+  if (Number(t.durationMs) > 0) {
+    return Number(t.durationMs);
+  }
+  const r = t.result;
+  if (r && typeof r === 'object' && Number(r.durationMs) > 0) {
+    return Number(r.durationMs);
+  }
+  return 0;
+}
+
+// ── 结果体截断标记 ──
+// Gate KHY_TOOL_RESULT_TRUNCATION_TAG (default on): when the DISPLAYED result
+// body carries fewer content characters than the full result text, append a dim
+// `[已截断 shown/total 字]` marker with the REAL counts (same append-a-dim-line
+// style as the fold footers / arg-summary `…` truncation). Fold markers
+// (`… +N 行…`) are display chrome, not result content, so they are excluded
+// from the shown count. Computed OUTSIDE the toolLiteralOutputMemo caches from
+// their (stable, cached) outputs — inputs can never go stale and the per-frame
+// cost is a bounded line-length sum over the already-folded window.
+function toolResultTruncationTagEnabled(env = process.env) {
+  const flag = String((env && env.KHY_TOOL_RESULT_TRUNCATION_TAG) || '')
+    .trim()
+    .toLowerCase();
+  return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
+}
+
+const _FOLD_MARKER_RE = /^… \+\d+ 行/;
+
+function buildResultTruncationTag(fullText, shownLines) {
+  try {
+    const total = String(fullText == null ? '' : fullText).replace(/\n/g, '').length;
+    if (!(total > 0) || !Array.isArray(shownLines)) {
+      return '';
+    }
+    let shown = 0;
+    for (const ln of shownLines) {
+      const s = String(ln == null ? '' : ln);
+      if (_FOLD_MARKER_RE.test(s)) {
+        continue;
+      } // display chrome, not content
+      shown += s.length;
+    }
+    if (shown >= total) {
+      return '';
+    }
+    return `[已截断 ${shown}/${total} 字]`;
+  } catch {
+    return '';
+  }
+}
+
 function truncate(s, n) {
   s = String(s).replace(/\s+/g, ' ').trim();
+  // Width-aware truncation only when the string contains wide chars (CJK =
+  // 2 columns): the legacy byte-level end-truncate is already width-correct
+  // for narrow-only strings and its output is locked byte-for-byte by tests.
+  // Lazy require with byte-level fallback so a formatters load failure can
+  // never break tool-line rendering.
+  try {
+    const { displayWidth, truncateToWidth } = require('../../formatters');
+    if (displayWidth(s) !== s.length) {
+      return truncateToWidth(s, n);
+    }
+  } catch {
+    /* formatters unavailable — legacy fallback below */
+  }
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
 
@@ -178,7 +326,9 @@ const SHELL_CONT = '  ';
 
 function splitDiffLines(text) {
   const arr = String(text ?? '').split('\n');
-  if (arr.length && arr[arr.length - 1] === '') arr.pop();
+  if (arr.length && arr[arr.length - 1] === '') {
+    arr.pop();
+  }
   return arr;
 }
 
@@ -195,10 +345,14 @@ function splitDiffLines(text) {
  * @returns {Array<{kind:'add'|'del'|'ctx'|'more'|'stat', num?:number, text:string}>|null}
  */
 function buildWriteDiffRows(diffCtx, expanded = false) {
-  if (!diffCtx) return null;
+  if (!diffCtx) {
+    return null;
+  }
   const before = typeof diffCtx.beforeContent === 'string' ? diffCtx.beforeContent : '';
   const after = typeof diffCtx.afterContent === 'string' ? diffCtx.afterContent : '';
-  if (before === after) return null;
+  if (before === after) {
+    return null;
+  }
 
   const previewMax = expanded ? PREVIEW_ROWS_EXPANDED : PREVIEW_ROWS_COLLAPSED;
   const maxRows = expanded ? MAX_DIFF_ROWS_EXPANDED : MAX_DIFF_ROWS_COLLAPSED;
@@ -214,33 +368,49 @@ function buildWriteDiffRows(diffCtx, expanded = false) {
     const lines = splitDiffLines(after);
     const { keep, hidden } = _overflow.resolveFold(lines.length, previewMax, process.env);
     lines.slice(0, keep).forEach((ln, i) => rows.push({ kind: 'add', num: i + 1, text: ln }));
-    if (hidden > 0) rows.push({ kind: 'more', text: moreText(hidden, '+') });
+    if (hidden > 0) {
+      rows.push({ kind: 'more', text: moreText(hidden, '+') });
+    }
     return rows;
   }
   if (before && !after) {
     const lines = splitDiffLines(before);
     const { keep, hidden } = _overflow.resolveFold(lines.length, previewMax, process.env);
     lines.slice(0, keep).forEach((ln, i) => rows.push({ kind: 'del', num: i + 1, text: ln }));
-    if (hidden > 0) rows.push({ kind: 'more', text: moreText(hidden, '-') });
+    if (hidden > 0) {
+      rows.push({ kind: 'more', text: moreText(hidden, '-') });
+    }
     return rows;
   }
 
   let diff;
-  try { diff = require('../../diffRenderer').computeStructuredDiffHunks(before, after, { context: DIFF_CONTEXT }); }
-  catch { return null; }
+  try {
+    diff = require('../../diffRenderer').computeStructuredDiffHunks(before, after, {
+      context: DIFF_CONTEXT,
+    });
+  } catch {
+    return null;
+  }
   const { added, removed, hunks } = diff;
-  if ((added === 0 && removed === 0) || !hunks.length) return null;
+  if ((added === 0 && removed === 0) || !hunks.length) {
+    return null;
+  }
 
   // Flatten hunks into rows, inserting a dim "⋯ N unchanged lines" separator
   // between non-adjacent hunks so multi-spot edits read honestly instead of one
   // miscounted mega-block.
   for (const hunk of hunks) {
     if (hunk.gapBefore > 0) {
-      rows.push({ kind: 'gap', text: `⋯ ${hunk.gapBefore} unchanged line${hunk.gapBefore !== 1 ? 's' : ''}` });
+      rows.push({
+        kind: 'gap',
+        text: `⋯ ${hunk.gapBefore} unchanged line${hunk.gapBefore !== 1 ? 's' : ''}`,
+      });
     } else if (hunk.gapBefore === 0) {
       rows.push({ kind: 'gap', text: '⋯' });
     }
-    for (const r of hunk.rows) rows.push(r);
+    for (const r of hunk.rows) {
+      rows.push(r);
+    }
   }
 
   if (rows.length > maxRows) {
@@ -253,7 +423,9 @@ function buildWriteDiffRows(diffCtx, expanded = false) {
 
   // 摘要串构造收敛到单一真源 cli/editStatLine.js(含 CC 句首 "Removed" 大写规则)。
   const statLine = require('../../editStatLine').buildEditStatLine(added, removed, process.env);
-  if (statLine) rows.push({ kind: 'stat', text: `└ ${statLine}` });
+  if (statLine) {
+    rows.push({ kind: 'stat', text: `└ ${statLine}` });
+  }
 
   return rows;
 }
@@ -281,7 +453,9 @@ function looksLikeUnifiedDiff(text) {
  */
 function buildShellDiffRows(text, expanded = false) {
   const lines = splitDiffLines(text);
-  if (!lines.length) return null;
+  if (!lines.length) {
+    return null;
+  }
   const numbersOn = diffLineNumbersEnabled();
   const maxRows = expanded ? MAX_DIFF_ROWS_EXPANDED : MAX_DIFF_ROWS_COLLAPSED;
   const rows = [];
@@ -291,9 +465,12 @@ function buildShellDiffRows(text, expanded = false) {
   let newLine = null;
   for (const ln of lines) {
     if (rows.length >= maxRows) {
-      rows.push({ kind: 'more', text: expanded
-        ? '... (diff truncated, capped)'
-        : '... (diff truncated, ctrl+o for full output)' });
+      rows.push({
+        kind: 'more',
+        text: expanded
+          ? '... (diff truncated, capped)'
+          : '... (diff truncated, ctrl+o for full output)',
+      });
       break;
     }
     // Meta lines carry no gutter number and advance no cursor. The `\ No newline
@@ -306,22 +483,37 @@ function buildShellDiffRows(text, expanded = false) {
     if (/^(\+\+\+|---|@@|diff |index |\\ )/.test(ln)) {
       if (numbersOn && /^@@/.test(ln)) {
         const hh = parseUnifiedHunkHeader(ln);
-        if (hh) { oldLine = hh.oldStart; newLine = hh.newStart; }
+        if (hh) {
+          oldLine = hh.oldStart;
+          newLine = hh.newStart;
+        }
       }
       rows.push({ kind: 'meta', text: ln });
     } else if (/^\+/.test(ln)) {
       const row = { kind: 'add', text: ln.slice(1) };
-      if (numbersOn && newLine != null) { row.num = newLine; newLine++; }
+      if (numbersOn && newLine != null) {
+        row.num = newLine;
+        newLine++;
+      }
       rows.push(row);
     } else if (/^-/.test(ln)) {
       const row = { kind: 'del', text: ln.slice(1) };
-      if (numbersOn && oldLine != null) { row.num = oldLine; oldLine++; }
+      if (numbersOn && oldLine != null) {
+        row.num = oldLine;
+        oldLine++;
+      }
       rows.push(row);
     } else {
       const row = { kind: 'ctx', text: ln.replace(/^ /, '') };
-      if (numbersOn && newLine != null) { row.num = newLine; }
-      if (numbersOn && oldLine != null) { oldLine++; }
-      if (numbersOn && newLine != null) { newLine++; }
+      if (numbersOn && newLine != null) {
+        row.num = newLine;
+      }
+      if (numbersOn && oldLine != null) {
+        oldLine++;
+      }
+      if (numbersOn && newLine != null) {
+        newLine++;
+      }
       rows.push(row);
     }
   }
@@ -336,7 +528,9 @@ function buildShellDiffRows(text, expanded = false) {
 // counterpart, token-diff, highlight changed words). Gate KHY_TUI_WORD_DIFF
 // (default on). =0/false/off/no → off → byte-identical whole-line rendering.
 function tuiWordDiffEnabled(env = process.env) {
-  const flag = String((env && env.KHY_TUI_WORD_DIFF) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_TUI_WORD_DIFF) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -357,20 +551,36 @@ function tuiWordDiffEnabled(env = process.env) {
  */
 function planWordDiffPairs(rows, wd, clipW = 100) {
   const plan = new Map();
-  if (!wd || typeof wd.computeWordDiffSegments !== 'function' || !Array.isArray(rows)) return plan;
+  if (!wd || typeof wd.computeWordDiffSegments !== 'function' || !Array.isArray(rows)) {
+    return plan;
+  }
   let i = 0;
   while (i < rows.length) {
-    if (!rows[i] || rows[i].kind !== 'del') { i++; continue; }
+    if (!rows[i] || rows[i].kind !== 'del') {
+      i++;
+      continue;
+    }
     const dels = [];
-    while (i < rows.length && rows[i] && rows[i].kind === 'del') { dels.push(i); i++; }
+    while (i < rows.length && rows[i] && rows[i].kind === 'del') {
+      dels.push(i);
+      i++;
+    }
     const adds = [];
-    while (i < rows.length && rows[i] && rows[i].kind === 'add') { adds.push(i); i++; }
-    if (!adds.length) continue; // dels with no following adds → no pairing
+    while (i < rows.length && rows[i] && rows[i].kind === 'add') {
+      adds.push(i);
+      i++;
+    }
+    if (!adds.length) {
+      continue;
+    } // dels with no following adds → no pairing
     const pairCount = Math.min(dels.length, adds.length);
     for (let k = 0; k < pairCount; k++) {
       const di = dels[k];
       const ai = adds[k];
-      const segs = wd.computeWordDiffSegments(clip(rows[di].text, clipW), clip(rows[ai].text, clipW));
+      const segs = wd.computeWordDiffSegments(
+        clip(rows[di].text, clipW),
+        clip(rows[ai].text, clipW)
+      );
       if (segs && segs.wordLevel) {
         plan.set(di, { side: 'del', segs: segs.old });
         plan.set(ai, { side: 'add', segs: segs.new });
@@ -387,7 +597,11 @@ function planWordDiffPairs(rows, wd, clipW = 100) {
 function renderDiffRows(rows, h, Box, Text, expanded = false) {
   let wd = null;
   if (tuiWordDiffEnabled()) {
-    try { wd = require('../../wordDiff'); } catch { wd = null; }
+    try {
+      wd = require('../../wordDiff');
+    } catch {
+      wd = null;
+    }
   }
   // gutter 数字位宽收敛到单一真源 cli/diffGutter.js(对齐 CC 动态位宽,门控关→恒 4 位字节回退)。
   const gutter = require('../../diffGutter');
@@ -395,13 +609,15 @@ function renderDiffRows(rows, h, Box, Text, expanded = false) {
   // 内容裁切宽度走 diffContentWidth 叶子:折叠→按终端列宽单行预算;展开→Infinity 不裁(ink 换行)。
   // 门控关 → 恒 100,逐字节回退到历史固定裁切。
   const clipW = diffClipWidth({
-    columns: (process.stdout && process.stdout.columns) || undefined,
+    columns: effectiveCols(undefined),
     gutterWidth: gw,
     expanded,
     env: process.env,
   });
   const plan = wd ? planWordDiffPairs(rows, wd, clipW) : null;
-  return h(Box, { key: 'diff', flexDirection: 'column', marginLeft: 2 },
+  return h(
+    Box,
+    { key: 'diff', flexDirection: 'column', marginLeft: 2 },
     ...rows.map((r, j) => {
       const num = gutter.formatDiffGutterNum(r.num, gw);
       // Paired remove/add lines with word-level segments: paint changed sub-spans
@@ -411,18 +627,36 @@ function renderDiffRows(rows, h, Box, Text, expanded = false) {
         const lineBg = seg.side === 'add' ? DIFF_ADD_BG : DIFF_DEL_BG;
         const wordBg = seg.side === 'add' ? DIFF_ADD_WORD_BG : DIFF_DEL_WORD_BG;
         const sign = seg.side === 'add' ? '+' : '-';
-        return h(Box, { key: j },
+        return h(
+          Box,
+          { key: j },
           h(Text, { color: '#FFFFFF', backgroundColor: lineBg }, `${num} ${sign} `),
-          ...seg.segs.map((s, k) => h(Text, {
-            key: k, color: '#FFFFFF', backgroundColor: s.changed ? wordBg : lineBg,
-          }, s.text))
+          ...seg.segs.map((s, k) =>
+            h(
+              Text,
+              {
+                key: k,
+                color: '#FFFFFF',
+                backgroundColor: s.changed ? wordBg : lineBg,
+              },
+              s.text
+            )
+          )
         );
       }
       if (r.kind === 'add') {
-        return h(Text, { key: j, color: '#FFFFFF', backgroundColor: DIFF_ADD_BG }, `${num} + ${clip(r.text, clipW)}`);
+        return h(
+          Text,
+          { key: j, color: '#FFFFFF', backgroundColor: DIFF_ADD_BG },
+          `${num} + ${clip(r.text, clipW)}`
+        );
       }
       if (r.kind === 'del') {
-        return h(Text, { key: j, color: '#FFFFFF', backgroundColor: DIFF_DEL_BG }, `${num} - ${clip(r.text, clipW)}`);
+        return h(
+          Text,
+          { key: j, color: '#FFFFFF', backgroundColor: DIFF_DEL_BG },
+          `${num} - ${clip(r.text, clipW)}`
+        );
       }
       if (r.kind === 'ctx') {
         return h(Text, { key: j, dimColor: true }, `${num}   ${clip(r.text, clipW)}`);
@@ -433,7 +667,9 @@ function renderDiffRows(rows, h, Box, Text, expanded = false) {
 }
 
 function resultPreview(result) {
-  if (!result) return '';
+  if (!result) {
+    return '';
+  }
   const text = result.text || result.content || result.output || '';
   const s = typeof text === 'string' ? text : JSON.stringify(text);
   return s;
@@ -459,15 +695,16 @@ function renderLiteralOutput(result, expanded, h, Box, Text) {
   const preview = _toolLiteralOutputMemo.memoPreview(
     result,
     () => formatShellOutputJson(resultPreview(result), process.env),
-    process.env,
+    process.env
   );
-  if (!preview || !preview.trim()) return null;
+  if (!preview || !preview.trim()) {
+    return null;
+  }
   const out = [];
   // `git diff`-shaped stdout keeps the classic red/green colouring. 行数据按 result 对象身份记忆
   // (已完成工具 result 冻结 → 消每帧 splitDiffLines 全量重切 + 逐行分类);门控关 → 直接构造。
-  const shellDiffRows = _toolDiffRowsMemo.memoDiffRows(
-    result, expanded,
-    () => (looksLikeUnifiedDiff(preview) ? buildShellDiffRows(preview, expanded) : null),
+  const shellDiffRows = _toolDiffRowsMemo.memoDiffRows(result, expanded, () =>
+    looksLikeUnifiedDiff(preview) ? buildShellDiffRows(preview, expanded) : null
   );
   if (shellDiffRows && shellDiffRows.length) {
     out.push(renderDiffRows(shellDiffRows, h, Box, Text, expanded));
@@ -475,21 +712,26 @@ function renderLiteralOutput(result, expanded, h, Box, Text) {
     // 折叠行 shownLines 依赖 (result, expanded)、不依赖列宽(列宽只在下游 truncate 阶段每帧
     // 现场施加)→ 按 result 身份 + expanded 档记忆,消每帧全量 split+collapse+fold。命中后
     // 每帧仅剩对**已折叠**(有界 maxLines)行的 truncate,byte-identical。门控关 → 直接构造。
-    const shownLines = _toolLiteralOutputMemo.memoFoldedLines(result, expanded, () => {
-      const allLines = preview.split('\n');
-      // Drop trailing blank lines so the hidden-line count is honest.
-      while (allLines.length && allLines[allLines.length - 1].trim() === '') allLines.pop();
-      // Collapse consecutive duplicate lines when collapsed (Ctrl+O feeds raw lines so
-      // expanded reveals the full output verbatim, repeats and all).
-      const sourceLines = expanded
-        ? allLines
-        : collapseConsecutiveDuplicates(allLines).lines;
-      // Collapsed → generous fold (short output shows in full); expanded → generous cap.
-      const policy = expanded
-        ? { maxLines: PREVIEW_ROWS_EXPANDED, foldHead: PREVIEW_ROWS_EXPANDED, foldTail: 0 }
-        : SHELL_COLLAPSED_POLICY;
-      return foldOutput(sourceLines, policy).lines;
-    }, process.env);
+    const shownLines = _toolLiteralOutputMemo.memoFoldedLines(
+      result,
+      expanded,
+      () => {
+        const allLines = preview.split('\n');
+        // Drop trailing blank lines so the hidden-line count is honest.
+        while (allLines.length && allLines[allLines.length - 1].trim() === '') {
+          allLines.pop();
+        }
+        // Collapse consecutive duplicate lines when collapsed (Ctrl+O feeds raw lines so
+        // expanded reveals the full output verbatim, repeats and all).
+        const sourceLines = expanded ? allLines : collapseConsecutiveDuplicates(allLines).lines;
+        // Collapsed → generous fold (short output shows in full); expanded → generous cap.
+        const policy = expanded
+          ? { maxLines: PREVIEW_ROWS_EXPANDED, foldHead: PREVIEW_ROWS_EXPANDED, foldTail: 0 }
+          : SHELL_COLLAPSED_POLICY;
+        return foldOutput(sourceLines, policy).lines;
+      },
+      process.env
+    );
     // 刀17:命令/三方应用 stdout 每行的裁切宽度走与 diff 行同一个 SSOT(`diffClipWidth`),
     // 而非历史的固定 100 字 `truncate(ln, 100)`。固定 100 与刀15 修掉的 diff 老缺口同病:
     //   ① 无视终端宽度(80 列 TTY 上裁到 100 仍宽于终端 → ink 二次换行 → 撑破 foldOutput
@@ -501,29 +743,44 @@ function renderLiteralOutput(result, expanded, h, Box, Text) {
     // `wrapWidth = max(terminalWidth - PADDING_TO_PREVENT_OVERFLOW(10), 10)`;展开态 → Infinity
     // (`clip(ln, Infinity) === ln`,整行交 ink 自然换行,Ctrl+O 真正全貌);门控关 → 100 字节回退。
     const litClipW = diffClipWidth({
-      columns: (process.stdout && process.stdout.columns) || undefined,
+      columns: effectiveCols(undefined),
       gutterWidth: 4,
       expanded,
       env: process.env,
     });
     out.push(
-      h(Box, { key: 'res', flexDirection: 'column', marginLeft: 1 },
+      h(
+        Box,
+        { key: 'res', flexDirection: 'column', marginLeft: 1 },
         // 命令 stdout 用**保留空格**的 clip(而非折叠 `\s+` 的 truncate):PowerShell / `ls -l` /
         // 任何列对齐输出靠成串空格排版,折叠空格会把表头塌成 `p n s` 这类单字母 + 空行。与上面
         // diff 分支同口径(见 clip 定义处注释:collapsing it would mangle code)。
-        ...shownLines.map((ln, j) => h(Box, { key: j },
-          h(Text, { dimColor: true }, j === 0 ? SHELL_ELBOW : SHELL_CONT),
-          h(Text, { dimColor: true }, clip(ln, litClipW))
-        ))
+        ...shownLines.map((ln, j) =>
+          h(
+            Box,
+            { key: j },
+            h(Text, { dimColor: true }, j === 0 ? SHELL_ELBOW : SHELL_CONT),
+            h(Text, { dimColor: true }, clip(ln, litClipW))
+          )
+        )
       )
     );
+    // 截断标记:显示字数 < 全文字数时补一条真实计数的 dim 行(见 buildResultTruncationTag
+    // 头注释;preview/shownLines 均为 memo 缓存的稳定引用,标记随之恒新,绝不吐旧)。
+    if (toolResultTruncationTagEnabled()) {
+      const tag = buildResultTruncationTag(preview, shownLines);
+      if (tag) {
+        out.push(
+          h(Box, { key: 'trunc', marginLeft: 1 }, h(Text, { dimColor: true }, SHELL_CONT + tag))
+        );
+      }
+    }
   }
   // A non-zero exit code is a result the stdout alone may not reveal — surface it.
   const exitCode = result && typeof result.exitCode === 'number' ? result.exitCode : null;
   if (exitCode !== null && exitCode !== 0) {
     out.push(
-      h(Box, { key: 'exit', marginLeft: 2 },
-        h(Text, { color: 'yellow' }, `↳ 退出码 ${exitCode}`))
+      h(Box, { key: 'exit', marginLeft: 2 }, h(Text, { color: 'yellow' }, `↳ 退出码 ${exitCode}`))
     );
   }
   return out;
@@ -532,10 +789,14 @@ function renderLiteralOutput(result, expanded, h, Box, Text) {
 // Extract a human-readable failure reason from a tool result so it can be shown
 // proactively on the ✗ line — the user should never have to ask "why did it fail".
 function errorText(result, env = process.env) {
-  if (!result) return '';
+  if (!result) {
+    return '';
+  }
   // A guard that blocked the tool supplies a clean, user-facing line separate
   // from its model-only steer message — always prefer it.
-  if (result._displayHint) return String(result._displayHint);
+  if (result._displayHint) {
+    return String(result._displayHint);
+  }
   const cand =
     result.error ||
     result.reason ||
@@ -543,7 +804,9 @@ function errorText(result, env = process.env) {
     result.output ||
     result.content ||
     result.text;
-  if (!cand) return '';
+  if (!cand) {
+    return '';
+  }
   // 刀18:折叠门控开时保留换行,让多行错误(栈回溯/构建输出/多行 stderr)按行铺开
   // 供下游 planErrorFold 折叠;关时 opts=undefined → stripInternalControlText 逐字节
   // 回退旧的「换行折空格→单行」,与历史 errorText 完全一致(单行 reason,slice(0,3)
@@ -551,7 +814,9 @@ function errorText(result, env = process.env) {
   const opts = require('../../toolErrorFold').toolErrorFoldEnabled(env)
     ? { preserveNewlines: true }
     : undefined;
-  if (typeof cand === 'string') return stripInternalControlText(cand, opts);
+  if (typeof cand === 'string') {
+    return stripInternalControlText(cand, opts);
+  }
   // Structured ToolError shapes.
   if (typeof cand === 'object') {
     return stripInternalControlText(cand.message || cand.reason || JSON.stringify(cand), opts);
@@ -562,12 +827,20 @@ function errorText(result, env = process.env) {
 function ToolLines({ tools = [], expanded = false, live = false }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
-  if (!tools || tools.length === 0) return null;
+  if (!tools || tools.length === 0) {
+    return null;
+  }
 
   // 每帧只取一次工作目录,传给每行头部记忆做 cwd 守卫键——把「每工具一次 process.cwd()
   // 系统调用」降到「每帧一次」。summarizeArgs 内部仍在 miss 时读 process.cwd()(同步 render 内
   // 与此值恒等),故键一致性成立。
-  const _cwd = (() => { try { return process.cwd(); } catch { return ''; } })();
+  const _cwd = (() => {
+    try {
+      return process.cwd();
+    } catch {
+      return '';
+    }
+  })();
 
   const blocks = tools.map((t, i) => {
     // Parallel sub-agent fan-out: once the orchestrator has spawned children the
@@ -576,39 +849,48 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
     // spawns (_agentTree empty) we fall through to the normal single-line row.
     const agentTree = Array.isArray(t._agentTree) && t._agentTree.length > 0 ? t._agentTree : null;
     if (agentTree) {
-      return h(Box, { key: `tool-${i}`, flexDirection: 'column', marginLeft: 1 },
-        h(AgentTree, { agents: agentTree, expanded, live }));
+      return h(
+        Box,
+        { key: `tool-${i}`, flexDirection: 'column', marginLeft: 1 },
+        h(AgentTree, { agents: agentTree, expanded, live })
+      );
     }
 
     const done = !!t.result;
     // Treat any explicit failure signal as an error so the reason is surfaced —
     // tools fail with varied shapes: {isError}, {is_error}, {error}, or just
     // {success:false, reason}.
-    const isErr = done && (
-      t.result.isError ||
-      t.result.is_error ||
-      t.result.error ||
-      t.result.success === false
-    );
+    const isErr =
+      done &&
+      (t.result.isError || t.result.is_error || t.result.error || t.result.success === false);
     const icon = !done ? '◆' : isErr ? '✗' : '✓';
     const color = !done ? 'yellow' : isErr ? 'red' : 'green';
     // 头行 { 显示名, 入参摘要 } 是 (tool, cwd) 的确定性纯函数(name/input 工具创建后不变)→
     // 按 (tool, cwd) 身份记忆,消每帧的 2×require+主题查表、JSON.parse 大入参、process.cwd() 系统
     // 调用。computeFn 内逐字节复刻原内联逻辑;门控关/异常/非对象 → 直接 computeFn(逐字节回退)。
-    const _header = _toolHeaderSummaryMemo.memoHeader(t, _cwd, () => {
-      // 头行显示名对齐 Claude Code:经典 REPL 早已过 getToolDisplayName 归一
-      // (edit→Update / write→Write / read→Read …),但此前 TUI 头行直接用原始注册名
-      // (Edit/Write/…),同一操作在 TUI 显示 `Edit(...)`、在 REPL/CC 却是 `Update(...)`。
-      // 接回同一份 SSOT 消除漂移。门控 KHY_TUI_TOOL_DISPLAY_NAME(默认开);关 / 出错 →
-      // 逐字节回退原始名。getToolDisplayName 对未收录工具本就返回原名,是安全超集。
-      let nm = t.name || t.toolName || t.tool || 'tool';
-      try {
-        nm = require('../../toolHeaderDisplayName').resolveToolHeaderName(
-          nm, process.env, require('../../renderTheme').getToolDisplayName
-        );
-      } catch { /* display-name alignment is additive; never block tool rendering */ }
-      return { name: nm, argSummary: summarizeArgs(t) };
-    }, process.env);
+    const _header = _toolHeaderSummaryMemo.memoHeader(
+      t,
+      _cwd,
+      () => {
+        // 头行显示名对齐 Claude Code:经典 REPL 早已过 getToolDisplayName 归一
+        // (edit→Update / write→Write / read→Read …),但此前 TUI 头行直接用原始注册名
+        // (Edit/Write/…),同一操作在 TUI 显示 `Edit(...)`、在 REPL/CC 却是 `Update(...)`。
+        // 接回同一份 SSOT 消除漂移。门控 KHY_TUI_TOOL_DISPLAY_NAME(默认开);关 / 出错 →
+        // 逐字节回退原始名。getToolDisplayName 对未收录工具本就返回原名,是安全超集。
+        let nm = t.name || t.toolName || t.tool || 'tool';
+        try {
+          nm = require('../../toolHeaderDisplayName').resolveToolHeaderName(
+            nm,
+            process.env,
+            require('../../renderTheme').getToolDisplayName
+          );
+        } catch {
+          /* display-name alignment is additive; never block tool rendering */
+        }
+        return { name: nm, argSummary: summarizeArgs(t) };
+      },
+      process.env
+    );
     const name = _header.name;
     const argSummary = _header.argSummary;
 
@@ -623,14 +905,23 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
         const { inlineLabel } = require('../../../services/trajectoryProvenance').projection;
         provLabel = inlineLabel({ _khyTrace: trace });
         provColor = trace.trust === 'quarantined' ? 'red' : 'yellow';
-      } catch { /* label is additive; never block tool rendering */ }
+      } catch {
+        /* label is additive; never block tool rendering */
+      }
     }
 
+    // 内联耗时:仅当工具/结果携带真实 durationMs 时显示 ` (45ms)`,缺失即无
+    // (绝不估算/补零)。独立于 memoHeader 缓存(见 toolHeaderDurationEnabled 头注释)。
+    const durTag = toolHeaderDurationEnabled() ? formatToolDuration(toolDurationMs(t)) : '';
+
     const children = [
-      h(Box, { key: 'head' },
+      h(
+        Box,
+        { key: 'head' },
         h(Text, { color }, icon + ' '),
         h(Text, { bold: true }, name),
         argSummary ? h(Text, { dimColor: true }, `(${argSummary})`) : null,
+        durTag ? h(Text, { dimColor: true }, ` (${durTag})`) : null,
         provLabel ? h(Text, { color: provColor }, `  ${provLabel}`) : null
       ),
     ];
@@ -642,9 +933,12 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
     // result lands and the row flips to ✓/✗ with its summary.
     if (!done && live && t.progress) {
       children.push(
-        h(Box, { key: 'progress', marginLeft: 2 },
+        h(
+          Box,
+          { key: 'progress', marginLeft: 2 },
           h(Text, { color: 'yellow' }, '↳ '),
-          h(Text, { dimColor: true }, String(t.progress)))
+          h(Text, { dimColor: true }, String(t.progress))
+        )
       );
     }
 
@@ -659,8 +953,11 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
       // **本仓自产的入参校验失败串**(面向模型的多行分组)收成单行 `Invalid tool parameters`;
       // **展开(Ctrl+O)** 仍显完整分组细节;模型侧 tool_result 不动(本处只在 display 层)。
       // 非校验类失败原样透传。门控 KHY_USER_FACING_TOOL_ERROR 默认开;关 / expanded → 原样回退。
-      const reason = require('../../ccUserFacingToolError')
-        .collapseValidationErrorForDisplay(rawReason, { expanded }, process.env);
+      const reason = require('../../ccUserFacingToolError').collapseValidationErrorForDisplay(
+        rawReason,
+        { expanded },
+        process.env
+      );
       const rawLines = reason ? String(reason).split('\n') : [];
       // 刀18:错误详情按 CC `FallbackToolUseErrorMessage` 折叠——折叠态最多显
       // MAX_RENDERED_LINES(10)行,余下不再静默丢弃而是缀一条**独立 dim 页脚**
@@ -671,12 +968,17 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
       // toolErrorFold(单一真源);着色(红行/dim 页脚)与 marginLeft 留本 call-site。
       // 门控 KHY_TOOL_ERROR_FOLD 默认开;关 → planErrorFold 逐字节回退旧 silent 3 行截断
       // ({shown: lines.slice(0,3), hidden:0},不受 expanded 影响)。
-      const { shown: detailLines, hidden } = require('../../toolErrorFold')
-        .planErrorFold(rawLines, expanded, process.env);
+      const { shown: detailLines, hidden } = require('../../toolErrorFold').planErrorFold(
+        rawLines,
+        expanded,
+        process.env
+      );
       // Guarantee at least one explanatory line even when no reason text exists.
-      const headline = denied ? '权限被拒绝' : (detailLines.length ? null : '失败');
+      const headline = denied ? '权限被拒绝' : detailLines.length ? null : '失败';
       const errChildren = [];
-      if (headline) errChildren.push(h(Text, { key: 'h', color: 'red', bold: denied }, headline));
+      if (headline) {
+        errChildren.push(h(Text, { key: 'h', color: 'red', bold: denied }, headline));
+      }
       // 刀40:错误详情每行的**裁切宽度**走 diffClipWidth SSOT,与姊妹 literal stdout 分支
       // (本文件 ~470 行)同口径——终端感知 + **展开(Ctrl+O)→Infinity 整行**——而非历史固定
       // `truncate(ln,120)`。固定 120 与刀15/刀17 修掉的 diff / literal 老缺口同病:① 无视终端宽
@@ -692,33 +994,32 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
       const _errFaithful = require('../../toolErrorFold').toolErrorFoldEnabled(process.env);
       const _errClipW = _errFaithful
         ? diffClipWidth({
-            columns: (process.stdout && process.stdout.columns) || undefined,
+            columns: effectiveCols(undefined),
             gutterWidth: 3,
             expanded,
             env: process.env,
           })
         : 120;
       detailLines.forEach((ln, j) =>
-        errChildren.push(h(Text, { key: `d${j}`, color: 'red' }, clip(ln, _errClipW))));
+        errChildren.push(h(Text, { key: `d${j}`, color: 'red' }, clip(ln, _errClipW)))
+      );
       // Honest fold footer (dim, like CC) — never a silent drop. Gate-off /
       // expanded → hidden===0 → no footer, byte-identical to the legacy branch.
       if (hidden > 0) {
         errChildren.push(h(Text, { key: 'more', dimColor: true }, `… +${hidden} 行 (ctrl+o 展开)`));
       }
-      children.push(
-        h(Box, { key: 'err', flexDirection: 'column', marginLeft: 2 }, ...errChildren)
-      );
+      children.push(h(Box, { key: 'err', flexDirection: 'column', marginLeft: 2 }, ...errChildren));
     }
 
     // Red/green ±diff for Write/Edit/Delete (Goal7, _khyWriteDiff). The diff IS
     // the result the user wants to see, so render it inline regardless of
     // `expanded` — it takes the place of the generic "✓ 完成" / text preview.
-    const diffRows = (done && !isErr && t.result && t.result._khyWriteDiff)
-      ? _toolDiffRowsMemo.memoDiffRows(
-          t.result._khyWriteDiff, expanded,
-          () => buildWriteDiffRows(t.result._khyWriteDiff, expanded),
-        )
-      : null;
+    const diffRows =
+      done && !isErr && t.result && t.result._khyWriteDiff
+        ? _toolDiffRowsMemo.memoDiffRows(t.result._khyWriteDiff, expanded, () =>
+            buildWriteDiffRows(t.result._khyWriteDiff, expanded)
+          )
+        : null;
 
     if (diffRows && diffRows.length) {
       children.push(renderDiffRows(diffRows, h, Box, Text, expanded));
@@ -738,8 +1039,11 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
         const summary = t.result && t.result.summary;
         const lead = resultLineLead();
         children.push(
-          h(Box, { key: 'ok', marginLeft: 2 },
-            h(Text, { color: lead.color, dimColor: lead.dim }, lead.glyph + (summary || '完成')))
+          h(
+            Box,
+            { key: 'ok', marginLeft: 2 },
+            h(Text, { color: lead.color, dimColor: lead.dim }, lead.glyph + (summary || '完成'))
+          )
         );
       }
     } else if (done && !isErr && !expanded) {
@@ -753,8 +1057,11 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
       const base = lead.glyph + (summary || '完成');
       const hint = shouldRenderTransparentBody(t.result) ? '  (ctrl+o 展开)' : '';
       children.push(
-        h(Box, { key: 'ok', marginLeft: 2 },
-          h(Text, { color: lead.color, dimColor: lead.dim }, base + hint))
+        h(
+          Box,
+          { key: 'ok', marginLeft: 2 },
+          h(Text, { color: lead.color, dimColor: lead.dim }, base + hint)
+        )
       );
     } else if (!diffRows && expanded && done && !isErr) {
       // 工具结果透明化(expanded):门控开且有真实输出体 → 同一 ⎿ 透明体(更慷慨的展开
@@ -768,9 +1075,16 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
         const preview = resultPreview(t.result);
         if (preview) {
           const lines = preview.split('\n').slice(0, 12);
+          // 12 行预览截断时同样补真实计数标记(与 literal 分支同口径,展开态诚实)。
+          const tag = toolResultTruncationTagEnabled()
+            ? buildResultTruncationTag(preview, lines)
+            : '';
           children.push(
-            h(Box, { key: 'res', flexDirection: 'column', marginLeft: 2 },
-              ...lines.map((ln, j) => h(Text, { key: j, dimColor: true }, clip(ln, 100)))
+            h(
+              Box,
+              { key: 'res', flexDirection: 'column', marginLeft: 2 },
+              ...lines.map((ln, j) => h(Text, { key: j, dimColor: true }, clip(ln, 100))),
+              tag ? h(Text, { key: 'trunc', dimColor: true }, tag) : null
             )
           );
         }
@@ -783,7 +1097,56 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
   return h(Box, { flexDirection: 'column' }, ...blocks);
 }
 
-module.exports = ToolLines;
+// Re-render narrowing: memoize the component so parent renders (e.g. App
+// re-rendering on every keystroke) stop cascading into re-rendering every
+// committed tool block. Props stability AUDIT (all callers: Transcript.js,
+// StreamingBlock.js, ProcessGroup.js):
+//   - `tools` is a NEW array every frame (ProcessGroup.groupTimeline /
+//     groupConsecutiveTools rebuild it, ProcessGroup filters it), so a plain
+//     shallow compare would never bail out. The tool OBJECTS inside are stable
+//     references though — useQueryBridge replaces an element immutably
+//     ({ ...t, result: ... }) whenever it changes — so an element-wise identity
+//     compare over the array is a faithful change signal.
+//   - `expanded` / `live` are primitives (field compare).
+// Gate KHY_TUI_COMPONENT_MEMO, DEFAULT ON; explicit off-writing
+// ('0'/'false'/'off'/'no') restores the plain (unmemoized) export byte-for-byte.
+function _componentMemoOff(env) {
+  const v = String((env && env.KHY_TUI_COMPONENT_MEMO) || '')
+    .trim()
+    .toLowerCase();
+  return v === '0' || v === 'false' || v === 'off' || v === 'no';
+}
+
+// Custom areEqual shared with ProcessGroup (same { tools, expanded, live }
+// prop shape): identity over committed tool objects, field compare on the
+// mutable primitives.
+function toolsPropsEqual(prev, next) {
+  if (prev.expanded !== next.expanded || prev.live !== next.live) {
+    return false;
+  }
+  const a = prev.tools;
+  const b = next.tools;
+  if (a === b) {
+    return true;
+  }
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+module.exports = _componentMemoOff(process.env)
+  ? ToolLines
+  : React.memo(ToolLines, toolsPropsEqual);
+// NOTE: all static properties below attach to the EXPORTED object (memo or
+// plain), so consumers (ProcessGroup, unit tests) keep reaching them via
+// require('./ToolLines').xxx regardless of the memo gate.
+module.exports.toolsPropsEqual = toolsPropsEqual;
 // Pure helpers exported for unit tests (no ink dependency).
 module.exports.buildWriteDiffRows = buildWriteDiffRows;
 module.exports.renderDiffRows = renderDiffRows;
@@ -803,3 +1166,11 @@ module.exports.errorText = errorText;
 // Arg-summary builder — exported so the path-middle-truncation routing (CC
 // truncatePathMiddle) can be asserted without rendering ink.
 module.exports.summarizeArgs = summarizeArgs;
+// Header duration tag + result-truncation marker helpers — exported so the
+// "real data only" rules (no tag without durationMs; real shown/total counts)
+// can be asserted without rendering ink.
+module.exports.formatToolDuration = formatToolDuration;
+module.exports.toolDurationMs = toolDurationMs;
+module.exports.toolHeaderDurationEnabled = toolHeaderDurationEnabled;
+module.exports.buildResultTruncationTag = buildResultTruncationTag;
+module.exports.toolResultTruncationTagEnabled = toolResultTruncationTagEnabled;

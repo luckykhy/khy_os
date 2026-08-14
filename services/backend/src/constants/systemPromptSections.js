@@ -26,8 +26,12 @@ const _sectionCache = new Map();
  * @returns {string|null}
  */
 function _normalizeKey(cacheKey) {
-  if (cacheKey == null) return null;
-  if (typeof cacheKey === 'string') return cacheKey;
+  if (cacheKey == null) {
+    return null;
+  }
+  if (typeof cacheKey === 'string') {
+    return cacheKey;
+  }
   try {
     return JSON.stringify(cacheKey);
   } catch {

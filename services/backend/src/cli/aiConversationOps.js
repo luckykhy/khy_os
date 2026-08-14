@@ -10,22 +10,28 @@
 'use strict';
 
 // ── Imports ──
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 let _chalk, _fmt;
-const chalk = () => (_chalk ??= (require('chalk').default || require('chalk')));
+const chalk = () => (_chalk ??= require('chalk').default || require('chalk'));
 const fmt = () => (_fmt ??= require('./formatters'));
+
+const { resolveMaxHistory } = require('../constants/chatHistoryDefaults');
 
 const _chatState = require('./aiChatState');
 const _localState = require('./aiLocalState');
 
 // ── Deps (injected by host ai.js via setAiConversationOpsDeps) ──
-let _deps = {};
-function setAiConversationOpsDeps(d) { Object.assign(_deps, d); }
+const _deps = {};
+function setAiConversationOpsDeps(d) {
+  Object.assign(_deps, d);
+}
 
 // ── Constants ──
-const MAX_HISTORY = 80;
+// 单一真源: constants/chatHistoryDefaults.js (KHY_MAX_HISTORY 可覆盖, 默认 160)。
+// 复杂任务会跑几十轮工具循环, 80 条会把早期任务上下文静默丢弃 → 模型失忆推不动。
+const MAX_HISTORY = resolveMaxHistory(process.env);
 const ENV_PATH = process.env.KHY_ENV_FILE
   ? path.resolve(process.env.KHY_ENV_FILE)
   : path.resolve(__dirname, '../../.env');
@@ -35,7 +41,9 @@ const AI_TECH_DETAILS_ENV = 'KHY_AI_TECH_DETAILS';
 // ── Env / Switch Helpers ──
 
 function _envToBool(v) {
-  const s = String(v || '').trim().toLowerCase();
+  const s = String(v || '')
+    .trim()
+    .toLowerCase();
   return s === '1' || s === 'true' || s === 'on' || s === 'yes' || s === 'y';
 }
 
@@ -51,7 +59,11 @@ function _markFailure() {
 
 function _setEnvVar(key, value) {
   let envContent = '';
-  try { envContent = fs.readFileSync(ENV_PATH, 'utf-8'); } catch { /* no .env */ }
+  try {
+    envContent = fs.readFileSync(ENV_PATH, 'utf-8');
+  } catch {
+    /* no .env */
+  }
   const regex = new RegExp(`^${key}=.*$`, 'm');
   const line = `${key}=${value}`;
   if (regex.test(envContent)) {
@@ -72,8 +84,12 @@ function _getEnvVar(key) {
     const envContent = fs.readFileSync(ENV_PATH, 'utf-8');
     const regex = new RegExp(`^${key}=(.*)$`, 'm');
     const match = envContent.match(regex);
-    if (!match) return '';
-    return String(match[1] || '').trim().replace(/^['"]|['"]$/g, '');
+    if (!match) {
+      return '';
+    }
+    return String(match[1] || '')
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
   } catch {
     return '';
   }
@@ -82,9 +98,15 @@ function _getEnvVar(key) {
 function _normalizeSwitchInput(options = {}, args = []) {
   const o = { ...options };
   const firstArg = String(args[0] || '').toLowerCase();
-  if (firstArg === 'on') o.on = true;
-  if (firstArg === 'off') o.off = true;
-  if (firstArg === 'status') o.status = true;
+  if (firstArg === 'on') {
+    o.on = true;
+  }
+  if (firstArg === 'off') {
+    o.off = true;
+  }
+  if (firstArg === 'status') {
+    o.status = true;
+  }
   return o;
 }
 
@@ -105,13 +127,15 @@ function _readOwnerControlStatus() {
 
 async function _askSecret(message) {
   const { promptCompat } = require('./uiPrompt');
-  const { secret } = await promptCompat([{
-    type: 'password',
-    name: 'secret',
-    message,
-    mask: '*',
-    validate: v => String(v || '').trim().length > 0 || 'Secret cannot be empty',
-  }]);
+  const { secret } = await promptCompat([
+    {
+      type: 'password',
+      name: 'secret',
+      message,
+      mask: '*',
+      validate: (v) => String(v || '').trim().length > 0 || 'Secret cannot be empty',
+    },
+  ]);
   return String(secret || '').trim();
 }
 
@@ -125,12 +149,12 @@ async function _requireOwnerSecret(options = {}) {
   }
 
   let secret = String(
-    options.secret
-      || options.key
-      || options.token
-      || options.ownerSecret
-      || options['owner-secret']
-      || ''
+    options.secret ||
+      options.key ||
+      options.token ||
+      options.ownerSecret ||
+      options['owner-secret'] ||
+      ''
   ).trim();
 
   if (!secret && process.stdin.isTTY && process.stdout.isTTY) {
@@ -157,17 +181,36 @@ async function _requireOwnerSecret(options = {}) {
 
 // ── History / Context Operations ──
 
-function maybeAutoCheckpointProgress(reason) {
+function maybeAutoCheckpointProgress(reason, folderNameHint) {
   try {
     let leaf;
-    try { leaf = require('../services/memoryEngine/sessionCheckpoint'); } catch { return false; }
-    if (!leaf || typeof leaf.buildAutoCheckpoint !== 'function') return false;
+    try {
+      leaf = require('../services/memoryEngine/sessionCheckpoint');
+    } catch {
+      return false;
+    }
+    if (!leaf || typeof leaf.buildAutoCheckpoint !== 'function') {
+      return false;
+    }
 
     const messages = Array.isArray(_chatState.messages) ? _chatState.messages : [];
-    if (messages.length === 0) return false;
+    if (messages.length === 0) {
+      return false;
+    }
 
     let folderName = '';
-    try { folderName = path.basename(process.cwd()) || ''; } catch { folderName = ''; }
+    try {
+      folderName =
+        String(
+          folderNameHint !== undefined &&
+            folderNameHint !== null &&
+            String(folderNameHint).trim() !== ''
+            ? folderNameHint
+            : path.basename(process.cwd())
+        ).trim() || '';
+    } catch {
+      folderName = '';
+    }
 
     const entry = leaf.buildAutoCheckpoint({
       messages,
@@ -175,14 +218,24 @@ function maybeAutoCheckpointProgress(reason) {
       folderName,
       env: process.env,
     });
-    if (!entry || !entry.topic || !entry.covered) return false;
+    if (!entry || !entry.topic || !entry.covered) {
+      return false;
+    }
 
     const sig = `${entry.topic} ${entry.covered}`;
-    if (sig === _localState.lastAutoCheckpointSig) return false;
+    if (sig === _localState.lastAutoCheckpointSig) {
+      return false;
+    }
 
     let memdir;
-    try { memdir = require('../memdir/memdir'); } catch { return false; }
-    if (!memdir || typeof memdir.appendProjectProgress !== 'function') return false;
+    try {
+      memdir = require('../memdir/memdir');
+    } catch {
+      return false;
+    }
+    if (!memdir || typeof memdir.appendProjectProgress !== 'function') {
+      return false;
+    }
     const res = memdir.appendProjectProgress(entry);
     if (res && res.ok) {
       _localState.lastAutoCheckpointSig = sig;
@@ -196,7 +249,11 @@ function maybeAutoCheckpointProgress(reason) {
 
 function clearHistory() {
   // 先于清空历史做「会话结束自动检查点」安全网(蒸馏需要 _chatState.messages 尚在)。
-  try { maybeAutoCheckpointProgress('clearHistory'); } catch { /* never blocks reset */ }
+  try {
+    maybeAutoCheckpointProgress('clearHistory');
+  } catch {
+    /* never blocks reset */
+  }
   _chatState.messages = [];
   _chatState.gatewayPreflightDone = false;
   _chatState.gatewayPreflightInFlight = null;
@@ -205,11 +262,19 @@ function clearHistory() {
   _chatState.pendingTaskGuard = null;
   _chatState.lastSubstantivePrompt = '';
   _chatState.lastSubstantiveAt = 0;
-  _localState.liveSessionId = null;   // next turn starts a fresh ~/.khy/sessions transcript
+  _localState.liveSessionId = null; // next turn starts a fresh ~/.khy/sessions transcript
   // Drop any ephemeral role overlay (DESIGN-ARCH-059 #3)
-  try { require('../services/roleService').clearActiveRole(); } catch { /* optional */ }
+  try {
+    require('../services/roleService').clearActiveRole();
+  } catch {
+    /* optional */
+  }
   // Forget short-term session memory (layer 1, point 5)
-  try { require('../services/memoryEngine').sessionMemory.clear(); } catch { /* optional */ }
+  try {
+    require('../services/memoryEngine').sessionMemory.clear();
+  } catch {
+    /* optional */
+  }
 }
 
 function _normalizeSummaryText(text = '', maxLen = 220) {
@@ -217,8 +282,12 @@ function _normalizeSummaryText(text = '', maxLen = 220) {
     .replace(/\s+/g, ' ')
     .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
     .trim();
-  if (!s) return '';
-  if (s.length <= maxLen) return s;
+  if (!s) {
+    return '';
+  }
+  if (s.length <= maxLen) {
+    return s;
+  }
   return `${s.slice(0, Math.max(16, maxLen - 1))}…`;
 }
 
@@ -235,24 +304,36 @@ function getConversationStats() {
   };
 
   let _htMod = null;
-  try { _htMod = require('./messagePredicates'); } catch { _htMod = null; }
+  try {
+    _htMod = require('./messagePredicates');
+  } catch {
+    _htMod = null;
+  }
   const _htOn = !!_htMod && _htMod.humanTurnCountEnabled(process.env);
   for (const msg of _chatState.messages) {
     const role = String(msg?.role || '').toLowerCase();
     if (role === 'user') {
       if (_htOn) {
         const kind = _htMod.userMessageKind(msg);
-        if (kind === 'tool') stats.toolMessages += 1;
-        else if (kind === 'meta') stats.otherMessages += 1;
-        else stats.userMessages += 1;
+        if (kind === 'tool') {
+          stats.toolMessages += 1;
+        } else if (kind === 'meta') {
+          stats.otherMessages += 1;
+        } else {
+          stats.userMessages += 1;
+        }
       } else {
         stats.userMessages += 1;
       }
+    } else if (role === 'assistant') {
+      stats.assistantMessages += 1;
+    } else if (role === 'tool') {
+      stats.toolMessages += 1;
+    } else if (role === 'system') {
+      stats.systemMessages += 1;
+    } else {
+      stats.otherMessages += 1;
     }
-    else if (role === 'assistant') stats.assistantMessages += 1;
-    else if (role === 'tool') stats.toolMessages += 1;
-    else if (role === 'system') stats.systemMessages += 1;
-    else stats.otherMessages += 1;
   }
 
   return stats;
@@ -260,6 +341,84 @@ function getConversationStats() {
 
 function getConversation() {
   return _chatState.messages.map((msg) => ({ ...msg }));
+}
+
+// ── Turn history snapshot / writeback (tool-use loop continuity) ──
+
+/**
+ * Snapshot the authoritative history tail right before a tool-use loop turn
+ * starts (before the loop's first chat() call pushes the user message).
+ * The returned token is consumed by reconcileTurnHistory() after the loop ends.
+ */
+function snapshotHistoryTurn() {
+  return {
+    length: _chatState.messages.length,
+    last:
+      _chatState.messages.length > 0 ? _chatState.messages[_chatState.messages.length - 1] : null,
+  };
+}
+
+/**
+ * Ensure the finished tool-loop turn is present in the authoritative history
+ * exactly once, so the NEXT turn's initialMessages carry this round.
+ *
+ * chat() already commits user/assistant pairs on the normal path; this is a
+ * repair pass for loop-terminal paths that bypassed those pushes (unexpected
+ * chat error, empty-reply un-commit, hook/budget stops before any push):
+ *  - an assistant message exists after the snapshot boundary → no-op;
+ *  - orphan user (pushed but never paired) → append the assistant reply only;
+ *  - no trace of the turn at all → append the user + assistant pair.
+ *
+ * Duplicate-safe by construction: the snapshot boundary is located by object
+ * identity (not text equality — chat() may store a purified variant of the
+ * user text), and only provably missing messages are appended.
+ *
+ * @param {{length:number,last:object|null}} snapshot  token from snapshotHistoryTurn()
+ * @param {string} userText       this turn's verbatim user input
+ * @param {string} assistantText  the loop's final text reply
+ * @returns {{appended:number,reason:string}}
+ */
+function reconcileTurnHistory(snapshot, userText, assistantText) {
+  if (!snapshot || typeof snapshot !== 'object') {
+    return { appended: 0, reason: 'no_snapshot' };
+  }
+  const msgs = _chatState.messages;
+  // Locate the snapshot anchor by reference. MAX_HISTORY trims use slice()
+  // (references preserved), so a missing anchor means it was trimmed away —
+  // fall back to boundary -1, where the pre-existing assistant messages make
+  // the check below a safe no-op instead of a duplicate append.
+  let boundary = -1;
+  if (snapshot.last) {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i] === snapshot.last) {
+        boundary = i;
+        break;
+      }
+    }
+  }
+  const turnTail = msgs.slice(boundary + 1);
+  if (turnTail.some((m) => m && m.role === 'assistant')) {
+    return { appended: 0, reason: 'already_committed' };
+  }
+  const finalAssistant = String(assistantText || '').trim();
+  if (!finalAssistant) {
+    return { appended: 0, reason: 'empty_final_reply' };
+  }
+  let appended = 0;
+  const hasUser = turnTail.some((m) => m && m.role === 'user');
+  if (!hasUser) {
+    const cleanUser = String(userText || '').trim();
+    if (cleanUser) {
+      msgs.push({ role: 'user', content: cleanUser });
+      appended += 1;
+    }
+  }
+  msgs.push({ role: 'assistant', content: finalAssistant });
+  appended += 1;
+  if (_chatState.messages.length > MAX_HISTORY) {
+    _chatState.messages = _chatState.messages.slice(-MAX_HISTORY);
+  }
+  return { appended, reason: hasUser ? 'paired_orphan_user' : 'committed_missing_turn' };
 }
 
 function _messageHasToolUse(msg) {
@@ -278,7 +437,9 @@ function snipConversation(options = {}) {
     mode,
   });
 
-  if (previousCount === 0) return done(false, 'empty');
+  if (previousCount === 0) {
+    return done(false, 'empty');
+  }
 
   let mode;
   if (Array.isArray(options.range) && options.range.length === 2) {
@@ -296,7 +457,9 @@ function snipConversation(options = {}) {
       };
     }
     const start = a - 1;
-    if (start >= previousCount) return done(false, 'out-of-range');
+    if (start >= previousCount) {
+      return done(false, 'out-of-range');
+    }
     const end = Math.min(b, previousCount);
     _chatState.messages.splice(start, end - start);
     mode = 'range';
@@ -307,7 +470,10 @@ function snipConversation(options = {}) {
   } else {
     let idx = -1;
     for (let i = _chatState.messages.length - 1; i >= 0; i--) {
-      if (String(_chatState.messages[i]?.role || '').toLowerCase() === 'user') { idx = i; break; }
+      if (String(_chatState.messages[i]?.role || '').toLowerCase() === 'user') {
+        idx = i;
+        break;
+      }
     }
     const from = idx >= 0 ? idx : Math.max(0, _chatState.messages.length - 1);
     _chatState.messages.splice(from);
@@ -316,9 +482,10 @@ function snipConversation(options = {}) {
 
   // Tidy: drop a now-trailing assistant message that carries unresolved tool_use
   while (
-    _chatState.messages.length > 0
-    && String(_chatState.messages[_chatState.messages.length - 1].role || '').toLowerCase() === 'assistant'
-    && _messageHasToolUse(_chatState.messages[_chatState.messages.length - 1])
+    _chatState.messages.length > 0 &&
+    String(_chatState.messages[_chatState.messages.length - 1].role || '').toLowerCase() ===
+      'assistant' &&
+    _messageHasToolUse(_chatState.messages[_chatState.messages.length - 1])
   ) {
     _chatState.messages.pop();
   }
@@ -331,19 +498,31 @@ function rewindToUserTurn(nFromEnd) {
   const n = Math.floor(Number(nFromEnd));
   if (!Number.isFinite(n) || n < 1) {
     return {
-      success: false, changed: false, previousCount,
-      nextCount: previousCount, removedCount: 0, mode: 'invalid',
+      success: false,
+      changed: false,
+      previousCount,
+      nextCount: previousCount,
+      removedCount: 0,
+      mode: 'invalid',
       error: '无效轮次序号,须为 >= 1 的整数(1 = 最近一条用户消息)',
     };
   }
   const userIdx = [];
   for (let i = 0; i < _chatState.messages.length; i++) {
-    if (String(_chatState.messages[i] && _chatState.messages[i].role || '').toLowerCase() === 'user') userIdx.push(i);
+    if (
+      String((_chatState.messages[i] && _chatState.messages[i].role) || '').toLowerCase() === 'user'
+    ) {
+      userIdx.push(i);
+    }
   }
   if (n > userIdx.length) {
     return {
-      success: false, changed: false, previousCount,
-      nextCount: previousCount, removedCount: 0, mode: 'out-of-range',
+      success: false,
+      changed: false,
+      previousCount,
+      nextCount: previousCount,
+      removedCount: 0,
+      mode: 'out-of-range',
       error: `仅有 ${userIdx.length} 条用户消息,无法回溯到第 ${n} 条`,
     };
   }
@@ -357,29 +536,46 @@ function _buildSegmentSummary(segment, options = {}) {
   const MAX_ITEMS = 8;
   const MAX_SUMMARY_CHARS = 4000;
   const toText = (c) => {
-    try { return require('../services/contentBlockUtils').contentToText(c); }
-    catch { return String(c || ''); }
+    try {
+      return require('../services/contentBlockUtils').contentToText(c);
+    } catch {
+      return String(c || '');
+    }
   };
   const userPoints = [];
   const assistantPoints = [];
   const toolPoints = [];
   const pushUnique = (arr, text, limit) => {
-    if (!text || arr.length >= limit) return;
-    if (arr.includes(text)) return;
+    if (!text || arr.length >= limit) {
+      return;
+    }
+    if (arr.includes(text)) {
+      return;
+    }
     arr.push(text);
   };
   for (const msg of Array.isArray(segment) ? segment : []) {
-    const role = String(msg && msg.role || '').toLowerCase();
+    const role = String((msg && msg.role) || '').toLowerCase();
     const normalized = _normalizeSummaryText(toText(msg && msg.content), MAX_POINT_CHARS);
-    if (!normalized) continue;
-    if (role === 'user') pushUnique(userPoints, normalized, MAX_ITEMS);
-    else if (role === 'assistant') pushUnique(assistantPoints, normalized, MAX_ITEMS);
-    else if (role === 'tool') pushUnique(toolPoints, normalized, Math.ceil(MAX_ITEMS / 2));
+    if (!normalized) {
+      continue;
+    }
+    if (role === 'user') {
+      pushUnique(userPoints, normalized, MAX_ITEMS);
+    } else if (role === 'assistant') {
+      pushUnique(assistantPoints, normalized, MAX_ITEMS);
+    } else if (role === 'tool') {
+      pushUnique(toolPoints, normalized, Math.ceil(MAX_ITEMS / 2));
+    }
   }
   const lines = [];
   lines.push(`[SummarizeFromHere @ ${new Date().toISOString()}]`);
-  lines.push(`Summarized ${Array.isArray(segment) ? segment.length : 0} message(s) from the selected turn onward.`);
-  if (focus) lines.push(`Focus priority: ${focus}`);
+  lines.push(
+    `Summarized ${Array.isArray(segment) ? segment.length : 0} message(s) from the selected turn onward.`
+  );
+  if (focus) {
+    lines.push(`Focus priority: ${focus}`);
+  }
   if (userPoints.length) {
     lines.push('');
     lines.push('User requests in this range:');
@@ -396,9 +592,13 @@ function _buildSegmentSummary(segment, options = {}) {
     toolPoints.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
   }
   lines.push('');
-  lines.push('Treat this as authoritative memory for the summarized turns; do not re-ask settled points.');
+  lines.push(
+    'Treat this as authoritative memory for the summarized turns; do not re-ask settled points.'
+  );
   let summary = lines.join('\n').trim();
-  if (summary.length > MAX_SUMMARY_CHARS) summary = `${summary.slice(0, MAX_SUMMARY_CHARS - 1)}…`;
+  if (summary.length > MAX_SUMMARY_CHARS) {
+    summary = `${summary.slice(0, MAX_SUMMARY_CHARS - 1)}…`;
+  }
   return summary;
 }
 
@@ -407,19 +607,31 @@ function summarizeFromUserTurn(nFromEnd, options = {}) {
   const n = Math.floor(Number(nFromEnd));
   if (!Number.isFinite(n) || n < 1) {
     return {
-      success: false, changed: false, previousCount,
-      nextCount: previousCount, summarizedCount: 0, mode: 'invalid',
+      success: false,
+      changed: false,
+      previousCount,
+      nextCount: previousCount,
+      summarizedCount: 0,
+      mode: 'invalid',
       error: '无效轮次序号,须为 >= 1 的整数(1 = 最近一条用户消息)',
     };
   }
   const userIdx = [];
   for (let i = 0; i < _chatState.messages.length; i++) {
-    if (String(_chatState.messages[i] && _chatState.messages[i].role || '').toLowerCase() === 'user') userIdx.push(i);
+    if (
+      String((_chatState.messages[i] && _chatState.messages[i].role) || '').toLowerCase() === 'user'
+    ) {
+      userIdx.push(i);
+    }
   }
   if (n > userIdx.length) {
     return {
-      success: false, changed: false, previousCount,
-      nextCount: previousCount, summarizedCount: 0, mode: 'out-of-range',
+      success: false,
+      changed: false,
+      previousCount,
+      nextCount: previousCount,
+      summarizedCount: 0,
+      mode: 'out-of-range',
       error: `仅有 ${userIdx.length} 条用户消息,无法回溯到第 ${n} 条`,
     };
   }
@@ -428,13 +640,20 @@ function summarizeFromUserTurn(nFromEnd, options = {}) {
   const toSummarize = _chatState.messages.slice(from);
   if (toSummarize.length === 0) {
     return {
-      success: true, changed: false, summarized: false, previousCount,
-      nextCount: previousCount, summarizedCount: 0, mode: 'none',
+      success: true,
+      changed: false,
+      summarized: false,
+      previousCount,
+      nextCount: previousCount,
+      summarizedCount: 0,
+      mode: 'none',
     };
   }
 
   const summary = _buildSegmentSummary(toSummarize, options);
-  const lastKeptRole = String(kept.length ? (kept[kept.length - 1] && kept[kept.length - 1].role) : '').toLowerCase();
+  const lastKeptRole = String(
+    kept.length ? kept[kept.length - 1] && kept[kept.length - 1].role : ''
+  ).toLowerCase();
   if (lastKeptRole === 'user') {
     _chatState.messages = [...kept, { role: 'assistant', content: summary }];
   } else {
@@ -444,7 +663,9 @@ function summarizeFromUserTurn(nFromEnd, options = {}) {
       { role: 'assistant', content: '好的，我已了解此处之后的对话摘要，继续处理你的请求。' },
     ];
   }
-  if (_chatState.messages.length > MAX_HISTORY) _chatState.messages = _chatState.messages.slice(-MAX_HISTORY);
+  if (_chatState.messages.length > MAX_HISTORY) {
+    _chatState.messages = _chatState.messages.slice(-MAX_HISTORY);
+  }
 
   return {
     success: true,
@@ -471,11 +692,14 @@ function compactHistory(options = {}) {
   const previousCount = _chatState.messages.length;
   const keepRecent = Math.max(
     4,
-    Math.min(40, Number.isFinite(Number(options.keepRecent)) ? Math.floor(Number(options.keepRecent)) : 12)
+    Math.min(
+      40,
+      Number.isFinite(Number(options.keepRecent)) ? Math.floor(Number(options.keepRecent)) : 12
+    )
   );
   const focus = _normalizeSummaryText(options.instructions || options.focus || '', 300);
 
-  if (previousCount <= (keepRecent + 1)) {
+  if (previousCount <= keepRecent + 1) {
     return {
       success: true,
       changed: false,
@@ -507,17 +731,26 @@ function compactHistory(options = {}) {
       maxToolItems: 5,
       maxPointChars: 300,
       maxSummaryChars: 6200,
-      continuityHint: 'Retain as much decision history as possible and avoid re-asking settled topics.',
+      continuityHint:
+        'Retain as much decision history as possible and avoid re-asking settled topics.',
     },
   };
 
-  let mode = String(options.mode || 'balanced').trim().toLowerCase();
+  let mode = String(options.mode || 'balanced')
+    .trim()
+    .toLowerCase();
   if (mode === 'auto') {
-    if (previousCount >= 60 || keepRecent <= 8) mode = 'aggressive';
-    else if (previousCount >= 28) mode = 'balanced';
-    else mode = 'light';
+    if (previousCount >= 60 || keepRecent <= 8) {
+      mode = 'aggressive';
+    } else if (previousCount >= 28) {
+      mode = 'balanced';
+    } else {
+      mode = 'light';
+    }
   }
-  if (!modeConfigs[mode]) mode = 'balanced';
+  if (!modeConfigs[mode]) {
+    mode = 'balanced';
+  }
   const cfg = modeConfigs[mode];
 
   const boundary = Math.max(0, previousCount - keepRecent);
@@ -529,17 +762,30 @@ function compactHistory(options = {}) {
   const toolPoints = [];
 
   const pushUnique = (arr, text, limit) => {
-    if (!text || arr.length >= limit) return;
-    if (arr.includes(text)) return;
+    if (!text || arr.length >= limit) {
+      return;
+    }
+    if (arr.includes(text)) {
+      return;
+    }
     arr.push(text);
   };
 
   for (const msg of [...toCompact].reverse()) {
     const role = String(msg?.role || '').toLowerCase();
-    const normalized = _normalizeSummaryText((() => {
-      try { return require('../services/contentBlockUtils').contentToText(msg?.content); } catch { return String(msg?.content || ''); }
-    })(), cfg.maxPointChars);
-    if (!normalized) continue;
+    const normalized = _normalizeSummaryText(
+      (() => {
+        try {
+          return require('../services/contentBlockUtils').contentToText(msg?.content);
+        } catch {
+          return String(msg?.content || '');
+        }
+      })(),
+      cfg.maxPointChars
+    );
+    if (!normalized) {
+      continue;
+    }
 
     if (role === 'user') {
       pushUnique(userPoints, normalized, cfg.maxItems);
@@ -554,14 +800,22 @@ function compactHistory(options = {}) {
     }
   }
 
-  const latestTailUser = [...keepTail].reverse().find(m => String(m?.role || '').toLowerCase() === 'user');
-  const latestTailAssistant = [...keepTail].reverse().find(m => String(m?.role || '').toLowerCase() === 'assistant');
+  const latestTailUser = [...keepTail]
+    .reverse()
+    .find((m) => String(m?.role || '').toLowerCase() === 'user');
+  const latestTailAssistant = [...keepTail]
+    .reverse()
+    .find((m) => String(m?.role || '').toLowerCase() === 'assistant');
 
   const lines = [];
   lines.push(`[ContextCompact v2 @ ${new Date().toISOString()}]`);
-  lines.push(`Mode: ${mode}. Compacted: ${toCompact.length}. Kept recent turns: ${keepTail.length}.`);
+  lines.push(
+    `Mode: ${mode}. Compacted: ${toCompact.length}. Kept recent turns: ${keepTail.length}.`
+  );
   lines.push(`Continuation rule: ${cfg.continuityHint}`);
-  if (focus) lines.push(`Focus priority: ${focus}`);
+  if (focus) {
+    lines.push(`Focus priority: ${focus}`);
+  }
 
   if (userPoints.length > 0) {
     lines.push('');
@@ -584,10 +838,34 @@ function compactHistory(options = {}) {
   lines.push('');
   lines.push('Pending context to resume immediately:');
   if (latestTailUser) {
-    lines.push(`- Latest user turn: ${_normalizeSummaryText((() => { try { return require('../services/contentBlockUtils').contentToText(latestTailUser.content); } catch { return String(latestTailUser.content || ''); } })(), 260)}`);
+    lines.push(
+      `- Latest user turn: ${_normalizeSummaryText(
+        (() => {
+          try {
+            return require('../services/contentBlockUtils').contentToText(latestTailUser.content);
+          } catch {
+            return String(latestTailUser.content || '');
+          }
+        })(),
+        260
+      )}`
+    );
   }
   if (latestTailAssistant) {
-    lines.push(`- Latest assistant turn: ${_normalizeSummaryText((() => { try { return require('../services/contentBlockUtils').contentToText(latestTailAssistant.content); } catch { return String(latestTailAssistant.content || ''); } })(), 260)}`);
+    lines.push(
+      `- Latest assistant turn: ${_normalizeSummaryText(
+        (() => {
+          try {
+            return require('../services/contentBlockUtils').contentToText(
+              latestTailAssistant.content
+            );
+          } catch {
+            return String(latestTailAssistant.content || '');
+          }
+        })(),
+        260
+      )}`
+    );
   }
   if (!latestTailUser && !latestTailAssistant) {
     lines.push('- No recent tail content was available.');
@@ -615,11 +893,17 @@ function compactHistory(options = {}) {
   const firstKept = keepTail[0];
   const firstKeptRole = String(firstKept?.role || '').toLowerCase();
   if (firstKeptRole === 'user') {
-    _chatState.messages = [summaryMsg, { role: 'assistant', content: '好的，我已了解上下文，继续处理你的请求。' }, ...keepTail];
+    _chatState.messages = [
+      summaryMsg,
+      { role: 'assistant', content: '好的，我已了解上下文，继续处理你的请求。' },
+      ...keepTail,
+    ];
   } else {
     _chatState.messages = [summaryMsg, ...keepTail];
   }
-  if (_chatState.messages.length > MAX_HISTORY) _chatState.messages = _chatState.messages.slice(-MAX_HISTORY);
+  if (_chatState.messages.length > MAX_HISTORY) {
+    _chatState.messages = _chatState.messages.slice(-MAX_HISTORY);
+  }
 
   return {
     success: true,
@@ -645,13 +929,18 @@ async function handleAiStatus(options = {}) {
   if (status.available) {
     printSuccess(`AI 服务可用 — ${status.provider}`);
     if (status.configuredProviders.length > 1) {
-      printInfo(`已配置 ${status.configuredProviders.length} 个提供商: ${status.configuredProviders.join(', ')}`);
+      printInfo(
+        `已配置 ${status.configuredProviders.length} 个提供商: ${status.configuredProviders.join(', ')}`
+      );
     }
     if (!quick) {
       const svc = _deps.getService();
       const test = await withSpinner('测试 AI 连接...', () => svc.testConnection());
-      if (test.success) printSuccess(`连接正常 (${test.provider})`);
-      else printError('连接测试失败');
+      if (test.success) {
+        printSuccess(`连接正常 (${test.provider})`);
+      } else {
+        printError('连接测试失败');
+      }
     } else {
       printInfo('快速状态模式：已跳过实时连通性测试');
     }
@@ -660,14 +949,20 @@ async function handleAiStatus(options = {}) {
     printInfo('运行 ai config 配置 API 密钥');
     try {
       const hint = require('../services/gateway/gatewayGuide').guideHintLine();
-      if (hint) printInfo(hint);
-    } catch { /* hint optional */ }
+      if (hint) {
+        printInfo(hint);
+      }
+    } catch {
+      /* hint optional */
+    }
   }
 
   console.log('');
   printInfo(`技术细节开关: ${_onOff(switchStates.techEnabled)}`);
   printInfo(`开放模式开关: ${_onOff(switchStates.unrestrictedEnabled)}`);
-  printInfo(`Owner 控制: ${ownerStatus.configured ? chalk().green('CONFIGURED') : chalk().yellow('NOT CONFIGURED')}`);
+  printInfo(
+    `Owner 控制: ${ownerStatus.configured ? chalk().green('CONFIGURED') : chalk().yellow('NOT CONFIGURED')}`
+  );
   if (ownerStatus.updatedAt) {
     printInfo(`Owner 更新: ${new Date(ownerStatus.updatedAt).toLocaleString('zh-CN')}`);
   }
@@ -689,7 +984,9 @@ async function handleAiOwner(action = 'status', options = {}) {
 
   if (cmd === 'status') {
     const st = owner.getOwnerControlStatus();
-    printInfo(`Owner 控制: ${st.configured ? chalk().green('CONFIGURED') : chalk().yellow('NOT CONFIGURED')}`);
+    printInfo(
+      `Owner 控制: ${st.configured ? chalk().green('CONFIGURED') : chalk().yellow('NOT CONFIGURED')}`
+    );
     if (st.updatedAt) {
       printInfo(`最近更新: ${new Date(st.updatedAt).toLocaleString('zh-CN')}`);
     }
@@ -708,8 +1005,12 @@ async function handleAiOwner(action = 'status', options = {}) {
 
     let secret = String(options.secret || options.key || '').trim();
     let confirm = String(options.confirm || '').trim();
-    if (!secret) secret = await _askSecret('Set owner secret (at least 8 chars):');
-    if (!confirm) confirm = await _askSecret('Confirm owner secret:');
+    if (!secret) {
+      secret = await _askSecret('Set owner secret (at least 8 chars):');
+    }
+    if (!confirm) {
+      confirm = await _askSecret('Confirm owner secret:');
+    }
     if (secret !== confirm) {
       printError('Secret confirmation mismatch.');
       _markFailure();
@@ -737,8 +1038,12 @@ async function handleAiOwner(action = 'status', options = {}) {
 
     let nextSecret = String(options.next || options.new || '').trim();
     let confirm = String(options.confirm || '').trim();
-    if (!nextSecret) nextSecret = await _askSecret('New owner secret (at least 8 chars):');
-    if (!confirm) confirm = await _askSecret('Confirm new owner secret:');
+    if (!nextSecret) {
+      nextSecret = await _askSecret('New owner secret (at least 8 chars):');
+    }
+    if (!confirm) {
+      confirm = await _askSecret('Confirm new owner secret:');
+    }
     if (nextSecret !== confirm) {
       printError('New secret confirmation mismatch.');
       _markFailure();
@@ -833,6 +1138,8 @@ module.exports = {
   clearHistory,
   getConversationStats,
   getConversation,
+  snapshotHistoryTurn,
+  reconcileTurnHistory,
   snipConversation,
   rewindToUserTurn,
   summarizeFromUserTurn,

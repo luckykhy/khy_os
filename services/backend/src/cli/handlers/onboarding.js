@@ -22,43 +22,46 @@
  * 持久化另受 KHY_WORKSPACE_TRUST 门控(关 → 只显状态、视为已信任、绝不弹窗)。
  */
 
-const { printInfo, printError } = require('../formatters');
 const leaf = require('../../services/onboarding/onboardingPlan');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');
 // async try/catch combinator 单一真源 utils/tryOrAsync:await fn,任何异常 → dflt。
 const _safeAsync = require('../../utils/tryOrAsync');
+const { printInfo, printError } = require('../formatters');
 
 /** 采只读引导状态快照(best-effort;缺面 → 字段 undefined,叶子诚实留白)。 */
 function _snapshot() {
   const onboarding = _safe(() => require('../onboarding'), null);
-  const onboardingDone = onboarding && typeof onboarding.needsOnboarding === 'function'
-    ? _safe(() => !onboarding.needsOnboarding(), undefined)
-    : undefined;
+  const onboardingDone =
+    onboarding && typeof onboarding.needsOnboarding === 'function'
+      ? _safe(() => !onboarding.needsOnboarding(), undefined)
+      : undefined;
 
   const activeTheme = _safe(() => require('../themeRegistry').getActiveName(), undefined);
 
   const gettingStartedPending = _safe(() => {
     const g = require('../../services/gettingStartedService');
-    return (typeof g.shouldShow === 'function') ? !!g.shouldShow() : undefined;
+    return typeof g.shouldShow === 'function' ? !!g.shouldShow() : undefined;
   }, undefined);
 
   // 已配置:复用密钥池 SSOT(不另写探测)。任一 provider 有 key → true。
   const configured = _safe(() => {
     const pool = require('../../services/apiKeyPool');
     _safe(() => pool.init(), null);
-    const providers = (typeof pool.getProviders === 'function') ? pool.getProviders() : [];
-    for (const pv of (Array.isArray(providers) ? providers : [])) {
-      if (_safe(() => (pool.getPoolStatus(pv) || []).length > 0, false)) return true;
+    const providers = typeof pool.getProviders === 'function' ? pool.getProviders() : [];
+    for (const pv of Array.isArray(providers) ? providers : []) {
+      if (_safe(() => (pool.getPoolStatus(pv) || []).length > 0, false)) {
+        return true;
+      }
     }
     return false;
   }, undefined);
 
   const mcpServerCount = _safe(() => {
     const mcp = require('../../services/mcp');
-    const cfg = (typeof mcp.loadConfig === 'function') ? mcp.loadConfig(process.cwd()) : null;
-    const servers = (cfg && cfg.mcpServers) ? Object.keys(cfg.mcpServers) : [];
+    const cfg = typeof mcp.loadConfig === 'function' ? mcp.loadConfig(process.cwd()) : null;
+    const servers = cfg && cfg.mcpServers ? Object.keys(cfg.mcpServers) : [];
     return servers.length;
   }, undefined);
 
@@ -68,7 +71,9 @@ function _snapshot() {
 /** 委托 router 重新分发某条命令(惰性 require 避免与 router 的循环依赖)。 */
 async function _route(parsed, options) {
   const router = _safe(() => require('../router'), null);
-  if (!router || typeof router.route !== 'function') return false;
+  if (!router || typeof router.route !== 'function') {
+    return false;
+  }
   return _safeAsync(() => router.route(parsed, { options }), false);
 }
 
@@ -121,7 +126,7 @@ async function handleOnboarding(_subCommand, args = [], options = {}) {
       }
       const outcome = await _safeAsync(
         () => onboarding.runOnboarding({ deps: { needs: () => true } }),
-        null,
+        null
       );
       if (outcome && outcome.ok) {
         printInfo('  ✓ 引导完成。');
@@ -133,14 +138,17 @@ async function handleOnboarding(_subCommand, args = [], options = {}) {
     case 'theme': {
       // 复用既有 skin 路径(themeRegistry SSOT):有名字 → set,否则 → list。
       const rest = parsed.rest || [];
-      await _route({
-        command: 'skin',
-        subCommand: rest.length ? 'set' : 'list',
-        args: rest,
-        options,
-        rawInput: rest.length ? `skin set ${rest.join(' ')}` : 'skin list',
-        rawCommandToken: 'skin',
-      }, options);
+      await _route(
+        {
+          command: 'skin',
+          subCommand: rest.length ? 'set' : 'list',
+          args: rest,
+          options,
+          rawInput: rest.length ? `skin set ${rest.join(' ')}` : 'skin list',
+          rawCommandToken: 'skin',
+        },
+        options
+      );
       return true;
     }
     case 'trust': {
@@ -152,46 +160,69 @@ async function handleOnboarding(_subCommand, args = [], options = {}) {
       const wt = _safe(() => require('../../services/workspaceTrust'), null);
       const tg = _safe(() => require('../trustGate'), null);
       const cwd = process.cwd();
-      const gateEnabled = (wt && typeof wt.isTrustGateEnabled === 'function')
-        ? _safe(() => wt.isTrustGateEnabled(), undefined)
-        : undefined;
-      const trustedPaths = (tg && typeof tg._readTrustedPaths === 'function')
-        ? _safe(() => tg._readTrustedPaths(), [])
-        : [];
-      const sessionTrusted = (tg && typeof tg._isSessionTrusted === 'function')
-        ? _safe(() => tg._isSessionTrusted(), false)
-        : false;
-      const stateObj = (wt && typeof wt.computeTrustState === 'function')
-        ? _safe(() => wt.computeTrustState({
+      const gateEnabled =
+        wt && typeof wt.isTrustGateEnabled === 'function'
+          ? _safe(() => wt.isTrustGateEnabled(), undefined)
+          : undefined;
+      const trustedPaths =
+        tg && typeof tg._readTrustedPaths === 'function'
+          ? _safe(() => tg._readTrustedPaths(), [])
+          : [];
+      const sessionTrusted =
+        tg && typeof tg._isSessionTrusted === 'function'
+          ? _safe(() => tg._isSessionTrusted(), false)
+          : false;
+      const stateObj =
+        wt && typeof wt.computeTrustState === 'function'
+          ? _safe(
+              () =>
+                wt.computeTrustState({
+                  cwd,
+                  homedir: os.homedir(),
+                  trustedPaths,
+                  sessionTrusted,
+                  exactDir:
+                    typeof wt.isExactDirTrustEnabled === 'function'
+                      ? _safe(() => wt.isExactDirTrustEnabled(), false)
+                      : false,
+                }),
+              null
+            )
+          : null;
+      printInfo(
+        leaf.buildTrustStatusText({
+          gateEnabled,
           cwd,
-          homedir: os.homedir(),
-          trustedPaths,
-          sessionTrusted,
-          exactDir: (typeof wt.isExactDirTrustEnabled === 'function')
-            ? _safe(() => wt.isExactDirTrustEnabled(), false) : false,
-        }), null)
-        : null;
-      printInfo(leaf.buildTrustStatusText({
-        gateEnabled,
-        cwd,
-        trusted: stateObj ? stateObj.trusted : undefined,
-        reason: stateObj ? stateObj.reason : undefined,
-        isHomeDir: stateObj ? stateObj.isHomeDir : undefined,
-        persistedCount: Array.isArray(trustedPaths) ? trustedPaths.length : 0,
-      }));
+          trusted: stateObj ? stateObj.trusted : undefined,
+          reason: stateObj ? stateObj.reason : undefined,
+          isHomeDir: stateObj ? stateObj.isHomeDir : undefined,
+          persistedCount: Array.isArray(trustedPaths) ? trustedPaths.length : 0,
+        })
+      );
 
       // 未信任 + 门控开 + 可交互 → 当场弹信任对话框(复用真实壳,拒绝不退出)。
       const interactive = !!(process.stdout && process.stdout.isTTY);
-      if (gateEnabled === true && stateObj && stateObj.trusted === false && interactive
-          && tg && typeof tg.ensureWorkspaceTrust === 'function') {
+      if (
+        gateEnabled === true &&
+        stateObj &&
+        stateObj.trusted === false &&
+        interactive &&
+        tg &&
+        typeof tg.ensureWorkspaceTrust === 'function'
+      ) {
         const inq = _safe(() => require('inquirer'), null);
         const decision = await _safeAsync(
           () => tg.ensureWorkspaceTrust({ cwd, inquirer: inq }),
-          null,
+          null
         );
-        if (decision && decision.trusted
-            && (decision.reason === 'accepted' || decision.reason === 'home-session')) {
-          printInfo(decision.persisted ? '  ✓ 已信任并记住此文件夹。' : '  ✓ 已信任此文件夹(本会话)。');
+        if (
+          decision &&
+          decision.trusted &&
+          (decision.reason === 'accepted' || decision.reason === 'home-session')
+        ) {
+          printInfo(
+            decision.persisted ? '  ✓ 已信任并记住此文件夹。' : '  ✓ 已信任此文件夹(本会话)。'
+          );
         } else {
           printInfo('  未改变信任状态。');
         }
@@ -210,14 +241,17 @@ async function handleOnboarding(_subCommand, args = [], options = {}) {
     }
     case 'mcp': {
       // 复用既有 `mcp governance` 只读视图(mcpGovernance SSOT)。
-      await _route({
-        command: 'mcp',
-        subCommand: 'governance',
-        args: [],
-        options,
-        rawInput: 'mcp governance',
-        rawCommandToken: 'mcp',
-      }, options);
+      await _route(
+        {
+          command: 'mcp',
+          subCommand: 'governance',
+          args: [],
+          options,
+          rawInput: 'mcp governance',
+          rawCommandToken: 'mcp',
+        },
+        options
+      );
       return true;
     }
     default:

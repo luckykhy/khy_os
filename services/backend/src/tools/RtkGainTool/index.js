@@ -1,8 +1,8 @@
 'use strict';
 
-const { BaseTool } = require('../_baseTool');
-const rtkMode = require('../../services/rtkMode');
 const rtkEffectiveState = require('../../services/rtkEffectiveState');
+const rtkMode = require('../../services/rtkMode');
+const { BaseTool } = require('../_baseTool');
 
 /**
  * RtkGainTool —— 展示 RTK 省 token 统计(只读)。
@@ -22,8 +22,12 @@ class RtkGainTool extends BaseTool {
   static aliases = ['rtk_gain', 'rtk_stats', 'token_savings'];
   static searchHint = 'rtk gain token 节省 省 token 统计 savings 省了多少 token RTK 状态';
 
-  isReadOnly() { return true; }
-  isConcurrencySafe() { return true; }
+  isReadOnly() {
+    return true;
+  }
+  isConcurrencySafe() {
+    return true;
+  }
 
   prompt() {
     return [
@@ -77,7 +81,9 @@ class RtkGainTool extends BaseTool {
         binary: bin || null,
         installed: !!bin,
         version: bin ? rtkMode.probeVersion({ bin }) : null,
-        ...(eff ? { effective: eff.effective, status: eff.status, statusLabel: eff.label, hint: eff.hint } : {}),
+        ...(eff
+          ? { effective: eff.effective, status: eff.status, statusLabel: eff.label, hint: eff.hint }
+          : {}),
       };
     }
 

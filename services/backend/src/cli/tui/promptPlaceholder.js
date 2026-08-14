@@ -20,7 +20,9 @@
 const FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function promptPlaceholderLadderEnabled(env = process.env) {
-  const v = String((env && env.KHY_PROMPT_PLACEHOLDER_LADDER) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_PROMPT_PLACEHOLDER_LADDER) || '')
+    .trim()
+    .toLowerCase();
   return !FALSY.has(v);
 }
 
@@ -53,7 +55,7 @@ function resolvePromptPlaceholder(state, env = process.env) {
 
   // 门控关 → 逐字节回退历史两分支。
   if (!promptPlaceholderLadderEnabled(env)) {
-    return reviewing ? reviewText : (busy ? busyText : defaultText);
+    return reviewing ? reviewText : busy ? busyText : defaultText;
   }
 
   // CC 优先级阶梯(teammate 档 honest-NA 略):
@@ -61,9 +63,15 @@ function resolvePromptPlaceholder(state, env = process.env) {
   //   2) 有可编辑排队消息且提示未用尽 → 「按 ↑ 编辑排队消息」。
   //   3) 忙 → busyText(历史为空串)。
   //   4) 空闲 → 默认引导串。
-  if (reviewing) return reviewText;
-  if (queueEditable && !queueHintExhausted && queueHintText) return queueHintText;
-  if (busy) return busyText;
+  if (reviewing) {
+    return reviewText;
+  }
+  if (queueEditable && !queueHintExhausted && queueHintText) {
+    return queueHintText;
+  }
+  if (busy) {
+    return busyText;
+  }
   return defaultText;
 }
 

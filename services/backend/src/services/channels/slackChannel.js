@@ -13,8 +13,9 @@
  *   - Webhook Mode: receive Events API callbacks at POST /webhooks/slack
  */
 
-const { BaseChannel } = require('./_baseChannel');
 const log = require('../../utils/logger');
+
+const { BaseChannel } = require('./_baseChannel');
 
 class SlackChannel extends BaseChannel {
   /**
@@ -35,7 +36,9 @@ class SlackChannel extends BaseChannel {
   }
 
   async connect() {
-    if (!this.botToken) throw new Error('SLACK_BOT_TOKEN is required');
+    if (!this.botToken) {
+      throw new Error('SLACK_BOT_TOKEN is required');
+    }
 
     // Verify token and get bot user ID
     const authResult = await this._apiCall('auth.test', {});
@@ -52,7 +55,11 @@ class SlackChannel extends BaseChannel {
 
   async disconnect() {
     if (this._ws) {
-      try { this._ws.close(); } catch { /* ignore */ }
+      try {
+        this._ws.close();
+      } catch {
+        /* ignore */
+      }
       this._ws = null;
     }
     await super.disconnect();
@@ -78,10 +85,14 @@ class SlackChannel extends BaseChannel {
    * @param {object} event - Slack event payload
    */
   handleWebhookEvent(event) {
-    if (!event || !event.type) return;
+    if (!event || !event.type) {
+      return;
+    }
 
     // Skip bot's own messages
-    if (event.bot_id || event.user === this._botUserId) return;
+    if (event.bot_id || event.user === this._botUserId) {
+      return;
+    }
 
     if (event.type === 'message' || event.type === 'app_mention') {
       let text = event.text || '';
@@ -109,15 +120,19 @@ class SlackChannel extends BaseChannel {
    * @returns {boolean}
    */
   verifySignature(signature, timestamp, body) {
-    if (!this.signingSecret) return false;
+    if (!this.signingSecret) {
+      return false;
+    }
     const crypto = require('crypto');
     const sigBasestring = `v0:${timestamp}:${body}`;
-    const mySignature = 'v0=' + crypto.createHmac('sha256', this.signingSecret)
-      .update(sigBasestring, 'utf8')
-      .digest('hex');
+    const mySignature =
+      'v0=' +
+      crypto.createHmac('sha256', this.signingSecret).update(sigBasestring, 'utf8').digest('hex');
     const a = Buffer.from(mySignature, 'utf8');
     const b = Buffer.from(signature, 'utf8');
-    if (a.length !== b.length) return false;
+    if (a.length !== b.length) {
+      return false;
+    }
     return crypto.timingSafeEqual(a, b);
   }
 
@@ -128,23 +143,30 @@ class SlackChannel extends BaseChannel {
     const http = require('http');
     const result = await new Promise((resolve, reject) => {
       const postData = '';
-      const req = http.request({
-        hostname: 'slack.com',
-        port: 443,
-        path: '/api/apps.connections.open',
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.appToken}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Content-Length': 0,
+      const req = http.request(
+        {
+          hostname: 'slack.com',
+          port: 443,
+          path: '/api/apps.connections.open',
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.appToken}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': 0,
+          },
         },
-      }, (res) => {
-        let body = '';
-        res.on('data', c => body += c);
-        res.on('end', () => {
-          try { resolve(JSON.parse(body)); } catch (e) { reject(e); }
-        });
-      });
+        (res) => {
+          let body = '';
+          res.on('data', (c) => (body += c));
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(body));
+            } catch (e) {
+              reject(e);
+            }
+          });
+        }
+      );
       req.on('error', reject);
       req.end();
     });
@@ -198,26 +220,34 @@ class SlackChannel extends BaseChannel {
     const body = JSON.stringify(payload);
 
     return new Promise((resolve, reject) => {
-      const req = https.request({
-        hostname: 'slack.com',
-        path: `/api/${method}`,
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.botToken}`,
-          'Content-Type': 'application/json; charset=utf-8',
-          'Content-Length': Buffer.byteLength(body),
+      const req = https.request(
+        {
+          hostname: 'slack.com',
+          path: `/api/${method}`,
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.botToken}`,
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Length': Buffer.byteLength(body),
+          },
         },
-      }, (res) => {
-        let data = '';
-        res.on('data', c => data += c);
-        res.on('end', () => {
-          try {
-            const result = JSON.parse(data);
-            if (!result.ok) reject(new Error(`Slack API ${method}: ${result.error || 'unknown'}`));
-            else resolve(result);
-          } catch (e) { reject(e); }
-        });
-      });
+        (res) => {
+          let data = '';
+          res.on('data', (c) => (data += c));
+          res.on('end', () => {
+            try {
+              const result = JSON.parse(data);
+              if (!result.ok) {
+                reject(new Error(`Slack API ${method}: ${result.error || 'unknown'}`));
+              } else {
+                resolve(result);
+              }
+            } catch (e) {
+              reject(e);
+            }
+          });
+        }
+      );
       req.on('error', reject);
       req.write(body);
       req.end();

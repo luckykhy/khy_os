@@ -17,11 +17,11 @@
  * 关 → 命令不接管(字节回退)。
  */
 
-const { printInfo, printError } = require('../formatters');
 const leaf = require('../../services/assistant/proactiveTogglePlan');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');
+const { printInfo, printError } = require('../formatters');
 
 /** assistant SSOT(wired activate/deactivate/getStatus)。 */
 function _assistant() {
@@ -83,9 +83,17 @@ async function handleProactive(_subCommand, args = [], _options = {}) {
   if (changes) {
     const a = _assistant();
     if (desired) {
-      _safe(() => { if (a && typeof a.activate === 'function') a.activate(); }, null);
+      _safe(() => {
+        if (a && typeof a.activate === 'function') {
+          a.activate();
+        }
+      }, null);
     } else {
-      _safe(() => { if (a && typeof a.deactivate === 'function') a.deactivate(); }, null);
+      _safe(() => {
+        if (a && typeof a.deactivate === 'function') {
+          a.deactivate();
+        }
+      }, null);
     }
   }
 

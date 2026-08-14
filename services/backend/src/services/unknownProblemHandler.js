@@ -41,7 +41,7 @@ const MARKERS = Object.freeze({
   INFO_UNKNOWN: '🔍 **未知点识别**',
   INFO_CONFIRM: '❓ **确认信息**',
   PROPOSE: '🧭 **方案对比**',
-  EXEC_STEP: '⚙️ **执行步骤',     // followed by ` [x/y]**`
+  EXEC_STEP: '⚙️ **执行步骤', // followed by ` [x/y]**`
   EXEC_CHECK: '✅ **校验点**',
   DEVIATION: '⚠️ **偏离预警**',
   TRUNCATION: '⚠️ **生成中断预警**：正在重试当前步骤',
@@ -100,7 +100,9 @@ function isExecutionStep(reply) {
  * @returns {boolean}
  */
 function isExecutionTruncated(reply, opts = {}) {
-  if (!isExecutionStep(reply)) return false;
+  if (!isExecutionStep(reply)) {
+    return false;
+  }
   const hasCheckpoint = _has(reply, MARKERS.EXEC_CHECK);
   // Truncated if the checkpoint never arrived, or the adapter explicitly says the
   // output was cut at the token limit.
@@ -177,7 +179,9 @@ function buildStateMachineSection() {
     '',
     '## 防御铁律',
     '- **防跳步**：缺关键信息时严禁跳过信息请求结构直接给方案或执行；用户未选方案严禁输出执行步骤；一条回复只呈现一个阶段的结构。',
-    '- **防截断**：若执行步骤的校验点未写完即被截断，下一条以 `' + MARKERS.TRUNCATION + '` 开头主动重续当前子步，不要干等用户再问。',
+    '- **防截断**：若执行步骤的校验点未写完即被截断，下一条以 `' +
+      MARKERS.TRUNCATION +
+      '` 开头主动重续当前子步，不要干等用户再问。',
     '- **防污染/死循环**：回退时清空失效假设，仅保留已确认事实与失败原因；同一问题最多回退重提方案 2 次，单子步最多重试 1 次，超限则诚实说明卡点并结束，不空转。',
     '- **红线**：不泄露密钥/凭证、不绕过人工确认；破坏性/不可逆动作执行前必须在风险点标注并取得确认。',
   ].join('\n');

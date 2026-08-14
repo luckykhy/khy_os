@@ -16,14 +16,62 @@ const TIMEOUT_MS = 30_000;
 
 // Known NVIDIA NIM models
 const NIM_CATALOG = [
-  { id: 'nvidia/llama-3.1-nemotron-70b-instruct', name: 'Nemotron 70B', size: '~40 GB', tier: 'ultra', category: 'general' },
-  { id: 'nvidia/llama-3.1-nemotron-51b-instruct', name: 'Nemotron 51B', size: '~30 GB', tier: 'high', category: 'general' },
-  { id: 'nvidia/nemotron-mini-4b-instruct', name: 'Nemotron Mini 4B', size: '~3 GB', tier: 'low', category: 'general' },
-  { id: 'nvidia/mistral-nemo-minitron-8b-base', name: 'Minitron 8B', size: '~5 GB', tier: 'medium', category: 'general' },
-  { id: 'meta/llama-3.1-8b-instruct', name: 'Llama 3.1 8B (NIM)', size: '~5 GB', tier: 'medium', category: 'general' },
-  { id: 'meta/llama-3.1-70b-instruct', name: 'Llama 3.1 70B (NIM)', size: '~40 GB', tier: 'ultra', category: 'general' },
-  { id: 'deepseek-ai/deepseek-r1-distill-qwen-7b', name: 'DeepSeek R1 Distill 7B', size: '~5 GB', tier: 'medium', category: 'reasoning' },
-  { id: 'nvidia/usdcode-llama3.1-70b-instruct', name: 'USD Code 70B', size: '~40 GB', tier: 'ultra', category: 'code' },
+  {
+    id: 'nvidia/llama-3.1-nemotron-70b-instruct',
+    name: 'Nemotron 70B',
+    size: '~40 GB',
+    tier: 'ultra',
+    category: 'general',
+  },
+  {
+    id: 'nvidia/llama-3.1-nemotron-51b-instruct',
+    name: 'Nemotron 51B',
+    size: '~30 GB',
+    tier: 'high',
+    category: 'general',
+  },
+  {
+    id: 'nvidia/nemotron-mini-4b-instruct',
+    name: 'Nemotron Mini 4B',
+    size: '~3 GB',
+    tier: 'low',
+    category: 'general',
+  },
+  {
+    id: 'nvidia/mistral-nemo-minitron-8b-base',
+    name: 'Minitron 8B',
+    size: '~5 GB',
+    tier: 'medium',
+    category: 'general',
+  },
+  {
+    id: 'meta/llama-3.1-8b-instruct',
+    name: 'Llama 3.1 8B (NIM)',
+    size: '~5 GB',
+    tier: 'medium',
+    category: 'general',
+  },
+  {
+    id: 'meta/llama-3.1-70b-instruct',
+    name: 'Llama 3.1 70B (NIM)',
+    size: '~40 GB',
+    tier: 'ultra',
+    category: 'general',
+  },
+  {
+    id: 'deepseek-ai/deepseek-r1-distill-qwen-7b',
+    name: 'DeepSeek R1 Distill 7B',
+    size: '~5 GB',
+    tier: 'medium',
+    category: 'reasoning',
+  },
+  {
+    id: 'nvidia/usdcode-llama3.1-70b-instruct',
+    name: 'USD Code 70B',
+    size: '~40 GB',
+    tier: 'ultra',
+    category: 'code',
+  },
 ];
 
 /**
@@ -45,7 +93,7 @@ function getApiKey() {
  */
 function listCatalogModels(filterTier = null) {
   if (filterTier) {
-    return NIM_CATALOG.filter(m => m.tier === filterTier);
+    return NIM_CATALOG.filter((m) => m.tier === filterTier);
   }
   return [...NIM_CATALOG];
 }
@@ -57,14 +105,14 @@ function detectNvidiaGpu() {
   try {
     const output = execSync(
       'nvidia-smi --query-gpu=name,memory.total,driver_version,compute_cap --format=csv,noheader,nounits 2>/dev/null',
-      { encoding: 'utf-8', timeout: 5000 },
+      { encoding: 'utf-8', timeout: 5000 }
     ).trim();
 
     if (!output) return null;
 
     const lines = output.split('\n');
-    const gpus = lines.map(line => {
-      const [name, vramMB, driver, computeCap] = line.split(', ').map(s => s.trim());
+    const gpus = lines.map((line) => {
+      const [name, vramMB, driver, computeCap] = line.split(', ').map((s) => s.trim());
       return {
         name,
         vramMB: parseInt(vramMB) || 0,
@@ -74,8 +122,14 @@ function detectNvidiaGpu() {
       };
     });
 
-    return { gpus, count: gpus.length, totalVramGB: gpus.reduce((acc, g) => acc + g.vramMB, 0) / 1024 };
-  } catch { return null; }
+    return {
+      gpus,
+      count: gpus.length,
+      totalVramGB: gpus.reduce((acc, g) => acc + g.vramMB, 0) / 1024,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -104,61 +158,75 @@ function generate(prompt, options = {}) {
       stream: false,
     });
 
-    const req = https.request({
-      hostname: NIM_API_BASE,
-      port: 443,
-      path: '/v1/chat/completions',
-      method: 'POST',
-      headers: sanitizeOutgoingHeaders({
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': Buffer.byteLength(body),
-      }),
-      timeout: TIMEOUT_MS,
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.choices?.[0]) {
-            resolve({
-              success: true,
-              content: json.choices[0].message.content,
-              provider: `NVIDIA NIM (${model.split('/').pop()})`,
-              adapter: 'nvidia',
-              model,
-              attempts: [{ provider: 'NVIDIA', success: true }],
-            });
-          } else {
+    const req = https.request(
+      {
+        hostname: NIM_API_BASE,
+        port: 443,
+        path: '/v1/chat/completions',
+        method: 'POST',
+        headers: sanitizeOutgoingHeaders({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Length': Buffer.byteLength(body),
+        }),
+        timeout: TIMEOUT_MS,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (json.choices?.[0]) {
+              resolve({
+                success: true,
+                content: json.choices[0].message.content,
+                provider: `NVIDIA NIM (${model.split('/').pop()})`,
+                adapter: 'nvidia',
+                model,
+                attempts: [{ provider: 'NVIDIA', success: true }],
+              });
+            } else {
+              resolve({
+                success: false,
+                content: json.error?.message || json.detail || 'Unknown error',
+                provider: 'NVIDIA NIM',
+                adapter: 'nvidia',
+                attempts: [{ provider: 'NVIDIA', success: false, error: json.error?.message }],
+              });
+            }
+          } catch (e) {
             resolve({
               success: false,
-              content: json.error?.message || json.detail || 'Unknown error',
+              content: e.message,
               provider: 'NVIDIA NIM',
               adapter: 'nvidia',
-              attempts: [{ provider: 'NVIDIA', success: false, error: json.error?.message }],
+              attempts: [{ provider: 'NVIDIA', success: false, error: e.message }],
             });
           }
-        } catch (e) {
-          resolve({
-            success: false, content: e.message,
-            provider: 'NVIDIA NIM', adapter: 'nvidia',
-            attempts: [{ provider: 'NVIDIA', success: false, error: e.message }],
-          });
-        }
+        });
+      }
+    );
+
+    req.on('error', (err) =>
+      resolve({
+        success: false,
+        content: err.message,
+        provider: 'NVIDIA NIM',
+        adapter: 'nvidia',
+        attempts: [{ provider: 'NVIDIA', success: false, error: err.message }],
+      })
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({
+        success: false,
+        content: 'Request timeout',
+        provider: 'NVIDIA NIM',
+        adapter: 'nvidia',
+        attempts: [{ provider: 'NVIDIA', success: false, error: 'timeout' }],
       });
     });
-
-    req.on('error', (err) => resolve({
-      success: false, content: err.message,
-      provider: 'NVIDIA NIM', adapter: 'nvidia',
-      attempts: [{ provider: 'NVIDIA', success: false, error: err.message }],
-    }));
-    req.on('timeout', () => { req.destroy(); resolve({
-      success: false, content: 'Request timeout',
-      provider: 'NVIDIA NIM', adapter: 'nvidia',
-      attempts: [{ provider: 'NVIDIA', success: false, error: 'timeout' }],
-    }); });
     req.write(body);
     req.end();
   });
@@ -181,8 +249,12 @@ function getStatus() {
   };
 }
 
-function detect() { return hasApiKey(); }
-function destroy() { /* stateless */ }
+function detect() {
+  return hasApiKey();
+}
+function destroy() {
+  /* stateless */
+}
 
 module.exports = {
   detect,

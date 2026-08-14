@@ -36,21 +36,27 @@ const { ccFormatEnabled, ccFormatNumber, ccFormatDuration } = require('./ccForma
 // 否则(>1 或门控关)→ legacy(call-site 传 `${count} tool uses`)。注意 >1 时 CC
 // 形态与 legacy 逐字节相同,唯一分歧只在 count===1。
 function agentToolUsesLabelOr(count, legacy, env = process.env) {
-  if (ccFormatEnabled(env) && Number(count) === 1) return '1 tool use';
+  if (ccFormatEnabled(env) && Number(count) === 1) {
+    return '1 tool use';
+  }
   return legacy;
 }
 
 // 「X tokens」:门控开 → `${ccFormatNumber(tokens)} tokens`(Intl 紧凑记数,保留
 // 尾随 `.0`,带 m/b 档与四舍五入);门控关 → legacy(各 call-site 历史 k 口径)。
 function agentTokensLabelOr(tokens, legacy, env = process.env) {
-  if (ccFormatEnabled(env)) return `${ccFormatNumber(tokens)} tokens`;
+  if (ccFormatEnabled(env)) {
+    return `${ccFormatNumber(tokens)} tokens`;
+  }
   return legacy;
 }
 
 // 时长:门控开 → `ccFormatDuration(ms)`(CC formatDuration,带 h/d 进位、整秒);
 // 门控关 → legacy(call-site 历史口径:树视图 `X.Xs` / done 行 `Nm Ns`)。
 function agentDurationLabelOr(ms, legacy, env = process.env) {
-  if (ccFormatEnabled(env)) return ccFormatDuration(ms);
+  if (ccFormatEnabled(env)) {
+    return ccFormatDuration(ms);
+  }
   return legacy;
 }
 
@@ -63,9 +69,8 @@ function agentDurationLabelOr(ms, legacy, env = process.env) {
 // `agentDurationLabelOr(ms, legacy, env)`,与改动前 call-site 逐字节相同(字节回退)。
 function toolDurationLabelOr(ms, legacy, env = process.env) {
   const raw = env && env.KHY_CC_TOOLDUR_SUBSEC;
-  const subSecOn = raw == null
-    ? true
-    : !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
+  const subSecOn =
+    raw == null ? true : !['0', 'false', 'off', 'no'].includes(String(raw).trim().toLowerCase());
   const n = Number(ms);
   if (subSecOn && Number.isFinite(n) && n > 0 && n < 1000) {
     return `${(n / 1000).toFixed(1)}s`;
@@ -81,7 +86,9 @@ function toolDurationLabelOr(ms, legacy, env = process.env) {
 // legacy(call-site 传 `+${count} more tool uses`,故 >1 时与 CC 形态逐字节相同,
 // 唯一分歧只在 count===1)。前缀 `+`、后缀 `(ctrl+o to expand)`、dim 着色留 call-site。
 function agentMoreToolUsesLabelOr(count, legacy, env = process.env) {
-  if (ccFormatEnabled(env) && Number(count) === 1) return '+1 more tool use';
+  if (ccFormatEnabled(env) && Number(count) === 1) {
+    return '+1 more tool use';
+  }
   return legacy;
 }
 

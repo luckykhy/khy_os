@@ -100,9 +100,12 @@ function _pickToolAwareSource(options) {
   }
 
   // structuredMessages with content arrays (CLI internal path)
-  if (Array.isArray(options.structuredMessages) && options.structuredMessages.length > 0
-      && options.structuredMessages.some(m => Array.isArray(m.content))) {
-    return options.structuredMessages.filter(m => m.role !== 'system');
+  if (
+    Array.isArray(options.structuredMessages) &&
+    options.structuredMessages.length > 0 &&
+    options.structuredMessages.some((m) => Array.isArray(m.content))
+  ) {
+    return options.structuredMessages.filter((m) => m.role !== 'system');
   }
 
   return null;
@@ -113,16 +116,19 @@ function _pickToolAwareSource(options) {
  */
 function _resolveAnthropicMessages(prompt, options) {
   if (Array.isArray(options.rawMessages) && options.rawMessages.length > 0) {
-    return options.rawMessages.filter(m => m.role !== 'system');
+    return options.rawMessages.filter((m) => m.role !== 'system');
   }
-  if (Array.isArray(options.structuredMessages) && options.structuredMessages.length > 0
-      && options.structuredMessages.some(m => Array.isArray(m.content))) {
-    return options.structuredMessages.filter(m => m.role !== 'system');
+  if (
+    Array.isArray(options.structuredMessages) &&
+    options.structuredMessages.length > 0 &&
+    options.structuredMessages.some((m) => Array.isArray(m.content))
+  ) {
+    return options.structuredMessages.filter((m) => m.role !== 'system');
   }
   if (Array.isArray(options.messages) && options.messages.length > 0) {
     return options.messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({ role: m.role || 'user', content: m.content }));
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({ role: m.role || 'user', content: m.content }));
   }
   return [{ role: 'user', content: prompt || '' }];
 }
@@ -132,7 +138,7 @@ function _resolveAnthropicMessages(prompt, options) {
  */
 function _resolveSimpleMessages(prompt, options) {
   if (Array.isArray(options.messages) && options.messages.length > 0) {
-    return options.messages.map(m => ({ role: m.role || 'user', content: m.content }));
+    return options.messages.map((m) => ({ role: m.role || 'user', content: m.content }));
   }
   return [{ role: 'user', content: prompt || '' }];
 }

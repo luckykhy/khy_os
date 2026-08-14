@@ -26,21 +26,32 @@ const { getBaseDataDir } = require('../utils/dataHome');
 
 // ── 环境开关（零硬编码；与 dynamic 保持同名同义，三行小助手就地复刻避免跨模块耦合） ──
 function _envBool(name, def) {
-  const v = String(process.env[name] == null ? '' : process.env[name]).trim().toLowerCase();
-  if (v === '') return def;
+  const v = String(process.env[name] == null ? '' : process.env[name])
+    .trim()
+    .toLowerCase();
+  if (v === '') {
+    return def;
+  }
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
 /** 动态化总开关：KHY_LEARN_DYNAMIC=0 一键回到纯地板。 */
-function isDynamicEnabled() { return _envBool('KHY_LEARN_DYNAMIC', true); }
+function isDynamicEnabled() {
+  return _envBool('KHY_LEARN_DYNAMIC', true);
+}
 
 const OVERLAY_VERSION = 1;
 
 // ── 覆盖层文件 ────────────────────────────────────────────────────────
 // 收敛到 utils/growthDataDir 单一真源(逐字节委托,调用点不变) // ~/.khyos/growth
 const _overlayDir = require('../utils/growthDataDir');
-function _overlayFile() { return path.join(_overlayDir(), 'curriculum_overlay.json'); }
-function _overlayTmp() { return path.join(_overlayDir(), 'curriculum_overlay.tmp'); }
+function _overlayFile() {
+  return path.join(_overlayDir(), 'curriculum_overlay.json');
+}
+
+function _overlayTmp() {
+  return path.join(_overlayDir(), 'curriculum_overlay.tmp');
+}
 
 function _emptyOverlay() {
   return {
@@ -60,21 +71,36 @@ let _overlayMtime = 0;
 
 /** 读覆盖层；缺失/损坏/被禁用 → 空覆盖层（地板照常）。绝不抛。 */
 function loadOverlay() {
-  if (!isDynamicEnabled()) return _emptyOverlay();
+  if (!isDynamicEnabled()) {
+    return _emptyOverlay();
+  }
   try {
     const file = _overlayFile();
     let stat;
-    try { stat = fs.statSync(file); } catch { _overlayCache = null; _overlayMtime = 0; return _emptyOverlay(); }
-    if (_overlayCache && stat.mtimeMs === _overlayMtime) return _overlayCache;
+    try {
+      stat = fs.statSync(file);
+    } catch {
+      _overlayCache = null;
+      _overlayMtime = 0;
+      return _emptyOverlay();
+    }
+    if (_overlayCache && stat.mtimeMs === _overlayMtime) {
+      return _overlayCache;
+    }
     const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    if (!raw || typeof raw !== 'object') return _emptyOverlay();
+    if (!raw || typeof raw !== 'object') {
+      return _emptyOverlay();
+    }
     // 结构兜底：字段缺失即补空，绝不让脏数据污染合并。
     const overlay = {
       version: Number(raw.version) || OVERLAY_VERSION,
       generatedAt: raw.generatedAt || null,
       fingerprint: typeof raw.fingerprint === 'string' ? raw.fingerprint : null,
-      capabilities: (raw.capabilities && typeof raw.capabilities === 'object') ? raw.capabilities : { fs: false, network: false, model: 'none' },
-      fileRemaps: (raw.fileRemaps && typeof raw.fileRemaps === 'object') ? raw.fileRemaps : {},
+      capabilities:
+        raw.capabilities && typeof raw.capabilities === 'object'
+          ? raw.capabilities
+          : { fs: false, network: false, model: 'none' },
+      fileRemaps: raw.fileRemaps && typeof raw.fileRemaps === 'object' ? raw.fileRemaps : {},
       topics: Array.isArray(raw.topics) ? raw.topics : [],
       layers: Array.isArray(raw.layers) ? raw.layers : [],
     };
@@ -90,9 +116,15 @@ function loadOverlay() {
 function clearOverlay() {
   try {
     const file = _overlayFile();
-    _overlayCache = null; _overlayMtime = 0;
-    if (fs.existsSync(file)) { fs.rmSync(file, { force: true }); return true; }
-  } catch { /* ignore */ }
+    _overlayCache = null;
+    _overlayMtime = 0;
+    if (fs.existsSync(file)) {
+      fs.rmSync(file, { force: true });
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
   return false;
 }
 
@@ -102,13 +134,22 @@ function writeOverlay(overlay) {
   const tmp = _overlayTmp();
   const file = _overlayFile();
   try {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(tmp, JSON.stringify(overlay, null, 2) + '\n', 'utf-8');
-    fs.renameSync(tmp, file);                 // 原子替换
-    _overlayCache = null; _overlayMtime = 0;  // 失效缓存，下次 loadOverlay 读新内容
+    fs.renameSync(tmp, file); // 原子替换
+    _overlayCache = null;
+    _overlayMtime = 0; // 失效缓存，下次 loadOverlay 读新内容
     return true;
   } catch {
-    try { if (fs.existsSync(tmp)) fs.rmSync(tmp, { force: true }); } catch { /* ignore */ }
+    try {
+      if (fs.existsSync(tmp)) {
+        fs.rmSync(tmp, { force: true });
+      }
+    } catch {
+      /* ignore */
+    }
     return false;
   }
 }
@@ -121,14 +162,22 @@ function writeOverlay(overlay) {
  *  - 按 id 排序返回。地板对象**不被修改**（受影响的层浅拷贝 + 新 topics 数组）。
  */
 function applyOverlay(floorLayers, overlay) {
-  if (!Array.isArray(floorLayers)) return floorLayers;
-  if (!overlay || typeof overlay !== 'object') return floorLayers.slice();
+  if (!Array.isArray(floorLayers)) {
+    return floorLayers;
+  }
+  if (!overlay || typeof overlay !== 'object') {
+    return floorLayers.slice();
+  }
 
-  const injectByLayer = new Map();   // layerId -> [topic, ...]
-  for (const t of (overlay.topics || [])) {
-    if (!t || t.layer == null || !t.id) continue;
+  const injectByLayer = new Map(); // layerId -> [topic, ...]
+  for (const t of overlay.topics || []) {
+    if (!t || t.layer == null || !t.id) {
+      continue;
+    }
     const lid = Number(t.layer);
-    if (!injectByLayer.has(lid)) injectByLayer.set(lid, []);
+    if (!injectByLayer.has(lid)) {
+      injectByLayer.set(lid, []);
+    }
     injectByLayer.get(lid).push({
       id: String(t.id),
       title: String(t.title || t.id),
@@ -141,24 +190,30 @@ function applyOverlay(floorLayers, overlay) {
 
   const merged = floorLayers.map((layer) => {
     const extra = injectByLayer.get(Number(layer.id));
-    if (!extra || extra.length === 0) return layer;
-    const existingIds = new Set((layer.topics || []).map(t => String(t.id)));
-    const fresh = extra.filter(t => !existingIds.has(String(t.id)));
-    if (fresh.length === 0) return layer;
+    if (!extra || extra.length === 0) {
+      return layer;
+    }
+    const existingIds = new Set((layer.topics || []).map((t) => String(t.id)));
+    const fresh = extra.filter((t) => !existingIds.has(String(t.id)));
+    if (fresh.length === 0) {
+      return layer;
+    }
     return { ...layer, topics: [...(layer.topics || []), ...fresh] };
   });
 
   // 追加动态层（id 不与地板层冲突时）
-  const floorIds = new Set(floorLayers.map(l => Number(l.id)));
-  for (const dl of (overlay.layers || [])) {
-    if (!dl || dl.id == null || floorIds.has(Number(dl.id))) continue;
+  const floorIds = new Set(floorLayers.map((l) => Number(l.id)));
+  for (const dl of overlay.layers || []) {
+    if (!dl || dl.id == null || floorIds.has(Number(dl.id))) {
+      continue;
+    }
     merged.push({
       id: Number(dl.id),
       title: String(dl.title || `动态层 ${dl.id}`),
       summary: String(dl.summary || ''),
       _dynamic: true,
       _source: 'ai',
-      topics: (Array.isArray(dl.topics) ? dl.topics : []).map(t => ({
+      topics: (Array.isArray(dl.topics) ? dl.topics : []).map((t) => ({
         id: String(t.id),
         title: String(t.title || t.id),
         desc: String(t.desc || ''),
@@ -177,9 +232,13 @@ function remapFile(relPath, overlay) {
   try {
     if (overlay && overlay.fileRemaps && typeof overlay.fileRemaps === 'object') {
       const to = overlay.fileRemaps[relPath];
-      if (to && typeof to === 'string') return to;
+      if (to && typeof to === 'string') {
+        return to;
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 

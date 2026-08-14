@@ -60,8 +60,12 @@ function isEnabled(env) {
  * @returns {boolean}
  */
 function isPayloadScopedFailure(input = {}) {
-  if (!isEnabled(input.env)) return false;
-  if (!input.hasAttachment) return false;
+  if (!isEnabled(input.env)) {
+    return false;
+  }
+  if (!input.hasAttachment) {
+    return false;
+  }
   // 合成一个失败结果交给单一真源判定(复用其结构化 + 不支持格式文本兜底)。
   const synthetic = {
     success: false,
@@ -86,10 +90,21 @@ function _describeKinds(kinds) {
   const names = [];
   const targets = [];
   for (const k of list) {
-    const label = _KIND_LABEL[String(k || '').trim().toLowerCase()];
-    if (!label) continue;
-    if (!names.includes(label.name)) names.push(label.name);
-    if (!targets.includes(label.to)) targets.push(label.to);
+    const label =
+      _KIND_LABEL[
+        String(k || '')
+          .trim()
+          .toLowerCase()
+      ];
+    if (!label) {
+      continue;
+    }
+    if (!names.includes(label.name)) {
+      names.push(label.name);
+    }
+    if (!targets.includes(label.to)) {
+      targets.push(label.to);
+    }
   }
   return { names, targets };
 }
@@ -98,8 +113,13 @@ function _describeExts(exts) {
   const out = [];
   const list = Array.isArray(exts) ? exts : [];
   for (const e of list) {
-    const s = String(e || '').trim().replace(/^\./, '').toLowerCase();
-    if (s && /^[a-z0-9]{1,8}$/.test(s) && !out.includes(s)) out.push(s);
+    const s = String(e || '')
+      .trim()
+      .replace(/^\./, '')
+      .toLowerCase();
+    if (s && /^[a-z0-9]{1,8}$/.test(s) && !out.includes(s)) {
+      out.push(s);
+    }
   }
   return out;
 }
@@ -118,7 +138,9 @@ const UNREADABLE_MARKER = '我暂时无法直接读取';
  * @returns {string|null}
  */
 function buildUnreadableAttachmentMessage(input = {}) {
-  if (!isEnabled(input.env)) return null;
+  if (!isEnabled(input.env)) {
+    return null;
+  }
 
   const { names, targets } = _describeKinds(input.kinds);
   const exts = _describeExts(input.exts);

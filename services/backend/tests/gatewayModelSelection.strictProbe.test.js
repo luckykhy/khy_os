@@ -47,6 +47,7 @@ describe('gateway model selection strict probe', () => {
 
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'localLLM', name: '本地模型', enabled: true, available: true, detail: 'ok' },
@@ -65,6 +66,13 @@ describe('gateway model selection strict probe', () => {
       printInfo,
       printTable,
       ICON_GATEWAY: 'G',
+      // Width/display helpers the handler destructures from formatters — the
+      // mock must supply them or the code path throws "not a function".
+      truncateToWidth: (s, w) => String(s).slice(0, w),
+      displayWidth: (s) => String(s).length,
+      padToWidth: (s) => String(s),
+      stripAnsi: (s) => String(s),
+      safeTerminalString: (s) => String(s),
     }));
     jest.doMock('../src/services/gateway/aiGateway', () => gatewayMock);
 
@@ -95,6 +103,7 @@ describe('gateway model selection strict probe', () => {
     const syncModelSwitch = jest.fn();
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'codex', name: 'Codex CLI', enabled: true, available: true, detail: 'ok' },
@@ -118,6 +127,13 @@ describe('gateway model selection strict probe', () => {
       printInfo,
       printTable,
       ICON_GATEWAY: 'G',
+      // Width/display helpers the handler destructures from formatters — the
+      // mock must supply them or the code path throws "not a function".
+      truncateToWidth: (s, w) => String(s).slice(0, w),
+      displayWidth: (s) => String(s).length,
+      padToWidth: (s) => String(s),
+      stripAnsi: (s) => String(s),
+      safeTerminalString: (s) => String(s),
     }));
     jest.doMock('../src/services/gateway/aiGateway', () => gatewayMock);
 
@@ -142,6 +158,7 @@ describe('gateway model selection strict probe', () => {
 
     const gatewayMock = {
       _initialized: true,
+      isInitialized() { return this._initialized; },
       init: jest.fn(async () => {}),
       getStatus: jest.fn(() => ([
         { type: 'codex', name: 'Codex CLI', enabled: true, available: true, detail: 'ok' },
@@ -164,6 +181,13 @@ describe('gateway model selection strict probe', () => {
       printInfo,
       printTable,
       ICON_GATEWAY: 'G',
+      // Width/display helpers the handler destructures from formatters — the
+      // mock must supply them or the code path throws "not a function".
+      truncateToWidth: (s, w) => String(s).slice(0, w),
+      displayWidth: (s) => String(s).length,
+      padToWidth: (s) => String(s),
+      stripAnsi: (s) => String(s),
+      safeTerminalString: (s) => String(s),
     }));
     jest.doMock('../src/services/gateway/aiGateway', () => gatewayMock);
 

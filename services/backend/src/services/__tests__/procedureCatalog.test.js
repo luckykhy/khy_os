@@ -10,8 +10,8 @@
  * 门关返 '')。零 IO、确定性——每个断言显式传 env,不依赖进程环境。
  */
 
-const { test } = require('node:test');
 const assert = require('node:assert');
+const { test } = require('node:test');
 
 const pc = require('../procedureCatalog');
 
@@ -57,8 +57,13 @@ test('listProcedures:门开返回多套(≥6),每条字段完整、id 唯一、s
     assert.equal(typeof p.title, 'string');
     assert.ok(p.title.length > 0, `${p.id}.title empty`);
     assert.ok(Array.isArray(p.steps) && p.steps.length >= 3, `${p.id}.steps too few`);
-    for (const s of p.steps) assert.ok(typeof s === 'string' && s.length > 0, `${p.id} step empty`);
-    assert.ok(Array.isArray(p.when.keywords) && p.when.keywords.length > 0, `${p.id}.keywords empty`);
+    for (const s of p.steps) {
+      assert.ok(typeof s === 'string' && s.length > 0, `${p.id} step empty`);
+    }
+    assert.ok(
+      Array.isArray(p.when.keywords) && p.when.keywords.length > 0,
+      `${p.id}.keywords empty`
+    );
     assert.ok(Array.isArray(p.when.tools), `${p.id}.tools not array`);
     assert.ok(!ids.has(p.id), `duplicate id ${p.id}`);
     ids.add(p.id);
@@ -76,7 +81,9 @@ test('listProcedures:按 id / taskType 过滤,未知返空', () => {
   assert.equal(one[0].id, 'configure-model-provider');
   const byType = pc.listProcedures({ taskType: one[0].taskType }, {});
   assert.ok(byType.length >= 1);
-  for (const p of byType) assert.equal(p.taskType, one[0].taskType);
+  for (const p of byType) {
+    assert.equal(p.taskType, one[0].taskType);
+  }
   assert.deepEqual(pc.listProcedures({ id: '不存在xyz' }, {}), []);
 });
 
@@ -123,8 +130,13 @@ test('matchProcedure:shellCommand + 部署便携语义 → deploy-portable(工�
 });
 
 test('matchProcedure:发布/发版/release/publish 诉求 → release-publish', () => {
-  for (const msg of ['帮我把 khyos 发布成 0.1.163 版本', '发版 0.1.163',
-    'release 0.1.163', '帮我发布新版本到 npm 和 pypi', 'publish to testpypi']) {
+  for (const msg of [
+    '帮我把 khyos 发布成 0.1.163 版本',
+    '发版 0.1.163',
+    'release 0.1.163',
+    '帮我发布新版本到 npm 和 pypi',
+    'publish to testpypi',
+  ]) {
     const m = pc.matchProcedure(msg, {});
     assert.ok(m, `no match for: ${msg}`);
     assert.equal(m.id, 'release-publish', `wrong id for: ${msg}`);

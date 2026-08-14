@@ -60,7 +60,11 @@ const {
 const _planner = require('./localExecutionPlanner');
 // Structured-output renderer (single source for tidy no-model output).
 let _fmt = null;
-try { _fmt = require('./localFormat'); } catch { /* degrade to plain text */ }
+try {
+  _fmt = require('./localFormat');
+} catch {
+  /* degrade to plain text */
+}
 
 // Curated tools that REQUIRE the network. When the caller knows it is offline,
 // planning these just burns a connect timeout inside executeTool before failing,
@@ -69,7 +73,9 @@ const _NETWORK_TOOLS = new Set(['WebFetch', 'WebSearch']);
 
 function _intFromEnv(name, fallback, min, max) {
   const v = Number(process.env[name]);
-  if (!Number.isFinite(v) || v < min) return fallback;
+  if (!Number.isFinite(v) || v < min) {
+    return fallback;
+  }
   return max != null ? Math.min(v, max) : v;
 }
 
@@ -105,9 +111,10 @@ const _SEARCH_GLUED_ASCII_RE = /(?:搜索|查找|搜|找|grep|search)([A-Za-z_][
 
 /** Extract a search term from a request, tolerating glued (no-space) forms. */
 function _extractSearchTerm(text) {
-  const m = String(text || '').match(_SEARCH_SPACED_RE)
-    || String(text || '').match(_SEARCH_GLUED_QUOTED_RE)
-    || String(text || '').match(_SEARCH_GLUED_ASCII_RE);
+  const m =
+    String(text || '').match(_SEARCH_SPACED_RE) ||
+    String(text || '').match(_SEARCH_GLUED_QUOTED_RE) ||
+    String(text || '').match(_SEARCH_GLUED_ASCII_RE);
   return m ? m[1] : null;
 }
 
@@ -124,7 +131,9 @@ function _extractSearchTerm(text) {
  */
 function planLocalToolCalls(userInput, opts = {}) {
   const text = String(userInput || '').trim();
-  if (!text) return [];
+  if (!text) {
+    return [];
+  }
   const allowed = opts.allowedSet instanceof Set ? opts.allowedSet : null;
   const networkUp = opts.networkUp !== false;
   // A tool is usable iff it is in the allowlist AND (if it needs the network) we
@@ -136,15 +145,22 @@ function planLocalToolCalls(userInput, opts = {}) {
   // through — otherwise a later rule could misread the URL as a local file path.
   const url = (text.match(_URL_RE) || [])[0];
   if (url) {
-    if (!has('WebFetch')) return [];
-    const prompt = text.replace(url, '').replace(/(请|帮我|总结|看看|打开|获取|内容)/g, '').trim();
+    if (!has('WebFetch')) {
+      return [];
+    }
+    const prompt = text
+      .replace(url, '')
+      .replace(/(请|帮我|总结|看看|打开|获取|内容)/g, '')
+      .trim();
     return [{ name: 'WebFetch', params: { url, prompt: prompt || '总结这个页面的主要内容' } }];
   }
 
   // 2. git working-tree status.
-  if (has('gitStatus') &&
-      ((/\bgit\b/i.test(text) && /(status|状态|未提交|工作区|暂存|staged)/i.test(text)) ||
-       /(改了哪些文件|工作区状态|有哪些改动|未提交的更改|当前改动)/.test(text))) {
+  if (
+    has('gitStatus') &&
+    ((/\bgit\b/i.test(text) && /(status|状态|未提交|工作区|暂存|staged)/i.test(text)) ||
+      /(改了哪些文件|工作区状态|有哪些改动|未提交的更改|当前改动)/.test(text))
+  ) {
     return [{ name: 'gitStatus', params: {} }];
   }
 
@@ -154,7 +170,10 @@ function planLocalToolCalls(userInput, opts = {}) {
   }
 
   // 4. list available models.
-  if (has('list_models') && /(模型列表|有哪些模型|可用模型|list\s*models|当前.*模型|支持哪些模型)/i.test(text)) {
+  if (
+    has('list_models') &&
+    /(模型列表|有哪些模型|可用模型|list\s*models|当前.*模型|支持哪些模型)/i.test(text)
+  ) {
     return [{ name: 'list_models', params: {} }];
   }
 
@@ -162,22 +181,35 @@ function planLocalToolCalls(userInput, opts = {}) {
   if (/(看看|查看|显示|打开|读取|读一下|读下|cat\b|show\b|read\b|view\b|内容)/i.test(text)) {
     const p = _extractPathToken(text);
     if (p && (/\.[A-Za-z0-9]{1,12}$/.test(p) || /[/\\]/.test(p))) {
-      if (has('Read')) return [{ name: 'Read', params: { file_path: p } }];
-      if (has('readFile')) return [{ name: 'readFile', params: { path: p } }];
+      if (has('Read')) {
+        return [{ name: 'Read', params: { file_path: p } }];
+      }
+      if (has('readFile')) {
+        return [{ name: 'readFile', params: { path: p } }];
+      }
     }
   }
 
   // 6. glob: an explicit wildcard file pattern.
-  const glob = (text.match(/(\*\*\/[\w./*-]+|[\w./-]*\*\.[A-Za-z0-9]{1,12}|\*\.[A-Za-z0-9]{1,12})/) || [])[0];
+  const glob = (text.match(
+    /(\*\*\/[\w./*-]+|[\w./-]*\*\.[A-Za-z0-9]{1,12}|\*\.[A-Za-z0-9]{1,12})/
+  ) || [])[0];
   if (glob && has('Glob') && /(找|查找|列出|列一下|有哪些|find|list|glob|匹配)/i.test(text)) {
     return [{ name: 'Glob', params: { pattern: glob } }];
   }
 
   // 7. code search ("搜索 X" / "grep X") referring to the codebase.
   const searchTerm = _extractSearchTerm(text);
-  if (searchTerm && /(代码|项目|文件|代码库|源码|code|函数|定义|class|function|哪里用)/i.test(text)) {
-    if (has('Grep')) return [{ name: 'Grep', params: { pattern: searchTerm, output_mode: 'files_with_matches' } }];
-    if (has('search')) return [{ name: 'search', params: { keyword: searchTerm } }];
+  if (
+    searchTerm &&
+    /(代码|项目|文件|代码库|源码|code|函数|定义|class|function|哪里用)/i.test(text)
+  ) {
+    if (has('Grep')) {
+      return [{ name: 'Grep', params: { pattern: searchTerm, output_mode: 'files_with_matches' } }];
+    }
+    if (has('search')) {
+      return [{ name: 'search', params: { keyword: searchTerm } }];
+    }
   }
 
   // 8. list a directory.
@@ -194,12 +226,19 @@ function planLocalToolCalls(userInput, opts = {}) {
   // 10. explicit online lookup. Tighten the query by segmentation ("切词"):
   // drop command/stopword noise and keep salient terms so a weak local search
   // gets a focused query instead of the whole sentence.
-  if (has('WebSearch') && /(上网|联网|网上|web|网络|百度|谷歌|google|搜一下|搜索一下|查一下)/i.test(text)) {
+  if (
+    has('WebSearch') &&
+    /(上网|联网|网上|web|网络|百度|谷歌|google|搜一下|搜索一下|查一下)/i.test(text)
+  ) {
     let q = text.replace(/(请|帮我|上网|联网|网上|搜索一下|搜一下|查一下|帮忙|一下)/g, '').trim();
     try {
       const kw = require('./localNlp').extractKeywords(q || text, { limit: 6 });
-      if (kw.length) q = kw.join(' ');
-    } catch { /* keep cleaned q */ }
+      if (kw.length) {
+        q = kw.join(' ');
+      }
+    } catch {
+      /* keep cleaned q */
+    }
     return [{ name: 'WebSearch', params: { query: q || text } }];
   }
 
@@ -227,7 +266,9 @@ const _RESULT_FAILURE_RE = /^(失败：|已被拒绝：|\(无返回\)\s*$)/;
  * @returns {string}
  */
 function stripToolCallSyntax(text) {
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
   return String(text)
     .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
     .replace(/<\/?tool_call>/gi, '')
@@ -247,7 +288,11 @@ function _stableCallSignature(name, params) {
   try {
     body = JSON.stringify(p, Object.keys(p).sort());
   } catch {
-    try { body = JSON.stringify(p); } catch { body = String(p); }
+    try {
+      body = JSON.stringify(p);
+    } catch {
+      body = String(p);
+    }
   }
   return `${name}:${body}`;
 }
@@ -265,29 +310,40 @@ function _stableCallSignature(name, params) {
 function _composeDeterministicAnswer(messages, userQuery) {
   const list = Array.isArray(messages) ? messages : [];
   const blocks = list
-    .filter(m => m && m.role === 'user' && _TOOL_RESULT_RE.test(String(m.content || '')))
-    .map(m => String(m.content));
-  if (!blocks.length) return '';
+    .filter((m) => m && m.role === 'user' && _TOOL_RESULT_RE.test(String(m.content || '')))
+    .map((m) => String(m.content));
+  if (!blocks.length) {
+    return '';
+  }
 
   // Honesty gate: if EVERY tool result was a failure/denial/empty return, there
   // is no real content to present. Returning a confident-looking header over a
   // "失败：…" body would dress a failure up as an answer (and the repl renders it
   // as a success step). Return '' instead so the caller degrades gracefully
   // (web search → capability menu). A single usable result is enough to proceed.
-  const anyUsable = blocks.some(raw => {
+  const anyUsable = blocks.some((raw) => {
     const m = raw.match(_TOOL_RESULT_HEAD_RE);
     const body = (m ? m[2] : raw).replace(/<\/?tool_call>/gi, '').trim();
     return body && !_RESULT_FAILURE_RE.test(body);
   });
-  if (!anyUsable) return '';
+  if (!anyUsable) {
+    return '';
+  }
 
   // The query is the first non-tool-result user turn (the original request).
-  const query = String(userQuery
-    || (list.find(m => m && m.role === 'user' && !_TOOL_RESULT_RE.test(String(m.content || '')))?.content)
-    || '');
+  const query = String(
+    userQuery ||
+      list.find((m) => m && m.role === 'user' && !_TOOL_RESULT_RE.test(String(m.content || '')))
+        ?.content ||
+      ''
+  );
 
   let nlp = null;
-  try { nlp = require('./localNlp'); } catch { /* degrade to raw */ }
+  try {
+    nlp = require('./localNlp');
+  } catch {
+    /* degrade to raw */
+  }
 
   const maxChars = _intFromEnv('KHY_LOCAL_DIGEST_MAXLEN', 600, 120);
   const maxSentences = _intFromEnv('KHY_LOCAL_DIGEST_SENTENCES', 3, 1, 10);
@@ -295,19 +351,27 @@ function _composeDeterministicAnswer(messages, userQuery) {
   const parts = ['（本地确定性工具循环 · 无模型）'];
   if (nlp && query) {
     const kw = nlp.extractKeywords(query, { limit: 6 });
-    if (kw.length) parts.push(`切词: ${kw.join(' / ')}`);
+    if (kw.length) {
+      parts.push(`切词: ${kw.join(' / ')}`);
+    }
   }
   parts.push('');
 
   for (const raw of blocks) {
     const clean = raw.replace(/<\/?tool_call>/gi, '');
     const m = clean.match(_TOOL_RESULT_HEAD_RE);
-    if (!m || !nlp) { parts.push(clean, ''); continue; }
+    if (!m || !nlp) {
+      parts.push(clean, '');
+      continue;
+    }
     const header = m[1];
     const digest = nlp.summarize(m[2], { query, maxSentences, maxChars });
     parts.push(header, digest, '');
   }
-  return parts.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
+  return parts
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
 }
 
 /**
@@ -345,11 +409,13 @@ function makeDeterministicGenerator(opts = {}) {
 
   // Plan the ordered queue once, lazily, on the first turn (the prompt is stable
   // across turns). Cached in closure so step indexing is consistent.
-  let orderedQueue = null;   // Array<step> once resolved; [] = not an ordered intent.
+  let orderedQueue = null; // Array<step> once resolved; [] = not an ordered intent.
   let planned = false;
 
   const resolveQueue = (prompt) => {
-    if (planned) return orderedQueue;
+    if (planned) {
+      return orderedQueue;
+    }
     planned = true;
     orderedQueue = [];
     try {
@@ -357,26 +423,34 @@ function makeDeterministicGenerator(opts = {}) {
       if (plan && Array.isArray(plan.steps) && plan.steps.length > 1) {
         const enforced = _planner.enforceReadWriteOrder(plan.steps, {
           fileExists,
-          canonicalReadName: !!(allowedSet && !allowedSet.has('Read') && allowedSet.has('readFile')),
+          canonicalReadName: !!(
+            allowedSet &&
+            !allowedSet.has('Read') &&
+            allowedSet.has('readFile')
+          ),
         });
-        let steps = enforced.steps;
+        const steps = enforced.steps;
         // Write tier gate: if writes aren't enabled, drop the whole ordered plan
         // (a half-plan that reads but never writes would mislead). Fall back to
         // the single-call read-only planner instead.
-        const hasMutation = steps.some(s => _planner._isMutation(s.name));
+        const hasMutation = steps.some((s) => _planner._isMutation(s.name));
         if (hasMutation && !writeEnabled) {
           orderedQueue = [];
         } else {
           orderedQueue = steps;
         }
       }
-    } catch { orderedQueue = []; }
+    } catch {
+      orderedQueue = [];
+    }
     return orderedQueue;
   };
 
   return async function deterministicGenerate(prompt, genOpts = {}) {
     const messages = Array.isArray(genOpts.messages) ? genOpts.messages : [];
-    const resultTurns = messages.filter(m => m && m.role === 'user' && _TOOL_RESULT_RE.test(String(m.content || ''))).length;
+    const resultTurns = messages.filter(
+      (m) => m && m.role === 'user' && _TOOL_RESULT_RE.test(String(m.content || ''))
+    ).length;
 
     const queue = resolveQueue(prompt);
 
@@ -384,7 +458,10 @@ function makeDeterministicGenerator(opts = {}) {
     if (queue.length) {
       if (resultTurns < queue.length) {
         const step = queue[resultTurns];
-        return { success: true, content: `<tool_call>${JSON.stringify({ name: step.name, params: step.params })}</tool_call>` };
+        return {
+          success: true,
+          content: `<tool_call>${JSON.stringify({ name: step.name, params: step.params })}</tool_call>`,
+        };
       }
       // All ordered steps done → synthesize.
       return { success: true, content: _composeDeterministicAnswer(messages, prompt) };
@@ -394,7 +471,10 @@ function makeDeterministicGenerator(opts = {}) {
     if (resultTurns === 0) {
       const calls = planLocalToolCalls(prompt, { allowedSet, networkUp });
       if (calls.length) {
-        return { success: true, content: calls.map(c => `<tool_call>${JSON.stringify(c)}</tool_call>`).join('\n') };
+        return {
+          success: true,
+          content: calls.map((c) => `<tool_call>${JSON.stringify(c)}</tool_call>`).join('\n'),
+        };
       }
       return { success: true, content: '' };
     }
@@ -415,11 +495,14 @@ function makeDeterministicGenerator(opts = {}) {
  * @param {string} userInput
  */
 function _resolveExhaustedFinalText(messages, lastText, userInput) {
-  const hasResults = (Array.isArray(messages) ? messages : [])
-    .some(m => m && m.role === 'user' && _TOOL_RESULT_RE.test(String(m.content || '')));
+  const hasResults = (Array.isArray(messages) ? messages : []).some(
+    (m) => m && m.role === 'user' && _TOOL_RESULT_RE.test(String(m.content || ''))
+  );
   if (hasResults) {
     const synth = _composeDeterministicAnswer(messages, userInput);
-    if (synth) return synth;
+    if (synth) {
+      return synth;
+    }
   }
   return stripToolCallSyntax(lastText);
 }
@@ -430,11 +513,21 @@ function _resolveExhaustedFinalText(messages, lastText, userInput) {
  * consistent section headings.
  */
 function _phaseForTool(name) {
-  if (_planner._isRead(name)) return 'read';
-  if (_planner._isMutation(name)) return 'write';
-  if (/^(Grep|grep|Glob|glob|LS|search|local_knowledge|list_models)$/.test(name)) return 'search';
-  if (/^(WebFetch|WebSearch)$/.test(name)) return 'fetch';
-  if (/^git/i.test(name)) return 'search';
+  if (_planner._isRead(name)) {
+    return 'read';
+  }
+  if (_planner._isMutation(name)) {
+    return 'write';
+  }
+  if (/^(Grep|grep|Glob|glob|LS|search|local_knowledge|list_models)$/.test(name)) {
+    return 'search';
+  }
+  if (/^(WebFetch|WebSearch)$/.test(name)) {
+    return 'fetch';
+  }
+  if (/^git/i.test(name)) {
+    return 'search';
+  }
   return 'tool';
 }
 
@@ -449,33 +542,63 @@ const _PHASE_LABEL = {
 
 /** Collapse one tool result to a compact, query-focused digest for a section body. */
 function _digestStructured(name, result, query) {
-  if (result == null) return '（无返回）';
-  if (result.denied) return `已被拒绝：${result.error || '权限不足'}`;
-  if (result.success === false) return `失败：${result.error || '未知错误'}`;
+  if (result == null) {
+    return '（无返回）';
+  }
+  if (result.denied) {
+    return `已被拒绝：${result.error || '权限不足'}`;
+  }
+  if (result.success === false) {
+    return `失败：${result.error || '未知错误'}`;
+  }
 
   // Known structured shapes from the curated read/search tools.
   if (Array.isArray(result.files)) {
-    if (!result.files.length) return '无匹配文件';
-    return result.files.slice(0, 12).map(f => `- ${f}`).join('\n')
-      + (result.truncated ? '\n- …（已截断）' : '');
+    if (!result.files.length) {
+      return '无匹配文件';
+    }
+    return (
+      result.files
+        .slice(0, 12)
+        .map((f) => `- ${f}`)
+        .join('\n') + (result.truncated ? '\n- …（已截断）' : '')
+    );
   }
   if (Array.isArray(result.matches)) {
-    if (!result.matches.length) return '无匹配';
-    return result.matches.slice(0, 12).map(m =>
-      typeof m === 'string' ? `- ${m}` : `- ${m.file || ''}${m.line != null ? ':' + m.line : ''}  ${String(m.content || '').trim()}`
-    ).join('\n') + (result.truncated ? '\n- …（已截断）' : '');
+    if (!result.matches.length) {
+      return '无匹配';
+    }
+    return (
+      result.matches
+        .slice(0, 12)
+        .map((m) =>
+          typeof m === 'string'
+            ? `- ${m}`
+            : `- ${m.file || ''}${m.line != null ? ':' + m.line : ''}  ${String(m.content || '').trim()}`
+        )
+        .join('\n') + (result.truncated ? '\n- …（已截断）' : '')
+    );
   }
   if (Array.isArray(result.counts)) {
-    return result.counts.slice(0, 12).map(c => `- ${c.file}: ${c.count}`).join('\n');
+    return result.counts
+      .slice(0, 12)
+      .map((c) => `- ${c.file}: ${c.count}`)
+      .join('\n');
   }
 
   const out = result.output != null ? result.output : result.content;
   if (out == null) {
     // Success with no payload (typical for a write/edit): report the effect, not raw JSON.
     const bits = [];
-    if (result.path || result.file) bits.push(String(result.path || result.file));
-    if (result.bytesWritten != null) bits.push(`${result.bytesWritten} 字节`);
-    if (result.changed != null) bits.push(result.changed ? '内容已变更' : '内容未变化');
+    if (result.path || result.file) {
+      bits.push(String(result.path || result.file));
+    }
+    if (result.bytesWritten != null) {
+      bits.push(`${result.bytesWritten} 字节`);
+    }
+    if (result.changed != null) {
+      bits.push(result.changed ? '内容已变更' : '内容未变化');
+    }
     return bits.length ? `已完成：${bits.join(' · ')}` : '已完成';
   }
   let body = typeof out === 'string' ? out : JSON.stringify(out);
@@ -485,8 +608,12 @@ function _digestStructured(name, result, query) {
     try {
       const nlp = require('./localNlp');
       const d = nlp.summarize(body, { query: query || '', maxSentences: 3, maxChars: 400 });
-      if (d) body = d;
-    } catch { body = body.slice(0, 400) + '…'; }
+      if (d) {
+        body = d;
+      }
+    } catch {
+      body = body.slice(0, 400) + '…';
+    }
   }
   return body;
 }
@@ -501,25 +628,35 @@ function _digestStructured(name, result, query) {
  * @param {string} query
  */
 function renderStructuredSteps(steps, query) {
-  if (!_fmt || !_fmt.isEnabled()) return '';
+  if (!_fmt || !_fmt.isEnabled()) {
+    return '';
+  }
   const list = Array.isArray(steps) ? steps.filter(Boolean) : [];
-  if (!list.length) return '';
+  if (!list.length) {
+    return '';
+  }
 
-  const usable = list.some(s => s.result && s.result.denied !== true && s.result.success !== false);
-  if (!usable) return '';
+  const usable = list.some(
+    (s) => s.result && s.result.denied !== true && s.result.success !== false
+  );
+  if (!usable) {
+    return '';
+  }
 
   const sections = list.map((s, i) => {
     const phase = s.phase || _phaseForTool(s.name);
     const label = _PHASE_LABEL[phase] || '执行';
     const file = _planner._stepFile(s);
-    const target = file ? ` ${file}` : (s.params && s.params.pattern ? ` "${s.params.pattern}"` : '');
+    const target = file ? ` ${file}` : s.params && s.params.pattern ? ` "${s.params.pattern}"` : '';
     return {
       heading: `第 ${i + 1} 步 · ${label} · ${s.name}${target}`,
       body: _digestStructured(s.name, s.result, query),
     };
   });
 
-  const okCount = list.filter(s => s.result && s.result.success !== false && !s.result.denied).length;
+  const okCount = list.filter(
+    (s) => s.result && s.result.success !== false && !s.result.denied
+  ).length;
   return _fmt.compose({
     title: '本地顺序执行结果',
     sections,
@@ -553,12 +690,19 @@ function renderStructuredSteps(steps, query) {
  * @returns {Promise<{finalText:string, iterations:number, toolCalls:Array, stopReason:string, mode:string}>}
  */
 async function runLocalToolLoop(userInput, opts = {}) {
-  const execTool = typeof opts.executeTool === 'function'
-    ? opts.executeTool
-    : (name, params, tc) => require('./toolCalling').executeTool(name, params, tc);
+  const execTool =
+    typeof opts.executeTool === 'function'
+      ? opts.executeTool
+      : (name, params, tc) => require('./toolCalling').executeTool(name, params, tc);
   const allDefs = Array.isArray(opts.toolDefinitions)
     ? opts.toolDefinitions
-    : (() => { try { return require('./toolCalling').getToolDefinitions(); } catch { return []; } })();
+    : (() => {
+        try {
+          return require('./toolCalling').getToolDefinitions();
+        } catch {
+          return [];
+        }
+      })();
 
   // generate is OPTIONAL: with no model, drive the loop deterministically.
   const mode = typeof opts.generate === 'function' ? 'model' : 'deterministic';
@@ -571,13 +715,16 @@ async function runLocalToolLoop(userInput, opts = {}) {
   // that is deterministic, not authoring, so the write tier is allowed in no-model
   // mode under the SAME _resolveWriteMode gate. Every write still passes
   // executeTool's approval gate downstream.
-  const hasApprovalChannel = typeof (opts.traceContext && opts.traceContext.onControlRequest) === 'function';
+  const hasApprovalChannel =
+    typeof (opts.traceContext && opts.traceContext.onControlRequest) === 'function';
   const writeEnabled = _resolveWriteMode({ hasApprovalChannel });
 
   const allowed = _resolveAllowedToolNames();
   if (writeEnabled) {
     for (const n of _resolveWriteToolNames()) {
-      if (!allowed.includes(n)) allowed.push(n);
+      if (!allowed.includes(n)) {
+        allowed.push(n);
+      }
     }
   }
   const defs = selectLocalTools(allDefs, allowed);
@@ -587,19 +734,26 @@ async function runLocalToolLoop(userInput, opts = {}) {
   // Build the allowlist from both forms so a canonical parsed call still matches
   // its raw catalog entry. executeTool resolves either form, so this is safe.
   const allowedSet = _buildAllowedNameSet(defs);
-  const generate = mode === 'model'
-    ? opts.generate
-    : makeDeterministicGenerator({
-        allowedSet,
-        networkUp: opts.networkUp !== false,
-        writeEnabled,
-        fileExists: typeof opts.fileExists === 'function' ? opts.fileExists : undefined,
-      });
+  const generate =
+    mode === 'model'
+      ? opts.generate
+      : makeDeterministicGenerator({
+          allowedSet,
+          networkUp: opts.networkUp !== false,
+          writeEnabled,
+          fileExists: typeof opts.fileExists === 'function' ? opts.fileExists : undefined,
+        });
 
-  const maxIterations = Number.isFinite(opts.maxIterations) && opts.maxIterations > 0
-    ? opts.maxIterations
-    : _intFromEnv('KHY_LOCAL_LOOP_MAX_ITERATIONS', DEFAULT_MAX_ITERATIONS, 1, 20);
-  const maxToolsPerTurn = _intFromEnv('KHY_LOCAL_LOOP_MAX_TOOLS_PER_TURN', DEFAULT_MAX_TOOLS_PER_TURN, 1, 10);
+  const maxIterations =
+    Number.isFinite(opts.maxIterations) && opts.maxIterations > 0
+      ? opts.maxIterations
+      : _intFromEnv('KHY_LOCAL_LOOP_MAX_ITERATIONS', DEFAULT_MAX_ITERATIONS, 1, 20);
+  const maxToolsPerTurn = _intFromEnv(
+    'KHY_LOCAL_LOOP_MAX_TOOLS_PER_TURN',
+    DEFAULT_MAX_TOOLS_PER_TURN,
+    1,
+    10
+  );
   const resultCap = _intFromEnv('KHY_LOCAL_LOOP_RESULT_MAXLEN', 2000, 200);
   const onStep = typeof opts.onStep === 'function' ? opts.onStep : () => {};
   const traceContext = opts.traceContext || {};
@@ -622,7 +776,9 @@ async function runLocalToolLoop(userInput, opts = {}) {
   const _finalize = (text) => {
     if (mode !== 'model') {
       const structured = renderStructuredSteps(structuredSteps, userInput);
-      if (structured) return structured;
+      if (structured) {
+        return structured;
+      }
     }
     return text;
   };
@@ -633,7 +789,13 @@ async function runLocalToolLoop(userInput, opts = {}) {
     try {
       res = await generate(String(userInput || ''), { system, messages, _localToolLoop: true });
     } catch (e) {
-      return { finalText: _resolveExhaustedFinalText(messages, lastText, userInput), iterations: iteration - 1, toolCalls: allToolCalls, stopReason: `generate_error:${e.message}`, mode };
+      return {
+        finalText: _resolveExhaustedFinalText(messages, lastText, userInput),
+        iterations: iteration - 1,
+        toolCalls: allToolCalls,
+        stopReason: `generate_error:${e.message}`,
+        mode,
+      };
     }
     const text = res && res.content != null ? String(res.content) : '';
     lastText = text || lastText;
@@ -642,21 +804,32 @@ async function runLocalToolLoop(userInput, opts = {}) {
     const parsed = extractToolCalls(text);
     // Keep only allowed tools; an out-of-allowlist call is treated as no call
     // (the text becomes the answer) rather than silently executed.
-    const calls = parsed
-      .filter(c => c && allowedSet.has(c.name))
-      .slice(0, maxToolsPerTurn);
+    const calls = parsed.filter((c) => c && allowedSet.has(c.name)).slice(0, maxToolsPerTurn);
 
     if (calls.length === 0) {
       const out = _finalize(text);
       onStep({ type: 'final', iteration, text: out });
-      return { finalText: out, iterations: iteration, toolCalls: allToolCalls, stopReason: 'final_answer', mode };
+      return {
+        finalText: out,
+        iterations: iteration,
+        toolCalls: allToolCalls,
+        stopReason: 'final_answer',
+        mode,
+      };
     }
 
     let progressed = false;
     for (const call of calls) {
       const sig = _stableCallSignature(call.name, call.params);
       if (seenCalls.has(sig)) {
-        messages.push({ role: 'user', content: formatToolResult(call.name, { success: false, error: '重复调用同一工具，请改用已获得的结果作答。' }, resultCap) });
+        messages.push({
+          role: 'user',
+          content: formatToolResult(
+            call.name,
+            { success: false, error: '重复调用同一工具，请改用已获得的结果作答。' },
+            resultCap
+          ),
+        });
         continue;
       }
       seenCalls.add(sig);
@@ -668,7 +841,11 @@ async function runLocalToolLoop(userInput, opts = {}) {
       } catch (e) {
         result = { success: false, error: e.message };
       }
-      allToolCalls.push({ name: call.name, params: call.params, success: !!(result && result.success !== false && !result.denied) });
+      allToolCalls.push({
+        name: call.name,
+        params: call.params,
+        success: !!(result && result.success !== false && !result.denied),
+      });
       onStep({ type: 'tool_result', iteration, name: call.name, result });
       // Capture structured result + phase. A read of a file already written this
       // session is a verify-read (先写再读), not a prior-read.
@@ -677,7 +854,9 @@ async function runLocalToolLoop(userInput, opts = {}) {
       if (phase === 'read' && stepFile && _writtenFiles.has(_planner._normFile(stepFile))) {
         phase = 'verify';
       }
-      if (phase === 'write' && stepFile) _writtenFiles.add(_planner._normFile(stepFile));
+      if (phase === 'write' && stepFile) {
+        _writtenFiles.add(_planner._normFile(stepFile));
+      }
       structuredSteps.push({ name: call.name, params: call.params || {}, phase, result });
       messages.push({ role: 'user', content: formatToolResult(call.name, result, resultCap) });
     }
@@ -686,12 +865,24 @@ async function runLocalToolLoop(userInput, opts = {}) {
     if (!progressed) {
       const out = _finalize(_resolveExhaustedFinalText(messages, lastText, userInput));
       onStep({ type: 'final', iteration, text: out });
-      return { finalText: out, iterations: iteration, toolCalls: allToolCalls, stopReason: 'no_progress', mode };
+      return {
+        finalText: out,
+        iterations: iteration,
+        toolCalls: allToolCalls,
+        stopReason: 'no_progress',
+        mode,
+      };
     }
   }
 
   const exhausted = _finalize(_resolveExhaustedFinalText(messages, lastText, userInput));
-  return { finalText: exhausted, iterations: maxIterations, toolCalls: allToolCalls, stopReason: 'max_iterations', mode };
+  return {
+    finalText: exhausted,
+    iterations: maxIterations,
+    toolCalls: allToolCalls,
+    stopReason: 'max_iterations',
+    mode,
+  };
 }
 
 module.exports = {

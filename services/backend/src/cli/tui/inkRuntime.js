@@ -51,19 +51,25 @@ let _renderStdout = null;
  * and retry through its transpiling handler, preserving the old contract.
  */
 function registerJsx() {
-  if (_jsxRegistered) return;
+  if (_jsxRegistered) {
+    return;
+  }
   _jsxRegistered = true;
   const jsHandler = require.extensions['.js'];
   require.extensions['.jsx'] = function (module, filename) {
     try {
       return jsHandler(module, filename);
     } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
+      if (!(err instanceof SyntaxError)) {
+        throw err;
+      }
       // Real JSX syntax detected — install babel (replaces this handler) and
       // recompile the file through the transpiling handler it registered. If
       // babel is already installed the file is genuinely malformed: rethrow
       // instead of recursing.
-      if (_babelInstalled) throw err;
+      if (_babelInstalled) {
+        throw err;
+      }
       _installBabelJsx();
       return require.extensions['.jsx'](module, filename);
     }
@@ -76,7 +82,9 @@ function registerJsx() {
  */
 let _babelInstalled = false;
 function _installBabelJsx() {
-  if (_babelInstalled) return;
+  if (_babelInstalled) {
+    return;
+  }
   _babelInstalled = true;
   require('@babel/register')({
     extensions: ['.jsx'],
@@ -91,7 +99,9 @@ function _installBabelJsx() {
  * @returns {Promise<object>}
  */
 async function loadInk() {
-  if (_ink) return _ink;
+  if (_ink) {
+    return _ink;
+  }
   if (!_loading) {
     _loading = import('ink').then(async (mod) => {
       _ink = mod;
@@ -134,8 +144,13 @@ function get() {
  * the terminal to interactive command handlers (e.g. inquirer-driven `/model`)
  * and reclaim it afterwards.
  */
-function setApp(app) { _app = app; }
-function getApp() { return _app; }
+function setApp(app) {
+  _app = app;
+}
+
+function getApp() {
+  return _app;
+}
 
 /**
  * Record the EXACT stdout object passed to ink's render() so getInkInstance()
@@ -143,7 +158,9 @@ function getApp() { return _app; }
  * startInkApp with the (possibly Proxy-wrapped) stdout handed to render().
  * @param {object} stdout
  */
-function setRenderStdout(stdout) { _renderStdout = stdout || null; }
+function setRenderStdout(stdout) {
+  _renderStdout = stdout || null;
+}
 
 /**
  * Return the live Ink instance bound to the current process.stdout, or null.
@@ -163,13 +180,17 @@ function setRenderStdout(stdout) { _renderStdout = stdout || null; }
  */
 function getInkInstance() {
   try {
-    if (!_instances) return null;
+    if (!_instances) {
+      return null;
+    }
     // Prefer the exact key ink used at render() time (a Proxy wrapper, when
     // scrollbackPreserve is active). Fall back to the bare process.stdout for
     // the un-wrapped path and for safety if registration was skipped.
     if (_renderStdout) {
       const viaRender = _instances.get(_renderStdout);
-      if (viaRender) return viaRender;
+      if (viaRender) {
+        return viaRender;
+      }
     }
     return _instances.get(process.stdout) || null;
   } catch {

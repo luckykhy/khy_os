@@ -15,11 +15,15 @@
  * 调度器。接管真实 loop 是后续 PR 的事；本引擎是可独立驱动、可单测的状态机。
  */
 
-const workbench = require('./workbench');
+const _simpleTokenEstimate = require('../../utils/simpleTokenEstimate');
+
 const compressionEngine = require('./compressionEngine');
-const snapshotManager = require('./snapshotManager');
-const overflowInterceptor = require('./overflowInterceptor');
 const offloadStore = require('./offloadStore');
+const overflowInterceptor = require('./overflowInterceptor');
+const snapshotManager = require('./snapshotManager');
+const workbench = require('./workbench');
+
+// Canonical chars/4 estimate atom (utils leaf; estimator fallback only).
 
 const DEFAULT_WINDOW = parseInt(process.env.KHY_CONTEXT_TOKEN_LIMIT || '131072', 10);
 
@@ -33,14 +37,26 @@ class CognitiveContextEngine {
    * @param {string} [opts.model] [opts.workspace]
    */
   constructor(opts = {}) {
-    if (!opts.taskId) throw new Error('CognitiveContextEngine: taskId 必填');
-    if (!opts.ultimateGoal) throw new Error('CognitiveContextEngine: ultimateGoal 必填（指南针不可空）');
+    if (!opts.taskId) {
+      throw new Error('CognitiveContextEngine: taskId 必填');
+    }
+    if (!opts.ultimateGoal) {
+      throw new Error('CognitiveContextEngine: ultimateGoal 必填（指南针不可空）');
+    }
     this.taskId = String(opts.taskId);
     this.ultimateGoal = String(opts.ultimateGoal);
     this.window = Math.max(1, Number(opts.contextWindowTokens) || DEFAULT_WINDOW);
-    this.estimate = typeof opts.estimateTokensFn === 'function'
-      ? opts.estimateTokensFn
-      : (() => { try { return require('../contextWasm').estimateTokens; } catch { return (t) => Math.ceil(String(t || '').length / 4); } })();
+    this.estimate =
+      typeof opts.estimateTokensFn === 'function'
+        ? opts.estimateTokensFn
+        : // Fallback thin delegate; byte-identical to (t) => Math.ceil(String(t || '').length / 4).
+          (() => {
+            try {
+              return require('../contextWasm').estimateTokens;
+            } catch {
+              return (t) => _simpleTokenEstimate(String(t || ''));
+            }
+          })();
     this.model = opts.model;
     this.workspace = opts.workspace;
     this.step = 0;
@@ -61,8 +77,12 @@ class CognitiveContextEngine {
     const remaining = Math.max(0, this.window - usedTokens);
     const ratio = this.usageRatio(usedTokens);
     const level = compressionEngine.selectLevel(ratio);
-    const strategy = level === compressionEngine.LEVELS.L0 ? 'proceed'
-      : level === compressionEngine.LEVELS.L3 ? 'offload' : 'compress';
+    const strategy =
+      level === compressionEngine.LEVELS.L0
+        ? 'proceed'
+        : level === compressionEngine.LEVELS.L3
+          ? 'offload'
+          : 'compress';
     return { remaining, estimatedStepCost: estimatedStepTokens, strategy, ratio, level };
   }
 
@@ -72,7 +92,11 @@ class CognitiveContextEngine {
   beforeStep({ usedTokens = 0, estimatedStepTokens = 0, budgetPlan, canCompress = true } = {}) {
     const plan = budgetPlan || this.planStep({ usedTokens, estimatedStepTokens });
     return overflowInterceptor.preflight({
-      usedTokens, estimatedStepTokens, windowTokens: this.window, budgetPlan: plan, canCompress,
+      usedTokens,
+      estimatedStepTokens,
+      windowTokens: this.window,
+      budgetPlan: plan,
+      canCompress,
     });
   }
 
@@ -94,7 +118,8 @@ class CognitiveContextEngine {
 
     const ratio = this.usageRatio(args.usedTokens);
     const compressed = compressionEngine.compressHistory(steps, {
-      usageRatio: ratio, estimateTokensFn: this.estimate,
+      usageRatio: ratio,
+      estimateTokensFn: this.estimate,
     });
 
     // L3：把冷候选真正卸载离境，上下文里只回填指针（§3.2 L3 / §3.3 指针集）。
@@ -105,27 +130,29 @@ class CognitiveContextEngine {
         this.offloadPointers.push(ptr);
         offloaded += 1;
         const slot = compressed.history.find((h) => h.offloaded && h.step === cand.step);
-        if (slot) slot.ref = ptr.ref; // 回填寻址指针
+        if (slot) {
+          slot.ref = ptr.ref;
+        } // 回填寻址指针
       }
     }
 
     const snapshot = snapshotManager.build({
       taskId: this.taskId,
-      ultimateGoal: this.ultimateGoal,         // 指南针：永不删除
+      ultimateGoal: this.ultimateGoal, // 指南针：永不删除
       step: this.step,
       compressedHistory: compressed.history,
       nextInstruction: args.nextInstruction || '',
       offloadPointers: this.offloadPointers,
       retryCount: this.retryCount,
       entities: compressed.entities,
-      lessons: compressed.lessons,             // 防呆③：错误教训随快照常驻
+      lessons: compressed.lessons, // 防呆③：错误教训随快照常驻
       model: this.model,
       workspace: this.workspace,
     });
 
     const res = snapshotManager.persist(snapshot);
     return {
-      valid: res.ok,                            // 防呆②：无快照 → 无效步
+      valid: res.ok, // 防呆②：无快照 → 无效步
       snapshot: res.ok ? snapshot : undefined,
       level: compressed.level,
       retainedRatio: compressed.retainedRatio,
@@ -135,7 +162,10 @@ class CognitiveContextEngine {
   }
 
   /** 错误重试计数 +1（写入下一张快照）。 */
-  bumpRetry() { this.retryCount += 1; return this.retryCount; }
+  bumpRetry() {
+    this.retryCount += 1;
+    return this.retryCount;
+  }
 
   /** 防呆④：截断异常熔断 → 紧急快照。 */
   onTruncation(steps = [], nextInstruction) {
@@ -151,13 +181,19 @@ class CognitiveContextEngine {
   }
 
   /** 标记任务完成（hotStart 不再热启）。 */
-  complete() { return snapshotManager.markComplete(this.taskId); }
+  complete() {
+    return snapshotManager.markComplete(this.taskId);
+  }
 
   /** 跨会话热启（防呆⑥）：自动注入状态，绝不要求用户复述。 */
-  hotStart() { return snapshotManager.hotStart(this.taskId); }
+  hotStart() {
+    return snapshotManager.hotStart(this.taskId);
+  }
 
   /** 静态热启：新会话不知道 taskId 内部状态时直接据盘上快照接力。 */
-  static hotStart(taskId) { return snapshotManager.hotStart(taskId); }
+  static hotStart(taskId) {
+    return snapshotManager.hotStart(taskId);
+  }
 }
 
 module.exports = {

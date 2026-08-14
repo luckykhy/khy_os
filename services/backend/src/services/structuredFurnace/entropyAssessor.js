@@ -45,7 +45,9 @@ function _countMatches(re, text) {
   let n = 0;
   while (g.exec(text) !== null) {
     n += 1;
-    if (g.lastIndex === 0) break; // 防零宽匹配死循环
+    if (g.lastIndex === 0) {
+      break;
+    } // 防零宽匹配死循环
   }
   return n;
 }
@@ -75,22 +77,28 @@ function assess(raw) {
 
   // 加权熵分（各量纲先饱和到 [0,1] 再加权，权重之和=1，结果天然落 [0,1]）。
   const sat = (x, k) => 1 - Math.exp(-x / k); // 单调饱和，越多越接近 1
-  const entropy = Math.min(1,
+  const entropy = Math.min(
+    1,
     0.18 * sat(length, 160) +
-    0.16 * sat(sentences - 1, 2) +
-    0.24 * sat(causal, 1.2) +
-    0.14 * sat(multiAction, 1.5) +
-    0.20 * sat(contradiction, 1) +
-    0.08 * (enumerated ? 1 : 0));
+      0.16 * sat(sentences - 1, 2) +
+      0.24 * sat(causal, 1.2) +
+      0.14 * sat(multiAction, 1.5) +
+      0.2 * sat(contradiction, 1) +
+      0.08 * (enumerated ? 1 : 0)
+  );
 
   // 级别判定：硬信号优先于纯熵分，保证“依赖必织网 / 矛盾必重构”不被规模稀释。
   let level = 'L0';
   const hasDependency = causal > 0 || enumerated || multiAction > 0 || sentences >= 3;
   const isChaotic = contradiction > 0 || length >= 400 || sentences >= 6 || entropy >= 0.6;
 
-  if (isChaotic) level = 'L2';
-  else if (hasDependency) level = 'L1';
-  else level = 'L0';
+  if (isChaotic) {
+    level = 'L2';
+  } else if (hasDependency) {
+    level = 'L1';
+  } else {
+    level = 'L0';
+  }
 
   return {
     entropy: Number(entropy.toFixed(4)),

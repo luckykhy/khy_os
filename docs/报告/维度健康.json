@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T04:47:00.149Z",
+  "generatedAt": "2026-08-06T14:17:26.919Z",
   "dimensions": {
     "D1": {
       "name": "Agent Harness",
@@ -69,10 +69,13 @@
     },
     "D5": {
       "name": "Governance & Quality",
-      "filesPresent": 2,
-      "filesMissing": [],
+      "filesPresent": 0,
+      "filesMissing": [
+        "../../AGENTS.md",
+        "../../scripts/ci/export-quality-dashboard.js"
+      ],
       "exportChecks": [],
-      "healthy": true
+      "healthy": false
     }
   }
 }

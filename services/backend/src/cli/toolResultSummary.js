@@ -23,7 +23,13 @@ const path = require('path');
 // tool-result render instead of allocating a fresh one each call. Consumed
 // read-only (`.has`); never mutated, never escapes.
 const _READABLE_SUMMARY_SKIP_KEYS = new Set([
-  'success', 'ok', 'isError', 'is_error', 'output', 'content', 'text',
+  'success',
+  'ok',
+  'isError',
+  'is_error',
+  'output',
+  'content',
+  'text',
 ]);
 
 // 收敛到 utils/normalizeToolName 单一真源(逐字节委托,调用点不变)
@@ -42,26 +48,54 @@ const normalizeToolName = require('../utils/normalizeToolName');
 // 纯函数、绝不抛(任何异常都退回 basename,摘要永不因路径计算崩)。
 function _displayPath(p, env = process.env, cwdOverride, homeOverride) {
   const raw = String(p == null ? '' : p);
-  if (!raw) return '';
-  const v = String((env && env.KHY_DISPLAY_PATH_CC) || '').trim().toLowerCase();
-  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return path.basename(raw);
+  if (!raw) {
+    return '';
+  }
+  const v = String((env && env.KHY_DISPLAY_PATH_CC) || '')
+    .trim()
+    .toLowerCase();
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+    return path.basename(raw);
+  }
   try {
     const cwd = cwdOverride != null ? cwdOverride : process.cwd();
     const abs = path.isAbsolute(raw) ? raw : path.resolve(cwd, raw);
     const rel = path.relative(cwd, abs);
     // ① cwd 内:相对路径(不以 .. 开头、非绝对)。CC: `relativePath && !startsWith('..')`。
-    if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) return rel;
+    if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) {
+      return _toPosix(rel);
+    }
     // ② home 内:~ 记法。CC: `filePath.startsWith(homeDir + sep)`。
     let home = homeOverride;
-    if (home == null) { try { home = require('os').homedir(); } catch { home = ''; } }
-    if (home && (abs === home || abs.startsWith(home + path.sep))) {
-      return '~' + abs.slice(home.length);
+    if (home == null) {
+      try {
+        home = require('os').homedir();
+      } catch {
+        home = '';
+      }
     }
-    // ③ 否则绝对路径。
-    return abs;
+    if (home) {
+      // 比较基准统一为「按当前盘 resolve 后的绝对路径」:Windows 上 POSIX 形式输入
+      // (`/home/u/...`)是当前盘根绝对路径,必须 resolve 成 `C:\home\u\...` 才能与
+      // home 前缀一致;真实 Windows 路径 resolve 后不变。
+      const homeAbs = path.resolve(home);
+      const compAbs = path.resolve(cwd, raw);
+      if (compAbs === homeAbs || compAbs.startsWith(homeAbs + path.sep)) {
+        return '~' + _toPosix(compAbs.slice(homeAbs.length));
+      }
+    }
+    // ③ 否则绝对路径(保持输入原本的绝对表示,跨平台 POSIX 测试输入原样返回)。
+    return _toPosix(abs);
   } catch {
     return path.basename(raw); // 绝不抛 → 退裸文件名
   }
+}
+
+// CC getDisplayPath 的跨平台口径:输出恒为 POSIX `/` 分隔(Windows 上 path.relative/
+// resolve 产出的 `\` 需归一),否则同一函数在 Windows 会返回 `src\cli\foo.js` 而非
+// `src/cli/foo.js`,破坏显示与测试对齐。
+function _toPosix(s) {
+  return String(s).replace(/\\/g, '/');
 }
 
 // CC 后端口径对齐:文件编辑摘要里的 ±行数 = 对 old_string/new_string 做**真实行级 diff**
@@ -72,7 +106,9 @@ function _displayPath(p, env = process.env, cwdOverride, homeOverride) {
 //   门控 KHY_EDIT_DIFF_STAT_CC(默认开):走真实 diff;关 → 逐字节回退旧净差(+net/-net/~same)。
 //   diff 计算包在 try 里,任何异常静默回退净差,绝不让摘要抛错。
 function _editDiffStat(oldStr, newStr, env = process.env) {
-  const v = String((env && env.KHY_EDIT_DIFF_STAT_CC) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_EDIT_DIFF_STAT_CC) || '')
+    .trim()
+    .toLowerCase();
   const ccMode = !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   if (ccMode) {
     try {
@@ -81,18 +117,30 @@ function _editDiffStat(oldStr, newStr, env = process.env) {
       const added = Number(d && d.added) || 0;
       const removed = Number(d && d.removed) || 0;
       const parts = [];
-      if (added > 0) parts.push(`+${added}`);
-      if (removed > 0) parts.push(`-${removed}`);
+      if (added > 0) {
+        parts.push(`+${added}`);
+      }
+      if (removed > 0) {
+        parts.push(`-${removed}`);
+      }
       return parts.length ? `（${parts.join('/')}）` : '';
-    } catch { /* fall through to the legacy net heuristic below */ }
+    } catch {
+      /* fall through to the legacy net heuristic below */
+    }
   }
   // legacy 字节回退:净行差启发式(本刀之前口径)。
   const oldLines = oldStr ? String(oldStr).split('\n').length : 0;
   const newLines = newStr ? String(newStr).split('\n').length : 0;
   const parts = [];
-  if (newLines > oldLines) parts.push(`+${newLines - oldLines}`);
-  if (oldLines > newLines) parts.push(`-${oldLines - newLines}`);
-  if (newLines === oldLines && oldLines > 0) parts.push(`~${oldLines}`);
+  if (newLines > oldLines) {
+    parts.push(`+${newLines - oldLines}`);
+  }
+  if (oldLines > newLines) {
+    parts.push(`-${oldLines - newLines}`);
+  }
+  if (newLines === oldLines && oldLines > 0) {
+    parts.push(`~${oldLines}`);
+  }
   return parts.length > 0 ? `（${parts.join('/')}）` : '';
 }
 
@@ -104,16 +152,25 @@ function _editDiffStat(oldStr, newStr, env = process.env) {
 //   3. compact `k=v` of top-level scalar fields (clipped)
 //   4. '' (caller falls back to '完成')
 function _readableObjectSummary(result) {
-  if (!result || typeof result !== 'object') return '';
-  const data = (result.data && typeof result.data === 'object') ? result.data : null;
+  if (!result || typeof result !== 'object') {
+    return '';
+  }
+  const data = result.data && typeof result.data === 'object' ? result.data : null;
   const clip = (v) => String(v).replace(/\s+/g, ' ').trim().slice(0, 60);
 
   const cmd = result.command || (data && data.command);
-  if (cmd) return `$ ${clip(cmd)}`;
+  if (cmd) {
+    return `$ ${clip(cmd)}`;
+  }
 
-  const msg = result.message || result.summary || result.reason
-    || (data && (data.nextAction || data.message || data.summary));
-  if (msg) return clip(msg);
+  const msg =
+    result.message ||
+    result.summary ||
+    result.reason ||
+    (data && (data.nextAction || data.message || data.summary));
+  if (msg) {
+    return clip(msg);
+  }
 
   // Compact readable k=v from top-level scalar fields. Skip noisy/internal keys
   // and never serialize nested objects/arrays (that is what produced braces).
@@ -121,13 +178,17 @@ function _readableObjectSummary(result) {
   const source = data || result;
   const parts = [];
   for (const k of Object.keys(source)) {
-    if (k.startsWith('_') || SKIP.has(k)) continue;
+    if (k.startsWith('_') || SKIP.has(k)) {
+      continue;
+    }
     const v = source[k];
     const t = typeof v;
     if (t === 'string' || t === 'number' || t === 'boolean') {
       parts.push(`${k}=${clip(v)}`);
     }
-    if (parts.length >= 4) break;
+    if (parts.length >= 4) {
+      break;
+    }
   }
   return parts.join('，');
 }
@@ -147,37 +208,57 @@ function _readableObjectSummary(result) {
 //   matches → content),再退 GrepTool 的默认 files_with_matches(空结果 sentinel
 //   {matches:[],count:0} 形状不可分时按真实默认档处理)。纯函数、绝不抛。
 function _grepModeSummary(result, params, env = process.env) {
-  const v = String((env && env.KHY_GREP_MODE_SUMMARY) || '').trim().toLowerCase();
-  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return null;
-  if (!result || typeof result !== 'object') return null;
+  const v = String((env && env.KHY_GREP_MODE_SUMMARY) || '')
+    .trim()
+    .toLowerCase();
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+    return null;
+  }
+  if (!result || typeof result !== 'object') {
+    return null;
+  }
 
   let mode = params && params.output_mode;
   if (mode !== 'content' && mode !== 'count' && mode !== 'files_with_matches') {
-    if (Array.isArray(result.counts) && typeof result.total === 'number') mode = 'count';
-    else if (Array.isArray(result.files)) mode = 'files_with_matches';
-    else if (Array.isArray(result.matches) && result.matches.length > 0) mode = 'content';
-    else mode = 'files_with_matches'; // GrepTool 默认(含空结果 sentinel)
+    if (Array.isArray(result.counts) && typeof result.total === 'number') {
+      mode = 'count';
+    } else if (Array.isArray(result.files)) {
+      mode = 'files_with_matches';
+    } else if (Array.isArray(result.matches) && result.matches.length > 0) {
+      mode = 'content';
+    } else {
+      mode = 'files_with_matches';
+    } // GrepTool 默认(含空结果 sentinel)
   }
 
   if (mode === 'count') {
-    const numMatches = typeof result.total === 'number'
-      ? result.total
-      : (Array.isArray(result.counts) ? result.counts.reduce((s, c) => s + (Number(c && c.count) || 0), 0) : 0);
+    const numMatches =
+      typeof result.total === 'number'
+        ? result.total
+        : Array.isArray(result.counts)
+          ? result.counts.reduce((s, c) => s + (Number(c && c.count) || 0), 0)
+          : 0;
     const numFiles = Array.isArray(result.counts)
       ? result.counts.length
-      : (typeof result.count === 'number' ? result.count : 0);
+      : typeof result.count === 'number'
+        ? result.count
+        : 0;
     return `找到 ${numMatches} 个匹配，跨 ${numFiles} 个文件`;
   }
   if (mode === 'content') {
     const numLines = Array.isArray(result.matches)
       ? result.matches.length
-      : (typeof result.count === 'number' ? result.count : 0);
+      : typeof result.count === 'number'
+        ? result.count
+        : 0;
     return `找到 ${numLines} 行`;
   }
   // files_with_matches
   const numFiles = Array.isArray(result.files)
     ? result.files.length
-    : (typeof result.count === 'number' ? result.count : 0);
+    : typeof result.count === 'number'
+      ? result.count
+      : 0;
   return `找到 ${numFiles} 个文件`;
 }
 
@@ -199,10 +280,18 @@ function _grepModeSummary(result, params, env = process.env) {
 //   让调用方逐字节回退旧「已读取 N 行」。只对齐 Khy 真实产出的类型(image),绝不编造
 //   Khy 不产出的 pdf/notebook/parts 档。纯函数、绝不抛。
 function _readTypeSummary(result, params, env = process.env) {
-  const v = String((env && env.KHY_READ_TYPE_SUMMARY) || '').trim().toLowerCase();
-  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return null;
-  if (!result || typeof result !== 'object') return null;
-  if (result.type !== 'image') return null; // Khy 只有 image 是真正的非文本读
+  const v = String((env && env.KHY_READ_TYPE_SUMMARY) || '')
+    .trim()
+    .toLowerCase();
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+    return null;
+  }
+  if (!result || typeof result !== 'object') {
+    return null;
+  }
+  if (result.type !== 'image') {
+    return null;
+  } // Khy 只有 image 是真正的非文本读
 
   const base = result.file || result.path || (params && params.file_path) || '';
   const bn = base ? _displayPath(base) : '';
@@ -211,11 +300,19 @@ function _readTypeSummary(result, params, env = process.env) {
     try {
       const { ccFormatFileSize } = require('./ccFormat');
       sizeStr = ccFormatFileSize(result.size) || '';
-    } catch { sizeStr = ''; }
+    } catch {
+      sizeStr = '';
+    }
   }
-  if (bn && sizeStr) return `已读取图片 ${bn}（${sizeStr}）`;
-  if (bn) return `已读取图片 ${bn}`;
-  if (sizeStr) return `已读取图片（${sizeStr}）`;
+  if (bn && sizeStr) {
+    return `已读取图片 ${bn}（${sizeStr}）`;
+  }
+  if (bn) {
+    return `已读取图片 ${bn}`;
+  }
+  if (sizeStr) {
+    return `已读取图片（${sizeStr}）`;
+  }
   return '已读取图片';
 }
 
@@ -229,15 +326,23 @@ function _readTypeSummary(result, params, env = process.env) {
 //   门控 KHY_READ_TRUNCATE_MARKER(默认开):命中截断 → `+`;关 → 逐字节回退无 `+`。
 // 纯函数、绝不抛。仅当 `totalLines > lineCount`(命中行上限)或 `truncated === true`(字节超限)时返 '+'。
 function _readTruncatedMarker(result, lineCount, env = process.env) {
-  const v = String((env && env.KHY_READ_TRUNCATE_MARKER) || '').trim().toLowerCase();
-  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return '';
-  if (!result || typeof result !== 'object') return '';
+  const v = String((env && env.KHY_READ_TRUNCATE_MARKER) || '')
+    .trim()
+    .toLowerCase();
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+    return '';
+  }
+  if (!result || typeof result !== 'object') {
+    return '';
+  }
   const total = result.totalLines;
   const moreByLines =
-    typeof total === 'number' && Number.isFinite(total) &&
-    typeof lineCount === 'number' && Number.isFinite(lineCount) &&
+    typeof total === 'number' &&
+    Number.isFinite(total) &&
+    typeof lineCount === 'number' &&
+    Number.isFinite(lineCount) &&
     total > lineCount;
-  return (moreByLines || result.truncated === true) ? '+' : '';
+  return moreByLines || result.truncated === true ? '+' : '';
 }
 
 // CC 后端口径对齐:写文件摘要里的「行数」用 CC 的 countLines 算法——
@@ -252,7 +357,9 @@ function _readTruncatedMarker(result, lineCount, env = process.env) {
 // 纯函数、绝不抛。空串由调用方 `contentStr ?` 守卫短路成 0(保留 Khy「空内容省略行数段」的既有产品行为)。
 function _writeLineCount(content, env = process.env) {
   const s = String(content == null ? '' : content);
-  if (s === '') return 0;
+  if (s === '') {
+    return 0;
+  }
   try {
     return require('./ccCountLines').countLinesOr(s, env);
   } catch {
@@ -268,12 +375,18 @@ function _writeLineCount(content, env = process.env) {
 //   门控 KHY_WRITE_SIZE_CCFORMAT(默认开):字节 → ccFormatFileSize humanize;
 //   关 → 逐字节回退旧 `${bytes}B`。require 失败/空返回时同样回退,绝不抛、绝不丢大小。
 function _writeSizeDisplay(bytes, env = process.env) {
-  const v = String((env && env.KHY_WRITE_SIZE_CCFORMAT) || '').trim().toLowerCase();
-  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return `${bytes}B`;
+  const v = String((env && env.KHY_WRITE_SIZE_CCFORMAT) || '')
+    .trim()
+    .toLowerCase();
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+    return `${bytes}B`;
+  }
   try {
     const { ccFormatFileSize } = require('./ccFormat');
     return ccFormatFileSize(bytes) || `${bytes}B`;
-  } catch { return `${bytes}B`; }
+  } catch {
+    return `${bytes}B`;
+  }
 }
 
 // CC 后端口径对齐:Web 工具结果摘要按工具种类分档——CC 每个工具有独立 renderToolResultMessage:
@@ -290,9 +403,13 @@ function _writeSizeDisplay(bytes, env = process.env) {
 function _webFetchContentBytes(result) {
   // CC 口径:抓取内容的字节大小。优先对真实交付内容算 Buffer.byteLength(精确字节,UTF-8),
   // 内容字段缺失时退回 contentLength(字符数近似)。纯函数、绝不抛。
-  const content = (result && typeof result.content === 'string') ? result.content : '';
+  const content = result && typeof result.content === 'string' ? result.content : '';
   if (content) {
-    try { return Buffer.byteLength(content, 'utf8'); } catch { /* fall through */ }
+    try {
+      return Buffer.byteLength(content, 'utf8');
+    } catch {
+      /* fall through */
+    }
   }
   if (result && typeof result.contentLength === 'number' && Number.isFinite(result.contentLength)) {
     return result.contentLength;
@@ -301,23 +418,35 @@ function _webFetchContentBytes(result) {
 }
 
 function _webResultSummary(name, result, env = process.env) {
-  const v = String((env && env.KHY_WEB_RESULT_SUMMARY) || '').trim().toLowerCase();
-  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return null;
-  if (!result || typeof result !== 'object') return null;
-  if (name !== 'webfetch') return null; // websearch keeps its already-CC-aligned count summary
+  const v = String((env && env.KHY_WEB_RESULT_SUMMARY) || '')
+    .trim()
+    .toLowerCase();
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') {
+    return null;
+  }
+  if (!result || typeof result !== 'object') {
+    return null;
+  }
+  if (name !== 'webfetch') {
+    return null;
+  } // websearch keeps its already-CC-aligned count summary
   const bytes = _webFetchContentBytes(result);
   let sizeStr = '';
   if (typeof bytes === 'number' && Number.isFinite(bytes) && bytes >= 0) {
     try {
       const { ccFormatFileSize } = require('./ccFormat');
       sizeStr = ccFormatFileSize(bytes) || '';
-    } catch { sizeStr = ''; }
+    } catch {
+      sizeStr = '';
+    }
   }
   return sizeStr ? `已获取网页（${sizeStr}）` : '已获取网页';
 }
 
 function summarizeToolResult(toolName, result, params) {
-  if (!result) return '完成';
+  if (!result) {
+    return '完成';
+  }
   const name = normalizeToolName(toolName);
   // output/content for the REPL's raw result; text for the TUI's projected one.
   const out = result.output || result.content || result.text || '';
@@ -326,77 +455,126 @@ function summarizeToolResult(toolName, result, params) {
   if (name === 'read' || name === 'readfile' || name === 'notebookread') {
     // Gate ON (default): content-type-aware summary (image → size, not line count).
     const typeSummary = _readTypeSummary(result, params);
-    if (typeSummary !== null) return typeSummary;
+    if (typeSummary !== null) {
+      return typeSummary;
+    }
     // Gate OFF / text reads: byte-identical legacy line-count summary.
     const lineCount = typeof result.lines === 'number' ? result.lines : outStr.split('\n').length;
     const mark = _readTruncatedMarker(result, lineCount);
-    const base = (result.path || (params && params.file_path) || '');
+    const base = result.path || (params && params.file_path) || '';
     const bn = base ? _displayPath(base) : '';
     return bn ? `已读取 ${bn}（${lineCount}${mark} 行）` : `已读取 ${lineCount}${mark} 行`;
   }
   if (name === 'websearch' || name === 'webfetch') {
     // Gate ON (default): webfetch → 已获取网页(大小), distinct from a search.
     const webSummary = _webResultSummary(name, result);
-    if (webSummary !== null) return webSummary;
+    if (webSummary !== null) {
+      return webSummary;
+    }
     // Gate OFF / websearch: byte-identical legacy "搜索到 N 条网页结果".
-    if (Array.isArray(result.results)) return `搜索到 ${result.results.length} 条网页结果`;
-    if (result.data && Array.isArray(result.data.results)) return `搜索到 ${result.data.results.length} 条网页结果`;
-    if (typeof result.count === 'number') return `搜索到 ${result.count} 条网页结果`;
-    if (typeof result.status === 'number') return `已获取网页（HTTP ${result.status}）`;
+    if (Array.isArray(result.results)) {
+      return `搜索到 ${result.results.length} 条网页结果`;
+    }
+    if (result.data && Array.isArray(result.data.results)) {
+      return `搜索到 ${result.data.results.length} 条网页结果`;
+    }
+    if (typeof result.count === 'number') {
+      return `搜索到 ${result.count} 条网页结果`;
+    }
+    if (typeof result.status === 'number') {
+      return `已获取网页（HTTP ${result.status}）`;
+    }
     return '网络搜索完成';
   }
   if (name === 'ls') {
-    if (typeof result.count === 'number') return `列出 ${result.count} 个条目`;
-    if (Array.isArray(result.entries)) return `列出 ${result.entries.length} 个条目`;
+    if (typeof result.count === 'number') {
+      return `列出 ${result.count} 个条目`;
+    }
+    if (Array.isArray(result.entries)) {
+      return `列出 ${result.entries.length} 个条目`;
+    }
     return '已列出目录内容';
   }
   if (name === 'bash' || name === 'shell' || name === 'shellcommand' || name === 'command') {
-    if (result._background) return '已在后台运行（↓ 管理）';
+    if (result._background) {
+      return '已在后台运行（↓ 管理）';
+    }
     const exitCode = typeof result.exitCode === 'number' ? result.exitCode : null;
-    const exitTag = (exitCode !== null && exitCode !== 0) ? ` [退出码 ${exitCode}]` : '';
+    const exitTag = exitCode !== null && exitCode !== 0 ? ` [退出码 ${exitCode}]` : '';
     // Prefer showing the concrete command the user ran over a possibly-empty
     // output dump — "人难以阅读的 {braces}" came from output-less results. The
     // command itself is the most readable, truthful one-liner.
     const cmd = (params && (params.command || params.cmd)) || '';
     const trimmedOut = outStr.trim();
-    if (!trimmedOut && cmd) return `$ ${String(cmd).replace(/\s+/g, ' ').slice(0, 76)}${exitTag}`;
+    if (!trimmedOut && cmd) {
+      return `$ ${String(cmd).replace(/\s+/g, ' ').slice(0, 76)}${exitTag}`;
+    }
     const lines = trimmedOut.split('\n');
-    if (lines.length <= 2) return (lines.join(' ').slice(0, 80) || (cmd ? `$ ${String(cmd).slice(0, 76)}` : '命令完成')) + exitTag;
+    if (lines.length <= 2) {
+      return (
+        (lines.join(' ').slice(0, 80) || (cmd ? `$ ${String(cmd).slice(0, 76)}` : '命令完成')) +
+        exitTag
+      );
+    }
     return `命令输出 ${lines.length} 行${exitTag}`;
   }
   // build_project / ProjectBlueprint build path: the real result lives under
   // `result.data` (command/exitCode/errorCount), so the generic JSON fallback
   // used to dump raw {braces}. Show the concrete build command + diagnostics.
   if (name === 'buildproject' || name === 'build' || name === 'projectblueprint') {
-    const d = (result.data && typeof result.data === 'object') ? result.data : result;
+    const d = result.data && typeof result.data === 'object' ? result.data : result;
     const cmd = d.command ? String(d.command).replace(/\s+/g, ' ').slice(0, 76) : '';
     const exitCode = typeof d.exitCode === 'number' ? d.exitCode : null;
-    const exitTag = (exitCode !== null && exitCode !== 0) ? ` [退出码 ${exitCode}]` : '';
-    const ec = typeof d.errorCount === 'number' ? d.errorCount
-      : (Array.isArray(d.errors) ? d.errors.length : null);
-    const wc = typeof d.warningCount === 'number' ? d.warningCount
-      : (Array.isArray(d.warnings) ? d.warnings.length : null);
+    const exitTag = exitCode !== null && exitCode !== 0 ? ` [退出码 ${exitCode}]` : '';
+    const ec =
+      typeof d.errorCount === 'number'
+        ? d.errorCount
+        : Array.isArray(d.errors)
+          ? d.errors.length
+          : null;
+    const wc =
+      typeof d.warningCount === 'number'
+        ? d.warningCount
+        : Array.isArray(d.warnings)
+          ? d.warnings.length
+          : null;
     const diagParts = [];
-    if (ec) diagParts.push(`${ec} 个错误`);
-    if (wc) diagParts.push(`${wc} 个警告`);
+    if (ec) {
+      diagParts.push(`${ec} 个错误`);
+    }
+    if (wc) {
+      diagParts.push(`${wc} 个警告`);
+    }
     const diag = diagParts.length ? `（${diagParts.join('、')}）` : '';
-    if (cmd) return `${result.success === false ? '构建失败' : '已构建'}：${cmd}${diag}${exitTag}`;
+    if (cmd) {
+      return `${result.success === false ? '构建失败' : '已构建'}：${cmd}${diag}${exitTag}`;
+    }
     // No command surfaced (e.g. ProjectBlueprint match/scaffold mode) → fall
     // through to the readable structured summary, never raw braces.
   }
   if (name === 'grep' || name === 'search' || name === 'searchcontent') {
     // Gate ON (default): CC-aligned, mode-aware summary (lines/matches/files).
     const modeSummary = _grepModeSummary(result, params);
-    if (modeSummary !== null) return modeSummary;
+    if (modeSummary !== null) {
+      return modeSummary;
+    }
     // Gate OFF: byte-identical legacy "找到 N 个匹配 / N 条结果".
-    if (typeof result.count === 'number') return `找到 ${result.count} 个匹配`;
-    if (Array.isArray(result.matches)) return `找到 ${result.matches.length} 个匹配`;
+    if (typeof result.count === 'number') {
+      return `找到 ${result.count} 个匹配`;
+    }
+    if (Array.isArray(result.matches)) {
+      return `找到 ${result.matches.length} 个匹配`;
+    }
     const matches = outStr.split('\n').filter(Boolean).length;
     return `找到 ${matches} 条结果`;
   }
   if (name === 'glob' || name === 'find' || name === 'findfiles') {
-    if (typeof result.count === 'number') return `找到 ${result.count} 个文件`;
-    if (Array.isArray(result.files)) return `找到 ${result.files.length} 个文件`;
+    if (typeof result.count === 'number') {
+      return `找到 ${result.count} 个文件`;
+    }
+    if (Array.isArray(result.files)) {
+      return `找到 ${result.files.length} 个文件`;
+    }
     const files = outStr.split('\n').filter(Boolean).length;
     return `找到 ${files} 个文件`;
   }
@@ -406,26 +584,42 @@ function summarizeToolResult(toolName, result, params) {
     const lineCount = contentStr ? _writeLineCount(contentStr) : 0;
     if (typeof result.bytes === 'number' && bn) {
       const sizeStr = _writeSizeDisplay(result.bytes);
-      return lineCount > 0 ? `已写入 ${bn}（${lineCount} 行，${sizeStr}）` : `已写入 ${bn}（${sizeStr}）`;
+      return lineCount > 0
+        ? `已写入 ${bn}（${lineCount} 行，${sizeStr}）`
+        : `已写入 ${bn}（${sizeStr}）`;
     }
-    if (bn) return lineCount > 0 ? `已写入 ${bn}（${lineCount} 行）` : `已写入 ${bn}`;
+    if (bn) {
+      return lineCount > 0 ? `已写入 ${bn}（${lineCount} 行）` : `已写入 ${bn}`;
+    }
     return lineCount > 0 ? `已写入 ${lineCount} 行` : '文件写入完成';
   }
   if (name === 'edit' || name === 'editfile' || name === 'multiedit' || name === 'notebookedit') {
     const bn = result.file ? _displayPath(result.file) : '';
-    const diffStr = _editDiffStat((params && params.old_string) || '', (params && params.new_string) || '');
+    const diffStr = _editDiffStat(
+      (params && params.old_string) || '',
+      (params && params.new_string) || ''
+    );
     const fuzzyNote = result.fuzzyMatch ? ` [模糊匹配 ${result.similarity || '?'}%]` : '';
-    const repCount = typeof result.replacements === 'number' ? result.replacements : (typeof result.editsApplied === 'number' ? result.editsApplied : 1);
+    const repCount =
+      typeof result.replacements === 'number'
+        ? result.replacements
+        : typeof result.editsApplied === 'number'
+          ? result.editsApplied
+          : 1;
     return bn
       ? `已修改 ${bn}，${repCount} 处替换${diffStr}${fuzzyNote}`
       : `已替换 ${repCount} 处${diffStr}${fuzzyNote}`;
   }
   if (name === 'todowrite') {
-    if (typeof result.count === 'number') return `已更新 ${result.count} 条待办`;
+    if (typeof result.count === 'number') {
+      return `已更新 ${result.count} 条待办`;
+    }
     return '待办列表已更新';
   }
   if (name === 'agent' || name === 'task') {
-    if (result.message) return String(result.message).slice(0, 90);
+    if (result.message) {
+      return String(result.message).slice(0, 90);
+    }
     return '子任务已完成';
   }
 
@@ -440,7 +634,9 @@ function summarizeToolResult(toolName, result, params) {
     brief = out.replace(/\n/g, ' ').slice(0, 60);
     // Empty string output but a structured result → derive a readable line from
     // the result's fields (command / message / k=v), never raw braces.
-    if (!brief) brief = _readableObjectSummary(result);
+    if (!brief) {
+      brief = _readableObjectSummary(result);
+    }
   } else {
     brief = _readableObjectSummary(out) || _readableObjectSummary(result);
   }

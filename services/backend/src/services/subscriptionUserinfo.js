@@ -23,22 +23,32 @@ const CANON_OFF = new Set(['0', 'off', 'false', 'no']);
 
 function _flagOff(env, name) {
   const raw = env && env[name];
-  if (raw === undefined || raw === null || raw === '') return false; // default-on
+  if (raw === undefined || raw === null || raw === '') {
+    return false;
+  } // default-on
   return CANON_OFF.has(String(raw).trim().toLowerCase());
 }
 
 // 门控:自身或父门任一为 CANON off → 关(父关⇒子恒关)。
 function isEnabled(env) {
   const e = env && typeof env === 'object' ? env : {};
-  if (_flagOff(e, PARENT_FLAG)) return false;
-  if (_flagOff(e, FLAG)) return false;
+  if (_flagOff(e, PARENT_FLAG)) {
+    return false;
+  }
+  if (_flagOff(e, FLAG)) {
+    return false;
+  }
   return true;
 }
 
 function _toNonNegInt(raw) {
-  if (raw === undefined || raw === null) return undefined;
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
   const s = String(raw).trim();
-  if (!/^\d+$/.test(s)) return undefined;
+  if (!/^\d+$/.test(s)) {
+    return undefined;
+  }
   const n = Number.parseInt(s, 10);
   return Number.isSafeInteger(n) && n >= 0 ? n : undefined;
 }
@@ -53,19 +63,29 @@ function _toNonNegInt(raw) {
  */
 function parseSubscriptionUserinfo(headerValue, env, opts) {
   try {
-    if (!isEnabled(env || {})) return null;
+    if (!isEnabled(env || {})) {
+      return null;
+    }
     const raw = String(headerValue == null ? '' : headerValue).trim();
-    if (!raw) return null;
+    if (!raw) {
+      return null;
+    }
 
     const fields = {};
     for (const part of raw.split(';')) {
       const seg = part.trim();
-      if (!seg) continue;
+      if (!seg) {
+        continue;
+      }
       const eq = seg.indexOf('=');
-      if (eq === -1) continue;
+      if (eq === -1) {
+        continue;
+      }
       const key = seg.slice(0, eq).trim().toLowerCase();
       const val = seg.slice(eq + 1).trim();
-      if (key) fields[key] = val;
+      if (key) {
+        fields[key] = val;
+      }
     }
 
     const upload = _toNonNegInt(fields.upload);
@@ -74,7 +94,12 @@ function parseSubscriptionUserinfo(headerValue, env, opts) {
     const expireSec = _toNonNegInt(fields.expire);
 
     // 没有任何可识别字段 → 视为无元信息。
-    if (upload === undefined && download === undefined && total === undefined && expireSec === undefined) {
+    if (
+      upload === undefined &&
+      download === undefined &&
+      total === undefined &&
+      expireSec === undefined
+    ) {
       return null;
     }
 

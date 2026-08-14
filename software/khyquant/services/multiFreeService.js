@@ -1,4 +1,6 @@
 const axios = require('axios');
+const http = require('http');
+const https = require('https');
 const jwt = require('jsonwebtoken');
 const { toGoogleInlineData, toOpenAIVisionBlocks, toAnthropicImageBlocks } = require('./gateway/adapters/_imageCompat');
 const { convertMessagesAnthropicToOpenAI } = require('./gateway/adapters/_toolSchemaConverter');
@@ -6,6 +8,55 @@ const { extractPrimaryApiKey } = require('./apiKeyFormat');
 const { normalizeCacheUsage } = require('./gateway/adapters/_cacheUsage');
 // Model-name SSOT: free-tier provider model choices flow from constants/models.js.
 const { PRIMARY: MODELS } = require('../constants/models');
+
+// ── Keep-alive 连接管理与死连接免疫 ─────────────────────────────────
+// 长空闲后服务端会静默关闭 keep-alive TCP 连接;下次复用该死连接会报
+// socket hang up / ECONNRESET,导致新消息被错误地记成 unknown 失败。对策:
+//   1. keepAlive 复用连接,但**不设 agent 级 timeout**:实测(Node v24 原生
+//      http.Agent + 本地服务器,块间隔 > timeout)该 timeout 是 socket 级,
+//      活跃请求期间同样触发 socket/request 的 timeout 事件——对块间隔可能
+//      超过阈值的 SSE 长流(OpenAI/Anthropic 流式)是不可靠行为(当前 axios
+//      恰好不因此销毁流,但属未文档化实现细节,不可依赖)。Node 原生 Agent
+//      也没有 agentkeepalive 的 freeSocketTimeout(仅作用空闲池)选项,故无法
+//      只对 free socket 设超时 → 选择安全方案:不设 timeout;
+//   2. 用较小的 maxFreeSockets 收紧空闲池,减少可能变成死连接的存量;
+//   3. 若仍撞上死连接(尚未收到任何响应数据),postWithDeadConnRetry 自动用
+//      全新连接重试一次(仅一次)——死连接防护完全由该重试兜底。
+const KEEP_ALIVE_MAX_FREE_SOCKETS = 5;
+const sharedHttpAgent = new http.Agent({ keepAlive: true, maxFreeSockets: KEEP_ALIVE_MAX_FREE_SOCKETS });
+const sharedHttpsAgent = new https.Agent({ keepAlive: true, maxFreeSockets: KEEP_ALIVE_MAX_FREE_SOCKETS });
+
+function withKeepAliveAgents(config = {}) {
+  // config 展开在后 → 调用方显式传入的 httpAgent/httpsAgent 优先于共享 agent。
+  return { httpAgent: sharedHttpAgent, httpsAgent: sharedHttpsAgent, ...config };
+}
+
+// 死连接错误判定:keep-alive 连接被服务端关闭后复用所致,换新连接即可恢复。
+// err.response 存在 → 已收到上游响应,不属于死连接。注意排除 axios 超时
+// (code 同为 ECONNABORTED 但 message 带 timeout)——超时重试只会双倍等待。
+function isDeadConnectionError(err) {
+  if (!err || err.response) return false;
+  const msg = String(err.message || '').toLowerCase();
+  const code = String(err.code || '').toUpperCase();
+  if (code === 'ECONNABORTED' || msg.includes('econnaborted')) {
+    return !/timeout|timed?\s*out/.test(msg);
+  }
+  return code === 'ECONNRESET' || code === 'EPIPE'
+    || msg.includes('socket hang up') || msg.includes('econnreset')
+    || msg.includes('epipe') || msg.includes('broken pipe');
+}
+
+// POST 封装:注入共享 keep-alive agent;遇死连接(未收到任何响应数据)时
+// 用全新连接重试一次(不带 agent → 绕开池内可能残留的其他死 socket)。
+async function postWithDeadConnRetry(url, data, config, label) {
+  try {
+    return await axios.post(url, data, withKeepAliveAgents(config));
+  } catch (err) {
+    if (!isDeadConnectionError(err)) throw err;
+    console.warn(`连接被服务端关闭(${err.code || err.message})，正在用新连接重试 ${label} (第1/1次)...`);
+    return axios.post(url, data, { ...(config || {}) });
+  }
+}
 
 class MultiFreeService {
   constructor() {
@@ -383,7 +434,7 @@ class MultiFreeService {
     }
     parts.push({ text: prompt });
 
-    const response = await axios.post(url, {
+    const response = await postWithDeadConnRetry(url, {
       contents: [{ parts }],
       generationConfig: {
         temperature: opts.temperature,
@@ -392,7 +443,7 @@ class MultiFreeService {
     }, {
       headers: { 'Content-Type': 'application/json' },
       timeout: 30000
-    });
+    }, provider.name);
 
     const content = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const meta = response.data?.usageMetadata;
@@ -406,7 +457,7 @@ class MultiFreeService {
 
   async callGroq(provider, prompt, opts) {
     const model = opts.model || provider.model || MODELS.freeGroq;
-    const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await postWithDeadConnRetry('https://api.groq.com/openai/v1/chat/completions', {
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: opts.temperature,
@@ -417,7 +468,7 @@ class MultiFreeService {
         'Content-Type': 'application/json'
       },
       timeout: 30000
-    });
+    }, provider.name);
 
     const content = response.data?.choices?.[0]?.message?.content || '';
     const usage = response.data?.usage;
@@ -432,7 +483,7 @@ class MultiFreeService {
 
   async callOpenRouter(provider, prompt, opts) {
     const model = opts.model || provider.model;
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await postWithDeadConnRetry('https://openrouter.ai/api/v1/chat/completions', {
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: opts.temperature,
@@ -445,7 +496,7 @@ class MultiFreeService {
         'X-Title': 'khy OS'
       },
       timeout: 30000
-    });
+    }, provider.name);
 
     const content = response.data?.choices?.[0]?.message?.content || '';
     const usage = response.data?.usage;
@@ -603,7 +654,7 @@ class MultiFreeService {
 
       let response;
       try {
-        response = await axios.post(`${baseUrl}/v1/chat/completions`, requestBody, {
+        response = await postWithDeadConnRetry(`${baseUrl}/v1/chat/completions`, requestBody, {
           headers: {
             Authorization: `Bearer ${provider.apiKey}`,
             'Content-Type': 'application/json',
@@ -611,13 +662,13 @@ class MultiFreeService {
           timeout: opts.timeoutMs || 120000,
           responseType: 'stream',
           signal: opts.signal,
-        });
+        }, provider.name);
       } catch (err) {
         // On 400, retry without tools — API key is valid, payload was rejected
         const retryBody = await _retryWithoutTools(err);
         if (retryBody) {
           retryBody.stream = true;
-          response = await axios.post(`${baseUrl}/v1/chat/completions`, retryBody, {
+          response = await postWithDeadConnRetry(`${baseUrl}/v1/chat/completions`, retryBody, {
             headers: {
               Authorization: `Bearer ${provider.apiKey}`,
               'Content-Type': 'application/json',
@@ -625,7 +676,7 @@ class MultiFreeService {
             timeout: opts.timeoutMs || 120000,
             responseType: 'stream',
             signal: opts.signal,
-          });
+          }, provider.name);
         } else {
           throw err;
         }
@@ -732,23 +783,23 @@ class MultiFreeService {
     // ── Non-streaming fallback ──────────────────────────────────────
     let response;
     try {
-      response = await axios.post(`${baseUrl}/v1/chat/completions`, requestBody, {
+      response = await postWithDeadConnRetry(`${baseUrl}/v1/chat/completions`, requestBody, {
         headers: {
           Authorization: `Bearer ${provider.apiKey}`,
           'Content-Type': 'application/json'
         },
         timeout: 30000
-      });
+      }, provider.name);
     } catch (err) {
       const retryBody = await _retryWithoutTools(err);
       if (retryBody) {
-        response = await axios.post(`${baseUrl}/v1/chat/completions`, retryBody, {
+        response = await postWithDeadConnRetry(`${baseUrl}/v1/chat/completions`, retryBody, {
           headers: {
             Authorization: `Bearer ${provider.apiKey}`,
             'Content-Type': 'application/json'
           },
           timeout: 30000
-        });
+        }, provider.name);
       } else {
         throw err;
       }
@@ -888,7 +939,7 @@ class MultiFreeService {
     // ── Streaming path for Anthropic ────────────────────────────────
     if (typeof opts.onChunk === 'function' && !isRelay) {
       body.stream = true;
-      const response = await axios.post(`${baseUrl}/v1/messages`, body, {
+      const response = await postWithDeadConnRetry(`${baseUrl}/v1/messages`, body, {
         headers: {
           'x-api-key': provider.apiKey,
           'anthropic-version': '2024-10-22',
@@ -898,7 +949,7 @@ class MultiFreeService {
         timeout: opts.timeoutMs || 120000,
         responseType: 'stream',
         signal: opts.signal,
-      });
+      }, provider.name);
 
       let content = '';
       let thinkingContent = '';
@@ -1017,7 +1068,7 @@ class MultiFreeService {
     // ── Non-streaming fallback ──────────────────────────────────────
     let response;
     try {
-      response = await axios.post(`${baseUrl}/v1/messages`, body, {
+      response = await postWithDeadConnRetry(`${baseUrl}/v1/messages`, body, {
         headers: {
           'x-api-key': provider.apiKey,
           'anthropic-version': '2024-10-22',
@@ -1025,7 +1076,7 @@ class MultiFreeService {
           'Content-Type': 'application/json'
         },
         timeout: 30000
-      });
+      }, provider.name);
     } catch (err) {
       if (isRelay && err.response?.status === 400) {
         const minimalBody = {
@@ -1034,14 +1085,14 @@ class MultiFreeService {
           temperature: opts.temperature,
           messages: [{ role: 'user', content: messageContent }],
         };
-        response = await axios.post(`${baseUrl}/v1/messages`, minimalBody, {
+        response = await postWithDeadConnRetry(`${baseUrl}/v1/messages`, minimalBody, {
           headers: {
             'x-api-key': provider.apiKey,
             'anthropic-version': '2024-10-22',
             'Content-Type': 'application/json'
           },
           timeout: 30000
-        });
+        }, provider.name);
       } else {
         throw err;
       }
@@ -1171,13 +1222,13 @@ class MultiFreeService {
 
     let response;
     try {
-      response = await axios.post(endpoint, requestBody, {
+      response = await postWithDeadConnRetry(endpoint, requestBody, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         timeout: 60000
-      });
+      }, provider.name);
     } catch (err) {
       // 关键诊断:智谱 v4 在 HTTP 错误(尤其 404)体里回**真实原因**(结构化 { error: { code, message } }
       // 或顶层 { code, message }):code `1002/1003/1004…`=鉴权/无效 key、`1211`=模型不存在/未开通、
@@ -1225,7 +1276,7 @@ class MultiFreeService {
 
   async callXunfei(provider, prompt, opts) {
     const model = opts.model || provider.model || 'lite';
-    const response = await axios.post('https://spark-api-open.xf-yun.com/v1/chat/completions', {
+    const response = await postWithDeadConnRetry('https://spark-api-open.xf-yun.com/v1/chat/completions', {
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: opts.temperature,
@@ -1236,7 +1287,7 @@ class MultiFreeService {
         'Content-Type': 'application/json'
       },
       timeout: 30000
-    });
+    }, provider.name);
 
     const content = response.data?.choices?.[0]?.message?.content || response.data?.result || '';
     const usage = response.data?.usage;
@@ -1263,7 +1314,7 @@ class MultiFreeService {
       : `${baseUrl}/api/v1/services/aigc/text-generation/generation`;
 
     if (useCompatible) {
-      const response = await axios.post(compatibleUrl, {
+      const response = await postWithDeadConnRetry(compatibleUrl, {
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: opts.temperature,
@@ -1274,7 +1325,7 @@ class MultiFreeService {
           'Content-Type': 'application/json',
         },
         timeout: 60000,
-      });
+      }, provider.name);
 
       const content = response.data?.choices?.[0]?.message?.content || '';
       const usage = response.data?.usage;
@@ -1287,7 +1338,7 @@ class MultiFreeService {
     }
 
     // Legacy DashScope API
-    const response = await axios.post(legacyUrl, {
+    const response = await postWithDeadConnRetry(legacyUrl, {
       model,
       input: {
         messages: [{ role: 'user', content: prompt }]
@@ -1303,7 +1354,7 @@ class MultiFreeService {
         'Content-Type': 'application/json'
       },
       timeout: 30000
-    });
+    }, provider.name);
 
     const content = response.data?.output?.choices?.[0]?.message?.content || '';
     const usage = response.data?.usage;
@@ -1333,7 +1384,7 @@ class MultiFreeService {
         }
 
         const tokenUrl = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${provider.apiKey}&client_secret=${provider.secretKey}`;
-        const tokenResponse = await axios.get(tokenUrl, { timeout: 20000 });
+        const tokenResponse = await axios.get(tokenUrl, withKeepAliveAgents({ timeout: 20000 }));
         const accessToken = tokenResponse.data?.access_token;
 
         if (!accessToken) {
@@ -1360,7 +1411,7 @@ class MultiFreeService {
     const endpoint = /\/chat\/completions$/i.test(baseUrl)
       ? baseUrl
       : `${baseUrl}/chat/completions`;
-    const response = await axios.post(
+    const response = await postWithDeadConnRetry(
       endpoint,
       {
         messages: [{ role: 'user', content: prompt }],
@@ -1373,7 +1424,8 @@ class MultiFreeService {
           'Authorization': `Bearer ${accessToken}`
         },
         timeout: 30000
-      }
+      },
+      provider.name
     );
 
     const content = response.data?.result || '';
@@ -1389,7 +1441,7 @@ class MultiFreeService {
 
   async callHuggingFace(provider, prompt, opts) {
     const model = opts.model || provider.model;
-    const response = await axios.post(
+    const response = await postWithDeadConnRetry(
       `https://api-inference.huggingface.co/models/${model}`,
       {
         inputs: prompt,
@@ -1404,7 +1456,8 @@ class MultiFreeService {
           'Content-Type': 'application/json'
         },
         timeout: 45000
-      }
+      },
+      provider.name
     );
 
     let content = '';

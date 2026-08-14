@@ -30,7 +30,9 @@ function _isEnabledDefaultOn(name, env) {
     return flagRegistry.isFlagEnabled(name, e);
   } catch {
     const raw = e && e[name];
-    if (raw === undefined || raw === null) return true;
+    if (raw === undefined || raw === null) {
+      return true;
+    }
     return !OFF_VALUES.includes(String(raw).trim().toLowerCase());
   }
 }

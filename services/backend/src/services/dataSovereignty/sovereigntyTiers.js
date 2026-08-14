@@ -20,11 +20,11 @@
  */
 
 const TIER = Object.freeze({
-  P0: 'P0',   // 绝对铁律
-  P1: 'P1',   // 意志注入
-  P2: 'P2',   // 环境语境
-  P3: 'P3',   // 推理演算
-  P4: 'P4',   // 默认基座
+  P0: 'P0', // 绝对铁律
+  P1: 'P1', // 意志注入
+  P2: 'P2', // 环境语境
+  P3: 'P3', // 推理演算
+  P4: 'P4', // 默认基座
 });
 
 // 权威秩：越小越高权威。裁决 = argmin(rank)。
@@ -52,13 +52,13 @@ const ALL_TIERS = Object.freeze([TIER.P0, TIER.P1, TIER.P2, TIER.P3, TIER.P4]);
  */
 const SOURCE_TIER = Object.freeze({
   // —— P0 绝对铁律：硬编码安全边界 / 防呆 / 物理极限 ——
-  'foolproof': TIER.P0,
+  foolproof: TIER.P0,
   'safety-boundary': TIER.P0,
   'physical-limit': TIER.P0,
-  'constitution': TIER.P0,
+  constitution: TIER.P0,
   'hard-rule': TIER.P0,
   // —— P1 意志注入：用户显式命令 / 任务目标 ——
-  'user': TIER.P1,
+  user: TIER.P1,
   'user-command': TIER.P1,
   'user-directive': TIER.P1,
   'task-goal': TIER.P1,
@@ -66,18 +66,18 @@ const SOURCE_TIER = Object.freeze({
   'os-native': TIER.P2,
   'os-privilege': TIER.P2,
   'network-state': TIER.P2,
-  'battery': TIER.P2,
+  battery: TIER.P2,
   'env-context': TIER.P2,
   // —— P3 推理演算：模型推理 / 记忆召回 / 工具返回值 ——
-  'model': TIER.P3,
+  model: TIER.P3,
   'model-inference': TIER.P3,
   'memory-recall': TIER.P3,
   'tool-return': TIER.P3,
-  'tool': TIER.P3,
+  tool: TIER.P3,
   // —— P4 默认基座：配置默认值 ——
-  'config': TIER.P4,
+  config: TIER.P4,
   'config-default': TIER.P4,
-  'default': TIER.P4,
+  default: TIER.P4,
 });
 
 // 「P3 及以上阶层」（权威秩 ≤ 3，即 P0-P3）的落败数据须以 ghost_value 留存供模型反思（防呆②）。
@@ -98,7 +98,9 @@ function isTier(t) {
  * @returns {string} TIER.*
  */
 function tierOf(source) {
-  const key = String(source || '').trim().toLowerCase();
+  const key = String(source || '')
+    .trim()
+    .toLowerCase();
   return Object.prototype.hasOwnProperty.call(SOURCE_TIER, key) ? SOURCE_TIER[key] : TIER.P4;
 }
 

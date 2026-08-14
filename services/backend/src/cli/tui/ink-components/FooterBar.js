@@ -4,6 +4,7 @@
  * FooterBar — status bar showing model, effort, context usage, permission mode.
  */
 const React = require('react');
+
 const inkRuntime = require('../inkRuntime');
 
 // CC 后端口径对齐:页脚上下文段不只显示百分比,还显示「已用 / 窗口」两个 token 数。
@@ -19,13 +20,21 @@ const inkRuntime = require('../inkRuntime');
 //   关 → 逐字节回退旧的「只显示窗口」`{pct}% ctx ({window}k)`。
 //   ccFormat require 包在 try 里,任何异常静默回退窗口口径,绝不让页脚渲染抛错。
 function buildContextStatus(contextPct, usedTokens, contextLimit, env = process.env) {
-  if (!contextLimit) return '';
+  if (!contextLimit) {
+    return '';
+  }
   const pct = contextPct || 0;
-  const v = String((env && env.KHY_CONTEXT_FILL_SHOW_USED) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_CONTEXT_FILL_SHOW_USED) || '')
+    .trim()
+    .toLowerCase();
   const showUsed = !(v === '0' || v === 'false' || v === 'off' || v === 'no');
   if (showUsed) {
     let fmt = null;
-    try { fmt = require('../../ccFormat').ccFormatTokens; } catch { fmt = null; }
+    try {
+      fmt = require('../../ccFormat').ccFormatTokens;
+    } catch {
+      fmt = null;
+    }
     if (typeof fmt === 'function') {
       const used = Math.max(0, Number(usedTokens) || 0);
       return `${pct}% ctx (${fmt(used)}/${fmt(contextLimit)})`;
@@ -45,12 +54,30 @@ function buildContextStatus(contextPct, usedTokens, contextLimit, env = process.
 function formatModelLabel(model, env = process.env) {
   try {
     const fn = require('../../ccModelName').formatModelLabel;
-    if (typeof fn === 'function') return fn(model, env);
-  } catch { /* fall through to raw */ }
+    if (typeof fn === 'function') {
+      return fn(model, env);
+    }
+  } catch {
+    /* fall through to raw */
+  }
   return String(model == null ? '' : model).trim();
 }
 
-function FooterBar({ model, effort, permissionMode, contextPct, contextTokens, contextLimit, topic, localMode, fastMode, voiceMode, bridge, goalActive }) {
+function FooterBar({
+  model,
+  effort,
+  permissionMode,
+  contextPct,
+  contextTokens,
+  contextLimit,
+  topic,
+  localMode,
+  fastMode,
+  voiceMode,
+  bridge,
+  goalActive,
+  contextPlan,
+}) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
 
@@ -58,27 +85,42 @@ function FooterBar({ model, effort, permissionMode, contextPct, contextTokens, c
   // session so the pairing URL / PIN / live client count never scroll away after
   // the startup banner. Only the non-sensitive token PREFIX is shown. Rendered
   // only when a bridge is actually running (bridge.running).
-  const bridgeLine = bridge && bridge.running
-    ? h(Box, null,
-        h(Text, { color: 'magenta' }, '🔗 协作 '),
-        h(Text, { color: 'green' }, bridge.url || ''),
-        bridge.pin ? h(Text, { dimColor: true }, '  PIN ') : null,
-        bridge.pin ? h(Text, { color: 'cyan', bold: true }, bridge.pin) : null,
-        h(Text, { dimColor: true }, `  ${bridge.clientCount || 0} 端`),
-        bridge.tokenShort ? h(Text, { dimColor: true }, `  ${bridge.tokenShort}…`) : null,
-      )
-    : null;
+  const bridgeLine =
+    bridge && bridge.running
+      ? h(
+          Box,
+          null,
+          h(Text, { color: 'magenta' }, '🔗 协作 '),
+          h(Text, { color: 'green' }, bridge.url || ''),
+          bridge.pin ? h(Text, { dimColor: true }, '  PIN ') : null,
+          bridge.pin ? h(Text, { color: 'cyan', bold: true }, bridge.pin) : null,
+          h(Text, { dimColor: true }, `  ${bridge.clientCount || 0} 端`),
+          bridge.tokenShort ? h(Text, { dimColor: true }, `  ${bridge.tokenShort}…`) : null
+        )
+      : null;
 
   // 语言偏好感知标签——对齐项目已有策略(renderTheme.js:64-68):默认中文,仅当 KHY_UI_LANG
   // 或 KHY_LANGUAGE 显式为 en/en-us/english 时走英文。Ink TUI 页脚此前硬编码英文标签,
   // 与全站中文默认策略(思维动词/阶段名/经典 REPL 均默认中文)不一致——此处补齐语言感知,
   // 既提升人机交互友好度(中文用户的母语足迹减少认知负担),又保留英文用户的选择逃生口。
-  const uiLangPref = String(process.env.KHY_UI_LANG || process.env.KHY_LANGUAGE || '').trim().toLowerCase();
+  const uiLangPref = String(process.env.KHY_UI_LANG || process.env.KHY_LANGUAGE || '')
+    .trim()
+    .toLowerCase();
   const preferEnglishUi = /^(en|en-us|english)\b/.test(uiLangPref);
 
   const permLabels = preferEnglishUi
-    ? { default: 'ask permissions', acceptEdits: 'accept edits', plan: 'plan mode (read-only)', bypass: 'bypass permissions on' }
-    : { default: '询问权限', acceptEdits: '接受编辑', plan: '规划模式（只读）', bypass: '绕过权限' };
+    ? {
+        default: 'ask permissions',
+        acceptEdits: 'accept edits',
+        plan: 'plan mode (read-only)',
+        bypass: 'bypass permissions on',
+      }
+    : {
+        default: '询问权限',
+        acceptEdits: '接受编辑',
+        plan: '规划模式（只读）',
+        bypass: '绕过权限',
+      };
   const permColors = { acceptEdits: 'green', plan: 'cyan', bypass: 'yellow' };
   const permLabel = permLabels[permissionMode] || permLabels.default;
   const permColor = permColors[permissionMode];
@@ -86,10 +128,50 @@ function FooterBar({ model, effort, permissionMode, contextPct, contextTokens, c
 
   // max/high/medium/low are KHY's own presets; xhigh/minimal come from codex
   // config.toml model_reasoning_effort (sourced via ai.getActiveEffort).
-  const effortLabels = { max: '最大强度', xhigh: '超高强度', high: '高强度', medium: '中强度', low: '低强度', minimal: '最小强度' };
+  const effortLabels = {
+    max: '最大强度',
+    xhigh: '超高强度',
+    high: '高强度',
+    medium: '中强度',
+    low: '低强度',
+    minimal: '最小强度',
+  };
   const effortStr = effortLabels[effort] || effort || '';
 
   const ctxStr = buildContextStatus(contextPct, contextTokens, contextLimit);
+
+  // 自动压缩倒计时。经典 REPL 早有这一段(_renderPermissionBar),Ink 页脚此前只渲
+  // 「{pct}% ctx」,用户看不到「还有多久会压缩」。阈值取 contextPlan.autoCompactAt ——
+  // 由 contextRouter.autoCompactTriggerTokens 从本轮真实预算推导(routeContextStrategy
+  // 触发条件的代数逆),故倒计时归零与真实压缩同刻发生,不会像比例式那样提前十几个百分点。
+  //   门控 KHY_CONTEXT_WARNING(默认开,与经典 REPL 同一个门);关/异常/首轮前 → 不渲该段
+  //   (逐字节回退今日页脚)。CC 的「只在警告带内才提示」由 contextWarning 叶子负责。
+  let compactSeg = null;
+  try {
+    const at = contextPlan && contextPlan.autoCompactAt;
+    if (at > 0) {
+      const cw = require('../../contextWarning');
+      if (cw.isEnabled(process.env)) {
+        const decision = cw.buildContextWarning({
+          tokenUsage: Math.max(0, Number(contextTokens) || 0),
+          contextWindow: contextLimit,
+          autoCompactEnabled: true,
+          autoCompactThresholdTokens: at,
+        });
+        if (decision.show) {
+          const color =
+            decision.style === 'error' ? 'red' : decision.style === 'warning' ? 'yellow' : null;
+          compactSeg = h(
+            Text,
+            { dimColor: !color, color: color || undefined },
+            '  ' + decision.text
+          );
+        }
+      }
+    }
+  } catch {
+    /* fail-soft:不渲倒计时,页脚其余部分照常 */
+  }
 
   const leftParts = [formatModelLabel(model), effortStr].filter(Boolean).join(' · ');
 
@@ -107,14 +189,20 @@ function FooterBar({ model, effort, permissionMode, contextPct, contextTokens, c
       const memColor = mem.level === 'error' ? 'red' : mem.level === 'warning' ? 'yellow' : null;
       memSeg = h(Text, { dimColor: !memColor, color: memColor || undefined }, '  ' + mem.text);
     }
-  } catch { /* footer memory segment is optional; never let it break footer render */ }
+  } catch {
+    /* footer memory segment is optional; never let it break footer render */
+  }
 
-  return h(Box, { flexDirection: 'column' },
+  return h(
+    Box,
+    { flexDirection: 'column' },
     // Persistent LAN-collaboration status (pinned so it survives a conversation).
     bridgeLine,
     // Topic fallback line (块3): only shown when the pinned topicBar can't run.
-    topic ? h(Box, null, h(Text, { dimColor: true }, '✱ ' + topic)) : null,
-    h(Box, null,
+    topic ? h(Box, null, h(Text, { dimColor: true }, '🍀 ' + topic)) : null,
+    h(
+      Box,
+      null,
       h(Text, { dimColor: !permColor, color: permColor }, '■ ' + permLabel + ' ' + cycleHint),
       localMode ? h(Text, { color: 'green' }, '  ◆ 本地模式 (/local)') : null,
       fastMode ? h(Text, { color: 'yellow' }, '  ◆ 快速模式 (/fast)') : null,
@@ -123,14 +211,26 @@ function FooterBar({ model, effort, permissionMode, contextPct, contextTokens, c
       // 由纯叶子 goalKickoff.formatGoalElapsed 产出)。goalActive 为 null(门控关/无目标/异常)→
       // 不渲该段(逐字节回退今日页脚)。中英文状态词尊重语言偏好(preferEnglishUi)。
       goalActive && goalActive.elapsedLabel != null
-        ? h(Text, { color: 'cyan' }, '  ◎ /goal ' + (preferEnglishUi ? 'active' : '进行中') + ' (' + goalActive.elapsedLabel + ')')
+        ? h(
+            Text,
+            { color: 'cyan' },
+            '  ◎ /goal ' +
+              (preferEnglishUi ? 'active' : '进行中') +
+              ' (' +
+              goalActive.elapsedLabel +
+              ')'
+          )
         : null
     ),
-    h(Box, { justifyContent: 'space-between' },
+    h(
+      Box,
+      { justifyContent: 'space-between' },
       memSeg
         ? h(Box, null, h(Text, { dimColor: true }, '[' + leftParts + ']'), memSeg)
         : h(Text, { dimColor: true }, '[' + leftParts + ']'),
-      h(Text, { dimColor: true }, ctxStr)
+      compactSeg
+        ? h(Box, null, h(Text, { dimColor: true }, ctxStr), compactSeg)
+        : h(Text, { dimColor: true }, ctxStr)
     )
   );
 }

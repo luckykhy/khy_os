@@ -46,7 +46,12 @@ const DEFAULT_SIGNAL = 'tool-failure';
  */
 async function harden(evaluation, observation, opts = {}) {
   const out = { vectorId: (evaluation && evaluation.vectorId) || null, sank: 0, requirements: [] };
-  if (!evaluation || evaluation.survived || !Array.isArray(evaluation.breaches) || !evaluation.breaches.length) {
+  if (
+    !evaluation ||
+    evaluation.survived ||
+    !Array.isArray(evaluation.breaches) ||
+    !evaluation.breaches.length
+  ) {
     return out;
   }
 
@@ -61,10 +66,17 @@ async function harden(evaluation, observation, opts = {}) {
         const r = bridge.observeFailure(friction);
         record = { ...r, invariant: breach.invariant };
       } catch (e) {
-        record = { observed: false, reason: 'observe-error', invariant: breach.invariant, error: String(e && e.message) };
+        record = {
+          observed: false,
+          reason: 'observe-error',
+          invariant: breach.invariant,
+          error: String(e && e.message),
+        };
       }
     }
-    if (record.observed) out.sank += 1;
+    if (record.observed) {
+      out.sank += 1;
+    }
     out.requirements.push(record);
 
     // 选沉淀：双轨淬火（注入了 forge 才走，避免与主沉淀重复）。永不阻断主路。
@@ -72,10 +84,13 @@ async function harden(evaluation, observation, opts = {}) {
       try {
         const forged = await opts.forge.forge(_toForgeObservation(evaluation, obs, breach));
         if (forged && forged.status === 'forged') {
-          record.forgedRequirementId = forged.requirementId || (forged.requirement && forged.requirement.id) || null;
+          record.forgedRequirementId =
+            forged.requirementId || (forged.requirement && forged.requirement.id) || null;
           record.forgedTrack = forged.source_track || null;
         }
-      } catch { /* 双轨淬火永不抛；真抛了也不许污染对抗战役 */ }
+      } catch {
+        /* 双轨淬火永不抛；真抛了也不许污染对抗战役 */
+      }
     }
   }
   return out;
@@ -104,7 +119,11 @@ function _toFriction(evaluation, obs, breach) {
 /** breach → DualTrackForge.forge 观测现场（仅在显式注入 forge 时构造）。 */
 function _toForgeObservation(evaluation, obs, breach) {
   return {
-    input: { vectorId: evaluation.vectorId, target: evaluation.target, invariant: breach.invariant },
+    input: {
+      vectorId: evaluation.vectorId,
+      target: evaluation.target,
+      invariant: breach.invariant,
+    },
     output: obs.outcome,
     goal: `守住不变量 ${breach.invariant}`,
     context: { source: 'adversarial-trainer', family: obs.family, detail: breach.detail },
@@ -112,7 +131,11 @@ function _toForgeObservation(evaluation, obs, breach) {
 }
 
 function _safeRequire(p) {
-  try { return require(p); } catch { return null; }
+  try {
+    return require(p);
+  } catch {
+    return null;
+  }
 }
 
 module.exports = {

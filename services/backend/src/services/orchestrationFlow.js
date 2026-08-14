@@ -35,7 +35,11 @@ const { FlowInstance, FLOW_STATE } = require('./flowsEngine');
 let _riskGate = null;
 function riskGate() {
   if (!_riskGate) {
-    try { _riskGate = require('./riskGate'); } catch { _riskGate = {}; }
+    try {
+      _riskGate = require('./riskGate');
+    } catch {
+      _riskGate = {};
+    }
   }
   return _riskGate;
 }
@@ -63,11 +67,15 @@ function resolveStepType(subtask = {}, runMode = 'hardened') {
         isReadOnly: !!subtask.isReadOnly,
         isDestructive: !!subtask.isDestructive,
       });
-      if (VALID_STEP_TYPES.has(t)) return t;
-    } catch { /* fall through */ }
+      if (VALID_STEP_TYPES.has(t)) {
+        return t;
+      }
+    } catch {
+      /* fall through */
+    }
   }
   // Mixed mode leaves underived steps flexible; hardened mode pins them hardened.
-  return runMode === 'flexible' ? 'flexible' : (runMode === 'mixed' ? 'flexible' : 'hardened');
+  return runMode === 'flexible' ? 'flexible' : runMode === 'mixed' ? 'flexible' : 'hardened';
 }
 
 /**
@@ -110,7 +118,7 @@ function _buildDefinition(subtasks, state, executeSubtask, isGateReleased, runMo
           const result = await executeSubtask(subtask, index);
           state.results[index] = result;
           state.timings[index] = Date.now() - startTs;
-          state.statuses[index] = (result && result.success === false) ? 'failed' : 'completed';
+          state.statuses[index] = result && result.success === false ? 'failed' : 'completed';
           if (state.statuses[index] === 'failed') {
             // A failed hardened step fails the SOP (strict ordering contract).
             // A flexible step's failure is non-fatal: the run continues so the
@@ -138,7 +146,11 @@ function _buildDefinition(subtasks, state, executeSubtask, isGateReleased, runMo
       // per-step flag merged into context by `signal({ released: {...} })`.
       step.canEnter = (context) => {
         if (typeof isGateReleased === 'function') {
-          try { return !!isGateReleased(subtask, index); } catch { return false; }
+          try {
+            return !!isGateReleased(subtask, index);
+          } catch {
+            return false;
+          }
         }
         return !!(context && context.released && context.released[stepId]);
       };
@@ -181,8 +193,11 @@ function _buildSummary(subtasks, state) {
     byStepType[stepType] = (byStepType[stepType] || 0) + 1;
     byExecutor[executor] = (byExecutor[executor] || 0) + 1;
     totalDurationMs += durationMs;
-    if (status === 'completed') successCount++;
-    else if (status === 'failed') failCount++;
+    if (status === 'completed') {
+      successCount++;
+    } else if (status === 'failed') {
+      failCount++;
+    }
 
     out.push({
       id: `step-${i}`,
@@ -224,9 +239,10 @@ function _buildSummary(subtasks, state) {
  */
 async function runHardenedFlow(opts = {}) {
   const subtasks = Array.isArray(opts.subtasks) ? opts.subtasks : [];
-  const executeSubtask = typeof opts.executeSubtask === 'function'
-    ? opts.executeSubtask
-    : async () => ({ success: false, error: 'no executeSubtask provided' });
+  const executeSubtask =
+    typeof opts.executeSubtask === 'function'
+      ? opts.executeSubtask
+      : async () => ({ success: false, error: 'no executeSubtask provided' });
   const runMode = opts.mode === 'mixed' ? 'mixed' : 'hardened';
 
   // Shared mutable run state — kept off the serialized flow context.
@@ -250,7 +266,11 @@ async function runHardenedFlow(opts = {}) {
   }
 
   const definition = _buildDefinition(
-    subtasks, state, executeSubtask, opts.isGateReleased, runMode
+    subtasks,
+    state,
+    executeSubtask,
+    opts.isGateReleased,
+    runMode
   );
   const instance = new FlowInstance(definition, opts.initialContext || {});
 

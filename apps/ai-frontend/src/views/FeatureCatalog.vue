@@ -7,7 +7,7 @@
           placeholder="搜索命令 / 名称 / 描述"
           clearable
           size="default"
-          style="width: 260px;"
+          style="width: 260px"
           @input="onSearch"
         />
         <el-button :loading="loading" @click="reload">刷新</el-button>
@@ -15,14 +15,14 @@
     </KhyPageHeader>
 
     <!-- 诚实提示：网页面是能力参考，命令在 CLI/TUI 里执行，而非网页聊天框 -->
-    <el-alert
-      class="honest-note"
-      type="info"
-      :closable="false"
-      show-icon
-      title="这里是 khy 全部功能的参考索引"
-      description="下列命令在 khy 的命令行 / 终端 (TUI) 中输入即可使用（例如在「KHY OS 内核」页或本机 CLI）。网页聊天框只会把文本发给模型，不会执行这些命令。"
-    />
+    <el-alert class="honest-note" type="info" :closable="false" show-icon>
+      <template #icon
+        ><el-icon><Guide /></el-icon
+      ></template>
+      <template #title>这里是 khy 全部功能的参考索引</template>
+      下列命令在 khy 的命令行 / 终端 (TUI) 中输入即可使用（例如在「KHY OS 内核」页或本机
+      CLI）。网页聊天框只会把文本发给模型，不会执行这些命令。
+    </el-alert>
 
     <div v-if="error" class="state-block">
       <KhyEmpty
@@ -52,12 +52,7 @@
       <div class="catalog-summary">
         共 <strong>{{ total }}</strong> 项命令，分 {{ categories.length }} 类
       </div>
-      <el-card
-        v-for="cat in categories"
-        :key="cat.key"
-        class="category-card"
-        shadow="hover"
-      >
+      <el-card v-for="cat in categories" :key="cat.key" class="category-card" shadow="hover">
         <template #header>
           <div class="category-header">
             <span class="category-label">{{ cat.label }}</span>
@@ -79,53 +74,53 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Warning, Search, Guide } from '@element-plus/icons-vue'
-import request from '@/api/request'
-import KhyEmpty from '@/components/KhyEmpty.vue'
-import KhyPageHeader from '@/components/KhyPageHeader.vue'
+import { ref, onMounted } from 'vue';
+import { Warning, Search, Guide } from '@element-plus/icons-vue';
+import request from '@/api/request';
+import KhyEmpty from '@/components/KhyEmpty.vue';
+import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
 // keep-alive matches on component name (see Layout CACHED_VIEWS convention).
-defineOptions({ name: 'FeatureCatalog' })
+defineOptions({ name: 'FeatureCatalog' });
 
-const categories = ref([])
-const total = ref(0)
-const keyword = ref('')
-const loading = ref(false)
-const error = ref(false)
+const categories = ref([]);
+const total = ref(0);
+const keyword = ref('');
+const loading = ref(false);
+const error = ref(false);
 
-let searchTimer = null
+let searchTimer = null;
 
 // Load the command catalog from the backend SSOT (GET /api/commands). The same
 // data powers the TUI `/features` command — one source, three surfaces.
 async function load(q = '') {
-  loading.value = true
-  error.value = false
+  loading.value = true;
+  error.value = false;
   try {
-    const res = await request.get('/api/commands', { params: q ? { q } : {} })
-    const payload = res && res.data && res.data.data ? res.data.data : { categories: [], total: 0 }
-    categories.value = Array.isArray(payload.categories) ? payload.categories : []
-    total.value = Number(payload.total) || 0
+    const res = await request.get('/api/commands', { params: q ? { q } : {} });
+    const payload = res && res.data && res.data.data ? res.data.data : { categories: [], total: 0 };
+    categories.value = Array.isArray(payload.categories) ? payload.categories : [];
+    total.value = Number(payload.total) || 0;
   } catch (e) {
-    error.value = true
-    categories.value = []
-    total.value = 0
+    error.value = true;
+    categories.value = [];
+    total.value = 0;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 // Debounced server-side search so typing doesn't hammer the endpoint.
 function onSearch() {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => load(keyword.value.trim()), 250)
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => load(keyword.value.trim()), 250);
 }
 
 function reload() {
-  load(keyword.value.trim())
+  load(keyword.value.trim());
 }
 
-onMounted(() => load())
+onMounted(() => load());
 </script>
 
 <style scoped>
@@ -164,7 +159,9 @@ onMounted(() => load())
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
   padding: 10px 12px;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 .command-item:hover {
   border-color: var(--el-color-primary-light-5);

@@ -32,7 +32,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_PHILOSOPHY_DESIGN;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -41,19 +43,76 @@ function isEnabled(env = process.env) {
 const _PHILOSOPHY_RE = new RegExp(
   [
     // 泛化哲学词(注意:「主义/思想」较宽,靠 ② 的「应用到软件」门控收敛零假阳性)
-    '哲学', '哲理', '思想', '主义', '世界观', '价值观', '方法论', '理念', '道德经',
-    'philosoph', 'ideolog', 'doctrine', 'worldview', 'ethos', '\\btenets?\\b', 'principle of life',
+    '哲学',
+    '哲理',
+    '思想',
+    '主义',
+    '世界观',
+    '价值观',
+    '方法论',
+    '理念',
+    '道德经',
+    'philosoph',
+    'ideolog',
+    'doctrine',
+    'worldview',
+    'ethos',
+    '\\btenets?\\b',
+    'principle of life',
     // 中国哲学
-    '道家', '儒家', '法家', '墨家', '无为(?:而治)?', '中庸', '阴阳', '太极', '禅', '佛家', '禅宗',
-    '老子', '孔子', '庄子', '孟子', '荀子', '韩非',
+    '道家',
+    '儒家',
+    '法家',
+    '墨家',
+    '无为(?:而治)?',
+    '中庸',
+    '阴阳',
+    '太极',
+    '禅',
+    '佛家',
+    '禅宗',
+    '老子',
+    '孔子',
+    '庄子',
+    '孟子',
+    '荀子',
+    '韩非',
     // 西方哲学流派/人物
-    '斯多葛', 'stoic', '存在主义', 'existential', '虚无主义', 'nihilis', '功利主义', 'utilitarian',
-    '康德', 'kant', '苏格拉底', 'socrat', '柏拉图', 'plato', '亚里士多德', 'aristotl',
-    '尼采', 'nietzsch', '黑格尔', 'hegel', '马克思', 'marx', '罗尔斯', 'rawls', '萨特', 'sartre',
+    '斯多葛',
+    'stoic',
+    '存在主义',
+    'existential',
+    '虚无主义',
+    'nihilis',
+    '功利主义',
+    'utilitarian',
+    '康德',
+    'kant',
+    '苏格拉底',
+    'socrat',
+    '柏拉图',
+    'plato',
+    '亚里士多德',
+    'aristotl',
+    '尼采',
+    'nietzsch',
+    '黑格尔',
+    'hegel',
+    '马克思',
+    'marx',
+    '罗尔斯',
+    'rawls',
+    '萨特',
+    'sartre',
     // 社会/政治哲学常被借喻进软件
-    '三权分立', '制衡', '社会契约', 'social\\s*contract', '辩证', 'dialectic',
+    '三权分立',
+    '制衡',
+    '社会契约',
+    'social\\s*contract',
+    '辩证',
+    'dialectic',
   ].join('|'),
-  'i',
+  'i'
 );
 
 // ② 「应用到软件/项目」信号:明确想把它落成软件/系统/架构/代码/项目。
@@ -67,7 +126,7 @@ const _APPLY_SW_RE = new RegExp(
     '(?:build|create|design|implement|model).{0,30}(?:software|project|system|architecture|app|codebase)',
     'turn.{0,20}(?:into).{0,20}(?:software|code|system|design)',
   ].join('|'),
-  'i',
+  'i'
 );
 
 /**
@@ -115,7 +174,9 @@ const _stripCode = require('../../utils/stripCodeSpans');
 function matchPhilosophyDesign(text) {
   try {
     const t = _stripCode(text);
-    if (!t.trim()) return false;
+    if (!t.trim()) {
+      return false;
+    }
     return _PHILOSOPHY_RE.test(t) && _APPLY_SW_RE.test(t);
   } catch {
     return false;
@@ -128,8 +189,12 @@ function matchPhilosophyDesign(text) {
  */
 function resolvePhilosophyIntent(text, env = process.env) {
   try {
-    if (!isEnabled(env)) return null;
-    if (!matchPhilosophyDesign(text)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
+    if (!matchPhilosophyDesign(text)) {
+      return null;
+    }
     return {
       id: 'philosophy-design',
       summary: PHILOSOPHY_DESIGN_SUMMARY,
@@ -147,9 +212,13 @@ function resolvePhilosophyIntent(text, env = process.env) {
 function routePhilosophyIntent(opts = {}) {
   try {
     const env = opts.env || process.env;
-    if (!isEnabled(env)) return null;
+    if (!isEnabled(env)) {
+      return null;
+    }
     const intent = resolvePhilosophyIntent(opts.text || '', env);
-    if (!intent) return null;
+    if (!intent) {
+      return null;
+    }
     return { directive: intent.directive, intent };
   } catch {
     return null;

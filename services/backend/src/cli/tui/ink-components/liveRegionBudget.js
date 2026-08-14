@@ -43,7 +43,7 @@ const BASE_CHROME = 9;
 // StreamingBlock 历史 reserve 基数(字节回退目标):`9 + min(toolCount,6)`。
 const LEGACY_BASE = 9;
 // 任务清单封顶比例与硬上下限。
-const TASK_CAP_RATIO = 0.30;
+const TASK_CAP_RATIO = 0.3;
 const TASK_CAP_MIN = 3;
 const TASK_CAP_MAX = 10;
 // 兄弟面板存在时,在 reserve 上多留的安全余量,确保 `streaming + 兄弟 < rows`(严格小于,
@@ -83,7 +83,9 @@ const CLAMP_MARGIN = 2;
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_LIVE_HEIGHT_BUDGET;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -95,7 +97,9 @@ function isEnabled(env = process.env) {
  */
 function clampEnabled(env = process.env) {
   const raw = env && env.KHY_LIVE_HEIGHT_CLAMP;
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -116,7 +120,9 @@ function _rows(rows) {
  * @returns {number}
  */
 function resolveTaskLineCap(rows, env = process.env) {
-  if (!isEnabled(env)) return Infinity;
+  if (!isEnabled(env)) {
+    return Infinity;
+  }
   const r = _rows(rows);
   const cap = Math.floor(r * TASK_CAP_RATIO);
   return Math.max(TASK_CAP_MIN, Math.min(TASK_CAP_MAX, cap));
@@ -137,14 +143,18 @@ function resolveTaskLineCap(rows, env = process.env) {
 function capTaskLines(lines, rows, env = process.env) {
   const arr = Array.isArray(lines) ? lines : [];
   const cap = resolveTaskLineCap(rows, env);
-  if (!Number.isFinite(cap) || arr.length <= cap) return { lines: arr, hidden: 0, hiddenLines: [] };
+  if (!Number.isFinite(cap) || arr.length <= cap) {
+    return { lines: arr, hidden: 0, hiddenLines: [] };
+  }
   const cut = arr.length - cap;
   // 刀30:优先保活进行中/错误/待办,陈旧已完成最先隐藏。门控开且全部行图标可识别 →
   // 优先级选择;门控关或任一行不可识别 → 回退历史尾切(slice)。截断条数 `cut` 不变,
   // 故面板高度(=保活行数)与既有 reserve 一致——本刀是「保活哪些行」的重排,高度中性。
   if (taskPriorityCapEnabled(env)) {
     const sel = selectTaskLinesByPriority(arr, cap);
-    if (sel) return { lines: sel.kept, hidden: cut, hiddenLines: sel.hiddenLines };
+    if (sel) {
+      return { lines: sel.kept, hidden: cut, hiddenLines: sel.hiddenLines };
+    }
   }
   const kept = arr.slice(cut); // tail（legacy 尾切）
   const hiddenLines = arr.slice(0, cut); // head（被丢弃,供状态分解）
@@ -159,7 +169,9 @@ function capTaskLines(lines, rows, env = process.env) {
  */
 function taskPanelHeight(lineCount, hasHiddenNotice = false) {
   const n = Number(lineCount);
-  if (!Number.isFinite(n) || n <= 0) return 0;
+  if (!Number.isFinite(n) || n <= 0) {
+    return 0;
+  }
   return Math.floor(n) + TASK_PANEL_CHROME + (hasHiddenNotice ? 1 : 0);
 }
 
@@ -182,24 +194,38 @@ function resolveStreamReserve(opts = {}, env = process.env) {
   const o = opts || {};
   const toolCount = Math.max(0, Number(o.toolCount) || 0);
   const toolRows = Math.min(toolCount, 6);
-  if (!isEnabled(env)) return LEGACY_BASE + toolRows;
+  if (!isEnabled(env)) {
+    return LEGACY_BASE + toolRows;
+  }
 
   // 兄弟面板的累计高度(任务清单 + 计划 + 队列 + steer)。
   let siblingHeight = taskPanelHeight(o.taskLineCount, !!o.taskHasHiddenNotice);
-  if (o.planActive) siblingHeight += 3; // PlanApproval 预览 / 执行 spinner
+  if (o.planActive) {
+    siblingHeight += 3;
+  } // PlanApproval 预览 / 执行 spinner
   const queueLen = Math.max(0, Number(o.queueLen) || 0);
-  if (queueLen > 0) siblingHeight += Math.min(queueLen, 4) + 1;
+  if (queueLen > 0) {
+    siblingHeight += Math.min(queueLen, 4) + 1;
+  }
   const steerLen = Math.max(0, Number(o.steerLen) || 0);
-  if (steerLen > 0) siblingHeight += 1;
+  if (steerLen > 0) {
+    siblingHeight += 1;
+  }
 
   // 页脚条件行(BASE_CHROME 未计入的变高行)+ Windows 静态余量。均加性,惰性时为 0。
   let footerExtra = 0;
-  if (o.collabActive) footerExtra += COLLAB_LINE_ROWS;
-  if (o.topicInFooter) footerExtra += TOPIC_FOOTER_ROWS;
-  const winMargin = (o.platform === 'win32') ? WIN_SAFETY_MARGIN : 0;
+  if (o.collabActive) {
+    footerExtra += COLLAB_LINE_ROWS;
+  }
+  if (o.topicInFooter) {
+    footerExtra += TOPIC_FOOTER_ROWS;
+  }
+  const winMargin = o.platform === 'win32' ? WIN_SAFETY_MARGIN : 0;
 
   // 三项修正皆 0 且无兄弟面板 → 与 legacy 逐字节一致(不加 base chrome 差、不加 margin)。
-  if (siblingHeight <= 0 && footerExtra === 0 && winMargin === 0) return BASE_CHROME + toolRows;
+  if (siblingHeight <= 0 && footerExtra === 0 && winMargin === 0) {
+    return BASE_CHROME + toolRows;
+  }
   // 有兄弟面板 → 额外叠加 SAFETY_MARGIN(严格 < rows);仅页脚行/Windows 余量在时不叠 SAFETY_MARGIN
   // (那是「兄弟面板行计数离散化」的专属余量,与页脚固定行无关)。
   const siblingMargin = siblingHeight > 0 ? SAFETY_MARGIN : 0;
@@ -227,13 +253,19 @@ function resolveStreamReserve(opts = {}, env = process.env) {
 function resolveExtraReserve(opts = {}, env = process.env) {
   const o = opts || {};
   const prev = Math.max(0, Number(o.prevExtra) || 0);
-  if (!isEnabled(env) || !clampEnabled(env)) return 0; // 惰性 → 字节回退
+  if (!isEnabled(env) || !clampEnabled(env)) {
+    return 0;
+  } // 惰性 → 字节回退
   const rows = _rows(o.rows);
   const measured = Number(o.lastOutputHeight);
-  if (!Number.isFinite(measured) || measured <= 0) return prev; // 无信号 → 保持
+  if (!Number.isFinite(measured) || measured <= 0) {
+    return prev;
+  } // 无信号 → 保持
   const target = rows - CLAMP_MARGIN;
   const overflow = measured - target;
-  if (overflow <= 0) return prev; // 在预算内 → 保持(滞回)
+  if (overflow <= 0) {
+    return prev;
+  } // 在预算内 → 保持(滞回)
   const maxExtra = Math.max(0, rows - CLAMP_MARGIN); // 有限上限;下限保护交 StreamingBlock 的 max(6,…)
   return Math.min(prev + overflow, maxExtra);
 }

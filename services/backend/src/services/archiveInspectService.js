@@ -16,6 +16,7 @@
  */
 
 const fs = require('fs');
+
 const policy = require('./archiveManifestPolicy');
 
 // 单个压缩包尺寸守护(tar 同步路径会整体读取;zip 仅读中央目录,但仍设上限防极端)。
@@ -30,15 +31,23 @@ const MAX_LIST_ENTRIES = Math.max(
 );
 
 function _statSafe(filePath) {
-  try { return fs.statSync(filePath); } catch { return null; }
+  try {
+    return fs.statSync(filePath);
+  } catch {
+    return null;
+  }
 }
 
 function _bufferToText(buf, maxChars) {
   try {
-    if (!buf || !buf.length) return '';
+    if (!buf || !buf.length) {
+      return '';
+    }
     // 二进制嗅探:头部出现 NUL 字节 → 视为二进制,不窥探。
     const head = buf.subarray(0, Math.min(buf.length, 1024));
-    if (head.includes(0)) return '';
+    if (head.includes(0)) {
+      return '';
+    }
     const text = buf.toString('utf-8');
     const normalized = String(text).replace(/\r\n/g, '\n');
     return normalized.length > maxChars ? normalized.slice(0, maxChars) : normalized;
@@ -49,7 +58,11 @@ function _bufferToText(buf, maxChars) {
 
 async function _inspectZip(filePath, env) {
   let StreamZip;
-  try { StreamZip = require('node-stream-zip'); } catch { return { success: false, error: 'zip 列表库不可用' }; }
+  try {
+    StreamZip = require('node-stream-zip');
+  } catch {
+    return { success: false, error: 'zip 列表库不可用' };
+  }
   let zip = null;
   try {
     zip = new StreamZip.async({ file: filePath });
@@ -70,14 +83,30 @@ async function _inspectZip(filePath, env) {
       try {
         const buf = await zip.entryData(target.name);
         const text = _bufferToText(buf, maxChars);
-        if (text) peeks.push({ name: target.name, text });
-      } catch { /* 单条窥探失败不影响整体 */ }
+        if (text) {
+          peeks.push({ name: target.name, text });
+        }
+      } catch {
+        /* 单条窥探失败不影响整体 */
+      }
     }
-    return { success: true, entries: listed, totalEntries, truncated: totalEntries > listed.length, peeks };
+    return {
+      success: true,
+      entries: listed,
+      totalEntries,
+      truncated: totalEntries > listed.length,
+      peeks,
+    };
   } catch (err) {
     return { success: false, error: `zip 列表失败: ${(err && err.message) || 'unknown'}` };
   } finally {
-    if (zip) { try { await zip.close(); } catch { /* ignore */ } }
+    if (zip) {
+      try {
+        await zip.close();
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }
 
@@ -88,14 +117,20 @@ function _inspectTar(filePath, env) {
     return { success: false, error: `压缩包过大(${stat.size} 字节),跳过列目录` };
   }
   let tar;
-  try { tar = require('tar'); } catch { return { success: false, error: 'tar 列表库不可用' }; }
+  try {
+    tar = require('tar');
+  } catch {
+    return { success: false, error: 'tar 列表库不可用' };
+  }
   try {
     const entries = [];
     tar.t({
       file: filePath,
       sync: true,
       onentry(e) {
-        if (entries.length >= MAX_LIST_ENTRIES) return;
+        if (entries.length >= MAX_LIST_ENTRIES) {
+          return;
+        }
         const type = String((e && e.type) || '');
         entries.push({
           name: String((e && e.path) || ''),
@@ -126,24 +161,43 @@ function _inspectTar(filePath, env) {
 async function inspectArchive(filePath, mimeType, opts = {}) {
   const env = opts.env || process.env;
   try {
-    if (!policy.isEnabled(env)) return { success: false, skipped: true };
-    if (!filePath) return { success: false, error: '无文件路径' };
+    if (!policy.isEnabled(env)) {
+      return { success: false, skipped: true };
+    }
+    if (!filePath) {
+      return { success: false, error: '无文件路径' };
+    }
     const strategy = policy.archiveStrategyForPath(filePath, env);
-    if (!strategy) return { success: false, skipped: true };
+    if (!strategy) {
+      return { success: false, skipped: true };
+    }
 
     const name = opts.name || require('path').basename(String(filePath));
     const mime = mimeType || policy.mimeForArchive(filePath, env) || 'application/octet-stream';
 
     if (strategy === 'unsupported') {
-      return { success: false, kindToken: 'unsupported', name, mimeType: mime, error: '该压缩格式暂不支持列出内容(支持 .zip / .tar / .tar.gz)' };
+      return {
+        success: false,
+        kindToken: 'unsupported',
+        name,
+        mimeType: mime,
+        error: '该压缩格式暂不支持列出内容(支持 .zip / .tar / .tar.gz)',
+      };
     }
 
     const stat = _statSafe(filePath);
     if (stat && stat.size <= 0) {
-      return { success: false, kindToken: strategy, name, mimeType: mime, error: '压缩包为空或无法读取' };
+      return {
+        success: false,
+        kindToken: strategy,
+        name,
+        mimeType: mime,
+        error: '压缩包为空或无法读取',
+      };
     }
 
-    const result = strategy === 'zip' ? await _inspectZip(filePath, env) : _inspectTar(filePath, env);
+    const result =
+      strategy === 'zip' ? await _inspectZip(filePath, env) : _inspectTar(filePath, env);
     return { ...result, kindToken: strategy, name, mimeType: mime };
   } catch (err) {
     return { success: false, error: `压缩包检视失败: ${(err && err.message) || 'unknown'}` };
@@ -157,7 +211,9 @@ async function inspectArchive(filePath, mimeType, opts = {}) {
 async function inspectArchiveToManifest(filePath, mimeType, opts = {}) {
   const env = opts.env || process.env;
   const res = await inspectArchive(filePath, mimeType, opts);
-  if (res.skipped) return '';
+  if (res.skipped) {
+    return '';
+  }
   return policy.buildArchiveManifest({
     env,
     name: res.name || (filePath ? require('path').basename(String(filePath)) : 'archive'),

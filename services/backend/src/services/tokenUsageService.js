@@ -6,29 +6,33 @@
  * Provides remaining quota based on subscription tier.
  */
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
-const USAGE_FILE = path.join(os.homedir(), '.khyquant', 'token_usage.json');
+// Legacy user-home usage file (pre portable-aware resolution).
+function _legacyUsageFile() {
+  return path.join(os.homedir(), '.khyquant', 'token_usage.json');
+}
 
-// USD to CNY exchange rate (approximate, updated periodically)
-const USD_TO_CNY = 7.25;
+// Resolve the usage file lazily via the portable-aware app home so portable
+// deployments keep token usage inside the install directory. Falls back to
+// the legacy user-home location when dataHome is unavailable.
+function _usageFile() {
+  try {
+    const { getAppHome } = require('../utils/dataHome');
+    return path.join(getAppHome(), 'token_usage.json');
+  } catch {
+    return _legacyUsageFile();
+  }
+}
 
-// Per-token pricing by provider (USD per 1M tokens)
-const TOKEN_PRICING = {
-  'OpenAI': { input: 0.15, output: 0.60 },       // gpt-4o-mini
-  'Anthropic': { input: 3.00, output: 15.00 },    // claude-3-5-sonnet
-  'Google Gemini': { input: 0.075, output: 0.30 },// gemini-2.5-flash
-  'Groq': { input: 0.05, output: 0.08 },          // llama-3.3
-  'OpenRouter': { input: 0.10, output: 0.30 },    // varies
-  '智谱AI': { input: 0.10, output: 0.10 },        // glm-4
-  '讯飞星火': { input: 0.00, output: 0.00 },       // free tier
-  '百度文心': { input: 0.12, output: 0.12 },       // ERNIE
-  '通义千问': { input: 0.008, output: 0.02 },      // qwen-turbo
-  'HuggingFace': { input: 0.00, output: 0.00 },   // free inference
-  'Ollama': { input: 0.00, output: 0.00 },        // local
-  'default': { input: 0.10, output: 0.30 },
-};
+// Batch 3:纯定价/换算数学(常量表、成本公式、token 估算)下沉到纯叶子
+// tokenPricing.js;本壳保持导出签名与返回结构逐字段恒等,只做薄委托。
+const _pricing = require('./tokenPricing');
+
+// Re-exported verbatim from the pricing leaf (same object identity).
+const USD_TO_CNY = _pricing.USD_TO_CNY;
+const TOKEN_PRICING = _pricing.TOKEN_PRICING;
 
 // In-memory session accumulator (resets each REPL start)
 let _sessionUsage = {
@@ -45,15 +49,41 @@ let _sessionUsage = {
 // toolUseLoop 交付汇总点经 codeChangeStats.collectUncountedChurn 幂等喂入。
 let _codeChanges = { added: 0, removed: 0 };
 
+// Serialize disk persistence (loadUsageData -> modify -> saveUsageData) through
+// an in-process Promise queue. Each write appends to the chain tail so
+// concurrent recordUsage calls run the read-modify-write critical section one
+// at a time and can never clobber each other's daily/monthly aggregates.
+let _writeChain = Promise.resolve();
+
+// Truncate a running USD total to 6 decimals to avoid floating-point drift
+// (e.g. 0.1 + 0.2 -> 0.30000000000000004). Applied consistently to the
+// session, daily, and monthly cost accumulators.
+function _roundCost(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return 0;
+  }
+  return parseFloat(n.toFixed(6));
+}
+
 /**
  * Load persisted usage data from disk.
  */
 function loadUsageData() {
   try {
-    if (fs.existsSync(USAGE_FILE)) {
-      return JSON.parse(fs.readFileSync(USAGE_FILE, 'utf-8'));
+    const file = _usageFile();
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, 'utf-8'));
     }
-  } catch { /* ignore corrupt file */ }
+    // Read-only legacy compat: fall back to the historical user-home file
+    // when the new location has no data yet (writes always go to _usageFile()).
+    const legacy = _legacyUsageFile();
+    if (legacy !== file && fs.existsSync(legacy)) {
+      return JSON.parse(fs.readFileSync(legacy, 'utf-8'));
+    }
+  } catch {
+    /* ignore corrupt file */
+  }
   return { daily: {}, monthlyTotals: {} };
 }
 
@@ -62,10 +92,14 @@ function loadUsageData() {
  */
 function saveUsageData(data) {
   try {
-    const dir = path.dirname(USAGE_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(USAGE_FILE, JSON.stringify(data, null, 2), 'utf-8');
-  } catch { /* ignore write failure */ }
+    const dir = path.dirname(_usageFile());
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(_usageFile(), JSON.stringify(data, null, 2), 'utf-8');
+  } catch {
+    /* ignore write failure */
+  }
 }
 
 /**
@@ -93,12 +127,13 @@ function monthKey() {
 function recordUsage(provider, model, inputTokens = 0, outputTokens = 0, costUSD = 0) {
   const total = inputTokens + outputTokens;
 
-  // Update session
+  // Update session synchronously — callers read getSessionUsage() immediately
+  // after recordUsage, so the in-memory accumulator must not be deferred.
   _sessionUsage.inputTokens += inputTokens;
   _sessionUsage.outputTokens += outputTokens;
   _sessionUsage.totalTokens += total;
   _sessionUsage.requests += 1;
-  _sessionUsage.costUSD += costUSD;
+  _sessionUsage.costUSD = _roundCost(_sessionUsage.costUSD + costUSD);
   _sessionUsage.records.push({
     provider,
     model,
@@ -109,42 +144,63 @@ function recordUsage(provider, model, inputTokens = 0, outputTokens = 0, costUSD
     timestamp: Date.now(),
   });
 
-  // Persist to disk (daily aggregate)
-  const data = loadUsageData();
+  // Persist to disk (daily aggregate). Capture the bucket keys now, then append
+  // the read-modify-write to the write queue so concurrent calls are serialized
+  // and no update is lost. The task body swallows errors and never rejects, so
+  // the chain always stays resolvable.
   const day = todayKey();
   const month = monthKey();
+  _writeChain = _writeChain.then(() => {
+    try {
+      const data = loadUsageData();
 
-  if (!data.daily[day]) {
-    data.daily[day] = { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0 };
-  }
-  data.daily[day].inputTokens += inputTokens;
-  data.daily[day].outputTokens += outputTokens;
-  data.daily[day].totalTokens += total;
-  data.daily[day].requests += 1;
-  data.daily[day].costUSD += costUSD;
+      if (!data.daily[day]) {
+        data.daily[day] = {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          requests: 0,
+          costUSD: 0,
+        };
+      }
+      data.daily[day].inputTokens += inputTokens;
+      data.daily[day].outputTokens += outputTokens;
+      data.daily[day].totalTokens += total;
+      data.daily[day].requests += 1;
+      data.daily[day].costUSD = _roundCost(data.daily[day].costUSD + costUSD);
 
-  if (!data.monthlyTotals[month]) {
-    data.monthlyTotals[month] = { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0 };
-  }
-  data.monthlyTotals[month].inputTokens += inputTokens;
-  data.monthlyTotals[month].outputTokens += outputTokens;
-  data.monthlyTotals[month].totalTokens += total;
-  data.monthlyTotals[month].requests += 1;
-  data.monthlyTotals[month].costUSD += costUSD;
+      if (!data.monthlyTotals[month]) {
+        data.monthlyTotals[month] = {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          requests: 0,
+          costUSD: 0,
+        };
+      }
+      data.monthlyTotals[month].inputTokens += inputTokens;
+      data.monthlyTotals[month].outputTokens += outputTokens;
+      data.monthlyTotals[month].totalTokens += total;
+      data.monthlyTotals[month].requests += 1;
+      data.monthlyTotals[month].costUSD = _roundCost(data.monthlyTotals[month].costUSD + costUSD);
 
-  // Prune old months (keep 6 months)
-  const months = Object.keys(data.monthlyTotals).sort();
-  while (months.length > 6) {
-    delete data.monthlyTotals[months.shift()];
-  }
+      // Prune old months (keep 6 months)
+      const months = Object.keys(data.monthlyTotals).sort();
+      while (months.length > 6) {
+        delete data.monthlyTotals[months.shift()];
+      }
 
-  // Prune old days (keep 90 days)
-  const days = Object.keys(data.daily).sort();
-  while (days.length > 90) {
-    delete data.daily[days.shift()];
-  }
+      // Prune old days (keep 90 days)
+      const days = Object.keys(data.daily).sort();
+      while (days.length > 90) {
+        delete data.daily[days.shift()];
+      }
 
-  saveUsageData(data);
+      saveUsageData(data);
+    } catch {
+      /* ignore persistence failure; never reject the chain */
+    }
+  });
 }
 
 /**
@@ -163,9 +219,15 @@ function recordCodeChange(added, removed) {
   try {
     const a = Number(added);
     const r = Number(removed);
-    if (Number.isFinite(a) && a > 0) _codeChanges.added += Math.floor(a);
-    if (Number.isFinite(r) && r > 0) _codeChanges.removed += Math.floor(r);
-  } catch { /* fail-soft:账本绝不影响主流程 */ }
+    if (Number.isFinite(a) && a > 0) {
+      _codeChanges.added += Math.floor(a);
+    }
+    if (Number.isFinite(r) && r > 0) {
+      _codeChanges.removed += Math.floor(r);
+    }
+  } catch {
+    /* fail-soft:账本绝不影响主流程 */
+  }
 }
 
 /** 刀110:读取本会话代码改动累计(副本,防外部改写)。 */
@@ -178,7 +240,15 @@ function getCodeChanges() {
  */
 function getTodayUsage() {
   const data = loadUsageData();
-  return data.daily[todayKey()] || { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0 };
+  return (
+    data.daily[todayKey()] || {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      requests: 0,
+      costUSD: 0,
+    }
+  );
 }
 
 /**
@@ -186,7 +256,15 @@ function getTodayUsage() {
  */
 function getMonthUsage() {
   const data = loadUsageData();
-  return data.monthlyTotals[monthKey()] || { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0 };
+  return (
+    data.monthlyTotals[monthKey()] || {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      requests: 0,
+      costUSD: 0,
+    }
+  );
 }
 
 /**
@@ -273,9 +351,13 @@ function _fmtTokenCount(n, legacy, env = process.env) {
     const { ccFormatEnabled, ccFormatTokens } = require('../cli/ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatTokens(Number(n));
-      if (out) return out;
+      if (out) {
+        return out;
+      }
     }
-  } catch { /* fall through to legacy */ }
+  } catch {
+    /* fall through to legacy */
+  }
   return legacy != null ? legacy : Number(n).toLocaleString('en-US');
 }
 
@@ -366,60 +448,44 @@ function formatUsageReport() {
 /**
  * Estimate token count from text (fallback when API doesn't return usage).
  * Rough heuristic: ~4 chars per token for English, ~2 chars per token for Chinese.
+ * Thin delegate to the pure pricing leaf (tokenPricing.estimateTokens).
  */
 function estimateTokens(text) {
-  if (!text) return 0;
-  // Count Chinese characters
-  const cjkCount = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
-  const nonCjkLen = text.length - cjkCount;
-  return Math.ceil(cjkCount / 1.5 + nonCjkLen / 4);
+  return _pricing.estimateTokens(text);
 }
 
 /**
  * Calculate cost for a request based on provider pricing.
+ * Thin delegate to tokenPricing.calculateCost with the built-in table/rate.
  * @param {string} provider
  * @param {number} inputTokens
  * @param {number} outputTokens
  * @returns {{ costUSD: number, costCNY: number }}
  */
 function calculateCost(provider, inputTokens, outputTokens) {
-  const pricing = TOKEN_PRICING[provider] || TOKEN_PRICING['default'];
-  const costUSD = (inputTokens * pricing.input + outputTokens * pricing.output) / 1000000;
-  const costCNY = costUSD * USD_TO_CNY;
-  return { costUSD, costCNY };
+  return _pricing.calculateCost(provider, inputTokens, outputTokens);
 }
 
 /**
  * Convenience: estimate cost from model/provider name + token counts.
  * Tries model name first, then provider name, then default.
+ * Thin delegate to tokenPricing.estimateCost with the built-in table.
  * @param {number} inputTokens
  * @param {number} outputTokens
  * @param {string} modelOrProvider - model name or provider key
  * @returns {number} costUSD
  */
 function estimateCost(inputTokens, outputTokens, modelOrProvider) {
-  const key = String(modelOrProvider || '').toLowerCase();
-  // Try to match a pricing key by substring
-  let pricing = TOKEN_PRICING['default'];
-  for (const [name, p] of Object.entries(TOKEN_PRICING)) {
-    if (name !== 'default' && key.includes(name.toLowerCase())) {
-      pricing = p;
-      break;
-    }
-  }
-  return (inputTokens * pricing.input + outputTokens * pricing.output) / 1000000;
+  return _pricing.estimateCost(inputTokens, outputTokens, modelOrProvider);
 }
 
 /**
  * Get total cost for session in both currencies.
+ * State read (_sessionUsage.records) stays here; the summation math lives in
+ * the pure leaf (tokenPricing.sumRecordsCost).
  */
 function getSessionCost() {
-  let totalUSD = 0;
-  for (const rec of _sessionUsage.records) {
-    const pricing = TOKEN_PRICING[rec.provider] || TOKEN_PRICING['default'];
-    totalUSD += (rec.inputTokens * pricing.input + rec.outputTokens * pricing.output) / 1000000;
-  }
-  return { costUSD: totalUSD, costCNY: totalUSD * USD_TO_CNY };
+  return _pricing.sumRecordsCost(_sessionUsage.records);
 }
 
 /**
@@ -460,7 +526,12 @@ function formatCostReport() {
   out += d('  \u2502 ') + d('输入: ') + w(fmtNum(session.inputTokens)) + d(' tokens') + '\n';
   out += d('  \u2502 ') + d('输出: ') + w(fmtNum(session.outputTokens)) + d(' tokens') + '\n';
   out += d('  \u2502 ') + d('合计: ') + b(fmtNum(session.totalTokens)) + d(' tokens') + '\n';
-  out += d('  \u2502 ') + d('费用: ') + y(fmtCNY(sessionCost.costCNY)) + d(` (${fmtUSD(sessionCost.costUSD)})`) + '\n';
+  out +=
+    d('  \u2502 ') +
+    d('费用: ') +
+    y(fmtCNY(sessionCost.costCNY)) +
+    d(` (${fmtUSD(sessionCost.costUSD)})`) +
+    '\n';
   // \u5200110:\u4f1a\u8bdd\u4ee3\u7801\u6539\u52a8(\u5bf9\u9f50 CC /cost "Total code changes")\u3002\u95e8\u63a7 KHY_CODE_CHANGES
   // \u5173 / \u65e0\u6539\u52a8 \u2192 \u4e0d\u8ffd\u52a0\u6b64\u884c(\u9010\u5b57\u8282\u56de\u9000\u4eca\u65e5\u62a5\u8868)\u3002fail-soft:\u7edd\u4e0d\u5f71\u54cd\u4e3b\u62a5\u8868\u3002
   try {
@@ -468,9 +539,13 @@ function formatCostReport() {
     if (_ccs.codeChangesEnabled(process.env)) {
       const _cc = getCodeChanges();
       const _ccVal = _ccs.buildCodeChangesValue(_cc.added, _cc.removed);
-      if (_ccVal) out += d('  \u2502 ') + d('\u6539\u52a8: ') + w(_ccVal) + '\n';
+      if (_ccVal) {
+        out += d('  \u2502 ') + d('\u6539\u52a8: ') + w(_ccVal) + '\n';
+      }
     }
-  } catch { /* fail-soft */ }
+  } catch {
+    /* fail-soft */
+  }
   out += d('  \u2514\n\n');
 
   // Today
@@ -493,30 +568,54 @@ function formatCostReport() {
   // (\u4e0e\u520092 \u7701\u7565\u65e0\u5e95\u5ea7\u5b57\u6bb5\u540c\u7eaa\u5f8b)\u3002\u95e8\u63a7 KHY_COST_BY_MODEL \u5173 \u2192 \u4e0d\u8ffd\u52a0\u672c\u6bb5(\u9010\u5b57\u8282\u56de\u9000)\u3002
   try {
     const cbm = require('./costByModel');
-    if (cbm.costByModelEnabled(process.env) && Array.isArray(session.records) && session.records.length) {
+    if (
+      cbm.costByModelEnabled(process.env) &&
+      Array.isArray(session.records) &&
+      session.records.length
+    ) {
       const { formatModelLabel } = require('../cli/ccModelName');
-      const rows = cbm.aggregateSessionUsageByModel(session.records, (m) => formatModelLabel(m, process.env));
+      const rows = cbm.aggregateSessionUsageByModel(session.records, (m) =>
+        formatModelLabel(m, process.env)
+      );
       if (rows.length) {
-        out += w('  \u250c\u2500 \u6309\u6a21\u578b\u7528\u91cf\uff08\u672c\u6b21\u4f1a\u8bdd\uff09\n');
+        out += w(
+          '  \u250c\u2500 \u6309\u6a21\u578b\u7528\u91cf\uff08\u672c\u6b21\u4f1a\u8bdd\uff09\n'
+        );
         for (const row of rows) {
           const cny = row.cost * USD_TO_CNY;
-          out += d('  \u2502 ') + w(row.label) + d(': ')
-            + w(fmtNum(row.input)) + d(' \u8f93\u5165 \u00b7 ') + w(fmtNum(row.output)) + d(' \u8f93\u51fa')
-            + d(' \u00b7 ') + y(fmtCNY(cny)) + d(` (${fmtUSD(row.cost)})`) + '\n';
+          out +=
+            d('  \u2502 ') +
+            w(row.label) +
+            d(': ') +
+            w(fmtNum(row.input)) +
+            d(' \u8f93\u5165 \u00b7 ') +
+            w(fmtNum(row.output)) +
+            d(' \u8f93\u51fa') +
+            d(' \u00b7 ') +
+            y(fmtCNY(cny)) +
+            d(` (${fmtUSD(row.cost)})`) +
+            '\n';
         }
         out += d('  \u2514\n\n');
       }
     }
-  } catch { /* fail-soft: \u5f52\u7ec4\u5931\u8d25\u7edd\u4e0d\u5f71\u54cd\u4e3b\u62a5\u8868 */ }
+  } catch {
+    /* fail-soft: \u5f52\u7ec4\u5931\u8d25\u7edd\u4e0d\u5f71\u54cd\u4e3b\u62a5\u8868 */
+  }
 
   // Quota bar
   if (quota.limit !== -1) {
     const pct = Math.round((quota.used / quota.limit) * 100);
     const color = pct > 90 ? r : pct > 70 ? y : g;
     const barLen = 20;
-    const filled = Math.round(barLen * Math.min(pct, 100) / 100);
+    const filled = Math.round((barLen * Math.min(pct, 100)) / 100);
     const bar = color('\u2588'.repeat(filled)) + d('\u2591'.repeat(barLen - filled));
-    out += w('  额度: ') + bar + ` ${color(pct + '%')} ` + d(`(${fmtNum(quota.used)}/${fmtNum(quota.limit)})`) + '\n';
+    out +=
+      w('  额度: ') +
+      bar +
+      ` ${color(pct + '%')} ` +
+      d(`(${fmtNum(quota.used)}/${fmtNum(quota.limit)})`) +
+      '\n';
   } else {
     out += w('  额度: ') + g('无限制 (企业版)') + '\n';
   }
@@ -529,9 +628,27 @@ function formatCostReport() {
  * Reset all usage data.
  */
 function resetUsage() {
-  _sessionUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0, requests: 0, costUSD: 0, records: [] };
+  _sessionUsage = {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    requests: 0,
+    costUSD: 0,
+    records: [],
+  };
   _compressionStats = { originalTokens: 0, compressedTokens: 0, savedTokens: 0, requests: 0 };
-  saveUsageData({ daily: {}, monthlyTotals: {} });
+  // Honor the _codeChanges contract: the session code-change ledger zeroes on
+  // reset (its declaration comment promises '随 resetUsage 归零').
+  _codeChanges = { added: 0, removed: 0 };
+  // Route the disk clear through the write queue so it lands after any pending
+  // recordUsage writes instead of racing them.
+  _writeChain = _writeChain.then(() => {
+    try {
+      saveUsageData({ daily: {}, monthlyTotals: {} });
+    } catch {
+      /* ignore write failure; never reject the chain */
+    }
+  });
 }
 
 // ── Tokenless compression tracking ──────────────────────────────────

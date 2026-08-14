@@ -381,10 +381,10 @@ const parsers = svc.__parsersForTests;
   const orig = process.env[KEY];
   afterEach(() => { if (orig === undefined) delete process.env[KEY]; else process.env[KEY] = orig; });
 
-  test('no opts → default 8', () => {
+  test('no opts → default 5', () => {
     delete process.env[KEY];
-    expect(resolveLimit()).toBe(8);
-    expect(resolveLimit({})).toBe(8);
+    expect(resolveLimit()).toBe(5);
+    expect(resolveLimit({})).toBe(5);
   });
 
   test('explicit count is honored', () => {
@@ -399,9 +399,9 @@ const parsers = svc.__parsersForTests;
 
   test('zero / negative / non-numeric falls back to default', () => {
     delete process.env[KEY];
-    expect(resolveLimit({ count: 0 })).toBe(8);
-    expect(resolveLimit({ count: -3 })).toBe(8);
-    expect(resolveLimit({ count: 'abc' })).toBe(8);
+    expect(resolveLimit({ count: 0 })).toBe(5);
+    expect(resolveLimit({ count: -3 })).toBe(5);
+    expect(resolveLimit({ count: 'abc' })).toBe(5);
   });
 
   test('limit / num / topN aliases all work', () => {
@@ -421,5 +421,54 @@ const parsers = svc.__parsersForTests;
   test('env default above ceiling is clamped too', () => {
     process.env[KEY] = '999';
     expect(resolveLimit()).toBe(30);
+  });
+});
+
+(parsers ? describe : describe.skip)('adaptive limit inference (_inferAdaptiveLimit)', () => {
+  const { inferAdaptiveLimit } = parsers || {};
+
+  test('empty / short query → DEFAULT_RESULTS (5)', () => {
+    if (!inferAdaptiveLimit) return;
+    expect(inferAdaptiveLimit('')).toBe(5);
+    expect(inferAdaptiveLimit('hello')).toBe(5);
+  });
+
+  test('single simple question → 7', () => {
+    if (!inferAdaptiveLimit) return;
+    expect(inferAdaptiveLimit('What is the capital of France?')).toBe(7);
+  });
+
+  test('long query → more results', () => {
+    if (!inferAdaptiveLimit) return;
+    const long = 'I want to understand the differences between React and Vue in terms of performance ecosystem learning curve and community support for building large scale applications';
+    expect(inferAdaptiveLimit(long)).toBeGreaterThanOrEqual(10);
+  });
+
+  test('multiple questions → more results', () => {
+    if (!inferAdaptiveLimit) return;
+    expect(inferAdaptiveLimit('What is AI? How does it work? What are its applications?')).toBeGreaterThanOrEqual(10);
+  });
+
+  test('comparison keywords → more results', () => {
+    if (!inferAdaptiveLimit) return;
+    expect(inferAdaptiveLimit('iPhone 15 vs Samsung S24 comparison pros and cons')).toBeGreaterThanOrEqual(7);
+  });
+
+  test('breadth keywords (overview/list) → more results', () => {
+    if (!inferAdaptiveLimit) return;
+    expect(inferAdaptiveLimit('有哪些流行的 JavaScript 框架')).toBeGreaterThanOrEqual(7);
+    expect(inferAdaptiveLimit('Overview of machine learning types')).toBeGreaterThanOrEqual(7);
+  });
+
+  test('time-sensitive keywords → slightly more', () => {
+    if (!inferAdaptiveLimit) return;
+    expect(inferAdaptiveLimit('最新 AI 新闻')).toBeGreaterThanOrEqual(7);
+  });
+
+  test('result is clamped to ceiling (30)', () => {
+    if (!inferAdaptiveLimit) return;
+    // Extremely complex query should still be capped
+    const extreme = '? '.repeat(50) + 'compare vs differences between '.repeat(20);
+    expect(inferAdaptiveLimit(extreme)).toBeLessThanOrEqual(30);
   });
 });

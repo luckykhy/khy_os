@@ -14,7 +14,9 @@ class LRUCache {
   }
 
   get(key) {
-    if (!this._map.has(key)) return undefined;
+    if (!this._map.has(key)) {
+      return undefined;
+    }
     const val = this._map.get(key);
     this._map.delete(key);
     this._map.set(key, val);
@@ -26,7 +28,9 @@ class LRUCache {
   }
 
   set(key, val) {
-    if (this._map.has(key)) this._map.delete(key);
+    if (this._map.has(key)) {
+      this._map.delete(key);
+    }
     this._map.set(key, val);
     if (this._map.size > this._max) {
       const firstKey = this._map.keys().next().value;

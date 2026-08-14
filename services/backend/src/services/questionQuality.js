@@ -22,7 +22,9 @@
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
 function _flagOn(raw) {
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !OFF_VALUES.includes(v);
 }
 
@@ -36,8 +38,10 @@ function isRecommendedFirstEnabled(env = process.env) {
 const _RECOMMENDED_MARKER_RE = /[（(]\s*(?:recommended|推荐)\s*[)）]/i;
 
 function _optLabel(o) {
-  if (typeof o === 'string') return o;
-  return (o && (o.label || o.value)) ? String(o.label || o.value) : '';
+  if (typeof o === 'string') {
+    return o;
+  }
+  return o && (o.label || o.value) ? String(o.label || o.value) : '';
 }
 
 /** 该选项是否带明确「推荐」标记。 */
@@ -56,13 +60,20 @@ function isRecommendedOption(option) {
  * @returns {Array}
  */
 function promoteRecommendedFirst(options) {
-  if (!Array.isArray(options) || options.length < 2) return options;
+  if (!Array.isArray(options) || options.length < 2) {
+    return options;
+  }
   try {
     let idx = -1;
     for (let i = 0; i < options.length; i++) {
-      if (isRecommendedOption(options[i])) { idx = i; break; }
+      if (isRecommendedOption(options[i])) {
+        idx = i;
+        break;
+      }
     }
-    if (idx <= 0) return options; // 无标记或已在首位 → 原样(不复制)
+    if (idx <= 0) {
+      return options;
+    } // 无标记或已在首位 → 原样(不复制)
     const reordered = options.slice();
     const [rec] = reordered.splice(idx, 1);
     reordered.unshift(rec);
@@ -81,14 +92,22 @@ function promoteRecommendedFirst(options) {
  */
 function normalizeQuestions(questions, opts = {}) {
   const env = (opts && opts.env) || process.env;
-  if (!isRecommendedFirstEnabled(env)) return questions;
-  if (!Array.isArray(questions) || questions.length === 0) return questions;
+  if (!isRecommendedFirstEnabled(env)) {
+    return questions;
+  }
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return questions;
+  }
   try {
     let changed = false;
     const out = questions.map((q) => {
-      if (!q || !Array.isArray(q.options)) return q;
+      if (!q || !Array.isArray(q.options)) {
+        return q;
+      }
       const promoted = promoteRecommendedFirst(q.options);
-      if (promoted === q.options) return q; // 未重排 → 同引用
+      if (promoted === q.options) {
+        return q;
+      } // 未重排 → 同引用
       changed = true;
       return { ...q, options: promoted };
     });

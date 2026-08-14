@@ -1,16 +1,16 @@
-const express = require('express');
-const { Op } = require('sequelize');
 const {
   generateRegistrationOptions,
   verifyRegistrationResponse,
   generateAuthenticationOptions,
-  verifyAuthenticationResponse
+  verifyAuthenticationResponse,
 } = require('@simplewebauthn/server');
 const { isoBase64URL } = require('@simplewebauthn/server/helpers');
+const express = require('express');
+const { Op } = require('sequelize');
 
-const { User } = require('../models');
-const { authMiddleware } = require('../middleware/auth');
 const { BACKEND_PORT } = require('../constants/serviceDefaults');
+const { authMiddleware } = require('../middleware/auth');
+const { User } = require('../models');
 const authSessionService = require('../services/authSessionService');
 
 const router = express.Router();
@@ -24,8 +24,12 @@ const challengeStore = new Map();
  * 将任意格式转为 base64url 字符串存入数据库
  */
 function toBase64Url(input) {
-  if (!input) return '';
-  if (typeof input === 'string') return input;
+  if (!input) {
+    return '';
+  }
+  if (typeof input === 'string') {
+    return input;
+  }
   // Uint8Array / Buffer
   return isoBase64URL.fromBuffer(input);
 }
@@ -72,12 +76,14 @@ function getRpContext(req) {
     .filter(Boolean);
 
   // Build expected origins dynamically from current request + env config
-  const expectedOrigins = Array.from(new Set([
-    origin,
-    `http://localhost:${BACKEND_PORT}`,
-    `http://127.0.0.1:${BACKEND_PORT}`,
-    ...configuredOrigins
-  ]));
+  const expectedOrigins = Array.from(
+    new Set([
+      origin,
+      `http://localhost:${BACKEND_PORT}`,
+      `http://127.0.0.1:${BACKEND_PORT}`,
+      ...configuredOrigins,
+    ])
+  );
 
   return { rpID, rpName, expectedOrigins };
 }
@@ -89,27 +95,37 @@ function putChallenge(key, payload) {
 function takeChallenge(key) {
   const value = challengeStore.get(key);
   challengeStore.delete(key);
-  if (!value) return null;
-  if (Date.now() - value.createdAt > CHALLENGE_TTL_MS) return null;
+  if (!value) {
+    return null;
+  }
+  if (Date.now() - value.createdAt > CHALLENGE_TTL_MS) {
+    return null;
+  }
   return value;
 }
 
 function sweepExpiredChallenges() {
   const now = Date.now();
   for (const [key, value] of challengeStore.entries()) {
-    if (now - value.createdAt > CHALLENGE_TTL_MS) challengeStore.delete(key);
+    if (now - value.createdAt > CHALLENGE_TTL_MS) {
+      challengeStore.delete(key);
+    }
   }
 }
 
 function normalizeCredentialPayload(payload) {
-  if (payload && payload.credential) return payload.credential;
-  if (payload && payload.response) return payload;
+  if (payload && payload.credential) {
+    return payload.credential;
+  }
+  if (payload && payload.response) {
+    return payload;
+  }
   return null;
 }
 
 async function findUserByIdentifier(identifier) {
   return User.findOne({
-    where: { [Op.or]: [{ username: identifier }, { email: identifier }] }
+    where: { [Op.or]: [{ username: identifier }, { email: identifier }] },
   });
 }
 
@@ -125,7 +141,7 @@ router.post('/register-options', authMiddleware, async (req, res) => {
       excludeCredentials.push({
         id: user.webauthnCredentialId,
         type: 'public-key',
-        transports: ['internal']
+        transports: ['internal'],
       });
     }
 
@@ -141,22 +157,25 @@ router.post('/register-options', authMiddleware, async (req, res) => {
       authenticatorSelection: {
         authenticatorAttachment: 'platform',
         residentKey: 'preferred',
-        userVerification: 'required'
+        userVerification: 'required',
       },
       supportedAlgorithmIDs: [-7, -257],
-      excludeCredentials
+      excludeCredentials,
     });
 
     putChallenge(`reg:${user.id}`, {
       challenge: options.challenge,
       rpID,
-      expectedOrigins
+      expectedOrigins,
     });
 
     res.json({ success: true, options });
   } catch (error) {
     console.error('WebAuthn register-options error:', error);
-    res.status(500).json({ success: false, message: error.message || 'Failed to generate registration options' });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to generate registration options',
+    });
   }
 });
 
@@ -168,15 +187,21 @@ router.post('/register-verify', authMiddleware, async (req, res) => {
     const credential = normalizeCredentialPayload(req.body);
 
     if (!credential) {
-      return res.status(400).json({ success: false, message: 'Missing WebAuthn registration response payload' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Missing WebAuthn registration response payload' });
     }
 
     // 确保 type 字段存在（前端有时会漏传）
-    if (!credential.type) credential.type = 'public-key';
+    if (!credential.type) {
+      credential.type = 'public-key';
+    }
 
     const saved = takeChallenge(`reg:${user.id}`);
     if (!saved) {
-      return res.status(400).json({ success: false, message: 'Registration challenge expired, please retry' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Registration challenge expired, please retry' });
     }
 
     const verification = await verifyRegistrationResponse({
@@ -184,11 +209,13 @@ router.post('/register-verify', authMiddleware, async (req, res) => {
       expectedChallenge: saved.challenge,
       expectedOrigin: saved.expectedOrigins,
       expectedRPID: saved.rpID,
-      requireUserVerification: true
+      requireUserVerification: true,
     });
 
     if (!verification.verified || !verification.registrationInfo) {
-      return res.status(400).json({ success: false, message: 'WebAuthn registration verification failed' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'WebAuthn registration verification failed' });
     }
 
     // v13: registrationInfo.credential 包含 { id, publicKey, counter, ... }
@@ -198,7 +225,7 @@ router.post('/register-verify', authMiddleware, async (req, res) => {
     await user.update({
       webauthnCredentialId: toBase64Url(credInfo.id),
       webauthnPublicKey: toBase64Url(credInfo.publicKey),
-      webauthnCounter: credInfo.counter || 0
+      webauthnCounter: credInfo.counter || 0,
     });
 
     res.json({ success: true, message: 'Biometric credential registered successfully' });
@@ -206,7 +233,7 @@ router.post('/register-verify', authMiddleware, async (req, res) => {
     console.error('WebAuthn register-verify error:', error);
     res.status(400).json({
       success: false,
-      message: error.message || 'Failed to verify registration response'
+      message: error.message || 'Failed to verify registration response',
     });
   }
 });
@@ -224,14 +251,14 @@ router.post('/login-options', async (req, res) => {
     if (!user || !user.webauthnCredentialId || !user.webauthnPublicKey) {
       return res.status(400).json({
         success: false,
-        message: '该账号尚未绑定生物识别，请先用密码登录，再前往「个人中心 → 安全设置」完成绑定'
+        message: '该账号尚未绑定生物识别，请先用密码登录，再前往「个人中心 → 安全设置」完成绑定',
       });
     }
 
     if (user.status !== 'active') {
       return res.status(403).json({
         success: false,
-        message: '账户已被禁用'
+        message: '账户已被禁用',
       });
     }
 
@@ -241,23 +268,28 @@ router.post('/login-options', async (req, res) => {
       rpID,
       timeout: 120000,
       userVerification: 'required',
-      allowCredentials: [{
-        id: user.webauthnCredentialId,
-        type: 'public-key',
-        transports: ['internal']
-      }]
+      allowCredentials: [
+        {
+          id: user.webauthnCredentialId,
+          type: 'public-key',
+          transports: ['internal'],
+        },
+      ],
     });
 
     putChallenge(`auth:${user.id}`, {
       challenge: options.challenge,
       rpID,
-      expectedOrigins
+      expectedOrigins,
     });
 
     res.json({ success: true, userId: user.id, options });
   } catch (error) {
     console.error('WebAuthn login-options error:', error);
-    res.status(500).json({ success: false, message: error.message || 'Failed to generate authentication options' });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to generate authentication options',
+    });
   }
 });
 
@@ -269,7 +301,9 @@ router.post('/login-verify', async (req, res) => {
     const credential = normalizeCredentialPayload(req.body);
 
     if (!Number.isFinite(userId) || !credential) {
-      return res.status(400).json({ success: false, message: 'Invalid WebAuthn authentication payload' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Invalid WebAuthn authentication payload' });
     }
 
     const user = await User.findByPk(userId);
@@ -283,7 +317,9 @@ router.post('/login-verify', async (req, res) => {
 
     const saved = takeChallenge(`auth:${userId}`);
     if (!saved) {
-      return res.status(400).json({ success: false, message: 'Authentication challenge expired, please retry' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Authentication challenge expired, please retry' });
     }
 
     // v13: credential.publicKey 必须是 Uint8Array
@@ -296,9 +332,9 @@ router.post('/login-verify', async (req, res) => {
         id: user.webauthnCredentialId,
         publicKey: isoBase64URL.toBuffer(user.webauthnPublicKey),
         counter: Number(user.webauthnCounter || 0),
-        transports: ['internal']
+        transports: ['internal'],
       },
-      requireUserVerification: true
+      requireUserVerification: true,
     });
 
     if (!verification.verified) {
@@ -307,7 +343,7 @@ router.post('/login-verify', async (req, res) => {
 
     await user.update({
       webauthnCounter: verification.authenticationInfo.newCounter,
-      lastLoginAt: new Date()
+      lastLoginAt: new Date(),
     });
 
     const authData = authSessionService.createAuthResponseData(
@@ -318,13 +354,13 @@ router.post('/login-verify', async (req, res) => {
     res.json({
       success: true,
       message: 'Biometric login succeeded',
-      data: authData
+      data: authData,
     });
   } catch (error) {
     console.error('WebAuthn login-verify error:', error);
     res.status(400).json({
       success: false,
-      message: error.message || 'Failed to verify authentication response'
+      message: error.message || 'Failed to verify authentication response',
     });
   }
 });
@@ -335,12 +371,14 @@ router.post('/unbind', authMiddleware, async (req, res) => {
     await req.user.update({
       webauthnCredentialId: null,
       webauthnPublicKey: null,
-      webauthnCounter: 0
+      webauthnCounter: 0,
     });
     res.json({ success: true, message: 'Biometric credential removed' });
   } catch (error) {
     console.error('WebAuthn unbind error:', error);
-    res.status(500).json({ success: false, message: error.message || 'Failed to unbind biometric credential' });
+    res
+      .status(500)
+      .json({ success: false, message: error.message || 'Failed to unbind biometric credential' });
   }
 });
 
@@ -348,7 +386,7 @@ router.post('/unbind', authMiddleware, async (req, res) => {
 router.get('/status', authMiddleware, async (req, res) => {
   res.json({
     success: true,
-    bound: Boolean(req.user.webauthnCredentialId && req.user.webauthnPublicKey)
+    bound: Boolean(req.user.webauthnCredentialId && req.user.webauthnPublicKey),
   });
 });
 

@@ -34,10 +34,10 @@
  * injected `downloader` replaces the network fetch.
  */
 
+const { spawnSync } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
-const { spawnSync } = require('child_process');
 
 // Backend root resolves correctly in both the source tree
 // (services/backend/src/services -> services/backend) and the bundled wheel
@@ -120,15 +120,24 @@ async function defaultDownloader(url, destPath) {
     const ws = fs.createWriteStream(destPath);
     let settled = false;
     const fail = (err) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
-      try { ws.destroy(); } catch { /* ignore */ }
+      try {
+        ws.destroy();
+      } catch {
+        /* ignore */
+      }
       reject(err);
     };
     response.data.on('error', fail);
     ws.on('error', fail);
     ws.on('finish', () => {
-      if (!settled) { settled = true; resolve(); }
+      if (!settled) {
+        settled = true;
+        resolve();
+      }
     });
     response.data.pipe(ws);
   });
@@ -143,11 +152,15 @@ function extractArchive(archivePath, destDir, format) {
   let args;
   if (format === 'tar.gz' || format === 'tgz') {
     command = searchExecutable('tar');
-    if (!command) throw new Error('tar not found — cannot extract .tar.gz runtime archive');
+    if (!command) {
+      throw new Error('tar not found — cannot extract .tar.gz runtime archive');
+    }
     args = ['-xzf', archivePath, '-C', destDir];
   } else if (format === 'tar') {
     command = searchExecutable('tar');
-    if (!command) throw new Error('tar not found — cannot extract .tar runtime archive');
+    if (!command) {
+      throw new Error('tar not found — cannot extract .tar runtime archive');
+    }
     args = ['-xf', archivePath, '-C', destDir];
   } else if (format === 'zip') {
     if (process.platform === 'win32') {
@@ -163,7 +176,9 @@ function extractArchive(archivePath, destDir, format) {
         args = ['-q', '-o', archivePath, '-d', destDir];
       } else {
         command = searchExecutable('7z') || searchExecutable('7za');
-        if (!command) throw new Error('no unzip/7z found — cannot extract .zip runtime archive');
+        if (!command) {
+          throw new Error('no unzip/7z found — cannot extract .zip runtime archive');
+        }
         args = ['x', `-o${destDir}`, '-y', archivePath];
       }
     }
@@ -176,9 +191,13 @@ function extractArchive(archivePath, destDir, format) {
     maxBuffer: 8 * 1024 * 1024,
     encoding: 'utf-8',
   });
-  if (result.error) throw new Error(`extraction failed: ${result.error.message}`);
+  if (result.error) {
+    throw new Error(`extraction failed: ${result.error.message}`);
+  }
   if (result.status !== 0) {
-    throw new Error(`extraction failed (exit ${result.status}): ${(result.stderr || '').slice(0, 400)}`);
+    throw new Error(
+      `extraction failed (exit ${result.status}): ${(result.stderr || '').slice(0, 400)}`
+    );
   }
 }
 
@@ -190,17 +209,25 @@ function extractArchive(archivePath, destDir, format) {
  */
 function locatePayloadRoot(stagingDir, sentinel, hint) {
   const direct = [];
-  if (hint && hint !== '.') direct.push(path.join(stagingDir, hint));
+  if (hint && hint !== '.') {
+    direct.push(path.join(stagingDir, hint));
+  }
   direct.push(stagingDir);
   for (const dir of direct) {
-    if (fs.existsSync(path.join(dir, sentinel))) return dir;
+    if (fs.existsSync(path.join(dir, sentinel))) {
+      return dir;
+    }
   }
 
   const queue = [{ dir: stagingDir, depth: 0 }];
   while (queue.length) {
     const { dir, depth } = queue.shift();
-    if (fs.existsSync(path.join(dir, sentinel))) return dir;
-    if (depth >= 5) continue;
+    if (fs.existsSync(path.join(dir, sentinel))) {
+      return dir;
+    }
+    if (depth >= 5) {
+      continue;
+    }
     let entries;
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -208,7 +235,9 @@ function locatePayloadRoot(stagingDir, sentinel, hint) {
       continue;
     }
     for (const entry of entries) {
-      if (entry.isDirectory()) queue.push({ dir: path.join(dir, entry.name), depth: depth + 1 });
+      if (entry.isDirectory()) {
+        queue.push({ dir: path.join(dir, entry.name), depth: depth + 1 });
+      }
     }
   }
   return null;
@@ -240,11 +269,15 @@ function movePayload(payloadRoot, targetDir) {
 
 /** chmod +x the executables a runtime actually invokes (POSIX only). */
 function applyChmod(targetDir, chmodList) {
-  if (process.platform === 'win32') return;
+  if (process.platform === 'win32') {
+    return;
+  }
   for (const rel of chmodList || []) {
     const file = path.join(targetDir, rel);
     try {
-      if (fs.existsSync(file)) fs.chmodSync(file, 0o755);
+      if (fs.existsSync(file)) {
+        fs.chmodSync(file, 0o755);
+      }
     } catch (err) {
       log(`chmod failed for ${file}: ${err.message}`);
     }
@@ -304,7 +337,9 @@ function _recordRuntimeLedger(name, targetDir) {
       action: 'remove-runtime',
       meta: { label: name },
     });
-  } catch { /* 记台账绝不拖累装运行时主流程 */ }
+  } catch {
+    /* 记台账绝不拖累装运行时主流程 */
+  }
 }
 
 async function _ensureRuntimeImpl(name, opts) {
@@ -316,7 +351,9 @@ async function _ensureRuntimeImpl(name, opts) {
   }
 
   const runtime = manifest.runtimes && manifest.runtimes[name];
-  if (!runtime) return { name, status: 'failed', error: `unknown runtime: ${name}` };
+  if (!runtime) {
+    return { name, status: 'failed', error: `unknown runtime: ${name}` };
+  }
 
   const targetDir = path.join(BACKEND_ROOT, runtime.targetDir);
 
@@ -351,12 +388,22 @@ async function _ensureRuntimeImpl(name, opts) {
   try {
     fs.mkdirSync(tmpRoot, { recursive: true });
   } catch (err) {
-    return { name, status: 'failed', error: `cannot create temp dir: ${err.message}`, path: targetDir };
+    return {
+      name,
+      status: 'failed',
+      error: `cannot create temp dir: ${err.message}`,
+      path: targetDir,
+    };
   }
 
   const lockDir = path.join(tmpRoot, `${name}.lock`);
   if (!acquireLock(lockDir)) {
-    return { name, status: 'failed', error: 'another provision is already in progress', path: targetDir };
+    return {
+      name,
+      status: 'failed',
+      error: 'another provision is already in progress',
+      path: targetDir,
+    };
   }
 
   let staging = null;
@@ -420,10 +467,18 @@ async function _ensureRuntimeImpl(name, opts) {
     return { name, status: 'failed', error: err.message || String(err), path: targetDir };
   } finally {
     if (staging) {
-      try { fs.rmSync(staging, { recursive: true, force: true }); } catch { /* ignore */ }
+      try {
+        fs.rmSync(staging, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     }
     if (archivePath) {
-      try { fs.rmSync(archivePath, { force: true }); } catch { /* ignore */ }
+      try {
+        fs.rmSync(archivePath, { force: true });
+      } catch {
+        /* ignore */
+      }
     }
     releaseLock(lockDir);
   }
@@ -440,7 +495,9 @@ async function _ensureRuntimeImpl(name, opts) {
  * @returns {Promise<object>}
  */
 function ensureRuntime(name, opts = {}) {
-  if (_inflight.has(name)) return _inflight.get(name);
+  if (_inflight.has(name)) {
+    return _inflight.get(name);
+  }
   const promise = _ensureRuntimeImpl(name, opts).finally(() => _inflight.delete(name));
   _inflight.set(name, promise);
   return promise;

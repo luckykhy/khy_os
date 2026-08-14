@@ -52,7 +52,10 @@ CMD ["sh", "-c", "node scripts/seed.js && node server.js"]
 }
 
 function _writeDockerBundleCompose(bundleRoot, options = {}) {
-  const backendContext = String(options.backendContext || './backend').trim().replace(/\\/g, '/') || './backend';
+  const backendContext =
+    String(options.backendContext || './backend')
+      .trim()
+      .replace(/\\/g, '/') || './backend';
   const serviceName = String(options.serviceName || 'khy-backend').trim() || 'khy-backend';
   const compose = `services:
   ${serviceName}:
@@ -139,20 +142,20 @@ function _writePipInstallBundleReadme(bundleRoot, meta = {}) {
   const installTreeLabel = isNpm ? 'npm-install/backend' : 'pip-install/khy_os/bundled/backend';
   const includeLines = isNpm
     ? [
-      '- `npm-install/backend`',
-      '- `docker-compose.yml` (Docker deploy entry)',
-      '- `.env.example`',
-      '- `INSTALL_LAYOUT.md` (directory + source mapping)',
-      '- `INSTALL_LAYOUT.json` (machine-readable layout map)',
-    ].join('\n')
+        '- `npm-install/backend`',
+        '- `docker-compose.yml` (Docker deploy entry)',
+        '- `.env.example`',
+        '- `INSTALL_LAYOUT.md` (directory + source mapping)',
+        '- `INSTALL_LAYOUT.json` (machine-readable layout map)',
+      ].join('\n')
     : [
-      '- `pip-install/khy_platform`',
-      '- `pip-install/khy_os`',
-      '- `docker-compose.yml` (Docker deploy entry)',
-      '- `.env.example`',
-      '- `INSTALL_LAYOUT.md` (directory + source mapping)',
-      '- `INSTALL_LAYOUT.json` (machine-readable layout map)',
-    ].join('\n');
+        '- `pip-install/khy_platform`',
+        '- `pip-install/khy_os`',
+        '- `docker-compose.yml` (Docker deploy entry)',
+        '- `.env.example`',
+        '- `INSTALL_LAYOUT.md` (directory + source mapping)',
+        '- `INSTALL_LAYOUT.json` (machine-readable layout map)',
+      ].join('\n');
 
   const readme = `# ${title}
 
@@ -185,7 +188,7 @@ ${includeLines}
 }
 
 function _timestampForFileName(date = new Date()) {
-  const pad = n => String(n).padStart(2, '0');
+  const pad = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 }
 

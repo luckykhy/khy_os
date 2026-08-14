@@ -22,9 +22,13 @@
 
 function envFlagByName(name, fallback = false) {
   const raw = process.env[name];
-  if (raw == null) return fallback;
+  if (raw == null) {
+    return fallback;
+  }
   const normalized = String(raw).trim().toLowerCase();
-  if (!normalized) return fallback;
+  if (!normalized) {
+    return fallback;
+  }
   return ['1', 'true', 'yes', 'on', 'enabled'].includes(normalized);
 }
 

@@ -27,14 +27,18 @@ const _OFF = ['0', 'false', 'off', 'no'];
 /** env 门控惯例(同 rewindControl.flagOn):默认开,仅显式 0/false/off/no 关。 */
 function isInterruptHintEnabled(env = process.env) {
   const raw = env && env[FLAG];
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
 /** 中断后引导门(sibling 惯例,默认开;关则回退旧 `已中断` 裸文案)。 */
 function isInsteadHintEnabled(env = process.env) {
   const raw = env && env[INSTEAD_FLAG];
-  const v = String(raw == null ? '' : raw).trim().toLowerCase();
+  const v = String(raw == null ? '' : raw)
+    .trim()
+    .toLowerCase();
   return !_OFF.includes(v);
 }
 
@@ -65,13 +69,23 @@ const POST_INTERRUPT_FALLBACK = '已中断';
  */
 function buildInterruptHint(p = {}, env = process.env) {
   try {
-    if (!isInterruptHintEnabled(env)) return '';
+    if (!isInterruptHintEnabled(env)) {
+      return '';
+    }
     const busy = !!p.busy;
     const queueLen = Number(p.queueLen) || 0;
-    if (!busy) return '';
-    if (p.compacting) return '';
-    if (p.awaitingChoice) return '';
-    if (queueLen > 0) return '';
+    if (!busy) {
+      return '';
+    }
+    if (p.compacting) {
+      return '';
+    }
+    if (p.awaitingChoice) {
+      return '';
+    }
+    if (queueLen > 0) {
+      return '';
+    }
     return INTERRUPT_HINT_TEXT;
   } catch {
     return '';
@@ -90,7 +104,9 @@ function buildInterruptHint(p = {}, env = process.env) {
  */
 function buildPostInterruptHint(env = process.env) {
   try {
-    if (!isInsteadHintEnabled(env)) return POST_INTERRUPT_FALLBACK;
+    if (!isInsteadHintEnabled(env)) {
+      return POST_INTERRUPT_FALLBACK;
+    }
     return POST_INTERRUPT_HINT_TEXT;
   } catch {
     return POST_INTERRUPT_FALLBACK;

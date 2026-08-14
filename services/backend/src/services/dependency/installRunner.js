@@ -31,7 +31,9 @@ const MANAGER_DOCS = {
 
 /** 由 argv 首词推断包管理器键（用于缺失归因）。 */
 function _managerOf(argv) {
-  const bin = String((argv && argv[0]) || '').toLowerCase().replace(/\.(cmd|bat|exe)$/, '');
+  const bin = String((argv && argv[0]) || '')
+    .toLowerCase()
+    .replace(/\.(cmd|bat|exe)$/, '');
   return bin;
 }
 
@@ -65,13 +67,21 @@ function _tail(s, n = 2000) {
  * @returns {string}
  */
 function _classifyExecError(err, stderr, manager) {
-  if (err && err.code === 'ENOENT') return 'manager-not-found';
-  if (err && err.killed) return 'timeout';
+  if (err && err.code === 'ENOENT') {
+    return 'manager-not-found';
+  }
+  if (err && err.killed) {
+    return 'timeout';
+  }
   const txt = String(stderr || (err && err.message) || '');
   // win32 cmd.exe: "'npm' 不是内部或外部命令" / "is not recognized as ...";
   // 部分本地化/POSIX shell: "command not found"。仅当提及该 manager 时判定缺失。
-  const mentionsManager = manager && new RegExp(`\\b${manager.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(txt);
-  if (mentionsManager && /(not recognized|不是内部或外部命令|command not found|未找到命令|No such file)/i.test(txt)) {
+  const mentionsManager =
+    manager && new RegExp(`\\b${manager.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(txt);
+  if (
+    mentionsManager &&
+    /(not recognized|不是内部或外部命令|command not found|未找到命令|No such file)/i.test(txt)
+  ) {
     return 'manager-not-found';
   }
   return 'exit-nonzero';
@@ -94,7 +104,7 @@ function _buildExecInvocation(argv, platform) {
   const [bin, ...rest] = argv;
   const isWin = platform === 'win32';
   return {
-    exe: isWin ? (process.env.COMSPEC || 'cmd.exe') : bin,
+    exe: isWin ? process.env.COMSPEC || 'cmd.exe' : bin,
     args: isWin ? ['/d', '/s', '/c', bin, ...rest] : rest,
   };
 }
@@ -106,7 +116,13 @@ function _realRunner(argv, { cwd, timeoutMs }) {
     try {
       ({ execFile } = require('child_process'));
     } catch {
-      resolve({ ok: false, code: null, stdout: '', stderr: 'child_process unavailable', error: 'no-exec' });
+      resolve({
+        ok: false,
+        code: null,
+        stdout: '',
+        stderr: 'child_process unavailable',
+        error: 'no-exec',
+      });
       return;
     }
     const manager = _managerOf(argv);
@@ -123,7 +139,9 @@ function _realRunner(argv, { cwd, timeoutMs }) {
           error: code,
         };
         // 缺失包管理器：附上明确归因（指向官方安装页），绝不静默失败。
-        if (code === 'manager-not-found') out.hint = managerMissingMessage(manager);
+        if (code === 'manager-not-found') {
+          out.hint = managerMissingMessage(manager);
+        }
         resolve(out);
       } else {
         resolve({ ok: true, code: 0, stdout: _tail(stdout), stderr: _tail(stderr) });
@@ -148,20 +166,30 @@ async function runInstall(plan, opts = {}) {
 
   const steps = [];
   const sequence = [plan.command];
-  if (Array.isArray(plan.followUp) && plan.followUp.length) sequence.push(plan.followUp);
+  if (Array.isArray(plan.followUp) && plan.followUp.length) {
+    sequence.push(plan.followUp);
+  }
 
   for (const argv of sequence) {
     let res;
     try {
       res = await runner(argv, { cwd, timeoutMs });
     } catch (e) {
-      res = { ok: false, code: null, stdout: '', stderr: String(e && e.message || e), error: 'runner-threw' };
+      res = {
+        ok: false,
+        code: null,
+        stdout: '',
+        stderr: String((e && e.message) || e),
+        error: 'runner-threw',
+      };
     }
     steps.push({ command: argv.join(' '), ...res });
     if (!res.ok) {
       const out = { ok: false, steps, command: argv.join(' '), error: res.error || 'exit-nonzero' };
       // 透传缺失包管理器的明确归因，供上层（healingLoop / 工具结果）原样回报用户。
-      if (res.hint) out.hint = res.hint;
+      if (res.hint) {
+        out.hint = res.hint;
+      }
       return out;
     }
   }

@@ -37,13 +37,17 @@ async function handleTag(subCommand, args = [], _options = {}) {
   let sessionId = null;
   try {
     sessionId = require('../../services/session/sessionForestService').getCurrentSessionId();
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
   if (!sessionId) {
     printInfo('暂无活动会话 —— 先开始一段对话,再用 /tag 给会话打标签。');
     return true;
   }
 
-  const tokens = [subCommand].concat(Array.isArray(args) ? args : []).filter((t) => t != null && t !== '');
+  const tokens = [subCommand]
+    .concat(Array.isArray(args) ? args : [])
+    .filter((t) => t != null && t !== '');
   const requested = leaf.parseTagArgs(tokens);
   const current = _readTags(sessionId);
 
@@ -73,9 +77,17 @@ async function handleTag(subCommand, args = [], _options = {}) {
   }
 
   const parts = [];
-  if (added.length) parts.push('已添加 ' + added.map((t) => '#' + t).join(' '));
-  if (removed.length) parts.push('已移除 ' + removed.map((t) => '#' + t).join(' '));
-  printSuccess((parts.join(';') || '标签无变化') + '。当前标签:' + (tags.length ? tags.map((t) => '#' + t).join(' ') : '(无)'));
+  if (added.length) {
+    parts.push('已添加 ' + added.map((t) => '#' + t).join(' '));
+  }
+  if (removed.length) {
+    parts.push('已移除 ' + removed.map((t) => '#' + t).join(' '));
+  }
+  printSuccess(
+    (parts.join(';') || '标签无变化') +
+      '。当前标签:' +
+      (tags.length ? tags.map((t) => '#' + t).join(' ') : '(无)')
+  );
   return true;
 }
 

@@ -22,8 +22,8 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
+const path = require('path');
 
 const trust = require('../services/workspaceTrust');
 
@@ -34,8 +34,12 @@ let _sessionTrusted = false;
 function _storePath() {
   try {
     const home = require('../utils/dataHome').getDataHome();
-    if (home) return path.join(home, 'trusted-folders.json');
-  } catch { /* 回退 */ }
+    if (home) {
+      return path.join(home, 'trusted-folders.json');
+    }
+  } catch {
+    /* 回退 */
+  }
   return path.join(os.homedir(), '.khy', 'trusted-folders.json');
 }
 
@@ -44,7 +48,9 @@ function _readTrustedPaths() {
   try {
     const raw = fs.readFileSync(_storePath(), 'utf-8');
     const obj = JSON.parse(raw);
-    if (obj && obj.paths && typeof obj.paths === 'object') return Object.keys(obj.paths);
+    if (obj && obj.paths && typeof obj.paths === 'object') {
+      return Object.keys(obj.paths);
+    }
     return [];
   } catch {
     return [];
@@ -63,11 +69,16 @@ function _readTrustStore() {
     const obj = JSON.parse(raw);
     if (obj && obj.paths && typeof obj.paths === 'object') {
       for (const [k, v] of Object.entries(obj.paths)) {
-        if (v && v.scope === 'exact') exactPaths.push(k);
-        else treePaths.push(k);
+        if (v && v.scope === 'exact') {
+          exactPaths.push(k);
+        } else {
+          treePaths.push(k);
+        }
       }
     }
-  } catch { /* 缺档/损坏 → 空 */ }
+  } catch {
+    /* 缺档/损坏 → 空 */
+  }
   return { treePaths, exactPaths };
 }
 
@@ -78,16 +89,26 @@ function _readTrustStore() {
  */
 function _persistTrust(absPath, scope = 'tree') {
   try {
-    if (!absPath) return false;
+    if (!absPath) {
+      return false;
+    }
     const p = _storePath();
     const dir = path.dirname(p);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     let obj = { paths: {} };
     try {
       const parsed = JSON.parse(fs.readFileSync(p, 'utf-8'));
-      if (parsed && typeof parsed === 'object') obj = parsed;
-    } catch { /* 新文件 */ }
-    if (!obj.paths || typeof obj.paths !== 'object') obj.paths = {};
+      if (parsed && typeof parsed === 'object') {
+        obj = parsed;
+      }
+    } catch {
+      /* 新文件 */
+    }
+    if (!obj.paths || typeof obj.paths !== 'object') {
+      obj.paths = {};
+    }
     obj.paths[absPath] = {
       trustedAt: new Date().toISOString(),
       scope: scope === 'exact' ? 'exact' : 'tree',
@@ -114,7 +135,9 @@ function _persistTrust(absPath, scope = 'tree') {
 async function ensureWorkspaceTrust(opts = {}) {
   try {
     // 门控关 → 逐字节回退:不弹窗、视为已信任(今日行为)。
-    if (!trust.isTrustGateEnabled()) return { trusted: true, reason: 'gate-off' };
+    if (!trust.isTrustGateEnabled()) {
+      return { trusted: true, reason: 'gate-off' };
+    }
 
     const cwd = opts.cwd || process.cwd();
     const homedir = opts.homedir || os.homedir();
@@ -128,15 +151,30 @@ async function ensureWorkspaceTrust(opts = {}) {
       sessionTrusted: _sessionTrusted,
       exactDir: trust.isExactDirTrustEnabled(),
     });
-    if (state.trusted) return { trusted: true, reason: state.reason };
+    if (state.trusted) {
+      return { trusted: true, reason: state.reason };
+    }
 
     // ── 需要弹窗 ──
-    const inquirer = ('inquirer' in opts)
-      ? opts.inquirer
-      : (() => { try { return require('inquirer'); } catch { return null; } })();
+    const inquirer =
+      'inquirer' in opts
+        ? opts.inquirer
+        : (() => {
+            try {
+              return require('inquirer');
+            } catch {
+              return null;
+            }
+          })();
     const c = opts.c || null;
     const paint = (fn, s) => (c && typeof c[fn] === 'function' ? c[fn](s) : s);
-    const log = (...a) => { try { (opts.io && opts.io.log ? opts.io.log : console.log)(...a); } catch { /* non-critical */ } };
+    const log = (...a) => {
+      try {
+        (opts.io && opts.io.log ? opts.io.log : console.log)(...a);
+      } catch {
+        /* non-critical */
+      }
+    };
 
     if (!inquirer || typeof inquirer.prompt !== 'function') {
       // 无法交互:可用性优先,放行但不落盘(诚实降级,绝不假装已持久化信任)。
@@ -144,17 +182,21 @@ async function ensureWorkspaceTrust(opts = {}) {
     }
 
     log('');
-    for (const line of trust.buildTrustPromptLines(cwd)) log(paint('dim', line));
+    for (const line of trust.buildTrustPromptLines(cwd)) {
+      log(paint('dim', line));
+    }
     log('');
 
     let answer;
     try {
-      ({ answer } = await inquirer.prompt([{
-        type: 'list',
-        name: 'answer',
-        message: '是否信任此文件夹?',
-        choices: trust.TRUST_CHOICES.map((ch) => ({ name: ch.name, value: ch.value })),
-      }]));
+      ({ answer } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'answer',
+          message: '是否信任此文件夹?',
+          choices: trust.TRUST_CHOICES.map((ch) => ({ name: ch.name, value: ch.value })),
+        },
+      ]));
     } catch {
       // 取消(Ctrl+C / ESC)= 不信任 → 退出(对齐 CC:ESC → exit)。
       return { trusted: false, action: 'exit', code: 0, reason: 'cancelled' };
@@ -172,10 +214,14 @@ async function ensureWorkspaceTrust(opts = {}) {
     if (state.isHomeDir) {
       if (trust.isPersistHomeTrustEnabled()) {
         const persisted = _persistTrust(trust.normalizePathForKey(cwd), 'tree');
-        if (persisted) return { trusted: true, persisted: true, reason: 'home-persisted' };
+        if (persisted) {
+          return { trusted: true, persisted: true, reason: 'home-persisted' };
+        }
       } else {
         const persisted = _persistTrust(trust.normalizePathForKey(cwd), 'exact');
-        if (persisted) return { trusted: true, persisted: true, reason: 'home-persisted-exact' };
+        if (persisted) {
+          return { trusted: true, persisted: true, reason: 'home-persisted-exact' };
+        }
       }
       _sessionTrusted = true;
       return { trusted: true, persisted: false, reason: 'home-session' };
@@ -195,8 +241,14 @@ module.exports = {
   _readTrustedPaths,
   _readTrustStore,
   _persistTrust,
-  _setSessionTrusted(v) { _sessionTrusted = !!v; },
-  _resetSessionTrusted() { _sessionTrusted = false; },
+  _setSessionTrusted(v) {
+    _sessionTrusted = !!v;
+  },
+  _resetSessionTrusted() {
+    _sessionTrusted = false;
+  },
   // 只读 session 信任态(供 /onboarding trust 如实展示 home 目录的本会话信任)。
-  _isSessionTrusted() { return _sessionTrusted; },
+  _isSessionTrusted() {
+    return _sessionTrusted;
+  },
 };

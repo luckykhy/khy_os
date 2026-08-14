@@ -47,18 +47,18 @@ function _renderContent(result) {
   const exec = result.execResult || {};
   const summary = exec.summary
     ? `${exec.summary.succeeded_steps || 0}/${exec.summary.total_steps || 0} steps succeeded`
-    : (result.status || 'done');
+    : result.status || 'done';
   return `Deploy APPLY for "${result.hostAlias}" — status: ${result.status}. ${summary}.`;
 }
 
 module.exports = defineTool({
   name: 'deploy',
   description:
-    'Deploy the current project to a remote host. Builds a Docker bundle, ships it over SSH '
-    + '(host comes from ~/.ssh/config), and runs `docker compose up -d --build` remotely. '
-    + 'Safe by default: without confirm:true it only does a DRY-RUN (builds + plans + emits an '
-    + 'approval ticket, no remote changes). A real apply needs confirm:true plus an approved '
-    + 'approvalTicketId and KHY_REMOTE_SSH_ENABLE_EXEC=true.',
+    'Deploy the current project to a remote host. Builds a Docker bundle, ships it over SSH ' +
+    '(host comes from ~/.ssh/config), and runs `docker compose up -d --build` remotely. ' +
+    'Safe by default: without confirm:true it only does a DRY-RUN (builds + plans + emits an ' +
+    'approval ticket, no remote changes). A real apply needs confirm:true plus an approved ' +
+    'approvalTicketId and KHY_REMOTE_SSH_ENABLE_EXEC=true.',
   category: 'execution',
   risk: 'high',
   isReadOnly: false,
@@ -80,12 +80,14 @@ module.exports = defineTool({
     remoteWorkspace: {
       type: 'string',
       maxLength: 4096,
-      description: 'Remote deploy directory. Defaults to the host config workspace; validated against the allowlist.',
+      description:
+        'Remote deploy directory. Defaults to the host config workspace; validated against the allowlist.',
     },
     confirm: {
       type: 'boolean',
       default: false,
-      description: 'false (default) = dry-run plan + approval ticket; true = real apply (needs approvalTicketId).',
+      description:
+        'false (default) = dry-run plan + approval ticket; true = real apply (needs approvalTicketId).',
     },
     approvalTicketId: {
       type: 'string',
@@ -109,7 +111,13 @@ module.exports = defineTool({
       ({ deployOrchestrator } = require('../services/remote'));
     } catch (err) {
       const error = `Remote deploy subsystem is unavailable: ${err && err.message ? err.message : String(err)}`;
-      return { success: false, status: 'subsystem_unavailable', error, content: error, meta: { mode: confirm ? 'apply' : 'dry-run' } };
+      return {
+        success: false,
+        status: 'subsystem_unavailable',
+        error,
+        content: error,
+        meta: { mode: confirm ? 'apply' : 'dry-run' },
+      };
     }
 
     let result;
@@ -117,13 +125,21 @@ module.exports = defineTool({
       result = await deployOrchestrator.deploy({
         hostAlias: target,
         projectRoot: params && params.projectRoot ? String(params.projectRoot) : undefined,
-        remoteWorkspace: params && params.remoteWorkspace ? String(params.remoteWorkspace) : undefined,
+        remoteWorkspace:
+          params && params.remoteWorkspace ? String(params.remoteWorkspace) : undefined,
         confirm,
-        approvalTicketId: params && params.approvalTicketId ? String(params.approvalTicketId) : undefined,
+        approvalTicketId:
+          params && params.approvalTicketId ? String(params.approvalTicketId) : undefined,
       });
     } catch (err) {
       const error = `Deploy error: ${err && err.message ? err.message : String(err)}`;
-      return { success: false, status: 'deploy_error', error, content: error, meta: { mode: confirm ? 'apply' : 'dry-run', hostAlias: target } };
+      return {
+        success: false,
+        status: 'deploy_error',
+        error,
+        content: error,
+        meta: { mode: confirm ? 'apply' : 'dry-run', hostAlias: target },
+      };
     }
 
     const meta = {

@@ -31,7 +31,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 /** L2 会话免审是否启用（纯函数，门控默认开；仅 0/false/off/no 关闭即恢复红线铁律）。 */
 function isL2SessionAllowEnabled(env = process.env) {
   const raw = env && env.KHY_L2_SESSION_ALLOW;
-  const v = String(raw === undefined || raw === null ? 'true' : raw).trim().toLowerCase();
+  const v = String(raw === undefined || raw === null ? 'true' : raw)
+    .trim()
+    .toLowerCase();
   return !_FALSY.has(v);
 }
 
@@ -41,10 +43,10 @@ function _key(intent, level) {
 
 class PermissionCache {
   constructor() {
-    this._manifest = new Set();   // 预审批清单的归一键集合
-    this._grants = new Set();     // L1 会话免审的归一键集合
-    this._l2Grants = new Set();   // L2 会话免审的归一键集合（门控 KHY_L2_SESSION_ALLOW，与 _grants 物理隔离）
-    this._manifestRaw = [];       // 原始清单条目（仅供展示/审计）
+    this._manifest = new Set(); // 预审批清单的归一键集合
+    this._grants = new Set(); // L1 会话免审的归一键集合
+    this._l2Grants = new Set(); // L2 会话免审的归一键集合（门控 KHY_L2_SESSION_ALLOW，与 _grants 物理隔离）
+    this._manifestRaw = []; // 原始清单条目（仅供展示/审计）
   }
 
   /**
@@ -55,8 +57,18 @@ class PermissionCache {
     const accepted = [];
     for (const it of items || []) {
       // 用真实分级器评估，杜绝调用方伪造 level 把红灯塞进清单。
-      const level = (classifier ? classifier({ action: it.action, scope: it.scope, risk: it.risk, isReadOnly: it.isReadOnly, isDestructive: it.isDestructive }).level : it.level);
-      if (!isExemptible(level)) continue; // L2 拒收
+      const level = classifier
+        ? classifier({
+            action: it.action,
+            scope: it.scope,
+            risk: it.risk,
+            isReadOnly: it.isReadOnly,
+            isDestructive: it.isDestructive,
+          }).level
+        : it.level;
+      if (!isExemptible(level)) {
+        continue;
+      } // L2 拒收
       const k = `${level}:${it.action}:${it.scope}`;
       this._manifest.add(k);
       accepted.push({ ...it, level });
@@ -67,20 +79,26 @@ class PermissionCache {
 
   /** 意图是否落在已批准的预审批清单内。L2 永远返回 false。 */
   inManifest(intent, level) {
-    if (!isExemptible(level)) return false;
+    if (!isExemptible(level)) {
+      return false;
+    }
     return this._manifest.has(_key(intent, level));
   }
 
   /** 记录一次 L1 会话免审授权。L2 调用是 no-op（红灯不可免审）。 */
   grantSessionExempt(intent, level) {
-    if (level !== LEVELS.L1) return false; // 只有 L1 可免审；L0 本就自动放行，L2 严禁
+    if (level !== LEVELS.L1) {
+      return false;
+    } // 只有 L1 可免审；L0 本就自动放行，L2 严禁
     this._grants.add(_key(intent, level));
     return true;
   }
 
   /** 该意图是否已获 L1 会话免审。 */
   hasSessionExempt(intent, level) {
-    if (level !== LEVELS.L1) return false;
+    if (level !== LEVELS.L1) {
+      return false;
+    }
     return this._grants.has(_key(intent, level));
   }
 
@@ -89,14 +107,18 @@ class PermissionCache {
    * 与 L1 通道物理隔离，归一键固定带 L2 前缀，绝不溢出到 L1/清单。
    */
   grantL2SessionExempt(intent) {
-    if (!isL2SessionAllowEnabled()) return false; // 门控关：恢复「L2 不可会话免审」红线
+    if (!isL2SessionAllowEnabled()) {
+      return false;
+    } // 门控关：恢复「L2 不可会话免审」红线
     this._l2Grants.add(_key(intent, LEVELS.L2));
     return true;
   }
 
   /** 该意图是否已获 L2 会话免审。门控关 → 恒 false（逐字节恢复红线铁律）。 */
   hasL2SessionExempt(intent) {
-    if (!isL2SessionAllowEnabled()) return false;
+    if (!isL2SessionAllowEnabled()) {
+      return false;
+    }
     return this._l2Grants.has(_key(intent, LEVELS.L2));
   }
 

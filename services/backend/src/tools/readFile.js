@@ -1,22 +1,33 @@
-const { defineTool } = require('./_baseTool');
 const fs = require('fs');
 const path = require('path');
+
+const { defineTool } = require('./_baseTool');
 
 const LEGACY_MAX_SIZE = 500 * 1024; // 500 KB (historical hard cap)
 
 // 文件读取上限的单一真源(纯叶子)。fail-soft:缺失则回退 legacy 常量 + 超限硬报错。
 let _fileReadLimit;
-try { _fileReadLimit = require('./fileReadLimit'); } catch { _fileReadLimit = null; }
-function _maxBytes() {
-  return _fileReadLimit ? _fileReadLimit.resolveMaxBytes(process.env, LEGACY_MAX_SIZE) : LEGACY_MAX_SIZE;
+try {
+  _fileReadLimit = require('./fileReadLimit');
+} catch {
+  _fileReadLimit = null;
 }
+function _maxBytes() {
+  return _fileReadLimit
+    ? _fileReadLimit.resolveMaxBytes(process.env, LEGACY_MAX_SIZE)
+    : LEGACY_MAX_SIZE;
+}
+
 function _partialOnOversize() {
   return _fileReadLimit ? _fileReadLimit.partialOnOversizeEnabled(process.env) : false;
 }
 
 module.exports = defineTool({
   name: 'readFile',
-  description: 'Read a file from the filesystem. Large files are read up to a bounded window with a pagination hint (use offset/limit to continue).',
+  description:
+    'Read a text file from the local filesystem and return its contents. ' +
+    'Use it to inspect source/config/log files before editing; do NOT use it for directories (use ListDir) or binary media. ' +
+    'Large files are read up to a bounded window with a pagination hint — pass offset/limit to continue instead of re-reading the whole file.',
   category: 'filesystem',
   risk: 'low',
   isReadOnly: true,
@@ -28,18 +39,42 @@ module.exports = defineTool({
   maxResultSizeChars: Infinity, // never persist to disk (prevents circular reads)
 
   inputSchema: {
-    path: { type: 'string', required: true, description: 'File path (relative to CWD or absolute)' },
-    encoding: { type: 'string', required: false, description: 'File encoding (default: utf-8)' },
-    offset: { type: 'number', required: false, description: 'Line number to start reading from (1-based)' },
-    limit: { type: 'number', required: false, description: 'Number of lines to read' },
+    path: {
+      type: 'string',
+      required: true,
+      description:
+        'File path, relative to CWD or absolute, e.g. "src/index.js" or "D:/proj/app.log". Supports ~ and env vars.',
+      example: 'src/index.js',
+    },
+    encoding: {
+      type: 'string',
+      required: false,
+      description: 'Text encoding used to decode the file (default: utf-8).',
+      example: 'utf-8',
+    },
+    offset: {
+      type: 'number',
+      required: false,
+      description:
+        '1-based line number to start reading from (default: 1). Use with limit for large files.',
+      example: 200,
+    },
+    limit: {
+      type: 'number',
+      required: false,
+      description:
+        'Number of lines to read from offset (default: bounded window). Only set when the file is too large to read at once.',
+      example: 100,
+    },
   },
 
   async validateInput(input) {
-    const { validateNotDevicePath, validateNotUNCPath, composeValidations } = require('./inputValidators');
-    return composeValidations(
-      validateNotDevicePath(input.path),
-      validateNotUNCPath(input.path),
-    );
+    const {
+      validateNotDevicePath,
+      validateNotUNCPath,
+      composeValidations,
+    } = require('./inputValidators');
+    return composeValidations(validateNotDevicePath(input.path), validateNotUNCPath(input.path));
   },
 
   getActivityDescription(input) {
@@ -59,7 +94,11 @@ module.exports = defineTool({
       if (rawPath.startsWith('~')) {
         rawPath = path.join(require('os').homedir(), rawPath.slice(1));
       }
-      try { rawPath = require('./_userDirs').normalizeDesktopPath(rawPath); } catch { /* ignore */ }
+      try {
+        rawPath = require('./_userDirs').normalizeDesktopPath(rawPath);
+      } catch {
+        /* ignore */
+      }
 
       // [SAFE] Reads default to GLOBALLY READABLE (user requirement「全局可读」).
       // We still block UNC/device paths (NTLM-leak / device-handle hazards), but an
@@ -73,9 +112,13 @@ module.exports = defineTool({
       {
         const { validateNotUNCPath, validateReadAccess } = require('./inputValidators');
         const uncCheck = validateNotUNCPath(rawPath);
-        if (!uncCheck.valid) return { success: false, error: uncCheck.message };
+        if (!uncCheck.valid) {
+          return { success: false, error: uncCheck.message };
+        }
         const accessCheck = validateReadAccess(rawPath);
-        if (!accessCheck.valid) return { success: false, error: accessCheck.message, approvable: accessCheck.approvable };
+        if (!accessCheck.valid) {
+          return { success: false, error: accessCheck.message, approvable: accessCheck.approvable };
+        }
       }
 
       const filePath = path.resolve(cwd, rawPath);
@@ -87,7 +130,11 @@ module.exports = defineTool({
       // 门控 KHY_READFILE_WIN_DEVICE_GUARD(默认开);关 → 逐字节回退历史行为(照旧 statSync→卡死)。
       // fail-soft:判定抛错 → 跳过,回退历史读取路径。
       try {
-        const { winDeviceGuardEnabled, classifyWindowsDevice, buildWinDeviceRefusal } = require('./winDeviceReadGuard');
+        const {
+          winDeviceGuardEnabled,
+          classifyWindowsDevice,
+          buildWinDeviceRefusal,
+        } = require('./winDeviceReadGuard');
         if (winDeviceGuardEnabled(process.env)) {
           const _wkind = classifyWindowsDevice(filePath);
           if (_wkind) {
@@ -98,7 +145,9 @@ module.exports = defineTool({
             };
           }
         }
-      } catch { /* 判定失败 → 回退历史读取行为 */ }
+      } catch {
+        /* 判定失败 → 回退历史读取行为 */
+      }
 
       const stat = fs.statSync(filePath);
       // Directory read would throw a raw `EISDIR: illegal operation on a
@@ -107,8 +156,17 @@ module.exports = defineTool({
       // on); off → message is null and we fall through to the historical throw.
       if (stat.isDirectory()) {
         let _dirMsg = null;
-        try { _dirMsg = require('../services/fsReadErrorGuard').directoryReadMessage(filePath, process.env); } catch { _dirMsg = null; }
-        if (_dirMsg) return { success: false, error: _dirMsg };
+        try {
+          _dirMsg = require('../services/fsReadErrorGuard').directoryReadMessage(
+            filePath,
+            process.env
+          );
+        } catch {
+          _dirMsg = null;
+        }
+        if (_dirMsg) {
+          return { success: false, error: _dirMsg };
+        }
       }
 
       // 特殊文件(FIFO/套接字/字符或块设备)读前防护:必须在 detectFile / 二进制守卫 /
@@ -119,7 +177,11 @@ module.exports = defineTool({
       // 门控 KHY_READFILE_SPECIAL_GUARD(默认开);关 → 逐字节回退历史行为(对特殊文件照旧
       // 走 detectFile/解码 → 卡死)。fail-soft:抛错 → 跳过,回退历史读取路径。
       try {
-        const { specialReadGuardEnabled, classifySpecialFile, buildSpecialFileRefusal } = require('./specialFileReadGuard');
+        const {
+          specialReadGuardEnabled,
+          classifySpecialFile,
+          buildSpecialFileRefusal,
+        } = require('./specialFileReadGuard');
         if (specialReadGuardEnabled(process.env)) {
           const _kind = classifySpecialFile(stat);
           if (_kind) {
@@ -131,7 +193,9 @@ module.exports = defineTool({
             };
           }
         }
-      } catch { /* 判定失败 → 回退历史读取行为 */ }
+      } catch {
+        /* 判定失败 → 回退历史读取行为 */
+      }
 
       // 伪文件系统(/proc·/sys)阻塞文件读前防护:第四条卡死向量,按「文件位置」拦。
       // Linux `/proc`·`/sys` 下是**常规文件**(isFile=true)、size=0、内容读时现生成——其中
@@ -147,9 +211,13 @@ module.exports = defineTool({
         const _pkind = shouldBoundedRead({ absPath: filePath, stat, env: process.env });
         if (_pkind) {
           const routed = readPseudoFileBounded({ filePath, kind: _pkind, env: process.env });
-          if (routed && routed.handled) return routed.result;
+          if (routed && routed.handled) {
+            return routed.result;
+          }
         }
-      } catch { /* 判定/有界读失败 → 回退历史读取行为 */ }
+      } catch {
+        /* 判定/有界读失败 → 回退历史读取行为 */
+      }
 
       // 二进制/压缩文件读前处理:把已存在的 fileFormatDetector.isBinary 能力接进读工具
       // (写工具 replaceAtLocation / inspectDocument 早已消费,读工具历史上漏接)。命中二进制后:
@@ -160,7 +228,11 @@ module.exports = defineTool({
       //   (KHY_READFILE_BINARY_GUARD,默认开)→ 更旧的解码注入(两门都关)。
       // fail-soft:任一步抛错 → 跳过,回退历史文本读取行为。
       try {
-        const { binaryReadGuardEnabled, isBinaryForRead, buildBinaryReadRefusal } = require('./readBinaryGuard');
+        const {
+          binaryReadGuardEnabled,
+          isBinaryForRead,
+          buildBinaryReadRefusal,
+        } = require('./readBinaryGuard');
         if (binaryReadGuardEnabled(process.env)) {
           const { detectFile } = require('../services/formatInspect/fileFormatDetector');
           const fmt = detectFile(filePath);
@@ -168,9 +240,18 @@ module.exports = defineTool({
             // 1) 先试按格式路由到提取器,真正读出内容(提取器全有界,故不会卡死)。
             try {
               const { routeFormatRead } = require('./readFileFormatRouter');
-              const routed = await routeFormatRead({ filePath, fmt, size: stat.size, env: process.env });
-              if (routed && routed.handled) return routed.result;
-            } catch { /* 路由失败 → 落 OPS-121 拒绝兜底 */ }
+              const routed = await routeFormatRead({
+                filePath,
+                fmt,
+                size: stat.size,
+                env: process.env,
+              });
+              if (routed && routed.handled) {
+                return routed.result;
+              }
+            } catch {
+              /* 路由失败 → 落 OPS-121 拒绝兜底 */
+            }
             // 2) 无提取器 / 提取失败 → OPS-121 信息性拒绝(兜底地板,行为不变)。
             return {
               success: false,
@@ -186,14 +267,19 @@ module.exports = defineTool({
             };
           }
         }
-      } catch { /* 探测失败 → 回退历史文本读取行为 */ }
+      } catch {
+        /* 探测失败 → 回退历史文本读取行为 */
+      }
 
       const maxBytes = _maxBytes();
       let oversize = false;
       if (stat.size > maxBytes) {
         // 门控关 → 逐字节回退历史「超限硬报错」;门控开 → 读有界窗口 + 诚实分页提示。
         if (!_partialOnOversize()) {
-          return { success: false, error: `File too large: ${stat.size} bytes (max ${maxBytes}). Use offset/limit or a shell command to read portions.` };
+          return {
+            success: false,
+            error: `File too large: ${stat.size} bytes (max ${maxBytes}). Use offset/limit or a shell command to read portions.`,
+          };
         }
         oversize = true;
       }
@@ -205,9 +291,10 @@ module.exports = defineTool({
         encoding: params.encoding,
         maxBytes: oversize ? maxBytes : undefined,
       });
-      const _notice = oversize && _fileReadLimit
-        ? _fileReadLimit.buildOversizeNotice({ totalBytes: stat.size, maxBytes })
-        : '';
+      const _notice =
+        oversize && _fileReadLimit
+          ? _fileReadLimit.buildOversizeNotice({ totalBytes: stat.size, maxBytes })
+          : '';
 
       // Apply offset/limit for line-range reading
       if (params.offset || params.limit) {
@@ -218,7 +305,13 @@ module.exports = defineTool({
 
         // Add line numbers
         const numbered = sliced.map((line, i) => `${start + i + 1}\t${line}`).join('\n');
-        return { success: true, content: numbered + _notice, size: stat.size, lines: sliced.length, truncated: oversize };
+        return {
+          success: true,
+          content: numbered + _notice,
+          size: stat.size,
+          lines: sliced.length,
+          truncated: oversize,
+        };
       }
 
       return { success: true, content: raw + _notice, size: stat.size, truncated: oversize };
@@ -227,8 +320,15 @@ module.exports = defineTool({
       // the raw "illegal operation" style message. Gated KHY_FS_ERROR_HUMANIZE
       // (default on); off / unknown errno → byte-identical to `err.message`.
       let _msg;
-      try { _msg = require('../services/fsReadErrorGuard').humanizeReadError(err, params && params.path, process.env); }
-      catch { _msg = err.message; }
+      try {
+        _msg = require('../services/fsReadErrorGuard').humanizeReadError(
+          err,
+          params && params.path,
+          process.env
+        );
+      } catch {
+        _msg = err.message;
+      }
       return { success: false, error: _msg };
     }
   },

@@ -32,7 +32,9 @@ const _FALSY = new Set(['0', 'false', 'off', 'no']);
 function isEnabled(env) {
   const e = env || process.env;
   const raw = e && e.KHY_VISION_DIRECT_DESCRIBE;
-  if (raw == null) return true;
+  if (raw == null) {
+    return true;
+  }
   return !_FALSY.has(String(raw).trim().toLowerCase());
 }
 
@@ -51,7 +53,9 @@ function shouldForceFirstToolCall(params = {}) {
   const env = params.env || process.env;
 
   // 门控关 → 逐字节回退到 legacy:仅第一轮强制。
-  if (!isEnabled(env)) return isFirstRound;
+  if (!isEnabled(env)) {
+    return isFirstRound;
+  }
 
   // 门控开 → 第一轮且**无**内联图片时才强制;带图则放手(返回 false → 'auto')。
   return isFirstRound && !params.hasImage;
@@ -65,17 +69,21 @@ function shouldForceFirstToolCall(params = {}) {
  */
 function buildInlineImageNote(params = {}) {
   const env = params.env || process.env;
-  if (!isEnabled(env)) return null;
+  if (!isEnabled(env)) {
+    return null;
+  }
 
   const count = Number(params.count);
-  if (!Number.isFinite(count) || count <= 0) return null;
+  if (!Number.isFinite(count) || count <= 0) {
+    return null;
+  }
 
   const n = Math.floor(count);
   const noun = n === 1 ? '一张图片' : `${n} 张图片`;
   return (
-    `[图片说明] 用户已随本条消息内联附加了${noun},它们已作为图像直接呈现、你能直接看到其内容。`
-    + `请直接观察并据此回答;这些是内联图像,磁盘上没有对应文件——`
-    + `不要用 Read / Glob / Bash 等工具去打开、读取或查找它们。`
+    `[图片说明] 用户已随本条消息内联附加了${noun},它们已作为图像直接呈现、你能直接看到其内容。` +
+    `请直接观察并据此回答;这些是内联图像,磁盘上没有对应文件——` +
+    `不要用 Read / Glob / Bash 等工具去打开、读取或查找它们。`
   );
 }
 

@@ -39,7 +39,9 @@ const _stat = require('./agentStatLine');
 // 到历史「裸名无子行」。`…` 用 U+2026(与 CC 逐字节一致)。
 const INITIALIZING_LABEL = 'Initializing…';
 function agentInitStatusEnabled(env = process.env) {
-  const flag = String((env && env.KHY_AGENT_INIT_STATUS) || '').trim().toLowerCase();
+  const flag = String((env && env.KHY_AGENT_INIT_STATUS) || '')
+    .trim()
+    .toLowerCase();
   return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
 }
 
@@ -95,13 +97,33 @@ function makeAgentState(init = {}) {
  * @returns {'command'|'listing'|'read'|'edit'|'search'|'agent'|'other'}
  */
 function classifyAgentTool(name) {
-  const n = String(name || '').toLowerCase().replace(/[\s_-]/g, '');
-  if (isAgentFamilyTool(name)) return 'agent';
-  if (/^(bash|shell|sh|zsh|cmd|powershell|pwsh|run|runcommand|exec|execute|executecommand|executecode|terminal)$/.test(n)) return 'command';
-  if (/^(ls|list|listfiles|listdir|listdirectory|readdirectory|readdir|dir|tree|glob|find)$/.test(n)) return 'listing';
-  if (/^(read|readfile|cat|open|view)$/.test(n)) return 'read';
-  if (/^(edit|editfile|write|writefile|multiedit|applypatch|str_replace|strreplace)$/.test(n)) return 'edit';
-  if (/^(grep|search|rg|ripgrep|websearch|searchcode)$/.test(n)) return 'search';
+  const n = String(name || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
+  if (isAgentFamilyTool(name)) {
+    return 'agent';
+  }
+  if (
+    /^(bash|shell|sh|zsh|cmd|powershell|pwsh|run|runcommand|exec|execute|executecommand|executecode|terminal)$/.test(
+      n
+    )
+  ) {
+    return 'command';
+  }
+  if (
+    /^(ls|list|listfiles|listdir|listdirectory|readdirectory|readdir|dir|tree|glob|find)$/.test(n)
+  ) {
+    return 'listing';
+  }
+  if (/^(read|readfile|cat|open|view)$/.test(n)) {
+    return 'read';
+  }
+  if (/^(edit|editfile|write|writefile|multiedit|applypatch|str_replace|strreplace)$/.test(n)) {
+    return 'edit';
+  }
+  if (/^(grep|search|rg|ripgrep|websearch|searchcode)$/.test(n)) {
+    return 'search';
+  }
   return 'other';
 }
 
@@ -116,22 +138,25 @@ function classifyAgentTool(name) {
  */
 function formatTreePreview(entries, { max = 6 } = {}) {
   const list = Array.isArray(entries) ? entries.filter((e) => e != null) : [];
-  if (list.length === 0) return [];
+  if (list.length === 0) {
+    return [];
+  }
   const cap = Math.max(2, max | 0);
   const overflow = list.length > cap;
   const shown = overflow ? cap - 1 : list.length; // reserve a row for the tail
   const lines = [];
   for (let i = 0; i < shown; i++) {
     const e = list[i];
-    const nm = typeof e === 'string'
-      ? e
-      : String((e && (e.name || e.path)) || '?');
-    const isDir = typeof e !== 'string'
-      && (e.type === 'directory' || e.type === 'dir' || e.isDirectory === true);
+    const nm = typeof e === 'string' ? e : String((e && (e.name || e.path)) || '?');
+    const isDir =
+      typeof e !== 'string' &&
+      (e.type === 'directory' || e.type === 'dir' || e.isDirectory === true);
     const isLast = !overflow && i === shown - 1;
     lines.push(`${isLast ? '└' : '├'} ${nm}${isDir ? '/' : ''}`);
   }
-  if (overflow) lines.push(`└ … +${list.length - shown} more`);
+  if (overflow) {
+    lines.push(`└ … +${list.length - shown} more`);
+  }
   return lines;
 }
 
@@ -156,7 +181,9 @@ function statusDot(status) {
  * so all three classify the same names identically (strip spaces/_/-).
  */
 function isAgentFamilyTool(name) {
-  const n = String(name || '').toLowerCase().replace(/[\s_-]/g, '');
+  const n = String(name || '')
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
   return n === 'agent' || n === 'spawnworker' || n === 'subagent';
 }
 
@@ -172,15 +199,18 @@ function formatStats(agent, env = process.env) {
     parts.push(_stat.agentToolUsesLabelOr(agent.toolCalls, `${agent.toolCalls} tool uses`, env));
   }
   if (agent && agent.tokens > 0) {
-    const legacyTok = agent.tokens >= 1000
-      ? `${(agent.tokens / 1000).toFixed(1)}k tokens`
-      : `${agent.tokens} tokens`;
+    const legacyTok =
+      agent.tokens >= 1000
+        ? `${(agent.tokens / 1000).toFixed(1)}k tokens`
+        : `${agent.tokens} tokens`;
     parts.push(_stat.agentTokensLabelOr(agent.tokens, legacyTok, env));
   }
   const el = agent && agent.elapsed;
   if (typeof el === 'number' && el > 0) {
     parts.push(_stat.agentDurationLabelOr(el, `${(el / 1000).toFixed(1)}s`, env));
-  } else if (typeof el === 'string' && el.trim()) parts.push(el.trim());
+  } else if (typeof el === 'string' && el.trim()) {
+    parts.push(el.trim());
+  }
   return parts;
 }
 
@@ -190,7 +220,9 @@ function formatStats(agent, env = process.env) {
  * "Done" / the failure reason). Empty string → no sub-line.
  */
 function detailText(agent, env = process.env) {
-  if (!agent) return '';
+  if (!agent) {
+    return '';
+  }
   if (agent.status === STATUS.RUNNING && agent.currentTool) {
     // A command tool surfaces what it is executing (命令); other tools surface
     // their target (path/pattern). currentCommand wins when present so a Bash row
@@ -243,7 +275,9 @@ function buildAgentTreeRows(agents) {
     // bounded defensively even though formatTreePreview already caps the source.
     const preview = Array.isArray(agent && agent.detailLines) ? agent.detailLines : [];
     for (let p = 0; p < preview.length && p < 6; p++) {
-      if (preview[p]) rows.push({ kind: 'preview', cont, text: String(preview[p]) });
+      if (preview[p]) {
+        rows.push({ kind: 'preview', cont, text: String(preview[p]) });
+      }
     }
   });
   return rows;
@@ -257,8 +291,9 @@ function buildAgentTreeRows(agents) {
  */
 function buildAgentHeader(agents) {
   const list = Array.isArray(agents) ? agents : [];
-  const allDone = list.length > 0
-    && list.every((a) => a && (a.status === STATUS.COMPLETED || a.status === STATUS.ERROR));
+  const allDone =
+    list.length > 0 &&
+    list.every((a) => a && (a.status === STATUS.COMPLETED || a.status === STATUS.ERROR));
   // Pluralize "agent(s)" via the shared ccPlural SSOT so a single-agent
   // fan-out reads "Running 1 agent…" / "1 agent finished" instead of the
   // ungrammatical "1 agents" (gate KHY_CC_PLURAL off → plural form → byte-revert).
@@ -267,7 +302,9 @@ function buildAgentHeader(agents) {
     count: list.length,
     allDone,
     dot: '●',
-    label: allDone ? `${list.length} ${agentWord} finished` : `Running ${list.length} ${agentWord}…`,
+    label: allDone
+      ? `${list.length} ${agentWord} finished`
+      : `Running ${list.length} ${agentWord}…`,
   };
 }
 
@@ -280,7 +317,9 @@ function buildAgentHeader(agents) {
  * @param {object} event
  */
 function applyProgressEvent(agent, event) {
-  if (!agent || !event) return agent;
+  if (!agent || !event) {
+    return agent;
+  }
   const next = { ...agent };
   switch (event.type) {
     case 'agent_spawned':
@@ -290,7 +329,9 @@ function applyProgressEvent(agent, event) {
       if (next.status !== STATUS.COMPLETED && next.status !== STATUS.ERROR) {
         next.status = STATUS.RUNNING;
       }
-      if (event.name && (!next.name || next.name === 'agent')) next.name = event.name;
+      if (event.name && (!next.name || next.name === 'agent')) {
+        next.name = event.name;
+      }
       break;
     case 'tool_start':
       next.toolCalls = (next.toolCalls || 0) + 1;
@@ -325,8 +366,12 @@ function applyProgressEvent(agent, event) {
       next.currentTool = null;
       next.currentTarget = null;
       next.currentText = null;
-      if (!next.detail) next.detail = 'Done';
-      if (typeof event.elapsed === 'number') next.elapsed = event.elapsed;
+      if (!next.detail) {
+        next.detail = 'Done';
+      }
+      if (typeof event.elapsed === 'number') {
+        next.elapsed = event.elapsed;
+      }
       break;
     case 'agent_failed':
       next.status = STATUS.ERROR;
@@ -334,16 +379,22 @@ function applyProgressEvent(agent, event) {
       next.currentTarget = null;
       next.currentText = null;
       next.detail = event.error || next.detail || 'Failed';
-      if (typeof event.elapsed === 'number') next.elapsed = event.elapsed;
+      if (typeof event.elapsed === 'number') {
+        next.elapsed = event.elapsed;
+      }
       break;
     case 'done':
       next.status = event.success ? STATUS.COMPLETED : STATUS.ERROR;
       next.currentTool = null;
       next.currentTarget = null;
       next.currentText = null;
-      next.detail = event.success ? 'Done' : (event.error || 'Failed');
-      if (typeof event.elapsed === 'number') next.elapsed = event.elapsed;
-      if (typeof event.toolCalls === 'number') next.toolCalls = event.toolCalls;
+      next.detail = event.success ? 'Done' : event.error || 'Failed';
+      if (typeof event.elapsed === 'number') {
+        next.elapsed = event.elapsed;
+      }
+      if (typeof event.toolCalls === 'number') {
+        next.toolCalls = event.toolCalls;
+      }
       break;
     default:
       break;

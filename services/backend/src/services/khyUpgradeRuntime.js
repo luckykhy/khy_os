@@ -276,13 +276,12 @@ function _stripLegacySection(text = '', heading = '', nextHeading = '') {
   const source = String(text || '');
   const start = String(heading || '').trim();
   const end = String(nextHeading || '').trim();
-  if (!source || !start || !end) return source;
+  if (!source || !start || !end) {
+    return source;
+  }
   const escapedStart = start.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const escapedEnd = end.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return source.replace(
-    new RegExp(`\\n${escapedStart}[\\s\\S]*?(?=\\n${escapedEnd})`, 'm'),
-    '\n',
-  );
+  return source.replace(new RegExp(`\\n${escapedStart}[\\s\\S]*?(?=\\n${escapedEnd})`, 'm'), '\n');
 }
 
 // Prompt-capsule modes that trigger stripping legacy managed sections and
@@ -290,18 +289,33 @@ function _stripLegacySection(text = '', heading = '', nextHeading = '') {
 //结构」): makeSystemPrompt formerly built this literal Set inline on every
 // prompt-cache miss. Consumed read-only via `.has`; never mutated/returned.
 const _ON_DEMAND_CAPSULE_MODES = new Set([
-  'on_demand', 'on_demand_omit', 'continuation_fallback', 'short_request_fallback',
+  'on_demand',
+  'on_demand_omit',
+  'continuation_fallback',
+  'short_request_fallback',
 ]);
 
 function _stripLegacyManagedPromptSections(prompt = '') {
   let next = String(prompt || '');
-  next = _stripLegacySection(next, '# Error Recovery', '# Work Lifecycle (Plan → Progress → Summary)');
-  next = _stripLegacySection(next, '# Output Format (align with Claude Code style)', '# Software Engineering Standards');
+  next = _stripLegacySection(
+    next,
+    '# Error Recovery',
+    '# Work Lifecycle (Plan → Progress → Summary)'
+  );
+  next = _stripLegacySection(
+    next,
+    '# Output Format (align with Claude Code style)',
+    '# Software Engineering Standards'
+  );
   next = _stripLegacySection(next, '## Scope Minimization', '## File Operations');
   next = _stripLegacySection(next, '## File Operations', '## Git Operations');
   next = _stripLegacySection(next, '## Git Operations', '## Action Safety');
   next = _stripLegacySection(next, '## Action Safety', '## Security & Permission Boundaries');
-  next = _stripLegacySection(next, '## Security & Permission Boundaries', '# Parallel Tool Execution');
+  next = _stripLegacySection(
+    next,
+    '## Security & Permission Boundaries',
+    '# Parallel Tool Execution'
+  );
   return next.replace(/\n{3,}/g, '\n\n');
 }
 
@@ -312,12 +326,16 @@ function estimateTokens(text) {
 }
 
 function normalizeWs(s) {
-  return String(s || '').replace(/\s+/g, ' ').trim();
+  return String(s || '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function summarizeText(text, maxLen = SUMMARY_MAX_LEN) {
   const oneLine = normalizeWs(text).replace(/\|/g, '/');
-  if (oneLine.length <= maxLen) return oneLine;
+  if (oneLine.length <= maxLen) {
+    return oneLine;
+  }
   return `${oneLine.slice(0, Math.max(40, maxLen - 3))}...`;
 }
 
@@ -330,19 +348,45 @@ const _isGreeting = (input) => require('./textHeuristics').isGreeting(input);
 
 function detectIntent(text) {
   const s = String(text || '');
-  if (_isGreeting(s)) return '问候';
-  if (/(回测|backtest|策略测试|模拟交易|strategy)/i.test(s)) return '回测';
-  if (/(行情|报价|价格|股价|多少钱|quote|price|涨跌)/i.test(s)) return '行情查询';
-  if (/(k线|K线|kline|日线|周线|月线|分钟线)/i.test(s)) return 'K线查询';
-  if (/(搜索|查|新闻|资讯|最新|动态|search|web)/i.test(s)) return '信息搜索';
-  if (/(计算|复利|收益率|\d+\s*[+\-*/^%])/i.test(s)) return '计算';
-  if (/(模型|model|gguf|safetensors|导入模型|ollama|下载模型|导出模型)/i.test(s)) return '模型管理';
-  if (/(pdf.*word|pdf.*docx|转.*word|转.*docx|pdf转换)/i.test(s)) return 'PDF转Word';
-  if (/(ocr|识别.*文字|图片.*文字|图.*识别|文字提取|图片.*识别)/i.test(s)) return '图片识别';
-  if (/(读取|查看|文件|read|cat|打开.*文件|\.json|\.js|\.md|\.py)/i.test(s)) return '读取文件';
-  if (/(写入|修改|重构|更新|新增|删除|edit|patch|refactor|write)/i.test(s)) return '代码修改';
-  if (/(命令|执行|运行|shell|bash|terminal|cmd)/i.test(s)) return '命令执行';
-  if (/(解释|什么是|定义|原理|怎么理解)/i.test(s)) return '概念解释';
+  if (_isGreeting(s)) {
+    return '问候';
+  }
+  if (/(回测|backtest|策略测试|模拟交易|strategy)/i.test(s)) {
+    return '回测';
+  }
+  if (/(行情|报价|价格|股价|多少钱|quote|price|涨跌)/i.test(s)) {
+    return '行情查询';
+  }
+  if (/(k线|K线|kline|日线|周线|月线|分钟线)/i.test(s)) {
+    return 'K线查询';
+  }
+  if (/(搜索|查|新闻|资讯|最新|动态|search|web)/i.test(s)) {
+    return '信息搜索';
+  }
+  if (/(计算|复利|收益率|\d+\s*[+\-*/^%])/i.test(s)) {
+    return '计算';
+  }
+  if (/(模型|model|gguf|safetensors|导入模型|ollama|下载模型|导出模型)/i.test(s)) {
+    return '模型管理';
+  }
+  if (/(pdf.*word|pdf.*docx|转.*word|转.*docx|pdf转换)/i.test(s)) {
+    return 'PDF转Word';
+  }
+  if (/(ocr|识别.*文字|图片.*文字|图.*识别|文字提取|图片.*识别)/i.test(s)) {
+    return '图片识别';
+  }
+  if (/(读取|查看|文件|read|cat|打开.*文件|\.json|\.js|\.md|\.py)/i.test(s)) {
+    return '读取文件';
+  }
+  if (/(写入|修改|重构|更新|新增|删除|edit|patch|refactor|write)/i.test(s)) {
+    return '代码修改';
+  }
+  if (/(命令|执行|运行|shell|bash|terminal|cmd)/i.test(s)) {
+    return '命令执行';
+  }
+  if (/(解释|什么是|定义|原理|怎么理解)/i.test(s)) {
+    return '概念解释';
+  }
   return '通用咨询';
 }
 
@@ -367,15 +411,17 @@ function inputPurify(userMessage, opts = {}) {
   // intent-carrying words. Only strip pure decoration (emoji, repeated symbols)
   // and courtesy phrases that add no task information.
   const fillerPatterns = [
-    /[\u{1F300}-\u{1FAFF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]/gu,           // emoji
-    /[…~～]{2,}/g,                                                           // repeated decorative symbols
+    /[\u{1F300}-\u{1FAFF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]/gu, // emoji
+    /[…~～]{2,}/g, // repeated decorative symbols
     /(请问一下|请教一下|麻烦你|麻烦帮我|帮我看下|帮我看一下|帮我查下|帮我查一下|麻烦看下)/gi,
     /(谢谢你|谢谢哈|辛苦了|拜托了|求你了|劳烦)/gi,
     /(你好|您好|哈喽|hello|hi|hey|早上好|下午好|晚上好|在吗|有人吗)/gi,
   ];
 
   let stripped = raw;
-  for (const p of fillerPatterns) stripped = stripped.replace(p, ' ');
+  for (const p of fillerPatterns) {
+    stripped = stripped.replace(p, ' ');
+  }
 
   stripped = stripped
     .replace(/[\r\n\t]+/g, ' ')
@@ -403,8 +449,12 @@ function _trimIntentFragment(text = '', maxLen = 180) {
     .trim()
     .replace(/^[,，。；;:："“”"'`《》「」『』【】()（）\-\s]+/, '')
     .replace(/[,，。；;:："“”"'`《》「」『』【】()（）\-\s]+$/, '');
-  if (!normalized) return '';
-  if (normalized.length <= maxLen) return normalized;
+  if (!normalized) {
+    return '';
+  }
+  if (normalized.length <= maxLen) {
+    return normalized;
+  }
   return `${normalized.slice(0, Math.max(16, maxLen - 1))}…`;
 }
 
@@ -413,26 +463,37 @@ function _dedupeIntentItems(items = [], limit = 8) {
   const out = [];
   for (const item of items) {
     const normalized = _trimIntentFragment(item, 160);
-    if (!normalized) continue;
+    if (!normalized) {
+      continue;
+    }
     const key = normalized.toLowerCase();
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     out.push(normalized);
-    if (out.length >= limit) break;
+    if (out.length >= limit) {
+      break;
+    }
   }
   return out;
 }
 
 function _splitIntentClauses(text = '') {
   return (String(text || '').match(/[^。！？!?；;\n]+/g) || [])
-    .map(part => _trimIntentFragment(part, 220))
+    .map((part) => _trimIntentFragment(part, 220))
     .filter(Boolean);
 }
 
 function _extractQuotedIntentAnchors(text = '') {
-  const matches = String(text || '').match(/["'`“”‘’《》「」『』][^"'`“”‘’《》「」『』\n]{2,80}["'`“”‘’《》「」『』]/g) || [];
+  const matches =
+    String(text || '').match(
+      /["'`“”‘’《》「」『』][^"'`“”‘’《》「」『』\n]{2,80}["'`“”‘’《》「」『』]/g
+    ) || [];
   return matches
-    .map(item => _trimIntentFragment(item.replace(/^["'`“”‘’《》「」『』]|["'`“”‘’《》「」『』]$/g, ''), 80))
+    .map((item) =>
+      _trimIntentFragment(item.replace(/^["'`“”‘’《》「」『』]|["'`“”‘’《》「」『』]$/g, ''), 80)
+    )
     .filter(Boolean);
 }
 
@@ -458,7 +519,8 @@ function _extractLiteralIntentAnchors(text = '') {
 function _extractPathIntentAnchors(text = '') {
   const raw = String(text || '');
   const hits = [];
-  const pathPattern = /(?:[A-Za-z]:\\|\/)?(?:[\w.@-]+[\\/]){1,8}[\w.@-]+\.(?:js|cjs|mjs|ts|tsx|jsx|py|vue|json|md|yaml|yml|toml|ini|env|sh|bash|sql|go|rs|java|kt|rb|php|css|scss|less|html)/g;
+  const pathPattern =
+    /(?:[A-Za-z]:\\|\/)?(?:[\w.@-]+[\\/]){1,8}[\w.@-]+\.(?:js|cjs|mjs|ts|tsx|jsx|py|vue|json|md|yaml|yml|toml|ini|env|sh|bash|sql|go|rs|java|kt|rb|php|css|scss|less|html)/g;
   const matches = raw.match(pathPattern) || [];
   for (const match of matches) {
     hits.push(_trimIntentFragment(match, 140));
@@ -467,70 +529,137 @@ function _extractPathIntentAnchors(text = '') {
 }
 
 const _INTENT_KEYWORD_STOPWORDS = new Set([
-  '帮我', '请', '请问', '麻烦', '一下', '看看', '看下', '查下', '查一下', '分析下', '分析一下',
-  '你好', '您好', '在吗', '有人吗', '谢谢', '辛苦了', '拜托了', '问题', '情况', '内容', '东西',
-  '帮我看看', '另外保留',
-  'search', 'find', 'help', 'please', 'thanks', 'thank', 'look', 'check', 'question', 'issue',
+  '帮我',
+  '请',
+  '请问',
+  '麻烦',
+  '一下',
+  '看看',
+  '看下',
+  '查下',
+  '查一下',
+  '分析下',
+  '分析一下',
+  '你好',
+  '您好',
+  '在吗',
+  '有人吗',
+  '谢谢',
+  '辛苦了',
+  '拜托了',
+  '问题',
+  '情况',
+  '内容',
+  '东西',
+  '帮我看看',
+  '另外保留',
+  'search',
+  'find',
+  'help',
+  'please',
+  'thanks',
+  'thank',
+  'look',
+  'check',
+  'question',
+  'issue',
 ]);
 
 function _extractKeywordIntentAnchors(text = '') {
-  const tokens = String(text || '').match(/[\u4e00-\u9fa5]{2,16}|[A-Za-z][A-Za-z0-9_.+#-]{2,31}/g) || [];
+  const tokens =
+    String(text || '').match(/[\u4e00-\u9fa5]{2,16}|[A-Za-z][A-Za-z0-9_.+#-]{2,31}/g) || [];
   const ranked = [];
   for (const token of tokens) {
     const value = _trimIntentFragment(token, 48);
     const low = value.toLowerCase();
-    if (!value || _INTENT_KEYWORD_STOPWORDS.has(low)) continue;
-    if (/^(这个|那个|这里|那里|可以|怎么|如何|为什么|是否|如果|然后|还有|另外|同时)$/.test(value)) continue;
+    if (!value || _INTENT_KEYWORD_STOPWORDS.has(low)) {
+      continue;
+    }
+    if (/^(这个|那个|这里|那里|可以|怎么|如何|为什么|是否|如果|然后|还有|另外|同时)$/.test(value)) {
+      continue;
+    }
     let score = value.length;
-    if (/[\\/]/.test(value) || /\./.test(value)) score += 10;
-    if (/\d/.test(value)) score += 8;
-    if (/^[A-Z0-9_.+#-]+$/.test(value)) score += 5;
+    if (/[\\/]/.test(value) || /\./.test(value)) {
+      score += 10;
+    }
+    if (/\d/.test(value)) {
+      score += 8;
+    }
+    if (/^[A-Z0-9_.+#-]+$/.test(value)) {
+      score += 5;
+    }
     ranked.push({ value, score });
   }
   ranked.sort((a, b) => b.score - a.score || b.value.length - a.value.length);
-  return _dedupeIntentItems(ranked.map(item => item.value), 8);
+  return _dedupeIntentItems(
+    ranked.map((item) => item.value),
+    8
+  );
 }
 
 function _extractConstraintIntentClauses(text = '') {
   const raw = String(text || '');
-  const matches = raw.match(/(?:不要|别|禁止|不能|务必|必须|需要|记得|保留|优先|仅|只|避免|必须先|不要忘|必须保留)[^，。；;\n]{0,80}|(?:must|do not|don't|never|without|only|prefer|avoid|keep|preserve|required)[^,.;\n]{0,80}/gi) || [];
+  const matches =
+    raw.match(
+      /(?:不要|别|禁止|不能|务必|必须|需要|记得|保留|优先|仅|只|避免|必须先|不要忘|必须保留)[^，。；;\n]{0,80}|(?:must|do not|don't|never|without|only|prefer|avoid|keep|preserve|required)[^,.;\n]{0,80}/gi
+    ) || [];
   return _dedupeIntentItems(matches, 5);
 }
 
 function _extractTailDetailClauses(text = '') {
   const raw = String(text || '');
-  const matches = raw.match(/(?:另外|还有|同时|并且|但是|不过|尤其|特别是|顺便|别忘了|再补充|补充一下|还有一点|also|but|except|plus|one more thing)[^。！？!?；;\n]{0,120}/gi) || [];
+  const matches =
+    raw.match(
+      /(?:另外|还有|同时|并且|但是|不过|尤其|特别是|顺便|别忘了|再补充|补充一下|还有一点|also|but|except|plus|one more thing)[^。！？!?；;\n]{0,120}/gi
+    ) || [];
   return _dedupeIntentItems(matches, 4);
 }
 
 function _pickPrimaryObjective(text = '') {
   const clauses = _splitIntentClauses(text);
-  const actionRe = /(修复|实现|修改|分析|解释|总结|搜索|查|读取|查看|创建|新增|删除|设计|比较|排查|review|fix|implement|modify|analy[sz]e|explain|summari[sz]e|search|read|inspect|create|add|remove|design|compare|debug)/i;
+  const actionRe =
+    /(修复|实现|修改|分析|解释|总结|搜索|查|读取|查看|创建|新增|删除|设计|比较|排查|review|fix|implement|modify|analy[sz]e|explain|summari[sz]e|search|read|inspect|create|add|remove|design|compare|debug)/i;
   const intentLeadRe = /(帮我|请|我要|我想|我需要|希望|如何|怎么|请你|能否|可以|需要)/i;
   let best = '';
   let bestScore = -Infinity;
   for (const clause of clauses) {
     const normalized = _trimIntentFragment(clause, 160);
-    if (!normalized) continue;
+    if (!normalized) {
+      continue;
+    }
     let score = Math.min(normalized.length, 80);
-    if (actionRe.test(normalized)) score += 40;
-    if (intentLeadRe.test(normalized)) score += 18;
-    if (/(不要|必须|优先|保留|别忘了|另外|同时|但是)/.test(normalized)) score += 6;
-    if (normalized.length < 6) score -= 20;
-    if (/^(你好|您好|谢谢|辛苦了|在吗|hello|hi|hey|thanks)/i.test(normalized)) score -= 30;
+    if (actionRe.test(normalized)) {
+      score += 40;
+    }
+    if (intentLeadRe.test(normalized)) {
+      score += 18;
+    }
+    if (/(不要|必须|优先|保留|别忘了|另外|同时|但是)/.test(normalized)) {
+      score += 6;
+    }
+    if (normalized.length < 6) {
+      score -= 20;
+    }
+    if (/^(你好|您好|谢谢|辛苦了|在吗|hello|hi|hey|thanks)/i.test(normalized)) {
+      score -= 30;
+    }
     if (score > bestScore) {
       best = normalized;
       bestScore = score;
     }
   }
-  if (best) return best;
+  if (best) {
+    return best;
+  }
   return _trimIntentFragment(text, 160);
 }
 
 // 读取 KHY_INTENT_ASSURANCE 开关，默认开启；0/false/off/no/n 视为关闭。
 function _intentAssuranceEnabled() {
   const raw = process.env.KHY_INTENT_ASSURANCE;
-  if (raw === undefined || raw === null || String(raw).trim() === '') return true;
+  if (raw === undefined || raw === null || String(raw).trim() === '') {
+    return true;
+  }
   return !['0', 'false', 'off', 'no', 'n'].includes(String(raw).trim().toLowerCase());
 }
 
@@ -557,11 +686,14 @@ function buildIntentAssuranceDirective(userMessage, opts = {}) {
 
   const purifiedQuestion = _trimIntentFragment(
     opts.purifiedQuestion || inputPurify(raw, { skipFillerStrip: false }).question || raw,
-    1400,
+    1400
   );
   const hasFilePathAnchor = _extractPathIntentAnchors(raw).length > 0;
-  const likelyCodeOrFileTask = hasFilePathAnchor
-    && /(修复|实现|修改|排查|查看|逻辑|接口|文件|代码|read|edit|fix|file|code|debug|review)/i.test(raw);
+  const likelyCodeOrFileTask =
+    hasFilePathAnchor &&
+    /(修复|实现|修改|排查|查看|逻辑|接口|文件|代码|read|edit|fix|file|code|debug|review)/i.test(
+      raw
+    );
   const intent = likelyCodeOrFileTask
     ? '代码/文件任务'
     : _trimIntentFragment(opts.intent || detectIntent(purifiedQuestion) || '通用咨询', 40);
@@ -570,34 +702,53 @@ function buildIntentAssuranceDirective(userMessage, opts = {}) {
   const pathAnchors = _extractPathIntentAnchors(raw);
   const pathSegments = new Set(
     pathAnchors
-      .flatMap(item => String(item || '').split(/[\\/]/g))
-      .map(item => String(item || '').trim().toLowerCase())
-      .filter(Boolean),
+      .flatMap((item) => String(item || '').split(/[\\/]/g))
+      .map((item) =>
+        String(item || '')
+          .trim()
+          .toLowerCase()
+      )
+      .filter(Boolean)
   );
-  const keywordAnchors = _extractKeywordIntentAnchors(purifiedQuestion || raw)
-    .filter((item) => {
-      const normalized = String(item || '').trim().toLowerCase();
-      if (!normalized) return false;
-      if (normalized.includes('.')) return true;
-      if (normalized.length > 8) return true;
-      return !pathSegments.has(normalized);
-    });
-  const detailAnchors = _dedupeIntentItems([
-    ..._extractQuotedIntentAnchors(raw),
-    ..._extractLiteralIntentAnchors(raw),
-    ...pathAnchors,
-    ...keywordAnchors,
-  ], 8);
+  const keywordAnchors = _extractKeywordIntentAnchors(purifiedQuestion || raw).filter((item) => {
+    const normalized = String(item || '')
+      .trim()
+      .toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    if (normalized.includes('.')) {
+      return true;
+    }
+    if (normalized.length > 8) {
+      return true;
+    }
+    return !pathSegments.has(normalized);
+  });
+  const detailAnchors = _dedupeIntentItems(
+    [
+      ..._extractQuotedIntentAnchors(raw),
+      ..._extractLiteralIntentAnchors(raw),
+      ...pathAnchors,
+      ...keywordAnchors,
+    ],
+    8
+  );
   const tailDetails = _extractTailDetailClauses(raw);
   const clauseCount = _splitIntentClauses(raw).length;
-  const fillerHits = (raw.match(/(请问一下|请教一下|麻烦你|麻烦帮我|帮我看下|帮我看一下|谢谢你|辛苦了|拜托了|你好|您好|哈喽|hello|hi|hey|在吗|有人吗)/gi) || []).length;
+  const fillerHits = (
+    raw.match(
+      /(请问一下|请教一下|麻烦你|麻烦帮我|帮我看下|帮我看一下|谢谢你|辛苦了|拜托了|你好|您好|哈喽|hello|hi|hey|在吗|有人吗)/gi
+    ) || []
+  ).length;
 
-  const shouldInject = raw.length >= 60
-    || clauseCount >= 3
-    || fillerHits >= 2
-    || constraints.length > 0
-    || tailDetails.length > 0
-    || detailAnchors.length >= 3;
+  const shouldInject =
+    raw.length >= 60 ||
+    clauseCount >= 3 ||
+    fillerHits >= 2 ||
+    constraints.length > 0 ||
+    tailDetails.length > 0 ||
+    detailAnchors.length >= 3;
 
   if (!shouldInject) {
     return {
@@ -638,10 +789,16 @@ function buildIntentAssuranceDirective(userMessage, opts = {}) {
 
   lines.push('Interpretation rules:');
   lines.push('1. Execute or answer for the primary objective first.');
-  lines.push('2. Preserve quoted phrases, file paths, commands, codes, dates, numbers, and model names exactly.');
+  lines.push(
+    '2. Preserve quoted phrases, file paths, commands, codes, dates, numbers, and model names exactly.'
+  );
   lines.push('3. If this summary conflicts with the raw user message, trust the raw user message.');
-  lines.push('4. Tail clauses introduced by words such as "另外/同时/但是/还有/also/but/except" are details to retain, not noise.');
-  lines.push('5. If multiple goals compete and priority is unclear, ask one focused clarification instead of guessing.');
+  lines.push(
+    '4. Tail clauses introduced by words such as "另外/同时/但是/还有/also/but/except" are details to retain, not noise.'
+  );
+  lines.push(
+    '5. If multiple goals compete and priority is unclear, ask one focused clarification instead of guessing.'
+  );
 
   return {
     shouldInject: true,
@@ -661,21 +818,34 @@ function buildIntentAssuranceDirective(userMessage, opts = {}) {
 // ── Fallback context summary (Phase 3 Level 3: manual extraction) ──
 function _fallbackContextSummary(droppedMessages) {
   const dropped = Array.isArray(droppedMessages) ? droppedMessages : [];
-  if (!dropped.length) return '[上下文摘要] 无历史上下文。';
+  if (!dropped.length) {
+    return '[上下文摘要] 无历史上下文。';
+  }
 
-  const users = dropped.filter(m => m.role === 'user').map(m => String(m.content || ''));
-  const assistants = dropped.filter(m => m.role === 'assistant').map(m => String(m.content || ''));
-  const tools = dropped.filter(m => m.role === 'tool').map(m => String(m.content || ''));
+  const users = dropped.filter((m) => m.role === 'user').map((m) => String(m.content || ''));
+  const assistants = dropped
+    .filter((m) => m.role === 'assistant')
+    .map((m) => String(m.content || ''));
+  const tools = dropped.filter((m) => m.role === 'tool').map((m) => String(m.content || ''));
 
   // Extract key points directly from raw text (no [意图]/[问题] tags since they're no longer injected)
-  const questions = users.map(u => summarizeText(u, 80)).filter(Boolean).slice(-5);
-  const conclusions = assistants.map(x => summarizeText(x, 90)).slice(-4);
-  const toolFacts = tools.map(x => summarizeText(x, 90)).slice(-4);
+  const questions = users
+    .map((u) => summarizeText(u, 80))
+    .filter(Boolean)
+    .slice(-5);
+  const conclusions = assistants.map((x) => summarizeText(x, 90)).slice(-4);
+  const toolFacts = tools.map((x) => summarizeText(x, 90)).slice(-4);
 
   const parts = [];
-  if (questions.length) parts.push(`历史问题=${questions.join(' ; ')}`);
-  if (toolFacts.length) parts.push(`已得工具结果=${toolFacts.join(' ; ')}`);
-  if (conclusions.length) parts.push(`历史结论=${conclusions.join(' ; ')}`);
+  if (questions.length) {
+    parts.push(`历史问题=${questions.join(' ; ')}`);
+  }
+  if (toolFacts.length) {
+    parts.push(`已得工具结果=${toolFacts.join(' ; ')}`);
+  }
+  if (conclusions.length) {
+    parts.push(`历史结论=${conclusions.join(' ; ')}`);
+  }
 
   return summarizeText(
     `[上下文摘要] 已压缩 ${dropped.length} 条历史消息。${parts.join(' | ') || '早期对话已省略。'}`,
@@ -723,7 +893,9 @@ function _splitByToolBoundary(messages, chunkTokenBudget) {
     currentTokens += tokens;
   }
 
-  if (current.length > 0) chunks.push(current);
+  if (current.length > 0) {
+    chunks.push(current);
+  }
   return chunks;
 }
 
@@ -740,7 +912,9 @@ function _splitByToolBoundary(messages, chunkTokenBudget) {
  */
 async function buildContextSummary(droppedMessages, opts = {}) {
   const dropped = Array.isArray(droppedMessages) ? droppedMessages : [];
-  if (!dropped.length) return '[上下文摘要] 无历史上下文。';
+  if (!dropped.length) {
+    return '[上下文摘要] 无历史上下文。';
+  }
 
   // Try AI summarization (Level 1)
   let gateway;
@@ -751,7 +925,7 @@ async function buildContextSummary(droppedMessages, opts = {}) {
   }
 
   // Sanitize tool results (truncate large outputs)
-  const sanitized = dropped.map(m => ({
+  const sanitized = dropped.map((m) => ({
     role: m.role,
     content: m.role === 'tool' ? summarizeText(m.content, 500) : String(m.content || ''),
   }));
@@ -763,9 +937,12 @@ async function buildContextSummary(droppedMessages, opts = {}) {
   let summary = '';
   try {
     for (const chunk of chunks) {
-      const chunkText = chunk.map(m =>
-        `${m.role === 'user' ? 'USER' : m.role === 'assistant' ? 'AI' : 'TOOL'}: ${m.content}`
-      ).join('\n');
+      const chunkText = chunk
+        .map(
+          (m) =>
+            `${m.role === 'user' ? 'USER' : m.role === 'assistant' ? 'AI' : 'TOOL'}: ${m.content}`
+        )
+        .join('\n');
 
       const prompt = summary
         ? `${SUMMARIZE_INSTRUCTION}\n\n[已有摘要]\n${summary}\n\n[新增对话]\n${chunkText}`
@@ -786,11 +963,14 @@ async function buildContextSummary(droppedMessages, opts = {}) {
   } catch {
     // Level 2: retry without oversized messages
     try {
-      const filtered = sanitized.filter(m => estimateTokens(m.content) < 1000);
+      const filtered = sanitized.filter((m) => estimateTokens(m.content) < 1000);
       if (filtered.length > 0 && filtered.length < sanitized.length) {
-        const compactText = filtered.map(m =>
-          `${m.role === 'user' ? 'USER' : m.role === 'assistant' ? 'AI' : 'TOOL'}: ${m.content}`
-        ).join('\n');
+        const compactText = filtered
+          .map(
+            (m) =>
+              `${m.role === 'user' ? 'USER' : m.role === 'assistant' ? 'AI' : 'TOOL'}: ${m.content}`
+          )
+          .join('\n');
 
         const result = await gateway.generate(
           `${SUMMARIZE_INSTRUCTION}\n\n[对话历史]\n${compactText}`,
@@ -801,31 +981,86 @@ async function buildContextSummary(droppedMessages, opts = {}) {
           return `[上下文摘要] ${result.content}`;
         }
       }
-    } catch { /* Level 2 also failed */ }
+    } catch {
+      /* Level 2 also failed */
+    }
 
     // Level 3: manual extraction fallback
     return _fallbackContextSummary(dropped);
   }
 }
 
+/**
+ * 滑窗压缩。薄包装:保证 onPhase 的终止符 `done/100` 在**任何**出口恰好发一次。
+ *
+ * 为何需要:内层在正常路径上确实会发 done(AI 摘要成功 / legacy 尾部贪心结束),但
+ * legacy 路径里的 buildContextSummary 是一次模型往返,抛异常时整个函数向上抛,
+ * 一个 done 都不会发 —— 而 useQueryBridge 只在收到 'compacted' 或 done 时才卸掉进度条,
+ * 于是进度条永久冻在 45%。这里用 try/finally 兜住,异常仍原样向上抛(不改变控制流)。
+ *
+ * 未传 onPhase 时直接透传内层,逐字节等价改动前。
+ */
 async function buildSlidingWindow(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, options = {}) {
+  const onPhase = typeof options.onPhase === 'function' ? options.onPhase : null;
+  if (!onPhase) {
+    return _buildSlidingWindowCore(messages, tokenLimit, options);
+  }
+
+  let doneSeen = false;
+  const guardedOnPhase = (p) => {
+    if (p && p.stage === 'done') {
+      doneSeen = true;
+    }
+    try {
+      onPhase(p);
+    } catch {
+      /* ignore UI callback errors */
+    }
+  };
+  try {
+    return await _buildSlidingWindowCore(messages, tokenLimit, {
+      ...options,
+      onPhase: guardedOnPhase,
+    });
+  } finally {
+    if (!doneSeen) {
+      try {
+        onPhase({ stage: 'done', pct: 100 });
+      } catch {
+        /* ignore UI callback errors */
+      }
+    }
+  }
+}
+
+async function _buildSlidingWindowCore(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, options = {}) {
   let arr = Array.isArray(messages) ? messages.slice() : [];
-  if (arr.length === 0) return [];
+  if (arr.length === 0) {
+    return [];
+  }
 
   // Optional progress callback so the TUI can render a compaction progress bar.
   // Fired at the real compression milestones (prune → guard → AI summary).
   // Best-effort: never let a UI callback break compaction.
   const onPhase = typeof options.onPhase === 'function' ? options.onPhase : null;
   const emitPhase = (stage, pct) => {
-    if (!onPhase) return;
-    try { onPhase({ stage, pct }); } catch { /* ignore UI callback errors */ }
+    if (!onPhase) {
+      return;
+    }
+    try {
+      onPhase({ stage, pct });
+    } catch {
+      /* ignore UI callback errors */
+    }
   };
 
   // Repair tool_call/result pairing before compression
   try {
     const { repairTranscript, ensureCompletePairs } = require('./transcriptRepair');
     arr = ensureCompletePairs(repairTranscript(arr));
-  } catch { /* transcriptRepair not available, continue with raw messages */ }
+  } catch {
+    /* transcriptRepair not available, continue with raw messages */
+  }
 
   // ── Coordinated multi-layer compression ──
   // Track pre-compression message count to detect if prior layers already pruned,
@@ -841,7 +1076,9 @@ async function buildSlidingWindow(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, op
       contextWindowTokens: tokenLimit,
       isToolPrunable: (toolName) => toolName !== 'read_file' && toolName !== 'readFile',
     });
-  } catch { /* contextPruner not available */ }
+  } catch {
+    /* contextPruner not available */
+  }
 
   // Layer 2: Context window guard — emergency prune if approaching limit
   let guardAlreadyPruned = false;
@@ -852,7 +1089,7 @@ async function buildSlidingWindow(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, op
     if (guard.shouldBlock) {
       const { pruned, removedCount } = pruneMessages(arr, {
         targetTokens: tokenLimit * 0.8,
-        estimateTokens: text => estimateTokens(text),
+        estimateTokens: (text) => estimateTokens(text),
       });
       if (removedCount > 0) {
         arr = pruned;
@@ -862,7 +1099,9 @@ async function buildSlidingWindow(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, op
       const logger = require('../utils/logger');
       logger.warn(formatWarning(guard));
     }
-  } catch { /* contextWindowGuard not available */ }
+  } catch {
+    /* contextWindowGuard not available */
+  }
 
   emitPhase('guarding', 30);
 
@@ -879,19 +1118,19 @@ async function buildSlidingWindow(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, op
     const { compress } = require('./contextCompressor');
     const compressResult = await compress(arr, {
       estimateTokensFn: (text) => estimateTokens(text),
-      callModelFn: (text, callOpts) => buildContextSummary(
-        [{ role: 'user', content: text }],
-        { maxTokens, ...callOpts }
-      ),
+      callModelFn: (text, callOpts) =>
+        buildContextSummary([{ role: 'user', content: text }], { maxTokens, ...callOpts }),
       contextWindowTokens: maxTokens,
       // If prior layers already pruned, increase preserve ratio to avoid over-compression
-      preserveRatioOverride: guardAlreadyPruned ? 0.50 : undefined,
+      preserveRatioOverride: guardAlreadyPruned ? 0.5 : undefined,
     });
     if (compressResult.summaryGenerated) {
       emitPhase('done', 100);
       return compressResult.compressed;
     }
-  } catch { /* contextCompressor not available, fall through to legacy */ }
+  } catch {
+    /* contextCompressor not available, fall through to legacy */
+  }
 
   // Legacy fallback: tail-greedy cutoff
   const reserveForSummary = 220;
@@ -901,13 +1140,17 @@ async function buildSlidingWindow(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, op
   let cutoff = arr.length;
   for (let i = arr.length - 1; i >= 0; i--) {
     const t = estimateTokens(arr[i].content);
-    if (used + t > usableBudget) break;
+    if (used + t > usableBudget) {
+      break;
+    }
     used += t;
     cutoff = i;
   }
 
   let kept = arr.slice(cutoff);
-  if (kept.length === 0) kept = [arr[arr.length - 1]];
+  if (kept.length === 0) {
+    kept = [arr[arr.length - 1]];
+  }
 
   const dropped = arr.slice(0, cutoff);
   if (dropped.length > 0) {
@@ -915,10 +1158,12 @@ async function buildSlidingWindow(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, op
     kept = [{ role: 'system', content: summary }, ...kept];
   }
 
-  while (estimateTokens(kept.map(m => m.content).join('\n')) > maxTokens && kept.length > 1) {
+  while (estimateTokens(kept.map((m) => m.content).join('\n')) > maxTokens && kept.length > 1) {
     if (kept[0].role === 'system') {
       kept[0] = { role: 'system', content: summarizeText(kept[0].content, 480) };
-      if (estimateTokens(kept.map(m => m.content).join('\n')) <= maxTokens) break;
+      if (estimateTokens(kept.map((m) => m.content).join('\n')) <= maxTokens) {
+        break;
+      }
     }
     kept.splice(1, 1);
   }
@@ -930,28 +1175,72 @@ async function buildSlidingWindow(messages, tokenLimit = CONTEXT_TOKEN_LIMIT, op
 function mapToolToNaturalAction(name) {
   const n = String(name || '');
   // Use snake_case names to match actual tool registry names
-  if (n === 'web_search' || n === 'webSearch' || n === 'search' || n === 'WebSearch') return { action: '搜索', arg: '关键词', desc: '搜索网页信息' };
-  if (n === 'quote') return { action: '行情', arg: '股票代码', desc: '查实时价格与涨跌' };
-  if (n === 'backtest') return { action: '回测', arg: 'symbol strategy', desc: '跑策略回测' };
-  if (n === 'data_fetch') return { action: 'K线', arg: 'symbol period', desc: '取K线数据' };
-  if (n === 'read_file' || n === 'readFile' || n === 'Read') return { action: '读取文件', arg: '文件路径', desc: '读取本地文件' };
-  if (n === 'write_file' || n === 'writeFile' || n === 'Write') return { action: '写入文件', arg: '路径 内容', desc: '写文件' };
-  if (n === 'editFile' || n === 'Edit' || n === 'multiEdit' || n === 'MultiEdit') return { action: '编辑文件', arg: 'file_path old_string new_string', desc: '精确修改文件内容' };
-  if (n === 'shell_command' || n === 'shellCommand' || n === 'Bash') return { action: '命令', arg: '命令文本', desc: '执行shell命令' };
-  if (n === 'ls' || n === 'LS' || n === 'glob' || n === 'Glob') return { action: '文件搜索', arg: 'pattern/path', desc: '查找文件和目录' };
-  if (n === 'grep' || n === 'Grep') return { action: '内容搜索', arg: 'pattern/path', desc: '按正则搜索内容' };
-  if (n === 'open_app') return { action: '打开应用', arg: '应用名称', desc: '打开应用（支持模糊匹配和中文名）' };
-  if (n === 'agent' || n === 'Task') return { action: '子任务', arg: 'prompt role', desc: '调用子代理并行处理' };
-  if (n === 'import_model') return { action: '导入模型', arg: '路径或URL', desc: '导入本地模型' };
-  if (n === 'download_model') return { action: '下载模型', arg: 'URL', desc: '下载并导入模型' };
-  if (n === 'list_models') return { action: '模型列表', arg: '', desc: '查看所有模型' };
-  if (n === 'export_ollama_model') return { action: '导出模型', arg: 'Ollama模型名', desc: '从Ollama导出模型' };
-  if (n === 'strategy_list') return { action: '策略列表', arg: 'all', desc: '列出可用策略' };
-  if (n === 'git_status') return { action: 'Git状态', arg: '.', desc: '查看工作区状态' };
-  if (n === 'git_diff') return { action: 'Git差异', arg: '文件路径', desc: '查看代码差异' };
-  if (n === 'pdf_to_word') return { action: 'PDF转Word', arg: 'PDF文件路径', desc: '把PDF转成Word' };
-  if (n === 'image_ocr') return { action: '图片识别', arg: '图片路径', desc: '识别图片中的文字' };
-  if (n === 'execute_code') return { action: '执行代码', arg: '代码文本', desc: '执行代码片段' };
+  if (n === 'web_search' || n === 'webSearch' || n === 'search' || n === 'WebSearch') {
+    return { action: '搜索', arg: '关键词', desc: '搜索网页信息' };
+  }
+  if (n === 'quote') {
+    return { action: '行情', arg: '股票代码', desc: '查实时价格与涨跌' };
+  }
+  if (n === 'backtest') {
+    return { action: '回测', arg: 'symbol strategy', desc: '跑策略回测' };
+  }
+  if (n === 'data_fetch') {
+    return { action: 'K线', arg: 'symbol period', desc: '取K线数据' };
+  }
+  if (n === 'read_file' || n === 'readFile' || n === 'Read') {
+    return { action: '读取文件', arg: '文件路径', desc: '读取本地文件' };
+  }
+  if (n === 'write_file' || n === 'writeFile' || n === 'Write') {
+    return { action: '写入文件', arg: '路径 内容', desc: '写文件' };
+  }
+  if (n === 'editFile' || n === 'Edit' || n === 'multiEdit' || n === 'MultiEdit') {
+    return { action: '编辑文件', arg: 'file_path old_string new_string', desc: '精确修改文件内容' };
+  }
+  if (n === 'shell_command' || n === 'shellCommand' || n === 'Bash') {
+    return { action: '命令', arg: '命令文本', desc: '执行shell命令' };
+  }
+  if (n === 'ls' || n === 'LS' || n === 'glob' || n === 'Glob') {
+    return { action: '文件搜索', arg: 'pattern/path', desc: '查找文件和目录' };
+  }
+  if (n === 'grep' || n === 'Grep') {
+    return { action: '内容搜索', arg: 'pattern/path', desc: '按正则搜索内容' };
+  }
+  if (n === 'open_app') {
+    return { action: '打开应用', arg: '应用名称', desc: '打开应用（支持模糊匹配和中文名）' };
+  }
+  if (n === 'agent' || n === 'Task') {
+    return { action: '子任务', arg: 'prompt role', desc: '调用子代理并行处理' };
+  }
+  if (n === 'import_model') {
+    return { action: '导入模型', arg: '路径或URL', desc: '导入本地模型' };
+  }
+  if (n === 'download_model') {
+    return { action: '下载模型', arg: 'URL', desc: '下载并导入模型' };
+  }
+  if (n === 'list_models') {
+    return { action: '模型列表', arg: '', desc: '查看所有模型' };
+  }
+  if (n === 'export_ollama_model') {
+    return { action: '导出模型', arg: 'Ollama模型名', desc: '从Ollama导出模型' };
+  }
+  if (n === 'strategy_list') {
+    return { action: '策略列表', arg: 'all', desc: '列出可用策略' };
+  }
+  if (n === 'git_status') {
+    return { action: 'Git状态', arg: '.', desc: '查看工作区状态' };
+  }
+  if (n === 'git_diff') {
+    return { action: 'Git差异', arg: '文件路径', desc: '查看代码差异' };
+  }
+  if (n === 'pdf_to_word') {
+    return { action: 'PDF转Word', arg: 'PDF文件路径', desc: '把PDF转成Word' };
+  }
+  if (n === 'image_ocr') {
+    return { action: '图片识别', arg: '图片路径', desc: '识别图片中的文字' };
+  }
+  if (n === 'execute_code') {
+    return { action: '执行代码', arg: '代码文本', desc: '执行代码片段' };
+  }
   return null;
 }
 
@@ -966,7 +1255,9 @@ function buildNaturalToolGuide() {
     for (const t of toolModule.getEnabled().values()) {
       const m = mapToolToNaturalAction(t.name);
       if (m) {
-        tools.push(`- ${t.name}: ${m.desc}  →  <tool_call>{"name": "${t.name}", "params": {${m.arg ? `"${_guessParamKey(t.name)}": "${m.arg}"` : ''}}}</tool_call>`);
+        tools.push(
+          `- ${t.name}: ${m.desc}  →  <tool_call>{"name": "${t.name}", "params": {${m.arg ? `"${_guessParamKey(t.name)}": "${m.arg}"` : ''}}}</tool_call>`
+        );
       }
     }
     // Include Claude-compatible aliases in tool guide to increase tool-call hit rate.
@@ -974,10 +1265,16 @@ function buildNaturalToolGuide() {
       const { getClaudeCompatToolList } = require('./claudeCompat');
       for (const compat of getClaudeCompatToolList()) {
         const m = mapToolToNaturalAction(compat.name);
-        if (!m) continue;
-        tools.push(`- ${compat.name}: ${m.desc}  →  <tool_call>{"name": "${compat.name}", "params": {${m.arg ? `"${_guessParamKey(compat.name)}": "${m.arg}"` : ''}}}</tool_call>`);
+        if (!m) {
+          continue;
+        }
+        tools.push(
+          `- ${compat.name}: ${m.desc}  →  <tool_call>{"name": "${compat.name}", "params": {${m.arg ? `"${_guessParamKey(compat.name)}": "${m.arg}"` : ''}}}</tool_call>`
+        );
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   } catch {
     // Fallback: minimal static list using PascalCase names matching the registry
     tools.push(
@@ -990,11 +1287,13 @@ function buildNaturalToolGuide() {
       '- webSearch: Web search  →  <tool_call>{"name": "webSearch", "params": {"query": "keyword"}}</tool_call>',
       '- quote: Stock quote  →  <tool_call>{"name": "quote", "params": {"symbol": "600519"}}</tool_call>',
       '- openApp: Open application  →  <tool_call>{"name": "openApp", "params": {"name": "firefox"}}</tool_call>',
-      '- backtest: Run backtest  →  <tool_call>{"name": "backtest", "params": {"symbol": "000300", "strategy": "ma_cross"}}</tool_call>',
+      '- backtest: Run backtest  →  <tool_call>{"name": "backtest", "params": {"symbol": "000300", "strategy": "ma_cross"}}</tool_call>'
     );
   }
 
-  if (!tools.length) return '';
+  if (!tools.length) {
+    return '';
+  }
   return `\n{{TOOL_LIST}}\n## Available Tools\n${[...new Set(tools)].join('\n')}\n{{/TOOL_LIST}}`;
 }
 
@@ -1003,91 +1302,110 @@ function buildNaturalToolGuide() {
  */
 function _guessParamKey(toolName) {
   const map = {
-    web_search: 'query', search: 'query', quote: 'symbol', backtest: 'symbol',
-    data_fetch: 'symbol', read_file: 'path', write_file: 'path',
-    shell_command: 'command', open_app: 'name', git_status: 'path',
-    git_diff: 'file', import_model: 'source', list_models: '',
-    export_ollama_model: 'model', pdf_to_word: 'inputPath',
-    image_ocr: 'imagePath', strategy_list: '', execute_code: 'code',
-    webSearch: 'query', Bash: 'command', Read: 'path', Write: 'path',
-    Edit: 'file_path', MultiEdit: 'file_path', LS: 'path', Grep: 'pattern',
-    Glob: 'pattern', Task: 'prompt',
+    web_search: 'query',
+    search: 'query',
+    quote: 'symbol',
+    backtest: 'symbol',
+    data_fetch: 'symbol',
+    read_file: 'path',
+    write_file: 'path',
+    shell_command: 'command',
+    open_app: 'name',
+    git_status: 'path',
+    git_diff: 'file',
+    import_model: 'source',
+    list_models: '',
+    export_ollama_model: 'model',
+    pdf_to_word: 'inputPath',
+    image_ocr: 'imagePath',
+    strategy_list: '',
+    execute_code: 'code',
+    webSearch: 'query',
+    Bash: 'command',
+    Read: 'path',
+    Write: 'path',
+    Edit: 'file_path',
+    MultiEdit: 'file_path',
+    LS: 'path',
+    Grep: 'pattern',
+    Glob: 'pattern',
+    Task: 'prompt',
   };
   return map[toolName] || 'input';
 }
 
 const NATURAL_ACTION_ALIASES = {
-  '搜索': '搜索',
-  'search': '搜索',
-  'websearch': '搜索',
-  '查找': '搜索',
+  搜索: '搜索',
+  search: '搜索',
+  websearch: '搜索',
+  查找: '搜索',
 
-  '计算器': '计算器',
-  '计算': '计算器',
-  'calculator': '计算器',
+  计算器: '计算器',
+  计算: '计算器',
+  calculator: '计算器',
 
-  '读取文件': '读取文件',
-  '读文件': '读取文件',
-  'readfile': '读取文件',
+  读取文件: '读取文件',
+  读文件: '读取文件',
+  readfile: '读取文件',
 
-  '写入文件': '写入文件',
-  'writefile': '写入文件',
+  写入文件: '写入文件',
+  writefile: '写入文件',
 
-  '命令': '命令',
-  'shell': '命令',
-  'bash': '命令',
+  命令: '命令',
+  shell: '命令',
+  bash: '命令',
 
-  '打开应用': '打开应用',
-  '打开': '打开应用',
-  '启动': '打开应用',
-  'open': '打开应用',
-  'openapp': '打开应用',
-  'launch': '打开应用',
+  打开应用: '打开应用',
+  打开: '打开应用',
+  启动: '打开应用',
+  open: '打开应用',
+  openapp: '打开应用',
+  launch: '打开应用',
 
-  '行情': '行情',
-  'quote': '行情',
-  '报价': '行情',
+  行情: '行情',
+  quote: '行情',
+  报价: '行情',
 
-  '回测': '回测',
-  'backtest': '回测',
+  回测: '回测',
+  backtest: '回测',
 
-  'k线': 'K线',
-  'kline': 'K线',
-  'K线': 'K线',
+  k线: 'K线',
+  kline: 'K线',
+  K线: 'K线',
 
-  '策略列表': '策略列表',
-  'strategylist': '策略列表',
+  策略列表: '策略列表',
+  strategylist: '策略列表',
 
-  'git状态': 'Git状态',
-  'gitstatus': 'Git状态',
+  git状态: 'Git状态',
+  gitstatus: 'Git状态',
 
-  'git差异': 'Git差异',
-  'gitdiff': 'Git差异',
+  git差异: 'Git差异',
+  gitdiff: 'Git差异',
 
-  '导入模型': '导入模型',
-  '下载模型': '导入模型',
-  'importmodel': '导入模型',
-  'downloadmodel': '导入模型',
+  导入模型: '导入模型',
+  下载模型: '导入模型',
+  importmodel: '导入模型',
+  downloadmodel: '导入模型',
 
-  '模型列表': '模型列表',
-  '查看模型': '模型列表',
-  'listmodels': '模型列表',
-  '所有模型': '模型列表',
+  模型列表: '模型列表',
+  查看模型: '模型列表',
+  listmodels: '模型列表',
+  所有模型: '模型列表',
 
-  '导出模型': '导出模型',
-  'exportmodel': '导出模型',
+  导出模型: '导出模型',
+  exportmodel: '导出模型',
 
-  'pdf转word': 'PDF转Word',
-  'pdf转换': 'PDF转Word',
-  'pdf2word': 'PDF转Word',
-  '转word': 'PDF转Word',
-  '转docx': 'PDF转Word',
+  pdf转word: 'PDF转Word',
+  pdf转换: 'PDF转Word',
+  pdf2word: 'PDF转Word',
+  转word: 'PDF转Word',
+  转docx: 'PDF转Word',
 
-  '图片识别': '图片识别',
-  '识别文字': '图片识别',
-  'ocr': '图片识别',
-  '文字识别': '图片识别',
-  '图文识别': '图片识别',
+  图片识别: '图片识别',
+  识别文字: '图片识别',
+  ocr: '图片识别',
+  文字识别: '图片识别',
+  图文识别: '图片识别',
 };
 
 function extractNaturalToolCall(text) {
@@ -1102,7 +1420,9 @@ function extractNaturalToolCall(text) {
       if (name) {
         return { action: name, arg: parsed.params || {}, _format: 'xml_json' };
       }
-    } catch { /* malformed JSON, fall through */ }
+    } catch {
+      /* malformed JSON, fall through */
+    }
   }
 
   // Format 2: 【调用 xxx：yyy】  (Chinese brackets)
@@ -1133,24 +1453,32 @@ function safeEvalExpression(expr) {
   // eslint-disable-next-line no-new-func
   const fn = new Function(`return (${src});`);
   const out = fn();
-  if (!Number.isFinite(Number(out))) throw new Error('Expression result is not finite');
+  if (!Number.isFinite(Number(out))) {
+    throw new Error('Expression result is not finite');
+  }
   return String(out);
 }
 
 function parseKVArg(argText) {
   const out = {};
   const s = String(argText || '').trim();
-  if (!s) return out;
+  if (!s) {
+    return out;
+  }
   const parts = s.split(/\s+/);
   for (const p of parts) {
     const m = p.match(/^([a-zA-Z_]+)=(.+)$/);
-    if (m) out[m[1]] = m[2];
+    if (m) {
+      out[m[1]] = m[2];
+    }
   }
   return out;
 }
 
 function normalizeToolResult(r, maxLen = 2200) {
-  if (!r) return { success: false, text: 'No result' };
+  if (!r) {
+    return { success: false, text: 'No result' };
+  }
   if (r.success) {
     // Priority chain: known string fields → file list → message → JSON fallback
     let body = r.output || r.content || r.result || r.data;
@@ -1158,7 +1486,9 @@ function normalizeToolResult(r, maxLen = 2200) {
       // Handle special return shapes (Grep→files, Glob→files, etc.)
       if (Array.isArray(r.files)) {
         body = r.files.join('\n');
-        if (r.count !== undefined) body = `Found ${r.count} result(s):\n${body}`;
+        if (r.count !== undefined) {
+          body = `Found ${r.count} result(s):\n${body}`;
+        }
       } else if (r.message) {
         body = r.message;
       } else {
@@ -1173,12 +1503,16 @@ function normalizeToolResult(r, maxLen = 2200) {
   }
   // Error case: also handle object errors
   let errText = r.error;
-  if (typeof errText === 'object') errText = JSON.stringify(errText);
+  if (typeof errText === 'object') {
+    errText = JSON.stringify(errText);
+  }
   return { success: false, text: String(errText || r.message || 'Tool failed') };
 }
 
 async function runNaturalToolCall(call, context = {}) {
-  if (!call) return null;
+  if (!call) {
+    return null;
+  }
   const tools = require('../tools');
   const { rewriteWindowsDesktopPath } = require('../utils/pathCompat');
 
@@ -1188,31 +1522,56 @@ async function runNaturalToolCall(call, context = {}) {
     const rawParams = call.arg;
     // Map model tool names to registered tool names (PascalCase for new registry)
     const TOOL_NAME_MAP = {
-      'Write': 'Write', 'write': 'Write', 'write_file': 'Write', 'writeFile': 'Write',
-      'Read': 'Read', 'read': 'Read', 'read_file': 'Read', 'readFile': 'Read',
-      'Edit': 'Edit', 'edit': 'Edit', 'edit_file': 'Edit', 'editFile': 'Edit',
-      'Glob': 'Glob', 'glob': 'Glob',
-      'Grep': 'Grep', 'grep': 'Grep',
-      'Bash': 'shellCommand', 'bash': 'shellCommand', 'shell_command': 'shellCommand', 'shellCommand': 'shellCommand',
-      'webSearch': 'webSearch', 'WebSearch': 'webSearch', 'web_search': 'webSearch',
-      'WebFetch': 'WebFetch', 'webFetch': 'WebFetch', 'web_fetch': 'WebFetch',
-      'quote': 'quote',
-      'gitStatus': 'gitStatus', 'git_status': 'gitStatus',
-      'gitDiff': 'gitDiff', 'git_diff': 'gitDiff',
-      'gitCommit': 'gitCommit', 'git_commit': 'gitCommit',
-      'data_fetch': 'data_fetch', 'dataFetch': 'data_fetch',
+      Write: 'Write',
+      write: 'Write',
+      write_file: 'Write',
+      writeFile: 'Write',
+      Read: 'Read',
+      read: 'Read',
+      read_file: 'Read',
+      readFile: 'Read',
+      Edit: 'Edit',
+      edit: 'Edit',
+      edit_file: 'Edit',
+      editFile: 'Edit',
+      Glob: 'Glob',
+      glob: 'Glob',
+      Grep: 'Grep',
+      grep: 'Grep',
+      Bash: 'shellCommand',
+      bash: 'shellCommand',
+      shell_command: 'shellCommand',
+      shellCommand: 'shellCommand',
+      webSearch: 'webSearch',
+      WebSearch: 'webSearch',
+      web_search: 'webSearch',
+      WebFetch: 'WebFetch',
+      webFetch: 'WebFetch',
+      web_fetch: 'WebFetch',
+      quote: 'quote',
+      gitStatus: 'gitStatus',
+      git_status: 'gitStatus',
+      gitDiff: 'gitDiff',
+      git_diff: 'gitDiff',
+      gitCommit: 'gitCommit',
+      git_commit: 'gitCommit',
+      data_fetch: 'data_fetch',
+      dataFetch: 'data_fetch',
     };
     let toolName = TOOL_NAME_MAP[name] || name;
 
     // Normalize params: model may use various key names for file path
     const params = { ...rawParams };
-    const pathValue = params.file_path || params.path || params.input || params.file || params.filepath;
+    const pathValue =
+      params.file_path || params.path || params.input || params.file || params.filepath;
     if (pathValue) {
       // New registry tools expect "file_path"; legacy tools expect "path"
       params.file_path = pathValue;
       params.path = pathValue;
       // Clean up duplicate keys
-      delete params.input; delete params.file; delete params.filepath;
+      delete params.input;
+      delete params.file;
+      delete params.filepath;
     }
 
     // Resolve paths against CWD
@@ -1256,26 +1615,42 @@ async function runNaturalToolCall(call, context = {}) {
           params.newContent,
           params.file_content,
           params.content_text,
-        ].find(v => v !== undefined && v !== null);
-        if (candidate !== undefined) params.content = candidate;
+        ].find((v) => v !== undefined && v !== null);
+        if (candidate !== undefined) {
+          params.content = candidate;
+        }
       }
       if (Array.isArray(params.content)) {
-        params.content = params.content.map(v => String(v)).join('\n');
-      } else if (params.content !== undefined && params.content !== null && typeof params.content !== 'string') {
-        try { params.content = JSON.stringify(params.content, null, 2); } catch { params.content = String(params.content); }
+        params.content = params.content.map((v) => String(v)).join('\n');
+      } else if (
+        params.content !== undefined &&
+        params.content !== null &&
+        typeof params.content !== 'string'
+      ) {
+        try {
+          params.content = JSON.stringify(params.content, null, 2);
+        } catch {
+          params.content = String(params.content);
+        }
       }
 
       // If the model actually intended a targeted replacement, auto-route to Edit.
-      if ((!params.content || String(params.content).trim() === '') && params.old_string !== undefined && params.new_string !== undefined) {
+      if (
+        (!params.content || String(params.content).trim() === '') &&
+        params.old_string !== undefined &&
+        params.new_string !== undefined
+      ) {
         toolName = 'Edit';
         params.file_path = params.file_path || params.path;
       }
     }
 
-    if ((toolName === 'Write' || toolName === 'writeFile' || toolName === 'write_file')
-      && (!params.content || String(params.content).trim() === '')
-      && !params.allow_empty
-      && !params.create_empty) {
+    if (
+      (toolName === 'Write' || toolName === 'writeFile' || toolName === 'write_file') &&
+      (!params.content || String(params.content).trim() === '') &&
+      !params.allow_empty &&
+      !params.create_empty
+    ) {
       return {
         success: false,
         text: 'Write tool rejected empty content. Please provide full file content (or set allow_empty/create_empty explicitly).',
@@ -1292,14 +1667,35 @@ async function runNaturalToolCall(call, context = {}) {
         if (typeof tc.approveTool === 'function') {
           tc.approveTool(toolName, false);
           // Also approve aliases and snake_case variants
-          const snakeMap = { 'Write': 'write_file', 'Read': 'read_file', 'Edit': 'edit_file', 'shellCommand': 'shell_command' };
-          if (snakeMap[toolName]) tc.approveTool(snakeMap[toolName], false);
+          const snakeMap = {
+            Write: 'write_file',
+            Read: 'read_file',
+            Edit: 'edit_file',
+            shellCommand: 'shell_command',
+          };
+          if (snakeMap[toolName]) {
+            tc.approveTool(snakeMap[toolName], false);
+          }
           // Pre-approve related tools (e.g. Edit after Read, Write after Read)
-          for (const related of ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'read_file', 'write_file', 'edit_file', 'editFile', 'shellCommand', 'shell_command']) {
+          for (const related of [
+            'Read',
+            'Write',
+            'Edit',
+            'Glob',
+            'Grep',
+            'read_file',
+            'write_file',
+            'edit_file',
+            'editFile',
+            'shellCommand',
+            'shell_command',
+          ]) {
             tc.approveTool(related, false);
           }
         }
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
 
     try {
@@ -1351,18 +1747,25 @@ async function runNaturalToolCall(call, context = {}) {
 
   if (call.action === '回测') {
     const kv = parseKVArg(call.arg);
-    const r = await tools.execute('backtest', {
-      symbol: kv.symbol || kv.code || '000300',
-      strategy: kv.strategy || 'ma_cross',
-      start: kv.start,
-      end: kv.end,
-      capital: kv.capital ? Number(kv.capital) : undefined,
-    }, context);
+    const r = await tools.execute(
+      'backtest',
+      {
+        symbol: kv.symbol || kv.code || '000300',
+        strategy: kv.strategy || 'ma_cross',
+        start: kv.start,
+        end: kv.end,
+        capital: kv.capital ? Number(kv.capital) : undefined,
+      },
+      context
+    );
     return normalizeToolResult(r);
   }
 
   if (call.action === 'K线') {
-    const parts = String(call.arg || '').trim().split(/\s+/).filter(Boolean);
+    const parts = String(call.arg || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
     const symbol = parts[0] || '000001';
     const period = parts[1] || 'daily';
     const r = await tools.execute('dataFetch', { symbol, period }, context);
@@ -1408,10 +1811,14 @@ async function runNaturalToolCall(call, context = {}) {
 
   if (call.action === 'PDF转Word') {
     const parts = String(call.arg || '').split('|');
-    const r = await tools.execute('pdfToWord', {
-      inputPath: (parts[0] || '').trim(),
-      outputPath: (parts[1] || '').trim() || undefined,
-    }, context);
+    const r = await tools.execute(
+      'pdfToWord',
+      {
+        inputPath: (parts[0] || '').trim(),
+        outputPath: (parts[1] || '').trim() || undefined,
+      },
+      context
+    );
     return normalizeToolResult(r);
   }
 
@@ -1419,10 +1826,14 @@ async function runNaturalToolCall(call, context = {}) {
     const arg = String(call.arg || '').trim();
     // Support "image_path|output.docx" format
     const parts = arg.split('|');
-    const r = await tools.execute('imageOcr', {
-      imagePath: (parts[0] || '').trim(),
-      outputPath: (parts[1] || '').trim() || undefined,
-    }, context);
+    const r = await tools.execute(
+      'imageOcr',
+      {
+        imagePath: (parts[0] || '').trim(),
+        outputPath: (parts[1] || '').trim() || undefined,
+      },
+      context
+    );
     return normalizeToolResult(r);
   }
 
@@ -1440,10 +1851,13 @@ const { isCreativeRequest, lockTemperature, lockTopP } = require('./samplingPoli
  */
 function postProcessOutput(text) {
   let out = String(text || '').trim();
-  if (!out) return out;
+  if (!out) {
+    return out;
+  }
 
   // Strip filler phrases at start (was Rule R1)
-  const FILLER_RE = /^(好的[，,]?\s*|让我[来为]?\s*|首先[，,]?\s*|接下来[，,]?\s*|当然[了，,]?\s*|没问题[，,]?\s*|我来\s*|请稍等[，,]?\s*|嗯[，,]?\s*|好[的吧]?[，,]\s*)+/;
+  const FILLER_RE =
+    /^(好的[，,]?\s*|让我[来为]?\s*|首先[，,]?\s*|接下来[，,]?\s*|当然[了，,]?\s*|没问题[，,]?\s*|我来\s*|请稍等[，,]?\s*|嗯[，,]?\s*|好[的吧]?[，,]\s*)+/;
   out = out.replace(FILLER_RE, '');
 
   // Collapse nested bullets to flat (was Rule R10)
@@ -1480,23 +1894,27 @@ const PROMPT_CACHE_MAX = 32;
  * @param {object} [promptRuntimeOpts] - Runtime prompt selection context
  * @returns {string} Complete system prompt
  */
-async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFiles = [], promptRuntimeOpts = {}) {
+async function makeSystemPrompt(
+  baseSecurity = '',
+  modelInfo = {},
+  bootstrapFiles = [],
+  promptRuntimeOpts = {}
+) {
   const crypto = require('crypto');
   const os = require('os');
   const { getDesktopPath } = require('../utils/pathCompat');
 
-  const modelId = modelInfo.model || process.env.GATEWAY_PREFERRED_MODEL
-    || process.env.OLLAMA_MODEL || 'auto';
+  const modelId =
+    modelInfo.model || process.env.GATEWAY_PREFERRED_MODEL || process.env.OLLAMA_MODEL || 'auto';
   const adapter = modelInfo.adapter || process.env.GATEWAY_PREFERRED_ADAPTER || 'auto';
 
   // Model-capability tier → harness profile. Same spine the tool-use loop uses
   // (modelTier.js). `lean` verbosity (T0 frontier only) drops the weak-model
   // hand-holding scaffolding sections below; T1/T2/T3 keep today's full prompt.
   const _modelTier = require('./modelTier');
-  const _harnessProfile = _modelTier.harnessProfile(
-    _modelTier.resolveTier(modelId),
-    { contextWindow: promptRuntimeOpts.contextWindow },
-  );
+  const _harnessProfile = _modelTier.harnessProfile(_modelTier.resolveTier(modelId), {
+    contextWindow: promptRuntimeOpts.contextWindow,
+  });
   const _lean = _harnessProfile.promptVerbosity === 'lean';
   // Short-context (small-window) models also drop the multi-KB hand-holding
   // sections — not because they're trusted to do it natively (T0 lean) but
@@ -1507,10 +1925,11 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
   const _compactPrompt = _lean || _short;
 
   // Determine if we should use modular prompt (cloud models) or legacy (local)
-  const isCloudModel = /claude|gpt|gemini|deepseek/i.test(modelId) ||
+  const isCloudModel =
+    /claude|gpt|gemini|deepseek/i.test(modelId) ||
     /api|claude|openai|cursor|kiro|codex/i.test(adapter);
-  const forceModular = process.env.KHY_MODULAR_PROMPT === '1' ||
-    process.env.KHY_CLAUDE_PROMPT === '1';
+  const forceModular =
+    process.env.KHY_MODULAR_PROMPT === '1' || process.env.KHY_CLAUDE_PROMPT === '1';
   const forceLegacy = process.env.KHY_LEGACY_PROMPT === '1';
 
   const useModular = (isCloudModel || forceModular) && !forceLegacy;
@@ -1518,15 +1937,19 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
   let enabledTools = [];
   try {
     const toolModule = require('../tools');
-    enabledTools = [...toolModule.getEnabled().values()].map(t => t.name);
-  } catch { /* tools not loaded yet */ }
+    enabledTools = [...toolModule.getEnabled().values()].map((t) => t.name);
+  } catch {
+    /* tools not loaded yet */
+  }
 
   try {
     const { getClaudeCompatToolList } = require('./claudeCompat');
     for (const compat of getClaudeCompatToolList()) {
       enabledTools.push(compat.name);
     }
-  } catch { /* best effort */ }
+  } catch {
+    /* best effort */
+  }
 
   const {
     getOnDemandPromptSections,
@@ -1563,16 +1986,27 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
       // a model whose tools get stripped is GUARANTEED to be taught the text fallback).
       // Gate KHY_MODEL_TOOLING_CAPABILITY off → byte-revert to the legacy inline logic.
       const _toolCap = require('./gateway/modelToolingCapability');
-      const _modelForTier = String(modelInfo?.model || process.env.GATEWAY_PREFERRED_MODEL || modelId || '');
+      const _modelForTier = String(
+        modelInfo?.model || process.env.GATEWAY_PREFERRED_MODEL || modelId || ''
+      );
       let adapterSupportsNativeToolUse;
       let hasNativeToolUse;
       if (_toolCap.isEnabled()) {
         adapterSupportsNativeToolUse = _toolCap.adapterSupportsNativeToolUse(adapter);
         let _measured = null;
-        try { _measured = require('./gateway/toolCapabilityStore').getVerdict(_modelForTier); } catch { /* best effort */ }
-        hasNativeToolUse = _toolCap.hasNativeToolUse({ model: _modelForTier, adapter, measured: _measured });
+        try {
+          _measured = require('./gateway/toolCapabilityStore').getVerdict(_modelForTier);
+        } catch {
+          /* best effort */
+        }
+        hasNativeToolUse = _toolCap.hasNativeToolUse({
+          model: _modelForTier,
+          adapter,
+          measured: _measured,
+        });
       } else {
-        const NATIVE_TOOL_USE_ADAPTERS = /^(kiro|cursor|trae|claude|codex|api|windsurf|vscode|warp|cursor2api|relay_api)$/i;
+        const NATIVE_TOOL_USE_ADAPTERS =
+          /^(kiro|cursor|trae|claude|codex|api|windsurf|vscode|warp|cursor2api|relay_api)$/i;
         adapterSupportsNativeToolUse = NATIVE_TOOL_USE_ADAPTERS.test(adapter);
         hasNativeToolUse = adapterSupportsNativeToolUse;
         const _LOW_TIER_RE = /(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny)/i;
@@ -1587,13 +2021,17 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
       let deferredToolsHint = '';
       try {
         const toolModule = require('../tools');
-        if (typeof toolModule.getDeferredTools === 'function' &&
-            typeof toolModule.getRevealedDeferred === 'function') {
+        if (
+          typeof toolModule.getDeferredTools === 'function' &&
+          typeof toolModule.getRevealedDeferred === 'function'
+        ) {
           const deferred = toolModule.getDeferredTools();
           const revealed = toolModule.getRevealedDeferred();
           const unrevealed = [];
           for (const [name] of deferred) {
-            if (!revealed.has(name)) unrevealed.push(name);
+            if (!revealed.has(name)) {
+              unrevealed.push(name);
+            }
           }
           if (unrevealed.length > 0) {
             deferredToolsHint =
@@ -1603,7 +2041,9 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
               unrevealed.join(', ');
           }
         }
-      } catch { /* tools not loaded yet */ }
+      } catch {
+        /* tools not loaded yet */
+      }
 
       const _sections = await getModularSystemPrompt({
         enabledTools,
@@ -1640,49 +2080,72 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
     // Static intro
     sections.push(
       `\nYou are khy OS, an intelligent operating system assistant powered by AI.\n` +
-      `You are an interactive agent that helps users with software engineering tasks, ` +
-      `system operations, and general knowledge. ` +
-      `Use the instructions below and the tools available to you to assist the user.\n\n` +
-      `${require('../constants/cyberRiskInstruction').CYBER_RISK_INSTRUCTION}\n` +
-      `IMPORTANT: You must NEVER generate or guess URLs for the user unless you are confident that the URLs are for helping the user with programming. You may use URLs provided by the user in their messages or local files.`
+        `You are an interactive agent that helps users with software engineering tasks, ` +
+        `system operations, and general knowledge. ` +
+        `Use the instructions below and the tools available to you to assist the user.\n\n` +
+        `${require('../constants/cyberRiskInstruction').CYBER_RISK_INSTRUCTION}\n` +
+        `IMPORTANT: You must NEVER generate or guess URLs for the user unless you are confident that the URLs are for helping the user with programming. You may use URLs provided by the user in their messages or local files.`
     );
 
     // System section
-    const { getSimpleSystemSection, getDoingTasksSection, getExecutionDisciplineSection,
-      getPlanningAndRecoverySection, getSessionMemoryAndContextSection,
-      getUsingYourToolsSection, getToneAndStyleSection, getOutputEfficiencySection,
-      getEnvironmentSection, getKhySpecificSection,
+    const {
+      getSimpleSystemSection,
+      getDoingTasksSection,
+      getExecutionDisciplineSection,
+      getPlanningAndRecoverySection,
+      getSessionMemoryAndContextSection,
+      getUsingYourToolsSection,
+      getToneAndStyleSection,
+      getOutputEfficiencySection,
+      getEnvironmentSection,
+      getKhySpecificSection,
       getOutputStyleSection,
-      getProjectInstructionsSection, getGitStatusSection, getMemorySection,
-      getPersonaSection, getCompactTaskDisciplineSection,
+      getProjectInstructionsSection,
+      getGitStatusSection,
+      getMemorySection,
+      getPersonaSection,
+      getCompactTaskDisciplineSection,
     } = require('../constants/prompts');
-    const cacheKey = crypto.createHash('sha256')
-      .update(JSON.stringify({
-        modelId,
-        adapter,
-        baseSecurity,
-        useModular,
-        bootstrapPaths: (bootstrapFiles || []).map(f => f.path).sort(),
-        promptCapsuleMode,
-        promptCapsules: activePromptSectionIds,
-        taskScale: String(promptRuntimeOpts.taskScale || ''),
-        verbosity: _harnessProfile.promptVerbosity,
-        shortContext: _short,
-        // Persona is loaded from persona.md below; fold its fingerprint into the
-        // cache key so edits to persona.md invalidate the cached prompt (C1).
-        personaStamp: (() => {
-          try { return require('./personaService').personaStamp(cwd); } catch { return 'none'; }
-        })(),
-        // Ephemeral role overlay (DESIGN-ARCH-059 #3): fold the active-role
-        // fingerprint in so adopting/exiting a role busts the cached prompt.
-        roleStamp: (() => {
-          try { return require('./roleService').roleStamp(); } catch { return 'none'; }
-        })(),
-      }))
+    const cacheKey = crypto
+      .createHash('sha256')
+      .update(
+        JSON.stringify({
+          modelId,
+          adapter,
+          baseSecurity,
+          useModular,
+          bootstrapPaths: (bootstrapFiles || []).map((f) => f.path).sort(),
+          promptCapsuleMode,
+          promptCapsules: activePromptSectionIds,
+          taskScale: String(promptRuntimeOpts.taskScale || ''),
+          verbosity: _harnessProfile.promptVerbosity,
+          shortContext: _short,
+          // Persona is loaded from persona.md below; fold its fingerprint into the
+          // cache key so edits to persona.md invalidate the cached prompt (C1).
+          personaStamp: (() => {
+            try {
+              return require('./personaService').personaStamp(cwd);
+            } catch {
+              return 'none';
+            }
+          })(),
+          // Ephemeral role overlay (DESIGN-ARCH-059 #3): fold the active-role
+          // fingerprint in so adopting/exiting a role busts the cached prompt.
+          roleStamp: (() => {
+            try {
+              return require('./roleService').roleStamp();
+            } catch {
+              return 'none';
+            }
+          })(),
+        })
+      )
       .digest('hex');
 
-    let cached = _promptCache.get(cacheKey);
-    if (cached) return cached;
+    const cached = _promptCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     // Stable-prefix mode (DESIGN-ARCH-047, KHY_STABLE_PREFIX=1, default OFF):
     // keep the boundary marker IN the joined string so the adapter can split the
@@ -1701,7 +2164,7 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
     // On-demand sections are classified from userMessage → request-variable. In
     // stable-prefix mode we DEFER them past the boundary (B2) so the static
     // prefix stays request-independent; otherwise they stay here (today's order).
-    const _onDemandSections = (!_compactPrompt) ? getOnDemandPromptSections(promptCapsuleOpts) : [];
+    const _onDemandSections = !_compactPrompt ? getOnDemandPromptSections(promptCapsuleOpts) : [];
     if (!_compactPrompt) {
       sections.push(getDoingTasksSection());
       sections.push(getExecutionDisciplineSection());
@@ -1717,7 +2180,9 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
       // context because an 8k–32k window can't afford the bulk — but a complete
       // skip left them with no main-loop planning cue. Inject a single-bullet
       // task discipline instead (token-cheap, default on).
-      const _disciplineRaw = String(process.env.KHY_PLANNING_DISCIPLINE || 'true').trim().toLowerCase();
+      const _disciplineRaw = String(process.env.KHY_PLANNING_DISCIPLINE || 'true')
+        .trim()
+        .toLowerCase();
       if (!['0', 'false', 'off', 'no'].includes(_disciplineRaw)) {
         sections.push(getCompactTaskDisciplineSection());
       }
@@ -1728,24 +2193,30 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
     // Deferred tools hint: list tools available via ToolSearch
     try {
       const toolModule = require('../tools');
-      if (typeof toolModule.getDeferredTools === 'function' &&
-          typeof toolModule.getRevealedDeferred === 'function') {
+      if (
+        typeof toolModule.getDeferredTools === 'function' &&
+        typeof toolModule.getRevealedDeferred === 'function'
+      ) {
         const deferred = toolModule.getDeferredTools();
         const revealed = toolModule.getRevealedDeferred();
         const unrevealed = [];
         for (const [name] of deferred) {
-          if (!revealed.has(name)) unrevealed.push(name);
+          if (!revealed.has(name)) {
+            unrevealed.push(name);
+          }
         }
         if (unrevealed.length > 0) {
           sections.push(
             `# Additional Tools\n` +
-            `The following tools are available but not currently loaded to save context space. ` +
-            `Use the toolSearch tool to discover and activate them when needed:\n` +
-            unrevealed.join(', ')
+              `The following tools are available but not currently loaded to save context space. ` +
+              `Use the toolSearch tool to discover and activate them when needed:\n` +
+              unrevealed.join(', ')
           );
         }
       }
-    } catch { /* tools not loaded yet */ }
+    } catch {
+      /* tools not loaded yet */
+    }
 
     sections.push(getToneAndStyleSection());
     sections.push(getOutputEfficiencySection());
@@ -1762,14 +2233,18 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
 
     // Dynamic sections
     const memorySection = getMemorySection();
-    if (memorySection) sections.push(memorySection);
+    if (memorySection) {
+      sections.push(memorySection);
+    }
 
     sections.push(getEnvironmentSection(modelId, cwd));
 
     // Language preference
     const lang = process.env.KHY_LANGUAGE || null;
     if (lang) {
-      sections.push(`# Language\nAlways respond in ${lang}. Use ${lang} for all explanations, comments, and communications with the user. Technical terms and code identifiers should remain in their original form.`);
+      sections.push(
+        `# Language\nAlways respond in ${lang}. Use ${lang} for all explanations, comments, and communications with the user. Technical terms and code identifiers should remain in their original form.`
+      );
     }
 
     // Default output style: senior-engineer (can be disabled via KHY_OUTPUT_STYLE=off|none|false|0)
@@ -1781,7 +2256,17 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
         const { BUILT_IN_STYLES } = require('../constants/outputStyles');
         let styleConfig = BUILT_IN_STYLES[styleRaw] || BUILT_IN_STYLES[styleKey] || null;
         if (!styleConfig) {
-          const stylePath = path.join(os.homedir(), '.khy', 'output-styles', `${styleRaw}.md`);
+          // Portable-aware data home; fallback to the legacy location.
+          let stylePath;
+          try {
+            stylePath = path.join(
+              require('../utils/dataHome').getDataHome(),
+              'output-styles',
+              `${styleRaw}.md`
+            );
+          } catch {
+            stylePath = path.join(os.homedir(), '.khy', 'output-styles', `${styleRaw}.md`);
+          }
           if (fs.existsSync(stylePath)) {
             const content = fs.readFileSync(stylePath, 'utf-8').trim();
             if (content) {
@@ -1791,23 +2276,33 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
         }
         if (styleConfig) {
           const styleSection = getOutputStyleSection(styleConfig);
-          if (styleSection) sections.push(styleSection);
+          if (styleSection) {
+            sections.push(styleSection);
+          }
         }
       }
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
 
     // Project instructions (CLAUDE.md, KHY.md)
     const projInstructions = getProjectInstructionsSection(cwd);
-    if (projInstructions) sections.push(projInstructions);
+    if (projInstructions) {
+      sections.push(projInstructions);
+    }
 
     // Persona (C1) — executable behavior spec; project instructions above win
     // on conflict. Injection-scanned inside personaService.
     const personaSection = getPersonaSection(cwd);
-    if (personaSection) sections.push(personaSection);
+    if (personaSection) {
+      sections.push(personaSection);
+    }
 
     // Git status
     const gitStatus = getGitStatusSection(cwd);
-    if (gitStatus) sections.push(gitStatus);
+    if (gitStatus) {
+      sections.push(gitStatus);
+    }
 
     // khy OS specific capabilities
     // 云端/IDE 适配器支持原生 function calling，不需要 <tool_call> 格式教学
@@ -1825,35 +2320,48 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
     if (_toolCap.isEnabled()) {
       adapterSupportsNativeToolUse = _toolCap.adapterSupportsNativeToolUse(adapter);
       let _measured = null;
-      try { _measured = require('./gateway/toolCapabilityStore').getVerdict(_modelId); } catch { /* best effort */ }
-      hasNativeToolUse = _toolCap.hasNativeToolUse({ model: _modelId, adapter, measured: _measured });
+      try {
+        _measured = require('./gateway/toolCapabilityStore').getVerdict(_modelId);
+      } catch {
+        /* best effort */
+      }
+      hasNativeToolUse = _toolCap.hasNativeToolUse({
+        model: _modelId,
+        adapter,
+        measured: _measured,
+      });
     } else {
-      const NATIVE_TOOL_USE_ADAPTERS = /^(kiro|cursor|trae|claude|codex|api|windsurf|vscode|warp|cursor2api|relay_api)$/i;
+      const NATIVE_TOOL_USE_ADAPTERS =
+        /^(kiro|cursor|trae|claude|codex|api|windsurf|vscode|warp|cursor2api|relay_api)$/i;
       adapterSupportsNativeToolUse = NATIVE_TOOL_USE_ADAPTERS.test(adapter);
       hasNativeToolUse = adapterSupportsNativeToolUse;
       const _LOW_TIER_RE = /(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny)/i;
       if (adapterSupportsNativeToolUse && _LOW_TIER_RE.test(_modelId)) {
-        hasNativeToolUse = false;  // 触发 _toolCallingFallbackProfile() 注入 <tool_call> 格式教学
+        hasNativeToolUse = false; // 触发 _toolCallingFallbackProfile() 注入 <tool_call> 格式教学
       }
     }
     const _isLowTierModel = !hasNativeToolUse && adapterSupportsNativeToolUse;
-    sections.push(getKhySpecificSection({
-      hasNativeToolUse,
-      _isLowTierModel,
-      taskScale: promptRuntimeOpts.taskScale,
-    }));
+    sections.push(
+      getKhySpecificSection({
+        hasNativeToolUse,
+        _isLowTierModel,
+        taskScale: promptRuntimeOpts.taskScale,
+      })
+    );
 
     // Synthetic tool layer hints for non-native / low-tier models
     // Makes small models output clearer patterns so the synthetic layer can detect & act
     if (!hasNativeToolUse || _isLowTierModel) {
-      sections.push([
-        '# 内容输出指南',
-        '当用户要求创建文档、保存文件或执行命令时：',
-        '- 直接在回复中包含全部内容（不要说"我无法保存文件"）',
-        '- 明确说明建议的文件名和类型',
-        '- 提及用户指定的保存位置',
-        '- 系统会自动帮你完成保存操作',
-      ].join('\n'));
+      sections.push(
+        [
+          '# 内容输出指南',
+          '当用户要求创建文档、保存文件或执行命令时：',
+          '- 直接在回复中包含全部内容（不要说"我无法保存文件"）',
+          '- 明确说明建议的文件名和类型',
+          '- 提及用户指定的保存位置',
+          '- 系统会自动帮你完成保存操作',
+        ].join('\n')
+      );
     }
 
     // Bootstrap file injection (workspace context)
@@ -1861,21 +2369,26 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
       try {
         const { injectWithBudget } = require('./bootstrapBudget');
         const { injected } = injectWithBudget(bootstrapFiles, {
-          perFileMaxChars: 8000, totalMaxChars: 24000,
+          perFileMaxChars: 8000,
+          totalMaxChars: 24000,
         });
         if (injected.length > 0) {
           const contextParts = injected
-            .filter(s => s.injectedChars > 0)
-            .map(s => `--- ${s.path} ---\n${s.injectedContent}`);
+            .filter((s) => s.injectedChars > 0)
+            .map((s) => `--- ${s.path} ---\n${s.injectedContent}`);
           if (contextParts.length > 0) {
             sections.push(`# Workspace context\n${contextParts.join('\n')}`);
           }
         }
-      } catch { /* bootstrapBudget not available */ }
+      } catch {
+        /* bootstrapBudget not available */
+      }
     }
 
     // Additional security
-    if (baseSecurity) sections.push(baseSecurity);
+    if (baseSecurity) {
+      sections.push(baseSecurity);
+    }
 
     // Tool guide — 原生适配器走结构化 function calling，不需要 <tool_call> 格式教学。
     // 非原生适配器的工具格式教学已由 prompts.js 的 _toolCallingFallbackProfile 注入，
@@ -1885,7 +2398,7 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
     // so the adapter can split prefix/suffix and place the cache breakpoint
     // between them; otherwise it is stripped (today's behavior).
     fullPrompt = sections
-      .filter(s => s != null && (_stablePrefix || s !== SYSTEM_PROMPT_DYNAMIC_BOUNDARY))
+      .filter((s) => s != null && (_stablePrefix || s !== SYSTEM_PROMPT_DYNAMIC_BOUNDARY))
       .join('\n\n');
 
     _promptCache.set(cacheKey, fullPrompt);
@@ -1893,23 +2406,28 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
       _promptCache.delete(_promptCache.keys().next().value);
     }
   } else {
-    const cacheKey = crypto.createHash('sha256')
-      .update(JSON.stringify({
-        modelId,
-        adapter,
-        baseSecurity,
-        useModular,
-        bootstrapPaths: (bootstrapFiles || []).map(f => f.path).sort(),
-        promptCapsuleMode,
-        promptCapsules: activePromptSectionIds,
-        taskScale: String(promptRuntimeOpts.taskScale || ''),
-        verbosity: _harnessProfile.promptVerbosity,
-        shortContext: _short,
-      }))
+    const cacheKey = crypto
+      .createHash('sha256')
+      .update(
+        JSON.stringify({
+          modelId,
+          adapter,
+          baseSecurity,
+          useModular,
+          bootstrapPaths: (bootstrapFiles || []).map((f) => f.path).sort(),
+          promptCapsuleMode,
+          promptCapsules: activePromptSectionIds,
+          taskScale: String(promptRuntimeOpts.taskScale || ''),
+          verbosity: _harnessProfile.promptVerbosity,
+          shortContext: _short,
+        })
+      )
       .digest('hex');
 
-    let cached = _promptCache.get(cacheKey);
-    if (cached) return cached;
+    const cached = _promptCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     // ── Legacy prompt for local models ──
     const platform = os.platform();
@@ -1918,10 +2436,12 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
     const cwd = (process.env.KHYQUANT_CWD || process.cwd()).replace(/\\/g, '/');
 
     const desktopDir = getDesktopPath().replace(/\\/g, '/');
-    let prompt = HARDCORE_SYSTEM_PROMPT
-      .replace(/\{\{MODEL_ID\}\}/g, modelId)
+    let prompt = HARDCORE_SYSTEM_PROMPT.replace(/\{\{MODEL_ID\}\}/g, modelId)
       .replace(/\{\{ADAPTER\}\}/g, adapter)
-      .replace(/\{\{PLATFORM\}\}/g, require('../constants/nodePlatformLabel').resolvePlatformLabel(platform))
+      .replace(
+        /\{\{PLATFORM\}\}/g,
+        require('../constants/nodePlatformLabel').resolvePlatformLabel(platform)
+      )
       .replace(/\{\{HOME_DIR\}\}/g, homeDir)
       .replace(/\{\{DESKTOP_DIR\}\}/g, desktopDir)
       .replace(/\{\{CWD\}\}/g, cwd);
@@ -1948,7 +2468,8 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
       try {
         const { injectWithBudget } = require('./bootstrapBudget');
         const { injected } = injectWithBudget(bootstrapFiles, {
-          perFileMaxChars: 8000, totalMaxChars: 24000,
+          perFileMaxChars: 8000,
+          totalMaxChars: 24000,
         });
         if (injected.length > 0) {
           prompt += '\n<workspace-context>\n';
@@ -1959,12 +2480,16 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
           }
           prompt += '</workspace-context>\n';
         }
-      } catch { /* best effort */ }
+      } catch {
+        /* best effort */
+      }
     }
 
     const dynamicSuffix = buildNaturalToolGuide();
     fullPrompt = prompt + osHint + (baseSecurity || '') + '\n' + dynamicSuffix;
-    fullPrompt = fullPrompt.replace(/\{\{TOOL_LIST\}\}\n?/, '').replace(/\{\{\/TOOL_LIST\}\}\n?/, '');
+    fullPrompt = fullPrompt
+      .replace(/\{\{TOOL_LIST\}\}\n?/, '')
+      .replace(/\{\{\/TOOL_LIST\}\}\n?/, '');
 
     _promptCache.set(cacheKey, fullPrompt);
     if (_promptCache.size > PROMPT_CACHE_MAX) {
@@ -1977,14 +2502,20 @@ async function makeSystemPrompt(baseSecurity = '', modelInfo = {}, bootstrapFile
 
 function buildFlatConversation(systemPrompt, messages) {
   let _ct;
-  try { _ct = require('./contentBlockUtils').contentToText; } catch { _ct = (c) => String(c || ''); }
+  try {
+    _ct = require('./contentBlockUtils').contentToText;
+  } catch {
+    _ct = (c) => String(c || '');
+  }
 
   return [
     systemPrompt,
     '',
-    ...messages.map(m => {
+    ...messages.map((m) => {
       const text = _ct(m.content);
-      if (m.role === 'tool') return `[ToolResult]\n${text}`;
+      if (m.role === 'tool') {
+        return `[ToolResult]\n${text}`;
+      }
       return `${m.role.toUpperCase()}: ${text}`;
     }),
   ].join('\n');
@@ -2007,4 +2538,9 @@ module.exports = {
   estimateTokens,
   buildIntentAssuranceDirective,
   _ON_DEMAND_CAPSULE_MODES,
+  // Stable/dynamic prompt architecture (Y-code inspired)
+  buildStableSystemMessage: require('./promptAssemblyService').buildStableSystemMessage,
+  buildDynamicContext: require('./promptAssemblyService').buildDynamicContext,
+  assembleRequestMessages: require('./promptAssemblyService').assembleRequestMessages,
+  promptAssemblyInvalidate: require('./promptAssemblyService').invalidateStablePrefix,
 };

@@ -115,7 +115,7 @@ test('never throws on bad env', () => {
 test('selfProfile injects the self-audit block via formatForSystemPrompt', () => {
   const src = fs.readFileSync(path.join(BACKEND_ROOT, 'src/services/selfProfile.js'), 'utf8');
   assert.ok(/require\(['"]\.\/selfAuditRegistry['"]\)/.test(src), 'selfProfile requires selfAuditRegistry');
-  assert.ok(/\.formatForSystemPrompt\(\s*\{\s*env:\s*process\.env\s*\}\s*\)/.test(src),
+  assert.ok(/\.formatForSystemPrompt\(\s*\{[^}]*env:\s*process\.env[^)]*\}\s*\)/.test(src),
     'selfProfile calls formatForSystemPrompt with env');
 });
 
@@ -131,4 +131,53 @@ test('flagRegistry registers KHY_SELF_AUDIT_AWARENESS default ON', () => {
   assert.strictEqual(reg.isFlagEnabled('KHY_SELF_AUDIT_AWARENESS', {}), true);
   assert.strictEqual(
     reg.isFlagEnabled('KHY_SELF_AUDIT_AWARENESS', { KHY_SELF_AUDIT_AWARENESS: 'off' }), false);
+});
+
+// ── ⑩ verification badges + protocol line ──────────────────────────────
+test('formatForSystemPrompt with verification emits badges and the verify protocol', () => {
+  // Plain-object shape (id → {verified, reason}), as produced by selfAuditVerifier.
+  const verification = {
+    '#1': { verified: true, reason: 'ok' },
+    '#4': { verified: false, reason: 'module missing' },
+  };
+  const out = sar.formatForSystemPrompt({ env: {}, verification });
+  assert.ok(out.includes('#1') && / ·已核验/.test(out), 'verified item carries the ·已核验 badge');
+  assert.ok(/ ·核验失败/.test(out), 'failed item carries the ·核验失败 badge');
+  // The note line becomes an ACTIONABLE verification protocol, not a static claim.
+  assert.ok(out.includes('self_audit_verify'), 'protocol points at KhySelf(action:self_audit_verify)');
+  assert.ok(out.includes('location'), 'protocol points at KhySelf(action:location)');
+  assert.ok(/Read\/Grep/.test(out), 'protocol tells the model to inspect with Read/Grep');
+  assert.ok(/勿声称无法验证/.test(out), 'protocol forbids claiming verification is impossible');
+  // Map shape is accepted too (same normalization seam).
+  const outMap = sar.formatForSystemPrompt({ env: {}, verification: new Map(Object.entries(verification)) });
+  assert.ok(/ ·已核验/.test(outMap) && / ·核验失败/.test(outMap), 'Map verification accepted');
+});
+
+// ── ⑪ no verification → legacy output (no badges, no protocol) ──────────
+test('formatForSystemPrompt without verification stays legacy (no badges/protocol)', () => {
+  const out = sar.formatForSystemPrompt({ env: {} });
+  assert.ok(!out.includes('·已核验'), 'no ·已核验 badge');
+  assert.ok(!out.includes('·核验失败'), 'no ·核验失败 badge');
+  assert.ok(!out.includes('self_audit_verify'), 'no verify-protocol wording');
+});
+
+// ── ⑫ evidenceAnchors: exact declarative values, fully frozen ───────────
+test('evidenceAnchors declare the exact mitigation modules/gates and are frozen', () => {
+  const expected = {
+    '#1': { modules: ['directiveComposer', 'directiveRegistryAudit'], gates: [] },
+    '#4': { modules: ['toolClusterActivation'], gates: ['KHY_TOOL_CLUSTER_ACTIVATION'] },
+    '#5': { modules: ['../tools/configureErrorShape'], gates: [] },
+    '#6': { modules: ['visionRoutingTruth'], gates: ['KHY_VISION_ROUTING_TRUTH'] },
+    '#7': { modules: ['commandOverlapAudit', 'commandCatalog/commandCatalog'], gates: ['KHY_COMMAND_PRIMARY_PANEL'] },
+  };
+  const byId = Object.fromEntries(sar.getSelfAuditItems().map((it) => [it.id, it]));
+  for (const [id, exp] of Object.entries(expected)) {
+    const anchors = byId[id] && byId[id].evidenceAnchors;
+    assert.ok(anchors, `${id} has evidenceAnchors`);
+    assert.deepStrictEqual([...anchors.modules], exp.modules, `${id} modules`);
+    assert.deepStrictEqual([...anchors.gates], exp.gates, `${id} gates`);
+    assert.ok(Object.isFrozen(anchors), `${id} evidenceAnchors frozen`);
+    assert.ok(Object.isFrozen(anchors.modules), `${id} modules frozen`);
+    assert.ok(Object.isFrozen(anchors.gates), `${id} gates frozen`);
+  }
 });

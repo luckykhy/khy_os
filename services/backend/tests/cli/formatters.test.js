@@ -257,7 +257,10 @@ describe('formatters', () => {
   });
 
   describe('printHelp() box alignment', () => {
-    const stringWidth = require('string-width');
+    // string-width is ESM-only on npm >= 5 (so `require('string-width')`
+    // throws under jest's CJS VM). formatters.displayWidth is the project's
+    // own CJK-aware width (string-width with manual fallback) — use it.
+    const stringWidth = fmt.displayWidth;
 
     function renderHelpBorderWidths() {
       const calls = [];
@@ -289,7 +292,7 @@ describe('formatters', () => {
   });
 
   describe('printBacktestResult() column alignment', () => {
-    const stringWidth = require('string-width');
+    const stringWidth = fmt.displayWidth;
 
     function renderRows() {
       const calls = [];

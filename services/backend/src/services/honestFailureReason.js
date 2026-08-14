@@ -25,7 +25,9 @@
  */
 
 function _enabled(env) {
-  const v = String((env && env.KHY_HONEST_FAILURE) || '').trim().toLowerCase();
+  const v = String((env && env.KHY_HONEST_FAILURE) || '')
+    .trim()
+    .toLowerCase();
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
@@ -53,16 +55,28 @@ const SECRET_PATTERNS = [
  */
 function sanitizeCause(raw, maxLen = 220) {
   let s = raw == null ? '' : String(raw);
-  if (!s) return '';
-  for (const re of SECRET_PATTERNS) s = s.replace(re, (m) => (m.includes('@') ? '//***@' : '***'));
+  if (!s) {
+    return '';
+  }
+  for (const re of SECRET_PATTERNS) {
+    s = s.replace(re, (m) => (m.includes('@') ? '//***@' : '***'));
+  }
   // 追加一趟「现代密钥」脱敏(sk-proj-/sk-svcacct-/sk-admin-…),严格超集,只多抹密钥。
   try {
     const r = require('./modernKeyRedaction').redactModernKeys(
-      s, (typeof process !== 'undefined' ? process.env : {}));
-    if (r != null) s = r;
-  } catch { /* fail-soft → legacy s(仅 legacy 脱敏) */ }
+      s,
+      typeof process !== 'undefined' ? process.env : {}
+    );
+    if (r != null) {
+      s = r;
+    }
+  } catch {
+    /* fail-soft → legacy s(仅 legacy 脱敏) */
+  }
   s = s.replace(/\s+/g, ' ').trim();
-  if (s.length > maxLen) s = `${s.slice(0, maxLen)}…`;
+  if (s.length > maxLen) {
+    s = `${s.slice(0, maxLen)}…`;
+  }
   return s;
 }
 
@@ -80,10 +94,16 @@ function resolveFriendlyFailureMessage({ errorType, cause, legacyFriendly, optio
   const env = (options && options.env) || (typeof process !== 'undefined' ? process.env : {});
   const legacy = legacyFriendly == null ? '' : String(legacyFriendly);
   try {
-    if (!_enabled(env)) return legacy;
+    if (!_enabled(env)) {
+      return legacy;
+    }
     const clean = sanitizeCause(cause);
-    if (!clean) return legacy; // 无真因 → 诚实回退,绝不编造
-    const type = String(errorType || '').trim().toLowerCase();
+    if (!clean) {
+      return legacy;
+    } // 无真因 → 诚实回退,绝不编造
+    const type = String(errorType || '')
+      .trim()
+      .toLowerCase();
     const prefix = CATEGORY_PREFIX[type];
     // 真因已包含类别前缀语义(避免「网络请求未能完成。具体原因：网络…」重复)时不再加前缀。
     if (prefix && !clean.includes(prefix)) {
@@ -108,11 +128,17 @@ function _keyInviteEnabled(env) {
   const e = env || (typeof process !== 'undefined' ? process.env : {});
   try {
     const reg = require('./flagRegistry');
-    if (reg && typeof reg.isRegistryEnabled === 'function' && reg.isRegistryEnabled(e)
-      && typeof reg.isFlagEnabled === 'function') {
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
       return reg.isFlagEnabled('KHY_FAILURE_KEY_INVITE', e);
     }
-  } catch { /* 注册表不可用 → 本地回退 */ }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
   const v = e && e.KHY_FAILURE_KEY_INVITE;
   return !(v !== undefined && v !== null && _INVITE_FALSY.has(String(v).trim().toLowerCase()));
 }
@@ -144,8 +170,14 @@ const _PROVIDER_HINTS = [
 function _detectProvider(cause) {
   try {
     const s = cause == null ? '' : String(cause);
-    if (!s) return null;
-    for (const h of _PROVIDER_HINTS) if (h.re.test(s)) return h.name;
+    if (!s) {
+      return null;
+    }
+    for (const h of _PROVIDER_HINTS) {
+      if (h.re.test(s)) {
+        return h.name;
+      }
+    }
     return null;
   } catch {
     return null;
@@ -169,15 +201,23 @@ function _detectProvider(cause) {
 function buildKeyConfigInvite({ errorType, cause, env } = {}) {
   try {
     const e = env || (typeof process !== 'undefined' ? process.env : {});
-    if (!_keyInviteEnabled(e)) return '';
-    const type = String(errorType || '').trim().toLowerCase();
-    if (!_INVITE_CATEGORIES.has(type)) return '';
+    if (!_keyInviteEnabled(e)) {
+      return '';
+    }
+    const type = String(errorType || '')
+      .trim()
+      .toLowerCase();
+    if (!_INVITE_CATEGORIES.has(type)) {
+      return '';
+    }
     const provider = _detectProvider(cause);
     const who = provider ? `${provider} 的 ` : '该模型的 ';
     // 换 key 档:已配过但密钥失效 / 额度用尽 → 引导换新 key。
     if (_KEY_INVALID_CATEGORIES.has(type)) {
-      return `检测到 ${who}API Key 失效或额度用尽。需要我帮你换一个新 key 吗?`
-        + `把 key 发我即可,我就地帮你更新。`;
+      return (
+        `检测到 ${who}API Key 失效或额度用尽。需要我帮你换一个新 key 吗?` +
+        `把 key 发我即可,我就地帮你更新。`
+      );
     }
     // 配置档:完全没配 → 引导配置。
     return `需要我帮你配置 ${who}API Key 吗?配好后即可继续使用(把 key 发我即可,我会帮你写入)。`;
@@ -199,14 +239,18 @@ function buildKeyConfigInvite({ errorType, cause, env } = {}) {
 function extractToolFailureReason(entry, options = {}) {
   const env = (options && options.env) || (typeof process !== 'undefined' ? process.env : {});
   try {
-    if (!_enabled(env)) return '';
-    if (!entry || typeof entry !== 'object') return '';
-    const r = (entry.result && typeof entry.result === 'object') ? entry.result : {};
-    const d = (r.data && typeof r.data === 'object') ? r.data : {};
+    if (!_enabled(env)) {
+      return '';
+    }
+    if (!entry || typeof entry !== 'object') {
+      return '';
+    }
+    const r = entry.result && typeof entry.result === 'object' ? entry.result : {};
+    const d = r.data && typeof r.data === 'object' ? r.data : {};
     const errObj = r.error || entry.error;
     const candidates = [
       entry.error,
-      errObj && typeof errObj === 'object' ? (errObj.message || errObj.reason) : errObj,
+      errObj && typeof errObj === 'object' ? errObj.message || errObj.reason : errObj,
       d.outputTail,
       d.nextAction,
       r.reason,
@@ -218,16 +262,26 @@ function extractToolFailureReason(entry, options = {}) {
     for (const c of candidates) {
       const clean = sanitizeCause(c, 200);
       if (clean) {
-        const exit = typeof d.exitCode === 'number' ? d.exitCode
-          : (typeof r.exitCode === 'number' ? r.exitCode : null);
-        const exitTag = (exit !== null && exit !== 0) ? `[退出码 ${exit}] ` : '';
+        const exit =
+          typeof d.exitCode === 'number'
+            ? d.exitCode
+            : typeof r.exitCode === 'number'
+              ? r.exitCode
+              : null;
+        const exitTag = exit !== null && exit !== 0 ? `[退出码 ${exit}] ` : '';
         return `${exitTag}${clean}`;
       }
     }
     // 没有任何文字真因,但有非零退出码 → 仍比「未知错误」具体。
-    const exit = typeof d.exitCode === 'number' ? d.exitCode
-      : (typeof r.exitCode === 'number' ? r.exitCode : null);
-    if (exit !== null && exit !== 0) return `命令以退出码 ${exit} 失败(无输出)`;
+    const exit =
+      typeof d.exitCode === 'number'
+        ? d.exitCode
+        : typeof r.exitCode === 'number'
+          ? r.exitCode
+          : null;
+    if (exit !== null && exit !== 0) {
+      return `命令以退出码 ${exit} 失败(无输出)`;
+    }
     return '';
   } catch {
     return '';
@@ -239,6 +293,7 @@ module.exports = {
   extractToolFailureReason,
   buildKeyConfigInvite,
   sanitizeCause,
-  isHonestFailureEnabled: (env) => _enabled(env || (typeof process !== 'undefined' ? process.env : {})),
+  isHonestFailureEnabled: (env) =>
+    _enabled(env || (typeof process !== 'undefined' ? process.env : {})),
   CATEGORY_PREFIX,
 };

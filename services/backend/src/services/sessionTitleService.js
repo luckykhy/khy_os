@@ -21,7 +21,9 @@ const log = require('../utils/logger');
  * @returns {string} A short title (≤50 chars)
  */
 function generateTitle(userMessage, assistantReply) {
-  if (!userMessage || typeof userMessage !== 'string') return 'New Conversation';
+  if (!userMessage || typeof userMessage !== 'string') {
+    return 'New Conversation';
+  }
 
   const text = userMessage.trim();
 
@@ -33,11 +35,15 @@ function generateTitle(userMessage, assistantReply) {
 
   // 2. Try extracting from common patterns
   const patternTitle = _extractFromPatterns(text);
-  if (patternTitle) return patternTitle;
+  if (patternTitle) {
+    return patternTitle;
+  }
 
   // 3. Try keyword extraction
   const keywordTitle = _extractKeywords(text);
-  if (keywordTitle) return keywordTitle;
+  if (keywordTitle) {
+    return keywordTitle;
+  }
 
   // 4. Truncate first line
   return _cleanTitle(firstLine.substring(0, 47) + '...');
@@ -61,19 +67,31 @@ ${assistantReply ? `Assistant: ${assistantReply.substring(0, 300)}` : ''}`;
     let result;
 
     if (typeof gw.query === 'function') {
-      result = await gw.query(prompt, { maxTokens: 20, temperature: 0.3 });
+      // requestSource:'background' — titling is fire-and-forget; the gateway
+      // fast-fails on overload instead of burning retries (KHY_BG_FAST_FAIL).
+      result = await gw.query(prompt, {
+        maxTokens: 20,
+        temperature: 0.3,
+        requestSource: 'background',
+      });
     } else if (typeof gw.chat === 'function') {
       const resp = await gw.chat({
         messages: [{ role: 'user', content: prompt }],
         maxTokens: 20,
         temperature: 0.3,
+        requestSource: 'background',
       });
       result = resp.content || resp.text;
     }
 
     if (result && typeof result === 'string') {
-      const clean = result.trim().replace(/^["'`]|["'`]$/g, '').trim();
-      if (clean.length >= 3 && clean.length <= 60) return clean;
+      const clean = result
+        .trim()
+        .replace(/^["'`]|["'`]$/g, '')
+        .trim();
+      if (clean.length >= 3 && clean.length <= 60) {
+        return clean;
+      }
     }
   } catch (err) {
     log.debug('AI title generation failed, using heuristic:', err.message);
@@ -109,7 +127,9 @@ function _extractFromPatterns(text) {
     const m = text.match(p.regex);
     if (m) {
       const title = m[p.group].trim();
-      if (title.length <= 50) return _cleanTitle(title);
+      if (title.length <= 50) {
+        return _cleanTitle(title);
+      }
       return _cleanTitle(title.substring(0, 47) + '...');
     }
   }
@@ -119,28 +139,98 @@ function _extractFromPatterns(text) {
 // ── Keyword Extraction ──
 
 const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'can', 'shall', 'to', 'of', 'in', 'for',
-  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during',
-  'before', 'after', 'above', 'below', 'between', 'and', 'but', 'or',
-  'not', 'no', 'so', 'if', 'then', 'than', 'that', 'this', 'it', 'its',
-  'i', 'me', 'my', 'we', 'you', 'your', 'he', 'she', 'they', 'them',
-  'please', 'just', 'also', 'very', 'really', 'quite', 'well', 'much',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'can',
+  'shall',
+  'to',
+  'of',
+  'in',
+  'for',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'into',
+  'through',
+  'during',
+  'before',
+  'after',
+  'above',
+  'below',
+  'between',
+  'and',
+  'but',
+  'or',
+  'not',
+  'no',
+  'so',
+  'if',
+  'then',
+  'than',
+  'that',
+  'this',
+  'it',
+  'its',
+  'i',
+  'me',
+  'my',
+  'we',
+  'you',
+  'your',
+  'he',
+  'she',
+  'they',
+  'them',
+  'please',
+  'just',
+  'also',
+  'very',
+  'really',
+  'quite',
+  'well',
+  'much',
 ]);
 
 function _extractKeywords(text) {
-  const words = text.toLowerCase()
+  const words = text
+    .toLowerCase()
     .replace(/[^a-z0-9\u4e00-\u9fff\s_-]/g, ' ')
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
 
-  if (words.length === 0) return null;
+  if (words.length === 0) {
+    return null;
+  }
 
   // Take first 5 meaningful words
   const keywords = words.slice(0, 5);
   const title = keywords.join(' ');
-  if (title.length > 50) return title.substring(0, 47) + '...';
+  if (title.length > 50) {
+    return title.substring(0, 47) + '...';
+  }
   return _capitalizeFirst(title);
 }
 
@@ -153,7 +243,9 @@ function _cleanTitle(str) {
 }
 
 function _capitalizeFirst(str) {
-  if (!str) return str;
+  if (!str) {
+    return str;
+  }
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 

@@ -9,9 +9,9 @@
  * \x1b[ + letter = arrow/special key sequence.
  */
 
-const { Mode, createVimState, createCommandContext } = require('./types');
-const { transition } = require('./transitions');
 const { firstNonBlank } = require('./motions');
+const { transition } = require('./transitions');
+const { Mode, createVimState, createCommandContext } = require('./types');
 
 const ESC_TIMEOUT_MS = 50;
 
@@ -39,30 +39,35 @@ function createVimInputHandler(rl, options = {}) {
   let escTimer = null;
   let escBuffer = '';
   let historyIndex = -1;
-  let historySnapshot = '';  // Save current line when entering history
+  let historySnapshot = ''; // Save current line when entering history
   let onDataHandler = null;
 
   // ── History access ───────────────────────────────────────────────
   // readline stores history internally; we access it for up/down navigation
 
   function getHistory() {
-    if (rl && rl.history) return rl.history;
+    if (rl && rl.history) {
+      return rl.history;
+    }
     return [];
   }
 
   // ── Rendering ────────────────────────────────────────────────────
 
   function render() {
-    if (!active || suspended) return;
+    if (!active || suspended) {
+      return;
+    }
 
     // Clear current line and redraw
     const cols = stdout.columns || 80;
     stdout.write('\r\x1b[K');
 
     // Mode indicator
-    const modeTag = vimState.mode === Mode.NORMAL
-      ? '\x1b[48;5;240m\x1b[97m NORMAL \x1b[0m '
-      : '\x1b[48;5;22m\x1b[97m INSERT \x1b[0m ';
+    const modeTag =
+      vimState.mode === Mode.NORMAL
+        ? '\x1b[48;5;240m\x1b[97m NORMAL \x1b[0m '
+        : '\x1b[48;5;22m\x1b[97m INSERT \x1b[0m ';
 
     stdout.write(modeTag + prompt + lineBuffer);
 
@@ -79,7 +84,9 @@ function createVimInputHandler(rl, options = {}) {
   // ── Mode switching ───────────────────────────────────────────────
 
   function setMode(mode) {
-    if (vimState.mode === mode) return;
+    if (vimState.mode === mode) {
+      return;
+    }
     vimState.mode = mode;
     if (mode === Mode.NORMAL) {
       // In NORMAL mode, cursor can't be past end of text
@@ -88,7 +95,9 @@ function createVimInputHandler(rl, options = {}) {
       }
     }
     Object.assign(vimState.cmd, createCommandContext());
-    if (onModeChange) onModeChange(mode);
+    if (onModeChange) {
+      onModeChange(mode);
+    }
     render();
   }
 
@@ -121,34 +130,40 @@ function createVimInputHandler(rl, options = {}) {
     }
 
     // Arrow keys
-    if (key === '\x1b[D') { // Left
+    if (key === '\x1b[D') {
+      // Left
       cursorPos = Math.max(0, cursorPos - 1);
       render();
       return;
     }
-    if (key === '\x1b[C') { // Right
+    if (key === '\x1b[C') {
+      // Right
       cursorPos = Math.min(lineBuffer.length, cursorPos + 1);
       render();
       return;
     }
-    if (key === '\x1b[A') { // Up — history
+    if (key === '\x1b[A') {
+      // Up — history
       navigateHistory(-1);
       return;
     }
-    if (key === '\x1b[B') { // Down — history
+    if (key === '\x1b[B') {
+      // Down — history
       navigateHistory(1);
       return;
     }
 
     // Home
-    if (key === '\x1b[H' || key === '\x01') { // Ctrl+A
+    if (key === '\x1b[H' || key === '\x01') {
+      // Ctrl+A
       cursorPos = 0;
       render();
       return;
     }
 
     // End
-    if (key === '\x1b[F' || key === '\x05') { // Ctrl+E
+    if (key === '\x1b[F' || key === '\x05') {
+      // Ctrl+E
       cursorPos = lineBuffer.length;
       render();
       return;
@@ -173,8 +188,12 @@ function createVimInputHandler(rl, options = {}) {
     if (key === '\x17') {
       if (cursorPos > 0) {
         let p = cursorPos - 1;
-        while (p > 0 && lineBuffer[p - 1] === ' ') p--;
-        while (p > 0 && lineBuffer[p - 1] !== ' ') p--;
+        while (p > 0 && lineBuffer[p - 1] === ' ') {
+          p--;
+        }
+        while (p > 0 && lineBuffer[p - 1] !== ' ') {
+          p--;
+        }
         lineBuffer = lineBuffer.slice(0, p) + lineBuffer.slice(cursorPos);
         cursorPos = p;
       }
@@ -218,19 +237,23 @@ function createVimInputHandler(rl, options = {}) {
     }
 
     // Arrow keys — cursor movement or history
-    if (key === '\x1b[D') { // Left = h
+    if (key === '\x1b[D') {
+      // Left = h
       handleNormalKey('h');
       return;
     }
-    if (key === '\x1b[C') { // Right = l
+    if (key === '\x1b[C') {
+      // Right = l
       handleNormalKey('l');
       return;
     }
-    if (key === '\x1b[A') { // Up = k
+    if (key === '\x1b[A') {
+      // Up = k
       navigateHistory(-1);
       return;
     }
-    if (key === '\x1b[B') { // Down = j
+    if (key === '\x1b[B') {
+      // Down = j
       navigateHistory(1);
       return;
     }
@@ -271,7 +294,9 @@ function createVimInputHandler(rl, options = {}) {
 
   function navigateHistory(direction) {
     const history = getHistory();
-    if (history.length === 0) return;
+    if (history.length === 0) {
+      return;
+    }
 
     if (historyIndex === -1) {
       historySnapshot = lineBuffer;
@@ -291,7 +316,9 @@ function createVimInputHandler(rl, options = {}) {
       lineBuffer = history[historyIndex] || '';
     } else {
       // Going forward in history
-      if (historyIndex === -1) return;
+      if (historyIndex === -1) {
+        return;
+      }
       if (newIndex >= history.length) {
         // Back to current input
         historyIndex = -1;
@@ -429,7 +456,9 @@ function createVimInputHandler(rl, options = {}) {
   // ── Public API ───────────────────────────────────────────────────
 
   function enable() {
-    if (active) return;
+    if (active) {
+      return;
+    }
     active = true;
     suspended = false;
     vimState = createVimState();
@@ -439,14 +468,26 @@ function createVimInputHandler(rl, options = {}) {
 
     // Pause readline so it doesn't consume stdin
     if (rl && typeof rl.pause === 'function') {
-      try { rl.pause(); } catch { /* ignore */ }
+      try {
+        rl.pause();
+      } catch {
+        /* ignore */
+      }
     }
 
     // Take raw mode
     onDataHandler = onData;
-    try { stdin.resume(); } catch { /* ignore */ }
+    try {
+      stdin.resume();
+    } catch {
+      /* ignore */
+    }
     if (typeof stdin.setRawMode === 'function') {
-      try { stdin.setRawMode(true); } catch { /* ignore */ }
+      try {
+        stdin.setRawMode(true);
+      } catch {
+        /* ignore */
+      }
     }
     stdin.on('data', onDataHandler);
 
@@ -454,7 +495,9 @@ function createVimInputHandler(rl, options = {}) {
   }
 
   function disable() {
-    if (!active) return;
+    if (!active) {
+      return;
+    }
     active = false;
     suspended = false;
 
@@ -466,7 +509,11 @@ function createVimInputHandler(rl, options = {}) {
 
     // Release raw mode
     if (typeof stdin.setRawMode === 'function') {
-      try { stdin.setRawMode(false); } catch { /* ignore */ }
+      try {
+        stdin.setRawMode(false);
+      } catch {
+        /* ignore */
+      }
     }
 
     // Clear escape timer
@@ -481,13 +528,23 @@ function createVimInputHandler(rl, options = {}) {
 
     // Resume readline
     if (rl && typeof rl.resume === 'function') {
-      try { rl.resume(); } catch { /* ignore */ }
+      try {
+        rl.resume();
+      } catch {
+        /* ignore */
+      }
     }
-    try { stdin.resume(); } catch { /* ignore */ }
+    try {
+      stdin.resume();
+    } catch {
+      /* ignore */
+    }
   }
 
   function suspend() {
-    if (!active || suspended) return;
+    if (!active || suspended) {
+      return;
+    }
     suspended = true;
 
     // Remove data handler and release raw mode
@@ -495,7 +552,11 @@ function createVimInputHandler(rl, options = {}) {
       stdin.removeListener('data', onDataHandler);
     }
     if (typeof stdin.setRawMode === 'function') {
-      try { stdin.setRawMode(false); } catch { /* ignore */ }
+      try {
+        stdin.setRawMode(false);
+      } catch {
+        /* ignore */
+      }
     }
 
     if (escTimer) {
@@ -505,20 +566,38 @@ function createVimInputHandler(rl, options = {}) {
     escBuffer = '';
 
     // Let readline or permission dialogs take over stdin
-    try { stdin.resume(); } catch { /* ignore */ }
+    try {
+      stdin.resume();
+    } catch {
+      /* ignore */
+    }
   }
 
   function resume() {
-    if (!active || !suspended) return;
+    if (!active || !suspended) {
+      return;
+    }
     suspended = false;
 
     // Re-take raw mode and data handler
     if (rl && typeof rl.pause === 'function') {
-      try { rl.pause(); } catch { /* ignore */ }
+      try {
+        rl.pause();
+      } catch {
+        /* ignore */
+      }
     }
-    try { stdin.resume(); } catch { /* ignore */ }
+    try {
+      stdin.resume();
+    } catch {
+      /* ignore */
+    }
     if (typeof stdin.setRawMode === 'function') {
-      try { stdin.setRawMode(true); } catch { /* ignore */ }
+      try {
+        stdin.setRawMode(true);
+      } catch {
+        /* ignore */
+      }
     }
     if (onDataHandler) {
       stdin.on('data', onDataHandler);
@@ -528,7 +607,9 @@ function createVimInputHandler(rl, options = {}) {
   }
 
   function getMode() {
-    if (!active) return null;
+    if (!active) {
+      return null;
+    }
     return vimState.mode;
   }
 
@@ -538,7 +619,9 @@ function createVimInputHandler(rl, options = {}) {
 
   function setPrompt(newPrompt) {
     prompt = newPrompt;
-    if (active && !suspended) render();
+    if (active && !suspended) {
+      render();
+    }
   }
 
   function setLine(text) {
@@ -547,7 +630,9 @@ function createVimInputHandler(rl, options = {}) {
     if (vimState.mode === Mode.NORMAL && lineBuffer.length > 0) {
       cursorPos = lineBuffer.length - 1;
     }
-    if (active && !suspended) render();
+    if (active && !suspended) {
+      render();
+    }
   }
 
   function destroy() {
@@ -570,7 +655,9 @@ function createVimInputHandler(rl, options = {}) {
     setPrompt,
     setLine,
     destroy,
-    setOnModeChange(cb) { onModeChange = cb; },
+    setOnModeChange(cb) {
+      onModeChange = cb;
+    },
   };
 }
 

@@ -21,14 +21,24 @@ const VALID_BACKENDS = new Set(['openai', 'agnes', 'domestic', 'sd_webui']);
  *          the user has no pin (auto) or anything goes wrong.
  */
 async function getUserImagePref(userId) {
-  if (userId == null || userId === '') return null;
+  if (userId == null || userId === '') {
+    return null;
+  }
   try {
     const { UserGatewayConfig } = require('@khy/shared/models');
-    if (!UserGatewayConfig || typeof UserGatewayConfig.findOne !== 'function') return null;
+    if (!UserGatewayConfig || typeof UserGatewayConfig.findOne !== 'function') {
+      return null;
+    }
     const row = await UserGatewayConfig.findOne({ where: { userId } });
-    if (!row) return null;
-    const backend = String(row.imageBackend || '').trim().toLowerCase();
-    if (!backend || backend === 'auto' || !VALID_BACKENDS.has(backend)) return null;
+    if (!row) {
+      return null;
+    }
+    const backend = String(row.imageBackend || '')
+      .trim()
+      .toLowerCase();
+    if (!backend || backend === 'auto' || !VALID_BACKENDS.has(backend)) {
+      return null;
+    }
     const model = String(row.imageModel || '').trim();
     return { backend, model };
   } catch {

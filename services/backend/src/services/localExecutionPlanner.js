@@ -40,10 +40,21 @@ const _WRITE_TOOLS = new Set(['Write', 'writeFile']);
 // Tools that read file content.
 const _READ_TOOLS = new Set(['Read', 'readFile']);
 
-function _isEdit(name) { return _EDIT_TOOLS.has(name); }
-function _isWrite(name) { return _WRITE_TOOLS.has(name); }
-function _isRead(name) { return _READ_TOOLS.has(name); }
-function _isMutation(name) { return _isEdit(name) || _isWrite(name); }
+function _isEdit(name) {
+  return _EDIT_TOOLS.has(name);
+}
+
+function _isWrite(name) {
+  return _WRITE_TOOLS.has(name);
+}
+
+function _isRead(name) {
+  return _READ_TOOLS.has(name);
+}
+
+function _isMutation(name) {
+  return _isEdit(name) || _isWrite(name);
+}
 
 /** Pull the file path a step targets, regardless of param naming. */
 function _stepFile(step) {
@@ -53,11 +64,15 @@ function _stepFile(step) {
 
 /** Normalize a path for same-file comparison (resolve + case/slash parity). */
 function _normFile(fp) {
-  if (!fp) return null;
+  if (!fp) {
+    return null;
+  }
   try {
     const abs = path.resolve(process.env.KHYQUANT_CWD || process.cwd(), String(fp));
     return process.platform === 'win32' ? abs.toLowerCase().replace(/\//g, '\\') : abs;
-  } catch { return String(fp); }
+  } catch {
+    return String(fp);
+  }
 }
 
 /** Build a Read step for `fp`, choosing the param name to match the mutation tool family. */
@@ -91,9 +106,16 @@ function _makeReadStep(fp, { canonical = false, why, inserted = false } = {}) {
  */
 function enforceReadWriteOrder(steps, opts = {}) {
   const list = Array.isArray(steps) ? steps.filter(Boolean) : [];
-  const fileExists = typeof opts.fileExists === 'function'
-    ? opts.fileExists
-    : (abs) => { try { return require('fs').existsSync(abs); } catch { return false; } };
+  const fileExists =
+    typeof opts.fileExists === 'function'
+      ? opts.fileExists
+      : (abs) => {
+          try {
+            return require('fs').existsSync(abs);
+          } catch {
+            return false;
+          }
+        };
   const canonical = !!opts.canonicalReadName;
 
   const out = [];
@@ -144,10 +166,14 @@ const _CREATE_WITH_CONTENT_RE =
   /(?:创建|新建|生成|写一个|写个|创建文件|新建文件)\s*([~\w./\\@-]+\.[A-Za-z0-9]{1,12})\s*(?:,|，|内容为|内容是|内容|content[:=]?)\s*["'“”‘’]?(.+?)["'“”‘’]?\s*$/i;
 
 // Does the request ask to verify / read-back after writing? ("然后查看/确认/读回")
-const _VERIFY_INTENT_RE = /(然后|接着|再|并)?\s*(查看|确认|读回|读取|检查|核对|验证|看看|read.?back|verify|confirm)/i;
+const _VERIFY_INTENT_RE =
+  /(然后|接着|再|并)?\s*(查看|确认|读回|读取|检查|核对|验证|看看|read.?back|verify|confirm)/i;
 
 function _cleanCapture(s) {
-  return String(s || '').trim().replace(/[，。；;]+$/, '').trim();
+  return String(s || '')
+    .trim()
+    .replace(/[，。；;]+$/, '')
+    .trim();
 }
 
 // Strip a trailing verify directive ("，然后读回确认" / "; then verify") that the
@@ -155,7 +181,10 @@ function _cleanCapture(s) {
 // follow-up instruction. Only trims when a connector precedes the verify verb.
 function _stripVerifyTail(s) {
   return String(s || '')
-    .replace(/[，,；;]?\s*(?:然后|接着|再|并|and|then)\s*(?:查看|确认|读回|读取|检查|核对|验证|看看|read.?back|verify|confirm).*$/i, '')
+    .replace(
+      /[，,；;]?\s*(?:然后|接着|再|并|and|then)\s*(?:查看|确认|读回|读取|检查|核对|验证|看看|read.?back|verify|confirm).*$/i,
+      ''
+    )
     .trim()
     .replace(/[，。；;]+$/, '')
     .trim();
@@ -174,7 +203,9 @@ function _stripVerifyTail(s) {
  */
 function planOrderedSteps(userInput, opts = {}) {
   const text = String(userInput || '').trim();
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
   const allowed = opts.allowedSet instanceof Set ? opts.allowedSet : null;
   const has = (n) => !allowed || allowed.has(n);
 
@@ -208,30 +239,39 @@ function planOrderedSteps(userInput, opts = {}) {
   let file = null;
   let content = null;
   m = text.match(_CREATE_WITH_CONTENT_RE);
-  if (m) { file = _cleanCapture(m[1]); content = _stripVerifyTail(_cleanCapture(m[2])); }
+  if (m) {
+    file = _cleanCapture(m[1]);
+    content = _stripVerifyTail(_cleanCapture(m[2]));
+  }
   if (!file) {
     m = text.match(_WRITE_CONTENT_TO_RE);
-    if (m) { content = _stripVerifyTail(_cleanCapture(m[1])); file = _cleanCapture(m[2]); }
+    if (m) {
+      content = _stripVerifyTail(_cleanCapture(m[1]));
+      file = _cleanCapture(m[2]);
+    }
   }
   if (file && content && (has('Write') || has('writeFile'))) {
     const writeName = has('Write') ? 'Write' : 'writeFile';
-    const writeParams = writeName === 'Write'
-      ? { file_path: file, content }
-      : { path: file, content };
-    const steps = [{
-      name: writeName,
-      params: writeParams,
-      phase: 'write',
-      why: '按显式内容创建/写入文件',
-    }];
+    const writeParams =
+      writeName === 'Write' ? { file_path: file, content } : { path: file, content };
+    const steps = [
+      {
+        name: writeName,
+        params: writeParams,
+        phase: 'write',
+        why: '按显式内容创建/写入文件',
+      },
+    ];
     // 先写再读: only append a verify read when the user explicitly asked to
     // confirm/read-back — never fabricate an extra step otherwise.
     if (_VERIFY_INTENT_RE.test(text) && (has('Read') || has('readFile'))) {
       const readCanonical = !has('Read') && has('readFile');
-      steps.push(_makeReadStep(file, {
-        canonical: readCanonical,
-        why: '先写再读：写入后读回验证内容已正确落盘',
-      }));
+      steps.push(
+        _makeReadStep(file, {
+          canonical: readCanonical,
+          why: '先写再读：写入后读回验证内容已正确落盘',
+        })
+      );
       steps[steps.length - 1].phase = 'verify';
     }
     return { steps, kind: 'write_then_verify' };

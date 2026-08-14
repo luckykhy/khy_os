@@ -52,10 +52,12 @@
  */
 
 // bugfix / feature 意图模式与 bugfixRegressionGate 保持一致(单源同义)。
-const BUGFIX_INTENT_PATTERN = /(修复|bug|fix(?:ing|ed)?|hotfix|回归|regression|故障|错误|报错|异常|崩溃|crash|fails?|failing|broken|defect|issue)/i;
+const BUGFIX_INTENT_PATTERN =
+  /(修复|bug|fix(?:ing|ed)?|hotfix|回归|regression|故障|错误|报错|异常|崩溃|crash|fails?|failing|broken|defect|issue)/i;
 
 // 编辑类工具(归一化名):写文件 / 改文件 / 多处编辑 / 打补丁。与 devCourseMonitor 对齐。
-const _EDIT_RE = /^(write|writefile|edit|editfile|createfile|multiedit|applypatch|patch|scaffoldfiles)$/;
+const _EDIT_RE =
+  /^(write|writefile|edit|editfile|createfile|multiedit|applypatch|patch|scaffoldfiles)$/;
 
 // 测试文件判定(跨语言保守口径)。
 const _TEST_FILE_RE = [
@@ -77,7 +79,9 @@ function isEnabled(env = process.env) {
 /** 通用「默认开」闸:仅 off/0/false 关闭。 */
 function _flagOn(env, key, def = true) {
   const v = env && env[key];
-  if (v === undefined || v === null || v === '') return def;
+  if (v === undefined || v === null || v === '') {
+    return def;
+  }
   return v !== 'off' && v !== '0' && v !== 'false' && v !== 'no';
 }
 
@@ -89,8 +93,10 @@ function looksLikeBugfixTask(userMessage = '') {
 /** 是否测试文件。 */
 function isTestFile(p) {
   const s = String(p || '');
-  if (!s) return false;
-  return _TEST_FILE_RE.some(re => re.test(s));
+  if (!s) {
+    return false;
+  }
+  return _TEST_FILE_RE.some((re) => re.test(s));
 }
 
 function _basename(p) {
@@ -117,10 +123,14 @@ function _stem(p) {
  */
 function _hasSiblingTest(srcFile, knownFiles) {
   const stem = _stem(srcFile);
-  if (!stem) return false;
+  if (!stem) {
+    return false;
+  }
   const lowStem = stem.toLowerCase();
   for (const kf of knownFiles) {
-    if (!isTestFile(kf)) continue;
+    if (!isTestFile(kf)) {
+      continue;
+    }
     const base = _basename(kf).toLowerCase();
     if (
       base.startsWith(`${lowStem}.test.`) ||
@@ -140,18 +150,32 @@ function _hasSiblingTest(srcFile, knownFiles) {
 function _computeUncovered(changedFiles, knownFiles) {
   const known = Array.isArray(knownFiles) ? knownFiles : [];
   // 无法获知项目文件清单时,不在覆盖维度上阻断(fail-open)。
-  if (known.length === 0) return [];
+  if (known.length === 0) {
+    return [];
+  }
   const out = [];
-  for (const f of (Array.isArray(changedFiles) ? changedFiles : [])) {
-    if (!f || isTestFile(f)) continue;
-    if (!_hasSiblingTest(f, known)) out.push(f);
+  for (const f of Array.isArray(changedFiles) ? changedFiles : []) {
+    if (!f || isTestFile(f)) {
+      continue;
+    }
+    if (!_hasSiblingTest(f, known)) {
+      out.push(f);
+    }
   }
   return out;
 }
 
 function _extractPath(params) {
-  if (!params || typeof params !== 'object') return null;
-  const p = params.path || params.file_path || params.filePath || params.filename || params.file || params.target;
+  if (!params || typeof params !== 'object') {
+    return null;
+  }
+  const p =
+    params.path ||
+    params.file_path ||
+    params.filePath ||
+    params.filename ||
+    params.file ||
+    params.target;
   return typeof p === 'string' && p ? p : null;
 }
 
@@ -170,13 +194,13 @@ function createState() {
     bugfixIntent: false,
     firstSrcEditIteration: null, // 首次 bugfix 意图下编辑非测试源码的轮次
     srcEditsCount: 0,
-    editedSrcFiles: new Set(),   // 改过的非测试源码
-    editedTestFiles: new Set(),  // 改过的测试文件
-    reproByKey: new Map(),       // framework|command -> { framework, command, redAt, greenAt, redFailures }
-    sawAnyRed: false,            // 是否观察到过任何红色复现
-    reproRedAt: null,            // 最早一次红色复现的轮次
-    announced: new Set(),        // assess 的 episode 去重(条件解除后重新武装)
-    cautions: [],                // 已浮出过的告诫(供 summarize)
+    editedSrcFiles: new Set(), // 改过的非测试源码
+    editedTestFiles: new Set(), // 改过的测试文件
+    reproByKey: new Map(), // framework|command -> { framework, command, redAt, greenAt, redFailures }
+    sawAnyRed: false, // 是否观察到过任何红色复现
+    reproRedAt: null, // 最早一次红色复现的轮次
+    announced: new Set(), // assess 的 episode 去重(条件解除后重新武装)
+    cautions: [], // 已浮出过的告诫(供 summarize)
   };
 }
 
@@ -189,7 +213,9 @@ function createState() {
  * @param {Array}  input.changedFiles 本轮(或累计)写工具改动的文件路径(可选;缺省由 toolResults 派生)
  */
 function recordIteration(state, input = {}, env = process.env) {
-  if (!state) return;
+  if (!state) {
+    return;
+  }
   try {
     state.iteration += 1;
     const toolResults = Array.isArray(input.toolResults) ? input.toolResults : [];
@@ -198,14 +224,26 @@ function recordIteration(state, input = {}, env = process.env) {
     // 1) 收集本轮编辑的文件(优先用调用方给的 changedFiles,否则从 toolResults 派生)。
     const edited = [];
     if (Array.isArray(input.changedFiles) && input.changedFiles.length) {
-      for (const f of input.changedFiles) if (typeof f === 'string' && f) edited.push(f);
+      for (const f of input.changedFiles) {
+        if (typeof f === 'string' && f) {
+          edited.push(f);
+        }
+      }
     } else {
       for (const tr of toolResults) {
-        if (!tr) continue;
-        if (tr.result && tr.result.success === false) continue; // 失败的写不算改动
-        if (!_EDIT_RE.test(_norm(tr.tool))) continue;
+        if (!tr) {
+          continue;
+        }
+        if (tr.result && tr.result.success === false) {
+          continue;
+        } // 失败的写不算改动
+        if (!_EDIT_RE.test(_norm(tr.tool))) {
+          continue;
+        }
         const f = _extractPath(tr.params);
-        if (f) edited.push(f);
+        if (f) {
+          edited.push(f);
+        }
       }
     }
     for (const f of edited) {
@@ -216,19 +254,26 @@ function recordIteration(state, input = {}, env = process.env) {
         state.editedSrcFiles.add(f);
         if (state.bugfixIntent && fresh) {
           state.srcEditsCount += 1;
-          if (state.firstSrcEditIteration == null) state.firstSrcEditIteration = state.iteration;
+          if (state.firstSrcEditIteration == null) {
+            state.firstSrcEditIteration = state.iteration;
+          }
         }
       }
     }
 
     // 2) 折叠测试发现:per (framework|command) 记录先红后绿。
     for (const t of testFindings) {
-      if (!t || t.kind !== 'test') continue;
+      if (!t || t.kind !== 'test') {
+        continue;
+      }
       const fw = String(t.framework || 'test');
       const cmd = String(t.command || '');
       const key = `${fw}|${cmd}`;
       let e = state.reproByKey.get(key);
-      if (!e) { e = { framework: fw, command: cmd, redAt: null, greenAt: null, redFailures: [] }; state.reproByKey.set(key, e); }
+      if (!e) {
+        e = { framework: fw, command: cmd, redAt: null, greenAt: null, redFailures: [] };
+        state.reproByKey.set(key, e);
+      }
       // 宽松红判定:green===false 即算复现(让 phantom 更难成立 → 宁可少拦)。
       const isRed = t.green === false;
       const isGreen = t.green === true;
@@ -236,21 +281,31 @@ function recordIteration(state, input = {}, env = process.env) {
         e.redAt = state.iteration;
         e.redFailures = Array.isArray(t.failures) ? t.failures.slice(0, 8) : [];
         state.sawAnyRed = true;
-        state.reproRedAt = state.reproRedAt == null ? state.iteration : Math.min(state.reproRedAt, state.iteration);
-      } else if (isRed && (!e.redFailures || !e.redFailures.length) && Array.isArray(t.failures) && t.failures.length) {
+        state.reproRedAt =
+          state.reproRedAt == null ? state.iteration : Math.min(state.reproRedAt, state.iteration);
+      } else if (
+        isRed &&
+        (!e.redFailures || !e.redFailures.length) &&
+        Array.isArray(t.failures) &&
+        t.failures.length
+      ) {
         e.redFailures = t.failures.slice(0, 8); // 补全失败样本名
       }
       if (isGreen && e.redAt != null && e.greenAt == null && state.iteration >= e.redAt) {
         e.greenAt = state.iteration; // 同一复现先红后绿 = 真修
       }
     }
-  } catch { /* 守卫纯累积,绝不反噬 loop */ }
+  } catch {
+    /* 守卫纯累积,绝不反噬 loop */
+  }
 }
 
 /** 是否观察到「真修」:某复现先红后绿。 */
 function _reproObserved(state) {
   for (const e of state.reproByKey.values()) {
-    if (e.redAt != null && e.greenAt != null && e.greenAt >= e.redAt) return true;
+    if (e.redAt != null && e.greenAt != null && e.greenAt >= e.redAt) {
+      return true;
+    }
   }
   return false;
 }
@@ -260,7 +315,9 @@ function _confirmedReproEntry(state) {
   let best = null;
   for (const e of state.reproByKey.values()) {
     if (e.redAt != null && e.greenAt != null && e.greenAt >= e.redAt) {
-      if (!best || e.greenAt < best.greenAt) best = e;
+      if (!best || e.greenAt < best.greenAt) {
+        best = e;
+      }
     }
   }
   return best;
@@ -275,7 +332,7 @@ function assess(state, env = process.env) {
   if (!state || !isEnabled(env) || !state.bugfixIntent) {
     return { caution: false, signals: [], directive: null };
   }
-  let candidates = [];
+  const candidates = [];
   try {
     const requireRepro = _flagOn(env, 'KHY_FPF_REQUIRE_RED_REPRO', true);
     const editedSrc = state.firstSrcEditIteration != null;
@@ -286,31 +343,48 @@ function assess(state, env = process.env) {
       candidates.push({
         key: 'phantom-no-repro',
         type: 'phantom-no-repro',
-        detail: '已为"修复 bug"改动了非测试源码,但全程没有任何能复现该 bug 的失败(红)测试。'
-          + '若代码本来就是正确的,通常写不出对它失败的测试 —— 建议先写一个能复现该 bug 的失败测试'
-          + '(让它先变红),确认 bug 真实存在后再修改,避免把本来正确的代码改坏',
+        detail:
+          '已为"修复 bug"改动了非测试源码,但全程没有任何能复现该 bug 的失败(红)测试。' +
+          '若代码本来就是正确的,通常写不出对它失败的测试 —— 建议先写一个能复现该 bug 的失败测试' +
+          '(让它先变红),确认 bug 真实存在后再修改,避免把本来正确的代码改坏',
       });
     }
-  } catch { return { caution: false, signals: [], directive: null }; }
+  } catch {
+    return { caution: false, signals: [], directive: null };
+  }
 
   // episode 去重 + 重新武装。
-  const activeKeys = new Set(candidates.map(c => c.key));
-  for (const k of [...state.announced]) if (!activeKeys.has(k)) state.announced.delete(k);
-  const fresh = candidates.filter(c => !state.announced.has(c.key));
-  for (const c of fresh) state.announced.add(c.key);
-  if (!fresh.length) return { caution: false, signals: [], directive: null };
+  const activeKeys = new Set(candidates.map((c) => c.key));
+  for (const k of [...state.announced]) {
+    if (!activeKeys.has(k)) {
+      state.announced.delete(k);
+    }
+  }
+  const fresh = candidates.filter((c) => !state.announced.has(c.key));
+  for (const c of fresh) {
+    state.announced.add(c.key);
+  }
+  if (!fresh.length) {
+    return { caution: false, signals: [], directive: null };
+  }
 
   const directive = buildFalsePositiveHint(fresh);
-  for (const c of fresh) state.cautions.push({ type: c.type, detail: c.detail, at: state.iteration });
+  for (const c of fresh) {
+    state.cautions.push({ type: c.type, detail: c.detail, at: state.iteration });
+  }
   return { caution: true, signals: fresh, directive };
 }
 
 /** 把告诫合成一段「上下文参考」式提示(可采用 / 改写 / 忽略)。 */
 function buildFalsePositiveHint(signals) {
-  if (!Array.isArray(signals) || !signals.length) return null;
+  if (!Array.isArray(signals) || !signals.length) {
+    return null;
+  }
   const lines = signals.map((s, i) => `${i + 1}. ${s.detail}`);
-  return `[SYSTEM: 复现先行提示(防 bug 误判 · 仅供参考,可采用/改写/忽略):\n${lines.join('\n')}\n`
-    + `—— 若你确信 bug 真实存在且已有复现,可忽略此提示并继续;否则建议先复现(让测试变红)再修。]`;
+  return (
+    `[SYSTEM: 复现先行提示(防 bug 误判 · 仅供参考,可采用/改写/忽略):\n${lines.join('\n')}\n` +
+    `—— 若你确信 bug 真实存在且已有复现,可忽略此提示并继续;否则建议先复现(让测试变红)再修。]`
+  );
 }
 
 /**
@@ -327,13 +401,22 @@ function buildFalsePositiveHint(signals) {
  */
 function finalize(state, ctx = {}, env = process.env) {
   const empty = {
-    verdict: 'pass', passed: true, blocked: false, reasons: [],
-    reproObserved: false, phantomSuspected: false, uncoveredFiles: [],
-    silentBehaviorChanges: [], deposit: { shouldDeposit: false },
-    summary: 'False-positive-fix guard skipped.', recommendations: [],
+    verdict: 'pass',
+    passed: true,
+    blocked: false,
+    reasons: [],
+    reproObserved: false,
+    phantomSuspected: false,
+    uncoveredFiles: [],
+    silentBehaviorChanges: [],
+    deposit: { shouldDeposit: false },
+    summary: 'False-positive-fix guard skipped.',
+    recommendations: [],
   };
   try {
-    if (!state || !isEnabled(env) || !state.bugfixIntent) return empty;
+    if (!state || !isEnabled(env) || !state.bugfixIntent) {
+      return empty;
+    }
 
     const requireRepro = _flagOn(env, 'KHY_FPF_REQUIRE_RED_REPRO', true);
     const uncoveredBlocks = _flagOn(env, 'KHY_FPF_UNCOVERED_BLOCKS', true);
@@ -341,12 +424,16 @@ function finalize(state, ctx = {}, env = process.env) {
     const failOpen = _flagOn(env, 'KHY_FPF_FAIL_OPEN', false);
     const autoDeposit = _flagOn(env, 'KHY_FPF_AUTO_DEPOSIT_REPRO', true);
 
-    const tier = String(ctx.tier || '').trim().toLowerCase();
+    const tier = String(ctx.tier || '')
+      .trim()
+      .toLowerCase();
     const editedSrc = state.firstSrcEditIteration != null;
     const reproObserved = _reproObserved(state);
 
     // 没有真改过非测试源码 → 无可误判的对象,直接放行。
-    if (!editedSrc) return { ...empty, reproObserved };
+    if (!editedSrc) {
+      return { ...empty, reproObserved };
+    }
 
     const reasons = [];
 
@@ -355,7 +442,8 @@ function finalize(state, ctx = {}, env = process.env) {
     if (phantomSuspected) {
       reasons.push({
         code: 'phantom-no-repro',
-        detail: '声称修复 bug 并改动了源码,但全程没有任何能复现该 bug 的失败(红)测试 —— 该 bug 可能并不存在,改动有把正确代码改坏的风险',
+        detail:
+          '声称修复 bug 并改动了源码,但全程没有任何能复现该 bug 的失败(红)测试 —— 该 bug 可能并不存在,改动有把正确代码改坏的风险',
       });
     }
 
@@ -363,12 +451,15 @@ function finalize(state, ctx = {}, env = process.env) {
     //    真 RED→GREEN 复现本身即提供了覆盖,故 reproObserved 时不计未覆盖。
     let uncoveredFiles = [];
     if (uncoveredBlocks && !reproObserved) {
-      uncoveredFiles = _computeUncovered(ctx.changedFiles, ctx.knownFiles).filter(f => state.editedSrcFiles.has(f));
+      uncoveredFiles = _computeUncovered(ctx.changedFiles, ctx.knownFiles).filter((f) =>
+        state.editedSrcFiles.has(f)
+      );
       if (uncoveredFiles.length) {
         reasons.push({
           code: 'uncovered-bugfix-edit',
-          detail: `bugfix 改动了无测试覆盖的源码(${uncoveredFiles.slice(0, 3).join(', ')}${uncoveredFiles.length > 3 ? ' …' : ''}),`
-            + '一旦改坏没有任何回归测试会发现 —— 建议为受影响代码补一个复现/特征测试',
+          detail:
+            `bugfix 改动了无测试覆盖的源码(${uncoveredFiles.slice(0, 3).join(', ')}${uncoveredFiles.length > 3 ? ' …' : ''}),` +
+            '一旦改坏没有任何回归测试会发现 —— 建议为受影响代码补一个复现/特征测试',
         });
       }
     }
@@ -378,26 +469,37 @@ function finalize(state, ctx = {}, env = process.env) {
     //    快照,则就地用 characterizationSnapshot 差分——**复用本守卫的 _computeUncovered 作
     //    coveredFiles 的单一真源**(不另造覆盖判定,防漂移)。gate KHY_FPF_CHARACTERIZATION
     //    关 / 无快照 / 抛错 → silentBehaviorChanges 恒 [] → 逐字节回退。fail-soft。
-    let silentBehaviorChanges = Array.isArray(ctx.silentBehaviorChanges) ? ctx.silentBehaviorChanges : [];
+    let silentBehaviorChanges = Array.isArray(ctx.silentBehaviorChanges)
+      ? ctx.silentBehaviorChanges
+      : [];
     if (!silentBehaviorChanges.length && ctx.baseline && ctx.current) {
       try {
         const cs = require('./characterizationSnapshot');
         if (cs.isEnabled(env)) {
           const changed = Array.isArray(ctx.changedFiles) ? ctx.changedFiles : [];
           const uncov = new Set(_computeUncovered(changed, ctx.knownFiles));
-          const coveredFiles = changed.filter(f => !uncov.has(f));
-          const base = cs.captureBaseline({ changedFiles: changed, verificationSnapshot: ctx.baseline });
-          const cur = cs.captureBaseline({ changedFiles: changed, verificationSnapshot: ctx.current });
+          const coveredFiles = changed.filter((f) => !uncov.has(f));
+          const base = cs.captureBaseline({
+            changedFiles: changed,
+            verificationSnapshot: ctx.baseline,
+          });
+          const cur = cs.captureBaseline({
+            changedFiles: changed,
+            verificationSnapshot: ctx.current,
+          });
           const diff = cs.diffBehavior(base, cur, { coveredFiles }, env);
           silentBehaviorChanges = Array.isArray(diff.silentChanges) ? diff.silentChanges : [];
         }
-      } catch { /* fail-soft:特征化绝不破坏收口裁决 */ }
+      } catch {
+        /* fail-soft:特征化绝不破坏收口裁决 */
+      }
     }
     if (!reproObserved && silentBehaviorChanges.length) {
       reasons.push({
         code: 'silent-behavior-change',
-        detail: `检测到未被测试覆盖的可观测行为发生了静默变化(${silentBehaviorChanges.length} 处),`
-          + '若非有意更改,可能是误判 bug 导致的回归',
+        detail:
+          `检测到未被测试覆盖的可观测行为发生了静默变化(${silentBehaviorChanges.length} 处),` +
+          '若非有意更改,可能是误判 bug 导致的回归',
       });
     }
 
@@ -426,23 +528,44 @@ function finalize(state, ctx = {}, env = process.env) {
     }
 
     const recommendations = [];
-    if (phantomSuspected) recommendations.push('先写一个能复现该 bug 的失败测试,确认 bug 真实存在后再修改。');
-    if (uncoveredFiles.length) recommendations.push('为本次改动的未覆盖源码补一个测试,锁住正确行为。');
-    if (deposit.shouldDeposit) recommendations.push('已识别真实的红→绿复现,可将其沉淀为永久回归测试。');
+    if (phantomSuspected) {
+      recommendations.push('先写一个能复现该 bug 的失败测试,确认 bug 真实存在后再修改。');
+    }
+    if (uncoveredFiles.length) {
+      recommendations.push('为本次改动的未覆盖源码补一个测试,锁住正确行为。');
+    }
+    if (deposit.shouldDeposit) {
+      recommendations.push('已识别真实的红→绿复现,可将其沉淀为永久回归测试。');
+    }
 
     const summary = reasons.length
-      ? `False-positive-fix guard ${blocked ? 'blocked' : 'flagged'} delivery: ${reasons.map(r => r.code).join(', ')}.`
+      ? `False-positive-fix guard ${blocked ? 'blocked' : 'flagged'} delivery: ${reasons.map((r) => r.code).join(', ')}.`
       : 'False-positive-fix guard passed (reproduction observed or no risk).';
 
     // 收尾把裁决记进 cautions(供 summarize / 返回契约)。
     if (reasons.length) {
-      for (const r of reasons) state.cautions.push({ type: r.code, detail: r.detail, at: state.iteration, finalized: true });
+      for (const r of reasons) {
+        state.cautions.push({
+          type: r.code,
+          detail: r.detail,
+          at: state.iteration,
+          finalized: true,
+        });
+      }
     }
 
     return {
-      verdict, passed: !blocked, blocked, reasons,
-      reproObserved, phantomSuspected, uncoveredFiles,
-      silentBehaviorChanges, deposit, summary, recommendations,
+      verdict,
+      passed: !blocked,
+      blocked,
+      reasons,
+      reproObserved,
+      phantomSuspected,
+      uncoveredFiles,
+      silentBehaviorChanges,
+      deposit,
+      summary,
+      recommendations,
     };
   } catch {
     return empty; // fail-soft:守卫绝不崩调用方
@@ -456,9 +579,13 @@ function hasFindings(state) {
 
 /** 收尾摘要:挂到 loop / harness 返回契约,供 UI/程序复盘。 */
 function summarize(state) {
-  if (!state) return null;
+  if (!state) {
+    return null;
+  }
   const byType = {};
-  for (const c of state.cautions) byType[c.type] = (byType[c.type] || 0) + 1;
+  for (const c of state.cautions) {
+    byType[c.type] = (byType[c.type] || 0) + 1;
+  }
   return {
     iterations: state.iteration,
     bugfixIntent: !!state.bugfixIntent,

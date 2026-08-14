@@ -20,19 +20,24 @@
  * read-only. Auto-registered by the tools/ readdir loader (flat defineTool).
  */
 
-const { defineTool } = require('./_baseTool');
 const resolver = require('../services/config/nlConfigResolver');
+
+const { defineTool } = require('./_baseTool');
 // Structured-error SSOT for the failure path (gate KHY_CONFIGURE_STRUCTURED_ERROR).
 // Best-effort require so a load failure never disables the tool.
 let _buildConfigureError;
-try { ({ buildConfigureError: _buildConfigureError } = require('./configureErrorShape')); }
-catch { _buildConfigureError = null; }
+try {
+  ({ buildConfigureError: _buildConfigureError } = require('./configureErrorShape'));
+} catch {
+  _buildConfigureError = null;
+}
 
 function _writeEnvPatch(envMap, unsetKeys, context) {
   // DI seam for tests; defaults to the canonical persister.
-  const fn = (context && typeof context.writeEnvPatch === 'function')
-    ? context.writeEnvPatch
-    : require('../cli/handlers/config')._writeEnvPatch;
+  const fn =
+    context && typeof context.writeEnvPatch === 'function'
+      ? context.writeEnvPatch
+      : require('../cli/handlers/config')._writeEnvPatch;
   return fn(envMap, unsetKeys || []);
 }
 
@@ -48,16 +53,22 @@ function _renderList() {
 
 function _normalizeState(params) {
   // Accepts: state:'on'|'off', or action:'on'|'off', or value (raw).
-  const raw = String(params.state || params.action || '').trim().toLowerCase();
-  if (raw === 'on' || raw === 'enable' || raw === 'true') return 'on';
-  if (raw === 'off' || raw === 'disable' || raw === 'false') return 'off';
+  const raw = String(params.state || params.action || '')
+    .trim()
+    .toLowerCase();
+  if (raw === 'on' || raw === 'enable' || raw === 'true') {
+    return 'on';
+  }
+  if (raw === 'off' || raw === 'disable' || raw === 'false') {
+    return 'off';
+  }
   return null;
 }
 
 module.exports = defineTool({
   name: 'Configure',
   description:
-    'Change a khyos capability/setting on the user\'s behalf and persist it — the user is the ' +
+    "Change a khyos capability/setting on the user's behalf and persist it — the user is the " +
     'highest authority and natural language drives everything, so NEVER tell the user to set an ' +
     'env var or edit a file; call this tool instead. Actions: list (read-only, show controllable ' +
     'capabilities), on/off (toggle a capability by friendly name or KHY_* key), set (raw env value). ' +
@@ -65,12 +76,19 @@ module.exports = defineTool({
   category: 'system',
   risk: 'low',
   aliases: ['configure', 'set-capability', 'capability'],
+  searchHint: 'capability feature toggle enable disable settings 能力开关 功能 设置',
 
   // Read-only only when just listing (or no capability + no value given).
   isReadOnly: (input) => {
-    if (!input) return true;
-    const action = String(input.action || '').trim().toLowerCase();
-    if (action === 'list' || action === 'get') return true;
+    if (!input) {
+      return true;
+    }
+    const action = String(input.action || '')
+      .trim()
+      .toLowerCase();
+    if (action === 'list' || action === 'get') {
+      return true;
+    }
     return !input.capability && !input.value && !input.state;
   },
 
@@ -84,7 +102,8 @@ module.exports = defineTool({
     capability: {
       type: 'string',
       required: false,
-      description: 'Capability friendly name/id (e.g. "change-watch", "改动监视") or a raw KHY_* env key.',
+      description:
+        'Capability friendly name/id (e.g. "change-watch", "改动监视") or a raw KHY_* env key.',
       maxLength: 200,
     },
     state: {
@@ -96,7 +115,8 @@ module.exports = defineTool({
     value: {
       type: 'string',
       required: false,
-      description: 'Raw value when action is "set" (advanced; sets the env key to this exact value).',
+      description:
+        'Raw value when action is "set" (advanced; sets the env key to this exact value).',
       maxLength: 500,
     },
   },
@@ -107,9 +127,13 @@ module.exports = defineTool({
     // as soon as they are resolved below.
     const _errCtx = { action: '', capability: '', envKey: '', target: '' };
     try {
-      const action = String(params.action || '').trim().toLowerCase();
+      const action = String(params.action || '')
+        .trim()
+        .toLowerCase();
       _errCtx.action = action;
-      if (params.capability) _errCtx.capability = String(params.capability);
+      if (params.capability) {
+        _errCtx.capability = String(params.capability);
+      }
 
       // List — read-only.
       if (action === 'list' || (!params.capability && !params.value && !action)) {
@@ -121,7 +145,9 @@ module.exports = defineTool({
       }
 
       const cap = resolver.findCapability(params.capability);
-      const rawKey = /\bKHY_[A-Z0-9_]{2,}\b/.test(params.capability) ? params.capability.match(/\bKHY_[A-Z0-9_]{2,}\b/)[0] : null;
+      const rawKey = /\bKHY_[A-Z0-9_]{2,}\b/.test(params.capability)
+        ? params.capability.match(/\bKHY_[A-Z0-9_]{2,}\b/)[0]
+        : null;
       const envKey = cap ? cap.envKey : rawKey;
       if (!envKey) {
         return `Configure: 未识别的能力「${params.capability}」。用 action="list" 查看可控能力,或直接给出 KHY_* 键。`;
@@ -129,7 +155,10 @@ module.exports = defineTool({
       _errCtx.envKey = envKey;
 
       let intent;
-      if (action === 'set' || (params.value !== undefined && params.value !== null && params.value !== '')) {
+      if (
+        action === 'set' ||
+        (params.value !== undefined && params.value !== null && params.value !== '')
+      ) {
         // Raw value set (advanced).
         intent = { kind: 'raw', envKey, value: String(params.value) };
       } else {
@@ -152,9 +181,8 @@ module.exports = defineTool({
 
       const newValue = envMap[envKey];
       const label = cap ? cap.summary : envKey;
-      const actWord = intent.kind === 'raw'
-        ? `已设为 ${newValue}`
-        : (intent.action === 'on' ? '已开启' : '已关闭');
+      const actWord =
+        intent.kind === 'raw' ? `已设为 ${newValue}` : intent.action === 'on' ? '已开启' : '已关闭';
       return `✅ ${label} ${actWord}(${envKey}=${newValue})。已即时生效并持久化到 ${writtenPath}。`;
     } catch (e) {
       // Structured failure (gate KHY_CONFIGURE_STRUCTURED_ERROR): return a
@@ -164,7 +192,9 @@ module.exports = defineTool({
       // byte-identical legacy string.
       if (_buildConfigureError) {
         const structured = _buildConfigureError(e, _errCtx, { env: process.env });
-        if (structured) return structured;
+        if (structured) {
+          return structured;
+        }
       }
       return `Configure 执行失败:${e && e.message ? e.message : String(e)}`;
     }

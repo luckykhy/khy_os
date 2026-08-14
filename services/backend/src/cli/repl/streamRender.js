@@ -19,10 +19,18 @@ function mapToolToPhaseLabel(toolName = '') {
     return renderer.getToolDisplayName(toolName);
   } catch {
     const n = String(toolName || '').toLowerCase();
-    if (n.includes('read')) return 'Read';
-    if (n.includes('write') || n.includes('edit')) return 'Write';
-    if (n.includes('search') || n.includes('grep') || n.includes('glob')) return 'Search';
-    if (n.includes('bash') || n.includes('shell') || n.includes('command')) return 'Bash';
+    if (n.includes('read')) {
+      return 'Read';
+    }
+    if (n.includes('write') || n.includes('edit')) {
+      return 'Write';
+    }
+    if (n.includes('search') || n.includes('grep') || n.includes('glob')) {
+      return 'Search';
+    }
+    if (n.includes('bash') || n.includes('shell') || n.includes('command')) {
+      return 'Bash';
+    }
     return toolName || 'Tool';
   }
 }
@@ -31,21 +39,27 @@ function getDisplayWidthChar(ch) {
   // Use formatters.displayWidth for accurate single-char width (CJK/emoji/grapheme).
   // Fast path for common ASCII first.
   const code = ch.codePointAt(0);
-  if (!code) return 1;
-  if (code >= 0x20 && code < 0x7F) return 1;
+  if (!code) {
+    return 1;
+  }
+  if (code >= 0x20 && code < 0x7f) {
+    return 1;
+  }
   try {
     const { displayWidth } = require('../formatters');
     return displayWidth(ch);
   } catch {
     // Fallback: manual CJK detection
-    if ((code >= 0x1100 && code <= 0x115F) ||
-        (code >= 0x2E80 && code <= 0xA4CF) ||
-        (code >= 0xAC00 && code <= 0xD7AF) ||
-        (code >= 0xF900 && code <= 0xFAFF) ||
-        (code >= 0xFE10 && code <= 0xFE6F) ||
-        (code >= 0xFF01 && code <= 0xFF60) ||
-        (code >= 0xFFE0 && code <= 0xFFE6) ||
-        (code >= 0x20000 && code <= 0x2FA1F)) {
+    if (
+      (code >= 0x1100 && code <= 0x115f) ||
+      (code >= 0x2e80 && code <= 0xa4cf) ||
+      (code >= 0xac00 && code <= 0xd7af) ||
+      (code >= 0xf900 && code <= 0xfaff) ||
+      (code >= 0xfe10 && code <= 0xfe6f) ||
+      (code >= 0xff01 && code <= 0xff60) ||
+      (code >= 0xffe0 && code <= 0xffe6) ||
+      (code >= 0x20000 && code <= 0x2fa1f)
+    ) {
       return 2;
     }
     return 1;
@@ -57,13 +71,19 @@ function streamThinkingChunk(text, streamState, c) {
   // the single control over whether reasoning is produced+shown. Set
   // KHY_SHOW_THINKING_TEXT=0/false/off to force-hide regardless of the toggle.
   const showThinking = String(process.env.KHY_SHOW_THINKING_TEXT ?? '').toLowerCase();
-  if (showThinking === '0' || showThinking === 'false' || showThinking === 'off') return;
+  if (showThinking === '0' || showThinking === 'false' || showThinking === 'off') {
+    return;
+  }
 
   const content = String(text || '').replace(/\r/g, '');
-  if (!content) return;
+  if (!content) {
+    return;
+  }
 
   // Track thinking text length for final summary
-  if (!streamState._thinkingLen) streamState._thinkingLen = 0;
+  if (!streamState._thinkingLen) {
+    streamState._thinkingLen = 0;
+  }
   streamState._thinkingLen += content.length;
 
   const maxCols = Math.max(24, (process.stdout.columns || 80) - 6);
@@ -103,13 +123,15 @@ function streamThinkingChunk(text, streamState, c) {
 }
 
 function closeThinkingStream(streamState) {
-  if (!streamState.thinkingLineOpen) return;
+  if (!streamState.thinkingLineOpen) {
+    return;
+  }
   process.stdout.write('\n');
   streamState.thinkingLineOpen = false;
   streamState.thinkingCol = 0;
 
   // Print a summary line showing how long thinking took
-  const c = () => (_chalk ??= (require('chalk').default || require('chalk')));
+  const c = () => (_chalk ??= require('chalk').default || require('chalk'));
   const thinkingLen = streamState._thinkingLen || 0;
   if (thinkingLen > 0) {
     const elapsed = streamState._thinkingStartAt
@@ -136,7 +158,9 @@ function closeThinkingStream(streamState) {
  * entire response to finish before seeing any output.
  */
 function bufferTextChunk(text, streamState) {
-  if (!text) return;
+  if (!text) {
+    return;
+  }
 
   // G1/G2: 使用 LineBuffer + AdaptiveChunker 替代原始字符串拼接
   if (streamState._chunker) {
@@ -148,7 +172,9 @@ function bufferTextChunk(text, streamState) {
   }
 
   // Fallback: 兼容旧路径（不应到达）
-  if (!streamState._textBuffer) streamState._textBuffer = '';
+  if (!streamState._textBuffer) {
+    streamState._textBuffer = '';
+  }
   streamState._textBuffer += text;
   _tryIncrementalFlush(streamState);
 }
@@ -163,11 +189,15 @@ function bufferTextChunk(text, streamState) {
  */
 function _tryIncrementalFlush(streamState) {
   const raw = streamState._textBuffer || '';
-  if (!raw || raw.length < 30) return; // too short, wait for more
+  if (!raw || raw.length < 30) {
+    return;
+  } // too short, wait for more
 
   // Check for open code fence — don't flush if we're inside one
   const fenceMatches = raw.match(/^```/gm);
-  if (fenceMatches && fenceMatches.length % 2 !== 0) return; // odd = unclosed fence
+  if (fenceMatches && fenceMatches.length % 2 !== 0) {
+    return;
+  } // odd = unclosed fence
 
   // Find the best split point
   let splitIdx = -1;
@@ -190,15 +220,21 @@ function _tryIncrementalFlush(streamState) {
   // Priority 3: plain newline (only for longer buffers)
   if (splitIdx < 0 && raw.length > 200) {
     const nlIdx = raw.lastIndexOf('\n');
-    if (nlIdx > 0) splitIdx = nlIdx + 1;
+    if (nlIdx > 0) {
+      splitIdx = nlIdx + 1;
+    }
   }
 
-  if (splitIdx <= 0) return;
+  if (splitIdx <= 0) {
+    return;
+  }
 
   // Don't split in the middle of a code fence block
   const beforeSplit = raw.slice(0, splitIdx);
   const fencesInBefore = beforeSplit.match(/^```/gm);
-  if (fencesInBefore && fencesInBefore.length % 2 !== 0) return;
+  if (fencesInBefore && fencesInBefore.length % 2 !== 0) {
+    return;
+  }
 
   // Don't split in the middle of a markdown table block
   // A table is a contiguous run of lines matching /^\s*\|.*\|/
@@ -214,18 +250,25 @@ function _tryIncrementalFlush(streamState) {
   // Case 2: afterSplit starts with a table row and beforeSplit recently had table rows
   // (handles tables separated by a blank line in AI output)
   if (/^\s*\|.*\|/.test(firstLineOfAfter)) {
-    const recentTableLine = beforeLines.slice(-5).some(l => /^\s*\|.*\|/.test(l));
-    if (recentTableLine) return; // likely a continuation of the same table
+    const recentTableLine = beforeLines.slice(-5).some((l) => /^\s*\|.*\|/.test(l));
+    if (recentTableLine) {
+      return;
+    } // likely a continuation of the same table
   }
   // Case 3: beforeSplit ends with a table row but afterSplit has more table rows coming
-  if (/^\s*\|.*\|/.test(lastLineOfBefore) && afterLines.slice(0, 3).some(l => /^\s*\|.*\|/.test(l.trim()))) {
+  if (
+    /^\s*\|.*\|/.test(lastLineOfBefore) &&
+    afterLines.slice(0, 3).some((l) => /^\s*\|.*\|/.test(l.trim()))
+  ) {
     return; // table continues after a gap
   }
 
   const toRender = beforeSplit.trim();
   streamState._textBuffer = raw.slice(splitIdx);
 
-  if (!toRender) return;
+  if (!toRender) {
+    return;
+  }
   _renderTextBlock(toRender);
 }
 
@@ -251,7 +294,9 @@ function flushTextBuffer(streamState, c, force = false) {
   }
 
   const raw = streamState._textBuffer || '';
-  if (!raw) return;
+  if (!raw) {
+    return;
+  }
 
   let toRender = raw;
   let remainder = '';
@@ -262,7 +307,9 @@ function flushTextBuffer(streamState, c, force = false) {
     let splitIdx = -1;
     for (let i = toRender.length - 1; i >= 0; i--) {
       const code = toRender.charCodeAt(i);
-      if (code >= 0xDC00 && code <= 0xDFFF) continue;
+      if (code >= 0xdc00 && code <= 0xdfff) {
+        continue;
+      }
       if (_TEXT_STRONG_BREAK_TAIL_RE.test(toRender[i])) {
         splitIdx = i + 1;
         break;
@@ -287,7 +334,9 @@ function flushTextBuffer(streamState, c, force = false) {
 
   const buf = toRender.trim();
   streamState._textBuffer = remainder;
-  if (!buf) return;
+  if (!buf) {
+    return;
+  }
   _renderTextBlock(buf);
 }
 
@@ -310,7 +359,7 @@ function _renderTextBlock(text) {
 
     if (lines.length <= _MAX_RENDER_LINES) {
       syncWrite(() => {
-        lines.forEach(l => console.log(`  ${l}`));
+        lines.forEach((l) => console.log(`  ${l}`));
       });
     } else {
       // Long output: head + fold + tail (virtual scroll substitute)
@@ -319,14 +368,20 @@ function _renderTextBlock(text) {
       const tailLines = lines.slice(-_RENDER_TAIL);
       const folded = lines.length - _RENDER_HEAD - _RENDER_TAIL;
       syncWrite(() => {
-        headLines.forEach(l => console.log(`  ${l}`));
+        headLines.forEach((l) => console.log(`  ${l}`));
         console.log(`  ${_chalk.dim(`… +${folded} 行 (ctrl+o 展开)`)}`);
-        tailLines.forEach(l => console.log(`  ${l}`));
+        tailLines.forEach((l) => console.log(`  ${l}`));
       });
       // Store for ctrl+o expansion
       try {
-        renderer.pushExpandableOutput({ tool: 'AI Response', detail: lines.join('\n'), paramStr: '' });
-      } catch { /* best effort */ }
+        renderer.pushExpandableOutput({
+          tool: 'AI Response',
+          detail: lines.join('\n'),
+          paramStr: '',
+        });
+      } catch {
+        /* best effort */
+      }
     }
   } catch {
     console.log(`  ${text}`);
@@ -338,7 +393,9 @@ function _renderTextBlock(text) {
  * Gated behind KHY_STREAMING_MD env var for safe rollout (default: enabled).
  */
 function _isStreamingMdEnabled() {
-  const v = String(process.env.KHY_STREAMING_MD || 'true').trim().toLowerCase();
+  const v = String(process.env.KHY_STREAMING_MD || 'true')
+    .trim()
+    .toLowerCase();
   return v !== 'false' && v !== '0' && v !== 'off' && v !== 'no';
 }
 
@@ -347,10 +404,14 @@ function _isStreamingMdEnabled() {
  * Returns null when the feature is disabled so callers can fall back.
  */
 function _createStreamingMdState() {
-  if (!_isStreamingMdEnabled()) return null;
+  if (!_isStreamingMdEnabled()) {
+    return null;
+  }
   return new MarkdownStreamState((blockText) => {
     const trimmed = blockText.trim();
-    if (trimmed) _renderTextBlock(trimmed);
+    if (trimmed) {
+      _renderTextBlock(trimmed);
+    }
   });
 }
 
