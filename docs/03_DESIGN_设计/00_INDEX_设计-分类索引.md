@@ -68,11 +68,37 @@
 | [DESIGN-ARCH-063] 对照《Claude Code 架构》一书读懂 Khy-OS.md | 书序架构阅读主线（书目录→khy 真源映射+术语对照） | 定稿 |
 | [DESIGN-ARCH-064] khyos 后端请求生命周期与逻辑关系图.md | 后端纵向逻辑关系图（一条消息下行路径·汇流点/单一出口/IoC 缝三骨架点） | 定稿 |
 | [DESIGN-ARCH-065] Hermes Agent v0.18.0 参考学习-判断验证自我进化.md | Hermes v0.18.0 三支柱研究+gap 分析；落地 /goal 证据门（evidence-based completion） | 定稿 |
+| [DESIGN-ARCH-066] 前端代理出站桥-选节点实际路由与启用停用开关.md | 前端代理出站桥路由与启停开关 | 定稿 |
 | [DESIGN-ARCH-067] opencode高含金量功能教学与khy-os差距补齐路线.md | opencode 12 项功能对照教学；References/LSP 诊断/权限 auto 三项差距分阶段补齐 | 定稿 |
+| [DESIGN-ARCH-067] 动态模型差异化适配引擎.md | 动态模型差异化适配引擎（**编号与上一行冲突，待重编**） | 定稿·编号冲突 |
+| [DESIGN-ARCH-068] 仓库层级板块规范.md | 顶层目录 L0–L6 分层 + 允许依赖边 + docs 两轴 + 任务入口命名（层级单一真源） | 定稿 |
 | [DESIGN-OTHER-001] Khyos-数学重塑-实施提示词链.md | 数学重塑提示词链 | 定稿 |
 | [DESIGN-OTHER-002] _cbssp_分阶段防闪退提示词.md | 分阶段防闪退提示 | 草稿 |
 | [DESIGN-OTHER-003] khy-系统提示词结构图.md | 系统提示词结构图 | 定稿 |
 | [DESIGN-OTHER-004] 特性访问-提示词胶囊-2026-06-01.md | 特性访问提示胶囊 | 定稿 |
+
+**历史未编号件**（保留原名；重命名须同步改写全部入站引用与 `.html` 孪生件，属独立一轮工作）：
+
+| 文件名 | 核心职责(10字内) | 状态 |
+| --- | --- | --- |
+| FILE-FORMAT-PROTOCOL.md | 各文件格式的职责边界 | 定稿·未编号 |
+| RELIABILITY-PROTOCOL.md | 长任务交互可靠性保障 | 定稿·未编号 |
+| ycode-inspiration-plan.md | ycode 借鉴点与落地计划 | 草稿·未编号 |
+
+> `FILE-FORMAT-PROTOCOL.md` 于 2026-08-15 从 `docs/02_CONCEPTS_概念入门/` 迁入本目录：它是
+> **强制标准**（违反即过不了 `check-change-safety` 门控），不是给小白读的概念入门篇，此前落在
+> 概念目录是历史批量搬迁的遗留，并因此成为 `docs:check-beginner` 的孤儿页。
+> 它与 `RELIABILITY-PROTOCOL.md` 互补；后者正文提到的 `COMMUNICATION-PROTOCOL.md`
+> **在仓库中不存在**（如实登记，本轮不补写）。
+
+> **`[DESIGN-ARCH-068]` 是「新代码/新目录该放哪一层、能依赖谁」的单一真源**，
+> 由 `npm run check:layout` 的 `layer-registry` 规则强制执行。`AGENTS.md`、`README.md`、
+> `[OPS-MAN-169]` 均指向它，不重复其内容。
+>
+> **编号缺陷（如实登记，本轮不重编）**：`[DESIGN-ARCH-067]` 被两份文档同时占用
+> （`opencode高含金量功能教学…` 与 `动态模型差异化适配引擎`），违反 [MGMT-STD-001]
+> 编号唯一性。重编需同步改写入站引用与 `.html` 孪生件，属独立一轮工作。
+> 因此本次新增文档取 **068**（跳过冲突号），下一个空号为 069。
 
 ## 三、已归档（已删除孤儿引擎）
 

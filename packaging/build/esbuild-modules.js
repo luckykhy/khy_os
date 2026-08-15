@@ -120,7 +120,7 @@ async function buildModule(moduleConfig) {
     minifySyntax: isProd,
     logLevel: 'warning',
     banner: {
-      js: `#!/usr/bin/env node\n/* KHY OS Module: ${moduleId} v${catalog.version} | ${new Date().toISOString().split('T')[0]} */`,
+      js: `/* KHY OS Module: ${moduleId} v${catalog.version} | ${new Date().toISOString().split('T')[0]} */`,
     },
     define: {
       'process.env.KHY_BUNDLED': '"true"',

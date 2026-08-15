@@ -28,8 +28,7 @@ process.env.SQLITE_DB_PATH = TMP_DB;
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'plugins-service-test-secret-at-least-32-chars';
 process.env.NODE_ENV = 'test';
 
-jest.mock('axios', () => jest.fn());
-const axios = require('axios');
+const originalFetch = global.fetch;
 
 const { sequelize, User, MarketplacePlugin, UserInstalledPlugin } = require('@khy/shared/models');
 const importSvc = require('../src/services/pluginImportService');
@@ -85,12 +84,13 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
-  axios.mockReset();
+  global.fetch = jest.fn();
   // Default: every hostname resolves to a public IP so the guard passes.
   urlSafety.__setDnsLookupForTests(async () => [{ address: '93.184.216.34', family: 4 }]);
 });
 
 afterEach(() => {
+  global.fetch = originalFetch;
   urlSafety.__setDnsLookupForTests(null);
 });
 
@@ -140,10 +140,38 @@ describe('pluginImportService.preview', () => {
   });
 
   test('fetches an OpenAPI doc from a URL (mocked) when the host is public', async () => {
-    axios.mockResolvedValue({ status: 200, data: JSON.stringify(openapiDoc()) });
+    const body = JSON.stringify(openapiDoc());
+    global.fetch.mockResolvedValue(new Response(body, {
+      status: 200,
+      headers: { 'content-length': String(Buffer.byteLength(body)) },
+    }));
     const norm = await importSvc.preview({ openapiUrl: 'https://specs.example.com/openapi.json' });
-    expect(axios).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(norm.slug).toBe('weather-api');
+  });
+
+  test('rejects a document whose declared size exceeds the limit', async () => {
+    global.fetch.mockResolvedValue(new Response('{}', {
+      status: 200,
+      headers: { 'content-length': String(2 * 1024 * 1024 + 1) },
+    }));
+
+    await expect(importSvc.preview({ openapiUrl: 'https://specs.example.com/large.json' }))
+      .rejects.toMatchObject({ statusCode: 413 });
+  });
+
+  test('stops reading when an unbounded response stream exceeds the limit', async () => {
+    const chunk = new Uint8Array(1024 * 1024 + 1);
+    global.fetch.mockResolvedValue(new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(chunk);
+        controller.enqueue(chunk);
+        controller.close();
+      },
+    }), { status: 200 }));
+
+    await expect(importSvc.preview({ openapiUrl: 'https://specs.example.com/stream.json' }))
+      .rejects.toMatchObject({ statusCode: 413 });
   });
 
   test('SSRF: a spec URL resolving to a private address is blocked (no fetch)', async () => {
@@ -151,7 +179,7 @@ describe('pluginImportService.preview', () => {
     await expect(
       importSvc.preview({ openapiUrl: 'https://metadata.evil.test/openapi.json' })
     ).rejects.toMatchObject({ statusCode: 400 });
-    expect(axios).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   test('rejects a non-OpenAPI-3 document', async () => {

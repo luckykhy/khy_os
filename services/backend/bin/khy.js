@@ -444,7 +444,10 @@ process.env.KHYQUANT_CWD = process.cwd();
 // 在 Windows 上优先使用 D 盘存放数据，通过目录联接（junction）实现：
 // 如果 D: 盘存在，创建 ~/.khyquant → D:\.khyquant 的联接，
 // 这样所有使用 os.homedir()/.khyquant 的代码都会透明地读写 D 盘
-if (process.platform === 'win32') {
+const isPortableDeployment = Boolean(
+  process.env.KHY_PORTABLE_ROOT || process.env.KHYQUANT_PORTABLE_ROOT
+);
+if (process.platform === 'win32' && !isPortableDeployment) {
   try {
     const fs = require('fs');
     const os = require('os');
@@ -775,7 +778,7 @@ async function ensureAuthenticated() {
                 }
               } catch (regErr) {
                 printInfo(`自动注册失败: ${regErr.message || 'unknown'}`);
-                printInfo(`提示: 如需使用完整功能，请先运行 'start-all.bat' 启动后端服务`);
+                printInfo(`提示: 如需使用完整功能，请先运行 'scripts/setup/start-all.bat' 启动后端服务`);
               }
             }
           } catch (err) {

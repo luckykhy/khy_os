@@ -1,0 +1,17 @@
+{
+  "_note": "check-repo-layout.js 的已知违规存量。只允许下降：实测数 > 基线数即在 CI 亮红。修完一批后跑 `npm run check:layout -- --update-baseline` 下调，绝不上调来让 CI 变绿。",
+  "_source": "scripts/ci/check-repo-layout.js；规范真源 docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md",
+  "_meaning": {
+    "dangling-task": "被文档/CI 引用但任何 package.json 里都没定义的 npm run 目标数",
+    "cross-layer-require": "跨 workspace 的深层相对 require 处数（纯 re-export 壳文件已豁免）",
+    "unresolved-require": "深层相对 require 指向磁盘上不存在的路径的处数 —— 每一处都是潜伏崩溃",
+    "docs-index-complete": "阶段目录里没有出现在主索引 docs/00_INDEX_文档索引.md 的文档份数（CP-3 漏链）"
+  },
+  "updated": "2026-08-15",
+  "counts": {
+    "dangling-task": 119,
+    "cross-layer-require": 43,
+    "unresolved-require": 24,
+    "docs-index-complete": 102
+  }
+}

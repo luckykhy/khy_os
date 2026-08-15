@@ -19,9 +19,8 @@
 
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const axios = require('axios');
-
 const MultiFreeService = require('../../src/services/multiFreeService');
+const axios = MultiFreeService.httpClient;
 
 const PROVIDER = { name: 'fake', model: 'm', apiKey: 'k' };
 

@@ -13,7 +13,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const REGISTRY_PATH = path.join(ROOT, 'docs', '设计模式', '模式注册表.json');
+const REGISTRY_PATH = path.join(ROOT, 'docs', '_设计模式', '模式注册表.json');
 
 const ALL_23 = [
   'Singleton', 'Factory Method', 'Abstract Factory', 'Builder', 'Prototype',
@@ -27,7 +27,7 @@ const EXCLUDE_DIRS = [
   'node_modules', '.git', 'dist', 'build', '.khy-runtime',
   'services/backend/tests', 'platform/packages/sdk/tests', 'tests/unit', 'tests/api',
   'scripts/ab-traces', 'kernel/build', 'frontend/src/assets',
-  '_build', 'frontend/android', 'docs/模板',
+  '_build', 'frontend/android', 'docs/_模板',
 ];
 
 // 扫描所有源文件

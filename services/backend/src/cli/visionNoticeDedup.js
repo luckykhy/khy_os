@@ -37,13 +37,35 @@ function isEnabled(env) {
   }
 }
 
-// 归一化签名:去首尾空白后原文。逐字节比较——不同模型名 / 不同失败真因天然签名不同,只折叠完全一致的重复。
+// 视觉消息阶段签名。候选模型名和具体错误可能不同，但同一回合里反复发出同阶段
+// 消息仍是重复进度；普通 assistant_message 保持逐字节签名，绝不模糊吞答复。
+function _visionPhaseSignature(text) {
+  if (
+    /(正在调用.+(?:识别|请稍候)|正在改用.+继续识别|MCP识图.+正在识别)/i.test(text)
+  ) {
+    return 'vision-phase:start';
+  }
+  if (
+    /(视觉识别完成|完成识别|MCP识图.+已完成|本地 OCR 成功识别)/i.test(text)
+  ) {
+    return 'vision-phase:complete';
+  }
+  if (/(图像识别失败|图片识别失败|视觉模型均不可用)/i.test(text)) {
+    return 'vision-phase:failure';
+  }
+  return null;
+}
+
+// 归一化签名:视觉进度按阶段折叠；其他消息去首尾空白后逐字节比较。
 function signatureOf(msgText) {
   if (typeof msgText !== 'string') {
     return null;
   }
   const s = msgText.trim();
-  return s.length ? s : null;
+  if (!s.length) {
+    return null;
+  }
+  return _visionPhaseSignature(s) || s;
 }
 
 /**

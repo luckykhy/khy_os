@@ -17,9 +17,8 @@
 const { describe, test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { Readable } = require('node:stream');
-const axios = require('axios');
-
 const MultiFreeService = require('../../src/services/multiFreeService');
+const axios = MultiFreeService.httpClient;
 const PROVIDER = { name: 'fake', model: 'agnes-2.0-flash', apiKey: 'k' };
 
 /** 造一条 SSE 可读流:先若干 text delta 块,末尾一个 usage-only 块(choices 空),再 [DONE]。 */

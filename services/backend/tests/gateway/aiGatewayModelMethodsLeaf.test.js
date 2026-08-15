@@ -23,9 +23,9 @@ const HOST = '../../src/services/gateway/aiGateway';
 const MIXIN_METHODS = [
   'autoSelectModel', 'generateWithSubModel', 'isLocalAdapter', 'getAvailableLocalAdapter',
   'getAdapterOrigin', 'getStatus', 'getKhyProtocolPriorityRisk', 'getFirstAvailableAdapter',
-  'getActiveAdapter', 'getRelayAdapter', 'getAdapter', 'getChannelHealthSnapshot', 'resetChannel',
+  'getActiveAdapter', '_getLastVerifiedActiveAdapter', 'getRelayAdapter', 'getAdapter', 'getChannelHealthSnapshot', 'resetChannel',
   'getFailoverOrder', 'setFailoverOrder', 'clearFailoverOrder', 'generateWithAdapter', 'listModels',
-  'verifyModel', 'verifyToolCalling', '_maybeBackgroundProbeToolCalling', 'destroy', 'testAdapter',
+  'verifyModel', 'verifyVisionCapability', 'verifyToolCalling', '_maybeBackgroundProbeToolCalling', 'destroy', 'testAdapter',
 ];
 
 test('leaf exports the model/adapter mixin object + DI setter', () => {

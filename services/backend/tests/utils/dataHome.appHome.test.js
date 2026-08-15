@@ -78,6 +78,40 @@ describe('dataHome — getAppHome() legacy-safe convergence', () => {
     expect(d.getAppDataDir('skills')).toBe(path.join(path.resolve(override), 'skills'));
   });
 
+  describe('portable root environment compatibility', () => {
+    test('canonical KHY_PORTABLE_ROOT marks the deployment portable', () => {
+      const portableRoot = path.join(tmpHome, 'canonical portable root');
+      process.env.KHY_PORTABLE_ROOT = portableRoot;
+      delete process.env.KHYQUANT_PORTABLE_ROOT;
+      jest.resetModules();
+
+      const d = require('../../src/utils/dataHome');
+      expect(d.isPortableDeployment()).toBe(true);
+      expect(d._portableRoot()).toBe(path.resolve(portableRoot));
+    });
+
+    test('legacy portable root remains compatible', () => {
+      const portableRoot = path.join(tmpHome, 'legacy portable root');
+      delete process.env.KHY_PORTABLE_ROOT;
+      process.env.KHYQUANT_PORTABLE_ROOT = portableRoot;
+      jest.resetModules();
+
+      const d = require('../../src/utils/dataHome');
+      expect(d.isPortableDeployment()).toBe(true);
+      expect(d._portableRoot()).toBe(path.resolve(portableRoot));
+    });
+
+    test('canonical portable root takes precedence over legacy root', () => {
+      const canonicalRoot = path.join(tmpHome, 'canonical root');
+      process.env.KHY_PORTABLE_ROOT = canonicalRoot;
+      process.env.KHYQUANT_PORTABLE_ROOT = path.join(tmpHome, 'legacy root');
+      jest.resetModules();
+
+      const d = require('../../src/utils/dataHome');
+      expect(d._portableRoot()).toBe(path.resolve(canonicalRoot));
+    });
+  });
+
   // ── 及时同步:convergence WITHOUT restart (KHY_APP_HOME_LIVE_RESOLVE) ─────────
   describe('timely admin↔user sync (live resolve of the non-established fallback)', () => {
     test('_appHomeLiveResolveEnabled: default ON, only {0,false,off,no} disable', () => {

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>模型可用性与适配器探测 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>模型可用性与适配器探测</div>
+      <header class="hero reveal"><h1>模型可用性与适配器探测</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#模型可用性与适配器探测">模型可用性与适配器探测</a></li><li class="lvl-2"><a href="#一-两个概念必须分开-enabled-available">一、两个概念必须分开：enabled ≠ available</a></li><li class="lvl-2"><a href="#二-适配器优先级与探测条件">二、适配器优先级与探测条件</a></li><li class="lvl-2"><a href="#三-gateway-enabled-是-关闭开关-不是开启开关">三、`GATEWAY__ENABLED` 是**关闭开关**，不是开启开关</a></li><li class="lvl-2"><a href="#四-让菜单有内容-三条最短路径">四、让菜单有内容：三条最短路径</a></li><li class="lvl-3"><a href="#路径-1-ollama-本地-免费-无-key">路径 1：Ollama（本地、免费、无 key）</a></li><li class="lvl-3"><a href="#路径-2-ide-桥接-用-ide-已有的配额">路径 2：IDE 桥接（用 IDE 已有的配额）</a></li><li class="lvl-3"><a href="#路径-3-api-key-api-适配器">路径 3：API Key（`api` 适配器）</a></li><li class="lvl-2"><a href="#五-诊断顺序">五、诊断顺序</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-019 | 阶段: 部署 | 原路径: COMPLETE_DEPLOYMENT_GUIDE.md（根目录归档） --&gt;</p>
+<h1 id="模型可用性与适配器探测">模型可用性与适配器探测<a class="anchor" href="#模型可用性与适配器探测" aria-label="锚点">#</a></h1>
+<blockquote><p>回答一个问题：<strong><code>/model</code> 菜单是空的，为什么，怎么修。</strong></p>
+<p>结论先写在这里：<strong>不是「适配器没启用」</strong>。18 个适配器在网关构造时全部 <code>enabled: true</code>，<br>空菜单的真实原因是<strong>每个适配器的 <code>detect()</code> 都返回了 false</strong> —— 也就是运行环境里<br>既没有可用的 IDE CLI、也没有 API Key、也没有本地模型服务。</p>
+<p><strong>归档来源</strong>：本文由根目录 <code>COMPLETE_DEPLOYMENT_GUIDE.md</code> 重写而成（归档日期 2026-08-15）。<br>原文是会话产物（带具体机器路径、「告诉我诊断脚本的输出」式对话口吻），且<strong>把「适配器启用」<br>与「适配器可用」混为一谈</strong>，据此给出的 <code>GATEWAY_OPENAI_ENABLED=true</code> 一类配置在代码中<br>并不存在。本文按代码实测重写。</p>
+<p>实现依据（核实来源）：</p>
+<ul><li>适配器清单与优先级：<code>services/backend/src/services/gateway/aiGateway.js</code>（<code>AIGateway</code> 构造函数）</li><li>开关与探测编排：<code>services/backend/src/services/gateway/aiGatewayRoutingMethods.js</code></li><li>各适配器 <code>detect()</code>：<code>services/backend/src/services/gateway/adapters/*.js</code></li><li>模型清单构建：<code>services/backend/src/cli/handlers/gatewayModelChoices.js</code></li></ul></blockquote>
+<hr>
+<h2 id="一-两个概念必须分开-enabled-available">一、两个概念必须分开：enabled ≠ available<a class="anchor" href="#一-两个概念必须分开-enabled-available" aria-label="锚点">#</a></h2>
+<p>网关初始化分两拍：</p>
+<pre><code>① enabled —— 这个适配器要不要参与探测
+     18 个适配器在构造函数里一律写死 enabled: true
+     只有环境变量显式设成字符串 &quot;false&quot; 才会被关掉（见第三节）
+
+② available —— 探测后它到底能不能用
+     对每个 enabled 的适配器并行调用 detectAsync() ?? detect()
+     单个探测超时 GATEWAY_INIT_TIMEOUT_MS（默认 15000ms）
+     超时或抛错 → available = false（静默，不阻断其他适配器）</code></pre>
+<p><code>/model</code> 只列出 <strong>available === true</strong> 的适配器的模型。所以：</p>
+<ul><li><strong>把某个 <code>GATEWAY_*_ENABLED</code> 设成 <code>true</code> 不会让菜单多出东西</strong> —— 它本来就是 enabled。</li><li>要让菜单有内容，必须让至少一个适配器的 <code>detect()</code> 通过，也就是<strong>在环境里补上它要找的东西</strong>。</li></ul>
+<hr>
+<h2 id="二-适配器优先级与探测条件">二、适配器优先级与探测条件<a class="anchor" href="#二-适配器优先级与探测条件" aria-label="锚点">#</a></h2>
+<p><code>aiGateway.js</code> 构造函数里的完整清单，按 <code>priority</code> 升序（数字小者优先被自动选中）：</p>
+<table><thead><tr><th>priority</th><th>key</th><th>分组</th><th><code>detect()</code> 找什么</th></tr></thead><tbody><tr><td>0</td><td><code>kiro</code></td><td>云端结构化</td><td>Kiro 凭据</td></tr><tr><td>1</td><td><code>cursor</code></td><td>云端结构化</td><td>Cursor token 文件（或账号池里的 pool token）</td></tr><tr><td>2</td><td><code>trae</code></td><td>云端结构化</td><td>Trae 凭据 / <code>TRAE_API_KEY</code></td></tr><tr><td>3</td><td><code>claude</code></td><td>云端结构化</td><td><code>claude</code> 命令存在（PATH 或便携版 <code>~/.khy/tools</code>）</td></tr><tr><td>4</td><td><code>codex</code></td><td>云端结构化</td><td>Codex 凭据</td></tr><tr><td>5</td><td><code>api</code></td><td>云端结构化</td><td>MultiFreeService 有可用 provider，或 <code>apiKeyPool</code> 里有可用 key</td></tr><tr><td>6</td><td><code>windsurf</code></td><td>IDE 桥接</td><td>Windsurf 安装路径 + token</td></tr><tr><td>7</td><td><code>vscode</code></td><td>IDE 桥接</td><td>VS Code + Copilot</td></tr><tr><td>8</td><td><code>warp</code></td><td>IDE 桥接</td><td>Warp 凭据</td></tr><tr><td>9</td><td><code>cursor2api</code></td><td>IDE 桥接</td><td>Cursor token（走 API 化通道）</td></tr><tr><td>10</td><td><code>relay_api</code></td><td>IDE 桥接</td><td>中继 API 配置</td></tr><tr><td>11</td><td><code>ollama</code></td><td>本地模型</td><td><code>GET /api/tags</code> 探活（默认 <code>http://localhost:11434</code>）</td></tr><tr><td>12</td><td><code>localLLM</code></td><td>本地模型</td><td>LocalLLM 服务在跑</td></tr><tr><td>13</td><td><code>cli</code></td><td>辅助通道</td><td>通用 CLI 工具</td></tr><tr><td>14</td><td><code>relay</code></td><td>辅助通道</td><td>Web 中继</td></tr><tr><td>15</td><td><code>clipboard</code></td><td>辅助通道</td><td>剪贴板中继</td></tr><tr><td>16</td><td><code>opencode</code></td><td>定向指挥</td><td>opencode 二进制（<strong>刻意置于低位</strong>，不抢占自动回退）</td></tr><tr><td>17</td><td><code>openclaw</code></td><td>定向指挥</td><td>门控 <code>KHY_OPENCLAW</code> <strong>默认关</strong>，关闭时 <code>detect()</code> 恒为 false</td></tr></tbody></table>
+<blockquote><p>分组注释在代码里写得很清楚：云端结构化适配器有原生 <code>tool_use</code>，最可靠；IDE 桥接依赖 IDE 进程，<br>次可靠；本地模型 function calling 弱或缺失，所以排在最后。<code>opencode</code> / <code>openclaw</code> 有自己的<br>provider/model 配置，属「定向指挥」类，<strong>不应成为通用聊天的默认回退</strong>，因此排在自动优先级最末；<br>显式 <code>preferredAdapter: 'opencode'</code> 走定向路由，不受此顺序影响。</p></blockquote>
+<p><strong>只要有任意一个适配器 available，<code>/model</code> 就有内容。</strong> 不需要凑齐多个。</p>
+<hr>
+<h2 id="三-gateway-enabled-是-关闭开关-不是开启开关">三、<code>GATEWAY_&lt;KEY&gt;_ENABLED</code> 是<strong>关闭开关</strong>，不是开启开关<a class="anchor" href="#三-gateway-enabled-是-关闭开关-不是开启开关" aria-label="锚点">#</a></h2>
+<p>代码里这组变量名是<strong>用模板拼出来的</strong>（`<code> </code>GATEWAY_${ideKey.toUpperCase()}_ENABLED<code> </code><code>），<br>判定条件是 </code>=== 'false'`：</p>
+<pre><code class="language-js">// aiGatewayRoutingMethods.js
+for (const ideKey of ['kiro','cursor','trae','claude','codex','windsurf','vscode','warp','cursor2api']) {
+  const envKey = `GATEWAY_${ideKey.toUpperCase()}_ENABLED`;
+  if (process.env[envKey] === 'false') { entry.enabled = false; }
+}</code></pre>
+<p>由此可得三条事实：</p>
+<ol><li><strong>存在</strong>且生效的 kill switch：<code>GATEWAY_KIRO_ENABLED</code>、<code>GATEWAY_CURSOR_ENABLED</code>、</li></ol>
+<p><code>GATEWAY_TRAE_ENABLED</code>、<code>GATEWAY_CLAUDE_ENABLED</code>、<code>GATEWAY_CODEX_ENABLED</code>、<br>   <code>GATEWAY_WINDSURF_ENABLED</code>、<code>GATEWAY_VSCODE_ENABLED</code>、<code>GATEWAY_WARP_ENABLED</code>、<br>   <code>GATEWAY_CURSOR2API_ENABLED</code>，另有独立三个 <code>GATEWAY_CLI_ENABLED</code>、<br>   <code>GATEWAY_OLLAMA_ENABLED</code>、<code>GATEWAY_RELAY_ENABLED</code>。</p>
+<ol><li><strong>只有字符串 <code>&quot;false&quot;</code> 有效果</strong>。设 <code>true</code>、<code>1</code>、<code>yes</code> 一律等同于不设——因为默认已经是开。</li><li><strong>不存在</strong>的变量（归档来源里写过、实测全仓无此名）：<code>GATEWAY_OPENAI_ENABLED</code>、</li></ol>
+<p><code>GATEWAY_CLAUDE_API_ENABLED</code>、<code>GATEWAY_DEEPSEEK_ENABLED</code>、<code>GATEWAY_OPENAI_API_KEY</code>、<br>   <code>GATEWAY_CLAUDE_API_KEY</code>、<code>GATEWAY_OLLAMA_BASE_URL</code>。设它们<strong>不会有任何效果</strong>。<br>   OpenAI / Claude API / DeepSeek 一类云端供应商走的是 <code>api</code> 适配器，读的是<strong>不带 <code>GATEWAY_</code> 前缀</strong><br>   的标准 key 名（见 <code>[DEPLOY-MAN-020]</code>）。</p>
+<p><strong>典型用法</strong>：临时排除某个探测很慢的通道，而不是「打开」它。</p>
+<pre><code class="language-powershell">$env:GATEWAY_WINDSURF_ENABLED = &quot;false&quot;   # 本机没装 Windsurf，省掉这次探测
+$env:GATEWAY_VSCODE_ENABLED   = &quot;false&quot;
+khy</code></pre>
+<hr>
+<h2 id="四-让菜单有内容-三条最短路径">四、让菜单有内容：三条最短路径<a class="anchor" href="#四-让菜单有内容-三条最短路径" aria-label="锚点">#</a></h2>
+<p>按上手难度排序。三条都不需要改任何 <code>GATEWAY_*_ENABLED</code>。</p>
+<h3 id="路径-1-ollama-本地-免费-无-key">路径 1：Ollama（本地、免费、无 key）<a class="anchor" href="#路径-1-ollama-本地-免费-无-key" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># 1) 装 Ollama：https://ollama.com/download
+# 2) 拉一个模型
+ollama pull llama3.2
+# 3) 确认服务在跑（detect 就是打这个接口）
+curl http://localhost:11434/api/tags
+# 4) 起 khy → /model
+khy</code></pre>
+<p>非默认端口用 <code>OLLAMA_HOST</code> 指过去（<strong>不是</strong> <code>GATEWAY_OLLAMA_BASE_URL</code>）。详见 <code>[DEPLOY-MAN-020]</code> 第二节。</p>
+<h3 id="路径-2-ide-桥接-用-ide-已有的配额">路径 2：IDE 桥接（用 IDE 已有的配额）<a class="anchor" href="#路径-2-ide-桥接-用-ide-已有的配额" aria-label="锚点">#</a></h3>
+<p>正在用 Claude Code / Cursor / Windsurf / VS Code 的话，桥接是零成本的——<code>detect()</code> 找的<br>就是这些 IDE 已经落在磁盘上的 CLI 或 token。配置细节与各 IDE 的 token 位置见 <code>[DEPLOY-MAN-021]</code>。</p>
+<p>最短检查：</p>
+<pre><code class="language-powershell">claude --version        # claude 适配器 detect() 就是查这个命令</code></pre>
+<h3 id="路径-3-api-key-api-适配器">路径 3：API Key（<code>api</code> 适配器）<a class="anchor" href="#路径-3-api-key-api-适配器" aria-label="锚点">#</a></h3>
+<p>在环境里放一个受支持的供应商 key，<code>api</code> 适配器的 <code>detect()</code> 就会通过。key 名清单与<br>配置方式见 <code>[DEPLOY-MAN-020]</code> 第三节。</p>
+<blockquote><p>红线：<strong>真 key 只经环境变量瞬时注入，绝不写进源码、配置模板或提交</strong>。本文与<br><code>[DEPLOY-MAN-020]</code>/<code>[DEPLOY-MAN-021]</code> 里出现的一切 key、secret 都是占位符。</p></blockquote>
+<hr>
+<h2 id="五-诊断顺序">五、诊断顺序<a class="anchor" href="#五-诊断顺序" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell">khy                     # 进 CLI
+gateway status          # 逐通道看 enabled / available，这是第一现场
+gateway test claude     # 单通道连通性 + 生成测试
+gateway config          # 交互式改网关配置（会写 .env）</code></pre>
+<p><code>gateway status</code> 才是判断依据：它把 enabled 与 available 分列出来，直接告出<br>「是被关掉了」还是「探测没通过」。</p>
+<table><thead><tr><th>现象</th><th>读法</th><th>处理</th></tr></thead><tbody><tr><td>所有通道 available=false</td><td>环境里没有任何可用凭据/服务</td><td>走第四节任一路径</td></tr><tr><td>某通道 enabled=false</td><td>有人设了 <code>GATEWAY_&lt;KEY&gt;_ENABLED=false</code></td><td>取消该环境变量</td></tr><tr><td><code>/model</code> 很久才出</td><td>逐个适配器探测累加</td><td>见 <code>docs/_报告/历史/2026-08-根目录归档-修复记录.md</code> 第二节的 <code>KHY_MODEL_*</code> 超时开关</td></tr><tr><td>探测阶段整体挂住</td><td>单适配器探测超时兜底</td><td>调低 <code>GATEWAY_INIT_TIMEOUT_MS</code>（默认 15000ms，下限 3000ms）</td></tr></tbody></table>
+<hr>
+<h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
+<ul><li>AI 供应商与 API Key 配置：<code>[DEPLOY-MAN-020] AI供应商与APIKey配置</code></li><li>IDE 桥接模式：<code>[DEPLOY-MAN-021] IDE桥接模式</code></li><li><code>/model</code> 慢与 <code>KHY_MODEL_*</code> 超时开关：<code>docs/_报告/历史/2026-08-根目录归档-修复记录.md</code></li><li>首次运行自动登录：<code>docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.md</code></li><li>环境开关命名规范：<code>docs/07_OPS_运维/[OPS-MAN-058] 环境开关与文档命名规范.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-018] khyos-Android构建避坑指南.html"><div class="dir">← 上一篇</div><div class="ttl">[DEPLOY-MAN-018] khyos Android 构建避坑指南</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-020] AI供应商与APIKey配置.html"><div class="dir">下一篇 →</div><div class="ttl">AI 供应商与 API Key 配置</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-019] 模型可用性与适配器探测.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

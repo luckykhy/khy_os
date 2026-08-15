@@ -1,4 +1,4 @@
-# This file is auto-generated from docs/维护者/维护映射表.json
+# This file is auto-generated from docs/_维护者/维护映射表.json
 # Each area's paths list the area maintainer as owner using @<area-id> placeholder.
 # Replace @<area-id> placeholders with actual GitHub usernames as needed.
 # In CODEOWNERS, the first matching pattern takes precedence.
@@ -100,7 +100,7 @@ scripts/install-git-hooks.js @maintenance-safety
 scripts/ci/check-version-sync.js @maintenance-safety
 scripts/ci/check-node-syntax.js @maintenance-safety
 scripts/ci/check-python-syntax.py @maintenance-safety
-docs/维护者/维护映射表.json @maintenance-safety
+docs/_维护者/维护映射表.json @maintenance-safety
 
 # Release and Rollback
 maintenance/stable-release.json @release-rollback
@@ -127,13 +127,13 @@ services/backend/tests/services/envPlatform.test.js @env-optimize
 # Evolution Prompt Playbook (1000 preset prompts)
 scripts/docs/gen-evolution-prompts.js @evolution-prompts
 scripts/tests/gen-evolution-prompts.test.js @evolution-prompts
-docs/维护者/维护映射表.json @evolution-prompts
+docs/_维护者/维护映射表.json @evolution-prompts
 
 # Symptom Triage (route a symptom to its subsystem)
 scripts/lib/maintainerTriage.js @triage
 scripts/triage.js @triage
 scripts/tests/maintainerTriage.test.js @triage
-docs/维护者/维护映射表.json @triage
+docs/_维护者/维护映射表.json @triage
 
 # Off-machine Restore Readiness
 scripts/lib/restoreReadiness.js @restore-readiness

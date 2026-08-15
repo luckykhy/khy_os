@@ -3,9 +3,9 @@
  * that the MyGateway header uses to classify groups (system / no-key / own-key).
  * Zero deps — run with the built-in Node test runner (apps/ai-frontend is
  * type:module):
- *   node --test src/composables/useModelPivots.test.js
+ *   npx vitest run src/composables/useModelPivots.test.js
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { pivotEdges, SYSTEM_KEY_BUCKET, NO_KEY_BUCKET } from './useModelPivots.js';
 

@@ -1,4 +1,4 @@
-<!-- 文档分类: DESIGN-ARCH-014 | 阶段: 设计 | 原路径: docs/设计模式/模式图谱.md -->
+<!-- 文档分类: DESIGN-ARCH-014 | 阶段: 设计 | 原路径: docs/_设计模式/模式图谱.md -->
 # GoF 23 设计模式全量映射
 
 > 自动生成，请勿手动编辑。源: `docs/design-patterns/pattern-registry.json`

@@ -6,7 +6,7 @@
 
 /**
  * export-quality-dashboard.js — Aggregates D1-D5 dimension scores and
- * CI check results into a single JSON dashboard at docs/报告/质量看板.json.
+ * CI check results into a single JSON dashboard at docs/_报告/质量看板.json.
  */
 
 const fs = require('fs');
@@ -36,8 +36,8 @@ function main() {
 
   // Load latest reports
   const reportPaths = {
-    skillEval: 'docs/报告/技能评估-最新.json',
-    skillScenario: 'docs/报告/技能场景评估-最新.json',
+    skillEval: 'docs/_报告/技能评估-最新.json',
+    skillScenario: 'docs/_报告/技能场景评估-最新.json',
   };
 
   for (const [key, reportPath] of Object.entries(reportPaths)) {
@@ -55,7 +55,7 @@ function main() {
   dashboard.exitCriteria.twoAt3 = scores.filter(s => s >= 3).length >= 2;
   dashboard.exitCriteria.met = dashboard.exitCriteria.allAtLeast2 && dashboard.exitCriteria.twoAt3;
 
-  const outDir = path.resolve(process.cwd(), 'docs/报告');
+  const outDir = path.resolve(process.cwd(), 'docs/_报告');
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, '质量看板.json');
   fs.writeFileSync(outPath, JSON.stringify(dashboard, null, 2) + '\n');

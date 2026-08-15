@@ -70,7 +70,7 @@
 <hr>
 <h2 id="四-这套概念和-khy-os-的关系">四、这套概念和 Khy-OS 的关系<a class="anchor" href="#四-这套概念和-khy-os-的关系" aria-label="锚点">#</a></h2>
 <p>Khy-OS 把上面五个概念都做成了真实代码。等你读完概念，可以对照工程实现：</p>
-<ul><li>工具循环的真实实现：见 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 里的网关与执行相关设计。</li><li>技能（Skill）的真实例子：见 <a href="../AI协作预设包/skills"><code>docs/AI协作预设包/skills</code></a> 目录，里面每个子目录就是一个 Skill。</li><li>运维与上手：见 <a href="../07_OPS_运维"><code>docs/07_OPS_运维</code></a>。</li></ul>
+<ul><li>工具循环的真实实现：见 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a> 里的网关与执行相关设计。</li><li>技能（Skill）的真实例子：见 <a href="../_AI协作预设包/skills"><code>docs/_AI协作预设包/skills</code></a> 目录，里面每个子目录就是一个 Skill。</li><li>运维与上手：见 <a href="../07_OPS_运维"><code>docs/07_OPS_运维</code></a>。</li></ul>
 <blockquote><p><strong>给自己的提醒</strong>：概念是地图，代码是地形。先看地图（本系列），再走地形（源码），不容易迷路。</p></blockquote>
 <div class="quiz reveal" data-multi="0"><div class="quiz-q">🧠 五个概念的关系，下面哪个说法对？</div><ul class="quiz-opts"><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="1"><span class="quiz-key">A</span><span class="quiz-text">Agent 是&quot;人&quot;，工具调用是&quot;迈一步&quot;，工具循环是&quot;走到终点&quot;，MCP 管&quot;工具从哪来&quot;，Skill 是&quot;做事的剧本&quot;</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">B</span><span class="quiz-text">它们是五个互相竞争、只能选一个用的技术</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">C</span><span class="quiz-text">MCP 会取代工具调用，Skill 会取代 Agent</span></button></li><li class="quiz-opt"><button type="button" class="quiz-choice" data-correct="0"><span class="quiz-key">D</span><span class="quiz-text">只要懂 Agent 一个词就够了，其它四个是重复的</span></button></li></ul><div class="quiz-feedback" aria-live="polite"></div><div class="quiz-explain" hidden>💬 五个概念是<strong>协作</strong>关系不是竞争关系：Agent（谁在干）用工具调用（一次动作）在工具循环（反复接力）里干活，工具可以经 MCP（来源）接入，而 Skill（剧本）告诉它某类事该怎么按套路做。读完五篇再回看这题，会更有底气。</div></div>
 <hr>
@@ -139,7 +139,7 @@
 <hr>
 <blockquote><p>📊 想知道这套文档站现在做到了什么程度、还剩什么没补？看 <a href="./00_完成度报告.html">概念入门文档站 · 完成度报告</a>——互动件覆盖、验证门实测、诚实的待办清单，一页看全。</p></blockquote>
       </article>
-      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/00_完成度报告.html"><div class="dir">← 上一篇</div><div class="ttl">📊 概念入门文档站 — 完成度报告</div></a><a class="next" href="../../docs/02_CONCEPTS_概念入门/FILE-FORMAT-PROTOCOL.html"><div class="dir">下一篇 →</div><div class="ttl">khy-os 文件格式协议 (File Format Protocol)</div></a></nav>
+      <nav class="pager"><a class="prev" href="../../docs/02_CONCEPTS_概念入门/00_完成度报告.html"><div class="dir">← 上一篇</div><div class="ttl">📊 概念入门文档站 — 完成度报告</div></a><span></span></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
     </div>
   </main>

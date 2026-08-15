@@ -200,5 +200,5 @@ function _repairExampleDir() {
 ## 相关文档
 
 - 架构规范：`docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.md`
-- 维护路由表（哪块坏了改哪里）：`docs/维护者/维护映射表.json`（区域 id：`env-optimize`）
+- 维护路由表（哪块坏了改哪里）：`docs/_维护者/维护映射表.json`（区域 id：`env-optimize`）
 - 项目可维护性总入口：仓库根 `.ai/`（见 `CLAUDE.md`）

@@ -1,9 +1,13 @@
 const http = require('http');
 const https = require('https');
 
-const axios = require('axios');
-const { HttpsProxyAgent } = require('https-proxy-agent');
+const { request: nativeRequest, requestStream: nativeRequestStream } = require('../utils/nativeHttp');
 const jwt = require('jsonwebtoken');
+
+function createProxyAgent(proxyUrl) {
+  const { HttpsProxyAgent } = require('https-proxy-agent');
+  return new HttpsProxyAgent(proxyUrl);
+}
 
 const { PRIMARY: MODELS } = require('../constants/models');
 
@@ -16,7 +20,44 @@ const {
 } = require('./gateway/adapters/_imageCompat');
 const { convertMessagesAnthropicToOpenAI } = require('./gateway/adapters/_toolSchemaConverter');
 
-// Model-name SSOT: free-tier provider model choices flow from constants/models.js.
+async function nativeJsonRequest(method, url, data, config = {}) {
+  const body = data === undefined || data === null ? undefined : JSON.stringify(data);
+  const options = {
+    method,
+    headers: config.headers,
+    body,
+    timeoutMs: config.timeout || 30000,
+    agent: new URL(url).protocol === 'https:' ? config.httpsAgent : config.httpAgent,
+  };
+  if (config.responseType === 'stream') {
+    const streamed = await nativeRequestStream(url, options);
+    if (streamed.status < 200 || streamed.status >= 300) {
+      streamed.stream.resume();
+      const err = new Error(`Request failed with status code ${streamed.status}`);
+      err.response = { status: streamed.status, headers: streamed.headers };
+      throw err;
+    }
+    return { status: streamed.status, data: streamed.stream, headers: streamed.headers };
+  }
+  let response;
+  try {
+    response = await nativeRequest(url, options);
+  } catch (err) {
+    throw err;
+  }
+  if (response.status < 200 || response.status >= 300) {
+    const err = new Error(`Request failed with status code ${response.status}`);
+    err.response = { status: response.status, data: response.data, headers: response.headers };
+    throw err;
+  }
+  return { status: response.status, data: response.data, headers: response.headers };
+}
+
+const axios = {
+  post: (url, data, config) => nativeJsonRequest('POST', url, data, config),
+  get: (url, config) => nativeJsonRequest('GET', url, undefined, config),
+};
+
 
 // ── Keep-alive 连接管理与死连接免疫 ─────────────────────────────────
 // 长空闲后服务端会静默关闭 keep-alive TCP 连接;下次复用该死连接会报
@@ -72,7 +113,7 @@ function _decideStripTools(model, opts = {}) {
 // 配置了 HTTPS_PROXY 时，优先走代理；代理不可达时自动回退直连。
 // 不配置 HTTPS_PROXY 时完全不走代理（性能零损耗）。
 const _configuredProxyUrl = (process.env.HTTPS_PROXY || process.env.https_proxy || '').trim();
-const _proxyAgent = _configuredProxyUrl ? new HttpsProxyAgent(_configuredProxyUrl) : null;
+const _proxyAgent = _configuredProxyUrl ? createProxyAgent(_configuredProxyUrl) : null;
 const sharedHttpAgent = new http.Agent({
   keepAlive: true,
   maxFreeSockets: KEEP_ALIVE_MAX_FREE_SOCKETS,
@@ -103,7 +144,7 @@ function _agentForProviderProxy(proxyUrl, label) {
   let agent = _providerProxyAgents.get(raw);
   if (!agent) {
     try {
-      agent = new HttpsProxyAgent(raw);
+      agent = createProxyAgent(raw);
     } catch (err) {
       // 非法代理 URL 会在此同步抛错；容错回退直连，避免请求前崩溃。
       // 只打 err.code（如 ERR_INVALID_URL），不打 URL/凭据。
@@ -180,7 +221,7 @@ async function postWithDeadConnRetry(url, data, config, label) {
       );
       let retryAgent;
       try {
-        retryAgent = new HttpsProxyAgent(providerProxyUrl);
+        retryAgent = createProxyAgent(providerProxyUrl);
       } catch (e) {
         // 代理地址此刻变得非法/不可构造 → 死连接重试改用直连，绝不因构造抛错中断。
         console.warn(
@@ -2103,6 +2144,7 @@ class MultiFreeService {
 }
 
 module.exports = MultiFreeService;
+module.exports.httpClient = axios;
 
 /**
  * enumerateKnownModels — 扁平枚举所有内置 provider 的模型 id + 渠道 + 声明的 supportsVision,

@@ -1299,7 +1299,8 @@ function _buildImagePromptBlock(paths) {
   const list = paths.map((p) => `- ${p}`).join('\n');
   return (
     `【图片附件】用户上传了 ${paths.length} 张图片，已保存到本地路径如下。` +
-    `请使用 Read 工具读取这些文件并结合用户的问题进行视觉分析（不要回答“未收到图片”）：\n${list}`
+    `这些路径仅在当前请求执行期间有效；只读取本块列出的当前路径，忽略历史消息中的 ` +
+    `khy-cli-img-* 路径，不要重试或猜测已删除的旧路径。请使用 Read 工具读取当前文件并结合用户的问题进行视觉分析（不要回答“未收到图片”）：\n${list}`
   );
 }
 

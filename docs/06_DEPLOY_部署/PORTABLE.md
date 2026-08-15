@@ -1,284 +1,352 @@
 # Khy-OS 便携化使用指南
 
-## 快速开始
+Khy-OS 有两条不同的便携路径，请按用途选择：
 
-3 步启动：
-1. 将整个 khy-os 文件夹复制到目标机器
-2. 确保系统已安装 Python 3.8+ 和 Node.js（推荐 23.4+，解压即用、无需编译）
-3. 启动：
-   - Windows: 双击 `khy.bat`
-   - Linux/macOS: 运行 `./khy.sh`
+## 直接压缩源码文件夹（原样源码包）
 
-## 前置条件
+如果只是要把当前开发环境整体传给另一台机器，直接在 Windows 资源管理器中对整个 `khy-os` 文件夹右键，选择“压缩为 ZIP 文件”即可。这个操作不需要先运行 npm 命令，也不需要执行 `打包便携版.bat`。
 
-- Python 3.8 或更高版本
-- Node.js 23.4 或更高版本（推荐）：使用内置 `node:sqlite` 驱动，无需编译工具链、无需 `npm rebuild`
-  - Node.js 20 ~ 23.3 也可运行：自动回退 `better-sqlite3` 原生驱动，首次需 `npm rebuild better-sqlite3` 一次（需 C++ 编译工具）
-- 首次启动需要网络连接（自动运行 `npm install` 安装 Node.js 依赖）
+解压时保留最外层 `khy-os` 目录和全部子目录。无需注册全局命令时，可直接从解压后的目录启动：
 
-下载链接：
-- Python: https://www.python.org/downloads/
-- Node.js: https://nodejs.org/
-
-## 构建便携副本
-
-使用仓库的便携构建脚本（位于 `scripts/portable/`），可将 Khy-OS 复制到任意目录（U盘、移动硬盘等），生成可独立运行的便携版本：
-
-Windows:
-```
-scripts\portable\run-portable.bat --target D:\Portable
+```powershell
+cd <解压后的 khy-os>
+.\khy.bat --help
 ```
 
-Linux/macOS:
-```
-bash scripts/portable/run-portable.sh --target /mnt/usb/khy-os
-```
+希望在任意目录使用 `khy` 命令时，Windows 双击根目录的 `portable-setup.bat`（或在终端运行 `.\portable-setup.bat`）。脚本会安装 `khy`、`khy-os`、`khyquant` 三个命令包装器到 `%LocalAppData%\khy-os\bin`，并幂等加入当前用户 PATH。打开新终端后运行：
 
-### 参数说明
-
-| 参数 | 说明 |
-|------|------|
-| `--target`, `-t <dir>` | 目标目录（必填） |
-| `--with-node-modules` | 包含 `services/backend/node_modules`，实现复制即用（无需首次 npm install） |
-| `--mirror` | 镜像模式：删除目标中源不存在的多余文件 |
-| `--dry-run` | 仅预览，不实际复制 |
-
-### 使用示例
-
-```
-# 基本复制（首次启动自动安装 node 依赖）
-scripts\portable\run-portable.bat --target D:\Portable
-
-# 包含 node_modules，复制后立即可用
-scripts\portable\run-portable.bat --target E:\khy-os --with-node-modules
-
-# 镜像同步（源目录有删除时，目标也同步删除）
-scripts\portable\run-portable.bat --target D:\Portable --mirror --with-node-modules
-
-# 预览模式（只看不做）
-scripts\portable\run-portable.bat --target D:\Portable --dry-run
+```powershell
+khy --help
 ```
 
-### 排除规则
+Linux/macOS 可运行：
 
-以下目录默认排除（不影响运行）：
-- `.git` — 版本控制历史
-- `node_modules` — 可通过 npm install 重新生成（`--with-node-modules` 时保留 `services/backend/node_modules`）
-- `__pycache__` — Python 缓存
-- `.tmp` — 临时文件
-- `dist` — 构建产物
-
-### 便携副本目录结构
-
-```
-D:\Portable\
-├── khy.bat              ← 双击启动
-├── khy.sh               ← Linux/macOS 启动
-├── portable.md           ← 本文件
-├── software/khyquant/    ← Python CLI
-├── services/backend/     ← Node.js 后端
-└── .khyquant-data/       ← 运行时自动生成
+```sh
+bash portable-setup.sh
+khy --help
 ```
 
-复制完成后，便携副本与原项目完全独立——修改任一方不会影响另一方。
+Unix 配置默认将包装器安装到 `~/.local/bin`，并在 `.bashrc` 或 `.zshrc` 中维护唯一的 Khy-OS PATH 配置块。项目目录移动、盘符变化或重新解压到其他位置后，在新目录再次运行对应的 `portable-setup` 脚本即可刷新包装器目标。
 
-## 保持便携版最新
+不希望修改用户 PATH 时，Linux/macOS 也可直接启动：
 
-便携版构建完成后，后续无需重新构建：在开发版里用一键同步命令，把最新代码增量同步过去。
-
-```
-# REPL 内（或别名：便携同步 / portable-sync / 同步便携版）
-khy portable sync
-
-# 先预览（零副作用）
-khy portable sync --dry-run
-
-# 不进 REPL 的快捷方式
-node scripts/portable-sync.js --dry-run
-
-# 查看上次同步记录与依赖新旧（别名：便携状态）
-khy portable status
+```sh
+cd <解压后的 khy-os>
+./khy.sh --help
 ```
 
-### 参数说明
+配置脚本写入用户 PATH 和命令包装器属于使用者主动执行的命令注册操作。Khy-OS 日常便携启动的数据仍位于源码根的 `.khy/`，不会因此改写到宿主 HOME、APPDATA 或其他系统数据目录。
 
-| 参数 | 说明 |
-|------|------|
-| `--target <dir>` | 目标便携版根目录（默认见下方 KHY_PORTABLE_ROOT） |
-| `--dry-run` | 只打印同步计划，不做任何修改 |
-| `--mirror` | 镜像模式：删除目标多余文件（保护目录除外，执行前列清单并确认） |
-| `--with-node-modules` | 强制镜像 `services/backend/node_modules` |
-| `--skip-node-modules` | 跳过依赖检查与镜像 |
-| `--skip-check` | 跳过源码入口 `node --check` 健康检查（不推荐） |
-| `--yes` | 跳过 `--mirror` 的删除确认 |
+源码入口从自身脚本位置解析项目根目录，支持移动到其他盘符以及包含空格或中文的路径。也可以从任意工作目录调用绝对路径入口。源码便携模式的状态默认位于源码根的 `.khy/`，不会因为调用者当前目录改变。
 
-工作方式：按 size+mtime（2 秒容差）增量比对，只复制有变化的文件；`services/backend/package-lock.json` 两侧 SHA256 一致时自动跳过 node_modules（不一致时 Windows 用 robocopy 镜像提速）。
+这是“原样压缩”，压缩包会忠实包含压缩时源码目录中已有的所有内容，包括 `node_modules/`、`.khy/`、缓存、日志、数据库和本地配置；不会自动清理、裁剪或重排。若目录中含有个人凭据或运行状态，请在压缩前自行处理。该方式适合继续开发和保留当前工作区，不等同于面向终端用户的发布包。
 
-### 默认目标与环境变量
+## 发布版一键打包
 
-默认目标目录由环境变量 `KHY_PORTABLE_ROOT` 覆盖；未设置时 Windows 使用内置默认（见 `services/backend/src/constants/serviceDefaults.js` 的 `PORTABLE_ROOT_DEFAULT`），非 Windows 无默认，必须显式 `--target`。
+需要生成经过裁剪、清单记录、SHA-256 校验并带内置运行时的发布 ZIP 时，使用发布打包入口：
 
-### 目标侧保护目录
+- Windows 双击 `打包便携版.bat`
+- `npm run portable:package`
+- `npm run portable:package:runtime`
+- `npm run portable:package:dev`
 
-以下便携版本地数据在任何模式下（含 `--mirror`）都不会被写入或删除：
+发布版流程会组装独立的 `portable-runtime` 或 `portable-dev` artifact，并执行健康检查后再压缩。它与上面的源码目录原样压缩是两条独立路径。
 
-- `.khyquant-data/`、`.khy/`、`.khy-Trajectory/` — 运行时数据
-- `logs/`、`*_history/` — 日志与历史
-- `.env`、`.env.local` — 本地环境配置
-- `node_modules/` — 仅由 package-lock 哈希门控独立镜像
+Windows 本机构建的运行版默认输出到：
 
-同步完成后目标根目录会写入 `.sync-manifest.json`（时间戳、来源、计数、lock 哈希），供 `khy portable status` 读取。
-
-注：pip 打包分发形态下 `scripts/portable-sync.js` 不随包分发、不可用，此形态请直接使用 `khy portable sync`。
-
-注：旧的 `khy sync` 文件监听（watcher）模式已被本一键同步命令取代，仅保留兼容入口：`khy sync start / stop` 只打印取代提示不再启动监听；`khy sync once` 仍可用且与本命令共用同一引擎。
-
-## 打包分发
-
-使用打包脚本把当前项目制成可分发 zip（输出到 `dist/`）：
-
-```
-# 完整包（含 node_modules，解压即用）
-node scripts/pack-portable.js
-
-# 精简包（排除 node_modules，目标机首启需 npm install）
-node scripts/pack-portable.js --no-modules
-
-# 只列包含/排除清单与统计，不压缩
-node scripts/pack-portable.js --dry-run
-
-# 自定义输出目录
-node scripts/pack-portable.js --out E:\release
+```text
+dist/releases/portable-runtime-<version>-win-x64.zip
 ```
 
-产出 `dist/khy-os-portable-<版本或日期>.zip`，并打印打包摘要（文件数、原始体积、zip 体积、耗时）。
+命令行等价入口：
 
-打包自动排除（保证跨机器可用、不泄露本地数据）：
-- `.git`、`dist/`、日志（`logs/`、`*.log`）、临时文件
-- 运行时数据目录：`.khyquant-data/`、`.khy/`、`khy-Trajectory/`、`data/`、`cache/` 及 `*.db` / `*.sqlite`
-- 平台相关二进制：`*.node`、`*.node.broken.bak`、`node_modules` 内 `build/Release|Debug`、`prebuilds/`、npm 临时残留目录
-- 本地配置与大文件：`.env*`、`_bs3_prebuild.tar.gz`、加密源码快照
-
-目标机解压后：Node ≥ 23.4 直接运行 `khy.bat` 即可；Node 20 ~ 23.3 首启前需 `cd services/backend` 后执行 `npm rebuild better-sqlite3` 一次。
-
-## 迁移
-
-便携目录支持整体移动/复制到新路径或新机器。迁移后如遇启动异常（链接失效、数据目录指针过期、原生模块报错等），在项目内运行修复命令：
-
-```
-khy repair
+```powershell
+npm run portable:package
+# 或
+npm run portable:package:runtime
 ```
 
-该命令会自动重建目录内部链接、校正数据目录指针，修复后重新启动即可。SQLite 驱动问题（如 `ERR_DLOPEN_FAILED` 或 `NODE_MODULE_VERSION` 不匹配）不会被自动修复，需手工处理：升级 Node.js 到 23.4+（适配器自动改用内置 `node:sqlite` 驱动），或在 `services/backend` 目录运行 `npm rebuild better-sqlite3`。
+生成可复制到 U 盘继续开发的开发版：
 
-## 两种使用方式
-
-### 方式一：双击启动
-
-直接双击项目根目录的启动脚本，适合临时使用：
-- Windows: `khy.bat`
-- Linux/macOS: `./khy.sh`
-
-### 方式二：加入 PATH（推荐）
-
-安装 PATH 包装器后，可在任意目录使用 `khy` 命令：
-
-Windows:
-```
-scripts\portable\install-path-wrappers.bat
+```powershell
+npm run portable:package:dev
 ```
 
-Linux/macOS:
+输出为 `dist/releases/portable-dev-<version>-win-x64.zip`。开发版包含项目源码、已安装依赖、同平台 Node/Python 运行时和 npm/pip 离线缓存。复制 ZIP 到 U 盘并解压后，运行：
+
+```powershell
+.\launch.bat shell
 ```
-bash scripts/portable/install-path-wrappers.sh
+
+这会从便携包的 `source` 目录打开开发终端。该终端的 Node、Python、依赖缓存、应用数据、日志和临时目录均指向便携包内部；可在盘符变化以及包含空格或中文的目录中使用。直接运行 `.\launch.bat --help` 则启动开发版应用入口。
+
+本机入口只生成当前 Windows/x64 产物。Linux、macOS Intel 和 macOS Apple Silicon 发布包由 GitHub Actions 的对应原生 runner 分别生成。`--skip-build` 可复用已有前端构建输出，`--keep-artifact` 可在压缩后保留 `dist/portable` 下的展开目录，自定义 ZIP 输出目录使用 `--out <dir>`。
+
+## 支持平台
+
+每个产物只支持一个 OS/CPU 组合：
+
+| 产物后缀 | 系统 | 架构 |
+|---|---|---|
+| `win-x64` | Windows | x64 |
+| `linux-x64` | Linux | x64 |
+| `macos-x64` | macOS | Intel x64 |
+| `macos-arm64` | macOS | Apple Silicon arm64 |
+
+不得在不同平台间复制 `node_modules`、原生模块或嵌入式运行时混用。CI 在上述四个平台的原生 runner 上分别构建和验证运行产物。
+
+## 使用 portable-runtime
+
+解压与当前平台匹配的 `portable-runtime-<version>-<platform>/` 后直接运行：
+
+```powershell
+# Windows
+.\launch.bat --help
 ```
 
-安装后直接输入 `khy` 即可使用。
+```sh
+# Linux / macOS
+./launch.sh --help
+```
 
-## 数据存储
+启动器只为当前进程设置环境变量，不修改系统配置。产物可整体移动到其他目录、盘符以及包含空格或中文的路径，再从新位置运行同一启动器。
 
-便携模式下，所有应用数据存储在项目根目录的 `.khyquant-data/` 文件夹中：
-- `.khyquant-data/data/` — 数据文件
-- `.khyquant-data/cache/` — 缓存
-- `.khyquant-data/models/` — 模型文件
-- `.khyquant-data/logs/` — 日志
-- `.khyquant-data/apps/` — 应用注册信息
+目录结构：
 
-如需自定义数据目录位置，在启动前设置环境变量 `KHYQUANT_DATA_HOME`。
+```text
+portable-runtime-<version>-<platform>/
+├── services/backend/     后端运行代码
+├── platform/             共享平台包
+├── software/khyquant/    量化后端运行代码
+├── node_modules/         已安装运行依赖
+├── runtime/node/         同平台 Node.js 运行时
+├── runtime/python/       同平台 Python 运行时
+├── web/ai/               AI 前端构建产物
+├── web/quant/            量化前端构建产物
+├── config/env.example    可选运行参数示例
+├── state/.khy/           本产物的持久状态根
+├── .portable             便携部署标记
+├── BUILD-INFO.json       构建来源和工具链信息
+├── MANIFEST.json         文件清单、目标平台和运行时合同
+├── SHA256SUMS            清单及载荷摘要
+└── launch.bat|launch.sh  相对路径启动器
+```
 
-## SQLite 驱动
+## 使用 portable-dev
 
-Khy-OS 使用双驱动适配器（`platform/packages/shared/src/config/sqlite-adapter.js`）自动选择数据库驱动：
+解压与当前平台匹配的 `portable-dev-<version>-<platform>/` 后运行：
 
-| 驱动 | 生效条件 | 说明 |
-|------|----------|------|
-| `node:sqlite`（首选） | Node ≥ 23.4（22.5 ~ 23.3 需 `--experimental-sqlite` 标志） | Node 内置，零编译，跨机器复制即用 |
-| `better-sqlite3`（回退） | Node 20 ~ 23.3 | 原生模块，换机器 / 换 Node 版本后需 `npm rebuild better-sqlite3` 一次 |
+```powershell
+# Windows
+.\launch.bat --help
+```
 
-查看当前驱动类型：
-- 启动 `khy` 时诊断行会输出 `SQLite driver: node:sqlite`（或 `better-sqlite3`）
-- 手动查看（在项目根目录执行）：
-  ```
-  node -e "console.log(require('./platform/packages/shared/src/config/sqlite-adapter.js').__driverInfo.type)"
-  ```
+```sh
+# Linux / macOS
+./launch.sh --help
+```
 
-## 与 pip install 的区别
+开发产物内置运行时和离线缓存。正常启动不读取宿主 Python/Node，也不要求修改 PATH。源码位于 `source/`；Windows 使用 `.\launch.bat shell`、Linux/macOS 使用 `./launch.sh shell` 进入便携开发终端，构建和依赖命令应在该环境中执行。
 
-| 特性 | pip install | 便携模式 |
-|------|-------------|----------|
-| 安装方式 | `pip install khy-os` | 复制文件夹 |
-| 数据位置 | `~/.khyquant/` | 项目内 `.khyquant-data/` |
-| 全局命令 | 自动注册 | 需手动安装 PATH 包装器 |
-| 多版本共存 | 困难 | 可多文件夹并存 |
-| 适用场景 | 固定开发环境 | U盘/移动办公/多机器 |
+目录结构：
+
+```text
+portable-dev-<version>-<platform>/
+├── source/               完整 workspace、源码和依赖
+├── runtime/node/         同平台 Node.js 22.12.0
+├── runtime/python/       同平台嵌入式 Python
+├── caches/npm/           npm 离线缓存
+├── caches/pip/           pip 离线缓存或 wheels
+├── artifacts/            本地构建输出目录
+├── state/.khy/           本产物的持久状态根
+├── .portable
+├── BUILD-INFO.json
+├── MANIFEST.json
+├── SHA256SUMS
+└── launch.bat|launch.sh
+```
+
+离线开发的边界由 `package-lock.json`、已携带的依赖和缓存决定。新增一个未缓存的依赖仍需要预先补充缓存并重新构建产物。
+
+## 构建产物
+
+### 构建 portable-runtime
+
+推荐使用上文的一键入口：
+
+```sh
+npm run portable:package:runtime
+```
+
+以下分步命令用于 CI 说明和故障排查。先安装依赖并构建两个前端，再用当前平台的 Node/Python 运行时目录组装运行产物：
+
+```sh
+npm ci
+npm ci --prefix apps/ai-frontend
+npm ci --prefix software/khyquant/frontend
+npm run build --prefix apps/ai-frontend
+npm run build --prefix software/khyquant/frontend
+
+npm run portable:build:runtime -- \
+  --node-runtime RUNTIME_NODE_DIR \
+  --python-runtime RUNTIME_PYTHON_DIR \
+  --force
+```
+
+只查看目标、输入和缺失前置项：
+
+```sh
+npm run portable:plan:runtime
+```
+
+CI 的权威顺序为：安装目标平台 Node/Python、安装应用与前端依赖、构建前端、组装 runtime、校验产物、压缩并上传。
+
+### 构建 portable-dev
+
+推荐使用自动发现本机 Node、Python 与缓存的一键入口：
+
+```sh
+npm run portable:package:dev
+```
+
+需要固定运行时或缓存来源时，可显式提供同平台目录：
+
+```sh
+npm run portable:build:dev -- \
+  --node-runtime RUNTIME_NODE_DIR \
+  --python-runtime RUNTIME_PYTHON_DIR \
+  --npm-cache NPM_CACHE_DIR \
+  --pip-cache PIP_CACHE_DIR \
+  --force
+```
+
+Windows PowerShell 可使用同样参数，不使用反斜杠续行：
+
+```powershell
+npm run portable:build:dev -- --node-runtime RUNTIME_NODE_DIR --python-runtime RUNTIME_PYTHON_DIR --npm-cache NPM_CACHE_DIR --pip-cache PIP_CACHE_DIR --force
+```
+
+规划检查：
+
+```sh
+npm run portable:plan:dev -- \
+  --node-runtime RUNTIME_NODE_DIR \
+  --python-runtime RUNTIME_PYTHON_DIR \
+  --npm-cache NPM_CACHE_DIR \
+  --pip-cache PIP_CACHE_DIR
+```
+
+构建器拒绝缺失的运行时、缓存、lockfile 或 workspace/前端依赖，并排除 `.env*`、数据库、日志、凭据、运行状态和旧输出目录。
+
+## 校验与打包
+
+构建完成后，先校验目录产物：
+
+```sh
+node scripts/portable/portable-health-check.js --artifact dist/portable/ARTIFACT_DIR
+```
+
+校验内容包括：
+
+- `MANIFEST.json` schema、kind、OS 和 CPU；
+- 每个载荷文件的大小与 SHA-256；
+- `SHA256SUMS` 自身的路径集合、manifest 摘要和载荷摘要；
+- 启动器、运行时、可执行文件和两个前端入口的完整性；
+- 目标平台必须与执行校验的主机一致。
+
+只有通过校验的 artifact 才能压缩：
+
+```sh
+node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR
+```
+
+预览而不生成压缩包：
+
+```sh
+node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --dry-run
+```
+
+自定义压缩包输出目录：
+
+```sh
+node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --out dist/releases
+```
+
+打包器在压缩前重新验证 manifest，检测到文件缺失、篡改或额外摘要条目时立即终止。
+
+## 数据与宿主隔离
+
+启动器以自身所在目录为 `KHY_PORTABLE_ROOT`，并统一设置：
+
+| 变量 | 便携产物中的值 |
+|---|---|
+| `KHY_PORTABLE_ROOT` | `<artifact>/` |
+| `KHYQUANT_PORTABLE_ROOT` | `<artifact>/`，旧名称兼容 |
+| `KHY_OS_ROOT` | runtime 为 `<artifact>/`；dev 为 `<artifact>/source/` |
+| `KHY_DATA_HOME` | `<artifact>/state/.khy/` |
+| `KHY_PROJECT_DATA_HOME` | 同 `KHY_DATA_HOME` |
+| `KHYQUANT_DATA_HOME` | 同 `KHY_DATA_HOME`，旧名称兼容 |
+| `KHYOS_HOME` | 同 `KHY_DATA_HOME` |
+| `KHY_RUNTIME_HOME` | `<artifact>/state/.khy/runtime/` |
+| `KHY_CACHE_HOME` | `<artifact>/state/.khy/cache/` |
+| `KHY_LOG_HOME` | `<artifact>/state/.khy/logs/` |
+| `KHY_TEMP_HOME` | `<artifact>/state/.khy/tmp/` |
+
+在该启动环境内，应用不得向 `~/.khy`、`C:\.khyquant`、`APPDATA` 或 `LOCALAPPDATA` 写入 Khy-OS 状态。便携模式也不会写入宿主数据目录指针。若显式覆盖上述变量，覆盖目录由使用者自行管理，不再属于默认零宿主写入合同。
+
+## 移动、备份与升级
+
+1. 退出该便携实例，确保数据库和后台进程已关闭。
+2. 复制整个 artifact 目录；需要保留状态时包含 `state/.khy/`。
+3. 从新目录执行 `launch.bat` 或 `launch.sh`。
+4. 运行 artifact health check，确认文件完整性和目标平台匹配。
+
+`MANIFEST.json` 描述发布载荷，不包含运行后在 `state/` 中新增的用户状态。升级时建议解压新的只读产物，再显式复制或迁移旧 `state/.khy/`；不要用新压缩包直接覆盖正在使用的目录。
+
+## 与源码启动的区别
+
+仓库根目录的 `khy.bat`、`khy.sh`、`scripts/portable/run.ps1` 和旧同步脚本仍服务于源码开发、自举或兼容流程。它们不是可发布 artifact 的替代品，也不构成“目标机无预装运行时、离线启动”的交付证明。
+
+发布和验收只以 `scripts/portable/build-portable-artifact.js` 生成、带完整 manifest 且通过 `portable-health-check.js --artifact` 的目录为准。
+
+### 源码目录下的三种启动档位
+
+<!-- 本小节由根目录 PORTABLE_GUIDE.md 归并而来（归档日期 2026-08-15）。 -->
+
+把源码文件夹整份拷到另一台机器后，按「要不要 Web 界面」选档位：
+
+| 启动方式 | 起了什么 | 需要后端 | Web 界面 |
+| --- | --- | --- | --- |
+| `khy` / `.\khy.bat` / `./khy.sh` | 仅 CLI（轻量） | 否 | 无 |
+| `scripts\setup\start-backend.bat` | 后端 API + 认证 | 是 | 无（只有 API） |
+| `scripts\setup\start-all.bat` | 后端 + 前端，各开一个窗口 | 是 | http://localhost:3000 |
+
+后端 API 在 http://localhost:5000。三档都不需要先跑任何 setup 脚本来建账号——
+**CLI 的自动登录不依赖后端**（凭据在本机现场生成），详见
+`docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.md`。需要 Web 界面登录、
+注册新用户或访问数据库时才必须起后端。
+
+跨机器配置全局 `khy` 命令：运行 `portable-setup.bat`（Windows）/ `portable-setup.sh`，
+重开终端后 `khy --version` 验证。脚本自动探测当前项目位置，不需要手写路径。
 
 ## 故障排除
 
-### Python 未找到
+### 目标平台不匹配
 
-错误：`检测 Python 3.8+ 失败`
+重新获取与当前 OS/CPU 对应的 artifact。macOS Intel 与 Apple Silicon 使用不同产物。
 
-解决方案：
-1. 确认 Python 已安装：`python --version`
-2. 确认 Python 已加入系统 PATH
-3. Windows 用户可从 Microsoft Store 安装 Python
+### manifest 或 SHA256SUMS 校验失败
 
-### Node.js 未找到
+不要继续运行该副本。重新复制或重新构建完整 artifact；不得只更新单个载荷文件后沿用旧摘要。
 
-错误：`检测 Node.js 20+ 失败`
+### 启动器找不到嵌入式 runtime
 
-解决方案：
-1. 确认 Node.js 已安装：`node --version`
-2. 确认主版本号 >= 20（推荐直接安装 23.4+，免编译、免 rebuild）
-3. 下载最新 LTS 版本：https://nodejs.org/
+确认解压工具保留了完整目录层级；Linux/macOS 上确认 `launch.sh` 与 `runtime/node/bin/node` 具有执行权限。随后再次运行 health check。
 
-### npm install 失败
+### portable-dev 离线安装缺包
 
-首次启动时会自动运行 `npm install`，如果失败：
-1. 检查网络连接
-2. 中国大陆用户可能需要配置镜像源
-3. 手动运行：`cd services/backend && npm install`
+在可联网构建机补齐 npm/pip 缓存，并重新生成整个开发产物。不要把其他 OS/CPU 的 `node_modules` 或 Python 环境复制进来。
 
-### native 模块错误
+### 状态需要清空
 
-错误：`ERR_DLOPEN_FAILED` 或 `NODE_MODULE_VERSION` 不匹配
-
-解决方案：
-1. 首选：升级 Node.js 到 23.4+，适配器自动改用内置 `node:sqlite` 驱动，无需编译
-2. 若需停留在 Node 20 ~ 23.3：运行 `cd services/backend && npm rebuild better-sqlite3`，需 C++ 编译工具（Windows: Visual Studio Build Tools）
-3. 整目录迁移后出现此错误也可运行 `khy repair` 自动修复
-
-## 环境变量参考
-
-| 变量名 | 用途 | 默认值 |
-|--------|------|--------|
-| `KHYQUANT_PORTABLE_ROOT` | 项目根目录（由启动脚本自动设置） | 脚本所在目录 |
-| `KHYQUANT_DATA_HOME` | 数据存储目录 | `<项目根>/.khyquant-data` |
-
-## 开发模式
-
-便携模式完全保留开发能力：
-- 可正常修改源码，改动即时生效
-- 可运行 `npm install` 添加新依赖
-- 可使用 `khy doctor` 诊断环境
-- 与 `pip install -e`（editable mode）效果等价
+退出所有 Khy-OS 进程后备份并删除 artifact 内的 `state/.khy/`，再运行启动器。该操作只重置当前便携实例。

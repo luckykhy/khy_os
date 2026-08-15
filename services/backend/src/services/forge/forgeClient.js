@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * forgeClient.js — 薄 IO 层:在 forgeCore 的确定性逻辑之上,真正发起 forge 搜索(axios)与
+ * forgeClient.js — 薄 IO 层:在 forgeCore 的确定性逻辑之上,真正发起 forge 搜索(native HTTP)与
  * 仓库克隆/更新(execFile git)。所有「什么算合法/安全/请求长什么样/响应怎么归一」都委派给
  * forgeCore(单一真源),本文件只做 IO + 读环境变量里的 token(从不回显、从不写日志)。
  *
  * 凭据纪律:
- *   · 搜索 token 从 env 读出后仅作为请求头/查询参数交给 axios,绝不打印、绝不进返回值。
+ *   · 搜索 token 从 env 读出后仅作为请求头/查询参数交给 HTTP transport,绝不打印、绝不进返回值。
  *   · clone URL 绝不内嵌 token —— 私有库由用户既有 git 凭据助手处理,避免泄漏进进程表。
  *   · git clone/pull 走 execFile(argv 数组,无 shell),并用 `--` 终结选项,杜绝参数注入。
  */
@@ -14,6 +14,7 @@
 const { execFile } = require('child_process');
 
 const forgeCore = require('./forgeCore');
+const { request: nativeRequest } = require('../../utils/nativeHttp');
 
 const GIT_TIMEOUT_MS = 10 * 60 * 1000; // 克隆大库可能较久;给足 10 分钟。
 
@@ -58,16 +59,8 @@ async function searchRepos(opts = {}, deps = {}) {
     return { ok: false, error: `无法为平台 ${platform} 构造搜索请求` };
   }
 
-  const axios = deps.axios || require('axios');
   try {
-    const resp = await axios({
-      method: req.method,
-      url: req.url,
-      headers: req.headers,
-      params: req.params,
-      timeout: 30000,
-      validateStatus: (s) => s >= 200 && s < 500,
-    });
+    const resp = await _httpGet(req, deps);
     if (resp.status >= 400) {
       return _httpErr(platform, resp, '搜索');
     }
@@ -200,21 +193,25 @@ async function pullRepo(opts = {}, deps = {}) {
 // 三个原子 IO(元数据 / 目录树 / 单文件)+ 一个编排 reconRepo,全部复用 forgeCore 的请求描述符与
 // 归一(单一真源)。凭据纪律同搜索:token 只进请求头/查询参,绝不进返回值、绝不打印。
 
-async function _axiosGet(req, deps, { responseType } = {}) {
-  const axios = deps.axios || require('axios');
-  const cfg = {
-    method: req.method,
-    url: req.url,
-    headers: req.headers,
-    params: req.params,
-    timeout: 30000,
-    validateStatus: (s) => s >= 200 && s < 500,
-  };
-  if (responseType) {
-    cfg.responseType = responseType;
+async function _httpGet(req, deps, { responseType } = {}) {
+  if (deps.axios) {
+    return deps.axios({
+      method: req.method,
+      url: req.url,
+      headers: req.headers,
+      params: req.params,
+      timeout: 30000,
+      validateStatus: (s) => s >= 200 && s < 500,
+      ...(responseType ? { responseType } : {}),
+    });
   }
-  const resp = await axios(cfg);
-  return resp;
+  const response = await nativeRequest(req.url, {
+    method: req.method,
+    headers: req.headers,
+    query: req.params,
+    timeoutMs: 30000,
+  });
+  return response;
 }
 
 function _httpErr(platform, resp, what) {
@@ -268,7 +265,7 @@ async function getRepoMeta(opts = {}, deps = {}) {
     return { ok: false, error: `无法为平台 ${platform} 构造元数据请求` };
   }
   try {
-    const resp = await _axiosGet(req, deps);
+    const resp = await _httpGet(req, deps);
     if (resp.status >= 400) {
       return _httpErr(platform, resp, '获取元数据');
     }
@@ -311,7 +308,7 @@ async function listContents(opts = {}, deps = {}) {
     return { ok: false, error: `无法为平台 ${platform} 构造目录请求` };
   }
   try {
-    const resp = await _axiosGet(req, deps);
+    const resp = await _httpGet(req, deps);
     if (resp.status >= 400) {
       return _httpErr(platform, resp, '列出目录');
     }
@@ -357,7 +354,7 @@ async function getFile(opts = {}, deps = {}) {
   }
   try {
     // gitlab raw 端点返回纯文本;github/gitee 返回含 base64 的 JSON。统一交给 parseFileContent。
-    const resp = await _axiosGet(req, deps);
+    const resp = await _httpGet(req, deps);
     if (resp.status >= 400) {
       return _httpErr(platform, resp, '读取文件');
     }
@@ -467,7 +464,7 @@ async function getCommits(opts = {}, deps = {}) {
     return { ok: false, error: `无法为平台 ${platform} 构造提交请求` };
   }
   try {
-    const resp = await _axiosGet(req, deps);
+    const resp = await _httpGet(req, deps);
     if (resp.status >= 400) {
       return _httpErr(platform, resp, '获取提交历史');
     }
@@ -507,7 +504,7 @@ async function searchCode(opts = {}, deps = {}) {
     return { ok: false, error: `代码搜索暂仅支持 github(${platform} 无对等的公开代码搜索端点)` };
   }
   try {
-    const resp = await _axiosGet(req, deps);
+    const resp = await _httpGet(req, deps);
     if (resp.status >= 400) {
       return _httpErr(platform, resp, '代码搜索');
     }
@@ -537,7 +534,7 @@ async function checkRateLimit(opts = {}, deps = {}) {
     return { ok: false, error: `速率限制查询暂仅支持 github(${platform} 无对等端点)` };
   }
   try {
-    const resp = await _axiosGet(req, deps);
+    const resp = await _httpGet(req, deps);
     if (resp.status >= 400) {
       return _httpErr(platform, resp, '查询速率限制');
     }

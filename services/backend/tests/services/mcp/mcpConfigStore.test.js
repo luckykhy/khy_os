@@ -16,9 +16,25 @@ function _readJson(p) {
 }
 
 // ── scopePath ─────────────────────────────────────────────────────────────────
-test('scopePath: user → <home>/.khy/mcp.json, project → <cwd>/.khy/mcp.json', () => {
+test('scopePath: user → data home, injected home remains compatible, project → cwd', () => {
+  assert.strictEqual(store.scopePath('user', { dataHome: '/data' }), path.join('/data', 'mcp.json'));
   assert.strictEqual(store.scopePath('user', { homedir: '/h' }), path.join('/h', '.khy', 'mcp.json'));
   assert.strictEqual(store.scopePath('project', { cwd: '/proj' }), path.join('/proj', '.khy', 'mcp.json'));
+});
+
+test('scopePath: normal user scope follows KHY_DATA_HOME like mcp runtime', () => {
+  const prev = process.env.KHY_DATA_HOME;
+  const dataHome = _tmp();
+  try {
+    process.env.KHY_DATA_HOME = dataHome;
+    require('../../../src/utils/dataHome')._resetStorageCaches();
+    assert.strictEqual(store.scopePath('user'), path.join(dataHome, 'mcp.json'));
+  } finally {
+    if (prev === undefined) delete process.env.KHY_DATA_HOME;
+    else process.env.KHY_DATA_HOME = prev;
+    require('../../../src/utils/dataHome')._resetStorageCaches();
+    fs.rmSync(dataHome, { recursive: true, force: true });
+  }
 });
 
 // ── addServer: fresh file ─────────────────────────────────────────────────────

@@ -22,6 +22,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { verifyArtifactManifest } = require('./artifact-manifest');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const ADAPTER_PATH = path.join(
@@ -227,6 +228,69 @@ function probeLinks() {
   return getKnownLinks().map(probeSingleLink);
 }
 
+// ── 探针 4：便携产物契约 ───────────────────────────────────────────────────
+
+async function probeArtifact(artifactRoot) {
+  const root = path.resolve(artifactRoot);
+  const result = {
+    kind: 'artifact', label: '便携产物完整性', ok: false,
+    detail: '', fix: '重新构建产物，禁止手工补写 MANIFEST.json 或 SHA256SUMS',
+    fixable: false, artifactRoot: root, issues: [],
+  };
+  const manifestPath = path.join(root, 'MANIFEST.json');
+  if (!fs.existsSync(manifestPath)) {
+    result.detail = `manifest 缺失: ${manifestPath}`;
+    return result;
+  }
+
+  let verification;
+  try {
+    verification = await verifyArtifactManifest(root);
+  } catch (error) {
+    result.detail = `完整性检查异常: ${error && error.message ? error.message : error}`;
+    return result;
+  }
+  const manifest = verification.manifest;
+  const expected = [];
+  if (manifest && manifest.kind === 'portable-runtime') {
+    expected.push(process.platform === 'win32' ? 'launch.bat' : 'launch.sh');
+    expected.push(process.platform === 'win32'
+      ? 'runtime/node/node.exe'
+      : 'runtime/node/bin/node');
+    expected.push(process.platform === 'win32'
+      ? 'runtime/python/python.exe'
+      : 'runtime/python/bin/python3');
+    expected.push('services/backend/bin/khy.js');
+    expected.push('web/ai/index.html', 'web/quant/index.html');
+  } else if (manifest && manifest.kind === 'portable-dev') {
+    expected.push(process.platform === 'win32' ? 'launch.bat' : 'launch.sh');
+    expected.push(process.platform === 'win32'
+      ? 'runtime/node/node.exe'
+      : 'runtime/node/bin/node');
+    expected.push(process.platform === 'win32'
+      ? 'runtime/python/python.exe'
+      : 'runtime/python/bin/python3');
+    expected.push('source/package.json', 'caches/npm', 'caches/pip');
+  }
+  const contractIssues = [];
+  if (manifest && (manifest.target.platform !== process.platform || manifest.target.arch !== process.arch)) {
+    contractIssues.push(
+      `目标不匹配: 产物 ${manifest.target.platform}-${manifest.target.arch}, 当前 ${process.platform}-${process.arch}`
+    );
+  }
+  for (const relative of expected) {
+    if (!fs.existsSync(path.join(root, ...relative.split('/')))) {
+      contractIssues.push(`必需入口缺失: ${relative}`);
+    }
+  }
+  result.issues = [...verification.issues, ...contractIssues];
+  result.ok = result.issues.length === 0;
+  result.detail = result.ok
+    ? `${manifest.kind} / ${manifest.target.platform}-${manifest.target.arch}，${manifest.files.length} 个文件校验通过`
+    : result.issues.join('；');
+  return result;
+}
+
 // ── 汇总 ─────────────────────────────────────────────────────────────────
 
 /**
@@ -235,6 +299,10 @@ function probeLinks() {
  */
 async function runHealthCheck(options = {}) {
   const issues = [];
+  if (options.artifactRoot) {
+    issues.push(await probeArtifact(options.artifactRoot));
+    return { ok: issues.every(i => i.ok), issues };
+  }
   issues.push(probeSqliteDriver(options));
   issues.push(probeDataPointer());
   for (const linkResult of probeLinks()) issues.push(linkResult);
@@ -254,10 +322,32 @@ function printReport(report) {
     : '发现问题：可运行 `node scripts/repair-portable.js` 一键修复可修复项。');
 }
 
-async function main() {
-  const report = await runHealthCheck();
+function parseArgs(argv) {
+  const options = {};
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (token === '--artifact') {
+      const value = argv[++index];
+      if (!value) throw new Error('--artifact requires a directory');
+      options.artifactRoot = path.resolve(value);
+    } else if (token === '--help' || token === '-h') {
+      options.help = true;
+    } else {
+      throw new Error(`未知参数: ${token}`);
+    }
+  }
+  return options;
+}
+
+async function main(argv = process.argv.slice(2)) {
+  const options = parseArgs(argv);
+  if (options.help) {
+    console.log('用法: node scripts/portable/portable-health-check.js [--artifact <dir>]');
+    return 0;
+  }
+  const report = await runHealthCheck(options);
   printReport(report);
-  process.exit(report.ok ? 0 : 1);
+  return report.ok ? 0 : 1;
 }
 
 module.exports = {
@@ -268,13 +358,15 @@ module.exports = {
   probeSqliteDriver,
   probeDataPointer,
   probeLinks,
+  probeArtifact,
   getKnownLinks,
+  parseArgs,
   printReport,
 };
 
 if (require.main === module) {
-  main().catch(err => {
+  main().then(code => { process.exitCode = code; }).catch(err => {
     console.error(`[FAIL] 健康检查自身异常: ${err && err.message ? err.message : err}`);
-    process.exit(1);
+    process.exitCode = 1;
   });
 }

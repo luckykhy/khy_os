@@ -3,9 +3,9 @@
  * parser that lets the frontend render CC-style titled sections instead of one
  * ellipsized line. Zero deps — run with the built-in Node test runner
  * (apps/ai-frontend is type:module):
- *   node --test src/views/toolOutputSections.test.js
+ *   npx vitest run src/views/toolOutputSections.test.js
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { parseToolOutputSections } from './toolOutputSections.js';
 

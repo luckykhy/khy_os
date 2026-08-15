@@ -130,7 +130,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import QRCode from 'qrcode'
+import { loadQRCode } from '@/utils/qrcode'
 import { useUserStore } from '@/stores/user'
 import {
   getBackendUrl,
@@ -641,6 +641,7 @@ function startQrPolling() {
 
 async function renderQrCode(content) {
   if (!qrCanvasRef.value) return
+  const QRCode = await loadQRCode()
   await QRCode.toCanvas(qrCanvasRef.value, content, {
     width: 220,
     margin: 1,

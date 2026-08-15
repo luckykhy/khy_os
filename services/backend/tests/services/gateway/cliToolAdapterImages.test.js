@@ -80,6 +80,8 @@ test('prompt block: references every path and forbids "no image" reply', () => {
   assert.match(block, /Read/);
   assert.match(block, /未收到图片/);
   assert.match(block, /2 张图片/);
+  assert.match(block, /当前请求执行期间有效/);
+  assert.match(block, /忽略历史消息中的/);
 });
 
 test('generate: image path block reaches the tool prompt; temp dir cleaned after', async () => {
@@ -110,7 +112,7 @@ test('generate: image path block reaches the tool prompt; temp dir cleaned after
     // The image prompt block (with Read instruction + path) round-tripped through cat.
     assert.match(echoed, /【图片附件】/);
     assert.match(echoed, /Read/);
-    const m = echoed.match(/(\/.*khy-cli-img-[^\s]+image-1-[0-9a-f]+\.png)/);
+    const m = echoed.match(/((?:[A-Za-z]:[\\/]|\/)[^\r\n]*khy-cli-img-[^\r\n]*[\\/]image-1-[0-9a-f]+\.png)/);
     assert.ok(m, 'echoed content includes the materialized image path');
     // generate() cleans up the temp dir in its finally → the file is gone now.
     assert.ok(!fs.existsSync(m[1]), 'temp image file removed after generate()');

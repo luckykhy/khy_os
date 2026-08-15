@@ -100,6 +100,13 @@
 | [OPS-MAN-171] 技能包规范-manifest与prompt模板.md | 技能包字段规范与可复制模板 | 定稿 |
 | [OPS-MAN-172] 自定义供应商接入指南.md | 一键预设/手动接入供应商·serviceType·gateway add | 定稿 |
 | [OPS-MAN-173] MCP工具接入快速上手.md | khy mcp add/presets/test·18 预设·三传输示例 | 定稿 |
+| [OPS-MAN-174] 任务入口总表.md | 根 package.json 每条入口·守什么·何时跑 | 定稿 |
+| [OPS-MAN-175] 首次运行自动登录与凭据.md | 默认管理员生成·CLI自动登录·凭据落盘位置 | 定稿 |
+
+> `[OPS-MAN-175]` 由根目录 6 份自动登录会话日志（`AUTO_LOGIN_ENABLED.md`、
+> `FIXED_AUTO_LOGIN.md`、`FINAL_AUTO_LOGIN_COMPLETE.md`、`FINAL_AUTO_LOGIN_GUIDE.md`、
+> `PASSWORD_AUTO_FILL.md`、`CLI_AUTO_USERNAME.md`）合并去重而成（归档日期 2026-08-15），
+> 已剔除原文中的机器专属路径与用户名。编号 174 预留给任务入口总表。
 
 ## 三、跨分类关联指引
 

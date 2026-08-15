@@ -155,7 +155,15 @@ function initializeOpenTelemetry(options = {}) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     currentStatus = 'failed';
-    logger.warn(`[otel] Failed to initialize OpenTelemetry: ${message}`);
+    const missingFeature = error && error.code === 'MODULE_NOT_FOUND';
+    if (missingFeature) {
+      logger.warn(
+        '[otel] OpenTelemetry is enabled but its optional packages are not installed. ' +
+          'Install the @opentelemetry peer dependencies listed in services/backend/package.json.'
+      );
+    } else {
+      logger.warn(`[otel] Failed to initialize OpenTelemetry: ${message}`);
+    }
     return { enabled: false, status: currentStatus };
   }
 }

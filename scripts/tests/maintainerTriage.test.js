@@ -158,13 +158,13 @@ test('真实映射表可加载且分诊命中(集成)', () => {
 test('速查表 OPS-MAN-067 已落盘且与生成器输出一致(防手改漂移)', () => {
   const fs = require('node:fs');
   const cli = require('../diagnostics/triage');
-  assert.ok(fs.existsSync(cli.DOC_PATH), '速查表未生成，先跑 npm run gen-triage-doc');
+  assert.ok(fs.existsSync(cli.DOC_PATH), '速查表未生成，先跑 npm run maintenance:triage-doc');
   const disk = fs.readFileSync(cli.DOC_PATH, 'utf8');
-  assert.strictEqual(disk, cli.buildDoc(), '落盘速查表与生成器输出不一致，请重跑 gen-triage-doc');
+  assert.strictEqual(disk, cli.buildDoc(), '落盘速查表与生成器输出不一致，请重跑 npm run maintenance:triage-doc');
   // 每个子系统一节、含 triage 用法与红线
   const map = t.loadMap();
   const sections = (disk.match(/^### /gm) || []).length;
   assert.strictEqual(sections, map.length, `子系统节数应等于 area 数 ${map.length}，实际 ${sections}`);
-  assert.ok(disk.includes('npm run triage'), '缺 triage 用法');
+  assert.ok(disk.includes('npm run maintainer:triage'), '缺 triage 用法');
   assert.ok(disk.includes('commit/push'), '缺红线');
 });

@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const mapPath = path.join(repoRoot, 'docs', '维护者', '维护映射表.json');
+const mapPath = path.join(repoRoot, 'docs', '_维护者', '维护映射表.json');
 
 function fail(message, code = 1) {
   console.error(`Maintainer map error: ${message}`);

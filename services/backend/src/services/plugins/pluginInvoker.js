@@ -28,6 +28,7 @@
 const { findOperation, operationParamSchema } = require('@khy/shared/plugins/openapiTools');
 
 const urlSafety = require('../urlSafety');
+const { request: nativeRequest } = require('../../utils/nativeHttp');
 
 const REQUEST_TIMEOUT_MS = Number(process.env.KHY_PLUGIN_REQUEST_TIMEOUT_MS || 30000);
 const MAX_RESPONSE_BYTES = Number(process.env.KHY_PLUGIN_MAX_RESPONSE_BYTES || 4 * 1024 * 1024);
@@ -43,7 +44,23 @@ function _err(status, message) {
   return e;
 }
 
-// ── Base URL resolution ─────────────────────────────────────────────────────
+function _nativeHttp(config) {
+  const body = config.data === undefined || config.data === null ? undefined :
+    typeof config.data === 'string' || Buffer.isBuffer(config.data) ? config.data : JSON.stringify(config.data);
+  return nativeRequest(config.url, {
+    method: config.method || 'GET',
+    headers: config.headers,
+    query: config.params,
+    body,
+    timeoutMs: config.timeout || REQUEST_TIMEOUT_MS,
+    maxBytes: Math.min(config.maxContentLength || MAX_RESPONSE_BYTES, MAX_RESPONSE_BYTES),
+  }).then((response) => ({
+    status: response.status,
+    headers: response.headers,
+    data: response.data,
+  }));
+}
+
 
 function _baseUrl(openapi, manifest) {
   const servers = Array.isArray(openapi && openapi.servers) ? openapi.servers : [];
@@ -267,7 +284,7 @@ async function invoke(opts = {}) {
     throw _err(400, 'invoke requires an operationId');
   }
 
-  const http = opts._http || require('axios');
+  const http = opts._http || _nativeHttp;
   const now = opts._now || Date.now;
   const tokenCache = opts._tokenCache || _defaultTokenCache;
 

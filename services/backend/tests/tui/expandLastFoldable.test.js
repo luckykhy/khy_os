@@ -3,7 +3,7 @@
 /**
  * expandLastFoldable — unit coverage for the Ctrl+O "expand committed turn"
  * support (Ink mode). Exercises the PURE, React-free helpers that pick the
- * target turn and build the synthetic `expansion` message. The render side
+ * target turn and build the temporary `expansion` view model. The render side
  * (MessageBlock role:'expansion') is covered by the ink render smoke test;
  * here we lock the selection/build contract that drives it.
  *

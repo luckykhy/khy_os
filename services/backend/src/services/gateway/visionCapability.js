@@ -52,17 +52,19 @@ const VISION_NAME_HINTS = Object.freeze([
   'image',
 ]);
 
-// 内置视觉模型集(精确小写匹配)。当前留空：经实测确认,SenseNova Token Plan 里没有
-// 任何「按 model id 走 /v1/chat/completions 直接读图」的多模态模型可信赖——
-//   - sensenova-6.7-flash-lite 此前被写死为视觉模型,但实际**不收图像输入**(带图请求
-//     它会当作没收到图、回「请上传图片」),故移出本集、按纯文本处理。
-//   - sensenova-6.7-flash-image / sensenova-u1-fast 是「生成图」型号(见下 TEXT_ONLY 集),
-//     名字带 image 会被启发式误判为视觉,必须显式纠正回纯文本,否则识图请求发给它→上游 404。
-// 于是 SenseNova 通道的带图请求会被 decideVisionRouting 判为「无视觉兄弟」→ 退回本地 OCR
-// (Tesseract,chi_sim+eng 已装),文字类截图可直接识别,非文字图给诚实说明(见 visionOcrFallback)。
-// 若日后确认某 SenseNova 型号确实支持图像输入,把它加回本集(或用 env KHY_VISION_MODELS=<id>
-// 即时启用),无需改动其它代码。
-const BUILTIN_VISION_MODELS = Object.freeze([]);
+// 内置视觉模型集(精确小写匹配)。除完整 Claude model id 外，保留 Claude Code
+// 使用的 tier aliases；这些别名最终由 claudeAdapter 解析为 Claude 视觉模型。
+const CLAUDE_TIER_ALIASES = Object.freeze(['opus', 'sonnet', 'haiku']);
+
+// 内置视觉模型集(精确小写匹配)。这里登记的是已确认的具体 model id，避免把
+// provider 级 supportsVision 或模型名猜测混作同一层能力。step-3.7-flash 虽然
+// 名称含 flash，但其原生接口支持图片输入，因此必须由显式能力表命中。
+const BUILTIN_VISION_MODELS = Object.freeze([
+  'step-3.7-flash',
+  'stepfun/step-3.7-flash',
+  'api:stepfun:step-3.7-flash',
+  'api/stepfun/step-3.7-flash',
+]);
 
 // 内置纯文本集(精确小写匹配)。这些型号名字带 image / 看似视觉,但实际**只生成图、不收
 // 图像输入**,会被 VISION_NAME_HINTS 的 'image' 片段误判为视觉,故在代码里显式纠正回纯文本
@@ -72,10 +74,6 @@ const BUILTIN_VISION_MODELS = Object.freeze([]);
 const BUILTIN_TEXT_ONLY_MODELS = Object.freeze([
   'sensenova-6.7-flash-image',
   'sensenova-u1-fast',
-  'step-3.7-flash',
-  'stepfun/step-3.7-flash',
-  'api:stepfun:step-3.7-flash',
-  'api/stepfun/step-3.7-flash',
 ]);
 
 // 收敛到 utils/trimLowerNullish 单一真源(逐字节委托,调用点不变)
@@ -113,13 +111,24 @@ function isVisionCapableModel(model, opts = {}) {
   const textOnly = parseModelListEnv(env.KHY_TEXT_ONLY_MODELS);
   if (textOnly.has(modelLower)) {
     return false;
-  } // 强制纯文本，优先级最高
+  }
 
   const visionEnv = parseModelListEnv(env.KHY_VISION_MODELS);
   if (visionEnv.has(modelLower)) {
     return true;
   }
-  if (BUILTIN_VISION_MODELS.includes(modelLower)) {
+
+  // A route-level runtime verdict is stronger than model/provider metadata, but
+  // remains below the administrator's explicit text/vision overrides.
+  // `unknown` deliberately falls through to the static prior.
+  if (opts.measured === 'supported') {
+    return true;
+  }
+  if (opts.measured === 'unsupported') {
+    return false;
+  }
+
+  if (BUILTIN_VISION_MODELS.includes(modelLower) || CLAUDE_TIER_ALIASES.includes(modelLower)) {
     return true;
   }
 
@@ -215,9 +224,12 @@ function pickVisionCandidate(candidates, opts = {}) {
   if (!Array.isArray(candidates)) {
     return null;
   }
+  const measuredCandidates = opts.measuredCandidates || {};
   for (const item of candidates) {
     const id = _candidateModelId(item);
-    if (id && isVisionCapableModel(id, opts)) {
+    const key = _normModel(id);
+    const measured = measuredCandidates[key];
+    if (id && isVisionCapableModel(id, { ...opts, measured })) {
       return item;
     }
   }

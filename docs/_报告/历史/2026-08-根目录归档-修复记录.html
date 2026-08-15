@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-08 根目录归档：修复记录 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_报告<span class="sep">›</span>历史<span class="sep">›</span>2026-08 根目录归档：修复记录</div>
+      <header class="hero reveal"><h1>2026-08 根目录归档：修复记录</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#2026-08-根目录归档-修复记录">2026-08 根目录归档：修复记录</a></li><li class="lvl-2"><a href="#一-修掉的两个问题">一、修掉的两个问题</a></li><li class="lvl-3"><a href="#1-khy-启动时-cli-卡死">1. `khy` 启动时 CLI 卡死</a></li><li class="lvl-3"><a href="#2-model-菜单长时间无响应">2. `/model` 菜单长时间无响应</a></li><li class="lvl-2"><a href="#二-相关环境开关-已核实存在于代码">二、相关环境开关（已核实存在于代码）</a></li><li class="lvl-2"><a href="#三-khy-全局命令-fix-khy-command-md-的处置">三、`khy` 全局命令（`FIX_KHY_COMMAND.md` 的处置）</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="2026-08-根目录归档-修复记录">2026-08 根目录归档：修复记录<a class="anchor" href="#2026-08-根目录归档-修复记录" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>归档件</strong> · 本文由根目录 6 份一次性会话记录合并而成（归档日期 2026-08-15）：<code>FIX_SUMMARY.md</code>、<code>FINAL_FIX_REPORT.md</code>、<code>FIX_KHY_COMMAND.md</code>、<code>MODEL_MENU_FIX.md</code>、<code>CLI_FREEZE_FIXED.md</code>、<code>TEST_MODEL_MENU.md</code>。</p>
+<p>原文是与 AI 的会话产物：带具体机器路径（<code>C:\khy-os</code>、<code>H:\.khy-project</code>）、机器用户名、「现在请测试」式对话口吻，且六份互相重复地描述同两个问题。按 <code>[MGMT-STD-001]</code> 第 1.1/1.2 条，这类文件不得留在根目录。本文只保留<strong>事后仍有价值的部分</strong>：修了什么、改在哪个文件、以及实测确认存在的环境开关。对话过程、待测清单、临时方案讨论不再保留（内容仍在 git 历史里）。</p>
+<p>定位：归档件，非现行手册。现行说明见「关联」。</p></blockquote>
+<hr>
+<h2 id="一-修掉的两个问题">一、修掉的两个问题<a class="anchor" href="#一-修掉的两个问题" aria-label="锚点">#</a></h2>
+<h3 id="1-khy-启动时-cli-卡死">1. <code>khy</code> 启动时 CLI 卡死<a class="anchor" href="#1-khy-启动时-cli-卡死" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody><tr><td>症状</td><td>敲 <code>khy</code> 后卡住，登录输入框不出现，无法输入任何内容</td></tr><tr><td>根因</td><td>登录流程里 <code>await bootstrap({ silent: true })</code> 去初始化数据库；数据库未配置/未启动时该调用无超时保护，整个 CLI 被阻塞</td></tr><tr><td>修法</td><td>去掉 <code>bootstrap()</code> 依赖，改用<strong>纯文件系统</strong>的 <code>loadOrCreateDefaultAdminCredentials()</code>（同步、不碰数据库），立即返回</td></tr><tr><td>落点</td><td><code>services/backend/bin/khy.js</code>、<code>services/backend/src/services/credentialGenerator.js</code></td></tr></tbody></table>
+<p>同批修掉的次生问题：自动登录失败后走 <code>auth.register()</code>，而注册需要数据库连接，后端未起时同样会挂死 —— 加了 10 秒注册超时 + 提示「后端可能未运行」。这条链路的现行行为见 <code>[OPS-MAN-175] 首次运行自动登录与凭据</code>。</p>
+<h3 id="2-model-菜单长时间无响应">2. <code>/model</code> 菜单长时间无响应<a class="anchor" href="#2-model-菜单长时间无响应" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody><tr><td>症状</td><td>CLI 里输入 <code>/model</code> 后长时间无输出，像卡死</td></tr><tr><td>根因</td><td>构建模型清单要<strong>逐个探测所有启用的适配器</strong>，单适配器默认超时 8 秒（生成探测 25 秒），且 <code>Promise.all</code> 同步等全部完成 —— 3 个不通的适配器就能累到 70 秒以上，期间没有任何整体超时兜底</td></tr><tr><td>修法</td><td>① 加多层超时（整体 45s / 探测 30s / 构建 20s）；② 单适配器超时降到 4 秒；③ 加「快速失败」模式跳过耗时初始化；④ 每一步打印进度提示，让「卡在哪」可观测</td></tr><tr><td>落点</td><td><code>services/backend/src/cli/handlers/gatewayModelChoices.js</code>、<code>src/cli/handlers/gateway.js</code></td></tr></tbody></table>
+<p>加进度提示这一条是这次修复里最有复用价值的部分：探测阶段现在会依次打印「正在初始化网关 → 正在同步 switch-center → 正在初始化网关适配器 → 正在刷新适配器 → 正在获取适配器状态 → 检测各通道连通性」。再遇到疑似卡死，<strong>记下最后一条提示</strong>就能定位到具体阶段，不必再猜。</p>
+<hr>
+<h2 id="二-相关环境开关-已核实存在于代码">二、相关环境开关（已核实存在于代码）<a class="anchor" href="#二-相关环境开关-已核实存在于代码" aria-label="锚点">#</a></h2>
+<p>归档时逐个核对过，下表五个变量在代码中真实生效：</p>
+<table><thead><tr><th>变量</th><th>作用</th><th>定义处</th></tr></thead><tbody><tr><td><code>KHY_MODEL_QUICK_FAIL</code></td><td>快速失败模式，跳过耗时初始化</td><td><code>gatewayModelChoices.js:164</code></td></tr><tr><td><code>KHY_MODEL_OVERALL_TIMEOUT_MS</code></td><td>模型清单构建的整体超时</td><td><code>gatewayModelChoices.js:267</code></td></tr><tr><td><code>KHY_MODEL_BUILD_TIMEOUT_MS</code></td><td>构建阶段超时</td><td><code>gatewayModelChoices.js:694</code></td></tr><tr><td><code>KHY_MODEL_PROBE_TIMEOUT_MS</code></td><td>单适配器连通性探测超时</td><td><code>gateway.js:2087</code></td></tr><tr><td><code>KHY_MODEL_PROBE_GENERATION_TIMEOUT_MS</code></td><td>生成能力探测超时</td><td><code>gateway.js:2097</code></td></tr></tbody></table>
+<p><code>/model</code> 慢的时候，缩短探测超时通常比禁用适配器更划算：</p>
+<pre><code class="language-powershell">$env:KHY_MODEL_QUICK_FAIL = &quot;true&quot;
+$env:KHY_MODEL_PROBE_TIMEOUT_MS = &quot;2000&quot;
+khy</code></pre>
+<p>不想进菜单也可以绕开：<code>gateway status</code> 看通道状态、<code>gateway config</code> 直接配。</p>
+<blockquote><p><strong>遗留</strong>：这五个开关<strong>尚未登记进 flag registry</strong>（<code>scripts/ci/check-flag-registry.js</code> 的真源表），因此也不在 <code>[OPS-MAN-058] 环境开关与文档命名规范</code> 的清单里。补登记是独立一项工作，不在本次归档范围内。</p></blockquote>
+<hr>
+<h2 id="三-khy-全局命令-fix-khy-command-md-的处置">三、<code>khy</code> 全局命令（<code>FIX_KHY_COMMAND.md</code> 的处置）<a class="anchor" href="#三-khy-全局命令-fix-khy-command-md-的处置" aria-label="锚点">#</a></h2>
+<p>原文给了三套让 <code>khy</code> 全局可用的办法（PowerShell profile 函数、<code>pip install -e .</code>、把 <code>.bat</code> 拷进 PATH 目录），全部写着具体的 <code>C:\khy-os</code> 路径。这些内容<strong>已被仓库里的正式入口取代</strong>，不再于归档件中保留操作步骤：</p>
+<ul><li><code>portable-setup.bat</code> / <code>portable-setup.sh</code> —— 便携部署的全局命令配置入口</li><li><code>scripts/portable/install-path-wrappers.bat</code> / <code>.sh</code> —— PATH wrapper 安装</li><li><code>pip install khy-os</code> —— 正式分发路径</li></ul>
+<p>现行说明见 <code>docs/06_DEPLOY_部署/PORTABLE.md</code> 与 <code>[OPS-MAN-027] 快速开始</code>。</p>
+<hr>
+<h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
+<ul><li>首次运行自动登录与凭据（现行手册）：<code>docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.md</code></li><li>便携版部署：<code>docs/06_DEPLOY_部署/PORTABLE.md</code></li><li>环境开关规范：<code>docs/07_OPS_运维/[OPS-MAN-058] 环境开关与文档命名规范.md</code></li><li>症状分诊速查：<code>docs/07_OPS_运维/[OPS-MAN-067] 症状分诊速查表.md</code></li><li>根目录零散落铁律：<code>docs/08_MGMT_项目管理/[MGMT-STD-001] 项目文档结构与索引铁律规范.md</code> 第一章</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_报告/历史/2026-08-部署报告.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 部署完成报告</div></a><a class="next" href="../../../docs/_报告/历史/2026-08-项目规模报告.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 项目规模报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_报告/历史/2026-08-根目录归档-修复记录.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

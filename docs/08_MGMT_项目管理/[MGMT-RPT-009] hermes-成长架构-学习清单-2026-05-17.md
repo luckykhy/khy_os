@@ -1,4 +1,4 @@
-<!-- 文档分类: MGMT-RPT-009 | 阶段: 项目管理 | 原路径: docs/报告/hermes-成长架构-学习清单-2026-05-17.md -->
+<!-- 文档分类: MGMT-RPT-009 | 阶段: 项目管理 | 原路径: docs/_报告/hermes-成长架构-学习清单-2026-05-17.md -->
 # Hermes Growth Architecture → KHY 学习清单 (2026-05-17)
 
 ## 范围

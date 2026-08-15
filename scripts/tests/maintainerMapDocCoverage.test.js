@@ -5,7 +5,7 @@
  *
  *   node --test scripts/tests/maintainerMapDocCoverage.test.js
  *
- * 目的：维护映射表(docs/维护者/维护映射表.json)是「症状 → 子系统 → 读哪些文件/跑哪条验证」
+ * 目的：维护映射表(docs/_维护者/维护映射表.json)是「症状 → 子系统 → 读哪些文件/跑哪条验证」
  * 的单一真源,triage 速查表(OPS-MAN-067)由它确定性生成。本守卫钉死两条不变量:
  *
  *   1. 覆盖(coverage):每个子系统 area 都必须给出至少一条 docs 指针——新登记的子系统
@@ -27,7 +27,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const MAP_PATH = path.join(ROOT, 'docs', '维护者', '维护映射表.json');
+const MAP_PATH = path.join(ROOT, 'docs', '_维护者', '维护映射表.json');
 
 function loadAreas() {
   const raw = fs.readFileSync(MAP_PATH, 'utf8');

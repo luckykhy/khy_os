@@ -79,8 +79,9 @@ const _POINTER_PATH_KEYS = ['dataHome', 'projectDataHome'];
 
 function _portableRoot() {
   try {
-    if (process.env.KHYQUANT_PORTABLE_ROOT) {
-      return path.resolve(process.env.KHYQUANT_PORTABLE_ROOT);
+    const configuredRoot = process.env.KHY_PORTABLE_ROOT || process.env.KHYQUANT_PORTABLE_ROOT;
+    if (configuredRoot) {
+      return path.resolve(configuredRoot);
     }
   } catch {
     /* fall through */
@@ -682,7 +683,7 @@ function isPortableDeployment() {
     return _cachedPortable;
   }
   try {
-    if (process.env.KHYQUANT_PORTABLE_ROOT) {
+    if (process.env.KHY_PORTABLE_ROOT || process.env.KHYQUANT_PORTABLE_ROOT) {
       _cachedPortable = true;
       return _cachedPortable;
     }

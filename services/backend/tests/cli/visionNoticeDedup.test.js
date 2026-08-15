@@ -27,32 +27,36 @@ test('首见 → 渲染(true)并记入 seenSet;同回合逐字节重复 → 压�
   assert.equal(dedup.shouldRender(seen, msg, on({})), false, '第三次仍压制');
 });
 
-test('不同中间消息(不同模型名 / 不同失败真因)签名不同 → 各自保留', () => {
+test('视觉进度按阶段折叠，不同模型名或失败真因不重复刷屏', () => {
   const seen = new Set();
   const a = '正在调用 glm/glm-4.6v-flash 进行识别，请稍候...';
   const b = '正在调用 glm-4v-flash 进行识别，请稍候...';
   const c = '图像识别失败:目标视觉模型返回「未找到 / 404」。';
   const d = '图像识别失败:无法连接到图像识别模型服务(网络/代理/端点问题)。';
   assert.equal(dedup.shouldRender(seen, a, on({})), true);
-  assert.equal(dedup.shouldRender(seen, b, on({})), true, '不同模型名 → 保留');
+  assert.equal(dedup.shouldRender(seen, b, on({})), false, '同一开始阶段只渲染一次');
   assert.equal(dedup.shouldRender(seen, c, on({})), true);
-  assert.equal(dedup.shouldRender(seen, d, on({})), true, '不同失败真因 → 保留');
-  // 全部重复一遍 → 全部压制。
-  for (const m of [a, b, c, d]) assert.equal(dedup.shouldRender(seen, m, on({})), false, `重复应压制: ${m.slice(0, 12)}`);
-  assert.equal(seen.size, 4, '四条不同消息各记一签名');
+  assert.equal(dedup.shouldRender(seen, d, on({})), false, '同一失败阶段只渲染一次');
+  assert.equal(seen.size, 2, '只记录开始与失败两个阶段');
 });
 
-test('复刻实测:一回合 6×正在调用(2 模型×3 迭代)+ 3×失败块 → 去重后仅 2 调用 + 2 失败块', () => {
+test('复刻实测:一回合 6×正在调用 + 3×失败块 → 仅一条开始 + 一条失败', () => {
   const seen = new Set();
   const callA = '正在调用 glm/glm-4.6v-flash 进行识别，请稍候...';
   const callB = '正在调用 glm-4v-flash 进行识别，请稍候...';
   const fail404 = '图像识别失败:目标视觉模型返回「未找到 / 404」(model_not_found)。本次尝试的视觉模型:glm/glm-4.6v-flash。';
   const failNet = '图像识别失败:无法连接到图像识别模型服务(网络/代理/端点问题)。';
-  // 迭代 1:callA callB fail404 / 迭代 2:callA callB failNet / 迭代 3:callA callB fail404
   const stream = [callA, callB, fail404, callA, callB, failNet, callA, callB, fail404];
   const rendered = stream.filter((m) => dedup.shouldRender(seen, m, on({})));
-  assert.deepEqual(rendered, [callA, callB, fail404, failNet], '去重后:2 条调用 + 2 个不同失败块,重复全折叠');
-  assert.equal(rendered.length, 4, '9 条刷屏 → 4 条有效告知');
+  assert.deepEqual(rendered, [callA, fail404]);
+  assert.equal(rendered.length, 2, '9 条刷屏 → 2 条阶段告知');
+});
+
+test('普通助手消息不做语义折叠，最终回答不会被误删', () => {
+  const seen = new Set();
+  assert.equal(dedup.shouldRender(seen, '图片中是一张登录页。', on({})), true);
+  assert.equal(dedup.shouldRender(seen, '图片中是一张注册页。', on({})), true);
+  assert.equal(dedup.shouldRender(seen, '图片中是一张登录页。', on({})), false);
 });
 
 test('门关(KHY_VISION_NOTICE_DEDUP=off / 0 / false / no)→ 逐字节回退:恒渲染,不触碰 seenSet', () => {
@@ -84,11 +88,9 @@ test('signatureOf:去首尾空白后逐字节;空 / 非串 → null', () => {
   assert.equal(dedup.signatureOf(42), null, '非串 → null');
 });
 
-test('signatureOf 区分空白差异:仅首尾空白折叠,内部差异视为不同签名', () => {
+test('signatureOf 区分普通消息的内部空白差异', () => {
   const seen = new Set();
-  assert.equal(dedup.shouldRender(seen, '正在调用 A 请稍候', on({})), true);
-  // 首尾空白不同 → 同签名 → 压制。
-  assert.equal(dedup.shouldRender(seen, '  正在调用 A 请稍候  ', on({})), false, '仅首尾空白差异 → 同签名压制');
-  // 内部空白不同 → 不同签名 → 渲染。
-  assert.equal(dedup.shouldRender(seen, '正在调用  A  请稍候', on({})), true, '内部空白差异 → 不同签名');
+  assert.equal(dedup.shouldRender(seen, '普通进度 A', on({})), true);
+  assert.equal(dedup.shouldRender(seen, '  普通进度 A  ', on({})), false, '仅首尾空白差异 → 同签名压制');
+  assert.equal(dedup.shouldRender(seen, '普通进度  A', on({})), true, '内部空白差异 → 不同签名');
 });

@@ -1,0 +1,86 @@
+{
+  "_comment": "KHY OS bootable kernel ISO download manifest. The wheel ships this file but NEVER the ISO (MANIFEST.in prunes *.iso). The ISO is platform-independent (one GRUB image boots on any x86_64 host via QEMU), so a single url/sha256 serves every platform. Until a release ISO is published, url/sha256 stay empty and ensureKhyosIso() falls through to the local kernel/build ISO or an actionable 'build locally' error. To publish: build with `make -C kernel iso`, upload khy-os-kernel.iso, then fill url + the `sha256sum` of that file here. KHY_KHYOS_MIRROR_BASE overrides the host; KHY_KERNEL_ISO overrides everything with a local path.",
+  "_comment_build_assets": "builderAppliance + qemu power WSL/Docker-free native-Windows builds: ensureBuilderAppliance() / ensurePortableQemu() fetch them sha256-pinned on demand and cache under ~/.khyos/cache/{builder,qemu} (legacy ~/.khyquant/khyos still read on existing machines). They are runtime downloads, never bundled in the wheel. Leave url/sha256 empty to keep the rung inert (the build cascade then degrades to downloading the prebuilt ISO, then a guide). qemu keys are `${process.platform}-${process.arch}`; systemBinRelPath/imgBinRelPath are paths INSIDE the extracted archive.",
+  "_comment_toolchain": "toolchain powers the PREFERRED native-Windows build (no Docker, no WSL, no VM): ensureWindowsBuildToolchain() fetches clang+ld.lld (llvm), nasm, limine, xorriso, make, and busybox sha256-pinned on demand and caches them under ~/.khyos/cache/toolchain/<platform>-<arch> (legacy ~/.khyquant/khyos/toolchain still read). All-or-nothing: every tool must be pinned (url+sha256) or the whole native rung degrades. *RelPath are paths INSIDE each extracted archive; single-file tools (busybox) set archive:false. RESILIENCE: each tool may carry an optional `mirrors:[...]` array of BYTE-IDENTICAL fallback URLs (same sha256); the downloader retries transient failures with backoff and fails over across primary -> mirrors so one dead/blocked host no longer sinks the build. KHY_KHYOS_MIRROR_BASE rehosts every tool under one base (tried first). CN FALLBACK: every github-hosted tool (llvm/limine/xorriso) AUTOMATICALLY gains ghproxy-mirrored fallback URLs (byte-identical, same sha256) so a blocked github.com no longer sinks the build on CN networks -- no manifest edit needed. Tune via KHY_KHYOS_CN_MIRRORS=<comma-prefixes> (override the ghproxy list), KHY_KHYOS_PREFER_CN=1 (try the CN mirrors FIRST, before the direct upstream -- skips per-tool timeouts when github is known-blocked), or KHY_KHYOS_NO_CN_MIRROR=1 (disable). nasm/sourceforge/frippery are not on github, so they still rely on a proxy (HTTPS_PROXY) or KHY_KHYOS_MIRROR_BASE. STABILITY: do NOT pin a GitHub branch archive (/archive/refs/heads/<branch>.zip) -- its sha drifts when the branch moves. Re-pin to an immutable commit URL with `node scripts/release/pin-khyos-toolchain.js` (resolves branch->commit, recomputes sha; `--check` fails CI on drift or any remaining branch archive). Pin the limine binary release to match kernel/iso/boot/limine/limine.conf syntax.",
+  "filename": "khy-os-kernel.iso",
+  "version": "0.2.0",
+  "url": "",
+  "sha256": "",
+  "builderAppliance": {
+    "filename": "khyos-builder.qcow2",
+    "url": "",
+    "sha256": "",
+    "size": 0
+  },
+  "qemu": {
+    "win32-x64": {
+      "filename": "qemu-w64-portable.zip",
+      "url": "",
+      "sha256": "",
+      "size": 0,
+      "systemBinRelPath": "qemu/qemu-system-x86_64.exe",
+      "imgBinRelPath": "qemu/qemu-img.exe"
+    }
+  },
+  "toolchain": {
+    "win32-x64": {
+      "llvm": {
+        "filename": "llvm-mingw-20260616-ucrt-x86_64.zip",
+        "url": "https://github.com/mstorsjo/llvm-mingw/releases/download/20260616/llvm-mingw-20260616-ucrt-x86_64.zip",
+        "sha256": "b9b68a4d276e16fa25802aaba458e4638f64b3884c290aaccdc2d87083b6ca35",
+        "size": 187504083,
+        "archive": true,
+        "ccRelPath": "llvm-mingw-20260616-ucrt-x86_64/bin/clang.exe",
+        "ldRelPath": "llvm-mingw-20260616-ucrt-x86_64/bin/ld.lld.exe"
+      },
+      "nasm": {
+        "filename": "nasm-2.16.03-win64.zip",
+        "url": "https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-win64.zip",
+        "sha256": "3ee4782247bcb874378d02f7eab4e294a84d3d15f3f6ee2de2f47a46aa7226e6",
+        "size": 513543,
+        "archive": true,
+        "binRelPath": "nasm-2.16.03/nasm.exe"
+      },
+      "limine": {
+        "_note": "Binary-release asset (prebuilt limine.exe host tool + limine-bios*.bin / limine-uefi-cd.bin boot blobs), NOT the source tarball. dirRelPath holds the boot blobs the iso-limine target copies; the Windows host tool sits one level deeper under limine-tool-windows-x86/.",
+        "filename": "limine-binary.tar.gz",
+        "url": "https://github.com/limine-bootloader/limine/releases/download/v12.3.3/limine-binary.tar.gz",
+        "sha256": "205f98218bb0d5a8ccabf5f903dba9d935f7b0aa66f4262a99b0f5a8e668ec6d",
+        "size": 1785734,
+        "archive": true,
+        "dirRelPath": "limine-binary",
+        "binRelPath": "limine-binary/limine-tool-windows-x86/limine.exe"
+      },
+      "xorriso": {
+        "_note": "PeyTy cygwin build: xorriso.exe needs cygwin1.dll + cygiconv-2.dll, which ship in the same archive dir and Windows loads next to the exe.",
+        "filename": "xorriso-exe-for-windows-9236798071b26ab7032cd82b4a5635fcf7c1409c.zip",
+        "url": "https://github.com/PeyTy/xorriso-exe-for-windows/archive/9236798071b26ab7032cd82b4a5635fcf7c1409c.zip",
+        "sha256": "fff12dd784155542d57018b208391928c9a3f3e4e856c1f1d01341042d1d129f",
+        "size": 4765739,
+        "archive": true,
+        "binRelPath": "xorriso-exe-for-windows-9236798071b26ab7032cd82b4a5635fcf7c1409c/xorriso.exe"
+      },
+      "make": {
+        "_note": "SourceForge's downloads.sourceforge.net often serves an HTML interstitial instead of the file; pin a direct mirror host (*.dl.sourceforge.net) as primary with byte-identical mirror failover (same sha256).",
+        "filename": "make-4.4.1-without-guile-w32-bin.zip",
+        "url": "https://master.dl.sourceforge.net/project/ezwinports/make-4.4.1-without-guile-w32-bin.zip?viasf=1",
+        "mirrors": [
+          "https://cfhcable.dl.sourceforge.net/project/ezwinports/make-4.4.1-without-guile-w32-bin.zip?viasf=1",
+          "https://altushost-swe.dl.sourceforge.net/project/ezwinports/make-4.4.1-without-guile-w32-bin.zip?viasf=1"
+        ],
+        "sha256": "fb66a02b530f7466f6222ce53c0b602c5288e601547a034e4156a512dd895ee7",
+        "size": 392579,
+        "archive": true,
+        "binRelPath": "bin/make.exe"
+      },
+      "busybox": {
+        "filename": "busybox-w64-FRP-5579-g5749feb35.exe",
+        "url": "https://frippery.org/files/busybox/busybox-w64-FRP-5579-g5749feb35.exe",
+        "sha256": "1255109d6335adf8374888f9c9fc70221f098cb6bf03f183e710e71179ecad78",
+        "size": 671232,
+        "archive": false,
+        "binRelPath": "busybox-w64-FRP-5579-g5749feb35.exe"
+      }
+    }
+  }
+}

@@ -1,14 +1,14 @@
 # [OPS-MAN-067] Khy-OS 症状分诊速查表
 
 > 出问题时的第一站：用 `Ctrl-F` 搜你看到的现象/报错词，跳到对应子系统，照着「先读文件」和「跑这条验证」做。
-> 本表由 `docs/维护者/维护映射表.json` 确定性生成，子系统长大后重跑 `npm run gen-triage-doc` 即自动覆盖。
+> 本表由 `docs/_维护者/维护映射表.json` 确定性生成，子系统长大后重跑 `npm run maintenance:triage-doc` 即自动覆盖。
 
 ## 更快的用法：直接问分诊器
 
 ```bash
-npm run triage -- "识图老是404还落剪贴板"     # 症状 → 子系统 + 读哪些文件 + 跑哪条命令
-npm run triage -- "守护进程端口漂移连不上"
-npm run triage -- "slash command missing"
+npm run maintainer:triage -- "识图老是404还落剪贴板"     # 症状 → 子系统 + 读哪些文件 + 跑哪条命令
+npm run maintainer:triage -- "守护进程端口漂移连不上"
+npm run maintainer:triage -- "slash command missing"
 ```
 
 ## 通用纪律（改动前必读）
@@ -20,7 +20,36 @@ npm run triage -- "slash command missing"
 
 ---
 
-## 分诊索引（共 44 个子系统）
+## 分诊索引（共 111 个子系统）
+
+### 面向小白概念文档 + 修仙学 AI 故事内容（作者向房屋风格 + 单人维护体检）  `beginner-docs-content`
+
+**什么时候来这里（症状触发词）：**
+- 要新增/修改一篇概念文档：命名用「[CONCEPT-NN] 什么是X.md」，保持房屋风格（callout/quiz/flip + mermaid 图），并在 00_INDEX_概念入门-总览.md 的 mermaid 与表格里补上交叉链接
+- 要新增/修改一章修仙故事：正文要有剧情 + mermaid 图 + 「## 📒 凡人笔记」小白解读段 + 「【上一章｜下一章｜回总目录】」导航块，并在 00_INDEX_修仙学AI-总目录.md 登记
+- 改完文档先跑 npm run docs:check-beginner 做单人维护体检，再跑 npm run docs:build 与 npm run docs:verify 生成并校验 HTML
+- 要扩展体检规则：看 scripts/docs/check_beginner_docs.js 顶部的 HOW-TO-EXTEND 注释（新增 SECTIONS 条目或 checkSection 规则）
+
+**先读这些文件：**
+- `scripts/docs/check_beginner_docs.js`
+- `scripts/docs/check_beginner_docs.test.js`
+- `docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.md`
+- `docs/09_STORY_修仙学AI/00_INDEX_修仙学AI-总目录.md`
+
+**参考文档：**
+- docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.md
+- docs/09_STORY_修仙学AI/00_INDEX_修仙学AI-总目录.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run docs:check-beginner
+node --test scripts/docs/check_beginner_docs.test.js
+npm run docs:build
+npm run docs:verify
+```
+
+---
 
 ### Bootstrap and Packaging  `bootstrap-packaging`
 
@@ -35,8 +64,8 @@ npm run triage -- "slash command missing"
 - `platform/khy_platform/_bootstrap.py`
 - `platform/khy_platform/__init__.py`
 - `pyproject.toml`
-- `setup.py`
-- `MANIFEST.in`
+- `software/khyquant/setup.py`
+- `software/khyquant/MANIFEST.in`
 - `packaging/npm/package.json`
 - `services/backend/package.json`
 
@@ -311,7 +340,7 @@ npm run check:quality-gates
 - `maintenance/tests/ops-lib.test.js`
 
 **参考文档：**
-- docs/传承/KHY-OS-传承书.md
+- docs/_传承/KHY-OS-传承书.md
 - docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md
 - maintenance/README.md
 
@@ -366,7 +395,7 @@ npm run test:maintainer:env-optimize
 **先读这些文件：**
 - `scripts/docs/gen-evolution-prompts.js`
 - `scripts/tests/gen-evolution-prompts.test.js`
-- `docs/维护者/维护映射表.json`
+- `docs/_维护者/维护映射表.json`
 
 **参考文档：**
 - docs/07_OPS_运维/[OPS-MAN-066] khyos进化提示词手册-1000条.md
@@ -389,9 +418,9 @@ npm run test:evolution-prompts
 
 **先读这些文件：**
 - `scripts/lib/maintainerTriage.js`
-- `scripts/triage.js`
+- `scripts/diagnostics/triage.js`
 - `scripts/tests/maintainerTriage.test.js`
-- `docs/维护者/维护映射表.json`
+- `docs/_维护者/维护映射表.json`
 
 **参考文档：**
 - docs/07_OPS_运维/[OPS-MAN-067] 症状分诊速查表.md
@@ -587,6 +616,9 @@ npm run test:bundle-launch-contract
 - core-required node reports core-missing but no guidance shown
 - /api/proxy-egress REST errors
 - HTTP_PROXY env not applied after choosing a node
+- raw node still asks to set KHY_PROXY_CORE=1 after pip/npm install (env not auto-seeded)
+- mihomo core binary missing and not auto-installed out of the box
+- web proxy page says 'download mihomo' but never shows where to download it (download URL / dest path missing)
 
 **先读这些文件：**
 - `services/backend/src/services/proxy/proxyCoreConfigGen.js`
@@ -892,7 +924,7 @@ npm run test:restore-converge
 
 ---
 
-### Dependency-aware WAVE scheduling + fault-aware execution + predecessor-result injection for auto-decomposed subtasks (拆任务 → 有序并行 → 依赖失败则跳过下游并如实汇报 → 前驱结果注入下游不再盲跑 → 跳过与失败在最终报告分列 → 确定性顺序链拆解让整条 arc 在默认离机路径活起来 → 按角色收窄子智能体工具集,只读角色不给写工具)  `dependency-wave-scheduler`
+### Dependency-aware WAVE scheduling + fault-aware execution + predecessor-result injection for auto-decomposed subtasks (拆任务 → 有序并行 → 依赖失败则跳过下游并如实汇报 → 前驱结果注入下游不再盲跑 → 跳过与失败在最终报告分列 → 确定性顺序链拆解让整条 arc 在默认离机路径活起来 → 按角色收窄子智能体工具集,只读角色不给写工具 → 多个并行子任务改同一文件时如实告警可能的写-写覆盖 → 成功但零产出的子任务如实标注不折进完成 → 最终报告按角色标注每个子任务并把失败按类型分布,让失败的验证子任务不被匿名折进失败)  `dependency-wave-scheduler`
 
 **什么时候来这里（症状触发词）：**
 - khy auto-decomposes a goal into subtasks and you want the ones with declared dependencies (explore → implement → verify) to run in ORDER, not all fanned out at once
@@ -904,6 +936,10 @@ npm run test:restore-converge
 - the FINAL user-facing report must distinguish a dependency-SKIPPED subtask (依赖失败，已跳过) from one that genuinely ran and failed — mergeResults (taskDecomposer.js, gate KHY_MERGE_SKIP_DISTINCT) renders skips as a distinct 跳过（依赖失败） status and a separate 跳过 footer count instead of folding them into 失败 (fixes the last-mile consumer bridge for the 087 `skipped` flag)
 - the whole wave arc is a silent no-op on the DEFAULT OFFLINE path (pip/npm install, no LLM key) because the four DETERMINISTIC decompose strategies emit NO `dependencies` — only the opt-in LLM strategy 5 does, and decompose is called without callModel. The deterministic sequential-chain producer _splitSequentialChain (taskDecomposer.js, gate KHY_SEQ_CHAIN_DECOMPOSE) recognizes 先…再…/然后/首先…其次…最后/then/finally and emits `dependencies: [priorIndex]` so planWaves compiles a serial chain offline (the producer side of the arc)
 - the decompose `role` string (explore/verify/implement) drives model selection (subAgentModelSelect) but NOT tool scoping — a read-only explore/verify subtask still receives Write/Edit/NotebookEdit. roleToolScope(role) (orchestrator/roleToolScope.js, gate KHY_ROLE_TOOL_SCOPE) maps read-only roles (explore/verify/plan/research/audit/review) to a disallowedTools strip (Edit/Write/NotebookEdit, NOT Bash) and mergeRoleScopeInto unions it into a base denylist matching AgentTool.buildSubagentDenylist's shape (the missing tool-scoping consumer of role; consume seam = buildSubagentDenylist union point)
+- multiple PARALLEL subtasks in the same wave each carry filesModified; mergeResults folds them into a de-duping Set so a file written by ≥2 concurrent agents silently collapses to one 修改文件 entry — a write-write race (last-write-wins, one agent's work lost) invisible in the report. detectFileConflicts/formatConflictWarning (orchestrator/mergeFileConflicts.js, gate KHY_MERGE_FILE_CONFLICT) surface a ⚠️ 并行写冲突 footer line naming the file + the conflicting subtasks (path trim but case-SENSITIVE to avoid A.js/a.js false positives; honest告知 only, does not arbitrate the race). This is the second orthogonal honesty dimension of the mergeResults render (092 = skip≠fail state honesty; this = parallel write-conflict honesty)
+- a subtask returns success (producer uses success !== false, so ANY non-explicit-false counts) yet produced NOTHING — no body (text/output empty), no filesModified, no toolCalls. mergeResults folds this 'empty success' into successCount and renders it as 完成, indistinguishable from real work — the most insidious false-green on an offline unattended fan-out (report shows 完成 3/3 while one agent silently did nothing / was cut off / no-op'd). isEmptySuccess/formatEmptySuccessWarning (orchestrator/mergeEmptySuccess.js, gate KHY_MERGE_EMPTY_SUCCESS) render such a subtask as ⚠️ 完成（无产出） and add a footer count (successCount UNCHANGED — it truly did not fail; only a visible marker + count so people can re-check). This is the THIRD orthogonal honesty dimension of the mergeResults render (092 = skip≠fail state; 098 = parallel write-conflict; this = empty-success honesty)
+- every decompose subtask carries a `role` (implement/verify/explore/general via _inferRole) that drives model-selection (subAgentModelSelect) and tool-scoping (094 roleToolScope), but the FINAL user-facing report (mergeResults) folds the role away: header reads 子任务 N: preview and a failure renders 失败 with no signal WHICH KIND of work failed — a failed 验证 (results UNVALIDATED, serious) is indistinguishable from a failed 探索 (recoverable). formatRoleTag/formatRoleFailureSummary (orchestrator/mergeRoleAttribution.js, gate KHY_MERGE_ROLE_ATTRIBUTION) tag each header 子任务 N（验证）: … and add a footer ⚠️ 失败分布: 验证 1 项… line (bucket counts always sum to failCount, unknown roles → 通用 so a failure is never dropped; a failed verify appends a 结果未经校验 critical hint). This is the FOURTH orthogonal honesty dimension of the mergeResults render (092 = skip≠fail state; 098 = parallel write-conflict; 099 = empty-success; this = role-attribution honesty / which TYPE of work failed)
+- OPS-094 built roleToolScope as a PURE LEAF with a documented consume seam but LEFT IT UNWIRED (zero production consumers = dead code) because god-file + blast-radius were then blocked. OPS-097 WIRES IT LIVE: AgentTool.buildSubagentDenylist gains a 4th `role` param and folds mergeRoleScopeInto(ownDeny, role) in before the spawn-tool∪ceiling logic; _runStandaloneAgent passes role at the call site. The net gap this closes: when built-in agents are unavailable (SDK mode → agentDef=null) a read-only explore/verify subtask's write-tool strip vanishes — the role now re-derives [Edit/Write/NotebookEdit] independent of agentDef; also closes the `verify`-not-in-toolFilter live gap. Wrapped in try/catch (leaf-load failure degrades to ownDeny, never breaks spawning); 4th param omitted/gate-off → byte-equivalent to the pre-wire 3-arg call. arch:god is a READ-ONLY gate (--god-report returns 0) so editing the god-file does not turn it red
 
 **先读这些文件：**
 - `services/backend/src/services/orchestrator/dependencyWaveScheduler.js`
@@ -922,6 +958,10 @@ npm run test:restore-converge
 - docs/07_OPS_运维/[OPS-MAN-092] 跳过与失败在最终报告分列.md
 - docs/07_OPS_运维/[OPS-MAN-093] 确定性顺序链拆解.md
 - docs/07_OPS_运维/[OPS-MAN-094] 角色工具作用域.md
+- docs/07_OPS_运维/[OPS-MAN-097] 角色工具作用域接线.md
+- docs/07_OPS_运维/[OPS-MAN-098] 并行写冲突检测.md
+- docs/07_OPS_运维/[OPS-MAN-099] 空产出成功检测.md
+- docs/07_OPS_运维/[OPS-MAN-101] 角色归属诚实.md
 
 **跑这些验证命令（绿灯＝这块没坏）：**
 
@@ -930,6 +970,9 @@ npm run test:dep-wave-schedule
 npm run test:merge-skip-distinct
 npm run test:seq-chain-decompose
 npm run test:role-tool-scope
+npm run test:merge-file-conflict
+npm run test:merge-empty-success
+npm run test:merge-role-attribution
 ```
 
 ---
@@ -1122,6 +1165,464 @@ npm run test:restore-verify-complete
 
 ---
 
+### Restore Snapshot-Format Compatibility Gate (consumes the DEAD snapshot header format/formatVersion fields BEFORE decryption: makeSourceSnapshot stamps format='khy-source-snapshot'+formatVersion=1 but the restore/heal path (sourceHealService.decrypt, cli/handlers/publish.js) only checks crypto.algo and NEVER checks format/formatVersion -> grep 'khy-source-snapshot' has zero consumers in the restore codebase; a strange machine running OLD khy against a FUTURE formatVersion=2 snapshot decrypts blindly (cryptic auth error or silent mis-parse), and a non-khy dir enters decryption unchecked; this is the missing PRE-check answering 'does this khy even understand this snapshot format?')  `snapshot-format-compat`
+
+**什么时候来这里（症状触发词）：**
+- the restore/heal path validates crypto.algo but never the snapshot header format/formatVersion -> old restore code will blindly try to decrypt a newer-format snapshot
+- you need a pre-decryption format gate a fresh-machine agent can run offline: node scripts/restore-check-format.js <dir> --json
+- verdict tiers (conservative first): unverifiable (header missing / format non-string / formatVersion non-finite) -> alien (format!=='khy-source-snapshot') -> too-new (formatVersion>MAX, upgrade khy) -> too-old (formatVersion<MIN) -> supported (format known AND version within [MIN,MAX])
+- honesty boundary: ok===true ONLY when status===supported; unknown/alien/out-of-range never default to supported
+- this is a PRE-gate: it runs BEFORE completeness reconciliation (095), authorization (088), navigation (090) -- if the format is not understood, every later diagnostic is meaningless
+- understood range is the leaf constants MIN_FORMAT_VERSION/MAX_FORMAT_VERSION (both 1 today); bump per the leaf HOW-TO-EXTEND when the snapshot layout changes incompatibly
+- --json exits 2 on any non-supported status so a self-driving agent does NOT blindly decrypt
+- the OPS-MAN-105 format-compat doc is out of sync with its generator
+
+**先读这些文件：**
+- `scripts/lib/snapshotFormatCompat.js`
+- `scripts/restore-check-format.js`
+- `scripts/tests/snapshotFormatCompat.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-105] 还原快照格式兼容性对账.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-check-format
+```
+
+---
+
+### Restore Provenance Reconciler (consumes the DEAD snapshot header captureMode/includesUncommitted/dirty fields: makeSourceSnapshot stamps whether the git archive was a clean HEAD or a dirty working-tree capture, but the restore banner (services/backend/src/cli/handlers/publish.js) only prints gitCommit.slice(0,12) and NEVER reads captureMode/includesUncommitted -> a fresh-machine user reads 'commit 44a491fb07f3' and believes the restored source EQUALS that clean published commit, when it is actually that commit PLUS uncommitted deltas (dirty capture); this pure leaf + read-only CLI answers 'which exact git state does this restored source equal?' so nobody mistakes a dirty capture for the published commit)  `restore-provenance`
+
+**什么时候来这里（症状触发词）：**
+- the restore banner prints the commit hash but never reveals the snapshot was a dirty working-tree capture -> user wrongly treats restored source as the clean published commit
+- run: node scripts/restore-provenance.js <dir> --json (exit 2 on any non-clean status so a self-driving agent does not assert 'this IS the published commit')
+- verdict tiers (conservative first): unverifiable (header missing/non-object/array) -> no-provenance (no gitCommit) -> dirty (includesUncommitted===true OR dirty===true) -> clean (captureMode==='HEAD' OR includesUncommitted===false) -> indeterminate (commit present but no clean/dirty evidence)
+- honesty boundary: ok===true ONLY when status===clean; without POSITIVE clean evidence it NEVER claims 'this is that commit'; a dirty capture is a legitimate complete restore, it just does not equal a clean commit
+- captureMode='working-tree'+includesUncommitted=true is the SHIPPED reality today (0.1.190 snapshot) -> the real bundle correctly reports dirty, exit 2
+- the OPS-MAN-107 provenance doc is out of sync with its generator
+
+**先读这些文件：**
+- `scripts/lib/restoreProvenance.js`
+- `scripts/restore-provenance.js`
+- `scripts/tests/restoreProvenance.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-107] 还原来源可溯性对账.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-provenance
+```
+
+---
+
+### Restore Archive-Extract Compatibility Gate (consumes the DEAD snapshot header plaintextFormat/layout fields: makeSourceSnapshot stamps plaintextFormat='tar.gz'+layout='git-archive' describing the DECRYPTED inner-archive shape, but the restore/heal extractor (sourceHealService._extractTarGz, cli/handlers/publish.js) HARD-CODES `tar -xzf` and NEVER reads plaintextFormat/layout -> grep shows zero consumers in the restore codebase; a fresh machine running OLD khy against a FUTURE plaintextFormat='tar.zst'/'zip' snapshot blindly runs `tar -xzf` (gzip header mismatch -> cryptic extract error, or partial bytes mis-parsed into half a tree); this pure leaf + read-only CLI answers 'does this khy's extractor even understand the decrypted archive shape BEFORE running tar -xzf?')  `archive-extract-compat`
+
+**什么时候来这里（症状触发词）：**
+- the restore extractor hard-codes `tar -xzf` and never checks the snapshot's plaintextFormat/layout -> old khy will blindly try to gunzip a future tar.zst/zip archive
+- you need a PRE-extraction inner-archive gate a fresh-machine agent can run offline: node scripts/restore-check-archive.js <dir> --json
+- verdict tiers (conservative first): unverifiable (header missing/non-object/array, or plaintextFormat non-string) -> unsupported-format (plaintextFormat NOT in SUPPORTED_PLAINTEXT_FORMATS -> tar -xzf cannot handle, upgrade khy) -> unknown-layout (format extractable but layout present and NOT in SUPPORTED_LAYOUTS) -> supported (format supported AND layout absent-or-supported)
+- honesty boundary: ok===true ONLY when status===supported; layout ABSENT is a legitimate backward-compat case (older snapshots) and does NOT block, but layout PRESENT must be a recognized shape
+- ORTHOGONAL to siblings: 105 snapshotFormatCompat = OUTER envelope (format/formatVersion); 107 restoreProvenance = git origin (captureMode); 095 completeness = post-extraction file count; THIS 108 = INNER decrypted-archive shape (plaintextFormat/layout), sitting AFTER 105 (envelope understood) and BEFORE 095 (extraction complete)
+- supported set is the leaf constants SUPPORTED_PLAINTEXT_FORMATS ['tar.gz'] / SUPPORTED_LAYOUTS ['git-archive']; only add a value once the extractor TRULY supports it (per the leaf HOW-TO-EXTEND), never for a green light
+- --json exits 2 on any non-supported status so a self-driving agent does NOT blindly extract
+- the OPS-MAN-108 archive-compat doc is out of sync with its generator
+
+**先读这些文件：**
+- `scripts/lib/archiveExtractCompat.js`
+- `scripts/restore-check-archive.js`
+- `scripts/tests/archiveExtractCompat.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-108] 还原归档形制可提取性对账.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-check-archive
+```
+
+---
+
+### Restore Crypto-Suite Performability Gate (consumes the DEAD snapshot header crypto.kdf field, and turns a MISLEADING error honest: sourceSnapshotCrypto.encrypt stamps crypto.algo/kdf/scrypt but decrypt (sourceSnapshotCrypto.decrypt) ONLY validates crypto.algo and NEVER validates crypto.kdf -> grep 'kdf' has exactly one reference (the encrypt stamp), zero consumers; worse, decrypt reads scrypt params as `(c.scrypt && c.scrypt.N) || SCRYPT.N` (blind fallback to hard-coded scrypt), so a FUTURE kdf='argon2' snapshot on OLD khy silently mis-derives the key via scrypt, decipher.final() throws 'unable to authenticate data', and the caller MAPS THAT TO 'wrong secret' -> a fresh-machine user is told their passphrase is wrong when the truth is 'this khy cannot perform the argon2 KDF'; this pure leaf + read-only CLI is the missing PRE-decrypt gate answering 'can this khy actually perform the declared crypto suite (algo+kdf) and is the crypto material complete?')  `crypto-suite-compat`
+
+**什么时候来这里（症状触发词）：**
+- decrypt validates crypto.algo but never crypto.kdf -> a future argon2 snapshot mis-derives via scrypt and reports a FAKE 'wrong secret' on a fresh machine
+- you need a PRE-decrypt crypto-suite gate a fresh-machine agent can run offline: node scripts/restore-check-crypto.js <dir> --json
+- verdict tiers (conservative first): unverifiable (header/crypto missing/non-object/array, or algo non-string) -> unsupported-algo (algo NOT in SUPPORTED_ALGOS) -> unsupported-kdf (kdf present and NOT in SUPPORTED_KDFS -> the DEAD field: decrypt would blind-use scrypt and mislabel failure as 'wrong secret') -> incomplete-material (algo/kdf ok but salt/iv/authTag missing -> snapshot is malformed, NOT a wrong passphrase) -> supported
+- honesty boundary: ok===true ONLY when status===supported; kdf ABSENT is a legitimate backward-compat case (decrypt falls back to scrypt) but kdf PRESENT must be recognized
+- SECRET HYGIENE (red-line): the leaf/CLI NEVER read or return any key/passphrase/plaintext material; they only inspect algo/kdf strings and the PRESENCE (non-empty string) of salt/iv/authTag -- those values never leave the check, never hit disk, never enter output
+- ORTHOGONAL to siblings & ordered by the restore pipeline: envelope 105 -> THIS crypto-suite 110 -> real decrypt -> inner archive 108 -> extract -> completeness 095
+- supported set is the leaf constants SUPPORTED_ALGOS ['aes-256-gcm'] / SUPPORTED_KDFS ['scrypt']; only add a value once decrypt TRULY performs it (per the leaf HOW-TO-EXTEND), never for a green light
+- --json exits 2 on any non-supported status so a self-driving agent does NOT blindly decrypt and does NOT treat the failure as a wrong passphrase
+- the OPS-MAN-110 crypto-suite doc is out of sync with its generator
+
+**先读这些文件：**
+- `scripts/lib/cryptoSuiteCompat.js`
+- `scripts/restore-check-crypto.js`
+- `scripts/tests/cryptoSuiteCompat.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-110] 还原解密套件可执行性对账.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-check-crypto
+```
+
+---
+
+### Restore Field Effect Probe / Jacobian Lens (turns the STATIC dead-field hunt into a DYNAMIC regression guard: prior rounds wired each snapshot-header field to a restore-family gate -- format/formatVersion(105), captureMode/includesUncommitted/dirty/gitCommit(107), plaintextFormat/layout(108), crypto.algo/crypto.kdf(110) -- but whether a field TRULY drives a gate was only ever confirmed by hand-grep, which a 'read-but-discarded' fake consumer fools; this pure leaf + read-only CLI does finite-difference perturbation: perturb each contract field, run the gate panel, measure the change in (status,ok), UNIONed over a corpus of ISOLATING contexts; a field whose Jacobian is ~0 across all contexts = behaviorally DEAD regardless of whether it is syntactically read; inspired by Anthropic 'Verbalizable Representations Form a Global Workspace in Language Models' -- averaging over contexts is what separates 'happened to be used' from 'load-bearing')  `restore-effect-probe`
+
+**什么时候来这里（症状触发词）：**
+- you refactored the restore pipeline and want to PROVE no header-field consumer silently regressed: node scripts/restore-effect-probe.js <dir> --json (exit 2 iff any contract field went dead)
+- single-context probing is UNRELIABLE because restoreProvenance uses redundant OR signals (includesUncommitted===true || dirty===true; captureMode==='HEAD' || includesUncommitted===false) -> on the real header two dirty signals are both true so perturbing one leaves the verdict unchanged, MIS-flagging captureMode/includesUncommitted/dirty as dead
+- the fix is buildContextCorpus: real + clean-head (isolates captureMode) + clean-worktree (isolates includesUncommitted) + dirty-flag (isolates dirty); a field is load-bearing if it moves ANY gate in ANY context, dead if it moves NO gate in EVERY context
+- verdict tiers: unverifiable (no gate panel injected or empty context corpus -> never fabricate green) -> regression (a CONTRACT field is dead = a consumer was removed / never wired) -> ok (all contract fields load-bearing)
+- CONTRACT_FIELDS = the header fields each restore gate was wired to consume; a field appearing there MEANS 'a gate must consume it' so dead is a red light -- extend it (and add an isolating context) via the leaf HOW-TO-EXTEND when adding a new gate
+- non-contract fields (archive/sha256/fileCount/version/createdAt/notes) are reported as informational 'unmonitored' extras: they should be consumed ELSEWHERE (fileCount->095 completeness, sha256->transfer integrity, version->banner); an unmonitored field consumed NOWHERE is a fresh dead field to chase
+- SECRET HYGIENE (red-line): the probe NEVER reads/returns/perturbs any key/passphrase/plaintext material -- CONTRACT_FIELDS excludes crypto.salt/iv/authTag and extras never descends into crypto; output carries only field paths, effect labels, context names, gate names, never any header value
+- perturbations are DETERMINISTIC (delete + a fixed foreign value, never random/time); the leaf is pure, zero-IO, never mutates inputs (deep-clone), never throws
+- the OPS-MAN-113 effect-probe doc is out of sync with its generator
+
+**先读这些文件：**
+- `scripts/lib/restoreEffectProbe.js`
+- `scripts/restore-effect-probe.js`
+- `scripts/tests/restoreEffectProbe.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-effect-probe
+```
+
+---
+
+### Restore Field-Consumer Attribution Probe / Label Preservation (the orthogonal DUAL of the OPS-113 effect probe: OPS-113 is breadth-blind -- it only counts whether a snapshot-header field drives >=1 restore gate, so a refactor that MOVES crypto.algo's effect from crypto(110) onto provenance(107) keeps OPS-113 fully green while introducing real CROSS-TALK -- the git-provenance verdict now depends on the encryption algorithm = concern leakage, and an encryption field steering a non-crypto verdict is also a security smell; this pure leaf reads OPS-113's probeResult (fields[].wiredBy + fields[].hits[gate]) and checks each contract field drives EXACTLY its declared owning gate, matching the field's wiredBy OPS number against the gate-name number; inspired by Anthropic 'Verbalizable Representations Form a Global Workspace in Language Models' section 4.3.2 -- a broadcast head must pass BOTH gain (breadth, ~ OPS-113) AND label preservation (map the direction faithfully back to itself, not scrambled among other directions); this probe is that second, independent score)  `restore-field-attribution`
+
+**什么时候来这里（症状触发词）：**
+- you refactored the restore pipeline and want to PROVE no header-field consumer got mis-wired / cross-wired onto the wrong gate (OPS-113 alone cannot see this -- a field with >=1 reacting gate stays green even if it is the WRONG gate): node scripts/restore-field-attribution.js <dir> --json (exit 2 iff any contract field is not faithful)
+- attribution tiers per field: faithful (reacts to exactly its declared owner gate = label preserved) -> cross-talk (reacts to a NON-owner gate = concern leakage, the class OPS-113 is blind to) -> partial (multi-owner field 'OPS-105+108' missing one declared owner gate) -> dead (reacts to NO gate -- OPS-113's domain, reported here too, still not ok) -> unattributed (field has no wiredBy -> cannot judge, conservatively not ok)
+- top-level status: ok iff EVERY contract field is faithful; miswired iff any offender; unverifiable if the upstream effect probe produced no fields (no gate panel / empty context corpus) -- never fabricate green
+- the declared owner comes from OPS-113 CONTRACT_FIELDS wiredBy; to extend, add the field there (OPS-113 HOW-TO-EXTEND) and make sure the CLI gate-panel entry's NAME contains the matching number (e.g. 'newgate(XXX)') so attribution lines up; a field that SHOULD be consumed by multiple gates uses a multi-number wiredBy like 'OPS-105+108'
+- SECRET HYGIENE (red-line): the probe touches only field paths, gate names, and OPS numbers; probeResult already excludes header values (OPS-113 guarantee) so no salt/iv/authTag/gitCommit value can enter the attribution verdict
+- the OPS-MAN-114 attribution-probe doc is out of sync with its generator
+
+**先读这些文件：**
+- `scripts/lib/restoreFieldAttribution.js`
+- `scripts/restore-field-attribution.js`
+- `scripts/tests/restoreFieldAttribution.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-114] 还原字段归属探针（label preservation）.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-field-attribution
+```
+
+---
+
+### Restore Completeness Reconciliation -- RUNTIME wiring (OPS-095 diagnosed that the snapshot header fileCount is a dead field -- khy restore only PRINTS it, never reconciles it against what tar actually wrote to disk -- and built a DEV-only checker scripts/restore-verify-complete.js, but never wired it into the runtime restore command; so real fresh-machine users still saw green 源码已完整还原 while files were silently missing after a tar that exited 0 on a full disk / MAX_PATH / skipped entry; THIS layer is the missing wiring: a bundled runtime pure leaf reconciles header.fileCount vs _collectRelFiles(dest).length right after extraction and makes handleRestore's banner honest, so no separate command is needed = wiring up capability that existed but was never connected)  `restore-completeness-check`
+
+**什么时候来这里（症状触发词）：**
+- khy restore now self-reconciles: after tar extraction it counts on-disk files (sourceHealService._collectRelFiles) and compares to the snapshot header fileCount; complete keeps the 源码已完整还原 banner, incomplete DOWNGRADES to a ⚠️ warning (落地 A · 清单 B · 缺 C) + troubleshooting hint, over-extracted warns of leftovers
+- tiers (conservative-first): unverifiable (expected absent/non-positive OR actual absent/negative -> keep old banner, never over-claim) -> incomplete (actual < expected, the silent-loss false-green) -> over-extracted (actual > expected) -> complete (actual === expected, the ONLY status that keeps 完整还原); ok iff complete
+- reconciliation口径: expected = header.fileCount (git ls-tree -r via makeSourceSnapshot, same treeish git archive packs), actual = _collectRelFiles(dest).length (skips node_modules/.git/__pycache__/.pytest_cache) -> equal on a clean successful restore (OPS-095 LIVE-verified)
+- gate KHY_RESTORE_VERIFY_COMPLETENESS (default-on; env in {0,false,off,no} -> off = byte-identical old banner); DIAGNOSTIC OVERLAY ONLY -- reconciliation NEVER makes restore fail, worst case downgrades the success banner to a warning and still returns true
+- SECRET HYGIENE (red-line): the reconciliation touches only FILE COUNTS, never any key / crypto header value; upstream sha256 + tar-exit failures already throw before this point so no corrupt tier is duplicated here
+- the OPS-MAN-117 runtime-wiring doc is out of sync with the leaf/handler
+
+**先读这些文件：**
+- `services/backend/src/services/restoreCompletenessCheck.js`
+- `services/backend/src/cli/handlers/publish.js`
+- `services/backend/tests/services/restoreCompletenessCheck.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-117] 还原完整性对账·运行时接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-completeness-check
+```
+
+---
+
+### Restore PRE-DECRYPT Compatibility Preflight -- RUNTIME wiring (OPS-105 format-compat + OPS-110 crypto-suite-decryptability were built as DEV-only leaves scripts/lib/snapshotFormatCompat.js + scripts/lib/cryptoSuiteCompat.js and never wired into the runtime restore; runtime _restoreFromSnapshot's only pre-decrypt guard was header.crypto presence, then it blindly decrypt()s -- and decrypt() only accepts algo==='aes-256-gcm' and ALWAYS runs scryptSync ignoring crypto.kdf, so a future kdf:'argon2' or unknown algo snapshot on an old machine derives a WRONG key / throws low-level garbage, which publish.js's catch rewrites into the MISLEADING '请用 --secret <密钥>' = reporting a capability gap as a password error; THIS layer is the missing wiring: a bundled runtime pure leaf runs a preflight over the parsed header BEFORE decrypt and names the true cause = wiring up capability that existed but was never connected)  `restore-preflight-check`
+
+**什么时候来这里（症状触发词）：**
+- khy restore now preflights the snapshot header BEFORE decrypt: crypto-suite incompatibility (missing/unsupported algo, unsupported kdf, missing salt/iv/authTag) is severity BLOCK -> throws a precise '请先升级 khy' message replacing the misleading --secret one; format oddities (alien format, too-new/too-old formatVersion) are severity WARN -> printWarn then STILL proceeds
+- two-tier severity, zero false-block: block = provably-can't-decrypt (these conditions necessarily make runtime decrypt() fail today) -> strictly-better message, never blocks a snapshot that could actually restore; warn = might still decrypt (v2 layout change on same suite still decrypts) -> heads-up only, never false-block
+- tiers (conservative-first, crypto-suite before format): unverifiable (no header / array / crypto non-object / preflight threw -> pass through, decrypt is authority) -> incomplete-material(block, missing algo or salt/iv/authTag) -> unsupported-algo(block) -> unsupported-kdf(block) -> alien-format(warn) -> too-new/too-old-format(warn) -> supported(none, ok); ok iff supported
+- supported set aligns with the runtime crypto ground truth: default supportedAlgos:['aes-256-gcm'] supportedKdfs:['scrypt'] mirror sourceSnapshotCrypto.decrypt's real capability; the wiring passes the runtime ALGO constant explicitly (DRY, single-point sync if the algo ever changes)
+- gate KHY_RESTORE_PREFLIGHT (default-on; env in {0,false,off,no} -> off = byte-identical old behavior, straight into decrypt); PROTECTIVE OVERLAY -- block only preempts a decrypt that would fail-and-mislead TODAY, never blocks a restore that could succeed; warn never blocks
+- SECRET HYGIENE (red-line): the preflight reads only algo/kdf/format strings, formatVersion number, and the PRESENCE booleans of salt/iv/authTag -- NEVER their values (unit test asserts the verdict JSON contains no key values)
+- the OPS-MAN-119 runtime-wiring doc is out of sync with the leaf/handler
+
+**先读这些文件：**
+- `services/backend/src/services/restorePreflightCheck.js`
+- `services/backend/src/cli/handlers/publish.js`
+- `services/backend/tests/services/restorePreflightCheck.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-119] 还原解密前兼容性预检·运行时接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-preflight
+```
+
+---
+
+### Restore POST-DECRYPT PRE-EXTRACT inner-archive-shape check -- RUNTIME wiring (the snapshot header's plaintextFormat + layout stamps -- makeSourceSnapshot.js emits plaintextFormat:'tar.gz' at :244 and layout:'git-archive' at :239 -- were DEAD FIELDS in the runtime: the dev leaf scripts/lib/archiveExtractCompat.js could judge 'does this machine's tar -xzf understand this decrypted archive' but was consumed ONLY by dev CLI (restore-check-archive.js / restore-effect-probe.js), never wired into the runtime restore; runtime _restoreFromSnapshot decrypts + sha256-verifies then hardcodes `tar -xzf` via _extractTarGz WITHOUT ever reading plaintextFormat/layout, so a future tar.zst/zip snapshot on an old khy gets blindly tar -xzf'd into garbage / half a directory while the banner still says '目录布局原样'; THIS layer is the missing pre-extract consumer: a bundled runtime pure leaf checks the header AFTER decrypt+sha256, BEFORE creating the dest dir / unpacking = wiring up capability that existed but was never connected)  `restore-archive-extract-check`
+
+**什么时候来这里（症状触发词）：**
+- khy restore now checks the inner-archive shape AFTER decrypt + sha256 verify but BEFORE resolving/creating the target dir and running tar -xzf: unsupported plaintextFormat is severity BLOCK -> throws a precise '请升级 khy' cause replacing the misleading blind-tar failure, and does so before any filesystem mutation (no empty dir / no half-extracted garbage)
+- orthogonal to restore-preflight-check (OPS-119): preflight reads the OUTER envelope (format/formatVersion) + crypto suite BEFORE decrypt; THIS reads the INNER archive shape (plaintextFormat/layout) AFTER decrypt -- the field sets do not overlap
+- two-tier severity, conservative-first: unverifiable (no header / array / missing-or-non-string plaintextFormat / leaf threw -> pass through, tar is authority; layout absent is a valid old-snapshot back-compat case) -> unsupported-format(block, plaintextFormat not in ['tar.gz']) -> unknown-layout(warn, format ok but layout present-and-unfamiliar, still unpacks) -> supported(none, ok); ok iff supported
+- supported set mirrors the runtime unpacker's real capability: SUPPORTED_PLAINTEXT_FORMATS:['tar.gz'] SUPPORTED_LAYOUTS:['git-archive'] match what _extractTarGz's `tar -xzf` can actually do; extend ONLY when the unpacker truly supports a new shape (HOW-TO-EXTEND in the leaf)
+- gate KHY_RESTORE_ARCHIVE_CHECK (default-on; env in {0,false,off,no} -> off = byte-identical old behavior, straight into blind tar -xzf); PROTECTIVE OVERLAY -- block only preempts an unpack that would produce garbage TODAY, never blocks a snapshot that could actually extract; warn never blocks
+- SECRET HYGIENE (red-line): the check reads only the plaintextFormat/layout archive-shape strings -- NEVER any key material (unit test asserts the verdict JSON contains no secret values); the leaf is zero-IO and never throws
+
+**先读这些文件：**
+- `services/backend/src/services/restoreArchiveExtractCheck.js`
+- `services/backend/src/cli/handlers/publish.js`
+- `services/backend/tests/services/restoreArchiveExtractCheck.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-128] restore解密后归档形制解包前把关·接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-archive-check
+```
+
+---
+
+### Restore ON-SUCCESS provenance honesty -- RUNTIME banner wiring (the snapshot header's captureMode + includesUncommitted + dirty stamps -- makeSourceSnapshot.js records how the snapshot was captured: working-tree(default)/head, includesUncommitted, dirty, gitCommit -- were DEAD FIELDS in the runtime banner: the dev leaf scripts/lib/restoreProvenance.js (OPS-107 assessRestoreProvenance) could judge 'which git state does this restored source actually equal' but was consumed ONLY by dev CLI (restore-provenance.js / restore-effect-probe.js), never wired into the runtime restore; runtime handleRestore's success banner printed ONLY gitCommit ('共 N 个文件 · commit 44a491fb · 目录布局原样') and NEVER read captureMode/includesUncommitted/dirty -- grep finds zero runtime consumers = dead triplet; MOST TOXIC on a fresh machine: the shipped snapshot is BY DEFAULT a dirty capture (captureMode='working-tree' includesUncommitted=true), so the restored source = commit 44a491fb PLUS uncommitted deltas, NOT the clean commit -- yet the maintainer sees 'commit 44a491fb · 目录布局原样' and mis-trusts it as exactly that commit; THIS layer is the missing on-success banner consumer: a bundled runtime pure leaf assesses the header and appends one honest banner line saying which git state the source really equals)  `restore-provenance-check`
+
+**什么时候来这里（症状触发词）：**
+- khy restore now appends an honest provenance line to the SUCCESS banner (after the existing '共 N 个文件 · commit X · 目录布局原样' line): dirty capture -> printWarn '= 提交 X + 未提交增量，不等于干净提交 (git diff X shows them)'; clean -> printInfo '可证等于干净提交 X'; indeterminate/no-provenance -> printInfo conservative note; PURE DIAGNOSTIC OVERLAY -- never changes restore success/failure, never _markFailure
+- orthogonal to the three wired restore diagnostics (field sets do not overlap): restore-preflight-check(OPS-119, pre-decrypt: format/crypto), restore-archive-extract-check(OPS-128, post-decrypt pre-unpack: plaintextFormat/layout), restore-completeness-check(post-unpack: fileCount); THIS reads captureMode/includesUncommitted/dirty on the SUCCESS banner
+- conservative-first verdict chain (never claims clean without positive evidence): unverifiable(header non-object/array) -> no-provenance(no gitCommit) -> dirty(includesUncommitted===true OR dirty===true) -> clean(captureMode HEAD/head, OR includesUncommitted===false) -> indeterminate(has commit, not dirty, no positive clean evidence); ok===true ONLY when status==='clean'
+- case-mismatch note: makeSourceSnapshot writes captureMode:'head' (lowercase) for archive mode with includesUncommitted=false, so the clean branch catches it via includesUncommitted===false even if only 'HEAD' matched; this leaf accepts both cases for robustness
+- gate KHY_RESTORE_PROVENANCE (default-on; env in {0,false,off,no} -> off = byte-identical old banner, only commit printed); the leaf is zero-IO and never throws, the wiring is try/catch fail-soft (any error -> no line -> byte-equivalent old banner)
+- SECRET HYGIENE (red-line): the check reads only the provenance strings (captureMode/gitCommit/includesUncommitted/dirty) -- NEVER any key material; dirty is a VALID complete restore (content intact), the layer turns silent misleading into honest labeling, never blocks; leaf logic must stay consistent with the dev leaf scripts/lib/restoreProvenance.js (two implementations of one honesty standard)
+
+**先读这些文件：**
+- `services/backend/src/services/restoreProvenanceCheck.js`
+- `services/backend/src/cli/handlers/publish.js`
+- `services/backend/tests/services/restoreProvenanceCheck.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-130] 还原来源可溯性·接线运行时横幅.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-provenance-check
+```
+
+---
+
+### Restore POST-DECRYPT PRE-EXTRACT cross-OS path-portability pre-scan -- RUNTIME wiring (the snapshot is PATH-BLIND at restore: makeSourceSnapshot packs the source tree into one tar.gz whose entry names were minted on Linux, then pip/npm ship it to STRANGER machines AND OSes; runtime handleRestore decrypts + blindly `tar -xzf`s WITHOUT ever looking at whether the entry names can land on the target filesystem -- on Windows/macOS a real fraction of Linux-valid names SILENTLY fail or get rewritten: Windows reserved device names (CON/PRN/AUX/NUL/COM1-9/LPT1-9, case+ext insensitive) can't be created, illegal chars (< > : " | ? * and control 0x00-0x1F) fail extraction, trailing dot/space segments get silently stripped, paths over 259 chars (MAX_PATH) get skipped, and case-insensitive collisions (Foo.js vs foo.js) overwrite each other on NTFS/APFS default volumes -- so files land FEWER than the archive holds; the ONLY cross-OS signal today is the reactive post-hoc completeness hint ('可能路径过长(Windows MAX_PATH) / tar 跳过条目…') AFTER a count shortfall = a guess that knows neither WHICH paths nor WHY; THIS layer is the missing pre-extract consumer: enumerate the archive entry names with `tar -tzf` BEFORE `tar -xzf`, classify each into the five hazard buckets, and emit a PROACTIVE, name-naming, host-aware honest banner = wiring up a cross-OS restore-honesty pre-scan the runtime never had)  `restore-path-portability-check`
+
+**什么时候来这里（症状触发词）：**
+- khy restore now pre-scans the archive entry names AFTER decrypt+sha256 but BEFORE tar -xzf: it enumerates via `tar -tzf` (list-only, bounded 20s timeout, fail-soft -> null on missing tar/timeout/non-zero/malformed = byte-equivalent old behavior, NEVER hangs) then classifies each name; PURE DIAGNOSTIC OVERLAY -- never changes restore success/failure, never blocks unpack (over-length/reserved/collision are the TARGET SYSTEM's naming limits, not a broken archive: on Linux it restores intact)
+- five orthogonal cross-OS hazard buckets: reserved (a path segment's base name is a Windows reserved device name), illegalChar (segment has < > : " | ? * or a control char), trailingDotSpace (segment ends with '.' or ' '; '.'/'..' nav segments excluded), tooLong (full path > 259 = MAX_PATH), caseCollision (two DIFFERENT entry names equal when lowercased); ok===true iff all five buckets empty
+- HOST-AWARE banner severity (whether a hazard actually bites depends on WHICH machine you restore on): hostPlatform==='win32' -> all five are real extraction failures -> severity warn; 'darwin' -> caseCollision is a real overwrite on the default volume -> warn, other Windows-only hazards -> info cross-OS heads-up; linux/other -> lands fine locally but WOULD break on Windows/macOS -> info forward-looking heads-up, no hazards -> null (no line, byte-equivalent old banner); example names capped to 3 per kind
+- orthogonal to the wired restore diagnostics (this reads ENTRY NAMES, not header fields): restore-preflight-check(OPS-119, pre-decrypt: format/crypto -> can this machine open the ciphertext), restore-archive-extract-check(OPS-128, post-decrypt pre-unpack: plaintextFormat/layout -> does tar understand this archive), THIS(post-decrypt pre-unpack: entry names vs target FS naming rules -> can each name land), restore-completeness-check(post-unpack: fileCount -> did the right count land; THIS is its PROACTIVE pre-version)
+- gate KHY_RESTORE_PATH_PORTABILITY (default-on; env in {0,false,off,no} -> off = byte-identical old behavior, straight into tar -xzf with no enumeration overhead); host override KHY_RESTORE_PLATFORM_OVERRIDE lets a single machine exercise the win32/darwin branches for testing (default process.platform); the leaf is zero-IO and never throws, wiring is try/catch fail-soft
+- SECRET HYGIENE (red-line): the pre-scan reads only the decrypted archive's ENTRY-NAME strings -- NEVER any key material or file content (unit test asserts the verdict JSON contains no secret/key/token/cipher); enumeration is `tar -tzf` list-only, never extracts, never touches ciphertext
+
+**先读这些文件：**
+- `services/backend/src/services/restorePathPortabilityCheck.js`
+- `services/backend/src/cli/handlers/publish.js`
+- `services/backend/tests/services/restorePathPortabilityCheck.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-133] restore跨OS路径可移植性解包前把关·接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:restore-path-portability
+```
+
+---
+
+### First-response silent-window guard -- WIRING an interactive responsiveness capability the REPL never had (user /goal: '当我向Khy输入提示词时，khy要及时回应' -- there is a SILENT window between the user hitting enter and the first model chunk: in raw-mode TTY the dynamic spinner is render-suppressed (spinner.js:122 `if (isRaw && blockInRawMode) return`) so nothing spins/types, and the existing turnAckVoice ack only fires at FIRST-TOOL-DISPATCH which is AFTER the model has already produced chunks -- so if the first token is slow (model/network latency), the user stares at a frozen terminal with no way to tell whether khy is thinking or hung; THIS layer is the missing consumer: a DI-timer scheduler armed at request send that, if NO chunk arrives within KHY_FIRST_RESPONSE_ACK_MS (default 1200ms), emits a wait-aware line so the user knows khy received the prompt and is working -- first chunk cancels it, finally disarms it)  `first-response-ack-voice`
+
+**什么时候来这里（症状触发词）：**
+- khy now guards the submit->first-model-token silent window: after spinner.start('request') a DI-timer scheduler is armed; if no chunk arrives within KHY_FIRST_RESPONSE_ACK_MS (default 1200, clamp [200,60000]) it prints one wait-aware line ('收到，正在为你连接模型，请稍候…' rotating by turnIndex, + '（已等待约 Ns）' when elapsed>=1s); the FIRST chunk (any type) calls markChunk -> clearTimeout -> the line never appears on a fast response; finally calls disarm as a safety net so a stale timer can never fire after the turn ends
+- orthogonal to turnAckVoice (KHY_TURN_ACK): turnAckVoice fires at the FIRST-TOOL-DISPATCH (model already speaking, tool-heavy turns); firstResponseAckVoice fires BEFORE the first model chunk (model not yet speaking); the emit callback sets _turnAckEmitted=true so the two never double-voice in the same turn
+- PURE LEAF + DI-timer scheduler: setTimeout/clearTimeout/emit/now all injected via deps (fall back to globals) so the async timing is unit-testable with fake timers; the leaf is zero-real-IO, deterministic (rotation by turnIndex, no randomness), and NEVER throws (every method try/catch); computeFirstResponseAck/firstResponseAckDelayMs are pure functions
+- gate KHY_FIRST_RESPONSE_ACK (default-on; env in {0,false,off,no} -> off = arm() no-ops, no timer armed, byte-identical old silent behavior) + numeric child KHY_FIRST_RESPONSE_ACK_MS (parent KHY_FIRST_RESPONSE_ACK); wiring in replSession is 4 thin lines (holder decl outside try, create+arm at spinner.start, markChunk at onChunk top, disarm in finally) all try/catch fail-soft
+- NEVER hangs / NEVER false-fires: pure timer + fail-soft, first chunk cancels immediately, emit callback errors are swallowed, and it fires at most once per turn; touches no key material and no user input content (only fixed rotating short lines)
+
+**先读这些文件：**
+- `services/backend/src/cli/firstResponseAckVoice.js`
+- `services/backend/src/cli/replSession.js`
+- `services/backend/tests/cli/firstResponseAckVoice.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-136] 首响应静默窗口守护·提交到首token及时回应·接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:first-response-ack
+```
+
+---
+
+### readFile PRE-READ binary guard -- WIRING an existing capability (services/backend/src/services/formatInspect/fileFormatDetector.js's detectFile(absPath).isBinary was consumed by the WRITE-side tools replaceAtLocation.js:79 and inspectDocument.js:161 but was NEVER wired into the READ tool readFile.js, which only had a size guard and no binary detection; so pointing khy at a project dir containing a binary .tar.gz made readFile inject the raw binary bytes as text -- mojibake laced with NUL bytes, success:true -- into the model API request, poisoning it and hanging the request for over an hour (observed: D:\moonbit-linux\moonbit-linux-x86_64.tar.gz stuck 1h2m34s '等待响应…'); THIS is the missing wiring: run detectFile BEFORE reading and refuse binary files fast with an informative redirect instead of poisoning the context)  `readfile-binary-guard`
+
+**什么时候来这里（症状触发词）：**
+- readFile now runs detectFile(filePath) BEFORE decoding text: if the file is detected binary (magic/heuristic) it returns success:false with an informative Chinese refusal naming the type+size and redirecting to analyzeBinary / UpstreamStudy / 校验解压 -- no binary bytes ever reach the model context
+- conservative isBinaryForRead(fmt): returns true ONLY when fmt.isBinary === strict true; anything ambiguous (malformed/missing/text) reads as before -- never false-refuse a text file
+- fail-soft: the whole guard is wrapped in try/catch; any detector error falls back to the historical text-read behavior (never breaks a read that used to work)
+- gate KHY_READFILE_BINARY_GUARD (default-on; env in {0,false,off,no} -> off = byte-identical old behavior, binary bytes decoded as text again); the refusal message names this escape hatch
+- detectFile reads only head/tail (16KB/4KB) so the guard is fast (~1-6ms) -- no full-file read of the binary
+- _humanBytes handles the Number(null)===0 trap explicitly: null/''/non-finite/negative size -> '未知大小', never a misleading '0 B'
+
+**先读这些文件：**
+- `services/backend/src/tools/readBinaryGuard.js`
+- `services/backend/src/tools/readFile.js`
+- `services/backend/tests/tools/readBinaryGuard.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-121] readFile二进制文件读前防护·接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:readfile-binary-guard
+```
+
+---
+
+### readFile FORMAT-AWARE routing to existing extractors -- WIRING existing capabilities (OPS-121 made readFile REFUSE binary files to stop the 1h hang, but the user's real requirement is that khy should READ every format, not refuse it; the repo already had bounded extractors for PDF (documentSnippetService.extractDocumentSnippetAsync: pdftotext->pypdf->strings), image OCR (ocrSnippetService.extractImageOcrSnippetAsync: docHelper.py tesseract), archives (archiveInspectService.inspectArchive list-only-no-extract + archiveManifestPolicy.buildArchiveManifest for listing+text-peek), and docx (docHelper.py docx_to_text) -- all consumed only by the multimodal/upload/UpstreamStudy paths, NEVER by the read tool; THIS layer wires them: on binary detect, readFile first routes to the matching extractor and returns readable content, falling back to the OPS-121 refusal only for formats with no extractor (ELF/PE/xlsx/pptx/unknown) or when extraction fails; because every extractor is self-bounded (timeout+size cap) the routing can never hang)  `readfile-format-route`
+
+**什么时候来这里（症状触发词）：**
+- readFile now READS binary formats instead of refusing them: image->OCR, pdf->text, docx->text, archive(zip/tar/tar.gz)->listing+text-peek; each returns success:true with a provenance header (【图片 OCR · tesseract】/【PDF 文本 · pdftotext · 取x/共y页】/【DOCX 文本】/[Archive Contents]) and no binary bytes reach the model context
+- three-tier graceful fallback: format routing (gate KHY_READFILE_FORMAT_ROUTE, default-on) -> OPS-121 informational refusal (gate KHY_READFILE_BINARY_GUARD, default-on) -> the oldest decode-inject behavior (both gates off)
+- archive semantics = list entries + peek text content: inspectArchive lists WITHOUT extracting to disk (no zip-slip, bounded) and natively peeks text files (selectPeekEntries+peekMaxChars); tar.gz is detected by extension (.tar.gz/.tgz) since gzip magic isn't in the detector table
+- docx extraction spawns python3 docHelper.py docx_to_text <in> <tmp.txt>, reads back the temp file, and DELETES it afterward (no on-disk residue); bounded by KHY_READFILE_DOCX_TIMEOUT_MS (default 8000)
+- fail-soft: routeFormatRead is wrapped in try/catch and NEVER throws; any extractor missing-dep (no tesseract/pdftotext/python) / timeout / failure -> {handled:false} -> falls to the OPS-121 refusal; a read that used to work never breaks, and it can never hang (extractors are all bounded)
+- DI-testable: the real extractor calls are injected via deps (default lazy-require the real services), so the pure-leaf unit test covers image/pdf/docx/archive success + fall-through + gate-off without spawning python/pdftotext
+
+**先读这些文件：**
+- `services/backend/src/tools/readFileFormatRouter.js`
+- `services/backend/src/tools/readFile.js`
+- `services/backend/tests/tools/readFileFormatRouter.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-123] readFile按格式路由到提取器·接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:readfile-format-route
+```
+
+---
+
+### readFile special-file (FIFO/socket/char-or-block-device) pre-read guard -- WIRING a type-based block against permanent hangs (OPS-121/OPS-123 covered binary content and format routing, but non-regular files still slipped through EVERY guard: a FIFO/socket/device has size:0 and is not a binary format, so it passes the size check and is not caught by the binary guard; worse, detectFile() reads magic bytes and readTextFileSmart opens+reads it, and reading the first byte of a FIFO with no writer BLOCKS FOREVER -- detectFile itself hangs; reproduced: mkfifo then readFile.execute did not return after a 6s timeout (EXIT=124); wired: same FIFO returns in 4ms with success:false; inputValidators.validateNotDevicePath is only a path-exact denylist (/dev/zero,/dev/stdin...) and cannot catch a FIFO/socket/self-made device node at an arbitrary path -- THIS layer blocks by fs.statSync TYPE predicate, which returns metadata instantly and never blocks on a FIFO/device (measured 0ms), so the check is safe BEFORE any blocking open/read)  `readfile-special-guard`
+
+**什么时候来这里（症状触发词）：**
+- readFile refuses non-regular files that would hang the process: FIFO (named pipe), UNIX-domain socket, character device, block device -> fast success:false instead of an infinite block in detectFile()/readTextFileSmart
+- the guard runs AFTER the isDirectory() special-case and BEFORE detectFile / the binary guard / readTextFileSmart, because those all block on a FIFO; it consumes the stat readFile already computed (zero extra IO) since statSync does not block on a FIFO/device
+- classifySpecialFile(stat) only matches an explicit FIFO/socket/char-device/block-device; regular files, directories, missing/non-object stat, or non-function/throwing predicates -> null (pass through), never misfiring on a regular file
+- gate KHY_READFILE_SPECIAL_GUARD (default-on; env in {0,false,off,no} normalized -> off); off -> byte-equivalent historical behavior (special files again fall through to detectFile/decode and hang), guard fully bypassed
+- fail-soft: the pure leaf is zero-IO and never throws; any error -> readFile's try/catch skips it and falls back to the historical read path
+- distinct hang vector from OPS-121 (binary content) and OPS-123 (format routing): those key off content/format, this keys off file TYPE; together they close the 'readFile hangs on a wrong/unsupported target' class
+
+**先读这些文件：**
+- `services/backend/src/tools/specialFileReadGuard.js`
+- `services/backend/src/tools/readFile.js`
+- `services/backend/tests/tools/specialFileReadGuard.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-125] readFile特殊文件读前防护·接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:readfile-special-guard
+```
+
+---
+
+### readFile pseudo-filesystem (/proc·/sys) bounded-timeout read -- WIRING a location-based no-hang guard, the 4th orthogonal reading-hang vector (OPS-121 binary-content, OPS-123 format-routing, OPS-125 file-type FIFO/socket/device; THIS keys off file LOCATION). Linux /proc·/sys entries are REGULAR files (stat.isFile()===true), size:0, content generated-on-read; some (/proc/kmsg, certain /sys poll attrs) BLOCK FOREVER on the first byte. They slip EVERY prior guard: regular file -> passes OPS-125 type predicates (isFIFO/isSocket/... all false); size:0 -> passes the oversize check (0>maxBytes false); mostly non-binary -> detectFile() reads magic bytes and HANGS right there. Measured: /proc/cpuinfo is a size:0 regular file with all four special predicates false. Per the OPS-123 lesson (route to a bounded reader, don't blanket-refuse): most /proc·/sys files are FINITE (cpuinfo/uptime/self-status read instantly), only a few block -- so this layer does a BOUNDED read, not a refuse. Key architecture point (OPS-125 blood lesson extended): a SYNC blocking read cannot be timed out in-process (readTextFileSmart locks the event loop so Promise.race/setTimeout never fire); the ONLY sync-safe fix is to move the blocking read into a CHILD process (head -c <maxBytes> <path>) that spawnSync's timeout option can KILL. Finite pseudo-file -> head exits 0 -> content returned; blocking pseudo-file -> head killed at timeout -> bounded return, never an infinite hang. LIVE-verified: real /proc/cpuinfo via readFile.execute -> success:true format=pseudo-fs-proc 33ms; a real no-writer FIFO via real spawnSync timeout=1500 -> killed at 1502ms timedOut:true (not a hang)  `readfile-pseudo-guard`
+
+**什么时候来这里（症状触发词）：**
+- readFile reads a Linux /proc·/sys pseudo-file without hanging: finite ones (cpuinfo/uptime/self-status) return bounded content via a child `head -c N` read; blocking ones (/proc/kmsg) get the child killed at the timeout and return an informational refusal (timedOut:true) instead of hanging forever
+- the guard runs AFTER the OPS-125 special-file guard and BEFORE detectFile / the binary guard, because detectFile reads magic bytes and hangs on a blocking pseudo-file; it consumes the stat readFile already computed (zero extra IO)
+- shouldBoundedRead({absPath,stat,env}) returns a kind ('proc'|'sys') ONLY when ALL hold: gate on + platform linux + stat.isFile() + stat.size===0 + path under /proc·/sys (isPseudoFsPath precisely matches /proc,/proc/...,/sys,/sys/... and rejects /home/x/proc/y and prefix traps like /procession); otherwise null -> historical path, zero misfire on regular files
+- a SYNC blocking read cannot be timed out in-process (event loop is locked); the fix moves the read into a child `head -c <maxBytes> <path>` killed by spawnSync's timeout -- readPseudoFileBounded returns {handled:true,result:success} on exit 0, {handled:true,result:timedOut} on ETIMEDOUT/signal, {handled:false} on ENOENT/status!=0/throw (fall back)
+- gate KHY_READFILE_PSEUDO_GUARD (default-on; env in {0,false,off,no} normalized -> off); off -> byte-equivalent historical behavior (blocking pseudo-files again fall through to detectFile/decode and hang), guard fully bypassed
+- fail-soft: the bounded-read leaf never throws; any error -> readFile's try/catch skips it and falls back to the historical read path
+- 4th orthogonal hang vector completing the family: OPS-121 binary-content, OPS-123 format, OPS-125 file-type, THIS file-location; together they close the 'readFile hangs on a wrong/unsupported target' class
+
+**先读这些文件：**
+- `services/backend/src/tools/pseudoFileReadGuard.js`
+- `services/backend/src/tools/readFile.js`
+- `services/backend/tests/tools/pseudoFileReadGuard.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-129] readFile伪文件系统有界超时读·接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:readfile-pseudo-guard
+```
+
+---
+
+### Shared pre-read hang guard for secondary file-reading tools (inspectDocument/replaceAtLocation) -- WIRING the anti-hang read-guard family onto the OTHER model-facing tools that touch bytes. OPS-121/123/125/129 hardened readFile.js and OPS-146 brought FileReadTool to parity, but inspectDocument.js (aliases read_format/inspect_format) and replaceAtLocation.js (replace_at) ALSO read files and had ZERO anti-hang guards: both call detectFile(absPath) right after existsSync (detectFile reads magic bytes -> HANGS FOREVER on a FIFO/blocking-pseudo), and both then readFileSync(...,'utf-8') which blocks too. A single composed pure leaf classifyPreReadHang({absPath,stat,env}) unifies the three infinite-hang vectors (Windows reserved device name path-check + FIFO/socket/device stat-type-check + Linux /proc·/sys blocking-pseudo detect) so every 'refuse-only' read tool closes the whole class with one call before touching bytes. LIVE-verified: FIFO/proc through inspectDocument.execute + replaceAtLocation.execute return in 0-3ms with success:false (previously infinite hang)  `file-preread-hang-guard`
+
+**什么时候来这里（症状触发词）：**
+- any secondary file-reading tool that only needs to REFUSE a hang target (not read its content) calls classifyPreReadHang({absPath,stat,env}) AFTER existsSync and BEFORE detectFile/readFileSync -> null (safe, proceed) or {blocked:true,kind,error} (return success:false, error, blockedRead:kind)
+- composes three orthogonal infinite-hang vectors: win-device (path-only, statSync-free), special FIFO/socket/char-or-block-device (stat type predicate), blocking pseudo /proc·/sys (detect-and-refuse here, since the caller only needs refusal; readFile.js keeps its own bounded-read path)
+- each sub-vector honors its own family gate (KHY_READFILE_SPECIAL_GUARD / KHY_READFILE_PSEUDO_GUARD / the win-device gate); a gate off -> that vector returns null (byte-equivalent historical behavior for that tool)
+- readFile.js and FileReadTool do NOT use this composer: they have finer read paths (pseudo bounded-read returns content, binary format-routing) and keep their inline guards; this composer serves the refuse-only tools inspectDocument/replaceAtLocation
+- pure + zero-side-effect (win=path, special=already-computed stat, pseudo=path+stat predicate) and NEVER throws; each caller wraps it in try/catch and falls back to historical behavior on any error
+- HOW-TO-EXTEND: add a new read-hang vector as another try block honoring its family gate; existing callers need no change -- that is the value of the central pre-read check
+
+**先读这些文件：**
+- `services/backend/src/tools/filePreReadHangGuard.js`
+- `services/backend/src/tools/inspectDocument.js`
+- `services/backend/src/tools/replaceAtLocation.js`
+- `services/backend/src/tools/editFile.js`
+- `services/backend/src/tools/exploreTool.js`
+- `services/backend/tests/tools/filePreReadHangGuard.test.js`
+- `services/backend/src/tools/unpackTool.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-147] 次级读取工具统一读前防卡死前检.md
+- docs/07_OPS_运维/[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/tools/filePreReadHangGuard.test.js
+```
+
+---
+
 ### Multi-Model-Type Provider Config Reconciler (the four user-facing model TYPES each resolve a provider through DISCONNECTED env namespaces: text via apiKeyPool/providerPresets/gateway, video via KHY_VIDEO_GEN_* outside the registry, vector via EMBED_URL/ollama/gateway embeddings, role via subAgentModelSelect reusing the text pool; the capability taxonomy names these buckets but NOTHING reconciles per-type whether a user supplied a working API and whether it is a relay(中转站)/direct(直连)/local endpoint; this pure leaf + read-only CLI answers "which types are ready and how is each wired" for a fresh-machine user configuring different APIs per type)  `model-type-provider-plan`
 
 **什么时候来这里（症状触发词）：**
@@ -1149,8 +1650,1285 @@ npm run test:model-type-providers
 
 ---
 
+### 卡住任务的强制结束会话逃生舱(REPL busy 分支 Ctrl+C/Esc 三次升级结束会话)。事件循环仍活(转圈动画在转=setInterval 在跑=JS 处理器仍执行)但优雅取消没落地时,busy 分支的 Ctrl+C(replSession SIGINT 处理)与 Esc(busy 输入分支)原本恒做优雅取消+return、永不升级,导致 wedged 回合按几次都杀不掉。此纯叶把「同窗口内累计第 3 次 busy 中断→强制结束会话」的判定逻辑抽出(零 IO、绝不抛),replSession 在优雅取消前先问它是否该 force-exit(exit 130),前两次先走优雅取消打断卡住的任务,第 3 次才强制结束会话;无论底层 adapter 是否兑现 abort 信号,只要事件循环还活着就能杀掉卡住的回合  `busy-interrupt-escalation`
+
+**什么时候来这里（症状触发词）：**
+- khy 执行到一半卡住、转圈还在转,但 Ctrl+C/Esc 都终止不了当前回合时,这是让累计第 3 次中断升级为强制结束会话的逃生舱(用户原话「3 次,Ctrl+C 结束会话」)
+- 门 KHY_BUSY_FORCE_EXIT(default-on,CANON falsy ['0','false','off','no'] 关闭→逐字节回退到原优雅取消行为)
+- 阈值 KHY_BUSY_FORCE_EXIT_PRESSES 默认 3(clamp [2,10]),时间窗 KHY_BUSY_FORCE_EXIT_WINDOW_MS 默认 3000ms(clamp [500,30000]);窗口外的按键会重置计数,前两次先走优雅取消
+- 只在 busy 分支生效:若前几次优雅取消中任意一次成功→_busy 转 false→下一次按键走非 busy 路径,不会误触发
+- force-exit 前尽力保存会话(saveConversation)+历史(saveHistory)、打印恢复提示,再 process.exit(130)(标准 SIGINT 退出码)
+- 纯叶 nextBusyInterruptState/busyForceExitEnabled/resolveThreshold/resolveWindowMs 对敌意 env 绝不抛;replSession 消费点在 SIGINT busy 分支与 Esc busy 分支的 _maybeForceExitOnBusyInterrupt
+
+**先读这些文件：**
+- `services/backend/src/cli/repl/busyInterruptEscalation.js`
+- `services/backend/src/cli/replSession.js`
+- `services/backend/tests/services/cli/repl/busyInterruptEscalation.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-102] 卡住任务的强制终止逃生舱.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:busy-interrupt-escalation
+```
+
+---
+
+### 把 claude/codex/opencode 做成装进 khy 数据家(~/.khy/tools)、开箱即用且可更新的便携 CLI(纯叶解析 package.json bin 字段→用当前 node 直接跑 JS 入口,绕开 Windows .cmd/.ps1 shim 与 PATH 依赖=根治 spawn ENOENT)。claude(@anthropic-ai/claude-code)与 codex(@openai/codex)npm 包发布的是带 node shebang 的 JS 入口,直接 spawn 裸名依赖系统 PATH→用户没全局装→恒 ENOENT。本子系统读已安装包 package.json 的 bin→定位真实 JS 入口→返回 {command:process.execPath,argsPrefix:[entryAbs]},跨平台一致不碰 PATH/.cmd;原生二进制入口(shebang 嗅探)回退直接执行。opencode 保留其既有专用解析器 opencodeBinResolver,泛化解析器对它返回 null;并为 opencode 补数据家候选让 khy tools install opencode 也能被解析。khy claude/codex 启动前若不可用→交互确认「是否现在安装便携版?[Y/n]」→点头即装、装完 detect(true) 复检直接继续本次启动  `portable-cli`
+
+**什么时候来这里（症状触发词）：**
+- 用户报告 khy claude/codex/opencode 报「未检测到 xxx 命令」或 spawn ENOENT(尤其 Windows),因为这三个 CLI 只被 spawn 裸命令、完全依赖系统 PATH,用户机器上没全局装
+- 要给这三个工具做开箱即用/可更新的便携安装(khy tools list|install <tool>|update <tool>|path <tool>),便携根默认 ~/.khy/tools(KHY_TOOLS_DIR 覆盖)
+- 门 KHY_PORTABLE_CLI(解析器,default-on)/KHY_PORTABLE_CLI_INSTALL(安装器)/KHY_PORTABLE_CLI_AUTOINSTALL(交互自动安装桥)/KHY_OPENCODE_BIN_DISCOVERY(opencode 专用解析器,pre-existing);CANON falsy ['0','false','off','no'] 关闭→逐字节回退到原裸命令行为
+- 覆盖 KHY_<TOOL>_BIN(如 KHY_CODEX_BIN)可直接指定入口,优先于便携解析
+- 纯叶 portableCliRegistry(SSOT,_TOOLS 冻结,_NATIVE_RESOLVER={'opencode'})/portableCliResolver(resolveLaunchSpec/isInstalled/packageDir/resolveSpawn,除 fs 只读探测外无副作用绝不抛)/portableAdapterSpawn(forTool(key)→{portableSpawn,portableInstalled} 极薄接线使 codex/claude god-file 接线仅数行);变更叶 portableCliInstaller(npm install <pkg>@latest --prefix,参数数组防注入,绝不写 key);交互桥 _portableAutoInstall(仅 TTY+有 rl 时提示)
+- god-file 接线点:codexAdapter(2492)/claudeAdapter(2448) 的 spawn else 分支与 detect/getStatus、ide.js 可用性门(:60);均 additive、门关逐字节回退
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/adapters/portableCliRegistry.js`
+- `services/backend/src/services/gateway/adapters/portableCliResolver.js`
+- `services/backend/src/services/gateway/adapters/portableCliInstaller.js`
+- `services/backend/src/services/gateway/adapters/portableAdapterSpawn.js`
+- `services/backend/src/services/gateway/adapters/opencodeBinResolver.js`
+- `services/backend/src/cli/handlers/tools.js`
+- `services/backend/src/cli/handlers/_portableAutoInstall.js`
+- `services/backend/src/cli/handlers/ide.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-100] 便携 CLI 子系统.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:portable-cli
+```
+
+---
+
+### 写记忆/召回记忆时明确告知用户(记忆操作可见化纯叶)。khy 早已自动写记忆(_maybeAutoSaveMemory)与自动召回记忆(memory engine surface + [RELEVANT_MEMORY] 注入),但两条路径都静默执行——用户看不到「刚记住了什么」或「这轮召回了哪些记忆」。本子系统抽纯叶 memoryOpsNotice.js 把这两个已有动作渲染成用户可见的状态提示,经既有 onStatus 状态通道推出:写入成功→🧠 已写入<类型>记忆(已落盘/本会话):<name>,召回命名记忆→🧠 召回 N 条相关记忆:a、b、c 等 N 条。零 IO、绝不抛、门控 default-on。直接回应 /goal 需求「写记忆和回忆时明确告知用户」  `memory-ops-notice`
+
+**什么时候来这里（症状触发词）：**
+- 用户报告 khy 自动写了记忆或召回了记忆却没有任何可见提示,想让「主动写/召回记忆」这件事对用户透明
+- 要调整记忆通知的文案/类型标签(user→身份/feedback→反馈/project→项目/reference→参考)或展示条数上限(_RECALL_NAME_CAP=3)
+- 门 KHY_MEMORY_NOTICE(default-on);CANON falsy ['0','false','off','no'] (大小写/空白归一)关闭→逐字节回退到原静默行为。此门不进 flagRegistry(sibling 门各自读 env)
+- 写入通知只对带完整元信息的富描述符({kind:'memory',success:true,name,type,...})渲染;指令类自动保存返回裸布尔→formatWriteNotice 得 ''=静默,避免噪声
+- 召回通知只告知命名可核验的召回(_memSurfaced 集合);[RELEVANT_MEMORY] 注入块读取但不追加名字→宁可少报绝不伪造记忆名
+
+**先读这些文件：**
+- `services/backend/src/services/memoryOpsNotice.js`
+- `services/backend/src/cli/ai.js`
+- `services/backend/src/cli/aiChatCore.js`
+- `services/backend/tests/services/memoryOpsNotice.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-103] 写记忆·召回记忆明确告知用户.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:memory-notice
+```
+
+---
+
+### Text-only-model Image OCR Fallback + Honest Confidence Caveat (when the running model is text-only/non-multimodal and NO vision model is reachable, khy must strip the raw image and inject locally-extracted OCR text as the answer basis; this area also closes the DEAD-FIELD gap where tesseract's per-word confidence/needsAiFallback was computed but dropped at every JS layer, so low-confidence OCR was injected as authoritative '请据此作答' with no warning — the sibling RecognizeImage tool path already honored needsAiFallback; the gateway did not)  `ocr-fallback-confidence`
+
+**什么时候来这里（症状触发词）：**
+- a text-only / non-multimodal model receives an image and NO vision model is available: khy must fall to local OCR (docHelper 'ocr' -> tesseract chi_sim+eng), strip the raw image, and inject the extracted text so the text model can answer
+- OCR text is being injected but the model over-trusts mis-recognized words: the low-confidence caveat (KHY_OCR_LOW_CONFIDENCE_CAVEAT, default-on) appends an honest '置信度较低' note ONLY on a POSITIVE low-confidence signal (needsAiFallback===true OR confidence in (0,60)); unknown/0 confidence (CLI path with no tsv) must NOT warn — byte-revert
+- the CLI OCR fallback path (pytesseract/PIL missing) reports confidence: single 'tesseract img outbase -l lang txt tsv' pass yields byte-identical text AND per-word tsv; _mean_tsv_confidence averages strictly-positive conf, None when unusable (never fabricates a score)
+- honesty boundary: caveat is a decoration that can be gated off; it never changes success/failure attribution; malformed OCR details never throw and never warn
+- dependency injection contract of aiGatewayGenerateMethod.js: setAiGatewayGenerateMethodDeps 已改为分组注入 (validation/failover/languageRecovery/ocrRescue/diagnostics) + fail-fast 校验——合并后缺失必选项在注入期点名抛错而非在 generate() 路径内静默崩坏；仅 diagnostics 组的 _advDiag/_modelSwitch/_traceAudit 可选（方法体内 if 守卫、可合法为 null）；旧扁平形态（测试桩逐项增量覆盖）仍兼容
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrConfidenceCaveat.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/gateway/aiGateway.js`
+- `services/backend/src/services/ocrSnippetService.js`
+- `services/backend/src/services/docHelper.py`
+- `services/backend/tests/gateway/ocrConfidenceCaveat.test.js`
+- `services/backend/tests/gateway/imageOcrFallbackWiring.test.js`
+- `services/backend/tests/gateway/imageOcrFallbackRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-confidence-caveat
+node --test services/backend/tests/gateway/imageOcrFallbackRealImage.test.js
+python3 -m unittest tests.unit.test_dochelper_ocr_confidence
+```
+
+---
+
+### Text-only-model Image OCR Fallback — Honest COVERAGE Caveat (orthogonal to ocr-fallback-confidence: confidence is about ACCURACY of the recognized words; coverage is about COMPLETENESS — whether the injected OCR text actually covers ALL input images; closes the MISSING-DIMENSION gap where extractImageOcrDetails does images.slice(0,maxImages) and silently drops images beyond the cap, and where some attempted images produce no text — so a text-only model is told '请据此作答' as if it saw everything when N-3 images and unreadable images vanished with zero trace: the textbook 'silent truncation reads as covered everything' anti-pattern)  `ocr-fallback-coverage`
+
+**什么时候来这里（症状触发词）：**
+- a text-only model got OCR text for SOME images but not all: KHY_OCR_COVERAGE_NOTICE (default-on) appends an honest note when there is a real coverage gap — omitted = images beyond maxImages(3) that were never OCR'd, and/or unreadable = attempted images that produced no text; the note tells the model NOT to assume it saw every image
+- the caveat fires ONLY on a real gap (omitted>0 OR unreadable>0); a clean single image / full coverage must NOT warn (byte-revert). unreadable counts only attempted-but-no-text (attempted - withText); the all-unreadable case (withText===0) is handled separately by visionOcrFallback.buildVisionUnreadableNote, so this area does NOT overlap it
+- computed at the three gateway OCR injection points (aiGatewayGenerateMethod.js) from totalImages=options.images.length and ocrTextCount=extracted-with-text count and the maxImages:3 literal — no change to extractImageOcrDetails; the pure leaf ocrCoverageNotice.computeCoverage does the arithmetic (fail-safe zeros on malformed) and buildCoverageNotice renders the note
+- honesty boundary: coverage note is a decoration that can be gated off; it never changes success/failure attribution, never changes the strip-image invariant; malformed input never throws and returns null
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrCoverageNotice.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/gateway/aiGateway.js`
+- `services/backend/tests/gateway/ocrCoverageNotice.test.js`
+- `services/backend/tests/gateway/imageOcrCoverageWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-coverage-notice
+node --check services/backend/src/services/gateway/ocrCoverageNotice.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — Honest TRUNCATION Caveat (third orthogonal honesty axis: confidence=ACCURACY of recognized words; coverage=COMPLETENESS across images; truncation=COMPLETENESS WITHIN a single image — whether a dense image's OCR full text was cut at maxChars(1200) with only a weak in-band English '...[truncated]' sentinel; closes the DEAD-FIELD gap where ocrSnippetService's _truncate silently clipped the tail and the truncated boolean never left the service, so a text-only model is told '请据此作答' on a partial text believing it complete)  `ocr-fallback-truncation`
+
+**什么时候来这里（症状触发词）：**
+- a text-only model got OCR text for an image but that text was clipped at maxChars: KHY_OCR_TRUNCATION_NOTICE (default-on) appends an honest note when any detail has truncated===true, telling the model the tail is missing and not to treat 'not mentioned' as 'not present'
+- the caveat fires ONLY when countTruncated(details)>=1; no truncation must NOT warn (byte-revert). the signal is produced by ocrSnippetService._truncateInfo (byte-identical text to _truncate plus a truncated boolean) exposed through extractImageOcrDetails' detail.truncated
+- computed at the three gateway OCR injection points (aiGatewayGenerateMethod.js) via _appendOcrTruncationNotice(prompt, ocrDetails) placed immediately after the coverage notice; the pure leaf ocrTruncationNotice.countTruncated counts and buildTruncationNotice renders (fail-safe null on gate-off/count<1/malformed)
+- honesty boundary: truncation note is a decoration that can be gated off; it never changes success/failure attribution, never changes the strip-image invariant; malformed input never throws and returns null; the PDF OCR path is intentionally out of scope (not on the gateway image hot path)
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrTruncationNotice.js`
+- `services/backend/src/services/ocrSnippetService.js`
+- `services/backend/src/services/gateway/aiGateway.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/tests/gateway/ocrTruncationNotice.test.js`
+- `services/backend/tests/gateway/imageOcrTruncationWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-truncation-notice
+node --check services/backend/src/services/gateway/ocrTruncationNotice.js
+node --check services/backend/src/services/ocrSnippetService.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — Honest LANGUAGE-PACK Caveat (fourth orthogonal honesty axis, most directly serving '准确识别图片': confidence=ACCURACY of words; coverage=COMPLETENESS across images; truncation=COMPLETENESS within one image; language=whether the REQUESTED OCR languages could actually run — docHelper.py._resolve_lang silently narrows a 'chi_sim+eng' request to the subset that has traineddata installed, so text in a missing-language image is un-recognized/mis-transliterated while the model is told '请据此作答'; closes the DEAD-FIELD gap where the JSON returned only the narrowed lang and never the original request, so the drop was invisible)  `ocr-fallback-language`
+
+**什么时候来这里（症状触发词）：**
+- a text-only model got OCR text but the requested language pack was NOT installed: KHY_OCR_LANGUAGE_NOTICE (default-on) appends an honest note naming the dropped languages + an install hint, so the model does not treat an English-only transliteration of a Chinese image as authoritative
+- the caveat fires ONLY when a requested language was actually dropped (requestedLang has it, effective lang does not); when the request equals the effective set (all packs present) or Python cannot introspect (returns request as-is) there is NO drop and NO warning (byte-revert). 'osd' is never counted (orientation/script detection, not a text language)
+- the signal chain: docHelper.py stamps requestedLang=original spec (alongside lang=effective) at the 3 OCR success sites; ocrSnippetService forwards requestedLang; aiGateway.extractImageOcrDetails carries lang+requestedLang per detail; the pure leaf ocrLanguageNotice.computeDroppedLangs does the requested-minus-effective set diff and buildLanguageNotice renders (fail-safe [] / null on malformed)
+- computed at the three gateway OCR injection points (aiGatewayGenerateMethod.js) via _appendOcrLanguageNotice(prompt, ocrDetails) placed immediately after the truncation notice; honesty boundary: decoration only, gate-off byte-reverts, never changes success/failure attribution or the strip-image invariant, malformed never throws
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrLanguageNotice.js`
+- `services/backend/src/services/docHelper.py`
+- `services/backend/src/services/ocrSnippetService.js`
+- `services/backend/src/services/gateway/aiGateway.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/tests/gateway/ocrLanguageNotice.test.js`
+- `services/backend/tests/gateway/imageOcrLanguageWiring.test.js`
+- `services/backend/tests/gateway/ocrLanguageNarrowing.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-112] 纯文本模型图片 OCR 兜底语言包可用性诚实告诫.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-language-notice
+node --check services/backend/src/services/gateway/ocrLanguageNotice.js
+python3 -m py_compile services/backend/src/services/docHelper.py
+```
+
+---
+
+### Text-only-model Image OCR Fallback — Auto-ORIENTATION Correction (FIRST CORRECTIVE axis; prior four axes — confidence/coverage/truncation/language — only DISCLOSE a problem, this one actually RECOVERS the correct text, most directly serving '准确识别图片'): a rotated photo OCRs to 'confident-looking garbage' (conf ~51-62, which partially ESCAPES the <60 low-confidence flag of OPS-104) while the correctly-oriented image OCRs at ~95; docHelper.py._maybe_reorient brute-forces 90/180/270 rotations (tesseract OSD --psm 0 is unreliable on sparse text) and keeps the highest-confidence success, stamping orientationCorrected=<deg>; the gateway then discloses that the text came from a rotated-straight image, closing the gap where a text-only model would otherwise be fed rotated garbage as authoritative  `ocr-fallback-orientation`
+
+**什么时候来这里（症状触发词）：**
+- a text-only model got OCR text but the source image was rotated: KHY_OCR_AUTO_ORIENT (default-on) makes docHelper try 90/180/270 and keep the best; when a rotation wins by a safe margin the recovered text replaces the garbage and orientationCorrected is set to the applied degree, then the gateway appends an honest note saying the text is from the rotated-straight image
+- correction fires ONLY when it is safe: an already-good page (needsAiFallback is not True AND base conf >= 80) is never perturbed (orientationCorrected=0), and a rotation is accepted only if best conf >= 60 AND best conf >= base conf + 20 (guards against 'confident garbage' false corrections); PIL/Pillow absent or any exception → byte-revert to the original single-pass result
+- the signal chain: docHelper.py._maybe_reorient stamps orientationCorrected at the 3 OCR success sites (CLI honest path, CLI degraded path=0, pytesseract path); ocrSnippetService forwards orientationCorrected; aiGateway.extractImageOcrDetails carries it per detail; the pure leaf ocrOrientationNotice.computeCorrectedOrientations collects the positive degrees (dedup+sort) and buildOrientationNotice renders (fail-safe [] / null on malformed)
+- computed at the three gateway OCR injection points (aiGatewayGenerateMethod.js) via _appendOcrOrientationNotice(prompt, ocrDetails) placed immediately after the language notice; honesty boundary: the correction is real (text is recovered), the note is decoration only — gate-off byte-reverts, never changes success/failure attribution or the strip-image invariant, malformed never throws
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrOrientationNotice.js`
+- `services/backend/src/services/docHelper.py`
+- `services/backend/src/services/ocrSnippetService.js`
+- `services/backend/src/services/gateway/aiGateway.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/tests/gateway/ocrOrientationNotice.test.js`
+- `services/backend/tests/gateway/imageOcrOrientationWiring.test.js`
+- `services/backend/tests/gateway/ocrOrientationRecovery.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-115] 纯文本模型图片 OCR 兜底方向自动校正.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-orientation-notice
+node --check services/backend/src/services/gateway/ocrOrientationNotice.js
+python3 -m py_compile services/backend/src/services/docHelper.py
+```
+
+---
+
+### Text-only-model Image OCR Fallback — Low-RESOLUTION Auto-Upscale (SIXTH axis, SECOND CORRECTIVE one, orthogonal to & alongside the orientation axis: orientation rotates-to-fix, this one enlarges-to-fix; the four earlier axes — confidence/coverage/truncation/language — only DISCLOSE, the two corrective axes actually RECOVER text, most directly serving '准确识别图片' for tiny/low-res images): a low-resolution image OCRs to NOTHING at native size (empty, not the orientation axis's 'confident garbage') because tesseract wants ~300 DPI; docHelper.py._maybe_upscale brute-forces 2/3/4× LANCZOS enlargements, keeps the highest-confidence success, and stamps upscaledFactor=<n>; the gateway then discloses that the text came from an auto-enlarged low-res image, closing the gap where a text-only model would otherwise get no text at all from a small image  `ocr-fallback-resolution`
+
+**什么时候来这里（症状触发词）：**
+- a text-only model got NO usable OCR text because the source image was too low-resolution: KHY_OCR_UPSCALE (default-on) makes docHelper try 2/3/4× and keep the best; when an upscale wins by a safe margin the recovered text is used and upscaledFactor is set to the applied factor, then the gateway appends an honest note saying the text is from the auto-enlarged low-res image
+- upscale fires ONLY when it is safe and useful: an already-good page (needsAiFallback is not True AND base conf >= 80) is never enlarged (upscaledFactor=0); source images already large (max side >= 1000px) are skipped, and factors whose result exceeds 4000px are skipped; an upscale is accepted only if best conf >= 60 AND (when base already had text) best conf >= base conf + 20; PIL/Pillow absent or any exception → byte-revert to the original single-pass result
+- the signal chain: docHelper.py._maybe_upscale stamps upscaledFactor at the 3 OCR success sites (CLI honest path, CLI degraded path=0, pytesseract path); ocrSnippetService forwards upscaledFactor; aiGateway.extractImageOcrDetails carries it per detail; the pure leaf ocrResolutionNotice.computeUpscaledFactors collects the factors > 1 (dedup+sort) and buildResolutionNotice renders (fail-safe [] / null on malformed)
+- computed at the three gateway OCR injection points (aiGatewayGenerateMethod.js) via _appendOcrResolutionNotice(prompt, ocrDetails) placed immediately after the orientation notice; honesty boundary: the recovery is real (text is recovered from an image that read empty natively), the note is decoration only — gate-off byte-reverts, never changes success/failure attribution or the strip-image invariant, malformed never throws
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrResolutionNotice.js`
+- `services/backend/src/services/docHelper.py`
+- `services/backend/src/services/ocrSnippetService.js`
+- `services/backend/src/services/gateway/aiGateway.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/tests/gateway/ocrResolutionNotice.test.js`
+- `services/backend/tests/gateway/imageOcrResolutionWiring.test.js`
+- `services/backend/tests/gateway/ocrResolutionRecovery.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-116] 纯文本模型图片 OCR 兜底低分辨率自动放大.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-resolution-notice
+node --check services/backend/src/services/gateway/ocrResolutionNotice.js
+python3 -m py_compile services/backend/src/services/docHelper.py
+```
+
+---
+
+### unpack Unknown-Format Self-Remediation (generic extractor fallback + gated auto-install)  `unpack-generic-fallback`
+
+**什么时候来这里（症状触发词）：**
+- unpack hits a format the built-in handlers (zip-family / tar* / gz / asar) do NOT cover — .7z / .rar / .bz2 / .xz / .lzma / .zst / .lz4 / .cab / .iso / .deb / .rpm: it must fall back to a system extractor (7z / bsdtar / unar / unrar) instead of a flat 'Unsupported archive format' (the .asar Windows failure that triggered this was an OLD build; .asar is already supported by the native parser)
+- no extractor is installed: unpack returns the EXACT per-platform install command ('指路'); it only runs the install and retries when KHY_UNPACK_AUTO_INSTALL=1 AND the call passes install:true (the model must ask the user first — installing software modifies the system, red line '禁止 AI 擅自动手')
+- gates: KHY_UNPACK_GENERIC (default-on; off → byte-revert to old Unsupported), KHY_UNPACK_AUTO_INSTALL (default-off, opt-in); neither is in flagRegistry (unregistered → conservative pass, per memoryOpsNotice/portableCli precedent)
+- security: external extractors bypass per-entry guards, so the generic path re-verifies AFTER extraction — reject any file escaping outputDir, strip symlinks, enforce MAX_UNPACK_BYTES (delete on overflow); the mapping/selection logic is injectable (opts.platform/opts.has) for deterministic unit tests
+
+**先读这些文件：**
+- `services/backend/src/services/reverseEngineer/genericExtractor.js`
+- `services/backend/src/tools/unpackTool.js`
+- `services/backend/tests/tools/unpackGeneric.test.js`
+- `services/backend/tests/tools/unpackAsar.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-106] unpack 未知格式自救.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:unpack-generic
+node --check services/backend/src/services/reverseEngineer/genericExtractor.js
+node --check services/backend/src/tools/unpackTool.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — Describe-cascade-fail SAFETY FLOOR decoupled from the cosmetic failure-summary gate (UPSTREAM control-flow axis: the prior six axes 104/109/111/112/115/116 all harden honesty INSIDE the OCR path assuming it was reached; this one guarantees the OCR path is RELIABLY REACHED when the describe-and-return vision cascade fully fails — 404/model_not_found + socket hang up — so a text-only model never gets a bare image and never hallucinates '消息里没有附带图片')  `vision-describe-fail-ocr-floor`
+
+**什么时候来这里（症状触发词）：**
+- the describe-and-return vision cascade fully failed (all pinned/GLM vision models 404 or network-error) and the request carried an image: KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR (default-on) UNCONDITIONALLY runs strip-image + OCR fallback + the '图片收到但读不出' honesty floor, regardless of whether the human-visible failure summary (KHY_VISION_FAILURE_SUMMARY) is on or off
+- root cause fixed (2026-07-12 user report 'Khy无法正确读图'): the safety-floor code was historically nested inside `if (_summaryOn)` (a purely COSMETIC failure-summary gate); when the user turned that gate OFF the floor was skipped too, control-flow fell through to the switch-model replacement that KEPT the unreadable image and re-sent it to the just-404'd vision model, so the text model answered with no 'image present' context and hallucinated 'there is no image attached'
+- the fix DECOUPLES safety from decoration: isDescribeFailFloorEnabled() is a separate default-on gate; Site 1 in aiGatewayGenerateMethod.js splits `if(_summaryOn){emit+floor}` into `if(_summaryOn){emit}` + `if(_summaryOn||_floorOn){floor}`; the floor body is byte-identical, only the guard changed; gate-off byte-reverts to the historic behavior (image kept, switch to vision model, no floor)
+- honesty boundary: two invariants enforced on describe-cascade failure — '非视觉模型永不收到裸图' (strip) and '绝不谎称没收到图' (floor injects '绝不能说没有收到图片'); the floor is SAFETY, the failure summary is DECORATION and stays independently switchable
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionOcrFallback.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/visionOcrFallback.test.js`
+- `services/backend/tests/gateway/visionDescribeFailFloorWiring.test.js`
+- `services/backend/tests/gateway/visionDescribeFailFloorRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-118] 视觉描述级联全失败 OCR 兜底底线解耦.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-describe-fail-floor
+node --check services/backend/src/services/gateway/visionOcrFallback.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — STRIP-IMAGE irreducible honesty floor decoupled from the OCR FEATURE gate (承 OPS-118: second orthogonal control-flow bridge on the same describe-cascade-fail path; OPS-118 guaranteed the floor PATH executes regardless of the cosmetic KHY_VISION_FAILURE_SUMMARY gate, but WITHIN the floor's empty-OCR else-branch the strip is UNCONDITIONAL while the '收到图但读不出' note is gated by KHY_VISION_OCR_FALLBACK — a FEATURE gate; user disables OCR fallback -> note suppressed but image still stripped -> bare prompt with no image + no note -> text model still hallucinates '消息里没有附带图片 / 当前对话中没有任何图片附件')  `vision-strip-image-floor`
+
+**什么时候来这里（症状触发词）：**
+- describe-and-return vision cascade fully failed AND local OCR extracted NO text (photo/blank/no-font image) AND the user turned KHY_VISION_OCR_FALLBACK off: buildVisionUnreadableNote returns null (feature gate off) but the else-branch still strips the image -> without a fix the text model gets a bare prompt and denies the image; KHY_VISION_STRIP_IMAGE_FLOOR (default-on) injects an irreducible minimal floor ('我收到了你的图片,但当前通道读不出它的内容——绝不能说没有收到图片') that does NOT mention OCR, upholding '剥图 ⟹ 必留痕' when the OCR note is absent
+- root cause (2026-07-12 user report 'Khy无法正确读图·降级到ocr'): the safety invariant '绝不谎称没收到图' was coupled to a FEATURE gate (KHY_VISION_OCR_FALLBACK controls whether the OCR note renders); Round 8/OPS-118 explicitly foreshadowed this in the flagRegistry comment ('那个管底线文案渲不渲') but only handled 'whether the floor path executes'; this axis closes the note-suppressed-but-strip-continues case
+- the fix is surgical + additive: in aiGatewayGenerateMethod.js Site 1 empty-OCR else-branch, when buildVisionUnreadableNote returns null, fall back to buildStrippedImageFloorNote({count,env}) BEFORE the unconditional strip; gate KHY_VISION_STRIP_IMAGE_FLOOR default-on, byte-reverts to historic (strip without note) when off; the OCR-text branch and OCR_FALLBACK-on path are untouched (no regression — original buildVisionUnreadableNote still used when the feature gate is on)
+- orthogonality: KHY_VISION_OCR_FALLBACK = 'does the OCR note render'; KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR (OPS-118) = 'does this path run the floor at all'; KHY_VISION_STRIP_IMAGE_FLOOR (OPS-120) = 'when the OCR note is absent, back the strip with a minimal floor so it never runs bare'
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionOcrFallback.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/visionStripImageFloorWiring.test.js`
+- `services/backend/tests/gateway/visionStripImageFloorRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-120] 剥图必留痕最小底线与OCR功能门解耦.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-strip-image-floor
+node --check services/backend/src/services/gateway/visionOcrFallback.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — POST-FAILURE rescue-net STRIP-IMAGE honesty floor (承 OPS-118/120: THIRD orthogonal '剥图 ⟹ 必留痕' bridge, but in the post-failure cascade rescue net instead of the prep-phase describe cascade; when the current model is deemed vision-capable (decideVisionRouting=keep, image kept) an adapter rejects the image at RUNTIME with 404/model_not_found -> shouldOcrRescue promotes _visionFallback -> the rescue net falls back to local OCR; the OCR-text-success branch strips+injects, but the empty-OCR / OCR-throw branch historically only emitStatus'd then break'd, leaving the BARE image to survive to a downstream text adapter that silently drops it and hallucinates '消息里没有附带图片')  `vision-rescue-strip-floor`
+
+**什么时候来这里（症状触发词）：**
+- a vision-capable-named model (keep routing) is rejected at runtime by an adapter with 404/model_not_found -> _visionFallback -> rescue net runs local OCR AND OCR extracts NO text (photo/blank/no-font image) or the OCR call throws: KHY_VISION_RESCUE_STRIP_FLOOR (default-on) makes the empty-OCR branch strip the image + inject the honesty note, exactly like the OCR-text-success branch, upholding '剥图 ⟹ 必留痕'
+- root cause (2026-07-12 user report 'Khy无法正确读图·降级到ocr'): the prep-phase Site1/Site2 floors (OPS-118/120) never covered the post-failure rescue net (aiGatewayGenerateMethod.js ~2755-2825); its empty-OCR else-branch only emitStatus'd then break'd -> the raw image continued down the cascade -> a downstream text adapter silently dropped it and answered '没有附带图片'; note KHY_VISION_OCR_FALLBACK MUST be on for the rescue net to engage at all (shouldOcrRescue gates on it), so the injected note is the standard buildVisionUnreadableNote with buildStrippedImageFloorNote as a defensive fallback
+- the fix is surgical + additive: a single gated guard before the `break` in the _visionFallback block; fires only when KHY_VISION_RESCUE_STRIP_FLOOR is on AND hasImageInput AND !_ocrFallbackApplied AND images remain (so it skips the OCR-text-success branch which already stripped); strips images (adapterOptions + outer options), injects the note, sets hasImageInput=false; gate-off / leaf-unavailable byte-reverts to historic behavior (image kept, only a status message)
+- orthogonality: KHY_VISION_OCR_FALLBACK = 'does OCR rescue engage / does the OCR note render'; KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR (OPS-118) = prep-phase describe-cascade floor path runs; KHY_VISION_STRIP_IMAGE_FLOOR (OPS-120) = prep-phase floor note present when OCR note absent; KHY_VISION_RESCUE_STRIP_FLOOR (OPS-122) = POST-FAILURE rescue net strips+notes when OCR yields no text (the three floor gates cover three distinct sites of the same invariant)
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionOcrFallback.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/visionRescueStripFloorWiring.test.js`
+- `services/backend/tests/gateway/visionRescueStripFloorRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-122] post-failure救援网剥图必留痕解耦.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-rescue-strip-floor
+node --check services/backend/src/services/gateway/visionOcrFallback.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — OCR-SUCCESS user-facing 'OCR was used' TRANSPARENCY disclosure (OPS-MAN-124; orthogonal to the six CONDITIONAL honesty axes: low-confidence / coverage / truncation / language / orientation / resolution — those fire only when the OCR result has a defect; when OCR succeeds CLEANLY none of them fire, so the injected prompt has only a model-facing '以下为图片 OCR 识别文本，请据此作答' header and the model answers as if it natively saw the image, never telling the USER that OCR was the reading method — violating '要能无感明显告知用户用了ocr但能正确识别图片')  `ocr-usage-disclosure`
+
+**什么时候来这里（症状触发词）：**
+- OCR successfully extracts text on any of the three OCR-success injection sites (Site1 describe-fail prep / Site2 ocr-fallback prep / Site3 post-failure rescue net): KHY_OCR_USAGE_DISCLOSURE (default-on) UNCONDITIONALLY appends a model-facing instruction telling the model to briefly, naturally, unobtrusively yet clearly disclose in its answer that the image content was obtained via OCR text recognition (not native vision) — 无感 (short, does not disturb the main answer) but 明显 (the user must clearly know OCR was used)
+- root cause (承 Rounds 8-10 which hardened the OCR-FAILURE / read-unreadable path): all six existing _appendOcr* helpers are CONDITIONAL caveats; a clean OCR success triggers none of them, so on the success path there was no unconditional user-facing transparency disclosure — the model received OCR text with an authoritative '据此作答' header and answered as if it saw the image natively, leaving the user unaware OCR was used
+- the fix is surgical + additive: a pure leaf ocrUsageNotice.js (buildUsageDisclosure({count,env}) fires unconditionally when count>0, gate-off/malformed→null byte-revert, never throws) + _appendOcrUsageDisclosure(prompt,{count}) helper wired UNCONDITIONALLY after the _appendOcrResolutionNotice call at all three OCR-success sites; gate-off byte-reverts to the historic 'answer from OCR text but never disclose to the user' behavior
+- orthogonality: the six conditional axes disclose a DEFECT in the OCR result (accuracy/completeness/language/orientation/resolution); KHY_OCR_USAGE_DISCLOSURE discloses the METHOD itself (that OCR — not native vision — read the image) and fires on clean SUCCESS, exactly the case where the six stay silent
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrUsageNotice.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/ocrUsageNotice.test.js`
+- `services/backend/tests/gateway/ocrUsageDisclosureWiring.test.js`
+- `services/backend/tests/gateway/ocrUsageDisclosureRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-124] OCR成功路径向用户透明告知用了OCR.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-usage-disclosure
+node --check services/backend/src/services/gateway/ocrUsageNotice.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — DETERMINISTIC user-facing 'OCR was used' footnote (OPS-MAN-126; 承 OPS-124). OPS-124 only injects a model-facing INSTRUCTION into the prompt asking the model to disclose OCR usage — that is ADVISORY: the model may ignore it, leaving the answer with no OCR mention, so '明显告知用户' is NOT guaranteed. finishResult's success side already hosts a family of DETERMINISTIC truth footers (answerVerifier / modelIdentityTruth / cacheMetricsTruth) that guarantee truth reaches the user regardless of model compliance; OCR-usage had no such deterministic footer. This area adds the belt to OPS-124's suspenders.  `ocr-usage-footnote`
+
+**什么时候来这里（症状触发词）：**
+- actual OCR text was surfaced (_ocrImageTextRead set ONLY at the three OCR-text options-reassigns: Site1 ~1590 / Site2 ~1690 / Site3 rescue ~2857 — NOT the vision-describe path nor the no-text strip-floor paths) AND the answer succeeded AND the answer does NOT already disclose OCR (answerAlreadyDisclosesOcr miss = the model ignored OPS-124's instruction): KHY_OCR_USAGE_FOOTNOTE (default-on) DETERMINISTICALLY appends a minimal user-visible footnote to result.content in finishResult, guaranteeing the user is told OCR was used (明显)
+- dedup / 无感 preservation: if the answer already mentions OCR (model complied with OPS-124) the footnote is SKIPPED — no double disclosure, the in-line natural disclosure stays 无感; only when the model stayed silent does the deterministic footnote fire
+- the fix is surgical + additive: a pure leaf ocrUsageFootnote.js (isFootnoteEnabled / answerAlreadyDisclosesOcr / buildOcrUsageFootnote({count,env}) → user-visible footnote when gate-on and count>0, gate-off/malformed→null byte-revert, never throws; OCR_USAGE_FOOTNOTE_MARKER for dedup) + a finishResult success-side block (after cacheMetricsTruth) gated by KHY_OCR_USAGE_FOOTNOTE + marker-dedup + answerAlreadyDisclosesOcr skip + fail-soft; gate-off byte-reverts result.content
+- orthogonality to OPS-124: OPS-124 = model-facing INSTRUCTION in the prompt (无感 when the model complies); OPS-125 = deterministic post-hoc FOOTNOTE at finishResult (guarantees 明显 even when the model ignores the instruction). Same family as answerVerifier/modelIdentityTruth/cacheMetricsTruth deterministic truth footers.
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrUsageFootnote.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/ocrUsageFootnote.test.js`
+- `services/backend/tests/gateway/ocrUsageFootnoteWiring.test.js`
+- `services/backend/tests/gateway/ocrUsageFootnoteRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-126] OCR成功路径确定性脚注兜底告知用了OCR.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-usage-footnote
+node --check services/backend/src/services/gateway/ocrUsageFootnote.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — DETERMINISTIC answer-side CORRECTION when the model, on the empty-OCR strip path, STILL denies receiving the image (OPS-MAN-138; 承 OPS-118/120/122 '剥图必留痕' + OPS-126 deterministic-footnote philosophy). Reproduced 2026-07-12 (paste-cache 92c0154d): text-only model + image → vision cascade all 404/socket-hang-up → OCR fallback but the image is NON-TEXT (photo/screenshot/chart) or missing langpack → local OCR reads NOTHING → the three empty-OCR sites (prep Site1 ~1626 / prep Site2 ~1736 / post-failure rescue ~2927) unconditionally strip the image AND inject a model-facing '收到图但读不出、绝不能说没收到图' honest floor — BUT that is only a PROMPT INSTRUCTION the model can ignore; in the real failure the model ignored it and answered '消息里没有附带图片 / 当前对话中没有任何图片附件'. The deterministic finishResult footer family had NO member for this: ocrUsageFootnote (KHY_OCR_USAGE_FOOTNOTE) fires ONLY on _ocrImageTextRead=true (OCR text was read); empty-OCR strip sets _ocrFallbackApplied but NOT _ocrImageTextRead → outside that footer's predicate → zero deterministic correction when the model denies the image. This area adds the last user-visible defense. OPS-MAN-140 (承 138) extends the SAME leaf with an ORTHOGONAL variant for the mirror cell — OCR **SUCCEEDED** (_ocrImageTextRead=true) yet the model STILL denies the image: OPS-138's predicate `!_ocrImageTextRead` excludes it, and ocrUsageFootnote (:858) in that cell only appends '以上关于这张图片的内容是通过 OCR 读取的' which is self-CONTRADICTORY with the denial and does not rebut it. The OCR-success variant (KHY_VISION_DENIAL_CORRECTION_OCR_READ, default-on, distinct DENIAL_CORRECTION_OCR_READ_MARKER) REPLACES (not stacks — noise-conscious) that plain footnote with a denial-aware rebuttal ('你确实发了图、OCR 已成功读出文字、是模型没采用、请据 OCR 文本重新作答'); gate-off byte-reverts to the plain ocrUsageFootnote branch.  `vision-denial-correction`
+
+**什么时候来这里（症状触发词）：**
+- the image was present and STRIPPED (_ocrFallbackApplied true) but OCR text was NOT injected (!_ocrImageTextRead — the empty-OCR / unreadable path, distinct from the three OCR-text options-reassigns that set _ocrImageTextRead) AND the answer succeeded AND the answer's body DENIES receiving the image (detectImageDenial hits '没有附带图片 / 当前对话中没有任何图片附件 / 无法描述不存在的内容' and does NOT already acknowledge '收到图但读不出'): KHY_VISION_DENIAL_CORRECTION (default-on) DETERMINISTICALLY appends a user-visible correction footnote to result.content in finishResult, delivering '你确实上传了图、只是当前通道读不了' unconditionally
+- OPS-140 mirror cell: OCR SUCCEEDED (_ocrImageTextRead=true, text injected into prompt) but the model STILL denies the image in its body (detectImageDenial hits): KHY_VISION_DENIAL_CORRECTION_OCR_READ (default-on, child gate independent of the parent) makes finishResult branch-1 REPLACE the plain ocrUsageFootnote with buildDenialCorrectionNote({ocrTextRead:true}) — a denial-aware rebuttal (DENIAL_CORRECTION_OCR_READ_MARKER) stating OCR read the text and the model ignored it, with a '据 OCR 文本重新作答' path; gate-off → _appended stays false → falls back to the plain ocrUsageFootnote (byte-revert). Only ONE footnote is appended per cell (noise-conscious, serving '减少心灵噪音').
+- dedup / 无感 preservation: if the answer already honestly acknowledges '收到图但读不出' (detectImageDenial miss) the correction is SKIPPED — no redundant note; only when the model actually DENIES the image does the deterministic correction fire
+- the fix is surgical + additive: a pure leaf visionDenialCorrection.js (isEnabled / isOcrReadDenialEnabled / detectImageDenial(content) — conservative denial regex that EXCLUDES already-acknowledged cases via a negation-aware ACK regex / buildDenialCorrectionNote({count,env,ocrTextRead}) → user-visible correction when the matching gate is on, gate-off→null byte-revert, never throws; DENIAL_CORRECTION_MARKER / DENIAL_CORRECTION_OCR_READ_MARKER for per-variant dedup) + a finishResult success-side block (empty-OCR variant after ocrUsageFootnote; OCR-success variant inside the _ocrImageTextRead branch, denial-first with an _appended latch guarding the plain footnote) gated by KHY_VISION_DENIAL_CORRECTION / KHY_VISION_DENIAL_CORRECTION_OCR_READ + marker-dedup + detectImageDenial + fail-soft; gate-off byte-reverts result.content
+- orthogonality to ocrUsageFootnote (OPS-126): that footer's predicate is _ocrImageTextRead=true (OCR SUCCEEDED, model didn't mention OCR AND didn't deny → append 'used OCR'); the empty-OCR variant's predicate is _ocrFallbackApplied && !_ocrImageTextRead (OCR EMPTY, model DENIED → append correction); the OPS-140 OCR-success variant's predicate is _ocrImageTextRead && detectImageDenial (OCR SUCCEEDED but model DENIED → rebut, replacing the plain footnote). Orthogonal to the three prompt-side floor gates (KHY_VISION_DESCRIBE_FAIL_OCR_FLOOR / KHY_VISION_STRIP_IMAGE_FLOOR / KHY_VISION_RESCUE_STRIP_FLOOR): those guarantee '剥图必留痕' on the PROMPT side; this guarantees the answer-side correction when the model ignores that trace.
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionDenialCorrection.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/visionDenialCorrection.test.js`
+- `services/backend/tests/gateway/visionDenialCorrectionWiring.test.js`
+- `services/backend/tests/gateway/visionDenialCorrectionRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-138] 空OCR剥图路径模型仍谎称没收到图的确定性纠正脚注.md
+- docs/07_OPS_运维/[OPS-MAN-140] OCR成功读出但模型仍谎称没收到图的确定性纠正脚注.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-denial-correction
+node --check services/backend/src/services/gateway/visionDenialCorrection.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — DEFER the vision-failure WALL until the OCR outcome is known (OPS-MAN-142; 承 OPS-138/140, directly serving '减少显示的心灵噪音'). Reproduced 2026-07-12 (paste-cache 92c0154d): text-only model + image → describe-and-return cascade to vision models all fail → aiGatewayGenerateMethod EAGERLY emitAssistantMessage's the scary failure WALL (buildVisionFailureMessage, '图像识别失败…粘贴 GLM API Key') at ~line 1590 BEFORE OCR fallback runs. When the image is a TEXT image and local OCR then SUCCEEDS reading it, that scary wall was ALREADY shown to the user — self-CONTRADICTORY with the immediately-following '已用 OCR 成功识别' and the loudest 心灵噪音 in the log. This area DEFERS the wall's emission to after the OCR result is known: OCR success → suppress the wall (rescued, wall is pure misdirection); OCR empty/failure → emit it (user genuinely needs to act). Orthogonal to the parent KHY_VISION_FAILURE_SUMMARY (which decides whether the wall's TEXT is an honest summary at all).  `vision-failure-summary-ocr-suppress`
+
+**什么时候来这里（症状触发词）：**
+- describe-and-return cascade all vision candidates failed (_describeAttempted, !_describeDone) AND KHY_VISION_FAILURE_SUMMARY (parent) is on so a wall would be built: KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS (default-on, child gate independent of parent) DEFERS the buildVisionFailureMessage emission — stores it in _deferredFailureMsg instead of emitting at ~1590 — then in the OCR branch: OCR SUCCESS (ocrTexts.length>0) → _deferredFailureMsg stays unemitted (wall suppressed); OCR EMPTY (else branch) → emit _deferredFailureMsg (real failure). Gate-off → emit at ~1590 unconditionally before OCR (byte-revert to historical eager wall).
+- orthogonality to the parent gate: KHY_VISION_FAILURE_SUMMARY decides IF a failure wall exists (honest-summary text vs legacy raw error); KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS decides WHEN it is emitted (before OCR always = off; deferred-and-suppressed-on-OCR-success = on). Parent off → buildVisionFailureMessage returns null → no wall regardless of child (the deferral never revives a wall the parent disabled).
+- the fix is surgical + additive: a new predicate isFailureSummaryOcrSuppressEnabled(env) on the existing pure leaf visionFailureSummary.js (mirror of isVisionFailureSummaryEnabled, reads KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS via flagRegistry with local CANON fallback, never throws) + a wiring change in aiGatewayGenerateMethod.js (read _ocrSuppressOn; if on, capture the wall into _deferredFailureMsg instead of emitting; in the OCR-empty else branch, emit _deferredFailureMsg) gated + fail-soft; gate-off byte-reverts to eager emission.
+- noise-conscious: the wall is only ever emitted ONCE — either eagerly (gate off) or deferred (gate on, OCR empty). On OCR success with the gate on, it is emitted ZERO times. This directly reduces the loudest contradiction (scary failure wall immediately followed by OCR success).
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionFailureSummary.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/gateway/visionFailureSummary.test.js`
+- `services/backend/tests/gateway/visionFailureSummaryOcrSuppressWiring.test.js`
+- `services/backend/tests/gateway/visionFailureSummaryOcrSuppressRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-142] 失败墙推迟到OCR结果已知后减少心灵噪音.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-failure-summary-ocr-suppress
+node --check services/backend/src/services/gateway/visionFailureSummary.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — user-visible CLOSURE when describe-fail → OCR-SUCCESS (OPS-MAN-144; 承 OPS-142, directly serving '无感明显告知用户用了 ocr' + '减少显示的心灵噪音'). KHY_VISION_INTERMEDIATE_MESSAGE emits a '正在调用 <vision-model>，请稍候...' PROMISE before EACH vision candidate, and on describe-SUCCESS closes it at line ~1554 with '视觉识别完成，正在根据识别结果为您作答'. But when all vision models fail and local OCR then SUCCEEDS, those N '请稍候' promises are NEVER closed — the user sees N dangling promises with no '识别完成', both 心灵噪音 AND a missed 'used OCR' disclosure. This area appends ONE closure '视觉模型均不可用，已改用本地 OCR 成功识别<N 张>图片，正在据此作答' in the OCR-success fallback branch: closes the dangling promises AND unobtrusively-yet-clearly discloses the OCR downgrade at the intermediate-message layer. Shares the _intermediateEnabled precondition (off → whole thing silent); own gate KHY_VISION_OCR_SUCCESS_CLOSURE off → byte-revert (no closure). Orthogonal to OPS-142 (that suppresses the failure WALL; this closes the dangling PROMISES).  `vision-ocr-success-closure`
+
+**什么时候来这里（症状触发词）：**
+- describe-and-return cascade all vision candidates failed AND local OCR SUCCEEDS (ocrTexts.length>0, the strip-image+OCR-inject branch) AND KHY_VISION_INTERMEDIATE_MESSAGE is on (so '请稍候' promises were actually emitted): KHY_VISION_OCR_SUCCESS_CLOSURE (default-on) appends ONE emitAssistantMessage closure via buildOcrSuccessClosure({count, env}). Gate-off OR intermediate-message-off → no closure (byte-revert).
+- orthogonality: OPS-142 KHY_VISION_FAILURE_SUMMARY_OCR_SUPPRESS suppresses the failure WALL on OCR success; OPS-144 KHY_VISION_OCR_SUCCESS_CLOSURE closes the dangling intermediate '请稍候' PROMISES on OCR success. Different message families, independent gates. The closure is emitted ONCE and only on OCR success with intermediate messages enabled.
+- the fix is surgical + additive: a new pure leaf visionOcrSuccessClosure.js (isVisionOcrSuccessClosureEnabled + buildOcrSuccessClosure, reads KHY_VISION_OCR_SUCCESS_CLOSURE via flagRegistry, zero IO, never throws, returns null when gated off / count<=0 / malformed) + a wiring change in aiGatewayGenerateMethod.js OCR-success branch (if _intermediateEnabled → build closure, emitAssistantMessage, fail-soft) gated; gate-off byte-reverts to no closure.
+- noise-conscious: without this fix the user sees N '正在调用...请稍候' with no resolution; the single closure both resolves them and states the OCR downgrade plainly — one message, not N, and it is the affirmative resolution of promises already shown.
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionOcrSuccessClosure.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/gateway/visionOcrSuccessClosure.test.js`
+- `services/backend/tests/gateway/visionOcrSuccessClosureWiring.test.js`
+- `services/backend/tests/gateway/visionOcrSuccessClosureRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-144] describe-fail到OCR成功的用户可见闭合减少心灵噪音.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-ocr-success-closure
+node --check services/backend/src/services/gateway/visionOcrSuccessClosure.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — de-duplicate the per-candidate '正在调用...请稍候' cascade notices (OPS-MAN-145; 承 OPS-144, directly serving '减少显示的心灵噪音'). When KHY_VISION_FALLBACK_CASCADE is on, the describe-and-return loop tries multiple vision candidates (built-in GLM pin → glm-4.6v-flash, glm-4v-flash, plus provider vision models). With KHY_VISION_INTERMEDIATE_MESSAGE on, EACH candidate previously emitted the byte-identical first sentence '我无法直接识别图片内容。正在调用 <model> 进行识别，请稍候...' — the redundant preamble '我无法直接识别图片内容' repeated N times, and candidates 2..N read like fresh parallel calls rather than a cascade fallback. This area makes the notice index-aware: candidate #1 keeps the FULL legacy preamble (byte-identical), candidates 2..N collapse to '视觉模型 <prev> 不可用，正在改用 <model> 继续识别...' — drops the redundant preamble, states the cascade nature, symmetric to the success-side reframe. Shares the _intermediateEnabled precondition (off → whole thing silent); own gate KHY_VISION_CASCADE_ATTEMPT_NOTICE off → every candidate byte-reverts to the full legacy preamble. Orthogonal to OPS-144 (that closes the dangling promises on OCR success; this de-duplicates the per-candidate promises themselves).  `vision-cascade-attempt-notice`
+
+**什么时候来这里（症状触发词）：**
+- describe-and-return cascade with KHY_VISION_FALLBACK_CASCADE on (≥2 vision candidates) AND KHY_VISION_INTERMEDIATE_MESSAGE on: KHY_VISION_CASCADE_ATTEMPT_NOTICE (default-on) reframes candidates 2..N via buildCascadeAttemptNotice({index, model, prevModel, env}) — index 0 → full legacy preamble (byte-identical), index>0 → '视觉模型 <prev> 不可用，正在改用 <model> 继续识别...'. Gate-off OR intermediate-message-off OR single candidate → legacy line / no notice (byte-revert).
+- orthogonality: OPS-144 KHY_VISION_OCR_SUCCESS_CLOSURE closes the dangling '请稍候' promises with ONE closure on OCR success; OPS-145 KHY_VISION_CASCADE_ATTEMPT_NOTICE de-duplicates the per-candidate promises AS THEY ARE EMITTED. Different concerns (closure vs preamble-dedup), independent gates, both under the shared _intermediateEnabled precondition.
+- the fix is surgical + additive: a new pure leaf visionCascadeAttemptNotice.js (isCascadeAttemptNoticeEnabled + buildCascadeAttemptNotice, reads KHY_VISION_CASCADE_ATTEMPT_NOTICE via flagRegistry, zero IO, never throws, returns the legacy line when gated off / index<=0 / non-finite index) + a wiring change in aiGatewayGenerateMethod.js cascade loop (track _attIdx + _prevAttemptModel, delegate the per-candidate notice; catch → byte-revert legacy line) gated; gate-off byte-reverts to the historical per-candidate preamble.
+- noise-conscious: candidate #1 is unchanged (full context for the user), only the redundant repeats collapse — the user still sees each attempt but without N copies of '我无法直接识别图片内容'.
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionCascadeAttemptNotice.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/gateway/visionCascadeAttemptNotice.test.js`
+- `services/backend/tests/gateway/visionCascadeAttemptNoticeWiring.test.js`
+- `services/backend/tests/gateway/visionCascadeAttemptNoticeRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-145] 级联逐候选请稍候提示减冗余减少心灵噪音.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-cascade-attempt-notice
+node --check services/backend/src/services/gateway/visionCascadeAttemptNotice.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — strip provider ROUTING PREFIX from vision model names in user-facing cascade notices (OPS-MAN-150; 承 OPS-145, directly serving '减少显示的心灵噪音'). On the reported OCR-fallback path the cascade's first attempt (_attempts[0] = decision.model = the switched-to-pinned vision model) keeps its provider routing prefix 'glm/glm-4.6v-flash' (prefix drives internal poolHint resolution), while all sibling candidates from collectVisionFallbackCandidates are BARE ids (glm-4v-flash, gpt-5.3-codex-review, claude-opus-4-6). So OPS-145's per-candidate '正在调用...请稍候' notices leaked the raw internal routing id 'glm/glm-4.6v-flash' into user prose for candidates [0]/[1] — inconsistent with every other bare line = mental noise leaking internal routing detail. FIX: a tiny pure leaf visionModelDisplayName.toDisplayModelName(model, env) strips the segment before the last '/' PRESERVING CASE (does NOT reuse _bareId, which is dedup-only and lowercases). Wired ONLY at the DISPLAY boundary: aiGatewayGenerateMethod normalizes model/prevModel just before buildCascadeAttemptNotice; internal _att.model/_prevAttemptModel routing state is UNTOUCHED (poolHint still resolves from the original prefixed id). Gate KHY_VISION_MODEL_DISPLAY_NAME default-on; off → byte-revert (prefix returns verbatim). Orthogonal to OPS-145 (which folds the repeated first sentence) — this folds the leaked prefix.  `vision-model-display-name`
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionModelDisplayName.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/gateway/visionModelDisplayName.test.js`
+- `services/backend/tests/gateway/visionModelDisplayNameWiring.test.js`
+- `services/backend/tests/gateway/visionModelDisplayNameRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-150] 级联中间提示显示归一去provider前缀减少心灵噪音.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-model-display-name
+node --check services/backend/src/services/gateway/visionModelDisplayName.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — strip provider ROUTING PREFIX from the vision model name in the FAILURE-SUMMARY wall too (OPS-MAN-159; 承 OPS-150, directly serving '减少显示的心灵噪音'). OPS-150 normalized the model name ONLY in the per-candidate cascade notices (buildCascadeAttemptNotice); the failure-summary wall (visionFailureSummary.buildVisionFailureMessage) has its OWN line '本次尝试的视觉模型:<model>' fed by the caller's _primaryModel = decision.model, which retains the 'glm/' routing prefix → the wall still leaked '本次尝试的视觉模型:glm/glm-4.6v-flash' inconsistently with the already-normalized cascade notices. This wall is user-visible when the vision cascade fully fails AND local OCR reads NO text (photos/screenshots/missing OCR langpack); on OCR-success it is suppressed by OPS-142 (_deferredFailureMsg). FIX: reuse OPS-150's pure leaf visionModelDisplayName.toDisplayModelName at the wall's DISPLAY boundary inside buildVisionFailureMessage (centralized so ALL callers — cascade path + recognizeImage.js tool — benefit), gated by the SAME flag KHY_VISION_MODEL_DISPLAY_NAME (default-on); off / leaf-unavailable → returns the raw prefixed id → byte-revert '本次尝试的视觉模型:glm/glm-4.6v-flash。'. Internal routing (_primaryModel/poolHint) UNTOUCHED. Orthogonal to OPS-150 (different emit site: the wall, not the notices).  `vision-failure-summary-display-name`
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionFailureSummary.js`
+- `services/backend/src/services/gateway/visionModelDisplayName.js`
+- `services/backend/tests/gateway/visionFailureSummaryDisplayName.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-159] 失败墙视觉模型名显示归一去provider前缀减少心灵噪音.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-failure-summary-display-name
+node --check services/backend/src/services/gateway/visionFailureSummary.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — dedup the '真实失败原因:' LABEL on the failure-summary wall (OPS-MAN-161; 承 OPS-159, directly serving '减少显示的心灵噪音'). This is the GAP flagged in the OPS-159 area's whenToUse: when a describe sub-call fails, gateway's aiGateway._buildFailureReasonSection prepends '真实失败原因:\n<真因…>', that string becomes _lastRawError → fed to buildVisionFailureMessage as rawError → cause = sanitizeCause(rawError) preserves the self-carried '真实失败原因:' label → the wall's cause push (真实失败原因:${cause}) prepends it a SECOND time = '真实失败原因:真实失败原因:…' stutter. aiGateway._prependFailureReason already has the same-intent guard `if(/真实失败原因/.test(body)) return body`; the wall historically missed the equivalent. FIX: gate KHY_VISION_FAILURE_CAUSE_DEDUP (default-on) — if cause already begins with the label (half- or full-width colon), strip the self-carried label so it appears exactly once; gate-off / exception → byte-revert to the doubled behavior. Orthogonal to OPS-159 (model-name prefix) and KHY_VISION_FAILURE_SUMMARY (whether the wall exists at all) on the SAME wall.  `vision-failure-cause-dedup`
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionFailureSummary.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/visionFailureCauseDedup.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-161] 失败墙真实失败原因标签去重减少心灵噪音.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-failure-cause-dedup
+node --check services/backend/src/services/gateway/visionFailureSummary.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — humanize the vision-pool adapter-failure STATUS on the OCR-rescued path (OPS-MAN-164, directly serving '减少显示的心灵噪音'). GAP: on the vision→local-OCR-success path, the final generation loop still attempts the vision-pool adapter and 404s; aiGatewayGenerateMethod's two adapter-failure emit sites (~2589 / ~3202) print the raw diagnostic status `visionpool 失败: OpenAI: 404 model_not_found` in real time — but the image was already read by OCR and answered, so that 404 line is SECONDARY mental noise. FIX: pure leaf visionPoolFailStatus.buildVisionPoolFailStatus({poolName, ocrRescued, env}) gated by KHY_VISION_POOL_FAIL_STATUS_HUMANIZE (default-on): when gate on && ocrRescued (options._ocrImageTextRead===true) && poolName matches /vision/i → return '视觉通道当前不可用，已用本地 OCR 兜底'; else null → caller keeps its raw `${name} 失败: ${errMsg}` line (byte-revert). Genuine failures (no OCR rescue) and non-vision pools keep the actionable root-cause diagnostic. Strict predicate: ocrRescued===true (never truthy-but-not-true) and /vision/i name match.  `vision-pool-fail-status-humanize`
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionPoolFailStatus.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/visionPoolFailStatusHumanize.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-164] 视觉池失败状态人话化减少心灵噪音.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-pool-fail-status-humanize
+node --check services/backend/src/services/gateway/visionPoolFailStatus.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — DETERMINISTIC live-STATUS 'downgraded to OCR' notice at the post-failure rescue net (OPS-MAN-127; 承 OPS-124/126). OPS-124 (prompt instruction) and OPS-126 (answer footnote) cover the ANSWER layer's 'OCR was used' disclosure; this area covers the LIVE-PROGRESS layer. prep-time Site1 (~1619) and Site2 (~1693) both emit an OCR-success emitStatus telling the user OCR was used; ONLY Site3 (the post-failure rescue net — the EXACT reported path gpt-4o keep → runtime 404 → rescue net) OCR-SUCCESS branch never emitted a status (its emitStatus calls covered only OCR failure/no-text). So on the exact reproduced path the live-progress layer stayed silent about the OCR downgrade. This area adds the missing rescue-net success status, aligned with Site1/Site2.  `ocr-rescue-status`
+
+**什么时候来这里（症状触发词）：**
+- post-failure rescue net (Site3 ~2857) OCR-SUCCESS branch (ocrTexts.length>0, images stripped, prompt injected): KHY_OCR_RESCUE_STATUS (default-on) emits a live emitStatus '已降级用本地 OCR 成功提取 N 张图片文本并据此作答', matching the announcements prep-time Site1/Site2 already make; gate-off → no emit, byte-reverts to the historical Site3-success-silent behavior
+- orthogonality: OPS-124 = model-facing prompt INSTRUCTION (answer layer, advisory); OPS-126 = deterministic finishResult FOOTNOTE (answer layer, guaranteed); OPS-127 = deterministic live emitStatus at the rescue net (live-progress layer, guaranteed at the moment of downgrade). Three orthogonal layers all serving '无感明显告知用户用了 OCR'.
+- the fix is surgical + additive: a pure leaf ocrRescueStatusNotice.js (isRescueStatusEnabled / buildOcrRescueStatus({count,adapterName,env}) → live-status string when gate-on and count>0, gate-off/malformed→null, never throws) + a gated emitStatus at the Site3 OCR-success branch (after the options reassign) with fail-soft try/catch; gate-off = no emit (byte-revert)
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrRescueStatusNotice.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/ocrRescueStatusNotice.test.js`
+- `services/backend/tests/gateway/ocrRescueStatusNoticeWiring.test.js`
+- `services/backend/tests/gateway/ocrRescueStatusNoticeRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-127] OCR救援网成功实时状态告知已降级到OCR.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-rescue-status
+node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### CI Duplicate-code Detection Gate + Shared OCR-gateway Test Harness (goal 2026-07-12: '把所有重复的函数提取成公共库,统一维护;在 CI 里加重复代码检测,超过三行相同就报警'). Two parts: (1) services/backend/tests/gateway/_ocrGatewayHarness.js — a parameterized-factory shared harness absorbing the copy-pasted scaffolding (_wireGateway/_makeRecordingAdapter/_makeRejectAdapter/_realExtractImageOcrDetails/tesseract+python probes/PIL render/env save-restore) across the 20 OCR-gateway .test.js files, byte-equivalent to each file's in-place harness; underscore-prefixed so *.test.js never selects it; it DOES IO (spawnSync/fs/imageService) so its header does NOT self-declare pure-leaf/zero-IO (else check-leaf-contract leaf-io fires). (2) A self-authored duplicate-code detector: pure guard core scripts/lib/duplicationGuard.js (crypto/path only, zero-IO, deterministic, fail-soft, gate KHY_DUPLICATION_GUARD) + thin CLI scripts/check-duplication.js (all IO). Algorithm: normalize lines (skip blank/comment/pure-punctuation), sliding window MIN_BLOCK=4 significant lines (=more than three), sha1, a hash in >=2 places is a clone class, coalesce adjacent windows to maximal spans, one finding per (file,span). Phased per user decision 'warn + baseline first, flip to hard gate after migration': stage-1 DEFAULT_MODE='warn' (all warnings, existing dup never reds CI, NOT in the blocking check:small-model:safety aggregate); stage-2 --gate / KHY_DUPLICATION_MODE=gate (in baseline → warning, not in baseline → error). Baseline .duplication-baseline.json stores normalized-window content-hash fingerprints (relocation-stable, self-shrinks as extraction deletes dup copies). Flip-to-hard-gate is one reviewable diff: change DEFAULT_MODE + re-run --write-baseline + fold check:duplication into the safety aggregate.  `ci-duplication-guard`
+
+**什么时候来这里（症状触发词）：**
+- you see copy-pasted scaffolding across test files, or want to extract duplicated functions into a shared library: use/extend services/backend/tests/gateway/_ocrGatewayHarness.js (parameterized factory; migrate reads from module vars to handle fields rec.finalPrompt/finalImages; keep all test bodies/assertions/env-keys/content-strings byte-equivalent)
+- you want CI to alert on >3 identical lines: npm run check:duplication (warn) / check:duplication:strict (exit 1 on warn) / check:duplication:gate (hard gate: non-baseline dup → error) / check:duplication:baseline (regenerate .duplication-baseline.json)
+- you need to flip stage-1 warn to stage-2 hard gate: change DEFAULT_MODE 'warn'→'gate' in scripts/check-duplication.js, re-run --write-baseline, and fold check:duplication into check:small-model:safety — one reviewable diff
+- you need to tune the detector: DEFAULT_MIN_BLOCK (how many lines = duplicate) and isSignificant/COMMENT_LINE_RE/PUNCT_ONLY_RE (skip categories) live in scripts/lib/duplicationGuard.js; DEFAULT_SCOPE (what gets scanned) lives in scripts/check-duplication.js
+
+**先读这些文件：**
+- `services/backend/tests/gateway/_ocrGatewayHarness.js`
+- `scripts/lib/duplicationGuard.js`
+- `scripts/check-duplication.js`
+- `.duplication-baseline.json`
+- `scripts/tests/duplicationGuard.test.js`
+- `scripts/tests/check-duplication.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-131] 重复代码检测门与公共测试脚手架.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:maintainer:duplication
+npm run check:duplication
+node --check scripts/lib/duplicationGuard.js scripts/check-duplication.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — DETERMINISTIC live-STATUS 'downgraded to OCR' notice at the PREP-time sites for NON-VERBOSE sessions (OPS-MAN-132; 承 OPS-127/124/126). OPS-127 made the Site3 rescue-net OCR-success status UNCONDITIONAL, but prep-time Site1 (~1618) and Site2 (~1692) OCR-success emitStatus were always nested inside `if (_isVerbose)`. So NON-VERBOSE sessions (default KHY_STATUS_VERBOSITY=auto) stayed silent on the live-progress layer during a prep-time OCR downgrade — asymmetric with the now-unconditional Site3. This area adds the missing unconditional prep-time status, guarded by !_isVerbose to avoid duplicating the existing verbose status.  `ocr-rescue-status-prep`
+
+**什么时候来这里（症状触发词）：**
+- prep-time Site1 (~1591 describe-cascade-all-failed) and Site2 (~1704 ocr-fallback) OCR-SUCCESS branches (ocrTexts.length>0, images stripped, prompt injected): when !_isVerbose, KHY_OCR_RESCUE_STATUS_PREP (default-on) emits a live emitStatus '已降级用本地 OCR 成功提取 N 张图片文本并据此作答' (subject '模型' not '适配器'); verbose sessions keep their existing status (the !_isVerbose guard avoids duplication); gate-off → no emit, byte-reverts to the historical non-verbose prep-time silence
+- orthogonality (four layers all serving '无感明显告知用户用了 OCR'): OPS-124 = model-facing prompt INSTRUCTION (answer layer, advisory); OPS-126 = deterministic finishResult FOOTNOTE (answer layer, guaranteed); OPS-127 = deterministic live emitStatus at the Site3 rescue net (live-progress layer, unconditional); OPS-132 = deterministic live emitStatus at prep-time Site1/Site2 (live-progress layer, fills the NON-VERBOSE gap, !_isVerbose-guarded)
+- the fix is surgical + additive: reuse the OPS-127 pure leaf ocrRescueStatusNotice.js with a NEW orthogonal prep variant (isRescuePrepStatusEnabled / buildOcrRescuePrepStatus({count,modelName,env}) → live-status string when gate-on and count>0, gate-off/malformed→null, never throws) under an INDEPENDENT gate KHY_OCR_RESCUE_STATUS_PREP + a !_isVerbose-guarded emitStatus at Site1/Site2 OCR-success branches with fail-soft try/catch; gate-off = no emit (byte-revert)
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrRescueStatusNotice.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/ocrRescueStatusPrep.test.js`
+- `services/backend/tests/gateway/ocrRescueStatusPrepWiring.test.js`
+- `services/backend/tests/gateway/ocrRescueStatusPrepRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-132] prep期OCR兜底非verbose实时状态告知已降级到OCR.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-rescue-status-prep
+node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Text-only-model Image OCR Fallback — CROSS-LAYER de-duplication of the Site1 prep-status (OPS-132) and the OCR-success closure (OPS-144), so a single OCR downgrade is not announced twice as two PERMANENT lines (OPS-MAN-148; 承 OPS-132 + OPS-144, directly serving '减少显示的心灵噪音'). On the EXACT reported path (non-verbose · describe cascade all-failed → local OCR success), the same 'downgraded to OCR and succeeded' fact was announced TWICE: (1) a status chunk from OPS-132 buildOcrRescuePrepStatus ('已降级用本地 OCR 成功提取…'), which — because it contains '成功' — is mis-classified by emitRuntimeStatus into a PERMANENT '模型已连接' terminal line; and (2) an assistant_message chunk from OPS-144 buildOcrSuccessClosure ('视觉模型均不可用，已改用本地 OCR 成功识别…据此作答'). Since the OPS-144 closure already delivers the '明显告知用了 OCR' disclosure on Site1, the prep-status is a redundant, worse-worded second announcement. This area suppresses the Site1 prep-status ONLY when the closure will also fire.  `ocr-rescue-prep-closure-dedup`
+
+**什么时候来这里（症状触发词）：**
+- Site1 (describe-cascade-all-failed → OCR success, ~1663) non-verbose prep-status: KHY_OCR_RESCUE_PREP_CLOSURE_DEDUP (default-on) suppresses the redundant prep-status via shouldSuppressPrepForClosure({intermediateEnabled, closureEnabled, env}) → true ONLY when the dedup gate is on AND intermediateEnabled===true AND closureEnabled===true (strict boolean checks). Then only the clearer OPS-144 closure remains = net 1 announcement. Gate-off / closure-won't-fire / malformed → false (no suppression) = byte-revert (prep-status + closure coexist, 2 announcements).
+- SCOPE IS SITE1 ONLY: Site2 (ocr-fallback, no cascade → no dangling '请稍候' promise → no closure, ~1796) NEVER calls this predicate and ALWAYS keeps its prep-status — otherwise non-verbose users on the Site2 path would fall back to silence. The predicate is invoked only at the Site1 call site.
+- orthogonality: OPS-132 ADDS the prep-status (fills the non-verbose gap); OPS-144 ADDS the closure (closes the dangling promises); OPS-148 REMOVES the resulting DUPLICATE on Site1 where both fire for the same fact. Independent gate KHY_OCR_RESCUE_PREP_CLOSURE_DEDUP; gate-off → byte-reverts to the OPS-132+OPS-144 coexistence.
+- the fix is surgical + additive: extend the existing pure leaf ocrRescueStatusNotice.js (isPrepClosureDedupEnabled + shouldSuppressPrepForClosure, reads KHY_OCR_RESCUE_PREP_CLOSURE_DEDUP via flagRegistry, zero IO, never throws, strict ===true checks so a truthy-but-not-true value never mis-suppresses) + a Site1-only guard in aiGatewayGenerateMethod.js that computes _closureWillFire (_intermediateEnabled && closure gate on) and skips the prep emitStatus when shouldSuppressPrepForClosure returns true; fail-soft try/catch → historical behavior on leaf-unavailable.
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/ocrRescueStatusNotice.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/ocrRescueStatusNotice.test.js`
+- `services/backend/tests/gateway/ocrRescuePrepClosureDedupWiring.test.js`
+- `services/backend/tests/gateway/ocrRescuePrepClosureDedupRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-148] Site1-prep状态与OCR成功闭合跨层去重减少心灵噪音.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:ocr-rescue-prep-closure-dedup
+node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
+node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
+```
+
+---
+
+### Vision-Cascade Exhaustion Diagnostic — NETWORK reason class (OPS-MAN-134; 承 OPS-118/120/122 model-rejection strip-floor). diagnoseVisionExhaustion (pure leaf, already wired at aiGatewayGenerateMethod.js:3315) classified only 404 (model_not_provisioned) and 429 (rate_limited). When the vision cascade exhausts on a TRANSIENT network failure (socket hang up / ECONNRESET / tunneling-socket / 连接被重置) and terminal OCR recovers NO text (photo/color-block, no chars), the request fell to the generic '所有 AI 通道均不可用' wall — omitting the honest 'I did receive your image but the network could not deliver it to the vision model — this is NOT “no image received”' acknowledgment, which is exactly the reported failure where the model falsely denies the image. This area adds the orthogonal network_unreachable reason branch (and folds it into 'multiple' when it co-occurs with 404/429).  `vision-network-exhaustion`
+
+**什么时候来这里（症状触发词）：**
+- terminal vision-cascade exhaustion (aiGatewayGenerateMethod.js:3313 diagnostic call, after tryRateLimitOcrRescue at :3292 returns null because OCR read no text): when any attempt carries errorType:'network' OR a network-signature error text (socket hang up / econnreset / tunneling socket / 连接被重置 / 连接超时 / getaddrinfo …), the diagnostic prepends '⚠ 识图失败:视觉通道网络不可达 … 我确实收到了你的图片 … 这不是「没收到图」' + a proxy/retry/paste-text fix; gated by KHY_VISION_NETWORK_EXHAUSTION_DIAG (default-on, independent sub-gate of parent KHY_VISION_EXHAUSTION_DIAG) — sub-gate off byte-reverts network detection to null while 404/429 branches stay intact
+- the network path is ORTHOGONAL to the text-image path: a text image under the SAME network exhaustion is recovered by tryRateLimitOcrRescue (network ∈ _RATE_LIMIT_OCR_ERROR_TYPES) → local tesseract reads the text + discloses '[视觉通道限流·本地 OCR 兜底]' — so 'no-vision model still accurately reads the image' holds; the diagnostic only fires when OCR finds NO text
+- reason values: single network → 'network_unreachable'; network + (404 and/or 429) → 'multiple'; 404+429 (no network) → 'both'; single 404 → 'model_not_provisioned'; single 429 → 'rate_limited'. bare 'timeout' errorType is deliberately NOT matched as network (preserves the existing auth+timeout→null contract). The fix lives ENTIRELY inside the already-wired pure leaf (zero aiGateway edit)
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/visionExhaustionDiagnostic.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/visionExhaustionDiagnostic.test.js`
+- `services/backend/tests/gateway/visionNetworkExhaustionRealImage.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-134] 视觉级联网络不可达终局诊断.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:vision-network-exhaustion
+node --check services/backend/src/services/gateway/visionExhaustionDiagnostic.js
+```
+
+---
+
+### Workflow list load — page-scoped degraded UI (silent request, no cross-page banner). Fixes the reported bug where a red 「网络连接异常:无法访问 /api/workflow。请确认 ai-backend 服务可用后重试。」 banner appeared on the UNRELATED 代理管理 (Proxy Management) page. Root cause: the workflow list fetch (Workflows.vue onMounted → useWorkflow.listWorkflows → GET /api/workflow) was NOT marked silent and had no local error UI, so request.js's interceptor fired a GLOBAL body-mounted ElMessage (notifyError) on network failure; a navigation-orphaned / backend-unreachable failure leaked that global toast onto whatever page the user had moved to. Fix (per request.js:88-94 convention): mark the list GET { silent: true } and render the failure IN-PAGE (inline el-alert + 重试) via a loadError ref, so the failure stays scoped to the Workflows page and never bleeds cross-page.  `workflow-frontend-degraded-load`
+
+**什么时候来这里（症状触发词）：**
+- a 「无法访问 /api/workflow」 / 「请确认 ai-backend 服务可用」 network-error banner shows up on a page that is not the Workflows page (e.g. Proxy Management)
+- the workflow list fails to load and the user needs an in-page error + retry instead of (or in addition to) a global toast
+- adding another background/navigation-orphaned GET that should degrade locally: mirror the { silent: true } + local error-ref + view alert pattern here rather than firing the global notifyError
+
+**先读这些文件：**
+- `apps/ai-frontend/src/composables/useWorkflow.js`
+- `apps/ai-frontend/src/views/Workflows.vue`
+- `apps/ai-frontend/src/composables/useWorkflow.wiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-135] 工作流列表载入本页降级不泄漏全局横幅.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run test:workflow-list-degraded
+node --check apps/ai-frontend/src/composables/useWorkflow.js
+```
+
+---
+
+### 缓存前缀击穿归因 (prompt-cache prefix bust attribution — 命中率低时定位是谁击穿了前缀：系统提示/工具集/工具顺序)  `cache-prefix-shape-attribution`
+
+**什么时候来这里（症状触发词）：**
+- 缓存命中率跌破阈值，用户/维护者需要知道『这一轮为什么没命中』——是系统提示变了、工具集变了、还是工具顺序抖了
+- 你要给已有的 cacheWarning 命中率百分比补上可定位的归因，而不是只报一个数字
+- 新增一个会进请求前缀的字段(system 或 tools schema)后，想确认它是否稳定、是否会击穿 provider 最长前缀缓存
+
+**先读这些文件：**
+- `services/backend/src/constants/promptPrefixShape.js`
+- `services/backend/src/cli/cacheWarning.js`
+- `services/backend/src/services/gateway/aiGatewayGenerateMethod.js`
+- `services/backend/src/cli/replSession.js`
+- `services/backend/tests/constants/promptPrefixShape.test.js`
+- `services/backend/tests/cli/cacheWarning.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-151] 缓存前缀击穿归因接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/cli/cacheWarning.test.js services/backend/tests/constants/promptPrefixShape.test.js
+node --check services/backend/src/constants/promptPrefixShape.js
+node --check services/backend/src/cli/cacheWarning.js
+```
+
+---
+
+### 交付门人类可读报告落盘 (deliveryGate markdown report — 把结构化 verdict 变成带逐条判定+改进建议的可打开报告)  `delivery-gate-report-artifact`
+
+**什么时候来这里（症状触发词）：**
+- harness 跑完交付门后，维护者/用户想要一份可打开的交付说明(逐条判定 + 缺失项 + 改进建议)，而不只是 harnessReport.deliveryGate 里的结构化摘要
+- deliveryGateReporter 叶(generateDeliveryReport/saveDeliveryReport)全实现且有测，却没有生产消费者——本区就是它的接线
+- 想改交付报告落盘的位置/格式，或调整门控 KHY_DELIVERY_GATE_REPORT 的开关行为
+
+**先读这些文件：**
+- `services/backend/src/services/deliveryGateReporter.js`
+- `services/backend/src/services/agenticHarnessService.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/deliveryGateReporter.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-152] 交付门人类可读报告落盘接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node services/backend/tests/services/deliveryGateReporter.test.js
+node --check services/backend/src/services/agenticHarnessService.js
+node --check services/backend/src/services/flagRegistry.js
+```
+
+---
+
+### 会话快照损坏兜底修复 (sessionFileRepair — 损坏/截断的 .json 快照在还原时先结构修复/partial salvage 再返回，而不是整段丢给 checkpoint/null)  `session-file-repair-restore`
+
+**什么时候来这里（症状触发词）：**
+- 换电脑/换系统后 restoreSession 遇到损坏或被截断的 JSON 会话快照(比如写盘中途断电、磁盘满写坏)，想尽量 salvage 出可用消息而不是整段会话丢失——直接服务「完整的简单的还原」
+- sessionFileRepair 叶(repairSessionFile/tryParsePartialJson/extractValidMessages)全实现且有单测，却此前零生产消费者——本区就是把它接进 sessionPersistence.restoreSession 的 JSON 快照兜底
+- 想改损坏快照的修复策略/落盘备份(.bak)/或调整门控 KHY_SESSION_FILE_REPAIR 的开关行为(关 → 逐字节回退到旧的 checkpoint/null 兜底)
+
+**先读这些文件：**
+- `services/backend/src/services/sessionFileRepair.js`
+- `services/backend/src/services/sessionPersistence.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/sessionFileRepairWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-153] 会话快照损坏兜底修复接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node services/backend/tests/services/sessionFileRepairWiring.test.js
+node --check services/backend/src/services/sessionPersistence.js
+node --check services/backend/src/services/flagRegistry.js
+```
+
+---
+
+### 任务模板执行手册注入 (taskTemplates — 用户消息命中常见任务关键词时，把该模板的分步执行手册作为 [Task Playbook] 附加进模型 loopInput，降低小模型推理负担)  `task-template-hint-injection`
+
+**什么时候来这里（症状触发词）：**
+- 想让小模型/弱模型在常见编程任务(加接口/修 bug/加功能模块/spec 驱动)上照「操作手册」分步执行，而不是全靠自己推理——这是 taskTemplates 叶的意图
+- taskTemplates(matchTemplate/generateTaskInstructions/listTemplates)全实现且有单测，却此前零生产消费者——本区就是把它接进 agenticHarnessService 的上下文/hints 组装
+- 想新增/改任务模板(applicableWhen 关键词、generateInstructions 分步指令)，或调整门控 KHY_TASK_TEMPLATE_HINT 的开关行为(关 → 不匹配/不注入，loopInput 逐字节回退)
+
+**先读这些文件：**
+- `services/backend/src/services/taskTemplates.js`
+- `services/backend/src/services/agenticHarnessService.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/taskTemplateHintWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-154] 任务模板执行手册注入接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node services/backend/tests/services/taskTemplateHintWiring.test.js
+node --check services/backend/src/services/agenticHarnessService.js
+node --check services/backend/src/services/flagRegistry.js
+```
+
+---
+
+### 指令注册表编译期收敛守卫 (directiveRegistryAudit — 把「DIRECTIVE_REGISTRY 指令 SSOT vs aiChatCore.js 实际 compose 的 key 集合」的一致性锁成 CI/提交期不变量，堵住协议漂移入口)  `directive-registry-audit-guard`
+
+**什么时候来这里（症状触发词）：**
+- directiveRegistryAudit(auditDirectiveRegistry/auditRegistryShape/extractComposedKeys)是全实现的纯审计原语，文件头写明「被守卫测试消费」，却此前零消费者、能力休眠——本区就是它设计意图里那个消费者
+- khyos 自审报告 #1「系统提示词膨胀+多协议冲突·根因=叠加式协议堆叠、无编译期冲突检测」的收敛机制:未注册 key 会被 composeDirectives 静默落 protocol 兜底=漂移入口，本守卫在 CI 锁死
+- 在 aiChatCore.js 新增/删除一路意图指令(composeDirectives 的 key)时——必须同步在 directiveComposer.DIRECTIVE_REGISTRY 登记正确 tier/label，否则本守卫红灯(unregistered/orphaned/duplicates)
+
+**先读这些文件：**
+- `services/backend/src/services/directiveRegistryAudit.js`
+- `services/backend/src/services/directiveComposer.js`
+- `services/backend/src/cli/aiChatCore.js`
+- `services/backend/tests/services/directiveRegistryAudit.guard.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-155] 指令注册表编译期收敛守卫接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/services/directiveRegistryAudit.guard.test.js
+node --check services/backend/src/services/directiveRegistryAudit.js
+```
+
+---
+
+### 取来即执行安全守卫接线 (fetchExecuteGuard — 把 curl…|sh / base64 -d|bash / bash -c "$(curl…)" 这类下载-解码-执行供应链签名接进 shellSafetyValidator.analyzeCommand，fail-closed 升为 critical 拦截)  `fetch-execute-guard-shell-safety`
+
+**什么时候来这里（症状触发词）：**
+- fetchExecuteGuard(analyzeFetchExecute/buildFetchExecuteRisks/describeFetchExecuteGuard)是全实现安全守卫叶，文件头写明「使既有 shellSafetyValidator block 路径接管」，却此前零消费者(无测试无生产接线)——本区就是把它接进 analyzeCommand
+- 想调整「取来即执行」识别范围(FETCHERS/DECODERS/SHELL_EXECUTORS/STDIN_INTERPRETERS 四张表、命令替换/进程替换判据)——只改 fetchExecuteGuard 叶，shellSafetyValidator 只消费 buildFetchExecuteRisks
+- 想开关这道守卫:门控 KHY_FETCH_EXEC_GUARD default-on。关 → buildFetchExecuteRisks 返 [] → analyzeCommand 的 risks 零增量 → maxSeverity 不变 → 逐字节回退到旧行为
+
+**先读这些文件：**
+- `services/backend/src/services/fetchExecuteGuard.js`
+- `services/backend/src/services/shellSafetyValidator.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/security/fetchExecuteGuardWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-156] 取来即执行安全守卫接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/security/fetchExecuteGuardWiring.test.js
+node --check services/backend/src/services/shellSafetyValidator.js
+```
+
+---
+
+### 用户显式 git-init 白名单覆盖接线 (gitTrackWhitelist — 让用户对自动判定会「软拒绝」的精确系统/共享根显式声明「我确实要 git 化」，接进 workspaceGitInit.ensureWorkspaceRepo；硬安全约束永不覆盖)  `git-track-whitelist-init-override`
+
+**什么时候来这里（症状触发词）：**
+- gitTrackWhitelist(loadWhitelist/isWhitelisted/addToWhitelist/removeFromWhitelist/saveWhitelist)是全实现的 khy-native 白名单叶，却此前零生产消费者(workspaceGitInit 从不消费)——本区就是把 isWhitelisted 接进 IO 层 ensureWorkspaceRepo
+- 想调整白名单覆盖的作用域:仅 workspaceGitInitPolicy 判 reason==="system-dir"(可覆盖软拒绝，如 /opt、/srv、/mnt)这一分支查白名单；filesystem-root / home-dir / ancestor-of-home / already-repo 属硬安全约束，白名单永不覆盖
+- 为什么接在 IO 层而非纯策略叶:workspaceGitInitPolicy 契约零 IO，白名单是 fs 读，放进本就做 git 探测/init 的 workspaceGitInit 服务，保住纯叶纯度
+- 想开关:门控 KHY_AUTO_GIT_INIT(既有父门)+ 白名单空(默认)→ isWhitelisted 恒 false → 逐字节回退，无任何覆盖
+
+**先读这些文件：**
+- `services/backend/src/services/gitTrackWhitelist.js`
+- `services/backend/src/services/workspaceGitInit.js`
+- `services/backend/src/services/workspaceGitInitPolicy.js`
+- `services/backend/tests/services/gitTrackWhitelistWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/services/gitTrackWhitelistWiring.test.js
+node --check services/backend/src/services/workspaceGitInit.js
+```
+
+---
+
+### 本地 Ollama 模型并入统一目录接线 (localOllamaProbe — 把本地正在服务的模型作 source:local 边接进 modelCatalogGraph.buildCatalogGraph 第 4 源，仅 live 发现时；never-throw 非阻塞)  `local-model-catalog-graph`
+
+**什么时候来这里（症状触发词）：**
+- localOllamaProbe.fetchLocalModels(gateway/localOllamaProbe.js)是复用 ollamaModelManager 的 never-throw 非阻塞适配器，专为 per-user 目录发现本地模型，却此前零生产消费者——本区把它接进统一目录 modelCatalogGraph 的第 4 源(继 chat/image/video)
+- 想调整本地模型如何并入:只改 modelCatalogGraph §4(edge shape / 去重 / status)或 localOllamaProbe 叶(探测/超时/never-throw 契约)；modelCatalogPivots 的所有分组视图自动跟随
+- 为什么仅 live 发现时探测:本地模型只能靠探测运行中的服务器得知，故属 live 发现路径，绝不上默认静态快路径(快路径逐字节回退，从不发网络)
+- 想开关:门控 KHY_LOCAL_MODEL_CATALOG default-on。关 / 非 live / Ollama 未运行 / 探测超时 → 无 source:local 边、sources.localModels===0、目录逐字节回退
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/localOllamaProbe.js`
+- `services/backend/src/services/gateway/modelCatalogGraph.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/gateway/localOllamaProbeCatalogWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-158] 本地模型并入统一目录接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/gateway/localOllamaProbeCatalogWiring.test.js
+node --check services/backend/src/services/gateway/modelCatalogGraph.js
+```
+
+---
+
+### 行为特征化并入误报收口裁决接线 (characterizationSnapshot — falsePositiveFixGuard.finalize 就地用回归门 baseline/current 快照差分「未覆盖文件上的静默行为漂移」并入裁决；agenticHarnessService 透传快照)  `characterization-silent-drift-fpf`
+
+**什么时候来这里（症状触发词）：**
+- characterizationSnapshot(services/backend/src/services/characterizationSnapshot.js)是纯零 IO 行为特征化叶,能差分两份验证快照产出静默行为漂移(silentChanges),falsePositiveFixGuard.finalize 也早就接受 ctx.silentBehaviorChanges,却从没有生产代码采集 baseline/current 喂给它——本区把回归门 bugfixRegressionGate 已产出的快照接进收口裁决
+- 想调整静默漂移如何判定:改 characterizationSnapshot 叶(指纹/步骤对比/coveredChanges 归类)或 finalize step-3 接线(coveredFiles 复用 falsePositiveFixGuard 自己的 _computeUncovered 作单一真源,勿另造覆盖判定防漂移)
+- 抑制不变量(保留既有语义):全覆盖(allCovered)/仅测试步漂移/reproObserved 红→绿真复现闭环 → 不算静默;调用方已预算 ctx.silentBehaviorChanges 时优先采用不就地差分
+- 想开关:门控 KHY_FPF_CHARACTERIZATION default-on。关 / 无 baseline+current 快照 / 差分抛错 → silentBehaviorChanges 恒 [] → 逐字节回退,纯叶 fail-soft 绝不破坏收口裁决
+
+**先读这些文件：**
+- `services/backend/src/services/characterizationSnapshot.js`
+- `services/backend/src/services/falsePositiveFixGuard.js`
+- `services/backend/src/services/agenticHarnessService.js`
+- `services/backend/src/services/flagRegistry.js`
+- `services/backend/tests/services/characterizationFpfWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-160] 行为特征化并入误报收口裁决接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/services/characterizationFpfWiring.test.js
+node --check services/backend/src/services/falsePositiveFixGuard.js
+```
+
+---
+
+### CLI/Web 管理面平价守卫 (parityGuard.checkParity — 证明 CLI 与 Web 通过同一 registry 漏斗管理同一批资源，两个面永不矛盾，锁成 CI/提交期不变量)  `parity-guard-cli-web`
+
+**什么时候来这里（症状触发词）：**
+- parityGuard(checkParity)是全实现的纯只读平价核验器，文件头声明它「证明 CLI 与 Web 管同一批资源、两面永不矛盾」，却此前零消费者、能力休眠——本区就是它设计意图里那个消费者
+- 三条平价不变量:①source 唯一性(堵 dataHome 式双根漂移)②CLI manage 子命令集合==注册表资源 id(含 list)③op 可达性(每能力有 ops 实现且 CLI/Web 同经 registry.invoke/describe 单一契约)
+- 在新增 manage 子命令、改动 management registry 资源、或给资源加能力但漏实现 ops 时——必须保持 CLI(commandSchema)与 Web(registry)两面同步，否则本守卫红灯(SOURCE_CONFLICT/CLI_PARITY/NO_IMPL 等)
+
+**先读这些文件：**
+- `services/backend/src/services/management/parityGuard.js`
+- `services/backend/src/services/management/index.js`
+- `services/backend/src/constants/commandSchema.js`
+- `services/backend/tests/services/management/parityGuardWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-162] CLI-Web管理面平价守卫接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/services/management/parityGuardWiring.test.js
+node --check services/backend/src/services/management/parityGuard.js
+```
+
+---
+
+### 动作契约极小核验器 V 的 CI 强制 (actionContractVerifier — 模型无关可证明不变量层的 fail-closed 谓词核验器,把 P1-P8 投毒抵抗+谓词/Hoare 逻辑锁成发布门禁)  `action-contract-verifier-ci-guard`
+
+**什么时候来这里（症状触发词）：**
+- actionContractVerifier(verify/evaluatePredicate/AXIOMS)是一枚零依赖、纯函数、可独立审计的 fail-closed 动作契约核验器 V:V(contract,states)=ok 才放行;契约的 Φ_pre/Φ_post 是可机检谓词数据(绝不当代码执行)
+- 它是安全原语:自证切断 8 条投毒路径(P1 谓词即代码/P2 原型污染/P3 fail-open 兜底/P4 ReDoS/P5 资源耗尽/P6 量词绑定走私/P7 量词 DoS/P8 ref 路径逃逸)。此前 314 行 22 例测试全绿却不在任何 npm 脚本=从不 CI 强制,不变量可静默回退到 fail-open
+- 改动核验器公理集 AXIOMS / 谓词求值 / 量词 / Hoare inv / 投毒切断逻辑时——本测(现已进 test:maintainer:safety 发布门)会红,守住 fail-closed 铁律与零依赖契约
+- ★叶零依赖是可审计性的一部分(全文件无 require):门 KHY_ACTION_CONTRACT 由叶读 env 直判(CANON off-words),绝不引 flagRegistry;flagRegistry 仅登记该 flag 作 SSOT 文档,无功能耦合
+
+**先读这些文件：**
+- `services/backend/src/services/syscallGateway/actionContractVerifier.js`
+- `services/backend/tests/actionContractVerifier.test.js`
+- `services/backend/src/services/flagRegistry.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-163] 动作契约核验器CI强制接线.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --test services/backend/tests/actionContractVerifier.test.js
+node --check services/backend/src/services/syscallGateway/actionContractVerifier.js
+```
+
+---
+
+### 离线文档站生成器 (build_docs_site.js：把每个 .md 确定性渲染成同名 .html，套统一模板=顶栏/侧边栏全站导航/面包屑/目录/上下一页/mermaid 图/构建期代码高亮/滚动动画，并把 .md 链接改写成 .html 实现站内跳转；verify_docs_site.js 是 B2 验证门)  `docs-site-generator`
+
+**什么时候来这里（症状触发词）：**
+- 需要为面向新手的文档补齐/重建 HTML 版：改样式或动画改 docs/_assets/docs-site.css / docs-site.js；改支持的 Markdown 语法改 renderMarkdown() 的块级/行内规则；改参与生成的目录改 SKIP_DIRS / SKIP_PATH_PARTS，然后 npm run docs:build 重跑。
+- 离线自包含：图表用 docs/_assets/mermaid.min.js（已 vendored），代码高亮在构建期完成；无新增运行时依赖。
+- 断链治理：源 .md 里指向已归档文档/已移动源码/畸形 href 的陈旧引用，会被 neutralizeDeadLinks 降级为纯文本（不改源 .md），命中项写入 docs/_assets/dead-links.json 审计；该数量若突增=提示系统性路径 bug。
+- 外科手术式约束：本生成器只新增 .html 与 docs/_assets/nav-data.js、dead-links.json，不改任何 .md 源文；同输入=同输出（无时间戳/随机数），可重复运行。
+- 面向小白的互动件在 .md 里用围栏/行内语法书写，由 renderMarkdown() 渲染、docs-site.js 在客户端激活、docs-site.css 提供动画：```callout kind|标题（吉祥物插话，kind=tip/note/warn/star/ask）、```quiz（Q:/问: 题干，- [x]/- [ ] 选项，> 解释；多选自动识别）、```flip（用 --- 分正反面的翻卡）、行内 +[文字](提示)（悬浮气泡弹窗）。改这些语法或动画须同步更新 build_docs_site.test.js 的断言。
+- 互动件防呆门：lint_docs_widgets.js 扫全站 .md，抓作者常见错误——quiz 无正确答案/无题干/空选项、flip 缺 --- 分隔或正反面空、callout 用了不认识的 kind、popover 空文字/空提示、围栏未闭合、疑似拼错的围栏名。renderMarkdown 对这些是静默容错（会渲染出坏页），本 linter 补上反馈。error=一定坏页会让 docs:verify 失败，warning（如 quiz 无解释）默认只提示。已并入 docs:verify（先 lint 再查存在性/链接）；单独跑 npm run docs:lint。新增互动件规则见 lint_docs_widgets.js 顶部 HOW-TO-EXTEND，并在 lint_docs_widgets.test.js 补坏/好样本断言。
+- pip 安装后跳转一致性（本次修复的根因）：文档站产物（nav-data.js + 各 .html）若在完整源码开发树生成、再被裁剪进 wheel 的 khy_os/bundled/，会引用不随包的文档（CLAUDE.html、.ai/*.html 等）→ 用户点侧栏/首页卡片打开不存在的 *.html 报 ERR_FILE_NOT_FOUND。两条腿修复：①构建时——setup.py 的 BuildWithBundle.run() 在 bundle 组装完成后调 scripts/release/docs_bundle_regen.py:regenerate_docs_site()，在 bundle 内重跑生成器（ROOT 自解析为 bundle 根），产出与实际随包内容一致的站点；fail-soft：node 缺失/失败则 strip_stale_docs_artifacts() 清掉陈旧产物（只删带模板签名且有同名 .md 的 .html + nav-data.js/dead-links.json/docs-index，绝不碰 apps/ai-frontend 等应用页），宁可无 html 也绝不发布断链；设 KHY_SKIP_DOCS_REGEN=1 可跳过。②用户机器——khy docs build（别名 site/rebuild/regenerate/generate）经 platform/khy_platform/docs_site.py 在安装目录内随时重新生成；只拦这几个别名，绝不遮蔽 Node 端 docs quickstart/ai-fastlane/maintainer/... 子命令。改这两条腿须同步更新 tests/unit/test_docs_site_build.py。 点目录断链子机理：setuptools 打包**无条件丢弃一切点目录**（.khy-runtime/、.githooks/ 等，任何 glob/配置都改不了）；但重生成此刻的 bundle 仍带着这些点目录里的 .md，生成器会照常给它们建同名 .html+侧栏卡片+首页引用，随后打包又把那些 .html 连点目录一起扔掉 → 侧栏留下指向不随包 html 的**活死链卡片**（非降级纯文本）。对策在 docs_bundle_regen.py:_prune_dot_directories()——重生成**之前**把点目录从 bundle 副本里删掉（不递归/不删 symlink 目标，对齐 khy-Trajectory symlink 红线），使「重生成输入」=「实际随包内容」；指向点目录文档的交叉引用于是被 neutralizeDeadLinks 正确降级。刻意不改共享生成器 build_docs_site.js：它在完整源码开发树的 npm run docs:build 里**应当**索引 .ai/ 等点目录文档，裁剪只针对进 wheel 的 bundle 副本。
+
+**先读这些文件：**
+- `scripts/docs/build_docs_site.js`
+- `scripts/docs/verify_docs_site.js`
+- `scripts/docs/build_docs_site.test.js`
+- `scripts/docs/lint_docs_widgets.js`
+- `scripts/docs/lint_docs_widgets.test.js`
+- `docs/_assets/docs-site.css`
+- `docs/_assets/docs-site.js`
+- `docs/_assets/nav-data.js`
+
+**参考文档：**
+- docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run docs:build
+npm run docs:lint
+npm run docs:verify
+node --check scripts/docs/build_docs_site.js
+node --check scripts/docs/lint_docs_widgets.js
+node --test scripts/docs/build_docs_site.test.js
+node --test scripts/docs/lint_docs_widgets.test.js
+python3 -m unittest tests.unit.test_docs_site_build
+python3 -m py_compile setup.py scripts/release/docs_bundle_regen.py platform/khy_platform/docs_site.py
+```
+
+---
+
+### Google Vertex AI 端点成形 CLI 接线 (khy gateway vertex：把纯叶子 vertexRequestShaping 的 URL 成形能力接到人面前，告诉用户网关表单该填什么 baseUrl/端点/鉴权)  `gateway-vertex-shaping`
+
+**什么时候来这里（症状触发词）：**
+- 用户要接入 Google Vertex AI：运行 khy gateway vertex --project <GCP项目> --location <地域,默认 us-central1> --model <模型名> [--stream] [--json]，得到应填进网关表单的 baseUrl（止于 …/publishers/google，网关随后自动拼 /models/<model>:generateContent）、鉴权（authorization_bearer → Authorization: Bearer <gcloud auth print-access-token 的输出>）、请求体格式（复用 Gemini 线格式，单一真源 protocolConverter）。
+- 为什么是 CLI 接线而非改 relay 热路径：Vertex 与 Gemini 唯一不同是端点 URL 与鉴权，请求体一致。gateway/vertexRequestShaping.js 是这套 URL 成形的确定性单一真源，此前零消费者（能力存在但没接线）。handleGatewayVertex 给它一个纯只读的真实消费者：不发请求、不碰 handleMultiProtocol，绝不动稳定的 relay。
+- 门控 KHY_VERTEX_REQUEST_SHAPING（默认开；0/false/off/no → 关）：关门时 describeVertexRequest 返回 {ok:false,reason:'disabled'}，CLI 回退到通用模板提示，不改任何其他行为（逐字节回退）。改成形规则（URL 方案/apiVersion/鉴权字段）改叶子 vertexRequestShaping.js 单一真源，并同步 vertexRequestShaping.test.js 与 vertexHandlerWiring.test.js 的断言；改 CLI 表面/路由改 handlers/gateway.js:handleGatewayVertex 与 cli/router.js 的 subCommand==='vertex' 分支。
+
+**先读这些文件：**
+- `services/backend/src/services/gateway/vertexRequestShaping.js`
+- `services/backend/src/services/gateway/providerPresets.js`
+- `services/backend/src/cli/handlers/gateway.js`
+- `services/backend/src/cli/router.js`
+- `services/backend/tests/services/gateway/vertexRequestShaping.test.js`
+- `services/backend/tests/services/gateway/vertexHandlerWiring.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-096] 多模型类型 Provider 配置对账.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --check services/backend/src/services/gateway/vertexRequestShaping.js
+node --check services/backend/src/cli/handlers/gateway.js
+node --check services/backend/src/cli/router.js
+node --test services/backend/tests/services/gateway/vertexRequestShaping.test.js
+node --test services/backend/tests/services/gateway/vertexHandlerWiring.test.js
+```
+
+---
+
+### khy msg 多平台消息收发 (钉钉/飞书/企业微信 群机器人 webhook：填 webhook 即可发送；把 /webhooks/<平台> 配到平台后台可接收——验签+解密+解析)  `messaging-channels`
+
+**什么时候来这里（症状触发词）：**
+- 用户要让 khy 往钉钉/飞书/企业微信群里发消息：运行 khy msg set <平台> webhook=<url>（可选 secret=- 从 stdin 读加签密钥），再 khy msg send <平台> <文本> 或 khy msg test <平台>。平台标识 dingtalk/feishu/wecom（含别名 ding/lark/wechat 等，由 msgChannelCore.normalizePlatform 归一）。配置落 ~/.khyos/msg.json（0600，字段白名单）。
+- 改出站报文或加签规则：改纯叶子 msgChannelCore.js（钉钉 HMAC-SHA256 拼 &timestamp&sign、飞书 HMAC 放请求体、企业微信无签）单一真源，同步 msgChannelCore.test.js 固定向量。改入站验签/解密/解析：改纯叶子 msgInboundCore.js（钉钉验签、飞书 AES-256-CBC+url_verification challenge、企业微信 WXBizMsgCrypt）同步 msgInboundCore.test.js 往返用例。
+- 接收端排障：入站回调在 routes/webhooks.js（POST /webhooks/{dingtalk,feishu}、GET+POST /webhooks/wecom），验签失败 401、渠道未注册 fail-soft。双向闭环（龙虾环）：入站验签/解密/解析/emit 后，msgReplyBridge 把文本经 aiChatPort 交 khy AI 生成回答，再经 messageRouter._handleMessage 回发原会话（钉钉 sessionWebhook、飞书/企业微信群 webhook）。接线在 _bootstrapChannels 注册≥1 IM 渠道后调 wireReplyBridge（门 KHY_MSG_AUTOREPLY default-on）。headless/无 chat 时 getAiChat()=null → fail-soft 不回复。要关自动回复设 KHY_MSG_AUTOREPLY=off。
+- 能力开关 KHY_MSG（default-on，0/false/off/no→关）：关门时 msgChannelCore.isEnabled 返回 false，_bootstrapChannels 不注册三渠道、msgSender.sendText 拒发。所有出站 URL 经 urlSafety.assertPublicHttpUrlResolved 防 SSRF。运行时机密只落 0600 文件绝不进包/源码/提交。
+- 连接稳定（重试）：msgSender.sendText 对瞬时故障（网络错/超时/HTTP 5xx/429）指数退避重试，永久错（非法 URL/4xx/业务错误码/SSRF 拒绝）立即返回不重试。旋钮 KHY_MSG_MAX_RETRIES（默认 2，夹 [0,5]，0=关）+ KHY_MSG_RETRY_BASE_MS（默认 500ms，退避 base·2^(n-1) 封顶 30s）。分类见 _isRetryable，改重试策略同步 msgSenderRetry.test.js（注入 post+sleep 零真实延时）。返回额外带 attempts。
+
+**先读这些文件：**
+- `services/backend/src/services/messaging/msgChannelCore.js`
+- `services/backend/src/services/messaging/msgInboundCore.js`
+- `services/backend/src/services/messaging/msgConfigStore.js`
+- `services/backend/src/services/messaging/msgSender.js`
+- `services/backend/src/services/channels/dingtalkChannel.js`
+- `services/backend/src/services/channels/feishuChannel.js`
+- `services/backend/src/services/channels/wecomChannel.js`
+- `services/backend/src/services/channels/messageRouter.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-167] khy msg 多平台消息收发（钉钉·飞书·企业微信）.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+node --check services/backend/src/services/messaging/msgChannelCore.js
+node --check services/backend/src/services/messaging/msgInboundCore.js
+node --check services/backend/src/cli/handlers/msg.js
+node --test services/backend/tests/services/messaging/msgChannelCore.test.js
+node --test services/backend/tests/services/messaging/msgInboundCore.test.js
+node --test services/backend/tests/services/messaging/msgReplyBridge.test.js
+node --test services/backend/tests/services/messaging/msgReplyRoundtrip.test.js
+node --test services/backend/tests/services/messaging/msgSenderRetry.test.js
+node --test services/backend/tests/cli/handlers/msgHandler.test.js
+```
+
+---
+
+### 弱模型护栏引擎(弱/陌生模型改 khyos 前先查这里:高危位点+照抄范例+看似bug实为刻意设计清单)  `weak-model-guidance`
+
+**先读这些文件：**
+- `services/backend/src/services/weakModelGuidance.js`
+- `services/backend/src/tools/WeakModelGuidanceTool/index.js`
+- `services/backend/src/tools/CommentGuidanceTool/index.js`
+- `services/backend/src/services/__tests__/weakModelGuidance.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-168] 弱模型护栏与维护子系统登记.md
+
+---
+
+### 弱模型改动守卫(弱档模型改红线/敏感文件时拦下要求强模型复核)  `weak-model-change-guard`
+
+**先读这些文件：**
+- `services/backend/src/services/weakModelChangeGuard.js`
+- `services/backend/tests/services/weakModelChangeGuard.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-168] 弱模型护栏与维护子系统登记.md
+
+---
+
+### 注释引导引擎(什么地方该写什么注释·零假阳性审计)  `comment-guidance`
+
+**先读这些文件：**
+- `services/backend/src/services/commentGuidance.js`
+- `services/backend/src/tools/CommentGuidanceTool/index.js`
+- `services/backend/tests/commentGuidance.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-168] 弱模型护栏与维护子系统登记.md
+
+---
+
+### 定时调度(khy cron·当前双实现:CC 对齐落盘 + Hermes 跨渠道投递)  `cron-scheduling`
+
+**先读这些文件：**
+- `services/backend/src/jobs/cronScheduler.js`
+- `services/backend/src/services/cronScheduler.js`
+- `services/backend/src/tools/ScheduleCronTool`
+- `services/backend/src/tools/CronListTool`
+- `services/backend/src/tools/CronDeleteTool`
+- `services/backend/src/cli/handlers/cron.js`
+- `services/backend/tests/services/cronScheduler.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-168] 弱模型护栏与维护子系统登记.md
+
+---
+
+### 未来抗性四支柱体检(khy maintain freshness 背后·可无 AI 传承)  `future-proofing`
+
+**先读这些文件：**
+- `services/backend/src/services/futureProofing.js`
+- `services/backend/src/cli/handlers/maintain.js`
+- `services/backend/tests/services/futureProofing.test.js`
+
+**参考文档：**
+- docs/07_OPS_运维/[OPS-MAN-168] 弱模型护栏与维护子系统登记.md
+
+---
+
+### 仓库层级板块结构守卫(npm run check:layout·根目录白名单/docs 索引/层级登记/任务入口)  `repo-layout`
+
+**先读这些文件：**
+- `scripts/ci/check-repo-layout.js`
+- `scripts/ci/repo-layout-baseline.json`
+- `scripts/tests/check-repo-layout.test.js`
+- `package.json`
+- `.github/workflows/pr-gate.yml`
+
+**参考文档：**
+- docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md
+- docs/07_OPS_运维/[OPS-MAN-174] 任务入口总表.md
+- docs/08_MGMT_项目管理/[MGMT-STD-001] 项目文档结构与索引铁律规范.md
+
+**跑这些验证命令（绿灯＝这块没坏）：**
+
+```bash
+npm run check:layout
+node --test scripts/tests/check-repo-layout.test.js
+```
+
+---
+
 ## 都不对？
 
-- 把报错原文完整贴给分诊器：`npm run triage -- "<把报错粘这里>"`。
+- 把报错原文完整贴给分诊器：`npm run maintainer:triage -- "<把报错粘这里>"`。
 - 仍无匹配就查总入口 `docs/00_INDEX_文档索引.md`，或读 `.ai/MAP.md` 了解全局骨架。
-- 新子系统请先登记进 `docs/维护者/维护映射表.json`，本表下次重生会自动收录它。
+- 新子系统请先登记进 `docs/_维护者/维护映射表.json`，本表下次重生会自动收录它。

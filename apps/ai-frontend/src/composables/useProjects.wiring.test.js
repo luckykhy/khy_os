@@ -10,9 +10,9 @@
  *
  * Zero deps — run with the built-in Node test runner (apps/ai-frontend is
  * type:module):
- *   node --test src/composables/useProjects.wiring.test.js
+ *   npx vitest run src/composables/useProjects.wiring.test.js
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

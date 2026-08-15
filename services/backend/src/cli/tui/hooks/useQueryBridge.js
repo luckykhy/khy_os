@@ -163,8 +163,8 @@ const buildTurnArtifacts = _qbt.buildTurnArtifacts;
 // A committed assistant turn is "foldable" when its persistent record carries a
 // process group (tool steps) or folded thinking — the bits ToolLines/ProcessGroup
 // collapse by default. `expanded` toggling cannot reveal them once they land in
-// Ink's <Static>, so Ctrl+O instead appends an `expansion` message (see
-// MessageBlock) rendering exactly these parts force-expanded.
+// Ink's <Static>, so Ctrl+O builds an `expansion` view model for App's removable
+// live layer (see MessageBlock), rendering exactly these parts force-expanded.
 
 function _entryIsFoldable(e) {
   return (
@@ -3320,29 +3320,18 @@ function useQueryBridge(hostHandlers = {}) {
     return unsubscribe;
   }, [getBridge, submit, resolveControl]);
 
-  // Ctrl+O on the committed transcript (Ink mode): append a one-shot, fully
-  // expanded copy of the most recent foldable turn below the transcript. Ink's
-  // <Static> can't re-render an already-printed process group on prop change, so
-  // this append (mirroring classic mode's "print expanded below") is how folded
-  // tool detail becomes visible without remounting Static (which would duplicate
-  // all scrollback). No-op (returns false) when there is nothing foldable, or
-  // when the previous append is still the last item, so repeated presses don't
-  // spam identical blocks. Returns true when a fresh expansion was appended.
+  // Ctrl+O on the committed transcript (Ink mode): build a fully expanded copy
+  // of the most recent foldable turn for App's removable live layer. Ink's
+  // <Static> can't re-render an already-printed process group on prop change;
+  // returning data instead of appending to `messages` lets a second Ctrl+O erase
+  // the live copy without remounting Static or duplicating scrollback.
   const expandLastFoldable = useCallback(() => {
     const target = selectLastFoldableMessage(messages);
     if (!target) {
-      return false;
+      return null;
     }
-    if (messages.length > 0 && messages[messages.length - 1].role === 'expansion') {
-      return false;
-    }
-    const expansion = buildExpansionMessage(target, Date.now());
-    if (!expansion) {
-      return false;
-    }
-    setMessages((s) => s.concat([expansion]));
-    return true;
-  }, [messages, setMessages]);
+    return buildExpansionMessage(target, Date.now());
+  }, [messages]);
 
   // Items rendered in the committed <Static> region: banner first, then messages.
   // Memoized by messages array identity (stable across streaming frames / keystrokes

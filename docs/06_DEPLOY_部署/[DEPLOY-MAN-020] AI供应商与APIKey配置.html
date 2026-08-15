@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 供应商与 API Key 配置 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>AI 供应商与 API Key 配置</div>
+      <header class="hero reveal"><h1>AI 供应商与 API Key 配置</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ai-供应商与-api-key-配置">AI 供应商与 API Key 配置</a></li><li class="lvl-2"><a href="#一-先别手写-env">一、先别手写 `.env`</a></li><li class="lvl-2"><a href="#二-ollama-本地-免费-无-key">二、Ollama（本地、免费、无 key）</a></li><li class="lvl-2"><a href="#三-云端-api-key-走-api-适配器">三、云端 API Key（走 `api` 适配器）</a></li><li class="lvl-3"><a href="#3-1-受支持的-key-变量名-实测清单">3.1 受支持的 key 变量名（实测清单）</a></li><li class="lvl-3"><a href="#3-2-配置方式">3.2 配置方式</a></li><li class="lvl-3"><a href="#3-3-排查">3.3 排查</a></li><li class="lvl-2"><a href="#四-怎么选">四、怎么选</a></li><li class="lvl-2"><a href="#五-常用命令">五、常用命令</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-020 | 阶段: 部署 | 原路径: AI_MODEL_SETUP_GUIDE.md（根目录归档） --&gt;</p>
+<h1 id="ai-供应商与-api-key-配置">AI 供应商与 API Key 配置<a class="anchor" href="#ai-供应商与-api-key-配置" aria-label="锚点">#</a></h1>
+<blockquote><p>给 Khy-OS 接上一个能出 token 的模型来源：<strong>本地 Ollama</strong>、<strong>云端 API Key</strong>，或<br><strong>IDE 桥接</strong>（后者见 <code>[DEPLOY-MAN-021]</code>）。本文只讲前两条。</p>
+<p>读本文前先读 <code>[DEPLOY-MAN-019]</code> 第一节：<strong>「适配器 enabled」与「适配器 available」是两件事</strong>，<br>空的 <code>/model</code> 菜单是后者的问题。本文讲的就是怎么让 <code>detect()</code> 通过。</p>
+<p><strong>归档来源</strong>：本文由根目录 <code>AI_MODEL_SETUP_GUIDE.md</code> 重写而成（归档日期 2026-08-15）。<br>原文的三份 <code>.env</code> 示例里<strong>内联了一份真实 <code>JWT_SECRET</code></strong>，且大部分变量名（<code>GATEWAY_OPENAI_ENABLED</code>、<br><code>GATEWAY_OPENAI_API_KEY</code>、<code>GATEWAY_CLAUDE_API_KEY</code>、<code>GATEWAY_OLLAMA_BASE_URL</code>、<br><code>GATEWAY_DEEPSEEK_ENABLED</code>）在代码中<strong>不存在</strong>。本文按代码实测重写，示例一律用占位符。</p>
+<p>实现依据（核实来源）：</p>
+<ul><li>供应商 key 清单：<code>services/backend/src/services/multiFreeService.js</code>、<code>src/services/apiKeyPool.js</code></li><li><code>api</code> 适配器探测：<code>services/backend/src/services/gateway/adapters/apiAdapter.js</code></li><li>Ollama 适配器：<code>services/backend/src/services/gateway/adapters/ollamaAdapter.js</code>、<code>src/constants/serviceDefaults.js</code></li><li>JWT 密钥自供给：<code>services/backend/src/bootstrap/ensureAuthSecret.js</code></li><li>网关配置写入：<code>services/backend/src/cli/handlers/gatewayConfigEditor.js</code></li></ul></blockquote>
+<hr>
+<h2 id="一-先别手写-env">一、先别手写 <code>.env</code><a class="anchor" href="#一-先别手写-env" aria-label="锚点">#</a></h2>
+<p>两条能省掉大部分踩坑的事实：</p>
+<p><strong>① <code>JWT_SECRET</code> 不需要你配。</strong> <code>ensureAuthSecret.js</code> 是它的单一真源，解析顺序为<br><code>process.env</code> → 规范 <code>.env</code> 文件 → <strong>自动生成一个强随机值并持久化</strong>。生成是一次性事件，<br>之后每次启动都读回同一个值，已签发的 token 继续有效。<strong>手写 <code>JWT_SECRET</code> 没有必要，<br>把它抄进文档或提交则直接违反红线 R2。</strong></p>
+<p><strong>② 优先用 <code>gateway config</code>，而不是手动编辑 <code>.env</code>。</strong></p>
+<pre><code class="language-powershell">khy
+gateway config          # 交互式；写入由 gatewayEnvFile 统一管理（规范文件 + 镜像）</code></pre>
+<p>手写 <code>.env</code> 时容易漏掉镜像文件，也容易写出根本不存在的变量名（归档来源就是这么错的）。<br>规范 env 文件路径由 <code>KHY_ENV_FILE</code> 决定，默认 <code>services/backend/.env</code>；<br>该文件与 <code>services/backend/src/.env</code> <strong>都已在 <code>.gitignore</code> 内</strong>，实测未被跟踪。</p>
+<p><code>services/backend/.env.example</code> 是可以放心参考的模板（其中 <code>JWT_SECRET=</code> 刻意留空）。</p>
+<hr>
+<h2 id="二-ollama-本地-免费-无-key">二、Ollama（本地、免费、无 key）<a class="anchor" href="#二-ollama-本地-免费-无-key" aria-label="锚点">#</a></h2>
+<p>个人开发与高隐私场景的首选：数据不出本地，无需 API Key。</p>
+<pre><code class="language-powershell"># 1) 安装：https://ollama.com/download
+# 2) 拉模型
+ollama pull llama3.2          # 小、快，够用
+ollama pull qwen2.5           # 中文更好
+
+# 3) 确认服务在跑 —— detect() 打的就是这个接口
+curl http://localhost:11434/api/tags
+
+# 4) 起 khy 选模型
+khy
+# CLI 内：/model</code></pre>
+<p><strong>不需要</strong>设任何变量。默认端口 <code>11434</code> 写在 <code>src/constants/serviceDefaults.js</code> 的 <code>OLLAMA_HOST</code>。</p>
+<table><thead><tr><th>变量</th><th>作用</th><th>备注</th></tr></thead><tbody><tr><td><code>OLLAMA_HOST</code></td><td>指向非默认地址的 Ollama</td><td><strong>注意名字</strong>：不带 <code>GATEWAY_</code> 前缀，<code>gateway config</code> 里改也是写这个</td></tr><tr><td><code>OLLAMA_MODEL</code></td><td>默认模型名</td><td></td></tr><tr><td><code>OLLAMA_AUTO_START</code></td><td>设 <code>false</code> 关掉自动拉起 Ollama 进程</td><td>默认开</td></tr><tr><td><code>GATEWAY_OLLAMA_ENABLED</code></td><td>设 <code>&quot;false&quot;</code> <strong>关掉</strong> ollama 通道</td><td>只有字符串 <code>false</code> 有效；不是开启开关</td></tr><tr><td><code>KHY_OLLAMA_NUM_PREDICT</code></td><td>生成 token 上限</td><td></td></tr><tr><td><code>GATEWAY_OLLAMA_COLD_TIMEOUT_MS</code> / <code>_WARM_TIMEOUT_MS</code> / <code>_DEGRADED_TIMEOUT_MS</code> / <code>_SMALL_TASK_TIMEOUT_MS</code></td><td>分档超时</td><td>冷启动比热请求慢得多，故分档</td></tr></tbody></table>
+<p><strong>排查</strong>：</p>
+<pre><code class="language-powershell">ollama list                                  # 服务在不在
+curl http://localhost:11434/api/tags         # 端口对不对</code></pre>
+<p><code>gateway status</code> 里 ollama 仍是 unavailable，而 <code>curl</code> 通 —— 检查是不是设了<br><code>GATEWAY_OLLAMA_ENABLED=false</code>，或 <code>OLLAMA_HOST</code> 指到了别处。</p>
+<hr>
+<h2 id="三-云端-api-key-走-api-适配器">三、云端 API Key（走 <code>api</code> 适配器）<a class="anchor" href="#三-云端-api-key-走-api-适配器" aria-label="锚点">#</a></h2>
+<p><strong>没有 per-provider 的 <code>GATEWAY_*_ENABLED</code> 开关</strong>。云端供应商统一由 <code>api</code> 适配器<br>（priority 5）承载，它的 <code>detect()</code> 逻辑是：</p>
+<pre><code>MultiFreeService 有可用 provider？        → available
+否则 apiKeyPool 里任一 provider 有可用 key？ → available
+否则                                      → unavailable</code></pre>
+<p>也就是说：<strong>环境里放上 key，通道自己就亮了</strong>，不需要额外「启用」动作。</p>
+<h3 id="3-1-受支持的-key-变量名-实测清单">3.1 受支持的 key 变量名（实测清单）<a class="anchor" href="#3-1-受支持的-key-变量名-实测清单" aria-label="锚点">#</a></h3>
+<p><code>multiFreeService.js</code> / <code>apiKeyPool.js</code> 里读取的环境变量，<strong>均不带 <code>GATEWAY_</code> 前缀</strong>：</p>
+<table><thead><tr><th>供应商</th><th>变量</th></tr></thead><tbody><tr><td>OpenAI</td><td><code>OPENAI_API_KEY</code>（配套 <code>OPENAI_BASE_URL</code> / <code>OPENAI_API_ENDPOINT</code>）</td></tr><tr><td>Anthropic / Claude</td><td><code>ANTHROPIC_API_KEY</code>（配套 <code>ANTHROPIC_BASE_URL</code> / <code>ANTHROPIC_API_ENDPOINT</code> / <code>ANTHROPIC_AUTH_TOKEN</code>）</td></tr><tr><td>DeepSeek</td><td><code>DEEPSEEK_API_KEY</code>（配套 <code>DEEPSEEK_BASE_URL</code>）</td></tr><tr><td>Google Gemini</td><td><code>GEMINI_API_KEY</code> / <code>GOOGLE_GEMINI_API_KEY</code></td></tr><tr><td>OpenRouter</td><td><code>OPENROUTER_API_KEY</code></td></tr><tr><td>Groq</td><td><code>GROQ_API_KEY</code></td></tr><tr><td>智谱</td><td><code>ZHIPU_API_KEY</code></td></tr><tr><td>阿里云 / DashScope</td><td><code>ALIBABA_API_KEY</code> / <code>DASHSCOPE_API_KEY</code></td></tr><tr><td>百度</td><td><code>BAIDU_API_KEY</code></td></tr><tr><td>讯飞</td><td><code>XUNFEI_API_KEY</code></td></tr><tr><td>Trae</td><td><code>TRAE_API_KEY</code></td></tr></tbody></table>
+<p>Claude 另有 <code>CLAUDE_API_KEY</code>，以及一组模型别名变量（<code>ANTHROPIC_DEFAULT_OPUS_MODEL</code>、<br><code>CLAUDE_OPUS_MODELS</code>、<code>CLAUDE_TIER_ALIASES</code> 等）用于把分层名映射到具体模型 id。</p>
+<h3 id="3-2-配置方式">3.2 配置方式<a class="anchor" href="#3-2-配置方式" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell"># 推荐：交互式，写入由 gatewayEnvFile 统一管理
+khy
+gateway config
+
+# 或本机会话内瞬时注入（不落盘，最安全）
+$env:OPENAI_API_KEY = &quot;&lt;你的 key&gt;&quot;
+khy</code></pre>
+<blockquote><p><strong>红线 R2</strong>：真 key / token <strong>永不进 bundle、源码、提交</strong>，只经环境变量瞬时注入。<br>本文所有 key 都是占位符 <code>&lt;...&gt;</code>。不要把真 key 写进任何被 git 跟踪的文件，也不要<br>贴进 issue 或聊天记录。</p></blockquote>
+<h3 id="3-3-排查">3.3 排查<a class="anchor" href="#3-3-排查" aria-label="锚点">#</a></h3>
+<pre><code class="language-powershell">khy
+gateway status              # api 通道 available 了吗
+gateway test api            # 对 apiKeyPool 里每个 provider 的 endpoint 做 HTTP 连通测试</code></pre>
+<p><code>gateway test api</code> 走的是 <code>detectAsync()</code>，会真的打一次 endpoint。常见失败原因按概率排序：<br>key 拼错 / 账户无余额 / 网络到不了该供应商 / <code>*_BASE_URL</code> 指到了错误的中转地址。</p>
+<p>手工验证某个供应商是否可达（以 OpenAI 为例，key 从环境读，不写进命令行历史）：</p>
+<pre><code class="language-powershell">curl https://api.openai.com/v1/models -H &quot;Authorization: Bearer $env:OPENAI_API_KEY&quot;</code></pre>
+<hr>
+<h2 id="四-怎么选">四、怎么选<a class="anchor" href="#四-怎么选" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>场景</th><th>建议</th><th>理由</th></tr></thead><tbody><tr><td>个人开发 / 试用</td><td>Ollama，或 IDE 桥接</td><td>零成本，无 key 管理负担</td></tr><tr><td>高隐私要求</td><td>仅 Ollama</td><td>数据不出本地</td></tr><tr><td>生产环境</td><td>云端 API Key</td><td>稳定性与模型完整度优于桥接；桥接依赖 IDE 进程存活</td></tr><tr><td>多来源并存</td><td>直接都配上</td><td>网关按 <code>[DEPLOY-MAN-019]</code> 第二节的 priority 自动挑；要固定用某个，设 <code>GATEWAY_PREFERRED_ADAPTER</code></td></tr></tbody></table>
+<p>多来源并存时的固定优先项：</p>
+<pre><code class="language-powershell">$env:GATEWAY_PREFERRED_ADAPTER = &quot;&lt;adapter key&gt;&quot;   # 如 ollama / api / claude
+$env:GATEWAY_PREFERRED_MODEL   = &quot;&lt;model id&gt;&quot;
+$env:GATEWAY_PREFERRED_STRICT  = &quot;true&quot;            # 只用首选，不回退</code></pre>
+<hr>
+<h2 id="五-常用命令">五、常用命令<a class="anchor" href="#五-常用命令" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell">gateway status          # 各通道 enabled / available（诊断第一现场）
+gateway config          # 交互式改网关配置
+gateway test &lt;key&gt;      # 单通道连通性 + 生成测试，如 gateway test ollama
+/model                  # 选模型</code></pre>
+<hr>
+<h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
+<ul><li>模型可用性与适配器探测（先读）：<code>[DEPLOY-MAN-019] 模型可用性与适配器探测</code></li><li>IDE 桥接模式：<code>[DEPLOY-MAN-021] IDE桥接模式</code></li><li><code>/model</code> 慢与 <code>KHY_MODEL_*</code> 超时开关：<code>docs/_报告/历史/2026-08-根目录归档-修复记录.md</code></li><li>环境开关命名规范：<code>docs/07_OPS_运维/[OPS-MAN-058] 环境开关与文档命名规范.md</code></li><li>首次运行自动登录与凭据：<code>docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-019] 模型可用性与适配器探测.html"><div class="dir">← 上一篇</div><div class="ttl">模型可用性与适配器探测</div></a><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-021] IDE桥接模式.html"><div class="dir">下一篇 →</div><div class="ttl">IDE 桥接模式</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-020] AI供应商与APIKey配置.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

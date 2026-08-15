@@ -1,0 +1,136 @@
+name: 🐞 缺陷报告 / Bug Report
+description: 报告一个可复现的缺陷。请务必填写复现步骤与环境信息，否则会被标记 status/needs-info。
+title: "[BUG] "
+labels: ["type/bug", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。**在提交前请确认**：
+        - 已检索过既有 Issue，没有重复；
+        - 这是一个**缺陷**（行为与文档/预期不符），而不是使用求助（求助请走 Discussions）；
+        - 若涉及安全问题，请**关闭本页**，改走 Security Advisory 私密通道。
+
+  - type: input
+    id: version
+    attributes:
+      label: Khy-OS 版本
+      description: 执行 `khy --version` 的输出。若为源码运行，请给出 commit SHA（`git rev-parse --short HEAD`）。
+      placeholder: "例：1.1.9 / 或 commit 7bde2df"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-channel
+    attributes:
+      label: 安装渠道
+      description: 不同渠道的打包内容与启动路径不同，这一项直接决定排查方向。
+      options:
+        - pip (khy-os)
+        - npm (@khy-os/khy-os)
+        - Docker (ghcr.io)
+        - 独立可执行文件 (standalone executable)
+        - 便携包 (portable zip / 7z)
+        - 源码运行 (git clone)
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 受影响模块
+      description: 不确定就选「不清楚」，triage 时会帮你归类。
+      options:
+        - 不清楚 / 无法判断
+        - CLI 与 TUI (services/backend/src/cli)
+        - AI 网关与供应商适配 (services/backend/src/services/gateway)
+        - 后端服务与 Web API (services/backend)
+        - AI 管理前端 (apps/ai-frontend)
+        - khyquant 量化应用 (software/khyquant)
+        - Python 启动器 (platform/khy_platform)
+        - OS 内核 (kernel, C)
+        - MoonBit / WASM 模块 (wasm-chain, wasm-context, wasm-indicators)
+        - 打包与发布 (packaging, scripts/release)
+        - 文档 (docs)
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 操作系统
+      options:
+        - Windows
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (glibc, 如 Ubuntu/Debian)
+        - Linux (musl, 如 Alpine)
+        - 其他 / 容器内
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: runtime
+    attributes:
+      label: 运行时版本
+      description: |
+        请贴出实际输出（**不要写「最新版」**——我们需要确切数字才能对齐支持范围）。
+        项目声明的支持下限是 Node `>=20`、Python `>=3.8`；低于下限的问题会先请你升级再复查。
+      value: |
+        node --version:
+        python --version:
+        npm --version:
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 请给出**从零到复现**的最小步骤。能贴命令就贴命令，不要只描述结果。
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你认为应该发生什么？如果文档里有对应描述，请附上文档路径或链接。
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？请附上完整报错、堆栈或截图。
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 诊断输出
+      description: |
+        可选但强烈建议。贴日志前**请自行脱敏**：移除 API Key、token、密码、内网地址、真实账号。
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已检索既有 Issue，确认这不是重复问题
+          required: true
+        - label: 我提供的复现步骤在干净环境下可复现（或已说明为何无法稳定复现）
+          required: true
+        - label: 我已对贴出的日志/配置做过脱敏，不含任何凭据
+          required: true

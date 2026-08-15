@@ -1,11 +1,11 @@
 /**
  * unwrap SSOT 单测(node:test·ESM)。
- *   node --test src/api/unwrap.test.js
+ *   npx vitest run src/api/unwrap.test.js
  *
  * 证:信封 {success,data} 解包、无信封透传、null-ish 分支、payload??res 兜底、
  * 不改入参。这是全站响应信封解包的唯一真源(取代 13 处内联副本)。
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { unwrap } from './unwrap.js';

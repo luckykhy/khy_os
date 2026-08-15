@@ -1,52 +1,48 @@
 @echo off
-:: Khy-OS Portable Setup
-:: Run this once on any new computer to enable 'khy' command globally
-
-setlocal enabledelayedexpansion
+setlocal EnableExtensions
+chcp 65001 >nul
 
 echo ========================================
-echo   Khy-OS Portable Setup
+echo   Khy-OS Portable Command Setup
 echo ========================================
 echo.
 
-:: Get current directory (project root)
-set "PROJECT_DIR=%~dp0"
-set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
+set "PROJECT_ROOT=%~dp0"
+if "%PROJECT_ROOT:~-1%"=="\" set "PROJECT_ROOT=%PROJECT_ROOT:~0,-1%"
+if not exist "%PROJECT_ROOT%\khy.bat" (
+    echo [FAIL] khy.bat not found under: %PROJECT_ROOT%
+    pause
+    exit /b 1
+)
 
-echo Project location: %PROJECT_DIR%
-echo.
-echo Setting up global 'khy' command...
-echo.
+call "%PROJECT_ROOT%\scripts\portable\install-path-wrappers.bat" --force --add-to-path
+if errorlevel 1 (
+    echo.
+    echo [FAIL] Command setup failed.
+    pause
+    exit /b 1
+)
 
-:: Check if PowerShell profile exists
-powershell -NoProfile -Command "if (!(Test-Path $PROFILE)) { $null = New-Item -ItemType File -Path $PROFILE -Force; Write-Host 'Created PowerShell profile' }"
+set "BIN_DIR=%LocalAppData%\khy-os\bin"
+for %%N in (khy.bat khy-os.bat khyquant.bat) do if not exist "%BIN_DIR%\%%N" (
+    echo [FAIL] Missing wrapper: %BIN_DIR%\%%N
+    pause
+    exit /b 1
+)
 
-:: Add or update khy function in profile
-powershell -NoProfile -Command ^
-"$profilePath = $PROFILE; ^
-$content = Get-Content $profilePath -Raw -ErrorAction SilentlyContinue; ^
-if ($content -match 'function khy') { ^
-    $content = $content -replace 'function khy \{[^}]+\}', ('function khy { node \"' + '%PROJECT_DIR%' + '\services\backend\bin\khy.js\" $args }'); ^
-    Set-Content $profilePath $content; ^
-    Write-Host 'Updated existing khy function' -ForegroundColor Yellow ^
-} else { ^
-    Add-Content $profilePath \"`n# Khy-OS Command`nfunction khy { node \`\"%PROJECT_DIR%\services\backend\bin\khy.js\`\" `$args }`n\"; ^
-    Write-Host 'Added khy function to profile' -ForegroundColor Green ^
-}"
+call "%BIN_DIR%\khy.bat" --help >nul
+if errorlevel 1 (
+    echo [FAIL] Wrapper verification failed. Try: "%PROJECT_ROOT%\khy.bat" --help
+    pause
+    exit /b 1
+)
 
 echo.
-echo ========================================
-echo   Setup Complete!
-echo ========================================
-echo.
-echo The 'khy' command will work from this location:
-echo %PROJECT_DIR%
-echo.
-echo Next steps:
-echo   1. Restart PowerShell
-echo   2. Run: khy --version
-echo.
-echo If you move this project to a different location,
-echo run this script again to update the path.
+echo [OK] khy command configured.
+echo Project: %PROJECT_ROOT%
+echo Wrappers: %BIN_DIR%
+echo Open a NEW terminal, then run: khy --help
+echo If this folder moves, run this script again.
 echo.
 pause
+exit /b 0

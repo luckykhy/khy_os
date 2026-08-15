@@ -14,11 +14,9 @@
  * Because loadInk() is awaited before the React tree is mounted, every component
  * body can call get() synchronously and is guaranteed a populated namespace.
  *
- * This module also installs the `.jsx` require handler. The TUI tree currently
- * contains NO real JSX syntax (components use React.createElement), so the
- * default handler compiles `.jsx` files as plain JS — zero cost. If a file
- * ever reintroduces JSX syntax, the handler falls back to @babel/register
- * (classic runtime → React.createElement) transparently on first SyntaxError.
+ * This module also installs the `.jsx` require handler. The TUI tree uses
+ * React.createElement rather than JSX syntax, so `.jsx` files compile as plain
+ * CommonJS JavaScript without a runtime transpiler.
  */
 
 let _ink = null;
@@ -43,12 +41,8 @@ let _renderStdout = null;
  * Install the `.jsx` require handler.
  * Idempotent; safe to call multiple times.
  *
- * Fast path: treat `.jsx` as plain JS — the TUI tree is written with
- * React.createElement, so the @babel/register pipeline (~0.5s cold install +
- * per-file transpile) was pure overhead on the startup critical path.
- * Fallback: if a `.jsx` file actually contains JSX syntax, the plain compile
- * throws SyntaxError before any code runs; we then install @babel/register
- * and retry through its transpiling handler, preserving the old contract.
+ * Treat `.jsx` as plain JavaScript. The TUI tree is written with
+ * React.createElement, so no runtime transpiler is needed.
  */
 function registerJsx() {
   if (_jsxRegistered) {
@@ -56,41 +50,7 @@ function registerJsx() {
   }
   _jsxRegistered = true;
   const jsHandler = require.extensions['.js'];
-  require.extensions['.jsx'] = function (module, filename) {
-    try {
-      return jsHandler(module, filename);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) {
-        throw err;
-      }
-      // Real JSX syntax detected — install babel (replaces this handler) and
-      // recompile the file through the transpiling handler it registered. If
-      // babel is already installed the file is genuinely malformed: rethrow
-      // instead of recursing.
-      if (_babelInstalled) {
-        throw err;
-      }
-      _installBabelJsx();
-      return require.extensions['.jsx'](module, filename);
-    }
-  };
-}
-
-/**
- * Install the @babel/register transpiling hook for JSX files in the TUI tree.
- * Idempotent; only reached when a `.jsx` file contains real JSX syntax.
- */
-let _babelInstalled = false;
-function _installBabelJsx() {
-  if (_babelInstalled) {
-    return;
-  }
-  _babelInstalled = true;
-  require('@babel/register')({
-    extensions: ['.jsx'],
-    only: [/backend\/src\/cli\/tui\//],
-    cache: true,
-  });
+  require.extensions['.jsx'] = jsHandler;
 }
 
 /**

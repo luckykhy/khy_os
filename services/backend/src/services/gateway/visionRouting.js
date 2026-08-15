@@ -63,11 +63,16 @@ function decideVisionRouting(input = {}) {
   const { hasImage, currentModel } = input;
   const env = input.env || process.env;
   const candidateModels = Array.isArray(input.candidateModels) ? input.candidateModels : [];
+  const measured = input.measured;
+  const measuredCandidates = input.measuredCandidates || {};
+  const excludedCandidates = input.excludedCandidates instanceof Set
+    ? input.excludedCandidates
+    : new Set(Array.isArray(input.excludedCandidates) ? input.excludedCandidates : []);
 
   if (!hasImage) {
     return { action: 'keep', reason: 'no_image_input' };
   }
-  if (isVisionCapableModel(currentModel, { env })) {
+  if (isVisionCapableModel(currentModel, { env, measured })) {
     return { action: 'keep', reason: 'current_model_supports_vision' };
   }
 
@@ -102,9 +107,9 @@ function decideVisionRouting(input = {}) {
     const id = String(_candidateModelId(c) || '')
       .trim()
       .toLowerCase();
-    return id && id !== currentLower;
+    return id && id !== currentLower && !excludedCandidates.has(id);
   });
-  const picked = pickVisionCandidate(others, { env });
+  const picked = pickVisionCandidate(others, { env, measuredCandidates });
   if (picked) {
     return {
       action: 'switch-model',

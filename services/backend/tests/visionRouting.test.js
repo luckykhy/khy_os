@@ -4,9 +4,42 @@ const test = require('node:test');
 const assert = require('node:assert');
 
 const { decideVisionRouting, _modelProviderPrefix } = require('../src/services/gateway/visionRouting');
+const { isVisionCapableModel } = require('../src/services/gateway/visionCapability');
 
 const EMPTY_ENV = {};
 
+test('实测 unsupported 覆盖静态视觉声明，跳过 keep', () => {
+  const result = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'step-3.7-flash',
+    measured: 'unsupported',
+    candidateModels: [],
+    env: {},
+  });
+  assert.strictEqual(result.action, 'ocr-fallback');
+});
+
+test('实测 supported 保持当前路由', () => {
+  const result = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'plain-text-model',
+    measured: 'supported',
+    candidateModels: [{ id: 'vision-candidate' }],
+    env: {},
+  });
+  assert.strictEqual(result.action, 'keep');
+});
+
+test('管理员视觉名单优先于实测 unsupported', () => {
+  const result = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'forced-vision',
+    measured: 'unsupported',
+    candidateModels: [],
+    env: { KHY_VISION_MODELS: 'forced-vision' },
+  });
+  assert.strictEqual(result.action, 'keep');
+});
 test('无图片输入 → keep', () => {
   const d = decideVisionRouting({ hasImage: false, currentModel: 'deepseek-v4-flash', env: EMPTY_ENV });
   assert.strictEqual(d.action, 'keep');
@@ -17,6 +50,88 @@ test('当前模型已支持视觉 → keep（不改选）', () => {
   const d = decideVisionRouting({ hasImage: true, currentModel: 'gpt-4o', env: EMPTY_ENV });
   assert.strictEqual(d.action, 'keep');
   assert.strictEqual(d.reason, 'current_model_supports_vision');
+});
+
+test('Claude tier alias opus + 配置 MCP → 保留原生视觉路由', () => {
+  const d = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'opus',
+    candidateModels: [],
+    env: { KHY_MCP_VISION_SERVER: 'deepseek-eyes' },
+  });
+  assert.strictEqual(d.action, 'keep');
+  assert.strictEqual(d.reason, 'current_model_supports_vision');
+});
+
+test('Claude Opus 5 完整 model id + 配置 MCP → 保留原生视觉路由', () => {
+  const d = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'claude-opus-5',
+    candidateModels: [],
+    env: { KHY_MCP_VISION_SERVER: 'deepseek-eyes' },
+  });
+  assert.strictEqual(d.action, 'keep');
+  assert.strictEqual(d.reason, 'current_model_supports_vision');
+});
+test('step-3.7-flash 名称含 flash 但显式能力表判定为视觉', () => {
+  assert.strictEqual(isVisionCapableModel('step-3.7-flash', { env: {} }), true);
+  assert.strictEqual(isVisionCapableModel('stepfun/step-3.7-flash', { env: {} }), true);
+  assert.strictEqual(isVisionCapableModel('sensenova-6.7-flash-image', { env: {} }), false);
+});
+
+test('step-3.7-flash 原生支持视觉且名称含 flash → keep', () => {
+  const d = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'step-3.7-flash',
+    candidateModels: [],
+    env: { KHY_MCP_VISION_SERVER: 'deepseek-eyes' },
+  });
+  assert.strictEqual(d.action, 'keep');
+  assert.strictEqual(d.reason, 'current_model_supports_vision');
+});
+
+test('step-3.7-flash 带 provider 前缀 → 仍识别为视觉模型', () => {
+  const d = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'stepfun/step-3.7-flash',
+    candidateModels: [],
+    env: { KHY_MCP_VISION_SERVER: 'deepseek-eyes' },
+  });
+  assert.strictEqual(d.action, 'keep');
+  assert.strictEqual(d.reason, 'current_model_supports_vision');
+});
+
+test('纯文本模型 + 配置 deepseek-eyes → MCP 视觉转发', () => {
+  const d = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'deepseek-v4-flash',
+    candidateModels: [],
+    env: { KHY_MCP_VISION_SERVER: 'deepseek-eyes' },
+  });
+  assert.strictEqual(d.action, 'mcp-vision');
+  assert.strictEqual(d.mcpServer, 'deepseek-eyes');
+  assert.strictEqual(d.reason, 'mcp_vision_server_configured');
+});
+
+test('MCP 视觉服务优先级低于可用视觉候选', () => {
+  const d = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'deepseek-v4-flash',
+    candidateModels: ['gpt-4o'],
+    env: { KHY_MCP_VISION_SERVER: 'deepseek-eyes' },
+  });
+  assert.strictEqual(d.action, 'switch-model');
+  assert.strictEqual(d.model, 'gpt-4o');
+});
+
+test('空白 MCP 服务名 → OCR 兜底', () => {
+  const d = decideVisionRouting({
+    hasImage: true,
+    currentModel: 'deepseek-v4-flash',
+    candidateModels: [],
+    env: { KHY_MCP_VISION_SERVER: '  ' },
+  });
+  assert.strictEqual(d.action, 'ocr-fallback');
 });
 
 test('纯文本模型 + 候选含视觉模型 → 改选该视觉候选', () => {

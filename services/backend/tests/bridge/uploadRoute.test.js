@@ -82,7 +82,9 @@ test('POST /api/upload with bearer → commits + returns descriptor; GET streams
   assert.equal(desc.url, `/api/ai/upload/${desc.id}`);
 
   // Download / preview path streams the stored bytes back.
-  const dl = await fetch(`${base}/api/upload/${desc.id}`);
+  const dl = await fetch(`${base}/api/upload/${desc.id}`, {
+    headers: { Authorization: `Bearer ${jwt}` },
+  });
   assert.equal(dl.status, 200);
   assert.equal(await dl.text(), 'hello attachment');
 

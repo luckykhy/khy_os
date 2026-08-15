@@ -99,7 +99,7 @@ flowchart LR
 
 ## 四、解剖一个真实 Skill：`khy-release-safety`
 
-光讲抽象结构不够，我们**真的拆开一个** Khy-OS 里存在的 Skill 看看。它就在 [`docs/AI协作预设包/skills/khy-release-safety`](../AI协作预设包/skills/khy-release-safety) 目录里，由两个文件组成：一个 `manifest.json`（登记表：告诉系统"我是谁、什么时候该用我"），一个 `prompt.md`（正文：具体怎么做）。
+光讲抽象结构不够，我们**真的拆开一个** Khy-OS 里存在的 Skill 看看。它就在 [`docs/_AI协作预设包/skills/khy-release-safety`](../_AI协作预设包/skills/khy-release-safety) 目录里，由两个文件组成：一个 `manifest.json`（登记表：告诉系统"我是谁、什么时候该用我"），一个 `prompt.md`（正文：具体怎么做）。
 
 ### 4.1 登记表 `manifest.json`——"什么时候用"写在这里
 
@@ -293,8 +293,8 @@ flowchart LR
 
 ### 实验 A：拆开一个真实 Skill 的结构（10 分钟）
 
-1. 打开目录 [`docs/AI协作预设包/skills`](../AI协作预设包/skills)，你会看到一排子目录，**每个子目录就是一个 Skill**。
-2. 随便挑一个，比如 [`khy-troubleshoot`](../AI协作预设包/skills/khy-troubleshoot)（排障）或 [`khy-onboarding`](../AI协作预设包/skills/khy-onboarding)（新人上手），进去看。
+1. 打开目录 [`docs/_AI协作预设包/skills`](../_AI协作预设包/skills)，你会看到一排子目录，**每个子目录就是一个 Skill**。
+2. 随便挑一个，比如 [`khy-troubleshoot`](../_AI协作预设包/skills/khy-troubleshoot)（排障）或 [`khy-onboarding`](../_AI协作预设包/skills/khy-onboarding)（新人上手），进去看。
 3. 找到里面的 `manifest.json`，读它的 `when_to_use` 字段——**这就是这份手册"什么时候被拿出来用"**。
 4. 再读 `prompt.md`，用第三节那张表去对照：哪几段是**步骤**？哪几段是**红线（绝对不要）**？哪里提到了要用的**工具**？
 
@@ -323,24 +323,24 @@ flowchart LR
 
 Khy-OS 里已经有一批真实的 Skill，就放在这个目录：
 
-- [`docs/AI协作预设包/skills`](../AI协作预设包/skills)
+- [`docs/_AI协作预设包/skills`](../_AI协作预设包/skills)
 
 打开看看，每个子目录就是一个技能，这是当前**真实存在**的一批：
 
 | Skill 目录 | 管的是哪类事 | 对应 Khy-OS 纪律 |
 |-----------|--------------|------------------|
-| [`khy-release-safety`](../AI协作预设包/skills/khy-release-safety) | 发布安全（本文的解剖对象） | 红线：密钥不入包、版本三处一致 |
-| [`khy-safe-change`](../AI协作预设包/skills/khy-safe-change) | 安全改动（外科手术式改动的套路） | 章程 B3：只动该动的 |
-| [`khy-honest-closure`](../AI协作预设包/skills/khy-honest-closure) | 诚实收尾（没验证过不许说做完） | 章程 B2：没跑过验证不许说"修好了" |
-| [`khy-onboarding`](../AI协作预设包/skills/khy-onboarding) | 新人上手 | 先读 `.ai/`、看懂再动手 |
-| [`khy-pick-task`](../AI协作预设包/skills/khy-pick-task) | 挑任务 / 定优先级 | 目标驱动、先列 plan |
-| [`khy-troubleshoot`](../AI协作预设包/skills/khy-troubleshoot) | 排障套路 | 先定位再动手 |
-| [`khy-gateway-fix`](../AI协作预设包/skills/khy-gateway-fix) | 网关类问题修复 | 对症的固定排查路径 |
-| [`khy-weak-model-guardrails`](../AI协作预设包/skills/khy-weak-model-guardrails) | 给弱模型的护栏 | 直接对应"为小模型兜底"理念 |
+| [`khy-release-safety`](../_AI协作预设包/skills/khy-release-safety) | 发布安全（本文的解剖对象） | 红线：密钥不入包、版本三处一致 |
+| [`khy-safe-change`](../_AI协作预设包/skills/khy-safe-change) | 安全改动（外科手术式改动的套路） | 章程 B3：只动该动的 |
+| [`khy-honest-closure`](../_AI协作预设包/skills/khy-honest-closure) | 诚实收尾（没验证过不许说做完） | 章程 B2：没跑过验证不许说"修好了" |
+| [`khy-onboarding`](../_AI协作预设包/skills/khy-onboarding) | 新人上手 | 先读 `.ai/`、看懂再动手 |
+| [`khy-pick-task`](../_AI协作预设包/skills/khy-pick-task) | 挑任务 / 定优先级 | 目标驱动、先列 plan |
+| [`khy-troubleshoot`](../_AI协作预设包/skills/khy-troubleshoot) | 排障套路 | 先定位再动手 |
+| [`khy-gateway-fix`](../_AI协作预设包/skills/khy-gateway-fix) | 网关类问题修复 | 对症的固定排查路径 |
+| [`khy-weak-model-guardrails`](../_AI协作预设包/skills/khy-weak-model-guardrails) | 给弱模型的护栏 | 直接对应"为小模型兜底"理念 |
 
 这些 Skill 把 Khy-OS 的工程纪律（章程里的 **B1 先想再写 / B2 目标驱动 / B3 外科手术式改动**、以及各条红线）**变成了 AI 可以直接照做的手册**。换句话说：章程是"法律条文"，Skill 是"照着法律办事的操作流程"——前者讲道理，后者能落地。
 
-特别看一眼 [`khy-weak-model-guardrails`](../AI协作预设包/skills/khy-weak-model-guardrails) 这个名字——它几乎是把第七节"为小模型兜底"的理念直接写成了一个 Skill。**这就是 Khy-OS 用 Skill 兑现"让弱智用户 / 小模型也不容易出错"承诺的地方。**
+特别看一眼 [`khy-weak-model-guardrails`](../_AI协作预设包/skills/khy-weak-model-guardrails) 这个名字——它几乎是把第七节"为小模型兜底"的理念直接写成了一个 Skill。**这就是 Khy-OS 用 Skill 兑现"让弱智用户 / 小模型也不容易出错"承诺的地方。**
 
 ---
 
@@ -380,7 +380,7 @@ flowchart TB
 1. 回到[文档站首页](../index.html)，浏览 Khy-OS 的其它文档，现在你能看懂它们在讲什么了。
 2. 想动手实践，去 [`docs/07_OPS_运维`](../07_OPS_运维) 找上手 / 安装类文档；发布相关的权威手册就在那里（`[OPS-MAN-042] 发布手册`）。
 3. 想看这些概念的真实代码实现，去 [`docs/03_DESIGN_设计`](../03_DESIGN_设计)。
-4. 想真正摸一个 Skill，回到第九节的**实验 A**，打开 [`docs/AI协作预设包/skills`](../AI协作预设包/skills) 挑一个读它的手册结构。
+4. 想真正摸一个 Skill，回到第九节的**实验 A**，打开 [`docs/_AI协作预设包/skills`](../_AI协作预设包/skills) 挑一个读它的手册结构。
 
 ```callout star|恭喜你读完了核心五篇！
 到这里，Agent、Tool Calling、Tool Loop、MCP、Skill 这五块地基你已经踩实了 🎉。如果你还想往下挖——比如"前面一直说的**大模型**到底是什么？""它为什么会**忘事**？""它怎么**记住**我给的资料？"——那就顺着**进阶链**继续：先从 [⑥ 什么是 LLM（大语言模型）](./[CONCEPT-06]%20什么是LLM-大语言模型.md) 开始，一路读到 RAG、机器学习、深度学习。

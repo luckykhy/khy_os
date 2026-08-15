@@ -459,6 +459,15 @@ function App({ options = {} }) {
   const [revSearch, setRevSearch] = React.useState(null);
   const [dismissedFor, setDismissedFor] = React.useState(null);
   const [expanded, setExpanded] = React.useState(false);
+  // A committed <Static> row cannot re-render, so its Ctrl+O detail lives in the
+  // removable live region. null = folded; an expansion view model = open.
+  const [committedExpansion, setCommittedExpansion] = React.useState(null);
+  // Any transcript mutation makes the temporary detail stale (new turn, clear,
+  // resume, rewind). Clear it through one identity-based rule instead of wiring
+  // every command path separately.
+  React.useEffect(() => {
+    setCommittedExpansion(null);
+  }, [query.messages]);
   // Ctrl+T (CC app:toggleTodos) toggles the task checklist panel's visibility.
   // When hidden, the coordination block forces zero task lines so the live region
   // shrinks and StreamingBlock reclaims the rows.
@@ -3549,6 +3558,7 @@ function App({ options = {} }) {
       }
       // Ctrl+L: clear committed transcript.
       if (key.ctrl && input === 'l') {
+        setCommittedExpansion(null);
         query.setMessages([]);
         return;
       }
@@ -3566,19 +3576,29 @@ function App({ options = {} }) {
         // dynamic StreamingBlock, which re-renders on prop change — toggle the
         // global flag so it expands/collapses in place.
         if (query.streaming) {
+          setCommittedExpansion(null);
           setExpanded((v) => {
             const next = !v;
-            showHint(next ? '过程组：已展开（显示工具详情）' : '过程组：已折叠');
+            showHint(next ? '过程组：已展开（显示完整详情）' : '过程组：已收起');
             return next;
           });
           return;
         }
-        // Otherwise the foldable detail has already committed into Ink's <Static>,
-        // which never re-renders printed items — so toggling `expanded` is a no-op
-        // for it (this was the "Ctrl+O 失效" report). Append a one-shot expanded
-        // copy of the most recent foldable turn below the transcript instead.
-        const appended = query.expandLastFoldable();
-        showHint(appended ? '已在下方展开上一步详情' : '暂无可展开的折叠内容');
+        // The committed detail has landed in Ink's immutable <Static> region.
+        // Toggle a force-expanded copy in the removable live layer: first press
+        // opens it, second press lets Ink erase it in place.
+        if (committedExpansion) {
+          setCommittedExpansion(null);
+          showHint('上一步详情：已收起');
+          return;
+        }
+        const expansion = query.expandLastFoldable();
+        if (expansion) {
+          setCommittedExpansion(expansion);
+          showHint('上一步详情：已展开（显示完整详情）');
+        } else {
+          showHint('暂无可展开的折叠内容');
+        }
         return;
       }
       // Shift+Tab: cycle permission mode and push it to the real tool gate.
@@ -4502,6 +4522,15 @@ function App({ options = {} }) {
               // the left column exactly where the sidebar tops the right column.
               _bannerInLive
                 ? h(WelcomeBanner, { key: 'live-banner', ...bannerProps, showArt: _bannerShowArt })
+                : null,
+              // Removable Ctrl+O detail for the latest committed <Static> turn.
+              // MessageBlock already force-expands role:'expansion'; keeping this
+              // outside Static makes the second keypress a true collapse.
+              committedExpansion
+                ? h(Transcript.MessageBlock, {
+                    key: 'committed-expansion',
+                    msg: committedExpansion,
+                  })
                 : null,
               // Live streaming turn. 任务#12: while the board is visible this block only
               // spans the LEFT column, so its wrap/height budgets must use the left-

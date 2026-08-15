@@ -2,12 +2,19 @@ name: CodeQL Security Scanning
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
   schedule:
     # Nightly scan catches newly disclosed CVEs against older commits
     - cron: '0 3 * * *'
+
+# CodeQL 单次运行分钟数较高（两种语言 + security-extended 查询集）。
+# 同一 ref 上只保留最新一次；定时任务用 schedule 作为 group 后缀，避免
+# 夜间扫描被随后的 push 取消掉（那会造成「昨夜没扫」的静默漏洞）。
+concurrency:
+  group: codeql-${{ github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || 'push' }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
   analyze:

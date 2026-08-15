@@ -28,15 +28,56 @@
 ### 验收门禁（会亮红灯的命令 = 「做完的定义」，任一红即未完成）
 
 ```
-node --check <改动文件>                # 语法
-<相关 jest / node:test 全绿>           # node:test 文件须 node --test，勿用 jest 前缀
-npm run arch:god                       # 改动文件不得新增超限（本仓由 change-safety + 阈值承载）
-node scripts/check-change-safety.js --changed
-node scripts/check-agent-rules.js --changed
-npm run maintainer:check               # 维护映射表 + 元数据一致
+node --check <改动文件>                                  # 语法
+<相关 jest / node:test 全绿>                             # node:test 文件须 node --test，勿用 jest 前缀
+node scripts/ci/check-change-safety.js --changed          # 三守卫之一
+node scripts/ci/check-agent-rules.js --changed            # 三守卫之二
+node scripts/ci/check-repo-layout.js                      # 三守卫之三：层级/根目录/索引/任务入口（刻意全仓扫，无 --changed）
+npm run arch:god --workspace services/backend             # 改动文件不得新增超限（archDebtScan --god-report）
+node scripts/maintenance/gen-codeowners.js                # 维护映射表 → CODEOWNERS
+git diff --exit-code .github/CODEOWNERS                   # 重生成后无脏 diff = 生成器与真源一致
+node --test scripts/tests/maintainerMapDocCoverage.test.js # 映射表覆盖每个 docs 分类
 ```
 
 > 三守卫须在**仓库根**跑；untracked 新叶子须**显式**传路径扫描。
+>
+> **路径更正（2026-08-15）**：`check-change-safety.js` 与 `check-agent-rules.js` 位于
+> `scripts/ci/`，不在 `scripts/` 根；本文此前写的 `node scripts/check-change-safety.js`
+> 已失效。`arch:god` 只定义在 `services/backend/package.json`，须带
+> `--workspace services/backend` 或先 `cd services/backend`。
+> 原文引用的 `npm run maintainer:check` 在任何 `package.json` 中**都不存在**，
+> 已替换为上面三条真实可跑的等价命令。全量任务入口对照见
+> `[OPS-MAN-174] 任务入口总表.md`。
+
+---
+
+## 一之二、板块层级（新增文件 / 新增顶层目录前必读）
+
+顶层目录的**层级定位（L0–L6）、允许的依赖方向、`docs/` 两轴命名、任务入口命名规约**，
+单一真源是 **`docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md`**：
+
+| 层 | 目录 | 一句话职责 |
+| --- | --- | --- |
+| L0 | `kernel/` | 手写 OS 内核（C / MoonBit），与 Node 栈无运行时耦合 |
+| L1 | `platform/` | Python 启动器 + 共享包 + 交付编排 |
+| L2 | `services/` | Node 运行时：CLI、AI 网关、Web API（全部业务逻辑） |
+| L3 | `apps/` | 平台自带管理前端 |
+| L4 | `software/` | 跑在平台之上的内置应用（khyquant） |
+| L5 | `extensions/` | 外部 IDE / 编辑器桥接 |
+| L6 | `tools/` | 独立开发者工具，不参与运行时 |
+
+横切层（不编号）：`scripts/`（工程任务）、`packaging/`（打包清单与板块切分）、`docs/`（文档）。
+
+**依赖方向是白名单，不是全序**：实测允许边为 `L1→L2`、`L3→L2`、`L4→L2`、`L2→L1`；
+`L0` 独立；`L5`/`L6` 只被 `scripts/` 触达。反向或跨层深相对引用
+（`require('../../../<其他层>/…')`）一律视为违规。
+
+强制手段：`npm run check:layout`（`scripts/ci/check-repo-layout.js`），
+规则 `root-whitelist` / `docs-index-first` / `layer-registry` 为 error，
+`dangling-task` / `cross-layer-require` / `unresolved-require` / `docs-index-complete`
+走 `scripts/ci/repo-layout-baseline.json` 基线只降不升。
+
+本节只是指针 + 速查，**不复制也不覆盖** DESIGN-ARCH-068 的内容；两者冲突时以 DESIGN-ARCH-068 为准。
 
 ---
 
@@ -91,10 +132,13 @@ npm run maintainer:check               # 维护映射表 + 元数据一致
 2. **同步两处索引**：① 所在目录的 `00_INDEX_<中文>-分类索引.md`「文件清单」表；② 主入口 `docs/00_INDEX_文档索引.md` 对应分区列表 + 顶部计数。
 3. **概念 / 故事目录额外守规**：`docs/02_CONCEPTS_概念入门/` 与 `docs/09_STORY_修仙学AI/` 受 `scripts/docs/check_beginner_docs.js`（`npm run docs:check-beginner`）约束——禁孤儿页、禁死链、禁无导航死胡同页；`CONCEPT` 前缀须**连号不跳**；故事文档须含 `## 📒 凡人笔记`。
 
-### 2.6 特殊（非编号）目录
+### 2.6 特殊（非编号）目录 —— `_` 前缀 = 跨阶段轴
 
-- `传承/`——无 AI 也能维护的生存文档（`KHY-OS-传承书.md`、`紧急恢复卡片.md`）。
-- `报告/`、`模板/`、`维护者/`、`设计模式/`——按各自约定命名。
+`docs/` 下有两条正交的轴（真源 `[DESIGN-ARCH-068]` 第三节）：**编号轴** `NN_STAGE_中文/` 是生命周期阶段，**`_` 前缀轴**是跨阶段资产。2026-08-15 起六个原本无前缀的中文目录统一加上 `_`，与既有的 `_assets/` `_ref/` 惯例对齐：
+
+- `_传承/`——无 AI 也能维护的生存文档（`KHY-OS-传承书.md`、`紧急恢复卡片.md`）。
+- `_报告/`、`_模板/`、`_维护者/`、`_设计模式/`、`_AI协作预设包/`——按各自约定命名。
+- 改名前那批**无 `_` 前缀**的旧路径已全仓改写（含代码、CI 配置与 `.html` 孪生件）；再遇到不带前缀的写法即是漏网，直接补上前缀。
 - `.ai/`（仓库根，非 `docs/`）——机器生成的种子文档（`MAP.md`、`CONTEXT.yaml`、`GUARDS.md`、`SKELETON.auto.md`），由 `khy metadata refresh` + pre-commit 钩子确定性维护，**不手改**。
 
 ### 2.7 校验/构建命令速查
@@ -141,7 +185,7 @@ npm run docs:check-beginner  # 概念/故事目录的小白友好度不变量
 
 - 新增内置技能：在 `services/backend/src/skills/<category>/<name>/` 放一份 `SKILL.md`（含上述 frontmatter），发现链自动纳入。
 - 注册表类叶子上方须留**抄写式 HOW-TO-EXTEND 注释**（`CLAUDE.md` §四）。
-- 新子系统必须登记进 `docs/维护者/维护映射表.json`（`whenToUse` / `paths` / `docs` / `verify`），`npm run maintainer:check` 守着。
+- 新子系统必须登记进 `docs/_维护者/维护映射表.json`（`whenToUse` / `paths` / `docs` / `verify`），`npm run maintainer:check` 守着。
 
 ---
 
@@ -234,4 +278,4 @@ npm run docs:check-beginner  # 概念/故事目录的小白友好度不变量
 - `[OPS-MAN-058]`——环境开关与文档命名规范（`KHY_*` 全量目录 + 命名速查）。
 - `[OPS-MAN-060]`——高危操作为何被拒与如何放行（权限的用户视角）。
 - `[OPS-MAN-042]` / `[OPS-MAN-061]`——发布手册与发布门禁。
-- `docs/维护者/维护映射表.json`——子系统登记（`maintainer:check` 守）。
+- `docs/_维护者/维护映射表.json`——子系统登记（`maintainer:check` 守）。

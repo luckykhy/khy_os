@@ -5,18 +5,34 @@
 
 ## 阶段总览
 
-| 序号 | 阶段目录 | 文档数 |
-|---|---|---:|
-| 01 | `01_INIT_立项/` | 2 |
-| 03 | `03_DESIGN_设计/` | 66 |
-| 04 | `04_IMPL_实现/` | 30 |
-| 05 | `05_TEST_测试/` | 9 |
-| 06 | `06_DEPLOY_部署/` | 18 |
-| 07 | `07_OPS_运维/` | 72 |
-| 08 | `08_MGMT_项目管理/` | 34 |
-| — | `AI协作预设包/`（跨阶段·分「给人看/给AI看」两线 + 可安装 skills/） | 11 文档 + 8 skill |
+| 序号 | 阶段目录 | 文档数 | 本索引已列 |
+|---|---|---:|---:|
+| 01 | `01_INIT_立项/` | 2 | 2 |
+| 02 | `02_CONCEPTS_概念入门/` | 33 | 目录入口（见下） |
+| 03 | `03_DESIGN_设计/` | 68 | 68 |
+| 04 | `04_IMPL_实现/` | 37 | 37 |
+| 05 | `05_TEST_测试/` | 9 | 9 |
+| 06 | `06_DEPLOY_部署/` | 22 | 22 |
+| 07 | `07_OPS_运维/` | 176 | 74 |
+| 08 | `08_MGMT_项目管理/` | 38 | 38 |
+| 09 | `09_STORY_修仙学AI/` | 29 | 目录入口（见下） |
+| — | `_AI协作预设包/`（跨阶段·分「给人看/给AI看」两线 + 可安装 skills/） | 11 文档 + 8 skill | — |
 
-> 🧭 **换任何 AI 接手先看**：[`AI协作预设包/`](AI协作预设包/00_INDEX_总入口.md) — 严格区分**给人看**（怎么用/排错/选活/保命）与**给AI看**（可直接粘贴的开场白/铁律/错误自查/任务卡）；含两份总说明（人的一页速览 + AI 的一次读懂全局）；并附一套可 `khy skill import` 的 **skills/**（8 个指导弱模型现场使用 khy 的 skill）。适用于「只能用弱模型 / 陌生大模型、且靠 pip 分发」的维护场景。
+> ⚠️ **本索引仍落后于磁盘现实**（2026-08-15 实测并已部分补齐）：「文档数」是各阶段目录下
+> 非索引 `.md` 的实际文件数，「本索引已列」是本页实际链到的文档份数。
+> 当前唯一缺口在 **`07_OPS_运维/` 的 102 份**；03/04/08 三处的 10 份漏链本轮已补齐。
+> 各阶段目录的就近 `00_INDEX_*` 分类索引比本页完整，**排查时以就近索引为准**。
+> 该缺口不再靠人工记忆跟踪：由 `npm run check:layout` 的 `docs-index-complete`
+> 规则实测，计入 `scripts/ci/repo-layout-baseline.json` 基线，只允许下降；
+> 全量漏链名单跑 `node scripts/ci/check-repo-layout.js --list=docs-index-complete`。
+> OPS 102 份不在本轮批量补链（属独立一轮工作），但基线锁死了它不会再涨。
+>
+> `02_CONCEPTS_概念入门/` 与 `09_STORY_修仙学AI/` **刻意不在本页逐篇点名**：这两个
+> 小白向目录的可达性由 `npm run docs:check-beginner`（`scripts/docs/check_beginner_docs.js`）
+> 保证——禁孤儿页、禁死链、禁无导航死胡同页，比「本页有没有这一行」更强。
+> 本页只链它们的目录入口（见下一节）。`docs-index-complete` 规则对这两个目录同样豁免。
+
+> 🧭 **换任何 AI 接手先看**：[`_AI协作预设包/`](_AI协作预设包/00_INDEX_总入口.md) — 严格区分**给人看**（怎么用/排错/选活/保命）与**给AI看**（可直接粘贴的开场白/铁律/错误自查/任务卡）；含两份总说明（人的一页速览 + AI 的一次读懂全局）；并附一套可 `khy skill import` 的 **skills/**（8 个指导弱模型现场使用 khy 的 skill）。适用于「只能用弱模型 / 陌生大模型、且靠 pip 分发」的维护场景。
 
 > 📖 **想按「从启动到愿景」的认知顺序读懂架构**：[`[DESIGN-ARCH-063]` 对照《Claude Code 架构》一书读懂 Khy-OS](03_DESIGN_设计/%5BDESIGN-ARCH-063%5D%20对照《Claude%20Code%20架构》一书读懂%20Khy-OS.md) — 借一本讲 Claude Code 架构的书的目录当骨架，逐章把「书里的 CC 概念」对齐到「khy 此刻真实的实现（文件:行）」，并如实标注相同/khy 特有/未做之处。它与本索引的**生命周期分类法互补**：本索引答「一个功能怎么落地」，那篇答「按认知顺序从启动一路读到 Agent-as-OS 愿景」。
 
@@ -96,10 +112,22 @@
 - [`DESIGN-ARCH-061` 更新包学习-取其精华弃其糟粕](03_DESIGN_设计/%5BDESIGN-ARCH-061%5D%20更新包学习-取其精华弃其糟粕.md)
 - [`DESIGN-ARCH-062` khyos 后台常驻与按需加载生命周期边界](03_DESIGN_设计/%5BDESIGN-ARCH-062%5D%20khyos%20后台常驻与按需加载生命周期边界.md)
 - [`DESIGN-ARCH-063` 对照《Claude Code 架构》一书读懂 Khy-OS（书序架构阅读主线）](03_DESIGN_设计/%5BDESIGN-ARCH-063%5D%20对照《Claude%20Code%20架构》一书读懂%20Khy-OS.md)
+- [`DESIGN-ARCH-064` khyos 后端请求生命周期与逻辑关系图](03_DESIGN_设计/%5BDESIGN-ARCH-064%5D%20khyos%20后端请求生命周期与逻辑关系图.md)
+- [`DESIGN-ARCH-065` Hermes Agent v0.18.0 参考学习-判断验证自我进化](03_DESIGN_设计/%5BDESIGN-ARCH-065%5D%20Hermes%20Agent%20v0.18.0%20参考学习-判断验证自我进化.md)
+- [`DESIGN-ARCH-066` 前端代理出站桥-选节点实际路由与启用停用开关](03_DESIGN_设计/%5BDESIGN-ARCH-066%5D%20前端代理出站桥-选节点实际路由与启用停用开关.md)
+- [`DESIGN-ARCH-067` opencode高含金量功能教学与khy-os差距补齐路线](03_DESIGN_设计/%5BDESIGN-ARCH-067%5D%20opencode高含金量功能教学与khy-os差距补齐路线.md)
+- [`DESIGN-ARCH-067` 动态模型差异化适配引擎](03_DESIGN_设计/%5BDESIGN-ARCH-067%5D%20动态模型差异化适配引擎.md) ⚠️ 编号与上一条冲突，待重编
+- [`DESIGN-ARCH-068` 仓库层级板块规范](03_DESIGN_设计/%5BDESIGN-ARCH-068%5D%20仓库层级板块规范.md) — **顶层目录 L0–L6 分层、允许依赖边、`docs/` 两轴命名、任务入口命名的单一真源**；新增文件或新增顶层目录前先读它，由 `npm run check:layout` 强制
 - [`DESIGN-OTHER-001` Khyos-数学重塑-实施提示词链](03_DESIGN_设计/%5BDESIGN-OTHER-001%5D%20Khyos-数学重塑-实施提示词链.md)
 - [`DESIGN-OTHER-002` _cbssp_分阶段防闪退提示词](03_DESIGN_设计/%5BDESIGN-OTHER-002%5D%20_cbssp_分阶段防闪退提示词.md)
 - [`DESIGN-OTHER-003` khy-系统提示词结构图](03_DESIGN_设计/%5BDESIGN-OTHER-003%5D%20khy-系统提示词结构图.md)
 - [`DESIGN-OTHER-004` 特性访问-提示词胶囊-2026-06-01](03_DESIGN_设计/%5BDESIGN-OTHER-004%5D%20特性访问-提示词胶囊-2026-06-01.md)
+
+历史未编号件（保留原名，重命名须同步改写全部入站引用，属独立一轮工作）：
+
+- [`FILE-FORMAT-PROTOCOL`（未编号）](03_DESIGN_设计/FILE-FORMAT-PROTOCOL.md) — 文件格式使用协议（JSON/YAML/JSONL/…各自的职责边界），由 `check-change-safety` 门控；2026-08-15 从 `02_CONCEPTS_概念入门/` 迁来（它是标准而非概念入门篇）
+- [`RELIABILITY-PROTOCOL`（未编号）](03_DESIGN_设计/RELIABILITY-PROTOCOL.md)
+- [`ycode-inspiration-plan`（未编号）](03_DESIGN_设计/ycode-inspiration-plan.md)
 
 ## 04_IMPL_实现
 
@@ -132,8 +160,16 @@
 - [`IMPL-RPT-027` 前后端对接与交互重构日志-2026-06-12](04_IMPL_实现/%5BIMPL-RPT-027%5D%20前后端对接与交互重构日志-2026-06-12.md)
 - [`IMPL-RPT-028` 按需加载与零噪音重构日志-2026-06-12](04_IMPL_实现/%5BIMPL-RPT-028%5D%20按需加载与零噪音重构日志-2026-06-12.md)
 - [`IMPL-RPT-029` 夜间代码质量与健壮性完善日志-2026-06-11](04_IMPL_实现/%5BIMPL-RPT-029%5D%20夜间代码质量与健壮性完善日志-2026-06-11.md)
+- [`IMPL-RPT-030` Agnes四模型一键置备-文生图图改图视频-2026-06-20](04_IMPL_实现/%5BIMPL-RPT-030%5D%20Agnes四模型一键置备-文生图图改图视频-2026-06-20.md)
+- [`IMPL-RPT-031` 多视角模型配置-单一图谱八视角-2026-06-20](04_IMPL_实现/%5BIMPL-RPT-031%5D%20多视角模型配置-单一图谱八视角-2026-06-20.md)
 - [`IMPL-RPT-032` 有学习价值的Bug汇编-UX漂移与half-wired](04_IMPL_实现/%5BIMPL-RPT-032%5D%20有学习价值的Bug汇编-UX漂移与half-wired.md)
 - [`IMPL-RPT-033` 后端公理化重构-网关与定价原子化-2026-07-30](04_IMPL_实现/%5BIMPL-RPT-033%5D%20后端公理化重构-网关与定价原子化-2026-07-30.md)
+- [`IMPL-RPT-040` CC-zip1 命令对齐账本](04_IMPL_实现/%5BIMPL-RPT-040%5D%20CC-zip1%20命令对齐账本.md)
+- [`IMPL-RPT-041` Qoder接入khy网关与开机自启实现记录-2026-07-13](04_IMPL_实现/%5BIMPL-RPT-041%5D%20Qoder接入khy网关与开机自启实现记录-2026-07-13.md)
+- [`IMPL-RPT-042` 交互过程与输出结构化-持久化与机器可读输出-2026-07-27](04_IMPL_实现/%5BIMPL-RPT-042%5D%20交互过程与输出结构化-持久化与机器可读输出-2026-07-27.md)
+- [`IMPL-RPT-043` 输出截断根治与无感接续-max_tokens元数据缺失与锚点续写-2026-08-07](04_IMPL_实现/%5BIMPL-RPT-043%5D%20输出截断根治与无感接续-max_tokens元数据缺失与锚点续写-2026-08-07.md)
+
+> 编号 034–039 为历史断档（删除后不回收，见 [MGMT-STD-001] 第 2.4 条），非漏链。
 
 ## 05_TEST_测试
 
@@ -167,6 +203,10 @@
 - [`DEPLOY-MAN-016` 部署指南-域名](06_DEPLOY_部署/%5BDEPLOY-MAN-016%5D%20部署指南-域名.md)
 - [`DEPLOY-MAN-017` 部署指南-无域名](06_DEPLOY_部署/%5BDEPLOY-MAN-017%5D%20部署指南-无域名.md)
 - [`DEPLOY-MAN-018` khyos-Android构建避坑指南](06_DEPLOY_部署/%5BDEPLOY-MAN-018%5D%20khyos-Android构建避坑指南.md)
+- [`DEPLOY-MAN-019` 模型可用性与适配器探测](06_DEPLOY_部署/%5BDEPLOY-MAN-019%5D%20模型可用性与适配器探测.md) — **`/model` 里没有模型时先读这篇**：18 个适配器默认全部 enabled，`available` 由独立探测轮决定；`GATEWAY_<KEY>_ENABLED` 只是关闭开关
+- [`DEPLOY-MAN-020` AI供应商与APIKey配置](06_DEPLOY_部署/%5BDEPLOY-MAN-020%5D%20AI供应商与APIKey配置.md) — Ollama / 11 家供应商的**真实**变量名；`JWT_SECRET` 无需手写（自动生成）
+- [`DEPLOY-MAN-021` IDE桥接模式](06_DEPLOY_部署/%5BDEPLOY-MAN-021%5D%20IDE桥接模式.md) — 复用 Claude Code / Cursor / Windsurf / VS Code 已有凭据，不需额外 API Key
+- [`PORTABLE`（未编号）便携化打包与启动](06_DEPLOY_部署/PORTABLE.md) — 源码三档启动 + 发布版一键打包 + 数据宿主隔离
 
 ## 07_OPS_运维
 
@@ -244,12 +284,15 @@
 - [`OPS-MAN-171` 技能包规范-manifest与prompt模板](07_OPS_运维/%5BOPS-MAN-171%5D%20技能包规范-manifest与prompt模板.md)
 - [`OPS-MAN-172` 自定义供应商接入指南](07_OPS_运维/%5BOPS-MAN-172%5D%20自定义供应商接入指南.md)
 - [`OPS-MAN-173` MCP工具接入快速上手](07_OPS_运维/%5BOPS-MAN-173%5D%20MCP工具接入快速上手.md)
+- [`OPS-MAN-174` 任务入口总表](07_OPS_运维/%5BOPS-MAN-174%5D%20任务入口总表.md) — 根 `package.json` 每条 `npm run` 入口：跑哪个脚本、守住什么、何时跑，附旧名→新名对照
+- [`OPS-MAN-175` 首次运行自动登录与凭据](07_OPS_运维/%5BOPS-MAN-175%5D%20首次运行自动登录与凭据.md) — 默认管理员如何生成、密码落在哪、CLI 为什么不需要先起后端
 
 ## 08_MGMT_项目管理
 
 - [`MGMT-OTHER-001` RESTORE_WINDOWS](08_MGMT_项目管理/%5BMGMT-OTHER-001%5D%20RESTORE_WINDOWS.md)
 - [`MGMT-OTHER-002` 事后分析-终端崩溃-2026-05-09](08_MGMT_项目管理/%5BMGMT-OTHER-002%5D%20事后分析-终端崩溃-2026-05-09.md)
 - [`MGMT-OTHER-003` 索引](08_MGMT_项目管理/%5BMGMT-OTHER-003%5D%20索引.md)
+- [`MGMT-OTHER-004` 事后分析-Windows内核构建为何之前失败现在成功-2026-06-26](08_MGMT_项目管理/%5BMGMT-OTHER-004%5D%20事后分析-Windows内核构建为何之前失败现在成功-2026-06-26.md)
 - [`MGMT-PLAN-001` khy-os-体验改进计划-2026-05-26](08_MGMT_项目管理/%5BMGMT-PLAN-001%5D%20khy-os-体验改进计划-2026-05-26.md)
 - [`MGMT-PLAN-002` khy-librechat-差距修复路线图](08_MGMT_项目管理/%5BMGMT-PLAN-002%5D%20khy-librechat-差距修复路线图.md)
 - [`MGMT-PLAN-003` khy-大任务框架蓝图](08_MGMT_项目管理/%5BMGMT-PLAN-003%5D%20khy-大任务框架蓝图.md)
@@ -277,6 +320,7 @@
 - [`MGMT-RPT-018` 项目矛盾审计-2026-05-21](08_MGMT_项目管理/%5BMGMT-RPT-018%5D%20项目矛盾审计-2026-05-21.md)
 - [`MGMT-RPT-019` 架构对比-cc-vs-khy](08_MGMT_项目管理/%5BMGMT-RPT-019%5D%20架构对比-cc-vs-khy.md)
 - [`MGMT-RPT-020` 项目痛点诊断报告-2026-06-13](08_MGMT_项目管理/%5BMGMT-RPT-020%5D%20项目痛点诊断报告-2026-06-13.md)
+- [`MGMT-RPT-021` 全量审查报告甄别-bundled路径与本仓源码对照-2026-07-14](08_MGMT_项目管理/%5BMGMT-RPT-021%5D%20全量审查报告甄别-bundled路径与本仓源码对照-2026-07-14.md)
 - [`MGMT-STD-001` 项目文档结构与索引铁律规范](08_MGMT_项目管理/%5BMGMT-STD-001%5D%20项目文档结构与索引铁律规范.md)
 - [`MGMT-STD-002` 工程交付综合系统提示词-文档结构与内嵌MD工作台](08_MGMT_项目管理/%5BMGMT-STD-002%5D%20工程交付综合系统提示词-文档结构与内嵌MD工作台.md)
 - [`MGMT-STD-003` 任务三综合系统提示词-模型自适应与双轨热插拔架构](08_MGMT_项目管理/%5BMGMT-STD-003%5D%20任务三综合系统提示词-模型自适应与双轨热插拔架构.md)
@@ -290,25 +334,25 @@
 > 用途：在「只能用弱模型/陌生大模型、且靠 pip 分发」的场景下继续维护本项目。
 > **严格区分受众**：`给人看/` 是你自己的操作与决策；`给AI看/` 是可直接整段粘贴给 AI 的内容。
 
-- [总入口](AI协作预设包/00_INDEX_总入口.md)
+- [总入口](_AI协作预设包/00_INDEX_总入口.md)
 
 **🚀 先看两份总说明（最快掌握）**
-- 🧑 [总说明-一页速览（给人）](AI协作预设包/给人看/总说明-一页速览.md) — 你自己 30 秒看懂全局
-- 🤖 [总说明-一次读懂全局（给AI）](AI协作预设包/给AI看/总说明-一次读懂全局.md) — 整段发给 AI 即读懂全貌
+- 🧑 [总说明-一页速览（给人）](_AI协作预设包/给人看/总说明-一页速览.md) — 你自己 30 秒看懂全局
+- 🤖 [总说明-一次读懂全局（给AI）](_AI协作预设包/给AI看/总说明-一次读懂全局.md) — 整段发给 AI 即读懂全貌
 
 **🧑 给人看/（你先从这里开始）**
-- [总说明-一页速览](AI协作预设包/给人看/总说明-一页速览.md)
-- [使用说明-怎么用这套包](AI协作预设包/给人看/使用说明-怎么用这套包.md)
-- [排错速查-给人](AI协作预设包/给人看/排错速查-给人.md)
-- [发展路径-决策与选活](AI协作预设包/给人看/发展路径-决策与选活.md)
-- [命脉自保清单-给人](AI协作预设包/给人看/命脉自保清单-给人.md)
+- [总说明-一页速览](_AI协作预设包/给人看/总说明-一页速览.md)
+- [使用说明-怎么用这套包](_AI协作预设包/给人看/使用说明-怎么用这套包.md)
+- [排错速查-给人](_AI协作预设包/给人看/排错速查-给人.md)
+- [发展路径-决策与选活](_AI协作预设包/给人看/发展路径-决策与选活.md)
+- [命脉自保清单-给人](_AI协作预设包/给人看/命脉自保清单-给人.md)
 
 **🤖 给AI看/（复制里面内容发给 AI）**
-- [总说明-一次读懂全局](AI协作预设包/给AI看/总说明-一次读懂全局.md)
-- [项目情况说明-开场白](AI协作预设包/给AI看/项目情况说明-开场白.md)
-- [协作铁律](AI协作预设包/给AI看/协作铁律.md)
-- [错误自查手册](AI协作预设包/给AI看/错误自查手册.md)
-- [任务派发卡](AI协作预设包/给AI看/任务派发卡.md)
+- [总说明-一次读懂全局](_AI协作预设包/给AI看/总说明-一次读懂全局.md)
+- [项目情况说明-开场白](_AI协作预设包/给AI看/项目情况说明-开场白.md)
+- [协作铁律](_AI协作预设包/给AI看/协作铁律.md)
+- [错误自查手册](_AI协作预设包/给AI看/错误自查手册.md)
+- [任务派发卡](_AI协作预设包/给AI看/任务派发卡.md)
 
 **🧩 skills/（装进 khy 指导弱模型现场执行）**
-- [skills 集合总说明](AI协作预设包/skills/README.md) — 8 个可安装 skill：onboarding / safe-change / weak-model-guardrails / pick-task / troubleshoot / gateway-fix / release-safety / honest-closure。装法：`khy skill import <目录>` 或放 `~/.khy/skills/`。
+- [skills 集合总说明](_AI协作预设包/skills/README.md) — 8 个可安装 skill：onboarding / safe-change / weak-model-guardrails / pick-task / troubleshoot / gateway-fix / release-safety / honest-closure。装法：`khy skill import <目录>` 或放 `~/.khy/skills/`。

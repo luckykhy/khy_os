@@ -73,8 +73,8 @@ describe('真图核验:OCR 路径不回归 + 回合内刷屏去重折叠', () =>
     try {
       const seen = new Set();
       const rendered = STREAM.filter((m) => dedup.shouldRender(seen, m, process.env));
-      assert.deepEqual(rendered, [CALL_A, CALL_B, FAIL_404, FAIL_NET], '仅保留首现的每条不同告知');
-      assert.equal(rendered.length, 4, '6×正在调用 + 3×失败块 → 2 调用 + 2 失败块');
+      assert.deepEqual(rendered, [CALL_A, FAIL_404], '仅保留开始与失败阶段首条告知');
+      assert.equal(rendered.length, 2, '6×正在调用 + 3×失败块 → 1 条开始 + 1 条失败');
     } finally {
       if (savedEnv === undefined) delete process.env.KHY_VISION_NOTICE_DEDUP;
       else process.env.KHY_VISION_NOTICE_DEDUP = savedEnv;

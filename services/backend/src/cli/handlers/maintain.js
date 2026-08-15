@@ -167,7 +167,7 @@ function _renderFreshness(cockpit, parsed, f) {
     pipLifeline: _exists('setup.py'),
     aiSeedDocs: _exists('.ai/GUARDS.md') || _exists('.ai/MAP.md'),
     maintenanceLaunchers: _exists('maintenance'),
-    inheritanceDoc: _exists('docs/传承'),
+    inheritanceDoc: _exists('docs/_传承'),
   };
 
   // 守卫接线：解析 package.json 的 check:small-model:safety 脚本串。

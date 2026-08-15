@@ -71,6 +71,16 @@ test('resolvePreset: extraArgs appended (filesystem path)', () => {
   assert.deepStrictEqual(r.config.args, ['-y', '@modelcontextprotocol/server-filesystem', '/home/me/docs']);
 });
 
+test('resolvePreset: deepseek-eyes → python module config and credential metadata', () => {
+  const r = presets.resolvePreset('deepseek-eyes', { gateEnv: {} });
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(r.name, 'deepseek-eyes');
+  assert.strictEqual(r.config.command, 'python');
+  assert.deepStrictEqual(r.config.args, ['-m', 'deepseek_eyes']);
+  assert.deepStrictEqual(r.meta.requiresEnv, ['MODELSCOPE_API_KEY']);
+  assert.deepStrictEqual(r.meta.missingEnv, ['MODELSCOPE_API_KEY']);
+});
+
 test('resolvePreset: unknown name → ok:false; gated off → ok:false', () => {
   assert.strictEqual(presets.resolvePreset('nope', { gateEnv: {} }).ok, false);
   assert.strictEqual(presets.resolvePreset('github', { gateEnv: { KHY_MCP_PRESETS: '0' } }).ok, false);

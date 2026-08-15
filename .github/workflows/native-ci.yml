@@ -1,0 +1,158 @@
+# 原生 / MoonBit 门禁：kernel/（C + nasm）与 5 个 MoonBit 模块。
+#
+# 现状（本 workflow 加入前）：kernel/ 与所有 .mbt 源码**没有任何 CI 覆盖** ——
+# 唯一构建它们的地方是开发者本机和 kernel/Dockerfile.kernel-build。
+#
+# 三个 job 的成熟度不同，刻意分开：
+#   1. MoonBit layout  —— 纯 Node 检查，不需要工具链，结论确定，本地已验证。
+#   2. MoonBit build   —— 需要联网安装 moon 工具链，尚未在本仓库验证过，报告态。
+#   3. Kernel build    —— 需要 gcc/nasm/ld，尚未在 Linux runner 上验证过，报告态。
+#
+# 报告态（continue-on-error）不是"永久豁免"：先让它跑起来产出真实结论，确认稳定
+# 后逐个删掉 continue-on-error 变成阻断。带 paths 过滤器，因此**不可**设为分支
+# 保护的必需状态检查（原因见 .github/rulesets/README.md）。
+
+name: Native CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'kernel/**'
+      - 'platform/packages/moonbit-plugin-sdk/**'
+      - 'services/backend/wasm-chain/**'
+      - 'services/backend/wasm-context/**'
+      - 'services/backend/wasm-indicators/**'
+      - 'scripts/ci/check-moonbit-layout.js'
+      - '.github/workflows/native-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'kernel/**'
+      - 'platform/packages/moonbit-plugin-sdk/**'
+      - 'services/backend/wasm-chain/**'
+      - 'services/backend/wasm-context/**'
+      - 'services/backend/wasm-indicators/**'
+      - 'scripts/ci/check-moonbit-layout.js'
+      - '.github/workflows/native-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: native-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  moonbit-layout:
+    name: MoonBit layout
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      # MoonBit 要求每个含 .mbt 的目录都有 moon.pkg.json，否则那些源文件
+      # **不参与编译且 moon build 不报错**。当前 5 个模块里 4 个有问题
+      # （6 个目录 / 8 个 .mbt 文件不会被编译，含整个 wasm-indicators 与
+      # plugin SDK），所以先用 --strict + continue-on-error：步骤会显红给出
+      # 确切清单，但不阻断合并。补齐 moon.pkg.json 后删掉 continue-on-error。
+      - name: Check module layout
+        continue-on-error: true
+        run: node scripts/ci/check-moonbit-layout.js --strict
+
+  moonbit-build:
+    name: MoonBit build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # 官方安装脚本，不钉版本（跟随当前稳定版）。
+      # 它把工具链装到 ~/.moon/bin，需要显式加进 PATH 才能被后续步骤看到。
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Toolchain version
+        run: moon version --all
+
+      # 每个模块独立 check/build：一个模块坏掉不掩盖其余模块的结论。
+      # `moon check` 只做类型检查，比 build 快且不需要后端目标；先跑它定位问题。
+      - name: Check and build each module
+        continue-on-error: true
+        run: |
+          set +e
+          status=0
+          for mod in kernel/moonbit \
+                     platform/packages/moonbit-plugin-sdk \
+                     services/backend/wasm-chain \
+                     services/backend/wasm-context \
+                     services/backend/wasm-indicators; do
+            echo "::group::$mod"
+            ( cd "$mod" && moon check ) || { echo "::warning title=moon check failed::$mod"; status=1; }
+            ( cd "$mod" && moon build ) || { echo "::warning title=moon build failed::$mod"; status=1; }
+            echo "::endgroup::"
+          done
+          exit $status
+
+      # 带 *_test.mbt 的模块（wasm-chain / wasm-indicators）才有测试可跑。
+      - name: Run module tests
+        continue-on-error: true
+        run: |
+          set +e
+          status=0
+          for mod in services/backend/wasm-chain services/backend/wasm-indicators; do
+            echo "::group::test $mod"
+            ( cd "$mod" && moon test ) || { echo "::warning title=moon test failed::$mod"; status=1; }
+            echo "::endgroup::"
+          done
+          exit $status
+
+  kernel-build:
+    name: Kernel build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # 内核需要 nasm + gcc + ld。不装 grub-mkrescue / xorriso：
+      # 默认目标 `all` 会去做 ISO，而我们只需要验证内核二进制能链出来，
+      # 因此下面直接调用 `check`（它只依赖 $(KERNEL)，不依赖 ISO）。
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nasm build-essential
+
+      - name: Tool versions
+        run: |
+          gcc --version | head -1
+          ld --version | head -1
+          nasm -v
+
+      # MOONBIT_PREBUILT=1 让 Makefile 使用已提交的 kernel/vendor/moonbit/
+      # （moonbit_gen.c + runtime.c + include/，见该目录 PROVENANCE.md），
+      # 从而**完全不调用 moon 工具链** —— 内核构建不必依赖 MoonBit 安装。
+      #
+      # SHELL=/bin/bash 是必需的：`check` 目标里用了 `grep -q $'\x7fELF'`，
+      # 这是 bash 的 ANSI-C 引用语法。Ubuntu 的 /bin/sh 是 dash，不支持它，
+      # 会把模式当字面量而让 ELF 魔数校验假失败。
+      - name: Build kernel and verify ELF
+        continue-on-error: true
+        run: make -C kernel SHELL=/bin/bash MOONBIT_PREBUILT=1 check
+
+      - name: Upload kernel binary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: khy-os-kernel-bin
+          path: kernel/build/khy-os.bin
+          retention-days: 7
+          # 构建是报告态，产物可能不存在；这里用 ignore 而不是 error，
+          # 否则上传步骤会替失败的构建再报一次同样的错。
+          if-no-files-found: ignore

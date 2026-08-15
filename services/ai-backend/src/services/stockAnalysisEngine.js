@@ -9,7 +9,6 @@
  * 6. 上下文记忆,连贯对话
  */
 
-const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 
@@ -233,7 +232,10 @@ class StockAnalysisEngine {
   // 检查网络状态
   async checkNetworkStatus() {
     try {
-      await axios.get('https://www.baidu.com', { timeout: 2000 });
+      const response = await fetch('https://www.baidu.com', {
+        signal: AbortSignal.timeout(2000),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       this.isOnline = true;
     } catch (error) {
       this.isOnline = false;
@@ -407,8 +409,9 @@ class StockAnalysisEngine {
     const url = `https://hq.sinajs.cn/list=${code}`;
 
     try {
-      const response = await axios.get(url, { timeout: 3000 });
-      const data = response.data.split(',');
+      const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = (await response.text()).split(',');
 
       if (data.length > 30) {
         const price = parseFloat(data[3]);

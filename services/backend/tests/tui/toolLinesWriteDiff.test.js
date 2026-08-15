@@ -158,6 +158,13 @@ describe('buildWriteDiffRows', () => {
     expect(expanded.some((r) => /ctrl\+o/.test(r.text || ''))).toBe(false);
   });
 
+  test('expanded new-file diff has no former 400-row cap', () => {
+    const after = Array.from({ length: 450 }, (_, i) => `L${i + 1}`).join('\n') + '\n';
+    const rows = buildWriteDiffRows({ beforeContent: '', afterContent: after }, true);
+    expect(rows.filter((r) => r.kind === 'add')).toHaveLength(450);
+    expect(rows.some((r) => r.kind === 'more')).toBe(false);
+  });
+
   test('a large edit reveals far more rows when expanded, and drops the ctrl+o hint', () => {
     const before = Array.from({ length: 400 }, (_, i) => `old${i}`).join('\n') + '\n';
     const after = Array.from({ length: 400 }, (_, i) => `new${i}`).join('\n') + '\n';
@@ -291,6 +298,14 @@ describe('buildShellDiffRows', () => {
     const more = rows.find((r) => r.kind === 'more' && /truncated/.test(r.text));
     expect(more).toBeTruthy();
     expect(rows.length).toBeLessThanOrEqual(61);
+  });
+
+  test('expanded shell diff has no former 1000-row cap', () => {
+    const big = Array.from({ length: 1100 }, (_, i) => `+line${i + 1}`).join('\n');
+    const rows = buildShellDiffRows(big, true);
+    expect(rows.filter((r) => r.kind === 'add')).toHaveLength(1100);
+    expect(rows[rows.length - 1].text).toBe('line1100');
+    expect(rows.some((r) => r.kind === 'more')).toBe(false);
   });
 
   test('returns null on empty input', () => {

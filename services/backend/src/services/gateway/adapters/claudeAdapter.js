@@ -20,6 +20,7 @@ const {
 } = require('../../../tools/platformUtils');
 const { extractPrimaryApiKey } = require('../../apiKeyFormat');
 const { detectErrorKindDeep, formatErrorMessage } = require('../../errorClassifier');
+const { request: nativeRequest, requestStream: nativeRequestStream } = require('../../../utils/nativeHttp');
 const { createAdapterRuntimeDiagnosticsStore } = require('../runtimeDiagnosticsStore');
 
 const { normalizeAbortReason, isAbortLikeError } = require('./_abortHelpers');
@@ -797,21 +798,15 @@ async function detectAsync(forceRefresh = false) {
       .replace(/\/+$/, '')
       .replace(/\/v\d+$/, '');
 
-    let http;
-    try {
-      http = require('axios');
-    } catch {
-      http = require(path.resolve(process.cwd(), 'node_modules/axios'));
-    }
     // A GET /v1/messages returns 405 (method not allowed) when the host is reachable.
-    // Any non-timeout/non-ECONNREFUSED response means the endpoint is alive.
-    await http.get(`${baseUrl}/v1/messages`, {
+    // Any HTTP response means the endpoint is alive.
+    await nativeRequest(`${baseUrl}/v1/messages`, {
+      method: 'GET',
       headers: {
         ..._buildAnthropicAuthHeaders(apiKey, _resolveAnthropicAuthScheme(credSource, process.env)),
         'anthropic-version': '2024-10-22',
       },
-      timeout: 6000,
-      validateStatus: () => true, // accept any HTTP status
+      timeoutMs: 6000,
     });
     return true;
   } catch (err) {
@@ -881,13 +876,21 @@ function parseModelId(rawId) {
   return { modelId: s.slice(0, idx), mode: s.slice(idx + 2).toLowerCase() || null };
 }
 
-function buildStreamUserMessage(prompt, rawUserMessage) {
+function buildStreamUserMessage(prompt, rawUserMessage, images = []) {
+  const text = applyAgenticGuidancePrefix(prompt, rawUserMessage);
+  let content = text;
+  if (Array.isArray(images) && images.length > 0) {
+    const imageBlocks = toAnthropicImageBlocks(images);
+    if (imageBlocks.length > 0) {
+      content = [{ type: 'text', text }, ...imageBlocks];
+    }
+  }
   return {
     type: 'user',
     session_id: '',
     message: {
       role: 'user',
-      content: applyAgenticGuidancePrefix(prompt, rawUserMessage),
+      content,
     },
     parent_tool_use_id: null,
   };
@@ -1013,8 +1016,10 @@ function shellEscapeArg(value) {
   return `'${String(value || '').replace(/'/g, `'\\''`)}'`;
 }
 
-function buildSeededShellCommand(args, prompt) {
-  const initialUserLine = JSON.stringify(buildStreamUserMessage(prompt));
+function buildSeededShellCommand(args, prompt, rawUserMessage, images = []) {
+  const initialUserLine = JSON.stringify(
+    buildStreamUserMessage(prompt, rawUserMessage, images)
+  );
   const cliArgs = Array.isArray(args) ? args.map(shellEscapeArg).join(' ') : '';
   return `{ printf '%s\\n' ${shellEscapeArg(initialUserLine)}; cat; } | claude ${cliArgs}`;
 }
@@ -1156,6 +1161,7 @@ async function runClaudeAttempt({
   launchMode = 'direct',
   prompt,
   rawUserMessage,
+  images = [],
   args,
   timeoutMs = null,
   onChunk,
@@ -1322,7 +1328,7 @@ async function runClaudeAttempt({
 
     let shouldWriteInitialUserLine = true;
     if (launchMode === 'seeded_shell') {
-      const shellCmd = buildSeededShellCommand(args, prompt);
+      const shellCmd = buildSeededShellCommand(args, prompt, rawUserMessage, images);
       const _cfg = getShellConfiguration({ login: true });
       const sh = { cmd: _cfg.executable, args: [..._cfg.argsPrefix, shellCmd] };
       child = spawn(sh.cmd, sh.args, {
@@ -1880,7 +1886,7 @@ async function runClaudeAttempt({
     child.stdin.on('error', () => {});
     if (
       shouldWriteInitialUserLine &&
-      !writeInputLine(buildStreamUserMessage(prompt, rawUserMessage))
+      !writeInputLine(buildStreamUserMessage(prompt, rawUserMessage, images))
     ) {
       finishWithError(
         attachClaudeBridgeDiagnostics(
@@ -2115,13 +2121,23 @@ async function callAnthropicStream(
   passthroughOptions,
   authScheme
 ) {
-  let http;
-  try {
-    http = require('axios');
-  } catch {
-    // Fallback: use the project-local axios
-    http = require(path.resolve(process.cwd(), 'node_modules/axios'));
-  }
+  const http = {
+    async post(url, postBody, config = {}) {
+      const response = await nativeRequestStream(url, {
+        method: 'POST',
+        headers: config.headers,
+        body: JSON.stringify(postBody),
+        signal: config.signal,
+        timeoutMs: connectTimeoutMs,
+      });
+      if (response.status < 200 || response.status >= 300) {
+        const err = new Error(`Request failed with status code ${response.status}`);
+        err.response = { status: response.status, data: response.stream, headers: response.headers };
+        throw err;
+      }
+      return { status: response.status, data: response.stream, headers: response.headers };
+    },
+  };
 
   body.stream = true;
 
@@ -3026,6 +3042,7 @@ async function generate(prompt, options = {}) {
         launchMode: 'direct',
         prompt: bridgePrompt,
         rawUserMessage: options.userMessage,
+        images: options.images,
         args,
         timeoutMs: options.timeoutMs,
         onChunk,
@@ -3061,6 +3078,7 @@ async function generate(prompt, options = {}) {
           launchMode: 'seeded_shell',
           prompt,
           rawUserMessage: options.userMessage,
+          images: options.images,
           args: retryArgs,
           timeoutMs: options.timeoutMs,
           onChunk,
@@ -3090,6 +3108,7 @@ async function generate(prompt, options = {}) {
           launchMode: 'direct',
           prompt,
           rawUserMessage: options.userMessage,
+          images: options.images,
           args,
           timeoutMs: options.timeoutMs,
           onChunk,
@@ -3277,6 +3296,7 @@ module.exports = {
       _betaOptOutAt = Date.now() - BETA_OPT_OUT_TTL_MS - 1;
     },
     bridgeToolUseRawInputEnabled: (env) => _bridgeToolUseRawInputEnabled(env),
+    buildStreamUserMessage,
     resolveAnthropicCredentialFromEnv: (env) => _resolveAnthropicCredentialFromEnv(env),
     resolveAnthropicAuthScheme: (source, env) => _resolveAnthropicAuthScheme(source, env),
     buildAnthropicAuthHeaders: (apiKey, scheme) => _buildAnthropicAuthHeaders(apiKey, scheme),

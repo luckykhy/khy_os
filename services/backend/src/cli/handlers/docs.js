@@ -13,7 +13,7 @@ const { printInfo, printSuccess } = require('../formatters');
 const DOCS_DIR = path.resolve(__dirname, '../../../docs');
 const BUNDLED_DOCS_DIR = path.resolve(__dirname, '../../bundled/docs');
 const FASTLANE_DOC_REL_PATH = path.join('指南', 'ai-快速通道.md');
-const MAINTAINER_MAP_REL_PATH = path.join('维护者', '维护映射表.json');
+const MAINTAINER_MAP_REL_PATH = path.join('_维护者', '维护映射表.json');
 
 function getRepoRoot() {
   // forest layout: handlers/ -> cli -> src -> backend -> services -> repo root (mirrored in bundle)
@@ -660,7 +660,7 @@ async function handleDocsMaintainer() {
   }
 
   printInfo(
-    '推荐顺序: 先看 CONTRIBUTING.md，再按 docs/维护者/维护映射表.json 选领域，再跑对应最小验证命令。'
+    '推荐顺序: 先看 CONTRIBUTING.md，再按 docs/_维护者/维护映射表.json 选领域，再跑对应最小验证命令。'
   );
   console.log('');
 }

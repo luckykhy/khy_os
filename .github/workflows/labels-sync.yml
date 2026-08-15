@@ -1,0 +1,110 @@
+# 标签体系同步 —— 把 .github/labels.json 同步为仓库的真实标签。
+#
+# 为什么是 workflow_dispatch 而不是自动触发：
+#   标签是仓库级共享状态，误改会影响所有既有 Issue/PR 的筛选。
+#   因此刻意做成「手动 + 默认 dry-run」，确认 diff 后才真正写入。
+#
+# 为什么不用第三方 labeler action：
+#   gh CLI 在 GitHub 托管 runner 上预装，无需引入任何第三方依赖或锁定版本。
+#
+# 回滚：删除本文件即可；已同步的标签不会自动消失，需在 GitHub UI 手动删除。
+
+name: Labels Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: '设为 true 才真正写入；默认只打印将要执行的变更（dry-run）'
+        required: false
+        default: 'false'
+      prune:
+        description: '设为 true 时，列出存在于仓库但不在 labels.json 中的标签（仅列出，不删除）'
+        required: false
+        default: 'true'
+
+# 标签属于 issues 作用域；除此之外一律只读。
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: labels-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync labels from labels.json
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 先做结构校验，避免把一份坏 JSON 半途写进仓库标签。
+      - name: Validate labels.json
+        run: |
+          node -e '
+            const labels = require("./.github/labels.json")
+              .filter((l) => l.name);
+            if (!labels.length) throw new Error("labels.json 中没有任何有效标签");
+            const seen = new Set();
+            for (const l of labels) {
+              if (seen.has(l.name)) throw new Error(`标签重复: ${l.name}`);
+              seen.add(l.name);
+              if (!/^[0-9a-f]{6}$/.test(l.color || "")) {
+                throw new Error(`标签 ${l.name} 的 color 必须是 6 位小写 hex（不含 #），当前: ${l.color}`);
+              }
+              if (!l.description) throw new Error(`标签 ${l.name} 缺少 description`);
+              if (l.description.length > 100) {
+                throw new Error(`标签 ${l.name} 的 description 超过 GitHub 的 100 字符上限`);
+              }
+            }
+            console.log(`labels.json 校验通过，共 ${labels.length} 个标签`);
+          '
+
+      - name: Apply labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          set -euo pipefail
+          # 用 --force 语义：存在则更新颜色/描述，不存在则创建。幂等。
+          node -e '
+            const labels = require("./.github/labels.json").filter((l) => l.name);
+            for (const l of labels) {
+              console.log([l.name, l.color, l.description].join("\t"));
+            }
+          ' > /tmp/labels.tsv
+
+          COUNT=$(wc -l < /tmp/labels.tsv)
+          if [ "${APPLY}" != "true" ]; then
+            echo "::notice::DRY-RUN —— 将会创建或更新 ${COUNT} 个标签。重新以 apply=true 运行才会写入。"
+            sed 's/^/  would upsert: /' /tmp/labels.tsv
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r name color desc; do
+            [ -n "$name" ] || continue
+            echo "upsert: $name"
+            gh label create "$name" --color "$color" --description "$desc" --force
+          done < /tmp/labels.tsv
+          echo "::notice::已同步 ${COUNT} 个标签。"
+
+      # 只报告、不删除：孤儿标签可能仍挂在历史 Issue 上，删除必须由人决定。
+      - name: Report orphan labels
+        if: ${{ inputs.prune == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh label list --limit 300 --json name --jq '.[].name' | sort > /tmp/remote.txt
+          node -e '
+            const labels = require("./.github/labels.json").filter((l) => l.name);
+            console.log(labels.map((l) => l.name).sort().join("\n"));
+          ' > /tmp/local.txt
+          if comm -23 /tmp/remote.txt /tmp/local.txt | grep . > /tmp/orphans.txt; then
+            echo "::warning::以下标签存在于仓库但不在 labels.json 中（未删除，请人工确认）："
+            sed 's/^/  orphan: /' /tmp/orphans.txt
+          else
+            echo "没有孤儿标签。"
+          fi

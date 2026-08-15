@@ -174,6 +174,55 @@ describe('autoLayout', () => {
   });
 });
 
+describe('_defaultChat', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  test('posts an OpenAI-compatible JSON request and returns content', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }),
+    });
+
+    await expect(svc._defaultChat(
+      { baseUrl: 'https://models.example.test/v1/', apiKey: 'TOKEN', model: 'fixture-model' },
+      [{ role: 'user', content: 'build workflow' }]
+    )).resolves.toBe('{"ok":true}');
+
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe('https://models.example.test/v1/chat/completions');
+    expect(options.headers.Authorization).toBe('Bearer TOKEN');
+    expect(options.signal).toBeDefined();
+    expect(JSON.parse(options.body)).toMatchObject({ model: 'fixture-model', temperature: 0.1 });
+  });
+
+  test('preserves non-string content as JSON', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ choices: [{ message: { content: { value: 1 } } }] }),
+    });
+    await expect(svc._defaultChat({ baseUrl: 'https://models.example.test' }, [], 'm'))
+      .resolves.toBe('{"value":1}');
+  });
+
+  test('maps non-2xx JSON and text responses to a 502 error', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 429, text: async () => '{"error":"rate limited"}' })
+      .mockResolvedValueOnce({ ok: false, status: 503, text: async () => 'unavailable' });
+
+    await expect(svc._defaultChat({ baseUrl: 'https://models.example.test' }, []))
+      .rejects.toMatchObject({ statusCode: 502, message: expect.stringContaining('rate limited') });
+    await expect(svc._defaultChat({ baseUrl: 'https://models.example.test' }, []))
+      .rejects.toMatchObject({ statusCode: 502, message: expect.stringContaining('unavailable') });
+  });
+});
+
 describe('_presetForProvider', () => {
   test('maps a known provider id to its preset endpoint + default model', () => {
     const p = svc._presetForProvider('deepseek');

@@ -1,0 +1,351 @@
+{
+  "$schemaVersion": 1,
+  "_readme": [
+    "模型差异化画像配置。纯文本、零构建：编辑保存后下一次请求即生效（无需重启、无需编译）。",
+    "解析顺序（高 → 低，逐层深合并）：",
+    "  1. env KHY_MODEL_FEATURES_JSON（内联 JSON，最高优先）",
+    "  2. 内存运行时覆盖（modelFeatureRegistry.saveTemporarily，供 A/B 探测与人工标注）",
+    "  3. <appHome>/model_features.json（运维覆盖，升级不丢）",
+    "  4. 本文件 models[<id>] 精确匹配",
+    "  5. 本文件 patterns[] 家族正则（按声明顺序全部命中者依次合并）",
+    "  6. tierDefaults[tier]（tier 由 modelTier.resolveTier 推断）",
+    "  7. modelTier.harnessProfile 推断的兜底（未登记模型也拿到方向正确的画像）",
+    "  8. defaults（本文件）",
+    "第 7 层刻意排在 tierDefaults 之下：人写在配置里的永远压过代码推断出来的。",
+    "未在此登记的模型不会报错：走第 6/7/8 层仍得到完整画像。加新模型只改本文件，不改代码。",
+    "数组合并规则：section_boost_rules / nudge_preferences 追加（base 先、patch 后）；",
+    "strengths / weaknesses / always_prefer_for / default_choice_for 取并集去重；其余数组整体替换。"
+  ],
+  "_capabilityDims": [
+    "11 个维度，取值 0-5 整数。注意：这套矩阵是本配置新引入的，仓库此前不存在 0-5 评分矩阵",
+    "（src/services/capabilityMatrix/ 是 agent 能力接缝描述符；gateway/modelCapability.js 是 text|audio|image|video 四值枚举）。",
+    "维度：text code reasoning tool_use vision long_context instruction_following structured_output multilingual speed cost_efficiency"
+  ],
+  "_confidenceNote": [
+    "每个条目带 confidence 字段：",
+    "  prior    = 人工先验估计，未实测（本文件内置条目全部是 prior，不冒充测量值）",
+    "  low      = modelDiscoveryEngine 首轮探测推断，待人工复核",
+    "  measured = 已由 A/B 采样或人工标注确认",
+    "路由与 Prompt 决策不应把 prior 当成测量结论看待；打分只用于相对排序。"
+  ],
+  "_sectionIds": [
+    "section_boost_rules 里 boost/suppress 引用的段落 id（未知 id 会被忽略，不报错，便于扩展）：",
+    "system_overview coding_standards tool_protocol task_decomposition self_check output_format",
+    "examples long_context_navigation safety_reminders memory_context skills_catalog"
+  ],
+
+  "defaults": {
+    "confidence": "prior",
+    "source": "handwritten",
+    "capability_matrix": {
+      "text": 3,
+      "code": 3,
+      "reasoning": 3,
+      "tool_use": 3,
+      "vision": 0,
+      "long_context": 3,
+      "instruction_following": 3,
+      "structured_output": 3,
+      "multilingual": 3,
+      "speed": 3,
+      "cost_efficiency": 3
+    },
+    "style_profile": {
+      "prompt_preference": "structured",
+      "response_style": "direct",
+      "tool_usage_tendency": "balanced",
+      "scaffolding_comfort_level": 5
+    },
+    "specialty_areas": {
+      "strengths": [],
+      "weaknesses": []
+    },
+    "routing_priority": {
+      "always_prefer_for": [],
+      "default_choice_for": [],
+      "avoid_when_budget_is": null
+    },
+    "prompt_templates": {
+      "system_overview": {
+        "concise_version": "You are a coding agent in khy-os. Use the available tools to inspect the repo before answering. Keep output terse.",
+        "detailed_version": "You are a coding agent operating inside the khy-os repository. Before answering, inspect the relevant files with the available tools rather than guessing. State assumptions explicitly, prefer small reversible changes, and report verification steps for anything you claim to have fixed."
+      },
+      "section_boost_rules": [],
+      "nudge_preferences": []
+    },
+    "dynamic_params": {
+      "preferred_timeout_ms": 120000,
+      "max_tools_per_turn": 6,
+      "parallel_tool_allowance": 2
+    }
+  },
+
+  "tierDefaults": {
+    "T0": {
+      "_note": "前沿模型：给最少脚手架，让它自己规划。",
+      "capability_matrix": { "reasoning": 5, "code": 5, "instruction_following": 5, "tool_use": 5 },
+      "style_profile": {
+        "prompt_preference": "concise",
+        "response_style": "direct",
+        "tool_usage_tendency": "aggressive",
+        "scaffolding_comfort_level": 2
+      },
+      "dynamic_params": {
+        "preferred_timeout_ms": 300000,
+        "max_tools_per_turn": 12,
+        "parallel_tool_allowance": 4
+      },
+      "prompt_templates": {
+        "section_boost_rules": [
+          {
+            "id": "t0-drop-scaffolding",
+            "when": {},
+            "suppress": ["task_decomposition", "examples", "self_check"]
+          }
+        ]
+      }
+    },
+    "T1": {
+      "capability_matrix": { "reasoning": 4, "code": 4, "instruction_following": 4, "tool_use": 4 },
+      "style_profile": {
+        "prompt_preference": "structured",
+        "response_style": "direct",
+        "tool_usage_tendency": "balanced",
+        "scaffolding_comfort_level": 4
+      },
+      "dynamic_params": {
+        "preferred_timeout_ms": 180000,
+        "max_tools_per_turn": 8,
+        "parallel_tool_allowance": 3
+      }
+    },
+    "T2": {
+      "capability_matrix": { "reasoning": 3, "code": 3, "instruction_following": 3, "tool_use": 3 },
+      "style_profile": {
+        "prompt_preference": "structured",
+        "response_style": "elaborated",
+        "tool_usage_tendency": "balanced",
+        "scaffolding_comfort_level": 6
+      },
+      "prompt_templates": {
+        "section_boost_rules": [
+          { "id": "t2-protocol", "when": {}, "boost": ["tool_protocol", "output_format"] }
+        ]
+      }
+    },
+    "T3": {
+      "_note": "弱模型：四阶段管线 + 显式协议 + 收紧工具并发，与 harnessProfile 的 9 个旋钮方向一致。",
+      "capability_matrix": {
+        "reasoning": 1,
+        "code": 2,
+        "instruction_following": 2,
+        "tool_use": 1,
+        "long_context": 1,
+        "speed": 4,
+        "cost_efficiency": 5
+      },
+      "style_profile": {
+        "prompt_preference": "detailed",
+        "response_style": "explainer",
+        "tool_usage_tendency": "conservative",
+        "scaffolding_comfort_level": 9
+      },
+      "specialty_areas": { "weaknesses": ["reasoning", "long_context", "refactor"] },
+      "routing_priority": { "avoid_when_budget_is": "high" },
+      "dynamic_params": {
+        "preferred_timeout_ms": 90000,
+        "max_tools_per_turn": 3,
+        "parallel_tool_allowance": 1
+      },
+      "prompt_templates": {
+        "section_boost_rules": [
+          {
+            "id": "t3-full-scaffolding",
+            "when": {},
+            "boost": [
+              "task_decomposition",
+              "tool_protocol",
+              "self_check",
+              "output_format",
+              "examples"
+            ]
+          },
+          {
+            "id": "t3-long-context-guard",
+            "when": { "context_tokens_gt": 16000 },
+            "boost": ["long_context_navigation"],
+            "suppress": ["examples"]
+          }
+        ],
+        "nudge_preferences": [
+          {
+            "id": "one-tool-at-a-time",
+            "text": "每轮只调用一个工具，等结果返回后再决定下一步。"
+          },
+          { "id": "no-guessing", "text": "不确定文件内容时先读文件，不要凭猜测作答。" }
+        ]
+      }
+    }
+  },
+
+  "patterns": [
+    {
+      "id": "family-claude",
+      "match": "claude",
+      "features": {
+        "specialty_areas": { "strengths": ["code", "refactor", "long_context", "analysis"] },
+        "capability_matrix": { "long_context": 5, "instruction_following": 5, "structured_output": 4 },
+        "routing_priority": { "default_choice_for": ["code", "refactor"] }
+      }
+    },
+    {
+      "id": "claude-opus",
+      "match": "claude.*opus",
+      "features": {
+        "capability_matrix": { "reasoning": 5, "code": 5, "cost_efficiency": 1, "speed": 2 },
+        "routing_priority": { "always_prefer_for": ["architecture", "reasoning"], "avoid_when_budget_is": "low" }
+      }
+    },
+    {
+      "id": "claude-sonnet",
+      "match": "claude.*sonnet",
+      "features": {
+        "capability_matrix": { "reasoning": 4, "code": 5, "cost_efficiency": 3, "speed": 4 },
+        "routing_priority": { "default_choice_for": ["code", "coding", "analysis"] }
+      }
+    },
+    {
+      "id": "claude-haiku",
+      "match": "claude.*haiku",
+      "features": {
+        "capability_matrix": { "speed": 5, "cost_efficiency": 5 },
+        "specialty_areas": { "strengths": ["conversation", "classification"], "weaknesses": ["architecture"] },
+        "routing_priority": { "default_choice_for": ["conversation", "chat"] }
+      }
+    },
+    {
+      "id": "family-openai",
+      "match": "(^|[/:_-])(gpt|o[134])",
+      "features": {
+        "specialty_areas": { "strengths": ["reasoning", "structured_output", "tool_use"] },
+        "capability_matrix": { "structured_output": 5, "tool_use": 4 },
+        "style_profile": { "prompt_preference": "structured" }
+      }
+    },
+    {
+      "id": "openai-small",
+      "match": "(gpt|o[134]).*(mini|nano)",
+      "features": {
+        "capability_matrix": { "speed": 5, "cost_efficiency": 5, "reasoning": 2 },
+        "style_profile": { "scaffolding_comfort_level": 7, "tool_usage_tendency": "conservative" }
+      }
+    },
+    {
+      "id": "openai-reasoning",
+      "match": "(^|[/:_-])o[134]",
+      "features": {
+        "_note": "推理系模型自带内部思考：外部再塞分解步骤会互相干扰。",
+        "capability_matrix": { "reasoning": 5 },
+        "specialty_areas": { "strengths": ["reasoning", "math", "planning"] },
+        "prompt_templates": {
+          "section_boost_rules": [
+            { "id": "no-external-cot", "when": {}, "suppress": ["task_decomposition", "examples"] }
+          ]
+        }
+      }
+    },
+    {
+      "id": "family-deepseek",
+      "match": "deepseek",
+      "features": {
+        "specialty_areas": { "strengths": ["code", "math"] },
+        "capability_matrix": { "code": 4, "cost_efficiency": 5, "multilingual": 4 },
+        "routing_priority": { "default_choice_for": ["code", "coding"] }
+      }
+    },
+    {
+      "id": "deepseek-reasoning",
+      "match": "deepseek.*(r1|reason)",
+      "features": {
+        "capability_matrix": { "reasoning": 5, "speed": 2 },
+        "specialty_areas": { "strengths": ["reasoning", "math"] },
+        "prompt_templates": {
+          "section_boost_rules": [
+            { "id": "no-external-cot", "when": {}, "suppress": ["task_decomposition"] }
+          ]
+        }
+      }
+    },
+    {
+      "id": "family-glm",
+      "match": "(glm|chatglm)",
+      "features": {
+        "capability_matrix": { "multilingual": 5, "tool_use": 4, "cost_efficiency": 4 },
+        "specialty_areas": { "strengths": ["conversation", "tool_use", "multilingual"] },
+        "style_profile": { "prompt_preference": "structured" }
+      }
+    },
+    {
+      "id": "glm-light",
+      "match": "glm.*(air|flash|lite)",
+      "features": {
+        "capability_matrix": { "speed": 5, "cost_efficiency": 5, "reasoning": 2 },
+        "style_profile": { "scaffolding_comfort_level": 7 }
+      }
+    },
+    {
+      "id": "family-kimi",
+      "match": "(kimi|moonshot)",
+      "features": {
+        "capability_matrix": { "long_context": 5, "multilingual": 5 },
+        "specialty_areas": { "strengths": ["long_context", "analysis", "multilingual"] },
+        "routing_priority": { "always_prefer_for": ["long_context"] },
+        "dynamic_params": { "preferred_timeout_ms": 240000 }
+      }
+    },
+    {
+      "id": "family-doubao",
+      "match": "doubao",
+      "features": {
+        "capability_matrix": { "multilingual": 5, "speed": 4, "cost_efficiency": 5 },
+        "specialty_areas": { "strengths": ["conversation", "multilingual"] },
+        "routing_priority": { "default_choice_for": ["conversation", "chat"] }
+      }
+    },
+    {
+      "id": "doubao-lite",
+      "match": "doubao.*lite",
+      "features": {
+        "capability_matrix": { "reasoning": 1, "code": 2 },
+        "style_profile": { "scaffolding_comfort_level": 9, "tool_usage_tendency": "conservative" }
+      }
+    },
+    {
+      "id": "vision-capable",
+      "match": "(vision|-vl|4o|omni|image)",
+      "features": { "capability_matrix": { "vision": 4 } }
+    }
+  ],
+
+  "models": {
+    "_note": [
+      "精确条目是可选的：上面的 patterns 已覆盖 claude / gpt / o-series / deepseek / glm / kimi / doubao 六大系列，",
+      "且新版本号会自动命中家族规则——这正是「不依赖静态预设」的做法，比逐个枚举模型 id 更抗腐坏。",
+      "只有需要覆盖家族规则时才在这里加精确条目。下面两条是格式示例。"
+    ],
+    "claude-opus-5": {
+      "tier": "T0",
+      "confidence": "prior",
+      "source": "handwritten",
+      "capability_matrix": { "vision": 4 },
+      "routing_priority": { "always_prefer_for": ["architecture", "reasoning", "refactor"] },
+      "dynamic_params": { "preferred_timeout_ms": 600000, "max_tools_per_turn": 16 }
+    },
+    "deepseek-reasoner": {
+      "confidence": "prior",
+      "source": "handwritten",
+      "specialty_areas": { "weaknesses": ["tool_use"] },
+      "dynamic_params": { "max_tools_per_turn": 4, "parallel_tool_allowance": 1 }
+    }
+  }
+}

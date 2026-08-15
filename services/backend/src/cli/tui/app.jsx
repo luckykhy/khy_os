@@ -88,10 +88,12 @@ async function startInkApp(options = {}) {
       if (prop === 'write') {
         return function (chunk, ...rest) {
           const normalized = scrollbackPreserve.normalizeClearTerminal(chunk, process.env, process.platform);
+          const frame = typeof normalized === 'string' ? normalized : String(normalized || '');
+          const forceRailPaint = /\n|\r|\x1b\[2J|\x1b\[3J/.test(frame);
           let pre = '';
           let rail = '';
-          try { pre = sidebarRail.clearBytes(); } catch { pre = ''; } // 辅助 UI,永不拖垮渲染
-          try { rail = sidebarRail.paintBytes(); } catch { rail = ''; }
+          try { pre = sidebarRail.clearBytes(forceRailPaint); } catch { pre = ''; } // 辅助 UI,永不拖垮渲染
+          try { rail = sidebarRail.paintBytes(forceRailPaint); } catch { rail = ''; }
           return target.write((pre || rail) ? pre + normalized + rail : normalized, ...rest);
         };
       }

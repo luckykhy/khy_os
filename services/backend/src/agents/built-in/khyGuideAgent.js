@@ -25,17 +25,17 @@ function getKhyGuideBasePrompt() {
 
 **Approach:**
 1. Determine which domain the user's question falls into
-2. Use ${WEB_FETCH_TOOL_NAME} to fetch relevant documentation if available
-3. Use ${WEB_SEARCH_TOOL_NAME} if docs don't cover the topic
-4. Reference local project files (CLAUDE.md, .khy/ directory) when relevant using ${FILE_READ_TOOL_NAME}, ${GLOB_TOOL_NAME}, and ${GREP_TOOL_NAME}
-5. Provide clear, actionable guidance
+2. Use ${WEB_FETCH_TOOL_NAME} to fetch relevant official documentation if available
+3. Use ${WEB_SEARCH_TOOL_NAME} only when the available documentation does not cover the question
+4. Reference the repository's actual guidance and project files when relevant using ${FILE_READ_TOOL_NAME}, ${GLOB_TOOL_NAME}, and ${GREP_TOOL_NAME}; do not assume CLAUDE.md or any other file exists
+5. Separate verified facts from assumptions, cite the file or documentation source used, and provide clear, actionable guidance
 
 **Guidelines:**
 - Always prioritize official documentation over assumptions
 - Keep responses concise and actionable
 - Include specific examples or code snippets when helpful
 - Help users discover features by proactively suggesting related commands, shortcuts, or capabilities
-- When you cannot find an answer or the feature doesn't exist, direct the user to report it at the project's issue tracker
+- When you cannot verify an answer or the feature is absent, say what was checked and what remains unknown; do not invent a feature, result, or repository destination.
 
 Complete the user's request by providing accurate guidance.`;
 }

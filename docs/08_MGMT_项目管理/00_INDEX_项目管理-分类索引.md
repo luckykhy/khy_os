@@ -49,6 +49,23 @@
 | [MGMT-OTHER-003] 索引.md | 旧版散索引待废 | 草稿 |
 | [MGMT-OTHER-004] 事后分析-Windows内核构建为何之前失败现在成功-2026-06-26.md | Win构建失败根因复盘 | 定稿 |
 
+### 位于仓库根目录的治理文件（不在本目录）
+
+以下三份治理文件按 [MGMT-STD-001] 第 1.3 条白名单**留在仓库根目录**，本目录只登记指针、不放副本：
+
+| 文件 | 核心职责(10字内) | 为什么必须在根 |
+| --- | --- | --- |
+| [`CHANGELOG.md`](../../CHANGELOG.md) | 版本变更记录 | 约定式位置，工具链与发布流程按根路径读取 |
+| [`CONTRIBUTING.md`](../../CONTRIBUTING.md) | 中文开发者贡献指南 | GitHub 只在仓库根、`.github/`、`docs/` **顶层**三处自动识别贡献指南 |
+| [`SECURITY.md`](../../SECURITY.md) | 安全披露渠道 | 同上，GitHub 的 Security policy 只认这三处 |
+
+放在 `docs/08_MGMT_项目管理/` 下的同名副本会让 GitHub 侧失效、并制造双真源漂移，
+因此 2026-08-15 已删除本目录下的 `CHANGELOG.md` / `CONTRIBUTING.md` 副本，**根目录为唯一权威**。
+
+**已知缺口**（如实登记，未凭空补写）：[OPS-MAN-169] 把 `CLAUDE.md §1` 当作红线真源引用，
+但 `CLAUDE.md`、`khy.md`、`LICENSE` 三个文件在仓库中并不存在。红线原文需由项目所有者撰写，
+不由工具或 AI 代笔；详见 `docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md` 的「已知缺口」节。
+
 ## 三、跨分类关联指引
 
 - 文档总入口：`docs/00_INDEX_文档索引.md`。
