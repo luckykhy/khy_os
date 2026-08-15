@@ -6,12 +6,12 @@
  * 定位(GOAL「khy 无生态,需连外部;如 mcp 安装」):services/mcp/index.js 的 saveConfig 只写 user 文件
  * 且把整个内存 config(含 CC-bridge、project 来源)一股脑写回 user 文件——不适合「只增删一台 server」的
  * 精细操作(会把别处来源的 server 复制进 user 文件)。故本模块提供**按 scope 定点读改写**:
- *   - user  → ~/.khy/mcp.json(与 index.js CONFIG_PATHS.user 同路径,loadConfig 会读到)
+ *   - user  → getDataHome()/mcp.json(与 index.js CONFIG_PATHS.user 同路径,loadConfig 会读到)
  *   - project → <cwd>/.khy/mcp.json(与 loadConfig 的 project 源同路径)
  * 只触碰目标文件的 mcpServers[name] 一个键,其余 server 与顶层字段原样保留。
  *
- * homedir/cwd 可注入(默认 os.homedir()/process.cwd())便于单测重定向到临时目录——因 mcp.json 路径基于
- * os.homedir() 而非 getDataHome(),KHY_DATA_HOME 不影响它。
+ * homedir/cwd 可注入便于单测重定向到临时目录。显式 homedir 仍使用旧的
+ * <home>/.khy 语义；正常运行时复用 getDataHome(),以兼容 KHY_DATA_HOME 与便携部署。
  */
 
 const fs = require('fs');
@@ -25,12 +25,22 @@ const path = require('path');
  * @returns {string}
  */
 function scopePath(scope, io = {}) {
-  const home = io.homedir || os.homedir();
   const cwd = io.cwd || process.cwd();
   if (scope === 'project') {
     return path.join(cwd, '.khy', 'mcp.json');
   }
-  return path.join(home, '.khy', 'mcp.json');
+  if (io.dataHome) {
+    return path.join(io.dataHome, 'mcp.json');
+  }
+  if (io.homedir) {
+    return path.join(io.homedir, '.khy', 'mcp.json');
+  }
+  try {
+    const { getDataHome } = require('../../utils/dataHome');
+    return path.join(getDataHome(), 'mcp.json');
+  } catch {
+    return path.join(os.homedir(), '.khy', 'mcp.json');
+  }
 }
 
 /**

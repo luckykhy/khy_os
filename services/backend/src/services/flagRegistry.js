@@ -3023,6 +3023,56 @@ const FLAGS = {
   KHY_REFUSAL_RECOVERY_MAX_RETRIES: { mode: 'numeric', default: 1, min: 0, max: 3 },
   // 每步的活动空闲上限(ms):基于活动的滑动超时,收到 chunk/完成即重置,绝不硬 kill 整个循环。clamp[15000, 300000]。
   KHY_REFUSAL_RECOVERY_STEP_IDLE_MS: { mode: 'numeric', default: 60000, min: 15000, max: 300000 },
+
+  // ── 模型差异化动态适配 Dynamic Model Adaptation(modelFeatureRegistry 链)──────
+  // 每请求按当前模型 id 读取完整画像(能力矩阵 11 维 / 风格 / 专长 / 路由偏好 / 段落
+  // boost 规则 / 动态参数),据此现场组装 Prompt、调整工具调用频率与脚手架强度。
+  // 配置是纯文本 JSON(config/models/features.json + <appHome>/model_features.json
+  // + env KHY_MODEL_FEATURES_JSON),零编译零打包,改完保存下一次请求即生效。
+  //
+  // 总闸 opt-in 默认**关**:必须显式登记,否则 isFlagEnabled 对未登记 flag 返回 true
+  // (第 ~3037 行「未登记 → 保守放行」),"渐进启用"会变成"上线即全开"。
+  // 关此门 → 所有子能力逐字节回退到现有 promptAssemblyService / autoModelSelect 行为。
+  KHY_MODEL_ADAPT: { mode: 'opt-in', off: 'CANON', default: false },
+  // 每请求动态 Prompt 组装(dynamicPromptAssembler)。关 → 走原有分段组装,不改一个字节。
+  KHY_DYNAMIC_PROMPT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MODEL_ADAPT',
+  },
+  // 专长匹配 + 成本效率 + UCB1 融合的模型挑选(enhancedModelSelector)。
+  // 关 → 走原 gateway/autoModelSelect.rankAutoModels 的既有排序。
+  KHY_ENHANCED_MODEL_SELECT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MODEL_ADAPT',
+  },
+  // per-request 适配流水线(ModelFeatureFetcher → TaskAnalyzer → StyleMatcher →
+  // 现有 PromptAssembler → AdaptiveScaffoldInjector → 现有 GatewayRouter → ResponseOptimizer)。
+  // 关 → 不插入任何新环节。
+  KHY_MODEL_ADAPT_PIPELINE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MODEL_ADAPT',
+  },
+  // 未知模型能力探测(modelDiscoveryEngine):会**真的发出 API 请求**做 A/B 采样,
+  // 有真实费用。因此独立 opt-in 默认关,即使总闸开了也要再显式打开这一道。
+  // 探测结论以 confidence:'low' 存入内存(saveTemporarily),人工复核后才誊写进
+  // <appHome>/model_features.json 提升为 measured —— 绝不自动写盘。
+  KHY_MODEL_DISCOVERY: {
+    mode: 'opt-in',
+    off: 'CANON',
+    default: false,
+    parent: 'KHY_MODEL_ADAPT',
+  },
+  // 画像配置的文件戳缓存时长(ms)。0 = 每次解析都 statSync 比对 mtime+size,
+  // 保证"改完保存下一次请求必然生效"(两次 statSync 约数十微秒,相对一次 LLM
+  // 网络往返可忽略)。高 QPS 下可调大以减少 stat 次数,代价是生效延迟至多该毫秒数。
+  // 不设 parent:总闸关时注册表本身也不该被强行禁用(它只是一次只读查表)。
+  KHY_MODEL_FEATURES_TTL_MS: { mode: 'numeric', default: 0, min: 0, max: 3600000 },
 };
 
 /**

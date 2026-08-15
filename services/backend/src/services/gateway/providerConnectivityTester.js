@@ -11,6 +11,7 @@
  */
 
 const spec = require('./providerConnectivitySpec');
+const { request: nativeRequest } = require('../../utils/nativeHttp');
 
 /**
  * 测试单个厂商的连通性。
@@ -31,17 +32,16 @@ async function testConnectivity(input = {}, env = process.env) {
       name: (input && (input.name || input.poolKey)) || '',
     };
   }
-  const axios = require('axios');
   const timeoutMs = Number(input && input.timeoutMs) > 0 ? Number(input.timeoutMs) : 15000;
   const started = Date.now();
   try {
-    const resp = await axios({
+    const body = built.body === undefined || built.body === null ? undefined :
+      typeof built.body === 'string' || Buffer.isBuffer(built.body) ? built.body : JSON.stringify(built.body);
+    const resp = await nativeRequest(built.url, {
       method: built.method,
-      url: built.url,
       headers: built.headers,
-      data: built.body,
-      timeout: timeoutMs,
-      validateStatus: () => true, // 自己按状态码归类,不让非 2xx 抛
+      body,
+      timeoutMs,
     });
     const cls = spec.classifyConnectivityResult({ status: resp.status });
     return {

@@ -57,7 +57,9 @@ describe('spawnWithIdleTimeout output decoding', () => {
   test('Windows GBK console: GBK bytes decode to correct characters', async () => {
     const { spawnWithIdleTimeout, restore } = loadSpawn({ platform: 'win32', sysEnc: 'gbk' });
     try {
-      const r = await spawnWithIdleTimeout(process.execPath, emitArgs(GBK_ZHONGWEN_HEX), { idleMs: 5000 });
+      const r = await spawnWithIdleTimeout(process.execPath, emitArgs(GBK_ZHONGWEN_HEX), {
+        idleMs: 5000,
+      });
       expect(r.code).toBe(0);
       expect(r.stdout).toBe(EXPECTED);
     } finally {
@@ -68,7 +70,9 @@ describe('spawnWithIdleTimeout output decoding', () => {
   test('Windows GBK console: multibyte char split across chunks still decodes', async () => {
     const { spawnWithIdleTimeout, restore } = loadSpawn({ platform: 'win32', sysEnc: 'gbk' });
     try {
-      const r = await spawnWithIdleTimeout(process.execPath, emitSplitArgs(GBK_ZHONGWEN_HEX), { idleMs: 5000 });
+      const r = await spawnWithIdleTimeout(process.execPath, emitSplitArgs(GBK_ZHONGWEN_HEX), {
+        idleMs: 5000,
+      });
       expect(r.stdout).toBe(EXPECTED);
     } finally {
       restore();
@@ -102,7 +106,9 @@ describe('spawnWithIdleTimeout output decoding', () => {
     // They must NOT silently decode to the GBK characters.
     const { spawnWithIdleTimeout, restore } = loadSpawn({ platform: 'linux', sysEnc: 'gbk' });
     try {
-      const r = await spawnWithIdleTimeout(process.execPath, emitArgs(GBK_ZHONGWEN_HEX), { idleMs: 5000 });
+      const r = await spawnWithIdleTimeout(process.execPath, emitArgs(GBK_ZHONGWEN_HEX), {
+        idleMs: 5000,
+      });
       expect(r.stdout).not.toBe(EXPECTED);
     } finally {
       restore();
@@ -128,7 +134,9 @@ describe('smartDecodeWinOutput — multi-candidate OEM fallback', () => {
     const { smartDecodeWinOutput } = require('../src/utils/spawnWithIdleTimeout');
     return {
       smartDecodeWinOutput,
-      restore() { jest.dontMock('../src/utils/systemEncoding'); },
+      restore() {
+        jest.dontMock('../src/utils/systemEncoding');
+      },
     };
   }
 

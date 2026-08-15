@@ -8,9 +8,9 @@
  * 这正是未来某次编辑若把某处退回内联副本时会静默破掉的不变量。
  *
  * 零依赖——用内置 Node 测试运行器跑(apps/ai-frontend 是 type:module):
- *   node --test src/api/unwrap.wiring.test.js
+ *   npx vitest run src/api/unwrap.wiring.test.js
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

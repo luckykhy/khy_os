@@ -2,9 +2,9 @@
  * Unit tests for the tool_use / tool_result event mappings that drive the
  * inline tool-call flow and the digital-human status orb. Zero deps — run with
  * the built-in Node test runner (apps/ai-frontend is type:module):
- *   node --test src/views/aiChatEventUtils.toolEvents.test.js
+ *   npx vitest run src/views/aiChatEventUtils.toolEvents.test.js
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
   describeToolEvent,

@@ -2576,7 +2576,12 @@ const AIGatewayGenerateMethod = {
     // 用户语义(Option A)：带图时优先在同 provider 候选里挑一个支持视觉的模型
     // (如 sensenova-u1)识图；候选中没有视觉模型才退回 OCR。决策由纯模块
     // decideVisionRouting 给出，本处只负责执行 keep / switch-model / ocr-fallback。
-    if (hasImageInput && !options._ocrFallbackApplied && !options._visionDescribePass) {
+    if (
+      hasImageInput &&
+      !options._ocrFallbackApplied &&
+      !options._visionDescribePass &&
+      !options._visionCapProbe
+    ) {
       // 首选/领先通道原生收图(如 codex direct 模式 → Responses API;实测 mindflow
       // gpt-5.3-codex-review 可真视觉读图)→ 不把图剥成 OCR,保留图让该通道真识别。
       // 单一真源 adapterVisionCapability.adapterHandlesImagesNatively(只此一处判定)。
@@ -2594,6 +2599,42 @@ const AIGatewayGenerateMethod = {
         );
       } catch {
         /* 叶子不可用 → 保持既有视觉路由 */
+      }
+
+      // Probe the concrete route before trusting adapter-level native support. A
+      // native image transport only proves that the payload can be sent; the
+      // selected endpoint/model may still reject or ignore image input.
+      let _visionMeasured = null;
+      try {
+        const _visionProbe = require('./visionCapabilityProbe');
+        const _visionStore = require('./visionCapabilityStore');
+        if (_visionProbe.isEnabled(process.env) && options.model) {
+          const _route = {
+            adapter: _leadAdapterKey,
+            pool: options.apiPoolProvider || options.provider || '',
+            endpoint: options.apiEndpoint || '',
+            apiFormat: options.apiFormat || '',
+            model: options.model,
+            apiKey: options.apiKey || '',
+          };
+          _visionMeasured = _visionStore.getVerdict(_route, process.env);
+          if (_visionMeasured === null) {
+            const _probeResult = await this.verifyVisionCapability(_route);
+            _visionMeasured = _probeResult.verdict === 'supported' || _probeResult.verdict === 'unsupported'
+              ? _probeResult.verdict
+              : null;
+            if (_isVerbose && _probeResult.reason) {
+              emitStatus(`视觉能力实测：${_leadAdapterKey}/${options.model} → ${_probeResult.verdict}（${_probeResult.reason}）`);
+            }
+          }
+        }
+      } catch {
+        /* fail-soft: static capability prior remains authoritative for this request */
+      }
+
+      // An explicit runtime rejection overrides the adapter's static native flag.
+      if (_visionMeasured === 'unsupported') {
+        _nativeVisionAdapter = false;
       }
       if (_nativeVisionAdapter) {
         if (_isVerbose) {
@@ -2637,6 +2678,7 @@ const AIGatewayGenerateMethod = {
             currentModel: options.model,
             candidateModels: siblings,
             env: _routingEnv,
+            measured: _visionMeasured,
           });
           if (decision.action === 'switch-model' && decision.model) {
             // 视觉候选已定。两种执行方式(门控 KHY_VISION_DESCRIBE_RETURN,默认开):
@@ -2712,8 +2754,9 @@ const AIGatewayGenerateMethod = {
               let _prevAttemptModel = null;
               for (const _att of _attempts) {
                 _describeAttempted = true;
-                if (_intermediateEnabled) {
-                  // OPS-145:委派纯叶做 index 感知的减冗余首句;门关/叶不可用 → 逐字节回退历史首句。
+                if (_intermediateEnabled && _attIdx === 0) {
+                  // A vision turn exposes one start message. Candidate failover remains
+                  // internal progress and is summarized once when recognition completes.
                   try {
                     // OPS-MAN-150:仅在**显示边界**去 provider 路由前缀(glm/glm-4.6v-flash → glm-4.6v-flash,
                     // 保大小写)。首候选 = 被切换钉住的视觉模型带路由前缀,其余候选是裸 id → 不归一则 prose
@@ -2789,13 +2832,15 @@ const AIGatewayGenerateMethod = {
                       hasImageInput = false;
                       _describeDone = true;
                       if (_intermediateEnabled) {
-                        // 命中的是备用模型(主视觉模型失败后自动改用)→ 透明告知已替换。
-                        if (_att.model !== _primaryModel) {
-                          emitAssistantMessage(
-                            `主视觉模型 ${_primaryModel} 不可用,已自动改用 ${_att.model} 完成识别。`
-                          );
-                        }
-                        emitAssistantMessage('视觉识别完成，正在根据识别结果为您作答。');
+                        // Keep failover context and completion in one terminal notice so a
+                        // vision turn has one start message and one result closure.
+                        const _failoverNote =
+                          _att.model !== _primaryModel
+                            ? `主视觉模型 ${_primaryModel} 不可用，已自动改用 ${_att.model} 完成识别，`
+                            : '';
+                        emitAssistantMessage(
+                          `${_failoverNote}视觉识别完成，正在根据识别结果为您作答。`
+                        );
                       }
                       if (_isVerbose) {
                         emitStatus(
@@ -3086,9 +3131,8 @@ const AIGatewayGenerateMethod = {
                 emitStatus(
                   `[MCP] ${mcpServerName} 识别失败：${errSummary}。将尝试其他视觉模型或 OCR 兜底。`
                 );
-                emitAssistantMessage(
-                  `⚠️ 图片识别失败（${mcpServerName}）：${_mcpErrors[0]}。正在尝试其他方式识别图片…`
-                );
+                // MCP 失败属于转场状态，不单独插入助手消息；后续视觉候选或 OCR
+                // 路径会发出唯一的结果闭合，避免用户看到断裂的双重进度块。
               }
             } catch (mcpErr) {
               emitStatus(
@@ -4324,7 +4368,12 @@ const AIGatewayGenerateMethod = {
                         idleTimeout.touch();
                       }
                     };
-                    stopPulse = startAdapterPulse(adapterDisplayName);
+                    // Nested vision-description requests are internal work. Their generic
+                    // "generating response" pulse conflicts with the outer "recognizing image"
+                    // phase, so keep the watchdog active but suppress that user-facing pulse.
+                    stopPulse = options._visionDescribePass
+                      ? () => {}
+                      : startAdapterPulse(adapterDisplayName);
                     const adapterPromise = this._generateWithAdapterIsolation(
                       entry,
                       languageRecoveryState.prompt,

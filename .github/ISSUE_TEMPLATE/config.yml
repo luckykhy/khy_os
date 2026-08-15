@@ -1,0 +1,17 @@
+# Issue 入口配置。
+# blank_issues_enabled: false 强制走结构化表单，避免「一句话 issue」导致的来回追问。
+# 若后续发现门槛过高挡住了贡献者，把它改回 true 即可（单行回滚）。
+blank_issues_enabled: false
+
+contact_links:
+  - name: 安全漏洞（请勿公开提交 Issue）
+    url: https://github.com/kodehu03/khy-os/security/advisories/new
+    about: 涉及凭据泄露、RCE、权限绕过、供应链等安全问题，请走私密披露通道，不要开公开 Issue。
+
+  - name: 使用问题 / 安装求助
+    url: https://github.com/kodehu03/khy-os/discussions
+    about: 「装不上」「命令不生效」「模型配不通」这类使用问题请开 Discussion，Issue 区只收可复现的缺陷与明确的需求。
+
+  - name: 先读文档
+    url: https://github.com/kodehu03/khy-os/blob/main/docs/00_INDEX_%E6%96%87%E6%A1%A3%E7%B4%A2%E5%BC%95.md
+    about: 文档索引（01_INIT 立项 → 09_STORY）已覆盖架构、部署、运维与排错，提问前建议先检索。

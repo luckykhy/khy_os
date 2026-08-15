@@ -1,0 +1,77 @@
+name: CODEOWNERS
+
+# 只在触及归属真源的 PR 上运行 —— 不给无关 PR 增加门禁耗时。
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '.github/CODEOWNERS'
+      - '.github/maintainers.json'
+      - 'docs/_维护者/维护映射表.json'
+      - 'scripts/maintenance/gen-codeowners.js'
+      - '.github/workflows/codeowners.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeowners-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify CODEOWNERS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      # 阻断项。生成器零依赖，不需要 npm ci。
+      # 拦两类问题：
+      #   1) 产物与真源漂移（有人手改了 CODEOWNERS，下次生成会被覆盖）
+      #   2) 混入 @<placeholder> 形式的无效 owner —— GitHub 对无效 owner 是
+      #      静默忽略，没有这一道检查就只能靠人眼发现「文件很全但一条都不生效」
+      - name: Check CODEOWNERS is in sync with its sources
+        run: node scripts/maintenance/gen-codeowners.js --check
+
+      # 报告项。GitHub 的 codeowners/errors API 能查出「账号不存在」「账号对本仓库
+      # 无读权限」「pattern 语法错误」这类只有服务端才知道的问题。
+      # 设为不阻断的原因有两个：
+      #   - 该 API 读的是仓库中某个 ref 上的文件，来自 fork 的 PR 其 head ref
+      #     不在本仓库，必然查不到；
+      #   - 权限类错误的修复动作在仓库设置里（邀请协作者），不该卡住代码合并。
+      - name: Ask GitHub to validate owners (report only)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          REF="${{ github.event.pull_request.head.ref || github.ref_name }}"
+          RESP=$(gh api "repos/${{ github.repository }}/codeowners/errors?ref=${REF}" 2>&1) || {
+            echo "::warning::无法查询 codeowners/errors（fork PR 或权限不足属预期）。原始输出：$RESP"
+            exit 0
+          }
+          COUNT=$(echo "$RESP" | jq '.errors | length')
+          if [ "$COUNT" = "0" ]; then
+            echo "GitHub 未报告任何 CODEOWNERS 错误。"
+          else
+            echo "$RESP" | jq -r '.errors[] | "  第 \(.line) 行 [\(.kind)] \(.message) — \(.suggestion // "无建议")"'
+            echo "::warning::GitHub 报告了 $COUNT 个 CODEOWNERS 错误。无效 owner 会被静默忽略，请核对 .github/maintainers.json 中的账号是否存在且对本仓库有读权限。"
+          fi
+
+      - name: Summarize assignment coverage
+        if: always()
+        run: |
+          node -e "
+            const r = require('./.github/maintainers.json');
+            const ids = Object.keys(r.areaOwners);
+            const owned = ids.filter((i) => r.areaOwners[i].length);
+            console.log('::notice::维护区域归属覆盖率：' + owned.length + '/' + ids.length +
+              '，全局兜底 owner：' + (r.defaultOwners.join(' ') || '(无)'));
+          "

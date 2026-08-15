@@ -1,0 +1,37 @@
+{
+  "_comment": [
+    "前端产物体积基线。由 scripts/ci/check-frontend-size.js 读取。",
+    "",
+    "appAssetsBytes = dist 内不在 vendor/ 目录下的文件总字节（Rollup 产物，日常 PR 会动）。",
+    "vendorBytes    = dist/**/vendor/** 下的文件总字节（静态拷贝，只在换依赖版本时动）。",
+    "两者分开计量的原因见脚本头部注释：ai-frontend 有 10.5 MB 静态 vendor，",
+    "混在一起算百分比会把应用代码的增长稀释到看不见。",
+    "",
+    "更新方式（构建产物后执行，不要手改数字）：",
+    "  npm run build --prefix apps/ai-frontend",
+    "  npm run build --prefix software/khyquant/frontend",
+    "  node scripts/ci/check-frontend-size.js --update",
+    "",
+    "tolerancePct 定为 5：Rollup 的 chunk 切分与 hash 命名会带来一两 KB 的抖动，",
+    "容差太小会变成噪声门禁；容差太大则放过真实的依赖膨胀。",
+    "先以报告态运行一段时间，确认抖动幅度后再调紧并改为 --strict 阻断。"
+  ],
+  "measuredAt": "2026-08-14",
+  "tolerancePct": 5,
+  "apps": {
+    "apps/ai-frontend": {
+      "dist": "dist",
+      "note": "vendor 为 public/vendor/khyos-muya.{js,css}，合计约 10.5 MB，占产物八成。",
+      "appAssetsBytes": 2723684,
+      "vendorBytes": 11033299,
+      "fileCount": 138
+    },
+    "software/khyquant/frontend": {
+      "dist": "dist",
+      "note": "含 vite-plugin-pwa 生成的 sw.js / workbox-*.js 与图片资源。",
+      "appAssetsBytes": 3890587,
+      "vendorBytes": 0,
+      "fileCount": 79
+    }
+  }
+}

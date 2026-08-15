@@ -3,9 +3,14 @@
  * Changed-file safety checker for low-cost / small-model workflows.
  *
  * Usage:
- *   node scripts/check-change-safety.js --changed
- *   node scripts/check-change-safety.js --changed --strict-warnings
- *   node scripts/check-change-safety.js <file-or-dir> [more...]
+ *   node scripts/ci/check-change-safety.js --changed
+ *   node scripts/ci/check-change-safety.js --changed --strict-warnings
+ *   node scripts/ci/check-change-safety.js --changed --promote=sensitive-paths
+ *   node scripts/ci/check-change-safety.js <file-or-dir> [more...]
+ *
+ * --strict-warnings 把**所有** warning 视为 error(适合 agent 的单次改动自检)。
+ * --promote=<id,id> 只把指定 finding 升为 error(适合 PR 门禁,见下方常量注释)。
+ * 可用 id 见 ALL_FINDING_IDS;拼错会以退出码 2 失败,不会静默放过。
  */
 'use strict';
 
@@ -15,9 +20,26 @@ const cp = require('child_process');
 
 const cwd = process.cwd();
 const repoRoot = path.resolve(__dirname, '..', '..');
-const maintainerMapPath = path.join(repoRoot, 'docs', '维护者', '维护映射表.json');
+const maintainerMapPath = path.join(repoRoot, 'docs', '_维护者', '维护映射表.json');
 const args = process.argv.slice(2);
 const strictWarnings = args.includes('--strict-warnings');
+// --promote=<id,id>:把指定 id 的 warning 单独视为 error。
+//
+// 为什么需要它:本脚本的 warning 混着两类性质完全不同的发现 ——
+//   (a) 单次改动卫生建议:改了 8+ 个文件、新增 3+ 个文件、跨 3+ 个顶层目录。
+//       这些阈值是给「低成本模型的一次 pass」设计的护栏,对人类 PR 属正常范围。
+//   (b) 必须拦住的事:改动集里出现 .env / *.pem / *.key / credentials.json。
+// 用 --strict-warnings 会把两类一起升为阻断,结果是任何触及 8 个以上文件的 PR
+// 都被拒;不用它则凭据文件泄漏变成不阻断。--promote 让调用方精确挑选,
+// 例如 PR 门禁只用 --promote=sensitive-paths。
+// --strict-warnings 的原语义保持不变,老调用方不受影响。
+const promotedIds = new Set(
+  args
+    .filter(arg => arg.startsWith('--promote='))
+    .flatMap(arg => arg.slice('--promote='.length).split(','))
+    .map(id => id.trim())
+    .filter(Boolean)
+);
 const changedMode = args.includes('--changed');
 const rawTargets = args.filter(arg => !arg.startsWith('--'));
 const maintainerPathTypeCache = new Map();
@@ -36,6 +58,18 @@ const IGNORE_DIRS = new Set([
 const WARN_CHANGED_FILE_COUNT = 8;
 const ERROR_CHANGED_FILE_COUNT = 20;
 const WARN_NEW_FILE_COUNT = 3;
+
+// 所有 finding 的 id 全集，供 --promote 校验拼写。新增 finding 时同步补一项。
+const ALL_FINDING_IDS = new Set([
+  'changed-count-error',
+  'changed-count',
+  'deletions',
+  'new-files',
+  'sensitive-paths',
+  'high-risk-surface',
+  'weak-model-banner',
+  'many-areas',
+]);
 
 const SENSITIVE_PATH_RE = /(?:^|\/)(?:\.env(?:\..*)?|credentials\.json|secrets?\.(?:ya?ml|json)|.*\.(?:pem|key))$/i;
 
@@ -262,9 +296,9 @@ function buildRecommendedCommands(entries) {
   const maintainerMatchedPaths = new Set();
 
   if (changedMode) {
-    commands.add('node scripts/check-agent-rules.js --changed');
+    commands.add('node scripts/ci/check-agent-rules.js --changed');
   } else {
-    commands.add(`node scripts/check-agent-rules.js ${paths.map(shellQuote).join(' ')}`);
+    commands.add(`node scripts/ci/check-agent-rules.js ${paths.map(shellQuote).join(' ')}`);
   }
 
   if (paths.some(file => /\.(?:js|cjs|mjs|ts|tsx|vue|json|ya?ml)$/i.test(file))) {
@@ -329,12 +363,14 @@ function main() {
   const changedCount = entries.length;
   if (changedCount > ERROR_CHANGED_FILE_COUNT) {
     findings.push({
+      id: 'changed-count-error',
       severity: 'error',
       message: `Changed-file count is too large for a low-cost-model pass (${changedCount} files).`,
       detail: `Reduce the blast radius or split the task. Threshold: ${ERROR_CHANGED_FILE_COUNT}.`,
     });
   } else if (changedCount > WARN_CHANGED_FILE_COUNT) {
     findings.push({
+      id: 'changed-count',
       severity: 'warning',
       message: `Changed-file count is high for a low-cost-model pass (${changedCount} files).`,
       detail: `Consider splitting the work. Warning threshold: ${WARN_CHANGED_FILE_COUNT}.`,
@@ -344,6 +380,7 @@ function main() {
   const deleted = entries.filter(entry => entry.status === 'D');
   if (deleted.length > 0) {
     findings.push({
+      id: 'deletions',
       severity: 'warning',
       message: `Deletion detected in change set (${deleted.length} file(s)).`,
       detail: deleted.map(entry => entry.path).join(', '),
@@ -353,6 +390,7 @@ function main() {
   const added = entries.filter(entry => entry.status === 'A');
   if (added.length > WARN_NEW_FILE_COUNT) {
     findings.push({
+      id: 'new-files',
       severity: 'warning',
       message: `Many new files were added (${added.length} file(s)).`,
       detail: `New-file warning threshold: ${WARN_NEW_FILE_COUNT}.`,
@@ -362,6 +400,7 @@ function main() {
   const sensitive = entries.filter(entry => SENSITIVE_PATH_RE.test(entry.path));
   if (sensitive.length > 0) {
     findings.push({
+      id: 'sensitive-paths',
       severity: 'warning',
       message: `Sensitive path touched by change set (${sensitive.length} file(s)).`,
       detail: sensitive.map(entry => entry.path).join(', '),
@@ -372,6 +411,7 @@ function main() {
     const hits = entries.filter(entry => rule.re.test(entry.path));
     if (hits.length === 0) continue;
     findings.push({
+      id: 'high-risk-surface',
       severity: 'warning',
       message: `High-risk surface touched: ${rule.label}.`,
       detail: hits.map(entry => entry.path).join(', '),
@@ -390,6 +430,7 @@ function main() {
     }
     if (!content.includes(WEAK_MODEL_BANNER_MARK)) {
       findings.push({
+        id: 'weak-model-banner',
         severity: 'error',
         message: `Weak-model guardrail banner missing after edit: ${watched}.`,
         detail: `This high-risk file must keep at least one "${WEAK_MODEL_BANNER_MARK}…]" banner. `
@@ -401,6 +442,7 @@ function main() {
   const buckets = [...new Set(entries.map(entry => topLevelBucket(entry.path)))];
   if (buckets.length > 3) {
     findings.push({
+      id: 'many-areas',
       severity: 'warning',
       message: `Change set spans many top-level areas (${buckets.length}).`,
       detail: buckets.join(', '),
@@ -412,12 +454,23 @@ function main() {
   console.log(`check-change-safety: scanned ${entries.length} changed file(s).`);
   console.log(`files: ${entries.map(entry => `${entry.status}:${entry.path}`).join(', ')}`);
 
+  // 提升后的实际等级：--promote 命中的 id，或 --strict-warnings 下的全部 warning。
+  const effectiveSeverity = (finding) => {
+    if (finding.severity !== 'warning') return finding.severity;
+    if (finding.id && promotedIds.has(finding.id)) return 'error';
+    if (strictWarnings) return 'error';
+    return 'warning';
+  };
+
   if (findings.length === 0) {
     console.log('result: no safety findings.');
   } else {
     console.log('result:');
     for (const finding of findings) {
-      console.log(` - [${finding.severity}] ${finding.message}`);
+      const eff = effectiveSeverity(finding);
+      // 被提升的条目标注出来,免得看日志的人对着 [error] 去源码里找不到对应的 severity。
+      const mark = eff !== finding.severity ? ` (promoted from ${finding.severity})` : '';
+      console.log(` - [${eff}]${mark} ${finding.message}${finding.id ? ` (id: ${finding.id})` : ''}`);
       if (finding.detail) console.log(`   ${finding.detail}`);
     }
   }
@@ -429,9 +482,16 @@ function main() {
     }
   }
 
-  const hasErrors = findings.some(finding => finding.severity === 'error');
-  const hasWarnings = findings.some(finding => finding.severity === 'warning');
-  if (hasErrors || (strictWarnings && hasWarnings)) {
+  // 未知的 --promote id 必须报错：写错一个 id 会让本该阻断的检查静默失效，
+  // 那正是本仓库 CODEOWNERS 占位符踩过的坑。
+  const unknown = [...promotedIds].filter(id => !ALL_FINDING_IDS.has(id));
+  if (unknown.length > 0) {
+    console.error(`check-change-safety: 未知的 --promote id: ${unknown.join(', ')}`);
+    console.error(`  可用 id: ${[...ALL_FINDING_IDS].join(', ')}`);
+    process.exit(2);
+  }
+
+  if (findings.some(finding => effectiveSeverity(finding) === 'error')) {
     process.exit(1);
   }
 }

@@ -26,7 +26,7 @@
       <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-066-khy-os-进化提示词手册-1000-条">[OPS-MAN-066] Khy-OS 进化提示词手册（1000 条）</a></li><li class="lvl-2"><a href="#怎么用-给小模型的三步">怎么用（给小模型的三步）</a></li><li class="lvl-2"><a href="#红线-破了就停-不许绕">红线（破了就停，不许绕）</a></li><li class="lvl-2"><a href="#通用验证门速查-收尾五门-全绿才算完成">通用验证门速查（收尾五门，全绿才算完成）</a></li><li class="lvl-2"><a href="#手册如何重生-系统长大后">手册如何重生（系统长大后）</a></li><li class="lvl-2"><a href="#一-通用工作纪律与红线-先读这一篇">一、通用工作纪律与红线（先读这一篇）</a></li><li class="lvl-2"><a href="#二-各子系统定位与自检">二、各子系统定位与自检</a></li><li class="lvl-2"><a href="#三-各子系统验证门-一条命令-一块的绿灯">三、各子系统验证门（一条命令＝一块的绿灯）</a></li><li class="lvl-2"><a href="#四-逐文件理解与补注释">四、逐文件理解与补注释</a></li><li class="lvl-2"><a href="#五-进化配方-每个子系统都照做一遍">五、进化配方（每个子系统都照做一遍）</a></li></ul></nav>
       <article class="doc-body">
 <h1 id="ops-man-066-khy-os-进化提示词手册-1000-条">[OPS-MAN-066] Khy-OS 进化提示词手册（1000 条）<a class="anchor" href="#ops-man-066-khy-os-进化提示词手册-1000-条" aria-label="锚点">#</a></h1>
-<blockquote><p>交给 khy 或任何「弱智 AI / 4B 小模型」用的进化清单：一次喂一条，照着做，跑通它自带的验证命令。<br>全部锚定本仓真实子系统、真实文件、真实 verify（来自 <code>docs/维护者/维护映射表.json</code>）。</p></blockquote>
+<blockquote><p>交给 khy 或任何「弱智 AI / 4B 小模型」用的进化清单：一次喂一条，照着做，跑通它自带的验证命令。<br>全部锚定本仓真实子系统、真实文件、真实 verify（来自 <code>docs/_维护者/维护映射表.json</code>）。</p></blockquote>
 <h2 id="怎么用-给小模型的三步">怎么用（给小模型的三步）<a class="anchor" href="#怎么用-给小模型的三步" aria-label="锚点">#</a></h2>
 <ol><li>从下面挑一条提示词，把「说明」读懂，按 <strong>B1</strong>（先想清改什么/为什么/影响面）动手。</li><li>改完立刻跑该条的「验证」命令；红灯就在本轮修好，<strong>没跑过验证不许说「修好了」</strong>（B2）。</li><li>只动该动的（<strong>B3</strong> 外科手术式改动），绿了再挑下一条。</li></ol>
 <h2 id="红线-破了就停-不许绕">红线（破了就停，不许绕）<a class="anchor" href="#红线-破了就停-不许绕" aria-label="锚点">#</a></h2>
@@ -41,7 +41,7 @@ npm run maintainer:check               # 维护映射表 + 元数据一致</code
 <p>本手册由生成器确定性产出，改子系统后重跑即可覆盖：</p>
 <pre><code class="language-bash">npm run docs:gen-evolution-prompts     # 重新生成本文件
 npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全 verify、幂等</code></pre>
-<blockquote><p>新增子系统请先登记进 <code>docs/维护者/维护映射表.json</code>，本手册下次重生会自动覆盖它。</p></blockquote>
+<blockquote><p>新增子系统请先登记进 <code>docs/_维护者/维护映射表.json</code>，本手册下次重生会自动覆盖它。</p></blockquote>
 <p><strong>共 1000 条。</strong></p>
 <hr>
 <h2 id="一-通用工作纪律与红线-先读这一篇">一、通用工作纪律与红线（先读这一篇）<a class="anchor" href="#一-通用工作纪律与红线-先读这一篇" aria-label="锚点">#</a></h2>
@@ -51,7 +51,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：核心方法论。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>3.</strong> 遵守 B3 外科手术式改动：只动该动的，不顺手重构、不扩大范围。</p>
 <ul><li>说明：把改动面压到最小。</li><li>验证：<code>npm run check:change-safety</code></li></ul>
-<p><strong>4.</strong> 改任何文件前，先读 .ai/MAP.md 与 docs/维护者/维护映射表.json 定位正确子系统。</p>
+<p><strong>4.</strong> 改任何文件前，先读 .ai/MAP.md 与 docs/_维护者/维护映射表.json 定位正确子系统。</p>
 <ul><li>说明：别在错的地方改。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>5.</strong> 多步任务先列 plan，每一步都写明它自己的 verify 命令。</p>
 <ul><li>说明：每步可验证。</li><li>验证：<code>npm run check:agent-rules</code></li></ul>
@@ -510,7 +510,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：子系统：Maintenance Safety and Rule Gates。读懂再动。</li><li>验证：<code>node --check scripts/ci/check-node-syntax.js</code></li></ul>
 <p><strong>231.</strong> 阅读「Maintenance Safety and Rule Gates」的 scripts/ci/check-python-syntax.py，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Maintenance Safety and Rule Gates。读懂再动。</li><li>验证：<code>npm run check:maintainer:safety</code></li></ul>
-<p><strong>232.</strong> 阅读「Maintenance Safety and Rule Gates」的 docs/维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
+<p><strong>232.</strong> 阅读「Maintenance Safety and Rule Gates」的 docs/_维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Maintenance Safety and Rule Gates。读懂再动。</li><li>验证：<code>npm run check:maintainer:safety</code></li></ul>
 <p><strong>233.</strong> 阅读「Release and Rollback」的 maintenance/stable-release.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Release and Rollback。读懂再动。</li><li>验证：<code>node --test maintenance/tests/ops-lib.test.js maintenance/tests/ops.integration.test.js</code></li></ul>
@@ -552,7 +552,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：子系统：Evolution Prompt Playbook (1000 preset prompts)。读懂再动。</li><li>验证：<code>node --check scripts/docs/gen-evolution-prompts.js</code></li></ul>
 <p><strong>252.</strong> 阅读「Evolution Prompt Playbook (1000 preset prompts)」的 scripts/tests/gen-evolution-prompts.test.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Evolution Prompt Playbook (1000 preset prompts)。读懂再动。</li><li>验证：<code>node --check scripts/tests/gen-evolution-prompts.test.js</code></li></ul>
-<p><strong>253.</strong> 阅读「Evolution Prompt Playbook (1000 preset prompts)」的 docs/维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
+<p><strong>253.</strong> 阅读「Evolution Prompt Playbook (1000 preset prompts)」的 docs/_维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Evolution Prompt Playbook (1000 preset prompts)。读懂再动。</li><li>验证：<code>npm run test:evolution-prompts</code></li></ul>
 <p><strong>254.</strong> 阅读「Symptom Triage (route a symptom to its subsystem)」的 scripts/lib/maintainerTriage.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。</li><li>验证：<code>node --check scripts/lib/maintainerTriage.js</code></li></ul>
@@ -560,7 +560,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。</li><li>验证：<code>node --check scripts/triage.js</code></li></ul>
 <p><strong>256.</strong> 阅读「Symptom Triage (route a symptom to its subsystem)」的 scripts/tests/maintainerTriage.test.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。</li><li>验证：<code>node --check scripts/tests/maintainerTriage.test.js</code></li></ul>
-<p><strong>257.</strong> 阅读「Symptom Triage (route a symptom to its subsystem)」的 docs/维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
+<p><strong>257.</strong> 阅读「Symptom Triage (route a symptom to its subsystem)」的 docs/_维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。</li><li>验证：<code>npm run test:triage</code></li></ul>
 <p><strong>258.</strong> 阅读「Off-machine Restore Readiness (can a fresh machine restore khyos?)」的 scripts/lib/restoreReadiness.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。</p>
 <ul><li>说明：子系统：Off-machine Restore Readiness (can a fresh machine restore khyos?)。读懂再动。</li><li>验证：<code>node --check scripts/lib/restoreReadiness.js</code></li></ul>
@@ -703,7 +703,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Bootstrap and Packaging。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>327.</strong> 给「Bootstrap and Packaging」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Bootstrap and Packaging。</li><li>验证：<code>npm run check:maintainer:bootstrap</code></li></ul>
-<p><strong>328.</strong> 为「Bootstrap and Packaging」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>328.</strong> 为「Bootstrap and Packaging」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Bootstrap and Packaging。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>329.</strong> 为「Bootstrap and Packaging」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Bootstrap and Packaging。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -823,7 +823,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：CLI Routing and Help Surface。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>387.</strong> 给「CLI Routing and Help Surface」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：CLI Routing and Help Surface。</li><li>验证：<code>npm run test:maintainer:cli-routing</code></li></ul>
-<p><strong>388.</strong> 为「CLI Routing and Help Surface」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>388.</strong> 为「CLI Routing and Help Surface」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：CLI Routing and Help Surface。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>389.</strong> 为「CLI Routing and Help Surface」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：CLI Routing and Help Surface。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -943,7 +943,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Prompt Capsule and Debug Prompt System。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>447.</strong> 给「Prompt Capsule and Debug Prompt System」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Prompt Capsule and Debug Prompt System。</li><li>验证：<code>node --test services/backend/tests/promptOnDemandSections.test.js</code></li></ul>
-<p><strong>448.</strong> 为「Prompt Capsule and Debug Prompt System」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>448.</strong> 为「Prompt Capsule and Debug Prompt System」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Prompt Capsule and Debug Prompt System。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>449.</strong> 为「Prompt Capsule and Debug Prompt System」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Prompt Capsule and Debug Prompt System。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -1063,7 +1063,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：AI Gateway and Adapter Layer。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>507.</strong> 给「AI Gateway and Adapter Layer」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：AI Gateway and Adapter Layer。</li><li>验证：<code>npm run test:maintainer:gateway</code></li></ul>
-<p><strong>508.</strong> 为「AI Gateway and Adapter Layer」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>508.</strong> 为「AI Gateway and Adapter Layer」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：AI Gateway and Adapter Layer。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>509.</strong> 为「AI Gateway and Adapter Layer」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：AI Gateway and Adapter Layer。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -1183,7 +1183,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Proxy, Daemon, and Runtime Port Discovery。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>567.</strong> 给「Proxy, Daemon, and Runtime Port Discovery」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Proxy, Daemon, and Runtime Port Discovery。</li><li>验证：<code>npm run test:maintainer:runtime</code></li></ul>
-<p><strong>568.</strong> 为「Proxy, Daemon, and Runtime Port Discovery」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>568.</strong> 为「Proxy, Daemon, and Runtime Port Discovery」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Proxy, Daemon, and Runtime Port Discovery。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>569.</strong> 为「Proxy, Daemon, and Runtime Port Discovery」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Proxy, Daemon, and Runtime Port Discovery。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -1303,7 +1303,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：AI Management UI and API。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>627.</strong> 给「AI Management UI and API」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：AI Management UI and API。</li><li>验证：<code>npm run test:maintainer:ai-management</code></li></ul>
-<p><strong>628.</strong> 为「AI Management UI and API」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>628.</strong> 为「AI Management UI and API」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：AI Management UI and API。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>629.</strong> 为「AI Management UI and API」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：AI Management UI and API。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -1423,7 +1423,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Coding Projects (named workspaces + chat linkage)。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>687.</strong> 给「Coding Projects (named workspaces + chat linkage)」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Coding Projects (named workspaces + chat linkage)。</li><li>验证：<code>npm run test:maintainer:projects</code></li></ul>
-<p><strong>688.</strong> 为「Coding Projects (named workspaces + chat linkage)」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>688.</strong> 为「Coding Projects (named workspaces + chat linkage)」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Coding Projects (named workspaces + chat linkage)。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>689.</strong> 为「Coding Projects (named workspaces + chat linkage)」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Coding Projects (named workspaces + chat linkage)。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -1543,7 +1543,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Workspace, Publish, and Verification Commands。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>747.</strong> 给「Workspace, Publish, and Verification Commands」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Workspace, Publish, and Verification Commands。</li><li>验证：<code>npm run test:maintainer:publish</code></li></ul>
-<p><strong>748.</strong> 为「Workspace, Publish, and Verification Commands」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>748.</strong> 为「Workspace, Publish, and Verification Commands」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Workspace, Publish, and Verification Commands。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>749.</strong> 为「Workspace, Publish, and Verification Commands」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Workspace, Publish, and Verification Commands。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -1663,7 +1663,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Maintenance Safety and Rule Gates。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>807.</strong> 给「Maintenance Safety and Rule Gates」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Maintenance Safety and Rule Gates。</li><li>验证：<code>npm run check:maintainer:safety</code></li></ul>
-<p><strong>808.</strong> 为「Maintenance Safety and Rule Gates」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>808.</strong> 为「Maintenance Safety and Rule Gates」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Maintenance Safety and Rule Gates。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>809.</strong> 为「Maintenance Safety and Rule Gates」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Maintenance Safety and Rule Gates。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -1783,7 +1783,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Release and Rollback。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>867.</strong> 给「Release and Rollback」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Release and Rollback。</li><li>验证：<code>node --test maintenance/tests/ops-lib.test.js maintenance/tests/ops.integration.test.js</code></li></ul>
-<p><strong>868.</strong> 为「Release and Rollback」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>868.</strong> 为「Release and Rollback」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Release and Rollback。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>869.</strong> 为「Release and Rollback」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Release and Rollback。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -1903,7 +1903,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Build Best Environment (Self-check / Repair / Probes)。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>927.</strong> 给「Build Best Environment (Self-check / Repair / Probes)」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Build Best Environment (Self-check / Repair / Probes)。</li><li>验证：<code>npm run test:maintainer:env-optimize</code></li></ul>
-<p><strong>928.</strong> 为「Build Best Environment (Self-check / Repair / Probes)」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>928.</strong> 为「Build Best Environment (Self-check / Repair / Probes)」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Build Best Environment (Self-check / Repair / Probes)。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>929.</strong> 为「Build Best Environment (Self-check / Repair / Probes)」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Build Best Environment (Self-check / Repair / Probes)。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
@@ -2023,7 +2023,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
 <ul><li>说明：门关回退。 子系统：Evolution Prompt Playbook (1000 preset prompts)。</li><li>验证：<code>npm run check:flag-registry</code></li></ul>
 <p><strong>987.</strong> 给「Evolution Prompt Playbook (1000 preset prompts)」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。</p>
 <ul><li>说明：正则去 g。 子系统：Evolution Prompt Playbook (1000 preset prompts)。</li><li>验证：<code>npm run test:evolution-prompts</code></li></ul>
-<p><strong>988.</strong> 为「Evolution Prompt Playbook (1000 preset prompts)」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
+<p><strong>988.</strong> 为「Evolution Prompt Playbook (1000 preset prompts)」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。</p>
 <ul><li>说明：登记映射表。 子系统：Evolution Prompt Playbook (1000 preset prompts)。</li><li>验证：<code>npm run maintainer:check</code></li></ul>
 <p><strong>989.</strong> 为「Evolution Prompt Playbook (1000 preset prompts)」补一句「一句话验证脚本」并并入 test:maintainer:all。</p>
 <ul><li>说明：一句话验证。 子系统：Evolution Prompt Playbook (1000 preset prompts)。</li><li>验证：<code>npm run maintainer:check</code></li></ul>

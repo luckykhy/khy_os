@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>动态模型差异化适配引擎 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>动态模型差异化适配引擎</div>
+      <header class="hero reveal"><h1>动态模型差异化适配引擎</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#动态模型差异化适配引擎">动态模型差异化适配引擎</a></li><li class="lvl-2"><a href="#1-设计结论">1. 设计结论</a></li><li class="lvl-2"><a href="#2-架构">2. 架构</a></li><li class="lvl-3"><a href="#模块边界">模块边界</a></li><li class="lvl-2"><a href="#3-画像解析与热更新">3. 画像解析与热更新</a></li><li class="lvl-2"><a href="#4-接口">4. 接口</a></li><li class="lvl-2"><a href="#5-动态组装算法">5. 动态组装算法</a></li><li class="lvl-2"><a href="#6-增强选型">6. 增强选型</a></li><li class="lvl-2"><a href="#7-快速开始">7. 快速开始</a></li><li class="lvl-2"><a href="#8-添加模型">8. 添加模型</a></li><li class="lvl-2"><a href="#9-自定义-boost-规则">9. 自定义 boost 规则</a></li><li class="lvl-2"><a href="#10-监控字段">10. 监控字段</a></li><li class="lvl-2"><a href="#11-性能与体积">11. 性能与体积</a></li><li class="lvl-2"><a href="#12-渐进启用与降级">12. 渐进启用与降级</a></li><li class="lvl-2"><a href="#13-当前兼容性边界">13. 当前兼容性边界</a></li><li class="lvl-2"><a href="#14-最佳实践">14. 最佳实践</a></li></ul></nav>
+      <article class="doc-body">
+<h1 id="动态模型差异化适配引擎">动态模型差异化适配引擎<a class="anchor" href="#动态模型差异化适配引擎" aria-label="锚点">#</a></h1>
+<blockquote><p>状态：核心模块已实现；宿主 HTTP 路由与真实网关调用点待单独挂载。<br>优先级：零构建、实时生效、每请求动态适配、未知模型可降级。</p></blockquote>
+<h2 id="1-设计结论">1. 设计结论<a class="anchor" href="#1-设计结论" aria-label="锚点">#</a></h2>
+<p>本引擎使用纯 CommonJS、JSON 和普通 JavaScript，不引入编译、打包、代码生成或新增生产依赖。模型画像和提示策略在请求到来时解析；配置文件保存后，下一次请求读取新内容。功能总闸默认关闭，关闭时沿用现有 <code>promptAssemblyService</code> / <code>autoModelSelect</code> 行为。</p>
+<p>模型相关提示只进入动态上下文，不进入稳定前缀。稳定前缀必须跨轮保持字节一致，才能命中 provider prompt cache；模型、任务、上下文和用户偏好本来就是每请求变化的数据。</p>
+<h2 id="2-架构">2. 架构<a class="anchor" href="#2-架构" aria-label="锚点">#</a></h2>
+<pre class="mermaid">flowchart LR
+    R[Request] --&gt; F[ModelFeatureFetcher]
+    F --&gt; A[TaskAnalyzer]
+    A --&gt; S[StyleMatcher]
+    S --&gt; P[DynamicPromptAssembler]
+    P --&gt; I[AdaptiveScaffoldInjector]
+    I --&gt; G[GatewayRouter]
+    G --&gt; O[ResponseOptimizer]
+    O --&gt; X[Response + sidecar]
+
+    J[features.json] --&gt; M[ModelFeatureRegistry]
+    H[appHome model_features.json] --&gt; M
+    E[env JSON] --&gt; M
+    T[temporary overrides] --&gt; M
+    M --&gt; F
+
+    C[style_templates.js] --&gt; P
+    U[UnknownModelDiscoveryEngine] --&gt;|confidence low| T
+    HTTP[status / reload handler] --&gt; M
+
+    BASE[autoModelSelect] --&gt; G
+    UCB[ucbRouter adapter arms] --&gt; G</pre>
+<h3 id="模块边界">模块边界<a class="anchor" href="#模块边界" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模块</th><th>责任</th><th style="text-align:right">IO</th><th>门控关闭行为</th></tr></thead><tbody><tr><td><code>modelFeatureRegistry.js</code></td><td>8 层画像解析、缓存、热重载、临时覆盖</td><td style="text-align:right">文件读取</td><td>注册表可独立读取；调用方决定是否采用</td></tr><tr><td><code>dynamicPromptAssembler.js</code></td><td>六步现场组装、段落预算、nudge、动态参数</td><td style="text-align:right">模板读取</td><td>返回空 appendix</td></tr><tr><td><code>enhancedModelSelector.js</code></td><td>tier 过滤后叠加专长/成本/UCB 排序</td><td style="text-align:right">画像读取</td><td>原样返回既有排序</td></tr><tr><td><code>perRequestAdaptationPipeline.js</code></td><td>七阶段同步编排、阶段故障隔离</td><td style="text-align:right">依赖决定</td><td>返回原 request 引用</td></tr><tr><td><code>modelDiscoveryEngine.js</code></td><td>可注入探测、能力推断、低置信度临时保存</td><td style="text-align:right">probe runner</td><td>不执行探测</td></tr><tr><td><code>responseOptimizers.js</code></td><td>生成响应呈现策略；显式选择时处理纯文本</td><td style="text-align:right">无</td><td>调用方不接入即无影响</td></tr><tr><td><code>modelAdaptationHttp.js</code></td><td>状态与显式 reload 的可挂载处理器</td><td style="text-align:right">HTTP 响应</td><td>未挂载即无影响</td></tr></tbody></table>
+<h2 id="3-画像解析与热更新">3. 画像解析与热更新<a class="anchor" href="#3-画像解析与热更新" aria-label="锚点">#</a></h2>
+<p>解析优先级从高到低：</p>
+<ol><li><code>KHY_MODEL_FEATURES_JSON</code></li><li><code>saveTemporarily()</code> 运行时覆盖</li><li><code>&lt;appHome&gt;/model_features.json</code></li><li><code>features.json.models[modelId]</code></li><li><code>features.json.patterns[]</code></li><li><code>features.json.tierDefaults[tier]</code></li><li><code>modelTier.resolveTier()</code> + <code>harnessProfile()</code> 推断</li><li><code>features.json.defaults</code></li></ol>
+<p>默认 <code>KHY_MODEL_FEATURES_TTL_MS=0</code>，每次读取先执行 <code>statSync</code>。当 mtime 距当前时间小于 2 秒时，不信任 mtime+size 快路径，重新读取文本并逐字节比较，覆盖同长度快速连存的文件系统时间戳边界。稳定文件只做 stat；内容未变不重新解析。</p>
+<p><code>style_templates.js</code> 不依赖 <code>require.cache</code>。加载器直接读取文本，在禁止 <code>require</code> 的 CommonJS shim 中解释字面量配置；这也能在 Jest 的独立模块注册表下验证热更新。配置写坏时保留上一份有效数据，修复后的下一次请求自动恢复。</p>
+<p>显式重载处理器：</p>
+<ul><li><code>GET /api/model-adaptation/status</code></li><li><code>POST /api/model-adaptation/reload</code></li></ul>
+<p>重载只清除注册表缓存并增加 generation。正在执行的请求继续使用其已经取得的画像；后续请求读取新 generation。</p>
+<h2 id="4-接口">4. 接口<a class="anchor" href="#4-接口" aria-label="锚点">#</a></h2>
+<pre><code class="language-ts">type PromptPreference = 'concise' | 'detailed' | 'structured';
+type ResponseStyle = 'direct' | 'elaborated' | 'explainer';
+type ToolTendency = 'aggressive' | 'conservative' | 'balanced';
+type Confidence = 'prior' | 'low' | 'measured';
+
+type CapabilityDimension =
+  | 'text' | 'code' | 'reasoning' | 'tool_use' | 'vision'
+  | 'long_context' | 'instruction_following' | 'structured_output'
+  | 'multilingual' | 'speed' | 'cost_efficiency';
+
+interface ModelFeatureProfile {
+  confidence: Confidence;
+  source: string;
+  capability_matrix: Record&lt;CapabilityDimension, 0 | 1 | 2 | 3 | 4 | 5&gt;;
+  style_profile: {
+    prompt_preference: PromptPreference;
+    response_style: ResponseStyle;
+    tool_usage_tendency: ToolTendency;
+    scaffolding_comfort_level: number; // 1..10，越高越需要脚手架
+  };
+  specialty_areas: { strengths: string[]; weaknesses: string[] };
+  routing_priority: {
+    always_prefer_for: string[];
+    default_choice_for: string[];
+    avoid_when_budget_is: 'low' | 'medium' | 'high' | null;
+  };
+  prompt_templates: {
+    system_overview: { concise_version: string; detailed_version: string };
+    section_boost_rules: SectionBoostRule[];
+    nudge_preferences: Array&lt;string | object&gt;;
+  };
+  dynamic_params: {
+    preferred_timeout_ms: number;
+    max_tools_per_turn: number;
+    parallel_tool_allowance: number;
+  };
+}
+
+interface DynamicPromptResult {
+  sections: Array&lt;{ id: string; title: string; body: string; reason: string }&gt;;
+  scaffoldingLevel: number | null;
+  tailoredNudges: string[];
+  appendix: string;
+  dynamicParams: ModelFeatureProfile['dynamic_params'];
+  meta: object;
+}</code></pre>
+<p>JSON 配置的结构约束：</p>
+<pre><code class="language-json">{
+  &quot;$schemaVersion&quot;: 1,
+  &quot;defaults&quot;: { &quot;...ModelFeatureProfile&quot;: &quot;...&quot; },
+  &quot;tierDefaults&quot;: { &quot;T0&quot;: {}, &quot;T1&quot;: {}, &quot;T2&quot;: {}, &quot;T3&quot;: {} },
+  &quot;patterns&quot;: [
+    { &quot;id&quot;: &quot;family&quot;, &quot;match&quot;: &quot;^family-&quot;, &quot;profile&quot;: {} }
+  ],
+  &quot;models&quot;: { &quot;exact-model-id&quot;: {} }
+}</code></pre>
+<p>运行时使用手写宽进严出校验，不依赖开发期 JSON Schema 库。非法字段退回默认值，未知 section id 被忽略，未知模型仍得到完整画像。</p>
+<h2 id="5-动态组装算法">5. 动态组装算法<a class="anchor" href="#5-动态组装算法" aria-label="锚点">#</a></h2>
+<p><code>assemblePromptForModel(requestContext)</code> 每次执行：</p>
+<ol><li><code>registry.get(modelId)</code> 读取当前完整画像。</li><li><code>analyzeTask()</code> 归一任务类型、上下文长度、工具可用性和用户偏好。</li><li><code>selectSections()</code> 按 <code>when</code> 和脚手架阈值选择目录段落。</li><li><code>applyBoostRules()</code> 强制加入或抑制段落；冲突时 suppress 优先。</li><li><code>generateTailoredNudges()</code> 按工具倾向、任务和脚手架生成最多 4 条提醒。</li><li><code>calibrateScaffolding()</code> 结合模型档位、强弱项、上下文和用户偏好校准 0..10。</li></ol>
+<p>同一模型在 concise / detailed、短 / 长上下文、带 / 不带工具、强项 / 弱项任务上得到不同 appendix、段落数、nudge 和工具动态参数。</p>
+<p><code>coding_standards</code> 标记为 <code>providedByStablePrefix:true</code>，默认不在动态区域重复计费；只有画像明确 boost 时才重复注入。</p>
+<h2 id="6-增强选型">6. 增强选型<a class="anchor" href="#6-增强选型" aria-label="锚点">#</a></h2>
+<p>先调用现有 <code>autoModelSelect.rankAutoModels()</code> 做 tier 和可用性过滤，再计算：</p>
+<pre><code class="language-text">specialtyMatch = clamp(0.2 + strength*0.5 - weakness*0.3, 0, 1)
+overallScore   = specialtyMatch*0.6 + costEfficiency*0.4
+blended        = normalizedUcb*0.3 + overallScore*0.7</code></pre>
+<p><code>always_prefer_for</code>、<code>default_choice_for</code> 和 <code>avoid_when_budget_is</code> 在 overall 阶段施加可解释加减分。UCB arm 的实际粒度是 adapter，不是 model；同一 adapter 下的模型共享探索信号。未拉取 arm 的 <code>+Infinity</code> 归一为 1，有限值 min-max 归一，全相等为 0.5；没有 adapter 的候选也使用中性 0.5。</p>
+<h2 id="7-快速开始">7. 快速开始<a class="anchor" href="#7-快速开始" aria-label="锚点">#</a></h2>
+<p>不需要构建。后端进程环境中打开总闸：</p>
+<pre><code class="language-powershell">$env:KHY_MODEL_ADAPT = '1'</code></pre>
+<p>子能力默认随总闸打开，可单独回退：</p>
+<pre><code class="language-powershell">$env:KHY_DYNAMIC_PROMPT = '0'
+$env:KHY_ENHANCED_MODEL_SELECT = '0'
+$env:KHY_MODEL_ADAPT_PIPELINE = '0'</code></pre>
+<p>未知模型探测会产生真实模型调用，因此需要单独打开：</p>
+<pre><code class="language-powershell">$env:KHY_MODEL_DISCOVERY = '1'</code></pre>
+<p>本地验证：</p>
+<pre><code class="language-powershell">cd services/backend
+npx jest tests/modelFeatureRegistry.test.js tests/dynamicPromptAssembler.test.js tests/enhancedModelSelector.test.js tests/perRequestAdaptationPipeline.test.js tests/modelDiscoveryEngine.test.js tests/modelAdaptationHttp.test.js</code></pre>
+<h2 id="8-添加模型">8. 添加模型<a class="anchor" href="#8-添加模型" aria-label="锚点">#</a></h2>
+<p>精确模型模板：</p>
+<pre><code class="language-json">{
+  &quot;models&quot;: {
+    &quot;new-model-id&quot;: {
+      &quot;confidence&quot;: &quot;prior&quot;,
+      &quot;source&quot;: &quot;manual&quot;,
+      &quot;capability_matrix&quot;: {
+        &quot;text&quot;: 4,
+        &quot;code&quot;: 4,
+        &quot;reasoning&quot;: 4,
+        &quot;tool_use&quot;: 3,
+        &quot;vision&quot;: 0,
+        &quot;long_context&quot;: 4,
+        &quot;instruction_following&quot;: 4,
+        &quot;structured_output&quot;: 4,
+        &quot;multilingual&quot;: 4,
+        &quot;speed&quot;: 3,
+        &quot;cost_efficiency&quot;: 3
+      },
+      &quot;style_profile&quot;: {
+        &quot;prompt_preference&quot;: &quot;structured&quot;,
+        &quot;response_style&quot;: &quot;direct&quot;,
+        &quot;tool_usage_tendency&quot;: &quot;balanced&quot;,
+        &quot;scaffolding_comfort_level&quot;: 4
+      },
+      &quot;specialty_areas&quot;: {
+        &quot;strengths&quot;: [&quot;code&quot;],
+        &quot;weaknesses&quot;: []
+      },
+      &quot;dynamic_params&quot;: {
+        &quot;preferred_timeout_ms&quot;: 180000,
+        &quot;max_tools_per_turn&quot;: 8,
+        &quot;parallel_tool_allowance&quot;: 3
+      }
+    }
+  }
+}</code></pre>
+<p>新版本通常应加家族 pattern，而不是逐版本复制：</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;new-family&quot;,
+  &quot;match&quot;: &quot;^new-family(?:-|$)&quot;,
+  &quot;profile&quot;: {
+    &quot;style_profile&quot;: { &quot;prompt_preference&quot;: &quot;structured&quot; }
+  }
+}</code></pre>
+<p>保存文件后，下一次 <code>registry.get()</code> 即看到新画像；不需要编译或重启。</p>
+<h2 id="9-自定义-boost-规则">9. 自定义 boost 规则<a class="anchor" href="#9-自定义-boost-规则" aria-label="锚点">#</a></h2>
+<pre><code class="language-json">{
+  &quot;prompt_templates&quot;: {
+    &quot;section_boost_rules&quot;: [
+      {
+        &quot;id&quot;: &quot;code-needs-self-check&quot;,
+        &quot;when&quot;: { &quot;task_type&quot;: &quot;code&quot; },
+        &quot;boost&quot;: [&quot;self_check&quot;, &quot;tool_protocol&quot;]
+      },
+      {
+        &quot;id&quot;: &quot;creative-drop-tools&quot;,
+        &quot;when&quot;: { &quot;task_type&quot;: &quot;creative&quot; },
+        &quot;suppress&quot;: [&quot;tool_protocol&quot;]
+      }
+    ]
+  }
+}</code></pre>
+<p>支持条件：<code>task_type</code>、<code>tier</code>、<code>has_tools</code>、<code>context_tokens_gt</code>、<code>context_tokens_lt</code>、<code>user_preference</code>、<code>min_capability</code>、<code>max_capability</code>。</p>
+<h2 id="10-监控字段">10. 监控字段<a class="anchor" href="#10-监控字段" aria-label="锚点">#</a></h2>
+<p><code>registry.getStatus()</code>：</p>
+<table><thead><tr><th>字段</th><th>含义</th></tr></thead><tbody><tr><td><code>generation</code></td><td>配置或临时覆盖变化代数；resolved cache key 的一部分</td></tr><tr><td><code>ttlMs</code></td><td>stat 检查最短间隔；0 表示每请求检查</td></tr><tr><td><code>repo/home.loads</code></td><td>成功解析次数</td></tr><tr><td><code>repo/home.reads</code></td><td>文件实际读取次数</td></tr><tr><td><code>repo/home.error</code></td><td>最近加载错误；成功恢复后清空</td></tr><tr><td><code>runtimeOverrides</code></td><td>临时画像数量</td></tr><tr><td><code>resolvedCacheSize</code></td><td>当前 generation 的解析画像缓存条数</td></tr><tr><td><code>counters.gets</code></td><td><code>get()</code> 调用总数</td></tr><tr><td><code>counters.cacheHits</code></td><td>resolved profile 缓存命中数</td></tr><tr><td><code>counters.reloads</code></td><td>显式 reload 次数</td></tr><tr><td><code>counters.statCalls</code></td><td>文件 stat 次数</td></tr><tr><td><code>counters.fileReads</code></td><td>文件正文读取次数</td></tr><tr><td><code>counters.parseErrors</code></td><td>JSON 解析错误数</td></tr></tbody></table>
+<p><code>getTemplatesStatus()</code>：<code>loads</code> 表示模板成功解析次数，<code>reads</code> 表示文本读取次数，<code>statCalls</code> 表示 stat 次数，<code>error</code> 表示最近错误，<code>sections</code> 表示当前有效段落数。</p>
+<h2 id="11-性能与体积">11. 性能与体积<a class="anchor" href="#11-性能与体积" aria-label="锚点">#</a></h2>
+<p>阶段一与最终回归实测：TTL=0、2000 次 <code>get()</code> 的单次平均约 <code>85–126 µs</code>（受同机负载影响）；最终门禁样本为 <code>91.3 µs/次</code>、<code>statCalls=4002</code>。相对于一次 LLM 网络往返可忽略。稳定态只做 stat 与 resolved cache lookup；文件变更才读取和解析。新增运行时依赖为 0，配置与源码均为解释执行文本。</p>
+<p>段落数量由 <code>SECTION_BUDGET[scaffoldingLevel]</code> 限制，nudge 最多 4 条；<code>coding_standards</code> 默认去重。高 QPS 部署可增大 <code>KHY_MODEL_FEATURES_TTL_MS</code>，代价是最多相同毫秒数的配置生效延迟。</p>
+<h2 id="12-渐进启用与降级">12. 渐进启用与降级<a class="anchor" href="#12-渐进启用与降级" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>阶段</th><th>开关</th><th>回退行为</th></tr></thead><tbody><tr><td>总闸</td><td><code>KHY_MODEL_ADAPT</code></td><td>所有调用点沿用旧行为</td></tr><tr><td>动态 prompt</td><td><code>KHY_DYNAMIC_PROMPT</code></td><td>appendix 为空串</td></tr><tr><td>增强选型</td><td><code>KHY_ENHANCED_MODEL_SELECT</code></td><td>返回 <code>rankAutoModels()</code> 原结果</td></tr><tr><td>流水线</td><td><code>KHY_MODEL_ADAPT_PIPELINE</code></td><td>返回原 request 引用</td></tr><tr><td>未知模型发现</td><td><code>KHY_MODEL_DISCOVERY</code></td><td>不发 probe、不写临时层</td></tr></tbody></table>
+<p>配置损坏：保留上一份有效数据；没有有效数据时使用内置默认画像或模板。任一流水线阶段抛错：记录 <code>degradedStages</code>，继续后续阶段。响应优化默认 sidecar-only，不改正文或 tool call。</p>
+<p>推荐上线顺序：</p>
+<ol><li>只部署注册表和监控，保持总闸关闭。</li><li>打开总闸 + dynamic prompt，对少量请求观察 appendix 体积与缓存命中。</li><li>打开 enhanced selector，观察 specialty/cost/UCB 分项。</li><li>挂载 pipeline 到一个实际调用点，再逐步扩大。</li><li>最后打开 discovery，并设置调用预算与人工复核流程。</li></ol>
+<h2 id="13-当前兼容性边界">13. 当前兼容性边界<a class="anchor" href="#13-当前兼容性边界" aria-label="锚点">#</a></h2>
+<ul><li>新增模块均为 CommonJS，同现有后端一致。</li><li>不修改 <code>promptAssemblyService</code> 稳定前缀，也不修改 <code>autoModelSelect</code> 纯叶子。</li><li><code>perRequestAdaptationPipeline</code> 和 <code>modelAdaptationHttp</code> 已实现但尚未挂到宿主热路径。</li><li>当前 <code>aiManagementServer.js</code> 在本次变更前已同时声明两次 <code>handleModelsStream</code>（约第 1570、1683 行），导致依赖它的 Jest suite 在 Babel 解析阶段失败。应先单独修复该基线缺陷，再挂载 HTTP handler，避免混合变更。</li><li><code>claude-opus-5</code> 的模型名正则曾解析为 <code>T2</code>；现已由精确画像中的 <code>&quot;tier&quot;:&quot;T0&quot;</code> 通过 <code>forceTier</code> 驱动注册表，确保 <code>_meta.tier</code> 与实际 <code>tierDefaults:T0</code> 一致。后续新增模型可沿用同一显式覆盖机制。</li></ul>
+<h2 id="14-最佳实践">14. 最佳实践<a class="anchor" href="#14-最佳实践" aria-label="锚点">#</a></h2>
+<ul><li>内置条目使用 <code>confidence:'prior'</code>，不要把人工估计标成 measured。</li><li>优先写家族 pattern，精确 model 只覆盖例外。</li><li><code>always_prefer_for</code> 只用于明显专长，避免把探索与成本信号全部压掉。</li><li>boost 规则保持少而可解释；显式 suppress 优先于 boost。</li><li>discovery 结果只留运行时临时层，人工查看 probe 原始结果后再写入运维覆盖文件。</li><li>调整 TTL、段落预算或文本长度时，同时记录延迟和 prompt 字节数，不只看功能是否生效。</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-066] 前端代理出站桥-选节点实际路由与启用停用开关.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-066] 前端代理出站桥 — 选节点实际路由 + 启用/停用开关</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-067] opencode高含金量功能教学与khy-os差距补齐路线.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-ARCH-067] opencode 高含金量功能教学与 khy-os 差距补齐路线</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-067] 动态模型差异化适配引擎.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

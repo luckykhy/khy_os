@@ -904,46 +904,54 @@ let _bootActivePort = null;
             // 定时任务注册
             try {
               const instrumentService = require('./src/services/instrumentService');
-              const cron = require('node-cron');
-              cron.schedule('0 2 * * *', async () => {
-                try {
-                  await instrumentService.syncInstrumentsFromAData();
-                } catch (e) {
-                  logger.warn('cron:instrumentSync failed', { error: e.message });
-                }
+              const { scheduleDaily } = require('./src/utils/dailyScheduler');
+              scheduleDaily({
+                hour: 2,
+                minute: 0,
+                task: async () => {
+                  try {
+                    await instrumentService.syncInstrumentsFromAData();
+                  } catch (e) {
+                    logger.warn('cron:instrumentSync failed', { error: e.message });
+                  }
+                },
               });
               console.log('Cron: 标的数据同步 (每天2:00)');
               const cacheController = require('./src/controllers/cacheController');
               const comprehensiveDataService = require('./src/services/comprehensiveDataService');
-              cron.schedule('0 3 * * *', async () => {
-                try {
-                  const instruments = await instrumentService.getInstruments({
-                    status: 'active',
-                    limit: 100,
-                  });
-                  for (const inst of instruments) {
-                    try {
-                      const klineData = await comprehensiveDataService.getComprehensiveData(
-                        inst.symbol,
-                        { period: 'daily', limit: 500 }
-                      );
-                      if (klineData?.kline?.length) {
-                        const klineDataService = require('./src/services/klineDataService');
-                        await klineDataService.saveKlineData(
+              scheduleDaily({
+                hour: 3,
+                minute: 0,
+                task: async () => {
+                  try {
+                    const instruments = await instrumentService.getInstruments({
+                      status: 'active',
+                      limit: 100,
+                    });
+                    for (const inst of instruments) {
+                      try {
+                        const klineData = await comprehensiveDataService.getComprehensiveData(
                           inst.symbol,
-                          inst.name,
-                          'daily',
-                          klineData.kline
+                          { period: 'daily', limit: 500 }
                         );
+                        if (klineData?.kline?.length) {
+                          const klineDataService = require('./src/services/klineDataService');
+                          await klineDataService.saveKlineData(
+                            inst.symbol,
+                            inst.name,
+                            'daily',
+                            klineData.kline
+                          );
+                        }
+                        await new Promise((r) => setTimeout(r, 100));
+                      } catch (e) {
+                        logger.warn('cron:klineData item failed', { error: e.message });
                       }
-                      await new Promise((r) => setTimeout(r, 100));
-                    } catch (e) {
-                      logger.warn('cron:klineData item failed', { error: e.message });
                     }
+                  } catch (e) {
+                    logger.warn('cron:klineData failed', { error: e.message });
                   }
-                } catch (e) {
-                  logger.warn('cron:klineData failed', { error: e.message });
-                }
+                },
               });
               console.log('Cron: K线数据持久化 (每天3:00)');
             } catch (e) {

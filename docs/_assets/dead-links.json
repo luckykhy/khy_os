@@ -1,5 +1,5 @@
 {
-  "total": 51,
+  "total": 50,
   "items": [
     {
       "from": "docs/00_INDEX_文档索引.html",
@@ -47,29 +47,29 @@
       "href": "../../.ai/MAP.html"
     },
     {
-      "from": "docs/02_CONCEPTS_概念入门/FILE-FORMAT-PROTOCOL.html",
+      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html",
+      "type": "a",
+      "href": "./[CONCEPT-05]%20什么是MCP-模型上下文协议.html"
+    },
+    {
+      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html",
+      "type": "a",
+      "href": "./[CONCEPT-05]%20什么是MCP-模型上下文协议.html"
+    },
+    {
+      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-31] 什么是幻觉-Hallucination.html",
+      "type": "a",
+      "href": "./[CONCEPT-04]%20什么是RAG-检索增强生成.html"
+    },
+    {
+      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-31] 什么是幻觉-Hallucination.html",
+      "type": "a",
+      "href": "./[CONCEPT-04]%20什么是RAG-检索增强生成.html"
+    },
+    {
+      "from": "docs/03_DESIGN_设计/FILE-FORMAT-PROTOCOL.html",
       "type": "a",
       "href": "./COMMUNICATION-PROTOCOL.html"
-    },
-    {
-      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html",
-      "type": "a",
-      "href": "./[CONCEPT-05]%20什么是MCP-模型上下文协议.html"
-    },
-    {
-      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-30] 函数调用与MCP辨析.html",
-      "type": "a",
-      "href": "./[CONCEPT-05]%20什么是MCP-模型上下文协议.html"
-    },
-    {
-      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-31] 什么是幻觉-Hallucination.html",
-      "type": "a",
-      "href": "./[CONCEPT-04]%20什么是RAG-检索增强生成.html"
-    },
-    {
-      "from": "docs/02_CONCEPTS_概念入门/[CONCEPT-31] 什么是幻觉-Hallucination.html",
-      "type": "a",
-      "href": "./[CONCEPT-04]%20什么是RAG-检索增强生成.html"
     },
     {
       "from": "docs/03_DESIGN_设计/[DESIGN-ARCH-043] khy-agent-sdk-Claude对齐与D1-D6融合规范.html",
@@ -225,11 +225,6 @@
       "from": "docs/07_OPS_运维/[OPS-MAN-021] opencode-任务编排经验.html",
       "type": "a",
       "href": "/tmp/opencode-dev/opencode-dev/packages/opencode/src/tool/plan.ts"
-    },
-    {
-      "from": "docs/08_MGMT_项目管理/CONTRIBUTING.html",
-      "type": "a",
-      "href": "../AGENTS.html"
     },
     {
       "from": "docs/08_MGMT_项目管理/[MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.html",

@@ -9,8 +9,6 @@
  * its own errors so callers can fire-and-forget without try-catch.
  */
 
-const axios = require('axios');
-
 const SERVERCHAN_BASE = 'https://sctapi.ftqq.com';
 
 /**
@@ -53,14 +51,23 @@ async function sendWeChatNotification(sendKey, signal) {
 
   try {
     const url = `${SERVERCHAN_BASE}/${sendKey}.send`;
-    const resp = await axios.post(url, { title, desp }, { timeout: 10000 });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title, desp }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) {
+      throw new Error(`ServerChan HTTP ${response.status}`);
+    }
+    const data = await response.json();
 
-    if (resp.data?.code === 0) {
+    if (data?.code === 0) {
       console.log(`[Notifier] WeChat push OK: ${title}`);
       return true;
     }
 
-    console.error(`[Notifier] ServerChan returned error:`, resp.data);
+    console.error(`[Notifier] ServerChan returned error:`, data);
     return false;
   } catch (err) {
     console.error(`[Notifier] WeChat push failed for "${title}":`, err.message);

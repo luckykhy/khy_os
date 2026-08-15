@@ -1,0 +1,48 @@
+name: 📄 文档问题 / Docs Issue
+description: 文档错误、缺失、过期或难以理解。
+title: "[DOCS] "
+labels: ["type/docs", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `docs/` 采用 `01_INIT` → `09_STORY` 的九段式编号体系，并有 HTML 同步产物。
+        **注意**：`.html` 文件是由 `.md` 生成的，请指向 `.md` 源文件，不要直接报 HTML。
+
+  - type: input
+    id: path
+    attributes:
+      label: 文档路径或链接
+      description: 仓库内相对路径优先。若涉及 README 徽章/章节，请给出章节标题。
+      placeholder: "例：docs/06_DEPLOY_部署/xxx.md 的「环境变量」一节"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 问题类型
+      options:
+        - 内容错误（写错了）
+        - 内容过期（与代码现状不一致）
+        - 内容缺失（该写的没写）
+        - 表述不清（看不懂）
+        - 链接失效 / 索引未登记
+        - 中英文或编码问题
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: 问题描述
+      description: 现在写的是什么、为什么有问题。若是「与代码不一致」，请附上对应代码路径作为依据。
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: 建议的修正（可选）
+      description: 可以直接给出建议文字，便于维护者快速采纳。

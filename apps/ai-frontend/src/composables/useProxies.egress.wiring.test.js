@@ -1,12 +1,12 @@
 /**
  * useProxies / ProxyManagement egress wiring 源级断言(node:test·ESM)。
- *   node --test apps/ai-frontend/src/composables/useProxies.egress.wiring.test.js
+ *   npx vitest run apps/ai-frontend/src/composables/useProxies.egress.wiring.test.js
  *
  * 前端 Vue / @ 别名不能裸 node:test 载入 → 沿用 useProjects.wiring.test.js 的
  * readFileSync + regex 源级断言法,核对 egress URL 组装 + 视图接线,不实际渲染。
  * apps/ai-frontend 是 type:module,故用 import 而非 require。
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

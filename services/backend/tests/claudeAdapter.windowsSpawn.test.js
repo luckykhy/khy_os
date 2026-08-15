@@ -74,6 +74,27 @@ describe('claudeAdapter windows spawn compatibility', () => {
     expect(spawn.mock.calls[0][1].slice(0, 4)).toEqual(['/d', '/s', '/c', 'claude.cmd']);
   });
 
+  test('bridge serializes clipboard images in the initial user message', () => {
+    const adapter = require('../src/services/gateway/adapters/claudeAdapter');
+
+    const withImage = adapter.__test__.buildStreamUserMessage(
+      'please inspect this image',
+      'please inspect this image',
+      [{ base64: 'aGk=', mimeType: 'image/png' }]
+    );
+    const withoutImage = adapter.__test__.buildStreamUserMessage('hello', 'hello');
+
+    expect(withImage.message.content).toEqual([
+      { type: 'text', text: expect.stringContaining('please inspect this image') },
+      {
+        type: 'image',
+        source: { type: 'base64', media_type: 'image/png', data: 'aGk=' },
+      },
+    ]);
+    expect(typeof withoutImage.message.content).toBe('string');
+    expect(withoutImage.message.content).toContain('hello');
+  });
+
   test('bridge handshake timeout escalates to SIGKILL only after shutdown stays idle', async () => {
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';

@@ -1,0 +1,62 @@
+[
+  {
+    "_comment": "标签体系单一事实来源（Single Source of Truth）。由 .github/workflows/labels-sync.yml 手动触发同步到 GitHub。",
+    "_comment2": "刻意使用 JSON 而非 YAML：Node 可原生 require，同步脚本零第三方依赖。",
+    "_comment3": "area/* 刻意只保留粗粒度模块。docs/_维护者/维护映射表.json 里的 111 个细粒度 area 继续只服务 CODEOWNERS——把 111 个 area 做成标签会让标签面板彻底不可用。",
+    "_schema": "后续条目为真实标签，键：name / color(6位hex,无#) / description"
+  },
+
+  { "name": "type/bug",            "color": "d73a4a", "description": "缺陷：行为与文档或预期不符" },
+  { "name": "type/feature",        "color": "0e8a16", "description": "新功能或能力增强" },
+  { "name": "type/docs",           "color": "0075ca", "description": "文档内容（.md 源文件）" },
+  { "name": "type/refactor",       "color": "5319e7", "description": "重构：对外行为不变" },
+  { "name": "type/perf",           "color": "fbca04", "description": "性能或体积优化" },
+  { "name": "type/test",           "color": "bfd4f2", "description": "仅测试代码" },
+  { "name": "type/build",          "color": "c2e0c6", "description": "构建、打包、发布链路" },
+  { "name": "type/ci",             "color": "c2e0c6", "description": "CI 流水线与仓库自动化" },
+  { "name": "type/chore",          "color": "ededed", "description": "杂务：不影响源码与文档语义" },
+  { "name": "type/security",       "color": "b60205", "description": "安全相关（公开可讨论的部分；漏洞走私密披露）" },
+
+  { "name": "prio/P0",             "color": "b60205", "description": "阻断性：主干不可用、发布受阻、数据或凭据风险" },
+  { "name": "prio/P1",             "color": "d93f0b", "description": "高优先：影响主流程，需尽快排期" },
+  { "name": "prio/P2",             "color": "fbca04", "description": "常规优先：排入正常迭代" },
+  { "name": "prio/P3",             "color": "fef2c0", "description": "低优先：有余力再做" },
+
+  { "name": "status/needs-triage", "color": "ededed", "description": "待分类：尚未确认与定级" },
+  { "name": "status/needs-info",   "color": "d4c5f9", "description": "信息不足：等待提交者补充复现或环境信息" },
+  { "name": "status/confirmed",    "color": "0e8a16", "description": "已复现或已确认" },
+  { "name": "status/blocked",      "color": "d93f0b", "description": "被外部依赖或其他 Issue 阻塞" },
+  { "name": "status/in-progress",  "color": "1d76db", "description": "正在处理中" },
+  { "name": "status/wontfix",      "color": "ffffff", "description": "确认不修：请在关闭时说明理由" },
+  { "name": "status/duplicate",    "color": "cfd3d7", "description": "重复：请链接到原 Issue" },
+  { "name": "status/stale",        "color": "cfd3d7", "description": "长期无进展，可能关闭" },
+
+  { "name": "area/cli-tui",        "color": "1d76db", "description": "CLI 与 TUI（services/backend/src/cli）" },
+  { "name": "area/gateway",        "color": "1d76db", "description": "AI 网关与供应商适配（src/services/gateway）" },
+  { "name": "area/backend",        "color": "1d76db", "description": "后端服务与 Web API（services/backend）" },
+  { "name": "area/frontend",       "color": "1d76db", "description": "AI 管理前端（apps/ai-frontend）" },
+  { "name": "area/khyquant",       "color": "1d76db", "description": "khyquant 量化应用（software/khyquant）" },
+  { "name": "area/python-launcher","color": "1d76db", "description": "Python 启动器（platform/khy_platform）" },
+  { "name": "area/kernel",         "color": "1d76db", "description": "OS 内核（kernel/，C + 汇编）" },
+  { "name": "area/moonbit-wasm",   "color": "1d76db", "description": "MoonBit 与 WASM 模块" },
+  { "name": "area/packaging",      "color": "1d76db", "description": "打包与发布（packaging/、scripts/release/）" },
+  { "name": "area/docs",           "color": "1d76db", "description": "文档体系（docs/）" },
+  { "name": "area/ci-infra",       "color": "1d76db", "description": "CI 与仓库基础设施（.github/、scripts/ci/）" },
+  { "name": "area/deps",           "color": "1d76db", "description": "依赖升级（含 Dependabot）" },
+
+  { "name": "lang/node",           "color": "f9d0c4", "description": "Node.js / JavaScript" },
+  { "name": "lang/python",         "color": "f9d0c4", "description": "Python" },
+  { "name": "lang/moonbit",        "color": "f9d0c4", "description": "MoonBit" },
+  { "name": "lang/c",              "color": "f9d0c4", "description": "C 与汇编" },
+
+  { "name": "size/XS",             "color": "e4e669", "description": "改动量 < 10 行" },
+  { "name": "size/S",              "color": "e4e669", "description": "改动量 10-99 行" },
+  { "name": "size/M",              "color": "e4e669", "description": "改动量 100-499 行" },
+  { "name": "size/L",              "color": "e4e669", "description": "改动量 500-999 行：建议拆分" },
+  { "name": "size/XL",             "color": "e4e669", "description": "改动量 >= 1000 行：应当拆分后再审查" },
+
+  { "name": "breaking-change",     "color": "b60205", "description": "破坏性变更：需在 CHANGELOG 显著标注并说明迁移方式" },
+  { "name": "good first issue",    "color": "7057ff", "description": "适合首次贡献者：范围明确、上下文自足" },
+  { "name": "help wanted",         "color": "008672", "description": "欢迎社区接手" },
+  { "name": "needs-design",        "color": "d4c5f9", "description": "方案未定：先在 Issue 或 Discussion 里定型再动手" }
+]

@@ -8,7 +8,7 @@
  *   { type: 'varContains',  var,  text }      stringify ctx.vars[var], check inclusion
  *   { type: 'windowTitle',  pattern }         regex over titles from
  *                                             ctx.executeTool('DesktopControl', { action: 'listWindows' })
- *   { type: 'httpStatus',   url,  expect }    axios GET, 30s timeout, status === expect (default 200)
+ *   { type: 'httpStatus',   url,  expect }    native HTTP GET, 30s timeout, status === expect (default 200)
  *
  * ctx contract: { vars: object, executeTool?: async (toolName, params) => result }.
  *
@@ -18,16 +18,16 @@
  *   original text.
  * - One assertion throwing yields { passed:false, reason:'校验执行异常...' }
  *   for that assertion only; the loop continues.
- * - windowTitle/httpStatus whose runtime dependency is unavailable
- *   (executeTool not injected, desktop gate closed/denied, axios missing)
- *   yield { passed:true, skipped:true } so a missing environment never fails
- *   the whole contract.
+ * - windowTitle whose runtime dependency is unavailable
+ *   (executeTool not injected, desktop gate closed/denied) yields
+ *   { passed:true, skipped:true } so a missing environment never fails the whole contract.
  * - Overall passed = every non-skipped assertion passed. Non-array / empty
  *   assertions → { passed:true, results:[] }. checkContract itself never throws.
  */
 'use strict';
 
 const fs = require('fs');
+const { requestStatus } = require('../../utils/nativeHttp');
 
 // Same wall-clock as the executor's http primitive (workflowExecutor.defaultPrimitives).
 const HTTP_TIMEOUT_MS = 30000;
@@ -214,20 +214,8 @@ async function _checkOne(assertion, ctx) {
           };
     }
     case 'httpStatus': {
-      let axios;
-      try {
-        axios = require('axios');
-      } catch {
-        return {
-          type: 'httpStatus',
-          passed: true,
-          skipped: true,
-          reason: '检查 HTTP 状态:axios 依赖不可用,跳过校验',
-        };
-      }
       const url = interpolateVars(a.url, vars);
-      // Protocol allowlist: only http/https make sense for an axios GET; an
-      // unparsable or non-http URL is a spec problem, not a contract miss.
+      // Protocol allowlist: only http/https make sense for a status check.
       let parsedUrl;
       try {
         parsedUrl = new URL(url);
@@ -249,20 +237,14 @@ async function _checkOne(assertion, ctx) {
       }
       const expect = Number.isFinite(Number(a.expect)) ? Number(a.expect) : 200;
       try {
-        const res = await axios({
-          method: 'GET',
-          url,
-          timeout: HTTP_TIMEOUT_MS,
-          validateStatus: () => true,
-        });
-        const ok = res.status === expect;
+        const response = await requestStatus(parsedUrl.toString(), { timeoutMs: HTTP_TIMEOUT_MS });
+        const ok = response.status === expect;
         return {
           type: 'httpStatus',
           passed: ok,
-          reason: `检查 ${url} HTTP 状态:期望 ${expect},实际 ${res.status},${ok ? '通过' : '不通过'}`,
+          reason: `检查 ${url} HTTP 状态:期望 ${expect},实际 ${response.status},${ok ? '通过' : '不通过'}`,
         };
       } catch (err) {
-        // Network-level failure (DNS/refused/timeout): a real contract miss.
         return {
           type: 'httpStatus',
           passed: false,

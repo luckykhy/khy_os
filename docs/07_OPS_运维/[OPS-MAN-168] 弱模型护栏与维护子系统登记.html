@@ -26,9 +26,9 @@
       <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-man-168-弱模型护栏与维护子系统登记-单人可维护补登记">[OPS-MAN-168] 弱模型护栏与维护子系统登记（单人可维护补登记）</a></li><li class="lvl-2"><a href="#为什么补这一篇">为什么补这一篇</a></li><li class="lvl-2"><a href="#1-弱模型护栏引擎-weak-model-guidance">1. 弱模型护栏引擎 `weak-model-guidance`</a></li><li class="lvl-2"><a href="#2-弱模型改动守卫-weak-model-change-guard">2. 弱模型改动守卫 `weak-model-change-guard`</a></li><li class="lvl-2"><a href="#3-注释引导引擎-comment-guidance">3. 注释引导引擎 `comment-guidance`</a></li><li class="lvl-2"><a href="#4-定时调度-cron-scheduling">4. 定时调度 `cron-scheduling`</a></li><li class="lvl-2"><a href="#5-未来抗性四支柱体检-future-proofing">5. 未来抗性四支柱体检 `future-proofing`</a></li><li class="lvl-2"><a href="#相关">相关</a></li></ul></nav>
       <article class="doc-body">
 <h1 id="ops-man-168-弱模型护栏与维护子系统登记-单人可维护补登记">[OPS-MAN-168] 弱模型护栏与维护子系统登记（单人可维护补登记）<a class="anchor" href="#ops-man-168-弱模型护栏与维护子系统登记-单人可维护补登记" aria-label="锚点">#</a></h1>
-<blockquote><p>目标（用户原话）：「补充完善维护脚本，确保可以单人维护」。<br>本篇是<strong>维护映射表登记补丁</strong>的人读说明：把五个此前已在产、却漏登记进<br><code>docs/维护者/维护映射表.json</code> 的子系统一次补齐，让 <code>khy triage</code> / <code>maintainer:check</code> /<br>双击 launcher 能正确路由它们。每节结构统一：<strong>它是什么 / 何时看它 / 怎么验 / 怎么扩展</strong>。</p></blockquote>
+<blockquote><p>目标（用户原话）：「补充完善维护脚本，确保可以单人维护」。<br>本篇是<strong>维护映射表登记补丁</strong>的人读说明：把五个此前已在产、却漏登记进<br><code>docs/_维护者/维护映射表.json</code> 的子系统一次补齐，让 <code>khy triage</code> / <code>maintainer:check</code> /<br>双击 launcher 能正确路由它们。每节结构统一：<strong>它是什么 / 何时看它 / 怎么验 / 怎么扩展</strong>。</p></blockquote>
 <h2 id="为什么补这一篇">为什么补这一篇<a class="anchor" href="#为什么补这一篇" aria-label="锚点">#</a></h2>
-<p>CLAUDE.md 第四条红线：「新子系统必须登记进 <code>docs/维护者/维护映射表.json</code><br>（whenToUse/paths/docs/verify）」。侦察发现下列子系统已接线在产但映射表零命中——<br>未登记意味着：出问题时 <code>khy triage</code> 无法把症状路由到它们、<code>maintainer:check</code> 不覆盖它们的<br>路径、双击维护 launcher 也生成不了它们的一键验证。本篇补齐登记并作为这些 area 的 <code>docs</code> 指向。</p>
+<p>CLAUDE.md 第四条红线：「新子系统必须登记进 <code>docs/_维护者/维护映射表.json</code><br>（whenToUse/paths/docs/verify）」。侦察发现下列子系统已接线在产但映射表零命中——<br>未登记意味着：出问题时 <code>khy triage</code> 无法把症状路由到它们、<code>maintainer:check</code> 不覆盖它们的<br>路径、双击维护 launcher 也生成不了它们的一键验证。本篇补齐登记并作为这些 area 的 <code>docs</code> 指向。</p>
 <p>同时本轮还强化了 <code>maintainer:check</code>（<code>scripts/ci/print-maintainer-map.js --check</code>）：<br>过去只校验 <code>paths</code>/<code>docs</code> 路径存在，现在<strong>额外校验每个 area 的 <code>verify</code> 非空、且其<br><code>npm run &lt;name&gt;</code> 引用的脚本真实存在</strong>——被改名/删除的验证命令会亮 <code>STALE-VERIFY</code> 红灯，<br>不再静默烂掉。</p>
 <hr>
 <h2 id="1-弱模型护栏引擎-weak-model-guidance">1. 弱模型护栏引擎 <code>weak-model-guidance</code><a class="anchor" href="#1-弱模型护栏引擎-weak-model-guidance" aria-label="锚点">#</a></h2>
@@ -58,7 +58,7 @@
 <p><strong>怎么扩展</strong>：在 EOL/退役表或四支柱检查项里追加一条；表是单一真源，改值别猜。</p>
 <hr>
 <h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
-<ul><li>维护映射表：<code>docs/维护者/维护映射表.json</code>（本篇五节即其中五个 area 的人读说明）。</li><li>维护映射表校验：<code>npm run maintainer:check</code>（现已校验 verify 字段）。</li><li>无 AI 传承宪法：<code>docs/传承/KHY-OS-传承书.md</code>；四支柱体检 <code>khy maintain freshness</code>。</li></ul>
+<ul><li>维护映射表：<code>docs/_维护者/维护映射表.json</code>（本篇五节即其中五个 area 的人读说明）。</li><li>维护映射表校验：<code>npm run maintainer:check</code>（现已校验 verify 字段）。</li><li>无 AI 传承宪法：<code>docs/_传承/KHY-OS-传承书.md</code>；四支柱体检 <code>khy maintain freshness</code>。</li></ul>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-167] khy msg 多平台消息收发（钉钉·飞书·企业微信）.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-167] khy msg 多平台消息收发（钉钉 / 飞书 / 企业微信）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-169] 项目规则总纲-命名·skill·权限·mcp.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-169] 项目规则总纲：命名 · Skill · 权限 · MCP</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

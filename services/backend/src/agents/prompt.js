@@ -51,7 +51,7 @@ When using the ${AGENT_TOOL_NAME} tool, specify a subagent_type parameter to sel
   const whenNotToUseSection = `
 When NOT to use the ${AGENT_TOOL_NAME} tool:
 - If you want to read a specific file path, use the ${FILE_READ_TOOL_NAME} tool or the ${GLOB_TOOL_NAME} tool instead of the ${AGENT_TOOL_NAME} tool, to find the match more quickly
-- If you are searching for a specific class definition like "class Foo", use the ${GLOB_TOOL_NAME} tool instead, to find the match more quickly
+- If you are searching for a specific class or function definition, use the ${GLOB_TOOL_NAME} tool to locate candidate files when the path is unknown, then use the ${FILE_READ_TOOL_NAME} tool to inspect the definition
 - If you are searching for code within a specific file or set of 2-3 files, use the ${FILE_READ_TOOL_NAME} tool instead of the ${AGENT_TOOL_NAME} tool, to find the match more quickly
 - Other tasks that are not related to the agent descriptions above
 `;
@@ -67,12 +67,12 @@ Usage notes:
 - Use agents for independent sidecar work, not for the next critical-path step that you are blocked on right now.
 - When delegating implementation or verification, assign clear ownership: name the files, modules, or responsibilities the agent owns, and whether it should write code or only research.
 - After non-trivial implementation work, consider using the verification agent to validate the result before you report completion. Pass the original task, files changed, and approach taken.
-- When the agent is done, it will return a single message back to you. The result returned by the agent is not visible to the user. To show the user the result, you should send a text message back to the user with a concise summary of the result.
+- When the agent is done, it will return a single message back to you. The result returned by the agent is not visible to the user. Treat it as a report to inspect, not proof that work happened: confirm claimed edits, tests, or commands from real tool results before presenting them as completed. To show the user the result, send a concise summary grounded in that evidence.
 - You can optionally run agents in the background using the run_in_background parameter. When an agent runs in the background, you will be automatically notified when it completes — do NOT sleep, poll, or proactively check on its progress. Continue with other work or respond to the user instead.
 - **Foreground vs background**: Use foreground (default) when you need the agent's results before you can proceed — e.g., research agents whose findings inform your next steps. Use background when you have genuinely independent work to do in parallel.
 - To continue a previously spawned agent, use ${SEND_MESSAGE_TOOL_NAME} with the agent's ID or name as the \`to\` field. The agent resumes with its full context preserved. Each Agent invocation starts fresh — provide a complete task description.
 - Provide clear, detailed prompts so the agent can work autonomously and return exactly the information you need.
-- The agent's outputs should generally be trusted
+- Evaluate agent findings against the assigned acceptance condition and supporting evidence; do not trust a claim solely because an agent returned it
 - Clearly tell the agent whether you expect it to write code or just to do research (search, file reads, web fetches, etc.), since it is not aware of the user's intent
 - If the agent description mentions that it should be used proactively, then you should try your best to use it without the user having to ask for it first. Use your judgement.
 - If the user specifies that they want you to run agents "in parallel", you MUST send a single message with multiple ${AGENT_TOOL_NAME} tool use content blocks. For example, if you need to launch both a build-validator agent and a test-runner agent in parallel, send a single message with both tool calls.

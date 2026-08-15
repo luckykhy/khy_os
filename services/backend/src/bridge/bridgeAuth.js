@@ -11,6 +11,7 @@
 
 const crypto = require('crypto');
 const path = require('path');
+const { getAppDataDir } = require('../utils/dataHome');
 
 let _db = null;
 let _jwtSecret = null;
@@ -31,6 +32,22 @@ function _loadDeps() {
   }
 }
 
+function resolveBridgeDataDir(env = process.env) {
+  if (env.BRIDGE_DATA_DIR && String(env.BRIDGE_DATA_DIR).trim()) {
+    return path.resolve(String(env.BRIDGE_DATA_DIR).trim());
+  }
+  return getAppDataDir('bridge');
+}
+
+function resolveBridgePaths(env = process.env) {
+  const dataDir = resolveBridgeDataDir(env);
+  return {
+    dataDir,
+    dbPath: path.join(dataDir, 'bridge-users.db'),
+    secretPath: path.join(dataDir, '.bridge_jwt_secret'),
+  };
+}
+
 function _getJwtSecret() {
   if (_jwtSecret) {
     return _jwtSecret;
@@ -45,8 +62,7 @@ function _getJwtSecret() {
   // Persist the secret to a file so tokens survive server restarts.
   // Without this, a random secret on every restart invalidates all issued tokens.
   const fs = require('fs');
-  const dataDir = path.resolve(__dirname, '../../data');
-  const secretPath = path.join(dataDir, '.bridge_jwt_secret');
+  const { dataDir, secretPath } = resolveBridgePaths();
   try {
     if (fs.existsSync(secretPath)) {
       const persisted = fs.readFileSync(secretPath, 'utf-8').trim();
@@ -61,6 +77,7 @@ function _getJwtSecret() {
 
   _jwtSecret = crypto.randomBytes(32).toString('hex');
   try {
+    fs.mkdirSync(dataDir, { recursive: true });
     fs.writeFileSync(secretPath, _jwtSecret, { mode: 0o600 });
   } catch {
     /* non-critical */
@@ -76,10 +93,9 @@ function initUserDb() {
   }
   _loadDeps();
 
-  const dataDir = path.resolve(__dirname, '../../data');
-  const dbPath = path.join(dataDir, 'bridge-users.db');
+  const { dataDir, dbPath } = resolveBridgePaths();
 
-  // Ensure data/ directory exists
+  // Ensure the portable bridge data directory exists.
   const fs = require('fs');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -214,4 +230,6 @@ module.exports = {
   registerUser,
   loginUser,
   validateJwt,
+  resolveBridgeDataDir,
+  resolveBridgePaths,
 };

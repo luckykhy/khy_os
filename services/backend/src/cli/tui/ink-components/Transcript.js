@@ -562,13 +562,10 @@ function MessageBlock({ msg, expanded }) {
     );
   }
 
-  // Expansion record — a one-shot, fully-expanded copy of the most recent
-  // foldable turn, appended on Ctrl+O. Ink's <Static> never re-renders items it
-  // has already printed, so toggling the global `expanded` prop cannot reveal a
-  // process group that has already scrolled into committed history. Instead we
-  // append THIS synthetic item below the transcript (Static's append path, no
-  // scrollback duplication) and render its carried tool/thinking detail with
-  // expanded forced true — matching classic-mode's "print expanded below".
+  // Expansion view — a fully-expanded copy of the most recent foldable turn.
+  // App renders new expansions in its removable live layer because Ink's <Static>
+  // never re-renders printed items; keeping this role renderer also preserves
+  // compatibility with expansion records produced by older in-process paths.
   if (msg.role === 'expansion') {
     const children = [h(Text, { key: 'hdr', color: 'cyan', dimColor: true }, '⤷ 展开上一步详情')];
     const timeline = Array.isArray(msg.timeline) ? msg.timeline : null;

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 部署完成报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_报告<span class="sep">›</span>历史<span class="sep">›</span>Khy-OS 部署完成报告</div>
+      <header class="hero reveal"><h1>Khy-OS 部署完成报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-部署完成报告">Khy-OS 部署完成报告</a></li><li class="lvl-2"><a href="#部署状态-成功">✅ 部署状态：成功</a></li><li class="lvl-2"><a href="#部署概览">🎯 部署概览</a></li><li class="lvl-2"><a href="#已安装的依赖">📦 已安装的依赖</a></li><li class="lvl-3"><a href="#后端-services-backend">后端 (services/backend/)</a></li><li class="lvl-3"><a href="#前端-apps-ai-frontend">前端 (apps/ai-frontend/)</a></li><li class="lvl-2"><a href="#快速启动指南">🚀 快速启动指南</a></li><li class="lvl-3"><a href="#方式-1-使用便携启动器-推荐">方式 1：使用便携启动器（推荐）</a></li><li class="lvl-3"><a href="#方式-2-直接启动后端">方式 2：直接启动后端</a></li><li class="lvl-3"><a href="#方式-3-启动前端开发服务器">方式 3：启动前端开发服务器</a></li><li class="lvl-3"><a href="#方式-4-cli-模式">方式 4：CLI 模式</a></li><li class="lvl-2"><a href="#首次运行配置">🔧 首次运行配置</a></li><li class="lvl-3"><a href="#1-环境变量-可选">1. 环境变量（可选）</a></li><li class="lvl-3"><a href="#2-数据库初始化-如使用-postgresql">2. 数据库初始化（如使用 PostgreSQL）</a></li><li class="lvl-3"><a href="#3-默认管理员账号">3. 默认管理员账号</a></li><li class="lvl-2"><a href="#项目结构确认">📂 项目结构确认</a></li><li class="lvl-2"><a href="#访问地址">🌐 访问地址</a></li><li class="lvl-2"><a href="#常用命令">⚙️ 常用命令</a></li><li class="lvl-3"><a href="#后端">后端</a></li><li class="lvl-3"><a href="#前端">前端</a></li><li class="lvl-2"><a href="#验证部署">🔍 验证部署</a></li><li class="lvl-3"><a href="#1-检查后端健康状态">1. 检查后端健康状态</a></li><li class="lvl-3"><a href="#2-检查前端构建">2. 检查前端构建</a></li><li class="lvl-3"><a href="#3-测试启动器">3. 测试启动器</a></li><li class="lvl-2"><a href="#已知问题">📋 已知问题</a></li><li class="lvl-3"><a href="#npm-安全漏洞">npm 安全漏洞</a></li><li class="lvl-3"><a href="#可选依赖警告">可选依赖警告</a></li><li class="lvl-2"><a href="#下一步">🎯 下一步</a></li><li class="lvl-3"><a href="#1-启动服务">1. 启动服务</a></li><li class="lvl-3"><a href="#2-访问管理界面">2. 访问管理界面</a></li><li class="lvl-3"><a href="#3-登录系统">3. 登录系统</a></li><li class="lvl-3"><a href="#4-探索功能">4. 探索功能</a></li><li class="lvl-2"><a href="#支持">📞 支持</a></li><li class="lvl-2"><a href="#部署统计">📊 部署统计</a></li><li class="lvl-2"><a href="#部署完成检查清单">✅ 部署完成检查清单</a></li><li class="lvl-2"><a href="#总结">🎉 总结</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 归档来源: 根目录 DEPLOYMENT_REPORT.md（归档日期 2026-08-15，MGMT-STD-001 第一章根目录零散落） --&gt;</p>
+<h1 id="khy-os-部署完成报告">Khy-OS 部署完成报告<a class="anchor" href="#khy-os-部署完成报告" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>一次性快照，不是现行部署手册。</strong> 现行部署与配置请读<br><code>docs/06_DEPLOY_部署/</code>（<code>[DEPLOY-MAN-019/020/021]</code> 与 <code>PORTABLE.md</code>）。</p></blockquote>
+<h2 id="部署状态-成功">✅ 部署状态：成功<a class="anchor" href="#部署状态-成功" aria-label="锚点">#</a></h2>
+<p>生成时间：2024-08-14</p>
+<hr>
+<h2 id="部署概览">🎯 部署概览<a class="anchor" href="#部署概览" aria-label="锚点">#</a></h2>
+<p>项目已成功部署到本地环境，所有核心组件就绪。</p>
+<table><thead><tr><th>组件</th><th>状态</th><th>说明</th></tr></thead><tbody><tr><td><strong>Git 仓库</strong></td><td>✅ 已初始化</td><td>首次提交已完成</td></tr><tr><td><strong>后端依赖</strong></td><td>✅ 已安装</td><td>services/backend/node_modules</td></tr><tr><td><strong>前端依赖</strong></td><td>✅ 已安装</td><td>apps/ai-frontend/node_modules</td></tr><tr><td><strong>Python 启动器</strong></td><td>✅ 就绪</td><td>platform/khy_platform/cli.py</td></tr><tr><td><strong>启动脚本</strong></td><td>✅ 就绪</td><td>khy.bat / khy.sh</td></tr><tr><td><strong>内核源码</strong></td><td>✅ 完整</td><td>kernel/src/ (123 个 C/H 文件)</td></tr><tr><td><strong>文档</strong></td><td>✅ 完整</td><td>docs/ (457 个 Markdown)</td></tr></tbody></table>
+<hr>
+<h2 id="已安装的依赖">📦 已安装的依赖<a class="anchor" href="#已安装的依赖" aria-label="锚点">#</a></h2>
+<h3 id="后端-services-backend">后端 (services/backend/)<a class="anchor" href="#后端-services-backend" aria-label="锚点">#</a></h3>
+<ul><li>✅ <strong>42 个生产依赖包</strong></li><li>✅ Express、Sequelize、PostgreSQL 客户端</li><li>✅ AI 网关相关包</li><li>✅ 认证、加密、日志等工具</li><li>⚠️ 42 个安全漏洞（可运行 <code>npm audit fix</code> 修复）</li></ul>
+<h3 id="前端-apps-ai-frontend">前端 (apps/ai-frontend/)<a class="anchor" href="#前端-apps-ai-frontend" aria-label="锚点">#</a></h3>
+<ul><li>✅ <strong>202 个依赖包</strong></li><li>✅ Vue 3、Vue Router、Pinia</li><li>✅ Element Plus UI 组件库</li><li>✅ Axios、ECharts</li><li>⚠️ 3 个安全漏洞（可运行 <code>npm audit fix</code> 修复）</li></ul>
+<hr>
+<h2 id="快速启动指南">🚀 快速启动指南<a class="anchor" href="#快速启动指南" aria-label="锚点">#</a></h2>
+<h3 id="方式-1-使用便携启动器-推荐">方式 1：使用便携启动器（推荐）<a class="anchor" href="#方式-1-使用便携启动器-推荐" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Windows
+.\khy.bat
+
+# Linux/macOS  
+./khy.sh</code></pre>
+<p>启动器会自动：</p>
+<ul><li>检测 Python 和 Node.js 环境</li><li>拉起后端服务</li><li>进入 CLI 交互模式</li></ul>
+<h3 id="方式-2-直接启动后端">方式 2：直接启动后端<a class="anchor" href="#方式-2-直接启动后端" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd services/backend
+npm start          # 生产模式
+# 或
+npm run dev        # 开发模式（热重载）</code></pre>
+<p>后端服务默认运行在：<code>http://localhost:5000</code></p>
+<h3 id="方式-3-启动前端开发服务器">方式 3：启动前端开发服务器<a class="anchor" href="#方式-3-启动前端开发服务器" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd apps/ai-frontend
+npm run dev</code></pre>
+<p>前端开发服务器默认运行在：<code>http://localhost:3000</code></p>
+<p>API 请求会自动代理到后端 <code>http://localhost:5000</code></p>
+<h3 id="方式-4-cli-模式">方式 4：CLI 模式<a class="anchor" href="#方式-4-cli-模式" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd services/backend
+npm run cli</code></pre>
+<p>直接进入 Khy-OS 命令行界面。</p>
+<hr>
+<h2 id="首次运行配置">🔧 首次运行配置<a class="anchor" href="#首次运行配置" aria-label="锚点">#</a></h2>
+<h3 id="1-环境变量-可选">1. 环境变量（可选）<a class="anchor" href="#1-环境变量-可选" aria-label="锚点">#</a></h3>
+<p>前端环境变量（如需自定义）：</p>
+<pre><code class="language-bash">cd apps/ai-frontend
+cp .env.example .env.local
+# 编辑 .env.local 配置 API 地址等</code></pre>
+<p>后端环境变量（如需配置数据库等）：</p>
+<pre><code class="language-bash">cd services/backend
+# 创建 .env 文件
+# 配置数据库连接、API 密钥等</code></pre>
+<h3 id="2-数据库初始化-如使用-postgresql">2. 数据库初始化（如使用 PostgreSQL）<a class="anchor" href="#2-数据库初始化-如使用-postgresql" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd services/backend
+npm run migrate    # 运行数据库迁移
+npm run seed       # 填充种子数据</code></pre>
+<h3 id="3-默认管理员账号">3. 默认管理员账号<a class="anchor" href="#3-默认管理员账号" aria-label="锚点">#</a></h3>
+<p>首次启动后端时会自动创建默认管理员账号。</p>
+<p><strong>查看默认密码</strong>：</p>
+<pre><code class="language-bash"># Windows
+type %USERPROFILE%\.khy\credentials\default-admin.json
+
+# Linux/macOS
+cat ~/.khy/credentials/default-admin.json</code></pre>
+<p>或在后端启动日志中查看输出的账号信息。</p>
+<hr>
+<h2 id="项目结构确认">📂 项目结构确认<a class="anchor" href="#项目结构确认" aria-label="锚点">#</a></h2>
+<pre><code>C:\khy-os\
+├── .git/                    ✅ Git 仓库已初始化
+├── apps/
+│   └── ai-frontend/         ✅ 前端源码 + node_modules
+├── services/
+│   └── backend/             ✅ 后端源码 + node_modules
+├── platform/
+│   └── khy_platform/        ✅ Python 启动器
+├── kernel/                  ✅ OS 内核（C 语言）
+├── docs/                    ✅ 完整文档（457 个 MD）
+├── scripts/                 ✅ 维护脚本
+├── packaging/               ✅ 打包配置
+├── extensions/              ✅ 扩展模块
+├── khy.bat                  ✅ Windows 启动器
+├── khy.sh                   ✅ Linux/macOS 启动器
+├── package.json             ✅ npm workspaces 配置
+├── pyproject.toml           ✅ Python 包配置
+└── README.md                ✅ 项目说明</code></pre>
+<hr>
+<h2 id="访问地址">🌐 访问地址<a class="anchor" href="#访问地址" aria-label="锚点">#</a></h2>
+<p>启动服务后，可访问：</p>
+<table><thead><tr><th>服务</th><th>地址</th><th>说明</th></tr></thead><tbody><tr><td>后端 API</td><td>http://localhost:5000</td><td>RESTful API</td></tr><tr><td>前端管理界面</td><td>http://localhost:3000</td><td>Vue 3 管理 UI</td></tr><tr><td>WebSocket</td><td>ws://localhost:5000</td><td>实时通信</td></tr></tbody></table>
+<hr>
+<h2 id="常用命令">⚙️ 常用命令<a class="anchor" href="#常用命令" aria-label="锚点">#</a></h2>
+<h3 id="后端">后端<a class="anchor" href="#后端" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd services/backend
+
+# 开发模式
+npm run dev              # 启动开发服务器（热重载）
+
+# 生产模式  
+npm start                # 启动生产服务器
+
+# CLI 模式
+npm run cli              # 进入命令行界面
+
+# 数据库
+npm run migrate          # 运行迁移
+npm run seed             # 填充种子数据
+npm run reset-db         # 重置数据库
+
+# 测试
+npm test                 # 运行测试
+npm run test:all         # 运行所有测试
+
+# 代码质量
+npm run lint             # 代码检查
+npm run format           # 代码格式化</code></pre>
+<h3 id="前端">前端<a class="anchor" href="#前端" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd apps/ai-frontend
+
+# 开发
+npm run dev              # 启动开发服务器
+
+# 构建
+npm run build            # 生产构建
+npm run preview          # 预览构建结果
+
+# 代码质量
+npm run lint             # 代码检查
+npm run format           # 代码格式化</code></pre>
+<hr>
+<h2 id="验证部署">🔍 验证部署<a class="anchor" href="#验证部署" aria-label="锚点">#</a></h2>
+<h3 id="1-检查后端健康状态">1. 检查后端健康状态<a class="anchor" href="#1-检查后端健康状态" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd services/backend
+node check-env.js        # 检查环境
+npm run test             # 运行测试</code></pre>
+<h3 id="2-检查前端构建">2. 检查前端构建<a class="anchor" href="#2-检查前端构建" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash">cd apps/ai-frontend
+npm run build            # 尝试构建</code></pre>
+<h3 id="3-测试启动器">3. 测试启动器<a class="anchor" href="#3-测试启动器" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># Windows
+.\khy.bat preflight      # 预检查
+
+# Linux/macOS
+./khy.sh preflight       # 预检查</code></pre>
+<hr>
+<h2 id="已知问题">📋 已知问题<a class="anchor" href="#已知问题" aria-label="锚点">#</a></h2>
+<h3 id="npm-安全漏洞">npm 安全漏洞<a class="anchor" href="#npm-安全漏洞" aria-label="锚点">#</a></h3>
+<ul><li>后端：42 个漏洞（1 低、27 中、13 高、1 严重）</li><li>前端：3 个漏洞（2 中、1 高）</li></ul>
+<p><strong>修复方法</strong>：</p>
+<pre><code class="language-bash"># 在各自目录下运行
+npm audit fix            # 自动修复
+# 或
+npm audit fix --force    # 强制修复（可能有破坏性变更）</code></pre>
+<h3 id="可选依赖警告">可选依赖警告<a class="anchor" href="#可选依赖警告" aria-label="锚点">#</a></h3>
+<p>部分可选依赖（如 <code>node-llama-cpp</code>、<code>node-pty</code>）可能需要编译。如不需要相关功能，可忽略这些警告。</p>
+<hr>
+<h2 id="下一步">🎯 下一步<a class="anchor" href="#下一步" aria-label="锚点">#</a></h2>
+<h3 id="1-启动服务">1. 启动服务<a class="anchor" href="#1-启动服务" aria-label="锚点">#</a></h3>
+<pre><code class="language-bash"># 同时启动后端和前端（推荐开两个终端）
+
+# 终端 1：后端
+cd services/backend &amp;&amp; npm run dev
+
+# 终端 2：前端  
+cd apps/ai-frontend &amp;&amp; npm run dev</code></pre>
+<h3 id="2-访问管理界面">2. 访问管理界面<a class="anchor" href="#2-访问管理界面" aria-label="锚点">#</a></h3>
+<p>浏览器打开：http://localhost:3000</p>
+<h3 id="3-登录系统">3. 登录系统<a class="anchor" href="#3-登录系统" aria-label="锚点">#</a></h3>
+<ul><li>点击&quot;使用默认管理员用户名填充&quot;按钮</li><li>在 <code>.khy/credentials/default-admin.json</code> 查看密码</li><li>登录后即可使用所有功能</li></ul>
+<h3 id="4-探索功能">4. 探索功能<a class="anchor" href="#4-探索功能" aria-label="锚点">#</a></h3>
+<ul><li>📊 工作台：查看系统概览</li><li>🤖 智能体控制台：管理 AI 智能体</li><li>🌐 AI 网关：配置多供应商 AI 服务</li><li>💬 AI 对话：与 AI 实时交互</li><li>📈 AI 监控：查看性能指标</li><li>⚙️ 系统设置：配置系统参数</li></ul>
+<hr>
+<h2 id="支持">📞 支持<a class="anchor" href="#支持" aria-label="锚点">#</a></h2>
+<p>如遇到问题，可查看：</p>
+<ul><li>项目文档：<code>docs/</code> 目录</li><li>维护指南：<code>AGENTS.md</code></li><li>部署文档：<code>docs/06_DEPLOY_部署/</code></li><li>运维文档：<code>docs/07_OPS_运维/</code></li></ul>
+<hr>
+<h2 id="部署统计">📊 部署统计<a class="anchor" href="#部署统计" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>数值</th></tr></thead><tbody><tr><td>部署时间</td><td>~5 分钟</td></tr><tr><td>占用空间</td><td>526 MB</td></tr><tr><td>后端依赖</td><td>42 个包</td></tr><tr><td>前端依赖</td><td>202 个包</td></tr><tr><td>Git 提交</td><td>1 个</td></tr><tr><td>就绪文件</td><td>5,733 个</td></tr></tbody></table>
+<hr>
+<h2 id="部署完成检查清单">✅ 部署完成检查清单<a class="anchor" href="#部署完成检查清单" aria-label="锚点">#</a></h2>
+<ul><li>[x] Git 仓库已初始化</li><li>[x] 后端依赖已安装</li><li>[x] 前端依赖已安装  </li><li>[x] Python 启动器就绪</li><li>[x] 启动脚本就绪</li><li>[x] 内核源码完整</li><li>[x] 文档完整</li><li>[x] 项目结构完整</li><li>[ ] 首次启动后端（待执行）</li><li>[ ] 首次启动前端（待执行）</li><li>[ ] 访问管理界面（待执行）</li><li>[ ] 登录并测试功能（待执行）</li></ul>
+<hr>
+<h2 id="总结">🎉 总结<a class="anchor" href="#总结" aria-label="锚点">#</a></h2>
+<p><strong>Khy-OS 项目已成功部署到本地环境！</strong></p>
+<p>✅ 所有核心组件就绪  <br>✅ 依赖包已安装  <br>✅ Git 版本控制已配置  <br>✅ 启动脚本可用</p>
+<p>现在可以启动服务并开始使用了！</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_报告/00_INDEX_报告-分类索引.html"><div class="dir">← 上一篇</div><div class="ttl">00INDEX 报告分类索引</div></a><a class="next" href="../../../docs/_报告/历史/2026-08-根目录归档-修复记录.html"><div class="dir">下一篇 →</div><div class="ttl">2026-08 根目录归档：修复记录</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_报告/历史/2026-08-部署报告.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

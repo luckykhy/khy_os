@@ -168,9 +168,38 @@ router.post('/chat', async (req, res) => {
   }
 });
 
+// POST JSON/form data with the timeout and response shape expected by provider adapters.
+async function postProvider(url, data, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  let body;
+  if (options.params) {
+    body = new URLSearchParams(options.params).toString();
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  } else if (data !== null && data !== undefined) {
+    body = JSON.stringify(data);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body,
+    signal: AbortSignal.timeout(options.timeout || 15000),
+  });
+  const responseText = await response.text();
+  let responseData;
+  try {
+    responseData = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    responseData = responseText;
+  }
+  if (!response.ok) {
+    throw new Error(`Provider API HTTP ${response.status}`);
+  }
+  return { data: responseData };
+}
+
 // 调用云端AI
 async function callCloudAI(stockCode, analysisContext, question, tokens, clientLocation) {
-  const axios = require('axios');
 
   // 构建系统Prompt
   let systemPrompt = `你是小K，一个智能AI助手，擅长量化交易分析，也能回答各类问题。
@@ -232,7 +261,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       name: 'OpenAI',
       check: () => tokens.openai,
       call: async () => {
-        const response = await axios.post(
+        const response = await postProvider(
           'https://api.openai.com/v1/chat/completions',
           {
             model: MODELS.openaiDirect,
@@ -258,7 +287,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       name: 'Claude',
       check: () => tokens.anthropic,
       call: async () => {
-        const response = await axios.post(
+        const response = await postProvider(
           'https://api.anthropic.com/v1/messages',
           {
             model: MODELS.anthropicDirect,
@@ -282,7 +311,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       check: () => tokens.google,
       call: async () => {
         // API key sent in header to avoid logging it in URL/access logs
-        const response = await axios.post(
+        const response = await postProvider(
           'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
           {
             contents: [
@@ -311,7 +340,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       check: () => tokens.baidu,
       call: async () => {
         // client_secret sent in POST body to avoid logging it in URL/access logs
-        const tokenResponse = await axios.post('https://aip.baidubce.com/oauth/2.0/token', null, {
+        const tokenResponse = await postProvider('https://aip.baidubce.com/oauth/2.0/token', null, {
           params: {
             grant_type: 'client_credentials',
             client_id: tokens.baidu,
@@ -321,7 +350,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
         });
         const accessToken = tokenResponse.data.access_token;
 
-        const response = await axios.post(
+        const response = await postProvider(
           `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions?access_token=${accessToken}`,
           {
             messages: [{ role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }],
@@ -338,7 +367,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       name: '通义千问',
       check: () => tokens.alibaba,
       call: async () => {
-        const response = await axios.post(
+        const response = await postProvider(
           'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
           {
             model: MODELS.qwenDirect,
@@ -367,7 +396,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       name: '智谱AI',
       check: () => tokens.zhipu,
       call: async () => {
-        const response = await axios.post(
+        const response = await postProvider(
           'https://open.bigmodel.cn/api/paas/v4/chat/completions',
           {
             model: MODELS.zhipuDirect,
@@ -448,3 +477,5 @@ function generatePredefinedAnswer(question, analysis) {
 }
 
 module.exports = router;
+module.exports.callCloudAI = callCloudAI;
+module.exports.postProvider = postProvider;

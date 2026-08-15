@@ -2,12 +2,12 @@
 
 > 目标（用户原话）：「补充完善维护脚本，确保可以单人维护」。
 > 本篇是**维护映射表登记补丁**的人读说明：把五个此前已在产、却漏登记进
-> `docs/维护者/维护映射表.json` 的子系统一次补齐，让 `khy triage` / `maintainer:check` /
+> `docs/_维护者/维护映射表.json` 的子系统一次补齐，让 `khy triage` / `maintainer:check` /
 > 双击 launcher 能正确路由它们。每节结构统一：**它是什么 / 何时看它 / 怎么验 / 怎么扩展**。
 
 ## 为什么补这一篇
 
-CLAUDE.md 第四条红线：「新子系统必须登记进 `docs/维护者/维护映射表.json`
+CLAUDE.md 第四条红线：「新子系统必须登记进 `docs/_维护者/维护映射表.json`
 （whenToUse/paths/docs/verify）」。侦察发现下列子系统已接线在产但映射表零命中——
 未登记意味着：出问题时 `khy triage` 无法把症状路由到它们、`maintainer:check` 不覆盖它们的
 路径、双击维护 launcher 也生成不了它们的一键验证。本篇补齐登记并作为这些 area 的 `docs` 指向。
@@ -90,6 +90,6 @@ prompt 路由**进 agent** 作 follow-up（agent 架构，非调度器硬编码�
 
 ## 相关
 
-- 维护映射表：`docs/维护者/维护映射表.json`（本篇五节即其中五个 area 的人读说明）。
+- 维护映射表：`docs/_维护者/维护映射表.json`（本篇五节即其中五个 area 的人读说明）。
 - 维护映射表校验：`npm run maintainer:check`（现已校验 verify 字段）。
-- 无 AI 传承宪法：`docs/传承/KHY-OS-传承书.md`；四支柱体检 `khy maintain freshness`。
+- 无 AI 传承宪法：`docs/_传承/KHY-OS-传承书.md`；四支柱体检 `khy maintain freshness`。

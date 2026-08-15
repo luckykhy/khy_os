@@ -1,9 +1,9 @@
 /**
  * Unit tests for gatewayInlineEdit pure helpers. Zero deps — run with the
  * built-in Node test runner (apps/ai-frontend is type:module):
- *   node --test src/composables/gatewayInlineEdit.test.js
+ *   npx vitest run src/composables/gatewayInlineEdit.test.js
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
   userEdgeRowId,

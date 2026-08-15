@@ -211,28 +211,32 @@ function _authHeaders(upstream) {
  * Returns the assistant message content string.
  */
 async function _defaultChat(upstream, messages, model) {
-  const axios = require('axios');
-  const res = await axios({
+  const response = await fetch(_chatCompletionsUrl(upstream.baseUrl), {
     method: 'POST',
-    url: _chatCompletionsUrl(upstream.baseUrl),
     headers: _authHeaders(upstream),
-    data: {
+    body: JSON.stringify({
       model: model || upstream.model || 'gpt-4o-mini',
       messages,
       temperature: 0.1,
       response_format: { type: 'json_object' },
-    },
-    timeout: 90000,
-    validateStatus: () => true,
+    }),
+    signal: AbortSignal.timeout(90000),
   });
-  if (res.status >= 400) {
-    const detail =
-      typeof res.data === 'object'
-        ? JSON.stringify(res.data).slice(0, 300)
-        : String(res.data || '').slice(0, 300);
-    throw httpError(502, `Upstream model error (${res.status}): ${detail}`);
+  const responseText = await response.text();
+  let data;
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    data = responseText;
   }
-  const data = res.data || {};
+  if (!response.ok) {
+    const detail =
+      typeof data === 'object'
+        ? JSON.stringify(data).slice(0, 300)
+        : String(data || '').slice(0, 300);
+    throw httpError(502, `Upstream model error (${response.status}): ${detail}`);
+  }
+  data = data || {};
   const choice = Array.isArray(data.choices) ? data.choices[0] : null;
   const content = choice && choice.message ? choice.message.content : '';
   return typeof content === 'string' ? content : JSON.stringify(content || '');
@@ -497,4 +501,5 @@ module.exports = {
   _resolveUpstream,
   _resolveSystemRelay,
   _presetForProvider,
+  _defaultChat,
 };

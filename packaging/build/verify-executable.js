@@ -91,13 +91,10 @@ function runExecutionTest(exePath) {
     execFile(exePath, ['--help'], { timeout: 10000, windowsHide: true }, (error, stdout, stderr) => {
       if (error && error.killed) {
         resolve({ pass: false, detail: 'Timed out (10s)' });
-      } else if (error && error.code !== 0) {
-        // Some tools exit non-zero for --help, that's OK if they produce output
-        if (stdout || stderr) {
-          resolve({ pass: true, detail: `Exit ${error.code} with output` });
-        } else {
-          resolve({ pass: false, detail: `Exit ${error.code}, no output` });
-        }
+      } else if (error) {
+        const output = [stdout, stderr].filter(Boolean).join('\n').trim();
+        const summary = output ? output.split(/\r?\n/)[0] : 'no output';
+        resolve({ pass: false, detail: `Exit ${error.code}: ${summary}` });
       } else {
         resolve({ pass: true, detail: 'OK' });
       }

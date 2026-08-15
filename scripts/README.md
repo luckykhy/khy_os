@@ -22,13 +22,15 @@
 | `qoder-bridge/` | Qoder 桥接（自启脚本 + 日志） |
 | `release/` | 发布：pip/npm 构建、双通道发布、门禁与版本工具 |
 | `restore/` | 恢复子系统各阶段脚本 |
+| `setup/` | 一次性上手脚本：注册全局命令、起后端/前端、建默认管理员、网关诊断（原散落在根目录） |
 | `sync/` | 两台电脑间离线代码同步：git bundle 导出/导入（`export-sync` / `import-sync`） |
 | `tests/` | 上述脚本的单元测试（对应 `lib/` 模块） |
 
 ## 使用约定
 
 - **入口脚本**：CLI 启动器 `khy.bat` / `khy.sh` 放根目录（供 PATH 全局调用）；便携化启动
-  `run.ps1` / `run-portable.bat` / `run-portable.sh` 归入 `portable/`。
+  `run.ps1` / `run-portable.bat` / `run-portable.sh` 归入 `portable/`；
+  **只跑一次的装机/救急脚本**归入 `setup/`（见 `setup/README.md` 的「何时跑哪个」表）。
 - **新增脚本**按上述主题放入对应子目录；不建一次性散落目录。
 - **跨平台**：新增批处理类脚本应同时提供 `.bat` 与 `.sh` 配对（参照 `install-path-wrappers`、`slim-down`）。
 - **共享逻辑**写入 `lib/`，脚本主体保持薄壳。

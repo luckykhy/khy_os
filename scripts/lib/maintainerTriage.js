@@ -5,7 +5,7 @@
  *
  * 送别礼的反向能力：把「一句症状 / 一段报错」→ 排序匹配到真实子系统，
  * 并交出「该读哪些文件 / 该跑哪条验证命令」。与 1000 条进化手册共用同一真源
- * （docs/维护者/维护映射表.json），映射表长大它自动覆盖。
+ * （docs/_维护者/维护映射表.json），映射表长大它自动覆盖。
  *
  * 三类人都受益：
  *   - 使用者：对着报错不再发懵，知道下一步做什么。
@@ -20,7 +20,7 @@
  * HOW-TO-EXTEND（给下一个维护者 / 小模型）
  *   1. 想让某类症状更易命中 → 往 SYMPTOM_HINTS 追加一条 { area:'<映射表里的 id>', words:[...] }。
  *      words 支持中英混写，会作为高权重关键词参与打分。
- *   2. 新子系统请先登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全），
+ *   2. 新子系统请先登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全），
  *      本分诊器与速查表下次都会自动覆盖它，通常无需改本文件。
  *   3. 改完跑：node --test scripts/tests/maintainerTriage.test.js（必须绿）。
  */
@@ -29,7 +29,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const MAP_PATH = path.join(ROOT, 'docs', '维护者', '维护映射表.json');
+const MAP_PATH = path.join(ROOT, 'docs', '_维护者', '维护映射表.json');
 
 /**
  * 症状提示表：把常见「人话症状」与子系统 id 显式关联，作为高权重信号。

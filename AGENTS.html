@@ -42,6 +42,7 @@
 <p><code>software/khyquant/frontend/</code>（内置的 khyquant 交易 UI）</p>
 <hr>
 <h2 id="架构速查">架构速查<a class="anchor" href="#架构速查" aria-label="锚点">#</a></h2>
+<blockquote><p><strong>新增文件 / 新增顶层目录 / 新增 <code>npm run</code> 入口前，先读<br><code>docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md</code></strong> —— 它是顶层目录层级<br>（L0 <code>kernel/</code> → L1 <code>platform/</code> → L2 <code>services/</code> → L3 <code>apps/</code> → L4 <code>software/</code> →<br>L5 <code>extensions/</code> → L6 <code>tools/</code>）、允许的依赖方向、<code>docs/</code> 两轴命名与任务入口命名规约的<br><strong>单一真源</strong>，由 <code>npm run check:layout</code> 强制执行。本节只是运行时调用链的速查，不覆盖它。</p></blockquote>
 <pre><code>User → khy command → Python cli.py → Node.js services/backend/bin/khy.js
                                           │
                          ┌────────────────┼────────────────┐
@@ -71,7 +72,7 @@
 <p><code>scripts/release/publish-dual.sh</code> 在发布时从单一 <code>--version</code> 输入同步<br><code>pyproject.toml</code>、<code>packaging/npm/package.json</code> 与 <code>services/backend/package.json</code><br>三处主轨道真源；<code>packaging/modules/modules.json</code> 由构建流程/人工维护，<br>最终由 <code>scripts/ci/check-version-sync.js</code> 统一校验主轨道 4 源 + ai-backend<br>轨道 2 源的组内一致性。CI 门在发布之外强制同一不变式。</p>
 <hr>
 <h2 id="人工维护参考">人工维护参考<a class="anchor" href="#人工维护参考" aria-label="锚点">#</a></h2>
-<p>完整的中文开发者指南见 <strong><a href="docs/08_MGMT_项目管理/CONTRIBUTING.html">CONTRIBUTING.md</a></strong>，涵盖：</p>
+<p>完整的中文开发者指南见 <strong><a href="CONTRIBUTING.html">CONTRIBUTING.md</a></strong>（在仓库根目录——GitHub 只从根、<code>.github/</code>、<code>docs/</code> 顶层自动识别贡献指南），涵盖：</p>
 <ul><li>详细的目录结构说明</li><li>数据流图</li><li>调试技巧</li><li>常见维护任务</li><li>发布流程</li></ul>
 <hr>
 <h2 id="代码风格">代码风格<a class="anchor" href="#代码风格" aria-label="锚点">#</a></h2>

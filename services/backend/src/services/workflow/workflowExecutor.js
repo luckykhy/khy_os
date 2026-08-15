@@ -23,6 +23,8 @@
  */
 'use strict';
 
+const { request: nativeRequest } = require('../../utils/nativeHttp');
+
 const MAX_STEPS = 1000;
 
 // ── Pure helpers (exported for unit tests) ───────────────────────────────────
@@ -234,14 +236,19 @@ function defaultPrimitives(ctx = {}) {
       return this.executeTool('Bash', { command: source });
     },
     async http(req) {
-      const axios = require('axios');
-      const res = await axios({
+      const hasBody = req.body !== undefined && req.body !== null;
+      const isBuffer = Buffer.isBuffer(req.body);
+      const body = !hasBody ? undefined :
+        typeof req.body === 'string' || isBuffer ? req.body : JSON.stringify(req.body);
+      const headers = { ...(req.headers || {}) };
+      if (body !== undefined && typeof req.body === 'object' && !isBuffer) {
+        headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+      }
+      const res = await nativeRequest(req.url, {
         method: req.method || 'GET',
-        url: req.url,
-        headers: req.headers || {},
-        data: req.body || undefined,
-        timeout: 30000,
-        validateStatus: () => true,
+        headers,
+        body,
+        timeoutMs: 30000,
       });
       return { status: res.status, data: res.data };
     },

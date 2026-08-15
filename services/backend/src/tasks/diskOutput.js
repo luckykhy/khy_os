@@ -16,6 +16,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { getDataHome, isPortableDeployment } = require('../utils/dataHome');
 
 // ── Constants ──────────────────────────────────────────────────────────
 
@@ -36,7 +37,9 @@ let _taskOutputDir = null;
  * Task logs can reach MAX_TASK_OUTPUT_BYTES (5GB), so they must stay OFF the
  * system drive when possible to avoid crashing the host. Resolution:
  *   1. KHY_TASK_OUTPUT_DIR (explicit override)
- *   2. storageRoots policy: largest-free non-system drive, else system default
+ *   2. KHY_TEMP_HOME/tasks (launcher-owned portable temp root)
+ *   3. portable deployment: KHY_DATA_HOME/tmp/tasks
+ *   4. regular install: storageRoots capacity policy
  * preferCwd is false — bulk logs must not scatter into whatever directory the
  * user happens to be in. Session-stable once resolved.
  * @returns {string}
@@ -44,7 +47,11 @@ let _taskOutputDir = null;
 function getTaskOutputDir() {
   if (!_taskOutputDir) {
     if (process.env.KHY_TASK_OUTPUT_DIR) {
-      _taskOutputDir = process.env.KHY_TASK_OUTPUT_DIR;
+      _taskOutputDir = path.resolve(process.env.KHY_TASK_OUTPUT_DIR);
+    } else if (process.env.KHY_TEMP_HOME) {
+      _taskOutputDir = path.join(path.resolve(process.env.KHY_TEMP_HOME), 'tasks');
+    } else if (isPortableDeployment()) {
+      _taskOutputDir = path.join(getDataHome(), 'tmp', 'tasks');
     } else {
       try {
         const { resolveGeneratedFileDir } = require('../utils/storageRoots');

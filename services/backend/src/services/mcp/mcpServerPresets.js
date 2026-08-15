@@ -215,6 +215,15 @@ const _PRESETS = Object.freeze({
     argHint: '可追加 --transport 等参数;默认连接本机 Docker 守护进程',
     homepage: 'https://github.com/ckreiling/mcp-server-docker',
   },
+  'deepseek-eyes': {
+    description: '外部图像理解 MCP 服务(供纯文本模型转发图片)',
+    transport: 'stdio',
+    command: 'python',
+    args: ['-m', 'deepseek_eyes'],
+    requiresEnv: ['MODELSCOPE_API_KEY'],
+    argHint: null,
+    homepage: 'https://modelscope.cn/',
+  },
 });
 
 // 短名别名 → 规范预设名。

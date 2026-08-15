@@ -1,0 +1,156 @@
+# 前端 PR 门禁：apps/ai-frontend 与 software/khyquant/frontend。
+#
+# 为什么单独一个 workflow：这两个前端此前**只在 v* tag 的 build-executables.yml
+# 里被构建**，PR 阶段完全没有检查 —— 前端改坏了要等到出包才发现。
+#
+# 注意：本 workflow 带 paths 过滤器，因此**不可**设为分支保护的必需状态检查。
+# 路径过滤的 workflow 在不相关的 PR 上根本不会运行，也就永远不上报状态，
+# 一旦设为必需，那些 PR 会永久停在 "Expected — waiting for status"。
+# 原因与必需检查清单见 .github/rulesets/README.md。
+
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'apps/ai-frontend/**'
+      - 'software/khyquant/frontend/**'
+      - 'scripts/ci/check-frontend-size.js'
+      - 'scripts/ci/frontend-size-baseline.json'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'apps/ai-frontend/**'
+      - 'software/khyquant/frontend/**'
+      - 'scripts/ci/check-frontend-size.js'
+      - 'scripts/ci/frontend-size-baseline.json'
+      - '.github/workflows/frontend-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ai-frontend:
+    name: AI frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        # 用 working-directory 而不是 `npm --prefix`：`npm exec --prefix <dir> -- eslint src`
+        # 的 cwd 仍是仓库根目录，`src` 匹配不到任何文件，而 eslint 此时**退出码为 0** ——
+        # 一个什么都没检查的步骤会显示为通过。这是实测过的静默失败，不要改回 --prefix。
+        working-directory: apps/ai-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 不写死大版本：跟随当前稳定 LTS。
+          node-version: 'lts/*'
+          cache: npm
+          cache-dependency-path: apps/ai-frontend/package-lock.json
+
+      # apps/ai-frontend 不是根 workspace 成员（根 workspaces 只含
+      # platform/packages/shared、services/backend、services/ai-backend），
+      # 因此在本目录内独立安装。
+      - name: Install
+        run: npm ci
+
+      # vitest 覆盖 src/**/*.test.{js,mjs}（14 个文件 / 162 个用例，实测全绿）。
+      - name: Unit tests (vitest)
+        run: npm test
+
+      # test/ 下的 node:test 套件（backendDiscovery 等），与 vitest 互不重叠。
+      - name: Runtime tests (node:test)
+        run: npm run test:node
+
+      # 报告态。src/ 现存 5 个 error + 1617 个 warning（114 个文件中 56 个命中）。
+      # 其中 3 个 error 是真实的 no-undef 引用（AIChat.vue 的 gw、AIGateway.vue 的
+      # modelCatalog、GuiEvalRunDetail.vue 缺 reactive 导入）。修掉这 5 个之后，
+      # 把本步骤改为 `--max-warnings 1617` 并删掉 continue-on-error，即可锁死
+      # error 且不允许 warning 数量增长。
+      - name: Lint (report-only)
+        continue-on-error: true
+        run: npx eslint src --ext .js,.mjs,.vue
+
+      - name: Build
+        run: npm run build
+
+      # 体积门禁：只比对应用产物（vendor 静态拷贝单独提示）。
+      # 先以报告态运行，观察 Rollup chunk hash 抖动幅度后再加 --strict。
+      # 脚本自己按 __dirname 解析仓库根，但基线路径是仓库级的，所以回到根目录执行。
+      - name: Bundle size (report-only)
+        continue-on-error: true
+        working-directory: .
+        run: node scripts/ci/check-frontend-size.js --app apps/ai-frontend
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-frontend-dist
+          # vendor/ 是 10.5 MB 的静态拷贝，不随 PR 变化，排除后 artifact 从
+          # 13.1 MB 降到约 2.6 MB —— 省下的是每次 CI 的上传时间与存储配额。
+          path: |
+            apps/ai-frontend/dist
+            !apps/ai-frontend/dist/vendor
+          retention-days: 7
+          if-no-files-found: error
+
+  khyquant-frontend:
+    name: KhyQuant frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: software/khyquant/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: npm
+          cache-dependency-path: software/khyquant/frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # 该前端没有测试脚本，只有 lint:ci（eslint . --max-warnings 0）与 build。
+      #
+      # 已知失败，原因不是代码风格：software/khyquant/frontend/eslint.config.js
+      # （ESLint 9 flat config）import 了 eslint-plugin-vue，但该包**不在它的
+      # devDependencies 里**（只有 @vitejs/plugin-vue），于是 lint:ci 无论在本地
+      # 还是在全新 CI 安装下都以 ERR_MODULE_NOT_FOUND 结束 —— 它从来没跑起来过。
+      #
+      # 这里刻意保留为报告态并把原因写进步骤名，而不是悄悄删掉：
+      # 补上依赖（`npm i -D eslint-plugin-vue --prefix software/khyquant/frontend`，
+      # 会改动 package.json 与 package-lock.json）之后本步骤自动开始产出真实结果，
+      # 那时再把它改成阻断。
+      - name: Lint (report-only, known broken — missing eslint-plugin-vue)
+        continue-on-error: true
+        run: npm run lint:ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Bundle size (report-only)
+        continue-on-error: true
+        working-directory: .
+        run: node scripts/ci/check-frontend-size.js --app software/khyquant/frontend
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: khyquant-frontend-dist
+          path: software/khyquant/frontend/dist
+          retention-days: 7
+          if-no-files-found: error

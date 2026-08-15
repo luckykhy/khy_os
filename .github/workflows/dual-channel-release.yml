@@ -23,6 +23,13 @@ permissions:
   contents: write
   id-token: write    # OIDC token for sigstore/cosign keyless signing
 
+# 发布绝不允许并发，也绝不允许被取消：
+# publish-dual.sh 会推 tag、上传 PyPI 与 npm —— 中途被砍会留下
+# 「npm 已发布、PyPI 未发布」这类无法回滚的半成品状态。
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest

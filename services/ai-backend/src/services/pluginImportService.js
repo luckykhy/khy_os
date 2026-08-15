@@ -72,25 +72,43 @@ async function _fetchDoc(url, label) {
     throw httpError(400, `${label} blocked: ${err.message}`);
   }
 
-  const axios = require('axios');
-  const res = await axios({
+  const response = await fetch(parsedUrl.toString(), {
     method: 'GET',
-    url: parsedUrl.toString(),
-    timeout: FETCH_TIMEOUT_MS,
-    maxContentLength: MAX_SPEC_BYTES,
-    maxBodyLength: MAX_SPEC_BYTES,
-    responseType: 'text',
-    transformResponse: [(d) => d], // keep raw text; we parse ourselves
-    validateStatus: () => true,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
-  if (res.status >= 400) {
-    throw httpError(502, `Failed to fetch ${label} (${res.status})`);
+  if (!response.ok) {
+    throw httpError(502, `Failed to fetch ${label} (${response.status})`);
   }
-  const body = typeof res.data === 'string' ? res.data : JSON.stringify(res.data || {});
-  if (Buffer.byteLength(body, 'utf8') > MAX_SPEC_BYTES) {
+
+  const declaredLength = Number(response.headers?.get('content-length') || 0);
+  if (declaredLength > MAX_SPEC_BYTES) {
     throw httpError(413, `${label} exceeds size limit`);
   }
-  return _parseDoc(body, label);
+
+  const chunks = [];
+  let totalBytes = 0;
+  if (response.body?.getReader) {
+    const reader = response.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_SPEC_BYTES) {
+        await reader.cancel();
+        throw httpError(413, `${label} exceeds size limit`);
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } else {
+    const bytes = Buffer.from(await response.arrayBuffer());
+    totalBytes = bytes.byteLength;
+    if (totalBytes > MAX_SPEC_BYTES) {
+      throw httpError(413, `${label} exceeds size limit`);
+    }
+    chunks.push(bytes);
+  }
+
+  return _parseDoc(Buffer.concat(chunks, totalBytes).toString('utf8'), label);
 }
 
 // ── Normalization ───────────────────────────────────────────────────────────

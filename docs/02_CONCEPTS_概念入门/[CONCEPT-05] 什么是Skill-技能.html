@@ -73,7 +73,7 @@
   S3 -. 调用 .-&gt; T3</pre>
 <hr>
 <h2 id="四-解剖一个真实-skill-khy-release-safety">四、解剖一个真实 Skill：<code>khy-release-safety</code><a class="anchor" href="#四-解剖一个真实-skill-khy-release-safety" aria-label="锚点">#</a></h2>
-<p>光讲抽象结构不够，我们<strong>真的拆开一个</strong> Khy-OS 里存在的 Skill 看看。它就在 <a href="../AI协作预设包/skills/khy-release-safety"><code>docs/AI协作预设包/skills/khy-release-safety</code></a> 目录里，由两个文件组成：一个 <code>manifest.json</code>（登记表：告诉系统&quot;我是谁、什么时候该用我&quot;），一个 <code>prompt.md</code>（正文：具体怎么做）。</p>
+<p>光讲抽象结构不够，我们<strong>真的拆开一个</strong> Khy-OS 里存在的 Skill 看看。它就在 <a href="../_AI协作预设包/skills/khy-release-safety"><code>docs/_AI协作预设包/skills/khy-release-safety</code></a> 目录里，由两个文件组成：一个 <code>manifest.json</code>（登记表：告诉系统&quot;我是谁、什么时候该用我&quot;），一个 <code>prompt.md</code>（正文：具体怎么做）。</p>
 <h3 id="4-1-登记表-manifest-json-什么时候用-写在这里">4.1 登记表 <code>manifest.json</code>——&quot;什么时候用&quot;写在这里<a class="anchor" href="#4-1-登记表-manifest-json-什么时候用-写在这里" aria-label="锚点">#</a></h3>
 <pre><code class="language-json">{
   &quot;name&quot;: &quot;khy-release-safety&quot;,
@@ -168,7 +168,7 @@
 <h2 id="九-动手小实验-思想实验">九、动手小实验 / 思想实验<a class="anchor" href="#九-动手小实验-思想实验" aria-label="锚点">#</a></h2>
 <p>看懂了不算会，<strong>打开真东西摸一摸</strong>才算。下面两个小任务，不需要写代码，只需要&quot;读&quot;：</p>
 <h3 id="实验-a-拆开一个真实-skill-的结构-10-分钟">实验 A：拆开一个真实 Skill 的结构（10 分钟）<a class="anchor" href="#实验-a-拆开一个真实-skill-的结构-10-分钟" aria-label="锚点">#</a></h3>
-<ol><li>打开目录 <a href="../AI协作预设包/skills"><code>docs/AI协作预设包/skills</code></a>，你会看到一排子目录，<strong>每个子目录就是一个 Skill</strong>。</li><li>随便挑一个，比如 <a href="../AI协作预设包/skills/khy-troubleshoot"><code>khy-troubleshoot</code></a>（排障）或 <a href="../AI协作预设包/skills/khy-onboarding"><code>khy-onboarding</code></a>（新人上手），进去看。</li><li>找到里面的 <code>manifest.json</code>，读它的 <code>when_to_use</code> 字段——<strong>这就是这份手册&quot;什么时候被拿出来用&quot;</strong>。</li><li>再读 <code>prompt.md</code>，用第三节那张表去对照：哪几段是<strong>步骤</strong>？哪几段是<strong>红线（绝对不要）</strong>？哪里提到了要用的<strong>工具</strong>？</li></ol>
+<ol><li>打开目录 <a href="../_AI协作预设包/skills"><code>docs/_AI协作预设包/skills</code></a>，你会看到一排子目录，<strong>每个子目录就是一个 Skill</strong>。</li><li>随便挑一个，比如 <a href="../_AI协作预设包/skills/khy-troubleshoot"><code>khy-troubleshoot</code></a>（排障）或 <a href="../_AI协作预设包/skills/khy-onboarding"><code>khy-onboarding</code></a>（新人上手），进去看。</li><li>找到里面的 <code>manifest.json</code>，读它的 <code>when_to_use</code> 字段——<strong>这就是这份手册&quot;什么时候被拿出来用&quot;</strong>。</li><li>再读 <code>prompt.md</code>，用第三节那张表去对照：哪几段是<strong>步骤</strong>？哪几段是<strong>红线（绝对不要）</strong>？哪里提到了要用的<strong>工具</strong>？</li></ol>
 <pre class="mermaid">flowchart LR
   D1[打开 skills 目录] --&gt; D2[挑一个子目录]
   D2 --&gt; D3[读 manifest.json&lt;br/&gt;找 when_to_use]
@@ -181,11 +181,11 @@
 <hr>
 <h2 id="十-和-khy-os-的关系-有真实例子可看">十、和 Khy-OS 的关系（有真实例子可看）<a class="anchor" href="#十-和-khy-os-的关系-有真实例子可看" aria-label="锚点">#</a></h2>
 <p>Khy-OS 里已经有一批真实的 Skill，就放在这个目录：</p>
-<ul><li><a href="../AI协作预设包/skills"><code>docs/AI协作预设包/skills</code></a></li></ul>
+<ul><li><a href="../_AI协作预设包/skills"><code>docs/_AI协作预设包/skills</code></a></li></ul>
 <p>打开看看，每个子目录就是一个技能，这是当前<strong>真实存在</strong>的一批：</p>
-<table><thead><tr><th>Skill 目录</th><th>管的是哪类事</th><th>对应 Khy-OS 纪律</th></tr></thead><tbody><tr><td><a href="../AI协作预设包/skills/khy-release-safety"><code>khy-release-safety</code></a></td><td>发布安全（本文的解剖对象）</td><td>红线：密钥不入包、版本三处一致</td></tr><tr><td><a href="../AI协作预设包/skills/khy-safe-change"><code>khy-safe-change</code></a></td><td>安全改动（外科手术式改动的套路）</td><td>章程 B3：只动该动的</td></tr><tr><td><a href="../AI协作预设包/skills/khy-honest-closure"><code>khy-honest-closure</code></a></td><td>诚实收尾（没验证过不许说做完）</td><td>章程 B2：没跑过验证不许说&quot;修好了&quot;</td></tr><tr><td><a href="../AI协作预设包/skills/khy-onboarding"><code>khy-onboarding</code></a></td><td>新人上手</td><td>先读 <code>.ai/</code>、看懂再动手</td></tr><tr><td><a href="../AI协作预设包/skills/khy-pick-task"><code>khy-pick-task</code></a></td><td>挑任务 / 定优先级</td><td>目标驱动、先列 plan</td></tr><tr><td><a href="../AI协作预设包/skills/khy-troubleshoot"><code>khy-troubleshoot</code></a></td><td>排障套路</td><td>先定位再动手</td></tr><tr><td><a href="../AI协作预设包/skills/khy-gateway-fix"><code>khy-gateway-fix</code></a></td><td>网关类问题修复</td><td>对症的固定排查路径</td></tr><tr><td><a href="../AI协作预设包/skills/khy-weak-model-guardrails"><code>khy-weak-model-guardrails</code></a></td><td>给弱模型的护栏</td><td>直接对应&quot;为小模型兜底&quot;理念</td></tr></tbody></table>
+<table><thead><tr><th>Skill 目录</th><th>管的是哪类事</th><th>对应 Khy-OS 纪律</th></tr></thead><tbody><tr><td><a href="../_AI协作预设包/skills/khy-release-safety"><code>khy-release-safety</code></a></td><td>发布安全（本文的解剖对象）</td><td>红线：密钥不入包、版本三处一致</td></tr><tr><td><a href="../_AI协作预设包/skills/khy-safe-change"><code>khy-safe-change</code></a></td><td>安全改动（外科手术式改动的套路）</td><td>章程 B3：只动该动的</td></tr><tr><td><a href="../_AI协作预设包/skills/khy-honest-closure"><code>khy-honest-closure</code></a></td><td>诚实收尾（没验证过不许说做完）</td><td>章程 B2：没跑过验证不许说&quot;修好了&quot;</td></tr><tr><td><a href="../_AI协作预设包/skills/khy-onboarding"><code>khy-onboarding</code></a></td><td>新人上手</td><td>先读 <code>.ai/</code>、看懂再动手</td></tr><tr><td><a href="../_AI协作预设包/skills/khy-pick-task"><code>khy-pick-task</code></a></td><td>挑任务 / 定优先级</td><td>目标驱动、先列 plan</td></tr><tr><td><a href="../_AI协作预设包/skills/khy-troubleshoot"><code>khy-troubleshoot</code></a></td><td>排障套路</td><td>先定位再动手</td></tr><tr><td><a href="../_AI协作预设包/skills/khy-gateway-fix"><code>khy-gateway-fix</code></a></td><td>网关类问题修复</td><td>对症的固定排查路径</td></tr><tr><td><a href="../_AI协作预设包/skills/khy-weak-model-guardrails"><code>khy-weak-model-guardrails</code></a></td><td>给弱模型的护栏</td><td>直接对应&quot;为小模型兜底&quot;理念</td></tr></tbody></table>
 <p>这些 Skill 把 Khy-OS 的工程纪律（章程里的 <strong>B1 先想再写 / B2 目标驱动 / B3 外科手术式改动</strong>、以及各条红线）<strong>变成了 AI 可以直接照做的手册</strong>。换句话说：章程是&quot;法律条文&quot;，Skill 是&quot;照着法律办事的操作流程&quot;——前者讲道理，后者能落地。</p>
-<p>特别看一眼 <a href="../AI协作预设包/skills/khy-weak-model-guardrails"><code>khy-weak-model-guardrails</code></a> 这个名字——它几乎是把第七节&quot;为小模型兜底&quot;的理念直接写成了一个 Skill。<strong>这就是 Khy-OS 用 Skill 兑现&quot;让弱智用户 / 小模型也不容易出错&quot;承诺的地方。</strong></p>
+<p>特别看一眼 <a href="../_AI协作预设包/skills/khy-weak-model-guardrails"><code>khy-weak-model-guardrails</code></a> 这个名字——它几乎是把第七节&quot;为小模型兜底&quot;的理念直接写成了一个 Skill。<strong>这就是 Khy-OS 用 Skill 兑现&quot;让弱智用户 / 小模型也不容易出错&quot;承诺的地方。</strong></p>
 <hr>
 <h2 id="十一-五个概念-最终合体">十一、五个概念，最终合体<a class="anchor" href="#十一-五个概念-最终合体" aria-label="锚点">#</a></h2>
 <p>恭喜你读到这里！把五个概念拼起来，就是一个完整的 AI 编程助手：</p>
@@ -205,7 +205,7 @@
 <hr>
 <h2 id="十二-下一步去哪">十二、下一步去哪<a class="anchor" href="#十二-下一步去哪" aria-label="锚点">#</a></h2>
 <p>你已经掌握了看懂 AI 编程助手所需的<strong>全部核心概念</strong>。接下来建议：</p>
-<ol><li>回到<a href="../index.html">文档站首页</a>，浏览 Khy-OS 的其它文档，现在你能看懂它们在讲什么了。</li><li>想动手实践，去 <a href="../07_OPS_运维"><code>docs/07_OPS_运维</code></a> 找上手 / 安装类文档；发布相关的权威手册就在那里（<code>[OPS-MAN-042] 发布手册</code>）。</li><li>想看这些概念的真实代码实现，去 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a>。</li><li>想真正摸一个 Skill，回到第九节的<strong>实验 A</strong>，打开 <a href="../AI协作预设包/skills"><code>docs/AI协作预设包/skills</code></a> 挑一个读它的手册结构。</li></ol>
+<ol><li>回到<a href="../index.html">文档站首页</a>，浏览 Khy-OS 的其它文档，现在你能看懂它们在讲什么了。</li><li>想动手实践，去 <a href="../07_OPS_运维"><code>docs/07_OPS_运维</code></a> 找上手 / 安装类文档；发布相关的权威手册就在那里（<code>[OPS-MAN-042] 发布手册</code>）。</li><li>想看这些概念的真实代码实现，去 <a href="../03_DESIGN_设计"><code>docs/03_DESIGN_设计</code></a>。</li><li>想真正摸一个 Skill，回到第九节的<strong>实验 A</strong>，打开 <a href="../_AI协作预设包/skills"><code>docs/_AI协作预设包/skills</code></a> 挑一个读它的手册结构。</li></ol>
 <aside class="callout callout-star reveal"><div class="callout-mascot" aria-hidden="true">🦊</div><div class="callout-body"><div class="callout-title">⭐ 恭喜你读完了核心五篇！</div><p>到这里，Agent、Tool Calling、Tool Loop、MCP、Skill 这五块地基你已经踩实了 🎉。如果你还想往下挖——比如&quot;前面一直说的<strong>大模型</strong>到底是什么？&quot;&quot;它为什么会<strong>忘事</strong>？&quot;&quot;它怎么<strong>记住</strong>我给的资料？&quot;——那就顺着<strong>进阶链</strong>继续：先从 <a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 什么是 LLM（大语言模型）</a> 开始，一路读到 RAG、机器学习、深度学习。</p></div></aside>
 <p>👉 继续深入：<a href="./[CONCEPT-06]%20什么是LLM-大语言模型.html">⑥ 什么是 LLM（大语言模型）</a>　｜　👈 回到 <a href="./00_INDEX_概念入门-总览.html">概念入门总览</a></p>
       </article>

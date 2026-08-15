@@ -148,8 +148,7 @@ test('clearBytes: 未画过(lastGeom 空) → 空串;画过 → 返回清槽位�
     rail.setSnapshot(SNAP);
     rail.paintBytes(); // 建立 lastGeom
     const bytes = rail.clearBytes();
-    assert.ok(bytes.includes('\x1b[1;127H'), '清的是上次画过的几何(left=127)');
-    assert.ok(bytes.includes(' '.repeat(24)), '整宽空格覆盖');
+    assert.equal(bytes, '', '已有稳定绘制 → 前置清屏必须跳过,避免清屏后重复帧不回画');
     assert.equal(out.writes.length, 0, 'clearBytes 与 paintBytes 同契约:绝不写 IO');
   });
 });
@@ -204,7 +203,19 @@ test('paintBytes: 几何未变时不发多余的清屏字节', () => {
     rail.setSnapshot(SNAP);
     rail.paintBytes();
     const bytes = rail.paintBytes();
-    assert.equal((bytes.match(/\x1b7/g) || []).length, 1, '只应有一段 DECSC…DECRC');
+    assert.equal(bytes, '', '几何与内容均未变时应跳过重复绘制');
+  });
+});
+
+test('paintBytes(force): 滚屏帧即使内容相同也强制回画', () => {
+  const rail = load();
+  const out = fakeTTY();
+  withEnv({ KHY_SIDEBAR_RAIL: '1' }, () => {
+    rail.enable(out);
+    rail.setSnapshot(SNAP);
+    rail.paintBytes();
+    assert.ok(rail.clearBytes(true).length > 0, '滚屏帧前应清旧槽位');
+    assert.ok(rail.paintBytes(true).length > 0, '滚屏帧后应强制回画相同内容');
   });
 });
 
@@ -289,8 +300,7 @@ test('setDims: 几何跟随推送尺寸，流上读数帧间震荡不再影响�
     out.columns = undefined; // conpty 震荡：流上瞬时读不到宽度
     out.rows = undefined;
     const bytes = rail.paintBytes();
-    assert.ok(bytes.includes('\x1b[1;127H'), '几何仍按推送的 150 列(left=127)');
-    assert.equal((bytes.match(/\x1b7/g) || []).length, 1, '几何未变 → 无多余清屏段');
+    assert.equal(bytes, '', '几何未变且帧内容未变 → 跳过重复绘制');
   });
 });
 
@@ -344,6 +354,7 @@ test('setDims: 有效值后推 unknown(null) → 粘滞保留上次有效值(抗
     rail.setDims(130, 40);              // 有效 → 栏宽24 → left=107
     rail.paintBytes();
     rail.setDims(null, null);           // unknown → 应粘滞回 130,而非假定80
+    rail.setSnapshot({ ...SNAP, queueLen: 2 }); // 触发一次新帧以观察粘滞几何
     const bytes = rail.paintBytes();
     assert.ok(bytes.includes('\x1b[1;107H'), 'unknown 帧粘滞保留 130 列(left=107)');
     assert.ok(!bytes.includes('\x1b[1;57H'), '绝不坠到假定 80 列(left=57)');
@@ -557,9 +568,11 @@ test('_resetLazyCacheForTest: 清除后下次 paintBytes 重新 require(但仍�
     rail.setSnapshot(SNAP);
     rail.paintBytes(); // populate cache
     rail._resetLazyCacheForTest();
-    // After reset, next paint should still succeed (re-resolves deps)
+    // After reset, the stable frame may be deduplicated; change the snapshot to
+    // verify the dependencies are re-resolved on the next actual paint.
+    rail.setSnapshot({ ...SNAP, queueLen: 2 });
     const bytes = rail.paintBytes();
-    assert.ok(bytes.length > 0, '重置后 paint 仍正常');
+    assert.ok(bytes.length > 0, '重置后发生新帧时 paint 仍正常');
   });
 });
 

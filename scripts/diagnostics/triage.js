@@ -4,9 +4,9 @@
  * triage.js — 症状分诊 CLI + 速查表生成器
  *
  * 用法：
- *   node scripts/triage.js "识图老是404还落剪贴板"     # 分诊：症状→子系统+读哪些文件+跑哪条命令
- *   npm run triage -- "守护进程端口漂移"                # 同上（经 npm 别名）
- *   node scripts/triage.js --gen-doc                    # 重新生成 OPS-MAN-067 症状分诊速查表
+ *   node scripts/diagnostics/triage.js "识图老是404还落剪贴板"     # 分诊：症状→子系统+读哪些文件+跑哪条命令
+ *   npm run maintainer:triage -- "守护进程端口漂移"                # 同上（经 npm 别名）
+ *   node scripts/diagnostics/triage.js --gen-doc                    # 重新生成 OPS-MAN-067 症状分诊速查表
  *
  * 设计：分诊逻辑全在纯叶子 scripts/lib/maintainerTriage.js；本文件只做 IO 与呈现。
  */
@@ -55,14 +55,14 @@ function buildDoc() {
   lines.push('# [OPS-MAN-067] Khy-OS 症状分诊速查表');
   lines.push('');
   lines.push('> 出问题时的第一站：用 `Ctrl-F` 搜你看到的现象/报错词，跳到对应子系统，照着「先读文件」和「跑这条验证」做。');
-  lines.push('> 本表由 `docs/维护者/维护映射表.json` 确定性生成，子系统长大后重跑 `npm run gen-triage-doc` 即自动覆盖。');
+  lines.push('> 本表由 `docs/_维护者/维护映射表.json` 确定性生成，子系统长大后重跑 `npm run maintenance:triage-doc` 即自动覆盖。');
   lines.push('');
   lines.push('## 更快的用法：直接问分诊器');
   lines.push('');
   lines.push('```bash');
-  lines.push('npm run triage -- "识图老是404还落剪贴板"     # 症状 → 子系统 + 读哪些文件 + 跑哪条命令');
-  lines.push('npm run triage -- "守护进程端口漂移连不上"');
-  lines.push('npm run triage -- "slash command missing"');
+  lines.push('npm run maintainer:triage -- "识图老是404还落剪贴板"     # 症状 → 子系统 + 读哪些文件 + 跑哪条命令');
+  lines.push('npm run maintainer:triage -- "守护进程端口漂移连不上"');
+  lines.push('npm run maintainer:triage -- "slash command missing"');
   lines.push('```');
   lines.push('');
   lines.push('## 通用纪律（改动前必读）');
@@ -109,9 +109,9 @@ function buildDoc() {
 
   lines.push('## 都不对？');
   lines.push('');
-  lines.push('- 把报错原文完整贴给分诊器：`npm run triage -- "<把报错粘这里>"`。');
+  lines.push('- 把报错原文完整贴给分诊器：`npm run maintainer:triage -- "<把报错粘这里>"`。');
   lines.push('- 仍无匹配就查总入口 `docs/00_INDEX_文档索引.md`，或读 `.ai/MAP.md` 了解全局骨架。');
-  lines.push('- 新子系统请先登记进 `docs/维护者/维护映射表.json`，本表下次重生会自动收录它。');
+  lines.push('- 新子系统请先登记进 `docs/_维护者/维护映射表.json`，本表下次重生会自动收录它。');
   lines.push('');
   return lines.join('\n');
 }
@@ -132,7 +132,7 @@ if (require.main === module) {
   } else {
     const symptom = argv.join(' ').trim();
     if (!symptom) {
-      process.stdout.write('用法: node scripts/triage.js "<症状/报错文本>"  或  --gen-doc\n');
+      process.stdout.write('用法: node scripts/diagnostics/triage.js "<症状/报错文本>"  或  --gen-doc\n');
       process.exit(0);
     }
     runTriage(symptom);

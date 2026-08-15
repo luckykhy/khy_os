@@ -42,26 +42,20 @@ if [ -z "$PYTHON_CMD" ]; then
     exit 1
 fi
 
-# --- Detect Node.js 20+ ---
-if ! command -v node >/dev/null 2>&1; then
-    echo "[ERROR] 检测 Node.js 20+ 失败：未在 PATH 中找到 node"
-    echo "请安装 Node.js 20+: https://nodejs.org/"
-    exit 1
-fi
-
-NODE_VERSION="$(node --version 2>/dev/null)"
-NODE_MAJOR="${NODE_VERSION#v}"
-NODE_MAJOR="${NODE_MAJOR%%.*}"
-
-if [ "$NODE_MAJOR" -lt 20 ] 2>/dev/null; then
-    echo "[ERROR] 检测 Node.js 20+ 失败：当前版本 ${NODE_VERSION} 过低（需要 v20+）"
-    echo "请升级 Node.js: https://nodejs.org/"
-    exit 1
-fi
-
-# --- Set environment variables ---
+# --- Set portable environment variables ---
+# Node is resolved by khy_platform.node_provisioner after Python starts.
+# This keeps the launcher usable on machines without a system Node install.
 export KHYQUANT_PORTABLE_ROOT="$SCRIPT_DIR"
-export KHYQUANT_DATA_HOME="${KHYQUANT_DATA_HOME:-$SCRIPT_DIR/.khyquant-data}"
+export KHY_PORTABLE_ROOT="$SCRIPT_DIR"
+export KHY_OS_ROOT="$SCRIPT_DIR"
+export KHY_DATA_HOME="${KHY_DATA_HOME:-$SCRIPT_DIR/.khy}"
+export KHY_PROJECT_DATA_HOME="${KHY_PROJECT_DATA_HOME:-$KHY_DATA_HOME}"
+export KHYQUANT_DATA_HOME="${KHYQUANT_DATA_HOME:-$KHY_DATA_HOME}"
+export KHYOS_HOME="${KHYOS_HOME:-$KHY_DATA_HOME}"
+export KHY_RUNTIME_HOME="${KHY_RUNTIME_HOME:-$KHY_DATA_HOME/runtime}"
+export KHY_CACHE_HOME="${KHY_CACHE_HOME:-$KHY_DATA_HOME/cache}"
+export KHY_LOG_HOME="${KHY_LOG_HOME:-$KHY_DATA_HOME/logs}"
+export KHY_TEMP_HOME="${KHY_TEMP_HOME:-$KHY_DATA_HOME/tmp}"
 export PYTHONPATH="$SCRIPT_DIR/platform:$SCRIPT_DIR/software/khyquant:${PYTHONPATH:-}"
 # Tell the platform launcher which entry alias was used (python -m loses argv[0]).
 export KHY_INVOKED_AS="khy"

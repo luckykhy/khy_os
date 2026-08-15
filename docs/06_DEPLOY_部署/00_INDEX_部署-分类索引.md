@@ -28,6 +28,19 @@
 | [DEPLOY-MAN-016] 部署指南-域名.md | 有域名部署 | 定稿 |
 | [DEPLOY-MAN-017] 部署指南-无域名.md | 无域名部署 | 定稿 |
 | [DEPLOY-MAN-018] khyos-Android构建避坑指南.md | Android构建避坑 | 定稿 |
+| [DEPLOY-MAN-019] 模型可用性与适配器探测.md | 适配器探测与可用性 | 定稿 |
+| [DEPLOY-MAN-020] AI供应商与APIKey配置.md | 供应商与Key配置 | 定稿 |
+| [DEPLOY-MAN-021] IDE桥接模式.md | 复用IDE凭据桥接 | 定稿 |
+| PORTABLE.md | 便携化打包与启动 | 定稿·未编号 |
+
+> `PORTABLE.md` 沿用历史无编号文件名（`README.md` 与多处脚本按此路径引用）。
+> 补编号需同步改写全部入站引用，属独立一轮工作；此处如实登记，不假装已合规。
+
+`[DEPLOY-MAN-019/020/021]` 由根目录 `COMPLETE_DEPLOYMENT_GUIDE.md` /
+`AI_MODEL_SETUP_GUIDE.md` / `IDE_BRIDGE_GUIDE.md` 重写而成（归档日期 2026-08-15）。
+三份原文均把「适配器 enabled」与「模型 available」混为一谈，并给出多个仓库里
+**不存在**的环境变量名；重写版按 `services/backend/src/services/gateway/` 源码实测更正，
+先读 `[DEPLOY-MAN-019]` 再读另两篇。
 
 ## 三、跨分类关联指引
 

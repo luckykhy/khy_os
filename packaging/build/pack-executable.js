@@ -139,6 +139,7 @@ function packModule(moduleConfig, platform) {
       '--target', target,
       '--output', outputPath,
       '--compress', 'GZip',
+      '--fallback-to-source',
     ];
 
     // Add assets

@@ -22,13 +22,13 @@ node scripts/ci/check-skill-evals.js
 Optional report output:
 
 ```bash
-node scripts/ci/check-skill-evals.js --report docs/报告/技能评估-最新.json
+node scripts/ci/check-skill-evals.js --report docs/_报告/技能评估-最新.json
 ```
 
 Scenario eval:
 
 ```bash
-node scripts/ci/check-skill-scenarios.js --report docs/报告/技能场景评估-最新.json
+node scripts/ci/check-skill-scenarios.js --report docs/_报告/技能场景评估-最新.json
 ```
 
 ## What This Baseline Checks

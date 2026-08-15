@@ -16,6 +16,7 @@ chcp 65001 >nul
 if /i "%~1"=="repair" (
     where node >nul 2>&1
     if !ERRORLEVEL! neq 0 call :discover_node
+    if defined NODE_FOUND_DIR set "PATH=!NODE_FOUND_DIR!;!PATH!"
     where node >nul 2>&1
     if !ERRORLEVEL! neq 0 (
         echo [ERROR] khy repair needs Node.js 20+ in PATH: https://nodejs.org/
@@ -66,36 +67,43 @@ if not defined PYTHON_CMD (
 )
 
 if not defined PYTHON_CMD (
-    echo [ERROR] 检测 Python 3.8+ 失败：未在 PATH 中找到 python
+    for %%F in (
+        "%~dp0runtime\python\python.exe"
+        "%~dp0.khy\python\python.exe"
+    ) do (
+        if not defined PYTHON_CMD if exist "%%~fF" set "PYTHON_CMD=""%%~fF"""
+    )
+)
+
+if not defined PYTHON_CMD if defined LOCALAPPDATA if exist "%LOCALAPPDATA%\Programs\Python" (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "%LOCALAPPDATA%\Programs\Python\Python3*" 2^>nul') do (
+        if not defined PYTHON_CMD if exist "%LOCALAPPDATA%\Programs\Python\%%D\python.exe" (
+            set "PYTHON_CMD=""%LOCALAPPDATA%\Programs\Python\%%D\python.exe"""
+        )
+    )
+)
+
+if not defined PYTHON_CMD (
+    echo [ERROR] 检测 Python 3.8+ 失败：未找到可用的 Python
+    echo 已检查 PATH、py launcher、项目内运行时和 LocalAppData 标准安装目录
     echo 请安装 Python 3.8+: https://www.python.org/downloads/
     exit /b 1
 )
 
-:: --- Detect Node.js 20+ (PATH first, then auto-discovery fallback) ---
-where node >nul 2>&1
-if %ERRORLEVEL% neq 0 call :discover_node
-if defined NODE_FOUND_DIR set "PATH=%NODE_FOUND_DIR%;%PATH%"
-where node >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] 检测 Node.js 20+ 失败：PATH 与常见安装位置均未找到 node
-    echo 请安装 Node.js 20+: https://nodejs.org/
-    exit /b 1
-)
-
-set "NODE_MAJOR=0"
-for /f "tokens=1 delims=v." %%N in ('node --version 2^>nul') do (
-    set "NODE_MAJOR=%%N"
-)
-
-if !NODE_MAJOR! lss 20 (
-    echo [ERROR] 检测 Node.js 20+ 失败：当前版本过低，需要 v20+
-    echo 请升级 Node.js: https://nodejs.org/
-    exit /b 1
-)
-
-:: --- Set environment variables ---
+:: --- Set portable environment variables ---
+:: Node is resolved by khy_platform.node_provisioner after Python starts.
+:: This keeps the launcher usable on machines without a system Node install.
 set "KHYQUANT_PORTABLE_ROOT=%~dp0"
-if not defined KHYQUANT_DATA_HOME set "KHYQUANT_DATA_HOME=%~dp0.khyquant-data"
+set "KHY_PORTABLE_ROOT=%~dp0"
+set "KHY_OS_ROOT=%~dp0"
+if not defined KHY_DATA_HOME set "KHY_DATA_HOME=%~dp0.khy"
+if not defined KHY_PROJECT_DATA_HOME set "KHY_PROJECT_DATA_HOME=%~dp0.khy"
+if not defined KHYQUANT_DATA_HOME set "KHYQUANT_DATA_HOME=%KHY_DATA_HOME%"
+set "KHYOS_HOME=%KHY_DATA_HOME%"
+set "KHY_RUNTIME_HOME=%KHY_DATA_HOME%\runtime"
+set "KHY_CACHE_HOME=%KHY_DATA_HOME%\cache"
+set "KHY_LOG_HOME=%KHY_DATA_HOME%\logs"
+set "KHY_TEMP_HOME=%KHY_DATA_HOME%\tmp"
 set "PYTHONPATH=%~dp0platform;%~dp0software\khyquant;%PYTHONPATH%"
 set "KHY_INVOKED_AS=khy"
 
@@ -128,6 +136,13 @@ if defined LOCALAPPDATA if exist "%LOCALAPPDATA%\Volta\bin\node.exe" set "NODE_F
 if defined LOCALAPPDATA if exist "%LOCALAPPDATA%\khy\node" (
     for /f "delims=" %%D in ('dir /b /ad "%LOCALAPPDATA%\khy\node" 2^>nul') do (
         for /f "delims=" %%F in ('dir /b /s "%LOCALAPPDATA%\khy\node\%%D\node.exe" 2^>nul') do (
+            call :consider_node_version "%%D" "%%~dpF"
+        )
+    )
+)
+if exist "%~dp0.khy\node" (
+    for /f "delims=" %%D in ('dir /b /ad "%~dp0.khy\node" 2^>nul') do (
+        for /f "delims=" %%F in ('dir /b /s "%~dp0.khy\node\%%D\node.exe" 2^>nul') do (
             call :consider_node_version "%%D" "%%~dpF"
         )
     )

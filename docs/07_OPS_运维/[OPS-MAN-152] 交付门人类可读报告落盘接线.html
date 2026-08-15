@@ -42,7 +42,7 @@
 <ul><li><strong>两个 orphan export 都被激活</strong>:<code>saveDeliveryReport</code> 内部调用</li></ul>
 <p><code>generateDeliveryReport</code>。</p>
 <h3 id="触碰的文件">触碰的文件<a class="anchor" href="#触碰的文件" aria-label="锚点">#</a></h3>
-<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>services/backend/src/services/flagRegistry.js</code></td><td>注册 <code>KHY_DELIVERY_GATE_REPORT</code> default-on</td></tr><tr><td><code>services/backend/src/services/agenticHarnessService.js</code></td><td><code>delivery_verdict</code> 后新增门控落盘块</td></tr><tr><td><code>services/backend/tests/services/deliveryGateReporter.test.js</code></td><td>+3 测(落盘一致性 / harness 接线源级断言 / 门注册)</td></tr><tr><td><code>docs/维护者/维护映射表.json</code></td><td>新增 area <code>delivery-gate-report-artifact</code></td></tr></tbody></table>
+<table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>services/backend/src/services/flagRegistry.js</code></td><td>注册 <code>KHY_DELIVERY_GATE_REPORT</code> default-on</td></tr><tr><td><code>services/backend/src/services/agenticHarnessService.js</code></td><td><code>delivery_verdict</code> 后新增门控落盘块</td></tr><tr><td><code>services/backend/tests/services/deliveryGateReporter.test.js</code></td><td>+3 测(落盘一致性 / harness 接线源级断言 / 门注册)</td></tr><tr><td><code>docs/_维护者/维护映射表.json</code></td><td>新增 area <code>delivery-gate-report-artifact</code></td></tr></tbody></table>
 <p>god-file 检查:agenticHarnessService 1882 行、flagRegistry 2483 行,均 &lt; 2500。</p>
 <h2 id="验证-全绿">验证(全绿)<a class="anchor" href="#验证-全绿" aria-label="锚点">#</a></h2>
 <pre><code>node services/backend/tests/services/deliveryGateReporter.test.js   # 9/9 通过

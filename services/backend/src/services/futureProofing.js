@@ -252,7 +252,7 @@ function _checkSelfMaintenance(wiring) {
     ['pipLifeline', 'pip 发布生命线 (setup.py)', 'pip 是唯一发布渠道，缺失即无法分发'],
     ['aiSeedDocs', '.ai/ 种子文档', '运行 khy metadata refresh 重建'],
     ['maintenanceLaunchers', 'maintenance/ 双击启动器', '运行 npm run maintenance:generate 重建'],
-    ['inheritanceDoc', '传承书 (docs/传承/)', '它是无 AI 维护的操作宪法，应随仓库保留'],
+    ['inheritanceDoc', '传承书 (docs/_传承/)', '它是无 AI 维护的操作宪法，应随仓库保留'],
   ];
   const missing = pillars.filter(([key]) => w[key] === false);
   if (!missing.length) {

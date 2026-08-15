@@ -7,7 +7,7 @@
  *   红线、五道验证门）作为通用篇固化下来。系统长大后改本文件重跑即可让手册重生。
  *
  * 数据源（单一真源，绝不臆造子系统）
- *   docs/维护者/维护映射表.json — 10 个 area，各带 whenToUse / paths / docs / verify。
+ *   docs/_维护者/维护映射表.json — 10 个 area，各带 whenToUse / paths / docs / verify。
  *
  * 安全契约
  *   - 本脚本零副作用地 build()（纯计算、确定性、无网络、无随机、无时钟）。
@@ -23,7 +23,7 @@
  *   1. 想加「通用纪律」→ 往 GENERAL 数组尾部追加一条 {text, note, v}。
  *   2. 想加「进化配方」→ 往 RECIPES 数组追加一条 {t, n, v}（t/n 里用 ${label} 占位）。
  *   3. v 只能填 VERIFY_KEYS 里的键或 'area'（用该子系统自己的 verify）。
- *   4. 新子系统请先登记进 docs/维护者/维护映射表.json，本手册会自动覆盖它。
+ *   4. 新子系统请先登记进 docs/_维护者/维护映射表.json，本手册会自动覆盖它。
  *   5. 改完跑：node --test scripts/tests/gen-evolution-prompts.test.js（必须绿）。
  */
 
@@ -33,7 +33,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const MAP_PATH = path.join(ROOT, 'docs', '维护者', '维护映射表.json');
+const MAP_PATH = path.join(ROOT, 'docs', '_维护者', '维护映射表.json');
 const DOC_PATH = path.join(
   ROOT,
   'docs',
@@ -119,7 +119,7 @@ const GENERAL = [
   { text: '每次动手前先做 B1：用一句话说清「改什么 / 为什么 / 影响面」，说不清就先别改。', note: '先想再写，避免瞎改。', v: 'agent' },
   { text: '用 B2 目标驱动循环：先定义可验证的成功标准，再自循环到绿，验证没过绝不说「修好了」。', note: '核心方法论。', v: 'maint' },
   { text: '遵守 B3 外科手术式改动：只动该动的，不顺手重构、不扩大范围。', note: '把改动面压到最小。', v: 'change' },
-  { text: '改任何文件前，先读 .ai/MAP.md 与 docs/维护者/维护映射表.json 定位正确子系统。', note: '别在错的地方改。', v: 'maint' },
+  { text: '改任何文件前，先读 .ai/MAP.md 与 docs/_维护者/维护映射表.json 定位正确子系统。', note: '别在错的地方改。', v: 'maint' },
   { text: '多步任务先列 plan，每一步都写明它自己的 verify 命令。', note: '每步可验证。', v: 'agent' },
   { text: '红线：绝不 AI 自动 commit/push，任何提交都要用户明确点头。', note: '提交权在人。', v: 'agent' },
   { text: '红线：真 key/token 绝不进源码 / 包 / 提交，只经 env 注入，日志只打印长度不打印明文。', note: '密钥防泄露。', v: 'model' },
@@ -206,7 +206,7 @@ const RECIPES = [
   { t: '把「${label}」里超过三层的嵌套条件重构为早返回（guard clause），降低阅读成本。', n: '早返回。', v: 'change' },
   { t: '为「${label}」补一条门关字节回退测试：关掉 KHY_* 门后行为逐字节回到改动前。', n: '门关回退。', v: 'flag' },
   { t: '给「${label}」仅用于匹配的正则去掉全局 g 标志，避免 lastIndex 状态残留。', n: '正则去 g。', v: 'area' },
-  { t: '为「${label}」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。', n: '登记映射表。', v: 'maint' },
+  { t: '为「${label}」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。', n: '登记映射表。', v: 'maint' },
   { t: '为「${label}」补一句「一句话验证脚本」并并入 test:maintainer:all。', n: '一句话验证。', v: 'maint' },
   { t: '检查「${label}」的错误信息是否可执行：告诉用户「下一步做什么」而不仅是「哪里错了」。', n: '可执行错误。', v: 'area' },
   { t: '为「${label}」的关键常量补注释解释「为什么是这个值」（保守高估、上限来源等）。', n: '常量讲来源。', v: 'change' },
@@ -340,7 +340,7 @@ function buildHeader(count) {
     '# [OPS-MAN-066] Khy-OS 进化提示词手册（1000 条）',
     '',
     '> 交给 khy 或任何「弱智 AI / 4B 小模型」用的进化清单：一次喂一条，照着做，跑通它自带的验证命令。',
-    '> 全部锚定本仓真实子系统、真实文件、真实 verify（来自 `docs/维护者/维护映射表.json`）。',
+    '> 全部锚定本仓真实子系统、真实文件、真实 verify（来自 `docs/_维护者/维护映射表.json`）。',
     '',
     '## 怎么用（给小模型的三步）',
     '',
@@ -374,7 +374,7 @@ function buildHeader(count) {
     'npm run test:evolution-prompts         # 校验恰好 ' + count + ' 条、每条带安全 verify、幂等',
     '```',
     '',
-    '> 新增子系统请先登记进 `docs/维护者/维护映射表.json`，本手册下次重生会自动覆盖它。',
+    '> 新增子系统请先登记进 `docs/_维护者/维护映射表.json`，本手册下次重生会自动覆盖它。',
     '',
     `**共 ${count} 条。**`,
     '',

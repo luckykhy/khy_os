@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khy-OS 项目规模报告 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_报告<span class="sep">›</span>历史<span class="sep">›</span>Khy-OS 项目规模报告</div>
+      <header class="hero reveal"><h1>Khy-OS 项目规模报告</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-os-项目规模报告">Khy-OS 项目规模报告</a></li><li class="lvl-2"><a href="#项目总体规模">📊 项目总体规模</a></li><li class="lvl-2"><a href="#目录大小分布">📁 目录大小分布</a></li><li class="lvl-2"><a href="#源码文件统计">💻 源码文件统计</a></li><li class="lvl-3"><a href="#按语言分类">按语言分类</a></li><li class="lvl-3"><a href="#核心模块统计">核心模块统计</a></li><li class="lvl-2"><a href="#项目结构细分">🏗️ 项目结构细分</a></li><li class="lvl-3"><a href="#1-node-js-后端-services-backend">1. Node.js 后端 (`services/backend/`)</a></li><li class="lvl-3"><a href="#2-前端应用-apps-ai-frontend">2. 前端应用 (`apps/ai-frontend/`)</a></li><li class="lvl-3"><a href="#3-os-内核-kernel">3. OS 内核 (`kernel/`)</a></li><li class="lvl-3"><a href="#4-文档体系-docs">4. 文档体系 (`docs/`)</a></li><li class="lvl-3"><a href="#5-python-启动层-platform-khy-platform">5. Python 启动层 (`platform/khy_platform/`)</a></li><li class="lvl-3"><a href="#6-脚本工具-scripts">6. 脚本工具 (`scripts/`)</a></li><li class="lvl-2"><a href="#代码复杂度估算">📈 代码复杂度估算</a></li><li class="lvl-3"><a href="#按功能复杂度">按功能复杂度</a></li><li class="lvl-2"><a href="#项目规模对比">🎯 项目规模对比</a></li><li class="lvl-3"><a href="#同类项目对比">同类项目对比</a></li><li class="lvl-3"><a href="#规模评级">规模评级</a></li><li class="lvl-2"><a href="#依赖规模">📦 依赖规模</a></li><li class="lvl-3"><a href="#npm-依赖">npm 依赖</a></li><li class="lvl-3"><a href="#主要依赖包">主要依赖包</a></li><li class="lvl-2"><a href="#增长趋势">🚀 增长趋势</a></li><li class="lvl-3"><a href="#近期变化-本次补全">近期变化（本次补全）</a></li><li class="lvl-3"><a href="#缺失部分">缺失部分</a></li><li class="lvl-2"><a href="#存储建议">💾 存储建议</a></li><li class="lvl-3"><a href="#开发环境">开发环境</a></li><li class="lvl-3"><a href="#生产部署">生产部署</a></li><li class="lvl-2"><a href="#总结">📊 总结</a></li><li class="lvl-3"><a href="#核心特点">核心特点</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 归档来源: 根目录 PROJECT_SIZE_REPORT.md（归档日期 2026-08-15，MGMT-STD-001 第一章根目录零散落） --&gt;</p>
+<h1 id="khy-os-项目规模报告">Khy-OS 项目规模报告<a class="anchor" href="#khy-os-项目规模报告" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>一次性快照。</strong> 原文正文的「生成时间：2024-08-14」为原作者笔误，实际为 2026-08-14；<br>此处保留原文不改，仅在此说明。</p></blockquote>
+<p>生成时间：2024-08-14</p>
+<h2 id="项目总体规模">📊 项目总体规模<a class="anchor" href="#项目总体规模" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>指标</th><th>数值</th></tr></thead><tbody><tr><td><strong>项目总大小</strong></td><td><strong>526 MB</strong></td></tr><tr><td>源码大小（不含依赖）</td><td>133 MB</td></tr><tr><td>node_modules 大小</td><td>393 MB</td></tr><tr><td>总文件数</td><td>5,733 个</td></tr><tr><td>源码文件数</td><td>4,065 个</td></tr></tbody></table>
+<hr>
+<h2 id="目录大小分布">📁 目录大小分布<a class="anchor" href="#目录大小分布" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>目录</th><th>大小</th><th>说明</th></tr></thead><tbody><tr><td><code>node_modules/</code></td><td>391 MB</td><td>npm 依赖包（根目录）</td></tr><tr><td><code>services/</code></td><td>47 MB</td><td>Node.js 后端服务</td></tr><tr><td><code>docs/</code></td><td>44 MB</td><td>完整项目文档</td></tr><tr><td><code>apps/</code></td><td>14 MB</td><td>前端应用（含 dist/）</td></tr><tr><td><code>kernel/</code></td><td>11 MB</td><td>手写 OS 内核（C 语言）</td></tr><tr><td><code>scripts/</code></td><td>2.3 MB</td><td>维护和构建脚本</td></tr><tr><td><code>platform/</code></td><td>1.3 MB</td><td>Python 启动层</td></tr><tr><td><code>extensions/</code></td><td>192 KB</td><td>扩展模块</td></tr><tr><td><code>packaging/</code></td><td>117 KB</td><td>分发打包配置</td></tr><tr><td><code>alpine/</code></td><td>10 KB</td><td>Alpine Linux 相关</td></tr></tbody></table>
+<hr>
+<h2 id="源码文件统计">💻 源码文件统计<a class="anchor" href="#源码文件统计" aria-label="锚点">#</a></h2>
+<h3 id="按语言分类">按语言分类<a class="anchor" href="#按语言分类" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>语言</th><th>文件数</th><th>说明</th></tr></thead><tbody><tr><td><strong>JavaScript</strong></td><td>3,868</td><td>后端业务逻辑、前端应用、脚本工具</td></tr><tr><td><strong>C/C++ 头文件</strong></td><td>123</td><td>内核源码（kernel/src/）</td></tr><tr><td><strong>Python</strong></td><td>55</td><td>启动器、工具脚本</td></tr><tr><td><strong>Vue</strong></td><td>13</td><td>前端组件（新创建）</td></tr><tr><td><strong>Markdown</strong></td><td>457</td><td>项目文档</td></tr></tbody></table>
+<h3 id="核心模块统计">核心模块统计<a class="anchor" href="#核心模块统计" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>模块</th><th>文件数</th><th>主要内容</th></tr></thead><tbody><tr><td><strong>后端服务</strong></td><td>~3,200</td><td>CLI、AI 网关、API、服务层</td></tr><tr><td><strong>内核</strong></td><td>123</td><td>调度、内存管理、VFS、系统调用</td></tr><tr><td><strong>前端</strong></td><td>31</td><td>管理界面（新补全）</td></tr><tr><td><strong>文档</strong></td><td>457</td><td>立项、设计、实现、部署等全套文档</td></tr><tr><td><strong>脚本工具</strong></td><td>~300</td><td>CI/CD、维护、发布脚本</td></tr><tr><td><strong>Python 层</strong></td><td>55</td><td>启动器、环境探测、Node.js 调度</td></tr></tbody></table>
+<hr>
+<h2 id="项目结构细分">🏗️ 项目结构细分<a class="anchor" href="#项目结构细分" aria-label="锚点">#</a></h2>
+<h3 id="1-node-js-后端-services-backend">1. Node.js 后端 (<code>services/backend/</code>)<a class="anchor" href="#1-node-js-后端-services-backend" aria-label="锚点">#</a></h3>
+<ul><li><strong>大小</strong>: 47 MB</li><li><strong>源码</strong>: 约 3,200 个 JS 文件</li><li><strong>包含</strong>:<ul><li>CLI 系统（<code>src/cli/</code>）</li><li>AI 网关（<code>src/services/gateway/</code>）</li><li>Web API（<code>src/routes/</code>）</li><li>数据库模型、中间件、控制器</li><li>测试、迁移、种子数据</li></ul></li></ul>
+<h3 id="2-前端应用-apps-ai-frontend">2. 前端应用 (<code>apps/ai-frontend/</code>)<a class="anchor" href="#2-前端应用-apps-ai-frontend" aria-label="锚点">#</a></h3>
+<ul><li><strong>大小</strong>: 14 MB</li><li><strong>源码</strong>: 31 个文件（新创建）</li><li><strong>包含</strong>:<ul><li>10 个 Vue 页面组件</li><li>路由、状态管理、工具函数</li><li>构建配置、开发文档</li></ul></li></ul>
+<h3 id="3-os-内核-kernel">3. OS 内核 (<code>kernel/</code>)<a class="anchor" href="#3-os-内核-kernel" aria-label="锚点">#</a></h3>
+<ul><li><strong>大小</strong>: 11 MB</li><li><strong>源码</strong>: 123 个 C/H 文件</li><li><strong>包含</strong>:<ul><li>调度器、内存管理</li><li>虚拟文件系统</li><li>系统调用、中断处理</li><li>驱动程序（ATA、帧缓冲等）</li></ul></li></ul>
+<h3 id="4-文档体系-docs">4. 文档体系 (<code>docs/</code>)<a class="anchor" href="#4-文档体系-docs" aria-label="锚点">#</a></h3>
+<ul><li><strong>大小</strong>: 44 MB</li><li><strong>文档</strong>: 457 个 Markdown 文件</li><li><strong>包含</strong>:<ul><li>01_INIT_立项/</li><li>02_CONCEPTS_概念入门/</li><li>03_DESIGN_设计/</li><li>04_IMPL_实现/</li><li>05_TEST_测试/</li><li>06_DEPLOY_部署/</li><li>07_OPS_运维/</li><li>08_MGMT_项目管理/</li><li>09_STORY_修仙学AI/</li><li>维护者手册、设计模式、AI 协作预设</li></ul></li></ul>
+<h3 id="5-python-启动层-platform-khy-platform">5. Python 启动层 (<code>platform/khy_platform/</code>)<a class="anchor" href="#5-python-启动层-platform-khy-platform" aria-label="锚点">#</a></h3>
+<ul><li><strong>大小</strong>: 1.3 MB</li><li><strong>源码</strong>: 55 个 Python 文件</li><li><strong>包含</strong>:<ul><li>cli.py（主启动器）</li><li>bootstrap（环境探测）</li><li>node_provisioner（Node.js 调度）</li><li>共享包（@khy/shared）</li></ul></li></ul>
+<h3 id="6-脚本工具-scripts">6. 脚本工具 (<code>scripts/</code>)<a class="anchor" href="#6-脚本工具-scripts" aria-label="锚点">#</a></h3>
+<ul><li><strong>大小</strong>: 2.3 MB</li><li><strong>脚本</strong>: 约 300 个文件</li><li><strong>18 个子目录</strong>:<ul><li>admin/、alpine/、bench/、ci/、diagnostics/</li><li>docs/、install/、maintenance/、portable/</li><li>release/、tests/ 等</li></ul></li></ul>
+<hr>
+<h2 id="代码复杂度估算">📈 代码复杂度估算<a class="anchor" href="#代码复杂度估算" aria-label="锚点">#</a></h2>
+<h3 id="按功能复杂度">按功能复杂度<a class="anchor" href="#按功能复杂度" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>级别</th><th>模块</th><th>估算代码量</th></tr></thead><tbody><tr><td><strong>高</strong></td><td>Node.js 后端</td><td>~150,000+ 行</td></tr><tr><td><strong>中</strong></td><td>OS 内核</td><td>~15,000 行</td></tr><tr><td><strong>中</strong></td><td>Python 启动层</td><td>~5,000 行</td></tr><tr><td><strong>低</strong></td><td>前端应用</td><td>~2,000 行</td></tr><tr><td><strong>低</strong></td><td>脚本工具</td><td>~10,000 行</td></tr></tbody></table>
+<p><strong>估算总代码量</strong>: ~180,000+ 行</p>
+<hr>
+<h2 id="项目规模对比">🎯 项目规模对比<a class="anchor" href="#项目规模对比" aria-label="锚点">#</a></h2>
+<h3 id="同类项目对比">同类项目对比<a class="anchor" href="#同类项目对比" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>项目</th><th>Khy-OS</th><th>VS Code</th><th>Atom</th><th>Jupyter</th></tr></thead><tbody><tr><td>总大小</td><td>526 MB</td><td>~300 MB</td><td>~500 MB</td><td>~200 MB</td></tr><tr><td>源码文件</td><td>4,065</td><td>~5,000</td><td>~3,000</td><td>~2,000</td></tr><tr><td>语言</td><td>JS/C/Py/Vue</td><td>TS/C++</td><td>JS/C++</td><td>Py/JS</td></tr><tr><td>复杂度</td><td><strong>中大型</strong></td><td>大型</td><td>大型</td><td>中型</td></tr></tbody></table>
+<h3 id="规模评级">规模评级<a class="anchor" href="#规模评级" aria-label="锚点">#</a></h3>
+<ul><li><strong>代码规模</strong>: ⭐⭐⭐⭐ 中大型项目</li><li><strong>架构复杂度</strong>: ⭐⭐⭐⭐⭐ 高（多层架构 + OS 内核）</li><li><strong>文档完整度</strong>: ⭐⭐⭐⭐⭐ 优秀（457 份文档）</li><li><strong>工程成熟度</strong>: ⭐⭐⭐⭐ 成熟（CI/CD + 双渠道分发）</li></ul>
+<hr>
+<h2 id="依赖规模">📦 依赖规模<a class="anchor" href="#依赖规模" aria-label="锚点">#</a></h2>
+<h3 id="npm-依赖">npm 依赖<a class="anchor" href="#npm-依赖" aria-label="锚点">#</a></h3>
+<ul><li><strong>根目录</strong>: 391 MB</li><li><strong>后端</strong>: 2 MB（workspace 共享）</li><li><strong>前端</strong>: 待安装（预计 ~50 MB）</li></ul>
+<h3 id="主要依赖包">主要依赖包<a class="anchor" href="#主要依赖包" aria-label="锚点">#</a></h3>
+<ul><li>express、axios、sequelize、pg、redis</li><li>vue、vue-router、pinia、element-plus</li><li>winston、joi、bcryptjs、jsonwebtoken</li></ul>
+<hr>
+<h2 id="增长趋势">🚀 增长趋势<a class="anchor" href="#增长趋势" aria-label="锚点">#</a></h2>
+<h3 id="近期变化-本次补全">近期变化（本次补全）<a class="anchor" href="#近期变化-本次补全" aria-label="锚点">#</a></h3>
+<ul><li>✅ 新增前端源码：31 个文件</li><li>✅ 前端模块：从 0 → 完整（10 个页面）</li><li>✅ 项目完整度：从 85% → 95%</li></ul>
+<h3 id="缺失部分">缺失部分<a class="anchor" href="#缺失部分" aria-label="锚点">#</a></h3>
+<ul><li>❌ <code>software/khyquant/</code>（内置默认应用）</li><li>⚠️ 部分文档可能未完全更新</li></ul>
+<hr>
+<h2 id="存储建议">💾 存储建议<a class="anchor" href="#存储建议" aria-label="锚点">#</a></h2>
+<h3 id="开发环境">开发环境<a class="anchor" href="#开发环境" aria-label="锚点">#</a></h3>
+<ul><li><strong>最小需求</strong>: 2 GB 磁盘空间</li><li><strong>推荐配置</strong>: 5 GB+（含构建缓存）</li></ul>
+<h3 id="生产部署">生产部署<a class="anchor" href="#生产部署" aria-label="锚点">#</a></h3>
+<ul><li><strong>Docker 镜像</strong>: 预计 ~200-300 MB</li><li><strong>独立可执行文件</strong>: 预计 ~50-100 MB（pkg 打包）</li></ul>
+<hr>
+<h2 id="总结">📊 总结<a class="anchor" href="#总结" aria-label="锚点">#</a></h2>
+<p>Khy-OS 是一个 <strong>中大型、高复杂度</strong> 的 AI 平台操作系统项目：</p>
+<p>✅ <strong>526 MB</strong> 总大小（含依赖）  <br>✅ <strong>133 MB</strong> 纯源码  <br>✅ <strong>5,733</strong> 个文件  <br>✅ <strong>4,065</strong> 个源码文件  <br>✅ <strong>~180,000</strong> 行代码（估算）  <br>✅ <strong>457</strong> 份文档</p>
+<h3 id="核心特点">核心特点<a class="anchor" href="#核心特点" aria-label="锚点">#</a></h3>
+<ul><li><strong>多语言</strong>: JavaScript (主) + C (内核) + Python (启动器) + Vue (前端)</li><li><strong>多层架构</strong>: Python → Node.js → Services/CLI + OS Kernel</li><li><strong>双渠道分发</strong>: PyPI + npm</li><li><strong>文档完善</strong>: 9 大类 + 专题文档</li><li><strong>工程规范</strong>: CI/CD + 版本同步 + 代码检查</li></ul>
+<p>项目规模适中，架构清晰，文档完善，工程化成熟，适合团队协作开发。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_报告/历史/2026-08-根目录归档-修复记录.html"><div class="dir">← 上一篇</div><div class="ttl">2026-08 根目录归档：修复记录</div></a><a class="next" href="../../../docs/_报告/历史/2026-08-依赖削减调研报告.html"><div class="dir">下一篇 →</div><div class="ttl">Khy-OS 依赖削减调研报告</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_报告/历史/2026-08-项目规模报告.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

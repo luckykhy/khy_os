@@ -46,7 +46,7 @@ verdict/blockedBy/summary,REPL 的 `onEvent` 处理器根本没有渲染分支
 | `services/backend/src/services/flagRegistry.js` | 注册 `KHY_DELIVERY_GATE_REPORT` default-on |
 | `services/backend/src/services/agenticHarnessService.js` | `delivery_verdict` 后新增门控落盘块 |
 | `services/backend/tests/services/deliveryGateReporter.test.js` | +3 测(落盘一致性 / harness 接线源级断言 / 门注册) |
-| `docs/维护者/维护映射表.json` | 新增 area `delivery-gate-report-artifact` |
+| `docs/_维护者/维护映射表.json` | 新增 area `delivery-gate-report-artifact` |
 
 god-file 检查:agenticHarnessService 1882 行、flagRegistry 2483 行,均 < 2500。
 

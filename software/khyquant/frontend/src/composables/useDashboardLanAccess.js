@@ -1,7 +1,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
-import QRCode from 'qrcode'
+import { loadQRCode } from '@/utils/qrcode'
 
 export function useDashboardLanAccess() {
   const lanIpAddress = ref('')
@@ -133,6 +133,7 @@ export function useDashboardLanAccess() {
     if (!qrCodeCanvas.value || !lanAccessUrl.value) return
 
     try {
+      const QRCode = await loadQRCode()
       await QRCode.toCanvas(qrCodeCanvas.value, lanAccessUrl.value, {
         width: 200,
         margin: 1,

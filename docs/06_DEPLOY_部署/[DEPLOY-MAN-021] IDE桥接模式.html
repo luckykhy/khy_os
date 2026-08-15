@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IDE 桥接模式 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>06_DEPLOY_部署<span class="sep">›</span>IDE 桥接模式</div>
+      <header class="hero reveal"><h1>IDE 桥接模式</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ide-桥接模式">IDE 桥接模式</a></li><li class="lvl-2"><a href="#一-支持的桥接通道">一、支持的桥接通道</a></li><li class="lvl-2"><a href="#二-claude-code-桥接-探测最简单的一条">二、Claude Code 桥接（探测最简单的一条）</a></li><li class="lvl-2"><a href="#三-cursor-桥接">三、Cursor 桥接</a></li><li class="lvl-2"><a href="#四-windsurf-vs-code-桥接">四、Windsurf / VS Code 桥接</a></li><li class="lvl-2"><a href="#五-多通道并存与固定首选">五、多通道并存与固定首选</a></li><li class="lvl-2"><a href="#六-验证">六、验证</a></li><li class="lvl-2"><a href="#七-桥接-vs-api-直连">七、桥接 vs API 直连</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DEPLOY-MAN-021 | 阶段: 部署 | 原路径: IDE_BRIDGE_GUIDE.md（根目录归档） --&gt;</p>
+<h1 id="ide-桥接模式">IDE 桥接模式<a class="anchor" href="#ide-桥接模式" aria-label="锚点">#</a></h1>
+<blockquote><p>把 Khy-OS 接到你<strong>已经在用</strong>的 IDE（Claude Code、Cursor、Windsurf、VS Code…），<br>复用 IDE 里的模型配额，<strong>不需要额外 API Key</strong>。</p>
+<p>桥接的核心是<strong>探测已有凭据</strong>：适配器去磁盘上找 IDE 自己落下的 CLI 或 token 文件。<br>因此「启用桥接」这个动作<strong>基本不存在</strong>——装好 IDE 并登录过一次，探测就会通过。</p>
+<p>读本文前先读 <code>[DEPLOY-MAN-019]</code> 第一、三节：18 个适配器默认全部 enabled，<br><code>GATEWAY_&lt;KEY&gt;_ENABLED</code> 是<strong>关闭开关</strong>而非开启开关。</p>
+<p><strong>归档来源</strong>：本文由根目录 <code>IDE_BRIDGE_GUIDE.md</code> 重写而成（归档日期 2026-08-15）。<br>原文内联了一份<strong>真实 <code>JWT_SECRET</code></strong>，并把 <code>GATEWAY_CLAUDE_ENABLED=true</code> 一类写法说成<br>「启用桥接的必要步骤」（实为 no-op），Cursor token 路径也与代码不一致。本文按代码实测重写。</p>
+<p>实现依据（核实来源）：</p>
+<ul><li>适配器清单与优先级：<code>services/backend/src/services/gateway/aiGateway.js</code></li><li>开关与探测编排：<code>services/backend/src/services/gateway/aiGatewayRoutingMethods.js</code></li><li>各适配器：<code>adapters/{claude,cursor,cursor2api,windsurf,vscode,warp,kiro,trae,codex}Adapter.js</code></li><li>IDE 安装探测：<code>adapters/ideDetector.js</code>、<code>adapters/_ideTokenMixin.js</code></li></ul></blockquote>
+<hr>
+<h2 id="一-支持的桥接通道">一、支持的桥接通道<a class="anchor" href="#一-支持的桥接通道" aria-label="锚点">#</a></h2>
+<p><code>[DEPLOY-MAN-019]</code> 第二节的 18 个适配器里，靠<strong>探测本机 IDE 凭据</strong>工作的是这九个<br>（<code>GATEWAY_&lt;KEY&gt;_ENABLED=false</code> 这组 kill switch 覆盖的正是它们）：</p>
+<table><thead><tr><th>priority</th><th>key</th><th>对应 IDE / 服务</th><th><code>detect()</code> 实际检查什么</th></tr></thead><tbody><tr><td>0</td><td><code>kiro</code></td><td>Kiro</td><td>Kiro 凭据</td></tr><tr><td>1</td><td><code>cursor</code></td><td>Cursor</td><td>Cursor 本地 token（<code>storage.json</code> / <code>state.vscdb</code>），或账号池 pool token</td></tr><tr><td>2</td><td><code>trae</code></td><td>Trae</td><td>Trae 凭据 / <code>TRAE_API_KEY</code></td></tr><tr><td>3</td><td><code>claude</code></td><td>Claude Code</td><td><code>claude</code> 命令存在（PATH，或便携版 <code>~/.khy/tools</code> 下的 claude）</td></tr><tr><td>4</td><td><code>codex</code></td><td>Codex</td><td>Codex 凭据</td></tr><tr><td>6</td><td><code>windsurf</code></td><td>Windsurf（Codeium）</td><td>Windsurf 安装路径 + storage 里的 <code>windsurfAuth</code> / <code>codeium</code> token</td></tr><tr><td>7</td><td><code>vscode</code></td><td>VS Code + Copilot</td><td>Copilot token 形状校验通过</td></tr><tr><td>8</td><td><code>warp</code></td><td>Warp</td><td>Warp 凭据</td></tr><tr><td>9</td><td><code>cursor2api</code></td><td>Cursor（API 化通道）</td><td>同 <code>cursor</code>，走 API 化路径</td></tr></tbody></table>
+<p><strong>只要有一个 available，<code>/model</code> 就有内容。</strong> 不必凑齐。</p>
+<hr>
+<h2 id="二-claude-code-桥接-探测最简单的一条">二、Claude Code 桥接（探测最简单的一条）<a class="anchor" href="#二-claude-code-桥接-探测最简单的一条" aria-label="锚点">#</a></h2>
+<p><code>claudeAdapter.detect()</code> 的全部逻辑就是「<code>claude</code> 命令在不在」：</p>
+<pre><code class="language-js">_available = commandExists('claude');
+if (!_available &amp;&amp; _portableClaudeInstalled()) { _available = true; }</code></pre>
+<p>所以检查也只有一步：</p>
+<pre><code class="language-powershell">claude --version        # 有输出 → claude 通道会 available
+where claude            # 找不到时看 PATH</code></pre>
+<p><strong>找不到 <code>claude</code> 命令时</strong>：确认 Claude Code 已安装、且 <code>claude</code> 在 PATH 中，<br>并在 Claude Code 里至少完整跑过一次对话（CLI 通常在首次使用时才落到系统）。</p>
+<p><code>detectAsync()</code> 比同步版多做一步：<strong>当环境里存在 Anthropic key 时</strong>，额外对 API 根做一次<br>轻量 GET 验证端点可达（401/405 也算可达，只有超时 / ECONNREFUSED 才判为不可达）。<br>这是为了让健康检查在用户选中直连模型<strong>之前</strong>就发现端点配错，而不是在生成时才炸。<br>探测走 <code>execFile</code> 而非 <code>spawnSync</code>，因此网关初始化不会卡住事件循环。</p>
+<p><strong>桥接失败但命令存在</strong>：多为 Claude Code 未登录或 token 过期。</p>
+<pre><code class="language-powershell">gateway test claude     # 看详细错误
+claude auth login       # 重新登录</code></pre>
+<hr>
+<h2 id="三-cursor-桥接">三、Cursor 桥接<a class="anchor" href="#三-cursor-桥接" aria-label="锚点">#</a></h2>
+<p><code>cursorAdapter</code> 按序在<strong>多个 home 根</strong>下找这些文件（<code>buildCursorStoragePaths()</code> 实测清单）：</p>
+<pre><code>&lt;home&gt;/.config/Cursor/User/globalStorage/storage.json                      # Linux
+&lt;home&gt;/Library/Application Support/Cursor/User/globalStorage/storage.json  # macOS
+&lt;home&gt;/AppData/Roaming/Cursor/User/globalStorage/storage.json              # Windows</code></pre>
+<p>以及同三处目录下的 SQLite 库 <code>state.vscdb</code> 与 <code>state-global.vscdb</code>（token 存在 DB 里时从这里读）。</p>
+<p><strong>非标准安装位置</strong>：用 <code>CURSOR_STORAGE_PATHS</code>（复数，逗号分隔）或 <code>CURSOR_STORAGE_PATH</code><br>显式追加路径——这两个变量在代码里真实生效。</p>
+<p><strong>找不到 token 时</strong>：打开 Cursor → 确认已登录 → 用一次 AI 功能（让它落盘）→ 重启 khy。</p>
+<p><strong>账号池</strong>：<code>cursor</code> 适配器还接受来自账号池的 token（<code>source</code> 以 <code>pool:</code> 开头）。<br>本地 token 缺失但池里有可用 token 时，通道仍会 available。</p>
+<hr>
+<h2 id="四-windsurf-vs-code-桥接">四、Windsurf / VS Code 桥接<a class="anchor" href="#四-windsurf-vs-code-桥接" aria-label="锚点">#</a></h2>
+<p><strong>Windsurf</strong>：<code>detect()</code> 先经 <code>ideDetector</code> 的 <code>findInstallation('windsurf')</code> /<br><code>findDataPath('windsurf')</code> 定位安装，再从 storage 快照里取 token，接受的键名很宽<br>（<code>windsurfAuth.accessToken</code>、<code>windsurf.auth.accessToken</code>、<code>codeium/accessToken</code>、<br><code>codeium.auth.accessToken</code>、裸 <code>accessToken</code>），endpoint 同样从快照里读。</p>
+<p>找不到时：打开 Windsurf → 确认已登录 Codeium → 用一次 Cascade → 重启 khy。</p>
+<p><strong>VS Code</strong>：<code>detect()</code> 只做一件事——读 Copilot token 并校验形状。<br>所以前提是 VS Code 装了 Copilot 且已登录。</p>
+<hr>
+<h2 id="五-多通道并存与固定首选">五、多通道并存与固定首选<a class="anchor" href="#五-多通道并存与固定首选" aria-label="锚点">#</a></h2>
+<p>启用多个通道时，网关按 <code>[DEPLOY-MAN-019]</code> 第二节的 priority 自动挑第一个 available 的。<br>要固定用某一个：</p>
+<pre><code class="language-powershell">$env:GATEWAY_PREFERRED_ADAPTER = &quot;claude&quot;      # 适配器 key
+$env:GATEWAY_PREFERRED_MODEL   = &quot;&lt;model id&gt;&quot;
+$env:GATEWAY_PREFERRED_STRICT  = &quot;true&quot;        # 只用首选，不回退</code></pre>
+<p>反过来，<strong>排除</strong>探测很慢或本机没装的 IDE（这才是 <code>_ENABLED</code> 的正确用法）：</p>
+<pre><code class="language-powershell">$env:GATEWAY_WINDSURF_ENABLED = &quot;false&quot;
+$env:GATEWAY_VSCODE_ENABLED   = &quot;false&quot;</code></pre>
+<blockquote><p>只有字符串 <code>&quot;false&quot;</code> 有效。设 <code>&quot;true&quot;</code> 是 no-op —— 默认已是开。</p></blockquote>
+<hr>
+<h2 id="六-验证">六、验证<a class="anchor" href="#六-验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell">khy
+gateway status          # 逐通道 enabled / available，第一现场
+gateway test claude     # 单通道连通性 + 生成测试
+/model                  # 看模型列表</code></pre>
+<table><thead><tr><th>现象</th><th>读法</th><th>处理</th></tr></thead><tbody><tr><td>通道 enabled 但 available=false</td><td>探测没找到凭据</td><td>按第二～四节补上对应 IDE 的登录状态</td></tr><tr><td>通道 enabled=false</td><td>设了 <code>GATEWAY_&lt;KEY&gt;_ENABLED=false</code></td><td>取消该环境变量</td></tr><tr><td>桥接一度可用后失效</td><td>IDE token 过期，或 IDE 进程/登录态变了</td><td>在 IDE 里重新登录，重启 khy</td></tr><tr><td>探测阶段整体很慢</td><td>逐适配器探测累加</td><td>关掉本机没装的 IDE 通道；或调 <code>GATEWAY_INIT_TIMEOUT_MS</code>（默认 15000ms）</td></tr></tbody></table>
+<blockquote><p>桥接读的是 IDE 落在磁盘上的<strong>真实凭据</strong>。红线 R2 同样适用：不要把探测到的 token 值<br>抄进文档、issue 或提交。排查只需报告「找到 / 没找到」与 <code>source</code> 字段，不需要贴 token。</p></blockquote>
+<hr>
+<h2 id="七-桥接-vs-api-直连">七、桥接 vs API 直连<a class="anchor" href="#七-桥接-vs-api-直连" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>维度</th><th>IDE 桥接</th><th>API 直连</th></tr></thead><tbody><tr><td>配置成本</td><td>几乎为零（探测已有凭据）</td><td>需要申请并注入 key</td></tr><tr><td>费用</td><td>复用 IDE 配额</td><td>按用量付费</td></tr><tr><td>稳定性</td><td>依赖 IDE 安装、登录态与 token 有效期</td><td>更稳定</td></tr><tr><td>模型范围</td><td>受限于该 IDE 开放的模型</td><td>供应商全量</td></tr><tr><td>工具调用</td><td>视通道而定</td><td>云端结构化适配器有原生 <code>tool_use</code></td></tr></tbody></table>
+<p><strong>结论</strong>：本机开发用桥接（省事），生产用 API 直连（可控）。两者可以同时配，<br>用 <code>GATEWAY_PREFERRED_*</code> 决定谁优先。API 直连的配置见 <code>[DEPLOY-MAN-020]</code>。</p>
+<hr>
+<h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
+<ul><li>模型可用性与适配器探测（先读）：<code>[DEPLOY-MAN-019] 模型可用性与适配器探测</code></li><li>AI 供应商与 API Key 配置：<code>[DEPLOY-MAN-020] AI供应商与APIKey配置</code></li><li>环境开关命名规范：<code>docs/07_OPS_运维/[OPS-MAN-058] 环境开关与文档命名规范.md</code></li><li><code>/model</code> 慢与 <code>KHY_MODEL_*</code> 超时开关：<code>docs/_报告/历史/2026-08-根目录归档-修复记录.md</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-020] AI供应商与APIKey配置.html"><div class="dir">← 上一篇</div><div class="ttl">AI 供应商与 API Key 配置</div></a><a class="next" href="../../docs/06_DEPLOY_部署/00_INDEX_部署-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 部署分类索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/06_DEPLOY_部署/[DEPLOY-MAN-021] IDE桥接模式.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

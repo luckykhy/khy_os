@@ -1,8 +1,8 @@
 /**
  * gatewayGuide 纯逻辑单测(apps/ai-frontend 为 type:module,用内置 Node 运行器):
- *   node --test src/components/gateway/gatewayGuide.test.js
+ *   npx vitest run src/components/gateway/gatewayGuide.test.js
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { GATEWAY_STEPS, CONFIG_METHODS, buildKeyReferences, buildGuide } from './gatewayGuide.js';

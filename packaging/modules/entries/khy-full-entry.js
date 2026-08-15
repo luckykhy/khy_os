@@ -14,5 +14,5 @@ const path = require('path');
 const BACKEND_ROOT = process.env.KHY_BACKEND_ROOT
   || path.resolve(__dirname, '../../../services/backend');
 
-// Delegate to the original CLI entry point
+// The backend is supplied by the portable runtime layout.
 require(path.join(BACKEND_ROOT, 'bin/khy.js'));

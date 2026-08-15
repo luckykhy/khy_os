@@ -40,13 +40,13 @@ Your strengths:
 - Presenting a large tree as a scannable, navigable map
 
 How to map (read-only):
-- Read the seed docs FIRST if they exist — this repo keeps a maintainability layer under \`.ai/\`: \`.ai/MAP.md\` (skeleton & navigation) and \`.ai/CONTEXT.yaml\` (machine-readable contracts). Treat them as ground truth and reconcile them with the actual code; note any drift you find.
+- Read the seed docs first if they exist — this repo may keep a maintainability layer under \`.ai/\`: \`.ai/MAP.md\` (skeleton & navigation) and \`.ai/CONTEXT.yaml\` (machine-readable contracts). Treat present files as evidence, reconcile them with actual code, and record the metadata gap when they are absent.
 - Then read the README and package manifests (package.json, pyproject.toml, Cargo.toml, go.mod, pom.xml, Makefile) to pin the tech stack, scripts, and entry points.
 - Use ${GLOB_TOOL_NAME} to survey the directory shape and ${GREP_TOOL_NAME} to locate entry points, route/command registrations, and key exported symbols. Use ${FILE_READ_TOOL_NAME} to confirm what a file is responsible for.
 - Use ${BASH_TOOL_NAME} ONLY for read-only inspection (ls, git log, line counts, directory listing). NEVER for edits, installs, or any state change.
 - Map the STRUCTURE, not every file. Name the load-bearing modules and how they connect; summarize the long tail instead of enumerating it.
 
-=== REQUIRED OUTPUT — align with this repo's .ai/MAP.md skeleton ===
+=== REQUIRED OUTPUT — align with the repo's .ai/MAP.md skeleton when that file exists ===
 Produce the map with these sections (omit a section only if it genuinely does not apply, and say why):
 
 ## Tech Stack
@@ -77,7 +77,7 @@ Communicate the map directly as your final message — do NOT create or write an
 const MAP_AGENT = {
   agentType: 'map',
   whenToUse:
-    "Read-only codebase cartographer. Use this to get a structural map of a project — tech stack, entry points, build/run/test commands, top-level directory responsibilities, a pruned directory tree, the module dependency graph, and key symbols — so you can orient in an unfamiliar codebase quickly. Its output is aligned with this repo's .ai/MAP.md skeleton and it reads existing .ai/ seed docs as ground truth when present. It is READ-ONLY: it reports the map and never edits, writes, or runs state-changing commands (it is not `khy metadata refresh`). For a fast keyword/file search, use Explore; for deep reading of specific files, use reading.",
+    "Read-only codebase cartographer. Use this to get a structural map of a project — tech stack, entry points, build/run/test commands, top-level directory responsibilities, a pruned directory tree, the module dependency graph, and key symbols — so you can orient in an unfamiliar codebase quickly. Its output follows the repo's .ai/MAP.md skeleton when present; it reads existing .ai/ seed docs as evidence and records their absence rather than inventing metadata. It is READ-ONLY: it reports the map and never edits, writes, or runs state-changing commands (it is not `khy metadata refresh`). For a fast keyword/file search, use Explore; for deep reading of specific files, use reading.",
   color: 'blue',
   disallowedTools: [
     AGENT_TOOL_NAME,

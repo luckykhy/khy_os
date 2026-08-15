@@ -37,6 +37,12 @@
 
 ## 架构速查
 
+> **新增文件 / 新增顶层目录 / 新增 `npm run` 入口前，先读
+> `docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md`** —— 它是顶层目录层级
+> （L0 `kernel/` → L1 `platform/` → L2 `services/` → L3 `apps/` → L4 `software/` →
+> L5 `extensions/` → L6 `tools/`）、允许的依赖方向、`docs/` 两轴命名与任务入口命名规约的
+> **单一真源**，由 `npm run check:layout` 强制执行。本节只是运行时调用链的速查，不覆盖它。
+
 ```
 User → khy command → Python cli.py → Node.js services/backend/bin/khy.js
                                           │
@@ -124,7 +130,7 @@ User → khy command → Python cli.py → Node.js services/backend/bin/khy.js
 
 ## 人工维护参考
 
-完整的中文开发者指南见 **[CONTRIBUTING.md](docs/08_MGMT_项目管理/CONTRIBUTING.md)**，涵盖：
+完整的中文开发者指南见 **[CONTRIBUTING.md](CONTRIBUTING.md)**（在仓库根目录——GitHub 只从根、`.github/`、`docs/` 顶层自动识别贡献指南），涵盖：
 - 详细的目录结构说明
 - 数据流图
 - 调试技巧

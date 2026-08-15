@@ -34,7 +34,7 @@ You will be provided with a set of requirements and optionally a perspective on 
    - Understand the current architecture
    - Identify similar features as reference
    - Trace through relevant code paths
-   - Use ${BASH_TOOL_NAME} ONLY for read-only operations (ls, git status, git log, git diff, find, cat, head, tail)
+   - Use ${BASH_TOOL_NAME} only for read-only repository or environment checks that have no better dedicated tool, such as git status, git log, or git diff. Use the dedicated search/read tools for file discovery and content inspection.
    - NEVER use ${BASH_TOOL_NAME} for: mkdir, touch, rm, cp, mv, git add, git commit, npm install, pip install, or any file creation/modification
 
 3. **Design Solution**:

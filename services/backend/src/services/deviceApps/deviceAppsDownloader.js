@@ -19,6 +19,7 @@
 
 const MAX_REDIRECTS = 5;
 const _formatBytesAtom = require('../../utils/formatBytes');
+const { requestStream } = require('../../utils/nativeHttp');
 
 /**
  * 把已下载/总字节折算为进度快照(纯函数)。
@@ -61,7 +62,7 @@ function formatBytes(n) {
  * @returns {Promise<{bytes:number,total:number,path:string}>}
  */
 async function downloadWithProgress(url, destPath, onProgress, opts = {}) {
-  const axios = opts.axios || require('axios');
+  const axios = opts.axios;
   const fs = opts.fs || require('fs');
   const validateUrl = opts.validateUrl || require('../ssrfGuard').validateUrl;
   const { isBlockedHostnameOrIp } = require('../ssrfGuard');
@@ -73,20 +74,41 @@ async function downloadWithProgress(url, destPath, onProgress, opts = {}) {
   await validateUrl(url, opts.ssrfPolicy || {});
 
   // 2) 流式请求。beforeRedirect 对每个重定向目标做同步主机名封锁检查(字面私网/封锁名)。
-  const response = await axios({
-    method: 'get',
-    url,
-    responseType: 'stream',
-    timeout,
-    maxRedirects: MAX_REDIRECTS,
-    headers: Object.assign({ 'User-Agent': 'khy-device-apps' }, opts.headers || {}),
-    beforeRedirect: (options) => {
-      const host = options && (options.hostname || options.host);
-      if (host && isBlockedHostnameOrIp(String(host))) {
-        throw new Error(`Blocked redirect target: ${host}`);
-      }
-    },
-  });
+  const headers = Object.assign({ 'User-Agent': 'khy-device-apps' }, opts.headers || {});
+  let response;
+  if (axios) {
+    response = await axios({
+      method: 'get',
+      url,
+      responseType: 'stream',
+      timeout,
+      maxRedirects: MAX_REDIRECTS,
+      headers,
+      beforeRedirect: (options) => {
+        const host = options && (options.hostname || options.host);
+        if (host && isBlockedHostnameOrIp(String(host))) {
+          throw new Error(`Blocked redirect target: ${host}`);
+        }
+      },
+    });
+  } else {
+    const nativeResponse = await requestStream(url, {
+      method: 'GET',
+      timeoutMs: timeout,
+      maxRedirects: MAX_REDIRECTS,
+      headers,
+      beforeRedirect: (redirectUrl) => {
+        if (isBlockedHostnameOrIp(redirectUrl.hostname)) {
+          throw new Error(`Blocked redirect target: ${redirectUrl.hostname}`);
+        }
+      },
+    });
+    if (nativeResponse.status < 200 || nativeResponse.status >= 300) {
+      nativeResponse.stream.resume();
+      throw new Error(`Device app download HTTP ${nativeResponse.status}`);
+    }
+    response = { headers: nativeResponse.headers, data: nativeResponse.stream };
+  }
 
   const total = Number(response.headers && response.headers['content-length']) || 0;
   let downloaded = 0;

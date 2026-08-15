@@ -37,6 +37,7 @@ let _state = {
   stdout: null,
   snapshot: null, // the latest _sidebarProps pushed from App's render
   lastGeom: null, // geometry of the most recent paint (for stale-clear)
+  lastPaintBytes: '', // identical frames need no second terminal repaint
   dims: null, // sticky-RESOLVED {cols, rows} pushed from App's render (SSOT)
   lastValidDims: null, // last VALID {cols, rows} — the sticky fallback setDims reuses
   chrome: null, // footer rows below the prompt border (App pushes via setChrome)
@@ -374,6 +375,7 @@ function enable(stdout) {
     stdout: out,
     snapshot: _state.snapshot,
     lastGeom: null,
+    lastPaintBytes: '',
     dims: _state.dims,
     lastValidDims: _state.lastValidDims,
     chrome: _state.chrome,
@@ -507,9 +509,10 @@ function setNav(nav) {
 /**
  * The bytes that paint the rail, to be appended to an ink frame write.
  * Returns '' whenever the rail must stay out of the way.
+ * @param {boolean} [force=false] repaint even when the generated frame is unchanged
  * @returns {string}
  */
-function paintBytes() {
+function paintBytes(force = false) {
   if (!_state.enabled || _state.suspended) {
     return '';
   }
@@ -519,6 +522,7 @@ function paintBytes() {
     // 会留在不再归看板管的区域里。buildRailClear(null) → ''(无残留即无字节)。
     const prev = _state.lastGeom;
     _state.lastGeom = null;
+    _state.lastPaintBytes = '';
     return railLayout.buildRailClear(prev);
   }
   let bg = null;
@@ -536,6 +540,7 @@ function paintBytes() {
   if (!geom) {
     const prev = _state.lastGeom;
     _state.lastGeom = null;
+    _state.lastPaintBytes = '';
     return railLayout.buildRailClear(prev);
   }
   let bytes = '';
@@ -553,7 +558,7 @@ function paintBytes() {
     bytes += railLayout.buildRailClear(prev);
   }
   const border = _border(process.env);
-  bytes += railLayout.buildRailPaint({
+  const painted = railLayout.buildRailPaint({
     lines,
     geom,
     bg,
@@ -561,7 +566,12 @@ function paintBytes() {
     border: border.str,
     borderCols: border.cols,
   });
+  bytes += painted;
   _state.lastGeom = geom;
+  if (!force && bytes === _state.lastPaintBytes) {
+    return '';
+  }
+  _state.lastPaintBytes = bytes;
   return bytes;
 }
 
@@ -575,8 +585,8 @@ function paintBytes() {
  * 不存在「清了还没画」的可观察瞬间。No IO — 与 paintBytes 同契约。
  * @returns {string} '' when there is nothing to clear
  */
-function clearBytes() {
-  if (!_state.enabled || _state.suspended) {
+function clearBytes(force = false) {
+  if (!_state.enabled || _state.suspended || (!force && _state.lastPaintBytes)) {
     return '';
   }
   return railLayout.buildRailClear(_state.lastGeom);
@@ -594,6 +604,7 @@ function suspend() {
   _state.suspended = true;
   _writeRaw(railLayout.buildRailClear(_state.lastGeom));
   _state.lastGeom = null;
+  _state.lastPaintBytes = '';
 }
 
 /** Counterpart to suspend(); the next ink frame repaints the rail. */
@@ -627,6 +638,7 @@ function onResize() {
   ) {
     _writeRaw(railLayout.buildRailClear(prev));
     _state.lastGeom = null;
+    _state.lastPaintBytes = '';
   }
 }
 
@@ -643,6 +655,7 @@ function disable() {
     stdout: null,
     snapshot: null,
     lastGeom: null,
+    lastPaintBytes: '',
     dims: null,
     lastValidDims: null,
     chrome: null,

@@ -33,9 +33,9 @@
 <p>Run from repository root:</p>
 <pre><code class="language-bash">node scripts/ci/check-skill-evals.js</code></pre>
 <p>Optional report output:</p>
-<pre><code class="language-bash">node scripts/ci/check-skill-evals.js --report docs/报告/技能评估-最新.json</code></pre>
+<pre><code class="language-bash">node scripts/ci/check-skill-evals.js --report docs/_报告/技能评估-最新.json</code></pre>
 <p>Scenario eval:</p>
-<pre><code class="language-bash">node scripts/ci/check-skill-scenarios.js --report docs/报告/技能场景评估-最新.json</code></pre>
+<pre><code class="language-bash">node scripts/ci/check-skill-scenarios.js --report docs/_报告/技能场景评估-最新.json</code></pre>
 <h2 id="what-this-baseline-checks">What This Baseline Checks<a class="anchor" href="#what-this-baseline-checks" aria-label="锚点">#</a></h2>
 <ul><li>Manifest required fields (<code>name</code>, <code>description</code>, <code>trigger</code>/<code>command</code>)</li><li>Invocable flag consistency (<code>user_invocable</code> or <code>userInvocable</code>)</li><li>Prompt asset presence (<code>prompt.md</code>)</li><li>Metadata quality fields (<code>tags</code>, <code>category</code>, <code>platforms</code>)</li><li>Prompt-level scenario assertions for key built-in skills (verify, commit, loop, stuck, remember)</li></ul>
 <h2 id="pass-conditions">Pass Conditions<a class="anchor" href="#pass-conditions" aria-label="锚点">#</a></h2>

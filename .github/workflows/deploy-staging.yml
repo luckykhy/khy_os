@@ -2,8 +2,20 @@ name: Staging Deployment
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
+
+# 需要 packages: write 推送 :staging 镜像到 GHCR；其余只读。
+permissions:
+  contents: read
+  packages: write
+
+# 部署必须串行：并发部署会让 staging 落到不确定的版本上。
+# 因此 cancel-in-progress: false —— 排队等前一次部署完成，而不是把它砍掉
+# （砍掉一次进行中的 flyctl deploy 可能留下半完成状态）。
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
 
 jobs:
   deploy-staging:
@@ -88,7 +100,9 @@ jobs:
         env:
           STAGING_URL: https://khy-os-staging.fly.dev
 
-      - name: Smoke test: khy --version via HTTP
+      # 注意：step name 中的冒号必须加引号，否则 YAML 会把它当成嵌套映射，
+      # 整个 workflow 文件解析失败（GitHub 会直接拒绝运行，而非跳过该步）。
+      - name: "Smoke test: health endpoint returns 200"
         run: |
           STAGING_URL="https://khy-os-staging.fly.dev"
           # The staging app exposes a health endpoint; verify it returns 200.

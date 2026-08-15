@@ -114,6 +114,18 @@ npm run dev                # Vite 开发服务器
 npm run build              # 生产构建
 ```
 
+### 本地开发访问地址
+
+后端与前端各占一个终端窗口；两者都起来后浏览器打开前端地址即可进入管理界面。
+
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| 前端管理界面 | http://localhost:3000 | Vue 3 管理 UI |
+| 后端 API | http://localhost:5000 | RESTful API |
+| WebSocket | ws://localhost:5000 | 实时通信 |
+
+只想用 CLI 而不开 Web 界面时，不需要起前端——直接 `.\khy.bat`（或 `npm run cli`）即可。
+
 ### 默认管理员账号
 
 后端启动时会**自动初始化**默认管理员（幂等：若账号已存在则跳过，绝不覆盖现有密码），无需手动运行脚本，启动日志中会输出账号信息。
@@ -223,6 +235,10 @@ khy-os/
 - **Node.js 后端**（`services/backend/`）：承载所有业务逻辑（CLI、AI 网关、各类服务、Web API）；
 - **前端**：`apps/ai-frontend/`（AI 平台管理 UI，Vue 3 + Vite）与 `software/khyquant/frontend/`（内置的 khyquant 交易 UI）；
 - **内核**（`kernel/`）：手写 C 语言 OS 内核，可在 QEMU 下引导运行。
+
+> 顶层七个目录的**层级定位（L0–L6）、允许的依赖方向、以及新文件该放哪一层**，
+> 真源是 [`docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md`](docs/03_DESIGN_设计/[DESIGN-ARCH-068]%20仓库层级板块规范.md)，
+> 由 `npm run check:layout` 强制执行。新增文件或新增顶层目录前先读它。
 
 ## 文档导航
 

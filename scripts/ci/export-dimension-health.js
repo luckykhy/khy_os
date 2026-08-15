@@ -6,7 +6,7 @@
 
 /**
  * export-dimension-health.js — Scans backend for D1-D5 evidence files,
- * verifies exports load correctly, and outputs docs/报告/维度健康.json.
+ * verifies exports load correctly, and outputs docs/_报告/维度健康.json.
  */
 
 const fs = require('fs');
@@ -108,7 +108,7 @@ function main() {
     health.dimensions[dim] = entry;
   }
 
-  const outDir = path.resolve(process.cwd(), 'docs/报告');
+  const outDir = path.resolve(process.cwd(), 'docs/_报告');
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, '维度健康.json');
   fs.writeFileSync(outPath, JSON.stringify(health, null, 2) + '\n');

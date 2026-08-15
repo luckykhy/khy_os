@@ -844,6 +844,61 @@ const AIGatewayModelMethods = {
    *   toolCapabilityStore.recordVerdict 的不降级不变量)。
    * @returns {Promise<{verdict:'native'|'text'|'unknown', latencyMs:number|null, error?:string}>}
    */
+  /**
+   * Runtime-check whether one concrete route really accepts image input.
+   * The probe is deliberately isolated from fallback and vision routing.
+   */
+  async verifyVisionCapability(route = {}, opts = {}) {
+    const probe = require('./visionCapabilityProbe');
+    const store = require('./visionCapabilityStore');
+    const adapterKey = String(route.adapter || '');
+    const model = String(route.model || '');
+    const entry = this._adapters.find((a) => a.key === adapterKey);
+    if (!model || !entry || !entry.adapter || typeof entry.adapter.generate !== 'function') {
+      return { verdict: 'unknown', latencyMs: null, error: 'route cannot probe' };
+    }
+    const identity = { ...route, adapter: adapterKey, model };
+    if (store.getVerdict(identity) !== null && !(opts && opts.force)) {
+      return { verdict: store.getVerdict(identity), cached: true, latencyMs: null };
+    }
+    const timeoutMs = Math.max(
+      4000,
+      parseInt(process.env.KHY_VISION_CAP_PROBE_TIMEOUT_MS || '15000', 10) || 15000
+    );
+    const t0 = Date.now();
+    try {
+      const result = await this.generate(probe.PROBE_PROMPT, {
+        preferredAdapter: adapterKey,
+        preferredModel: model,
+        model,
+        apiPoolProvider: route.pool || undefined,
+        apiEndpoint: route.endpoint || undefined,
+        apiFormat: route.apiFormat || undefined,
+        apiKey: route.apiKey || undefined,
+        images: [probe.PROBE_IMAGE_DATA_URL],
+        maxTotalAttempts: 1,
+        maxRetryDelayBudgetMs: 500,
+        maxTokens: 32,
+        temperature: 0,
+        top_p: 1,
+        thinking: false,
+        timeoutMs,
+        firstResponseTimeoutMs: timeoutMs,
+        disableProviderFallback: true,
+        strictAutoRelaxOnProcess: false,
+        _visionCapProbe: true,
+      });
+      const verdict = probe.interpretProbeResult(result);
+      const latencyMs = Date.now() - t0;
+      if (verdict.verdict !== 'unknown') {
+        store.recordVerdict(identity, verdict.verdict, { latencyMs, reason: verdict.reason });
+      }
+      return { ...verdict, latencyMs };
+    } catch (err) {
+      return { verdict: 'unknown', reason: 'probe_error', latencyMs: Date.now() - t0, error: err.message || String(err) };
+    }
+  },
+
   async verifyToolCalling(adapterKey, modelId, opts = {}) {
     const probe = require('./toolCallingProbe');
     const store = require('./toolCapabilityStore');

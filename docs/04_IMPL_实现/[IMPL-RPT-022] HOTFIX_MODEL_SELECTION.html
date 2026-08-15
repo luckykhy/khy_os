@@ -25,7 +25,7 @@
       <header class="hero reveal"><h1>/model 命令修复说明 (2026-06-04)</h1></header>
       <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#model-命令修复说明-2026-06-04">/model 命令修复说明 (2026-06-04)</a></li><li class="lvl-2"><a href="#问题描述">问题描述</a></li><li class="lvl-2"><a href="#核心修复-model-导致进程退出-最终真因-确诊">核心修复：/model 导致进程退出（最终真因 = 确诊）</a></li><li class="lvl-2"><a href="#次要修复-保留-无害加固">次要修复（保留，无害加固）</a></li><li class="lvl-3"><a href="#修复-1-添加取消提示">修复 1: 添加取消提示</a></li><li class="lvl-3"><a href="#修复-2-添加-claude-opus-4-8-4-7">修复 2: 添加 Claude Opus 4.8/4.7</a></li><li class="lvl-2"><a href="#应用修复">应用修复</a></li><li class="lvl-3"><a href="#当前状态检测">当前状态检测</a></li><li class="lvl-3"><a href="#解决方案-重启-khy-进程">解决方案：重启 KHY 进程</a></li><li class="lvl-2"><a href="#验证修复">验证修复</a></li><li class="lvl-2"><a href="#技术细节">技术细节</a></li><li class="lvl-3"><a href="#为什么需要重启">为什么需要重启？</a></li><li class="lvl-3"><a href="#相关文件">相关文件</a></li><li class="lvl-2"><a href="#后续建议">后续建议</a></li></ul></nav>
       <article class="doc-body">
-<p>&lt;!-- 文档分类: IMPL-RPT-022 | 阶段: 实现 | 原路径: docs/维护者/HOTFIX_MODEL_SELECTION.md --&gt;</p>
+<p>&lt;!-- 文档分类: IMPL-RPT-022 | 阶段: 实现 | 原路径: docs/_维护者/HOTFIX_MODEL_SELECTION.md --&gt;</p>
 <h1 id="model-命令修复说明-2026-06-04">/model 命令修复说明 (2026-06-04)<a class="anchor" href="#model-命令修复说明-2026-06-04" aria-label="锚点">#</a></h1>
 <h2 id="问题描述">问题描述<a class="anchor" href="#问题描述" aria-label="锚点">#</a></h2>
 <ol><li><strong>输入 <code>/model</code> 后整个 khy 进程直接退出回到 bash</strong>（核心问题，二次定位）</li><li>用户在选择界面取消时无提示</li><li>Claude Opus 4.8 模型缺失，无法在模型列表中选择</li></ol>

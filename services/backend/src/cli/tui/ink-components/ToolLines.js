@@ -300,15 +300,15 @@ const DIFF_DEL_BG = '#7A2936';
 const DIFF_ADD_WORD_BG = '#38A660';
 const DIFF_DEL_WORD_BG = '#B3596B';
 const DIFF_CONTEXT = 3;
-// Inline-view caps. The COLLAPSED preview is deliberately short (a glance, with a
-// truthful "ctrl+o to expand" promise); EXPANDED raises the ceiling to a generous
-// safety cap so pressing Ctrl+O actually reveals the full change. Honesty rule:
-// the "ctrl+o to expand" hint appears ONLY when collapsed and truncated — once
-// expanded, an absolute-cap overflow is reported plainly (no false promise).
+// Inline-view policy. The COLLAPSED preview is deliberately short (a glance, with
+// a truthful "ctrl+o to expand" promise); EXPANDED has no data-row ceiling, so
+// pressing Ctrl+O reveals the complete result. Ink still wraps to terminal width.
 const PREVIEW_ROWS_COLLAPSED = 10;
-const PREVIEW_ROWS_EXPANDED = 400;
+// Expanded output is rendered from the complete source; Infinity is intentional
+// here because Ink remains responsible for terminal wrapping, not data folding.
+const PREVIEW_ROWS_EXPANDED = Infinity;
 const MAX_DIFF_ROWS_COLLAPSED = 60; // inline-view safety cap when folded
-const MAX_DIFF_ROWS_EXPANDED = 1000; // generous cap once the user opts to expand
+const MAX_DIFF_ROWS_EXPANDED = Infinity; // no data truncation after Ctrl+O
 
 // Shell / third-party-app stdout fold rule (TUI). Deliberately MORE generous than
 // the shared `bash` policy (maxLines:6): a command result that is "not too long"
@@ -338,9 +338,8 @@ function splitDiffLines(text) {
  *   - new file (no before)     → green + preview
  *   - deleted file (no after)  → red − preview
  *   - existing file            → structured line diff with 3 context lines
- * `expanded` raises the row caps so Ctrl+O genuinely shows more (expansion
- * honesty): when collapsed a "ctrl+o to expand" hint is appended on overflow;
- * when expanded, overflow past the safety cap is reported without that promise.
+ * `expanded` removes the row caps so Ctrl+O genuinely shows the complete diff;
+ * when collapsed a "ctrl+o to expand" hint is appended on overflow.
  * Returns null when there is no renderable change.
  * @returns {Array<{kind:'add'|'del'|'ctx'|'more'|'stat', num?:number, text:string}>|null}
  */
@@ -356,7 +355,7 @@ function buildWriteDiffRows(diffCtx, expanded = false) {
 
   const previewMax = expanded ? PREVIEW_ROWS_EXPANDED : PREVIEW_ROWS_COLLAPSED;
   const maxRows = expanded ? MAX_DIFF_ROWS_EXPANDED : MAX_DIFF_ROWS_COLLAPSED;
-  // Collapsed overflow promises Ctrl+O; expanded overflow states the fact only.
+  // Collapsed overflow promises Ctrl+O; expanded takes every source row.
   // Marker text + plural guard live in the previewOverflowMarker SSOT (shared
   // with the classic REPL's toolOutputRender so "+1 line" never reads "+1 lines").
   const _overflow = require('../../previewOverflowMarker');
@@ -366,7 +365,9 @@ function buildWriteDiffRows(diffCtx, expanded = false) {
 
   if (!before && after) {
     const lines = splitDiffLines(after);
-    const { keep, hidden } = _overflow.resolveFold(lines.length, previewMax, process.env);
+    const { keep, hidden } = expanded
+      ? { keep: lines.length, hidden: 0 }
+      : _overflow.resolveFold(lines.length, previewMax, process.env);
     lines.slice(0, keep).forEach((ln, i) => rows.push({ kind: 'add', num: i + 1, text: ln }));
     if (hidden > 0) {
       rows.push({ kind: 'more', text: moreText(hidden, '+') });
@@ -375,7 +376,9 @@ function buildWriteDiffRows(diffCtx, expanded = false) {
   }
   if (before && !after) {
     const lines = splitDiffLines(before);
-    const { keep, hidden } = _overflow.resolveFold(lines.length, previewMax, process.env);
+    const { keep, hidden } = expanded
+      ? { keep: lines.length, hidden: 0 }
+      : _overflow.resolveFold(lines.length, previewMax, process.env);
     lines.slice(0, keep).forEach((ln, i) => rows.push({ kind: 'del', num: i + 1, text: ln }));
     if (hidden > 0) {
       rows.push({ kind: 'more', text: moreText(hidden, '-') });
@@ -726,7 +729,7 @@ function renderLiteralOutput(result, expanded, h, Box, Text) {
         const sourceLines = expanded ? allLines : collapseConsecutiveDuplicates(allLines).lines;
         // Collapsed → generous fold (short output shows in full); expanded → generous cap.
         const policy = expanded
-          ? { maxLines: PREVIEW_ROWS_EXPANDED, foldHead: PREVIEW_ROWS_EXPANDED, foldTail: 0 }
+          ? { maxLines: Infinity, foldHead: Infinity, foldTail: 0 }
           : SHELL_COLLAPSED_POLICY;
         return foldOutput(sourceLines, policy).lines;
       },

@@ -171,29 +171,31 @@ function buildSidebarLines(props = {}) {
   const build = (foldCompleted) => {
     const lines = [];
 
-    // 1. 任务清单(始终展示:无任务时灰色提示语)。
-    if (taskLines.length === 0) {
-      // 单一真源:样式取自 EMPTY_PLACEHOLDER,仅文本经宽度截断器处理。
-      lines.push({ ...EMPTY_PLACEHOLDER, text: t(EMPTY_PLACEHOLDER.text) });
-      // 二级提示:引导首次使用者(dim gray,不喧宾夺主)。
-      lines.push({ text: t('发送消息后将显示任务'), color: 'gray', dim: true });
-    } else {
-      const counts = countTaskLinesByStatus(taskLines);
-      const total = taskLines.length;
-      // 图标不可识别 → 诚实只报总数(绝不臆造完成数)。
-      const header = counts.unknown > 0 ? `任务 ${total} 项` : `任务 ${counts.completed}/${total}`;
-      lines.push({ text: t(header), bold: true });
-      let folded = 0;
-      for (let i = 0; i < taskLines.length; i++) {
-        const status = taskLineStatus(taskLines[i]);
-        if (foldCompleted && status === 'completed') {
-          folded += 1;
-          continue;
+    // 1. Task checklist. App owns the canonical full-width TaskListPanel and
+    // passes hideTaskSection here so the optional right rail does not duplicate
+    // tasks or show a misleading permanent empty state.
+    if (!props.hideTaskSection) {
+      if (taskLines.length === 0) {
+        lines.push({ ...EMPTY_PLACEHOLDER, text: t(EMPTY_PLACEHOLDER.text) });
+        lines.push({ text: t('创建任务或执行计划后将显示'), color: 'gray', dim: true });
+      } else {
+        const counts = countTaskLinesByStatus(taskLines);
+        const total = taskLines.length;
+        // 图标不可识别 → 诚实只报总数(绝不臆造完成数)。
+        const header = counts.unknown > 0 ? `任务 ${total} 项` : `任务 ${counts.completed}/${total}`;
+        lines.push({ text: t(header), bold: true });
+        let folded = 0;
+        for (let i = 0; i < taskLines.length; i++) {
+          const status = taskLineStatus(taskLines[i]);
+          if (foldCompleted && status === 'completed') {
+            folded += 1;
+            continue;
+          }
+          lines.push(formatTaskLine(taskLines[i], i + 1, t));
         }
-        lines.push(formatTaskLine(taskLines[i], i + 1, t));
-      }
-      if (folded > 0) {
-        lines.push({ text: t(`✓ 已完成 ${folded} 项`), color: COMPLETED_FOLD_COLOR, dim: true });
+        if (folded > 0) {
+          lines.push({ text: t(`✓ 已完成 ${folded} 项`), color: COMPLETED_FOLD_COLOR, dim: true });
+        }
       }
     }
 
@@ -203,7 +205,9 @@ function buildSidebarLines(props = {}) {
       props.streaming && Array.isArray(props.streaming.tools) ? props.streaming.tools : [];
     if (tools.length > 0) {
       const running = tools.filter((x) => !(x && x.result)).length;
-      lines.push({ ...divider });
+      if (lines.length > 0) {
+        lines.push({ ...divider });
+      }
       lines.push({
         text: t(`工具 · 运行中 ${running}/共 ${tools.length}`),
         color: running > 0 ? TOOLS_COLOR.running : TOOLS_COLOR.idle,

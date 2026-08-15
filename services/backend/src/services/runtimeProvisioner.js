@@ -38,6 +38,18 @@ const { spawnSync } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { requestStream } = require('../utils/nativeHttp');
+
+function runtimeProxyAgent() {
+  const proxyUrl = String(process.env.HTTPS_PROXY || process.env.HTTP_PROXY || '').trim();
+  if (!proxyUrl) return undefined;
+  try {
+    const { HttpsProxyAgent } = require('https-proxy-agent');
+    return new HttpsProxyAgent(proxyUrl);
+  } catch {
+    return undefined;
+  }
+}
 
 // Backend root resolves correctly in both the source tree
 // (services/backend/src/services -> services/backend) and the bundled wheel
@@ -101,45 +113,35 @@ function sha256File(filePath) {
 }
 
 /**
- * Default downloader: streams a URL to a file with axios. axios' node adapter
- * reads HTTPS_PROXY/HTTP_PROXY/NO_PROXY from the environment automatically
- * (via proxy-from-env) as long as `proxy` is left unset, so restricted-network
- * users only need the standard proxy env vars.
+ * Default downloader: streams a URL to a file using the shared native transport.
  */
 async function defaultDownloader(url, destPath) {
-  const axios = require('axios');
-  const response = await axios({
-    method: 'get',
-    url,
-    responseType: 'stream',
-    timeout: DOWNLOAD_TIMEOUT_MS,
-    maxRedirects: 5,
+  const { status, stream } = await requestStream(url, {
+    method: 'GET',
     headers: { 'User-Agent': 'khy-runtime-provisioner' },
+    timeoutMs: DOWNLOAD_TIMEOUT_MS,
+    maxRedirects: 5,
+    agent: runtimeProxyAgent(),
   });
+  if (status < 200 || status >= 300) {
+    stream.resume();
+    throw new Error(`Runtime download HTTP ${status}`);
+  }
   await new Promise((resolve, reject) => {
     const ws = fs.createWriteStream(destPath);
     let settled = false;
     const fail = (err) => {
-      if (settled) {
-        return;
-      }
+      if (settled) return;
       settled = true;
-      try {
-        ws.destroy();
-      } catch {
-        /* ignore */
-      }
+      try { ws.destroy(); } catch { /* ignore */ }
       reject(err);
     };
-    response.data.on('error', fail);
+    stream.on('error', fail);
     ws.on('error', fail);
     ws.on('finish', () => {
-      if (!settled) {
-        settled = true;
-        resolve();
-      }
+      if (!settled) { settled = true; resolve(); }
     });
-    response.data.pipe(ws);
+    stream.pipe(ws);
   });
 }
 

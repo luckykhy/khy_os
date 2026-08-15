@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>首次运行自动登录与凭据 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>首次运行自动登录与凭据</div>
+      <header class="hero reveal"><h1>首次运行自动登录与凭据</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#首次运行自动登录与凭据">首次运行自动登录与凭据</a></li><li class="lvl-2"><a href="#一-首次运行发生了什么">一、首次运行发生了什么</a></li><li class="lvl-2"><a href="#二-凭据文件">二、凭据文件</a></li><li class="lvl-2"><a href="#三-想跳过自动登录-换掉生成的密码">三、想跳过自动登录 / 换掉生成的密码</a></li><li class="lvl-2"><a href="#四-跨机器复制项目后">四、跨机器复制项目后</a></li><li class="lvl-2"><a href="#五-故障排查">五、故障排查</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-175 | 阶段: 运维 | 原路径: 新建（根目录 6 份会话日志合并归档） --&gt;</p>
+<h1 id="首次运行自动登录与凭据">首次运行自动登录与凭据<a class="anchor" href="#首次运行自动登录与凭据" aria-label="锚点">#</a></h1>
+<blockquote><p>第一次敲 <code>khy</code> 时不需要先注册账号：CLI 会用<strong>当前操作系统用户名</strong>派生一个机器本地管理员，生成随机密码落到数据家的凭据文件，然后自己登录进去。本文讲这条链路每一步实际做了什么、凭据存在哪、哪些环境变量能改它的行为、以及跨机器复制项目后要做什么。</p>
+<p><strong>归档来源</strong>：本文由根目录 6 份一次性会话记录合并而成（归档日期 2026-08-15）：<code>AUTO_LOGIN_ENABLED.md</code>、<code>FIXED_AUTO_LOGIN.md</code>、<code>FINAL_AUTO_LOGIN_COMPLETE.md</code>、<code>FINAL_AUTO_LOGIN_GUIDE.md</code>、<code>PASSWORD_AUTO_FILL.md</code>、<code>CLI_AUTO_USERNAME.md</code>。原文带具体机器路径与用户名，且互相矛盾（其中一份提出的 <code>KHY_CLI_SKIP_AUTH</code> 从未实现，见第五节），本文按<strong>代码实测</strong>重写，不保留原文表述。</p>
+<p>实现依据（核实来源）：</p>
+<ul><li>CLI 登录流程：<code>services/backend/bin/khy.js</code>（<code>ensureAuthenticated</code> 一带）</li><li>凭据生成与持久化的唯一真源：<code>services/backend/src/services/credentialGenerator.js</code></li><li>凭据文件落盘位置解析：<code>services/backend/src/utils/dataHome.js</code></li><li>服务端播种路径：<code>services/backend/scripts/seed.js</code>、<code>src/services/manageDbBootstrap.js</code></li><li>Web 端登录页预填：<code>services/ai-backend/src/routes/auth.js</code></li></ul></blockquote>
+<hr>
+<h2 id="一-首次运行发生了什么">一、首次运行发生了什么<a class="anchor" href="#一-首次运行发生了什么" aria-label="锚点">#</a></h2>
+<pre><code>khy
+  │
+  ├─0 凭据文件已存在？ → 读出来直接登录（2 秒超时），成功即进 CLI
+  │
+  ├─1 打印登录提示，并给出凭据文件的**路径**（不打印明文密码）
+  │
+  ├─2 第一次尝试（且 KHY_CLI_AUTO_LOGIN ≠ 0）：
+  │     ├─ 探测系统用户名 → 规范化为合法用户名
+  │     ├─ 凭据文件存在且用户名对得上 → 取其中密码
+  │     ├─ 凭据文件不存在        → 现场生成并落盘（loadOrCreateDefaultAdminCredentials）
+  │     ├─ 仍拿不到密码           → 退到环境变量 KHY_DEFAULT_PASSWORD
+  │     ├─ 登录 → 成功即进 CLI
+  │     └─ 登录返回「用户不存在」 → 自动注册（10 秒超时）→ 成功即进 CLI
+  │
+  └─3 上面都没成 → 交互式登录表单，用户名已预填系统用户名，只需输密码
+        └─ 非交互环境（管道 / CI）没有表单可填 → 报错退出（exit 1）</code></pre>
+<p><strong>用户名怎么来的</strong>：<code>os.userInfo().username</code>，回退 <code>%USERNAME%</code>（Windows）/ <code>$USER</code>（Linux/macOS），然后转小写并剔除 <code>[a-z0-9_-]</code> 之外的字符。所以换一台机器会自动得到那台机器的用户名，不用改配置。</p>
+<p><strong>密码怎么来的</strong>：<code>credentialGenerator.js</code> 用机器指纹材料（主机名、设备 id）混 <code>crypto.randomBytes</code> 熵，生成约 16 位混合字符集密码。<strong>不存在跨机器可预测的固定默认密码</strong>，也没有 <code>admin/admin123</code> 这类硬编码残留。</p>
+<p><strong>为什么后端没起也能登进去</strong>：生成的默认管理员是<strong>本地</strong>凭据，CLI 不需要后端在跑就能认它。后端未运行时 CLI 会提示这一点。但注册新用户、Web 界面等需要后端的能力仍然要先启动后端。</p>
+<hr>
+<h2 id="二-凭据文件">二、凭据文件<a class="anchor" href="#二-凭据文件" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文件名</td><td><code>default-admin.json</code></td></tr><tr><td>目录</td><td><code>&lt;数据家&gt;/credentials/</code>（便携部署落在便携根的 <code>.khy/credentials/</code>）</td></tr><tr><td>内容</td><td>用户名 + <strong>明文</strong>密码（数据库里存的始终只是 bcrypt 哈希）</td></tr><tr><td>权限</td><td>尽力 <code>chmod 0600</code>；Windows 上设置失败会被忽略</td></tr><tr><td>幂等性</td><td>文件已存在就<strong>永不重新生成、永不覆盖</strong></td></tr></tbody></table>
+<p><strong>数据家（data home）怎么解析</strong>：真源是 <code>services/backend/src/utils/dataHome.js</code>，按序为 ① 环境变量 <code>KHY_DATA_HOME</code> ② <code>~/.khy/.location.json</code> 记录的钉住位置 ③ 已有非空的 <code>~/.khy</code> 原地钉死 ④ 全新安装选剩余空间最大的<strong>非系统盘</strong> ⑤ 兜底 <code>~/.khy</code>。所以凭据文件的绝对路径<strong>因机器而异</strong>，本文刻意不写死某个盘符——要看自己这台机器的实际路径，跑：</p>
+<pre><code class="language-bash">node -e &quot;console.log(require('./services/backend/src/services/credentialGenerator').getDefaultAdminCredentialsPath())&quot;</code></pre>
+<p>CLI 在登录提示里也会打印这个路径。</p>
+<blockquote><p>⚠️ 这个文件里是<strong>明文密码</strong>。它属于机器本地凭据，不要复制到别的机器、不要进版本库（<code>.khy/</code> 已在 <code>.gitignore</code> 内）、不要贴进 issue 或聊天记录。换机器时的正确做法是让新机器自己生成一份（第四节）。</p></blockquote>
+<hr>
+<h2 id="三-想跳过自动登录-换掉生成的密码">三、想跳过自动登录 / 换掉生成的密码<a class="anchor" href="#三-想跳过自动登录-换掉生成的密码" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell"># 关掉自动登录，每次手动输（用户名仍会预填）
+$env:KHY_CLI_AUTO_LOGIN = &quot;0&quot;
+
+# 指定 CLI 自动登录用的密码（不写凭据文件）
+$env:KHY_DEFAULT_PASSWORD = &quot;&lt;密码&gt;&quot;
+
+# 指定默认管理员的用户名 / 密码（纯环境变量模式：不落盘、调用方不打印）
+$env:KHY_ADMIN_USERNAME = &quot;&lt;用户名&gt;&quot;
+$env:KHY_ADMIN_PASSWORD = &quot;&lt;密码&gt;&quot;
+
+# 把数据家（连带凭据目录）指到别处
+$env:KHY_DATA_HOME = &quot;&lt;目录&gt;&quot;</code></pre>
+<p>Linux/macOS 用 <code>export KHY_CLI_AUTO_LOGIN=0</code> 等价形式。</p>
+<table><thead><tr><th>变量</th><th>作用域</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_CLI_AUTO_LOGIN</code></td><td>CLI</td><td>置 <code>0</code> 关闭首次尝试的自动登录；其余值等同开启</td></tr><tr><td><code>KHY_DEFAULT_PASSWORD</code></td><td>CLI</td><td>凭据文件取不到密码时的回退来源</td></tr><tr><td><code>KHY_ADMIN_USERNAME</code></td><td>凭据生成</td><td>覆盖「用系统用户名」的默认行为</td></tr><tr><td><code>KHY_ADMIN_PASSWORD</code></td><td>凭据生成</td><td>纯环境变量模式，<strong>不写凭据文件</strong></td></tr><tr><td><code>DEFAULT_ADMIN_PASSWORD</code></td><td>凭据生成</td><td><code>KHY_ADMIN_PASSWORD</code> 的历史别名</td></tr><tr><td><code>KHY_DATA_HOME</code></td><td>全局</td><td>显式指定数据家，凭据目录随之移动</td></tr></tbody></table>
+<blockquote><p>红线：真密码只经环境变量瞬时注入，<strong>绝不写进源码、配置模板或提交</strong>。上表里的变量用于本机会话，不要固化到仓库文件里。</p></blockquote>
+<hr>
+<h2 id="四-跨机器复制项目后">四、跨机器复制项目后<a class="anchor" href="#四-跨机器复制项目后" aria-label="锚点">#</a></h2>
+<ol><li><strong>配置全局 <code>khy</code> 命令</strong>：<code>portable-setup.bat</code>（Windows）/ <code>portable-setup.sh</code></li><li><strong>直接跑 <code>khy</code></strong>：用户名按新机器的系统用户自动探测，凭据在本机现场生成——<strong>不需要</strong>先跑任何 setup 脚本</li><li>需要完整能力（Web 界面、注册新用户、数据库）时再启动后端：<code>npm run dev --workspace services/backend</code></li></ol>
+<p>如果想在启动 CLI 之前就把管理员账号播种进数据库（例如要立刻用 Web 界面登录），跑 <code>scripts/setup/first-time-setup.bat</code>，它等价于 <code>node services/backend/scripts/quick-setup.js</code>；失败时的兜底是 <code>npm run seed --workspace services/backend</code>。</p>
+<hr>
+<h2 id="五-故障排查">五、故障排查<a class="anchor" href="#五-故障排查" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>症状</th><th>原因</th><th>处理</th></tr></thead><tbody><tr><td>一直弹登录表单，不自动登录</td><td>凭据文件不存在且现场生成失败（多为数据家不可写）</td><td>看 CLI 打印的错误行；用 <code>KHY_DATA_HOME</code> 指到可写目录</td></tr><tr><td>「用户不存在，正在自动注册…」后失败</td><td>注册需要后端，后端未运行</td><td>先起后端；或用本地默认管理员（凭据文件那份）登录</td></tr><tr><td>凭据文件里的密码登不进去</td><td>数据库里的账号是另一套凭据（例如被 <code>reset-admin-password</code> 改过）</td><td><code>node services/ai-backend/scripts/reset-admin-password.js --password &lt;新密码&gt;</code></td></tr><tr><td>想重新生成凭据</td><td>生成是幂等的，文件在就不会重来</td><td>删掉 <code>&lt;数据家&gt;/credentials/default-admin.json</code> 再跑 <code>khy</code></td></tr><tr><td>非交互环境下报「自动登录失败且非交互模式」</td><td>管道/CI 里没有表单可填</td><td>预先设 <code>KHY_DEFAULT_PASSWORD</code>，或先在交互终端里跑一次让凭据落盘</td></tr></tbody></table>
+<p><strong><code>KHY_CLI_SKIP_AUTH</code> 不存在</strong>。归档来源里有一份文档把它写成「跳过认证模式」的开关，全仓检索确认代码中<strong>从无此变量</strong>——设它不会有任何效果。要免输密码请用第三节的自动登录链路。</p>
+<hr>
+<h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
+<ul><li>访问与登录（Web 侧）：<code>[OPS-MAN-003] ai-管理-访问与登录</code></li><li>快速开始：<code>[OPS-MAN-027] 快速开始</code></li><li>便携版部署：<code>docs/06_DEPLOY_部署/PORTABLE.md</code></li><li>环境开关命名规范：<code>[OPS-MAN-058] 环境开关与文档命名规范</code></li><li>一次性脚本的位置约定：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范</code></li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-174] 任务入口总表.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-174] 任务入口总表</div></a><a class="next" href="../../docs/07_OPS_运维/00_INDEX_运维-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 运维分类索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

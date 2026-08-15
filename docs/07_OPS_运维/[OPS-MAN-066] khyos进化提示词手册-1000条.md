@@ -1,7 +1,7 @@
 # [OPS-MAN-066] Khy-OS 进化提示词手册（1000 条）
 
 > 交给 khy 或任何「弱智 AI / 4B 小模型」用的进化清单：一次喂一条，照着做，跑通它自带的验证命令。
-> 全部锚定本仓真实子系统、真实文件、真实 verify（来自 `docs/维护者/维护映射表.json`）。
+> 全部锚定本仓真实子系统、真实文件、真实 verify（来自 `docs/_维护者/维护映射表.json`）。
 
 ## 怎么用（给小模型的三步）
 
@@ -35,7 +35,7 @@ npm run docs:gen-evolution-prompts     # 重新生成本文件
 npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全 verify、幂等
 ```
 
-> 新增子系统请先登记进 `docs/维护者/维护映射表.json`，本手册下次重生会自动覆盖它。
+> 新增子系统请先登记进 `docs/_维护者/维护映射表.json`，本手册下次重生会自动覆盖它。
 
 **共 1000 条。**
 
@@ -56,7 +56,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：把改动面压到最小。
   - 验证：`npm run check:change-safety`
 
-**4.** 改任何文件前，先读 .ai/MAP.md 与 docs/维护者/维护映射表.json 定位正确子系统。
+**4.** 改任何文件前，先读 .ai/MAP.md 与 docs/_维护者/维护映射表.json 定位正确子系统。
   - 说明：别在错的地方改。
   - 验证：`npm run maintainer:check`
 
@@ -977,7 +977,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：子系统：Maintenance Safety and Rule Gates。读懂再动。
   - 验证：`npm run check:maintainer:safety`
 
-**232.** 阅读「Maintenance Safety and Rule Gates」的 docs/维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
+**232.** 阅读「Maintenance Safety and Rule Gates」的 docs/_维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
   - 说明：子系统：Maintenance Safety and Rule Gates。读懂再动。
   - 验证：`npm run check:maintainer:safety`
 
@@ -1061,7 +1061,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：子系统：Evolution Prompt Playbook (1000 preset prompts)。读懂再动。
   - 验证：`node --check scripts/tests/gen-evolution-prompts.test.js`
 
-**253.** 阅读「Evolution Prompt Playbook (1000 preset prompts)」的 docs/维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
+**253.** 阅读「Evolution Prompt Playbook (1000 preset prompts)」的 docs/_维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
   - 说明：子系统：Evolution Prompt Playbook (1000 preset prompts)。读懂再动。
   - 验证：`npm run test:evolution-prompts`
 
@@ -1077,7 +1077,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。
   - 验证：`node --check scripts/tests/maintainerTriage.test.js`
 
-**257.** 阅读「Symptom Triage (route a symptom to its subsystem)」的 docs/维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
+**257.** 阅读「Symptom Triage (route a symptom to its subsystem)」的 docs/_维护者/维护映射表.json，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
   - 说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。
   - 验证：`npm run test:triage`
 
@@ -1364,7 +1364,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Bootstrap and Packaging。
   - 验证：`npm run check:maintainer:bootstrap`
 
-**328.** 为「Bootstrap and Packaging」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**328.** 为「Bootstrap and Packaging」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Bootstrap and Packaging。
   - 验证：`npm run maintainer:check`
 
@@ -1604,7 +1604,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：CLI Routing and Help Surface。
   - 验证：`npm run test:maintainer:cli-routing`
 
-**388.** 为「CLI Routing and Help Surface」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**388.** 为「CLI Routing and Help Surface」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：CLI Routing and Help Surface。
   - 验证：`npm run maintainer:check`
 
@@ -1844,7 +1844,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Prompt Capsule and Debug Prompt System。
   - 验证：`node --test services/backend/tests/promptOnDemandSections.test.js`
 
-**448.** 为「Prompt Capsule and Debug Prompt System」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**448.** 为「Prompt Capsule and Debug Prompt System」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Prompt Capsule and Debug Prompt System。
   - 验证：`npm run maintainer:check`
 
@@ -2084,7 +2084,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：AI Gateway and Adapter Layer。
   - 验证：`npm run test:maintainer:gateway`
 
-**508.** 为「AI Gateway and Adapter Layer」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**508.** 为「AI Gateway and Adapter Layer」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：AI Gateway and Adapter Layer。
   - 验证：`npm run maintainer:check`
 
@@ -2324,7 +2324,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Proxy, Daemon, and Runtime Port Discovery。
   - 验证：`npm run test:maintainer:runtime`
 
-**568.** 为「Proxy, Daemon, and Runtime Port Discovery」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**568.** 为「Proxy, Daemon, and Runtime Port Discovery」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Proxy, Daemon, and Runtime Port Discovery。
   - 验证：`npm run maintainer:check`
 
@@ -2564,7 +2564,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：AI Management UI and API。
   - 验证：`npm run test:maintainer:ai-management`
 
-**628.** 为「AI Management UI and API」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**628.** 为「AI Management UI and API」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：AI Management UI and API。
   - 验证：`npm run maintainer:check`
 
@@ -2804,7 +2804,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Coding Projects (named workspaces + chat linkage)。
   - 验证：`npm run test:maintainer:projects`
 
-**688.** 为「Coding Projects (named workspaces + chat linkage)」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**688.** 为「Coding Projects (named workspaces + chat linkage)」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Coding Projects (named workspaces + chat linkage)。
   - 验证：`npm run maintainer:check`
 
@@ -3044,7 +3044,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Workspace, Publish, and Verification Commands。
   - 验证：`npm run test:maintainer:publish`
 
-**748.** 为「Workspace, Publish, and Verification Commands」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**748.** 为「Workspace, Publish, and Verification Commands」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Workspace, Publish, and Verification Commands。
   - 验证：`npm run maintainer:check`
 
@@ -3284,7 +3284,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Maintenance Safety and Rule Gates。
   - 验证：`npm run check:maintainer:safety`
 
-**808.** 为「Maintenance Safety and Rule Gates」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**808.** 为「Maintenance Safety and Rule Gates」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Maintenance Safety and Rule Gates。
   - 验证：`npm run maintainer:check`
 
@@ -3524,7 +3524,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Release and Rollback。
   - 验证：`node --test maintenance/tests/ops-lib.test.js maintenance/tests/ops.integration.test.js`
 
-**868.** 为「Release and Rollback」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**868.** 为「Release and Rollback」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Release and Rollback。
   - 验证：`npm run maintainer:check`
 
@@ -3764,7 +3764,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Build Best Environment (Self-check / Repair / Probes)。
   - 验证：`npm run test:maintainer:env-optimize`
 
-**928.** 为「Build Best Environment (Self-check / Repair / Probes)」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**928.** 为「Build Best Environment (Self-check / Repair / Probes)」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Build Best Environment (Self-check / Repair / Probes)。
   - 验证：`npm run maintainer:check`
 
@@ -4004,7 +4004,7 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：正则去 g。 子系统：Evolution Prompt Playbook (1000 preset prompts)。
   - 验证：`npm run test:evolution-prompts`
 
-**988.** 为「Evolution Prompt Playbook (1000 preset prompts)」登记进 docs/维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
+**988.** 为「Evolution Prompt Playbook (1000 preset prompts)」登记进 docs/_维护者/维护映射表.json（whenToUse/paths/docs/verify 齐全）。
   - 说明：登记映射表。 子系统：Evolution Prompt Playbook (1000 preset prompts)。
   - 验证：`npm run maintainer:check`
 

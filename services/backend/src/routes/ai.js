@@ -6,7 +6,30 @@ const { authMiddleware } = require('../middleware/auth');
 const imageGenService = require('../services/imageGenService');
 const stockAnalysisEngine = require('../services/stockAnalysisEngine');
 const trainingData = require('../services/trainingDataService');
+const { request: nativeRequest } = require('../utils/nativeHttp');
 // Model-name SSOT: direct provider-call model choices flow from constants/models.js.
+
+// Call a provider with JSON or form data using the shared native HTTP transport.
+async function postProvider(url, data, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  let body;
+  if (options.form) {
+    body = new URLSearchParams(options.form).toString();
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  } else if (data !== undefined && data !== null) {
+    body = JSON.stringify(data);
+  }
+  const response = await nativeRequest(url, {
+    method: 'POST',
+    headers,
+    body,
+    timeoutMs: options.timeoutMs || 15000,
+  });
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`Provider API HTTP ${response.status}`);
+  }
+  return { data: response.data };
+}
 
 // Format the optional browser-provided geolocation into a system prompt line.
 // Validates latitude ∈ [-90, 90] and longitude ∈ [-180, 180] as finite numbers;
@@ -559,8 +582,6 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
 
 // 调用云端AI
 async function callCloudAI(stockCode, analysisContext, question, tokens, clientLocation) {
-  const axios = require('axios');
-
   // 构建系统Prompt
   let systemPrompt = `你是小K，一个智能AI助手，擅长量化交易分析，也能回答各类问题。
 
@@ -619,7 +640,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       name: 'OpenAI',
       check: () => tokens.openai,
       call: async () => {
-        const response = await axios.post(
+        const response = await postProvider(
           'https://api.openai.com/v1/chat/completions',
           {
             model: MODELS.openaiDirect,
@@ -635,7 +656,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
               Authorization: `Bearer ${tokens.openai}`,
               'Content-Type': 'application/json',
             },
-            timeout: 15000,
+            timeoutMs: 15000,
           }
         );
         return response.data.choices[0].message.content;
@@ -645,7 +666,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       name: 'Claude',
       check: () => tokens.anthropic,
       call: async () => {
-        const response = await axios.post(
+        const response = await postProvider(
           'https://api.anthropic.com/v1/messages',
           {
             model: MODELS.anthropicDirect,
@@ -658,7 +679,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
               'anthropic-version': '2023-06-01',
               'Content-Type': 'application/json',
             },
-            timeout: 15000,
+            timeoutMs: 15000,
           }
         );
         return response.data.content[0].text;
@@ -668,8 +689,8 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       name: 'Gemini',
       check: () => tokens.google,
       call: async () => {
-        const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${tokens.google}`,
+        const response = await postProvider(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
           {
             contents: [
               {
@@ -682,8 +703,8 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
             ],
           },
           {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 15000,
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': tokens.google },
+            timeoutMs: 15000,
           }
         );
         return response.data.candidates[0].content.parts[0].text;
@@ -694,19 +715,28 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       check: () => tokens.baidu,
       call: async () => {
         // 文心一言需要先获取access_token
-        const tokenResponse = await axios.post(
-          `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${tokens.baidu}&client_secret=${tokens.baiduSecret || tokens.baidu}`
+        const tokenResponse = await postProvider(
+          'https://aip.baidubce.com/oauth/2.0/token',
+          null,
+          {
+            form: {
+              grant_type: 'client_credentials',
+              client_id: tokens.baidu,
+              client_secret: tokens.baiduSecret || tokens.baidu,
+            },
+            timeoutMs: 15000,
+          }
         );
         const accessToken = tokenResponse.data.access_token;
 
-        const response = await axios.post(
-          `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions?access_token=${accessToken}`,
+        const response = await postProvider(
+          `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions?access_token=${encodeURIComponent(accessToken)}`,
           {
             messages: [{ role: 'user', content: `${systemPrompt}\n\n${userPrompt}` }],
           },
           {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 15000,
+            timeoutMs: 15000,
           }
         );
         return response.data.result;
@@ -716,7 +746,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
       name: '通义千问',
       check: () => tokens.alibaba,
       call: async () => {
-        const response = await axios.post(
+        const response = await postProvider(
           'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
           {
             model: MODELS.qwenDirect,
@@ -735,7 +765,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
               Authorization: `Bearer ${tokens.alibaba}`,
               'Content-Type': 'application/json',
             },
-            timeout: 15000,
+            timeoutMs: 15000,
           }
         );
         return response.data.output.choices[0].message.content;
@@ -754,7 +784,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
         } catch {
           /* fail-soft: keep legacy default */
         }
-        const response = await axios.post(
+        const response = await postProvider(
           'https://open.bigmodel.cn/api/paas/v4/chat/completions',
           {
             model: _zhipuModel,
@@ -768,7 +798,7 @@ async function callCloudAI(stockCode, analysisContext, question, tokens, clientL
               Authorization: `Bearer ${tokens.zhipu}`,
               'Content-Type': 'application/json',
             },
-            timeout: 15000,
+            timeoutMs: 15000,
           }
         );
         return response.data.choices[0].message.content;
@@ -849,3 +879,5 @@ router.get('/persona', (req, res) => {
 });
 
 module.exports = router;
+module.exports.callCloudAI = callCloudAI;
+module.exports.postProvider = postProvider;

@@ -1154,36 +1154,37 @@ khy train import ${modelName} --from ${remoteUrl}
  * Create remote repository via API.
  */
 async function createRemoteRepo(platform, repoName, token, owner) {
-  const axios = require('axios');
   try {
+    let url;
+    let body;
+    let headers = { 'Content-Type': 'application/json' };
     if (platform === 'github') {
-      await axios.post(
-        'https://api.github.com/user/repos',
-        {
-          name: repoName,
-          private: true,
-          description: 'KHY-Quant trained model',
-        },
-        {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          timeout: 15000,
-        }
-      );
+      url = 'https://api.github.com/user/repos';
+      headers = { ...headers, Authorization: `Bearer ${token}` };
+      body = {
+        name: repoName,
+        private: true,
+        description: 'KHY-Quant trained model',
+      };
     } else if (platform === 'gitee') {
-      await axios.post(
-        'https://gitee.com/api/v5/user/repos',
-        {
-          access_token: token,
-          name: repoName,
-          private: true,
-          description: 'KHY-Quant trained model',
-        },
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 15000,
-        }
-      );
+      url = 'https://gitee.com/api/v5/user/repos';
+      body = {
+        access_token: token,
+        name: repoName,
+        private: true,
+        description: 'KHY-Quant trained model',
+      };
+    } else {
+      return;
     }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) throw new Error(`Repository API HTTP ${response.status}`);
   } catch {
     /* repo may already exist, ignore */
   }
@@ -1389,6 +1390,7 @@ module.exports = {
 
   // Git upload
   uploadToGitRepo,
+  createRemoteRepo,
 
   // HuggingFace
   uploadToHuggingFace,

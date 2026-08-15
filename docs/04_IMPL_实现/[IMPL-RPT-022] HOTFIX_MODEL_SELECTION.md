@@ -1,4 +1,4 @@
-<!-- 文档分类: IMPL-RPT-022 | 阶段: 实现 | 原路径: docs/维护者/HOTFIX_MODEL_SELECTION.md -->
+<!-- 文档分类: IMPL-RPT-022 | 阶段: 实现 | 原路径: docs/_维护者/HOTFIX_MODEL_SELECTION.md -->
 # /model 命令修复说明 (2026-06-04)
 
 ## 问题描述

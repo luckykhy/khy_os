@@ -1,9 +1,9 @@
 /**
  * Unit tests for customProviderForm — the pure logic behind CustomProviderCard's
  * add form (model-seed parsing + provider payload shape). Zero deps:
- *   node --test src/components/gateway/customProviderForm.test.js
+ *   npx vitest run src/components/gateway/customProviderForm.test.js
  */
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
   parseModelSeed,

@@ -35,15 +35,19 @@ from typing import List, Optional
 PORTABLE_MARKER_FILENAME = ".portable"
 
 #: Env var carrying an explicit portable root (same as Node side).
-PORTABLE_ROOT_ENV = "KHYQUANT_PORTABLE_ROOT"
+PORTABLE_ROOT_ENV = "KHY_PORTABLE_ROOT"
+#: Legacy environment variable retained for existing launchers and installs.
+LEGACY_PORTABLE_ROOT_ENV = "KHYQUANT_PORTABLE_ROOT"
 
 #: Directory (under the portable root) that holds all portable khy data.
 PORTABLE_DATA_DIRNAME = ".khy"
 
 
 def _env_portable_root() -> Optional[Path]:
-    """Portable root from the env var, or None when unset/blank."""
+    """Portable root from the canonical or legacy env var, if set."""
     raw = os.environ.get(PORTABLE_ROOT_ENV, "").strip()
+    if not raw:
+        raw = os.environ.get(LEGACY_PORTABLE_ROOT_ENV, "").strip()
     if not raw:
         return None
     try:
@@ -97,13 +101,19 @@ def is_portable_deployment() -> bool:
 
 
 def get_portable_data_home() -> Optional[Path]:
-    """``<portable root>/.khy`` for portable installs, else None.
+    """Return the canonical data home for a portable install, else ``None``.
 
-    Callers use the ``None`` return to fall back to their historical
-    (non-portable) paths, keeping all portable/non-portable branching in
-    this single module.
+    ``KHY_DATA_HOME`` is the cross-language canonical override exported by the
+    artifact launchers. When absent, source-tree portable installs retain the
+    historical ``<portable root>/.khy`` layout.
     """
     root = get_portable_root()
     if root is None:
         return None
+    configured = os.environ.get("KHY_DATA_HOME", "").strip()
+    if configured:
+        try:
+            return Path(configured).resolve()
+        except OSError:
+            return Path(configured)
     return root / PORTABLE_DATA_DIRNAME

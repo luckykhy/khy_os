@@ -23,7 +23,7 @@
     <div class="content">
       <div class="breadcrumb reveal"><a href="./docs/index.html">首页</a><span class="sep">›</span>项目简介</div>
       <header class="hero reveal"><h1>项目简介</h1></header>
-      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-2"><a href="#项目简介">项目简介</a></li><li class="lvl-2"><a href="#架构概览">架构概览</a></li><li class="lvl-3"><a href="#关键入口点">关键入口点</a></li><li class="lvl-2"><a href="#安装方式">安装方式</a></li><li class="lvl-3"><a href="#包管理器安装-二选一-两渠道内容一致">包管理器安装（二选一，两渠道内容一致）</a></li><li class="lvl-3"><a href="#本仓库源码运行">本仓库源码运行</a></li><li class="lvl-2"><a href="#快速开始-开发者">快速开始（开发者）</a></li><li class="lvl-3"><a href="#启动后端">启动后端</a></li><li class="lvl-3"><a href="#启动-ai-平台前端">启动 AI 平台前端</a></li><li class="lvl-3"><a href="#默认管理员账号">默认管理员账号</a></li><li class="lvl-2"><a href="#配置文件位置">配置文件位置</a></li><li class="lvl-2"><a href="#目录结构">目录结构</a></li><li class="lvl-3"><a href="#分层概览">分层概览</a></li><li class="lvl-2"><a href="#文档导航">文档导航</a></li><li class="lvl-2"><a href="#版本同步">版本同步</a></li><li class="lvl-2"><a href="#贡献与维护">贡献与维护</a></li><li class="lvl-2"><a href="#许可">许可</a></li></ul></nav>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-2"><a href="#项目简介">项目简介</a></li><li class="lvl-2"><a href="#架构概览">架构概览</a></li><li class="lvl-3"><a href="#关键入口点">关键入口点</a></li><li class="lvl-2"><a href="#安装方式">安装方式</a></li><li class="lvl-3"><a href="#包管理器安装-二选一-两渠道内容一致">包管理器安装（二选一，两渠道内容一致）</a></li><li class="lvl-3"><a href="#本仓库源码运行">本仓库源码运行</a></li><li class="lvl-2"><a href="#快速开始-开发者">快速开始（开发者）</a></li><li class="lvl-3"><a href="#启动后端">启动后端</a></li><li class="lvl-3"><a href="#启动-ai-平台前端">启动 AI 平台前端</a></li><li class="lvl-3"><a href="#本地开发访问地址">本地开发访问地址</a></li><li class="lvl-3"><a href="#默认管理员账号">默认管理员账号</a></li><li class="lvl-2"><a href="#配置文件位置">配置文件位置</a></li><li class="lvl-2"><a href="#目录结构">目录结构</a></li><li class="lvl-3"><a href="#分层概览">分层概览</a></li><li class="lvl-2"><a href="#文档导航">文档导航</a></li><li class="lvl-2"><a href="#版本同步">版本同步</a></li><li class="lvl-2"><a href="#贡献与维护">贡献与维护</a></li><li class="lvl-2"><a href="#许可">许可</a></li></ul></nav>
       <article class="doc-body">
 <h1 align="center">Khy-OS</h1>
 <p align="center">
@@ -86,6 +86,10 @@ npm run cli                # 直接进入 CLI：node bin/khy.js</code></pre>
 npm install
 npm run dev                # Vite 开发服务器
 npm run build              # 生产构建</code></pre>
+<h3 id="本地开发访问地址">本地开发访问地址<a class="anchor" href="#本地开发访问地址" aria-label="锚点">#</a></h3>
+<p>后端与前端各占一个终端窗口；两者都起来后浏览器打开前端地址即可进入管理界面。</p>
+<table><thead><tr><th>服务</th><th>地址</th><th>说明</th></tr></thead><tbody><tr><td>前端管理界面</td><td>http://localhost:3000</td><td>Vue 3 管理 UI</td></tr><tr><td>后端 API</td><td>http://localhost:5000</td><td>RESTful API</td></tr><tr><td>WebSocket</td><td>ws://localhost:5000</td><td>实时通信</td></tr></tbody></table>
+<p>只想用 CLI 而不开 Web 界面时，不需要起前端——直接 <code>.\khy.bat</code>（或 <code>npm run cli</code>）即可。</p>
 <h3 id="默认管理员账号">默认管理员账号<a class="anchor" href="#默认管理员账号" aria-label="锚点">#</a></h3>
 <p>后端启动时会<strong>自动初始化</strong>默认管理员（幂等：若账号已存在则跳过，绝不覆盖现有密码），无需手动运行脚本，启动日志中会输出账号信息。</p>
 <blockquote><p>⚠️ <strong>没有固定的默认口令</strong>。出于安全考虑，默认管理员密码由<strong>机器指纹 + 随机熵</strong>生成（约 16 位混合字符强密码），首次启动时保存于数据目录 <code>.khy/credentials/default-admin.json</code>（<code>KHY_DATA_HOME</code> 覆盖时在其下）。请打开该文件查看初始密码。</p></blockquote>
@@ -161,6 +165,7 @@ node scripts\seed.js               # 或：完整种子数据（含管理员）<
 └── _source/                  # 源码快照 / 恢复参考</code></pre>
 <h3 id="分层概览">分层概览<a class="anchor" href="#分层概览" aria-label="锚点">#</a></h3>
 <ul><li><strong>Python 层</strong>（<code>platform/khy_platform/</code>）：轻量启动器，负责检测环境并拉起 Node.js；</li><li><strong>Node.js 后端</strong>（<code>services/backend/</code>）：承载所有业务逻辑（CLI、AI 网关、各类服务、Web API）；</li><li><strong>前端</strong>：<code>apps/ai-frontend/</code>（AI 平台管理 UI，Vue 3 + Vite）与 <code>software/khyquant/frontend/</code>（内置的 khyquant 交易 UI）；</li><li><strong>内核</strong>（<code>kernel/</code>）：手写 C 语言 OS 内核，可在 QEMU 下引导运行。</li></ul>
+<blockquote><p>顶层七个目录的<strong>层级定位（L0–L6）、允许的依赖方向、以及新文件该放哪一层</strong>，<br>真源是 <a href="docs/03_DESIGN_设计/[DESIGN-ARCH-068]%20仓库层级板块规范.html"><code>docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md</code></a>，<br>由 <code>npm run check:layout</code> 强制执行。新增文件或新增顶层目录前先读它。</p></blockquote>
 <h2 id="文档导航">文档导航<a class="anchor" href="#文档导航" aria-label="锚点">#</a></h2>
 <ul><li>文档总索引：<a href="docs/00_INDEX_文档索引.html">docs/00_INDEX_文档索引.md</a></li><li>概念入门（Agent / Tool Calling / MCP / LLM 等）：<code>docs/02_CONCEPTS_概念入门/</code></li><li>设计与实现记录：<code>docs/03_DESIGN_设计/</code>、<code>docs/04_IMPL_实现/</code></li><li>部署与运维手册：<code>docs/06_DEPLOY_部署/</code>、<code>docs/07_OPS_运维/</code></li></ul>
 <h2 id="版本同步">版本同步<a class="anchor" href="#版本同步" aria-label="锚点">#</a></h2>

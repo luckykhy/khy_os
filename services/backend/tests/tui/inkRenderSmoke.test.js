@@ -812,6 +812,14 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
     expect(expanded).not.toContain('ctrl+o 展开'); // no false promise once open
   });
 
+  test('GOAL2: expanded shell stdout includes rows past the former 400-line cap', async () => {
+    const output = Array.from({ length: 450 }, (_, i) => `fullrow${i + 1}`).join('\n');
+    const expanded = await toolFrame([{ name: 'bash', result: { success: true, output } }], true);
+    expect(expanded).toContain('fullrow450');
+    expect(expanded).not.toContain('已截断');
+    expect(expanded).not.toContain('ctrl+o 展开');
+  });
+
   // "如果不太长不需要折叠完全展开即可" — output within the threshold shows IN FULL.
   test('GOAL2: a not-too-long shell stdout shows in FULL with no fold marker', async () => {
     const output = Array.from({ length: 15 }, (_, i) => `keep${i + 1}`).join('\n'); // < 20

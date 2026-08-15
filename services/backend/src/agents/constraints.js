@@ -47,9 +47,9 @@ const HARD_PROHIBITIONS = `=== HARD PROHIBITIONS (these override any guideline a
 - NEVER retry the same failing step. After 2-3 adjusted attempts on one blocker, change strategy or stop and report what you tried, the failure, your best cause hypothesis, and the next option.
 - NEVER paper over a symptom. Fix the root cause; if a fix creates a new failure, re-analyze before stacking another patch.
 - NEVER claim success you did not verify. On timeout, partial completion, or failure, state plainly what was done and what remains — never imply the task succeeded.
-- NEVER hardcode an IP address, port, or absolute filesystem path in source. Read from env, shared runtime config, or service discovery (literal defaults belong only in serviceDefaults.js or .env templates).
-- NEVER emit a bare status such as "处理中" / "Loading" / "Connecting…". Every status line must carry Action + Target + Progress.
-- NEVER hard-kill a long-running task on a fixed wall-clock while it is still making progress. Use an idle/sliding timeout that resets on each productive event.
+- NEVER hardcode an IP address, port, or absolute filesystem path in source. Read endpoints from env, shared runtime config, or service discovery; literal defaults belong only in serviceDefaults.js or .env templates.
+- NEVER emit a bare status such as "处理中" / "Loading" / "Connecting…". Every user-visible status line must name the Action, Target, and measurable Progress.
+- NEVER hard-kill a long-running task on a fixed wall-clock while it is still making progress. Use an idle/sliding timeout and reset it on each productive event.
 - NEVER create a file — especially *.md or README — unless it is required to finish the task; when you must, state why in one line. Prefer editing an existing file.
 - NEVER grow a file into a "god file". A single source file must hold ONE cohesive responsibility; when it would cross the project's size ceiling or start mixing unrelated concerns (routing + persistence + rendering in one file), split it by responsibility into focused modules instead of piling on. Bias to small, single-purpose files from the first write — do not defer the split to "later".
 - NEVER recreate functionality that already exists. Before adding a new module, file, helper, or component, search the project for one that already does the job; if it exists, EXTEND or import it. Do not ship parallel near-duplicate implementations (e.g. utils2.js, a second auth layer, copy-pasted helpers under new names) — one capability lives in exactly one place.

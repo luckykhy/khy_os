@@ -92,8 +92,14 @@ _dbg_*
 _repl_*
 _smoke_*
 
-# Vendored tooling & reference material (kept out of git)
-tools/deepseek-eyes/
+# Vendored tooling & reference material
+# deepseek-eyes source is distributed with khy; its local runtime stays untracked.
+tools/deepseek-eyes/.venv/
+tools/deepseek-eyes/**/__pycache__/
+tools/deepseek-eyes/**/*.py[cod]
+tools/deepseek-eyes/*.egg-info/
+tools/deepseek-eyes/.env
+tools/deepseek-eyes/.env.local
 docs/_ref/
 
 # Root-level scratch / ad-hoc probe scripts (keep project root clean)
